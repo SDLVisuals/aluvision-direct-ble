@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-03",
+  "artifacts": [
+    {
+      "id": "spi-18.18.0-nfc",
+      "receiverType": "SPI",
+      "model": "ALV-SPI-SK6812",
+      "board": "ESP32S3",
+      "version": "18.18.0",
+      "variant": "NFC_ONLY",
+      "build": "18.18.0-spi-safe-boot-hold",
+      "channel": "stable",
+      "releaseNotes": "Veilige BOOT-koppeling en stabiele 90 FPS-bediening. De firmware controleert het bestand, herstart en bevestigt zichzelf pas na de ingebouwde zelftest.",
+      "file": "artifacts/Aluvision_SPI_Receiver_V18_18_0_NFC_ONLY.app.bin",
+      "size": 1283792,
+      "sha256": "0754c49758c7c906e01c805de9696c4bd14ed27ff9f4f039da53c5b8e6ef051a",
+      "identityMarker": "ALUVISION_FW_ID_V1|TYPE=SPI|MODEL=ALV-SPI-SK6812|BOARD=ESP32S3|VERSION=18.18.0|VARIANT=NFC_ONLY|END",
+      "otaWireVersion": 1,
+      "dataPayloadBytes": 128,
+      "trusted": true,
+      "applicationImage": true
+    },
+    {
+      "id": "rgbw-18.18.0-nfc",
+      "receiverType": "RGBW",
+      "model": "ALV-RGBW-DUAL",
+      "board": "ESP32S3",
+      "version": "18.18.0",
+      "variant": "NFC_ONLY",
+      "build": "18.18.0-rgbw-safe-boot-hold",
+      "channel": "stable",
+      "releaseNotes": "Veilige BOOT-koppeling en stabiele bediening van beide RGBW-uitgangen. De firmware controleert het bestand, herstart en bevestigt zichzelf pas na de ingebouwde zelftest.",
+      "file": "artifacts/Aluvision_RGBW_Receiver_V18_18_0_NFC_ONLY.app.bin",
+      "size": 1284944,
+      "sha256": "ab5ea8212c58ee0fd55c0a447734d9fee8d594929142f38527003f147f71bf35",
+      "identityMarker": "ALUVISION_FW_ID_V1|TYPE=RGBW|MODEL=ALV-RGBW-DUAL|BOARD=ESP32S3|VERSION=18.18.0|VARIANT=NFC_ONLY|END",
+      "otaWireVersion": 1,
+      "dataPayloadBytes": 128,
+      "trusted": true,
+      "applicationImage": true
+    }
+  ]
+}

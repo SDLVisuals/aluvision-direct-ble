@@ -1,3 +1,4 @@
+import hashlib
 import json
 import re
 import unittest
@@ -10,6 +11,54 @@ APP = (ROOT / "app.js").read_text(encoding="utf-8")
 HTML = (ROOT / "index.html").read_text(encoding="utf-8")
 CSS = (ROOT / "styles.css").read_text(encoding="utf-8")
 SW = (ROOT / "service-worker.js").read_text(encoding="utf-8")
+FIRMWARE_CATALOG = json.loads(
+    (ROOT / "firmware" / "catalog.json").read_text(encoding="utf-8")
+)
+
+
+OTA_UUID_CONTRACT = {
+    "service": "8f0d1100-8b2b-4ca3-a9d5-8a39aaf11700",
+    "command": "8f0d1101-8b2b-4ca3-a9d5-8a39aaf11700",
+    "status": "8f0d1102-8b2b-4ca3-a9d5-8a39aaf11700",
+    "info": "8f0d1103-8b2b-4ca3-a9d5-8a39aaf11700",
+    "ota_control": "8f0d1104-8b2b-4ca3-a9d5-8a39aaf11700",
+    "ota_data": "8f0d1105-8b2b-4ca3-a9d5-8a39aaf11700",
+    "ota_status": "8f0d1106-8b2b-4ca3-a9d5-8a39aaf11700",
+}
+
+
+FIRMWARE_ARTIFACT_CONTRACT = {
+    "spi-18.18.0-nfc": {
+        "receiverType": "SPI",
+        "model": "ALV-SPI-SK6812",
+        "board": "ESP32S3",
+        "version": "18.18.0",
+        "variant": "NFC_ONLY",
+        "build": "18.18.0-spi-safe-boot-hold",
+        "file": "artifacts/Aluvision_SPI_Receiver_V18_18_0_NFC_ONLY.app.bin",
+        "size": 1_283_792,
+        "sha256": "0754c49758c7c906e01c805de9696c4bd14ed27ff9f4f039da53c5b8e6ef051a",
+        "identityMarker": (
+            "ALUVISION_FW_ID_V1|TYPE=SPI|MODEL=ALV-SPI-SK6812|BOARD=ESP32S3|"
+            "VERSION=18.18.0|VARIANT=NFC_ONLY|END"
+        ),
+    },
+    "rgbw-18.18.0-nfc": {
+        "receiverType": "RGBW",
+        "model": "ALV-RGBW-DUAL",
+        "board": "ESP32S3",
+        "version": "18.18.0",
+        "variant": "NFC_ONLY",
+        "build": "18.18.0-rgbw-safe-boot-hold",
+        "file": "artifacts/Aluvision_RGBW_Receiver_V18_18_0_NFC_ONLY.app.bin",
+        "size": 1_284_944,
+        "sha256": "ab5ea8212c58ee0fd55c0a447734d9fee8d594929142f38527003f147f71bf35",
+        "identityMarker": (
+            "ALUVISION_FW_ID_V1|TYPE=RGBW|MODEL=ALV-RGBW-DUAL|BOARD=ESP32S3|"
+            "VERSION=18.18.0|VARIANT=NFC_ONLY|END"
+        ),
+    },
+}
 
 
 SPI_CATALOGUE_CONTRACT = """
@@ -246,6 +295,111 @@ class FullDirectAppContractTests(unittest.TestCase):
         self.assertIn("replyRid === String(info.RID).toUpperCase()", APP)
         self.assertIn("transactionTail.then(run, run)", APP)
 
+    def test_v1818_ota_uses_the_exact_ble_characteristics(self):
+        for name, uuid in OTA_UUID_CONTRACT.items():
+            with self.subTest(characteristic=name):
+                self.assertIn(uuid, APP)
+        for characteristic in ("otaControl", "otaData", "otaStatus"):
+            self.assertRegex(APP, rf"\b{characteristic}\b")
+
+    def test_firmware_catalog_contains_only_the_two_trusted_app_images(self):
+        self.assertEqual(FIRMWARE_CATALOG["schemaVersion"], 1)
+        artifacts = {
+            artifact["id"]: artifact
+            for artifact in FIRMWARE_CATALOG["artifacts"]
+        }
+        self.assertEqual(set(artifacts), set(FIRMWARE_ARTIFACT_CONTRACT))
+
+        firmware_root = (ROOT / "firmware").resolve()
+        for artifact_id, expected in FIRMWARE_ARTIFACT_CONTRACT.items():
+            with self.subTest(artifact=artifact_id):
+                artifact = artifacts[artifact_id]
+                for key, value in expected.items():
+                    self.assertEqual(artifact[key], value)
+                self.assertEqual(artifact["channel"], "stable")
+                self.assertIs(artifact["trusted"], True)
+                self.assertIs(artifact["applicationImage"], True)
+                self.assertEqual(artifact["otaWireVersion"], 1)
+                self.assertEqual(artifact["dataPayloadBytes"], 128)
+
+                relative_path = Path(artifact["file"])
+                self.assertFalse(relative_path.is_absolute())
+                image_path = (firmware_root / relative_path).resolve()
+                self.assertEqual(image_path.parents[1], firmware_root)
+                self.assertTrue(image_path.name.endswith(".app.bin"))
+                self.assertNotRegex(image_path.name.lower(), r"bootloader|merged|partitions")
+
+                image = image_path.read_bytes()
+                self.assertEqual(len(image), expected["size"])
+                self.assertEqual(hashlib.sha256(image).hexdigest(), expected["sha256"])
+                self.assertEqual(image[0], 0xE9)
+                self.assertIn(expected["identityMarker"].encode("ascii"), image)
+
+    def test_ota_catalogue_and_device_profile_are_both_strictly_checked(self):
+        self.assertIn("TRUSTED_FIRMWARE", APP)
+        for expected in FIRMWARE_ARTIFACT_CONTRACT.values():
+            for key in (
+                "receiverType", "model", "board", "version", "variant",
+                "size", "sha256",
+            ):
+                self.assertIn(str(expected[key]), APP)
+        for marker in (
+            "validatedCatalogArtifact", "receiverType", "model", "board",
+            "version", "variant", "applicationImage", "trusted",
+            "OTA_MIN_IMAGE_BYTES", "OTAMAX", "otaMaxBytes",
+        ):
+            self.assertIn(marker, APP)
+        self.assertIn("64 * 1024", APP)
+        self.assertRegex(APP, r"artifact\.size\s*>\s*[^\n;]*otaMaxBytes")
+
+    def test_ota_binary_is_verified_before_the_receiver_is_armed(self):
+        for marker in (
+            "crypto.subtle.digest", "SHA-256", "identityMarker",
+            "0xE9", "OTA_ARM", "OTA_ARMED", "TARGETACK", "TARGETRID",
+        ):
+            self.assertIn(marker, APP)
+        self.assertRegex(APP, r"fetch\([^)]*(artifact|firmware)")
+        self.assertRegex(APP, r"byteLength|\.length")
+
+    def test_ota_transfer_is_stop_and_wait_with_little_endian_frames(self):
+        for marker in (
+            "OTA_BEGIN", "READY", "NEXT", "OTA_COMMIT", "VERIFIED",
+            "REBOOTING", "OTA_ABORT", "waitForOtaStatus", "waitForOtaNext",
+            "crc32", "writeValueWithResponse", "OTA_DATA_RETRIES",
+        ):
+            self.assertIn(marker, APP)
+        self.assertIn("const OTA_DATA_MAGIC = 0x3141544F", APP)
+        self.assertIn("const OTA_DATA_BYTES = 128", APP)
+        self.assertIn("const OTA_DATA_RETRIES = 2", APP)
+        self.assertIn("new Uint8Array(20 + payload.length)", APP)
+        self.assertRegex(APP, r"setUint32\(\s*0\s*,\s*OTA_DATA_MAGIC\s*,\s*true\s*\)")
+        self.assertRegex(APP, r"setUint16\(\s*6\s*,\s*payload\.length\s*,\s*true\s*\)")
+        self.assertRegex(APP, r"setUint32\(\s*8\s*,\s*Number\(session\)[^,]*,\s*true\s*\)")
+        self.assertRegex(APP, r"setUint32\(\s*12\s*,\s*Number\(offset\)[^,]*,\s*true\s*\)")
+        self.assertRegex(APP, r"setUint32\(\s*16\s*,\s*crc32\(payload\)\s*,\s*true\s*\)")
+        self.assertRegex(APP, r"for\s*\([^)]*attempt\s*<=\s*OTA_DATA_RETRIES")
+
+    def test_ota_cancel_and_disconnect_are_safe_around_commit(self):
+        for marker in (
+            "cancelAllowed", "cancelRequested", "committed",
+            "expectedDisconnect", "rejectOtaWaiters",
+        ):
+            self.assertIn(marker, APP)
+        self.assertRegex(
+            APP,
+            r"if\s*\([^)]*(?:committed|cancelAllowed)[^)]*\)[^{]*\{?[^}]*OTA_ABORT",
+        )
+        self.assertRegex(APP, r"committed\s*=\s*true")
+
+    def test_ota_reconnects_and_verifies_the_installed_identity(self):
+        for marker in (
+            "gatt.connect", "ROLLED_BACK", "PENDING", "VALID", "CONFIRMED",
+            "firmwareUpdate.expectedDisconnect", "90_000",
+        ):
+            self.assertIn(marker, APP)
+        for identity_field in ("RID", "DEVTYPE", "MODEL", "BOARD", "FWVER", "FWVARIANT"):
+            self.assertIn(identity_field, APP)
+
     def test_tunnel_commands_are_real_line_timed_commands(self):
         tunnel_variants = {row[3] for row in contract_rows(TUNNEL_CATALOGUE_CONTRACT)}
         self.assertTrue(set(range(98, 103)).issubset(tunnel_variants))
@@ -295,9 +449,11 @@ class FullDirectAppContractTests(unittest.TestCase):
         self.assertEqual(manifest["scope"], "./")
         self.assertEqual(manifest["display"], "standalone")
         self.assertIn("aluvision-direct-", SW)
-        self.assertIn("v4-full-app", SW)
-        self.assertIn('styles.css?v=18.18.0-full', HTML)
-        self.assertIn('app.js?v=18.18.0-full', HTML)
+        self.assertIn("v5-ota", SW)
+        self.assertIn("./firmware/catalog.json", SW)
+        for asset in ('styles.css?v=18.18.0-ota1', 'app.js?v=18.18.0-ota1'):
+            self.assertIn(asset, HTML)
+            self.assertIn(f'./{asset}', SW)
 
     def test_no_baked_credentials_or_receiver_identity(self):
         combined = APP + HTML + CSS + SW

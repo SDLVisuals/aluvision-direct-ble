@@ -33,6 +33,34 @@ koppelen**. Eén via Bluetooth verbonden receiver fungeert als toegang tot de
 receivers met dezelfde installatiesleutel; de receiverfirmware verzorgt het
 ESP-NOW-verkeer naar de andere doelen.
 
+## Veilige firmware-update via Bluetooth
+
+Onder **Receivers** toont de app per rechtstreeks verbonden receiver of versie
+18.18.0 beschikbaar is. De app kiest het bestand zelf: SPI en RGBW hebben elk
+een eigen, vast vertrouwd profiel en kunnen nooit met elkaars bestand worden
+bijgewerkt. De update wordt alleen aangeboden wanneer type, model, bord,
+firmwarevariant en beschikbare updateruimte exact bevestigd zijn.
+
+Tijdens de update:
+
+- blijft de updatepagina open en blijft de receiver dichtbij en onder spanning;
+- controleert de app eerst bestandsgrootte, SHA-256 en ingebouwde
+  firmware-identiteit;
+- wordt ieder klein datapakket apart door de receiver bevestigd;
+- kan veilig worden geannuleerd totdat de definitieve installatie begint;
+- herstart de receiver automatisch en controleert de app daarna opnieuw het
+  receiver-ID, profiel, versienummer en de geldige opstartstatus.
+
+Een onbekende updateruimte, een ouder receiverprofiel of een onverwachte
+receiver blokkeert de draadloze update. In dat geval blijft de bestaande
+firmware onaangeroerd en meldt de app dat eerst een update via USB nodig is.
+Na een onderbroken overdracht kun je opnieuw verbinden en de update opnieuw
+starten; na **Installeren** mag de receiver niet handmatig worden uitgeschakeld.
+
+De gepubliceerde catalogus bevat uitsluitend de twee volledige
+applicatiebestanden voor **SPI 18.18.0 NFC_ONLY** en **RGBW 18.18.0 NFC_ONLY**.
+Bootloader-, partitietabel- en samengevoegde bestanden worden niet gebruikt.
+
 ## Publiceren
 
 GitHub Pages publiceert rechtstreeks vanuit deze map/repository. Alle paden zijn

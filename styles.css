@@ -317,6 +317,44 @@ h3 { margin-bottom: 5px; font-size: 15px; }
 .receiver-actions { display:flex; gap:6px; }
 .receiver-actions button { width:40px; height:40px; border:0; border-radius:12px; color:var(--ink); background:var(--soft); cursor:pointer; }
 .receiver-actions button.live { color:var(--green); background:#ebf6f0; }
+.receiver-card-shell { overflow:hidden; border:1px solid var(--line); border-radius:20px; background:var(--card); box-shadow:var(--shadow-soft); }
+.receiver-card-shell .receiver-card { border:0; border-radius:0; box-shadow:none; background:transparent; }
+.firmware-status { display:flex; align-items:center; gap:11px; padding:13px 14px; border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.48); }
+.firmware-status.compact { margin:0 12px 12px; padding:9px 11px; border-radius:12px; }
+.firmware-status > i { flex:0 0 auto; width:9px; height:9px; border-radius:50%; background:#9a9d98; box-shadow:0 0 0 5px rgba(154,157,152,.11); }
+.firmware-status span { min-width:0; }
+.firmware-status b,.firmware-status small { display:block; }
+.firmware-status b { font-size:11px; }
+.firmware-status small { margin-top:3px; color:var(--muted); font-size:9px; }
+.firmware-status.ok > i { background:#32a852; box-shadow:0 0 0 5px rgba(50,168,82,.11); }
+.firmware-status.update > i { background:var(--red); box-shadow:0 0 0 5px rgba(201,81,73,.12); }
+.firmware-status.warning > i { background:#df9a2a; box-shadow:0 0 0 5px rgba(223,154,42,.12); }
+.firmware-update-intro { display:grid; gap:17px; }
+.firmware-version-flow { display:grid; grid-template-columns:1fr auto 1fr; gap:12px; align-items:center; padding:18px; border-radius:20px; color:#fff; background:linear-gradient(135deg,#191a19,#2b2d2b); }
+.firmware-version-flow span { display:grid; gap:5px; }
+.firmware-version-flow span:last-child { text-align:right; }
+.firmware-version-flow small { color:rgba(255,255,255,.55); font-size:8px; font-weight:900; letter-spacing:.13em; }
+.firmware-version-flow b { font-size:17px; }
+.firmware-version-flow > i { color:#f3a19a; font-style:normal; font-size:22px; }
+.firmware-safety { display:flex; align-items:center; gap:13px; padding:14px; border:1px solid rgba(50,168,82,.2); border-radius:16px; background:rgba(50,168,82,.07); }
+.firmware-safety > i { display:grid; place-items:center; width:32px; height:32px; border-radius:50%; color:#fff; background:#32a852; font-style:normal; font-weight:900; }
+.firmware-safety b,.firmware-safety small { display:block; }
+.firmware-safety small { margin-top:4px; color:var(--muted); font-size:9px; }
+.firmware-confirm { display:flex; align-items:flex-start; gap:11px; padding:14px; border:1px solid var(--line); border-radius:16px; font-size:11px; font-weight:750; cursor:pointer; }
+.firmware-confirm input { width:20px; height:20px; accent-color:var(--red); }
+.firmware-progress-card { display:grid; grid-template-columns:auto 1fr; gap:14px; padding:19px; border-radius:21px; color:#fff; background:linear-gradient(145deg,#171817,#292b29); }
+.firmware-progress-icon { display:grid; place-items:center; width:46px; height:46px; border-radius:15px; color:#fff; background:linear-gradient(135deg,var(--red),#f08e82); font-size:20px; font-weight:950; }
+.firmware-progress-card.success .firmware-progress-icon { background:linear-gradient(135deg,#248d43,#58c875); }
+.firmware-progress-card.failed .firmware-progress-icon { background:linear-gradient(135deg,#9c342e,#dc625a); }
+.firmware-progress-card h2 { margin:3px 0 2px; color:#fff; font-size:28px; }
+.firmware-progress-card .sub { color:rgba(255,255,255,.64); }
+.firmware-progress-track { grid-column:1/-1; overflow:hidden; height:9px; border-radius:999px; background:rgba(255,255,255,.12); }
+.firmware-progress-track i { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,var(--red),#ffb0a7); transition:width .16s ease; }
+.firmware-progress-meta { grid-column:1/-1; display:flex; justify-content:space-between; gap:10px; color:rgba(255,255,255,.52); font-size:9px; font-weight:800; }
+.firmware-error { margin-top:14px; padding:14px; border:1px solid rgba(197,63,54,.2); border-radius:16px; color:#832d28; background:rgba(197,63,54,.07); }
+.firmware-error b { font-size:11px; }
+.firmware-error p { margin:5px 0 0; font-size:10px; line-height:1.5; }
+.firmware-actions { justify-content:flex-end; margin-top:14px; }
 .nfc-strip { display:grid; grid-template-columns:54px minmax(0,1fr) auto; gap:13px; align-items:center; padding:16px; border:1px solid #e8d6d2; border-radius:20px; background:linear-gradient(135deg,#fff7f5,#fff); }
 .nfc-icon { width:54px; height:54px; display:grid; place-items:center; border-radius:17px; color:#fff; background:var(--red); font-size:22px; }
 .nfc-strip b,.nfc-strip small { display:block; }
@@ -354,6 +392,7 @@ h3 { margin-bottom: 5px; font-size: 15px; }
   box-shadow:0 20px 45px rgba(13,14,13,.28);
   backdrop-filter:blur(24px);
   -webkit-backdrop-filter:blur(24px);
+  transform:translateX(-50%);
 }
 .bottom-nav button { min-width:0; min-height:53px; display:grid; place-items:center; align-content:center; gap:3px; padding:4px 2px; border:0; border-radius:17px; color:#a8aaa5; background:transparent; cursor:pointer; }
 .bottom-nav i { font-style:normal; font-size:16px; line-height:1; }
@@ -399,6 +438,9 @@ body.dark { color-scheme:dark; --bg:#121312; --panel:rgba(30,31,30,.94); --panel
 body.dark .topbar { background:linear-gradient(180deg,rgba(18,19,18,.98) 72%,rgba(18,19,18,0)); }
 body.dark .location-button,body.dark .connection-badge { border-color:#373936; background:rgba(31,33,31,.88); }
 body.dark .card,body.dark .compact-card,body.dark .zone-card,body.dark .group-card,body.dark .scene-card,body.dark .preset-card,body.dark .receiver-card,body.dark .quick-card,body.dark .more-card { background:#202220; }
+body.dark .receiver-card-shell { background:#202220; }
+body.dark .firmware-status { background:rgba(255,255,255,.035); }
+body.dark .firmware-error { color:#ffaaa3; }
 body.dark .field,body.dark .setting-card,body.dark .effect-card,body.dark .layout-card,body.dark .pill,body.dark .channel-toggle { color:var(--ink); background:#292b28; }
 body.dark .mode-switch { background:#292b28; }
 body.dark .mode-switch button.active,body.dark .direction-control button.active { color:#fff; background:#41433f; }
