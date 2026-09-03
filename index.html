@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#181918">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Aluvision Direct">
+  <title>Aluvision Lighting Control</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/aluvision-logo.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <img class="brand" src="assets/aluvision-logo.png" alt="Aluvision">
+      <div id="connectionBadge" class="status-badge"><i></i><span>Niet verbonden</span></div>
+    </header>
+
+    <main>
+      <section id="compatibilityPanel" class="compatibility" hidden>
+        <span class="compatibility-icon" aria-hidden="true">◉</span>
+        <div>
+          <strong>Open deze pagina in Bluefy</strong>
+          <p>Safari kan op iPhone niet rechtstreeks met de receiver praten. Open dezelfde link in Bluefy; daarna heb je geen Mac nodig.</p>
+          <a class="button primary" href="https://apps.apple.com/us/app/bluefy-web-ble-browser/id1492822055" target="_blank" rel="noreferrer">Download Bluefy</a>
+        </div>
+      </section>
+
+      <section id="connectPanel" class="hero-card">
+        <div class="hero-copy">
+          <span class="eyebrow">RECHTSTREEKS VIA BLUETOOTH</span>
+          <h1>Bedien je LED Line zonder Mac.</h1>
+          <p>Houd de <b>BOOT-knop 2 seconden</b> ingedrukt en verbind daarna rechtstreeks met je receiver.</p>
+          <button id="connectButton" class="button primary connect-button" type="button">
+            <span class="bluetooth-mark" aria-hidden="true">ᛒ</span>
+            Receiver koppelen
+          </button>
+          <p id="connectHint" class="microcopy">De receiver verschijnt ongeveer 60 seconden via Bluetooth.</p>
+        </div>
+
+        <div class="pair-visual" aria-hidden="true">
+          <div class="phone-shape"><span>ALV</span></div>
+          <div class="radio-waves"><i></i><i></i><i></i></div>
+          <div class="receiver-shape">
+            <span class="receiver-led"></span>
+            <b>Receiver</b>
+            <small>BOOT · 2 sec</small>
+          </div>
+        </div>
+      </section>
+
+      <section id="controlPanel" class="control-panel" aria-live="polite" hidden>
+        <div class="receiver-bar">
+          <div class="receiver-identity">
+            <span id="receiverNumber" class="receiver-number">1</span>
+            <span>
+              <small id="receiverTypeLabel">RECEIVER</small>
+              <strong id="receiverName">Aluvision Receiver</strong>
+            </span>
+          </div>
+          <button id="powerButton" class="power-button on" type="button" aria-pressed="true">
+            <span aria-hidden="true">⏻</span><b>Aan</b>
+          </button>
+        </div>
+
+        <div class="live-preview-card">
+          <div class="preview-topline">
+            <span><i class="live-dot"></i> LIVE</span>
+            <small id="previewLabel">Static Color</small>
+          </div>
+          <div id="ledPreview" class="led-preview" aria-label="Live voorbeeld van de LED Line"></div>
+        </div>
+
+        <nav class="mode-tabs" aria-label="Lichtmodus">
+          <button id="staticModeButton" class="active" type="button" data-mode="static">Static Color</button>
+          <button id="animationModeButton" type="button" data-mode="animation">Animaties</button>
+        </nav>
+
+        <section class="panel colour-panel">
+          <div class="section-heading">
+            <span>
+              <small>KLEUR</small>
+              <h2>Kies je licht</h2>
+            </span>
+            <span id="liveState" class="live-label"><i></i> LIVE</span>
+          </div>
+
+          <div id="paletteTabs" class="palette-tabs" aria-label="Effectkleuren">
+            <button class="palette-tab active" type="button" data-slot="0"><i></i>Kleur 1</button>
+            <button class="palette-tab" type="button" data-slot="1"><i></i>Kleur 2</button>
+          </div>
+
+          <div class="wheel-grid">
+            <div id="colorWheel" class="color-wheel" role="slider" tabindex="0" aria-label="Kleurenwiel" aria-valuemin="0" aria-valuemax="360">
+              <span id="wheelPointer" class="wheel-pointer"></span>
+            </div>
+            <div class="colour-details">
+              <div class="selected-row">
+                <span id="selectedColour" class="selected-colour"></span>
+                <label for="hexColour">
+                  <small>Exacte kleur</small>
+                  <input id="hexColour" type="text" value="#FF4A3D" maxlength="7" autocomplete="off" spellcheck="false">
+                </label>
+              </div>
+              <div class="quick-colours" aria-label="Snelle kleuren">
+                <button type="button" data-colour="#FF453A" style="--quick:#FF453A" aria-label="Rood"></button>
+                <button type="button" data-colour="#FF9F0A" style="--quick:#FF9F0A" aria-label="Oranje"></button>
+                <button type="button" data-colour="#FFD60A" style="--quick:#FFD60A" aria-label="Geel"></button>
+                <button type="button" data-colour="#30D158" style="--quick:#30D158" aria-label="Groen"></button>
+                <button type="button" data-colour="#32ADE6" style="--quick:#32ADE6" aria-label="Blauw"></button>
+                <button type="button" data-colour="#7D5CFF" style="--quick:#7D5CFF" aria-label="Paars"></button>
+                <button type="button" data-colour="#FFFFFF" style="--quick:#FFFFFF" aria-label="Wit"></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="channel-switches">
+            <button id="rgbToggle" class="channel-toggle active" type="button" aria-pressed="true">
+              <i class="rgb-icon"></i><span><b>RGB</b><small>Kleur aan</small></span>
+            </button>
+            <button id="whiteToggle" class="channel-toggle" type="button" aria-pressed="false">
+              <i class="white-icon"></i><span><b>Wit</b><small>Wit uit</small></span>
+            </button>
+          </div>
+
+          <div id="whiteControl" class="setting-row disabled">
+            <div class="setting-copy"><b>Witkanaal</b><small>Voeg echt wit toe voor pastellicht</small></div>
+            <div class="setting-control">
+              <input id="whiteRange" type="range" min="0" max="255" value="0" aria-label="Witkanaal">
+              <output id="whiteValue">0</output>
+            </div>
+          </div>
+        </section>
+
+        <section id="effectPanel" class="panel effect-panel" hidden>
+          <div class="section-heading">
+            <span><small>ANIMATIE</small><h2>Kies een effect</h2></span>
+          </div>
+          <div id="effectGrid" class="effect-grid"></div>
+        </section>
+
+        <section class="panel settings-panel">
+          <div class="section-heading">
+            <span><small>LIVE BEDIENING</small><h2>Fijn afstellen</h2></span>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-copy"><b>Helderheid</b><small>Hoe fel de LED Line brandt</small></div>
+            <div class="setting-control">
+              <input id="brightnessRange" type="range" min="1" max="100" value="100">
+              <output id="brightnessValue">100%</output>
+            </div>
+          </div>
+
+          <div id="speedSetting" class="setting-row">
+            <div class="setting-copy"><b>Snelheid</b><small>Van heel rustig tot snel</small></div>
+            <div class="setting-control">
+              <input id="speedRange" type="range" min="1" max="100" value="24">
+              <output id="speedValue">24</output>
+            </div>
+          </div>
+
+          <div id="smoothSetting" class="setting-row">
+            <div class="setting-copy"><b>Vloeiendheid</b><small>Zachte overgangen zonder stappen</small></div>
+            <div class="setting-control">
+              <input id="smoothRange" type="range" min="0" max="100" value="92">
+              <output id="smoothValue">92%</output>
+            </div>
+          </div>
+
+          <div id="widthSetting" class="setting-row">
+            <div class="setting-copy"><b>Animatiedikte</b><small>Exact aantal pixels breed</small></div>
+            <div class="setting-control">
+              <input id="widthRange" type="range" min="1" max="60" value="4">
+              <output id="widthValue">4 px</output>
+            </div>
+          </div>
+
+          <div id="directionSetting" class="direction-row">
+            <span><b>Richting</b><small>Waar de animatie naartoe beweegt</small></span>
+            <div class="segmented">
+              <button type="button" data-direction="left">← Links</button>
+              <button class="active" type="button" data-direction="right">Rechts →</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="utility-row">
+          <button id="identifyButton" class="button soft" type="button">LED Line laten knipperen</button>
+          <button id="disconnectButton" class="button ghost" type="button">Verbinding sluiten</button>
+        </section>
+
+        <details class="connection-details">
+          <summary>Verbindingsinformatie</summary>
+          <div class="detail-grid">
+            <span><small>Status</small><b id="detailStatus">Verbonden</b></span>
+            <span><small>Firmware</small><b id="detailFirmware">—</b></span>
+            <span><small>LED Line</small><b id="detailPixels">—</b></span>
+            <span><small>Signaal</small><b id="detailTransport">Bluetooth</b></span>
+          </div>
+        </details>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="busyOverlay" class="busy-overlay" hidden>
+    <div class="spinner"></div>
+    <b id="busyText">Verbinden…</b>
+  </div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
