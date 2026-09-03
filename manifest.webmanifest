@@ -1,17 +1,15 @@
 {
   "name": "Aluvision Lighting Control",
   "short_name": "Aluvision",
-  "description": "Volledige Aluvision-bediening voor zones, groepen, scènes, presets en receivers.",
-  "lang": "nl",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait-primary",
-  "background_color": "#f3f2ef",
+  "background_color": "#f3f2f0",
   "theme_color": "#191a19",
+  "orientation": "any",
   "icons": [
     {
-      "src": "assets/aluvision-app-icon.png",
+      "src": "./assets/aluvision-app-icon.png",
       "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "any maskable"

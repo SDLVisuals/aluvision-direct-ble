@@ -1,68 +1,34 @@
-# Aluvision Lighting Control · directe webapp
+# Aluvision Lighting Control — faithful static build
 
-Dit is de volledige statische Aluvision-app voor GitHub Pages. De app opent
-meteen op Home; Bluetooth is een normale koppelactie onder **Receivers** en
-NFC blijft zichtbaar als de geplande aanraakmethode.
+This directory is a static GitHub Pages port of the exact UI served by the
+local Aluvision application on port 8841. It intentionally keeps the original
+markup, styles, responsive layout, animation previews and interaction code.
 
-## Wat lokaal op het toestel werkt
+`direct_ble_bridge.js` replaces the local `/api/*` calls with:
 
-- Home en bediening van alle verlichting in de actieve locatie;
-- locaties, zones en aparte groepspagina's;
-- strikt gescheiden SPI- en RGBW-groepen;
-- vaste kleur, RGB/W-kleurkeuze en live effectinstellingen;
-- de volledige SPI-catalogus (86 gewone effecten), 24 tunnelpresets en 5
-  whole-line effecten met vaste firmware-varianten 2–102;
-- RGBW-effecten met eenvoudige volledige-lijnfades en pulses;
-- horizontale en verticale tunnelpreviews;
-- scènes met een vrije selectie van groepen;
-- presets die opnieuw op een compatibele groep kunnen worden toegepast;
-- receivers koppelen, herkennen, toewijzen, kalibreren en verwijderen;
-- doorlopende LED Lines met cumulatieve pixeloffsets;
-- parallelle LED Lines met gedeelde fase, lijnindex en instelbare lijntiming;
-- dark mode en offline app-shell na de eerste succesvolle laadbeurt.
+- local browser storage for locations, zones, groups, scenes and presets;
+- Web Bluetooth pairing and receiver status;
+- V18 LIVE, SAVE, CONFIG, identify and pixel-calibration commands;
+- ESP-NOW target routing through the currently connected Bluetooth gateway.
 
-Instellingen, scènes en presets staan uitsluitend in de lokale browseropslag.
-De installatiecode wordt op het toestel willekeurig aangemaakt. De repository
-bevat geen receiver-ID, installatiesleutel, wifigegevens of gebruikersdata.
+`direct_ble_ota.js` adds the existing verified V18.18 direct-Bluetooth update
+transport without changing any UI. The local firmware catalogue contains only
+the matching SPI and RGBW application images. Before transfer, the app verifies
+receiver type, model, board, capacity, file size, SHA-256 and the embedded
+firmware identity. It then uses acknowledged 128-byte blocks, a protected
+commit boundary and a reconnect/self-test check.
 
-## iPhone
+On iPhone, Safari can display the complete interface, but it does not expose
+direct Web Bluetooth. Open the same GitHub Pages link in Bluefy to pair a
+receiver or control the lights live. This static build needs neither a Mac nor
+the local venue Wi-Fi network.
 
-Safari biedt nog geen Web Bluetooth. Open daarom de gepubliceerde HTTPS-link in
-**Bluefy** en kies in de app **Receivers → Receiver toevoegen → Bluetooth
-koppelen**. Eén via Bluetooth verbonden receiver fungeert als toegang tot de
-receivers met dezelfde installatiesleutel; de receiverfirmware verzorgt het
-ESP-NOW-verkeer naar de andere doelen.
+During an active firmware update, pairing, forgetting and light commands are
+temporarily paused so the Bluetooth connection cannot switch underneath the
+transfer. Normal live lighting resumes immediately after the OTA job reaches a
+final state. Firmware binaries are never served from the offline cache.
 
-## Veilige firmware-update via Bluetooth
-
-Onder **Receivers** toont de app per rechtstreeks verbonden receiver of versie
-18.18.0 beschikbaar is. De app kiest het bestand zelf: SPI en RGBW hebben elk
-een eigen, vast vertrouwd profiel en kunnen nooit met elkaars bestand worden
-bijgewerkt. De update wordt alleen aangeboden wanneer type, model, bord,
-firmwarevariant en beschikbare updateruimte exact bevestigd zijn.
-
-Tijdens de update:
-
-- blijft de updatepagina open en blijft de receiver dichtbij en onder spanning;
-- controleert de app eerst bestandsgrootte, SHA-256 en ingebouwde
-  firmware-identiteit;
-- wordt ieder klein datapakket apart door de receiver bevestigd;
-- kan veilig worden geannuleerd totdat de definitieve installatie begint;
-- herstart de receiver automatisch en controleert de app daarna opnieuw het
-  receiver-ID, profiel, versienummer en de geldige opstartstatus.
-
-Een onbekende updateruimte, een ouder receiverprofiel of een onverwachte
-receiver blokkeert de draadloze update. In dat geval blijft de bestaande
-firmware onaangeroerd en meldt de app dat eerst een update via USB nodig is.
-Na een onderbroken overdracht kun je opnieuw verbinden en de update opnieuw
-starten; na **Installeren** mag de receiver niet handmatig worden uitgeschakeld.
-
-De gepubliceerde catalogus bevat uitsluitend de twee volledige
-applicatiebestanden voor **SPI 18.18.0 NFC_ONLY** en **RGBW 18.18.0 NFC_ONLY**.
-Bootloader-, partitietabel- en samengevoegde bestanden worden niet gebruikt.
-
-## Publiceren
-
-GitHub Pages publiceert rechtstreeks vanuit deze map/repository. Alle paden zijn
-relatief en de service worker gebruikt uitsluitend caches met het voorvoegsel
-`aluvision-direct-`.
+The release is checked before publication with static contracts, simulated
+acknowledged Bluetooth traffic, complete OTA transfers, cache-isolation tests
+and mobile/desktop visual regression checks. Those private release tests are
+kept outside this public repository.
