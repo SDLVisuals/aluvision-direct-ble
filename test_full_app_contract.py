@@ -295,7 +295,9 @@ class FullDirectAppContractTests(unittest.TestCase):
         self.assertEqual(manifest["scope"], "./")
         self.assertEqual(manifest["display"], "standalone")
         self.assertIn("aluvision-direct-", SW)
-        self.assertIn("v3-full-app", SW)
+        self.assertIn("v4-full-app", SW)
+        self.assertIn('styles.css?v=18.18.0-full', HTML)
+        self.assertIn('app.js?v=18.18.0-full', HTML)
 
     def test_no_baked_credentials_or_receiver_identity(self):
         combined = APP + HTML + CSS + SW

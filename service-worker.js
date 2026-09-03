@@ -1,10 +1,10 @@
 const CACHE_PREFIX = 'aluvision-direct-';
-const CACHE = `${CACHE_PREFIX}v3-full-app`;
+const CACHE = `${CACHE_PREFIX}v4-full-app`;
 const ASSETS = [
   './',
   './index.html',
-  './styles.css',
-  './app.js',
+  './styles.css?v=18.18.0-full',
+  './app.js?v=18.18.0-full',
   './manifest.webmanifest',
   './assets/aluvision-logo.png',
   './assets/aluvision-app-icon.png'
