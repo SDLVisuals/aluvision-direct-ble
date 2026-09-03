@@ -1,9 +1,9 @@
 /*
- * Isolated direct-BLE OTA controller for the exact Aluvision browser UI.
+ * Transport-aware OTA controller for the exact Aluvision browser UI.
  *
  * This module owns no interface markup. It exposes the same JSON job contract
- * as the local /api/firmware/* backend and uses dependencies supplied by
- * direct_ble_bridge.js for the already-established receiver connection.
+ * as the local /api/firmware/* backend. The private receiver Wi-Fi is the
+ * normal path; direct BLE is retained only as a hidden recovery path.
  */
 (() => {
   'use strict';
@@ -14,28 +14,39 @@
     data: '8f0d1105-8b2b-4ca3-a9d5-8a39aaf11700',
     status: '8f0d1106-8b2b-4ca3-a9d5-8a39aaf11700',
   });
-  const CATALOG_URL = './firmware/catalog.json';
+  const LOCAL_CATALOG_URL = './firmware/catalog.json';
+  const REMOTE_CATALOG_URL = 'https://sdlvisuals.github.io/aluvision-direct-ble/firmware/catalog.json';
+  const REMOTE_CATALOG_ORIGIN = 'https://sdlvisuals.github.io';
   const WIRE_VERSION = 1;
   const DATA_MAGIC = 0x3141544F;
   const DATA_BYTES = 128;
+  const HTTP_DATA_BYTES = 4096;
   const DATA_RETRIES = 2;
   const MIN_RELIABLE_CAPACITY = 64 * 1024;
   const FINAL_STATES = new Set(['completed', 'failed', 'cancelled']);
+  const JOB_STORAGE_KEY = 'aluvision.ota.jobs.v2';
+  const MAX_PERSISTED_JOBS = 12;
+  const CHECKPOINT_INTERVAL_MS = 750;
+  const MAX_CATALOG_ARTIFACTS = 32;
+  const MAX_APPLICATION_IMAGE_BYTES = 8 * 1024 * 1024;
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
 
-  // The catalogue is untrusted input. These immutable values are the release
-  // allow-list reviewed with the matching V18.18 receiver source and binaries.
-  const TRUSTED = Object.freeze({
-    'spi-18.18.0-nfc': Object.freeze({
+  // Trust boundary for future updates:
+  // - an immutable catalogue embedded in the installed receiver firmware; or
+  // - the pinned HTTPS GitHub Pages origin controlled by Aluvision.
+  // Every entry is still constrained to an exact product profile and is
+  // verified again by size, SHA-256 and its identity marker before streaming.
+  // This lets a current receiver accept a later signed-off patch release
+  // without having to hard-code that future binary's hash in today's app.
+  const TRUSTED_PROFILES = Object.freeze({
+    SPI: Object.freeze({
       receiverType: 'SPI', model: 'ALV-SPI-SK6812', board: 'ESP32S3',
-      version: '18.18.0', variant: 'NFC_ONLY', size: 1283792,
-      sha256: '0754c49758c7c906e01c805de9696c4bd14ed27ff9f4f039da53c5b8e6ef051a',
+      minVersion: '18.18.0', variants: Object.freeze(['NFC_ONLY']),
     }),
-    'rgbw-18.18.0-nfc': Object.freeze({
+    RGBW: Object.freeze({
       receiverType: 'RGBW', model: 'ALV-RGBW-DUAL', board: 'ESP32S3',
-      version: '18.18.0', variant: 'NFC_ONLY', size: 1284944,
-      sha256: 'ab5ea8212c58ee0fd55c0a447734d9fee8d594929142f38527003f147f71bf35',
+      minVersion: '18.18.0', variants: Object.freeze(['NFC_ONLY']),
     }),
   });
 
@@ -91,25 +102,46 @@
 
   function validateArtifact(raw) {
     if (!raw || typeof raw !== 'object') return null;
+    const receiverType = String(raw.receiverType || '').toUpperCase();
+    const profile = TRUSTED_PROFILES[receiverType];
+    if (!profile) return null;
+    const version = String(raw.version || '');
+    const variant = String(raw.variant || '').toUpperCase();
     const id = String(raw.id || '').toLowerCase();
-    const trusted = TRUSTED[id];
-    if (!trusted) return null;
+    const expectedId = `${receiverType.toLowerCase()}-${version.toLowerCase()}-${variant === 'NFC_ONLY' ? 'nfc' : variant.toLowerCase().replace(/_/g, '-')}`;
     const candidate = {
-      ...raw,
       id,
-      receiverType: String(raw.receiverType || '').toUpperCase(),
+      receiverType,
       model: String(raw.model || '').toUpperCase(),
       board: String(raw.board || '').toUpperCase(),
-      variant: String(raw.variant || '').toUpperCase(),
+      version,
+      variant,
+      build: String(raw.build || '').slice(0, 96),
+      channel: String(raw.channel || '').toLowerCase(),
+      releaseNotes: String(raw.releaseNotes || '').slice(0, 800),
+      file: String(raw.file || ''),
       sha256: String(raw.sha256 || '').toLowerCase(),
       size: Number(raw.size || 0),
+      identityMarker: String(raw.identityMarker || ''),
+      otaWireVersion: Number(raw.otaWireVersion || 0),
+      dataPayloadBytes: Number(raw.dataPayloadBytes || 0),
+      trusted: raw.trusted === true,
+      applicationImage: raw.applicationImage === true,
     };
-    const exact = ['receiverType', 'model', 'board', 'version', 'variant', 'size', 'sha256']
-      .every((field) => candidate[field] === trusted[field]);
+    const exactProfile = candidate.receiverType === profile.receiverType &&
+      candidate.model === profile.model && candidate.board === profile.board &&
+      profile.variants.includes(candidate.variant);
+    const safeVersion = /^\d+\.\d+\.\d+$/.test(candidate.version) &&
+      compareVersions(candidate.version, profile.minVersion) >= 0;
+    const safeSize = Number.isSafeInteger(candidate.size) &&
+      candidate.size >= MIN_RELIABLE_CAPACITY && candidate.size <= MAX_APPLICATION_IMAGE_BYTES;
+    const safeHash = /^[0-9a-f]{64}$/.test(candidate.sha256);
     const safeFile = /^artifacts\/[A-Za-z0-9._-]+\.app\.bin$/.test(String(candidate.file || ''));
     const safeMarker = candidate.identityMarker ===
       `ALUVISION_FW_ID_V1|TYPE=${candidate.receiverType}|MODEL=${candidate.model}|BOARD=${candidate.board}|VERSION=${candidate.version}|VARIANT=${candidate.variant}|END`;
-    if (!exact || !safeFile || !safeMarker || candidate.trusted !== true ||
+    if (candidate.id !== expectedId || !exactProfile || !safeVersion || !safeSize ||
+        !safeHash || !safeFile || !safeMarker || candidate.channel !== 'stable' ||
+        candidate.trusted !== true ||
         candidate.applicationImage !== true || Number(candidate.otaWireVersion) !== WIRE_VERSION ||
         Number(candidate.dataPayloadBytes) !== DATA_BYTES) return null;
     return Object.freeze(candidate);
@@ -127,55 +159,162 @@
     });
 
     let artifacts = [];
+    const artifactSources = new Map();
     let catalogueDocument = null;
     let activeJobId = '';
     let wakeLock = null;
     let controlSequence = Math.floor(Date.now() % 900000000) || 1;
     const jobs = new Map();
+    let lastCheckpointAt = 0;
+    let checkpointTimer = 0;
     const gatt = { control: null, data: null, status: null };
     const stream = { session: 0, buffer: '', queue: [], waiters: [] };
+    let activeTransport = 'ble';
 
     const getBle = dependencies.getBle;
+    const getWifiOta = typeof dependencies.getWifiOta === 'function'
+      ? dependencies.getWifiOta : () => null;
     const currentJob = () => activeJobId ? jobs.get(activeJobId) : null;
     const publicJob = (job) => clone(job);
+
+    function wifiOta() {
+      const adapter = getWifiOta();
+      return adapter && adapter.supportsOta === true ? adapter : null;
+    }
+
+    function otaUsesWifi() { return activeTransport === 'wifi'; }
+
+    function selectTransport(receiver) {
+      const adapter = wifiOta();
+      if (adapter && typeof adapter.otaTargetReady === 'function' &&
+          adapter.otaTargetReady(receiver?.rid)) {
+        activeTransport = 'wifi';
+        return activeTransport;
+      }
+      const ble = getBle();
+      if (ble.connected && exactRid(ble.rid) === exactRid(receiver?.rid)) {
+        activeTransport = 'ble';
+        return activeTransport;
+      }
+      throw new Error('Verbind tijdelijk met het ALUVISION-netwerk van precies deze receiver en probeer opnieuw.');
+    }
 
     function nextControlId() {
       controlSequence = (controlSequence + 1) % 2147483000 || 1;
       return controlSequence;
     }
 
+    function persistedJob(job) {
+      const safe = clone(job);
+      delete safe.cancelRequested;
+      delete safe.verified;
+      return safe;
+    }
+
+    function persistJobs(force = false) {
+      if (typeof localStorage === 'undefined') return;
+      const write = () => {
+        checkpointTimer = 0;
+        lastCheckpointAt = Date.now();
+        try {
+          const recent = [...jobs.values()]
+            .sort((left, right) => Number(right.updatedAt || 0) - Number(left.updatedAt || 0))
+            .slice(0, MAX_PERSISTED_JOBS)
+            .map(persistedJob);
+          localStorage.setItem(JOB_STORAGE_KEY, JSON.stringify({ schemaVersion: 2, jobs: recent }));
+        } catch (_) {}
+      };
+      const remaining = CHECKPOINT_INTERVAL_MS - (Date.now() - lastCheckpointAt);
+      if (force || remaining <= 0) {
+        clearTimeout(checkpointTimer);
+        write();
+      } else if (!checkpointTimer) {
+        checkpointTimer = setTimeout(write, remaining);
+      }
+    }
+
+    function restoreJobs() {
+      if (typeof localStorage === 'undefined') return;
+      try {
+        const saved = JSON.parse(localStorage.getItem(JOB_STORAGE_KEY) || 'null');
+        if (Number(saved?.schemaVersion) !== 2 || !Array.isArray(saved.jobs)) return;
+        saved.jobs.slice(0, MAX_PERSISTED_JOBS).forEach((raw) => {
+          if (!raw || typeof raw !== 'object' || !raw.id || !exactRid(raw.rid)) return;
+          const job = { ...raw, cancelRequested: false };
+          if (!FINAL_STATES.has(job.state)) {
+            job.state = 'failed';
+            job.phase = 'interrupted';
+            job.cancelAllowed = false;
+            job.error = job.committed
+              ? 'De update werd onderbroken na de installatie. Verbind opnieuw en controleer de firmwareversie.'
+              : 'De update werd onderbroken. Start de update veilig opnieuw.';
+            job.detail = 'Onderbroken update hersteld';
+            job.updatedAt = Date.now() / 1000;
+            job.completedAt = job.updatedAt;
+          }
+          jobs.set(String(job.id), job);
+        });
+        persistJobs(true);
+      } catch (_) {}
+    }
+
     function updateJob(job, changes) {
       Object.assign(job, changes, { updatedAt: Date.now() / 1000 });
+      persistJobs(FINAL_STATES.has(job.state) || changes?.committed === true);
       return job;
+    }
+
+    restoreJobs();
+
+    function validateCatalogue(raw, sourceUrl) {
+      if (Number(raw?.schemaVersion) !== 1 || !Array.isArray(raw?.artifacts) ||
+          raw.artifacts.length < 1 || raw.artifacts.length > MAX_CATALOG_ARTIFACTS) {
+        throw new Error('Onbekende firmwarecatalogusversie');
+      }
+      const suppliedIds = raw.artifacts.map((item) => String(item?.id || '').toLowerCase());
+      if (new Set(suppliedIds).size !== suppliedIds.length) {
+        throw new Error('Firmwarecatalogus bevat dubbele releases');
+      }
+      const checked = raw.artifacts.map(validateArtifact);
+      if (checked.some((item) => !item)) {
+        throw new Error('Firmwarecatalogus bevat een niet-vertrouwde release');
+      }
+      artifactSources.clear();
+      checked.forEach((artifact) => artifactSources.set(artifact.id, sourceUrl));
+      return checked;
+    }
+
+    async function fetchCatalogue(url, timeout, remote) {
+      const resolved = new URL(url, location.href);
+      if (remote && (resolved.protocol !== 'https:' || resolved.origin !== REMOTE_CATALOG_ORIGIN)) {
+        throw new Error('Ongeldige firmwarecataloguslocatie');
+      }
+      const response = await withTimeout(dependencies.nativeFetch(resolved, {
+        cache: 'no-store',
+        credentials: resolved.origin === location.origin ? 'same-origin' : 'omit',
+        mode: resolved.origin === location.origin ? 'same-origin' : 'cors',
+      }), timeout, 'Firmwarecatalogus timeout');
+      if (!response.ok) throw new Error(`Firmwarecatalogus niet beschikbaar (${response.status})`);
+      const raw = await response.json();
+      return { raw, resolved };
     }
 
     async function loadCatalogue(force = false) {
       if (catalogueDocument && !force) return catalogueDocument;
-      const response = await dependencies.nativeFetch(CATALOG_URL, {
-        cache: 'no-store', credentials: 'same-origin',
-      });
-      if (!response.ok) throw new Error(`Firmwarecatalogus niet beschikbaar (${response.status})`);
-      const raw = await response.json();
-      if (Number(raw.schemaVersion) !== 1 || !Array.isArray(raw.artifacts)) {
-        throw new Error('Onbekende firmwarecatalogusversie');
+      let loaded;
+      let source = 'embedded';
+      try {
+        loaded = await fetchCatalogue(REMOTE_CATALOG_URL, 3500, true);
+        source = 'online';
+      } catch (_) {
+        loaded = await fetchCatalogue(LOCAL_CATALOG_URL, 3500, false);
       }
-      const expectedIds = Object.keys(TRUSTED).sort();
-      const suppliedIds = raw.artifacts.map((item) => String(item?.id || '').toLowerCase());
-      const uniqueIds = [...new Set(suppliedIds)].sort();
-      if (uniqueIds.length !== suppliedIds.length ||
-          uniqueIds.length !== expectedIds.length ||
-          !uniqueIds.every((id, index) => id === expectedIds[index])) {
-        throw new Error('Firmwarecatalogus bevat niet exact de vertrouwde releases');
-      }
-      const checked = raw.artifacts.map(validateArtifact).filter(Boolean);
-      if (checked.length !== Object.keys(TRUSTED).length || checked.length !== raw.artifacts.length) {
-        throw new Error('Firmwarecatalogus is niet volledig vertrouwd');
-      }
-      artifacts = checked;
+      artifacts = validateCatalogue(loaded.raw, loaded.resolved.href);
       catalogueDocument = {
         schemaVersion: 1,
-        generatedAt: raw.generatedAt || '',
+        generatedAt: String(loaded.raw.generatedAt || ''),
         loadedAt: Date.now() / 1000,
+        source,
         artifacts: artifacts.map(publicArtifact),
       };
       return catalogueDocument;
@@ -218,7 +357,7 @@
         const sameRelease = compareVersions(currentVersion, latest.version) === 0 && currentVariant === latest.variant;
         if (!sameRelease && (!Number.isFinite(otaMaxBytes) || otaMaxBytes < MIN_RELIABLE_CAPACITY)) {
           state = 'capacity_refresh_required';
-          reason = 'Controleer de updateruimte rechtstreeks via Bluetooth';
+          reason = 'Controleer de updateruimte via de installatiecontroller';
         } else if (!sameRelease && latest.size > otaMaxBytes) {
           state = 'incompatible';
           reason = 'Deze update is te groot voor een draadloze update op deze receiver; gebruik eenmalig het bijbehorende USB-bestand';
@@ -237,13 +376,37 @@
       };
     }
 
+    function assertReceiverIdentity(info, receiver, artifact = null) {
+      const expectedRid = exactRid(receiver?.rid);
+      const expectedType = String(artifact?.receiverType || receiver?.receiverType || '').toUpperCase();
+      const expectedModel = String(artifact?.model || receiver?.model || '').toUpperCase();
+      const expectedBoard = String(artifact?.board || receiver?.board || '').toUpperCase();
+      const actualRid = exactRid(info?.RID);
+      const actualType = String(info?.DEVTYPE || '').toUpperCase();
+      const actualModel = String(info?.MODEL || '').toUpperCase();
+      const actualBoard = String(info?.BOARD || '').toUpperCase();
+      if (!expectedRid || actualRid !== expectedRid || !['SPI', 'RGBW'].includes(actualType) ||
+          actualType !== expectedType || !actualModel || (expectedModel && actualModel !== expectedModel) ||
+          !actualBoard || (expectedBoard && actualBoard !== expectedBoard)) {
+        throw new Error('OTA_PROFILE');
+      }
+      // Deliberately do not inspect PHYSICAL: it is a configurable saved value,
+      // not a hardware-detectable strip length or firmware compatibility field.
+      return { rid: actualRid, receiverType: actualType, model: actualModel, board: actualBoard };
+    }
+
     async function catalogue() {
       const catalog = await loadCatalogue();
+      const recentJobs = [...jobs.values()]
+        .sort((left, right) => Number(right.updatedAt || 0) - Number(left.updatedAt || 0))
+        .slice(0, 5)
+        .map(publicJob);
       return {
         ok: true,
         ...catalog,
         receivers: dependencies.listReceivers().map(releaseFor),
         activeJobId,
+        recentJobs,
       };
     }
 
@@ -252,8 +415,16 @@
     }
 
     async function ensureOtaCharacteristics() {
+      if (otaUsesWifi()) {
+        const adapter = wifiOta();
+        if (!adapter || typeof adapter.otaBegin !== 'function' ||
+            typeof adapter.otaData !== 'function' || typeof adapter.otaStatus !== 'function') {
+          throw new Error('OTA_CAPACITY_UNKNOWN');
+        }
+        return;
+      }
       const ble = getBle();
-      if (!ble.connected || !ble.server) throw new Error('Verbind eerst rechtstreeks met deze receiver');
+      if (!ble.connected || !ble.server) throw new Error('Open eerst de beveiligde updateverbinding met deze receiver');
       const service = await ble.server.getPrimaryService(UUIDS.service);
       [gatt.control, gatt.data, gatt.status] = await Promise.all([
         optionalCharacteristic(service, UUIDS.control),
@@ -264,6 +435,13 @@
     }
 
     async function readInfo() {
+      if (otaUsesWifi()) {
+        const adapter = wifiOta();
+        if (!adapter || typeof adapter.otaInfo !== 'function') {
+          throw new Error('OTA_TARGET_CONNECTION_REQUIRED');
+        }
+        return adapter.otaInfo();
+      }
       const ble = getBle();
       if (!ble.info) throw new Error('Receiverinformatie is niet beschikbaar');
       return dependencies.parseFields(textOf(await withTimeout(
@@ -275,12 +453,10 @@
       if (activeJobId) throw new Error('Er loopt al een firmware-update');
       const exact = exactRid(rid);
       const receiver = dependencies.getReceiver(exact);
-      const ble = getBle();
       if (!receiver) throw new Error('Receiver niet gevonden');
-      if (!ble.connected || exactRid(ble.rid) !== exact) {
-        throw new Error('Verbind eerst rechtstreeks met deze receiver');
-      }
+      selectTransport(receiver);
       const info = await readInfo();
+      assertReceiverIdentity(info, receiver);
       const refreshed = dependencies.recordFromInfo(info);
       dependencies.saveReceiver(refreshed);
       return refreshed;
@@ -305,8 +481,46 @@
         ? characteristic.writeValueWithResponse(bytes)
         : typeof characteristic.writeValue === 'function'
           ? characteristic.writeValue(bytes)
-          : Promise.reject(new Error('Bluetooth write-with-response ontbreekt'));
-      await withTimeout(operation, timeout, 'Bluetooth write timeout');
+          : Promise.reject(new Error('Beveiligd updateschrijven ontbreekt'));
+      await withTimeout(operation, timeout, 'Updateschrijven timeout');
+    }
+
+    async function postOtaControl(kind, message, timeout = 10000) {
+      if (!otaUsesWifi()) {
+        await writeWithResponse(gatt.control, encoder.encode(message), timeout);
+        return;
+      }
+      const adapter = wifiOta();
+      const handler = kind === 'begin' ? adapter?.otaBegin
+        : kind === 'commit' ? adapter?.otaCommit : adapter?.otaAbort;
+      if (typeof handler !== 'function') throw new Error('OTA_CAPACITY_UNKNOWN');
+      const queued = await withTimeout(handler.call(adapter, message), timeout, 'Updateschrijven timeout');
+      const status = Number(queued?.status || 0);
+      const fields = queued?.fields || queued || {};
+      if (![200, 202].includes(status) || String(fields.STATUS || '').toUpperCase() === 'ERROR') {
+        throw new Error(fields.DETAIL || 'Receiver weigerde de updateopdracht');
+      }
+    }
+
+    async function postOtaData(frame, timeout = 12000) {
+      if (!otaUsesWifi()) {
+        await writeWithResponse(gatt.data, frame, timeout);
+        return;
+      }
+      const adapter = wifiOta();
+      if (!adapter || typeof adapter.otaData !== 'function') throw new Error('OTA_CAPACITY_UNKNOWN');
+      const queued = await withTimeout(adapter.otaData(frame), timeout, 'Updateblok timeout');
+      const status = Number(queued?.status || 0);
+      const fields = queued?.fields || queued || {};
+      if (![200, 202].includes(status) || String(fields.STATUS || '').toUpperCase() === 'ERROR') {
+        throw new Error(fields.DETAIL || 'Receiver weigerde het updateblok');
+      }
+    }
+
+    async function readWifiOtaStatus(timeout = 3500) {
+      const adapter = wifiOta();
+      if (!adapter || typeof adapter.otaStatus !== 'function') throw new Error('OTA_TARGET_CONNECTION_REQUIRED');
+      return withTimeout(adapter.otaStatus(timeout), timeout + 250, 'OTA-status timeout');
     }
 
     function rejectWaiters(error) {
@@ -363,6 +577,46 @@
     }
 
     function waitForStatus(session, accepted, timeout = 10000, expectedNext = null) {
+      if (otaUsesWifi()) {
+        const acceptedStatuses = new Set(accepted.map((value) => String(value).toUpperCase()));
+        return (async () => {
+          const deadline = Date.now() + timeout;
+          let waitMs = 18;
+          while (Date.now() < deadline) {
+            const result = await readWifiOtaStatus(Math.min(3500, Math.max(400, deadline - Date.now())));
+            const fields = result?.fields || result || {};
+            const httpStatus = Number(result?.status || 200);
+            const status = String(fields.STATUS || '').toUpperCase();
+            if (httpStatus === 202 || status === 'QUEUED' || !status) {
+              await delay(waitMs);
+              waitMs = Math.min(90, Math.round(waitMs * 1.45));
+              continue;
+            }
+            if (Number(fields.V || 0) !== WIRE_VERSION ||
+                String(fields.SESSION || '').toUpperCase() !== sessionHex(session)) {
+              await delay(waitMs);
+              continue;
+            }
+            if (status === 'ERROR' || status === 'ABORTED') {
+              throw new Error(`Receiver weigerde de update: ${fields.DETAIL || status}`);
+            }
+            if (expectedNext !== null && status === 'NEXT') {
+              const next = Number(fields.NEXT);
+              if (!Number.isFinite(next) || next > expectedNext) {
+                throw new Error('Receiver bevestigde een onverwachte OTA-offset');
+              }
+              if (next < expectedNext) {
+                await delay(waitMs);
+                continue;
+              }
+              return fields;
+            }
+            if (acceptedStatuses.has(status)) return fields;
+            await delay(waitMs);
+          }
+          throw new Error('Geen OTA-bevestiging ontvangen');
+        })();
+      }
       return new Promise((resolve, reject) => {
         const waiter = {
           session,
@@ -390,12 +644,14 @@
       stream.buffer = '';
       stream.queue = [];
       rejectWaiters(new Error('Nieuwe OTA-sessie'));
+      if (otaUsesWifi()) return;
       gatt.status.removeEventListener('characteristicvaluechanged', onOtaStatus);
       gatt.status.addEventListener('characteristicvaluechanged', onOtaStatus);
       await withTimeout(gatt.status.startNotifications(), 5000, 'OTA notifications timeout');
     }
 
     async function stopNotifications() {
+      if (otaUsesWifi()) return;
       if (!gatt.status) return;
       try { gatt.status.removeEventListener('characteristicvaluechanged', onOtaStatus); } catch (_) {}
       if (getBle().connected && typeof gatt.status.stopNotifications === 'function') {
@@ -415,7 +671,8 @@
     }
 
     function dataFrame(session, offset, payload) {
-      if (!(payload instanceof Uint8Array) || !payload.length || payload.length > DATA_BYTES) {
+      const maximum = otaUsesWifi() ? HTTP_DATA_BYTES : DATA_BYTES;
+      if (!(payload instanceof Uint8Array) || !payload.length || payload.length > maximum) {
         throw new Error('Ongeldig OTA-datablok');
       }
       const frame = new Uint8Array(20 + payload.length);
@@ -433,9 +690,11 @@
 
     async function readCheckpoint(session) {
       try {
-        const fields = dependencies.parseFields(textOf(await withTimeout(
-          gatt.status.readValue(), 2500, 'OTA checkpoint timeout',
-        )));
+        const fields = otaUsesWifi()
+          ? ((await readWifiOtaStatus(2500))?.fields || {})
+          : dependencies.parseFields(textOf(await withTimeout(
+            gatt.status.readValue(), 2500, 'OTA checkpoint timeout',
+          )));
         if (Number(fields.V || 0) !== WIRE_VERSION ||
             String(fields.SESSION || '').toUpperCase() !== sessionHex(session)) return null;
         if (String(fields.STATUS || '').toUpperCase() === 'ERROR') {
@@ -455,19 +714,21 @@
       const frame = dataFrame(session, offset, payload);
       for (let attempt = 0; attempt <= DATA_RETRIES; attempt += 1) {
         try {
-          await writeWithResponse(gatt.data, frame, 9000);
+          await postOtaData(frame, otaUsesWifi() ? 12000 : 9000);
           await waitForStatus(session, ['NEXT'], 9000, expectedNext);
           return expectedNext;
         } catch (error) {
           const message = String(error?.message || error);
-          if (!/bevestiging|timeout|disconnected|verbinding|GATT/i.test(message) || !getBle().connected) throw error;
+          const transportAvailable = otaUsesWifi()
+            ? Boolean(wifiOta()?.otaTargetReady?.(job.rid)) : Boolean(getBle().connected);
+          if (!/bevestiging|timeout|disconnected|verbinding|GATT|antwoord|blok/i.test(message) || !transportAvailable) throw error;
           const checkpoint = await readCheckpoint(session);
           if (checkpoint === expectedNext) return expectedNext;
           if (checkpoint !== null && checkpoint > expectedNext) {
             throw new Error('Receiver rapporteerde een onverwachte OTA-offset');
           }
           if (attempt >= DATA_RETRIES) throw error;
-          updateJob(job, { detail: `Bluetooth-bevestiging opnieuw vragen (${attempt + 1}/${DATA_RETRIES})` });
+          updateJob(job, { detail: `Updatebevestiging opnieuw vragen (${attempt + 1}/${DATA_RETRIES})` });
         }
       }
       throw new Error('Receiver bevestigde het OTA-blok niet');
@@ -483,26 +744,92 @@
       return false;
     }
 
+    function sha256Fallback(bytes) {
+      const constants = new Uint32Array([
+        0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+        0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+        0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+        0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+        0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+        0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+        0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+        0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+      ]);
+      const initial = new Uint32Array([
+        0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,
+        0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19
+      ]);
+      const paddedLength = Math.ceil((bytes.length + 9) / 64) * 64;
+      const padded = new Uint8Array(paddedLength);
+      padded.set(bytes);
+      padded[bytes.length] = 0x80;
+      const bitLength = bytes.length * 8;
+      const tail = new DataView(padded.buffer);
+      tail.setUint32(paddedLength - 8, Math.floor(bitLength / 0x100000000), false);
+      tail.setUint32(paddedLength - 4, bitLength >>> 0, false);
+      const words = new Uint32Array(64);
+      const rotateRight = (value, count) => (value >>> count) | (value << (32 - count));
+      for (let offset = 0; offset < paddedLength; offset += 64) {
+        const view = new DataView(padded.buffer, offset, 64);
+        for (let index = 0; index < 16; index += 1) words[index] = view.getUint32(index * 4, false);
+        for (let index = 16; index < 64; index += 1) {
+          const a = words[index - 15];
+          const b = words[index - 2];
+          const s0 = rotateRight(a, 7) ^ rotateRight(a, 18) ^ (a >>> 3);
+          const s1 = rotateRight(b, 17) ^ rotateRight(b, 19) ^ (b >>> 10);
+          words[index] = (words[index - 16] + s0 + words[index - 7] + s1) >>> 0;
+        }
+        let [a,b,c,d,e,f,g,h] = initial;
+        for (let index = 0; index < 64; index += 1) {
+          const s1 = rotateRight(e, 6) ^ rotateRight(e, 11) ^ rotateRight(e, 25);
+          const choice = (e & f) ^ (~e & g);
+          const t1 = (h + s1 + choice + constants[index] + words[index]) >>> 0;
+          const s0 = rotateRight(a, 2) ^ rotateRight(a, 13) ^ rotateRight(a, 22);
+          const majority = (a & b) ^ (a & c) ^ (b & c);
+          const t2 = (s0 + majority) >>> 0;
+          h=g; g=f; f=e; e=(d+t1)>>>0; d=c; c=b; b=a; a=(t1+t2)>>>0;
+        }
+        initial[0]=(initial[0]+a)>>>0; initial[1]=(initial[1]+b)>>>0;
+        initial[2]=(initial[2]+c)>>>0; initial[3]=(initial[3]+d)>>>0;
+        initial[4]=(initial[4]+e)>>>0; initial[5]=(initial[5]+f)>>>0;
+        initial[6]=(initial[6]+g)>>>0; initial[7]=(initial[7]+h)>>>0;
+      }
+      return Array.from(initial, (value) => value.toString(16).padStart(8, '0')).join('');
+    }
+
+    async function sha256Hex(bytes) {
+      if (crypto?.subtle?.digest) {
+        try {
+          return Array.from(
+            new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)),
+            (byte) => byte.toString(16).padStart(2, '0')
+          ).join('');
+        } catch (_) {}
+      }
+      return sha256Fallback(bytes);
+    }
+
     async function firmwareBytes(artifact) {
       const trusted = validateArtifact(artifact);
       if (!trusted) throw new Error('Ongeldige of niet-vertrouwde firmwarecatalogus');
-      const catalogUrl = new URL(CATALOG_URL, location.href);
+      const catalogUrl = new URL(artifactSources.get(trusted.id) || LOCAL_CATALOG_URL, location.href);
       const firmwareUrl = new URL(trusted.file, catalogUrl);
-      if (firmwareUrl.origin !== location.origin || !firmwareUrl.pathname.endsWith('.app.bin')) {
+      const trustedOrigin = firmwareUrl.origin === location.origin ||
+        (firmwareUrl.protocol === 'https:' && firmwareUrl.origin === REMOTE_CATALOG_ORIGIN);
+      if (!trustedOrigin || firmwareUrl.origin !== catalogUrl.origin || !firmwareUrl.pathname.endsWith('.app.bin')) {
         throw new Error('Ongeldige firmwarelocatie');
       }
       const response = await dependencies.nativeFetch(firmwareUrl, {
-        cache: 'no-store', credentials: 'same-origin',
+        cache: 'no-store',
+        credentials: firmwareUrl.origin === location.origin ? 'same-origin' : 'omit',
+        mode: firmwareUrl.origin === location.origin ? 'same-origin' : 'cors',
       });
       if (!response.ok) throw new Error(`Firmware downloaden mislukt (${response.status})`);
       const contentLength = Number(response.headers.get('content-length') || 0);
       if (contentLength && contentLength !== trusted.size) throw new Error('Firmwaregrootte komt niet overeen');
       const bytes = new Uint8Array(await response.arrayBuffer());
       if (bytes.length !== trusted.size || bytes[0] !== 0xE9) throw new Error('Ongeldige ESP32-applicatiefirmware');
-      const digest = Array.from(
-        new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)),
-        (byte) => byte.toString(16).padStart(2, '0'),
-      ).join('');
+      const digest = await sha256Hex(bytes);
       if (digest !== trusted.sha256) throw new Error('SHA-256 firmwarecontrole mislukt');
       if (!containsBytes(bytes, encoder.encode(trusted.identityMarker))) {
         throw new Error('De firmware-identiteit past niet bij deze receiver');
@@ -511,11 +838,8 @@
     }
 
     function preflight(info, receiver, artifact) {
-      if (exactRid(info.RID) !== exactRid(receiver.rid) ||
-          String(info.DEVTYPE || '').toUpperCase() !== artifact.receiverType ||
-          String(info.MODEL || '').toUpperCase() !== artifact.model ||
-          String(info.BOARD || '').toUpperCase() !== artifact.board) throw new Error('OTA_PROFILE');
-      if (!['1', 'BLE1'].includes(String(info.OTA || '').toUpperCase()) ||
+      assertReceiverIdentity(info, receiver, artifact);
+      if (!['1', 'BLE1', 'HTTP1', 'WIFI1'].includes(String(info.OTA || '').toUpperCase()) ||
           Number(info.OTAV || 0) !== WIRE_VERSION) throw new Error('OTA_CAPACITY_UNKNOWN');
       const capacity = Number(info.OTAMAX || 0);
       if (!Number.isFinite(capacity) || capacity < MIN_RELIABLE_CAPACITY) throw new Error('OTA_CAPACITY_UNKNOWN');
@@ -524,11 +848,14 @@
     }
 
     async function abortBeforeCommit(job, receiver) {
-      if (!stream.session || job.committed || !getBle().connected || !gatt.control) return;
+      if (!stream.session || job.committed) return;
+      if (otaUsesWifi()) {
+        if (!wifiOta()?.otaTargetReady?.(receiver.rid)) return;
+      } else if (!getBle().connected || !gatt.control) return;
       try {
-        await writeWithResponse(gatt.control, encoder.encode(controlMessage(
+        await postOtaControl('abort', controlMessage(
           'OTA_ABORT', stream.session, { TARGET: receiver.rid },
-        )), 3000);
+        ), 3000);
       } catch (_) {}
     }
 
@@ -539,16 +866,23 @@
       while (Date.now() < deadline) {
         try {
           let info;
-          if (!device.gatt.connected) info = await withTimeout(
-            dependencies.attachDevice(device), 7000, 'Receiver opnieuw verbinden timeout',
-          );
-          else info = await readInfo();
-          const ble = getBle();
-          ble.rid = exactRid(info.RID);
-          ble.receiverType = String(info.DEVTYPE || '').toUpperCase() === 'RGBW' ? 'RGBW' : 'SPI';
-          if ([exactRid(info.RID), String(info.DEVTYPE || '').toUpperCase(),
-               String(info.MODEL || '').toUpperCase(), String(info.BOARD || '').toUpperCase()].join('|') !==
-              [receiver.rid, artifact.receiverType, artifact.model, artifact.board].join('|')) throw new Error('OTA_PROFILE');
+          if (otaUsesWifi()) {
+            const adapter = wifiOta();
+            if (!adapter) throw new Error('Privéverbinding nog niet beschikbaar');
+            if (typeof adapter.connect === 'function') await withTimeout(
+              adapter.connect({ interactive: false }), 7000, 'Receiver opnieuw verbinden timeout'
+            );
+            info = await readInfo();
+          } else {
+            if (!device.gatt.connected) info = await withTimeout(
+              dependencies.attachDevice(device), 7000, 'Receiver opnieuw verbinden timeout',
+            );
+            else info = await readInfo();
+            const ble = getBle();
+            ble.rid = exactRid(info.RID);
+            ble.receiverType = String(info.DEVTYPE || '').toUpperCase() === 'RGBW' ? 'RGBW' : 'SPI';
+          }
+          assertReceiverIdentity(info, receiver, artifact);
           const state = String(info.OTASTATE || info.BOOTSTATE || '').toUpperCase();
           if (state === 'ROLLED_BACK') throw new Error('OTA_ROLLBACK');
           if (String(info.FWVER || '') !== artifact.version ||
@@ -564,8 +898,10 @@
         } catch (error) {
           if (/OTA_PROFILE|OTA_ROLLBACK/.test(String(error?.message || error))) throw error;
           lastError = error;
-          try { if (device.gatt.connected) device.gatt.disconnect(); } catch (_) {}
-          getBle().connected = false;
+          if (!otaUsesWifi()) {
+            try { if (device?.gatt?.connected) device.gatt.disconnect(); } catch (_) {}
+            getBle().connected = false;
+          }
           await delay(800);
         }
       }
@@ -578,9 +914,10 @@
       if (/OTA_TOO_LARGE|IMAGE_TOO_LARGE/.test(message)) return 'Deze firmware past niet in de inactieve updatepartitie. Werk de receiver via USB bij.';
       if (/OTA_PROFILE|WRONG_FIRMWARE_TYPE/.test(message)) return 'De verbonden receiver past niet exact bij deze firmware. Er is niets geïnstalleerd.';
       if (/OTA_ROLLBACK/.test(message)) return 'De nieuwe firmware slaagde niet voor de zelftest. De receiver heeft zichzelf veilig teruggezet.';
+      if (/OTA_TARGET_CONNECTION_REQUIRED/.test(message)) return 'Verbind tijdelijk met het ALUVISION-netwerk van precies deze receiver en probeer opnieuw.';
       if (/disconnected|GATT|timeout|bevestiging|verbinding/i.test(message)) return committed
         ? 'De firmware is verzonden, maar de veilige herstart kon niet worden bevestigd. Verbind de receiver opnieuw om de versie te controleren.'
-        : 'De Bluetoothverbinding viel weg. Zet de receiver dichtbij en probeer opnieuw.';
+        : 'De updateverbinding viel weg. Zet de receiver dichtbij en probeer opnieuw.';
       return message.replace(/^Receiver weigerde de update:\s*/i, 'Receiver stopte de update: ');
     }
 
@@ -594,9 +931,9 @@
     }
 
     async function run(job, receiver, artifact) {
-      updateJob(job, { state: 'running', phase: 'connecting', progress: 1, detail: 'Directe Bluetooth-verbinding controleren' });
+      updateJob(job, { state: 'running', phase: 'connecting', progress: 1, detail: 'Beveiligde updateverbinding controleren' });
       await acquireWakeLock();
-      const device = getBle().device;
+      const device = otaUsesWifi() ? null : getBle().device;
       let image = null;
       let notifications = false;
       try {
@@ -617,7 +954,8 @@
         // OTA_ARM uses the same serialized transport; new light commands stay
         // blocked until this job reaches a final state.
         const arm = await dependencies.transact({
-          TYPE: 'OTA_ARM', KEY: dependencies.getNetworkKey(), TARGET: receiver.rid, WINDOWMS: 120000,
+          TYPE: 'OTA_ARM', KEY: dependencies.getNetworkKey(), TARGET: receiver.rid,
+          DEVTYPE: artifact.receiverType, WINDOWMS: 120000,
         }, 9000, true);
         const armTarget = exactRid(arm.TARGETRID || arm.TARGET);
         if (arm.STATUS !== 'OK' || arm.DETAIL !== 'OTA_ARMED' ||
@@ -636,15 +974,18 @@
           BOARD: artifact.board, VERSION: artifact.version, VARIANT: artifact.variant,
           SIZE: artifact.size, SHA256: artifact.sha256,
         });
-        await writeWithResponse(gatt.control, encoder.encode(begin), 10000);
+        await postOtaControl('begin', begin, 10000);
         const ready = await waitForStatus(stream.session, ['READY'], 10000);
         if (Number(ready.NEXT) !== 0) throw new Error('Receiver start de update niet op byte nul');
 
         let offset = 0;
-        updateJob(job, { phase: 'uploading', progress: 3, detail: 'Firmware rechtstreeks via Bluetooth versturen' });
+        updateJob(job, { phase: 'uploading', progress: 3, detail: 'Firmware beveiligd naar de receiver versturen' });
+        const blockSize = otaUsesWifi()
+          ? Math.min(HTTP_DATA_BYTES, Number(wifiOta()?.otaMaxChunk) || HTTP_DATA_BYTES)
+          : DATA_BYTES;
         while (offset < image.length) {
           if (job.cancelRequested) throw new Error('OTA_CANCELLED');
-          const payload = image.slice(offset, Math.min(offset + DATA_BYTES, image.length));
+          const payload = image.slice(offset, Math.min(offset + blockSize, image.length));
           offset = await writeBlock(job, stream.session, offset, payload);
           const progress = Math.min(96, 3 + Math.floor(offset * 93 / image.length));
           updateJob(job, { progress, bytesSent: offset, detail: `Firmware versturen · ${progress}%` });
@@ -655,15 +996,19 @@
         updateJob(job, { phase: 'verifying', progress: 97, bytesSent: image.length, detail: 'Firmware en identiteit controleren', cancelAllowed: false });
         job.committed = true;
         const commit = controlMessage('OTA_COMMIT', stream.session, { TARGET: receiver.rid });
-        await writeWithResponse(gatt.control, encoder.encode(commit), 10000);
-        await waitForStatus(stream.session, ['VERIFIED'], 20000);
+        await postOtaControl('commit', commit, 10000);
+        await waitForStatus(stream.session, otaUsesWifi() ? ['VERIFIED', 'REBOOTING'] : ['VERIFIED'], 20000);
         updateJob(job, { phase: 'rebooting', progress: 98, detail: 'Receiver herstart met de nieuwe firmware' });
-        try { await waitForStatus(stream.session, ['REBOOTING'], 4000); } catch (_) {}
+        if (!otaUsesWifi()) {
+          try { await waitForStatus(stream.session, ['REBOOTING'], 4000); } catch (_) {}
+        }
         await stopNotifications();
         notifications = false;
         await delay(1200);
-        try { if (device.gatt.connected) device.gatt.disconnect(); } catch (_) {}
-        getBle().connected = false;
+        if (!otaUsesWifi()) {
+          try { if (device?.gatt?.connected) device.gatt.disconnect(); } catch (_) {}
+          getBle().connected = false;
+        }
 
         updateJob(job, { phase: 'reconnecting', progress: 99, detail: 'Nieuwe versie en veilige opstart bevestigen' });
         const verified = await reconnectAndVerify(device, receiver, artifact);
@@ -715,12 +1060,11 @@
       const exact = exactRid(rid);
       const receiver = dependencies.getReceiver(exact);
       const artifact = artifacts.find((item) => item.id === String(artifactId || '').toLowerCase());
-      const ble = getBle();
       if (!exact || !receiver) throw new Error('Receiver is niet gekoppeld');
       if (!artifact) throw new Error('Firmwareversie staat niet in de lokale catalogus');
       if (artifact.variant === 'TEMP_BLE_PAIRING' && development !== true) throw new Error('Tijdelijke ontwikkelfirmware vereist een expliciete ontwikkelkeuze');
       if (artifact.receiverType !== String(receiver.receiverType || '').toUpperCase()) throw new Error('Firmwaretype komt niet overeen met de receiver');
-      if (!ble.connected || exactRid(ble.rid) !== exact) throw new Error('Verbind eerst rechtstreeks met deze receiver');
+      selectTransport(receiver);
       const release = releaseFor(receiver);
       if (release.state !== 'update_available' || release.latest?.id !== artifact.id) throw new Error(release.reason || 'Deze firmwarebuild kan niet veilig worden geïnstalleerd');
       const now = Date.now() / 1000;
@@ -735,13 +1079,16 @@
         createdAt: now, updatedAt: now,
       };
       jobs.set(job.id, job);
+      persistJobs(true);
       activeJobId = job.id;
       void run(job, receiver, artifact);
       return publicJob(job);
     }
 
     function status(jobId) {
-      const job = jobs.get(String(jobId || ''));
+      const requested = String(jobId || '');
+      const job = requested ? jobs.get(requested) : [...jobs.values()]
+        .sort((left, right) => Number(right.updatedAt || 0) - Number(left.updatedAt || 0))[0];
       if (!job) throw new Error('Firmware-update niet gevonden');
       return publicJob(job);
     }
@@ -753,11 +1100,14 @@
       if (!job.cancelAllowed || job.committed) throw new Error('De update wordt al gecontroleerd en kan nu niet veilig stoppen');
       job.cancelRequested = true;
       updateJob(job, { detail: 'Annuleren wordt veilig afgerond' });
+      persistJobs(true);
       return publicJob(job);
     }
 
     function onDisconnected() {
-      rejectWaiters(new Error(currentJob()?.committed ? 'OTA_REBOOT_DISCONNECT' : 'Bluetooth disconnected'));
+      if (!otaUsesWifi()) {
+        rejectWaiters(new Error(currentJob()?.committed ? 'OTA_REBOOT_DISCONNECT' : 'Updateverbinding verbroken'));
+      }
     }
 
     async function handle(path, body = {}) {
@@ -779,7 +1129,7 @@
         try {
           return { status: 202, body: { ok: true, job: await start(body.rid, body.artifactId, body.development === true) } };
         } catch (error) {
-          const conflict = /loopt al|rechtstreeks/.test(String(error?.message || error));
+          const conflict = /loopt al|updateverbinding/.test(String(error?.message || error));
           return failure(conflict ? 409 : 400, error);
         }
       }

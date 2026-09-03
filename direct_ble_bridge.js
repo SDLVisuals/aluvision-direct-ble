@@ -4,9 +4,10 @@
  * The user interface in index.html is the exact document served by the local
  * Aluvision app.  This bridge replaces only its localhost JSON endpoints, so
  * the same interface can run as a static GitHub Pages PWA and talk directly to
- * V18 receivers through Web Bluetooth.  Receiver-to-receiver delivery remains
- * ESP-NOW: the connected receiver is the gateway for commands addressed to a
- * different RID.
+ * receivers through a replaceable controller transport.  The production path
+ * is a local Wi-Fi AP gateway; the original Web-Bluetooth link remains a
+ * deliberately hidden recovery adapter until the AP firmware is proven on
+ * hardware. Receiver-to-receiver delivery remains ESP-NOW.
  */
 (() => {
   'use strict';
@@ -23,9 +24,19 @@
   const MAX_APP_STATE_BYTES = 2 * 1024 * 1024;
   const COMMAND_ACTIONS = new Set([
     'LIVE', 'SAVE', 'STATUS', 'CONFIG', 'IDENTIFY', 'CALIBRATE',
-    'CALIBRATE_FILL', 'CALIBRATE_CLEAR', 'UNPAIR'
+    'CALIBRATE_FILL', 'CALIBRATE_END', 'CALIBRATE_START',
+    'CALIBRATE_CLEAR', 'UNPAIR'
   ]);
-  const LATEST_ONLY_ACTIONS = new Set(['LIVE', 'CALIBRATE', 'CALIBRATE_FILL']);
+  const CALIBRATION_ACTIONS = new Set([
+    'CALIBRATE', 'CALIBRATE_FILL', 'CALIBRATE_END', 'CALIBRATE_START'
+  ]);
+  const LATEST_ONLY_ACTIONS = new Set(['LIVE', ...CALIBRATION_ACTIONS]);
+  const PRIMARY_TRANSPORT = 'wifi-ap';
+  const RECOVERY_TRANSPORT = 'ble-recovery';
+  const TARGET_FAILURE_LIMIT = 2;
+  const TARGET_CIRCUIT_MS = 6000;
+  const MAX_CONCURRENT_TARGETS = 4;
+  const CONNECT_TIMEOUT_MS = 7000;
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
   const nativeFetch = window.fetch.bind(window);
@@ -34,7 +45,10 @@
   let notificationBuffer = '';
   let commandSequence = Math.floor(Date.now() % 900000000) || 1;
   let commandTail = Promise.resolve();
+  let recoveryConnectPromise = null;
   const phaseClocks = new Map();
+  const targetHealth = new Map();
+  const transportAdapters = new Map();
   let otaController = null;
 
   const ble = {
@@ -46,20 +60,35 @@
     connected: false,
     rid: '',
     receiverType: 'SPI',
-    fields: {}
+    fields: {},
+    connectionState: 'idle',
+    lastError: '',
+    connectedAt: 0,
+    disconnectedAt: 0
   };
+
+  function withTimeout(promise, milliseconds, message) {
+    let timer = 0;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(message)), milliseconds);
+    });
+    return Promise.race([Promise.resolve(promise), timeout]).finally(() => clearTimeout(timer));
+  }
 
   function clamp(value, minimum, maximum, fallback = minimum) {
     const parsed = Number(value);
     return Math.max(minimum, Math.min(maximum, Number.isFinite(parsed) ? Math.round(parsed) : fallback));
   }
 
-  function randomHex64() {
-    const bytes = new Uint8Array(8);
+  function randomHex(byteLength = 8) {
+    const bytes = new Uint8Array(byteLength);
     crypto.getRandomValues(bytes);
-    if (bytes.every((value) => value === 0)) bytes[7] = 1;
+    if (bytes.every((value) => value === 0)) bytes[bytes.length - 1] = 1;
     return Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('').toUpperCase();
   }
+
+  function randomHex64() { return randomHex(8); }
+  function randomHex256() { return randomHex(32); }
 
   function loadBridge() {
     try {
@@ -67,7 +96,19 @@
       if (saved && typeof saved === 'object') {
         saved.receivers ||= {};
         saved.browserDeviceIds ||= {};
-        saved.networkKey = /^[0-9A-F]{16}$/.test(saved.networkKey || '') ? saved.networkKey : randomHex64();
+        const storedNetworkKey = String(saved.networkKey || '').toUpperCase();
+        const storedMasterSecret = String(saved.masterSecret || '').toUpperCase();
+        const storedPublicTag = String(saved.publicTag || '').toUpperCase();
+        const legacyKey = /^[0-9A-F]{16}$/.test(storedNetworkKey) ? storedNetworkKey : '';
+        saved.masterSecret = /^[0-9A-F]{64}$/.test(storedMasterSecret)
+          ? storedMasterSecret : randomHex256();
+        // Existing receivers continue to understand their 64-bit network key.
+        // New installations also get that compatibility key independently; it
+        // is never reused as, or displayed as, the 256-bit master secret.
+        saved.networkKey = legacyKey || randomHex64();
+        saved.publicTag = /^[0-9A-F]{6}$/.test(storedPublicTag) ? storedPublicTag : randomHex(3);
+        saved.secretVersion = 2;
+        saved.legacyKeyMigrated = Boolean(legacyKey);
         saved.revision = clamp(saved.revision, 0, Number.MAX_SAFE_INTEGER, 0);
         saved.preferredGatewayRid = /^[0-9A-F]{16}$/.test(saved.preferredGatewayRid || '') &&
           saved.receivers[saved.preferredGatewayRid] ? saved.preferredGatewayRid : '';
@@ -75,7 +116,8 @@
       }
     } catch (_) {}
     return {
-      networkKey: randomHex64(), receivers: {}, browserDeviceIds: {},
+      masterSecret: randomHex256(), networkKey: randomHex64(), publicTag: randomHex(3),
+      secretVersion: 2, legacyKeyMigrated: false, receivers: {}, browserDeviceIds: {},
       preferredGatewayRid: '', revision: 0, sharedState: null
     };
   }
@@ -83,8 +125,17 @@
   const bridge = loadBridge();
 
   function persistBridge() {
-    localStorage.setItem(BRIDGE_KEY, JSON.stringify(bridge));
+    try {
+      localStorage.setItem(BRIDGE_KEY, JSON.stringify(bridge));
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
+
+  // Commit an old 64-bit-only record as the v2 accountless installation
+  // envelope immediately, without exposing any secret through an API.
+  persistBridge();
 
   function removeLegacyReceiver216(state) {
     if (!state || typeof state !== 'object') return false;
@@ -110,7 +161,10 @@
     if (removeLegacyReceiver216(bridge.sharedState)) persistBridge();
   }
 
-  const forbiddenStateKeys = new Set(['__proto__', 'prototype', 'constructor', 'networkKey']);
+  const forbiddenStateKeys = new Set([
+    '__proto__', 'prototype', 'constructor', 'networkKey', 'masterSecret',
+    'installationSecret', 'compatibilityKey'
+  ]);
   const transientStateKeys = new Set(['previewStartedAt', 'token', 'rawInfo', 'sessionToken', 'auth']);
   const transientRootKeys = new Set(['transportStatus', 'discovery', 'liveStatus']);
   const transientDeviceKeys = new Set([
@@ -290,6 +344,9 @@
       hardwareId: receiver.hardwareId || `ALV-${rid.slice(-6)}`,
       number: clamp(receiver.number, 1, 250, 1),
       name: `Receiver ${clamp(receiver.number, 1, 250, 1)}`,
+      shortTag: rid.slice(-4),
+      displayName: `Receiver ${clamp(receiver.number, 1, 250, 1)} · ${rid.slice(-4)}`,
+      installationTag: bridge.publicTag,
       receiverType: type,
       pixels: type === 'RGBW' ? 1 : clamp(receiver.pixels, 1, 1024, 60),
       portCount: type === 'RGBW' ? 2 : 1,
@@ -300,7 +357,7 @@
       firmwareVariant: receiver.firmwareVariant || '', build: receiver.build || '',
       model: receiver.model || '', board: receiver.board || '',
       otaCapable: Boolean(receiver.otaCapable), otaProtocol: Number(receiver.otaProtocol || 0),
-      otaMaxBytes: Number(receiver.otaMaxBytes || 0), transport: 'BLE_ESPNOW', online: false,
+      otaMaxBytes: Number(receiver.otaMaxBytes || 0), transport: 'WIFI_AP_ESPNOW', online: false,
       reachableViaGateway: false, gateway: false, fps: 0
     };
   }
@@ -445,7 +502,7 @@
   }
 
   async function writeCommand(text) {
-    if (!ble.connected || !ble.command) throw new Error('Bluetoothverbinding is gesloten');
+    if (!ble.connected || !ble.command) throw new Error('Recoveryverbinding is gesloten');
     const bytes = encoder.encode(`${text}\n`);
     for (let offset = 0; offset < bytes.length; offset += 150) {
       const chunk = bytes.slice(offset, offset + 150);
@@ -479,28 +536,47 @@
     }
   }
 
-  function transact(fields, timeout = 3200, allowError = false) {
+  function transactBle(fields, timeout = 3200, allowError = false) {
     const run = () => transactNow(fields, timeout, allowError);
     const next = commandTail.then(run, run);
     commandTail = next.catch(() => {});
     return next;
   }
 
+  async function transact(fields, timeout = 3200, allowError = false) {
+    const selected = activeAdapter();
+    if (selected?.name === PRIMARY_TRANSPORT) {
+      const reply = await withTimeout(
+        selected.adapter.transact({ ...fields }, { timeout, allowError }),
+        timeout + 500,
+        'Controller antwoordde niet op tijd'
+      );
+      const parsed = normaliseTransportReply(reply);
+      if (!allowError && parsed.STATUS === 'ERROR') throw new Error(parsed.DETAIL || 'Receiverfout');
+      return parsed;
+    }
+    return transactBle(fields, timeout, allowError);
+  }
+
   function onDisconnected() {
     otaController?.onDisconnected();
     ble.connected = false;
+    ble.connectionState = 'offline';
+    ble.disconnectedAt = Date.now();
     ble.server = null;
     ble.command = null;
     ble.status = null;
     ble.info = null;
     ackWaiters.forEach((pending) => {
       clearTimeout(pending.timer);
-      pending.reject(new Error('Bluetoothverbinding is gesloten'));
+      pending.reject(new Error('Recoveryverbinding is gesloten'));
     });
     ackWaiters.clear();
   }
 
   async function attachDevice(device) {
+    ble.connectionState = 'connecting';
+    ble.lastError = '';
     if (ble.device && ble.device !== device) {
       try { ble.device.removeEventListener?.('gattserverdisconnected', onDisconnected); } catch (_) {}
       if (ble.device.gatt?.connected) {
@@ -512,25 +588,37 @@
     }
     try { device.removeEventListener?.('gattserverdisconnected', onDisconnected); } catch (_) {}
     device.addEventListener('gattserverdisconnected', onDisconnected);
-    const server = device.gatt.connected && ble.device === device && ble.server
-      ? ble.server : await device.gatt.connect();
-    const service = await server.getPrimaryService(UUIDS.service);
-    const [command, status, info] = await Promise.all([
-      service.getCharacteristic(UUIDS.command),
-      service.getCharacteristic(UUIDS.status),
-      service.getCharacteristic(UUIDS.info)
-    ]);
-    ble.device = device;
-    ble.server = server;
-    ble.command = command;
-    ble.status = status;
-    ble.info = info;
-    ble.fields = {};
-    ble.connected = true;
-    notificationBuffer = '';
-    status.addEventListener('characteristicvaluechanged', onStatus);
-    await status.startNotifications();
-    return parseFields(valueText(await info.readValue()));
+    try {
+      const server = device.gatt.connected && ble.device === device && ble.server
+        ? ble.server : await withTimeout(device.gatt.connect(), CONNECT_TIMEOUT_MS, 'Controllerverbinding timeout');
+      const service = await withTimeout(
+        server.getPrimaryService(UUIDS.service), CONNECT_TIMEOUT_MS, 'Controllerservice timeout'
+      );
+      const [command, status, info] = await withTimeout(Promise.all([
+        service.getCharacteristic(UUIDS.command),
+        service.getCharacteristic(UUIDS.status),
+        service.getCharacteristic(UUIDS.info)
+      ]), CONNECT_TIMEOUT_MS, 'Controllerkanalen timeout');
+      ble.device = device;
+      ble.server = server;
+      ble.command = command;
+      ble.status = status;
+      ble.info = info;
+      ble.fields = {};
+      ble.connected = true;
+      ble.connectionState = 'ready';
+      ble.connectedAt = Date.now();
+      notificationBuffer = '';
+      status.addEventListener('characteristicvaluechanged', onStatus);
+      await withTimeout(status.startNotifications(), 5000, 'Controllerstatus timeout');
+      return parseFields(valueText(await withTimeout(info.readValue(), 4000, 'Controllerinformatie timeout')));
+    } catch (error) {
+      ble.connectionState = 'error';
+      ble.lastError = String(error?.message || error);
+      ble.connected = false;
+      try { if (device?.gatt?.connected) device.gatt.disconnect(); } catch (_) {}
+      throw error;
+    }
   }
 
   function exactRid(value) {
@@ -538,25 +626,101 @@
     return /^[0-9A-F]{16}$/.test(rid) ? rid : '';
   }
 
-  function deviceRecord(fields, pairReply = {}) {
-    const merged = { ...fields, ...pairReply, ...ble.fields };
+  function normaliseTransportName(value) {
+    return String(value || '').trim().toLowerCase();
+  }
+
+  function adapterReady(adapter) {
+    if (!adapter) return false;
+    try {
+      if (typeof adapter.isReady === 'function') return Boolean(adapter.isReady());
+      if ('ready' in adapter) return Boolean(adapter.ready);
+      if ('connected' in adapter) return Boolean(adapter.connected);
+    } catch (_) {}
+    return false;
+  }
+
+  function registerTransport(name, adapter) {
+    const key = normaliseTransportName(name);
+    if (!key || !adapter || typeof adapter.transact !== 'function') {
+      throw new TypeError('Een transportadapter vereist een naam en transact-functie');
+    }
+    transportAdapters.set(key, adapter);
+    if (typeof adapter.configureSecurity === 'function') {
+      try {
+        const configured = adapter.configureSecurity(Object.freeze({
+          version: 2,
+          masterSecret: bridge.masterSecret,
+          compatibilityKey: bridge.networkKey,
+          publicTag: bridge.publicTag
+        }));
+        Promise.resolve(configured).catch(() => {});
+      } catch (_) {}
+    }
+    return () => { if (transportAdapters.get(key) === adapter) transportAdapters.delete(key); };
+  }
+
+  function primaryAdapter() {
+    return transportAdapters.get(PRIMARY_TRANSPORT) || null;
+  }
+
+  function activeAdapter() {
+    const primary = primaryAdapter();
+    if (adapterReady(primary)) return { name: PRIMARY_TRANSPORT, adapter: primary };
+    if (ble.connected && ble.command) return { name: RECOVERY_TRANSPORT, adapter: null };
+    return null;
+  }
+
+  async function connectPrimaryTransport(interactive = false) {
+    const adapter = primaryAdapter();
+    if (!adapter) return false;
+    if (adapterReady(adapter)) return true;
+    if (typeof adapter.connect !== 'function') return false;
+    try {
+      await withTimeout(
+        adapter.connect({ interactive: Boolean(interactive) }),
+        CONNECT_TIMEOUT_MS,
+        'Controllerverbinding timeout'
+      );
+    } catch (_) { return false; }
+    return adapterReady(adapter);
+  }
+
+  function normaliseTransportReply(value) {
+    if (typeof value === 'string') return parseFields(value);
+    if (value?.reply && typeof value.reply === 'object') return value.reply;
+    if (value && typeof value === 'object') return value;
+    throw new Error('Controller gaf een ongeldig antwoord');
+  }
+
+  function deviceRecord(fields, pairReply = {}, sessionFields = ble.fields) {
+    const merged = { ...fields, ...pairReply, ...sessionFields };
     const rid = exactRid(fields.RID || pairReply.RID || merged.TARGETRID);
     if (!rid) throw new Error('Ongeldige receiveridentiteit');
-    const receiverType = String(merged.DEVTYPE || 'SPI').toUpperCase() === 'RGBW' ? 'RGBW' : 'SPI';
+    const declaredType = String(merged.DEVTYPE || '').toUpperCase();
+    if (!['SPI', 'RGBW'].includes(declaredType)) throw new Error('Onbekend receivertype');
+    const receiverType = declaredType;
     const previous = bridge.receivers[rid] || {};
+    if (previous.receiverType && previous.receiverType !== receiverType) {
+      throw new Error('Receivertype komt niet overeen met de eerder gekoppelde receiver');
+    }
     const number = clamp(merged.NUMBER || previous.number, 1, 250, 1);
     return {
       ...previous,
       id: `rx-${rid.toLowerCase()}`, rid,
       hardwareId: merged.HWID || previous.hardwareId || `ALV-${rid.slice(-6)}`,
       name: `Receiver ${number}`, number, receiverType,
+      shortTag: rid.slice(-4),
+      displayName: `Receiver ${number} · ${rid.slice(-4)}`,
+      installationTag: bridge.publicTag,
       firmware: `V${String(merged.V || previous.firmware || '18').replace(/^V/i, '')}`,
       firmwareVersion: merged.FWVER || previous.firmwareVersion || '',
       firmwareVariant: String(merged.FWVARIANT || previous.firmwareVariant || '').toUpperCase(),
       build: merged.BUILD || previous.build || '',
       model: String(merged.MODEL || previous.model || '').toUpperCase(),
       board: String(merged.BOARD || previous.board || '').toUpperCase(),
-      otaCapable: merged.OTA == null ? Boolean(previous.otaCapable) : ['1', 'BLE1'].includes(String(merged.OTA).toUpperCase()),
+      otaCapable: merged.OTA == null ? Boolean(previous.otaCapable) :
+        ['1', 'BLE1', 'HTTP1', 'WIFI1'].includes(String(merged.OTA).toUpperCase()),
       otaProtocol: Number(merged.OTAV || previous.otaProtocol || 0),
       otaMaxBytes: Number(merged.OTAMAX || previous.otaMaxBytes || 0),
       otaState: String(merged.OTASTATE || previous.otaState || '').toUpperCase(),
@@ -565,17 +729,23 @@
       port1Rid: exactRid(merged.PORT1RID || previous.port1Rid),
       port2Rid: exactRid(merged.PORT2RID || previous.port2Rid),
       pixelConfiguration: receiverType !== 'RGBW',
+      // PHYSICAL is a saved receiver setting, never an auto-detected strip
+      // length. A different value must therefore start the setup wizard, not
+      // reject pairing or mark the hardware as incompatible.
       pixels: receiverType === 'RGBW' ? 1 : clamp(merged.PHYSICAL || previous.pixels, 1, 1024, 60),
+      reportedPixels: receiverType === 'RGBW' ? null : clamp(merged.PHYSICAL || previous.reportedPixels || previous.pixels, 1, 1024, 60),
+      pixelCountSource: receiverType === 'RGBW' ? 'not_applicable' : 'saved_setting',
+      pixelCountMismatch: false,
       physicalReverse: String(merged.PHYSICALREVERSE ?? (previous.physicalReverse ? '1' : '0')) === '1',
       fps: Number(merged.FPS || 0), frame: merged.FRAME || '—', sample: merged.SAMPLE || '—',
-      transport: 'BLE_ESPNOW', online: true, gateway: true,
-      reachableViaGateway: true, reachability: 'ble_gateway', lastSeenMs: 0
+      transport: 'WIFI_AP_ESPNOW', online: true, gateway: true,
+      reachableViaGateway: true, reachability: 'gateway', lastSeenMs: 0
     };
   }
 
-  async function pairReceiver(number) {
+  async function pairReceiverRecovery(number) {
     if (!navigator.bluetooth) {
-      throw new Error('Open deze GitHub-link op iPhone in Bluefy om Bluetooth te gebruiken.');
+      throw new Error('Recoveryverbinding is niet beschikbaar op dit toestel.');
     }
     const device = await navigator.bluetooth.requestDevice({
       filters: [{ services: [UUIDS.service] }],
@@ -583,7 +753,7 @@
     });
     const info = await attachDevice(device);
     const rid = exactRid(info.RID);
-    if (!rid) throw new Error('De gekozen Bluetooth-receiver heeft geen geldig ID.');
+    if (!rid) throw new Error('De gekozen recoveryreceiver heeft geen geldig ID.');
     ble.rid = rid;
     ble.receiverType = info.DEVTYPE === 'RGBW' ? 'RGBW' : 'SPI';
     const existing = bridge.receivers[rid];
@@ -598,7 +768,7 @@
         NUMBER: clamp(existing?.number || number, 1, 250, 1)
       };
       if (ble.receiverType === 'RGBW') fields.PORTMASK = clamp(info.PORTMASK, 1, 3, 3);
-      pairReply = await transact(fields, 4200, true);
+      pairReply = await transactBle(fields, 4200, true);
       const replyRid = exactRid(pairReply.RID || pairReply.TARGETRID);
       const committed = pairReply.PAIRED === '1' && replyRid === rid &&
         ((pairReply.STATUS === 'OK' && pairReply.DETAIL === 'PAIRED') ||
@@ -606,7 +776,7 @@
       if (!committed) throw new Error(pairReply.DETAIL || 'Koppeling niet bevestigd');
     }
     try {
-      const status = await transact({ TYPE: 'STATUS', TARGET: rid, DEVTYPE: ble.receiverType }, 3600);
+      const status = await transactBle({ TYPE: 'STATUS', TARGET: rid, DEVTYPE: ble.receiverType }, 3600);
       receiveLine(Object.entries(status).map(([key, value]) => `${key}=${value}`).join(';'));
     } catch (_) {}
     const record = deviceRecord(info, pairReply);
@@ -616,6 +786,55 @@
     if (!bridge.preferredGatewayRid) bridge.preferredGatewayRid = rid;
     persistBridge();
     return record;
+  }
+
+  function fieldsFromTransport(raw = {}) {
+    const source = raw.device || raw.fields || raw;
+    return {
+      ...source,
+      RID: source.RID || source.rid,
+      HWID: source.HWID || source.hardwareId,
+      DEVTYPE: source.DEVTYPE || source.receiverType || source.type,
+      NUMBER: source.NUMBER || source.number,
+      PHYSICAL: source.PHYSICAL ?? source.pixels,
+      PHYSICALREVERSE: source.PHYSICALREVERSE ?? Number(Boolean(source.physicalReverse ?? source.reversed)),
+      PORTMASK: source.PORTMASK ?? source.portMask,
+      MODEL: source.MODEL || source.model,
+      BOARD: source.BOARD || source.board,
+      FWVER: source.FWVER || source.firmwareVersion,
+      FWVARIANT: source.FWVARIANT || source.firmwareVariant,
+      OTA: source.OTA ?? Number(Boolean(source.otaCapable)),
+      OTAV: source.OTAV ?? source.otaProtocol,
+      OTAMAX: source.OTAMAX ?? source.otaMaxBytes
+    };
+  }
+
+  async function pairReceiver(number) {
+    const adapter = primaryAdapter();
+    if (!adapter || typeof adapter.pair !== 'function') {
+      throw new Error('Maak eerst verbinding met de controller van deze installatie.');
+    }
+    if (!adapterReady(adapter)) await connectPrimaryTransport(true);
+    if (!adapterReady(adapter)) throw new Error('De controllerverbinding kon niet worden geopend.');
+    const raw = await withTimeout(
+      adapter.pair({
+        number: clamp(number, 1, 250, 1),
+        installationSecret: bridge.masterSecret,
+        compatibilityKey: bridge.networkKey,
+        publicTag: bridge.publicTag
+      }),
+      15000,
+      'Receiver toevoegen timeout'
+    );
+    const fields = fieldsFromTransport(raw);
+    const rid = exactRid(fields.RID);
+    if (!rid) throw new Error('De receiver gaf geen geldige identiteit door.');
+    const record = deviceRecord(fields, {}, {});
+    Object.values(bridge.receivers).forEach((item) => { item.online = false; item.gateway = false; });
+    bridge.receivers[rid] = { ...record, online: true, gateway: Boolean(raw.gateway) };
+    bridge.preferredGatewayRid = exactRid(raw.gatewayRid) || bridge.preferredGatewayRid || rid;
+    persistBridge();
+    return bridge.receivers[rid];
   }
 
   function closeRejectedGateway(device) {
@@ -639,7 +858,7 @@
     }
     ble.rid = rid;
     ble.receiverType = String(info.DEVTYPE || bridge.receivers[rid].receiverType).toUpperCase() === 'RGBW' ? 'RGBW' : 'SPI';
-    const status = await transact({ TYPE: 'STATUS', TARGET: rid, DEVTYPE: ble.receiverType }, 3600, true);
+    const status = await transactBle({ TYPE: 'STATUS', TARGET: rid, DEVTYPE: ble.receiverType }, 3600, true);
     const reportedRid = exactRid(status.TARGETRID) || (!status.TARGETRID ? exactRid(status.RID) : '');
     if (status.STATUS !== 'OK' || reportedRid !== rid) {
       closeRejectedGateway(device);
@@ -656,27 +875,31 @@
 
   async function reconnectPermittedGateway() {
     if (ble.connected && ble.device?.gatt?.connected) return true;
+    if (recoveryConnectPromise) return recoveryConnectPromise;
     if (!navigator.bluetooth || typeof navigator.bluetooth.getDevices !== 'function') return false;
-    const permitted = await navigator.bluetooth.getDevices();
-    if (!Array.isArray(permitted) || !permitted.length) return false;
-    const order = [bridge.preferredGatewayRid, ...Object.keys(bridge.receivers)].filter(Boolean);
-    let device = null;
-    for (const rid of order) {
-      const browserId = bridge.browserDeviceIds?.[rid];
-      if (browserId) device = permitted.find((candidate) => String(candidate.id) === String(browserId));
-      if (device) break;
-    }
-    if (!device) return false;
-    const info = await attachDevice(device);
-    return acceptKnownGateway(device, info);
+    recoveryConnectPromise = (async () => {
+      const permitted = await withTimeout(navigator.bluetooth.getDevices(), 4000, 'Recoverylijst timeout');
+      if (!Array.isArray(permitted) || !permitted.length) return false;
+      const order = [bridge.preferredGatewayRid, ...Object.keys(bridge.receivers)].filter(Boolean);
+      let device = null;
+      for (const rid of order) {
+        const browserId = bridge.browserDeviceIds?.[rid];
+        if (browserId) device = permitted.find((candidate) => String(candidate.id) === String(browserId));
+        if (device) break;
+      }
+      if (!device) return false;
+      const info = await attachDevice(device);
+      return acceptKnownGateway(device, info);
+    })().finally(() => { recoveryConnectPromise = null; });
+    return recoveryConnectPromise;
   }
 
   async function chooseKnownGateway() {
     if (!navigator.bluetooth || typeof navigator.bluetooth.requestDevice !== 'function') {
-      throw new Error('Open deze GitHub-link op iPhone in Bluefy om Bluetooth te gebruiken.');
+      throw new Error('Recoveryverbinding is niet beschikbaar op dit toestel.');
     }
     if (!Object.keys(bridge.receivers).length) {
-      throw new Error('Voeg eerst een receiver toe voordat je een Bluetooth-gateway kiest.');
+      throw new Error('Voeg eerst een receiver toe voordat je een recoverygateway kiest.');
     }
     const device = await navigator.bluetooth.requestDevice({
       filters: [{ services: [UUIDS.service] }],
@@ -688,18 +911,30 @@
 
   async function refreshInventory(active) {
     if (otaController?.busy) return;
-    if (!ble.connected) {
-      try { await reconnectPermittedGateway(); } catch (_) {}
+    const adapter = primaryAdapter();
+    if (adapter) {
+      if (!adapterReady(adapter)) await connectPrimaryTransport(active);
+      if (!adapterReady(adapter)) return;
+      if (typeof adapter.discover === 'function') {
+        const inventory = await withTimeout(adapter.discover({ active: Boolean(active) }), 6000, 'Receiverlijst timeout');
+        const devices = Array.isArray(inventory) ? inventory : inventory?.devices;
+        if (Array.isArray(devices)) devices.forEach((raw) => {
+          try {
+            const fields = fieldsFromTransport(raw);
+            const record = deviceRecord(fields, {}, {});
+            bridge.receivers[record.rid] = { ...(bridge.receivers[record.rid] || {}), ...record };
+          } catch (_) {}
+        });
+        persistBridge();
+      }
+      return;
     }
-    // Only a deliberate “Controller verbinden” action may open the browser's
-    // Bluetooth chooser. Background/silent discovery may reconnect an
-    // already permitted device, but can never interrupt the user with a popup.
-    if (!ble.connected && active) {
-      await chooseKnownGateway();
-    }
+    // Recovery BLE is intentionally never opened by normal discovery. It can
+    // only be enabled through the hidden recovery API while AP rollout is
+    // being validated.
     if (!ble.connected || !ble.rid) return;
     try {
-      const status = await transact({ TYPE: 'STATUS', TARGET: ble.rid, DEVTYPE: ble.receiverType }, 3400, true);
+      const status = await transactBle({ TYPE: 'STATUS', TARGET: ble.rid, DEVTYPE: ble.receiverType }, 3400, true);
       if (status.STATUS === 'OK') {
         receiveLine(Object.entries(status).map(([key, value]) => `${key}=${value}`).join(';'));
         bridge.receivers[ble.rid] = deviceRecord({ RID: ble.rid, DEVTYPE: ble.receiverType });
@@ -709,23 +944,36 @@
   }
 
   function transportStatus() {
-    const gateway = ble.connected && ble.rid ? bridge.receivers[ble.rid] : null;
+    const primary = primaryAdapter();
+    const primaryReady = adapterReady(primary);
+    const recoveryReady = ble.connected && Boolean(ble.rid);
+    const adapterGatewayRid = exactRid(
+      typeof primary?.gatewayRid === 'function' ? primary.gatewayRid() : primary?.gatewayRid
+    );
+    const gatewayRid = primaryReady ? (adapterGatewayRid || bridge.preferredGatewayRid) : (recoveryReady ? ble.rid : '');
+    const gateway = gatewayRid ? bridge.receivers[gatewayRid] : null;
     return {
-      gatewayReady: Boolean(gateway),
+      gatewayReady: Boolean(primaryReady || recoveryReady),
       gateway: gateway ? { rid: gateway.rid, hardwareId: gateway.hardwareId, receiverType: gateway.receiverType } : {},
-      transport: 'BLE_ESPNOW'
+      transport: 'WIFI_AP_ESPNOW',
+      primaryTransport: 'WIFI_AP',
+      activeTransport: primaryReady ? 'WIFI_AP' : (recoveryReady ? 'RECOVERY' : 'OFFLINE'),
+      state: primaryReady || recoveryReady ? 'ready' : 'offline',
+      installationTag: bridge.publicTag
     };
   }
 
   function publicReceivers() {
+    const status = transportStatus();
+    const activeGatewayRid = exactRid(status.gateway?.rid);
     return Object.values(bridge.receivers).map((record) => {
-      const isGateway = Boolean(ble.connected && record.rid === ble.rid);
+      const isGateway = Boolean(status.gatewayReady && activeGatewayRid && record.rid === activeGatewayRid);
       return {
         ...record,
-        online: isGateway,
+        online: status.gatewayReady && (record.online !== false || isGateway),
         gateway: isGateway,
-        reachableViaGateway: Boolean(ble.connected),
-        reachability: isGateway ? 'ble_gateway' : (ble.connected ? 'esp_now' : 'unknown'),
+        reachableViaGateway: status.gatewayReady,
+        reachability: isGateway ? 'gateway' : (status.gatewayReady ? 'esp_now' : 'unknown'),
         lastSeenMs: isGateway ? 0 : null
       };
     }).sort((left, right) => Number(left.number || 999) - Number(right.number || 999));
@@ -774,6 +1022,101 @@
     return Math.round((((phase % 1) + 1) % 1) * 1000) % 1000;
   }
 
+  /* Keep the wire payload aligned with the controls and with what the receiver
+     renderer actually consumes.  A hidden setting must never leak a stale
+     value into another effect just because every SceneState happens to contain
+     the same storage fields. */
+  function effectCommandCapabilities(receiverType, engine, variant, isParallel, lineCount) {
+    const capabilities = {
+      speed: false, width: false, smooth: false, background: false,
+      spacing: false, count: false, trail: false, spread: false,
+      randomness: false, bounce: false, mirror: false, direction: false,
+      lineDelay: false
+    };
+
+    if (receiverType === 'RGBW') {
+      if (engine === 'STATIC') return capabilities;
+      capabilities.speed = true;
+      capabilities.direction = variant >= 5 && variant <= 16 && isParallel && lineCount > 1;
+      capabilities.lineDelay = capabilities.direction;
+      // These are the only RGBW variants whose numeric smoothness value is
+      // consumed by the receiver. Other fades have a deliberately fixed curve.
+      capabilities.smooth = (engine === 'SPARKLE' && (variant === 4 || variant === 11)) ||
+        (engine === 'CHASE' && variant === 8) || (engine === 'WAVE' && variant === 12);
+      return capabilities;
+    }
+
+    if (variant >= 90 && variant <= 97) {
+      capabilities.speed = true;
+      capabilities.smooth = true;
+      capabilities.background = true;
+      capabilities.width = variant === 94 || variant === 96 || variant === 97;
+      capabilities.direction = variant >= 92;
+      capabilities.spacing = [90, 91, 94, 96, 97].includes(variant);
+      capabilities.count = [93, 94, 96, 97].includes(variant);
+      capabilities.mirror = [94, 96, 97].includes(variant);
+      // Synchronized Rows (97) intentionally shares one exact position, so a
+      // per-line delay would contradict that effect rather than tune it.
+      capabilities.lineDelay = isParallel && lineCount > 1 && variant <= 96;
+      return capabilities;
+    }
+
+    if (variant >= 98 && variant <= 102) {
+      capabilities.speed = true;
+      capabilities.smooth = variant === 102;
+      capabilities.background = variant === 98 || variant === 99 || variant === 102;
+      capabilities.direction = isParallel && lineCount > 1;
+      capabilities.lineDelay = capabilities.direction;
+      return capabilities;
+    }
+
+    // Warm Ribbon Chase (103) has its own SPI renderer. Keep the transmitted
+    // controls limited to the values that shape that renderer so stale generic
+    // COMET count/spacing/bounce fields cannot change the measured video look.
+    if (variant === 103) {
+      capabilities.speed = true;
+      capabilities.width = true;
+      capabilities.smooth = true;
+      capabilities.background = true;
+      capabilities.trail = true;
+      capabilities.direction = true;
+      return capabilities;
+    }
+
+    const movingGradient = engine === 'GRADIENT' && variant % 6 !== 0;
+    if (engine === 'GRADIENT') {
+      capabilities.speed = movingGradient;
+      capabilities.direction = movingGradient;
+      capabilities.spread = true;
+      return capabilities;
+    }
+    if (engine === 'WARM') {
+      capabilities.speed = true;
+      return capabilities;
+    }
+    if (engine === 'STATIC') return capabilities;
+
+    const exactWidth = ['FLOW', 'WAVE', 'SCANNER', 'DUAL', 'MIRROR', 'COMET',
+      'ALTERNATE', 'SEQUENCE', 'CASCADE', 'MINIMAL', 'CHASE', 'SPARKLE'];
+    const objectEffects = ['FLOW', 'WAVE', 'DUAL', 'MIRROR', 'COMET',
+      'SEQUENCE', 'CASCADE', 'MINIMAL', 'CHASE', 'SPARKLE'];
+    const spacedEffects = ['FLOW', 'WAVE', 'COMET', 'ALTERNATE', 'SEQUENCE',
+      'CASCADE', 'MINIMAL', 'CHASE'];
+    capabilities.speed = true;
+    capabilities.width = exactWidth.includes(engine);
+    capabilities.smooth = !['BREATHE', 'SPARKLE', 'ALL'].includes(engine);
+    capabilities.background = !['ALL'].includes(engine);
+    capabilities.direction = !['BREATHE', 'SPARKLE', 'ALL'].includes(engine);
+    capabilities.spacing = spacedEffects.includes(engine);
+    capabilities.count = objectEffects.includes(engine);
+    capabilities.trail = engine === 'COMET' || engine === 'SCANNER';
+    capabilities.spread = ['FLOW', 'WAVE', 'BREATHE', 'DUAL', 'MIRROR'].includes(engine);
+    capabilities.randomness = engine === 'SPARKLE';
+    capabilities.bounce = ['CHASE', 'COMET', 'SCANNER', 'MINIMAL'].includes(engine);
+    capabilities.mirror = ['CHASE', 'SCANNER', 'WAVE', 'FLOW', 'MINIMAL'].includes(engine);
+    return capabilities;
+  }
+
   function liveFields(body, target, targetIndex, targets, save) {
     const state = body.state || {};
     const receiverType = String(target.receiverType || state.receiverType || 'SPI').toUpperCase() === 'RGBW' ? 'RGBW' : 'SPI';
@@ -811,6 +1154,7 @@
     const lineTimed = isParallel && lineCount > 1 &&
       ((receiverType === 'SPI' && variant >= 90 && variant <= 102) ||
        (receiverType === 'RGBW' && variant >= 5 && variant <= 16));
+    const capabilities = effectCommandCapabilities(receiverType, engine, variant, isParallel, lineCount);
     const fields = {
       TYPE: save ? 'SAVE' : 'LIVE', KEY: bridge.networkKey, TARGET: exactRid(target.rid || target.receiverId),
       DEVTYPE: receiverType, SCENE: engine, VARIANT: variant,
@@ -819,29 +1163,45 @@
       FG3: rgb(colors[2], whites[2], rgbFlags[2], whiteFlags[2]),
       FG4: rgb(colors[3], whites[3], rgbFlags[3], whiteFlags[3]),
       COLORS: engine === 'WARM' ? 1 : clamp(state.colorCount || colors.length, 1, 4, 1),
-      BG: rgb(state.background || '#000000', state.backgroundWhite || 0,
-        state.backgroundRgbEnabled !== false, state.backgroundWhiteEnabled !== false),
-      BGON: engine === 'WARM' ? 0 : Number(state.backgroundOn !== false),
-      SPEED: clamp(state.speed, 0, 100, 22), WIDTH: clamp(state.width, 1, 100, 30),
-      WIDTHPX: clamp(state.widthPixels, 1, Math.min(groupPixels, 8192), 3),
-      SMOOTH: clamp(state.smooth, 0, 100, 90), BRIGHT: clamp(state.brightness, 0, 100, 100),
-      BGBRIGHT: clamp(state.bgBrightness, 0, 100, 10), SPACING: clamp(state.spacing, 0, 100, 50),
-      COUNT: clamp(state.objectCount, 1, 16, 1), TRAIL: clamp(state.trailLength, 0, 100, 45),
-      SPREAD: clamp(state.spread, 0, 100, 50), RANDOM: clamp(state.randomness, 0, 100, 25),
-      BOUNCE: Number(Boolean(state.bounce)), MIRROR: Number(Boolean(state.mirror)),
+      BRIGHT: clamp(state.brightness, 0, 100, 100),
       LINEINDEX: clamp(target.lineIndex ?? targetIndex, 0, lineCount - 1, targetIndex), LINECOUNT: lineCount,
       PARALLEL: Number(isParallel),
-      REVERSE: Number(physicalReverse !== motionReverse), MOTIONREVERSE: Number(motionReverse),
-      PHYSICALREVERSE: Number(physicalReverse), RESTART: clamp(state.restartToken, 0, Number.MAX_SAFE_INTEGER, 0),
+      RESTART: clamp(state.restartToken, 0, Number.MAX_SAFE_INTEGER, 0),
       POWER: 100, WHITEMIX: 0, TRANSITIONMS: clamp(state.transitionMs, 0, 1000, 70),
       PHASEMS: phaseFor(body.timelineId || state.timelineId, state, receiverType), TEST: 'NONE'
     };
-    if (lineTimed) fields.LINEDELAYMS = Math.round(clamp(state.lineDelayMs, 0, 5080, 240) / 40) * 40;
+    if (capabilities.background) {
+      fields.BG = rgb(state.background || '#000000', state.backgroundWhite || 0,
+        state.backgroundRgbEnabled !== false, state.backgroundWhiteEnabled !== false);
+      fields.BGON = Number(state.backgroundOn !== false);
+      fields.BGBRIGHT = clamp(state.bgBrightness, 0, 100, 10);
+    }
+    if (capabilities.speed) fields.SPEED = clamp(state.speed, 0, 100, 22);
+    if (capabilities.width) {
+      fields.WIDTH = clamp(state.width, 1, 100, 30);
+      fields.WIDTHPX = clamp(state.widthPixels, 1, Math.min(groupPixels, 8192), 3);
+    }
+    if (capabilities.smooth) fields.SMOOTH = clamp(state.smooth, 0, 100, 90);
+    if (capabilities.spacing) fields.SPACING = clamp(state.spacing, 0, 100, 50);
+    if (capabilities.count) fields.COUNT = clamp(state.objectCount, 1, 8, 1);
+    if (capabilities.trail) fields.TRAIL = clamp(state.trailLength, 0, 100, 45);
+    if (capabilities.spread) fields.SPREAD = clamp(state.spread, 0, 100, 50);
+    if (capabilities.randomness) fields.RANDOM = clamp(state.randomness, 0, 100, 25);
+    if (capabilities.bounce) fields.BOUNCE = Number(Boolean(state.bounce));
+    if (capabilities.mirror) fields.MIRROR = Number(Boolean(state.mirror));
+    if (capabilities.direction) {
+      fields.REVERSE = Number(physicalReverse !== motionReverse);
+      fields.MOTIONREVERSE = Number(motionReverse);
+    }
+    if (capabilities.lineDelay && lineTimed) {
+      fields.LINEDELAYMS = Math.round(clamp(state.lineDelayMs, 0, 5080, 240) / 40) * 40;
+    }
     if (receiverType === 'RGBW') {
       fields.PORT = clamp(target.port || target.outputPort, 1, 2, 1);
       delete fields.WIDTH; delete fields.WIDTHPX; delete fields.PHYSICALREVERSE;
       delete fields.MOTIONREVERSE; delete fields.PIXELS; delete fields.GROUPPIXELS; delete fields.OFFSET;
     } else {
+      fields.PHYSICALREVERSE = Number(physicalReverse);
       fields.PIXELS = groupPixels; fields.GROUPPIXELS = groupPixels; fields.OFFSET = offset;
     }
     return fields;
@@ -853,7 +1213,7 @@
     const rid = exactRid(target.rid || target.receiverId);
     const base = { TARGET: rid, DEVTYPE: receiverType };
     if (action === 'STATUS') return { TYPE: 'STATUS', ...base };
-    if (action === 'UNPAIR') return { TYPE: 'UNPAIR', KEY: bridge.networkKey, TARGET: rid };
+    if (action === 'UNPAIR') return { TYPE: 'UNPAIR', KEY: bridge.networkKey, ...base };
     if (action === 'CONFIG') {
       if (receiverType === 'RGBW') {
         const portMask = clamp(target.portMask, 1, 3, 3);
@@ -874,9 +1234,10 @@
       }
       return fields;
     }
-    if (['CALIBRATE', 'CALIBRATE_FILL'].includes(action)) {
+    if (['CALIBRATE', 'CALIBRATE_FILL', 'CALIBRATE_END', 'CALIBRATE_START'].includes(action)) {
       const pixels = clamp(target.pixels, 1, 1024, 1);
-      return { TYPE: 'LIVE', KEY: bridge.networkKey, TARGET: rid, DEVTYPE: 'SPI', TEST: 'FILL',
+      const test = action === 'CALIBRATE_END' ? 'END' : action === 'CALIBRATE_START' ? 'START' : 'FILL';
+      return { TYPE: 'LIVE', KEY: bridge.networkKey, TARGET: rid, DEVTYPE: 'SPI', TEST: test,
         PHYSICAL: pixels, PIXELS: pixels, GROUPPIXELS: pixels, OFFSET: 0,
         PHYSICALREVERSE: Number(Boolean(target.reversed)) };
     }
@@ -904,6 +1265,9 @@
       if (!['SPI', 'RGBW'].includes(receiverType)) throw new Error('Onbekend receivertype');
       target.receiverType = receiverType;
       receiverTypes.add(receiverType);
+      if (receiverType !== 'SPI' && (CALIBRATION_ACTIONS.has(action) || action === 'CALIBRATE_CLEAR')) {
+        throw new Error('Pixelkalibratie is alleen beschikbaar voor SPI-receivers');
+      }
       const port = clamp(target.port ?? target.outputPort, 0, 2, 0);
       if (receiverType === 'RGBW' && ['LIVE', 'SAVE', 'IDENTIFY'].includes(action) && ![1, 2].includes(port)) {
         throw new Error('RGBW-doel mist poort 1 of 2');
@@ -960,6 +1324,10 @@
     }
     const confirmed = accepted && targetMatches && portMatch &&
       ['1', 'DIRECT', 'OK', 'DELIVERED'].includes(targetAck);
+    const reportedPhysical = reply.PHYSICAL;
+    const configuredPhysical = action === 'CONFIG' && receiverType === 'SPI' && confirmed
+      ? clamp(target.pixels, 1, 1024, 60)
+      : reportedPhysical;
     return {
       id: target.id, online: accepted, accepted, confirmed,
       gatewayAck: accepted, targetAck: targetAck || null, target: rid,
@@ -967,7 +1335,11 @@
       receiverType: reply.DEVTYPE || receiverType || body.state?.receiverType || 'SPI',
       port: rawPort ?? requestedPort, portMatch,
       portMask: reply.PORTMASK, portCount: reply.PORTS ?? reply.PORTCOUNT,
-      physical: reply.PHYSICAL, physicalReverse: reply.PHYSICALREVERSE,
+      // A receiver cannot discover the length of a pixel strip. During CONFIG
+      // the explicit target ACK confirms acceptance of the customer's chosen
+      // value; a stale PHYSICAL echo must never block adding the LED Line.
+      physical: configuredPhysical, reportedPhysical,
+      pixelCountMismatch: false, physicalReverse: reply.PHYSICALREVERSE,
       groupPixels: reply.GROUPPIXELS ?? reply.PIXELS,
       fps: reply.FPS, frame: reply.FRAME, sample: reply.SAMPLE,
       appliedEffect: reply.EFFECT, appliedVariant: reply.VARIANT,
@@ -975,6 +1347,111 @@
       appliedLineDelayMs: reply.LINEDELAYMS,
       phaseMs: sent.PHASEMS, reply: Object.entries(reply).map(([key, value]) => `${key}=${value}`).join(';')
     };
+  }
+
+  function targetCircuitKey(target) {
+    return `${exactRid(target.physicalRid || target.rid)}:${target.receiverType}:${clamp(target.port, 0, 2, 0)}`;
+  }
+
+  function circuitOpen(target, action) {
+    if (!['LIVE', 'STATUS', ...CALIBRATION_ACTIONS].includes(action)) return false;
+    const health = targetHealth.get(targetCircuitKey(target));
+    return Boolean(health?.openUntil && health.openUntil > Date.now());
+  }
+
+  function recordTargetHealth(target, healthy) {
+    const key = targetCircuitKey(target);
+    if (healthy) {
+      targetHealth.set(key, { failures: 0, openUntil: 0, lastSuccessAt: Date.now() });
+      return;
+    }
+    const previous = targetHealth.get(key) || { failures: 0, openUntil: 0 };
+    const failures = previous.failures + 1;
+    targetHealth.set(key, {
+      failures,
+      openUntil: failures >= TARGET_FAILURE_LIMIT ? Date.now() + TARGET_CIRCUIT_MS : 0,
+      lastFailureAt: Date.now()
+    });
+  }
+
+  function commandTimeout(action) {
+    if (action === 'CONFIG') return 4200;
+    if (['SAVE', 'UNPAIR'].includes(action)) return 3200;
+    if (action === 'STATUS') return 2600;
+    return 1900;
+  }
+
+  function failedTargetResult(target, detail) {
+    return {
+      id: target.id, online: false, accepted: false, confirmed: false,
+      gatewayAck: false, target: target.rid, detail
+    };
+  }
+
+  async function executeTarget(body, action, targets, target, index) {
+    if (otaController?.busy) {
+      return failedTargetResult(target, 'Firmware-update actief · deze verouderde lichtopdracht is veilig overgeslagen');
+    }
+    if (circuitOpen(target, action)) {
+      return failedTargetResult(target, 'Receiver tijdelijk overgeslagen na meerdere ontbrekende antwoorden');
+    }
+    try {
+      const sent = commandFields(body, target, index, targets);
+      let reply = await transact(sent, commandTimeout(action), true);
+      let result = resultFromReply(action, body, target, sent, reply);
+      if (action === 'CONFIG' && target.receiverType === 'RGBW' && result.accepted && !result.confirmed) {
+        const physicalRid = exactRid(target.physicalRid || target.rid);
+        const requestedMask = clamp(target.portMask, 1, 3, 3);
+        const status = await transact({ TYPE: 'STATUS', TARGET: physicalRid, DEVTYPE: 'RGBW' }, 3200, true);
+        const statusMask = clamp(status.PORTMASK ?? status.PHYSICAL, 0, 3, 0);
+        if (status.STATUS === 'OK' && exactRid(status.TARGETRID) === physicalRid && statusMask === requestedMask) {
+          reply = { ...reply, ...status, TARGETRID: physicalRid, PORTMASK: String(statusMask) };
+          result = { ...resultFromReply(action, body, target, sent, reply), confirmed: true, portMatch: true };
+        }
+      }
+      recordTargetHealth(target, result.confirmed || (action === 'STATUS' && result.accepted));
+      if (result.confirmed && action === 'CONFIG') {
+        const physicalRid = exactRid(target.physicalRid || target.rid);
+        const stored = bridge.receivers[physicalRid];
+        if (stored?.receiverType === 'SPI') {
+          const requestedPixels = clamp(target.pixels, 1, 1024, stored.pixels || 60);
+          stored.pixels = requestedPixels;
+          stored.reportedPixels = requestedPixels;
+          stored.pixelCountSource = 'saved_setting';
+          stored.pixelCountMismatch = false;
+          stored.physicalReverse = Boolean(target.reversed);
+          result.physical = requestedPixels;
+          result.physicalReverse = String(Number(Boolean(target.reversed)));
+        }
+        if (stored?.receiverType === 'RGBW') stored.portMask = clamp(reply.PORTMASK, 1, 3, stored.portMask || 3);
+        persistBridge();
+      }
+      if (result.confirmed && action === 'UNPAIR') {
+        delete bridge.receivers[target.rid];
+        delete bridge.browserDeviceIds[target.rid];
+        targetHealth.delete(targetCircuitKey(target));
+        if (bridge.preferredGatewayRid === target.rid) bridge.preferredGatewayRid = Object.keys(bridge.receivers)[0] || '';
+        persistBridge();
+      }
+      return result;
+    } catch (error) {
+      recordTargetHealth(target, false);
+      return failedTargetResult(target, String(error?.message || error));
+    }
+  }
+
+  async function runTargetPool(entries, limit, worker) {
+    const results = new Array(entries.length);
+    let cursor = 0;
+    async function consume() {
+      while (cursor < entries.length) {
+        const local = cursor;
+        cursor += 1;
+        results[local] = await worker(entries[local]);
+      }
+    }
+    await Promise.all(Array.from({ length: Math.max(1, Math.min(limit, entries.length)) }, consume));
+    return results;
   }
 
   async function executeCommands(rawBody) {
@@ -991,77 +1468,27 @@
         error: 'Firmware-update actief'
       };
     }
-    if (!ble.connected) {
-      try { await reconnectPermittedGateway(); } catch (_) {}
-    }
-    if (!ble.connected) {
+    if (!activeAdapter()) await connectPrimaryTransport(false);
+    if (!activeAdapter()) {
       return { results: targets.map((target) => ({
         id: target.id, online: false, accepted: false, confirmed: false,
-        gatewayAck: false, target: target.rid, detail: 'Verbind eerst een receiver via Bluetooth'
+        gatewayAck: false, target: target.rid, detail: 'Maak eerst verbinding met de installatiecontroller'
       })) };
     }
-    const gatewayRid = exactRid(ble.rid);
+    const status = transportStatus();
+    const gatewayRid = exactRid(status.gateway?.rid || ble.rid);
     const ordered = targets.map((target, index) => ({ target, index })).sort((left, right) => {
       const leftGateway = [left.target.rid, exactRid(left.target.physicalRid)].includes(gatewayRid) ? 0 : 1;
       const rightGateway = [right.target.rid, exactRid(right.target.physicalRid)].includes(gatewayRid) ? 0 : 1;
       return leftGateway - rightGateway || left.index - right.index;
     });
-    const completed = [];
-    let interruptedByOta = false;
-    for (const entry of ordered) {
-      const { target, index } = entry;
-      if (interruptedByOta || otaController?.busy) {
-        interruptedByOta = true;
-        completed.push({ index, result: {
-          id: target.id, online: false, accepted: false, confirmed: false,
-          gatewayAck: false, target: target.rid,
-          detail: 'Firmware-update actief · deze verouderde lichtopdracht is veilig overgeslagen'
-        } });
-        continue;
-      }
-      try {
-        const sent = commandFields(body, target, index, targets);
-        let reply = await transact(sent, action === 'CONFIG' ? 4200 : 3200, true);
-        let result = resultFromReply(action, body, target, sent, reply);
-        if (action === 'CONFIG' && target.receiverType === 'RGBW' && result.accepted && !result.confirmed) {
-          const physicalRid = exactRid(target.physicalRid || target.rid);
-          const requestedMask = clamp(target.portMask, 1, 3, 3);
-          const status = await transact({ TYPE: 'STATUS', TARGET: physicalRid, DEVTYPE: 'RGBW' }, 3600, true);
-          const statusMask = clamp(status.PORTMASK ?? status.PHYSICAL, 0, 3, 0);
-          if (status.STATUS === 'OK' && exactRid(status.TARGETRID) === physicalRid && statusMask === requestedMask) {
-            reply = { ...reply, ...status, TARGETRID: physicalRid, PORTMASK: String(statusMask) };
-            result = { ...resultFromReply(action, body, target, sent, reply), confirmed: true, portMatch: true };
-          }
-        }
-        if (result.confirmed && action === 'CONFIG') {
-          const physicalRid = exactRid(target.physicalRid || target.rid);
-          const stored = bridge.receivers[physicalRid];
-          if (stored?.receiverType === 'SPI') {
-            const requestedPixels = clamp(target.pixels, 1, 1024, stored.pixels || 60);
-            const reportedPixels = clamp(reply.PHYSICAL, 0, 1024, 0);
-            const sideMatch = String(reply.PHYSICALREVERSE ?? '') === String(Number(Boolean(target.reversed)));
-            if (reportedPixels === requestedPixels && sideMatch) {
-              stored.pixels = requestedPixels;
-              stored.physicalReverse = Boolean(target.reversed);
-            }
-          }
-          if (stored?.receiverType === 'RGBW') stored.portMask = clamp(reply.PORTMASK, 1, 3, stored.portMask || 3);
-          persistBridge();
-        }
-        if (result.confirmed && action === 'UNPAIR') {
-          delete bridge.receivers[target.rid];
-          delete bridge.browserDeviceIds[target.rid];
-          if (bridge.preferredGatewayRid === target.rid) bridge.preferredGatewayRid = Object.keys(bridge.receivers)[0] || '';
-          persistBridge();
-        }
-        completed.push({ index, result });
-      } catch (error) {
-        completed.push({ index, result: {
-          id: target.id, online: false, accepted: false, confirmed: false,
-          gatewayAck: false, target: target.rid, detail: String(error?.message || error)
-        } });
-      }
-    }
+    const selected = activeAdapter();
+    const concurrency = selected?.name === PRIMARY_TRANSPORT && selected.adapter?.supportsConcurrentFanout !== false
+      ? MAX_CONCURRENT_TARGETS : 1;
+    const completed = await runTargetPool(ordered, concurrency, async ({ target, index }) => ({
+      index,
+      result: await executeTarget(body, action, targets, target, index)
+    }));
     return { results: completed.sort((left, right) => left.index - right.index).map((entry) => entry.result) };
   }
 
@@ -1091,9 +1518,9 @@
           if (previous) previous.resolve({ results: [], superseded: true });
           this.live.set(key, job);
         } else {
-          if (['CALIBRATE_CLEAR', 'CONFIG'].includes(action)) {
+          if (['CALIBRATE_CLEAR', 'CONFIG', 'UNPAIR'].includes(action)) {
             const pending = this.live.get(key);
-            if (pending && ['CALIBRATE', 'CALIBRATE_FILL'].includes(String(pending.body?.action || '').toUpperCase())) {
+            if (pending && CALIBRATION_ACTIONS.has(String(pending.body?.action || '').toUpperCase())) {
               this.live.delete(key);
               pending.resolve({ results: [], superseded: true });
             }
@@ -1145,11 +1572,15 @@
   if (typeof window.createAluvisionDirectOta === 'function') {
     otaController = window.createAluvisionDirectOta({
       getBle: () => ble,
+      getWifiOta: () => primaryAdapter(),
       getNetworkKey: () => bridge.networkKey,
       listReceivers: () => publicReceivers(),
       getReceiver: (rid) => bridge.receivers[exactRid(rid)] || null,
       saveReceiver: saveOtaReceiver,
       recordFromInfo: (info) => deviceRecord(info),
+      // OTA arms through the same active transport as normal commands. The
+      // OTA controller itself then selects authenticated private HTTP or the
+      // deliberately hidden direct-BLE recovery channel for the data stream.
       transact,
       parseFields,
       attachDevice,
@@ -1171,8 +1602,11 @@
   }
 
   async function routeApi(path, method, body) {
-    if (path === '/api/session') return json({ token: 'static-github-pages' });
-    if (path === '/api/health') return json({ ok: true, build: '18.18-faithful-static', ready: ble.connected });
+    if (path === '/api/session') return json({ token: sessionToken });
+    if (path === '/api/health') {
+      const status = transportStatus();
+      return json({ ok: true, build: '20.0.0-hardware-acceptance', ready: status.gatewayReady, transport: status.activeTransport });
+    }
     if (path === '/api/transport') return json(transportStatus());
     if (path === '/api/app-state' && method === 'GET') {
       return json({ ok: true, revision: bridge.revision || 0, state: bridge.sharedState || null });
@@ -1212,6 +1646,24 @@
         return json({ ok: false, error: String(error?.message || error), transport: transportStatus() });
       }
     }
+    if (path === '/api/recovery/pair') {
+      if (otaController?.busy) return json({ ok: false, busy: true, error: 'Wacht tot de firmware-update klaar is' }, 409);
+      try {
+        const receiver = await pairReceiverRecovery(body.number || 1);
+        return json({ ok: true, device: receiver, recovery: true, transport: transportStatus() });
+      } catch (error) {
+        return json({ ok: false, error: String(error?.message || error), recovery: true, transport: transportStatus() }, 409);
+      }
+    }
+    if (path === '/api/recovery/connect') {
+      if (otaController?.busy) return json({ ok: false, busy: true, error: 'Wacht tot de firmware-update klaar is' }, 409);
+      try {
+        const ready = body.interactive === true ? await chooseKnownGateway() : await reconnectPermittedGateway();
+        return json({ ok: Boolean(ready), recovery: true, transport: transportStatus() }, ready ? 200 : 409);
+      } catch (error) {
+        return json({ ok: false, error: String(error?.message || error), recovery: true, transport: transportStatus() }, 409);
+      }
+    }
     if (path === '/api/command') return json(await commandBroker.submit(body));
     if (path === '/api/forget') {
       if (otaController?.busy) {
@@ -1248,132 +1700,19 @@
     get connected() { return ble.connected; },
     get gatewayRid() { return ble.rid; },
     get receivers() { return publicReceivers(); },
-    get otaBusy() { return Boolean(otaController?.busy); }
+    get otaBusy() { return Boolean(otaController?.busy); },
+    get transport() { return transportStatus(); }
   });
 
-  function phoneCopy() {
-    let language = 'nl';
-    try {
-      const app = JSON.parse(localStorage.getItem(APP_KEY) || '{}');
-      language = String(app?.settings?.language || app?.language || document.documentElement.lang || 'nl').slice(0, 2);
-    } catch (_) {}
-    const copy = {
-      nl: {
-        eyebrow: 'IPHONE · RECHTSTREEKS', title: 'Open de volledige app in Bluefy',
-        intro: 'Deze GitHub-app werkt zonder Mac en zonder lokaal wifi-netwerk.',
-        steps: ['Open de GitHub-link in de Bluefy-browser.', 'Tik op Receiver toevoegen of Controller verbinden.', 'Tik de receiver aan en kies hem in het Bluetooth-venster.'],
-        safari: 'Safari kan de interface bekijken, maar biedt geen directe Web Bluetooth. Gebruik Bluefy voor koppelen en live licht.',
-        note: 'Eén receiver is de Bluetooth-gateway. De andere gekoppelde receivers volgen via ESP-NOW.', close: 'Begrepen'
-      },
-      en: {
-        eyebrow: 'IPHONE · DIRECT', title: 'Open the full app in Bluefy',
-        intro: 'This GitHub app works without a Mac or local Wi-Fi network.',
-        steps: ['Open the GitHub link in the Bluefy browser.', 'Tap Add receiver or Connect controller.', 'Tap the receiver and select it in the Bluetooth window.'],
-        safari: 'Safari can display the interface but does not provide direct Web Bluetooth. Use Bluefy for pairing and live lighting.',
-        note: 'One receiver is the Bluetooth gateway. Other paired receivers follow over ESP-NOW.', close: 'Got it'
-      },
-      fr: {
-        eyebrow: 'IPHONE · DIRECT', title: 'Ouvrez l’app complète dans Bluefy',
-        intro: 'Cette app GitHub fonctionne sans Mac ni réseau Wi-Fi local.',
-        steps: ['Ouvrez le lien GitHub dans le navigateur Bluefy.', 'Touchez Ajouter un récepteur ou Connecter le contrôleur.', 'Touchez le récepteur et sélectionnez-le dans la fenêtre Bluetooth.'],
-        safari: 'Safari peut afficher l’interface, mais ne fournit pas le Web Bluetooth direct. Utilisez Bluefy pour l’association et la lumière en direct.',
-        note: 'Un récepteur sert de passerelle Bluetooth. Les autres suivent via ESP-NOW.', close: 'Compris'
-      },
-      de: {
-        eyebrow: 'IPHONE · DIREKT', title: 'Öffne die vollständige App in Bluefy',
-        intro: 'Diese GitHub-App funktioniert ohne Mac und ohne lokales WLAN.',
-        steps: ['Öffne den GitHub-Link im Bluefy-Browser.', 'Tippe auf Receiver hinzufügen oder Controller verbinden.', 'Berühre den Receiver und wähle ihn im Bluetooth-Fenster.'],
-        safari: 'Safari kann die Oberfläche anzeigen, bietet aber kein direktes Web Bluetooth. Nutze Bluefy zum Koppeln und für Live-Licht.',
-        note: 'Ein Receiver ist das Bluetooth-Gateway. Weitere gekoppelte Receiver folgen über ESP-NOW.', close: 'Verstanden'
-      }
-    };
-    return copy[language] || copy.nl;
-  }
-
-  function showDirectIphoneHelp() {
-    const overlay = document.getElementById('modal');
-    const root = document.getElementById('modalBody');
-    if (!overlay || !root) return;
-    const copy = phoneCopy();
-    root.innerHTML = `<div class="eyebrow">${copy.eyebrow}</div><h1>${copy.title}</h1>` +
-      `<p class="sub">${copy.intro}</p><ol class="sub" style="line-height:1.8">` +
-      copy.steps.map((step) => `<li>${step}</li>`).join('') + '</ol>' +
-      `<p class="danger-note">${copy.safari}</p>` +
-      `<p class="animation-setting-note"><b>Bluetooth + ESP-NOW</b><br>${copy.note}</p>` +
-      `<button class="button" style="width:100%" onclick="document.getElementById('modal').hidden=true">${copy.close}</button>`;
-    overlay.hidden = false;
-  }
-
-  function decorateDirectIphoneSettings() {
-    const root = document.getElementById('settings');
-    const card = root?.querySelector('[data-customer-phone]');
-    if (!card) return;
-    const copy = phoneCopy();
-    const title = card.querySelector('h2');
-    const description = card.querySelector('p');
-    const button = card.querySelector('button');
-    if (title) title.textContent = copy.title;
-    if (description) description.textContent = copy.intro;
-    if (button) button.textContent = copy.close === 'Begrepen' ? 'Toon stappen →' : `${copy.close} →`;
-  }
-
-  window.addEventListener?.('load', () => {
-    window.showIphoneInstructions = showDirectIphoneHelp;
-    window.showIphoneAtHome = showDirectIphoneHelp;
-    window.showRemoteAccess = showDirectIphoneHelp;
-    window.openGatewayConnection = function directGatewayConnection() {
-      const overlay = document.getElementById('modal');
-      const root = document.getElementById('modalBody');
-      if (!overlay || !root) return;
-      root.innerHTML = '<div class="eyebrow">CONTROLLER VERBINDEN</div>' +
-        '<h1>Kies één gekoppelde receiver</h1>' +
-        '<p class="sub">Deze receiver wordt de Bluetooth-gateway. De andere receivers volgen automatisch via ESP-NOW.</p>' +
-        '<div class="tap-visual"><span class="tap-wave"></span><span class="tap-wave"></span><div class="tap-device">BLE<br>LINK</div></div>' +
-        '<div class="nfc-pair-steps"><div class="nfc-pair-step"><b>1 · Open</b><small>Open het beveiligde venster met NFC of BOOT.</small></div>' +
-        '<div class="nfc-pair-step"><b>2 · Kies</b><small>Selecteer dezelfde receiver in Bluefy.</small></div>' +
-        '<div class="nfc-pair-step"><b>3 · Bedien</b><small>De volledige installatie reageert live.</small></div></div>' +
-        '<div id="bleConnectStatus" class="nfc-status"><span><b>Klaar om te verbinden</b><small>Dit toestel vraagt de eerste keer toestemming voor Bluetooth.</small></span></div>' +
-        '<div class="row"><button class="button soft" onclick="document.getElementById(\'modal\').hidden=true">Annuleren</button>' +
-        '<button class="button" onclick="connectGatewayNow()">Verbinden via Bluetooth</button></div>';
-      overlay.hidden = false;
-    };
-    window.connectGatewayNow = async function directGatewayNow() {
-      const status = document.getElementById('bleConnectStatus');
-      if (status) {
-        status.className = 'nfc-status scanning';
-        status.innerHTML = '<span><b>Receiver zoeken…</b><small>Laat de receiver aan en dicht bij dit toestel.</small></span>';
-      }
-      await window.discover(false);
-      if (ble.connected) {
-        const overlay = document.getElementById('modal');
-        if (overlay) overlay.hidden = true;
-        window.go?.('devices');
-      } else if (status) {
-        status.className = 'nfc-status error';
-        status.innerHTML = '<span><b>Nog geen receiver gevonden</b><small>Open het venster opnieuw en probeer binnen 60 seconden.</small></span>';
-      }
-    };
-    if (typeof window.pairReceiverViaBluetooth === 'function') {
-      const pairBluetooth = window.pairReceiverViaBluetooth;
-      window.pairReceiverViaBluetooth = async function directPairBluetooth(...args) {
-        const result = await pairBluetooth.apply(this, args);
-        const status = document.getElementById('receiverBluetoothTestStatus');
-        if (status) status.innerHTML = status.innerHTML
-          .replace('Controleer Bluetooth op de Mac', 'Controleer Bluetooth op dit toestel')
-          .replace('Check Bluetooth on the Mac', 'Check Bluetooth on this device')
-          .replace('Vérifiez le Bluetooth du Mac', 'Vérifiez le Bluetooth de cet appareil')
-          .replace('Prüfe Bluetooth am Mac', 'Prüfe Bluetooth auf diesem Gerät');
-        return result;
-      };
-    }
-    if (typeof window.settings === 'function') {
-      const renderSettings = window.settings;
-      window.settings = function directSettings(...args) {
-        const result = renderSettings.apply(this, args);
-        decorateDirectIphoneSettings();
-        return result;
-      };
-    }
-    decorateDirectIphoneSettings();
+  Object.defineProperty(window, 'AluvisionTransportRegistry', {
+    configurable: false,
+    enumerable: false,
+    writable: false,
+    value: Object.freeze({
+      register: registerTransport,
+      get primary() { return PRIMARY_TRANSPORT; },
+      get status() { return transportStatus(); }
+    })
   });
+
 })();
