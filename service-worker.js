@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'aluvision-direct-';
-const CACHE = `${CACHE_PREFIX}v2`;
+const CACHE = `${CACHE_PREFIX}v3-full-app`;
 const ASSETS = [
   './',
   './index.html',

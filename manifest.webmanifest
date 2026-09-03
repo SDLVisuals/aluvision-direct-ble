@@ -1,7 +1,7 @@
 {
   "name": "Aluvision Lighting Control",
   "short_name": "Aluvision",
-  "description": "Directe Bluetoothbediening voor Aluvision LED Lines.",
+  "description": "Volledige Aluvision-bediening voor zones, groepen, scènes, presets en receivers.",
   "lang": "nl",
   "start_url": "./",
   "scope": "./",
