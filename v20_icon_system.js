@@ -68,11 +68,22 @@
     .customer-group-empty-preview>span{min-width:0;max-width:190px;line-height:1.3;text-align:left}
     .customer-group-empty>i[data-alv-icon]{display:grid;place-items:center;width:46px!important;height:46px!important;margin:0 auto 10px;border-radius:14px;background:var(--panel-2);color:var(--red)}
     .customer-group-empty>i[data-alv-icon]>.alv-icon{width:23px!important;height:23px!important}
+    .v188-empty-visual.scene.alv-scene-empty-visual{display:grid!important;grid-template-columns:minmax(0,1fr) 46px;align-items:center;gap:13px;width:min(100%,330px)!important;height:100px!important;margin:0 auto 15px!important;padding:14px!important;border:1px solid #ffffff14;border-radius:18px;background:radial-gradient(circle at 82% 22%,#c94e4620,transparent 35%),linear-gradient(145deg,#202220,#090a09)!important;box-shadow:inset 0 1px #ffffff12,0 10px 24px #1112;overflow:hidden}
+    .alv-scene-cue-lines{display:grid;gap:7px;min-width:0}
+    .alv-scene-cue-track{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:3px;height:17px;padding:3px;border:1px solid #ffffff0d;border-radius:7px;background:#050606;overflow:hidden}
+    .alv-scene-cue-track>i{display:block;min-width:0;border-radius:3px;background:#ffffff12;animation:alvSceneRecall 5.4s ease-in-out infinite;animation-delay:calc(-1.85s + (var(--scene-row) * .38s) + (var(--scene-cell) * .055s))}
+    .alv-scene-cue-track:nth-child(1){--scene-colour:#ff756a}.alv-scene-cue-track:nth-child(2){--scene-colour:#ffc174}.alv-scene-cue-track:nth-child(3){--scene-colour:#b8dcff}
+    .alv-scene-cue-badge{position:relative;display:grid;place-items:center;width:46px;height:46px;border:1px solid #ffffff1c;border-radius:14px;background:#ffffff0b;color:#fff}
+    .alv-scene-cue-badge>.alv-icon{width:25px;height:25px}
+    .alv-scene-cue-badge>span{position:absolute;right:5px;bottom:5px;width:8px;height:8px;border:2px solid #151615;border-radius:50%;background:var(--red);box-shadow:0 0 10px var(--red);animation:alvSceneReady 5.4s ease-in-out -1.85s infinite}
+    @keyframes alvSceneRecall{0%,12%,100%{background:#ffffff12;box-shadow:none;opacity:.55}34%,62%{background:var(--scene-colour);box-shadow:0 0 8px var(--scene-colour);opacity:1}82%{background:#ffffff16;box-shadow:none;opacity:.68}}
+    @keyframes alvSceneReady{0%,43%,100%{transform:scale(.65);opacity:.38}57%,75%{transform:scale(1);opacity:1}}
     @media(max-width:560px){
       .nav>button>i[data-alv-icon]>.alv-icon{width:20px;height:20px}
       .alv-title-icon{width:27px;height:27px}
       .v1814-group-nav button>i[data-alv-icon]>.alv-icon{width:15px;height:15px}
     }
+    @media(prefers-reduced-motion:reduce){.alv-scene-cue-track>i,.alv-scene-cue-badge>span{animation:none!important}.alv-scene-cue-track>i{background:color-mix(in srgb,var(--scene-colour),#161816 38%);opacity:.9}.alv-scene-cue-badge>span{opacity:1}}
   `;
   document.head.append(style);
 
@@ -228,6 +239,18 @@
     root.querySelectorAll?.('.v1814-home-off-mark').forEach((node) => setIcon(node, 'power'));
   }
 
+  function decorateEmptyScenes(root) {
+    root.querySelectorAll?.('.v188-empty-visual.scene').forEach((node) => {
+      if (node.dataset.alvSceneVisual === 'recall') return;
+      const lines = Array.from({ length: 3 }, (_, row) =>
+        `<div class="alv-scene-cue-track" style="--scene-row:${row}">${Array.from({ length: 12 }, (_, cell) => `<i style="--scene-cell:${cell}"></i>`).join('')}</div>`
+      ).join('');
+      node.dataset.alvSceneVisual = 'recall';
+      node.classList.add('alv-scene-empty-visual');
+      node.innerHTML = `<div class="alv-scene-cue-lines">${lines}</div><div class="alv-scene-cue-badge">${markup('scenes')}<span></span></div>`;
+    });
+  }
+
   function apply(root = document) {
     decorateNavigation(root);
     decorateLocations(root);
@@ -237,7 +260,8 @@
     decorateCreationButtons(root);
     decorateReceivers(root);
     decorateDisclosureIcons(root);
-    document.documentElement.dataset.alvIconSystem = '20.0.1';
+    decorateEmptyScenes(root);
+    document.documentElement.dataset.alvIconSystem = '20.0.2';
   }
 
   let scheduled = false;
