@@ -969,7 +969,7 @@
     const manualRequested = Boolean(window.AluvisionPrivateWifi?.manualBootstrapRequested?.());
     const nfcState = String(link.nfcState || '');
     const nfcHealth = privateNfcHealth(link);
-    const nfcHardwareMarkup = connected && nfcState
+    const nfcHardwareMarkup = connected && nfcState && !manualRequested
       ? `<div class="v20-nfc-health ${nfcHealth.tone}"><i>${nfcHealth.icon}</i><span><b>${nfcHealth.title}</b><small>${nfcHealth.detail}</small></span></div>`
       : '';
     const stateMarkup = connected
@@ -983,7 +983,7 @@
         : `<div id="v20PrivatePairStatus" class="nfc-status ${provisioned ? 'scanning' : ''}"><span><b>${provisioned ? tx('Receivergegevens ontvangen', 'Receiver details received', 'Données du récepteur reçues', 'Receiver-Daten empfangen') : tx('Klaar voor de tijdelijke testverbinding', 'Ready for the temporary test connection', 'Prêt pour la connexion de test temporaire', 'Bereit für die temporäre Testverbindung')}</b><small>${provisioned ? tx('Kies deze beveiligde receiververbinding één keer op je iPhone. De wizard bewaart je voortgang.', 'Choose this secure receiver connection once on your iPhone. The wizard keeps your progress.', 'Choisissez une fois cette connexion sécurisée sur votre iPhone. L’assistant conserve votre progression.', 'Wähle diese sichere Receiver-Verbindung einmal auf deinem iPhone. Der Assistent behält deinen Fortschritt.') : tx('Volg de drie stappen hieronder. Daarna opent automatisch de volledige instelwizard.', 'Follow the three steps below. The complete setup wizard then opens automatically.', 'Suivez les trois étapes ci-dessous. L’assistant de configuration complet s’ouvre ensuite automatiquement.', 'Folge den drei Schritten unten. Danach öffnet sich automatisch der vollständige Einrichtungsassistent.')}</small></span></div>`;
     window.modal(`<section class="v20-private-pair">
       <div class="eyebrow">${tx('RECEIVER TOEVOEGEN', 'ADD RECEIVER', 'AJOUTER UN RÉCEPTEUR', 'RECEIVER HINZUFÜGEN')}</div>
-      <h1>${tx('Tik. Verbind. Stel in.', 'Tap. Connect. Set up.', 'Touchez. Connectez. Configurez.', 'Tippen. Verbinden. Einrichten.')}</h1>
+      <h1>${tx('Druk. Verbind. Stel in.', 'Press. Connect. Set up.', 'Appuyez. Connectez. Configurez.', 'Drücken. Verbinden. Einrichten.')}</h1>
       <p class="sub">${tx('Voor deze tijdelijke test heb je geen NFC nodig. Verbind je iPhone rechtstreeks met de receiver en doorloop daarna de volledige wizard.', 'You do not need NFC for this temporary test. Connect your iPhone directly to the receiver, then complete the full wizard.', 'Vous n’avez pas besoin du NFC pour ce test temporaire. Connectez directement votre iPhone au récepteur, puis suivez l’assistant complet.', 'Für diesen temporären Test brauchst du kein NFC. Verbinde dein iPhone direkt mit dem Receiver und durchlaufe danach den vollständigen Assistenten.')}</p>
       ${destination ? `<div class="group-pair-target"><span><b>${tx('Wordt toegevoegd aan', 'Will be added to', 'Sera ajouté à', 'Wird hinzugefügt zu')}</b><small>${safe(destination.zone.name)} → ${safe(destination.group.name)}</small></span><span class="scope">${tx('AL GEKOZEN', 'PRESELECTED', 'PRÉSÉLECTIONNÉ', 'VORAUSGEWÄHLT')}</span></div>` : ''}
       <div class="v20-pair-visual" aria-hidden="true"><div class="v20-phone-glyph"><i>BOOT</i></div><div class="v20-pair-waves"><i></i><i></i><i></i></div><div class="v20-hub-glyph"><b>R</b><small>Wi-Fi</small></div></div>
@@ -1003,7 +1003,7 @@
       ${provisioned ? `<div class="v20-network-card"><span><small>${tx('BEVEILIGDE RECEIVER-VERBINDING', 'SECURE RECEIVER CONNECTION', 'CONNEXION SÉCURISÉE DU RÉCEPTEUR', 'SICHERE RECEIVER-VERBINDUNG')}</small><b>${safe(link.ssid || 'ALUVISION-••••')}</b></span>${link.hasPassword ? `<button class="button soft" onclick="v20CopyPrivatePassword()">${tx('Code kopiëren', 'Copy code', 'Copier le code', 'Code kopieren')}</button>` : ''}</div>` : ''}
       ${stateMarkup}
       ${nfcHardwareMarkup}
-      <details class="v20-nfc-alternative" ${provisioned && !manualRequested ? 'open' : ''}><summary>${tx('Liever NFC gebruiken?', 'Prefer to use NFC?', 'Vous préférez utiliser le NFC ?', 'Lieber NFC verwenden?')}</summary><p>${tx('Tik de NFC-tag van de receiver aan met je iPhone. Kies daarna het aangeboden ALUVISION-netwerk; de wizard gaat vanzelf verder.', 'Tap the receiver NFC tag with your iPhone. Then choose the offered ALUVISION network; the wizard continues automatically.', 'Touchez le tag NFC du récepteur avec votre iPhone. Choisissez ensuite le réseau ALUVISION proposé ; l’assistant continue automatiquement.', 'Tippe den NFC-Tag des Receivers mit deinem iPhone an. Wähle danach das angebotene ALUVISION-Netzwerk; der Assistent läuft automatisch weiter.')}</p></details>
+      ${manualRequested ? '' : `<details class="v20-nfc-alternative" ${provisioned ? 'open' : ''}><summary>${tx('Liever NFC gebruiken?', 'Prefer to use NFC?', 'Vous préférez utiliser le NFC ?', 'Lieber NFC verwenden?')}</summary><p>${tx('Tik de NFC-tag van de receiver aan met je iPhone. Kies daarna het aangeboden ALUVISION-netwerk; de wizard gaat vanzelf verder.', 'Tap the receiver NFC tag with your iPhone. Then choose the offered ALUVISION network; the wizard continues automatically.', 'Touchez le tag NFC du récepteur avec votre iPhone. Choisissez ensuite le réseau ALUVISION proposé ; l’assistant continue automatiquement.', 'Tippe den NFC-Tag des Receivers mit deinem iPhone an. Wähle danach das angebotene ALUVISION-Netzwerk; der Assistent läuft automatisch weiter.')}</p></details>`}
     </section>`);
     if (provisioned && !connected && checkState !== 'manual-failed') schedulePrivatePairCheck();
     if (connected && privatePairAutoRequested && !privatePairAutoStarted && !privatePairInFlight) {
@@ -1118,7 +1118,7 @@
     if (!response?.ok || !response.device) {
       if (node) {
         node.className = 'nfc-status error';
-        node.innerHTML = `<span><b>${tx('Toevoegen is nog niet gelukt', 'Adding has not succeeded yet', 'L’ajout n’a pas encore réussi', 'Hinzufügen noch nicht erfolgreich')}</b><small>${safe(response?.error || tx('Houd BOOT 2 seconden ingedrukt en probeer opnieuw. NFC blijft ook beschikbaar.', 'Hold BOOT for 2 seconds and try again. NFC also remains available.', 'Maintenez BOOT pendant 2 secondes et réessayez. Le NFC reste également disponible.', 'BOOT 2 Sekunden gedrückt halten und erneut versuchen. NFC bleibt ebenfalls verfügbar.'))}</small></span>`;
+        node.innerHTML = `<span><b>${tx('Toevoegen is nog niet gelukt', 'Adding has not succeeded yet', 'L’ajout n’a pas encore réussi', 'Hinzufügen noch nicht erfolgreich')}</b><small>${safe(response?.error || tx('Houd BOOT 2 seconden ingedrukt en probeer opnieuw.', 'Hold BOOT for 2 seconds and try again.', 'Maintenez BOOT pendant 2 secondes et réessayez.', 'BOOT 2 Sekunden gedrückt halten und erneut versuchen.'))}</small></span>`;
       }
       if (button) button.disabled = false;
       privatePairInFlight = false;

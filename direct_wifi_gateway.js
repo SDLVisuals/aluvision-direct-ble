@@ -289,7 +289,7 @@
   }
 
   async function request(path, options = {}) {
-    if (!connection.token) throw new Error('Tik eerst de NFC-tag van een receiver aan.');
+    if (!connection.token) throw new Error('Verbind eerst met een receiver via Receiver toevoegen.');
     const timeout = Math.max(300, Number(options.timeout) || 3500);
     const deadline = abortAfter(timeout);
     const headers = new Headers(options.headers || {});
@@ -306,7 +306,7 @@
       const fields = parseFields(text);
       if (response.status === 401) {
         ready = false;
-        throw new Error('De beveiligde toegang van deze receiver is niet meer geldig. Tik de NFC-tag opnieuw aan.');
+        throw new Error('De beveiligde toegang is verlopen. Verbind de receiver opnieuw via Receiver toevoegen.');
       }
       if (!response.ok && response.status !== 202) {
         throw new Error(fields.DETAIL || `Receiverfout ${response.status}`);
@@ -334,7 +334,7 @@
    */
   async function recoveryRequest(path, options = {}) {
     if (!RECOVERY_PATHS.has(path)) throw new Error('Onbekende herstelactie');
-    if (!connection.token) throw new Error('Tik eerst de NFC-tag van een receiver aan.');
+    if (!connection.token) throw new Error('Verbind eerst met een receiver via Receiver toevoegen.');
     const timeout = Math.max(500, Math.min(20000, Number(options.timeout) || 5000));
     const deadline = abortAfter(timeout);
     const headers = new Headers(options.headers || {});
@@ -532,7 +532,7 @@
         NUMBER: number
       }, { timeout: 5000, allowError: true });
       const committed = reply.PAIRED === '1' && ['OK', 'ERROR'].includes(reply.STATUS) && reply.DETAIL === 'PAIRED';
-      if (!committed) throw new Error(reply.DETAIL || 'Koppeling werd niet bevestigd. Tik de NFC-tag opnieuw aan.');
+      if (!committed) throw new Error(reply.DETAIL || 'Koppeling werd niet bevestigd. Houd BOOT 2 seconden ingedrukt en probeer opnieuw.');
       connection.pairingToken = '';
       persist();
     }
