@@ -11,6 +11,8 @@
 
   const STORAGE_KEY = 'aluvision.private-wifi-gateway.v1';
   const DEFAULT_GATEWAY = 'http://192.168.4.1';
+  const MANUAL_BOOTSTRAP_PATH = '/alv/manual-bootstrap';
+  const MANUAL_BOOTSTRAP_PASSWORD = 'aluvision20';
   const TOKEN_HEADER = 'X-Aluvision-Token';
   const API_VERSION = 1;
   const MIN_POLL_MS = 18;
@@ -21,6 +23,7 @@
   let gatewayFields = {};
   let commandId = Math.floor(Date.now() % 900000000) || 1;
   let transactionTail = Promise.resolve();
+  let manualBootstrapPromise = null;
   let security = {};
   let capturedThisLoad = false;
   let outputHealth = Object.freeze({
@@ -48,6 +51,9 @@
   function isReceiverOrigin() {
     return location.hostname === '192.168.4.1';
   }
+
+  const manualBootstrapRequested = isReceiverOrigin() &&
+    new URLSearchParams(location.search || '').get('manual') === '1';
 
   function selectedStorage() {
     /*
@@ -127,6 +133,118 @@
       const next = `${location.pathname}${query.toString() ? `?${query}` : ''}${nextHash}`;
       try { history.replaceState(history.state, '', next); } catch (_) {}
     }
+  }
+
+  function clearManualBootstrapFlag() {
+    const query = new URLSearchParams(location.search || '');
+    if (!query.has('manual')) return;
+    query.delete('manual');
+    const next = `${location.pathname}${query.toString() ? `?${query}` : ''}${location.hash || ''}`;
+    try { history.replaceState(history.state, '', next); } catch (_) {}
+  }
+
+  function validateManualBootstrap(fields, response) {
+    if (!response.ok) {
+      if (response.status === 403 && fields.ERROR === 'HOLD_BOOT_2S') {
+        const error = new Error('Houd BOOT 2 seconden ingedrukt en probeer opnieuw.');
+        error.code = 'HOLD_BOOT_2S';
+        throw error;
+      }
+      throw new Error(fields.ERROR || fields.DETAIL || `Receiverfout ${response.status}`);
+    }
+    const rid = cleanHex(fields.RID, 16);
+    const pairingToken = cleanHex(fields.TOKEN, 16);
+    const apiToken = cleanHex(fields.APTOKEN, 64);
+    const ssid = String(fields.SSID || '');
+    const password = String(fields.APPASS || '');
+    const receiverType = String(fields.DEVTYPE || '').toUpperCase();
+    const windowSeconds = Number(fields.WINDOW);
+    if (fields.API !== String(API_VERSION) || fields.STATUS !== 'OK' ||
+        fields.MODE !== 'MANUAL_TEST' || fields.FWVARIANT !== 'MANUAL_WIFI' ||
+        !rid || !pairingToken || !apiToken ||
+        !/^ALUVISION-[0-9A-F]{6}$/.test(ssid) ||
+        password !== MANUAL_BOOTSTRAP_PASSWORD ||
+        !['SPI', 'RGBW'].includes(receiverType) ||
+        !Number.isInteger(windowSeconds) || windowSeconds < 1 || windowSeconds > 600) {
+      throw new Error('De receiver gaf geen geldige tijdelijke verbindingsgegevens door.');
+    }
+    return { rid, pairingToken, apiToken, ssid, password, receiverType, windowSeconds };
+  }
+
+  async function performManualBootstrap() {
+    if (!isReceiverOrigin()) {
+      throw new Error('Open eerst 192.168.4.1/?manual=1 via het ALUVISION-netwerk.');
+    }
+    const deadline = abortAfter(4500);
+    let response;
+    let body;
+    try {
+      response = await fetch(`${location.origin}${MANUAL_BOOTSTRAP_PATH}`, {
+        method: 'GET',
+        cache: 'no-store',
+        credentials: 'omit',
+        redirect: 'error',
+        referrerPolicy: 'no-referrer',
+        headers: { Accept: 'text/plain' },
+        signal: deadline.signal
+      });
+      body = await response.text();
+    } catch (error) {
+      if (error?.name === 'AbortError') throw new Error('De receiver antwoordde niet op tijd. Houd BOOT 2 seconden ingedrukt en probeer opnieuw.');
+      throw error;
+    } finally {
+      deadline.clear();
+    }
+    const contentType = String(response.headers?.get?.('content-type') || '').toLowerCase();
+    if (!contentType.startsWith('text/plain') || body.length > 1024) {
+      throw new Error('De receiver gaf een ongeldig tijdelijk verbindingsantwoord.');
+    }
+    const validated = validateManualBootstrap(parseFields(body), response);
+    const previous = { ...connection };
+    Object.assign(connection, {
+      base: cleanBase(location.origin),
+      token: validated.apiToken,
+      pairingToken: validated.pairingToken,
+      expectedRid: validated.rid,
+      ssid: validated.ssid,
+      password: validated.password
+    });
+    ready = false;
+    gatewayFields = {};
+    persist();
+    try {
+      const info = await readInfo(3500);
+      if (cleanHex(info.RID, 16) !== validated.rid ||
+          String(info.DEVTYPE || '').toUpperCase() !== validated.receiverType) {
+        throw new Error('De tijdelijke verbinding hoort niet bij deze receiver.');
+      }
+    } catch (error) {
+      Object.assign(connection, previous);
+      ready = false;
+      gatewayFields = {};
+      persist();
+      throw error;
+    }
+    capturedThisLoad = true;
+    clearManualBootstrapFlag();
+    return Object.freeze({
+      ok: true,
+      ready: true,
+      rid: validated.rid,
+      ssid: validated.ssid,
+      receiverType: validated.receiverType,
+      windowSeconds: validated.windowSeconds
+    });
+  }
+
+  function manualBootstrap(options = {}) {
+    if (manualBootstrapPromise && !options.refresh) return manualBootstrapPromise;
+    const attempt = performManualBootstrap();
+    manualBootstrapPromise = attempt;
+    attempt.catch(() => {
+      if (manualBootstrapPromise === attempt) manualBootstrapPromise = null;
+    });
+    return attempt;
   }
 
   function localHandoffUrl() {
@@ -506,6 +624,8 @@
     configureSecurity,
     gatewayRid: () => gatewayFields.RID || connection.expectedRid || '',
     wasProvisionedThisLoad: () => capturedThisLoad,
+    manualBootstrapRequested: () => manualBootstrapRequested,
+    manualBootstrap,
     getConnectionDetails: () => Object.freeze({
       base: connection.base,
       ssid: connection.ssid,
@@ -566,4 +686,8 @@
     writable: false,
     value: adapter
   });
+
+  if (manualBootstrapRequested) {
+    setTimeout(() => manualBootstrap().catch(() => {}), 0);
+  }
 })();

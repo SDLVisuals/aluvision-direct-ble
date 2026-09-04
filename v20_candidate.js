@@ -325,10 +325,10 @@
     flow.phase = 'security-confirm';
     modal(`<section class="v20-commission v20-security-step" data-phase="security-confirm">
       ${stepDots('security')}
-      <div class="v20-security-confirm-visual"><i>NFC</i><span></span><b>R</b></div>
+      <div class="v20-security-confirm-visual"><i>BOOT</i><span></span><b>R</b></div>
       <div class="eyebrow">${tx('FYSIEKE BEVESTIGING', 'PHYSICAL CONFIRMATION', 'CONFIRMATION PHYSIQUE', 'PHYSISCHE BESTÄTIGUNG')}</div>
-      <h1>${tx('Tik de receiver opnieuw aan', 'Tap the receiver again', 'Touchez à nouveau le récepteur', 'Tippe den Receiver erneut an')}</h1>
-      <p class="sub">${tx('De NFC-toestemming is verlopen. Tik opnieuw met je iPhone en druk daarna op Verder. Op oudere firmware kun je de BOOT-knop 2 seconden vasthouden.', 'The NFC approval expired. Tap again with your iPhone, then press Continue. On older firmware, hold BOOT for 2 seconds.', 'L’autorisation NFC a expiré. Touchez à nouveau avec votre iPhone puis continuez. Sur un ancien firmware, maintenez BOOT 2 secondes.', 'Die NFC-Freigabe ist abgelaufen. Tippe erneut mit dem iPhone und drücke dann Weiter. Bei älterer Firmware BOOT 2 Sekunden halten.')}</p>
+      <h1>${tx('Houd BOOT 2 seconden ingedrukt', 'Hold BOOT for 2 seconds', 'Maintenez BOOT pendant 2 secondes', 'BOOT 2 Sekunden gedrückt halten')}</h1>
+      <p class="sub">${tx('Deze beveiligingsstap vraagt fysieke toestemming op de receiver. Houd BOOT 2 seconden ingedrukt en druk daarna op Verder.', 'This security step requires physical approval on the receiver. Hold BOOT for 2 seconds, then press Continue.', 'Cette étape de sécurité exige une confirmation physique sur le récepteur. Maintenez BOOT pendant 2 secondes, puis continuez.', 'Dieser Sicherheitsschritt erfordert eine physische Bestätigung am Receiver. BOOT 2 Sekunden gedrückt halten und dann Weiter drücken.')}</p>
       ${message ? `<p class="danger-note">${safe(message)}</p>` : ''}
       <footer><button class="button soft" onclick="v20CancelCommission()">${tx('Annuleren', 'Cancel', 'Annuler', 'Abbrechen')}</button><button class="button" onclick="v20RetryInstallationProtection()">${tx('Verder', 'Continue', 'Continuer', 'Weiter')} →</button></footer>
     </section>`);
@@ -960,12 +960,13 @@
     }, 1400);
   }
 
-  function renderPrivateReceiverAdd(target = null, checkState = '') {
+  function renderPrivateReceiverAdd(target = null, checkState = '', statusMessage = '') {
     const destination = target && typeof window.receiverGroupTarget === 'function'
       ? receiverGroupTarget(target.zoneId, target.groupId) : null;
     const link = privateWifiDetails();
     const connected = Boolean(link.ready);
     const provisioned = Boolean(link.provisioned);
+    const manualRequested = Boolean(window.AluvisionPrivateWifi?.manualBootstrapRequested?.());
     const nfcState = String(link.nfcState || '');
     const nfcHealth = privateNfcHealth(link);
     const nfcHardwareMarkup = connected && nfcState
@@ -973,26 +974,38 @@
       : '';
     const stateMarkup = connected
       ? `<div id="v20PrivatePairStatus" class="nfc-status success"><span><b>${tx('Privénetwerk verbonden', 'Private network connected', 'Réseau privé connecté', 'Privatnetz verbunden')}</b><small>${safe(link.ssid || 'ALUVISION')} · ${tx('klaar om toe te voegen', 'ready to add', 'prêt à être ajouté', 'bereit zum Hinzufügen')}</small></span></div>`
+      : checkState === 'manual-loading'
+        ? `<div id="v20PrivatePairStatus" class="nfc-status scanning"><span><b>${tx('Receiver controleren…', 'Checking receiver…', 'Vérification du récepteur…', 'Receiver wird geprüft…')}</b><small>${tx('De tijdelijke BOOT-toestemming en receiveridentiteit worden veilig gecontroleerd.', 'The temporary BOOT approval and receiver identity are being checked securely.', 'L’autorisation BOOT temporaire et l’identité du récepteur sont vérifiées de manière sécurisée.', 'Die temporäre BOOT-Freigabe und die Receiver-Identität werden sicher geprüft.')}</small></span></div>`
+      : checkState === 'manual-failed'
+        ? `<div id="v20PrivatePairStatus" class="nfc-status error"><span><b>${tx('Nieuwe BOOT-toestemming nodig', 'New BOOT approval required', 'Nouvelle autorisation BOOT requise', 'Neue BOOT-Freigabe erforderlich')}</b><small>${safe(statusMessage || tx('Houd BOOT 2 seconden ingedrukt en probeer meteen opnieuw.', 'Hold BOOT for 2 seconds and retry immediately.', 'Maintenez BOOT pendant 2 secondes et réessayez immédiatement.', 'BOOT 2 Sekunden gedrückt halten und sofort erneut versuchen.'))}</small></span></div>`
       : checkState === 'failed'
-        ? `<div id="v20PrivatePairStatus" class="nfc-status error"><span><b>${tx('Receiver nog niet bereikbaar', 'Receiver not reachable yet', 'Récepteur pas encore accessible', 'Receiver noch nicht erreichbar')}</b><small>${tx('Kies op je iPhone het getoonde ALUVISION-netwerk en tik de receiver daarna opnieuw aan.', 'Choose the shown ALUVISION network on your iPhone, then tap the receiver again.', 'Choisissez le réseau ALUVISION affiché sur votre iPhone, puis touchez à nouveau le récepteur.', 'Wähle auf deinem iPhone das angezeigte ALUVISION-Netzwerk und tippe den Receiver danach erneut an.')}</small></span></div>`
-        : `<div id="v20PrivatePairStatus" class="nfc-status ${provisioned ? 'scanning' : ''}"><span><b>${provisioned ? tx('Receivergegevens ontvangen', 'Receiver details received', 'Données du récepteur reçues', 'Receiver-Daten empfangen') : tx('Tik de receiver aan', 'Tap the receiver', 'Touchez le récepteur', 'Receiver antippen')}</b><small>${provisioned ? tx('Kies deze beveiligde receiververbinding één keer op je iPhone. De wizard bewaart je voortgang.', 'Choose this secure receiver connection once on your iPhone. The wizard keeps your progress.', 'Choisissez une fois cette connexion sécurisée sur votre iPhone. L’assistant conserve votre progression.', 'Wähle diese sichere Receiver-Verbindung einmal auf deinem iPhone. Der Assistent behält deinen Fortschritt.') : tx('De receiver stuurt zijn unieke verbindingsgegevens via NFC naar je iPhone.', 'The receiver sends its unique connection details to your iPhone over NFC.', 'Le récepteur envoie ses données de connexion uniques à votre iPhone via NFC.', 'Der Receiver sendet seine eindeutigen Verbindungsdaten per NFC an dein iPhone.')}</small></span></div>`;
+        ? `<div id="v20PrivatePairStatus" class="nfc-status error"><span><b>${tx('Receiver nog niet bereikbaar', 'Receiver not reachable yet', 'Récepteur pas encore accessible', 'Receiver noch nicht erreichbar')}</b><small>${tx('Controleer of je iPhone met het ALUVISION-netwerk is verbonden en open daarna het receiveradres.', 'Check that your iPhone is connected to the ALUVISION network, then open the receiver address.', 'Vérifiez que votre iPhone est connecté au réseau ALUVISION, puis ouvrez l’adresse du récepteur.', 'Prüfe, ob dein iPhone mit dem ALUVISION-Netzwerk verbunden ist, und öffne danach die Receiver-Adresse.')}</small></span></div>`
+        : `<div id="v20PrivatePairStatus" class="nfc-status ${provisioned ? 'scanning' : ''}"><span><b>${provisioned ? tx('Receivergegevens ontvangen', 'Receiver details received', 'Données du récepteur reçues', 'Receiver-Daten empfangen') : tx('Klaar voor de tijdelijke testverbinding', 'Ready for the temporary test connection', 'Prêt pour la connexion de test temporaire', 'Bereit für die temporäre Testverbindung')}</b><small>${provisioned ? tx('Kies deze beveiligde receiververbinding één keer op je iPhone. De wizard bewaart je voortgang.', 'Choose this secure receiver connection once on your iPhone. The wizard keeps your progress.', 'Choisissez une fois cette connexion sécurisée sur votre iPhone. L’assistant conserve votre progression.', 'Wähle diese sichere Receiver-Verbindung einmal auf deinem iPhone. Der Assistent behält deinen Fortschritt.') : tx('Volg de drie stappen hieronder. Daarna opent automatisch de volledige instelwizard.', 'Follow the three steps below. The complete setup wizard then opens automatically.', 'Suivez les trois étapes ci-dessous. L’assistant de configuration complet s’ouvre ensuite automatiquement.', 'Folge den drei Schritten unten. Danach öffnet sich automatisch der vollständige Einrichtungsassistent.')}</small></span></div>`;
     window.modal(`<section class="v20-private-pair">
       <div class="eyebrow">${tx('RECEIVER TOEVOEGEN', 'ADD RECEIVER', 'AJOUTER UN RÉCEPTEUR', 'RECEIVER HINZUFÜGEN')}</div>
       <h1>${tx('Tik. Verbind. Stel in.', 'Tap. Connect. Set up.', 'Touchez. Connectez. Configurez.', 'Tippen. Verbinden. Einrichten.')}</h1>
-      <p class="sub">${tx('Tik de receiver aan. Kies daarna één keer zijn beveiligde ALUVISION-verbinding op je iPhone. Dezelfde wizard opent vanaf de receiver en gaat automatisch verder.', 'Tap the receiver. Then choose its secure ALUVISION connection once on your iPhone. The same wizard opens from the receiver and continues automatically.', 'Touchez le récepteur. Choisissez ensuite une fois sa connexion ALUVISION sécurisée sur votre iPhone. Le même assistant s’ouvre depuis le récepteur et continue automatiquement.', 'Tippe den Receiver an. Wähle danach einmal seine sichere ALUVISION-Verbindung auf deinem iPhone. Derselbe Assistent öffnet sich vom Receiver und läuft automatisch weiter.')}</p>
+      <p class="sub">${tx('Voor deze tijdelijke test heb je geen NFC nodig. Verbind je iPhone rechtstreeks met de receiver en doorloop daarna de volledige wizard.', 'You do not need NFC for this temporary test. Connect your iPhone directly to the receiver, then complete the full wizard.', 'Vous n’avez pas besoin du NFC pour ce test temporaire. Connectez directement votre iPhone au récepteur, puis suivez l’assistant complet.', 'Für diesen temporären Test brauchst du kein NFC. Verbinde dein iPhone direkt mit dem Receiver und durchlaufe danach den vollständigen Assistenten.')}</p>
       ${destination ? `<div class="group-pair-target"><span><b>${tx('Wordt toegevoegd aan', 'Will be added to', 'Sera ajouté à', 'Wird hinzugefügt zu')}</b><small>${safe(destination.zone.name)} → ${safe(destination.group.name)}</small></span><span class="scope">${tx('AL GEKOZEN', 'PRESELECTED', 'PRÉSÉLECTIONNÉ', 'VORAUSGEWÄHLT')}</span></div>` : ''}
-      <div class="v20-pair-visual" aria-hidden="true"><div class="v20-phone-glyph"><i>NFC</i></div><div class="v20-pair-waves"><i></i><i></i><i></i></div><div class="v20-hub-glyph"><b>R</b><small>Wi-Fi</small></div></div>
+      <div class="v20-pair-visual" aria-hidden="true"><div class="v20-phone-glyph"><i>BOOT</i></div><div class="v20-pair-waves"><i></i><i></i><i></i></div><div class="v20-hub-glyph"><b>R</b><small>Wi-Fi</small></div></div>
       <div class="v20-pair-steps">
-        <span class="${provisioned || connected ? 'done' : 'on'}"><i>${provisioned || connected ? '✓' : '1'}</i><b>${tx('Tik NFC', 'Tap NFC', 'Touchez NFC', 'NFC antippen')}</b></span>
-        <span class="${connected ? 'done' : provisioned ? 'on' : ''}"><i>${connected ? '✓' : '2'}</i><b>${tx('Kies verbinding', 'Choose connection', 'Choisissez la connexion', 'Verbindung wählen')}</b></span>
+        <span class="${provisioned || connected || manualRequested ? 'done' : 'on'}"><i>${provisioned || connected || manualRequested ? '✓' : '1'}</i><b>${tx('BOOT 2 sec.', 'BOOT 2 sec.', 'BOOT 2 s', 'BOOT 2 Sek.')}</b></span>
+        <span class="${connected ? 'done' : provisioned || manualRequested ? 'on' : ''}"><i>${connected ? '✓' : '2'}</i><b>${tx('Kies Wi-Fi', 'Choose Wi-Fi', 'Choisissez le Wi-Fi', 'WLAN wählen')}</b></span>
         <span class="${connected ? 'on' : ''}"><i>3</i><b>${tx('Receiver instellen', 'Set up receiver', 'Configurer le récepteur', 'Receiver einrichten')}</b></span>
       </div>
+      <section class="v20-manual-pair" aria-label="${tx('Handmatig verbinden', 'Connect manually', 'Connexion manuelle', 'Manuell verbinden')}">
+        <ol>
+          <li><i>1</i><span><b>${tx('Houd BOOT 2 seconden ingedrukt', 'Hold BOOT for 2 seconds', 'Maintenez BOOT pendant 2 secondes', 'BOOT 2 Sekunden gedrückt halten')}</b><small>${tx('Het tijdelijke verbindingsvenster blijft 5 minuten open.', 'The temporary connection window stays open for 5 minutes.', 'La fenêtre de connexion temporaire reste ouverte pendant 5 minutes.', 'Das temporäre Verbindungsfenster bleibt 5 Minuten offen.')}</small></span></li>
+          <li><i>2</i><span><b>${tx('Open Instellingen → Wi-Fi', 'Open Settings → Wi-Fi', 'Ouvrez Réglages → Wi-Fi', 'Einstellungen → WLAN öffnen')}</b><small>${tx('Kies ALUVISION-… en gebruik deze vaste testcode:', 'Choose ALUVISION-… and use this fixed test code:', 'Choisissez ALUVISION-… et utilisez ce code de test fixe :', 'ALUVISION-… wählen und diesen festen Testcode verwenden:')}</small><code>aluvision20</code><button type="button" class="v20-inline-copy" onclick="v20CopyManualWifiCode()">${tx('Kopieer code', 'Copy code', 'Copier le code', 'Code kopieren')}</button></span></li>
+          <li><i>3</i><span><b>${tx('Open in Safari', 'Open in Safari', 'Ouvrez dans Safari', 'In Safari öffnen')}</b><small>${tx('Open dit adres zodra Wi-Fi verbonden is:', 'Open this address once Wi-Fi is connected:', 'Ouvrez cette adresse dès que le Wi-Fi est connecté :', 'Diese Adresse öffnen, sobald das WLAN verbunden ist:')}</small><code>192.168.4.1/?manual=1</code></span></li>
+        </ol>
+      </section>
+      <div class="v20-pair-actions"><button class="button soft" onclick="closeModal()">${tx('Annuleren', 'Cancel', 'Annuler', 'Abbrechen')}</button>${connected ? `<button class="button" onclick="v20PairPrivateReceiver()">${tx('Receiver instellen', 'Set up receiver', 'Configurer le récepteur', 'Receiver einrichten')} →</button>` : checkState === 'manual-loading' ? `<button class="button" disabled>${tx('Verbinden…', 'Connecting…', 'Connexion…', 'Verbinden…')}</button>` : checkState === 'manual-failed' ? `<button class="button" onclick="v20RetryManualBootstrap()">${tx('Opnieuw proberen', 'Try again', 'Réessayer', 'Erneut versuchen')}</button>` : provisioned ? `<button class="button" onclick="v20CheckPrivateReceiver()">${tx('Receiver openen', 'Open receiver', 'Ouvrir le récepteur', 'Receiver öffnen')}</button>` : `<button class="button" onclick="v20OpenManualReceiver()">${tx('Open 192.168.4.1', 'Open 192.168.4.1', 'Ouvrir 192.168.4.1', '192.168.4.1 öffnen')}</button>`}</div>
       ${provisioned ? `<div class="v20-network-card"><span><small>${tx('BEVEILIGDE RECEIVER-VERBINDING', 'SECURE RECEIVER CONNECTION', 'CONNEXION SÉCURISÉE DU RÉCEPTEUR', 'SICHERE RECEIVER-VERBINDUNG')}</small><b>${safe(link.ssid || 'ALUVISION-••••')}</b></span>${link.hasPassword ? `<button class="button soft" onclick="v20CopyPrivatePassword()">${tx('Code kopiëren', 'Copy code', 'Copier le code', 'Code kopieren')}</button>` : ''}</div>` : ''}
       ${stateMarkup}
       ${nfcHardwareMarkup}
-      <div class="v20-pair-actions"><button class="button soft" onclick="closeModal()">${tx('Annuleren', 'Cancel', 'Annuler', 'Abbrechen')}</button>${connected ? `<button class="button" onclick="v20PairPrivateReceiver()">${tx('Receiver instellen', 'Set up receiver', 'Configurer le récepteur', 'Receiver einrichten')} →</button>` : `<button class="button" onclick="v20CheckPrivateReceiver()">${tx('Verbinding controleren', 'Check connection', 'Vérifier la connexion', 'Verbindung prüfen')}</button>`}</div>
+      <details class="v20-nfc-alternative" ${provisioned && !manualRequested ? 'open' : ''}><summary>${tx('Liever NFC gebruiken?', 'Prefer to use NFC?', 'Vous préférez utiliser le NFC ?', 'Lieber NFC verwenden?')}</summary><p>${tx('Tik de NFC-tag van de receiver aan met je iPhone. Kies daarna het aangeboden ALUVISION-netwerk; de wizard gaat vanzelf verder.', 'Tap the receiver NFC tag with your iPhone. Then choose the offered ALUVISION network; the wizard continues automatically.', 'Touchez le tag NFC du récepteur avec votre iPhone. Choisissez ensuite le réseau ALUVISION proposé ; l’assistant continue automatiquement.', 'Tippe den NFC-Tag des Receivers mit deinem iPhone an. Wähle danach das angebotene ALUVISION-Netzwerk; der Assistent läuft automatisch weiter.')}</p></details>
     </section>`);
-    if ((provisioned && !connected) || (connected && !link.nfcReady)) schedulePrivatePairCheck();
+    if (provisioned && !connected && checkState !== 'manual-failed') schedulePrivatePairCheck();
     if (connected && privatePairAutoRequested && !privatePairAutoStarted && !privatePairInFlight) {
       privatePairAutoStarted = true;
       setTimeout(() => window.v20PairPrivateReceiver?.(), 180);
@@ -1020,6 +1033,49 @@
       toast(copied ? tx('Wachtwoord gekopieerd', 'Password copied', 'Mot de passe copié', 'Passwort kopiert') : tx('Geen wachtwoord ontvangen', 'No password received', 'Aucun mot de passe reçu', 'Kein Passwort empfangen'));
     } catch (_) {
       toast(tx('Kopiëren is niet toegestaan · houd het wachtwoord ingedrukt', 'Copying is unavailable · press and hold the password', 'Copie indisponible · maintenez le mot de passe', 'Kopieren nicht verfügbar · Passwort gedrückt halten'));
+    }
+  };
+
+  window.v20CopyManualWifiCode = async function v20CopyManualWifiCode() {
+    const code = 'aluvision20';
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code);
+      } else {
+        const input = document.createElement('textarea');
+        input.value = code;
+        input.setAttribute('readonly', '');
+        input.style.position = 'fixed';
+        input.style.opacity = '0';
+        document.body.appendChild(input);
+        input.select();
+        const copied = Boolean(document.execCommand?.('copy'));
+        input.remove();
+        if (!copied) throw new Error('copy unavailable');
+      }
+      toast(tx('Testcode gekopieerd', 'Test code copied', 'Code de test copié', 'Testcode kopiert'));
+    } catch (_) {
+      toast(tx('Houd de code ingedrukt om hem te kopiëren', 'Press and hold the code to copy it', 'Maintenez le code pour le copier', 'Code gedrückt halten, um ihn zu kopieren'));
+    }
+  };
+
+  window.v20OpenManualReceiver = function v20OpenManualReceiver() {
+    location.assign('http://192.168.4.1/?manual=1');
+  };
+
+  window.v20RetryManualBootstrap = async function v20RetryManualBootstrap() {
+    const target = privatePairTarget && { ...privatePairTarget };
+    privatePairAutoRequested = true;
+    privatePairAutoStarted = false;
+    renderPrivateReceiverAdd(target, 'manual-loading');
+    try {
+      const bootstrap = window.AluvisionPrivateWifi?.manualBootstrap;
+      if (typeof bootstrap !== 'function') throw new Error(tx('De handmatige receiververbinding is niet beschikbaar.', 'The manual receiver connection is unavailable.', 'La connexion manuelle au récepteur n’est pas disponible.', 'Die manuelle Receiver-Verbindung ist nicht verfügbar.'));
+      await bootstrap({ refresh: true });
+      renderPrivateReceiverAdd(target);
+    } catch (error) {
+      privatePairAutoRequested = false;
+      renderPrivateReceiverAdd(target, 'manual-failed', error?.message || String(error));
     }
   };
 
@@ -1062,7 +1118,7 @@
     if (!response?.ok || !response.device) {
       if (node) {
         node.className = 'nfc-status error';
-        node.innerHTML = `<span><b>${tx('Toevoegen is nog niet gelukt', 'Adding has not succeeded yet', 'L’ajout n’a pas encore réussi', 'Hinzufügen noch nicht erfolgreich')}</b><small>${safe(response?.error || tx('Tik NFC opnieuw aan en controleer het privénetwerk.', 'Tap NFC again and check the private network.', 'Touchez à nouveau le NFC et vérifiez le réseau privé.', 'Tippe NFC erneut an und prüfe das Privatnetz.'))}</small></span>`;
+        node.innerHTML = `<span><b>${tx('Toevoegen is nog niet gelukt', 'Adding has not succeeded yet', 'L’ajout n’a pas encore réussi', 'Hinzufügen noch nicht erfolgreich')}</b><small>${safe(response?.error || tx('Houd BOOT 2 seconden ingedrukt en probeer opnieuw. NFC blijft ook beschikbaar.', 'Hold BOOT for 2 seconds and try again. NFC also remains available.', 'Maintenez BOOT pendant 2 secondes et réessayez. Le NFC reste également disponible.', 'BOOT 2 Sekunden gedrückt halten und erneut versuchen. NFC bleibt ebenfalls verfügbar.'))}</small></span>`;
       }
       if (button) button.disabled = false;
       privatePairInFlight = false;
@@ -1155,6 +1211,8 @@
     .calibration-live[data-state="offline"]{background:#f9e9e7;color:#903e38}.calibration-live[data-state="sent"]{background:#fff3dd;color:#7b581f}
     .v20-private-pair{display:grid;gap:15px;min-width:0}.v20-private-pair h1{margin:0;font-size:clamp(28px,6vw,38px)}.v20-private-pair>.sub{margin-top:-8px;line-height:1.5}.v20-pair-visual{display:flex;align-items:center;justify-content:center;min-height:126px;padding:18px;border-radius:20px;background:radial-gradient(circle at 50% 50%,#ca4e4630,transparent 44%),#111312;color:#fff;overflow:hidden}.v20-phone-glyph,.v20-hub-glyph{display:grid;place-items:center;flex:0 0 72px;height:91px;border:1px solid #ffffff30;border-radius:18px;background:linear-gradient(145deg,#3b3e3b,#181a19);box-shadow:0 12px 26px #0008}.v20-phone-glyph:before{content:'';width:28px;height:5px;border-radius:99px;background:#ffffff35}.v20-phone-glyph i{font-size:10px;font-style:normal;letter-spacing:1px}.v20-hub-glyph b{font-size:27px}.v20-hub-glyph small{font-size:8px;color:#ffffffa5}.v20-pair-waves{position:relative;display:flex;align-items:center;justify-content:center;width:94px;height:70px}.v20-pair-waves i{position:absolute;width:19px;height:42px;border:2px solid #d65a52;border-left:0;border-top-color:transparent;border-bottom-color:transparent;border-radius:0 50% 50% 0;animation:v20PairWave 1.55s ease-out infinite}.v20-pair-waves i:nth-child(2){animation-delay:.32s}.v20-pair-waves i:nth-child(3){animation-delay:.64s}.v20-pair-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.v20-pair-steps span{display:grid;justify-items:center;gap:6px;padding:10px 6px;border:1px solid var(--line);border-radius:13px;color:var(--mut);text-align:center}.v20-pair-steps i{display:grid;place-items:center;width:27px;height:27px;border-radius:50%;background:var(--panel-2);font-style:normal;font-weight:900}.v20-pair-steps b{font-size:9px}.v20-pair-steps .on{border-color:var(--red);color:var(--ink)}.v20-pair-steps .on i{background:var(--red);color:#fff}.v20-pair-steps .done i{background:#19825c;color:#fff}.v20-network-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px;border:1px solid var(--line);border-radius:14px;background:var(--panel-2)}.v20-network-card span{min-width:0}.v20-network-card small,.v20-network-card b{display:block}.v20-network-card small{color:var(--mut);font-size:8px;letter-spacing:.65px}.v20-network-card b{margin-top:4px;overflow:hidden;text-overflow:ellipsis}.v20-pair-actions{display:grid;grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr);gap:9px}.v20-pair-actions .button{min-width:0;min-height:50px}.v20-pair-actions .button:only-child{grid-column:1/-1}
     .v20-nfc-health{display:grid;grid-template-columns:34px minmax(0,1fr);gap:9px;align-items:center;padding:10px 11px;border:1px solid var(--line);border-radius:13px;background:var(--panel-2)}.v20-nfc-health>i{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:#19825c;color:#fff;font-style:normal;font-weight:950}.v20-nfc-health.checking>i{background:#bd8116}.v20-nfc-health.error>i{background:var(--red)}.v20-nfc-health b,.v20-nfc-health small{display:block}.v20-nfc-health small{margin-top:2px;color:var(--mut);font-size:9px}
+    .v20-private-pair .nfc-status:before{content:'Wi-Fi'}
+    .v20-manual-pair{padding:13px;border:1px solid var(--line);border-radius:16px;background:var(--panel-2)}.v20-manual-pair ol{display:grid;gap:12px;margin:0;padding:0;list-style:none}.v20-manual-pair li{display:grid;grid-template-columns:31px minmax(0,1fr);gap:10px;align-items:start}.v20-manual-pair li>i{display:grid;place-items:center;width:31px;height:31px;border-radius:10px;background:var(--ink);color:var(--panel);font-style:normal;font-weight:950}.v20-manual-pair li>span{min-width:0}.v20-manual-pair b,.v20-manual-pair small,.v20-manual-pair code{display:block}.v20-manual-pair small{margin-top:3px;color:var(--mut);font-size:9px;line-height:1.4}.v20-manual-pair code{margin-top:7px;padding:8px 10px;border-radius:9px;background:var(--panel);color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;font-weight:850;overflow-wrap:anywhere}.v20-inline-copy{margin-top:6px;padding:4px 0;border:0;background:transparent;color:var(--red);font:inherit;font-size:9px;font-weight:900;cursor:pointer}.v20-nfc-alternative{padding:10px 12px;border:1px solid var(--line);border-radius:13px;background:var(--panel-2)}.v20-nfc-alternative summary{cursor:pointer;font-size:10px;font-weight:900}.v20-nfc-alternative p{margin:8px 0 0;color:var(--mut);font-size:9px;line-height:1.45}
     @keyframes v20GreenConfirm{50%{filter:brightness(1.25);transform:scaleY(.86)}}
     @keyframes v20GreenTravelRight{from{transform:translateX(-2400%);filter:brightness(1.35)}to{transform:translateX(0);filter:brightness(1)}}
     @keyframes v20GreenTravelLeft{from{transform:translateX(2400%);filter:brightness(1.35)}to{transform:translateX(0);filter:brightness(1)}}
@@ -1165,12 +1223,27 @@
   `;
   document.head.appendChild(style);
 
-  /* An NFC hand-off opens the same complete app, not a separate pairing
-     website. Bring the receiver wizard forward automatically after the
-     fragment has been captured and scrubbed by the Wi-Fi adapter. */
+  /* Both the temporary BOOT flow and the NFC hand-off open this same complete
+     app. Bring the receiver wizard forward after the local adapter has safely
+     captured and verified the receiver credentials. */
   const v20DeveloperHost = ['127.0.0.1', 'localhost', '::1'].includes(location.hostname);
   const v20UiTest = v20DeveloperHost ? new URLSearchParams(location.search).get('uiTest') : '';
-  if (!v20UiTest && window.AluvisionPrivateWifi?.wasProvisionedThisLoad?.()) {
+  const v20ManualBootstrapRequested = Boolean(window.AluvisionPrivateWifi?.manualBootstrapRequested?.());
+  if (!v20UiTest && v20ManualBootstrapRequested) {
+    privatePairAutoRequested = true;
+    privatePairAutoStarted = false;
+    setTimeout(async () => {
+      privatePairTarget = null;
+      renderPrivateReceiverAdd(null, 'manual-loading');
+      try {
+        await window.AluvisionPrivateWifi.manualBootstrap();
+        renderPrivateReceiverAdd();
+      } catch (error) {
+        privatePairAutoRequested = false;
+        renderPrivateReceiverAdd(null, 'manual-failed', error?.message || String(error));
+      }
+    }, 180);
+  } else if (!v20UiTest && window.AluvisionPrivateWifi?.wasProvisionedThisLoad?.()) {
     privatePairAutoRequested = true;
     privatePairAutoStarted = false;
     setTimeout(() => {
