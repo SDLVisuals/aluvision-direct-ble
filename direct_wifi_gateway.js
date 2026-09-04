@@ -23,6 +23,12 @@
   let transactionTail = Promise.resolve();
   let security = {};
   let capturedThisLoad = false;
+  let outputHealth = Object.freeze({
+    ready: null,
+    degraded: false,
+    code: '',
+    selfTest: ''
+  });
 
   function cleanHex(value, length) {
     const text = String(value || '').trim().toUpperCase();
@@ -323,7 +329,50 @@
 
   async function statusForGateway(timeout = 3600) {
     const type = String(gatewayFields.DEVTYPE || 'SPI').toUpperCase() === 'RGBW' ? 'RGBW' : 'SPI';
-    return transact({ TYPE: 'STATUS', TARGET: gatewayFields.RID, DEVTYPE: type }, { timeout, allowError: true });
+    const status = await transact(
+      { TYPE: 'STATUS', TARGET: gatewayFields.RID, DEVTYPE: type },
+      { timeout, allowError: true }
+    );
+    const expectedRid = cleanHex(gatewayFields.RID, 16);
+    const targetRid = cleanHex(status.TARGETRID, 16);
+    const replyRid = cleanHex(status.RID, 16);
+    const identityMatches = targetRid ? targetRid === expectedRid : replyRid === expectedRid;
+    if (!identityMatches) {
+      ready = false;
+      throw new Error('De receiverstatus hoort niet bij de verbonden receiver.');
+    }
+
+    /*
+     * V20 receivers can report STATUS=ERROR for a valid STATUS reply when the
+     * radio/pairing path is healthy but the physical LED output failed its
+     * boot check.  That is an output diagnostic, not a failed pairing.  Keep
+     * the transport usable and carry the diagnostic to the setup UI instead
+     * of losing the newly paired receiver.
+     */
+    const degradedOutput = status.STATUS === 'ERROR' && status.DETAIL === 'STATUS' && status.PAIRED === '1';
+    const accepted = status.STATUS === 'OK' || degradedOutput;
+    const explicitReady = status.OUTPUTOK === '1' ? true : status.OUTPUTOK === '0' ? false : null;
+    const outputReady = degradedOutput ? false : explicitReady;
+    const selfTest = String(status.BOOTSELFTEST || '').toUpperCase();
+    const code = outputReady === false
+      ? (selfTest || String(status.OUTPUTSTATE || status.OUTPUTERROR || 'OUTPUT_NOT_READY').toUpperCase())
+      : '';
+    outputHealth = Object.freeze({
+      ready: outputReady,
+      degraded: degradedOutput,
+      code,
+      selfTest
+    });
+    gatewayFields = { ...gatewayFields, OUTPUTOK: status.OUTPUTOK, BOOTSELFTEST: status.BOOTSELFTEST };
+
+    if (!accepted) throw new Error(status.DETAIL || 'Receiverstatus niet beschikbaar');
+    return {
+      ...status,
+      outputReady: outputHealth.ready,
+      outputDegraded: outputHealth.degraded,
+      outputDiagnostic: outputHealth.code,
+      outputSelfTest: outputHealth.selfTest
+    };
   }
 
   async function pair(payload = {}) {
@@ -370,7 +419,6 @@
       persist();
     }
     const status = await statusForGateway();
-    if (status.STATUS === 'ERROR') throw new Error(status.DETAIL || 'Receiverstatus niet beschikbaar');
     return {
       ...gatewayFields,
       ...reply,
@@ -386,7 +434,6 @@
     try {
       await connect();
       const status = await statusForGateway(3000);
-      if (status.STATUS === 'ERROR') return { devices: [] };
       return { devices: [{ ...gatewayFields, ...status, RID: gatewayFields.RID, gateway: true }] };
     } catch (_) {
       ready = false;
@@ -468,7 +515,11 @@
       ready,
       nfcState: String(gatewayFields.NFCSTATE || (gatewayFields.NFCREADY === '1' || gatewayFields.NFC === '1' ? 'READY' : gatewayFields.NFCREADY === '0' ? 'NOT_READY' : '')).toUpperCase(),
       nfcReady: gatewayFields.NFCSTATE === 'READY' || gatewayFields.NFCREADY === '1' || gatewayFields.NFC === '1',
-      nfcTaps: Math.max(0, Number(gatewayFields.NFCTAPS) || 0)
+      nfcTaps: Math.max(0, Number(gatewayFields.NFCTAPS) || 0),
+      outputReady: outputHealth.ready,
+      outputDegraded: outputHealth.degraded,
+      outputDiagnostic: outputHealth.code,
+      outputSelfTest: outputHealth.selfTest
     }),
     copyWifiPassword: async () => {
       if (!connection.password) return false;
