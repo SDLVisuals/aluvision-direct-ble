@@ -1,7 +1,7 @@
 // Bump this key whenever cache policy changes. In particular, the previous
 // cache could contain a navigation Request whose NFC query parameters were part
 // of the CacheStorage key. Activating this worker removes that cache wholesale.
-const CACHE = 'aluvision-v20-20-0-0-shell-v1';
+const CACHE = 'aluvision-v20-20-0-0-shell-v2';
 const SHELL = [
   './index.html',
   './direct_ble_ota.js',
@@ -12,6 +12,7 @@ const SHELL = [
   './v20_customer_palette.js',
   './v20_accountless_recovery.js',
   './v20_ui_fixes.js',
+  './v20_icon_system.js',
   './manifest.webmanifest',
   './assets/aluvision-logo.png',
   './assets/aluvision-app-icon.png'
@@ -77,7 +78,7 @@ self.addEventListener('activate', (event) => {
     self.clients.claim(),
     caches.keys().then((keys) => Promise.all(
       keys.filter((key) =>
-        (key.startsWith('aluvision-faithful-') || key.startsWith('aluvision-direct-') || key.startsWith('aluvision-hardware-')) && key !== CACHE
+        (key.startsWith('aluvision-faithful-') || key.startsWith('aluvision-direct-') || key.startsWith('aluvision-hardware-') || key.startsWith('aluvision-v20-')) && key !== CACHE
       )
         .map((key) => caches.delete(key))
     )),
