@@ -121,11 +121,10 @@
   }
 
   function credentialHeaders(extra = {}) {
-    return {
-      'X-Aluvision-Device': device.id,
-      'X-Aluvision-Device-Token': device.token,
-      ...extra
-    };
+    /* DEVICEID and DEVICETOKEN are already authenticated by the receiver from
+       the request body. Keeping them out of custom headers avoids an iOS/
+       Safari private-network preflight that the receiver cannot approve. */
+    return { ...extra };
   }
 
   async function controlOnce(action, fields = {}, timeout = 15000) {

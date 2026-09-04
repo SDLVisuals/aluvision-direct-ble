@@ -215,7 +215,6 @@
     const deadline = abortAfter(timeout);
     const headers = new Headers(options.headers || {});
     headers.set(TOKEN_HEADER, connection.token);
-    headers.set('Cache-Control', 'no-store');
     try {
       const response = await fetch(`${connection.base}${path}`, {
         method: String(options.method || 'POST').toUpperCase(),
