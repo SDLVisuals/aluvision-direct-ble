@@ -933,7 +933,7 @@
     if (!cue) return;
     cue[key] = clamp(value, key === 'fade' ? 0 : .1, key === 'fade' ? 30 : 120, cue[key]);
     rgbwPersist(draft);
-    requestAnimationFrame(() => window.studio());
+    window.studio();
   };
 
   window.studioConsoleRgbwMoveCue = function studioConsoleRgbwMoveCue(id, delta) {
