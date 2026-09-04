@@ -1,7 +1,7 @@
 // Bump this key whenever cache policy changes. In particular, the previous
 // cache could contain a navigation Request whose NFC query parameters were part
 // of the CacheStorage key. Activating this worker removes that cache wholesale.
-const CACHE = 'aluvision-v20-20-0-0-shell-v5';
+const CACHE = 'aluvision-v20-20-0-0-shell-v6';
 const SHELL = [
   './index.html',
   './direct_ble_ota.js',
@@ -14,6 +14,7 @@ const SHELL = [
   './v20_ui_fixes.js',
   './v20_icon_system.js',
   './v20_studio_console.js',
+  './v20_studio_pro.js',
   './manifest.webmanifest',
   './assets/aluvision-logo.png',
   './assets/aluvision-app-icon.png',

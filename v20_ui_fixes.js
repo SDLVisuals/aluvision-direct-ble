@@ -332,6 +332,7 @@
     window.render = render = function v20FinalRender(...args) {
       runMigrations();
       const result = baseRender.apply(this, args);
+      localiseMountedUi();
       requestAnimationFrame(localiseMountedUi);
       return result;
     };
