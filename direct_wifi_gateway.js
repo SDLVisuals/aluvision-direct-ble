@@ -466,7 +466,10 @@
       hasPassword: Boolean(connection.password),
       provisioned: Boolean(connection.token),
       needsLocalHandoff: Boolean(connection.token && cleanBase(location.origin) !== connection.base),
-      ready
+      ready,
+      nfcState: String(gatewayFields.NFCSTATE || (gatewayFields.NFCREADY === '1' || gatewayFields.NFC === '1' ? 'READY' : gatewayFields.NFCREADY === '0' ? 'NOT_READY' : '')).toUpperCase(),
+      nfcReady: gatewayFields.NFCSTATE === 'READY' || gatewayFields.NFCREADY === '1' || gatewayFields.NFC === '1',
+      nfcTaps: Math.max(0, Number(gatewayFields.NFCTAPS) || 0)
     }),
     copyWifiPassword: async () => {
       if (!connection.password) return false;

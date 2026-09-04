@@ -338,6 +338,19 @@
     };
   }
 
+  // Dynamic dialogs are created after the normal page render. Localise them
+  // in the same call so a fast tap never exposes the Dutch source copy for a
+  // frame (and tests/users do not need to wait for the observer).
+  const baseModal = window.modal;
+  if (typeof baseModal === 'function') {
+    window.modal = modal = function v20LocalisedModal(...args) {
+      const result = baseModal.apply(this, args);
+      localiseCommonUi(document.getElementById('modalBody'));
+      polishRgbwReceiverDialog();
+      return result;
+    };
+  }
+
   let localisationQueued = false;
   const observer = new MutationObserver((records) => {
     const selector = '#v1814-group-settings,#scenes,#lighting,#modalBody';

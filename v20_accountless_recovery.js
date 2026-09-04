@@ -325,22 +325,44 @@
     return continueSetup();
   }
 
+  /* Programmatic entry used by the receiver commissioning wizard. Secrets
+     exist only in this module's short-lived memory and are never copied into
+     pairDraft, the installation database, the URL or browser storage. */
+  async function setupInstallation(code = '') {
+    if (code) {
+      const normalized = normalizeUserCode(code);
+      if (!normalized) throw new Error(t('Gebruik een code van 8 tot 12 cijfers.','Use an 8 to 12 digit code.','Utilisez un code de 8 à 12 chiffres.','Verwenden Sie einen Code mit 8 bis 12 Ziffern.'));
+      pendingSetup = { code: normalized, key: createRecoveryKey() };
+    }
+    if (!pendingSetup) throw new Error(t('Kies eerst je herstelcode.','Choose your recovery code first.','Choisissez d’abord votre code.','Wählen Sie zuerst Ihren Wiederherstellungscode.'));
+    const result = await control('SETUP', { CODE: pendingSetup.code, KEY: pendingSetup.key });
+    if (result.DETAIL === 'PHYSICAL_REQUIRED') return { ok: false, physicalRequired: true };
+    if (result.DETAIL === 'PAIRING_REQUIRED') throw new Error(t('Koppel eerst deze receiver aan de installatie.','Pair this receiver with the installation first.','Associez d’abord ce receiver à l’installation.','Koppeln Sie diesen Receiver zuerst mit der Installation.'));
+    if (result.STATUS !== 'OK') throw new Error(result.DETAIL || 'Setup failed');
+    const recoveryKey = pendingSetup.key;
+    pendingSetup = null;
+    statusCache = null;
+    let snapshotStored = false;
+    try {
+      if (bindings?.getState) {
+        await uploadSnapshot(bindings.getState(), bindings.getRevision?.() || 1);
+        snapshotStored = true;
+      }
+    } catch (error) {
+      lastError = String(error?.message || error);
+    }
+    return { ok: true, recoveryKey, snapshotStored };
+  }
+
   async function continueSetup() {
     if (!pendingSetup) return openSetup();
     try {
-      const result = await control('SETUP', { CODE: pendingSetup.code, KEY: pendingSetup.key });
-      if (result.DETAIL === 'PHYSICAL_REQUIRED') {
+      const outcome = await setupInstallation();
+      if (outcome.physicalRequired) {
         show(`${physicalCard()}<h1>${t('Bevestig nu op de verbonden receiver','Confirm now on the connected receiver','Confirmez sur le receiver connecté','Jetzt am verbundenen Receiver bestätigen')}</h1><p class="sub">${t('Houd de knop 2 seconden vast en tik daarna op Verder.','Hold the button for 2 seconds, then tap Continue.','Maintenez le bouton 2 secondes puis continuez.','Taste 2 Sekunden halten, dann fortfahren.')}</p><button class="button" onclick="AluvisionAccountlessRecovery.continueSetup()">${t('Verder','Continue','Continuer','Weiter')}</button>`);
         return;
       }
-      if (result.DETAIL === 'PAIRING_REQUIRED') {
-        throw new Error(t('Koppel eerst deze receiver aan de installatie.','Pair this receiver with the installation first.','Associez d’abord ce receiver à l’installation.','Koppeln Sie diesen Receiver zuerst mit der Installation.'));
-      }
-      if (result.STATUS !== 'OK') throw new Error(result.DETAIL || 'Setup failed');
-      const recoveryKey = pendingSetup.key;
-      pendingSetup = null;
-      statusCache = null;
-      if (bindings?.getState) await uploadSnapshot(bindings.getState(), bindings.getRevision?.() || 1);
+      const recoveryKey = outcome.recoveryKey;
       show(`<span class="scope">${t('EENMALIG ZICHTBAAR','SHOWN ONCE','AFFICHÉE UNE FOIS','EINMALIG SICHTBAR')}</span><h1>Recovery Key</h1><div class="v20-recovery-code">${safe(recoveryKey)}</div><p class="danger-note">${t('Bewaar deze lange sleutel buiten de app. Hiermee kun je herstellen als je jouw gewone code vergeet.','Store this long key outside the app. It restores the setup if you forget your regular code.','Conservez cette clé hors de l’app.','Bewahren Sie diesen Schlüssel außerhalb der App auf.')}</p><button class="button soft" onclick="AluvisionAccountlessRecovery.copyCode('${safe(recoveryKey)}')">${t('Recovery Key kopiëren','Copy Recovery Key','Copier la clé','Recovery Key kopieren')}</button><button class="button" onclick="closeModal()">${t('Ik heb hem veilig bewaard','I stored it safely','Je l’ai conservée','Sicher gespeichert')}</button>`);
     } catch (error) {
       show(`<h1>${t('Nog niet gelukt','Not completed yet','Pas encore terminé','Noch nicht abgeschlossen')}</h1><p class="danger-note">${safe(error?.message || error)}</p>${physicalCard()}<button class="button" onclick="AluvisionAccountlessRecovery.continueSetup()">${t('Opnieuw proberen','Try again','Réessayer','Erneut versuchen')}</button>`);
@@ -571,6 +593,7 @@
     normalizeUserCode,
     normalizeRecoveryKey,
     createRecoveryKey,
+    setupInstallation,
     limits: Object.freeze({ plaintext: MAX_PLAINTEXT_BYTES, stored: MAX_STORED_BYTES, userCodeMin: USER_CODE_MIN, userCodeMax: USER_CODE_MAX }),
     get lastError() { return lastError; }
   });
