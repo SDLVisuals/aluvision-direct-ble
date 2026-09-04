@@ -61,6 +61,13 @@
     .alv-button-icon>.alv-icon{width:18px;height:18px}
     .v1814-home-action-chevron[data-alv-icon]>.alv-icon,.v1814-home-off-mark[data-alv-icon]>.alv-icon{width:15px;height:15px}
     .customer-device-empty>span[data-alv-icon]>.alv-icon{width:24px;height:24px}
+    .customer-group-empty-preview{min-height:76px!important;height:auto!important;padding:10px 12px!important;gap:12px!important;overflow:hidden}
+    .customer-group-empty-preview>.alv-empty-line-mark{position:relative;display:grid!important;place-items:center;flex:0 0 clamp(108px,42%,176px);width:clamp(108px,42%,176px)!important;height:50px!important;border:1px solid #ffffff18;border-radius:13px;background:repeating-linear-gradient(90deg,#30332f 0 8px,#151715 8px 11px),#101211;color:#fff!important;box-shadow:inset 0 1px #ffffff12,0 5px 14px #10121018}
+    .customer-group-empty-preview>.alv-empty-line-mark>.alv-icon{width:35px!important;height:35px!important;padding:7px;border-radius:10px;background:#0a0c0be8;filter:drop-shadow(0 0 5px #fff5)}
+    .customer-group-empty-preview>.alv-empty-line-mark:after{content:'+';position:absolute;right:6px;bottom:6px;display:grid;place-items:center;width:18px;height:18px;border-radius:6px;background:var(--red);color:#fff;font:900 14px/1 system-ui}
+    .customer-group-empty-preview>span{min-width:0;max-width:190px;line-height:1.3;text-align:left}
+    .customer-group-empty>i[data-alv-icon]{display:grid;place-items:center;width:46px!important;height:46px!important;margin:0 auto 10px;border-radius:14px;background:var(--panel-2);color:var(--red)}
+    .customer-group-empty>i[data-alv-icon]>.alv-icon{width:23px!important;height:23px!important}
     @media(max-width:560px){
       .nav>button>i[data-alv-icon]>.alv-icon{width:20px;height:20px}
       .alv-title-icon{width:27px;height:27px}
@@ -137,8 +144,11 @@
   function decorateGroups(root) {
     root.querySelectorAll?.('.customer-group-explorer-copy h3')
       .forEach((title) => addTitleIcon(title, 'group', 'alv-group-icon'));
-    root.querySelectorAll?.('.customer-group-empty>i,.customer-group-empty-preview>i')
-      .forEach((node) => setIcon(node, 'groupPlus'));
+    root.querySelectorAll?.('.customer-group-empty>i').forEach((node) => setIcon(node, 'groupPlus'));
+    root.querySelectorAll?.('.customer-group-empty-preview>i').forEach((node) => {
+      node.classList.add('alv-empty-line-mark');
+      setIcon(node, 'ledlines');
+    });
     root.querySelectorAll?.('.active-context-icon,.group-card-active-note>i,.active-group-modal-banner>i')
       .forEach((node) => setIcon(node, 'group'));
 
