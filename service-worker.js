@@ -1,7 +1,7 @@
 // Bump this key whenever cache policy changes. In particular, the previous
 // cache could contain a navigation Request whose NFC query parameters were part
 // of the CacheStorage key. Activating this worker removes that cache wholesale.
-const CACHE = 'aluvision-v20-20-0-0-shell-v3';
+const CACHE = 'aluvision-v20-20-0-0-shell-v4';
 const SHELL = [
   './index.html',
   './direct_ble_ota.js',
@@ -15,7 +15,15 @@ const SHELL = [
   './v20_icon_system.js',
   './manifest.webmanifest',
   './assets/aluvision-logo.png',
-  './assets/aluvision-app-icon.png'
+  './assets/aluvision-app-icon.png',
+  './assets/apple-touch-icon.png',
+  './assets/aluvision-icon-192.png',
+  './assets/aluvision-icon-512.png',
+  './assets/aluvision-icon-maskable-192.png',
+  './assets/aluvision-icon-maskable-512.png',
+  './assets/aluvision-icon-monochrome.png',
+  './assets/favicon-light.png',
+  './assets/favicon-dark.png'
 ];
 
 const SCOPE = self.registration.scope;
