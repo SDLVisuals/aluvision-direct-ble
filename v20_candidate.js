@@ -885,6 +885,50 @@
     catch (_) { return {}; }
   }
 
+  function privateNfcHealth(link) {
+    const hint = String(link.nfcHint || '').toUpperCase();
+    const state = String(link.nfcState || '').toUpperCase();
+    if (link.nfcReady || state === 'READY') return {
+      tone: 'ready', icon: '✓',
+      title: tx('NFC-module gevonden', 'NFC module found', 'Module NFC détecté', 'NFC-Modul gefunden'),
+      detail: tx('Klaar voor iPhone-tikken', 'Ready for iPhone taps', 'Prêt pour les touches iPhone', 'Bereit für iPhone-Taps')
+    };
+    if (state === 'STARTING' || hint === 'WAITING_FOR_FIRST_PROBE') return {
+      tone: 'checking', icon: '…',
+      title: tx('NFC-module wordt gecontroleerd', 'Checking NFC module', 'Vérification du module NFC', 'NFC-Modul wird geprüft'),
+      detail: tx('Dit duurt enkele seconden', 'This takes a few seconds', 'Cela prend quelques secondes', 'Dies dauert einige Sekunden')
+    };
+    if (state === 'INIT_FAILED' || hint === 'PN532_RESPONDED_INIT_WILL_RETRY' || (link.nfcI2cError === 0 && !link.nfcReady)) return {
+      tone: 'checking', icon: '↻',
+      title: tx('NFC-module gevonden', 'NFC module found', 'Module NFC détecté', 'NFC-Modul gefunden'),
+      detail: tx('De receiver probeert automatisch opnieuw', 'The receiver is retrying automatically', 'Le récepteur réessaie automatiquement', 'Der Receiver versucht es automatisch erneut')
+    };
+    if (link.nfcSwapped === true || hint === 'SWAP_SDA_SCL_AT_METRO') return {
+      tone: 'error', icon: '!',
+      title: tx('SDA en SCL zijn omgewisseld', 'SDA and SCL are swapped', 'SDA et SCL sont inversés', 'SDA und SCL sind vertauscht'),
+      detail: tx('Wissel alleen deze twee draden om bij de receiver', 'Swap only these two wires at the receiver', 'Inversez uniquement ces deux fils au niveau du récepteur', 'Nur diese beiden Kabel am Receiver tauschen')
+    };
+    if (link.nfcIdleSda === false || link.nfcIdleScl === false || hint === 'CHECK_SDA47_SCL48_FOR_SHORT_OR_LOOSE_WIRE') {
+      const both = link.nfcIdleSda === false && link.nfcIdleScl === false;
+      const line = both ? 'SDA + SCL' : link.nfcIdleSda === false ? 'SDA' : link.nfcIdleScl === false ? 'SCL' : 'SDA / SCL';
+      return {
+        tone: 'error', icon: '!',
+        title: tx(`${line} maakt geen goed contact`, `${line} has no reliable connection`, `${line} n’a pas de connexion fiable`, `${line} hat keinen sicheren Kontakt`),
+        detail: tx('Controleer deze draad op een los contact of kortsluiting', 'Check this wire for a loose contact or short circuit', 'Vérifiez si ce fil est desserré ou en court-circuit', 'Dieses Kabel auf Wackelkontakt oder Kurzschluss prüfen')
+      };
+    }
+    if (link.nfcI2cError === 2 || hint === 'CHECK_POWER_CYCLE_MODE_1_ON_2_OFF_AND_WIRING') return {
+      tone: 'error', icon: '!',
+      title: tx('Geen elektrisch antwoord van de NFC-module', 'No electrical response from the NFC module', 'Aucune réponse électrique du module NFC', 'Keine elektrische Antwort vom NFC-Modul'),
+      detail: tx('Stand 1 aan / 2 uit. Maak volledig stroomloos en controleer daarna 3V3, GND, SDA en SCL', 'Use switch 1 on / 2 off. Fully disconnect power, then check 3V3, GND, SDA and SCL', 'Position 1 activée / 2 désactivée. Coupez totalement l’alimentation, puis vérifiez 3V3, GND, SDA et SCL', 'Schalter 1 an / 2 aus. Strom vollständig trennen, dann 3V3, GND, SDA und SCL prüfen')
+    };
+    return {
+      tone: 'error', icon: '!',
+      title: tx('NFC-module niet bereikbaar', 'NFC module unavailable', 'Module NFC indisponible', 'NFC-Modul nicht erreichbar'),
+      detail: tx('Controleer 3V3, GND, SDA en SCL en onderbreek daarna de voeding volledig', 'Check 3V3, GND, SDA and SCL, then fully disconnect the power', 'Vérifiez 3V3, GND, SDA et SCL, puis coupez complètement l’alimentation', '3V3, GND, SDA und SCL prüfen, danach die Stromversorgung vollständig trennen')
+    };
+  }
+
   function nextAvailableReceiverNumber() {
     const used = new Set((db.devices || []).map((device) => Math.round(Number(device.number)))
       .filter((number) => number >= 1 && number <= 250));
@@ -923,8 +967,9 @@
     const connected = Boolean(link.ready);
     const provisioned = Boolean(link.provisioned);
     const nfcState = String(link.nfcState || '');
+    const nfcHealth = privateNfcHealth(link);
     const nfcHardwareMarkup = connected && nfcState
-      ? `<div class="v20-nfc-health ${link.nfcReady ? 'ready' : 'error'}"><i>${link.nfcReady ? '✓' : '!'}</i><span><b>${link.nfcReady ? tx('NFC-module gevonden', 'NFC module found', 'Module NFC détecté', 'NFC-Modul gefunden') : tx('NFC-module niet bereikbaar', 'NFC module unavailable', 'Module NFC indisponible', 'NFC-Modul nicht erreichbar')}</b><small>${link.nfcReady ? tx('Klaar voor iPhone-tikken', 'Ready for iPhone taps', 'Prêt pour les touches iPhone', 'Bereit für iPhone-Taps') : tx('Controleer de I²C-stand en de vier aansluitingen', 'Check I²C mode and the four connections', 'Vérifiez le mode I²C et les quatre connexions', 'I²C-Modus und vier Anschlüsse prüfen')}</small></span></div>`
+      ? `<div class="v20-nfc-health ${nfcHealth.tone}"><i>${nfcHealth.icon}</i><span><b>${nfcHealth.title}</b><small>${nfcHealth.detail}</small></span></div>`
       : '';
     const stateMarkup = connected
       ? `<div id="v20PrivatePairStatus" class="nfc-status success"><span><b>${tx('Privénetwerk verbonden', 'Private network connected', 'Réseau privé connecté', 'Privatnetz verbunden')}</b><small>${safe(link.ssid || 'ALUVISION')} · ${tx('klaar om toe te voegen', 'ready to add', 'prêt à être ajouté', 'bereit zum Hinzufügen')}</small></span></div>`
@@ -947,7 +992,7 @@
       ${nfcHardwareMarkup}
       <div class="v20-pair-actions"><button class="button soft" onclick="closeModal()">${tx('Annuleren', 'Cancel', 'Annuler', 'Abbrechen')}</button>${connected ? `<button class="button" onclick="v20PairPrivateReceiver()">${tx('Receiver instellen', 'Set up receiver', 'Configurer le récepteur', 'Receiver einrichten')} →</button>` : `<button class="button" onclick="v20CheckPrivateReceiver()">${tx('Verbinding controleren', 'Check connection', 'Vérifier la connexion', 'Verbindung prüfen')}</button>`}</div>
     </section>`);
-    if (provisioned && !connected) schedulePrivatePairCheck();
+    if ((provisioned && !connected) || (connected && !link.nfcReady)) schedulePrivatePairCheck();
     if (connected && privatePairAutoRequested && !privatePairAutoStarted && !privatePairInFlight) {
       privatePairAutoStarted = true;
       setTimeout(() => window.v20PairPrivateReceiver?.(), 180);
@@ -1109,7 +1154,7 @@
     .v20-complete{text-align:center}.v20-complete .v20-success,.v20-security-step>.v20-success{display:grid;place-items:center;width:68px;height:68px;margin:0 auto 13px;border-radius:50%;background:#19825c;color:#fff;font-size:29px;font-weight:950}.v20-complete p{color:var(--mut);line-height:1.6}.v20-complete .button{width:100%;margin-top:11px}
     .calibration-live[data-state="offline"]{background:#f9e9e7;color:#903e38}.calibration-live[data-state="sent"]{background:#fff3dd;color:#7b581f}
     .v20-private-pair{display:grid;gap:15px;min-width:0}.v20-private-pair h1{margin:0;font-size:clamp(28px,6vw,38px)}.v20-private-pair>.sub{margin-top:-8px;line-height:1.5}.v20-pair-visual{display:flex;align-items:center;justify-content:center;min-height:126px;padding:18px;border-radius:20px;background:radial-gradient(circle at 50% 50%,#ca4e4630,transparent 44%),#111312;color:#fff;overflow:hidden}.v20-phone-glyph,.v20-hub-glyph{display:grid;place-items:center;flex:0 0 72px;height:91px;border:1px solid #ffffff30;border-radius:18px;background:linear-gradient(145deg,#3b3e3b,#181a19);box-shadow:0 12px 26px #0008}.v20-phone-glyph:before{content:'';width:28px;height:5px;border-radius:99px;background:#ffffff35}.v20-phone-glyph i{font-size:10px;font-style:normal;letter-spacing:1px}.v20-hub-glyph b{font-size:27px}.v20-hub-glyph small{font-size:8px;color:#ffffffa5}.v20-pair-waves{position:relative;display:flex;align-items:center;justify-content:center;width:94px;height:70px}.v20-pair-waves i{position:absolute;width:19px;height:42px;border:2px solid #d65a52;border-left:0;border-top-color:transparent;border-bottom-color:transparent;border-radius:0 50% 50% 0;animation:v20PairWave 1.55s ease-out infinite}.v20-pair-waves i:nth-child(2){animation-delay:.32s}.v20-pair-waves i:nth-child(3){animation-delay:.64s}.v20-pair-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.v20-pair-steps span{display:grid;justify-items:center;gap:6px;padding:10px 6px;border:1px solid var(--line);border-radius:13px;color:var(--mut);text-align:center}.v20-pair-steps i{display:grid;place-items:center;width:27px;height:27px;border-radius:50%;background:var(--panel-2);font-style:normal;font-weight:900}.v20-pair-steps b{font-size:9px}.v20-pair-steps .on{border-color:var(--red);color:var(--ink)}.v20-pair-steps .on i{background:var(--red);color:#fff}.v20-pair-steps .done i{background:#19825c;color:#fff}.v20-network-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px;border:1px solid var(--line);border-radius:14px;background:var(--panel-2)}.v20-network-card span{min-width:0}.v20-network-card small,.v20-network-card b{display:block}.v20-network-card small{color:var(--mut);font-size:8px;letter-spacing:.65px}.v20-network-card b{margin-top:4px;overflow:hidden;text-overflow:ellipsis}.v20-pair-actions{display:grid;grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr);gap:9px}.v20-pair-actions .button{min-width:0;min-height:50px}.v20-pair-actions .button:only-child{grid-column:1/-1}
-    .v20-nfc-health{display:grid;grid-template-columns:34px minmax(0,1fr);gap:9px;align-items:center;padding:10px 11px;border:1px solid var(--line);border-radius:13px;background:var(--panel-2)}.v20-nfc-health>i{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:#19825c;color:#fff;font-style:normal;font-weight:950}.v20-nfc-health.error>i{background:var(--red)}.v20-nfc-health b,.v20-nfc-health small{display:block}.v20-nfc-health small{margin-top:2px;color:var(--mut);font-size:9px}
+    .v20-nfc-health{display:grid;grid-template-columns:34px minmax(0,1fr);gap:9px;align-items:center;padding:10px 11px;border:1px solid var(--line);border-radius:13px;background:var(--panel-2)}.v20-nfc-health>i{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:#19825c;color:#fff;font-style:normal;font-weight:950}.v20-nfc-health.checking>i{background:#bd8116}.v20-nfc-health.error>i{background:var(--red)}.v20-nfc-health b,.v20-nfc-health small{display:block}.v20-nfc-health small{margin-top:2px;color:var(--mut);font-size:9px}
     @keyframes v20GreenConfirm{50%{filter:brightness(1.25);transform:scaleY(.86)}}
     @keyframes v20GreenTravelRight{from{transform:translateX(-2400%);filter:brightness(1.35)}to{transform:translateX(0);filter:brightness(1)}}
     @keyframes v20GreenTravelLeft{from{transform:translateX(2400%);filter:brightness(1.35)}to{transform:translateX(0);filter:brightness(1)}}
