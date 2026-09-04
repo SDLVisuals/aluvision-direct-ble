@@ -4579,6 +4579,12 @@ window.setV1814GroupSection=function(section){
   catch(error){sharedAppDirty=wasDirty;if(sharedAppDirty)sharedScheduleSave(700);toast(ac('Reset niet uitgevoerd · probeer opnieuw','Reset not performed · try again','Réinitialisation non effectuée · réessayez','Zurücksetzen nicht ausgeführt · erneut versuchen'))}finally{sharedAppBusy=false}
  }
  window.confirmSharedFactoryReset=confirmSharedFactoryReset;
+ window.AluvisionRgbwRuntime={
+  effects:rgbwEffects,
+  defaultState:source=>rgbwDefaultState(source),
+  defaults:effect=>v1811RgbwDefaults(effect),
+  previewSample:(current,lineIndex,lineCount,time)=>rgbwPreviewSample(current,lineIndex,lineCount,time)
+ };
  async function sharedPollState(){if(!sharedAppReady||sharedAppBusy||sharedAppDirty||v18151InteractionBusy()||document.visibilityState!=='visible')return;try{let latest=await sharedFetchState(),revision=Number(latest.revision)||0;if(v18151InteractionBusy())return;if(latest.state&&revision>sharedAppRevision){sharedAppRevision=revision;sharedApplyState(latest.state,true);sharedAppLastEncoded=sharedAppEncoded()}}catch(error){/* Local control remains available while the web endpoint reconnects. */}}
  async function startSharedAppState(){
   try{let remote=await sharedFetchState();sharedAppRevision=Number(remote.revision)||0;if(remote.state){sharedApplyState(remote.state,false);sharedAppLastEncoded=sharedAppEncoded()}else if(sharedAppStateIsMeaningful(db)){let snapshot=sharedAppSnapshot(),response=await api('/api/app-state',{expectedRevision:0,state:snapshot});if(response.code==='REVISION_CONFLICT'){let latest=await sharedFetchState();sharedAppRevision=Number(latest.revision)||0;if(latest.state)sharedApplyState(latest.state,false);sharedAppLastEncoded=sharedAppEncoded()}else if(response.ok){sharedAppRevision=Number(response.revision)||1;sharedAppLastEncoded=JSON.stringify(snapshot)}else throw new Error(response.error||'Installatie kon niet worden gedeeld')}else sharedAppLastEncoded=sharedAppEncoded()
@@ -4605,3 +4611,4 @@ window.AluvisionAccountlessRecovery?.bind({
 </script>
 <script src="./v20_ui_fixes.js"></script>
 <script src="./v20_icon_system.js"></script>
+<script src="./v20_studio_console.js"></script>
