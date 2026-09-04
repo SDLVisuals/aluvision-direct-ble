@@ -908,7 +908,7 @@
       title: tx('SDA en SCL zijn omgewisseld', 'SDA and SCL are swapped', 'SDA et SCL sont inversés', 'SDA und SCL sind vertauscht'),
       detail: tx('Wissel alleen deze twee draden om bij de receiver', 'Swap only these two wires at the receiver', 'Inversez uniquement ces deux fils au niveau du récepteur', 'Nur diese beiden Kabel am Receiver tauschen')
     };
-    if (link.nfcIdleSda === false || link.nfcIdleScl === false || hint === 'CHECK_SDA47_SCL48_FOR_SHORT_OR_LOOSE_WIRE') {
+    if (link.nfcIdleSda === false || link.nfcIdleScl === false || (hint.startsWith('CHECK_SDA') && hint.endsWith('FOR_SHORT_OR_LOOSE_WIRE'))) {
       const both = link.nfcIdleSda === false && link.nfcIdleScl === false;
       const line = both ? 'SDA + SCL' : link.nfcIdleSda === false ? 'SDA' : link.nfcIdleScl === false ? 'SCL' : 'SDA / SCL';
       return {
