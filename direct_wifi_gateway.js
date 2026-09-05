@@ -12,7 +12,7 @@
   const STORAGE_KEY = 'aluvision.private-wifi-gateway.v1';
   const DEFAULT_GATEWAY = 'http://192.168.4.1';
   const MANUAL_BOOTSTRAP_PATH = '/alv/manual-bootstrap';
-  const MANUAL_BOOTSTRAP_PASSWORD = 'aluvision20';
+  const MANUAL_BOOTSTRAP_SECURITY = 'OPEN_TEST';
   const TOKEN_HEADER = 'X-Aluvision-Token';
   const API_VERSION = 1;
   const MIN_POLL_MS = 18;
@@ -157,18 +157,19 @@
     const apiToken = cleanHex(fields.APTOKEN, 64);
     const ssid = String(fields.SSID || '');
     const password = String(fields.APPASS || '');
+    const apSecurity = String(fields.APSEC || '').toUpperCase();
     const receiverType = String(fields.DEVTYPE || '').toUpperCase();
     const windowSeconds = Number(fields.WINDOW);
     if (fields.API !== String(API_VERSION) || fields.STATUS !== 'OK' ||
         fields.MODE !== 'MANUAL_TEST' || fields.FWVARIANT !== 'MANUAL_WIFI' ||
         !rid || !pairingToken || !apiToken ||
         !/^ALUVISION-[0-9A-F]{6}$/.test(ssid) ||
-        password !== MANUAL_BOOTSTRAP_PASSWORD ||
+        password !== '' || apSecurity !== MANUAL_BOOTSTRAP_SECURITY ||
         !['SPI', 'RGBW'].includes(receiverType) ||
         !Number.isInteger(windowSeconds) || windowSeconds < 1 || windowSeconds > 600) {
       throw new Error('De receiver gaf geen geldige tijdelijke verbindingsgegevens door.');
     }
-    return { rid, pairingToken, apiToken, ssid, password, receiverType, windowSeconds };
+    return { rid, pairingToken, apiToken, ssid, password, apSecurity, receiverType, windowSeconds };
   }
 
   async function performManualBootstrap() {

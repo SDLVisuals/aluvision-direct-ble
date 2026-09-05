@@ -988,15 +988,15 @@
       ${destination ? `<div class="group-pair-target"><span><b>${tx('Wordt toegevoegd aan', 'Will be added to', 'Sera ajouté à', 'Wird hinzugefügt zu')}</b><small>${safe(destination.zone.name)} → ${safe(destination.group.name)}</small></span><span class="scope">${tx('AL GEKOZEN', 'PRESELECTED', 'PRÉSÉLECTIONNÉ', 'VORAUSGEWÄHLT')}</span></div>` : ''}
       <div class="v20-pair-visual" aria-hidden="true"><div class="v20-phone-glyph"><i>BOOT</i></div><div class="v20-pair-waves"><i></i><i></i><i></i></div><div class="v20-hub-glyph"><b>R</b><small>Wi-Fi</small></div></div>
       <div class="v20-pair-steps">
-        <span class="${provisioned || connected || manualRequested ? 'done' : 'on'}"><i>${provisioned || connected || manualRequested ? '✓' : '1'}</i><b>${tx('BOOT 2 sec.', 'BOOT 2 sec.', 'BOOT 2 s', 'BOOT 2 Sek.')}</b></span>
-        <span class="${connected ? 'done' : provisioned || manualRequested ? 'on' : ''}"><i>${connected ? '✓' : '2'}</i><b>${tx('Kies Wi-Fi', 'Choose Wi-Fi', 'Choisissez le Wi-Fi', 'WLAN wählen')}</b></span>
+        <span class="${provisioned || connected ? 'done' : 'on'}"><i>${provisioned || connected ? '✓' : '1'}</i><b>${tx('BOOT 2 sec.', 'BOOT 2 sec.', 'BOOT 2 s', 'BOOT 2 Sek.')}</b></span>
+        <span class="${connected ? 'done' : provisioned ? 'on' : ''}"><i>${connected ? '✓' : '2'}</i><b>${tx('Kies Wi-Fi', 'Choose Wi-Fi', 'Choisissez le Wi-Fi', 'WLAN wählen')}</b></span>
         <span class="${connected ? 'on' : ''}"><i>3</i><b>${tx('Receiver instellen', 'Set up receiver', 'Configurer le récepteur', 'Receiver einrichten')}</b></span>
       </div>
       <section class="v20-manual-pair" aria-label="${tx('Handmatig verbinden', 'Connect manually', 'Connexion manuelle', 'Manuell verbinden')}">
         <ol>
           <li><i>1</i><span><b>${tx('Houd BOOT 2 seconden ingedrukt', 'Hold BOOT for 2 seconds', 'Maintenez BOOT pendant 2 secondes', 'BOOT 2 Sekunden gedrückt halten')}</b><small>${tx('Het tijdelijke verbindingsvenster blijft 5 minuten open.', 'The temporary connection window stays open for 5 minutes.', 'La fenêtre de connexion temporaire reste ouverte pendant 5 minutes.', 'Das temporäre Verbindungsfenster bleibt 5 Minuten offen.')}</small></span></li>
-          <li><i>2</i><span><b>${tx('Open Instellingen → Wi-Fi', 'Open Settings → Wi-Fi', 'Ouvrez Réglages → Wi-Fi', 'Einstellungen → WLAN öffnen')}</b><small>${tx('Kies ALUVISION-… en gebruik deze vaste testcode:', 'Choose ALUVISION-… and use this fixed test code:', 'Choisissez ALUVISION-… et utilisez ce code de test fixe :', 'ALUVISION-… wählen und diesen festen Testcode verwenden:')}</small><code>aluvision20</code><button type="button" class="v20-inline-copy" onclick="v20CopyManualWifiCode()">${tx('Kopieer code', 'Copy code', 'Copier le code', 'Code kopieren')}</button></span></li>
-          <li><i>3</i><span><b>${tx('Open in Safari', 'Open in Safari', 'Ouvrez dans Safari', 'In Safari öffnen')}</b><small>${tx('Open dit adres zodra Wi-Fi verbonden is:', 'Open this address once Wi-Fi is connected:', 'Ouvrez cette adresse dès que le Wi-Fi est connecté :', 'Diese Adresse öffnen, sobald das WLAN verbunden ist:')}</small><code>192.168.4.1/?manual=1</code></span></li>
+          <li><i>2</i><span><b>${tx('Open Instellingen → Wi-Fi', 'Open Settings → Wi-Fi', 'Ouvrez Réglages → Wi-Fi', 'Einstellungen → WLAN öffnen')}</b><small>${tx('Kies ALUVISION-…; voor deze tijdelijke verbinding is geen wifi-wachtwoord nodig. Kies “Gebruik zonder internet” als je iPhone dit vraagt.', 'Choose ALUVISION-…; this temporary connection needs no Wi-Fi password. Choose “Use Without Internet” if your iPhone asks.', 'Choisissez ALUVISION-… ; cette connexion temporaire ne demande aucun mot de passe Wi-Fi. Restez connecté si l’iPhone le demande.', 'Wähle ALUVISION-…; diese temporäre Verbindung benötigt kein WLAN-Passwort. Bleibe verbunden, wenn dein iPhone danach fragt.')}</small></span></li>
+          <li><i>3</i><span><b>${tx('De app opent lokaal', 'The app opens locally', 'L’app s’ouvre localement', 'Die App öffnet sich lokal')}</b><small>${tx('De receiver probeert de app automatisch te openen. Gebeurt dat niet, typ dan dit volledige adres in een nieuwe Safari-tab:', 'The receiver tries to open the app automatically. If it does not, type this full address in a new Safari tab:', 'Le récepteur tente d’ouvrir l’app automatiquement. Sinon, saisissez cette adresse complète dans un nouvel onglet Safari :', 'Der Receiver versucht, die App automatisch zu öffnen. Falls nicht, gib diese vollständige Adresse in einem neuen Safari-Tab ein:')}</small><code>http://192.168.4.1/?manual=1</code></span></li>
         </ol>
       </section>
       <div class="v20-pair-actions"><button class="button soft" onclick="closeModal()">${tx('Annuleren', 'Cancel', 'Annuler', 'Abbrechen')}</button>${connected ? `<button class="button" onclick="v20PairPrivateReceiver()">${tx('Receiver instellen', 'Set up receiver', 'Configurer le récepteur', 'Receiver einrichten')} →</button>` : checkState === 'manual-loading' ? `<button class="button" disabled>${tx('Verbinden…', 'Connecting…', 'Connexion…', 'Verbinden…')}</button>` : checkState === 'manual-failed' ? `<button class="button" onclick="v20RetryManualBootstrap()">${tx('Opnieuw proberen', 'Try again', 'Réessayer', 'Erneut versuchen')}</button>` : provisioned ? `<button class="button" onclick="v20CheckPrivateReceiver()">${tx('Receiver openen', 'Open receiver', 'Ouvrir le récepteur', 'Receiver öffnen')}</button>` : `<button class="button" onclick="v20OpenManualReceiver()">${tx('Open 192.168.4.1', 'Open 192.168.4.1', 'Ouvrir 192.168.4.1', '192.168.4.1 öffnen')}</button>`}</div>
@@ -1033,29 +1033,6 @@
       toast(copied ? tx('Wachtwoord gekopieerd', 'Password copied', 'Mot de passe copié', 'Passwort kopiert') : tx('Geen wachtwoord ontvangen', 'No password received', 'Aucun mot de passe reçu', 'Kein Passwort empfangen'));
     } catch (_) {
       toast(tx('Kopiëren is niet toegestaan · houd het wachtwoord ingedrukt', 'Copying is unavailable · press and hold the password', 'Copie indisponible · maintenez le mot de passe', 'Kopieren nicht verfügbar · Passwort gedrückt halten'));
-    }
-  };
-
-  window.v20CopyManualWifiCode = async function v20CopyManualWifiCode() {
-    const code = 'aluvision20';
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(code);
-      } else {
-        const input = document.createElement('textarea');
-        input.value = code;
-        input.setAttribute('readonly', '');
-        input.style.position = 'fixed';
-        input.style.opacity = '0';
-        document.body.appendChild(input);
-        input.select();
-        const copied = Boolean(document.execCommand?.('copy'));
-        input.remove();
-        if (!copied) throw new Error('copy unavailable');
-      }
-      toast(tx('Testcode gekopieerd', 'Test code copied', 'Code de test copié', 'Testcode kopiert'));
-    } catch (_) {
-      toast(tx('Houd de code ingedrukt om hem te kopiëren', 'Press and hold the code to copy it', 'Maintenez le code pour le copier', 'Code gedrückt halten, um ihn zu kopieren'));
     }
   };
 
