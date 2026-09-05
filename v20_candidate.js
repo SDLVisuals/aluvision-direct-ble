@@ -831,7 +831,8 @@
     ];
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode(node) {
-        return node.parentElement?.closest('script,style,textarea') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+        return node.parentElement?.closest('script,style,textarea,[data-preserve-transport-copy]')
+          ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
       }
     });
     while (walker.nextNode()) {
@@ -960,6 +961,52 @@
     }, 1400);
   }
 
+  function bluetoothPairingSupport() {
+    const browser = globalThis.navigator || {};
+    const userAgent = String(browser.userAgent || '');
+    const appleMobile = /iPad|iPhone|iPod/i.test(userAgent) ||
+      (browser.platform === 'MacIntel' && Number(browser.maxTouchPoints) > 1);
+    const safari = /Safari/i.test(userAgent) &&
+      !/(?:Chrome|Chromium|CriOS|FxiOS|EdgiOS|OPiOS|Android)/i.test(userAgent);
+    const secure = window.isSecureContext !== false;
+    const ready = secure && typeof browser.bluetooth?.requestDevice === 'function';
+    return { ready, secure, appleMobile, safari };
+  }
+
+  function renderBluetoothReceiverAdd(target = null, checkState = '', statusMessage = '') {
+    const destination = target && typeof window.receiverGroupTarget === 'function'
+      ? receiverGroupTarget(target.zoneId, target.groupId) : null;
+    const support = bluetoothPairingSupport();
+    const statusMarkup = checkState === 'bluetooth-loading'
+      ? `<div id="v20BluetoothPairStatus" class="nfc-status scanning"><span><b>${tx('Bluetooth zoekt naar je receiver…', 'Bluetooth is searching for your receiver…', 'Bluetooth recherche votre récepteur…', 'Bluetooth sucht deinen Receiver…')}</b><small>${tx('Kies de ALUVISION-receiver in het browservenster.', 'Choose the ALUVISION receiver in the browser dialog.', 'Choisissez le récepteur ALUVISION dans la fenêtre du navigateur.', 'Wähle den ALUVISION-Receiver im Browserfenster.')}</small></span></div>`
+      : checkState === 'bluetooth-failed'
+        ? `<div id="v20BluetoothPairStatus" class="nfc-status error"><span><b>${tx('Bluetooth-koppeling niet gelukt', 'Bluetooth pairing did not succeed', 'L’association Bluetooth a échoué', 'Bluetooth-Kopplung nicht erfolgreich')}</b><small>${safe(statusMessage || tx('Houd BOOT opnieuw 2 seconden ingedrukt en probeer meteen opnieuw.', 'Hold BOOT for 2 seconds again and retry immediately.', 'Maintenez à nouveau BOOT pendant 2 secondes et réessayez immédiatement.', 'Halte BOOT erneut 2 Sekunden gedrückt und versuche es sofort erneut.'))}</small></span></div>`
+        : support.ready
+          ? `<div id="v20BluetoothPairStatus" class="nfc-status success"><span><b>${tx('Bluetooth is beschikbaar', 'Bluetooth is available', 'Bluetooth est disponible', 'Bluetooth ist verfügbar')}</b><small>${tx('Houd BOOT 2 seconden ingedrukt en tik daarna op Receiver zoeken.', 'Hold BOOT for 2 seconds, then tap Find receiver.', 'Maintenez BOOT pendant 2 secondes, puis appuyez sur Rechercher le récepteur.', 'Halte BOOT 2 Sekunden gedrückt und tippe dann auf Receiver suchen.')}</small></span></div>`
+          : support.appleMobile
+            ? `<div id="v20BluetoothPairStatus" class="nfc-status error"><span><b>${tx('Safari op iPhone ondersteunt deze Bluetooth-koppeling niet', 'Safari on iPhone does not support this Bluetooth pairing', 'Safari sur iPhone ne prend pas en charge cette association Bluetooth', 'Safari auf dem iPhone unterstützt diese Bluetooth-Kopplung nicht')}</b><small>${tx('Open deze app op je iPhone in Bluefy, of gebruik de ingeklapte wifi-reserve hieronder.', 'Open this app on your iPhone in Bluefy, or use the collapsed Wi-Fi fallback below.', 'Ouvrez cette app sur votre iPhone dans Bluefy, ou utilisez la solution Wi-Fi repliée ci-dessous.', 'Öffne diese App auf deinem iPhone in Bluefy oder nutze unten die eingeklappte WLAN-Reserve.')}</small></span></div>`
+            : support.safari
+              ? `<div id="v20BluetoothPairStatus" class="nfc-status error"><span><b>${tx('Safari ondersteunt deze Bluetooth-koppeling niet', 'Safari does not support this Bluetooth pairing', 'Safari ne prend pas en charge cette association Bluetooth', 'Safari unterstützt diese Bluetooth-Kopplung nicht')}</b><small>${tx('Gebruik Chrome of Edge op een computer, of open de wifi-reserve hieronder.', 'Use Chrome or Edge on a computer, or open the Wi-Fi fallback below.', 'Utilisez Chrome ou Edge sur un ordinateur, ou ouvrez la solution Wi-Fi ci-dessous.', 'Verwende Chrome oder Edge auf einem Computer oder öffne unten die WLAN-Reserve.')}</small></span></div>`
+              : !support.secure
+              ? `<div id="v20BluetoothPairStatus" class="nfc-status error"><span><b>${tx('Open de beveiligde app-link', 'Open the secure app link', 'Ouvrez le lien sécurisé de l’app', 'Öffne den sicheren App-Link')}</b><small>${tx('Bluetooth vereist een HTTPS-pagina. De wifi-reserve blijft hieronder beschikbaar.', 'Bluetooth requires an HTTPS page. The Wi-Fi fallback remains available below.', 'Bluetooth nécessite une page HTTPS. La solution Wi-Fi reste disponible ci-dessous.', 'Bluetooth benötigt eine HTTPS-Seite. Die WLAN-Reserve bleibt unten verfügbar.')}</small></span></div>`
+                : `<div id="v20BluetoothPairStatus" class="nfc-status error"><span><b>${tx('Bluetooth niet beschikbaar in deze browser', 'Bluetooth is unavailable in this browser', 'Bluetooth n’est pas disponible dans ce navigateur', 'Bluetooth ist in diesem Browser nicht verfügbar')}</b><small>${tx('Gebruik een browser met Web Bluetooth, of open de wifi-reserve hieronder.', 'Use a browser with Web Bluetooth, or open the Wi-Fi fallback below.', 'Utilisez un navigateur avec Web Bluetooth, ou ouvrez la solution Wi-Fi ci-dessous.', 'Verwende einen Browser mit Web Bluetooth oder öffne unten die WLAN-Reserve.')}</small></span></div>`;
+    window.modal(`<section class="v20-private-pair v20-bluetooth-first" data-preserve-transport-copy>
+      <div class="eyebrow">${tx('RECEIVER TOEVOEGEN', 'ADD RECEIVER', 'AJOUTER UN RÉCEPTEUR', 'RECEIVER HINZUFÜGEN')}</div>
+      <h1>${tx('Receiver koppelen via Bluetooth', 'Pair receiver via Bluetooth', 'Associer le récepteur via Bluetooth', 'Receiver über Bluetooth koppeln')}</h1>
+      <p class="sub">${tx('Dit houdt je internetverbinding actief. De browser vraagt welke ALUVISION-receiver je wilt koppelen.', 'This keeps your internet connection active. The browser asks which ALUVISION receiver to pair.', 'Votre connexion Internet reste active. Le navigateur demande quel récepteur ALUVISION associer.', 'Deine Internetverbindung bleibt aktiv. Der Browser fragt, welcher ALUVISION-Receiver gekoppelt werden soll.')}</p>
+      ${destination ? `<div class="group-pair-target"><span><b>${tx('Wordt toegevoegd aan', 'Will be added to', 'Sera ajouté à', 'Wird hinzugefügt zu')}</b><small>${safe(destination.zone.name)} → ${safe(destination.group.name)}</small></span><span class="scope">${tx('AL GEKOZEN', 'PRESELECTED', 'PRÉSÉLECTIONNÉ', 'VORAUSGEWÄHLT')}</span></div>` : ''}
+      <div class="v20-pair-visual" aria-hidden="true"><div class="v20-phone-glyph"><i>BOOT</i></div><div class="v20-pair-waves"><i></i><i></i><i></i></div><div class="v20-hub-glyph"><b>R</b><small>Bluetooth</small></div></div>
+      <div class="v20-pair-steps">
+        <span class="on"><i>1</i><b>${tx('BOOT 2 sec.', 'BOOT 2 sec.', 'BOOT 2 s', 'BOOT 2 Sek.')}</b></span>
+        <span><i>2</i><b>${tx('Receiver zoeken', 'Find receiver', 'Rechercher', 'Receiver suchen')}</b></span>
+        <span><i>3</i><b>${tx('Receiver instellen', 'Set up receiver', 'Configurer', 'Receiver einrichten')}</b></span>
+      </div>
+      ${statusMarkup}
+      <div class="v20-pair-actions"><button class="button soft" type="button" onclick="closeModal()">${tx('Annuleren', 'Cancel', 'Annuler', 'Abbrechen')}</button><button id="v20BluetoothPairButton" class="button" type="button" onclick="v20PairReceiverBluetooth()" ${support.ready && checkState !== 'bluetooth-loading' ? '' : 'disabled'}>${checkState === 'bluetooth-loading' ? tx('Zoeken…', 'Searching…', 'Recherche…', 'Suche…') : tx('Receiver zoeken', 'Find receiver', 'Rechercher le récepteur', 'Receiver suchen')}</button></div>
+      <details class="v20-nfc-alternative"><summary>${tx('Wifi-reserve', 'Wi-Fi fallback', 'Solution Wi-Fi', 'WLAN-Reserve')}</summary><p>${tx('Alleen als Bluetooth niet kan: verbind tijdelijk met het ALUVISION-netwerk zonder internet.', 'Only if Bluetooth cannot be used: temporarily connect to the ALUVISION network without internet.', 'Uniquement si Bluetooth ne fonctionne pas : connectez-vous temporairement au réseau ALUVISION sans Internet.', 'Nur wenn Bluetooth nicht möglich ist: vorübergehend mit dem ALUVISION-Netzwerk ohne Internet verbinden.')}</p><button class="button soft" type="button" onclick="v20ShowWifiReserve()">${tx('Toon wifi-stappen', 'Show Wi-Fi steps', 'Afficher les étapes Wi-Fi', 'WLAN-Schritte zeigen')}</button></details>
+    </section>`);
+  }
+
   function renderPrivateReceiverAdd(target = null, checkState = '', statusMessage = '') {
     const destination = target && typeof window.receiverGroupTarget === 'function'
       ? receiverGroupTarget(target.zoneId, target.groupId) : null;
@@ -1012,19 +1059,43 @@
     }
   }
 
-  window.openAddReceiver = function v20OpenAddReceiver() {
+  function privatePairTargetFromUrl() {
+    const query = new URLSearchParams(location.search || '');
+    const validId = (value) => /^[A-Za-z0-9._:-]{1,96}$/.test(String(value || '')) ? String(value) : '';
+    const zoneId = validId(query.get('zone'));
+    const groupId = validId(query.get('group'));
+    return zoneId && groupId ? { zoneId, groupId, deviceId: '' } : null;
+  }
+
+  function privateReceiverUrl(target = null) {
+    const query = new URLSearchParams({ manual: '1' });
+    if (target?.zoneId && target?.groupId) {
+      query.set('zone', String(target.zoneId));
+      query.set('group', String(target.groupId));
+    }
+    return `http://192.168.4.1/?${query}`;
+  }
+
+  function beginPrivateReceiverAdd(target = null) {
     privatePairAutoRequested = false;
     privatePairAutoStarted = false;
-    privatePairTarget = null;
-    renderPrivateReceiverAdd();
+    privatePairTarget = target && { ...target };
+    renderBluetoothReceiverAdd(privatePairTarget);
+  }
+
+  window.openAddReceiver = function v20OpenAddReceiver() {
+    beginPrivateReceiverAdd();
   };
 
   window.openAddReceiverForGroup = function v20OpenAddReceiverForGroup() {
     if (!zone || !group) return toast(tx('Open eerst een groep', 'Open a group first', 'Ouvrez d’abord un groupe', 'Öffne zuerst eine Gruppe'));
+    beginPrivateReceiverAdd({ zoneId: zone.id, groupId: group.id, deviceId: '' });
+  };
+
+  window.v20ShowWifiReserve = function v20ShowWifiReserve() {
     privatePairAutoRequested = false;
     privatePairAutoStarted = false;
-    privatePairTarget = { zoneId: zone.id, groupId: group.id, deviceId: '' };
-    renderPrivateReceiverAdd(privatePairTarget);
+    renderPrivateReceiverAdd(privatePairTarget && { ...privatePairTarget });
   };
 
   window.v20CopyPrivatePassword = async function v20CopyPrivatePassword() {
@@ -1037,7 +1108,7 @@
   };
 
   window.v20OpenManualReceiver = function v20OpenManualReceiver() {
-    location.assign('http://192.168.4.1/?manual=1');
+    location.assign(privateReceiverUrl(privatePairTarget));
   };
 
   window.v20RetryManualBootstrap = async function v20RetryManualBootstrap() {
@@ -1075,6 +1146,66 @@
     }
   };
 
+  function finishReceiverPair(response, target, fallbackTransport) {
+    const old = db.devices.find((device) => device.id === response.device.id);
+    const gatewayRid = String(response.transport?.gateway?.rid || '').toUpperCase();
+    const isGateway = gatewayRid === String(response.device.rid || '').toUpperCase();
+    const device = normaliseDevice({
+      ...response.device,
+      online: true,
+      reachableViaGateway: true,
+      gateway: isGateway
+    }, old);
+    db.devices = db.devices.filter((item) => item.id !== device.id);
+    db.devices.push(device);
+    db.transportStatus = response.transport || {
+      gatewayReady: true,
+      gateway: { rid: device.rid, hardwareId: device.hardwareId },
+      transport: fallbackTransport
+    };
+    save('queued');
+    privatePairInFlight = false;
+    privatePairAutoRequested = false;
+    base.closeModal?.call(window);
+    render();
+    if (target?.zoneId && target?.groupId) startPairingForGroup(device.id, target.zoneId, target.groupId);
+    else startPairing(device.id);
+  }
+
+  window.v20PairReceiverBluetooth = async function v20PairReceiverBluetooth() {
+    if (privatePairInFlight) return;
+    const support = bluetoothPairingSupport();
+    if (!support.ready) {
+      renderBluetoothReceiverAdd(privatePairTarget && { ...privatePairTarget });
+      return;
+    }
+    const target = privatePairTarget && { ...privatePairTarget };
+    const node = document.getElementById('v20BluetoothPairStatus');
+    const button = document.getElementById('v20BluetoothPairButton');
+    privatePairInFlight = true;
+    if (button) {
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
+      button.textContent = tx('Zoeken…', 'Searching…', 'Recherche…', 'Suche…');
+    }
+    if (node) {
+      node.className = 'nfc-status scanning';
+      node.innerHTML = `<span><b>${tx('Bluetooth zoekt naar je receiver…', 'Bluetooth is searching for your receiver…', 'Bluetooth recherche votre récepteur…', 'Bluetooth sucht deinen Receiver…')}</b><small>${tx('Kies de ALUVISION-receiver in het browservenster.', 'Choose the ALUVISION receiver in the browser dialog.', 'Choisissez le récepteur ALUVISION dans la fenêtre du navigateur.', 'Wähle den ALUVISION-Receiver im Browserfenster.')}</small></span>`;
+    }
+    let response;
+    try {
+      response = await api('/api/pair-test', { number: nextAvailableReceiverNumber() });
+    } catch (error) {
+      response = { ok: false, error: error?.message || error };
+    }
+    if (!response?.ok || !response.device) {
+      privatePairInFlight = false;
+      renderBluetoothReceiverAdd(target, 'bluetooth-failed', response?.error || tx('Receiver niet gevonden. Open het BOOT-venster opnieuw.', 'Receiver not found. Open the BOOT window again.', 'Récepteur introuvable. Ouvrez à nouveau la fenêtre BOOT.', 'Receiver nicht gefunden. Öffne das BOOT-Fenster erneut.'));
+      return;
+    }
+    finishReceiverPair(response, target, 'BLE_ESPNOW');
+  };
+
   window.v20PairPrivateReceiver = async function v20PairPrivateReceiver() {
     if (privatePairInFlight) return;
     privatePairInFlight = true;
@@ -1102,20 +1233,7 @@
       privatePairAutoRequested = false;
       return;
     }
-    const old = db.devices.find((device) => device.id === response.device.id);
-    const gatewayRid = String(response.transport?.gateway?.rid || '').toUpperCase();
-    const isGateway = gatewayRid === String(response.device.rid || '').toUpperCase();
-    const device = normaliseDevice({ ...response.device, online: true, reachableViaGateway: true, gateway: isGateway }, old);
-    db.devices = db.devices.filter((item) => item.id !== device.id);
-    db.devices.push(device);
-    db.transportStatus = response.transport || { gatewayReady: true, gateway: { rid: device.rid, hardwareId: device.hardwareId }, transport: 'WIFI_AP_ESPNOW' };
-    save('queued');
-    privatePairInFlight = false;
-    privatePairAutoRequested = false;
-    base.closeModal?.call(window);
-    render();
-    if (target?.zoneId && target?.groupId) startPairingForGroup(device.id, target.zoneId, target.groupId);
-    else startPairing(device.id);
+    finishReceiverPair(response, target, 'WIFI_AP_ESPNOW');
   };
 
   /* The original V11 raster loop and the current preview engine both painted
@@ -1206,26 +1324,27 @@
   const v20DeveloperHost = ['127.0.0.1', 'localhost', '::1'].includes(location.hostname);
   const v20UiTest = v20DeveloperHost ? new URLSearchParams(location.search).get('uiTest') : '';
   const v20ManualBootstrapRequested = Boolean(window.AluvisionPrivateWifi?.manualBootstrapRequested?.());
+  const v20InitialPairTarget = privatePairTargetFromUrl();
   if (!v20UiTest && v20ManualBootstrapRequested) {
     privatePairAutoRequested = true;
     privatePairAutoStarted = false;
     setTimeout(async () => {
-      privatePairTarget = null;
-      renderPrivateReceiverAdd(null, 'manual-loading');
+      privatePairTarget = v20InitialPairTarget;
+      renderPrivateReceiverAdd(privatePairTarget, 'manual-loading');
       try {
         await window.AluvisionPrivateWifi.manualBootstrap();
-        renderPrivateReceiverAdd();
+        renderPrivateReceiverAdd(privatePairTarget);
       } catch (error) {
         privatePairAutoRequested = false;
-        renderPrivateReceiverAdd(null, 'manual-failed', error?.message || String(error));
+        renderPrivateReceiverAdd(privatePairTarget, 'manual-failed', error?.message || String(error));
       }
     }, 180);
   } else if (!v20UiTest && window.AluvisionPrivateWifi?.wasProvisionedThisLoad?.()) {
     privatePairAutoRequested = true;
     privatePairAutoStarted = false;
     setTimeout(() => {
-      privatePairTarget = null;
-      renderPrivateReceiverAdd();
+      privatePairTarget = v20InitialPairTarget;
+      renderPrivateReceiverAdd(privatePairTarget);
     }, 180);
   }
 

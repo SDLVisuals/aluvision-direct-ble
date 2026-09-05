@@ -1635,7 +1635,7 @@
         }, 409);
       }
     }
-    if (path === '/api/pair' || path === '/api/pair-test') {
+    if (path === '/api/pair') {
       if (otaController?.busy) {
         return json({ ok: false, busy: true, error: 'Wacht tot de firmware-update klaar is' }, 409);
       }
@@ -1644,6 +1644,23 @@
         return json({ ok: true, device: receiver, transport: transportStatus() });
       } catch (error) {
         return json({ ok: false, error: String(error?.message || error), transport: transportStatus() });
+      }
+    }
+    if (path === '/api/pair-test') {
+      if (otaController?.busy) {
+        return json({ ok: false, busy: true, error: 'Wacht tot de firmware-update klaar is' }, 409);
+      }
+      try {
+        const receiver = await pairReceiverRecovery(body.number || 1);
+        return json({ ok: true, device: receiver, temporaryBluetooth: true, recovery: true, transport: transportStatus() });
+      } catch (error) {
+        return json({
+          ok: false,
+          error: String(error?.message || error),
+          temporaryBluetooth: true,
+          recovery: true,
+          transport: transportStatus()
+        }, 409);
       }
     }
     if (path === '/api/recovery/pair') {
