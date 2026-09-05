@@ -1,12 +1,13 @@
 // Bump this key whenever cache policy changes. In particular, the previous
 // cache could contain a navigation Request whose NFC query parameters were part
 // of the CacheStorage key. Activating this worker removes that cache wholesale.
-const CACHE = 'aluvision-v20-20-0-0-shell-v15';
+const CACHE = 'aluvision-v20-20-0-0-shell-v16-home-wifi';
 const SHELL = [
   './index.html',
   './direct_ble_ota.js',
   './direct_ble_bridge.js',
   './direct_wifi_gateway.js',
+  './direct_home_wifi_gateway.js',
   './v20_candidate.js',
   './v20_visual_polish.js',
   './v20_customer_palette.js',
