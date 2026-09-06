@@ -6,13 +6,50 @@
 (() => {
   'use strict';
 
+  if (window.__aluvisionV20UiFixes) return;
+  window.__aluvisionV20UiFixes = true;
+
   const uiTest = new URLSearchParams(location.search).has('uiTest');
   let migrationDirty = false;
 
+  const list = (value) => Array.isArray(value) ? value : [];
+  const values = (value) => value && typeof value === 'object' && !Array.isArray(value)
+    ? Object.values(value)
+    : [];
+
   function allGroups() {
-    return (db?.installations || []).flatMap((installation) =>
-      (installation.zones || []).flatMap((currentZone) => currentZone.groups || [])
+    return list(db?.installations).flatMap((installation) =>
+      list(installation?.zones).flatMap((currentZone) => list(currentZone?.groups))
     );
+  }
+
+  function allPersistedEffectStates() {
+    const states = [];
+    const seen = new Set();
+    const addState = (current) => {
+      if (!current || typeof current !== 'object' || seen.has(current)) return;
+      seen.add(current);
+      states.push(current);
+    };
+    const addGroup = (currentGroup) => {
+      if (!currentGroup || typeof currentGroup !== 'object') return;
+      addState(currentGroup.state);
+      values(currentGroup.parallelLineStates).forEach(addState);
+      addState(currentGroup.powerRestore?.state);
+      values(currentGroup.powerRestore?.parallelLineStates).forEach(addState);
+    };
+
+    allGroups().forEach(addGroup);
+    list(db?.installations).forEach((installation) => {
+      list(installation?.scenes).forEach((scene) => {
+        list(scene?.zones).forEach((currentZone) => list(currentZone?.groups).forEach(addGroup));
+      });
+    });
+    list(db?.presets).forEach((preset) => {
+      addState(preset?.state);
+      list(preset?.parallel?.statesByOrder).forEach(addState);
+    });
+    return states;
   }
 
   function ensureReceiverNumbers() {
@@ -22,9 +59,14 @@
     let changed = false;
 
     devices.forEach((device) => {
+      if (!device || typeof device !== 'object') return;
       const number = Number(device?.number);
       if (Number.isSafeInteger(number) && number > 0 && !used.has(number)) {
         used.add(number);
+        if (device.number !== number) {
+          device.number = number;
+          changed = true;
+        }
       } else {
         pending.push(device);
       }
@@ -46,22 +88,25 @@
   }
 
   function migrateTunnelWave() {
-    const replacement = (effects || []).find((effect) => effect?.[0] === 'Panel Wave');
+    const effectList = list(effects);
+    const replacement = effectList.find((effect) => effect?.[0] === 'Panel Wave');
     if (!replacement) return false;
+    const resolvedVariant = typeof effectWireVariant === 'function'
+      ? Number(effectWireVariant(replacement))
+      : Number(replacement[3]);
+    const replacementVariant = Number.isFinite(resolvedVariant)
+      ? resolvedVariant
+      : Math.max(0, effectList.indexOf(replacement));
     let changed = false;
 
-    allGroups().forEach((currentGroup) => {
-      const current = currentGroup?.state;
-      if (!current) return;
+    allPersistedEffectStates().forEach((current) => {
       const obsoleteName = current.animation === 'Tunnel Wave';
       const obsoleteEngine = current.engine === 'LINE_WAVE';
       if (!obsoleteName && !obsoleteEngine) return;
 
       current.animation = replacement[0];
       current.engine = replacement[1];
-      current.variant = typeof effectWireVariant === 'function'
-        ? effectWireVariant(replacement)
-        : (Number(replacement[3]) || Math.max(0, effects.indexOf(replacement)));
+      current.variant = replacementVariant;
       changed = true;
     });
 
@@ -69,16 +114,146 @@
     return changed;
   }
 
+  function isLegacyWarmContourDefault(current) {
+    if (!current || Number(current.variant) !== 120 || current.animation !== 'Warm Contour Flow') return false;
+    const colors = list(current.colors).map((value) => String(value || '').toLowerCase());
+    const whites = list(current.whiteChannels).map((value) => Number(value) || 0);
+    const rgb = list(current.rgbEnabled).map(Boolean);
+    const white = list(current.whiteEnabled).map(Boolean);
+    if (Number(current.speed) !== 45 || Number(current.widthPixels) !== 4 || Number(current.smooth) !== 100 ||
+        Number(current.trailLength) !== 28 || current.direction !== 'right' || Number(current.objectCount) !== 1 ||
+        Number(current.spacing) !== 100 || current.bounce !== false || current.mirror !== false ||
+        current.backgroundOn !== false || Number(current.colorCount) !== 2) return false;
+    if (colors[0] !== '#000000' || colors[1] !== '#ff7a14' || whites[0] !== 255 || whites[1] !== 0 ||
+        rgb[0] !== false || rgb[1] !== true || white[0] !== true || white[1] !== false) return false;
+    // Normalisation may append disabled channel slots. They are still the old
+    // untouched default only when none of those extra slots can emit light.
+    for (let index = 2; index < Math.max(colors.length, whites.length, rgb.length, white.length); index += 1) {
+      const hasRgb = rgb[index] !== false && !['', '#000000'].includes(colors[index] || '#000000');
+      const hasWhite = white[index] !== false && (whites[index] || 0) > 0;
+      if (hasRgb || hasWhite) return false;
+    }
+    return true;
+  }
+
+  function applyWarmContourDefault(current) {
+    current.widthPixels = 4;
+    current.trailLength = 36;
+    current.colorCount = 1;
+    current.colors = ['#5a1e00'];
+    current.whiteChannels = [255, 0, 0, 0];
+    current.rgbEnabled = [true, false, false, false];
+    current.whiteEnabled = [true, false, false, false];
+    current.whiteOnly = false;
+  }
+
+  function migrateWarmContourDefaults() {
+    let changed = false;
+    const migrateState = (current) => {
+      if (!isLegacyWarmContourDefault(current)) return false;
+      applyWarmContourDefault(current);
+      changed = true;
+      return true;
+    };
+    const migrateStoredGroup = (currentGroup, shouldSync) => {
+      if (!currentGroup || typeof currentGroup !== 'object') return;
+      let activeChanged = migrateState(currentGroup.state);
+      values(currentGroup.parallelLineStates).forEach((current) => { activeChanged = migrateState(current) || activeChanged; });
+      migrateState(currentGroup.powerRestore?.state);
+      values(currentGroup.powerRestore?.parallelLineStates).forEach(migrateState);
+      if (activeChanged && shouldSync && list(currentGroup.receivers).length) {
+        currentGroup.warmContourV120SyncPending = true;
+        changed = true;
+      }
+    };
+
+    allGroups().forEach((currentGroup) => migrateStoredGroup(currentGroup, true));
+    list(db?.installations).forEach((installation) => {
+      list(installation?.scenes).forEach((scene) => {
+        list(scene?.zones).forEach((currentZone) => list(currentZone?.groups).forEach((currentGroup) => migrateStoredGroup(currentGroup, false)));
+      });
+    });
+    list(db?.presets).forEach((preset) => {
+      migrateState(preset?.state);
+      list(preset?.parallel?.statesByOrder).forEach(migrateState);
+    });
+    if (changed) migrationDirty = true;
+    return changed;
+  }
+
+  let warmContourSyncTimer = 0;
+  let warmContourSyncInFlight = false;
+  let warmContourSyncDelay = 1200;
+
+  function receiverLooksReachable(device) {
+    if (!device) return false;
+    try {
+      if (typeof receiverReachable === 'function') return receiverReachable(device);
+    } catch (_) {}
+    return device.online === true || device.gateway === true || device.reachableViaGateway === true;
+  }
+
+  function scheduleWarmContourSync(delay = 180) {
+    if (warmContourSyncTimer || warmContourSyncInFlight) return;
+    warmContourSyncTimer = setTimeout(() => {
+      warmContourSyncTimer = 0;
+      flushWarmContourSync();
+    }, Math.max(0, Number(delay) || 0));
+  }
+
+  async function flushWarmContourSync() {
+    if (warmContourSyncInFlight || typeof live !== 'function') return false;
+    const activeInstallation = install || list(db?.installations).find((item) => item?.id === db?.activeInstallationId);
+    const pending = list(activeInstallation?.zones)
+      .flatMap((currentZone) => list(currentZone?.groups))
+      .filter((currentGroup) => currentGroup?.warmContourV120SyncPending === true);
+    if (!pending.length) return true;
+    const candidate = pending.find((currentGroup) => list(currentGroup.receivers).some((line) =>
+      receiverLooksReachable(list(db?.devices).find((device) => device?.id === line?.deviceId))
+    ));
+    if (!candidate) return false;
+
+    warmContourSyncInFlight = true;
+    let delivered = false;
+    try {
+      const response = await live(candidate, true);
+      const results = list(response?.results);
+      delivered = results.length > 0 && results.every((result) => result?.accepted === true || result?.online === true);
+      if (delivered) {
+        delete candidate.warmContourV120SyncPending;
+        migrationDirty = true;
+        persistMigrations();
+        warmContourSyncDelay = 1200;
+      }
+    } catch (_) {
+      delivered = false;
+    } finally {
+      warmContourSyncInFlight = false;
+    }
+    if (list(activeInstallation?.zones).flatMap((currentZone) => list(currentZone?.groups))
+      .some((currentGroup) => currentGroup?.warmContourV120SyncPending === true)) {
+      warmContourSyncDelay = delivered ? 1200 : Math.min(30000, warmContourSyncDelay * 2);
+      scheduleWarmContourSync(warmContourSyncDelay);
+    }
+    return delivered;
+  }
+
   function persistMigrations() {
     if (!migrationDirty || uiTest || typeof save !== 'function') return;
-    migrationDirty = false;
-    save();
+    try {
+      save();
+      migrationDirty = false;
+    } catch (_) {
+      // Keep the in-memory repair and retry persistence on the next render.
+    }
   }
 
   function runMigrations() {
     ensureReceiverNumbers();
     migrateTunnelWave();
+    migrateWarmContourDefaults();
     persistMigrations();
+    scheduleWarmContourSync();
   }
 
   function text(nl, en, fr, de) {
@@ -258,7 +433,9 @@
       if (!trimmed) return;
       const mapped = translations.get(trimmed);
       const translated = (mapped && mapped !== trimmed ? mapped : null) || translateCommonDynamic(trimmed);
-      if (translated) node.nodeValue = original.replace(trimmed, translated);
+      if (!translated) return;
+      const next = original.replace(trimmed, translated);
+      if (next !== original) node.nodeValue = next;
     });
   }
 
@@ -268,8 +445,9 @@
     const portButton = root?.querySelector('[onclick^="toggleRgbwDevicePort("]');
     if (heading && portButton) {
       const match = portButton.getAttribute('onclick')?.match(/toggleRgbwDevicePort\('([^']+)'/);
-      const device = match ? (db.devices || []).find((item) => item.id === match[1]) : null;
-      if (device) heading.textContent = `Receiver ${device.number}`;
+      const device = match ? list(db?.devices).find((item) => item?.id === match[1]) : null;
+      const label = device ? `Receiver ${device.number}` : '';
+      if (label && heading.textContent !== label) heading.textContent = label;
     }
     root?.querySelectorAll('.rgbw-device-ports .scope').forEach((scope) => {
       [...scope.childNodes].filter((node) => node.nodeType === Node.TEXT_NODE).forEach((node) => {
@@ -300,11 +478,52 @@
       persistMigrations();
       const result = baseDevices.apply(this, args);
       document.querySelectorAll('.customer-device-card[data-device-id]').forEach((card) => {
-        const device = (db.devices || []).find((item) => item.id === card.dataset.deviceId);
+        const device = list(db?.devices).find((item) => item?.id === card.dataset.deviceId);
         const badge = card.querySelector('.receiver-number');
         if (badge && device) badge.textContent = String(device.number);
       });
       return result;
+    };
+  }
+
+  /* A scene is a snapshot, not a permanent mode. As soon as the customer
+   * changes any live lighting value the previous scene must no longer be
+   * labelled as active. Centralising that rule in queueLive covers SPI, RGBW,
+   * group, zone and whole-location controls without duplicating it in every
+   * slider and colour picker. */
+  function refreshVisibleSceneStatus() {
+    document.querySelectorAll('.scene-card.active,.home-scene-card.active-selection').forEach((card) => {
+      card.classList.remove('active', 'active-selection');
+    });
+    document.querySelectorAll('.scene-card,.home-scene-card,.ux-scene-simple').forEach((card) => {
+      const scope = card.querySelector('.scope');
+      if (!scope || !/ACTIEF|ACTIVE|ACTIF|AKTIV/i.test(scope.textContent || '')) return;
+      scope.textContent = card.classList.contains('scene-card')
+        ? 'SELECTIE'
+        : (typeof ac === 'function' ? ac('SCÈNE', 'SCENE', 'SCÈNE', 'SZENE') : 'SCÈNE');
+      const button = card.querySelector('button[onclick*="applySceneById"]');
+      if (!button) return;
+      button.classList.remove('soft');
+      if (card.classList.contains('scene-card') || card.classList.contains('home-scene-card')) button.classList.add('green');
+      button.textContent = card.classList.contains('scene-card')
+        ? (typeof ac === 'function' ? ac('Scène activeren', 'Activate scene', 'Activer la scène', 'Szene aktivieren') : 'Scène activeren')
+        : (typeof ac === 'function' ? ac('Scène starten', 'Start scene', 'Lancer la scène', 'Szene starten') : 'Scène starten');
+    });
+  }
+
+  function invalidateActiveScene() {
+    if (!install?.activeSceneId) return false;
+    install.activeSceneId = null;
+    try { if (typeof save === 'function') save('queued'); } catch (_) {}
+    queueMicrotask(refreshVisibleSceneStatus);
+    return true;
+  }
+
+  const baseQueueLive = window.queueLive;
+  if (typeof baseQueueLive === 'function') {
+    window.queueLive = queueLive = function v20QueueLiveWithoutStaleScene(...args) {
+      invalidateActiveScene();
+      return baseQueueLive.apply(this, args);
     };
   }
 
@@ -313,18 +532,106 @@
    * layout frames, so switching tabs never jumps up or down the long editor. */
   const baseSetGroupSection = window.setV1814GroupSection;
   if (typeof baseSetGroupSection === 'function') {
+    const sectionScrollPositions = new Map();
+    let firstRestoreFrame = 0;
+    let finalRestoreFrame = 0;
+    let continuousRestoreFrame = 0;
+    let midRestoreTimer = 0;
+    let lateRestoreTimer = 0;
+    let anchoredSurface = null;
+    let previousOverflowAnchor = '';
+    const cancelPendingRestores = () => {
+      if (firstRestoreFrame) cancelAnimationFrame(firstRestoreFrame);
+      if (finalRestoreFrame) cancelAnimationFrame(finalRestoreFrame);
+      if (continuousRestoreFrame) cancelAnimationFrame(continuousRestoreFrame);
+      if (midRestoreTimer) clearTimeout(midRestoreTimer);
+      if (lateRestoreTimer) clearTimeout(lateRestoreTimer);
+      firstRestoreFrame = 0;
+      finalRestoreFrame = 0;
+      continuousRestoreFrame = 0;
+      midRestoreTimer = 0;
+      lateRestoreTimer = 0;
+      if (anchoredSurface?.isConnected) anchoredSurface.style.overflowAnchor = previousOverflowAnchor;
+      anchoredSurface = null;
+      previousOverflowAnchor = '';
+    };
     window.setV1814GroupSection = function v20StableGroupSection(section, ...args) {
       const surface = document.querySelector('.app');
-      const top = surface?.scrollTop || 0;
+      const top = Number(surface?.scrollTop) || 0;
+      const shell = document.querySelector('#zones.page.on .v1814-group-shell');
+      const groupKey = String(group?.id || shell?.querySelector('h1')?.textContent || 'group');
+      const currentSection = String(shell?.dataset?.v1814Section || 'light');
+      sectionScrollPositions.set(`${groupKey}:${currentSection}`, top);
+      const rememberedTarget = sectionScrollPositions.get(`${groupKey}:${section}`);
+      const restoreTop = Number.isFinite(rememberedTarget) ? rememberedTarget : top;
+      cancelPendingRestores();
+      const surfaceOwnsScroll = surface && getComputedStyle(surface).overflowY === 'auto';
+      /* Disable anchoring before the panel is hidden/shown. Waiting until the
+       * setter returns is too late: WebKit/Chromium may synchronously move the
+       * scroll position while the shorter panel is being laid out. */
+      if (surfaceOwnsScroll && typeof surface.scrollTo === 'function') {
+        anchoredSurface = surface;
+        previousOverflowAnchor = surface.style.overflowAnchor;
+        surface.style.overflowAnchor = 'none';
+      }
       const result = baseSetGroupSection.call(this, section, ...args);
-      if (!surface) return result;
-      surface.scrollTo({ top, left: 0, behavior: 'auto' });
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        surface.scrollTo({ top, left: 0, behavior: 'auto' });
-      }));
-      setTimeout(() => surface.scrollTo({ top, left: 0, behavior: 'auto' }), 80);
+      if (!surfaceOwnsScroll || typeof surface.scrollTo !== 'function') {
+        cancelPendingRestores();
+        return result;
+      }
+      const restore = () => {
+        if (!surface.isConnected || document.querySelector('.app') !== surface) return;
+        if (!surface.querySelector('#zones.page.on .customer-group-page')) return;
+        surface.scrollTo({ top: restoreTop, left: 0, behavior: 'auto' });
+      };
+      restore();
+      firstRestoreFrame = requestAnimationFrame(() => {
+        firstRestoreFrame = 0;
+        finalRestoreFrame = requestAnimationFrame(() => {
+          finalRestoreFrame = 0;
+          restore();
+        });
+      });
+      /* Several enhancement layers finish on later animation frames. Keep the
+       * tapped position stable throughout that brief layout window instead of
+       * relying on one frame whose order varies across mobile browsers. */
+      const restoreDeadline = performance.now() + 205;
+      const keepPositionStable = () => {
+        continuousRestoreFrame = 0;
+        restore();
+        if (performance.now() < restoreDeadline) {
+          continuousRestoreFrame = requestAnimationFrame(keepPositionStable);
+        }
+      };
+      continuousRestoreFrame = requestAnimationFrame(keepPositionStable);
+      midRestoreTimer = setTimeout(() => {
+        midRestoreTimer = 0;
+        restore();
+      }, 80);
+      lateRestoreTimer = setTimeout(() => {
+        lateRestoreTimer = 0;
+        if (continuousRestoreFrame) cancelAnimationFrame(continuousRestoreFrame);
+        continuousRestoreFrame = 0;
+        restore();
+        if (anchoredSurface === surface) {
+          surface.style.overflowAnchor = previousOverflowAnchor;
+          anchoredSurface = null;
+          previousOverflowAnchor = '';
+        }
+      }, 220);
       return result;
     };
+    window.addEventListener('pagehide', cancelPendingRestores);
+  }
+
+  let localisationQueued = false;
+  function queueLocalisation() {
+    if (localisationQueued) return;
+    localisationQueued = true;
+    requestAnimationFrame(() => {
+      localisationQueued = false;
+      localiseMountedUi();
+    });
   }
 
   const baseRender = window.render;
@@ -333,7 +640,8 @@
       runMigrations();
       const result = baseRender.apply(this, args);
       localiseMountedUi();
-      requestAnimationFrame(localiseMountedUi);
+      queueLocalisation();
+      scheduleWarmContourSync();
       return result;
     };
   }
@@ -351,28 +659,36 @@
     };
   }
 
-  let localisationQueued = false;
   const observer = new MutationObserver((records) => {
     const selector = '#v1814-group-settings,#scenes,#lighting,#modalBody';
-    const relevant = records.some((record) => record.type === 'characterData' || record.target?.closest?.(selector) || [...record.addedNodes].some((node) =>
-      node.nodeType === 1 && (node.matches?.(selector) || node.closest?.(selector) || node.querySelector?.(selector))
-    ));
-    if (!relevant || localisationQueued) return;
-    localisationQueued = true;
-    requestAnimationFrame(() => {
-      localisationQueued = false;
-      localiseMountedUi();
+    const relevant = records.some((record) => {
+      if (record.type === 'characterData') {
+        return Boolean(record.target?.parentElement?.closest?.(selector));
+      }
+      if (record.target?.closest?.(selector)) return true;
+      return [...record.addedNodes].some((node) =>
+        node.nodeType === 1 && (node.matches?.(selector) || node.closest?.(selector) || node.querySelector?.(selector))
+      );
     });
+    if (relevant) queueLocalisation();
   });
   if (document.body) observer.observe(document.body, { childList: true, characterData: true, subtree: true });
 
   runMigrations();
   localiseMountedUi();
+  window.addEventListener('online', () => scheduleWarmContourSync(80));
+  window.addEventListener('focus', () => scheduleWarmContourSync(120));
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) scheduleWarmContourSync(120);
+  });
   window.AluvisionV20UiFixes = Object.freeze({
     ensureReceiverNumbers,
     migrateTunnelWave,
+    migrateWarmContourDefaults,
+    flushWarmContourSync,
     localiseGroupSettings,
     localiseCommonUi,
-    runMigrations
+    runMigrations,
+    invalidateActiveScene
   });
 })();

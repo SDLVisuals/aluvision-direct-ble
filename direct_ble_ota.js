@@ -15,8 +15,6 @@
     status: '8f0d1106-8b2b-4ca3-a9d5-8a39aaf11700',
   });
   const LOCAL_CATALOG_URL = './firmware/catalog.json';
-  const REMOTE_CATALOG_URL = 'https://sdlvisuals.github.io/aluvision-direct-ble/firmware/catalog.json';
-  const REMOTE_CATALOG_ORIGIN = 'https://sdlvisuals.github.io';
   const WIRE_VERSION = 1;
   const DATA_MAGIC = 0x3141544F;
   const DATA_BYTES = 128;
@@ -28,25 +26,31 @@
   const MAX_PERSISTED_JOBS = 12;
   const CHECKPOINT_INTERVAL_MS = 750;
   const MAX_CATALOG_ARTIFACTS = 32;
-  const MAX_APPLICATION_IMAGE_BYTES = 8 * 1024 * 1024;
+  // V21 is delivered as a local release-candidate for controlled hardware
+  // validation. Both accepted channels are still confined to the byte-bundled
+  // catalogue below; no online candidate feed is trusted.
+  const TRUSTED_LOCAL_CHANNELS = new Set(['stable', 'release-candidate']);
+  // Both V21 receiver families use one 2 MiB application slot. Never accept a
+  // larger catalogue entry merely because a receiver reports a larger flash
+  // chip or an untrusted OTAMAX value.
+  const MAX_APPLICATION_IMAGE_BYTES = 2 * 1024 * 1024;
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
 
-  // Trust boundary for future updates:
-  // - an immutable catalogue embedded in the installed receiver firmware; or
-  // - the pinned HTTPS GitHub Pages origin controlled by Aluvision.
+  // Trust boundary for this release: the catalogue and app images bundled
+  // byte-for-byte in the installed V21 application.
   // Every entry is still constrained to an exact product profile and is
   // verified again by size, SHA-256 and its identity marker before streaming.
-  // This lets a current receiver accept a later signed-off patch release
-  // without having to hard-code that future binary's hash in today's app.
+  // A future online catalogue must add a verified digital signature before it
+  // may become a trusted source; HTTPS origin pinning alone is not enough.
   const TRUSTED_PROFILES = Object.freeze({
     SPI: Object.freeze({
       receiverType: 'SPI', model: 'ALV-SPI-SK6812', board: 'ESP32S3',
-      minVersion: '18.18.0', variants: Object.freeze(['NFC_ONLY']),
+      minVersion: '18.18.0', variants: Object.freeze(['NFC_ONLY', 'LOCAL_SETUP']),
     }),
     RGBW: Object.freeze({
       receiverType: 'RGBW', model: 'ALV-RGBW-DUAL', board: 'ESP32S3',
-      minVersion: '18.18.0', variants: Object.freeze(['NFC_ONLY']),
+      minVersion: '18.18.0', variants: Object.freeze(['NFC_ONLY', 'LOCAL_SETUP']),
     }),
   });
 
@@ -140,7 +144,7 @@
     const safeMarker = candidate.identityMarker ===
       `ALUVISION_FW_ID_V1|TYPE=${candidate.receiverType}|MODEL=${candidate.model}|BOARD=${candidate.board}|VERSION=${candidate.version}|VARIANT=${candidate.variant}|END`;
     if (candidate.id !== expectedId || !exactProfile || !safeVersion || !safeSize ||
-        !safeHash || !safeFile || !safeMarker || candidate.channel !== 'stable' ||
+        !safeHash || !safeFile || !safeMarker || !TRUSTED_LOCAL_CHANNELS.has(candidate.channel) ||
         candidate.trusted !== true ||
         candidate.applicationImage !== true || Number(candidate.otaWireVersion) !== WIRE_VERSION ||
         Number(candidate.dataPayloadBytes) !== DATA_BYTES) return null;
@@ -284,11 +288,9 @@
       return checked;
     }
 
-    async function fetchCatalogue(url, timeout, remote) {
+    async function fetchCatalogue(url, timeout) {
       const resolved = new URL(url, location.href);
-      if (remote && (resolved.protocol !== 'https:' || resolved.origin !== REMOTE_CATALOG_ORIGIN)) {
-        throw new Error('Ongeldige firmwarecataloguslocatie');
-      }
+      if (resolved.origin !== location.origin) throw new Error('Ongeldige firmwarecataloguslocatie');
       const response = await withTimeout(dependencies.nativeFetch(resolved, {
         cache: 'no-store',
         credentials: resolved.origin === location.origin ? 'same-origin' : 'omit',
@@ -301,20 +303,13 @@
 
     async function loadCatalogue(force = false) {
       if (catalogueDocument && !force) return catalogueDocument;
-      let loaded;
-      let source = 'embedded';
-      try {
-        loaded = await fetchCatalogue(REMOTE_CATALOG_URL, 3500, true);
-        source = 'online';
-      } catch (_) {
-        loaded = await fetchCatalogue(LOCAL_CATALOG_URL, 3500, false);
-      }
+      const loaded = await fetchCatalogue(LOCAL_CATALOG_URL, 3500);
       artifacts = validateCatalogue(loaded.raw, loaded.resolved.href);
       catalogueDocument = {
         schemaVersion: 1,
         generatedAt: String(loaded.raw.generatedAt || ''),
         loadedAt: Date.now() / 1000,
-        source,
+        source: 'embedded',
         artifacts: artifacts.map(publicArtifact),
       };
       return catalogueDocument;
@@ -325,8 +320,8 @@
       const model = String(receiver?.model || '').toUpperCase();
       const board = String(receiver?.board || '').toUpperCase();
       return artifacts
-        .filter((item) => item.receiverType === receiverType && item.variant === 'NFC_ONLY' &&
-          item.channel === 'stable' && (!model || item.model === model) && (!board || item.board === board))
+        .filter((item) => item.receiverType === receiverType && TRUSTED_PROFILES[receiverType]?.variants.includes(item.variant) &&
+          TRUSTED_LOCAL_CHANNELS.has(item.channel) && (!model || item.model === model) && (!board || item.board === board))
         .sort((left, right) => compareVersions(right.version, left.version))[0] || null;
     }
 
@@ -337,7 +332,9 @@
       const board = String(receiver?.board || '').toUpperCase();
       const currentVersion = receiverVersion(receiver) || 'Onbekend';
       const currentVariant = String(receiver?.firmwareVariant || '').toUpperCase() || 'Onbekend';
-      const otaMaxBytes = Number(receiver?.otaMaxBytes || 0);
+      const reportedOtaMaxBytes = Number(receiver?.otaMaxBytes || 0);
+      const otaMaxBytes = Number.isFinite(reportedOtaMaxBytes)
+        ? Math.min(MAX_APPLICATION_IMAGE_BYTES, reportedOtaMaxBytes) : 0;
       let state = 'up_to_date';
       let reason = '';
       let updateAvailable = false;
@@ -814,8 +811,7 @@
       if (!trusted) throw new Error('Ongeldige of niet-vertrouwde firmwarecatalogus');
       const catalogUrl = new URL(artifactSources.get(trusted.id) || LOCAL_CATALOG_URL, location.href);
       const firmwareUrl = new URL(trusted.file, catalogUrl);
-      const trustedOrigin = firmwareUrl.origin === location.origin ||
-        (firmwareUrl.protocol === 'https:' && firmwareUrl.origin === REMOTE_CATALOG_ORIGIN);
+      const trustedOrigin = firmwareUrl.origin === location.origin;
       if (!trustedOrigin || firmwareUrl.origin !== catalogUrl.origin || !firmwareUrl.pathname.endsWith('.app.bin')) {
         throw new Error('Ongeldige firmwarelocatie');
       }
@@ -841,10 +837,38 @@
       assertReceiverIdentity(info, receiver, artifact);
       if (!['1', 'BLE1', 'HTTP1', 'WIFI1'].includes(String(info.OTA || '').toUpperCase()) ||
           Number(info.OTAV || 0) !== WIRE_VERSION) throw new Error('OTA_CAPACITY_UNKNOWN');
-      const capacity = Number(info.OTAMAX || 0);
+      const reportedCapacity = Number(info.OTASLOT || info.OTAMAX || 0);
+      const capacity = Number.isFinite(reportedCapacity)
+        ? Math.min(MAX_APPLICATION_IMAGE_BYTES, reportedCapacity) : 0;
       if (!Number.isFinite(capacity) || capacity < MIN_RELIABLE_CAPACITY) throw new Error('OTA_CAPACITY_UNKNOWN');
+      if (artifact.size > MAX_APPLICATION_IMAGE_BYTES) throw new Error('OTA_TOO_LARGE');
       if (artifact.size > capacity) throw new Error('OTA_TOO_LARGE');
       if (compareVersions(info.FWVER, artifact.version) > 0) throw new Error('Downgrade wordt geweigerd');
+    }
+
+    async function preflightOnly(rid, artifactId) {
+      if (activeJobId) throw new Error('Er loopt al een firmware-update');
+      await loadCatalogue(true);
+      const exact = exactRid(rid);
+      const receiver = dependencies.getReceiver(exact);
+      const artifact = artifacts.find((item) => item.id === String(artifactId || '').toLowerCase());
+      if (!exact || !receiver) throw new Error('Receiver is niet gekoppeld');
+      if (!artifact) throw new Error('Firmwareversie staat niet in de lokale catalogus');
+      if (artifact.receiverType !== String(receiver.receiverType || '').toUpperCase()) {
+        throw new Error('Firmwaretype komt niet overeen met de receiver');
+      }
+      if (typeof dependencies.nativeOtaPreflight !== 'function') {
+        return {
+          ready: false, willUpload: false, requiresExplicitStart: true,
+          slotLimitBytes: MAX_APPLICATION_IMAGE_BYTES,
+          reason: 'Native OTA-voorcontrole is niet beschikbaar'
+        };
+      }
+      const result = await dependencies.nativeOtaPreflight(receiver, artifact);
+      return {
+        ...(result || {}), willUpload: false, requiresExplicitStart: true,
+        slotLimitBytes: MAX_APPLICATION_IMAGE_BYTES
+      };
     }
 
     async function abortBeforeCommit(job, receiver) {
@@ -1132,6 +1156,10 @@
           const conflict = /loopt al|updateverbinding/.test(String(error?.message || error));
           return failure(conflict ? 409 : 400, error);
         }
+      }
+      if (path === '/api/firmware/preflight') {
+        try { return { status: 200, body: { ok: true, preflight: await preflightOnly(body.rid, body.artifactId) } }; }
+        catch (error) { return failure(400, error); }
       }
       if (path === '/api/firmware/status') {
         try { return { status: 200, body: { ok: true, job: status(body.jobId) } }; }

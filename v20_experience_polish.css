@@ -1,0 +1,587 @@
+/* Aluvision V20 customer experience polish.
+   Visual-only: the original application remains responsible for every action. */
+
+.alv-screen-reader-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+html.alv-experience-ready,
+html.alv-experience-ready body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.alv-experience-ready .page,
+.alv-experience-ready .card,
+.alv-experience-ready .customer-zone-explorer,
+.alv-experience-ready .customer-group-explorer,
+.alv-experience-ready .customer-device-card,
+.alv-experience-ready #modalBody,
+.alv-experience-ready .row > * {
+  min-width: 0;
+}
+
+.alv-experience-ready button,
+.alv-experience-ready [role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.alv-experience-ready button:focus-visible,
+.alv-experience-ready [role="button"]:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--red), transparent 64%);
+  outline-offset: 2px;
+}
+
+/* The active installation and its real connection state stay legible without
+   consuming another card in every page. */
+.alv-experience-location .v1814-location-copy em {
+  color: var(--ink);
+  font-weight: 760;
+}
+
+.badge.alv-experience-health {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  max-width: min(190px, 48vw);
+  border: 1px solid var(--line);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge.alv-experience-health.ready { background: #e8f5ed; color: #286344; }
+.badge.alv-experience-health.partial { background: #fff3df; color: #8b5d16; }
+.badge.alv-experience-health.offline { background: #f8e7e5; color: #8b3732; }
+.badge.alv-experience-health.setup { background: var(--panel-2); color: var(--mut); }
+body.dark .badge.alv-experience-health.ready { background: #1e3b2c; color: #9ee2b8; }
+body.dark .badge.alv-experience-health.partial { background: #43351d; color: #f3ca7c; }
+body.dark .badge.alv-experience-health.offline { background: #462421; color: #f3aaa4; }
+
+/* Home is an obvious shortcut for the whole active location. */
+.alv-experience-master {
+  position: relative;
+  isolation: isolate;
+}
+
+.alv-experience-master::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at 92% 3%, color-mix(in srgb, var(--red), transparent 90%), transparent 37%);
+  pointer-events: none;
+}
+
+.alv-experience-master .ux-control-head h2 {
+  max-width: 26ch;
+  letter-spacing: -.035em;
+}
+
+.alv-experience-master .alv-home-scope-note {
+  margin-top: 2px;
+  border-color: var(--line);
+  background: var(--panel-2);
+}
+
+.alv-experience-master .alv-home-scope-note > i {
+  background: var(--ink);
+}
+
+.alv-experience-master .ux-control-tabs > button {
+  min-height: 106px;
+}
+
+.alv-experience-master .v1816-power-toggle {
+  min-height: 60px;
+}
+
+/* The zone overview now reads as a tiny journey, not as a technical diagram. */
+.alv-experience-journey > span {
+  opacity: .68;
+  transition: opacity .18s ease, border-color .18s ease, transform .18s ease;
+}
+
+.alv-experience-journey > span.is-next {
+  opacity: 1;
+  border-color: color-mix(in srgb, var(--red), var(--line) 44%);
+  background: color-mix(in srgb, var(--red), var(--panel) 95%);
+  box-shadow: inset 0 -3px color-mix(in srgb, var(--red), transparent 18%);
+}
+
+.alv-experience-journey > span.is-next > i {
+  background: var(--red) !important;
+  color: #fff !important;
+}
+
+.alv-direct-card {
+  contain: layout paint;
+}
+
+.alv-direct-card .customer-light-status {
+  letter-spacing: -.01em;
+}
+
+.alv-zone-card .customer-zone-explorer-main {
+  padding-bottom: 14px;
+}
+
+.alv-zone-card .alv-open-affordance {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 38px;
+  margin-top: -2px;
+  padding: 6px 7px 6px 11px;
+  border-radius: 11px;
+  background: var(--panel-2);
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.alv-zone-card .alv-open-affordance > i {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: var(--ink);
+  color: var(--panel);
+  font-style: normal;
+}
+
+.alv-group-card .alv-open-group {
+  min-height: 42px;
+  white-space: nowrap;
+}
+
+.alv-experience-zone-detail .customer-zone-detail-head,
+.alv-experience-group-page > .row:first-of-type {
+  scroll-margin-top: 10px;
+}
+
+/* Breadcrumbs remain visible, but become a compact context bar on a phone. */
+.customer-structure-route.alv-experience-path {
+  box-shadow: 0 8px 22px #1718170a;
+}
+
+.customer-structure-route.alv-experience-path .alv-context-chip {
+  min-height: 42px;
+}
+
+.customer-structure-route.alv-experience-path button.alv-context-chip:active {
+  transform: scale(.98);
+}
+
+.alv-experience-group-page .v1814-group-nav {
+  scrollbar-width: none;
+}
+
+.alv-experience-group-page .v1814-group-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.alv-experience-group-page .v1814-group-nav > button {
+  min-height: 60px;
+}
+
+/* Receiver list: essential information first. Firmware/OTA remains available
+   after opening Instellen, rather than dominating the everyday overview. */
+.alv-experience-devices .alv-receiver-filters {
+  position: sticky;
+  z-index: 3;
+  top: 0;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel-2), transparent 3%);
+  backdrop-filter: blur(14px);
+}
+
+.alv-experience-devices .alv-receiver-filters button {
+  min-height: 46px;
+}
+
+.alv-receiver-card {
+  overflow: hidden;
+}
+
+.alv-receiver-card .customer-device-head {
+  align-items: center;
+}
+
+.alv-receiver-card .customer-device-title small {
+  max-width: 55ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alv-receiver-card .customer-device-facts {
+  gap: 7px;
+}
+
+.alv-receiver-card .customer-device-facts > span {
+  min-height: 62px;
+  padding: 10px;
+}
+
+.alv-receiver-card .firmware-strip {
+  display: none;
+}
+
+.alv-receiver-card .firmware-strip-head small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alv-receiver-card .customer-device-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) auto;
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.alv-receiver-card .customer-device-actions .button {
+  min-height: 44px;
+  padding-inline: 10px;
+}
+
+.alv-receiver-card .customer-device-actions .button.red {
+  background: color-mix(in srgb, var(--red), var(--panel) 88%);
+  color: var(--red);
+}
+
+/* Group management is a short, visual checklist: arrangement, order, lines. */
+#modalBody.alv-experience-manage {
+  overscroll-behavior: contain;
+}
+
+.alv-experience-manage > button:first-child {
+  min-height: 44px;
+}
+
+.alv-experience-manage .v187-manage-head {
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.alv-manage-summary {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  margin: 0 0 12px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-2);
+}
+
+.alv-manage-summary > i {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: var(--ink);
+  color: var(--panel);
+  font-style: normal;
+}
+
+.alv-manage-summary > i .alv-icon { width: 22px; height: 22px; }
+.alv-manage-summary b,
+.alv-manage-summary small { display: block; }
+.alv-manage-summary small { margin-top: 2px; color: var(--mut); font-size: 9px; }
+.alv-manage-summary > em {
+  padding: 6px 8px;
+  border-radius: 99px;
+  background: var(--panel);
+  color: var(--mut);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.alv-manage-summary > em.ready { color: #286344; }
+.alv-manage-summary > em.partial { color: #8b5d16; }
+.alv-manage-summary > em.offline { color: #8b3732; }
+
+.alv-experience-manage .v187-layout-section,
+.alv-experience-manage .rgbw-layout-section,
+.alv-experience-manage .v187-receiver-order {
+  padding: 14px;
+}
+
+.alv-experience-manage .v187-layout-choice {
+  min-height: 150px;
+}
+
+.alv-experience-manage .v187-receiver-row {
+  scroll-margin-block: 10px;
+}
+
+.alv-guided-setup {
+  max-width: 100%;
+}
+
+.alv-experience-setup .alv-setup-actions {
+  position: sticky;
+  z-index: 4;
+  bottom: -1px;
+  margin: 14px -4px -4px;
+  padding: 10px 4px 4px;
+  background: linear-gradient(transparent, var(--panel) 26%);
+}
+
+@media (max-width: 700px) {
+  .alv-experience-location .v1814-location-copy em {
+    font-size: 8.5px;
+  }
+
+  .badge.alv-experience-health {
+    max-width: 151px;
+    min-height: 30px;
+    padding-inline: 8px;
+    font-size: 9px;
+  }
+
+  .alv-experience-master .ux-control-head h2 {
+    font-size: 22px;
+  }
+
+  .alv-experience-master .ux-scope-summary {
+    gap: 4px;
+  }
+
+  .alv-experience-master .alv-home-scope-note {
+    grid-template-columns: 31px minmax(0, 1fr) auto;
+  }
+
+  .alv-experience-master .alv-home-scope-note > em {
+    grid-column: auto;
+    align-self: center;
+  }
+
+  #zones .alv-experience-journey {
+    grid-template-columns: minmax(0, 1fr) 8px minmax(0, 1fr) 8px minmax(0, 1fr) !important;
+  }
+
+  #zones .alv-experience-journey > span {
+    min-height: 58px !important;
+    border-radius: 10px;
+  }
+
+  #zones .alv-experience-journey > span > i {
+    width: 27px !important;
+    height: 27px !important;
+  }
+
+  #zones .alv-experience-journey > span > b > small {
+    font-size: 6px !important;
+  }
+
+  #zones .alv-experience-journey > span > b > strong {
+    max-width: 74px !important;
+    font-size: 7px !important;
+  }
+
+  .alv-zone-card .customer-zone-explorer-main {
+    gap: 9px;
+  }
+
+  .alv-zone-card .customer-zone-preview-row canvas {
+    height: 28px !important;
+  }
+
+  .alv-zone-card .customer-zone-explorer-head {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .alv-zone-card .customer-light-status {
+    grid-column: 1 / -1;
+    margin-top: -2px;
+  }
+
+  .customer-structure-route.alv-experience-path {
+    position: sticky;
+    top: 0;
+    z-index: 7;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 0 0 9px;
+    padding: 5px;
+  }
+
+  .customer-structure-route.alv-experience-path::before {
+    display: none;
+  }
+
+  .customer-structure-route.alv-experience-path .alv-context-chip {
+    grid-template-columns: 1fr;
+    min-height: 44px;
+    padding: 4px;
+  }
+
+  .customer-structure-route.alv-experience-path .alv-context-chip > i {
+    display: none;
+  }
+
+  .customer-structure-route.alv-experience-path .alv-context-chip small {
+    font-size: 6px;
+  }
+
+  .customer-structure-route.alv-experience-path .alv-context-chip b {
+    font-size: 8px;
+  }
+
+  .alv-experience-zone-detail .customer-zone-detail-head {
+    gap: 8px;
+  }
+
+  .alv-experience-group-page .v1814-group-nav {
+    position: sticky;
+    z-index: 6;
+    top: 0;
+    margin-inline: -2px;
+    background: color-mix(in srgb, var(--bg), transparent 5%);
+    backdrop-filter: blur(14px);
+  }
+
+  .alv-experience-group-page .v1814-group-nav > button {
+    min-height: 56px;
+    padding-inline: 3px;
+  }
+
+  .alv-experience-group-page .v1814-group-nav small {
+    max-width: 70px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .alv-experience-devices .alv-receiver-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: grid;
+  }
+
+  .alv-receiver-card .customer-device-head {
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    gap: 7px;
+  }
+
+  .alv-receiver-card .customer-device-head .pill {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .alv-receiver-card .customer-device-facts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .alv-receiver-card .customer-device-facts > span {
+    min-height: 55px;
+    padding: 8px;
+  }
+
+  .alv-receiver-card .customer-device-facts b { font-size: 12px; }
+  .alv-receiver-card .customer-device-facts small { font-size: 7px; }
+
+  .alv-receiver-card .customer-device-actions {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .alv-receiver-card .customer-device-actions .button.red {
+    grid-column: 1 / -1;
+    min-height: 44px;
+  }
+
+  .alv-experience-manage .v187-manage-head {
+    display: grid;
+  }
+
+  .alv-experience-manage .v187-manage-head .button {
+    width: 100%;
+  }
+
+  .alv-manage-summary {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .alv-manage-summary > i {
+    width: 36px;
+    height: 36px;
+  }
+
+  .alv-experience-manage .v187-receiver-row {
+    grid-template-columns: 36px 34px minmax(0, 1fr) 9px;
+  }
+
+  .alv-experience-manage .v187-receiver-actions {
+    grid-template-columns: 44px 44px 44px minmax(0, 1fr) 44px;
+  }
+}
+
+@media (max-width: 370px) {
+  .badge.alv-experience-health { max-width: 130px; }
+  .alv-experience-master .alv-home-scope-note > em { display: none; }
+  .alv-experience-master .alv-home-scope-note { grid-template-columns: 31px minmax(0, 1fr); }
+  .alv-receiver-card .customer-device-actions { grid-template-columns: 1fr; }
+  .alv-receiver-card .customer-device-actions .button.red { grid-column: auto; }
+  .alv-manage-summary { grid-template-columns: 34px minmax(0, 1fr); }
+  .alv-manage-summary > em { grid-column: 1 / -1; text-align: center; }
+}
+
+@media (min-width: 900px) {
+  .alv-experience-devices .grid.cards {
+    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  }
+
+  .alv-experience-manage .v187-layout-grid,
+  .alv-experience-manage .rgbw-layout-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alv-experience-journey > span,
+  .alv-direct-card,
+  .alv-experience-ready button,
+  .alv-experience-ready [role="button"] {
+    transition: none !important;
+  }
+}
+
+/* Keep WebKit from compositing a hidden Studio canvas or sticky inspector on
+   top of the next page. JavaScript applies this before route rendering. */
+#studio.alv-route-dormant,
+#studio.page:not(.on) {
+  display: none !important;
+  visibility: hidden !important;
+  content-visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  animation: none !important;
+  transform: none !important;
+}
+
+#studio.alv-route-dormant canvas,
+#studio.page:not(.on) canvas {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+#settings.page.on {
+  position: relative;
+  isolation: isolate;
+}

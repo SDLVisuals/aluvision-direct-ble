@@ -519,6 +519,7 @@
   }
 
   function wrapSettings() {
+    if (window.webkit?.messageHandlers?.aluvision) return;
     if (settingsWrapped || typeof window.settings !== 'function') return;
     const original = window.settings;
     window.settings = function accountlessRecoverySettings(...args) {

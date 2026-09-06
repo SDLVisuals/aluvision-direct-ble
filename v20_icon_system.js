@@ -11,8 +11,8 @@
   const paths = Object.freeze({
     home: '<path d="M3.5 10.8 12 3.6l8.5 7.2"/><path d="M5.5 9.5V21h13V9.5M9.5 21v-6h5v6"/>',
     zone: '<path d="M4 3h16v18H4z"/><path d="M4 10h7V3M11 14h9M11 14v7"/>',
-    group: '<path d="M6 6h14M6 12h14M6 18h14"/><circle cx="4" cy="6" r="1.4"/><circle cx="4" cy="12" r="1.4"/><circle cx="4" cy="18" r="1.4"/><path d="M20 6v12"/>',
-    light: '<path d="M8.4 16.7h7.2M9.2 20h5.6"/><path d="M8.1 13.8A6 6 0 1 1 16 13.8c-1.1.8-1.5 1.5-1.6 2.9H9.6c-.1-1.4-.5-2.1-1.5-2.9Z"/>',
+    group: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+    light: '<rect x="3" y="8" width="18" height="8" rx="2"/><path d="M6 12h.01M9 12h.01M12 12h.01M15 12h.01M18 12h.01" stroke-width="2.6"/><path d="M7 5V3M12 5V2M17 5V3M7 19v2M12 19v3M17 19v2"/>',
     animation: '<path d="M3 13h3l2.1-6 4 10 3-7 2.1 3H21"/><path d="m17.5 4 .7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/>',
     colours: '<path d="M12 3a9 9 0 1 0 0 18h1.2a2 2 0 0 0 0-4H12a1.7 1.7 0 0 1 0-3.4h2.5A6.5 6.5 0 0 0 21 7.1C21 4.8 17 3 12 3Z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="9" cy="6.8" r="1"/><circle cx="14" cy="6.5" r="1"/>',
     ledlines: '<rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/><path d="M6 7h.01M9 7h.01M12 7h.01M15 7h.01M18 7h.01M6 17h.01M9 17h.01M12 17h.01M15 17h.01M18 17h.01" stroke-width="2.6"/>',
@@ -24,12 +24,12 @@
     academy: '<path d="m3 9 9-5 9 5-9 5z"/><path d="M7 12v4c2.7 2 7.3 2 10 0v-4M21 9v6"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2M12 19.2v2M21.2 12h-2M4.8 12h-2M18.5 5.5 17 7M7 17l-1.5 1.5M18.5 18.5 17 17M7 7 5.5 5.5"/><circle cx="12" cy="12" r="7"/>',
     more: '<circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none"/>',
-    location: '<path d="M20 10c0 5.2-8 11-8 11S4 15.2 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.7"/>',
+    location: '<path d="M4 21V7l8-4 8 4v14M2 21h20"/><path d="M8 9h2M14 9h2M8 13h2M14 13h2M10 21v-4h4v4"/>',
     chevronDown: '<path d="m7 9.5 5 5 5-5"/>',
     chevronUp: '<path d="m7 14.5 5-5 5 5"/>',
     power: '<path d="M12 2.8v8"/><path d="M7.3 5.4a8 8 0 1 0 9.4 0"/>',
     zonePlus: '<path d="M3.5 4h10v10h-10zM3.5 9h5V4M8.5 11h5"/><path d="M18 12v9M13.5 16.5h9"/>',
-    groupPlus: '<path d="M4 6h10M4 11h10M4 16h7"/><circle cx="2.5" cy="6" r=".8"/><circle cx="2.5" cy="11" r=".8"/><circle cx="2.5" cy="16" r=".8"/><path d="M18 12v9M13.5 16.5h9"/>'
+    groupPlus: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17.5 14v7M14 17.5h7"/>'
   });
 
   const style = document.createElement('style');
@@ -48,6 +48,8 @@
     .utility-action-icon[data-alv-icon]>.alv-icon{width:23px;height:23px}
     .utility-preset-note>i[data-alv-icon]>.alv-icon{width:18px;height:18px}
     .v188-structure-route i[data-alv-icon]>.alv-icon{width:17px;height:17px;margin:auto}
+    .v20-review-map i[data-alv-icon]>.alv-icon{width:22px;height:22px;margin:auto}
+    .alv-home-scope-note>i[data-alv-icon]>.alv-icon,.alv-manage-summary>i[data-alv-icon]>.alv-icon{width:22px;height:22px;margin:auto}
     .active-context-icon[data-alv-icon]>.alv-icon,.group-card-active-note>i[data-alv-icon]>.alv-icon,
     .active-group-modal-banner>i[data-alv-icon]>.alv-icon{width:17px;height:17px}
     .alv-title-with-icon{display:flex!important;align-items:center;gap:9px}
@@ -78,12 +80,39 @@
     .alv-scene-cue-badge>span{position:absolute;right:5px;bottom:5px;width:8px;height:8px;border:2px solid #151615;border-radius:50%;background:var(--red);box-shadow:0 0 10px var(--red);animation:alvSceneReady 5.4s ease-in-out -1.85s infinite}
     @keyframes alvSceneRecall{0%,12%,100%{background:#ffffff12;box-shadow:none;opacity:.55}34%,62%{background:var(--scene-colour);box-shadow:0 0 8px var(--scene-colour);opacity:1}82%{background:#ffffff16;box-shadow:none;opacity:.68}}
     @keyframes alvSceneReady{0%,43%,100%{transform:scale(.65);opacity:.38}57%,75%{transform:scale(1);opacity:1}}
+    .v187-layout-grid>.alv-layout-choice{display:grid;grid-template-columns:minmax(0,1fr) 25px;gap:8px;align-items:center;min-width:0;padding:9px;background:var(--panel);color:var(--ink);white-space:normal;text-align:left}
+    .v187-layout-grid>.alv-layout-choice>span{min-width:0;font-size:12px}
+    .v187-layout-grid>.alv-layout-choice.on{border-color:var(--red);box-shadow:inset 0 0 0 1px var(--red);background:var(--panel)!important;color:var(--ink)!important}
+    .v187-layout-demo.alv-layout-scene{display:block!important;position:relative;min-width:0;overflow:hidden;background:#111312!important}
+    .alv-layout-scene>svg{display:block;width:100%;height:100%;overflow:hidden}
+    .alv-layout-scene .alv-layout-rail{stroke:#414641;stroke-width:8;stroke-linecap:round}
+    .alv-layout-scene .alv-layout-pixels{stroke:#707970;stroke-width:5;stroke-dasharray:1 7;stroke-linecap:round}
+    .alv-layout-scene .alv-layout-number{font:700 10px system-ui;fill:#ccd2cc;text-anchor:middle}
+    .alv-layout-scene .alv-layout-flow{stroke:#fff0d0;stroke-width:7;stroke-linecap:round;stroke-dasharray:15 170;animation:alvLayoutFlow 3.2s linear infinite}
+    .alv-layout-scene .alv-layout-whole{stroke:#ffe4b3;stroke-width:8;stroke-linecap:round;animation:alvLayoutWhole 3.2s ease-in-out infinite;animation-delay:var(--alv-line-delay,0s)}
+    .alv-layout-scene .alv-layout-arrow{fill:none;stroke:#c94e46;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+    .alv-layout-scene .alv-layout-whole.alv-layout-linked{animation-delay:0s}
+    .v207-output-board .v207-output-routes>span>em{position:relative;overflow:hidden}
+    .v207-output-board .v207-output-routes>span.on>em:after{content:'';position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,#fff0d0,transparent);animation:alvPortSignal 2.8s linear infinite}
+    .v207-output-board .v207-output-routes>span>b.alv-port-strip{position:relative;overflow:hidden;isolation:isolate}
+    .v207-output-board .v207-output-routes>span.on>b.alv-port-strip:after{content:'';position:absolute;inset:0;z-index:-1;background:repeating-linear-gradient(90deg,#fff0d022 0 5px,transparent 5px 8px)}
+    .v21-rgbw-pair-board>div>span.on>i,.rgbw207-pair-route.on>i{animation:alvRgbwPortGlow 3.2s ease-in-out infinite;background:#ffe4b3!important}
+    .v21-rgbw-pair-board[data-mode="separate"]>div>span:nth-child(2).on>i{animation-delay:-1.6s;background:#c94e46!important}
+    .v21-rgbw-pair-modes>button>i.alv-port-mode{width:52px!important;height:44px!important;border-radius:10px;background:#141714!important;color:#fff0d0!important;overflow:hidden}
+    body.v21 .v21-rgbw-pair-modes>button:has(>.alv-port-mode){grid-template-columns:52px minmax(0,1fr) 22px}
+    .alv-port-mode>svg{display:block;width:100%;height:100%}
+    .alv-port-mode .alv-port-active{animation:alvRgbwPortGlow 3.2s ease-in-out infinite}
+    .alv-port-mode[data-alv-port-mode="separate"] .alv-port-two{animation-delay:-1.6s}
+    @keyframes alvLayoutFlow{from{stroke-dashoffset:185}to{stroke-dashoffset:0}}
+    @keyframes alvLayoutWhole{0%,100%{opacity:.16}30%,48%{opacity:1}78%{opacity:.16}}
+    @keyframes alvPortSignal{to{transform:translateX(100%)}}
+    @keyframes alvRgbwPortGlow{0%,100%{opacity:.46}45%,60%{opacity:1}}
     @media(max-width:560px){
       .nav>button>i[data-alv-icon]>.alv-icon{width:20px;height:20px}
       .alv-title-icon{width:27px;height:27px}
       .v1814-group-nav button>i[data-alv-icon]>.alv-icon{width:15px;height:15px}
     }
-    @media(prefers-reduced-motion:reduce){.alv-scene-cue-track>i,.alv-scene-cue-badge>span{animation:none!important}.alv-scene-cue-track>i{background:color-mix(in srgb,var(--scene-colour),#161816 38%);opacity:.9}.alv-scene-cue-badge>span{opacity:1}}
+    @media(prefers-reduced-motion:reduce){.alv-scene-cue-track>i,.alv-scene-cue-badge>span,.alv-layout-scene .alv-layout-flow,.alv-layout-scene .alv-layout-whole,.v207-output-board .v207-output-routes>span.on>em:after,.v21-rgbw-pair-board>div>span.on>i,.rgbw207-pair-route.on>i,.alv-port-mode .alv-port-active{animation:none!important}.alv-layout-scene .alv-layout-flow{stroke-dashoffset:-55}.alv-layout-scene .alv-layout-whole{opacity:.85}.alv-scene-cue-track>i{background:color-mix(in srgb,var(--scene-colour),#161816 38%);opacity:.9}.alv-scene-cue-badge>span{opacity:1}}
   `;
   document.head.append(style);
 
@@ -93,10 +122,57 @@
   }
 
   function setIcon(node, name) {
-    if (!node || node.dataset.alvIcon === name) return;
+    if (!node || !paths[name]) return;
+    const svg = node.querySelector(':scope > svg[data-alv-icon-name]');
+    if (node.dataset.alvIcon === name && svg?.dataset.alvIconName === name && node.childElementCount === 1 && node.childNodes.length === 1) return;
     node.dataset.alvIcon = name;
     node.setAttribute('aria-hidden', 'true');
     node.innerHTML = markup(name);
+  }
+
+  function setSemanticIcon(node, name, role = name) {
+    if (!node) return;
+    setIcon(node, name);
+    node.dataset.v21IconId = name;
+    node.dataset.v21IconRole = role === 'ledlines' || role === 'light' ? 'led-line' : role;
+  }
+
+  function semanticRole(node) {
+    if (!node) return '';
+    // Read the kind label, never a customer-defined location or group name.
+    // The overview journey changes from Zone / Group / Light to Location /
+    // Zone / Group after its first render, so position is not a stable role.
+    const resolve = value => {
+      const label = (value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      if (/\b(?:locatie|locaties|location|locations|emplacement|emplacements|standort|standorte)\b/.test(label)) return 'location';
+      if (/\b(?:zone|zones|zonen)\b/.test(label)) return 'zone';
+      if (/\b(?:groep|groepen|group|groups|groupe|groupes|gruppe|gruppen)\b/.test(label)) return 'group';
+      if (/\b(?:led[ -]?lines?|licht|light|lumiere|beleuchtung)\b/.test(label)) return 'led-line';
+      return '';
+    };
+    const small = node.querySelector('small');
+    const role = resolve(small?.textContent || node.querySelector(':scope > b')?.textContent);
+    if (role) return role;
+    // The polished overview puts "CHOOSE NOW" / "THEN" above Zone / Group.
+    // Only this instructional route may derive its kind from that second line.
+    return node.parentElement?.matches('.v188-structure-route')
+      ? resolve(node.querySelector(':scope > b > strong')?.textContent) : '';
+  }
+
+  function refineHierarchy(root = document) {
+    root.querySelectorAll?.('.customer-location-mark,.v18152-location-mark,.v1814-all-scope-badge>i')
+      .forEach(node => setSemanticIcon(node, 'location'));
+    root.querySelectorAll?.('.customer-zone-icon,.customer-zone-detail-icon,.v18152-zone-scope-mark')
+      .forEach(node => setSemanticIcon(node, 'zone'));
+    root.querySelectorAll?.('.v188-structure-route>span,.customer-structure-route .alv-context-chip,.v20-review-map>span')
+      .forEach(node => {
+        const role = semanticRole(node);
+        if (role) setSemanticIcon(node.querySelector(':scope > i'), role === 'led-line' ? 'ledlines' : role, role);
+      });
+    root.querySelectorAll?.('[data-v1814-group-tab="light"]>i,[data-v1814-group-tab="lines"]>i,.customer-group-empty-preview>i,.alv-home-scope-note>i,.alv-manage-summary>i')
+      .forEach(node => setSemanticIcon(node, 'ledlines', 'led-line'));
+    root.querySelectorAll?.('.active-context-icon,.group-card-active-note>i,.active-group-modal-banner>i,.alv-group-icon,.alv-group-page-icon')
+      .forEach(node => setSemanticIcon(node, 'group'));
   }
 
   function language() {
@@ -135,12 +211,6 @@
     root.querySelectorAll?.('.customer-zone-icon,.customer-zone-detail-icon,.v18152-zone-scope-mark')
       .forEach((node) => setIcon(node, 'zone'));
     root.querySelectorAll?.('.customer-zone-empty>i').forEach((node) => setIcon(node, 'zonePlus'));
-    root.querySelectorAll?.('.v188-structure-route').forEach((route) => {
-      const stops = route.querySelectorAll(':scope > span');
-      setIcon(stops[0]?.querySelector('i'), 'zone');
-      setIcon(stops[1]?.querySelector('i'), 'group');
-      setIcon(stops[2]?.querySelector('i'), 'light');
-    });
   }
 
   function addTitleIcon(title, name, className) {
@@ -176,7 +246,7 @@
       de: { short: 'Animation', full: 'Animationseinstellungen' }
     };
     const translated = copy(labels);
-    const tabIcons = { light: 'light', settings: 'animation', colors: 'colours', lines: 'ledlines' };
+    const tabIcons = { light: 'ledlines', settings: 'animation', colors: 'colours', lines: 'ledlines' };
     root.querySelectorAll?.('.v1814-group-nav [data-v1814-group-tab]').forEach((button) => {
       const key = button.dataset.v1814GroupTab;
       setIcon(button.querySelector(':scope > i'), tabIcons[key]);
@@ -251,6 +321,139 @@
     });
   }
 
+  function layoutGroup() {
+    try { return typeof group !== 'undefined' ? group : null; } catch (_) { return null; }
+  }
+
+  function layoutScene(layout, family, count, orientation) {
+    const panel = layout === 'parallel';
+    const vertical = panel && orientation === 'vertical';
+    const wholeLine = family === 'RGBW';
+    const number = (value, x, y) => `<text class="alv-layout-number" x="${x}" y="${y}">${value}</text>`;
+    const rail = (path, index, linked = false) => `<path class="alv-layout-rail" d="${path}"/>${wholeLine ? '' : `<path class="alv-layout-pixels" d="${path}"/>`}${panel || wholeLine ? `<path class="alv-layout-whole ${linked ? 'alv-layout-linked' : ''}" d="${path}" style="--alv-line-delay:${(-index * 3.2 / count).toFixed(3)}s"/>` : ''}`;
+    let content = '';
+    let height = 82;
+    if (panel) {
+      // Keep one visible rail per logical LED Line. A linked RGBW pair is
+      // already collapsed by logicalRgbwLines; no fake per-pixel RGBW motion.
+      if (vertical) {
+        const gap = 150 / count;
+        for (let index = 0; index < count; index += 1) {
+          const x = 15 + gap * (index + .5);
+          content += rail(`M${x} 15V55`, index) + number(index + 1, x, 73);
+        }
+        content += '<path class="alv-layout-arrow" d="M15 6h150m-5-4 5 4-5 4"/>';
+      } else {
+        height = Math.max(82, count * 18 + 16);
+        const gap = (height - 18) / count;
+        for (let index = 0; index < count; index += 1) {
+          const y = 9 + gap * (index + .5);
+          content += number(index + 1, 12, y + 3.5) + rail(`M29 ${y}H154`, index);
+        }
+        content += `<path class="alv-layout-arrow" d="M169 14v${height - 28}m-4-5 4 5 4-5"/>`;
+      }
+    } else {
+      const segments = wholeLine ? 1 : count;
+      const gap = 156 / segments;
+      for (let index = 0; index < segments; index += 1) {
+        const x = 12 + gap * index;
+        content += rail(`M${x} 35H${x + gap - (segments > 1 ? 4 : 0)}`, index, true)
+          + number(index + 1, x + gap / 2, 57);
+      }
+      if (!wholeLine) content += '<path class="alv-layout-flow" d="M12 35H168"/>';
+      content += '<path class="alv-layout-arrow" d="M22 70h136m-5-4 5 4-5 4"/>';
+    }
+    return `<svg viewBox="0 0 180 ${height}" aria-hidden="true" focusable="false">${content}</svg>`;
+  }
+
+  function portModeScene(mode) {
+    const active = port => mode === 'linked' || mode === 'separate' || mode === `port${port}`;
+    const rails = [1, 2].map(port => {
+      const y = port === 1 ? 14 : 30;
+      const on = active(port);
+      const colour = !on ? '#424a42' : mode === 'separate' && port === 2 ? '#c94e46' : 'currentColor';
+      return `<path d="M18 ${y}h8" stroke="#788078" stroke-width="1.5"/><rect class="${on ? 'alv-port-active' : ''} ${port === 2 ? 'alv-port-two' : ''}" x="27" y="${y - 3}" width="20" height="6" rx="2" fill="${colour}"/><text x="11" y="${y + 2.5}" text-anchor="middle" fill="#eef1ee" font-size="7" font-family="system-ui">${port}</text>`;
+    }).join('');
+    return `<svg viewBox="0 0 54 44" aria-hidden="true" focusable="false"><rect x="4" y="7" width="14" height="30" rx="4" fill="#343a34"/>${rails}</svg>`;
+  }
+
+  function decorateSetupVisuals(root) {
+    const selectedGroup = layoutGroup();
+    root.querySelectorAll?.('.v21-rgbw-pair[data-phase="rgbw-ports"]>header p').forEach(node => {
+      const label = copy({ nl: 'Kies één poort, beide samen of elk apart.', en: 'Choose one port, both together or each separately.', fr: 'Choisissez un port, les deux ensemble ou chacun séparément.', de: 'Wähle einen Port, beide gemeinsam oder jeden einzeln.' });
+      if (node.textContent !== label) node.textContent = label;
+    });
+    root.querySelectorAll?.('.v187-layout-grid>button[onclick*="setGroupLayout("]').forEach(button => {
+      if (button.querySelector(':scope > .v187-layout-demo')) return;
+      const layout = button.getAttribute('onclick')?.match(/setGroupLayout\(['"](line|parallel)['"]\)/)?.[1];
+      if (!layout) return;
+      // Four-port SPI can still expose a text-only fallback. Give that button
+      // the same broad, animated LED Line illustration as the established
+      // setup flow instead of replacing it with a thin technical schematic.
+      const title = layout === 'line'
+        ? copy({ nl: 'Eén doorlopende LED Line', en: 'One continuous LED Line', fr: 'Une LED Line continue', de: 'Eine fortlaufende LED Line' })
+        : copy({ nl: 'LED Lines onder elkaar', en: 'Stacked LED Lines', fr: 'LED Lines superposées', de: 'LED Lines untereinander' });
+      const hint = layout === 'line'
+        ? copy({ nl: 'Eén lange beweging', en: 'One long movement', fr: 'Un seul mouvement continu', de: 'Eine lange Bewegung' })
+        : copy({ nl: 'Rijen vormen een paneel', en: 'Rows form a panel', fr: 'Les rangées forment un panneau', de: 'Reihen bilden ein Paneel' });
+      const demoTemplate = document.createElement('template');
+      demoTemplate.innerHTML = layout === 'parallel'
+        ? '<div class="v187-layout-demo v187-layout-stacked" data-layout-demo="stacked" aria-hidden="true"><span class="v187-wall-line"><i>R1</i><b></b></span><span class="v187-wall-line"><i>R2</i><b></b></span><span class="v187-wall-line"><i>R3</i><b></b></span></div>'
+        : '<div class="v187-layout-demo v187-layout-continuous" data-layout-demo="continuous" aria-hidden="true"><span class="v187-continuous-segment"><i>R1</i></span><span class="v187-continuous-segment"><i>R2</i></span><b></b></div>';
+      const demo = demoTemplate.content.firstElementChild;
+      const copyNode = document.createElement('span');
+      const label = document.createElement('b');
+      label.textContent = title;
+      const description = document.createElement('small');
+      description.textContent = hint;
+      copyNode.append(label, description);
+      const check = document.createElement('strong');
+      check.setAttribute('aria-hidden', 'true');
+      const selected = (selectedGroup?.layout || 'line') === layout;
+      check.textContent = selected ? '✓' : '›';
+      button.dataset.layoutChoice = layout;
+      button.classList.remove('button', 'soft', 'alv-layout-choice');
+      button.classList.add('v187-layout-choice');
+      button.classList.toggle('on', selected);
+      button.setAttribute('aria-pressed', String(selected));
+      button.replaceChildren(demo, copyNode, check);
+    });
+    root.querySelectorAll?.('.v187-layout-choice[data-layout-choice]>.v187-layout-demo:not([data-layout-demo])').forEach(node => {
+      const layout = node.parentElement.dataset.layoutChoice;
+      const family = String(selectedGroup?.receiverType || 'SPI').toUpperCase() === 'RGBW' ? 'RGBW' : 'SPI';
+      const logical = family === 'RGBW' && window.AluvisionV21?.logicalRgbwLines
+        ? window.AluvisionV21.logicalRgbwLines(selectedGroup) : selectedGroup?.receivers || [];
+      const count = Math.max(1, logical.length);
+      const orientation = selectedGroup?.parallelOrientation === 'vertical' ? 'vertical' : 'horizontal';
+      const key = `${layout}:${family}:${count}:${orientation}`;
+      if (node.dataset.alvLayoutScene === key && node.querySelector(':scope > svg')) return;
+      node.dataset.alvLayoutScene = key;
+      node.dataset.alvLineCount = String(layout !== 'parallel' && family === 'RGBW' ? 1 : count);
+      node.dataset.alvFamily = family;
+      node.classList.add('alv-layout-scene');
+      node.innerHTML = layoutScene(layout, family, count, orientation);
+    });
+    root.querySelectorAll?.('.v207-output-board').forEach(board => {
+      const routes = board.querySelectorAll('.v207-output-routes>span');
+      board.dataset.alvPhysicalPorts = String(routes.length);
+      routes.forEach((route, index) => {
+        route.dataset.alvPort = String(index + 1);
+        route.querySelector(':scope > b')?.classList.add('alv-port-strip');
+      });
+    });
+    root.querySelectorAll?.('.v21-rgbw-pair-board,.rgbw207-pair-board').forEach(board => {
+      board.dataset.alvPhysicalPorts = '2';
+    });
+    root.querySelectorAll?.('[data-v21-rgbw-pair-mode]>i').forEach(node => {
+      const mode = node.parentElement.dataset.v21RgbwPairMode;
+      if (node.dataset.alvPortMode === mode && node.querySelector(':scope > svg')) return;
+      node.dataset.alvPortMode = mode;
+      node.classList.add('alv-port-mode');
+      node.setAttribute('aria-hidden', 'true');
+      node.innerHTML = portModeScene(mode);
+    });
+  }
+
   function apply(root = document) {
     decorateNavigation(root);
     decorateLocations(root);
@@ -261,7 +464,9 @@
     decorateReceivers(root);
     decorateDisclosureIcons(root);
     decorateEmptyScenes(root);
-    document.documentElement.dataset.alvIconSystem = '20.0.2';
+    refineHierarchy(root);
+    decorateSetupVisuals(root);
+    document.documentElement.dataset.alvIconSystem = '21.0.1';
   }
 
   let scheduled = false;
@@ -275,14 +480,19 @@
   }
 
   const observer = new MutationObserver((mutations) => {
-    if (mutations.some((mutation) => [...mutation.addedNodes].some((node) => node.nodeType === Node.ELEMENT_NODE))) {
+    if (mutations.some((mutation) => {
+      if ([...mutation.addedNodes].some(node => node.nodeType === Node.ELEMENT_NODE)) return true;
+      const target = mutation.target?.nodeType === Node.ELEMENT_NODE ? mutation.target : mutation.target?.parentElement;
+      return Boolean(target?.closest?.('[data-alv-icon],.v188-structure-route,.alv-context-chip,.v20-review-map'));
+    })) {
       schedule();
     }
   });
 
-  const api = Object.freeze({ markup, apply: schedule });
+  const api = Object.freeze({ markup, semanticRole, setSemanticIcon, refineHierarchy, apply: schedule });
   window.AluvisionIcons = api;
   window.AluvisionV20IconSystem = api;
   apply(document);
-  observer.observe(document.body, { childList: true, subtree: true });
+  observer.observe(document.body, { childList: true, characterData: true, subtree: true });
+  new MutationObserver(schedule).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
 })();

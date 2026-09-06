@@ -293,7 +293,7 @@
     return stage;
   }
 
-  function updateCustomDemo(stage, kind, range, palette) {
+  function updateCustomDemo(stage, kind, range, palette, key = kind) {
     const minimum = Number(range.min) || 0;
     const maximum = Number(range.max) || 100;
     const value = Math.max(minimum, Math.min(maximum, Number(range.value) || 0));
@@ -335,7 +335,12 @@
 
     stage.style.setProperty('--v188-level', `${level}%`);
     const readout = stage.querySelector('em');
-    if (readout) readout.textContent = kind === 'count' ? `${Math.round(value)} ×` : `${Math.round(value)}%`;
+    if (readout) {
+      const unit = unitFor(key);
+      readout.textContent = kind === 'count'
+        ? `${Math.round(value)} ×`
+        : `${Math.round(value)}${unit ? ` ${unit}` : ''}`;
+    }
   }
 
   function syncExistingDemo(stage, kind, range, palette) {
@@ -443,7 +448,7 @@
 
         let stage = panel.querySelector('.v188-control-visual,.v1812-rgbw-control-visual');
         if (!stage && ['spacing', 'count', 'spread'].includes(kind)) stage = createSettingDemo(panel, kind);
-        if (stage?.classList.contains('v20-setting-demo')) updateCustomDemo(stage, kind, range, palette);
+        if (stage?.classList.contains('v20-setting-demo')) updateCustomDemo(stage, kind, range, palette, key);
         else if (stage) syncExistingDemo(stage, kind, range, palette);
       });
 
@@ -589,7 +594,10 @@
     const original = window[name];
     if (typeof original !== 'function' || original.__v20VisualWrapped) return;
     const wrapped = function v20VisualWrappedFunction() {
-      if (remember) rememberOpenDetails(document);
+      // Every wrapped live control runs the shared enhancement pass. Capture
+      // the current disclosure state first, otherwise that pass can restore an
+      // earlier closed value while an advanced slider or toggle is changing.
+      rememberOpenDetails(document);
       const result = original.apply(this, arguments);
       queueEnhance();
       if (result && typeof result.finally === 'function') result.finally(queueEnhance);

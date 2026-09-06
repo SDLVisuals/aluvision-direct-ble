@@ -1,7 +1,7 @@
 // Bump this key whenever cache policy changes. In particular, the previous
 // cache could contain a navigation Request whose NFC query parameters were part
 // of the CacheStorage key. Activating this worker removes that cache wholesale.
-const CACHE = 'aluvision-v20-20-0-0-shell-v16-home-wifi';
+const CACHE = 'aluvision-v21-21-0-3-rc1-core-1';
 const SHELL = [
   './index.html',
   './direct_ble_ota.js',
@@ -13,9 +13,31 @@ const SHELL = [
   './v20_customer_palette.js',
   './v20_accountless_recovery.js',
   './v20_ui_fixes.js',
+  './v20_animation_expansion.js',
+  './v20_smoothness.js',
+  './v20_animation_catalog_pro.css',
+  './v20_animation_catalog_pro.js',
   './v20_icon_system.js',
   './v20_studio_console.js',
   './v20_studio_pro.js',
+  './ios_native_gateway.js',
+  './v21_pin_srp.js',
+  './v20_native_security.js',
+  './v20_navigation_refine.css',
+  './v20_navigation_refine.js',
+  './v20_connection_choice.js',
+  './v20_experience_polish.css',
+  './v20_experience_polish.js',
+  './v20_receiver_geometry.js',
+  './v20_spi_four_port.js',
+  './v20_academy_experience.css',
+  './v20_academy_experience.js',
+  './v20_connection_resilience.js',
+  './v20_rgbw_output_scope.js',
+  './v21_core_model.js',
+  './v21_animation_catalog.js',
+  './v21_system.css',
+  './v21_system.js',
   './manifest.webmanifest',
   './assets/aluvision-logo.png',
   './assets/aluvision-app-icon.png',
@@ -89,7 +111,7 @@ self.addEventListener('activate', (event) => {
     self.clients.claim(),
     caches.keys().then((keys) => Promise.all(
       keys.filter((key) =>
-        (key.startsWith('aluvision-faithful-') || key.startsWith('aluvision-direct-') || key.startsWith('aluvision-hardware-') || key.startsWith('aluvision-v20-')) && key !== CACHE
+        (key.startsWith('aluvision-faithful-') || key.startsWith('aluvision-direct-') || key.startsWith('aluvision-hardware-') || key.startsWith('aluvision-v20-') || key.startsWith('aluvision-v21-')) && key !== CACHE
       )
         .map((key) => caches.delete(key))
     )),

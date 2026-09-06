@@ -9,6 +9,10 @@
 (() => {
   'use strict';
 
+  // Native iOS owns receiver discovery and UDP. The browser-only private-AP
+  // adapter must stay inactive in the bundled app.
+  if (window.webkit?.messageHandlers?.aluvision) return;
+
   const STORAGE_KEY = 'aluvision.private-wifi-gateway.v1';
   const DEFAULT_GATEWAY = 'http://192.168.4.1';
   const MANUAL_BOOTSTRAP_PATH = '/alv/manual-bootstrap';
@@ -174,7 +178,9 @@
 
   async function performManualBootstrap() {
     if (!isReceiverOrigin()) {
-      throw new Error('Open eerst 192.168.4.1/?manual=1 via het ALUVISION-netwerk.');
+      const error = new Error('Open eerst 192.168.4.1/?manual=1 via het ALUVISION-netwerk.');
+      error.code = 'MANUAL_BOOTSTRAP_NOT_ON_RECEIVER';
+      throw error;
     }
     const deadline = abortAfter(4500);
     let response;
@@ -419,7 +425,10 @@
         continue;
       }
       const replyId = Number(status.fields.ID || 0);
-      if (replyId && replyId !== id) {
+      // The receiver exposes one final-status slot. A reply without this
+      // command's exact ID can be the tail of an earlier slider move and must
+      // never be accepted as confirmation for the current state.
+      if (!replyId || replyId !== id) {
         pollMs = Math.min(MAX_POLL_MS, Math.round(pollMs * 1.35));
         continue;
       }
@@ -608,6 +617,7 @@
   const adapter = Object.freeze({
     supportsConcurrentFanout: false,
     supportsOta: true,
+    managesOperationTimeouts: true,
     otaMaxChunk: 4096,
     isReady: () => ready,
     connect,
