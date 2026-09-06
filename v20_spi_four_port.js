@@ -23,6 +23,74 @@
   };
   const reachable = (device) => typeof window.receiverReachable === 'function'
     ? receiverReachable(device) : Boolean(device?.online || device?.reachableViaGateway || device?.espNowReachable);
+  const duplicate = (value) => {
+    if (value == null) return value;
+    try { return typeof window.clone === 'function' ? clone(value) : JSON.parse(JSON.stringify(value)); }
+    catch (_) { return value; }
+  };
+
+  function ensurePortSetting(device, port) {
+    device.spiPorts ||= {};
+    const number = capacityOf(device) === 4 ? clamp(port, 1, 4, 1) : 1;
+    if (!device.spiPorts[number] || typeof device.spiPorts[number] !== 'object') {
+      const fallback = portSettings(device, number);
+      device.spiPorts[number] = {
+        pixels: clamp(fallback?.pixels, 1, 1024, number === 1 ? clamp(device?.pixels, 1, 1024, 25) : 25),
+        reversed: Boolean(fallback?.reversed)
+      };
+    }
+    return device.spiPorts[number];
+  }
+
+  function defaultPortLineId(device, port) {
+    return `r-${String(device?.id || device?.rid || 'spi')}-p${port}`;
+  }
+
+  function rememberPortLine(device, port, line, sourceGroup) {
+    if (!device || !line) return false;
+    const setting = ensurePortSetting(device, port);
+    const before = JSON.stringify(setting.savedLine || null);
+    const prior = setting.savedLine && typeof setting.savedLine === 'object' ? setting.savedLine : {};
+    const state = sourceGroup?.parallelLineStates?.[line.id];
+    setting.savedLine = {
+      ...prior,
+      id: String(line.id || prior.id || defaultPortLineId(device, port)),
+      name: String(line.name || prior.name || ''),
+      ...(state != null ? { state: duplicate(state) } : {})
+    };
+    return before !== JSON.stringify(setting.savedLine);
+  }
+
+  function rememberedPortLine(device, port) {
+    const setting = ensurePortSetting(device, port);
+    const saved = setting.savedLine && typeof setting.savedLine === 'object' ? setting.savedLine : {};
+    return {
+      id: String(saved.id || defaultPortLineId(device, port)),
+      name: String(saved.name || `${device.name} · ${tx('Poort', 'Port', 'Port', 'Port')} ${port}`),
+      state: saved.state != null ? duplicate(saved.state) : null
+    };
+  }
+
+  function cleanGroupLineMetadata(selectedGroup) {
+    if (!selectedGroup) return;
+    const ids = new Set((selectedGroup.receivers || []).map((line) => line.id));
+    ['v21SelectedLineIds', 'parallelSelectedIds'].forEach((key) => {
+      if (Array.isArray(selectedGroup[key])) selectedGroup[key] = selectedGroup[key].filter((id) => ids.has(id));
+    });
+    if (selectedGroup.parallelLineStates && typeof selectedGroup.parallelLineStates === 'object') {
+      Object.keys(selectedGroup.parallelLineStates).forEach((id) => {
+        if (!ids.has(id)) delete selectedGroup.parallelLineStates[id];
+      });
+    }
+    if (!ids.size && selectedGroup.receiverType === 'SPI') selectedGroup.receiverType = null;
+  }
+
+  function restoreRememberedPortState(selectedGroup, line, device, port) {
+    const saved = rememberedPortLine(device, port);
+    if (saved.state == null) return;
+    selectedGroup.parallelLineStates ||= {};
+    selectedGroup.parallelLineStates[line.id] = duplicate(saved.state);
+  }
 
   function everyAssignment() {
     return (db?.installations || []).flatMap((location) => (location.zones || []).flatMap((selectedZone) =>
@@ -48,11 +116,13 @@
       if (Number(device.activePortCount) !== activeCount) { device.activePortCount = activeCount; changed = true; }
       if (Number(device.portCount) !== activeCount) { device.portCount = activeCount; changed = true; }
     });
-    everyAssignment().forEach(({ line }) => {
+    everyAssignment().forEach(({ group: selectedGroup, line }) => {
       if (typeOf(line) !== 'SPI') return;
       if (!PORTS.includes(Number(line.port))) { line.port = 1; changed = true; }
       if (!line.physicalRid && line.rid) { line.physicalRid = line.rid; changed = true; }
       line.receiverType = 'SPI';
+      const device = (db?.devices || []).find((item) => item.id === line.deviceId);
+      if (device && typeOf(device) === 'SPI') changed = rememberPortLine(device, Number(line.port) || 1, line, selectedGroup) || changed;
     });
     if (changed && typeof window.save === 'function') save('queued');
   }
@@ -126,13 +196,20 @@
   window.v207AttachConfiguredPort = function v207AttachConfiguredPort(deviceId, port) {
     const device = (db.devices || []).find((item) => item.id === deviceId);
     if (!device || !group || typeOf(device) !== 'SPI') return;
+    const number = capacityOf(device) === 4 ? clamp(port, 1, 4, 1) : 1;
     const currentType = typeof window.groupReceiverType === 'function' ? groupReceiverType(group) : group.receiverType;
     if (currentType && currentType !== 'SPI') return toast(tx('Maak voor SPI een aparte groep', 'Create a separate SPI group', 'Créez un groupe SPI séparé', 'Erstelle eine separate SPI-Gruppe'));
-    if (assignmentsFor(deviceId, port).length) return toast(tx('Deze uitgang zit al in een groep', 'This output is already in a group', 'Cette sortie est déjà dans un groupe', 'Dieser Ausgang ist bereits in einer Gruppe'));
-    const setting = portSettings(device, port);
+    if (assignmentsFor(deviceId, number).length) return toast(tx('Deze uitgang zit al in een groep', 'This output is already in a group', 'Cette sortie est déjà dans un groupe', 'Dieser Ausgang ist bereits in einer Gruppe'));
+    const setting = ensurePortSetting(device, number);
+    const remembered = rememberedPortLine(device, number);
     group.receiverType = 'SPI';
     group.receivers ||= [];
-    group.receivers.push({ id: `r${Date.now()}p${port}`, deviceId, name: `${device.name} · ${tx('Poort', 'Port', 'Port', 'Port')} ${port}`, rid: device.rid, physicalRid: device.rid, hardwareId: device.hardwareId, receiverType: 'SPI', port, pixels: clamp(setting.pixels, 1, 1024, 25), reversed: Boolean(setting.reversed) });
+    const line = { id: remembered.id, deviceId, name: remembered.name, rid: device.rid, physicalRid: device.rid,
+      hardwareId: device.hardwareId, receiverType: 'SPI', port: number,
+      pixels: clamp(setting.pixels, 1, 1024, 25), reversed: Boolean(setting.reversed) };
+    group.receivers.push(line);
+    restoreRememberedPortState(group, line, device, number);
+    rememberPortLine(device, number, line, group);
     save('queued'); manageGroup(); Promise.resolve(queueLive(group)).catch(() => {});
   };
 
@@ -150,23 +227,35 @@
     const number = capacityOf(device) === 4 ? clamp(port, 1, 4, 1) : 1;
     const currentType = selectedGroup && (typeof window.groupReceiverType === 'function' ? groupReceiverType(selectedGroup) : selectedGroup.receiverType);
     if (!device || typeOf(device) !== 'SPI' || !selectedGroup || (currentType && currentType !== 'SPI')) return false;
-    const previous = assignmentsFor(deviceId, number)[0];
-    const setting = portSettings(device, number);
+    const existingAssignments = assignmentsFor(deviceId, number);
+    const previous = existingAssignments[0];
+    // Choosing the group the line already belongs to is a true no-op. Removing
+    // and appending it would silently change a continuous line's physical order.
+    if (existingAssignments.length === 1 && previous?.group === selectedGroup) return true;
+    if (previous) rememberPortLine(device, number, previous.line, previous.group);
+    const setting = ensurePortSetting(device, number);
+    const remembered = rememberedPortLine(device, number);
     const line = previous?.line || {
-      id: `r${Date.now()}p${number}`, deviceId, rid: device.rid, physicalRid: device.rid,
+      id: remembered.id, deviceId, rid: device.rid, physicalRid: device.rid,
       hardwareId: device.hardwareId, receiverType: 'SPI', port: number
     };
+    const previousSelection = previous?.group === selectedGroup ? {
+      v21SelectedLineIds: Array.isArray(selectedGroup.v21SelectedLineIds) ? [...selectedGroup.v21SelectedLineIds] : null,
+      parallelSelectedIds: Array.isArray(selectedGroup.parallelSelectedIds) ? [...selectedGroup.parallelSelectedIds] : null
+    } : null;
     const affected = new Set();
     (db.installations || []).forEach((location) => (location.zones || []).forEach((candidateZone) =>
       (candidateZone.groups || []).forEach((candidateGroup) => {
         const before = candidateGroup.receivers?.length || 0;
         candidateGroup.receivers = (candidateGroup.receivers || []).filter((candidate) =>
           !(candidate.deviceId === deviceId && Number(candidate.port || 1) === number));
-        if (before !== candidateGroup.receivers.length) affected.add(candidateGroup);
-        if (!candidateGroup.receivers.length && candidateGroup.receiverType === 'SPI') candidateGroup.receiverType = null;
+        if (before !== candidateGroup.receivers.length) {
+          affected.add(candidateGroup);
+          cleanGroupLineMetadata(candidateGroup);
+        }
       })));
     Object.assign(line, {
-      deviceId, name: `${device.name} · ${tx('Poort', 'Port', 'Port', 'Port')} ${number}`,
+      deviceId, name: String(line.name || remembered.name),
       rid: device.rid, physicalRid: device.rid, hardwareId: device.hardwareId,
       receiverType: 'SPI', port: number,
       pixels: clamp(setting.pixels, 1, 1024, 25), reversed: Boolean(setting.reversed)
@@ -174,6 +263,13 @@
     selectedGroup.receiverType = 'SPI';
     selectedGroup.receivers ||= [];
     selectedGroup.receivers.push(line);
+    restoreRememberedPortState(selectedGroup, line, device, number);
+    rememberPortLine(device, number, line, selectedGroup);
+    ['v21SelectedLineIds', 'parallelSelectedIds'].forEach((key) => {
+      if (!previousSelection?.[key]?.includes(line.id)) return;
+      selectedGroup[key] ||= [];
+      if (!selectedGroup[key].includes(line.id)) selectedGroup[key].push(line.id);
+    });
     affected.add(selectedGroup);
     save('queued');
     affected.forEach((candidate) => {
@@ -190,13 +286,16 @@
     let removed = false;
     (db.installations || []).forEach((location) => (location.zones || []).forEach((candidateZone) =>
       (candidateZone.groups || []).forEach((candidateGroup) => {
+        const removedLines = (candidateGroup.receivers || []).filter((candidate) =>
+          candidate.deviceId === deviceId && Number(candidate.port || 1) === number);
         const before = candidateGroup.receivers?.length || 0;
+        removedLines.forEach((line) => rememberPortLine(device, number, line, candidateGroup));
         candidateGroup.receivers = (candidateGroup.receivers || []).filter((candidate) =>
           !(candidate.deviceId === deviceId && Number(candidate.port || 1) === number));
         if (before === candidateGroup.receivers.length) return;
         removed = true;
         affected.add(candidateGroup);
-        if (!candidateGroup.receivers.length && candidateGroup.receiverType === 'SPI') candidateGroup.receiverType = null;
+        cleanGroupLineMetadata(candidateGroup);
       })));
     if (!removed) return false;
     save('queued');

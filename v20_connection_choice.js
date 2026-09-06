@@ -102,7 +102,12 @@
       <div class="v20-connection-route" aria-hidden="true">
         <span class="phone"><i></i></span><em class="wifi">${transportIcon('wifi')}</em><span class="receiver"><i></i><i></i></span>
       </div>
-      <span><b>${tx('Sterke rechtstreekse verbinding', 'Strong direct connection', 'Connexion directe stable', 'Starke direkte Verbindung')}</b><small>${tx('De app maakt verbinding met de privé-wifi van de hoofdreceiver. Internet is niet nodig.', 'The app connects to the main receiver’s private Wi-Fi. Internet is not required.', 'L’app se connecte au Wi-Fi privé du récepteur principal. Internet n’est pas nécessaire.', 'Die App verbindet sich mit dem privaten WLAN des Hauptreceivers. Internet ist nicht nötig.')}</small></span>
+      <span><b>${tx('Sterke rechtstreekse verbinding', 'Strong direct connection', 'Connexion directe stable', 'Starke direkte Verbindung')}</b><small>${native.capabilities?.wifiAutoJoin === false
+        ? tx('Open Instellingen → Wifi op je iPhone, kies het ALUVISION-netwerk van je receiver en keer terug. Tik daarna op Verbinding controleren. Internet is niet nodig.',
+          'Open Settings → Wi-Fi on your iPhone, choose your receiver’s ALUVISION network and return. Then tap Check connection. Internet is not required.',
+          'Ouvrez Réglages → Wi-Fi sur votre iPhone, choisissez le réseau ALUVISION du récepteur et revenez. Touchez ensuite Vérifier la connexion. Internet n’est pas nécessaire.',
+          'Öffne Einstellungen → WLAN auf deinem iPhone, wähle das ALUVISION-Netzwerk deines Receivers und kehre zurück. Tippe dann auf Verbindung prüfen. Internet ist nicht nötig.')
+        : tx('De app maakt verbinding met de privé-wifi van de hoofdreceiver. Internet is niet nodig.', 'The app connects to the main receiver’s private Wi-Fi. Internet is not required.', 'L’app se connecte au Wi-Fi privé du récepteur principal. Internet n’est pas nécessaire.', 'Die App verbindet sich mit dem privaten WLAN des Hauptreceivers. Internet ist nicht nötig.')}</small></span>
     </div>`;
   }
 
@@ -119,7 +124,9 @@
     if (button) {
       button.textContent = selectedMode === 'bluetooth'
         ? tx('Zoeken via Bluetooth', 'Search via Bluetooth', 'Rechercher via Bluetooth', 'Über Bluetooth suchen')
-        : tx('Verbinden via Wi‑Fi', 'Connect via Wi-Fi', 'Se connecter via Wi-Fi', 'Über WLAN verbinden');
+        : native.capabilities?.wifiAutoJoin === false
+          ? tx('Verbinding controleren', 'Check connection', 'Vérifier la connexion', 'Verbindung prüfen')
+          : tx('Verbinden via Wi‑Fi', 'Connect via Wi-Fi', 'Se connecter via Wi-Fi', 'Über WLAN verbinden');
     }
     const bluetoothList = document.getElementById('nativeBluetoothCandidates');
     if (bluetoothList && selectedMode !== 'bluetooth') bluetoothList.innerHTML = '';
@@ -216,6 +223,11 @@
     });
   }
 
+  function operationIsCurrent(generation, root) {
+    return generation === operationGeneration && (!root || (root.isConnected &&
+      !document.getElementById('modal')?.hidden && document.querySelector('.v20-connection-choice') === root));
+  }
+
   window.v20SetReceiverTransport = function v20SetReceiverTransport(mode) {
     if (connectionBusy || !MODES.has(mode)) return;
     saveMode(mode);
@@ -223,7 +235,10 @@
     document.getElementById('nativeReceiverCandidates')?.replaceChildren();
     setStatus('', tx('Klaar om te zoeken', 'Ready to search', 'Prêt à rechercher', 'Bereit zum Suchen'), mode === 'bluetooth'
       ? tx('Zet de receiver aan en blijf met je iPhone in de buurt.', 'Power on the receiver and keep your iPhone nearby.', 'Allumez le récepteur et gardez votre iPhone à proximité.', 'Schalte den Receiver ein und halte dein iPhone in der Nähe.')
-      : tx('Zet de receiver aan. De app regelt de rechtstreekse verbinding.', 'Power on the receiver. The app handles the direct connection.', 'Allumez le récepteur. L’app gère la connexion directe.', 'Schalte den Receiver ein. Die App stellt die direkte Verbindung her.'));
+      : native.capabilities?.wifiAutoJoin === false
+        ? tx('Kies het ALUVISION-netwerk in Instellingen → Wifi en keer terug naar de app.', 'Choose the ALUVISION network in Settings → Wi-Fi and return to the app.',
+          'Choisissez le réseau ALUVISION dans Réglages → Wi-Fi et revenez dans l’app.', 'Wähle das ALUVISION-Netzwerk unter Einstellungen → WLAN und kehre zur App zurück.')
+        : tx('Zet de receiver aan. De app regelt de rechtstreekse verbinding.', 'Power on the receiver. The app handles the direct connection.', 'Allumez le récepteur. L’app gère la connexion directe.', 'Schalte den Receiver ein. Die App stellt die direkte Verbindung her.'));
     updateChoice();
   };
 
@@ -238,6 +253,7 @@
   window.v20StartReceiverConnection = async function v20StartReceiverConnection() {
     if (connectionBusy) return;
     const generation = ++operationGeneration;
+    const root = document.querySelector?.('.v20-connection-choice');
     setBusy(true);
     document.getElementById('nativeBluetoothCandidates')?.replaceChildren();
     document.getElementById('nativeReceiverCandidates')?.replaceChildren();
@@ -245,14 +261,16 @@
       if (selectedMode === 'wifi') {
         setStatus('scanning', tx('Wi‑Fi-verbinding openen…', 'Opening Wi-Fi connection…', 'Ouverture de la connexion Wi-Fi…', 'WLAN-Verbindung wird geöffnet…'), tx('Bevestig alleen de iPhone-melding als die verschijnt.', 'Only confirm the iPhone prompt if it appears.', 'Confirmez uniquement le message de l’iPhone s’il apparaît.', 'Bestätige nur die iPhone-Meldung, falls sie erscheint.'));
         if (native.mode === 'bluetooth') await native.disconnectBluetooth().catch(() => {});
+        if (!operationIsCurrent(generation, root)) return;
         await native.selectTransport('wifi');
-        if (generation !== operationGeneration) return;
-        setBusy(false);
-        return window.scanNativeReceivers?.({ setupFirst: firstReceiver() });
+        if (!operationIsCurrent(generation, root)) return;
+        updateChoice();
+        return await window.scanNativeReceivers?.({ setupFirst: firstReceiver() });
       }
 
       setStatus('scanning', tx('Bluetooth-receivers zoeken…', 'Searching for Bluetooth receivers…', 'Recherche de récepteurs Bluetooth…', 'Bluetooth-Receiver werden gesucht…'), tx('Blijf dichtbij; dit duurt meestal enkele seconden.', 'Stay nearby; this usually takes a few seconds.', 'Restez à proximité ; cela prend généralement quelques secondes.', 'Bleib in der Nähe; dies dauert meist nur wenige Sekunden.'));
       await native.selectTransport('bluetooth');
+      if (!operationIsCurrent(generation, root)) return;
       // For an existing installation the phone always talks to its remembered
       // main receiver. That main then discovers new receivers over ESP-NOW.
       // Reconnect it first so customers never need to guess which nearby unit
@@ -261,21 +279,20 @@
         try {
           setStatus('scanning', tx('Hoofdreceiver verbinden…', 'Connecting main receiver…', 'Connexion au récepteur principal…', 'Hauptreceiver wird verbunden…'), tx('Extra receivers worden daarna automatisch gezocht.', 'Additional receivers are then found automatically.', 'Les récepteurs supplémentaires sont ensuite trouvés automatiquement.', 'Weitere Receiver werden danach automatisch gefunden.'));
           const remembered = await native.connectBluetooth();
-          if (generation !== operationGeneration) return;
+          if (!operationIsCurrent(generation, root)) return;
           if (receiverInventoryReturned(remembered)) {
-            setBusy(false);
-            return window.scanNativeReceivers?.({ setupFirst: firstReceiver() });
+            return await window.scanNativeReceivers?.({ setupFirst: firstReceiver() });
           }
         } catch (_) {
           // No remembered gateway on this phone: fall through to the visual
           // nearby-receiver list and let the customer choose it once.
         }
       }
+      if (!operationIsCurrent(generation, root)) return;
       const result = await native.scanBluetooth();
-      if (generation !== operationGeneration) return;
+      if (!operationIsCurrent(generation, root)) return;
       if (result?.connected === true || receiverInventoryReturned(result)) {
-        setBusy(false);
-        return window.scanNativeReceivers?.({ setupFirst: firstReceiver() });
+        return await window.scanNativeReceivers?.({ setupFirst: firstReceiver() });
       }
       const peripherals = normaliseBluetoothPeripherals(result);
       renderBluetoothPeripherals(peripherals);
@@ -290,7 +307,7 @@
             : tx('Tik op de receiver die je wilt toevoegen.', 'Tap the receiver you want to add.', 'Touchez le récepteur à ajouter.', 'Tippe auf den Receiver, den du hinzufügen möchtest.'))
           : tx('Controleer de stroom en probeer opnieuw.', 'Check the power and try again.', 'Vérifiez l’alimentation et réessayez.', 'Prüfe die Stromversorgung und versuche es erneut.'));
     } catch (error) {
-      if (generation !== operationGeneration) return;
+      if (!operationIsCurrent(generation, root)) return;
       setStatus('error', tx('Verbinden niet gelukt', 'Could not connect', 'Connexion impossible', 'Verbindung fehlgeschlagen'), String(error?.message || error));
     } finally {
       if (generation === operationGeneration) setBusy(false);
@@ -300,13 +317,14 @@
   window.v20ConnectReceiverBluetooth = async function v20ConnectReceiverBluetooth(peripheralId, button) {
     if (connectionBusy || !peripheralId) return;
     const generation = ++operationGeneration;
+    const root = document.querySelector?.('.v20-connection-choice');
     const oldLabel = button?.querySelector('b')?.textContent || '';
     setBusy(true);
     if (button?.querySelector('b')) button.querySelector('b').textContent = tx('Verbinden…', 'Connecting…', 'Connexion…', 'Verbinden…');
     setStatus('scanning', tx('Bluetooth verbinden…', 'Connecting via Bluetooth…', 'Connexion Bluetooth…', 'Bluetooth wird verbunden…'), tx('De receiver wordt veilig gecontroleerd.', 'The receiver is being verified securely.', 'Le récepteur est vérifié de manière sécurisée.', 'Der Receiver wird sicher geprüft.'));
     try {
       const result = await native.connectBluetooth(String(peripheralId));
-      if (generation !== operationGeneration) return;
+      if (!operationIsCurrent(generation, root)) return;
       if (!firstReceiver()) {
         const inventory = result?.inventory && typeof result.inventory === 'object' ? result.inventory : result;
         const gatewayRid = String(inventory?.gatewayRid || '').toUpperCase();
@@ -318,10 +336,10 @@
           throw new Error(tx('Dit is een nieuwe receiver. Kies eerst de hoofdreceiver van je installatie; die vindt deze receiver daarna automatisch.', 'This is a new receiver. First choose your installation’s main receiver; it will then find this receiver automatically.', 'Ceci est un nouveau récepteur. Choisissez d’abord le récepteur principal de l’installation ; il le trouvera ensuite automatiquement.', 'Dies ist ein neuer Receiver. Wähle zuerst den Hauptreceiver deiner Installation; er findet diesen Receiver danach automatisch.'));
         }
       }
-      setBusy(false);
+      if (!operationIsCurrent(generation, root)) return;
       await window.scanNativeReceivers?.({ setupFirst: firstReceiver() });
     } catch (error) {
-      if (generation !== operationGeneration) return;
+      if (!operationIsCurrent(generation, root)) return;
       setStatus('error', tx('Bluetooth-verbinding mislukt', 'Bluetooth connection failed', 'Échec de la connexion Bluetooth', 'Bluetooth-Verbindung fehlgeschlagen'), String(error?.message || error));
       if (button?.querySelector('b')) button.querySelector('b').textContent = oldLabel;
     } finally {

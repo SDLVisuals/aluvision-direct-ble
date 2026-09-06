@@ -482,8 +482,125 @@
     const enhanceSettings = (root = doc) => {
       root.querySelectorAll?.('#zones .v1814-group-shell .v1811-settings-card input[type="range"]').forEach(updateRangeVisual);
     };
+    const catalogueCopy = () => ({
+      search: translated(copy('Zoek animatie', 'Search animations', 'Rechercher une animation', 'Animation suchen')),
+      clear: translated(copy('Zoekopdracht wissen', 'Clear search', 'Effacer la recherche', 'Suche löschen')),
+      all: translated(copy('Alle animaties tonen', 'Show all animations', 'Afficher toutes les animations', 'Alle Animationen anzeigen')),
+      none: translated(copy('Geen animaties gevonden', 'No animations found', 'Aucune animation trouvée', 'Keine Animationen gefunden')),
+      retry: translated(copy('Probeer een andere naam of wis je zoekopdracht.', 'Try another name or clear your search.', 'Essayez un autre nom ou effacez la recherche.', 'Versuche einen anderen Namen oder lösche die Suche.')),
+      favorites: translated(copy('Nog geen favorieten', 'No favourites yet', 'Aucun favori pour le moment', 'Noch keine Favoriten')),
+      favoriteHint: translated(copy('Tik op het sterretje bij een animatie om die hier te bewaren.', 'Tap the star beside an animation to keep it here.', 'Touchez l’étoile d’une animation pour la garder ici.', 'Tippe auf den Stern einer Animation, um sie hier zu speichern.')),
+      result: translated(copy('resultaat', 'result', 'résultat', 'Ergebnis')),
+      results: translated(copy('resultaten', 'results', 'résultats', 'Ergebnisse'))
+    });
+    const normalizedSearch = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().trim();
+    const setText = (node, value) => { if (node && node.textContent !== value) node.textContent = value; };
+    const clearCatalogueSearch = (body, families = false) => {
+      const input = body.querySelector('[data-v20-catalogue-search-input]');
+      if (!input) return;
+      input.value = '';
+      if (families && typeof win.setAnimationLibrarySection === 'function') win.setAnimationLibrarySection('families');
+      else input.dispatchEvent(new win.Event('input', { bubbles: true }));
+      enhanceLibrary();
+      input.focus({ preventScroll: true });
+    };
+    const enhanceLibrary = () => {
+      const body = doc.querySelector('#modalBody[data-v1811="animation-library"]');
+      if (!body) return;
+      const rgbwCards = [...body.querySelectorAll('.rgbw-effect-card')];
+      let input = body.querySelector('#findEffect,[data-v20-catalogue-search-input]');
+      if (!input && !rgbwCards.length) return;
+      const words = catalogueCopy();
+      let search = body.querySelector('.v20-catalogue-search');
+      if (!search) {
+        search = doc.createElement('div');
+        search.className = 'v20-catalogue-search';
+        if (input) input.before(search);
+        else {
+          input = doc.createElement('input');
+          input.id = 'v20RgbwEffectSearch';
+          input.className = 'field';
+          (body.querySelector('.v1811-library-current') || body.querySelector('h1')).after(search);
+        }
+        search.append(input);
+        const clear = doc.createElement('button');
+        clear.type = 'button';
+        clear.className = 'v20-catalogue-clear';
+        clear.textContent = '×';
+        clear.addEventListener('click', () => clearCatalogueSearch(body));
+        search.append(clear);
+        const status = doc.createElement('div');
+        status.className = 'v20-catalogue-search-status';
+        status.id = 'v20EffectSearchStatus';
+        status.setAttribute('role', 'status');
+        status.setAttribute('aria-live', 'polite');
+        search.after(status);
+      }
+      input.dataset.v20CatalogueSearchInput = 'true';
+      input.type = 'search';
+      input.placeholder = words.search;
+      input.setAttribute('aria-label', words.search);
+      input.setAttribute('aria-describedby', 'v20EffectSearchStatus');
+      input.autocomplete = 'off';
+      input.spellcheck = false;
+      const query = normalizedSearch(input.value);
+      const clear = search.querySelector('button');
+      clear.hidden = !input.value;
+      clear.setAttribute('aria-label', words.clear);
+      clear.title = words.clear;
+      const status = body.querySelector('#v20EffectSearchStatus');
+      status.hidden = !query;
+      if (rgbwCards.length) {
+        let count = 0;
+        rgbwCards.forEach(card => {
+          const matched = !query || normalizedSearch(card.textContent).includes(query);
+          card.hidden = !matched;
+          if (matched) count += 1;
+        });
+        body.querySelectorAll('.v1812-rgbw-family').forEach(family => {
+          family.hidden = ![...family.querySelectorAll('.rgbw-effect-card')].some(card => !card.hidden);
+        });
+        let empty = body.querySelector('[data-v20-catalogue-empty]');
+        if (!empty) {
+          empty = doc.createElement('div');
+          empty.className = 'empty v20-catalogue-empty';
+          empty.dataset.v20CatalogueEmpty = 'true';
+          empty.innerHTML = '<b></b><p></p><button type="button" class="button soft"></button>';
+          empty.querySelector('button').addEventListener('click', () => clearCatalogueSearch(body));
+          status.after(empty);
+        }
+        empty.hidden = count > 0;
+        setText(empty.querySelector('b'), words.none);
+        setText(empty.querySelector('p'), words.retry);
+        setText(empty.querySelector('button'), words.all);
+        setText(status, count + ' ' + (count === 1 ? words.result : words.results));
+      } else {
+        const root = body.querySelector('#animationLibrary');
+        const renderedCount = root?.querySelector(':scope > .row .scope')?.textContent?.trim();
+        const count = query && /^\d+$/.test(renderedCount || '')
+          ? Number(renderedCount)
+          : root?.querySelectorAll('.effect:not(.library-family),.preset-card').length || 0;
+        setText(status, count + ' ' + (count === 1 ? words.result : words.results));
+        const empty = root?.querySelector('.empty');
+        const favorites = !query && body.querySelector('[data-library="favorites"].on');
+        if (empty && (query || favorites) && !empty.querySelector('[data-v20-catalogue-reset]')) {
+          empty.classList.add('v20-catalogue-empty');
+          empty.textContent = '';
+          const title = doc.createElement('b'), hint = doc.createElement('p'), action = doc.createElement('button');
+          title.textContent = favorites ? words.favorites : words.none;
+          hint.textContent = favorites ? words.favoriteHint : words.retry;
+          action.type = 'button';
+          action.className = 'button soft';
+          action.dataset.v20CatalogueReset = 'true';
+          action.textContent = words.all;
+          action.addEventListener('click', () => clearCatalogueSearch(body, true));
+          empty.append(title, hint, action);
+        }
+      }
+    };
     doc.addEventListener?.('input', (event) => {
       if (event.target?.matches?.('#zones .v1814-group-shell .v1811-settings-card input[type="range"]')) updateRangeVisual(event.target);
+      if (event.target?.matches?.('[data-v20-catalogue-search-input]')) win.queueMicrotask(enhanceLibrary);
     }, true);
     if (typeof win.MutationObserver === 'function') {
       const observer = new win.MutationObserver((records) => {
@@ -499,10 +616,16 @@
           )
         ));
         if (settingsAdded) enhanceSettings(doc);
+        const libraryAdded = records.some(record => [...(record.addedNodes || [])].some(node =>
+          node?.nodeType === 1 && (node.matches?.('#animationLibrary,.v1811-library-current,.effect,.rgbw-effect-card,.v1812-rgbw-family,.empty')
+            || node.querySelector?.('#animationLibrary,.rgbw-effect-card,.effect'))
+        ));
+        if (libraryAdded) enhanceLibrary();
       });
       observer.observe(doc.documentElement, { childList: true, subtree: true });
     }
     enhanceSettings(doc);
+    enhanceLibrary();
 
     const api = Object.freeze({
       installed: true,

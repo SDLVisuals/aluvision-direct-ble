@@ -321,6 +321,15 @@
 
   function updatePanel(root, runtime, panel) {
     const doc = root.document;
+    // RGBW already has an effect-accurate whole-line canvas. In particular,
+    // SMOOTH means flash duration for strobe, not motion between pixels.
+    // Do not replace that canvas or its explanation with the SPI travel demo.
+    if (panel.querySelector('.v1812-rgbw-control-visual canvas[data-rgbw-control]')) {
+      panel.querySelectorAll('.v20-smoothness-injected,.v20-smoothness-presets').forEach(node => node.remove());
+      panel.removeAttribute('data-v20-smoothness-enhanced');
+      panel.dataset.v20SmoothnessType = 'whole-line';
+      return;
+    }
     const copy = copyFor(doc);
     const input = smoothInput(panel);
     if (!input) return;
@@ -381,7 +390,7 @@
     style.textContent = `
       ${PANEL_SCOPE}{min-width:0;max-width:100%;overflow:hidden}
       ${PANEL_SCOPE}[data-v20-smoothness-enhanced="true"]>.v1812-rgbw-control-visual{display:none!important}
-      ${PANEL_SCOPE} .v18153-smooth-demo.v188-control-visual{position:relative;display:block;width:100%;max-width:100%;height:82px;margin:10px 0 8px;padding:0;border:1px solid #ffffff2d;border-radius:14px;background:linear-gradient(145deg,#343834,#171918);overflow:hidden;isolation:isolate;box-sizing:border-box}
+      ${PANEL_SCOPE} .v18153-smooth-demo.v188-control-visual{position:relative;display:block;width:100%;max-width:100%;height:96px;margin:10px 0 8px;padding:0;border:1px solid #ffffff2d;border-radius:14px;background:linear-gradient(145deg,#343834,#171918);overflow:hidden;isolation:isolate;box-sizing:border-box}
       ${PANEL_SCOPE} .v18153-smooth-demo:before,${PANEL_SCOPE} .v18153-smooth-demo:after{display:none!important;content:none!important}
       ${PANEL_SCOPE} .v18153-smooth-canvas,${PANEL_SCOPE} .v18153-smooth-canvas[hidden]{display:none!important}
       ${PANEL_SCOPE} .v20-smoothness-live{position:absolute;z-index:2;left:9px;right:9px;top:7px;height:43px;border:1px solid #ffffff18;border-radius:10px;background:#0b0d0c;overflow:hidden;box-shadow:inset 0 1px 5px #000b}
@@ -396,8 +405,8 @@
       ${PANEL_SCOPE} .v20-smoothness-flow>b{animation-timing-function:linear;filter:blur(var(--v20-smooth-softness,.8px)) drop-shadow(0 0 7px var(--v20-smooth-primary,#fff))}
       ${PANEL_SCOPE} .v20-smoothness-flow i.edge{opacity:.32}
       ${PANEL_SCOPE} .v20-smoothness-reverse .v20-smoothness-motion>b{animation-direction:reverse}
-      ${PANEL_SCOPE} .v18153-smooth-demo-legend{position:absolute;z-index:3;left:9px;right:9px;bottom:5px;display:grid;grid-template-columns:minmax(0,.75fr) minmax(0,1.25fr);align-items:center;gap:7px;padding:0;color:#d9dcd8;font-size:7px;font-weight:900;line-height:1.15;letter-spacing:.28px;text-transform:uppercase}
-      ${PANEL_SCOPE} .v18153-smooth-demo-legend span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      ${PANEL_SCOPE} .v18153-smooth-demo-legend{position:absolute;z-index:3;left:9px;right:9px;bottom:8px;display:grid;grid-template-columns:minmax(0,.75fr) minmax(0,1.25fr);align-items:center;gap:7px;padding:0;color:#d9dcd8;font-size:10px;font-weight:800;line-height:1.25;letter-spacing:0;text-transform:none}
+      ${PANEL_SCOPE} .v18153-smooth-demo-legend span{min-width:0;white-space:normal;overflow-wrap:break-word}
       ${PANEL_SCOPE} .v18153-smooth-demo-legend span:last-child{text-align:right;color:#fff}
       ${PANEL_SCOPE} .v20-smoothness-injected{grid-column:1/-1!important}
       ${PANEL_SCOPE} .v20-smoothness-presets{grid-column:1/-1!important}
@@ -405,19 +414,19 @@
       ${PANEL_SCOPE} .v18153-smooth-limits span{min-width:0;max-width:48%;line-height:1.25}
       @keyframes v20SmoothnessTravel{from{transform:translate3d(-120%,0,0)}to{transform:translate3d(410%,0,0)}}
       @media(max-width:430px){
-        ${PANEL_SCOPE} .v18153-smooth-demo.v188-control-visual{height:80px}
+        ${PANEL_SCOPE} .v18153-smooth-demo.v188-control-visual{height:96px}
         ${PANEL_SCOPE} .v20-smoothness-live{left:7px;right:7px}
         ${PANEL_SCOPE} .v20-smoothness-leds,${PANEL_SCOPE} .v20-smoothness-motion{left:5px;right:5px;gap:2px}
         ${PANEL_SCOPE} .v20-smoothness-leds{gap:2px}
         ${PANEL_SCOPE} .v20-smoothness-motion>b{gap:2px;width:29%}
-        ${PANEL_SCOPE} .v18153-smooth-demo-legend{left:7px;right:7px;font-size:6.5px;letter-spacing:.18px}
+        ${PANEL_SCOPE} .v18153-smooth-demo-legend{left:7px;right:7px;font-size:10px}
         ${PANEL_SCOPE} .v18153-smooth-presets{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
         ${PANEL_SCOPE} .v18153-smooth-presets button{min-width:0;padding:6px 5px}
       }
       @media(max-width:350px){
         ${PANEL_SCOPE} .v20-smoothness-leds{grid-template-columns:repeat(15,minmax(0,1fr))}
         ${PANEL_SCOPE} .v20-smoothness-leds i:nth-child(n+16){display:none}
-        ${PANEL_SCOPE} .v18153-smooth-demo-legend{grid-template-columns:minmax(0,.58fr) minmax(0,1.42fr);font-size:6px}
+        ${PANEL_SCOPE} .v18153-smooth-demo-legend{grid-template-columns:minmax(0,.75fr) minmax(0,1.25fr);font-size:10px}
         ${PANEL_SCOPE} .v18153-smooth-presets button{display:block;text-align:center}
         ${PANEL_SCOPE} .v18153-smooth-presets button>i{display:none}
       }

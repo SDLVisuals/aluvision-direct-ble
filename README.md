@@ -1,6 +1,12 @@
-# Aluvision Lighting Control — 21.0.3
+# Aluvision Lighting Control — 21.0.3, build 28
 
-De volledige webinterface: https://sdlvisuals.github.io/aluvision-direct-ble/?release=21.0.3
+De volledige webinterface: https://sdlvisuals.github.io/aluvision-direct-ble/?release=21.0.3-build28
+
+Build 28 bevat verbeteringen aan koppelen en annuleren, PIN-sessies, het
+bewaren en verplaatsen van poorten, RGBW-voorbeelden, zoeken bij effecten,
+presets en scènes, toetsenbordbediening en pictogramcontrast in donkere modus.
+De bronbestanden komen overeen met de gecontroleerde iPhone-interface van
+build 28. De SPI- en RGBW-receiverfirmware blijven beide op 21.0.3.
 
 Deze publicatie bevat Home, zones, groepen, kleuren, SPI/RGBW-effecten,
 receiverinstellingen en de bestaande Studio/Academy. De nieuwe SPI-effecten zijn

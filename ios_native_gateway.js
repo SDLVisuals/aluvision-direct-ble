@@ -21,6 +21,8 @@
   let pendingPairRid = '';
   let pendingReconnectRid = '';
   let receiverScanBusy = false;
+  let receiverScanRoot = null;
+  let receiverScanGeneration = 0;
   let receiverPairBusy = false;
   let gatewayPromotion = null;
   let nativeReceiverAddTarget = null;
@@ -434,6 +436,11 @@
     else call.resolve(response.result ?? {});
   };
 
+  function receiverReportsOnline(device) {
+    const value = String(device?.ONLINE ?? device?.online ?? '1').trim().toLowerCase();
+    return value === '1' || value === 'true';
+  }
+
   function remember(inventory) {
     const incoming = Array.isArray(inventory?.devices) ? inventory.devices : [];
     rememberNfcPairTokens(incoming);
@@ -445,7 +452,8 @@
       // Keep the cached inventory available for display, but never present it
       // as a live transport connection. This forces connect() to rejoin the
       // receiver access point instead of sending commands to a stale route.
-      ready = Boolean(gatewayRid) && !stale;
+      const main = incoming.find(item => exactRid(item.RID || item.rid) === gatewayRid);
+      ready = Boolean(main) && receiverReportsOnline(main) && !stale;
       if (!stale) {
         lastHealthyInventoryAt = Date.now();
         lastSuccessfulTransportAt = lastHealthyInventoryAt;
@@ -1002,7 +1010,7 @@
           payload.devices = payload.devices
             .filter((item) => {
               const current = liveByRID.get(exactRid(item.rid || item.RID));
-              return current && String(current.ONLINE ?? current.online ?? '1') !== '0';
+              return current && receiverReportsOnline(current);
             })
             .map((item) => ({ ...item, online: true, reachableViaGateway: true }));
         }
@@ -1077,7 +1085,7 @@
   function candidateMarkup(device, configured) {
     const rid = exactRid(device.RID || device.rid);
     const type = String(device.DEVTYPE || device.receiverType || 'SPI').toUpperCase() === 'RGBW' ? 'RGBW' : 'SPI';
-    const online = String(device.ONLINE ?? device.online ?? '1') !== '0';
+    const online = ready && receiverReportsOnline(device);
     const reconnect = online && candidateNeedsReconnect(device, knownReceiverRIDs());
     const canResumeSetup = configured && knownReceiverRIDs().has(rid) && !reconnect;
     const unavailable = !online || (configured && !reconnect && !canResumeSetup);
@@ -1112,7 +1120,7 @@
     const sorted = [...devices].sort((a, b) => String(a.HWID || '').localeCompare(String(b.HWID || '')));
     const available = sorted.filter((device) => {
       const rid = exactRid(device.RID || device.rid);
-      return rid && (!configured.has(rid) || candidateNeedsReconnect(device, used)) && String(device.ONLINE ?? '1') !== '0';
+      return ready && rid && (!configured.has(rid) || candidateNeedsReconnect(device, used)) && receiverReportsOnline(device);
     });
     const firstJoin = document.querySelector('.native-wifi-once');
     if (firstJoin) firstJoin.hidden = sorted.length > 0;
@@ -1133,10 +1141,15 @@
   }
 
   window.scanNativeReceivers = async function scanNativeReceivers({ setupFirst = false } = {}) {
-    if (receiverScanBusy) return;
-    receiverScanBusy = true;
-    pendingPairRid = '';
     const candidateRoot = document.getElementById('nativeReceiverCandidates');
+    if (receiverScanBusy && receiverScanRoot === candidateRoot) return;
+    receiverScanBusy = true;
+    receiverScanRoot = candidateRoot;
+    const scanGeneration = ++receiverScanGeneration;
+    const currentScan = () => scanGeneration === receiverScanGeneration && (!candidateRoot ||
+      (candidateRoot.isConnected && document.getElementById('nativeReceiverCandidates') === candidateRoot &&
+        !document.getElementById('modal')?.hidden));
+    pendingPairRid = '';
     const status = document.getElementById('receiverNfcStatus');
     const button = document.getElementById('nativeReceiverScanButton');
     if (button) { button.disabled = true; button.setAttribute('aria-busy', 'true'); }
@@ -1149,19 +1162,20 @@
       // connected main keeps its radio session while we look for satellites.
       // A second discovery used to repeat every ESP-NOW page immediately.
       await connect({ interactive: false });
+      if (!currentScan()) return;
       renderCandidates();
       const used = knownReceiverRIDs();
       const configured = appReceiverRIDs();
       const available = devices.filter((device) => {
         const rid = exactRid(device.RID || device.rid);
-        return rid && (!configured.has(rid) || candidateNeedsReconnect(device, used)) && String(device.ONLINE ?? '1') !== '0';
+        return ready && rid && (!configured.has(rid) || candidateNeedsReconnect(device, used)) && receiverReportsOnline(device);
       });
       // The user has already chosen this main receiver in the connection
       // screen. Open its shared PIN/port wizard for either radio immediately.
       // Never select an arbitrary satellite, or reopen a dismissed screen.
       const firstMain = setupFirst && candidateRoot?.isConnected &&
         document.getElementById('nativeReceiverCandidates') === candidateRoot &&
-        devices.find(device => exactRid(device.RID || device.rid) === gatewayRid && String(device.ONLINE ?? '1') !== '0');
+        devices.find(device => ready && exactRid(device.RID || device.rid) === gatewayRid && receiverReportsOnline(device));
       if (firstMain) {
         await window.addNativeCandidate(gatewayRid, null);
         return;
@@ -1173,11 +1187,15 @@
         }
       }
     } catch (error) {
+      if (!currentScan()) return;
       devices = [];
       renderCandidates();
       if (status) status.querySelector('small').textContent = String(error?.message || error);
     } finally {
-      receiverScanBusy = false;
+      if (scanGeneration === receiverScanGeneration) {
+        receiverScanBusy = false;
+        receiverScanRoot = null;
+      }
       if (button) { button.disabled = false; button.removeAttribute('aria-busy'); }
     }
   };
@@ -1212,7 +1230,7 @@
     const used = knownReceiverRIDs();
     const configured = appReceiverRIDs();
     const reconnecting = candidateNeedsReconnect(device, used);
-    if (selected && device && String(device.ONLINE ?? '1') !== '0' &&
+    if (ready && selected && device && receiverReportsOnline(device) &&
         configured.has(selected) && used.has(selected) && !reconnecting) {
       // A transport record can exist before PIN/port setup was completed.
       // Resume that receiver's real wizard instead of leaving Add disabled or
@@ -1237,7 +1255,7 @@
       }
       return;
     }
-    if (!selected || !device || String(device.ONLINE ?? '1') === '0' || (configured.has(selected) && !reconnecting)) {
+    if (!ready || !selected || !device || !receiverReportsOnline(device) || (configured.has(selected) && !reconnecting)) {
       const status = document.getElementById('receiverNfcStatus');
       if (status) {
         status.className = 'nfc-status error';

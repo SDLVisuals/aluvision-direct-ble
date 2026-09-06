@@ -15,9 +15,7 @@
 
   const query = new URLSearchParams(location.search || '');
   const configuredBridge = String(query.get('wifiBridge') || '').trim();
-  // A public copy must never discover or select one developer's private
-  // computer. The optional desktop bridge is only used on a local development
-  // server, or when this browser tab explicitly supplies its bridge URL.
+  // A public copy must never automatically contact a private developer bridge.
   const loopback = ['localhost', '127.0.0.1', '::1', '[::1]'].includes(location.hostname);
   const privateLan = /^(?:10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.)/.test(location.hostname);
   const localServer = loopback || (privateLan && Boolean(location.port));

@@ -26,6 +26,8 @@
   let lineScopeRefreshGroup = null;
   let animationNameMigrationRan = false;
   let lastCustomerPanel = 'light';
+  let canonicalSaveTimer = 0;
+  let canonicalSaveStarted = 0;
 
   const array = value => Array.isArray(value) ? value : [];
   const duplicate = value => {
@@ -149,14 +151,36 @@
     if (typeof previousSave === 'function' && !previousSave.__v21Wrapped) {
       const wrapped = function v21Save(...args) {
         const result = previousSave.apply(this, args);
-        queueMicrotask(() => syncCanonicalModel('save'));
+        // This is a derived cache, not the authoritative installation save.
+        // Do not repeatedly migrate/stringify the complete installation while
+        // a user drags a live slider. The original save still runs immediately.
+        scheduleCanonicalSave();
         return result;
       };
       wrapped.__v21Wrapped = true;
       window.save = wrapped;
       try { save = wrapped; } catch (_) { /* Global lexical binding is optional. */ }
     }
+    window.addEventListener('pagehide', flushCanonicalSave);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') flushCanonicalSave();
+    });
     syncCanonicalModel('startup');
+  }
+
+  function flushCanonicalSave() {
+    if (!canonicalSaveTimer) return;
+    clearTimeout(canonicalSaveTimer);
+    canonicalSaveTimer = 0;
+    canonicalSaveStarted = 0;
+    syncCanonicalModel('save');
+  }
+
+  function scheduleCanonicalSave() {
+    const now = Date.now();
+    if (!canonicalSaveStarted) canonicalSaveStarted = now;
+    clearTimeout(canonicalSaveTimer);
+    canonicalSaveTimer = setTimeout(flushCanonicalSave, Math.min(140, Math.max(0, 600 - (now - canonicalSaveStarted))));
   }
 
   function modalKeyFromHtml(html) {
@@ -171,8 +195,20 @@
   function installStableModal() {
     const previousModal = window.modal;
     if (typeof previousModal !== 'function' || previousModal.__v21Wrapped) return;
+    let modalGeneration = 0;
+    let opener = null;
+    let openerBookmark = null;
     const wrapped = function v21Modal(html, options = {}) {
+      const generation = ++modalGeneration;
+      const host = document.getElementById('modal');
       const body = document.getElementById('modalBody');
+      const active = document.activeElement;
+      const wasOpen = host && !host.hidden;
+      if (!wasOpen) {
+        opener = active;
+        openerBookmark = active ? { id: active.id, action: active.getAttribute('onclick'), page: active.closest('.page')?.id } : null;
+      }
+      const bookmark = body?.contains(active) ? { id: active.id, action: active.getAttribute('onclick'), start: active.selectionStart, end: active.selectionEnd } : null;
       if (body && lastModalKey) modalPositions.set(lastModalKey, body.scrollTop || 0);
       const nextKey = options?.viewKey || modalKeyFromHtml(html);
       const keep = Boolean(body && nextKey === lastModalKey && !isGuideActive());
@@ -180,7 +216,27 @@
       body?.classList.add('v21-modal-updating');
       const result = previousModal.call(this, html);
       lastModalKey = nextKey;
+      const nextBody = document.getElementById('modalBody');
+      const nextHost = document.getElementById('modal');
+      if (nextHost && nextBody && !isGuideActive()) {
+        nextHost.setAttribute('role', 'dialog');
+        nextHost.setAttribute('aria-modal', 'true');
+        const title = nextBody.querySelector('h1,h2');
+        if (title) {
+          if (!title.id) title.id = 'v21-dialog-title';
+          nextHost.setAttribute('aria-labelledby', title.id);
+        } else nextHost.removeAttribute('aria-labelledby');
+        nextBody.tabIndex = -1;
+        let focus = keep && bookmark?.id ? document.getElementById(bookmark.id) : null;
+        if (!focus && keep && bookmark?.action) focus = [...nextBody.querySelectorAll('button[onclick]')].find(button => button.getAttribute('onclick') === bookmark.action);
+        if (!nextBody.contains(focus)) focus = nextBody;
+        focus.focus({ preventScroll: true });
+        if (focus !== nextBody && bookmark?.start != null && typeof focus.setSelectionRange === 'function') {
+          try { focus.setSelectionRange(bookmark.start, bookmark.end); } catch (_) { /* number/range inputs do not expose a selection */ }
+        }
+      }
       requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (generation !== modalGeneration) return;
         const nextBody = document.getElementById('modalBody');
         if (!nextBody) return;
         const maximum = Math.max(0, nextBody.scrollHeight - nextBody.clientHeight);
@@ -196,15 +252,47 @@
     const previousClose = window.closeModal;
     if (typeof previousClose === 'function' && !previousClose.__v21Wrapped) {
       const close = function v21CloseModal(...args) {
+        const generation = ++modalGeneration;
         const body = document.getElementById('modalBody');
         if (body && lastModalKey) modalPositions.set(lastModalKey, body.scrollTop || 0);
         lastModalKey = '';
-        return previousClose.apply(this, args);
+        const result = previousClose.apply(this, args);
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          if (generation !== modalGeneration || !document.getElementById('modal')?.hidden) return;
+          let target = opener?.isConnected ? opener : null;
+          if (!target && openerBookmark?.id) target = document.getElementById(openerBookmark.id);
+          const page = document.querySelector('.page.on');
+          if (!target && openerBookmark?.action && page?.id === openerBookmark.page) {
+            target = [...page.querySelectorAll('button[onclick]')].find(button => button.getAttribute('onclick') === openerBookmark.action);
+          }
+          if (!target?.getClientRects().length) {
+            target = page;
+            if (target) target.tabIndex = -1;
+          }
+          target?.focus({ preventScroll: true });
+          opener = null;
+          openerBookmark = null;
+        }));
+        return result;
       };
       close.__v21Wrapped = true;
       window.closeModal = close;
       try { closeModal = close; } catch (_) { /* Global lexical binding is optional. */ }
     }
+    document.addEventListener('keydown', event => {
+      const host = document.getElementById('modal');
+      const body = document.getElementById('modalBody');
+      if (!host || host.hidden || !body || isGuideActive()) return;
+      if (event.key === 'Tab') {
+        const focusable = [...body.querySelectorAll('button,a[href],input,select,textarea,[tabindex]')]
+          .filter(node => !node.disabled && node.tabIndex >= 0 && node.getClientRects().length && !node.closest('[hidden],[inert]'));
+        const first = focusable[0], last = focusable.at(-1), active = document.activeElement;
+        if (!first) { event.preventDefault(); body.focus({ preventScroll: true }); }
+        else if (!body.contains(active) || active === body || (event.shiftKey && active === first) || (!event.shiftKey && active === last)) {
+          event.preventDefault(); (event.shiftKey ? last : first).focus({ preventScroll: true });
+        }
+      }
+    }, true);
   }
 
   function allGroups(scope = 'all') {
@@ -1067,7 +1155,7 @@
     });
     if (!root.querySelector('[data-v21-add-receiver]')) {
       const heading = root.querySelector('.ux-page-intro,.customer-page-header,.page-head,.hero');
-      const button = `<button type="button" class="button v21-add-receiver" data-v21-add-receiver onclick="go('devices');setTimeout(()=>{if(typeof openPairing==='function')openPairing()},0)">＋ ${text('Receiver toevoegen', 'Add receiver', 'Ajouter un récepteur', 'Receiver hinzufügen')}</button>`;
+      const button = `<button type="button" class="button v21-add-receiver" data-v21-add-receiver onclick="openAddReceiver()">＋ ${text('Receiver toevoegen', 'Add receiver', 'Ajouter un récepteur', 'Receiver hinzufügen')}</button>`;
       heading?.insertAdjacentHTML('beforeend', button);
     }
   }
@@ -2066,6 +2154,77 @@
     });
   }
 
+  function installPresetGroupChoice() {
+    window.v21ChoosePresetGroup = function () {
+      const location = currentLocation();
+      if (!location) return;
+      const groups = array(location.zones).flatMap(zone => array(zone.groups));
+      const lineCount = group => receiverType(group) === 'RGBW' ? logicalRgbwLines(group).length : array(group.receivers).length;
+      window.modal(`<section class="v21-preset-destination" data-v21-view="preset-group-choice"><div class="eyebrow">PRESETS</div><h1>${text('Welke groep wil je bedienen?', 'Which group do you want to control?', 'Quel groupe voulez-vous contrôler ?', 'Welche Gruppe möchtest du steuern?')}</h1><p class="sub">${text('Kies een groep. Je blijft hier bij je presets.', 'Choose a group without leaving your presets.', 'Choisissez un groupe sans quitter vos presets.', 'Wähle eine Gruppe, ohne deine Presets zu verlassen.')}</p>${array(location.zones).filter(zone => array(zone.groups).length).map(zone => `<section><h2>${safe(zone.name)}</h2><div class="v21-destination-grid">${zone.groups.map(group => `<button type="button" class="v21-destination-choice ${group.id === currentGroup()?.id ? 'on' : ''}" aria-pressed="${group.id === currentGroup()?.id}" onclick="${safe(`v21SetPresetGroup(${JSON.stringify(location.id)},${JSON.stringify(zone.id)},${JSON.stringify(group.id)})`)}"><i data-alv-icon="groups" aria-hidden="true">${window.AluvisionIcons?.markup?.('groups') || ''}</i><span><b>${safe(group.name)}</b><small>${lineCount(group)} LED Line${lineCount(group) === 1 ? '' : 's'} · ${receiverType(group)}</small></span><em aria-hidden="true">${group.id === currentGroup()?.id ? '✓' : '›'}</em></button>`).join('')}</div></section>`).join('')}${groups.length ? '' : `<p class="sub">${text('Maak eerst een groep in Zones.', 'Create a group in Zones first.', 'Créez d’abord un groupe dans Zones.', 'Erstelle zuerst eine Gruppe unter Zonen.')}</p>`}<button type="button" class="button soft" onclick="closeModal()">${text('Annuleren', 'Cancel', 'Annuler', 'Abbrechen')}</button></section>`, { viewKey: 'preset-group-choice' });
+    };
+    window.v21SetPresetGroup = function (locationId, zoneId, groupId) {
+      const location = currentLocation();
+      const selectedZone = array(location?.zones).find(item => item.id === zoneId);
+      const selectedGroup = array(selectedZone?.groups).find(item => item.id === groupId);
+      if (location?.id !== locationId || !selectedGroup) {
+        toastMessage(text('Deze groep is niet meer beschikbaar.', 'This group is no longer available.', 'Ce groupe n’est plus disponible.', 'Diese Gruppe ist nicht mehr verfügbar.'));
+        return;
+      }
+      zone = selectedZone;
+      group = selectedGroup;
+      if (typeof rememberActiveGroup === 'function') rememberActiveGroup();
+      // Choosing a destination never changes its lighting or leaves Presets.
+      window.closeModal();
+      window.render();
+      queueRefinement();
+    };
+  }
+
+  function refineSavedLighting() {
+    const library = document.getElementById('lighting');
+    if (library?.classList.contains('on')) {
+      const choose = library.querySelector('.active-context-bar button');
+      if (choose) {
+        choose.id = 'v21-preset-group-choice';
+        choose.setAttribute('onclick', 'v21ChoosePresetGroup()');
+        choose.setAttribute('aria-haspopup', 'dialog');
+      }
+    }
+    document.querySelectorAll('#lighting.page.on .preset-card button[onclick],#scenes.page.on .scene-card button[onclick],#home.page.on .home-scene-card button[onclick]').forEach(button => {
+      const action = button.getAttribute('onclick') || '';
+      const presetId = action.match(/^presetMenu\(['"]([^'"]+)['"]\)/)?.[1];
+      const sceneId = action.match(/^sceneMenu\(['"]([^'"]+)['"]\)/)?.[1];
+      const item = presetId ? array(currentDatabase()?.presets).find(p => p.id === presetId)
+        : sceneId ? array(currentLocation()?.scenes).find(s => s.id === sceneId) : null;
+      if (item) {
+        button.setAttribute('aria-label', `${presetId ? text('Preset beheren', 'Manage preset', 'Gérer le preset', 'Preset verwalten') : text('Scène beheren', 'Manage scene', 'Gérer la scène', 'Szene verwalten')}: ${item.name}`);
+        button.setAttribute('aria-haspopup', 'dialog');
+      }
+    });
+    const body = document.getElementById('modalBody');
+    if (!body || document.getElementById('modal')?.hidden || !body.querySelector('#sceneName')) return;
+    body.querySelectorAll('.scene-group-pick').forEach(button => {
+      button.setAttribute('role', 'checkbox');
+      button.setAttribute('aria-checked', String(button.classList.contains('selected')));
+    });
+    body.querySelectorAll('.scene-zone-head').forEach(button => {
+      const groups = [...button.closest('.scene-zone-pick').querySelectorAll('.scene-group-pick')];
+      const count = groups.filter(group => group.classList.contains('selected')).length;
+      button.setAttribute('role', 'checkbox');
+      button.setAttribute('aria-checked', count && count < groups.length ? 'mixed' : String(Boolean(count)));
+    });
+    const steps = [...body.querySelectorAll('.scene-builder-step')];
+    if (steps.length === 3) {
+      const put = (node, value) => { if (node && node.textContent !== value) node.textContent = value; };
+      put(steps[0].querySelector('b'), text('Kies zones en groepen', 'Choose zones and groups', 'Choisissez les zones et les groupes', 'Zonen und Gruppen wählen'));
+      put(steps[0].querySelector('small'), text('Tik een groep aan, of kies een hele zone.', 'Select a group, or choose a whole zone.', 'Sélectionnez un groupe ou une zone entière.', 'Wähle eine Gruppe oder eine ganze Zone.'));
+      // Group choices already appear under their zone. Keep the summary but
+      // remove the separate, empty second selection step.
+      steps[1].classList.add('v21-scene-repeat-step');
+      put(steps[2].querySelector('i'), '2');
+    }
+  }
+
   let initialUiNormalized = false;
   function refineVisibleUi() {
     observerQueued = false;
@@ -2091,6 +2250,7 @@
     refinePairingWizard();
     refineAnimationLibraryCount();
     refineProductSettings();
+    refineSavedLighting();
   }
 
   function queueRefinement() {
@@ -2220,7 +2380,7 @@
   function exposeDiagnostics() {
     window.AluvisionV21 = Object.freeze({
       version: VERSION,
-      get canonicalModel() { return canonicalModel ? duplicate(canonicalModel) : null; },
+      get canonicalModel() { flushCanonicalSave(); return canonicalModel ? duplicate(canonicalModel) : null; },
       get canonicalError() { return canonicalError; },
       syncCanonicalModel,
       logicalRgbwLines,
@@ -2240,6 +2400,7 @@
     updateVersionMarkers();
     installCanonicalMirror();
     installStableModal();
+    installPresetGroupChoice();
     installQuickColourInvariant();
     installExactRgbwRouting();
     installRgbwEffectScopeGuard();

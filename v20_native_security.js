@@ -20,6 +20,14 @@
   const RECOVERY_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
   const encoder = new TextEncoder();
   let cachedStatus = null;
+  let securitySession = 0;
+  let statusRequest = 0;
+  let setupPending = false;
+  window.addEventListener?.('aluvision-transport-session-changed', () => {
+    securitySession += 1;
+    statusRequest += 1;
+    cachedStatus = null;
+  });
 
   function t(nl, en, fr, de) {
     try { return typeof window.ac === 'function' ? window.ac(nl, en, fr, de) : nl; }
@@ -95,16 +103,32 @@
     return status === 'OK' && supported && (!expectedDetail || detail === expectedDetail);
   }
 
+  function captureSecuritySession() {
+    return { rid: directGatewayRid(), mode: connection.mode, generation: securitySession };
+  }
+
+  function checkSecuritySession(session) {
+    if (session.generation !== securitySession || session.mode !== connection.mode || directGatewayRid() !== session.rid) {
+      throw new Error(t('De receiververbinding is gewijzigd. Probeer opnieuw.', 'The receiver connection changed. Please retry.',
+        'La connexion au récepteur a changé. Réessayez.', 'Die Receiver-Verbindung hat sich geändert. Versuche es erneut.'));
+    }
+  }
+
   async function getStatus(force = false) {
-    if (!force && cachedStatus && Date.now() - cachedStatus.checkedAt < 2500) return cachedStatus;
+    const request = ++statusRequest;
     try {
-      const rid = directGatewayRid();
+      const session = captureSecuritySession();
+      const rid = session.rid;
+      if (!force && cachedStatus?.rid === rid && cachedStatus.mode === session.mode &&
+          cachedStatus.generation === session.generation && Date.now() - cachedStatus.checkedAt < 2500) return cachedStatus;
       const reply = await gateway.transact({
         V: 18,
         TYPE: 'SECURITY_STATUS',
         TARGET: rid
       }, { timeout: 4200 });
-      if (!validSecurityReply(reply, 'SECURITY_STATUS') || exactRid(reply.RID) !== rid) {
+      checkSecuritySession(session);
+      if (!validSecurityReply(reply, 'SECURITY_STATUS') || exactRid(reply.RID) !== rid ||
+          !['0', '1'].includes(String(reply.PINSET))) {
         throw new Error(t(
           'Deze receiver ondersteunt de beveiligde pincode nog niet. Plaats eerst de nieuwste receiverfirmware.',
           'This receiver does not support the secure PIN yet. Install the latest receiver firmware first.',
@@ -112,7 +136,7 @@
           'Dieser Receiver unterstützt die sichere PIN noch nicht. Installiere zuerst die neueste Firmware.'
         ));
       }
-      cachedStatus = {
+      const result = {
         available: true,
         configured: String(reply.PINSET || '') === '1',
         trusted: String(reply.PINSET || '') === '1' && String(reply.OWNERMATCH || '') === '1',
@@ -123,22 +147,26 @@
         pinAuthSupported: String(reply.PINAUTH || '') === '2' && typeof window.AluvisionPinSrp?.create === 'function',
         retryAfterMs: Math.max(0, Number(reply.RETRYAFTERMS) || 0),
         rid,
+        mode: session.mode,
+        generation: session.generation,
         checkedAt: Date.now()
       };
-      return cachedStatus;
+      if (request === statusRequest) cachedStatus = result;
+      return result;
     } catch (error) {
-      cachedStatus = {
+      const result = {
         available: false,
         configured: false,
         trusted: false,
         error: String(error?.message || error),
         checkedAt: Date.now()
       };
-      return cachedStatus;
+      if (request === statusRequest) cachedStatus = result;
+      return result;
     }
   }
 
-  async function setupInstallation(rawCode) {
+  async function configureInstallation(rawCode) {
     const code = normalizeUserCode(rawCode);
     if (!code) {
       throw new Error(t(
@@ -165,7 +193,9 @@
         'Dieser Receiver gehört zu einer bestehenden Installation. Verwende deren PIN.'));
     }
 
-    const rid = directGatewayRid();
+    const session = { rid: status.rid, mode: status.mode, generation: status.generation };
+    checkSecuritySession(session);
+    const rid = session.rid;
     let saltHex;
     let pinVerifier;
     let recoveryVerifier;
@@ -196,6 +226,7 @@
         'Die PIN konnte nicht sicher vorbereitet werden. Versuche es erneut.'
       ));
     }
+    checkSecuritySession(session);
     const reply = await gateway.transact({
       V: 18,
       TYPE: 'SECURITY_SETUP',
@@ -204,6 +235,7 @@
       VERIFIER: pinVerifier,
       RECOVERY: recoveryVerifier
     }, { timeout: 10000 });
+    checkSecuritySession(session);
 
     if (!validSecurityReply(reply, 'SECURITY_READY') ||
         exactRid(reply.RID) !== rid || String(reply.PINSET || '') !== '1') {
@@ -224,8 +256,17 @@
       ));
     }
 
-    cachedStatus = { available: true, configured: true, trusted: true, rid, checkedAt: Date.now() };
+    cachedStatus = { available: true, configured: true, trusted: true, rid, mode: session.mode,
+      generation: session.generation, checkedAt: Date.now() };
     return { ok: true, recoveryKey, physicalRequired: false };
+  }
+
+  async function setupInstallation(rawCode) {
+    if (setupPending) throw new Error(t('De pincode wordt al ingesteld.', 'The PIN is already being set.',
+      'Le code PIN est en cours de création.', 'Die PIN wird bereits eingerichtet.'));
+    setupPending = true;
+    try { return await configureInstallation(rawCode); }
+    finally { setupPending = false; }
   }
 
   let restorePending = false;
@@ -268,12 +309,14 @@
           'Mettez à jour le firmware du récepteur pour récupérer l’accès par PIN.',
           'Aktualisiere zuerst die Receiver-Firmware für die PIN-Wiederherstellung.'));
       }
-      const rid = directGatewayRid(), mode = connection.mode;
+      const transportSession = { rid: status.rid, mode: status.mode, generation: status.generation };
+      checkSecuritySession(transportSession);
+      const rid = transportSession.rid;
       session = window.AluvisionPinSrp.create(rid);
       let challenge;
       const deadline = Date.now() + 15000;
       do {
-        if (directGatewayRid() !== rid || connection.mode !== mode) throw new Error('De receiververbinding is gewijzigd. Probeer opnieuw.');
+        checkSecuritySession(transportSession);
         challenge = await gateway.transact({ V: 18, ...session.hello }, { timeout: 4200 });
         if (validSecurityReply(challenge, 'PIN_AUTH_PENDING')) {
           if (Date.now() >= deadline) throw new Error('De PIN-controle duurde te lang. Probeer opnieuw.');
@@ -282,11 +325,11 @@
       } while (Date.now() < deadline);
       if (!validSecurityReply(challenge, 'PIN_CHALLENGE')) throw restoreError(challenge);
       const proof = await session.prove(code, challenge);
-      if (directGatewayRid() !== rid || connection.mode !== mode) throw new Error('De receiververbinding is gewijzigd. Probeer opnieuw.');
+      checkSecuritySession(transportSession);
       const reply = await gateway.transact({ V: 18, ...proof }, { timeout: 10000 });
       if (!validSecurityReply(reply, 'PIN_AUTHENTICATED')) throw restoreError(reply);
       const material = await session.open(reply);
-      if (directGatewayRid() !== rid || connection.mode !== mode) throw new Error('De receiververbinding is gewijzigd. Probeer opnieuw.');
+      checkSecuritySession(transportSession);
       if (typeof window.AluvisionDirectBridge?.adoptRecoveredInstallation !== 'function') throw new Error('Herstel is in deze app niet beschikbaar.');
       await window.AluvisionDirectBridge.adoptRecoveredInstallation(material);
       cachedStatus = null;

@@ -1,4 +1,47 @@
 /* Additive V20 animation catalogue + setting-preview finish. */
+#modalBody[data-v1811="animation-library"] .v20-catalogue-search {
+  position:relative;
+  min-width:0;
+  margin:14px 0 8px;
+}
+#modalBody[data-v1811="animation-library"] .v20-catalogue-search input {
+  display:block;
+  width:100%;
+  min-width:0;
+  min-height:48px;
+  margin:0;
+  padding-right:50px;
+  font-size:16px; /* Avoid iPhone keyboard zoom. */
+}
+#modalBody[data-v1811="animation-library"] .v20-catalogue-search input::-webkit-search-cancel-button {display:none}
+#modalBody[data-v1811="animation-library"] .v20-catalogue-clear {
+  position:absolute;
+  top:2px;
+  right:3px;
+  width:44px;
+  height:44px;
+  padding:0;
+  border:0;
+  border-radius:11px;
+  background:transparent;
+  color:var(--mut);
+  font-size:25px;
+  cursor:pointer;
+}
+#modalBody[data-v1811="animation-library"] .v20-catalogue-clear:focus-visible {
+  outline:2px solid var(--red);
+  outline-offset:-3px;
+}
+#modalBody[data-v1811="animation-library"] .v20-catalogue-search-status {
+  margin:0 2px 10px;
+  color:var(--mut);
+  font-size:11px;
+}
+#modalBody[data-v1811="animation-library"] .v20-catalogue-empty {padding:20px 14px;min-width:0}
+#modalBody[data-v1811="animation-library"] .v20-catalogue-empty b {display:block;color:var(--ink)}
+#modalBody[data-v1811="animation-library"] .v20-catalogue-empty p {margin:8px 0 14px;font-size:12px;line-height:1.45}
+#modalBody[data-v1811="animation-library"] :is(.rgbw-effect-card,.v1812-rgbw-family,.v20-catalogue-empty,.v20-catalogue-clear,.v20-catalogue-search-status)[hidden] {display:none!important}
+
 #zones .v1814-group-shell .v1811-settings-card {
   container-type:inline-size;
 }

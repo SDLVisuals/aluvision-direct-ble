@@ -10,6 +10,7 @@
 
   const VERSION = '20.7.2';
   const deviceDrafts = new Map();
+  const deviceSaveBusy = new Set();
   const scopedLiveTimers = new Map();
   const mapDrafts = new Map();
 
@@ -19,8 +20,32 @@
   const duplicate = value => typeof clone === 'function' ? clone(value) : JSON.parse(JSON.stringify(value));
   const activeGuide = () => typeof realGuide !== 'undefined' && Boolean(realGuide?.active);
   const deviceType = device => typeof receiverTypeOf === 'function' ? receiverTypeOf(device) : String(device?.receiverType || 'SPI').toUpperCase();
-  const isRgbw = value => typeof isRgbwGroup === 'function' && isRgbwGroup(value);
   const reachable = device => typeof receiverReachable === 'function' ? receiverReachable(device) : Boolean(device?.online);
+  const endpointRid = (device, port) => {
+    const key = Number(port) === 2 ? 'port2Rid' : 'port1Rid';
+    return String(device?.[key] || device?.[key.toLowerCase()] || device?.rid || '').toUpperCase();
+  };
+  const groupType = value => {
+    if (!value) return null;
+    if (typeof groupReceiverType === 'function') return groupReceiverType(value);
+    const declared = String(value.receiverType || '').toUpperCase();
+    if (declared === 'RGBW' || declared === 'SPI') return declared;
+    const first = value.receivers?.[0];
+    if (!first) return null;
+    const device = (db?.devices || []).find(item => item.id === first.deviceId);
+    return deviceType(first?.receiverType ? first : device);
+  };
+  const isRgbw = value => groupType(value) === 'RGBW';
+  const normaliseRgbwState = state => {
+    if (typeof rgbwDefaultState === 'function') return rgbwDefaultState(state);
+    const current = state || {};
+    const alreadyRgbw = String(current.receiverType || '').toUpperCase() === 'RGBW';
+    return {
+      ...current,
+      ...(alreadyRgbw ? {} : { animation: 'Static Color', engine: 'STATIC', variant: 0 }),
+      receiverType: 'RGBW', widthPixels: 1, width: 1
+    };
+  };
   const modeMask = mode => mode === 'port1' ? 1 : mode === 'port2' ? 2 : mode === 'linked' ? 3 : 0;
   const modeFromMask = mask => Number(mask) === 2 ? 'port2' : Number(mask) === 3 ? 'linked' : 'port1';
   const portLabel = port => port === 0
@@ -39,6 +64,52 @@
 
   function exactPort(line) {
     return Math.max(1, Math.min(2, Number(line?.port) || 1));
+  }
+
+  function defaultRgbwLineId(device, port) {
+    return `r-${String(device?.id || device?.rid || 'rgbw')}-p${port}`;
+  }
+
+  function rgbwPortRecord(device, port) {
+    device.rgbwPortRecords ||= {};
+    const number = exactPort({ port });
+    if (!device.rgbwPortRecords[number] || typeof device.rgbwPortRecords[number] !== 'object') {
+      device.rgbwPortRecords[number] = { id: defaultRgbwLineId(device, number), name: '' };
+    }
+    return device.rgbwPortRecords[number];
+  }
+
+  function rememberRgbwLine(device, item) {
+    if (!device || !item?.r) return false;
+    const port = exactPort(item.r);
+    const record = rgbwPortRecord(device, port);
+    const before = JSON.stringify(record);
+    const state = item.g?.parallelLineStates?.[item.r.id];
+    record.id = String(item.r.id || record.id || defaultRgbwLineId(device, port));
+    record.name = String(item.r.name || record.name || '');
+    if (state != null) record.state = duplicate(state);
+    return before !== JSON.stringify(record);
+  }
+
+  function cleanGroupLineMetadata(currentGroup) {
+    if (!currentGroup) return;
+    const ids = new Set((currentGroup.receivers || []).map(line => line.id));
+    ['v21SelectedLineIds', 'parallelSelectedIds'].forEach(key => {
+      if (Array.isArray(currentGroup[key])) currentGroup[key] = currentGroup[key].filter(id => ids.has(id));
+    });
+    if (currentGroup.parallelLineStates && typeof currentGroup.parallelLineStates === 'object') {
+      Object.keys(currentGroup.parallelLineStates).forEach(id => {
+        if (!ids.has(id)) delete currentGroup.parallelLineStates[id];
+      });
+    }
+    if (!ids.size && currentGroup.receiverType === 'RGBW') currentGroup.receiverType = null;
+  }
+
+  function restoreRgbwLineState(device, currentGroup, line) {
+    const record = rgbwPortRecord(device, exactPort(line));
+    if (record.state == null) return;
+    currentGroup.parallelLineStates ||= {};
+    currentGroup.parallelLineStates[line.id] = duplicate(record.state);
   }
 
   function sameGroup(assignments) {
@@ -89,6 +160,10 @@
         const scope = normalisedGroupScope(currentGroup);
         if (currentGroup.rgbwOutputScope !== scope) { currentGroup.rgbwOutputScope = scope; dirty = true; }
       })));
+    (db.devices || []).forEach(device => {
+      if (deviceType(device) !== 'RGBW') return;
+      allAssignments(device.id).forEach(item => { dirty = rememberRgbwLine(device, item) || dirty; });
+    });
     if (dirty && typeof save === 'function') save('queued');
   }
 
@@ -367,8 +442,8 @@
   function compatibleDestinations(deviceId) {
     const result = [];
     (install?.zones || []).forEach(currentZone => (currentZone.groups || []).forEach(currentGroup => {
-      const type = typeof groupReceiverType === 'function' ? groupReceiverType(currentGroup) : currentGroup.receiverType;
-      if (!type || type === 'RGBW' || (currentGroup.receivers || []).some(line => line.deviceId === deviceId)) result.push({ zone: currentZone, group: currentGroup, key: groupKey(currentZone, currentGroup) });
+      const type = groupType(currentGroup);
+      if (!type || type === 'RGBW') result.push({ zone: currentZone, group: currentGroup, key: groupKey(currentZone, currentGroup) });
     }));
     return result;
   }
@@ -383,9 +458,10 @@
   }
 
   function newRgbwLine(device, port) {
-    return { id: `r${Date.now()}p${port}${Math.random().toString(36).slice(2, 7)}`, deviceId: device.id,
-      name: `${typeof rgbwReceiverName === 'function' ? rgbwReceiverName(device) : device.name} · ${portLabel(port)}`,
-      rid: receiverEndpointRid(device, port), hardwareId: device.hardwareId, receiverType: 'RGBW', port,
+    const record = rgbwPortRecord(device, port);
+    return { id: String(record.id || defaultRgbwLineId(device, port)), deviceId: device.id,
+      name: String(record.name || `${typeof rgbwReceiverName === 'function' ? rgbwReceiverName(device) : device.name} · ${portLabel(port)}`),
+      rid: endpointRid(device, port), physicalRid: device.rid, hardwareId: device.hardwareId, receiverType: 'RGBW', port,
       pixels: 1, reversed: false };
   }
 
@@ -462,10 +538,10 @@
   function rgbwTarget(device, port, prefix = 'rgbw') {
     const mask = Math.max(1, Math.min(3, Number(device.portMask) || 3));
     return { id: `${prefix}-${device.id}-${port}`, deviceId: device.id,
-      rid: port === 0 ? String(device.rid || '').toUpperCase() : receiverEndpointRid(device, port),
+      rid: port === 0 ? String(device.rid || '').toUpperCase() : endpointRid(device, port),
       physicalRid: String(device.rid || '').toUpperCase(), hardwareId: device.hardwareId, receiverType: 'RGBW',
-      port, outputPort: port, portMask: mask, port1Rid: receiverEndpointRid(device, 1),
-      port2Rid: receiverEndpointRid(device, 2), pixels: 1, offset: 0, groupPixels: 1,
+      port, outputPort: port, portMask: mask, port1Rid: endpointRid(device, 1),
+      port2Rid: endpointRid(device, 2), pixels: 1, offset: 0, groupPixels: 1,
       lineIndex: 0, lineCount: 1, layoutParallel: false };
   }
 
@@ -632,7 +708,7 @@
 
   window.rgbw207SetDeviceMode = function setDeviceMode(id, mode) {
     const device = (db.devices || []).find(item => item.id === id);
-    if (!device || !['port1', 'port2', 'linked'].includes(mode)) return;
+    if (!device || deviceSaveBusy.has(id) || !['port1', 'port2', 'linked'].includes(mode)) return;
     const draft = modeForDraft(device);
     draft.mode = mode;
     document.querySelectorAll('.rgbw207-device-mode-grid [data-rgbw-mode]').forEach(button => {
@@ -656,42 +732,109 @@
 
   window.rgbw207SetDeviceDestination = function setDeviceDestination(id, value) {
     const device = (db.devices || []).find(item => item.id === id);
-    if (device) modeForDraft(device).destination = String(value || '');
+    if (device && !deviceSaveBusy.has(id)) modeForDraft(device).destination = String(value || '');
   };
 
-  function removeExactLine(item) {
+  function removeExactLine(item, device) {
+    if (device) rememberRgbwLine(device, item);
     item.g.receivers = (item.g.receivers || []).filter(line => line.id !== item.r.id);
-    if (!item.g.receivers.length) item.g.receiverType = null;
+    cleanGroupLineMetadata(item.g);
+  }
+
+  function assertRgbwGroup(currentGroup) {
+    if (!currentGroup) return;
+    const existingType = groupType(currentGroup);
+    if (existingType && existingType !== 'RGBW') throw new Error(copy('Deze groep bevat SPI LED Lines', 'This group contains SPI LED Lines', 'Ce groupe contient des LED Lines SPI', 'Diese Gruppe enthält SPI LED Lines'));
   }
 
   function ensureRgbwGroup(currentGroup) {
     if (!currentGroup) return;
-    const existingType = typeof groupReceiverType === 'function' ? groupReceiverType(currentGroup) : currentGroup.receiverType;
-    if (existingType && existingType !== 'RGBW') throw new Error(copy('Deze groep bevat SPI LED Lines', 'This group contains SPI LED Lines', 'Ce groupe contient des LED Lines SPI', 'Diese Gruppe enthält SPI LED Lines'));
+    assertRgbwGroup(currentGroup);
     currentGroup.receiverType = 'RGBW';
-    currentGroup.state = rgbwDefaultState(currentGroup.state);
+    currentGroup.state = normaliseRgbwState(currentGroup.state);
+  }
+
+  function resolveDeviceModeDestination(device, draft) {
+    const previous = allAssignments(device.id);
+    const byPort = new Map();
+    previous.forEach(item => { if (!byPort.has(exactPort(item.r))) byPort.set(exactPort(item.r), item); });
+    const fallback = parseDestination(draft.destination) || (previous[0]
+      ? { zone: previous[0].z, group: previous[0].g, key: groupKey(previous[0].z, previous[0].g) }
+      : null);
+    let destinationGroup = null;
+    if (draft.mode === 'linked') {
+      if (!fallback) throw new Error(copy('Kies eerst een RGBW-groep voor beide uitgangen', 'First choose an RGBW group for both outputs', 'Choisissez d’abord un groupe RGBW pour les deux sorties', 'Wähle zuerst eine RGBW-Gruppe für beide Ausgänge'));
+      destinationGroup = fallback.group;
+      assertRgbwGroup(destinationGroup);
+    } else {
+      const selectedPort = draft.mode === 'port2' ? 2 : 1;
+      const destination = byPort.get(selectedPort) || fallback;
+      if (!destination) throw new Error(copy('Kies eerst een RGBW-groep voor deze uitgang', 'First choose an RGBW group for this output', 'Choisissez d’abord un groupe RGBW pour cette sortie', 'Wähle zuerst eine RGBW-Gruppe für diesen Ausgang'));
+      destinationGroup = destination.g || destination.group;
+      assertRgbwGroup(destinationGroup);
+    }
+    return { previous, byPort, fallback, destinationGroup };
+  }
+
+  function assignmentSignature(deviceId) {
+    return allAssignments(deviceId).map(item => [
+      item.i?.id || '', item.z?.id || '', item.g?.id || '', item.r?.id || '', exactPort(item.r),
+      Math.max(0, (item.g?.receivers || []).findIndex(line => line.id === item.r?.id))
+    ].join(':')).join('|');
+  }
+
+  function groupIsStillAttached(location, selectedGroup) {
+    return Boolean(location && selectedGroup && (location.zones || []).some(currentZone =>
+      (currentZone.groups || []).some(currentGroup => currentGroup === selectedGroup)));
   }
 
   function applyDeviceMode(device, draft) {
     const mask = modeMask(draft.mode);
-    const previous = allAssignments(device.id);
-    const byPort = new Map(previous.map(item => [exactPort(item.r), item]));
-    const fallback = parseDestination(draft.destination) || (previous[0] ? { zone: previous[0].z, group: previous[0].g, key: groupKey(previous[0].z, previous[0].g) } : null);
+    const { previous, byPort, fallback, destinationGroup } = resolveDeviceModeDestination(device, draft);
+    previous.forEach(item => {
+      item.index = Math.max(0, (item.g.receivers || []).findIndex(line => line.id === item.r.id));
+      rememberRgbwLine(device, item);
+    });
+    const selectionSnapshot = new Map([...new Set(previous.map(item => item.g))].map(currentGroup => [currentGroup, {
+      v21SelectedLineIds: Array.isArray(currentGroup.v21SelectedLineIds) ? [...currentGroup.v21SelectedLineIds] : null,
+      parallelSelectedIds: Array.isArray(currentGroup.parallelSelectedIds) ? [...currentGroup.parallelSelectedIds] : null
+    }]));
+    const selectedPorts = draft.mode === 'linked' ? [1, 2] : [draft.mode === 'port2' ? 2 : 1];
+    const previousInDestination = previous.filter(item => item.g === destinationGroup);
+    const insertAt = previousInDestination.length
+      ? Math.min(...previousInDestination.map(item => item.index))
+      : (destinationGroup.receivers || []).length;
+    const lines = selectedPorts.map(port => {
+      const prior = byPort.get(port)?.r;
+      const line = prior || newRgbwLine(device, port);
+      const record = rgbwPortRecord(device, port);
+      Object.assign(line, {
+        id: String(line.id || record.id || defaultRgbwLineId(device, port)), deviceId: device.id,
+        name: String(line.name || record.name || `${device.name || 'Receiver'} · ${portLabel(port)}`),
+        rid: endpointRid(device, port), physicalRid: device.rid, hardwareId: device.hardwareId,
+        receiverType: 'RGBW', port, pixels: 1, reversed: false
+      });
+      return line;
+    });
+    previous.forEach(item => removeExactLine(item, device));
+    ensureRgbwGroup(destinationGroup);
+    destinationGroup.receivers ||= [];
+    destinationGroup.receivers.splice(Math.min(insertAt, destinationGroup.receivers.length), 0, ...lines);
+    lines.forEach(line => {
+      restoreRgbwLineState(device, destinationGroup, line);
+      rememberRgbwLine(device, { r: line, g: destinationGroup });
+      const prior = byPort.get(exactPort(line));
+      const priorSelection = prior?.g === destinationGroup ? selectionSnapshot.get(destinationGroup) : null;
+      ['v21SelectedLineIds', 'parallelSelectedIds'].forEach(key => {
+        if (!priorSelection?.[key]?.includes(line.id)) return;
+        destinationGroup[key] ||= [];
+        if (!destinationGroup[key].includes(line.id)) destinationGroup[key].push(line.id);
+      });
+    });
     if (draft.mode === 'linked') {
-      if (!fallback) throw new Error(copy('Kies eerst een RGBW-groep voor beide uitgangen', 'First choose an RGBW group for both outputs', 'Choisissez d’abord un groupe RGBW pour les deux sorties', 'Wähle zuerst eine RGBW-Gruppe für beide Ausgänge'));
-      ensureRgbwGroup(fallback.group);
-      const lines = [1, 2].map(port => byPort.get(port)?.r || newRgbwLine(device, port));
-      previous.forEach(removeExactLine);
-      fallback.group.receivers.push(...lines);
-      fallback.group.rgbwOutputScope = 'both';
+      destinationGroup.rgbwOutputScope = 'both';
     } else {
-      const selectedPort = draft.mode === 'port2' ? 2 : 1;
-      previous.filter(item => exactPort(item.r) !== selectedPort).forEach(removeExactLine);
-      if (!byPort.has(selectedPort) && fallback) {
-        ensureRgbwGroup(fallback.group);
-        fallback.group.receivers.push(newRgbwLine(device, selectedPort));
-        fallback.group.rgbwOutputScope = draft.mode;
-      }
+      destinationGroup.rgbwOutputScope = draft.mode;
     }
     device.portMask = mask;
     device.portCount = 2;
@@ -706,33 +849,50 @@
   window.saveRgbwDevicePorts = async function saveRgbwDevicePorts207(id) {
     const device = (db.devices || []).find(item => item.id === id);
     if (!device) return;
+    if (deviceSaveBusy.has(id)) return;
     if (!reachable(device)) return toast(copy('Verbind eerst met de receiver en probeer opnieuw', 'Connect to the receiver first and try again', 'Connectez d’abord le récepteur', 'Verbinde zuerst den Receiver'));
     const draft = modeForDraft(device);
     if (!['port1', 'port2', 'linked'].includes(draft.mode)) {
       return toast(copy('Kies eerst Poort 1, Poort 2 of Beide samen', 'First choose Port 1, Port 2 or Both together', 'Choisissez d’abord le port 1, le port 2 ou les deux', 'Wähle zuerst Port 1, Port 2 oder Beide'));
     }
-    const mask = modeMask(draft.mode);
+    const requested = { mode: draft.mode, destination: draft.destination };
+    const mask = modeMask(requested.mode);
     try {
-      if (draft.mode === 'linked') {
-        const destination = parseDestination(draft.destination) || allAssignments(id)[0];
-        const destinationGroup = destination?.group || destination?.g;
-        if (!destinationGroup) throw new Error(copy('Kies eerst een RGBW-groep', 'Choose an RGBW group first', 'Choisissez d’abord un groupe RGBW', 'Wähle zuerst eine RGBW-Gruppe'));
-        ensureRgbwGroup(destinationGroup);
-      }
+      const database = db;
+      const location = install;
+      const preflight = resolveDeviceModeDestination(device, requested);
+      const beforeAssignments = assignmentSignature(id);
+      const beforeDeviceMode = `${Number(device.portMask) || 0}:${String(device.rgbwOutputMode || '')}:${Boolean(device.rgbwLinked)}`;
+      deviceSaveBusy.add(id);
       const target = { id: `rgbw-config-${id}`, deviceId: id, rid: String(device.rid || '').toUpperCase(),
         physicalRid: String(device.rid || '').toUpperCase(), hardwareId: device.hardwareId, receiverType: 'RGBW',
-        port: 0, outputPort: 0, portMask: mask, port1Rid: receiverEndpointRid(device, 1),
-        port2Rid: receiverEndpointRid(device, 2), pixels: 1, offset: 0, groupPixels: 1 };
+        port: 0, outputPort: 0, portMask: mask, port1Rid: endpointRid(device, 1),
+        port2Rid: endpointRid(device, 2), pixels: 1, offset: 0, groupPixels: 1 };
       const response = await api('/api/command', { action: 'config', state: { receiverType: 'RGBW' }, targets: [target] });
       const result = response.results?.[0];
       if (!result?.confirmed) return toast(copy('De receiver bevestigde de uitgangen niet', 'The receiver did not confirm the outputs', 'Le récepteur n’a pas confirmé les sorties', 'Der Receiver hat die Ausgänge nicht bestätigt'));
-      applyDeviceMode(device, draft);
+      const currentDeviceMode = `${Number(device.portMask) || 0}:${String(device.rgbwOutputMode || '')}:${Boolean(device.rgbwLinked)}`;
+      if (db !== database || install !== location || !(database.devices || []).includes(device) ||
+          !groupIsStillAttached(location, preflight.destinationGroup) || assignmentSignature(id) !== beforeAssignments ||
+          currentDeviceMode !== beforeDeviceMode) {
+        return toast(copy('De receiver of indeling is intussen gewijzigd. Open de uitgangen opnieuw.', 'The receiver or assignment changed. Open the outputs again.', 'Le récepteur ou l’affectation a changé. Rouvrez les sorties.', 'Receiver oder Zuordnung wurden geändert. Öffne die Ausgänge erneut.'));
+      }
+      const currentPlan = resolveDeviceModeDestination(device, requested);
+      if (currentPlan.destinationGroup !== preflight.destinationGroup) {
+        return toast(copy('De gekozen groep is intussen gewijzigd. Kies de groep opnieuw.', 'The selected group changed. Choose the group again.', 'Le groupe sélectionné a changé. Choisissez-le à nouveau.', 'Die gewählte Gruppe wurde geändert. Wähle sie erneut.'));
+      }
+      if (draft.mode !== requested.mode || draft.destination !== requested.destination) {
+        return toast(copy('Je keuze is gewijzigd. Controleer de uitgangen en sla opnieuw op.', 'Your selection changed. Check the outputs and save again.', 'Votre choix a changé. Vérifiez les sorties puis enregistrez à nouveau.', 'Deine Auswahl hat sich geändert. Prüfe die Ausgänge und speichere erneut.'));
+      }
+      applyDeviceMode(device, requested);
       save();
       deviceDrafts.delete(id);
       window.deviceDiag(id);
       toast(copy('Uitgangen veilig opgeslagen', 'Outputs saved safely', 'Sorties enregistrées', 'Ausgänge sicher gespeichert'));
     } catch (error) {
       toast(String(error?.message || error));
+    } finally {
+      deviceSaveBusy.delete(id);
     }
   };
 
