@@ -579,10 +579,23 @@
         cancelPendingRestores();
         return result;
       }
+      let lastRestoredTop = null;
       const restore = () => {
         if (!surface.isConnected || document.querySelector('.app') !== surface) return;
         if (!surface.querySelector('#zones.page.on .customer-group-page')) return;
+        if (anchoredSurface !== surface) return;
+        // A tab's late layout repair must never undo a newer scroll. This
+        // includes keyboard focus/scrollIntoView, not only wheel/touch input.
+        // A shorter panel can legitimately clamp our own previous position;
+        // allow that clamp, but relinquish ownership of any other movement.
+        const maximum = Math.max(0, surface.scrollHeight - surface.clientHeight);
+        if (lastRestoredTop !== null &&
+            Math.abs(surface.scrollTop - Math.min(lastRestoredTop, maximum)) > 1) {
+          cancelPendingRestores();
+          return;
+        }
         surface.scrollTo({ top: restoreTop, left: 0, behavior: 'auto' });
+        lastRestoredTop = surface.scrollTop;
       };
       restore();
       firstRestoreFrame = requestAnimationFrame(() => {
@@ -599,7 +612,7 @@
       const keepPositionStable = () => {
         continuousRestoreFrame = 0;
         restore();
-        if (performance.now() < restoreDeadline) {
+        if (anchoredSurface === surface && performance.now() < restoreDeadline) {
           continuousRestoreFrame = requestAnimationFrame(keepPositionStable);
         }
       };
@@ -621,6 +634,11 @@
       }, 220);
       return result;
     };
+    // The short restoration window only belongs to the tab change. The next
+    // gesture or live control immediately belongs to the customer instead.
+    for (const type of ['wheel', 'touchstart', 'pointerdown', 'keydown', 'input']) {
+      document.addEventListener(type, cancelPendingRestores, { capture: true, passive: true });
+    }
     window.addEventListener('pagehide', cancelPendingRestores);
   }
 

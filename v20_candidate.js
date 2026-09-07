@@ -1737,10 +1737,8 @@
       <div class="v20-pair-actions"><button class="button soft" onclick="closeModal()">${tx('Annuleren', 'Cancel', 'Annuler', 'Abbrechen')}</button>${connected ? `<button class="button" onclick="v20PairPrivateReceiver()">${tx('Receiver instellen', 'Set up receiver', 'Configurer le récepteur', 'Receiver einrichten')} →</button>` : checkState === 'manual-loading' ? `<button class="button" disabled>${tx('Zoeken…', 'Searching…', 'Recherche…', 'Suche…')}</button>` : `<button class="button" onclick="v20CheckPrivateReceiver()">${firstReceiver ? tx('Verbinden en zoeken', 'Connect and search', 'Connecter et rechercher', 'Verbinden und suchen') : tx('Opnieuw zoeken', 'Search again', 'Rechercher à nouveau', 'Erneut suchen')}</button>`}</div>
     </section>`);
     if (!connected && checkState === 'manual-loading') schedulePrivatePairCheck();
-    if (connected && privatePairAutoRequested && !privatePairAutoStarted && !privatePairInFlight) {
-      privatePairAutoStarted = true;
-      setTimeout(() => window.v20PairPrivateReceiver?.({ autoMode: true }), 180);
-    }
+    // A successful search never claims or blinks a receiver on its own.
+    // The customer starts recognition explicitly with Receiver toevoegen.
   }
 
   function privatePairTargetFromUrl() {
@@ -1927,6 +1925,7 @@
         return { ok: true, paired, partial: true, error: error?.message || String(error) };
       }
 
+      if (response?.cancelled) return { ok: false, cancelled: true, cancelReason: response.cancelReason, paired: [] };
       if (!response?.ok || !response.device) {
         if (!paired.length) {
           return { ok: false, error: response?.error || tx('Geen receiver toegevoegd. Controleer of deze nog in bereik is.', 'No receiver added. Check that the receiver is still reachable.'), paired: [] };
@@ -1976,16 +1975,23 @@
     if (button) button.disabled = true;
     if (node) {
       node.className = 'nfc-status scanning';
-      node.innerHTML = `<span><b>${tx('Receiver veilig toevoegen…', 'Adding receiver(s) securely…', 'Ajout sécurisé du(des) récepteur(s)…', 'Receiver wird sicher hinzugefügt…')}</b><small>${tx('Identiteit en verbinding worden bevestigd.', 'Identity and connection are being confirmed.', 'L’identité et la connexion sont confirmées.', 'Identität und Verbindung werden bestätigt.')}</small></span>`;
+      node.innerHTML = `<span><b>${tx('LED Line herkennen…', 'Identifying LED Line…', 'Identification de la LED Line…', 'LED Line erkennen…')}</b><small>${tx('De gekozen LED Line knippert. Bevestig daarna of dit de juiste is.', 'The selected LED Line flashes. Then confirm whether it is the right one.', 'La LED Line choisie clignote. Confirmez ensuite que c’est la bonne.', 'Die gewählte LED Line blinkt. Bestätige danach, dass es die richtige ist.')}</small></span>`;
     }
     const target = privatePairTarget && { ...privatePairTarget };
     try {
       const result = await pairPrivateReceiverBatch(target, 'WIFI_AP_ESPNOW', { autoMode });
       const paired = Array.isArray(result?.paired) ? result.paired : [];
+      if (result?.cancelled) {
+        if (result.cancelReason === 'other-receiver') renderPrivateReceiverAdd(target);
+        return;
+      }
       if (!result?.ok) {
-        if (node) {
+        if (node?.isConnected) {
           node.className = 'nfc-status error';
           node.innerHTML = `<span><b>${tx('Toevoegen is nog niet gelukt', 'Adding has not succeeded yet', 'L’ajout n’a pas encore réussi', 'Hinzufügen noch nicht erfolgreich')}</b><small>${safe(result?.error || tx('Controleer of de receiver aanstaat en binnen bereik is, en probeer opnieuw.', 'Check that the receiver is powered on and within range, then try again.', 'Vérifiez que le récepteur est allumé et à portée, puis réessayez.', 'Prüfe, ob der Receiver eingeschaltet und in Reichweite ist, und versuche es erneut.'))}</small></span>`;
+        } else {
+          renderPrivateReceiverAdd(target, 'failed', result?.error || 'Toevoegen niet gelukt. Probeer opnieuw.');
+          window.toast?.(result?.error || 'Toevoegen niet gelukt.');
         }
         return;
       }
@@ -2001,14 +2007,17 @@
         openPairingForDevice(paired[0], target);
         return;
       }
-      if (node) {
+      if (node?.isConnected) {
         node.className = 'nfc-status error';
         node.innerHTML = `<span><b>${tx('Geen nieuwe receiver gevonden', 'No new receiver found', 'Aucun nouveau récepteur trouvé', 'Kein neuer Receiver gefunden')}</b><small>${safe(result?.error || tx('Controleer bereik en probeer opnieuw.', 'Check reachability and try again.', 'Vérifiez la portée et réessayez.', 'Prüfe die Reichweite und versuche es erneut.'))}</small></span>`;
       }
     } catch (error) {
-      if (node) {
+      if (node?.isConnected) {
         node.className = 'nfc-status error';
         node.innerHTML = `<span><b>${tx('Toevoegen is nog niet gelukt', 'Adding has not succeeded yet', 'L’ajout n’a pas encore réussi', 'Hinzufügen noch nicht erfolgreich')}</b><small>${safe(error?.message || error)}</small></span>`;
+      } else {
+        renderPrivateReceiverAdd(target, 'failed', error?.message || String(error));
+        window.toast?.(error?.message || String(error));
       }
     } finally {
       // Always release the click guard. Previously one unexpected integration

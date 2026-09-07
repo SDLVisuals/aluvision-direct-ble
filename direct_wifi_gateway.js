@@ -391,6 +391,8 @@
       ready = false;
       throw new Error('De verbonden wifi hoort niet bij de aangetikte receiver.');
     }
+    try { window.AluvisionReceiverIdentity?.assertInventory([result.fields]); }
+    catch (error) { ready = false; throw error; }
     gatewayFields = { ...gatewayFields, ...result.fields, RID: rid };
     ready = true;
     return gatewayFields;
@@ -401,7 +403,9 @@
   }
 
   async function transactNow(fields, options = {}) {
+    if (options.signal?.aborted) throw Object.assign(new Error('Toevoegen geannuleerd.'), { code: 'IDENTIFY_CANCELLED' });
     if (!ready) await connect({ interactive: false });
+    if (options.signal?.aborted) throw Object.assign(new Error('Toevoegen geannuleerd.'), { code: 'IDENTIFY_CANCELLED' });
     const timeout = Math.max(500, Number(options.timeout) || 3500);
     const started = performance.now();
     commandId = (commandId + 1) % 2147483000 || 1;
@@ -533,6 +537,26 @@
       }
     }
     const number = Math.max(1, Math.min(250, Math.round(Number(payload.number) || 1)));
+    const rid = cleanHex(gatewayFields.RID, 16);
+    const base = connection.base;
+    const currentPair = () => ready && rid && cleanHex(gatewayFields.RID, 16) === rid && connection.base === base;
+    if (!window.AluvisionIdentifyBeforePair?.confirm) throw new Error('Herkenning kon niet worden geopend. Open de app opnieuw.');
+    const recognition = await window.AluvisionIdentifyBeforePair.confirm({
+      receiver: { rid, name: gatewayFields.NAME || 'Receiver', receiverType: gatewayFields.DEVTYPE || 'SPI', portCount: Number(gatewayFields.PORTS) || 1 },
+      isCurrent: currentPair,
+      identify: async ({ rid: target, requestId, signal }) => {
+        if (target !== rid || !currentPair() || signal.aborted) throw new Error('Verbinding gewijzigd. Kies de receiver opnieuw.');
+        const identified = await transact({ TYPE: 'MESH_IDENTIFY', TARGET: rid, PORT: 0, KEY: cleanHex(payload.compatibilityKey, 16) }, { timeout: 3600, allowError: true, signal });
+        if (!currentPair() || signal.aborted || identified.STATUS !== 'OK' || identified.DETAIL !== 'MESH_IDENTIFIED' ||
+            String(identified.TARGETACK) !== '1' || cleanHex(identified.TARGETRID, 16) !== rid) {
+          throw new Error('De LED Line bevestigde het knipperen niet. Controleer de verbinding en receiverfirmware.');
+        }
+        return { ok: true, rid, requestId };
+      }
+    });
+    if (!recognition.confirmed || recognition.rid !== rid || !currentPair()) {
+      throw Object.assign(new Error('Toevoegen geannuleerd.'), { code: 'IDENTIFY_CANCELLED', reason: recognition.reason });
+    }
     let reply = {};
     if (connection.pairingToken) {
       reply = await transact({
@@ -542,7 +566,7 @@
         NUMBER: number
       }, { timeout: 5000, allowError: true });
       const committed = reply.PAIRED === '1' && ['OK', 'ERROR'].includes(reply.STATUS) && reply.DETAIL === 'PAIRED';
-      if (!committed) throw new Error(reply.DETAIL || 'Koppeling werd niet bevestigd. Houd BOOT 2 seconden ingedrukt en probeer opnieuw.');
+      if (!committed) throw new Error(reply.DETAIL || 'Koppeling werd niet bevestigd. Controleer de verbinding en probeer opnieuw.');
       connection.pairingToken = '';
       persist();
     }

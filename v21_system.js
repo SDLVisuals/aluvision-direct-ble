@@ -12,7 +12,7 @@
   if (window.__aluvisionV21System) return;
   window.__aluvisionV21System = true;
 
-  const VERSION = '21.0.3';
+  const VERSION = '21.0.8';
   const CORE = window.AluvisionV21Model;
   const ANIMATION_CATALOG = window.AluvisionV21AnimationCatalog;
   const rgbwLiveTimers = new Map();
@@ -306,6 +306,7 @@
 
   function forceStaticState(state) {
     if (!state) return;
+    const changed = state.animation !== 'Static Color' || state.engine !== 'STATIC' || state.variant !== 0;
     state.animation = 'Static Color';
     state.engine = 'STATIC';
     state.variant = 0;
@@ -316,8 +317,10 @@
     state.backgroundRgbEnabled = false;
     state.backgroundWhiteEnabled = false;
     state.bgBrightness = 0;
-    state.restartToken = (Number(state.restartToken) || 0) + 1;
-    state.previewStartedAt = (window.performance?.now?.() || Date.now()) / 1000;
+    if (changed) {
+      state.restartToken = (Number(state.restartToken) || 0) + 1;
+      state.previewStartedAt = (window.performance?.now?.() || Date.now()) / 1000;
+    }
   }
 
   function installQuickColourInvariant() {
@@ -334,7 +337,7 @@
         }
       });
       const result = previous.apply(this, arguments);
-      queueMicrotask(() => syncCanonicalModel('quick-static-colour'));
+      scheduleCanonicalSave();
       return result;
     };
     wrapped.__v21Wrapped = true;
@@ -366,7 +369,7 @@
           key: `linked:${line.deviceId}`,
           lineIds: siblings.map(item => item.id),
           label: `${text('LED Line', 'LED Line', 'LED Line', 'LED Line')} ${result.length + 1}`,
-          detail: text('Twee poorten samen', 'Two ports linked', 'Deux ports liés', 'Zwei Ports gekoppelt'),
+          detail: `${device?.name || `${text('Receiver', 'Receiver', 'Récepteur', 'Receiver')} ${device?.number || index + 1}`} · P1 + P2`,
           linked: true
         });
         return;
@@ -376,12 +379,72 @@
         key: String(line.id),
         lineIds: [line.id],
         label: `${text('LED Line', 'LED Line', 'LED Line', 'LED Line')} ${result.length + 1}`,
-        detail: `${text('Receiver', 'Receiver', 'Récepteur', 'Receiver')} ${device?.number || index + 1} · P${Number(line.port) || 1}`,
+        detail: `${device?.name || `${text('Receiver', 'Receiver', 'Récepteur', 'Receiver')} ${device?.number || index + 1}`} · P${Number(line.port) || 1}`,
         linked: false
       });
     });
     return result;
   }
+
+  // These are view preferences only. Search and preview pages never remove
+  // endpoints, alter pixel offsets, or change a receiver's mesh identity.
+  const largeLineUi = new Map();
+  const PREVIEW_PAGE_SIZE = 8;
+  function largeLinePreference(groupId, context) {
+    const key = `${groupId}:${context}`;
+    if (!largeLineUi.has(key)) largeLineUi.set(key, { query: '', open: false, page: 0 });
+    return largeLineUi.get(key);
+  }
+
+  function searchableLinePicker(selectedGroup, context, heading, activeLabel, buttons, count, allAction) {
+    const preference = largeLinePreference(selectedGroup.id, context);
+    return `<section class="v21-large-line-scope" data-v21-large-scope="${safe(context)}" data-v21-large-group="${safe(selectedGroup.id)}"><div class="v21-line-scope-head"><h3>${heading}</h3><button type="button" class="button soft v21-select-every-line" onclick="${safe(allAction)}">${text('Alles', 'All', 'Tout', 'Alle')} · ${count}</button></div><details class="v21-large-line-picker" ${preference.open ? 'open' : ''} ontoggle="v21RememberLinePicker(this)"><summary><span><b data-v21-large-selection>${safe(activeLabel)}</b><small>${text('Kies een LED Line', 'Choose a LED Line', 'Choisir une LED Line', 'LED Line wählen')}</small></span><i aria-hidden="true">⌄</i></summary><label class="v21-line-search"><span>${text('Zoeken', 'Search', 'Rechercher', 'Suchen')}</span><input type="search" inputmode="search" autocomplete="off" value="${safe(preference.query)}" placeholder="${text('LED Line of receiver', 'LED Line or receiver', 'LED Line ou récepteur', 'LED Line oder Receiver')}" oninput="v21FilterLinePicker(this)"></label><div class="v21-line-selector v21-large-line-list" data-v21-line-count="${count}" role="radiogroup" aria-label="${safe(heading)}">${buttons.join('')}</div><small class="v21-line-search-result" aria-live="polite"></small></details></section>`;
+  }
+
+  window.v21RememberLinePicker = function v21RememberLinePicker(details) {
+    const scope = details.closest('[data-v21-large-scope]');
+    if (scope) largeLinePreference(scope.dataset.v21LargeGroup, scope.dataset.v21LargeScope).open = details.open;
+  };
+
+  window.v21FilterLinePicker = function v21FilterLinePicker(input) {
+    const scope = input.closest('[data-v21-large-scope]');
+    if (!scope) return;
+    const preference = largeLinePreference(scope.dataset.v21LargeGroup, scope.dataset.v21LargeScope);
+    preference.query = input.value;
+    const query = input.value.trim().toLocaleLowerCase().replace(/\s+/g, ' ');
+    const list = scope.querySelector('.v21-large-line-list,.v187-receiver-list');
+    if (!list) return;
+    let visible = 0;
+    const rows = [...list.children].filter(item => item.matches('button,[data-receiver-id]'));
+    rows.forEach(row => {
+      const searchable = String(row.dataset.v21Search || row.textContent).toLocaleLowerCase().replace(/\s+/g, ' ');
+      const hidden = !searchable.includes(query);
+      if (row.hidden !== hidden) row.hidden = hidden;
+      if (!row.hidden && row.dataset.v21LineKey !== 'all') visible += 1;
+    });
+    const result = scope.querySelector('.v21-line-search-result');
+    const count = rows.filter(row => row.dataset.v21LineKey !== 'all').length;
+    const copy = visible ? `${visible} / ${count} ${text('zichtbaar', 'shown', 'visibles', 'sichtbar')}` : text('Geen resultaat. Pas je zoekopdracht aan.', 'No results. Change your search.', 'Aucun résultat. Modifiez la recherche.', 'Keine Ergebnisse. Suche ändern.');
+    if (result && result.textContent !== copy) result.textContent = copy;
+  };
+
+  function previewWindow(model) {
+    const total = array(model?.lines).length;
+    if (model?.layout !== 'parallel' || total <= PREVIEW_PAGE_SIZE) return { start: 0, count: total, total };
+    const preference = largeLinePreference(model.currentGroup?.id || currentGroup()?.id, 'preview');
+    preference.page = Math.max(0, Math.min(Math.ceil(total / PREVIEW_PAGE_SIZE) - 1, preference.page));
+    const start = preference.page * PREVIEW_PAGE_SIZE;
+    return { start, count: Math.min(PREVIEW_PAGE_SIZE, total - start), total };
+  }
+
+  window.v21ChangePreviewPage = function v21ChangePreviewPage(delta) {
+    const selectedGroup = currentGroup();
+    if (!selectedGroup) return;
+    const total = receiverType(selectedGroup) === 'RGBW' ? logicalRgbwLines(selectedGroup).length : array(selectedGroup.receivers).filter(line => line.active !== false).length;
+    const preference = largeLinePreference(selectedGroup.id, 'preview');
+    preference.page = Math.max(0, Math.min(Math.ceil(total / PREVIEW_PAGE_SIZE) - 1, preference.page + Number(delta)));
+    refineVisibleUi();
+  };
 
   function rgbwPreviewTopology(selectedGroup) {
     const logical = logicalRgbwLines(selectedGroup);
@@ -486,7 +549,10 @@
   }
 
   function rgbwPreviewGuideLines(selectedGroup, topology = rgbwPreviewTopology(selectedGroup)) {
-    if (topology.panel) return topology.logical;
+    if (topology.panel) {
+      const view = previewWindow({ currentGroup: selectedGroup, layout: 'parallel', lines: topology.logical });
+      return topology.logical.slice(view.start, view.start + view.count);
+    }
     return [{
       key: 'all',
       lineIds: array(selectedGroup?.receivers).filter(line => line && line.active !== false).map(line => line.id),
@@ -563,6 +629,9 @@
         return `<button type="button" class="${active ? 'on' : ''}" data-v21-line-key="${safe(item.key)}" role="radio" aria-checked="${active}" aria-pressed="${active}" onclick="v21SelectRgbwLines('${safe(selectedGroup.id)}','${safe(item.key)}','${contextKey}')"><i>${index + 1}<em style="background:${safe(colour)}"></em></i><span><b>${text('LED Line', 'LED Line', 'LED Line', 'LED Line')} ${index + 1}</b><small class="v21-line-state">${safe(stateLabel)}</small><small>${safe(item.detail)}</small></span></button>`;
       }) : [])
     ];
+    if (!oneLogicalTarget && logical.length > PREVIEW_PAGE_SIZE) {
+      return `<div data-v21-line-scope-context="${contextKey}">${searchableLinePicker(selectedGroup, contextKey, heading, activeLabel, buttons, logical.length, `v21SelectRgbwLines(${JSON.stringify(String(selectedGroup.id))},'all',${JSON.stringify(contextKey)})`)}</div>`;
+    }
     return `<section class="v21-rgbw-line-scope" data-v21-view="rgbw-line-scope" data-v21-line-scope-context="${contextKey}"><div class="v21-line-scope-head"><span><small>${text('BEDIEN', 'CONTROL', 'COMMANDER', 'STEUERN')}</small><h3>${heading}</h3></span><span class="scope">${safe(activeLabel)}</span></div><div class="v21-line-selector" data-v21-line-count="${logical.length}" data-v21-many="${logical.length > 4}" role="radiogroup" aria-label="${heading}">${buttons.join('')}</div></section>`;
   }
 
@@ -593,6 +662,9 @@
         }
         if (button.innerHTML !== next.innerHTML) button.innerHTML = next.innerHTML;
       });
+      const label = scope.querySelector('[data-v21-large-selection]');
+      const nextLabel = replacement.querySelector('[data-v21-large-selection]');
+      if (label && nextLabel && label.textContent !== nextLabel.textContent) label.textContent = nextLabel.textContent;
     });
     if (modalBody) modalBody.scrollTop = modalScroll;
     syncRgbwPreviewTargets(selectedGroup);
@@ -696,6 +768,9 @@
     const topology = rgbwPreviewTopology(selectedGroup);
     const logical = topology.logical;
     const choice = logical.find(item => item.key === key);
+    if (choice && logical.length > PREVIEW_PAGE_SIZE) {
+      largeLinePreference(selectedGroup.id, 'preview').page = Math.floor(logical.indexOf(choice) / PREVIEW_PAGE_SIZE);
+    }
     selectedGroup.v21SelectedLineIds = key === 'all' || !topology.panel
       ? array(selectedGroup.receivers).filter(line => line && line.active !== false).map(line => line.id)
       : array(choice?.lineIds);
@@ -777,12 +852,12 @@
     return next;
   }
 
-  async function sendExactRgbw(selectedGroup, action = 'live', quiet = true) {
-    const selectedTargets = exactRgbwTargets(selectedGroup);
+  async function sendExactRgbw(selectedGroup, action = 'live', quiet = true, prepared = null) {
+    const selectedTargets = prepared?.targets || exactRgbwTargets(selectedGroup);
     if (!selectedTargets.length) return { results: [] };
     const generation = nextGeneration(selectedGroup.id);
     let commandState;
-    try { commandState = typeof window.state === 'function' ? window.state(selectedGroup) : state(selectedGroup); }
+    try { commandState = prepared?.state || (typeof window.state === 'function' ? window.state(selectedGroup) : state(selectedGroup)); }
     catch (_) { commandState = duplicate(selectedGroup.state || {}); }
     commandState = {
       ...commandState,
@@ -793,7 +868,7 @@
     try {
       const response = await window.api('/api/command', {
         action,
-        timelineId: `${currentLocation()?.id || 'installation'}:${selectedGroup.id}:rgbw:v21`,
+        timelineId: `${prepared?.installationId || currentLocation()?.id || 'installation'}:${selectedGroup.id}:rgbw:v21`,
         generation,
         synchronize: action === 'live',
         scheduleDelayMs: 160,
@@ -801,6 +876,7 @@
         targets: selectedTargets
       });
       const results = array(response?.results);
+      if (response?.superseded === true || (results.length > 0 && results.every(result => result?.superseded === true))) return response;
       const confirmed = results.length === selectedTargets.length && results.every(result => result?.confirmed === true || result?.applied === true);
       if (!quiet) toastMessage(confirmed
         ? text('Live toegepast', 'Applied live', 'Appliqué en direct', 'Live angewendet')
@@ -812,6 +888,49 @@
     }
   }
 
+  function settleOverlappingRgbwEdits(selectedGroup, intendedIds, nextKey = '') {
+    for (const [key, entry] of rgbwLiveTimers) {
+      if (key === nextKey || !String(key).startsWith(`${selectedGroup.id}:rgbw:`) || !entry?.pending) continue;
+      const previousIds = array(entry.logicalLineIds);
+      if (!previousIds.some(id => intendedIds.has(id))) continue;
+      // All -> one line: first retain the earlier colour for the other lines.
+      // One line -> All: the newer command replaces every earlier target.
+      if (previousIds.every(id => intendedIds.has(id))) window.cancelLatestThrottle?.(rgbwLiveTimers, key);
+      else window.flushLatestThrottle?.(rgbwLiveTimers, key);
+    }
+  }
+
+  function queueExactRgbwEdit(selectedGroup, everyLine = false) {
+    if (!selectedGroup) return;
+    if (!everyLine) captureSelectedLineState(selectedGroup);
+    queueRgbwLineScopeRefresh(selectedGroup);
+    if (typeof window.save === 'function') window.save('queued');
+    const snapshotGroup = everyLine ? { ...selectedGroup,
+      v21SelectedLineIds: array(selectedGroup.receivers).filter(line => line.active !== false).map(line => line.id),
+      parallelApplyAll: true, parallelSelectedIds: [] } : selectedGroup;
+    const prepared = { state: duplicate(typeof window.state === 'function' ? window.state(selectedGroup) : selectedGroup.state),
+      targets: duplicate(exactRgbwTargets(snapshotGroup)), installationId: currentLocation()?.id };
+    const intendedIds = new Set(prepared.targets.flatMap(target => array(target.logicalLineIds).map(String)));
+    const assignmentKey = target => JSON.stringify([String(target.id), String(target.deviceId || ''),
+      String(target.physicalRid || target.rid || ''), Number(target.port || target.outputPort) || 1]);
+    const intendedAssignments = rawTargets(selectedGroup).filter(target => intendedIds.has(String(target.id))).map(assignmentKey);
+    const targetKey = prepared.targets.map(target => `${target.physicalRid || target.rid || target.deviceId}:${target.port ?? target.outputPort ?? 1}`).sort().join('|');
+    const key = `${selectedGroup.id}:rgbw:${targetKey}`;
+    settleOverlappingRgbwEdits(selectedGroup, intendedIds, key);
+    const dispatch = () => {
+      if (currentLocation()?.id !== prepared.installationId) return;
+      if (!array(currentLocation()?.zones).some(zone => array(zone.groups).includes(selectedGroup))) return;
+      const currentAssignments = new Set(rawTargets(selectedGroup).map(assignmentKey));
+      if (intendedAssignments.some(assignment => !currentAssignments.has(assignment))) return;
+      sendExactRgbw(selectedGroup, 'live', true, prepared);
+    };
+    if (typeof window.queueLatestThrottle === 'function') {
+      window.queueLatestThrottle(rgbwLiveTimers, key, dispatch, 40);
+      const entry = rgbwLiveTimers.get(key);
+      if (entry && typeof entry === 'object') entry.logicalLineIds = [...intendedIds];
+    } else dispatch();
+  }
+
   function installExactRgbwRouting() {
     const previousQueue = window.queueLive;
     if (typeof previousQueue === 'function' && !previousQueue.__v21Wrapped) {
@@ -819,20 +938,33 @@
         if (!selectedGroup || receiverType(selectedGroup) !== 'RGBW') {
           return previousQueue.apply(this, arguments);
         }
-        captureSelectedLineState(selectedGroup);
-        queueRgbwLineScopeRefresh(selectedGroup);
-        if (typeof window.save === 'function') window.save('queued');
-        const key = String(selectedGroup.id);
-        clearTimeout(rgbwLiveTimers.get(key));
-        rgbwLiveTimers.set(key, setTimeout(() => {
-          rgbwLiveTimers.delete(key);
-          sendExactRgbw(selectedGroup, 'live', true);
-        }, 28));
+        // Keep the intended outputs and values together. Moving to another
+        // line before the trailing flush must not recolour that new selection.
+        queueExactRgbwEdit(selectedGroup);
       };
       queue.__v21Wrapped = true;
       window.queueLive = queue;
       try { queueLive = queue; } catch (_) { /* Global lexical binding is optional. */ }
     }
+
+    const previousAll = window.AluvisionAnimationRuntime?.queueAllParallelLines;
+    if (typeof previousAll === 'function' && !previousAll.__v21RgbwLiveWrapped) {
+      const all = function v21QueueAllParallelLines(selectedGroup) {
+        if (receiverType(selectedGroup) !== 'RGBW') return previousAll.apply(this, arguments);
+        // Home/zone colours target the whole group but keep the customer's
+        // individual-line choice for when they return to the group editor.
+        queueExactRgbwEdit(selectedGroup, true);
+      };
+      all.__v21RgbwLiveWrapped = true;
+      window.AluvisionAnimationRuntime.queueAllParallelLines = all;
+    }
+
+    const flushQueuedColours = () => {
+      if (typeof window.flushLatestThrottle === 'function') window.flushLatestThrottle(rgbwLiveTimers);
+    };
+    document.addEventListener('pointerup', flushQueuedColours);
+    document.addEventListener('pointercancel', flushQueuedColours);
+    document.addEventListener('change', flushQueuedColours);
 
     const previousLive = window.live;
     if (typeof previousLive === 'function' && !previousLive.__v21Wrapped) {
@@ -840,6 +972,7 @@
         if (!selectedGroup || receiverType(selectedGroup) !== 'RGBW') {
           return previousLive.apply(this, arguments);
         }
+        settleOverlappingRgbwEdits(selectedGroup, new Set(exactRgbwTargets(selectedGroup).flatMap(target => array(target.logicalLineIds).map(String))));
         captureSelectedLineState(selectedGroup);
         return sendExactRgbw(selectedGroup, 'live', quiet);
       };
@@ -959,6 +1092,11 @@
         insertContextScope(colourCard, 'colour');
         root.querySelectorAll('[data-v188-control="width"], [data-v20-setting="width"], #tune-width')
           .forEach(element => element.closest('.setting-visual-panel,.control,.v1811-rgbw-setting')?.remove());
+      } else if (selectedGroup.layout === 'parallel' && array(selectedGroup.receivers).length > PREVIEW_PAGE_SIZE) {
+        root.querySelectorAll('.parallel-scope').forEach(scope => scope.remove());
+        for (const [selector, context] of [['.v1811-colour-card,.effect-color-card', 'colour'], ['.v1811-settings-card', 'animation']]) {
+          root.querySelector(selector)?.insertAdjacentHTML('afterbegin', spiLargeLineSelectorMarkup(selectedGroup, context));
+        }
       }
 
       const settings = root.querySelector('.v1811-settings-card');
@@ -970,6 +1108,32 @@
     window.groupUI = wrapped;
     try { groupUI = wrapped; } catch (_) { /* Global lexical binding is optional. */ }
   }
+
+  function spiLargeLineSelectorMarkup(selectedGroup, context) {
+    const lines = array(selectedGroup.receivers).filter(line => line && line.active !== false);
+    const selected = new Set(array(selectedGroup.parallelSelectedIds).map(String));
+    const all = selectedGroup.parallelApplyAll !== false;
+    const indices = lines.map((line, index) => selected.has(String(line.id)) ? index + 1 : 0).filter(Boolean);
+    const label = all ? `${text('Alle', 'All', 'Toutes les', 'Alle')} ${lines.length} LED Lines`
+      : indices.length === 1 ? `LED Line ${indices[0]}` : `${indices.length} LED Lines ${text('geselecteerd', 'selected', 'sélectionnées', 'ausgewählt')}`;
+    const heading = context === 'colour' ? text('Kleur voor', 'Colour for', 'Couleur pour', 'Farbe für') : text('Animatie voor', 'Animation for', 'Animation pour', 'Animation für');
+    const buttons = lines.map((line, index) => {
+      const device = deviceForLine(line), state = selectedGroup.parallelLineStates?.[line.id] || selectedGroup.state;
+      const active = all || selected.has(String(line.id));
+      const detail = `${device?.name || `Receiver ${device?.number || index + 1}`} · P${Number(line.port) || 1}`;
+      return `<button type="button" data-v21-spi-line-key="${safe(line.id)}" class="${active ? 'on' : ''}" role="radio" aria-checked="${active}" aria-pressed="${active}" onclick="${safe(`v21SelectLargeSpiLine(${JSON.stringify(String(line.id))})`)}"><i>${index + 1}<em style="background:${safe(rgbwStateSwatch(state))}"></em></i><span><b>LED Line ${index + 1}</b><small>${safe(detail)}</small><small class="v21-line-state">${safe(state?.animation || '')}</small></span></button>`;
+    });
+    return searchableLinePicker(selectedGroup, context, heading, label, buttons, lines.length, 'setParallelApplyAll()');
+  }
+
+  window.v21SelectLargeSpiLine = function v21SelectLargeSpiLine(id) {
+    const selectedGroup = currentGroup();
+    if (!selectedGroup || receiverType(selectedGroup) !== 'SPI' || selectedGroup.layout !== 'parallel') return;
+    const index = array(selectedGroup.receivers).filter(line => line.active !== false).findIndex(line => String(line.id) === String(id));
+    if (index < 0) return;
+    largeLinePreference(selectedGroup.id, 'preview').page = Math.floor(index / PREVIEW_PAGE_SIZE);
+    window.selectParallelPreviewRow?.(id);
+  };
 
   function familyCounts(scope = 'all') {
     const counts = { SPI: 0, RGBW: 0 };
@@ -1249,6 +1413,37 @@
     if (primary) {
       const type = receiverType(currentGroup());
       const topology = type === 'RGBW' ? rgbwPreviewTopology(currentGroup()) : null;
+      const visibleModel = { currentGroup: currentGroup(), layout: topology ? (topology.panel ? 'parallel' : 'line') : currentGroup()?.layout,
+        lines: topology ? topology.logical : array(currentGroup()?.receivers).filter(line => line && line.active !== false) };
+      const view = previewWindow(visibleModel);
+      const paged = visibleModel.layout === 'parallel' && view.total > PREVIEW_PAGE_SIZE;
+      primary.dataset.v21PagedPreview = String(paged);
+      primary.dataset.v21PreviewStart = String(view.start);
+      primary.dataset.v21PreviewCount = String(view.count);
+      primary.style.setProperty('--v21-preview-count', String(view.count));
+      primary.style.setProperty('--v21-preview-side-inset', `${Math.max(24, Math.min(46, primary.clientWidth * .055))}px`);
+      let pager = shell.querySelector('[data-v21-preview-pager]');
+      if (paged) {
+        const pagerMarkup = `<button type="button" class="button soft" aria-label="${text('Vorige LED Lines', 'Previous LED Lines', 'LED Lines précédentes', 'Vorherige LED Lines')}" onclick="v21ChangePreviewPage(-1)" ${view.start === 0 ? 'disabled' : ''}>‹</button><span><b>LED Lines ${view.start + 1}–${view.start + view.count}</b><small>${text('van', 'of', 'sur', 'von')} ${view.total} · ${text('Live voorbeeld', 'Live preview', 'Aperçu en direct', 'Live-Vorschau')}</small></span><button type="button" class="button soft" aria-label="${text('Volgende LED Lines', 'Next LED Lines', 'LED Lines suivantes', 'Nächste LED Lines')}" onclick="v21ChangePreviewPage(1)" ${view.start + view.count >= view.total ? 'disabled' : ''}>›</button>`;
+        if (!pager) { primary.insertAdjacentHTML('beforebegin', '<div class="v21-preview-pager" data-v21-preview-pager></div>'); pager = primary.previousElementSibling; }
+        const pagerSignature = JSON.stringify([language(), currentGroup().id, view.start, view.count, view.total]);
+        if (pager.dataset.v21PagerSignature !== pagerSignature) {
+          pager.innerHTML = pagerMarkup;
+          pager.dataset.v21PagerSignature = pagerSignature;
+        }
+        if (type === 'SPI') {
+          const overlay = primary.querySelector('.stacked-row-overlays');
+          const lines = visibleModel.lines.slice(view.start, view.start + view.count);
+          const signature = JSON.stringify([view.start, lines.map(line => line.id), currentGroup().parallelSelectedIds, currentGroup().parallelApplyAll]);
+          if (overlay && overlay.dataset.v21PageSignature !== signature) {
+            overlay.innerHTML = lines.map((line, index) => {
+              const active = currentGroup().parallelApplyAll !== false || array(currentGroup().parallelSelectedIds).includes(line.id);
+              return `<button type="button" class="stacked-row-hit ${active ? 'on' : ''}" aria-label="LED Line ${view.start + index + 1}" aria-pressed="${active}" onclick="${safe(`v21SelectLargeSpiLine(${JSON.stringify(String(line.id))})`)}"><span>${view.start + index + 1}</span></button>`;
+            }).join('');
+            overlay.dataset.v21PageSignature = signature;
+          }
+        }
+      } else pager?.remove();
       primary.dataset.v21PreviewType = type === 'RGBW'
         ? 'whole-line'
         : currentGroup()?.layout === 'parallel' ? 'pixel-tunnel' : 'physical-pixels';
@@ -1277,7 +1472,7 @@
         const columns = Math.min(5, lines.length);
         const guideHeight = Math.ceil(lines.length / columns) * 44 + (Math.ceil(lines.length / columns) - 1) * 5;
         const stageHeight = topology.panel && topology.orientation === 'vertical'
-          ? 230 : Math.max(138, topology.panel ? 94 + lines.length * 11 : 138);
+          ? 230 : Math.max(172, topology.panel ? 94 + lines.length * 24 : 172);
         primary.style.setProperty('--v21-rgbw-stage-height', `${stageHeight}px`);
         primary.style.setProperty('--v21-rgbw-guide-height', `${guideHeight}px`);
         primary.style.setProperty('--v21-rgbw-guide-columns', String(columns));
@@ -1287,12 +1482,15 @@
           primary.insertAdjacentHTML('beforeend', `<span class="v21-whole-line-guide ${lines.length >= 4 ? 'is-many' : ''}" data-v21-rgbw-layout="${topology.layout}" data-v21-line-count="${lines.length}" data-v21-selection="${all ? 'all' : 'one'}" role="group" aria-label="${text('LED Line kiezen', 'Choose LED Line', 'Choisir une LED Line', 'LED Line wählen')}">${lines.map((line, index) => {
           const target = line.key === 'all' || logicalRgbwTargetSelected(line, selected);
           const action = `v21SelectRgbwLines(${JSON.stringify(String(currentGroup().id))},${JSON.stringify(String(line.key))},${JSON.stringify(lastCustomerPanel === 'colors' ? 'colour' : 'animation')})`;
-          return `<i class="${target ? 'is-target' : 'is-muted'}" data-v21-preview-line-key="${safe(line.key)}" data-v21-preview-line-ids="${safe(line.lineIds.map(String).join(','))}"><button type="button" aria-label="${safe(line.label)}" aria-pressed="${target}" title="${safe(line.label)}" onclick="${safe(action)}"><b aria-hidden="true">${index + 1}</b><em>${safe(line.label)}</em></button></i>`;
+          return `<i class="${target ? 'is-target' : 'is-muted'}" data-v21-preview-line-key="${safe(line.key)}" data-v21-preview-line-ids="${safe(line.lineIds.map(String).join(','))}"><button type="button" aria-label="${safe(line.label)}" aria-pressed="${target}" title="${safe(line.label)}" onclick="${safe(action)}"><b aria-hidden="true">${view.start + index + 1}</b><em>${safe(line.label)}</em></button></i>`;
           }).join('')}</span>`);
           primary.querySelector('.v21-whole-line-guide').dataset.v21GuideSignature = guideSignature;
         }
       } else existingGuide?.remove();
       if (type === 'RGBW') {
+        // RGBW controls entire lines, never a pixel-width kernel. Remove the
+        // legacy placeholder too, before a paused/off preview's first frame.
+        primary.querySelector('[data-preview-width]')?.remove();
         const panelControls = topology?.panel && topology.renderCount > 1;
         shell.querySelectorAll('.rgbw-live-setting').forEach(setting => {
           const panelOnly = /rgbwRange\(['"]spread['"]/.test(setting.querySelector('input')?.getAttribute('oninput') || '');
@@ -2155,10 +2353,37 @@
   }
 
   function installPresetGroupChoice() {
+    const emptyGroupGuide = () => `<section class="v21-preset-destination" data-v21-view="first-group-needed"><div class="eyebrow">${text('EERSTE STAP', 'FIRST STEP', 'PREMIÈRE ÉTAPE', 'ERSTER SCHRITT')}</div><h1>${text('Maak eerst een groep', 'Create a group first', 'Créez d’abord un groupe', 'Erstelle zuerst eine Gruppe')}</h1><p class="sub">${text('Een groep bundelt de verlichting die je samen wilt bedienen, bijvoorbeeld Wand of Plafond.', 'A group brings together lights you want to control, such as Wall or Ceiling.', 'Un groupe réunit les lumières à commander ensemble, par exemple Mur ou Plafond.', 'Eine Gruppe fasst gemeinsam gesteuerte Beleuchtung zusammen, etwa Wand oder Decke.')}</p><div class="customer-dialog-actions"><button type="button" class="button soft" onclick="closeModal()">${text('Annuleren', 'Cancel', 'Annuler', 'Abbrechen')}</button><button type="button" class="button" data-v21-create-first-group onclick="v21CreateFirstGroup()">${text('Groep maken', 'Create group', 'Créer le groupe', 'Gruppe erstellen')}</button></div></section>`;
+    window.v21CreateFirstGroup = function () {
+      const location = currentLocation();
+      const selectedZone = array(location?.zones).find(item => item.id === currentZone()?.id) || array(location?.zones)[0];
+      window.closeModal();
+      if (selectedZone) {
+        window.openZone(selectedZone.id);
+        window.newGroup();
+      } else {
+        window.go('zones');
+        window.newZone();
+      }
+    };
+    const previousSceneEditor = window.openSceneEditor;
+    if (typeof previousSceneEditor === 'function') {
+      window.openSceneEditor = function v21OpenSceneEditorWithFirstStep(id = null) {
+        if (!id && !array(currentLocation()?.zones).some(zone => array(zone.groups).length)) {
+          window.modal(emptyGroupGuide(), { viewKey: 'first-group-needed' });
+          return;
+        }
+        return previousSceneEditor.apply(this, arguments);
+      };
+    }
     window.v21ChoosePresetGroup = function () {
       const location = currentLocation();
       if (!location) return;
       const groups = array(location.zones).flatMap(zone => array(zone.groups));
+      if (!groups.length) {
+        window.modal(emptyGroupGuide(), { viewKey: 'first-group-needed' });
+        return;
+      }
       const lineCount = group => receiverType(group) === 'RGBW' ? logicalRgbwLines(group).length : array(group.receivers).length;
       window.modal(`<section class="v21-preset-destination" data-v21-view="preset-group-choice"><div class="eyebrow">PRESETS</div><h1>${text('Welke groep wil je bedienen?', 'Which group do you want to control?', 'Quel groupe voulez-vous contrôler ?', 'Welche Gruppe möchtest du steuern?')}</h1><p class="sub">${text('Kies een groep. Je blijft hier bij je presets.', 'Choose a group without leaving your presets.', 'Choisissez un groupe sans quitter vos presets.', 'Wähle eine Gruppe, ohne deine Presets zu verlassen.')}</p>${array(location.zones).filter(zone => array(zone.groups).length).map(zone => `<section><h2>${safe(zone.name)}</h2><div class="v21-destination-grid">${zone.groups.map(group => `<button type="button" class="v21-destination-choice ${group.id === currentGroup()?.id ? 'on' : ''}" aria-pressed="${group.id === currentGroup()?.id}" onclick="${safe(`v21SetPresetGroup(${JSON.stringify(location.id)},${JSON.stringify(zone.id)},${JSON.stringify(group.id)})`)}"><i data-alv-icon="groups" aria-hidden="true">${window.AluvisionIcons?.markup?.('groups') || ''}</i><span><b>${safe(group.name)}</b><small>${lineCount(group)} LED Line${lineCount(group) === 1 ? '' : 's'} · ${receiverType(group)}</small></span><em aria-hidden="true">${group.id === currentGroup()?.id ? '✓' : '›'}</em></button>`).join('')}</div></section>`).join('')}${groups.length ? '' : `<p class="sub">${text('Maak eerst een groep in Zones.', 'Create a group in Zones first.', 'Créez d’abord un groupe dans Zones.', 'Erstelle zuerst eine Gruppe unter Zonen.')}</p>`}<button type="button" class="button soft" onclick="closeModal()">${text('Annuleren', 'Cancel', 'Annuler', 'Abbrechen')}</button></section>`, { viewKey: 'preset-group-choice' });
     };
@@ -2251,6 +2476,39 @@
     refineAnimationLibraryCount();
     refineProductSettings();
     refineSavedLighting();
+    refineLargeLineViews();
+  }
+
+  function refineLargeLineViews() {
+    const selectedGroup = currentGroup();
+    const list = document.querySelector('#modalBody .v187-receiver-list');
+    if (selectedGroup && list && array(selectedGroup.receivers).length > PREVIEW_PAGE_SIZE) {
+      const card = list.closest('.v187-receiver-order');
+      if (card) {
+        card.dataset.v21LargeScope = 'management';
+        card.dataset.v21LargeGroup = String(selectedGroup.id);
+        list.classList.add('v21-management-line-list');
+        const lines = new Map(array(selectedGroup.receivers).map((line, index) => [String(line.id), { line, index }]));
+        list.querySelectorAll('[data-receiver-id]').forEach(row => {
+          const found = lines.get(row.dataset.receiverId);
+          if (!found) return;
+          const { line, index } = found, device = deviceForLine(line);
+          const detail = `${device?.name || `Receiver ${device?.number || index + 1}`} · ${text('Poort', 'Port', 'Port', 'Port')} ${Number(line.port) || 1}`;
+          const title = row.querySelector('.v187-receiver-copy > b');
+          const lineName = line.name || `LED Line ${index + 1}`;
+          if (title && title.textContent !== lineName) title.textContent = lineName;
+          const copy = row.querySelector('.v187-receiver-copy > small');
+          if (copy && copy.textContent !== detail) copy.textContent = detail;
+          row.dataset.v21Search = `LED Line ${index + 1} ${line.name || ''} ${detail}`;
+        });
+        if (!card.querySelector('.v21-line-search')) {
+          const preference = largeLinePreference(selectedGroup.id, 'management');
+          list.insertAdjacentHTML('beforebegin', `<label class="v21-line-search"><span>${text('Zoeken', 'Search', 'Rechercher', 'Suchen')}</span><input type="search" autocomplete="off" value="${safe(preference.query)}" placeholder="${text('LED Line of receiver', 'LED Line or receiver', 'LED Line ou récepteur', 'LED Line oder Receiver')}" oninput="v21FilterLinePicker(this)"></label>`);
+          list.insertAdjacentHTML('afterend', '<small class="v21-line-search-result" aria-live="polite"></small>');
+        }
+      }
+    }
+    document.querySelectorAll('[data-v21-large-scope] .v21-line-search input').forEach(input => window.v21FilterLinePicker(input));
   }
 
   function queueRefinement() {
@@ -2304,18 +2562,33 @@
 
   function installSwipeBack() {
     let gesture = null;
+    const cancel = () => { gesture = null; };
+    const pointerNavigationOwnsGesture = () => typeof window.PointerEvent === 'function'
+      && typeof window.AluvisionNavigationRefine?.backDestination === 'function';
     const begin = event => {
-      const point = event.touches?.[0] || event;
-      if (!point || point.clientX > 34 || event.target?.closest?.('input,select,textarea,[data-no-swipe]')) return;
-      gesture = { x: point.clientX, y: point.clientY, time: Date.now() };
+      cancel();
+      // The primary controller already supplies the animated swipe and guards
+      // commissioning/PIN screens. iOS emits both pointer and touch events:
+      // only one controller may own the same physical gesture.
+      if (pointerNavigationOwnsGesture()) return;
+      if (event.defaultPrevented || event.touches?.length !== 1) return;
+      const point = event.touches[0];
+      // Adjusting a colour or an output is not back navigation, even when
+      // that control starts close to the left edge of a small phone screen.
+      if (!point || point.clientX > 34 || event.target?.closest?.('input,select,textarea,button,a,[role="slider"],[contenteditable="true"],.color-wheel,.rgbw-row,[data-no-swipe]')) return;
+      gesture = { id: point.identifier, x: point.clientX, y: point.clientY, time: Date.now() };
     };
     const finish = event => {
       if (!gesture) return;
-      const point = event.changedTouches?.[0] || event;
-      const dx = point.clientX - gesture.x;
-      const dy = Math.abs(point.clientY - gesture.y);
-      const elapsed = Date.now() - gesture.time;
-      gesture = null;
+      const started = gesture;
+      cancel();
+      if (pointerNavigationOwnsGesture()) return;
+      if (event.defaultPrevented || event.touches?.length) return;
+      const point = [...(event.changedTouches || [])].find(touch => touch.identifier === started.id);
+      if (!point) return;
+      const dx = point.clientX - started.x;
+      const dy = Math.abs(point.clientY - started.y);
+      const elapsed = Date.now() - started.time;
       if (dx < 72 || dy > 54 || elapsed > 750) return;
       const modalHost = document.getElementById('modal');
       if (modalHost && !modalHost.hidden && typeof window.closeModal === 'function') {
@@ -2335,7 +2608,11 @@
       if (typeof window.go === 'function') window.go('zones');
     };
     document.addEventListener('touchstart', begin, { passive: true });
+    document.addEventListener('touchmove', event => { if (event.touches?.length !== 1) cancel(); }, { passive: true });
+    document.addEventListener('touchcancel', cancel, { passive: true });
     document.addEventListener('touchend', finish, { passive: true });
+    window.addEventListener('blur', cancel);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) cancel(); });
   }
 
   function installNavigationCleanup() {
@@ -2385,6 +2662,7 @@
       syncCanonicalModel,
       logicalRgbwLines,
       rgbwPreviewTopology,
+      previewWindow,
       selectedRgbwIds,
       exactRgbwTargets,
       familyCounts,

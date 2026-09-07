@@ -1,12 +1,16 @@
-# Aluvision Lighting Control — 21.0.3, build 28
+# Aluvision Lighting Control — 21.0.8, build 34
 
-De volledige webinterface: https://sdlvisuals.github.io/aluvision-direct-ble/?release=21.0.3-build28
+De volledige webinterface: https://sdlvisuals.github.io/aluvision-direct-ble/?release=21.0.8-build34
 
-Build 28 bevat verbeteringen aan koppelen en annuleren, PIN-sessies, het
-bewaren en verplaatsen van poorten, RGBW-voorbeelden, zoeken bij effecten,
-presets en scènes, toetsenbordbediening en pictogramcontrast in donkere modus.
-De bronbestanden komen overeen met de gecontroleerde iPhone-interface van
-build 28. De SPI- en RGBW-receiverfirmware blijven beide op 21.0.3.
+Build 34 bevat verdere verbeteringen aan live kleuren, het wisselen en annuleren
+van verbindingen, grote groepen en RGBW-voorbeelden. Oude opdrachten volgen niet
+meer naar een andere receiver. Een verwijderde groep krijgt geen wachtende
+kleurwijziging meer. Veegbewegingen blijven beschermd tijdens setup en kleuren
+kiezen. Lege presets/scènes leiden rechtstreeks naar het aanmaken van een groep.
+De gebundelde SPI- en RGBW-receiverfirmware zijn beide 21.0.8. SPI annuleert oude
+geplande opdrachten op uitgeschakelde poorten; RGBW bewaart de geplande starttijd
+bij het aflopen van een herkenningstest. De eerdere fijnere fades en
+pixelovergangen blijven behouden.
 
 Deze publicatie bevat Home, zones, groepen, kleuren, SPI/RGBW-effecten,
 receiverinstellingen en de bestaande Studio/Academy. De nieuwe SPI-effecten zijn
@@ -29,15 +33,18 @@ Tailscale-host of wifi-wachtwoord in deze configuratie.
 ## Receiverbestanden
 
 `firmware/catalog.json` verwijst naar de SPI- en RGBW-application images van
-21.0.3 en hun exacte grootte, SHA-256 en hardware-identiteit. Dit zijn
+21.0.8 en hun exacte grootte, SHA-256 en hardware-identiteit. Dit zijn
 OTA-application images, geen volledige USB-flashbundels. De bestaande
 V18-bestanden blijven beschikbaar voor reeds uitgegeven verwijzingen; de
-actuele catalogus biedt alleen V21.0.3 aan.
+actuele catalogus biedt alleen V21.0.8 aan.
 
 De firmware is een release candidate. Lokale builds en regressietests zijn
-geslaagd; volledige fysieke OTA-acceptatie, automatische gatewayovername en
-verdere netwerkbeveiliging blijven afzonderlijke validatiepunten. Er wordt
-geen volledig gevalideerde multihopmesh of productiegarantie geclaimd.
+geslaagd. Een geslaagde service-OTA naar één RGBW-receiver bewijst niet dat de
+native iPhone-updateknop of iedere netwerksituatie werkt. Automatische
+gatewayovername, ondertekende firmware, versleuteld/geauthenticeerd meshverkeer
+en migratie van reeds botsende oude identiteiten blijven open releasepunten.
+Er wordt geen volledig gevalideerde multihopmesh, 60-receivercapaciteit of
+productiegarantie geclaimd. NFC blijft uitgeschakeld.
 
 ## Publicatiecontrole
 

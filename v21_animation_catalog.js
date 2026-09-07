@@ -12,7 +12,7 @@
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var VERSION = '21.0.3';
+  var VERSION = '21.0.8';
   var PROTOCOL = 18;
 
   function clone(value) { return value === undefined ? undefined : JSON.parse(JSON.stringify(value)); }

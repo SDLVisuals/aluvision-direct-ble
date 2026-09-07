@@ -374,6 +374,7 @@
     }
 
     function assertReceiverIdentity(info, receiver, artifact = null) {
+      window.AluvisionReceiverIdentity?.assertReceiver({ ...info, RID: receiver?.rid || info.RID }, receiver);
       const expectedRid = exactRid(receiver?.rid);
       const expectedType = String(artifact?.receiverType || receiver?.receiverType || '').toUpperCase();
       const expectedModel = String(artifact?.model || receiver?.model || '').toUpperCase();

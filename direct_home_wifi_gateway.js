@@ -36,6 +36,9 @@
   let consecutiveEmptyInventories = 0;
   let lastBridgeReplyAt = 0;
   let lastReceiverReplyAt = 0;
+  let connectionGeneration = 0;
+  let pairOperation = null;
+  let commandSequence = Math.floor(Date.now() % 900000000) || 1;
   const BRIDGE_FAILURE_LIMIT = 3;
   const BRIDGE_GRACE_MS = 15000;
   // A gateway can briefly return an empty inventory while its radio task is
@@ -48,8 +51,31 @@
     return /^[0-9A-F]{16}$/.test(text) ? text : '';
   }
 
+  function cancelled() {
+    return Object.assign(new Error(customerCopy('Toevoegen geannuleerd.', 'Adding cancelled.', 'Ajout annulé.', 'Hinzufügen abgebrochen.')), { code: 'IDENTIFY_CANCELLED' });
+  }
+
+  function nextCommandId() { commandSequence = (commandSequence + 1) % 2147483000 || 1; return commandSequence; }
+
+  function knownReceivers() {
+    const stored = window.AluvisionDirectBridge?.receivers;
+    const records = Array.isArray(stored) ? stored : stored && typeof stored === 'object' ? Object.values(stored) : [];
+    const configured = typeof db !== 'undefined' && Array.isArray(db?.devices) ? db.devices : [];
+    const keys = !Array.isArray(stored) && stored && typeof stored === 'object' ? Object.keys(stored).map(exactRid) : [];
+    return new Set([...keys, ...[...records, ...configured].map(item => exactRid(item?.rid || item?.RID))].filter(Boolean));
+  }
+
+  function availableReceiver(device) {
+    const online = device?.ONLINE ?? device?.online;
+    return Boolean(exactRid(device?.RID || device?.rid)) && ![false, 0, '0', 'false'].includes(online) &&
+      ![true, 1, '1', 'true'].includes(device?.IDENTITYCONFLICT ?? device?.identityConflict);
+  }
+
   async function request(path, options = {}) {
+    if (options.signal?.aborted) throw cancelled();
     const controller = new AbortController();
+    const abort = () => controller.abort();
+    options.signal?.addEventListener('abort', abort, { once: true });
     const timer = setTimeout(() => controller.abort(), options.timeout || 6500);
     let reachedBridge = false;
     try {
@@ -64,6 +90,7 @@
       });
       reachedBridge = true;
       const payload = await response.json();
+      if (options.signal?.aborted) throw cancelled();
       if (!response.ok || payload?.ok === false) {
         throw new Error(payload?.error || `Wi-Fi-bridge antwoordde met ${response.status}`);
       }
@@ -71,18 +98,23 @@
       lastBridgeReplyAt = Date.now();
       return payload;
     } catch (error) {
+      if (options.signal?.aborted) throw cancelled();
       // A receiver/ESP-NOW NACK is not a lost Mac bridge. Only mark the
       // transport unavailable after several actual HTTP misses and never on
       // the first dropped packet while the bridge was recently healthy.
       if (!reachedBridge) {
         consecutiveBridgeMisses += 1;
         const recentlyHealthy = lastBridgeReplyAt && Date.now() - lastBridgeReplyAt < BRIDGE_GRACE_MS;
-        if (consecutiveBridgeMisses >= BRIDGE_FAILURE_LIMIT && !recentlyHealthy) ready = false;
+        if (consecutiveBridgeMisses >= BRIDGE_FAILURE_LIMIT && !recentlyHealthy) {
+          if (ready) connectionGeneration++;
+          ready = false;
+        }
       }
       if (error?.name === 'AbortError') throw new Error('Wi-Fi-bridge antwoordde niet op tijd');
       throw error;
     } finally {
       clearTimeout(timer);
+      options.signal?.removeEventListener('abort', abort);
     }
   }
 
@@ -99,12 +131,14 @@
       consecutiveEmptyInventories = 0;
       lastReceiverReplyAt = Date.now();
     }
+    const wasReady = ready, oldGateway = gateway;
     devices = incoming;
     gateway = incomingGateway;
     // A reachable Mac bridge is not the same as a reachable receiver. Keeping
     // this true for an empty inventory made the complete app show "connected"
     // and send commands into an installation that was not actually present.
     ready = Boolean(gateway && devices.length);
+    if (wasReady !== ready || oldGateway !== gateway) connectionGeneration++;
     return { devices };
   }
 
@@ -123,25 +157,102 @@
     return remember(await request('/home-wifi-api/discover'));
   }
 
-  async function pair(payload = {}) {
-    const inventory = await discover();
-    if (!inventory.devices.length) {
-      throw new Error('Geen receiver gevonden op dit Wi-Fi-netwerk');
-    }
-    const requestedNumber = Math.max(1, Math.min(250, Number(payload.number) || 1));
-    const sorted = [...inventory.devices].sort((left, right) =>
-      String(left.HWID || left.hardwareId || '').localeCompare(String(right.HWID || right.hardwareId || ''))
-    );
-    const unclaimed = sorted.filter((device) => {
-      const rid = exactRid(device.RID || device.rid);
-      try {
-        const bridge = window.AluvisionDirectBridge;
-        return !bridge?.receivers?.some((record) => exactRid(record.rid) === rid);
-      } catch (_) { return true; }
+  function chooseReceiver(candidates, isCurrent, cancelSelection) {
+    if (typeof window.modal !== 'function') throw new Error('Open Receiver toevoegen opnieuw om een receiver te kiezen.');
+    return new Promise((resolve, reject) => {
+      let finished = false, observer, guard, timeout, root;
+      function ownsPanel() { return Boolean(root?.isConnected && !document.getElementById('modal')?.hidden); }
+      function finish(rid) {
+        if (finished) {
+          if (!rid) { cancelSelection(); if (ownsPanel()) window.closeModal?.(); }
+          return;
+        }
+        finished = true; observer?.disconnect(); clearInterval(guard); clearTimeout(timeout);
+        if (rid && isCurrent() && ownsPanel()) {
+          root.querySelectorAll('[data-home-wifi-add]').forEach(button => { button.disabled = true; });
+          resolve(rid);
+        }
+        else { if (ownsPanel()) window.closeModal?.(); reject(cancelled()); }
+      }
+      window.modal(`<section data-home-wifi-receiver-choice><div class="eyebrow">${customerCopy('RECEIVER TOEVOEGEN', 'ADD RECEIVER', 'AJOUTER UN RÉCEPTEUR', 'RECEIVER HINZUFÜGEN')}</div><h1>${customerCopy('Welke receiver?', 'Which receiver?', 'Quel récepteur ?', 'Welcher Receiver?')}</h1><p class="sub">${customerCopy('Kies Toevoegen. Alleen die receiver laat zijn LED Line knipperen.', 'Choose Add. Only that receiver flashes its LED Line.', 'Choisissez Ajouter. Seul ce récepteur fait clignoter sa LED Line.', 'Wähle Hinzufügen. Nur dieser Receiver lässt seine LED Line blinken.')}</p><div class="native-receiver-candidates">${candidates.map((item, index) => {
+        const rid = exactRid(item.RID || item.rid);
+        const family = String(item.DEVTYPE || item.receiverType || '').toUpperCase() === 'RGBW' ? 'RGBW' : 'SPI';
+        const name = item.NAME || item.name || `${family} Receiver ${index + 1}`;
+        return `<div class="row" style="gap:12px;padding:12px 0;border-bottom:1px solid var(--line)"><span><b>${safeHtml(name)}</b><small class="sub" style="display:block">${family} · ${safeHtml(rid.slice(-4))}</small></span><button class="button" type="button" data-home-wifi-add="${rid}">${customerCopy('Toevoegen', 'Add', 'Ajouter', 'Hinzufügen')}</button></div>`;
+      }).join('')}</div><button class="button soft" type="button" data-home-wifi-cancel>${customerCopy('Annuleren', 'Cancel', 'Annuler', 'Abbrechen')}</button></section>`);
+      root = document.querySelector('[data-home-wifi-receiver-choice]');
+      if (!root) { finish(''); return; }
+      root.querySelectorAll('[data-home-wifi-add]').forEach(button => button.addEventListener('click', () => finish(button.dataset.homeWifiAdd)));
+      root.querySelector('[data-home-wifi-cancel]').addEventListener('click', () => finish(''));
+      const check = () => { if (!isCurrent() || !ownsPanel()) finish(''); };
+      observer = new MutationObserver(check);
+      observer.observe(document.getElementById('modal'), { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
+      guard = setInterval(check, 250);
+      timeout = setTimeout(() => finish(''), 60000);
     });
-    const selected = unclaimed[0] || sorted[(requestedNumber - 1) % sorted.length];
-    const rid = exactRid(selected.RID || selected.rid);
-    return { ...selected, NUMBER: requestedNumber, gateway: rid === gateway, gatewayRid: gateway || rid };
+  }
+
+  async function assertOwnership(rid, key, isCurrent) {
+    const id = nextCommandId();
+    const reply = await transact({ V: 18, ID: id, TYPE: 'SECURITY_STATUS', TARGET: rid, KEY: key });
+    if (!isCurrent()) throw cancelled();
+    if (String(reply.ID) !== String(id) || exactRid(reply.RID) !== rid ||
+        (reply.TARGETRID && exactRid(reply.TARGETRID) !== rid) || reply.STATUS !== 'OK' ||
+        reply.DETAIL !== 'SECURITY_STATUS' || String(reply.SECURITY) !== '1' ||
+        !['0', '1'].includes(String(reply.PINSET)) || !['0', '1'].includes(String(reply.OWNED)) ||
+        !['0', '1'].includes(String(reply.OWNERMATCH))) {
+      throw new Error(customerCopy('Deze lokale testverbinding kan de eigenaar niet veilig controleren. Gebruik de actuele receiver-app om toe te voegen of met je installatie-PIN te herstellen.', 'This local test connection cannot verify ownership. Use the current receiver app to add or restore with your installation PIN.', 'Cette connexion locale ne peut pas vérifier le propriétaire. Utilisez l’app actuelle et votre PIN.', 'Diese lokale Testverbindung kann den Eigentümer nicht prüfen. Nutze die aktuelle App und deine Installations-PIN.'));
+    }
+    if ((String(reply.OWNED) === '1' || String(reply.PINSET) === '1') && String(reply.OWNERMATCH) !== '1') {
+      throw new Error(customerCopy('Deze receiver hoort bij een bestaande installatie. Herstel eerst met de installatie-PIN in de receiver-app; deze testverbinding kan die toegang niet overnemen.', 'This receiver belongs to an existing installation. Restore access using its PIN in the receiver app; this test connection cannot take it over.', 'Ce récepteur appartient à une installation existante. Restaurez l’accès avec son PIN dans l’app.', 'Dieser Receiver gehört zu einer bestehenden Installation. Stelle den Zugriff mit deren PIN in der App wieder her.'));
+    }
+  }
+
+  async function pair(payload = {}) {
+    if (pairOperation) throw new Error('Er wordt al een receiver toegevoegd. Rond die stap eerst af.');
+    const operation = {}; pairOperation = operation;
+    const opener = document.getElementById('modalBody')?.firstElementChild;
+    try {
+      const inventory = await discover();
+      if (opener && (!opener.isConnected || document.getElementById('modal')?.hidden)) throw cancelled();
+      const generation = connectionGeneration, selectedGateway = gateway;
+      let selectedRid = '';
+      const current = () => pairOperation === operation && !operation.cancelled && ready && generation === connectionGeneration && gateway === selectedGateway &&
+        (!selectedRid || devices.some(item => exactRid(item.RID || item.rid) === selectedRid && availableReceiver(item)));
+      const known = knownReceivers();
+      const unique = new Map(inventory.devices.filter(availableReceiver).map(item => [exactRid(item.RID || item.rid), item]));
+      const candidates = [...unique.values()].filter(item => !known.has(exactRid(item.RID || item.rid)));
+      if (!candidates.length) throw new Error(customerCopy('Geen nieuwe receiver gevonden. De al toegevoegde receivers blijven behouden.', 'No new receiver found. Existing receivers are preserved.', 'Aucun nouveau récepteur trouvé. Les récepteurs existants sont conservés.', 'Kein neuer Receiver gefunden. Vorhandene Receiver bleiben erhalten.'));
+      const rid = candidates.length === 1 ? exactRid(candidates[0].RID || candidates[0].rid) : await chooseReceiver(candidates, current, () => { operation.cancelled = true; });
+      selectedRid = rid;
+      const selected = candidates.find(item => exactRid(item.RID || item.rid) === rid);
+      const selectionPanel = document.getElementById('modalBody')?.firstElementChild;
+      const selectionCurrent = () => current() && (!selectionPanel || (selectionPanel.isConnected && !document.getElementById('modal')?.hidden));
+      const key = exactRid(payload.compatibilityKey || security.compatibilityKey);
+      if (!key) throw new Error('De installatiebeveiliging is nog niet klaar. Open de app opnieuw.');
+      await assertOwnership(rid, key, selectionCurrent);
+      if (!window.AluvisionIdentifyBeforePair?.confirm) throw new Error('Herkenning kon niet worden geopend. Open de app opnieuw.');
+      const recognition = await window.AluvisionIdentifyBeforePair.confirm({
+        receiver: { rid, name: selected.NAME || selected.name || 'Receiver', receiverType: String(selected.DEVTYPE || selected.receiverType || '').toUpperCase() === 'RGBW' ? 'RGBW' : 'SPI', portCount: Number(selected.PORTS) || 1 },
+        isCurrent: current,
+        identify: async ({ rid: target, requestId, signal }) => {
+          if (target !== rid || !current() || signal.aborted) throw cancelled();
+          const id = nextCommandId();
+          const reply = await transact({ V: 18, ID: id, TYPE: 'MESH_IDENTIFY', TARGET: rid, PORT: 0, KEY: key }, { timeout: 3600, signal });
+          if (!current() || signal.aborted) throw cancelled();
+          const source = exactRid(reply.RID);
+          if (String(reply.ID) !== String(id) || ![rid, selectedGateway].includes(source) || reply.STATUS !== 'OK' ||
+              reply.DETAIL !== 'MESH_IDENTIFIED' || String(reply.TARGETACK) !== '1' || exactRid(reply.TARGETRID) !== rid ||
+              (reply.PORTACK != null && String(reply.PORTACK) !== '0')) throw new Error('De gekozen LED Line bevestigde het knipperen niet.');
+          return { ok: true, rid, requestId };
+        }
+      });
+      if (!recognition?.confirmed || recognition.rid !== rid || !current()) throw cancelled();
+      // Legacy bridge registration only: no MESH_MAIN/PAIR, owner/key change,
+      // PIN bypass or replacement of the receiver's saved configuration.
+      const requestedNumber = Math.max(1, Math.min(250, Math.round(Number(payload.number) || 1)));
+      return { ...selected, NUMBER: requestedNumber, gateway: rid === gateway, gatewayRid: gateway || rid };
+    } finally { if (pairOperation === operation) pairOperation = null; }
   }
 
   async function transact(fields, options = {}) {
@@ -149,7 +260,7 @@
       ? Number(options)
       : Number(options?.timeout || options?.timeoutMs || 3200);
     const payload = await request('/home-wifi-api/transact', {
-      method: 'POST', body: { fields }, timeout: Math.max(900, timeout + 250)
+      method: 'POST', body: { fields }, timeout: Math.max(900, timeout + 250), signal: options?.signal
     });
     return payload.fields || payload.reply || payload;
   }
@@ -182,6 +293,10 @@
       securityConfigured: Boolean(security.compatibilityKey)
     })
   });
+
+  window.addEventListener('aluvision-transport-session-changed', () => { connectionGeneration++; });
+  window.addEventListener('pagehide', () => { connectionGeneration++; });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') connectionGeneration++; });
 
   function customerCopy(nl, en, fr, de) {
     try { return typeof window.ac === 'function' ? window.ac(nl, en, fr, de) : nl; }
@@ -295,10 +410,8 @@
           status.innerHTML = `<span><b>${customerCopy('Receivers zoeken…', 'Searching for receivers…', 'Recherche des receivers…', 'Receiver werden gesucht…')}</b><small>${customerCopy('Even geduld; de app controleert de privéverbinding van je installatie.', 'Please wait; the app is checking your installation’s private connection.', 'Veuillez patienter ; l’app vérifie la connexion privée de votre installation.', 'Bitte warten; die App prüft die private Verbindung deiner Installation.')}</small></span>`;
         }
         const result = await pairNow.apply(this, args);
-        const current = document.getElementById('receiverNfcStatus');
-        if (current?.classList.contains('error')) {
-          current.innerHTML = `<span><b>${customerCopy('Geen receiver gevonden', 'No receiver found', 'Aucun receiver trouvé', 'Kein Receiver gefunden')}</b><small>${customerCopy('Controleer of de receiver aanstaat en binnen bereik is, en probeer opnieuw.', 'Check that the receiver is powered on and within range, then try again.', 'Vérifiez que le récepteur est allumé et à portée, puis réessayez.', 'Prüfe, ob der Receiver eingeschaltet und in Reichweite ist, und versuche es erneut.')}</small></span>`;
-        }
+        // Preserve actionable ownership/PIN and identification errors instead
+        // of replacing every failed Add with the misleading "not found" copy.
         return result;
       };
     }

@@ -132,7 +132,12 @@
   const baseTargets = typeof targets === 'function' ? targets : null;
   if (baseTargets) {
     targets = function v207Targets(selectedGroup = group) {
-      if (!selectedGroup || (typeof window.groupReceiverType === 'function' && groupReceiverType(selectedGroup) === 'RGBW')) return baseTargets(selectedGroup);
+      // groupReceiverType lives inside the original app closure and is not a
+      // window API. Do not accidentally rewrite every RGBW port as SPI P1.
+      const firstLine = selectedGroup?.receivers?.[0];
+      const firstDevice = (db?.devices || []).find(item => item.id === firstLine?.deviceId);
+      const declaredType = selectedGroup?.receiverType || firstLine?.receiverType || firstDevice?.receiverType;
+      if (!selectedGroup || String(declaredType || '').toUpperCase() === 'RGBW') return baseTargets(selectedGroup);
       const lines = selectedGroup.receivers || [];
       const groupPixels = Math.max(1, lines.reduce((sum, line) => sum + clamp(line.pixels, 1, 1024, 1), 0));
       const lineCount = Math.max(1, lines.length);

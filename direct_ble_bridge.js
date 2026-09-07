@@ -50,6 +50,7 @@
   let notificationBuffer = '';
   let commandSequence = Math.floor(Date.now() % 900000000) || 1;
   let commandTail = Promise.resolve();
+  let bleSessionEpoch = 0;
   let recoveryConnectPromise = null;
   const phaseClocks = new Map();
   const targetHealth = new Map();
@@ -475,6 +476,9 @@
     return {
       id: `rx-${rid.toLowerCase()}`, rid,
       hardwareId: receiver.hardwareId || `ALV-${rid.slice(-6)}`,
+      physicalId: receiver.physicalId || '', mac: receiver.mac || '',
+      canonicalRid: receiver.canonicalRid || '', identitySchema: receiver.identitySchema || 1,
+      identityLegacy: Boolean(receiver.identityLegacy), identityConflict: Boolean(receiver.identityConflict),
       number: clamp(receiver.number, 1, 250, 1),
       name: `Receiver ${clamp(receiver.number, 1, 250, 1)}`,
       shortTag: rid.slice(-4),
@@ -621,10 +625,15 @@
       clearTimeout(pending.timer);
       pending.resolve(fields);
     }
-    ble.fields = { ...ble.fields, ...fields };
+    const reported = exactRid(fields.TARGETRID || fields.RID);
+    // Satellite ACK fields never become the direct gateway's identity cache.
+    if (!reported || !ble.rid || reported === exactRid(ble.rid)) {
+      ble.fields = { ...ble.fields, ...fields };
+    }
   }
 
   function onStatus(event) {
+    if (event?.target !== ble.status || !ble.connected) return;
     notificationBuffer += valueText(event.target.value);
     if (notificationBuffer.length > 6000) notificationBuffer = notificationBuffer.slice(-3000);
     let newline = notificationBuffer.indexOf('\n');
@@ -646,19 +655,45 @@
     });
   }
 
-  async function writeCommand(text) {
-    if (!ble.connected || !ble.command) throw new Error('Recoveryverbinding is gesloten');
+  function retireBleSession(message = 'Recoveryverbinding is gesloten') {
+    bleSessionEpoch += 1;
+    notificationBuffer = '';
+    receiverClocks.clear();
+    ackWaiters.forEach((pending) => {
+      clearTimeout(pending.timer);
+      pending.reject(new Error(message));
+    });
+    ackWaiters.clear();
+    return bleSessionEpoch;
+  }
+
+  function assertBleOperation(operation, signal) {
+    if (signal?.aborted) throw Object.assign(new Error('Toevoegen geannuleerd.'), { code: 'IDENTIFY_CANCELLED' });
+    if (!operation.active || operation.epoch !== bleSessionEpoch || !ble.connected ||
+        !operation.command || operation.command !== ble.command || operation.device !== ble.device) {
+      throw new Error('Recoveryverbinding is gesloten of gewijzigd');
+    }
+  }
+
+  async function writeCommand(text, operation, signal = null) {
+    assertBleOperation(operation, signal);
+    const command = operation.command;
     const bytes = encoder.encode(`${text}\n`);
     for (let offset = 0; offset < bytes.length; offset += 150) {
+      assertBleOperation(operation, signal);
       const chunk = bytes.slice(offset, offset + 150);
-      if (typeof ble.command.writeValueWithoutResponse === 'function') await ble.command.writeValueWithoutResponse(chunk);
-      else if (typeof ble.command.writeValue === 'function') await ble.command.writeValue(chunk);
-      else await ble.command.writeValueWithResponse(chunk);
+      operation.writeStarted = true;
+      if (typeof command.writeValueWithoutResponse === 'function') await command.writeValueWithoutResponse(chunk);
+      else if (typeof command.writeValue === 'function') await command.writeValue(chunk);
+      else await command.writeValueWithResponse(chunk);
+      assertBleOperation(operation, signal);
+      if (offset + chunk.length === bytes.length) operation.packetWritten = true;
       if (bytes.length > 150) await new Promise((resolve) => setTimeout(resolve, 5));
     }
   }
 
-  async function transactNow(fields, timeout = 3200, allowError = false) {
+  async function transactNow(fields, timeout = 3200, allowError = false, operation, signal = null) {
+    assertBleOperation(operation, signal);
     let id = Number(fields.ID || 0);
     if (!Number.isInteger(id) || id <= 0) {
       commandSequence = (commandSequence + 1) % 2147483000 || 1;
@@ -670,9 +705,27 @@
       .filter(([, value]) => value !== undefined && value !== null && value !== '')
       .map(([key, value]) => `${key}=${value}`).join(';');
     const pending = waitForAck(id, timeout);
+    // A notification timeout or cancellation may occur while a GATT write
+    // promise is still waiting. Attach the rejection handler immediately.
+    pending.catch(() => {});
+    const cancel = () => {
+      const waiter = ackWaiters.get(id);
+      if (waiter) {
+        clearTimeout(waiter.timer);
+        ackWaiters.delete(id);
+        waiter.reject(Object.assign(new Error('Toevoegen geannuleerd.'), { code: 'IDENTIFY_CANCELLED' }));
+      }
+    };
+    signal?.addEventListener?.('abort', cancel, { once: true });
     try {
-      await writeCommand(text);
+      const write = writeCommand(text, operation, signal);
+      // A rejected ACK wait (cancel/disconnect/deadline) also retires a stalled
+      // write promptly. A successful ACK still waits for the write itself.
+      const interrupted = pending.then(() => new Promise(() => {}));
+      await withTimeout(Promise.race([write, interrupted]), timeout, 'Receiveropdracht schrijven duurde te lang');
       const reply = await pending;
+      assertBleOperation(operation, signal);
+      assertReceiverIdentity(reply);
       if (!allowError && reply.STATUS === 'ERROR') throw new Error(reply.DETAIL || 'Receiverfout');
       return reply;
     } catch (error) {
@@ -680,19 +733,38 @@
       if (waiter) {
         clearTimeout(waiter.timer);
         ackWaiters.delete(id);
+        waiter.reject(error);
+      }
+      // Never concatenate the next command onto a half-written packet. Only
+      // retire our own still-current connection; never disconnect its successor.
+      if (operation.writeStarted && !operation.packetWritten &&
+          operation.epoch === bleSessionEpoch && operation.command === ble.command) {
+        retireBleSession('Recoveryverbinding herstelt na een onderbroken opdracht');
+        ble.connected = false;
+        try { operation.device?.gatt?.disconnect(); } catch (_) {}
       }
       throw error;
+    } finally {
+      operation.active = false;
+      signal?.removeEventListener?.('abort', cancel);
     }
   }
 
-  function transactBle(fields, timeout = 3200, allowError = false) {
-    const run = () => transactNow(fields, timeout, allowError);
+  function transactBle(fields, timeout = 3200, allowError = false, signal = null) {
+    const request = { ...fields };
+    const operation = { epoch: bleSessionEpoch, device: ble.device, command: ble.command,
+      active: true, writeStarted: false, packetWritten: false };
+    const run = () => {
+      assertBleOperation(operation, signal);
+      return transactNow(request, timeout, allowError, operation, signal);
+    };
     const next = commandTail.then(run, run);
     commandTail = next.catch(() => {});
     return next;
   }
 
   async function transact(fields, timeout = 3200, allowError = false) {
+    if (exactRid(fields?.TARGET)) assertReceiverIdentity({ RID: exactRid(fields.TARGET) });
     /* Allocate the correlation ID before selecting a transport.  This keeps
        the exact same ID visible to resultFromReply for BLE, native Wi-Fi and
        the Mac bridge instead of trusting whichever reply happens to arrive. */
@@ -710,6 +782,7 @@
         ? await operation
         : await withTimeout(operation, timeout + 500, 'Controller antwoordde niet op tijd');
       const parsed = normaliseTransportReply(reply);
+      assertReceiverIdentity(parsed);
       if (!allowError && parsed.STATUS === 'ERROR') throw new Error(parsed.DETAIL || 'Receiverfout');
       return parsed;
     }
@@ -746,8 +819,11 @@
     return clock;
   }
 
-  async function prepareSynchronizedStarts(body, action, targets) {
-    if (action !== 'LIVE' || body?.synchronize !== true || targets.length < 1) return;
+  async function prepareSynchronizedStarts(body, action, targets, shouldYield = () => false) {
+    // One logical output (including RGBW PORT=0) is applied atomically by its
+    // receiver. A clock probe + future start only adds latency to that wheel.
+    // Multiple separate outputs still need their common scheduled instant.
+    if (action !== 'LIVE' || body?.synchronize !== true || targets.length < 2) return;
     const unique = new Map();
     targets.forEach((target) => {
       const rid = exactRid(target.physicalRid || target.rid);
@@ -767,19 +843,28 @@
     if (serial) {
       // Measure actual round-trip time, not time waiting behind another BLE
       // request; otherwise the last receiver acquires a false clock offset.
-      for (const target of unique.values()) clocks.push(await measureClock(target));
+      for (const target of unique.values()) {
+        if (shouldYield()) return;
+        clocks.push(await measureClock(target));
+      }
     } else {
-      clocks.push(...await Promise.all([...unique.values()].map(measureClock)));
+      const pending = [...unique.values()];
+      // Use the same bounded lanes as command fanout, not 30 simultaneous
+      // probes whose queueing time would look like radio latency.
+      await Promise.all(Array.from({ length: Math.min(MAX_CONCURRENT_TARGETS, pending.length) }, async () => {
+        while (pending.length && !shouldYield()) clocks.push(await measureClock(pending.shift()));
+      }));
     }
     // Older firmware may lack a clock. Degrade the entire update together,
     // never send a future phase to an immediate/unscheduled member of a group.
-    if (clocks.some(([, clock]) => !clock)) return;
+    if (shouldYield() || clocks.some(([, clock]) => !clock)) return;
     const requestedDelay = clamp(body.scheduleDelayMs, 90, 750, 160);
     // Bluetooth writes all endpoints through one ordered lane. Allow the
     // complete group to arrive before its common start, not only endpoint 1.
     const maxRtt = Math.max(0, ...clocks.map(([, clock]) => clock?.rttMs || 0));
-    const sendBudget = serial ? targets.length : Math.max(1,
-      ...[...unique.keys()].map(rid => targets.filter(target => exactRid(target.physicalRid || target.rid) === rid).length));
+    const maxPorts = Math.max(1, ...[...unique.keys()].map(rid =>
+      targets.filter(target => exactRid(target.physicalRid || target.rid) === rid).length));
+    const sendBudget = serial ? targets.length : Math.ceil(unique.size / MAX_CONCURRENT_TARGETS) * maxPorts;
     const delayMs = Math.max(requestedDelay, Math.min(50000, 60 + sendBudget * Math.max(35, maxRtt * 1.5)));
     const hostStartMs = monotonicNowMs() + delayMs;
     bodyHostStarts.set(body, hostStartMs);
@@ -796,8 +881,9 @@
     bodyStarts.set(body, starts);
   }
 
-  function onDisconnected() {
-    receiverClocks.clear();
+  function onDisconnected(event) {
+    if (event?.target && event.target !== ble.device) return;
+    retireBleSession();
     otaController?.onDisconnected();
     ble.connected = false;
     ble.connectionState = 'offline';
@@ -806,14 +892,11 @@
     ble.command = null;
     ble.status = null;
     ble.info = null;
-    ackWaiters.forEach((pending) => {
-      clearTimeout(pending.timer);
-      pending.reject(new Error('Recoveryverbinding is gesloten'));
-    });
-    ackWaiters.clear();
   }
 
   async function attachDevice(device) {
+    const epoch = retireBleSession('Een andere receiververbinding wordt geopend');
+    ble.connected = false;
     ble.connectionState = 'connecting';
     ble.lastError = '';
     if (ble.device && ble.device !== device) {
@@ -830,6 +913,7 @@
     try {
       const server = device.gatt.connected && ble.device === device && ble.server
         ? ble.server : await withTimeout(device.gatt.connect(), CONNECT_TIMEOUT_MS, 'Controllerverbinding timeout');
+      if (epoch !== bleSessionEpoch) throw new Error('Receiverkeuze is gewijzigd');
       const service = await withTimeout(
         server.getPrimaryService(UUIDS.service), CONNECT_TIMEOUT_MS, 'Controllerservice timeout'
       );
@@ -838,6 +922,7 @@
         service.getCharacteristic(UUIDS.status),
         service.getCharacteristic(UUIDS.info)
       ]), CONNECT_TIMEOUT_MS, 'Controllerkanalen timeout');
+      if (epoch !== bleSessionEpoch) throw new Error('Receiverkeuze is gewijzigd');
       ble.device = device;
       ble.server = server;
       ble.command = command;
@@ -850,8 +935,18 @@
       notificationBuffer = '';
       status.addEventListener('characteristicvaluechanged', onStatus);
       await withTimeout(status.startNotifications(), 5000, 'Controllerstatus timeout');
-      return parseFields(valueText(await withTimeout(info.readValue(), 4000, 'Controllerinformatie timeout')));
+      if (epoch !== bleSessionEpoch) throw new Error('Receiverkeuze is gewijzigd');
+      const fields = parseFields(valueText(await withTimeout(info.readValue(), 4000, 'Controllerinformatie timeout')));
+      if (epoch !== bleSessionEpoch) throw new Error('Receiverkeuze is gewijzigd');
+      return fields;
     } catch (error) {
+      if (epoch !== bleSessionEpoch) {
+        // A late connect result may belong to a different physical device.
+        // Release that orphan, but never disconnect a newer attempt on the
+        // same device or overwrite its ready/error state.
+        try { if (device !== ble.device && device?.gatt?.connected) device.gatt.disconnect(); } catch (_) {}
+        throw error;
+      }
       ble.connectionState = 'error';
       ble.lastError = String(error?.message || error);
       ble.connected = false;
@@ -937,14 +1032,76 @@
     throw new Error('Controller gaf een ongeldig antwoord');
   }
 
+  // Identity evidence is a collision guard, not ownership authentication.
+  // Never replace the installed receiver/PIN/group record with a different
+  // physical board merely because old firmware reported the same short RID.
+  function identityEvidence(value = {}) {
+    const hex = (raw, length) => {
+      const result = String(raw || '').replace(/[:-]/g, '').trim().toUpperCase();
+      return new RegExp(`^[0-9A-F]{${length}}$`).test(result) && !/^0+$/.test(result) ? result : '';
+    };
+    return {
+      physicalId: hex(value.PHYSID || value.physicalId, 12),
+      mac: hex(value.MAC || value.mac, 12),
+      canonicalRid: exactRid(value.CANONRID || value.canonicalRid)
+    };
+  }
+
+  function assertReceiverIdentity(incoming = {}, previous = null) {
+    const rid = exactRid(incoming.RID || incoming.rid || incoming.TARGETRID);
+    const saved = previous || bridge.receivers[rid] || {};
+    const next = identityEvidence(incoming);
+    const before = identityEvidence(saved);
+    const mismatch = ['physicalId', 'mac', 'canonicalRid'].some(key => before[key] && next[key] && before[key] !== next[key]);
+    if (mismatch || saved.identityConflict || bridge.receivers[rid]?.identityConflict || String(incoming.IDENTITYCONFLICT || '') === '1') {
+      if (bridge.receivers[rid]) {
+        bridge.receivers[rid].identityConflict = true;
+        bridge.receivers[rid].online = false;
+        persistBridge();
+      }
+      const error = new Error('Twee receivers gebruiken dezelfde herkenning. Bediening is geblokkeerd om de verkeerde LED Line niet aan te sturen. Deze oude koppeling heeft veilig herstel nodig; reset niets. Je groepen en PIN blijven bewaard.');
+      error.code = 'RECEIVER_IDENTITY_CONFLICT';
+      throw error;
+    }
+    if (String(incoming.IDREADY ?? '') === '0') {
+      throw new Error('Deze receiver kon zijn opgeslagen herkenning niet veilig laden. Voeg hem niet opnieuw toe en reset hem niet.');
+    }
+    return next;
+  }
+
+  function assertIdentityInventory(incoming = []) {
+    const seen = new Map();
+    // Validate the whole batch before anything is merged or paired.
+    incoming.forEach(raw => {
+      const item = fieldsFromTransport(raw);
+      const rid = exactRid(item.RID);
+      if (!rid) return;
+      assertReceiverIdentity(item);
+      if (seen.has(rid)) assertReceiverIdentity(item, seen.get(rid));
+      const before = identityEvidence(seen.get(rid) || {});
+      const next = identityEvidence(item);
+      seen.set(rid, { ...item, PHYSID: next.physicalId || before.physicalId,
+        MAC: next.mac || before.mac, CANONRID: next.canonicalRid || before.canonicalRid });
+    });
+    return incoming;
+  }
+
+  window.AluvisionReceiverIdentity = Object.freeze({ assertReceiver: assertReceiverIdentity, assertInventory: assertIdentityInventory });
+
   function deviceRecord(fields, pairReply = {}, sessionFields = ble.fields) {
-    const merged = { ...fields, ...pairReply, ...sessionFields };
-    const rid = exactRid(fields.RID || pairReply.RID || merged.TARGETRID);
+    const rid = exactRid(fields.RID || pairReply.RID || fields.TARGETRID);
     if (!rid) throw new Error('Ongeldige receiveridentiteit');
+    const relevant = [fields, pairReply, sessionFields].filter(item =>
+      exactRid(item.TARGETRID || item.RID) === rid);
+    assertIdentityInventory(relevant);
+    // Session status is fallback only; explicit responses keep precedence.
+    const session = exactRid(sessionFields.TARGETRID || sessionFields.RID) === rid ? sessionFields : {};
+    const merged = { ...session, ...fields, ...pairReply };
     const declaredType = String(merged.DEVTYPE || '').toUpperCase();
     if (!['SPI', 'RGBW'].includes(declaredType)) throw new Error('Onbekend receivertype');
     const receiverType = declaredType;
     const previous = bridge.receivers[rid] || {};
+    const identity = assertReceiverIdentity({ ...merged, RID: rid });
     const migratedRgbwToSpi = previous.receiverType === 'RGBW' && receiverType === 'SPI';
     if (previous.receiverType && previous.receiverType !== receiverType && !migratedRgbwToSpi) {
       throw new Error('Receivertype komt niet overeen met de eerder gekoppelde receiver');
@@ -971,6 +1128,11 @@
       ...previous,
       id: `rx-${rid.toLowerCase()}`, rid,
       hardwareId: merged.HWID || previous.hardwareId || `ALV-${rid.slice(-6)}`,
+      physicalId: identity.physicalId || previous.physicalId || '',
+      mac: identity.mac || previous.mac || '',
+      canonicalRid: identity.canonicalRid || previous.canonicalRid || '',
+      identitySchema: Number(merged.IDSCHEMA || previous.identitySchema || 1),
+      identityLegacy: String(merged.IDLEGACY ?? Number(Boolean(previous.identityLegacy))) === '1',
       name: `Receiver ${number}`, number, receiverType,
       shortTag: rid.slice(-4),
       displayName: `Receiver ${number} · ${rid.slice(-4)}`,
@@ -1034,6 +1196,7 @@
       optionalServices: [UUIDS.service]
     });
     const info = await attachDevice(device);
+    assertReceiverIdentity(info);
     const rid = exactRid(info.RID);
     if (!rid) throw new Error('De gekozen recoveryreceiver heeft geen geldig ID.');
     ble.rid = rid;
@@ -1041,9 +1204,27 @@
     const existing = bridge.receivers[rid];
     let pairReply = {};
     const token = String(info.TOKEN || '').toUpperCase();
+    if (!window.AluvisionIdentifyBeforePair?.confirm) throw new Error('Herkenning kon niet worden geopend. Open de app opnieuw.');
+    const currentPair = () => ble.device === device && ble.rid === rid && Boolean(device.gatt?.connected);
+    const recognition = await window.AluvisionIdentifyBeforePair.confirm({
+      receiver: { rid, name: existing?.name || 'Receiver', receiverType: ble.receiverType, portCount: Number(info.PORTS) || 1 },
+      isCurrent: currentPair,
+      identify: async ({ rid: target, requestId, signal }) => {
+        if (target !== rid || !currentPair() || signal.aborted) throw new Error('Verbinding gewijzigd. Kies de receiver opnieuw.');
+        const reply = await transactBle({ TYPE: 'MESH_IDENTIFY', TARGET: rid, PORT: 0, KEY: bridge.networkKey }, 3600, true, signal);
+        if (!currentPair() || signal.aborted || reply.STATUS !== 'OK' || reply.DETAIL !== 'MESH_IDENTIFIED' ||
+            String(reply.TARGETACK) !== '1' || exactRid(reply.TARGETRID) !== rid) {
+          throw new Error('De LED Line bevestigde het knipperen niet. Controleer de verbinding en receiverfirmware.');
+        }
+        return { ok: true, rid, requestId };
+      }
+    });
+    if (!recognition.confirmed || recognition.rid !== rid || !currentPair()) {
+      throw Object.assign(new Error('Toevoegen geannuleerd.'), { code: 'IDENTIFY_CANCELLED', reason: recognition.reason });
+    }
     if (!existing || info.PAIRED !== '1' || token) {
       if (!/^[0-9A-F]{16}$/.test(token)) {
-        throw new Error('Koppeltijd verstreken. Houd BOOT opnieuw ongeveer 2 seconden ingedrukt.');
+        throw new Error('Koppeltijd verstreken. Zet alleen deze nog ongebruikte receiver opnieuw aan. Is hij al gekoppeld? Gebruik de installatie-PIN.');
       }
       const requestedMeshId = /^[0-9A-F]{8}$/.test(bridge.networkKey.slice(0, 8)) &&
         bridge.networkKey.slice(0, 8) !== '00000000'
@@ -1078,6 +1259,11 @@
       ...source,
       RID: source.RID || source.rid,
       HWID: source.HWID || source.hardwareId,
+      PHYSID: source.PHYSID || source.physicalId,
+      MAC: source.MAC || source.mac,
+      CANONRID: source.CANONRID || source.canonicalRid,
+      IDSCHEMA: source.IDSCHEMA ?? source.identitySchema,
+      IDLEGACY: source.IDLEGACY ?? (source.identityLegacy == null ? undefined : Number(source.identityLegacy)),
       DEVTYPE: source.DEVTYPE || source.receiverType || source.type,
       NUMBER: source.NUMBER || source.number,
       PHYSICAL: source.PHYSICAL ?? source.pixels,
@@ -1131,6 +1317,14 @@
     bridge.preferredGatewayRid = exactRid(raw.gatewayRid) || bridge.preferredGatewayRid || rid;
     persistBridge();
     return bridge.receivers[rid];
+  }
+
+  let pairingOperationActive = false;
+  async function runPairOperation(operation) {
+    if (pairingOperationActive) throw new Error('Er wordt al een receiver toegevoegd. Rond die stap eerst af.');
+    pairingOperationActive = true;
+    try { return await operation(); }
+    finally { pairingOperationActive = false; }
   }
 
   function closeRejectedGateway(device) {
@@ -1220,6 +1414,7 @@
           ? await operation
           : await withTimeout(operation, 12000, 'Receiverlijst timeout');
         const devices = Array.isArray(inventory) ? inventory : inventory?.devices;
+        if (Array.isArray(devices)) assertIdentityInventory(devices);
         if (Array.isArray(devices)) devices.forEach((raw) => {
           try {
             const fields = fieldsFromTransport(raw);
@@ -1525,7 +1720,7 @@
       offset = targets.slice(0, targetIndex).reduce((sum, item) => sum + clamp(item.pixels, 1, 1024, 1), 0);
     }
     const variant = clamp(state.variant, 0, 255, 0);
-    const lineCount = clamp(target.lineCount || (isParallel ? targets.length : 1), 1, 32, 1);
+    const lineCount = clamp(target.lineCount || (isParallel ? targets.length : 1), 1, 120, 1);
     const lineTimed = isParallel && lineCount > 1 &&
       ((receiverType === 'SPI' && ((variant >= 90 && variant <= 102) || (variant >= 104 && variant <= 111) || variant === 128)) ||
        (receiverType === 'RGBW' && ((variant >= 5 && variant <= 16) || (variant >= 21 && variant <= 24) || variant === 26 || variant === 27)));
@@ -1801,7 +1996,8 @@
     if (action === 'CONFIG') {
       const requestedMask = clamp(target.portMask, 1, receiverType === 'RGBW' ? 3 : 15, receiverType === 'RGBW' ? 3 : 1);
       const singlePortLegacy = receiverType === 'SPI' && receiverPortCapacity(bridge.receivers[rid] || {}, 'SPI') === 1;
-      const reportedMask = reply.PORTACKMASK ?? reply.PORTMASK ?? (receiverType === 'RGBW' ? reply.PHYSICAL : singlePortLegacy ? 1 : undefined);
+      // PHYSICAL is a capacity/count, never a bitmask proving enabled outputs.
+      const reportedMask = reply.PORTACKMASK ?? reply.PORTMASK ?? (singlePortLegacy ? 1 : undefined);
       portMatch = reportedMask !== undefined && Number(reportedMask) === requestedMask &&
         (rawPort !== undefined ? Number(rawPort) === requestedPort : legacySinglePortAck);
       if (requestedMap) mapMatch = requestedPort > 0 && rgbwChannelMap(reply.MAP) === requestedMap;
@@ -1809,6 +2005,15 @@
     }
     const deliveryConfirmed = accepted && idMatch && targetMatches && portMatch && mapMatch && portModeMatch && rawMatch &&
       ['1', 'DIRECT', 'OK', 'DELIVERED'].includes(targetAck);
+    // A gateway can acknowledge enqueueing a routed LIVE without claiming
+    // which physical port has applied it. This is NOT an endpoint/port ACK.
+    // Accept that limited evidence only from this session's known gateway;
+    // an explicit wrong port, unrelated RID or mismatched ID is never healthy.
+    const activeGatewayRid = exactRid(transportStatus().gateway?.rid);
+    const gatewayQueued = action === 'LIVE' && accepted && idMatch && targetMatches &&
+      targetAck === 'PENDING' && Boolean(activeGatewayRid) && rid !== activeGatewayRid &&
+      directReplyRid === activeGatewayRid &&
+      (rawPort === undefined || Number(rawPort) === requestedPort);
     const requestedGeneration = clamp(sent?.GEN, 0, 4294967295, 0);
     const detail = String(reply.DETAIL || '').toUpperCase();
     const selectedMask = clamp(reply.PORTACKMASK ?? reply.PORTMASK ?? target.portMask,
@@ -1839,13 +2044,12 @@
     // non-terminal; V21 commands become confirmed only after the requested
     // generation is visible as applied. Legacy firmware without generation
     // telemetry retains its attributable direct-ACK behaviour.
-    const finalApplied = !['SCHEDULED', 'PENDING', 'QUEUED'].includes(detail) && generationApplied;
+    const finalApplied = targetAck !== 'PENDING' && !['SCHEDULED', 'PENDING', 'QUEUED'].includes(detail) && generationApplied;
     const confirmed = deliveryConfirmed && finalApplied;
     // Routed LIVE updates are intentionally fire-and-continue: the gateway
     // confirms radio acceptance with PENDING so animation sliders stay fast.
     // This is healthy delivery queueing, not a missing receiver response.
-    const pendingDelivery = action === 'LIVE' && accepted && idMatch && targetMatches && portMatch &&
-      (targetAck === 'PENDING' || !finalApplied);
+    const pendingDelivery = gatewayQueued || (action === 'LIVE' && deliveryConfirmed && !finalApplied);
     const reportedPhysical = reply.PHYSICAL;
     const configuredPhysical = action === 'CONFIG' && receiverType === 'SPI' && confirmed
       ? clamp(target.pixels, 1, 1024, 60)
@@ -1857,7 +2061,7 @@
       gatewayAck: accepted, targetAck: targetAck || null, target: rid,
       logicalTarget: logicalRid,
       reportedTarget: reportedTarget || null, detail: reply.DETAIL,
-      deliveryConfirmed, finalApplied, generationApplied,
+      deliveryConfirmed, finalApplied, generationApplied, hasGenerationTelemetry, gatewayQueued,
       receiverType: reply.DEVTYPE || receiverType || body.state?.receiverType || 'SPI',
       port: rawPort ?? requestedPort, portMatch, mapMatch, portModeMatch, requestedRaw, rawMatch,
       channelMap: rgbwChannelMap(reply.MAP || (requestedPort === 1 ? reply.MAP1 : requestedPort === 2 ? reply.MAP2 : '')) || null,
@@ -1884,15 +2088,18 @@
     };
   }
 
-  async function waitForAppliedReply(action, target, sent, initialReply) {
+  async function waitForAppliedReply(action, target, sent, initialReply, shouldYield = () => false) {
     if (!sent?.GEN || !['LIVE', 'SAVE', 'CONFIG'].includes(action)) return initialReply;
     let merged = initialReply;
     let state = resultFromReply(action, {}, target, sent, merged);
-    if (state.confirmed || !state.deliveryConfirmed || state.finalApplied) return merged;
+    if (state.confirmed || (!state.deliveryConfirmed && !state.gatewayQueued) || state.finalApplied) return merged;
+    const requiresAppliedGeneration = state.gatewayQueued;
     const deadline = Date.now() + Math.min(1500, Math.max(500, commandTimeout(action)));
     let pause = 35;
     while (Date.now() < deadline) {
+      if (shouldYield()) return merged;
       await new Promise(resolve => setTimeout(resolve, pause));
+      if (shouldYield()) return merged;
       const remaining = deadline - Date.now();
       if (remaining <= 0) break;
       const physicalRid = exactRid(target.physicalRid || target.rid);
@@ -1900,8 +2107,21 @@
         TYPE: 'STATUS', TARGET: physicalRid, DEVTYPE: target.receiverType,
         PORT: clamp(target.port ?? target.outputPort, 0, target.receiverType === 'RGBW' ? 2 : 4, 0)
       };
-      const status = await transact(request, Math.max(450, Math.min(1100, remaining)), true);
-      if (status.STATUS !== 'OK' || exactRid(status.TARGETRID || status.RID) !== physicalRid) {
+      let status;
+      try {
+        status = await transact(request, Math.max(450, Math.min(1100, remaining)), true);
+      } catch (_) {
+        // A failed verification probe cannot undo attributable acceptance or
+        // prove application. Keep the pending state, just as batch verification
+        // does, instead of claiming the whole receiver route disconnected.
+        return merged;
+      }
+      const statusEvidence = resultFromReply('STATUS', {}, target, request, status);
+      const statusSource = exactRid(status.RID);
+      const sourceMatches = statusSource === physicalRid ||
+        (Boolean(statusSource) && statusSource === exactRid(transportStatus().gateway?.rid));
+      if (!sourceMatches || !statusEvidence.deliveryConfirmed ||
+          (requiresAppliedGeneration && !statusEvidence.hasGenerationTelemetry)) {
         pause = Math.min(180, pause * 2);
         continue;
       }
@@ -2022,7 +2242,7 @@
     setupTransactions.delete(rid);
   }
 
-  async function executeTarget(body, action, targets, target, index, afterFanout = null) {
+  async function executeTarget(body, action, targets, target, index, afterFanout = null, shouldYield = () => false) {
     if (otaController?.busy) {
       return failedTargetResult(target, 'Firmware-update actief · deze verouderde lichtopdracht is veilig overgeslagen');
     }
@@ -2030,10 +2250,11 @@
       return failedTargetResult(target, 'Receiver tijdelijk overgeslagen na meerdere ontbrekende antwoorden');
     }
     try {
+      assertReceiverIdentity({ RID: exactRid(target.physicalRid || target.rid) });
       let sent = commandFields(body, target, index, targets);
       let reply = await transact(sent, commandTimeout(action), true);
       const staleGeneration = reply.STATUS === 'ERROR' && /STALE_GENERATION/i.test(String(reply.DETAIL || reply.CODE || ''));
-      if (staleGeneration && sent.GEN) {
+      if (staleGeneration && sent.GEN && !shouldYield()) {
         const physicalRid = exactRid(target.physicalRid || target.rid);
         sent = { ...sent, GEN: reserveGeneration(body, physicalRid, generationFloorFromFields(reply)) };
         reply = await transact(sent, commandTimeout(action), true);
@@ -2043,7 +2264,7 @@
       // only then check the applied generations. CONFIG/SAVE remain ordered.
       const deferApplied = Array.isArray(afterFanout) && action === 'LIVE' &&
         body.synchronize === true && targets.length > 1;
-      if (!deferApplied) reply = await waitForAppliedReply(action, target, sent, reply);
+      if (!deferApplied) reply = await waitForAppliedReply(action, target, sent, reply, shouldYield);
       let result = resultFromReply(action, body, target, sent, reply);
       if (['SETUP_BEGIN', 'SETUP_KEEPALIVE', 'SETUP_END', 'SETUP_CANCEL'].includes(action) &&
           !result.confirmed && /UNKNOWN|ONBEKEND/.test(String(reply.DETAIL || '').toUpperCase())) {
@@ -2073,16 +2294,22 @@
         if (requestedPort) statusRequest.PORT = requestedPort;
         const status = await transact(statusRequest, 3200, true);
         const singlePortLegacy = target.receiverType === 'SPI' && receiverPortCapacity(bridge.receivers[physicalRid] || {}, 'SPI') === 1;
-        const statusMask = clamp(status.PORTACKMASK ?? status.PORTMASK ?? (target.receiverType === 'RGBW' ? status.PHYSICAL : singlePortLegacy ? 1 : undefined), 0, maximumMask, 0);
+        const statusMask = clamp(status.PORTACKMASK ?? status.PORTMASK ?? (singlePortLegacy ? 1 : undefined), 0, maximumMask, 0);
         const statusPort = status.PORTACK ?? status.PORT;
         const statusPortMatches = !requestedPort || Number(statusPort) === requestedPort ||
           (singlePortLegacy && requestedPort === 1 && statusPort == null);
         const requestedMap = target.receiverType === 'RGBW' ? rgbwChannelMap(target.channelMap ?? target.map) : '';
         const statusMapMatches = !requestedMap || rgbwChannelMap(status.MAP) === requestedMap;
-        if (status.STATUS === 'OK' && exactRid(status.TARGETRID) === physicalRid && statusMask === requestedMask && statusPortMatches && statusMapMatches) {
+        const statusEvidence = resultFromReply('STATUS', {}, target, statusRequest, status);
+        const statusSource = exactRid(status.RID);
+        const sourceMatches = statusSource === physicalRid ||
+          (Boolean(statusSource) && statusSource === exactRid(transportStatus().gateway?.rid));
+        if (sourceMatches && statusEvidence.deliveryConfirmed &&
+            statusMask === requestedMask && statusPortMatches && statusMapMatches) {
           /* The CONFIG response already matched its own ID; STATUS only
-             verifies the committed fields. Preserve that CONFIG ID when the
-             two pieces of evidence are combined. */
+             verifies the committed fields after its own ID, source, target
+             and port have also been checked. Preserve that CONFIG ID only
+             when these two independently attributable replies are combined. */
           reply = { ...reply, ...status, ID: sent.ID, TARGETRID: physicalRid, PORTMASK: String(statusMask) };
           const verified = resultFromReply(action, body, target, sent, reply);
           result = { ...verified, confirmed: verified.confirmed, portMatch: true, mapMatch: verified.mapMatch };
@@ -2139,11 +2366,11 @@
         if (bridge.preferredGatewayRid === physicalRid) bridge.preferredGatewayRid = Object.keys(bridge.receivers)[0] || '';
         persistBridge();
       }
-      if (deferApplied && result.deliveryConfirmed && !result.finalApplied) {
+      if (deferApplied && (result.deliveryConfirmed || result.gatewayQueued) && !result.finalApplied) {
         const initialReply = reply;
         afterFanout.push(async () => {
           try {
-            const applied = await waitForAppliedReply(action, target, sent, initialReply);
+            const applied = await waitForAppliedReply(action, target, sent, initialReply, shouldYield);
             Object.assign(result, resultFromReply(action, body, target, sent, applied));
           } catch (_) {
             // An accepted scheduled frame remains pending when its status read
@@ -2154,6 +2381,12 @@
       }
       return result;
     } catch (error) {
+      if (/\bLIVE_SUPERSEDED\b/.test(String(error?.message || error))) {
+        // The native latest-only queue deliberately discarded an old intent.
+        // It has no ACK and is neither applied nor a lost receiver connection.
+        return { id: target.id, target: exactRid(target.physicalRid || target.rid),
+          accepted: false, confirmed: false, superseded: true, detail: 'LIVE_SUPERSEDED' };
+      }
       recordTargetHealth(target, false);
       return failedTargetResult(target, String(error?.message || error));
     }
@@ -2173,7 +2406,7 @@
     return results;
   }
 
-  async function executeCommands(rawBody) {
+  async function executeCommands(rawBody, hasNewerIntent = () => false) {
     const checked = validatedCommand(rawBody);
     const { body, action, targets } = checked;
     if (otaController?.busy) {
@@ -2194,7 +2427,14 @@
         gatewayAck: false, target: target.rid, detail: 'Maak eerst verbinding met de installatiecontroller'
       })) };
     }
-    await prepareSynchronizedStarts(body, action, targets);
+    const replacedBeforeSend = () => action === 'LIVE' && hasNewerIntent();
+    if (replacedBeforeSend()) return { results: [], superseded: true };
+    await prepareSynchronizedStarts(body, action, targets, replacedBeforeSend);
+    if (replacedBeforeSend()) return { results: [], superseded: true };
+    // Do not push a scheduled group's start endlessly into the future during
+    // a gesture. Once a cohort starts sending, finish all its outputs and
+    // verify it. Only an immediate frame may yield to a newer exact-scope LIVE.
+    const shouldYield = () => !bodyStarts.has(body) && replacedBeforeSend();
     const status = transportStatus();
     const gatewayRid = exactRid(status.gateway?.rid || ble.rid);
     const ordered = targets.map((target, index) => ({ target, index })).sort((left, right) => {
@@ -2220,12 +2460,15 @@
     const completed = (await runTargetPool(groups, concurrency, async (entries) => {
       const receiverResults = [];
       for (const { target, index } of entries) {
-        receiverResults.push({ index, result: await executeTarget(body, action, targets, target, index, afterFanout) });
+        if (shouldYield()) break;
+        receiverResults.push({ index, result: await executeTarget(body, action, targets, target, index, afterFanout, shouldYield) });
       }
       return receiverResults;
     })).flat();
     await runTargetPool(afterFanout, concurrency, verify => verify());
-    return { results: completed.sort((left, right) => left.index - right.index).map((entry) => entry.result) };
+    return { results: completed.sort((left, right) => left.index - right.index).map((entry) => entry.result),
+      ...(replacedBeforeSend() || (completed.length && completed.every(entry => entry.result.superseded))
+        ? { superseded: true } : {}) };
   }
 
   class LatestCommandBroker {
@@ -2239,9 +2482,9 @@
     key(body) {
       const targets = Array.isArray(body?.targets) ? body.targets : [];
       return targets.map((target) => {
-        const identity = String(target.rid || target.receiverId || target.deviceId || target.id || '').toUpperCase();
-        const port = target.port || target.outputPort || '';
-        return identity + (port ? `:${port}` : '');
+        const identity = String(target.physicalRid || target.rid || target.receiverId || target.deviceId || target.id || '').toUpperCase();
+        const port = target.port ?? target.outputPort ?? 1;
+        return `${identity}:${port}`;
       }).join('|') || 'ALL';
     }
 
@@ -2268,11 +2511,17 @@
         };
         if (latestOnly) {
           const previous = this.live.get(key);
-          if (previous?.fingerprint === job.fingerprint) {
+          // A repeated value is only redundant if no different scope arrived
+          // after it. P1 → all off → P1 must finish with P1 on, even when its
+          // final value equals the first. Do not split multi-output bodies:
+          // their original target order defines continuous SPI geometry.
+          const lastPendingKey = [...this.live.keys()].at(-1);
+          if (previous?.fingerprint === job.fingerprint && lastPendingKey === key && !this.durable.length) {
             previous.followers.push(resolve);
             return;
           }
-          if (this.activeLive?.key === key && this.activeLive.fingerprint === job.fingerprint) {
+          if (this.activeLive?.key === key && this.activeLive.fingerprint === job.fingerprint
+              && !this.durable.length && [...this.live.keys()].every(pendingKey => pendingKey === key)) {
             // The physical receiver is already receiving this exact state. If
             // another value was queued in between, it is obsolete now that the
             // customer returned to the active value.
@@ -2283,7 +2532,10 @@
             this.activeLive.followers.push(resolve);
             return;
           }
-          if (previous) this.resolveJob(previous, { results: [], superseded: true });
+          if (previous) {
+            this.live.delete(key);
+            this.resolveJob(previous, { results: [], superseded: true });
+          }
           this.live.set(key, job);
         } else {
           if (['CALIBRATE_CLEAR', 'CONFIG', 'UNPAIR'].includes(action)) {
@@ -2311,7 +2563,8 @@
           job = first[1];
         }
         if (job.latestOnly) this.activeLive = job;
-        try { this.resolveJob(job, await executeCommands(job.body)); }
+        try { this.resolveJob(job, await executeCommands(job.body,
+          () => job.latestOnly && this.live.has(job.key))); }
         catch (error) {
           const targets = Array.isArray(job.body?.targets) ? job.body.targets : [];
           this.resolveJob(job, {
@@ -2335,6 +2588,7 @@
   function saveOtaReceiver(record) {
     const rid = exactRid(record?.rid);
     if (!rid) throw new Error('Ongeldige receiveridentiteit na firmwarecontrole');
+    assertReceiverIdentity(record);
     bridge.receivers[rid] = { ...(bridge.receivers[rid] || {}), ...record, rid };
     persistBridge();
     return bridge.receivers[rid];
@@ -2416,10 +2670,10 @@
         return json({ ok: false, busy: true, error: 'Wacht tot de firmware-update klaar is' }, 409);
       }
       try {
-        const receiver = await pairReceiver(body.number || 1);
+        const receiver = await runPairOperation(() => pairReceiver(body.number || 1));
         return json({ ok: true, device: receiver, transport: transportStatus() });
       } catch (error) {
-        return json({ ok: false, error: String(error?.message || error), transport: transportStatus() });
+        return json({ ok: false, cancelled: error?.code === 'IDENTIFY_CANCELLED', cancelReason: error?.reason, error: String(error?.message || error), transport: transportStatus() });
       }
     }
     if (path === '/api/pair-test') {
@@ -2427,11 +2681,13 @@
         return json({ ok: false, busy: true, error: 'Wacht tot de firmware-update klaar is' }, 409);
       }
       try {
-        const receiver = await pairReceiverRecovery(body.number || 1);
+        const receiver = await runPairOperation(() => pairReceiverRecovery(body.number || 1));
         return json({ ok: true, device: receiver, temporaryBluetooth: true, recovery: true, transport: transportStatus() });
       } catch (error) {
         return json({
           ok: false,
+          cancelled: error?.code === 'IDENTIFY_CANCELLED',
+          cancelReason: error?.reason,
           error: String(error?.message || error),
           temporaryBluetooth: true,
           recovery: true,
@@ -2442,10 +2698,10 @@
     if (path === '/api/recovery/pair') {
       if (otaController?.busy) return json({ ok: false, busy: true, error: 'Wacht tot de firmware-update klaar is' }, 409);
       try {
-        const receiver = await pairReceiverRecovery(body.number || 1);
+        const receiver = await runPairOperation(() => pairReceiverRecovery(body.number || 1));
         return json({ ok: true, device: receiver, recovery: true, transport: transportStatus() });
       } catch (error) {
-        return json({ ok: false, error: String(error?.message || error), recovery: true, transport: transportStatus() }, 409);
+        return json({ ok: false, cancelled: error?.code === 'IDENTIFY_CANCELLED', cancelReason: error?.reason, error: String(error?.message || error), recovery: true, transport: transportStatus() }, 409);
       }
     }
     if (path === '/api/recovery/connect') {

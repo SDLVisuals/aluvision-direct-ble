@@ -161,7 +161,7 @@
     const saved = Object.values(window.AluvisionDirectBridge?.receivers || {})
       .find((item) => exactRid(item?.rid || item?.RID) === rid);
     const ssid = String(saved?.apSsid || saved?.APSSID || '').trim();
-    return /^ALUVISION-(?:SPI|RGBW)-[0-9A-F]{4}$/i.test(ssid) ? ssid : '';
+    return /^ALUVISION-(?:SPI|RGBW)-(?:[0-9A-F]{4}|[0-9A-F]{12})$/i.test(ssid) ? ssid : '';
   }
 
   function validateDirectGateway() {
@@ -443,6 +443,8 @@
 
   function remember(inventory) {
     const incoming = Array.isArray(inventory?.devices) ? inventory.devices : [];
+    try { window.AluvisionReceiverIdentity?.assertInventory(incoming); }
+    catch (error) { ready = false; throw error; }
     rememberNfcPairTokens(incoming);
     const incomingGateway = exactRid(inventory?.gatewayRid) || exactRid(incoming[0]?.RID || incoming[0]?.rid);
     const stale = inventory?.stale === true;
@@ -677,6 +679,30 @@
     const number = Math.max(1, Math.min(250, Number(restoring ? stored?.number : payload.number) || 1));
     const key = networkKey();
     if (!key) throw new Error(text('De installatiebeveiliging is nog niet klaar.', 'Installation security is not ready yet.', 'La sécurité de l’installation n’est pas encore prête.', 'Die Installationssicherheit ist noch nicht bereit.'));
+    const generation = transportGeneration;
+    const selectedGateway = gatewayRid;
+    const currentPair = () => ready && generation === transportGeneration && gatewayRid === selectedGateway;
+    if (!window.AluvisionIdentifyBeforePair?.confirm) {
+      throw new Error('Herkenning kon niet worden geopend. Open de app opnieuw.');
+    }
+    const recognition = await window.AluvisionIdentifyBeforePair.confirm({
+      receiver: {
+        rid, name: selected.name || selected.NAME || 'Receiver',
+        receiverType: selected.DEVTYPE || selected.receiverType || 'SPI',
+        portCount: Number(selected.PORTS) || 1
+      },
+      isCurrent: currentPair,
+      identify: async ({ rid: target, requestId, signal }) => {
+        if (target !== rid || !currentPair() || signal.aborted) throw new Error('Verbinding gewijzigd. Kies de receiver opnieuw.');
+        await identifyReceiver(target, { signal });
+        if (!currentPair() || signal.aborted) throw new Error('Herkenning geannuleerd.');
+        return { ok: true, rid: target, requestId };
+      }
+    });
+    if (!recognition.confirmed || recognition.rid !== rid || !currentPair()) {
+      throw Object.assign(new Error('Toevoegen geannuleerd.'), { code: 'IDENTIFY_CANCELLED', reason: recognition.reason });
+    }
+    window.modal?.(`<section class="native-pair-progress"><h2>${text('Receiver toevoegen…', 'Adding receiver…', 'Ajout du récepteur…', 'Receiver wird hinzugefügt…')}</h2><p class="sub">${text('Daarna stel je de LED Lines in.', 'Next, set up the LED Lines.', 'Configurez ensuite les LED Lines.', 'Danach richtest du die LED Lines ein.')}</p><div id="receiverNfcStatus" class="nfc-status scanning" role="status"></div></section>`);
     const selectedRole = String(selected.MESHROLE || selected.ROLE || '').toUpperCase();
     const needsMainConfiguration = rid === gatewayRid && (selectedRole === 'STANDALONE' || !used.size);
     if (needsMainConfiguration) {
@@ -841,7 +867,12 @@
   }
 
   async function transact(fields, options = {}) {
+    const checkCancelled = () => {
+      if (options?.signal?.aborted) throw Object.assign(new Error('Herkenning geannuleerd.'), { code: 'IDENTIFY_CANCELLED' });
+    };
+    checkCancelled();
     await ensureNativeTransportState();
+    checkCancelled();
     const timeout = typeof options === 'number' ? options : Number(options?.timeout || options?.timeoutMs || 3600);
     const commandType = String(fields?.TYPE || '').trim().toUpperCase();
     const commandRid = exactRid(fields?.TARGET) || gatewayRid;
@@ -864,6 +895,7 @@
     // The web command broker/resilience layer owns the single newest replay.
     const replayableCommand = REPLAYABLE_COMMANDS.has(commandType) && !ephemeralCalibration;
     const sendOnce = async () => {
+      checkCancelled();
       validateDirectGateway();
       const result = await nativeCall('transact', { fields: securedFields, timeoutMs: timeout }, Math.max(5000, timeout + 2200));
       noteTransportSuccess();
@@ -897,6 +929,7 @@
     try {
       return await sendOnce();
     } catch (firstError) {
+      checkCancelled();
       noteTransportFailure(firstError);
       if (!replayableCommand) throw firstError;
 
@@ -917,10 +950,11 @@
   }
 
   const adapter = Object.freeze({
-    // UDP can fan out safely. CoreBluetooth has one ordered GATT write/notify
-    // lane, so concurrent target requests only create a queue of stale light
-    // states and increase the chance of a false timeout.
-    get supportsConcurrentFanout() { return selectedTransportMode !== 'bluetooth'; },
+    // Both native transports have one ordered command/ACK lane, including
+    // Wi-Fi's serviceUserTransactions queue. Advertise that actual capacity:
+    // parallel clock probes otherwise count native queue time as radio RTT,
+    // skewing receiver clocks and under-budgeting multi-receiver start times.
+    get supportsConcurrentFanout() { return false; },
     supportsOta: false,
     // Every native bridge operation already owns a bounded timeout. The shared
     // web transport must not race it with a shorter Promise.race: that reports
@@ -1135,7 +1169,7 @@
       } else if (!available.length) {
         status.innerHTML = `<span><b>${text('Geen nieuwe receiver gevonden', 'No new receiver found', 'Aucun nouveau récepteur trouvé', 'Kein neuer Receiver gefunden')}</b><small>${text('De reeds toegevoegde verlichting blijft verbonden.', 'Your existing lighting remains connected.', 'Votre éclairage existant reste connecté.', 'Deine vorhandene Beleuchtung bleibt verbunden.')}</small></span>`;
       } else {
-        status.innerHTML = `<span><b>${available.length} ${text(available.length === 1 ? 'nieuwe receiver gevonden' : 'nieuwe receivers gevonden', available.length === 1 ? 'new receiver found' : 'new receivers found', available.length === 1 ? 'nouveau récepteur trouvé' : 'nouveaux récepteurs trouvés', available.length === 1 ? 'neuer Receiver gefunden' : 'neue Receiver gefunden')}</b><small>${text('Laat een LED Line knipperen om zeker te zijn en kies daarna Toevoegen.', 'Flash a LED Line to verify it, then choose Add.', 'Faites clignoter une LED Line pour la vérifier, puis choisissez Ajouter.', 'Lass eine LED Line zur Kontrolle blinken und wähle dann Hinzufügen.')}</small></span>`;
+        status.innerHTML = `<span><b>${available.length} ${text(available.length === 1 ? 'nieuwe receiver gevonden' : 'nieuwe receivers gevonden', available.length === 1 ? 'new receiver found' : 'new receivers found', available.length === 1 ? 'nouveau récepteur trouvé' : 'nouveaux récepteurs trouvés', available.length === 1 ? 'neuer Receiver gefunden' : 'neue Receiver gefunden')}</b><small>${text('Tik op Toevoegen. De gekozen LED Line knippert ter herkenning.', 'Tap Add. The selected LED Line flashes for identification.', 'Touchez Ajouter. La LED Line choisie clignote pour être identifiée.', 'Tippe auf Hinzufügen. Die gewählte LED Line blinkt zur Erkennung.')}</small></span>`;
       }
     }
   }
@@ -1170,16 +1204,8 @@
         const rid = exactRid(device.RID || device.rid);
         return ready && rid && (!configured.has(rid) || candidateNeedsReconnect(device, used)) && receiverReportsOnline(device);
       });
-      // The user has already chosen this main receiver in the connection
-      // screen. Open its shared PIN/port wizard for either radio immediately.
-      // Never select an arbitrary satellite, or reopen a dismissed screen.
-      const firstMain = setupFirst && candidateRoot?.isConnected &&
-        document.getElementById('nativeReceiverCandidates') === candidateRoot &&
-        devices.find(device => ready && exactRid(device.RID || device.rid) === gatewayRid && receiverReportsOnline(device));
-      if (firstMain) {
-        await window.addNativeCandidate(gatewayRid, null);
-        return;
-      }
+      // Discovery only lists receivers. Recognition/claim starts from the
+      // customer's Add tap, never merely because a radio has connected.
       if (available.length === 1 && !configured.has(exactRid(available[0].RID || available[0].rid))) {
         if (status) {
           status.className = 'nfc-status success';
@@ -1200,6 +1226,16 @@
     }
   };
 
+  async function identifyReceiver(target, options = {}) {
+    const reply = await transact({ V: 18, TYPE: 'MESH_IDENTIFY', TARGET: target, PORT: 0, KEY: networkKey() }, { timeout: 3600, ...options });
+    if (String(reply.STATUS || '').toUpperCase() !== 'OK' ||
+        String(reply.DETAIL || '').toUpperCase() !== 'MESH_IDENTIFIED' ||
+        String(reply.TARGETACK || '') !== '1' || exactRid(reply.TARGETRID) !== target) {
+      throw new Error(text('De LED Line bevestigde het knipperen niet. Controleer de verbinding en receiverfirmware.', 'The LED Line did not confirm flashing. Check the connection and receiver firmware.', 'La LED Line n’a pas confirmé le clignotement. Vérifiez la connexion et le firmware.', 'Die LED Line hat das Blinken nicht bestätigt. Prüfe Verbindung und Receiver-Firmware.'));
+    }
+    return reply;
+  }
+
   window.identifyNativeCandidate = async function identifyNativeCandidate(rid, button) {
     const target = exactRid(rid);
     const device = devices.find((item) => exactRid(item.RID || item.rid) === target);
@@ -1207,14 +1243,7 @@
     const previous = button?.innerHTML;
     if (button) { button.disabled = true; button.textContent = text('Knippert…', 'Flashing…', 'Clignote…', 'Blinkt…'); }
     try {
-      const fields = { V: 18, TYPE: 'MESH_IDENTIFY', TARGET: target, KEY: networkKey() };
-      const reply = await transact(fields, { timeout: 3600 });
-      if (String(reply.STATUS || '').toUpperCase() !== 'OK' ||
-          String(reply.DETAIL || '').toUpperCase() !== 'MESH_IDENTIFIED' ||
-          String(reply.TARGETACK || '') !== '1' ||
-          exactRid(reply.TARGETRID) !== target) {
-        throw new Error(text('De LED Line bevestigde de herkenning niet.', 'The LED Line did not confirm identification.', 'La LED Line n’a pas confirmé l’identification.', 'Die LED Line hat die Erkennung nicht bestätigt.'));
-      }
+      await identifyReceiver(target);
       window.toast?.(text('De gekozen LED Line knippert nu', 'The selected LED Line is flashing now', 'La LED Line choisie clignote', 'Die gewählte LED Line blinkt jetzt'));
     } catch (error) {
       window.toast?.(String(error?.message || error));
@@ -1386,6 +1415,10 @@
       }
       try {
         const response = await api('/api/pair', { number: nextNativeReceiverNumber() });
+        if (response?.cancelled) {
+          if (response.cancelReason === 'other-receiver') pairingModal(selectedTarget);
+          return;
+        }
         if (!response?.ok) throw new Error(response?.error || text('Geen receiver gevonden', 'No receiver found', 'Aucun récepteur trouvé', 'Kein Receiver gefunden'));
         const previous = db.devices.find((item) => item.id === response.device.id);
         const gateway = String(response.transport?.gateway?.rid || '').toUpperCase();

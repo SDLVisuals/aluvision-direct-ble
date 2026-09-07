@@ -392,6 +392,43 @@ body.v21 .v21-line-selector[data-v21-many="true"] small:last-child {
   display: none;
 }
 
+/* Large installations use the same line controls, with a bounded searchable
+   list. Every endpoint remains available; the editor itself never grows to
+   sixty or a hundred-and-twenty chips tall. */
+body.v21 .v21-large-line-scope { min-width:0; margin:8px 0 14px; }
+body.v21 .v21-large-line-scope .v21-line-scope-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+body.v21 .v21-large-line-scope h3 { margin:0; font-size:14px; }
+body.v21 .v21-large-line-scope .v21-select-every-line { min-height:44px; margin:0; padding:8px 12px; font-size:12px; white-space:nowrap; }
+body.v21 .v21-large-line-picker { overflow:hidden; border:1px solid var(--line); border-radius:14px; background:var(--panel); }
+body.v21 .v21-large-line-picker > summary { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:58px; padding:10px 12px; color:var(--ink); cursor:pointer; list-style:none; }
+body.v21 .v21-large-line-picker > summary::-webkit-details-marker { display:none; }
+body.v21 .v21-large-line-picker > summary b, body.v21 .v21-large-line-picker > summary small { display:block; }
+body.v21 .v21-large-line-picker > summary b { font-size:13px; }
+body.v21 .v21-large-line-picker > summary small { margin-top:3px; font-size:11px; color:var(--mut); }
+body.v21 .v21-large-line-picker > summary i { font-style:normal; font-size:20px; }
+body.v21 .v21-large-line-picker[open] > summary { border-bottom:1px solid var(--line); }
+body.v21 .v21-large-line-picker[open] > summary i { transform:rotate(180deg); }
+body.v21 .v21-line-search { display:grid; grid-template-columns:auto minmax(0,1fr); gap:8px; align-items:center; margin:10px; color:var(--mut); font-size:11px; }
+body.v21 .v21-line-search input { min-width:0; width:100%; min-height:44px; padding:9px 10px; border:1px solid var(--line); border-radius:10px; background:var(--panel-2); color:var(--ink); font:inherit; font-size:16px; }
+body.v21 .v21-large-line-picker .v21-large-line-list,
+body.v21.v21-in-group #zones .v21-large-line-picker .v21-large-line-list { display:grid; grid-template-columns:1fr; gap:6px; max-height:228px; overflow-y:auto; overscroll-behavior:contain; padding:0 9px 9px; }
+body.v21 .v21-large-line-picker .v21-large-line-list > button,
+body.v21.v21-in-group #zones .v21-large-line-picker .v21-large-line-list > button { min-height:66px !important; grid-template-columns:34px minmax(0,1fr); gap:10px !important; padding:9px !important; }
+body.v21 .v21-large-line-picker .v21-large-line-list > button i { width:32px !important; height:32px !important; font-size:12px; }
+body.v21 .v21-large-line-picker .v21-large-line-list > button b { font-size:12px !important; }
+body.v21.v21-in-group #zones .v21-large-line-picker .v21-large-line-list > button small { display:block !important; font-size:11px !important; line-height:1.3; }
+body.v21 .v21-large-line-list > button[hidden], body.v21 .v21-management-line-list > [hidden] { display:none !important; }
+body.v21 .v21-line-search-result { display:block; margin:0; padding:7px 12px 11px; color:var(--mut); font-size:11px; }
+body.v21 .v21-management-line-list { max-height:480px; overflow-y:auto; overscroll-behavior:contain; padding-right:4px; }
+body.v21 .v21-management-line-list .v187-receiver-copy > small { font-size:11px; line-height:1.35; }
+body.v21 .v21-preview-pager { display:grid; grid-template-columns:44px minmax(0,1fr) 44px; align-items:center; gap:8px; margin:8px 0; text-align:center; }
+body.v21 .v21-preview-pager .button { min-width:44px; min-height:44px; padding:6px; margin:0; font-size:24px; }
+body.v21 .v21-preview-pager b, body.v21 .v21-preview-pager small { display:block; }
+body.v21 .v21-preview-pager b { font-size:12px; }
+body.v21 .v21-preview-pager small { margin-top:3px; color:var(--mut); font-size:10px; }
+body.v21 #zones [data-v21-paged-preview="true"][data-v21-preview-type="pixel-tunnel"] { height:286px !important; }
+body.v21 #zones [data-v21-paged-preview="true"] .stacked-row-overlays { grid-template-rows:repeat(var(--v21-preview-count,8),minmax(0,1fr)); }
+body.v21 #zones [data-v21-paged-preview="true"] .stacked-row-overlays.is-vertical { grid-template-columns:repeat(var(--v21-preview-count,8),minmax(0,1fr)) !important; grid-template-rows:1fr !important; inset:44px var(--v21-preview-side-inset,24px) 52px !important; }
 body.v21 .v21-primary-settings {
   scroll-margin-top: 84px;
 }
@@ -949,6 +986,20 @@ body.v21 #zones [data-v21-primary-preview][data-v21-preview-type="whole-line"] c
   image-rendering: auto;
 }
 
+body.v21 #zones [data-v21-preview-type="whole-line"] .v18162-preview-hud {
+  grid-auto-flow: column;
+  grid-template-columns: minmax(58px, 1fr);
+  grid-auto-columns: minmax(48px, auto);
+}
+
+body.v21 #zones [data-v21-preview-type="whole-line"] .v18162-preview-metric[hidden] {
+  display: none !important;
+}
+
+body.v21 #zones [data-v21-preview-type="whole-line"] .v18162-preview-metric small {
+  font-size: 7px;
+}
+
 body.v21 #zones [data-v21-primary-preview][data-v21-preview-type="whole-line"] .rgbw-preview-lines {
   display: grid;
   grid-template-columns: 1fr;
@@ -1053,7 +1104,9 @@ body.v21 #zones .v21-whole-line-guide.is-many em {
 /* Interactive line targets sit above, never on top of painted RGBW rails. */
 body.v21 #zones [data-v21-primary-preview][data-v21-preview-type="whole-line"]:has(.v21-whole-line-guide) {
   --v21-rgbw-canvas-top: calc(var(--v21-rgbw-guide-height, 44px) + 16px);
-  height: calc(var(--v21-rgbw-stage-height, 138px) + var(--v21-rgbw-canvas-top)) !important;
+  /* Border-box height must also contain both 1px housing borders. Otherwise
+     the canvas extends 1px past the bottom and its final row is clipped. */
+  height: calc(var(--v21-rgbw-stage-height, 138px) + var(--v21-rgbw-canvas-top) + 2px) !important;
   min-height: 0 !important;
 }
 
