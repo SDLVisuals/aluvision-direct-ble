@@ -8,6 +8,7 @@
  */
 (() => {
   'use strict';
+  if (window.AluvisionInstallationProfiles?.startupBlocked) return;
 
   // The native iOS shell provides direct Bonjour/UDP transport. Do not start
   // the Mac HTTP bridge inside that app or it would race the native adapter.
@@ -237,6 +238,7 @@
         isCurrent: current,
         identify: async ({ rid: target, requestId, signal }) => {
           if (target !== rid || !current() || signal.aborted) throw cancelled();
+          const sentAt = Date.now();
           const id = nextCommandId();
           const reply = await transact({ V: 18, ID: id, TYPE: 'MESH_IDENTIFY', TARGET: rid, PORT: 0, KEY: key }, { timeout: 3600, signal });
           if (!current() || signal.aborted) throw cancelled();
@@ -244,7 +246,7 @@
           if (String(reply.ID) !== String(id) || ![rid, selectedGateway].includes(source) || reply.STATUS !== 'OK' ||
               reply.DETAIL !== 'MESH_IDENTIFIED' || String(reply.TARGETACK) !== '1' || exactRid(reply.TARGETRID) !== rid ||
               (reply.PORTACK != null && String(reply.PORTACK) !== '0')) throw new Error('De gekozen LED Line bevestigde het knipperen niet.');
-          return { ok: true, rid, requestId };
+          return { ok: true, rid, requestId, pattern: window.AluvisionIdentifyBeforePair.patternFromReply?.(reply, String(selected.DEVTYPE || selected.receiverType || 'SPI').toUpperCase(), Date.now() - sentAt) };
         }
       });
       if (!recognition?.confirmed || recognition.rid !== rid || !current()) throw cancelled();

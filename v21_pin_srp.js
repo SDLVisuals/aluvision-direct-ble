@@ -30,29 +30,51 @@
   const random = length => crypto.getRandomValues(new Uint8Array(length));
   const validRid = value => typeof value === 'string' && /^[0-9A-F]{16}$/.test(value) && value !== '0000000000000000';
 
-  function create(rid) {
+  function create(rid, {purpose = 'PIN'} = {}) {
+    if(!['PIN','RECOVERY'].includes(purpose))throw new Error('Ongeldige herstelmethode.');
+    const recovery=purpose==='RECOVERY';
     if (!validRid(rid) || !crypto?.subtle) throw new Error('Veilig PIN-herstel is niet beschikbaar.');
     let privateBytes = random(32); privateBytes[0] |= 0x80;
     let a = integer(privateBytes); privateBytes.fill(0);
     const A = pad(raw(pow(G, a))), client = hex(random(8));
-    const identity = enc.encode('ALUVISION-PIN-V2:' + rid);
+    const identity = enc.encode((recovery?'ALUVISION-RECOVERY-V2:':'ALUVISION-PIN-V2:') + rid);
     let key = null, expectedM2 = null, nonce = '', expiresAt = Date.now() + 30000, phase = 'hello';
-    const clear = () => { a = 0n; key?.fill(0); key = null; expectedM2?.fill(0); expectedM2 = null; phase = 'closed'; };
+    let ownerAes = null, ownerExpiresAt = 0, ownerCounter = 0, ownerBusy = false, ownerOperation = null, recoveryChannel = null, epoch = 0, authStartedAt = 0;
+    const clearSrp = () => { a = 0n; key?.fill(0); key = null; expectedM2?.fill(0); expectedM2 = null; };
+    const clear = () => { epoch++; clearSrp(); recoveryChannel?.close?.(); recoveryChannel = null; ownerAes = null; ownerExpiresAt = 0; ownerBusy = false; ownerOperation = null; phase = 'closed'; };
+    const ownerBinding = () => 'ALUVISION-OWNER-V1|RID=' + rid + '|NONCE=' + nonce + '|CLIENT=' + client;
+    const ownerValid = () => phase === 'owner' && !!ownerAes && Date.now() < ownerExpiresAt;
+    async function installOwner(ownerKey, deadline, generation) {
+      const aes = await crypto.subtle.importKey('raw', ownerKey, 'AES-GCM', false, ['encrypt', 'decrypt']);
+      const hmacKey = await crypto.subtle.importKey('raw', ownerKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+      const recoveryKey = new Uint8Array(await crypto.subtle.sign('HMAC', hmacKey, enc.encode('ALUVISION-RECOVERY-BINARY-V1')));
+      ownerKey.fill(0);
+      if (generation !== epoch || Date.now() >= deadline) { recoveryKey.fill(0); throw new Error('De beveiligde sessie is verlopen.'); }
+      ownerAes = aes; ownerExpiresAt = deadline; ownerCounter = 0; phase = 'owner';
+      if (typeof window.createAluvisionSecureRecoveryChannel === 'function') {
+        recoveryChannel = await window.createAluvisionSecureRecoveryChannel({ key: recoveryKey, rid, client, nonce,
+          isValid: () => generation === epoch && ownerValid(),
+          requestRaw: (frame, receiver) => window.AluvisionNativeConnection.secureRecoveryRequest(frame, receiver) });
+      }
+      recoveryKey.fill(0);
+      if (generation !== epoch) throw new Error('De beveiligde sessie is gesloten.');
+    }
     return Object.freeze({
-      hello: Object.freeze({ TYPE: 'SECURITY_HELLO', TARGET: rid, CLIENT: client, A: hex(A) }),
+      hello: Object.freeze({ TYPE: 'SECURITY_HELLO', TARGET: rid, CLIENT: client, A: hex(A), ...(recovery?{PURPOSE:'RECOVERY'}:{}) }),
       async prove(code, fields) {
         if (phase !== 'hello') throw new Error('Voer je installatiepincode opnieuw in.');
         phase = 'proof';
+        const generation = epoch;
         try {
-          if (!/^[0-9]{8,12}$/.test(code) || fields.RID !== rid || fields.CLIENT !== client ||
+          if (!(recovery?/^[2-9A-HJ-NP-Z]{20}$/.test(code):/^[0-9]{8,12}$/.test(code)) || (recovery?fields.PURPOSE!=='RECOVERY':fields.PURPOSE&&fields.PURPOSE!=='PIN') || fields.RID !== rid || fields.CLIENT !== client ||
               fields.PINAUTH !== '2' || fields.ITERATIONS !== '180000' ||
               !/^[0-9A-F]{32}$/.test(fields.SALT || '') || !/^[0-9A-F]{32}$/.test(fields.NONCE || '') ||
               !/^(?:[0-9A-F]{2}){1,384}$/.test(fields.B || '')) throw new Error('Ongeldige PIN-uitdaging.');
           const salt = bytes(fields.SALT), B = bytes(fields.B), b = integer(B);
           if (b <= 1n || b >= N) throw new Error('Ongeldige receiveridentiteit.');
           nonce = fields.NONCE;
-          expiresAt = Date.now() + Math.min(30000, Math.max(0, Number(fields.EXPIRESMS) || 0));
-          const material = await crypto.subtle.importKey('raw', enc.encode('ALUVISION:PIN:1:' + code), 'PBKDF2', false, ['deriveBits']);
+          expiresAt = Math.min(expiresAt, Date.now() + Math.min(30000, Math.max(0, Number(fields.EXPIRESMS) || 0)));
+          const material = await crypto.subtle.importKey('raw', enc.encode('ALUVISION:'+purpose+':1:' + code), 'PBKDF2', false, ['deriveBits']);
           const verifier = new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 180000, hash: 'SHA-256' }, material, 256));
           const password = enc.encode(hex(verifier)); verifier.fill(0);
           const inner = await hash(identity, enc.encode(':'), password); password.fill(0);
@@ -67,21 +89,23 @@
           const xor = hn.map((value, index) => value ^ hg[index]);
           const m1 = await hash(xor, await hash(identity), salt, A, B, key);
           expectedM2 = await hash(A, m1, key);
-          if (Date.now() >= expiresAt) throw Object.assign(new Error('De PIN-controle is verlopen. Probeer opnieuw.'), { code: 'PIN_CHALLENGE_EXPIRED' });
-          return { TYPE: 'SECURITY_AUTH', TARGET: rid, CLIENT: client, NONCE: nonce, PROOF: hex(m1) };
+          if (generation !== epoch || Date.now() >= expiresAt) throw Object.assign(new Error('De PIN-controle is verlopen. Probeer opnieuw.'), { code: 'PIN_CHALLENGE_EXPIRED' });
+          authStartedAt = Date.now();
+          return { TYPE: 'SECURITY_AUTH', TARGET: rid, CLIENT: client, NONCE: nonce, PROOF: hex(m1), ...(recovery?{PURPOSE:'RECOVERY'}:{}) };
         } catch (error) { clear(); throw error; }
       },
       async open(fields) {
+        const generation = epoch;
         try {
           if (Date.now() >= expiresAt) throw Object.assign(new Error('De PIN-controle is verlopen. Probeer opnieuw.'), { code: 'PIN_CHALLENGE_EXPIRED' });
           if (phase !== 'proof' || !key || Date.now() >= expiresAt ||
               fields.STATUS !== 'OK' || fields.DETAIL !== 'PIN_AUTHENTICATED' ||
-              fields.PINAUTH !== '2' || fields.RID !== rid || fields.CLIENT !== client || fields.NONCE !== nonce ||
+              fields.PINAUTH !== '2' || (recovery?fields.PURPOSE!=='RECOVERY':fields.PURPOSE&&fields.PURPOSE!=='PIN') || fields.RID !== rid || fields.CLIENT !== client || fields.NONCE !== nonce ||
               !/^[0-9A-F]{128}$/.test(fields.M2 || '') || !equal(bytes(fields.M2), expectedM2) ||
               !/^[0-9A-F]{24}$/.test(fields.IV || '') || !/^[0-9A-F]{32}$/.test(fields.TAG || '') ||
               !/^(?:[0-9A-F]{2}){1,192}$/.test(fields.CIPHER || '')) throw new Error('De receiver kon niet veilig worden geverifieerd.');
           phase = 'opening';
-          const aad = enc.encode('ALUVISION-PIN-ENVELOPE-V2|RID=' + rid + '|NONCE=' + nonce + '|CLIENT=' + client);
+          const aad = enc.encode((recovery?'ALUVISION-RECOVERY-ENVELOPE-V2|RID=':'ALUVISION-PIN-ENVELOPE-V2|RID=') + rid + '|NONCE=' + nonce + '|CLIENT=' + client);
           const hmacKey = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
           const session = await crypto.subtle.sign('HMAC', hmacKey, aad);
           const aes = await crypto.subtle.importKey('raw', session, 'AES-GCM', false, ['decrypt']);
@@ -98,9 +122,67 @@
               !/^[0-9A-F]{8}$/.test(values.MESHID || '') || values.MESHID === '00000000' ||
               !['SPI','RGBW'].includes(values.DEVTYPE) || !/^[1-9][0-9]{0,2}$/.test(values.NUMBER || '') ||
               Number(values.NUMBER) > 250) throw new Error('Ongeldige installatiegegevens.');
+          if (fields.OWNERCHANNEL === '1') {
+            const ownerKey = new Uint8Array(await crypto.subtle.sign('HMAC', hmacKey, enc.encode(ownerBinding())));
+            await installOwner(ownerKey, authStartedAt + 90000, generation);
+          } else phase = 'closed';
+          clearSrp();
           return { verified: true, rid, networkKey: values.NETWORK, meshId: values.MESHID,
-            receiverType: values.DEVTYPE, number: Number(values.NUMBER), role: 'MAIN' };
-        } finally { clear(); }
+            receiverType: values.DEVTYPE, number: Number(values.NUMBER), role: 'MAIN', ownerChannel: !!ownerAes };
+        } catch (error) { clear(); throw error; }
+      },
+      async resume(device, installationId, transact) {
+        if (phase !== 'hello' || !/^[0-9A-F]{8}$/.test(installationId || '') || !/^[0-9A-F]{16}$/.test(device?.id || '') || !/^[0-9A-F]{64}$/.test(device?.token || '') || !/^[0-9A-F]{32}$/.test(device?.salt || '')) throw new Error('Voer je installatiepincode opnieuw in.');
+        const generation = epoch, startedAt = Date.now(); phase = 'resume';
+        let digest;
+        try {
+          const fields = await transact({ TYPE: 'RECOVERY_HELLO', TARGET: rid, CLIENT: client, DEVICEID: device.id });
+          if (generation !== epoch || Date.now() - startedAt >= 15000 || fields?.STATUS !== 'OK' || fields.DETAIL !== 'RECOVERY_RESUME_CHALLENGE' || fields.RID !== rid || fields.INSTALLATION !== installationId || fields.CLIENT !== client || fields.DEVICEID !== device.id || !/^[0-9A-F]{32}$/.test(fields.NONCE || '')) throw new Error('Voer je installatiepincode opnieuw in.');
+          nonce = fields.NONCE;
+          digest = new Uint8Array(await crypto.subtle.digest('SHA-256', concat(bytes(device.salt), bytes(device.id), bytes(device.token))));
+          const signing = await crypto.subtle.importKey('raw', digest, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+          const binding = 'ALUVISION-RECOVERY-RESUME-V1|RID=' + rid + '|INSTALLATION=' + installationId + '|DEVICE=' + device.id + '|CLIENT=' + client + '|NONCE=' + nonce;
+          const proof = hex(new Uint8Array(await crypto.subtle.sign('HMAC', signing, enc.encode(binding + '|DIRECTION=CLIENT'))));
+          authStartedAt = Date.now();
+          const reply = await transact({ TYPE: 'RECOVERY_AUTH', TARGET: rid, CLIENT: client, DEVICEID: device.id, NONCE: nonce, PROOF: proof });
+          const expected = new Uint8Array(await crypto.subtle.sign('HMAC', signing, enc.encode(binding + '|DIRECTION=SERVER')));
+          if (generation !== epoch || Date.now() - startedAt >= 15000 || reply?.STATUS !== 'OK' || reply.DETAIL !== 'RECOVERY_RESUMED' || reply.RID !== rid || reply.INSTALLATION !== installationId || reply.DEVICEID !== device.id || reply.CLIENT !== client || reply.NONCE !== nonce || !/^[0-9A-F]{64}$/.test(reply.PROOF || '') || !equal(expected, bytes(reply.PROOF))) throw new Error('Deze telefoon is niet meer vertrouwd. Voer je installatiepincode in.');
+          const ownerKey = new Uint8Array(await crypto.subtle.sign('HMAC', signing, enc.encode(binding + '|KEY=OWNER')));
+          await installOwner(ownerKey, authStartedAt + 90000, generation); clearSrp();
+          return { ok: true, rid, installationId };
+        } catch (error) { clear(); throw error; }
+        finally { digest?.fill(0); }
+      },
+      get ownerSessionActive() { return ownerValid(); },
+      get ownerSessionExpiresAt() { return ownerValid() ? ownerExpiresAt : 0; },
+      recoveryRequest(path, options, isCurrent) {
+        if (!ownerValid() || !recoveryChannel) throw new Error('De beveiligde back-upverbinding is verlopen.');
+        return recoveryChannel.request(path, options, isCurrent);
+      },
+      async ownerCommand(action, payload, transact) {
+        if (phase !== 'owner' || !ownerAes || Date.now() >= ownerExpiresAt) { clear(); throw new Error('Voer je installatiepincode opnieuw in.'); }
+        if (ownerBusy) throw new Error('Een beveiligde actie wordt nog afgerond.');
+        if (!/^[A-Z_]{3,32}$/.test(action) || typeof payload !== 'string' || enc.encode(payload).length > 1536 || typeof transact !== 'function') throw new Error('Ongeldige beveiligde opdracht.');
+        ownerBusy = true;
+        const generation = epoch, operation = {}; ownerOperation = operation;
+        const counter = ++ownerCounter, transaction = hex(random(8));
+        const suffix = '|COUNTER=' + counter + '|TXN=' + transaction + '|ACTION=' + action;
+        const aes = ownerAes;
+        try {
+          const iv = random(12), aad = enc.encode(ownerBinding() + suffix + '|DIRECTION=REQUEST');
+          const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: aad, tagLength: 128 }, aes, enc.encode(payload)));
+          if (generation !== epoch || ownerAes !== aes || !ownerValid()) throw new Error('De beveiligde sessie is gesloten.');
+          const request = Object.freeze({ TYPE: 'SECURE_OWNER', TARGET: rid, CLIENT: client, NONCE: nonce,
+            COUNTER: String(counter), TXN: transaction, ACTION: action, IV: hex(iv),
+            CIPHER: hex(encrypted.subarray(0, -16)), TAG: hex(encrypted.subarray(-16)) });
+          const reply = await transact(request);
+          if (phase !== 'owner' || ownerAes !== aes || Date.now() >= ownerExpiresAt) throw new Error('De beveiligde sessie is verlopen.');
+          if (reply?.STATUS !== 'OK' || reply?.DETAIL !== 'OWNER_REPLY' || reply.RID !== rid || reply.CLIENT !== client || reply.NONCE !== nonce || reply.COUNTER !== String(counter) || reply.TXN !== transaction || reply.ACTION !== action || !/^[0-9A-F]{24}$/.test(reply.IV || '') || !/^[0-9A-F]{32}$/.test(reply.TAG || '') || !/^(?:[0-9A-F]{2}){1,1536}$/.test(reply.CIPHER || '')) throw new Error('De beveiligde bevestiging komt niet overeen.');
+          const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes(reply.IV), additionalData: enc.encode(ownerBinding() + suffix + '|DIRECTION=REPLY'), tagLength: 128 }, aes, concat(bytes(reply.CIPHER), bytes(reply.TAG)));
+          if (phase !== 'owner' || ownerAes !== aes || Date.now() >= ownerExpiresAt) throw new Error('De beveiligde sessie is verlopen.');
+          return dec.decode(plain);
+        } catch (error) { if (generation === epoch && ownerAes === aes) clear(); throw error; }
+        finally { if (ownerOperation === operation) { ownerBusy = false; ownerOperation = null; } }
       },
       close: clear
     });

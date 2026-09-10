@@ -288,8 +288,8 @@
     removeCustomerCmyk(active);
     const modalRoot = document.getElementById('modal');
     if (modalRoot && !modalRoot.hidden && !excludedSurface(modalRoot)) removeCustomerCmyk(modalRoot);
-    if (active.id === 'home') refineHome(active);
-    if (active.id === 'zones') {
+    if (active.id === 'home' && !active.dataset.v22View) refineHome(active);
+    if (active.id === 'zones' && !active.dataset.v22View) {
       overviewJourney(active);
       detailContextPath(active);
       refineZoneScope(active);

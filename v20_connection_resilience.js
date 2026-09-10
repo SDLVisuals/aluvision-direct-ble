@@ -82,14 +82,23 @@
     }
   }
 
+  function errorText(value) {
+    if (!value || typeof value !== 'object') return String(value || '');
+    return [value.code, value.message, value.error && errorText(value.error)].filter(Boolean).join(' ');
+  }
+
   function responseCanRecover(response) {
     const results = Array.isArray(response?.results) ? response.results : [];
-    const error = String(response?.error || '');
-    if (/mixed receiver|zelfde groep|same group|même groupe|gleichen gruppe|NFC|TOKEN|PAIR_DENIED|KEY_MISMATCH|AUTH|beveilig|pincode|PIN_REQUIRED/i.test(error)) return false;
-    if (!results.length) return /offline|unreachable|timeout|timed? ?out|not respond|connection|verbinding|bereikbaar|connexion|antwoordde niet/i.test(error);
+    const error = errorText(response);
+    // A failed target can be marked offline even when the actual error is an
+    // owner/PIN rejection or a deliberate route change. Those are not radio
+    // failures, and must never replay an older gesture into the next session.
+    const allErrors = [error, ...results.map(errorText)].join(' ');
+    if (/mixed receiver|zelfde groep|same group|même groupe|gleichen gruppe|NFC|TOKEN|PAIR_DENIED|KEY_MISMATCH|AUTH|SECURITY_|PIN_|TRUST_|beveilig|pincode|TRANSPORT_CHANGED|connection method changed|verbindingsmethode gewijzigd|IDENTITY_|CANCELLED|CANCELED|SUPERSEDED|LIVE_REJECTED/i.test(allErrors)) return false;
+    if (!results.length) return /offline|unreachable|unavailable|not acknowledged|timeout|timed? ?out|not respond|connection|verbinding|bereikbaar|connexion|antwoordde niet/i.test(error);
     return results.some((item) => {
       if (item?.queued === true || item?.online === false) return true;
-      return /offline|unreachable|timeout|connection|verbinding|bereikbaar|connexion/i.test(String(item?.error || ''));
+      return /offline|unreachable|timeout|connection|verbinding|bereikbaar|connexion/i.test(errorText(item));
     });
   }
 
@@ -160,20 +169,41 @@
     pendingGroups.set(key, { currentGroup, revision });
   }
 
+  function retirePending(key, revision) {
+    if (groupRevisions.get(key) !== revision) return;
+    pendingGroups.delete(key);
+    if (!pendingGroups.size) {
+      cancelRetry();
+      clearRecoveringMarker();
+      publish('blocked');
+    }
+  }
+
   async function replayPending() {
     if (replayPromise) return replayPromise;
     if (!pendingGroups.size) return true;
     const operation = (async () => {
       const entries = [...pendingGroups.entries()];
       for (const [key, record] of entries) {
+        if (document.visibilityState === 'hidden') return false;
         if (pendingGroups.get(key) !== record) continue;
         const { currentGroup, revision } = record;
         if (!currentGroup?.receivers?.length) {
           pendingGroups.delete(key);
           continue;
         }
-        const response = await originalLive(currentGroup, true);
+        let response;
+        try {
+          response = await originalLive(currentGroup, true);
+        } catch (error) {
+          if (!responseCanRecover(error)) retirePending(key, revision);
+          throw error;
+        }
         markAcceptedRoutes(currentGroup, response);
+        if (!responseAccepted(response) && !responseCanRecover(response)) {
+          retirePending(key, revision);
+          throw Object.assign(new Error(errorText(response) || 'Light update rejected'), { code: 'LIVE_REJECTED' });
+        }
         // A gesture made while this ACK was in flight owns a newer revision.
         // Never clear that gesture because an older replay succeeded.
         if (responseAccepted(response) && pendingGroups.get(key) === record &&
@@ -188,16 +218,27 @@
   async function reconnectNow() {
     if (reconnectPromise) return reconnectPromise;
     cancelRetry();
+    if (document.visibilityState === 'hidden') { publish('waiting'); return false; }
     publish('recovering');
     showRecovering();
     let retryNeeded = false;
+    const attemptRevisions = new Map([...pendingGroups].map(([key, record]) => [key, record.revision]));
     reconnectPromise = (async () => {
       try {
         // When the route was healthy moments ago, first retry only the newest
         // light state. A full inventory scan is comparatively expensive and
         // can compete with a slider gesture for the same receiver radio.
-        let applied = anyReceiverReachable() ? await replayPending() : false;
+        let applied = false;
+        if (anyReceiverReachable()) {
+          try { applied = await replayPending(); }
+          catch (error) {
+            // Cached reachability can outlive the GATT/Wi-Fi session. A warm
+            // replay failure must still reach the real reconnect/discovery.
+            if (!responseCanRecover(error)) throw error;
+          }
+        }
         if (!applied) {
+          if (document.visibilityState === 'hidden') { publish('waiting'); return false; }
           await originalDiscover(true);
           if (!anyReceiverReachable()) throw new Error('receiver unavailable');
           applied = await replayPending();
@@ -210,13 +251,17 @@
         if (typeof window.updateCustomerStatus === 'function') window.updateCustomerStatus();
         return true;
       } catch (error) {
-        retryNeeded = true;
+        retryNeeded = responseCanRecover(error);
+        if (!retryNeeded) {
+          for (const [key, revision] of attemptRevisions) retirePending(key, revision);
+        }
         return false;
       } finally {
         reconnectPromise = null;
         // scheduleReconnect() used to run while reconnectPromise was still
         // set, so its guard silently cancelled every retry after attempt one.
-        if (retryNeeded && pendingGroups.size) scheduleReconnect();
+        const newerIntent = [...pendingGroups].some(([key, record]) => attemptRevisions.get(key) !== record.revision);
+        if ((retryNeeded || newerIntent) && pendingGroups.size) scheduleReconnect();
       }
     })();
     return reconnectPromise;
@@ -247,10 +292,10 @@
     try {
       response = await originalLive(currentGroup, quiet);
     } catch (error) {
-      if (responseCanRecover({ error: String(error?.message || error) })) {
+      if (responseCanRecover(error)) {
         rememberLatest(currentGroup, revision);
         scheduleReconnect();
-      }
+      } else retirePending(key, revision);
       throw error;
     }
     markAcceptedRoutes(currentGroup, response);
@@ -267,7 +312,7 @@
     } else if (responseCanRecover(response)) {
       rememberLatest(currentGroup, revision);
       scheduleReconnect();
-    }
+    } else retirePending(key, revision);
     return response;
   };
 
@@ -275,8 +320,13 @@
     const result = await originalDiscover.apply(this, args);
     if (anyReceiverReachable()) {
       lastHealthyAt = Date.now();
-      if (pendingGroups.size) await replayPending();
-      if (!pendingGroups.size) {
+      let replayRejected = false;
+      if (pendingGroups.size) {
+        try { await replayPending(); }
+        catch (error) { replayRejected = !responseCanRecover(error); }
+      }
+      if (pendingGroups.size) scheduleReconnect();
+      else if (!replayRejected) {
         retryAttempt = 0;
         cancelRetry();
         clearRecoveringMarker();
@@ -289,6 +339,11 @@
   };
 
   document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      cancelRetry();
+      if (pendingGroups.size) publish('waiting');
+      return;
+    }
     if (document.visibilityState === 'visible' && pendingGroups.size) scheduleReconnect(true);
   });
   window.addEventListener('online', () => {

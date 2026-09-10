@@ -213,6 +213,130 @@
     return range?.closest?.('.setting-visual-panel,.speed-panel,.width-panel,.rgbw-live-setting,.row-delay-panel,[data-v1817-line-delay]') || null;
   }
 
+  function selectedCanonicalEffect() {
+    const selected = currentGroup();
+    const state = selected?.state || {};
+    const rgbw = String(selected?.receiverType || state.receiverType || '').toUpperCase() === 'RGBW';
+    const catalogue = window.AluvisionV21AnimationCatalog;
+    const effects = rgbw ? catalogue?.rgbwEffects : catalogue?.spiEffects;
+    return effects?.find(effect => effect.name === state.animation) || effects?.find(effect =>
+      Number(effect.variant) === Number(state.variant) && effect.engine === state.engine) || null;
+  }
+
+  function settingDefault(key) {
+    const stateKey = key === 'width' ? 'widthPixels' : key;
+    const canonical = selectedCanonicalEffect();
+    const defaults = canonical ? window.AluvisionV21AnimationCatalog.effectState(canonical) : {};
+    if (defaults[stateKey] != null) return defaults[stateKey];
+    if (!canonical) {
+      try {
+        const effect = window.AluvisionAnimationRuntime?.effects?.find(effect => effect[0] === currentGroup()?.state?.animation);
+        const legacyDefaults = effect ? { ...animationDefaults(effect), ...(effect[4] || {}) } : {};
+        if (legacyDefaults[stateKey] != null) return legacyDefaults[stateKey];
+      } catch (_) {}
+    }
+    // Existing shared initial settings provide values absent from a catalogue
+    // entry, particularly RGBW brightness and the optional effect toggles.
+    let fallback = {};
+    try { fallback = fresh().installations[0].zones[0].groups[0].state; } catch (_) {}
+    const stable = { speed: 18, smooth: 100, brightness: 75, bgBrightness: 0, widthPixels: 3,
+      spacing: 58, objectCount: 1, trailLength: 45, spread: 55, randomness: 25,
+      bounce: false, mirror: false, direction: 'right', lineDelayMs: 0 };
+    return fallback[stateKey] ?? stable[stateKey];
+  }
+
+  function addSettingReset(panel, key, range = null) {
+    if (!panel || settingDefault(key) == null) return;
+    let button = panel.querySelector(`:scope > [data-v21-reset-setting="${key}"]`);
+    if (!button) {
+      button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'v21-setting-reset';
+      button.dataset.v21ResetSetting = key;
+      panel.append(button);
+    }
+    if (range) button.dataset.v21ResetSource = range.id;
+    const label = key === 'direction' ? tx('Richting', 'Direction', 'Direction', 'Richtung') : range?.getAttribute('aria-label') || panel.querySelector('b')?.textContent || key;
+    const title = tx('Standaard', 'Default', 'Par défaut', 'Standard');
+    button.textContent = `↺ ${title}`;
+    button.setAttribute('aria-label', `${label}: ${title.toLowerCase()}`);
+    button.title = `${title}: ${settingDefault(key)}${unitFor(key) ? ` ${unitFor(key)}` : ''}`;
+  }
+
+  function enhanceSettingResets(settings) {
+    settings.querySelectorAll('input[type="range"]').forEach(range => {
+      if (!range.id) range.id = `v20-setting-range-${++generatedRangeId}`;
+      addSettingReset(settingPanel(range) || range.closest('.control'), rangeKey(range), range);
+    });
+    settings.querySelectorAll('[data-animation-toggle]').forEach(toggle => {
+      addSettingReset(toggle.closest('.setting-toggle'), toggle.dataset.animationToggle);
+    });
+    settings.querySelectorAll('.direction-premium,.rgbw-direction').forEach(panel => {
+      let resetRow = panel.nextElementSibling;
+      if (!resetRow?.classList.contains('v21-direction-reset-context')) {
+        resetRow = document.createElement('div');
+        resetRow.className = 'v21-direction-reset-context';
+        panel.insertAdjacentElement('afterend', resetRow);
+      }
+      addSettingReset(resetRow, 'direction');
+    });
+    const delayPanel = settings.querySelector('[data-v1817-line-delay]');
+    if (delayPanel) {
+      const explanation = delayPanel.querySelector('.v1817-delay-editor > p');
+      if (explanation) explanation.textContent = tx('0 ms = tegelijk; 5000 ms = 5 seconden per stap. De animatie bepaalt welke lijnen samen starten.', '0 ms = together; 5000 ms = 5 seconds per step. The animation determines which lines start together.', '0 ms = ensemble ; 5000 ms = 5 secondes par étape. L’animation détermine quelles lignes démarrent ensemble.', '0 ms = gleichzeitig; 5000 ms = 5 Sekunden pro Schritt. Die Animation bestimmt, welche Linien gemeinsam starten.');
+      const subtitle = delayPanel.querySelector(':scope > summary > span:first-child small');
+      if (subtitle) subtitle.textContent = tx('Wachttijd per stap van de animatie', 'Delay per animation step', 'Délai par étape de l’animation', 'Wartezeit pro Animationsschritt');
+      const lineLabel = delayPanel.querySelector('label[for="lineDelayRange"]');
+      if (lineLabel) lineLabel.textContent = tx('Tijd per stap', 'Time per step', 'Durée par étape', 'Zeit pro Schritt');
+      const presets = delayPanel.querySelector('.v1817-delay-presets');
+      if (presets && !presets.querySelector('[data-line-delay-preset="5000"]')) {
+        const preset = document.createElement('button');
+        preset.type = 'button';
+        preset.className = 'button soft';
+        preset.dataset.lineDelayPreset = '5000';
+        preset.textContent = '5 s';
+        preset.setAttribute('onclick', 'setLineDelayMs(5000)');
+        presets.append(preset);
+      }
+    }
+    const effect = selectedCanonicalEffect();
+    if (effect?.tunnel || effect?.kind === 'tunnel-lines') {
+      const speed = [...settings.querySelectorAll('input[type="range"]')].find(range => rangeKey(range) === 'speed');
+      const panel = settingPanel(speed);
+      const heading = panel?.querySelector('.setting-title b') || panel?.querySelector(':scope > div:first-child b');
+      const title = effect.receiverType === 'RGBW' ? tx('Fade-tempo', 'Fade speed', 'Vitesse du fondu', 'Blendtempo') : tx('Beweging per lijn', 'Motion per line', 'Mouvement par ligne', 'Bewegung pro Linie');
+      if (heading) heading.textContent = title;
+      const description = panel?.querySelector('.setting-description') || panel?.querySelector(':scope > div:first-child small');
+      if (description) description.textContent = tx('Bepaalt hoe snel elke lijn fadet of beweegt. De wachttijd tussen lijnen stel je apart in.', 'Controls how quickly each line fades or moves. Set the delay between lines separately.', 'Règle la vitesse du fondu ou du mouvement de chaque ligne. Le délai entre les lignes se règle séparément.', 'Bestimmt, wie schnell jede Linie blendet oder sich bewegt. Die Wartezeit zwischen den Linien wird separat eingestellt.');
+    }
+  }
+
+  document.addEventListener('click', event => {
+    const button = event.target?.closest?.('[data-v21-reset-setting]');
+    const shell = button?.closest?.('#zones .v1814-group-shell');
+    if (!shell) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const key = button.dataset.v21ResetSetting;
+    const value = settingDefault(key);
+    if (value == null) return;
+    rememberOpenDetails(shell);
+    const range = button.dataset.v21ResetSource ? shell.querySelector(`#${CSS.escape(button.dataset.v21ResetSource)}`) : null;
+    if (range) {
+      // The normal input handler performs persistence, selected-line routing
+      // and preview/live updates. Never reset the entire animation state.
+      range.value = String(value);
+      range.dispatchEvent(new Event('input', { bubbles: true }));
+    } else if (key === 'direction') {
+      const rgbw = String(currentGroup()?.receiverType || '').toUpperCase() === 'RGBW';
+      (rgbw ? window.rgbwDirection : window.setDirection)?.(value);
+    } else if (Boolean(currentGroup()?.state?.[key]) !== Boolean(value)) {
+      window.toggleAnimationSetting?.(key);
+    }
+    restoreOpenDetails(shell);
+    queueEnhance();
+  }, true);
+
   function addDirectNumber(range, settingsRoot) {
     if (!range || range.dataset[ENHANCED_RANGE] === 'true') return;
     const key = rangeKey(range);
@@ -293,6 +417,43 @@
     return stage;
   }
 
+  function timingDemoColour(state, sample, family, count, supportsBackground) {
+    const colours = Array.isArray(state.colors) && state.colors.length ? state.colors : ['#000000'];
+    const palette = Array.from({ length: count }, (_, index) => ({
+      rgb: parseHex(state.rgbEnabled?.[index] === false ? '#000000' : colours[index % colours.length]),
+      white: state.whiteEnabled?.[index] === false ? 0 : Math.max(0, Math.min(255, Number(state.whiteChannels?.[index]) || 0))
+    }));
+    const engine = window.AluvisionTunnelEngine;
+    const spec = engine.paletteSpec(sample, count);
+    const first = palette[spec.first];
+    const second = palette[spec.second];
+    let mix = spec.mix;
+    if (family === 'SPI' && engine?.sharedRgbwVariant?.(state.variant) == null) {
+      const smooth = Math.max(0, Math.min(100, Number(state.smooth ?? 100))) / 100;
+      const blend = smooth < 0.5 ? 4 * smooth * smooth * smooth : 1 - 4 * Math.pow(1 - smooth, 3);
+      const stepped = mix < 0.5 ? 0 : 1;
+      mix = stepped + (mix - stepped) * blend;
+    }
+    const foreground = {
+      rgb: first.rgb.map((channel, index) => Math.round(channel + (second.rgb[index] - channel) * mix)),
+      white: Math.round(first.white + (second.white - first.white) * mix),
+      amount: sample.amount
+    };
+    const brightness = Math.max(0, Math.min(100, Number(state.brightness ?? 100))) / 100;
+    if (family === 'SPI') {
+      foreground.brightness = brightness;
+      if (supportsBackground && state.backgroundOn) foreground.background = {
+        rgb: parseHex(state.backgroundRgbEnabled === false ? '#000000' : state.background?.rgb || state.background || '#000000'),
+        white: state.backgroundWhiteEnabled === false ? 0 : Number(state.background?.white ?? state.backgroundWhite) || 0,
+        brightness: Math.max(0, Math.min(100, Number(state.bgBrightness ?? state.backgroundBrightness) || 0)) / 100
+      };
+    } else foreground.amount *= brightness;
+    // Interpolate the physical RGB and W channels first. Applying optical
+    // white to each slot before mixing, or dimming the mixed screen colour,
+    // changes the hue and cannot match the main preview during a fade.
+    return rgbCss(window.AluvisionV21AnimationCatalog.opticalRgb(foreground));
+  }
+
   function updateCustomDemo(stage, kind, range, palette, key = kind) {
     const minimum = Number(range.min) || 0;
     const maximum = Number(range.max) || 100;
@@ -303,6 +464,64 @@
     stage.dataset.v20Value = String(value);
     stage.style.setProperty('--v20-demo-paint', palettePaint(palette));
     stage.style.setProperty('--v20-demo-colour', palette[0]);
+    const sharedWholeLine = String(currentGroup()?.receiverType || '').toUpperCase() === 'SPI'
+      && window.AluvisionTunnelEngine?.sharedRgbwVariant?.(currentGroup()?.state?.variant) != null;
+    if (key === 'lineDelayMs' || sharedWholeLine && ['speed', 'smooth', 'spacing'].includes(kind)) {
+      stage.dataset.v21TimingDemo = key === 'lineDelayMs' ? 'line-starts' : 'whole-line-' + kind;
+      const count = currentGroup()?.layout === 'parallel' ? Math.max(2, Math.min(3, currentGroup()?.receivers?.length || 3)) : 1;
+      const state = currentGroup()?.state || {};
+      const delay = key === 'lineDelayMs' ? value : Math.round(Math.max(0, Math.min(5080, Number(state.lineDelayMs) || 0)) / 40) * 40;
+      const engine = window.AluvisionTunnelEngine;
+      const family = String(currentGroup()?.receiverType || state.receiverType || 'SPI').toUpperCase();
+      const variant = Number(state.variant) || 0;
+      const supportsBackground = window.AluvisionV21AnimationCatalog?.spiEffects?.find(effect => effect.variant === variant)?.capabilities.background === true;
+      const shape = engine?.kind(family, variant);
+      // Older panel effects use the same literal timing demonstration: one
+      // complete line pulses after the other, at the entered delay.
+      const demoFamily = shape ? family : 'RGBW';
+      const demoVariant = shape ? variant : 5;
+      const speed = Number(state.speed) || 0;
+      const smooth = Number(state.smooth ?? 100);
+      const reverse = state.direction === 'left';
+      const timing = engine?.plan(shape || 'pulse', count, speed, delay);
+      const channelSignature = JSON.stringify([state.colors, state.whiteChannels, state.rgbEnabled, state.whiteEnabled,
+        state.backgroundOn, state.background, state.backgroundWhite, state.backgroundRgbEnabled, state.backgroundWhiteEnabled, state.bgBrightness]);
+      const signature = `${family}:${count}:${delay}:${speed}:${smooth}:${reverse}:${variant}:${state.spacing}:${state.brightness}:${palette.join(',')}:${channelSignature}`;
+      if (stage.dataset.v21TimingSignature !== signature) {
+        stage.dataset.v21TimingSignature = signature;
+        stage.querySelectorAll('i').forEach(line => line.getAnimations?.().forEach(animation => animation.cancel()));
+        stage.replaceChildren();
+        const started = document.timeline?.currentTime;
+        for (let index = 0; index < count; index += 1) {
+          const row = document.createElement('div');
+          row.className = 'v21-delay-preview-row';
+          const name = document.createElement('b');
+          name.textContent = `LED Line ${index + 1}`;
+          const line = document.createElement('i');
+          line.style.background = palette[0];
+          line.style.filter = 'brightness(0)';
+          const time = document.createElement('span');
+          const order = engine?.orderFor(shape || 'pulse', index, count, reverse) ?? index;
+          const milliseconds = order * delay;
+          time.textContent = milliseconds === 0 ? '0 ms' : milliseconds % 1000 === 0 ? `+${milliseconds / 1000} s` : `+${milliseconds} ms`;
+          row.append(name, line, time);
+          stage.append(row);
+          if (timing && engine?.paletteSpec && window.AluvisionV21AnimationCatalog?.opticalRgb && typeof line.animate === 'function' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            const steps = Math.max(30, Math.ceil(timing.period / 0.04));
+            const frames = Array.from({ length: steps + 1 }, (_, step) => {
+              const phase = step / steps;
+              const sample = engine.sample(demoFamily, demoVariant, index, count, phase, speed, delay, smooth, reverse, state.spacing ?? 50);
+              const colour = timingDemoColour(state, sample, family, palette.length, supportsBackground);
+              return { offset: phase, filter: 'none', backgroundColor: colour, boxShadow: `0 0 10px ${colour}` };
+            });
+            const animation = line.animate(frames, { duration: timing.period * 1000, iterations: Infinity, easing: 'linear' });
+            if (started != null) animation.startTime = started;
+            if (speed <= 0) animation.pause();
+          }
+        }
+      }
+      return;
+    }
     const nodes = stage.querySelector('.v20-demo-nodes');
     const trackCells = stage.querySelectorAll('.v20-demo-track i');
     const wanted = kind === 'count' ? Math.max(1, Math.min(8, Math.round(value))) : kind === 'spacing' ? 3 : 5;
@@ -448,6 +667,23 @@
 
         let stage = panel.querySelector('.v188-control-visual,.v1812-rgbw-control-visual');
         if (!stage && ['spacing', 'count', 'spread'].includes(kind)) stage = createSettingDemo(panel, kind);
+        const sharedWholeLine = String(currentGroup()?.receiverType || '').toUpperCase() === 'SPI'
+          && window.AluvisionTunnelEngine?.sharedRgbwVariant?.(currentGroup()?.state?.variant) != null;
+        if (stage && sharedWholeLine && ['speed', 'smooth', 'spacing'].includes(kind)) {
+          stage.classList.remove('v18153-smooth-demo', 'v18161-speed-demo');
+          stage.classList.add('v20-setting-demo');
+          if (kind === 'smooth') {
+            const description = panel.querySelector('.setting-description');
+            if (description) description.textContent = tx('Hoe zacht volledige LED Lines oplichten en uitdoven. Iedere lijn blijft één geheel.', 'How softly complete LED Lines light and fade. Every line stays one whole.', 'Douceur de l’allumage et de l’extinction des lignes complètes.', 'Wie weich ganze LED Lines aufleuchten und erlöschen.');
+            const limit = panel.querySelector('.v18153-smooth-limits span');
+            if (limit) limit.textContent = tx('Duidelijke stappen', 'Clear steps', 'Étapes nettes', 'Klare Schritte');
+            const meaning = panel.querySelector('#tune-smooth-meaning');
+            if (meaning) meaning.textContent = tx('Overgangen tussen volledige lijnen', 'Transitions between complete lines', 'Transitions entre lignes complètes', 'Übergänge zwischen ganzen Linien');
+            const meta = panel.querySelector('.v18153-smooth-meta span:last-child');
+            if (meta) meta.textContent = tx('Geen losse pixels', 'No separate pixels', 'Pas de pixels séparés', 'Keine einzelnen Pixel');
+            range.setAttribute('aria-valuetext', `${range.value}% · ${tx('volledige lijnen', 'complete lines', 'lignes complètes', 'ganze Linien')}`);
+          }
+        }
         if (stage?.classList.contains('v20-setting-demo')) updateCustomDemo(stage, kind, range, palette, key);
         else if (stage) syncExistingDemo(stage, kind, range, palette);
       });
@@ -570,6 +806,7 @@
       if (!settings) return;
       normalizeWidthControl(shell);
       settings.querySelectorAll('input[type="range"]').forEach((range) => addDirectNumber(range, settings));
+      enhanceSettingResets(settings);
       syncDirectNumbers(shell);
     });
   }
@@ -727,6 +964,14 @@
       #zones .v1814-group-shell .advanced-panel { overflow:hidden; }
       #zones .v1814-group-shell .advanced-panel[open] > summary { border-bottom:1px solid var(--line);margin-bottom:12px; }
       #zones .v1814-group-shell .advanced-panel > summary { min-width:0;overflow-wrap:anywhere; }
+      #zones .v1814-group-shell [data-v1817-line-delay] > summary { display:grid;grid-template-columns:minmax(0,1fr) auto 12px;gap:8px;align-items:center; }
+      #zones .v1814-group-shell [data-v1817-line-delay] > summary:after { content:'⌄';grid-column:3;grid-row:1;align-self:center;justify-self:end;margin:0;font-size:15px;line-height:1; }
+      #zones .v1814-group-shell [data-v1817-line-delay][open] > summary:after { transform:rotate(180deg); }
+      #zones .v1814-group-shell [data-v1817-line-delay]:has([data-v21-timing-demo]) [data-line-delay-schedule] { display:none!important; }
+      #zones .v1814-group-shell .v21-setting-reset { display:block;grid-column:1/-1!important;justify-self:end;min-height:36px;min-width:88px;margin:7px 0 0 auto;padding:6px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--ink);font-size:11px;font-weight:750;line-height:1.3;cursor:pointer; }
+      #zones .v1814-group-shell .v21-setting-reset:focus-visible { outline:2px solid var(--red);outline-offset:2px; }
+      #zones .v1814-group-shell .setting-toggle:has(> .v21-setting-reset) { flex-wrap:wrap; }
+      #zones .v1814-group-shell .setting-toggle > .v21-setting-reset { margin-left:auto; }
 
       #zones .v1814-group-shell .control.v20-has-direct {
         display:grid!important;
@@ -777,6 +1022,10 @@
       #zones .v1814-group-shell .v20-demo-nodes { position:absolute!important;z-index:2;inset:13px!important;display:block!important;height:auto!important;pointer-events:none; }
       #zones .v1814-group-shell .v20-demo-nodes i { position:absolute;top:50%;height:18px;max-width:30%;border-radius:99px;transform:translate(-50%,-50%);transition:left .14s,width .14s,background .12s,box-shadow .12s; }
       #zones .v1814-group-shell .v20-setting-demo > em { display:inline-flex; }
+      #zones .v1814-group-shell .v20-setting-demo[data-v21-timing-demo] { display:grid;height:auto;min-height:78px;gap:9px;padding:12px; }
+      #zones .v1814-group-shell .v21-delay-preview-row { position:relative;z-index:1;display:grid;grid-template-columns:65px minmax(0,1fr) 57px;gap:8px;align-items:center;color:#fff;font-size:10px;line-height:1.3; }
+      #zones .v1814-group-shell .v21-delay-preview-row i { display:block;height:9px;border-radius:99px;box-shadow:0 0 7px color-mix(in srgb,var(--v20-demo-colour),transparent 35%); }
+      #zones .v1814-group-shell .v21-delay-preview-row span { text-align:right;font-weight:800; }
       #zones .v1814-group-shell [data-v20-demo="direction"] .v188-direction-track i { opacity:.48; }
       #zones .v1814-group-shell [data-v20-demo="direction"] .v188-direction-track b { background:var(--v20-demo-colour)!important;box-shadow:0 0 10px var(--v20-demo-colour)!important; }
       #zones .v1814-group-shell [data-v20-demo="mirror"] .v188-toggle-visual { color:var(--v20-demo-colour); }

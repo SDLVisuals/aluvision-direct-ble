@@ -11,6 +11,30 @@
   const tx = (nl, en, fr, de) => typeof window.ac === 'function' ? window.ac(nl, en, fr, de) : nl;
   const exactRid = value => /^[A-F0-9]{16}$/i.test(String(value || '')) ? String(value).toUpperCase() : '';
 
+  function patternFromReply(reply, family, roundTripMs = 0) {
+    const halfMs = family === 'RGBW' ? 180 : 250;
+    const periodMs = halfMs * 2;
+    const integer = value => /^\d{1,6}$/.test(String(value ?? '')) ? Number(value) : NaN;
+    const phase = integer(reply?.IDENTIFYPHASEMS), remaining = integer(reply?.IDENTIFYREMAINMS);
+    const timed = integer(reply?.IDENTIFYHALFMS) === halfMs && phase < periodMs && remaining <= 5000;
+    const oneWayMs = Number.isFinite(roundTripMs) ? Math.min(500, Math.max(0, roundTripMs / 2)) : 0;
+    return Object.freeze({ halfMs, periodMs, phaseMs: timed ? (phase + oneWayMs) % periodMs : halfMs,
+      remainingMs: timed ? Math.max(0, remaining - oneWayMs) : 5000, timed });
+  }
+  function startBlink(flow, pattern) {
+    const expectedHalf = flow.receiver.receiverType === 'RGBW' ? 180 : 250;
+    const valid = pattern?.halfMs === expectedHalf && pattern.periodMs === expectedHalf * 2 &&
+      Number.isFinite(pattern.phaseMs) && pattern.phaseMs >= 0 && pattern.phaseMs < pattern.periodMs &&
+      Number.isFinite(pattern.remainingMs) && pattern.remainingMs >= 0 && pattern.remainingMs <= 5000;
+    const timing = valid ? pattern : patternFromReply(null, flow.receiver.receiverType);
+    flow.root.style.setProperty('--identify-period', `${timing.periodMs}ms`);
+    flow.root.style.setProperty('--identify-offset', `${-timing.phaseMs}ms`);
+    flow.root.dataset.identifyTiming = timing.timed ? 'receiver' : 'pattern';
+    if (timing.remainingMs <= 0) return;
+    flow.root.classList.add('is-blinking');
+    flow.blinkTimer = setTimeout(() => { if (check(flow)) flow.root.classList.remove('is-blinking'); }, timing.remainingMs);
+  }
+
   function externalCurrent(flow) {
     if (active !== flow || flow.finished) return false;
     try { return typeof flow.isCurrent !== 'function' || flow.isCurrent() === true; }
@@ -39,8 +63,17 @@
     clearTimeout(flow.cooldownTimer);
     clearAttempt(flow);
     if (active === flow) active = null;
-    // Never close a newer screen placed there by navigation or another task.
-    if (owned) window.closeModal?.();
+    // Confirmation hands this still-open panel to the setup flow. Closing it
+    // first cancels commissioning listeners and leaves Home exposed when the
+    // next network/storage operation fails. Only an explicit cancel closes it.
+    if (owned && confirmed) {
+      status(flow, 'continuing', tx('Instellingen openen…', 'Opening settings…', 'Ouverture des réglages…', 'Einstellungen werden geöffnet…'),
+        tx('Je receiver is herkend. Even wachten op de volgende stap.', 'Your receiver is identified. Waiting for the next step.', 'Votre récepteur est identifié. La prochaine étape arrive.', 'Dein Receiver wurde erkannt. Der nächste Schritt wird geöffnet.'));
+      flow.root.querySelectorAll('button').forEach(button => { button.disabled = true; });
+    } else if (owned && ['stale', 'hidden'].includes(reason)) {
+      status(flow, 'expired', tx('Verbinding onderbroken', 'Connection interrupted', 'Connexion interrompue', 'Verbindung unterbrochen'),
+        tx('Je receiver is nog niet toegevoegd. Controleer de verbinding en probeer opnieuw.', 'Your receiver has not been added. Check the connection and try again.', 'Le récepteur n’a pas été ajouté. Vérifiez la connexion et réessayez.', 'Dein Receiver wurde noch nicht hinzugefügt. Prüfe die Verbindung und versuche es erneut.'));
+    } else if (owned) window.closeModal?.();
     flow.resolve(confirmed
       ? { confirmed: true, rid: flow.receiver.rid, requestId: flow.requestId }
       : { confirmed: false, reason: reason || 'cancelled' });
@@ -109,8 +142,7 @@
         throw Object.assign(new Error('IDENTIFY_NOT_CONFIRMED'), { code: 'IDENTIFY_NOT_CONFIRMED' });
       }
       flow.identified = true;
-      flow.root.classList.add('is-blinking');
-      flow.blinkTimer = setTimeout(() => { if (check(flow)) flow.root.classList.remove('is-blinking'); }, 5000);
+      startBlink(flow, reply.pattern);
       status(flow, 'ready', tx('Kijk naar je LED Line', 'Look at your LED Line', 'Regardez votre LED Line', 'Schau auf deine LED Line'),
         tx('Knippert de juiste LED Line? Bevestig dan hieronder.', 'Is the correct LED Line flashing? Confirm below.', 'Est-ce la bonne LED Line qui clignote ? Confirmez ci-dessous.', 'Blinkt die richtige LED Line? Bestätige unten.'));
     } catch (error) {
@@ -148,7 +180,7 @@
       if (!externalCurrent(flow)) { finish(flow, false, 'stale'); return; }
       window.modal(`<section class="v21-identify-pair" data-v21-identify-before-pair="${flow.id}" data-phase="initial" data-preserve-transport-copy>
         <header><div class="eyebrow">${tx('RECEIVER TOEVOEGEN', 'ADD RECEIVER', 'AJOUTER UN RÉCEPTEUR', 'RECEIVER HINZUFÜGEN')}</div><h1>${tx('Is dit jouw LED Line?', 'Is this your LED Line?', 'Est-ce votre LED Line ?', 'Ist das deine LED Line?')}</h1><p>${tx('Herken je verlichting voordat je verdergaat.', 'Identify your lighting before continuing.', 'Identifiez votre éclairage avant de continuer.', 'Erkenne deine Beleuchtung, bevor du fortfährst.')}</p></header>
-        <div class="v21-identify-visual" aria-hidden="true"><div class="v21-identify-board"><span>ALUVISION</span><b>${family}</b><div>${Array(receiver.portCount).fill('<i></i>').join('')}</div></div><div class="v21-identify-wire"></div><div class="v21-identify-rail"><i></i></div></div>
+        <div class="v21-identify-visual" aria-hidden="true"><div class="v21-identify-board"><i>${window.AluvisionIcons?.markup?.('receiver') || '▣'}</i><b>${family}-${tx('receiver', 'receiver', 'récepteur', 'Receiver')}</b></div><div class="v21-identify-wire"></div><div class="v21-identify-rail"><i></i></div></div>
         <div class="v21-identify-device"><span class="v21-identify-device-icon" aria-hidden="true">${window.AluvisionIcons?.markup?.('receiver') || '▣'}</span><span><b>${safe(receiver.name)}</b><small>${family} · ${receiver.portCount} ${tx(receiver.portCount === 1 ? 'uitgang' : 'uitgangen', receiver.portCount === 1 ? 'output' : 'outputs', receiver.portCount === 1 ? 'sortie' : 'sorties', receiver.portCount === 1 ? 'Ausgang' : 'Ausgänge')}</small></span></div>
         <div class="v21-identify-status" data-identify-status role="status" aria-live="polite"></div>
         <button class="button soft v21-identify-repeat" type="button" data-identify-action="repeat">${tx('Nogmaals knipperen', 'Flash again', 'Faire clignoter', 'Erneut blinken')}</button>
@@ -156,7 +188,12 @@
       </section>`, { viewKey: `v21-identify-pair-${flow.id}` });
       flow.root = document.querySelector(`[data-v21-identify-before-pair="${flow.id}"]`);
       if (!flow.root) { finish(flow, false, 'unavailable'); return; }
-      flow.root.querySelector('[data-identify-action="no"]').addEventListener('click', () => finish(flow, false, 'other-receiver'));
+      flow.root.querySelector('[data-identify-action="no"]').addEventListener('click', () => {
+        // A disconnected selection has already resolved to its transport, but
+        // its visible explanation must still have a working way out.
+        if (flow.finished) { if (ownsPanel(flow)) window.closeModal?.(); return; }
+        finish(flow, false, 'other-receiver');
+      });
       flow.root.querySelector('[data-identify-action="repeat"]').addEventListener('click', () => { void identify(flow); });
       flow.root.querySelector('[data-identify-action="yes"]').addEventListener('click', () => {
         if (check(flow) && flow.phase === 'ready' && flow.identified) finish(flow, true);
@@ -168,7 +205,7 @@
       void identify(flow);
     });
   }
-  window.AluvisionIdentifyBeforePair = Object.freeze({ confirm, limits: LIMITS,
+  window.AluvisionIdentifyBeforePair = Object.freeze({ confirm, limits: LIMITS, patternFromReply,
     cancel(reason = 'cancelled') { if (active) finish(active, false, String(reason)); } });
   window.addEventListener('pagehide', () => window.AluvisionIdentifyBeforePair.cancel('hidden'));
   document.addEventListener('visibilitychange', () => {

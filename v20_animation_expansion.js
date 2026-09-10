@@ -141,13 +141,13 @@
   const oldIsMultiLineEffect = isMultiLineEffect;
   isMultiLineEffect = function v204IsMultiLineEffect(effect) {
     const variant = effectWireVariant(effect);
-    return oldIsMultiLineEffect(effect) || (variant >= 104 && variant <= 111);
+    return oldIsMultiLineEffect(effect) || Boolean(window.AluvisionTunnelEngine?.kind('SPI', variant));
   };
   runtime.isMultiLineEffect = isMultiLineEffect;
   const oldIsMultiLineState = isMultiLineState;
   isMultiLineState = function v204IsMultiLineState(current) {
     const variant = Number(current?.variant);
-    return oldIsMultiLineState(current) || (variant >= 104 && variant <= 111);
+    return oldIsMultiLineState(current) || Boolean(window.AluvisionTunnelEngine?.kind('SPI', variant));
   };
   runtime.isMultiLineState = isMultiLineState;
   const oldSharedTimeline = usesSharedParallelTimeline;
@@ -156,7 +156,7 @@
     if (!currentGroup || currentGroup.layout !== 'parallel' || (currentGroup.receivers?.length || 0) < 2) return false;
     const type = (typeof groupReceiverType === 'function' ? groupReceiverType(currentGroup) : currentState?.receiverType) || 'SPI';
     const variant = Number(currentState?.variant);
-    return String(type).toUpperCase() === 'RGBW' ? variant >= 21 && variant <= 24 : variant >= 104 && variant <= 111;
+    return Boolean(window.AluvisionTunnelEngine?.kind(String(type).toUpperCase(), variant));
   };
   runtime.usesSharedParallelTimeline = usesSharedParallelTimeline;
 
@@ -223,10 +223,10 @@
     if (!currentGroup || currentGroup.layout !== 'parallel' || (currentGroup.receivers?.length || 0) < 2) return false;
     if (isRgbwGroup()) {
       const variant = Number(item?.variant ?? rgbwEffect()?.variant);
-      return variant >= 21 && variant <= 24;
+      return Boolean(window.AluvisionTunnelEngine?.kind('RGBW', variant));
     }
     const variant = effectWireVariant(effect || effects.find((value) => value[0] === currentGroup.state?.animation));
-    return variant >= 104 && variant <= 111;
+    return Boolean(window.AluvisionTunnelEngine?.kind('SPI', variant));
   };
   runtime.v1817UsesLineDelay = v1817UsesLineDelay;
 

@@ -321,7 +321,7 @@
       detail.classList.add('alv-experience-zone-detail');
       setStatusNode(detail.querySelector('.customer-zone-detail-head .customer-light-status'), lightStats(selectedZone, database));
       const heading = detail.querySelector('.customer-zone-group-title h2');
-      setText(heading, `${tr('Kies een groep in', 'Choose a group in', 'Choisissez un groupe dans', 'Wähle eine Gruppe in')} ${selectedZone.name}`);
+      if (!root.dataset.v22View) setText(heading, `${tr('Kies een groep in', 'Choose a group in', 'Choisissez un groupe dans', 'Wähle eine Gruppe in')} ${selectedZone.name}`);
     }
 
     const groupPage = root.querySelector('.customer-group-page,.rgbw-group-ui');
@@ -563,7 +563,7 @@
     refineTop();
     refineNavigation();
     const active = document.querySelector('.page.on');
-    if (active?.id === 'home') refineHome(active);
+    if (active?.id === 'home' && !active.dataset.v22View) refineHome(active);
     if (active?.id === 'zones') refineZones(active);
     if (active?.id === 'devices') refineDevices(active);
     const restoreStudio = active?.id === 'studio' && active.hidden && !utilityMenuOpen();

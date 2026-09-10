@@ -1,9 +1,10 @@
 // Bump this key whenever cache policy changes. In particular, the previous
 // cache could contain a navigation Request whose NFC query parameters were part
 // of the CacheStorage key. Activating this worker removes that cache wholesale.
-const CACHE = 'aluvision-v21-21-0-8-release-build34-stability-1';
+const CACHE = 'aluvision-v21-21-1-9-build46-receiver-release-1';
 const SHELL = [
   './index.html',
+  './v21_local_test_mode.js',
   './direct_ble_ota.js',
   './direct_ble_bridge.js',
   './direct_wifi_gateway.js',
@@ -21,7 +22,16 @@ const SHELL = [
   './v20_studio_console.js',
   './v20_studio_pro.js',
   './ios_native_gateway.js',
+  './v21_configuration_snapshot.js',
+  './v21_installation_profiles.js',
+  './v21_secure_recovery_channel.js',
   './v21_pin_srp.js',
+  './v21_secure_trust_store.js',
+  './v21_device_trust.js',
+  './v21_node_enrollment.js',
+  './v21_mesh_provisioning.js',
+  './v21_secure_connection.js',
+  './v21_receiver_release.js',
   './v20_native_security.js',
   './v20_navigation_refine.css',
   './v20_navigation_refine.js',
@@ -35,9 +45,12 @@ const SHELL = [
   './v20_connection_resilience.js',
   './v20_rgbw_output_scope.js',
   './v21_core_model.js',
+  './v21_tunnel_engine.js',
   './v21_animation_catalog.js',
   './v21_system.css',
   './v21_system.js',
+  './v21_simple_hierarchy.css',
+  './v21_simple_hierarchy.js',
   './v21_identify_before_pair.css',
   './v21_identify_before_pair.js',
   './manifest.webmanifest',

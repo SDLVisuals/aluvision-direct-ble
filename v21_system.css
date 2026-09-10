@@ -1174,6 +1174,54 @@ body.v21 :where(#home, #zones, #modalBody) .v21-colour-workbench .v1814-colour-f
   display: grid !important;
 }
 
+/* Same selected RGBW mixture as the colour editor, beside its exact inputs.
+   No animation/transition lag: fine adjustments must be visible immediately. */
+.unified-color-picker .v21-fine-colour-preview {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  width: 100%;
+  margin: 0 0 4px;
+}
+.unified-color-picker .v21-fine-colour-caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px 10px;
+  line-height: 1.3;
+}
+.unified-color-picker .v21-fine-colour-caption b {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 750;
+}
+.unified-color-picker .v21-fine-colour-caption small {
+  color: var(--mut);
+  font-size: 10px;
+  font-weight: 650;
+}
+.unified-color-picker .v21-fine-colour-housing {
+  min-width: 0;
+  padding: 13px 12px;
+  overflow: hidden;
+  border: 1px solid #424641;
+  border-radius: 14px;
+  background: #20231f;
+  box-shadow: inset 0 1px 1px #ffffff18, 0 3px 9px #00000014;
+}
+.unified-color-picker .v21-fine-colour-light {
+  display: block;
+  width: 100%;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--v21-fine-colour, #000);
+  box-shadow: 0 0 11px color-mix(in srgb, var(--v21-fine-colour, #000), transparent 55%);
+}
+.unified-color-picker .v21-fine-colour-preview.is-off .v21-fine-colour-light {
+  box-shadow: inset 0 0 0 1px #ffffff14;
+}
+
 body.v21 :where(#home, #zones, #modalBody) .v21-optional-colour-method {
   border: 1px solid var(--line);
   border-radius: 13px;
@@ -1393,7 +1441,7 @@ body.v21 .v21-free-port-note small {
 }
 
 body.v21 #modalBody[data-v21-receiver-view="rgbw-ports"] .rgbw207-device-footer {
-  position: sticky !important;
+  position: static !important;
   right: auto !important;
   bottom: -1px !important;
   left: auto !important;
@@ -1401,7 +1449,82 @@ body.v21 #modalBody[data-v21-receiver-view="rgbw-ports"] .rgbw207-device-footer 
   width: 100% !important;
   margin: 0 !important;
   padding: 16px 0 max(6px, env(safe-area-inset-bottom)) !important;
-  background: linear-gradient(transparent 0, var(--panel) 22%);
+  background: var(--panel);
+}
+
+/* Editing a receiver keeps the same four choices as its first setup. */
+body.v21 #modalBody[data-v21-receiver-view="rgbw-ports"] .rgbw207-device .rgbw207-device-mode-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 12px;
+}
+body.v21 #modalBody[data-v21-receiver-view="rgbw-ports"] .rgbw207-device .rgbw207-mode-choice {
+  grid-template-columns: minmax(0, 1fr) 18px;
+  gap: 9px;
+  align-content: start;
+  padding: 12px;
+}
+body.v21 #modalBody[data-v21-receiver-view="rgbw-ports"] .rgbw207-device .rgbw207-mode-visual {
+  grid-column: 1;
+  grid-row: 1;
+}
+body.v21 #modalBody[data-v21-receiver-view="rgbw-ports"] .rgbw207-device .rgbw207-mode-choice > span:nth-child(2) {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+body.v21 #modalBody[data-v21-receiver-view="rgbw-ports"] .rgbw207-device .rgbw207-mode-choice > strong {
+  grid-column: 2;
+  grid-row: 1;
+}
+body.v21 #modalBody[data-v21-receiver-view="rgbw-ports"] .rgbw207-device .rgbw207-mode-visual .rail b {
+  animation: none;
+  background: #ee827b;
+}
+body.v21 #modalBody[data-v21-receiver-view="rgbw-ports"] .rgbw207-device .rgbw207-mode-visual.separate .rail.two b {
+  background: #7ac5bd;
+}
+body.v21 #modalBody[data-v21-receiver-view="rgbw-ports"] .rgbw207-device .rgbw207-separate-note {
+  display: block;
+  background: var(--panel-2);
+  color: var(--mut);
+  font-size: 12px;
+  line-height: 1.5;
+}
+body.v21 #modalBody[data-v21-receiver-view="rgbw-ports"] .rgbw207-device .rgbw207-assignments {
+  grid-template-columns: 1fr;
+}
+body.v21 #modalBody[data-v21-receiver-view="rgbw-ports"] .rgbw207-device .rgbw207-port-editor {
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  padding: 12px;
+  opacity: 1;
+}
+body.v21 #modalBody[data-v21-receiver-view="rgbw-ports"] .rgbw207-device .rgbw207-port-editor:not(.on) {
+  border-style: dashed;
+}
+body.v21 #modalBody[data-v21-receiver-view="rgbw-ports"] .rgbw207-device .rgbw207-port-editor strong {
+  overflow-wrap: anywhere;
+}
+body.v21 #modalBody[data-v21-receiver-view="rgbw-ports"] .rgbw207-device .rgbw207-port-editor small {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+body.v21 #modalBody[data-v21-receiver-view="rgbw-ports"] .rgbw207-device .rgbw207-port-group {
+  display: grid;
+  gap: 6px;
+  grid-column: 1 / -1;
+  min-width: 0;
+  font-size: 12px;
+}
+body.v21 #modalBody[data-v21-receiver-view="rgbw-ports"] .rgbw207-device .rgbw207-port-group select {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  min-height: 44px;
+  font-size: 16px;
+}
+body.v21 #modalBody[data-v21-receiver-view="rgbw-ports"] .rgbw207-device .rgbw207-port-add {
+  padding: 8px;
+  min-width: 0;
+  font-size: 11px;
 }
 
 body.v21.dark :where(#home, #zones, #devices) .scope,
@@ -2191,3 +2314,34 @@ body.v21 .v21-scene-repeat-step { display: none; }
 
 /* The ink background becomes light in dark mode; keep the glyph inverted. */
 body.v21 #settings .customer-settings-icon { color: var(--panel, #fff); }
+[data-receiver-release][aria-busy="true"] #v21ReleaseStatus::before {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 9px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  vertical-align: -2px;
+  animation: v21-release-wait .8s linear infinite;
+}
+@keyframes v21-release-wait { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  [data-receiver-release][aria-busy="true"] #v21ReleaseStatus::before { animation: none; }
+}
+[data-receiver-release] .v20-show-code {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin-block: 12px;
+  cursor: pointer;
+}
+[data-receiver-release] .v20-show-code input {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--accent, #a8403b);
+}

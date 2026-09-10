@@ -8,6 +8,7 @@
  */
 (() => {
   'use strict';
+  if (window.AluvisionInstallationProfiles?.startupBlocked) return;
 
   // Native iOS owns receiver discovery and UDP. The browser-only private-AP
   // adapter must stay inactive in the bundled app.
@@ -546,12 +547,13 @@
       isCurrent: currentPair,
       identify: async ({ rid: target, requestId, signal }) => {
         if (target !== rid || !currentPair() || signal.aborted) throw new Error('Verbinding gewijzigd. Kies de receiver opnieuw.');
+        const sentAt = Date.now();
         const identified = await transact({ TYPE: 'MESH_IDENTIFY', TARGET: rid, PORT: 0, KEY: cleanHex(payload.compatibilityKey, 16) }, { timeout: 3600, allowError: true, signal });
         if (!currentPair() || signal.aborted || identified.STATUS !== 'OK' || identified.DETAIL !== 'MESH_IDENTIFIED' ||
             String(identified.TARGETACK) !== '1' || cleanHex(identified.TARGETRID, 16) !== rid) {
           throw new Error('De LED Line bevestigde het knipperen niet. Controleer de verbinding en receiverfirmware.');
         }
-        return { ok: true, rid, requestId };
+        return { ok: true, rid, requestId, pattern: window.AluvisionIdentifyBeforePair.patternFromReply?.(identified, gatewayFields.DEVTYPE || 'SPI', Date.now() - sentAt) };
       }
     });
     if (!recognition.confirmed || recognition.rid !== rid || !currentPair()) {

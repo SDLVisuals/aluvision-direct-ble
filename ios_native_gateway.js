@@ -8,6 +8,7 @@
  */
 (() => {
   'use strict';
+  if (window.AluvisionInstallationProfiles?.startupBlocked) return;
 
   const handler = window.webkit?.messageHandlers?.aluvision;
   if (!handler) return;
@@ -24,6 +25,7 @@
   let receiverScanRoot = null;
   let receiverScanGeneration = 0;
   let receiverPairBusy = false;
+  let receiverPairActivity = null;
   let gatewayPromotion = null;
   let nativeReceiverAddTarget = null;
   let discoveryPromise = null;
@@ -41,6 +43,7 @@
   let nativeStateKnownGeneration = -1;
   let nativeStatePromise = null;
   let nativeStatePromiseGeneration = -1;
+  let transportSelection = null;
   let consecutiveTransportFailures = 0;
   let lastSuccessfulTransportAt = 0;
   let nativeTransportCapabilities = Object.freeze({ wifi: true, wifiAutoJoin: null, bluetooth: true, recovery: false });
@@ -61,6 +64,14 @@
     'STATUS', 'CONFIG', 'SAVE', 'TEST', 'IDENTIFY', 'MESH_IDENTIFY',
     'CALIBRATE', 'CALIBRATE_FILL', 'CALIBRATE_END', 'CALIBRATE_START',
     'CALIBRATE_CLEAR', 'SETUP_BEGIN', 'SETUP_KEEPALIVE', 'SETUP_END', 'SETUP_CANCEL'
+  ]);
+  // Keep aligned with NativeTrustWire.isStatefulSecurityExchange. At the
+  // minimum GATT MTU a full 4096-byte reply needs about 9.2 seconds and its
+  // command can need another 6 seconds. Allow bounded room for crypto/queue
+  // too. This is a response deadline, never a delay before applying a command.
+  const BLE_SECURE_RESPONSE_TYPES = new Set([
+    'TRUST_HELLO', 'TRUST_AUTH', 'SECURE_OWNER', 'SECURITY_HELLO',
+    'SECURITY_AUTH', 'RECOVERY_HELLO', 'RECOVERY_AUTH', 'RELEASE_STATUS'
   ]);
 
   function text(nl, en, fr, de) {
@@ -193,7 +204,12 @@
         reject(new Error(text('Receiver antwoordde niet op tijd', 'Receiver did not respond in time', 'Le récepteur ne répond pas', 'Receiver antwortete nicht rechtzeitig')));
       }, timeoutMs);
       pending.set(id, { resolve, reject, timer });
-      handler.postMessage({ id, action, payload });
+      try { handler.postMessage({ id, action, payload }); }
+      catch (error) {
+        clearTimeout(timer);
+        pending.delete(id);
+        reject(error);
+      }
     });
   }
 
@@ -249,55 +265,59 @@
     return textValue;
   }
 
-  async function nativeRecoveryRequest(path, options = {}) {
-    if (!RECOVERY_PATHS.has(path)) throw new Error('Onbekende herstelactie');
-    await ensureNativeTransportState();
-    if (selectedTransportMode !== 'wifi' || !ready || !nativeTransportCapabilities.recovery) {
-      throw new Error('Verbind eerst via de private wifi van de hoofdreceiver.');
-    }
-    const receiverRid = exactRid(gatewayRid);
-    const installationKey = networkKey();
-    if (!receiverRid || !installationKey) throw new Error('De installatiebeveiliging is niet beschikbaar.');
-    const method = String(options.method || 'POST').toUpperCase();
-    if (method !== 'POST') throw new Error('Alleen beveiligde POST-herstelacties zijn toegestaan.');
-    const suppliedHeaders = new Headers(options.headers || {});
-    for (const [name] of suppliedHeaders) {
-      if (!['content-type', 'accept'].includes(name.toLowerCase())) {
-        throw new Error('Deze herstelheader is niet toegestaan.');
-      }
-    }
-    const contentType = String(suppliedHeaders.get('Content-Type') || '');
-    const accept = String(suppliedHeaders.get('Accept') || '');
-    const bytes = recoveryBodyBytes(options.body);
-    const maximum = path === '/alv/recovery/snapshot' ? RECOVERY_SNAPSHOT_LIMIT : RECOVERY_TEXT_LIMIT;
-    if (!bytes.length || bytes.length > maximum) throw new Error('De herstelopdracht is te groot of leeg.');
-    const timeoutMs = Math.max(500, Math.min(20000, Number(options.timeout) || 5000));
-    const result = await nativeCall('recoveryRequest', {
-      path, method, contentType, accept,
-      bodyBase64: bytesToBase64(bytes), timeoutMs,
-      receiverRid, networkKey: installationKey
-    }, timeoutMs + 1500);
-    const status = Number(result?.status);
-    const responseType = String(result?.contentType || '').toLowerCase();
-    if (!Number.isInteger(status) || status < 200 || status > 499 ||
-        !['text/plain; charset=utf-8', 'application/octet-stream'].includes(responseType)) {
-      throw new Error('De receiver gaf een ongeldig herstelantwoord.');
-    }
-    const responseBytes = base64ToBytes(result.bodyBase64);
-    const requestedSnapshotRead = path === '/alv/recovery/snapshot' && bytes.length >= 7 && bytes[6] === 2;
-    const binaryDownload = requestedSnapshotRead && responseType === 'application/octet-stream' && status === 200;
-    const responseLimit = binaryDownload ? 20 + (128 * 1024) : 8 * 1024;
-    if (responseBytes.length > responseLimit || (!binaryDownload && responseType !== 'text/plain; charset=utf-8')) {
-      throw new Error('De receiver gaf een ongeldig herstelantwoord.');
-    }
-    if (!binaryDownload) strictRecoveryFields(responseBytes);
-    return Object.freeze({
-      status,
-      bytes: responseBytes,
-      text: binaryDownload ? '' : utf8Decoder.decode(responseBytes),
-      headers: new Headers({ 'Content-Type': responseType })
+  async function nativeRecoveryRequest() {
+    throw Object.assign(new Error('Gebruik het versleutelde herstelkanaal via je installatiepincode.'), {
+      code: 'ENCRYPTED_CHANNEL_REQUIRED'
     });
   }
+
+  // This adapter talks only to the app's encrypted, ThisDeviceOnly native
+  // store. Neither receiver JSON nor web storage can advertise this authority.
+  const ownerJournalRevisions = new Map();
+  function journalIdentity(id) {
+    const match = /^(?:(?:trust|pending|profile):)?([0-9A-F]{8})$/.exec(String(id || ''));
+    if (!match || match[1] === '00000000') throw new Error('Ongeldige installatie voor beveiligde opslag.');
+    return match[1];
+  }
+  function journalRecord(id, record) {
+    const installationId = journalIdentity(id);
+    if (!record || record.id !== installationId || record.installationId !== installationId ||
+        !/^[0-9A-F]{16}$/.test(record.transaction || '') || /^0+$/.test(record.transaction) ||
+        !Number.isSafeInteger(record.journalRevision) || record.journalRevision < 1) {
+      throw new Error('Ongeldige beveiligde installatiegegevens.');
+    }
+    const encoded = JSON.stringify(record);
+    if (new TextEncoder().encode(encoded).length > 256 * 1024) throw new Error('De beveiligde installatiegegevens zijn te groot.');
+    return encoded;
+  }
+  const secretJournal = Object.freeze({
+    storageClass: 'native-encrypted-owner-secrets-v1-cas',
+    async load(id) {
+      journalIdentity(id);
+      const result = await nativeCall('ownerJournal', {operation: 'load', id}, 10000);
+      if (result?.valueJSON === null) { ownerJournalRevisions.delete(id); return null; }
+      if (typeof result?.valueJSON !== 'string' || new TextEncoder().encode(result.valueJSON).length > 256 * 1024) throw new Error('De beveiligde opslag kon niet worden gecontroleerd.');
+      const record = JSON.parse(result.valueJSON); journalRecord(id, record);
+      ownerJournalRevisions.set(id, {transaction: record.transaction, revision: record.journalRevision});
+      return record;
+    },
+    async save(id, record, expectedTransaction = null) {
+      const valueJSON = journalRecord(id, record);
+      if (expectedTransaction !== null && !/^[0-9A-F]{16}$/.test(expectedTransaction)) throw new Error('Ongeldige opslagbevestiging.');
+      const result = await nativeCall('ownerJournal', {operation: 'save', id, valueJSON, expectedTransaction}, 10000);
+      if (result?.ok !== true) return false;
+      ownerJournalRevisions.set(id, {transaction: record.transaction, revision: record.journalRevision});
+      return true;
+    },
+    async remove(id, expectedTransaction) {
+      journalIdentity(id);
+      const expected = ownerJournalRevisions.get(id);
+      if (!expected || expected.transaction !== expectedTransaction) return false;
+      const result = await nativeCall('ownerJournal', {operation: 'remove', id, expectedTransaction, expectedRevision: expected.revision}, 10000);
+      if (result?.ok === true && ownerJournalRevisions.get(id) === expected) ownerJournalRevisions.delete(id);
+      return result?.ok === true;
+    }
+  });
 
   function normaliseTransportMode(value) {
     const mode = String(value || '').trim().toLowerCase();
@@ -307,6 +327,27 @@
     return mode;
   }
 
+  async function secureRecoveryRequest(frame, rid) {
+    await ensureNativeTransportState();
+    const target = exactRid(rid);
+    if (selectedTransportMode !== 'wifi' || !ready || !target || target !== gatewayRid) {
+      throw new Error('Verbind via Wi-Fi met de hoofdreceiver om je installatie veilig te herstellen.');
+    }
+    const bytes = recoveryBodyBytes(frame);
+    if (bytes.length < 92 || bytes.length > 4188) throw new Error('Ongeldig beveiligd herstelbericht.');
+    const generation = transportGeneration;
+    const result = await nativeCall('secureRecoveryRequest', {
+      receiverRid: target, bodyBase64: bytesToBase64(bytes)
+    }, 22000);
+    if (generation !== transportGeneration || gatewayRid !== target) throw new Error('De herstelverbinding is gewijzigd.');
+    if (Number(result?.status) !== 200 || typeof result?.bodyBase64 !== 'string' || result.bodyBase64.length > 5584) {
+      throw new Error('Ongeldig beveiligd herstelantwoord.');
+    }
+    const response = base64ToBytes(result.bodyBase64);
+    if (response.length < 92 || response.length > 4188) throw new Error('Ongeldig beveiligd herstelantwoord.');
+    return { status: 200, bytes: response };
+  }
+
   function rememberNativeCapabilities(result = {}) {
     if (!result?.capabilities || typeof result.capabilities !== 'object') return result;
     const source = result.capabilities;
@@ -314,12 +355,18 @@
       wifi: source.wifi !== false,
       wifiAutoJoin: typeof source.wifiAutoJoin === 'boolean' ? source.wifiAutoJoin : null,
       bluetooth: source.bluetooth !== false,
-      recovery: source.recovery === true || source.recoveryRequest === true
+      recovery: source.recovery === true || source.recoveryRequest === true,
+      secureRecovery: source.secureRecoveryRequest === true,
+      nativeOta: source.nativeOta === true
     });
     return result;
   }
 
   async function ensureNativeTransportState() {
+    if (transportSelection?.generation === transportGeneration) {
+      await transportSelection.promise;
+      return selectedTransportMode;
+    }
     const generation = transportGeneration;
     if (nativeStateKnownGeneration === generation) return selectedTransportMode;
     if (nativeStatePromise && nativeStatePromiseGeneration === generation) return nativeStatePromise;
@@ -345,19 +392,30 @@
 
   async function selectNativeTransport(value) {
     const mode = normaliseTransportMode(value);
-    await ensureNativeTransportState();
-    if (mode === selectedTransportMode) return { mode, capabilities: nativeTransportCapabilities };
+    // A pending selection is an intent, not a confirmed mode. Selecting the
+    // old mode again must supersede it, while repeated taps on the same
+    // pending target share its result instead of resetting another session.
+    if (transportSelection?.generation !== transportGeneration) await ensureNativeTransportState();
+    const activeSelection = transportSelection?.generation === transportGeneration ? transportSelection : null;
+    if (activeSelection?.mode === mode) return activeSelection.promise;
+    if (!activeSelection && mode === selectedTransportMode) return { mode, capabilities: nativeTransportCapabilities };
     transportGeneration += 1;
     const generation = transportGeneration;
     invalidateRuntimeConnection();
-    const result = await nativeCall('selectTransport', { mode }, 10000);
-    if (generation !== transportGeneration) {
-      throw new Error(text('Verbindingsmethode gewijzigd', 'Connection method changed', 'Mode de connexion modifié', 'Verbindungsmethode geändert'));
-    }
-    rememberNativeCapabilities(result);
-    selectedTransportMode = mode;
-    nativeStateKnownGeneration = transportGeneration;
-    return { ...result, mode };
+    const selection = { mode, generation, promise: null };
+    transportSelection = selection;
+    selection.promise = nativeCall('selectTransport', { mode }, 10000).then((result) => {
+      if (generation !== transportGeneration) {
+        throw Object.assign(new Error(text('Verbindingsmethode gewijzigd', 'Connection method changed', 'Mode de connexion modifié', 'Verbindungsmethode geändert')), { code: 'TRANSPORT_CHANGED' });
+      }
+      rememberNativeCapabilities(result);
+      selectedTransportMode = mode;
+      nativeStateKnownGeneration = generation;
+      return { ...result, mode };
+    }).finally(() => {
+      if (transportSelection === selection) transportSelection = null;
+    });
+    return selection.promise;
   }
 
   async function scanNativeBluetooth() {
@@ -369,15 +427,22 @@
   async function connectNativeBluetooth(peripheralId = '') {
     await ensureNativeTransportState();
     if (selectedTransportMode !== 'bluetooth') await selectNativeTransport('bluetooth');
+    const generation = transportGeneration;
     transportSessionChanged();
-    const result = rememberNativeCapabilities(await nativeCall(
+    const connected = await nativeCall(
       'connectBluetooth',
       {
         ...(peripheralId ? { peripheralId: String(peripheralId) } : {}),
         expectedGatewayRid: preferredMainRID()
       },
       22000
-    ));
+    );
+    // Wi-Fi selection or an explicit Disconnect can overtake this GATT
+    // handshake. Never revive the retired receiver from its late inventory.
+    if (generation !== transportGeneration) {
+      throw Object.assign(new Error('Verbinding gewijzigd. Probeer opnieuw.'), { code: 'TRANSPORT_CHANGED' });
+    }
+    const result = rememberNativeCapabilities(connected);
     const inventory = result?.inventory && typeof result.inventory === 'object'
       ? result.inventory : result;
     if (Array.isArray(inventory?.devices)) remember(inventory);
@@ -398,18 +463,77 @@
   }
 
   async function nativeOtaPreflight(receiver, artifact) {
-    await ensureNativeTransportState();
+    if (window.AluvisionLocalTestMode?.enabled) throw new Error('OTA is niet beschikbaar in de tijdelijke teststand zonder PIN.');
+    await prepareNativeOtaAccess(receiver);
     const rid = exactRid(receiver?.rid || receiver?.RID);
     const receiverType = String(receiver?.receiverType || receiver?.DEVTYPE || '').toUpperCase();
     if (!rid || !['SPI', 'RGBW'].includes(receiverType) || !artifact || typeof artifact !== 'object') {
       throw new TypeError('Ongeldige OTA-voorcontrole');
     }
-    return nativeCall('otaPreflight', {
+    const release = await window.AluvisionSecureConnection?.pauseForNativeOperation?.();
+    try { return await nativeCall('otaPreflight', {
+      installationId: meshId(),
       receiverRid: rid,
-      receiverType,
-      artifact
-    }, 12000);
+      artifactId: artifact.id
+    }, 20000); } finally { release?.(); }
   }
+
+  async function prepareNativeOtaAccess(receiver) {
+    if (window.AluvisionLocalTestMode?.enabled) throw new Error('OTA is niet beschikbaar in de tijdelijke teststand zonder PIN.');
+    await ensureNativeTransportState();
+    const rid = exactRid(receiver?.rid || receiver?.RID);
+    if (selectedTransportMode !== 'wifi' || !rid || rid !== gatewayRid) {
+      throw new Error(text('Verbind via Wi-Fi met precies deze receiver voor de update.',
+        'Connect to this exact receiver over Wi-Fi to update it.',
+        'Connectez-vous à ce récepteur précis par Wi-Fi pour le mettre à jour.',
+        'Verbinde dich für das Update per WLAN mit genau diesem Receiver.'));
+    }
+    // Native OTA loads the installation owner from its encrypted journal. A
+    // legacy shared KEY or public ownership flag is not update authority.
+    const reply = window.AluvisionSecureConnection
+      ? await window.AluvisionSecureConnection.control({V:18,TYPE:'SECURITY_STATUS',TARGET:rid},{timeout:6000})
+      : {STATUS:'ERROR'};
+    if (String(reply.STATUS).toUpperCase() !== 'OK' || String(reply.OWNERMATCH) !== '1' || String(reply.PINSET) !== '1') {
+      throw new Error(text('Bevestig eerst toegang met je installatiepincode.',
+        'Confirm access with your installation PIN first.',
+        'Confirmez d’abord l’accès avec le code PIN de l’installation.',
+        'Bestätige zuerst den Zugriff mit deiner Installations-PIN.'));
+    }
+  }
+
+  const nativeOtaLeases = new Map();
+  function nativeOtaLeaseState(job) {
+    if(job && ['completed','failed','cancelled'].includes(job.state)) {
+      nativeOtaLeases.get(job.id)?.(); nativeOtaLeases.delete(job.id);
+    }
+    return job;
+  }
+  async function nativeOtaStart(receiver, artifact) {
+    await prepareNativeOtaAccess(receiver);
+    const release = await window.AluvisionSecureConnection?.pauseForNativeOperation?.();
+    try {
+      const job = await nativeCall('otaStart', { receiverRid: exactRid(receiver?.rid || receiver?.RID),
+      installationId: meshId(),
+      artifactId: String(artifact?.id || '') }, 15000);
+      if(!job?.id) throw new Error('De update heeft nog geen bevestigde taakidentiteit. Controleer de status opnieuw.');
+      if(release) nativeOtaLeases.set(job.id,release);
+      return nativeOtaLeaseState(job);
+    } catch(error) {release?.();throw error;}
+  }
+  const nativeOtaStatus = async jobId => nativeOtaLeaseState(await nativeCall('otaStatus', { jobId }, 6000));
+  const nativeOtaCancel = async jobId => nativeOtaLeaseState(await nativeCall('otaCancel', { jobId }, 6000));
+  const nativeOtaJobs = async () => {
+    const result = await nativeCall('otaJobs', {}, 6000);
+    // A missed status poll must not leave controls paused after the same
+    // native job later reports a terminal state in the refreshed job list.
+    if (Array.isArray(result?.recentJobs)) result.recentJobs.forEach(nativeOtaLeaseState);
+    return result;
+  };
+  const nativeOtaVerify = async jobId => {
+    const release = nativeOtaLeases.has(jobId) ? null : await window.AluvisionSecureConnection?.pauseForNativeOperation?.();
+    try { return nativeOtaLeaseState(await nativeCall('otaVerify', { jobId, installationId: meshId() }, 15000)); }
+    finally { release?.(); }
+  };
 
   function registerCommissionSecurityProvider(provider) {
     if (!provider || typeof provider.getStatus !== 'function' ||
@@ -427,12 +551,14 @@
   }
 
   window.__aluvisionNativeReply = function nativeReply(message) {
-    const response = typeof message === 'string' ? JSON.parse(message) : message;
+    let response;
+    try { response = typeof message === 'string' ? JSON.parse(message) : message; }
+    catch (_) { return; } // no trustworthy request ID: let its bounded deadline handle it
     const call = pending.get(String(response?.id || ''));
     if (!call) return;
     clearTimeout(call.timer);
     pending.delete(String(response.id));
-    if (response.ok === false) call.reject(new Error(response.error || text('Native verbinding mislukt', 'Native connection failed', 'Connexion native échouée', 'Native Verbindung fehlgeschlagen')));
+    if (response.ok === false) call.reject(Object.assign(new Error(response.error || text('Native verbinding mislukt', 'Native connection failed', 'Connexion native échouée', 'Native Verbindung fehlgeschlagen')), { code: String(response.code || '') }));
     else call.resolve(response.result ?? {});
   };
 
@@ -448,25 +574,42 @@
     rememberNfcPairTokens(incoming);
     const incomingGateway = exactRid(inventory?.gatewayRid) || exactRid(incoming[0]?.RID || incoming[0]?.rid);
     const stale = inventory?.stale === true;
+    const inventoryComplete = inventory?.inventoryComplete !== false;
     if (incoming.length) {
-      devices = incoming;
+      // A missed discovery page says nothing about the receivers on that page.
+      // Retain them visibly as unconfirmed, never as online and never silently
+      // remove their installation configuration. Do not cross gateway sessions.
+      const seen = new Set(incoming.map(item => exactRid(item.RID || item.rid)));
+      const unconfirmed = !inventoryComplete && incomingGateway === gatewayRid
+        ? devices.filter(item => !seen.has(exactRid(item.RID || item.rid)))
+            .map(item => ({ ...item, ONLINE: '0', DISCOVERYSTATE: 'UNCONFIRMED' }))
+        : [];
+      devices = [...incoming, ...unconfirmed].map(item => stale
+        ? { ...item, ONLINE: '0', DISCOVERYSTATE: 'UNCONFIRMED' } : item);
       gatewayRid = incomingGateway || gatewayRid;
       // Keep the cached inventory available for display, but never present it
       // as a live transport connection. This forces connect() to rejoin the
       // receiver access point instead of sending commands to a stale route.
       const main = incoming.find(item => exactRid(item.RID || item.rid) === gatewayRid);
       ready = Boolean(main) && receiverReportsOnline(main) && !stale;
-      if (!stale) {
+      if (ready) {
         lastHealthyInventoryAt = Date.now();
         lastSuccessfulTransportAt = lastHealthyInventoryAt;
         consecutiveTransportFailures = 0;
       }
+    } else if (stale) {
+      // Explicit link loss is stronger evidence than the display grace period.
+      // Keep names, not a false live connection that suppresses reconnect().
+      devices = incomingGateway && gatewayRid && incomingGateway !== gatewayRid ? []
+        : devices.map(item => ({ ...item, ONLINE: '0', DISCOVERYSTATE: 'UNCONFIRMED' }));
+      gatewayRid = incomingGateway || gatewayRid;
+      ready = false;
     } else if (!ready || Date.now() - lastHealthyInventoryAt > INVENTORY_GRACE_MS) {
       devices = [];
       gatewayRid = '';
       ready = false;
     }
-    return { devices };
+    return { devices, inventoryComplete: inventoryComplete && !stale };
   }
 
   function transportSessionChanged() {
@@ -495,6 +638,12 @@
     return /bluetooth.{0,32}(verbroken|niet beschikbaar|disconnected|unavailable|powered off)|(?:network|netwerk|wi-?fi).{0,32}(not connected|no route|down|verbroken|niet verbonden)/i.test(message);
   }
 
+  function replayableTransportFailure(error) {
+    const detail = `${error?.code || ''} ${error?.message || error || ''}`;
+    if (/TRANSPORT_CHANGED|IDENTITY_|PIN_|TRUST_|SECURITY_|AUTH|PAIR_DENIED|KEY_MISMATCH|CANCELLED|CANCELED|SUPERSEDED|beveilig|pincode/i.test(detail)) return false;
+    return explicitTransportLoss(error) || /timeout|timed? ?out|not respond|antwoord(?:de|t) niet|niet op tijd|unreachable|no route|connection.{0,32}(lost|failed|closed)|verbinding.{0,32}verbroken|connexion.{0,32}perdue/i.test(detail);
+  }
+
   function noteTransportFailure(error) {
     // A command timeout or a missing ESP-NOW target ACK says nothing about
     // the iPhone-to-gateway link. Only explicit link-loss errors contribute
@@ -515,6 +664,7 @@
   }
 
   async function promoteSavedStandaloneGateway() {
+    if (window.AluvisionSecureConnection) return false; // repair requires proven owner flow, never a legacy KEY claim
     validateDirectGateway();
     const direct = devices.find((item) => exactRid(item.RID || item.rid) === gatewayRid);
     if (!direct || String(direct.MESHROLE || direct.ROLE || '').toUpperCase() !== 'STANDALONE') return false;
@@ -630,7 +780,18 @@
   }
 
   async function pair(payload = {}) {
+    // Capture the Add owner before discovery: a late scan must not attach its
+    // result to a newer Add operation or continue after the customer closes it.
+    // Intentional replacement of the visible modal remains part of this same
+    // activity; only closing/cancelling it retires the operation.
+    const activity = receiverPairActivity;
+    const currentActivity = () => !activity || pairActivityCurrent(activity);
+    const cancelledPair = () => Object.assign(new Error('Toevoegen geannuleerd.'), {
+      code: 'IDENTIFY_CANCELLED', reason: currentActivity() ? 'stale' : 'closed'
+    });
+    if (!currentActivity()) throw cancelledPair();
     const inventory = await discover();
+    if (!currentActivity()) throw cancelledPair();
     if (!inventory.devices.length) throw new Error(selectedTransportMode === 'bluetooth' ? text(
       'Geen Bluetooth-verbinding met de hoofdreceiver gevonden. Kies Bluetooth opnieuw bij Receiver toevoegen.',
       'No Bluetooth connection to the main receiver was found. Choose Bluetooth again under Add receiver.',
@@ -671,6 +832,7 @@
     }
     pendingPairRid = '';
     const rid = exactRid(selected.RID || selected.rid);
+    if (window.AluvisionLocalTestMode?.enabled) window.AluvisionLocalTestMode.assertReceiver(rid);
     const stored = Object.values(window.AluvisionDirectBridge?.receivers || {})
       .find((item) => exactRid(item?.rid || item?.RID) === rid);
     const reconnecting = candidateNeedsReconnect(selected, used);
@@ -681,7 +843,9 @@
     if (!key) throw new Error(text('De installatiebeveiliging is nog niet klaar.', 'Installation security is not ready yet.', 'La sécurité de l’installation n’est pas encore prête.', 'Die Installationssicherheit ist noch nicht bereit.'));
     const generation = transportGeneration;
     const selectedGateway = gatewayRid;
-    const currentPair = () => ready && generation === transportGeneration && gatewayRid === selectedGateway;
+    const currentLink = () => ready && generation === transportGeneration && gatewayRid === selectedGateway;
+    const currentPair = () => currentActivity() && currentLink();
+    const assertPairCurrent = () => { if (!currentPair()) throw cancelledPair(); };
     if (!window.AluvisionIdentifyBeforePair?.confirm) {
       throw new Error('Herkenning kon niet worden geopend. Open de app opnieuw.');
     }
@@ -694,9 +858,11 @@
       isCurrent: currentPair,
       identify: async ({ rid: target, requestId, signal }) => {
         if (target !== rid || !currentPair() || signal.aborted) throw new Error('Verbinding gewijzigd. Kies de receiver opnieuw.');
-        await identifyReceiver(target, { signal });
+        const sentAt = Date.now();
+        const reply = await identifyReceiver(target, { signal });
         if (!currentPair() || signal.aborted) throw new Error('Herkenning geannuleerd.');
-        return { ok: true, rid: target, requestId };
+        return { ok: true, rid: target, requestId,
+          pattern: window.AluvisionIdentifyBeforePair.patternFromReply?.(reply, String(selected.DEVTYPE || selected.receiverType || 'SPI').toUpperCase(), Date.now() - sentAt) };
       }
     });
     if (!recognition.confirmed || recognition.rid !== rid || !currentPair()) {
@@ -705,7 +871,31 @@
     window.modal?.(`<section class="native-pair-progress"><h2>${text('Receiver toevoegen…', 'Adding receiver…', 'Ajout du récepteur…', 'Receiver wird hinzugefügt…')}</h2><p class="sub">${text('Daarna stel je de LED Lines in.', 'Next, set up the LED Lines.', 'Configurez ensuite les LED Lines.', 'Danach richtest du die LED Lines ein.')}</p><div id="receiverNfcStatus" class="nfc-status scanning" role="status"></div></section>`);
     const selectedRole = String(selected.MESHROLE || selected.ROLE || '').toUpperCase();
     const needsMainConfiguration = rid === gatewayRid && (selectedRole === 'STANDALONE' || !used.size);
-    if (needsMainConfiguration) {
+    // A previously PIN-free MAIN can already have a local receiver entry.
+    // Re-check its actual security rather than letting that stale entry skip
+    // first PIN setup. An owned MAIN resumes without asking for a new PIN.
+    if (rid === gatewayRid && window.AluvisionSecureConnection) {
+      const initial = await commissionSecurityProvider?.getStatus?.(true);
+      assertPairCurrent();
+      if(!initial?.configured || !initial?.trusted) {
+        if(typeof window.v20CheckReceiverSecurity!=='function')throw new Error('De pincode-instelling kon niet worden geopend.');
+        const confirmed=await new Promise((resolve,reject)=>{
+          window.v20CheckReceiverSecurity({id:'native-restore-'+rid,rid,name:selected.name||'Receiver',receiverType:selected.DEVTYPE||selected.receiverType||'SPI'},
+            ()=>resolve(true),()=>resolve(false)).catch(reject);
+        });
+        if(!confirmed||!currentPair())throw Object.assign(new Error('Toevoegen geannuleerd.'),{code:'IDENTIFY_CANCELLED'});
+      }
+      assertPairCurrent();
+      const owner = await window.AluvisionSecureConnection.ensure(rid,{isCurrent:currentPair});
+      assertPairCurrent();
+      const status = await window.AluvisionSecureConnection.control({V:18,TYPE:'SECURITY_STATUS',TARGET:rid});
+      assertPairCurrent();
+      if (status.STATUS !== 'OK' || status.OWNERMATCH !== '1' || status.PINSET !== '1') throw new Error('De hoofdreceiver heeft de installatie nog niet bevestigd.');
+      selected = {...selected,RID:rid,DEVTYPE:owner.descriptor.receiverType,MESHROLE:'MAIN',MESHROUTING:'1',NUMBER:1};
+      await commissionSecurityProvider?.finalizeInstallation?.(rid,{isCurrent:currentPair});
+      assertPairCurrent();
+    } else if (needsMainConfiguration) {
+      assertPairCurrent();
       const meshReply = await transact({
         V: 18,
         TYPE: 'MESH_MAIN',
@@ -714,6 +904,7 @@
         NETWORK: key,
         NUMBER: number
       }, { timeout: 4200 });
+      assertPairCurrent();
       if (String(meshReply.STATUS || '').toUpperCase() !== 'OK' ||
           String(meshReply.MESHROLE || '').toUpperCase() !== 'MAIN' ||
           String(meshReply.MESHROUTING || '') !== '1') {
@@ -721,9 +912,14 @@
       }
       selected = { ...selected, ...meshReply, RID: rid, NUMBER: number };
       gatewayRid = rid;
+      await commissionSecurityProvider?.finalizeInstallation?.(rid, { isCurrent: currentPair });
+      assertPairCurrent();
     } else if (rid !== gatewayRid) {
       const receiverType = String(restoring ? stored?.receiverType : (selected.DEVTYPE || selected.receiverType || 'SPI')).toUpperCase() === 'RGBW' ? 'RGBW' : 'SPI';
-      const meshReply = await transact({
+      assertPairCurrent();
+      const meshReply = window.AluvisionSecureConnection
+        ? await window.AluvisionSecureConnection.enrollNode({...selected,rid,receiverType,number},{isCurrent:currentPair})
+        : await transact({
         V: 18,
         TYPE: 'MESH_PAIR',
         TARGET: rid,
@@ -731,6 +927,7 @@
         DEVTYPE: receiverType,
         KEY: key
       }, { timeout: 6200 });
+      assertPairCurrent();
       if (String(meshReply.STATUS || '').toUpperCase() !== 'OK' ||
           String(meshReply.DETAIL || '').toUpperCase() !== 'MESH_PAIRED' ||
           String(meshReply.TARGETACK || '') !== '1' ||
@@ -745,7 +942,9 @@
             PORTMASK: Math.max(1, Math.min(3, Number(stored.portMask) || 3)),
             PHYSICAL: Math.max(1, Math.min(3, Number(stored.portMask) || 3))
           };
+          assertPairCurrent();
           const configReply = await transact(restored, { timeout: 5200 });
+          assertPairCurrent();
           if (String(configReply.STATUS || '').toUpperCase() !== 'OK' ||
               !['1', 'OK', 'DELIVERED'].includes(String(configReply.TARGETACK || '').toUpperCase()) ||
               exactRid(configReply.TARGETRID) !== rid) {
@@ -759,7 +958,9 @@
             // Identity is the firmware default. Sending only actual
             // corrections keeps previously deployed receivers compatible.
             if (!map || map === 'RGBW') continue;
+            assertPairCurrent();
             const mapReply = await transact({ ...restored, PORT: port, MAP: map }, { timeout: 5200 });
+            assertPairCurrent();
             if (String(mapReply.STATUS || '').toUpperCase() !== 'OK' ||
                 !['1', 'OK', 'DELIVERED'].includes(String(mapReply.TARGETACK || '').toUpperCase()) ||
                 exactRid(mapReply.TARGETRID) !== rid || Number(mapReply.PORTACK ?? mapReply.PORT) !== port ||
@@ -774,20 +975,23 @@
           const ports = Array.from({ length: capacity }, (_, index) => index + 1)
             .filter((port) => mask & (1 << (port - 1)));
           let stagedSetup = false;
-          if (capacity === 4) {
-            const setupReply = await transact({
-              V: 18, TYPE: 'SETUP_BEGIN', TARGET: rid, DEVTYPE: 'SPI', KEY: key,
-              PORT: 0, PORTCAP: capacity, PORTMASK: mask, PORTS: ports.length
-            }, { timeout: 5200 });
-            if (String(setupReply.STATUS || '').toUpperCase() !== 'OK' ||
-                !['1', 'OK', 'DELIVERED'].includes(String(setupReply.TARGETACK || '').toUpperCase()) ||
-                exactRid(setupReply.TARGETRID) !== rid || Number(setupReply.PORTACK ?? setupReply.PORT) !== 0) {
-              throw new Error(text('De opgeslagen uitgangen konden niet veilig worden voorbereid.', 'The saved outputs could not be prepared safely.', 'Les sorties enregistrées n’ont pas pu être préparées en toute sécurité.', 'Die gespeicherten Ausgänge konnten nicht sicher vorbereitet werden.'));
-            }
-            stagedSetup = true;
-          }
           try {
+            if (capacity === 4) {
+              assertPairCurrent();
+              const setupReply = await transact({
+                V: 18, TYPE: 'SETUP_BEGIN', TARGET: rid, DEVTYPE: 'SPI', KEY: key,
+                PORT: 0, PORTCAP: capacity, PORTMASK: mask, PORTS: ports.length
+              }, { timeout: 5200 });
+              if (String(setupReply.STATUS || '').toUpperCase() !== 'OK' ||
+                  !['1', 'OK', 'DELIVERED'].includes(String(setupReply.TARGETACK || '').toUpperCase()) ||
+                  exactRid(setupReply.TARGETRID) !== rid || Number(setupReply.PORTACK ?? setupReply.PORT) !== 0) {
+                throw new Error(text('De opgeslagen uitgangen konden niet veilig worden voorbereid.', 'The saved outputs could not be prepared safely.', 'Les sorties enregistrées n’ont pas pu être préparées en toute sécurité.', 'Die gespeicherten Ausgänge konnten nicht sicher vorbereitet werden.'));
+              }
+              stagedSetup = true;
+              assertPairCurrent();
+            }
             for (const port of ports) {
+              assertPairCurrent();
               const setting = spiPortSetting(stored, port);
               const restored = {
                 V: 18, TYPE: 'CONFIG', TARGET: rid, DEVTYPE: 'SPI', KEY: key,
@@ -796,6 +1000,7 @@
                 GROUPPIXELS: setting.groupPixels || setting.pixels, OFFSET: setting.offset
               };
               const configReply = await transact(restored, { timeout: 5200 });
+              assertPairCurrent();
               const portAck = configReply.PORTACK ?? configReply.PORT;
               const portMatches = Number(portAck) === port || (capacity === 1 && port === 1 && portAck == null);
               if (String(configReply.STATUS || '').toUpperCase() !== 'OK' ||
@@ -812,6 +1017,7 @@
               };
             }
             if (capacity === 4) {
+              assertPairCurrent();
               const setupReply = await transact({
                 V: 18, TYPE: 'SETUP_END', TARGET: rid, DEVTYPE: 'SPI', KEY: key,
                 PORT: 0, PORTCAP: capacity, PORTMASK: mask, PORTS: ports.length
@@ -822,9 +1028,12 @@
                 throw new Error(text('De opgeslagen uitgangen konden niet worden bevestigd.', 'The saved outputs could not be confirmed.', 'Les sorties enregistrées n’ont pas pu être confirmées.', 'Die gespeicherten Ausgänge konnten nicht bestätigt werden.'));
               }
               stagedSetup = false;
+              assertPairCurrent();
             }
           } catch (error) {
-            if (stagedSetup) {
+            // Cancellation may end only the staging lease that this operation
+            // opened. Never send cleanup through a changed gateway/session.
+            if (stagedSetup && currentLink()) {
               await transact({
                 V: 18, TYPE: 'SETUP_CANCEL', TARGET: rid, DEVTYPE: 'SPI', KEY: key,
                 PORT: 0, PORTMASK: mask
@@ -835,11 +1044,14 @@
         }
       }
     }
+    assertPairCurrent();
     try {
       const refreshed = await discover();
+      assertPairCurrent();
       const current = refreshed.devices.find((item) => exactRid(item.RID || item.rid) === rid);
       if (current) selected = { ...selected, ...current, RID: rid, NUMBER: number };
     } catch (_) {}
+    assertPairCurrent();
     // A node may advertise its pre-CONFIG values from the gateway cache for a
     // brief moment after re-pairing. Keep the saved hardware configuration
     // authoritative until the node's next HELLO refreshes that cache.
@@ -866,15 +1078,66 @@
     return { ...selected, NUMBER: number, gateway: rid === gatewayRid, gatewayRid: gatewayRid || rid, reconnected: reconnecting, rehydrated: rehydrating };
   }
 
+  function secureCommandCoordinator() {
+    const secure = window.AluvisionSecureConnection;
+    return secure && typeof secure.control === 'function' && typeof secure.hasTrustedMain === 'function' ? secure : null;
+  }
+
+  function guardMissingSecureCoordinator(fields) {
+    if (secureCommandCoordinator()) return;
+    const type = String(fields?.TYPE || '').toUpperCase();
+    const direct = exactRid(gatewayRid);
+    const hasTarget = Object.prototype.hasOwnProperty.call(fields || {}, 'TARGET');
+    const target = hasTarget ? exactRid(fields.TARGET) : direct;
+    const gateway = devices.find(item => exactRid(item.RID || item.rid) === direct);
+    const savedGateway = window.AluvisionDirectBridge?.receivers?.[direct];
+    const family = String(gateway?.DEVTYPE || gateway?.receiverType
+      || savedGateway?.DEVTYPE || savedGateway?.receiverType || '').trim().toUpperCase();
+    const hasFamily = Object.prototype.hasOwnProperty.call(fields || {}, 'DEVTYPE');
+    const familyMatches = !hasFamily || !['SPI','RGBW'].includes(family)
+      || String(fields.DEVTYPE || '').trim().toUpperCase() === family;
+    // These local reads/cryptographic envelopes do not grant ownership. A
+    // partial app must never downgrade LIVE, port setup, pairing or removal to
+    // an old plaintext/compatibility-key command, including through transactRaw.
+    const local = ['DISCOVER','INFO','STATUS','PING','SECURITY_STATUS','SECURITY_HELLO','SECURITY_AUTH',
+      'RECOVERY_HELLO','RECOVERY_AUTH','TRUST_HELLO','TRUST_AUTH','SECURE_OWNER','RELEASE_STATUS'].includes(type);
+    // Missing TARGET means this directly connected receiver. An explicitly
+    // invalid/zero target or another family must not become a legacy broadcast.
+    if (direct && direct !== '0000000000000000' && target === direct && familyMatches && local) return;
+    throw Object.assign(new Error(text(
+      'De beveiligde verbinding is niet volledig geladen. Sluit en heropen de app of plaats de nieuwste appversie. Je receiver en PIN blijven behouden.',
+      'The secure connection did not load completely. Reopen the app or install its latest version. Your receiver and PIN are kept.',
+      'La connexion sécurisée ne s’est pas chargée complètement. Rouvrez l’app ou installez sa dernière version. Votre récepteur et votre PIN sont conservés.',
+      'Die sichere Verbindung wurde nicht vollständig geladen. Öffne die App erneut oder installiere die neueste Version. Receiver und PIN bleiben erhalten.')),
+      {code:'SECURITY_STACK_REQUIRED'});
+  }
+
   async function transact(fields, options = {}) {
+    const type = String(fields?.TYPE || '').toUpperCase();
+    const plainRead = ['DISCOVER','INFO','SECURITY_STATUS','SECURITY_HELLO','SECURITY_AUTH','RECOVERY_HELLO','RECOVERY_AUTH','TRUST_HELLO','TRUST_AUTH','SECURE_OWNER','RELEASE_STATUS'].includes(type);
+    const secure = secureCommandCoordinator();
+    if (secure && !plainRead) {
+      if (['IDENTIFY','MESH_IDENTIFY'].includes(type) && !await secure.hasTrustedMain(gatewayRid)) return transactRaw(fields,options);
+      return secure.control(fields, options);
+    }
+    guardMissingSecureCoordinator(fields);
+    return transactRaw(fields, options);
+  }
+
+  async function transactRaw(fields, options = {}) {
     const checkCancelled = () => {
       if (options?.signal?.aborted) throw Object.assign(new Error('Herkenning geannuleerd.'), { code: 'IDENTIFY_CANCELLED' });
     };
     checkCancelled();
+    guardMissingSecureCoordinator(fields);
     await ensureNativeTransportState();
     checkCancelled();
-    const timeout = typeof options === 'number' ? options : Number(options?.timeout || options?.timeoutMs || 3600);
+    guardMissingSecureCoordinator(fields);
+    const requestedTimeout = typeof options === 'number' ? options : Number(options?.timeout || options?.timeoutMs || 3600);
     const commandType = String(fields?.TYPE || '').trim().toUpperCase();
+    const secureBleResponse = selectedTransportMode === 'bluetooth' &&
+      (BLE_SECURE_RESPONSE_TYPES.has(commandType) || commandType.startsWith('SECURE_FRAME_'));
+    const timeout = secureBleResponse ? Math.max(20000, requestedTimeout) : requestedTimeout;
     const commandRid = exactRid(fields?.TARGET) || gatewayRid;
     const commissioningCommand = commandType === 'SECURITY_SETUP' ||
       commandType === 'MESH_MAIN' || commandType === 'MESH_PAIR';
@@ -884,22 +1147,43 @@
       ...fields,
       ...(commissioningCommand && cachedPairToken && !exactPairToken(fields?.PAIR_TOKEN)
         ? { PAIR_TOKEN: cachedPairToken } : {}),
-      ...(['SECURITY_SETUP', 'SECURITY_STATUS'].includes(commandType) && networkKey() && !fields?.KEY
+      ...(['SECURITY_SETUP'].includes(commandType) && networkKey() && !fields?.KEY
         ? { KEY: networkKey() } : {})
     };
     if (!commissioningCommand) delete securedFields.PAIR_TOKEN;
+    if (window.AluvisionSecureConnection || commandType === 'SECURITY_STATUS') delete securedFields.KEY;
     const testMode = String(fields?.TEST || '').trim().toUpperCase();
     const ephemeralCalibration = commandType === 'TEST' && ['FILL', 'START', 'END'].includes(testMode);
     // LIVE is latest-only. Replaying it here after a reconnect can apply a
     // stale slider value after the customer has already chosen a newer one.
     // The web command broker/resilience layer owns the single newest replay.
     const replayableCommand = REPLAYABLE_COMMANDS.has(commandType) && !ephemeralCalibration;
+    const commandGeneration = transportGeneration;
     const sendOnce = async () => {
       checkCancelled();
+      guardMissingSecureCoordinator(fields);
       validateDirectGateway();
+      if (window.AluvisionLocalTestMode?.enabled && !['DISCOVER','INFO','STATUS','PING','SECURITY_STATUS'].includes(commandType)) {
+        window.AluvisionLocalTestMode.assertReceiver(commandRid);
+        if (['TRUST_HELLO','TRUST_AUTH','SECURE_OWNER','SECURITY_SETUP','SECURITY_HELLO','SECURITY_AUTH','RECOVERY_HELLO','RECOVERY_AUTH','UNPAIR','FACTORY_RESET'].includes(commandType))
+          throw Object.assign(new Error('Deze beveiligingsactie is niet beschikbaar in de tijdelijke teststand zonder PIN.'),{code:'LOCAL_NOPIN_ACTION_UNAVAILABLE'});
+      }
+      const replyingGateway = gatewayRid, replyingGeneration = transportGeneration;
       const result = await nativeCall('transact', { fields: securedFields, timeoutMs: timeout }, Math.max(5000, timeout + 2200));
+      if (gatewayRid !== replyingGateway || transportGeneration !== replyingGeneration)
+        throw Object.assign(new Error('Verbinding gewijzigd. Probeer opnieuw.'), {code:'TRANSPORT_CHANGED'});
       noteTransportSuccess();
-      const reply = result.fields || result.reply || result;
+      let reply = result.fields || result.reply || result;
+      // Raw native BLE, unlike native Wi-Fi, leaves legacy direct replies
+      // without routing labels. A reply from this exact selected gateway is
+      // direct delivery, not a satellite ACK. Keep every actual PORT/PORTMASK,
+      // STATUS and explicit routing rejection unchanged; never invent them.
+      if (commandRid === replyingGateway && exactRid(reply?.RID) === replyingGateway &&
+          (!reply.TARGETRID || exactRid(reply.TARGETRID) === commandRid) &&
+          (!securedFields.ID || String(reply.ID) === String(securedFields.ID))) {
+        reply = {...reply, TARGETRID: reply.TARGETRID || commandRid,
+          TARGETACK: reply.TARGETACK ?? 'DIRECT'};
+      }
       const detail = String(reply?.DETAIL || '').toUpperCase();
       if (commissioningCommand && String(reply?.STATUS || '').toUpperCase() !== 'OK') {
         const explanation = detail === 'SETUP_WINDOW_EXPIRED' ? text(
@@ -931,7 +1215,7 @@
     } catch (firstError) {
       checkCancelled();
       noteTransportFailure(firstError);
-      if (!replayableCommand) throw firstError;
+      if (!replayableCommand || !replayableTransportFailure(firstError) || commandGeneration !== transportGeneration) throw firstError;
 
       // Durable idempotent commands (including generation-controlled SAVE)
       // get one quiet reconnect/replay. LIVE and
@@ -939,14 +1223,41 @@
       // value makes the physical strip lag behind the newest UI state.
       try {
         await shortPause(120);
+        checkCancelled();
+        if (commandGeneration !== transportGeneration) throw Object.assign(new Error('Verbinding gewijzigd. Probeer opnieuw.'), { code: 'TRANSPORT_CHANGED' });
         const reconnected = await connect({ interactive: false, forceReconnect: true });
         if (!reconnected) throw firstError;
+        if (commandGeneration !== transportGeneration) throw Object.assign(new Error('Verbinding gewijzigd. Probeer opnieuw.'), { code: 'TRANSPORT_CHANGED' });
         return await sendOnce();
       } catch (retryError) {
         noteTransportFailure(retryError);
         throw retryError;
       }
     }
+  }
+
+  async function reconnectReleased(rid) {
+    const target=exactRid(rid),id=meshId(),key=networkKey(),mode=selectedTransportMode,generation=transportGeneration;
+    const record=await window.AluvisionSecureConnection?.store.load(id);
+    const pending=record?.pendingRelease;
+    if(!target||pending?.rid!==target||pending.installationId!==id||meshId()!==id||networkKey()!==key||mode!==selectedTransportMode||generation!==transportGeneration)
+      throw new Error('De bewaarde verwijdering hoort niet bij deze verbinding.');
+    // Rejoin only the exact receiver with a durable release intent. Do not
+    // promote/re-pair a newly released standalone receiver as a side effect.
+    const saved=Object.values(window.AluvisionDirectBridge?.receivers||{}).find(item=>exactRid(item.rid||item.RID)===target);
+    const info=devices.find(item=>exactRid(item.RID||item.rid)===target);
+    const ssid=String(saved?.apSsid||saved?.APSSID||info?.APSSID||'');
+    transportSessionChanged();
+    const connected=await nativeCall('connect',{expectedGatewayRid:target,
+      preferredSSID:/^ALUVISION-(?:SPI|RGBW)-(?:[0-9A-F]{4}|[0-9A-F]{12})$/i.test(ssid)?ssid:''},30000);
+    if(generation!==transportGeneration||meshId()!==id||networkKey()!==key||mode!==selectedTransportMode)
+      throw new Error('De verbinding is gewijzigd. De verwijdering blijft bewaard.');
+    const incoming=Array.isArray(connected?.devices)?connected.devices:[];
+    const actual=exactRid(connected?.gatewayRid)||exactRid(incoming[0]?.RID||incoming[0]?.rid);
+    if(actual!==target){invalidateRuntimeConnection();throw new Error('De gevonden receiver hoort niet bij deze verwijdering.');}
+    remember(connected);
+    if(!ready||gatewayRid!==target)throw new Error('De receiver start nog opnieuw.');
+    return true;
   }
 
   const adapter = Object.freeze({
@@ -956,6 +1267,7 @@
     // skewing receiver clocks and under-budgeting multi-receiver start times.
     get supportsConcurrentFanout() { return false; },
     supportsOta: false,
+    supportsNativeOta: true,
     // Every native bridge operation already owns a bounded timeout. The shared
     // web transport must not race it with a shorter Promise.race: that reports
     // a false disconnect while iOS is still completing an AP/BLE reconnect and
@@ -964,11 +1276,22 @@
     requiresExplicitPairing: true,
     isReady: () => ready,
     connect,
+    reconnectReleased,
     discover,
     pair,
     transact,
+    transactRaw,
+    receiverInfo: rid => devices.find(item => exactRid(item.RID || item.rid) === exactRid(rid)) || null,
+    installationContext: () => Object.freeze({meshId: meshId(), networkKey: networkKey()}),
+    installationReceiverRids: () => Array.from(appReceiverRIDs()),
     recoveryRequest: nativeRecoveryRequest,
+    secureRecoveryRequest,
     otaPreflight: nativeOtaPreflight,
+    otaStart: nativeOtaStart,
+    otaStatus: nativeOtaStatus,
+    otaCancel: nativeOtaCancel,
+    otaJobs: nativeOtaJobs,
+    otaVerify: nativeOtaVerify,
     configureSecurity(next = {}) {
       security = { compatibilityKey: String(next.compatibilityKey || ''), publicTag: String(next.publicTag || ''), meshId: String(next.meshId || '') };
       return true;
@@ -998,7 +1321,15 @@
       connectBluetooth: connectNativeBluetooth,
       disconnectBluetooth: disconnectNativeBluetooth,
       deriveSecurity: deriveNativeInstallationSecurity,
+      secretJournal,
+      secureRecoveryRequest,
       otaPreflight: nativeOtaPreflight,
+      supportsNativeOta: true,
+      otaStart: nativeOtaStart,
+      otaStatus: nativeOtaStatus,
+      otaCancel: nativeOtaCancel,
+      otaJobs: nativeOtaJobs,
+      otaVerify: nativeOtaVerify,
       registerSecurityProvider: registerCommissionSecurityProvider,
       setAddTarget(target = null) { chooseTarget(target); },
       getAddTarget() { return nativeReceiverAddTarget ? { ...nativeReceiverAddTarget } : null; }
@@ -1140,8 +1471,8 @@
     return `<article class="native-receiver-choice ${configured && !reconnect ? 'known' : ''} ${reconnect ? 'reconnect' : ''} ${online ? '' : 'offline'}">
       <span class="native-receiver-symbol">${type === 'RGBW' ? 'W' : '▥'}</span>
       <span class="native-receiver-info"><b>${escapeHtml(candidateName(device))}</b><small>${escapeHtml(description)} · ${escapeHtml(pixels)}</small></span>
-      <button class="button soft" type="button" ${online ? '' : 'disabled'} onclick="identifyNativeCandidate('${rid}',this)">✦ ${text('Herken', 'Identify', 'Identifier', 'Erkennen')}</button>
-      <button class="button native-candidate-add" data-native-rid="${rid}" type="button" ${unavailable ? 'disabled' : ''} onclick="addNativeCandidate('${rid}',this)">${actionLabel}</button>
+      <div class="native-receiver-actions"><button class="button soft native-candidate-identify" type="button" ${online ? '' : 'disabled'} onclick="identifyNativeCandidate('${rid}',this)"><span aria-hidden="true">✦</span> ${text('Herkennen', 'Identify', 'Identifier', 'Erkennen')}</button>
+      <button class="button native-candidate-add" data-native-rid="${rid}" type="button" ${unavailable ? 'disabled' : ''} onclick="addNativeCandidate('${rid}',this)">${actionLabel}</button></div>
     </article>`;
   }
 
@@ -1252,6 +1583,66 @@
     }
   };
 
+  // One visible hand-off owns the Add operation. A cancelled/closed panel
+  // must never reappear when a late radio reply finally arrives.
+  function beginPairActivity(rid) {
+    const activity = { rid, cancelled: false, observer: null };
+    const host = document.getElementById('modal');
+    activity.checkClosed = (records = []) => {
+      // A close followed by another modal in the same event must still retire
+      // Add. Looking only at the final hidden=false would miss that transition.
+      if (host?.hidden || records.some(record => record.attributeName === 'hidden' && record.oldValue !== null)) {
+        activity.cancelled = true;
+      }
+    };
+    if (host && typeof MutationObserver === 'function') {
+      activity.observer = new MutationObserver(records => activity.checkClosed(records));
+      activity.observer.observe(host, { attributes: true, attributeFilter: ['hidden'], attributeOldValue: true });
+    }
+    receiverPairActivity = activity;
+    return activity;
+  }
+  function pairActivityCurrent(activity = receiverPairActivity) {
+    activity?.checkClosed?.(activity.observer?.takeRecords() || []);
+    return !activity || (activity === receiverPairActivity && !activity.cancelled && !document.getElementById('modal')?.hidden);
+  }
+  function endPairActivity(activity) {
+    activity?.observer?.disconnect();
+    if (receiverPairActivity === activity) receiverPairActivity = null;
+  }
+  function showPairFailure(error, target, activity = receiverPairActivity) {
+    if (!pairActivityCurrent(activity)) return;
+    // Error messages never depend on the discovery DOM still existing. That
+    // panel has already been replaced by identification or setup at this point.
+    const message = text('De instellingen konden nog niet worden geopend. Je receiver en keuzes blijven bewaard. Controleer de verbinding en probeer opnieuw.',
+      'The settings could not be opened yet. Your receiver and choices are kept. Check the connection and try again.',
+      'Les réglages n’ont pas pu être ouverts. Votre récepteur et vos choix sont conservés. Vérifiez la connexion et réessayez.',
+      'Die Einstellungen konnten noch nicht geöffnet werden. Receiver und Auswahl bleiben gespeichert. Prüfe die Verbindung und versuche es erneut.');
+    chooseTarget(target);
+    window.modal?.(`<section class="native-pair-error" data-native-pair-error role="alert"><div class="eyebrow">${text('RECEIVER TOEVOEGEN', 'ADD RECEIVER', 'AJOUTER UN RÉCEPTEUR', 'RECEIVER HINZUFÜGEN')}</div><h1>${text('Instellen onderbroken', 'Setup interrupted', 'Configuration interrompue', 'Einrichtung unterbrochen')}</h1><p class="sub">${message}</p><div class="v20-pair-actions"><button type="button" class="button soft" onclick="closeModal()">${text('Later', 'Later', 'Plus tard', 'Später')}</button><button type="button" class="button" onclick="retryNativeReceiverSetup()">${text('Opnieuw proberen', 'Try again', 'Réessayer', 'Erneut versuchen')}</button></div></section>`, { viewKey: 'native-pair-error' });
+  }
+  window.retryNativeReceiverSetup = () => {
+    if (receiverPairBusy) return;
+    const target = nativeReceiverAddTarget ? { ...nativeReceiverAddTarget } : null;
+    if (typeof window.openAddReceiver === 'function') {
+      // Use the shared Wi-Fi/Bluetooth choice screen, retaining the original
+      // destination even when Add was opened from a group.
+      window.openAddReceiver(target);
+      chooseTarget(target);
+    } else pairingModal(target);
+  };
+  async function openNativeReceiverSetup(device, target, activity = receiverPairActivity) {
+    if (!pairActivityCurrent(activity)) return;
+    window.modal?.(`<section class="native-pair-progress"><h2>${text('Instellingen openen…', 'Opening settings…', 'Ouverture des réglages…', 'Einstellungen werden geöffnet…')}</h2><p class="sub">${escapeHtml(candidateName(device))}</p></section>`, { viewKey: 'native-pair-handoff' });
+    if (target?.zoneId && target?.groupId && typeof window.startPairingForGroup === 'function') {
+      await window.startPairingForGroup(device.id, target.zoneId, target.groupId);
+    } else {
+      if (typeof window.startPairing !== 'function') throw new Error('SETUP_UNAVAILABLE');
+      await window.startPairing(device.id);
+    }
+    if (pairActivityCurrent(activity) && document.querySelector('.native-pair-progress')) throw new Error('SETUP_NOT_OPENED');
+  }
+
   window.addNativeCandidate = async function addNativeCandidate(rid, button) {
     if (receiverPairBusy) return;
     const selected = exactRid(rid);
@@ -1265,22 +1656,19 @@
       // Resume that receiver's real wizard instead of leaving Add disabled or
       // attempting to claim an already owned receiver again.
       receiverPairBusy = true;
+      const activity = beginPairActivity(selected);
       try {
         await connect({ interactive: false });
         validateDirectGateway();
         const existing = (db?.devices || []).find(item => exactRid(item.rid || item.RID) === selected);
         if (!existing) throw new Error(text('Receiver niet meer beschikbaar', 'Receiver is no longer available', 'Récepteur indisponible', 'Receiver nicht verfügbar'));
         const target = nativeReceiverAddTarget;
-        window.closeModal?.();
-        if (target?.zoneId && target?.groupId && typeof window.startPairingForGroup === 'function') {
-          await window.startPairingForGroup(existing.id, target.zoneId, target.groupId);
-        } else {
-          await window.startPairing?.(existing.id);
-        }
+        await openNativeReceiverSetup(existing, target, activity);
       } catch (error) {
-        window.toast?.(String(error?.message || error));
+        showPairFailure(error, nativeReceiverAddTarget, activity);
       } finally {
         receiverPairBusy = false;
+        endPairActivity(activity);
       }
       return;
     }
@@ -1296,9 +1684,15 @@
     if (selected === gatewayRid && selectedRole === 'MAIN' && !used.has(selected) &&
         typeof window.v20CheckReceiverSecurity === 'function' && commissionSecurityProvider?.getStatus) {
       receiverPairBusy = true;
+      const activity = beginPairActivity(selected);
       let status;
-      try { status = await commissionSecurityProvider.getStatus(true); }
-      finally { receiverPairBusy = false; }
+      try {
+        status = await commissionSecurityProvider.getStatus(true);
+        if (!pairActivityCurrent(activity)) return;
+      } catch (error) {
+        showPairFailure(error, nativeReceiverAddTarget, activity);
+        return;
+      } finally { receiverPairBusy = false; endPairActivity(activity); }
       if (!status?.configured || !status?.trusted) {
         const target = nativeReceiverAddTarget ? { ...nativeReceiverAddTarget } : null;
         await window.v20CheckReceiverSecurity({
@@ -1313,6 +1707,7 @@
       }
     }
     receiverPairBusy = true;
+    const activity = beginPairActivity(selected);
     const previousLabel = button?.textContent || '';
     const pairButtons = [...document.querySelectorAll('.native-candidate-add')];
     const priorDisabledState = new Map(pairButtons.map((item) => [item, item.disabled]));
@@ -1323,15 +1718,12 @@
     try {
       await window.pairNfcReceiver();
     } catch (error) {
-      const status = document.getElementById('receiverNfcStatus');
-      if (status) {
-        status.className = 'nfc-status error';
-        status.innerHTML = `<span><b>${text('Toevoegen niet gelukt', 'Could not add receiver', 'Impossible d’ajouter le récepteur', 'Receiver konnte nicht hinzugefügt werden')}</b><small>${escapeHtml(error?.message || error)}</small></span>`;
-      }
+      showPairFailure(error, nativeReceiverAddTarget, activity);
     } finally {
       pendingPairRid = '';
       pendingReconnectRid = '';
       receiverPairBusy = false;
+      endPairActivity(activity);
       priorDisabledState.forEach((disabled, item) => {
         if (item.isConnected) item.disabled = disabled;
       });
@@ -1372,6 +1764,7 @@
       <div class="native-wifi-once"><span><b>${escapeHtml(connectionCopy.title)}</b><small>${text('Internet is niet nodig.', 'No internet is needed.', 'Internet n’est pas nécessaire.', 'Kein Internet nötig.')}</small></span></div>
       <div id="receiverNfcStatus" class="nfc-status"><span><b>${text('Verbinding controleren', 'Checking connection', 'Vérification de la connexion', 'Verbindung wird geprüft')}</b><small>${text('Internet is niet nodig. De app zoekt rechtstreeks naar je verlichting.', 'No internet is needed. The app searches directly for your lighting.', 'Aucune connexion Internet n’est nécessaire. L’app recherche directement votre éclairage.', 'Kein Internet nötig. Die App sucht direkt nach deiner Beleuchtung.')}</small></span></div>
       <div id="nativeReceiverCandidates" class="native-receiver-candidates"></div>
+      ${window.AluvisionLocalTestMode?.enabled ? '<p class="sub" data-local-no-pin-notice>Teststand · PIN tijdelijk uitgeschakeld</p>' : `<button type="button" class="button soft" data-existing-installation-entry onclick="AluvisionAccountlessRecovery.openExisting('connect')">${text('Bestaande installatie verbinden', 'Connect existing installation', 'Connecter l’installation existante', 'Bestehende Installation verbinden')}</button>`}
       <div class="v20-pair-actions"><button class="button soft" type="button" onclick="closeModal()">${text('Annuleren', 'Cancel', 'Annuler', 'Abbrechen')}</button><button id="nativeReceiverScanButton" class="button" type="button" onclick="scanNativeReceivers()">${escapeHtml(connectionCopy.button)}</button></div>
     </section>`);
     setTimeout(() => window.scanNativeReceivers?.(), 0);
@@ -1407,6 +1800,7 @@
     };
     window.pairNfcReceiver = async () => {
       const selectedTarget = nativeReceiverAddTarget ? { ...nativeReceiverAddTarget } : null;
+      const activity = receiverPairActivity;
       const reconnecting = Boolean(pendingReconnectRid);
       let status = document.getElementById('receiverNfcStatus');
       if (status) {
@@ -1417,8 +1811,10 @@
         const response = await api('/api/pair', { number: nextNativeReceiverNumber() });
         if (response?.cancelled) {
           if (response.cancelReason === 'other-receiver') pairingModal(selectedTarget);
+          else if (!['closed', 'superseded', 'cancelled'].includes(response.cancelReason)) showPairFailure(null, selectedTarget, activity);
           return;
         }
+        if (!pairActivityCurrent(activity)) return;
         if (!response?.ok) throw new Error(response?.error || text('Geen receiver gevonden', 'No receiver found', 'Aucun récepteur trouvé', 'Kein Receiver gefunden'));
         const previous = db.devices.find((item) => item.id === response.device.id);
         const gateway = String(response.transport?.gateway?.rid || '').toUpperCase();
@@ -1440,8 +1836,6 @@
           transport: `NATIVE_${selectedTransportMode.toUpperCase()}`
         };
         save();
-        closeModal();
-        render();
         if (reconnecting) {
           // Reconnecting a retained receiver must also verify the main PIN.
           // A previous transport record is not proof that setup completed.
@@ -1449,29 +1843,25 @@
             window.closeModal?.();
             window.toast?.(text('Receiver opnieuw verbonden', 'Receiver reconnected', 'Récepteur reconnecté', 'Receiver neu verbunden'));
           });
-        } else if (selectedTarget?.zoneId && selectedTarget?.groupId && typeof window.startPairingForGroup === 'function') {
-          await window.startPairingForGroup(device.id, selectedTarget.zoneId, selectedTarget.groupId);
         } else {
-          await window.startPairing?.(device.id);
+          await openNativeReceiverSetup(device, selectedTarget, activity);
         }
       } catch (error) {
-        status = document.getElementById('receiverNfcStatus');
-        if (status) {
-          status.className = 'nfc-status error';
-          status.innerHTML = `<span><b>${text('Geen receiver gevonden', 'No receiver found', 'Aucun récepteur trouvé', 'Kein Receiver gefunden')}</b><small>${escapeHtml(error?.message || error)}</small></span>`;
-        }
+        showPairFailure(error, selectedTarget, activity);
         throw error;
       }
     };
     document.documentElement.classList.add('native-ios');
     document.head.insertAdjacentHTML('beforeend', `<style>
       .native-receiver-candidates{display:grid;gap:9px;margin-top:12px}
-      .native-receiver-choice{display:grid;grid-template-columns:42px minmax(0,1fr) auto auto;gap:9px;align-items:center;padding:11px;border:1px solid var(--line);border-radius:15px;background:var(--panel-2)}
+      .native-receiver-choice{display:grid;grid-template-columns:42px minmax(0,1fr);gap:9px;align-items:center;padding:11px;border:1px solid var(--line);border-radius:15px;background:var(--panel-2);min-width:0}
+      .native-receiver-actions{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:9px;min-width:0}
+      .native-receiver-actions>.button{min-width:0;width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.25}
       .native-receiver-choice.known,.native-receiver-choice.offline{opacity:.68}.native-receiver-choice.reconnect{border-color:color-mix(in srgb,var(--accent,#c94e46) 42%,var(--line))}.native-receiver-symbol{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#202120;color:#fff;font-weight:950}
       .native-receiver-info{min-width:0}.native-receiver-info b,.native-receiver-info small{display:block}.native-receiver-info small{margin-top:3px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       .native-receiver-choice .button{min-height:40px;padding:8px 11px}.native-receiver-empty{padding:16px;text-align:center;border:1px dashed var(--line);border-radius:15px}.native-receiver-empty b,.native-receiver-empty small{display:block}.native-receiver-empty small{margin-top:5px;color:var(--mut);line-height:1.45}
       .native-wifi-once{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0 0;padding:11px 12px;border:1px solid var(--line);border-radius:14px;background:var(--panel-2)}.native-wifi-once[hidden]{display:none}.native-wifi-once b,.native-wifi-once small{display:block}.native-wifi-once small{margin-top:2px;color:var(--mut)}
-      @media(max-width:700px){.native-receiver-choice{grid-template-columns:42px minmax(0,1fr)}.native-receiver-choice .button{width:100%}}
+      @media(max-width:350px){.native-receiver-actions{grid-template-columns:1fr}.native-receiver-actions>.native-candidate-add{grid-row:1}}
     </style>`);
     window.dispatchEvent(new CustomEvent('aluvision-native-ready'));
   }, { once: true });

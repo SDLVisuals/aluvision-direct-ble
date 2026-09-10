@@ -34,6 +34,12 @@
   // larger catalogue entry merely because a receiver reports a larger flash
   // chip or an untrusted OTAMAX value.
   const MAX_APPLICATION_IMAGE_BYTES = 2 * 1024 * 1024;
+  // These shipped receiver builds reject the old OTA_ARM/KEY and plain HTTP
+  // stream. Only the native owner-authorized adapter currently implements the
+  // encrypted grant/binary channel. Older compatibility firmware keeps its
+  // existing path; public OTAV=1 alone does not prove secure-update support.
+  const OWNER_OTA_REQUIRED_FROM = '21.1.1';
+  const NATIVE_OWNER_OTA_REASON = 'Deze receiver gebruikt beveiligde updates. Open de geïnstalleerde Aluvision-app op je iPhone en verbind via Wi-Fi om bij te werken.';
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
 
@@ -187,6 +193,51 @@
     }
 
     function otaUsesWifi() { return activeTransport === 'wifi'; }
+
+    function nativeOta() {
+      const adapter = getWifiOta();
+      return adapter?.supportsNativeOta === true ? adapter : null;
+    }
+
+    function needsNativeOwnerOta(receiver, artifact) {
+      return !nativeOta() && (
+        compareVersions(receiverVersion(receiver), OWNER_OTA_REQUIRED_FROM) >= 0 ||
+        compareVersions(artifact?.version || '', OWNER_OTA_REQUIRED_FROM) >= 0
+      );
+    }
+
+    function acceptNativeJob(raw, expected = {}) {
+      if (!raw || typeof raw !== 'object' || typeof raw.id !== 'string' || !raw.id ||
+          exactRid(raw.rid) !== raw.rid || !['SPI', 'RGBW'].includes(raw.receiverType) ||
+          !['queued', 'running', 'completed', 'failed', 'cancelled'].includes(raw.state) ||
+          !Number.isInteger(raw.progress) || raw.progress < 0 || raw.progress > 100 ||
+          (expected.id && raw.id !== expected.id) || (expected.rid && raw.rid !== expected.rid) ||
+          (expected.artifactId && raw.artifactId !== expected.artifactId)) {
+        throw new Error('Ongeldige native updatebevestiging');
+      }
+      const job = clone(raw);
+      if (job.state === 'completed') {
+        const info = job.verified;
+        if (job.committed !== true || job.progress !== 100 || !info ||
+            info.RID !== job.rid || info.DEVTYPE !== job.receiverType ||
+            info.FWVER !== job.toVersion || info.FWVARIANT !== job.toVariant ||
+            !/^[0-9A-F]{12}$/.test(String(info.PHYSID || '')) || info.PINSET !== '1' ||
+            !['VALID', 'CONFIRMED'].includes(info.OTASTATE)) {
+          throw new Error('De nieuwe firmware en bestaande installatie zijn nog niet bevestigd');
+        }
+        const receiver = dependencies.getReceiver(job.rid);
+        if (receiver) {
+          assertReceiverIdentity(info, receiver);
+          dependencies.saveReceiver(dependencies.recordFromInfo(info));
+        }
+      }
+      jobs.set(job.id, job);
+      if (!FINAL_STATES.has(job.state)) activeJobId = job.id;
+      else if (activeJobId === job.id) activeJobId = '';
+      // Native checkpoints are authoritative; a WebKit reload cannot resume
+      // bytes or infer a successful commit from localStorage progress.
+      return publicJob(job);
+    }
 
     function selectTransport(receiver) {
       const adapter = wifiOta();
@@ -364,6 +415,11 @@
           updateAvailable = true;
         }
       }
+      if (state === 'update_available' && needsNativeOwnerOta(receiver, latest)) {
+        state = 'native_app_required';
+        updateAvailable = false;
+        reason = NATIVE_OWNER_OTA_REASON;
+      }
       return {
         receiverRid: exactRid(receiver?.rid), receiverType, model, board,
         currentVersion, currentVariant, otaCapable: Boolean(receiver?.otaCapable),
@@ -395,6 +451,10 @@
 
     async function catalogue() {
       const catalog = await loadCatalogue();
+      if (nativeOta()) {
+        const native = await nativeOta().otaJobs();
+        for (const job of native.recentJobs || []) acceptNativeJob(job);
+      }
       const recentJobs = [...jobs.values()]
         .sort((left, right) => Number(right.updatedAt || 0) - Number(left.updatedAt || 0))
         .slice(0, 5)
@@ -452,6 +512,13 @@
       const exact = exactRid(rid);
       const receiver = dependencies.getReceiver(exact);
       if (!receiver) throw new Error('Receiver niet gevonden');
+      if (nativeOta()) {
+        const reply = await dependencies.transact({ TYPE: 'STATUS', TARGET: exact, DEVTYPE: receiver.receiverType, PORT: 0 }, 9000);
+        assertReceiverIdentity(reply, receiver);
+        const refreshed = dependencies.recordFromInfo(reply);
+        dependencies.saveReceiver(refreshed);
+        return refreshed;
+      }
       selectTransport(receiver);
       const info = await readInfo();
       assertReceiverIdentity(info, receiver);
@@ -858,6 +925,13 @@
       if (artifact.receiverType !== String(receiver.receiverType || '').toUpperCase()) {
         throw new Error('Firmwaretype komt niet overeen met de receiver');
       }
+      if (needsNativeOwnerOta(receiver, artifact)) {
+        return {
+          ready: false, willUpload: false, requiresExplicitStart: true,
+          slotLimitBytes: MAX_APPLICATION_IMAGE_BYTES,
+          reason: NATIVE_OWNER_OTA_REASON
+        };
+      }
       if (typeof dependencies.nativeOtaPreflight !== 'function') {
         return {
           ready: false, willUpload: false, requiresExplicitStart: true,
@@ -1089,9 +1163,18 @@
       if (!artifact) throw new Error('Firmwareversie staat niet in de lokale catalogus');
       if (artifact.variant === 'TEMP_BLE_PAIRING' && development !== true) throw new Error('Tijdelijke ontwikkelfirmware vereist een expliciete ontwikkelkeuze');
       if (artifact.receiverType !== String(receiver.receiverType || '').toUpperCase()) throw new Error('Firmwaretype komt niet overeen met de receiver');
-      selectTransport(receiver);
       const release = releaseFor(receiver);
       if (release.state !== 'update_available' || release.latest?.id !== artifact.id) throw new Error(release.reason || 'Deze firmwarebuild kan niet veilig worden geïnstalleerd');
+      const native = nativeOta();
+      if (native) {
+        activeJobId = 'native-starting';
+        try {
+          if (typeof dependencies.waitForCommandDrain === 'function') await dependencies.waitForCommandDrain();
+          return acceptNativeJob(await native.otaStart(receiver, publicArtifact(artifact)), { rid: exact, artifactId: artifact.id });
+        } catch (error) { if (activeJobId === 'native-starting') activeJobId = ''; throw error; }
+      }
+      if (window.webkit?.messageHandlers?.aluvision) throw new Error('Native updateverbinding is nog niet beschikbaar');
+      selectTransport(receiver);
       const now = Date.now() / 1000;
       const job = {
         id: crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : `${Date.now().toString(16)}${Math.random().toString(16).slice(2)}`,
@@ -1163,11 +1246,20 @@
         catch (error) { return failure(400, error); }
       }
       if (path === '/api/firmware/status') {
-        try { return { status: 200, body: { ok: true, job: status(body.jobId) } }; }
+        try { return { status: 200, body: { ok: true, job: nativeOta()
+          ? acceptNativeJob(await nativeOta().otaStatus(String(body.jobId || '')), { id: String(body.jobId || '') })
+          : status(body.jobId) } }; }
         catch (error) { return failure(404, error); }
       }
       if (path === '/api/firmware/cancel') {
-        try { return { status: 200, body: { ok: true, job: cancel(body.jobId) } }; }
+        try { return { status: 200, body: { ok: true, job: nativeOta()
+          ? acceptNativeJob(await nativeOta().otaCancel(String(body.jobId || '')), { id: String(body.jobId || '') })
+          : cancel(body.jobId) } }; }
+        catch (error) { return failure(409, error); }
+      }
+      if (path === '/api/firmware/verify' && nativeOta()?.otaVerify) {
+        try { return { status: 200, body: { ok: true, job: acceptNativeJob(
+          await nativeOta().otaVerify(String(body.jobId || '')), { id: String(body.jobId || '') }) } }; }
         catch (error) { return failure(409, error); }
       }
       return { status: 404, body: { ok: false, error: 'Onbekende firmwareactie' } };

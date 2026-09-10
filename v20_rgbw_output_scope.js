@@ -46,7 +46,7 @@
       receiverType: 'RGBW', widthPixels: 1, width: 1
     };
   };
-  const modeMask = mode => mode === 'port1' ? 1 : mode === 'port2' ? 2 : mode === 'linked' ? 3 : 0;
+  const modeMask = mode => mode === 'port1' ? 1 : mode === 'port2' ? 2 : ['linked', 'separate'].includes(mode) ? 3 : 0;
   const modeFromMask = mask => Number(mask) === 2 ? 'port2' : Number(mask) === 3 ? 'linked' : 'port1';
   const portLabel = port => port === 0
     ? copy('Beide samen', 'Both together', 'Les deux ensemble', 'Beide zusammen')
@@ -119,6 +119,9 @@
   function inferDeviceMode(device) {
     const mask = Math.max(1, Math.min(3, Number(device?.portMask) || 3));
     if (mask !== 3) return modeFromMask(mask);
+    // Group membership does not determine whether two physical outputs mirror.
+    if (['linked', 'separate'].includes(device?.rgbwOutputMode)) return device.rgbwOutputMode;
+    if (device?.rgbwLinked === false) return 'separate';
     const assignments = allAssignments(device?.id).filter(item => [1, 2].includes(exactPort(item.r)));
     if (device?.rgbwOutputMode === 'linked' || device?.rgbwLinked === true || sameGroup(assignments)) return 'linked';
     return 'separate';
@@ -176,9 +179,11 @@
   function modeChoice(mode, selected, disabled = false, handler = '') {
     const title = mode === 'port1' ? copy('Poort 1', 'Port 1', 'Port 1', 'Port 1')
       : mode === 'port2' ? copy('Poort 2', 'Port 2', 'Port 2', 'Port 2')
+      : mode === 'separate' ? copy('Beide apart', 'Both separate', 'Les deux séparément', 'Beide getrennt')
       : copy('Beide samen', 'Both together', 'Les deux ensemble', 'Beide zusammen');
     const detail = mode === 'linked'
       ? copy('Eén kleur en animatie op beide uitgangen', 'One colour and animation on both outputs', 'Une couleur et une animation sur les deux sorties', 'Eine Farbe und Animation auf beiden Ausgängen')
+      : mode === 'separate' ? copy('Eigen kleur, animatie en groep per poort', 'Own colour, animation and group per port', 'Couleur, animation et groupe par port', 'Eigene Farbe, Animation und Gruppe pro Port')
       : copy('Alleen deze uitgang bedienen', 'Control only this output', 'Piloter uniquement cette sortie', 'Nur diesen Ausgang steuern');
     return `<button type="button" class="rgbw207-mode-choice ${selected ? 'on' : ''}" data-rgbw-mode="${mode}" role="radio" aria-checked="${selected}" ${disabled ? 'disabled' : ''} ${handler ? `onclick="${handler}"` : ''}>${modeVisual(mode)}<span><b>${title}</b><small>${detail}</small></span><strong>${selected ? '✓' : '›'}</strong></button>`;
   }
@@ -394,7 +399,10 @@
     try {
       const timelineId = [install?.id || 'installation', currentGroup.id, 'rgbw', scope].join(':');
       const commandState = state(currentGroup);
-      if (scope === 'both') commandState.transitionMs = Math.max(180, Math.min(220, Number(commandState.transitionMs) || 180));
+      // Both outputs use the same requested fade. Do not turn a fast wheel
+      // update (or immediate OFF) into an enforced 180 ms transition.
+      commandState.transitionMs = Number.isFinite(Number(commandState.transitionMs))
+        ? Math.max(0, Math.min(1800000, Number(commandState.transitionMs))) : 70;
       const response = await api('/api/command', { action, timelineId, state: commandState, targets: selected });
       const results = Array.isArray(response.results) ? response.results : [];
       const strict = results.length === selected.length && selected.length > 0 && results.every(item => item.confirmed === true);
@@ -466,20 +474,32 @@
   }
 
   function modeForDraft(device) {
+    const sourceKey = `${device.portMask}:${device.rgbwOutputMode}:${device.rgbwLinked}:${assignmentSignature(device.id)}`;
     const stored = deviceDrafts.get(device.id);
-    if (stored) return stored;
+    if (stored && stored.sourceKey === sourceKey && stored.sourceDevice === device) return stored;
     const assignments = allAssignments(device.id);
-    const fallback = assignments[0] ? groupKey(assignments[0].z, assignments[0].g) : '';
-    const created = { mode: inferDeviceMode(device), destination: fallback };
+    const fallback = assignments[0] ? groupKey(assignments[0].z, assignments[0].g) : compatibleDestinations(device.id)[0]?.key || '';
+    const destinations = Object.fromEntries([1, 2].map(port => {
+      const item = assignments.find(entry => exactPort(entry.r) === port);
+      return [port, item ? groupKey(item.z, item.g) : fallback];
+    }));
+    const created = { mode: inferDeviceMode(device), destination: fallback, destinations, sourceKey, sourceDevice: device };
     deviceDrafts.set(device.id, created);
     return created;
   }
 
-  function assignmentMarkup(device) {
+  function assignmentMarkup(device, draft = modeForDraft(device)) {
     const byPort = new Map(allAssignments(device.id).map(item => [exactPort(item.r), item]));
+    const mask = modeMask(draft.mode);
+    const destinations = compatibleDestinations(device.id);
     return [1, 2].map(port => {
       const item = byPort.get(port);
-      return `<article class="rgbw207-assignment ${item ? 'on' : ''}"><b>P${port}</b><span><strong>LED Line ${port}</strong><small>${item ? `${safe(item.z.name)} → ${safe(item.g.name)}` : copy('Nog niet ingedeeld', 'Not assigned yet', 'Pas encore affectée', 'Noch nicht zugeordnet')}</small></span><button class="v187-identify" type="button" onclick="identifyRgbwPort('${safe(device.id)}',${port})" aria-label="${copy('Deze uitgang laten knipperen', 'Flash this output', 'Faire clignoter cette sortie', 'Diesen Ausgang blinken lassen')}">✦</button></article>`;
+      const enabled = Boolean(mask & (1 << (port - 1)));
+      const destination = draft.mode === 'linked' ? draft.destination : draft.destinations[port];
+      const selected = parseDestination(destination);
+      const route = selected ? `${safe(selected.zone.name)} → ${safe(selected.group.name)}` : copy('Kies een groep', 'Choose a group', 'Choisir un groupe', 'Gruppe wählen');
+      const name = item?.r.name || device.rgbwPortRecords?.[port]?.name || `LED Line ${port}`;
+      return `<article class="rgbw207-assignment rgbw207-port-editor ${enabled ? 'on' : ''}" data-rgbw-device-port="${port}"><b>P${port}</b><span><strong>${safe(name)}</strong><small>${enabled ? route : copy('Niet in gebruik', 'Not in use', 'Non utilisé', 'Nicht verwendet')}</small></span>${enabled ? `<button class="v187-identify" type="button" ${reachable(device) ? '' : 'disabled'} onclick="identifyRgbwPort('${safe(device.id)}',${port})" aria-label="${portLabel(port)} · ${copy('Laten knipperen', 'Flash', 'Faire clignoter', 'Blinken lassen')}">✦</button>` : `<button class="button soft rgbw207-port-add" type="button" onclick="rgbw207SetDeviceMode('${safe(device.id)}','separate')">＋ ${copy('Toevoegen', 'Add', 'Ajouter', 'Hinzufügen')}</button>`}${enabled && draft.mode !== 'linked' ? `<label class="rgbw207-port-group"><span>${copy('Groep', 'Group', 'Groupe', 'Gruppe')} · ${portLabel(port)}</span><select class="field" data-rgbw-device-destination="${port}" onchange="rgbw207SetDevicePortDestination('${safe(device.id)}',${port},this.value)"><option value="" ${selected ? '' : 'selected'} disabled>${copy('Kies een groep', 'Choose a group', 'Choisir un groupe', 'Gruppe wählen')}</option>${destinations.map(option => `<option value="${safe(option.key)}" ${option.key === destination ? 'selected' : ''}>${safe(option.zone.name)} → ${safe(option.group.name)}</option>`).join('')}</select></label>` : ''}</article>`;
     }).join('');
   }
 
@@ -488,18 +508,19 @@
       ${modeChoice('port1', draft.mode === 'port1', false, `rgbw207SetDeviceMode('${safe(device.id)}','port1')`)}
       ${modeChoice('port2', draft.mode === 'port2', false, `rgbw207SetDeviceMode('${safe(device.id)}','port2')`)}
       ${modeChoice('linked', draft.mode === 'linked', false, `rgbw207SetDeviceMode('${safe(device.id)}','linked')`)}
+      ${modeChoice('separate', draft.mode === 'separate', false, `rgbw207SetDeviceMode('${safe(device.id)}','separate')`)}
     </div>`;
   }
 
   function deviceModeBadge(mode) {
-    if (mode === 'separate') return copy('APART INGEDEELD', 'ASSIGNED SEPARATELY', 'AFFECTÉES SÉPARÉMENT', 'GETRENNT ZUGEORDNET');
+    if (mode === 'separate') return copy('BEIDE APART', 'BOTH SEPARATE', 'LES DEUX SÉPARÉMENT', 'BEIDE GETRENNT');
     return mode === 'linked' ? copy('BEIDE SAMEN', 'BOTH TOGETHER', 'LES DEUX', 'BEIDE')
       : portLabel(mode === 'port2' ? 2 : 1).toUpperCase();
   }
 
   function separateModeNote(draft) {
     if (draft.mode !== 'separate') return '';
-    return `<div class="rgbw207-separate-note"><i>!</i><span><b>${copy('De uitgangen staan nu in verschillende groepen', 'The outputs are currently in different groups', 'Les sorties sont actuellement dans des groupes différents', 'Die Ausgänge sind derzeit verschiedenen Gruppen zugeordnet')}</b><small>${copy('Kies hierboven bewust Poort 1, Poort 2 of Beide samen voordat je de indeling wijzigt.', 'Choose Port 1, Port 2 or Both together above before changing the layout.', 'Choisissez le port 1, le port 2 ou les deux avant de modifier la disposition.', 'Wähle oben Port 1, Port 2 oder Beide, bevor du die Zuordnung änderst.')}</small></span></div>`;
+    return `<p class="sub rgbw207-separate-note">${copy('Elke poort heeft een eigen kleur en animatie, ook binnen dezelfde groep.', 'Each port has its own colour and animation, even in the same group.', 'Chaque port a sa couleur et son animation, même dans le même groupe.', 'Jeder Port hat eine eigene Farbe und Animation, auch in derselben Gruppe.')}</p>`;
   }
 
   function destinationMarkup(device, draft) {
@@ -700,7 +721,15 @@
     if (activeGuide() || deviceType(device) !== 'RGBW') return deviceDiagBase.apply(this, arguments);
     const draft = modeForDraft(device);
     const mask = Math.max(1, Math.min(3, Number(device.portMask) || 3));
-    modal(`<section class="rgbw207-device"><button class="button soft" onclick="closeModal()">← ${copy('Receivers', 'Receivers', 'Récepteurs', 'Receiver')}</button><header class="rgbw-device-head"><span><div class="eyebrow">RGBW · 2 ${copy('UITGANGEN', 'OUTPUTS', 'SORTIES', 'AUSGÄNGE')}</div><h1>${safe(typeof customerDeviceName === 'function' ? customerDeviceName(device) : device.name)}</h1><p>1 receiver → ${mask === 3 ? 2 : 1} LED Line${mask === 3 ? 's' : ''}</p></span><span class="pill ${reachable(device) ? 'online' : 'offline'}">● ${reachable(device) ? copy('Bereikbaar', 'Reachable', 'Joignable', 'Erreichbar') : copy('Niet bereikbaar', 'Unavailable', 'Indisponible', 'Nicht erreichbar')}</span></header><section class="card rgbw207-output-mode"><div class="row"><span><h2>${copy('Uitgangen bedienen', 'Control outputs', 'Piloter les sorties', 'Ausgänge steuern')}</h2><p class="sub">${copy('Kies één uitgang of laat beide altijd samen reageren.', 'Choose one output or make both always respond together.', 'Choisissez une sortie ou faites réagir les deux ensemble.', 'Wähle einen Ausgang oder lasse beide gemeinsam reagieren.')}</p></span><span id="rgbw207ModeBadge" class="scope">${deviceModeBadge(draft.mode)}</span></div>${deviceModeMarkup(device, draft)}${separateModeNote(draft)}${destinationMarkup(device, draft)}</section><section class="card"><div class="row"><span><h2>${copy('Waar staan de LED Lines?', 'Where are the LED Lines?', 'Où se trouvent les LED Lines ?', 'Wo sind die LED Lines?')}</h2><p class="sub">${copy('✦ laat precies één fysieke uitgang knipperen.', '✦ flashes exactly one physical output.', '✦ fait clignoter exactement une sortie physique.', '✦ lässt genau einen physischen Ausgang blinken.')}</p></span></div><div class="rgbw207-assignments">${assignmentMarkup(device)}</div></section><footer class="rgbw207-device-footer"><button class="button red" onclick="requestDeleteDevice('${safe(id)}')">${copy('Receiver verwijderen', 'Remove receiver', 'Supprimer le récepteur', 'Receiver entfernen')}</button><button class="button" ${draft.mode === 'separate' ? 'disabled' : ''} onclick="saveRgbwDevicePorts('${safe(id)}')">${draft.mode === 'separate' ? copy('Kies een uitgang', 'Choose an output', 'Choisir une sortie', 'Ausgang wählen') : copy('Keuze opslaan', 'Save selection', 'Enregistrer le choix', 'Auswahl speichern')}</button></footer></section>`);
+    modal(`<section class="rgbw207-device">
+      <button class="button soft" onclick="closeModal()">← ${copy('Receivers', 'Receivers', 'Récepteurs', 'Receiver')}</button>
+      <header class="rgbw-device-head"><span><div class="eyebrow">RGBW · 2 ${copy('UITGANGEN', 'OUTPUTS', 'SORTIES', 'AUSGÄNGE')}</div><h1>${safe(typeof customerDeviceName === 'function' ? customerDeviceName(device) : device.name)}</h1><p>1 receiver → ${mask === 3 ? 2 : 1} LED Line${mask === 3 ? 's' : ''}</p></span><span class="pill ${reachable(device) ? 'online' : 'offline'}">● ${reachable(device) ? copy('Bereikbaar', 'Reachable', 'Joignable', 'Erreichbar') : copy('Niet bereikbaar', 'Unavailable', 'Indisponible', 'Nicht erreichbar')}</span></header>
+      <section class="card rgbw207-output-mode"><div class="row"><span><h2>${copy('Hoe gebruik je de poorten?', 'How do you use the ports?', 'Comment utiliser les ports ?', 'Wie nutzt du die Ports?')}</h2></span><span id="rgbw207ModeBadge" class="scope">${deviceModeBadge(draft.mode)}</span></div>${deviceModeMarkup(device, draft)}
+        <div id="rgbw207DeviceDestinations">${separateModeNote(draft)}${destinationMarkup(device, draft)}</div>
+      </section>
+      <section class="card"><h2>${copy('Poorten en groepen', 'Ports and groups', 'Ports et groupes', 'Ports und Gruppen')}</h2><div class="rgbw207-assignments">${assignmentMarkup(device, draft)}</div></section>
+      <footer class="rgbw207-device-footer"><button class="button soft" onclick="requestDeleteDevice('${safe(id)}')">${copy('Receiver verwijderen', 'Remove receiver', 'Supprimer le récepteur', 'Receiver entfernen')}</button><button class="button" data-rgbw-save onclick="saveRgbwDevicePorts('${safe(id)}')">${copy('Keuze opslaan', 'Save selection', 'Enregistrer le choix', 'Auswahl speichern')}</button></footer>
+    </section>`);
     const footer = document.querySelector('#modalBody .rgbw207-device-footer');
     if (footer) footer.insertAdjacentHTML('beforebegin', calibrationMarkup(device, mask));
     if (typeof v187ResetModalScroll === 'function') v187ResetModalScroll();
@@ -708,7 +737,7 @@
 
   window.rgbw207SetDeviceMode = function setDeviceMode(id, mode) {
     const device = (db.devices || []).find(item => item.id === id);
-    if (!device || deviceSaveBusy.has(id) || !['port1', 'port2', 'linked'].includes(mode)) return;
+    if (!device || deviceSaveBusy.has(id) || !['port1', 'port2', 'linked', 'separate'].includes(mode)) return;
     const draft = modeForDraft(device);
     draft.mode = mode;
     document.querySelectorAll('.rgbw207-device-mode-grid [data-rgbw-mode]').forEach(button => {
@@ -718,12 +747,10 @@
       const marker = button.querySelector(':scope > strong');
       if (marker) marker.textContent = selected ? '✓' : '›';
     });
-    const destination = document.getElementById('rgbw207LinkDestination');
-    if (destination) destination.hidden = mode !== 'linked';
+    refreshDeviceDestinations(device, draft);
     const badge = document.getElementById('rgbw207ModeBadge');
     if (badge) badge.textContent = deviceModeBadge(mode);
-    document.querySelector('.rgbw207-separate-note')?.remove();
-    const saveButton = document.querySelector('.rgbw207-device-footer .button:not(.red)');
+    const saveButton = document.querySelector('.rgbw207-device-footer [data-rgbw-save]');
     if (saveButton) {
       saveButton.disabled = false;
       saveButton.textContent = copy('Keuze opslaan', 'Save selection', 'Enregistrer le choix', 'Auswahl speichern');
@@ -732,7 +759,26 @@
 
   window.rgbw207SetDeviceDestination = function setDeviceDestination(id, value) {
     const device = (db.devices || []).find(item => item.id === id);
-    if (device && !deviceSaveBusy.has(id)) modeForDraft(device).destination = String(value || '');
+    if (device && !deviceSaveBusy.has(id)) {
+      const draft = modeForDraft(device);
+      draft.destination = String(value || '');
+      refreshDeviceDestinations(device, draft);
+    }
+  };
+
+  function refreshDeviceDestinations(device, draft) {
+    const host = document.getElementById('rgbw207DeviceDestinations');
+    if (host) host.innerHTML = separateModeNote(draft) + destinationMarkup(device, draft);
+    const ports = document.querySelector('.rgbw207-device .rgbw207-assignments');
+    if (ports) ports.innerHTML = assignmentMarkup(device, draft);
+  }
+
+  window.rgbw207SetDevicePortDestination = function setDevicePortDestination(id, port, value) {
+    const device = (db.devices || []).find(item => item.id === id);
+    if (!device || deviceSaveBusy.has(id) || ![1, 2].includes(Number(port))) return;
+    const draft = modeForDraft(device);
+    draft.destinations[Number(port)] = String(value || '');
+    refreshDeviceDestinations(device, draft);
   };
 
   function removeExactLine(item, device) {
@@ -758,22 +804,17 @@
     const previous = allAssignments(device.id);
     const byPort = new Map();
     previous.forEach(item => { if (!byPort.has(exactPort(item.r))) byPort.set(exactPort(item.r), item); });
-    const fallback = parseDestination(draft.destination) || (previous[0]
-      ? { zone: previous[0].z, group: previous[0].g, key: groupKey(previous[0].z, previous[0].g) }
-      : null);
-    let destinationGroup = null;
-    if (draft.mode === 'linked') {
-      if (!fallback) throw new Error(copy('Kies eerst een RGBW-groep voor beide uitgangen', 'First choose an RGBW group for both outputs', 'Choisissez d’abord un groupe RGBW pour les deux sorties', 'Wähle zuerst eine RGBW-Gruppe für beide Ausgänge'));
-      destinationGroup = fallback.group;
-      assertRgbwGroup(destinationGroup);
-    } else {
-      const selectedPort = draft.mode === 'port2' ? 2 : 1;
-      const destination = byPort.get(selectedPort) || fallback;
-      if (!destination) throw new Error(copy('Kies eerst een RGBW-groep voor deze uitgang', 'First choose an RGBW group for this output', 'Choisissez d’abord un groupe RGBW pour cette sortie', 'Wähle zuerst eine RGBW-Gruppe für diesen Ausgang'));
-      destinationGroup = destination.g || destination.group;
-      assertRgbwGroup(destinationGroup);
-    }
-    return { previous, byPort, fallback, destinationGroup };
+    const ports = [1, 2].filter(port => modeMask(draft.mode) & (1 << (port - 1)));
+    const destinations = ports.map(port => {
+      const key = draft.mode === 'linked' ? draft.destination : draft.destinations?.[port];
+      const selected = parseDestination(key);
+      if (!selected) throw new Error(copy(
+        `Kies een groep voor ${portLabel(port)}`, `Choose a group for ${portLabel(port)}`,
+        `Choisissez un groupe pour ${portLabel(port)}`, `Wähle eine Gruppe für ${portLabel(port)}`));
+      assertRgbwGroup(selected.group);
+      return { port, ...selected };
+    });
+    return { previous, byPort, destinations };
   }
 
   function assignmentSignature(deviceId) {
@@ -790,57 +831,52 @@
 
   function applyDeviceMode(device, draft) {
     const mask = modeMask(draft.mode);
-    const { previous, byPort, fallback, destinationGroup } = resolveDeviceModeDestination(device, draft);
-    previous.forEach(item => {
-      item.index = Math.max(0, (item.g.receivers || []).findIndex(line => line.id === item.r.id));
-      rememberRgbwLine(device, item);
-    });
-    const selectionSnapshot = new Map([...new Set(previous.map(item => item.g))].map(currentGroup => [currentGroup, {
-      v21SelectedLineIds: Array.isArray(currentGroup.v21SelectedLineIds) ? [...currentGroup.v21SelectedLineIds] : null,
-      parallelSelectedIds: Array.isArray(currentGroup.parallelSelectedIds) ? [...currentGroup.parallelSelectedIds] : null
+    const { previous, byPort, destinations } = resolveDeviceModeDestination(device, draft);
+    previous.forEach(item => rememberRgbwLine(device, item));
+    const targetByPort = new Map(destinations.map(item => [item.port, item.group]));
+    const linkedGroup = draft.mode === 'linked' ? destinations[0].group : null;
+    const linkedIndex = linkedGroup ? Math.min(linkedGroup.receivers?.length || 0,
+      ...previous.filter(item => item.g === linkedGroup).map(item => item.g.receivers.indexOf(item.r))) : 0;
+    const selections = new Map([...new Set(previous.map(item => item.g))].map(currentGroup => [currentGroup, {
+      v21SelectedLineIds: [...(currentGroup.v21SelectedLineIds || [])],
+      parallelSelectedIds: [...(currentGroup.parallelSelectedIds || [])]
     }]));
-    const selectedPorts = draft.mode === 'linked' ? [1, 2] : [draft.mode === 'port2' ? 2 : 1];
-    const previousInDestination = previous.filter(item => item.g === destinationGroup);
-    const insertAt = previousInDestination.length
-      ? Math.min(...previousInDestination.map(item => item.index))
-      : (destinationGroup.receivers || []).length;
-    const lines = selectedPorts.map(port => {
-      const prior = byPort.get(port)?.r;
-      const line = prior || newRgbwLine(device, port);
-      const record = rgbwPortRecord(device, port);
-      Object.assign(line, {
-        id: String(line.id || record.id || defaultRgbwLineId(device, port)), deviceId: device.id,
-        name: String(line.name || record.name || `${device.name || 'Receiver'} · ${portLabel(port)}`),
-        rid: endpointRid(device, port), physicalRid: device.rid, hardwareId: device.hardwareId,
-        receiverType: 'RGBW', port, pixels: 1, reversed: false
-      });
-      return line;
+    // Keep untouched lines in place, including when other receivers sit between
+    // this receiver's outputs in a group. Only move changed destinations.
+    previous.forEach(item => {
+      if (linkedGroup || targetByPort.get(exactPort(item.r)) !== item.g || byPort.get(exactPort(item.r)) !== item) {
+        removeExactLine(item, device);
+      }
     });
-    previous.forEach(item => removeExactLine(item, device));
-    ensureRgbwGroup(destinationGroup);
-    destinationGroup.receivers ||= [];
-    destinationGroup.receivers.splice(Math.min(insertAt, destinationGroup.receivers.length), 0, ...lines);
-    lines.forEach(line => {
+    destinations.forEach(({ port, group: destinationGroup }, index) => {
+      const prior = byPort.get(port);
+      const line = prior?.r || newRgbwLine(device, port);
+      Object.assign(line, {
+        deviceId: device.id, rid: endpointRid(device, port), physicalRid: device.rid,
+        hardwareId: device.hardwareId, receiverType: 'RGBW', port, outputPort: port,
+        pixels: 1, reversed: false, portMask: draft.mode === 'linked' ? 3 : 1 << (port - 1),
+        rgbwLinked: draft.mode === 'linked', rgbwOutputMode: draft.mode
+      });
+      ensureRgbwGroup(destinationGroup);
+      destinationGroup.receivers ||= [];
+      if (!destinationGroup.receivers.includes(line)) {
+        if (linkedGroup) destinationGroup.receivers.splice(Math.min(linkedIndex + index, destinationGroup.receivers.length), 0, line);
+        else destinationGroup.receivers.push(line);
+      }
       restoreRgbwLineState(device, destinationGroup, line);
       rememberRgbwLine(device, { r: line, g: destinationGroup });
-      const prior = byPort.get(exactPort(line));
-      const priorSelection = prior?.g === destinationGroup ? selectionSnapshot.get(destinationGroup) : null;
       ['v21SelectedLineIds', 'parallelSelectedIds'].forEach(key => {
-        if (!priorSelection?.[key]?.includes(line.id)) return;
+        if (prior?.g !== destinationGroup || !selections.get(destinationGroup)?.[key]?.includes(line.id)) return;
         destinationGroup[key] ||= [];
         if (!destinationGroup[key].includes(line.id)) destinationGroup[key].push(line.id);
       });
     });
-    if (draft.mode === 'linked') {
-      destinationGroup.rgbwOutputScope = 'both';
-    } else {
-      destinationGroup.rgbwOutputScope = draft.mode;
-    }
     device.portMask = mask;
     device.portCount = 2;
     device.receiverType = 'RGBW';
     device.rgbwOutputMode = draft.mode;
     device.rgbwLinked = draft.mode === 'linked';
+    if (linkedGroup) linkedGroup.rgbwOutputScope = 'both';
     (install?.zones || []).forEach(currentZone => (currentZone.groups || []).forEach(currentGroup => {
       if (isRgbw(currentGroup)) currentGroup.rgbwOutputScope = normalisedGroupScope(currentGroup);
     }));
@@ -852,11 +888,12 @@
     if (deviceSaveBusy.has(id)) return;
     if (!reachable(device)) return toast(copy('Verbind eerst met de receiver en probeer opnieuw', 'Connect to the receiver first and try again', 'Connectez d’abord le récepteur', 'Verbinde zuerst den Receiver'));
     const draft = modeForDraft(device);
-    if (!['port1', 'port2', 'linked'].includes(draft.mode)) {
+    if (!['port1', 'port2', 'linked', 'separate'].includes(draft.mode)) {
       return toast(copy('Kies eerst Poort 1, Poort 2 of Beide samen', 'First choose Port 1, Port 2 or Both together', 'Choisissez d’abord le port 1, le port 2 ou les deux', 'Wähle zuerst Port 1, Port 2 oder Beide'));
     }
-    const requested = { mode: draft.mode, destination: draft.destination };
+    const requested = { mode: draft.mode, destination: draft.destination, destinations: { ...draft.destinations } };
     const mask = modeMask(requested.mode);
+    const saveButton = document.querySelector('.rgbw207-device-footer [data-rgbw-save]');
     try {
       const database = db;
       const location = install;
@@ -864,24 +901,35 @@
       const beforeAssignments = assignmentSignature(id);
       const beforeDeviceMode = `${Number(device.portMask) || 0}:${String(device.rgbwOutputMode || '')}:${Boolean(device.rgbwLinked)}`;
       deviceSaveBusy.add(id);
+      if (saveButton) {
+        saveButton.disabled = true;
+        saveButton.setAttribute('aria-busy', 'true');
+        saveButton.textContent = copy('Opslaan…', 'Saving…', 'Enregistrement…', 'Speichern…');
+      }
       const target = { id: `rgbw-config-${id}`, deviceId: id, rid: String(device.rid || '').toUpperCase(),
         physicalRid: String(device.rid || '').toUpperCase(), hardwareId: device.hardwareId, receiverType: 'RGBW',
-        port: 0, outputPort: 0, portMask: mask, port1Rid: endpointRid(device, 1),
+        port: 0, outputPort: 0, portMask: mask, portMode: requested.mode === 'linked' ? 'LINKED' : 'SEPARATE', port1Rid: endpointRid(device, 1),
         port2Rid: endpointRid(device, 2), pixels: 1, offset: 0, groupPixels: 1 };
       const response = await api('/api/command', { action: 'config', state: { receiverType: 'RGBW' }, targets: [target] });
       const result = response.results?.[0];
       if (!result?.confirmed) return toast(copy('De receiver bevestigde de uitgangen niet', 'The receiver did not confirm the outputs', 'Le récepteur n’a pas confirmé les sorties', 'Der Receiver hat die Ausgänge nicht bestätigt'));
+      if (result.portModeMatch === false || result.portMaskMatch === false ||
+          (result.portMode && String(result.portMode).toUpperCase() !== target.portMode) ||
+          (result.portMask != null && Number(result.portMask) !== mask)) {
+        return toast(copy('De poortinstelling is nog niet toegepast. Probeer opnieuw.', 'The port setting has not been applied yet. Try again.', 'Le réglage des ports n’a pas encore été appliqué. Réessayez.', 'Die Porteinstellung wurde noch nicht übernommen. Versuche es erneut.'));
+      }
       const currentDeviceMode = `${Number(device.portMask) || 0}:${String(device.rgbwOutputMode || '')}:${Boolean(device.rgbwLinked)}`;
       if (db !== database || install !== location || !(database.devices || []).includes(device) ||
-          !groupIsStillAttached(location, preflight.destinationGroup) || assignmentSignature(id) !== beforeAssignments ||
+          preflight.destinations.some(item => !groupIsStillAttached(location, item.group)) || assignmentSignature(id) !== beforeAssignments ||
           currentDeviceMode !== beforeDeviceMode) {
         return toast(copy('De receiver of indeling is intussen gewijzigd. Open de uitgangen opnieuw.', 'The receiver or assignment changed. Open the outputs again.', 'Le récepteur ou l’affectation a changé. Rouvrez les sorties.', 'Receiver oder Zuordnung wurden geändert. Öffne die Ausgänge erneut.'));
       }
       const currentPlan = resolveDeviceModeDestination(device, requested);
-      if (currentPlan.destinationGroup !== preflight.destinationGroup) {
+      if (currentPlan.destinations.some((item, index) => item.group !== preflight.destinations[index]?.group)) {
         return toast(copy('De gekozen groep is intussen gewijzigd. Kies de groep opnieuw.', 'The selected group changed. Choose the group again.', 'Le groupe sélectionné a changé. Choisissez-le à nouveau.', 'Die gewählte Gruppe wurde geändert. Wähle sie erneut.'));
       }
-      if (draft.mode !== requested.mode || draft.destination !== requested.destination) {
+      if (draft.mode !== requested.mode || draft.destination !== requested.destination ||
+          JSON.stringify(draft.destinations) !== JSON.stringify(requested.destinations)) {
         return toast(copy('Je keuze is gewijzigd. Controleer de uitgangen en sla opnieuw op.', 'Your selection changed. Check the outputs and save again.', 'Votre choix a changé. Vérifiez les sorties puis enregistrez à nouveau.', 'Deine Auswahl hat sich geändert. Prüfe die Ausgänge und speichere erneut.'));
       }
       applyDeviceMode(device, requested);
@@ -893,6 +941,11 @@
       toast(String(error?.message || error));
     } finally {
       deviceSaveBusy.delete(id);
+      if (saveButton?.isConnected) {
+        saveButton.disabled = false;
+        saveButton.removeAttribute('aria-busy');
+        saveButton.textContent = copy('Keuze opslaan', 'Save selection', 'Enregistrer le choix', 'Auswahl speichern');
+      }
     }
   };
 

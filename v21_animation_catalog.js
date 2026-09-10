@@ -5,14 +5,16 @@
  * per effect.  It has no dependency on the DOM and is testable in Node/JXA.
  */
 (function (root, factory) {
-  var api = factory();
+  var tunnel = root.AluvisionTunnelEngine;
+  if (!tunnel && typeof module === 'object' && module.exports) tunnel = require('./v21_tunnel_engine.js');
+  var api = factory(tunnel);
   if (typeof module === 'object' && module.exports) module.exports = api;
   root.AluvisionV21AnimationCatalog = api;
   if (root.window === root && root.AluvisionAnimationRuntime) api.install(root);
-}(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+}(typeof globalThis !== 'undefined' ? globalThis : this, function (Tunnel) {
   'use strict';
 
-  var VERSION = '21.0.8';
+  var VERSION = '21.1.9';
   var PROTOCOL = 18;
 
   function clone(value) { return value === undefined ? undefined : JSON.parse(JSON.stringify(value)); }
@@ -56,6 +58,11 @@
   }
 
   function spi(name, variant, scene, category, defaults, enabled, formula, description, tunnel) {
+    if (Tunnel.kind('SPI', variant)) {
+      defaults = Object.assign({}, defaults, { speed: 55, smooth: 100,
+        lineDelayMs: Math.round((defaults.lineDelayMs || 0)/40)*40 });
+      formula = formula.replace(/-v1$/, '-v2');
+    }
     return freezeEffect({
       id: 'spi-' + variant, receiverType: 'SPI', name: name, variant: variant,
       scene: scene, engine: scene, category: category, defaults: defaults,
@@ -244,6 +251,11 @@
   var SPI_EFFECTS = Object.freeze(SPI_TUNNELS.concat(SPI_GENERAL).sort(function (a, b) { return a.variant - b.variant; }));
 
   function rgbw(name, variant, engine, kind, colors, defaults, formula, description) {
+    if (Tunnel.kind('RGBW', variant)) {
+      defaults = Object.assign({}, defaults, { speed: 55, smooth: 100,
+        lineDelayMs: Math.round((defaults.lineDelayMs || 0)/40)*40 });
+      formula = formula.replace(/-v1$/, '-v2');
+    }
     return Object.freeze({
       id: 'rgbw-' + engine.toLowerCase() + '-' + variant, receiverType: 'RGBW', name: name,
       variant: variant, engine: engine, scene: engine, kind: kind, colors: colors,
@@ -267,9 +279,9 @@
     rgbw('Line Smooth Transition', 10, 'FLOW', 'tunnel-lines', 3, { speed: 9, smooth: 100, lineDelayMs: 360, direction: 'right' }, 'rgbw-line-smooth-v1', copy('Zachte kleurovergangen reizen tussen lijnen', 'Soft transitions travel between lines', 'Des transitions douces voyagent entre les lignes', 'Weiche Übergänge wandern zwischen Linien')),
     rgbw('Line Strobe', 11, 'SPARKLE', 'tunnel-lines', 1, { speed: 22, smooth: 18, lineDelayMs: 120, direction: 'right' }, 'rgbw-line-strobe-v1', copy('Korte volledige flitsen volgen elkaar op', 'Short full-line flashes follow one another', 'De courts éclairs complets se suivent', 'Kurze Vollblitze folgen einander')),
     rgbw('Tunnel Ripple', 12, 'WAVE', 'tunnel-lines', 3, { speed: 13, smooth: 97, lineDelayMs: 200, direction: 'right' }, 'rgbw-tunnel-ripple-v1', copy('Een rimpel loopt ring voor ring door de tunnel', 'A ripple travels ring by ring through the tunnel', 'Une ondulation traverse le tunnel', 'Eine Welle läuft Ring für Ring durch den Tunnel')),
-    rgbw('Center Out', 13, 'MIRROR', 'tunnel-lines', 2, { speed: 12, smooth: 98, lineDelayMs: 280, direction: 'right' }, 'rgbw-center-out-v1', copy('Middelste lijnen openen naar buiten', 'Centre lines open outwards', 'Les lignes centrales s’ouvrent vers l’extérieur', 'Mittlere Linien öffnen nach außen')),
-    rgbw('Outside In', 14, 'MIRROR', 'tunnel-lines', 2, { speed: 12, smooth: 98, lineDelayMs: 280, direction: 'right' }, 'rgbw-outside-in-v1', copy('Buitenste lijnen sluiten naar het midden', 'Outer lines close towards the centre', 'Les lignes extérieures convergent vers le centre', 'Äußere Linien schließen zur Mitte')),
-    rgbw('Alternating Lines', 15, 'ALTERNATE', 'tunnel-lines', 2, { speed: 14, smooth: 94, lineDelayMs: 240, direction: 'right' }, 'rgbw-alternating-v1', copy('Even en oneven lijnen wisselen af', 'Even and odd lines alternate', 'Les lignes paires et impaires alternent', 'Gerade und ungerade Linien wechseln')),
+    rgbw('Tunnel Center Out', 13, 'MIRROR', 'tunnel-lines', 2, { speed: 12, smooth: 98, lineDelayMs: 280, direction: 'right' }, 'rgbw-center-out-v1', copy('Middelste lijnen openen naar buiten', 'Centre lines open outwards', 'Les lignes centrales s’ouvrent vers l’extérieur', 'Mittlere Linien öffnen nach außen')),
+    rgbw('Tunnel Outside In', 14, 'MIRROR', 'tunnel-lines', 2, { speed: 12, smooth: 98, lineDelayMs: 280, direction: 'right' }, 'rgbw-outside-in-v1', copy('Buitenste lijnen sluiten naar het midden', 'Outer lines close towards the centre', 'Les lignes extérieures convergent vers le centre', 'Äußere Linien schließen zur Mitte')),
+    rgbw('Tunnel Alternating Lines', 15, 'ALTERNATE', 'tunnel-lines', 2, { speed: 14, smooth: 94, lineDelayMs: 240, direction: 'right' }, 'rgbw-alternating-v1', copy('Even en oneven lijnen wisselen af', 'Even and odd lines alternate', 'Les lignes paires et impaires alternent', 'Gerade und ungerade Linien wechseln')),
     rgbw('Double Line Wave', 16, 'WAVE', 'tunnel-lines', 3, { speed: 16, smooth: 97, lineDelayMs: 160, direction: 'right' }, 'rgbw-double-line-wave-v1', copy('Twee golven bewegen over volledige lijnen', 'Two waves move across complete lines', 'Deux vagues parcourent les lignes', 'Zwei Wellen bewegen sich über ganze Linien')),
     rgbw('Gentle Glow', 17, 'BREATHE', 'whole-line', 1, { speed: 9, smooth: 98 }, 'rgbw-gentle-glow-v1', copy('Een zachte gloed over de volledige lijn', 'A gentle glow across the complete line', 'Une douce lueur sur toute la ligne', 'Ein sanftes Leuchten über die ganze Linie')),
     rgbw('Double Pulse', 18, 'BREATHE', 'whole-line', 2, { speed: 15, smooth: 94 }, 'rgbw-double-pulse-v1', copy('Twee volledige-lijnpulsen per cyclus', 'Two whole-line pulses per cycle', 'Deux pulsations de ligne par cycle', 'Zwei Ganzlinienpulse pro Zyklus')),
@@ -281,8 +293,31 @@
     rgbw('Tunnel Twin Wave', 24, 'WAVE', 'tunnel-lines', 3, { speed: 16, smooth: 97, lineDelayMs: 150, direction: 'right' }, 'rgbw-twin-wave-v1', copy('Twee golven kruisen door de volledige opstelling', 'Two waves cross through the complete installation', 'Deux vagues traversent toute l’installation', 'Zwei Wellen kreuzen durch die ganze Installation')),
     rgbw('Organic Fade', 25, 'BREATHE', 'whole-line', 3, { speed: 8, smooth: 100 }, 'rgbw-organic-fade-v1', copy('Een gelaagde ademhaling laat hele lijnen natuurlijk van kleur veranderen', 'A layered breath changes whole-line colours organically', 'Une respiration nuancée change les couleurs de ligne', 'Ein vielschichtiges Atmen verändert die ganzen Linienfarben')),
     rgbw('Tunnel Pendulum', 26, 'WAVE', 'tunnel-lines', 2, { speed: 15, smooth: 96, lineDelayMs: 300, direction: 'right' }, 'rgbw-tunnel-pendulum-v1', copy('Een lichtpuls reist heen en terug door de volledige lijnen', 'A light pulse travels out and back across complete lines', 'Une pulsation fait l’aller-retour entre les lignes', 'Ein Lichtpuls wandert durch ganze Linien hin und zurück')),
-    rgbw('Tunnel Build', 27, 'SEQUENCE', 'tunnel-lines', 4, { speed: 12, smooth: 98, lineDelayMs: 500, direction: 'right' }, 'rgbw-tunnel-build-v1', copy('Volledige lijnen lichten na elkaar op, blijven even aan en doven weer', 'Complete lines fill in order, hold, then release', 'Les lignes s’allument successivement, restent puis s’éteignent', 'Ganze Linien leuchten nacheinander, halten und erlöschen'))
+    rgbw('Tunnel Build', 27, 'SEQUENCE', 'tunnel-lines', 4, { speed: 12, smooth: 98, lineDelayMs: 500, direction: 'right' }, 'rgbw-tunnel-build-v1', copy('Volledige lijnen lichten na elkaar op, blijven even aan en doven weer', 'Complete lines fill in order, hold, then release', 'Les lignes s’allument successivement, restent puis s’éteignent', 'Ganze Linien leuchten nacheinander, halten und erlöschen')),
+    rgbw('Tunnel Depth Comet', 28, 'COMET', 'tunnel-lines', 2, { speed: 55, smooth: 100, lineDelayMs: 240, direction: 'right' }, 'rgbw-depth-comet-v1', copy('Een heldere kop trekt een lange, zachte lichtstaart door de opeenvolgende lijnen', 'A bright front pulls a long soft tail through successive lines', 'Un front lumineux entraîne une longue traînée douce entre les lignes', 'Eine helle Front zieht einen langen weichen Schweif durch die Linien')),
+    rgbw('Tunnel Portal', 29, 'MIRROR', 'tunnel-lines', 2, { speed: 55, smooth: 100, lineDelayMs: 280, direction: 'right' }, 'rgbw-portal-v1', copy('Het portaal opent vanuit het midden, blijft even open en sluit van buiten naar binnen', 'The portal opens from the centre, holds, then closes from the outside inward', 'Le portail s’ouvre du centre, reste ouvert puis se referme vers le centre', 'Das Portal öffnet sich aus der Mitte, hält und schließt sich von außen')),
+    rgbw('Tunnel Colour Steps', 30, 'SEQUENCE', 'tunnel-lines', 4, { speed: 55, smooth: 100, lineDelayMs: 320, direction: 'right' }, 'rgbw-colour-steps-v1', copy('Lijnen bouwen na elkaar op: kleur 1, kleur 2, kleur 3… Iedere lijn houdt haar kleur vast', 'Lines build in order: colour 1, colour 2, colour 3… Each line keeps its colour', 'Les lignes apparaissent en ordre : couleur 1, 2, 3… Chaque ligne garde sa couleur', 'Linien bauen sich mit Farbe 1, 2, 3 auf und behalten ihre jeweilige Farbe')),
+    rgbw('Tunnel Breathing Wave', 31, 'WAVE', 'tunnel-lines', 2, { speed: 55, smooth: 100, lineDelayMs: 200, direction: 'right' }, 'rgbw-breathing-wave-v1', copy('Een brede, zachte golf glijdt door meerdere lijnen en dooft achter zich uit', 'A broad soft wave glides through several lines and fades behind itself', 'Une large vague douce traverse les lignes et s’efface derrière elle', 'Eine breite weiche Welle gleitet durch mehrere Linien und klingt hinter sich ab'))
   ]);
+
+  // One whole-line library for both receiver families. Copy the RGBW entry,
+  // not an approximate pixel animation with a similar name. Its stable SPI
+  // wire ID leaves every existing SPI preset and pixel effect untouched.
+  var SPI_SHARED_TUNNELS = Object.freeze(RGBW_EFFECTS.filter(function (effect) {
+    return effect.kind === 'tunnel-lines';
+  }).map(function (effect) {
+    var defaults = Object.assign({brightness:100,backgroundOn:false},clone(effect.defaults),{
+      colorCount:effect.colors,
+      palette:clone(effect.defaults.palette || [slot('#FF5544',0),slot('#FFC43D',0),slot('#2DD09F',0),slot('#328CFF',0)].slice(0,effect.colors))
+    });
+    var controls=['speed','smooth','direction','lineDelayMs','colors'];
+    if (effect.variant === 22) controls.push('spacing');
+    var shared=spi(effect.name,Tunnel.sharedSpiVariant(effect.variant),effect.engine,'Tunnel',
+      defaults,controls,effect.previewFormula.replace(/^rgbw-/,'spi-shared-'),effect.description,true);
+    return Object.freeze(Object.assign({},shared,{spatialResolution:'logical-line',sharedRgbwVariant:effect.variant}));
+  }));
+  var ALL_SPI_TUNNELS = Object.freeze(SPI_TUNNELS.concat(SPI_SHARED_TUNNELS));
+  SPI_EFFECTS = Object.freeze(ALL_SPI_TUNNELS.concat(SPI_GENERAL).sort(function (a,b) {return a.variant-b.variant;}));
 
   var LEGACY_NAME_MAP = Object.freeze({
     'Slow Halo Relay': 'Tunnel Halo', 'Fast Depth Scan': 'Depth Scanner',
@@ -392,9 +427,23 @@
     return mixSlot(palette[index], palette[(index + 1) % palette.length], amount);
   }
 
+  function tunnelPaletteChannels(palette, spec, smooth) {
+    var amount = spec.mix;
+    var stepped = amount < 0.5 ? 0 : 1;
+    amount = stepped+(amount-stepped)*smoothnessCurve(smooth);
+    var first = palette[spec.first], second = palette[spec.second];
+    var a = hexRgb(first.rgb), b = hexRgb(second.rgb);
+    // Retain fractional channels until overlapping heads have been mixed.
+    return a.map(function (value,index) { return value+(b[index]-value)*amount; })
+      .concat(first.white+(second.white-first.white)*amount);
+  }
+
   function cyclesPerSecond(state, receiverType) {
     var speed = clamp(state.speed, 0, 100, 0);
     if (speed === 0) return 0;
+    if (Tunnel.kind(receiverType, state.variant)) {
+      return Tunnel.rate(receiverType,state.variant,state.lineCount || 1,speed,state.lineDelayMs || 0);
+    }
     var normalized = speed / 100;
     if (receiverType === 'SPI') return 0.002 + normalized * normalized * 0.8;
     if ([4, 11, 20].indexOf(Number(state.variant)) >= 0) return 0.5 + normalized * normalized * 11.5;
@@ -461,7 +510,7 @@
     var localU = state.receiverOffset == null ? u : (u * n - Number(state.receiverOffset)) / physical;
     var line = Math.max(0, Number(lineIndex == null ? state.lineIndex : lineIndex) || 0);
     var lines = Math.max(1, Number(lineCount == null ? state.lineCount : lineCount) || 1);
-    var phase = phaseFor(state, Number(time) || 0, 'SPI');
+    var phase = phaseFor(Object.assign({},state,{lineCount:lines}), Number(time) || 0, 'SPI');
     var seconds = elapsedFor(state, Number(time) || 0);
     var smooth = clamp(state.smooth, 0, 100, effect.defaults.smooth);
     var reverse = state.direction === 'left';
@@ -487,40 +536,44 @@
     var band = false;
     var bandIndex = null;
     var smoothPalette = true;
+    var tunnelPalette = null;
+    var tunnelOppositePalette = null;
+    var tunnelOppositeWeight = 0;
 
-    if (effect.variant === 104) {
-      amount = 0.06 + 0.94 * smoothstep(0.5 - 0.5 * Math.cos(tunnelPhase * Math.PI * 2));
-      colourPhase = tunnelPhase;
-    } else if (effect.variant === 105) {
-      amount = smoothstep(1 - Math.min(tunnelPhase, 1 - tunnelPhase) / (0.06 + 0.28 * smooth / 100));
-      colourPhase = line / Math.max(1, lines - 1) + tunnelPhase; band = true;
-    } else if (effect.variant === 106) {
-      amount = 0.07 + 0.93 * Math.pow(0.5 + 0.5 * Math.cos(tunnelPhase * Math.PI * 4), 0.65 + 0.7 * (1 - smooth / 100));
-      colourPhase = tunnelPhase;
-    } else if (effect.variant === 107) {
-      amount = 1; colourPhase = tunnelPhase;
-    } else if (effect.variant === 108) {
-      var primary = smoothstep(1 - Math.min(tunnelPhase, 1 - tunnelPhase) / (0.08 + 0.20 * smooth / 100));
-      var echoPhase = mod1(tunnelPhase - (0.17 + 0.25 * spacing));
-      var echo = smoothstep(1 - Math.min(echoPhase, 1 - echoPhase) / (0.10 + 0.18 * smooth / 100));
-      amount = Math.max(primary, echo * 0.48); colourPhase = tunnelPhase;
-    } else if (effect.variant === 109) {
-      var curtainEdge = Math.max(0.5, width * 0.5) / physical;
-      var curtainLocal = reverse ? 1 - localU : localU;
-      amount = 1 - smoothstep((curtainLocal - smoothstep(tunnelPhase) + curtainEdge) / (curtainEdge * 2));
-      colourPhase = curtainLocal * 0.45 + tunnelPhase;
-    } else if (effect.variant === 110) {
-      var crossing = pixelMotionPosition(0.5 - 0.5 * Math.cos(tunnelPhase * Math.PI * 2), width, physical, smooth);
-      amount = Math.max(thickness(Math.abs(localU - crossing), width, physical, smooth),
-        thickness(Math.abs(localU - (1 - crossing)), width, physical, smooth));
-      colourPhase = localU + tunnelPhase;
-    } else if (effect.variant === 111) {
-      var tunnelHead = pixelMotionPosition(tunnelPhase, width, physical, smooth);
-      var tunnelBehind = mod1(tunnelHead - localU) * physical;
-      var tunnelTrail = Math.max(width, physical * Math.max(0.04, trail));
-      amount = Math.max(thickness(circularDistance(localU, tunnelHead), width, physical, smooth),
-        Math.max(0, 1 - tunnelBehind / tunnelTrail) * 224 / 255);
-      colourPhase = tunnelBehind / Math.max(1, tunnelTrail);
+    if (Tunnel.kind('SPI',effect.variant)) {
+      var tunnel = Tunnel.sample('SPI',effect.variant,line,lines,phase,state.speed,
+        state.lineDelayMs,smooth,reverse,state.spacing);
+      amount = tunnel.amount;
+      colourPhase = tunnel.colourPhase;
+      if (effect.variant === 109) {
+        var curtainEdge = Math.max(1,width*(0.25+0.75*smooth/100))/physical;
+        var curtainLocal = reverse ? 1-localU : localU;
+        amount *= 1-smoothstep((curtainLocal-tunnel.progress+curtainEdge)/(2*curtainEdge));
+      } else if (effect.variant === 110) {
+        var crossing = pixelMotionPosition(tunnel.progress,width,physical,smooth);
+        var crossingA = thickness(Math.abs(localU-crossing),width,physical,smooth);
+        var crossingB = thickness(Math.abs(localU-(1-crossing)),width,physical,smooth);
+        amount *= Math.max(crossingA,crossingB);
+        if (crossingA+crossingB > 0) tunnelOppositeWeight = crossingB/(crossingA+crossingB);
+      } else if (effect.variant === 111) {
+        var tunnelHead = pixelMotionPosition(tunnel.progress,width,physical,smooth);
+        var tunnelLocal = reverse ? 1-localU : localU;
+        var tunnelBehind = mod1(tunnelHead-tunnelLocal)*physical;
+        var tunnelTrail = Math.max(width,physical*Math.max(0.04,trail));
+        amount *= Math.max(thickness(circularDistance(tunnelLocal,tunnelHead),width,physical,smooth),
+          Math.max(0,1-tunnelBehind/tunnelTrail)*224/255);
+      } else if (effect.variant === 128) {
+        var diagonalU = reverse ? 1-localU : localU;
+        var forward = mod1(diagonalU*count-tunnel.progress);
+        var backward = mod1(diagonalU*count+tunnel.progress+0.5);
+        var widthPerCell = Math.min(physical,width*count);
+        var diagonalA = thickness(Math.min(forward,1-forward),widthPerCell,physical,smooth);
+        var diagonalB = thickness(Math.min(backward,1-backward),widthPerCell,physical,smooth);
+        amount *= Math.max(diagonalA,diagonalB*0.68);
+        if (diagonalA+diagonalB*0.68 > 0) tunnelOppositeWeight = diagonalB*0.68/(diagonalA+diagonalB*0.68);
+      }
+      tunnelPalette = Tunnel.paletteSpec(tunnel,palette.length);
+      if (tunnelOppositeWeight > 0) tunnelOppositePalette = Tunnel.paletteSpec(tunnel,palette.length,true);
     } else if (effect.variant === 112) {
       var edgeTravel = phase < 0.5 ? phase * 2 : (1 - phase) * 2;
       var edgeCenter = edgeTravel * (n - width) + (width - 1) * 0.5;
@@ -672,15 +725,6 @@
         if (shutterAmount > amount) { amount = shutterAmount; selectedShutter = shutterCenter + opening * 0.22; }
       }
       colourPhase = selectedShutter;
-    } else if (effect.variant === 128) {
-      var diagonalU = reverse ? 1 - localU : localU;
-      var forward = mod1(diagonalU * count - rowClock);
-      var backward = mod1(diagonalU * count + rowClock + 0.5);
-      var widthPerCell = Math.min(physical, width * count);
-      var diagonalA = thickness(Math.min(forward, 1 - forward), widthPerCell, physical, smooth);
-      var diagonalB = thickness(Math.min(backward, 1 - backward), widthPerCell, physical, smooth);
-      amount = Math.max(diagonalA, diagonalB * 0.68);
-      colourPhase = diagonalA >= diagonalB * 0.68 ? rowClock : 0.5 + rowClock;
     } else if (effect.variant === 129) {
       var carriageGap = 1 + spacing * n * 0.2;
       for (var carriage = 0; carriage < count; carriage += 1) {
@@ -715,25 +759,34 @@
     }
     var foreground = bandIndex !== null ? mixSlot(palette[bandIndex], palette[bandIndex], 0) : band ? mixSlot(palette[Math.floor(mod1(colourPhase) * palette.length) % palette.length],
       palette[Math.floor(mod1(colourPhase) * palette.length) % palette.length], 0) : paletteAt(palette, colourPhase, smoothPalette, smooth);
+    if (tunnelPalette) {
+      var tunnelChannels = tunnelPaletteChannels(palette,tunnelPalette,
+        effect.spatialResolution === 'logical-line' ? 100 : smooth);
+      if (tunnelOppositePalette) {
+        var oppositeChannels = tunnelPaletteChannels(palette,tunnelOppositePalette,smooth);
+        tunnelChannels = tunnelChannels.map(function (value,index) {
+          return value+(oppositeChannels[index]-value)*tunnelOppositeWeight;
+        });
+      }
+      foreground = {rgb:tunnelChannels.slice(0,3).map(Math.round),white:Math.round(tunnelChannels[3])};
+    }
     if (effect.variant === 120) {
       var requestedWhite = Math.max.apply(Math, palette.map(function (item) { return item.white; }));
       var explicitRgb = palette.some(function (item) { return hexRgb(item.rgb).some(function (channel) { return channel > 0; }); });
       if (!explicitRgb) { foreground.rgb = [0, 0, 0]; foreground.white = requestedWhite || 255; }
       else if (requestedWhite) foreground.white = Math.max(foreground.white, requestedWhite);
     }
-    // Tunnel legacy renderers apply the same smoothness presentation to the
-    // envelope as to palette blends. Match that receiver step exactly.
-    if (effect.variant >= 104 && effect.variant <= 111) amount = (amount < 0.5 ? 0 : 1) +
-      (amount - (amount < 0.5 ? 0 : 1)) * smoothnessCurve(smooth);
     var background = state.background && typeof state.background === 'object' ? state.background : {
       rgb: state.background || '#000000', white: state.backgroundWhite || 0
     };
     return { receiverType: 'SPI', variant: effect.variant, formula: effect.previewFormula,
       rgb: foreground.rgb, white: foreground.white, amount: clamp(amount, 0, 1, 0),
-      background: state.backgroundOn ? { rgb: hexRgb(background.rgb), white: background.white || 0,
+      background: effect.capabilities.background && state.backgroundOn ? {
+        rgb: state.backgroundRgbEnabled === false ? [0, 0, 0] : hexRgb(background.rgb),
+        white: state.backgroundWhiteEnabled === false ? 0 : clamp(background.white, 0, 255, 0),
         brightness: clamp(state.bgBrightness == null ? state.backgroundBrightness : state.bgBrightness, 0, 100, 0) / 100 } : null,
       brightness: clamp(state.brightness, 0, 100, effect.defaults.brightness) / 100,
-      uniform: false, coordinate: u };
+      uniform: effect.spatialResolution === 'logical-line', spatialResolution:effect.spatialResolution || 'pixel', coordinate: u };
   }
 
   function rgbwEffectForState(state) {
@@ -767,7 +820,8 @@
     state = Object.assign({}, effect.defaults, state);
     var lines = Math.max(1, Number(lineCount) || 1);
     var line = Math.max(0, Math.min(lines - 1, Number(lineIndex) || 0));
-    var phase = phaseWithSmoothness(phaseFor(state, Number(time) || 0, 'RGBW'), state.smooth);
+    var continuousPhase = phaseFor(Object.assign({},state,{lineCount:lines}), Number(time) || 0, 'RGBW');
+    var phase = phaseWithSmoothness(continuousPhase, state.smooth);
     var order = effect.kind === 'tunnel-lines' ? rgbwLineOrder(effect.variant, line, lines, state.direction) : 0;
     var delay = Math.round(clamp(state.lineDelayMs, 0, 5080, effect.defaults.lineDelayMs || 0) / 40) * 0.04 * cyclesPerSecond(state, 'RGBW');
     var legacyDelay = (effect.variant >= 5 && effect.variant <= 16) || (effect.variant >= 21 && effect.variant <= 24);
@@ -780,7 +834,13 @@
     var smoothPalette = true;
     var band = false;
 
-    if (effect.variant === 0 && effect.engine === 'STATIC') { amount = 1; colourPhase = 0; }
+    if (Tunnel.kind('RGBW',effect.variant)) {
+      var tunnel = Tunnel.sample('RGBW',effect.variant,line,lines,continuousPhase,state.speed,
+        state.lineDelayMs,state.smooth,state.direction === 'left',state.spacing);
+      amount = tunnel.amount;
+      colourPhase = tunnel.colourPhase;
+    }
+    else if (effect.variant === 0 && effect.engine === 'STATIC') { amount = 1; colourPhase = 0; }
     else if (effect.variant === 0) { amount = 0.1 + 0.9 * (0.5 - 0.5 * Math.cos(raw * Math.PI * 2)); colourPhase = 0; }
     else if (effect.variant === 1) { amount = smoothstep(1 - Math.abs(raw * 2 - 1)); colourPhase = 0; }
     else if (effect.variant === 2) smoothPalette = false;
@@ -843,7 +903,11 @@
       colourPhase = line / lines;
     }
     var selected;
-    if (band) selected = mixSlot(palette[Math.floor(mod1(colourPhase) * palette.length) % palette.length], palette[Math.floor(mod1(colourPhase) * palette.length) % palette.length], 0);
+    if (Tunnel.kind('RGBW',effect.variant)) {
+      var tunnelPalette = Tunnel.paletteSpec(tunnel,palette.length);
+      selected = mixSlot(palette[tunnelPalette.first],palette[tunnelPalette.second],tunnelPalette.mix);
+    }
+    else if (band) selected = mixSlot(palette[Math.floor(mod1(colourPhase) * palette.length) % palette.length], palette[Math.floor(mod1(colourPhase) * palette.length) % palette.length], 0);
     else selected = paletteAt(palette, colourPhase, smoothPalette);
     return { receiverType: 'RGBW', variant: effect.variant, engine: effect.engine, formula: effect.previewFormula,
       rgb: selected.rgb, white: selected.white, amount: clamp(amount, 0, 1, 0) * clamp(state.brightness, 0, 100, 100) / 100,
@@ -881,8 +945,8 @@
     var canonicalTuples = SPI_EFFECTS.map(tuple);
     var spiVariants = SPI_EFFECTS.map(function (item) { return item.variant; });
     replaceVariants(runtime.effects, spiVariants, runtime, canonicalTuples);
-    replaceVariants(runtime.multiLineEffects, SPI_TUNNELS.map(function (item) { return item.variant; }), runtime, SPI_TUNNELS.map(tuple));
-    replaceVariants(runtime.tunnelSupplementalEffects, SPI_TUNNELS.map(function (item) { return item.variant; }), runtime, SPI_TUNNELS.map(tuple));
+    replaceVariants(runtime.multiLineEffects, ALL_SPI_TUNNELS.map(function (item) { return item.variant; }), runtime, ALL_SPI_TUNNELS.map(tuple));
+    replaceVariants(runtime.tunnelSupplementalEffects, ALL_SPI_TUNNELS.map(function (item) { return item.variant; }), runtime, ALL_SPI_TUNNELS.map(tuple));
 
     if (Array.isArray(runtime.rgbwEffects)) {
       var canonicalKeys = new Set(RGBW_EFFECTS.map(function (item) { return item.engine + ':' + item.variant; }));
@@ -965,7 +1029,8 @@
   validate();
   return Object.freeze({
     version: VERSION, protocol: PROTOCOL,
-    spiEffects: SPI_EFFECTS, spiTunnelEffects: SPI_TUNNELS, spiGeneralEffects: SPI_GENERAL,
+    spiEffects: SPI_EFFECTS, spiTunnelEffects: ALL_SPI_TUNNELS, spiGeneralEffects: SPI_GENERAL,
+    spiPixelTunnelEffects:SPI_TUNNELS, spiSharedTunnelEffects:SPI_SHARED_TUNNELS,
     rgbwEffects: RGBW_EFFECTS, legacyNameMap: LEGACY_NAME_MAP,
     canonicalName: canonicalName, migrateLegacyNames: migrateLegacyNames,
     effectState: effectState, sampleSpiPixel: sampleSpiPixel, sampleRgbwLine: sampleRgbwLine,

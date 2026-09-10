@@ -44,6 +44,7 @@
     securityComplete: false,
     securityBackendReady: false,
     securityBackendError: '',
+    securityBackendCode: '',
     securityDisposition: 'unavailable',
     pinAuthSupported: false,
     recoveryKey: '',
@@ -506,6 +507,9 @@
     const restoreRequired = flow.securityDisposition === 'restore-required';
     const ownershipUnknown = flow.securityDisposition === 'ownership-unknown';
     const nativeProvider = window.AluvisionNativeConnection?.securityProvider;
+    const localNoPin = window.AluvisionLocalTestMode?.enabled === true;
+    const diagnostic = flow.securityDisposition === 'unavailable' && nativeProvider?.securityFailureDiagnostic
+      ? nativeProvider.securityFailureDiagnostic(flow.securityBackendCode) : null;
     const canRestore = restoreRequired && (nativeProvider
       ? flow.pinAuthSupported && typeof nativeProvider.restoreInstallation === 'function'
       : typeof window.AluvisionAccountlessRecovery?.openRestore === 'function');
@@ -521,14 +525,15 @@
       : tx('De beveiliging van je hoofdreceiver is nog niet bereikbaar. Controleer de verbinding en probeer opnieuw.', 'Your main receiver’s security is not reachable yet. Check the connection and try again.', 'La sécurité du récepteur principal n’est pas accessible. Vérifiez la connexion et réessayez.', 'Die Sicherheit des Haupt-Receivers ist noch nicht erreichbar. Prüfe die Verbindung und versuche es erneut.');
     modal(`<section class="v20-commission v20-security-step" data-phase="security" data-security-state="${flow.securityDisposition}">
       ${stepDots('security')}
-      <header><span><div class="eyebrow">${tx(`STAP ${stepNumber('security')} · BEVEILIGING`, `STEP ${stepNumber('security')} · SECURITY`, `ÉTAPE ${stepNumber('security')} · SÉCURITÉ`, `SCHRITT ${stepNumber('security')} · SICHERHEIT`)}</div><h1>${heading}</h1><p>${detail}</p></span></header>
+      <header><span><div class="eyebrow">${tx(`STAP ${stepNumber('security')} · BEVEILIGING`, `STEP ${stepNumber('security')} · SECURITY`, `ÉTAPE ${stepNumber('security')} · SÉCURITÉ`, `SCHRITT ${stepNumber('security')} · SICHERHEIT`)}</div><h1>${localNoPin ? 'Testfirmware nodig' : heading}</h1><p>${localNoPin ? 'Deze receiver bevestigt de tijdelijke teststand zonder PIN nog niet. Plaats de bijbehorende testfirmware en zoek opnieuw. Bestaande beveiligde installaties blijven beschermd.' : diagnostic ? safe(diagnostic.message) : detail}</p>${diagnostic ? `<small data-security-diagnostic="${safe(diagnostic.code)}">${safe(diagnostic.code)}</small>` : ''}</span></header>
       ${backendReady ? `<section class="v20-live-card v20-code-card">
         <label><b>${tx('Persoonlijke pincode', 'Personal PIN', 'Code PIN personnel', 'Persönliche PIN')}</b><input id="v20CommissionCode" class="field v20-recovery-input" type="password" inputmode="numeric" autocomplete="new-password" maxlength="12" placeholder="8–12 ${tx('cijfers', 'digits', 'chiffres', 'Ziffern')}"></label>
         <label><b>${tx('Herhaal de code', 'Repeat the code', 'Répétez le code', 'Code wiederholen')}</b><input id="v20CommissionCodeAgain" class="field v20-recovery-input" type="password" inputmode="numeric" autocomplete="new-password" maxlength="12" placeholder="••••••••"></label>
         <label class="v20-show-code"><input type="checkbox" onchange="v20ToggleCommissionCode(this.checked)"><span>${tx('Code tonen', 'Show code', 'Afficher le code', 'Code anzeigen')}</span></label>
-        <p>${tx('Bewaar deze code voor een nieuwe telefoon of herstel.', 'Keep this code for a new phone or recovery.', 'Conservez ce code pour un nouveau téléphone ou une restauration.', 'Bewahre die PIN für ein neues Telefon oder eine Wiederherstellung auf.')}</p>
+        <p>${tx('Gebruik deze PIN als je de app opnieuw installeert of je verlichting met een ander toestel wilt bedienen. Je hoeft hem niet bij iedere verbinding in te voeren.', 'Use this PIN after reinstalling the app or to control your lights from another device. You do not need to enter it at every connection.', 'Utilisez ce PIN après une réinstallation ou pour contrôler l’éclairage depuis un autre appareil. Il n’est pas demandé à chaque connexion.', 'Nutze diese PIN nach einer Neuinstallation oder auf einem anderen Gerät. Du musst sie nicht bei jeder Verbindung eingeben.')}</p>
       </section>` : `<div class="v20-security-backend-wait" role="status"><i>${restoreRequired ? '↻' : '!'}</i><span><b>${tx('Instellingen blijven bewaard', 'Settings are retained', 'Les réglages sont conservés', 'Einstellungen bleiben erhalten')}</b><small>${tx('Ga verder zodra de toegang is bevestigd.', 'Continue once access is confirmed.', 'Continuez lorsque l’accès est confirmé.', 'Fahre fort, sobald der Zugang bestätigt ist.')}</small></span></div>`}
-      <footer><button class="button soft" onclick="v20CancelCommission()">${tx('Annuleren', 'Cancel', 'Annuler', 'Abbrechen')}</button>${backendReady ? `<button class="button" onclick="v20CreateInstallationProtection()">${tx('Pincode bewaren', 'Save PIN', 'Enregistrer le PIN', 'PIN speichern')} →</button>` : canRestore ? `<button class="button" onclick="v20RestoreCommissionInstallation()">${tx('Toegang herstellen', 'Restore access', 'Rétablir l’accès', 'Zugang wiederherstellen')}</button>` : `<button class="button" onclick="v20RetryCommissionSecurity()">${tx('Opnieuw controleren', 'Check again', 'Vérifier à nouveau', 'Erneut prüfen')}</button>`}</footer>
+      ${canRestore&&typeof nativeProvider?.connectExistingInstallation==='function'?`<button type="button" class="button" onclick="v20ConnectCommissionInstallation()">${tx('Bestaande installatie verbinden','Connect existing installation','Connecter l’installation existante','Bestehende Installation verbinden')}</button><p class="sub">${tx('Voer je bestaande PIN in. Je inrichting wordt niet vervangen.','Enter your existing PIN. Your setup is not replaced.','Saisissez votre PIN existant sans remplacer la configuration.','Gib deine bestehende PIN ein. Deine Einrichtung wird nicht ersetzt.')}</p>`:''}
+      <footer><button class="button soft" onclick="v20CancelCommission()">${tx('Annuleren', 'Cancel', 'Annuler', 'Abbrechen')}</button>${backendReady ? `<button class="button" onclick="v20CreateInstallationProtection()">${tx('Pincode bewaren', 'Save PIN', 'Enregistrer le PIN', 'PIN speichern')} →</button>` : canRestore ? `<button class="button soft" onclick="v20RestoreCommissionInstallation()">${tx('Volledige inrichting herstellen', 'Restore complete setup', 'Restaurer la configuration', 'Vollständige Einrichtung wiederherstellen')}</button>` : `<button class="button" onclick="v20RetryCommissionSecurity()">${tx('Opnieuw controleren', 'Check again', 'Vérifier à nouveau', 'Erneut prüfen')}</button>`}</footer>
     </section>`);
   }
 
@@ -577,6 +582,7 @@
     flow.recoveryKey = '';
     if (typeof flow.resumeAfterSecurity === 'function') {
       const resume = flow.resumeAfterSecurity;
+      flow.cancelSecurityAwait = null;
       stopFlow(false);
       return resume();
     }
@@ -934,15 +940,22 @@
     const generation = flow.generation;
     flow.securityBackendReady = false;
     flow.securityBackendError = '';
+    flow.securityBackendCode = '';
     flow.securityDisposition = 'unavailable';
     flow.pinAuthSupported = false;
     flow.securityComplete = false;
     try {
+      if (window.AluvisionLocalTestMode?.enabled) {
+        window.AluvisionLocalTestMode.assertReceiver(device.rid || device.RID);
+        flow.securityDisposition = 'temporary-no-pin';
+        return false;
+      }
       // The provider reads the current main receiver, also while an extra
       // receiver is being assigned. A cached app flag cannot prove PINSET.
       const status = await commissionSecurityApi()?.getStatus?.(true);
       if (!flow.active || flow.generation !== generation || flow.deviceId !== device.id) return true;
       flow.securityBackendError = String(status?.error || '');
+      flow.securityBackendCode = String(status?.errorCode || '');
       if (!status?.available) return true;
       flow.pinAuthSupported = status.pinAuthSupported === true;
       const owned = status.owned === true;
@@ -991,6 +1004,14 @@
     renderSecurity();
   };
 
+  window.v20ConnectCommissionInstallation=function(){
+    if(!flow.active||flow.phase!=='security'||!flow.pinAuthSupported)return;
+    const generation=flow.generation,deviceId=flow.deviceId;
+    window.AluvisionAccountlessRecovery?.openExisting('connect',{
+      onConnected:()=>{if(!flow.active||flow.generation!==generation||flow.deviceId!==deviceId)return;flow.needsSecurity=false;flow.securityComplete=true;return continueAfterSecurity();},
+      onCancel:()=>{if(flow.active&&flow.generation===generation)stopFlow();}
+    });
+  };
   window.v20RestoreCommissionInstallation = function v20RestoreCommissionInstallation() {
     if (!flow.active || flow.phase !== 'security' || flow.securityDisposition !== 'restore-required') return;
     const nativeProvider = window.AluvisionNativeConnection?.securityProvider;
@@ -998,11 +1019,10 @@
       if (!flow.pinAuthSupported || typeof nativeProvider.restoreInstallation !== 'function') return;
       flow.phase = 'security-restore';
       modal(`<section class="v20-commission v20-security-step" data-phase="security-restore">
-        ${stepDots('security')}
-        <header><span><h1>${tx('Toegang herstellen', 'Restore access', 'Rétablir l’accès', 'Zugang wiederherstellen')}</h1><p>${tx('Gebruik de bestaande pincode van deze installatie.', 'Use this installation’s existing PIN.', 'Utilisez le code PIN existant de cette installation.', 'Verwende die bestehende PIN dieser Installation.')}</p></span></header>
-        <section class="v20-live-card v20-code-card"><label><b>${tx('Pincode', 'PIN', 'Code PIN', 'PIN')}</b><input id="v20RestoreCommissionCode" class="field v20-recovery-input" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12" placeholder="8–12 ${tx('cijfers', 'digits', 'chiffres', 'Ziffern')}"></label><p>${tx('Dit herstelt toegang tot de receivers, niet je indelingen of scènes.', 'This restores access to the receivers, not layouts or scenes.', 'Ceci rétablit l’accès aux récepteurs, pas les dispositions ni les scènes.', 'Dies stellt den Zugang zu den Receivern wieder her, nicht Layouts oder Szenen.')}</p></section>
+        <header><span><h1>${tx('Installatie herstellen', 'Restore installation', 'Restaurer l’installation', 'Installation wiederherstellen')}</h1><p>${tx('Gebruik de bestaande pincode van deze installatie.', 'Use this installation’s existing PIN.', 'Utilisez le code PIN existant de cette installation.', 'Verwende die bestehende PIN dieser Installation.')}</p></span></header>
+        <section class="v20-live-card v20-code-card"><label><b>${tx('Pincode', 'PIN', 'Code PIN', 'PIN')}</b><input id="v20RestoreCommissionCode" class="field v20-recovery-input" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12" placeholder="8–12 ${tx('cijfers', 'digits', 'chiffres', 'Ziffern')}"></label><p>${tx('Via Wi-Fi halen we de opgeslagen zones, groepen, LED Lines, presets en scènes terug. Ook niet-bereikbare receivers blijven zichtbaar. Je hoeft de pixels en aansluitkant niet opnieuw in te stellen.', 'Over Wi-Fi we restore saved zones, groups, LED Lines, presets and scenes. Offline receivers remain visible. Pixels and connection direction do not need to be set up again.', 'En Wi-Fi, les zones, groupes, LED Lines, presets et scènes enregistrés sont restaurés, y compris les récepteurs hors ligne.', 'Über WLAN werden gespeicherte Zonen, Gruppen, LED Lines, Presets und Szenen einschließlich nicht erreichbarer Receiver wiederhergestellt.')}</p></section>
         <p id="v20CommissionRestoreError" class="sub" role="alert" hidden style="margin:0;color:var(--red);font-size:12px;line-height:1.4"></p>
-        <footer><button class="button soft" onclick="v20CancelCommission()">${tx('Annuleren', 'Cancel', 'Annuler', 'Abbrechen')}</button><button class="button" onclick="v20SubmitCommissionRestore()">${tx('Toegang herstellen', 'Restore access', 'Rétablir l’accès', 'Zugang wiederherstellen')}</button></footer>
+        <footer><button class="button soft" onclick="v20CancelCommission()">${tx('Annuleren', 'Cancel', 'Annuler', 'Abbrechen')}</button><button class="button" onclick="v20SubmitCommissionRestore()">${tx('Installatie herstellen', 'Restore installation', 'Restaurer l’installation', 'Installation wiederherstellen')}</button></footer>
       </section>`);
       return;
     }
@@ -1026,15 +1046,13 @@
     if (button) button.disabled = true;
     flow.phase = 'security-restoring';
     try {
-      const outcome = await provider.restoreInstallation(code);
+      const outcome = await provider.restoreInstallation(code, { isCurrent: () => flow.active && flow.generation === generation && flow.deviceId === device.id });
       if (!flow.active || flow.generation !== generation || flow.deviceId !== device.id) return;
-      if (!outcome?.ok || outcome.restored !== true) throw new Error('restore-not-confirmed');
-      const stillNeeded = await needsInstallationSecurity(device);
-      if (!flow.active || flow.generation !== generation || flow.deviceId !== device.id) return;
-      flow.needsSecurity = stillNeeded;
-      if (stillNeeded) return renderSecurity();
-      toast(tx('Toegang hersteld', 'Access restored', 'Accès rétabli', 'Zugang wiederhergestellt'));
-      return continueAfterSecurity();
+      if (!outcome?.ok || outcome.restored !== true || outcome.configurationRestored !== true) throw new Error('restore-not-confirmed');
+      stopFlow(false); base.closeModal?.call(window); window.go?.('home');
+      toast(tx(`Installatie hersteld · ${outcome.receiverCount || 0} receivers in je inrichting`, 'Installation restored', 'Installation restaurée', 'Installation wiederhergestellt'));
+      window.discover?.(true);
+      return;
     } catch (error) {
       if (!flow.active || flow.generation !== generation || flow.deviceId !== device.id) return;
       flow.phase = 'security-restore';
@@ -1051,6 +1069,12 @@
             : tx('Wacht even en probeer opnieuw.', 'Please wait a moment and try again.', 'Patientez un instant et réessayez.', 'Warte einen Moment und versuche es erneut.')
           : code === 'PIN_CHALLENGE_EXPIRED'
             ? tx('De pincodecontrole is verlopen. Probeer opnieuw.', 'The PIN check expired. Please try again.', 'La vérification du PIN a expiré. Réessayez.', 'Die PIN-Prüfung ist abgelaufen. Versuche es erneut.')
+            : code === 'RECOVERY_WIFI_REQUIRED'
+              ? tx('Kies Wi-Fi bij Verbinding en verbind met de hoofdreceiver. Zo halen we de volledige inrichting terug.', 'Choose Wi-Fi under Connection and connect to the main receiver to restore the full setup.', 'Choisissez Wi-Fi dans Connexion et connectez le récepteur principal.', 'Wähle WLAN unter Verbindung und verbinde dich mit dem Hauptreceiver.')
+              : code === 'SNAPSHOT_MISSING'
+                ? tx('Er is nog geen volledige back-up op deze hoofdreceiver. Je huidige inrichting is niet gewijzigd.', 'No complete backup is stored on this main receiver. Your current setup was not changed.', 'Aucune sauvegarde complète sur ce récepteur. Votre configuration reste inchangée.', 'Auf diesem Hauptreceiver liegt kein vollständiges Backup. Die aktuelle Einrichtung bleibt unverändert.')
+                : code.startsWith('SNAPSHOT_')
+                  ? tx('De back-up is onvolledig, verouderd of het herstel is onderbroken. Je inrichting is niet vervangen.', 'The backup is incomplete, outdated, or recovery was interrupted. Your setup was not replaced.', 'Sauvegarde incomplète ou récupération interrompue. Votre configuration n’a pas été remplacée.', 'Das Backup ist unvollständig, veraltet oder die Wiederherstellung wurde unterbrochen.')
             : code === 'PIN_UNSUPPORTED'
               ? tx('Herstel via pincode is hier nog niet beschikbaar.', 'PIN recovery is not available here yet.', 'La récupération par PIN n’est pas encore disponible ici.', 'PIN-Wiederherstellung ist hier noch nicht verfügbar.')
               : tx('Toegang niet hersteld. Controleer de pincode en verbinding.', 'Access was not restored. Check the PIN and connection.', 'Accès non rétabli. Vérifiez le code PIN et la connexion.', 'Zugang nicht wiederhergestellt. Prüfe PIN und Verbindung.');
@@ -1062,7 +1086,7 @@
   // Native Add can discover an already-owned main before it has an app record.
   // Check access on a temporary snapshot; never insert an unverified receiver
   // or retry MESH_MAIN under another owner's credentials to show this screen.
-  window.v20CheckReceiverSecurity = async function v20CheckReceiverSecurity(device, onConfirmed) {
+  window.v20CheckReceiverSecurity = async function v20CheckReceiverSecurity(device, onConfirmed, onCancelled) {
     if (!device?.id || typeof onConfirmed !== 'function') return false;
     stopFlow(true);
     flow.active = true;
@@ -1073,6 +1097,7 @@
     flow.generation += 1;
     const generation = flow.generation;
     flow.resumeAfterSecurity = onConfirmed;
+    flow.cancelSecurityAwait = typeof onCancelled === 'function' ? onCancelled : null;
     flow.needsSecurity = true;
     modal(`<section class="v20-commission"><div class="v20-pair-loading"><i></i><b>${tx('Toegang controleren…', 'Checking access…', 'Vérification de l’accès…', 'Zugang wird geprüft…')}</b></div></section>`);
     const needsSecurity = await needsInstallationSecurity(device);
@@ -1178,6 +1203,8 @@
   }
 
   function stopFlow(clear = true) {
+    const cancelSecurityAwait = flow.cancelSecurityAwait;
+    flow.cancelSecurityAwait = null;
     if (flow.active && clear && flow.receiverType === 'SPI') {
       finishSetupSession(true);
       if (calibrationPhase()) clearCalibration(true);
@@ -1199,6 +1226,7 @@
     flow.resumePairing = null;
     flow.resumeAfterSecurity = null;
     flow.deviceSnapshot = null;
+    cancelSecurityAwait?.();
   }
 
   window.startPairing = function v20StartPairing(id) {
@@ -1455,7 +1483,7 @@
     if (!flow.active) return;
     renderPortAssignments();
   };
-  window.v20CancelCommission = function v20CancelCommission() { stopFlow(true); base.closeModal?.call(window); };
+  window.v20CancelCommission = function v20CancelCommission() { window.AluvisionNativeConnection?.securityProvider?.cancelPendingSetup?.(); stopFlow(true); base.closeModal?.call(window); };
   window.v20OpenCompletedGroup = function v20OpenCompletedGroup(zoneId, groupId) {
     base.closeModal?.call(window);
     if (typeof window.openZone === 'function') openZone(zoneId);

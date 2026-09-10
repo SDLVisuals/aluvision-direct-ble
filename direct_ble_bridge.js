@@ -11,6 +11,7 @@
  */
 (() => {
   'use strict';
+  if (window.AluvisionInstallationProfiles?.startupBlocked) return;
 
   const UUIDS = Object.freeze({
     service: '8f0d1100-8b2b-4ca3-a9d5-8a39aaf11700',
@@ -183,6 +184,7 @@
   }
 
   const bridge = loadBridge();
+  let profileSwitch = null;
   bridge.commandGenerations ||= {};
   const bodyGenerations = new WeakMap();
   const bodyStarts = new WeakMap();
@@ -249,6 +251,7 @@
   }
 
   function persistBridge() {
+    if (profileSwitch) return false;
     try {
       localStorage.setItem(BRIDGE_KEY, JSON.stringify(bridge));
       return true;
@@ -834,7 +837,11 @@
         port: clamp(target.port ?? target.outputPort, 0, target.receiverType === 'RGBW' ? 2 : 4, 0)
       });
     });
-    const serial = activeAdapter()?.adapter?.supportsConcurrentFanout === false;
+    // Match the actual fanout lane below. Browser Bluetooth has no adapter
+    // object, but its writes are still strictly serial (commandTail).
+    const selected = activeAdapter();
+    const serial = selected?.name !== PRIMARY_TRANSPORT ||
+      selected.adapter?.supportsConcurrentFanout === false;
     const measureClock = async target => {
       try { return [target, await receiverClock(target.rid, target.receiverType, target.port)]; }
       catch (_) { return [target, null]; }
@@ -1211,12 +1218,13 @@
       isCurrent: currentPair,
       identify: async ({ rid: target, requestId, signal }) => {
         if (target !== rid || !currentPair() || signal.aborted) throw new Error('Verbinding gewijzigd. Kies de receiver opnieuw.');
+        const sentAt = Date.now();
         const reply = await transactBle({ TYPE: 'MESH_IDENTIFY', TARGET: rid, PORT: 0, KEY: bridge.networkKey }, 3600, true, signal);
         if (!currentPair() || signal.aborted || reply.STATUS !== 'OK' || reply.DETAIL !== 'MESH_IDENTIFIED' ||
             String(reply.TARGETACK) !== '1' || exactRid(reply.TARGETRID) !== rid) {
           throw new Error('De LED Line bevestigde het knipperen niet. Controleer de verbinding en receiverfirmware.');
         }
-        return { ok: true, rid, requestId };
+        return { ok: true, rid, requestId, pattern: window.AluvisionIdentifyBeforePair.patternFromReply?.(reply, ble.receiverType, Date.now() - sentAt) };
       }
     });
     if (!recognition.confirmed || recognition.rid !== rid || !currentPair()) {
@@ -1491,9 +1499,16 @@
     return [...channels, whiteOn ? clamp(white, 0, 255, 0) : 0].join(',');
   }
 
-  function cyclesPerSecond(speed, receiverType, engine) {
+  function cyclesPerSecond(speed, receiverType, engine, timing = null) {
     const value = clamp(speed, 0, 100, 0);
     if (!value) return 0;
+    // The shared helper is loaded after this bridge, before any user command.
+    // Read it at call time so previews and physical group clocks use one rate.
+    const tunnel = window.AluvisionTunnelEngine;
+    if (timing && tunnel?.kind(receiverType, timing.variant)) {
+      return tunnel.rate(receiverType, timing.variant, timing.lineCount,
+        value, timing.lineDelayMs);
+    }
     const normalized = value / 100;
     if (receiverType === 'RGBW') {
       return engine === 'SPARKLE'
@@ -1503,22 +1518,31 @@
     return 0.002 + normalized * normalized * 0.80;
   }
 
-  function phaseFor(timelineId, state, receiverType, at = performance.now()) {
+  function phaseFor(timelineId, state, receiverType, at = performance.now(), topology = null) {
     const key = String(timelineId || 'default').slice(0, 160);
     const speed = clamp(state.speed, 0, 100, 22);
     const engine = String(state.engine || 'CHASE').toUpperCase();
     const restartToken = Number(state.restartToken || 0);
     const parsedPhaseMs = Number(state.phaseMs);
     const phaseOffset = Number.isFinite(parsedPhaseMs) ? parsedPhaseMs / 1000 : 0;
+    const parallel = topology?.layoutParallel ?? state.layoutParallel ?? true;
+    const lineCount = receiverType === 'SPI' && !parallel ? 1
+      : clamp(topology?.lineCount ?? state.lineCount, 1, 120, 1);
+    const rate = cyclesPerSecond(speed, receiverType, engine, {
+      variant: clamp(state.variant, 0, 255, 0), lineCount,
+      lineDelayMs: Math.round(clamp(state.lineDelayMs, 0, 5080, 240) / 40) * 40
+    });
     const signature = `${engine}:${clamp(state.variant, 0, 255, 0)}:${state.direction === 'left' ? 'left' : 'right'}`;
     const current = phaseClocks.get(key);
     let phase = current
-      ? (current.phase + ((at - current.at) / 1000) * cyclesPerSecond(current.speed, current.receiverType, current.engine)) % 1
+      ? (current.phase + ((at - current.at) / 1000) * current.rate) % 1
       : phaseOffset % 1;
     if (current && (current.restartToken !== restartToken || current.signature !== signature || current.receiverType !== receiverType)) {
       phase = phaseOffset % 1;
     }
-    phaseClocks.set(key, { phase, at, speed, engine, restartToken, signature, receiverType, used: at });
+    // First reach this edit's common start using the previous actual rate,
+    // then continue from that phase with the new speed/delay/topology rate.
+    phaseClocks.set(key, { phase, at, rate, speed, engine, restartToken, signature, receiverType, used: at });
     if (phaseClocks.size > 128) {
       const oldest = [...phaseClocks.entries()].sort((left, right) => left[1].used - right[1].used)[0]?.[0];
       if (oldest && oldest !== key) phaseClocks.delete(oldest);
@@ -1537,15 +1561,28 @@
       randomness: false, bounce: false, mirror: false, direction: false,
       lineDelay: false
     };
+    const tunnel = window.AluvisionTunnelEngine;
+    const tunnelKind = tunnel?.kind(receiverType, variant);
+    const sharedRgbwVariant = receiverType === 'SPI' ? tunnel?.sharedRgbwVariant?.(variant) : null;
+    if (tunnelKind && sharedRgbwVariant != null) {
+      const canonical = window.AluvisionV21AnimationCatalog?.spiEffects?.find(effect => effect.variant === variant);
+      capabilities.speed = capabilities.smooth = true;
+      capabilities.direction = isParallel && lineCount > 1;
+      capabilities.lineDelay = capabilities.direction;
+      capabilities.spacing = Boolean(canonical?.capabilities?.spacing || sharedRgbwVariant === 22);
+      return capabilities;
+    }
 
     if (receiverType === 'RGBW') {
       if (engine === 'STATIC') return capabilities;
       capabilities.speed = true;
-      capabilities.direction = ((variant >= 5 && variant <= 16) || (variant >= 21 && variant <= 24) || variant === 26 || variant === 27) && isParallel && lineCount > 1;
+      const tunnelVariant = Boolean(tunnelKind);
+      capabilities.direction = tunnelVariant && isParallel && lineCount > 1;
       capabilities.lineDelay = capabilities.direction;
-      // These are the only RGBW variants whose numeric smoothness value is
-      // consumed by the receiver. Other fades have a deliberately fixed curve.
-      capabilities.smooth = (engine === 'SPARKLE' && (variant === 4 || variant === 11 || variant === 20)) ||
+      // Expose smoothness where it meaningfully changes the effect. The clock
+      // quantizer still consumes it for other variants, so liveFields sends
+      // the state explicitly even when no separate control is shown.
+      capabilities.smooth = tunnelVariant || (engine === 'SPARKLE' && (variant === 4 || variant === 11 || variant === 20)) ||
         (engine === 'CHASE' && variant === 8) || (engine === 'WAVE' && variant === 12) ||
         (variant >= 17 && variant <= 27);
       capabilities.spacing = variant === 19 || variant === 20 || variant === 22;
@@ -1592,7 +1629,6 @@
     if (variant >= 104 && variant <= 111) {
       capabilities.speed = true;
       capabilities.smooth = true;
-      capabilities.background = true;
       capabilities.direction = true;
       capabilities.lineDelay = isParallel && lineCount > 1;
       capabilities.width = variant >= 109;
@@ -1690,7 +1726,8 @@
     const receiverType = String(target.receiverType || state.receiverType || 'SPI').toUpperCase() === 'RGBW' ? 'RGBW' : 'SPI';
     const requestedLeft = state.direction === 'left';
     const engine = String(state.engine || 'CHASE').toUpperCase();
-    const canonicalSpi = receiverType === 'SPI' && Number(state.variant) >= 104 && Number(state.variant) <= 131;
+    const tunnelKind = window.AluvisionTunnelEngine?.kind(receiverType, Number(state.variant));
+    const canonicalSpi = receiverType === 'SPI' && (tunnelKind || Number(state.variant) >= 104 && Number(state.variant) <= 131);
     const motionReverse = !canonicalSpi && ['GRADIENT', 'ALTERNATE'].includes(engine) ? !requestedLeft : requestedLeft;
     const physicalReverse = Boolean(target.reversed);
     const colors = Array.isArray(state.colors) && state.colors.length ? state.colors.slice(0, 4) : ['#873ada'];
@@ -1722,11 +1759,10 @@
     const variant = clamp(state.variant, 0, 255, 0);
     const lineCount = clamp(target.lineCount || (isParallel ? targets.length : 1), 1, 120, 1);
     const lineTimed = isParallel && lineCount > 1 &&
-      ((receiverType === 'SPI' && ((variant >= 90 && variant <= 102) || (variant >= 104 && variant <= 111) || variant === 128)) ||
-       (receiverType === 'RGBW' && ((variant >= 5 && variant <= 16) || (variant >= 21 && variant <= 24) || variant === 26 || variant === 27)));
+      (Boolean(tunnelKind) || receiverType === 'SPI' && variant >= 90 && variant <= 102);
     const capabilities = effectCommandCapabilities(receiverType, engine, variant, isParallel, lineCount);
     const transitionMs = receiverType === 'RGBW'
-      ? clamp(state.transitionMs, 0, 1800000, 240)
+      ? clamp(state.transitionMs, 0, 1800000, 70)
       : clamp(state.transitionMs, 0, 1000, 70);
     const fields = {
       TYPE: save ? 'SAVE' : 'LIVE', KEY: bridge.networkKey,
@@ -1743,13 +1779,18 @@
       RESTART: clamp(state.restartToken, 0, Number.MAX_SAFE_INTEGER, 0),
       POWER: 100, WHITEMIX: 0, TRANSITIONMS: Math.round(transitionMs),
       PHASEMS: phaseFor(body.timelineId || state.timelineId, state, receiverType,
-        bodyHostStarts.get(body) ?? performance.now()), TEST: 'NONE'
+        bodyHostStarts.get(body) ?? performance.now(),
+        { lineCount, layoutParallel: isParallel }), TEST: 'NONE'
     };
     if (capabilities.background) {
       fields.BG = rgb(state.background || '#000000', state.backgroundWhite || 0,
         state.backgroundRgbEnabled !== false, state.backgroundWhiteEnabled !== false);
       fields.BGON = Number(state.backgroundOn !== false);
       fields.BGBRIGHT = clamp(state.bgBrightness, 0, 100, 10);
+    } else if (receiverType === 'SPI' && tunnelKind) {
+      // Tunnel effects have no background control. Clear a previous effect's
+      // stored background so their depth envelopes can actually fade to black.
+      fields.BGON = 0;
     }
     if (capabilities.speed) fields.SPEED = clamp(state.speed, 0, 100, 22);
     if (capabilities.width) {
@@ -1773,6 +1814,13 @@
     }
     const rawPort = target.port ?? target.outputPort;
     if (receiverType === 'RGBW') {
+      // Whole-line renderers consume these fields even when their controls are
+      // hidden. Every member must receive the same clock quantization/direction,
+      // not retain an old strobe smoothness or a previous tunnel's reverse flag.
+      fields.SMOOTH = clamp(state.smooth, 0, 100, 90);
+      fields.REVERSE = Number([9, 15, 19, 23].includes(variant) ? !requestedLeft : requestedLeft);
+      fields.LINEDELAYMS = lineTimed
+        ? Math.round(clamp(state.lineDelayMs, 0, 5080, 240) / 40) * 40 : 0;
       fields.PORT = rawPort === 0 ? 0 : clamp(rawPort, 1, 2, 1);
       delete fields.WIDTH; delete fields.WIDTHPX; delete fields.PHYSICALREVERSE;
       delete fields.MOTIONREVERSE; delete fields.PIXELS; delete fields.GROUPPIXELS; delete fields.OFFSET;
@@ -2632,6 +2680,7 @@
   }
 
   async function routeApi(path, method, body) {
+    if (profileSwitch) return json({ok:false,error:'Een andere installatie wordt geopend. Wacht even.',code:'INSTALLATION_SWITCHING'},409);
     if (path === '/api/session') return json({ token: sessionToken });
     if (path === '/api/health') {
       const status = transportStatus();
@@ -2777,8 +2826,69 @@
     return { ok: true, rid };
   }
 
+  function commitRecoveredConfiguration(snapshot, applyState, isCurrent = () => true) {
+    const checked = window.AluvisionConfigurationSnapshot?.validate(snapshot, { installationId: bridge.meshId });
+    if (!checked || typeof applyState !== 'function' || !isCurrent()) throw new Error('Herstel werd onderbroken.');
+    const before = { ...bridge }, stored = localStorage.getItem(BRIDGE_KEY);
+    const receivers = {};
+    for (const device of checked.state.devices) {
+      const rid = exactRid(device.physicalRid || device.rid || device.RID);
+      if (!rid) continue;
+      receivers[rid] = { ...(bridge.receivers[rid] || {}), ...device, rid,
+        online: false, gateway: rid === checked.mainReceiverId, reachableViaGateway: false };
+    }
+    const next = { ...bridge, receivers, sharedState: checked.state,
+      revision: Math.max(Number(bridge.revision) || 0, Number(checked.revision)),
+      restoredRevision: checked.revision, preferredGatewayRid: checked.mainReceiverId };
+    try {
+      // This single durable record also contains the complete app state. On a
+      // restart /api/app-state therefore cannot return the pre-restore layout.
+      localStorage.setItem(BRIDGE_KEY, JSON.stringify(next));
+      const result = applyState(checked.state, next.revision);
+      if (result && typeof result.then === 'function') throw new Error('Herstel moet atomair worden toegepast.');
+      Object.assign(bridge, next);
+      return { ok: true, revision: next.revision };
+    } catch (error) {
+      Object.assign(bridge, before);
+      if (stored === null) localStorage.removeItem(BRIDGE_KEY); else localStorage.setItem(BRIDGE_KEY, stored);
+      throw error;
+    }
+  }
+
   window.AluvisionDirectBridge = Object.freeze({
+    installationProfiles: Object.freeze({
+      async lock() {
+        if(profileSwitch||otaController?.busy)throw new Error('Een receiveractie wordt nog afgerond. Wacht even.');
+        const token={};profileSwitch=token;
+        let release;
+        try {
+          release=await window.AluvisionSecureConnection?.pauseForNativeOperation?.();
+          try{await commandTail;}catch(_){}
+          return ()=>{if(profileSwitch===token)profileSwitch=null;release?.();};
+        } catch(error){if(profileSwitch===token)profileSwitch=null;release?.();throw error;}
+      },
+      snapshot() {
+        if(!profileSwitch)throw new Error('De installatie is niet veilig gepauzeerd.');
+        const privateBridge=JSON.parse(JSON.stringify(bridge));delete privateBridge.sharedState;delete privateBridge.profileActivation;
+        const id=String(privateBridge.meshId||privateBridge.networkKey?.slice(0,8)||'').toUpperCase();
+        privateBridge.meshId=id;
+        return {meshId:id,privateBridge};
+      },
+      fresh(id) {
+        if(!/^[0-9A-F]{8}$/.test(id)||id==='00000000')throw new Error('Ongeldige nieuwe installatie.');
+        return {masterSecret:randomHex256(),networkKey:randomHex64(),meshId:id,publicTag:randomHex(3),secretVersion:2,legacyKeyMigrated:false,receivers:{},browserDeviceIds:{},preferredGatewayRid:'',revision:0,commandGenerations:{}};
+      },
+      commit(privateBridge,activation,state) {
+        if(!profileSwitch||privateBridge?.meshId!==activation?.id||!privateBridge.receivers||!/^[0-9A-F]{16}$/.test(privateBridge.networkKey||'')||!/^[0-9A-F]{64}$/.test(privateBridge.masterSecret||''))throw new Error('De installatieovergang is niet bevestigd.');
+        const clean=sanitiseSharedState(state),next={...JSON.parse(JSON.stringify(privateBridge)),sharedState:clean,profileActivation:activation};
+        const encoded=JSON.stringify(next);localStorage.setItem(BRIDGE_KEY,encoded);
+        if(localStorage.getItem(BRIDGE_KEY)!==encoded)throw new Error('De nieuwe installatie kon niet worden bevestigd.');
+        // Deliberately keep this page paused on the old in-memory state until
+        // reload. Bootstrap completes the public stores from this checkpoint.
+      }
+    }),
     adoptRecoveredInstallation,
+    commitRecoveredConfiguration,
     get connected() { return ble.connected; },
     get gatewayRid() { return ble.rid; },
     get preferredGatewayRid() { return exactRid(bridge.preferredGatewayRid); },

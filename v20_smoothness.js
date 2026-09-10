@@ -192,6 +192,16 @@
     return COPY[languageFor(doc)];
   }
 
+  function wholeLineCopy(doc) {
+    const translations = {
+      nl: { description: 'Bepaalt hoe zacht de volledige RGBW LED Line in- en uitfadet: 0% verandert in stapjes, 100% geeft een vloeiende fade.', fixedSpeed: 'Volledige LED Line · vaste demotijd', low: '0% · zichtbare stapjes', high: '100% · zachte fade', crisp: 'Stapsgewijs', stepped: 'zichtbare helderheidsstapjes', mixed: 'steeds zachtere fade', continuous: 'vloeiende volledige-lijnfade' },
+      en: { description: 'Controls the complete RGBW LED Line fade: 0% changes in steps, 100% fades continuously.', fixedSpeed: 'Complete LED Line · fixed demo time', low: '0% · visible steps', high: '100% · soft fade', crisp: 'Stepped', stepped: 'visible brightness steps', mixed: 'progressively softer fade', continuous: 'smooth whole-line fade' },
+      fr: { description: 'Règle le fondu de toute la LED Line RGBW : 0 % change par paliers, 100 % produit un fondu fluide.', fixedSpeed: 'LED Line entière · durée de démo fixe', low: '0 % · paliers visibles', high: '100 % · fondu doux', crisp: 'Par paliers', stepped: 'paliers de luminosité visibles', mixed: 'fondu progressivement plus doux', continuous: 'fondu fluide de toute la ligne' },
+      de: { description: 'Bestimmt die Blende der gesamten RGBW LED Line: 0 % verändert sich in Stufen, 100 % blendet kontinuierlich.', fixedSpeed: 'Ganze LED Line · feste Demozeit', low: '0 % · sichtbare Stufen', high: '100 % · weich blenden', crisp: 'Stufig', stepped: 'sichtbare Helligkeitsstufen', mixed: 'zunehmend weicher blenden', continuous: 'weiche Ganzlinienblende' }
+    };
+    return { ...copyFor(doc), ...translations[languageFor(doc)] };
+  }
+
   function modeText(level, copy) {
     const value = Math.round(clamp(level));
     if (value <= 5) return `${value}% · ${copy.stepped}`;
@@ -224,7 +234,8 @@
     return Array.from({ length: count }, (_, index) => `<i${className && (index === 0 || index === count - 1) ? ` class="${className}"` : ''}></i>`).join('');
   }
 
-  function demoMarkup(copy) {
+  function demoMarkup(copy, wholeLine = false) {
+    if (wholeLine) return `<div class="v20-smoothness-live v20-smoothness-whole-line" aria-hidden="true"><span class="v20-smoothness-line v20-smoothness-line-step"></span><span class="v20-smoothness-line v20-smoothness-line-flow"></span></div><div class="v18153-smooth-demo-legend"><span>${copy.fixedSpeed}</span><span data-smooth-demo-value></span></div>`;
     return `<div class="v20-smoothness-live" aria-hidden="true">
       <span class="v20-smoothness-leds">${ledCells(18)}</span>
       <span class="v20-smoothness-motion v20-smoothness-step"><b>${ledCells(5)}</b></span>
@@ -286,7 +297,7 @@
     });
   }
 
-  function ensureStage(doc, panel, copy) {
+  function ensureStage(doc, panel, copy, wholeLine = false) {
     let stage = panel.querySelector('.v18153-smooth-demo');
     if (!stage) {
       stage = doc.createElement('div');
@@ -295,10 +306,13 @@
       if (range) range.insertAdjacentElement('beforebegin', stage);
       else panel.append(stage);
     }
-    if (!stage.querySelector('.v20-smoothness-live')) {
+    const mode = wholeLine ? 'whole-line' : 'pixels';
+    if (!stage.querySelector('.v20-smoothness-live') || stage.dataset.v20SmoothnessType !== mode) {
       stage.querySelector('.v18153-smooth-canvas')?.setAttribute('hidden', '');
+      stage.querySelector('.v20-smoothness-live')?.remove();
       stage.querySelector('.v18153-smooth-demo-legend')?.remove();
-      stage.insertAdjacentHTML('beforeend', demoMarkup(copy));
+      stage.insertAdjacentHTML('beforeend', demoMarkup(copy, wholeLine));
+      stage.dataset.v20SmoothnessType = mode;
     }
     return stage;
   }
@@ -330,16 +344,20 @@
       panel.dataset.v20SmoothnessType = 'whole-line';
       return;
     }
-    const copy = copyFor(doc);
+    const selected = currentGroup(runtime);
+    const wholeLine = String(selected?.receiverType || selected?.state?.receiverType || '').toUpperCase() === 'RGBW' || panel.matches('.rgbw-live-setting,[data-v1817-rgbw-setting]');
+    const copy = wholeLine ? wholeLineCopy(doc) : copyFor(doc);
     const input = smoothInput(panel);
     if (!input) return;
     const level = Math.round(clamp(input.value));
     const blend = smoothMix(level);
-    const state = currentGroup(runtime)?.state || {};
+    const state = selected?.state || {};
     const palette = selectedPalette(runtime, state);
-    const stage = ensureStage(doc, panel, copy);
+    const stage = ensureStage(doc, panel, copy, wholeLine);
     ensureChoices(doc, panel, copy);
     panel.dataset.v20SmoothnessEnhanced = 'true';
+    panel.dataset.v20SmoothnessType = wholeLine ? 'whole-line' : 'pixels';
+    input.setAttribute('aria-valuetext', modeText(level, copy));
     stage.style.setProperty('--v20-smooth-flow', blend.toFixed(4));
     stage.style.setProperty('--v20-smooth-step', (1 - blend).toFixed(4));
     stage.style.setProperty('--v20-smooth-softness', (0.25 + blend * 1.15).toFixed(3) + 'px');
@@ -373,10 +391,16 @@
     }
     const meaning = panel.querySelector('#tune-smooth-meaning');
     if (meaning) meaning.textContent = modeText(level, copy).replace(/^\d+%\s*·\s*/, '');
+    if (wholeLine) {
+      const meta = panel.querySelector('.v18153-smooth-meta > span:last-child');
+      if (meta) meta.textContent = copy.fixedSpeed;
+    }
     panel.querySelectorAll('[data-smooth-preset],[data-v20-smooth-choice]').forEach((button) => {
       button.type = 'button';
       const preset = Number(button.dataset.smoothPreset ?? button.dataset.v20SmoothChoice);
       const active = preset === 0 ? level <= 20 : preset === 60 ? level > 20 && level < 80 : level >= 80;
+      const label = button.querySelector('b');
+      if (label) label.textContent = preset === 0 ? copy.crisp : preset === 60 ? copy.natural : copy.fluid;
       button.classList.toggle('on', active);
       button.setAttribute('aria-pressed', String(active));
     });
@@ -404,6 +428,9 @@
       ${PANEL_SCOPE} .v20-smoothness-flow{opacity:var(--v20-smooth-flow,1);transition:opacity .09s;mix-blend-mode:screen}
       ${PANEL_SCOPE} .v20-smoothness-flow>b{animation-timing-function:linear;filter:blur(var(--v20-smooth-softness,.8px)) drop-shadow(0 0 7px var(--v20-smooth-primary,#fff))}
       ${PANEL_SCOPE} .v20-smoothness-flow i.edge{opacity:.32}
+      ${PANEL_SCOPE} .v20-smoothness-line{position:absolute;inset:12px 9px;border-radius:99px;background:var(--v20-smooth-primary,#fff);box-shadow:0 0 12px var(--v20-smooth-primary,#fff)}
+      ${PANEL_SCOPE} .v20-smoothness-line-step{animation:v20SmoothnessLineStep 3s steps(6,end) infinite;opacity:var(--v20-smooth-step,0)}
+      ${PANEL_SCOPE} .v20-smoothness-line-flow{animation:v20SmoothnessLineFade 3s ease-in-out infinite;opacity:var(--v20-smooth-flow,1)}
       ${PANEL_SCOPE} .v20-smoothness-reverse .v20-smoothness-motion>b{animation-direction:reverse}
       ${PANEL_SCOPE} .v18153-smooth-demo-legend{position:absolute;z-index:3;left:9px;right:9px;bottom:8px;display:grid;grid-template-columns:minmax(0,.75fr) minmax(0,1.25fr);align-items:center;gap:7px;padding:0;color:#d9dcd8;font-size:10px;font-weight:800;line-height:1.25;letter-spacing:0;text-transform:none}
       ${PANEL_SCOPE} .v18153-smooth-demo-legend span{min-width:0;white-space:normal;overflow-wrap:break-word}
@@ -413,6 +440,8 @@
       ${PANEL_SCOPE} .v18153-smooth-presets button span{min-width:0}
       ${PANEL_SCOPE} .v18153-smooth-limits span{min-width:0;max-width:48%;line-height:1.25}
       @keyframes v20SmoothnessTravel{from{transform:translate3d(-120%,0,0)}to{transform:translate3d(410%,0,0)}}
+      @keyframes v20SmoothnessLineStep{0%,100%{filter:brightness(0)}50%{filter:brightness(1)}}
+      @keyframes v20SmoothnessLineFade{0%,100%{filter:brightness(0)}50%{filter:brightness(1)}}
       @media(max-width:430px){
         ${PANEL_SCOPE} .v18153-smooth-demo.v188-control-visual{height:96px}
         ${PANEL_SCOPE} .v20-smoothness-live{left:7px;right:7px}
@@ -433,6 +462,7 @@
       @media(prefers-reduced-motion:reduce){
         ${PANEL_SCOPE} .v20-smoothness-motion>b{animation:none!important;transform:translate3d(135%,0,0)}
         ${PANEL_SCOPE} .v20-smoothness-step{transform:translateX(-7px)}
+        ${PANEL_SCOPE} .v20-smoothness-line{animation:none!important;filter:brightness(.75)}
       }
     `;
     doc.head.append(style);

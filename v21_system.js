@@ -12,7 +12,7 @@
   if (window.__aluvisionV21System) return;
   window.__aluvisionV21System = true;
 
-  const VERSION = '21.0.8';
+  const VERSION = '21.1.9';
   const CORE = window.AluvisionV21Model;
   const ANIMATION_CATALOG = window.AluvisionV21AnimationCatalog;
   const rgbwLiveTimers = new Map();
@@ -466,7 +466,7 @@
     const available = new Set(array(selectedGroup?.receivers)
       .filter(line => line && line.active !== false)
       .map(line => String(line.id)));
-    if (!rgbwPreviewTopology(selectedGroup).panel) return [...available];
+    // Visual arrangement is independent of physical output linking.
     const stored = array(selectedGroup?.v21SelectedLineIds).map(String).filter(id => available.has(id));
     return stored.length ? stored : [...available];
   }
@@ -537,7 +537,7 @@
   }
 
   function activeRgbwTargetLabel(selectedGroup, topology = rgbwPreviewTopology(selectedGroup)) {
-    if (!topology.panel || topology.logical.length <= 1) {
+    if (topology.logical.length <= 1) {
       return text('Hele LED Line', 'Complete LED Line', 'LED Line complète', 'Ganze LED Line');
     }
     if (isAllRgbwSelected(selectedGroup)) {
@@ -606,7 +606,7 @@
       : allAnimations.length === 1
         ? allAnimations[0]
         : text('Meerdere animaties', 'Multiple animations', 'Plusieurs animations', 'Mehrere Animationen');
-    const oneLogicalTarget = !topology.panel || logical.length === 1;
+    const oneLogicalTarget = logical.length === 1;
     const activeLabel = activeRgbwTargetLabel(selectedGroup, topology);
     const heading = context === 'colour'
       ? text('Kleur voor', 'Colour for', 'Couleur pour', 'Farbe für')
@@ -771,7 +771,7 @@
     if (choice && logical.length > PREVIEW_PAGE_SIZE) {
       largeLinePreference(selectedGroup.id, 'preview').page = Math.floor(logical.indexOf(choice) / PREVIEW_PAGE_SIZE);
     }
-    selectedGroup.v21SelectedLineIds = key === 'all' || !topology.panel
+    selectedGroup.v21SelectedLineIds = key === 'all'
       ? array(selectedGroup.receivers).filter(line => line && line.active !== false).map(line => line.id)
       : array(choice?.lineIds);
     selectedGroup.parallelApplyAll = isAllRgbwSelected(selectedGroup);
@@ -806,6 +806,7 @@
     const selected = new Set(selectedRgbwIds(selectedGroup));
     const linesById = new Map(array(selectedGroup.receivers).map(line => [String(line.id), line]));
     const originals = rawTargets(selectedGroup).filter(target => linesById.get(String(target.id))?.active !== false);
+    const originalOrder = new Map(originals.map((target,index) => [String(target.id),index]));
     const byDevice = new Map();
     originals.forEach(target => {
       const key = String(target.deviceId || target.physicalRid || target.rid || '');
@@ -817,7 +818,13 @@
     byDevice.forEach(bucket => {
       const device = deviceForLine(linesById.get(String(bucket[0]?.id)));
       const ports = new Set(bucket.map(item => Number(item.port || item.outputPort) || 1));
-      if (linkedDevice(device) && ports.has(1) && ports.has(2)) {
+      // A shared solid colour can be applied atomically to both outputs with
+      // one PORT=0 LIVE command. This does not change their SEPARATE setting.
+      // Individual selections and animated line phases keep per-port routing.
+      const batchSolidColour = String(selectedGroup.state?.engine || '').toUpperCase() === 'STATIC'
+        && bucket.length === 2 && Number(device?.portMask) === 3
+        && bucket.every(item => selected.has(String(item.id)));
+      if ((linkedDevice(device) || batchSolidColour) && ports.has(1) && ports.has(2)) {
         const first = bucket[0];
         routed.push({ ...first, id: `v21-linked-${first.deviceId}`, port: 0, outputPort: 0,
           portMask: 3, linkedPorts: [1, 2], logicalLineIds: bucket.map(item => item.id) });
@@ -825,17 +832,22 @@
         bucket.forEach(item => routed.push({ ...item, logicalLineIds: [item.id] }));
       }
     });
+    // Device batching must not reorder a tunnel such as A1 → B1 → A2 → B2.
+    // A linked pair occupies the first of its saved logical positions.
+    routed.sort((a,b) => Math.min(...a.logicalLineIds.map(id => originalOrder.get(String(id))))
+      - Math.min(...b.logicalLineIds.map(id => originalOrder.get(String(id)))));
+    const parallel = rgbwPreviewTopology(selectedGroup).panel;
     const sharedTimeline = rgbwEffectUsesEveryLine(selectedGroup.state);
     const selectedTargets = routed.map((target, index) => ({ ...target, topologyIndex: index }))
       .filter(target => target.logicalLineIds.some(id => selected.has(String(id))));
-    const count = Math.max(1, sharedTimeline ? routed.length : selectedTargets.length);
+    const count = parallel ? Math.max(1, sharedTimeline ? routed.length : selectedTargets.length) : 1;
     return selectedTargets.map((target, index) => {
       // A colour edit on tunnel row 4 must keep row 4's phase, not turn it into
       // row 1 of a new single-row tunnel or recolour all the other rows.
-      const lineIndex = sharedTimeline ? target.topologyIndex : index;
+      const lineIndex = parallel ? (sharedTimeline ? target.topologyIndex : index) : 0;
       const { topologyIndex, ...wireTarget } = target;
       return { ...wireTarget, lineIndex, lineCount: count,
-        layoutParallel: rgbwPreviewTopology(selectedGroup).panel, pixels: 1,
+        layoutParallel: parallel, pixels: 1,
         offset: lineIndex, groupPixels: count };
     });
   }
@@ -863,7 +875,7 @@
       ...commandState,
       receiverType: 'RGBW',
       commandGeneration: generation,
-      transitionMs: clamp(commandState.transitionMs, 0, 1800000, 240)
+      transitionMs: clamp(commandState.transitionMs, 0, 1800000, 70)
     };
     try {
       const response = await window.api('/api/command', {
@@ -1174,7 +1186,30 @@
     stateValue.restartToken = (Number(stateValue.restartToken) || 0) + 1;
   }
 
-  window.v21ApplyQuickEffect = function v21ApplyQuickEffect(type, name, scope = 'all') {
+  function captureQuickEffectScope(scope) {
+    if (!['all', 'zone', 'group'].includes(scope) || !currentLocation()?.id) return '';
+    if (scope !== 'all' && (!currentZone()?.id || !array(currentLocation().zones).includes(currentZone()))) return '';
+    if (scope === 'group' && (!currentGroup()?.id || !array(currentZone().groups).includes(currentGroup()))) return '';
+    return encodeURIComponent(JSON.stringify({
+      locationId: String(currentLocation().id), scope,
+      zoneId: scope === 'all' ? '' : String(currentZone().id),
+      groupId: scope === 'group' ? String(currentGroup().id) : ''
+    })).replaceAll("'", '%27');
+  }
+
+  function currentQuickEffectScope(scope, captured) {
+    // A visible card belongs to the location/zone in which it was rendered.
+    // Never retarget an old picker when navigation changes the global context.
+    const current = captureQuickEffectScope(scope);
+    if (!current || (captured !== undefined && captured !== current)) {
+      toastMessage(text('De gekozen locatie of zone is veranderd. Open Sfeer opnieuw.', 'The selected location or zone changed. Open Moods again.', 'L’emplacement ou la zone a changé. Rouvrez Ambiance.', 'Der Standort oder die Zone wurde gewechselt. Öffne Stimmung erneut.'));
+      return '';
+    }
+    return current;
+  }
+
+  window.v21ApplyQuickEffect = function v21ApplyQuickEffect(type, name, scope = 'all', captured) {
+    if (!currentQuickEffectScope(scope, captured)) return false;
     const normalized = type === 'RGBW' ? 'RGBW' : 'SPI';
     const effect = findEffect(normalized, name);
     if (!effect) return;
@@ -1199,7 +1234,7 @@
     return text('Sfeervolle beweging', 'Ambient movement', 'Mouvement d’ambiance', 'Stimmungsvolle Bewegung');
   }
 
-  function quickEffectCard(type, effect, scope) {
+  function quickEffectCard(type, effect, scope, captured = captureQuickEffectScope(scope)) {
     const name = type === 'RGBW' ? effect.name : effect[0];
     const engine = type === 'RGBW' ? effect.engine : effect[1];
     const variant = type === 'RGBW' ? effect.variant : effect[3];
@@ -1207,10 +1242,12 @@
       ? `<canvas class="v1811-rgbw-effect-canvas" data-rgbw-effect="${array(window.AluvisionAnimationRuntime?.rgbwEffects).indexOf(effect)}" aria-hidden="true"></canvas>`
       : `<canvas class="effect-mini" data-engine="${safe(engine)}" data-index="${array(window.AluvisionAnimationRuntime?.effects).indexOf(effect)}" aria-hidden="true"></canvas>`;
     void variant;
-    return `<button type="button" class="effect v21-quick-effect" onclick="v21ApplyQuickEffect('${type}','${safe(name)}','${scope}')">${canvas}<span><b>${safe(name)}</b><small>${quickEffectDescription(engine)}</small></span><strong>›</strong></button>`;
+    return `<button type="button" class="effect v21-quick-effect" onclick="v21ApplyQuickEffect('${type}','${safe(name)}','${scope}','${safe(captured)}')">${canvas}<span><b>${safe(name)}</b><small>${quickEffectDescription(engine)}</small></span><strong>›</strong></button>`;
   }
 
-  window.v21OpenQuickEffects = function v21OpenQuickEffects(type, scope = 'all') {
+  window.v21OpenQuickEffects = function v21OpenQuickEffects(type, scope = 'all', captured) {
+    const target = currentQuickEffectScope(scope, captured);
+    if (!target) return false;
     const normalized = type === 'RGBW' ? 'RGBW' : 'SPI';
     const runtime = window.AluvisionAnimationRuntime;
     const source = normalized === 'RGBW'
@@ -1224,8 +1261,7 @@
       seen.add(name);
       unique.push(effect);
     });
-    const recommended = unique.slice(-12);
-    window.modal(`<section class="v21-effect-picker" data-v21-view="quick-effects-${normalized}"><button type="button" class="button soft" onclick="closeModal()">← ${text('Terug', 'Back', 'Retour', 'Zurück')}</button><div class="v21-effect-hero"><i>${normalized}</i><span><div class="eyebrow">${scope === 'zone' ? text('DEZE ZONE', 'THIS ZONE', 'CETTE ZONE', 'DIESE ZONE') : text('DEZE LOCATIE', 'THIS LOCATION', 'CET EMPLACEMENT', 'DIESER STANDORT')}</div><h1>${normalized === 'RGBW' ? text('Zachte volledige-lijneffecten', 'Smooth whole-line effects', 'Effets fluides de ligne entière', 'Weiche Ganzlinien-Effekte') : text('Pixelanimaties', 'Pixel animations', 'Animations pixel', 'Pixelanimationen')}</h1><p>${normalized === 'RGBW' ? text('Iedere LED Line verandert als één geheel.', 'Every LED Line changes as one whole.', 'Chaque LED Line change comme un tout.', 'Jede LED Line verändert sich als Ganzes.') : text('Beweging loopt vloeiend over de echte pixels.', 'Motion flows smoothly across the physical pixels.', 'Le mouvement parcourt les pixels physiques.', 'Bewegung läuft weich über die echten Pixel.')}</p></span></div><div class="v21-quick-effect-grid">${recommended.map(effect => quickEffectCard(normalized, effect, scope)).join('')}</div></section>`);
+    window.modal(`<section class="v21-effect-picker" data-v21-view="quick-effects-${normalized}"><button type="button" class="button soft" onclick="closeModal()">← ${text('Terug', 'Back', 'Retour', 'Zurück')}</button><div class="v21-effect-hero"><i>${normalized}</i><span><div class="eyebrow">${scope === 'zone' ? text('DEZE ZONE', 'THIS ZONE', 'CETTE ZONE', 'DIESE ZONE') : text('DEZE LOCATIE', 'THIS LOCATION', 'CET EMPLACEMENT', 'DIESER STANDORT')}</div><h1>${normalized === 'RGBW' ? text('Zachte volledige-lijneffecten', 'Smooth whole-line effects', 'Effets fluides de ligne entière', 'Weiche Ganzlinien-Effekte') : text('Sferen voor SPI LED Lines', 'Moods for SPI LED Lines', 'Ambiances pour LED Lines SPI', 'Stimmungen für SPI LED Lines')}</h1><p>${normalized === 'RGBW' ? text('Iedere LED Line verandert als één geheel.', 'Every LED Line changes as one whole.', 'Chaque LED Line change comme un tout.', 'Jede LED Line verändert sich als Ganzes.') : text('Pixelbeweging, fades en effecten over volledige LED Lines.', 'Pixel motion, fades and effects across whole LED Lines.', 'Mouvements de pixels, fondus et effets sur des LED Lines entières.', 'Pixelbewegung, Fades und Effekte über ganze LED Lines.')}</p></span></div><div class="v21-quick-effect-grid">${unique.map(effect => quickEffectCard(normalized, effect, scope, target)).join('')}</div></section>`);
   };
 
   function quickFamilyEffects(type, limit = 4) {
@@ -1248,7 +1284,7 @@
   function quickFamilyKey(scope) {
     // Counts alone cannot invalidate an empty panel when the effect catalogue
     // becomes ready later, or when the app language changes.
-    return JSON.stringify([familyCounts(scope), language(),
+    return JSON.stringify([captureQuickEffectScope(scope), familyCounts(scope), language(),
       quickFamilyEffects('SPI').map(effect => effect[0]),
       quickFamilyEffects('RGBW').map(effect => effect.name)]);
   }
@@ -1266,6 +1302,7 @@
 
   function quickFamilyMarkup(scope = 'all') {
     const counts = familyCounts(scope);
+    const captured = captureQuickEffectScope(scope);
     const entries = [];
     const section = type => {
       const count = counts[type];
@@ -1274,7 +1311,7 @@
       const effects = quickFamilyEffects(type);
       const iconName = rgbw ? 'ledlines' : 'animation';
       const icon = window.AluvisionIcons?.markup?.(iconName) || '';
-      entries.push(`<section class="v21-atmosphere-family" data-v21-family="${type}"><header><i data-alv-icon="${iconName}" aria-hidden="true">${icon}</i><span><b>${rgbw ? text('Sferen voor volledige LED Lines', 'Whole-line moods', 'Ambiances pour lignes entières', 'Stimmungen für ganze LED Lines') : text('Sferen met pixelbeweging', 'Pixel-motion moods', 'Ambiances avec mouvement pixel', 'Stimmungen mit Pixelbewegung')}</b><small>${count} LED Line${count === 1 ? '' : 's'} · ${rgbw ? text('fade en pulse', 'fade and pulse', 'fondu et pulse', 'Fade und Pulse') : text('vloeiende animaties', 'smooth animations', 'animations fluides', 'weiche Animationen')}</small></span>${effects.length ? `<button type="button" class="button soft" onclick="v21OpenQuickEffects('${type}','${scope}')">${text('Alle', 'All', 'Toutes', 'Alle')} →</button>` : ''}</header>${effects.length ? `<div class="v21-family-effect-grid">${effects.map(effect => quickEffectCard(type, effect, scope)).join('')}</div>` : quickFamilyEmpty('catalogue')}</section>`);
+      entries.push(`<section class="v21-atmosphere-family" data-v21-family="${type}"><header><i data-alv-icon="${iconName}" aria-hidden="true">${icon}</i><span><b>${rgbw ? text('Sferen voor volledige LED Lines', 'Whole-line moods', 'Ambiances pour lignes entières', 'Stimmungen für ganze LED Lines') : text('Sferen voor SPI LED Lines', 'Moods for SPI LED Lines', 'Ambiances pour LED Lines SPI', 'Stimmungen für SPI LED Lines')}</b><small>${count} LED Line${count === 1 ? '' : 's'} · ${rgbw ? text('fade en pulse', 'fade and pulse', 'fondu et pulse', 'Fade und Pulse') : text('pixelbeweging en fades', 'pixel motion and fades', 'mouvement de pixels et fondus', 'Pixelbewegung und Fades')}</small></span>${effects.length ? `<button type="button" class="button soft" onclick="v21OpenQuickEffects('${type}','${scope}','${safe(captured)}')">${text('Alle', 'All', 'Toutes', 'Alle')} →</button>` : ''}</header>${effects.length ? `<div class="v21-family-effect-grid">${effects.map(effect => quickEffectCard(type, effect, scope, captured)).join('')}</div>` : quickFamilyEmpty('catalogue')}</section>`);
     };
     if (counts.SPI) section('SPI');
     if (counts.RGBW) section('RGBW');
@@ -1444,9 +1481,11 @@
           }
         }
       } else pager?.remove();
+      const sharedSpiWholeLine = type === 'SPI' && window.AluvisionTunnelEngine?.sharedRgbwVariant?.(currentGroup()?.state?.variant) != null;
+      primary.dataset.v21EffectResolution = type === 'RGBW' || sharedSpiWholeLine ? 'logical-line' : 'pixel';
       primary.dataset.v21PreviewType = type === 'RGBW'
         ? 'whole-line'
-        : currentGroup()?.layout === 'parallel' ? 'pixel-tunnel' : 'physical-pixels';
+        : sharedSpiWholeLine ? 'whole-line-tunnel' : currentGroup()?.layout === 'parallel' ? 'pixel-tunnel' : 'physical-pixels';
       if (topology) {
         primary.dataset.v21RgbwLayout = topology.layout;
         primary.dataset.v21RgbwRenderCount = String(topology.renderCount);
@@ -1458,7 +1497,9 @@
       const activeTarget = type === 'RGBW' ? activeRgbwTargetLabel(currentGroup(), topology) : '';
       primary.setAttribute('aria-label', type === 'RGBW'
         ? `${text('Live preview van volledige LED Lines', 'Live preview of complete LED Lines', 'Aperçu des LED Lines complètes', 'Live-Vorschau vollständiger LED Lines')} · ${activeTarget}`
-        : text('Live preview van de echte pixels', 'Live preview of the physical pixels', 'Aperçu des pixels physiques', 'Live-Vorschau der echten Pixel'));
+        : sharedSpiWholeLine
+          ? text('Volledige LED Lines lichten op in de ingestelde volgorde', 'Complete LED Lines light in the configured order', 'Les lignes complètes s’allument dans l’ordre choisi', 'Ganze LED Lines leuchten in der eingestellten Reihenfolge')
+          : text('Live preview van de echte pixels', 'Live preview of the physical pixels', 'Aperçu des pixels physiques', 'Live-Vorschau der echten Pixel'));
       const existingGuide = primary.querySelector('.v21-whole-line-guide');
       if (type === 'RGBW' && topology?.renderCount) {
         const lines = rgbwPreviewGuideLines(currentGroup(), topology);
@@ -1911,9 +1952,13 @@
       const label = button.querySelector('small');
       const mode = button.dataset.rgbwMode;
       if (!label) return;
-      if (mode === 'linked') label.textContent = text('Spiegelt één state op Poort 1 + 2', 'Mirrors one state to Ports 1 + 2', 'Reproduit un état sur les ports 1 + 2', 'Spiegelt einen Zustand auf Port 1 + 2');
-      else label.textContent = text('Deze poort blijft apart bedienbaar', 'This port remains independently controllable', 'Ce port reste pilotable séparément', 'Dieser Port bleibt separat steuerbar');
+      if (mode === 'linked') label.textContent = text('Eén kleur en animatie op beide poorten', 'One colour and animation on both ports', 'Une couleur et une animation sur les deux ports', 'Eine Farbe und Animation auf beiden Ports');
+      else if (mode === 'separate') label.textContent = text('Eigen kleur, animatie en groep per poort', 'Own colour, animation and group per port', 'Couleur, animation et groupe par port', 'Eigene Farbe, Animation und Gruppe pro Port');
+      else label.textContent = text('Alleen deze poort gebruiken', 'Use only this port', 'Utiliser uniquement ce port', 'Nur diesen Port verwenden');
     });
+    // The current editor owns per-port destinations and unused-port actions.
+    // Keep the legacy decorator only for older receiver screens.
+    if (rgbwDevice.querySelector('[data-rgbw-device-port]')) return;
     const free = rgbwDevice.querySelectorAll('.rgbw207-assignment:not(.on)');
     const selectedMode = rgbwDevice.querySelector('[data-rgbw-mode][aria-checked="true"]')?.dataset.rgbwMode;
     free.forEach((item, index) => {
@@ -1943,9 +1988,9 @@
 
   window.v21StageSecondRgbwPort = function v21StageSecondRgbwPort(deviceId) {
     if (!deviceId || typeof window.rgbw207SetDeviceMode !== 'function') return;
-    window.rgbw207SetDeviceMode(deviceId, 'linked');
+    window.rgbw207SetDeviceMode(deviceId, 'separate');
     document.querySelectorAll('.rgbw207-device-mode-grid [data-rgbw-mode]').forEach(button => {
-      const selected = button.dataset.rgbwMode === 'linked';
+      const selected = button.dataset.rgbwMode === 'separate';
       button.classList.toggle('on', selected);
       button.setAttribute('aria-checked', String(selected));
     });
@@ -2222,10 +2267,12 @@
             receiverType: 'RGBW', port: 0, portMask: rgbwPairMask(requested), portMode: mode }]
         });
         const confirmation = array(response?.results)[0];
-        if (!confirmation?.confirmed || confirmation.portModeMatch === false ||
+        if (!confirmation?.confirmed) {
+          toastMessage(text('POORTEN niet bevestigd door de receiver · instellingen worden wel lokaal opgeslagen. Controleer je verbinding als dit niet vanzelf lukt.', 'Ports not confirmed by receiver yet · settings were still saved locally. Check connection if it does not apply automatically.', 'Les ports ne sont pas encore confirmés par le récepteur · les paramètres sont tout de même enregistrés localement. Vérifiez la connexion si nécessaire.', 'Ports wurden vom Receiver noch nicht bestätigt · Einstellungen wurden trotzdem lokal gespeichert. Prüfe die Verbindung bei Bedarf.'));
+        } else if (confirmation.portModeMatch === false ||
             (confirmation.portMode && confirmation.portMode.toUpperCase() !== mode) ||
             (confirmation.portMask != null && Number(confirmation.portMask) !== rgbwPairMask(requested))) {
-          throw new Error(text('De receiver heeft de poorten nog niet bevestigd. Controleer je verbinding en probeer opnieuw.', 'The receiver has not confirmed the ports. Check your connection and try again.', 'Le récepteur n’a pas confirmé les ports. Vérifiez la connexion et réessayez.', 'Der Receiver hat die Ports nicht bestätigt. Prüfe die Verbindung und versuche es erneut.'));
+          toastMessage(text('De receiver meldde afwijkende poortinstellingen, maar de koppeling wordt verder toegepast met lokale instellingen.', 'Receiver reported mismatched port settings, but pairing continues with local settings.', 'Le récepteur indique des paramètres de port différents, l’association continue avec les paramètres locaux.', 'Der Receiver meldet abweichende Port-Einstellungen, aber die Zuordnung wird mit lokalen Einstellungen fortgesetzt.'));
         }
         if (currentPairDraft() !== draft || currentDatabase() !== database || rgbwPairMode(draft) !== requested ||
             rgbwPairDestinations(draft).map(item => `${item.port}:${item.selectedZone?.id}:${item.selectedGroup?.id}`).join('|') !== destinationSignature) {
@@ -2477,6 +2524,7 @@
     refineProductSettings();
     refineSavedLighting();
     refineLargeLineViews();
+    window.AluvisionSimpleHierarchy?.refine?.();
   }
 
   function refineLargeLineViews() {
