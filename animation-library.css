@@ -1,0 +1,20 @@
+/* Gallery presentation only; effect recipes and receiver controls are unchanged. */
+.animation-family-section{display:grid;gap:12px;min-width:0}
+.animation-family-section+.animation-family-section{margin-top:24px}
+.animation-family-heading{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.animation-family-heading h2{font-size:16px;letter-spacing:0;margin:0;color:var(--ink)}
+.animation-family-heading>small{font-size:11px;color:var(--muted);flex:none}
+.animation-family-grid{align-items:stretch}
+.animation-family-card{display:flex;flex-direction:column;gap:0;min-width:0;overflow:hidden}
+.animation-family-card canvas{flex:none}
+.animation-family-card .family-category{font-size:11px;line-height:1.4;color:var(--muted);padding:9px 4px 0}
+.animation-family-card .family-title{font-size:14px;line-height:1.3;padding:8px 4px 5px;overflow-wrap:anywhere}
+.animation-family-card .family-summary{font-size:11px;line-height:1.5;color:var(--muted);padding:0 4px 12px;flex:1}
+.animation-family-card .family-variants{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:0 4px 3px;padding:9px 0 0;border-top:1px solid var(--line);font-size:11px;font-weight:650;color:var(--ink)}
+.animation-family-card .family-variants .icon{width:15px;height:15px;flex:none}
+.animation-family-card:hover{border-color:var(--red)}
+.animation-family-card:focus-visible{outline:2px solid var(--red);outline-offset:3px}
+.animation-search input{font-size:16px;font-weight:400}
+.filter-row[aria-label="Effectbibliotheek"] button{min-height:44px}
+#animation-results .effect-card small{font-size:11px;line-height:1.5}
+@media(max-width:360px){.animation-family-grid{gap:10px}.animation-family-card{padding:7px;border-radius:15px}.animation-family-card canvas{height:78px}.animation-family-card .family-title{font-size:13px}}

@@ -1,0 +1,167 @@
+{
+  "appVersion": "30.0.0",
+  "build": 109,
+  "firmwareVersion": "21.1.36",
+  "webSourceHash": "ad7bf9645ebbe8433ac389b7cad45790ff761539f8d3f5e4b07d60964292e780",
+  "matchingWebResources": 39,
+  "sameInterfaceAsXcode": true,
+  "nativeHardwareFunctionsAvailableInBrowser": false,
+  "sourceFiles": [
+    {
+      "file": "animation-engine.js",
+      "sha256": "6ec41e15810aa5c312496834d65885eb9b455aee7eae932257c84e4ac8142939"
+    },
+    {
+      "file": "animation-library.css",
+      "sha256": "6fd1b815f225eda2e045070ced45734302fb2e7af99aefd39dbe544a2fcaf25f"
+    },
+    {
+      "file": "animation-library.js",
+      "sha256": "7e73119efc6e7b97b3265c3bd960b629dde5edc061ef7068fbc6f01a7882d16e"
+    },
+    {
+      "file": "animations.css",
+      "sha256": "78fcc222941ce0aedf6d52ba5353c2f55aaa0d5dcadff3f81c7dddd6c8b88e1b"
+    },
+    {
+      "file": "app.js",
+      "sha256": "8436d6da723b5772e3cc5c593450b2b69e63238af781c6c289828ddc1e44998b"
+    },
+    {
+      "file": "assets/aluvision-logo.png",
+      "sha256": "834524590fdae6c13804869c8c04cb3452ef68e80c189a3ea27e02a43d08f018"
+    },
+    {
+      "file": "colour-library-drag.js",
+      "sha256": "e663692aed4316855d13c56fd216d4111286cca94955dba1473e4bbf8683d7bb"
+    },
+    {
+      "file": "colour.js",
+      "sha256": "1a08dae3946d2d63729a69b6221a7882bf29d25889f6186651b06ee22967b3b8"
+    },
+    {
+      "file": "colours-library.js",
+      "sha256": "b77b7cff5a05697e820e9d8778b853a376d9edbfdb0f8781e9d1fec12c7ef752"
+    },
+    {
+      "file": "continuity.css",
+      "sha256": "f3309825d1d0dea9e0834a03a323f4b8fcc3a3b57e5c3fb437a3054d207ec460"
+    },
+    {
+      "file": "firmware/artifacts/rgbw-21.1.36-local-setup.app.bin",
+      "sha256": "f9ab6a1b4032ce95b1f2e9b77bc369733109304abb393fec9f6a55c2995e2486"
+    },
+    {
+      "file": "firmware/artifacts/spi-21.1.36-local-setup.app.bin",
+      "sha256": "4cb32f020c8e4b944592d1b062bdefab298016d89ca2442d3f81a2dfed147da4"
+    },
+    {
+      "file": "firmware/catalog.json",
+      "sha256": "7989cfb5629525d0ac4cf8f21f80114f9f66ea659cf536e6d39f4248120eec79"
+    },
+    {
+      "file": "fixtures.js",
+      "sha256": "7ccc08ac36a6ab22e65c79d796f4dd3e60d42232ff6209ae866b616bc9d0beb8"
+    },
+    {
+      "file": "index.html",
+      "sha256": "7fabb4c82c659dc7bb1c7ef22df52ee074f2cbdca78436a3ac1686e76963e7e7"
+    },
+    {
+      "file": "migration.js",
+      "sha256": "2a224b4c273aa3b01994c459aab34fa803fff47816e63dcf6ac7d7cd936954a7"
+    },
+    {
+      "file": "model.js",
+      "sha256": "13276383f3626264f4da970537cae1f9964b9cd565259071dd778b48bcf0c4f4"
+    },
+    {
+      "file": "native-runtime.js",
+      "sha256": "109879acfabd725b9b3829bd5fa881d66f8ad49c853d6815cf973bc0c569bca2"
+    },
+    {
+      "file": "onboarding-adapter.js",
+      "sha256": "495155567af18f5f234a30662a0f472610f3602b6b1dbd3bb5c46371614e08e0"
+    },
+    {
+      "file": "onboarding-contract.js",
+      "sha256": "47b7a0cc1e7a3cc21d57e1b701c61011b4519e96f93cccdec59fd91051274403"
+    },
+    {
+      "file": "onboarding-draft.js",
+      "sha256": "62c84850f136166426fbc526383719e3826d1d294e8ad362b31e76e6fe645c91"
+    },
+    {
+      "file": "onboarding-ui.css",
+      "sha256": "c601be507fe31a137fc20c547a79606d62f63309bd31c7a6e5e1f1ccfae50636"
+    },
+    {
+      "file": "onboarding-ui.js",
+      "sha256": "4a77c4651357bc78c278d9e25d4d39a28a5c0c419252062ca93ab8e9bd33483f"
+    },
+    {
+      "file": "pixel-setup.css",
+      "sha256": "3bfb8b01fcaf846e5e10c35db62117663a429b06fc497fa12797fa3d2ff9bd71"
+    },
+    {
+      "file": "pixel-setup.js",
+      "sha256": "de4323ed6b0cfe0069777117d2dc806c17371b716a379465dc4844c0cd11f49a"
+    },
+    {
+      "file": "preferences.js",
+      "sha256": "0b3e44caae447e5b77d50cf1e7e329b50b340c64d9714d5f715bb7f020a55b5a"
+    },
+    {
+      "file": "presets.js",
+      "sha256": "26cffab7ab172be68b238f762a2eefc2a91e514c08b16178b8a15ef50255dee7"
+    },
+    {
+      "file": "preview.js",
+      "sha256": "4d184d32790c27953c7c36b8884d78cdbfe92bc9a9ab896d7eb7437ca1376c00"
+    },
+    {
+      "file": "receiver-removal-ui.css",
+      "sha256": "751fb973574322565b51fbad6e4b42029d5b057c1a16faba0cf3adb53fca7bc4"
+    },
+    {
+      "file": "receiver-removal-ui.js",
+      "sha256": "5c20c4430faa0111ea3c6554f890bf81c191f3351d5c3b8e87da057b935c1adb"
+    },
+    {
+      "file": "receiver-update-ui.css",
+      "sha256": "134b9721f592c84e7f1c72f3a448fcc46d4f062b07c11d1b9ba24bbdf48e8ca9"
+    },
+    {
+      "file": "receiver-update-ui.js",
+      "sha256": "2854563d49703ccecca2883224ac5cedf98afae36fca57247ede0b7fe0122b49"
+    },
+    {
+      "file": "receiver-visual.css",
+      "sha256": "c399196f04a4eb3415af3042a944493207a677bf9c856ebeae1711713fadb19a"
+    },
+    {
+      "file": "receiver-visual.js",
+      "sha256": "969e8380cda460168cd96fc05f7fd1b68cfb367690558098ebdaebc46760172e"
+    },
+    {
+      "file": "scenes.css",
+      "sha256": "4ae3efd4eca1416245f02a2b810f0b9f5583ae3fdf7781f90bdedc68713d2c26"
+    },
+    {
+      "file": "scenes.js",
+      "sha256": "270533e1d9b68b40c4712c1f592ec0d69201c76666c9a36f401435c6ebb637dd"
+    },
+    {
+      "file": "styles.css",
+      "sha256": "c199f0267645d7754da53e69b0441eac76259aa31a16769b364eb4e4c1ca6bf5"
+    },
+    {
+      "file": "vendor/v21_animation_catalog.js",
+      "sha256": "ee390cce7e26d05e7e1e580b7fefadbfce3c75c5487f595ad2890bbbd324c860"
+    },
+    {
+      "file": "vendor/v21_tunnel_engine.js",
+      "sha256": "5e8f4170084d5a6a3597fe014a117597b6a2b2eee4869437ee3ff9a6cc288c3e"
+    }
+  ]
+}

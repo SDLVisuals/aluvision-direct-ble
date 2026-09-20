@@ -1,0 +1,12 @@
+.receiver-update-sheet { width:min(100% - 24px,480px); max-height:calc(100dvh - 32px); padding:22px; border:1px solid var(--line,#ddd); border-radius:25px; color:var(--ink,#171817); background:var(--paper,#f8f8f5); }
+.receiver-update-sheet::backdrop { background:#0008; backdrop-filter:blur(5px); }
+.receiver-update-sheet > header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:18px; }
+.receiver-update-sheet h2 { font-size:24px; line-height:1.12; margin:0 0 7px; }
+.receiver-update-sheet h3 { margin:0 0 8px; }
+.receiver-update-sheet p { line-height:1.5; margin:10px 0 16px; }
+.receiver-update-sheet .card { margin:18px 0; }
+.receiver-update-sheet section { display:block; }
+.receiver-update-sheet > .button { margin-top:10px; }
+.receiver-update-sheet [role=alert]:not([hidden]) { padding:14px; background:#c94e4610; border:1px solid #c94e4670; border-radius:15px; }
+.receiver-update-progress progress { width:calc(100% - 56px); height:12px; accent-color:var(--accent,#c94e46); margin-right:10px; }
+.receiver-update-progress > b { font-variant-numeric:tabular-nums; }

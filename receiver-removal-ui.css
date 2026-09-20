@@ -1,0 +1,26 @@
+.receiver-removal-sheet { width:min(100% - 20px,430px); max-height:calc(100dvh - 32px); padding:20px; border:0; border-radius:24px; background:var(--surface,#fff); color:var(--ink,#171817); }
+.receiver-removal-sheet::backdrop { background:#14181580; backdrop-filter:blur(5px); }
+.receiver-removal-sheet header { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:18px; }
+.receiver-removal-sheet h2 { font-size:24px; letter-spacing:-.7px; }
+.receiver-removal-sheet header p { margin:5px 0 0; font-size:14px; }
+.receiver-removal-sheet section { display:block; margin:14px 0; }
+.receiver-removal-sheet h3 { font-size:20px; margin:0 0 12px; }
+.receiver-removal-sheet p { margin:10px 0; overflow-wrap:anywhere; }
+.receiver-removal-sheet [role=alert] { padding:12px; border-radius:12px; background:#c94e4612; color:var(--ink,#171817); }
+.receiver-removal-sheet [hidden] { display:none!important; }
+.receiver-removal-sheet .button { margin-top:10px; white-space:normal; }
+.receiver-removal-sheet .removal-confirm { background:#a83430; color:#fff; }
+.receiver-removal-sheet .removal-warning { border-color:#c94e4640; }
+.receiver-removal-sheet .removal-help{font-size:12px;line-height:1.5;color:var(--muted,#656962)}
+.removal-pin-label{display:grid;gap:8px;font-weight:650;margin-top:18px}
+.removal-pin-label input{box-sizing:border-box;min-width:0;width:100%;min-height:48px;border:1px solid var(--line,#ddd);border-radius:12px;background:var(--surface,#fff);color:inherit;padding:12px;font:inherit;font-size:20px;letter-spacing:3px}
+.removal-pin-label input[aria-invalid=true]{border-color:#a83430}
+.receiver-removal-sheet .removal-pin-hint{font-size:12px;color:#a83430}
+.removal-consent{display:flex;align-items:flex-start;gap:10px;margin:16px 0;font-size:13px;line-height:1.5;cursor:pointer}
+.removal-consent input{flex:none;width:20px;height:20px;margin:1px 0;accent-color:var(--red,#c94e46)}
+.removal-progress{display:grid;gap:9px;font-size:13px;padding:14px;border:1px solid var(--line,#ddd);border-radius:12px}
+.removal-progress progress{width:100%;height:8px;accent-color:var(--red,#c94e46)}
+.removal-progress span{font-size:12px;color:var(--muted,#656962)}
+.receiver-removal-sheet .button:disabled{opacity:.4;cursor:not-allowed}
+.receiver-removal-sheet :focus-visible{outline:2px solid var(--red,#c94e46);outline-offset:3px}
+@media(max-width:350px){.receiver-removal-sheet{padding:16px}.receiver-removal-sheet h2{font-size:22px}.receiver-removal-sheet h3{font-size:19px}.receiver-removal-sheet p{font-size:13px;line-height:1.5}}

@@ -1,178 +1,23 @@
-// Bump this key whenever cache policy changes. In particular, the previous
-// cache could contain a navigation Request whose NFC query parameters were part
-// of the CacheStorage key. Activating this worker removes that cache wholesale.
-const CACHE = 'aluvision-v21-21-1-9-build46-receiver-release-1';
-const SHELL = [
-  './index.html',
-  './v21_local_test_mode.js',
-  './direct_ble_ota.js',
-  './direct_ble_bridge.js',
-  './direct_wifi_gateway.js',
-  './direct_home_wifi_gateway.js',
-  './v20_candidate.js',
-  './v20_visual_polish.js',
-  './v20_customer_palette.js',
-  './v20_accountless_recovery.js',
-  './v20_ui_fixes.js',
-  './v20_animation_expansion.js',
-  './v20_smoothness.js',
-  './v20_animation_catalog_pro.css',
-  './v20_animation_catalog_pro.js',
-  './v20_icon_system.js',
-  './v20_studio_console.js',
-  './v20_studio_pro.js',
-  './ios_native_gateway.js',
-  './v21_configuration_snapshot.js',
-  './v21_installation_profiles.js',
-  './v21_secure_recovery_channel.js',
-  './v21_pin_srp.js',
-  './v21_secure_trust_store.js',
-  './v21_device_trust.js',
-  './v21_node_enrollment.js',
-  './v21_mesh_provisioning.js',
-  './v21_secure_connection.js',
-  './v21_receiver_release.js',
-  './v20_native_security.js',
-  './v20_navigation_refine.css',
-  './v20_navigation_refine.js',
-  './v20_connection_choice.js',
-  './v20_experience_polish.css',
-  './v20_experience_polish.js',
-  './v20_receiver_geometry.js',
-  './v20_spi_four_port.js',
-  './v20_academy_experience.css',
-  './v20_academy_experience.js',
-  './v20_connection_resilience.js',
-  './v20_rgbw_output_scope.js',
-  './v21_core_model.js',
-  './v21_tunnel_engine.js',
-  './v21_animation_catalog.js',
-  './v21_system.css',
-  './v21_system.js',
-  './v21_simple_hierarchy.css',
-  './v21_simple_hierarchy.js',
-  './v21_identify_before_pair.css',
-  './v21_identify_before_pair.js',
-  './manifest.webmanifest',
-  './assets/aluvision-logo.png',
-  './assets/aluvision-app-icon.png',
-  './assets/apple-touch-icon.png',
-  './assets/aluvision-icon-192.png',
-  './assets/aluvision-icon-512.png',
-  './assets/aluvision-icon-maskable-192.png',
-  './assets/aluvision-icon-maskable-512.png',
-  './assets/aluvision-icon-monochrome.png',
-  './assets/favicon-light.png',
-  './assets/favicon-dark.png'
+/* Migration only: retire the previous Aluvision Pages offline shell.
+ * This is not an alternate app and does not cache credentials or firmware.
+ * The current WebApp assets are served unchanged from the Xcode source tree.
+ */
+'use strict';
+const retiredAluvisionCaches = [
+  'aluvision-faithful-', 'aluvision-direct-', 'aluvision-hardware-',
+  'aluvision-v20-', 'aluvision-v21-'
 ];
-
-const SCOPE = self.registration.scope;
-const NAVIGATION_SHELL_URL = new URL('./index.html', SCOPE).href;
-const SHELL_URLS = new Set(SHELL.map((entry) => {
-  const url = new URL(entry, SCOPE);
-  url.search = '';
-  url.hash = '';
-  return url.href;
-}));
-
-function cleanShellRequest(url) {
-  // Construct a new Request rather than cloning the browser Request. This
-  // deliberately drops NFC query/fragment data, bearer headers, cookies and a
-  // potentially secret-bearing referrer before either fetch or CacheStorage.
-  return new Request(url, {
-    method: 'GET',
-    credentials: 'omit',
-    redirect: 'follow',
-    referrer: '',
-    referrerPolicy: 'no-referrer'
-  });
-}
-
-function shellUrlFor(request) {
-  const requested = new URL(request.url);
-  if (requested.origin !== self.location.origin) return null;
-
-  // Every in-scope navigation is the same application shell. Never let an NFC
-  // URL such as ?i=...&t=...&s=...&p=...&k=... become a cache key.
-  if (request.mode === 'navigate') return NAVIGATION_SHELL_URL;
-
-  requested.search = '';
-  requested.hash = '';
-  return SHELL_URLS.has(requested.href) ? requested.href : null;
-}
-
-async function pruneUnexpectedShellEntries() {
-  const cache = await caches.open(CACHE);
-  const requests = await cache.keys();
-  await Promise.all(requests.map((request) => {
-    const url = new URL(request.url);
-    const isCleanAllowlistedShell = request.method === 'GET' &&
-      !url.search && !url.hash && SHELL_URLS.has(url.href);
-    return isCleanAllowlistedShell ? false : cache.delete(request);
-  }));
-}
-
-self.addEventListener('install', (event) => {
-  self.skipWaiting();
-  event.waitUntil(caches.open(CACHE).then((cache) =>
-    cache.addAll(SHELL.map((entry) =>
-      cleanShellRequest(new URL(entry, SCOPE).href)
-    ))
-  ));
+self.addEventListener('install', event => {
+  event.waitUntil(self.skipWaiting());
 });
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(Promise.all([
-    self.clients.claim(),
-    caches.keys().then((keys) => Promise.all(
-      keys.filter((key) =>
-        (key.startsWith('aluvision-faithful-') || key.startsWith('aluvision-direct-') || key.startsWith('aluvision-hardware-') || key.startsWith('aluvision-v20-') || key.startsWith('aluvision-v21-')) && key !== CACHE
-      )
-        .map((key) => caches.delete(key))
-    )),
-    pruneUnexpectedShellEntries()
-  ]));
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    const names = await caches.keys();
+    await Promise.all(names.filter(name => retiredAluvisionCaches.some(prefix => name.startsWith(prefix)))
+      .map(name => caches.delete(name)));
+    await self.clients.claim();
+    await self.registration.unregister();
+  })());
 });
-
-self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
-  const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin) return;
-  // The catalogue and firmware images always come from the network. The OTA
-  // layer then verifies size, SHA-256 and embedded identity before arming.
-  if (url.pathname.includes('/firmware/')) {
-    event.respondWith(fetch(event.request, { cache: 'no-store' }));
-    return;
-  }
-
-  const shellUrl = shellUrlFor(event.request);
-  if (!shellUrl) {
-    // Same-origin API and future non-shell resources remain network-only. This
-    // guarantees that CacheStorage contains exactly the public SHELL allowlist.
-    event.respondWith(fetch(event.request, { cache: 'no-store' }));
-    return;
-  }
-
-  const shellRequest = cleanShellRequest(shellUrl);
-  event.respondWith(
-    fetch(shellRequest, { cache: 'no-store' })
-      .then(async (response) => {
-        if (response.ok) {
-          const cache = await caches.open(CACHE);
-          await cache.put(shellRequest, response.clone());
-        }
-        return response;
-      })
-      .catch(async () => {
-        // Never read a similarly named predecessor cache: only this exact
-        // release may supply its own offline shell.
-        const currentCache = await caches.open(CACHE);
-        const cached = await currentCache.match(shellRequest);
-        if (cached) return cached;
-        return new Response('Offline', {
-          status: 503,
-          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-        });
-      })
-  );
-});
+// Deliberately no fetch handler: no previous app shell can be substituted for
+// the new app and no private receiver requests are intercepted or stored.
