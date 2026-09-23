@@ -79,7 +79,11 @@
     services:webDemo||(runtime?.native===true?runtime.services||{}:{}),
     onManage:request=>manageSetupZones(request),
     onComplete:nextModel=>{model=nextModel;},
-    onExit:result=>navigate(result?.stand||route.setupFrom==='stand'||!stand()?'stand':'receivers')});
+    onExit:result=>{
+      const returnZone=stand()?.zones.find(z=>z.id===route.setupReturnZoneId);
+      if(returnZone)return navigate('layout',{zoneId:returnZone.id,setupReturnZoneId:null});
+      navigate(result?.stand||route.setupFrom==='stand'||!stand()?'stand':'receivers',{setupReturnZoneId:null});
+    }});
   const previews = new Map();
   let previewKey = 0;
   const copy = object => JSON.parse(JSON.stringify(object));
@@ -346,6 +350,10 @@
     if(type==='SPI')choices.push(['continuous','Doorlopend','Pixels vormen samen één lijn.']);
     return `<div class="editor-grid">${controlContext('layout')}<section class="editor-controls"><div><div class="section-heading"><h2>Hoe staan je LED-lines?</h2></div>${type==='SPI'?'<p class="layout-demo-help">Zo kan licht door je opstelling bewegen. Je huidige kleur of animatie blijft behouden.</p>':''}<div class="layout-grid">${choices.map(([id,name,desc])=>`<button class="layout-choice ${type==='SPI'?'layout-choice-spi':''}" data-action="set-layout" data-id="${id}" aria-pressed="${zone().layout===id}">${type==='SPI'?spiLayoutPreview(id):`<span class="layout-art ${id}" aria-hidden="true"><i></i><i></i><i></i></span>`}<b>${name}</b><small>${desc}</small></button>`).join('')}</div></div><div class="card"><h3>Volgorde in deze zone</h3><div class="receiver-order">${receivers().map((r,i)=>`<div><span class="order-number">${i+1}</span><b>${esc(r.name)}</b><small>${r.type==='SPI'?`${r.outputs.filter(p=>p.enabled).reduce((a,p)=>a+p.pixels,0)} pixels`:'één geheel'}</small></div>`).join('')}</div><p style="margin-top:13px">${type==='RGBW'?'RGBW verandert per receiver als één geheel. Er zijn geen afzonderlijke pixels of een doorlopende pixelstand.':'De preview houdt rekening met alle pixels, de poortvolgorde en de omkering per uitgang.'}</p></div><div class="receiver-list">${receivers().map(receiverCard).join('')}</div></section></div>`;
   }
+  function layoutReceiverActions() {
+    const z=zone(),list=receivers();
+    return `<section class="layout-receiver-actions" aria-label="Receivers toevoegen aan ${esc(z.name)}"><div class="label-row"><h2>Receivers in deze zone</h2><small>${list.length} ${list.length===1?'receiver':'receivers'} · ${z.type}</small></div><button class="button full" data-action="layout-receiver-add" data-zone="${esc(z.id)}"><span aria-hidden="true">＋</span> Receiver toevoegen</button><button class="button secondary full" data-action="zone-assign" data-id="${esc(z.id)}">${icon('receiver')} Bestaande receiver kiezen</button></section>`;
+  }
   function receiverOrderMarkup() {
     const list=receivers();
     return `<p class="order-help">Laat een lijn knipperen om haar te herkennen. Sleep daarna aan de stippen naar de juiste plek.</p><div class="receiver-order" aria-label="Receivervolgorde">${list.map((r,i)=>{
@@ -499,7 +507,10 @@
       card.querySelector('.receiver-details').insertAdjacentHTML('beforeend',`<section class="receiver-danger-section" aria-label="Receiver verwijderen"><h3>${r.role==='main'?'Netwerk verwijderen':'Receiver verwijderen'}</h3><p>${r.role==='main'?'Hiermee verwijder je het volledige receivernetwerk.':'Hiermee verwijder je alleen deze receiver uit het netwerk.'}</p><button class="button secondary full" data-action="receiver-remove" data-id="${esc(r.id)}">${r.role==='main'?'Hoofdreceiver en netwerk verwijderen':'Receiver volledig verwijderen'}</button></section>`);
     });
     if(zoneScreen&&zone()?.type===null)main.querySelector('.page-heading .pill')?.remove();
-    if(route.screen==='layout'&&receivers().length)main.querySelector('.editor-controls').insertAdjacentHTML('beforeend',`<div class="zone-management-actions"><button class="text-button" data-action="zone-rename" data-id="${esc(zone().id)}">Naam van deze zone wijzigen</button>${zoneDeleteButton(zone())}</div>`);
+    if(route.screen==='layout'&&receivers().length){
+      main.querySelector('.editor-controls').insertAdjacentHTML('afterbegin',layoutReceiverActions());
+      main.querySelector('.editor-controls').insertAdjacentHTML('beforeend',`<div class="zone-management-actions"><button class="text-button" data-action="zone-rename" data-id="${esc(zone().id)}">Naam van deze zone wijzigen</button>${zoneDeleteButton(zone())}</div>`);
+    }
     document.documentElement.lang=uiPreferences.preferences.language;
     document.body.dataset.theme=uiPreferences.preferences.theme;
     document.querySelector('meta[name="theme-color"]').content=uiPreferences.preferences.theme==='dark'?'#171817':'#f8f8f5';
@@ -522,7 +533,7 @@
     const current = route.screen.startsWith('scene')?'scenes':route.screen==='receiver-add'?route.setupFrom||'stand':route.screen==='pin-login'?'settings':['receivers','settings'].includes(route.screen)?route.screen:'stand';
     document.getElementById('navigation').innerHTML=[['stand','stand','stand'],['scenes','scenes','scenes'],['receivers','receivers','receiver'],['settings','more','settings']].map(([id,label,glyph])=>`<button data-action="nav" data-id="${id}" ${current===id?'aria-current="page"':''}>${icon(glyph)}<span>${esc(t(label))}</span></button>`).join('');
     translateMainControls();
-    if(route.screen==='receiver-add')onboarding.mount(main.querySelector('#receiver-onboarding'),{origin:current,activeZoneId:stand()?.zones.some(z=>z.id===route.zoneId)?route.zoneId:undefined});
+    if(route.screen==='receiver-add')onboarding.mount(main.querySelector('#receiver-onboarding'),{origin:route.setupReturnZoneId?'layout':current,activeZoneId:stand()?.zones.some(z=>z.id===route.zoneId)?route.zoneId:undefined,autoSearch:!!route.setupReturnZoneId});
     if(route.screen==='stand'&&stand()){
       main.querySelector('.page').classList.add('stand-page');
       // Put everyday lighting first. Adding receivers stays one tap away,
@@ -556,7 +567,7 @@
   function navigate(screen, extra={}) {
     if(screen!==route.screen)visualPlugMotions.clear();
     if(!pinRequired&&screen==='pin-login')screen='settings';
-    if(screen==='receiver-add'&&route.screen!=='receiver-add')extra={setupFrom:!stand()||!standReceivers().some(receiver=>receiver.role==='main')||route.screen!=='receivers'?'stand':'receivers',...extra};
+    if(screen==='receiver-add'&&route.screen!=='receiver-add')extra={setupFrom:!stand()||!standReceivers().some(receiver=>receiver.role==='main')||route.screen!=='receivers'?'stand':'receivers',setupReturnZoneId:null,...extra};
     if(route.screen==='receiver-add')onboarding.suspend();route = {...route,screen,...extra}; render({top:true});
   }
   function resetMarkup(key,label) { return `<button class="setting-reset" data-action="setting-reset" data-id="${key}" aria-label="${esc(label)} terug naar standaard">↺ Standaard</button>`; }
@@ -1110,7 +1121,11 @@
       if(action==='receiver-move')return showReceiverAssignment(id);
       if(action==='zone-assign')return showZoneReceiverPicker(id);
       if(action==='assignment-receiver')return showReceiverAssignment(id,button.dataset.zone);
-      if(action==='assignment-add-receiver'){closeEffectDialog();return navigate('receiver-add');}
+      if(action==='layout-receiver-add'){
+        const target=stand()?.zones.find(z=>z.id===button.dataset.zone);if(!target)return;
+        return navigate('receiver-add',{zoneId:target.id,setupReturnZoneId:target.id});
+      }
+      if(action==='assignment-add-receiver'){closeEffectDialog();return navigate('receiver-add',route.screen==='layout'?{setupReturnZoneId:route.zoneId}:{});}
       if(action==='assignment-zone'){
         if(!receiverAssignment)return;receiverAssignment.zoneId=id;
         const r=model.receivers.find(r=>r.id===receiverAssignment.receiverId);

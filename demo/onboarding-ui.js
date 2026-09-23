@@ -136,7 +136,7 @@
       if(result.error){error=result.error.message||'Controleer je keuze.';if(render)paintPage(false);return false;}
       draft=result.draft;error='';if(event.type!=='SECURITY_PROGRESS')keepDraft();if(render)paintPage(top);return true;
     }
-    function start({activeZoneId}={}){
+    function start({activeZoneId,retargetZone=false}={}){
       if(!draft||draft.stage==='done'){
         draft=draftApi.create({model:getModel(),activeZoneId,transactionId:'onboarding-'+crypto.randomUUID()});
         results=[];searchState='idle';securityReceiptRef=null;finalReceiptRef=null;completeModel=null;
@@ -145,7 +145,13 @@
         standNameInput=null;zoneNameInput='';pendingChoices=null;saveFailed=false;
         zoneExtraNames=[];zoneRemoval=null;zoneRename=null;receiverMove=null;managementBusy=false;
         visualEntrances.clear();presentedStages.clear();plugMotion.clear();selectedOutput=null;
-      }else if(draft.cancelled)change({type:'RETRY'},{render:false});
+      }else {
+        if(draft.cancelled)change({type:'RETRY'},{render:false});
+        // Reopening discovery from another zone may change its destination,
+        // but never silently move an already selected or pending receiver.
+        if(retargetZone&&draft.stage==='receiver'&&!draft.receiver&&activeZoneId&&draft.zones.some(zone=>zone.id===activeZoneId)&&draft.activeZoneId!==activeZoneId)
+          change({type:'SELECT_ACTIVE_ZONE',zoneId:activeZoneId},{render:false});
+      }
     }
     const automaticMain=()=>pinRequired&&!!draft&&draft.role==='main'&&manualWifi();
     const pendingMain=()=>automaticMain()&&((draft.stage==='security'&&securityUncertain)||(['zone','review'].includes(draft.stage)&&draft.security.status==='confirmed'&&!!draft.zoneId));
@@ -190,7 +196,7 @@
     }
     function nativeActive(){resumeAfterWifiReturn();}
     function pageShown(event){if(event.persisted||returningFromWifi)resumeAfterWifiReturn();}
-    function mount(element,options){start(options);origin=options?.origin==='receivers'&&draft.mainReceiverId?'receivers':'stand';container=element;container.addEventListener('click',click);container.addEventListener('input',input);container.addEventListener('keydown',keydown);unbindPixelScrub=pixelSetup.bindPixelScrub(container,{isEnabled:()=>draft?.stage==='pixels'&&!busy&&!draftSaving,onChange:value=>updatePixelCount(value)});document.addEventListener('visibilitychange',visibilityChanged);window.addEventListener('lightning:native-active',nativeActive);window.addEventListener('pageshow',pageShown);paintPage(false);if(pendingMain())resumeAfterWifiReturn();}
+    function mount(element,options){start({...options,retargetZone:options?.origin==='layout'&&!container});origin=['receivers','layout'].includes(options?.origin)&&draft.mainReceiverId?options.origin:'stand';container=element;container.addEventListener('click',click);container.addEventListener('input',input);container.addEventListener('keydown',keydown);unbindPixelScrub=pixelSetup.bindPixelScrub(container,{isEnabled:()=>draft?.stage==='pixels'&&!busy&&!draftSaving,onChange:value=>updatePixelCount(value)});document.addEventListener('visibilitychange',visibilityChanged);window.addEventListener('lightning:native-active',nativeActive);window.addEventListener('pageshow',pageShown);paintPage(false);if(pendingMain())resumeAfterWifiReturn();if(options?.autoSearch&&draft.stage==='receiver'&&searchState==='idle')queueMicrotask(()=>{if(container&&draft.stage==='receiver'&&!busy&&searchState==='idle')void search();});}
     function suspend(){
       // Leaving this screen must never discard an uncertain claim. PIN inputs
       // are destroyed; only non-secret choices and opaque receipts stay private.
@@ -292,7 +298,7 @@
     }
     function completeCard(){
       const zone=draft.zones.find(zone=>zone.id===draft.zoneId),count=getModel().receivers.filter(receiver=>receiver.zoneId===draft.zoneId&&receiver.lifecycle==='added').length;
-      return `<section class="card onboarding-done">${product(draft.receiver,{compact:true})}<span class="onboarding-success-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="m8 16 5 5 11-11"/></svg></span><h2>Receiver toegevoegd</h2><p>${escape(zone?.name)} · ${count} ${count===1?'receiver':'receivers'}</p></section>${button('done','Klaar · naar mijn stand')}<p class="onboarding-later-hint">Meer receivers toevoegen kan later.</p><section class="onboarding-followup"><h2>Verder uitbreiden?</h2>${button('another',`＋ Nog een receiver in ${escape(zone?.name)}`,'class="button secondary"')}${button('another-zone','Andere zone kiezen','class="button secondary"')}</section>`;
+      return `<section class="card onboarding-done">${product(draft.receiver,{compact:true})}<span class="onboarding-success-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="m8 16 5 5 11-11"/></svg></span><h2>Receiver toegevoegd</h2><p>${escape(zone?.name)} · ${count} ${count===1?'receiver':'receivers'}</p></section>${button('done',origin==='layout'?'Terug naar opstelling':'Klaar · naar mijn stand')}<p class="onboarding-later-hint">Meer receivers toevoegen kan later.</p><section class="onboarding-followup"><h2>Verder uitbreiden?</h2>${button('another',`＋ Nog een receiver in ${escape(zone?.name)}`,'class="button secondary"')}${button('another-zone','Andere zone kiezen','class="button secondary"')}</section>`;
     }
     function errorBox(){return `<p class="onboarding-error" role="alert" ${error?'':'hidden'}>${escape(error)}</p><p class="onboarding-notice" role="status" ${notice||draftSaving?'':'hidden'}>${draftSaving?'Je keuzes bewaren…':escape(notice)}</p>${pendingChoices&&saveFailed?button('save-retry',draftSaving?'Bewaren…':'Opnieuw bewaren',draftSaving?'disabled':''):''}`;}
     function footer(next='Volgende',disabled=false){return `<div class="onboarding-actions onboarding-footer">${button('back','← Terug',`class="button secondary" ${draft.stage==='zones'&&!draft.stand.isNew?'disabled':''}`)}${button('next',next,disabled?'disabled':'')}</div>`;}
