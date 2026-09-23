@@ -234,7 +234,7 @@ body:has(.onboarding-page)>.connection-bar{display:none}
 .onboarding-result .pill{background:var(--soft);border:0;border-radius:7px;padding:6px 8px;letter-spacing:.5px}
 .onboarding-result .onboarding-actions{grid-template-columns:minmax(0,1fr) minmax(0,1.65fr)}
 .onboarding-result .onboarding-actions .button{margin-top:4px;min-height:48px}
-.onboarding-result .onboarding-actions .button:first-child{background:var(--panel);border:1px solid var(--line)}
+.onboarding-result .onboarding-actions .button:first-child:not(:only-child){background:var(--panel);color:var(--ink);border:1px solid var(--line)}
 .onboarding-page .onboarding-product.compact canvas{height:136px}
 .onboarding-page .onboarding-product{background:linear-gradient(140deg,#fafbf8,#eef1e8);border-color:#e0e4da}
 .onboarding-page .onboarding-pin-card{gap:12px;border-radius:20px}
