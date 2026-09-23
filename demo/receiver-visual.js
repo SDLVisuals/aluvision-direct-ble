@@ -1,6 +1,7 @@
 /* Product-oriented, code-native 3D preview. Geometry is projected and depth
- * sorted, not an image or a hardware wiring diagram. RGBW now shows the new
- * single-output/four-channel MOSFET concept; actual enclosure is unconfirmed.
+ * sorted, not an image or a hardware wiring diagram. RGBW has one logical
+ * four-channel output with a reference-style four-way physical splitter;
+ * actual enclosure and connector positions are unconfirmed.
  * The SPI enclosure/port positions are indicative.
  * No timers, transport, state persistence or physical identification commands.
  */
@@ -28,7 +29,8 @@
       :[x+Math.cos(i/20*Math.PI*2)*r,y+distance,z+Math.sin(i/20*Math.PI*2)*r]);
     const sections=axis==='x'?[[0,.62],[.22,.62],[.28,.88],[.48,.88],[.54,1],[.94,1],[1,.88]]:[[0,.86],[1,1]];
     const rings=sections.map(([distance,r])=>ring(distance*length,r*radius)),faces=[];
-    rings.slice(0,-1).forEach((a,section)=>{const b=rings[section+1];a.forEach((p,i)=>faces.push({points:[p,a[(i+1)%20],b[(i+1)%20],b[i]],fill:active?RED:axis==='x'&&section<2?'#515352':'#E6E7E3'}));});
+    const splitter=id==='splitter-hub';
+    rings.slice(0,-1).forEach((a,section)=>{const b=rings[section+1];a.forEach((p,i)=>faces.push({points:[p,a[(i+1)%20],b[(i+1)%20],b[i]],fill:active?RED:splitter?(section<2?'#323734':'#AEB3AB'):axis==='x'&&section<2?'#515352':'#E6E7E3'}));});
     faces.push({points:rings[rings.length-1],fill:active?RED:'#707570',surface:'end'});
     result.meshes.push({id,kind:'round-connector',axis,active,vertices:rings.flat(),faces});
     result.rings.push({id,axis,center:axis==='x'?[x+length+.4,y,z]:[x,y+length+.4,z],radius:radius*.62,active});
@@ -54,34 +56,31 @@
     box(result,'controller-end',45,19,21,29,53,2,'#E5E7E1',8);
     box(result,'power-label',-90,-125,23.1,21,7,.4,'#434645',1);
     cable(result,'power-to-controller',curve([145,-120,11],[280,-70,1],[180,153,1],[77,49,11]),4.8,false,'#D8DBD4');
-    // Conceptual signal path: one LED output fed by four PWM channels. Four
-    // coloured wires are channels R/G/B/W, never four independently selectable
-    // outputs. The module and terminal locations are not a physical pinout.
-    cable(result,'controller-to-mosfet',curve([-80,44,11],[-170,56,5],[-198,134,5],[-150,145,10]),5.2,options.identifying,'#DDE0D7');
-    box(result,'mosfet-module',-150,122,3,96,48,17,'#DDE1D9',5);
-    box(result,'mosfet-cover',-145,126,20,86,40,1,'#EFF1EA',4);
-    const channelColors=['#C94E46','#57A477','#5278BE','#DBDED6'];
-    ['R','G','B','W'].forEach((channel,index)=>{
-      const y=133+index*10;
-      cable(result,'pwm-channel-'+channel,curve([-54,y,12],[-25,y-4,8],[-8,143+index*2,8],[10,148+index*1.5,8]),2.4,options.identifying,channelColors[index]);
-      result.labels.push({text:channel,point:[-129+index*20,144,21.6],size:8,color:channelColors[index]});
+    // The reference assembly has a loop from the controller into a small
+    // splitter and four matching white plugs. They are one RGBW light output,
+    // not four selectable ports or a diagram of the internal PWM wiring.
+    cable(result,'controller-to-splitter',curve([-80,44,11],[-180,40,5],[-238,76,5],[-190,136,9]),5.2,options.identifying,'#DDE0D7');
+    cylinder(result,'splitter-hub',-194,136,9,11,25,options.identifying,'x');
+    const ends=[[-25,226],[10,218],[45,210],[80,202]];
+    ends.forEach(([x,y],index)=>{
+      const origin=[-170,139+index*1.2,9],target=[x,y,9];
+      cable(result,'splitter-branch-'+(index+1),curve(origin,
+        [-116,149+index*1.2,6],[x-42,y-23,6],target),3.2,options.identifying,'#DDE0D7');
+      cylinder(result,'rgbw-plug-'+(index+1),x,y,9,8.3,21,options.identifying,'x');
     });
-    cylinder(result,'rgbw-output',10,151,8,8.2,22,options.identifying,'x');
-    box(result,'ledline-diffuser',35,146,2,172,10,5,'#E8E8DD',2);
-    result.meshes[result.meshes.length-1].active=Boolean(options.identifying);
     result.seams.push([[-59,20,24],[-59,71,24]],[[44,20,24],[44,71,24]],
       [[-114,-133,24],[-114,-108,24]],[[122,-133,24],[122,-108,24]],
       [[-59,71,23],[44,71,23]],[[-113,-109,23],[121,-109,23]]);
-    result.screws.push(...[[-70,25,24],[-70,66,24],[67,25,24],[67,66,24],[-127,-124,25],[137,-116,25],[-143,128,21],[-63,164,21]].map(point=>({point,radius:1.65})));
+    result.screws.push(...[[-70,25,24],[-70,66,24],[67,25,24],[67,66,24],[-127,-124,25],[137,-116,25]].map(point=>({point,radius:1.65})));
     result.indicators.push({id:'receiver-status',point:[57,43,24],radius:2.5,active:options.identifying});
     result.labels.push({text:'ALUVISION',point:[-8,35,24.4],size:7,color:'#738078'},
       {text:'RGBW',point:[-8,51,24.4],size:12,color:'#46514A'});
     // RGBW is one logical line: identification always covers the whole path.
     for(const item of [...result.meshes,...result.rings,...result.cables])item.identifying=Boolean(item.active&&options.identifying);
-    result.metadata={type:'RGBW',logicalOutputs:1,physicalConnectors:1,selectedPort:null,
-      activePorts:[],identifyingPorts:[],identifying:Boolean(options.identifying),reference:'conceptual-rgbw-mosfet',
+    result.metadata={type:'RGBW',logicalOutputs:1,physicalConnectors:4,selectedPort:null,
+      activePorts:[],identifyingPorts:[],identifying:Boolean(options.identifying),reference:'rgbw-four-way-reference',
       physicalPositionsConfirmed:false,label:'RGBW-receiver · één uitgang',
-      description:'Schematisch voorbeeld: vier PWM-kleurkanalen sturen samen één RGBW-ledline aan.'};
+      description:'Vier fysieke stekkers aan één RGBW-uitgang; alle vier volgen hetzelfde lichtgedrag.'};
   }
   function spi(result,options){
     const validPort=port=>Number.isInteger(port)&&port>=1&&port<=4;
