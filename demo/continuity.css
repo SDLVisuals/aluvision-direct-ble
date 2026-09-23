@@ -149,13 +149,16 @@ body[data-theme=dark] .section-tabs button:not([aria-selected=true]){color:var(-
 .receiver-chips .selection-together[aria-pressed=true] small{color:#f0e9e7}
 .receiver-chips button[aria-pressed=true]:not(.selection-together){box-shadow:inset 0 0 0 1px var(--red)}
 .receiver-chips button>span{white-space:nowrap}
+/* A sheet owns the gesture: reaching its end must not scroll the page behind it. */
+html:has(dialog[open]){overflow:hidden}
+dialog{overscroll-behavior:contain}
 /* Exact RGBW values remain usable on narrow phones and inside colour dialogs. */
 .channel-help{font-size:10px!important;line-height:1.45;color:var(--muted);margin-bottom:9px!important}
 .channel-row{grid-template-columns:44px 44px minmax(40px,1fr) 44px 56px;gap:4px;min-height:48px}
 .channel-row button{width:100%;min-width:0}
 .channel-row .channel-toggle{font-size:13px;font-weight:800;color:var(--channel);border:1px solid var(--channel);background:var(--panel)}
 .channel-row .channel-toggle[aria-pressed=false]{color:var(--muted);border-color:var(--line);background:var(--soft);text-decoration:line-through}
-.channel-row .channel-number{width:100%;min-width:0;height:44px;padding:2px 3px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);font-size:13px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
+.channel-row .channel-number{width:100%;min-width:0;height:44px;padding:2px 3px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);font-size:16px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
 .channel-number::-webkit-inner-spin-button,.channel-number::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .channel-number{-moz-appearance:textfield;appearance:textfield}
 @media(max-width:360px){.channel-row{grid-template-columns:40px 38px minmax(40px,1fr) 38px 50px;gap:3px}.channel-row button{height:44px}}

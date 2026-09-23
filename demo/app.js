@@ -554,6 +554,13 @@
     for(const id of identifyPending.keys())syncIdentifyControls(id);
     syncLiveStatus();
     paint(performance.now()/1000);
+    // Rebuilding a category row must not hide its selected tab offscreen.
+    // Adjust only its horizontal scroll, never the surrounding document.
+    main.querySelectorAll('.filter-row [aria-selected="true"]').forEach(selected=>{
+      const row=selected.closest('.filter-row'),bounds=row.getBoundingClientRect(),item=selected.getBoundingClientRect();
+      if(item.left<bounds.left+4)row.scrollLeft-=bounds.left+4-item.left;
+      else if(item.right>bounds.right-4)row.scrollLeft+=item.right-bounds.right+4;
+    });
     if(top){window.scrollTo({top:0,left:0,behavior:'instant'});main.focus({preventScroll:true});}
     else {
       if(preserveScroll)window.scrollTo({top:savedScroll,left:0,behavior:'instant'});
@@ -878,7 +885,12 @@
     if(removeIndex===null){palette.push(['#C94E46','#F0B95F','#669CC6','#72B894','#BB8CC8','#F5DCA8','#73C9CE'][count%7]);whites.push(0);rgbFlags.push(true);whiteFlags.push(true);}
     else [palette,whites,rgbFlags,whiteFlags].forEach(values=>values.splice(removeIndex,1));
     apply({colors:palette,whiteChannels:whites,rgbEnabled:rgbFlags,whiteEnabled:whiteFlags,colorCount:palette.length});
-    const row=main.querySelector('.palette');if(row)row.innerHTML=paletteMarkup(selectedState());
+    const row=main.querySelector('.palette'),focused=document.activeElement,restoreFocus=row?.contains(focused);
+    if(row)row.innerHTML=paletteMarkup(selectedState());
+    if(restoreFocus&&!restoreControlFocus(focused)){
+      const index=removeIndex===null?palette.length-1:Math.min(removeIndex,palette.length-1);
+      row.querySelector(`[data-action="palette-edit"][data-id="${index}"]`)?.focus({preventScroll:true});
+    }
   }
   function updatePalette(index,color,white) {
     const s=selectedState(),palette=copy(colours(s)),whites=copy(s.whiteChannels||palette.map(()=>0));

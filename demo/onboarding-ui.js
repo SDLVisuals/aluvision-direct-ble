@@ -50,7 +50,7 @@
     let rejoinSession=0,rejoinAttempts=0,rejoinRunning=false,rejoinExhausted=false,rejoinBlocked=false,automaticFinalizing=false;
     let identifying=new Map(),identifyPending=new Set(),zoneNameOpen=false,searchAbort=null,resumeSelection=null;
     let standNameInput=null,zoneNameInput='',draftSaving=false,pendingChoices=null,saveFailed=false,origin='stand';
-    let zoneExtraNames=[],zoneRemoval=null,zoneRename=null,receiverMove=null,managementBusy=false;
+    let zoneExtraNames=[],zoneRemoval=null,zoneRename=null,receiverMove=null,managementBusy=false,zoneListReturn=null;
     const visualEntrances=new Map(),presentedStages=new Set(),plugMotion=visual.createPlugMotion();
     let selectedOutput=null,unbindPixelScrub=null;
     const saveNotice='Je keuzes zijn nog niet bewaard. Probeer opnieuw; je hoeft niets opnieuw in te vullen.';
@@ -78,6 +78,23 @@
       if(stand)standNameInput=stand.value;if(zone)zoneNameInput=zone.value;
       if(zone)zoneExtraNames=Array.from(container.querySelectorAll('[data-zone-extra]'),field=>field.value);
       const rename=container?.querySelector('#onboarding-zone-rename');if(rename&&zoneRename)zoneRename.name=rename.value;
+    }
+    function rememberZoneList(target){
+      const index=draft.zones.findIndex(zone=>zone.id===target.dataset.id);
+      zoneListReturn={stage:draft.stage,x:window.scrollX,y:window.scrollY,action:target.dataset.onboardingAction,
+        ids:[target.dataset.id,draft.zones[index+1]?.id,draft.zones[index-1]?.id].filter(Boolean)};
+    }
+    function restoreZoneList(){
+      if(!zoneListReturn)return;
+      if(zoneListReturn.stage!==draft.stage){zoneListReturn=null;return;}
+      if(zoneRename||zoneRemoval||draftSaving||managementBusy||pendingChoices)return;
+      // Editing temporarily replaces a long list with a short panel. Its
+      // clamped scroll position must not become the list's return position.
+      const saved=zoneListReturn;zoneListReturn=null;
+      window.scrollTo({top:saved.y,left:saved.x,behavior:'instant'});
+      const control=saved.ids.map(id=>container.querySelector(`[data-onboarding-action="${saved.action}"][data-id="${CSS.escape(id)}"]`)).find(Boolean)
+        ||container.querySelector('#onboarding-zone-name');
+      control?.focus({preventScroll:true});
     }
     const canManageZones=()=>!!draft&&!draft.receiver&&!draft.cancelled&&draft.security.status==='not-started'&&['zones','receiver'].includes(draft.stage);
     const zoneMembers=id=>getModel().receivers.filter(receiver=>receiver.standId===draft.stand?.id&&receiver.zoneId===id&&receiver.lifecycle==='added');
@@ -146,7 +163,7 @@
         securityUncertain=false;finalizationStarted=false;manualRejoinSSID=null;resumeSelection=null;error='';notice='';zoneNameOpen=false;
         stopAutomaticRejoin();rejoinExhausted=false;rejoinBlocked=false;automaticFinalizing=false;registrationPending=false;returningFromWifi=false;
         standNameInput=null;zoneNameInput='';pendingChoices=null;saveFailed=false;
-        zoneExtraNames=[];zoneRemoval=null;zoneRename=null;receiverMove=null;managementBusy=false;
+        zoneExtraNames=[];zoneRemoval=null;zoneRename=null;receiverMove=null;managementBusy=false;zoneListReturn=null;
         visualEntrances.clear();presentedStages.clear();plugMotion.clear();selectedOutput=null;
       }else {
         if(draft.cancelled)change({type:'RETRY'},{render:false});
@@ -207,7 +224,7 @@
       unbindPixelScrub?.();unbindPixelScrub=null;
       if(container){container.removeEventListener('click',click);container.removeEventListener('input',input);container.removeEventListener('keydown',keydown);}
       document.removeEventListener('visibilitychange',visibilityChanged);window.removeEventListener('lightning:native-active',nativeActive);window.removeEventListener('pageshow',pageShown);stopAutomaticRejoin();returningFromWifi=false;
-      container=null;cancelSearch();plugMotion.clear();selectedOutput=null;
+      container=null;cancelSearch();plugMotion.clear();selectedOutput=null;zoneListReturn=null;
       for(const id of identifying.keys())stopIdentify(id);
     }
     function reset(){
@@ -368,6 +385,7 @@
       const stageKey=[draft.transactionId,draft.stage,draft.receiver?.id||''].join(':'),entering=!presentedStages.has(stageKey);
       const focusedPort=container.contains(document.activeElement)&&document.activeElement.dataset.onboardingAction==='output'?document.activeElement.dataset.port:null;
       const focusedZone=container.contains(document.activeElement)&&document.activeElement.dataset.onboardingAction==='active-zone'?document.activeElement.dataset.id:null;
+      const focusedSide=container.contains(document.activeElement)&&document.activeElement.dataset.onboardingAction==='side'?document.activeElement.dataset.side:null;
       const zoneScroll=container.querySelector('.onboarding-destination .onboarding-zone-list')?.scrollTop||0;
       const zonePickerOpen=container.querySelector('.onboarding-destination')?.open===true;
       presentedStages.add(stageKey);
@@ -416,6 +434,8 @@
       if(top){window.scrollTo({top:0,left:0,behavior:'instant'});container.querySelector('h1').setAttribute('tabindex','-1');container.querySelector('h1').focus({preventScroll:true});}
       else if(focusedPort)container.querySelector(`[data-onboarding-action="output"][data-port="${focusedPort}"]`)?.focus({preventScroll:true});
       else if(focusedZone)container.querySelector(`[data-onboarding-action="active-zone"][data-id="${CSS.escape(focusedZone)}"]`)?.focus({preventScroll:true});
+      else if(focusedSide)container.querySelector(`[data-onboarding-action="side"][data-side="${CSS.escape(focusedSide)}"]`)?.focus({preventScroll:true});
+      restoreZoneList();
       paint(performance.now()/1000);
     }
     function validName(value){const name=String(value).trim();return name.length>0&&name.length<=64&&!/[<>\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/.test(name);}
@@ -748,7 +768,7 @@
       if(action==='zone-rename'){
         if(!canManageZones())return;const zone=draft.zones.find(zone=>zone.id===target.dataset.id);if(!zone)return;
         const stored=currentZone(zone.id);if(!zone.isNew&&!stored){error='Deze zone is intussen gewijzigd. Open de setup opnieuw om je actuele indeling te zien.';paintPage(false);return;}
-        captureNames();zoneRename={zoneId:zone.id,name:zone.name,signature:zone.isNew?null:zoneSignature(stored)};zoneRemoval=null;receiverMove=null;error='';paintPage(false);
+        captureNames();rememberZoneList(target);zoneRename={zoneId:zone.id,name:zone.name,signature:zone.isNew?null:zoneSignature(stored)};zoneRemoval=null;receiverMove=null;error='';paintPage(false);
         const input=container.querySelector('#onboarding-zone-rename');input?.focus();input?.select();return;
       }
       if(action==='zone-rename-cancel'){zoneRename=null;error='';paintPage(false);return;}
@@ -760,7 +780,7 @@
       if(action==='zone-remove'){
         if(!canManageZones())return;const zone=draft.zones.find(zone=>zone.id===target.dataset.id);if(!zone)return;
         const stored=currentZone(zone.id);if(!zone.isNew&&!stored){error='Deze zone is intussen gewijzigd. Open de setup opnieuw om je actuele indeling te zien.';paintPage(false);return;}
-        zoneRemoval={zoneId:zone.id,signature:zone.isNew?null:zoneSignature(stored)};error='';paintPage(false);container.querySelector('[data-setup-delete-zone] h2')?.scrollIntoView({block:'nearest'});return;
+        rememberZoneList(target);zoneRemoval={zoneId:zone.id,signature:zone.isNew?null:zoneSignature(stored)};error='';paintPage(false);container.querySelector('[data-setup-delete-zone] h2')?.scrollIntoView({block:'nearest'});return;
       }
       if(action==='zone-remove-cancel'){zoneRemoval=null;error='';paintPage(false);return;}
       if(action==='zone-remove-confirm'){
