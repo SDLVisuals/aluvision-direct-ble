@@ -52,7 +52,7 @@
     let standNameInput=null,zoneNameInput='',draftSaving=false,pendingChoices=null,saveFailed=false,origin='stand';
     let zoneExtraNames=[],zoneRemoval=null,zoneRename=null,receiverMove=null,managementBusy=false;
     const visualEntrances=new Map(),presentedStages=new Set(),plugMotion=visual.createPlugMotion();
-    let selectedOutput=null;
+    let selectedOutput=null,unbindPixelScrub=null;
     const saveNotice='Je keuzes zijn nog niet bewaard. Probeer opnieuw; je hoeft niets opnieuw in te vullen.';
     const committer=draftApi.createCommitter({verifyFinalReceipt:request=>{
       if(typeof services.verifyFinalReceipt!=='function')throw Error('VERIFIER_UNAVAILABLE');
@@ -190,11 +190,12 @@
     }
     function nativeActive(){resumeAfterWifiReturn();}
     function pageShown(event){if(event.persisted||returningFromWifi)resumeAfterWifiReturn();}
-    function mount(element,options){start(options);origin=options?.origin==='receivers'&&draft.mainReceiverId?'receivers':'stand';container=element;container.addEventListener('click',click);container.addEventListener('input',input);container.addEventListener('keydown',keydown);document.addEventListener('visibilitychange',visibilityChanged);window.addEventListener('lightning:native-active',nativeActive);window.addEventListener('pageshow',pageShown);paintPage(false);if(pendingMain())resumeAfterWifiReturn();}
+    function mount(element,options){start(options);origin=options?.origin==='receivers'&&draft.mainReceiverId?'receivers':'stand';container=element;container.addEventListener('click',click);container.addEventListener('input',input);container.addEventListener('keydown',keydown);unbindPixelScrub=pixelSetup.bindPixelScrub(container,{isEnabled:()=>draft?.stage==='pixels'&&!busy&&!draftSaving,onChange:value=>updatePixelCount(value)});document.addEventListener('visibilitychange',visibilityChanged);window.addEventListener('lightning:native-active',nativeActive);window.addEventListener('pageshow',pageShown);paintPage(false);if(pendingMain())resumeAfterWifiReturn();}
     function suspend(){
       // Leaving this screen must never discard an uncertain claim. PIN inputs
       // are destroyed; only non-secret choices and opaque receipts stay private.
       captureNames();container?.querySelectorAll('[data-onboarding-pin]').forEach(input=>{input.value='';});
+      unbindPixelScrub?.();unbindPixelScrub=null;
       if(container){container.removeEventListener('click',click);container.removeEventListener('input',input);container.removeEventListener('keydown',keydown);}
       document.removeEventListener('visibilitychange',visibilityChanged);window.removeEventListener('lightning:native-active',nativeActive);window.removeEventListener('pageshow',pageShown);stopAutomaticRejoin();returningFromWifi=false;
       container=null;cancelSearch();plugMotion.clear();selectedOutput=null;

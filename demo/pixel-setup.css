@@ -108,6 +108,11 @@
 .pixel-count-preview .pixel-setup-strip i{max-width:12px;background:#d2d9ce;box-shadow:none;animation:none}
 .pixel-count-more{color:#aeb7ac;font-size:19px;line-height:10px;letter-spacing:1px}
 .pixel-setup-visual.pixel-count-preview .pixel-preview-notice{position:static;padding:0;color:#aeb7ac;text-align:left}
+/* Horizontal scrubbing shares the numeric controls; vertical gestures scroll. */
+[data-pixel-scrub]{min-width:0;border-radius:13px;touch-action:pan-y pinch-zoom;cursor:ew-resize;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+[data-pixel-scrub]>*{pointer-events:none}
+[data-pixel-scrub]:focus-visible,[data-pixel-scrub][data-scrubbing=true]{outline:2px solid var(--red,#bd4842);outline-offset:3px}
+[data-pixel-scrub][data-scrubbing=true] .pixel-count-preview-label b{color:#fff}
 /* Left/right stay fixed in the installed view. The chosen incoming cable and
    its connection marker move together; no logical-start choice is exposed. */
 .pixel-setup-visual.pixel-connection-preview{height:auto;min-height:122px;display:grid;gap:12px;padding:12px;flex-direction:column}
