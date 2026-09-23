@@ -87,15 +87,18 @@
     // The reference assembly has a loop from the controller into a small
     // splitter and four matching white plugs. They are one RGBW light output,
     // not four selectable ports or a diagram of the internal PWM wiring.
-    cable(result,'controller-to-splitter',curve([-80,44,11],[-194,-8,6],[-261,71,6],[-185,135,9]),5.3,options.identifying,'#E4E3DB');
+    cable(result,'controller-to-splitter',curve([-80,44,11],[-247,-29,7],[-298,171,7],[-160,191,9]),5.8,options.identifying,'#E4E3DB');
     cable(result,'controller-output-gland',curve([-79,44,11],[-82,43,11],[-86,42,11],[-91,40,11]),8.3,false,'#B8BAB3');
-    box(result,'splitter-hub',-193,127,0,28,21,17,'#C4C7BF',9.5);
+    cable(result,'splitter-strain-relief',curve([-170,190,9],[-167,190.4,9],[-163,191,9],[-158,191,9]),10.5,false,'#5D635D');
+    box(result,'splitter-hub',-160,179,0,38,25,17,'#D4D5CC',5.5);
     result.meshes[result.meshes.length-1].active=Boolean(options.identifying);
-    const ends=[[-38,222],[-3,216],[32,210],[67,204]];
+    // Match the supplied assembly: four ordered tails fan sideways from the
+    // elongated molded hub. Neither the branches nor their plugs cross.
+    const ends=[[64,235],[76,208],[88,181],[100,154]];
     ends.forEach(([x,y],index)=>{
-      const origin=[-169,134+index*3.4,9],target=[x,y,9];
+      const origin=[-122,200-index*4.5,9],target=[x,y,9];
       cable(result,'splitter-branch-'+(index+1),curve(origin,
-        [-112,151+index*4,7],[x-35,y-5,7],target),3.4,options.identifying,'#E7E5DE');
+        [-58,origin[1]+(y-origin[1])*.3,7],[x-35,y,7],target),3.4,options.identifying,'#E7E5DE');
       cylinder(result,'rgbw-plug-'+(index+1),x,y,9,8.5,24,options.identifying,'x');
       if(!options.compact)for(const dx of [13.8,15.5,17.2,18.9,20.6])result.details.push({points:Array.from({length:28},(_,i)=>[x+dx,y+Math.cos(i/28*Math.PI*2)*8.55,9+Math.sin(i/28*Math.PI*2)*8.55]),closed:true,color:'#A6AAA1',width:.45});
     });
@@ -108,6 +111,7 @@
     result.labels.push({text:'ALUVISION',point:[-8,35,24.4],size:7.8,color:'#61635F'},
       {text:'RGBW',point:[-8,51,24.4],size:12,color:'#353B37'});
     if(!options.compact){
+      result.details.push({points:([[-153,182],[-132,182],[-125,187],[-125,199],[-150,200]]).map(([x,y])=>[x,y,17.2]),color:'#90978B',width:.55});
       result.details.push({points:Array.from({length:25},(_,i)=>{const a=-Math.PI*.3+i/24*Math.PI*1.6;return [57+Math.cos(a)*4,51+Math.sin(a)*4,21.9-Math.cos(a)*4*.14];}),color:'#6A6F68',width:.85},
         {points:[[57,46,21.9],[57,51,21.9]],color:'#6A6F68',width:.85});
       for(let i=0;i<3;i++)result.details.push({points:[[-89,-124+i*1.9,23.8],[-71+(i===2?7:0),-124+i*1.9,23.8]],color:'#C8CBC4',width:.6});
@@ -161,13 +165,13 @@
       result.strips.push({port,active,identifying:identified,points:outline(lineX-4,86,8,73,2).map(([a,b])=>[a,b,2])});
       const pixels=Array.from({length:10},(_,i)=>({point:[lineX-2.5,91+i*6.5,2.25],active,identifying:identified,port,index:i}));
       result.pixels.push(...pixels);
-      if(!options.compact)result.labels.push({text:String(port),point:[x,66,3],size:11,color:highlighted?RED:'#596159',port,active:highlighted});
+      if(!options.compact&&!options.hidePortLabels)result.labels.push({text:String(port),point:[x,66,3],size:11,color:highlighted?RED:'#596159',port,active:highlighted});
     }
     result.labels.push({text:'ALUVISION',point:[0,-57,31],size:8,color:'#69746A'},
       {text:'SPI',point:[0,-39,31],size:15,color:'#333F36'});
     result.indicators.push({id:'receiver-status',point:[52,-46,31],radius:2.5,active:identifyingPorts.length>0});
     result.metadata={type:'SPI',logicalOutputs:4,physicalConnectors:4,selectedPort:selected,activePorts,highlightedPorts,
-      enabledPorts:[...enabled].sort((a,b)=>a-b),identifyingPorts,identifying:identifyingPorts.length>0,portLabelsVisible:!options.compact,
+      enabledPorts:[...enabled].sort((a,b)=>a-b),identifyingPorts,identifying:identifyingPorts.length>0,portLabelsVisible:!options.compact&&!options.hidePortLabels,
       reference:'indicative-spi-model',physicalPositionsConfirmed:false,
       label:selected?`SPI-receiver · uitgang ${selected}`:'SPI-receiver · vier uitgangen',
       description:'Ontwerpvoorstel · vier afzonderlijke SPI-uitgangen.'};
@@ -207,7 +211,7 @@
     return `rgb(${channels.join(',')})`;
   }
   function draw(canvas,options={}){
-    const key=JSON.stringify([String(options.type||'RGBW').toUpperCase(),options.selectedPort,options.enabledPorts,Boolean(options.identifying),options.identifyingPorts,Boolean(options.compact)]);
+    const key=JSON.stringify([String(options.type||'RGBW').toUpperCase(),options.selectedPort,options.enabledPorts,Boolean(options.identifying),options.identifyingPorts,Boolean(options.compact),Boolean(options.hidePortLabels)]);
     let cached=sceneCache.get(canvas);
     if(!cached||cached.key!==key){cached={key,model:scene(options)};sceneCache.set(canvas,cached);}
     const model=cached.model,ctx=canvas.getContext('2d');if(!ctx)return model.metadata;
@@ -324,5 +328,5 @@
     return {...model.metadata,plugProgress,projectedBounds:{width,height},motionReduced:Boolean(options.reducedMotion),entranceProgress:entrance,
       identificationLevel:model.metadata.identifying?identifyLevel:0};
   }
-  return Object.freeze({scene,draw,createPlugMotion,version:'30-receiver-visual-6',isLocalPreview:true});
+  return Object.freeze({scene,draw,createPlugMotion,version:'30-receiver-visual-7',isLocalPreview:true});
 }));

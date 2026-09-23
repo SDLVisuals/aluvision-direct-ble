@@ -449,7 +449,11 @@
         const key=[draft.transactionId,draft.stage,canvas.dataset.onboardingVisual].join(':');
         if(!visualEntrances.has(key))visualEntrances.set(key,time);
         const entranceProgress=reducedMotion?1:Math.max(0,Math.min(1,(time-visualEntrances.get(key))/.7));
-        const metadata=visual.draw(canvas,{type:canvas.dataset.type,selectedPort:Number(canvas.dataset.port)||null,enabledPorts:active().map(output=>output.port),compact:canvas.dataset.compact==='true',identifying:identifying.has(canvas.dataset.onboardingVisual),time,reducedMotion,entranceProgress});
+        // A shorter card is not a tiny thumbnail. Keep the complete product
+        // finish on phone-width discovery cards, without premature port labels.
+        const compact=rect.width<140,hidePortLabels=canvas.dataset.compact==='true';
+        const metadata=visual.draw(canvas,{type:canvas.dataset.type,selectedPort:Number(canvas.dataset.port)||null,enabledPorts:active().map(output=>output.port),compact,hidePortLabels,identifying:identifying.has(canvas.dataset.onboardingVisual),time,reducedMotion,entranceProgress});
+        canvas.dataset.detailLevel=compact?'thumbnail':'full';
         canvas.dataset.entranceKey=key;canvas.dataset.entranceProgress=entranceProgress.toFixed(3);
         canvas.dataset.activePorts=metadata.activePorts.join(',');canvas.dataset.portLabelsVisible=String(metadata.portLabelsVisible===true);
       });
