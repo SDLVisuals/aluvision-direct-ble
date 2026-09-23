@@ -17,7 +17,7 @@
   const pinRequired=window.AluvisionSecurityMode?.pinRequired!==false;
   const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const button=(action,label,extra='')=>`<button type="button" class="${extra.includes('class="button secondary"')?'button secondary':'button'}" data-onboarding-action="${action}" ${extra.replace('class="button secondary"','')}>${label}</button>`;
-  const labels={stand:'Je stand',zones:'Zones maken',receiver:'Receiver zoeken',outputs:'Kies je uitgangen',pixels:'Stel je lengte in',connection:'Kies het beginpunt',pin:'Kies je installatie-PIN',security:pinRequired?'Verbinding bevestigen':'Receiver verbinden',zone:'Kies de zone',review:'Klaar om toe te voegen',done:'Je receiver is klaar'};
+  const labels={stand:'Je stand',zones:'Zones maken',receiver:'Receiver zoeken',outputs:'Kies je uitgangen',pixels:'Stel je lengte in',connection:'Kies de aansluiting',pin:'Kies je installatie-PIN',security:pinRequired?'Verbinding bevestigen':'Receiver verbinden',zone:'Kies de zone',review:'Klaar om toe te voegen',done:'Je receiver is klaar'};
   const phaseLabels={configuring:'Instellingen bewaren',claiming:'Receiver beveiligen',reconnecting:'Opnieuw met wifi verbinden',verifying:'Verbinding controleren',resuming:'Beveiliging controleren'};
   const unavailable='Er is nog geen verbindingsdienst beschikbaar. Je keuzes blijven bewaard.';
   const clone=value=>JSON.parse(JSON.stringify(value));

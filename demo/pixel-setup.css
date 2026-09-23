@@ -108,8 +108,8 @@
 .pixel-count-preview .pixel-setup-strip i{max-width:12px;background:#d2d9ce;box-shadow:none;animation:none}
 .pixel-count-more{color:#aeb7ac;font-size:19px;line-height:10px;letter-spacing:1px}
 .pixel-setup-visual.pixel-count-preview .pixel-preview-notice{position:static;padding:0;color:#aeb7ac;text-align:left}
-/* Start 1 is the fixed reading reference. Mirror the entire physical line for
-   a free-end start, including the cable icon and its green connection marker. */
+/* Left/right stay fixed in the installed view. The chosen incoming cable and
+   its connection marker move together; no logical-start choice is exposed. */
 .pixel-setup-visual.pixel-connection-preview{height:auto;min-height:122px;display:grid;gap:12px;padding:12px;flex-direction:column}
 .pixel-connection-preview .pixel-setup-reference{padding:0;color:#f0f3ed;font-size:11px;gap:5px}
 .pixel-connection-preview .pixel-setup-reference>span{min-width:49px}.pixel-connection-preview .pixel-setup-reference>span:last-child{justify-content:flex-end}
@@ -121,12 +121,14 @@
 .pixel-connection-preview .pixel-setup-strip i{box-shadow:none;background:#8c988d}.pixel-connection-preview .pixel-setup-strip .start{background:#58d996;box-shadow:0 0 6px #58d99655}
 .pixel-connection-preview .pixel-setup-endpoint-labels{color:#bdc8bc;font-size:10px;margin:0}
 .pixel-setup-endpoint-labels .pixel-cable-label{display:flex;align-items:center;gap:5px}.pixel-setup-endpoint-labels i{width:6px;height:6px;border-radius:50%;background:#58d996}
-.pixel-start-choice{display:flex;align-items:center;justify-content:center;gap:7px;min-width:64px}
-.pixel-start-choice svg{width:28px;height:24px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;color:var(--muted,#666)}
-.pixel-setup-sides [data-side=right] .pixel-start-choice svg{transform:scaleX(-1)}
-.pixel-start-choice b{display:grid;place-items:center;width:25px;height:25px;border-radius:8px;background:var(--soft,#eee);font-size:13px}
-.pixel-start-choice i{font-size:23px;font-style:normal;font-weight:400;color:var(--muted,#666)}
-.pixel-setup-sides [aria-pressed=true] .pixel-start-choice b{background:var(--red,#bd4842);color:white}
+.pixel-feed-choice{display:flex;align-items:center;justify-content:center;gap:0;min-width:74px;height:26px;color:var(--muted,#666)}
+.pixel-feed-choice svg{width:30px;height:24px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
+.pixel-setup-sides [data-side=right] .pixel-feed-choice{flex-direction:row-reverse}
+.pixel-setup-sides [data-side=right] .pixel-feed-choice svg{transform:scaleX(-1)}
+.pixel-feed-mini-line{display:flex;gap:2px;height:9px}.pixel-feed-mini-line i{width:8px;background:currentColor;border-radius:2px;opacity:.55}
+.pixel-setup-sides [aria-pressed=true] .pixel-feed-choice{color:var(--red,#bd4842)}
+/* The modal asks the question in its header; onboarding asks it in the card. */
+.pixel-setup-dialog [data-pixel-panel=connection]>h2{display:none}
 /* Keep the physical port and the per-port task together in both setup routes. */
 .pixel-port-context{display:grid;grid-template-columns:100px minmax(0,1fr);gap:10px;align-items:center;min-width:0;margin:0;padding:9px;background:var(--panel,#fff);border:1px solid var(--line,#ddd);border-radius:17px}
 .pixel-port-context canvas{display:block;width:100%;height:102px;background:#f4f5f1;border-radius:10px}
@@ -142,9 +144,8 @@
 @media(max-width:350px) and (max-height:650px){
   .pixel-setup-body .pixel-port-context{padding:6px;gap:7px;grid-template-columns:79px minmax(0,1fr)}
   .pixel-setup-body .pixel-port-context canvas{height:86px}.pixel-setup-body .pixel-port-context p{margin:3px 0 5px}
-  .pixel-setup-body .pixel-port-context+[data-pixel-panel=connection]>h2,.pixel-setup-body .pixel-port-context+[data-pixel-panel=connection]>p{display:none}
+  .pixel-setup-body .pixel-port-context+[data-pixel-panel=connection]>p{display:none}
   .pixel-setup-panel[data-pixel-panel=connection]{gap:7px}
   .pixel-setup-visual.pixel-connection-preview{min-height:91px;gap:8px;padding:10px}
   .pixel-setup-panel[data-pixel-panel=connection] .pixel-setup-sides button{min-height:66px;gap:4px;padding:7px 5px}
-  .pixel-setup-panel[data-pixel-panel=connection] .pixel-start-choice b{height:22px;width:22px}
 }
