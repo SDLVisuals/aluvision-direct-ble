@@ -40,13 +40,14 @@
     const active=outputs.filter(item=>item.enabled).map(item=>`P${item.port}`),summary=active.length?`${active.join(' + ')} aan · ${active.length} van 4 uitgangen`:'Alle uitgangen uit';
     return `<div class="pixel-output-picker"><canvas data-pixel-outputs-visual role="img" aria-label="SPI-receiver · ${summary}" width="400" height="200"></canvas><div class="pixel-setup-outputs" role="group" aria-label="Uitgangen aan of uit">${outputs.map(item=>`<button type="button" ${attr}="output" data-port="${item.port}" role="switch" aria-checked="${item.enabled}" aria-label="Uitgang ${item.port}" ${item.port===initialPort?'data-requested-port="true"':''}><b>P${item.port}</b><span>${item.enabled?'Aan':'Uit'}</span><i class="pixel-setup-switch" aria-hidden="true"><i></i></i></button>`).join('')}</div><p class="pixel-output-summary">${summary}</p><small class="pixel-preview-notice">Voorbeeld · geen testlicht</small></div>`;
   }
-  function paintOutputs(container,outputs,{time=0,reducedMotion=false,entranceProgress=1,visual=globalThis.LightningReceiverVisual}={}){
+  function paintOutputs(container,outputs,{time=0,reducedMotion=false,entranceProgress=1,selectedPort=null,plugProgress={},visual=globalThis.LightningReceiverVisual}={}){
     if(!container||container.ownerDocument?.hidden||typeof visual?.draw!=='function')return;
     container.querySelectorAll('[data-pixel-outputs-visual]').forEach(canvas=>{
       const rect=canvas.getBoundingClientRect(),body=canvas.closest('.pixel-setup-body')?.getBoundingClientRect();
       if(!rect.width||!rect.height||rect.bottom<0||rect.top>innerHeight||body&&(rect.bottom<body.top||rect.top>body.bottom))return;
-      const metadata=visual.draw(canvas,{type:'SPI',enabledPorts:outputs.filter(item=>item.enabled).map(item=>item.port),selectedPort:null,compact:false,time,reducedMotion,entranceProgress});
+      const metadata=visual.draw(canvas,{type:'SPI',enabledPorts:outputs.filter(item=>item.enabled).map(item=>item.port),selectedPort,plugProgress,compact:false,time,reducedMotion,entranceProgress});
       canvas.dataset.activePorts=metadata.activePorts.join(',');canvas.dataset.portLabelsVisible=String(metadata.portLabelsVisible===true);
+      canvas.dataset.selectedPort=String(metadata.selectedPort||'');canvas.dataset.plugProgress=JSON.stringify(plugProgress);
     });
   }
   function renderPixels(output,{inputId='pixel-setup-number',onboarding=false,pixelsPerMeter=DEFAULT_PIXELS_PER_METER}={}){
@@ -72,10 +73,11 @@
   function create({onSave,onClose=()=>{},mode='preview',pixelsPerMeter=DEFAULT_PIXELS_PER_METER}={}){
     if(typeof onSave!=='function')throw Error('PIXEL_SAVE_HANDLER_REQUIRED');
     const limits=pixelLimits({pixelsPerMeter});
-    let dialog=null,receiver=null,outputs=[],index=0,busy=false,error='',focusBefore=null,initialPort=null;
+    let dialog=null,receiver=null,outputs=[],index=0,busy=false,error='',focusBefore=null,initialPort=null,selectedPort=null;
+    const plugMotion=globalThis.LightningReceiverVisual.createPlugMotion();
     const plan=()=>sequence(outputs),current=()=>plan()[index],output=()=>outputs.find(item=>item.port===current().port);
-    function paint(time){if(dialog?.open&&current().stage==='outputs')paintOutputs(dialog,outputs,{time,reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches});}
-    function close(){if(!dialog||busy)return;dialog.close();dialog.remove();dialog=null;focusBefore?.focus?.({preventScroll:true});onClose();}
+    function paint(time){if(dialog?.open&&current().stage==='outputs'){const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;paintOutputs(dialog,outputs,{time,reducedMotion,selectedPort,plugProgress:plugMotion.sample(time,reducedMotion)});}}
+    function close(){if(!dialog||busy)return;dialog.close();dialog.remove();dialog=null;plugMotion.clear();focusBefore?.focus?.({preventScroll:true});onClose();}
     function render(top=false){
       if(!dialog)return;const previousScroll=dialog.querySelector('.pixel-setup-body')?.scrollTop||0,step=current(),ports=outputs.filter(item=>item.enabled),active=output();
       const focusedPort=dialog.contains(document.activeElement)&&document.activeElement.dataset.pixelAction==='output'?document.activeElement.dataset.port:null;
@@ -94,7 +96,7 @@
       const target=event.target.closest('[data-pixel-action]');if(!target||target.disabled||busy)return;
       const action=target.dataset.pixelAction,step=current();
       if(action==='close')return close();
-      if(action==='output'){const item=outputs.find(item=>item.port===Number(target.dataset.port));if(item.enabled&&outputs.filter(item=>item.enabled).length===1){error='Gebruik minstens één uitgang.';render();return;}item.enabled=!item.enabled;error='';return render();}
+      if(action==='output'){const item=outputs.find(item=>item.port===Number(target.dataset.port));if(item.enabled&&outputs.filter(item=>item.enabled).length===1){error='Gebruik minstens één uitgang.';render();return;}item.enabled=!item.enabled;selectedPort=item.port;plugMotion.trigger(item.port,performance.now()/1000,item.enabled);error='';return render();}
       if(['pixel-less','pixel-more','meter-less','meter-more'].includes(action))return adjust(stepPixels(output().pixels,(action.endsWith('less')?-1:1)*(action.startsWith('meter')?Math.round(limits.pixelsPerMeter):1),limits));
       if(action==='side'){output().reversed=target.dataset.side==='right';error='';return render();}
       if(action==='next'){if(!outputs.some(item=>item.enabled)){error='Gebruik minstens één uitgang.';return render();}if(step.stage==='pixels'&&!validateInput(dialog,dialog.querySelector('[data-pixel-count]').value))return;index++;error='';return render(true);}
@@ -102,7 +104,7 @@
       if(action==='save'){if(mode!=='preview'||!outputs.some(item=>item.enabled)||outputs.some(item=>item.enabled&&!editablePixels(item.pixels,limits)))return;busy=true;error='';render();try{await onSave({receiverId:receiver.id,outputs:copy(outputs)});busy=false;close();}catch(failure){busy=false;error=typeof failure?.message==='string'?failure.message:'Bewaren is nog niet gelukt. Je keuzes blijven staan.';render();}}
     }
     function open(value,{initialPort:port}={}){
-      if(dialog)throw Error('PIXEL_SETUP_ALREADY_OPEN');outputs=outputsOf(value);receiver={id:value.id,name:value.name};initialPort=Number.isInteger(port)&&port>=1&&port<=4?port:null;index=0;error='';busy=false;focusBefore=document.activeElement;
+      if(dialog)throw Error('PIXEL_SETUP_ALREADY_OPEN');outputs=outputsOf(value);receiver={id:value.id,name:value.name};initialPort=Number.isInteger(port)&&port>=1&&port<=4?port:null;selectedPort=null;plugMotion.clear();index=0;error='';busy=false;focusBefore=document.activeElement;
       dialog=document.createElement('dialog');dialog.className='pixel-setup-dialog';dialog.setAttribute('aria-label','Pixels en beginpunt instellen');dialog.addEventListener('click',click);dialog.addEventListener('input',input);dialog.addEventListener('cancel',event=>{event.preventDefault();close();});document.body.append(dialog);render(true);dialog.showModal();paint(performance.now()/1000);
     }
     return Object.freeze({open,close,paint,isOpen:()=>!!dialog});

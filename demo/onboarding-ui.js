@@ -51,7 +51,8 @@
     let identifying=new Map(),identifyPending=new Set(),zoneNameOpen=false,searchAbort=null,resumeSelection=null;
     let standNameInput=null,zoneNameInput='',draftSaving=false,pendingChoices=null,saveFailed=false,origin='stand';
     let zoneExtraNames=[],zoneRemoval=null,zoneRename=null,receiverMove=null,managementBusy=false;
-    const visualEntrances=new Map(),presentedStages=new Set();
+    const visualEntrances=new Map(),presentedStages=new Set(),plugMotion=visual.createPlugMotion();
+    let selectedOutput=null;
     const saveNotice='Je keuzes zijn nog niet bewaard. Probeer opnieuw; je hoeft niets opnieuw in te vullen.';
     const committer=draftApi.createCommitter({verifyFinalReceipt:request=>{
       if(typeof services.verifyFinalReceipt!=='function')throw Error('VERIFIER_UNAVAILABLE');
@@ -143,7 +144,7 @@
         stopAutomaticRejoin();rejoinExhausted=false;rejoinBlocked=false;automaticFinalizing=false;registrationPending=false;returningFromWifi=false;
         standNameInput=null;zoneNameInput='';pendingChoices=null;saveFailed=false;
         zoneExtraNames=[];zoneRemoval=null;zoneRename=null;receiverMove=null;managementBusy=false;
-        visualEntrances.clear();presentedStages.clear();
+        visualEntrances.clear();presentedStages.clear();plugMotion.clear();selectedOutput=null;
       }else if(draft.cancelled)change({type:'RETRY'},{render:false});
     }
     const automaticMain=()=>pinRequired&&!!draft&&draft.role==='main'&&manualWifi();
@@ -196,7 +197,7 @@
       captureNames();container?.querySelectorAll('[data-onboarding-pin]').forEach(input=>{input.value='';});
       if(container){container.removeEventListener('click',click);container.removeEventListener('input',input);container.removeEventListener('keydown',keydown);}
       document.removeEventListener('visibilitychange',visibilityChanged);window.removeEventListener('lightning:native-active',nativeActive);window.removeEventListener('pageshow',pageShown);stopAutomaticRejoin();returningFromWifi=false;
-      container=null;cancelSearch();
+      container=null;cancelSearch();plugMotion.clear();selectedOutput=null;
       for(const id of identifying.keys())stopIdentify(id);
     }
     function reset(){
@@ -433,7 +434,7 @@
         const key=[draft.transactionId,draft.stage,draft.receiver.id].join(':');
         if(!visualEntrances.has(key))visualEntrances.set(key,time);
         const entranceProgress=reducedMotion?1:Math.max(0,Math.min(1,(time-visualEntrances.get(key))/.7));
-        pixelSetup.paintOutputs(container,draft.outputs,{time,reducedMotion,visual,entranceProgress});
+        pixelSetup.paintOutputs(container,draft.outputs,{time,reducedMotion,visual,entranceProgress,selectedPort:selectedOutput,plugProgress:plugMotion.sample(time,reducedMotion)});
         const canvas=container.querySelector('[data-pixel-outputs-visual]');
         if(canvas){canvas.dataset.entranceKey=key;canvas.dataset.entranceProgress=entranceProgress.toFixed(3);}
       }
@@ -794,10 +795,15 @@
           draft=draftApi.snapshot(resumeSelection);resumeSelection=null;notice='Je vorige instellingen staan klaar.';keepDraft();paintPage();return;
         }
         resumeSelection=null;
-        if(change({type:'SELECT_RECEIVER',receiver:candidate},{render:false})){for(const id of identifying.keys())stopIdentify(id);change({type:'NEXT'});if(draft.stage==='security')return secure();}return;
+        if(change({type:'SELECT_RECEIVER',receiver:candidate},{render:false})){plugMotion.clear();selectedOutput=null;for(const id of identifying.keys())stopIdentify(id);change({type:'NEXT'});if(draft.stage==='security')return secure();}return;
       }
       if(action==='count')return change({type:'SET_OUTPUT_COUNT',count:Number(target.dataset.count)});
-      if(action==='output'){const output=draft.outputs.find(o=>o.port===Number(target.dataset.port));if(output)return change({type:'SET_OUTPUT_ENABLED',port:output.port,enabled:!output.enabled},{top:false});return;}
+      if(action==='output'){
+        const output=draft.outputs.find(o=>o.port===Number(target.dataset.port));if(!output)return;
+        const enabled=!output.enabled;
+        if(change({type:'SET_OUTPUT_ENABLED',port:output.port,enabled},{render:false})){selectedOutput=output.port;plugMotion.trigger(output.port,performance.now()/1000,enabled);}
+        return paintPage(false);
+      }
       if(['pixel-less','pixel-more','meter-less','meter-more'].includes(action)){
         const step=action.startsWith('meter')?pixelSetup.pixelLimits().pixelsPerMeter:1;
         return updatePixelCount(pixelSetup.stepPixels(draft.outputs.find(output=>output.port===draft.port).pixels,action.endsWith('less')?-step:step));

@@ -23,7 +23,8 @@
   if(!nativeContext&&(!previewContext||webDemoContext))route={...route,screen:'receiver-add',setupFrom:'stand'};
   const selections = new Map();
   const brandColours = new Map();
-  const visualPorts = new Map(), identifying = new Map(), identifyPending = new Map(), expandedReceivers = new Set();
+  const visualPorts = new Map(), visualPlugMotions=new Map(), identifying = new Map(), identifyPending = new Map(), expandedReceivers = new Set();
+  function receiverPlugMotion(id){if(!visualPlugMotions.has(id))visualPlugMotions.set(id,window.LightningReceiverVisual.createPlugMotion());return visualPlugMotions.get(id);}
   let receiverFilter='all';
   let pixelSetupReceiverId=null;
   let presetStore, colourStore, sceneStore;
@@ -60,7 +61,7 @@
   }
   const receiverUpdates=window.LightningReceiverUpdateUI.create({services:runtime?.native===true?runtime.services||{}:{}});
   const receiverRemoval=window.LightningReceiverRemovalUI.create({services:runtime?.native===true?runtime.services||{}:{},getModel:()=>model,
-    onRemoved:nextModel=>{model=M.assertValid(nextModel);selections.clear();visualPorts.clear();identifying.clear();navigate('receivers');}});
+    onRemoved:nextModel=>{model=M.assertValid(nextModel);selections.clear();visualPorts.clear();visualPlugMotions.clear();identifying.clear();navigate('receivers');}});
   const pixelSetup=window.LightningPixelSetup.create({mode:previewContext?'preview':'native-unavailable',
     onClose:()=>{document.querySelector(`[data-action="receiver-pixel-setup"][data-id="${CSS.escape(pixelSetupReceiverId||'')}"]`)?.focus({preventScroll:true});pixelSetupReceiverId=null;},
     onSave:({receiverId,outputs})=>{
@@ -553,6 +554,7 @@
     same.focus({preventScroll:true});return true;
   }
   function navigate(screen, extra={}) {
+    if(screen!==route.screen)visualPlugMotions.clear();
     if(!pinRequired&&screen==='pin-login')screen='settings';
     if(screen==='receiver-add'&&route.screen!=='receiver-add')extra={setupFrom:!stand()||!standReceivers().some(receiver=>receiver.role==='main')||route.screen!=='receivers'?'stand':'receivers',...extra};
     if(route.screen==='receiver-add')onboarding.suspend();route = {...route,screen,...extra}; render({top:true});
@@ -739,10 +741,14 @@
       const rect=canvas.getBoundingClientRect();if(!rect.width||!rect.height||rect.bottom<0||rect.top>innerHeight)return;
       const r=model.receivers.find(r=>r.id===canvas.dataset.productReceiver);if(!r)return;
       const blink=identifying.get(r.id);
-      const metadata=window.LightningReceiverVisual.draw(canvas,{type:r.type,selectedPort:visualPorts.get(r.id)||1,enabledPorts:r.outputs.filter(p=>p.enabled).map(p=>p.port),compact:canvas.dataset.compact==='true',identifying:!!blink,identifyingPorts:blink?.ports||[],time:blink?time-blink.startedAt:time,reducedMotion:reduce});
+      // Connector motion uses the shared monotonic clock, independently of a
+      // blink session. Neither selecting nor animating a connector edits output state.
+      const plugProgress=visualPlugMotions.get(r.id)?.sample(time,reduce)||{};
+      const metadata=window.LightningReceiverVisual.draw(canvas,{type:r.type,selectedPort:visualPorts.get(r.id)||1,enabledPorts:r.outputs.filter(p=>p.enabled).map(p=>p.port),plugProgress,compact:canvas.dataset.compact==='true',identifying:!!blink,identifyingPorts:blink?.ports||[],time:blink?time-blink.startedAt:time,reducedMotion:reduce});
       canvas.dataset.activePorts=metadata.activePorts.join(',');canvas.dataset.highlightedPorts=(metadata.highlightedPorts||[]).join(',');canvas.dataset.selectedPort=String(metadata.selectedPort||'');
       canvas.dataset.identifyingPorts=(metadata.identifyingPorts||[]).join(',');canvas.dataset.identifying=String(!!blink);
       canvas.dataset.portLabelsVisible=String(metadata.portLabelsVisible===true);
+      canvas.dataset.plugProgress=JSON.stringify(plugProgress);
     });
   }
   function syncIdentifyControls(receiverId){
@@ -1074,7 +1080,7 @@
           if(nativeContext){window.location.reload();return;}
           onboarding.reset();model=M.assertValid(runtime?.emptyModel?.()||{schemaVersion:30,demo:webDemoContext,stands:[],receivers:[],scenes:[],presets:[]});
           savedPresets=presetStore.load();savedColours=colourStore.load();savedScenes=sceneStore.load();uiPreferences=preferenceStore.load();
-          selections.clear();brandColours.clear();visualPorts.clear();identifying.clear();expandedReceivers.clear();
+          selections.clear();brandColours.clear();visualPorts.clear();visualPlugMotions.clear();identifying.clear();expandedReceivers.clear();
           sceneDraft=null;receiverFilter='all';route={screen:'receiver-add',setupFrom:'stand',zoneId:null,family:null,library:'all'};
           closeEffectDialog();render({top:true});return;
         }catch(failure){
@@ -1227,6 +1233,7 @@
         const rid=button.dataset.receiver,r=model.receivers.find(r=>r.id===rid);if(r?.type!=='SPI')return;
         event.preventDefault();const scroll=window.scrollY;
         visualPorts.set(rid,Number(id));
+        const motion=receiverPlugMotion(rid);motion.clear();motion.trigger(Number(id),performance.now()/1000,true);
         const details=button.closest('details');details.querySelectorAll('[data-action="visual-port"]').forEach(el=>el.setAttribute('aria-pressed',el===button));
         details.querySelectorAll('[data-port-row]').forEach(el=>el.classList.toggle('port-focused',Number(el.dataset.portRow)===Number(id)));
         details.querySelector('.receiver-product-caption strong').textContent=`Uitgang ${id} geselecteerd`;
@@ -1238,6 +1245,7 @@
         if(output.enabled&&receiver.outputs.filter(o=>o.enabled).length===1)return toast('Gebruik minstens één uitgang.');
         if(!output.enabled&&!window.LightningPixelSetup.editablePixels(output.pixels))return toast('Stel eerst de lengte in via Pixels / beginpunt instellen. Maximaal 6,3 meter per strip.');
         const next=copy(model);next.receivers.find(r=>r.id===receiver.id).outputs.find(o=>o.port===port).enabled=!output.enabled;
+        receiverPlugMotion(receiver.id).trigger(port,performance.now()/1000,!output.enabled);
         model=M.assertValid(next);
         const blink=identifying.get(receiver.id),enabled=model.receivers.find(r=>r.id===receiver.id).outputs.filter(o=>o.enabled).map(o=>o.port);
         if(blink){blink.ports=blink.scope==='all'?enabled:blink.ports.filter(p=>enabled.includes(p));if(!blink.ports.length)identifying.delete(receiver.id);}
@@ -1352,6 +1360,7 @@
   document.addEventListener('toggle',event=>{
     const details=event.target;if(!details.matches?.('[data-receiver-detail]')||!details.isConnected)return;
     details.open?expandedReceivers.add(details.dataset.receiverDetail):expandedReceivers.delete(details.dataset.receiverDetail);
+    if(!details.open)visualPlugMotions.delete(details.dataset.receiverDetail);
   },true);
   window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'30.0.0-phase22-zone-setup',hardwareEnabled:false});
   async function loadNativeState(){
