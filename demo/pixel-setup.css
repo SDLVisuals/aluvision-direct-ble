@@ -116,16 +116,20 @@
 .pixel-connection-preview .pixel-setup-reference>i{color:#f0f3ed;animation:none!important;transform:none;will-change:auto}
 .pixel-cable-line{display:flex;align-items:center;gap:0;min-width:0}
 .pixel-connection-preview[data-side=right] .pixel-cable-line{transform:scaleX(-1)}
-.pixel-cable-source{display:block;width:38px;flex:none}.pixel-cable-source svg{display:block;width:38px;height:24px;fill:none;stroke:#91a697;stroke-width:1.4;stroke-linecap:round}
-.pixel-connection-preview .pixel-setup-track::before{display:none}.pixel-connection-preview .pixel-setup-track .pixel-setup-strip{width:100%;flex-direction:row}
-.pixel-connection-preview .pixel-setup-strip i{box-shadow:none;background:#8c988d}.pixel-connection-preview .pixel-setup-strip .start{background:#58d996;box-shadow:0 0 6px #58d99655}
+.pixel-cable-source{display:block;width:62px;flex:none}.pixel-cable-source svg{display:block;width:62px;height:32px;fill:none;stroke:#bec9bc;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
+.pixel-cable-source .pixel-lead-wire{stroke:#e5e5db;stroke-width:3.5}.pixel-cable-source .pixel-lead-plug{fill:#e5e5db;stroke:#aab5a8}
+.pixel-connection-preview .pixel-setup-track{height:30px}.pixel-connection-preview .pixel-setup-track::before{display:none}
+.pixel-connection-preview .pixel-setup-track .pixel-setup-strip{position:relative;width:100%;height:30px;flex-direction:row;background:linear-gradient(#cdd1c7 0 3px,#f9f8ed 4px,#edeee4 14px,#faf9f0 24px,#bfc7bb 27px,#e0e3d9);border:1px solid #afb9ac;border-radius:3px;box-shadow:0 3px 6px #0004,inset 3px 0 #dce1d5,inset -3px 0 #dce1d5}
+.pixel-ledline-profile::before,.pixel-ledline-profile::after{content:'';position:absolute;left:4px;right:4px;height:1px;background:#b9c1b3a8}
+.pixel-ledline-profile::before{top:3px}.pixel-ledline-profile::after{bottom:3px}
+.pixel-connection-preview .pixel-setup-strip .start{position:absolute;left:-1px;top:10px;width:4px;height:8px;flex:none;border-radius:2px;background:#58d996;box-shadow:0 0 6px #58d99655}
 .pixel-connection-preview .pixel-setup-endpoint-labels{color:#bdc8bc;font-size:10px;margin:0}
 .pixel-setup-endpoint-labels .pixel-cable-label{display:flex;align-items:center;gap:5px}.pixel-setup-endpoint-labels i{width:6px;height:6px;border-radius:50%;background:#58d996}
-.pixel-feed-choice{display:flex;align-items:center;justify-content:center;gap:0;min-width:74px;height:26px;color:var(--muted,#666)}
-.pixel-feed-choice svg{width:30px;height:24px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
+.pixel-feed-choice{display:flex;align-items:center;justify-content:center;gap:0;min-width:86px;height:26px;color:var(--muted,#666)}
+.pixel-feed-choice svg{width:40px;height:24px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}.pixel-feed-choice .pixel-lead-wire{stroke-width:2.5}
 .pixel-setup-sides [data-side=right] .pixel-feed-choice{flex-direction:row-reverse}
 .pixel-setup-sides [data-side=right] .pixel-feed-choice svg{transform:scaleX(-1)}
-.pixel-feed-mini-line{display:flex;gap:2px;height:9px}.pixel-feed-mini-line i{width:8px;background:currentColor;border-radius:2px;opacity:.55}
+.pixel-feed-mini-line{display:block;width:42px;height:15px;border:1px solid currentColor;border-radius:2px;background:linear-gradient(#cfd3c9 0 2px,#f5f4eb 3px,#faf9f0 10px,#cfd3c9 12px,#e0e3d9);box-shadow:inset 2px 0 #e0e3d9,inset -2px 0 #e0e3d9}
 .pixel-setup-sides [aria-pressed=true] .pixel-feed-choice{color:var(--red,#bd4842)}
 /* The modal asks the question in its header; onboarding asks it in the card. */
 .pixel-setup-dialog [data-pixel-panel=connection]>h2{display:none}

@@ -18,7 +18,9 @@
   function stepPixels(value,delta,options){const limits=pixelLimits(options);if(!validPixels(value)||!Number.isInteger(delta))throw Error('PIXEL_STEP_INVALID');return Math.max(limits.min,Math.min(limits.max,value+delta));}
   function meterLabel(value,options){const limits=pixelLimits(options);return `≈ ${(value/limits.pixelsPerMeter).toLocaleString('nl-BE',{maximumFractionDigits:2,minimumFractionDigits:2})} m`;}
   const endpointLabel=output=>output.reversed?'Stroom komt rechts binnen':'Stroom komt links binnen';
-  const cableIcon='<svg viewBox="0 0 38 24" aria-hidden="true"><rect x="1" y="3" width="23" height="18" rx="5"/><path d="M8 7h8M24 12h13"/></svg>';
+  // The supplied LED-line uses a round plug and a flexible lead into the end
+  // of a broad diffuser profile, not a receiver box attached to exposed LEDs.
+  const cableIcon='<svg viewBox="0 0 64 32" aria-hidden="true"><path class="pixel-lead-wire" d="M25 15C35 15 35 27 46 27S57 17 64 17"/><path class="pixel-lead-plug" d="M4 7H18L24 10V20L18 23H4Z"/><path d="M5 8V22M9 8V22M13 8V22M17 8V22M24 12H28V18H24"/></svg>';
   function outputsOf(receiver){
     if(!receiver||receiver.type!=='SPI'||typeof receiver.id!=='string'||!Array.isArray(receiver.outputs)||receiver.outputs.length!==4)throw Error('SPI_RECEIVER_REQUIRED');
     const outputs=receiver.outputs.map(output=>({port:output.port,enabled:output.enabled,pixels:output.pixels,reversed:output.reversed})).sort((a,b)=>a.port-b.port);
@@ -42,7 +44,7 @@
     // Right-side input reverses physical pixel order once; it is not a separate
     // animation-direction choice. Keep the cable and its marker together.
     const cableLabel='<span class="pixel-cable-label"><i></i>Stroom in</span>',otherEnd='<span></span>';
-    return `<div class="pixel-setup-visual pixel-connection-preview" data-pixel-visual="connection" data-side="${reversed?'right':'left'}" data-preview-pixels="${output.pixels}" role="img" aria-label="${endpointLabel(output)}. De groene aansluiting is altijd bij de kabel. Schematisch, geen fysieke lichttest."><div class="pixel-setup-reference" aria-hidden="true"><span>Links</span><span>Rechts</span></div><div class="pixel-cable-line"><span class="pixel-cable-source" aria-hidden="true">${cableIcon}</span><span class="pixel-setup-track"><span class="pixel-setup-strip">${Array.from({length:count},(_,i)=>`<i${i===0?' class="start"':''}></i>`).join('')}</span></span></div><div class="pixel-setup-endpoint-labels">${reversed?otherEnd+cableLabel:cableLabel+otherEnd}</div></div>`;
+    return `<div class="pixel-setup-visual pixel-connection-preview" data-pixel-visual="connection" data-side="${reversed?'right':'left'}" data-preview-pixels="${output.pixels}" data-ledline-reference="supplied-spi-profile" role="img" aria-label="${endpointLabel(output)}. LED-line met breed profiel, diffuser en aansluitkabel. De groene aansluiting is altijd bij de kabel. Schematisch, geen fysieke lichttest."><div class="pixel-setup-reference" aria-hidden="true"><span>Links</span><span>Rechts</span></div><div class="pixel-cable-line"><span class="pixel-cable-source" aria-hidden="true">${cableIcon}</span><span class="pixel-setup-track"><span class="pixel-setup-strip pixel-ledline-profile"><i class="start"></i></span></span></div><div class="pixel-setup-endpoint-labels">${reversed?otherEnd+cableLabel:cableLabel+otherEnd}</div></div>`;
   }
   function renderOutputs(outputs,{onboarding=false,initialPort=null}={}){
     const attr=onboarding?'data-onboarding-action':'data-pixel-action';
@@ -65,7 +67,7 @@
   }
   function renderSide(output,{onboarding=false}={}){
     const attr=onboarding?'data-onboarding-action':'data-pixel-action';
-    const choice=`${cableIcon}<span class="pixel-feed-mini-line"><i></i><i></i><i></i><i></i></span>`;
+    const choice=`${cableIcon}<span class="pixel-feed-mini-line"></span>`;
     return `<section class="pixel-setup-panel" data-pixel-panel="connection"><h2>Aan welke kant komt de stroom binnen?</h2><p>Kijk waar de kabel van deze receiver je LED-line ingaat.</p><small class="pixel-preview-notice">Voorbeeld · geen testlicht</small>${strip(output,'connection')}<div class="pixel-setup-sides" role="group" aria-label="Kant waar de stroom binnenkomt"><button type="button" ${attr}="side" data-side="left" aria-pressed="${!output.reversed}"><span class="pixel-feed-choice" aria-hidden="true">${choice}</span><span>Links</span></button><button type="button" ${attr}="side" data-side="right" aria-pressed="${output.reversed}"><span class="pixel-feed-choice" aria-hidden="true">${choice}</span><span>Rechts</span></button></div><details class="pixel-setup-more"><summary>Waarom dit kiezen?</summary><p>Bekijk de LED-line zoals ze in je opstelling ligt. Kies de kant waar de kabel van deze receiver binnenkomt. Zo houdt de app rekening met de aansluiting wanneer lijnen samen bewegen. Je hoeft niets om te steken. Groen toont alleen de aansluiting in het voorbeeld, geen testlicht. De animatierichting kies je later.</p></details></section>`;
   }
   function updatePixels(container,output,{source,pixelsPerMeter}={}){

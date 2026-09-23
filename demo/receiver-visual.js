@@ -158,12 +158,25 @@
       // plug is closed at the cable end, never an open socket pierced by wire.
       result.rings.push({id:'spi-port-'+port,hidden:true,identifying:identified,active:highlighted,center:[x,1,14],radius:5.2});
       const lineX=x*1.10;
-      const cablePoints=curve([x,24,14],[x,44,7],[lineX,57,3],[lineX,86,3]);
+      const cablePoints=curve([x,24,14],[x-4,48,7],[lineX-3,65,3],[lineX,86,3]);
       cable(result,'spi-cable-'+port,cablePoints,3.4,active,'#DDE0D7');
       result.cables[result.cables.length-1].identifying=identified;
       result.cables[result.cables.length-1].plugPort=port;
-      result.strips.push({port,active,identifying:identified,points:outline(lineX-4,86,8,73,2).map(([a,b])=>[a,b,2])});
-      const pixels=Array.from({length:10},(_,i)=>({point:[lineX-2.5,91+i*6.5,2.25],active,identifying:identified,port,index:i}));
+      // Supplied LED-line photo: a broad profile with a continuous diffuser,
+      // narrow raised side rails and one flexible incoming lead at the end.
+      // This is a schematic product shape, not a claim of measured dimensions.
+      box(result,'spi-ledline-profile-'+port,lineX-9,86,0,18,104,6,'#E1E2DC',1.4);
+      box(result,'spi-ledline-diffuser-'+port,lineX-6,89,6,12,98,.7,'#FAF9F1',1.1);
+      box(result,'spi-ledline-entry-'+port,lineX-9,86,0,18,3.3,6.6,'#F0F0E9',1.3);
+      box(result,'spi-ledline-end-'+port,lineX-9,186.7,0,18,3.3,6.6,'#E9EAE3',1.3);
+      result.strips.push({port,active,identifying:identified,diffused:true,points:outline(lineX-6,89,12,98,1.1).map(([a,b])=>[a,b,6.7])});
+      if(!options.compact){
+        result.seams.push([[lineX-6.6,89,6.7],[lineX-6.6,186,6.7]],[[lineX+6.6,89,6.7],[lineX+6.6,186,6.7]]);
+        for(const railX of [lineX-8,lineX+8])result.details.push({points:[[railX,90,6.1],[railX,186,6.1]],color:'#FFFFFF',width:.65});
+      }
+      // Ten soft illumination samples sit under the diffuser. They are not
+      // separate exposed LED blocks or the customer's configured pixel count.
+      const pixels=Array.from({length:10},(_,i)=>({point:[lineX-5,91+i*9.5,6.8],width:10,height:9.5,diffused:true,active,identifying:identified,port,index:i}));
       result.pixels.push(...pixels);
       if(!options.compact&&!options.hidePortLabels)result.labels.push({text:String(port),point:[x,66,3],size:11,color:highlighted?RED:'#596159',port,active:highlighted});
     }
@@ -172,9 +185,9 @@
     result.indicators.push({id:'receiver-status',point:[52,-46,31],radius:2.5,active:identifyingPorts.length>0});
     result.metadata={type:'SPI',logicalOutputs:4,physicalConnectors:4,selectedPort:selected,activePorts,highlightedPorts,
       enabledPorts:[...enabled].sort((a,b)=>a-b),identifyingPorts,identifying:identifyingPorts.length>0,portLabelsVisible:!options.compact&&!options.hidePortLabels,
-      reference:'indicative-spi-model',physicalPositionsConfirmed:false,
+      reference:'indicative-spi-model',ledlineReference:'supplied-spi-profile',physicalPositionsConfirmed:false,
       label:selected?`SPI-receiver · uitgang ${selected}`:'SPI-receiver · vier uitgangen',
-      description:'Ontwerpvoorstel · vier afzonderlijke SPI-uitgangen.'};
+      description:'Ontwerpvoorstel · vier afzonderlijke SPI-uitgangen met LED-profiel naar je foto.'};
   }
   function scene(options={}){
     const type=String(options.type||'RGBW').toUpperCase();
@@ -305,7 +318,8 @@
       const traveling=options.reducedMotion?1:.24+.76*Math.pow(.5+.5*Math.cos((pixel.index/10-time*.32)*Math.PI*2),1.5);
       ctx.save();ctx.transform(px[0]-p[0],px[1]-p[1],py[0]-p[0],py[1]-p[1],p[0],p[1]);
       ctx.fillStyle=pixel.active?(pixel.identifying?identificationColor:`rgba(201,78,70,${Math.max(.4,traveling*pulse)})`):'#C6CFC7';
-      ctx.shadowColor=pixel.identifying?'#FFFFFF':RED;ctx.shadowBlur=pixel.active?3.5*(pixel.identifying?identifyLevel:traveling):0;ctx.fillRect(0,0,5,4.3);ctx.restore();
+      if(pixel.diffused)ctx.globalAlpha=pixel.active?.68:.12;
+      ctx.shadowColor=pixel.identifying?'#FFFFFF':RED;ctx.shadowBlur=pixel.active?(pixel.diffused?5:3.5)*(pixel.identifying?identifyLevel:traveling):0;ctx.fillRect(0,0,pixel.width||5,(pixel.height||4.3)+(pixel.diffused?.2:0));ctx.restore();
     }
     for(const indicator of model.indicators){const p=project(indicator.point);ctx.beginPath();ctx.arc(p[0],p[1],Math.max(1,indicator.radius*scale),0,Math.PI*2);ctx.fillStyle='#D1DACB';ctx.fill();ctx.beginPath();ctx.arc(p[0],p[1],Math.max(.7,indicator.radius*.62*scale),0,Math.PI*2);ctx.fillStyle=indicator.active?identificationColor:'#7E9B82';ctx.fill();}
     if(!options.compact)for(const screw of model.screws){
@@ -328,5 +342,5 @@
     return {...model.metadata,plugProgress,projectedBounds:{width,height},motionReduced:Boolean(options.reducedMotion),entranceProgress:entrance,
       identificationLevel:model.metadata.identifying?identifyLevel:0};
   }
-  return Object.freeze({scene,draw,createPlugMotion,version:'30-receiver-visual-7',isLocalPreview:true});
+  return Object.freeze({scene,draw,createPlugMotion,version:'30-receiver-visual-8',isLocalPreview:true});
 }));
