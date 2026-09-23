@@ -108,19 +108,22 @@
 .pixel-count-preview .pixel-setup-strip i{max-width:12px;background:#d2d9ce;box-shadow:none;animation:none}
 .pixel-count-more{color:#aeb7ac;font-size:19px;line-height:10px;letter-spacing:1px}
 .pixel-setup-visual.pixel-count-preview .pixel-preview-notice{position:static;padding:0;color:#aeb7ac;text-align:left}
-/* The cable and its green marker never move. Only logical start 1 changes;
-   these choices work without asking the customer for screen left/right. */
+/* Start 1 is the fixed reading reference. Mirror the entire physical line for
+   a free-end start, including the cable icon and its green connection marker. */
 .pixel-setup-visual.pixel-connection-preview{height:auto;min-height:122px;display:grid;gap:12px;padding:12px;flex-direction:column}
 .pixel-connection-preview .pixel-setup-reference{padding:0;color:#f0f3ed;font-size:11px;gap:5px}
 .pixel-connection-preview .pixel-setup-reference>span{min-width:49px}.pixel-connection-preview .pixel-setup-reference>span:last-child{justify-content:flex-end}
 .pixel-connection-preview .pixel-setup-reference>i{color:#f0f3ed;animation:none!important;transform:none;will-change:auto}
 .pixel-cable-line{display:flex;align-items:center;gap:0;min-width:0}
+.pixel-connection-preview[data-side=right] .pixel-cable-line{transform:scaleX(-1)}
 .pixel-cable-source{display:block;width:38px;flex:none}.pixel-cable-source svg{display:block;width:38px;height:24px;fill:none;stroke:#91a697;stroke-width:1.4;stroke-linecap:round}
 .pixel-connection-preview .pixel-setup-track::before{display:none}.pixel-connection-preview .pixel-setup-track .pixel-setup-strip{width:100%;flex-direction:row}
 .pixel-connection-preview .pixel-setup-strip i{box-shadow:none;background:#8c988d}.pixel-connection-preview .pixel-setup-strip .start{background:#58d996;box-shadow:0 0 6px #58d99655}
 .pixel-connection-preview .pixel-setup-endpoint-labels{color:#bdc8bc;font-size:10px;margin:0}
-.pixel-setup-endpoint-labels>span:first-child{display:flex;align-items:center;gap:5px}.pixel-setup-endpoint-labels i{width:6px;height:6px;border-radius:50%;background:#58d996}
-.pixel-start-choice{display:flex;align-items:center;justify-content:center;gap:12px;min-width:64px}
+.pixel-setup-endpoint-labels .pixel-cable-label{display:flex;align-items:center;gap:5px}.pixel-setup-endpoint-labels i{width:6px;height:6px;border-radius:50%;background:#58d996}
+.pixel-start-choice{display:flex;align-items:center;justify-content:center;gap:7px;min-width:64px}
+.pixel-start-choice svg{width:28px;height:24px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;color:var(--muted,#666)}
+.pixel-setup-sides [data-side=right] .pixel-start-choice svg{transform:scaleX(-1)}
 .pixel-start-choice b{display:grid;place-items:center;width:25px;height:25px;border-radius:8px;background:var(--soft,#eee);font-size:13px}
 .pixel-start-choice i{font-size:23px;font-style:normal;font-weight:400;color:var(--muted,#666)}
 .pixel-setup-sides [aria-pressed=true] .pixel-start-choice b{background:var(--red,#bd4842);color:white}
