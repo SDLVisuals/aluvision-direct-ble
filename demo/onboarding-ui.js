@@ -248,7 +248,10 @@
       return `<p class="onboarding-main-context" data-onboarding-search-via="${escape(main?.type||'main')}">Via je hoofdreceiver${main?` · ${escape(main.type)} <b>${escape(main.name)}</b>`:''}</p>`;
     }
     function receiverAction(receiver){
-      return button('receiver',busy?'Controleren…':'Deze receiver instellen',`data-id="${escape(receiver.id)}" ${busy||!(receiver.canConfigure||receiver.canVerifyIdentity)?'disabled':''}`);
+      const zone=draft.zones.find(item=>item.id===draft.activeZoneId);
+      const compatible=zone&&(!zone.type||zone.type===receiver.type);
+      const label=!pinRequired&&receiver.type==='RGBW'?(compatible?`Toevoegen aan ${escape(zone.name)}`:'Zone kiezen en toevoegen'):'Deze receiver instellen';
+      return button('receiver',busy?'Controleren…':label,`data-id="${escape(receiver.id)}" ${busy||!(receiver.canConfigure||receiver.canVerifyIdentity)?'disabled':''}`);
     }
     function receiverSearchView(){
       const single=results.length===1,found=results.length>0;
@@ -280,7 +283,10 @@
       return `${pinNetwork()}<p class="onboarding-task-hint">Eén PIN voor je hele installatie.</p><section class="card onboarding-pin-card"><label class="onboarding-field">PIN · 8–12 cijfers<input id="onboarding-pin" data-onboarding-pin="first" type="password" inputmode="numeric" autocomplete="new-password" minlength="8" maxlength="12" aria-describedby="onboarding-pin-help" spellcheck="false"></label><label class="onboarding-field">Herhaal dezelfde PIN<input id="onboarding-pin-repeat" data-onboarding-pin="repeat" type="password" inputmode="numeric" autocomplete="new-password" minlength="8" maxlength="12" aria-describedby="onboarding-pin-error onboarding-pin-match" spellcheck="false"></label><p id="onboarding-pin-error" class="onboarding-error" role="alert" hidden></p><p id="onboarding-pin-match" class="onboarding-pin-match" role="status" hidden>✓ Beide PINs komen overeen</p><p id="onboarding-pin-help" class="onboarding-hint">Bewaar je PIN: je wifi-wachtwoord en toegang op een ander toestel.</p><p class="onboarding-pin-rejoin-note">Daarna kies je het receiver-wifi opnieuw in Instellingen, met deze PIN.</p></section><details class="onboarding-recovery"><summary>App gewist of PIN vergeten?</summary><p>Bewaar je PIN ook buiten de app. Voor toegang na herinstallatie of op een ander toestel gebruik je dezelfde PIN zodra de hersteloptie beschikbaar is. PIN vergeten? Dan is een ondersteunde fabrieksreset op de receiver nodig.</p></details>${footerPin()}`;
     }
     function reviewCard(){
-      return `<section class="card onboarding-review onboarding-review-product">${product(draft.receiver,{compact:true,port:null})}<dl><div><dt>Receiver</dt><dd>${escape(draft.receiver.name||draft.receiver.type)}</dd></div><div><dt>Zone</dt><dd>${escape(draft.zones.find(zone=>zone.id===draft.zoneId)?.name)}</dd></div><div><dt>Verbinding</dt><dd>${draft.role==='main'?(pinRequired?'Hoofdreceiver · beveiligd':'Hoofdreceiver · open netwerk'):'Via hoofdreceiver'}</dd></div></dl>${draft.receiver.type==='SPI'?`<ul>${active().map(output=>`<li><b>P${output.port}</b><span>${output.pixels} pixels<small>${pixelSetup.endpointLabel(output)}</small></span></li>`).join('')}</ul>`:lightExample('RGBW')}</section><div class="onboarding-actions onboarding-footer">${button('back','← Zone kiezen',busy||finalizationStarted?'disabled':'')}${button('finish',busy?'Toevoegen…':'Receiver toevoegen',busy?'disabled':'')}</div>`;
+      return `<section class="card onboarding-review onboarding-review-product">${product(draft.receiver,{compact:true,port:null})}<dl><div><dt>Receiver</dt><dd>${escape(draft.receiver.name||draft.receiver.type)}</dd></div><div><dt>Zone</dt><dd>${escape(draft.zones.find(zone=>zone.id===draft.zoneId)?.name)}</dd></div><div><dt>Verbinding</dt><dd>${draft.role==='main'?(pinRequired?'Hoofdreceiver · beveiligd':'Hoofdreceiver · open netwerk'):'Via hoofdreceiver'}</dd></div></dl>${draft.receiver.type==='SPI'?`<ul>${active().map(output=>`<li><b>P${output.port}</b><span>${output.pixels} pixels<small>${pixelSetup.endpointLabel(output)}</small></span></li>`).join('')}</ul>`:lightExample('RGBW')}</section><div class="onboarding-actions onboarding-footer">${pinRequired?button('back','← Zone kiezen',busy||finalizationStarted?'disabled':''):''}${button('finish',busy?'Toevoegen…':!pinRequired&&finalizationStarted?'Opnieuw proberen':'Receiver toevoegen',busy?'disabled':'')}</div>`;
+    }
+    function addingPanel(){
+      return `<section class="card onboarding-security" role="status"><span class="onboarding-security-icon">${setupIcon('wifi')}</span><h2>Receiver toevoegen…</h2><p>We controleren de verbinding en bewaren je receiver in ${escape(draft.zones.find(zone=>zone.id===draft.zoneId)?.name)}.</p></section>`;
     }
     function completeCard(){
       const zone=draft.zones.find(zone=>zone.id===draft.zoneId),count=getModel().receivers.filter(receiver=>receiver.zoneId===draft.zoneId&&receiver.lifecycle==='added').length;
@@ -339,8 +345,8 @@
         }
         case 'pin':return pinRequired?pinForm():securityPanel();
         case 'security':return securityPanel();
-        case 'zone':return `<div class="onboarding-zone-list">${zoneChoices()}</div>${zoneNameOpen?`<section class="card">${nameField('onboarding-zone-name','Naam van de nieuwe zone','Bijvoorbeeld: Lichttunnel',zoneNameInput)}${button('zone-create','Zone maken','disabled')}</section>`:button('zone-new','＋ Nieuwe zone','class="button secondary"')}${button('next','Verder naar overzicht',draft.zoneId?'':'disabled')}<small class="onboarding-hint">RGBW en SPI apart. Verplaatsen kan later.</small>`;
-        case 'review':return automaticMain()&&automaticFinalizing?mainWifiReturn():reviewCard();
+        case 'zone':return `${!pinRequired?'<p class="onboarding-task-hint">Kies een passende zone om deze receiver toe te voegen.</p>':''}<div class="onboarding-zone-list">${zoneChoices()}</div>${zoneNameOpen?`<section class="card">${nameField('onboarding-zone-name','Naam van de nieuwe zone','Bijvoorbeeld: Lichttunnel',zoneNameInput)}${button('zone-create','Zone maken','disabled')}</section>`:button('zone-new','＋ Nieuwe zone','class="button secondary"')}${pinRequired?button('next','Verder naar overzicht',draft.zoneId?'':'disabled'):''}<small class="onboarding-hint">RGBW en SPI apart. Verplaatsen kan later.</small>`;
+        case 'review':return automaticMain()&&automaticFinalizing?mainWifiReturn():!pinRequired&&automaticFinalizing&&busy?addingPanel():reviewCard();
         case 'done':return completeCard();
         default:return '';
       }
@@ -529,7 +535,7 @@
       // Erase both visible PIN inputs before the first await. Only this call's
       // short-lived closure passes the credential to the trusted service.
       container?.querySelectorAll('[data-onboarding-pin]').forEach(element=>{element.value='';});
-      repeat='';busy=true;error='';const token=++operation;paintPage();
+      repeat='';busy=true;error='';const token=++operation;let finishSelectedZone=false;paintPage();
       const method=reconcile||securityUncertain?'reconcileSecurity':'secure';
       let attempted=false;
       try{
@@ -577,6 +583,14 @@
         if(confirmed.error){securityReceiptRef=null;throw Error('UNCONFIRMED');}
         if(token!==operation)throw Error('SUSPENDED');
         draft=confirmed.draft;securityReceiptRef=response.receiptRef;securityUncertain=false;manualRejoinSSID=null;
+        // The customer already picked a destination while naming zones. The
+        // trusted security receipt may choose it only when it is compatible;
+        // the final receiver receipt still gates actual app membership.
+        if(!pinRequired&&draft.zoneId){
+          const reviewed=draftApi.transition(draft,{type:'NEXT'});
+          if(reviewed.error)throw Error('ZONE_UNCONFIRMED');
+          draft=reviewed.draft;finishSelectedZone=true;
+        }
         return 'confirmed';
       }catch(failure){
         if(token!==operation)return 'stop';
@@ -588,11 +602,20 @@
       }
       finally{
         pin='';repeat='';busy=false;
-        if(token===operation){keepDraft();paintPage(!automatic);if((returningFromWifi&&!rejoinRunning)||(!automatic&&draft.security.status==='confirmed'))resumeAfterWifiReturn();}
+        if(token===operation){
+          if(finishSelectedZone&&container)void finish({automatic:true});
+          else {keepDraft();paintPage(!automatic);if((returningFromWifi&&!rejoinRunning)||(!automatic&&draft.security.status==='confirmed'))resumeAfterWifiReturn();}
+        }
       }
     }
+    function finishChosenZone(){
+      if(!container||draft.stage!=='zone'||!draft.zoneId)return;
+      const reviewed=draftApi.transition(draft,{type:'NEXT'});
+      if(reviewed.error){error=reviewed.error.message;paintPage(false);return;}
+      draft=reviewed.draft;void finish({automatic:true});
+    }
     async function finish({automatic=false}={}){
-      if(busy)return 'stop';busy=true;finalizationStarted=true;automaticFinalizing=automatic;error='';const token=++operation;paintPage(false);
+      if(busy)return 'stop';busy=true;finalizationStarted=true;automaticFinalizing=automatic;error='';notice='';const token=++operation;paintPage(false);
       try{
         await persist();if(token!==operation)throw Error('SUSPENDED');
         let response;
@@ -600,7 +623,7 @@
         else {if(typeof services.finalize!=='function')throw Error('UNAVAILABLE');response=await bounded(services.finalize({configuration:config(),securityReceiptRef}),50000);}
         if(!response?.receiptRef)throw Error('NO_RECEIPT');finalReceiptRef=response.receiptRef;
         if(token!==operation)throw Error('SUSPENDED');
-        if(automatic&&document.hidden)return 'stop';
+        if(automatic&&document.hidden){notice='Toevoegen is onderbroken. Kom terug en tik op Opnieuw proberen.';return 'stop';}
         const currentModel=getModel();
         const completed=await bounded(committer.finish(currentModel,draft,finalReceiptRef));
         if(completed.error){finalReceiptRef=null;throw Error('UNCONFIRMED');}
@@ -608,7 +631,7 @@
         // made elsewhere in the meantime, nor publish after this flow closed.
         // The private receipt can be reverified against the new model on retry.
         if(token!==operation||getModel()!==currentModel)throw Error('MODEL_CHANGED');
-        if(automatic&&document.hidden)return 'stop';
+        if(automatic&&document.hidden){notice='Toevoegen is onderbroken. Kom terug en tik op Opnieuw proberen.';return 'stop';}
         if(typeof services.publishModel==='function'){
           const saved=await bounded(services.publishModel({model:completed.model,configuration:config(),receiptRef:finalReceiptRef}));
           if(!saved?.model||canonical(saved.model)!==canonical(completed.model))throw Error('MODEL_UNCONFIRMED');
@@ -618,7 +641,7 @@
         return 'done';
       }catch(failure){
         if(token!==operation)return 'stop';
-        if(automatic&&transientRejoin(failure))return 'retry';
+        if(automatic&&pinRequired&&transientRejoin(failure))return 'retry';
         error=`Je receiver kon nog niet worden toegevoegd. Je ${pinRequired?'PIN en ':''}keuzes blijven bewaard. Er is niets opnieuw ingesteld.`;
         if(automatic)rejoinBlocked=true;
         return 'stop';
@@ -688,10 +711,18 @@
         // together with the receiver step, without a redundant confirmation
         // page or a second tap. Later zone management still stays editable.
         const firstBatch=origin==='stand'&&draft.stage==='zones'&&!draft.zones.length;
+        const newReceiverZone=draft.stage==='zone'&&!pinRequired;
         const events=zoneNames().map(name=>({type:'ADD_ZONE',id:'zone-'+crypto.randomUUID(),name}));
         if(firstBatch)events.push({type:'NEXT'});
         return saveChoices(events,()=>{
           zoneNameOpen=false;resetZoneNames();
+          // Run after the atomic draft save has cleared its busy state. The
+          // same callback runs on storage retry, so no extra tap is required.
+          // The browser walkthrough can reveal its fixtures immediately.
+          // A real first MAIN still needs the customer's manual Wi-Fi choice;
+          // don't launch a doomed discovery before that Settings trip.
+          if(firstBatch&&!pinRequired&&!manualWifi())queueMicrotask(()=>{if(container&&draft.stage==='receiver')void search();});
+          if(newReceiverZone)queueMicrotask(()=>finishChosenZone());
         });
       }
       if(action==='zone-add-row'){
@@ -772,7 +803,12 @@
         return updatePixelCount(pixelSetup.stepPixels(draft.outputs.find(output=>output.port===draft.port).pixels,action.endsWith('less')?-step:step));
       }
       if(action==='side')return change({type:'SET_SIDE',port:draft.port,side:target.dataset.side},{top:false});
-      if(action==='zone')return change({type:'SELECT_ZONE',zoneId:target.dataset.id});
+      if(action==='zone'){
+        if(pinRequired)return change({type:'SELECT_ZONE',zoneId:target.dataset.id});
+        const selected=draftApi.transition(draft,{type:'SELECT_ZONE',zoneId:target.dataset.id});
+        if(selected.error){error=selected.error.message;paintPage(false);return;}
+        draft=selected.draft;return finishChosenZone();
+      }
       if(action==='back'){
         if(finalizationStarted)return;
         if(draft.stage==='receiver'){cancelSearch();for(const id of identifying.keys())stopIdentify(id);}
