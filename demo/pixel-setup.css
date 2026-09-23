@@ -127,7 +127,22 @@
 .pixel-start-choice b{display:grid;place-items:center;width:25px;height:25px;border-radius:8px;background:var(--soft,#eee);font-size:13px}
 .pixel-start-choice i{font-size:23px;font-style:normal;font-weight:400;color:var(--muted,#666)}
 .pixel-setup-sides [aria-pressed=true] .pixel-start-choice b{background:var(--red,#bd4842);color:white}
+/* Keep the physical port and the per-port task together in both setup routes. */
+.pixel-port-context{display:grid;grid-template-columns:100px minmax(0,1fr);gap:10px;align-items:center;min-width:0;margin:0;padding:9px;background:var(--panel,#fff);border:1px solid var(--line,#ddd);border-radius:17px}
+.pixel-port-context canvas{display:block;width:100%;height:102px;background:#f4f5f1;border-radius:10px}
+.pixel-port-context-info{min-width:0}.pixel-port-context h2{font-size:15px;line-height:1.3;letter-spacing:-.02em;margin:0;color:var(--ink,#171817)}
+.pixel-port-context p{margin:4px 0 8px;font-size:10px;line-height:1.3;color:var(--muted,#666)}
+.pixel-port-context ol{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;list-style:none;margin:0;padding:0}
+.pixel-port-step{display:grid;justify-items:center;gap:3px;padding:4px 0;border-radius:7px;background:var(--soft,#eee);color:var(--muted,#666)}
+.pixel-port-step b{font-size:13px;line-height:1.1}.pixel-port-step span{font-size:8px;line-height:1.2}
+.pixel-port-step[data-state=current]{background:var(--red,#bd4842);color:#fff;box-shadow:0 0 0 2px #bd48421c}
+.pixel-port-step[data-state=complete]{background:#287a5410;color:#287a54}.pixel-port-step[data-state=complete] b::after{content:'✓';font-size:8px;margin-left:1px}
+.pixel-port-step[data-state=off]{background:transparent;opacity:.65}
+@media(max-width:350px){.pixel-port-context{grid-template-columns:83px minmax(0,1fr);gap:8px;padding:8px}.pixel-port-context canvas{height:96px}.pixel-port-context h2{font-size:13px}.pixel-port-context p{font-size:9px}}
 @media(max-width:350px) and (max-height:650px){
+  .pixel-setup-body .pixel-port-context{padding:6px;gap:7px;grid-template-columns:79px minmax(0,1fr)}
+  .pixel-setup-body .pixel-port-context canvas{height:86px}.pixel-setup-body .pixel-port-context p{margin:3px 0 5px}
+  .pixel-setup-body .pixel-port-context+[data-pixel-panel=connection]>h2,.pixel-setup-body .pixel-port-context+[data-pixel-panel=connection]>p{display:none}
   .pixel-setup-panel[data-pixel-panel=connection]{gap:7px}
   .pixel-setup-visual.pixel-connection-preview{min-height:91px;gap:8px;padding:10px}
   .pixel-setup-panel[data-pixel-panel=connection] .pixel-setup-sides button{min-height:66px;gap:4px;padding:7px 5px}

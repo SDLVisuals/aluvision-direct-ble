@@ -338,11 +338,11 @@
         case 'outputs':return `${pixelSetup.renderOutputs(draft.outputs,{onboarding:true})}<p class="onboarding-hint">Extra uitgangen inschakelen kan later.</p>${footer()}`;
         case 'pixels':{
           const output=draft.outputs.find(output=>output.port===draft.port);
-          return `<div class="onboarding-port-label"><b>Uitgang ${draft.port}</b><span>${active().findIndex(output=>output.port===draft.port)+1} van ${active().length}</span></div>${pixelSetup.renderPixels(output,{inputId:'onboarding-pixels',onboarding:true})}${footer(draft.port===active().at(-1).port?'Beginpunt kiezen':'Volgende uitgang')}`;
+          return `${pixelSetup.renderPortContext(draft.outputs,draft.port)}${pixelSetup.renderPixels(output,{inputId:'onboarding-pixels',onboarding:true})}${footer(pixelSetup.nextPortLabel(draft.outputs,draft.port))}`;
         }
         case 'connection':{
           const output=draft.outputs.find(output=>output.port===draft.port);
-          return `<div class="onboarding-port-label"><b>Uitgang ${draft.port}</b><span>${output.pixels} pixels</span></div>${pixelSetup.renderSide(output,{onboarding:true})}${footer(draft.port===active().at(-1).port?'Volgende':'Volgende uitgang')}`;
+          return `${pixelSetup.renderPortContext(draft.outputs,draft.port,{stage:'connection'})}${pixelSetup.renderSide(output,{onboarding:true})}${footer(pixelSetup.nextPortLabel(draft.outputs,draft.port,{stage:'connection'}))}`;
         }
         case 'pin':return pinRequired?pinForm():securityPanel();
         case 'security':return securityPanel();
@@ -438,6 +438,7 @@
         const canvas=container.querySelector('[data-pixel-outputs-visual]');
         if(canvas){canvas.dataset.entranceKey=key;canvas.dataset.entranceProgress=entranceProgress.toFixed(3);}
       }
+      if(['pixels','connection'].includes(draft.stage))pixelSetup.paintOutputs(container,draft.outputs,{time,reducedMotion,visual,selectedPort:draft.port});
       for(const [id,until] of identifying)if(until<=time){
         identifying.delete(id);const control=container.querySelector(`[data-onboarding-action="identify"][data-id="${CSS.escape(id)}"]`);
         if(control){control.textContent='Laat knipperen';control.setAttribute('aria-pressed','false');const label=control.closest('.onboarding-recognition')?.querySelector('span');if(label)label.textContent='Herken jouw verlichting';}
