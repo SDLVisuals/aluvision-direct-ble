@@ -375,6 +375,11 @@ body:has(.onboarding-page)>.connection-bar{display:none}
 .onboarding-search-again .button{min-height:44px;background:transparent;color:var(--muted);font-size:12px;text-decoration:underline;text-underline-offset:3px}
 .onboarding-page[data-onboarding-stage=receiver] .onboarding-footer:has(>.button:only-child){grid-template-columns:1fr}
 .onboarding-zones-continue{grid-template-columns:minmax(0,1fr);gap:4px}
+.onboarding-zone-add-actions{display:flex;align-items:center;gap:8px;margin-top:12px}
+.onboarding-zone-add-actions>.button{flex:1;min-width:0;min-height:44px;padding:9px 10px;font-size:12px;background:var(--soft);color:var(--ink)}
+.onboarding-zone-add-actions>[data-onboarding-action=zone-add-row]{background:transparent;border:1px dashed var(--line)}
+.onboarding-zone-add-actions>[data-onboarding-action=zone-create]{border:1px solid var(--line)}
+.onboarding-page[data-onboarding-stage=zones]>.onboarding-zones-continue{position:static;bottom:auto;box-shadow:none}
 .onboarding-zones-continue>.button[data-onboarding-action=next]{width:100%;min-height:54px;background:var(--ink);color:var(--panel);font-size:15px}
 .onboarding-zones-footer-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .onboarding-zones-continue .button[data-onboarding-action=back]{flex:none;min-width:90px;min-height:40px;background:transparent;color:var(--muted);font-size:12px}

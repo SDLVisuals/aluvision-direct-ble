@@ -86,6 +86,9 @@
     function resetZoneNames(){zoneNameInput='';zoneExtraNames=[];container?.querySelectorAll('#onboarding-zone-name,[data-zone-extra]').forEach(field=>{if(field.hasAttribute('data-zone-extra'))field.remove();else field.value='';});}
     function zoneNames(){return [zoneNameInput,...zoneExtraNames];}
     function validZoneNames(){const names=zoneNames(),keys=names.map(name=>name.trim().normalize('NFKC').toLowerCase());return names.every(validName)&&new Set(keys).size===keys.length&&draft.zones.length+names.length<=256;}
+    const hasZoneNames=()=>zoneExtraNames.length>0||zoneNameInput.trim().length>0;
+    const canContinueZones=()=>hasZoneNames()?validZoneNames():draft.zones.length>0;
+    const newZoneEvents=()=>zoneNames().map(name=>({type:'ADD_ZONE',id:'zone-'+crypto.randomUUID(),name}));
     // Commit the entire small setup step, including its destination screen, as
     // one native draft. Retrying uses the exact same IDs and candidate after an
     // uncertain storage response; it cannot create a second stand or zone.
@@ -215,7 +218,7 @@
     function heading(){
       const firstSetup=origin==='stand';
       const step=draft.stage==='stand'?1:draft.stage==='zones'?2:3;
-      const title=draft.stage==='stand'?'Hoe heet je stand?':draft.stage==='zones'?(zoneRemoval?'Zones beheren':zoneRename?'Zone hernoemen':receiverMove?'Receiver verplaatsen':zoneNames().length>1?'Maak je zones':zoneNameOpen&&draft.zones.length?'Nieuwe zone':draft.zones.length?'Je zones':'Maak je eerste zone'):draft.stage==='receiver'?(busy?'Receiver controleren':searchState==='searching'?'Receiver zoeken…':results.length===1?'Receiver gevonden':results.length>1?'Kies je receiver':'Receiver zoeken'):automaticMain()&&draft.stage==='security'?(busy||rejoinRunning?'Je receiver toevoegen':'Verbind opnieuw met wifi'):automaticMain()&&automaticFinalizing&&draft.stage==='review'?'Je receiver toevoegen':labels[draft.stage]||'Receiver toevoegen';
+      const title=draft.stage==='stand'?'Hoe heet je stand?':draft.stage==='zones'?(zoneRemoval?'Zones beheren':zoneRename?'Zone hernoemen':receiverMove?'Receiver verplaatsen':'Je zones'):draft.stage==='receiver'?(busy?'Receiver controleren':searchState==='searching'?'Receiver zoeken…':results.length===1?'Receiver gevonden':results.length>1?'Kies je receiver':'Receiver zoeken'):automaticMain()&&draft.stage==='security'?(busy||rejoinRunning?'Je receiver toevoegen':'Verbind opnieuw met wifi'):automaticMain()&&automaticFinalizing&&draft.stage==='review'?'Je receiver toevoegen':labels[draft.stage]||'Receiver toevoegen';
       return `<header class="onboarding-setup-header"><div><span class="onboarding-setup-label">Setup</span><b>${firstSetup?'Je stand instellen':'Receiver toevoegen'}</b></div><button type="button" class="back" data-onboarding-action="exit">Later verder <span aria-hidden="true">×</span></button></header>${firstSetup?`<ol class="onboarding-setup-steps" aria-label="Je stand instellen">${['Standnaam','Zones','Receivers'].map((label,i)=>`<li data-setup-step="${i+1}" ${i+1===step?'aria-current="step"':''} class="${i+1<step||draft.stage==='done'?'completed':''}"><span>${i+1<step||draft.stage==='done'?'✓':i+1}</span><b>${label}</b></li>`).join('')}</ol>`:''}<header class="onboarding-heading"><div class="onboarding-step-caption"><span>${firstSetup?`Stap ${step} van 3`:'Receiver toevoegen'}</span>${draft.stand&&draft.stage!=='stand'?`<small>${escape(draft.stand.name)}</small>`:''}</div><h1>${title}</h1></header>${!['stand','zones','receiver','done'].includes(draft.stage)?zoneContext():''}`;
     }
     function zoneVisual(index){
@@ -229,7 +232,7 @@
       return `<section class="card onboarding-zone-confirm" data-setup-rename-zone="${escape(zone.id)}"><h2>${escape(zone.name)}</h2><p>Alleen de naam verandert. Receivers${pinRequired?', PIN':''} en opgeslagen licht blijven bewaard.</p>${nameField('onboarding-zone-rename','Zonenaam','Bijvoorbeeld: Demohoek',zoneRename.name)}<div class="onboarding-actions">${button('zone-rename-cancel','Annuleren','class="button secondary"')}${button('zone-rename-confirm','Naam opslaan','disabled')}</div></section>`;
     }
     function zoneNameFields(){
-      return `<section class="card onboarding-name-card onboarding-batch-zones"><div class="onboarding-zone-inputs">${zoneNames().map((name,index)=>`<div class="onboarding-zone-input">${index===0?nameField('onboarding-zone-name',zoneNames().length===1?'Zonenaam':'Zone 1','Bijvoorbeeld: Demohoek',name):`<label class="onboarding-field">Zone ${index+1}<input id="onboarding-zone-name-${index}" data-zone-extra="${index}" maxlength="64" autocomplete="off" value="${escape(name)}" placeholder="Bijvoorbeeld: Balie"></label>`}${zoneNames().length>1?`<button type="button" data-onboarding-action="zone-drop-row" data-index="${index}" aria-label="Naamveld ${index+1} verwijderen">×</button>`:''}</div>`).join('')}</div>${button('zone-add-row','＋ Nog een zone','class="button secondary" '+(zoneNames().length>=12||draft.zones.length+zoneNames().length>=256?'disabled':''))}<small class="onboarding-batch-hint">Eén zone is genoeg. Meer kan later.</small></section>`;
+      return `<section class="card onboarding-name-card onboarding-batch-zones"><div class="onboarding-zone-inputs">${zoneNames().map((name,index)=>`<div class="onboarding-zone-input">${index===0?nameField('onboarding-zone-name',zoneNames().length===1?(draft.zones.length?'Nog een zone toevoegen':'Zonenaam'):'Zone 1','Bijvoorbeeld: Demohoek',name):`<label class="onboarding-field">Zone ${index+1}<input id="onboarding-zone-name-${index}" data-zone-extra="${index}" maxlength="64" autocomplete="off" value="${escape(name)}" placeholder="Bijvoorbeeld: Balie"></label>`}${zoneNames().length>1?`<button type="button" data-onboarding-action="zone-drop-row" data-index="${index}" aria-label="Naamveld ${index+1} verwijderen">×</button>`:''}</div>`).join('')}</div><div class="onboarding-zone-add-actions">${button('zone-add-row','＋ Nog een zone','class="button secondary" '+(zoneNames().length>=12||draft.zones.length+zoneNames().length>=256?'disabled':''))}${button('zone-create',zoneNames().length>1?'Zones toevoegen':'Toevoegen','class="button secondary" disabled')}</div></section>`;
     }
     function zoneRemovalPanel(){
       const zone=draft.zones.find(zone=>zone.id===zoneRemoval?.zoneId);if(!zone)return '';
@@ -338,8 +341,7 @@
           if(zoneRemoval)return zoneRemovalPanel();
           if(zoneRename)return zoneRenamePanel();
           if(receiverMove)return movePanel();
-          const editing=!draft.zones.length||zoneNameOpen;
-          return `${draft.zones.length?'':`<p class="onboarding-task-hint">Zone = plek in je stand, zoals de balie.</p>`}${setupZones({editable:true})}${draft.zones.length?`<p class="onboarding-zone-count" role="status">${draft.zones.length} ${draft.zones.length===1?'zone':'zones'} · Kies waar je begint.</p>`:''}${editing?`${zoneNameFields()}<div class="onboarding-actions onboarding-footer">${button(draft.zones.length?'zone-cancel':'back',draft.zones.length?'Annuleren':'← Terug','class="button secondary"')}${button('zone-create',zoneNames().length>1?`${zoneNames().length} zones maken`:'Zone maken','disabled')}</div>`:`${button('zone-new','＋ Voeg nog een zone toe','class="button secondary"')}${receiverPlacement()}<div class="onboarding-actions onboarding-footer onboarding-zones-continue">${button('next','Verder →','aria-label="Verder naar receivers toevoegen"')}<div class="onboarding-zones-footer-row">${button('back','← Terug',`class="button secondary" ${!draft.stand.isNew?'disabled':''}`)}<p class="onboarding-later-hint">Meer zones toevoegen kan ook later.</p></div></div>`}`;
+          return `${draft.zones.length?'':`<p class="onboarding-task-hint">Een zone is een plek in je stand, zoals de balie.</p>`}${setupZones({editable:true})}${draft.zones.length?`<p class="onboarding-zone-count" role="status">${draft.zones.length} ${draft.zones.length===1?'zone':'zones'} · Kies waar je begint.</p>`:''}${zoneNameFields()}${receiverPlacement()}<div class="onboarding-actions onboarding-footer onboarding-zones-continue">${button('next','Verder →','aria-label="Verder naar receivers toevoegen" disabled')}<div class="onboarding-zones-footer-row">${button('back','← Terug',`class="button secondary" ${!draft.stand.isNew?'disabled':''}`)}<p class="onboarding-later-hint">Meer zones toevoegen kan ook later.</p></div></div>`;
         }
         case 'receiver':return receiverSearchView();
         case 'outputs':return `${pixelSetup.renderOutputs(draft.outputs,{onboarding:true})}<p class="onboarding-hint">Extra uitgangen inschakelen kan later.</p>${footer()}`;
@@ -403,6 +405,7 @@
         const field=container.querySelector('#'+id);if(field)container.querySelector(`[data-onboarding-action="${action}"]`).disabled=action==='zone-create'?!validZoneNames():!validName(field.value);
       }
       const rename=container.querySelector('#onboarding-zone-rename');if(rename)container.querySelector('[data-onboarding-action="zone-rename-confirm"]').disabled=!validName(rename.value)||rename.value.trim()===draft.zones.find(zone=>zone.id===zoneRename.zoneId)?.name;
+      if(draft.stage==='zones'&&container.querySelector('[data-onboarding-action="next"]'))container.querySelector('[data-onboarding-action="next"]').disabled=!canContinueZones();
       if(draft.stage==='pixels'){const input=container.querySelector('#onboarding-pixels');input.inputMode='numeric';container.querySelector('[data-onboarding-action="next"]').disabled=!pixelSetup.validateInput(container,input.value);}
       if(draftSaving||pendingChoices)container.querySelectorAll('button,input').forEach(control=>{
         if(draftSaving||!['save-retry','exit'].includes(control.dataset.onboardingAction))control.disabled=true;
@@ -423,7 +426,7 @@
       let action=null;
       switch(draft.stage){
         case 'stand':action='stand-save';break;
-        case 'zones':action=container.querySelector('#onboarding-zone-name')?'zone-create':'next';break;
+        case 'zones':action='next';break;
         case 'receiver':{
           const choices=container.querySelectorAll('[data-onboarding-action="receiver"]:not(:disabled)');
           if(choices.length===1)action='receiver';else if(!choices.length&&searchState!=='searching')action='search';break;
@@ -481,6 +484,7 @@
       }
       const action=element.id==='onboarding-stand-name'?'stand-save':element.id==='onboarding-zone-name'||element.hasAttribute('data-zone-extra')?'zone-create':null;
       if(action){captureNames();container.querySelector(`[data-onboarding-action="${action}"]`).disabled=action==='zone-create'?!validZoneNames():!validName(element.value);}
+      if(action==='zone-create'&&draft.stage==='zones')container.querySelector('[data-onboarding-action="next"]').disabled=!canContinueZones();
       if(element.id==='onboarding-zone-rename'){captureNames();container.querySelector('[data-onboarding-action="zone-rename-confirm"]').disabled=!validName(element.value)||element.value.trim()===draft.zones.find(zone=>zone.id===zoneRename.zoneId)?.name;}
       if(element.matches('[data-pixel-count],[data-pixel-range]')){
         updatePixelCount(element.value,element);
@@ -726,11 +730,11 @@
         // Creating zones and leaving this step are separate choices. Keep
         // every saved batch here so the customer can add another zone first.
         const newReceiverZone=draft.stage==='zone'&&!pinRequired;
-        const events=zoneNames().map(name=>({type:'ADD_ZONE',id:'zone-'+crypto.randomUUID(),name}));
+        const events=newZoneEvents();
         return saveChoices(events,()=>{
           zoneNameOpen=false;resetZoneNames();
           if(newReceiverZone)queueMicrotask(()=>finishChosenZone());
-        });
+        },{top:draft.stage!=='zones'});
       }
       if(action==='zone-add-row'){
         captureNames();if(zoneNames().length>=12||draft.zones.length+zoneNames().length>=256)return;
@@ -827,11 +831,17 @@
         return change({type:'BACK'});
       }
       if(action==='next'){
-        if(draft.stage==='zones')return saveChoices([{type:'NEXT'}],()=>{
+        if(draft.stage==='zones'){
+          captureNames();if(!canContinueZones())return;
+          // One zones page: Continue can save the entered name(s) and leave
+          // atomically, without an intermediate overview or a second tap.
+          return saveChoices([...(hasZoneNames()?newZoneEvents():[]),{type:'NEXT'}],()=>{
+          resetZoneNames();zoneNameOpen=false;
           // Search only after an explicit Continue and a successful save.
           // Manual Wi-Fi still needs the customer's Settings trip first.
           if(!draft.mainReceiverId&&!pinRequired&&!manualWifi())queueMicrotask(()=>{if(container&&draft.stage==='receiver')void search();});
-        });
+          });
+        }
         if(draft.stage==='connection'&&draft.port===active().at(-1).port&&draft.role==='node'&&!canSecure()){error=unavailable;paintPage(false);return;}
         if(change({type:'NEXT'})&&draft.stage==='security')return secure();return;
       }
