@@ -386,6 +386,11 @@
       const focusedPort=container.contains(document.activeElement)&&document.activeElement.dataset.onboardingAction==='output'?document.activeElement.dataset.port:null;
       const focusedZone=container.contains(document.activeElement)&&document.activeElement.dataset.onboardingAction==='active-zone'?document.activeElement.dataset.id:null;
       const focusedSide=container.contains(document.activeElement)&&document.activeElement.dataset.onboardingAction==='side'?document.activeElement.dataset.side:null;
+      // A local choice repaints this step, not its open help panels. Closing a
+      // disclosure during that repaint also shrinks the page under the user's
+      // finger and makes Safari/Chrome clamp the scroll position upwards.
+      const disclosureKey=element=>element.className+'|'+element.querySelector(':scope > summary')?.textContent;
+      const disclosures=!top?new Map(Array.from(container.querySelectorAll('details'),element=>[disclosureKey(element),element.open])):null;
       const zoneScroll=container.querySelector('.onboarding-destination .onboarding-zone-list')?.scrollTop||0;
       const zonePickerOpen=container.querySelector('.onboarding-destination')?.open===true;
       presentedStages.add(stageKey);
@@ -429,6 +434,7 @@
         if(draftSaving||!['save-retry','exit'].includes(control.dataset.onboardingAction))control.disabled=true;
       });
       if(managementBusy)container.querySelectorAll('button,input,summary').forEach(control=>{if(control.tagName==='SUMMARY')control.setAttribute('aria-disabled','true');else control.disabled=true;});
+      if(disclosures)container.querySelectorAll('details').forEach(element=>{if(disclosures.has(disclosureKey(element)))element.open=disclosures.get(disclosureKey(element));});
       updateGuidance();
       if(!top){const list=container.querySelector('.onboarding-destination .onboarding-zone-list');if(list)list.scrollTop=zoneScroll;}
       if(top){window.scrollTo({top:0,left:0,behavior:'instant'});container.querySelector('h1').setAttribute('tabindex','-1');container.querySelector('h1').focus({preventScroll:true});}

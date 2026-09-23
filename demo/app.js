@@ -304,18 +304,20 @@
   }
   function tunnelGuide() {
     const count=receivers().length,together=selection().kind==='all';
-    const arches=[
-      'M22 168V91C22 39 92 12 180 12C268 12 338 39 338 91V168',
-      'M66 166V97C66 56 117 35 180 35C243 35 294 56 294 97V166',
-      'M108 164V106C108 76 140 60 180 60C220 60 252 76 252 106V164',
-      'M144 162V117C144 99 160 89 180 89C200 89 216 99 216 117V162'
-    ];
+    // Project four solid portals towards an off-centre vanishing point. Seeing
+    // the side faces, walkway and shrinking depth makes this a tunnel, rather
+    // than four flat arches nested inside one another.
+    const arch='M28 207V108C28 57 65 20 126 20C187 20 224 57 224 108V207';
+    const depths=[1,.74,.53,.37];
+    const point=(x,y,depth)=>`${(305+(x-305)*depth).toFixed(1)},${(119+(y-119)*depth).toFixed(1)}`;
+    const floor=depths.map(depth=>`M${point(30,211,depth)}L${point(222,211,depth)}`).join('');
+    const portals=depths.map((depth,i)=>`<g class="tunnel-portal" data-depth="${i}" transform="translate(${305*(1-depth)} ${119*(1-depth)}) scale(${depth})"><path class="tunnel-portal-shadow" d="${arch}" transform="translate(9 -5)"/><path class="tunnel-portal-side" d="${arch}" transform="translate(5 -3)"/><path class="tunnel-arch-track" d="${arch}"/><path class="tunnel-arch arch-${i}" d="${arch}"/><path class="tunnel-foot" d="M20 207H36M216 207H232"/></g>`).reverse().join('');
     const status=count<2?`Nog ${2-count} ${count===1?'receiver':'receivers'} nodig`:together?'Klaar voor tunneleffecten':'Selecteer alle ledlines';
     const detail=count<2?`${count} ${count===1?'receiver':'receivers'} in ${zone().name}`:together?`${count} receivers · in de volgorde van Opstelling`:`${count} receivers · een tunnel bedien je samen`;
     const action=count<2?`<button class="button full" data-action="layout-receiver-add" data-zone="${esc(zone().id)}"><span aria-hidden="true">＋</span> Receiver toevoegen</button>`:!together?'<button class="button full" data-action="tunnel-together">Alle ledlines samen bedienen</button>':'';
     // A teaching illustration, never a substitute for the actual installation.
     // Effect cards below still use its real receiver count, order and layout.
-    return `<section class="tunnel-guide" aria-label="Tunneleffecten"><header class="tunnel-guide-heading"><div><h2>Van lijn naar lijn</h2><p>Een lichtgolf door je opstelling.</p></div><span class="tunnel-motion-symbol" aria-hidden="true">${icon('chevron')}${icon('chevron')}</span></header><figure class="tunnel-visual"><svg viewBox="0 0 360 190" role="img" aria-label="Uitlegvoorbeeld: een lichtgolf door vier lichtbogen"><path class="tunnel-floor" d="M22 182L155 151M338 182L205 151M63 184L165 152M297 184L195 152M114 184L173 152M246 184L187 152"/>${arches.map((d,i)=>`<path class="tunnel-arch-track" d="${d}"/><path class="tunnel-arch arch-${i}" d="${d}"/>`).join('')}</svg><figcaption><span>Voorbeeld met 4 lichtbogen</span><span class="tunnel-sequence" aria-hidden="true">${arches.map((_,i)=>`<i class="arch-${i}"></i>`).join('')}</span></figcaption></figure><div class="tunnel-status"><div><strong>${status}</strong><small>${esc(detail)}</small></div>${action}</div></section>`;
+    return `<section class="tunnel-guide" aria-label="Tunneleffecten"><header class="tunnel-guide-heading"><div><h2>Licht door de tunnel</h2><p>Van de eerste naar de laatste lichtboog.</p></div><span class="tunnel-motion-symbol" aria-hidden="true">${icon('chevron')}${icon('chevron')}</span></header><figure class="tunnel-visual"><svg viewBox="0 0 360 230" role="img" aria-label="Uitlegvoorbeeld in perspectief: een lichtgolf door vier lichtbogen boven een looppad"><defs><linearGradient id="tunnel-frame" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#849087"/><stop offset=".45" stop-color="#414f47"/><stop offset="1" stop-color="#26372e"/></linearGradient><linearGradient id="tunnel-walkway" x1="0" y1="1" x2=".7" y2="0"><stop stop-color="#46534a"/><stop offset="1" stop-color="#1a2820"/></linearGradient><radialGradient id="tunnel-exit"><stop stop-color="#c7d5bf" stop-opacity=".22"/><stop offset="1" stop-color="#c7d5bf" stop-opacity="0"/></radialGradient></defs><ellipse cx="280" cy="136" rx="52" ry="49" fill="url(#tunnel-exit)"/><path class="tunnel-wall" d="M224 207V108C224 57 187 20 126 20L239 82C263 82 278 96 278 115V152Z"/><path class="tunnel-walkway" d="M15 220L231 150L285 150L233 220Z"/><path class="tunnel-floor" d="${floor}M70 220L246 150M177 220L272 150"/><path class="tunnel-floor-edge" d="M15 220L231 150M233 220L285 150"/>${portals}</svg><figcaption><span>Voorbeeld met 4 lichtbogen</span><span class="tunnel-sequence" aria-hidden="true">${depths.map((_,i)=>`<i class="arch-${i}"></i>`).join('')}</span></figcaption></figure><div class="tunnel-status"><div><strong>${status}</strong><small>${esc(detail)}</small></div>${action}</div></section>`;
   }
   function presetContext() { return {type:zone().type,receiverCount:receivers().length,selection:selection(),layout:zone().layout}; }
   function renderPresets() {
@@ -467,7 +469,7 @@
   function renderSettings() {
     return `<div class="page"><header class="page-heading"><div><h1>${esc(t('more'))}</h1><p>${esc(t('settings'))} · V30</p></div></header><section class="card"><h2>${esc(t('appearance'))}</h2><h3 class="preference-label">${esc(t('language'))}</h3><div class="preference-grid">${Preferences.languages.map(language=>`<button data-action="language" data-id="${language.code}" lang="${language.code}" aria-pressed="${uiPreferences.preferences.language===language.code}">${language.name}</button>`).join('')}</div><p class="preference-note">${esc(t('wipNotice'))}</p><h3 class="preference-label">${esc(t('theme'))}</h3><div class="preference-grid">${['light','dark'].map(theme=>`<button data-action="theme" data-id="${theme}" aria-pressed="${uiPreferences.preferences.theme===theme}">${esc(t(theme))}</button>`).join('')}</div>${uiPreferences.error?`<p role="alert">${esc(uiPreferences.error.message)}</p>`:''}</section><button class="menu-card" data-action="help"><span class="menu-icon">${icon('info')}</span><div><b>Stand en zones uitgelegd</b><small>Een eenvoudige weg naar je verlichting</small></div>${icon('chevron')}</button><section class="card connection-info" id="connection-info"><span class="pill">Niet verbonden</span><h2>Verbinding en gegevens</h2><p>Je bekijkt momenteel een voorbeeldstand met fictieve receivers. Er worden geen opdrachten naar echte verlichting verstuurd.</p><p>Indeling, poorten en lichtstanden zijn tijdelijk en beginnen na herladen opnieuw. Mijn kleuren, animatiepresets, scènes en voorkeuren worden alleen op dit apparaat bewaard.</p><details class="technical-status"><summary>Technische gereedheid</summary><ul class="readiness-list"><li><b>Dezelfde bediening</b><span>Alle schermformaten volgen dezelfde compacte bediening voor zones, receivers, kleuren en animaties.</span></li><li><b>Nog aansluiten en fysiek testen</b><span>${pinRequired?'Echte koppeling, beveiliging, ESP-NOW, herstel, veilig verwijderen en OTA moeten nog fysiek worden getest.':'Deze demo werkt zonder toegangscode. ESP-NOW, veilig verwijderen en OTA moeten nog fysiek worden getest.'} Ook nieuwe effecten moeten naar de receiverfirmware worden overgezet.</span></li><li><b>Receiverbeelden</b><span>RGBW volgt de aangeleverde productreferentie. Het SPI-beeld is een concept; fysieke poortplaatsing moet nog worden bevestigd.</span></li><li><b>Bestaande functies behouden</b><span>Volledige vertalingen, Academy en overige bestaande beheerfuncties blijven in de overdrachtscontrole staan.${pinRequired?' De bestaande beveiliging blijft behouden.':''}</span></li></ul></details></section></div>`;
   }
-  function render({top=false,preserveScroll=false}={}) {
+  function render({top=false,preserveScroll=true}={}) {
     // A replaced handle no longer represents an active drag. Cancel before
     // rebuilding the page, so a later pointerup cannot save a stale position.
     if(dragOrder)finishOrder({pointerId:dragOrder.pointerId},true);
@@ -569,8 +571,8 @@
     paint(performance.now()/1000);
     // Rebuilding a category row must not hide its selected tab offscreen.
     // Adjust only its horizontal scroll, never the surrounding document.
-    main.querySelectorAll('.filter-row [aria-selected="true"]').forEach(selected=>{
-      const row=selected.closest('.filter-row'),bounds=row.getBoundingClientRect(),item=selected.getBoundingClientRect();
+    main.querySelectorAll('.filter-row [aria-selected="true"],.receiver-chips [aria-pressed="true"]').forEach(selected=>{
+      const row=selected.closest('.filter-row,.receiver-chips'),bounds=row.getBoundingClientRect(),item=selected.getBoundingClientRect();
       if(item.left<bounds.left+4)row.scrollLeft-=bounds.left+4-item.left;
       else if(item.right>bounds.right-4)row.scrollLeft+=item.right-bounds.right+4;
     });
@@ -1189,8 +1191,9 @@
         if(id!=='all'&&!receivers().some(r=>r.id===id))return;
         selections.set(route.zoneId,id==='all'?{kind:'all'}:{kind:'receiver',receiverId:id});
         if(route.screen==='effects'&&activeEffect())route.screen='animations';
-        render();
-        document.querySelector(`.receiver-chips button[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({block:'nearest',inline:'nearest'});return;
+        // Keep the tapped row in place. render reveals the chosen chip only
+        // horizontally; scrollIntoView would also pull the entire page up.
+        return render();
       }
       if(action==='power'){const on=!selected().every(r=>r.state.on!==false && r.state.power!==false);apply({on,power:on});if(standControlOpen)return;return render();}
       if(action==='swatch'){
@@ -1254,8 +1257,11 @@
       if(action==='effects'||action==='effects-root')return navigate('effects',{family:null,library:action==='effects'?(activeEffect()?.category||'all'):route.library});
       if(action==='animation-search-clear'){const search=document.getElementById('animation-search');if(search){search.value='';search.dispatchEvent(new Event('input',{bubbles:true}));}return;}
       if(action==='family')return navigate('effects',{family:id});
-      if(action==='library')return navigate('effects',{family:null,library:id});
-      if(action==='tunnel-together'){selections.set(route.zoneId,{kind:'all'});return render({top:true});}
+      if(action==='library'){
+        if(route.screen!=='effects')return navigate('effects',{family:null,library:id});
+        route={...route,family:null,library:id};return render();
+      }
+      if(action==='tunnel-together'){selections.set(route.zoneId,{kind:'all'});return render();}
       if(action==='effect'){
         const effect=catalogue().find(e=>e.id===id);if(!effect)return;
         if(effect.minimumReceivers>1 && (receivers().length<2||selection().kind!=='all'))return;
@@ -1345,7 +1351,7 @@
       if(input.id==='management-name'){document.querySelector('[data-action="management-name-save"]').disabled=!input.value.trim();return;}
       if(input.id==='preset-name'){document.querySelector('[data-action="preset-confirm"]').disabled=!input.value.trim();return;}
       if(input.id==='animation-search'){
-        const value=input.value;if(!value.trim()){render();document.getElementById('animation-search')?.focus();return;}
+        const value=input.value;if(!value.trim()){render();document.getElementById('animation-search')?.focus({preventScroll:true});return;}
         const results=document.getElementById('animation-results');results.querySelectorAll('canvas[data-preview]').forEach(c=>previews.delete(c.dataset.preview));results.innerHTML=effectResults(value);paint(performance.now()/1000);return;
       }
       if(input.id==='scene-name'){if(sceneDraft){sceneDraft.name=input.value;syncSceneDraft();}return;}
