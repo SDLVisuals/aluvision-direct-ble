@@ -124,7 +124,7 @@
     if (!['not-started','pending','confirmed'].includes(value.security.status) || !PHASES.includes(value.security.phase)) fail('SECURITY','De beveiligingsstap is ongeldig.');
     if (value.security.status !== 'not-started' && !['security','zone','review','done'].includes(value.stage)) fail('SECURITY_LOCKED','Hervat dezelfde beveiligde toevoeging; begin geen nieuwe claim.');
     if (['zone','review','done'].includes(value.stage) && value.security.status !== 'confirmed') fail('SECURITY_UNCONFIRMED','Bevestig eerst de beveiligde receiververbinding.');
-    if (['review','done'].includes(value.stage) && value.zoneId === null) fail('ZONE_REQUIRED','Kies een zone voor deze receiver.');
+    if (['review','done'].includes(value.stage) && value.zoneId === null && value.zones.length) fail('ZONE_REQUIRED','Kies een zone voor deze receiver.');
     if ((value.stage === 'done') !== (value.membership === 'added')) fail('MEMBERSHIP','Een receiver verschijnt pas na definitieve bevestiging in de app.');
     shape(value.context,['standIds','zoneIds','receivers'],'CONTEXT');
     for (const key of ['standIds','zoneIds']) if (!Array.isArray(value.context[key]) || value.context[key].length > 4096 || value.context[key].some(item => !id(item)) || new Set(value.context[key]).size !== value.context[key].length) fail('CONTEXT','De bestaande indeling is ongeldig.');
@@ -146,7 +146,7 @@
     const zones = stand ? stand.zones.map(zone => ({id:zone.id,name:zone.name,type:zone.type,layout:zone.layout,isNew:false,
       pixels:Model.zoneReceivers(model,zone.id).reduce((sum,receiver) => sum + receiver.outputs.reduce((n,output) => n + (output.enabled ? output.pixels : 0),0),0)})) : [];
     const active = options.activeZoneId === undefined ? zones[0] && zones[0].id || null : options.activeZoneId;
-    return snapshot({version:1,transactionId:options.transactionId,stage:stand ? zones.length ? 'receiver' : 'zones' : 'stand',
+    return snapshot({version:1,transactionId:options.transactionId,stage:stand ? zones.length || main ? 'receiver' : 'zones' : 'stand',
       stand:stand ? {id:stand.id,name:stand.name,isNew:false} : null,zones,receiver:null,role:main ? 'node' : 'main',mainReceiverId:main ? main.id : null,
       outputs:[],port:null,zoneId:null,activeZoneId:active,security:{status:'not-started',phase:'idle'},cancelled:false,membership:'pending',
       context:{standIds:model.stands.map(item => item.id),zoneIds:model.stands.flatMap(item => item.zones.map(zone => zone.id)),
@@ -167,7 +167,7 @@
   function transition(value,event) {
     const original=snapshot(value), next=copy(original);
     try {
-      const fields={SET_STAND:['id','name'],ADD_ZONE:['id','name'],RENAME_ZONE:['zoneId','name'],REMOVE_ZONE:['zoneId'],SELECT_ACTIVE_ZONE:['zoneId'],SELECT_RECEIVER:['receiver'],SET_OUTPUT_COUNT:['count'],SET_OUTPUT_ENABLED:['port','enabled'],SET_PIXELS:['port','pixels'],SET_SIDE:['port','side'],SELECT_ZONE:['zoneId'],SECURITY_PROGRESS:['phase'],NEXT:[],BACK:[],CANCEL:[],RETRY:[]};
+      const fields={SET_STAND:['id','name'],ADD_ZONE:['id','name'],RENAME_ZONE:['zoneId','name'],REMOVE_ZONE:['zoneId'],SELECT_ACTIVE_ZONE:['zoneId'],SELECT_RECEIVER:['receiver'],SET_OUTPUT_COUNT:['count'],SET_OUTPUT_ENABLED:['port','enabled'],SET_PIXELS:['port','pixels'],SET_SIDE:['port','side'],SELECT_ZONE:['zoneId'],SECURITY_PROGRESS:['phase'],SKIP_ZONES:[],NEXT:[],BACK:[],CANCEL:[],RETRY:[]};
       if (!plain(event) || !own(fields,event.type)) fail('EVENT','Deze instelactie is niet beschikbaar.');
       shape(event,['type'].concat(fields[event.type]),'EVENT');
       if (next.stage === 'done') fail('ALREADY_ADDED','Deze receiver is al toegevoegd.');
@@ -242,6 +242,8 @@
           requireStage(next,['security']);
           if (!['configuring','claiming','reconnecting','verifying','resuming'].includes(event.phase) || next.security.status !== 'pending') fail('SECURITY_PHASE','Deze beveiligingsstap moet door de verbinding worden bevestigd.');
           next.security.phase=event.phase;break;
+        case 'SKIP_ZONES':
+          unlocked(next);requireStage(next,['zones']);next.stage='receiver';break;
         case 'NEXT':
           switch (next.stage) {
             case 'stand': if (!next.stand) fail('STAND','Geef eerst je stand een naam.');next.stage='zones';break;
@@ -256,7 +258,7 @@
               const following=activeOutputs(next).find(output => output.port > next.port);
               if (following) next.port=following.port;else toSecurity(next);break;
             }
-            case 'zone': if (!next.zoneId) fail('ZONE_REQUIRED','Kies een zone voor deze receiver.');compatible(next,next.zones.find(zone => zone.id === next.zoneId));next.stage='review';break;
+            case 'zone': if (!next.zoneId && next.zones.length) fail('ZONE_REQUIRED','Kies een zone voor deze receiver.');if(next.zoneId)compatible(next,next.zones.find(zone => zone.id === next.zoneId));next.stage='review';break;
             case 'pin': fail('PIN_REQUIRED','Vul twee keer dezelfde PIN van 8 tot 12 cijfers in.');break;
             case 'security': fail('SECURITY_UNCONFIRMED','De beveiligde verbinding moet eerst bevestigd worden.');break;
             case 'review': fail('FINAL_RECEIPT_REQUIRED','Toevoegen vereist de definitieve bevestiging van deze receiver.');break;
@@ -313,7 +315,7 @@
       if(stand)next.stand={id:stand.id,name:stand.name,isNew:false};
       if(!next.zones.some(zone=>zone.id===next.activeZoneId))next.activeZoneId=next.zones[0]?.id||null;
       if(!next.zones.some(zone=>zone.id===next.zoneId))next.zoneId=null;
-      if(!next.zones.length&&next.stage==='receiver')next.stage='zones';
+      if(original.zones.length&&!next.zones.length&&next.stage==='receiver')next.stage='zones';
       return result(next);
     }catch(error){return caught(original,error);}
   }
@@ -347,14 +349,15 @@
     let next=Model.clone(model);
     if (draft.stand.isNew) next.stands.push({id:draft.stand.id,name:draft.stand.name,zones:[]});
     for (const zone of draft.zones.filter(item => item.isNew)) next=Model.createZone(next,draft.stand.id,{id:zone.id,name:zone.name});
-    const zone=Model.getZone(next,draft.zoneId);
-    if (!zone || !next.stands.find(item => item.id === draft.stand.id).zones.some(item => item.id === zone.id)) fail('ZONE_NOT_FOUND','De gekozen zone is niet meer beschikbaar in deze stand.');
+    if(draft.zoneId===null&&next.stands.find(item=>item.id===draft.stand.id).zones.length)fail('ZONE_REQUIRED','De zones zijn intussen gewijzigd. Kies een zone voor deze receiver.');
+    const zone=draft.zoneId===null?null:Model.getZone(next,draft.zoneId);
+    if (draft.zoneId!==null&&(!zone || !next.stands.find(item => item.id === draft.stand.id).zones.some(item => item.id === zone.id))) fail('ZONE_NOT_FOUND','De gekozen zone is niet meer beschikbaar in deze stand.');
     // No pending receiver is ever inserted. Both insertion and assignment are
     // local immutable operations after a verified final receipt, returned only
     // if the complete model (including continuous pixel budget) validates.
     next.receivers.push({id:draft.receiver.id,rid:draft.receiver.rid,deviceFingerprint:draft.receiver.deviceFingerprint,name:draft.receiver.name,type:draft.receiver.type,
       standId:draft.stand.id,zoneId:null,role:draft.role,lifecycle:'added',connection:'unknown',outputs:copy(draft.outputs),state:Model.defaultState(),onboardingTransactionId:draft.transactionId});
-    return Model.assignReceiverToZone(next,draft.receiver.id,draft.zoneId);
+    return draft.zoneId===null?Model.assertValid(next):Model.assignReceiverToZone(next,draft.receiver.id,draft.zoneId);
   }
   function createCommitter(options={}) {
     shape(options,['verifyFinalReceipt'],'COMMITTER');

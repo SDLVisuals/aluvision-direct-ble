@@ -174,7 +174,8 @@
       }
     }
     const automaticMain=()=>pinRequired&&!!draft&&draft.role==='main'&&manualWifi();
-    const pendingMain=()=>automaticMain()&&((draft.stage==='security'&&securityUncertain)||(['zone','review'].includes(draft.stage)&&draft.security.status==='confirmed'&&!!draft.zoneId));
+    const placementReady=()=>!!draft?.zoneId||draft?.zones.length===0;
+    const pendingMain=()=>automaticMain()&&((draft.stage==='security'&&securityUncertain)||(['zone','review'].includes(draft.stage)&&draft.security.status==='confirmed'&&placementReady()));
     const transientRejoin=failure=>['DISCOVERY_UNAVAILABLE','MAIN_MANUAL_WIFI_REQUIRED','MAIN_CONNECTION_UNAVAILABLE','NATIVE_TIMEOUT','TIMEOUT','NATIVE_BUSY','MAIN_BUSY','MAIN_REGISTRATION_UNCONFIRMED','MAIN_RECOVERY_UNAVAILABLE'].includes(failure?.code);
     function stopAutomaticRejoin(){clearTimeout(rejoinTimer);rejoinTimer=null;rejoinSession++;rejoinRunning=false;}
     function resumeAfterWifiReturn({force=false}={}){
@@ -195,7 +196,7 @@
       if(session!==rejoinSession||!container||document.hidden)return;
       // The zone was already chosen before the PIN. Preserve that choice, but
       // still traverse the normal validators and the authenticated finalizer.
-      if(draft.security.status==='confirmed'&&draft.zoneId&&['zone','review'].includes(draft.stage)){
+      if(draft.security.status==='confirmed'&&placementReady()&&['zone','review'].includes(draft.stage)){
         if(draft.stage==='zone'&&!change({type:'NEXT'},{render:false}))outcome='stop';
         else if(draft.stage==='review')outcome=await finish({automatic:true});
       }
@@ -278,7 +279,7 @@
     function receiverAction(receiver){
       const zone=draft.zones.find(item=>item.id===draft.activeZoneId);
       const compatible=zone&&(!zone.type||zone.type===receiver.type);
-      const label=!pinRequired&&receiver.type==='RGBW'?(compatible?`Toevoegen aan ${escape(zone.name)}`:'Zone kiezen en toevoegen'):'Deze receiver instellen';
+      const label=!pinRequired&&receiver.type==='RGBW'?(compatible?`Toevoegen aan ${escape(zone.name)}`:!draft.zones.length?'Receiver toevoegen':'Zone kiezen en toevoegen'):'Deze receiver instellen';
       return button('receiver',busy?'Controleren…':label,`data-id="${escape(receiver.id)}" ${busy||!(receiver.canConfigure||receiver.canVerifyIdentity)?'disabled':''}`);
     }
     function receiverSearchView(){
@@ -311,14 +312,14 @@
       return `${pinNetwork()}<p class="onboarding-task-hint">Eén PIN voor je hele installatie.</p><section class="card onboarding-pin-card"><label class="onboarding-field">PIN · 8–12 cijfers<input id="onboarding-pin" data-onboarding-pin="first" type="password" inputmode="numeric" autocomplete="new-password" minlength="8" maxlength="12" aria-describedby="onboarding-pin-help" spellcheck="false"></label><label class="onboarding-field">Herhaal dezelfde PIN<input id="onboarding-pin-repeat" data-onboarding-pin="repeat" type="password" inputmode="numeric" autocomplete="new-password" minlength="8" maxlength="12" aria-describedby="onboarding-pin-error onboarding-pin-match" spellcheck="false"></label><p id="onboarding-pin-error" class="onboarding-error" role="alert" hidden></p><p id="onboarding-pin-match" class="onboarding-pin-match" role="status" hidden>✓ Beide PINs komen overeen</p><p id="onboarding-pin-help" class="onboarding-hint">Bewaar je PIN: je wifi-wachtwoord en toegang op een ander toestel.</p><p class="onboarding-pin-rejoin-note">Daarna kies je het receiver-wifi opnieuw in Instellingen, met deze PIN.</p></section><details class="onboarding-recovery"><summary>App gewist of PIN vergeten?</summary><p>Bewaar je PIN ook buiten de app. Voor toegang na herinstallatie of op een ander toestel gebruik je dezelfde PIN zodra de hersteloptie beschikbaar is. PIN vergeten? Dan is een ondersteunde fabrieksreset op de receiver nodig.</p></details>${footerPin()}`;
     }
     function reviewCard(){
-      return `<section class="card onboarding-review onboarding-review-product">${product(draft.receiver,{compact:true,port:null})}<dl><div><dt>Receiver</dt><dd>${escape(draft.receiver.name||draft.receiver.type)}</dd></div><div><dt>Zone</dt><dd>${escape(draft.zones.find(zone=>zone.id===draft.zoneId)?.name)}</dd></div><div><dt>Verbinding</dt><dd>${draft.role==='main'?(pinRequired?'Hoofdreceiver · beveiligd':'Hoofdreceiver · open netwerk'):'Via hoofdreceiver'}</dd></div></dl>${draft.receiver.type==='SPI'?`<ul>${active().map(output=>`<li><b>P${output.port}</b><span>${output.pixels} pixels<small>${pixelSetup.endpointLabel(output)}</small></span></li>`).join('')}</ul>`:lightExample('RGBW')}</section><div class="onboarding-actions onboarding-footer">${pinRequired?button('back','← Zone kiezen',busy||finalizationStarted?'disabled':''):''}${button('finish',busy?'Toevoegen…':!pinRequired&&finalizationStarted?'Opnieuw proberen':'Receiver toevoegen',busy?'disabled':'')}</div>`;
+      return `<section class="card onboarding-review onboarding-review-product">${product(draft.receiver,{compact:true,port:null})}<dl><div><dt>Receiver</dt><dd>${escape(draft.receiver.name||draft.receiver.type)}</dd></div><div><dt>Zone</dt><dd>${escape(draft.zones.find(zone=>zone.id===draft.zoneId)?.name||'Later kiezen')}</dd></div><div><dt>Verbinding</dt><dd>${draft.role==='main'?(pinRequired?'Hoofdreceiver · beveiligd':'Hoofdreceiver · open netwerk'):'Via hoofdreceiver'}</dd></div></dl>${draft.receiver.type==='SPI'?`<ul>${active().map(output=>`<li><b>P${output.port}</b><span>${output.pixels} pixels<small>${pixelSetup.endpointLabel(output)}</small></span></li>`).join('')}</ul>`:lightExample('RGBW')}</section><div class="onboarding-actions onboarding-footer">${pinRequired?button('back','← Zone kiezen',busy||finalizationStarted?'disabled':''):''}${button('finish',busy?'Toevoegen…':!pinRequired&&finalizationStarted?'Opnieuw proberen':'Receiver toevoegen',busy?'disabled':'')}</div>`;
     }
     function addingPanel(){
-      return `<section class="card onboarding-security" role="status"><span class="onboarding-security-icon">${setupIcon('wifi')}</span><h2>Receiver toevoegen…</h2><p>We controleren de verbinding en bewaren je receiver in ${escape(draft.zones.find(zone=>zone.id===draft.zoneId)?.name)}.</p></section>`;
+      return `<section class="card onboarding-security" role="status"><span class="onboarding-security-icon">${setupIcon('wifi')}</span><h2>Receiver toevoegen…</h2><p>We controleren de verbinding en bewaren je receiver${draft.zoneId?` in ${escape(draft.zones.find(zone=>zone.id===draft.zoneId)?.name)}`:''}.</p></section>`;
     }
     function completeCard(){
-      const zone=draft.zones.find(zone=>zone.id===draft.zoneId),count=getModel().receivers.filter(receiver=>receiver.zoneId===draft.zoneId&&receiver.lifecycle==='added').length;
-      return `<section class="card onboarding-done">${product(draft.receiver,{compact:true})}<span class="onboarding-success-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="m8 16 5 5 11-11"/></svg></span><h2>Receiver toegevoegd</h2><p>${escape(zone?.name)} · ${count} ${count===1?'receiver':'receivers'}</p></section>${button('done',origin==='layout'?'Terug naar opstelling':'Klaar · naar mijn stand')}<p class="onboarding-later-hint">Meer receivers toevoegen kan later.</p><section class="onboarding-followup"><h2>Verder uitbreiden?</h2>${button('another',`＋ Nog een receiver in ${escape(zone?.name)}`,'class="button secondary"')}${button('another-zone','Andere zone kiezen','class="button secondary"')}</section>`;
+      const zone=draft.zones.find(zone=>zone.id===draft.zoneId),count=getModel().receivers.filter(receiver=>receiver.standId===draft.stand.id&&receiver.zoneId===draft.zoneId&&receiver.lifecycle==='added').length;
+      return `<section class="card onboarding-done">${product(draft.receiver,{compact:true})}<span class="onboarding-success-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="m8 16 5 5 11-11"/></svg></span><h2>Receiver toegevoegd</h2><p>${escape(zone?.name||'Niet in een zone')} · ${count} ${count===1?'receiver':'receivers'}</p></section>${button('done',origin==='layout'?'Terug naar opstelling':'Klaar · naar mijn stand')}<p class="onboarding-later-hint">${zone?'Meer receivers toevoegen kan later.':'Je kunt later zones maken en je receivers indelen.'}</p><section class="onboarding-followup"><h2>Verder uitbreiden?</h2>${button('another',zone?`＋ Nog een receiver in ${escape(zone.name)}`:'＋ Nog een receiver toevoegen','class="button secondary"')}${button('another-zone',zone?'Andere zone kiezen':'Zone toevoegen','class="button secondary"')}</section>`;
     }
     function errorBox(){return `<p class="onboarding-error" role="alert" ${error?'':'hidden'}>${escape(error)}</p><p class="onboarding-notice" role="status" ${notice||draftSaving?'':'hidden'}>${draftSaving?'Je keuzes bewaren…':escape(notice)}</p>${pendingChoices&&saveFailed?button('save-retry',draftSaving?'Bewaren…':'Opnieuw bewaren',draftSaving?'disabled':''):''}`;}
     function footer(next='Volgende',disabled=false){return `<div class="onboarding-actions onboarding-footer">${button('back','← Terug',`class="button secondary" ${draft.stage==='zones'&&!draft.stand.isNew?'disabled':''}`)}${button('next',next,disabled?'disabled':'')}</div>`;}
@@ -358,7 +359,7 @@
           if(zoneRemoval)return zoneRemovalPanel();
           if(zoneRename)return zoneRenamePanel();
           if(receiverMove)return movePanel();
-          return `${draft.zones.length?'':`<p class="onboarding-task-hint">Een zone is een plek in je stand, zoals de balie.</p>`}${setupZones({editable:true})}${draft.zones.length?`<p class="onboarding-zone-count" role="status">${draft.zones.length} ${draft.zones.length===1?'zone':'zones'} · Kies waar je begint.</p>`:''}${zoneNameFields()}${receiverPlacement()}<div class="onboarding-actions onboarding-footer onboarding-zones-continue">${button('next','Verder →','aria-label="Verder naar receivers toevoegen" disabled')}${button('zones-later',draft.zones.length?'Meer zones later toevoegen':'Zones later toevoegen','class="button secondary" aria-describedby="onboarding-zones-later-hint"')}<p id="onboarding-zones-later-hint" class="onboarding-zones-later-hint">${draft.zones.length?'Verder met je huidige zones.':'Ga naar je stand. Je kunt de setup later hervatten.'}</p><div class="onboarding-zones-footer-row">${button('back','← Terug',`class="button secondary" ${!draft.stand.isNew?'disabled':''}`)}</div></div>`;
+          return `${draft.zones.length?'':`<p class="onboarding-task-hint">Een zone is een plek in je stand, zoals de balie.</p>`}${setupZones({editable:true})}${draft.zones.length?`<p class="onboarding-zone-count" role="status">${draft.zones.length} ${draft.zones.length===1?'zone':'zones'} · Kies waar je begint.</p>`:''}${zoneNameFields()}${receiverPlacement()}<div class="onboarding-actions onboarding-footer onboarding-zones-continue">${button('next','Verder →','aria-label="Verder naar receivers toevoegen" disabled')}${button('zones-later',draft.zones.length?'Meer zones later toevoegen':'Zones later toevoegen','class="button secondary" aria-describedby="onboarding-zones-later-hint"')}<p id="onboarding-zones-later-hint" class="onboarding-zones-later-hint">Verder naar receivers toevoegen.</p><div class="onboarding-zones-footer-row">${button('back','← Terug',`class="button secondary" ${!draft.stand.isNew?'disabled':''}`)}</div></div>`;
         }
         case 'receiver':return receiverSearchView();
         case 'outputs':return `${pixelSetup.renderOutputs(draft.outputs,{onboarding:true})}<p class="onboarding-hint">Extra uitgangen inschakelen kan later.</p>${footer()}`;
@@ -372,7 +373,7 @@
         }
         case 'pin':return pinRequired?pinForm():securityPanel();
         case 'security':return securityPanel();
-        case 'zone':return `${!pinRequired?'<p class="onboarding-task-hint">Kies een passende zone om deze receiver toe te voegen.</p>':''}<div class="onboarding-zone-list">${zoneChoices()}</div>${zoneNameOpen?`<section class="card">${nameField('onboarding-zone-name','Naam van de nieuwe zone','Bijvoorbeeld: Lichttunnel',zoneNameInput)}${button('zone-create','Zone maken','disabled')}</section>`:button('zone-new','＋ Nieuwe zone','class="button secondary"')}${pinRequired?button('next','Verder naar overzicht',draft.zoneId?'':'disabled'):''}<small class="onboarding-hint">RGBW en SPI apart. Verplaatsen kan later.</small>`;
+        case 'zone':return `${!draft.zones.length?`<p class="onboarding-task-hint">Je voegt deze receiver zonder zone toe.</p>${button('next','Verder naar overzicht')}`:`${!pinRequired?'<p class="onboarding-task-hint">Kies een passende zone om deze receiver toe te voegen.</p>':''}<div class="onboarding-zone-list">${zoneChoices()}</div>${zoneNameOpen?`<section class="card">${nameField('onboarding-zone-name','Naam van de nieuwe zone','Bijvoorbeeld: Lichttunnel',zoneNameInput)}${button('zone-create','Zone maken','disabled')}</section>`:button('zone-new','＋ Nieuwe zone','class="button secondary"')}${pinRequired?button('next','Verder naar overzicht',draft.zoneId?'':'disabled'):''}`}<small class="onboarding-hint">${draft.zones.length?'RGBW en SPI apart. Verplaatsen kan later.':'Zones maken en receivers indelen kan later.'}</small>`;
         case 'review':return automaticMain()&&automaticFinalizing?mainWifiReturn():!pinRequired&&automaticFinalizing&&busy?addingPanel():reviewCard();
         case 'done':return completeCard();
         default:return '';
@@ -399,7 +400,7 @@
         const heading=container.querySelector('.onboarding-heading');
         const destination=draft.zones.find(zone=>zone.id===draft.activeZoneId);
         const destinationCount=zoneMembers(destination?.id).length;
-        heading.insertAdjacentHTML('afterend',`<details class="onboarding-destination" ${zonePickerOpen?'open':''}><summary>${zoneVisual(Math.max(0,draft.zones.indexOf(destination)))}<span class="onboarding-destination-name"><small>Toevoegen aan · ${destinationCount} ${destinationCount===1?'receiver':'receivers'}</small><b>${escape(destination?.name||'Kies een zone')}</b></span><em>Wijzig zone⌄</em></summary><div class="onboarding-destination-title"><h2>Kies je zone</h2>${button('zone-add-from-receiver','＋ Nieuwe zone','class="button secondary"')}</div>${setupZones()}<div class="onboarding-existing-members" data-existing-receivers>${receiverPlacement()}</div>${button('zone-manage','Zones beheren','class="button secondary"')}</details>`);
+        heading.insertAdjacentHTML('afterend',`<details class="onboarding-destination" ${zonePickerOpen?'open':''}><summary>${destination?zoneVisual(draft.zones.indexOf(destination)):'<span class="onboarding-zone-number" aria-hidden="true">—</span>'}<span class="onboarding-destination-name"><small>${destination?`Toevoegen aan · ${destinationCount} ${destinationCount===1?'receiver':'receivers'}`:'Indelen kan later'}</small><b>${escape(destination?.name||'Niet in een zone')}</b></span><em>${destination?'Wijzig zone':'Zone toevoegen'}⌄</em></summary><div class="onboarding-destination-title"><h2>Kies je zone</h2>${button('zone-add-from-receiver','＋ Nieuwe zone','class="button secondary"')}</div>${setupZones()}<div class="onboarding-existing-members" data-existing-receivers>${receiverPlacement()}</div>${button('zone-manage','Zones beheren','class="button secondary"')}</details>`);
         const intro=container.querySelector('.onboarding-heading~p');
         if(intro){intro.className='onboarding-later-hint';heading.insertAdjacentElement('afterend',intro);}
         const destinationCard=container.querySelector('.onboarding-destination');
@@ -632,7 +633,7 @@
         // The customer already picked a destination while naming zones. The
         // trusted security receipt may choose it only when it is compatible;
         // the final receiver receipt still gates actual app membership.
-        if(!pinRequired&&draft.zoneId){
+        if(!pinRequired&&placementReady()){
           const reviewed=draftApi.transition(draft,{type:'NEXT'});
           if(reviewed.error)throw Error('ZONE_UNCONFIRMED');
           draft=reviewed.draft;finishSelectedZone=true;
@@ -655,7 +656,7 @@
       }
     }
     function finishChosenZone(){
-      if(!container||draft.stage!=='zone'||!draft.zoneId)return;
+      if(!container||draft.stage!=='zone'||!placementReady())return;
       const reviewed=draftApi.transition(draft,{type:'NEXT'});
       if(reviewed.error){error=reviewed.error.message;paintPage(false);return;}
       draft=reviewed.draft;void finish({automatic:true});
@@ -736,15 +737,6 @@
       const action=target.dataset.onboardingAction;
       if(draftSaving||managementBusy)return;
       if(action==='save-retry')return saveChoices();
-      if(action==='zones-later'&&draft.stage==='zones'&&!draft.zones.length){
-        captureNames();
-        // Parking this step must not lose a name on a later cold start. Save
-        // complete zone names atomically; leave incomplete entries visible so
-        // the customer can finish or remove them before leaving the setup.
-        const saveZones=hasZoneNames();
-        if(saveZones&&!validZoneNames()){error='Maak de ingevulde namen af of verwijder een leeg extra naamveld. Je namen blijven staan.';paintPage(false);return;}
-        return saveChoices(saveZones?newZoneEvents():[],()=>{if(saveZones)resetZoneNames();suspend();onExit();},{top:false});
-      }
       if(action==='exit'){
         const beforeSave=operation;
         const name=container.querySelector('#onboarding-stand-name')?.value;
@@ -867,13 +859,13 @@
       }
       if(action==='next'||action==='zones-later'&&draft.stage==='zones'){
         if(draft.stage==='zones'){
-          captureNames();if(!canContinueZones()){
+          captureNames();if(hasZoneNames()?!validZoneNames():!draft.zones.length&&action!=='zones-later'){
             if(action==='zones-later'){error='Maak de ingevulde namen af of verwijder een leeg extra naamveld. Je namen blijven staan.';paintPage(false);}
             return;
           }
           // One zones page: Continue can save the entered name(s) and leave
           // atomically, without an intermediate overview or a second tap.
-          return saveChoices([...(hasZoneNames()?newZoneEvents():[]),{type:'NEXT'}],()=>{
+          return saveChoices([...(hasZoneNames()?newZoneEvents():[]),{type:action==='zones-later'?'SKIP_ZONES':'NEXT'}],()=>{
           resetZoneNames();zoneNameOpen=false;
           // Search only after an explicit Continue and a successful save.
           // Manual Wi-Fi still needs the customer's Settings trip first.
