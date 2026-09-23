@@ -302,22 +302,52 @@
     const layout=singleLine?'stacked':tunnel&&zone().layout==='continuous'?'stacked':zone().layout;
     return addPreview(list,layout,'',{label:effect.name,effectId:effect.id,brand:effect.category==='brand',labels:!singleLine});
   }
+  function tunnelIllustration() {
+    // Product-inspired teaching model, not a CAD model or the user's actual
+    // receiver geometry: a broad circular fascia and a continuous curved wall.
+    const outer=[[60,224],[20,190,12,148,18,110],[24,47,72,14,132,14],[194,14,241,59,244,116],[246,159,230,194,206,224]];
+    const inner=[[82,224],[55,196,40,162,43,122],[46,76,82,40,132,40],[181,40,216,73,220,123],[221,163,206,195,182,224]];
+    const depths=[1,.84,.70,.58,.48],vp=[300,120];
+    const point=(x,y,s)=>`${(vp[0]+(x-vp[0])*s).toFixed(2)} ${(vp[1]+(y-vp[1])*s).toFixed(2)}`;
+    function curve(points,s,reverse=false,join=false){
+      if(!reverse)return (join?'L':'M')+point(...points[0],s)+points.slice(1).map(p=>'C'+point(p[0],p[1],s)+' '+point(p[2],p[3],s)+' '+point(p[4],p[5],s)).join('');
+      return (join?'L':'M')+point(...points.at(-1).slice(-2),s)+points.slice(1).map((p,i)=>'C'+point(p[2],p[3],s)+' '+point(p[0],p[1],s)+' '+point(...points[i].slice(-2),s)).reverse().join('');
+    }
+    const band=(a,b,front=inner,back=inner)=>curve(front,a)+curve(back,b,true,true)+'Z';
+    const panels=depths.slice(0,-1).map((depth,i)=>{
+      const rear=depths[i+1],middle=(depth+rear)/2;
+      return `<g class="tunnel-light-section" data-depth="${i}"><path class="tunnel-panel" d="${band(depth,rear)}"/><path class="tunnel-panel-light arch-${i}" d="${band(depth,rear)}"/><path class="tunnel-panel-seam" d="${curve(inner,rear)}"/><path class="tunnel-arch arch-${i}" d="${curve(inner,middle)}" style="--light-width:${(3.2*depth).toFixed(1)}px"/><path class="tunnel-ribbon arch-${i}" d="${curve(inner,depth-.025)}"/></g>`;
+    }).reverse().join('');
+    const reflections=depths.slice(0,-1).map((depth,i)=>{
+      const rear=depths[i+1];
+      return `<path class="tunnel-reflection arch-${i}" d="M${point(109,230,depth)}L${point(151,230,depth)}L${point(151,230,rear)}L${point(109,230,rear)}Z"/>`;
+    }).join('');
+    return `<svg viewBox="0 0 360 260" role="img" aria-label="Uitlegvoorbeeld in 3D: een ronde Aluvision-geïnspireerde tunnel met vier bewegende lichtzones en een reflecterend looppad"><defs>
+      <linearGradient id="tunnel-shell" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b8b9b9"/><stop offset=".45" stop-color="#777b7d"/><stop offset="1" stop-color="#383d40"/></linearGradient>
+      <linearGradient id="tunnel-face" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="#f0f0ed"/><stop offset=".5" stop-color="#c7c9c9"/><stop offset="1" stop-color="#929698"/></linearGradient>
+      <linearGradient id="tunnel-lining" x1="0" y1="0" x2="1" y2=".8"><stop stop-color="#353536"/><stop offset=".36" stop-color="#141518"/><stop offset=".7" stop-color="#313133"/><stop offset="1" stop-color="#18191b"/></linearGradient>
+      <linearGradient id="tunnel-light" x1="0" y1="1" x2=".6" y2="0"><stop stop-color="#e7754e" stop-opacity=".6"/><stop offset=".4" stop-color="#ffbb70" stop-opacity=".5"/><stop offset=".75" stop-color="#ffddae" stop-opacity=".85"/><stop offset="1" stop-color="#ff8a62" stop-opacity=".35"/></linearGradient>
+      <linearGradient id="tunnel-walkway" x1="0" y1="1" x2=".7" y2="0"><stop stop-color="#a3a09a"/><stop offset=".5" stop-color="#767573"/><stop offset="1" stop-color="#424345"/></linearGradient>
+      <linearGradient id="tunnel-reflect" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#ffb07a" stop-opacity=".15"/><stop offset=".5" stop-color="#ffe3b9" stop-opacity=".72"/><stop offset="1" stop-color="#de694a" stop-opacity=".3"/></linearGradient>
+      <radialGradient id="tunnel-exit"><stop stop-color="#b7b7b5" stop-opacity=".36"/><stop offset="1" stop-color="#b7b7b5" stop-opacity="0"/></radialGradient>
+      <clipPath id="tunnel-opening"><path d="${curve(inner,1)}Z"/></clipPath>
+    </defs><g transform="translate(18 2)"><ellipse class="tunnel-ground-shadow" cx="160" cy="231" rx="140" ry="15"/><ellipse cx="243" cy="143" rx="58" ry="56" fill="url(#tunnel-exit)"/>
+      <path class="tunnel-shell" d="${band(1,.48,outer,outer)}"/><g class="tunnel-interior" clip-path="url(#tunnel-opening)"><path class="tunnel-back-face" d="${band(.48,.48,outer,inner)}"/>
+      <path class="tunnel-inner-wall" d="${band(1,.48)}"/>${panels}</g>
+      <path class="tunnel-walkway" d="M61 239L189 239L245 171L194 171Z"/><path class="tunnel-floor-edge" d="M61 239L194 171M189 239L245 171"/>
+      <path class="tunnel-floor-inlay" d="M108 236L151 236L230 173L213 173Z"/>${reflections}
+      <path class="tunnel-front-side" d="${band(1,1,outer,inner)}" transform="translate(4 2)"/><path class="tunnel-front-face" d="${band(1,1,outer,inner)}"/><path class="tunnel-front-edge" d="${curve(outer,1)}"/>
+      <text class="tunnel-brand" x="132" y="30" text-anchor="middle">Aluvision</text>
+    </g></svg>`;
+  }
   function tunnelGuide() {
     const count=receivers().length,together=selection().kind==='all';
-    // Project four solid portals towards an off-centre vanishing point. Seeing
-    // the side faces, walkway and shrinking depth makes this a tunnel, rather
-    // than four flat arches nested inside one another.
-    const arch='M28 207V108C28 57 65 20 126 20C187 20 224 57 224 108V207';
-    const depths=[1,.74,.53,.37];
-    const point=(x,y,depth)=>`${(305+(x-305)*depth).toFixed(1)},${(119+(y-119)*depth).toFixed(1)}`;
-    const floor=depths.map(depth=>`M${point(30,211,depth)}L${point(222,211,depth)}`).join('');
-    const portals=depths.map((depth,i)=>`<g class="tunnel-portal" data-depth="${i}" transform="translate(${305*(1-depth)} ${119*(1-depth)}) scale(${depth})"><path class="tunnel-portal-shadow" d="${arch}" transform="translate(9 -5)"/><path class="tunnel-portal-side" d="${arch}" transform="translate(5 -3)"/><path class="tunnel-arch-track" d="${arch}"/><path class="tunnel-arch arch-${i}" d="${arch}"/><path class="tunnel-foot" d="M20 207H36M216 207H232"/></g>`).reverse().join('');
     const status=count<2?`Nog ${2-count} ${count===1?'receiver':'receivers'} nodig`:together?'Klaar voor tunneleffecten':'Selecteer alle ledlines';
     const detail=count<2?`${count} ${count===1?'receiver':'receivers'} in ${zone().name}`:together?`${count} receivers · in de volgorde van Opstelling`:`${count} receivers · een tunnel bedien je samen`;
     const action=count<2?`<button class="button full" data-action="layout-receiver-add" data-zone="${esc(zone().id)}"><span aria-hidden="true">＋</span> Receiver toevoegen</button>`:!together?'<button class="button full" data-action="tunnel-together">Alle ledlines samen bedienen</button>':'';
     // A teaching illustration, never a substitute for the actual installation.
     // Effect cards below still use its real receiver count, order and layout.
-    return `<section class="tunnel-guide" aria-label="Tunneleffecten"><header class="tunnel-guide-heading"><div><h2>Licht door de tunnel</h2><p>Van de eerste naar de laatste lichtboog.</p></div><span class="tunnel-motion-symbol" aria-hidden="true">${icon('chevron')}${icon('chevron')}</span></header><figure class="tunnel-visual"><svg viewBox="0 0 360 230" role="img" aria-label="Uitlegvoorbeeld in perspectief: een lichtgolf door vier lichtbogen boven een looppad"><defs><linearGradient id="tunnel-frame" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#849087"/><stop offset=".45" stop-color="#414f47"/><stop offset="1" stop-color="#26372e"/></linearGradient><linearGradient id="tunnel-walkway" x1="0" y1="1" x2=".7" y2="0"><stop stop-color="#46534a"/><stop offset="1" stop-color="#1a2820"/></linearGradient><radialGradient id="tunnel-exit"><stop stop-color="#c7d5bf" stop-opacity=".22"/><stop offset="1" stop-color="#c7d5bf" stop-opacity="0"/></radialGradient></defs><ellipse cx="280" cy="136" rx="52" ry="49" fill="url(#tunnel-exit)"/><path class="tunnel-wall" d="M224 207V108C224 57 187 20 126 20L239 82C263 82 278 96 278 115V152Z"/><path class="tunnel-walkway" d="M15 220L231 150L285 150L233 220Z"/><path class="tunnel-floor" d="${floor}M70 220L246 150M177 220L272 150"/><path class="tunnel-floor-edge" d="M15 220L231 150M233 220L285 150"/>${portals}</svg><figcaption><span>Voorbeeld met 4 lichtbogen</span><span class="tunnel-sequence" aria-hidden="true">${depths.map((_,i)=>`<i class="arch-${i}"></i>`).join('')}</span></figcaption></figure><div class="tunnel-status"><div><strong>${status}</strong><small>${esc(detail)}</small></div>${action}</div></section>`;
+    return `<section class="tunnel-guide" aria-label="Tunneleffecten"><header class="tunnel-guide-heading"><div><h2>Licht door de tunnel</h2><p>Van voor naar achter, in één beweging.</p></div><span class="tunnel-motion-symbol" aria-hidden="true">${icon('chevron')}${icon('chevron')}</span></header><figure class="tunnel-visual">${tunnelIllustration()}<figcaption><span>Tunnelvoorbeeld · 4 lichtzones</span><span class="tunnel-sequence" aria-hidden="true">${[0,1,2,3].map(i=>`<i class="arch-${i}"></i>`).join('')}</span></figcaption></figure><div class="tunnel-status"><div><strong>${status}</strong><small>${esc(detail)}</small></div>${action}</div></section>`;
   }
   function presetContext() { return {type:zone().type,receiverCount:receivers().length,selection:selection(),layout:zone().layout}; }
   function renderPresets() {
