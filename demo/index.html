@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#171817">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'none'">
+  <title>Aluvision Lighting</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="animations.css">
+  <link rel="stylesheet" href="animation-library.css">
+  <link rel="stylesheet" href="receiver-visual.css">
+  <link rel="stylesheet" href="continuity.css">
+  <link rel="stylesheet" href="onboarding-ui.css">
+  <link rel="stylesheet" href="pixel-setup.css">
+  <link rel="stylesheet" href="receiver-update-ui.css">
+  <link rel="stylesheet" href="receiver-removal-ui.css">
+  <link rel="stylesheet" href="scenes.css">
+  <script defer src="vendor/v21_tunnel_engine.js"></script>
+  <script defer src="vendor/v21_animation_catalog.js"></script>
+  <script defer src="model.js"></script>
+  <script defer src="fixtures.js"></script>
+  <script defer src="animation-engine.js"></script>
+  <script defer src="preview.js"></script>
+  <script defer src="animation-library.js"></script>
+  <script defer src="colour.js"></script>
+  <script defer src="presets.js"></script>
+  <script defer src="colours-library.js"></script>
+  <script defer src="colour-library-drag.js"></script>
+  <script defer src="scenes.js"></script>
+  <script defer src="preferences.js"></script>
+  <script defer src="receiver-visual.js"></script>
+  <script defer src="security-mode.js"></script>
+  <script defer src="onboarding-contract.js"></script>
+  <script defer src="onboarding-draft.js"></script>
+  <script defer src="pixel-setup.js"></script>
+  <script defer src="onboarding-ui.js"></script>
+  <script defer src="native-runtime.js"></script>
+  <script defer src="web-demo-service.js"></script>
+  <script defer src="live-control.js"></script>
+  <script defer src="receiver-update-ui.js"></script>
+  <script defer src="receiver-removal-ui.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Naar de bediening</a>
+  <header class="brand-bar"><img src="assets/aluvision-logo.png" alt="Aluvision"><span>LIGHTING <b>V30</b></span></header>
+  <div id="web-demo-banner" class="web-demo-banner" role="status" hidden><b>DEMO</b><span>Fictieve receivers · geen verbinding met echte verlichting</span></div>
+  <div class="connection-bar"><button class="connection-status" data-action="connection-status" aria-label="Niet verbonden. Bekijk verbinding en gegevens."><span aria-hidden="true"></span>Niet verbonden</button></div>
+  <main id="main" tabindex="-1"></main>
+  <nav id="navigation" class="navigation" aria-label="Hoofdnavigatie"></nav>
+  <dialog id="help"><div id="help-content"></div></dialog>
+  <dialog id="effect-dialog" aria-labelledby="effect-dialog-title"><div id="effect-dialog-content"></div></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <noscript>Schakel JavaScript in om Aluvision Lighting te gebruiken.</noscript>
+</body>
+</html>

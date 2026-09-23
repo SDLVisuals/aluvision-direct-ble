@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "artifacts": [
+    {
+      "id": "rgbw-21.1.39-local-setup",
+      "receiverType": "RGBW",
+      "model": "ALV-RGBW-DUAL",
+      "board": "ESP32S3",
+      "version": "21.1.39",
+      "variant": "LOCAL_SETUP",
+      "channel": "release-candidate",
+      "file": "artifacts/rgbw-21.1.39-local-setup.app.bin",
+      "size": 1452528,
+      "sha256": "5796666bde07e147fe7aa510afc34745206838a0d3358f50e36aa260d8b730e2",
+      "identityMarker": "ALUVISION_FW_ID_V1|TYPE=RGBW|MODEL=ALV-RGBW-DUAL|BOARD=ESP32S3|VERSION=21.1.39|VARIANT=LOCAL_SETUP|END",
+      "otaWireVersion": 1,
+      "dataPayloadBytes": 128,
+      "trusted": true,
+      "applicationImage": true
+    },
+    {
+      "id": "spi-21.1.39-local-setup",
+      "receiverType": "SPI",
+      "model": "ALV-SPI-SK6812",
+      "board": "ESP32S3",
+      "version": "21.1.39",
+      "variant": "LOCAL_SETUP",
+      "channel": "release-candidate",
+      "file": "artifacts/spi-21.1.39-local-setup.app.bin",
+      "size": 1525504,
+      "sha256": "66edf1bfec70b67cc1f58515754fe13c5e36c3e2e1ac45bdc13081769cde9b34",
+      "identityMarker": "ALUVISION_FW_ID_V1|TYPE=SPI|MODEL=ALV-SPI-SK6812|BOARD=ESP32S3|VERSION=21.1.39|VARIANT=LOCAL_SETUP|END",
+      "otaWireVersion": 1,
+      "dataPayloadBytes": 128,
+      "trusted": true,
+      "applicationImage": true
+    }
+  ]
+}

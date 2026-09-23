@@ -1,0 +1,170 @@
+/* Keep the established light Aluvision header. Dark surfaces are reserved for
+   light previews and the compact navigation, not a new branding banner. */
+:root{--app-width:440px}
+body{width:100%;max-width:var(--app-width);min-height:100dvh;margin:0 auto;background:var(--bg)}
+.brand-bar{padding-inline:17px}
+main{width:100%;max-width:var(--app-width)}
+.connection-bar{height:27px;display:flex;align-items:center;justify-content:flex-end;padding:0 17px;background:var(--bg)}
+.web-demo-banner{display:flex;align-items:center;justify-content:center;gap:9px;padding:8px 14px;background:#fff1d4;color:#573b10;text-align:center;font-size:11px;line-height:1.3}
+.web-demo-banner[hidden]{display:none}
+.web-demo-banner b{flex:none;border-radius:5px;background:#573b10;color:white;padding:3px 5px;letter-spacing:.09em;font-size:9px}
+.connection-status{display:inline-flex;align-items:center;gap:6px;background:transparent;color:var(--muted);font-size:10px;font-weight:500;padding:5px 0;min-height:25px}
+.connection-status>span{width:5px;height:5px;border-radius:50%;background:#979e94}
+.navigation{width:min(calc(var(--app-width) - 24px),calc(100% - 24px))}
+.toast{max-width:min(calc(var(--app-width) - 32px),calc(100vw - 32px))}
+dialog,#effect-dialog{width:min(calc(var(--app-width) - 24px),calc(100vw - 24px))}
+.current-effect{flex-wrap:wrap;gap:8px}.current-effect>.menu-icon{display:none}.current-effect>div>small:last-child{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.current-effect>.button{width:100%;max-width:none;min-height:36px;font-size:12px}.filter-row{margin:0 -4px;padding:3px 4px 8px}.settings-panel{padding:15px;gap:12px}.effect-card canvas{height:85px}.brand-colour>svg{display:none}
+.receiver-product canvas{height:205px}.receiver-product.compact canvas{height:125px}
+.connection-empty>.icon{width:32px;height:32px;color:var(--muted);margin-bottom:12px}.connection-empty h2{margin-bottom:10px}
+.page-heading:has(>h1){display:block}.page-heading:has(>h1)>.eyebrow{margin-bottom:8px}
+.onboarding-page :is(button,input,summary){scroll-margin-block-end:calc(var(--nav) + env(safe-area-inset-bottom) + 18px)}
+.connection-info h2{margin-top:12px;margin-bottom:12px}.connection-info .pill{font-weight:600}.technical-status{margin-top:17px;border-top:1px solid var(--line);padding-top:13px}.technical-status>summary{font-size:13px;font-weight:700;cursor:pointer;min-height:30px}.technical-status .readiness-list{margin-top:12px}
+/* Names can contain 64 characters without spaces. Keep them inside the phone
+   layout, with a compact title and back link above the shared light preview. */
+.page>*{min-width:0}.page-heading :is(h1,p,.eyebrow),.zone-copy b{overflow-wrap:anywhere}
+.topline>.back{min-width:0;max-width:75%}.back>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.context-name{min-width:0;flex:1}
+.control-context h1{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.page-heading>.pill{flex:none}.zone-card{grid-template-columns:105px minmax(0,1fr)}
+.selection-summary{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.selection>header h2{flex:none}
+dialog :is(h2,h3,p){overflow-wrap:anywhere}dialog header h2{min-width:0}
+.animation-search-empty{padding-block:20px}.animation-search-empty h2{margin-top:0}
+@media(min-width:441px){body{border-inline:1px solid var(--line);box-shadow:0 0 45px #20252005}}
+/* More space for everyday actions, without shrinking their touch targets. */
+.stand-page{gap:14px}
+.stand-page .stand-summary{gap:8px}
+.stand-page .stand-summary>div{padding:10px 12px;gap:9px}
+.stand-page .stand-summary>div>span{display:flex;align-items:baseline;gap:7px}
+.stand-page .stand-summary b{font-size:20px}
+.stand-page .stand-control-shortcut{min-height:66px;padding:11px 13px;gap:11px}
+.stand-page .stand-control-shortcut>span:nth-child(2){flex:1;min-width:0}
+.control-context:is([data-page="controls"],[data-page="layout"]){position:static}
+.control-context .back,.control-context .section-tabs button,.control-context .receiver-chips button{min-height:44px}
+.current-effect>.button{min-height:44px}
+.preview-live-controls button{min-height:44px}
+.zone-management-actions{padding-top:14px;border-top:1px solid var(--line)}
+.scene-rename{display:inline-flex;align-items:center;gap:7px;justify-self:start;margin-top:-10px}
+.scene-rename .icon{width:16px;height:16px}
+/* The shared dialog keeps its title and close button above its live preview. */
+#effect-dialog{background:var(--panel)}
+#effect-dialog-content>header{position:sticky;top:-22px;z-index:6;background:var(--panel);margin:0 -8px;padding:10px 8px;border-bottom:1px solid var(--line);box-shadow:0 8px 0 var(--panel)}
+#effect-dialog-content>header h2{font-size:19px}
+#effect-dialog .dialog-live-preview{top:calc(var(--dialog-header-height,64px) - 14px);z-index:5}
+#effect-dialog :is(button,input){scroll-margin-block-start:calc(var(--dialog-header-height,64px) + 12px);scroll-margin-block-end:18px}
+#effect-dialog:has(.dialog-live-preview) :is(.shared-colour-picker button,.shared-colour-picker input){scroll-margin-block-start:calc(var(--dialog-header-height,64px) + 115px)}
+#effect-dialog .shared-colour-picker .section-heading{flex-wrap:wrap;gap:5px;margin-bottom:12px}
+#effect-dialog .shared-colour-picker .section-heading h2{flex:1 0 100%;font-size:16px}
+#effect-dialog .shared-colour-picker .section-heading small{font-size:11px}
+@media(max-width:360px){#effect-dialog .shared-colour-picker .colour-tools{grid-template-columns:1fr}#effect-dialog .colour-tools .wheel-wrap{max-width:156px;justify-self:center;width:100%}#effect-dialog .colour-tools .colour-values{gap:6px}}
+.brand-bar{background:#f8f8f5;color:var(--ink);border-bottom:1px solid var(--line)}
+.brand-bar img{filter:none}.brand-bar>span{color:var(--muted)}.brand-bar b{color:var(--red)}
+.receiver-status{font-size:10px!important;color:var(--muted);margin-top:3px}.receiver-management{display:grid;gap:6px;padding:0 0 14px;margin-bottom:8px;border-bottom:1px solid var(--line)}.receiver-management .button{display:flex;align-items:center;justify-content:center;gap:8px;white-space:normal}.receiver-management .text-button{min-height:42px}.receiver-management small{font-size:11px;line-height:1.5;color:var(--muted)}
+.assignment-choices{display:grid;gap:9px;margin:16px 0}.assignment-choice{display:flex;align-items:center;gap:11px;text-align:left;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);padding:13px;min-height:65px}.assignment-choice>span{flex:1;min-width:0}.assignment-choice b{display:block;font-size:14px;overflow-wrap:anywhere}.assignment-choice small{display:block;font-size:11px;color:var(--muted);line-height:1.5;margin-top:3px}.assignment-choice>i{font-style:normal;flex:none;width:20px;text-align:center;color:var(--red)}.assignment-choice[aria-pressed=true]{border-color:var(--red);box-shadow:inset 0 0 0 1px var(--red)}.assignment-choice:disabled{opacity:.55}.empty-zone{display:grid;gap:14px;margin-top:16px}.empty-zone small{line-height:1.5;color:var(--muted)}
+.animation-search{display:grid;gap:7px;font-size:12px;font-weight:650}.animation-search input{width:100%;min-height:45px;border:1px solid var(--line);border-radius:12px;padding:10px 13px;background:var(--panel);color:var(--ink)}.library-result-count{font-size:11px;color:var(--muted);margin-bottom:12px}.option-toggle{display:flex;align-items:center;justify-content:space-between;background:var(--soft);border:1px solid var(--line);border-radius:12px;min-height:44px;padding:10px;font-size:12px}.option-toggle[aria-pressed=true]{border-color:var(--red);color:var(--red)}
+.my-colours{border-top:1px solid var(--line);margin-top:15px;padding-top:9px}.my-colours .section-heading{margin-bottom:4px}
+.saved-colour-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px}
+.saved-colour-item{position:relative;min-width:0;padding-top:14px}
+.saved-colour{width:100%;background:transparent;display:flex;flex-direction:column;align-items:center;gap:7px;padding:7px 2px;font-size:10px;min-width:0;min-height:77px;align-self:start}
+.add-colour{padding-top:21px}
+.colour-library-hint{font-size:10px!important;line-height:1.5;margin-bottom:6px!important;color:var(--muted)}
+.my-colours .section-heading h3{white-space:nowrap}.my-colours .section-heading .text-button{font-size:11px;text-align:right;line-height:1.3}
+.colour-remove{position:absolute;top:0;right:0;display:grid;place-items:center;width:44px;height:44px;background:transparent;padding:0}
+.colour-remove span{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--red);font-size:20px;line-height:1;box-shadow:0 2px 5px #0001}
+.saved-colour-grid.is-ordering .saved-colour-item{border:1px dashed var(--line);border-radius:12px}
+.saved-colour-grid.is-ordering :is(.saved-colour,.colour-drag-handle){touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.colour-drag-handle{width:100%;display:flex;align-items:center;justify-content:center;gap:5px;min-height:44px;background:var(--soft);border-radius:0 0 11px 11px;color:var(--muted)}.colour-drag-handle>span{font-size:22px}.colour-drag-handle small{font-size:10px}
+.saved-colour-item.colour-drag-source{opacity:.55;cursor:grabbing}.saved-colour-item.colour-drag-target{border-color:var(--red)!important;outline:2px solid var(--red);box-shadow:0 0 0 3px #c94e4620;background:var(--soft)}
+.colour-drag-ghost{position:fixed;pointer-events:none;z-index:100;display:grid;justify-items:center;gap:5px;width:90px;padding:8px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 6px 20px #0003;font-size:10px}.colour-drag-ghost i{width:34px;height:34px;border-radius:50%}
+.colour-library-feedback{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:24px}.colour-library-status{font-size:11px!important;line-height:1.4;color:var(--muted)}.colour-library-feedback .text-button{font-size:11px;min-height:36px;margin-left:auto}
+.saved-colour i{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--swatch,#eee);border:3px solid var(--panel);box-shadow:0 0 0 1px var(--line);font-style:normal;font-size:24px}.saved-colour span{max-width:100%;overflow-wrap:anywhere}.add-colour i{background:var(--soft);color:var(--ink);box-shadow:none}
+.shared-colour-picker .wheel{outline-offset:4px}
+.shared-colour-picker .colour-values{grid-template-columns:minmax(0,1fr)}
+#effect-dialog-content{min-width:0}#effect-dialog section{display:block;min-width:0;margin:0}#effect-dialog .shared-colour-picker{margin:0;padding:12px}#effect-dialog .colour-tools{grid-template-columns:minmax(120px,1fr) minmax(0,1fr);gap:14px}#effect-dialog .my-colours{margin-top:15px;padding-top:9px}#effect-dialog .my-colours p{font-size:11px}#effect-dialog .section-heading h2{font-size:16px}#effect-dialog .section-heading small{font-size:10px}#effect-dialog .colour-values{min-width:0}
+.receiver-order>[data-order-receiver]{display:grid;grid-template-columns:30px 25px minmax(0,1fr) 72px;gap:6px;border:1px solid var(--line);border-radius:12px;padding:5px;background:var(--panel)}
+.order-handle{touch-action:none;user-select:none;cursor:grab;background:transparent;min-height:44px;font-size:23px;color:var(--muted)}.order-handle:active{cursor:grabbing}
+.order-name{min-width:0}.order-name b{display:block;overflow-wrap:anywhere;font-size:11px}.order-name small{display:block;font-size:9px}
+.order-buttons{display:flex;gap:3px}.order-buttons button{background:var(--soft);border-radius:8px;min-height:44px;width:34px;font-size:17px}
+.order-help{margin-top:10px!important;font-size:11px!important}.order-status{font-size:11px!important;margin-top:7px!important;min-height:1em}
+.receiver-order>.drag-source{opacity:.6}.receiver-order>.drag-target{border:2px solid var(--red);padding:4px}
+.receiver-order .order-name{grid-column:3/-1}
+.receiver-order .order-handle{grid-row:1/3;align-self:stretch}
+.order-controls{grid-column:2/-1;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.receiver-order .order-identify{flex-direction:row;width:auto;min-height:44px;padding:7px 10px;gap:6px;font-size:10px}
+.scene-list,.scene-zone-list{display:grid;gap:12px}.scene-card,.scene-zone{display:flex;align-items:center;gap:13px;padding:12px;border:1px solid var(--line);border-radius:17px;background:var(--panel);text-align:left;color:var(--ink)}
+.scene-card>span,.scene-zone>span{flex:1;min-width:0}.scene-card b,.scene-zone b{font-size:14px;display:block;overflow-wrap:anywhere}.scene-card small,.scene-zone small{font-size:11px;display:block;line-height:1.5;margin-top:5px}.scene-preview{width:100px;height:80px;flex:none;border-radius:12px;display:block}
+.scene-zone[aria-pressed=true]{border:2px solid var(--red);padding:11px}.scene-zone i{width:26px;height:26px;border-radius:50%;background:var(--soft);font-style:normal;display:grid;place-items:center;flex:none}.scene-zone[aria-pressed=true] i{background:var(--red);color:white}
+.scene-detail .scene-preview{width:100%;height:150px;margin-bottom:15px}.scene-detail h2{margin-bottom:10px}.scene-detail p{margin-bottom:12px}
+.scene-preview-unavailable{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;background:var(--soft);color:var(--muted);text-align:center;padding:8px}.scene-preview-unavailable small{font-size:10px}.boolean-setting{display:grid;gap:5px}.boolean-setting .setting-reset{justify-self:start}
+.empty-zone-page{gap:12px}.empty-zone-page .topline{margin-bottom:0}.empty-zone-page h1{overflow-wrap:anywhere}.empty-zone{margin-top:0;gap:10px;padding:16px}.empty-zone h2{font-size:19px;margin:0}.empty-zone .button{margin:0}.empty-zone small{font-size:11px}
+.zone-entry{display:grid;min-width:0;border:1px solid var(--line);border-radius:20px;background:var(--panel)}
+.zone-entry .zone-card{width:100%;min-width:0;border:0;border-radius:20px 20px 0 0;background:var(--panel)}
+.zone-entry .zone-card:hover{transform:none;background:var(--bg)}
+.zone-delete-shortcut{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--muted);font-size:12px}
+.zone-delete-shortcut .icon{width:17px;height:17px}.zone-delete-shortcut:hover{color:var(--red);background:var(--bg)}
+.zone-entry>.zone-delete-shortcut{border:0;border-top:1px solid var(--line);border-radius:0 0 20px 20px}
+.zone-management-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.zone-delete-destination{display:flex;align-items:center;gap:12px;padding:14px;margin:16px 0;border:1px solid var(--line);border-radius:14px;background:var(--bg)}
+.zone-delete-destination>span{min-width:0;overflow-wrap:anywhere}.zone-delete-destination b{display:block;font-size:14px}.zone-delete-destination small{display:block;margin-top:4px;font-size:12px;color:var(--muted)}
+.zone-delete-actions{position:sticky;bottom:-22px;display:grid;gap:8px;margin:0 -8px -8px;padding:12px 8px 8px;background:var(--panel);border-top:1px solid var(--line);box-shadow:0 -10px 16px var(--panel);z-index:2}
+.management-status{padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--muted);font-size:13px}
+#effect-dialog .zone-delete-scene-note{margin-top:12px;padding:12px;border-left:3px solid var(--red);background:var(--bg);font-size:12px}
+.preference-label{margin:17px 0 9px}.preference-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.preference-grid button{min-height:44px;padding:10px;border:1px solid var(--line);background:var(--soft);border-radius:10px;color:var(--ink);font-size:12px}.preference-grid button[aria-pressed=true]{border-color:var(--red);color:var(--red);box-shadow:inset 0 0 0 1px var(--red)}.preference-note{font-size:11px!important;margin-top:10px!important}.readiness-list{padding:0;list-style:none;display:grid;gap:14px}.readiness-list b{font-size:12px;display:block}.readiness-list span{display:block;font-size:12px;color:var(--muted);line-height:1.6;margin-top:4px}
+.pin-login-entry>div{min-width:0}.pin-login-entry .pin-login-availability{font-size:11px;color:var(--muted);margin-top:7px}.pin-login-status{display:grid;gap:12px}.pin-login-status .menu-icon{background:var(--soft);color:var(--red)}.pin-login-status h2,.pin-login-guide h2{font-size:17px;line-height:1.4}.pin-login-status p+p{margin-top:0}.pin-login-guide>p{margin-top:10px}.pin-login-guide ol{list-style:none;counter-reset:pin-step;padding:0;margin:18px 0 0;display:grid;gap:18px}.pin-login-guide li{counter-increment:pin-step;display:grid;grid-template-columns:28px minmax(0,1fr);column-gap:10px;align-items:start}.pin-login-guide li:before{content:counter(pin-step);grid-row:span 2;display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:var(--soft);font-size:12px;font-weight:700}.pin-login-guide li b{font-size:13px}.pin-login-guide li span{grid-column:2;font-size:12px;color:var(--muted);margin-top:4px}
+body[data-theme=dark]{--bg:#131512;--panel:#20231e;--ink:#f1f2ee;--muted:#b6b9ae;--line:#3e443b;--soft:#2b3028;background:var(--bg);color:var(--ink);color-scheme:dark}
+body[data-theme=dark] .brand-bar{background:var(--bg)}body[data-theme=dark] .brand-bar img{filter:invert(1)}body[data-theme=dark] :is(.card,.menu-card,.zone-card,.receiver-list details,.layout-choice,.power-card,.receiver-chips button,.icon-button,dialog,.scene-card,.scene-zone){background:var(--panel);color:var(--ink)}
+body[data-theme=dark] :is(.preview-notice,.guide,.section-tabs,.channel-row button,.button.secondary,.pill,.receiver-type-icon){background:var(--soft);color:var(--muted)}body[data-theme=dark] :is(.pill,.zone-copy span,.guide p,.port-preview-note,.output-row select,.output-row input,.page-heading p){color:var(--muted)}body[data-theme=dark] :is(.section-tabs button[aria-selected=true],.receiver-chips button[aria-pressed=true]){background:#edece5;color:#242720}
+body[data-theme=dark] :is(.dialog-field input,.output-row input,.output-row select,.physical-port-picker button){background:var(--bg);color:var(--ink);border-color:var(--line)}body[data-theme=dark] :is(.stand-summary>div,.current-effect,.effect-card,.family-card){background:var(--panel);color:var(--ink);border-color:var(--line)}
+@media(max-width:360px){.scene-preview{width:72px;height:68px}.order-number{width:24px}.receiver-order>[data-order-receiver]{grid-template-columns:24px 23px minmax(0,1fr) 65px;gap:4px}.order-buttons button{width:31px}.shared-colour-picker .colour-tools{grid-template-columns:130px minmax(0,1fr)}#effect-dialog .colour-tools{grid-template-columns:120px minmax(0,1fr);gap:9px}.shared-colour-picker .setting-hint{font-size:10px}}
+/* Keep editor surfaces on the active theme. In dark mode the old literal white
+   backgrounds made inherited light labels and direction selections unreadable. */
+.settings-toggle,.brand-colour,.tunnel-guide,.preset-card,.filter-row button,.compact-direction button{background:var(--panel);color:var(--ink)}
+.filter-row button[aria-selected=true],.compact-direction button[aria-pressed=true]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.compact-direction button{min-height:44px}
+.physical-port-picker b{background:var(--soft);color:var(--ink)}
+.output-row.port-focused{background:var(--soft);box-shadow:8px 0 var(--soft),-8px 0 var(--soft)}
+.visual-setting{border-color:var(--line)}
+body[data-theme=dark] .onboarding-name-card input{background:var(--panel);color:var(--ink)}
+body[data-theme=dark] .section-tabs button:not([aria-selected=true]){color:var(--muted)}
+/* A small finish pass: unchanged geometry for cards, clearer pressed states,
+   and generous channel steppers without reducing the working slider area. */
+.zone-entry,.menu-card,.scene-card,.receiver-list details{box-shadow:0 2px 8px #20252005}
+.navigation{border:1px solid #ffffff12;box-shadow:0 5px 22px #17201724}
+.navigation button[aria-current=page]{box-shadow:0 1px 4px #0002}
+.channel-row{grid-template-columns:17px 44px minmax(20px,1fr) 44px 24px;min-height:48px}
+.channel-row button{width:44px;height:44px;border-radius:11px;font-size:20px}
+.channel-row output,.slider-row output{font-variant-numeric:tabular-nums}
+:is(.zone-card,.menu-card,.scene-card,.settings-toggle,.compact-direction button,.filter-row button,.channel-row button){transition:border-color .14s ease,background-color .14s ease,box-shadow .14s ease}
+:is(button,a,input,select,summary):focus-visible{outline:2px solid var(--red);outline-offset:3px}
+.receiver-list summary:focus-visible{outline-offset:-3px;border-radius:16px}
+@media(hover:hover){:is(.menu-card,.scene-card,.settings-toggle,.channel-row button):hover:not(:disabled){border-color:var(--red);box-shadow:0 2px 9px #2025200c}}
+@media(max-width:360px){.channel-row{grid-template-columns:15px 44px minmax(20px,1fr) 44px 22px;gap:3px}}
+@media(prefers-reduced-motion:reduce){:is(.zone-card,.menu-card,.scene-card,.settings-toggle,.compact-direction button,.filter-row button,.channel-row button,.switch i:after){transition:none}}
+/* Scope belongs next to a colour or animation, never on the zone overview. */
+.selection{min-width:0}
+.page>.selection{padding:13px;border:1px solid var(--line);border-radius:15px;background:var(--panel)}
+.receiver-chips .selection-together{gap:6px;border-width:2px}
+.receiver-chips .selection-together svg{width:21px;height:21px;color:var(--red)}
+.receiver-chips .selection-together[aria-pressed=true]{border-color:var(--red);background:var(--ink);color:var(--panel)}
+.receiver-chips .selection-together[aria-pressed=true] svg{color:#f3a29e}
+.receiver-chips .selection-together small{font-size:10px;color:var(--muted)}
+.receiver-chips .selection-together[aria-pressed=true] small{color:#f0e9e7}
+.receiver-chips button[aria-pressed=true]:not(.selection-together){box-shadow:inset 0 0 0 1px var(--red)}
+.receiver-chips button>span{white-space:nowrap}
+/* Exact RGBW values remain usable on narrow phones and inside colour dialogs. */
+.channel-help{font-size:10px!important;line-height:1.45;color:var(--muted);margin-bottom:9px!important}
+.channel-row{grid-template-columns:44px 44px minmax(40px,1fr) 44px 56px;gap:4px;min-height:48px}
+.channel-row button{width:100%;min-width:0}
+.channel-row .channel-toggle{font-size:13px;font-weight:800;color:var(--channel);border:1px solid var(--channel);background:var(--panel)}
+.channel-row .channel-toggle[aria-pressed=false]{color:var(--muted);border-color:var(--line);background:var(--soft);text-decoration:line-through}
+.channel-row .channel-number{width:100%;min-width:0;height:44px;padding:2px 3px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);font-size:13px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
+.channel-number::-webkit-inner-spin-button,.channel-number::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.channel-number{-moz-appearance:textfield;appearance:textfield}
+@media(max-width:360px){.channel-row{grid-template-columns:40px 38px minmax(40px,1fr) 38px 50px;gap:3px}.channel-row button{height:44px}}
+/* The destructive network action is intentionally separate from updates. */
+.receiver-service-section,.receiver-danger-section{display:grid;gap:10px;min-width:0;margin-top:18px;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+.receiver-service-section h3,.receiver-danger-section h3{font-size:15px;line-height:1.3;overflow-wrap:anywhere}
+.receiver-service-section p,.receiver-danger-section p{font-size:11px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}
+.receiver-service-section .button,.receiver-danger-section .button{margin-top:2px;min-height:46px;white-space:normal;text-align:center}
+.receiver-danger-section{margin-top:26px;border-color:#bf484155;background:#bf484109}
+.receiver-danger-section h3{color:var(--red)}
+.receiver-danger-section .button.secondary{border:1px solid var(--red);background:var(--panel);color:var(--red)}
+.app-erase-section{display:grid;gap:12px;min-width:0;margin-top:24px;border-color:#bf484155;background:#bf484109}.app-erase-section h2{margin:0}.app-erase-section p{margin:0;color:var(--muted);font-size:12px;line-height:1.5}.app-erase-section .button{min-height:46px;white-space:normal}

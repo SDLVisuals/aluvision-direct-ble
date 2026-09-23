@@ -1,0 +1,38 @@
+.receiver-product{position:relative;overflow:hidden;border:1px solid #e1e3dd;border-radius:20px;background:radial-gradient(ellipse at 48% 30%,#fff 0,#fafbf8 66%,#f1f3ee 100%);isolation:isolate}
+.receiver-product::after{position:absolute;inset:auto 16% 12% 16%;height:8%;border-radius:50%;background:#30373009;filter:blur(13px);content:"";pointer-events:none;z-index:-1}
+.receiver-product canvas{display:block;width:100%;height:240px}
+.receiver-product.compact{border-radius:14px}
+.receiver-product.compact canvas{height:135px}
+.receiver-product-caption{margin:0;padding:0 16px 14px;color:#657163;font-size:12px;line-height:1.5}
+.receiver-product-caption strong{display:block;color:#253326;font-size:13px}
+@media(max-width:480px){.receiver-product canvas{height:205px}.receiver-product.compact canvas{height:125px}}
+@media(prefers-reduced-motion:reduce){.receiver-product *{animation:none!important;transition:none!important}}
+.receiver-filters{display:flex;gap:5px;padding:4px;margin:16px 0;background:var(--line,#e8e8e3);border-radius:14px}
+.receiver-filters button{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;min-height:48px;border-radius:10px;background:transparent;font-size:12px;padding:7px;color:var(--muted)}
+.receiver-filters button[aria-pressed=true]{background:var(--surface,#fff);color:var(--ink);box-shadow:0 2px 6px #00000008}
+.receiver-filters button span{font-size:10px;min-width:19px;min-height:19px;border-radius:7px;padding:2px;background:#7a7c7412}
+.receiver-list summary{gap:9px}
+.receiver-list summary .receiver-heading-copy{flex:1;min-width:0;overflow-wrap:anywhere}
+.receiver-list summary .receiver-heading-copy b{font-size:13px}
+.receiver-list summary .receiver-heading-copy small{font-size:11px}
+.receiver-list summary>.icon{width:14px;height:14px;flex:none}
+.receiver-blink{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:none;min-height:48px;width:76px;padding:7px 4px;border:1px solid var(--line);border-radius:12px;background:var(--surface,#fff);font-size:10px;line-height:1.3}
+.receiver-blink .icon{width:17px;height:17px}
+.receiver-blink[aria-pressed=true]{color:var(--red);border-color:var(--red);background:#c94e4610}
+.receiver-details{overflow-anchor:none}
+.receiver-ports-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 0 8px}
+.receiver-ports-heading small{font-size:10px;text-align:right;max-width:160px}
+.receiver-port-list{display:grid;gap:7px;margin-bottom:12px}
+.receiver-port-row{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:14px;padding:6px;background:var(--surface,#fff)}
+.receiver-port-row.port-focused{border-color:var(--red);background:#c94e4606}
+.receiver-port-select{display:flex;flex:1;align-items:center;gap:10px;min-width:0;min-height:54px;text-align:left;background:transparent;padding:4px;font-size:12px;border-radius:10px}
+.receiver-port-select>b{display:grid;place-items:center;width:32px;height:34px;flex:none;border-radius:10px;background:#7a7c7412;font-size:13px}
+.receiver-port-select[aria-pressed=true]>b{background:var(--red);color:#fff}
+.receiver-port-select small{display:block;font-size:10px}
+.receiver-port-switch{flex-direction:column;gap:3px;flex:none;min-width:48px;min-height:48px;font-size:10px;padding:3px}
+.receiver-port-switch i{width:38px;height:23px}.receiver-port-switch i:after{width:17px;height:17px}.receiver-port-switch[aria-checked=true] i:after{transform:translateX(15px)}
+.receiver-port-switch:disabled{opacity:.4}.receiver-port-row{gap:5px}.receiver-port-row .receiver-port-select{gap:5px;font-size:11px}.receiver-port-row .receiver-blink{width:60px;font-size:9px}
+.pixel-setup-shortcut{display:flex;justify-content:center;align-items:center;gap:8px;font-size:13px}
+.pixel-setup-shortcut>.icon{width:18px;height:18px}
+.receiver-details .receiver-management{border-top:1px solid var(--line);padding-top:16px;margin-top:16px}
+@media(max-width:359px){.receiver-list summary .list-product{width:42px!important;flex-basis:42px!important}.receiver-list summary{padding:12px 10px}.receiver-list summary>.icon{width:10px}.receiver-blink{width:66px}.receiver-heading-copy b{font-size:12px!important}}
