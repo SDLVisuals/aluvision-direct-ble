@@ -208,7 +208,7 @@
     function heading(){
       const firstSetup=origin==='stand';
       const step=draft.stage==='stand'?1:draft.stage==='zones'?2:3;
-      const title=draft.stage==='stand'?'Hoe heet je stand?':draft.stage==='zones'?(zoneRemoval?'Zones beheren':zoneRename?'Zone hernoemen':receiverMove?'Receiver verplaatsen':zoneNames().length>1?'Maak je zones':zoneNameOpen&&draft.zones.length?'Nieuwe zone':draft.zones.length?'Zones beheren':'Maak je eerste zone'):draft.stage==='receiver'?(busy?'Receiver controleren':searchState==='searching'?'Receiver zoeken…':results.length===1?'Receiver gevonden':results.length>1?'Kies je receiver':'Receiver zoeken'):automaticMain()&&draft.stage==='security'?(busy||rejoinRunning?'Je receiver toevoegen':'Verbind opnieuw met wifi'):automaticMain()&&automaticFinalizing&&draft.stage==='review'?'Je receiver toevoegen':labels[draft.stage]||'Receiver toevoegen';
+      const title=draft.stage==='stand'?'Hoe heet je stand?':draft.stage==='zones'?(zoneRemoval?'Zones beheren':zoneRename?'Zone hernoemen':receiverMove?'Receiver verplaatsen':zoneNames().length>1?'Maak je zones':zoneNameOpen&&draft.zones.length?'Nieuwe zone':draft.zones.length?'Je zones':'Maak je eerste zone'):draft.stage==='receiver'?(busy?'Receiver controleren':searchState==='searching'?'Receiver zoeken…':results.length===1?'Receiver gevonden':results.length>1?'Kies je receiver':'Receiver zoeken'):automaticMain()&&draft.stage==='security'?(busy||rejoinRunning?'Je receiver toevoegen':'Verbind opnieuw met wifi'):automaticMain()&&automaticFinalizing&&draft.stage==='review'?'Je receiver toevoegen':labels[draft.stage]||'Receiver toevoegen';
       return `<header class="onboarding-setup-header"><div><span class="onboarding-setup-label">Setup</span><b>${firstSetup?'Je stand instellen':'Receiver toevoegen'}</b></div><button type="button" class="back" data-onboarding-action="exit">Later verder <span aria-hidden="true">×</span></button></header>${firstSetup?`<ol class="onboarding-setup-steps" aria-label="Je stand instellen">${['Standnaam','Zones','Receivers'].map((label,i)=>`<li data-setup-step="${i+1}" ${i+1===step?'aria-current="step"':''} class="${i+1<step||draft.stage==='done'?'completed':''}"><span>${i+1<step||draft.stage==='done'?'✓':i+1}</span><b>${label}</b></li>`).join('')}</ol>`:''}<header class="onboarding-heading"><div class="onboarding-step-caption"><span>${firstSetup?`Stap ${step} van 3`:'Receiver toevoegen'}</span>${draft.stand&&draft.stage!=='stand'?`<small>${escape(draft.stand.name)}</small>`:''}</div><h1>${title}</h1></header>${!['stand','zones','receiver','done'].includes(draft.stage)?zoneContext():''}`;
     }
     function zoneVisual(index){
@@ -332,7 +332,7 @@
           if(zoneRename)return zoneRenamePanel();
           if(receiverMove)return movePanel();
           const editing=!draft.zones.length||zoneNameOpen;
-          return `${draft.zones.length?'':`<p class="onboarding-task-hint">Zone = plek in je stand, zoals de balie.</p>`}${setupZones({editable:true})}${draft.zones.length?`<p class="onboarding-zone-count" role="status">${draft.zones.length} ${draft.zones.length===1?'zone':'zones'} · Kies waar je begint.</p>`:''}${editing?`${zoneNameFields()}<div class="onboarding-actions onboarding-footer">${button(draft.zones.length?'zone-cancel':'back',draft.zones.length?'Annuleren':'← Terug','class="button secondary"')}${button('zone-create',zoneNames().length>1?`${zoneNames().length} zones maken`:'Zone maken','disabled')}</div>`:`<p class="onboarding-later-hint">Zones toevoegen of receivers verplaatsen kan ook later.</p>${button('zone-new','＋ Zones toevoegen','class="button secondary"')}${receiverPlacement()}${footer('Verder · receivers toevoegen')}`}`;
+          return `${draft.zones.length?'':`<p class="onboarding-task-hint">Zone = plek in je stand, zoals de balie.</p>`}${setupZones({editable:true})}${draft.zones.length?`<p class="onboarding-zone-count" role="status">${draft.zones.length} ${draft.zones.length===1?'zone':'zones'} · Kies waar je begint.</p>`:''}${editing?`${zoneNameFields()}<div class="onboarding-actions onboarding-footer">${button(draft.zones.length?'zone-cancel':'back',draft.zones.length?'Annuleren':'← Terug','class="button secondary"')}${button('zone-create',zoneNames().length>1?`${zoneNames().length} zones maken`:'Zone maken','disabled')}</div>`:`${button('zone-new','＋ Voeg nog een zone toe','class="button secondary"')}${receiverPlacement()}<div class="onboarding-actions onboarding-footer onboarding-zones-continue">${button('next','Verder →','aria-label="Verder naar receivers toevoegen"')}<div class="onboarding-zones-footer-row">${button('back','← Terug',`class="button secondary" ${!draft.stand.isNew?'disabled':''}`)}<p class="onboarding-later-hint">Meer zones toevoegen kan ook later.</p></div></div>`}`;
         }
         case 'receiver':return receiverSearchView();
         case 'outputs':return `${pixelSetup.renderOutputs(draft.outputs,{onboarding:true})}<p class="onboarding-hint">Extra uitgangen inschakelen kan later.</p>${footer()}`;
@@ -712,21 +712,12 @@
       }
       if(action==='zone-create'){
         captureNames();if(!validZoneNames())return;
-        // The first zone batch already gives us a valid destination. Store it
-        // together with the receiver step, without a redundant confirmation
-        // page or a second tap. Later zone management still stays editable.
-        const firstBatch=origin==='stand'&&draft.stage==='zones'&&!draft.zones.length;
+        // Creating zones and leaving this step are separate choices. Keep
+        // every saved batch here so the customer can add another zone first.
         const newReceiverZone=draft.stage==='zone'&&!pinRequired;
         const events=zoneNames().map(name=>({type:'ADD_ZONE',id:'zone-'+crypto.randomUUID(),name}));
-        if(firstBatch)events.push({type:'NEXT'});
         return saveChoices(events,()=>{
           zoneNameOpen=false;resetZoneNames();
-          // Run after the atomic draft save has cleared its busy state. The
-          // same callback runs on storage retry, so no extra tap is required.
-          // The browser walkthrough can reveal its fixtures immediately.
-          // A real first MAIN still needs the customer's manual Wi-Fi choice;
-          // don't launch a doomed discovery before that Settings trip.
-          if(firstBatch&&!pinRequired&&!manualWifi())queueMicrotask(()=>{if(container&&draft.stage==='receiver')void search();});
           if(newReceiverZone)queueMicrotask(()=>finishChosenZone());
         });
       }
@@ -825,7 +816,11 @@
         return change({type:'BACK'});
       }
       if(action==='next'){
-        if(draft.stage==='zones')return saveChoices([{type:'NEXT'}]);
+        if(draft.stage==='zones')return saveChoices([{type:'NEXT'}],()=>{
+          // Search only after an explicit Continue and a successful save.
+          // Manual Wi-Fi still needs the customer's Settings trip first.
+          if(!draft.mainReceiverId&&!pinRequired&&!manualWifi())queueMicrotask(()=>{if(container&&draft.stage==='receiver')void search();});
+        });
         if(draft.stage==='connection'&&draft.port===active().at(-1).port&&draft.role==='node'&&!canSecure()){error=unavailable;paintPage(false);return;}
         if(change({type:'NEXT'})&&draft.stage==='security')return secure();return;
       }
