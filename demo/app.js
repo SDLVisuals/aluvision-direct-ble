@@ -308,8 +308,13 @@
     const outer=[[60,224],[20,190,12,148,18,110],[24,47,72,14,132,14],[194,14,241,59,244,116],[246,159,230,194,206,224]];
     const inner=[[82,224],[55,196,40,162,43,122],[46,76,82,40,132,40],[181,40,216,73,220,123],[221,163,206,195,182,224]];
     const rim=outer.map((points,i)=>points.map((value,j)=>(value+inner[i][j])/2));
-    const depths=[1,.84,.70,.58,.48],vp=[300,120];
+    // Extend the constant-width fascia below the ground, then cut both feet
+    // on one horizontal plane. Perspective and floor share one projection.
+    const fascia=copy(rim);fascia[0]=[83,240];fascia[1][0]=57;fascia[1][1]=211;fascia[4][2]=207;fascia[4][3]=211;fascia[4][4]=183;fascia[4][5]=240;
+    const depths=[1,.84,.70,.58,.48],vp=[164,108];
+    const project=(x,y,s)=>[vp[0]+(x-vp[0])*s,vp[1]+(y-vp[1])*s];
     const point=(x,y,s)=>`${(vp[0]+(x-vp[0])*s).toFixed(2)} ${(vp[1]+(y-vp[1])*s).toFixed(2)}`;
+    const floor=(left,right,front=1.1,rear=.48)=>`M${point(left,224,front)}L${point(right,224,front)}L${point(right,224,rear)}L${point(left,224,rear)}Z`;
     function curve(points,s,reverse=false,join=false){
       if(!reverse)return (join?'L':'M')+point(...points[0],s)+points.slice(1).map(p=>'C'+point(p[0],p[1],s)+' '+point(p[2],p[3],s)+' '+point(p[4],p[5],s)).join('');
       return (join?'L':'M')+point(...points.at(-1).slice(-2),s)+points.slice(1).map((p,i)=>'C'+point(p[2],p[3],s)+' '+point(p[0],p[1],s)+' '+point(...points[i].slice(-2),s)).reverse().join('');
@@ -321,7 +326,7 @@
     }).reverse().join('');
     const reflections=depths.slice(0,-1).map((depth,i)=>{
       const rear=depths[i+1];
-      return `<path class="tunnel-reflection arch-${i}" d="M${point(109,230,depth)}L${point(151,230,depth)}L${point(151,230,rear)}L${point(109,230,rear)}Z"/>`;
+      return `<path class="tunnel-reflection arch-${i}" d="${floor(109,155,depth,rear)}"/>`;
     }).join('');
     return `<svg viewBox="0 0 360 260" role="img" aria-label="Uitlegvoorbeeld in 3D: een ronde ledtunnel met vier bewegende lichtzones en een reflecterend looppad"><defs>
       <linearGradient id="tunnel-shell" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d1d5d5"/><stop offset=".4" stop-color="#bdc2c3"/><stop offset="1" stop-color="#a8aeb1"/></linearGradient>
@@ -329,15 +334,20 @@
       <linearGradient id="tunnel-lining" x1="0" y1="0" x2="1" y2=".8"><stop stop-color="#202226"/><stop offset=".36" stop-color="#090c10"/><stop offset=".7" stop-color="#25272b"/><stop offset="1" stop-color="#111316"/></linearGradient>
       <linearGradient id="tunnel-light" x1="0" y1="1" x2=".6" y2="0"><stop stop-color="#de6559" stop-opacity=".3"/><stop offset=".4" stop-color="#d15148" stop-opacity=".12"/><stop offset=".75" stop-color="#f5dfd8" stop-opacity=".18"/><stop offset="1" stop-color="#e36559" stop-opacity=".2"/></linearGradient>
       <linearGradient id="tunnel-walkway" x1="0" y1="1" x2=".7" y2="0"><stop stop-color="#a3a09a"/><stop offset=".5" stop-color="#767573"/><stop offset="1" stop-color="#424345"/></linearGradient>
-      <linearGradient id="tunnel-reflect" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#d66a61" stop-opacity=".05"/><stop offset=".5" stop-color="#e9e0da" stop-opacity=".35"/><stop offset="1" stop-color="#d5564d" stop-opacity=".15"/></linearGradient>
-      <radialGradient id="tunnel-exit"><stop stop-color="#b7b7b5" stop-opacity=".36"/><stop offset="1" stop-color="#b7b7b5" stop-opacity="0"/></radialGradient>
+      <linearGradient id="tunnel-reflect" x1="0" y1="1" x2="0" y2="0"><stop stop-color="#dfafa5" stop-opacity="0"/><stop offset=".42" stop-color="#dfafa5" stop-opacity=".14"/><stop offset=".58" stop-color="#e9e0da" stop-opacity=".2"/><stop offset="1" stop-color="#e9e0da" stop-opacity="0"/></linearGradient>
+      <linearGradient id="tunnel-exit" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#777d81" stop-opacity=".08"/><stop offset=".65" stop-color="#888e90" stop-opacity=".16"/><stop offset="1" stop-color="#a5a4a0" stop-opacity=".3"/></linearGradient>
+      <radialGradient id="tunnel-exit-glow"><stop stop-color="#d7d9d8" stop-opacity=".23"/><stop offset="1" stop-color="#d7d9d8" stop-opacity="0"/></radialGradient>
       <clipPath id="tunnel-opening"><path d="${curve(inner,1)}Z"/></clipPath>
-    </defs><g transform="translate(18 2)"><ellipse class="tunnel-ground-shadow" cx="160" cy="231" rx="140" ry="15"/><ellipse cx="243" cy="143" rx="58" ry="56" fill="url(#tunnel-exit)"/>
+      <clipPath id="tunnel-exit-boundary"><path d="${curve(inner,.48)}Z"/></clipPath>
+      <clipPath id="tunnel-ground-cut"><rect x="-20" y="-20" width="330" height="244"/></clipPath>
+    </defs><g transform="translate(44 5)"><ellipse class="tunnel-ground-shadow" cx="132" cy="231" rx="131" ry="12"/>
+      <path class="tunnel-exit-opening" d="${curve(inner,.48)}Z" fill="url(#tunnel-exit)"/><ellipse cx="${project(132,129,.48)[0]}" cy="${project(132,129,.48)[1]}" rx="39" ry="43" fill="url(#tunnel-exit-glow)"/>
+      <g clip-path="url(#tunnel-exit-boundary)" opacity=".4"><path d="${floor(82,182,.48,.08)}" fill="url(#tunnel-walkway)"/><path d="${floor(109,155,.48,.08)}" fill="#44474a"/></g>
       <path class="tunnel-shell" d="${band(1,.48,outer,outer)}"/><g class="tunnel-interior" clip-path="url(#tunnel-opening)"><path class="tunnel-back-face" d="${band(.48,.48,outer,inner)}"/>
       <path class="tunnel-inner-wall" d="${band(1,.48)}"/>${panels}</g>
-      <path class="tunnel-walkway" d="M61 239L189 239L245 171L194 171Z"/><path class="tunnel-floor-edge" d="M61 239L194 171M189 239L245 171"/>
-      <path class="tunnel-floor-inlay" d="M108 236L151 236L230 173L213 173Z"/>${reflections}
-      <path class="tunnel-front-side" d="${curve(rim,1)}" transform="translate(3 1.5)"/><path class="tunnel-front-edge" d="${curve(rim,1)}"/><path class="tunnel-front-face" d="${curve(rim,1)}"/><path class="tunnel-inner-bevel" d="${curve(inner,1)}"/>
+      <path class="tunnel-walkway" d="${floor(82,182)}"/><path class="tunnel-floor-edge" d="M${point(82,224,1.1)}L${point(82,224,.48)}M${point(182,224,1.1)}L${point(182,224,.48)}"/>
+      <path class="tunnel-floor-inlay" d="${floor(109,155)}"/>${reflections}
+      <g class="tunnel-fascia" clip-path="url(#tunnel-ground-cut)"><path class="tunnel-front-side" d="${curve(fascia,1)}" transform="translate(2 1)"/><path class="tunnel-front-edge" d="${curve(fascia,1)}"/><path class="tunnel-front-face" d="${curve(fascia,1)}"/></g><path class="tunnel-inner-bevel" d="${curve(inner,1)}"/>
     </g></svg>`;
   }
   function tunnelGuide() {

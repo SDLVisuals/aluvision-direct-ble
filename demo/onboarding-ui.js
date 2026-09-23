@@ -358,7 +358,7 @@
           if(zoneRemoval)return zoneRemovalPanel();
           if(zoneRename)return zoneRenamePanel();
           if(receiverMove)return movePanel();
-          return `${draft.zones.length?'':`<p class="onboarding-task-hint">Een zone is een plek in je stand, zoals de balie.</p>`}${setupZones({editable:true})}${draft.zones.length?`<p class="onboarding-zone-count" role="status">${draft.zones.length} ${draft.zones.length===1?'zone':'zones'} · Kies waar je begint.</p>`:''}${zoneNameFields()}${receiverPlacement()}<div class="onboarding-actions onboarding-footer onboarding-zones-continue">${button('next','Verder →','aria-label="Verder naar receivers toevoegen" disabled')}<div class="onboarding-zones-footer-row">${button('back','← Terug',`class="button secondary" ${!draft.stand.isNew?'disabled':''}`)}<p class="onboarding-later-hint">Meer zones toevoegen kan ook later.</p></div></div>`;
+          return `${draft.zones.length?'':`<p class="onboarding-task-hint">Een zone is een plek in je stand, zoals de balie.</p>`}${setupZones({editable:true})}${draft.zones.length?`<p class="onboarding-zone-count" role="status">${draft.zones.length} ${draft.zones.length===1?'zone':'zones'} · Kies waar je begint.</p>`:''}${zoneNameFields()}${receiverPlacement()}<div class="onboarding-actions onboarding-footer onboarding-zones-continue">${button('next','Verder →','aria-label="Verder naar receivers toevoegen" disabled')}${button('zones-later',draft.zones.length?'Meer zones later toevoegen':'Zones later toevoegen','class="button secondary" aria-describedby="onboarding-zones-later-hint"')}<p id="onboarding-zones-later-hint" class="onboarding-zones-later-hint">${draft.zones.length?'Verder met je huidige zones.':'Ga naar je stand. Je kunt de setup later hervatten.'}</p><div class="onboarding-zones-footer-row">${button('back','← Terug',`class="button secondary" ${!draft.stand.isNew?'disabled':''}`)}</div></div>`;
         }
         case 'receiver':return receiverSearchView();
         case 'outputs':return `${pixelSetup.renderOutputs(draft.outputs,{onboarding:true})}<p class="onboarding-hint">Extra uitgangen inschakelen kan later.</p>${footer()}`;
@@ -736,6 +736,15 @@
       const action=target.dataset.onboardingAction;
       if(draftSaving||managementBusy)return;
       if(action==='save-retry')return saveChoices();
+      if(action==='zones-later'&&draft.stage==='zones'&&!draft.zones.length){
+        captureNames();
+        // Parking this step must not lose a name on a later cold start. Save
+        // complete zone names atomically; leave incomplete entries visible so
+        // the customer can finish or remove them before leaving the setup.
+        const saveZones=hasZoneNames();
+        if(saveZones&&!validZoneNames()){error='Maak de ingevulde namen af of verwijder een leeg extra naamveld. Je namen blijven staan.';paintPage(false);return;}
+        return saveChoices(saveZones?newZoneEvents():[],()=>{if(saveZones)resetZoneNames();suspend();onExit();},{top:false});
+      }
       if(action==='exit'){
         const beforeSave=operation;
         const name=container.querySelector('#onboarding-stand-name')?.value;
@@ -856,9 +865,12 @@
         if(draft.stage==='receiver'){cancelSearch();for(const id of identifying.keys())stopIdentify(id);}
         return change({type:'BACK'});
       }
-      if(action==='next'){
+      if(action==='next'||action==='zones-later'&&draft.stage==='zones'){
         if(draft.stage==='zones'){
-          captureNames();if(!canContinueZones())return;
+          captureNames();if(!canContinueZones()){
+            if(action==='zones-later'){error='Maak de ingevulde namen af of verwijder een leeg extra naamveld. Je namen blijven staan.';paintPage(false);}
+            return;
+          }
           // One zones page: Continue can save the entered name(s) and leave
           // atomically, without an intermediate overview or a second tap.
           return saveChoices([...(hasZoneNames()?newZoneEvents():[]),{type:'NEXT'}],()=>{
