@@ -455,6 +455,9 @@
     return `<div class="page"><header class="page-heading"><div><h1>${esc(t('more'))}</h1><p>${esc(t('settings'))} · V30</p></div></header><section class="card"><h2>${esc(t('appearance'))}</h2><h3 class="preference-label">${esc(t('language'))}</h3><div class="preference-grid">${Preferences.languages.map(language=>`<button data-action="language" data-id="${language.code}" lang="${language.code}" aria-pressed="${uiPreferences.preferences.language===language.code}">${language.name}</button>`).join('')}</div><p class="preference-note">${esc(t('wipNotice'))}</p><h3 class="preference-label">${esc(t('theme'))}</h3><div class="preference-grid">${['light','dark'].map(theme=>`<button data-action="theme" data-id="${theme}" aria-pressed="${uiPreferences.preferences.theme===theme}">${esc(t(theme))}</button>`).join('')}</div>${uiPreferences.error?`<p role="alert">${esc(uiPreferences.error.message)}</p>`:''}</section><button class="menu-card" data-action="help"><span class="menu-icon">${icon('info')}</span><div><b>Stand en zones uitgelegd</b><small>Een eenvoudige weg naar je verlichting</small></div>${icon('chevron')}</button><section class="card connection-info" id="connection-info"><span class="pill">Niet verbonden</span><h2>Verbinding en gegevens</h2><p>Je bekijkt momenteel een voorbeeldstand met fictieve receivers. Er worden geen opdrachten naar echte verlichting verstuurd.</p><p>Indeling, poorten en lichtstanden zijn tijdelijk en beginnen na herladen opnieuw. Mijn kleuren, animatiepresets, scènes en voorkeuren worden alleen op dit apparaat bewaard.</p><details class="technical-status"><summary>Technische gereedheid</summary><ul class="readiness-list"><li><b>Dezelfde bediening</b><span>Alle schermformaten volgen dezelfde compacte bediening voor zones, receivers, kleuren en animaties.</span></li><li><b>Nog aansluiten en fysiek testen</b><span>${pinRequired?'Echte koppeling, beveiliging, ESP-NOW, herstel, veilig verwijderen en OTA moeten nog fysiek worden getest.':'Deze demo werkt zonder toegangscode. ESP-NOW, veilig verwijderen en OTA moeten nog fysiek worden getest.'} Ook nieuwe effecten moeten naar de receiverfirmware worden overgezet.</span></li><li><b>Receiverbeelden</b><span>RGBW volgt de aangeleverde productreferentie. Het SPI-beeld is een concept; fysieke poortplaatsing moet nog worden bevestigd.</span></li><li><b>Bestaande functies behouden</b><span>Volledige vertalingen, Academy en overige bestaande beheerfuncties blijven in de overdrachtscontrole staan.${pinRequired?' De bestaande beveiliging blijft behouden.':''}</span></li></ul></details></section></div>`;
   }
   function render({top=false,preserveScroll=false}={}) {
+    // A replaced handle no longer represents an active drag. Cancel before
+    // rebuilding the page, so a later pointerup cannot save a stale position.
+    if(dragOrder)finishOrder({pointerId:dragOrder.pointerId},true);
     const savedScroll=window.scrollY;
     if(!nativeLoaded){
       main.innerHTML=`<div class="page"><header class="page-heading"><div><h1>${nativeLoadError?'Je gegevens openen':'Je stand openen…'}</h1><p>${nativeLoadError?'Je bewaarde instellingen konden nog niet veilig worden gelezen. Er is niets vervangen of gewist.':'Je bewaarde stand en onafgeronde toevoeging worden geladen.'}</p></div></header>${nativeLoadError?'<button class="button full" data-action="native-load-retry">Opnieuw proberen</button>':''}</div>`;
@@ -659,7 +662,10 @@
   function pickerMemoryKey(root){return root?.dataset.colourPicker==='animation'?`palette${Number(root.dataset.slot)}`:root?.dataset.colourPicker||'static';}
   function rememberedChannels(root,rgb,w){
     const previous=selectedState().rgbwLast||{},key=pickerMemoryKey(root),last={...(previous[key]||{})};
-    [...rgb,w].forEach((value,index)=>{if(Number(value)>0)last['rgbw'[index]]=Math.round(Number(value));});
+    const remember=values=>values.forEach((value,index)=>{if(Number(value)>0)last['rgbw'[index]]=Math.round(Number(value));});
+    // Loaded colours may not have memory yet. Seed the value being replaced
+    // before writing a zero, then let new non-zero values become the latest.
+    remember(pickerChannels(root));remember([...rgb,w]);
     return {...previous,[key]:last};
   }
   function restoreChannelValue(root,channel){
@@ -1354,12 +1360,13 @@
   });
   document.addEventListener('keydown',event=>{if(event.key==='Enter'&&event.target.matches?.('input[data-channel-number]'))event.target.blur();});
   document.addEventListener('pointerdown',event=>{
-    const handle=event.target.closest('.order-handle');if(!handle||event.button!==0||dragOrder)return;
+    const handle=event.target.closest('.order-handle');if(!handle||handle.disabled||managementBusy||route.screen!=='layout'||event.button!==0||event.isPrimary===false||dragOrder)return;
     const row=handle.closest('[data-order-receiver]');event.preventDefault();handle.setPointerCapture(event.pointerId);
     dragOrder={id:row.dataset.orderReceiver,index:receivers().findIndex(r=>r.id===row.dataset.orderReceiver),zoneId:route.zoneId,pointerId:event.pointerId,handle};row.classList.add('drag-source');
   });
   document.addEventListener('pointermove',event=>{
     if(!dragOrder||dragOrder.pointerId!==event.pointerId)return;event.preventDefault();
+    if(!dragOrder.handle.isConnected||route.screen!=='layout'||route.zoneId!==dragOrder.zoneId||managementBusy)return finishOrder(event,true);
     const rows=Array.from(document.querySelectorAll('[data-order-receiver]'));if(!rows.length)return;
     const closest=rows.reduce((a,b)=>Math.abs(event.clientY-(a.getBoundingClientRect().top+a.offsetHeight/2))<Math.abs(event.clientY-(b.getBoundingClientRect().top+b.offsetHeight/2))?a:b);
     dragOrder.index=rows.indexOf(closest);rows.forEach(row=>row.classList.toggle('drag-target',row===closest));
@@ -1372,6 +1379,10 @@
   }
   document.addEventListener('pointerup',event=>finishOrder(event));
   document.addEventListener('pointercancel',event=>finishOrder(event,true));
+  document.addEventListener('lostpointercapture',event=>finishOrder(event,true));
+  document.addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&dragOrder){event.preventDefault();finishOrder({pointerId:dragOrder.pointerId},true);}
+  });
   document.addEventListener('toggle',event=>{
     const details=event.target;if(!details.matches?.('[data-receiver-detail]')||!details.isConnected)return;
     details.open?expandedReceivers.add(details.dataset.receiverDetail):expandedReceivers.delete(details.dataset.receiverDetail);

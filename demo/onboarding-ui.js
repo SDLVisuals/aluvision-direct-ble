@@ -392,7 +392,10 @@
       for(const receiver of results.filter(receiver=>receiver.canConfigure===false)){
         const card=container.querySelector(`[data-onboarding-result="${CSS.escape(receiver.id)}"]`);
         if(!card)continue;
-        container.querySelectorAll(`button[data-id="${CSS.escape(receiver.id)}"]`).forEach(button=>{button.disabled=!(button.dataset.onboardingAction==='receiver'&&receiver.canVerifyIdentity&&!busy);});
+        // Identity selection remains guarded, but a supported temporary blink
+        // is explicitly allowed before configuration/claim. Do not override
+        // the identify button's own pending/capability checks here.
+        container.querySelectorAll(`[data-onboarding-action="receiver"][data-id="${CSS.escape(receiver.id)}"]`).forEach(button=>{button.disabled=!(receiver.canVerifyIdentity&&!busy);});
         const hint=document.createElement('p');hint.className='onboarding-hint';
         hint.textContent=receiver.unavailableReason;card.insertBefore(hint,card.querySelector('.onboarding-recognition'));
       }

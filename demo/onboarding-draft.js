@@ -205,12 +205,17 @@
           if(next.zoneId===zone.id)next.zoneId=null;
           break;
         }
-        case 'SELECT_RECEIVER':
+        case 'SELECT_RECEIVER': {
           unlocked(next);requireStage(next,['receiver']);validateReceiver(event.receiver);
           if (duplicate(next.context,event.receiver)) fail('DUPLICATE_RECEIVER','Deze receiver hoort al bij een installatie in de app.');
+          // Back to discovery is not a request to discard the customer's SPI
+          // choices. Reuse them only for the exact same verified identity;
+          // another physical receiver must start with its own clean settings.
+          const sameReceiver=next.receiver&&['id','rid','type','deviceFingerprint'].every(key=>next.receiver[key]===event.receiver[key]);
           next.receiver={...copy(event.receiver),name:name(event.receiver.name)};
-          next.outputs=event.receiver.type === 'SPI' ? [1,2,3,4].map(port => ({port,enabled:port === 1,pixels:25,reversed:false})) : [];
+          if(!sameReceiver)next.outputs=event.receiver.type === 'SPI' ? [1,2,3,4].map(port => ({port,enabled:port === 1,pixels:25,reversed:false})) : [];
           next.port=null;next.zoneId=null;break;
+        }
         case 'SET_OUTPUT_COUNT':
           unlocked(next);requireStage(next,['outputs']);
           if (!int(event.count,1,4)) fail('OUTPUT_COUNT','Kies één, twee, drie of vier uitgangen.');

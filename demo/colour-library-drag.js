@@ -131,6 +131,11 @@
       return next;
     }
     function keyDown(event) {
+      // Escape cancels both keyboard and pointer ordering. Pointer capture
+      // does not move keyboard focus, so the key may arrive outside the handle.
+      if (event.key === 'Escape' && active) {
+        event.preventDefault();event.stopPropagation();finish(true);return;
+      }
       const found = sourceFor(event.target);
       if (!found || !found.source.matches('.colour-drag-handle')) return;
       const pick = event.key === ' ' || event.key === 'Enter';
