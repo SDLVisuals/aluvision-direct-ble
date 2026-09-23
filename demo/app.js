@@ -307,6 +307,7 @@
     // receiver geometry: a broad circular fascia and a continuous curved wall.
     const outer=[[60,224],[20,190,12,148,18,110],[24,47,72,14,132,14],[194,14,241,59,244,116],[246,159,230,194,206,224]];
     const inner=[[82,224],[55,196,40,162,43,122],[46,76,82,40,132,40],[181,40,216,73,220,123],[221,163,206,195,182,224]];
+    const rim=outer.map((points,i)=>points.map((value,j)=>(value+inner[i][j])/2));
     const depths=[1,.84,.70,.58,.48],vp=[300,120];
     const point=(x,y,s)=>`${(vp[0]+(x-vp[0])*s).toFixed(2)} ${(vp[1]+(y-vp[1])*s).toFixed(2)}`;
     function curve(points,s,reverse=false,join=false){
@@ -322,13 +323,13 @@
       const rear=depths[i+1];
       return `<path class="tunnel-reflection arch-${i}" d="M${point(109,230,depth)}L${point(151,230,depth)}L${point(151,230,rear)}L${point(109,230,rear)}Z"/>`;
     }).join('');
-    return `<svg viewBox="0 0 360 260" role="img" aria-label="Uitlegvoorbeeld in 3D: een ronde Aluvision-geïnspireerde tunnel met vier bewegende lichtzones en een reflecterend looppad"><defs>
-      <linearGradient id="tunnel-shell" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b8b9b9"/><stop offset=".45" stop-color="#777b7d"/><stop offset="1" stop-color="#383d40"/></linearGradient>
-      <linearGradient id="tunnel-face" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="#f0f0ed"/><stop offset=".5" stop-color="#c7c9c9"/><stop offset="1" stop-color="#929698"/></linearGradient>
-      <linearGradient id="tunnel-lining" x1="0" y1="0" x2="1" y2=".8"><stop stop-color="#353536"/><stop offset=".36" stop-color="#141518"/><stop offset=".7" stop-color="#313133"/><stop offset="1" stop-color="#18191b"/></linearGradient>
-      <linearGradient id="tunnel-light" x1="0" y1="1" x2=".6" y2="0"><stop stop-color="#e7754e" stop-opacity=".6"/><stop offset=".4" stop-color="#ffbb70" stop-opacity=".5"/><stop offset=".75" stop-color="#ffddae" stop-opacity=".85"/><stop offset="1" stop-color="#ff8a62" stop-opacity=".35"/></linearGradient>
+    return `<svg viewBox="0 0 360 260" role="img" aria-label="Uitlegvoorbeeld in 3D: een ronde ledtunnel met vier bewegende lichtzones en een reflecterend looppad"><defs>
+      <linearGradient id="tunnel-shell" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d1d5d5"/><stop offset=".4" stop-color="#bdc2c3"/><stop offset="1" stop-color="#a8aeb1"/></linearGradient>
+      <linearGradient id="tunnel-face" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="#d5d8d8"/><stop offset=".5" stop-color="#c6cacb"/><stop offset="1" stop-color="#b4b9bc"/></linearGradient>
+      <linearGradient id="tunnel-lining" x1="0" y1="0" x2="1" y2=".8"><stop stop-color="#202226"/><stop offset=".36" stop-color="#090c10"/><stop offset=".7" stop-color="#25272b"/><stop offset="1" stop-color="#111316"/></linearGradient>
+      <linearGradient id="tunnel-light" x1="0" y1="1" x2=".6" y2="0"><stop stop-color="#de6559" stop-opacity=".3"/><stop offset=".4" stop-color="#d15148" stop-opacity=".12"/><stop offset=".75" stop-color="#f5dfd8" stop-opacity=".18"/><stop offset="1" stop-color="#e36559" stop-opacity=".2"/></linearGradient>
       <linearGradient id="tunnel-walkway" x1="0" y1="1" x2=".7" y2="0"><stop stop-color="#a3a09a"/><stop offset=".5" stop-color="#767573"/><stop offset="1" stop-color="#424345"/></linearGradient>
-      <linearGradient id="tunnel-reflect" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#ffb07a" stop-opacity=".15"/><stop offset=".5" stop-color="#ffe3b9" stop-opacity=".72"/><stop offset="1" stop-color="#de694a" stop-opacity=".3"/></linearGradient>
+      <linearGradient id="tunnel-reflect" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#d66a61" stop-opacity=".05"/><stop offset=".5" stop-color="#e9e0da" stop-opacity=".35"/><stop offset="1" stop-color="#d5564d" stop-opacity=".15"/></linearGradient>
       <radialGradient id="tunnel-exit"><stop stop-color="#b7b7b5" stop-opacity=".36"/><stop offset="1" stop-color="#b7b7b5" stop-opacity="0"/></radialGradient>
       <clipPath id="tunnel-opening"><path d="${curve(inner,1)}Z"/></clipPath>
     </defs><g transform="translate(18 2)"><ellipse class="tunnel-ground-shadow" cx="160" cy="231" rx="140" ry="15"/><ellipse cx="243" cy="143" rx="58" ry="56" fill="url(#tunnel-exit)"/>
@@ -336,8 +337,7 @@
       <path class="tunnel-inner-wall" d="${band(1,.48)}"/>${panels}</g>
       <path class="tunnel-walkway" d="M61 239L189 239L245 171L194 171Z"/><path class="tunnel-floor-edge" d="M61 239L194 171M189 239L245 171"/>
       <path class="tunnel-floor-inlay" d="M108 236L151 236L230 173L213 173Z"/>${reflections}
-      <path class="tunnel-front-side" d="${band(1,1,outer,inner)}" transform="translate(4 2)"/><path class="tunnel-front-face" d="${band(1,1,outer,inner)}"/><path class="tunnel-front-edge" d="${curve(outer,1)}"/>
-      <text class="tunnel-brand" x="132" y="30" text-anchor="middle">Aluvision</text>
+      <path class="tunnel-front-side" d="${curve(rim,1)}" transform="translate(3 1.5)"/><path class="tunnel-front-edge" d="${curve(rim,1)}"/><path class="tunnel-front-face" d="${curve(rim,1)}"/><path class="tunnel-inner-bevel" d="${curve(inner,1)}"/>
     </g></svg>`;
   }
   function tunnelGuide() {
