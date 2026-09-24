@@ -170,7 +170,7 @@
   function requireAddedReceiver(model, receiverId) {
     var receiver = model.receivers.find(function (item) { return item.id === receiverId; });
     if (!receiver) issue('RECEIVER_NOT_FOUND', 'Deze receiver bestaat niet.');
-    if (receiver.lifecycle !== 'added') issue('RECEIVER_NOT_ADDED', 'Rond eerst het toevoegen van deze receiver af.');
+    if (receiver.lifecycle !== 'added') issue('RECEIVER_NOT_ADDED', 'Deze receiver is niet toegevoegd. Zoek hem via Receivers.');
     return receiver;
   }
   // These are immutable preview/model edits only. They neither grant ownership

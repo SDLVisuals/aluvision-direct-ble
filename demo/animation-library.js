@@ -7,10 +7,10 @@
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
   const CATEGORIES = Object.freeze([
-    Object.freeze({key:'whole',title:'Kleur & sfeer',summary:'De hele LED-line verandert samen van kleur of helderheid.',aliases:'hele lijn volledig gelijk samen uniform rgbw'}),
+    Object.freeze({key:'whole',title:'Kleur & sfeer',summary:'De hele lichtlijn verandert samen van kleur of helderheid.',aliases:'hele lijn volledig gelijk samen uniform rgbw'}),
     Object.freeze({key:'pixels',title:'Bewegend licht',summary:'Licht beweegt over de pixels, bijvoorbeeld als golf of lopend licht.',aliases:'pixel pixels pixelanimatie pixelanimaties led strip spi'}),
-    Object.freeze({key:'tunnel',title:'Tunnel',summary:'Licht reist tussen twee of meer receivers.',aliases:'tunnel diepte receiver receivers boog bogen achter elkaar'}),
-    Object.freeze({key:'brand',title:'Brand',summary:'Rustig wit en zachte accenten voor je huisstijl.',aliases:'brand huisstijl merk beurs stand presentatie corporate'})
+    Object.freeze({key:'tunnel',title:'Tunnel',summary:'Licht reist tussen twee of meer lichtlijnen.',aliases:'tunnel diepte receiver receivers boog bogen achter elkaar'}),
+    Object.freeze({key:'brand',title:'Huisstijl',summary:'Rustig wit en zachte accenten voor je huisstijl.',aliases:'brand huisstijl merk beurs stand presentatie corporate'})
   ]);
   const descriptor = (key, title, summary, aliases = '') => Object.freeze({key,title,summary,aliases});
   const DEFINITIONS = Object.freeze({
@@ -21,15 +21,15 @@
       descriptor('flash','Flitsen','Korte lichtflitsen; kan ook snel knipperen.','sparkle flash strobe flits flitsen knipperen theater')
     ]),
     pixels:Object.freeze([
-      descriptor('flow','Flow','Kleuren vloeien zacht over de pixels.','gradient verloop kleurverloop vloeien zacht overgang fade'),
-      descriptor('pulse','Pulse','Het licht ademt of pulseert binnen de lijn.','puls pulsen ademen ademhaling ademend breathe breathing'),
-      descriptor('wave','Wave','Golven bewegen door de lichtlijn.','golf golven golfbeweging ripple rimpel'),
-      descriptor('chase','Chase','Lichtpunten volgen elkaar over de lijn.','looplicht lopen lopend achtervolgen jagen runner running'),
-      descriptor('comet','Comet','Een lichtpunt trekt een zachte staart achter zich aan.','komeet kometen meteoor meteor staart trail ribbon'),
+      descriptor('flow','Kleurverloop','Kleuren vloeien zacht over de pixels.','flow gradient verloop kleurverloop vloeien zacht overgang fade'),
+      descriptor('pulse','Ademen','Het licht ademt of pulseert binnen de lijn.','pulse puls pulsen ademen ademhaling ademend breathe breathing'),
+      descriptor('wave','Golven','Golven bewegen door de lichtlijn.','wave golf golven golfbeweging ripple rimpel'),
+      descriptor('chase','Lopend licht','Lichtpunten volgen elkaar over de lijn.','chase looplicht lopen lopend achtervolgen jagen runner running'),
+      descriptor('comet','Komeet','Een lichtpunt trekt een zachte staart achter zich aan.','comet komeet kometen meteoor meteor staart trail ribbon'),
       descriptor('scanner','Scanner','Een lichtbundel veegt over de lijn.','scannen veeg vegen sweep heen en weer'),
       descriptor('mirror','Spiegel','Licht beweegt symmetrisch naar binnen of buiten.','mirror spiegelen symmetrie symmetrisch midden center centre buiten'),
-      descriptor('sparkle','Sparkle','Kleine lichtaccenten twinkelen of flitsen.','twinkelen twinkel fonkelen schitteren shimmer glitter strobe flits'),
-      descriptor('sequence','Sequence','Het licht bouwt stap voor stap een patroon op.','volgorde opbouwen stappen opeenvolgen cascade reeks'),
+      descriptor('sparkle','Twinkelen','Kleine lichtaccenten twinkelen of flitsen.','sparkle twinkelen twinkel fonkelen schitteren shimmer glitter strobe flits'),
+      descriptor('sequence','Stap voor stap','Het licht bouwt stap voor stap een patroon op.','sequence volgorde opbouwen stappen opeenvolgen cascade reeks'),
       descriptor('alternate','Afwisseling','Lichtdelen wisselen elkaar om en om af.','alternate alternating afwisselen om en om'),
       descriptor('accent','Accent','Subtiele lichtaccenten trekken rustig de aandacht.','minimal subtiel focus aandacht'),
       descriptor('warm','Warm wit','Warme kleurmixen en zachte wittinten.','warmwit warm white amber wit temperatuur')
@@ -57,6 +57,24 @@
   });
   const TUNNEL_ENGINES = Object.freeze({WAVE:'waves',BREATHE:'waves',CHASE:'travel',SCANNER:'travel',COMET:'travel',MIRROR:'symmetry',DUAL:'symmetry',CASCADE:'build',SEQUENCE:'build',FLOW:'colour',GRADIENT:'colour',SPARKLE:'alternate',ALTERNATE:'alternate'});
   const BRAND_IDS = Object.freeze({'v30-brand-white-breathe':'white','v30-brand-warm-white':'white','v30-brand-accent':'colour','v30-brand-soft-gradient':'colour','v30-brand-sweep':'focus','v30-brand-focus':'focus'});
+  // A small, contrasting introduction. These are references to the existing
+  // recipes, never a second catalogue or a change to stored effect identities.
+  const STARTERS = Object.freeze([
+    {ids:['rgbw-breathe-1','spi-breathe-99'],title:'Zacht ademen',summary:'De hele lichtlijn wordt rustig lichter en donkerder.'},
+    {ids:['v30-rgb-jumping'],title:'Kleurwissel',summary:'Rood, groen en blauw wisselen elkaar direct af.'},
+    {ids:['spi-chase-8'],title:'Lopend licht',summary:'Een lichtpunt loopt over de pixels van de lichtlijn.'},
+    {ids:['spi-wave-29'],title:'Lichtgolf',summary:'Een zachte golf beweegt over de pixels.'},
+    {ids:['rgbw-gradient-2'],title:'Kleurverloop',summary:'De hele lichtlijn vloeit zacht van kleur naar kleur.'},
+    {ids:['v30-brand-warm-white'],title:'Warm naar wit',summary:'Warm licht gaat rustig over in neutraal wit.'}
+  ]);
+  function starters(items) {
+    const hasPixels=items.some(effect=>effect.category==='pixels');
+    return Object.freeze(STARTERS.filter(item=>!hasPixels||!['Kleurverloop','Warm naar wit'].includes(item.title)).flatMap(item=>{
+      const effect=items.find(effect=>item.ids.includes(effect.id));
+      return effect?[Object.freeze({effect,title:item.title,summary:item.summary})]:[];
+    }));
+  }
+  function displayName(effect) { return STARTERS.find(item=>item.ids.includes(effect.id))?.title||effect.name; }
   const FALLBACK = descriptor('other','Overige bewegingen','Meer animaties uit deze categorie.','overig overige');
   const normalize = value => String(value == null ? '' : value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('nl').replace(/[^a-z0-9]+/g,' ').trim();
   const category = key => CATEGORIES.find(item => item.key === key) || null;
@@ -101,13 +119,13 @@
     if (!terms.length) return ordered;
     return ordered.map((effect,index) => {
       const family = classification(effect), section = category(effect.category);
-      const name = normalize(effect.name), familyText = normalize([effect.family,family.title,family.aliases].join(' '));
-      const haystack = normalize([effect.name,effect.family,effect.description,family.title,family.summary,family.aliases,section.title,section.aliases].join(' '));
+      const name = normalize(displayName(effect)), familyText = normalize([effect.family,family.title,family.aliases].join(' '));
+      const haystack = normalize([effect.name,displayName(effect),effect.family,effect.description,family.title,family.summary,family.aliases,section.title,section.aliases].join(' '));
       if (!terms.every(term => haystack.includes(term))) return null;
       const full = terms.join(' ');
       const rank = name === full ? 4 : name.startsWith(full) ? 3 : terms.every(term => name.includes(term)) ? 2 : terms.every(term => familyText.includes(term)) ? 1 : 0;
       return {effect,index,rank};
     }).filter(Boolean).sort((a,b) => b.rank - a.rank || a.index - b.index).map(item => item.effect);
   }
-  return Object.freeze({categories:CATEGORIES,groups,group,sections,search,normalize});
+  return Object.freeze({categories:CATEGORIES,groups,group,sections,search,normalize,starters,displayName});
 }));

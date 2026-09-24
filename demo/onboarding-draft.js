@@ -8,7 +8,7 @@
  * a real authenticated NODE enrollment adapter is required separately.
  *
  * Sequence (V30 brief, not the older V21 late-PIN flow):
- * stand -> zones -> receiver -> [SPI outputs -> every pixels -> every side]
+ * stand -> zones -> receiver -> [compatible placement] -> [SPI outputs -> each port]
  * -> [MAIN PIN] -> security/rejoin/identity -> zone -> review -> added.
  * Once security starts, choices identifying/configuring the receiver lock.
  * Cancel/retry preserves the same transaction; it never releases ownership,
@@ -48,11 +48,11 @@
   else root.LightningOnboardingDraft = api;
 }(typeof globalThis !== 'undefined' ? globalThis : this, function (Model, Contract, SecurityMode) {
   'use strict';
-  const STAGES = Object.freeze(['stand','zones','receiver','outputs','pixels','connection','pin','security','zone','review','done']);
+  const STAGES = Object.freeze(['stand','zones','receiver','placement','outputs','pixels','connection','pin','security','zone','review','done']);
   const PHASES = Object.freeze(['idle','configuring','claiming','reconnecting','verifying','resuming','identity-confirmed']);
   // A single generated build setting controls whether commissioning asks for
   // credentials. Node/unit tests without the generated script retain PIN mode.
-  const pinRequired = SecurityMode?.pinRequired !== false;
+  const pinRequired=()=> SecurityMode?.pinRequired !== false;
   const own = (value,key) => Object.prototype.hasOwnProperty.call(value,key);
   const plain = value => !!value && typeof value === 'object' && !Array.isArray(value) && [Object.prototype,null].includes(Object.getPrototypeOf(value));
   const copy = value => JSON.parse(JSON.stringify(value));
@@ -81,9 +81,9 @@
     if (typeof value !== 'string' || !value.trim() || value.trim().length > 64 || /[<>\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/.test(value)) fail('NAME','Kies een gewone naam van 1 tot 64 tekens.');
     return value.trim();
   }
-  function validOutput(output,index) {
+  function validOutput(output,index,allowZero=false) {
     shape(output,['port','enabled','pixels','reversed'],'OUTPUT');
-    if (output.port !== index + 1 || typeof output.enabled !== 'boolean' || !int(output.pixels,1,Model.LIMITS.pixelsPerPort) || typeof output.reversed !== 'boolean') fail('OUTPUT','Controleer de pixels en aansluiting van elke uitgang.');
+    if (output.port !== index + 1 || typeof output.enabled !== 'boolean' || !int(output.pixels,allowZero?0:1,Model.LIMITS.pixelsPerPort) || typeof output.reversed !== 'boolean') fail('OUTPUT','Controleer de pixels en aansluiting van elke uitgang.');
   }
   function validateReceiver(receiver) {
     shape(receiver,['id','rid','name','type','deviceFingerprint'],'RECEIVER');
@@ -96,8 +96,9 @@
     name(zone.name);
   }
   function snapshot(value) {
-    shape(value,['version','transactionId','stage','stand','zones','receiver','role','mainReceiverId','outputs','port','zoneId','activeZoneId','security','cancelled','membership','context'],'DRAFT');
-    if (value.version !== 1 || !id(value.transactionId) || !STAGES.includes(value.stage) || !['main','node'].includes(value.role) || value.mainReceiverId !== null && !id(value.mainReceiverId) || typeof value.cancelled !== 'boolean' || !['pending','added'].includes(value.membership)) fail('DRAFT','De instelstap is niet geldig.');
+    shape(value,['version','transactionId','stage','stand','zones','receiver','role','mainReceiverId','outputs','port','zoneId','activeZoneId','zoneChoiceRequired','security','cancelled','membership','context'],'DRAFT');
+    if(own(value,'zoneChoiceRequired')&&typeof value.zoneChoiceRequired!=='boolean')fail('DRAFT','De zonekeuze is niet geldig.');
+    if (![1,2].includes(value.version) || !id(value.transactionId) || !STAGES.includes(value.stage) || !['main','node'].includes(value.role) || value.mainReceiverId !== null && !id(value.mainReceiverId) || typeof value.cancelled !== 'boolean' || !['pending','added'].includes(value.membership)) fail('DRAFT','De instelstap is niet geldig.');
     if ((value.role === 'main') !== (value.mainReceiverId === null)) fail('DRAFT_ROLE','De rol van de receiver komt niet overeen met deze stand.');
     if (value.stand !== null) {
       shape(value.stand,['id','name','isNew'],'STAND');
@@ -108,12 +109,14 @@
     value.zones.forEach(validateZone);
     if (new Set(value.zones.map(zone => zone.id)).size !== value.zones.length) fail('ZONE_ID','Een zone-ID mag maar één keer voorkomen.');
     for (const key of ['zoneId','activeZoneId']) if (value[key] !== null && !value.zones.some(zone => zone.id === value[key])) fail('ZONE_NOT_FOUND','Deze zone bestaat niet in deze stand.');
+    if(value.zoneChoiceRequired&&(value.zoneId!==null||value.activeZoneId!==null))fail('ZONE_REQUIRED','Kies een passende zone of voeg de receiver zonder zone toe.');
     if (value.receiver !== null) validateReceiver(value.receiver);
     else if (!['stand','zones','receiver'].includes(value.stage)) fail('RECEIVER_REQUIRED','Kies eerst een gevonden receiver.');
     if (!Array.isArray(value.outputs)) fail('OUTPUT','De uitgangen ontbreken.');
     if (value.receiver && value.receiver.type === 'SPI') {
       if (value.outputs.length !== 4) fail('OUTPUT','Een SPI-receiver heeft vier uitgangen.');
-      value.outputs.forEach(validOutput);
+      const allowZero=['receiver','placement','outputs','pixels','connection'].includes(value.stage)&&value.security?.status==='not-started';
+      value.outputs.forEach((output,index)=>validOutput(output,index,allowZero));
       if (!value.outputs.some(output => output.enabled)) fail('OUTPUT','Gebruik minstens één uitgang.');
     } else if (value.outputs.length) fail('RGBW_OUTPUTS','RGBW werkt als één geheel, zonder afzonderlijke uitgangen.');
     if (value.port !== null && (!int(value.port,1,4) || !value.outputs.some(output => output.port === value.port && output.enabled))) fail('PORT','Kies een actieve uitgang.');
@@ -124,7 +127,7 @@
     if (!['not-started','pending','confirmed'].includes(value.security.status) || !PHASES.includes(value.security.phase)) fail('SECURITY','De beveiligingsstap is ongeldig.');
     if (value.security.status !== 'not-started' && !['security','zone','review','done'].includes(value.stage)) fail('SECURITY_LOCKED','Hervat dezelfde beveiligde toevoeging; begin geen nieuwe claim.');
     if (['zone','review','done'].includes(value.stage) && value.security.status !== 'confirmed') fail('SECURITY_UNCONFIRMED','Bevestig eerst de beveiligde receiververbinding.');
-    if (['review','done'].includes(value.stage) && value.zoneId === null && value.zones.length) fail('ZONE_REQUIRED','Kies een zone voor deze receiver.');
+    if (['review','done'].includes(value.stage) && (value.zoneChoiceRequired||value.zoneId === null && value.activeZoneId !== null)) fail('ZONE_REQUIRED','Kies een passende zone of voeg de receiver zonder zone toe.');
     if ((value.stage === 'done') !== (value.membership === 'added')) fail('MEMBERSHIP','Een receiver verschijnt pas na definitieve bevestiging in de app.');
     shape(value.context,['standIds','zoneIds','receivers'],'CONTEXT');
     for (const key of ['standIds','zoneIds']) if (!Array.isArray(value.context[key]) || value.context[key].length > 4096 || value.context[key].some(item => !id(item)) || new Set(value.context[key]).size !== value.context[key].length) fail('CONTEXT','De bestaande indeling is ongeldig.');
@@ -133,7 +136,13 @@
       shape(receiver,['id','rid','deviceFingerprint'],'CONTEXT');
       if (!id(receiver.id) || receiver.rid !== null && (typeof receiver.rid !== 'string' || receiver.rid.length > 96) || receiver.deviceFingerprint !== null && !hex(receiver.deviceFingerprint,64)) fail('CONTEXT','Een bestaande receiveridentiteit is ongeldig.');
     });
-    return freeze(copy(value));
+    const migrated=copy(value);
+    // v1 asked all lengths before any connection sides. Revisit from the first
+    // active port if it stopped during lengths; preserve every stored choice.
+    // A legacy side step already completed earlier ports, so resume that port.
+    if(migrated.version===1&&migrated.stage==='pixels')migrated.port=migrated.outputs.find(output=>output.enabled).port;
+    migrated.version=2;
+    return freeze(migrated);
   }
   function create(options) {
     shape(options,['model','transactionId','standId','activeZoneId'],'OPTIONS');
@@ -146,7 +155,7 @@
     const zones = stand ? stand.zones.map(zone => ({id:zone.id,name:zone.name,type:zone.type,layout:zone.layout,isNew:false,
       pixels:Model.zoneReceivers(model,zone.id).reduce((sum,receiver) => sum + receiver.outputs.reduce((n,output) => n + (output.enabled ? output.pixels : 0),0),0)})) : [];
     const active = options.activeZoneId === undefined ? zones[0] && zones[0].id || null : options.activeZoneId;
-    return snapshot({version:1,transactionId:options.transactionId,stage:stand ? zones.length || main ? 'receiver' : 'zones' : 'stand',
+    return snapshot({version:2,transactionId:options.transactionId,stage:stand ? zones.length || main ? 'receiver' : 'zones' : 'stand',
       stand:stand ? {id:stand.id,name:stand.name,isNew:false} : null,zones,receiver:null,role:main ? 'node' : 'main',mainReceiverId:main ? main.id : null,
       outputs:[],port:null,zoneId:null,activeZoneId:active,security:{status:'not-started',phase:'idle'},cancelled:false,membership:'pending',
       context:{standIds:model.stands.map(item => item.id),zoneIds:model.stands.flatMap(item => item.zones.map(zone => zone.id)),
@@ -163,7 +172,16 @@
     if (zone.type !== null && zone.type !== draft.receiver.type) fail('MIXED_ZONE','Plaats RGBW en SPI in afzonderlijke zones.');
     if (zone.layout === 'continuous' && zone.type === 'SPI' && zone.pixels + activeOutputs(draft).reduce((sum,output) => sum + output.pixels,0) > Model.LIMITS.continuousPixels) fail('ZONE_PIXEL_LIMIT','Deze doorlopende zone ondersteunt maximaal 8192 pixels. Kies een andere zone.');
   }
-  function toSecurity(draft) { draft.port=null; draft.stage=draft.role === 'main' && pinRequired ? 'pin' : 'security'; if (draft.stage === 'security') draft.security={status:'pending',phase:'configuring'}; }
+  function toSecurity(draft) {
+    if(activeOutputs(draft).some(output=>output.pixels===0))fail('PIXELS_REQUIRED','Stel de lengte in voor elke gebruikte uitgang.');
+    // Zero belongs to the editable draft, never to a physical configuration.
+    // Disabled outputs retain existing lengths; only untouched zeros receive
+    // the protocol placeholder. They stay disabled and produce no light.
+    for(const output of draft.outputs)if(!output.enabled&&output.pixels===0){output.pixels=1;output.reversed=false;}
+    draft.port=null;draft.stage=draft.role==='main'&&pinRequired()?'pin':'security';
+    if(draft.stage==='security')draft.security={status:'pending',phase:'configuring'};
+  }
+  function toConfiguration(draft) { if(draft.receiver.type==='SPI')draft.stage='outputs';else toSecurity(draft); }
   function transition(value,event) {
     const original=snapshot(value), next=copy(original);
     try {
@@ -180,18 +198,20 @@
           if (!id(event.id) || next.context.standIds.includes(event.id)) fail('STAND_ID','Kies een nieuwe stand-ID.');
           next.stand={id:event.id,name:name(event.name),isNew:true}; break;
         case 'ADD_ZONE':
-          requireStage(next,['zones','zone']);
+          requireStage(next,['zones','placement','zone']);
           if (!id(event.id) || next.context.zoneIds.includes(event.id) || next.zones.some(zone => zone.id === event.id)) fail('ZONE_ID','Deze zone bestaat al.');
           next.zones.push({id:event.id,name:name(event.name),type:null,layout:'stacked',isNew:true,pixels:0});
           if (next.activeZoneId === null) next.activeZoneId=event.id;
           if (next.stage === 'zone') next.zoneId=event.id;
+          if (next.stage === 'placement') next.activeZoneId=event.id;
+          delete next.zoneChoiceRequired;
           break;
         case 'SELECT_ACTIVE_ZONE':
           // A destination preference is not membership or a security claim.
           // Actual assignment stays locked behind identity/final receipt checks.
           unlocked(next);requireStage(next,['zones','receiver']);
-          if(!next.zones.some(zone=>zone.id===event.zoneId))fail('ZONE_NOT_FOUND','Kies een zone in deze stand.');
-          next.activeZoneId=event.zoneId;break;
+          if(event.zoneId!==null&&!next.zones.some(zone=>zone.id===event.zoneId))fail('ZONE_NOT_FOUND','Kies een zone in deze stand.');
+          next.activeZoneId=event.zoneId;delete next.zoneChoiceRequired;break;
         case 'RENAME_ZONE':
         case 'REMOVE_ZONE': {
           unlocked(next);requireStage(next,['zones']);
@@ -213,7 +233,7 @@
           // another physical receiver must start with its own clean settings.
           const sameReceiver=next.receiver&&['id','rid','type','deviceFingerprint'].every(key=>next.receiver[key]===event.receiver[key]);
           next.receiver={...copy(event.receiver),name:name(event.receiver.name)};
-          if(!sameReceiver)next.outputs=event.receiver.type === 'SPI' ? [1,2,3,4].map(port => ({port,enabled:port === 1,pixels:25,reversed:false})) : [];
+          if(!sameReceiver)next.outputs=event.receiver.type === 'SPI' ? [1,2,3,4].map(port => ({port,enabled:port === 1,pixels:0,reversed:false})) : [];
           next.port=null;next.zoneId=null;break;
         }
         case 'SET_OUTPUT_COUNT':
@@ -227,38 +247,44 @@
           next.outputs[event.port-1].enabled=event.enabled;break;
         case 'SET_PIXELS':
           unlocked(next);requireStage(next,['pixels']);
-          if (event.port !== next.port || !int(event.pixels,1,Model.LIMITS.pixelsPerPort)) fail('PIXELS','Kies 1 tot 1024 pixels voor de getoonde uitgang.');
+          if (event.port !== next.port || !int(event.pixels,0,Model.LIMITS.pixelsPerPort)) fail('PIXELS','Kies een geldig aantal pixels voor de getoonde uitgang.');
           next.outputs[event.port-1].pixels=event.pixels;break;
         case 'SET_SIDE':
           unlocked(next);requireStage(next,['connection']);
           if (event.port !== next.port || !['left','right'].includes(event.side)) fail('SIDE','Kies welk gemarkeerd uiteinde bij het begin van je opstelling ligt.');
           next.outputs[event.port-1].reversed=event.side === 'right';break;
         case 'SELECT_ZONE': {
-          requireStage(next,['zone']);const zone=next.zones.find(item => item.id === event.zoneId);
+          requireStage(next,['placement','zone']);const zone=next.zones.find(item => item.id === event.zoneId);
+          if(event.zoneId===null){next.activeZoneId=null;next.zoneId=null;delete next.zoneChoiceRequired;break;}
           if (!zone) fail('ZONE_NOT_FOUND','Kies een zone in deze stand.');
-          compatible(next,zone);next.zoneId=zone.id;break;
+          compatible(next,zone);if(next.stage==='placement')next.activeZoneId=zone.id;else next.zoneId=zone.id;delete next.zoneChoiceRequired;break;
         }
         case 'SECURITY_PROGRESS':
           requireStage(next,['security']);
           if (!['configuring','claiming','reconnecting','verifying','resuming'].includes(event.phase) || next.security.status !== 'pending') fail('SECURITY_PHASE','Deze beveiligingsstap moet door de verbinding worden bevestigd.');
           next.security.phase=event.phase;break;
         case 'SKIP_ZONES':
-          unlocked(next);requireStage(next,['zones']);next.stage='receiver';break;
+          unlocked(next);requireStage(next,['zones']);delete next.zoneChoiceRequired;next.stage='receiver';break;
         case 'NEXT':
           switch (next.stage) {
             case 'stand': if (!next.stand) fail('STAND','Geef eerst je stand een naam.');next.stage='zones';break;
             case 'zones': if (!next.zones.length) fail('ZONE_REQUIRED','Maak minstens één zone, bijvoorbeeld Demohoek.');next.stage='receiver';break;
-            case 'receiver': if (!next.receiver) fail('RECEIVER_REQUIRED','Kies eerst een gevonden receiver.');if (next.receiver.type === 'SPI') next.stage='outputs';else toSecurity(next);break;
+            case 'receiver': {
+              if (!next.receiver) fail('RECEIVER_REQUIRED','Kies eerst een gevonden receiver.');
+              const zone=next.zones.find(zone=>zone.id===next.activeZoneId);
+              if(next.zoneChoiceRequired||zone&&zone.type&&zone.type!==next.receiver.type)next.stage='placement';else toConfiguration(next);break;
+            }
+            case 'placement': {if(next.zoneChoiceRequired)fail('ZONE_REQUIRED','Kies een passende zone of voeg de receiver zonder zone toe.');const zone=next.zones.find(zone=>zone.id===next.activeZoneId);if(zone)compatible(next,zone);toConfiguration(next);break;}
             case 'outputs': next.stage='pixels';next.port=activeOutputs(next)[0].port;break;
             case 'pixels': {
-              const following=activeOutputs(next).find(output => output.port > next.port);
-              if (following) next.port=following.port;else {next.stage='connection';next.port=activeOutputs(next)[0].port;}break;
+              if(next.outputs[next.port-1].pixels===0)fail('PIXELS_REQUIRED',`Stel eerst de lengte van poort ${next.port} in.`);
+              next.stage='connection';break;
             }
             case 'connection': {
               const following=activeOutputs(next).find(output => output.port > next.port);
-              if (following) next.port=following.port;else toSecurity(next);break;
+              if (following) {next.stage='pixels';next.port=following.port;}else toSecurity(next);break;
             }
-            case 'zone': if (!next.zoneId && next.zones.length) fail('ZONE_REQUIRED','Kies een zone voor deze receiver.');if(next.zoneId)compatible(next,next.zones.find(zone => zone.id === next.zoneId));next.stage='review';break;
+            case 'zone': if (next.zoneChoiceRequired||next.zoneId===null&&next.activeZoneId!==null) fail('ZONE_REQUIRED','Kies een passende zone of voeg de receiver zonder zone toe.');if(next.zoneId)compatible(next,next.zones.find(zone => zone.id === next.zoneId));next.stage='review';break;
             case 'pin': fail('PIN_REQUIRED','Vul twee keer dezelfde PIN van 8 tot 12 cijfers in.');break;
             case 'security': fail('SECURITY_UNCONFIRMED','De beveiligde verbinding moet eerst bevestigd worden.');break;
             case 'review': fail('FINAL_RECEIPT_REQUIRED','Toevoegen vereist de definitieve bevestiging van deze receiver.');break;
@@ -269,9 +295,10 @@
           switch (next.stage) {
             case 'zones': if (!next.stand.isNew) fail('NO_BACK','Deze stand bestaat al.');next.stage='stand';break;
             case 'receiver': next.stage='zones';break;
+            case 'placement': next.stage='receiver';break;
             case 'outputs': next.stage='receiver';break;
-            case 'pixels': {const previous=activeOutputs(next).filter(output => output.port < next.port).pop();if (previous) next.port=previous.port;else {next.stage='outputs';next.port=null;}break;}
-            case 'connection': {const previous=activeOutputs(next).filter(output => output.port < next.port).pop();if (previous) next.port=previous.port;else {next.stage='pixels';next.port=activeOutputs(next).slice(-1)[0].port;}break;}
+            case 'pixels': {const previous=activeOutputs(next).filter(output => output.port < next.port).pop();if (previous) {next.stage='connection';next.port=previous.port;}else {next.stage='outputs';next.port=null;}break;}
+            case 'connection': next.stage='pixels';break;
             case 'pin': if (next.receiver.type === 'SPI') {next.stage='connection';next.port=activeOutputs(next).slice(-1)[0].port;}else next.stage='receiver';break;
             default: fail('NO_BACK','Je bent aan het begin van deze toevoeging.');
           }break;
@@ -282,7 +309,7 @@
   function providePin(value,pin,repeat) {
     const original=snapshot(value);
     try {
-      if (!pinRequired) fail('PIN_DISABLED','Deze demo gebruikt geen installatie-PIN.');
+      if (!pinRequired()) fail('PIN_DISABLED','Deze demo gebruikt geen installatie-PIN.');
       requireStage(original,['pin']);unlocked(original);
       if (original.cancelled) fail('CANCELLED','Hervat eerst deze toevoeging.');
       const validation=Contract.validatePin(pin,repeat);
@@ -313,7 +340,9 @@
       if(pending.some(zone=>context.zoneIds.includes(zone.id)))fail('ZONE_ID','Een nieuwe zone hoort ondertussen bij een andere stand.');
       next.zones=[...saved,...pending];next.context=context;
       if(stand)next.stand={id:stand.id,name:stand.name,isNew:false};
-      if(!next.zones.some(zone=>zone.id===next.activeZoneId))next.activeZoneId=next.zones[0]?.id||null;
+      // A removed destination is not the customer's explicit "Without zone"
+      // choice. Keep that distinction until they choose a destination again.
+      if(next.activeZoneId!==null&&!next.zones.some(zone=>zone.id===next.activeZoneId)){next.activeZoneId=null;next.zoneChoiceRequired=true;}
       if(!next.zones.some(zone=>zone.id===next.zoneId))next.zoneId=null;
       if(original.zones.length&&!next.zones.length&&next.stage==='receiver')next.stage='zones';
       return result(next);
@@ -329,8 +358,9 @@
   function steps(value) {
     const draft=snapshot(value);
     const list=['stand','zones','receiver'];
-    if (draft.receiver && draft.receiver.type === 'SPI') list.push('outputs','pixels','connection');
-    if (draft.role === 'main' && pinRequired) list.push('pin');
+    if(draft.stage==='placement')list.push('placement');
+    if (draft.receiver && draft.receiver.type === 'SPI') list.push('outputs','pixels');
+    if (draft.role === 'main' && pinRequired()) list.push('pin');
     return list.concat(['security','zone','review','done']);
   }
   function assertCurrent(model,draft,allowAdded) {
@@ -349,7 +379,6 @@
     let next=Model.clone(model);
     if (draft.stand.isNew) next.stands.push({id:draft.stand.id,name:draft.stand.name,zones:[]});
     for (const zone of draft.zones.filter(item => item.isNew)) next=Model.createZone(next,draft.stand.id,{id:zone.id,name:zone.name});
-    if(draft.zoneId===null&&next.stands.find(item=>item.id===draft.stand.id).zones.length)fail('ZONE_REQUIRED','De zones zijn intussen gewijzigd. Kies een zone voor deze receiver.');
     const zone=draft.zoneId===null?null:Model.getZone(next,draft.zoneId);
     if (draft.zoneId!==null&&(!zone || !next.stands.find(item => item.id === draft.stand.id).zones.some(item => item.id === zone.id))) fail('ZONE_NOT_FOUND','De gekozen zone is niet meer beschikbaar in deze stand.');
     // No pending receiver is ever inserted. Both insertion and assignment are

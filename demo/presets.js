@@ -59,7 +59,7 @@
     const result = {};
     Object.keys(value).forEach(key => {
       if (!has(rules, key)) {
-        if (strict) fail('STATE_FIELD', 'De preset bevat gegevens die geen lichtinstelling zijn.');
+        if (strict) fail('STATE_FIELD', 'De bewaarde animatie bevat gegevens die geen lichtinstelling zijn.');
         return;
       }
       if (!rules[key](value[key])) fail('STATE_VALUE', 'De lichtinstelling ‘' + key + '’ is niet geldig.');
@@ -83,28 +83,28 @@
     return 'preset-' + Date.now().toString(36) + '-' + sequence.toString(36) + '-' + Math.random().toString(36).slice(2, 10);
   }
   function capture(name, effect, editedState, options = {}) {
-    if (typeof name !== 'string' || !safeText(name.trim(), 64)) fail('NAME', 'Geef je preset een naam van 1 tot 64 tekens.');
+    if (typeof name !== 'string' || !safeText(name.trim(), 64)) fail('NAME', 'Geef je animatie een naam van 1 tot 64 tekens.');
     if (!plain(effect) || dangerous(effect) || !validId(effect.id) || !CATEGORIES.includes(effect.category) || !plain(effect.state)) fail('EFFECT', 'Kies eerst een animatie.');
     if (!plain(editedState) || dangerous(editedState)) fail('STATE', 'De lichtinstellingen zijn niet geldig.');
     const supportedTypes = effect.supportedTypes || effect.receiverTypes ||
       (effect.category === 'pixels' ? ['SPI'] : effect.category !== 'whole' && TYPES.includes(effect.state.receiverType) ? [effect.state.receiverType] : TYPES);
-    if (!Array.isArray(supportedTypes) || !supportedTypes.length || supportedTypes.some(type => !TYPES.includes(type))) fail('TYPE', 'Het type van deze preset is niet geldig.');
+    if (!Array.isArray(supportedTypes) || !supportedTypes.length || supportedTypes.some(type => !TYPES.includes(type))) fail('TYPE', 'Het type van deze animatie is niet geldig.');
     if (editedState.engine && editedState.engine !== effect.state.engine) fail('EFFECT_STATE', 'De gekozen animatie en instellingen horen niet bij elkaar.');
     const state = lightState(Object.assign({}, effect.state, editedState));
     if (effect.state.variant !== undefined && state.variant !== effect.state.variant) fail('EFFECT_STATE', 'De gekozen animatievariant en instellingen horen niet bij elkaar.');
     if (effect.state.v30Effect && state.v30Effect !== effect.state.v30Effect) fail('EFFECT_STATE', 'De gekozen animatie en instellingen horen niet bij elkaar.');
     const id = options.id === undefined ? newId() : options.id;
-    if (!validId(id)) fail('ID', 'De preset-identiteit is niet geldig.');
+    if (!validId(id)) fail('ID', 'De identificatie van de bewaarde animatie is niet geldig.');
     return validate({ version: 1, id, name: name.trim(), effectId: effect.id, category: effect.category,
       supportedTypes: [...new Set(supportedTypes)], constraints: restrictions(effect), state });
   }
   function onlyKeys(value, keys, code) {
-    if (!plain(value) || dangerous(value) || Object.keys(value).some(key => !keys.includes(key))) fail(code, 'De preset bevat onbekende of ongeldige gegevens.');
+    if (!plain(value) || dangerous(value) || Object.keys(value).some(key => !keys.includes(key))) fail(code, 'De bewaarde animatie bevat onbekende of ongeldige gegevens.');
   }
   function validate(value) {
     onlyKeys(value, ['version', 'id', 'name', 'effectId', 'category', 'supportedTypes', 'constraints', 'state'], 'PRESET');
-    if (value.version !== 1 || !validId(value.id) || !safeText(value.name, 64) || !validId(value.effectId) || !CATEGORIES.includes(value.category)) fail('PRESET', 'Deze preset is niet geldig of heeft een onbekende versie.');
-    if (!Array.isArray(value.supportedTypes) || !value.supportedTypes.length || value.supportedTypes.some(type => !TYPES.includes(type)) || new Set(value.supportedTypes).size !== value.supportedTypes.length) fail('TYPE', 'Het type van deze preset is niet geldig.');
+    if (value.version !== 1 || !validId(value.id) || !safeText(value.name, 64) || !validId(value.effectId) || !CATEGORIES.includes(value.category)) fail('PRESET', 'Deze bewaarde animatie is niet geldig of heeft een onbekende versie.');
+    if (!Array.isArray(value.supportedTypes) || !value.supportedTypes.length || value.supportedTypes.some(type => !TYPES.includes(type)) || new Set(value.supportedTypes).size !== value.supportedTypes.length) fail('TYPE', 'Het type van deze animatie is niet geldig.');
     if (value.category === 'pixels' && value.supportedTypes.some(type => type !== 'SPI')) fail('TYPE', 'Bewegend licht over pixels is alleen voor SPI.');
     onlyKeys(value.constraints, ['minimumReceivers', 'requireTogether', 'layouts'], 'CONSTRAINTS');
     const constraints = value.constraints;
@@ -130,14 +130,14 @@
     let saved;
     try { saved = validate(preset); } catch (error) { return { compatible: false, reason: error.message, effectId: null }; }
     if (!plain(context) || !TYPES.includes(context.type)) return { compatible: false, reason: 'Open eerst een RGBW- of SPI-zone.', effectId: null };
-    if (!saved.supportedTypes.includes(context.type) || (saved.category === 'pixels' && context.type !== 'SPI')) return { compatible: false, reason: 'Deze preset is alleen voor ' + saved.supportedTypes.join(' en ') + '.', effectId: null };
+    if (!saved.supportedTypes.includes(context.type) || (saved.category === 'pixels' && context.type !== 'SPI')) return { compatible: false, reason: 'Deze animatie is alleen voor ' + saved.supportedTypes.join(' en ') + '.', effectId: null };
     const effect = effectInCatalog(saved, catalog);
     if (!effect || effect.category !== saved.category) return { compatible: false, reason: 'Deze animatie is niet beschikbaar voor deze zone.', effectId: null };
-    if (effect.state.engine !== saved.state.engine || effect.state.variant !== saved.state.variant || (effect.state.v30Effect || null) !== (saved.state.v30Effect || null)) return { compatible: false, reason: 'Deze preset hoort bij een andere animatieversie.', effectId: null };
+    if (effect.state.engine !== saved.state.engine || effect.state.variant !== saved.state.variant || (effect.state.v30Effect || null) !== (saved.state.v30Effect || null)) return { compatible: false, reason: 'Deze bewaarde animatie hoort bij een andere animatieversie.', effectId: null };
     const minimum = Math.max(saved.constraints.minimumReceivers, effect.minimumReceivers || 1);
     if (!integer(context.receiverCount, 1, 1000) || context.receiverCount < minimum) return { compatible: false, reason: 'Voeg minstens ' + minimum + ' receivers toe aan deze zone.', effectId: effect.id };
     const currentLayouts = effect.supportedLayouts || effect.layouts || LAYOUTS;
-    if (!saved.constraints.layouts.includes(context.layout) || !currentLayouts.includes(context.layout) || (context.type === 'RGBW' && context.layout === 'continuous')) return { compatible: false, reason: 'Deze preset past niet bij de gekozen opstelling.', effectId: effect.id };
+    if (!saved.constraints.layouts.includes(context.layout) || !currentLayouts.includes(context.layout) || (context.type === 'RGBW' && context.layout === 'continuous')) return { compatible: false, reason: 'Deze animatie past niet bij de gekozen opstelling.', effectId: effect.id };
     if (!context.selection || !['all', 'receiver'].includes(context.selection.kind)) return { compatible: false, reason: 'Kies Samen of één receiver.', effectId: effect.id };
     if ((saved.constraints.requireTogether || effect.requireTogether || effect.category === 'tunnel') && context.selection.kind !== 'all') return { compatible: false, reason: 'Kies Samen om dit effect over de opstelling te gebruiken.', effectId: effect.id };
     return { compatible: true, reason: '', effectId: effect.id };
@@ -156,11 +156,11 @@
     function load() {
       let raw;
       try {
-        if (!storage || typeof storage.getItem !== 'function') return storageError('STORAGE_UNAVAILABLE', 'Eigen presets kunnen hier niet lokaal worden bewaard.');
+        if (!storage || typeof storage.getItem !== 'function') return storageError('STORAGE_UNAVAILABLE', 'Mijn animaties kunnen hier niet lokaal worden bewaard.');
         raw = storage.getItem(STORAGE_KEY);
-      } catch (_) { return storageError('STORAGE_UNAVAILABLE', 'De lokale presetopslag is niet bereikbaar.'); }
+      } catch (_) { return storageError('STORAGE_UNAVAILABLE', 'De lokale opslag voor Mijn animaties is niet bereikbaar.'); }
       if (raw === null || raw === undefined) return { presets: [], error: null };
-      if (typeof raw !== 'string' || raw.length > MAX_BYTES) return storageError('STORAGE_CORRUPT', 'De opgeslagen presets konden niet veilig worden gelezen. Ze zijn niet overschreven.');
+      if (typeof raw !== 'string' || raw.length > MAX_BYTES) return storageError('STORAGE_CORRUPT', 'De bewaarde animaties konden niet veilig worden gelezen. Ze zijn niet overschreven.');
       try {
         const envelope = JSON.parse(raw);
         onlyKeys(envelope, ['version', 'presets'], 'STORAGE_CORRUPT');
@@ -168,16 +168,16 @@
         const presets = envelope.presets.map(validate);
         if (new Set(presets.map(preset => preset.id)).size !== presets.length) throw new Error('Duplicate preset identity');
         return { presets, error: null };
-      } catch (_) { return storageError('STORAGE_CORRUPT', 'De opgeslagen presets konden niet veilig worden gelezen. Ze zijn niet overschreven.'); }
+      } catch (_) { return storageError('STORAGE_CORRUPT', 'De bewaarde animaties konden niet veilig worden gelezen. Ze zijn niet overschreven.'); }
     }
     function write(presets, previous) {
       try {
-        if (!storage || typeof storage.setItem !== 'function') return { presets: previous, error: { code: 'STORAGE_UNAVAILABLE', message: 'Eigen presets kunnen hier niet lokaal worden bewaard.' } };
+        if (!storage || typeof storage.setItem !== 'function') return { presets: previous, error: { code: 'STORAGE_UNAVAILABLE', message: 'Mijn animaties kunnen hier niet lokaal worden bewaard.' } };
         const serialized = JSON.stringify({ version: 1, presets });
-        if (serialized.length > MAX_BYTES) return { presets: previous, error: { code: 'STORAGE_FULL', message: 'De lokale presetopslag is vol. Verwijder eerst een ongebruikte preset.' } };
+        if (serialized.length > MAX_BYTES) return { presets: previous, error: { code: 'STORAGE_FULL', message: 'De lokale opslag voor Mijn animaties is vol. Verwijder eerst een ongebruikte animatie.' } };
         storage.setItem(STORAGE_KEY, serialized);
         return { presets: clone(presets), error: null };
-      } catch (_) { return { presets: previous, error: { code: 'STORAGE_WRITE', message: 'De preset kon niet worden bewaard. Je bestaande presets blijven staan.' } }; }
+      } catch (_) { return { presets: previous, error: { code: 'STORAGE_WRITE', message: 'De animatie kon niet worden bewaard. Je bestaande animaties blijven staan.' } }; }
     }
     function save(preset) {
       const current = load();
@@ -185,7 +185,7 @@
       let saved;
       try { saved = validate(preset); } catch (error) { return { presets: current.presets, error: { code: error.code || 'PRESET', message: error.message } }; }
       const existing = current.presets.findIndex(item => item.id === saved.id);
-      if (existing < 0 && current.presets.length >= MAX_PRESETS) return { presets: current.presets, error: { code: 'PRESET_LIMIT', message: 'Je hebt 100 presets. Verwijder eerst een ongebruikte preset.' } };
+      if (existing < 0 && current.presets.length >= MAX_PRESETS) return { presets: current.presets, error: { code: 'PRESET_LIMIT', message: 'Je hebt 100 bewaarde animaties. Verwijder eerst een ongebruikte animatie.' } };
       const next = current.presets.slice();
       if (existing < 0) next.push(saved); else next[existing] = saved;
       return write(next, current.presets);
@@ -193,7 +193,7 @@
     function remove(id) {
       const current = load();
       if (current.error) return current;
-      if (!validId(id)) return { presets: current.presets, error: { code: 'ID', message: 'Kies de preset die je wilt verwijderen.' } };
+      if (!validId(id)) return { presets: current.presets, error: { code: 'ID', message: 'Kies de animatie die je wilt verwijderen.' } };
       if (!current.presets.some(preset => preset.id === id)) return current;
       return write(current.presets.filter(preset => preset.id !== id), current.presets);
     }

@@ -19,9 +19,9 @@
       if(!dialog?.open)return;
       const complete=job?.state==='completed'&&job.phase==='verified',running=job&&!terminal.has(job.state),resume=job?.committed&&!complete&&!running;
       const percent=complete?100:Math.min(99,job?.progress||0);
-      let content=`<p>Verbind je telefoon met het wifi-netwerk van je hoofdreceiver. Je ${root.AluvisionSecurityMode?.pinRequired===false?'inrichting':'PIN en inrichting'} blijft bij een update bewaard.</p>`;
+      let content=`<p>${receiver.role==='node'?'Deze receiver krijgt zijn update draadloos via je hoofdreceiver. ':''}Blijf op de wifi van je hoofdreceiver. Je instellingen blijven bewaard.</p>`;
       if(job){
-        content+=`<section class="card receiver-update-progress"><h3>${escape(complete?'Bijgewerkt':phases[job.phase]||'Update controleren')}</h3><p>${escape(receiver.type)} · versie ${escape(job.toVersion)}</p><progress max="100" value="${percent}" aria-label="Voortgang van de receiverupdate"></progress><b>${percent}%</b>${complete?'<p>De juiste receiver heeft de nieuwe software na de herstart bevestigd.</p>':'<p>Laat de receiver aan en blijf op zijn wifi. Sluiten stopt de update niet.</p>'}</section>`;
+        content+=`<section class="card receiver-update-progress"><h3>${escape(complete?'Bijgewerkt':phases[job.phase]||'Update controleren')}</h3><p>${escape(receiver.type)} · versie ${escape(job.toVersion)}</p><progress max="100" value="${percent}" aria-label="Voortgang van de receiverupdate"></progress><b>${percent}%</b>${complete?'<p>De nieuwe software is actief.</p>':`<p>Laat ${receiver.role==='node'?'beide receivers':'de receiver'} aan en blijf op de wifi van je hoofdreceiver. Sluiten stopt de update niet.</p>`}</section>`;
         if(resume)content+='<button class="button full" data-update="resume">Herstart controleren</button>';
         if(running&&job.cancelAllowed&&!job.committed)content+='<button class="button secondary full" data-update="cancel">Update annuleren</button>';
         if(running&&error)content+='<button class="button full" data-update="status">Voortgang opnieuw controleren</button>';
@@ -41,7 +41,7 @@
       if(busy||!dialog?.open)return;
       const token=generation;busy=true;error='';paint();
       try{
-        const request={standId:receiver.standId};let value;
+        const request={standId:receiver.standId,receiverId:receiver.id};let value;
         if(action==='check'){
           if(typeof services.otaPlan!=='function')throw Error('UNAVAILABLE');
           value=await services.otaPlan(request);if(token!==generation)return;
@@ -69,7 +69,7 @@
       }
     }
     function open(value){
-      if(!value||value.lifecycle!=='added'||value.role!=='main')throw Error('MAIN_REQUIRED');
+      if(!value||value.lifecycle!=='added'||!['main','node'].includes(value.role)||typeof value.id!=='string'||!value.id)throw Error('ADDED_RECEIVER_REQUIRED');
       generation++;clearTimeout(timer);timer=null;receiver={...value};plan=null;job=null;busy=false;error='';returnFocus=document.activeElement;
       if(!dialog){dialog=document.createElement('dialog');dialog.className='receiver-update-sheet';dialog.setAttribute('aria-label','Receiver bijwerken');document.body.append(dialog);
         dialog.addEventListener('click',event=>{const button=event.target.closest('[data-update]');if(!button||button.disabled)return;button.dataset.update==='close'?close():perform(button.dataset.update);});

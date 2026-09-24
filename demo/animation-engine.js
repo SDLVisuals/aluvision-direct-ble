@@ -242,6 +242,10 @@
     return mix(white, brand, 0.12 + 0.4 * shaped((1 + Math.sin((position * 0.6 - direction * clock.phase) * Math.PI * 2)) / 2, state));
   }
   function sample(input = {}) {
+    // In a continuous SPI zone all physical outputs form one logical strip.
+    // Receiver/port boundaries must not restart an extension effect.
+    if(input.receiverType==='SPI'&&input.layout==='continuous')input={...input,
+      receiverCount:1,receiverIndex:0,pixelCount:input.totalPixels,pixelIndex:input.globalPixel};
     const state = input.state || {};
     const entry = BY_ID.get(state.v30Effect);
     if (!entry) throw new Error('Unknown V30 preview effect: ' + state.v30Effect);

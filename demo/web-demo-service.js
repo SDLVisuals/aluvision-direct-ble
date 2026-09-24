@@ -18,12 +18,20 @@
       removeItem:key=>{memory.delete(String(key));},
       clear:()=>{memory.clear();}
     });
-    const units=[
-      {id:'demo-rgbw-1',rid:'D000000000000001',deviceFingerprint:'A'.repeat(64),type:'RGBW',name:'Demo RGBW 1'},
-      {id:'demo-spi-1',rid:'D000000000000002',deviceFingerprint:'B'.repeat(64),type:'SPI',name:'Demo SPI 1'},
-      {id:'demo-rgbw-2',rid:'D000000000000003',deviceFingerprint:'C'.repeat(64),type:'RGBW',name:'Demo RGBW 2'},
-      {id:'demo-spi-2',rid:'D000000000000004',deviceFingerprint:'D'.repeat(64),type:'SPI',name:'Demo SPI 2'}
-    ];
+    // Ten of each family can be added during a walkthrough. Keep the original
+    // four identities stable; the additional identities are deterministic UI
+    // fixtures too, never physical device fingerprints or security evidence.
+    const legacyFingerprints=['A','B','C','D'];
+    const units=Array.from({length:20},(_,index)=>{
+      const type=index%2?'SPI':'RGBW',number=Math.floor(index/2)+1;
+      const serial=(index+1).toString(16).toUpperCase();
+      return {
+        id:`demo-${type.toLowerCase()}-${number}`,
+        rid:`D${serial.padStart(15,'0')}`,
+        deviceFingerprint:index<4?legacyFingerprints[index].repeat(64):serial.padStart(64,'0'),
+        type,name:`Demo ${type} ${number}`
+      };
+    });
     const receipts=new Map();let serial=0;
     const receipt=(kind,configuration)=>{
       const receiptRef=`receipt:demo-walkthrough-${++serial}`;

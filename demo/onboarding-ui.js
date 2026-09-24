@@ -14,20 +14,24 @@
  */
 (function(root,factory){'use strict';root.LightningOnboardingUI=factory();}(window,function(){
   'use strict';
-  const pinRequired=window.AluvisionSecurityMode?.pinRequired!==false;
+  const pinRequired=()=>window.AluvisionSecurityMode?.pinRequired!==false;
   const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-  const button=(action,label,extra='')=>`<button type="button" class="${extra.includes('class="button secondary"')?'button secondary':'button'}" data-onboarding-action="${action}" ${extra.replace('class="button secondary"','')}>${label}</button>`;
-  const labels={stand:'Je stand',zones:'Zones maken',receiver:'Receiver zoeken',outputs:'Kies je uitgangen',pixels:'Stel je lengte in',connection:'Kies de aansluiting',pin:'Kies je installatie-PIN',security:pinRequired?'Verbinding bevestigen':'Receiver verbinden',zone:'Kies de zone',review:'Klaar om toe te voegen',done:'Je receiver is klaar'};
+  const button=(action,label,extra='')=>{
+    const classes=extra.match(/\bclass="([^"]*)"/);
+    return `<button type="button" class="${classes?classes[1]:'button'}" data-onboarding-action="${action}" ${extra.replace(/\bclass="[^"]*"/,'')}>${label}</button>`;
+  };
+  const labels={stand:'Je stand',zones:'Zones maken',receiver:'Receiver zoeken',placement:'Kies een passende zone',outputs:'Kies je uitgangen',pixels:'Verlichting aansluiten',connection:'Verlichting aansluiten',pin:'Kies je installatie-PIN',get security(){return pinRequired()?'Verbinding bevestigen':'Receiver verbinden';},zone:'Kies de zone',review:'Klaar om toe te voegen',done:'Je receiver is klaar'};
   const phaseLabels={configuring:'Instellingen bewaren',claiming:'Receiver beveiligen',reconnecting:'Opnieuw met wifi verbinden',verifying:'Verbinding controleren',resuming:'Beveiliging controleren'};
   const unavailable='Er is nog geen verbindingsdienst beschikbaar. Je keuzes blijven bewaard.';
   const clone=value=>JSON.parse(JSON.stringify(value));
+  const uniqueId=()=>typeof crypto.randomUUID==='function'?crypto.randomUUID():Array.from(crypto.getRandomValues(new Uint8Array(16)),byte=>byte.toString(16).padStart(2,'0')).join('');
   const canonical=value=>JSON.stringify(value,(_,item)=>item&&typeof item==='object'&&!Array.isArray(item)?Object.fromEntries(Object.keys(item).sort().map(key=>[key,item[key]])):item);
   function bounded(promise,milliseconds=15000){let timer;return Promise.race([Promise.resolve(promise),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Object.assign(Error('TIMEOUT'),{code:'TIMEOUT'})),milliseconds);})]).finally(()=>clearTimeout(timer));}
   // Native errors contain only bounded codes. Never render an exception's raw
   // message: network responses can contain credentials or untrusted content.
   function connectionFailure(failure,{viaMain=false}={}){
     const code=typeof failure?.code==='string'?failure.code:'';
-    if(!pinRequired&&['MAIN_RECOVERY_UNAVAILABLE','MAIN_RECOVERY_CONFLICT','MAIN_REGISTRATION_UNCONFIRMED','REMOVAL_PIN_REQUIRED'].includes(code))return {message:'De receiver antwoordt nog niet. Laat hem aan en controleer dezelfde verbinding opnieuw. Je keuzes blijven bewaard.'};
+    if(!pinRequired()&&['MAIN_RECOVERY_UNAVAILABLE','MAIN_RECOVERY_CONFLICT','MAIN_REGISTRATION_UNCONFIRMED','REMOVAL_PIN_REQUIRED'].includes(code))return {message:'De receiver antwoordt nog niet. Laat hem aan en controleer dezelfde verbinding opnieuw. Je keuzes blijven bewaard.'};
     if(code==='DISCOVERY_EXPIRED')return {expired:true,message:'De vorige verbindingscontrole is verlopen. Tik op Verbinding controleren om je receiver opnieuw te zoeken. Je keuzes blijven bewaard.'};
     if(['DISCOVERY_UNAVAILABLE','MAIN_MANUAL_WIFI_REQUIRED','MAIN_CONNECTION_UNAVAILABLE','NATIVE_TIMEOUT','TIMEOUT'].includes(code))return {message:viaMain?'Je hoofdreceiver antwoordt nog niet. Controleer of je iPhone met het ALUVISION-wifi van je hoofdreceiver verbonden is. Laat de extra receiver aan en probeer opnieuw; verbind je iPhone niet met zijn eigen wifi. Je keuzes blijven bewaard.':'De receiver antwoordt nog niet. Controleer op je iPhone via Instellingen → Wifi of je met het ALUVISION-netwerk van jouw receiver verbonden bent. Ga terug en tik op Verbinding controleren. Je keuzes blijven bewaard.'};
     if(code==='OWNED_DISCOVERY_UNSUPPORTED')return {message:'Extra receivers zoeken via je hoofdreceiver is in deze appversie nog niet beschikbaar. Je bestaande installatie en keuzes blijven bewaard; je hoeft niets te resetten.'};
@@ -48,11 +52,53 @@
     let securityReceiptRef=null,finalReceiptRef=null,securityUncertain=false,finalizationStarted=false,completeModel=null,manualRejoinSSID=null;
     let returningFromWifi=false,rejoinTimer=null,registrationPending=false;
     let rejoinSession=0,rejoinAttempts=0,rejoinRunning=false,rejoinExhausted=false,rejoinBlocked=false,automaticFinalizing=false;
-    let identifying=new Map(),identifyPending=new Set(),zoneNameOpen=false,searchAbort=null,resumeSelection=null;
+    let identifying=new Map(),identifyPending=new Map(),zoneNameOpen=false,searchAbort=null,resumeSelection=null;
     let standNameInput=null,zoneNameInput='',draftSaving=false,pendingChoices=null,saveFailed=false,origin='stand';
     let zoneExtraNames=[],zoneRemoval=null,zoneRename=null,receiverMove=null,managementBusy=false,zoneListReturn=null;
     const visualEntrances=new Map(),presentedStages=new Set(),plugMotion=visual.createPlugMotion();
     let selectedOutput=null,unbindPixelScrub=null;
+    let parkedChoices=new Map(),parkedTransactions=new Set(),parking=null,parkPending=null,actionAbort=null,searchOnMount=false;
+    const searchable=()=>draft?.stage==='receiver';
+    function searchDraft(value){
+      return draftApi.snapshot({...clone(value),transactionId:'onboarding-'+uniqueId(),stage:'receiver',
+        receiver:null,outputs:[],port:null,zoneId:null,security:{status:'not-started',phase:'idle'},cancelled:false,membership:'pending'});
+    }
+    async function parkForSearch(){
+      if(parking)return parking;
+      const saved=parkPending||(draft?.receiver&&draft.stage!=='done'?draft:null);
+      if(!saved)return true;
+      parkPending=saved;searchOnMount=true;cancelSearch();actionAbort?.abort();actionAbort=null;stopAutomaticRejoin();
+      if(draft?.receiver||draft?.transactionId===saved.transactionId)draft=searchDraft(saved);
+      results=[];searchState='idle';error='';notice='';draftSaving=true;
+      securityReceiptRef=null;finalReceiptRef=null;securityUncertain=false;finalizationStarted=false;resumeSelection=null;manualRejoinSSID=null;
+      parking=(async()=>{
+        try{
+          await pixelPreview.stop();
+          if(!parkedTransactions.has(saved.transactionId)){
+            if(typeof services.parkDraft==='function')await services.parkDraft({transactionId:saved.transactionId});
+            else parkedChoices.set(saved.receiver.id,clone(saved));
+            parkedTransactions.add(saved.transactionId);
+          }
+          if(typeof services.persistDraft==='function')await services.persistDraft({draft:clone(draft)});
+          parkPending=null;saveFailed=false;return true;
+        }catch(_){error='De zoeklijst kon nog niet worden geopend. Probeer opnieuw. Je receivers zijn niet gewijzigd.';return false;}
+        finally{parking=null;draftSaving=false;busy=false;paintPage(false);}
+      })();
+      return parking;
+    }
+    async function browseReceivers(){
+      if(await parkForSearch()){paintPage(true);if(container)void search();}
+    }
+    let previewState={kind:'idle'};
+    const pixelPreview=pixelSetup.createLivePreview({send:services.previewPixels,onState:state=>{previewState=state;pixelSetup.showPreviewStatus(container,state);}});
+    function syncPixelPreview(){
+      if(!container||document.hidden||draft?.stage!=='pixels'){void pixelPreview.stop();return;}
+      const selected=draft.outputs.find(output=>output.port===draft.port);
+      pixelPreview.update({standId:draft.stand.id,transactionId:draft.transactionId,
+        receiver:{id:draft.receiver.id,rid:draft.receiver.rid,type:'SPI',deviceFingerprint:draft.receiver.deviceFingerprint},
+        role:draft.role,mainReceiverId:draft.mainReceiverId,port:draft.port,pixels:selected.pixels});
+      pixelSetup.showPreviewStatus(container,previewState);
+    }
     const saveNotice='Je keuzes zijn nog niet bewaard. Probeer opnieuw; je hoeft niets opnieuw in te vullen.';
     const committer=draftApi.createCommitter({verifyFinalReceipt:request=>{
       if(typeof services.verifyFinalReceipt!=='function')throw Error('VERIFIER_UNAVAILABLE');
@@ -105,7 +151,7 @@
     function validZoneNames(){const names=zoneNames(),keys=names.map(name=>name.trim().normalize('NFKC').toLowerCase());return names.every(validName)&&new Set(keys).size===keys.length&&draft.zones.length+names.length<=256;}
     const hasZoneNames=()=>zoneExtraNames.length>0||zoneNameInput.trim().length>0;
     const canContinueZones=()=>hasZoneNames()?validZoneNames():draft.zones.length>0;
-    const newZoneEvents=()=>zoneNames().map(name=>({type:'ADD_ZONE',id:'zone-'+crypto.randomUUID(),name}));
+    const newZoneEvents=()=>zoneNames().map(name=>({type:'ADD_ZONE',id:'zone-'+uniqueId(),name}));
     // Commit the entire small setup step, including its destination screen, as
     // one native draft. Retrying uses the exact same IDs and candidate after an
     // uncertain storage response; it cannot create a second stand or zone.
@@ -129,21 +175,17 @@
       }
     }
     function verifyAgain(value){
-      resumeSelection=clone(value);resumeSelection.security=pinRequired?{status:'not-started',phase:'idle'}:{status:'pending',phase:'configuring'};
-      if(['security','zone','review'].includes(resumeSelection.stage))resumeSelection.stage=pinRequired?'pin':'security';
+      const needsPin=pinRequired()&&value.role==='main';
+      resumeSelection=clone(value);resumeSelection.security=needsPin||value.security.status==='not-started'?{status:'not-started',phase:'idle'}:{status:'pending',phase:'configuring'};
+      if(['security','zone','review'].includes(resumeSelection.stage))resumeSelection.stage=needsPin?'pin':'security';
       draft=draftApi.snapshot({...clone(value),stage:'receiver',receiver:null,outputs:[],port:null,zoneId:null,security:{status:'not-started',phase:'idle'},cancelled:false});
       securityUncertain=false;securityReceiptRef=null;finalReceiptRef=null;manualRejoinSSID=null;searchState='idle';results=[];
     }
     function restore(value){
       if(container||busy)throw Error('FLOW_ACTIVE');
       const saved=draftApi.snapshot(value);if(saved.membership==='added')throw Error('ALREADY_ADDED');
-      if(!pinRequired&&saved.stage==='pin'){
-        draft=draftApi.snapshot({...clone(saved),stage:'security',security:{status:'pending',phase:'configuring'}});
-        securityUncertain=false;return;
-      }
-      if(saved.security.status!=='not-started'){
-        draft=draftApi.snapshot({...clone(saved),stage:'security',security:{status:'pending',phase:'resuming'},cancelled:false});securityUncertain=true;
-      }else if(saved.receiver)verifyAgain(saved);else draft=saved;
+      if(saved.receiver){parkPending=saved;draft=searchDraft(saved);}
+      else draft=saved;
     }
     function cancelSearch(){
       // Invalidate before abort callbacks can settle; late answers must not
@@ -158,7 +200,7 @@
     }
     function start({activeZoneId,retargetZone=false}={}){
       if(!draft||draft.stage==='done'){
-        draft=draftApi.create({model:getModel(),activeZoneId,transactionId:'onboarding-'+crypto.randomUUID()});
+        draft=draftApi.create({model:getModel(),activeZoneId,transactionId:'onboarding-'+uniqueId()});
         results=[];searchState='idle';securityReceiptRef=null;finalReceiptRef=null;completeModel=null;
         securityUncertain=false;finalizationStarted=false;manualRejoinSSID=null;resumeSelection=null;error='';notice='';zoneNameOpen=false;
         stopAutomaticRejoin();rejoinExhausted=false;rejoinBlocked=false;automaticFinalizing=false;registrationPending=false;returningFromWifi=false;
@@ -173,8 +215,8 @@
           change({type:'SELECT_ACTIVE_ZONE',zoneId:activeZoneId},{render:false});
       }
     }
-    const automaticMain=()=>pinRequired&&!!draft&&draft.role==='main'&&manualWifi();
-    const placementReady=()=>!!draft?.zoneId||draft?.zones.length===0;
+    const automaticMain=()=>pinRequired()&&!!draft&&draft.role==='main'&&manualWifi();
+    const placementReady=()=>!draft?.zoneChoiceRequired&&(!!draft?.zoneId||draft?.activeZoneId===null);
     const pendingMain=()=>automaticMain()&&((draft.stage==='security'&&securityUncertain)||(['zone','review'].includes(draft.stage)&&draft.security.status==='confirmed'&&placementReady()));
     const transientRejoin=failure=>['DISCOVERY_UNAVAILABLE','MAIN_MANUAL_WIFI_REQUIRED','MAIN_CONNECTION_UNAVAILABLE','NATIVE_TIMEOUT','TIMEOUT','NATIVE_BUSY','MAIN_BUSY','MAIN_REGISTRATION_UNCONFIRMED','MAIN_RECOVERY_UNAVAILABLE'].includes(failure?.code);
     function stopAutomaticRejoin(){clearTimeout(rejoinTimer);rejoinTimer=null;rejoinSession++;rejoinRunning=false;}
@@ -212,13 +254,24 @@
       paintPage(false);
     }
     function visibilityChanged(){
+      syncPixelPreview();
       if(document.hidden){if(pendingMain())returningFromWifi=true;stopAutomaticRejoin();}
       else if(returningFromWifi)resumeAfterWifiReturn();
     }
     function nativeActive(){resumeAfterWifiReturn();}
     function pageShown(event){if(event.persisted||returningFromWifi)resumeAfterWifiReturn();}
-    function mount(element,options){start({...options,retargetZone:options?.origin==='layout'&&!container});origin=['receivers','layout'].includes(options?.origin)&&draft.mainReceiverId?options.origin:'stand';container=element;container.addEventListener('click',click);container.addEventListener('input',input);container.addEventListener('keydown',keydown);unbindPixelScrub=pixelSetup.bindPixelScrub(container,{isEnabled:()=>draft?.stage==='pixels'&&!busy&&!draftSaving,onChange:value=>updatePixelCount(value)});document.addEventListener('visibilitychange',visibilityChanged);window.addEventListener('lightning:native-active',nativeActive);window.addEventListener('pageshow',pageShown);paintPage(false);if(pendingMain())resumeAfterWifiReturn();if(options?.autoSearch&&draft.stage==='receiver'&&searchState==='idle')queueMicrotask(()=>{if(container&&draft.stage==='receiver'&&!busy&&searchState==='idle')void search();});}
-    function suspend(){
+    function mount(element,options){
+      start({...options,retargetZone:options?.origin==='layout'&&!container});
+      origin=['receivers','layout'].includes(options?.origin)&&draft.mainReceiverId?options.origin:'stand';container=element;
+      container.addEventListener('click',click);container.addEventListener('input',input);container.addEventListener('keydown',keydown);
+      unbindPixelScrub=pixelSetup.bindPixelScrub(container,{isEnabled:()=>draft?.stage==='pixels'&&!busy&&!draftSaving,onChange:value=>updatePixelCount(value)});
+      document.addEventListener('visibilitychange',visibilityChanged);window.addEventListener('lightning:native-active',nativeActive);window.addEventListener('pageshow',pageShown);
+      if(parkPending||parking){void parkForSearch().then(ok=>{if(ok&&container)void search();});}
+      else if((options?.autoSearch||searchOnMount)&&draft.stage==='receiver'&&searchState==='idle')queueMicrotask(()=>{if(container&&draft.stage==='receiver'&&!busy&&searchState==='idle')void search();});
+      paintPage(false);
+    }
+    function suspend({discard=false}={}){
+      void pixelPreview.stop();
       // Leaving this screen must never discard an uncertain claim. PIN inputs
       // are destroyed; only non-secret choices and opaque receipts stay private.
       captureNames();container?.querySelectorAll('[data-onboarding-pin]').forEach(input=>{input.value='';});
@@ -226,10 +279,13 @@
       if(container){container.removeEventListener('click',click);container.removeEventListener('input',input);container.removeEventListener('keydown',keydown);}
       document.removeEventListener('visibilitychange',visibilityChanged);window.removeEventListener('lightning:native-active',nativeActive);window.removeEventListener('pageshow',pageShown);stopAutomaticRejoin();returningFromWifi=false;
       container=null;cancelSearch();plugMotion.clear();selectedOutput=null;zoneListReturn=null;
+      for(const pending of identifyPending.values())pending.abort();identifyPending.clear();
       for(const id of identifying.keys())stopIdentify(id);
+      if(!discard&&draft?.receiver&&draft.stage!=='done')void parkForSearch();
     }
     function reset(){
-      suspend();draft=null;results=[];securityReceiptRef=null;finalReceiptRef=null;
+      suspend({discard:true});draft=null;results=[];securityReceiptRef=null;finalReceiptRef=null;
+      parkPending=null;searchOnMount=false;parkedChoices.clear();parkedTransactions.clear();
       securityUncertain=false;finalizationStarted=false;completeModel=null;pendingChoices=null;
       resumeSelection=null;manualRejoinSSID=null;error='';notice='';busy=false;
     }
@@ -237,25 +293,25 @@
       const firstSetup=origin==='stand';
       const step=draft.stage==='stand'?1:draft.stage==='zones'?2:3;
       const title=draft.stage==='stand'?'Hoe heet je stand?':draft.stage==='zones'?(zoneRemoval?'Zones beheren':zoneRename?'Zone hernoemen':receiverMove?'Receiver verplaatsen':'Je zones'):draft.stage==='receiver'?(busy?'Receiver controleren':searchState==='searching'?'Receiver zoeken…':results.length===1?'Receiver gevonden':results.length>1?'Kies je receiver':'Receiver zoeken'):automaticMain()&&draft.stage==='security'?(busy||rejoinRunning?'Je receiver toevoegen':'Verbind opnieuw met wifi'):automaticMain()&&automaticFinalizing&&draft.stage==='review'?'Je receiver toevoegen':labels[draft.stage]||'Receiver toevoegen';
-      return `<header class="onboarding-setup-header"><div><span class="onboarding-setup-label">Setup</span><b>${firstSetup?'Je stand instellen':'Receiver toevoegen'}</b></div><button type="button" class="back" data-onboarding-action="exit">Later verder <span aria-hidden="true">×</span></button></header>${firstSetup?`<ol class="onboarding-setup-steps" aria-label="Je stand instellen">${['Standnaam','Zones','Receivers'].map((label,i)=>`<li data-setup-step="${i+1}" ${i+1===step?'aria-current="step"':''} class="${i+1<step||draft.stage==='done'?'completed':''}"><span>${i+1<step||draft.stage==='done'?'✓':i+1}</span><b>${label}</b></li>`).join('')}</ol>`:''}<header class="onboarding-heading"><div class="onboarding-step-caption"><span>${firstSetup?`Stap ${step} van 3`:'Receiver toevoegen'}</span>${draft.stand&&draft.stage!=='stand'?`<small>${escape(draft.stand.name)}</small>`:''}</div><h1>${title}</h1></header>${!['stand','zones','receiver','done'].includes(draft.stage)?zoneContext():''}`;
+      return `<header class="onboarding-setup-header"><div><span class="onboarding-setup-label">${firstSetup?`Stap ${step} · ${step===1?'Standnaam':step===2?'Zones':'Verlichting aansluiten'}`:'Receiver toevoegen'}</span></div><button type="button" class="back" data-onboarding-action="exit">Later verder <span aria-hidden="true">×</span></button></header><header class="onboarding-heading"><h1>${title}</h1></header>${!['stand','zones','receiver','placement','done'].includes(draft.stage)?zoneContext():''}`;
     }
     function zoneVisual(index){
       return `<span class="onboarding-zone-number" aria-hidden="true">${index+1}</span>`;
     }
-    function setupZones({editable=false}={}){
-      return `<div class="onboarding-zone-list onboarding-zone-tiles" aria-label="Jouw zones">${draft.zones.map((zone,index)=>{const count=zoneMembers(zone.id).length;return `<div class="onboarding-zone-row" data-setup-zone-row="${escape(zone.id)}"><button type="button" class="onboarding-zone" data-setup-zone="${escape(zone.id)}" data-onboarding-action="active-zone" data-id="${escape(zone.id)}" aria-pressed="${draft.activeZoneId===zone.id}">${zoneVisual(index)}<span><b>${escape(zone.name)}</b><small>${count?`${count} ${count===1?'receiver':'receivers'} · ${zone.type}`:'Nog geen receivers'}${draft.activeZoneId===zone.id?' · Gekozen':''}</small></span><i aria-hidden="true">${draft.activeZoneId===zone.id?'✓':''}</i></button>${editable&&canManageZones()?`<div class="onboarding-zone-tools"><button type="button" class="onboarding-rename-zone" data-onboarding-action="zone-rename" data-id="${escape(zone.id)}" aria-label="${escape(zone.name)} hernoemen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 14z"/></svg></button><button type="button" class="onboarding-remove-zone" data-onboarding-action="zone-remove" data-id="${escape(zone.id)}" aria-label="${escape(zone.name)} verwijderen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/></svg></button></div>`:''}</div>`;}).join('')}</div>`;
+    function setupZones({editable=false,withoutZone=false}={}){
+      return `<div class="onboarding-zone-list onboarding-zone-tiles" aria-label="Jouw zones">${withoutZone?withoutZoneChoice():''}${draft.zones.map((zone,index)=>{const count=zoneMembers(zone.id).length;return `<div class="onboarding-zone-row" data-setup-zone-row="${escape(zone.id)}"><button type="button" class="onboarding-zone" data-setup-zone="${escape(zone.id)}" data-onboarding-action="active-zone" data-id="${escape(zone.id)}" aria-pressed="${draft.activeZoneId===zone.id}">${zoneVisual(index)}<span><b>${escape(zone.name)}</b><small>${count?`${count} ${count===1?'receiver':'receivers'} · ${zone.type}`:'Nog geen receivers'}${draft.activeZoneId===zone.id?' · Gekozen':''}</small></span><i aria-hidden="true">${draft.activeZoneId===zone.id?'✓':''}</i></button>${editable&&canManageZones()?`<div class="onboarding-zone-tools"><button type="button" class="onboarding-rename-zone" data-onboarding-action="zone-rename" data-id="${escape(zone.id)}" aria-label="${escape(zone.name)} hernoemen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 14z"/></svg></button><button type="button" class="onboarding-remove-zone" data-onboarding-action="zone-remove" data-id="${escape(zone.id)}" aria-label="${escape(zone.name)} verwijderen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/></svg></button></div>`:''}</div>`;}).join('')}</div>`;
     }
     function zoneRenamePanel(){
       const zone=draft.zones.find(zone=>zone.id===zoneRename?.zoneId);if(!zone)return '';
-      return `<section class="card onboarding-zone-confirm" data-setup-rename-zone="${escape(zone.id)}"><h2>${escape(zone.name)}</h2><p>Alleen de naam verandert. Receivers${pinRequired?', PIN':''} en opgeslagen licht blijven bewaard.</p>${nameField('onboarding-zone-rename','Zonenaam','Bijvoorbeeld: Demohoek',zoneRename.name)}<div class="onboarding-actions">${button('zone-rename-cancel','Annuleren','class="button secondary"')}${button('zone-rename-confirm','Naam opslaan','disabled')}</div></section>`;
+      return `<section class="card onboarding-zone-confirm" data-setup-rename-zone="${escape(zone.id)}"><h2>${escape(zone.name)}</h2><p>Alleen de naam verandert. Receivers${pinRequired()?', PIN':''} en opgeslagen licht blijven bewaard.</p>${nameField('onboarding-zone-rename','Zonenaam','Bijvoorbeeld: Demohoek',zoneRename.name)}<div class="onboarding-actions">${button('zone-rename-cancel','Annuleren','class="button secondary"')}${button('zone-rename-confirm','Naam opslaan','disabled')}</div></section>`;
     }
     function zoneNameFields(){
-      return `<section class="card onboarding-name-card onboarding-batch-zones"><div class="onboarding-zone-inputs">${zoneNames().map((name,index)=>`<div class="onboarding-zone-input">${index===0?nameField('onboarding-zone-name',zoneNames().length===1?(draft.zones.length?'Nog een zone toevoegen':'Zonenaam'):'Zone 1','Bijvoorbeeld: Demohoek',name):`<label class="onboarding-field">Zone ${index+1}<input id="onboarding-zone-name-${index}" data-zone-extra="${index}" maxlength="64" autocomplete="off" value="${escape(name)}" placeholder="Bijvoorbeeld: Balie"></label>`}${zoneNames().length>1?`<button type="button" data-onboarding-action="zone-drop-row" data-index="${index}" aria-label="Naamveld ${index+1} verwijderen">×</button>`:''}</div>`).join('')}</div><div class="onboarding-zone-add-actions">${button('zone-add-row','＋ Nog een zone','class="button secondary" '+(zoneNames().length>=12||draft.zones.length+zoneNames().length>=256?'disabled':''))}${button('zone-create',zoneNames().length>1?'Zones toevoegen':'Toevoegen','class="button secondary" disabled')}</div></section>`;
+      return `<section class="card onboarding-name-card onboarding-batch-zones"><div class="onboarding-zone-inputs">${zoneNames().map((name,index)=>`<div class="onboarding-zone-input">${index===0?nameField('onboarding-zone-name',zoneNames().length===1?(draft.zones.length?'Nog een zone toevoegen':'Zonenaam'):'Zone 1','Bijvoorbeeld: Demohoek',name):`<label class="onboarding-field">Zone ${index+1}<input id="onboarding-zone-name-${index}" data-zone-extra="${index}" maxlength="64" autocomplete="off" value="${escape(name)}" placeholder="Bijvoorbeeld: Balie"></label>`}${zoneNames().length>1?`<button type="button" data-onboarding-action="zone-drop-row" data-index="${index}" aria-label="Naamveld ${index+1} verwijderen">×</button>`:''}</div>`).join('')}</div><div class="onboarding-zone-add-actions">${button('zone-add-row','＋ Nog een zone','class="button secondary" '+(zoneNames().length>=12||draft.zones.length+zoneNames().length>=256?'disabled':''))}</div></section>`;
     }
     function zoneRemovalPanel(){
       const zone=draft.zones.find(zone=>zone.id===zoneRemoval?.zoneId);if(!zone)return '';
       const count=zoneMembers(zone.id).length;
-      return `<section class="card onboarding-zone-confirm" data-setup-delete-zone="${escape(zone.id)}"><h2>${escape(zone.name)} verwijderen?</h2><p>${count?`${count} ${count===1?'receiver blijft':'receivers blijven'} gekoppeld en komt bij <b>Niet in een zone</b>. Je kunt ze meteen opnieuw indelen.`:'Je verwijdert alleen deze zone.'}</p><small>Je receivers${pinRequired?' en PIN':''} worden niet gereset.</small><div class="onboarding-actions">${button('zone-remove-cancel','Annuleren','class="button secondary"')}${button('zone-remove-confirm','Zone verwijderen')}</div></section>`;
+      return `<section class="card onboarding-zone-confirm" data-setup-delete-zone="${escape(zone.id)}"><h2>${escape(zone.name)} verwijderen?</h2><p>${count?`${count} ${count===1?'receiver blijft':'receivers blijven'} gekoppeld en komt bij <b>Niet in een zone</b>. Je kunt ze meteen opnieuw indelen.`:'Je verwijdert alleen deze zone.'}</p><small>Je receivers${pinRequired()?' en PIN':''} worden niet gereset.</small><div class="onboarding-actions">${button('zone-remove-cancel','Annuleren','class="button secondary"')}${button('zone-remove-confirm','Zone verwijderen')}</div></section>`;
     }
     function receiverPlacement(){
       if(!canManageZones())return '';
@@ -279,8 +335,8 @@
     function receiverAction(receiver){
       const zone=draft.zones.find(item=>item.id===draft.activeZoneId);
       const compatible=zone&&(!zone.type||zone.type===receiver.type);
-      const label=!pinRequired&&receiver.type==='RGBW'?(compatible?`Toevoegen aan ${escape(zone.name)}`:!draft.zones.length?'Receiver toevoegen':'Zone kiezen en toevoegen'):'Deze receiver instellen';
-      return button('receiver',busy?'Controleren…':label,`data-id="${escape(receiver.id)}" ${busy||!(receiver.canConfigure||receiver.canVerifyIdentity)?'disabled':''}`);
+      const label=!pinRequired()&&receiver.type==='RGBW'?(compatible?`Toevoegen aan ${escape(zone.name)}`:!zone?'Receiver toevoegen':'Zone kiezen en toevoegen'):'Deze receiver instellen';
+      return `${zone&&!compatible?`<p class="onboarding-compatibility-note">${escape(receiver.type)} past niet in deze zone. Kies een andere zone of voeg hem zonder zone toe.</p>`:''}${button('receiver',busy||identifyPending.size?'Even wachten…':label,`data-id="${escape(receiver.id)}" ${busy||identifyPending.size||!(receiver.canConfigure||receiver.canVerifyIdentity)?'disabled':''}`)}`;
     }
     function receiverSearchView(){
       const single=results.length===1,found=results.length>0;
@@ -290,8 +346,8 @@
       else if(searchState==='unavailable')content=`<section class="card onboarding-search-empty"><h2>Zoeken nog niet beschikbaar</h2><p>${unavailable}</p></section>`;
       else if(searchState==='ready'&&!found)content=`<section class="card onboarding-search-empty"><h2>Nog niets gevonden</h2><p>${manualWifi()?'Controleer of je iPhone met jouw ALUVISION-netwerk verbonden is.':'Staat de nieuwe receiver aan? Zet hem in de buurt van je hoofdreceiver.'}</p></section>`;
       else if(!found&&searchState==='idle'&&!manualWifi())content=`<p class="onboarding-search-help">${draft.mainReceiverId?'Zet de receiver die je wilt toevoegen aan.':'Zet één receiver aan. RGBW of SPI kan je hoofdreceiver zijn.'}</p>`;
-      if(found)content+=`<div class="onboarding-results" aria-label="Gevonden receivers">${results.map(receiver=>`<article class="card onboarding-result" data-onboarding-result="${escape(receiver.id)}" data-discovery-status="found"><div class="onboarding-found-status"><b>Gevonden</b><span>Nog niet toegevoegd</span></div><header><h2>${escape(receiver.name||`${receiver.type}-receiver`)}</h2><span class="pill">${receiver.type}</span></header>${product(receiver,{compact:true})}<div class="onboarding-recognition"><span>${identifying.has(receiver.id)?'Dit licht knippert nu.':'Herken jouw verlichting'}</span>${button('identify',identifying.has(receiver.id)?'Stop knipperen':'Laat knipperen',`data-id="${escape(receiver.id)}" class="button secondary" aria-pressed="${identifying.has(receiver.id)}" ${busy||identifyPending.has(receiver.id)||!canIdentify(receiver)?'disabled':''}`)}</div>${!canIdentify(receiver)?`<small class="onboarding-identify-unavailable">${draft.role==='main'?'Deze eerste hoofdreceiver kan vóór toevoegen nog niet knipperen.':'Knipperen via de hoofdreceiver is nu niet beschikbaar.'}</small>`:''}${single?'':`<div class="onboarding-actions">${receiverAction(receiver)}</div>`}</article>`).join('')}</div><div class="onboarding-search-again">${button('search',manualWifi()?'Verbinding opnieuw controleren':'Opnieuw zoeken','class="button secondary" '+(busy?'disabled':''))}</div>`;
-      return `<p class="onboarding-later-hint">Meer receivers toevoegen kan later.</p>${searchContext()}${found?'':manualWifiGuide()}${content}${found?manualWifiGuide():''}<div class="onboarding-actions onboarding-footer">${button('back','← Zones',`class="button secondary" ${busy?'disabled':''}`)}${single?receiverAction(results[0]):found?'':button('search',searchLabel(),searching||busy?'disabled':'')}</div>`;
+      if(found)content+=`<div class="onboarding-results" aria-label="Gevonden receivers">${results.map(receiver=>`<article class="card onboarding-result" data-onboarding-result="${escape(receiver.id)}" data-discovery-status="found"><div class="onboarding-found-status"><b>Gevonden</b><span>Nog niet toegevoegd</span></div><header><h2>${escape(receiver.name||`${receiver.type}-receiver`)}</h2><span class="pill">${receiver.type}</span></header>${product(receiver,{compact:true})}<div class="onboarding-recognition"><span>${identifying.has(receiver.id)?'Dit licht knippert nu.':'Herken jouw verlichting'}</span>${button('identify',identifying.has(receiver.id)?'Stop knipperen':'Laat knipperen',`data-id="${escape(receiver.id)}" class="button secondary" aria-pressed="${identifying.has(receiver.id)}" ${busy||identifyPending.has(receiver.id)||!canIdentify(receiver)?'disabled':''}`)}</div>${!canIdentify(receiver)?`<small class="onboarding-identify-unavailable">${draft.role==='main'?'Deze eerste hoofdreceiver kan vóór toevoegen nog niet knipperen.':'Knipperen via de hoofdreceiver is nu niet beschikbaar.'}</small>`:''}${single?'':`<div class="onboarding-actions">${receiverAction(receiver)}</div>`}</article>`).join('')}</div><div class="onboarding-search-again">${button('search',manualWifi()?'Verbinding opnieuw controleren':'Opnieuw zoeken','class="button secondary" '+(busy||identifyPending.size?'disabled':''))}</div>`;
+      return `<p class="onboarding-later-hint">Een receiver is het kastje bij je verlichting.</p>${searchContext()}${found?'':manualWifiGuide()}${content}${found?manualWifiGuide():''}<div class="onboarding-actions onboarding-footer">${button('back','← Zones',`class="button secondary" ${busy?'disabled':''}`)}${single?receiverAction(results[0]):found?'':button('search',searchLabel(),searching||busy||identifyPending.size?'disabled':'')}</div>`;
     }
     function lightExample(type){
       // Independent teaching motion. Physical identification stays exclusively
@@ -312,7 +368,7 @@
       return `${pinNetwork()}<p class="onboarding-task-hint">Eén PIN voor je hele installatie.</p><section class="card onboarding-pin-card"><label class="onboarding-field">PIN · 8–12 cijfers<input id="onboarding-pin" data-onboarding-pin="first" type="password" inputmode="numeric" autocomplete="new-password" minlength="8" maxlength="12" aria-describedby="onboarding-pin-help" spellcheck="false"></label><label class="onboarding-field">Herhaal dezelfde PIN<input id="onboarding-pin-repeat" data-onboarding-pin="repeat" type="password" inputmode="numeric" autocomplete="new-password" minlength="8" maxlength="12" aria-describedby="onboarding-pin-error onboarding-pin-match" spellcheck="false"></label><p id="onboarding-pin-error" class="onboarding-error" role="alert" hidden></p><p id="onboarding-pin-match" class="onboarding-pin-match" role="status" hidden>✓ Beide PINs komen overeen</p><p id="onboarding-pin-help" class="onboarding-hint">Bewaar je PIN: je wifi-wachtwoord en toegang op een ander toestel.</p><p class="onboarding-pin-rejoin-note">Daarna kies je het receiver-wifi opnieuw in Instellingen, met deze PIN.</p></section><details class="onboarding-recovery"><summary>App gewist of PIN vergeten?</summary><p>Bewaar je PIN ook buiten de app. Voor toegang na herinstallatie of op een ander toestel gebruik je dezelfde PIN zodra de hersteloptie beschikbaar is. PIN vergeten? Dan is een ondersteunde fabrieksreset op de receiver nodig.</p></details>${footerPin()}`;
     }
     function reviewCard(){
-      return `<section class="card onboarding-review onboarding-review-product">${product(draft.receiver,{compact:true,port:null})}<dl><div><dt>Receiver</dt><dd>${escape(draft.receiver.name||draft.receiver.type)}</dd></div><div><dt>Zone</dt><dd>${escape(draft.zones.find(zone=>zone.id===draft.zoneId)?.name||'Later kiezen')}</dd></div><div><dt>Verbinding</dt><dd>${draft.role==='main'?(pinRequired?'Hoofdreceiver · beveiligd':'Hoofdreceiver · open netwerk'):'Via hoofdreceiver'}</dd></div></dl>${draft.receiver.type==='SPI'?`<ul>${active().map(output=>`<li><b>P${output.port}</b><span>${output.pixels} pixels<small>${pixelSetup.endpointLabel(output)}</small></span></li>`).join('')}</ul>`:lightExample('RGBW')}</section><div class="onboarding-actions onboarding-footer">${pinRequired?button('back','← Zone kiezen',busy||finalizationStarted?'disabled':''):''}${button('finish',busy?'Toevoegen…':!pinRequired&&finalizationStarted?'Opnieuw proberen':'Receiver toevoegen',busy?'disabled':'')}</div>`;
+      return `<section class="card onboarding-review onboarding-review-product">${product(draft.receiver,{compact:true,port:null})}<dl><div><dt>Receiver</dt><dd>${escape(draft.receiver.name||draft.receiver.type)}</dd></div><div><dt>Zone</dt><dd>${escape(draft.zones.find(zone=>zone.id===draft.zoneId)?.name||'Later kiezen')}</dd></div><div><dt>Verbinding</dt><dd>${draft.role==='main'?(pinRequired()?'Hoofdreceiver · beveiligd':'Hoofdreceiver · open netwerk'):'Via hoofdreceiver'}</dd></div></dl>${draft.receiver.type==='SPI'?`<ul>${active().map(output=>`<li><b>P${output.port}</b><span>${output.pixels} pixels<small>${pixelSetup.endpointLabel(output)}</small></span></li>`).join('')}</ul>`:lightExample('RGBW')}</section><div class="onboarding-actions onboarding-footer">${pinRequired()?button('back','← Zone kiezen',busy||finalizationStarted?'disabled':''):''}${button('finish',busy?'Toevoegen…':!pinRequired()&&finalizationStarted?'Opnieuw proberen':'Receiver toevoegen',busy?'disabled':'')}</div>`;
     }
     function addingPanel(){
       return `<section class="card onboarding-security" role="status"><span class="onboarding-security-icon">${setupIcon('wifi')}</span><h2>Receiver toevoegen…</h2><p>We controleren de verbinding en bewaren je receiver${draft.zoneId?` in ${escape(draft.zones.find(zone=>zone.id===draft.zoneId)?.name)}`:''}.</p></section>`;
@@ -330,7 +386,7 @@
       return results.length?`<details class="card onboarding-manual-wifi onboarding-wifi-help"><summary>Wifi-stappen</summary>${instructions}</details>`:`<section class="card onboarding-manual-wifi" aria-label="Wifi met de hand verbinden">${instructions}</section>`;
     }
     function securityPanel(){
-      if(!pinRequired)return `${draft.role==='main'?pinNetwork():''}<section class="card onboarding-security" data-security-busy="${busy}" role="status"><span class="onboarding-security-icon">${setupIcon('wifi')}</span><h2>${busy?'Receiver verbinden':'Verbinding controleren'}</h2><p>${busy?'Je receiver wordt aan je stand toegevoegd. Blijf op dit scherm.':'De verbinding is nog niet bevestigd. Je instellingen blijven bewaard.'}</p></section>${busy?'':button('security-retry','Opnieuw controleren')}`;
+      if(!pinRequired())return `${draft.role==='main'?pinNetwork():''}<section class="card onboarding-security" data-security-busy="${busy}" role="status"><span class="onboarding-security-icon">${setupIcon('wifi')}</span><h2>${busy?'Receiver verbinden':'Verbinding controleren'}</h2><p>${busy?'Je receiver wordt aan je stand toegevoegd. Blijf op dit scherm.':'De verbinding is nog niet bevestigd. Je instellingen blijven bewaard.'}</p></section>${busy?'':button('security-retry','Opnieuw controleren')}`;
       if(automaticMain())return mainWifiReturn();
       if(manualRejoinSSID&&!registrationPending)return `<section class="card onboarding-manual-wifi" aria-label="Met beveiligde wifi verbinden"><h2>${busy?'Verbinding controleren…':'Verbind met je beveiligde wifi'}</h2><ol class="onboarding-wifi-tiles" data-setup-visual="wifi-rejoin"><li>${setupIcon('wifi')}<span><b>Instellingen → Wifi</b><small>Kies ${escape(manualRejoinSSID)}</small></span></li><li>${setupIcon('phone')}<span><b>Vul je eigen PIN in</b><small>Dit is nu je wifi-wachtwoord.</small></span></li><li>${setupIcon('return')}<span><b>Terug naar de app</b><small>We controleren dezelfde koppeling bij je terugkeer.</small></span></li></ol></section>${button('security-retry',busy?'Verbinding controleren…':'Ik ben verbonden · controleren',busy?'disabled':'')}<small class="onboarding-hint">Dezelfde receiver en PIN. Je keuzes blijven bewaard.</small>`;
       if(registrationPending)return `<section class="card onboarding-security" role="status"><h2>Je receiver rondt af</h2><p>De toegang voor dit toestel wordt bewaard. Je hoeft geen nieuwe PIN te kiezen.</p></section>${button('security-retry',busy?'Afronden…':'Verder controleren',busy?'disabled':'')}`;
@@ -348,7 +404,11 @@
       if(manualWifi())return searchState==='searching'?'Controleren…':'Verbinding controleren';
       return searchState==='searching'?'Zoeken…':searchState==='idle'?'Receivers zoeken':'Opnieuw zoeken';
     }
-    function zoneChoices(){return draft.zones.map(zone=>{
+    function withoutZoneChoice(action='active-zone'){
+      const selected=!draft.zoneChoiceRequired&&(action==='active-zone'?draft.activeZoneId===null:draft.zoneId===null&&draft.activeZoneId===null);
+      return `<button type="button" class="onboarding-zone" data-onboarding-action="${action}" data-without-zone aria-pressed="${selected}"><span class="onboarding-zone-number" aria-hidden="true">—</span><span><b>Zonder zone</b><small>Later aan een zone toewijzen</small></span><i aria-hidden="true">${selected?'✓':'→'}</i></button>`;
+    }
+    function zoneChoices(){return withoutZoneChoice('zone')+draft.zones.map(zone=>{
       const compatible=!zone.type||zone.type===draft.receiver.type;
       return `<button type="button" class="onboarding-zone" data-onboarding-action="zone" data-id="${escape(zone.id)}" aria-pressed="${draft.zoneId===zone.id}" ${compatible?'':'disabled'}><span><b>${escape(zone.name)}</b><small>${compatible?(zone.type||'Lege zone'):`${zone.type} · ander type verlichting`}</small></span><i>${draft.zoneId===zone.id?'✓':'→'}</i></button>`;
     }).join('');}
@@ -359,9 +419,10 @@
           if(zoneRemoval)return zoneRemovalPanel();
           if(zoneRename)return zoneRenamePanel();
           if(receiverMove)return movePanel();
-          return `${draft.zones.length?'':`<p class="onboarding-task-hint">Een zone is een plek in je stand, zoals de balie.</p>`}${setupZones({editable:true})}${draft.zones.length?`<p class="onboarding-zone-count" role="status">${draft.zones.length} ${draft.zones.length===1?'zone':'zones'} · Kies waar je begint.</p>`:''}${zoneNameFields()}${receiverPlacement()}<div class="onboarding-actions onboarding-footer onboarding-zones-continue">${button('next','Verder →','aria-label="Verder naar receivers toevoegen" disabled')}${button('zones-later',draft.zones.length?'Meer zones later toevoegen':'Zones later toevoegen','class="button secondary" aria-describedby="onboarding-zones-later-hint"')}<p id="onboarding-zones-later-hint" class="onboarding-zones-later-hint">Verder naar receivers toevoegen.</p><div class="onboarding-zones-footer-row">${button('back','← Terug',`class="button secondary" ${!draft.stand.isNew?'disabled':''}`)}</div></div>`;
+          return `${draft.zones.length?'':`<p class="onboarding-task-hint">Een zone is een plek in je stand, zoals de balie.</p>`}${setupZones({editable:true})}${zoneNameFields()}${receiverPlacement()}<div class="onboarding-actions onboarding-footer onboarding-zones-continue">${button('next','Verder →','aria-label="Verder naar receivers toevoegen" disabled')}${!draft.zones.length?button('zones-later','Zones later toevoegen','class="button secondary"'):''}<div class="onboarding-zones-footer-row">${button('back','← Terug',`class="button secondary" ${!draft.stand.isNew?'disabled':''}`)}</div></div>`;
         }
         case 'receiver':return receiverSearchView();
+        case 'placement':return `<p class="onboarding-task-hint">${draft.zoneChoiceRequired?'Je gekozen zone is niet meer beschikbaar.':`${escape(draft.receiver.type)} past niet in de gekozen zone.`} Kies een andere zone of voeg hem zonder zone toe.</p><div class="onboarding-zone-list">${zoneChoices()}</div>${zoneNameOpen?`<section class="card">${nameField('onboarding-zone-name','Naam van de nieuwe zone','Bijvoorbeeld: Lichttunnel',zoneNameInput)}${button('zone-create','Verder','disabled')}</section>`:button('zone-new','＋ Nieuwe zone','class="button secondary"')}${button('back','← Terug','class="button secondary"')}`;
         case 'outputs':return `${pixelSetup.renderOutputs(draft.outputs,{onboarding:true})}<p class="onboarding-hint">Extra uitgangen inschakelen kan later.</p>${footer()}`;
         case 'pixels':{
           const output=draft.outputs.find(output=>output.port===draft.port);
@@ -371,10 +432,10 @@
           const output=draft.outputs.find(output=>output.port===draft.port);
           return `${pixelSetup.renderPortContext(draft.outputs,draft.port,{stage:'connection'})}${pixelSetup.renderSide(output,{onboarding:true})}${footer(pixelSetup.nextPortLabel(draft.outputs,draft.port,{stage:'connection'}))}`;
         }
-        case 'pin':return pinRequired?pinForm():securityPanel();
+        case 'pin':return pinRequired()?pinForm():securityPanel();
         case 'security':return securityPanel();
-        case 'zone':return `${!draft.zones.length?`<p class="onboarding-task-hint">Je voegt deze receiver zonder zone toe.</p>${button('next','Verder naar overzicht')}`:`${!pinRequired?'<p class="onboarding-task-hint">Kies een passende zone om deze receiver toe te voegen.</p>':''}<div class="onboarding-zone-list">${zoneChoices()}</div>${zoneNameOpen?`<section class="card">${nameField('onboarding-zone-name','Naam van de nieuwe zone','Bijvoorbeeld: Lichttunnel',zoneNameInput)}${button('zone-create','Zone maken','disabled')}</section>`:button('zone-new','＋ Nieuwe zone','class="button secondary"')}${pinRequired?button('next','Verder naar overzicht',draft.zoneId?'':'disabled'):''}`}<small class="onboarding-hint">${draft.zones.length?'RGBW en SPI apart. Verplaatsen kan later.':'Zones maken en receivers indelen kan later.'}</small>`;
-        case 'review':return automaticMain()&&automaticFinalizing?mainWifiReturn():!pinRequired&&automaticFinalizing&&busy?addingPanel():reviewCard();
+        case 'zone':return `${!draft.zones.length&&!draft.zoneChoiceRequired?`<p class="onboarding-task-hint">Je voegt deze receiver zonder zone toe.</p>${button('next','Verder naar overzicht')}`:`${draft.zoneChoiceRequired?'<p class="onboarding-task-hint">Je gekozen zone is niet meer beschikbaar. Kies een nieuwe zone of voeg deze receiver zonder zone toe.</p>':!pinRequired()?'<p class="onboarding-task-hint">Kies een zone of deel deze receiver later in.</p>':''}<div class="onboarding-zone-list">${zoneChoices()}</div>${zoneNameOpen?`<section class="card">${nameField('onboarding-zone-name','Naam van de nieuwe zone','Bijvoorbeeld: Lichttunnel',zoneNameInput)}${button('zone-create','Zone maken','disabled')}</section>`:button('zone-new','＋ Nieuwe zone','class="button secondary"')}${pinRequired()?button('next','Verder naar overzicht',placementReady()?'':'disabled'):''}`}<small class="onboarding-hint">${draft.zones.length?'RGBW en SPI apart. Verplaatsen kan later.':'Zones maken en receivers indelen kan later.'}</small>`;
+        case 'review':return automaticMain()&&automaticFinalizing?mainWifiReturn():!pinRequired()&&automaticFinalizing&&busy?addingPanel():reviewCard();
         case 'done':return completeCard();
         default:return '';
       }
@@ -395,12 +456,14 @@
       const zoneScroll=container.querySelector('.onboarding-destination .onboarding-zone-list')?.scrollTop||0;
       const zonePickerOpen=container.querySelector('.onboarding-destination')?.open===true;
       presentedStages.add(stageKey);
-      container.innerHTML=`<div class="page onboarding-page${entering?' onboarding-stage-enter':''}" data-setup-origin="${origin}" data-onboarding-stage="${draft.stage}" aria-busy="${draftSaving||busy}">${heading()}${['outputs','pixels','connection'].includes(draft.stage)?pixelSetup.renderProgress(draft.stage):''}${body()}${errorBox()}</div>`;
+      container.innerHTML=`<div class="page onboarding-page${entering?' onboarding-stage-enter':''}" data-setup-origin="${origin}" data-onboarding-stage="${draft.stage}" aria-busy="${draftSaving||busy}">${heading()}${body()}${errorBox()}</div>`;
+      document.title=`${container.querySelector('h1').textContent} · Aluvision Lighting`;
       if(draft.stage==='receiver'){
         const heading=container.querySelector('.onboarding-heading');
         const destination=draft.zones.find(zone=>zone.id===draft.activeZoneId);
         const destinationCount=zoneMembers(destination?.id).length;
-        heading.insertAdjacentHTML('afterend',`<details class="onboarding-destination" ${zonePickerOpen?'open':''}><summary>${destination?zoneVisual(draft.zones.indexOf(destination)):'<span class="onboarding-zone-number" aria-hidden="true">—</span>'}<span class="onboarding-destination-name"><small>${destination?`Toevoegen aan · ${destinationCount} ${destinationCount===1?'receiver':'receivers'}`:'Indelen kan later'}</small><b>${escape(destination?.name||'Niet in een zone')}</b></span><em>${destination?'Wijzig zone':'Zone toevoegen'}⌄</em></summary><div class="onboarding-destination-title"><h2>Kies je zone</h2>${button('zone-add-from-receiver','＋ Nieuwe zone','class="button secondary"')}</div>${setupZones()}<div class="onboarding-existing-members" data-existing-receivers>${receiverPlacement()}</div>${button('zone-manage','Zones beheren','class="button secondary"')}</details>`);
+        const destinationName=destination?.name||(draft.zoneChoiceRequired?'Kies een bestemming':'Zonder zone');
+        heading.insertAdjacentHTML('afterend',`<details class="onboarding-destination" ${zonePickerOpen?'open':''}><summary>${destination?zoneVisual(draft.zones.indexOf(destination)):'<span class="onboarding-zone-number" aria-hidden="true">—</span>'}<span class="onboarding-destination-name"><small>${destination?`Toevoegen aan · ${destinationCount} ${destinationCount===1?'receiver':'receivers'}`:draft.zoneChoiceRequired?'Je vorige zone is verwijderd':'Later aan een zone toewijzen'}</small><b>${escape(destinationName)}</b></span><em>${destination?'Wijzig zone':draft.zones.length?'Zone kiezen':'Zone toevoegen'}⌄</em></summary><div class="onboarding-destination-title"><h2>Waar komt je receiver?</h2>${button('zone-add-from-receiver','＋ Nieuwe zone','class="button secondary"')}</div>${setupZones({withoutZone:true})}<div class="onboarding-existing-members" data-existing-receivers>${receiverPlacement()}</div>${button('zone-manage','Zones beheren','class="button secondary"')}</details>`);
         const intro=container.querySelector('.onboarding-heading~p');
         if(intro){intro.className='onboarding-later-hint';heading.insertAdjacentElement('afterend',intro);}
         const destinationCard=container.querySelector('.onboarding-destination');
@@ -421,16 +484,16 @@
         // Identity selection remains guarded, but a supported temporary blink
         // is explicitly allowed before configuration/claim. Do not override
         // the identify button's own pending/capability checks here.
-        container.querySelectorAll(`[data-onboarding-action="receiver"][data-id="${CSS.escape(receiver.id)}"]`).forEach(button=>{button.disabled=!(receiver.canVerifyIdentity&&!busy);});
+        container.querySelectorAll(`[data-onboarding-action="receiver"][data-id="${CSS.escape(receiver.id)}"]`).forEach(button=>{button.disabled=!(receiver.canVerifyIdentity&&!busy&&!identifyPending.size);});
         const hint=document.createElement('p');hint.className='onboarding-hint';
         hint.textContent=receiver.unavailableReason;card.insertBefore(hint,card.querySelector('.onboarding-recognition'));
       }
       for(const [id,action] of [['onboarding-stand-name','stand-save'],['onboarding-zone-name','zone-create']]){
-        const field=container.querySelector('#'+id);if(field)container.querySelector(`[data-onboarding-action="${action}"]`).disabled=action==='zone-create'?!validZoneNames():!validName(field.value);
+        const field=container.querySelector('#'+id),control=container.querySelector(`[data-onboarding-action="${action}"]`);if(field&&control)control.disabled=action==='zone-create'?!validZoneNames():!validName(field.value);
       }
       const rename=container.querySelector('#onboarding-zone-rename');if(rename)container.querySelector('[data-onboarding-action="zone-rename-confirm"]').disabled=!validName(rename.value)||rename.value.trim()===draft.zones.find(zone=>zone.id===zoneRename.zoneId)?.name;
       if(draft.stage==='zones'&&container.querySelector('[data-onboarding-action="next"]'))container.querySelector('[data-onboarding-action="next"]').disabled=!canContinueZones();
-      if(draft.stage==='pixels'){const input=container.querySelector('#onboarding-pixels');input.inputMode='numeric';container.querySelector('[data-onboarding-action="next"]').disabled=!pixelSetup.validateInput(container,input.value);}
+      if(draft.stage==='pixels'){const input=container.querySelector('#onboarding-pixels');input.inputMode='numeric';container.querySelector('[data-onboarding-action="next"]').disabled=!pixelSetup.validateInput(container,input.value)||!pixelSetup.configuredPixels(Number(input.value));}
       if(draftSaving||pendingChoices)container.querySelectorAll('button,input').forEach(control=>{
         if(draftSaving||!['save-retry','exit'].includes(control.dataset.onboardingAction))control.disabled=true;
       });
@@ -443,7 +506,11 @@
       else if(focusedZone)container.querySelector(`[data-onboarding-action="active-zone"][data-id="${CSS.escape(focusedZone)}"]`)?.focus({preventScroll:true});
       else if(focusedSide)container.querySelector(`[data-onboarding-action="side"][data-side="${CSS.escape(focusedSide)}"]`)?.focus({preventScroll:true});
       restoreZoneList();
+      if(!busy&&['security','review'].includes(draft.stage)){
+        container.querySelector('.onboarding-page').insertAdjacentHTML('beforeend',button('receivers-list','← Terug naar zoeken','class="button secondary full"'));
+      }
       paint(performance.now()/1000);
+      syncPixelPreview();
     }
     function validName(value){const name=String(value).trim();return name.length>0&&name.length<=64&&!/[<>\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/.test(name);}
     function updateGuidance(){
@@ -461,7 +528,7 @@
         case 'pin':action='secure';break;
         case 'security':action='security-retry';break;
         case 'outputs':case 'pixels':case 'connection':action='next';break;
-        case 'zone':action=zoneNameOpen?'zone-create':draft.zoneId?'next':'zone-new';break;
+        case 'placement':case 'zone':action=zoneNameOpen?'zone-create':draft.zoneId?'next':'zone-new';break;
         case 'review':action='finish';break;
       }
       const control=action&&container.querySelector(`[data-onboarding-action="${action}"]:not(:disabled)`);
@@ -510,7 +577,7 @@
         container.querySelector('[data-onboarding-action="secure"]').disabled=!validation.valid;updateGuidance();return;
       }
       const action=element.id==='onboarding-stand-name'?'stand-save':element.id==='onboarding-zone-name'||element.hasAttribute('data-zone-extra')?'zone-create':null;
-      if(action){captureNames();container.querySelector(`[data-onboarding-action="${action}"]`).disabled=action==='zone-create'?!validZoneNames():!validName(element.value);}
+      if(action){captureNames();const control=container.querySelector(`[data-onboarding-action="${action}"]`);if(control)control.disabled=action==='zone-create'?!validZoneNames():!validName(element.value);}
       if(action==='zone-create'&&draft.stage==='zones')container.querySelector('[data-onboarding-action="next"]').disabled=!canContinueZones();
       if(element.id==='onboarding-zone-rename'){captureNames();container.querySelector('[data-onboarding-action="zone-rename-confirm"]').disabled=!validName(element.value)||element.value.trim()===draft.zones.find(zone=>zone.id===zoneRename.zoneId)?.name;}
       if(element.matches('[data-pixel-count],[data-pixel-range]')){
@@ -520,21 +587,29 @@
     }
     function updatePixelCount(value,source){
       if(draft.stage!=='pixels')return;
-      const valid=pixelSetup.validateInput(container,value);container.querySelector('[data-onboarding-action="next"]').disabled=!valid;
+      const valid=pixelSetup.validateInput(container,value);container.querySelector('[data-onboarding-action="next"]').disabled=!valid||!pixelSetup.configuredPixels(Number(value));
       if(valid&&change({type:'SET_PIXELS',port:draft.port,pixels:Number(value)},{render:false}))pixelSetup.updatePixels(container,draft.outputs.find(output=>output.port===draft.port),{source});
+      if(valid)syncPixelPreview();
       updateGuidance();
     }
-    function keydown(event){if(event.key==='Enter'&&event.target.matches('input:not([data-onboarding-pin])')){const button=container.querySelector('[data-onboarding-action="stand-save"], [data-onboarding-action="zone-create"], [data-onboarding-action="zone-rename-confirm"]');if(button&&!button.disabled){event.preventDefault();button.click();}}}
+    function keydown(event){if(event.key==='Enter'&&event.target.matches('input:not([data-onboarding-pin])')){const button=container.querySelector('[data-onboarding-action="stand-save"], [data-onboarding-action="zone-create"], [data-onboarding-action="zone-rename-confirm"]')||(draft.stage==='zones'?container.querySelector('[data-onboarding-action="next"]'):null);if(button&&!button.disabled){event.preventDefault();button.click();}}}
     async function search(){
-      if(searchState==='searching'||busy)return;
+      if(parkPending||parking){if(!(await parkForSearch()))return;}
+      if(searchState==='searching'||busy||identifyPending.size)return;
+      if(identifying.size){
+        const stopToken=operation;busy=true;paintPage(false);
+        try{for(const id of Array.from(identifying.keys()))await stopIdentify(id);}
+        finally{busy=false;if(container)paintPage(false);}
+        if(stopToken!==operation||!container||!searchable())return;
+      }
       // No discovery or claim is started while the stand/zone choices are not
       // durably retained. Retrying a failed save remains a local operation.
       const beforeSave=operation;
       if(!(await saveChoices()))return;
-      if(beforeSave!==operation||!container||draft.stage!=='receiver')return;
+      if(beforeSave!==operation||!container||!searchable())return;
       if(typeof services.search!=='function'){searchState='unavailable';results=[];error='';paintPage(false);return;}
-      for(const id of identifying.keys())stopIdentify(id);
-      const token=++operation;searchAbort=new AbortController();searchState='searching';results=[];error='';paintPage(false);
+      if(identifyPending.size)return;
+      const token=++operation;searchOnMount=false;searchAbort=new AbortController();searchState='searching';results=[];error='';paintPage(false);
       try{
         const result=await bounded(services.search({standId:draft.stand.id,mainReceiverId:draft.mainReceiverId,signal:searchAbort.signal}),draft.role==='node'?35000:15000);
         if(token!==operation||searchAbort?.signal.aborted)return;
@@ -548,10 +623,10 @@
       }catch(failure){if(token!==operation)return;searchState='failed';results=[];error=connectionFailure(failure,{viaMain:draft.role==='node'}).message;}
       finally{if(token===operation){searchAbort=null;paintPage(false);}}
     }
-    function identifyService(receiver,enabled){
-      if(draft?.role==='node'&&receiver.canVerifyIdentity===true&&typeof services.identifyCandidate==='function')return services.identifyCandidate({standId:draft.stand.id,mainReceiverId:draft.mainReceiverId,receiverId:receiver.id,rid:receiver.rid,action:enabled?'START':'STOP'});
-      if(draft?.role==='main'&&receiver.canVerifyIdentity===true&&typeof services.identifyFactoryMain==='function')return services.identifyFactoryMain({standId:draft.stand.id,transactionId:draft.transactionId,receiverId:receiver.id,rid:receiver.rid,type:receiver.type,action:enabled?'START':'STOP'});
-      return services.identify({receiver:clone(receiver),enabled,ttlMs:10000});
+    function identifyService(receiver,enabled,signal){
+      if(draft?.role==='node'&&receiver.canVerifyIdentity===true&&typeof services.identifyCandidate==='function')return services.identifyCandidate({standId:draft.stand.id,mainReceiverId:draft.mainReceiverId,receiverId:receiver.id,rid:receiver.rid,action:enabled?'START':'STOP',signal});
+      if(draft?.role==='main'&&receiver.canVerifyIdentity===true&&typeof services.identifyFactoryMain==='function')return services.identifyFactoryMain({standId:draft.stand.id,transactionId:draft.transactionId,receiverId:receiver.id,rid:receiver.rid,type:receiver.type,action:enabled?'START':'STOP',signal});
+      return services.identify({receiver:clone(receiver),enabled,ttlMs:10000,signal});
     }
     async function stopIdentify(id,knownReceiver=null){
       const receiver=knownReceiver||results.find(receiver=>receiver.id===id)||draft?.receiver;
@@ -561,18 +636,20 @@
     async function identify(id){
       const receiver=results.find(receiver=>receiver.id===id);if(!receiver||identifyPending.has(id))return;
       if(!canIdentify(receiver)){notice='Knipperen is voor deze receiver nog niet beschikbaar.';paintPage(false);return;}
-      identifyPending.add(id);const stopping=identifying.has(id),identifyOperation=operation;paintPage(false);
+      const controller=new AbortController();identifyPending.set(id,controller);const stopping=identifying.has(id),identifyOperation=operation;paintPage(false);
       try{
         if(stopping)await stopIdentify(id);
         else {
-          const answer=await bounded(identifyService(receiver,true));if(answer?.confirmed!==true)throw Error('UNCONFIRMED');
-          if(identifyOperation!==operation||!container||draft.stage!=='receiver')await stopIdentify(id,receiver);
+          const answer=await bounded(identifyService(receiver,true,controller.signal));if(answer?.confirmed!==true)throw Error('UNCONFIRMED');
+          if(identifyOperation!==operation||!container||draft.stage!=='receiver'){
+            if(!identifyPending.has(id)||identifyPending.get(id)===controller)await stopIdentify(id,receiver);
+          }
           else identifying.set(id,performance.now()/1000+(Number.isInteger(answer.ttlMs)&&answer.ttlMs>0?answer.ttlMs/1000:10));
         }
       }catch(_){if(identifyOperation===operation)notice='Knipperen is niet bevestigd. Je kunt de receiver wel verder instellen.';}
-      finally{identifyPending.delete(id);paintPage(false);}
+      finally{if(identifyPending.get(id)===controller)identifyPending.delete(id);paintPage(false);}
     }
-    async function secure(pin,repeat,{reconcile=false,automatic=false}={}){
+    async function secure(pin,repeat,{reconcile=false,automatic=false,resumeFinalization=false}={}){
       if(busy)return 'stop';
       registrationPending=false;
       if(!canSecure()){pin='';repeat='';error=unavailable;paintPage(false);return;}
@@ -582,7 +659,7 @@
       // Erase both visible PIN inputs before the first await. Only this call's
       // short-lived closure passes the credential to the trusted service.
       container?.querySelectorAll('[data-onboarding-pin]').forEach(element=>{element.value='';});
-      repeat='';busy=true;error='';const token=++operation;let finishSelectedZone=false;paintPage();
+      repeat='';busy=true;error='';const token=++operation;const controller=new AbortController();actionAbort=controller;let finishSelectedZone=false;paintPage();
       const method=reconcile||securityUncertain?'reconcileSecurity':'secure';
       let attempted=false;
       try{
@@ -592,7 +669,7 @@
         if(method==='reconcileSecurity'&&securityReceiptRef)response={receiptRef:securityReceiptRef};
         else {
           if(typeof services[method]!=='function')throw Error('UNAVAILABLE');
-          attempted=true;const request=services[method]({configuration:config(),...(pinRequired&&method==='secure'&&draft.role==='main'?{pin}:{}),...(pinRequired?{onProgress:phase=>{
+          attempted=true;const request=services[method]({configuration:config(),signal:controller.signal,...(pinRequired()&&method==='secure'&&draft.role==='main'?{pin}:{}),...(pinRequired()?{onProgress:phase=>{
             if(token===operation&&busy&&draft.stage==='security'&&phaseLabels[phase])change({type:'SECURITY_PROGRESS',phase},{top:false});
           }}:{})});
           pin='';repeat='';response=await bounded(request,draft.role==='node'?125000:50000);
@@ -600,7 +677,7 @@
         pin='';repeat='';
         // The first demo claim may have committed while its reply was lost.
         // Reconcile that same transaction read-only; never send secure twice.
-        if(!pinRequired&&response?.status==='demo-reconcile-required')response=await bounded(services.reconcileSecurity({configuration:config()}),50000);
+        if(!pinRequired()&&response?.status==='demo-reconcile-required')response=await bounded(services.reconcileSecurity({configuration:config(),signal:controller.signal}),50000);
         // A radio change is expected after the first claim, not a failed PIN.
         // This is NOT a proof: keep the transaction uncertain and reconcile it
         // after the user selects protected wifi. Never submit the claim twice.
@@ -609,13 +686,13 @@
           verifyAgain(draft);notice='Controleer dezelfde receiver opnieuw. Je stand en zonekeuzes blijven bewaard.';return;
         }
         if(response?.status==='pin-required'){
-          if(!pinRequired)throw Object.assign(Error('PIN_DISABLED'),{code:'PIN_DISABLED'});
+          if(!pinRequired())throw Object.assign(Error('PIN_DISABLED'),{code:'PIN_DISABLED'});
           if(method!=='reconcileSecurity'||draft.role!=='main')throw Error('INVALID_RESUME');
           draft=draftApi.snapshot({...clone(draft),stage:'pin',security:{status:'not-started',phase:'idle'}});
           securityUncertain=false;manualRejoinSSID=null;notice='De receiver is nog niet beveiligd. Vul je gekozen PIN opnieuw in om verder te gaan.';return;
         }
         if(response?.status==='manual-rejoin'){
-          if(!pinRequired)throw Object.assign(Error('UNEXPECTED_REJOIN'),{code:'UNEXPECTED_REJOIN'});
+          if(!pinRequired())throw Object.assign(Error('UNEXPECTED_REJOIN'),{code:'UNEXPECTED_REJOIN'});
           if(!manualWifi()||draft.role!=='main'||typeof response.ssid!=='string'||!/^ALUVISION-(RGBW|SPI)-[A-F0-9]{12}$/.test(response.ssid)||!response.ssid.startsWith('ALUVISION-'+draft.receiver.type+'-'))throw Error('INVALID_REJOIN');
           manualRejoinSSID=response.ssid;return 'retry';
         }
@@ -633,7 +710,7 @@
         // The customer already picked a destination while naming zones. The
         // trusted security receipt may choose it only when it is compatible;
         // the final receiver receipt still gates actual app membership.
-        if(!pinRequired&&placementReady()){
+        if((!pinRequired()||resumeFinalization)&&placementReady()){
           const reviewed=draftApi.transition(draft,{type:'NEXT'});
           if(reviewed.error)throw Error('ZONE_UNCONFIRMED');
           draft=reviewed.draft;finishSelectedZone=true;
@@ -641,14 +718,14 @@
         return 'confirmed';
       }catch(failure){
         if(token!==operation)return 'stop';
-        if(pinRequired&&!attempted&&!securityUncertain&&draft.role==='main')draft=draftApi.snapshot({...clone(draft),stage:'pin',security:{status:'not-started',phase:'idle'}});
+        if(pinRequired()&&!attempted&&!securityUncertain&&draft.role==='main')draft=draftApi.snapshot({...clone(draft),stage:'pin',security:{status:'not-started',phase:'idle'}});
         if(automaticMain()&&transientRejoin(failure))return 'retry';
-        error=typeof failure?.code==='string'?connectionFailure(failure,{viaMain:draft.role==='node'}).message:`We konden deze receiver nog niet toevoegen. Je ${pinRequired?'PIN en ':''}keuzes blijven bewaard; er is niets opnieuw ingesteld.`;
+        error=typeof failure?.code==='string'?connectionFailure(failure,{viaMain:draft.role==='node'}).message:`We konden deze receiver nog niet toevoegen. Je ${pinRequired()?'PIN en ':''}keuzes blijven bewaard; er is niets opnieuw ingesteld.`;
         if(automaticMain())rejoinBlocked=true;
         return 'stop';
       }
       finally{
-        pin='';repeat='';busy=false;
+        pin='';repeat='';if(actionAbort===controller)actionAbort=null;if(token===operation)busy=false;
         if(token===operation){
           if(finishSelectedZone&&container)void finish({automatic:true});
           else {keepDraft();paintPage(!automatic);if((returningFromWifi&&!rejoinRunning)||(!automatic&&draft.security.status==='confirmed'))resumeAfterWifiReturn();}
@@ -662,12 +739,12 @@
       draft=reviewed.draft;void finish({automatic:true});
     }
     async function finish({automatic=false}={}){
-      if(busy)return 'stop';busy=true;finalizationStarted=true;automaticFinalizing=automatic;error='';notice='';const token=++operation;paintPage(false);
+      if(busy)return 'stop';busy=true;finalizationStarted=true;automaticFinalizing=automatic;error='';notice='';const token=++operation;const controller=new AbortController();actionAbort=controller;paintPage(false);
       try{
         await persist();if(token!==operation)throw Error('SUSPENDED');
         let response;
         if(finalReceiptRef)response={receiptRef:finalReceiptRef};
-        else {if(typeof services.finalize!=='function')throw Error('UNAVAILABLE');response=await bounded(services.finalize({configuration:config(),securityReceiptRef}),50000);}
+        else {if(typeof services.finalize!=='function')throw Error('UNAVAILABLE');response=await bounded(services.finalize({configuration:config(),securityReceiptRef,signal:controller.signal}),50000);}
         if(!response?.receiptRef)throw Error('NO_RECEIPT');finalReceiptRef=response.receiptRef;
         if(token!==operation)throw Error('SUSPENDED');
         if(automatic&&document.hidden){notice='Toevoegen is onderbroken. Kom terug en tik op Opnieuw proberen.';return 'stop';}
@@ -688,12 +765,12 @@
         return 'done';
       }catch(failure){
         if(token!==operation)return 'stop';
-        if(automatic&&pinRequired&&transientRejoin(failure))return 'retry';
-        error=`Je receiver kon nog niet worden toegevoegd. Je ${pinRequired?'PIN en ':''}keuzes blijven bewaard. Er is niets opnieuw ingesteld.`;
+        if(automatic&&pinRequired()&&transientRejoin(failure))return 'retry';
+        error=`Je receiver kon nog niet worden toegevoegd. Je ${pinRequired()?'PIN en ':''}keuzes blijven bewaard. Er is niets opnieuw ingesteld.`;
         if(automatic)rejoinBlocked=true;
         return 'stop';
       }
-      finally{busy=false;paintPage();}
+      finally{if(actionAbort===controller)actionAbort=null;if(token===operation){busy=false;paintPage();}}
     }
     async function manageSetup(request){
       if(!canManageZones()||managementBusy)return;
@@ -737,10 +814,15 @@
       const action=target.dataset.onboardingAction;
       if(draftSaving||managementBusy)return;
       if(action==='save-retry')return saveChoices();
+      if(action==='receivers-list')return browseReceivers();
+      if(['next','back','exit'].includes(action)&&draft.stage==='pixels'){
+        busy=true;try{await pixelPreview.stop();}finally{busy=false;}
+        if(!container)return;
+      }
       if(action==='exit'){
         const beforeSave=operation;
         const name=container.querySelector('#onboarding-stand-name')?.value;
-        const events=draft.stage==='stand'&&validName(name||'')?[{type:'SET_STAND',id:draft.stand?.id||'stand-'+crypto.randomUUID(),name}]:[];
+        const events=draft.stage==='stand'&&validName(name||'')?[{type:'SET_STAND',id:draft.stand?.id||'stand-'+uniqueId(),name}]:[];
         if((pendingChoices||['stand','zones'].includes(draft.stage))&&!(await saveChoices(events)))return;
         if(beforeSave!==operation||!container)return;
         suspend();onExit();return;
@@ -750,17 +832,20 @@
       if(action==='identify')return identify(target.dataset.id);
       if(busy)return;
       if(action==='stand-save'){
-        return saveChoices([{type:'SET_STAND',id:draft.stand?.id||'stand-'+crypto.randomUUID(),name:container.querySelector('#onboarding-stand-name').value},{type:'NEXT'}]);
+        return saveChoices([{type:'SET_STAND',id:draft.stand?.id||'stand-'+uniqueId(),name:container.querySelector('#onboarding-stand-name').value},{type:'NEXT'}]);
       }
       if(action==='zone-create'){
         captureNames();if(!validZoneNames())return;
         // Creating zones and leaving this step are separate choices. Keep
         // every saved batch here so the customer can add another zone first.
-        const newReceiverZone=draft.stage==='zone'&&!pinRequired;
+        const newReceiverZone=draft.stage==='zone'&&!pinRequired();
+        const earlyPlacement=draft.stage==='placement';
         const events=newZoneEvents();
+        if(earlyPlacement)events.push({type:'NEXT'});
         return saveChoices(events,()=>{
           zoneNameOpen=false;resetZoneNames();
           if(newReceiverZone)queueMicrotask(()=>finishChosenZone());
+          if(earlyPlacement&&draft.stage==='security')queueMicrotask(()=>secure());
         },{top:draft.stage!=='zones'});
       }
       if(action==='zone-add-row'){
@@ -811,9 +896,65 @@
         zoneNameOpen=true;if(change({type:'BACK'}))container.querySelector('#onboarding-zone-name')?.focus();return;
       }
       if(action==='zone-cancel'){zoneNameOpen=false;resetZoneNames();paintPage(false);return;}
-      if(action==='active-zone')return saveChoices([{type:'SELECT_ACTIVE_ZONE',zoneId:target.dataset.id}],()=>{},{top:false});
+      if(action==='active-zone')return saveChoices([{type:'SELECT_ACTIVE_ZONE',zoneId:target.hasAttribute('data-without-zone')?null:target.dataset.id}],()=>{},{top:false});
       if(action==='receiver'){
+        if(identifyPending.size)return;
         let receiver=results.find(receiver=>receiver.id===target.dataset.id);if(!receiver)return;
+        if(identifying.size){
+          // STOP uses the same native radio lock as identity verification and
+          // commissioning. Settle it before either operation starts.
+          const token=++operation;busy=true;paintPage(false);
+          try{
+            for(const id of Array.from(identifying.keys())){
+              if(token!==operation||!container||draft.stage!=='receiver')return;
+              await stopIdentify(id);
+            }
+          }
+          finally{busy=false;if(token===operation)paintPage(false);}
+          if(token!==operation||!container||draft.stage!=='receiver')return;
+        }
+        // Looking at a receiver list grants no membership. Only selecting the
+        // exact found identity may reopen its private, immutable native intent.
+        // Other receivers remain ordinary selectable results in the meantime.
+        if(typeof services.resumeDraft==='function'||parkedChoices.has(receiver.id)){
+          const token=++operation;busy=true;error='';paintPage(false);
+          let restored=null;
+          try{
+            const view=typeof services.resumeDraft==='function'?await services.resumeDraft({standId:draft.stand.id,receiverId:receiver.id,rid:receiver.rid,fingerprint:receiver.deviceFingerprint}):{draft:parkedChoices.get(receiver.id)};
+            if(token!==operation||!container)return;
+            if(view?.draft?.receiver){
+              const saved=draftApi.snapshot(view.draft),identity=saved.receiver;
+              if(saved.stand.id!==draft.stand.id||identity.id!==receiver.id||identity.rid!==receiver.rid||identity.type!==receiver.type||receiver.deviceFingerprint&&identity.deviceFingerprint!==receiver.deviceFingerprint)throw Error('IDENTITY_MISMATCH');
+              parkedChoices.delete(receiver.id);parkedTransactions.delete(saved.transactionId);restored=saved;
+            }
+          }catch(failure){if(token===operation){error=connectionFailure(failure,{viaMain:draft.role==='node'}).message;return;}}
+          finally{busy=false;paintPage(false);}
+          if(token!==operation||!container)return;
+          if(restored){
+            draft=restored;securityReceiptRef=null;finalReceiptRef=null;
+            securityUncertain=draft.security.status!=='not-started';
+            if(securityUncertain)draft=draftApi.snapshot({...clone(draft),stage:'security',security:{status:'pending',phase:'resuming'},cancelled:false});
+            paintPage(true);
+            if(securityUncertain)return secure(undefined,undefined,{reconcile:true,resumeFinalization:['zone','review'].includes(restored.stage)});
+            // Unclaimed choices are not fresh identity proof. A native
+            // reachability-only result must reattest the original pin before
+            // continuing its saved output/PIN screen or starting a claim.
+            busy=true;
+            try{
+              if(receiver.canConfigure===false&&receiver.canVerifyIdentity){
+                const verified=await bounded(services.select({standId:draft.stand.id,transactionId:draft.transactionId,receiver:clone(receiver)}),50000);
+                if(token!==operation||!container)return;
+                if(!['id','rid','type','deviceFingerprint'].every(key=>verified?.[key]===draft.receiver[key]))throw Object.assign(Error('IDENTITY_MISMATCH'),{code:'IDENTITY_MISMATCH'});
+              }
+              await persist();
+            }catch(failure){if(token===operation)error=connectionFailure(failure,{viaMain:draft.role==='node'}).message;return;}
+            finally{if(token===operation){busy=false;paintPage(false);}}
+            if(token!==operation||!container)return;
+            if(draft.stage==='pin'&&!pinRequired())draft=draftApi.snapshot({...clone(draft),stage:'security',security:{status:'pending',phase:'configuring'}});
+            if(draft.stage==='security')return secure();
+            return;
+          }
+        }
         if(receiver.canConfigure===false&&receiver.canVerifyIdentity){
           const token=++operation,expected=receiver;busy=true;error='';notice='Receiver veilig controleren…';paintPage(false);
           try{
@@ -829,10 +970,16 @@
         if(receiver.type==='RGBW'&&draft.role==='node'&&!canSecure()){error=unavailable;paintPage(false);return;}
         const candidate={id:receiver.id,rid:receiver.rid,type:receiver.type,name:receiver.name,deviceFingerprint:receiver.deviceFingerprint};
         if(resumeSelection&&['id','rid','type','deviceFingerprint'].every(key=>resumeSelection.receiver?.[key]===candidate[key])){
-          draft=draftApi.snapshot(resumeSelection);resumeSelection=null;notice='Je vorige instellingen staan klaar.';keepDraft();paintPage();return;
+          draft=draftApi.snapshot(resumeSelection);resumeSelection=null;notice='Je vorige instellingen staan klaar.';keepDraft();paintPage();
+          // Native reconciliation has confirmed that no durable claim exists.
+          // After rechecking this exact device, continue the preserved setup;
+          // reconciling the absent claim again would strand the user in a loop.
+          // A MAIN that needs a PIN still waits for its explicit PIN submission.
+          if(draft.stage==='security')return secure();
+          return;
         }
         resumeSelection=null;
-        if(change({type:'SELECT_RECEIVER',receiver:candidate},{render:false})){plugMotion.clear();selectedOutput=null;for(const id of identifying.keys())stopIdentify(id);change({type:'NEXT'});if(draft.stage==='security')return secure();}return;
+        if(change({type:'SELECT_RECEIVER',receiver:candidate},{render:false})){plugMotion.clear();selectedOutput=null;change({type:'NEXT'});if(draft.stage==='security')return secure();}return;
       }
       if(action==='count')return change({type:'SET_OUTPUT_COUNT',count:Number(target.dataset.count)});
       if(action==='output'){
@@ -847,8 +994,10 @@
       }
       if(action==='side')return change({type:'SET_SIDE',port:draft.port,side:target.dataset.side},{top:false});
       if(action==='zone'){
-        if(pinRequired)return change({type:'SELECT_ZONE',zoneId:target.dataset.id});
-        const selected=draftApi.transition(draft,{type:'SELECT_ZONE',zoneId:target.dataset.id});
+        const zoneId=target.hasAttribute('data-without-zone')?null:target.dataset.id;
+        if(draft.stage==='placement')return saveChoices([{type:'SELECT_ZONE',zoneId},{type:'NEXT'}],()=>{if(draft.stage==='security')queueMicrotask(()=>secure());});
+        if(pinRequired())return change({type:'SELECT_ZONE',zoneId});
+        const selected=draftApi.transition(draft,{type:'SELECT_ZONE',zoneId});
         if(selected.error){error=selected.error.message;paintPage(false);return;}
         draft=selected.draft;return finishChosenZone();
       }
@@ -869,17 +1018,17 @@
           resetZoneNames();zoneNameOpen=false;
           // Search only after an explicit Continue and a successful save.
           // Manual Wi-Fi still needs the customer's Settings trip first.
-          if(!draft.mainReceiverId&&!pinRequired&&!manualWifi())queueMicrotask(()=>{if(container&&draft.stage==='receiver')void search();});
+          if(!draft.mainReceiverId&&!pinRequired()&&!manualWifi())queueMicrotask(()=>{if(container&&draft.stage==='receiver')void search();});
           });
         }
-        if(draft.stage==='connection'&&draft.port===active().at(-1).port&&draft.role==='node'&&!canSecure()){error=unavailable;paintPage(false);return;}
+        if(draft.stage==='pixels'&&draft.port===active().at(-1).port&&draft.role==='node'&&!canSecure()){error=unavailable;paintPage(false);return;}
         if(change({type:'NEXT'})&&draft.stage==='security')return secure();return;
       }
       if(action==='secure')return secure(container.querySelector('#onboarding-pin').value,container.querySelector('#onboarding-pin-repeat').value);
       if(action==='security-retry')return automaticMain()?resumeAfterWifiReturn({force:true}):secure(undefined,undefined,{reconcile:true});
       if(action==='finish')return finish();
       if(action==='done'){suspend();onExit({stand:true});return;}
-      if(action==='another'){const activeZoneId=draft.zoneId;draft=null;start({activeZoneId});paintPage();return;}
+      if(action==='another'){const activeZoneId=draft.zoneId;draft=null;start({activeZoneId});paintPage();if(draft.stage==='receiver')queueMicrotask(()=>{if(container&&draft.stage==='receiver'&&searchState==='idle'&&!busy)void search();});return;}
       if(action==='another-zone'){const activeZoneId=draft.zoneId;draft=null;start({activeZoneId});change({type:'BACK'});return;}
     }
     // Only names, counts and the pending step for the Stand resume card; never

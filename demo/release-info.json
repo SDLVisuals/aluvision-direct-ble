@@ -1,0 +1,174 @@
+{
+  "kind": "isolated-browser-demo",
+  "revision": "v31-20260924-demo1",
+  "interfaceVersion": 31,
+  "interfaceBaseline": "V31 iPhone build 128 source; demo-only inventory and wifi example additions",
+  "fakeReceivers": {
+    "RGBW": 10,
+    "SPI": 10,
+    "preAdded": 0
+  },
+  "wifi": "nonfunctional example only",
+  "storage": "in-memory; cleared on page reload",
+  "hardwareAccess": false,
+  "nativeAppModified": false,
+  "firmwarePublished": false,
+  "assets": [
+    {
+      "path": "animation-engine.js",
+      "sha256": "abab745ce59b89904feda6e6d791c680057b50943fec9ae670612137be318201"
+    },
+    {
+      "path": "animation-library.css",
+      "sha256": "f6c9f8ada37ea55a5eda056876bfa6f18f1659c1232ac13117bed28b433beab4"
+    },
+    {
+      "path": "animation-library.js",
+      "sha256": "a50d3a49b444c7b33189de31ae0829a4283428747f46a70b70495c917dc5f98c"
+    },
+    {
+      "path": "animations.css",
+      "sha256": "c3a0307329434ef2df6d79a71d577581e230bee210a762a2013e7c1f525dcfde"
+    },
+    {
+      "path": "app.js",
+      "sha256": "141c4efa482b4955194c38d7571974ed2353b7efec2db0e6486c5398512d922c"
+    },
+    {
+      "path": "assets/aluvision-logo.png",
+      "sha256": "834524590fdae6c13804869c8c04cb3452ef68e80c189a3ea27e02a43d08f018"
+    },
+    {
+      "path": "colour-library-drag.js",
+      "sha256": "a397d1cb53cc3496340f9ca6230a1a69901d32eeb07d58e49e25024f077bca8c"
+    },
+    {
+      "path": "colour.js",
+      "sha256": "1a08dae3946d2d63729a69b6221a7882bf29d25889f6186651b06ee22967b3b8"
+    },
+    {
+      "path": "colours-library.js",
+      "sha256": "b77b7cff5a05697e820e9d8778b853a376d9edbfdb0f8781e9d1fec12c7ef752"
+    },
+    {
+      "path": "continuity.css",
+      "sha256": "6dd5d5c2a01ec89523c68f9cf9869b0f549ccd97f50d4bf0e873de89e4e89b63"
+    },
+    {
+      "path": "fixtures.js",
+      "sha256": "7ccc08ac36a6ab22e65c79d796f4dd3e60d42232ff6209ae866b616bc9d0beb8"
+    },
+    {
+      "path": "index.html",
+      "sha256": "fad967b3480b9e4eaba6190a3b196d1b4713db0e5c47c53ef196ef94a708d337"
+    },
+    {
+      "path": "live-control.js",
+      "sha256": "d004b62a9b8240082243b98aa9a4f9eb9318fae1f3b8ef03b43149252073932d"
+    },
+    {
+      "path": "migration.js",
+      "sha256": "2a224b4c273aa3b01994c459aab34fa803fff47816e63dcf6ac7d7cd936954a7"
+    },
+    {
+      "path": "model.js",
+      "sha256": "a37572a24aa33b20a4a8214bdd9852afd3685679d403721d374ead6678ca1471"
+    },
+    {
+      "path": "native-runtime.js",
+      "sha256": "52c505f9a90f06dc4f837d4b0e8789179b0e32ed04bd2f491295a5673726a400"
+    },
+    {
+      "path": "onboarding-adapter.js",
+      "sha256": "495155567af18f5f234a30662a0f472610f3602b6b1dbd3bb5c46371614e08e0"
+    },
+    {
+      "path": "onboarding-contract.js",
+      "sha256": "47b7a0cc1e7a3cc21d57e1b701c61011b4519e96f93cccdec59fd91051274403"
+    },
+    {
+      "path": "onboarding-draft.js",
+      "sha256": "9efe402d8649f24d09a057ee05ca4b5e3d15ff537e146c02d69d73ccc22f7859"
+    },
+    {
+      "path": "onboarding-ui.css",
+      "sha256": "ed71d3cb6d8f3cf58c30aa879f3f78e768e1651e0dfdebbc8e39f5a19d7e7191"
+    },
+    {
+      "path": "onboarding-ui.js",
+      "sha256": "f1771aec5fd8836d4682324a568ab266169d4202c175220c5023b03ca4bcd1f4"
+    },
+    {
+      "path": "pixel-setup.css",
+      "sha256": "a1d163bf8e55fabe3a4afa8748537600c3bc98b932762350c6cafff54d3e43c7"
+    },
+    {
+      "path": "pixel-setup.js",
+      "sha256": "de8f98ec8913d21c99e59e5a635bf977443a4d92d49c569e7e397b6d448e6601"
+    },
+    {
+      "path": "preferences.js",
+      "sha256": "33fa7d3c6ac91b5c3a7a052938e30356e04e8c229fb981ce77cc9657a461649d"
+    },
+    {
+      "path": "presets.js",
+      "sha256": "e7fbe4f4c8af323b14005a9852c52ede8ce40f1d5be02fd4fc490021d381bef9"
+    },
+    {
+      "path": "preview.js",
+      "sha256": "2542b422aec7692c2c3552f224cef9687dffc674fee1d011a6166a0662031528"
+    },
+    {
+      "path": "receiver-removal-ui.css",
+      "sha256": "751fb973574322565b51fbad6e4b42029d5b057c1a16faba0cf3adb53fca7bc4"
+    },
+    {
+      "path": "receiver-removal-ui.js",
+      "sha256": "250248974e4a1d8e1307863549a02171d47d13e87f7a7fe4c45470e996d7ef27"
+    },
+    {
+      "path": "receiver-update-ui.css",
+      "sha256": "134b9721f592c84e7f1c72f3a448fcc46d4f062b07c11d1b9ba24bbdf48e8ca9"
+    },
+    {
+      "path": "receiver-update-ui.js",
+      "sha256": "5c04d3e10fd29f4a63249fefb2b63741934e95400f47ae5223d42580ab8ce84e"
+    },
+    {
+      "path": "receiver-visual.css",
+      "sha256": "76b6f07b2fa02534534e951ee9689033aa4665eab9db7d7f5d0b9cef81252c09"
+    },
+    {
+      "path": "receiver-visual.js",
+      "sha256": "8c3196efcf8c93f8b514cc14a8f29a131de057bef91a21d37f81f2d7c9e303ef"
+    },
+    {
+      "path": "scenes.css",
+      "sha256": "c94a08ba17d0726fdcd2b631deefa39590dbe9fc3f97270dbb3d6ae1f260afb6"
+    },
+    {
+      "path": "scenes.js",
+      "sha256": "270533e1d9b68b40c4712c1f592ec0d69201c76666c9a36f401435c6ebb637dd"
+    },
+    {
+      "path": "security-mode.js",
+      "sha256": "e4da258988fc8791d0d923d517f86ed3003792fe9d8a89b034bfdd05c8518ef2"
+    },
+    {
+      "path": "styles.css",
+      "sha256": "203a722b175cebdf974b4c2dacf4a1a25ef27267aceb9721cb5020d8155db8b4"
+    },
+    {
+      "path": "vendor/v21_animation_catalog.js",
+      "sha256": "ee390cce7e26d05e7e1e580b7fefadbfce3c75c5487f595ad2890bbbd324c860"
+    },
+    {
+      "path": "vendor/v21_tunnel_engine.js",
+      "sha256": "5e8f4170084d5a6a3597fe014a117597b6a2b2eee4869437ee3ff9a6cc288c3e"
+    },
+    {
+      "path": "web-demo-service.js",
+      "sha256": "e30b0ff2c98f25fe153cffd9a132e2dbda97f6508b1c2a0731ca3b2642840dfa"
+    }
+  ]
+}

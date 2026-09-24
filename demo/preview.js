@@ -717,7 +717,7 @@ function usesCyclePhaseSteps(state) {
       context.textAlign = 'center'; context.fillText('Nog geen receivers in deze zone', width / 2, height / 2);
       return frame;
     }
-    const byReceiver = options.presentation === 'receivers' || frame.rows.some(row => row.category === 'tunnel');
+    const byReceiver = options.presentation === 'receivers' || options.layout !== 'continuous' && frame.rows.some(row => row.category === 'tunnel');
     const vertical = options.layout === 'vertical' && options.presentation !== 'receivers';
     const continuous = options.layout === 'continuous' && !byReceiver && frame.rows.every(row => row.type === 'SPI');
     const padding = Math.min(18, width / 8);

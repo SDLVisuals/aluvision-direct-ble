@@ -15,6 +15,13 @@
 .animation-family-card:hover{border-color:var(--red)}
 .animation-family-card:focus-visible{outline:2px solid var(--red);outline-offset:3px}
 .animation-search input{font-size:16px;font-weight:400}
+.animation-start{gap:16px}
+.animation-starter-grid{align-items:stretch}
+.animation-starter-card{text-align:left;min-width:0}
+.animation-starter-card b{font-size:15px;line-height:1.35}
+.animation-starter-card small{font-size:12px;line-height:1.5}
+.animation-start>.button{margin:0}
+@media(max-height:700px){.animation-start{gap:12px}.animation-start>.topline{margin-bottom:0}.animation-start .page-heading h1{font-size:24px}.animation-start .animation-starter-card canvas{height:64px}}
 .filter-row[aria-label="Effectbibliotheek"] button{min-height:44px}
 #animation-results .effect-card small{font-size:11px;line-height:1.5}
 @media(max-width:360px){.animation-family-grid{gap:10px}.animation-family-card{padding:7px;border-radius:15px}.animation-family-card canvas{height:78px}.animation-family-card .family-title{font-size:13px}}

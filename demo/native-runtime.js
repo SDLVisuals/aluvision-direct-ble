@@ -19,7 +19,8 @@
   let documentId=null;
   try{if(native&&typeof root.crypto?.randomUUID==='function')documentId=root.crypto.randomUUID().replace(/-/g,'').toUpperCase();}catch(_){}
   const pending=new Map();let serial=0;
-  const actions=new Set(['capabilities','discover','discoverMesh','select','secure','reconcileSecurity','finalize','verifyFinalReceipt','loadView','saveDraft','publishModel','editZones','eraseAppData','applyLive','otaPlan','otaStart','otaStatus','otaResume','otaCancel','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain']);
+  const actions=new Set(['capabilities','securityPreference','securityStatus','setPinProtection','discover','discoverMesh','select','secure','reconcileSecurity','finalize','verifyFinalReceipt','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones','configureOutputs','previewPixels','eraseAppData','applyLive','applyLiveBatch','otaPlan','otaStart','otaStatus','otaResume','otaCancel','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain']);
+  actions.add('outputConfigurationStatus');
   let viewRevision=0,viewLoaded=false,viewModelKey=null,viewDraftKey='null',writeQueue=Promise.resolve();
   const fail=code=>Object.assign(new Error('De verbinding is nog niet beschikbaar.'),{code});
   function receive(message){
@@ -37,16 +38,16 @@
     if(pending.size>=8)return Promise.reject(fail('NATIVE_BUSY'));
     return new Promise((resolve,reject)=>{
       const id='v30-'+documentId+'-'+(++serial),cancelNative=()=>{
-        if(pending.has(id)&&!['capabilities','loadView','saveDraft','publishModel','editZones'].includes(action))try{handler.postMessage({version:1,id:'v30-'+documentId+'-'+(++serial),action:action==='discover'?'cancelDiscover':'cancelOnboarding',payload:{requestId:id}});}catch(_){}
+        if(pending.has(id)&&!['capabilities','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones'].includes(action))try{handler.postMessage({version:1,id:'v30-'+documentId+'-'+(++serial),action:action==='discover'?'cancelDiscover':'cancelOnboarding',payload:{requestId:id}});}catch(_){}
       },abort=()=>{
         cancelNative();
         receive({id,ok:false,code:'CANCELLED'});
       };
       // MAIN verification has its own 12 s handshake deadline. The bridge must
       // leave room for native key storage and delivering that bounded result.
-      const timeout=['discoverMesh','applyLive'].includes(action)?30000:
+      const timeout=action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
         ['secure','reconcileSecurity'].includes(action)&&payload.configuration?.role==='node'?120000:
-        ['select','secure','reconcileSecurity','finalize','otaPlan','removalPlan','removalStart','removalResume','identify'].includes(action)?45000:12000;
+        ['select','secure','reconcileSecurity','finalize','otaPlan','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain'].includes(action)?45000:12000;
       const timer=root.setTimeout(()=>{cancelNative();receive({id,ok:false,code:'NATIVE_TIMEOUT'});},timeout);
       pending.set(id,{resolve,reject,timer,removeAbort:()=>signal?.removeEventListener('abort',abort)});
       signal?.addEventListener('abort',abort,{once:true});
@@ -95,6 +96,26 @@
       return result;
     });writeQueue=next;return next;
   }
+  function moveDraft(action,payload){
+    const next=writeQueue.catch(()=>{}).then(async()=>{
+      if(!viewLoaded)throw fail('VIEW_NOT_LOADED');
+      const previousModel=viewModelKey,revision=viewRevision;
+      const matches=view=>view?.model&&canonical(view.model)===previousModel&&[revision,revision+1].includes(view.revision)&&
+        (action==='parkDraft'?view.draft===null:view.draft===null||view.draft.receiver===null||
+          view.draft.stand?.id===payload.standId&&view.draft.receiver.id===payload.receiverId&&view.draft.receiver.rid===payload.rid&&
+          (!payload.fingerprint||view.draft.receiver.deviceFingerprint===payload.fingerprint));
+      try{
+        const view=await call(action,{...payload,expectedRevision:revision});
+        if(!matches(view))throw fail('VIEW_INVALID');
+        return acceptView(view);
+      }catch(error){
+        // A local CAS may have committed before its reply was lost. Recover
+        // only the exact result, never replay a receiver claim or mutation.
+        try{const view=acceptView(await call('loadView'));if(view.revision===revision+1&&matches(view))return view;}catch(_){}
+        throw error;
+      }
+    });writeQueue=next;return next;
+  }
   function editZones(request){
     if(!request||typeof request!=='object'||Array.isArray(request))return Promise.reject(fail('ZONE_EDIT_INVALID'));
     const {standId,expectedRevision,operation,expectedZoneSignature}=request;
@@ -121,7 +142,7 @@
           if(previousDraft.stand?.id!==standId||previousDraft.receiver!==null||previousDraft.cancelled!==false||
             previousDraft.security?.status!=='not-started'||previousDraft.security?.phase!=='idle'||
             !['zones','receiver'].includes(previousDraft.stage)||
-            !(['delete','rename','assign'].includes(kind)||kind==='create'&&Object.prototype.hasOwnProperty.call(payload.operation,'receiverId')))
+            !(['delete','rename','assign','layout','reorder'].includes(kind)||kind==='create'&&Object.prototype.hasOwnProperty.call(payload.operation,'receiverId')))
             throw fail('V30_CHECKPOINT_CONFLICT');
           const checked=root.LightningOnboardingDraft?.refreshZones(previousDraft,JSON.parse(viewModelKey));
           if(!checked||checked.error||canonical(checked.draft)!==viewDraftKey)throw fail('VIEW_INVALID');
@@ -131,9 +152,11 @@
           const Model=root.LightningModel,cached=JSON.parse(viewModelKey),op=payload.operation;
           if(!Model)throw fail('VIEW_INVALID');
           const stand=cached.stands?.find(item=>item.id===standId),receiver=cached.receivers?.find(item=>item.id===op.receiverId);
-          if(['delete','rename'].includes(kind)?!stand?.zones.some(zone=>zone.id===op.zoneId):receiver?.standId!==standId||kind==='assign'&&op.zoneId!==null&&!stand?.zones.some(zone=>zone.id===op.zoneId))throw fail('V30_CHECKPOINT_CONFLICT');
+          if(['delete','rename','layout','reorder'].includes(kind)?!stand?.zones.some(zone=>zone.id===op.zoneId):receiver?.standId!==standId||kind==='assign'&&op.zoneId!==null&&!stand?.zones.some(zone=>zone.id===op.zoneId))throw fail('V30_CHECKPOINT_CONFLICT');
           if(kind==='delete')expectedSetupModel=Model.deleteZone(cached,op.zoneId);
           else if(kind==='rename')expectedSetupModel=Model.renameZone(cached,op.zoneId,op.name);
+          else if(kind==='layout')expectedSetupModel=Model.setLayout(cached,op.zoneId,op.layout);
+          else if(kind==='reorder')expectedSetupModel=Model.reorderReceivers(cached,op.zoneId,op.receiverIds);
           else {
             const base=kind==='create'?Model.createZone(cached,standId,{id:op.zoneId,name:op.name}):cached;
             expectedSetupModel=op.zoneId===null?Model.unassignReceiver(base,op.receiverId):Model.assignReceiverToZone(base,op.receiverId,op.zoneId);
@@ -165,15 +188,118 @@
       }
     });writeQueue=next;return next;
   }
+  function configureOutputs(request){
+    const validId=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(value);
+    if(!request||typeof request!=='object'||Array.isArray(request)||Object.keys(request).some(key=>!['standId','receiverId','outputs','expectedRevision'].includes(key))||
+      !validId(request.standId)||!validId(request.receiverId)||request.expectedRevision!==undefined&&(!Number.isSafeInteger(request.expectedRevision)||request.expectedRevision<0)||
+      !Array.isArray(request.outputs)||request.outputs.length!==4||!request.outputs.every((port,index)=>port&&Object.keys(port).sort().join(',')==='enabled,pixels,port,reversed'&&port.port===index+1&&typeof port.enabled==='boolean'&&typeof port.reversed==='boolean'&&Number.isInteger(port.pixels)&&port.pixels>=1&&port.pixels<=163)||!request.outputs.some(port=>port.enabled))return Promise.reject(fail('OUTPUT_CONFIGURATION_INVALID'));
+    const {standId,receiverId,expectedRevision}=request,outputs=request.outputs.map(port=>({...port,pixels:port.enabled?port.pixels:1,reversed:port.enabled&&port.reversed}));
+    const next=writeQueue.catch(()=>{}).then(async()=>{
+      if(!viewLoaded)throw fail('VIEW_NOT_LOADED');
+      const previousDraft=JSON.parse(viewDraftKey);
+      if(expectedRevision!==undefined&&expectedRevision!==viewRevision)throw fail('V30_CHECKPOINT_CONFLICT');
+      if(previousDraft!==null){
+        if(previousDraft.stand?.id!==standId||previousDraft.receiver!==null||previousDraft.cancelled!==false||
+          previousDraft.security?.status!=='not-started'||previousDraft.security?.phase!=='idle'||!['zones','receiver'].includes(previousDraft.stage))throw fail('V30_CHECKPOINT_CONFLICT');
+        const checked=root.LightningOnboardingDraft?.refreshZones(previousDraft,JSON.parse(viewModelKey));
+        if(!checked||checked.error||canonical(checked.draft)!==viewDraftKey)throw fail('VIEW_INVALID');
+      }
+      const revision=viewRevision,expected=JSON.parse(viewModelKey),receiver=expected.receivers?.find(item=>item.id===receiverId&&item.standId===standId&&item.type==='SPI'&&item.lifecycle==='added');
+      if(!receiver)throw fail('OUTPUT_CONFIGURATION_PROFILE');
+      receiver.outputs=outputs;
+      const refreshed=previousDraft===null?null:root.LightningOnboardingDraft?.refreshZones(previousDraft,expected);
+      if(previousDraft!==null&&(!refreshed||refreshed.error))throw fail('VIEW_INVALID');
+      const expectedDraft=refreshed?.draft||null;
+      const unchanged=canonical(expected)===viewModelKey&&canonical(expectedDraft)===viewDraftKey;
+      const matches=view=>canonical(view?.draft)===canonical(expectedDraft)&&(view?.revision===revision+1||unchanged&&view?.revision===revision)&&canonical(view.model)===canonical(expected);
+      try{
+        const view=await call('configureOutputs',{standId,receiverId,outputs,expectedRevision:revision});
+        if(!matches(view))throw fail('VIEW_INVALID');
+        return acceptView(view);
+      }catch(error){
+        // The public geometry may have committed while journal cleanup failed.
+        // A local view cannot prove that the native pending intent was closed;
+        // retain the error and let an explicit same-configuration retry finish it.
+        try{error.reconciledView=acceptView(await call('loadView'));}catch(_){}
+        throw error;
+      }
+    });writeQueue=next;return next;
+  }
+  function livePayload({standId,receiverId,kind,brightness,transitionMs,channels,scene}={}){
+    const validID=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(value);
+    const byte=value=>Number.isInteger(value)&&value>=0&&value<=255;
+    const full=['RGBW_SCENE','SPI_SCENE'].includes(kind);
+    if(!validID(standId)||!validID(receiverId)||!['RGBW_STATIC','SPI_BRIGHTNESS','RGBW_SCENE','SPI_SCENE'].includes(kind)||
+      !Number.isInteger(brightness)||brightness<0||brightness>100||!Number.isInteger(transitionMs)||transitionMs<0||transitionMs>750||
+      !Array.isArray(channels)||(kind==='RGBW_STATIC'?channels.length!==4||!channels.every(byte):channels.length!==0)||full!==(scene!==undefined))throw fail('LIVE_INVALID');
+    if(full){
+      const keys=['engine','variant','palette','background','speed','smooth','backgroundBrightness','backgroundOn','motionReverse','widthPixels','spacing','objectCount','trailLength','spread','randomness','bounce','mirror','lineDelayMs'];
+      const bounds={variant:[0,255],speed:[0,100],smooth:[0,100],backgroundBrightness:[0,100],widthPixels:[1,8192],spacing:[0,100],objectCount:[1,8],trailLength:[0,100],spread:[0,100],randomness:[0,100],lineDelayMs:[0,5000]};
+      const colour=value=>Array.isArray(value)&&value.length===4&&value.every(byte);
+      const extended=scene&&Object.prototype.hasOwnProperty.call(scene,'v30');
+      if(!scene||typeof scene!=='object'||Array.isArray(scene)||Object.keys(scene).length!==keys.length+(extended?1:0)||!keys.every(key=>Object.prototype.hasOwnProperty.call(scene,key))||
+        typeof scene.engine!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(scene.engine)||!colour(scene.background)||!Array.isArray(scene.palette)||scene.palette.length<1||scene.palette.length>(extended?7:4)||!scene.palette.every(colour)||
+        !Object.entries(bounds).every(([key,[min,max]])=>Number.isInteger(scene[key])&&scene[key]>=min&&scene[key]<=max)||
+        !['backgroundOn','motionReverse','bounce','mirror'].every(key=>typeof scene[key]==='boolean'))throw fail('LIVE_INVALID');
+      if(extended){
+        const v30=scene.v30,limits={effect:[1,kind==='SPI_SCENE'?30:20],fadeAmount:[0,100],width:[0,100],delayMs:[0,10000]};
+        if(!v30||typeof v30!=='object'||Array.isArray(v30)||Object.keys(v30).sort().join(',')!=='brand,delayMs,effect,fadeAmount,width'||!colour(v30.brand)||
+          !Object.entries(limits).every(([key,[min,max]])=>Number.isInteger(v30[key])&&v30[key]>=min&&v30[key]<=max))throw fail('LIVE_INVALID');
+      }
+    }
+    return {standId,receiverId,kind,brightness,transitionMs,channels:[...channels],...(full?{scene:JSON.parse(JSON.stringify(scene))}:{})};
+  }
   const services=Object.freeze(native?{
     connectionMode:'manual-wifi',
+    async securityPreference({standId}){
+      const result=await call('securityPreference',{standId});
+      if(typeof result?.pinRequired!=='boolean')throw fail('PIN_MODE_UNCONFIRMED');
+      return {pinRequired:result.pinRequired};
+    },
+    async securityStatus({standId}){
+      await writeQueue.catch(()=>{});
+      const result=await call('securityStatus',{standId});
+      if(!['applied','reconnect-required'].includes(result?.status)||typeof result.pinRequired!=='boolean'||typeof result.hasPin!=='boolean'||!['installation','new-installation'].includes(result.scope))throw fail('PIN_MODE_UNCONFIRMED');
+      return result;
+    },
+    async setPinProtection({standId,enabled,pin,confirmation}){
+      if(typeof standId!=='string'||typeof enabled!=='boolean'||pin!==undefined&&(typeof pin!=='string'||!/^\d{8,12}$/.test(pin))||
+        (enabled?confirmation!==undefined:confirmation!=='DISABLE_PIN'||pin!==undefined))throw fail('PIN_MODE_INVALID');
+      await writeQueue.catch(()=>{});
+      const result=await call('setPinProtection',{standId,enabled,...(pin===undefined?{}:{pin}),...(confirmation===undefined?{}:{confirmation})});
+      if(!['applied','reconnect-required'].includes(result?.status)||result.pinRequired!==enabled||typeof result.hasPin!=='boolean'||!['installation','new-installation'].includes(result.scope))throw fail('PIN_MODE_UNCONFIRMED');
+      return result;
+    },
     async loadState(){return acceptView(await call('loadView'));},
     async persistDraft({draft}){return writeView('saveDraft',{draft});},
+    async parkDraft({transactionId}){return moveDraft('parkDraft',{transactionId});},
+    async resumeDraft({standId,receiverId,rid,fingerprint=null}){return moveDraft('resumeDraft',{standId,receiverId,rid,fingerprint});},
     async publishModel({model,configuration,receiptRef}){return writeView('publishModel',{model,configuration,receiptRef});},
     async editZones(request){return editZones(request);},
+    async configureOutputs(request){return configureOutputs(request);},
+    async outputConfigurationStatus({standId,receiverId}){
+      if(root.__lightningV31OutputRecovery!==true)return {status:'none'};
+      const id=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(value);
+      if(!id(standId)||!id(receiverId))throw fail('OUTPUT_CONFIGURATION_INVALID');
+      await writeQueue.catch(()=>{});
+      const result=await call('outputConfigurationStatus',{standId,receiverId});
+      if(result?.status==='none'&&Object.keys(result).length===1)return {status:'none'};
+      if(result?.status!=='pending'||Object.keys(result).sort().join(',')!=='outputs,status'||!Array.isArray(result.outputs)||result.outputs.length!==4||
+        !result.outputs.every((port,index)=>port&&Object.keys(port).sort().join(',')==='enabled,pixels,port,reversed'&&port.port===index+1&&typeof port.enabled==='boolean'&&typeof port.reversed==='boolean'&&Number.isInteger(port.pixels)&&port.pixels>=1&&port.pixels<=163)||!result.outputs.some(port=>port.enabled))throw fail('OUTPUT_CONFIGURATION_UNCONFIRMED');
+      return JSON.parse(JSON.stringify(result));
+    },
+    async previewPixels(request){
+      if(!request||!['start','update','stop'].includes(request.action)||request.receiver?.type!=='SPI'||
+        !Number.isInteger(request.port)||request.port<1||request.port>4||!Number.isInteger(request.pixels)||request.pixels<0||request.pixels>163)throw fail('PIXEL_PREVIEW_INVALID');
+      const payload=JSON.parse(JSON.stringify(request));
+      const answer=await call('previewPixels',payload);
+      if(answer?.applied!==true||answer.port!==request.port||answer.pixels!==request.pixels||
+        (request.action==='stop'?answer.previewTTLMS!==0:!Number.isInteger(answer.previewTTLMS)||answer.previewTTLMS<1||answer.previewTTLMS>15000))throw fail('PIXEL_PREVIEW_UNCONFIRMED');
+      return answer;
+    },
     async select({standId,transactionId,receiver}){return call('select',{standId,transactionId,receiver:{id:receiver.id,rid:receiver.rid,type:receiver.type}});},
-    async secure({configuration,pin}){return call('secure',{configuration,...(root.AluvisionSecurityMode?.pinRequired===false||configuration?.role==='node'?{}:{pin})});},
-    async reconcileSecurity({configuration}){return call('reconcileSecurity',{configuration});},
+    async secure({configuration,pin,signal}){return call('secure',{configuration,...(root.AluvisionSecurityMode?.pinRequired===false||configuration?.role==='node'?{}:{pin})},signal);},
+    async reconcileSecurity({configuration,signal}){return call('reconcileSecurity',{configuration},signal);},
     async eraseAppData({confirmation}){
       if(confirmation!=='Alles verwijderen')throw fail('CONFIRMATION_REQUIRED');
       const next=writeQueue.catch(()=>{}).then(()=>call('eraseAppData',{confirmation}));writeQueue=next;
@@ -182,25 +308,37 @@
       viewRevision=0;viewLoaded=false;viewModelKey=null;viewDraftKey='null';
       return answer;
     },
-    async applyLive({standId,receiverId,kind,brightness,transitionMs,channels}){
-      const validID=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(value);
-      const byte=value=>Number.isInteger(value)&&value>=0&&value<=255;
-      if(!validID(standId)||!validID(receiverId)||!['RGBW_STATIC','SPI_BRIGHTNESS'].includes(kind)||
-        !Number.isInteger(brightness)||brightness<0||brightness>100||!Number.isInteger(transitionMs)||transitionMs<0||transitionMs>750||
-        !Array.isArray(channels)||(kind==='RGBW_STATIC'?channels.length!==4||!channels.every(byte):channels.length!==0))throw fail('LIVE_INVALID');
+    async applyLive(request){
+      const payload=livePayload(request),{receiverId}=payload;
       await writeQueue.catch(()=>{});
       if(!viewLoaded)throw fail('VIEW_NOT_LOADED');
-      const result=await call('applyLive',{standId,receiverId,kind,brightness,transitionMs,channels:[...channels]});
+      const result=await call('applyLive',payload);
       if(result?.status!=='applied-in-firmware'||result.receiverId!==receiverId||!Number.isSafeInteger(result.generation)||result.generation<1)throw fail('LIVE_UNCONFIRMED');
       return {status:'applied-in-firmware',receiverId,generation:result.generation};
     },
-    async finalize({configuration,securityReceiptRef}){return call('finalize',{configuration,securityReceiptRef});},
+    async applyLiveBatch({requests}={}){
+      if(!Array.isArray(requests)||requests.length<1||requests.length>30||requests.some(request=>!request||typeof request!=='object'||Array.isArray(request)))throw fail('LIVE_INVALID');
+      const payload=requests.map(livePayload),ids=new Set(payload.map(request=>request.receiverId));
+      if(ids.size!==payload.length||payload.some(request=>request.standId!==payload[0].standId))throw fail('LIVE_INVALID');
+      await writeQueue.catch(()=>{});
+      if(!viewLoaded)throw fail('VIEW_NOT_LOADED');
+      const answer=await call('applyLiveBatch',{requests:payload});
+      if(answer?.status!=='batch-complete'||!Array.isArray(answer.results)||answer.results.length!==payload.length)throw fail('LIVE_UNCONFIRMED');
+      const results=answer.results.map(result=>{
+        if(!result||!ids.delete(result.receiverId))throw fail('LIVE_UNCONFIRMED');
+        if(result.status==='applied-in-firmware'&&Number.isSafeInteger(result.generation)&&result.generation>=1)return {receiverId:result.receiverId,status:result.status,generation:result.generation};
+        if(['unconfirmed','not-sent'].includes(result.status)&&typeof result.code==='string'&&/^[A-Z][A-Z0-9_]{0,63}$/.test(result.code))return {receiverId:result.receiverId,status:result.status,code:result.code};
+        throw fail('LIVE_UNCONFIRMED');
+      });
+      return {status:'batch-complete',results};
+    },
+    async finalize({configuration,securityReceiptRef,signal}){return call('finalize',{configuration,securityReceiptRef},signal);},
     async verifyFinalReceipt({receiptRef,purpose,expected}){return call('verifyFinalReceipt',{receiptRef,purpose,expected});},
-    async otaPlan({standId}){return call('otaPlan',{standId});},
-    async otaStart({standId,artifactId}){return call('otaStart',{standId,artifactId});},
-    async otaStatus({standId,jobId}){return call('otaStatus',{standId,jobId});},
-    async otaResume({standId,jobId}){return call('otaResume',{standId,jobId});},
-    async otaCancel({standId,jobId}){return call('otaCancel',{standId,jobId});},
+    async otaPlan({standId,receiverId}){return call('otaPlan',{standId,receiverId});},
+    async otaStart({standId,receiverId,artifactId}){return call('otaStart',{standId,receiverId,artifactId});},
+    async otaStatus({standId,receiverId,jobId}){return call('otaStatus',{standId,receiverId,jobId});},
+    async otaResume({standId,receiverId,jobId}){return call('otaResume',{standId,receiverId,jobId});},
+    async otaCancel({standId,receiverId,jobId}){return call('otaCancel',{standId,receiverId,jobId});},
     async removalPlan({standId,receiverId}){return removal('removalPlan',{standId,receiverId});},
     async removalStart({standId,receiverId,planId,pin}){return removal('removalStart',{standId,receiverId,planId,...(pin===undefined?{}:{pin})});},
     async removalResume({standId,receiverId,jobId,pin}){return removal('removalResume',{standId,receiverId,jobId,...(pin===undefined?{}:{pin})});},
@@ -212,21 +350,21 @@
       if(result?.confirmed!==true||!Number.isInteger(result.ttlMs)||result.ttlMs<0||result.ttlMs>5000||(enabled?result.ttlMs===0:result.ttlMs!==0))throw fail('IDENTIFY_UNCONFIRMED');
       return {confirmed:true,ttlMs:result.ttlMs};
     },
-    async identifyCandidate({standId,mainReceiverId,receiverId,rid,action}){
+    async identifyCandidate({standId,mainReceiverId,receiverId,rid,action,signal}){
       const validID=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(value);
       if(!validID(standId)||!validID(mainReceiverId)||receiverId!=='receiver-'+rid||!validID(receiverId)||!/^[A-F0-9]{16}$/.test(rid)||!['START','STOP'].includes(action))throw fail('IDENTIFY_INVALID');
       await writeQueue.catch(()=>{});
       if(!viewLoaded)throw fail('VIEW_NOT_LOADED');
-      const result=await call('identifyCandidate',{standId,mainReceiverId,receiverId,rid,action});
+      const result=await call('identifyCandidate',{standId,mainReceiverId,receiverId,rid,action},signal);
       if(result?.confirmed!==true||!Number.isInteger(result.ttlMs)||result.ttlMs<0||result.ttlMs>5000||(action==='START'?result.ttlMs===0:result.ttlMs!==0))throw fail('IDENTIFY_UNCONFIRMED');
       return {confirmed:true,ttlMs:result.ttlMs};
     },
-    async identifyFactoryMain({standId,transactionId,receiverId,rid,type,action}){
+    async identifyFactoryMain({standId,transactionId,receiverId,rid,type,action,signal}){
       const validID=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(value);
       if(!validID(standId)||!validID(transactionId)||receiverId!=='receiver-'+rid||!validID(receiverId)||!/^[A-F0-9]{16}$/.test(rid)||!['RGBW','SPI'].includes(type)||!['START','STOP'].includes(action))throw fail('IDENTIFY_INVALID');
       await writeQueue.catch(()=>{});
       if(!viewLoaded)throw fail('VIEW_NOT_LOADED');
-      const result=await call('identifyFactoryMain',{standId,transactionId,receiverId,rid,type,action});
+      const result=await call('identifyFactoryMain',{standId,transactionId,receiverId,rid,type,action},signal);
       if(result?.confirmed!==true||!Number.isInteger(result.ttlMs)||result.ttlMs<0||result.ttlMs>5000||(action==='START'?result.ttlMs===0:result.ttlMs!==0))throw fail('IDENTIFY_UNCONFIRMED');
       return {confirmed:true,ttlMs:result.ttlMs};
     },
