@@ -249,10 +249,15 @@
   function selectionIds(model, zoneId, selection) {
     requireZone(model, zoneId);
     var receivers = zoneReceivers(model, zoneId);
-    if (!selection || (selection.kind !== 'all' && selection.kind !== 'receiver')) issue('SELECTION', 'Kies Samen of precies één receiver.');
+    if (!selection || !['all', 'receiver', 'receivers'].includes(selection.kind)) issue('SELECTION', 'Kies Alle ledlines of één of meer ledlines.');
     if (selection.kind === 'all') return receivers.map(function (r) { return r.id; });
-    if (!receivers.some(function (r) { return r.id === selection.receiverId; })) issue('TARGET_OUTSIDE_ZONE', 'Deze receiver hoort niet bij de actieve zone.');
-    return [selection.receiverId];
+    var requested = selection.kind === 'receiver' ? [selection.receiverId] : selection.receiverIds;
+    if (!Array.isArray(requested) || !requested.length || requested.some(function (id) { return typeof id !== 'string'; })) issue('SELECTION', 'Kies minstens één ledline.');
+    var unique = new Set(requested);
+    if (unique.size !== requested.length) issue('SELECTION', 'Een ledline mag maar één keer gekozen zijn.');
+    if (requested.some(function (id) { return !receivers.some(function (r) { return r.id === id; }); })) issue('TARGET_OUTSIDE_ZONE', 'Een gekozen ledline hoort niet bij de actieve zone.');
+    // Preserve configured zone order regardless of tap order.
+    return receivers.filter(function (receiver) { return unique.has(receiver.id); }).map(function (receiver) { return receiver.id; });
   }
   function resolveTargets(model, zoneId, selection) {
     assertValid(model);

@@ -111,7 +111,7 @@
     function load() {
       let raw;
       try {
-        if (!storage || typeof storage.getItem !== 'function') return storageError('STORAGE_UNAVAILABLE', 'Mijn kleuren kunnen hier niet lokaal worden bewaard.');
+        if (!storage || typeof storage.getItem !== 'function') return storageError('STORAGE_UNAVAILABLE', 'Je kleurpresets kunnen hier niet lokaal worden bewaard.');
         raw = storage.getItem(STORAGE_KEY);
       } catch (_) { return storageError('STORAGE_UNAVAILABLE', 'De lokale kleurenopslag is niet bereikbaar.'); }
       // Missing is not the same as intentionally empty. Never seed by writing.
@@ -128,7 +128,7 @@
     }
     function write(colors, previous) {
       try {
-        if (!storage || typeof storage.setItem !== 'function') return storageError('STORAGE_UNAVAILABLE', 'Mijn kleuren kunnen hier niet lokaal worden bewaard.', previous);
+        if (!storage || typeof storage.setItem !== 'function') return storageError('STORAGE_UNAVAILABLE', 'Je kleurpresets kunnen hier niet lokaal worden bewaard.', previous);
         const raw = JSON.stringify({version:1,colors});
         if (raw.length > MAX_BYTES) return storageError('STORAGE_FULL', 'De kleurenopslag is vol. Verwijder eerst een ongebruikte kleur.', previous);
         storage.setItem(STORAGE_KEY, raw);
@@ -159,7 +159,7 @@
       if (current.error) return current;
       if (!validId(id)) return storageError('ID', 'Kies de kleur die je wilt verplaatsen.', current.colors);
       if (!Number.isInteger(toIndex) || toIndex < 0 || toIndex >= current.colors.length) {
-        return storageError('MOVE_INDEX', 'Kies een bestaande positie in Mijn kleuren.', current.colors);
+        return storageError('MOVE_INDEX', 'Kies een bestaande positie in Kleurpresets.', current.colors);
       }
       const fromIndex = current.colors.findIndex(color=>color.id===id);
       // A colour removed in another view and an unchanged position need no write.

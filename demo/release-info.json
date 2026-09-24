@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v31-20260924-demo1",
+  "revision": "v31-20260925-ui1",
   "interfaceVersion": 31,
-  "interfaceBaseline": "V31 iPhone build 128 source; demo-only inventory and wifi example additions",
+  "interfaceBaseline": "V31 iPhone build 129 source; demo-only inventory and wifi example additions",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -16,11 +16,11 @@
   "assets": [
     {
       "path": "animation-engine.js",
-      "sha256": "abab745ce59b89904feda6e6d791c680057b50943fec9ae670612137be318201"
+      "sha256": "85805cc9b3548fc5800051edbdf37f5152113856223036d321fc31292a409af0"
     },
     {
       "path": "animation-library.css",
-      "sha256": "f6c9f8ada37ea55a5eda056876bfa6f18f1659c1232ac13117bed28b433beab4"
+      "sha256": "0675e2c9c5415e3e9b4e1acc5f2796951dacedd96a826336061bbf765ed6f0b0"
     },
     {
       "path": "animation-library.js",
@@ -32,7 +32,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "141c4efa482b4955194c38d7571974ed2353b7efec2db0e6486c5398512d922c"
+      "sha256": "8713fbcd7bcf3dee97c33d7962b2c0b724bb24d2b945113fa9252795bba38484"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -48,11 +48,11 @@
     },
     {
       "path": "colours-library.js",
-      "sha256": "b77b7cff5a05697e820e9d8778b853a376d9edbfdb0f8781e9d1fec12c7ef752"
+      "sha256": "7cd6eff981a6540a30f7c1d3bfdf328750d26c0e8837e51f1d8145c0f386a9f1"
     },
     {
       "path": "continuity.css",
-      "sha256": "6dd5d5c2a01ec89523c68f9cf9869b0f549ccd97f50d4bf0e873de89e4e89b63"
+      "sha256": "074d7f5779f7f36f1d7d4c8d964c58b04f6a739231fd9703a80a5e1c82f0e081"
     },
     {
       "path": "fixtures.js",
@@ -60,11 +60,11 @@
     },
     {
       "path": "index.html",
-      "sha256": "fad967b3480b9e4eaba6190a3b196d1b4713db0e5c47c53ef196ef94a708d337"
+      "sha256": "e254a6169381d91d0e2f37f2c4839166f55db920a750f98dc0eb4547fe466056"
     },
     {
       "path": "live-control.js",
-      "sha256": "d004b62a9b8240082243b98aa9a4f9eb9318fae1f3b8ef03b43149252073932d"
+      "sha256": "4204cf6afbc5096e2c563a4c1e1993e8bd009258a111721a342f85bfbbd321a3"
     },
     {
       "path": "migration.js",
@@ -72,7 +72,7 @@
     },
     {
       "path": "model.js",
-      "sha256": "a37572a24aa33b20a4a8214bdd9852afd3685679d403721d374ead6678ca1471"
+      "sha256": "32f974469fd3fcb7963de3af603cb55f3b138b2fa67c9b7d8c203c1a4f53a794"
     },
     {
       "path": "native-runtime.js",
@@ -108,15 +108,15 @@
     },
     {
       "path": "preferences.js",
-      "sha256": "33fa7d3c6ac91b5c3a7a052938e30356e04e8c229fb981ce77cc9657a461649d"
+      "sha256": "42928c64d7c22742387e580609bb77c26426fbec8bb9fa91d144c0559ee17aea"
     },
     {
       "path": "presets.js",
-      "sha256": "e7fbe4f4c8af323b14005a9852c52ede8ce40f1d5be02fd4fc490021d381bef9"
+      "sha256": "d4e512aa6c14705438a6238dd48eeff65ad56527adc9bb5aa44de2bd60ebdbb9"
     },
     {
       "path": "preview.js",
-      "sha256": "2542b422aec7692c2c3552f224cef9687dffc674fee1d011a6166a0662031528"
+      "sha256": "9eb753d8ae4ee06cef0a56e853e0212017fca8580f248dbccee2db8f7facd630"
     },
     {
       "path": "receiver-removal-ui.css",
@@ -156,7 +156,7 @@
     },
     {
       "path": "styles.css",
-      "sha256": "203a722b175cebdf974b4c2dacf4a1a25ef27267aceb9721cb5020d8155db8b4"
+      "sha256": "15c9845993bceb21701edbcb6120b9d3873d39138268507d3859ef297aef1856"
     },
     {
       "path": "vendor/v21_animation_catalog.js",

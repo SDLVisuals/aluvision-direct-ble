@@ -1,27 +1,68 @@
-/* Gallery presentation only; effect recipes and receiver controls are unchanged. */
+/* Animation library: show a clear group first, then reveal comparable variants in place. */
 .animation-family-section{display:grid;gap:12px;min-width:0}
 .animation-family-section+.animation-family-section{margin-top:24px}
-.animation-family-heading{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-.animation-family-heading h2{font-size:16px;letter-spacing:0;margin:0;color:var(--ink)}
-.animation-family-heading>small{font-size:11px;color:var(--muted);flex:none}
-.animation-family-grid{align-items:stretch}
-.animation-family-card{display:flex;flex-direction:column;gap:0;min-width:0;overflow:hidden}
-.animation-family-card canvas{flex:none}
-.animation-family-card .family-category{font-size:11px;line-height:1.4;color:var(--muted);padding:9px 4px 0}
-.animation-family-card .family-title{font-size:14px;line-height:1.3;padding:8px 4px 5px;overflow-wrap:anywhere}
-.animation-family-card .family-summary{font-size:11px;line-height:1.5;color:var(--muted);padding:0 4px 12px;flex:1}
-.animation-family-card .family-variants{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:0 4px 3px;padding:9px 0 0;border-top:1px solid var(--line);font-size:11px;font-weight:650;color:var(--ink)}
-.animation-family-card .family-variants .icon{width:15px;height:15px;flex:none}
-.animation-family-card:hover{border-color:var(--red)}
-.animation-family-card:focus-visible{outline:2px solid var(--red);outline-offset:3px}
+.animation-family-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.animation-family-heading>div{min-width:0}
+.animation-family-heading h2{font-size:16px;letter-spacing:-.2px;margin:0;color:var(--ink)}
+.animation-family-heading p{margin-top:4px;color:var(--muted);font-size:12px;line-height:1.45}
+.animation-family-heading>small{padding:4px 8px;border-radius:20px;background:var(--soft);font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.animation-family-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;min-width:0}
+.animation-family-card{min-width:0;overflow:hidden;border:1px solid var(--line);border-radius:18px;background:var(--panel);transition:border-color .16s ease,box-shadow .16s ease}
+.animation-family-card.is-expanded{border-color:#d69b97;box-shadow:0 0 0 2px #bf484117}
+.animation-family-trigger{display:grid;grid-template-columns:minmax(88px,24%) minmax(0,1fr);align-items:center;gap:13px;width:100%;min-height:112px;padding:10px;background:transparent;color:var(--ink);text-align:left}
+.animation-family-trigger:focus-visible{position:relative;z-index:1;outline-offset:-3px}
+.animation-family-preview{display:block;min-width:0;overflow:hidden;border-radius:12px;background:#101410}
+.animation-family-preview canvas{display:block;width:100%;height:76px;background:#101410}
+.family-copy{display:grid;gap:5px;min-width:0}
+.family-kicker{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.family-kicker-label{color:var(--red);font-size:9px;line-height:1.3;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+.family-count{flex:none;padding:3px 7px;border:1px solid var(--line);border-radius:20px;background:var(--bg);color:var(--muted);font-size:10px;line-height:1.25;font-weight:650;white-space:nowrap}
+.animation-family-card .family-title{display:block;padding:0;font-size:15px;line-height:1.3;overflow-wrap:anywhere}
+.animation-family-card .family-summary{display:block;padding:0;color:var(--muted);font-size:12px;line-height:1.45}
+.animation-family-card .family-variants{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:3px;color:var(--red);font-size:11px;line-height:1.4;font-weight:750}
+.animation-family-card .family-variants .icon{width:16px;height:16px;flex:none;transition:transform .18s ease}
+.animation-family-trigger[aria-expanded=true] .family-variants .icon{transform:rotate(90deg)}
+.family-variants-panel{margin:0 10px 10px;padding-top:11px;border-top:1px solid var(--line)}
+.family-variants-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:0 2px 9px}
+.family-variants-heading b{font-size:12px}
+.family-variants-heading small{font-size:10px;white-space:nowrap}
+.family-variant-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:8px}
+.family-variant-card{min-width:0;padding:7px;border-radius:13px;background:var(--bg);text-align:left;white-space:normal}
+.family-variant-card canvas{display:block;width:100%;height:66px;border-radius:9px;background:#101410}
+.family-variant-card b{display:block;padding:8px 3px 3px;font-size:11px;line-height:1.3;overflow-wrap:anywhere}
+.family-variant-card small{display:block;padding:0 3px 4px;color:var(--muted);font-size:11px;line-height:1.4}
+.family-variant-card[aria-pressed=true]{border-color:var(--red);box-shadow:0 0 0 1px var(--red)}
+.animation-category-note{padding:9px 11px;border-left:3px solid var(--red);border-radius:0 9px 9px 0;background:var(--soft);color:var(--muted);font-size:11px;line-height:1.5}
+.animation-requirement{display:grid;gap:9px}
+.animation-requirement h2{font-size:15px}
+.animation-requirement p{font-size:12px}
+.animation-requirement .button{justify-self:start;margin:0}
 .animation-search input{font-size:16px;font-weight:400}
+.library-filter-block .filter-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:0;padding:0;overflow:visible;scroll-snap-type:none}
+.library-filter-block .filter-row button{min-height:44px;padding:8px 6px;text-align:center;white-space:normal;line-height:1.2;scroll-snap-align:none}
+.library-filter-heading small{color:var(--muted)}
 .animation-start{gap:16px}
 .animation-starter-grid{align-items:stretch}
 .animation-starter-card{text-align:left;min-width:0}
 .animation-starter-card b{font-size:15px;line-height:1.35}
 .animation-starter-card small{font-size:12px;line-height:1.5}
 .animation-start>.button{margin:0}
-@media(max-height:700px){.animation-start{gap:12px}.animation-start>.topline{margin-bottom:0}.animation-start .page-heading h1{font-size:24px}.animation-start .animation-starter-card canvas{height:64px}}
-.filter-row[aria-label="Effectbibliotheek"] button{min-height:44px}
-#animation-results .effect-card small{font-size:11px;line-height:1.5}
-@media(max-width:360px){.animation-family-grid{gap:10px}.animation-family-card{padding:7px;border-radius:15px}.animation-family-card canvas{height:78px}.animation-family-card .family-title{font-size:13px}}
+body[data-theme=dark] .animation-family-heading>small{background:var(--soft);color:var(--ink)}
+body[data-theme=dark] .family-count{background:var(--soft)}
+@media(max-width:360px){
+  .animation-family-grid{gap:9px}
+  .animation-family-trigger{grid-template-columns:84px minmax(0,1fr);gap:10px;padding:9px;min-height:102px}
+  .animation-family-preview canvas{height:68px}
+  .animation-family-card .family-title{font-size:14px}
+  .animation-family-card .family-summary{font-size:11px}
+  .family-variants-panel{margin:0 8px 8px;padding-top:9px}
+  .family-variant-grid{gap:7px}
+  .family-variant-card{padding:6px}
+  .family-variant-card canvas{height:58px}
+  .family-variant-card b{font-size:10px}
+  .animation-start{gap:12px}
+  .animation-start>.topline{margin-bottom:0}
+  .animation-start .page-heading h1{font-size:24px}
+  .animation-start .animation-starter-card canvas{height:64px}
+}
+@media(prefers-reduced-motion:reduce){.animation-family-card,.animation-family-card .family-variants .icon{transition:none}}

@@ -33,3 +33,26 @@ dialog{width:min(520px,calc(100% - 24px));max-height:85dvh;padding:24px;border:1
 @media(max-width:360px){main{padding-inline:12px}.colour-tools{grid-template-columns:130px 1fr;gap:8px}.quick-colours{gap:4px}.quick-colours button{width:28px;height:28px;min-width:28px}.current-effect{gap:8px;padding:10px}.effect-thumb{width:44px}.current-effect b{font-size:13px}.current-effect .button{max-width:87px}.receiver-chips button{font-size:10px;padding:8px}.channel-row{grid-template-columns:15px 30px 1fr 30px 22px;gap:3px}.page-heading{gap:8px}.output-row{gap:5px;grid-template-columns:30px 1fr auto}.output-row select{max-width:77px}.output-row input[type=number]{width:57px}.port-config{gap:4px!important}.brand-bar{height:52px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 @media(max-height:700px){.control-context .page-heading p{display:none}.control-context h1{font-size:21px}.control-context .page-heading{margin-bottom:7px}.control-context .back{min-height:31px}.control-context .section-tabs button{min-height:33px;padding:6px 10px;font-size:12px}.control-context .section-tabs{padding:3px}.control-context .preview-wrap{margin-top:8px!important;padding-top:7px;border-radius:13px}.control-context .preview-wrap canvas{height:62px}.control-context .preview-top{font-size:8px}.control-context .selection{padding-top:6px}.control-context .receiver-chips button{min-height:35px;padding:6px 8px}.control-context .receiver-chips{padding-bottom:3px}.control-context .selection h2{font-size:11px}.mixed-note{font-size:10px}}
+/* Clear, numbered scope cards replace the hard-to-scan horizontal receiver chips. */
+.selection .receiver-scope-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;overflow:visible;padding:3px 1px 7px;scroll-padding:0}
+.selection-summary{max-width:54%;overflow-wrap:anywhere}
+.selection .receiver-scope-grid>button{position:relative;display:flex;justify-content:flex-start;align-items:center;gap:9px;width:100%;min-width:0;min-height:60px;padding:9px 10px;border-radius:13px;white-space:normal;flex-shrink:1;text-align:left}
+.selection .receiver-scope-grid>button .icon{width:18px;height:18px;flex:none}
+.selection .receiver-scope-grid .selection-together{grid-column:1/-1;min-height:62px;padding:10px 13px;background:#fff;border-color:#d8d8d2}
+.selection .receiver-scope-grid .selection-together[aria-pressed=true]{background:#202520;border-color:#202520;color:white;box-shadow:inset 3px 0 0 var(--red)}
+.selection .scope-copy{display:grid;gap:3px;min-width:0;flex:1}
+.selection .scope-option-title{display:block;min-width:0;max-width:100%;white-space:normal;word-break:break-word;font-size:12px;line-height:1.25;font-weight:750;overflow-wrap:anywhere}
+.selection .scope-copy small{font-size:10px;line-height:1.25;color:var(--muted);font-weight:550}
+.selection .selection-together[aria-pressed=true] .scope-copy small{color:#d4d8d3}
+.selection .scope-number{display:grid;place-items:center;width:27px;height:27px;border-radius:9px;flex:none;background:#efefeb;color:#5f625d;font-size:10px;font-weight:800}
+.selection .scope-line[aria-pressed=true]{background:#fff5f4;border-color:var(--red);box-shadow:0 0 0 1px #bf484133;color:var(--ink)}
+.selection .scope-line[aria-pressed=true] .scope-number{background:var(--red);color:white}
+.selection .scope-selected-mark{display:grid;place-items:center;width:19px;height:19px;flex:none;border-radius:50%;background:var(--red);color:white;opacity:0;transform:scale(.8);transition:opacity .15s,transform .15s}
+.selection .scope-selected-mark .icon{width:12px;height:12px;stroke-width:2.4}
+.selection .receiver-scope-grid button[aria-pressed=true] .scope-selected-mark{opacity:1;transform:scale(1)}
+.selection .scope-choice-label{grid-column:1/-1;display:flex;align-items:center;gap:9px;padding:2px 1px 0;color:var(--muted);font-size:10px;font-weight:650}
+.selection .scope-choice-label:after{content:"";height:1px;flex:1;background:var(--line)}
+.selection .receiver-scope-grid>button.scope-line:last-of-type:nth-child(odd){grid-column:1/-1;width:calc(50% - 4px);justify-self:center}
+@media(max-width:360px){.selection .receiver-scope-grid{gap:7px}.selection .receiver-scope-grid>button{gap:7px;padding:8px}.selection .scope-number{width:24px;height:24px}.selection .scope-option-title{font-size:11px}.selection .scope-copy small{font-size:9px}}
+@media(max-height:700px){.control-context .selection .receiver-scope-grid>button{min-height:54px;padding:7px 8px}.control-context .selection .receiver-scope-grid .selection-together{min-height:56px}.control-context .selection .scope-choice-label{font-size:9px}}
+@media(max-width:700px){.control-context.many-receivers{position:static}}

@@ -502,7 +502,8 @@ function usesCyclePhaseSteps(state) {
   function categoryFor(receiver) { return descriptorFor(receiver)?.category; }
   function selected(receiver, selection) {
     return !selection || selection.kind === 'all' ||
-      (selection.kind === 'receiver' && selection.receiverId === receiver.id);
+      (selection.kind === 'receiver' && selection.receiverId === receiver.id) ||
+      (selection.kind === 'receivers' && Array.isArray(selection.receiverIds) && selection.receiverIds.includes(receiver.id));
   }
   function geometry(receivers, layout = 'stacked') {
     if (!Array.isArray(receivers)) throw new Error('Receivers must be an array');
@@ -655,7 +656,7 @@ function usesCyclePhaseSteps(state) {
         }
         return { receiverId: receiver.id, name: receiver.name || 'Receiver', type: receiver.type,
           category: categoryFor(receiver), selected: selected(receiver, options.selection),
-          individuallySelected: options.selection?.kind === 'receiver' && selected(receiver, options.selection),
+          individuallySelected: (options.selection?.kind === 'receiver' || options.selection?.kind === 'receivers') && selected(receiver, options.selection),
           offline: receiver.connection === 'offline', pixels, outputs, identifying, identificationPixels };
       })
     };
@@ -700,6 +701,8 @@ function usesCyclePhaseSteps(state) {
     if (canvas.dataset) {
       canvas.dataset.highlightedReceiverIds = frame.highlightedReceiverIds.join(',');
       canvas.dataset.identifyingReceiverIds = frame.identifyingReceiverIds.join(',');
+      canvas.dataset.renderedLineCount = String(frame.rows.length);
+      canvas.dataset.lineHitRegions = '[]';
     }
     const context = canvas.getContext('2d');
     if (!context) return frame;
@@ -722,16 +725,22 @@ function usesCyclePhaseSteps(state) {
     const continuous = options.layout === 'continuous' && !byReceiver && frame.rows.every(row => row.type === 'SPI');
     const padding = Math.min(18, width / 8);
     const maxRowPixels = Math.max(1, ...frame.rows.filter(row => row.type === 'SPI').map(row => row.pixels.length));
+    const hitRegions = [];
     context.font = '11px system-ui'; context.textBaseline = 'middle';
     frame.rows.forEach((row, index) => {
       const lane = vertical ? (width - padding * 2) / frame.rows.length : Math.max(1, height - 16) / frame.rows.length;
       const barHeight = continuous ? Math.min(12, height / 4) : Math.max(0.5, Math.min(12, lane * 0.4));
-      const showLabel = continuous ? false : vertical ? lane >= 48 : lane >= 30;
+      const showLabel = continuous ? false : vertical ? lane >= 48 : lane >= 30 || row.individuallySelected && lane >= 24;
       const continuousFraction = row.pixels.length / Math.max(1, frame.geometry.totalPixels);
       const continuousOffset = frame.geometry.receivers[index].offset / Math.max(1, frame.geometry.totalPixels);
       const x = continuous ? padding + (width - padding * 2) * continuousOffset : vertical ? padding + lane * index + lane / 2 - barHeight / 2 : padding;
       const y = continuous ? (height - barHeight) / 2 : vertical ? Math.min(showLabel ? 38 : 14, height / 3)
         : 8 + lane * index + (lane - barHeight) / 2 + (showLabel ? 4 : 0);
+      if (options.main === true && !continuous) hitRegions.push({receiverId:row.receiverId,
+        x:vertical?(padding + lane * index) / width:0,
+        y:vertical?0:(8 + lane * index) / height,
+        width:vertical?lane / width:1,
+        height:vertical?1:lane / height});
       const availableLength = Math.max(0.5, continuous ? (width - padding * 2) * continuousFraction
         : vertical ? height - y - Math.min(24, height / 4) : width - padding * 2);
       // One common physical pixel pitch for separate SPI rows. A 12-pixel
@@ -793,7 +802,7 @@ function usesCyclePhaseSteps(state) {
       // their spatial order; a continuous strip has no per-receiver captions.
       // Pixel totals are actual active-output counts, never RGBW's sample size.
       if (options.labels !== false && !continuous && showLabel) {
-        if (frame.rows.length > 1 || highlighted) context.fillText(String(index + 1) + (highlighted ? ' · Actief' : ''),
+        if (frame.rows.length > 1 || highlighted) context.fillText(String(options.lineNumbers?.[row.receiverId] || index + 1) + (highlighted ? ' · Actief' : ''),
           vertical ? x + barHeight / 2 : x, vertical ? 19 : y - 12,
           vertical ? lane - 5 : Math.max(10, bw));
         if (row.type === 'SPI') {
@@ -804,6 +813,7 @@ function usesCyclePhaseSteps(state) {
         }
       }
     });
+    if (canvas.dataset) canvas.dataset.lineHitRegions = JSON.stringify(hitRegions);
     return frame;
   }
   return Object.freeze({ catalog, geometry, sample, draw, rows, selected, normalizeState, opticalWhite,

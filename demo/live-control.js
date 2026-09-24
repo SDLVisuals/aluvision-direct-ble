@@ -51,7 +51,7 @@
       lineDelayMs:number(state.lineDelayMs,0,0,5000)};
     if(state.on===false||state.power===false)scene.backgroundOn=false;
     if(extension){
-      const brand=colour(state.brandColor||hex[0]||'#C94E46',0);
+      const brand=colour(state.v30Effect==='v30-brand-focus'?hex[0]||'#C94E46':state.brandColor||hex[0]||'#C94E46',0);
       scene.v30={effect:extensionId,fadeAmount:number(extensionId>=21?state.spacing:state.fadeAmount,90,0,100),
         width:number(state.width,65,0,100),delayMs:number(state.delayMs,300,0,10000),brand};
       if(Object.values(scene.v30).some(value=>value===null))return null;

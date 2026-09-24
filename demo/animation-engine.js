@@ -55,7 +55,7 @@
     };
     entry.state.rgbEnabled = entry.state.colors.map(() => true);
     entry.state.whiteEnabled = entry.state.colors.map((_, i) => (entry.state.whiteChannels[i] || 0) > 0);
-    if (entry.paletteEditable) entry.colorCountRange = { min: 1, max: Math.max(4, entry.state.colors.length) };
+    if (entry.paletteEditable) entry.colorCountRange = entry.colorCountRange || { min: 1, max: Math.max(4, entry.state.colors.length) };
     return entry;
   }
   const DEFINITIONS = [
@@ -97,7 +97,7 @@
     descriptor('brand-sweep', 'Zachte lichtgloed', 'brand', 'Een subtiele huisstijlgloed beweegt over een rustige witte basis.',
       { colors: [DEFAULT_BRAND], brandColor: DEFAULT_BRAND, speed: 23 }, { controls: ['speed', 'smooth', 'width', 'direction', 'brandColor'], directions: ['forward', 'reverse'] }),
     descriptor('brand-focus', 'Productfocus', 'brand', 'Een helder focuspunt trekt langzaam langs de receivers, met een zachte witte achtergrond.',
-      { colors: [DEFAULT_BRAND], brandColor: DEFAULT_BRAND, speed: 20 }, { controls: ['speed', 'smooth', 'width', 'brandColor'] }),
+      { colors: [DEFAULT_BRAND], brandColor: DEFAULT_BRAND, speed: 20 }, { controls: ['speed', 'smooth', 'width'], paletteEditable: true, colorCountRange: { min: 1, max: 7 } }),
     descriptor('brand-soft-gradient', 'Huisstijlverloop', 'brand', 'Een subtiel verloop tussen de huisstijlkleur en wit, zonder drukke kleurwissels.',
       { colors: [DEFAULT_BRAND], brandColor: DEFAULT_BRAND, speed: 23 }, { controls: ['speed', 'smooth', 'direction', 'brandColor'], directions: ['forward', 'reverse'] })
   ];
@@ -232,7 +232,11 @@
       const center = (1 - Math.cos(clock.phase * Math.PI * 2)) / 2;
       const width = 0.12 + clamp(state.width, 0, 100, 65) / 100 * 0.42;
       const focus = shaped(clamp(1 - Math.abs((index + 0.5) / count - center) / width, 0, 1), state);
-      return mix(brand, white, 0.65 + focus * 0.35).map(channel => channel * (0.52 + focus * 0.48));
+      const colors = palette(state, [state.brandColor || DEFAULT_BRAND]);
+      const palettePosition = center * Math.max(0, colors.length - 1);
+      const first = Math.floor(palettePosition), fraction = shaped(palettePosition - first, state);
+      const accent = mix(colors[first] || brand, colors[Math.min(first + 1, colors.length - 1)] || brand, fraction);
+      return mix(accent, white, 0.65 + focus * 0.35).map(channel => channel * (0.52 + focus * 0.48));
     }
     if (id === 'v30-brand-sweep') {
       const distance = Math.abs(mod(position - direction * clock.phase + 0.5, 1) - 0.5);
