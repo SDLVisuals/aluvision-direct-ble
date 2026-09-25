@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v31-20260925-animation-gallery-13",
+  "revision": "v31-20260925-preview-sizes-14",
   "interfaceVersion": 31,
-  "interfaceBaseline": "V31 iPhone build 141 source; clearer grouped animation gallery with visible motion-pattern previews; dedicated Brand animaties with six selectable accent tones and 21 curated existing SPI exhibition recipes; perspective tunnel previews; shared colour wheel for editable Brand colours; all original wire recipes preserved; bulk-select and atomically assign compatible ledlines to a zone; rounded shared modal headings; colour-first whole-stand sheet with one button to the full scenes gallery; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search; SPI endpoint guidance",
+  "interfaceBaseline": "V31 iPhone build 141 source; clearer grouped animation gallery with visible motion-pattern previews; dedicated Brand animaties with six selectable accent tones and 21 curated existing SPI exhibition recipes; perspective tunnel previews; shared colour wheel for editable Brand colours; all original wire recipes preserved; bulk-select and atomically assign compatible ledlines to a zone; rounded shared modal headings; colour-first whole-stand sheet with one button to the full scenes gallery; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search; SPI endpoint guidance; user-selectable compact, medium and large LED previews",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -10,6 +10,12 @@
   },
   "wifi": "nonfunctional example only",
   "storage": "in-memory; cleared on page reload",
+  "previewSizes": [
+    "small",
+    "medium",
+    "large"
+  ],
+  "previewSizeControl": "Sticky LED overview; display-only; no receiver commands",
   "hardwareAccess": false,
   "nativeAppModified": false,
   "firmwarePublished": false,
@@ -32,7 +38,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "18e740d504d8e90bb28198fb42ae37ecb90eb2e9f33abd450f17d3c9cf79a584"
+      "sha256": "8747736ed7d83e22aed245190a2f9e1130bd809557d0be89acfdafd0d5e67ac4"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -52,7 +58,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "399c1d75f9ec5d181d22ad81ddb9015204df23ae1d169aeb6b256241c2967042"
+      "sha256": "c736643561e8277c496780b7df8f4f586614524dd075ad5b43c91c4772855b97"
     },
     {
       "path": "fixtures.js",
@@ -60,7 +66,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "5cdd869f735438edb120e679f495662af106e94fb51ae1a39ed1a2348322a733"
+      "sha256": "310035fb0760607d3485913a5f77aab4379167757a5ad271b1b8fcb62f6122d7"
     },
     {
       "path": "live-control.js",

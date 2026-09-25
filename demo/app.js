@@ -53,7 +53,7 @@
   // Everyday controls share one zone screen. Keep the light mode local to
   // that screen so changing between colour and movement never sends users
   // through an intermediate page or clears their selected ledline.
-  let controlMode='colour',showControlAnimationGallery=true;
+  let controlMode='colour',showControlAnimationGallery=true,controlPreviewSize='small';
   let pinProtection=null,pinProtectionLoading=false,pinProtectionBusy=false,pinProtectionError='',pinProtectionReconnect=null;
   const liveStates=new Map();
   const liveController=nativeContext&&runtime?.native===true&&typeof runtime.services?.applyLive==='function'
@@ -296,6 +296,9 @@
     </section>`;
   }
   function zoneTypeLabel(z) { return z.type==='SPI'?'Pixel LED · SPI':z.type==='RGBW'?'RGBW':'Nog geen verlichting'; }
+  function previewSizePickerMarkup(){
+    return `<div class="preview-size-row"><span>Voorbeeld</span><div class="preview-size-picker" role="group" aria-label="Grootte van het ledlinevoorbeeld">${[['small','Klein'],['medium','Groter'],['large','Heel groot']].map(([size,title])=>`<button type="button" data-action="preview-size" data-id="${size}" aria-label="${title} voorbeeld" aria-pressed="${controlPreviewSize===size}">${title}</button>`).join('')}</div></div>`;
+  }
   function zoneDeleteButton(z,css=''){return `<button type="button" class="zone-delete-shortcut ${css}" data-action="zone-delete" data-id="${esc(z.id)}" aria-label="Zone ${esc(z.name)} verwijderen">${icon('trash')}<span>Zone verwijderen</span></button>`;}
   function renderEmptyZone() {
     const z=zone();
@@ -849,6 +852,8 @@
     const views = {stand:renderStand,controls:renderControls,colour:renderColour,animations:renderAnimations,effects:renderEffects,layout:renderLayout,receivers:renderReceivers,settings:renderSettings,'demo-wifi':renderDemoWifi,'pin-login':renderPinLogin,scenes:renderScenes,'scene-draft':renderSceneDraft,'scene-detail':renderSceneDetail,'receiver-add':renderReceiverAdd};
     const zoneScreen=['controls','colour','animations','effects','layout'].includes(route.screen);
     main.innerHTML = (zoneScreen&&zone()&&!receivers().length?renderEmptyZone:(views[route.screen] || renderStand))();
+    const previewDock=main.querySelector('.control-preview-dock');
+    if(previewDock){previewDock.dataset.previewSize=controlPreviewSize;previewDock.querySelector('.preview-top')?.insertAdjacentHTML('afterend',previewSizePickerMarkup());}
     main.classList.toggle('gallery-scroll-stable',Boolean(main.querySelector('#animation-results')));
     if(route.screen==='scene-detail')main.querySelector('.scene-activate-bar')?.insertAdjacentHTML('afterbegin','<p class="live-confirmation" data-live-status="scene" role="status" aria-live="polite"></p>');
     if(route.screen==='settings')main.querySelector('.page-heading')?.insertAdjacentHTML('afterend',pinProtectionCard());
@@ -913,7 +918,7 @@
       }
     }
     contextObserver?.disconnect();
-    const context=main.querySelector('.control-context'),previewDock=main.querySelector('.control-preview-dock');
+    const context=main.querySelector('.control-context');
     if(context)context.dataset.page=route.screen;
     const measureContext=()=>document.documentElement.style.setProperty('--sticky-height',previewDock&&getComputedStyle(previewDock).position==='sticky'?`${Math.ceil(previewDock.getBoundingClientRect().height)}px`:'0px');
     measureContext();
@@ -1563,6 +1568,10 @@
     if(managementBusy||pinProtectionBusy)return;
     const action=button.dataset.action,id=button.dataset.id;
     try {
+      if(action==='preview-size'){
+        if(!['small','medium','large'].includes(id)||controlPreviewSize===id)return;
+        controlPreviewSize=id;return render({preserveScroll:true});
+      }
       if(action==='nav')return navigate(id);
       if(action==='demo-settings-tab'&&webDemoContext)return navigate(id==='wifi'?'demo-wifi':'settings');
       if(action==='pin-protection-toggle')return openPinProtection();
