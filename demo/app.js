@@ -408,8 +408,8 @@
       ['objectCount','Aantal lichtpunten',1,8,s.objectCount??1,'',''],
       ['trailLength','Staart',0,100,s.trailLength??12,'%',''],
       ['spacing','Afstand',0,100,s.spacing??30,'%',''],
-      ['lineDelayMs','Pauze tussen ledlines',0,5000,s.lineDelayMs??160,' ms','Een langere pauze laat de volgende ledline later beginnen.'],
-      ['delayMs','Pauze tussen ledlines',0,10000,s.delayMs??300,' ms','Een langere pauze laat de volgende ledline later beginnen.'],
+      ['lineDelayMs','Startverschil tussen ledlines',0,5000,s.lineDelayMs??160,' ms','Bepaalt hoeveel later elke volgende ledline begint.'],
+      ['delayMs','Minimale tijd tussen ledlines',0,10000,s.delayMs??300,' ms','Bepaalt hoe lang het licht minimaal wacht voor de volgende ledline.'],
       ['fadeAmount','Zacht aan en uit',0,100,s.fadeAmount??90,'%',''],
       ['width','Breedte van het licht',0,100,s.width??65,'%',''],
       ['spread','Spreiding',0,100,s.spread??30,'%',''],
@@ -417,9 +417,11 @@
     ];
     const directionLabels=zone().layout==='vertical'?['→ Naar rechts','← Naar links']:effect.category==='tunnel'?['↓ Volgorde 1 → 2','↑ Volgorde 2 → 1']:['→ Vooruit','← Achteruit'];
     const directionMap={right:directionLabels[0],left:directionLabels[1],forward:directionLabels[0],reverse:directionLabels[1],bounce:'↔ Heen en weer','center-out':'← · → Vanuit het midden','outside-in':'→ · ← Naar het midden'};
-    const controls=specs.filter(spec=>available.includes(spec[0]));
+    // A line-to-line delay cannot change a single selected line. Keep the
+    // saved setting intact, but don't offer an inactive control in that scope.
+    const controls=specs.filter(spec=>available.includes(spec[0])&&!(spec[0]==='lineDelayMs'&&selected().length<2));
     if(!controls.length&&!['direction','bounce','mirror'].some(key=>available.includes(key)))return '';
-    return `<button class="settings-toggle" data-action="settings-toggle" aria-expanded="${settingsOpen}" aria-controls="animation-settings">${icon('sliders')}<span>Meer instellingen</span>${icon(settingsOpen?'close':'chevron')}</button><section id="animation-settings" class="card settings-panel" ${settingsOpen?'':'hidden'}>${controls.map(spec=>`<div class="visual-setting">${animationSlider(...spec)}${resetMarkup(spec[0],spec[1])}</div>`).join('')}${available.includes('direction') ? `<div><p class="setting-hint">Bewegingsrichting</p><div class="compact-direction" aria-label="Bewegingsrichting">${(effect.directions||['right','left']).map(value=>`<button data-action="direction" data-value="${value}" aria-pressed="${(s.direction||effect.state.direction)===value}">${esc(directionMap[value]||value)}</button>`).join('')}</div></div>`:''}</section>`;
+    return `<button class="settings-toggle" data-action="settings-toggle" aria-expanded="${settingsOpen}" aria-controls="animation-settings">${icon('sliders')}<span>${settingsOpen?'Instellingen verbergen':'Beweging instellen'}</span>${icon(settingsOpen?'close':'chevron')}</button><section id="animation-settings" class="card settings-panel" ${settingsOpen?'':'hidden'}>${controls.map(spec=>`<div class="visual-setting">${animationSlider(...spec)}${resetMarkup(spec[0],spec[1])}</div>`).join('')}${available.includes('direction') ? `<div><p class="setting-hint">Bewegingsrichting</p><div class="compact-direction" aria-label="Bewegingsrichting">${(effect.directions||['right','left']).map(value=>`<button data-action="direction" data-value="${value}" aria-pressed="${(s.direction||effect.state.direction)===value}">${esc(directionMap[value]||value)}</button>`).join('')}</div></div>`:''}</section>`;
   }
   function animationSettingValue(key,value,unit='') { return ['delayMs','lineDelayMs'].includes(key)?`${Number((Number(value)/1000).toFixed(3)).toLocaleString('nl-BE',{maximumFractionDigits:3})} s`:Math.round(value)+unit; }
   function animationSlider(key,label,min,max,value,unit='',hint='') {
@@ -1865,7 +1867,7 @@
         const value=settingDefault(id);if(value===undefined)return;
         apply({[id]:value});const input=document.querySelector(`[data-setting="${CSS.escape(id)}"]`);if(input){input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}));}else render();return;
       }
-      if(action==='settings-toggle'){settingsOpen=!settingsOpen;button.setAttribute('aria-expanded',settingsOpen);button.lastElementChild.outerHTML=icon(settingsOpen?'close':'chevron');document.getElementById('animation-settings').hidden=!settingsOpen;return;}
+      if(action==='settings-toggle'){settingsOpen=!settingsOpen;button.setAttribute('aria-expanded',settingsOpen);button.querySelector('span').textContent=settingsOpen?'Instellingen verbergen':'Beweging instellen';button.lastElementChild.outerHTML=icon(settingsOpen?'close':'chevron');document.getElementById('animation-settings').hidden=!settingsOpen;return;}
       if(action==='direction'){apply({direction:button.dataset.value});document.querySelectorAll('[data-action="direction"]').forEach(el=>el.setAttribute('aria-pressed',el===button));syncSettingResets();return;}
       if(action==='effect-boolean'){if(!['bounce','mirror'].includes(id)||!activeEffect()?.controls.includes(id))return;const value=!selectedState()[id];apply({[id]:value});button.setAttribute('aria-pressed',value);button.querySelector('b').textContent=value?'Aan':'Uit';syncSettingResets();return;}
       if(action==='set-layout'){
