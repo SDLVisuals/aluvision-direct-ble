@@ -238,7 +238,7 @@ dialog{overscroll-behavior:contain}
 .control-dock-location b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.25}
 .control-dock-mode{justify-self:end;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--muted);font-size:10px;font-weight:750;white-space:nowrap}
 .control-preview-dock .control-mode-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;min-width:0;padding:3px;gap:3px;border-radius:15px}
-.control-preview-dock .control-mode-tabs button{min-width:0;min-height:50px;padding:7px 5px;gap:5px;font-size:13px;font-weight:700;white-space:nowrap}
+.control-preview-dock .control-mode-tabs button{min-width:0;min-height:52px;padding:7px 5px;gap:5px;font-size:13px;font-weight:700;white-space:nowrap}
 .control-preview-dock .control-mode-tabs button[aria-pressed=true]{background:var(--ink);color:#fff;box-shadow:inset 0 -2px var(--red)}
 .control-preview-dock .control-mode-tabs button .icon{width:20px;height:20px}
 .control-preview-dock .preview-wrap{margin:0!important;border-radius:15px;padding:8px 9px 3px}
@@ -263,25 +263,39 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
   .control-dock-actions{grid-template-columns:72px minmax(0,1fr);gap:6px}
   .control-dock-back{min-width:0;padding-inline:7px!important;gap:4px!important;font-size:12px!important}
   .control-dock-back svg{width:17px!important;height:17px!important}
-  .control-preview-dock .control-mode-tabs button{min-height:50px;padding-inline:4px;font-size:12px;gap:4px}
+  .control-preview-dock .control-mode-tabs button{min-height:52px;padding-inline:4px;font-size:12px;gap:4px}
   .control-preview-dock .control-mode-tabs button .icon{width:18px;height:18px}
   .control-preview-dock .preview-top{font-size:9px;gap:8px}
 }
 @media(max-width:360px){
   .control-dock-actions{grid-template-columns:74px minmax(0,1fr);gap:5px}
   .control-dock-back{padding-inline:6px!important;font-size:11px!important}
-  .control-preview-dock .control-mode-tabs button{min-height:48px;font-size:11px;gap:3px;padding-inline:3px}
-  .control-preview-dock .control-mode-tabs button .icon{width:17px;height:17px}
+  .control-preview-dock .control-mode-tabs button{min-height:52px;font-size:12px;gap:3px;padding-inline:3px}
+  .control-preview-dock .control-mode-tabs button .icon{width:18px;height:18px}
   .control-preview-dock .preview-top{font-size:8px}
   .control-preview-dock .preview-wrap canvas{height:62px}
 }
 @media(max-height:700px){
   .control-preview-dock .preview-wrap{padding-top:6px}
   .control-preview-dock .preview-wrap canvas{height:56px}
-  .control-preview-dock .control-mode-tabs button,.control-dock-back{min-height:48px!important}
+  .control-preview-dock .control-mode-tabs button{min-height:52px!important;font-size:12px!important}
+  .control-dock-back{min-height:48px!important}
   .control-context .page-heading p{display:none}
 }
 @media(prefers-reduced-motion:reduce){.control-preview-dock .preview-wrap canvas{transition:none}}
+/* While scrolling, retain the all-ledline overview and its mode/back controls
+   but release vertical room so gallery and setup choices underneath remain
+   visible and receive taps instead of being covered by the sticky preview. */
+.control-preview-dock[data-scrolled=true]{min-height:var(--control-preview-expanded-height);padding-top:4px;padding-bottom:4px;margin-bottom:7px;background:transparent;box-shadow:none;pointer-events:none}
+.control-preview-dock[data-scrolled=true] :is(.control-dock-context-line,.control-dock-actions,.preview-wrap){pointer-events:auto}
+.control-preview-dock[data-scrolled=true] .control-dock-context-line{margin-bottom:3px}
+.control-preview-dock[data-scrolled=true] .control-dock-actions{margin-bottom:3px}
+.control-preview-dock[data-scrolled=true] .preview-size-row,
+.control-preview-dock[data-scrolled=true] .preview-live-controls,
+.control-preview-dock[data-scrolled=true] .live-confirmation{display:none!important}
+.control-preview-dock[data-scrolled=true] .preview-wrap{padding:4px 8px 2px;border-radius:12px}
+.control-preview-dock[data-scrolled=true] .preview-top{min-height:12px;font-size:8px}
+.control-preview-dock[data-scrolled=true] .preview-wrap canvas{height:24px!important;transition:none}
 /* Let customers choose how prominently to see their ledlines without leaving
    the sticky overview. The selector stays compact even on narrow phones. */
 .preview-size-row{display:grid;grid-template-columns:48px minmax(0,1fr);align-items:center;gap:7px;padding:5px 1px 4px}

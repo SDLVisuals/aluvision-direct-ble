@@ -67,6 +67,20 @@
   let dialogReturnFocus = null,colourManagerReturn=null;
   let settingsOpen = false, toastTimer, contextObserver, dialogHeaderObserver;
   const main = document.getElementById('main');
+  function updateControlPreviewDensity(){
+    const dock=main.querySelector('.control-preview-dock');
+    if(!dock)return;
+    if(window.scrollY>48){
+      if(!dock.dataset.scrolled){
+        dock.style.setProperty('--control-preview-expanded-height',`${Math.ceil(dock.getBoundingClientRect().height)}px`);
+        dock.dataset.scrolled='true';
+      }
+    }else{
+      delete dock.dataset.scrolled;
+      dock.style.removeProperty('--control-preview-expanded-height');
+    }
+  }
+  window.addEventListener('scroll',updateControlPreviewDensity,{passive:true});
   document.getElementById('effect-dialog').addEventListener('cancel',event=>{if(colourManagerReturn){event.preventDefault();closeColourManager();}});
   if(webDemoContext){
     document.getElementById('web-demo-banner').hidden=false;
@@ -978,9 +992,10 @@
       if(item.left<bounds.left+4)row.scrollLeft-=bounds.left+4-item.left;
       else if(item.right>bounds.right-4)row.scrollLeft+=item.right-bounds.right+4;
     });
-    if(top){window.scrollTo({top:0,left:0,behavior:'instant'});main.focus({preventScroll:true});}
+    if(top){window.scrollTo({top:0,left:0,behavior:'instant'});updateControlPreviewDensity();main.focus({preventScroll:true});}
     else {
       if(preserveScroll)window.scrollTo({top:savedScroll,left:0,behavior:'instant'});
+      updateControlPreviewDensity();
       if(!restoreControlFocus(focused)&&focusKey)document.querySelector(`[data-order-receiver="${CSS.escape(focusKey)}"] .order-handle`)?.focus({preventScroll:true});
     }
   }
