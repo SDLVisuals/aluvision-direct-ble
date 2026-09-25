@@ -1,5 +1,6 @@
 /* Animation library: show a clear group first, then reveal comparable variants in place. */
 .animation-family-section{display:grid;gap:12px;min-width:0}
+.animation-preview-note{margin:-5px 1px 0;color:var(--muted);font-size:11px;line-height:1.45}
 /* The gallery expands in place inside the document scroller. Disable browser
    scroll anchoring here; app.js preserves the opened group at its same viewport
    position so new variants never nudge the customer away. */

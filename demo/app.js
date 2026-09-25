@@ -457,10 +457,15 @@
     // Gallery cards explain the motion on one representative line, not by
     // duplicating the animation across the customer's whole installation.
     // This sample never enters the model or changes ports/pixels/targets.
+    // Older stored effects default to very slow cycles (up to ~100 seconds),
+    // which makes distinct animations look frozen and alike while browsing.
+    // Accelerate only these disposable gallery samples; the selected effect,
+    // its settings and the main installation preview keep their real speed.
+    const previewState={...effectState(effect),speed:Math.max(effect.category==='brand'?58:75,Number(effect.state.speed)||0)};
     const sampleType=zone().type||'RGBW',oneLine=effect.category!=='tunnel';
     const list=oneLine?[{id:'library-sample-strip',type:sampleType,name:'LED-voorbeeld',
-      outputs:sampleType==='SPI'?[{port:1,enabled:true,pixels:32,reversed:false}]:[],state:effectState(effect)}]
-      :receivers().map(r=>({...r,state:effectState(effect)}));
+      outputs:sampleType==='SPI'?[{port:1,enabled:true,pixels:32,reversed:false}]:[],state:previewState}]
+      :receivers().map(r=>({...r,state:previewState}));
     // Tunnel effects remain the only gallery examples that show several lines.
     const layout=oneLine?'stacked':zone().layout;
     return addPreview(list,layout,'',{label:Library.displayName(effect),effectId:effect.id,brand:effect.category==='brand',labels:!oneLine});
@@ -571,7 +576,8 @@
     const results=tab==='presets'?renderPresets():tunnelUnavailable?'':tab==='catalogue'?animationCategorySections(items,active?.key):animationCategoryFamilyList(items,tab,active?.key);
     // The tunnel guide already explains its requirements and provides the one
     // relevant action. Do not duplicate that status and CTA in a second card.
-    return `<section class="animation-library-inline" aria-label="Animatiegalerij">${intro}<div class="library-filter-block"><div class="library-filter-heading"><b>Soort animatie</b><small>Kies een groep om de varianten te bekijken</small></div><div class="filter-row" role="tablist" aria-label="Animatiecategorie">${tabs.map(key=>`<button role="tab" data-action="library" data-id="${key}" aria-selected="${tab===key}"><span>${libraryTabLabel(key)}</span><small aria-label="${counts[key]||0} animaties">${counts[key]||0}</small></button>`).join('')}</div></div>${tab!=='presets'&&!tunnelUnavailable?'<label class="animation-search"><span>Zoek in animaties</span><input type="search" id="animation-search" placeholder="Zoek een groep of beweging" autocomplete="off"></label>':''}<div id="animation-results">${results}</div></section>`;
+    const previewNote=tab==='presets'?'':'<p class="animation-preview-note">Voorbeelden bewegen versneld zodat je ze goed kunt vergelijken. Je verlichting verandert pas als je kiest.</p>';
+    return `<section class="animation-library-inline" aria-label="Animatiegalerij">${intro}${previewNote}<div class="library-filter-block"><div class="library-filter-heading"><b>Soort animatie</b><small>Kies een groep om de varianten te bekijken</small></div><div class="filter-row" role="tablist" aria-label="Animatiecategorie">${tabs.map(key=>`<button role="tab" data-action="library" data-id="${key}" aria-selected="${tab===key}"><span>${libraryTabLabel(key)}</span><small aria-label="${counts[key]||0} animaties">${counts[key]||0}</small></button>`).join('')}</div></div>${tab!=='presets'&&!tunnelUnavailable?'<label class="animation-search"><span>Zoek in animaties</span><input type="search" id="animation-search" placeholder="Zoek een groep of beweging" autocomplete="off"></label>':''}<div id="animation-results">${results}</div></section>`;
   }
   function spiLayoutPreview(layout) {
     // These small teaching examples are separate from the installation. They
