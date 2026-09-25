@@ -1,0 +1,500 @@
+/* V31 visual finish: soft, milky surfaces with a quiet Aluvision red accent.
+   Keep every lighting preview dark and every control high-contrast. */
+:root {
+  --bg: #f5f4f2;
+  --panel: #fff;
+  --ink: #202220;
+  --muted: #696d67;
+  --line: #deded9;
+  --red: #bf4841;
+  --soft: #eeede9;
+  --glass: rgba(255, 255, 255, .48);
+  --glass-edge: rgba(255, 255, 255, .96);
+  --surface-shadow: 0 10px 28px rgba(25, 30, 25, .065);
+  --surface-highlight: inset 0 1px rgba(255, 255, 255, .98), inset 0 0 0 1px rgba(255, 255, 255, .28);
+}
+
+body:not([data-theme="dark"]) {
+  background:
+    radial-gradient(95% 27rem at 2% -8%, rgba(255, 255, 255, .98), transparent 75%),
+    radial-gradient(80% 27rem at 104% 16%, rgba(191, 72, 65, .16), transparent 76%),
+    radial-gradient(72% 30rem at 18% 70%, rgba(214, 220, 211, .58), transparent 72%),
+    linear-gradient(180deg, #f8f7f5 0%, #e6e5e1 100%);
+}
+
+/* Glass is a surface treatment, not a veil over content. */
+.brand-bar,
+.connection-bar {
+  background: rgba(249, 248, 246, .88);
+  border-color: rgba(255, 255, 255, .9);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  backdrop-filter: blur(18px) saturate(125%);
+}
+
+.brand-bar {
+  box-shadow: 0 3px 16px rgba(23, 28, 23, .035);
+}
+
+.connection-bar {
+  border-bottom: 1px solid rgba(32, 34, 32, .035);
+}
+
+:is(
+  .card,
+  .stand-info-tile,
+  .zone-entry,
+  .zone-card,
+  .menu-card,
+  .power-card,
+  .current-effect,
+  .settings-toggle,
+  .assignment-choice,
+  .layout-choice,
+  .receiver-list details,
+  .receiver-order > [data-order-receiver],
+  .scene-card,
+  .scene-zone,
+  .scene-saved-zone,
+  .scene-save-bar,
+  .stand-scenes,
+  .stand-scenes-empty,
+  .stand-scene-card,
+  .stand-overview-row,
+  .preset-card,
+  .effect-card,
+  .family-card,
+  .animation-family-card,
+  .family-variant-card,
+  .onboarding-name-card,
+  .onboarding-zone,
+  .onboarding-destination,
+  .stand-setup-overview,
+  .pixel-setup-panel,
+  .pixel-setup-shell,
+  .receiver-update-sheet,
+  .receiver-removal-sheet,
+  .pin-protection-card,
+  .assignment-choice,
+  #effect-dialog
+) {
+  background-color: var(--glass);
+  background-image:
+    linear-gradient(145deg, rgba(255, 255, 255, .36), rgba(255, 255, 255, .12)),
+    radial-gradient(110% 130% at 100% 0%, rgba(191, 72, 65, .10), transparent 70%),
+    radial-gradient(120% 100% at 0% 100%, rgba(234, 236, 232, .25), transparent 72%);
+  border-color: color-mix(in srgb, var(--line) 44%, white);
+  box-shadow: var(--surface-shadow), var(--surface-highlight);
+  -webkit-backdrop-filter: blur(16px) saturate(128%);
+  backdrop-filter: blur(16px) saturate(128%);
+}
+
+.zone-entry {
+  overflow: hidden;
+}
+
+.zone-entry .zone-card {
+  background-color: rgba(255, 255, 255, .44);
+  background-image: linear-gradient(145deg, rgba(255, 255, 255, .38), rgba(255, 255, 255, .14));
+  box-shadow: none;
+}
+
+.zone-entry .zone-card:hover {
+  background-image: linear-gradient(145deg, rgba(255, 255, 255, .74), rgba(250, 246, 244, .56));
+}
+
+.stand-info-tile {
+  border-radius: 17px;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.stand-info-tile > svg:first-child,
+.stand-info-tile > span {
+  position: relative;
+  z-index: 1;
+}
+
+.stand-info-tile > svg:first-child {
+  color: var(--red);
+  filter: drop-shadow(0 2px 5px rgba(191, 72, 65, .12));
+}
+
+.card,
+.menu-card,
+.power-card,
+.current-effect,
+.settings-toggle,
+.assignment-choice,
+.scene-card,
+.scene-zone,
+.stand-scenes-empty,
+.stand-scene-card,
+.receiver-list details,
+.onboarding-name-card,
+.pixel-setup-panel,
+.pixel-setup-shell {
+  border-radius: 20px;
+}
+
+.button {
+  border: 1px solid rgba(255, 255, 255, .08);
+  background: linear-gradient(145deg, #292d29 0%, #171a17 78%);
+  box-shadow: 0 5px 13px rgba(18, 23, 18, .13), inset 0 1px rgba(255, 255, 255, .16);
+  transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+}
+
+.button.red,
+.button.removal-confirm {
+  background: linear-gradient(145deg, #ca5a52 0%, #ae3d37 82%);
+  box-shadow: 0 5px 13px rgba(160, 54, 48, .18), inset 0 1px rgba(255, 255, 255, .24);
+}
+
+.button.secondary {
+  border: 1px solid rgba(255, 255, 255, .92);
+  background: linear-gradient(145deg, rgba(255, 255, 255, .96), rgba(237, 236, 232, .88));
+  box-shadow: 0 3px 11px rgba(29, 33, 29, .045), inset 0 1px rgba(255, 255, 255, .95);
+}
+
+.icon-button,
+.zone-options-button,
+.order-buttons button,
+.channel-row button,
+.colour-remove span {
+  box-shadow: 0 3px 10px rgba(23, 28, 23, .06), inset 0 1px rgba(255, 255, 255, .9);
+}
+
+.pill {
+  background: linear-gradient(145deg, rgba(255, 255, 255, .92), rgba(242, 241, 237, .82));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .9);
+}
+
+.pill.red,
+.onboarding-setup-label {
+  background: linear-gradient(145deg, rgba(255, 255, 255, .92), rgba(248, 229, 226, .82));
+}
+
+.section-tabs,
+.control-mode-tabs,
+.demo-settings-tabs {
+  border: 1px solid rgba(255, 255, 255, .78);
+  background: linear-gradient(145deg, rgba(236, 236, 232, .94), rgba(226, 226, 221, .8));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .84), 0 4px 13px rgba(26, 30, 26, .035);
+}
+
+.section-tabs button[aria-selected="true"] {
+  background: linear-gradient(145deg, #fff, rgba(255, 255, 255, .9));
+  box-shadow: 0 3px 9px rgba(30, 34, 30, .075), inset 0 1px #fff;
+}
+
+.control-mode-tabs button[aria-pressed="true"],
+.filter-row button[aria-selected="true"] {
+  color: #fff;
+  background-color: #202420;
+  background-image: linear-gradient(145deg, #292d29, #171a17);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .14), inset 0 -2px var(--red), 0 3px 9px rgba(18, 23, 18, .13);
+}
+
+.receiver-chips button,
+.filter-row button,
+.compact-direction button,
+.physical-port-picker button,
+.preference-grid button {
+  background-image: linear-gradient(145deg, rgba(255, 255, 255, .96), rgba(242, 241, 238, .86));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .9), 0 2px 8px rgba(30, 34, 30, .035);
+}
+
+.receiver-chips button[aria-pressed="true"],
+.filter-row button[aria-selected="true"],
+.compact-direction button[aria-pressed="true"] {
+  color: #fff;
+  background-color: #202420;
+  background-image: linear-gradient(145deg, #292d29, #171a17);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .13), inset 0 -2px var(--red), 0 3px 9px rgba(18, 23, 18, .12);
+}
+
+.scope-lines-list .scope-line[aria-pressed="true"],
+.assignment-choice[aria-pressed="true"],
+.scene-zone[aria-pressed="true"],
+.onboarding-zone[aria-pressed="true"],
+.layout-choice[aria-pressed="true"],
+.effect-card[aria-pressed="true"] {
+  box-shadow: inset 0 1px rgba(255, 255, 255, .9), 0 0 0 1px rgba(191, 72, 65, .5), 0 5px 14px rgba(191, 72, 65, .07);
+}
+
+.animation-family-card {
+  overflow-anchor: none;
+  background-image:
+    linear-gradient(150deg, rgba(255, 255, 255, .36), rgba(255, 255, 255, .14)),
+    radial-gradient(120% 130% at 100% 0%, rgba(191, 72, 65, .055), transparent 72%);
+  box-shadow: 0 7px 21px rgba(25, 30, 25, .055), inset 0 1px rgba(255, 255, 255, .95);
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+#animation-results {
+  overflow-anchor: none;
+}
+
+.animation-family-card.is-expanded {
+  background-image:
+    linear-gradient(150deg, rgba(255, 255, 255, .42), rgba(255, 255, 255, .2)),
+    radial-gradient(120% 130% at 100% 0%, rgba(191, 72, 65, .075), transparent 72%);
+  box-shadow: 0 0 0 1px rgba(191, 72, 65, .18), 0 9px 24px rgba(32, 34, 32, .07), inset 0 1px white;
+}
+
+.family-variants-panel {
+  background-image: linear-gradient(145deg, rgba(242, 241, 238, .92), rgba(250, 248, 246, .94));
+}
+
+/* Repeated gallery tiles keep the glossy gradient, but skip per-card blur to
+   avoid expensive compositing while opening groups or scrolling on phones. */
+:is(.animation-family-card, .family-variant-card, .effect-card, .family-card) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.guide,
+.preview-notice,
+.receiver-zone-row-hint,
+.pixel-preview-notice,
+.management-status {
+  background: linear-gradient(145deg, rgba(239, 238, 234, .92), rgba(230, 229, 224, .78));
+  border: 1px solid rgba(255, 255, 255, .62);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .55);
+}
+
+.navigation {
+  border: 1px solid rgba(255, 255, 255, .18);
+  background: linear-gradient(145deg, rgba(32, 36, 32, .97), rgba(17, 20, 17, .97));
+  box-shadow: 0 9px 28px rgba(13, 18, 13, .18), inset 0 1px rgba(255, 255, 255, .1);
+  -webkit-backdrop-filter: blur(20px) saturate(130%);
+  backdrop-filter: blur(20px) saturate(130%);
+}
+
+.navigation button[aria-current="page"] {
+  background: linear-gradient(145deg, #fff, rgba(248, 247, 244, .97));
+  box-shadow: 0 3px 9px rgba(0, 0, 0, .13), inset 0 1px white;
+}
+
+.navigation button[aria-current="page"] svg {
+  filter: drop-shadow(0 2px 4px rgba(191, 72, 65, .13));
+}
+
+.toast {
+  border: 1px solid rgba(255, 255, 255, .13);
+  background: linear-gradient(145deg, rgba(39, 44, 39, .97), rgba(23, 27, 23, .97));
+  box-shadow: 0 12px 32px rgba(16, 21, 16, .2), inset 0 1px rgba(255, 255, 255, .1);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+.connection-status > span {
+  box-shadow: 0 0 0 3px rgba(122, 153, 128, .12);
+}
+
+@media (hover: hover) {
+  :is(.stand-info-tile, .zone-card, .menu-card, .scene-card, .stand-scene-card, .animation-family-card, .effect-card, .family-card, .layout-choice):hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--red) 24%, var(--line));
+    box-shadow: 0 8px 20px rgba(24, 30, 24, .07), inset 0 1px rgba(255, 255, 255, .92);
+  }
+
+  .button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.035);
+    box-shadow: 0 8px 17px rgba(18, 23, 18, .16), inset 0 1px rgba(255, 255, 255, .18);
+  }
+}
+
+@media (max-width: 700px) {
+  /* Keep the full-zone preview visible while leaving a clear touch lane below. */
+  .control-preview-dock .preview-wrap canvas {
+    height: 52px;
+  }
+}
+
+@media (max-height: 700px) {
+  .control-preview-dock .preview-wrap canvas {
+    height: 48px;
+  }
+}
+
+body[data-theme="dark"] {
+  --glass: rgba(37, 41, 36, .84);
+  --glass-edge: rgba(255, 255, 255, .09);
+  --surface-shadow: 0 9px 24px rgba(0, 0, 0, .2);
+  --surface-highlight: inset 0 1px rgba(255, 255, 255, .055);
+  background:
+    radial-gradient(90% 26rem at 100% 0%, rgba(191, 72, 65, .055), transparent 74%),
+    radial-gradient(80% 26rem at 0% 22%, rgba(255, 255, 255, .025), transparent 75%),
+    linear-gradient(180deg, #151714 0%, #111310 100%);
+}
+
+body[data-theme="dark"] .brand-bar,
+body[data-theme="dark"] .connection-bar {
+  background: rgba(21, 23, 20, .88);
+  border-color: rgba(255, 255, 255, .06);
+}
+
+body[data-theme="dark"] :is(
+  .card,
+  .stand-info-tile,
+  .zone-entry,
+  .zone-card,
+  .menu-card,
+  .power-card,
+  .current-effect,
+  .settings-toggle,
+  .assignment-choice,
+  .layout-choice,
+  .receiver-list details,
+  .receiver-order > [data-order-receiver],
+  .scene-card,
+  .scene-zone,
+  .scene-saved-zone,
+  .scene-save-bar,
+  .stand-scenes,
+  .stand-scenes-empty,
+  .stand-scene-card,
+  .stand-overview-row,
+  .preset-card,
+  .effect-card,
+  .family-card,
+  .animation-family-card,
+  .family-variant-card,
+  .onboarding-name-card,
+  .onboarding-zone,
+  .onboarding-destination,
+  .stand-setup-overview,
+  .pixel-setup-panel,
+  .pixel-setup-shell,
+  .receiver-update-sheet,
+  .receiver-removal-sheet,
+  .pin-protection-card,
+  #effect-dialog
+) {
+  color: var(--ink);
+  background-color: rgba(32, 35, 30, .86);
+  background-image: linear-gradient(145deg, rgba(54, 59, 52, .88), rgba(31, 34, 29, .9)), radial-gradient(120% 110% at 100% 0%, rgba(191, 72, 65, .08), transparent 75%);
+  border-color: rgba(255, 255, 255, .12);
+  box-shadow: var(--surface-shadow), var(--surface-highlight);
+}
+
+body[data-theme="dark"] .zone-entry .zone-card {
+  background-image: linear-gradient(145deg, rgba(49, 53, 47, .86), rgba(30, 33, 28, .88));
+  box-shadow: none;
+}
+
+body[data-theme="dark"] :is(.section-tabs, .control-mode-tabs, .demo-settings-tabs, .guide, .preview-notice, .receiver-zone-row-hint, .pixel-preview-notice, .management-status) {
+  color: var(--ink);
+  background: linear-gradient(145deg, rgba(47, 51, 45, .92), rgba(37, 40, 35, .88));
+  border-color: rgba(255, 255, 255, .07);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .06);
+}
+
+body[data-theme="dark"] :is(.receiver-chips button, .filter-row button, .compact-direction button, .physical-port-picker button, .preference-grid button, .pill) {
+  color: var(--ink);
+  background-image: linear-gradient(145deg, rgba(48, 52, 46, .95), rgba(34, 37, 32, .93));
+  border-color: rgba(255, 255, 255, .09);
+}
+
+body[data-theme="dark"] :is(.receiver-chips button[aria-pressed="true"], .filter-row button[aria-selected="true"], .compact-direction button[aria-pressed="true"], .control-mode-tabs button[aria-pressed="true"]) {
+  color: #fff;
+  background-color: #202420;
+  background-image: linear-gradient(145deg, #333833, #202420);
+  border-color: rgba(191, 72, 65, .56);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .08), inset 0 -2px var(--red), 0 4px 12px rgba(0, 0, 0, .18);
+}
+
+body[data-theme="dark"] .navigation {
+  background: linear-gradient(145deg, rgba(31, 35, 31, .97), rgba(15, 18, 15, .97));
+}
+
+body[data-theme="dark"] .navigation button[aria-current="page"] {
+  color: var(--red);
+  background: linear-gradient(145deg, #f6f5f0, #e8e7e1);
+}
+
+body[data-theme="dark"] .family-variants-panel {
+  background: linear-gradient(145deg, rgba(42, 46, 40, .94), rgba(34, 37, 32, .94));
+}
+
+/* The LED canvas stays pitch-dark and untouched in both themes. */
+:is(.preview-wrap, .effect-thumb, .scene-mosaic, .layout-art, .zone-card canvas, .scene-preview, .family-card canvas, .effect-card canvas, .family-variant-card canvas, .pixel-connection-preview, .pixel-count-preview) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.stand-info-tile, .button, .animation-family-card) {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) and (hover: hover) {
+  :is(.stand-info-tile, .button, .animation-family-card):hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* Keep small controls and nested surfaces as softly rounded as the main cards.
+   The LED pixels themselves remain square so their preview stays recognisable. */
+:is(main, dialog) button {
+  border-radius: 13px;
+}
+
+:is(main, dialog) :is(input:not([type="range"]), select, textarea, summary) {
+  border-radius: 12px;
+}
+
+main :is(
+  .animation-category-note,
+  .preview-live-controls button,
+  .order-buttons button,
+  .channel-row button,
+  .compact-direction button,
+  .physical-port-picker button,
+  .output-row input[type="number"],
+  .output-row select
+) {
+  border-radius: 13px;
+}
+
+main :is(
+  .background-swatch,
+  .receiver-chips .number,
+  .physical-port-picker b,
+  .order-number,
+  .selection .scope-number,
+  .selection .scope-lines-list .scope-line .scope-number,
+  .onboarding-setup-steps li > span,
+  .onboarding-zone-tiles .onboarding-zone i,
+  .onboarding-role-cards .onboarding-type-label,
+  .onboarding-members > h2 > span,
+  .onboarding-role,
+  .onboarding-member-type,
+  .onboarding-review-product li > b,
+  .onboarding-manual-wifi li::before,
+  .onboarding-wifi-steps li::before,
+  .onboarding-pin-future > i,
+  .onboarding-wifi-return-steps li > i,
+  .receiver-filters button span,
+  .scene-zone-number,
+  .scene-mosaic-overflow
+) {
+  border-radius: 10px;
+}
+
+main :is(.onboarding-setup-label, .onboarding-result .pill) {
+  border-radius: 999px;
+}
+
+main :is(.scene-mosaic-tile, .scene-mosaic .scene-preview, .scene-zone > .scene-preview, .stand-scene-card .scene-preview) {
+  border-radius: 10px;
+}
+
+dialog :is(.pixel-setup-outputs b, .pixel-setup-reference b, .pixel-port-step) {
+  border-radius: 10px;
+}
+
+dialog .pixel-setup-steps li {
+  border-radius: 11px;
+}

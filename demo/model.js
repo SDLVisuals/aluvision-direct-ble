@@ -130,7 +130,7 @@
     });
     memberships.forEach(function (zoneId, rid) { if (!receivers.has(rid)) add('ORPHAN_MEMBER', 'zones.' + zoneId, 'Een zonelid bestaat niet in de receiverlijst.'); });
     stands.forEach(function (stand) {
-      if (model.receivers.filter(function (r) { return r && r.standId === stand.id && r.role === 'main' && r.lifecycle === 'added'; }).length > 1) add('MULTIPLE_MAIN', 'stands.' + stand.id, 'Een stand heeft maximaal één hoofdreceiver.');
+      if (model.receivers.filter(function (r) { return r && r.standId === stand.id && r.role === 'main' && r.lifecycle === 'added'; }).length > 1) add('MULTIPLE_MAIN', 'stands.' + stand.id, 'De receiverindeling van deze stand is ongeldig.');
     });
     zones.forEach(function (ref) {
       if (ref.zone.type !== 'SPI' || ref.zone.layout !== 'continuous' || !Array.isArray(ref.zone.receiverIds)) return;

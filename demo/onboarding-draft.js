@@ -329,7 +329,7 @@
       if(!stand&&!next.stand.isNew)fail('STAND_NOT_FOUND','Deze stand bestaat niet meer. Open eerst de juiste stand.');
       if(stand&&next.stand.isNew)fail('STAND_CHANGED','Deze stand is ondertussen al opgeslagen. Open de juiste stand opnieuw.');
       const main=stand&&model.receivers.find(receiver=>receiver.standId===stand.id&&receiver.role==='main'&&receiver.lifecycle==='added');
-      if((main?.id||null)!==next.mainReceiverId)fail('DRAFT_ROLE','De hoofdreceiver van deze stand is veranderd. Hervat vanuit de juiste stand.');
+      if((main?.id||null)!==next.mainReceiverId)fail('DRAFT_ROLE','De verbinding van deze stand is veranderd. Hervat vanuit de juiste stand.');
       const context={standIds:model.stands.map(item=>item.id),zoneIds:model.stands.flatMap(item=>item.zones.map(zone=>zone.id)),
         receivers:model.receivers.map(receiver=>({id:receiver.id,rid:typeof receiver.rid==='string'&&receiver.rid?receiver.rid.toUpperCase():null,
           deviceFingerprint:typeof receiver.deviceFingerprint==='string'?receiver.deviceFingerprint.toUpperCase():null}))};
@@ -368,7 +368,7 @@
     const stand=model.stands.find(item => item.id === draft.stand.id);
     if (draft.stand.isNew && stand && !allowAdded || !draft.stand.isNew && !stand) fail('STAND_CHANGED','Deze stand is intussen veranderd. Controleer de indeling.');
     const mains=model.receivers.filter(receiver => receiver.standId === draft.stand.id && receiver.lifecycle === 'added' && receiver.role === 'main');
-    if (draft.role === 'main' ? mains.some(receiver => !allowAdded || receiver.id !== draft.receiver.id) : mains.length !== 1 || mains[0].id !== draft.mainReceiverId) fail('MAIN_CHANGED','De hoofdreceiver van deze stand is veranderd. Hervat niet met een andere hoofdreceiver.');
+    if (draft.role === 'main' ? mains.some(receiver => !allowAdded || receiver.id !== draft.receiver.id) : mains.length !== 1 || mains[0].id !== draft.mainReceiverId) fail('MAIN_CHANGED','De verbinding van deze stand is veranderd. Hervat vanuit de juiste stand.');
     const identities=model.receivers.filter(receiver => receiver.id === draft.receiver.id || receiver.rid && receiver.rid.toUpperCase() === draft.receiver.rid || receiver.deviceFingerprint && receiver.deviceFingerprint.toUpperCase() === draft.receiver.deviceFingerprint);
     if (identities.length && (!allowAdded || identities.length !== 1 || identities[0].lifecycle !== 'added' || identities[0].onboardingTransactionId !== draft.transactionId || identities[0].id !== draft.receiver.id || identities[0].rid !== draft.receiver.rid || identities[0].deviceFingerprint !== draft.receiver.deviceFingerprint || identities[0].standId !== draft.stand.id || identities[0].zoneId !== draft.zoneId || identities[0].role !== draft.role || !same(identities[0].outputs,draft.outputs))) fail('DUPLICATE_RECEIVER','Deze receiver is intussen al toegevoegd of gewijzigd.');
     return identities[0] || null;

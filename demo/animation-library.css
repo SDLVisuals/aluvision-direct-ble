@@ -1,5 +1,9 @@
 /* Animation library: show a clear group first, then reveal comparable variants in place. */
 .animation-family-section{display:grid;gap:12px;min-width:0}
+/* The gallery expands in place inside the document scroller. Disable browser
+   scroll anchoring here; app.js preserves the opened group at its same viewport
+   position so new variants never nudge the customer away. */
+main.gallery-scroll-stable{overflow-anchor:none}
 .animation-family-section+.animation-family-section{margin-top:24px}
 .animation-family-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .animation-family-heading>div{min-width:0}

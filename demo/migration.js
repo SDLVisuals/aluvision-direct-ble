@@ -138,7 +138,7 @@
       var roles = [];
       if (device.role === 'main' || device.role === 'node') roles.push(device.role);
       if (first.stand.mainReceiverId !== undefined) roles.push(first.stand.mainReceiverId === deviceId ? 'main' : 'node');
-      if (!roles.length || roles.some(function (role) { return role !== roles[0]; })) conflict('ROLE_REVIEW', path, 'De hoofdreceiverrol is niet eenduidig opgeslagen. De beveiligde installatie wordt niet opnieuw uitgevonden.');
+      if (!roles.length || roles.some(function (role) { return role !== roles[0]; })) conflict('ROLE_REVIEW', path, 'De opgeslagen receiververbinding is niet eenduidig. De bestaande installatie wordt niet aangepast.');
       var outputs = [];
       if (first.type === 'SPI') {
         var orderedPorts = related.map(function (entry) { return entry.port; });

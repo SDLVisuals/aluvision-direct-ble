@@ -7,23 +7,23 @@
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
   const CATEGORIES = Object.freeze([
-    Object.freeze({key:'whole',title:'Kleur & sfeer',summary:'De hele lichtlijn verandert samen van kleur of helderheid.',aliases:'hele lijn volledig gelijk samen uniform rgbw'}),
-    Object.freeze({key:'pixels',title:'Bewegend licht',summary:'Licht beweegt over de pixels, bijvoorbeeld als golf of lopend licht.',aliases:'pixel pixels pixelanimatie pixelanimaties led strip spi'}),
-    Object.freeze({key:'tunnel',title:'Tunnel',summary:'Licht reist tussen twee of meer lichtlijnen.',aliases:'tunnel diepte receiver receivers boog bogen achter elkaar'}),
+    Object.freeze({key:'whole',title:'Kleur & sfeer',summary:'Kleur of helderheid verandert tegelijk op alle ledlines.',aliases:'hele lijn volledig gelijk samen uniform rgbw'}),
+    Object.freeze({key:'pixels',title:'Bewegend licht',summary:'Beweging over pixels: bijvoorbeeld golven of lopend licht.',aliases:'pixel pixels pixelanimatie pixelanimaties led strip spi'}),
+    Object.freeze({key:'tunnel',title:'Tunnel',summary:'Licht reist tussen twee of meer ledlines.',aliases:'tunnel diepte receiver receivers boog bogen achter elkaar'}),
     Object.freeze({key:'brand',title:'Huisstijl',summary:'Rustig wit en zachte accenten voor je huisstijl.',aliases:'brand huisstijl merk beurs stand presentatie corporate'})
   ]);
   const descriptor = (key, title, summary, aliases = '') => Object.freeze({key,title,summary,aliases});
   const DEFINITIONS = Object.freeze({
     whole:Object.freeze([
       descriptor('colour','Kleurwissel','Vaste kleuren wisselen of vloeien in elkaar over.','kleur kleuren wisselen regenboog rainbow rgb gradient jumping'),
-      descriptor('pulse','Ademen & pulsen','De hele lijn wordt rustig lichter en donkerder.','pulse puls pulsen ademen ademend ademhaling breathe breathing fade'),
+      descriptor('pulse','Ademen & pulsen','Alle ledlines worden rustig lichter en donkerder.','pulse puls pulsen ademen ademend ademhaling breathe breathing fade'),
       descriptor('flow','Zachte overgangen','Kleuren mengen geleidelijk, zonder harde sprongen.','flow gradient verloop kleurverloop vloeien zacht overgang fade'),
       descriptor('flash','Flitsen','Korte lichtflitsen; kan ook snel knipperen.','sparkle flash strobe flits flitsen knipperen theater')
     ]),
     pixels:Object.freeze([
       descriptor('flow','Kleurverloop','Kleuren vloeien zacht over de pixels.','flow gradient verloop kleurverloop vloeien zacht overgang fade'),
       descriptor('pulse','Ademen','Het licht ademt of pulseert binnen de lijn.','pulse puls pulsen ademen ademhaling ademend breathe breathing'),
-      descriptor('wave','Golven','Golven bewegen door de lichtlijn.','wave golf golven golfbeweging ripple rimpel'),
+      descriptor('wave','Golven','Golven bewegen over de pixels.','wave golf golven golfbeweging ripple rimpel'),
       descriptor('chase','Lopend licht','Lichtpunten volgen elkaar over de lijn.','chase looplicht lopen lopend achtervolgen jagen runner running'),
       descriptor('comet','Komeet','Een lichtpunt trekt een zachte staart achter zich aan.','comet komeet kometen meteoor meteor staart trail ribbon'),
       descriptor('scanner','Scanner','Een lichtbundel veegt over de lijn.','scannen veeg vegen sweep heen en weer'),
@@ -60,11 +60,11 @@
   // A small, contrasting introduction. These are references to the existing
   // recipes, never a second catalogue or a change to stored effect identities.
   const STARTERS = Object.freeze([
-    {ids:['rgbw-breathe-1','spi-breathe-99'],title:'Zacht ademen',summary:'De hele lichtlijn wordt rustig lichter en donkerder.'},
+    {ids:['rgbw-breathe-1','spi-breathe-99'],title:'Zacht ademen',summary:'De ledlines worden rustig lichter en donkerder.'},
     {ids:['v30-rgb-jumping'],title:'Kleurwissel',summary:'Rood, groen en blauw wisselen elkaar direct af.'},
-    {ids:['spi-chase-8'],title:'Lopend licht',summary:'Een lichtpunt loopt over de pixels van de lichtlijn.'},
+    {ids:['spi-chase-8'],title:'Lopend licht',summary:'Een lichtpunt loopt over de pixels.'},
     {ids:['spi-wave-29'],title:'Lichtgolf',summary:'Een zachte golf beweegt over de pixels.'},
-    {ids:['rgbw-gradient-2'],title:'Kleurverloop',summary:'De hele lichtlijn vloeit zacht van kleur naar kleur.'},
+    {ids:['rgbw-gradient-2'],title:'Kleurverloop',summary:'De ledlines veranderen zacht van kleur.'},
     {ids:['v30-brand-warm-white'],title:'Warm naar wit',summary:'Warm licht gaat rustig over in neutraal wit.'}
   ]);
   function starters(items) {

@@ -19,9 +19,9 @@
       if(!dialog?.open)return;
       const complete=job?.state==='completed'&&job.phase==='verified',running=job&&!terminal.has(job.state),resume=job?.committed&&!complete&&!running;
       const percent=complete?100:Math.min(99,job?.progress||0);
-      let content=`<p>${receiver.role==='node'?'Deze receiver krijgt zijn update draadloos via je hoofdreceiver. ':''}Blijf op de wifi van je hoofdreceiver. Je instellingen blijven bewaard.</p>`;
+      let content=`<p>Blijf verbonden met het ALUVISION-wifi van je installatie. Je instellingen blijven bewaard.</p>`;
       if(job){
-        content+=`<section class="card receiver-update-progress"><h3>${escape(complete?'Bijgewerkt':phases[job.phase]||'Update controleren')}</h3><p>${escape(receiver.type)} · versie ${escape(job.toVersion)}</p><progress max="100" value="${percent}" aria-label="Voortgang van de receiverupdate"></progress><b>${percent}%</b>${complete?'<p>De nieuwe software is actief.</p>':`<p>Laat ${receiver.role==='node'?'beide receivers':'de receiver'} aan en blijf op de wifi van je hoofdreceiver. Sluiten stopt de update niet.</p>`}</section>`;
+        content+=`<section class="card receiver-update-progress"><h3>${escape(complete?'Bijgewerkt':phases[job.phase]||'Update controleren')}</h3><p>${escape(receiver.type)} · versie ${escape(job.toVersion)}</p><progress max="100" value="${percent}" aria-label="Voortgang van de receiverupdate"></progress><b>${percent}%</b>${complete?'<p>De nieuwe software is actief.</p>':`<p>Laat alle receivers aan en blijf verbonden met het ALUVISION-wifi van je installatie. Sluiten stopt de update niet.</p>`}</section>`;
         if(resume)content+='<button class="button full" data-update="resume">Herstart controleren</button>';
         if(running&&job.cancelAllowed&&!job.committed)content+='<button class="button secondary full" data-update="cancel">Update annuleren</button>';
         if(running&&error)content+='<button class="button full" data-update="status">Voortgang opnieuw controleren</button>';

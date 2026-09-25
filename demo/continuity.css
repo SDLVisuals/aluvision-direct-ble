@@ -142,6 +142,13 @@ body[data-theme=dark] .section-tabs button:not([aria-selected=true]){color:var(-
 /* Scope belongs next to a colour or animation, never on the zone overview. */
 .selection{min-width:0}
 .page>.selection{padding:13px;border:1px solid var(--line);border-radius:15px;background:var(--panel)}
+.selection.single-scope{display:flex;align-items:center;gap:10px;padding:5px 2px 8px}
+.selection.single-scope .scope-line-icon{display:grid;place-items:center;width:36px;height:36px;flex:none;border-radius:11px;background:var(--soft);color:var(--red)}
+.selection.single-scope .scope-line-icon svg{width:19px;height:19px}
+.selection.single-scope .scope-single-copy{display:grid;gap:2px;min-width:0}
+.selection.single-scope .scope-single-copy b{font-size:12px}
+.selection.single-scope .scope-single-copy small{font-size:10px;color:var(--muted)}
+.selection.single-scope .selection-summary{margin-left:auto}
 .receiver-chips .selection-together{gap:8px;border-width:2px;min-height:44px}
 .receiver-chips .selection-together svg{width:34px;height:28px;color:var(--red)}
 .icon-together .together-link{opacity:.65;stroke-width:1.5}
@@ -168,7 +175,7 @@ body[data-theme=dark] .section-tabs button:not([aria-selected=true]){color:var(-
 .selection .scope-lines-reveal.is-open{grid-template-rows:1fr;opacity:1}
 .selection .scope-lines-inner{min-height:0;overflow:hidden}
 .selection .scope-choice-label{padding:4px 2px 8px;font-size:10px}
-.selection .scope-lines-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0;padding:0 1px 3px}
+.selection .scope-lines-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0;max-height:min(42dvh,360px);overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:0 2px 5px}
 .selection .scope-lines-list .scope-line{position:relative;display:flex;justify-content:flex-start;align-items:center;gap:8px;width:100%;min-width:0;min-height:58px;padding:9px 10px;border:1px solid var(--line);border-radius:13px;background:var(--panel);color:var(--ink);text-align:left;white-space:normal;flex-shrink:1}
 .selection .scope-lines-list .scope-line .scope-copy{display:grid;gap:3px;min-width:0;flex:1}
 .selection .scope-lines-list .scope-line .scope-option-title{font-size:12px;line-height:1.2;overflow-wrap:anywhere}
@@ -184,8 +191,7 @@ body[data-theme=dark] .section-tabs button:not([aria-selected=true]){color:var(-
 .selection .scope-lines-list .scope-line:last-child:nth-child(odd){grid-column:1/-1;width:calc(50% - 4px);justify-self:center}
 .selection .scope-lines-toggle:focus-visible,.selection .scope-lines-list .scope-line:focus-visible{outline:3px solid #bf484155;outline-offset:2px}
 @media(max-width:360px){.selection .scope-lines-list{gap:6px}.selection .scope-lines-list .scope-line{min-height:54px;padding:8px}.selection .scope-lines-list .scope-line .scope-number{width:24px;height:24px}.selection .scope-lines-list .scope-line .scope-option-title{font-size:11px}.selection .scope-lines-list .scope-line .scope-copy small{font-size:9px}.selection.has-multiple-selection .selection-summary{max-width:58%;font-size:9px}}
-@media(max-height:700px){.control-context .selection .scope-lines-toggle{min-height:56px;padding:7px 9px}.control-context .selection .scope-toggle-icon{width:32px;height:32px}.control-context .selection .scope-lines-list .scope-line{min-height:50px;padding:7px 8px}}
-@media(max-width:700px){.control-context.expanded-lines{position:static}}
+@media(max-height:700px){.editor-controls .selection .scope-lines-toggle{min-height:56px;padding:7px 9px}.editor-controls .selection .scope-toggle-icon{width:32px;height:32px}.editor-controls .selection .scope-lines-list .scope-line{min-height:50px;padding:7px 8px}}
 @media(prefers-reduced-motion:reduce){.selection .scope-toggle-chevron,.selection .scope-lines-reveal{transition:none}}
 /* A sheet owns the gesture: reaching its end must not scroll the page behind it. */
 html:has(dialog[open]){overflow:hidden}
@@ -196,6 +202,49 @@ dialog{overscroll-behavior:contain}
 .channel-row button{width:100%;min-width:0}
 .channel-row .channel-toggle{font-size:13px;font-weight:800;color:var(--channel);border:1px solid var(--channel);background:var(--panel)}
 .channel-row .channel-toggle[aria-pressed=false]{color:var(--muted);border-color:var(--line);background:var(--soft);text-decoration:line-through}
+/* Keep only the compact, full-zone light overview anchored while the customer
+   browses colour/effect controls. The title and line-selection list can scroll,
+   so a large installation never pins a tall panel over its own controls. */
+.editor-grid>.control-context{grid-column:1;grid-row:1;position:static;z-index:auto;padding:0 0 8px;background:transparent;min-width:0}
+.editor-grid>.control-preview-dock{grid-column:1;grid-row:2;position:sticky;top:0;z-index:8;align-self:start;min-width:0;margin:0 0 11px;padding:8px 0 9px;background:var(--bg);box-shadow:0 9px 14px -13px #17201980}
+.editor-grid>.editor-controls{grid-column:2;grid-row:1 / span 2;min-width:0}
+.control-dock-heading{display:grid;grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr);align-items:center;gap:8px;min-width:0;margin:0 1px 7px}
+.control-dock-location{display:grid;gap:2px;min-width:0}
+.control-dock-location small{font-size:8px;line-height:1.2;font-weight:800;letter-spacing:.8px;color:var(--muted)}
+.control-dock-location b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.25}
+.control-dock-mode{justify-self:end;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--muted);font-size:10px;font-weight:750;white-space:nowrap}
+.control-preview-dock .control-mode-tabs{min-width:0;padding:3px;gap:3px;border-radius:12px}
+.control-preview-dock .control-mode-tabs button{min-width:0;min-height:44px;padding:7px 5px;gap:5px;font-size:11px;white-space:nowrap}
+.control-preview-dock .control-mode-tabs button[aria-pressed=true]{background:var(--ink);color:#fff;box-shadow:inset 0 -2px var(--red)}
+.control-preview-dock .control-mode-tabs button .icon{width:16px;height:16px}
+.control-preview-dock .preview-wrap{margin:0!important;border-radius:15px;padding:8px 9px 3px}
+.control-preview-dock .preview-top{align-items:center;min-height:15px;font-size:9px}
+.control-preview-dock .preview-summary{max-width:58%;overflow:hidden;text-align:right;text-overflow:ellipsis;white-space:nowrap;color:#d4d9d4}
+.control-preview-dock .preview-wrap canvas{height:76px}
+.control-preview-dock .live-confirmation{min-height:0;margin:0}
+.control-preview-dock .preview-live-controls{padding:2px 4px 5px;font-size:9px}
+.control-preview-dock+.editor-controls{padding-top:7px}
+body[data-theme=dark] .control-preview-dock{background:var(--bg)}
+@media(max-width:700px){
+  .editor-grid{display:block}
+  .editor-grid>.control-context{padding:0 0 7px}
+  .editor-grid>.control-preview-dock{top:0;margin-bottom:9px}
+  .editor-grid>.editor-controls{padding-top:7px}
+  .control-preview-dock .preview-wrap canvas{height:68px}
+}
+@media(max-width:360px){
+  .control-dock-heading{grid-template-columns:minmax(0,.68fr) minmax(0,1.32fr);gap:6px}
+  .control-preview-dock .control-mode-tabs button{font-size:10px;gap:4px}
+  .control-preview-dock .preview-top{font-size:8px}
+  .control-preview-dock .preview-wrap canvas{height:62px}
+}
+@media(max-height:700px){
+  .control-preview-dock .preview-wrap{padding-top:6px}
+  .control-preview-dock .preview-wrap canvas{height:56px}
+  .control-preview-dock .control-mode-tabs button{min-height:44px}
+  .control-context .page-heading p{display:none}
+}
+@media(prefers-reduced-motion:reduce){.control-preview-dock .preview-wrap canvas{transition:none}}
 .channel-row .channel-number{width:100%;min-width:0;height:44px;padding:2px 3px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);font-size:16px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
 .channel-number::-webkit-inner-spin-button,.channel-number::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .scope-line-icon{display:grid;place-items:center;flex:none;width:38px;height:34px;border-radius:10px;background:var(--soft);color:var(--red)}
@@ -256,6 +305,8 @@ dialog{overscroll-behavior:contain}
 .stand-scenes-compact .stand-scene-card{background:var(--panel)}
 .receiver-zone-row{min-height:76px;width:100%;cursor:pointer}
 .receiver-zone-row-hint{color:var(--red)!important;font-size:10px!important;font-weight:650}
+.receiver-zone-change-icon{display:grid;place-items:center;width:36px;height:36px;flex:none;border-radius:11px;background:var(--soft);color:var(--red)}
+.receiver-zone-change-icon .icon{width:19px;height:19px}
 .receiver-zone-row:active,.stand-scene-card:active,.stand-scenes-empty:active{background:var(--soft)}
 /* On a phone, the primary paths should not depend on tiny hit targets. */
 .button,.icon-button,.text-button,.zone-options-button,.palette-add,.palette-remove,.colour-drag-handle,.saved-colour,.assignment-choice,.stand-info-tile,.stand-scene-card,.stand-scenes-empty{scroll-margin:12px;}
@@ -361,7 +412,7 @@ body[data-theme=dark] .scope-lines-list .scope-line[aria-pressed=true] .scope-li
 .animation-family-heading h2{font-size:16px}
 .animation-family-heading p{margin-top:3px;color:var(--muted);font-size:11px;line-height:1.45}
 .animation-family-heading>small{padding:3px 7px;border-radius:20px;background:var(--soft);font-variant-numeric:tabular-nums}
-.animation-category-note{padding:9px 11px;border-left:3px solid var(--red);border-radius:0 9px 9px 0;background:var(--soft);color:var(--muted);font-size:10px;line-height:1.5}
+.animation-category-note{padding:9px 11px;border:1px solid var(--line);border-left:3px solid var(--red);border-radius:13px;background:var(--soft);color:var(--muted);font-size:10px;line-height:1.5}
 .animation-requirement{display:grid;gap:9px}
 .animation-requirement h2{font-size:15px}
 .animation-requirement p{font-size:12px}
