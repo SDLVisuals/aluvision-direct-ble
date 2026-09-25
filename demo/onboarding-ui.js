@@ -56,7 +56,7 @@
     let standNameInput=null,zoneNameInput='',draftSaving=false,pendingChoices=null,saveFailed=false,origin='stand';
     let zoneExtraNames=[],zoneRemoval=null,zoneRename=null,receiverMove=null,managementBusy=false,zoneListReturn=null;
     const visualEntrances=new Map(),presentedStages=new Set(),plugMotion=visual.createPlugMotion();
-    let selectedOutput=null,unbindPixelScrub=null,openZonePickerOnNextPaint=false;
+    let selectedOutput=null,unbindPixelScrub=null,openZonePickerOnNextPaint=false,receiverZoneSelection;
     let parkedChoices=new Map(),parkedTransactions=new Set(),parking=null,parkPending=null,actionAbort=null,searchOnMount=false;
     const searchable=()=>draft?.stage==='receiver';
     function searchDraft(value){
@@ -155,13 +155,13 @@
     // Commit the entire small setup step, including its destination screen, as
     // one native draft. Retrying uses the exact same IDs and candidate after an
     // uncertain storage response; it cannot create a second stand or zone.
-    async function saveChoices(events=[],afterSave=()=>{},{top=true}={}){
+    async function saveChoices(events=[],afterSave=()=>{},{top=true,focusDestination=false}={}){
       if(draftSaving)return false;
       captureNames();
       if(!pendingChoices){
         let candidate=draft;
         for(const event of events){const result=draftApi.transition(candidate,event);if(result.error){error=result.error.message;paintPage(false);return false;}candidate=result.draft;}
-        pendingChoices={draft:candidate,afterSave,top,focusedZone:container?.contains(document.activeElement)&&document.activeElement.dataset.onboardingAction==='active-zone'?document.activeElement.dataset.id:null};
+        pendingChoices={draft:candidate,afterSave,top,focusDestination,focusedZone:container?.contains(document.activeElement)&&document.activeElement.dataset.onboardingAction==='active-zone'?document.activeElement.dataset.id:null};
       }
       draftSaving=true;error='';paintPage(false);
       const pending=pendingChoices;
@@ -170,8 +170,14 @@
         draft=pending.draft;pendingChoices=null;saveFailed=false;notice='';pending.afterSave();return true;
       }catch(_){saveFailed=true;notice=saveNotice;return false;}
       finally{
-        draftSaving=false;paintPage(!pendingChoices&&pending.top);
-        if(!pendingChoices&&!pending.top&&pending.focusedZone){
+        draftSaving=false;
+        if(pendingChoices&&saveFailed&&draft.stage==='receiver'){
+          const picker=container?.querySelector('[data-receiver-destination]');if(picker)picker.open=false;
+          const dialog=picker?.querySelector('[data-onboarding-zone-dialog]');if(dialog?.open)dialog.close();openZonePickerOnNextPaint=false;
+        }
+        paintPage(!pendingChoices&&pending.top);
+        if(!pendingChoices&&!pending.top&&pending.focusDestination)container?.querySelector('.onboarding-destination>summary')?.focus({preventScroll:true});
+        else if(!pendingChoices&&!pending.top&&pending.focusedZone){
           if(pending.draft.stage==='receiver'&&!container?.querySelector('.onboarding-destination')?.open)container?.querySelector('.onboarding-destination>summary')?.focus({preventScroll:true});
           else container?.querySelector(`[data-onboarding-action="active-zone"][data-id="${CSS.escape(pending.focusedZone)}"]`)?.focus({preventScroll:true});
         }
@@ -209,7 +215,7 @@
         stopAutomaticRejoin();rejoinExhausted=false;rejoinBlocked=false;automaticFinalizing=false;registrationPending=false;returningFromWifi=false;
         standNameInput=null;zoneNameInput='';pendingChoices=null;saveFailed=false;
         zoneExtraNames=[];zoneRemoval=null;zoneRename=null;receiverMove=null;managementBusy=false;zoneListReturn=null;
-        visualEntrances.clear();presentedStages.clear();plugMotion.clear();selectedOutput=null;openZonePickerOnNextPaint=false;
+        visualEntrances.clear();presentedStages.clear();plugMotion.clear();selectedOutput=null;openZonePickerOnNextPaint=false;receiverZoneSelection=undefined;
       }else {
         if(draft.cancelled)change({type:'RETRY'},{render:false});
         // Reopening discovery from another zone may change its destination,
@@ -278,6 +284,7 @@
       // Leaving this screen must never discard an uncertain claim. PIN inputs
       // are destroyed; only non-secret choices and opaque receipts stay private.
       captureNames();container?.querySelectorAll('[data-onboarding-pin]').forEach(input=>{input.value='';});
+      const zoneDialog=container?.querySelector('[data-onboarding-zone-dialog]');if(zoneDialog?.open)zoneDialog.close();receiverZoneSelection=undefined;openZonePickerOnNextPaint=false;
       unbindPixelScrub?.();unbindPixelScrub=null;
       if(container){container.removeEventListener('click',click);container.removeEventListener('input',input);container.removeEventListener('keydown',keydown);}
       document.removeEventListener('visibilitychange',visibilityChanged);window.removeEventListener('lightning:native-active',nativeActive);window.removeEventListener('pageshow',pageShown);stopAutomaticRejoin();returningFromWifi=false;
@@ -365,8 +372,20 @@
       const destination=draft.zones.find(zone=>zone.id===draft.activeZoneId);
       const destinationName=destination?.name||(draft.zoneChoiceRequired?'Kies een zone':'Zonder zone');
       const hint=draft.zoneChoiceRequired?'Kies een zone':destination?'Toevoegen aan':'Later aan een zone toewijzen';
-      const zoneEditor=zoneNameOpen?`<section class="onboarding-destination-create">${nameField('onboarding-zone-name','Zonenaam','Bijvoorbeeld: Demohoek',zoneNameInput)}${button('zone-create','Zone maken','disabled')}</section>`:setupZones({withoutZone:true,compact:true});
-      return `<details class="onboarding-destination" data-receiver-destination ${open?'open':''}><summary><span class="onboarding-destination-ledline" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 9h18v6H3zM6 11v2M10 11v2M14 11v2M18 11v2M1 12h2M21 12h2"/></svg></span><span class="onboarding-destination-name"><small>${hint}</small><b>${escape(destinationName)}</b></span><em>${destination?'Wijzig zone':'Kies zone'}<span aria-hidden="true">⌄</span></em></summary><div class="onboarding-destination-title"><h2>${zoneNameOpen?'Nieuwe zone toevoegen':'Kies waar deze ledline komt'}</h2>${zoneNameOpen?button('zone-cancel','Annuleren','class="button secondary"'):button('zone-add-from-receiver','＋ Nieuwe zone','class="button secondary"')}</div>${zoneEditor}</details>`;
+      const chosenZone=receiverZoneSelection===undefined?draft.activeZoneId:receiverZoneSelection;
+      const found=results.length===1?results[0]:null;
+      const explanation=found?`<b>${escape(found.name||`${found.type}-receiver`)}</b> · ${escape(found.type)} · Nog niet toegevoegd. Kies waar deze ledline komt.`:'De ledline is nog niet toegevoegd. Kies waar deze ledline komt.';
+      const zones=draft.zones.map(zone=>{
+        const selected=chosenZone===zone.id,members=zoneMembers(zone.id);
+        const detail=selected?'Gekozen':`${zone.type||'Lege zone'}${members.length?` · ${members.length} ${members.length===1?'ledline':'ledlines'}`:''}`;
+        return `<button type="button" class="assignment-choice onboarding-zone onboarding-destination-choice" data-onboarding-action="active-zone" data-id="${escape(zone.id)}" aria-pressed="${selected}"><svg class="icon onboarding-destination-choice-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg><span><b>${escape(zone.name)}</b><small>${escape(detail)}</small></span><i aria-hidden="true">${selected?'✓':''}</i></button>`;
+      }).join('');
+      const noZoneSelected=chosenZone===null&&!draft.zoneChoiceRequired;
+      const noZone=`<button type="button" class="assignment-choice onboarding-zone onboarding-destination-choice" data-onboarding-action="active-zone" data-without-zone aria-pressed="${noZoneSelected}"><svg class="icon onboarding-destination-choice-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h18v6H3zM6 11v2M10 11v2M14 11v2M18 11v2M1 12h2M21 12h2"/></svg><span><b>Nog geen zone</b><small>${noZoneSelected?'Gekozen · blijft gekoppeld aan je stand':'Blijft gekoppeld aan je stand'}</small></span><i aria-hidden="true">${noZoneSelected?'✓':''}</i></button>`;
+      const zoneEditor=zoneNameOpen?`<section class="onboarding-destination-create">${nameField('onboarding-zone-name','Zonenaam','Bijvoorbeeld: Demohoek',zoneNameInput)}${button('zone-create','Zone maken','disabled')}</section>`:`<div class="assignment-choices onboarding-zone-list onboarding-destination-choices" aria-label="Zone kiezen">${zones}${noZone}</div>`;
+      const zoneChanged=receiverZoneSelection!==undefined&&receiverZoneSelection!==draft.activeZoneId;
+      const confirm=zoneNameOpen?'':button('zone-picker-confirm',draft.activeZoneId?'Zone wijzigen':'Zone kiezen',`class="button full" ${zoneChanged&&!(draft.zoneChoiceRequired&&chosenZone===null)?'':'disabled'}`);
+      return `<details class="onboarding-destination" data-receiver-destination ${open?'open':''}><summary data-onboarding-action="zone-picker-open" aria-haspopup="dialog" aria-expanded="${open}" aria-controls="onboarding-zone-change"><span class="onboarding-destination-ledline" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 9h18v6H3zM6 11v2M10 11v2M14 11v2M18 11v2M1 12h2M21 12h2"/></svg></span><span class="onboarding-destination-name"><small>${hint}</small><b>${escape(destinationName)}</b></span><em>${destination?'Zone wijzigen':'Kies zone'}<span aria-hidden="true">⌄</span></em></summary><dialog class="onboarding-zone-dialog" id="onboarding-zone-change" data-onboarding-zone-dialog aria-labelledby="onboarding-zone-change-title"><header class="onboarding-destination-title"><h2 id="onboarding-zone-change-title">${zoneNameOpen?'Nieuwe zone maken':'Zone wijzigen'}</h2><button type="button" class="icon-button" data-onboarding-action="zone-picker-close" aria-label="Venster sluiten">×</button></header><p class="onboarding-destination-info">${explanation}</p>${zoneEditor}${zoneNameOpen?'':button('zone-add-from-receiver','＋ Nieuwe zone maken','class="button secondary full"')}${confirm}</dialog></details>`;
     }
     function product(receiver,{compact=false,port=null}={}){
       return `<div class="onboarding-product ${compact?'compact':''}"><canvas data-onboarding-visual="${escape(receiver.id)}" data-type="${receiver.type}" data-port="${port||''}" data-compact="${compact}" role="img" aria-label="${receiver.type}-receiver${port?` · uitgang ${port}`:''}" width="400" height="210"></canvas></div>`;
@@ -482,6 +501,17 @@
         if(receiverMove){
           for(const element of Array.from(container.querySelector('.onboarding-page').children))if(!element.matches('.onboarding-setup-header,.onboarding-setup-steps,.onboarding-heading'))element.remove();
           heading.insertAdjacentHTML('afterend',movePanel()+errorBox());
+        }
+        if(zonePickerOpen){
+          const dialog=container.querySelector('[data-onboarding-zone-dialog]');
+          if(dialog&&!dialog.open){
+            dialog.addEventListener('cancel',event=>{
+              event.preventDefault();const picker=dialog.closest('[data-receiver-destination]');if(picker)picker.open=false;
+              receiverZoneSelection=undefined;openZonePickerOnNextPaint=false;
+              paintPage(false);container?.querySelector('[data-receiver-destination]>summary')?.focus({preventScroll:true});
+            });
+            dialog.showModal();
+          }
         }
       }
       // Read-only native discovery can show the real product without pretending
@@ -822,6 +852,26 @@
       const target=event.target.closest('[data-onboarding-action]');if(!target||target.disabled)return;
       const action=target.dataset.onboardingAction;
       if(draftSaving||managementBusy)return;
+      if(action==='zone-picker-open'){
+        event.preventDefault();const picker=target.closest('[data-receiver-destination]');if(!picker)return;
+        const dialog=picker.querySelector('[data-onboarding-zone-dialog]'),wasOpen=picker.open&&dialog?.open;
+        picker.open=!wasOpen;if(wasOpen&&dialog?.open){dialog.close();receiverZoneSelection=undefined;}else if(receiverZoneSelection===undefined)receiverZoneSelection=draft.activeZoneId;
+        openZonePickerOnNextPaint=picker.open;paintPage(false);
+        if(!picker.open)container?.querySelector('[data-receiver-destination]>summary')?.focus({preventScroll:true});return;
+      }
+      if(action==='zone-picker-close'){
+        event.preventDefault();const picker=target.closest('[data-receiver-destination]');if(picker)picker.open=false;
+        const dialog=target.closest('[data-onboarding-zone-dialog]');if(dialog?.open)dialog.close();
+        receiverZoneSelection=undefined;openZonePickerOnNextPaint=false;
+        paintPage(false);container?.querySelector('[data-receiver-destination]>summary')?.focus({preventScroll:true});return;
+      }
+      if(action==='zone-picker-confirm'){
+        if(receiverZoneSelection===undefined||draft.zoneChoiceRequired&&receiverZoneSelection===null)return;
+        return saveChoices([{type:'SELECT_ACTIVE_ZONE',zoneId:receiverZoneSelection}],()=>{
+          receiverZoneSelection=undefined;const picker=container?.querySelector('[data-receiver-destination]');if(picker)picker.open=false;
+          const dialog=picker?.querySelector('[data-onboarding-zone-dialog]');if(dialog?.open)dialog.close();openZonePickerOnNextPaint=false;
+        },{top:false,focusDestination:true});
+      }
       if(action==='save-retry')return saveChoices();
       if(action==='receivers-list')return browseReceivers();
       if(['next','back','exit'].includes(action)&&draft.stage==='pixels'){
@@ -856,6 +906,7 @@
         if(earlyPlacement)events.push({type:'NEXT'});
         return saveChoices(events,()=>{
           zoneNameOpen=false;resetZoneNames();
+          if(draft.stage==='receiver'){const picker=container?.querySelector('[data-receiver-destination]');if(picker)picker.open=false;const dialog=picker?.querySelector('[data-onboarding-zone-dialog]');if(dialog?.open)dialog.close();openZonePickerOnNextPaint=false;}
           if(newReceiverZone)queueMicrotask(()=>finishChosenZone());
           if(earlyPlacement&&draft.stage==='security')queueMicrotask(()=>secure());
         },{top:!['zones','receiver'].includes(draft.stage)});
@@ -908,7 +959,10 @@
       }
       if(action==='zone-cancel'){zoneNameOpen=false;resetZoneNames();paintPage(false);return;}
       if(action==='active-zone'){
-        if(draft.stage==='receiver'){const picker=target.closest('.onboarding-destination');if(picker){picker.open=false;const existing=picker.querySelector('.onboarding-existing-members');if(existing)existing.open=false;}}
+        if(draft.stage==='receiver'&&target.closest('[data-onboarding-zone-dialog]')){
+          receiverZoneSelection=target.hasAttribute('data-without-zone')?null:target.dataset.id;error='';paintPage(false);return;
+        }
+        if(draft.stage==='receiver'){const picker=target.closest('.onboarding-destination');if(picker){picker.open=false;const dialog=picker.querySelector('[data-onboarding-zone-dialog]');if(dialog?.open)dialog.close();const existing=picker.querySelector('.onboarding-existing-members');if(existing)existing.open=false;}}
         return saveChoices([{type:'SELECT_ACTIVE_ZONE',zoneId:target.hasAttribute('data-without-zone')?null:target.dataset.id}],()=>{},{top:false});
       }
       if(action==='receiver'){

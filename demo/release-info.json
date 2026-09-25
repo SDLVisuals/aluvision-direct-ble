@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v31-20260925-ui8",
+  "revision": "v31-20260925-ui9",
   "interfaceVersion": 31,
-  "interfaceBaseline": "V31 iPhone build 137 source; unified LEDline scope dropdown; prominent return-to-zones button; simplified zone and receiver-add flow; consistent ledline language; SPI endpoint guidance",
+  "interfaceBaseline": "V31 iPhone build 138 source; unified LEDline scope dropdown; prominent return-to-zones button; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search; SPI endpoint guidance",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -60,7 +60,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "cf44827aa6e1f1c85775e4eb47ee65c83bf7707fc43d290eede7e5518e8c6c53"
+      "sha256": "893672bdbbb46feb184ce5de957a5e05a44071c6f1b07e8caafc89647718fabd"
     },
     {
       "path": "live-control.js",
@@ -92,11 +92,11 @@
     },
     {
       "path": "onboarding-ui.css",
-      "sha256": "b7cdadc32ebc7181fe8ef3c1006fd07b640ba6557f75eefc1bbf69e524f41af0"
+      "sha256": "fd75270e5fcfefacd1ee418d87464d1dc9706f7173124fc1076e11ddf9fa6d15"
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "c2a2362429d3a4ba7fde6a649e884a63f7904a90e9f91ab358de049be34872ff"
+      "sha256": "5e4c70f1dd3587633902383af4c64d80f945812a9210bd4197205fbe79e4f073"
     },
     {
       "path": "pixel-setup.css",

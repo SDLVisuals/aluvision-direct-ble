@@ -92,12 +92,29 @@ body:has(.onboarding-page) .onboarding-page{gap:10px}
 .onboarding-destination>summary em span{font-size:15px;line-height:1}
 .onboarding-destination[open]>summary{border-bottom:1px solid var(--line);padding-bottom:7px}
 .onboarding-destination .onboarding-zone-tiles{margin-bottom:4px}
-.onboarding-destination-title{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.onboarding-destination-title h2{font-size:13px}
-.onboarding-destination-title .button{min-height:44px;background:transparent;padding:6px 0 6px 8px;color:var(--red);font-size:12px}
+.onboarding-destination-title{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:6px}
+.onboarding-destination-title h2{font-size:17px;margin:0}
+.onboarding-destination-title .button{min-height:44px;padding:8px 12px;font-size:12px}
+.onboarding-destination-info{margin:6px 1px 10px!important;font-size:12px!important;line-height:1.5;color:var(--muted)}
+.onboarding-destination-choices{max-height:240px;overflow-y:auto;overscroll-behavior:contain;padding:2px;scrollbar-width:thin}
+.onboarding-destination-choice{min-height:70px!important;padding:12px!important;gap:12px!important;border-radius:20px!important}
+.onboarding-destination-choice>svg{display:grid;place-items:center;width:40px!important;height:40px!important;flex:none;padding:9px;border-radius:13px;background:var(--soft);color:var(--red);fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.onboarding-destination-choice b{font-size:14px!important}
+.onboarding-destination-choice small{font-size:11px!important;line-height:1.4;margin-top:4px!important}
+.onboarding-destination-choice>i{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--soft);font-size:13px;font-weight:750}
+.onboarding-destination-choice[aria-pressed=true]>i{background:var(--red);color:#fff}
+.onboarding-destination>[data-onboarding-action=zone-add-from-receiver]{min-height:50px;margin-top:7px;border-radius:15px}
 .onboarding-destination-create{margin:8px 0 3px;padding:10px 2px 2px;border-top:1px solid var(--line)}
 .onboarding-destination-create>[data-onboarding-action=zone-create]{width:100%;min-height:48px;margin-top:8px;border-radius:14px}
 .onboarding-destination .onboarding-zone-list{max-height:180px;overflow-y:auto;overscroll-behavior:contain;padding:2px;scrollbar-width:thin}
+.onboarding-zone-dialog{position:fixed;inset:0;margin:auto;width:min(calc(100vw - 28px),520px);max-height:min(86vh,680px);max-height:min(86dvh,680px);overflow-y:auto;border:1px solid var(--line);border-radius:28px;padding:22px;background:var(--panel);color:var(--ink);box-shadow:0 24px 70px #171c1840}
+.onboarding-zone-dialog::backdrop{background:#161c1970;backdrop-filter:blur(5px)}
+.onboarding-zone-dialog>header{position:sticky;top:-22px;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-22px -22px 12px;padding:18px 18px 14px 22px;background:var(--panel);border-bottom:1px solid var(--line)}
+.onboarding-zone-dialog>header h2{margin:0;font-size:20px;line-height:1.2}
+.onboarding-zone-dialog>header .icon-button{width:54px;min-width:54px;height:54px;min-height:54px;border-radius:17px;font-size:26px}
+.onboarding-zone-dialog .onboarding-destination-info{margin:12px 1px 16px!important}
+.onboarding-zone-dialog .onboarding-zone-list{max-height:min(42dvh,320px)}
+.onboarding-zone-dialog>[data-onboarding-action=zone-add-from-receiver]{width:100%;margin-top:5px}
 .onboarding-destination .onboarding-zone-list{gap:7px}
 .onboarding-destination .onboarding-zone{min-height:60px;padding:8px 10px;border-radius:13px;gap:9px}
 .onboarding-destination .onboarding-zone b{font-size:13px}
