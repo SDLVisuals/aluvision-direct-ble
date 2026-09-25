@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v31-20260925-unassigned-zone-icon-18",
+  "revision": "v31-20260925-gallery-note-removed-19",
   "interfaceVersion": 31,
-  "interfaceBaseline": "V31 iPhone build 141 source; clearer grouped animation gallery with visible motion-pattern previews; dedicated Brand animaties with six selectable accent tones and 21 curated existing SPI exhibition recipes; perspective tunnel previews; shared colour wheel for editable Brand colours; all original wire recipes preserved; bulk-select and atomically assign compatible ledlines to a zone; rounded shared modal headings; colour-first whole-stand sheet with one button to the full scenes gallery; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search with one matching location-minus icon for receivers without a zone; SPI endpoint guidance; user-selectable compact, medium and large LED previews; direct entry to the active animation settings with the gallery one tap away; background colour is grouped with animation colours behind an explicit toggle; animation smoothness is fixed at 100%, including when older active animations are opened; adjustable settings have a meaning icon and plain-language hint, with the active live preview identified as the immediate visual feedback",
+  "interfaceBaseline": "V31 iPhone build 141 source; clearer grouped animation gallery with visible motion-pattern previews and no confusing preview disclaimer; dedicated Brand animaties with six selectable accent tones and 21 curated existing SPI exhibition recipes; perspective tunnel previews; shared colour wheel for editable Brand colours; all original wire recipes preserved; bulk-select and atomically assign compatible ledlines to a zone; rounded shared modal headings; colour-first whole-stand sheet with one button to the full scenes gallery; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search with one matching location-minus icon for receivers without a zone; SPI endpoint guidance; user-selectable compact, medium and large LED previews; direct entry to the active animation settings with the gallery one tap away; background colour is grouped with animation colours behind an explicit toggle; animation smoothness is fixed at 100%, including when older active animations are opened; adjustable settings have a meaning icon and plain-language hint, with the active live preview identified as the immediate visual feedback",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -27,7 +27,7 @@
     },
     {
       "path": "animation-library.css",
-      "sha256": "2320ca1a19ca155a1c8cbafe96bb04a638533f8be4d25e0ecb4194e16be92f7b"
+      "sha256": "24481f404aae0c510fb2fb4ed00eb62f163c773bf699bd86ab186b30365aa669"
     },
     {
       "path": "animation-library.js",
@@ -39,7 +39,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "c79caa51e4ea1daadf910676ea56805ccd919c93044cf7ad7036fb17f8264bc2"
+      "sha256": "429eb2e5eca3d5d793013dcacea8f745cb51b5449a7a949b53a20444fecdcf48"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -67,7 +67,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "6b879b1f7fc2a6de63410bfdf95cba84f2adcb5c9230f71898b3d2181e02ddef"
+      "sha256": "520408e74bbd12e25ee20918d57fe8977ad22d44c7e6158d8eb3232b4194f337"
     },
     {
       "path": "live-control.js",
