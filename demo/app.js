@@ -324,7 +324,7 @@
     const states = powerTargets().map(r => r.state.on !== false && r.state.power !== false);
     const value = states.length&&states.every(Boolean) ? true : states.some(Boolean) ? 'mixed' : false;
     const scope=standControlOpen?'stand':'zone';
-    return `<div class="power-card"><div><strong>${icon('power')}Hele ${scope}</strong></div><button class="switch" role="switch" aria-label="${value==='mixed'?`Deels aan; zet de hele ${scope} aan`:`Hele ${scope} aan of uit`}" aria-checked="${value===true}" data-mixed="${value==='mixed'}" data-action="power" ${states.length?'':'disabled'}><span>${value === 'mixed' ? 'Deels aan' : value ? 'Aan' : 'Uit'}</span><i aria-hidden="true"></i></button></div>`;
+    return `<div class="power-card power-card-${scope}"><div><strong>${icon('power')}Hele ${scope}</strong></div><button class="switch" role="switch" aria-label="${value==='mixed'?`Deels aan; zet de hele ${scope} aan`:`Hele ${scope} aan of uit`}" aria-checked="${value===true}" data-mixed="${value==='mixed'}" data-action="power" ${states.length?'':'disabled'}><span>${value === 'mixed' ? 'Deels aan' : value ? 'Aan' : 'Uit'}</span><i aria-hidden="true"></i></button></div>`;
   }
   function renderControls() {
     const colour=controlMode==='colour';
@@ -332,7 +332,7 @@
     const modeContent=colour
       ?`<section class="bediening-workspace" aria-labelledby="bediening-colour-title"><header class="bediening-workspace-heading"><span class="menu-icon">${icon('sun')}</span><div><h2 id="bediening-colour-title">Vaste kleur</h2><p>${oneLine?'Kies een kleur voor deze ledline.':'Kies ledlines om samen te bedienen.'}</p></div></header>${selector()}${colourPickerMarkup()}</section>`
       :`<section class="bediening-workspace" aria-labelledby="bediening-animation-title"><header class="bediening-workspace-heading"><span class="menu-icon">${icon('animation')}</span><div><h2 id="bediening-animation-title">Animaties</h2><p>${oneLine?'Kies een animatie voor deze ledline.':'Kies ledlines om samen te bedienen. Kies daarna een animatie.'}</p></div></header>${selector()}${controlAnimationPanel()}</section>`;
-    return `<div class="editor-grid">${controlContext('controls')}<section class="editor-controls">${powerControl()}<section class="control-workspace"><div class="control-mode-panel" role="region" aria-label="${colour?'Vaste kleur':'Animaties'}" data-control-mode="${controlMode}">${modeContent}</div></section></section></div>`;
+    return `<div class="editor-grid">${controlContext('controls')}<section class="editor-controls editor-controls-zone">${powerControl()}<section class="control-workspace"><div class="control-mode-panel" role="region" aria-label="${colour?'Vaste kleur':'Animaties'}" data-control-mode="${controlMode}">${modeContent}</div></section></section></div>`;
   }
 
   function controlAnimationPanel(){
