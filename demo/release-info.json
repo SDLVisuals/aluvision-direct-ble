@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v31-20260925-smoothness-100-17",
+  "revision": "v31-20260925-unassigned-zone-icon-18",
   "interfaceVersion": 31,
-  "interfaceBaseline": "V31 iPhone build 141 source; clearer grouped animation gallery with visible motion-pattern previews; dedicated Brand animaties with six selectable accent tones and 21 curated existing SPI exhibition recipes; perspective tunnel previews; shared colour wheel for editable Brand colours; all original wire recipes preserved; bulk-select and atomically assign compatible ledlines to a zone; rounded shared modal headings; colour-first whole-stand sheet with one button to the full scenes gallery; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search; SPI endpoint guidance; user-selectable compact, medium and large LED previews; direct entry to the active animation settings with the gallery one tap away; background colour is grouped with animation colours behind an explicit toggle; animation smoothness is fixed at 100%, including when older active animations are opened; adjustable settings have a meaning icon and plain-language hint, with the active live preview identified as the immediate visual feedback",
+  "interfaceBaseline": "V31 iPhone build 141 source; clearer grouped animation gallery with visible motion-pattern previews; dedicated Brand animaties with six selectable accent tones and 21 curated existing SPI exhibition recipes; perspective tunnel previews; shared colour wheel for editable Brand colours; all original wire recipes preserved; bulk-select and atomically assign compatible ledlines to a zone; rounded shared modal headings; colour-first whole-stand sheet with one button to the full scenes gallery; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search with one matching location-minus icon for receivers without a zone; SPI endpoint guidance; user-selectable compact, medium and large LED previews; direct entry to the active animation settings with the gallery one tap away; background colour is grouped with animation colours behind an explicit toggle; animation smoothness is fixed at 100%, including when older active animations are opened; adjustable settings have a meaning icon and plain-language hint, with the active live preview identified as the immediate visual feedback",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -39,7 +39,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "5b99a61fb3b1fea1dd269f408b49b5f7d4c3834b0bd5a7630f05b1b5368e94ea"
+      "sha256": "c79caa51e4ea1daadf910676ea56805ccd919c93044cf7ad7036fb17f8264bc2"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -59,7 +59,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "450460618939d30474c9e533a947360f9303769a2731867f99f0d8c3017260bf"
+      "sha256": "a8529b783b4bf24c26ac91cf3a05fb84f512f391e6a075eb86b02e14cc4e6c39"
     },
     {
       "path": "fixtures.js",
@@ -67,7 +67,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "28ef17d72d7bdeb0799df4213b2293812861b8ae2c9dd3e7ec6eb5eaadbc6e6a"
+      "sha256": "6b879b1f7fc2a6de63410bfdf95cba84f2adcb5c9230f71898b3d2181e02ddef"
     },
     {
       "path": "live-control.js",
@@ -99,11 +99,11 @@
     },
     {
       "path": "onboarding-ui.css",
-      "sha256": "fd75270e5fcfefacd1ee418d87464d1dc9706f7173124fc1076e11ddf9fa6d15"
+      "sha256": "d9b1489c7d7c3dbd5220e19d9043c33f389354ba319e35f50083af11ffd62362"
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "5e4c70f1dd3587633902383af4c64d80f945812a9210bd4197205fbe79e4f073"
+      "sha256": "eff27e06c5acdb3744ae70c0494a0eb594102aa361467527d3cdfbdac304ef04"
     },
     {
       "path": "pixel-setup.css",

@@ -121,6 +121,7 @@
   const iconPaths = {
     stand:'M3 21V4h18v17M3 8h18M7 21V12h10v9M1 21h22',
     zones:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
+    unassigned:'M12 22s7-4.35 7-12a7 7 0 1 0-14 0c0 7.65 7 12 7 12ZM9 10h6',
     light:'M3 9h18v6H3zM6 11v2M10 11v2M14 11v2M18 11v2M1 12h2M21 12h2',
     receiver:'M4 5h16v15H4zM8 2v3M16 2v3M7 9h10M7 13h2M11 13h2M15 13h2M7 17h10',
     back:'m14 6-6 6 6 6M8 12h13', chevron:'m9 5 7 7-7 7', close:'m6 6 12 12M6 18 18 6',
@@ -144,7 +145,8 @@
     // not a menu, receiver or reorder symbol. The check follows aria-pressed.
     if(name==='together')return `<svg class="icon icon-together" viewBox="0 0 40 32" aria-hidden="true" focusable="false"><path class="together-link" d="M5 5.5H2v18h3M2 14.5h3"/>${[3,12,21].map(y=>`<rect class="together-line" x="7" y="${y}" width="21" height="5" rx="2.5"/>`).join('')}<path class="together-check" d="m30 24 3 3 5-7"/></svg>`;
     if(name==='receiver')name='light';
-    return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="${iconPaths[name] || iconPaths.light}"/></svg>`;
+    const unassigned=name==='unassigned';
+    return `<svg class="icon${unassigned?' icon-unassigned':''}"${unassigned?' data-icon="unassigned"':''} viewBox="0 0 24 24" aria-hidden="true"><path d="${iconPaths[name] || iconPaths.light}"/></svg>`;
   }
   const stand = () => model.stands[0];
   // Before the first receiver is confirmed, the named stand exists only in
@@ -1364,7 +1366,7 @@
     showEffectDialog('Zone wijzigen',`<p><b>${esc(r.name)}</b> · ${esc(r.type)} · nu ${r.zoneId?`in ${esc(M.getZone(model,r.zoneId).name)}`:'nog niet aan een zone toegewezen'}. De koppeling en lichtinstellingen blijven bewaard.</p><div class="assignment-choices" aria-label="Zone kiezen">${stand().zones.map(z=>{
       const compatible=!z.type||z.type===r.type,chosen=z.id===receiverAssignment.zoneId;
       return `<button class="assignment-choice" data-action="assignment-zone" data-id="${esc(z.id)}" aria-pressed="${chosen}" ${compatible?'':'disabled'}>${icon('zones')}<span><b>${esc(z.name)}</b><small>${z.id===r.zoneId?'Huidige zone':compatible?`${zoneTypeLabel(z)}${z.type?` · ${receiverCount(z.receiverIds.length)}`:''}`:`Alleen ${z.type} · past niet bij deze receiver`}</small></span><i aria-hidden="true">${chosen?'✓':''}</i></button>`;
-    }).join('')}<button class="assignment-choice" data-action="assignment-zone" data-id="" aria-pressed="${!receiverAssignment.zoneId}">${icon('receiver')}<span><b>Nog geen zone</b><small>Blijft gekoppeld aan je stand</small></span><i aria-hidden="true">${!receiverAssignment.zoneId?'✓':''}</i></button></div><button class="button secondary full" data-action="assignment-new-zone">＋ Nieuwe zone maken</button><p class="dialog-error" role="alert" hidden></p><button class="button full" data-action="assignment-confirm" ${receiverAssignment.zoneId===r.zoneId?'disabled':''}>Zone wijzigen</button>`);
+    }).join('')}<button class="assignment-choice" data-action="assignment-zone" data-id="" aria-pressed="${!receiverAssignment.zoneId}">${icon('unassigned')}<span><b>Nog geen zone</b><small>Blijft gekoppeld aan je stand</small></span><i aria-hidden="true">${!receiverAssignment.zoneId?'✓':''}</i></button></div><button class="button secondary full" data-action="assignment-new-zone">＋ Nieuwe zone maken</button><p class="dialog-error" role="alert" hidden></p><button class="button full" data-action="assignment-confirm" ${receiverAssignment.zoneId===r.zoneId?'disabled':''}>Zone wijzigen</button>`);
   }
   function showLayoutReceiverAdd(zoneId) {
     const z=M.getZone(model,zoneId);if(!z)return;

@@ -99,6 +99,9 @@ body:has(.onboarding-page) .onboarding-page{gap:10px}
 .onboarding-destination-choices{max-height:240px;overflow-y:auto;overscroll-behavior:contain;padding:2px;scrollbar-width:thin}
 .onboarding-destination-choice{min-height:70px!important;padding:12px!important;gap:12px!important;border-radius:20px!important}
 .onboarding-destination-choice>svg{display:grid;place-items:center;width:40px!important;height:40px!important;flex:none;padding:9px;border-radius:13px;background:var(--soft);color:var(--red);fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.onboarding-destination-choice>svg.icon-unassigned{stroke-width:1.9}
+.onboarding-zone-unassigned-icon{color:var(--red);background:#c94e4612!important}
+.onboarding-zone-unassigned-icon .icon{width:19px;height:19px}
 .onboarding-destination-choice b{font-size:14px!important}
 .onboarding-destination-choice small{font-size:11px!important;line-height:1.4;margin-top:4px!important}
 .onboarding-destination-choice>i{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--soft);font-size:13px;font-weight:750}
