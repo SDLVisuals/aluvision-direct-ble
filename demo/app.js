@@ -208,7 +208,10 @@
   function catalogue() { return P.catalog(zone()?.type || 'RGBW'); }
   function activeEffect() {
     if(standControlOpen)return null;
-    if(selected().length>1&&mixedSelection())return null;
+    // Smoothness is a fixed 100% rule for effects that support it. Older
+    // installations may differ only in their saved smoothness value; treat
+    // those lines as one effect so opening the editor can normalize them.
+    if(selected().length>1&&mixedSelection(true))return null;
     const s = selectedState();
     if(!s.engine||String(s.engine).toUpperCase()==='STATIC')return null;
     return catalogue().find(e => s.v30Effect ? e.state.v30Effect === s.v30Effect : !e.state.v30Effect && e.state.engine === s.engine && e.state.variant === s.variant && (e.state.previewFamily || null) === (s.previewFamily || null));
@@ -242,13 +245,13 @@
     const backToZones=back==='stand';
     return `<div class="topline"><button class="back${backToZones?' back-to-zones':''}" data-action="${back}">${icon('back')}<span>${esc(backLabel)}</span></button><span class="context-name">${esc(standLabel())}</span></div><header class="page-heading"><div><h1>${esc(title)}</h1><p>${esc(subtitle || '')}</p></div>${['controls','colour','animations','effects','layout'].includes(route.screen) && zone() ? `<span class="pill">${zone().type === 'SPI' ? 'Pixel LED · SPI' : 'RGBW'}</span>` : ''}</header>`;
   }
-  function mixedSelection() {
+  function mixedSelection(ignoreSmooth=false) {
     const signatures = selected().map(receiver => {
       const s = P.normalizeState(receiver);
       const signature = {on:s.on !== false && s.power !== false,engine:s.engine,variant:s.variant || 0,
         bri:s.brightness,colors:s.colors.map((c,i)=>s.rgbEnabled?.[i] === false?'#000000':c.toUpperCase()),
         whites:s.whiteChannels.map((w,i)=>s.whiteEnabled?.[i] === false?0:w)};
-      if(s.engine !== 'STATIC')for(const key of ['v30Effect','previewFamily','legacySpi','speed','smooth','colorCount','widthPixels','objectCount','trailLength','spacing','direction','lineDelayMs','spread','randomness','fadeAmount','delayMs','width','brandColor','bounce','mirror','background','backgroundOn','backgroundWhite','backgroundRgbEnabled','backgroundWhiteEnabled','bgBrightness'])signature[key]=s[key]??null;
+      if(s.engine !== 'STATIC')for(const key of ['v30Effect','previewFamily','legacySpi','speed','smooth','colorCount','widthPixels','objectCount','trailLength','spacing','direction','lineDelayMs','spread','randomness','fadeAmount','delayMs','width','brandColor','bounce','mirror','background','backgroundOn','backgroundWhite','backgroundRgbEnabled','backgroundWhiteEnabled','bgBrightness'])if(!(ignoreSmooth&&key==='smooth'))signature[key]=s[key]??null;
       return JSON.stringify(signature);
     });
     return signatures.some(value=>value!==signatures[0]);
@@ -418,7 +421,7 @@
     bri:{icon:'sun',description:'Hoe fel de bewegende kleuren branden.'},
     speed:{icon:'animation',description:'Hoe snel het licht over de ledlines beweegt.'},
     bgBrightness:{icon:'sun',description:'Hoe fel de vaste achtergrondkleur brandt.'},
-    smooth:{icon:'sparkle',description:'Hoe zacht de kleuren in elkaar overvloeien.'},
+    smooth:{icon:'sparkle',description:'Animaties lopen altijd op maximale vloeiendheid.'},
     widthPixels:{icon:'light',description:'Hoeveel pixels één lichtpunt inneemt.'},
     objectCount:{icon:'together',description:'Hoeveel lichtpunten tegelijk bewegen.'},
     trailLength:{icon:'animation',description:'Hoe lang de lichtstaart achter een lichtpunt is.'},
@@ -434,7 +437,6 @@
     if (!effect) return '';
     const s = selectedState(), available = effect.controls;
     const specs = [
-      ['smooth','Vloeiendheid',0,100,s.smooth??85,'%',''],
       ['widthPixels','Breedte',1,60,s.widthPixels??8,' px',''],
       ['objectCount','Aantal lichtpunten',1,8,s.objectCount??1,'',''],
       ['trailLength','Staart',0,100,s.trailLength??12,'%',''],
@@ -451,14 +453,15 @@
     // A line-to-line delay cannot change a single selected line. Keep the
     // saved setting intact, but don't offer an inactive control in that scope.
     const controls=specs.filter(spec=>available.includes(spec[0])&&!(spec[0]==='lineDelayMs'&&selected().length<2));
-    if(!controls.length&&!['direction','bounce','mirror'].some(key=>available.includes(key)))return '';
-    return `<button class="settings-toggle" data-action="settings-toggle" aria-expanded="${settingsOpen}" aria-controls="animation-settings">${icon('sliders')}<span>${settingsOpen?'Instellingen verbergen':'Beweging instellen'}</span>${icon(settingsOpen?'close':'chevron')}</button><section id="animation-settings" class="card settings-panel" ${settingsOpen?'':'hidden'}><p class="animation-preview-feedback"><span class="preview-feedback-icon">${icon('animation')}</span><span>Kijk bovenaan: het ledline-voorbeeld beweegt meteen mee.</span></p>${controls.map(spec=>`<div class="animation-setting">${animationSlider(...spec)}${resetMarkup(spec[0],spec[1])}</div>`).join('')}${available.includes('direction') ? `<div class="direction-setting"><p class="direction-setting-label"><span class="setting-label-icon">${icon('back')}</span><span><b>Richting</b><small>Kies welke kant het licht op beweegt.</small></span></p><div class="compact-direction" aria-label="Bewegingsrichting">${(effect.directions||['right','left']).map(value=>`<button data-action="direction" data-value="${value}" aria-pressed="${(s.direction||effect.state.direction)===value}">${esc(directionMap[value]||value)}</button>`).join('')}</div></div>`:''}</section>`;
+    const smoothness=available.includes('smooth')?`<div class="fixed-animation-setting" data-fixed-setting="smooth" aria-label="Vloeiendheid altijd 100 procent"><span class="setting-label-icon">${icon(animationSettingGuides.smooth.icon)}</span><span class="fixed-animation-copy"><b>Vloeiendheid</b><small>${esc(animationSettingGuides.smooth.description)}</small></span><strong>100%</strong></div>`:'';
+    if(!controls.length&&!smoothness&&!['direction','bounce','mirror'].some(key=>available.includes(key)))return '';
+    return `<button class="settings-toggle" data-action="settings-toggle" aria-expanded="${settingsOpen}" aria-controls="animation-settings">${icon('sliders')}<span>${settingsOpen?'Instellingen verbergen':'Beweging instellen'}</span>${icon(settingsOpen?'close':'chevron')}</button><section id="animation-settings" class="card settings-panel" ${settingsOpen?'':'hidden'}><p class="animation-preview-feedback"><span class="preview-feedback-icon">${icon('animation')}</span><span>Kijk bovenaan: het ledline-voorbeeld beweegt meteen mee.</span></p>${controls.map(spec=>`<div class="animation-setting">${animationSlider(...spec)}${resetMarkup(spec[0],spec[1])}</div>`).join('')}${smoothness}${available.includes('direction') ? `<div class="direction-setting"><p class="direction-setting-label"><span class="setting-label-icon">${icon('back')}</span><span><b>Richting</b><small>Kies welke kant het licht op beweegt.</small></span></p><div class="compact-direction" aria-label="Bewegingsrichting">${(effect.directions||['right','left']).map(value=>`<button data-action="direction" data-value="${value}" aria-pressed="${(s.direction||effect.state.direction)===value}">${esc(directionMap[value]||value)}</button>`).join('')}</div></div>`:''}</section>`;
   }
   function animationSettingValue(key,value,unit='') { return ['delayMs','lineDelayMs'].includes(key)?`${Number((Number(value)/1000).toFixed(3)).toLocaleString('nl-BE',{maximumFractionDigits:3})} s`:Math.round(value)+unit; }
   function animationSlider(key,label,min,max,value,unit='',hint='') {
     return slider(key,label,min,max,value,unit,hint,animationSettingGuides[key]||{icon:'sliders',description:hint||'Pas dit aan en bekijk meteen het voorbeeld.'}).replace(`${Math.round(value)}${unit}</output>`,`${animationSettingValue(key,value,unit)}</output>`);
   }
-  function settingDefault(key) { return activeEffect()?.state[key]??(key==='bri'?100:key==='bgBrightness'?10:['bounce','mirror'].includes(key)?false:undefined); }
+  function settingDefault(key) { return key==='smooth'?100:activeEffect()?.state[key]??(key==='bri'?100:key==='bgBrightness'?10:['bounce','mirror'].includes(key)?false:undefined); }
   function settingChanged(key) { const fallback=settingDefault(key);return fallback!==undefined&&(selectedState()[key]??fallback)!==fallback; }
   function syncSettingResets() { document.querySelectorAll('[data-action="setting-reset"]').forEach(button=>{button.hidden=!settingChanged(button.dataset.id);}); }
   function animationEditorMarkup(effect) {
@@ -488,6 +491,7 @@
   function backgroundDefaults(){return {backgroundOn:false,background:'#000000',backgroundWhite:0,bgBrightness:10,backgroundRgbEnabled:true,backgroundWhiteEnabled:true};}
   function effectState(effect) {
     const state={...backgroundDefaults(),...copy(effect.state),category:effect.category,v30Effect:effect.state.v30Effect||null,previewFamily:effect.state.previewFamily||null,legacySpi:effect.state.legacySpi===true,bounce:effect.state.bounce===true,mirror:effect.state.mirror===true,on:true,power:true};
+    if(effect.controls.includes('smooth'))state.smooth=100;
     if(effect.category==='brand'){
       const accent=brandColours.get(route.zoneId)||state.brandColor||state.colors?.[0]||'#C94E46';
       state.brandColor=accent;
@@ -863,6 +867,9 @@
     }
     if(route.screen==='demo-wifi'&&!webDemoContext)route.screen='settings';
     if(!model.stands.length&&!['stand','scenes','settings','demo-wifi','pin-login','receivers','receiver-add'].includes(route.screen))route.screen='stand';
+    const animationEditorOpen=route.screen==='animations'||(route.screen==='controls'&&controlMode==='animations'&&!showControlAnimationGallery);
+    const visibleEffect=animationEditorOpen?activeEffect():null;
+    if(visibleEffect?.controls.includes('smooth')&&selected().some(receiver=>Number(receiver.state.smooth)!==100))apply({smooth:100});
     // No empty animation landing page. This also covers switching from an
     // animated receiver to a static one while its editor is already open.
     if(route.screen==='animations'&&zone()&&receivers().length&&!activeEffect()){
@@ -1074,6 +1081,7 @@
   }
   function apply(patch,scope=selection()) {
     const ids=standControlOpen?standReceivers().map(receiver=>receiver.id):selectedReceiverIds(scope);
+    if(activeEffect()?.controls.includes('smooth'))patch={...patch,smooth:100};
     if(Object.hasOwn(patch,'bri')&&!Object.hasOwn(patch,'brightness'))patch={...patch,brightness:patch.bri};
     else if(Object.hasOwn(patch,'brightness')&&!Object.hasOwn(patch,'bri'))patch={...patch,bri:patch.brightness};
     model=standControlOpen?M.applyStandState(model,stand().id,patch):M.applyState(model,route.zoneId,scope,patch);
@@ -1939,7 +1947,7 @@
       if(action==='preset-apply'){
         const preset=savedPresets.presets.find(p=>p.id===id);if(!preset)return;
         const restored=S.restore(preset,presetContext(),catalogue());if(!restored.compatible)return toast(restored.reason);
-        apply({...backgroundDefaults(),...restored.state,v30Effect:restored.state.v30Effect||null,previewFamily:restored.state.previewFamily||null});settingsOpen=false;
+        apply({...backgroundDefaults(),...restored.state,...(restored.effect.controls.includes('smooth')?{smooth:100}:{}),v30Effect:restored.state.v30Effect||null,previewFamily:restored.state.previewFamily||null});settingsOpen=false;
         if(route.screen==='controls'&&button.closest('[data-control-mode="animations"]')){controlMode='animations';showControlAnimationGallery=false;return render({preserveScroll:true});}
         if(route.screen==='effects'&&route.effectsReturn==='controls'){controlMode='animations';return navigate('controls',{zoneId:route.zoneId});}
         return navigate('animations');
