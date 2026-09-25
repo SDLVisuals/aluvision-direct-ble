@@ -49,6 +49,7 @@ body:not([data-theme="dark"]) {
   .current-effect,
   .settings-toggle,
   .assignment-choice,
+  .assignment-family-choice,
   .layout-choice,
   .receiver-list details,
   .receiver-order > [data-order-receiver],
@@ -214,6 +215,7 @@ body:not([data-theme="dark"]) {
 
 .scope-lines-list .scope-line[aria-pressed="true"],
 .assignment-choice[aria-pressed="true"],
+.assignment-family-choice[aria-pressed="true"],
 .scene-zone[aria-pressed="true"],
 .onboarding-zone[aria-pressed="true"],
 .layout-choice[aria-pressed="true"],
@@ -345,6 +347,7 @@ body[data-theme="dark"] :is(
   .current-effect,
   .settings-toggle,
   .assignment-choice,
+  .assignment-family-choice,
   .layout-choice,
   .receiver-list details,
   .receiver-order > [data-order-receiver],
@@ -396,6 +399,17 @@ body[data-theme="dark"] :is(.receiver-chips button, .filter-row button, .compact
   color: var(--ink);
   background-image: linear-gradient(145deg, rgba(48, 52, 46, .95), rgba(34, 37, 32, .93));
   border-color: rgba(255, 255, 255, .09);
+}
+
+body[data-theme="dark"] .assignment-family-choice {
+  color: var(--ink);
+  background: linear-gradient(145deg, rgba(48, 52, 46, .95), rgba(34, 37, 32, .93));
+  border-color: rgba(255, 255, 255, .09);
+}
+
+body[data-theme="dark"] .assignment-family-choice[aria-pressed="true"] {
+  border-color: rgba(191, 72, 65, .72);
+  background: linear-gradient(145deg, rgba(67, 49, 46, .94), rgba(44, 37, 34, .92));
 }
 
 body[data-theme="dark"] :is(.receiver-chips button[aria-pressed="true"], .filter-row button[aria-selected="true"], .compact-direction button[aria-pressed="true"], .control-mode-tabs button[aria-pressed="true"]) {

@@ -123,10 +123,14 @@
     // uses the most recent accepted view. Callers may bind an explicit earlier
     // revision when their UI decision depends on that exact snapshot.
     const kinds={create:operation&&Object.prototype.hasOwnProperty.call(operation,'receiverId')?['kind','zoneId','name','receiverId']:['kind','zoneId','name'],rename:['kind','zoneId','name'],renameReceiver:['kind','receiverId','name'],delete:['kind','zoneId'],
-      assign:['kind','receiverId','zoneId'],reorder:['kind','zoneId','receiverIds'],layout:['kind','zoneId','layout']};
+      assign:['kind','receiverId','zoneId'],assignMany:['kind','receiverIds','zoneId'],reorder:['kind','zoneId','receiverIds'],layout:['kind','zoneId','layout']};
     const fields=typeof operation?.kind==='string'&&Object.prototype.hasOwnProperty.call(kinds,operation.kind)?kinds[operation.kind]:null;
+    const boundedId=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(value);
     if(typeof standId!=='string'||expectedRevision!==undefined&&(!Number.isSafeInteger(expectedRevision)||expectedRevision<0)||!fields||
       !operation||typeof operation!=='object'||Array.isArray(operation)||
+      operation.kind==='assignMany'&&(!Array.isArray(operation.receiverIds)||!operation.receiverIds.length||operation.receiverIds.length>128||
+        operation.receiverIds.some(id=>!boundedId(id))||new Set(operation.receiverIds).size!==operation.receiverIds.length||
+        !(operation.zoneId===null||boundedId(operation.zoneId)))||
       expectedZoneSignature!==undefined&&(!['delete','rename'].includes(operation.kind)||typeof expectedZoneSignature!=='string'||expectedZoneSignature.length>16384)||
       Object.keys(operation).length!==fields.length||!fields.every(key=>Object.prototype.hasOwnProperty.call(operation,key)))return Promise.reject(fail('ZONE_EDIT_INVALID'));
     let payload;
@@ -136,13 +140,19 @@
       if(expectedRevision!==undefined&&expectedRevision!==viewRevision)throw fail('V30_CHECKPOINT_CONFLICT');
       const revision=viewRevision,previousDraft=JSON.parse(viewDraftKey);
       let expectedSetupModel=null;
+      if(payload.operation.kind==='assignMany'){
+        const op=payload.operation,Model=root.LightningModel,cached=JSON.parse(viewModelKey),stand=cached.stands?.find(item=>item.id===standId);
+        if(!Model||!stand||op.receiverIds.some(id=>!cached.receivers?.some(item=>item.id===id&&item.standId===standId&&item.lifecycle==='added'))||
+          op.zoneId!==null&&!stand.zones.some(zone=>zone.id===op.zoneId))throw fail('V30_CHECKPOINT_CONFLICT');
+        try{Model.moveReceivers(cached,op.receiverIds,op.zoneId);}catch(_){throw fail('ZONE_EDIT_INVALID');}
+      }
       try{
         if(previousDraft!==null){
           const kind=payload.operation.kind;
           if(previousDraft.stand?.id!==standId||previousDraft.receiver!==null||previousDraft.cancelled!==false||
             previousDraft.security?.status!=='not-started'||previousDraft.security?.phase!=='idle'||
             !['zones','receiver'].includes(previousDraft.stage)||
-            !(['delete','rename','assign','layout','reorder'].includes(kind)||kind==='create'&&Object.prototype.hasOwnProperty.call(payload.operation,'receiverId')))
+            !(['delete','rename','assign','assignMany','layout','reorder'].includes(kind)||kind==='create'&&Object.prototype.hasOwnProperty.call(payload.operation,'receiverId')))
             throw fail('V30_CHECKPOINT_CONFLICT');
           const checked=root.LightningOnboardingDraft?.refreshZones(previousDraft,JSON.parse(viewModelKey));
           if(!checked||checked.error||canonical(checked.draft)!==viewDraftKey)throw fail('VIEW_INVALID');
@@ -152,11 +162,16 @@
           const Model=root.LightningModel,cached=JSON.parse(viewModelKey),op=payload.operation;
           if(!Model)throw fail('VIEW_INVALID');
           const stand=cached.stands?.find(item=>item.id===standId),receiver=cached.receivers?.find(item=>item.id===op.receiverId);
-          if(['delete','rename','layout','reorder'].includes(kind)?!stand?.zones.some(zone=>zone.id===op.zoneId):receiver?.standId!==standId||kind==='assign'&&op.zoneId!==null&&!stand?.zones.some(zone=>zone.id===op.zoneId))throw fail('V30_CHECKPOINT_CONFLICT');
+          if(['delete','rename','layout','reorder'].includes(kind)&&!stand?.zones.some(zone=>zone.id===op.zoneId))throw fail('V30_CHECKPOINT_CONFLICT');
+          if(kind==='assign'&&(receiver?.standId!==standId||op.zoneId!==null&&!stand?.zones.some(zone=>zone.id===op.zoneId)))throw fail('V30_CHECKPOINT_CONFLICT');
+          if(kind==='assignMany'&&(!stand||!Array.isArray(op.receiverIds)||!op.receiverIds.length||op.receiverIds.length>128||
+            op.receiverIds.some(id=>typeof id!=='string'||!cached.receivers?.some(item=>item.id===id&&item.standId===standId&&item.lifecycle==='added'))||
+            new Set(op.receiverIds).size!==op.receiverIds.length||op.zoneId!==null&&!stand?.zones.some(zone=>zone.id===op.zoneId)))throw fail('V30_CHECKPOINT_CONFLICT');
           if(kind==='delete')expectedSetupModel=Model.deleteZone(cached,op.zoneId);
           else if(kind==='rename')expectedSetupModel=Model.renameZone(cached,op.zoneId,op.name);
           else if(kind==='layout')expectedSetupModel=Model.setLayout(cached,op.zoneId,op.layout);
           else if(kind==='reorder')expectedSetupModel=Model.reorderReceivers(cached,op.zoneId,op.receiverIds);
+          else if(kind==='assignMany')expectedSetupModel=Model.moveReceivers(cached,op.receiverIds,op.zoneId);
           else {
             const base=kind==='create'?Model.createZone(cached,standId,{id:op.zoneId,name:op.name}):cached;
             expectedSetupModel=op.zoneId===null?Model.unassignReceiver(base,op.receiverId):Model.assignReceiverToZone(base,op.receiverId,op.zoneId);

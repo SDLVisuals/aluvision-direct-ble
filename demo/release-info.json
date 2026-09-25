@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v31-20260925-ui11",
+  "revision": "v31-20260925-ui12",
   "interfaceVersion": 31,
-  "interfaceBaseline": "V31 iPhone build 140 source; rounded shared modal headings; colour-first whole-stand sheet with one button to the full scenes gallery; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search; SPI endpoint guidance",
+  "interfaceBaseline": "V31 iPhone build 141 source; bulk-select and atomically assign compatible ledlines to a zone; rounded shared modal headings; colour-first whole-stand sheet with one button to the full scenes gallery; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search; SPI endpoint guidance",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -32,7 +32,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "6ca6d12971ea6d7be9f9092be786120b7b4f76a434a58adb81d64e7b6429fa9f"
+      "sha256": "4ee0bf46e57267307bddac4a8d40808bfb4698ee84a2140ba041f81d0fbb697d"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -52,7 +52,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "ec7584f5efdce39d4ee673cadb421843165f133791ffb1698f71e8f8e77af968"
+      "sha256": "3d6458a1c601e8eac958f3069944ce83cd6265cfd2aa7ddf92581fa3dea5fa13"
     },
     {
       "path": "fixtures.js",
@@ -60,7 +60,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "efe5c48608ab3ed0c9e5cf0e9062165f112212505dd43b0f6000374698291fff"
+      "sha256": "e6351e4b288fa88b14f2b32786ec52af4e09d43a264e9b38aa500fadf97dec2e"
     },
     {
       "path": "live-control.js",
@@ -72,11 +72,11 @@
     },
     {
       "path": "model.js",
-      "sha256": "6bd5badad89f9799f2dea77c4397745744b81ef985357e74e271a4a3d2ca202e"
+      "sha256": "792dda5cfc003d11bc5231eb51784d44dd0fb6a75f50ce19bb204998e04ca5cd"
     },
     {
       "path": "native-runtime.js",
-      "sha256": "52c505f9a90f06dc4f837d4b0e8789179b0e32ed04bd2f491295a5673726a400"
+      "sha256": "8ba7803bdd2a503063a3a496fda290c1921d2be7b61908e7f8d53afb4aeeb290"
     },
     {
       "path": "onboarding-adapter.js",
@@ -112,7 +112,7 @@
     },
     {
       "path": "premium-surfaces.css",
-      "sha256": "e3faa7657cf3e25b7d03977509fa49bdd652673ca9245c858e041ada00327e04"
+      "sha256": "1d5a1b593d7e4cbe53a9d0a8bdac348158f6ef3a7c2e46ebdbe0606d6508bc91"
     },
     {
       "path": "presets.js",

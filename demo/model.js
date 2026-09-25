@@ -246,6 +246,20 @@
     // release, reset or a change to stand membership.
     return assertValid(next);
   }
+  function moveReceivers(model, receiverIds, zoneId) {
+    assertValid(model);
+    if (!Array.isArray(receiverIds) || !receiverIds.length || receiverIds.length > 128 ||
+      receiverIds.some(function (id) { return typeof id !== 'string'; }) ||
+      new Set(receiverIds).size !== receiverIds.length ||
+      !(zoneId === null || typeof zoneId === 'string')) {
+      issue('RECEIVER_SELECTION', 'Kies één of meer verschillende ledlines.');
+    }
+    var next = clone(model);
+    receiverIds.forEach(function (receiverId) {
+      next = zoneId === null ? unassignReceiver(next, receiverId) : assignReceiverToZone(next, receiverId, zoneId);
+    });
+    return assertValid(next);
+  }
   function selectionIds(model, zoneId, selection) {
     requireZone(model, zoneId);
     var receivers = zoneReceivers(model, zoneId);
@@ -349,6 +363,6 @@
   return Object.freeze({ LIMITS: LIMITS, clone: clone, defaultState: defaultState, validate: validate, assertValid: assertValid, getZone: getZone,
     zoneReceivers: zoneReceivers, resolveTargets: resolveTargets, applyState: applyState, applyStandState: applyStandState, setLayout: setLayout,
     createZone: createZone, renameZone: renameZone, deleteZone: deleteZone, renameReceiver: renameReceiver,
-    assignReceiverToZone: assignReceiverToZone, unassignReceiver: unassignReceiver,
+    assignReceiverToZone: assignReceiverToZone, unassignReceiver: unassignReceiver, moveReceivers: moveReceivers,
     reorderReceivers: reorderReceivers, moveReceiver: moveReceiver, configureSpiOutput: configureSpiOutput });
 }));

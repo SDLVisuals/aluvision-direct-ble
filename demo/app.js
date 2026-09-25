@@ -1283,8 +1283,38 @@
   }
   function showZoneReceiverPicker(zoneId) {
     const z=M.getZone(model,zoneId);if(!z)return;
-    const eligible=model.receivers.filter(r=>r.lifecycle==='added'&&r.standId===stand().id&&r.zoneId!==zoneId&&(!z.type||r.type===z.type));
-    showEffectDialog(`Receiver voor ${z.name}`,`<p>Kies een receiver uit je stand. Je bevestigt daarna de verplaatsing.</p><div class="assignment-choices">${eligible.map(r=>`<button class="assignment-choice" data-action="assignment-receiver" data-id="${esc(r.id)}" data-zone="${esc(z.id)}">${icon('receiver')}<span><b>${esc(r.name)}</b><small>${esc(r.type)} · ${esc(M.getZone(model,r.zoneId)?.name||'Nog geen zone')}</small></span>${icon('chevron')}</button>`).join('')||'<p>Er zijn geen passende receivers om te verplaatsen.</p>'}</div><button class="button secondary full" data-action="assignment-add-receiver">Nieuwe receiver toevoegen</button>`);
+    receiverAssignment={mode:'many',receiverIds:[],zoneId:z.id,type:z.type};
+    renderZoneReceiverPicker();
+  }
+  function renderZoneReceiverPicker(focusType=null) {
+    const assignment=receiverAssignment,z=assignment?.mode==='many'?M.getZone(model,assignment.zoneId):null;
+    if(!assignment||!z)return;
+    const available=model.receivers.filter(r=>r.lifecycle==='added'&&r.standId===stand().id&&r.zoneId!==z.id);
+    const types=[...new Set(available.map(r=>r.type))];
+    if(!z.type&&!assignment.type&&types.length===1)assignment.type=types[0];
+    const selectedType=z.type||assignment.type;
+    const eligible=selectedType?available.filter(r=>r.type===selectedType):[];
+    assignment.receiverIds=assignment.receiverIds.filter(id=>eligible.some(r=>r.id===id));
+    const familyChoices=!z.type&&types.length>1?`<div class="assignment-family-picker" role="group" aria-label="Kies soort ledline">${types.map(type=>{
+      const count=available.filter(r=>r.type===type).length;
+      return `<button class="assignment-family-choice" data-action="assignment-many-type" data-id="${esc(type)}" aria-pressed="${selectedType===type}"><b>${esc(type)}</b><small>${ledlineCount(count)}</small></button>`;
+    }).join('')}</div>`:'';
+    const list=selectedType?`<div class="assignment-many-tools"><span>${esc(selectedType)} · ${ledlineCount(eligible.length)}</span><button class="text-button" data-action="assignment-many-select-all" ${eligible.length?'':'disabled'}>${eligible.length&&assignment.receiverIds.length===eligible.length?'Selectie wissen':'Alles kiezen'}</button></div><div class="assignment-choices assignment-many-list" aria-label="Ledlines kiezen">${eligible.map(r=>{
+      const chosen=assignment.receiverIds.includes(r.id);
+      return `<button class="assignment-choice assignment-many-choice" data-action="assignment-many-toggle" data-id="${esc(r.id)}" aria-pressed="${chosen}">${icon('receiver')}<span><b>${esc(r.name)}</b><small>${esc(r.type)} · ${esc(M.getZone(model,r.zoneId)?.name||'Nog geen zone')}</small></span><i aria-hidden="true">${chosen?'✓':''}</i></button>`;
+    }).join('')||`<p class="assignment-many-empty">${available.length?`Er zijn geen andere passende ${esc(selectedType)}-ledlines om toe te wijzen.`:'Er zijn nog geen andere ledlines om toe te wijzen.'}</p>`}</div>`:`<p class="assignment-many-empty">${available.length?'Kies RGBW of SPI. Per zone kun je één soort ledline combineren.':'Er zijn nog geen andere ledlines om toe te wijzen.'}</p>`;
+    const count=assignment.receiverIds.length;
+    showEffectDialog('Ledlines toewijzen',`<section class="assignment-many" data-assignment-many><p class="assignment-many-destination">Naar <b>${esc(z.name)}</b></p><p class="assignment-many-note">Ledlines uit een andere zone worden verplaatst. Hun instellingen blijven bewaard.</p>${familyChoices}${list}<p class="assignment-many-summary" data-assignment-many-summary role="status">${count?`${ledlineCount(count)} gekozen`:'Kies één of meer ledlines.'}</p><button class="button full" data-action="assignment-many-confirm" ${count?'':'disabled'}>${count?`${ledlineCount(count)} toewijzen`:'Ledlines toewijzen'}</button><button class="button secondary full" data-action="assignment-add-receiver">＋ Nieuwe ledline zoeken</button></section>`);
+    if(focusType)document.querySelector(`[data-action="assignment-many-type"][data-id="${CSS.escape(focusType)}"]`)?.focus({preventScroll:true});
+  }
+  function syncZoneReceiverPicker() {
+    const assignment=receiverAssignment;if(assignment?.mode!=='many')return;
+    const chosen=new Set(assignment.receiverIds),eligible=Array.from(document.querySelectorAll('[data-action="assignment-many-toggle"]'));
+    eligible.forEach(row=>{const selected=chosen.has(row.dataset.id);row.setAttribute('aria-pressed',String(selected));row.querySelector('i').textContent=selected?'✓':'';});
+    const selectedAll=eligible.length>0&&eligible.every(row=>chosen.has(row.dataset.id)),count=chosen.size;
+    const bulk=document.querySelector('[data-action="assignment-many-select-all"]');if(bulk)bulk.textContent=selectedAll?'Selectie wissen':'Alles kiezen';
+    const summary=document.querySelector('[data-assignment-many-summary]');if(summary)summary.textContent=count?`${ledlineCount(count)} gekozen`:'Kies één of meer ledlines.';
+    const confirm=document.querySelector('[data-action="assignment-many-confirm"]');if(confirm){confirm.disabled=!count;confirm.textContent=count?`${ledlineCount(count)} toewijzen`:'Ledlines toewijzen';}
   }
   function showNameDialog(kind,id=null) {
     const target=kind==='receiver-rename'?model.receivers.find(r=>r.id===id):kind==='zone-rename'?M.getZone(model,id):null;
@@ -1430,17 +1460,15 @@
   async function updateManagement(next,message,receiverId=null,operation=null) {
     next=await persistManagement(next,operation);if(!next)return false;
     const openIds=Array.from(main.querySelectorAll('[data-receiver-detail][open]'),el=>el.dataset.receiverDetail);
-    if(receiverId){
-      const old=model.receivers.find(r=>r.id===receiverId),s=selections.get(old?.zoneId);
-      if(s?.kind==='receiver'&&s.receiverId===receiverId){
-        const remaining=M.zoneReceivers(next,old.zoneId);
-        if(!remaining.some(r=>r.id===receiverId)){
-          if(remaining.length)selections.set(old.zoneId,{kind:'receiver',receiverId:remaining[0].id});
-          else selections.delete(old.zoneId);
-        }
-      }else if(s?.kind==='receivers'&&s.receiverIds.includes(receiverId)){
-        const remaining=M.zoneReceivers(next,old.zoneId);
-        storeLineSelection(s.receiverIds.filter(id=>remaining.some(receiver=>receiver.id===id)),remaining,old.zoneId);
+    const movedIds=Array.isArray(receiverId)?receiverId:receiverId?[receiverId]:[],affectedZones=new Set(movedIds.map(id=>model.receivers.find(r=>r.id===id)?.zoneId).filter(Boolean));
+    for(const zoneId of affectedZones){
+      const selected=selections.get(zoneId),remaining=M.zoneReceivers(next,zoneId);
+      if(selected?.kind==='receiver'&&!remaining.some(r=>r.id===selected.receiverId)){
+        if(remaining.length)selections.set(zoneId,{kind:'receiver',receiverId:remaining[0].id});
+        else selections.delete(zoneId);
+      }else if(selected?.kind==='receivers'){
+        const retained=selected.receiverIds.filter(id=>remaining.some(receiver=>receiver.id===id));
+        if(retained.length)storeLineSelection(retained,remaining,zoneId);else selections.delete(zoneId);
       }
     }
     model=next;closeEffectDialog();receiverAssignment=null;nameDialog=null;render();
@@ -1557,6 +1585,31 @@
       if(action==='receiver-move')return showReceiverAssignment(id);
       if(action==='zone-assign')return showZoneReceiverPicker(id);
       if(action==='assignment-receiver')return showReceiverAssignment(id,button.dataset.zone);
+      if(action==='assignment-many-type'){
+        if(receiverAssignment?.mode!=='many')return;
+        const z=M.getZone(model,receiverAssignment.zoneId);if(!z||z.type||!['RGBW','SPI'].includes(id))return;
+        receiverAssignment.type=id;receiverAssignment.receiverIds=[];return renderZoneReceiverPicker(id);
+      }
+      if(action==='assignment-many-toggle'){
+        if(receiverAssignment?.mode!=='many')return;
+        const row=model.receivers.find(r=>r.id===id&&r.lifecycle==='added'&&r.standId===stand().id),z=M.getZone(model,receiverAssignment.zoneId);
+        if(!row||!z||row.zoneId===z.id||row.type!==(z.type||receiverAssignment.type))return;
+        receiverAssignment.receiverIds=receiverAssignment.receiverIds.includes(id)?receiverAssignment.receiverIds.filter(item=>item!==id):[...receiverAssignment.receiverIds,id];
+        return syncZoneReceiverPicker();
+      }
+      if(action==='assignment-many-select-all'){
+        if(receiverAssignment?.mode!=='many')return;
+        const eligible=Array.from(document.querySelectorAll('[data-action="assignment-many-toggle"]'),row=>row.dataset.id);
+        if(!eligible.length)return;
+        receiverAssignment.receiverIds=eligible.every(id=>receiverAssignment.receiverIds.includes(id))?[]:eligible;
+        return syncZoneReceiverPicker();
+      }
+      if(action==='assignment-many-confirm'){
+        const assignment=receiverAssignment;if(assignment?.mode!=='many'||!assignment.receiverIds.length)return;
+        const ids=[...assignment.receiverIds],zoneId=assignment.zoneId,target=M.getZone(model,zoneId);if(!target)return;
+        const next=M.moveReceivers(model,ids,zoneId);
+        return await updateManagement(next,`${ledlineCount(ids.length)} toegewezen aan ${target.name}.`,ids,{kind:'assignMany',receiverIds:ids,zoneId});
+      }
       if(action==='layout-receiver-add'){
         const target=stand()?.zones.find(z=>z.id===button.dataset.zone);if(!target)return;
         return showLayoutReceiverAdd(target.id);
@@ -1565,7 +1618,7 @@
         const target=stand()?.zones.find(z=>z.id===button.dataset.zone);if(!target)return;closeEffectDialog();
         return navigate('receiver-add',{zoneId:target.id,setupReturnZoneId:target.id});
       }
-      if(action==='assignment-add-receiver'){closeEffectDialog();return navigate('receiver-add',route.screen==='layout'?{setupReturnZoneId:route.zoneId}:{});}
+      if(action==='assignment-add-receiver'){receiverAssignment=null;closeEffectDialog();return navigate('receiver-add',route.screen==='layout'?{setupReturnZoneId:route.zoneId}:{});}
       if(action==='assignment-zone'){
         if(!receiverAssignment)return;receiverAssignment.zoneId=id||null;
         const r=model.receivers.find(r=>r.id===receiverAssignment.receiverId);
