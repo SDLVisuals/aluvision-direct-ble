@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v31-20260925-active-animation-settings-15",
+  "revision": "v31-20260925-animation-background-clarity-16",
   "interfaceVersion": 31,
-  "interfaceBaseline": "V31 iPhone build 141 source; clearer grouped animation gallery with visible motion-pattern previews; dedicated Brand animaties with six selectable accent tones and 21 curated existing SPI exhibition recipes; perspective tunnel previews; shared colour wheel for editable Brand colours; all original wire recipes preserved; bulk-select and atomically assign compatible ledlines to a zone; rounded shared modal headings; colour-first whole-stand sheet with one button to the full scenes gallery; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search; SPI endpoint guidance; user-selectable compact, medium and large LED previews; direct entry to the active animation settings with the gallery one tap away",
+  "interfaceBaseline": "V31 iPhone build 141 source; clearer grouped animation gallery with visible motion-pattern previews; dedicated Brand animaties with six selectable accent tones and 21 curated existing SPI exhibition recipes; perspective tunnel previews; shared colour wheel for editable Brand colours; all original wire recipes preserved; bulk-select and atomically assign compatible ledlines to a zone; rounded shared modal headings; colour-first whole-stand sheet with one button to the full scenes gallery; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search; SPI endpoint guidance; user-selectable compact, medium and large LED previews; direct entry to the active animation settings with the gallery one tap away; background colour is grouped with animation colours behind an explicit toggle; every adjustable animation setting has a meaning icon and plain-language hint, with the active live preview identified as the immediate visual feedback",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -35,11 +35,11 @@
     },
     {
       "path": "animations.css",
-      "sha256": "c3a0307329434ef2df6d79a71d577581e230bee210a762a2013e7c1f525dcfde"
+      "sha256": "71b425c0c7c6120b19ece7c2776726c9a41274b9f008a87f7ff3ab72a14c4bf1"
     },
     {
       "path": "app.js",
-      "sha256": "c9582683c85cb816ed3db66c7ff371e8d3c1c62dc1fb7514ef53ebc794ed35f5"
+      "sha256": "4f40e1b3d1cbd3211aa18df4fb9a84b298406d8973136b78032d653e25e69bdf"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -59,7 +59,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "c736643561e8277c496780b7df8f4f586614524dd075ad5b43c91c4772855b97"
+      "sha256": "450460618939d30474c9e533a947360f9303769a2731867f99f0d8c3017260bf"
     },
     {
       "path": "fixtures.js",
@@ -67,7 +67,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "94b1dedc642f0afdafbf5892f9cf510ea8a95df7b3cd4888f03cfb97bee48d40"
+      "sha256": "533dc8095809d3838b09466a5f7037ae876e2d6dfd0258872286c709ac3cf186"
     },
     {
       "path": "live-control.js",

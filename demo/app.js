@@ -134,7 +134,10 @@
     wifi:'M2 8a16 16 0 0 1 20 0M5 12a11 11 0 0 1 14 0M8 16a6 6 0 0 1 8 0M12 20h.01',
     lock:'M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5zM12 14v3',
     scenes:'M7 3h14v14H7zM3 7v14h14M11 7h6M11 11h6',
-    check:'m5 12 4 4L19 6', sun:'M12 2v2M12 20v2M2 12h2M20 12h2M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0'
+    check:'m5 12 4 4L19 6', sun:'M12 2v2M12 20v2M2 12h2M20 12h2M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
+    clock:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 7v5l3 2',
+    layers:'M12 3 2 8l10 5 10-5-10-5ZM2 12l10 5 10-5M2 16l10 5 10-5',
+    sparkle:'m12 3 1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6L12 3ZM19 16l.7 2.3 2.3.7-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z'
   };
   function icon(name) {
     // Three diffuser profiles on one connection: lighting selected together,
@@ -333,8 +336,10 @@
     const current=effect?`<button class="current-animation-shortcut" data-action="animation-current-edit"><span class="menu-icon">${icon('animation')}</span><span><small>NU ACTIEF</small><b>${esc(Library.displayName(effect))}</b></span><span class="current-animation-edit">Aanpassen ${icon('chevron')}</span></button>`:'';
     return `<div class="control-animation-choices">${current}${animationLibraryContent()}</div>`;
   }
-  function slider(key,label,min,max,value,unit='',hint='') {
-    return `<div class="slider-row"><label for="setting-${key}">${esc(label)}<output data-value-for="${key}">${Math.round(value)}${unit}</output></label><input id="setting-${key}" type="range" min="${min}" max="${max}" step="1" value="${value}" data-setting="${key}" data-unit="${unit}">${hint ? `<small>${esc(hint)}</small>` : ''}</div>`;
+  function slider(key,label,min,max,value,unit='',hint='',guide=null) {
+    const title=guide?.icon?`<span class="setting-label-icon">${icon(guide.icon)}</span><span class="setting-label-copy">${esc(label)}</span>`:esc(label);
+    const description=guide?.description||hint;
+    return `<div class="slider-row${guide?.icon?' has-setting-icon':''}"><label for="setting-${key}">${title}<output data-value-for="${key}">${Math.round(value)}${unit}</output></label><input id="setting-${key}" type="range" min="${min}" max="${max}" step="1" value="${value}" data-setting="${key}" data-unit="${unit}">${description ? `<small>${esc(description)}</small>` : ''}</div>`;
   }
   function renderColour() {
     return `<div class="editor-grid">${controlContext('colour')}<section class="editor-controls">${selector()}${colourPickerMarkup()}</section></div>`;
@@ -407,8 +412,24 @@
   function backgroundControls(effect){
     if(!effect.backgroundEditable)return '';
     const s=selectedState(),channels=backgroundChannels(),on=Boolean(s.backgroundOn);
-    return `<section class="card animation-background"><div class="section-heading"><h2>Achtergrond</h2><button class="switch" data-action="background-toggle" aria-label="Achtergrond aan of uit" aria-pressed="${on}" aria-checked="${on}" role="switch"><span>${on?'Aan':'Uit'}</span><i aria-hidden="true"></i></button></div><p class="setting-hint">De kleur achter het bewegende licht of tussen de pulsen.</p><div data-background-details ${on?'':'hidden'}><button class="background-colour" data-action="background-edit"><span class="background-swatch" style="background:${C.hex(C.mixWhite(channels.slice(0,3),channels[3]))}"></span><span>Achtergrondkleur wijzigen</span>${icon('chevron')}</button>${slider('bgBrightness','Achtergrondhelderheid',0,100,s.bgBrightness??10,'%')}${resetMarkup('bgBrightness','Achtergrondhelderheid')}</div></section>`;
+    return `<section class="animation-background" aria-label="Achtergrondkleur"><div class="background-control-heading"><span class="setting-label-icon">${icon('layers')}</span><span class="background-control-copy"><b>Achtergrondkleur</b><small>Achter de bewegende lichtpunten</small></span><button class="switch" data-action="background-toggle" aria-label="Achtergrondkleur aan of uit" aria-pressed="${on}" aria-checked="${on}" role="switch"><span>${on?'Aan':'Uit'}</span><i aria-hidden="true"></i></button></div><p class="background-explanation">Aan: kies een vaste kleur achter de animatie. Uit: alleen de animatiekleuren.</p><div class="background-details" data-background-details ${on?'':'hidden'}><button class="background-colour" data-action="background-edit"><span class="background-swatch" style="background:${C.hex(C.mixWhite(channels.slice(0,3),channels[3]))}"></span><span>Kies achtergrondkleur</span>${icon('chevron')}</button>${animationSlider('bgBrightness','Helderheid achtergrond',0,100,s.bgBrightness??10,'%')}${resetMarkup('bgBrightness','Helderheid achtergrond')}</div></section>`;
   }
+  const animationSettingGuides={
+    bri:{icon:'sun',description:'Hoe fel de bewegende kleuren branden.'},
+    speed:{icon:'animation',description:'Hoe snel het licht over de ledlines beweegt.'},
+    bgBrightness:{icon:'sun',description:'Hoe fel de vaste achtergrondkleur brandt.'},
+    smooth:{icon:'sparkle',description:'Hoe zacht de kleuren in elkaar overvloeien.'},
+    widthPixels:{icon:'light',description:'Hoeveel pixels één lichtpunt inneemt.'},
+    objectCount:{icon:'together',description:'Hoeveel lichtpunten tegelijk bewegen.'},
+    trailLength:{icon:'animation',description:'Hoe lang de lichtstaart achter een lichtpunt is.'},
+    spacing:{icon:'zones',description:'Hoeveel ruimte er tussen lichtpunten zit.'},
+    lineDelayMs:{icon:'clock',description:'Hoe lang elke volgende ledline wacht met starten.'},
+    delayMs:{icon:'clock',description:'Hoe lang het licht wacht voor de volgende beweging.'},
+    fadeAmount:{icon:'sun',description:'Hoe geleidelijk het licht aan en uit gaat.'},
+    width:{icon:'light',description:'Hoe breed de lichtbundel op de ledline is.'},
+    spread:{icon:'zones',description:'Hoe ver de beweging zich over de ledlines verspreidt.'},
+    randomness:{icon:'sparkle',description:'Voegt kleine verschillen aan de beweging toe.'}
+  };
   function animationControls(effect) {
     if (!effect) return '';
     const s = selectedState(), available = effect.controls;
@@ -431,11 +452,11 @@
     // saved setting intact, but don't offer an inactive control in that scope.
     const controls=specs.filter(spec=>available.includes(spec[0])&&!(spec[0]==='lineDelayMs'&&selected().length<2));
     if(!controls.length&&!['direction','bounce','mirror'].some(key=>available.includes(key)))return '';
-    return `<button class="settings-toggle" data-action="settings-toggle" aria-expanded="${settingsOpen}" aria-controls="animation-settings">${icon('sliders')}<span>${settingsOpen?'Instellingen verbergen':'Beweging instellen'}</span>${icon(settingsOpen?'close':'chevron')}</button><section id="animation-settings" class="card settings-panel" ${settingsOpen?'':'hidden'}>${controls.map(spec=>`<div class="visual-setting">${animationSlider(...spec)}${resetMarkup(spec[0],spec[1])}</div>`).join('')}${available.includes('direction') ? `<div><p class="setting-hint">Bewegingsrichting</p><div class="compact-direction" aria-label="Bewegingsrichting">${(effect.directions||['right','left']).map(value=>`<button data-action="direction" data-value="${value}" aria-pressed="${(s.direction||effect.state.direction)===value}">${esc(directionMap[value]||value)}</button>`).join('')}</div></div>`:''}</section>`;
+    return `<button class="settings-toggle" data-action="settings-toggle" aria-expanded="${settingsOpen}" aria-controls="animation-settings">${icon('sliders')}<span>${settingsOpen?'Instellingen verbergen':'Beweging instellen'}</span>${icon(settingsOpen?'close':'chevron')}</button><section id="animation-settings" class="card settings-panel" ${settingsOpen?'':'hidden'}><p class="animation-preview-feedback"><span class="preview-feedback-icon">${icon('animation')}</span><span>Kijk bovenaan: het ledline-voorbeeld beweegt meteen mee.</span></p>${controls.map(spec=>`<div class="animation-setting">${animationSlider(...spec)}${resetMarkup(spec[0],spec[1])}</div>`).join('')}${available.includes('direction') ? `<div class="direction-setting"><p class="direction-setting-label"><span class="setting-label-icon">${icon('back')}</span><span><b>Richting</b><small>Kies welke kant het licht op beweegt.</small></span></p><div class="compact-direction" aria-label="Bewegingsrichting">${(effect.directions||['right','left']).map(value=>`<button data-action="direction" data-value="${value}" aria-pressed="${(s.direction||effect.state.direction)===value}">${esc(directionMap[value]||value)}</button>`).join('')}</div></div>`:''}</section>`;
   }
   function animationSettingValue(key,value,unit='') { return ['delayMs','lineDelayMs'].includes(key)?`${Number((Number(value)/1000).toFixed(3)).toLocaleString('nl-BE',{maximumFractionDigits:3})} s`:Math.round(value)+unit; }
   function animationSlider(key,label,min,max,value,unit='',hint='') {
-    return slider(key,label,min,max,value,unit,hint).replace(`${Math.round(value)}${unit}</output>`,`${animationSettingValue(key,value,unit)}</output>`);
+    return slider(key,label,min,max,value,unit,hint,animationSettingGuides[key]||{icon:'sliders',description:hint||'Pas dit aan en bekijk meteen het voorbeeld.'}).replace(`${Math.round(value)}${unit}</output>`,`${animationSettingValue(key,value,unit)}</output>`);
   }
   function settingDefault(key) { return activeEffect()?.state[key]??(key==='bri'?100:key==='bgBrightness'?10:['bounce','mirror'].includes(key)?false:undefined); }
   function settingChanged(key) { const fallback=settingDefault(key);return fallback!==undefined&&(selectedState()[key]??fallback)!==fallback; }
@@ -446,7 +467,7 @@
     const galleryButton=['controls','animations'].includes(route.screen)?`<button class="button secondary animation-gallery-return" data-action="${galleryAction}" aria-label="Terug naar animatiegalerij">${icon('back')}<span>Galerij</span></button>`:'';
     const paletteTitle=effect.category==='brand'?effect.id==='v30-brand-focus'?'Merkkleuren · tik om te wijzigen':'Accentkleur · tik om te wijzigen':effect.paletteEditable===false?'Kleurenreeks':'Animatiekleuren · tik om te wijzigen';
     const paletteHelp=effect.id==='v30-brand-focus'?'<p class="palette-guidance">Voeg kleuren toe voor je merkaccent. De gloed laat ze na elkaar zien langs de ledlines.</p>':'';
-    const content = `<div class="current-effect"><span class="menu-icon">${icon('animation')}</span><div><small>Actieve animatie · ${esc(categoryLabel(effect.category))}</small><b>${esc(Library.displayName(effect))}</b><small>${esc(effect.description)}</small></div>${galleryButton}</div><section class="card palette-section"><h2>${paletteTitle}</h2>${paletteHelp}<div class="palette" aria-label="Animatiekleuren">${paletteMarkup(s)}</div>${slider('bri','Kleurhelderheid',0,100,s.bri??100,'%')}${resetMarkup('bri','Kleurhelderheid')}${effect.controls.includes('speed')?`${slider('speed','Snelheid',0,100,s.speed??30,'%')}${resetMarkup('speed','Snelheid')}`:''}</section>${backgroundControls(effect)}${animationControls(effect)}<button class="button secondary full" data-action="preset-save">＋ Animatie bewaren</button>`;
+    const content = `<div class="current-effect"><span class="menu-icon">${icon('animation')}</span><div><small>Actieve animatie · ${esc(categoryLabel(effect.category))}</small><b>${esc(Library.displayName(effect))}</b><small>${esc(effect.description)}</small></div>${galleryButton}</div><section class="card palette-section"><h2>${paletteTitle}</h2>${paletteHelp}<div class="palette" aria-label="Animatiekleuren">${paletteMarkup(s)}</div>${animationSlider('bri','Kleurhelderheid',0,100,s.bri??100,'%')}${resetMarkup('bri','Kleurhelderheid')}${backgroundControls(effect)}${effect.controls.includes('speed')?`${animationSlider('speed','Snelheid',0,100,s.speed??30,'%')}${resetMarkup('speed','Snelheid')}`:''}</section>${animationControls(effect)}<button class="button secondary full" data-action="preset-save">＋ Animatie bewaren</button>`;
     return `<section class="active-animation-workspace" aria-label="Animatie aanpassen">${content}</section>`;
   }
   function renderAnimations() {

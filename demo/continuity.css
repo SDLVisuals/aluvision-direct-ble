@@ -131,7 +131,7 @@ body[data-theme=dark] :is(.dialog-field input,.output-row input,.output-row sele
 .compact-direction button{min-height:44px}
 .physical-port-picker b{background:var(--soft);color:var(--ink)}
 .output-row.port-focused{background:var(--soft);box-shadow:8px 0 var(--soft),-8px 0 var(--soft)}
-.visual-setting{border-color:var(--line)}
+.animation-setting{border-color:var(--line)}
 body[data-theme=dark] .onboarding-name-card input{background:var(--panel);color:var(--ink)}
 body[data-theme=dark] .section-tabs button:not([aria-selected=true]){color:var(--muted)}
 /* A small finish pass: unchanged geometry for cards, clearer pressed states,
