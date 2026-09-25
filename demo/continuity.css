@@ -165,7 +165,13 @@ body[data-theme=dark] .section-tabs button:not([aria-selected=true]){color:var(-
 .receiver-chips button>span{white-space:nowrap}
 /* Individual LED lines live behind a clear, animated disclosure so a long
    installation stays calm until someone chooses to address one line. */
+.selection .receiver-scope-grid{grid-template-columns:minmax(0,1fr)}
 .selection .scope-lines-toggle{grid-column:1/-1;justify-content:flex-start;min-height:64px;padding:10px 12px;border-radius:14px;background:var(--panel);text-align:left;white-space:normal}
+.selection[data-selection-mode=all] .scope-lines-toggle{border:2px solid var(--red);background:var(--ink);color:var(--panel);box-shadow:inset 3px 0 0 var(--red)}
+.selection[data-selection-mode=all] .scope-lines-toggle .scope-toggle-icon{background:#343834;color:#f5aaa4}
+.selection[data-selection-mode=all] .scope-lines-toggle .scope-copy small{color:#d4d8d3}
+.selection[data-selection-mode=all] .scope-lines-toggle .scope-toggle-chevron{background:#343834;color:#d4d8d3}
+.selection[data-selection-mode=all] .scope-lines-toggle[aria-expanded=true] .scope-toggle-chevron{background:#f5e8e6;color:var(--red)}
 .selection .scope-toggle-icon{display:grid;place-items:center;width:38px;height:38px;flex:none;border-radius:12px;background:var(--soft);color:var(--red)}
 .selection .scope-toggle-icon svg{width:20px;height:20px}
 .selection .scope-lines-toggle .scope-copy{gap:4px}
@@ -176,8 +182,11 @@ body[data-theme=dark] .section-tabs button:not([aria-selected=true]){color:var(-
 .selection .scope-lines-toggle[aria-expanded=true] .scope-toggle-chevron{transform:rotate(-90deg);background:#f5e8e6;color:var(--red)}
 .selection .scope-lines-reveal{grid-column:1/-1;display:grid;grid-template-rows:0fr;min-width:0;opacity:0;transition:grid-template-rows .24s ease,opacity .18s ease}
 .selection .scope-lines-reveal.is-open{grid-template-rows:1fr;opacity:1}
-.selection .scope-lines-inner{min-height:0;overflow:hidden}
+.selection .scope-lines-inner{display:grid;grid-template-columns:minmax(0,1fr);min-height:0;overflow:hidden}
 .selection .scope-choice-label{padding:4px 2px 8px;font-size:10px}
+.selection .scope-lines-reveal .scope-all-choice{display:flex;grid-column:1/-1;width:calc(100% - 4px);min-width:0;min-height:54px;margin:0 2px 8px;padding:8px 10px;border:1px solid var(--line);border-radius:13px;background:var(--panel);color:var(--ink);text-align:left}
+.selection .scope-lines-reveal .scope-all-choice[aria-pressed=true]{border-color:var(--red);background:#f7e8e6;color:var(--ink);box-shadow:inset 3px 0 0 var(--red)}
+.selection .scope-lines-reveal .scope-all-choice[aria-pressed=true] .scope-selected-mark{opacity:1;transform:scale(1)}
 .selection .scope-lines-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0;max-height:min(42dvh,360px);overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:0 2px 5px}
 .selection .scope-lines-list .scope-line{position:relative;display:flex;justify-content:flex-start;align-items:center;gap:8px;width:100%;min-width:0;min-height:58px;padding:9px 10px;border:1px solid var(--line);border-radius:13px;background:var(--panel);color:var(--ink);text-align:left;white-space:normal;flex-shrink:1}
 .selection .scope-lines-list .scope-line .scope-copy{display:grid;gap:3px;min-width:0;flex:1}
@@ -187,8 +196,8 @@ body[data-theme=dark] .section-tabs button:not([aria-selected=true]){color:var(-
 .selection .scope-lines-list .scope-line[aria-pressed=true] .scope-selected-mark{opacity:1;transform:scale(1)}
 .selection.has-multiple-selection>header{align-items:flex-start}
 .selection.has-multiple-selection .selection-summary{max-width:62%;padding:4px 8px;border:1px solid #bf484133;border-radius:999px;background:#fbf0ee;color:#a63c36;font-size:10px;font-weight:700;line-height:1.35}
-.selection.has-multiple-selection .scope-lines-toggle{border-color:#e2c6c3;background:#fffdfc}
-.selection.has-multiple-selection .scope-lines-toggle .scope-toggle-icon{background:#f7e8e6}
+.selection.has-multiple-selection:not([data-selection-mode=all]) .scope-lines-toggle{border-color:#e2c6c3;background:#fffdfc}
+.selection.has-multiple-selection:not([data-selection-mode=all]) .scope-lines-toggle .scope-toggle-icon{background:#f7e8e6}
 .selection .scope-lines-list .scope-line .scope-number{width:27px;height:27px;border-radius:9px;flex:none}
 .selection .scope-lines-list .scope-line[aria-pressed=true] .scope-number{background:var(--red);color:white}
 .selection .scope-lines-list .scope-line:last-child:nth-child(odd){grid-column:1/-1;width:calc(50% - 4px);justify-self:center}

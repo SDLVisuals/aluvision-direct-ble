@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v31-20260925-ui6",
+  "revision": "v31-20260925-ui7",
   "interfaceVersion": 31,
-  "interfaceBaseline": "V31 iPhone build 135 source; simplified zone and receiver-add flow; consistent ledline language; SPI endpoint guidance",
+  "interfaceBaseline": "V31 iPhone build 136 source; unified LEDline scope dropdown; simplified zone and receiver-add flow; consistent ledline language; SPI endpoint guidance",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -32,7 +32,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "9cf2e18aeb0b98dc2e479c108a958938c1f21dc7489699e78ce7ec1bea3c573d"
+      "sha256": "f10fa231cd71f8691833e5edc8d01cdb6f6a99bb4987dbde183ee390f979a923"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -52,7 +52,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "8392abb01d5f2bbe39f1649f78f544f951a4450fbf6233903719efc1fcbedba0"
+      "sha256": "1fc17b801c4174d2e8ab5dfb7faa2ce47e5f2244bee276b79d5f6f39d24d8040"
     },
     {
       "path": "fixtures.js",
@@ -60,7 +60,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "0396d46c913ff14149d836adc64b369f906f80797269d2644ff9461784a04be6"
+      "sha256": "880d71b7ebbea8d9498a8c9bc642e9212a20a199cb239c0fada174a2234d8994"
     },
     {
       "path": "live-control.js",
@@ -108,7 +108,7 @@
     },
     {
       "path": "preferences.js",
-      "sha256": "f01c4987dd613f87ecdc35736b8908c97d873ec4e5c60ba056f6969251354cc9"
+      "sha256": "08da383173246927690e55e56ac93a8b3ab95acfc175206cd67edf6bfd1c185f"
     },
     {
       "path": "premium-surfaces.css",
