@@ -267,7 +267,7 @@
     const atRoot = screen === 'controls' || screen === 'layout';
     const list=receivers();
     const returningToGallery=screen==='controls'&&controlMode==='animations'&&Boolean(activeEffect())&&!showControlAnimationGallery;
-    const modeTabs=screen==='controls'?`<div class="section-tabs control-mode-tabs" role="group" aria-label="Kleur of animatie"><button data-action="colour" aria-pressed="${controlMode==='colour'}">${icon('sun')}Kleur</button><button data-action="animations" aria-label="${returningToGallery?'Terug naar animatiegalerij':'Animaties kiezen'}" aria-pressed="${controlMode==='animations'}">${icon('animation')}${returningToGallery?'Galerij':'Effecten'}</button></div>`:'';
+    const modeTabs=screen==='controls'?`<div class="section-tabs control-mode-tabs" role="group" aria-label="Kleur of animatie"><button data-action="colour" aria-pressed="${controlMode==='colour'}">${icon('sun')}Kleur</button><button data-action="animations" aria-label="${returningToGallery?'Terug naar animatiegalerij':'Animaties kiezen'}" aria-pressed="${controlMode==='animations'}">${icon(returningToGallery?'back':'animation')}${returningToGallery?'Galerij':'Effecten'}</button></div>`:'';
     const galleryBack=screen==='animations'&&Boolean(activeEffect()),backLabel=atRoot?'Terug naar zones':galleryBack?'Animatiegalerij':`Bediening · ${z.name}`,backAction=atRoot?'stand':galleryBack?'animations-gallery':'controls';
     const integratedControlHeading=screen==='controls'&&atRoot;
     return `<section class="control-context${list.length>=5?' many-receivers':''}">${integratedControlHeading?'':contextTitle(title,atRoot ? `${list.length} ledline${list.length===1?'':'s'} · in ${standLabel()}` : z.name,backLabel,backAction)}${atRoot ? `<div class="section-tabs" role="tablist" aria-label="Zonepagina"><button role="tab" data-action="controls" aria-selected="${screen === 'controls'}">${icon('sun')}Bediening</button><button role="tab" data-action="layout" aria-selected="${screen === 'layout'}">${icon('zones')}Opstelling</button></div>` : ''}</section>${controlPreviewDock(screen,modeTabs)}`;
@@ -1643,9 +1643,9 @@
         }
         return await updateManagement(kind==='zone-rename'?M.renameZone(model,targetId,name):M.renameReceiver(model,targetId,name),'Naam aangepast.',null,kind==='zone-rename'?{kind:'rename',zoneId:targetId,name}:{kind:'renameReceiver',receiverId:targetId,name});
       }
-      if(action==='colour'&&route.screen==='controls'){controlMode='colour';return render({preserveScroll:true});}
+      if(action==='colour'&&route.screen==='controls'){controlMode='colour';return render({top:true});}
       if(action==='animations'&&route.screen==='controls'){
-        controlMode='animations';showControlAnimationGallery=true;route={...route,family:null,library:initialAnimationLibrary(),effectsReturn:'controls'};return render({preserveScroll:true});
+        controlMode='animations';showControlAnimationGallery=true;route={...route,family:null,library:initialAnimationLibrary(),effectsReturn:'controls'};return render({top:true});
       }
       if(action==='animation-current-edit'&&route.screen==='controls'&&activeEffect()){
         showControlAnimationGallery=false;return render({preserveScroll:true});
