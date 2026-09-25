@@ -39,6 +39,10 @@ dialog :is(h2,h3,p){overflow-wrap:anywhere}dialog header h2{min-width:0}
 .stand-page .stand-control-shortcut>span:nth-child(2){flex:1;min-width:0}
 .control-context:is([data-page="controls"],[data-page="layout"]){position:static}
 .control-context .back,.control-context .section-tabs button,.control-context .receiver-chips button{min-height:44px}
+.back.back-to-zones{min-height:50px;gap:10px;padding:0 15px 0 12px;border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--ink);box-shadow:0 2px 8px #2025200b;font-size:14px;font-weight:750}
+.back.back-to-zones svg{width:21px;height:21px;color:var(--red)}
+.control-context .back.back-to-zones{min-height:50px;font-size:14px}
+@media(max-width:360px){.back.back-to-zones{gap:8px;padding-inline:10px;font-size:13px}}
 .current-effect>.button{min-height:44px}
 .preview-live-controls button{min-height:44px}
 .zone-management-actions{padding-top:14px;border-top:1px solid var(--line)}

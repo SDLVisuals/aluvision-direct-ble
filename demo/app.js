@@ -228,7 +228,8 @@
   }
   function zonePreview(z, css, options) { return addPreview(M.zoneReceivers(model,z.id),z.layout,css,{zoneId:z.id,...options}); }
   function contextTitle(title, subtitle, backLabel = zone()?.name, back = 'controls') {
-    return `<div class="topline"><button class="back" data-action="${back}">${icon('back')}<span>${esc(backLabel)}</span></button><span class="context-name">${esc(standLabel())}</span></div><header class="page-heading"><div><h1>${esc(title)}</h1><p>${esc(subtitle || '')}</p></div>${['controls','colour','animations','effects','layout'].includes(route.screen) && zone() ? `<span class="pill">${zone().type === 'SPI' ? 'Pixel LED · SPI' : 'RGBW'}</span>` : ''}</header>`;
+    const backToZones=back==='stand';
+    return `<div class="topline"><button class="back${backToZones?' back-to-zones':''}" data-action="${back}">${icon('back')}<span>${esc(backLabel)}</span></button><span class="context-name">${esc(standLabel())}</span></div><header class="page-heading"><div><h1>${esc(title)}</h1><p>${esc(subtitle || '')}</p></div>${['controls','colour','animations','effects','layout'].includes(route.screen) && zone() ? `<span class="pill">${zone().type === 'SPI' ? 'Pixel LED · SPI' : 'RGBW'}</span>` : ''}</header>`;
   }
   function mixedSelection() {
     const signatures = selected().map(receiver => {
@@ -267,7 +268,7 @@
     const list=receivers();
     const returningToGallery=screen==='controls'&&controlMode==='animations'&&Boolean(activeEffect())&&!showControlAnimationGallery;
     const modeTabs=screen==='controls'?`<div class="section-tabs control-mode-tabs" role="group" aria-label="Kleur of animatie"><button data-action="colour" aria-pressed="${controlMode==='colour'}">${icon('sun')}Kleur</button><button data-action="animations" aria-label="${returningToGallery?'Terug naar animatiegalerij':'Animaties kiezen'}" aria-pressed="${controlMode==='animations'}">${icon('animation')}${returningToGallery?'Galerij':'Effecten'}</button></div>`:'';
-    const galleryBack=screen==='animations'&&Boolean(activeEffect()),backLabel=atRoot?'Alle zones':galleryBack?'Animatiegalerij':`Bediening · ${z.name}`,backAction=atRoot?'stand':galleryBack?'animations-gallery':'controls';
+    const galleryBack=screen==='animations'&&Boolean(activeEffect()),backLabel=atRoot?'Terug naar zones':galleryBack?'Animatiegalerij':`Bediening · ${z.name}`,backAction=atRoot?'stand':galleryBack?'animations-gallery':'controls';
     return `<section class="control-context${list.length>=5?' many-receivers':''}">${contextTitle(title,atRoot ? `${list.length} ledline${list.length===1?'':'s'} · in ${standLabel()}` : z.name,backLabel,backAction)}${atRoot ? `<div class="section-tabs" role="tablist" aria-label="Zonepagina"><button role="tab" data-action="controls" aria-selected="${screen === 'controls'}">${icon('sun')}Bediening</button><button role="tab" data-action="layout" aria-selected="${screen === 'layout'}">${icon('zones')}Opstelling</button></div>` : ''}</section>${controlPreviewDock(screen,modeTabs)}`;
   }
   function controlPreviewDock(screen,modeTabs='') {
@@ -288,7 +289,7 @@
   function zoneDeleteButton(z,css=''){return `<button type="button" class="zone-delete-shortcut ${css}" data-action="zone-delete" data-id="${esc(z.id)}" aria-label="Zone ${esc(z.name)} verwijderen">${icon('trash')}<span>Zone verwijderen</span></button>`;}
   function renderEmptyZone() {
     const z=zone();
-    return `<div class="page empty-zone-page"><div class="topline"><button class="back" data-action="stand">${icon('back')} Alle zones</button><span class="context-name">${esc(standLabel())}</span></div><header class="page-heading"><div><div class="eyebrow">LEGE ZONE</div><h1>${esc(z.name)}</h1></div><button class="icon-button" data-action="zone-rename" data-id="${esc(z.id)}" aria-label="Naam van deze zone wijzigen">${icon('edit')}</button></header><section class="card empty empty-zone"><h2>Voeg verlichting toe</h2><p>Verplaats een receiver uit je stand. Zijn instellingen blijven bewaard.</p><button class="button full" data-action="zone-assign" data-id="${esc(z.id)}">Bestaande receiver kiezen</button><small>${z.type?`Deze zone is voor ${esc(z.type)}.`:'Voeg nieuwe verlichting toe via Receivers. De eerste receiver bepaalt het zonetype: RGBW of SPI.'}</small></section>${zoneDeleteButton(z)}</div>`;
+    return `<div class="page empty-zone-page"><div class="topline"><button class="back back-to-zones" data-action="stand">${icon('back')}<span>Terug naar zones</span></button><span class="context-name">${esc(standLabel())}</span></div><header class="page-heading"><div><div class="eyebrow">LEGE ZONE</div><h1>${esc(z.name)}</h1></div><button class="icon-button" data-action="zone-rename" data-id="${esc(z.id)}" aria-label="Naam van deze zone wijzigen">${icon('edit')}</button></header><section class="card empty empty-zone"><h2>Voeg verlichting toe</h2><p>Verplaats een receiver uit je stand. Zijn instellingen blijven bewaard.</p><button class="button full" data-action="zone-assign" data-id="${esc(z.id)}">Bestaande receiver kiezen</button><small>${z.type?`Deze zone is voor ${esc(z.type)}.`:'Voeg nieuwe verlichting toe via Receivers. De eerste receiver bepaalt het zonetype: RGBW of SPI.'}</small></section>${zoneDeleteButton(z)}</div>`;
   }
   function renderStand() {
     if(!stand()){
