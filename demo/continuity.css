@@ -50,7 +50,7 @@ dialog :is(h2,h3,p){overflow-wrap:anywhere}dialog header h2{min-width:0}
 .scene-rename .icon{width:16px;height:16px}
 /* The shared dialog keeps its title and close button above its live preview. */
 #effect-dialog{background:var(--panel)}
-#effect-dialog-content>header{position:sticky;top:-22px;z-index:6;background:var(--panel);margin:0 -8px;padding:10px 8px;border-bottom:1px solid var(--line);box-shadow:0 8px 0 var(--panel)}
+#effect-dialog-content>header{position:sticky;top:-22px;z-index:6;background:var(--panel);margin:0 -8px;padding:10px 8px;border-bottom:1px solid var(--line);border-radius:18px;box-shadow:0 8px 0 var(--panel)}
 #effect-dialog-content>header h2{font-size:19px}
 #effect-dialog:has([data-stand-overview]){border-radius:28px}
 #effect-dialog:has([data-stand-overview]) #effect-dialog-content>header{border-radius:18px;border-bottom-color:transparent;box-shadow:none}
@@ -320,6 +320,10 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .stand-scenes-empty b{font-size:12px}
 .stand-scenes-empty small{font-size:10px;line-height:1.4}
 .stand-scenes-empty>.icon:last-child{width:16px;height:16px;color:var(--muted)}
+.stand-scenes-entry{display:flex;align-items:center;gap:11px;width:100%;min-width:0;min-height:72px;padding:11px 13px;border:1px solid var(--line);border-radius:20px;background:var(--glass,var(--panel));color:var(--ink);text-align:left;box-shadow:0 2px 8px #20252005}
+.stand-scenes-entry-icon{display:grid;place-items:center;width:42px;height:42px;flex:none;border-radius:14px;background:var(--soft);color:var(--red)}
+.stand-scenes-entry-copy{display:grid;gap:3px;flex:1;min-width:0}.stand-scenes-entry-copy b{font-size:14px}.stand-scenes-entry-copy small{font-size:11px;line-height:1.4}
+.stand-scenes-entry-open{flex:none;color:var(--red);font-size:12px;font-weight:750}.stand-scenes-entry>.icon:last-child{width:17px;height:17px;flex:none;color:var(--muted)}
 .stand-scenes-compact{padding:12px;margin:14px 0}
 .stand-scenes-compact .stand-scene-card{background:var(--panel)}
 .receiver-zone-row{min-height:76px;width:100%;cursor:pointer}
@@ -327,20 +331,20 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .receiver-zone-change small{margin:0!important;color:var(--ink)!important;font-size:11px!important;font-weight:700;line-height:1.2;white-space:nowrap}
 .receiver-zone-change-icon{display:grid;place-items:center;width:36px;height:36px;flex:none;border-radius:11px;background:var(--soft);color:var(--red)}
 .receiver-zone-change-icon .icon{width:19px;height:19px}
-.receiver-zone-row:active,.stand-scene-card:active,.stand-scenes-empty:active{background:var(--soft)}
+.receiver-zone-row:active,.stand-scene-card:active,.stand-scenes-empty:active,.stand-scenes-entry:active{background:var(--soft)}
 /* On a phone, the primary paths should not depend on tiny hit targets. */
-.button,.icon-button,.text-button,.zone-options-button,.palette-add,.palette-remove,.colour-drag-handle,.saved-colour,.assignment-choice,.stand-info-tile,.stand-scene-card,.stand-scenes-empty{scroll-margin:12px;}
+.button,.icon-button,.text-button,.zone-options-button,.palette-add,.palette-remove,.colour-drag-handle,.saved-colour,.assignment-choice,.stand-info-tile,.stand-scene-card,.stand-scenes-empty,.stand-scenes-entry{scroll-margin:12px;}
 .text-button{min-height:44px}
 .zone-options-button{min-width:48px;min-height:48px}
 .saved-colour{min-height:82px}
 .palette-add,.palette-remove{min-height:44px;min-width:44px}
 .stand-overview-row{min-height:64px}
 .control-context .section-tabs button,.control-context .receiver-chips button{min-height:44px}
-body[data-theme=dark] .stand-scenes,body[data-theme=dark] .stand-scene-card,body[data-theme=dark] .stand-scenes-empty,body[data-theme=dark] .colour-manager-row{background:var(--panel);color:var(--ink)}
+body[data-theme=dark] .stand-scenes,body[data-theme=dark] .stand-scene-card,body[data-theme=dark] .stand-scenes-empty,body[data-theme=dark] .stand-scenes-entry,body[data-theme=dark] .colour-manager-row{background:var(--panel);color:var(--ink)}
 body[data-theme=dark] .family-variants-panel{background:color-mix(in srgb,var(--soft) 65%,var(--panel))}
 body[data-theme=dark] .scope-lines-list .scope-line[aria-pressed=true] .scope-line-icon{color:#fff}
 @media(max-width:360px){.animation-family-trigger{grid-template-columns:74px minmax(0,1fr);gap:8px;min-height:102px;padding:8px}.family-variant-grid{grid-template-columns:1fr}.family-variant-card{min-height:0}.family-variant-card canvas{height:68px}.library-filter-block .filter-row{display:flex;flex-wrap:wrap}.library-filter-block .filter-row button{flex:1 1 calc(50% - 6px);min-width:calc(50% - 6px)}.stand-scenes .section-heading{align-items:flex-start}.stand-scenes .section-heading .text-button{padding-inline:4px;font-size:11px}.stand-scene-card .scene-mosaic{width:64px}.stand-scenes-compact .stand-scene-card .scene-mosaic{width:56px}}
-@media(prefers-reduced-motion:reduce){.animation-family-card,.stand-scene-card,.stand-scenes-empty{transition:none}}
+@media(prefers-reduced-motion:reduce){.animation-family-card,.stand-scene-card,.stand-scenes-empty,.stand-scenes-entry{transition:none}}
 .channel-number{-moz-appearance:textfield;appearance:textfield}
 @media(max-width:360px){.channel-row{grid-template-columns:40px 38px minmax(40px,1fr) 38px 50px;gap:3px}.channel-row button{height:44px}}
 /* The destructive network action is intentionally separate from updates. */

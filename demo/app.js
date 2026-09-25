@@ -645,7 +645,12 @@
     return `<span class="scene-mosaic" data-zone-count="${zones.length}" aria-label="${zoneCount(zones.length)} in ${esc(scene.name)}">${shown.map(z=>`<span class="scene-mosaic-tile" data-scene-thumbnail-zone="${esc(z.id)}">${savedZonePreview(z)}</span>`).join('')}${extra?`<span class="scene-mosaic-overflow">+${zoneCount(extra)}</span>`:''}</span>`;
   }
   function standScenesMarkup(compact=false) {
-    const list=savedScenes.scenes.filter(scene=>scene.standId===stand()?.id),shown=list.slice(0,compact?3:4);
+    const list=savedScenes.scenes.filter(scene=>scene.standId===stand()?.id);
+    if(compact){
+      const summary=list.length?`${list.length} bewaarde ${list.length===1?'scène':'scènes'}`:'Bekijk en bewaar lichtinstellingen';
+      return `<button class="stand-scenes-entry" data-action="stand-scenes"><span class="stand-scenes-entry-icon">${icon('scenes')}</span><span class="stand-scenes-entry-copy"><b>Scènes</b><small>${esc(summary)}</small></span><span class="stand-scenes-entry-open">Openen</span>${icon('chevron')}</button>`;
+    }
+    const shown=list.slice(0,4);
     const cards=shown.map(scene=>`<button class="stand-scene-card" data-action="scene-open" data-id="${esc(scene.id)}">${scenePreview(scene)}<span><b>${esc(scene.name)}</b><small>${zoneCount(scene.zones.length)} · ${receiverCount(scene.zones.reduce((count,item)=>count+item.receivers.length,0))}</small><i>Bekijken ${icon('chevron')}</i></span></button>`).join('');
     return `<section class="stand-scenes${compact?' stand-scenes-compact':''}"><div class="section-heading"><div><h2>Scènes</h2><small>${list.length?`${list.length} bewaarde ${list.length===1?'sfeer':'sferen'}`:'Bewaar een lichtinstelling om die later terug te halen.'}</small></div><button class="text-button" data-action="stand-scenes">${list.length?'Alle scènes':'Scènes openen'} ${icon('chevron')}</button></div>${cards?`<div class="stand-scene-list">${cards}</div>`:`<button class="stand-scenes-empty" data-action="stand-scenes">${icon('scenes')}<span><b>Nog geen scènes bewaard</b><small>Open Scènes om je eerste lichtinstelling op te slaan.</small></span>${icon('chevron')}</button>`}</section>`;
   }
@@ -1211,7 +1216,7 @@
   function showStandControls(){
     if(!standReceivers().length)return;
     standControlOpen=true;
-    showEffectDialog('Alles bedienen',`<p class="stand-control-scope"><b>${esc(standLabel())}</b> · ${stand().zones.length} zone${stand().zones.length===1?'':'s'} · ${receiverCount(standReceivers().length)}</p><p>Een vaste kleur voor je hele stand, zowel RGBW als SPI. Aan/uit bewaart je huidige kleuren en animaties.</p>${powerControl()}<p class="live-confirmation" data-live-status="stand" role="status" aria-live="polite"></p><p id="stand-control-mixed" class="mixed-note" ${mixedSelection()?'':'hidden'}>Je verlichting heeft verschillende instellingen. Een kleur kiezen maakt alles dezelfde vaste kleur.</p>${standScenesMarkup(true)}${colourPickerMarkup()}`);
+    showEffectDialog('Alles bedienen',`<p class="stand-control-scope"><b>${esc(standLabel())}</b> · ${stand().zones.length} zone${stand().zones.length===1?'':'s'} · ${receiverCount(standReceivers().length)}</p><p>Een vaste kleur voor je hele stand, zowel RGBW als SPI. Aan/uit bewaart je huidige kleuren en animaties.</p>${powerControl()}<p class="live-confirmation" data-live-status="stand" role="status" aria-live="polite"></p><p id="stand-control-mixed" class="mixed-note" ${mixedSelection()?'':'hidden'}>Je verlichting heeft verschillende instellingen. Een kleur kiezen maakt alles dezelfde vaste kleur.</p>${colourPickerMarkup()}${standScenesMarkup(true)}`);
     syncLiveStatus();
     paintWheel();syncColour();
   }
