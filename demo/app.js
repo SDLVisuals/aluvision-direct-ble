@@ -1712,7 +1712,7 @@
         controlMode='animations';showControlAnimationGallery=true;return render({top:true});
       }
       if(action==='animations'&&route.screen==='controls'){
-        controlMode='animations';showControlAnimationGallery=true;route={...route,family:null,library:initialAnimationLibrary(),effectsReturn:'controls'};return render({top:true});
+        controlMode='animations';showControlAnimationGallery=!activeEffect();route={...route,family:null,library:initialAnimationLibrary(),effectsReturn:'controls'};return render({top:true});
       }
       if(action==='animation-current-edit'&&route.screen==='controls'&&activeEffect()){
         showControlAnimationGallery=false;return render({preserveScroll:true});

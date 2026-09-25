@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v31-20260925-preview-sizes-14",
+  "revision": "v31-20260925-active-animation-settings-15",
   "interfaceVersion": 31,
-  "interfaceBaseline": "V31 iPhone build 141 source; clearer grouped animation gallery with visible motion-pattern previews; dedicated Brand animaties with six selectable accent tones and 21 curated existing SPI exhibition recipes; perspective tunnel previews; shared colour wheel for editable Brand colours; all original wire recipes preserved; bulk-select and atomically assign compatible ledlines to a zone; rounded shared modal headings; colour-first whole-stand sheet with one button to the full scenes gallery; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search; SPI endpoint guidance; user-selectable compact, medium and large LED previews",
+  "interfaceBaseline": "V31 iPhone build 141 source; clearer grouped animation gallery with visible motion-pattern previews; dedicated Brand animaties with six selectable accent tones and 21 curated existing SPI exhibition recipes; perspective tunnel previews; shared colour wheel for editable Brand colours; all original wire recipes preserved; bulk-select and atomically assign compatible ledlines to a zone; rounded shared modal headings; colour-first whole-stand sheet with one button to the full scenes gallery; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search; SPI endpoint guidance; user-selectable compact, medium and large LED previews; direct entry to the active animation settings with the gallery one tap away",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -16,6 +16,7 @@
     "large"
   ],
   "previewSizeControl": "Sticky LED overview; display-only; no receiver commands",
+  "activeAnimationEntry": "Effecten opens the existing animation settings directly; Galerij opens the library without changing effect, palette or selection",
   "hardwareAccess": false,
   "nativeAppModified": false,
   "firmwarePublished": false,
@@ -38,7 +39,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "8747736ed7d83e22aed245190a2f9e1130bd809557d0be89acfdafd0d5e67ac4"
+      "sha256": "c9582683c85cb816ed3db66c7ff371e8d3c1c62dc1fb7514ef53ebc794ed35f5"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -66,7 +67,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "310035fb0760607d3485913a5f77aab4379167757a5ad271b1b8fcb62f6122d7"
+      "sha256": "94b1dedc642f0afdafbf5892f9cf510ea8a95df7b3cd4888f03cfb97bee48d40"
     },
     {
       "path": "live-control.js",
