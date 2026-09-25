@@ -269,10 +269,12 @@
     const returningToGallery=screen==='controls'&&controlMode==='animations'&&Boolean(activeEffect())&&!showControlAnimationGallery;
     const modeTabs=screen==='controls'?`<div class="section-tabs control-mode-tabs" role="group" aria-label="Kleur of animatie"><button data-action="colour" aria-pressed="${controlMode==='colour'}">${icon('sun')}Kleur</button><button data-action="animations" aria-label="${returningToGallery?'Terug naar animatiegalerij':'Animaties kiezen'}" aria-pressed="${controlMode==='animations'}">${icon('animation')}${returningToGallery?'Galerij':'Effecten'}</button></div>`:'';
     const galleryBack=screen==='animations'&&Boolean(activeEffect()),backLabel=atRoot?'Terug naar zones':galleryBack?'Animatiegalerij':`Bediening · ${z.name}`,backAction=atRoot?'stand':galleryBack?'animations-gallery':'controls';
-    return `<section class="control-context${list.length>=5?' many-receivers':''}">${contextTitle(title,atRoot ? `${list.length} ledline${list.length===1?'':'s'} · in ${standLabel()}` : z.name,backLabel,backAction)}${atRoot ? `<div class="section-tabs" role="tablist" aria-label="Zonepagina"><button role="tab" data-action="controls" aria-selected="${screen === 'controls'}">${icon('sun')}Bediening</button><button role="tab" data-action="layout" aria-selected="${screen === 'layout'}">${icon('zones')}Opstelling</button></div>` : ''}</section>${controlPreviewDock(screen,modeTabs)}`;
+    const integratedControlHeading=screen==='controls'&&atRoot;
+    return `<section class="control-context${list.length>=5?' many-receivers':''}">${integratedControlHeading?'':contextTitle(title,atRoot ? `${list.length} ledline${list.length===1?'':'s'} · in ${standLabel()}` : z.name,backLabel,backAction)}${atRoot ? `<div class="section-tabs" role="tablist" aria-label="Zonepagina"><button role="tab" data-action="controls" aria-selected="${screen === 'controls'}">${icon('sun')}Bediening</button><button role="tab" data-action="layout" aria-selected="${screen === 'layout'}">${icon('zones')}Opstelling</button></div>` : ''}</section>${controlPreviewDock(screen,modeTabs)}`;
   }
   function controlPreviewDock(screen,modeTabs='') {
     const z=zone(),list=receivers(),pixels=z.type==='SPI'?P.geometry(list,z.layout).totalPixels:0;
+    const integratedControlHeading=screen==='controls';
     const canTapLines=list.length>1&&!continuousZone()&&['controls','colour','animations'].includes(screen);
     const effectChosen=screen==='controls'&&controlMode==='animations'&&Boolean(activeEffect());
     const total=z.type==='SPI'?t(list.length===1?'scopeTotalSpiOne':'scopeTotalSpiMany',{count:list.length,pixels}):t(list.length===1?'scopeCountOne':'scopeCountMany',{count:list.length});
@@ -280,6 +282,7 @@
     const modeName=screen==='controls'?(controlMode==='colour'?'Kleur':'Effecten'):screen==='layout'?'Opstelling':screen==='colour'?'Kleur':screen==='animations'?'Effecten':'Bediening';
     const label=`LED-overzicht van ${z.name} · ${total}${selection().kind==='all'?'':` · ${nameOfSelection()} gekozen`}`;
     return `<section class="control-preview-dock" aria-label="LED-overzicht en bediening">
+      ${integratedControlHeading?`<div class="control-dock-context-line"><button class="back back-to-zones control-dock-back" data-action="stand">${icon('back')}<span>Terug naar zones</span></button><span class="pill control-dock-type-badge">${zoneTypeLabel(z)}</span></div>`:''}
       <div class="control-dock-heading"><div class="control-dock-location"><small>JE LICHT · ${esc(modeName)}</small><b>${esc(z.name)}</b></div>${modeTabs||`<span class="control-dock-mode">${esc(modeName)}</span>`}</div>
       <div class="preview-wrap${canTapLines?' preview-selectable':''}"><div class="preview-top"><span>Hele zone · alle ledlines</span><span class="preview-summary">${esc(scope)}</span></div>${zonePreview(z,'',{selection:selection(),main:true,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1])),label})}${screen==='animations'||effectChosen?`<div class="preview-live-controls"><span>Voorbeeld volgt je keuze direct</span></div>`:''}</div>
       <p class="live-confirmation" data-live-status="zone" role="status" aria-live="polite"></p>

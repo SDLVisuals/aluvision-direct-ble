@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v31-20260925-ui9",
+  "revision": "v31-20260925-ui10",
   "interfaceVersion": 31,
-  "interfaceBaseline": "V31 iPhone build 138 source; unified LEDline scope dropdown; prominent return-to-zones button; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search; SPI endpoint guidance",
+  "interfaceBaseline": "V31 iPhone build 139 source; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search; SPI endpoint guidance",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -32,7 +32,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "c89b45c61526f5f7fa65304209171371fbe80104dc743c32bc28339735512add"
+      "sha256": "cd7e49d4af56209eac6619940787c7e22e2d366275f53e83af6f8d9080df55a2"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -52,7 +52,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "9bf5997e17a2f6f0a95996dc896d851d87250741fa480805d3825d8a377801a3"
+      "sha256": "6280e3b54e48686020c2d234a98f6136da9b62117ce3b0527d5ea366417b87e1"
     },
     {
       "path": "fixtures.js",
@@ -60,7 +60,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "893672bdbbb46feb184ce5de957a5e05a44071c6f1b07e8caafc89647718fabd"
+      "sha256": "31a962a87bcbb7e63981339fed80667475ec7dc4c32294b830905b4ef6416c75"
     },
     {
       "path": "live-control.js",
