@@ -79,20 +79,28 @@ body:has(.onboarding-page) .onboarding-page{gap:10px}
 .onboarding-zone-tiles .onboarding-zone[aria-pressed=true] i{background:var(--red);color:#fff}
 .onboarding-zone-tiles .onboarding-zone b{font-size:14px}
 .onboarding-zone-tiles .onboarding-zone small{font-size:10px;line-height:1.4;margin-top:3px}
-.onboarding-destination{display:block;border:1px solid var(--line);border-radius:16px;padding:6px 10px;background:var(--panel)}
-.onboarding-destination>summary{list-style:none;display:flex;align-items:center;gap:9px;min-height:48px;cursor:pointer}
+.onboarding-destination{display:block;margin:9px 0 2px;border:1px solid var(--line);border-radius:19px;padding:8px 11px;background:var(--panel);box-shadow:0 4px 14px #18221b05}
+.onboarding-destination>summary{list-style:none;display:flex;align-items:center;gap:10px;min-height:54px;cursor:pointer}
 .onboarding-destination>summary::-webkit-details-marker{display:none}
 .onboarding-destination>summary svg{width:44px;height:39px}
+.onboarding-destination>summary .onboarding-destination-ledline{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:13px;background:var(--soft);color:var(--red)}
+.onboarding-destination>summary .onboarding-destination-ledline svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .onboarding-destination>summary span{min-width:0;flex:1}
-.onboarding-destination>summary small{display:block;font-size:9px;color:var(--muted);margin-bottom:3px}
+.onboarding-destination>summary small{display:block;font-size:10px;color:var(--muted);margin-bottom:3px}
 .onboarding-destination>summary b{display:block;font-size:13px;overflow-wrap:anywhere}
-.onboarding-destination>summary em{font-size:10px;color:var(--red);font-style:normal}
-.onboarding-destination[open]>summary{border-bottom:1px solid var(--line);padding-bottom:6px}
+.onboarding-destination>summary em{display:flex;align-items:center;gap:3px;font-size:11px;color:var(--red);font-style:normal;white-space:nowrap}
+.onboarding-destination>summary em span{font-size:15px;line-height:1}
+.onboarding-destination[open]>summary{border-bottom:1px solid var(--line);padding-bottom:7px}
 .onboarding-destination .onboarding-zone-tiles{margin-bottom:4px}
 .onboarding-destination-title{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .onboarding-destination-title h2{font-size:13px}
-.onboarding-destination-title .button{min-height:42px;background:transparent;padding:6px 0 6px 8px;color:var(--red);font-size:11px}
+.onboarding-destination-title .button{min-height:44px;background:transparent;padding:6px 0 6px 8px;color:var(--red);font-size:12px}
 .onboarding-destination .onboarding-zone-list{max-height:180px;overflow-y:auto;overscroll-behavior:contain;padding:2px;scrollbar-width:thin}
+.onboarding-destination .onboarding-zone-list{gap:7px}
+.onboarding-destination .onboarding-zone{min-height:60px;padding:8px 10px;border-radius:13px;gap:9px}
+.onboarding-destination .onboarding-zone b{font-size:13px}
+.onboarding-destination .onboarding-zone small{font-size:10px;margin-top:2px}
+.onboarding-page>.onboarding-search-help{display:block;font-size:13px;line-height:1.45;margin:0;color:var(--muted)}
 .onboarding-zone-context{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:14px;padding:5px 10px;background:var(--panel)}
 .onboarding-zone-context .onboarding-zone-icon{width:43px;height:38px}
 .onboarding-zone-context span{min-width:0}
@@ -173,7 +181,6 @@ body:has(.onboarding-page) .onboarding-page{gap:10px}
 .onboarding-member b{display:block;font-size:12px;overflow-wrap:anywhere}
 .onboarding-member small{display:block;margin-top:3px;color:var(--muted);font-size:10px;line-height:1.3}
 .onboarding-member>.button{flex:none;font-size:11px;min-height:40px;padding:7px 9px;background:var(--soft);color:var(--ink)}
-.onboarding-destination>[data-onboarding-action=zone-manage]{width:100%;min-height:40px;margin:5px 0;background:var(--soft);color:var(--ink);font-size:11px}
 .onboarding-connect-visual{display:flex;align-items:center;justify-content:center;gap:12px;padding:16px 12px;border:1px solid var(--line);border-radius:17px;background:linear-gradient(130deg,#fff,#f1f3ee)}
 .onboarding-connect-visual>div{display:grid;place-items:center;gap:6px;flex:1;text-align:center}
 .onboarding-connect-visual svg{width:42px;height:42px;fill:none;stroke:var(--ink);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
@@ -375,8 +382,18 @@ body:has(.onboarding-page) .onboarding-page{gap:10px}
    stays a text context, separate from discovery and membership management. */
 .onboarding-page>.onboarding-main-context{font-size:11px;line-height:1.5;margin:0;color:var(--muted)}
 .onboarding-main-context b{color:var(--ink);font-weight:650}
-.onboarding-existing-members:empty{display:none}
-.onboarding-existing-members .onboarding-members{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
+.onboarding-existing-members{border-top:1px solid var(--line);margin-top:5px}
+.onboarding-existing-members>summary{display:flex;align-items:center;justify-content:space-between;gap:9px;min-height:44px;padding:6px 2px;color:var(--muted);font-size:12px;font-weight:650;cursor:pointer;list-style:none}
+.onboarding-existing-members>summary::-webkit-details-marker{display:none}
+.onboarding-existing-members>summary::after{content:'＋';display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:9px;background:var(--soft);color:var(--ink);font-size:16px;font-weight:450}
+.onboarding-existing-members[open]>summary::after{content:'−'}
+.onboarding-existing-members-content{padding:4px 0 6px}
+.onboarding-existing-members-content .onboarding-members{border-top:1px solid var(--line);padding-top:11px;margin-top:10px}
+.onboarding-existing-members-content .onboarding-members:first-child{border-top:0;padding-top:3px;margin-top:0}
+.onboarding-page .onboarding-destination .onboarding-zone{min-height:58px;padding:8px 10px;border-radius:13px;gap:9px}
+.onboarding-page .onboarding-destination .onboarding-zone b{font-size:13px}
+.onboarding-page .onboarding-destination .onboarding-zone small{font-size:10px;margin-top:2px}
+.onboarding-destination>summary em span{flex:none;min-width:0}
 .onboarding-found-status{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;font-size:11px;color:var(--muted)}
 .onboarding-found-status b{font-size:11px;font-weight:750;color:var(--red);background:#c94e4610;border-radius:6px;padding:4px 7px}
 .onboarding-result[data-discovery-status=found] .onboarding-product{margin:12px -16px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}

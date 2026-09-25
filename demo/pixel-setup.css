@@ -109,10 +109,16 @@
 .pixel-connection-preview[data-preview-pixels="0"] .pixel-ledline-profile .start{box-shadow:none}
 .pixel-count-preview-label b{font-size:14px;font-variant-numeric:tabular-nums}.pixel-count-preview-label span{font-size:9px;color:#aeb7ac;text-align:right}
 .pixel-count-preview .pixel-setup-track{transform:none!important;gap:7px}.pixel-count-preview .pixel-setup-track::before{display:none}
-.pixel-count-preview .pixel-setup-track .pixel-setup-strip{width:100%;flex:1;justify-content:flex-start}
+.pixel-count-preview .pixel-setup-track .pixel-setup-strip{width:auto;flex:1;min-width:0;justify-content:flex-start}
 .pixel-count-preview .pixel-setup-strip i{max-width:12px;background:#d2d9ce;box-shadow:none;animation:none}
+.pixel-count-preview .pixel-setup-strip i.end{background:#f0443d;box-shadow:0 0 10px #f0443d99,inset 0 0 0 1px #ffb2ac}
 .pixel-count-more{color:#aeb7ac;font-size:19px;line-height:10px;letter-spacing:1px}
-.pixel-setup-visual.pixel-count-preview .pixel-preview-notice{position:static;padding:0;color:#aeb7ac;text-align:left}
+.pixel-count-terminal{display:flex;align-items:center;justify-content:center;flex:0 0 12px;width:12px;height:13px}
+.pixel-count-terminal i.end{display:block;width:11px;height:11px;border-radius:3px;background:#f0443d;box-shadow:0 0 10px #f0443d99,inset 0 0 0 1px #ffb2ac}
+.pixel-endpoint-guide{display:flex;align-items:center;gap:7px;min-width:0;color:#f4f5f0;font-size:11px;font-weight:650;line-height:16px}
+.pixel-endpoint-guide>i{display:block;flex:none;width:10px;height:10px;border-radius:3px;background:#f0443d;box-shadow:0 0 8px #f0443d99}
+.pixel-endpoint-guide.is-empty{color:#aeb7ac;font-weight:500}
+.pixel-setup-visual.pixel-count-preview .pixel-preview-notice{position:static;min-height:16px;padding:0;color:#bac3b8;text-align:left;background:transparent;border:0;box-shadow:none}
 /* Horizontal scrubbing shares the numeric controls; vertical gestures scroll. */
 [data-pixel-scrub]{min-width:0;border-radius:13px;touch-action:pan-y pinch-zoom;cursor:ew-resize;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 [data-pixel-scrub]>*{pointer-events:none}

@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v31-20260925-ui3",
+  "revision": "v31-20260925-ui4",
   "interfaceVersion": 31,
-  "interfaceBaseline": "V31 iPhone build 129 source; demo-only inventory and wifi example additions",
+  "interfaceBaseline": "V31 iPhone build 133 source; demo-only inventory and Wi-Fi example additions; SPI endpoint guidance",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -20,7 +20,7 @@
     },
     {
       "path": "animation-library.css",
-      "sha256": "8953cb8e0e6d44642f455ba5226f4966469e1e7480823ab2ba07f401f3c1dc1f"
+      "sha256": "e8d0259e85f1441f7311ab2123071d62c8a9cf383fd3613217ab2d1950a3d98c"
     },
     {
       "path": "animation-library.js",
@@ -32,7 +32,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "6cf3d1d80472f6d2c7d5db7b94734a55b8ea9b035e5269bc2ee3ca26eddea096"
+      "sha256": "1143c7b40fcb44483bb7301740e6322dd44a2e1b2484e1ac46c5c502bac3c8d1"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -52,7 +52,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "2bd5c66633e454066d949379f516423184936e898bcc4e08ceac5db0b510dd66"
+      "sha256": "8392abb01d5f2bbe39f1649f78f544f951a4450fbf6233903719efc1fcbedba0"
     },
     {
       "path": "fixtures.js",
@@ -60,7 +60,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "016e990fd6b0fb9e704dcbf3873f16b58122a98171cd0e5c8dfeabca4510f1b2"
+      "sha256": "5b5d11d3ce7ac042508ee1eeffdd4e9d2709dc6fc0932a25ade3b47b863ea4a5"
     },
     {
       "path": "live-control.js",
@@ -92,19 +92,19 @@
     },
     {
       "path": "onboarding-ui.css",
-      "sha256": "ed71d3cb6d8f3cf58c30aa879f3f78e768e1651e0dfdebbc8e39f5a19d7e7191"
+      "sha256": "a550921ecaeb53aec5e38e3e31e67f3cbba084dea41ed2eb86ab20265a0ce35a"
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "07915583c0da27859aad4f46ea8a1dbe09db819321123c251fe7a06b12ac962f"
+      "sha256": "5bd93002ef464b848eb8633d856a0dd1456d6b4587427fbcc662438d0e45dced"
     },
     {
       "path": "pixel-setup.css",
-      "sha256": "a1d163bf8e55fabe3a4afa8748537600c3bc98b932762350c6cafff54d3e43c7"
+      "sha256": "b98306b324966ee6eff961755ce76b31a117f9a7ab7cccc57531b28c3f3822fe"
     },
     {
       "path": "pixel-setup.js",
-      "sha256": "de8f98ec8913d21c99e59e5a635bf977443a4d92d49c569e7e397b6d448e6601"
+      "sha256": "0224e2829b1af29fe47517d97a14fb4675fbbf9d5ab7390b216b5d20b762d23f"
     },
     {
       "path": "preferences.js",

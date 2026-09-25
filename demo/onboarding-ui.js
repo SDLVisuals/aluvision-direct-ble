@@ -171,7 +171,10 @@
       }catch(_){saveFailed=true;notice=saveNotice;return false;}
       finally{
         draftSaving=false;paintPage(!pendingChoices&&pending.top);
-        if(!pendingChoices&&!pending.top&&pending.focusedZone)container?.querySelector(`[data-onboarding-action="active-zone"][data-id="${CSS.escape(pending.focusedZone)}"]`)?.focus({preventScroll:true});
+        if(!pendingChoices&&!pending.top&&pending.focusedZone){
+          if(pending.draft.stage==='receiver'&&!container?.querySelector('.onboarding-destination')?.open)container?.querySelector('.onboarding-destination>summary')?.focus({preventScroll:true});
+          else container?.querySelector(`[data-onboarding-action="active-zone"][data-id="${CSS.escape(pending.focusedZone)}"]`)?.focus({preventScroll:true});
+        }
       }
     }
     function verifyAgain(value){
@@ -292,14 +295,14 @@
     function heading(){
       const firstSetup=origin==='stand';
       const step=draft.stage==='stand'?1:draft.stage==='zones'?2:3;
-      const title=draft.stage==='stand'?'Hoe heet je stand?':draft.stage==='zones'?(zoneRemoval?'Zones beheren':zoneRename?'Zone hernoemen':receiverMove?'Receiver verplaatsen':'Je zones'):draft.stage==='receiver'?(busy?'Receiver controleren':searchState==='searching'?'Receiver zoeken…':results.length===1?'Receiver gevonden':results.length>1?'Kies je receiver':'Receiver zoeken'):automaticMain()&&draft.stage==='security'?(busy||rejoinRunning?'Je receiver toevoegen':'Verbind opnieuw met wifi'):automaticMain()&&automaticFinalizing&&draft.stage==='review'?'Je receiver toevoegen':labels[draft.stage]||'Receiver toevoegen';
+      const title=draft.stage==='stand'?'Hoe heet je stand?':draft.stage==='zones'?(zoneRemoval?'Zones beheren':zoneRename?'Zone hernoemen':receiverMove?'Ledline verplaatsen':'Je zones'):draft.stage==='receiver'?(receiverMove?'Ledline verplaatsen':busy?'Receiver controleren':searchState==='searching'?'Receiver zoeken…':results.length===1?'Receiver gevonden':results.length>1?'Kies je receiver':'Receiver zoeken'):automaticMain()&&draft.stage==='security'?(busy||rejoinRunning?'Je receiver toevoegen':'Verbind opnieuw met wifi'):automaticMain()&&automaticFinalizing&&draft.stage==='review'?'Je receiver toevoegen':labels[draft.stage]||'Receiver toevoegen';
       return `<header class="onboarding-setup-header"><div><span class="onboarding-setup-label">${firstSetup?`Stap ${step} · ${step===1?'Standnaam':step===2?'Zones':'Verlichting aansluiten'}`:'Receiver toevoegen'}</span></div><button type="button" class="back" data-onboarding-action="exit">Later verder <span aria-hidden="true">×</span></button></header><header class="onboarding-heading"><h1>${title}</h1></header>${!['stand','zones','receiver','placement','done'].includes(draft.stage)?zoneContext():''}`;
     }
     function zoneVisual(index){
       return `<span class="onboarding-zone-number" aria-hidden="true">${index+1}</span>`;
     }
-    function setupZones({editable=false,withoutZone=false}={}){
-      return `<div class="onboarding-zone-list onboarding-zone-tiles" aria-label="Jouw zones">${withoutZone?withoutZoneChoice():''}${draft.zones.map((zone,index)=>{const count=zoneMembers(zone.id).length;return `<div class="onboarding-zone-row" data-setup-zone-row="${escape(zone.id)}"><button type="button" class="onboarding-zone" data-setup-zone="${escape(zone.id)}" data-onboarding-action="active-zone" data-id="${escape(zone.id)}" aria-pressed="${draft.activeZoneId===zone.id}">${zoneVisual(index)}<span><b>${escape(zone.name)}</b><small>${count?`${count} ${count===1?'receiver':'receivers'} · ${zone.type}`:'Nog geen receivers'}${draft.activeZoneId===zone.id?' · Gekozen':''}</small></span><i aria-hidden="true">${draft.activeZoneId===zone.id?'✓':''}</i></button>${editable&&canManageZones()?`<div class="onboarding-zone-tools"><button type="button" class="onboarding-rename-zone" data-onboarding-action="zone-rename" data-id="${escape(zone.id)}" aria-label="${escape(zone.name)} hernoemen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 14z"/></svg></button><button type="button" class="onboarding-remove-zone" data-onboarding-action="zone-remove" data-id="${escape(zone.id)}" aria-label="${escape(zone.name)} verwijderen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/></svg></button></div>`:''}</div>`;}).join('')}</div>`;
+    function setupZones({editable=false,withoutZone=false,compact=false}={}){
+      return `<div class="onboarding-zone-list onboarding-zone-tiles" aria-label="Jouw zones">${withoutZone?withoutZoneChoice():''}${draft.zones.map((zone,index)=>{const count=zoneMembers(zone.id);const detail=compact?(zone.type||'Nog geen ledlines'):(count.length?`${count.length} ${count.length===1?'ledline':'ledlines'} · ${zone.type}`:'Nog geen ledlines');return `<div class="onboarding-zone-row" data-setup-zone-row="${escape(zone.id)}"><button type="button" class="onboarding-zone" data-setup-zone="${escape(zone.id)}" data-onboarding-action="active-zone" data-id="${escape(zone.id)}" aria-pressed="${draft.activeZoneId===zone.id}">${zoneVisual(index)}<span><b>${escape(zone.name)}</b><small>${detail}${!compact&&draft.activeZoneId===zone.id?' · Gekozen':''}</small></span><i aria-hidden="true">${draft.activeZoneId===zone.id?'✓':''}</i></button>${editable&&canManageZones()?`<div class="onboarding-zone-tools"><button type="button" class="onboarding-rename-zone" data-onboarding-action="zone-rename" data-id="${escape(zone.id)}" aria-label="${escape(zone.name)} hernoemen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 14z"/></svg></button><button type="button" class="onboarding-remove-zone" data-onboarding-action="zone-remove" data-id="${escape(zone.id)}" aria-label="${escape(zone.name)} verwijderen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/></svg></button></div>`:''}</div>`;}).join('')}</div>`;
     }
     function zoneRenamePanel(){
       const zone=draft.zones.find(zone=>zone.id===zoneRename?.zoneId);if(!zone)return '';
@@ -311,17 +314,17 @@
     function zoneRemovalPanel(){
       const zone=draft.zones.find(zone=>zone.id===zoneRemoval?.zoneId);if(!zone)return '';
       const count=zoneMembers(zone.id).length;
-      return `<section class="card onboarding-zone-confirm" data-setup-delete-zone="${escape(zone.id)}"><h2>${escape(zone.name)} verwijderen?</h2><p>${count?`${count} ${count===1?'receiver blijft':'receivers blijven'} gekoppeld en komt bij <b>Niet in een zone</b>. Je kunt ze meteen opnieuw indelen.`:'Je verwijdert alleen deze zone.'}</p><small>Je receivers${pinRequired()?' en PIN':''} worden niet gereset.</small><div class="onboarding-actions">${button('zone-remove-cancel','Annuleren','class="button secondary"')}${button('zone-remove-confirm','Zone verwijderen')}</div></section>`;
+      return `<section class="card onboarding-zone-confirm" data-setup-delete-zone="${escape(zone.id)}"><h2>${escape(zone.name)} verwijderen?</h2><p>${count?`${count} ${count===1?'ledline blijft':'ledlines blijven'} gekoppeld en komt bij <b>Niet in een zone</b>. Je kunt ze meteen opnieuw indelen.`:'Je verwijdert alleen deze zone.'}</p><small>Je ledlines${pinRequired()?' en PIN':''} worden niet gereset.</small><div class="onboarding-actions">${button('zone-remove-cancel','Annuleren','class="button secondary"')}${button('zone-remove-confirm','Zone verwijderen')}</div></section>`;
     }
     function receiverPlacement(){
       if(!canManageZones())return '';
       const chosen=draft.zones.find(zone=>zone.id===draft.activeZoneId),members=zoneMembers(chosen?.id),unassigned=getModel().receivers.filter(receiver=>receiver.standId===draft.stand?.id&&receiver.lifecycle==='added'&&!receiver.zoneId);
-      const rows=list=>list.map(receiver=>`<div class="onboarding-member" data-setup-receiver="${escape(receiver.id)}"><span class="onboarding-member-type">${receiver.type}</span><span><b>${escape(receiver.name)}</b><small>${receiver.zoneId?'Toegevoegd':'Nog geen zone'}</small></span>${button('receiver-move',receiver.zoneId?'Verplaatsen':'Zone kiezen',`data-id="${escape(receiver.id)}" class="button secondary"`)}</div>`).join('');
-      return `${members.length?`<section class="onboarding-members"><h2>In ${escape(chosen.name)} <span>${members.length}</span></h2>${rows(members)}</section>`:''}${unassigned.length?`<section class="onboarding-members"><h2>Niet in een zone <span>${unassigned.length}</span></h2>${rows(unassigned)}</section>`:''}`;
+      const rows=list=>list.map(receiver=>`<div class="onboarding-member" data-setup-receiver="${escape(receiver.id)}"><span class="onboarding-member-type">${receiver.type}</span><span><b>${escape(receiver.name)}</b><small>${receiver.zoneId?'Toegevoegd':'Nog geen zone'}</small></span>${button('receiver-move',receiver.zoneId?'Zone wijzigen':'Zone kiezen',`data-id="${escape(receiver.id)}" class="button secondary"`)}</div>`).join('');
+      return `${members.length?`<section class="onboarding-members"><h2>Ledlines in ${escape(chosen.name)} <span>${members.length}</span></h2>${rows(members)}</section>`:''}${unassigned.length?`<section class="onboarding-members"><h2>Ledlines zonder zone <span>${unassigned.length}</span></h2>${rows(unassigned)}</section>`:''}`;
     }
     function movePanel(){
       const receiver=getModel().receivers.find(receiver=>receiver.id===receiverMove?.receiverId);if(!receiver)return '';
-      return `<section class="card onboarding-move-panel" data-setup-move-receiver="${escape(receiver.id)}"><h2>Waar hoort ${escape(receiver.name)}?</h2><p>Kies een zone. Zijn lichtinstellingen blijven bewaard.</p><div class="onboarding-zone-list">${draft.zones.map((zone,index)=>{const compatible=!zone.type||zone.type===receiver.type;return `<button type="button" class="onboarding-zone" data-onboarding-action="move-zone" data-id="${escape(zone.id)}" aria-pressed="${receiverMove.zoneId===zone.id}" ${compatible?'':'disabled'}>${zoneVisual(index)}<span><b>${escape(zone.name)}</b><small>${!compatible?`Alleen ${zone.type}`:receiver.zoneId===zone.id?'Huidige zone':`${zoneMembers(zone.id).length} receivers`}</small></span><i aria-hidden="true">${receiverMove.zoneId===zone.id?'✓':''}</i></button>`;}).join('')}</div><div class="onboarding-actions">${button('move-cancel','Annuleren','class="button secondary"')}${button('move-confirm',receiver.zoneId?'Verplaatsen':'Toewijzen',!receiverMove.zoneId||receiverMove.zoneId===receiver.zoneId?'disabled':'')}</div></section>`;
+      return `<section class="card onboarding-move-panel" data-setup-move-receiver="${escape(receiver.id)}"><h2>Waar hoort ${escape(receiver.name)}?</h2><p>Kies een zone. Zijn lichtinstellingen blijven bewaard.</p><div class="onboarding-zone-list">${draft.zones.map((zone,index)=>{const compatible=!zone.type||zone.type===receiver.type;return `<button type="button" class="onboarding-zone" data-onboarding-action="move-zone" data-id="${escape(zone.id)}" aria-pressed="${receiverMove.zoneId===zone.id}" ${compatible?'':'disabled'}>${zoneVisual(index)}<span><b>${escape(zone.name)}</b><small>${!compatible?`Alleen ${zone.type}`:receiver.zoneId===zone.id?'Huidige zone':`${zoneMembers(zone.id).length} ledlines`}</small></span><i aria-hidden="true">${receiverMove.zoneId===zone.id?'✓':''}</i></button>`;}).join('')}</div><div class="onboarding-actions">${button('move-cancel','Annuleren','class="button secondary"')}${button('move-confirm',receiver.zoneId?'Zone wijzigen':'Toewijzen aan zone',!receiverMove.zoneId||receiverMove.zoneId===receiver.zoneId?'disabled':'')}</div></section>`;
     }
     function setupIcon(name){
       const paths={phone:'<rect x="12" y="3" width="20" height="38" rx="5"/><path d="M18 8h8M19 36h6"/>',wifi:'<path d="M5 16a25 25 0 0 1 34 0M11 23a16 16 0 0 1 22 0M17 30a7 7 0 0 1 10 0"/><circle cx="22" cy="37" r="1.5"/>',return:'<rect x="12" y="3" width="20" height="38" rx="5"/><path d="M5 23h20m-6-6 6 6-6 6M19 36h6"/>'};
@@ -330,12 +333,12 @@
     function searchContext(){
       if(!draft.mainReceiverId)return '';
       const main=getModel().receivers.find(receiver=>receiver.id===draft.mainReceiverId);
-      return `<p class="onboarding-main-context" data-onboarding-search-via="${escape(main?.type||'main')}">Verbonden met ${main?`${escape(main.name)} · ${escape(main.type)}`:'je bestaande installatie'}</p>`;
+      return `<p class="onboarding-main-context" data-onboarding-search-via="${escape(main?.type||'main')}">Verbonden met je installatie</p>`;
     }
     function receiverAction(receiver){
       const zone=draft.zones.find(item=>item.id===draft.activeZoneId);
       const compatible=zone&&(!zone.type||zone.type===receiver.type);
-      const label=!pinRequired()&&receiver.type==='RGBW'?(compatible?`Toevoegen aan ${escape(zone.name)}`:!zone?'Receiver toevoegen':'Zone kiezen en toevoegen'):'Deze receiver instellen';
+      const label=!pinRequired()&&receiver.type==='RGBW'?(compatible?`Toevoegen aan ${escape(zone.name)}`:!zone?'Zonder zone toevoegen':'Kies een passende zone'):`Verder met ${receiver.type}-receiver`;
       return `${zone&&!compatible?`<p class="onboarding-compatibility-note">${escape(receiver.type)} past niet in deze zone. Kies een andere zone of voeg hem zonder zone toe.</p>`:''}${button('receiver',busy||identifyPending.size?'Even wachten…':label,`data-id="${escape(receiver.id)}" ${busy||identifyPending.size||!(receiver.canConfigure||receiver.canVerifyIdentity)?'disabled':''}`)}`;
     }
     function receiverSearchView(){
@@ -345,9 +348,9 @@
       if(searching)content=`<div class="card onboarding-searching" role="status"><span></span>${manualWifi()?'Je receiver controleren…':'Zoeken naar receivers…'}</div>`;
       else if(searchState==='unavailable')content=`<section class="card onboarding-search-empty"><h2>Zoeken nog niet beschikbaar</h2><p>${unavailable}</p></section>`;
       else if(searchState==='ready'&&!found)content=`<section class="card onboarding-search-empty"><h2>Nog niets gevonden</h2><p>${manualWifi()?'Controleer of je iPhone met jouw ALUVISION-netwerk verbonden is.':'Controleer of de receiver aan staat en dicht bij je installatie staat.'}</p></section>`;
-      else if(!found&&searchState==='idle'&&!manualWifi())content=`<p class="onboarding-search-help">${draft.mainReceiverId?'Zet de receiver die je wilt toevoegen aan.':'Zet de receiver aan die je wilt toevoegen.'}</p>`;
+      else if(!found&&searchState==='idle'&&!manualWifi())content=`<p class="onboarding-search-help">Zet de ledline aan die je wilt toevoegen.</p>`;
       if(found)content+=`<div class="onboarding-results" aria-label="Gevonden receivers">${results.map(receiver=>`<article class="card onboarding-result" data-onboarding-result="${escape(receiver.id)}" data-discovery-status="found"><div class="onboarding-found-status"><b>Gevonden</b><span>Nog niet toegevoegd</span></div><header><h2>${escape(receiver.name||`${receiver.type}-receiver`)}</h2><span class="pill">${receiver.type}</span></header>${product(receiver,{compact:true})}<div class="onboarding-recognition"><span>${identifying.has(receiver.id)?'Dit licht knippert nu.':'Herken jouw verlichting'}</span>${button('identify',identifying.has(receiver.id)?'Stop knipperen':'Laat knipperen',`data-id="${escape(receiver.id)}" class="button secondary" aria-pressed="${identifying.has(receiver.id)}" ${busy||identifyPending.has(receiver.id)||!canIdentify(receiver)?'disabled':''}`)}</div>${!canIdentify(receiver)?`<small class="onboarding-identify-unavailable">${draft.role==='main'?'Deze receiver kan pas knipperen nadat hij is toegevoegd.':'Deze receiver kan nu niet knipperen. Controleer je verbinding en probeer opnieuw.'}</small>`:''}${single?'':`<div class="onboarding-actions">${receiverAction(receiver)}</div>`}</article>`).join('')}</div><div class="onboarding-search-again">${button('search',manualWifi()?'Verbinding opnieuw controleren':'Opnieuw zoeken','class="button secondary" '+(busy||identifyPending.size?'disabled':''))}</div>`;
-      return `<p class="onboarding-later-hint">Een receiver is het kastje bij je verlichting.</p>${searchContext()}${found?'':manualWifiGuide()}${content}${found?manualWifiGuide():''}<div class="onboarding-actions onboarding-footer">${button('back','← Zones',`class="button secondary" ${busy?'disabled':''}`)}${single?receiverAction(results[0]):found?'':button('search',searchLabel(),searching||busy||identifyPending.size?'disabled':'')}</div>`;
+      return `${searchContext()}${found?'':manualWifiGuide()}${content}${found?manualWifiGuide():''}<div class="onboarding-actions onboarding-footer">${button('back','← Zones',`class="button secondary" ${busy?'disabled':''}`)}${single?receiverAction(results[0]):found?'':button('search',searchLabel(),searching||busy||identifyPending.size?'disabled':'')}</div>`;
     }
     function lightExample(type){
       // Independent teaching motion. Physical identification stays exclusively
@@ -357,6 +360,12 @@
     function zoneContext(){
       const zone=draft.zones.find(zone=>zone.id===(draft.zoneId||draft.activeZoneId));
       return zone?`<div class="onboarding-zone-context">${zoneVisual(draft.zones.indexOf(zone))}<span><small>${draft.receiver&&zone.type&&zone.type!==draft.receiver.type?'Kies straks een passende zone':'Toevoegen aan'}</small><b>${escape(zone.name)}</b></span></div>`:'';
+    }
+    function receiverDestinationMarkup(open=false){
+      const destination=draft.zones.find(zone=>zone.id===draft.activeZoneId);
+      const destinationName=destination?.name||(draft.zoneChoiceRequired?'Kies een zone':'Zonder zone');
+      const hint=draft.zoneChoiceRequired?'Kies een nieuwe zone':destination?'Zone voor deze ledline':'Later aan een zone toewijzen';
+      return `<details class="onboarding-destination" data-receiver-destination ${open?'open':''}><summary><span class="onboarding-destination-ledline" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 9h18v6H3zM6 11v2M10 11v2M14 11v2M18 11v2M1 12h2M21 12h2"/></svg></span><span class="onboarding-destination-name"><small>${hint}</small><b>${escape(destinationName)}</b></span><em>${destination?'Wijzig zone':'Kies zone'}<span aria-hidden="true">⌄</span></em></summary><div class="onboarding-destination-title"><h2>Kies waar deze ledline komt</h2>${button('zone-add-from-receiver','＋ Nieuwe zone','class="button secondary"')}</div>${setupZones({withoutZone:true,compact:true})}</details>`;
     }
     function product(receiver,{compact=false,port=null}={}){
       return `<div class="onboarding-product ${compact?'compact':''}"><canvas data-onboarding-visual="${escape(receiver.id)}" data-type="${receiver.type}" data-port="${port||''}" data-compact="${compact}" role="img" aria-label="${receiver.type}-receiver${port?` · uitgang ${port}`:''}" width="400" height="210"></canvas></div>`;
@@ -460,20 +469,18 @@
       document.title=`${container.querySelector('h1').textContent} · Aluvision Lighting`;
       if(draft.stage==='receiver'){
         const heading=container.querySelector('.onboarding-heading');
-        const destination=draft.zones.find(zone=>zone.id===draft.activeZoneId);
-        const destinationCount=zoneMembers(destination?.id).length;
-        const destinationName=destination?.name||(draft.zoneChoiceRequired?'Kies een bestemming':'Zonder zone');
-        heading.insertAdjacentHTML('afterend',`<details class="onboarding-destination" ${zonePickerOpen?'open':''}><summary>${destination?zoneVisual(draft.zones.indexOf(destination)):'<span class="onboarding-zone-number" aria-hidden="true">—</span>'}<span class="onboarding-destination-name"><small>${destination?`Toevoegen aan · ${destinationCount} ${destinationCount===1?'receiver':'receivers'}`:draft.zoneChoiceRequired?'Je vorige zone is verwijderd':'Later aan een zone toewijzen'}</small><b>${escape(destinationName)}</b></span><em>${destination?'Wijzig zone':draft.zones.length?'Zone kiezen':'Zone toevoegen'}⌄</em></summary><div class="onboarding-destination-title"><h2>Waar komt je receiver?</h2>${button('zone-add-from-receiver','＋ Nieuwe zone','class="button secondary"')}</div>${setupZones({withoutZone:true})}<div class="onboarding-existing-members" data-existing-receivers>${receiverPlacement()}</div>${button('zone-manage','Zones beheren','class="button secondary"')}</details>`);
-        const intro=container.querySelector('.onboarding-heading~p');
-        if(intro){intro.className='onboarding-later-hint';heading.insertAdjacentElement('afterend',intro);}
-        const destinationCard=container.querySelector('.onboarding-destination');
+        const prompt=container.querySelector('.onboarding-search-help');
+        if(prompt)heading.insertAdjacentElement('afterend',prompt);
+        const footer=container.querySelector('.onboarding-footer');
+        if(!receiverMove&&footer)footer.insertAdjacentHTML('beforebegin',receiverDestinationMarkup(zonePickerOpen));
+        const destinationCard=container.querySelector('[data-receiver-destination]');
         // Failed checks belong next to the active task, not below a fixed
         // footer where they look like an unresponsive button.
         const connectionError=container.querySelector('.onboarding-error:not([hidden])');
-        if(connectionError)destinationCard.insertAdjacentElement('afterend',connectionError);
+        if(connectionError&&destinationCard)destinationCard.insertAdjacentElement('afterend',connectionError);
         if(receiverMove){
-          for(const element of Array.from(container.querySelector('.onboarding-page').children))if(!element.matches('.onboarding-setup-header,.onboarding-setup-steps,.onboarding-heading,.onboarding-destination'))element.remove();
-          destinationCard.insertAdjacentHTML('afterend',movePanel()+errorBox());
+          for(const element of Array.from(container.querySelector('.onboarding-page').children))if(!element.matches('.onboarding-setup-header,.onboarding-setup-steps,.onboarding-heading'))element.remove();
+          heading.insertAdjacentHTML('afterend',movePanel()+errorBox());
         }
       }
       // Read-only native discovery can show the real product without pretending
@@ -503,6 +510,7 @@
       if(!top){const list=container.querySelector('.onboarding-destination .onboarding-zone-list');if(list)list.scrollTop=zoneScroll;}
       if(top){window.scrollTo({top:0,left:0,behavior:'instant'});container.querySelector('h1').setAttribute('tabindex','-1');container.querySelector('h1').focus({preventScroll:true});}
       else if(focusedPort)container.querySelector(`[data-onboarding-action="output"][data-port="${focusedPort}"]`)?.focus({preventScroll:true});
+      else if(focusedZone&&draft.stage==='receiver'&&!zonePickerOpen)container.querySelector('.onboarding-destination>summary')?.focus({preventScroll:true});
       else if(focusedZone)container.querySelector(`[data-onboarding-action="active-zone"][data-id="${CSS.escape(focusedZone)}"]`)?.focus({preventScroll:true});
       else if(focusedSide)container.querySelector(`[data-onboarding-action="side"][data-side="${CSS.escape(focusedSide)}"]`)?.focus({preventScroll:true});
       restoreZoneList();
@@ -890,13 +898,15 @@
         if(!canManageZones()||!receiverMove)return;const zone=draft.zones.find(zone=>zone.id===receiverMove.zoneId);if(!zone)return;
         return manageSetup({kind:'assign',receiverId:receiverMove.receiverId,zoneId:zone.id,...(zone.isNew?{zone:{id:zone.id,name:zone.name}}:{})});
       }
-      if(action==='zone-manage'){if(!canManageZones())return;cancelSearch();for(const id of identifying.keys())stopIdentify(id);return saveChoices([{type:'BACK'}]);}
       if(action==='zone-add-from-receiver'){
         cancelSearch();for(const id of identifying.keys())stopIdentify(id);
         zoneNameOpen=true;if(change({type:'BACK'}))container.querySelector('#onboarding-zone-name')?.focus();return;
       }
       if(action==='zone-cancel'){zoneNameOpen=false;resetZoneNames();paintPage(false);return;}
-      if(action==='active-zone')return saveChoices([{type:'SELECT_ACTIVE_ZONE',zoneId:target.hasAttribute('data-without-zone')?null:target.dataset.id}],()=>{},{top:false});
+      if(action==='active-zone'){
+        if(draft.stage==='receiver'){const picker=target.closest('.onboarding-destination');if(picker){picker.open=false;const existing=picker.querySelector('.onboarding-existing-members');if(existing)existing.open=false;}}
+        return saveChoices([{type:'SELECT_ACTIVE_ZONE',zoneId:target.hasAttribute('data-without-zone')?null:target.dataset.id}],()=>{},{top:false});
+      }
       if(action==='receiver'){
         if(identifyPending.size)return;
         let receiver=results.find(receiver=>receiver.id===target.dataset.id);if(!receiver)return;

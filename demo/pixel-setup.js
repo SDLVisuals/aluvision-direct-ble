@@ -47,7 +47,14 @@
   }
   function strip(output,stage,options){
     const count=Math.min(24,output.pixels),reversed=stage==='connection'&&output.reversed;
-    if(stage==='pixels')return `<div class="pixel-setup-visual pixel-count-preview" data-pixel-visual="pixels" data-preview-pixels="${output.pixels}" role="img" aria-label="Ingesteld: ${output.pixels} ${output.pixels===1?'pixel':'pixels'}. Schematisch aantal, geen gemeten striplengte."><div class="pixel-count-preview-label"><b>${output.pixels} ${output.pixels===1?'pixel':'pixels'}</b><span>↔ Veeg om aan te passen</span></div><span class="pixel-setup-track"><span class="pixel-setup-strip">${Array.from({length:count},()=>'<i></i>').join('')}</span>${output.pixels>24?'<span class="pixel-count-more" aria-hidden="true">···</span>':''}</span><small class="pixel-preview-notice">Voorbeeld · geen testlicht</small></div>`;
+    if(stage==='pixels'){
+      const represented=output.pixels>24?23:Math.max(0,output.pixels-1),cells=Array.from({length:represented},()=>'<i></i>').join('');
+      const endpoint=output.pixels>0?'<i class="end"></i>':'';
+      const terminal=output.pixels>24?`<span class="pixel-count-more" aria-hidden="true">···</span><span class="pixel-count-terminal" aria-hidden="true"><i class="end"></i></span>`:'';
+      const guide=output.pixels>0?`<span class="pixel-endpoint-guide"><i aria-hidden="true"></i><span>Laatste pixel ${output.pixels} hoort rood te branden</span></span>`:'<span class="pixel-endpoint-guide is-empty">Stel eerst het aantal pixels in</span>';
+      const aria=output.pixels>0?`Ingesteld: ${output.pixels} ${output.pixels===1?'pixel':'pixels'}. Laatste pixel ${output.pixels} hoort rood te branden.`:'Geen pixels ingesteld; er is geen rode eindpixel.';
+      return `<div class="pixel-setup-visual pixel-count-preview" data-pixel-visual="pixels" data-preview-pixels="${output.pixels}" role="img" aria-label="${aria} Schematisch aantal, geen gemeten striplengte."><div class="pixel-count-preview-label"><b>${output.pixels} ${output.pixels===1?'pixel':'pixels'}</b><span>↔ Veeg om aan te passen</span></div><span class="pixel-setup-track"><span class="pixel-setup-strip">${cells}${output.pixels>0&&output.pixels<=24?endpoint:''}</span>${terminal}</span>${guide}<small class="pixel-preview-notice">Testvoorbeeld · geen testlicht</small></div>`;
+    }
     // The customer identifies the incoming cable in the installed view.
     // Right-side input reverses physical pixel order once; it is not a separate
     // animation-direction choice. Keep the cable and its marker together.
@@ -190,7 +197,7 @@
     }
     return Object.freeze({update,stop});
   }
-  function previewMessage(state){return state.kind==='failed'?'Testlicht niet bereikbaar. Controleer de receiververbinding; je aantal blijft bewaard.':state.kind==='applied'?(state.pixels?`Testlicht verstuurd naar poort ${state.port}. Controleer de echte ledline.`:'0 pixels · testlicht uit.'):state.kind==='pending'?'Testlicht aanpassen…':'Voorbeeld · geen testlicht';}
+  function previewMessage(state){return state.kind==='failed'?'Testlicht niet bereikbaar. Controleer de receiververbinding; je aantal blijft bewaard.':state.kind==='applied'?(state.pixels?`Testlicht verstuurd naar poort ${state.port}. De laatste pixel (${state.pixels}) hoort rood te branden; de andere pixels wit.`:'0 pixels · testlicht uit.'):state.kind==='pending'?'Testlicht aanpassen…':'Testvoorbeeld · geen testlicht';}
   function showPreviewStatus(container,state){const label=container?.querySelector('[data-pixel-preview] .pixel-preview-notice');if(label){label.textContent=previewMessage(state);label.dataset.testLight=state.kind;}}
   function create({onSave,onClose=()=>{},onPreview,mode='preview',pixelsPerMeter=DEFAULT_PIXELS_PER_METER}={}){
     if(typeof onSave!=='function')throw Error('PIXEL_SAVE_HANDLER_REQUIRED');

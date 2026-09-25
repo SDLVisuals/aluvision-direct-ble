@@ -48,6 +48,10 @@ dialog :is(h2,h3,p){overflow-wrap:anywhere}dialog header h2{min-width:0}
 #effect-dialog{background:var(--panel)}
 #effect-dialog-content>header{position:sticky;top:-22px;z-index:6;background:var(--panel);margin:0 -8px;padding:10px 8px;border-bottom:1px solid var(--line);box-shadow:0 8px 0 var(--panel)}
 #effect-dialog-content>header h2{font-size:19px}
+#effect-dialog:has([data-stand-overview]){border-radius:28px}
+#effect-dialog:has([data-stand-overview]) #effect-dialog-content>header{border-radius:18px;border-bottom-color:transparent;box-shadow:none}
+#effect-dialog:has([data-stand-overview]) .stand-overview-row{border-radius:20px}
+#effect-dialog:has([data-stand-overview]) .receiver-zone-change-icon{border-radius:14px}
 #effect-dialog .dialog-live-preview{top:calc(var(--dialog-header-height,64px) - 14px);z-index:5}
 #effect-dialog :is(button,input){scroll-margin-block-start:calc(var(--dialog-header-height,64px) + 12px);scroll-margin-block-end:18px}
 .pin-login-entry{scroll-margin-block-end:calc(var(--nav) + env(safe-area-inset-bottom) + 18px)}
@@ -142,13 +146,12 @@ body[data-theme=dark] .section-tabs button:not([aria-selected=true]){color:var(-
 /* Scope belongs next to a colour or animation, never on the zone overview. */
 .selection{min-width:0}
 .page>.selection{padding:13px;border:1px solid var(--line);border-radius:15px;background:var(--panel)}
-.selection.single-scope{display:flex;align-items:center;gap:10px;padding:5px 2px 8px}
+.selection.single-scope{display:flex;align-items:center;gap:10px;min-height:60px;padding:10px 13px;border:1px solid var(--line);border-radius:18px;background:var(--panel)}
 .selection.single-scope .scope-line-icon{display:grid;place-items:center;width:36px;height:36px;flex:none;border-radius:11px;background:var(--soft);color:var(--red)}
 .selection.single-scope .scope-line-icon svg{width:19px;height:19px}
 .selection.single-scope .scope-single-copy{display:grid;gap:2px;min-width:0}
 .selection.single-scope .scope-single-copy b{font-size:12px}
 .selection.single-scope .scope-single-copy small{font-size:10px;color:var(--muted)}
-.selection.single-scope .selection-summary{margin-left:auto}
 .receiver-chips .selection-together{gap:8px;border-width:2px;min-height:44px}
 .receiver-chips .selection-together svg{width:34px;height:28px;color:var(--red)}
 .icon-together .together-link{opacity:.65;stroke-width:1.5}
@@ -214,9 +217,9 @@ dialog{overscroll-behavior:contain}
 .control-dock-location b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.25}
 .control-dock-mode{justify-self:end;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--muted);font-size:10px;font-weight:750;white-space:nowrap}
 .control-preview-dock .control-mode-tabs{min-width:0;padding:3px;gap:3px;border-radius:12px}
-.control-preview-dock .control-mode-tabs button{min-width:0;min-height:44px;padding:7px 5px;gap:5px;font-size:11px;white-space:nowrap}
+.control-preview-dock .control-mode-tabs button{min-width:0;min-height:56px;padding:8px 7px;gap:6px;font-size:14px;font-weight:700;white-space:nowrap}
 .control-preview-dock .control-mode-tabs button[aria-pressed=true]{background:var(--ink);color:#fff;box-shadow:inset 0 -2px var(--red)}
-.control-preview-dock .control-mode-tabs button .icon{width:16px;height:16px}
+.control-preview-dock .control-mode-tabs button .icon{width:20px;height:20px}
 .control-preview-dock .preview-wrap{margin:0!important;border-radius:15px;padding:8px 9px 3px}
 .control-preview-dock .preview-top{align-items:center;min-height:15px;font-size:9px}
 .control-preview-dock .preview-summary{max-width:58%;overflow:hidden;text-align:right;text-overflow:ellipsis;white-space:nowrap;color:#d4d9d4}
@@ -234,14 +237,14 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 }
 @media(max-width:360px){
   .control-dock-heading{grid-template-columns:minmax(0,.68fr) minmax(0,1.32fr);gap:6px}
-  .control-preview-dock .control-mode-tabs button{font-size:10px;gap:4px}
+  .control-preview-dock .control-mode-tabs button{min-height:54px;font-size:12px;gap:5px;padding-inline:6px}
   .control-preview-dock .preview-top{font-size:8px}
   .control-preview-dock .preview-wrap canvas{height:62px}
 }
 @media(max-height:700px){
   .control-preview-dock .preview-wrap{padding-top:6px}
   .control-preview-dock .preview-wrap canvas{height:56px}
-  .control-preview-dock .control-mode-tabs button{min-height:44px}
+  .control-preview-dock .control-mode-tabs button{min-height:52px}
   .control-context .page-heading p{display:none}
 }
 @media(prefers-reduced-motion:reduce){.control-preview-dock .preview-wrap canvas{transition:none}}
@@ -304,7 +307,8 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .stand-scenes-compact{padding:12px;margin:14px 0}
 .stand-scenes-compact .stand-scene-card{background:var(--panel)}
 .receiver-zone-row{min-height:76px;width:100%;cursor:pointer}
-.receiver-zone-row-hint{color:var(--red)!important;font-size:10px!important;font-weight:650}
+.receiver-zone-change{display:grid;justify-items:center;gap:4px;flex:0 0 auto!important;min-width:70px;text-align:center}
+.receiver-zone-change small{margin:0!important;color:var(--ink)!important;font-size:11px!important;font-weight:700;line-height:1.2;white-space:nowrap}
 .receiver-zone-change-icon{display:grid;place-items:center;width:36px;height:36px;flex:none;border-radius:11px;background:var(--soft);color:var(--red)}
 .receiver-zone-change-icon .icon{width:19px;height:19px}
 .receiver-zone-row:active,.stand-scene-card:active,.stand-scenes-empty:active{background:var(--soft)}
@@ -363,6 +367,7 @@ body[data-theme=dark] .scope-lines-list .scope-line[aria-pressed=true] .scope-li
 .stand-overview-row>span{flex:1;min-width:0;overflow-wrap:anywhere}
 .stand-overview-row b{display:block;font-size:14px}.stand-overview-row small{display:block;color:var(--muted);font-size:12px;line-height:1.5;margin-top:3px}
 .stand-overview-row .icon{flex:none}
+.receiver-zone-row>span:nth-child(2){flex:1;min-width:0}
 .control-workspace{display:grid;gap:12px;min-width:0;padding:14px;border:1px solid var(--line);border-radius:19px;background:var(--panel)}
 .control-workspace-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .control-workspace-heading h2{font-size:17px;line-height:1.3}
@@ -421,4 +426,5 @@ body[data-theme=dark] .animation-family-heading>small{background:var(--soft);col
 body[data-theme=dark] .control-mode-tabs button[aria-pressed=true]{background:#edece5;color:#242720}
 .toast{pointer-events:none}
 @media(max-width:360px){.control-workspace{padding:11px}.control-mode-tabs button{gap:5px;padding-inline:7px;font-size:12px}.control-starter-grid .effect-card canvas{height:60px}.library-filter-heading{align-items:flex-start;flex-direction:column;gap:2px}}
+@media(max-width:360px){.receiver-zone-row{gap:9px;padding:12px}}
 [data-stand-overview]>.button{margin-top:12px}
