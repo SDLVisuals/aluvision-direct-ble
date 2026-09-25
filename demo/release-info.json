@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v31-20260925-ui5",
+  "revision": "v31-20260925-ui6",
   "interfaceVersion": 31,
-  "interfaceBaseline": "V31 iPhone build 134 source; consistent ledline language in tunnel and layout; SPI endpoint guidance",
+  "interfaceBaseline": "V31 iPhone build 135 source; simplified zone and receiver-add flow; consistent ledline language; SPI endpoint guidance",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -60,7 +60,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "5ed22d9f25689ed74999072e232c7d11fb37553068d6398858862bcd295231b7"
+      "sha256": "0396d46c913ff14149d836adc64b369f906f80797269d2644ff9461784a04be6"
     },
     {
       "path": "live-control.js",
@@ -88,15 +88,15 @@
     },
     {
       "path": "onboarding-draft.js",
-      "sha256": "64dd6bee55cfad20f9163aaad45dd048ffd3693de10ee7b16bb5b0e1a073f20e"
+      "sha256": "96d58a5edec235ffad806b093da4129baf83d9bd6933fc2aad2ed06d7f6883f6"
     },
     {
       "path": "onboarding-ui.css",
-      "sha256": "a550921ecaeb53aec5e38e3e31e67f3cbba084dea41ed2eb86ab20265a0ce35a"
+      "sha256": "b7cdadc32ebc7181fe8ef3c1006fd07b640ba6557f75eefc1bbf69e524f41af0"
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "5bd93002ef464b848eb8633d856a0dd1456d6b4587427fbcc662438d0e45dced"
+      "sha256": "c2a2362429d3a4ba7fde6a649e884a63f7904a90e9f91ab358de049be34872ff"
     },
     {
       "path": "pixel-setup.css",

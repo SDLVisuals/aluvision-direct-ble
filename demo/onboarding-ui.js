@@ -56,7 +56,7 @@
     let standNameInput=null,zoneNameInput='',draftSaving=false,pendingChoices=null,saveFailed=false,origin='stand';
     let zoneExtraNames=[],zoneRemoval=null,zoneRename=null,receiverMove=null,managementBusy=false,zoneListReturn=null;
     const visualEntrances=new Map(),presentedStages=new Set(),plugMotion=visual.createPlugMotion();
-    let selectedOutput=null,unbindPixelScrub=null;
+    let selectedOutput=null,unbindPixelScrub=null,openZonePickerOnNextPaint=false;
     let parkedChoices=new Map(),parkedTransactions=new Set(),parking=null,parkPending=null,actionAbort=null,searchOnMount=false;
     const searchable=()=>draft?.stage==='receiver';
     function searchDraft(value){
@@ -209,7 +209,7 @@
         stopAutomaticRejoin();rejoinExhausted=false;rejoinBlocked=false;automaticFinalizing=false;registrationPending=false;returningFromWifi=false;
         standNameInput=null;zoneNameInput='';pendingChoices=null;saveFailed=false;
         zoneExtraNames=[];zoneRemoval=null;zoneRename=null;receiverMove=null;managementBusy=false;zoneListReturn=null;
-        visualEntrances.clear();presentedStages.clear();plugMotion.clear();selectedOutput=null;
+        visualEntrances.clear();presentedStages.clear();plugMotion.clear();selectedOutput=null;openZonePickerOnNextPaint=false;
       }else {
         if(draft.cancelled)change({type:'RETRY'},{render:false});
         // Reopening discovery from another zone may change its destination,
@@ -339,7 +339,7 @@
       const zone=draft.zones.find(item=>item.id===draft.activeZoneId);
       const compatible=zone&&(!zone.type||zone.type===receiver.type);
       const label=!pinRequired()&&receiver.type==='RGBW'?(compatible?`Toevoegen aan ${escape(zone.name)}`:!zone?'Zonder zone toevoegen':'Kies een passende zone'):`Verder met ${receiver.type}-receiver`;
-      return `${zone&&!compatible?`<p class="onboarding-compatibility-note">${escape(receiver.type)} past niet in deze zone. Kies een andere zone of voeg hem zonder zone toe.</p>`:''}${button('receiver',busy||identifyPending.size?'Even wachten…':label,`data-id="${escape(receiver.id)}" ${busy||identifyPending.size||!(receiver.canConfigure||receiver.canVerifyIdentity)?'disabled':''}`)}`;
+      return `${zone&&!compatible?`<p class="onboarding-compatibility-note">${escape(receiver.type)} past niet in deze zone. Kies een andere zone of voeg hem zonder zone toe.</p>`:''}${button('receiver',busy||identifyPending.size?'Even wachten…':label,`data-id="${escape(receiver.id)}" ${busy||identifyPending.size||draft.zoneChoiceRequired||!(receiver.canConfigure||receiver.canVerifyIdentity)?'disabled':''}`)}`;
     }
     function receiverSearchView(){
       const single=results.length===1,found=results.length>0;
@@ -348,9 +348,9 @@
       if(searching)content=`<div class="card onboarding-searching" role="status"><span></span>${manualWifi()?'Je receiver controleren…':'Zoeken naar receivers…'}</div>`;
       else if(searchState==='unavailable')content=`<section class="card onboarding-search-empty"><h2>Zoeken nog niet beschikbaar</h2><p>${unavailable}</p></section>`;
       else if(searchState==='ready'&&!found)content=`<section class="card onboarding-search-empty"><h2>Nog niets gevonden</h2><p>${manualWifi()?'Controleer of je iPhone met jouw ALUVISION-netwerk verbonden is.':'Controleer of de receiver aan staat en dicht bij je installatie staat.'}</p></section>`;
-      else if(!found&&searchState==='idle'&&!manualWifi())content=`<p class="onboarding-search-help">Zet de ledline aan die je wilt toevoegen.</p>`;
+      else if(!found&&searchState==='idle'&&!manualWifi())content=`<p class="onboarding-search-help">${draft.zoneChoiceRequired?'Kies eerst een zone of “Zonder zone”.':'Zet de ledline aan die je wilt toevoegen.'}</p>`;
       if(found)content+=`<div class="onboarding-results" aria-label="Gevonden receivers">${results.map(receiver=>`<article class="card onboarding-result" data-onboarding-result="${escape(receiver.id)}" data-discovery-status="found"><div class="onboarding-found-status"><b>Gevonden</b><span>Nog niet toegevoegd</span></div><header><h2>${escape(receiver.name||`${receiver.type}-receiver`)}</h2><span class="pill">${receiver.type}</span></header>${product(receiver,{compact:true})}<div class="onboarding-recognition"><span>${identifying.has(receiver.id)?'Dit licht knippert nu.':'Herken jouw verlichting'}</span>${button('identify',identifying.has(receiver.id)?'Stop knipperen':'Laat knipperen',`data-id="${escape(receiver.id)}" class="button secondary" aria-pressed="${identifying.has(receiver.id)}" ${busy||identifyPending.has(receiver.id)||!canIdentify(receiver)?'disabled':''}`)}</div>${!canIdentify(receiver)?`<small class="onboarding-identify-unavailable">${draft.role==='main'?'Deze receiver kan pas knipperen nadat hij is toegevoegd.':'Deze receiver kan nu niet knipperen. Controleer je verbinding en probeer opnieuw.'}</small>`:''}${single?'':`<div class="onboarding-actions">${receiverAction(receiver)}</div>`}</article>`).join('')}</div><div class="onboarding-search-again">${button('search',manualWifi()?'Verbinding opnieuw controleren':'Opnieuw zoeken','class="button secondary" '+(busy||identifyPending.size?'disabled':''))}</div>`;
-      return `${searchContext()}${found?'':manualWifiGuide()}${content}${found?manualWifiGuide():''}<div class="onboarding-actions onboarding-footer">${button('back','← Zones',`class="button secondary" ${busy?'disabled':''}`)}${single?receiverAction(results[0]):found?'':button('search',searchLabel(),searching||busy||identifyPending.size?'disabled':'')}</div>`;
+      return `${searchContext()}${found?'':manualWifiGuide()}${content}${found?manualWifiGuide():''}<div class="onboarding-actions onboarding-footer">${button('back','← Zones beheren',`class="button secondary" ${busy?'disabled':''}`)}${single?receiverAction(results[0]):found?'':button('search',searchLabel(),searching||busy||identifyPending.size||draft.zoneChoiceRequired?'disabled':'')}</div>`;
     }
     function lightExample(type){
       // Independent teaching motion. Physical identification stays exclusively
@@ -364,8 +364,9 @@
     function receiverDestinationMarkup(open=false){
       const destination=draft.zones.find(zone=>zone.id===draft.activeZoneId);
       const destinationName=destination?.name||(draft.zoneChoiceRequired?'Kies een zone':'Zonder zone');
-      const hint=draft.zoneChoiceRequired?'Kies een nieuwe zone':destination?'Zone voor deze ledline':'Later aan een zone toewijzen';
-      return `<details class="onboarding-destination" data-receiver-destination ${open?'open':''}><summary><span class="onboarding-destination-ledline" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 9h18v6H3zM6 11v2M10 11v2M14 11v2M18 11v2M1 12h2M21 12h2"/></svg></span><span class="onboarding-destination-name"><small>${hint}</small><b>${escape(destinationName)}</b></span><em>${destination?'Wijzig zone':'Kies zone'}<span aria-hidden="true">⌄</span></em></summary><div class="onboarding-destination-title"><h2>Kies waar deze ledline komt</h2>${button('zone-add-from-receiver','＋ Nieuwe zone','class="button secondary"')}</div>${setupZones({withoutZone:true,compact:true})}</details>`;
+      const hint=draft.zoneChoiceRequired?'Kies een zone':destination?'Toevoegen aan':'Later aan een zone toewijzen';
+      const zoneEditor=zoneNameOpen?`<section class="onboarding-destination-create">${nameField('onboarding-zone-name','Zonenaam','Bijvoorbeeld: Demohoek',zoneNameInput)}${button('zone-create','Zone maken','disabled')}</section>`:setupZones({withoutZone:true,compact:true});
+      return `<details class="onboarding-destination" data-receiver-destination ${open?'open':''}><summary><span class="onboarding-destination-ledline" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 9h18v6H3zM6 11v2M10 11v2M14 11v2M18 11v2M1 12h2M21 12h2"/></svg></span><span class="onboarding-destination-name"><small>${hint}</small><b>${escape(destinationName)}</b></span><em>${destination?'Wijzig zone':'Kies zone'}<span aria-hidden="true">⌄</span></em></summary><div class="onboarding-destination-title"><h2>${zoneNameOpen?'Nieuwe zone toevoegen':'Kies waar deze ledline komt'}</h2>${zoneNameOpen?button('zone-cancel','Annuleren','class="button secondary"'):button('zone-add-from-receiver','＋ Nieuwe zone','class="button secondary"')}</div>${zoneEditor}</details>`;
     }
     function product(receiver,{compact=false,port=null}={}){
       return `<div class="onboarding-product ${compact?'compact':''}"><canvas data-onboarding-visual="${escape(receiver.id)}" data-type="${receiver.type}" data-port="${port||''}" data-compact="${compact}" role="img" aria-label="${receiver.type}-receiver${port?` · uitgang ${port}`:''}" width="400" height="210"></canvas></div>`;
@@ -428,7 +429,7 @@
           if(zoneRemoval)return zoneRemovalPanel();
           if(zoneRename)return zoneRenamePanel();
           if(receiverMove)return movePanel();
-          return `${draft.zones.length?'':`<p class="onboarding-task-hint">Een zone is een plek in je stand, zoals de balie.</p>`}${setupZones({editable:true})}${zoneNameFields()}${receiverPlacement()}<div class="onboarding-actions onboarding-footer onboarding-zones-continue">${button('next','Verder →','aria-label="Verder naar receivers toevoegen" disabled')}${!draft.zones.length?button('zones-later','Zones later toevoegen','class="button secondary"'):''}<div class="onboarding-zones-footer-row">${button('back','← Terug',`class="button secondary" ${!draft.stand.isNew?'disabled':''}`)}</div></div>`;
+          return `<p class="onboarding-task-hint">Stel hier de plekken in je stand in. Daarna zoek je de ledline.</p>${setupZones({editable:true})}${zoneNameFields()}${receiverPlacement()}<div class="onboarding-actions onboarding-footer onboarding-zones-continue">${button('next','Verder · ledline zoeken →','aria-label="Verder naar ledline zoeken" disabled')}${!draft.zones.length?button('zones-later','Zones later toevoegen','class="button secondary"'):''}<div class="onboarding-zones-footer-row">${button('back','← Terug',`class="button secondary" ${!draft.stand.isNew?'disabled':''}`)}</div></div>`;
         }
         case 'receiver':return receiverSearchView();
         case 'placement':return `<p class="onboarding-task-hint">${draft.zoneChoiceRequired?'Je gekozen zone is niet meer beschikbaar.':`${escape(draft.receiver.type)} past niet in de gekozen zone.`} Kies een andere zone of voeg hem zonder zone toe.</p><div class="onboarding-zone-list">${zoneChoices()}</div>${zoneNameOpen?`<section class="card">${nameField('onboarding-zone-name','Naam van de nieuwe zone','Bijvoorbeeld: Lichttunnel',zoneNameInput)}${button('zone-create','Verder','disabled')}</section>`:button('zone-new','＋ Nieuwe zone','class="button secondary"')}${button('back','← Terug','class="button secondary"')}`;
@@ -463,7 +464,7 @@
       const disclosureKey=element=>element.className+'|'+element.querySelector(':scope > summary')?.textContent;
       const disclosures=!top?new Map(Array.from(container.querySelectorAll('details'),element=>[disclosureKey(element),element.open])):null;
       const zoneScroll=container.querySelector('.onboarding-destination .onboarding-zone-list')?.scrollTop||0;
-      const zonePickerOpen=container.querySelector('.onboarding-destination')?.open===true;
+      const zonePickerOpen=container.querySelector('.onboarding-destination')?.open===true||openZonePickerOnNextPaint;openZonePickerOnNextPaint=false;
       presentedStages.add(stageKey);
       container.innerHTML=`<div class="page onboarding-page${entering?' onboarding-stage-enter':''}" data-setup-origin="${origin}" data-onboarding-stage="${draft.stage}" aria-busy="${draftSaving||busy}">${heading()}${body()}${errorBox()}</div>`;
       document.title=`${container.querySelector('h1').textContent} · Aluvision Lighting`;
@@ -849,12 +850,15 @@
         const newReceiverZone=draft.stage==='zone'&&!pinRequired();
         const earlyPlacement=draft.stage==='placement';
         const events=newZoneEvents();
+        // From the destination picker, the new zone is immediately the
+        // destination. This avoids asking the customer to choose it again.
+        if(draft.stage==='receiver'&&events.length)events.push({type:'SELECT_ACTIVE_ZONE',zoneId:events.at(-1).id});
         if(earlyPlacement)events.push({type:'NEXT'});
         return saveChoices(events,()=>{
           zoneNameOpen=false;resetZoneNames();
           if(newReceiverZone)queueMicrotask(()=>finishChosenZone());
           if(earlyPlacement&&draft.stage==='security')queueMicrotask(()=>secure());
-        },{top:draft.stage!=='zones'});
+        },{top:!['zones','receiver'].includes(draft.stage)});
       }
       if(action==='zone-add-row'){
         captureNames();if(zoneNames().length>=12||draft.zones.length+zoneNames().length>=256)return;
@@ -900,7 +904,7 @@
       }
       if(action==='zone-add-from-receiver'){
         cancelSearch();for(const id of identifying.keys())stopIdentify(id);
-        zoneNameOpen=true;if(change({type:'BACK'}))container.querySelector('#onboarding-zone-name')?.focus();return;
+        zoneNameOpen=true;zoneNameInput='';zoneExtraNames=[];paintPage(false);container.querySelector('#onboarding-zone-name')?.focus({preventScroll:true});return;
       }
       if(action==='zone-cancel'){zoneNameOpen=false;resetZoneNames();paintPage(false);return;}
       if(action==='active-zone'){
@@ -1039,7 +1043,10 @@
       if(action==='finish')return finish();
       if(action==='done'){suspend();onExit({stand:true});return;}
       if(action==='another'){const activeZoneId=draft.zoneId;draft=null;start({activeZoneId});paintPage();if(draft.stage==='receiver')queueMicrotask(()=>{if(container&&draft.stage==='receiver'&&searchState==='idle'&&!busy)void search();});return;}
-      if(action==='another-zone'){const activeZoneId=draft.zoneId;draft=null;start({activeZoneId});change({type:'BACK'});return;}
+      if(action==='another-zone'){
+        draft=null;start({activeZoneId:null});draft=draftApi.snapshot({...clone(draft),zoneChoiceRequired:true});
+        return saveChoices([],()=>{openZonePickerOnNextPaint=true;},{top:true});
+      }
     }
     // Only names, counts and the pending step for the Stand resume card; never
     // expose credentials, security receipts or unconfirmed receiver membership.

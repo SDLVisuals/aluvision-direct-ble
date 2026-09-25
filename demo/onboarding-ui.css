@@ -95,6 +95,8 @@ body:has(.onboarding-page) .onboarding-page{gap:10px}
 .onboarding-destination-title{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .onboarding-destination-title h2{font-size:13px}
 .onboarding-destination-title .button{min-height:44px;background:transparent;padding:6px 0 6px 8px;color:var(--red);font-size:12px}
+.onboarding-destination-create{margin:8px 0 3px;padding:10px 2px 2px;border-top:1px solid var(--line)}
+.onboarding-destination-create>[data-onboarding-action=zone-create]{width:100%;min-height:48px;margin-top:8px;border-radius:14px}
 .onboarding-destination .onboarding-zone-list{max-height:180px;overflow-y:auto;overscroll-behavior:contain;padding:2px;scrollbar-width:thin}
 .onboarding-destination .onboarding-zone-list{gap:7px}
 .onboarding-destination .onboarding-zone{min-height:60px;padding:8px 10px;border-radius:13px;gap:9px}

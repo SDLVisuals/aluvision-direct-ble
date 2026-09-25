@@ -198,7 +198,7 @@
           if (!id(event.id) || next.context.standIds.includes(event.id)) fail('STAND_ID','Kies een nieuwe stand-ID.');
           next.stand={id:event.id,name:name(event.name),isNew:true}; break;
         case 'ADD_ZONE':
-          requireStage(next,['zones','placement','zone']);
+          requireStage(next,['zones','receiver','placement','zone']);
           if (!id(event.id) || next.context.zoneIds.includes(event.id) || next.zones.some(zone => zone.id === event.id)) fail('ZONE_ID','Deze zone bestaat al.');
           next.zones.push({id:event.id,name:name(event.name),type:null,layout:'stacked',isNew:true,pixels:0});
           if (next.activeZoneId === null) next.activeZoneId=event.id;
