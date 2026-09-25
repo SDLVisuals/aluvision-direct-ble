@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v31-20260925-ui4",
+  "revision": "v31-20260925-ui5",
   "interfaceVersion": 31,
-  "interfaceBaseline": "V31 iPhone build 133 source; demo-only inventory and Wi-Fi example additions; SPI endpoint guidance",
+  "interfaceBaseline": "V31 iPhone build 134 source; consistent ledline language in tunnel and layout; SPI endpoint guidance",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -32,7 +32,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "1143c7b40fcb44483bb7301740e6322dd44a2e1b2484e1ac46c5c502bac3c8d1"
+      "sha256": "9cf2e18aeb0b98dc2e479c108a958938c1f21dc7489699e78ce7ec1bea3c573d"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -60,7 +60,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "5b5d11d3ce7ac042508ee1eeffdd4e9d2709dc6fc0932a25ade3b47b863ea4a5"
+      "sha256": "5ed22d9f25689ed74999072e232c7d11fb37553068d6398858862bcd295231b7"
     },
     {
       "path": "live-control.js",
