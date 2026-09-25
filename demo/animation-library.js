@@ -10,7 +10,7 @@
     Object.freeze({key:'whole',title:'Kleur & sfeer',summary:'Kleur of helderheid verandert tegelijk op alle ledlines.',aliases:'hele lijn volledig gelijk samen uniform rgbw'}),
     Object.freeze({key:'pixels',title:'Bewegend licht',summary:'Beweging over pixels: bijvoorbeeld golven of lopend licht.',aliases:'pixel pixels pixelanimatie pixelanimaties led strip spi'}),
     Object.freeze({key:'tunnel',title:'Tunnel',summary:'Licht reist tussen twee of meer ledlines.',aliases:'tunnel diepte receiver receivers boog bogen achter elkaar'}),
-    Object.freeze({key:'brand',title:'Huisstijl',summary:'Rustig wit en zachte accenten voor je huisstijl.',aliases:'brand huisstijl merk beurs stand presentatie corporate'})
+    Object.freeze({key:'brand',title:'Brand animaties',summary:'Rustige kleur- en lichteffecten voor je merk en beursstand.',aliases:'brand brandanimaties huisstijl merk beurs stand presentatie corporate'})
   ]);
   const descriptor = (key, title, summary, aliases = '') => Object.freeze({key,title,summary,aliases});
   const DEFINITIONS = Object.freeze({
@@ -44,9 +44,11 @@
       descriptor('pixels','Pixelgolven','Beweging in elke pixellijn reist door naar de volgende.','pixel pixelgordijn gordijn curtain kruisende pixelgolven cross')
     ]),
     brand:Object.freeze([
-      descriptor('white','Wit & sfeer','Rustig wit ademt of verschuift naar een warme mix.','wit warm warmwit white breathe ademen ademend sfeer rustig'),
-      descriptor('colour','Huisstijl & kleur','Je huisstijlkleur mengt subtiel met een witte basis.','brand corporate huisstijl merk kleur kleuren accent gradient verloop'),
-      descriptor('focus','Lichtaccent & focus','Een zachte gloed of focuspunt trekt de aandacht.','productfocus product highlight sweep gloed focus aandacht lichtaccent')
+      descriptor('white','Wit & warme sfeer','Rustig wit, warm licht en zachte overgangen.','wit warm warmwit white breathe ademen ademend rustig avond presentatie'),
+      descriptor('colour','Kleur door de ruimte','Je gekozen kleur vloeit rustig over de ledlines.','brand corporate huisstijl merk kleur kleuren accent gradient verloop flow golf beurs welkom'),
+      descriptor('pulse','Zachte kleurpuls','Een gekozen kleur ademt rustig op en neer.','pulse pulseren ademen ademend ritme'),
+      descriptor('focus','Lichtaccent & focus','Een lichtaccent beweegt rustig naar een product toe.','productfocus product highlight sweep gloed focus aandacht lichtaccent chase lopend licht'),
+      descriptor('sparkle','Subtiele schittering','Kleine lichtaccenten twinkelen zonder onrustig te worden.','twinkel schitter glans luxe shimmer sprankel')
     ])
   });
   const PIXEL_FAMILIES = Object.freeze({Flow:'flow',Pulse:'pulse',Wave:'wave',Chase:'chase',Comet:'comet',Scanner:'scanner',Spiegel:'mirror',Sparkle:'sparkle',Sequence:'sequence',Afwisseling:'alternate',Accent:'accent','Warm wit':'warm'});
@@ -56,7 +58,20 @@
     'v30-tunnel-pixel-curtain':'pixels','v30-tunnel-pixel-cross':'pixels'
   });
   const TUNNEL_ENGINES = Object.freeze({WAVE:'waves',BREATHE:'waves',CHASE:'travel',SCANNER:'travel',COMET:'travel',MIRROR:'symmetry',DUAL:'symmetry',CASCADE:'build',SEQUENCE:'build',FLOW:'colour',GRADIENT:'colour',SPARKLE:'alternate',ALTERNATE:'alternate'});
-  const BRAND_IDS = Object.freeze({'v30-brand-white-breathe':'white','v30-brand-warm-white':'white','v30-brand-accent':'colour','v30-brand-soft-gradient':'colour','v30-brand-sweep':'focus','v30-brand-focus':'focus'});
+  const BRAND_IDS = Object.freeze({
+    'v30-brand-white-breathe':'white','v30-brand-warm-white':'white','v30-brand-accent':'colour','v30-brand-soft-gradient':'colour','v30-brand-sweep':'focus','v30-brand-focus':'focus',
+    'spi-flow-47':'colour','spi-flow-48':'white','spi-warm-49':'white',
+    'spi-flow-73':'colour','spi-breathe-74':'pulse','spi-chase-75':'focus',
+    'spi-flow-76':'colour','spi-flow-77':'colour','spi-breathe-78':'pulse','spi-breathe-79':'white',
+    'spi-chase-80':'focus','spi-sparkle-81':'sparkle','spi-flow-82':'colour','spi-breathe-84':'white','spi-warm-85':'white'
+  });
+  const BRAND_NAMES = Object.freeze({
+    'spi-flow-47':'Merkaccent','spi-flow-48':'Witte accentgolf','spi-warm-49':'Warm wit in beweging',
+    'spi-flow-73':'Meerkleurige merkflow','spi-breathe-74':'Kleur die rustig ademt','spi-chase-75':'Lopend merkaccent',
+    'spi-flow-76':'Beursgolf','spi-flow-77':'Welkomsgolf','spi-breathe-78':'Zachte presentatiepuls','spi-breathe-79':'Avondsfeer',
+    'spi-chase-80':'Productaccent','spi-sparkle-81':'Luxe schittering','spi-flow-82':'Rustige kleurgolf',
+    'spi-breathe-84':'Wit in beweging','spi-warm-85':'Warm naar neutraal wit'
+  });
   // A small, contrasting introduction. These are references to the existing
   // recipes, never a second catalogue or a change to stored effect identities.
   const STARTERS = Object.freeze([
@@ -74,7 +89,7 @@
       return effect?[Object.freeze({effect,title:item.title,summary:item.summary})]:[];
     }));
   }
-  function displayName(effect) { return STARTERS.find(item=>item.ids.includes(effect.id))?.title||effect.name; }
+  function displayName(effect) { return STARTERS.find(item=>item.ids.includes(effect.id))?.title||BRAND_NAMES[effect.id]||effect.name; }
   const FALLBACK = descriptor('other','Overige bewegingen','Meer animaties uit deze categorie.','overig overige');
   const normalize = value => String(value == null ? '' : value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('nl').replace(/[^a-z0-9]+/g,' ').trim();
   const category = key => CATEGORIES.find(item => item.key === key) || null;
@@ -115,6 +130,9 @@
   }
   function search(items, query = '') {
     const terms = normalize(query).split(' ').filter(Boolean);
+    const phrase=terms.join(' ');
+    const categoryMatch=CATEGORIES.find(section=>normalize(section.title)===phrase||terms.length===1&&normalize(section.aliases).split(' ').includes(phrase));
+    if(categoryMatch)return items.filter(effect=>effect.category===categoryMatch.key);
     const ordered = groups(items).flatMap(family => family.effects);
     if (!terms.length) return ordered;
     return ordered.map((effect,index) => {

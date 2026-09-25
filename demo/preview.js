@@ -36,6 +36,10 @@
       ALTERNATE: 'Afwisseling', MINIMAL: 'Accent', WARM: 'Warm wit' })[effect.engine] || 'Overige';
   };
   const controlAliases = { width: 'widthPixels', count: 'objectCount', trail: 'trailLength' };
+  // These are complete, existing receiver recipes (SPI variants 47–49 and
+  // 73–85), not look-alike demos. Keep their wire engines/variants intact but
+  // surface the exhibition-friendly ones in the dedicated Brand collection.
+  const BRAND_SPI_VARIANTS = new Set([47,48,49,73,74,75,76,77,78,79,80,81,82,84,85]);
   // Colour-only crossfades cover the full line continuously; a background
   // control would do nothing there. Pulses, chases and tunnel envelopes expose
   // the area/time outside the foreground and can blend a separate background.
@@ -61,7 +65,8 @@
       id: wholeLine ? 'spi-line-' + effect.engine.toLowerCase() + '-' + effect.variant
         : targetType.toLowerCase() + '-' + effect.engine.toLowerCase() + '-' + effect.variant,
       name: effect.name, family: family(effect), state,
-      category: family(effect) === 'Tunnel' ? 'tunnel' : wholeLine || targetType === 'RGBW' ? 'whole' : 'pixels',
+      category: family(effect) === 'Tunnel' ? 'tunnel' : wholeLine || targetType === 'RGBW' ? 'whole'
+        : BRAND_SPI_VARIANTS.has(Number(effect.variant)) ? 'brand' : 'pixels',
       description: effect.description.nl,
       controls: controls(effect),
       directions: controls(effect).includes('direction') ? ['right', 'left'] : [],
@@ -467,7 +472,8 @@ function usesCyclePhaseSteps(state) {
           SEQUENCE:'Een reeks kleuren beweegt over de pixels.',
           MINIMAL:'Een compact lichtaccent beweegt over de LED Line.'
         };
-        const category=variant>=90&&variant<=97?'tunnel':variant>=98&&variant<=102?'whole':'pixels';
+        const category=variant>=90&&variant<=97?'tunnel':variant>=98&&variant<=102?'whole'
+          :BRAND_SPI_VARIANTS.has(Number(variant))?'brand':'pixels';
         const entryFamily=category==='tunnel'?'Tunnel':family({engine});
         return {id:'spi-'+engine.toLowerCase()+'-'+variant,name,family:entryFamily,state,
           category,legacy:true,source:'v21-inline-catalog',paletteEditable:true,

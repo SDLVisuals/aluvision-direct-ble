@@ -92,14 +92,14 @@
     descriptor('brand-warm-white', 'Warm naar wit', 'brand', 'Een rustige overgang van een warme RGB + W-mix naar neutraal wit.',
       { colors: ['#C55B13', '#000000'], whiteChannels: [125, 255], colorCount: 2, speed: 20 },
       { controls: ['speed', 'smooth'] }),
-    descriptor('brand-accent', 'Huisstijlaccent', 'brand', 'De eigen huisstijlkleur komt zacht terug in een heldere witte basis.',
-      { colors: [DEFAULT_BRAND], brandColor: DEFAULT_BRAND, speed: 22 }, { controls: ['speed', 'smooth', 'fadeAmount', 'brandColor'] }),
-    descriptor('brand-sweep', 'Zachte lichtgloed', 'brand', 'Een subtiele huisstijlgloed beweegt over een rustige witte basis.',
-      { colors: [DEFAULT_BRAND], brandColor: DEFAULT_BRAND, speed: 23 }, { controls: ['speed', 'smooth', 'width', 'direction', 'brandColor'], directions: ['forward', 'reverse'] }),
+    descriptor('brand-accent', 'Merkaccent', 'brand', 'Je gekozen accentkleur keert zacht terug in een heldere witte basis.',
+      { colors: [DEFAULT_BRAND], brandColor: DEFAULT_BRAND, speed: 22 }, { controls: ['speed', 'smooth', 'fadeAmount', 'brandColor'], paletteEditable: true, colorCountRange: { min: 1, max: 1 } }),
+    descriptor('brand-sweep', 'Zachte lichtgloed', 'brand', 'Een subtiele merkglans beweegt over een rustige witte basis.',
+      { colors: [DEFAULT_BRAND], brandColor: DEFAULT_BRAND, speed: 23 }, { controls: ['speed', 'smooth', 'width', 'direction', 'brandColor'], directions: ['forward', 'reverse'], paletteEditable: true, colorCountRange: { min: 1, max: 1 } }),
     descriptor('brand-focus', 'Productfocus', 'brand', 'Een helder focuspunt trekt langzaam langs de receivers, met een zachte witte achtergrond.',
       { colors: [DEFAULT_BRAND], brandColor: DEFAULT_BRAND, speed: 20 }, { controls: ['speed', 'smooth', 'width'], paletteEditable: true, colorCountRange: { min: 1, max: 7 } }),
-    descriptor('brand-soft-gradient', 'Huisstijlverloop', 'brand', 'Een subtiel verloop tussen de huisstijlkleur en wit, zonder drukke kleurwissels.',
-      { colors: [DEFAULT_BRAND], brandColor: DEFAULT_BRAND, speed: 23 }, { controls: ['speed', 'smooth', 'direction', 'brandColor'], directions: ['forward', 'reverse'] })
+    descriptor('brand-soft-gradient', 'Zacht merkverloop', 'brand', 'Een subtiel verloop tussen je gekozen accentkleur en wit, zonder drukke kleurwissels.',
+      { colors: [DEFAULT_BRAND], brandColor: DEFAULT_BRAND, speed: 23 }, { controls: ['speed', 'smooth', 'direction', 'brandColor'], directions: ['forward', 'reverse'], paletteEditable: true, colorCountRange: { min: 1, max: 1 } })
   ];
   const BY_ID = new Map(DEFINITIONS.map(entry => [entry.id, entry]));
   function periodForEffect(state = {}) {

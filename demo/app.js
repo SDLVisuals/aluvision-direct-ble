@@ -24,6 +24,14 @@
   const selections = new Map();
   const expandedScopeZones = new Set();
   const brandColours = new Map();
+  const BRAND_TONES = Object.freeze([
+    Object.freeze({id:'aluvision-rood',name:'Aluvision rood',value:'#C94E46'}),
+    Object.freeze({id:'warm-amber',name:'Warm amber',value:'#E9A04B'}),
+    Object.freeze({id:'zacht-roze',name:'Zacht roze',value:'#D97F9B'}),
+    Object.freeze({id:'diep-blauw',name:'Diep blauw',value:'#4865C8'}),
+    Object.freeze({id:'fris-turquoise',name:'Fris turquoise',value:'#36AFA4'}),
+    Object.freeze({id:'zacht-violet',name:'Zacht violet',value:'#9272C8'})
+  ]);
   const visualPorts = new Map(), visualPlugMotions=new Map(), identifying = new Map(), identifyPending = new Map(), expandedReceivers = new Set();
   function receiverPlugMotion(id){if(!visualPlugMotions.has(id))visualPlugMotions.set(id,window.LightningReceiverVisual.createPlugMotion());return visualPlugMotions.get(id);}
   let receiverFilter='all';
@@ -433,7 +441,9 @@
     const s = selectedState();
     const galleryAction=route.screen==='controls'?'animation-gallery':'animations-gallery';
     const galleryButton=['controls','animations'].includes(route.screen)?`<button class="button secondary animation-gallery-return" data-action="${galleryAction}" aria-label="Terug naar animatiegalerij">${icon('back')}<span>Galerij</span></button>`:'';
-    const content = `<div class="current-effect"><span class="menu-icon">${icon('animation')}</span><div><small>Actieve animatie · ${esc(categoryLabel(effect.category))}</small><b>${esc(Library.displayName(effect))}</b><small>${esc(effect.description)}</small></div>${galleryButton}</div>${effect.category==='brand'&&effect.id!=='v30-brand-focus'&&effect.controls.includes('brandColor')?brandControl(s.brandColor||'#C94E46','active'):''}<section class="card palette-section"><h2>${effect.paletteEditable===false?'Kleurenreeks':effect.id==='v30-brand-focus'?'Focuskleuren · tik om te wijzigen':'Animatiekleuren · tik om te wijzigen'}</h2>${effect.id==='v30-brand-focus'?'<p class="palette-guidance">Voeg meerdere focuskleuren toe. De gloed laat ze na elkaar zien terwijl ze langs de ledline beweegt.</p>':''}<div class="palette" aria-label="Animatiekleuren">${paletteMarkup(s)}</div>${slider('bri','Kleurhelderheid',0,100,s.bri??100,'%')}${resetMarkup('bri','Kleurhelderheid')}${effect.controls.includes('speed')?`${slider('speed','Snelheid',0,100,s.speed??30,'%')}${resetMarkup('speed','Snelheid')}`:''}</section>${backgroundControls(effect)}${animationControls(effect)}<button class="button secondary full" data-action="preset-save">＋ Animatie bewaren</button>`;
+    const paletteTitle=effect.category==='brand'?effect.id==='v30-brand-focus'?'Merkkleuren · tik om te wijzigen':'Accentkleur · tik om te wijzigen':effect.paletteEditable===false?'Kleurenreeks':'Animatiekleuren · tik om te wijzigen';
+    const paletteHelp=effect.id==='v30-brand-focus'?'<p class="palette-guidance">Voeg kleuren toe voor je merkaccent. De gloed laat ze na elkaar zien langs de ledlines.</p>':'';
+    const content = `<div class="current-effect"><span class="menu-icon">${icon('animation')}</span><div><small>Actieve animatie · ${esc(categoryLabel(effect.category))}</small><b>${esc(Library.displayName(effect))}</b><small>${esc(effect.description)}</small></div>${galleryButton}</div><section class="card palette-section"><h2>${paletteTitle}</h2>${paletteHelp}<div class="palette" aria-label="Animatiekleuren">${paletteMarkup(s)}</div>${slider('bri','Kleurhelderheid',0,100,s.bri??100,'%')}${resetMarkup('bri','Kleurhelderheid')}${effect.controls.includes('speed')?`${slider('speed','Snelheid',0,100,s.speed??30,'%')}${resetMarkup('speed','Snelheid')}`:''}</section>${backgroundControls(effect)}${animationControls(effect)}<button class="button secondary full" data-action="preset-save">＋ Animatie bewaren</button>`;
     return `<section class="active-animation-workspace" aria-label="Animatie aanpassen">${content}</section>`;
   }
   function renderAnimations() {
@@ -441,8 +451,9 @@
     if(!effect)return renderEffects();
     return `<div class="editor-grid">${controlContext('animations')}<section class="editor-controls">${selector()}${animationEditorMarkup(effect)}</section></div>`;
   }
-  function brandControl(value,scope) {
-    return `<label class="brand-colour"><input type="color" data-brand-colour="${scope}" value="${esc(value)}" aria-label="Bedrijfskleur kiezen"><span><b>Jouw bedrijfskleur</b><small>${scope==='library'?'Bekijk de kleur direct in de passende voorbeelden.':'Verander het accent van deze animatie.'}</small></span>${icon('sliders')}</label>`;
+  function brandTonePicker() {
+    const selected=brandColours.get(route.zoneId)||'#C94E46';
+    return `<section class="brand-tone-picker" aria-label="Merkaccent kiezen"><div class="brand-tone-heading"><b>Merkaccent</b><small>Kies een kleur voor de merkvoorbeelden</small></div><div class="brand-tone-options" role="group" aria-label="Beschikbare merkkleuren">${BRAND_TONES.map(tone=>`<button class="brand-tone-option" type="button" data-action="brand-tone" data-id="${tone.id}" aria-label="${tone.name}" aria-pressed="${selected.toLowerCase()===tone.value.toLowerCase()}" title="${tone.name}" style="--brand-tone:${tone.value}"><i aria-hidden="true"></i><span>${tone.name}</span></button>`).join('')}</div><small class="brand-tone-note">Je verlichting verandert pas wanneer je een animatie kiest.</small></section>`;
   }
   function categoryLabel(key) {
     return Library.categories.find(category=>category.key===key)?.title||({catalogue:'Alle',presets:'Mijn animaties'})[key]||'Animaties';
@@ -451,7 +462,41 @@
   function initialAnimationLibrary() { return zone()?.type==='SPI'?'pixels':'catalogue'; }
   function libraryTab() { return route.library==='all'?'catalogue':route.library||initialAnimationLibrary(); }
   function backgroundDefaults(){return {backgroundOn:false,background:'#000000',backgroundWhite:0,bgBrightness:10,backgroundRgbEnabled:true,backgroundWhiteEnabled:true};}
-  function effectState(effect) { return {...backgroundDefaults(),...copy(effect.state),category:effect.category,v30Effect:effect.state.v30Effect||null,previewFamily:effect.state.previewFamily||null,legacySpi:effect.state.legacySpi===true,bounce:effect.state.bounce===true,mirror:effect.state.mirror===true,...(effect.category==='brand'?{brandColor:brandColours.get(route.zoneId)||effect.state.brandColor}:{}),on:true,power:true}; }
+  function effectState(effect) {
+    const state={...backgroundDefaults(),...copy(effect.state),category:effect.category,v30Effect:effect.state.v30Effect||null,previewFamily:effect.state.previewFamily||null,legacySpi:effect.state.legacySpi===true,bounce:effect.state.bounce===true,mirror:effect.state.mirror===true,on:true,power:true};
+    if(effect.category==='brand'){
+      const accent=brandColours.get(route.zoneId)||state.brandColor||state.colors?.[0]||'#C94E46';
+      state.brandColor=accent;
+      if(effect.id==='v30-brand-focus'||effect.id.startsWith('spi-')&&effect.state.engine!=='WARM'&&!/white/i.test(effect.name)){
+        state.colors=[accent];state.colorCount=1;state.whiteChannels=[0];state.rgbEnabled=[true];state.whiteEnabled=[false];
+      }
+    }
+    return state;
+  }
+  function effectMotionKey(effect) {
+    const id=effect.id,variant=Number(effect.state?.variant),engine=String(effect.state?.engine||'').toUpperCase();
+    if(effect.category==='tunnel'){
+      const named={'v30-tunnel-travel':'waves','v30-tunnel-bounce':'bounce','v30-tunnel-center':'mirror','v30-tunnel-outside':'mirror','v30-tunnel-cascade':'sequence','v30-tunnel-handoff':'flow','v30-tunnel-pulse':'pulse','v30-tunnel-echo':'comet','v30-tunnel-pixel-curtain':'sequence','v30-tunnel-pixel-cross':'cross'};
+      if(named[id])return named[id];
+      if(variant===93)return 'wave';if(variant===94)return 'chase';if(variant===95)return 'mirror';if(variant===96)return 'alternate';if(variant===97)return 'flow';
+      return variant===90||variant===91||variant===92?'sequence':({WAVE:'wave',CHASE:'chase',COMET:'comet',SCANNER:'scanner',MIRROR:'mirror',DUAL:'cross',CASCADE:'sequence',SEQUENCE:'sequence',FLOW:'flow',GRADIENT:'flow',BREATHE:'pulse',SPARKLE:'sparkle',ALTERNATE:'alternate'})[engine]||'flow';
+    }
+    if(effect.category==='brand'){
+      if(id==='v30-brand-warm-white'||engine==='WARM')return 'warm';
+      if(id==='v30-brand-white-breathe'||/white|ambient/i.test(effect.name))return 'pulse';
+      if(id==='v30-brand-focus'||id==='spi-chase-75'||id==='spi-chase-80')return 'focus';
+      if(id==='v30-brand-sweep')return 'scanner';
+      if(id==='v30-brand-soft-gradient')return 'flow';
+      if(id==='v30-brand-accent')return 'accent';
+    }
+    return ({FLOW:'flow',GRADIENT:'flow',BREATHE:'pulse',WAVE:'wave',CHASE:'chase',COMET:'comet',SCANNER:'scanner',MIRROR:'mirror',DUAL:'cross',SPARKLE:'sparkle',SEQUENCE:'sequence',CASCADE:'sequence',ALTERNATE:'alternate',MINIMAL:'accent',WARM:'warm'})[engine]||({Kleurverloop:'flow','Ademen':'pulse',Golven:'wave','Lopend licht':'chase',Komeet:'comet',Scanner:'scanner',Spiegel:'mirror',Twinkelen:'sparkle','Stap voor stap':'sequence',Afwisseling:'alternate',Accent:'accent','Warm wit':'warm'})[effect.family]||'flow';
+  }
+  function motionSignature(effect) {
+    const key=effectMotionKey(effect),lanes=effect.category==='tunnel'
+      ? `<svg viewBox="0 0 160 38" focusable="false"><path class="motion-floor" d="M12 35 80 25 148 35"/><path class="motion-rail rail-back" d="M59 28C59 20 101 20 101 28"/><path class="motion-rail rail-mid" d="M36 32C36 13 124 13 124 32"/><path class="motion-rail rail-front" d="M12 35C12 3 148 3 148 35"/><path class="motion-flow-line" d="M12 35C12 3 148 3 148 35"/><circle class="motion-marker marker-one" cx="20" cy="22" r="3.3"/><circle class="motion-marker marker-two" cx="80" cy="5" r="3.3"/><circle class="motion-marker marker-three" cx="140" cy="22" r="3.3"/></svg>`
+      : `<span class="motion-lanes">${Array.from({length:3},()=>`<i class="motion-lane">${Array.from({length:7},()=>'<b></b>').join('')}</i>`).join('')}</span>`;
+    return `<span class="motion-signature motion-signature--${key}${effect.category==='tunnel'?' is-tunnel':''}" data-motion-signature="${key}" aria-hidden="true">${lanes}</span>`;
+  }
   function effectPreview(effect) {
     const tunnel=effect.category==='tunnel';
     // Gallery cards explain the motion on one representative line, not by
@@ -537,13 +582,13 @@
   function effectCards(effects,extraClass='') {
     const together=selection().kind==='all'&&receivers().length>=2,selectedCount=selected().length;
     const className=`effect-card${extraClass?` ${extraClass}`:''}`;
-    return effects.map(effect=>{const needsAll=effect.requireTogether||effect.category==='tunnel',tooFew=selectedCount<(effect.minimumReceivers||1),locked=needsAll?!together:tooFew;return `<button class="${className}" data-action="effect" data-id="${esc(effect.id)}" aria-pressed="${activeEffect()?.id===effect.id}" ${locked?'disabled':''}>${effectPreview(effect)}<b>${esc(Library.displayName(effect))}</b><small>${esc(categoryLabel(effect.category))} · ${esc(effect.description)}</small>${locked?`<small>${needsAll?'Kies Alle ledlines samen':'Selecteer minstens '+(effect.minimumReceivers||1)+' ledlines'}</small>`:''}</button>`;}).join('');
+    return effects.map(effect=>{const needsAll=effect.requireTogether||effect.category==='tunnel',tooFew=selectedCount<(effect.minimumReceivers||1),locked=needsAll?!together:tooFew;return `<button class="${className}" data-action="effect" data-id="${esc(effect.id)}" data-motion="${effectMotionKey(effect)}" aria-pressed="${activeEffect()?.id===effect.id}" ${locked?'disabled':''}>${motionSignature(effect)}${effectPreview(effect)}<b>${esc(Library.displayName(effect))}</b><small>${esc(categoryLabel(effect.category))} · ${esc(effect.description)}</small>${locked?`<small>${needsAll?'Kies Alle ledlines samen':'Selecteer minstens '+(effect.minimumReceivers||1)+' ledlines'}</small>`:''}</button>`;}).join('');
   }
   function animationFamilyCard(group,expandedKey=null) {
     const expanded=expandedKey===group.key,panelId=`animation-variants-${group.key.replace(/[^a-z0-9_-]/gi,'-')}`;
     const countLabel=`${group.count} ${group.count===1?'voorbeeld':'varianten'}`;
     const type=zone()?.type==='SPI'?'SPI':'RGBW';
-    return `<article class="animation-family-card${expanded?' is-expanded':''}"><button class="animation-family-trigger" data-action="family" data-id="${esc(group.key)}" data-ledline-type="${type}" aria-expanded="${expanded}" aria-controls="${panelId}"><span class="animation-family-preview">${effectPreview(group.preview)}</span><span class="family-copy"><span class="family-kicker"><span class="family-kicker-label">Animatiegroep</span><span class="animation-type-badge" aria-label="Animaties voor ${type}-ledlines">${type}</span><span class="family-count">${countLabel}</span></span><b class="family-title">${esc(group.title)}</b><small class="family-summary">${esc(group.summary)}</small><span class="family-variants"><span>${expanded?'Varianten verbergen':group.count===1?'Voorbeeld bekijken':'Bekijk varianten'}</span>${icon('chevron')}</span></span></button><div class="family-variants-panel" id="${panelId}" ${expanded?'':'hidden'}><div class="family-variants-heading"><b>Kies een variant</b><small>${countLabel}</small></div><div class="family-variant-grid">${effectCards(group.effects,'family-variant-card')}</div></div></article>`;
+    return `<article class="animation-family-card${expanded?' is-expanded':''}"><button class="animation-family-trigger" data-action="family" data-id="${esc(group.key)}" data-ledline-type="${type}" aria-expanded="${expanded}" aria-controls="${panelId}"><span class="animation-family-preview">${motionSignature(group.preview)}${effectPreview(group.preview)}</span><span class="family-copy"><span class="family-kicker"><span class="family-kicker-label">Animatiegroep</span><span class="animation-type-badge" aria-label="Animaties voor ${type}-ledlines">${type}</span><span class="family-count">${countLabel}</span></span><b class="family-title">${esc(group.title)}</b><small class="family-summary">${esc(group.summary)}</small><span class="family-variants"><span>${expanded?'Varianten verbergen':group.count===1?'Voorbeeld bekijken':'Bekijk varianten'}</span>${icon('chevron')}</span></span></button><div class="family-variants-panel" id="${panelId}" ${expanded?'':'hidden'}><div class="family-variants-heading"><b>Kies een variant</b><small>${countLabel}</small></div><div class="family-variant-grid">${effectCards(group.effects,'family-variant-card')}</div></div></article>`;
   }
   function animationCategorySection(section,expandedKey=null) {
     return `<section class="animation-family-section" aria-labelledby="animation-category-${esc(section.key)}"><header class="animation-family-heading"><div><h2 id="animation-category-${esc(section.key)}">${esc(section.title)}</h2><p>${esc(section.summary)}</p></div><small>${section.count} ${section.count===1?'animatie':'animaties'}</small></header>${section.key==='tunnel'?`<p class="animation-category-note">Tunnelanimaties werken met minimaal twee ledlines. Kies daarna <b>Alle ledlines samen</b>.</p>`:''}<div class="animation-family-grid">${section.groups.map(group=>animationFamilyCard(group,expandedKey)).join('')}</div></section>`;
@@ -571,7 +616,7 @@
     savedPresets=presetStore.load();
     const items=catalogue(),tab=libraryTab(),active=route.family?Library.group(items,route.family):null;
     const isSpi=zone().type==='SPI',canTunnel=receivers().length>=2&&selection().kind==='all',tabs=isSpi?['pixels','whole','catalogue','tunnel','brand','presets']:['catalogue','whole','tunnel','brand','presets'],counts={catalogue:items.length,...Object.fromEntries(Library.sections(items).map(section=>[section.key,section.count])),presets:savedPresets.presets.length};
-    const intro=tab==='whole'&&isSpi?`<p class="library-intro">Rustige kleurwissels en pulsen, zoals RGBW-effecten. Ook op SPI-ledlines.</p>`:tab==='whole'||tab==='pixels'?`<p class="library-intro">${esc(Library.categories.find(category=>category.key===tab).summary)} Open een groep en kies een voorbeeld.</p>`:tab==='brand'?`<p class="library-intro">Wit en kleuraccenten. Open een groep en kies een voorbeeld.</p>`:tab==='tunnel'?tunnelGuide():tab==='catalogue'?`<p class="library-intro">${items.length} animaties. Kies een groep en vergelijk de voorbeelden.</p>`:'';
+    const intro=tab==='whole'&&isSpi?`<p class="library-intro">Rustige kleurwissels en pulsen, zoals RGBW-effecten. Ook op SPI-ledlines.</p>`:tab==='whole'||tab==='pixels'?`<p class="library-intro">${esc(Library.categories.find(category=>category.key===tab).summary)} Open een groep en kies een voorbeeld.</p>`:tab==='brand'?`${brandTonePicker()}<p class="library-intro">Kies een merkbeweging en vergelijk de voorbeelden. Je accentkleur zie je meteen terug.</p>`:tab==='tunnel'?tunnelGuide():tab==='catalogue'?`<p class="library-intro">${items.length} animaties. Kies een groep en vergelijk de voorbeelden.</p>`:'';
     const tunnelUnavailable=tab==='tunnel'&&!canTunnel;
     const results=tab==='presets'?renderPresets():tunnelUnavailable?'':tab==='catalogue'?animationCategorySections(items,active?.key):animationCategoryFamilyList(items,tab,active?.key);
     // The tunnel guide already explains its requirements and provides the one
@@ -1264,7 +1309,8 @@
     if(white!==undefined&&(!Number.isInteger(white)||white<0||white>255))return;
     if(color!==undefined)palette[index]=color;if(white!==undefined)whites[index]=white;
     const rgbFlags=palette.map((_,i)=>i===index&&color!==undefined?true:s.rgbEnabled?.[i]!==false),whiteFlags=palette.map((_,i)=>i===index&&white!==undefined?true:s.whiteEnabled?.[i]!==false);
-    apply({colors:palette,whiteChannels:whites,rgbEnabled:rgbFlags,whiteEnabled:whiteFlags});
+    apply({colors:palette,whiteChannels:whites,rgbEnabled:rgbFlags,whiteEnabled:whiteFlags,
+      ...(color!==undefined&&index===0&&activeEffect()?.controls.includes('brandColor')?{brandColor:color}:{})});
     const row=document.querySelector('.palette');if(row)row.innerHTML=paletteMarkup(selectedState());
   }
   function showSavePreset() {
@@ -1785,6 +1831,10 @@
         requestAnimationFrame(()=>{restoreFamilyViewport();requestAnimationFrame(restoreFamilyViewport);});
         return;
       }
+      if(action==='brand-tone'){
+        const tone=BRAND_TONES.find(item=>item.id===id);if(!tone)return;
+        brandColours.set(route.zoneId,tone.value);return render({preserveScroll:true});
+      }
       if(action==='library'){
         if(route.screen==='controls'&&button.closest('[data-control-mode="animations"]')){
           route={...route,family:null,library:id,effectsReturn:'controls'};showControlAnimationGallery=true;return render({preserveScroll:true});
@@ -1917,11 +1967,6 @@
       }
       if(input.id==='scene-zone-search'){if(sceneDraft){sceneDraft.search=input.value;filterSceneZones('draft');}return;}
       if(input.id==='scene-detail-search'){sceneDetailSearch=input.value;filterSceneZones('detail');return;}
-      if(input.dataset.brandColour){
-        if(input.dataset.brandColour==='library')brandColours.set(route.zoneId,input.value);
-        else {apply({brandColor:input.value});const row=document.querySelector('.palette');if(row)row.innerHTML=paletteMarkup(selectedState());}
-        paint(performance.now()/1000);return;
-      }
       if(input.dataset.effectColour!==undefined)return updatePalette(Number(input.dataset.effectColour),input.value);
       if(input.dataset.effectWhite!==undefined){document.getElementById('palette-white-value').textContent=input.value;return updatePalette(Number(input.dataset.effectWhite),undefined,Number(input.value));}
       if(input.matches('input[data-channel-number]')){

@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v31-20260925-ui12",
+  "revision": "v31-20260925-animation-gallery-13",
   "interfaceVersion": 31,
-  "interfaceBaseline": "V31 iPhone build 141 source; bulk-select and atomically assign compatible ledlines to a zone; rounded shared modal headings; colour-first whole-stand sheet with one button to the full scenes gallery; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search; SPI endpoint guidance",
+  "interfaceBaseline": "V31 iPhone build 141 source; clearer grouped animation gallery with visible motion-pattern previews; dedicated Brand animaties with six selectable accent tones and 21 curated existing SPI exhibition recipes; perspective tunnel previews; shared colour wheel for editable Brand colours; all original wire recipes preserved; bulk-select and atomically assign compatible ledlines to a zone; rounded shared modal headings; colour-first whole-stand sheet with one button to the full scenes gallery; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search; SPI endpoint guidance",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -16,15 +16,15 @@
   "assets": [
     {
       "path": "animation-engine.js",
-      "sha256": "85805cc9b3548fc5800051edbdf37f5152113856223036d321fc31292a409af0"
+      "sha256": "4f93eae69ec3eec5583b976ba793e8fc3cf45b33010c639a7aa4a7f79f5db377"
     },
     {
       "path": "animation-library.css",
-      "sha256": "e8d0259e85f1441f7311ab2123071d62c8a9cf383fd3613217ab2d1950a3d98c"
+      "sha256": "2320ca1a19ca155a1c8cbafe96bb04a638533f8be4d25e0ecb4194e16be92f7b"
     },
     {
       "path": "animation-library.js",
-      "sha256": "a71023076c303af1820706b96334a97312e9241af7b0fa4718ee8664c0cc4296"
+      "sha256": "1af319b65398fa82ba614504b2c99159cd86b195f956017d233848933c29cdb0"
     },
     {
       "path": "animations.css",
@@ -32,7 +32,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "4ee0bf46e57267307bddac4a8d40808bfb4698ee84a2140ba041f81d0fbb697d"
+      "sha256": "18e740d504d8e90bb28198fb42ae37ecb90eb2e9f33abd450f17d3c9cf79a584"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -52,7 +52,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "3d6458a1c601e8eac958f3069944ce83cd6265cfd2aa7ddf92581fa3dea5fa13"
+      "sha256": "399c1d75f9ec5d181d22ad81ddb9015204df23ae1d169aeb6b256241c2967042"
     },
     {
       "path": "fixtures.js",
@@ -60,7 +60,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "e6351e4b288fa88b14f2b32786ec52af4e09d43a264e9b38aa500fadf97dec2e"
+      "sha256": "5cdd869f735438edb120e679f495662af106e94fb51ae1a39ed1a2348322a733"
     },
     {
       "path": "live-control.js",
@@ -120,7 +120,7 @@
     },
     {
       "path": "preview.js",
-      "sha256": "9eb753d8ae4ee06cef0a56e853e0212017fca8580f248dbccee2db8f7facd630"
+      "sha256": "775c0b748c834d7c627e71503d8e1ac6d9f09929cd032ad69d97a1d7be0baa3c"
     },
     {
       "path": "receiver-removal-ui.css",
