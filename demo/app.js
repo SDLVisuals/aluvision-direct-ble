@@ -284,7 +284,7 @@
     return `<section class="control-preview-dock" aria-label="LED-overzicht en bediening">
       ${integratedControlHeading?`<div class="control-dock-context-line"><button class="back back-to-zones control-dock-back" data-action="stand">${icon('back')}<span>Terug naar zones</span></button><span class="pill control-dock-type-badge">${zoneTypeLabel(z)}</span></div>`:''}
       <div class="control-dock-heading"><div class="control-dock-location"><small>JE LICHT · ${esc(modeName)}</small><b>${esc(z.name)}</b></div>${modeTabs||`<span class="control-dock-mode">${esc(modeName)}</span>`}</div>
-      <div class="preview-wrap${canTapLines?' preview-selectable':''}"><div class="preview-top"><span>Hele zone · alle ledlines</span><span class="preview-summary">${esc(scope)}</span></div>${zonePreview(z,'',{selection:selection(),main:true,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1])),label})}${screen==='animations'||effectChosen?`<div class="preview-live-controls"><span>Voorbeeld volgt je keuze direct</span></div>`:''}</div>
+      <div class="preview-wrap${canTapLines?' preview-selectable':''}"><div class="preview-top"><span>Hele zone</span><span class="preview-summary">${esc(scope)}</span></div>${zonePreview(z,'',{selection:selection(),main:true,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1])),label})}${screen==='animations'||effectChosen?`<div class="preview-live-controls"><span>Voorbeeld volgt je keuze direct</span></div>`:''}</div>
       <p class="live-confirmation" data-live-status="zone" role="status" aria-live="polite"></p>
     </section>`;
   }

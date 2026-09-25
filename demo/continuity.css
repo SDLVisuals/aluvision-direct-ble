@@ -252,9 +252,17 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
   .editor-grid>.editor-controls{padding-top:7px}
   .control-preview-dock .preview-wrap canvas{height:68px}
 }
+@media(max-width:390px){
+  .control-dock-heading{grid-template-columns:minmax(0,1fr);gap:7px}
+  .control-dock-location{display:flex;align-items:baseline;justify-content:space-between;gap:9px}
+  .control-dock-location small{flex:none;font-size:8px}
+  .control-dock-location b{font-size:14px;text-align:right}
+  .control-preview-dock .control-mode-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}
+  .control-preview-dock .control-mode-tabs button{min-height:50px;padding-inline:8px;font-size:13px;gap:7px}
+  .control-preview-dock .preview-top{font-size:9px;gap:8px}
+}
 @media(max-width:360px){
-  .control-dock-heading{grid-template-columns:minmax(0,.68fr) minmax(0,1.32fr);gap:6px}
-  .control-preview-dock .control-mode-tabs button{min-height:54px;font-size:12px;gap:5px;padding-inline:6px}
+  .control-preview-dock .control-mode-tabs button{min-height:52px;font-size:12px;gap:5px;padding-inline:6px}
   .control-preview-dock .preview-top{font-size:8px}
   .control-preview-dock .preview-wrap canvas{height:62px}
 }
