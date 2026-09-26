@@ -50,6 +50,9 @@
   'use strict';
   const STAGES = Object.freeze(['stand','zones','receiver','placement','outputs','pixels','connection','pin','security','zone','review','done']);
   const PHASES = Object.freeze(['idle','configuring','claiming','reconnecting','verifying','resuming','identity-confirmed']);
+  // New SPI runs start at the product's 6.3 m setup cap: 26 px/m gives 163
+  // whole pixels (about 6.27 m). Existing measured lengths remain untouched.
+  const DEFAULT_SPI_PIXELS=163;
   // A single generated build setting controls whether commissioning asks for
   // credentials. Node/unit tests without the generated script retain PIN mode.
   const pinRequired=()=> SecurityMode?.pinRequired !== false;
@@ -233,18 +236,27 @@
           // another physical receiver must start with its own clean settings.
           const sameReceiver=next.receiver&&['id','rid','type','deviceFingerprint'].every(key=>next.receiver[key]===event.receiver[key]);
           next.receiver={...copy(event.receiver),name:name(event.receiver.name)};
-          if(!sameReceiver)next.outputs=event.receiver.type === 'SPI' ? [1,2,3,4].map(port => ({port,enabled:port === 1,pixels:0,reversed:false})) : [];
+          if(!sameReceiver)next.outputs=event.receiver.type === 'SPI' ? [1,2,3,4].map(port => ({port,enabled:port === 1,pixels:port===1?DEFAULT_SPI_PIXELS:0,reversed:false})) : [];
           next.port=null;next.zoneId=null;break;
         }
         case 'SET_OUTPUT_COUNT':
           unlocked(next);requireStage(next,['outputs']);
           if (!int(event.count,1,4)) fail('OUTPUT_COUNT','Kies één, twee, drie of vier uitgangen.');
-          next.outputs.forEach(output => {output.enabled=output.port <= event.count;});break;
+          next.outputs.forEach(output => {
+            const enabled=output.port<=event.count;
+            if(enabled&&!output.enabled&&output.pixels===0)output.pixels=DEFAULT_SPI_PIXELS;
+            output.enabled=enabled;
+          });break;
         case 'SET_OUTPUT_ENABLED':
           unlocked(next);requireStage(next,['outputs']);
           if(!int(event.port,1,4)||typeof event.enabled!=='boolean')fail('OUTPUT','Kies een geldige uitgang.');
           if(!event.enabled&&next.outputs[event.port-1].enabled&&activeOutputs(next).length===1)fail('OUTPUT','Gebruik minstens één uitgang.');
-          next.outputs[event.port-1].enabled=event.enabled;break;
+          {
+            const output=next.outputs[event.port-1];
+            if(event.enabled&&!output.enabled&&output.pixels===0)output.pixels=DEFAULT_SPI_PIXELS;
+            output.enabled=event.enabled;
+          }
+          break;
         case 'SET_PIXELS':
           unlocked(next);requireStage(next,['pixels']);
           if (event.port !== next.port || !int(event.pixels,0,Model.LIMITS.pixelsPerPort)) fail('PIXELS','Kies een geldig aantal pixels voor de getoonde uitgang.');

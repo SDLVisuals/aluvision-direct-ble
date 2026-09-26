@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v31-20260926-preview-legibility-27",
+  "revision": "v31-20260926-spi-default-6m3-28",
   "interfaceVersion": 31,
-  "interfaceBaseline": "Shared V31 WebApp source; included in native build 148 candidate; the animation gallery shows one example ledline when lines are operated together and one distinct lane per ledline when several lines are selected individually; the compact RGBW preview draws a visibly fuller single-line light bar and the sticky size choices preserve a readable light while scrolling; the physical iPhone is not confirmed available for this turn and no installation is claimed; compact LED preview-size selector with three on-demand options that do not cover the LED; clearer grouped animation gallery with one labelled real-light preview and a plain-language button showing how many animations the group contains; no duplicate abstract diagram that could be mistaken for receiver hardware; dedicated Brand animaties with six selectable accent tones and 21 curated existing SPI exhibition recipes; perspective tunnel previews; shared colour wheel for editable Brand colours; all original wire recipes preserved; bulk-select and atomically assign compatible ledlines to a zone; rounded shared modal headings; colour-first whole-stand sheet with one button to the full scenes gallery; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search with one matching location-minus icon for receivers without a zone; compact inline zone power switch; SPI endpoint guidance; user-selectable compact, medium and large LED previews; direct entry to the active animation settings with the gallery one tap away; background colour is grouped with animation colours behind an explicit toggle; new animations start at 100% smoothness, while the slider remains adjustable and saved settings are preserved; adjustable settings have a meaning icon and plain-language hint, with the active live preview identified as the immediate visual feedback; scroll-compacted sticky LED preview preserves page layout and remains click-through over controls; minimum 52 px colour/effect tab touch height on compact phones",
+  "interfaceBaseline": "Shared V31 WebApp source; included in native build 150 installed and launched on the paired iPhone; SPI and RGBW receiver firmware V21.1.44 compile-only candidates, not flashed or thermally validated. New SPI outputs default to 163 pixels (about 6.3 m); saved/manual lengths remain unchanged. The web demo uses fictional receivers and sends no hardware commands. The animation gallery shows one example ledline when lines are operated together and one distinct lane per ledline when several lines are selected individually; the compact RGBW preview draws a visibly fuller single-line light bar and the sticky size choices preserve a readable light while scrolling; compact LED preview-size selector with three on-demand options that do not cover the LED; clearer grouped animation gallery with one labelled real-light preview and a plain-language button showing how many animations the group contains; no duplicate abstract diagram that could be mistaken for receiver hardware; dedicated Brand animaties with six selectable accent tones and 21 curated existing SPI exhibition recipes; perspective tunnel previews; shared colour wheel for editable Brand colours; all original wire recipes preserved; bulk-select and atomically assign compatible ledlines to a zone; rounded shared modal headings; colour-first whole-stand sheet with one button to the full scenes gallery; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search with one matching location-minus icon for receivers without a zone; compact inline zone power switch; SPI endpoint guidance; user-selectable compact, medium and large LED previews; direct entry to the active animation settings with the gallery one tap away; background colour is grouped with animation colours behind an explicit toggle; new animations start at 100% smoothness, while the slider remains adjustable and saved settings are preserved; adjustable settings have a meaning icon and plain-language hint, with the active live preview identified as the immediate visual feedback; scroll-compacted sticky LED preview preserves page layout and remains click-through over controls; minimum 52 px colour/effect tab touch height on compact phones",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -18,7 +18,7 @@
   "previewSizeControl": "Sticky LED overview; display-only; no receiver commands",
   "activeAnimationEntry": "Effecten opens the existing animation settings directly; Galerij opens the library without changing effect, palette or selection",
   "hardwareAccess": false,
-  "nativeAppModified": false,
+  "nativeAppModified": true,
   "firmwarePublished": false,
   "assets": [
     {
@@ -67,7 +67,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "c85d991613a1b99a784f4402b7a7cad9e6731a83d305f00616d02b57469a3271"
+      "sha256": "58fc82a88552d50fa743486aec1fd637fe44e1f0b3b123479f80c7bc1b1c2422"
     },
     {
       "path": "live-control.js",
@@ -95,7 +95,7 @@
     },
     {
       "path": "onboarding-draft.js",
-      "sha256": "96d58a5edec235ffad806b093da4129baf83d9bd6933fc2aad2ed06d7f6883f6"
+      "sha256": "b55570bee8b85446bf5e1b2878b9815a1f108edacae7fcc036e2cef96b967dd0"
     },
     {
       "path": "onboarding-ui.css",
@@ -103,7 +103,7 @@
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "d932b0025c5534968b0d9102fadaaf266441bcf0ca2efbe4a9bf9ce697984bbf"
+      "sha256": "f17233ba54677d08012e55ad4d717c8a937d3275ac6495b28944e92ad0dac3f7"
     },
     {
       "path": "pixel-setup.css",
