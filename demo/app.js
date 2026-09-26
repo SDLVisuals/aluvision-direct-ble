@@ -890,6 +890,12 @@
     return `<div class="page"><header class="page-heading"><div><h1>${esc(t('more'))}</h1><p>${esc(t('settings'))} · V32</p></div></header><section class="card"><h2>${esc(t('appearance'))}</h2><h3 class="preference-label">${esc(t('language'))}</h3><div class="preference-grid">${Preferences.languages.map(language=>`<button data-action="language" data-id="${language.code}" lang="${language.code}" aria-pressed="${uiPreferences.preferences.language===language.code}">${language.name}</button>`).join('')}</div><p class="preference-note">${esc(t('wipNotice'))}</p><h3 class="preference-label">${esc(t('theme'))}</h3><div class="preference-grid">${['light','dark'].map(theme=>`<button data-action="theme" data-id="${theme}" aria-pressed="${uiPreferences.preferences.theme===theme}">${esc(t(theme))}</button>`).join('')}</div>${uiPreferences.error?`<p role="alert">${esc(uiPreferences.error.message)}</p>`:''}</section><button class="menu-card" data-action="help"><span class="menu-icon">${icon('info')}</span><div><b>Stand en zones uitgelegd</b><small>Een eenvoudige weg naar je verlichting</small></div>${icon('chevron')}</button><section class="card connection-info" id="connection-info"><span class="pill">Niet verbonden</span><h2>Verbinding en gegevens</h2><p>Je bekijkt momenteel een voorbeeldstand met fictieve receivers. Er worden geen opdrachten naar echte verlichting verstuurd.</p><p>Indeling, poorten en lichtstanden zijn tijdelijk en beginnen na herladen opnieuw. Kleurpresets, animatiepresets, scènes en voorkeuren worden alleen op dit apparaat bewaard.</p><details class="technical-status"><summary>Technische gereedheid</summary><ul class="readiness-list"><li><b>Dezelfde bediening</b><span>Alle schermformaten volgen dezelfde compacte bediening voor zones, receivers, kleuren en animaties.</span></li><li><b>Nog aansluiten en fysiek testen</b><span>${pinRequired()?'Echte koppeling, beveiliging, ESP-NOW, herstel, veilig verwijderen en OTA moeten nog fysiek worden getest.':'Deze demo werkt zonder toegangscode. ESP-NOW, veilig verwijderen en OTA moeten nog fysiek worden getest.'} De app en receiver moeten bij elkaar passende software gebruiken.</span></li><li><b>Receiverbeelden</b><span>RGBW volgt de aangeleverde productreferentie. Het SPI-beeld is een concept; fysieke poortplaatsing moet nog worden bevestigd.</span></li><li><b>Bestaande functies behouden</b><span>Volledige vertalingen, Academy en overige bestaande beheerfuncties blijven in de overdrachtscontrole staan.${pinRequired()?' De bestaande beveiliging blijft behouden.':''}</span></li></ul></details></section></div>`;
   }
   function render({top=false,preserveScroll=true}={}) {
+    // Apply local presentation before loading/error early returns as well.
+    // The optional native appearance acknowledgement remains in the loaded
+    // path below; this does not start any native or receiver work earlier.
+    document.documentElement.lang=uiPreferences.preferences.language;
+    document.body.dataset.theme=uiPreferences.preferences.theme;
+    document.querySelector('meta[name="theme-color"]').content=uiPreferences.preferences.theme==='dark'?'#171817':'#f8f8f5';
     // A replaced handle no longer represents an active drag. Cancel before
     // rebuilding the page, so a later pointerup cannot save a stale position.
     if(dragOrder)finishOrder({pointerId:dragOrder.pointerId},true);
@@ -971,9 +977,6 @@
       main.querySelector('.editor-controls').insertAdjacentHTML('afterbegin',layoutReceiverActions());
       main.querySelector('.editor-controls').insertAdjacentHTML('beforeend',`<div class="zone-management-actions"><button class="text-button" data-action="zone-rename" data-id="${esc(zone().id)}">Naam van deze zone wijzigen</button>${zoneDeleteButton(zone())}</div>`);
     }
-    document.documentElement.lang=uiPreferences.preferences.language;
-    document.body.dataset.theme=uiPreferences.preferences.theme;
-    document.querySelector('meta[name="theme-color"]').content=uiPreferences.preferences.theme==='dark'?'#171817':'#f8f8f5';
     if(nativeContext&&window.__lightningV32Appearance===true)
       runtime?.services?.setAppearance?.({theme:uiPreferences.preferences.theme}).catch(()=>{});
     // Replace the old fixed shortcuts and read-only order list with their

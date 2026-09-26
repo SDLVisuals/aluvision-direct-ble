@@ -39,7 +39,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "7c8c3f3bdd25741ba8bee9a36985a61681863ff66c1f55226597422eacc04061"
+      "sha256": "939d832b063e341c0256a35b088b2e93a0c6cdf9069ae3723c74d7c6af3d508d"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -71,7 +71,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "711696b96f065029850ee7858837267ec11838f4525db027bce46e59844f2346"
+      "sha256": "a6d89333b4b4a7f3292c08e132c2d8fc9766e3d0342557d61a377ad76cd716e2"
     },
     {
       "path": "live-control.js",
