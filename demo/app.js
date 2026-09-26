@@ -538,21 +538,24 @@
   }
   function effectPreview(effect) {
     const tunnel=effect.category==='tunnel';
-    // Gallery cards explain the motion on one representative line, not by
-    // duplicating the animation across the customer's whole installation.
-    // This sample never enters the model or changes ports/pixels/targets.
+    // Together mode and a single selected line use one representative strip.
+    // When several ledlines are selected individually, show exactly those
+    // physical ledlines separately so the preview matches the chosen target.
+    // Tunnel effects always need the complete layout to explain the movement
+    // between ledlines. Gallery previews never change the model.
     // Older stored effects default to very slow cycles (up to ~100 seconds),
     // which makes distinct animations look frozen and alike while browsing.
     // Accelerate only these disposable gallery samples; the selected effect,
     // its settings and the main installation preview keep their real speed.
     const previewState={...effectState(effect),speed:Math.max(effect.category==='brand'?58:75,Number(effect.state.speed)||0)};
-    const sampleType=zone().type||'RGBW',oneLine=effect.category!=='tunnel';
-    const list=oneLine?[{id:'library-sample-strip',type:sampleType,name:'LED-voorbeeld',
+    const separateSelection=selection().kind==='receivers',representativeOnly=!tunnel&&!separateSelection;
+    const sampleType=zone().type||'RGBW';
+    const physicalLines=tunnel?receivers():selected();
+    const list=representativeOnly?[{id:'library-sample-strip',type:sampleType,name:'LED-voorbeeld',
       outputs:sampleType==='SPI'?[{port:1,enabled:true,pixels:32,reversed:false}]:[],state:previewState}]
-      :receivers().map(r=>({...r,state:previewState}));
-    // Tunnel effects remain the only gallery examples that show several lines.
-    const layout=oneLine?'stacked':zone().layout;
-    return addPreview(list,layout,'',{label:Library.displayName(effect),effectId:effect.id,brand:effect.category==='brand',labels:!oneLine});
+      :physicalLines.map(r=>({...r,state:previewState}));
+    const lineNumbers=Object.fromEntries(receivers().map((receiver,index)=>[receiver.id,index+1]));
+    return addPreview(list,representativeOnly?'stacked':zone().layout,'',{label:Library.displayName(effect),effectId:effect.id,brand:effect.category==='brand',labels:!representativeOnly,lineNumbers});
   }
   function tunnelIllustration() {
     // Product-inspired teaching model, not a CAD model or the user's actual

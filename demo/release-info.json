@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v31-20260926-animation-gallery-clear-25",
+  "revision": "v31-20260926-animation-gallery-selection-26",
   "interfaceVersion": 31,
-  "interfaceBaseline": "Shared V31 WebApp source; included in native build 146 candidate; the physical iPhone was unavailable for this turn and no installation is claimed; compact LED preview-size selector with three on-demand options that do not cover the LED; clearer grouped animation gallery with one labelled real-light preview and a plain-language button showing how many animations the group contains; no duplicate abstract diagram that could be mistaken for receiver hardware; dedicated Brand animaties with six selectable accent tones and 21 curated existing SPI exhibition recipes; perspective tunnel previews; shared colour wheel for editable Brand colours; all original wire recipes preserved; bulk-select and atomically assign compatible ledlines to a zone; rounded shared modal headings; colour-first whole-stand sheet with one button to the full scenes gallery; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search with one matching location-minus icon for receivers without a zone; compact inline zone power switch; SPI endpoint guidance; user-selectable compact, medium and large LED previews; direct entry to the active animation settings with the gallery one tap away; background colour is grouped with animation colours behind an explicit toggle; new animations start at 100% smoothness, while the slider remains adjustable and saved settings are preserved; adjustable settings have a meaning icon and plain-language hint, with the active live preview identified as the immediate visual feedback; scroll-compacted sticky LED preview preserves page layout and remains click-through over controls; minimum 52 px colour/effect tab touch height on compact phones",
+  "interfaceBaseline": "Shared V31 WebApp source; included in native build 147 candidate; the animation gallery shows one example ledline when lines are operated together and one distinct lane per ledline when several lines are selected individually; the physical iPhone was unavailable for this turn and no installation is claimed; compact LED preview-size selector with three on-demand options that do not cover the LED; clearer grouped animation gallery with one labelled real-light preview and a plain-language button showing how many animations the group contains; no duplicate abstract diagram that could be mistaken for receiver hardware; dedicated Brand animaties with six selectable accent tones and 21 curated existing SPI exhibition recipes; perspective tunnel previews; shared colour wheel for editable Brand colours; all original wire recipes preserved; bulk-select and atomically assign compatible ledlines to a zone; rounded shared modal headings; colour-first whole-stand sheet with one button to the full scenes gallery; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search with one matching location-minus icon for receivers without a zone; compact inline zone power switch; SPI endpoint guidance; user-selectable compact, medium and large LED previews; direct entry to the active animation settings with the gallery one tap away; background colour is grouped with animation colours behind an explicit toggle; new animations start at 100% smoothness, while the slider remains adjustable and saved settings are preserved; adjustable settings have a meaning icon and plain-language hint, with the active live preview identified as the immediate visual feedback; scroll-compacted sticky LED preview preserves page layout and remains click-through over controls; minimum 52 px colour/effect tab touch height on compact phones",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -39,7 +39,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "77268150b3d02f31432d4da7803bda07ad429e5d4d42235bc3c0d8ef5be9efa9"
+      "sha256": "a3289517330efe3858177420e12965b0075f280296209995ad53692c1dbc0371"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -67,7 +67,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "5b76c0825877947954e2f3e622f6c8be4fa6d1315037e5a763fd447f86973034"
+      "sha256": "60d1218f9a44040f683cdc548d6b5e61f31dba51db1693c9a26383f15c81626f"
     },
     {
       "path": "live-control.js",
