@@ -296,11 +296,17 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .control-preview-dock[data-scrolled=true] .preview-wrap{padding:4px 8px 2px;border-radius:12px}
 .control-preview-dock[data-scrolled=true] .preview-top{min-height:12px;font-size:8px}
 .control-preview-dock[data-scrolled=true] .preview-wrap canvas{height:24px!important;transition:none}
-/* Let customers choose how prominently to see their ledlines without leaving
-   the sticky overview. The selector stays compact even on narrow phones. */
-.preview-size-row{display:grid;grid-template-columns:48px minmax(0,1fr);align-items:center;gap:7px;padding:5px 1px 4px}
-.preview-size-row>span{font-size:9px;font-weight:700;color:#a7afa7;white-space:nowrap}
-.preview-size-picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;min-width:0;padding:2px;border:1px solid #ffffff20;border-radius:999px;background:#ffffff0d}
+/* Keep the LED preview visible by default. Open the three size choices only
+   when requested; the menu stays in-flow above the LED, never on top of it. */
+.preview-size-row{display:flex;justify-content:flex-end;align-items:center;padding:3px 1px 4px}
+.preview-size-control{position:relative;max-width:100%}
+.preview-size-control>summary{display:flex;align-items:center;gap:7px;min-height:32px;padding:3px 9px;border:1px solid #ffffff24;border-radius:999px;background:#ffffff0d;color:#d4d9d4;cursor:pointer;list-style:none;font-size:9px;font-weight:700;white-space:nowrap}
+.preview-size-control>summary::-webkit-details-marker{display:none}
+.preview-size-control>summary b{padding:4px 7px;border-radius:999px;background:#ffffff12;color:#fff;font-size:10px}
+.preview-size-control>summary .icon{width:13px;height:13px;transform:rotate(90deg);transition:transform .16s ease}
+.preview-size-control[open]>summary .icon{transform:rotate(-90deg)}
+.preview-size-control>summary:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.preview-size-picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;min-width:0;padding:4px;margin-top:4px;border:1px solid #ffffff20;border-radius:14px;background:#181c18}
 .preview-size-picker button{min-width:0;min-height:38px;padding:5px 6px;border:0;border-radius:999px;background:transparent;color:#d4d9d4;font-size:10px;font-weight:750;white-space:nowrap}
 .preview-size-picker button[aria-pressed=true]{background:var(--red);color:#fff;box-shadow:0 2px 5px #0003}
 .preview-size-picker button:focus-visible{outline:2px solid #fff;outline-offset:1px}
@@ -311,6 +317,10 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
   .control-preview-dock[data-preview-size=small] .preview-wrap canvas{height:52px}
   .control-preview-dock[data-preview-size=medium] .preview-wrap canvas{height:104px}
   .control-preview-dock[data-preview-size=large] .preview-wrap canvas{height:164px}
+}
+@media(max-width:360px){
+  .preview-size-control>summary{min-height:30px;padding-inline:8px}
+  .preview-size-picker button{min-height:38px;padding-inline:4px;font-size:9px}
 }
 @media(max-height:700px){
   .control-preview-dock[data-preview-size=small] .preview-wrap canvas{height:46px}

@@ -319,7 +319,8 @@
   }
   function zoneTypeLabel(z) { return z.type==='SPI'?'Pixel LED · SPI':z.type==='RGBW'?'RGBW':'Nog geen verlichting'; }
   function previewSizePickerMarkup(){
-    return `<div class="preview-size-row"><span>Voorbeeld</span><div class="preview-size-picker" role="group" aria-label="Grootte van het ledlinevoorbeeld">${[['small','Klein'],['medium','Groter'],['large','Heel groot']].map(([size,title])=>`<button type="button" data-action="preview-size" data-id="${size}" aria-label="${title} voorbeeld" aria-pressed="${controlPreviewSize===size}">${title}</button>`).join('')}</div></div>`;
+    const sizes=[['small','Klein'],['medium','Groter'],['large','Heel groot']],current=sizes.find(([size])=>size===controlPreviewSize)?.[1]||'Klein';
+    return `<div class="preview-size-row"><details class="preview-size-control"><summary aria-label="Voorbeeldgrootte ${current}. Tik om te wijzigen"><span>Voorbeeld</span><b>${current}</b>${icon('chevron')}</summary><div class="preview-size-picker" role="group" aria-label="Grootte van het ledlinevoorbeeld">${sizes.map(([size,title])=>`<button type="button" data-action="preview-size" data-id="${size}" aria-label="${title} voorbeeld" aria-pressed="${controlPreviewSize===size}">${title}</button>`).join('')}</div></details></div>`;
   }
   function zoneDeleteButton(z,css=''){return `<button type="button" class="zone-delete-shortcut ${css}" data-action="zone-delete" data-id="${esc(z.id)}" aria-label="Zone ${esc(z.name)} verwijderen">${icon('trash')}<span>Zone verwijderen</span></button>`;}
   function renderEmptyZone() {
@@ -1612,7 +1613,8 @@
     const action=button.dataset.action,id=button.dataset.id;
     try {
       if(action==='preview-size'){
-        if(!['small','medium','large'].includes(id)||controlPreviewSize===id)return;
+        if(!['small','medium','large'].includes(id))return;
+        if(controlPreviewSize===id){button.closest('.preview-size-control')?.removeAttribute('open');return;}
         controlPreviewSize=id;return render({preserveScroll:true});
       }
       if(action==='nav')return navigate(id);

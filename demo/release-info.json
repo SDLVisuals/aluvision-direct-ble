@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v31-20260926-smoothness-adjustable-22",
+  "revision": "v31-20260926-preview-menu-compact-23",
   "interfaceVersion": 31,
-  "interfaceBaseline": "Shared V31 WebApp source; also included in the native build 144 candidate; phone installation not confirmed; clearer grouped animation gallery with visible motion-pattern previews and no confusing preview disclaimer; dedicated Brand animaties with six selectable accent tones and 21 curated existing SPI exhibition recipes; perspective tunnel previews; shared colour wheel for editable Brand colours; all original wire recipes preserved; bulk-select and atomically assign compatible ledlines to a zone; rounded shared modal headings; colour-first whole-stand sheet with one button to the full scenes gallery; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search with one matching location-minus icon for receivers without a zone; compact inline zone power switch; SPI endpoint guidance; user-selectable compact, medium and large LED previews; direct entry to the active animation settings with the gallery one tap away; background colour is grouped with animation colours behind an explicit toggle; new animations start at 100% smoothness, while the slider remains adjustable and saved settings are preserved; adjustable settings have a meaning icon and plain-language hint, with the active live preview identified as the immediate visual feedback; scroll-compacted sticky LED preview preserves page layout and remains click-through over controls; minimum 52 px colour/effect tab touch height on compact phones",
+  "interfaceBaseline": "Shared V31 WebApp source; also included in the native build 145 candidate; phone installation not confirmed; compact LED preview-size selector with three on-demand options that do not cover the LED; clearer grouped animation gallery with visible motion-pattern previews and no confusing preview disclaimer; dedicated Brand animaties with six selectable accent tones and 21 curated existing SPI exhibition recipes; perspective tunnel previews; shared colour wheel for editable Brand colours; all original wire recipes preserved; bulk-select and atomically assign compatible ledlines to a zone; rounded shared modal headings; colour-first whole-stand sheet with one button to the full scenes gallery; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search with one matching location-minus icon for receivers without a zone; compact inline zone power switch; SPI endpoint guidance; user-selectable compact, medium and large LED previews; direct entry to the active animation settings with the gallery one tap away; background colour is grouped with animation colours behind an explicit toggle; new animations start at 100% smoothness, while the slider remains adjustable and saved settings are preserved; adjustable settings have a meaning icon and plain-language hint, with the active live preview identified as the immediate visual feedback; scroll-compacted sticky LED preview preserves page layout and remains click-through over controls; minimum 52 px colour/effect tab touch height on compact phones",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -39,7 +39,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "d95e13b15b749d6502ad3be89f9f128bc1b65c13cceca1b91f172082a1277494"
+      "sha256": "d02f0e7e7666e4f427ab2cb28bf8e9189db23af07a6e12af8dde9e806c9c2b75"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -59,7 +59,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "fbf85d7361fa63fc571c5ab488631efff1365a6cb4539c66b5184209b89c3037"
+      "sha256": "e6e5b59f824b67556a17450034f9471d5a6bab5725728e6acac884d87f5bdee7"
     },
     {
       "path": "fixtures.js",
@@ -67,7 +67,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "b1fd179818ac1f2c3a92c50becca8b1f2b39fae50fa709739285f1bd0c38624a"
+      "sha256": "064dbbcc088f4a18027b9048a36f97b382f26c28072e3ed09481cb29920883da"
     },
     {
       "path": "live-control.js",
