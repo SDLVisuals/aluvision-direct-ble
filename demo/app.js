@@ -327,6 +327,9 @@
     const integratedControlHeading=screen==='controls';
     const canTapLines=list.length>1&&!continuousZone()&&['controls','colour','animations'].includes(screen);
     const effectChosen=screen==='controls'&&controlMode==='animations'&&Boolean(activeEffect());
+    // Tunnel pages already have one readable overview in their content. Keep
+    // navigation sticky, but don't stack a second, flat preview over the tunnel.
+    const tunnelOverview=screen==='animations'?activeEffect()?.category==='tunnel':screen==='controls'&&controlMode==='animations'&&(effectChosen&&!showControlAnimationGallery?activeEffect()?.category==='tunnel':libraryTab()==='tunnel');
     const total=z.type==='SPI'?t(list.length===1?'scopeTotalSpiOne':'scopeTotalSpiMany',{count:list.length,pixels}):t(list.length===1?'scopeCountOne':'scopeCountMany',{count:list.length});
     const scope=selection().kind==='all'?total:t('scopeSelectedTap',{name:nameOfSelection()});
     const modeName=screen==='controls'?(controlMode==='colour'?'Kleur':'Effecten'):screen==='layout'?'Opstelling':screen==='colour'?'Kleur':screen==='animations'?'Effecten':'Bediening';
@@ -334,7 +337,7 @@
     return `<section class="control-preview-dock" aria-label="LED-overzicht en bediening"><div class="control-dock-surface">
       ${integratedControlHeading?`<div class="control-dock-context-line"><div class="control-dock-location"><small>JE LICHT · ${esc(modeName)}</small><b>${esc(z.name)}</b></div><span class="pill control-dock-type-badge">${zoneTypeLabel(z)}</span></div><div class="control-dock-actions"><button class="back back-to-zones control-dock-back" data-action="stand" aria-label="Terug naar zones" title="Terug naar zones">${icon('back')}<span>Zones</span></button>${modeTabs}</div>`:''}
       ${integratedControlHeading?'':`<div class="control-dock-heading"><div class="control-dock-location"><small>JE LICHT · ${esc(modeName)}</small><b>${esc(z.name)}</b></div>${modeTabs||`<span class="control-dock-mode">${esc(modeName)}</span>`}</div>`}
-      <div class="preview-wrap${canTapLines?' preview-selectable':''}"><div class="preview-top"><span>Hele zone</span><span class="preview-summary">${esc(scope)}</span></div>${zonePreview(z,'',{selection:selection(),main:true,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1])),label})}${screen==='animations'||effectChosen?`<div class="preview-live-controls"><span>Voorbeeld volgt je keuze direct</span></div>`:''}</div>
+      ${tunnelOverview?'':`<div class="preview-wrap${canTapLines?' preview-selectable':''}"><div class="preview-top"><span>Hele zone</span><span class="preview-summary">${esc(scope)}</span></div>${zonePreview(z,'',{selection:selection(),main:true,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1])),label})}${screen==='animations'||effectChosen?`<div class="preview-live-controls"><span>Voorbeeld volgt je keuze direct</span></div>`:''}</div>`}
       ${animationWayfinding(screen)}<p class="live-confirmation" data-live-status="zone" role="status" aria-live="polite"></p>
     </div></section>`;
   }
@@ -532,7 +535,7 @@
     return `<section class="brand-tone-picker" aria-label="Merkaccent kiezen"><div class="brand-tone-heading"><b>Jouw merkkleuren</b><small>Kies tot vier kleuren. De voorbeelden hieronder gebruiken ze meteen.</small></div><div class="brand-palette-slots">${palette.map((hex,i)=>`<div class="brand-palette-slot"><label><input type="color" value="${hex}" data-brand-colour="${i}" aria-label="Merkkleur ${i+1}"><span>Kleur ${i+1}</span></label>${palette.length>1?`<button data-action="brand-colour-remove" data-id="${i}" aria-label="Merkkleur ${i+1} verwijderen">−</button>`:''}</div>`).join('')}${palette.length<4?'<button class="button secondary" data-action="brand-colour-add">＋ Kleur</button>':''}</div><details class="brand-suggestions"><summary>Kleurideeën</summary><div class="brand-tone-options" role="group" aria-label="Beschikbare merkkleuren">${BRAND_TONES.map(tone=>`<button class="brand-tone-option" type="button" data-action="brand-tone" data-id="${tone.id}" aria-label="${tone.name}" aria-pressed="${selected.toLowerCase()===tone.value.toLowerCase()}" title="${tone.name}" style="--brand-tone:${tone.value}"><i aria-hidden="true"></i><span>${tone.name}</span></button>`).join('')}</div></details><small class="brand-tone-note">Kies een animatie om deze kleuren op je verlichting toe te passen.</small></section>`;
   }
   function referenceEditorPreview(effect){
-    const list=receivers(),lineNumbers=Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1]));
+    const list=selected(),lineNumbers=Object.fromEntries(receivers().map((receiver,index)=>[receiver.id,index+1]));
     return `<details open class="reference-editor-preview card" aria-label="Tunnelvoorbeeld"><summary>${icon('zones')}<b>Tunnelvoorbeeld</b>${icon('chevron')}</summary><div class="reference-preview-body"><div class="section-heading"><div><b>${ledlineCount(list.length)}</b><small>Elke boog is één ledline.</small></div><button class="button secondary" data-action="reference-view" aria-label="${spatialEffectView?'Toon rechte ledlines':'Toon de 3D-tunnel'}" aria-pressed="${spatialEffectView}">${spatialEffectView?'Rechte lijnen':'3D-tunnel'}</button></div>${addPreview(list,zone().layout,'reference-large-preview',{zoneId:zone().id,visibleReceiverIds:list.map(r=>r.id),preserveZoneGeometry:true,lineNumbers,presentation:'receivers',spatialShape:spatialEffectView?'tunnel':null,label:Library.displayName(effect)+' · '+ledlineCount(list.length)+' in de tunnel'})}<small>Van voor naar achter: de volgorde in Opstelling.</small></div></details>`;
   }
   function categoryLabel(key) {
@@ -579,8 +582,8 @@
     // Together mode and a single selected line use one representative strip.
     // When several ledlines are selected individually, show exactly those
     // physical ledlines separately so the preview matches the chosen target.
-    // Tunnel effects always need the complete layout to explain the movement
-    // between ledlines. Gallery previews never change the model.
+    // Tunnel previews show the selected scope in the same camera as the main
+    // example. Geometry retains setup order; browsing never selects extra lines.
     // Older stored effects default to very slow cycles (up to ~100 seconds),
     // which makes distinct animations look frozen and alike while browsing.
     // Accelerate only these disposable gallery samples; the selected effect,
@@ -589,25 +592,30 @@
     const previewState={...effectState(effect),speed:reference?effect.state.speed:Math.max(effect.category==='brand'?58:75,Number(effect.state.speed)||0)};
     const separateSelection=selection().kind==='receivers',representativeOnly=!tunnel&&!separateSelection;
     const sampleType=zone().type||'RGBW';
-    const physicalLines=tunnel?receivers():selected();
+    const physicalLines=selected();
     const list=representativeOnly?[{id:'library-sample-strip',type:sampleType,name:'LED-voorbeeld',
       outputs:sampleType==='SPI'?[{port:1,enabled:true,pixels:32,reversed:false}]:[],state:previewState}]
       :physicalLines.map(r=>({...r,state:previewState}));
     const lineNumbers=Object.fromEntries(receivers().map((receiver,index)=>[receiver.id,index+1]));
-    return addPreview(list,representativeOnly?'stacked':zone().layout,reference?'reference-preview':'',{label:Library.displayName(effect),effectId:effect.id,brand:effect.category==='brand',brandPaletteLimit:effect.paletteEditable===false?0:effect.colorCountRange?.max||4,labels:!representativeOnly,lineNumbers});
+    return addPreview(list,representativeOnly?'stacked':zone().layout,tunnel?'tunnel-effect-preview':reference?'reference-preview':'',{label:Library.displayName(effect)+(tunnel?' · '+ledlineCount(list.length)+' in de tunnel':''),effectId:effect.id,brand:effect.category==='brand',brandPaletteLimit:effect.paletteEditable===false?0:effect.colorCountRange?.max||4,labels:!representativeOnly,lineNumbers,...(tunnel?{spatialShape:'tunnel',geometryReceivers:receivers()}:{} )});
   }
   function tunnelGuide() {
-    const list=receivers(),count=list.length,together=selection().kind==='all';
-    const status=count<2?`Nog ${2-count} ${count===1?'ledline':'ledlines'} nodig`:together?'Klaar voor tunneleffecten':'Selecteer alle ledlines';
-    const detail=`${ledlineCount(count)} · in de volgorde van Opstelling`;
-    const action=count<2?`<button class="button full" data-action="layout-receiver-add" data-zone="${esc(zone().id)}"><span aria-hidden="true">＋</span> Ledline toevoegen</button>`:!together?'<button class="button full" data-action="tunnel-together">Alle ledlines samen bedienen</button>':'';
-    const active=activeEffect(),tunnelExamples=catalogue().filter(effect=>effect.category==='tunnel');
-    const example=active?.category==='tunnel'?active:tunnelExamples.find(effect=>Number(effect.state.variant)===93)||tunnelExamples[0];
+    const list=selected(),count=list.length,zoneCount=receivers().length,together=selection().kind==='all';
+    const status=zoneCount<2?`Nog ${2-zoneCount} ${zoneCount===1?'ledline':'ledlines'} nodig`:together?'Klaar voor tunneleffecten':'Selecteer alle ledlines';
+    const detail=`${ledlineCount(count)}${together?'':' geselecteerd'} · elke boog is één ledline`;
+    const action=zoneCount<2?`<button class="button full" data-action="layout-receiver-add" data-zone="${esc(zone().id)}"><span aria-hidden="true">＋</span> Ledline toevoegen</button>`:!together?'<button class="button full" data-action="tunnel-together">Alle ledlines samen bedienen</button>':'';
+    const tunnelExamples=catalogue().filter(effect=>effect.category==='tunnel');
+    // An individually powered-off line makes editor settings "mixed", not
+    // imaginary. Keep real receiver states in the overview even when power,
+    // colours or speeds differ, instead of substituting the gallery recipe.
+    const current=list.map(receiver=>{const s=receiver.state||{};return String(s.engine||'STATIC').toUpperCase()==='STATIC'?null:tunnelExamples.find(effect=>s.v30Effect?effect.state.v30Effect===s.v30Effect:!effect.state.v30Effect&&effect.state.engine===s.engine&&effect.state.variant===s.variant&&(effect.state.previewFamily||null)===(s.previewFamily||null));});
+    const live=current.some(Boolean),common=current[0]&&current.every(effect=>effect?.id===current[0].id)?current[0]:null;
+    const example=live?common:tunnelExamples.find(effect=>Number(effect.state.variant)===93)||tunnelExamples[0];
     // Match the gallery's readable sample pace only until an effect is chosen.
     // An active tunnel always keeps its real colours, speed and power state.
-    const live=example===active,previewList=live||!example?list:list.map(receiver=>({...receiver,state:{...effectState(example),speed:Math.max(75,Number(example.state.speed)||0)}}));
-    const visual=addPreview(previewList,zone().layout,'tunnel-live-preview',{...(live?{zoneId:zone().id}:{}),spatialShape:'tunnel',label:`Tunnelvoorbeeld · ${ledlineCount(count)}`,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1]))});
-    return `<section class="tunnel-guide" aria-label="Tunneleffecten"><header class="tunnel-guide-heading"><div><h2>Jouw tunnel in 3D</h2><p>Elke boog is één ledline. De beweging volgt je opstelling.</p></div></header><figure class="tunnel-visual">${visual}<figcaption><span>${esc(detail)}</span></figcaption></figure>${example?`<p class="tunnel-example-name">${live?'Actief':'Voorbeeld'}: <b>${esc(Library.displayName(example))}</b></p>`:''}<div class="tunnel-status"><div><strong>${status}</strong></div>${action}</div><details class="tunnel-arrangement-help"><summary>Volgorde van mijn ledlines</summary><p>Boog 1 staat vooraan. De nummers volgen de volgorde in <b>Opstelling</b>. Het tunnelvoorbeeld verandert je opstelling niet.</p><button class="button secondary full" data-action="layout">Opstelling bekijken</button></details></section>`;
+    const previewList=live||!example?list:list.map(receiver=>({...receiver,state:{...effectState(example),speed:Math.max(75,Number(example.state.speed)||0)}}));
+    const visual=addPreview(previewList,zone().layout,'tunnel-live-preview',{...(live?{zoneId:zone().id,visibleReceiverIds:list.map(receiver=>receiver.id),preserveZoneGeometry:true}:{geometryReceivers:receivers()}),spatialShape:'tunnel',label:`Tunnelvoorbeeld · ${ledlineCount(count)}`,lineNumbers:Object.fromEntries(receivers().map((receiver,index)=>[receiver.id,index+1]))});
+    return `<section class="tunnel-guide" aria-label="Tunneleffecten"><header class="tunnel-guide-heading"><div><h2>Jouw tunnel</h2></div></header><figure class="tunnel-visual">${visual}<figcaption><span>${esc(detail)}</span></figcaption></figure>${example||live?`<p class="tunnel-example-name">${live?'Actief':'Voorbeeld'}: <b>${example?esc(Library.displayName(example)):'Eigen instellingen per ledline'}</b></p>`:''}<div class="tunnel-status${action?'':' tunnel-ready'}"><div><strong>${status}</strong></div>${action}</div><details class="tunnel-arrangement-help"><summary>Volgorde van mijn ledlines</summary><p>Van voor naar achter, zoals in <b>Opstelling</b>. Hieronder bekijk je elke animatie op deze ledlines.</p><button class="button secondary full" data-action="layout">Opstelling bekijken</button></details></section>`;
   }
   function presetContext() { return {type:zone().type,receiverCount:receivers().length,selection:selection(),layout:zone().layout}; }
   function renderPresets() {
@@ -625,7 +633,8 @@
     const expanded=expandedKey===group.key,panelId=`animation-variants-${group.key.replace(/[^a-z0-9_-]/gi,'-')}`;
     const countLabel=t(group.count===1?'animationCountOne':'animationCountMany',{count:group.count});
     const type=zone()?.type==='SPI'?'SPI':'RGBW';
-    return `<article class="animation-family-card${expanded?' is-expanded':''}"><button class="animation-family-trigger" data-action="family" data-id="${esc(group.key)}" data-ledline-type="${type}" aria-expanded="${expanded}" aria-controls="${panelId}"><span class="animation-family-preview" data-motion-preview="${effectMotionKey(group.preview)}"><span class="animation-family-preview-label">${esc(t('animationPreview'))}</span>${effectPreview(group.preview)}</span><span class="family-copy"><span class="family-kicker"><span class="animation-type-badge" aria-label="${esc(t('animationBadgeForType',{type}))}">${type}</span></span><b class="family-title">${esc(group.title)}</b><small class="family-summary">${esc(group.summary)}</small><span class="family-variants"><span>${expanded?t('hideAnimationOptions'):group.count===1?t('viewAnimation'):t('viewAnimationCount',{count:group.count})}</span>${icon('chevron')}</span></span></button><div class="family-variants-panel" id="${panelId}" ${expanded?'':'hidden'}><div class="family-variants-heading"><b>${esc(t('chooseAnimation'))}</b><small>${esc(countLabel)}</small></div><div class="family-variant-grid">${effectCards(group.effects,'family-variant-card')}</div></div></article>`;
+    const tunnel=group.preview.category==='tunnel';
+    return `<article class="animation-family-card${tunnel?' tunnel-family-card':''}${expanded?' is-expanded':''}"><button class="animation-family-trigger" data-action="family" data-id="${esc(group.key)}" data-ledline-type="${type}" aria-expanded="${expanded}" aria-controls="${panelId}">${tunnel?'':`<span class="animation-family-preview" data-motion-preview="${effectMotionKey(group.preview)}"><span class="animation-family-preview-label">${esc(t('animationPreview'))}</span>${effectPreview(group.preview)}</span>`}<span class="family-copy">${tunnel?'':`<span class="family-kicker"><span class="animation-type-badge" aria-label="${esc(t('animationBadgeForType',{type}))}">${type}</span></span>`}<b class="family-title">${esc(group.title)}</b><small class="family-summary">${esc(group.summary)}</small><span class="family-variants"><span>${expanded?t('hideAnimationOptions'):group.count===1?t('viewAnimation'):t('viewAnimationCount',{count:group.count})}</span>${icon('chevron')}</span></span></button><div class="family-variants-panel" id="${panelId}" ${expanded?'':'hidden'}><div class="family-variants-heading"><b>${esc(t('chooseAnimation'))}</b><small>${esc(countLabel)}</small></div><div class="family-variant-grid">${effectCards(group.effects,'family-variant-card')}</div></div></article>`;
   }
   function animationCategorySection(section,expandedKey=null) {
     return `<section class="animation-family-section" aria-labelledby="animation-category-${esc(section.key)}"><header class="animation-family-heading"><div><h2 id="animation-category-${esc(section.key)}">${esc(section.title)}</h2><p>${esc(section.summary)}</p></div><small>${section.count} ${section.count===1?'animatie':'animaties'}</small></header>${section.key==='tunnel'?`<p class="animation-category-note">Tunnelanimaties werken met minimaal twee ledlines. Kies daarna <b>Alle ledlines samen</b>.</p>`:''}<div class="animation-family-grid">${section.groups.map(group=>animationFamilyCard(group,expandedKey)).join('')}</div></section>`;
@@ -1346,7 +1355,7 @@
         const palette=brandPalettes.get(route.zoneId)?.slice(0,spec.brandPaletteLimit||0);
         return {...r,state:{...r.state,brandColor:brandColours.get(route.zoneId)||r.state.brandColor,...(palette?.length?{colors:palette,colorCount:palette.length,whiteChannels:palette.map(()=>0),rgbEnabled:palette.map(()=>true),whiteEnabled:palette.map(()=>false)}:{})}};
       }):spec.receivers;
-      P.draw(canvas,{...spec,receivers:list,geometryReceivers:spec.preserveZoneGeometry?zoneList:undefined,selection:spec.main?selection():spec.selection,
+      P.draw(canvas,{...spec,receivers:list,geometryReceivers:spec.preserveZoneGeometry?zoneList:spec.geometryReceivers,selection:spec.main?selection():spec.selection,
         selectionFeedback:spec.main===true,identifying:spec.main?identifying:undefined,identificationTime:time,reducedMotion:reduce,
         time:reduce&&!spec.main?1.5:time});
     });

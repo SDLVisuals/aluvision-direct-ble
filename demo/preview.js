@@ -645,16 +645,16 @@ function softChaseCoverage(distance,width,n,smooth){
     materials.set(css,material);
     return material;
   }
-  // The old round tunnel model, parameterised by arc length. This is only a
+  // The original walk-through tunnel, parameterised by arc length. This is only a
   // camera projection: one receiver row is one light arch, in setup order.
   // Equal pixel distances along the curve keep a chase's speed consistent
   // through its round roof and sides. No independent CSS/demo animation.
   const tunnelCurve = (() => {
     const segments = [
-      [[82,224],[55,196],[40,162],[43,122]],
-      [[43,122],[46,76],[82,40],[132,40]],
-      [[132,40],[181,40],[216,73],[220,123]],
-      [[220,123],[221,163],[206,195],[182,224]]
+      [[44,224],[44,190],[44,156],[44,122]],
+      [[44,122],[44,70],[80,40],[132,40]],
+      [[132,40],[184,40],[220,70],[220,122]],
+      [[220,122],[220,156],[220,190],[220,224]]
     ];
     const raw = [], distances = [0];
     segments.forEach((segment, part) => {
@@ -676,17 +676,21 @@ function softChaseCoverage(distance,width,n,smooth){
   function tunnelProjection(lineCount, width=360, height=240) {
     const count=Math.max(0,Math.floor(number(lineCount,0)));
     width=Math.max(1,number(width,360));height=Math.max(1,number(height,240));
-    const vanishing=[width*.62,height*.43];
+    // Put the vanishing point OUTSIDE the entrance. The former camera put it
+    // inside the opening, turning each real ledline into a concentric ring.
+    // An oblique view, upright sides and a visible walkway explain front/back
+    // order without inventing extra lights or needing camera controls.
+    const vanishing=[width*.95,height*.43];
     const project=scale=>tunnelCurve.map(([x,y])=>{
-      const front=[width*(.11+(x-40)/184*.75),height*(.08+(y-40)/184*.76)];
+      const front=[width*(.09+(x-44)/176*.54),height*(.08+(y-40)/184*.76)];
       return [vanishing[0]+(front[0]-vanishing[0])*scale,vanishing[1]+(front[1]-vanishing[1])*scale];
     });
-    const front=project(1), back=project(.44);
+    const front=project(1), back=project(.46);
     const arches=Array.from({length:count},(_,index)=>{
-      const depth=count>1?index/(count-1):0, scale=1-depth*.56;
+      const depth=count>1?index/(count-1):0, scale=1-depth*.54;
       // Dense installations retain ALL arches. Narrow the lens instead of
       // silently clamping to four lines or hiding the rear of the tunnel.
-      const spacing=count>1?height*.76*.56/(count-1):height;
+      const spacing=count>1?height*.76*.54/(count-1):height;
       const thickness=Math.max(.7,Math.min(5.4,width*.016,height*.025,spacing*.62))*(.7+.3*scale);
       return {index,depth,scale,thickness,points:project(scale)};
     });
@@ -716,9 +720,14 @@ function softChaseCoverage(distance,width,n,smooth){
     // One continuous, quiet wall and floor make depth legible. There are no
     // extra illuminated arches, floating tiles or thick occluding fascia.
     path([...model.front,...model.back.slice().reverse()],true);
-    context.fillStyle=material([width*.1,height],[width*.7,0],'#303b38','#151c1a');context.fill();
+    context.fillStyle=material([width*.1,height],[width*.9,0],'#26302c','#131b17');context.fill();
     path(model.floor,true);
-    context.fillStyle=material([width*.5,height*.84],[width*.62,height*.43],'#303735','#161d1b');context.fill();
+    context.fillStyle=material([width*.3,height*.84],[width*.95,height*.43],'#333c36','#17201b');context.fill();
+    // Quiet walkway edges are structural guides, never animated light. Avoid
+    // a broad front fascia: it would obscure short chases and the rear lines.
+    context.strokeStyle='#46514a';context.lineWidth=Math.max(.5,width*.002);
+    path([model.floor[0],model.floor[3]]);context.stroke();
+    path([model.floor[1],model.floor[2]]);context.stroke();
     context.lineCap='round';context.lineJoin='round';
     for(let rowIndex=frame.rows.length-1;rowIndex>=0;rowIndex--){
       const row=frame.rows[rowIndex],arch=model.arches[rowIndex];
@@ -732,6 +741,8 @@ function softChaseCoverage(distance,width,n,smooth){
         for(let index=begin;index<end;index++)points.push(arch.points[index]);
         points.push(point(to));path(points);
       };
+      path(arch.points);context.strokeStyle=material(arch.points[0],arch.points[64],'#3d4840','#566058');
+      context.lineWidth=arch.thickness+Math.max(.8,2.2*arch.scale);context.stroke();
       path(arch.points);context.strokeStyle='#29342f';context.lineWidth=arch.thickness+.8;context.stroke();
       const segments=row.type==='RGBW'?1:Math.min(384,pixels.length);
       // Blur is decoration, not pixel data. Rasterizing hundreds of separate

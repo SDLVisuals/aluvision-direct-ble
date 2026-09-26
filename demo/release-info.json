@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-20260927-stability-158-final",
+  "revision": "v32-20260927-tunnel-perspective-01",
   "interfaceVersion": 32,
-  "interfaceBaseline": "Shared V32 WebApp source for native build 158. Portable backup/import, identity-bound saved lighting intent, smoother SPI cycle boundaries and optimized topology-aware tunnel previews. Existing navigation, zones, scenes, Brand palettes and adjustable smoothness with a 100 percent default are preserved. This manifest does not confirm an iPhone installation, hardware operation, PIN recovery or a receiver update. Native receiver context, PIN recovery, factory reset and playback persistence require compatible V32 firmware and physical acceptance. This browser demo is isolated: fictional receivers only, no hardware commands and no PIN collection. Exact visual equivalence to the reference videos is not claimed.",
+  "interfaceBaseline": "V32 tunnel preview refinement after native build 158: restored oblique walk-through camera, one shared overview, compact family headings and one real selected-line tunnel per animation choice. Existing V32 backup, PIN, scenes, Brand, effect formulas and receiver protocols are unchanged. This demo revision is not yet installed on iPhone and does not confirm hardware operation or a receiver update. Native receiver context, PIN recovery, factory reset and playback persistence require compatible V32 firmware and physical acceptance. This browser demo is isolated: fictional receivers only, no hardware commands and no PIN collection. Exact visual equivalence to the reference videos is not claimed.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -18,7 +18,8 @@
   "previewSizeControl": "Sticky LED overview; display-only; no receiver commands",
   "activeAnimationEntry": "Effecten opens the existing animation settings directly; Galerij opens the library without changing effect, palette or selection",
   "hardwareAccess": false,
-  "nativeAppModified": true,
+  "nativeAppModified": false,
+  "nativeAppUpdatePending": true,
   "firmwarePublished": false,
   "assets": [
     {
@@ -27,7 +28,7 @@
     },
     {
       "path": "animation-library.css",
-      "sha256": "a0c4dec3b6f7ef04ac8da6bac31df3f68fab8507c8a53b407cf0ec3c8eb5d71b"
+      "sha256": "82b6728561f1c9204c2e481dee5f0c552dbc04905f0ee629312b7082e839413f"
     },
     {
       "path": "animation-library.js",
@@ -39,7 +40,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "939d832b063e341c0256a35b088b2e93a0c6cdf9069ae3723c74d7c6af3d508d"
+      "sha256": "b30ccb432cc50ffd7dbf29ff9a99523dce207503c09f2fc808305a616d610fde"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -71,7 +72,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "a6d89333b4b4a7f3292c08e132c2d8fc9766e3d0342557d61a377ad76cd716e2"
+      "sha256": "51eed94e902afe2c21b18a994bcd74a8e51f88cace9fdda386e5a29c66930000"
     },
     {
       "path": "live-control.js",
@@ -131,7 +132,7 @@
     },
     {
       "path": "preview.js",
-      "sha256": "29c26561ba4006d08f89585049c87b88c760cbec27208f394a8b5f9ee198bc46"
+      "sha256": "0182ce113568efe8b3658f7560ee6c61fabb5c75744a18dc03d9d89da4887130"
     },
     {
       "path": "receiver-playback.js",

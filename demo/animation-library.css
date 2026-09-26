@@ -123,3 +123,22 @@ body[data-theme=dark] .animation-family-heading>small{background:var(--soft);col
   .animation-start .animation-starter-card canvas{height:64px}
 }
 @media(prefers-reduced-motion:reduce){.animation-family-card,.animation-family-card .family-variants .icon{transition:none}}
+
+/* One shared tunnel overview; the actual choices get the same camera, not a
+   second decorative thumbnail in every accordion heading. */
+.tunnel-family-card .animation-family-trigger{display:block;min-height:0;padding:14px}
+.tunnel-family-card .family-copy{gap:5px}
+.tunnel-family-card .family-variants{margin-top:4px}
+.tunnel-family-card .family-variant-grid{grid-template-columns:1fr}
+.effect-card:has(.tunnel-effect-preview){padding:10px;border-radius:16px}
+.effect-card canvas.tunnel-effect-preview{height:170px;max-height:none;border-radius:12px}
+.effect-card:has(.tunnel-effect-preview) b{font-size:14px;padding:9px 3px 4px}
+.effect-card:has(.tunnel-effect-preview) small{font-size:12px;line-height:1.45}
+.tunnel-guide .tunnel-live-preview{height:225px}
+.tunnel-ready strong{font-size:12px;color:var(--muted);font-weight:500}
+@media(max-width:360px){
+  .tunnel-guide{padding:12px}
+  .tunnel-guide .tunnel-live-preview{height:200px}
+  .effect-card canvas.tunnel-effect-preview{height:150px}
+}
+@media(min-width:700px){.tunnel-family-card .family-variant-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
