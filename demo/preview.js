@@ -324,11 +324,11 @@ function softChaseCoverage(distance,width,n,smooth){
       }else if(variant>=90&&variant<=97&&lines>1){
         const row=line/Math.max(1,lines-1),panelRaw=phaseSteps(raw-slot*delay,Math.max(16,lines)),panel=left?wrap(1-panelRaw):panelRaw;
         const rowWidth=Math.max(1,1+width/physical*lines);
-        if(variant===90||variant===91){amount=thickness(Math.abs(row-(variant===91?1-panel:panel)),rowWidth,lines);foreground=palette[line%count];}
-        else if(variant===92){const active=Math.min(lines-1,Math.floor(panel*lines));amount=line===active?1:0;foreground=palette[active%count];}
+        if(variant===90||variant===91){let sweep=variant===91?1-panel:panel;const feather=(rowWidth*.5+.5)/lines;sweep+=(sweep*2-1)*feather*curve;amount=thickness(Math.abs(row-sweep),rowWidth,lines);foreground=palette[line%count];}
+        else if(variant===92){const active=Math.min(lines-1,Math.floor(panel*lines)),next=(active+1)%lines,fade=ease(panel*lines-active),old=line===active?1:0,continuous=line===active?1-fade:line===next?fade:0;amount=q16(old+(continuous-old)*curve);foreground=palette[line%count];}
         else if(variant===93){amount=q16(Math.pow(.5+.5*Math.sin((local-panel+row*spread)*tau*objects),.8));foreground=gradient(row+local);}
         else if(variant===94){const p=motion(panel-row*spacing/lines,width,physical);amount=thickness(distance(local,p),width,physical);foreground=palette[line%count];}
-        else if(variant===95){const centre=(lines-1)*.5,d=Math.abs(line-centre)/Math.max(1,centre);amount=thickness(Math.abs(d-panel),rowWidth,lines);foreground=band(Math.min(d,.999999));}
+        else if(variant===95){const centre=(lines-1)*.5,d=Math.abs(line-centre)/Math.max(1,centre),feather=(rowWidth*.5+.5)/lines,sweep=panel+(panel*2-1)*feather*curve;amount=thickness(Math.abs(d-sweep),rowWidth,lines);foreground=band(Math.min(d,.999999));}
         else if(variant===96){const p=motion(line%2?1-panel:panel,width,physical);amount=thickness(distance(local,p),width,physical);foreground=palette[line%count];}
         else{const p=motion(panel,width,physical);amount=thickness(distance(local,p),width,physical);foreground=gradient(local);}
       }else if(engine==='STATIC')foreground=band(u);
@@ -358,10 +358,11 @@ function softChaseCoverage(distance,width,n,smooth){
         for(let k=0;k<objects;k++){const p=motion(phase+(objects===1?0:k*span/objects),width),tail=wrap(left?u-p:p-u),a=q16(Math.max(0,1-tail*n/Math.max(1,width*(1.4+trail*.09))));amount=Math.max(amount,thickness(distance(u,p),width),Math.floor(a*65535*.88)/65535);}
       }else if(engine==='ALTERNATE'){
         const bandWidth=Math.max(1,Math.round(width)),gap=Math.max(1,Math.floor(Math.fround(bandWidth*Math.fround(.3+spacing*2.7)))),period=bandWidth+gap,p=motion(phase,width),centre=(bandWidth-1)*.5;
-        foreground=palette[Math.floor(Math.floor(u*n)/period)%count];let delta=u*n-.5+p*n-centre;delta-=Math.floor(delta/period+.5)*period;
+        const cyclicDistance=Math.max(period,Math.round(n/period)*period),continuous=phaseSteps(phase)*cyclicDistance,travel=p*n+(continuous-p*n)*curve;
+        foreground=palette[Math.floor(Math.floor(u*n)/period)%count];let delta=u*n-.5+travel-centre;delta-=Math.floor(delta/period+.5)*period;
         const c=clamp((bandWidth+1)*.5-Math.abs(delta),0,1),a=c>=.999?1:0;amount=q16(a+(c-a)*curve);
       }else if(engine==='CASCADE'||engine==='SEQUENCE'){
-        const q=wrap(u-temporal);foreground=palette[Math.min(Math.floor(q*objects),objects-1)%count];amount=objectAmount();
+        const q=wrap(u-temporal);foreground=mix(palette[Math.min(Math.floor(q*objects),objects-1)%count],gradient(q,true),curve);amount=objectAmount();
         if(engine==='CASCADE')amount=Math.floor(amount*65535*(60+Math.floor(q*40))/100)/65535;
       }else if(engine==='WARM'){
         const clock=phaseSteps(temporal+u*.72),white=Math.max(...palette.map(c=>c[3]));

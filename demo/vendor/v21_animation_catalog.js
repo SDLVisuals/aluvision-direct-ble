@@ -586,7 +586,8 @@
       var centerDistance = Math.abs(u * n - 0.5 - (n - 1) * 0.5);
       var centerFeather = Math.max(0.5, width * 0.5);
       amount = clamp((centerTravel * n * 0.5 - centerDistance + centerFeather) / centerFeather, 0, 1, 0);
-      colourPhase = centerDistance / Math.max(1, n * 0.5) * (1 + spread) + temporal * 0.08;
+      var centerColourDrift = temporal + (0.5 - 0.5 * Math.cos(temporal * Math.PI * 2) - temporal) * smoothnessCurve(smooth);
+      colourPhase = centerDistance / Math.max(1, n * 0.5) * (1 + spread) + centerColourDrift * 0.08;
     } else if (effect.variant === 114) {
       // Integer clock harmonics close the shared 0..1 receiver phase. The
       // old fractional clock rates restarted mid-wave on every group cycle.
@@ -630,10 +631,11 @@
         seed = (seed ^ (seed >>> 15)) >>> 0;
         var flyCenter = (seed & 65535) / 65536;
         var flyRate = 0.37 + ((seed >>> 16) & 127) / 180;
+        flyRate += (1 + ((seed >>> 24) & 1) - flyRate) * smoothnessCurve(smooth);
         var pulse = Math.pow(Math.max(0, Math.sin(mod1(phase * flyRate + flyCenter) * Math.PI * 2)), 4);
         amount = Math.max(amount, thickness(circularDistance(u, flyCenter), width, n, smooth) * pulse);
       }
-      colourPhase = u + temporal * 0.04;
+      colourPhase = u + temporal * (0.04 + 0.96 * smoothnessCurve(smooth));
     } else if (effect.variant === 119) {
       var radialFeather = (width * 0.5 + 1) / n;
       var radius = phase * (0.5 + radialFeather * 2) - radialFeather;
@@ -661,7 +663,8 @@
         darkness = Math.max(darkness, thickness(circularDistance(local, blackoutHead), width, n, smooth), blackoutWake);
       }
       amount = 1 - darkness;
-      colourPhase = local * (1 + spacing * 1.5) + temporal * 0.035;
+      var blackoutColourDrift = temporal + (0.5 - 0.5 * Math.cos(temporal * Math.PI * 2) - temporal) * smoothnessCurve(smooth);
+      colourPhase = local * (1 + spacing * 1.5) + blackoutColourDrift * 0.035;
     } else if (effect.variant === 122) {
       var waves = 1.5 + spacing * 6.5;
       var weaveA = 0.5 + 0.5 * Math.sin((local * waves - clock) * Math.PI * 2);
@@ -671,7 +674,10 @@
       var edgeB = clamp((threshold - Math.abs(weaveB - 0.5) + 0.08 * smoothnessCurve(smooth)) / threshold, 0, 1, 0);
       var afterglow = trail * 0.42 * (0.5 + 0.5 * Math.sin((local * waves - clock + 0.22) * Math.PI * 2));
       amount = Math.max(edgeA, edgeB * (0.55 + 0.45 * weaveA), afterglow);
-      colourPhase = edgeA + 0.00001 >= edgeB ? 0.08 + local * 0.18 : 0.58 + local * 0.18;
+      var originalColour = edgeA + 0.00001 >= edgeB ? 0.08 + local * 0.18 : 0.58 + local * 0.18;
+      var weaveWeight = edgeA + edgeB + afterglow * 2;
+      var blendedColour = 0.08 + local * 0.18 + 0.5 * (weaveWeight > 0 ? (edgeB + afterglow) / weaveWeight : 0.5);
+      colourPhase = originalColour + (blendedColour - originalColour) * smoothnessCurve(smooth);
     } else if (effect.variant === 123) {
       var prismSpatial = orientedPixel / width * (0.55 + spacing * 1.9);
       var prismCoordinate = prismSpatial - clock * (1 + Math.round(trail));
@@ -695,30 +701,39 @@
     } else if (effect.variant === 125) {
       var emberCount = Math.max(2, Math.min(12, 2 + Math.floor(spacing * 10)));
       var heat = 0;
+      var heatWeight = 0, heatSum = 0;
       for (var ember = 0; ember < emberCount; ember += 1) {
         var hash = (Math.imul(0x9E3779B9, ember + 1) ^ Math.imul(0x85EBCA6B, randomness + 17)) >>> 0;
         hash = (hash ^ (hash >>> 16)) >>> 0;
         var origin = (hash & 65535) / 65536;
         var rate = 0.32 + ((hash >>> 16) & 255) / 510;
-        var center = mod1(origin + clock * rate);
+        var motionRate = rate + (1 + ((hash >>> 24) & 1) - rate) * smoothnessCurve(smooth);
+        var center = mod1(origin + clock * motionRate);
         var emberRadius = Math.max(0.5, width * (0.55 + ((hash >>> 24) & 127) / 255));
         var spatial = Math.max(0, 1 - circularDistance(local, center) * n / emberRadius);
-        var age = mod1(clock * rate + origin);
+        var age = mod1(clock * motionRate + origin);
         var life = Math.pow(Math.max(0, 1 - age), 0.7 + trail * 2.4);
+        var birthPhase = clamp(age / 0.08, 0, 1, 0);
+        var birth = birthPhase * birthPhase * (3 - 2 * birthPhase);
         var flicker = 0.70 + 0.30 * Math.sin((seconds * (2.2 + rate * 3) + origin) * Math.PI * 2);
-        var emberAmount = Math.pow(spatial, 0.7 + (100 - smooth) * 0.025) * life * flicker;
+        var emberAmount = Math.pow(spatial, 0.7 + (100 - smooth) * 0.025) * life * flicker * (1 + (birth - 1) * smoothnessCurve(smooth));
+        heatWeight += emberAmount; heatSum += emberAmount * (1 - age);
         if (emberAmount > amount) { amount = emberAmount; heat = 1 - age; }
       }
+      if (heatWeight > 0) heat += (heatSum / heatWeight - heat) * smoothnessCurve(smooth);
       colourPhase = 0.02 + heat * (0.18 + spacing * 0.18);
     } else if (effect.variant === 126) {
       var span = (0.08 + spacing * 0.72) * (0.65 + 0.35 * Math.sin(clock * Math.PI * 2));
       var selectedOrb = 0;
+      var orbWeight = 0, orbSum = 0;
       for (var orb = 0; orb < count; orb += 1) {
         var offset = count === 1 ? 0 : (orb / (count - 1) - 0.5) * span;
         var orbHead = pixelMotionPosition(mod1(clock + offset), width, n, smooth);
         var orbAmount = thickness(circularDistance(local, orbHead), width, n, smooth);
         if (orbAmount > amount) { amount = orbAmount; selectedOrb = orb / count; }
+        orbWeight += orbAmount; orbSum += orbAmount * orb / count;
       }
+      if (orbWeight > 0) selectedOrb += (orbSum / orbWeight - selectedOrb) * smoothnessCurve(smooth);
       colourPhase = selectedOrb + clock;
     } else if (effect.variant === 127) {
       var selectedShutter = 0;

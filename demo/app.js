@@ -974,6 +974,8 @@
     document.documentElement.lang=uiPreferences.preferences.language;
     document.body.dataset.theme=uiPreferences.preferences.theme;
     document.querySelector('meta[name="theme-color"]').content=uiPreferences.preferences.theme==='dark'?'#171817':'#f8f8f5';
+    if(nativeContext&&window.__lightningV32Appearance===true)
+      runtime?.services?.setAppearance?.({theme:uiPreferences.preferences.theme}).catch(()=>{});
     // Replace the old fixed shortcuts and read-only order list with their
     // interactive counterparts, without rebuilding the established editors.
 

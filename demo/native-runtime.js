@@ -23,6 +23,8 @@
   actions.add('outputConfigurationStatus');
   ['exportBackup','chooseBackup','importInstallationView','recoverInstallation'].forEach(action=>actions.add(action));
   ['receiverContextStatus','syncInstallationContext'].forEach(action=>actions.add(action));
+  actions.add('setAppearance');
+  let appearanceTheme=null,appearanceRequest=null,appearanceSerial=0;
   const contextTimers=new Map(),contextEpochs=new Map();let contextQueue=Promise.resolve(),contextResetEpoch=0;
   let viewRevision=0,viewLoaded=false,viewModelKey=null,viewDraftKey='null',writeQueue=Promise.resolve();
   const fail=code=>Object.assign(new Error('De verbinding is nog niet beschikbaar.'),{code});
@@ -41,7 +43,7 @@
     if(pending.size>=8)return Promise.reject(fail('NATIVE_BUSY'));
     return new Promise((resolve,reject)=>{
       const id='v30-'+documentId+'-'+(++serial),cancelNative=()=>{
-        if(pending.has(id)&&!['capabilities','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones','exportBackup','chooseBackup','importInstallationView'].includes(action))try{handler.postMessage({version:1,id:'v30-'+documentId+'-'+(++serial),action:action==='discover'?'cancelDiscover':'cancelOnboarding',payload:{requestId:id}});}catch(_){}
+        if(pending.has(id)&&!['setAppearance','capabilities','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones','exportBackup','chooseBackup','importInstallationView'].includes(action))try{handler.postMessage({version:1,id:'v30-'+documentId+'-'+(++serial),action:action==='discover'?'cancelDiscover':'cancelOnboarding',payload:{requestId:id}});}catch(_){}
       },abort=()=>{
         cancelNative();
         receive({id,ok:false,code:'CANCELLED'});
@@ -303,6 +305,20 @@
   }
   const services=Object.freeze(native?{
     connectionMode:'manual-wifi',
+    async setAppearance(request){
+      if(root.__lightningV32Appearance!==true)throw fail('APPEARANCE_UNAVAILABLE');
+      if(!request||Object.keys(request).length!==1||!['light','dark'].includes(request.theme))throw fail('APPEARANCE_INVALID');
+      const {theme}=request;
+      if(appearanceRequest?.theme===theme)return appearanceRequest.promise;
+      if(!appearanceRequest&&appearanceTheme===theme)return {status:'applied-local',theme};
+      const sequence=++appearanceSerial;
+      const promise=call('setAppearance',{theme}).then(result=>{
+        if(result?.status!=='applied-local'||result.theme!==theme)throw fail('APPEARANCE_UNCONFIRMED');
+        if(sequence===appearanceSerial)appearanceTheme=theme;
+        return result;
+      }).finally(()=>{if(appearanceRequest?.sequence===sequence)appearanceRequest=null;});
+      appearanceRequest={sequence,theme,promise};return promise;
+    },
     async receiverContextStatus({standId}){return receiverContext('receiverContextStatus',standId);},
     async syncInstallationContext({standId}){
       root.clearTimeout(contextTimers.get(standId));contextTimers.delete(standId);

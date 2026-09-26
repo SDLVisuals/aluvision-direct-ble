@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-20260927-stability-157",
+  "revision": "v32-20260927-stability-158",
   "interfaceVersion": 32,
-  "interfaceBaseline": "Shared V32 WebApp source for native build 157. Portable backup/import, identity-bound saved lighting intent, smoother SPI cycle boundaries and optimized topology-aware tunnel previews. Existing navigation, zones, scenes, Brand palettes and adjustable smoothness with a 100 percent default are preserved. This manifest does not confirm an iPhone installation, hardware operation, PIN recovery or a receiver update. Native receiver context, PIN recovery, factory reset and playback persistence require compatible V32 firmware and physical acceptance. This browser demo is isolated: fictional receivers only, no hardware commands and no PIN collection. Exact visual equivalence to the reference videos is not claimed.",
+  "interfaceBaseline": "Shared V32 WebApp source for native build 158. Portable backup/import, identity-bound saved lighting intent, smoother SPI cycle boundaries and optimized topology-aware tunnel previews. Existing navigation, zones, scenes, Brand palettes and adjustable smoothness with a 100 percent default are preserved. This manifest does not confirm an iPhone installation, hardware operation, PIN recovery or a receiver update. Native receiver context, PIN recovery, factory reset and playback persistence require compatible V32 firmware and physical acceptance. This browser demo is isolated: fictional receivers only, no hardware commands and no PIN collection. Exact visual equivalence to the reference videos is not claimed.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -39,7 +39,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "11c0aa7d7a0784c6a46ba0977b60b85af13737d1f862b35d4a86a9f0323a47ba"
+      "sha256": "7c8c3f3bdd25741ba8bee9a36985a61681863ff66c1f55226597422eacc04061"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -71,7 +71,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "3e266f76c26c816dd88134109130646ac902753bc57d8d8c870726270e1a8b93"
+      "sha256": "711696b96f065029850ee7858837267ec11838f4525db027bce46e59844f2346"
     },
     {
       "path": "live-control.js",
@@ -87,7 +87,7 @@
     },
     {
       "path": "native-runtime.js",
-      "sha256": "5757c2358ecf594b95343766434d4b09ce26cfa75c93cdf7072be737caadf436"
+      "sha256": "9944d0d0dc2213b4bd0f8aa191204b99b2245fe560d1654085539315fd5ce3a4"
     },
     {
       "path": "onboarding-adapter.js",
@@ -131,7 +131,7 @@
     },
     {
       "path": "preview.js",
-      "sha256": "cb270c0a6d67158650ff07cb7c1114682066bf7fd54713bc7184df5b1d858be1"
+      "sha256": "29c26561ba4006d08f89585049c87b88c760cbec27208f394a8b5f9ee198bc46"
     },
     {
       "path": "receiver-playback.js",
@@ -183,7 +183,7 @@
     },
     {
       "path": "vendor/v21_animation_catalog.js",
-      "sha256": "242d51a6ae96bf3aa9e82e8f31de3e701ad924c46fa7a4745693b4802f3e10b7"
+      "sha256": "96ce379842e153bf438e18bc659e995e418928e76c84acb383b2865f2608c744"
     },
     {
       "path": "vendor/v21_tunnel_engine.js",
