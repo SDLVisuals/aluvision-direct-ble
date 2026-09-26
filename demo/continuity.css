@@ -224,6 +224,7 @@ dialog{overscroll-behavior:contain}
    so a large installation never pins a tall panel over its own controls. */
 .editor-grid>.control-context{grid-column:1;grid-row:1;position:static;z-index:auto;padding:0 0 8px;background:transparent;min-width:0}
 .editor-grid>.control-preview-dock{grid-column:1;grid-row:2;position:sticky;top:0;z-index:8;align-self:start;min-width:0;margin:0 0 11px;padding:8px 0 9px;background:var(--bg);box-shadow:0 9px 14px -13px #17201980}
+.control-dock-surface{display:flow-root;min-width:0}
 .editor-grid>.editor-controls{grid-column:2;grid-row:1 / span 2;min-width:0}
 .control-dock-context-line{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;margin:0 1px 7px}
 .control-dock-context-line .control-dock-location{flex:1 1 auto}
@@ -286,7 +287,11 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 /* While scrolling, retain the all-ledline overview and its mode/back controls
    but release vertical room so gallery and setup choices underneath remain
    visible and receive taps instead of being covered by the sticky preview. */
-.control-preview-dock[data-scrolled=true]{min-height:var(--control-preview-expanded-height);padding-top:4px;padding-bottom:4px;margin-bottom:7px;background:transparent;box-shadow:none;pointer-events:none}
+.editor-grid>.control-preview-dock[data-scrolled=true]{min-height:var(--control-preview-expanded-height);padding-top:0;padding-bottom:4px;margin-bottom:7px;background:transparent;box-shadow:none;pointer-events:none}
+/* Only the visible header gets a backing. The taller layout reservation below
+   remains transparent/click-through, but moving text can no longer show through
+   the zone name, gaps between buttons, or the preview heading. */
+.control-preview-dock[data-scrolled=true] .control-dock-surface{padding-top:4px;background:var(--bg);border-radius:0 0 15px 15px;box-shadow:0 8px 16px -12px #17201980;pointer-events:auto}
 .control-preview-dock[data-scrolled=true] :is(.control-dock-context-line,.control-dock-actions,.preview-wrap){pointer-events:auto}
 .control-preview-dock[data-scrolled=true] .control-dock-context-line{margin-bottom:3px}
 .control-preview-dock[data-scrolled=true] .control-dock-actions{margin-bottom:3px}

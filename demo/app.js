@@ -310,12 +310,12 @@
     const scope=selection().kind==='all'?total:t('scopeSelectedTap',{name:nameOfSelection()});
     const modeName=screen==='controls'?(controlMode==='colour'?'Kleur':'Effecten'):screen==='layout'?'Opstelling':screen==='colour'?'Kleur':screen==='animations'?'Effecten':'Bediening';
     const label=`LED-overzicht van ${z.name} · ${total}${selection().kind==='all'?'':` · ${nameOfSelection()} gekozen`}`;
-    return `<section class="control-preview-dock" aria-label="LED-overzicht en bediening">
+    return `<section class="control-preview-dock" aria-label="LED-overzicht en bediening"><div class="control-dock-surface">
       ${integratedControlHeading?`<div class="control-dock-context-line"><div class="control-dock-location"><small>JE LICHT · ${esc(modeName)}</small><b>${esc(z.name)}</b></div><span class="pill control-dock-type-badge">${zoneTypeLabel(z)}</span></div><div class="control-dock-actions"><button class="back back-to-zones control-dock-back" data-action="stand" aria-label="Terug naar zones" title="Terug naar zones">${icon('back')}<span>Zones</span></button>${modeTabs}</div>`:''}
       ${integratedControlHeading?'':`<div class="control-dock-heading"><div class="control-dock-location"><small>JE LICHT · ${esc(modeName)}</small><b>${esc(z.name)}</b></div>${modeTabs||`<span class="control-dock-mode">${esc(modeName)}</span>`}</div>`}
       <div class="preview-wrap${canTapLines?' preview-selectable':''}"><div class="preview-top"><span>Hele zone</span><span class="preview-summary">${esc(scope)}</span></div>${zonePreview(z,'',{selection:selection(),main:true,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1])),label})}${screen==='animations'||effectChosen?`<div class="preview-live-controls"><span>Voorbeeld volgt je keuze direct</span></div>`:''}</div>
       <p class="live-confirmation" data-live-status="zone" role="status" aria-live="polite"></p>
-    </section>`;
+    </div></section>`;
   }
   function zoneTypeLabel(z) { return z.type==='SPI'?'Pixel LED · SPI':z.type==='RGBW'?'RGBW':'Nog geen verlichting'; }
   function previewSizePickerMarkup(){

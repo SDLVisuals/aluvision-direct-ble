@@ -2,6 +2,7 @@
   width: min(calc(100% - 24px), 500px);
   max-height: min(88dvh, 820px);
   overflow: auto;
+  overscroll-behavior: contain;
   padding: clamp(16px, 4vw, 24px);
   border: 1px solid var(--line, #ddd);
   border-radius: 26px;
@@ -26,7 +27,8 @@
 .receiver-update-sheet .receiver-update-progress .update-receiver-copy > small:first-of-type { font-variant-numeric: tabular-nums; }
 .receiver-update-sheet .receiver-update-progress [data-update="resume"],
 .receiver-update-sheet .receiver-update-progress [data-update="cancel"] { grid-column: 1 / -1; justify-self: start; }
-.receiver-update-sheet > .button { margin-top: 10px; }
+.receiver-update-sheet > .button,
+.receiver-update-sheet .update-controls > .button { margin-top: 10px; }
 .receiver-update-sheet .update-run-status,
 .receiver-update-sheet .update-all-current { margin: 14px 0; padding: 12px 14px; border-radius: 16px; background: var(--soft, #eeede9); font-size: 13px; }
 .receiver-update-entry h2 { margin: 0 0 6px; font-size: 17px; }

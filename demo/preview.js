@@ -731,6 +731,7 @@ function usesCyclePhaseSteps(state) {
     const continuous = options.layout === 'continuous' && !byReceiver && frame.rows.every(row => row.type === 'SPI');
     const padding = Math.min(18, width / 8);
     const maxRowPixels = Math.max(1, ...frame.rows.filter(row => row.type === 'SPI').map(row => row.pixels.length));
+    const shortestFraction = Math.min(1, ...frame.rows.filter(row => row.type === 'SPI').map(row => row.pixels.length / maxRowPixels));
     const hitRegions = [];
     context.font = '11px system-ui'; context.textBaseline = 'middle';
     frame.rows.forEach((row, index) => {
@@ -738,12 +739,17 @@ function usesCyclePhaseSteps(state) {
       // A single ledline should read as a light bar, not a hairline, in the
       // compact sticky preview. Scale with each lane so multi-line layouts
       // stay clearly separated on small screens.
-      const barHeight = continuous ? Math.min(18, height * 0.4) : Math.max(0.5, Math.min(18, lane * 0.62));
       const showLabel = continuous ? false : vertical ? lane >= 48 : lane >= 30 || row.individuallySelected && lane >= 24;
+      const verticalStart = Math.min(showLabel ? 38 : 14, height / 3);
+      // In a short vertical thumbnail, strip length (not the much wider lane)
+      // limits thickness. All lanes keep the same material/pixel pitch, while
+      // even the shortest physical line still reads as a line, not a square.
+      const verticalThickness = (height - verticalStart - Math.min(24, height / 4)) * shortestFraction * .45;
+      const barHeight = continuous ? Math.min(18, height * 0.4) : Math.max(0.5, Math.min(18, lane * 0.62, vertical ? verticalThickness : Infinity));
       const continuousFraction = row.pixels.length / Math.max(1, frame.geometry.totalPixels);
       const continuousOffset = frame.geometry.receivers[index].offset / Math.max(1, frame.geometry.totalPixels);
       const x = continuous ? padding + (width - padding * 2) * continuousOffset : vertical ? padding + lane * index + lane / 2 - barHeight / 2 : padding;
-      const y = continuous ? (height - barHeight) / 2 : vertical ? Math.min(showLabel ? 38 : 14, height / 3)
+      const y = continuous ? (height - barHeight) / 2 : vertical ? verticalStart
         : 8 + lane * index + (lane - barHeight) / 2 + (showLabel ? 4 : 0);
       if (options.main === true && !continuous) hitRegions.push({receiverId:row.receiverId,
         x:vertical?(padding + lane * index) / width:0,

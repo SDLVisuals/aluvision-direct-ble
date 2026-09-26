@@ -252,10 +252,15 @@
       const bounds={variant:[0,255],speed:[0,100],smooth:[0,100],backgroundBrightness:[0,100],widthPixels:[1,8192],spacing:[0,100],objectCount:[1,8],trailLength:[0,100],spread:[0,100],randomness:[0,100],lineDelayMs:[0,5000]};
       const colour=value=>Array.isArray(value)&&value.length===4&&value.every(byte);
       const extended=scene&&Object.prototype.hasOwnProperty.call(scene,'v30');
-      if(!scene||typeof scene!=='object'||Array.isArray(scene)||Object.keys(scene).length!==keys.length+(extended?1:0)||!keys.every(key=>Object.prototype.hasOwnProperty.call(scene,key))||
+      const phased=scene&&(Object.prototype.hasOwnProperty.call(scene,'phaseMs')||Object.prototype.hasOwnProperty.call(scene,'phaseRateMicroHz'));
+      if(!scene||typeof scene!=='object'||Array.isArray(scene)||Object.keys(scene).length!==keys.length+(extended?1:0)+(phased?2:0)||!keys.every(key=>Object.prototype.hasOwnProperty.call(scene,key))||
         typeof scene.engine!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(scene.engine)||!colour(scene.background)||!Array.isArray(scene.palette)||scene.palette.length<1||scene.palette.length>(extended?7:4)||!scene.palette.every(colour)||
         !Object.entries(bounds).every(([key,[min,max]])=>Number.isInteger(scene[key])&&scene[key]>=min&&scene[key]<=max)||
         !['backgroundOn','motionReverse','bounce','mirror'].every(key=>typeof scene[key]==='boolean'))throw fail('LIVE_INVALID');
+      // Keep the same bounded pair as V30LiveControlService. Legacy SPI effects
+      // use it to resume a group's shared phase; RGBW and V30 effects do not.
+      if(phased&&(kind!=='SPI_SCENE'||extended||!Number.isInteger(scene.phaseMs)||scene.phaseMs<0||scene.phaseMs>999||
+        !Number.isInteger(scene.phaseRateMicroHz)||scene.phaseRateMicroHz<0||scene.phaseRateMicroHz>20000000))throw fail('LIVE_INVALID');
       if(extended){
         const v30=scene.v30,limits={effect:[1,kind==='SPI_SCENE'?30:20],fadeAmount:[0,100],width:[0,100],delayMs:[0,10000]};
         if(!v30||typeof v30!=='object'||Array.isArray(v30)||Object.keys(v30).sort().join(',')!=='brand,delayMs,effect,fadeAmount,width'||!colour(v30.brand)||
