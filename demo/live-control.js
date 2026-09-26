@@ -9,10 +9,22 @@
   const SPI_ENGINES=['STATIC','GRADIENT','BREATHE','CHASE','COMET','SCANNER','SPARKLE','WAVE','SEQUENCE','ALL','MIRROR','ALTERNATE','CASCADE','DUAL','FLOW','WARM','MINIMAL'];
   const RGBW_ENGINES=[...SPI_ENGINES,'PULSE','STROBE','SMOOTH'];
   const V30_EFFECTS=['rgb-jumping','seven-jumping','rgb-gradient','seven-gradient','tunnel-travel','tunnel-bounce','tunnel-center','tunnel-outside','tunnel-cascade','tunnel-handoff','tunnel-pulse','tunnel-echo','tunnel-pixel-curtain','tunnel-pixel-cross','brand-white-breathe','brand-warm-white','brand-accent','brand-sweep','brand-focus','brand-soft-gradient'].map(id=>'v30-'+id);
+  const SPI_TIMED_VARIANTS=new Set([...Array(13)].map((_,i)=>90+i).concat([104,105,106,107,108,109,110,111,128]));
+  const SHARED_TUNNEL_VARIANTS=new Set([5,6,7,8,9,10,11,12,13,14,15,16,21,22,23,24,26,27,28,29,30,31]);
   const clone=value=>JSON.parse(JSON.stringify(value));
+  function spiPhaseLineDelay(state,variant,lineCount,parallel) {
+    if(!parallel||lineCount<=1)return 0;
+    const shared=variant>=150&&SHARED_TUNNEL_VARIANTS.has(variant-150);
+    const timed=SPI_TIMED_VARIANTS.has(variant)||shared;
+    if(timed)return Math.min(5080,Math.round(Math.max(0,Math.min(5000,Number(state.lineDelayMs)||0))/40)*40);
+    const speed=Math.max(0.5,Math.min(100,Number(state.speed)||0));
+    const normalized=speed/100,rate=0.002+normalized*normalized*0.80;
+    const delay=Number(state.spread??50)/100*0.65*1000/((lineCount-1)*rate);
+    return Math.min(5080,Math.round(Math.max(0,Math.min(5080,delay))/40)*40);
+  }
   // Full lighting intent. Geometry is deliberately not accepted from this
   // object; the native owner resolves it against its persisted receiver list.
-  function requestFor(receiver,{zone,receivers}={}) {
+  function requestFor(receiver,{zone,receivers,time}={}) {
     if(!receiver||!['RGBW','SPI'].includes(receiver.type))return null;
     const state=receiver.state||{},spi=receiver.type==='SPI';
     let extension=state.engine==='V30'||state.v30Effect;
@@ -42,7 +54,7 @@
     if(palette.some(c=>!c)||!background)return null;
     const brightness=number(state.bri??state.brightness,100,0,100);
     const scene={engine,variant,palette,background,
-      speed:number(state.speed,30,0,100),smooth:number(state.smooth,90,0,100),
+      speed:number(state.speed,30,0,100),smooth:number(state.smooth,100,0,100),
       backgroundBrightness:number(state.bgBrightness,0,0,100),backgroundOn:state.backgroundOn===true,
       motionReverse:['left','reverse'].includes(state.direction),widthPixels:number(state.widthPixels,4,1,8192),
       spacing:number(state.spacing,50,0,100),objectCount:number(state.objectCount,1,1,8),
@@ -50,6 +62,17 @@
       randomness:number(state.randomness,25,0,100),bounce:state.bounce===true,mirror:state.mirror===true,
       lineDelayMs:number(state.lineDelayMs,0,0,5000)};
     if(state.on===false||state.power===false)scene.backgroundOn=false;
+    if(spi&&!extension&&engine!=='STATIC'){
+      const clock=Number.isFinite(Number(time))?Number(time):performance.now()/1000;
+      const parallel=zone?.layout!=='continuous';
+      const lineCount=parallel?Math.max(1,(receivers||[receiver]).length):1;
+      const phaseState={...state,speed:Math.max(0.5,Number(state.speed)||0),lineCount,
+        lineDelayMs:spiPhaseLineDelay(state,variant,lineCount,parallel)};
+      const phase=globalThis.AluvisionV21AnimationCatalog?.phaseFor?.(phaseState,clock,'SPI');
+      if(Number.isFinite(phase))scene.phaseMs=Math.round((((phase%1)+1)%1)*1000)%1000;
+      const rate=globalThis.AluvisionV21AnimationCatalog?.cyclesPerSecond?.(phaseState,'SPI');
+      if(Number.isFinite(rate)&&rate>=0&&rate<=20)scene.phaseRateMicroHz=Math.round(rate*1000000);
+    }
     if(extension){
       const brand=colour(state.v30Effect==='v30-brand-focus'?hex[0]||'#C94E46':state.brandColor||hex[0]||'#C94E46',0);
       scene.v30={effect:extensionId,fadeAmount:number(extensionId>=21?state.spacing:state.fadeAmount,90,0,100),

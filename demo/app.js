@@ -89,7 +89,7 @@
     status.lastChild.textContent=' Demo · niet verbonden';
     status.setAttribute('aria-label','Demo met fictieve receivers. Er is geen verbinding met echte verlichting.');
   }
-  const receiverUpdates=window.LightningReceiverUpdateUI.create({services:runtime?.native===true?runtime.services||{}:{}});
+  const receiverUpdates=window.LightningReceiverUpdateUI.create({services:runtime?.native===true?runtime.services||{}:{},translate:(key,params)=>t(key,params)});
   const receiverRemoval=window.LightningReceiverRemovalUI.create({services:runtime?.native===true?runtime.services||{}:{},getModel:()=>model,
     onRemoved:nextModel=>{model=M.assertValid(nextModel);selections.clear();visualPorts.clear();visualPlugMotions.clear();identifying.clear();navigate('receivers');}});
   const pixelSetup=window.LightningPixelSetup.create({mode:previewContext?'preview':nativeContext&&typeof runtime?.services?.configureOutputs==='function'?'native':'native-unavailable',
@@ -709,7 +709,9 @@
   function renderReceivers() {
     const all=standReceivers(),unassigned=all.filter(r=>!r.zoneId);
     const shown=receiverFilter==='unassigned'?unassigned:all,cards=shown.map(r=>receiverCard(r)).join('');
-    return `<div class="page"><header class="page-heading"><div><div class="eyebrow">${esc(standLabel())}</div><h1>Receivers</h1><p>Je receivers en hun plek in de stand.</p></div></header><button class="button" data-action="receiver-add">＋ Receiver toevoegen</button><div class="receiver-filters" role="group" aria-label="Receivers filteren">${[['all','Alle receivers',all.length],['unassigned','Niet in een zone',unassigned.length]].map(([id,label,count])=>`<button data-action="receiver-filter" data-id="${id}" aria-pressed="${receiverFilter===id}">${label}<span>${count}</span></button>`).join('')}</div><div class="receiver-list">${cards||`<section class="card empty connection-empty"><h2>${receiverFilter==='unassigned'&&all.length?'Alles heeft een plek':'Nog geen receivers'}</h2><p>${receiverFilter==='unassigned'&&all.length?'Alle receivers zijn aan een zone toegewezen.':stand()?'Voeg je eerste receiver toe om deze stand te verlichten.':'Begin met een naam voor je stand en een zone. Daarna zoek je je eerste receiver.'}</p>${receiverFilter==='unassigned'?'<button class="button secondary" data-action="receiver-filter" data-id="all">Alle receivers bekijken</button>':''}</section>`}</div></div>`;
+    const canUpdate=nativeContext&&runtime?.native===true&&typeof runtime.services?.otaPlan==='function'&&all.length>0;
+    const updateEntry=canUpdate?`<section class="card receiver-update-entry"><h2>${esc(t('softwareUpdateSection'))}</h2><p>${esc(t('softwareUpdateSubtitle'))} ${esc(t('softwareUpdateSequence'))}</p><button class="button full" data-action="receiver-update-all">${esc(t('softwareUpdateButton'))}</button></section>`:'';
+    return `<div class="page"><header class="page-heading"><div><div class="eyebrow">${esc(standLabel())}</div><h1>Receivers</h1><p>Je receivers en hun plek in de stand.</p></div></header><button class="button" data-action="receiver-add">＋ Receiver toevoegen</button>${updateEntry}<div class="receiver-filters" role="group" aria-label="Receivers filteren">${[['all','Alle receivers',all.length],['unassigned','Niet in een zone',unassigned.length]].map(([id,label,count])=>`<button data-action="receiver-filter" data-id="${id}" aria-pressed="${receiverFilter===id}">${label}<span>${count}</span></button>`).join('')}</div><div class="receiver-list">${cards||`<section class="card empty connection-empty"><h2>${receiverFilter==='unassigned'&&all.length?'Alles heeft een plek':'Nog geen receivers'}</h2><p>${receiverFilter==='unassigned'&&all.length?'Alle receivers zijn aan een zone toegewezen.':stand()?'Voeg je eerste receiver toe om deze stand te verlichten.':'Begin met een naam voor je stand en een zone. Daarna zoek je je eerste receiver.'}</p>${receiverFilter==='unassigned'?'<button class="button secondary" data-action="receiver-filter" data-id="all">Alle receivers bekijken</button>':''}</section>`}</div></div>`;
   }
   function renderReceiverAdd() {
     return '<div id="receiver-onboarding"></div>';
@@ -936,7 +938,7 @@
       const r=model.receivers.find(receiver=>receiver.id===card.dataset.receiverDetail);
       if(r.type==='SPI'&&!r.outputs.some(output=>output.enabled))card.querySelector('[data-action="visual-identify"]').disabled=true;
       card.querySelector('summary small').insertAdjacentHTML('afterend',`<small class="receiver-status">${statusText(r)}</small>`);
-      card.querySelector('.receiver-manage-content').insertAdjacentHTML('beforeend',`<section class="receiver-service-section" aria-label="Receiver en software"><h3>Software</h3><p>Bekijk en installeer beschikbare updates voor deze receiver.</p><button class="button secondary full" data-action="receiver-update" data-id="${esc(r.id)}">Softwareversie en updates</button></section>`);
+      if(nativeContext&&runtime?.native===true&&typeof runtime.services?.otaPlan==='function')card.querySelector('.receiver-manage-content').insertAdjacentHTML('beforeend',`<section class="receiver-service-section" aria-label="Receiver en software"><h3>${esc(t('softwareUpdateSection'))}</h3><p>${esc(t('softwareUpdateSubtitle'))}</p><button class="button secondary full" data-action="receiver-update" data-id="${esc(r.id)}">${esc(t('softwareUpdates'))}</button></section>`);
       card.querySelector('.receiver-manage-content').insertAdjacentHTML('beforeend',`<section class="receiver-danger-section" aria-label="Receiver verwijderen"><h3>${r.role==='main'?'Alle receivers ontkoppelen':'Deze receiver ontkoppelen'}</h3><p>${r.role==='main'?'Hiermee verwijder je het volledige receivernetwerk.':'Hiermee verwijder je alleen deze receiver uit het netwerk.'}</p><button class="button secondary full" data-action="receiver-remove" data-id="${esc(r.id)}">${r.role==='main'?'Alle receivers ontkoppelen':'Deze receiver ontkoppelen'}</button></section>`);
     });
     if(zoneScreen&&zone()?.type===null)main.querySelector('.page-heading .pill')?.remove();
@@ -1027,9 +1029,9 @@
     }
     main.querySelectorAll('.my-colours h3').forEach(node=>node.textContent=t('myColours'));
   }
-  function liveRequest(receiver) {
+  function liveRequest(receiver,time=performance.now()/1000) {
     const targetZone=model.stands.find(item=>item.id===receiver.standId)?.zones.find(item=>item.id===receiver.zoneId);
-    return window.LightningLiveControl?.requestFor?.(receiver,{zone:targetZone,receivers:targetZone?M.zoneReceivers(model,targetZone.id):[receiver]})||null;
+    return window.LightningLiveControl?.requestFor?.(receiver,{zone:targetZone,receivers:targetZone?M.zoneReceivers(model,targetZone.id):[receiver],time})||null;
   }
   function liveTargets(scope){
     if(scope==='stand')return standReceivers();
@@ -1041,9 +1043,10 @@
     const ids=new Set(selectedReceiverIds());return receivers().filter(receiver=>ids.has(receiver.id));
   }
   function sendReceiverStates(ids){
+    const time=performance.now()/1000;
     for(const id of ids){
       const receiver=model.receivers.find(item=>item.id===id);if(!receiver)continue;
-      const request=liveRequest(receiver);
+      const request=liveRequest(receiver,time);
       if(nativeLoaded&&liveController&&request)liveController.request(request);
       else if(liveController)liveController.preview(id);
       else liveStates.set(id,{kind:'preview'});
@@ -1665,7 +1668,8 @@
       if(action==='overview-zone'){closeEffectDialog();return navigate('controls',{zoneId:id});}
       if(action==='overview-receivers'){closeEffectDialog();receiverFilter=id==='unassigned'?'unassigned':'all';return navigate('receivers');}
       if(action==='overview-zone-new'){closeEffectDialog();return showNameDialog('zone-create');}
-      if(action==='receiver-update'){const receiver=model.receivers.find(r=>r.id===id);if(receiver)return receiverUpdates.open(receiver);return;}
+      if(action==='receiver-update-all')return receiverUpdates.openAll(standReceivers());
+      if(action==='receiver-update'){const receiver=model.receivers.find(r=>r.id===id&&r.lifecycle==='added');if(receiver)return receiverUpdates.open(receiver);return;}
       if(action==='receiver-remove'){const receiver=model.receivers.find(r=>r.id===id);if(receiver)return receiverRemoval.open(receiver);return;}
       if(action==='receiver-filter'){if(!['all','unassigned'].includes(id))return;receiverFilter=id;return render({preserveScroll:true});}
       if(action==='receiver-pixel-setup'){

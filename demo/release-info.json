@@ -1,6 +1,6 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v31-20260926-spi-default-6m3-28",
+  "revision": "v31-20260926-native-ota-update-all-01",
   "interfaceVersion": 31,
   "interfaceBaseline": "Shared V31 WebApp source; included in native build 150 installed and launched on the paired iPhone; SPI and RGBW receiver firmware V21.1.44 compile-only candidates, not flashed or thermally validated. New SPI outputs default to 163 pixels (about 6.3 m); saved/manual lengths remain unchanged. The web demo uses fictional receivers and sends no hardware commands. The animation gallery shows one example ledline when lines are operated together and one distinct lane per ledline when several lines are selected individually; the compact RGBW preview draws a visibly fuller single-line light bar and the sticky size choices preserve a readable light while scrolling; compact LED preview-size selector with three on-demand options that do not cover the LED; clearer grouped animation gallery with one labelled real-light preview and a plain-language button showing how many animations the group contains; no duplicate abstract diagram that could be mistaken for receiver hardware; dedicated Brand animaties with six selectable accent tones and 21 curated existing SPI exhibition recipes; perspective tunnel previews; shared colour wheel for editable Brand colours; all original wire recipes preserved; bulk-select and atomically assign compatible ledlines to a zone; rounded shared modal headings; colour-first whole-stand sheet with one button to the full scenes gallery; unified LEDline scope dropdown; return navigation and RGBW/SPI badge integrated into the light-control heading; duplicate zone title removed; simplified zone and receiver-add flow; consistent ledline language; shared rounded zone picker in receiver search with one matching location-minus icon for receivers without a zone; compact inline zone power switch; SPI endpoint guidance; user-selectable compact, medium and large LED previews; direct entry to the active animation settings with the gallery one tap away; background colour is grouped with animation colours behind an explicit toggle; new animations start at 100% smoothness, while the slider remains adjustable and saved settings are preserved; adjustable settings have a meaning icon and plain-language hint, with the active live preview identified as the immediate visual feedback; scroll-compacted sticky LED preview preserves page layout and remains click-through over controls; minimum 52 px colour/effect tab touch height on compact phones",
   "fakeReceivers": {
@@ -39,7 +39,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "a3289517330efe3858177420e12965b0075f280296209995ad53692c1dbc0371"
+      "sha256": "0077adb89cdf6bf6bdbd3124a452d092c557fe24ac04ceebe43adbd0d2876d39"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -67,11 +67,11 @@
     },
     {
       "path": "index.html",
-      "sha256": "58fc82a88552d50fa743486aec1fd637fe44e1f0b3b123479f80c7bc1b1c2422"
+      "sha256": "4f6ca4f4bc4c201f816869e18e814bd4a3c355dd46c0e2ed16f6b1bc8bb6b258"
     },
     {
       "path": "live-control.js",
-      "sha256": "4204cf6afbc5096e2c563a4c1e1993e8bd009258a111721a342f85bfbbd321a3"
+      "sha256": "1515dc39d18f19ae140cef2b5693e136ae5382e436dde489530a06afe344266e"
     },
     {
       "path": "migration.js",
@@ -79,7 +79,7 @@
     },
     {
       "path": "model.js",
-      "sha256": "792dda5cfc003d11bc5231eb51784d44dd0fb6a75f50ce19bb204998e04ca5cd"
+      "sha256": "07ad814b5e5f446da6103c0090471fbfe571e81eea53e5fbc0aa5de18e67f91b"
     },
     {
       "path": "native-runtime.js",
@@ -115,7 +115,7 @@
     },
     {
       "path": "preferences.js",
-      "sha256": "89d24eaffa12e5abb0a8eb8f2ecab7004059e78988b655b705347add9c25ddad"
+      "sha256": "5c772eba1c847cb3f1e1944ca37a5680fc3376750619487e07bb5354065a4b40"
     },
     {
       "path": "premium-surfaces.css",
@@ -139,11 +139,11 @@
     },
     {
       "path": "receiver-update-ui.css",
-      "sha256": "134b9721f592c84e7f1c72f3a448fcc46d4f062b07c11d1b9ba24bbdf48e8ca9"
+      "sha256": "9c78f72cafecff8f7c4f62d66f88518e249378fff4fc0b0c56e510f73e373da0"
     },
     {
       "path": "receiver-update-ui.js",
-      "sha256": "c19d6be5bc2c1fc598e475842dd1cabaca666032c493ba76cc94ac6a0686fd7e"
+      "sha256": "3afae0551bd02aaa0e1446e63fbf06b13d2aca738a6d7e1a24e91d6bdaec3676"
     },
     {
       "path": "receiver-visual.css",
@@ -171,7 +171,7 @@
     },
     {
       "path": "vendor/v21_animation_catalog.js",
-      "sha256": "ee390cce7e26d05e7e1e580b7fefadbfce3c75c5487f595ad2890bbbd324c860"
+      "sha256": "69f20eef364dd95606fad041f465adea070894c5d111f604767d5590596dc6b3"
     },
     {
       "path": "vendor/v21_tunnel_engine.js",

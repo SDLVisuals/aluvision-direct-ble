@@ -1033,7 +1033,8 @@
     spiPixelTunnelEffects:SPI_TUNNELS, spiSharedTunnelEffects:SPI_SHARED_TUNNELS,
     rgbwEffects: RGBW_EFFECTS, legacyNameMap: LEGACY_NAME_MAP,
     canonicalName: canonicalName, migrateLegacyNames: migrateLegacyNames,
-    effectState: effectState, sampleSpiPixel: sampleSpiPixel, sampleRgbwLine: sampleRgbwLine,
+    effectState: effectState, phaseFor: phaseFor, cyclesPerSecond: cyclesPerSecond,
+    sampleSpiPixel: sampleSpiPixel, sampleRgbwLine: sampleRgbwLine,
     opticalRgb: opticalRgb, install: install, validate: validate
   });
 }));

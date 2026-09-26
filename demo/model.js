@@ -26,7 +26,7 @@
   function issue(code, message) { var error = new Error(message); error.code = code; throw error; }
   function defaultState() {
     return { engine: 'STATIC', animation: 'Vaste kleur', variant: 0, r: 201, g: 78, b: 70, w: 0,
-      bri: 100, brightness: 100, speed: 30, smooth: 90, power: true, colors: ['#c94e46'],
+      bri: 100, brightness: 100, speed: 30, smooth: 100, power: true, colors: ['#c94e46'],
       whiteChannels: [0], rgbEnabled: [true], whiteEnabled: [false], direction: 'right', widthPixels: 4,
       transitionMs: 250, background: '#000000', backgroundOn: false, bgBrightness: 0 };
   }

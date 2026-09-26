@@ -1,82 +1,259 @@
-/* Consumer OTA sheet. Only typed native services may authorize firmware.
- * Closing a sheet stops local polling, not an in-flight receiver update. */
+/* Receiver firmware updates. Plans are read first; installation updates run
+ * one receiver at a time through the native, receiver-bound OTA services. */
 (function(root){
   'use strict';
+  const version=value=>typeof value==='string'&&/^\d{1,6}\.\d{1,6}\.\d{1,6}$/.test(value);
   const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const phases={preflight:'Receiver controleren',authorizing:'Update voorbereiden',uploading:'Software versturen',committing:'Software installeren',reconnecting:'Receiver start opnieuw',verifying:'Nieuwe software controleren',verified:'Bijgewerkt',verification_required:'Herstart nog controleren',interrupted:'Update onderbroken',journal_unconfirmed:'Bewaren nog niet bevestigd',aborting:'Annuleren controleren',cancelled:'Update geannuleerd'};
-  const terminal=new Set(['completed','failed','cancelled']);
-  function create({services={}}={}){
-    let dialog=null,receiver=null,plan=null,job=null,busy=false,error='',generation=0,timer=null,returnFocus=null;
-    function close(){generation++;clearTimeout(timer);timer=null;dialog?.close();if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});}
-    function exactJob(value){
-      if(!value||value.rid!==receiver.rid||value.receiverType!==receiver.type||typeof value.id!=='string'||!value.id||value.id.length>96||
-        !['queued','running','completed','failed','cancelled'].includes(value.state)||!Number.isFinite(value.progress)||value.progress<0||value.progress>100||
-        typeof value.phase!=='string'||typeof value.committed!=='boolean'||typeof value.cancelAllowed!=='boolean'||typeof value.toVersion!=='string'||
-        (value.state==='completed'&&(value.phase!=='verified'||value.progress!==100||value.committed!==true)))throw Error('UNCONFIRMED');
+  function create({services={},translate,pollIntervalMs=800}={}){
+    let dialog=null,entries=[],allReceivers=false,busy=false,busyKey='',generation=0,returnFocus=null;
+    let activeMonitorId=null,success=false;
+    const t=(key,params)=>typeof translate==='function'?translate(key,params):key;
+    function normalize(list){
+      if(!Array.isArray(list)||!list.length||list.length>60)return null;
+      const standId=list[0]?.standId,ids=new Set(),rids=new Set();
+      if(typeof standId!=='string'||!standId)return null;
+      const normalized=[];
+      for(const receiver of list){
+        if(!receiver||typeof receiver!=='object'||receiver.standId!==standId||
+          typeof receiver.id!=='string'||!receiver.id||receiver.id.length>96||
+          typeof receiver.rid!=='string'||!/^[A-F0-9]{16}$/.test(receiver.rid)||
+          !['RGBW','SPI'].includes(receiver.type)||!['main','node'].includes(receiver.role)||
+          receiver.lifecycle!=='added'||ids.has(receiver.id)||rids.has(receiver.rid))return null;
+        ids.add(receiver.id);rids.add(receiver.rid);
+        normalized.push({receiver:{...receiver},status:'checking',plan:null,job:null,errorCode:'',message:''});
+      }
+      return normalized;
+    }
+    function exactJob(value,entry){
+      if(!value||value.rid!==entry.receiver.rid||value.receiverType!==entry.receiver.type||
+        typeof value.id!=='string'||!value.id||value.id.length>96||
+        !['queued','running','completed','failed','cancelled'].includes(value.state)||
+        !Number.isInteger(value.progress)||value.progress<0||value.progress>100||
+        typeof value.phase!=='string'||typeof value.committed!=='boolean'||
+        typeof value.cancelAllowed!=='boolean'||typeof value.toVersion!=='string'||!version(value.toVersion)||
+        value.error!==undefined&&(typeof value.error!=='string'||value.error.length>80)||
+        value.state==='completed'&&(value.phase!=='verified'||value.progress!==100||value.committed!==true))throw Error('UNCONFIRMED');
       return value;
+    }
+    function exactPlan(value,entry){
+      if(!value||value.rid!==entry.receiver.rid||value.type!==entry.receiver.type||
+        !['ready','up-to-date','pending'].includes(value.status))throw Error('UNCONFIRMED');
+      if(value.status==='pending')return {status:value.status,job:exactJob(value.job,entry)};
+      if(!version(value.currentVersion))throw Error('UNCONFIRMED');
+      if(value.status==='ready'&&(typeof value.artifactId!=='string'||
+        !/^(rgbw|spi)-\d{1,6}\.\d{1,6}\.\d{1,6}-local-setup$/.test(value.artifactId)||
+        !version(value.toVersion)||!Number.isInteger(value.size)||value.size<65536))throw Error('UNCONFIRMED');
+      return value;
+    }
+    function errorKey(code){
+      const map={
+        OTA_DIRECT_WIFI_REQUIRED:'softwareErrorConnection',NATIVE_UNAVAILABLE:'softwareErrorConnection',
+        OTA_ACK_TIMEOUT:'softwareErrorAck',OTA_RECEIVER_REJECTED:'softwareErrorAck',
+        OTA_RESTART_NOT_VERIFIED:'softwareErrorRestart',OTA_ROLLBACK:'softwareErrorRollback',
+        OTA_TOPOLOGY_UNSUPPORTED:'softwareErrorTopology',OTA_TOPOLOGY_UNCONFIRMED:'softwareErrorTopologyUnconfirmed',
+        OTA_PROFILE:'softwareErrorTopologyUnconfirmed',NATIVE_TIMEOUT:'softwareErrorTimeout',
+        OTA_BUSY:'softwareErrorTimeout',OTA_UNEXPECTED_OFFSET:'softwareErrorAck'
+      };
+      return map[code]||'softwareErrorGeneric';
+    }
+    function messageFor(code){return t(errorKey(code));}
+    function phaseKey(job){
+      const map={preflight:'softwarePreparing',arming:'softwarePreparing',uploading:'softwareSending',
+        verifying:'softwareVerifying',reconnecting:'softwareRestarting',verified:'softwareUpdateFinished',
+        verification_required:'softwareRestarting',interrupted:'softwareFailed',error:'softwareFailed',
+        cancelled:'softwareCancelled'};
+      return map[job?.phase]||'softwareChecking';
+    }
+    function phaseLabel(job){return t(phaseKey(job));}
+    function orderedTargets(){return entries.filter(entry=>entry.status==='ready'||entry.status==='up-to-date')
+      .sort((a,b)=>Number(a.receiver.role==='main')-Number(b.receiver.role==='main'));}
+    function safeTitle(){return t('softwareUpdates');}
+    function rowMarkup(entry){
+      const receiver=entry.receiver,name=escape(receiver.name||receiver.type+' receiver');
+      let status='';
+      if(entry.status==='checking')status=`<small>${escape(t('softwareChecking'))}</small>`;
+      else if(entry.status==='ready')status=`<small>${escape(t('softwareUpdateAvailable',{current:entry.plan.currentVersion,version:entry.plan.toVersion}))}</small>`;
+      else if(entry.status==='up-to-date')status=`<small>${escape(t('softwareUpToDate',{version:entry.plan.currentVersion}))}</small>`;
+      else if(entry.status==='running')status=['arming','preflight'].includes(entry.job.phase)
+        ?`<small>${escape(phaseLabel(entry.job))}</small><span class="update-activity"><i aria-hidden="true"></i>${escape(t('softwareConnectionChecking'))}</span>`
+        :`<small>${escape(phaseLabel(entry.job))} · ${entry.job.progress}%</small><progress max="100" value="${entry.job.progress}" aria-label="${escape(phaseLabel(entry.job))}"></progress>`;
+      else if(entry.status==='waiting')status=`<small>${escape(t('softwareWaiting'))}</small>`;
+      else if(entry.status==='recovery')status=`<small class="update-warning" role="alert">${escape(messageFor(entry.job?.error||'OTA_RESTART_NOT_VERIFIED'))}</small>`;
+      else if(entry.status==='failed'||entry.status==='uncertain'||entry.status==='offline'){
+        const code=entry.errorCode||entry.job?.error||'';
+        status=`<small class="update-warning" role="alert">${escape(entry.message||messageFor(code))}</small>`;
+      }else if(entry.status==='cancelled')status=`<small>${escape(t('softwareCancelled'))}</small>`;
+      else if(entry.status==='complete')status=`<small>${escape(phaseLabel(entry.job))} · 100%</small><progress max="100" value="100" aria-label="${escape(phaseLabel(entry.job))}"></progress>`;
+      let action='';
+      if(!busy&&entry.status==='recovery')action=`<button class="text-button" data-update="resume" data-id="${escape(receiver.id)}">${escape(t('softwareResumeCheck'))}</button>`;
+      else if(!busy&&entry.status==='running'&&entry.job?.cancelAllowed&&!entry.job?.committed)action=`<button class="text-button" data-update="cancel" data-id="${escape(receiver.id)}">${escape(t('softwareCancel'))}</button>`;
+      return `<section class="card receiver-update-progress" data-update-row="${escape(receiver.id)}" data-state="${entry.status}"><div class="update-receiver-copy"><b>${name}</b><small>${escape(receiver.type)}</small>${status}</div>${action}</section>`;
     }
     function paint(){
       if(!dialog?.open)return;
-      const complete=job?.state==='completed'&&job.phase==='verified',running=job&&!terminal.has(job.state),resume=job?.committed&&!complete&&!running;
-      const percent=complete?100:Math.min(99,job?.progress||0);
-      let content=`<p>Blijf verbonden met het ALUVISION-wifi van je installatie. Je instellingen blijven bewaard.</p>`;
-      if(job){
-        content+=`<section class="card receiver-update-progress"><h3>${escape(complete?'Bijgewerkt':phases[job.phase]||'Update controleren')}</h3><p>${escape(receiver.type)} · versie ${escape(job.toVersion)}</p><progress max="100" value="${percent}" aria-label="Voortgang van de receiverupdate"></progress><b>${percent}%</b>${complete?'<p>De nieuwe software is actief.</p>':`<p>Laat alle receivers aan en blijf verbonden met het ALUVISION-wifi van je installatie. Sluiten stopt de update niet.</p>`}</section>`;
-        if(resume)content+='<button class="button full" data-update="resume">Herstart controleren</button>';
-        if(running&&job.cancelAllowed&&!job.committed)content+='<button class="button secondary full" data-update="cancel">Update annuleren</button>';
-        if(running&&error)content+='<button class="button full" data-update="status">Voortgang opnieuw controleren</button>';
-        if(!running&&!resume&&!complete)content+='<button class="button full" data-update="check">Opnieuw controleren</button>';
-      }else if(plan?.status==='ready'){
-        content+=`<section class="card"><span class="pill">Update beschikbaar</span><h3>${escape(plan.currentVersion)} → ${escape(plan.toVersion)}</h3><p>${(plan.size/1048576).toFixed(1)} MB · ${escape(receiver.type)}</p></section><button class="button full" data-update="start">Nu bijwerken</button>`;
-      }else if(plan?.status==='up-to-date')content+=`<section class="card"><h3>Je receiver is bijgewerkt</h3><p>Gecontroleerde versie: ${escape(plan.currentVersion)}</p></section>`;
-      else content+='<button class="button full" data-update="check">Controleren op updates</button>';
-      dialog.innerHTML=`<header><div><h2>Receiver bijwerken</h2><p>${escape(receiver.name)}</p></div><button class="icon-button" data-update="close" aria-label="Updatevenster sluiten">×</button></header>${content}<p role="alert" ${error?'':'hidden'}>${escape(error)}</p><p role="status" ${busy?'':'hidden'}>Even controleren…</p><button class="button secondary full" data-update="close">${running?'Sluiten · update gaat verder':'Terug naar receivers'}</button>`;
+      const allChecked=entries.length>0&&entries.every(entry=>['ready','up-to-date'].includes(entry.status));
+      const readyCount=entries.filter(entry=>entry.status==='ready').length;
+      const needsCheck=entries.some(entry=>['failed','uncertain','offline','cancelled'].includes(entry.status));
+      const hasRecovery=entries.some(entry=>entry.status==='recovery');
+      const hasRunning=entries.some(entry=>entry.status==='running');
+      let controls='';
+      if(!busy&&allChecked&&readyCount>0){
+        controls=`<button class="button full" data-update="all">${escape(allReceivers?t('softwareUpdateMany',{count:readyCount}):t('softwareUpdateOne'))}</button>`;
+      }else if(!busy&&allChecked&&readyCount===0){
+        controls=`<p class="update-all-current" role="status">${escape(t(success?'softwareUpdateFinished':'softwareAllCurrent'))}</p>`;
+      }else if(!busy&&!hasRecovery&&!hasRunning&&needsCheck){
+        controls=`<button class="button full" data-update="check">${escape(t('softwareCheckAgain'))}</button>`;
+      }
+      const statusLine=busy?`<p class="update-run-status" role="status" aria-live="polite">${escape(t(busyKey||'softwarePreflight'))}</p>`:'';
+      const body=`<header><div><h2>${escape(safeTitle())}</h2><p>${escape(t('softwareUpdateSubtitle'))}</p></div><button class="icon-button" data-update="close" aria-label="${escape(t('close'))}">×</button></header><p class="update-guidance">${escape(t('softwareUpdateKeepOpen'))} ${escape(t('softwareUpdateSequence'))}</p><div class="update-receiver-list">${entries.map(rowMarkup).join('')}</div>${controls}${statusLine}<button class="button secondary full" data-update="close">${escape(t('close'))}</button>`;
+      dialog.innerHTML=body;
       dialog.querySelectorAll('[data-update]:not([data-update="close"])').forEach(button=>{button.disabled=busy;});
     }
-    function schedule(){
-      clearTimeout(timer);timer=null;
-      if(dialog?.open&&job&&!terminal.has(job.state))timer=setTimeout(()=>perform('status'),800);
-    }
-    async function perform(action){
-      if(busy||!dialog?.open)return;
-      const token=generation;busy=true;error='';paint();
-      try{
-        const request={standId:receiver.standId,receiverId:receiver.id};let value;
-        if(action==='check'){
-          if(typeof services.otaPlan!=='function')throw Error('UNAVAILABLE');
-          value=await services.otaPlan(request);if(token!==generation)return;
-          if(value?.rid!==receiver.rid||value.type!==receiver.type)throw Error('UNCONFIRMED');
-          if(value.status==='pending'){job=exactJob(value.job);plan=null;}
-          else {
-            if(!['ready','up-to-date'].includes(value.status)||typeof value.currentVersion!=='string')throw Error('UNCONFIRMED');
-            if(value.status==='ready'&&(typeof value.artifactId!=='string'||typeof value.toVersion!=='string'||!Number.isInteger(value.size)||value.size<65536))throw Error('UNCONFIRMED');
-            plan=value;job=null;
-          }
-        }else{
-          const method={start:'otaStart',status:'otaStatus',resume:'otaResume',cancel:'otaCancel'}[action];
-          if(typeof services[method]!=='function')throw Error('UNAVAILABLE');
-          if(action==='start'){if(plan?.status!=='ready')throw Error('UNCONFIRMED');request.artifactId=plan.artifactId;}
-          else {if(!job)throw Error('UNCONFIRMED');request.jobId=job.id;}
-          value=await services[method](request);if(token!==generation)return;
-          const next=exactJob(value);if(action!=='start'&&next.id!==job.id)throw Error('UNCONFIRMED');job=next;
+    function close(){generation++;activeMonitorId=null;dialog?.close();if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});}
+    async function refreshPlans(token){
+      success=false;
+      for(const entry of entries){entry.plan=null;entry.job=null;entry.errorCode='';entry.message='';entry.status='checking';}
+      paint();
+      const order=[...entries].sort((a,b)=>Number(a.receiver.role==='main')-Number(b.receiver.role==='main'));
+      for(let index=0;index<order.length;index++){
+        const entry=order[index];if(token!==generation)return;
+        try{
+          if(typeof services.otaPlan!=='function')throw Object.assign(new Error('UNAVAILABLE'),{code:'NATIVE_UNAVAILABLE'});
+          const result=exactPlan(await services.otaPlan({standId:entry.receiver.standId,receiverId:entry.receiver.id}),entry);
+          entry.plan=result;
+          if(result.status==='pending'){
+            entry.job=result.job;
+            if(result.job.state==='running'||result.job.state==='queued')entry.status='running';
+            else if(result.job.committed&&result.job.state!=='completed')entry.status='recovery';
+            else entry.status='failed';
+          }else entry.status=result.status;
+        }catch(error){entry.status='offline';entry.errorCode=error?.code||'NATIVE_UNAVAILABLE';entry.message=messageFor(entry.errorCode);}
+        if(['running','recovery','failed'].includes(entry.status)){
+          for(const remaining of order.slice(index+1))remaining.status='waiting';
+          paint();return;
         }
-      }catch(_){
-        if(token!==generation)return;
-        error=job?.committed?'De herstart is nog niet bevestigd. Er wordt geen nieuwe update verstuurd. Blijf op de receiver-wifi en controleer opnieuw.':'De receiverupdate kon nog niet veilig worden bevestigd. Controleer je wifi en probeer opnieuw. Er wordt niets gewist.';
-        if(action==='status')clearTimeout(timer);
-      }finally{
-        if(token===generation){busy=false;paint();if(!error)schedule();}
+        paint();
       }
     }
-    function open(value){
-      if(!value||value.lifecycle!=='added'||!['main','node'].includes(value.role)||typeof value.id!=='string'||!value.id)throw Error('ADDED_RECEIVER_REQUIRED');
-      generation++;clearTimeout(timer);timer=null;receiver={...value};plan=null;job=null;busy=false;error='';returnFocus=document.activeElement;
-      if(!dialog){dialog=document.createElement('dialog');dialog.className='receiver-update-sheet';dialog.setAttribute('aria-label','Receiver bijwerken');document.body.append(dialog);
-        dialog.addEventListener('click',event=>{const button=event.target.closest('[data-update]');if(!button||button.disabled)return;button.dataset.update==='close'?close():perform(button.dataset.update);});
-        dialog.addEventListener('cancel',event=>{event.preventDefault();close();});}
-      dialog.showModal();paint();dialog.scrollTop=0;perform('check');
+    function pause(){return new Promise(resolve=>setTimeout(resolve,Math.max(0,pollIntervalMs)));}
+    function terminalState(entry,job){
+      entry.job=job;
+      if(job.state==='completed'&&job.phase==='verified'&&job.progress===100){entry.status='complete';entry.errorCode='';entry.message='';return true;}
+      if(job.state==='cancelled'){entry.status='cancelled';entry.errorCode='';entry.message='';return false;}
+      if(job.state==='failed'){
+        entry.status=job.committed?'recovery':'failed';entry.errorCode=job.error||'';
+        entry.message=messageFor(job.error||'OTA_RECEIVER_REJECTED');return false;
+      }
+      entry.status='running';return null;
     }
-    return Object.freeze({open,close});
+    async function monitorJob(entry,token,{batchIndex,total,batchOwned=false}={}){
+      if(!entry.job)return false;
+      let job=entry.job;
+      while(token===generation&&dialog?.open){
+        const finished=terminalState(entry,job);if(batchOwned)busyKey=phaseKey(job);paint();
+        if(finished!==null)return finished;
+        if(!batchOwned){busyKey='softwareSending';paint();}
+        await pause();if(token!==generation||!dialog?.open)return false;
+        try{
+          job=exactJob(await services.otaStatus({standId:entry.receiver.standId,receiverId:entry.receiver.id,jobId:job.id}),entry);
+        }catch(error){
+          entry.status=job.committed?'recovery':'uncertain';entry.errorCode=error?.code||'NATIVE_TIMEOUT';
+          entry.message=job.committed?messageFor('OTA_RESTART_NOT_VERIFIED'):messageFor(entry.errorCode);
+          paint();return false;
+        }
+        if(batchOwned)busyKey='softwareSending';
+      }
+      return false;
+    }
+    async function monitorPending(entry,token){
+      if(activeMonitorId||entry.status!=='running'||!entry.job)return;
+      activeMonitorId=entry.receiver.id;busy=false;busyKey='';paint();
+      const completed=await monitorJob(entry,token,{batchOwned:false});
+      if(token!==generation)return;
+      activeMonitorId=null;
+      if(completed){
+        busy=true;busyKey='softwarePreflight';paint();
+        await refreshPlans(token);
+        if(token!==generation)return;
+        busy=false;busyKey='';paint();
+        const another=entries.find(item=>item.status==='running');if(another)void monitorPending(another,token);
+      }else{busy=false;busyKey='';paint();}
+    }
+    async function check(){
+      if(busy)return;const token=generation;busy=true;busyKey='softwarePreflight';paint();
+      await refreshPlans(token);if(token!==generation)return;
+      busy=false;busyKey='';paint();
+      const pending=entries.find(entry=>entry.status==='running');if(pending)void monitorPending(pending,token);
+    }
+    async function updateAll(){
+      if(busy)return;const token=generation;busy=true;busyKey='softwarePreflight';paint();
+      await refreshPlans(token);if(token!==generation)return;
+      const allReady=entries.length&&entries.every(entry=>['ready','up-to-date'].includes(entry.status));
+      if(!allReady){busy=false;busyKey='';paint();const pending=entries.find(entry=>entry.status==='running');if(pending)void monitorPending(pending,token);return;}
+      const queue=orderedTargets().filter(entry=>entry.status==='ready');
+      if(!queue.length){busy=false;busyKey='';success=true;paint();return;}
+      for(let index=0;index<queue.length;index++){
+        if(token!==generation||!dialog?.open)return;
+        const entry=queue[index];busyKey='softwarePreparing';entry.status='running';entry.job={id:'',rid:entry.receiver.rid,receiverType:entry.receiver.type,toVersion:entry.plan.toVersion,state:'queued',phase:'arming',progress:1,committed:false,cancelAllowed:false};
+        busyKey='softwarePreflight';paint();
+        try{
+          if(typeof services.otaStart!=='function')throw Object.assign(new Error('UNAVAILABLE'),{code:'NATIVE_UNAVAILABLE'});
+          entry.job=exactJob(await services.otaStart({standId:entry.receiver.standId,receiverId:entry.receiver.id,artifactId:entry.plan.artifactId}),entry);
+          if(entry.job.toVersion!==entry.plan.toVersion||!['queued','running','completed','failed','cancelled'].includes(entry.job.state))throw Error('UNCONFIRMED');
+        }catch(error){entry.status='uncertain';entry.errorCode=error?.code||'NATIVE_TIMEOUT';entry.message=messageFor(entry.errorCode);paint();break;}
+        busyKey='softwareSending';paint();
+        const completed=await monitorJob(entry,token,{batchIndex:index+1,total:queue.length,batchOwned:true});
+        if(token!==generation||!dialog?.open)return;
+        if(!completed)break;
+      }
+      if(token!==generation||!dialog?.open)return;
+      const stopped=entries.some(entry=>['failed','uncertain','recovery','cancelled'].includes(entry.status));
+      if(!stopped){busyKey='softwarePreflight';paint();await refreshPlans(token);if(token!==generation)return;success=entries.length>0&&entries.every(entry=>entry.status==='up-to-date');}
+      busy=false;busyKey='';paint();
+    }
+    async function resume(receiverId){
+      if(busy)return;const entry=entries.find(item=>item.receiver.id===receiverId);if(!entry?.job||entry.status!=='recovery')return;
+      const token=generation;busy=true;busyKey='softwareRestarting';paint();
+      try{
+        entry.job=exactJob(await services.otaResume({standId:entry.receiver.standId,receiverId:entry.receiver.id,jobId:entry.job.id}),entry);
+        if(entry.job.state==='completed')entry.status='complete';else entry.status='running';
+        paint();const complete=await monitorJob(entry,token,{batchOwned:true});
+        if(token!==generation)return;
+        if(complete){busyKey='softwarePreflight';await refreshPlans(token);success=entries.every(item=>item.status==='up-to-date');}
+      }catch(error){entry.status='recovery';entry.errorCode=error?.code||'OTA_RESTART_NOT_VERIFIED';entry.message=messageFor(entry.errorCode);}
+      if(token!==generation)return;busy=false;busyKey='';paint();
+    }
+    async function cancel(receiverId){
+      if(busy)return;const entry=entries.find(item=>item.receiver.id===receiverId);if(!entry?.job||!entry.job.cancelAllowed||entry.job.committed)return;
+      const token=generation;busy=true;busyKey='softwareCurrent';paint();
+      try{entry.job=exactJob(await services.otaCancel({standId:entry.receiver.standId,receiverId:entry.receiver.id,jobId:entry.job.id}),entry);terminalState(entry,entry.job);}
+      catch(error){entry.status='uncertain';entry.errorCode=error?.code||'NATIVE_TIMEOUT';entry.message=messageFor(entry.errorCode);}
+      if(token!==generation)return;busy=false;busyKey='';paint();
+    }
+    function openList(value,scopeAll){
+      const normalized=normalize(Array.isArray(value)?value:[value]);if(!normalized)return false;
+      generation++;activeMonitorId=null;entries=normalized;allReceivers=scopeAll;
+      busy=true;busyKey='softwarePreflight';success=false;returnFocus=document.activeElement;
+      if(!dialog){dialog=document.createElement('dialog');dialog.className='receiver-update-sheet';dialog.setAttribute('aria-label',t('softwareUpdates'));
+        document.body.append(dialog);
+        dialog.addEventListener('click',event=>{
+          const button=event.target.closest('[data-update]');if(!button||button.disabled)return;
+          const action=button.dataset.update;
+          if(action==='close')close();else if(action==='all')void updateAll();else if(action==='check')void check();
+          else if(action==='resume')void resume(button.dataset.id);else if(action==='cancel')void cancel(button.dataset.id);
+        });
+        dialog.addEventListener('cancel',event=>{event.preventDefault();close();});
+      }
+      dialog.showModal();paint();dialog.scrollTop=0;
+      const token=generation;
+      void refreshPlans(token).then(()=>{
+        if(token!==generation||!dialog?.open)return;
+        busy=false;busyKey='';paint();
+        const pending=entries.find(entry=>entry.status==='running');if(pending)void monitorPending(pending,token);
+      });
+      return true;
+    }
+    return Object.freeze({open:receiver=>openList(receiver,false),openAll:receivers=>openList(receivers,true),close});
   }
   root.LightningReceiverUpdateUI=Object.freeze({create});
 })(window);
