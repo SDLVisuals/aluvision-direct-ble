@@ -24,6 +24,8 @@
   const selections = new Map();
   const expandedScopeZones = new Set();
   const brandColours = new Map();
+  const brandPalettes = new Map();
+  let spatialEffectView=true;
   const BRAND_TONES = Object.freeze([
     Object.freeze({id:'aluvision-rood',name:'Aluvision rood',value:'#C94E46'}),
     Object.freeze({id:'warm-amber',name:'Warm amber',value:'#E9A04B'}),
@@ -485,9 +487,9 @@
     const s = selectedState();
     const galleryAction=route.screen==='controls'?'animation-gallery':'animations-gallery';
     const galleryButton=['controls','animations'].includes(route.screen)?`<button class="button secondary animation-gallery-return" data-action="${galleryAction}" aria-label="Terug naar animatiegalerij">${icon('back')}<span>Galerij</span></button>`:'';
-    const paletteTitle=effect.category==='brand'?effect.id==='v30-brand-focus'?'Merkkleuren · tik om te wijzigen':'Accentkleur · tik om te wijzigen':effect.paletteEditable===false?'Kleurenreeks':'Animatiekleuren · tik om te wijzigen';
+    const paletteTitle=effect.category==='brand'?(effect.id==='v30-brand-focus'||effect.id.startsWith('v31-ref-'))?'Merkkleuren · tik om te wijzigen':'Accentkleur · tik om te wijzigen':effect.paletteEditable===false?'Kleurenreeks':'Animatiekleuren · tik om te wijzigen';
     const paletteHelp=effect.id==='v30-brand-focus'?'<p class="palette-guidance">Voeg kleuren toe voor je merkaccent. De gloed laat ze na elkaar zien langs de ledlines.</p>':'';
-    const content = `<div class="current-effect"><span class="menu-icon">${icon('animation')}</span><div><small>Actieve animatie · ${esc(categoryLabel(effect.category))}</small><b>${esc(Library.displayName(effect))}</b><small>${esc(effect.description)}</small></div>${galleryButton}</div><section class="card palette-section"><h2>${paletteTitle}</h2>${paletteHelp}<div class="palette" aria-label="Animatiekleuren">${paletteMarkup(s)}</div>${animationSlider('bri','Kleurhelderheid',0,100,s.bri??100,'%')}${resetMarkup('bri','Kleurhelderheid')}${backgroundControls(effect)}${effect.controls.includes('speed')?`${animationSlider('speed','Snelheid',0,100,s.speed??30,'%')}${resetMarkup('speed','Snelheid')}`:''}</section>${animationControls(effect)}<button class="button secondary full" data-action="preset-save">＋ Animatie bewaren</button>`;
+    const content = `<div class="current-effect"><span class="menu-icon">${icon('animation')}</span><div><small>Actieve animatie · ${esc(categoryLabel(effect.category))}</small><b>${esc(Library.displayName(effect))}</b><small>${esc(effect.description)}</small></div>${galleryButton}</div>${effect.id.startsWith('v31-ref-')?referenceEditorPreview(effect):''}<section class="card palette-section"><h2>${paletteTitle}</h2>${paletteHelp}<div class="palette" aria-label="Animatiekleuren">${paletteMarkup(s)}</div>${animationSlider('bri','Kleurhelderheid',0,100,s.bri??100,'%')}${resetMarkup('bri','Kleurhelderheid')}${backgroundControls(effect)}${effect.controls.includes('speed')?`${animationSlider('speed','Snelheid',0,100,s.speed??30,'%')}${resetMarkup('speed','Snelheid')}`:''}</section>${animationControls(effect)}<button class="button secondary full" data-action="preset-save">＋ Animatie bewaren</button>`;
     return `<section class="active-animation-workspace" aria-label="Animatie aanpassen">${content}</section>`;
   }
   function renderAnimations() {
@@ -495,9 +497,18 @@
     if(!effect)return renderEffects();
     return `<div class="editor-grid">${controlContext('animations')}<section class="editor-controls">${selector()}${animationEditorMarkup(effect)}</section></div>`;
   }
+  function currentBrandPalette(){
+    const chosen=brandPalettes.get(route.zoneId);if(chosen)return chosen;
+    const saved=receivers().find(receiver=>receiver.state?.category==='brand')?.state;
+    return saved?.colors?.length?saved.colors.slice(0,4):[brandColours.get(route.zoneId)||'#C94E46'];
+  }
   function brandTonePicker() {
-    const selected=brandColours.get(route.zoneId)||'#C94E46';
-    return `<section class="brand-tone-picker" aria-label="Merkaccent kiezen"><div class="brand-tone-heading"><b>Merkaccent</b><small>Kies een kleur voor de merkvoorbeelden</small></div><div class="brand-tone-options" role="group" aria-label="Beschikbare merkkleuren">${BRAND_TONES.map(tone=>`<button class="brand-tone-option" type="button" data-action="brand-tone" data-id="${tone.id}" aria-label="${tone.name}" aria-pressed="${selected.toLowerCase()===tone.value.toLowerCase()}" title="${tone.name}" style="--brand-tone:${tone.value}"><i aria-hidden="true"></i><span>${tone.name}</span></button>`).join('')}</div><small class="brand-tone-note">Je verlichting verandert pas wanneer je een animatie kiest.</small></section>`;
+    const palette=currentBrandPalette(),selected=palette[0];
+    return `<section class="brand-tone-picker" aria-label="Merkaccent kiezen"><div class="brand-tone-heading"><b>Jouw merkkleuren</b><small>Kies tot vier kleuren. De voorbeelden hieronder gebruiken ze meteen.</small></div><div class="brand-palette-slots">${palette.map((hex,i)=>`<div class="brand-palette-slot"><label><input type="color" value="${hex}" data-brand-colour="${i}" aria-label="Merkkleur ${i+1}"><span>Kleur ${i+1}</span></label>${palette.length>1?`<button data-action="brand-colour-remove" data-id="${i}" aria-label="Merkkleur ${i+1} verwijderen">−</button>`:''}</div>`).join('')}${palette.length<4?'<button class="button secondary" data-action="brand-colour-add">＋ Kleur</button>':''}</div><details class="brand-suggestions"><summary>Kleurideeën</summary><div class="brand-tone-options" role="group" aria-label="Beschikbare merkkleuren">${BRAND_TONES.map(tone=>`<button class="brand-tone-option" type="button" data-action="brand-tone" data-id="${tone.id}" aria-label="${tone.name}" aria-pressed="${selected.toLowerCase()===tone.value.toLowerCase()}" title="${tone.name}" style="--brand-tone:${tone.value}"><i aria-hidden="true"></i><span>${tone.name}</span></button>`).join('')}</div></details><small class="brand-tone-note">Kies een animatie om deze kleuren op je verlichting toe te passen.</small></section>`;
+  }
+  function referenceEditorPreview(effect){
+    const list=effect.category==='tunnel'?receivers():selected(),shape=effect.referenceView==='frames'||effect.id==='v31-ref-brand-outline'?'frames':'canopy';
+    return `<details class="reference-editor-preview card" aria-label="Ruimtelijk animatievoorbeeld"><summary>${icon('zones')}<b>3D-voorbeeld bekijken</b>${icon('chevron')}</summary><div class="reference-preview-body"><div class="section-heading"><div><b>Zo beweegt je licht</b><small>${ledlineCount(list.length)} · voorbeeldopstelling</small></div><button class="button secondary" data-action="reference-view" aria-pressed="${spatialEffectView}">${spatialEffectView?'Lijnen':'3D'}</button></div>${addPreview(list,zone().layout,'reference-large-preview',{zoneId:zone().id,visibleReceiverIds:list.map(r=>r.id),preserveZoneGeometry:true,spatialShape:spatialEffectView?shape:null,label:Library.displayName(effect)+' op je ledlines'})}<small>De nummers volgen de volgorde in Opstelling.</small></div></details>`;
   }
   function categoryLabel(key) {
     return Library.categories.find(category=>category.key===key)?.title||({catalogue:'Alle',presets:'Mijn animaties'})[key]||'Animaties';
@@ -510,10 +521,12 @@
     const state={...backgroundDefaults(),...copy(effect.state),category:effect.category,v30Effect:effect.state.v30Effect||null,previewFamily:effect.state.previewFamily||null,legacySpi:effect.state.legacySpi===true,bounce:effect.state.bounce===true,mirror:effect.state.mirror===true,on:true,power:true};
     if(effect.controls.includes('smooth'))state.smooth=100;
     if(effect.category==='brand'){
-      const accent=brandColours.get(route.zoneId)||state.brandColor||state.colors?.[0]||'#C94E46';
+      const accent=currentBrandPalette()[0];
       state.brandColor=accent;
-      if(effect.id==='v30-brand-focus'||effect.id.startsWith('spi-')&&effect.state.engine!=='WARM'&&!/white/i.test(effect.name)){
-        state.colors=[accent];state.colorCount=1;state.whiteChannels=[0];state.rgbEnabled=[true];state.whiteEnabled=[false];
+      if(effect.paletteEditable!==false){
+        const palette=currentBrandPalette();
+        const chosen=palette.slice(0,effect.colorCountRange?.max||4);
+        state.colors=chosen;state.colorCount=chosen.length;state.whiteChannels=chosen.map(()=>0);state.rgbEnabled=chosen.map(()=>true);state.whiteEnabled=chosen.map(()=>false);
       }
     }
     return state;
@@ -547,7 +560,8 @@
     // which makes distinct animations look frozen and alike while browsing.
     // Accelerate only these disposable gallery samples; the selected effect,
     // its settings and the main installation preview keep their real speed.
-    const previewState={...effectState(effect),speed:Math.max(effect.category==='brand'?58:75,Number(effect.state.speed)||0)};
+    const reference=effect.id.startsWith('v31-ref-');
+    const previewState={...effectState(effect),speed:reference?effect.state.speed:Math.max(effect.category==='brand'?58:75,Number(effect.state.speed)||0)};
     const separateSelection=selection().kind==='receivers',representativeOnly=!tunnel&&!separateSelection;
     const sampleType=zone().type||'RGBW';
     const physicalLines=tunnel?receivers():selected();
@@ -555,7 +569,7 @@
       outputs:sampleType==='SPI'?[{port:1,enabled:true,pixels:32,reversed:false}]:[],state:previewState}]
       :physicalLines.map(r=>({...r,state:previewState}));
     const lineNumbers=Object.fromEntries(receivers().map((receiver,index)=>[receiver.id,index+1]));
-    return addPreview(list,representativeOnly?'stacked':zone().layout,'',{label:Library.displayName(effect),effectId:effect.id,brand:effect.category==='brand',labels:!representativeOnly,lineNumbers});
+    return addPreview(list,representativeOnly?'stacked':zone().layout,reference?'reference-preview':'',{label:Library.displayName(effect),effectId:effect.id,brand:effect.category==='brand',brandPaletteLimit:effect.paletteEditable===false?0:effect.colorCountRange?.max||4,labels:!representativeOnly,lineNumbers,spatialShape:reference&&tunnel?effect.referenceView:null});
   }
   function tunnelIllustration() {
     // Product-inspired teaching model, not a CAD model or the user's actual
@@ -610,6 +624,7 @@
     const status=count<2?`Nog ${2-count} ${count===1?'ledline':'ledlines'} nodig`:together?'Klaar voor tunneleffecten':'Selecteer alle ledlines';
     const detail=count<2?`${ledlineCount(count)} in ${zone().name}`:together?`${ledlineCount(count)} · in de volgorde van Opstelling`:`${ledlineCount(count)} · een tunnel bedien je samen`;
     const action=count<2?`<button class="button full" data-action="layout-receiver-add" data-zone="${esc(zone().id)}"><span aria-hidden="true">＋</span> Ledline toevoegen</button>`:!together?'<button class="button full" data-action="tunnel-together">Alle ledlines samen bedienen</button>':'';
+    if(zone().type==='SPI')return `<section class="tunnel-guide tunnel-guide-compact" aria-label="Tunneleffecten"><header class="tunnel-guide-heading"><div><h2>Licht over meerdere ledlines</h2><p>${count<2?'Vanaf twee ledlines wordt de beweging over de hele opstelling verdeeld.':`Kies een beweging. De app verdeelt die over je ${count} ledlines.`}</p></div></header><div class="tunnel-status"><div><strong>${status}</strong><small>${esc(detail)}</small></div>${action}</div><details class="tunnel-arrangement-help"><summary>Hoe zet ik mijn ledlines klaar?</summary><p>Leg de ledlines naast elkaar, met het begin aan dezelfde kant. Zet ze in <b>Opstelling</b> in de juiste volgorde. Kies <b>Onder elkaar</b> of <b>Verticaal</b>. De nummers in het voorbeeld volgen die volgorde.</p><p>Liggen ze achter elkaar als één lange lijn? Kies dan <b>Doorlopend</b>.</p><button class="button secondary full" data-action="layout">Opstelling bekijken</button></details></section>`;
     // A teaching illustration, never a substitute for the actual installation.
     // Effect cards below still use its real receiver count, order and layout.
     return `<section class="tunnel-guide" aria-label="Tunneleffecten"><header class="tunnel-guide-heading"><div><h2>Licht door de tunnel</h2><p>Van voor naar achter, in één beweging.</p></div><span class="tunnel-motion-symbol" aria-hidden="true">${icon('chevron')}${icon('chevron')}</span></header><figure class="tunnel-visual">${tunnelIllustration()}<figcaption><span>Tunnelvoorbeeld · 4 lichtzones</span><span class="tunnel-sequence" aria-hidden="true">${[0,1,2,3].map(i=>`<i class="arch-${i}"></i>`).join('')}</span></figcaption></figure><div class="tunnel-status"><div><strong>${status}</strong><small>${esc(detail)}</small></div>${action}</div></section>`;
@@ -1083,6 +1098,7 @@
         let reason='Je receiver antwoordt niet. Controleer de verbinding en probeer opnieuw.';
         if(codes.has('OUTPUT_CONFIGURATION_PENDING'))reason='De gewijzigde poortinstellingen zijn nog niet bevestigd. Controleer Pixels / kant instellen bij je receiver.';
         else if(codes.has('LIVE_CONTROL_PROFILE'))reason='Deze receiver komt niet overeen met je opgeslagen installatie. Open Receivers om dit te controleren.';
+        else if(codes.has('LIVE_CONTROL_FIRMWARE_UPDATE'))reason='Deze animatie heeft SPI-software 21.1.45 of nieuwer nodig op alle gekozen receivers. Je huidige verlichting is niet gewijzigd.';
         else if(['LIVE_CONTROL_BUSY','NATIVE_BUSY','OTA_BUSY','REMOVAL_BUSY'].some(code=>codes.has(code)))reason='Er loopt nog een receiveractie. Probeer zo opnieuw.';
         else if(['LIVE_CONTROL_CANCELLED','CANCELLED'].some(code=>codes.has(code)))reason='Versturen is onderbroken. Je keuze staat nog in het voorbeeld.';
         message=applied?`${targets.length-applied} van ${targets.length} receivers antwoordt nog niet. ${reason}`:reason;
@@ -1205,8 +1221,11 @@
       const spec=previews.get(canvas.dataset.preview);if(!spec)return;
       if(!secondary&&!spec.main)return;
       const zoneList=spec.zoneId?M.zoneReceivers(model,spec.zoneId):null;
-      const list=zoneList?(spec.visibleReceiverIds?zoneList.filter(receiver=>spec.visibleReceiverIds.includes(receiver.id)):zoneList):spec.brand?spec.receivers.map(r=>({...r,state:{...r.state,brandColor:brandColours.get(route.zoneId)||r.state.brandColor}})):spec.receivers;
-      P.draw(canvas,{...spec,receivers:list,selection:spec.main?selection():spec.selection,
+      const list=zoneList?(spec.visibleReceiverIds?zoneList.filter(receiver=>spec.visibleReceiverIds.includes(receiver.id)):zoneList):spec.brand?spec.receivers.map(r=>{
+        const palette=brandPalettes.get(route.zoneId)?.slice(0,spec.brandPaletteLimit||0);
+        return {...r,state:{...r.state,brandColor:brandColours.get(route.zoneId)||r.state.brandColor,...(palette?.length?{colors:palette,colorCount:palette.length,whiteChannels:palette.map(()=>0),rgbEnabled:palette.map(()=>true),whiteEnabled:palette.map(()=>false)}:{})}};
+      }):spec.receivers;
+      P.draw(canvas,{...spec,receivers:list,geometryReceivers:spec.preserveZoneGeometry?zoneList:undefined,selection:spec.main?selection():spec.selection,
         selectionFeedback:spec.main===true,identifying:spec.main?identifying:undefined,identificationTime:time,reducedMotion:reduce,
         time:reduce&&!spec.main?1.5:time});
     });
@@ -1446,7 +1465,7 @@
     const count=M.zoneReceivers(model,z.id).length,next=await persistManagement(M.deleteZone(model,z.id),{kind:'delete',zoneId},consent.signature);
     if(!next)return;
     // This is zone membership only; never invoke receiver removal, reset or PIN services.
-    model=next;selections.delete(zoneId);brandColours.delete(zoneId);
+    model=next;selections.delete(zoneId);brandColours.delete(zoneId);brandPalettes.delete(zoneId);
     if(sceneDraft)sceneDraft.zoneIds=sceneDraft.zoneIds.filter(id=>id!==zoneId);
     receiverAssignment=null;nameDialog=null;closeEffectDialog();
     if(count){receiverFilter='unassigned';navigate('receivers',{zoneId:null});}
@@ -1503,7 +1522,7 @@
       }
       model=next;retainSetupSelections();zoneDeletion=null;receiverAssignment=null;nameDialog=null;
       if(request.kind==='delete'){
-        brandColours.delete(request.zoneId);
+        brandColours.delete(request.zoneId);brandPalettes.delete(request.zoneId);
         if(sceneDraft)sceneDraft.zoneIds=sceneDraft.zoneIds.filter(id=>id!==request.zoneId);
       }
       // Setup owns its current panel and focus. No navigate/render, receiver
@@ -1646,7 +1665,7 @@
           if(nativeContext){window.location.reload();return;}
           onboarding.reset();model=M.assertValid(runtime?.emptyModel?.()||{schemaVersion:30,demo:webDemoContext,stands:[],receivers:[],scenes:[],presets:[]});
           savedPresets=presetStore.load();savedColours=colourStore.load();savedScenes=sceneStore.load();uiPreferences=preferenceStore.load();
-          selections.clear();brandColours.clear();visualPorts.clear();visualPlugMotions.clear();identifying.clear();expandedReceivers.clear();expandedConnections.clear();
+          selections.clear();brandColours.clear();brandPalettes.clear();visualPorts.clear();visualPlugMotions.clear();identifying.clear();expandedReceivers.clear();expandedConnections.clear();
           sceneDraft=null;receiverFilter='all';route={screen:'receiver-add',setupFrom:'stand',zoneId:null,family:null,library:'all'};
           closeEffectDialog();render({top:true});return;
         }catch(failure){
@@ -1888,8 +1907,15 @@
       }
       if(action==='brand-tone'){
         const tone=BRAND_TONES.find(item=>item.id===id);if(!tone)return;
-        brandColours.set(route.zoneId,tone.value);return render({preserveScroll:true});
+        brandColours.set(route.zoneId,tone.value);brandPalettes.set(route.zoneId,[tone.value]);return render({preserveScroll:true});
       }
+      if(action==='brand-colour-add'||action==='brand-colour-remove'){
+        const palette=[...currentBrandPalette()];
+        if(action==='brand-colour-add'&&palette.length<4)palette.push(['#C94E46','#F0B95F','#FFFFFF','#4865C8'][palette.length]);
+        if(action==='brand-colour-remove'&&palette.length>1&&Number.isInteger(Number(id))&&Number(id)>=0&&Number(id)<palette.length)palette.splice(Number(id),1);
+        brandPalettes.set(route.zoneId,palette);brandColours.set(route.zoneId,palette[0]);return render({preserveScroll:true});
+      }
+      if(action==='reference-view'){spatialEffectView=!spatialEffectView;render({preserveScroll:true});const preview=main.querySelector('.reference-editor-preview');if(preview)preview.open=true;return;}
       if(action==='library'){
         if(route.screen==='controls'&&button.closest('[data-control-mode="animations"]')){
           route={...route,family:null,library:id,effectsReturn:'controls'};showControlAnimationGallery=true;return render({preserveScroll:true});
@@ -2002,6 +2028,12 @@
   document.addEventListener('input',event=>{
     const input=event.target;
     try {
+      if(input.matches('[data-brand-colour]')){
+        if(!/^#[0-9a-f]{6}$/i.test(input.value))return;
+        const palette=[...currentBrandPalette()],index=Number(input.dataset.brandColour);
+        if(!Number.isInteger(index)||index<0||index>=palette.length)return;
+        palette[index]=input.value;brandPalettes.set(route.zoneId,palette);brandColours.set(route.zoneId,palette[0]);return;
+      }
       if(input.matches('[data-security-pin],[data-security-pin-repeat]')){
         const panel=input.closest('[data-pin-protection-dialog]'),first=panel?.querySelector('[data-security-pin]'),repeat=panel?.querySelector('[data-security-pin-repeat]');
         if(panel)panel.querySelector('[data-action="pin-protection-save"]').disabled=!/^\d{8,12}$/.test(first.value)||first.value!==repeat.value;

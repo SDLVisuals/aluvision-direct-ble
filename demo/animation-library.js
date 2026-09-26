@@ -35,6 +35,7 @@
       descriptor('warm','Warm wit','Warme kleurmixen en zachte wittinten.','warmwit warm white amber wit temperatuur')
     ]),
     tunnel:Object.freeze([
+      descriptor('reference','Lichtbanen & contouren','Lichtbanen, kleurpakketjes en contouren over meerdere ledlines.','video videos referentie plafond contour lint pakket amber'),
       descriptor('waves','Golven & pulsen','Een golf of puls reist van receiver naar receiver.','golf golven lichtgolf licht golf wave ripple puls pulse ademen echo heen terug pendulum'),
       descriptor('travel','Reizend licht','Een lichtpunt of bundel trekt door de opstelling.','chase comet komeet meteoor scanner sweep reizen looplicht diepte'),
       descriptor('symmetry','Midden & symmetrie','Licht opent naar buiten of beweegt naar het midden.','mirror spiegel spiegelen midden center centre outside binnen buiten symmetrisch kruis cross'),
@@ -44,6 +45,7 @@
       descriptor('pixels','Pixelgolven','Beweging in elke pixellijn reist door naar de volgende.','pixel pixelgordijn gordijn curtain kruisende pixelgolven cross')
     ]),
     brand:Object.freeze([
+      descriptor('reference','Rustig voor je beursstand','Vloeiende merkkleuren en zachte lichtaccenten.','video videos referentie merk contour lint zijde rustig beurs'),
       descriptor('white','Wit & warme sfeer','Rustig wit, warm licht en zachte overgangen.','wit warm warmwit white breathe ademen ademend rustig avond presentatie'),
       descriptor('colour','Kleur door de ruimte','Je gekozen kleur vloeit rustig over de ledlines.','brand corporate huisstijl merk kleur kleuren accent gradient verloop flow golf beurs welkom'),
       descriptor('pulse','Zachte kleurpuls','Een gekozen kleur ademt rustig op en neer.','pulse pulseren ademen ademend ritme'),
@@ -95,6 +97,7 @@
   const category = key => CATEGORIES.find(item => item.key === key) || null;
   function classification(effect) {
     if (!effect || !category(effect.category)) return null;
+    if(effect.id.startsWith('v31-ref-'))return DEFINITIONS[effect.category].find(item=>item.key==='reference');
     let key;
     if (effect.category === 'whole') key = ({Kleurwissel:'colour',Pulse:'pulse',Flow:'flow',Sparkle:'flash'})[effect.family];
     if (effect.category === 'pixels') key = PIXEL_FAMILIES[effect.family];

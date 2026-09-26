@@ -28,8 +28,9 @@
     if(!receiver||!['RGBW','SPI'].includes(receiver.type))return null;
     const state=receiver.state||{},spi=receiver.type==='SPI';
     let extension=state.engine==='V30'||state.v30Effect;
-    let extensionId=extension?V30_EFFECTS.indexOf(state.v30Effect)+1:0;
-    if(extension&&(!extensionId||!spi&&[13,14].includes(extensionId)))return null;
+    const reference=typeof module==='object'&&module.exports?require('./reference-animations.js'):globalThis.LightningReferenceAnimations;
+    let extensionId=extension?(reference.wireId(state.v30Effect)||V30_EFFECTS.indexOf(state.v30Effect)+1):0;
+    if(extension&&(!extensionId||!spi&&([13,14].includes(extensionId)||extensionId>=31)))return null;
     let engine=state.engine||'STATIC',variant=Number(state.variant??0);
     if(extension){engine='BREATHE';variant=0;}
     if(!(spi?SPI_ENGINES:RGBW_ENGINES).includes(engine)||!Number.isInteger(variant)||variant<0||variant>(spi?181:31))return null;
@@ -75,7 +76,7 @@
     }
     if(extension){
       const brand=colour(state.v30Effect==='v30-brand-focus'?hex[0]||'#C94E46':state.brandColor||hex[0]||'#C94E46',0);
-      scene.v30={effect:extensionId,fadeAmount:number(extensionId>=21?state.spacing:state.fadeAmount,90,0,100),
+      scene.v30={effect:extensionId,fadeAmount:number(extensionId>=21&&extensionId<=30?state.spacing:state.fadeAmount,90,0,100),
         width:number(state.width,65,0,100),delayMs:number(state.delayMs,300,0,10000),brand};
       if(Object.values(scene.v30).some(value=>value===null))return null;
       if(state.on===false||state.power===false)scene.backgroundOn=false;

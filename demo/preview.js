@@ -8,10 +8,11 @@
     ? require('./vendor/v21_animation_catalog.js') : root.AluvisionV21AnimationCatalog;
   const extension = typeof module === 'object' && module.exports
     ? require('./animation-engine.js') : root.LightningAnimationEngine;
-  const api = factory(canonical, extension);
+  const references = typeof module === 'object' && module.exports ? require('./reference-animations.js') : root.LightningReferenceAnimations;
+  const api = factory(canonical, extension, references);
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.LightningPreview = api;
-}(typeof globalThis !== 'undefined' ? globalThis : this, function (canonical, extension) {
+}(typeof globalThis !== 'undefined' ? globalThis : this, function (canonical, extension, references) {
   'use strict';
   if (!canonical) throw new Error('Load the V30 vendored animation catalog before preview.js');
   if (!extension) throw new Error('Load animation-engine.js before preview.js');
@@ -497,7 +498,7 @@ function usesCyclePhaseSteps(state) {
     const preserved = type === 'RGBW'
       ? canonical.rgbwEffects.filter(effect => effect.engine !== 'STATIC').map(effect => entry(effect, type))
       : legacySpi.catalog().concat(canonical.spiEffects.map(effect => entry(effect, type)), whole.map(effect => entry(effect, type, true)));
-    return preserved.concat(extension.catalog(type));
+    return preserved.concat(extension.catalog(type),references.catalog(type));
   }
   const descriptors = new Map(['RGBW', 'SPI'].flatMap(type => catalog(type).map(effect =>
     [effect.state.v30Effect || [type, effect.state.engine, effect.state.variant, effect.state.previewFamily || ''].join(':'), effect])));
@@ -600,10 +601,11 @@ function usesCyclePhaseSteps(state) {
       const input = { state, receiverIndex: geo.lineIndex, receiverCount: geo.lineCount,
         receiverType: receiver.type, time, pixelCount: geo.pixelCount,
         totalPixels: group.totalPixels, layout: group.layout };
-      if (receiver.type === 'RGBW') return [extension.sample({ ...input, pixelIndex: 0, globalPixel: geo.offset })];
+      const engine=references.supports(state.v30Effect)?references:extension;
+      if (receiver.type === 'RGBW') return [engine.sample({ ...input, pixelIndex: 0, globalPixel: geo.offset })];
       return geo.outputs.flatMap(output => Array.from({ length: output.pixels }, (_, pixel) => {
         const oriented = output.reversed ? output.pixels - 1 - pixel : pixel;
-        return extension.sample({ ...input, pixelIndex: output.localOffset + oriented, globalPixel: output.offset + oriented });
+        return engine.sample({ ...input, pixelIndex: output.localOffset + oriented, globalPixel: output.offset + oriented });
       }));
     }
     if (isStatic || receiver.type === 'RGBW' || state.previewFamily === 'RGBW') {
@@ -635,7 +637,7 @@ function usesCyclePhaseSteps(state) {
   }
   function rows(options) {
     const receivers = options.receivers || [];
-    const group = geometry(receivers, options.layout);
+    const group = geometry(options.geometryReceivers || receivers, options.layout);
     const frame = {
       geometry: group,
       rows: receivers.map(receiver => {
@@ -702,6 +704,37 @@ function usesCyclePhaseSteps(state) {
     materials.set(css,material);
     return material;
   }
+  // A projection of the SAME sampled pixels, not a second canned animation.
+  // View shape changes presentation only; it never changes output mapping.
+  function drawSpatial(context,frame,width,height,shape) {
+    const count=frame.rows.length;
+    const point=(index,u)=>{
+      const spread=(index+.5)/count;
+      if(shape==='frames'){
+        const depth=count===1?0:index/(count-1),scale=1-depth*.57;
+        const corners=[[-.36,.34],[.36,.34],[.36,-.34],[-.36,-.34],[-.36,.34]];
+        const pos=u*4,k=Math.min(3,Math.floor(pos)),f=pos-k;
+        return [width*(.5+(corners[k][0]*(1-f)+corners[k+1][0]*f)*scale+depth*.07),height*(.51+(corners[k][1]*(1-f)+corners[k+1][1]*f)*scale-depth*.08)];
+      }
+      const x=.11+spread*.78;
+      if(u<.32)return [width*x,height*(.88-u/.32*.32)];
+      const t=(u-.32)/.68,bend=Math.sin(Math.min(1,t*3)*Math.PI/2);
+      return [width*(.52+(x-.52)*(1-t*.56)),height*(.56-.18*bend-.24*t)];
+    };
+    context.lineCap='round';context.lineJoin='round';
+    for(let rowIndex=count-1;rowIndex>=0;rowIndex--){
+      const row=frame.rows[rowIndex],steps=Math.min(144,Math.max(32,row.pixels.length)),thickness=Math.max(1.2,Math.min(5,width/count*.055));
+      const points=Array.from({length:steps+1},(_,i)=>point(rowIndex,i/steps));
+      context.beginPath();points.forEach(([x,y],i)=>i?context.lineTo(x,y):context.moveTo(x,y));context.strokeStyle='#303937';context.lineWidth=thickness+2;context.stroke();
+      for(let i=0;i<steps;i++){
+        const color=row.pixels[Math.min(row.pixels.length-1,Math.floor((i+.5)/steps*row.pixels.length))]||[0,0,0];
+        const [r,g,b]=color;context.strokeStyle=`rgb(${r},${g},${b})`;context.shadowColor=context.strokeStyle;context.shadowBlur=Math.max(r,g,b)>35?5:0;
+        context.lineWidth=thickness;context.beginPath();context.moveTo(...points[i]);context.lineTo(...points[i+1]);context.stroke();
+      }
+      context.shadowBlur=0;
+      if(count<=8&&height>=130){const p=point(rowIndex,0),number=(frame.geometry.receivers.find(r=>r.receiverId===row.receiverId)?.lineIndex??rowIndex)+1;context.fillStyle='#bcc6c1';context.font='10px system-ui';context.textAlign='center';context.fillText(String(number),p[0],Math.min(height-6,p[1]+14));}
+    }
+  }
   function draw(canvas, options = {}) {
     const frame = rows(options);
     if (canvas.dataset) {
@@ -725,6 +758,10 @@ function usesCyclePhaseSteps(state) {
       context.fillStyle = '#a8b0ab'; context.font = '13px system-ui';
       context.textAlign = 'center'; context.fillText('Nog geen receivers in deze zone', width / 2, height / 2);
       return frame;
+    }
+    if(options.spatialShape){
+      if(canvas.dataset){canvas.dataset.spatialShape=options.spatialShape;canvas.dataset.spatialLineCount=String(frame.rows.length);}
+      drawSpatial(context,frame,width,height,options.spatialShape);return frame;
     }
     const byReceiver = options.presentation === 'receivers' || options.layout !== 'continuous' && frame.rows.some(row => row.category === 'tunnel');
     const vertical = options.layout === 'vertical' && options.presentation !== 'receivers';

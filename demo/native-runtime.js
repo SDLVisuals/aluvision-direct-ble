@@ -262,7 +262,7 @@
       if(phased&&(kind!=='SPI_SCENE'||extended||!Number.isInteger(scene.phaseMs)||scene.phaseMs<0||scene.phaseMs>999||
         !Number.isInteger(scene.phaseRateMicroHz)||scene.phaseRateMicroHz<0||scene.phaseRateMicroHz>20000000))throw fail('LIVE_INVALID');
       if(extended){
-        const v30=scene.v30,limits={effect:[1,kind==='SPI_SCENE'?30:20],fadeAmount:[0,100],width:[0,100],delayMs:[0,10000]};
+        const v30=scene.v30,limits={effect:[1,kind==='SPI_SCENE'?43:20],fadeAmount:[0,100],width:[0,100],delayMs:[0,10000]};
         if(!v30||typeof v30!=='object'||Array.isArray(v30)||Object.keys(v30).sort().join(',')!=='brand,delayMs,effect,fadeAmount,width'||!colour(v30.brand)||
           !Object.entries(limits).every(([key,[min,max]])=>Number.isInteger(v30[key])&&v30[key]>=min&&v30[key]<=max))throw fail('LIVE_INVALID');
       }

@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v31-20260926-code-review-153",
+  "revision": "v31-20260926-video-brand-154",
   "interfaceVersion": 31,
-  "interfaceBaseline": "Shared V31 WebApp source for native build 153; this manifest does not confirm an iPhone installation or a receiver update. SPI and RGBW V21.1.44 remain compile-only firmware candidates, not physically or thermally validated. This browser demo uses fictional receivers and sends no hardware commands. Review fixes: bounded shared SPI animation phase crosses the native bridge; new receiver publication uses the current 100% smoothness default while retaining old journals; native OTA follows exact job/version receipts without scroll jumps or stale-page replies; compact vertical SPI previews retain line proportions; the visible sticky control header has an opaque theme-matched backing while unused space stays transparent and clickable in light and dark modes. Existing onboarding, animation/scene/colour libraries, compatible bulk zone assignment and adjustable saved settings are retained.",
+  "interfaceBaseline": "Shared V31 WebApp source for native build 154; this manifest does not confirm an iPhone installation or a receiver update. Thirteen additional SPI animations: eight tunnel motions reconstructed from four reference videos, one warm-contour interpretation and four calm Brand variants. Brand animations offer up to four customer colours. Optional spatial previews use the same sampled pixels and configured line order, without changing receiver settings. The new live effects require SPI V21.1.45; the native app checks every selected receiver before sending. SPI V21.1.45 and unchanged RGBW V21.1.44 are compile-only candidates, not physically or thermally validated. Exact visual equivalence to the videos is not claimed. This browser demo uses fictional receivers and sends no hardware commands. Existing effects, scenes, onboarding, compatible zone assignment and adjustable smoothness with a 100 percent default are retained.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -27,11 +27,11 @@
     },
     {
       "path": "animation-library.css",
-      "sha256": "e943be7bd87f35d2ed05719cebf6e96a5c256c3c6496d5b9d110ba72c0e73f0b"
+      "sha256": "8597478c69a6f20ba36c68c173006c38fe9b88def01f37a3f5b6fe6549ec800e"
     },
     {
       "path": "animation-library.js",
-      "sha256": "1af319b65398fa82ba614504b2c99159cd86b195f956017d233848933c29cdb0"
+      "sha256": "0b43493345eef63c2f277e83c82e44c03f982ce2bb3a9388548ff927c4cfe5cc"
     },
     {
       "path": "animations.css",
@@ -39,7 +39,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "8c92287f430017512900cfc159a3cc953b602773fff8a9faecf3e6671db6daed"
+      "sha256": "eb4a085ca38618a76ef6f8fd2ae93afa835fcdaa0001babae1277a78d209c6fe"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -67,11 +67,11 @@
     },
     {
       "path": "index.html",
-      "sha256": "3dfb986b4f00ea0b0c0f01ace94ceffce2ae61704722b5119d542aaa14fb9ab9"
+      "sha256": "c1fde78d757ba6207fc52066868b35437378b72a0fd5a34a53d331f34ff7b81d"
     },
     {
       "path": "live-control.js",
-      "sha256": "1515dc39d18f19ae140cef2b5693e136ae5382e436dde489530a06afe344266e"
+      "sha256": "d8afc2a660025403f92ac6b251499e3b152fbc7fdb401aa031b0fd43fc00b33f"
     },
     {
       "path": "migration.js",
@@ -83,7 +83,7 @@
     },
     {
       "path": "native-runtime.js",
-      "sha256": "f001b0bcfbe3d3b20db5f514ca87e49063a69dfc84039d8ca536a2e2bcd43092"
+      "sha256": "32d19e8a0b5774d761e4fcf0876b07c94d5be3c10320170b837d61b0a1f82a77"
     },
     {
       "path": "onboarding-adapter.js",
@@ -127,7 +127,7 @@
     },
     {
       "path": "preview.js",
-      "sha256": "bd6c80c70b876065289f81522ce06e2524c8ed4018a7cf7858ea4e36a4c4190d"
+      "sha256": "3d6de175c45c91a4f44574c7c21e98b6419fe92c3d880f61fb86166e832e1599"
     },
     {
       "path": "receiver-removal-ui.css",
@@ -152,6 +152,10 @@
     {
       "path": "receiver-visual.js",
       "sha256": "8c3196efcf8c93f8b514cc14a8f29a131de057bef91a21d37f81f2d7c9e303ef"
+    },
+    {
+      "path": "reference-animations.js",
+      "sha256": "a3c2687d36e80a67d23610d2a430b8f3183d6e922396a814ad02c7542c269eea"
     },
     {
       "path": "scenes.css",
