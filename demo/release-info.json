@@ -1,6 +1,6 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-20260927-stability-158",
+  "revision": "v32-20260927-stability-158-final",
   "interfaceVersion": 32,
   "interfaceBaseline": "Shared V32 WebApp source for native build 158. Portable backup/import, identity-bound saved lighting intent, smoother SPI cycle boundaries and optimized topology-aware tunnel previews. Existing navigation, zones, scenes, Brand palettes and adjustable smoothness with a 100 percent default are preserved. This manifest does not confirm an iPhone installation, hardware operation, PIN recovery or a receiver update. Native receiver context, PIN recovery, factory reset and playback persistence require compatible V32 firmware and physical acceptance. This browser demo is isolated: fictional receivers only, no hardware commands and no PIN collection. Exact visual equivalence to the reference videos is not claimed.",
   "fakeReceivers": {
