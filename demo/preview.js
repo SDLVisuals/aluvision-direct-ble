@@ -735,7 +735,10 @@ function usesCyclePhaseSteps(state) {
     context.font = '11px system-ui'; context.textBaseline = 'middle';
     frame.rows.forEach((row, index) => {
       const lane = vertical ? (width - padding * 2) / frame.rows.length : Math.max(1, height - 16) / frame.rows.length;
-      const barHeight = continuous ? Math.min(12, height / 4) : Math.max(0.5, Math.min(12, lane * 0.4));
+      // A single ledline should read as a light bar, not a hairline, in the
+      // compact sticky preview. Scale with each lane so multi-line layouts
+      // stay clearly separated on small screens.
+      const barHeight = continuous ? Math.min(18, height * 0.4) : Math.max(0.5, Math.min(18, lane * 0.62));
       const showLabel = continuous ? false : vertical ? lane >= 48 : lane >= 30 || row.individuallySelected && lane >= 24;
       const continuousFraction = row.pixels.length / Math.max(1, frame.geometry.totalPixels);
       const continuousOffset = frame.geometry.receivers[index].offset / Math.max(1, frame.geometry.totalPixels);

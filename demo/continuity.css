@@ -295,7 +295,7 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .control-preview-dock[data-scrolled=true] .live-confirmation{display:none!important}
 .control-preview-dock[data-scrolled=true] .preview-wrap{padding:4px 8px 2px;border-radius:12px}
 .control-preview-dock[data-scrolled=true] .preview-top{min-height:12px;font-size:8px}
-.control-preview-dock[data-scrolled=true] .preview-wrap canvas{height:24px!important;transition:none}
+.control-preview-dock[data-scrolled=true] .preview-wrap canvas{height:44px!important;transition:none}
 /* Keep the LED preview visible by default. Open the three size choices only
    when requested; the menu stays in-flow above the LED, never on top of it. */
 .preview-size-row{display:flex;justify-content:flex-end;align-items:center;padding:3px 1px 4px}
@@ -327,6 +327,12 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
   .control-preview-dock[data-preview-size=medium] .preview-wrap canvas{height:82px}
   .control-preview-dock[data-preview-size=large] .preview-wrap canvas{height:128px}
 }
+/* Keep the chosen preview size perceptible while the dock is sticky. The
+   compact option stays close to its normal phone size instead of collapsing
+   the actual light to a hairline; larger choices remain visibly larger. */
+.control-preview-dock[data-scrolled=true][data-preview-size=small] .preview-wrap canvas{height:52px!important}
+.control-preview-dock[data-scrolled=true][data-preview-size=medium] .preview-wrap canvas{height:68px!important}
+.control-preview-dock[data-scrolled=true][data-preview-size=large] .preview-wrap canvas{height:88px!important}
 @media(prefers-reduced-motion:reduce){.control-preview-dock .preview-wrap canvas{transition:none}}
 .channel-row .channel-number{width:100%;min-width:0;height:44px;padding:2px 3px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);font-size:16px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
 .channel-number::-webkit-inner-spin-button,.channel-number::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
