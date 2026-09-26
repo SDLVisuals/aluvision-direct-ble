@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v31-20260926-video-brand-154",
-  "interfaceVersion": 31,
-  "interfaceBaseline": "Shared V31 WebApp source for native build 154; this manifest does not confirm an iPhone installation or a receiver update. Thirteen additional SPI animations: eight tunnel motions reconstructed from four reference videos, one warm-contour interpretation and four calm Brand variants. Brand animations offer up to four customer colours. Optional spatial previews use the same sampled pixels and configured line order, without changing receiver settings. The new live effects require SPI V21.1.45; the native app checks every selected receiver before sending. SPI V21.1.45 and unchanged RGBW V21.1.44 are compile-only candidates, not physically or thermally validated. Exact visual equivalence to the videos is not claimed. This browser demo uses fictional receivers and sends no hardware commands. Existing effects, scenes, onboarding, compatible zone assignment and adjustable smoothness with a 100 percent default are retained.",
+  "revision": "v32-20260927-stability-157",
+  "interfaceVersion": 32,
+  "interfaceBaseline": "Shared V32 WebApp source for native build 157. Portable backup/import, identity-bound saved lighting intent, smoother SPI cycle boundaries and optimized topology-aware tunnel previews. Existing navigation, zones, scenes, Brand palettes and adjustable smoothness with a 100 percent default are preserved. This manifest does not confirm an iPhone installation, hardware operation, PIN recovery or a receiver update. Native receiver context, PIN recovery, factory reset and playback persistence require compatible V32 firmware and physical acceptance. This browser demo is isolated: fictional receivers only, no hardware commands and no PIN collection. Exact visual equivalence to the reference videos is not claimed.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -23,11 +23,11 @@
   "assets": [
     {
       "path": "animation-engine.js",
-      "sha256": "4f93eae69ec3eec5583b976ba793e8fc3cf45b33010c639a7aa4a7f79f5db377"
+      "sha256": "50bb02244e63dc5d8e1b8203912f99d9ab506cbb6ac7c417c27055f9932a3f6d"
     },
     {
       "path": "animation-library.css",
-      "sha256": "8597478c69a6f20ba36c68c173006c38fe9b88def01f37a3f5b6fe6549ec800e"
+      "sha256": "a0c4dec3b6f7ef04ac8da6bac31df3f68fab8507c8a53b407cf0ec3c8eb5d71b"
     },
     {
       "path": "animation-library.js",
@@ -39,11 +39,15 @@
     },
     {
       "path": "app.js",
-      "sha256": "eb4a085ca38618a76ef6f8fd2ae93afa835fcdaa0001babae1277a78d209c6fe"
+      "sha256": "11c0aa7d7a0784c6a46ba0977b60b85af13737d1f862b35d4a86a9f0323a47ba"
     },
     {
       "path": "assets/aluvision-logo.png",
       "sha256": "834524590fdae6c13804869c8c04cb3452ef68e80c189a3ea27e02a43d08f018"
+    },
+    {
+      "path": "backup.js",
+      "sha256": "70275f54d934ae6d42791f6fb4680588572022db997d76e8f6eccaea8f3659ab"
     },
     {
       "path": "colour-library-drag.js",
@@ -59,7 +63,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "43a16d6d6783c301c7dc8a287fcd7152a1422bfc4d6f521bb29d29a3be04f51a"
+      "sha256": "82d51d53386a83db067be06a191399291e841cba54bbc10f6c71ddae9a0759aa"
     },
     {
       "path": "fixtures.js",
@@ -67,7 +71,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "c1fde78d757ba6207fc52066868b35437378b72a0fd5a34a53d331f34ff7b81d"
+      "sha256": "3e266f76c26c816dd88134109130646ac902753bc57d8d8c870726270e1a8b93"
     },
     {
       "path": "live-control.js",
@@ -83,7 +87,7 @@
     },
     {
       "path": "native-runtime.js",
-      "sha256": "32d19e8a0b5774d761e4fcf0876b07c94d5be3c10320170b837d61b0a1f82a77"
+      "sha256": "5757c2358ecf594b95343766434d4b09ce26cfa75c93cdf7072be737caadf436"
     },
     {
       "path": "onboarding-adapter.js",
@@ -99,11 +103,11 @@
     },
     {
       "path": "onboarding-ui.css",
-      "sha256": "a06eb6d6cfba01dd2d9cbd50bde2cbc26fd4d0841a99725a22e526b4b787dca0"
+      "sha256": "bcb61753aaa6b5e9363c130565774991349aaf4fe7530d2850a7be6aec8b0b65"
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "f17233ba54677d08012e55ad4d717c8a937d3275ac6495b28944e92ad0dac3f7"
+      "sha256": "f22d553aa094268f548cd132d17db9fb5165f1b0cf21019fee4e3c1501c85c45"
     },
     {
       "path": "pixel-setup.css",
@@ -115,7 +119,7 @@
     },
     {
       "path": "preferences.js",
-      "sha256": "6ec358dbf35d8bfb22b869bbdbc3194f9f1306bd8c86f4f1deaf53c91d69c01c"
+      "sha256": "20ab149061e88631fef04af87d80f98851b3955ff3228e468f39eb7d67f7d9c5"
     },
     {
       "path": "premium-surfaces.css",
@@ -127,7 +131,11 @@
     },
     {
       "path": "preview.js",
-      "sha256": "3d6de175c45c91a4f44574c7c21e98b6419fe92c3d880f61fb86166e832e1599"
+      "sha256": "cb270c0a6d67158650ff07cb7c1114682066bf7fd54713bc7184df5b1d858be1"
+    },
+    {
+      "path": "receiver-playback.js",
+      "sha256": "83f83cb27bb6f14688387f1d2af384f776f33002fe318c81c709bc0d4b7e058d"
     },
     {
       "path": "receiver-removal-ui.css",
@@ -155,7 +163,7 @@
     },
     {
       "path": "reference-animations.js",
-      "sha256": "a3c2687d36e80a67d23610d2a430b8f3183d6e922396a814ad02c7542c269eea"
+      "sha256": "b9755022205b685a5ade1e7f353379ca280150e19914e476a111649351c90baf"
     },
     {
       "path": "scenes.css",
@@ -175,7 +183,7 @@
     },
     {
       "path": "vendor/v21_animation_catalog.js",
-      "sha256": "69f20eef364dd95606fad041f465adea070894c5d111f604767d5590596dc6b3"
+      "sha256": "242d51a6ae96bf3aa9e82e8f31de3e701ad924c46fa7a4745693b4802f3e10b7"
     },
     {
       "path": "vendor/v21_tunnel_engine.js",

@@ -1,6 +1,6 @@
-/* V30 presentation adapter. No storage, timers, hardware calls or runtime patches.
- * Timing and spatial formulas come from the unmodified, vendored V21 engines.
- * Deliberate V30 corrections: W is neutral white; non-static speed 0 still moves.
+/* V32 presentation adapter. No storage, timers, hardware calls or runtime patches.
+ * The retained V21 engines include mirrored V32 smooth-motion/loop corrections.
+ * W is neutral white; non-static speed 0 still moves.
  * This is a local preview, not a claim of calibrated light or firmware parity.
  */
 (function (root, factory) {
@@ -83,10 +83,9 @@
 
   // The standalone V21 catalog replaced only variants 104 and later. Its
   // original app retained 0–103 in index.html, including scanners and the
-  // original chases. Keep those actual formulas and wire variants here, not
-  // look-alike aliases using an unrelated new engine. The legacy core below
-  // is copied from tunedAnimationPixelCore + the v1817 line/ribbon adapter;
-  // timing shaping comes from v20_smoothness.js. Only optical W is neutral.
+  // original chases. Keep their wire variants and accepted physical formulas,
+  // not look-alike aliases. The V32 preview mirrors current SPI scenePixel;
+  // actual C++ extraction tests cover every legacy recipe and all 4 channels.
   const legacySpi = (() => {
     const effects = [
       ["Static Color","STATIC","Minimal",0],
@@ -196,12 +195,7 @@
     ];
     const widthEngines = new Set(['CHASE','COMET','SCANNER','DUAL','MIRROR','MINIMAL','CASCADE','SEQUENCE','FLOW','WAVE','ALTERNATE','SPARKLE']);
     const movingFamilies = new Set(['GRADIENT','FLOW','CHASE','COMET','SCANNER','WAVE','SEQUENCE','MIRROR','ALTERNATE','CASCADE','DUAL','MINIMAL']);
-    const MOTION_ENGINES = new Set([...movingFamilies,'LINE_WAVE','BREATHE','WARM','ALL']);
-    const rgbHex = rgb;
-    const clamp = (value, minimum = 0, maximum = 100) => Math.max(minimum, Math.min(maximum, Number.isFinite(Number(value)) ? Number(value) : minimum));
-    const lerp = (a,b,t) => a.map((v,i) => Math.round(v+(b[i]-v)*t));
-    const wrap = (a,b) => { const d = Math.abs(a-b); return Math.min(d,1-d); };
-    const rgbwPreview = (channels,white=0) => channels.map(value => Math.round(255-(255-clamp(value,0,255))*(1-clamp(white,0,255)/255)));
+    const clamp = (value, minimum = 0, maximum = 100, fallback = minimum) => Math.max(minimum, Math.min(maximum, Number.isFinite(Number(value)) ? Number(value) : fallback));
     const effectWireVariant = effect => Number(effect?.[3]);
     function effectColorCount(effect) {
       const variant = effectWireVariant(effect);
@@ -212,7 +206,6 @@
       if (/multi|aurora|sequence|timeline|cascade/.test(name)) return 3;
       return /dual/.test(name) || ['GRADIENT','FLOW','ALTERNATE'].includes(engine) ? 2 : 1;
     }
-    const v1817ClampLineDelay = (value,fallback=240) => Math.max(0,Math.min(5080,Math.round((Number.isFinite(Number(value))?Number(value):fallback)/40)*40));
 
 function animationDefaults(e){
   let name=(e?.[0]||'').toLowerCase(),engine=e?.[1]||'STATIC',d={speed:18,speedMode:'slow',widthPixels:3,smooth:90,spacing:58,objectCount:1,trailLength:45,spread:55,randomness:25,bounce:false,mirror:false};
@@ -261,179 +254,132 @@ function effectCapabilities(e){
   }
  }
 
-function animationCyclesPerSecond(value){let speed=Math.max(0,Math.min(100,Number(value)||0));if(speed<=0)return 0;let normalized=speed/100;return .002+normalized*normalized*.80}
+// Same finite, energy-preserving spatial edge as SPI softChaseAmount.
+// No afterimage/time filter: a receiver joining later renders this exact phase.
+function softChaseCoverage(distance,width,n,smooth){
+  width=clamp(Math.round(width),1,n);if(width>=n)return 1;
+  const d=Math.abs(distance)*n,half=width*.5;
+  const crisp=clamp(half+.5-d,0,1)>=.999?1:0;
+  const integral=p=>{const x=Math.abs(p),tail=1.5-x,v=x>=1.5?1:x<=.5?.5+x*(.75-x*x/3):1-tail*tail*tail/6;return p<0?1-v:v;};
+  const band=delta=>integral(delta+half)-integral(delta-half);
+  let soft=band(d);if(n-d<half+1.5)soft+=band(d-n);if(n+d<half+1.5)soft+=band(d+n);
+  const s=clamp(smooth,0,100,100)/100,blend=s<.5?4*s*s*s:1-4*Math.pow(1-s,3);
+  return crisp+(clamp(soft,0,1)-crisp)*blend;
+}
 
-function thicknessAmount(distance,pixels,n,smooth=90){let d=Math.abs(distance)*n,widthPixels=Math.max(1,Math.min(n,Math.round(Number(pixels)||1))),coverage=Math.max(0,Math.min(1,widthPixels/2+.5-d));if(coverage<=0||coverage>=1)return coverage;let eased=coverage*coverage*(3-2*coverage),blend=Math.max(0,Math.min(1,Number(smooth??90)/100));return coverage+(eased-coverage)*blend}
-
-function enabledRgbwPreview(s,index=0,background=false){let rgb=background?s.background||'#000000':s.colors?.[index]||'#000000',white=background?s.backgroundWhite||0:s.whiteChannels?.[index]||0,rgbOn=background?s.backgroundRgbEnabled!==false:!Array.isArray(s.rgbEnabled)||s.rgbEnabled[index]!==false,whiteOn=background?s.backgroundWhiteEnabled!==false:!Array.isArray(s.whiteEnabled)||s.whiteEnabled[index]!==false;return rgbwPreview(rgbOn?rgbHex(rgb):[0,0,0],whiteOn?white:0)}
-
-function previewRgbwPalette(s){return (s.colors||['#873ada']).slice(0,s.colorCount||4).map((c,i)=>enabledRgbwPreview(s,i))}
-
-function tunedAnimationPixelCore(s,u,time,index,n){
-  let speed=(s.speed??18)/100,variant=s.variant??0,family=variant%6,cps=animationCyclesPerSecond(s.speed??18),elapsed=Math.max(0,time-(s.previewStartedAt||0)),raw=(((Number(s.phaseMs)||0)/1000+elapsed*cps)%1+1)%1,bounce=s.bounce?1-Math.abs(2*raw-1):raw,left=(s.direction||'right')==='left',phase=left?1-bounce:bounce,engine=s.engine||'CHASE',widthPixels=Math.max(1,Math.min(n,Number(s.widthPixels)||3)),objects=Math.max(1,Math.min(8,Math.round(Number(s.objectCount)||1))),spacing=Math.max(0,Math.min(100,Number(s.spacing??50)))/100,spread=Math.max(0,Math.min(100,Number(s.spread??50)))/100,trailLength=Math.max(0,Math.min(100,Number(s.trailLength??45)))/100,randomness=Math.max(0,Math.min(100,Number(s.randomness??25)))/100,colors=previewRgbwPalette(s),bg=s.backgroundOn===false?[0,0,0]:enabledRgbwPreview(s,0,true).map(v=>Math.round(v*(s.bgBrightness??10)/100)),amount=0,color=colors[Math.floor(u*colors.length)%colors.length],positions=[];
-  let gradientAt=coordinate=>{let wrapped=((coordinate%1)+1)%1,scaled=wrapped*colors.length,i=Math.floor(scaled)%colors.length;return lerp(colors[i],colors[(i+1)%colors.length],scaled-Math.floor(scaled))},bandAt=coordinate=>colors[Math.min(colors.length-1,Math.floor(((coordinate%1+1)%1)*colors.length))],coverageAt=(position,pixels=widthPixels,circular=true)=>{let core=Math.max(1,Math.min(n,Math.round(Number(pixels)||1)));if(core>=n)return 1;let sample=u*n-.5,center=circular?((position%1+1)%1)*n+(core-1)*.5:Math.max(0,Math.min(1,position))*(n-core)+(core-1)*.5,delta=sample-center;if(circular)delta-=Math.round(delta/n)*n;let coverage=Math.max(0,Math.min(1,(core+1)*.5-Math.abs(delta)));if(coverage<=0||coverage>=1)return coverage;let eased=coverage*coverage*(3-2*coverage),blend=Math.max(0,Math.min(1,Number(s.smooth??90)/100));return coverage+(eased-coverage)*blend};
-  let span=.18+spacing*.82;for(let k=0;k<objects;k++){let p=(phase+(objects===1?0:k/objects*span))%1;positions.push(p);if(s.mirror)positions.push((1-p+1)%1)}
-  let atPositions=(pixels=widthPixels)=>{let value=0;positions.forEach(p=>value=Math.max(value,coverageAt(p,pixels,true)));return value};
-  let lineCount=Math.max(1,Math.round(Number(s.lineCount)||1)),lineIndex=Math.max(0,Math.min(lineCount-1,Math.round(Number(s.lineIndex)||0))),row=lineCount>1?lineIndex/(lineCount-1):0,wireVariant=Number(s.variant),multiHandled=lineCount>1&&wireVariant>=90&&wireVariant<=97;
-  if(multiHandled){
-   let rowColor=colors[0],totalRowDelay=spread*.65,rowObjects=position=>{let best=0,span=.18+spacing*.82;for(let object=0;object<objects;object++){let p=(position+(objects===1?0:object*span/objects)+1)%1;best=Math.max(best,coverageAt(p,widthPixels,true));if(s.mirror)best=Math.max(best,coverageAt((1-p+1)%1,widthPixels,true))}return best};
-   if(wireVariant===90||wireVariant===91){let ordered=wireVariant===91?lineCount-1-lineIndex:lineIndex,orderedRow=lineCount>1?ordered/(lineCount-1):0,rowPosition=orderedRow*totalRowDelay,distance=wrap(rowPosition,bounce)*lineCount,pulseRows=.72+(1-spacing),feather=.10+(s.smooth??90)*.0038,half=pulseRows*.5,core=Math.max(0,half-feather),q=distance<=core?1:distance>=half+feather?0:1-(distance-core)/Math.max(.001,2*feather);amount=q*q*(3-2*q);color=rowColor}
-   else if(wireVariant===92){let progress=1-Math.abs(2*raw-1),ordered=(s.direction||'right')==='left'?lineCount-1-lineIndex:lineIndex,orderedRow=lineCount>1?ordered/(lineCount-1):0,feather=.04+(s.smooth??90)*.0012,trigger=feather+orderedRow*totalRowDelay,q=Math.max(0,Math.min(1,(progress-trigger+feather)/Math.max(.001,2*feather)));amount=q*q*(3-2*q);color=rowColor}
-   else if(wireVariant===93){let rowDelay=row*totalRowDelay,coordinate=u-phase+rowDelay,wave=.5+.5*Math.sin(coordinate*Math.PI*2*objects),exponent=.55+(100-(s.smooth??90))*.012;amount=Math.pow(wave,exponent);let q=((coordinate+row*.17+1)%1)*colors.length,i=Math.floor(q)%colors.length;color=lerp(colors[i],colors[(i+1)%colors.length],q-Math.floor(q))}
-   else if(wireVariant===94){let rowDelay=row*totalRowDelay;amount=rowObjects((phase-rowDelay+1)%1);color=rowColor}
-   else if(wireVariant===95){let center=(lineCount-1)*.5,nearest=lineCount%2?0:.5,maximum=Math.max(nearest,center),distance=maximum>nearest?(Math.abs(lineIndex-center)-nearest)/(maximum-nearest):0,progress=1-Math.abs(2*raw-1),feather=.04+(s.smooth??90)*.0012,orderedDistance=(s.direction||'right')==='left'?1-distance:distance,trigger=feather+orderedDistance*totalRowDelay,q=Math.max(0,Math.min(1,(progress-trigger+feather)/Math.max(.001,2*feather)));amount=q*q*(3-2*q);let gradient=distance*.999*colors.length,i=Math.floor(gradient)%colors.length;color=lerp(colors[i],colors[(i+1)%colors.length],gradient-Math.floor(gradient))}
-   else if(wireVariant===96){let delayedPhase=(phase-row*totalRowDelay+1)%1,rowPhase=lineIndex%2?(1-delayedPhase+1)%1:delayedPhase;amount=rowObjects(rowPhase);color=rowColor}
-   else {amount=rowObjects(phase);let q=((u-phase+1)%1)*colors.length,i=Math.floor(q)%colors.length;color=lerp(colors[i],colors[(i+1)%colors.length],q-Math.floor(q))}
-  }
-  else if(engine==='STATIC'){amount=1;color=colors[Math.min(colors.length-1,Math.floor(u*colors.length))]}
-  else if(engine==='GRADIENT'){let scale=1+spread*3,q=((u*scale-(family===0?0:phase)+1)%1)*colors.length,i=Math.floor(q)%colors.length;color=lerp(colors[i],colors[(i+1)%colors.length],q-Math.floor(q));amount=1}
-  else if(engine==='BREATHE'||engine==='ALL'){let localPhase=u*Math.PI*2*spread,pulse=.5+.5*Math.sin(raw*Math.PI*2+localPhase);amount=pulse;color=gradientAt(u)}
-  else if(engine==='WARM'){let white=s.whiteEnabled?.[0]===false?0:Math.max(1,Math.min(255,Number(s.whiteChannels?.[0])||255)),warm=.5+.5*Math.sin(raw*Math.PI*2+u*Math.PI*2*.72);warm=warm*warm*(3-2*warm);amount=1;color=rgbwPreview([white*.45*warm,white*.22*warm,0],white*(1-.48*warm))}
-  else if(engine==='SPARKLE'){let cluster=Math.floor(index/Math.max(1,widthPixels)),sparkleSpeed=Math.max(0,Math.min(100,Number(s.speed??18))),tick=sparkleSpeed===0?0:Math.floor(raw*(24+sparkleSpeed*.76)),h=((cluster*1103515245+tick*12345+variant*7919)>>>0)%1000,threshold=Math.min(820,8+Math.round(randomness*100)*2+objects*9);amount=h<threshold?1:0;color=bandAt(cluster/7)}
-  else if(engine==='WAVE'||engine==='FLOW'){amount=atPositions(widthPixels);color=gradientAt(u*(1+spread*2)-phase)}
-  else if(engine==='SCANNER'){let position=phase;amount=coverageAt(position,widthPixels,false);if(s.mirror)amount=Math.max(amount,coverageAt(1-position,widthPixels,false));color=gradientAt(phase);if(trailLength>0){let d=left?(u-position+1)%1:(position-u+1)%1;amount=Math.max(amount,Math.max(0,1-d*n/Math.max(1,widthPixels*(1+trailLength*100/12)))*.72)}}
-  else if(engine==='MIRROR'||engine==='DUAL'){let copies=Math.max(2,objects);for(let k=0;k<copies;k++){let p=(phase+k/copies*(.35+spread*.65))%1;amount=Math.max(amount,coverageAt(p,widthPixels,true),coverageAt((1-p+1)%1,widthPixels,true))}color=gradientAt(u+phase)}
-  else if(engine==='ALTERNATE'){let band=Math.max(1,Math.round(widthPixels)),gap=Math.max(1,Math.round(band*(.3+spacing*2.7))),period=band+gap,repeats=Math.max(1,Math.round(n/period)),pixel=u*n-.5,movingX=pixel-phase*repeats*period,local=((movingX%period)+period)%period,center=(band-1)/2,signed=local-center;if(signed>period/2)signed-=period;else if(signed<-period/2)signed+=period;amount=thicknessAmount(Math.abs(signed)/n,band,n,s.smooth);let nearest=Math.round((movingX-center)/period),paletteIndex=((nearest%colors.length)+colors.length)%colors.length;color=colors[paletteIndex]}
-  else if(engine==='CASCADE'||engine==='SEQUENCE'){let q=(u-phase+1)%1;amount=atPositions(widthPixels);color=colors[Math.min(Math.floor(q*objects),objects-1)%colors.length];if(engine==='CASCADE')amount*=.60+q*.40}
-  else if(engine==='COMET'){positions.forEach(p=>{let head=coverageAt(p,widthPixels,true),d=left?(u-p+1)%1:(p-u+1)%1,tail=Math.max(0,1-d*n/Math.max(1,widthPixels*(1.4+trailLength*9)));amount=Math.max(amount,head,tail*.88)});color=gradientAt(phase)}
-  else {amount=atPositions(widthPixels);color=gradientAt(phase)}
-  let bright=Math.max(0,Math.min(1,Number(s.brightness??75)/100)),coverage=Math.max(0,Math.min(1,amount));if(s.backgroundOn===false)return lerp(bg,color,coverage).map(value=>Math.round(value*bright));return lerp(bg,color.map(value=>value*bright),coverage).map(value=>Math.round(value))
- }
-
-function v1817PositiveModulo(value,divisor=1){return ((value%divisor)+divisor)%divisor}
-
-function v1817LineOrder(current,lineIndex,lineCount,variant){let count=Math.max(1,lineCount),index=Math.max(0,Math.min(count-1,lineIndex)),reverse=current?.direction==='left';if(variant===90)return index;if(variant===91)return count-1-index;if(variant===16){let pairs=Math.max(1,Math.ceil(count/2)),pair=Math.floor(index/2);return reverse?pairs-1-pair:pair}if(variant===95||variant===13||variant===14){let centre=(count-1)/2,nearest=count%2?0:.5,rank=Math.max(0,Math.round(Math.abs(index-centre)-nearest)),maximum=Math.max(0,Math.ceil(count/2)-1),fromCentre=rank;if(variant===14)fromCentre=maximum-rank;return reverse?maximum-fromCentre:fromCentre}return reverse?count-1-index:index}
-
-function v1817Palette(current,count=4){let palette=previewRgbwPalette(current).slice(0,Math.max(1,count));return palette.length?palette:[[255,255,255]]}
-
-function v1817PaletteAt(palette,phase,smooth=true){let scaled=v1817PositiveModulo(phase,1)*palette.length,index=Math.floor(scaled)%palette.length,mix=scaled-Math.floor(scaled);if(smooth)mix=mix*mix*(3-2*mix);return lerp(palette[index],palette[(index+1)%palette.length],mix)}
-
-function v1817PaletteBand(palette,phase){return palette[Math.floor(v1817PositiveModulo(phase,1)*palette.length)%palette.length]}
-
-function v1817WholeLinePixel(current,time,variant){let count=Math.max(1,Number(current.lineCount)||1),index=Math.max(0,Math.min(count-1,Number(current.lineIndex)||0)),speed=Math.max(0,Math.min(100,Number(current.speed)||0)),cycles=animationCyclesPerSecond(speed),started=Number(current.previewStartedAt),elapsed=Number.isFinite(started)&&started>=0&&started<=time?time-started:0,order=v1817LineOrder(current,index,count,variant),delay=v1817ClampLineDelay(current.lineDelayMs)/1000,timeline=elapsed*cycles+(Number(current.phaseMs)||0)/1000,shifted=timeline-order*delay*cycles,raw=v1817PositiveModulo(current.direction==='left'?-shifted:shifted,1),palette=v1817Palette(current,4),amount=1,color=palette[0],smooth=Math.max(0,Math.min(1,Number(current.smooth??90)/100));
-  if(variant===98)amount=.10+.90*(.5-.5*Math.cos(raw*Math.PI*2));
-  else if(variant===99){let triangle=1-Math.abs(2*raw-1);amount=triangle*triangle*(3-2*triangle)}
-  else if(variant===100)color=v1817PaletteAt(palette,raw,false);
-  else if(variant===101)color=v1817PaletteAt(palette,raw,true);
-  else if(variant===102){let onFraction=.04+.22*smooth;amount=raw<onFraction?1:0;color=v1817PaletteBand(palette,raw)}
-  let background=current.backgroundOn===false?[0,0,0]:enabledRgbwPreview(current,0,true).map(channel=>Math.round(channel*(Number(current.bgBrightness??10)/100))),brightness=Math.max(0,Math.min(1,Number(current.brightness??100)/100)),coverage=Math.max(0,Math.min(1,amount));if(current.backgroundOn===false)return lerp(background,color,coverage).map(channel=>Math.round(channel*brightness));return lerp(background,color.map(channel=>channel*brightness),coverage).map(channel=>Math.round(channel))
- }
-
-function v20WarmRibbonPixel(current,u,time,pixelCount=0){
-  let n=Math.max(1,Number(pixelCount)||Number(current.groupPixels)||60),speed=Math.max(0,Math.min(100,Number(current.speed)||0)),cycles=animationCyclesPerSecond(speed),started=Number(current.previewStartedAt),elapsed=Number.isFinite(started)&&started>=0&&started<=time?time-started:0,raw=v1817PositiveModulo((Number(current.phaseMs)||0)/1000+elapsed*cycles,1),reverse=current.direction==='left',head=reverse?1-raw:raw,behind=v1817PositiveModulo(reverse?u-head:head-u,1)*n,width=Math.max(1,Math.min(n,Number(current.widthPixels)||4)),trail=Math.max(0,Math.min(100,Number(current.trailLength??78))),ribbon=Math.max(width,Math.min(Math.max(1,n-.5),n*trail/100)),smooth=Math.max(0,Math.min(1,Number(current.smooth??92)/100)),fade=Math.max(width*(.35+1.15*smooth),ribbon*(.04+.08*smooth)),warmZone=Math.min(ribbon,Math.max(fade*2,width*2)),remaining=ribbon-behind,tailGate=Math.max(0,Math.min(1,(remaining+.5)/Math.max(.5,fade))),headGate=Math.max(0,Math.min(1,(behind+.5)/(.45+1.0*smooth)));tailGate=tailGate*tailGate*(3-2*tailGate);headGate=headGate*headGate*(3-2*headGate);let warmMix=Math.max(0,Math.min(1,(behind-(ribbon-warmZone))/Math.max(.5,warmZone)));warmMix=warmMix*warmMix*(3-2*warmMix);let palette=v1817Palette(current,2),color=lerp(palette[0],palette[1]||palette[0],warmMix),amount=headGate*tailGate,background=current.backgroundOn===false?[0,0,0]:enabledRgbwPreview(current,0,true).map(channel=>Math.round(channel*(Number(current.bgBrightness??10)/100))),brightness=Math.max(0,Math.min(1,Number(current.brightness??100)/100)),composite=current.backgroundOn===false?lerp(background,color,amount).map(channel=>Math.round(channel*brightness)):lerp(background,color.map(channel=>channel*brightness),amount).map(channel=>Math.round(channel));return composite
- }
-
-function smoothMix(value) {
-    const normalized = clamp(value) / 100;
-    // Keep the lower half deliberately stepped for a useful A/B comparison,
-    // then converge quickly toward true continuous motion. This mirrors the
-    // receiver curve, so 75% already feels fluid and 100% remains exact.
-    return normalized < .5
-      ? 4 * normalized * normalized * normalized
-      : 1 - 4 * (1 - normalized) * (1 - normalized) * (1 - normalized);
-  }
-
-function positiveModulo(value, divisor) {
-    return ((value % divisor) + divisor) % divisor;
-  }
-
-function interpolateLedPhase(totalPhase, smoothness, pixelCount, maximumStops = 32) {
-    const phase = Number(totalPhase);
-    if (!Number.isFinite(phase)) return 0;
-    const blend = smoothMix(smoothness);
-    if (blend >= 1) return phase;
-    const pixels = Math.max(1, Math.round(Number(pixelCount) || 1));
-    const stops = Math.max(2, Math.round(Number(maximumStops) || 32));
-    const stride = Math.max(1, Math.ceil(pixels / stops));
-    const cycle = Math.floor(phase);
-    const withinCycle = positiveModulo(phase, 1);
-    const firstPixelInStep = Math.floor((withinCycle * pixels) / stride) * stride;
-    const snappedPixel = Math.min(pixels - 0.5, firstPixelInStep + 0.5);
-    const snapped = cycle + snappedPixel / pixels;
-    return snapped + (phase - snapped) * blend;
-  }
-
-function interpolateCyclePhase(totalPhase, smoothness, phaseSteps = 16) {
-    const phase = Number(totalPhase);
-    if (!Number.isFinite(phase)) return 0;
-    const blend = smoothMix(smoothness);
-    if (blend >= 1) return phase;
-    const steps = Math.max(2, Math.round(Number(phaseSteps) || 16));
-    const cycle = Math.floor(phase);
-    const withinCycle = positiveModulo(phase, 1);
-    const stepped = cycle + Math.floor(withinCycle * steps) / steps;
-    return stepped + (phase - stepped) * blend;
-  }
-
-function adjustedPreviewTime(state, time, pixelCount, cyclesPerSecond, maximumStops = 32) {
-    const now = Number(time);
-    const started = Number(state?.previewStartedAt);
-    const rate = Number(cyclesPerSecond);
-    const smoothness = clamp(state?.smooth ?? 100);
-    if (!Number.isFinite(now) || !Number.isFinite(started) || !Number.isFinite(rate) || rate <= 0 || smoothness >= 100) return time;
-    const elapsed = Math.max(0, now - started);
-    const phaseOffset = (Number(state?.phaseMs) || 0) / 1000;
-    const continuousPhase = phaseOffset + elapsed * rate;
-    const displayPhase = interpolateLedPhase(continuousPhase, smoothness, pixelCount, maximumStops);
-    return started + Math.max(0, (displayPhase - phaseOffset) / rate);
-  }
-
-function adjustedCyclePreviewTime(state, time, cyclesPerSecond, phaseSteps = 16) {
-    const now = Number(time);
-    const started = Number(state?.previewStartedAt);
-    const rate = Number(cyclesPerSecond);
-    const smoothness = clamp(state?.smooth ?? 100);
-    if (!Number.isFinite(now) || !Number.isFinite(started) || !Number.isFinite(rate) || rate <= 0 || smoothness >= 100) return time;
-    const elapsed = Math.max(0, now - started);
-    const phaseOffset = (Number(state?.phaseMs) || 0) / 1000;
-    const continuousPhase = phaseOffset + elapsed * rate;
-    const displayPhase = interpolateCyclePhase(continuousPhase, smoothness, phaseSteps);
-    return started + Math.max(0, (displayPhase - phaseOffset) / rate);
-  }
-
-function shouldShapeSpiMotion(state) {
-    const variant = Number(state?.variant);
-    const engine = String(state?.engine || '').toUpperCase();
-    if (variant === 102 || engine === 'STATIC' || engine === 'SPARKLE') return false;
-    if (variant >= 98 && variant <= 120) return true;
-    return MOTION_ENGINES.has(engine);
-  }
-
-function usesCyclePhaseSteps(state) {
-    const variant = Number(state?.variant);
-    if ((variant >= 98 && variant <= 101) || (variant >= 104 && variant <= 108)) return true;
-    return ['BREATHE', 'GRADIENT', 'WARM', 'ALL'].includes(String(state?.engine || '').toUpperCase());
-  }
-
-    function baseSample(state,u,time,index,n) {
-      const center=tunedAnimationPixelCore(state,u,time,index,n), speed=Number(state.speed??18), smooth=Number(state.smooth??90), engine=state.engine||'CHASE';
-      if(widthEngines.has(engine)||speed>25||smooth<55||['STATIC','SPARKLE','BREATHE','WARM'].includes(engine))return center;
-      const delta=.28/n, before=tunedAnimationPixelCore(state,u-delta,time,index,n), after=tunedAnimationPixelCore(state,u+delta,time,index,n);
-      const mix=Math.max(45,Math.min(135,45+(smooth-55)*2))/255;
-      return center.map((v,i)=>Math.round(v*(1-mix)+(before[i]+after[i])*.5*mix));
-    }
-    function sample(state,u,time,index,n) {
-      const variant=Number(state.variant);
-      if (shouldShapeSpiMotion(state)) {
-        const rate=animationCyclesPerSecond(state.speed);
-        time=usesCyclePhaseSteps(state) ? adjustedCyclePreviewTime(state,time,rate,16) : adjustedPreviewTime(state,time,n,rate,32);
+    // V32: mirror the CURRENT SPI scenePixel implementation, not the archived
+    // V21 HTML mock-up. In particular colour/envelope quantisation, comet tails,
+    // sparkle clocks and real four-channel W must agree before screen clipping.
+    // This does not send pixels or alter the receiver's accepted effect recipes.
+    function sample(s,u,time,index,n) {
+      const variant=Number(s.variant),engine=s.engine||'CHASE',smooth=clamp(s.smooth,0,100,100),sm=smooth/100;
+      const curve=sm<.5?4*sm*sm*sm:1-4*Math.pow(1-sm,3),tau=Math.PI*2;
+      const wrap=x=>x-Math.floor(x),ease=x=>{x=clamp(x,0,1);return x*x*(3-2*x);};
+      const q16=x=>Math.round(clamp(x,0,1)*65535)/65535;
+      const mix=(a,b,x)=>a.map((v,i)=>v+(b[i]-v)*q16(x));
+      const animated=x=>{x=clamp(x,0,1);const step=x<.5?0:1;return step+(x-step)*curve;};
+      const mixAnimated=(a,b,x)=>mix(a,b,animated(x));
+      const blend=(a,b)=>{let delta=wrap(b)-wrap(a);if(delta>.5)delta--;if(delta<-.5)delta++;return wrap(a+delta*curve);};
+      const phaseSteps=(x,steps=16)=>smooth>=100?wrap(x):blend(Math.floor(wrap(x)*steps)/steps,wrap(x));
+      const motion=(x,width,pixels=n)=>{x=wrap(x);if(smooth>=100)return x;let pixel=x*pixels,nearest=Math.round(pixel);if(Math.abs(pixel-nearest)<.0001)pixel=nearest;return blend(wrap((Math.floor(pixel)+(Math.round(width)%2?.5:0))/pixels),x);};
+      const distance=(a,b)=>Math.min(Math.abs(a-b),1-Math.abs(a-b));
+      const thickness=(d,width,pixels=n)=>{if(width>=pixels)return 1;const coverage=clamp(width*.5+.5-d*pixels,0,1),step=coverage>=.999?1:0;return q16(step+(coverage-step)*curve);};
+      const brightness=clamp(s.brightness,0,100,100)/100;
+      // V30LiveScene.delivery scales only the sent foreground palette and
+      // uses BRIGHT=100, so the user's background dimmer stays independent.
+      // WARM alone keeps its real palette and uses the physical output dimmer.
+      const count=clamp(Math.round(s.colorCount||1),1,4),palette=Array.from({length:count},(_,i)=>[
+        ...(s.rgbEnabled?.[i]===false?[0,0,0]:rgb(s.colors?.[i])),s.whiteEnabled?.[i]===false?0:clamp(s.whiteChannels?.[i],0,255)]
+        .map(x=>engine==='WARM'?x:Math.round(x*brightness)));
+      const band=x=>palette[Math.min(count-1,Math.floor(wrap(x)*count))];
+      const gradient=(x,eased=false)=>{const scaled=wrap(x)*count,i=Math.floor(scaled),fraction=scaled-i;return mixAnimated(palette[i],palette[(i+1)%count],eased?ease(fraction):fraction);};
+      const elapsed=Math.max(0,time-(Number(s.previewStartedAt)||0)),speed=clamp(s.speed,.5,100,35),rate=.002+(speed/100)**2*.8;
+      const raw=wrap(elapsed*rate+(Number(s.phaseMs)||0)/1000),triangle=1-Math.abs(2*raw-1),eased=.5-.5*Math.cos(raw*tau);
+      const bounce=s.bounce?triangle+(eased-triangle)*curve:raw,left=s.direction==='left',phase=left?1-bounce:bounce,temporal=phaseSteps(phase);
+      const width=Math.max(1,Number(s.widthPixels)||3),objects=clamp(Math.round(s.objectCount||1),1,8),spacing=clamp(s.spacing,0,100,50)/100,spread=clamp(s.spread,0,100,50)/100,trail=clamp(s.trailLength,0,100,45);
+      const span=.18+spacing*.82,physical=Math.max(1,Number(s.physicalLeds)||n),offset=Number(s.receiverOffset)||0,local=(index-offset+.5)/physical;
+      let lines=Math.max(1,Number(s.lineCount)||1),line=clamp(s.lineIndex,0,lines-1);
+      // Ordinary whole-line effects are sent with one shared row/zero delay.
+      if(variant>=98&&variant<=102){lines=1;line=0;}
+      const slot=left?lines-1-line:line,delay=s.lineDelayMs!=null?Math.round(clamp(s.lineDelayMs,0,5080)/40)*.04*rate:spread*.65/Math.max(1,lines-1);
+      const linePhase=left?wrap(1-phaseSteps(raw-slot*delay)):phaseSteps(raw-slot*delay);
+      const backgroundValue=typeof s.background==='object'&&s.background?s.background:{rgb:s.background,white:s.backgroundWhite};
+      const bg=s.backgroundOn?[
+        ...(s.backgroundRgbEnabled===false?[0,0,0]:rgb(backgroundValue.rgb)),s.backgroundWhiteEnabled===false?0:clamp(backgroundValue.white,0,255)
+      ].map(x=>Math.floor(x*clamp(s.bgBrightness??s.backgroundBrightness,0,100,10)/100)):[0,0,0,0];
+      let foreground=palette[0],amount=1;
+      const objectAmount=()=>{let best=0;for(let k=0;k<objects;k++){const p=motion(phase+(objects===1?0:k*span/objects),width);best=Math.max(best,q16(softChaseCoverage(distance(u,p),width,n,smooth)));if(s.mirror)best=Math.max(best,q16(softChaseCoverage(distance(u,wrap(1-p)),width,n,smooth)));}return best;};
+      if(variant===103){
+        const head=motion(left?1-raw:raw,width),behind=wrap(left?u-head:head-u)*n,ribbon=Math.max(width,Math.min(Math.max(1,n-.5),n*trail/100));
+        const fade=Math.max(width*(.35+1.15*sm),ribbon*(.04+.08*sm)),warmZone=Math.min(ribbon,Math.max(fade*2,width*2));
+        amount=q16(ease((ribbon-behind+.5)/Math.max(.5,fade))*ease((behind+.5)/(.45+sm)));
+        foreground=mixAnimated(palette[0],palette[count>1?1:0],ease((behind-(ribbon-warmZone))/Math.max(.5,warmZone)));
+      }else if(variant>=98&&variant<=102){
+        foreground=band(linePhase);
+        if(variant===98)amount=q16(.1+.9*(.5-.5*Math.cos(linePhase*tau)));
+        else if(variant===99)amount=q16(ease(1-Math.abs(2*linePhase-1)));
+        else if(variant===100)foreground=gradient(linePhase);
+        else if(variant===101)foreground=gradient(linePhase,true);
+        else amount=linePhase<.04+.22*sm?1:0;
+      }else if(variant>=90&&variant<=97&&lines>1){
+        const row=line/Math.max(1,lines-1),panelRaw=phaseSteps(raw-slot*delay,Math.max(16,lines)),panel=left?wrap(1-panelRaw):panelRaw;
+        const rowWidth=Math.max(1,1+width/physical*lines);
+        if(variant===90||variant===91){amount=thickness(Math.abs(row-(variant===91?1-panel:panel)),rowWidth,lines);foreground=palette[line%count];}
+        else if(variant===92){const active=Math.min(lines-1,Math.floor(panel*lines));amount=line===active?1:0;foreground=palette[active%count];}
+        else if(variant===93){amount=q16(Math.pow(.5+.5*Math.sin((local-panel+row*spread)*tau*objects),.8));foreground=gradient(row+local);}
+        else if(variant===94){const p=motion(panel-row*spacing/lines,width,physical);amount=thickness(distance(local,p),width,physical);foreground=palette[line%count];}
+        else if(variant===95){const centre=(lines-1)*.5,d=Math.abs(line-centre)/Math.max(1,centre);amount=thickness(Math.abs(d-panel),rowWidth,lines);foreground=band(Math.min(d,.999999));}
+        else if(variant===96){const p=motion(line%2?1-panel:panel,width,physical);amount=thickness(distance(local,p),width,physical);foreground=palette[line%count];}
+        else{const p=motion(panel,width,physical);amount=thickness(distance(local,p),width,physical);foreground=gradient(local);}
+      }else if(engine==='STATIC')foreground=band(u);
+      else if(engine==='GRADIENT')foreground=gradient(u*(1+spread*3)+temporal*(variant===60?-1:variant%6===0?0:1));
+      else if(engine==='FLOW'||engine==='WAVE'){foreground=gradient(u*(1+spread*2)-temporal);amount=objectAmount();}
+      else if(engine==='BREATHE'){
+        foreground=gradient(u);const clock=phaseSteps(elapsed*(.35+speed/100*2.2)/tau+u*spread);
+        // Match sinf's signed half-cycle boundary before the deliberate 0%
+        // hard cut. Double precision rounds the exact pi crossing differently.
+        const sine=Math.fround(Math.sin(Math.fround(clock*Math.fround(tau))));
+        amount=q16(Math.fround(.5+Math.fround(.5*sine)));
       }
-      if (variant===103) return v20WarmRibbonPixel(state,u,time,n);
-      // These five are ordinary whole-line effects, not tunnel relays.
-      // Together therefore shares one phase, including old saved states that
-      // still contain a lineDelayMs value. Spatial delays belong to tunnels.
-      if (variant>=98 && variant<=102) return v1817WholeLinePixel({...state,lineIndex:0,lineCount:1,lineDelayMs:0},time,variant);
-      if (variant>=90 && variant<=97 && Number(state.lineCount)>1 && state.lineDelayMs!=null) {
-        const order=v1817LineOrder(state,Number(state.lineIndex)||0,Number(state.lineCount)||1,variant);
-        return baseSample({...state,spread:0,previewStartedAt:(Number(state.previewStartedAt)||0)+order*v1817ClampLineDelay(state.lineDelayMs)/1000},u,time,index,n);
-      }
-      return baseSample(state,u,time,index,n);
+      else if(engine==='SPARKLE'){
+        const tick=Math.floor(Math.fround(elapsed)*Math.fround(3+speed*.22)),seed=Math.max(0,Math.floor(index/width));
+        const hash=(Math.imul(seed,1103515245)+Math.imul(tick,12345)+Math.imul(variant,7919))>>>0;
+        foreground=band(seed/7);amount=hash%1000<Math.min(820,8+clamp(s.randomness,0,100,25)*2+objects*9)?1:0;
+      }else if(engine==='SCANNER'){
+        let p=left?1-(s.bounce?bounce:raw):(s.bounce?bounce:raw);const core=clamp(Math.round(width),1,n),travel=Math.max(1,n-core),step=Math.round(p*travel)/travel;p=step+(p-step)*curve;
+        const coverage=position=>{if(core>=n)return 1;const c=clamp((core+1)*.5-Math.abs(Math.round(u*n-.5)-(clamp(position,0,1)*(n-core)+(core-1)*.5)),0,1),a=c>=.999?1:0;return q16(a+(c-a)*curve);};
+        foreground=gradient(temporal);amount=coverage(p);if(s.mirror)amount=Math.max(amount,coverage(1-p));
+        if(trail){const tail=wrap(left?u-p:p-u),a=q16(Math.max(0,1-tail*n/Math.max(1,width*(1+trail/12))));amount=Math.max(amount,Math.floor(a*65535*.72)/65535);}
+      }else if(engine==='DUAL'||engine==='MIRROR'){
+        foreground=gradient(u+temporal);amount=0;const copies=Math.max(2,objects);
+        for(let k=0;k<copies;k++){const p=motion(phase+k*(.35+spread*.65)/copies,width);amount=Math.max(amount,thickness(distance(u,p),width),thickness(distance(u,wrap(1-p)),width));}
+      }else if(engine==='COMET'){
+        foreground=gradient(temporal);amount=0;
+        for(let k=0;k<objects;k++){const p=motion(phase+(objects===1?0:k*span/objects),width),tail=wrap(left?u-p:p-u),a=q16(Math.max(0,1-tail*n/Math.max(1,width*(1.4+trail*.09))));amount=Math.max(amount,thickness(distance(u,p),width),Math.floor(a*65535*.88)/65535);}
+      }else if(engine==='ALTERNATE'){
+        const bandWidth=Math.max(1,Math.round(width)),gap=Math.max(1,Math.floor(Math.fround(bandWidth*Math.fround(.3+spacing*2.7)))),period=bandWidth+gap,p=motion(phase,width),centre=(bandWidth-1)*.5;
+        foreground=palette[Math.floor(Math.floor(u*n)/period)%count];let delta=u*n-.5+p*n-centre;delta-=Math.floor(delta/period+.5)*period;
+        const c=clamp((bandWidth+1)*.5-Math.abs(delta),0,1),a=c>=.999?1:0;amount=q16(a+(c-a)*curve);
+      }else if(engine==='CASCADE'||engine==='SEQUENCE'){
+        const q=wrap(u-temporal);foreground=palette[Math.min(Math.floor(q*objects),objects-1)%count];amount=objectAmount();
+        if(engine==='CASCADE')amount=Math.floor(amount*65535*(60+Math.floor(q*40))/100)/65535;
+      }else if(engine==='WARM'){
+        const clock=phaseSteps(temporal+u*.72),white=Math.max(...palette.map(c=>c[3]));
+        if(!palette.some(c=>c[0]||c[1]||c[2]))foreground=[0,0,0,(white||255)*(.68+.32*ease(.5+.5*Math.sin(clock*tau)))];
+        else{foreground=gradient(clock,true);if(white)foreground[3]=Math.max(foreground[3],white);}
+      }else if(engine==='ALL')foreground=gradient(temporal);
+      else{foreground=gradient(temporal);amount=objectAmount();}
+      const channels=mixAnimated(bg,foreground,amount),bright=engine==='WARM'?(palette.some(c=>c.some(x=>x!==0))?brightness:0):1;
+      return channels.slice(0,3).map(x=>Math.round(clamp(255-(255-x*bright)*(1-channels[3]*bright/255),0,255)));
     }
     function catalog() {
       return effects.filter(effect=>effect[1]!=='STATIC').map(effect=>{
         const [name,engine,,variant,overrides={}]=effect;
         const count=effectColorCount(effect);
-        const palette=variant===103 ? ['#FFF4D4','#F3A24D'] : ['#C94E46','#F0B95F','#669CC6'];
+        // WARM's dedicated white-emitter flow must not start with an opaque
+        // W=255 + one constant RGB tint, which produces a static physical look.
+        // Only defaults change; saved palettes/receiver state remain intact.
+        const palette=engine==='WARM'?['#000000']:variant===103 ? ['#FFF4D4','#F3A24D'] : ['#C94E46','#F0B95F','#669CC6'];
         const state={animation:name,engine,variant,legacySpi:true,previewStartedAt:0,phaseMs:0,
           colors:palette.slice(0,count),whiteChannels:Array(count).fill(engine==='WARM'?255:0),
           rgbEnabled:Array(count).fill(true),whiteEnabled:Array(count).fill(true),colorCount:count,
@@ -561,21 +507,15 @@ function usesCyclePhaseSteps(state) {
   function opticalWhite(sample) {
     const amount = clamp(sample.amount, 0, 1, 0);
     const background = sample.background;
-    if (background) {
-      // Foreground and background are two independently dimmed light colours.
-      // Applying foreground brightness after compositing also dims the
-      // background (and its W channel), making its own slider misleading.
-      const front = opticalWhite({ ...sample, background: null, amount: 1 });
-      const back = opticalWhite({ ...background, amount: 1 });
-      return back.map((channel, index) => Math.round(channel + (front[index] - channel) * amount));
-    }
+    // Interpolate/dim R/G/B/W independently, exactly like receiver output.
+    // Compose the limited screen RGB only afterwards, never round it early.
+    const brightness = sample.brightness == null ? 1 : sample.brightness;
     const backgroundWhite = background ? background.white * background.brightness : 0;
-    const white = (backgroundWhite + (clamp(sample.white, 0, 255) - backgroundWhite) * amount) / 255;
+    const white = (backgroundWhite + (clamp(sample.white, 0, 255) * brightness - backgroundWhite) * amount) / 255;
     return sample.rgb.map((channel, index) => {
       const base = background ? background.rgb[index] * background.brightness : 0;
-      const linear = base + (clamp(channel, 0, 255) - base) * amount;
-      return Math.round(clamp((255 - (255 - linear) * (1 - white)) *
-        (sample.brightness == null ? 1 : sample.brightness), 0, 255));
+      const linear = base + (clamp(channel, 0, 255) * brightness - base) * amount;
+      return Math.round(clamp(255 - (255 - linear) * (1 - white), 0, 255));
     });
   }
   function backgroundSample(state) {
@@ -704,9 +644,143 @@ function usesCyclePhaseSteps(state) {
     materials.set(css,material);
     return material;
   }
+  // The old round tunnel model, parameterised by arc length. This is only a
+  // camera projection: one receiver row is one light arch, in setup order.
+  // Equal pixel distances along the curve keep a chase's speed consistent
+  // through its round roof and sides. No independent CSS/demo animation.
+  const tunnelCurve = (() => {
+    const segments = [
+      [[82,224],[55,196],[40,162],[43,122]],
+      [[43,122],[46,76],[82,40],[132,40]],
+      [[132,40],[181,40],[216,73],[220,123]],
+      [[220,123],[221,163],[206,195],[182,224]]
+    ];
+    const raw = [], distances = [0];
+    segments.forEach((segment, part) => {
+      for (let step = part ? 1 : 0; step <= 48; step++) {
+        const t=step/48, s=1-t;
+        const p=[0,1].map(axis=>s*s*s*segment[0][axis]+3*s*s*t*segment[1][axis]+3*s*t*t*segment[2][axis]+t*t*t*segment[3][axis]);
+        if(raw.length)distances.push(distances.at(-1)+Math.hypot(p[0]-raw.at(-1)[0],p[1]-raw.at(-1)[1]));
+        raw.push(p);
+      }
+    });
+    let cursor=1;
+    return Array.from({length:129},(_,index)=>{
+      const distance=index/128*distances.at(-1);
+      while(cursor<distances.length-1&&distances[cursor]<distance)cursor++;
+      const ratio=(distance-distances[cursor-1])/(distances[cursor]-distances[cursor-1]);
+      return [0,1].map(axis=>raw[cursor-1][axis]+(raw[cursor][axis]-raw[cursor-1][axis])*ratio);
+    });
+  })();
+  function tunnelProjection(lineCount, width=360, height=240) {
+    const count=Math.max(0,Math.floor(number(lineCount,0)));
+    width=Math.max(1,number(width,360));height=Math.max(1,number(height,240));
+    const vanishing=[width*.62,height*.43];
+    const project=scale=>tunnelCurve.map(([x,y])=>{
+      const front=[width*(.11+(x-40)/184*.75),height*(.08+(y-40)/184*.76)];
+      return [vanishing[0]+(front[0]-vanishing[0])*scale,vanishing[1]+(front[1]-vanishing[1])*scale];
+    });
+    const front=project(1), back=project(.44);
+    const arches=Array.from({length:count},(_,index)=>{
+      const depth=count>1?index/(count-1):0, scale=1-depth*.56;
+      // Dense installations retain ALL arches. Narrow the lens instead of
+      // silently clamping to four lines or hiding the rear of the tunnel.
+      const spacing=count>1?height*.76*.56/(count-1):height;
+      const thickness=Math.max(.7,Math.min(5.4,width*.016,height*.025,spacing*.62))*(.7+.3*scale);
+      return {index,depth,scale,thickness,points:project(scale)};
+    });
+    return {width,height,arches,front,back,floor:[front[0],front.at(-1),back.at(-1),back[0]]};
+  }
+  const tunnelProjectionCache=new Map();
+  function drawTunnel(context,frame,width,height) {
+    const key=[frame.rows.length,width,height].join(':');
+    let model=tunnelProjectionCache.get(key);
+    if(!model){
+      model=tunnelProjection(frame.rows.length,width,height);
+      if(tunnelProjectionCache.size>=8)tunnelProjectionCache.delete(tunnelProjectionCache.keys().next().value);
+      tunnelProjectionCache.set(key,model);
+    }
+    const path=(points,close=false)=>{
+      context.beginPath();points.forEach(([x,y],index)=>index?context.lineTo(x,y):context.moveTo(x,y));
+      if(close)context.closePath();
+    };
+    const material=(start,end,from,to)=>{
+      if(typeof context.createLinearGradient==='function'){
+        const gradient=context.createLinearGradient(...start,...end);
+        if(gradient&&typeof gradient.addColorStop==='function'){gradient.addColorStop(0,from);gradient.addColorStop(1,to);return gradient;}
+      }
+      return from;
+    };
+    context.shadowBlur=0;
+    // One continuous, quiet wall and floor make depth legible. There are no
+    // extra illuminated arches, floating tiles or thick occluding fascia.
+    path([...model.front,...model.back.slice().reverse()],true);
+    context.fillStyle=material([width*.1,height],[width*.7,0],'#303b38','#151c1a');context.fill();
+    path(model.floor,true);
+    context.fillStyle=material([width*.5,height*.84],[width*.62,height*.43],'#303735','#161d1b');context.fill();
+    context.lineCap='round';context.lineJoin='round';
+    for(let rowIndex=frame.rows.length-1;rowIndex>=0;rowIndex--){
+      const row=frame.rows[rowIndex],arch=model.arches[rowIndex];
+      const pixels=row.identificationPixels||row.pixels;
+      const point=position=>{
+        const at=clamp(position,0,1)*128,index=Math.min(127,Math.floor(at)),fraction=at-index;
+        return [0,1].map(axis=>arch.points[index][axis]+(arch.points[index+1][axis]-arch.points[index][axis])*fraction);
+      };
+      const part=(from,to)=>{
+        const points=[point(from)],begin=Math.floor(from*128)+1,end=Math.ceil(to*128);
+        for(let index=begin;index<end;index++)points.push(arch.points[index]);
+        points.push(point(to));path(points);
+      };
+      path(arch.points);context.strokeStyle='#29342f';context.lineWidth=arch.thickness+.8;context.stroke();
+      const segments=row.type==='RGBW'?1:Math.min(384,pixels.length);
+      // Blur is decoration, not pixel data. Rasterizing hundreds of separate
+      // shadow masks per arch is expensive on phones. Draw a bounded, soft
+      // halo underneath, then every exact foreground pixel without blur.
+      const groupedHalo=row.type==='SPI'&&segments>64;
+      if(groupedHalo){
+        const groups=16;
+        for(let group=0;group<groups;group++){
+          const start=Math.floor(group*pixels.length/groups),end=Math.floor((group+1)*pixels.length/groups),sum=[0,0,0];
+          for(let pixel=start;pixel<end;pixel++)for(let channel=0;channel<3;channel++)sum[channel]+=pixels[pixel][channel];
+          const colour=sum.map(value=>Math.round(value/Math.max(1,end-start)));
+          if(Math.max(...colour)===0)continue;
+          const css='rgba('+colour.join(',')+',0.38)';context.strokeStyle=css;context.shadowColor=css;
+          context.shadowBlur=Math.min(5,arch.thickness*1.25);context.lineWidth=arch.thickness;
+          part(group/groups,(group+1)/groups);context.stroke();
+        }
+        context.shadowBlur=0;
+      }
+      for(let index=0;index<segments;index++){
+        const colour=pixels[Math.min(pixels.length-1,Math.floor((index+.5)/segments*pixels.length))]||[0,0,0];
+        const css='rgb('+colour.join(',')+')',on=Math.max(...colour)>0;
+        // A tiny gap keeps SPI's physical pixels legible at useful sizes;
+        // subpixel/dense samples naturally read as a continuous diffuser.
+        const gap=row.type==='SPI'&&pixels.length<=64?.035:0;
+        context.strokeStyle=css;context.shadowColor=css;
+        context.shadowBlur=on&&!groupedHalo?Math.min(5,arch.thickness*1.25):0;
+        context.lineWidth=arch.thickness;
+        part((index+gap)/segments,(index+1-gap)/segments);context.stroke();
+      }
+      context.shadowBlur=0;
+    }
+    // Labels are UI, not light. Paint them after ALL arches so the next
+    // foreground arch cannot cut through the number of a deeper ledline.
+    if(frame.rows.length<=8&&height>=130){
+      context.font='10px system-ui';context.textAlign='center';context.textBaseline='top';
+      context.strokeStyle='#111514';context.lineWidth=3;context.fillStyle='#d3ddd6';
+      for(let rowIndex=frame.rows.length-1;rowIndex>=0;rowIndex--){
+        const row=frame.rows[rowIndex],arch=model.arches[rowIndex],position=arch.points[0];
+        const order=(frame.geometry.receivers.find(item=>item.receiverId===row.receiverId)?.lineIndex??rowIndex)+1;
+        const x=position[0]-arch.thickness-7,y=position[1]+4;
+        context.strokeText(String(order),x,y);context.fillText(String(order),x,y);
+      }
+    }
+    context.shadowBlur=0;
+  }
   // A projection of the SAME sampled pixels, not a second canned animation.
   // View shape changes presentation only; it never changes output mapping.
   function drawSpatial(context,frame,width,height,shape) {
+    if(shape==='tunnel'){drawTunnel(context,frame,width,height);return;}
     const count=frame.rows.length;
     const point=(index,u)=>{
       const spread=(index+.5)/count;
@@ -742,6 +816,8 @@ function usesCyclePhaseSteps(state) {
       canvas.dataset.identifyingReceiverIds = frame.identifyingReceiverIds.join(',');
       canvas.dataset.renderedLineCount = String(frame.rows.length);
       canvas.dataset.lineHitRegions = '[]';
+      canvas.dataset.spatialShape = options.spatialShape && frame.rows.length ? options.spatialShape : '';
+      canvas.dataset.spatialLineCount = options.spatialShape ? String(frame.rows.length) : '';
     }
     const context = canvas.getContext('2d');
     if (!context) return frame;
@@ -868,6 +944,6 @@ function usesCyclePhaseSteps(state) {
     if (canvas.dataset) canvas.dataset.lineHitRegions = JSON.stringify(hitRegions);
     return frame;
   }
-  return Object.freeze({ catalog, geometry, sample, draw, rows, selected, normalizeState, opticalWhite,
+  return Object.freeze({ catalog, geometry, sample, draw, rows, selected, normalizeState, opticalWhite, tunnelProjection,
     engineVersion: canonical.version, extensionVersion: extension.version, isLocalPreview: true });
 }));

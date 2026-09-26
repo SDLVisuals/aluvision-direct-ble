@@ -8,7 +8,8 @@
   const mod=v=>((v%1)+1)%1, ease=v=>{const x=clamp(v);return x*x*(3-2*x);};
   const mix=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
   const rgb=hex=>/^#[0-9a-f]{6}$/i.test(hex||'')?[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)):[0,0,0];
-  const optical=(hex,w=0)=>rgb(hex).map(c=>255-(255-c)*(1-clamp(w,0,255)/255));
+  const physical=(hex,w=0)=>[...rgb(hex),clamp(w,0,255)];
+  const display=channels=>channels.slice(0,3).map(c=>Math.round(clamp(255-(255-c)*(1-channels[3]/255),0,255)));
   // Numeric IDs 1..30 belong to older releases. Never reuse them.
   const recipes=[
     [31,'sheet','Samen vooruit','tunnel','Een brede lichtbaan schuift tegelijk over alle ledlines.',1.55,['#DDD8FF'],1,'0–17,8 s','canopy'],
@@ -45,7 +46,7 @@
     return base*Math.pow(4,(30-clamp(state.speed??30,0,100))/50);
   };
   function catalog(type){return type==='SPI'?JSON.parse(JSON.stringify(entries)):[];}
-  function palette(state){const cs=state.colors?.length?state.colors:['#FFFFFF'];return cs.slice(0,clamp(state.colorCount??cs.length,1,4)).map((c,i)=>optical(state.rgbEnabled?.[i]===false?'#000000':c,state.whiteEnabled?.[i]===false?0:state.whiteChannels?.[i]||0));}
+  function palette(state){const cs=state.colors?.length?state.colors:['#FFFFFF'];return cs.slice(0,clamp(state.colorCount??cs.length,1,4)).map((c,i)=>physical(state.rgbEnabled?.[i]===false?'#000000':c,state.whiteEnabled?.[i]===false?0:state.whiteChannels?.[i]||0));}
   function sample(input){
     const state=input.state||{},entry=byId.get(state.v30Effect);
     if(!entry||input.receiverType!=='SPI'||state.on===false||state.power===false)return [0,0,0];
@@ -91,8 +92,8 @@
     if(key===39){const glow=pulse(u-p,.11+w*.3);amount=.22+.78*glow;color=mix(at(time*.25),at(time*.25+1/colors.length),glow);}
     if(key===40){const glow=pulse(u*.68-p,.22+w*.26);amount=.3+.7*glow;color=at(time*.16-u*.32);}
     const brightness=clamp(state.bri??state.brightness??100,0,100)/100;
-    const background=state.backgroundOn?optical(state.backgroundRgbEnabled===false?'#000000':state.background||'#000000',state.backgroundWhiteEnabled===false?0:state.backgroundWhite||0).map(c=>c*clamp(state.bgBrightness??10,0,100)/100):[0,0,0];
-    return mix(background,color.map(c=>c*brightness),clamp(amount)).map(c=>Math.round(clamp(c,0,255)));
+    const background=state.backgroundOn?physical(state.backgroundRgbEnabled===false?'#000000':state.background||'#000000',state.backgroundWhiteEnabled===false?0:state.backgroundWhite||0).map(c=>c*clamp(state.bgBrightness??10,0,100)/100):[0,0,0,0];
+    return display(mix(background,color.map(c=>c*brightness),clamp(amount)));
   }
   return Object.freeze({catalog,supports,wireId,period,sample,version:1});
 });

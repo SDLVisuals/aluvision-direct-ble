@@ -301,6 +301,15 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .control-preview-dock[data-scrolled=true] .preview-wrap{padding:4px 8px 2px;border-radius:12px}
 .control-preview-dock[data-scrolled=true] .preview-top{min-height:12px;font-size:8px}
 .control-preview-dock[data-scrolled=true] .preview-wrap canvas{height:44px!important;transition:none}
+/* One stable route between gallery and settings; never rename Effecten into
+   Galerij and never bury this action in the scrolling effect description. */
+.animation-wayfinding{margin-top:7px;min-width:0;pointer-events:auto}
+.animation-wayfinding .animation-gallery-return{display:flex;align-items:center;gap:9px;width:100%;min-height:46px;margin:0;padding:9px 13px;border:1px solid color-mix(in srgb,var(--red) 36%,var(--line));border-radius:14px;background:var(--panel);color:var(--ink);box-shadow:0 2px 7px #17181709;font-size:13px;font-weight:750;line-height:1.25;text-align:left;white-space:normal}
+.animation-wayfinding .animation-gallery-return span{flex:1;min-width:0}
+.animation-wayfinding .animation-gallery-return .icon{width:19px;height:19px;color:var(--red);flex:none}
+.animation-wayfinding .animation-gallery-return:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.control-preview-dock[data-scrolled=true] .animation-wayfinding{margin-top:5px;padding-bottom:5px}
+.current-effect b:focus{outline:none}
 /* Keep the LED preview visible by default. Open the three size choices only
    when requested; the menu stays in-flow above the LED, never on top of it. */
 .preview-size-row{display:flex;justify-content:flex-end;align-items:center;padding:3px 1px 4px}

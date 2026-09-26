@@ -588,11 +588,13 @@
       amount = clamp((centerTravel * n * 0.5 - centerDistance + centerFeather) / centerFeather, 0, 1, 0);
       colourPhase = centerDistance / Math.max(1, n * 0.5) * (1 + spread) + temporal * 0.08;
     } else if (effect.variant === 114) {
-      var auroraA = Math.sin((u * (1.2 + spread * 2.8) - temporal * 0.31) * Math.PI * 2);
-      var auroraB = Math.sin((u * 3.17 + temporal * 0.19 + 0.23) * Math.PI * 2);
-      var auroraC = Math.sin((u * 0.73 - temporal * 0.11 + 0.61) * Math.PI * 2);
+      // Integer clock harmonics close the shared 0..1 receiver phase. The
+      // old fractional clock rates restarted mid-wave on every group cycle.
+      var auroraA = Math.sin((u * (1.2 + spread * 2.8) - temporal) * Math.PI * 2);
+      var auroraB = Math.sin((u * 3.17 + temporal * 2 + 0.23) * Math.PI * 2);
+      var auroraC = Math.sin((u * 0.73 - temporal + 0.61) * Math.PI * 2);
       amount = Math.pow(clamp(0.48 + auroraA * 0.27 + auroraB * 0.16 + auroraC * 0.09, 0, 1, 0), 1.35);
-      colourPhase = u * 0.65 + temporal * 0.14 + auroraB * 0.05;
+      colourPhase = u * 0.65 + temporal + auroraB * 0.05;
     } else if (effect.variant === 115) {
       var directed = reverse ? 1 - phase : phase;
       var headA = pixelMotionPosition(directed, width, n, smooth);
@@ -600,13 +602,15 @@
       var behindA = mod1(headA - u) * n;
       var behindB = mod1(u - headB) * n;
       var dualTail = Math.max(width, n * Math.max(0.02, trail));
-      amount = Math.max(thickness(circularDistance(u, headA), width, n, smooth),
-        thickness(circularDistance(u, headB), width, n, smooth),
-        Math.max(0, 1 - behindA / dualTail) * 0.82, Math.max(0, 1 - behindB / dualTail) * 0.82);
-      colourPhase = behindA < behindB ? 0.05 : 0.55;
+      var dualA = Math.max(thickness(circularDistance(u, headA), width, n, smooth),Math.max(0,1-behindA/dualTail)*0.82);
+      var dualB = Math.max(thickness(circularDistance(u, headB), width, n, smooth),Math.max(0,1-behindB/dualTail)*0.82);
+      amount = Math.max(dualA,dualB);
+      var dualBlend = dualA+dualB>0 ? 0.05+0.5*dualB/(dualA+dualB) : 0.05;
+      var dualOriginal = behindA < behindB ? 0.05 : 0.55;
+      colourPhase = dualOriginal+(dualBlend-dualOriginal)*smoothnessCurve(smooth);
     } else if (effect.variant === 116) {
       var first = Math.sin((u * (2 + count) - temporal) * Math.PI * 2);
-      var second = Math.sin((u * (2.37 + spread * 3) + temporal * 0.83) * Math.PI * 2);
+      var second = Math.sin((u * (2.37 + spread * 3) + temporal) * Math.PI * 2);
       amount = Math.pow(0.5 + 0.5 * first * second, 0.8 + (100 - smooth) * 0.012);
       colourPhase = (first - second) * 0.18 + temporal;
     } else if (effect.variant === 117) {
@@ -631,11 +635,12 @@
       }
       colourPhase = u + temporal * 0.04;
     } else if (effect.variant === 119) {
-      var radius = phase * 0.5;
+      var radialFeather = (width * 0.5 + 1) / n;
+      var radius = phase * (0.5 + radialFeather * 2) - radialFeather;
       var radialDistance = Math.abs(u - 0.5);
       amount = thickness(Math.abs(radialDistance - radius), width, n, smooth);
-      if (count > 1) amount = Math.max(amount, thickness(Math.abs(radialDistance - mod1(phase + 0.5) * 0.5), width, n, smooth));
-      colourPhase = radius * 2;
+      if (count > 1) amount = Math.max(amount, thickness(Math.abs(radialDistance - (mod1(phase + 0.5)*(0.5+radialFeather*2)-radialFeather)), width, n, smooth));
+      colourPhase = phase;
     } else if (effect.variant === 120) {
       var contourHead = pixelMotionPosition(phase, width, n, smooth);
       var contourBehind = mod1(contourHead - local) * n;
@@ -660,7 +665,7 @@
     } else if (effect.variant === 122) {
       var waves = 1.5 + spacing * 6.5;
       var weaveA = 0.5 + 0.5 * Math.sin((local * waves - clock) * Math.PI * 2);
-      var weaveB = 0.5 + 0.5 * Math.sin((local * waves + clock * 0.83 + 0.5) * Math.PI * 2);
+      var weaveB = 0.5 + 0.5 * Math.sin((local * waves + clock + 0.5) * Math.PI * 2);
       var threshold = Math.max(0.01, Math.max(0.5, width * 0.5) / n * waves);
       var edgeA = clamp((threshold - Math.abs(weaveA - 0.5) + 0.08 * smoothnessCurve(smooth)) / threshold, 0, 1, 0);
       var edgeB = clamp((threshold - Math.abs(weaveB - 0.5) + 0.08 * smoothnessCurve(smooth)) / threshold, 0, 1, 0);
@@ -668,22 +673,25 @@
       amount = Math.max(edgeA, edgeB * (0.55 + 0.45 * weaveA), afterglow);
       colourPhase = edgeA + 0.00001 >= edgeB ? 0.08 + local * 0.18 : 0.58 + local * 0.18;
     } else if (effect.variant === 123) {
-      var prismCoordinate = orientedPixel / width * (0.55 + spacing * 1.9) - clock * (1 + trail * 0.8);
+      var prismSpatial = orientedPixel / width * (0.55 + spacing * 1.9);
+      var prismCoordinate = prismSpatial - clock * (1 + Math.round(trail));
       var prismCenter = 1 - Math.abs(mod1(prismCoordinate) * 2 - 1);
       var gapFloor = 0.25 + trail * 0.70;
       amount = gapFloor + (1 - gapFloor) * Math.pow(prismCenter, 0.45 + (100 - smooth) * 0.018);
-      colourPhase = prismCoordinate * (1 + spacing) * (0.7 + spread * 0.6) + temporal * 0.21;
+      colourPhase = prismSpatial * (1 + spacing) * (0.7 + spread * 0.6) - clock;
     } else if (effect.variant === 124) {
       var gapPixels = 1 + spacing * Math.max(2, n * 0.16);
       var periodPixels = width + gapPixels;
-      var travelPixels = clock * periodPixels;
+      var travelPixels = clock * periodPixels * palette.length;
       var cell = (orientedPixel - travelPixels + periodPixels * 8) % periodPixels;
       var distanceToSegment = cell < width ? 0 : Math.min(cell - width, periodPixels - cell);
       var featherPixels = 0.15 + smoothnessCurve(smooth) * Math.min(1.5, gapPixels * 0.45);
       var lit = cell < width ? 1 : Math.max(0, 1 - distanceToSegment / featherPixels);
       var marched = mod1((orientedPixel - travelPixels) / periodPixels);
       amount = Math.max(lit, trail * 0.55 * Math.pow(Math.max(0, 1 - marched), 2));
-      colourPhase = Math.floor((orientedPixel - travelPixels) / periodPixels) * 0.23;
+      var segmentCoordinate = (orientedPixel-travelPixels)/periodPixels;
+      var segmentBand = Math.floor(segmentCoordinate);
+      colourPhase = (segmentBand+(segmentCoordinate-segmentBand)*smoothnessCurve(smooth))/palette.length;
     } else if (effect.variant === 125) {
       var emberCount = Math.max(2, Math.min(12, 2 + Math.floor(spacing * 10)));
       var heat = 0;

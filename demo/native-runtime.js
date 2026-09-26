@@ -21,6 +21,9 @@
   const pending=new Map();let serial=0;
   const actions=new Set(['capabilities','securityPreference','securityStatus','setPinProtection','discover','discoverMesh','select','secure','reconcileSecurity','finalize','verifyFinalReceipt','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones','configureOutputs','previewPixels','eraseAppData','applyLive','applyLiveBatch','otaPlan','otaStart','otaStatus','otaResume','otaCancel','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain']);
   actions.add('outputConfigurationStatus');
+  ['exportBackup','chooseBackup','importInstallationView','recoverInstallation'].forEach(action=>actions.add(action));
+  ['receiverContextStatus','syncInstallationContext'].forEach(action=>actions.add(action));
+  const contextTimers=new Map(),contextEpochs=new Map();let contextQueue=Promise.resolve(),contextResetEpoch=0;
   let viewRevision=0,viewLoaded=false,viewModelKey=null,viewDraftKey='null',writeQueue=Promise.resolve();
   const fail=code=>Object.assign(new Error('De verbinding is nog niet beschikbaar.'),{code});
   function receive(message){
@@ -38,14 +41,14 @@
     if(pending.size>=8)return Promise.reject(fail('NATIVE_BUSY'));
     return new Promise((resolve,reject)=>{
       const id='v30-'+documentId+'-'+(++serial),cancelNative=()=>{
-        if(pending.has(id)&&!['capabilities','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones'].includes(action))try{handler.postMessage({version:1,id:'v30-'+documentId+'-'+(++serial),action:action==='discover'?'cancelDiscover':'cancelOnboarding',payload:{requestId:id}});}catch(_){}
+        if(pending.has(id)&&!['capabilities','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones','exportBackup','chooseBackup','importInstallationView'].includes(action))try{handler.postMessage({version:1,id:'v30-'+documentId+'-'+(++serial),action:action==='discover'?'cancelDiscover':'cancelOnboarding',payload:{requestId:id}});}catch(_){}
       },abort=()=>{
         cancelNative();
         receive({id,ok:false,code:'CANCELLED'});
       };
       // MAIN verification has its own 12 s handshake deadline. The bridge must
       // leave room for native key storage and delivering that bounded result.
-      const timeout=action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
+      const timeout=['exportBackup','chooseBackup','recoverInstallation'].includes(action)?300000:action==='syncInstallationContext'?180000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
         ['secure','reconcileSecurity'].includes(action)&&payload.configuration?.role==='node'?120000:
         ['select','secure','reconcileSecurity','finalize','otaPlan','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain'].includes(action)?45000:12000;
       const timer=root.setTimeout(()=>{cancelNative();receive({id,ok:false,code:'NATIVE_TIMEOUT'});},timeout);
@@ -57,6 +60,35 @@
   }
   if(native)Object.defineProperty(root,'__lightningV30Reply',{value:receive,configurable:false,writable:false});
   function emptyModel(){return {schemaVersion:30,demo:false,stands:[],receivers:[],scenes:[],presets:[]};}
+  function contextEvent(detail){if(typeof root.dispatchEvent==='function'&&typeof root.CustomEvent==='function')root.dispatchEvent(new root.CustomEvent('lightning:receiver-context',{detail}));}
+  function contextResult(result,standId){
+    if(!result||result.standId!==standId||!['synced','pending'].includes(result.status)||!Number.isInteger(result.synced)||!Number.isInteger(result.total)||result.total<1||result.total>30||result.synced<0||result.synced>result.total||(result.status==='synced'&&result.synced!==result.total))throw fail('RECEIVER_CONTEXT_UNCONFIRMED');
+    return {standId,status:result.status,synced:result.synced,total:result.total};
+  }
+  async function receiverContext(action,standId){
+    if(root.__lightningV32ReceiverContext!==true)throw fail('RECEIVER_CONTEXT_UNAVAILABLE');
+    if(typeof standId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(standId))throw fail('RECEIVER_CONTEXT_INVALID');
+    await writeQueue.catch(()=>{});
+    return contextResult(await call(action,{standId}),standId);
+  }
+  function scheduleContext(view,standId){
+    if(root.__lightningV32ReceiverContext!==true||!view?.model?.receivers?.some(receiver=>receiver.standId===standId&&receiver.lifecycle==='added'))return view;
+    root.clearTimeout(contextTimers.get(standId));
+    const epoch=(contextEpochs.get(standId)||0)+1,reset=contextResetEpoch;
+    contextEpochs.set(standId,epoch);
+    const current=()=>contextEpochs.get(standId)===epoch&&contextResetEpoch===reset;
+    contextEvent({standId,status:'pending'});
+    contextTimers.set(standId,root.setTimeout(()=>{
+      contextTimers.delete(standId);
+      contextQueue=contextQueue.catch(()=>{}).then(async()=>{
+        if(!current())return;
+        contextEvent({standId,status:'syncing'});
+        try{const result=await receiverContext('syncInstallationContext',standId);if(current())contextEvent(result);}
+        catch(_){if(current())contextEvent({standId,status:'pending'});}
+      });
+    },1400));
+    return view;
+  }
   function canonical(value){
     if(Array.isArray(value))return '['+value.map(canonical).join(',')+']';
     if(value&&typeof value==='object')return '{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonical(value[key])).join(',')+'}';
@@ -271,6 +303,55 @@
   }
   const services=Object.freeze(native?{
     connectionMode:'manual-wifi',
+    async receiverContextStatus({standId}){return receiverContext('receiverContextStatus',standId);},
+    async syncInstallationContext({standId}){
+      root.clearTimeout(contextTimers.get(standId));contextTimers.delete(standId);
+      const epoch=(contextEpochs.get(standId)||0)+1,reset=contextResetEpoch;contextEpochs.set(standId,epoch);
+      const result=contextQueue.catch(()=>{}).then(async()=>{
+        if(contextEpochs.get(standId)!==epoch||reset!==contextResetEpoch)throw fail('RECEIVER_CONTEXT_STALE');
+        const result=await receiverContext('syncInstallationContext',standId);
+        if(contextEpochs.get(standId)!==epoch||reset!==contextResetEpoch)throw fail('RECEIVER_CONTEXT_STALE');
+        return result;
+      });contextQueue=result;
+      return result;
+    },
+    async recoverInstallation({pin,signal}){
+      if(typeof pin!=='string'||!/^\d{8,12}$/.test(pin))throw fail('PIN_RECOVERY_INVALID');
+      const next=writeQueue.catch(()=>{}).then(async()=>{
+        const result=await call('recoverInstallation',{pin},signal);
+        if(result?.status!=='restored'||typeof result.standId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(result.standId)||result.view?.model?.demo!==false||result.view?.draft!==null)throw fail('PIN_RECOVERY_UNCONFIRMED');
+        if(result.lightStateComplete!==true||typeof root.LightningReceiverPlayback?.restore!=='function')throw fail('PLAYBACK_UNCONFIRMED');
+        const playbackModel=root.LightningReceiverPlayback.restore(result.view.model,result.liveStatuses,{standId:result.standId});
+        return {status:'restored',standId:result.standId,view:acceptView(result.view),playbackModel};
+      });writeQueue=next;return next;
+    },
+    async exportBackup({name,json}){
+      if(typeof name!=='string'||!/^[A-Za-z0-9._-]{1,100}\.json$/.test(name)||typeof json!=='string'||new TextEncoder().encode(json).length>4*1024*1024)throw fail('BACKUP_INVALID');
+      const result=await call('exportBackup',{name,json});
+      if(!['shared','cancelled'].includes(result?.status))throw fail('BACKUP_UNCONFIRMED');return result;
+    },
+    async chooseBackup(){
+      const result=await call('chooseBackup');
+      if(result?.status==='cancelled')return result;
+      if(result?.status!=='selected'||typeof result.json!=='string'||new TextEncoder().encode(result.json).length>4*1024*1024)throw fail('BACKUP_INVALID');return result;
+    },
+    async importInstallationView({model,confirmation}){
+      if(confirmation!=='RESTORE_LOCAL_SETTINGS'||!model||model.demo!==false)throw fail('BACKUP_INVALID');
+      const snapshot=JSON.parse(JSON.stringify(model));
+      const next=writeQueue.catch(()=>{}).then(async()=>{
+        if(!viewLoaded)throw fail('VIEW_NOT_LOADED');
+        const expectedRevision=viewRevision,previous=viewModelKey;
+        const matches=view=>view?.draft===null&&canonical(view.model)===canonical(snapshot)&&Number.isSafeInteger(view.revision)&&view.revision>=expectedRevision&&view.revision<=expectedRevision+1&&(view.revision!==expectedRevision||canonical(snapshot)===previous);
+        try{const view=await call('importInstallationView',{model:snapshot,confirmation,expectedRevision});if(!matches(view))throw fail('BACKUP_UNCONFIRMED');return acceptView(view);}
+        catch(error){
+          // A lost acknowledgement is reconciled read-only, never by replaying.
+          try{const view=acceptView(await call('loadView'));
+            if(matches(view))return view;
+            error.reconciledView=view;error.unchanged=canonical(view.model)===previous&&view.revision===expectedRevision;
+          }catch(_){}throw error;
+        }
+      });writeQueue=next;return next.then(view=>{for(const stand of view.model.stands)scheduleContext(view,stand.id);return view;});
+    },
     async securityPreference({standId}){
       const result=await call('securityPreference',{standId});
       if(typeof result?.pinRequired!=='boolean')throw fail('PIN_MODE_UNCONFIRMED');
@@ -294,9 +375,9 @@
     async persistDraft({draft}){return writeView('saveDraft',{draft});},
     async parkDraft({transactionId}){return moveDraft('parkDraft',{transactionId});},
     async resumeDraft({standId,receiverId,rid,fingerprint=null}){return moveDraft('resumeDraft',{standId,receiverId,rid,fingerprint});},
-    async publishModel({model,configuration,receiptRef}){return writeView('publishModel',{model,configuration,receiptRef});},
-    async editZones(request){return editZones(request);},
-    async configureOutputs(request){return configureOutputs(request);},
+    async publishModel({model,configuration,receiptRef}){return writeView('publishModel',{model,configuration,receiptRef}).then(view=>scheduleContext(view,configuration.standId));},
+    async editZones(request){return editZones(request).then(view=>scheduleContext(view,request.standId));},
+    async configureOutputs(request){return configureOutputs(request).then(view=>scheduleContext(view,request.standId));},
     async outputConfigurationStatus({standId,receiverId}){
       if(root.__lightningV31OutputRecovery!==true)return {status:'none'};
       const id=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(value);
@@ -322,6 +403,7 @@
     async reconcileSecurity({configuration,signal}){return call('reconcileSecurity',{configuration},signal);},
     async eraseAppData({confirmation}){
       if(confirmation!=='Alles verwijderen')throw fail('CONFIRMATION_REQUIRED');
+      contextTimers.forEach(timer=>root.clearTimeout(timer));contextTimers.clear();contextEpochs.clear();contextResetEpoch++;
       const next=writeQueue.catch(()=>{}).then(()=>call('eraseAppData',{confirmation}));writeQueue=next;
       const answer=await next;
       if(answer?.status!=='erased-local-only')throw fail('ERASE_UNCONFIRMED');

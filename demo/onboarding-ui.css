@@ -429,6 +429,15 @@ body:has(.onboarding-page) .onboarding-page{gap:10px}
 .onboarding-recognition .button{flex:none;min-height:44px;font-size:12px;border:1px solid var(--line);background:var(--soft)}
 .onboarding-result .onboarding-actions{display:block;margin-top:10px}
 .onboarding-result .onboarding-actions>.button{width:100%;background:var(--ink);color:var(--panel)}
+.onboarding-results-heading{display:grid;gap:9px;margin-top:4px;min-width:0}
+.onboarding-results-heading h2{font-size:16px;margin:0}
+.onboarding-results-heading p{font-size:12px;line-height:1.45;color:var(--muted);margin:0}
+.onboarding-result-filter{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;padding:4px;border:1px solid var(--line);border-radius:16px;background:var(--soft)}
+.onboarding-page .onboarding-result-filter .button.secondary{min-height:44px;border:1px solid transparent;border-radius:12px;padding:8px 5px;color:var(--ink);background:var(--soft);font-size:12px;box-shadow:none}
+/* Keep the selected type identifiable after the later premium/dark button
+   rules. Solid accent and white copy are shared by both display themes. */
+.onboarding-page .onboarding-result-filter .button[aria-pressed=true]{color:#fff;background:var(--red);border-color:var(--red);box-shadow:0 2px 5px #0000000a}
+.onboarding-result-filter .button:focus-visible{outline:2px solid var(--red);outline-offset:1px}
 .onboarding-search-again{display:flex;justify-content:center}
 .onboarding-search-again .button{min-height:44px;background:transparent;color:var(--muted);font-size:12px;text-decoration:underline;text-underline-offset:3px}
 .onboarding-page[data-onboarding-stage=receiver] .onboarding-footer:has(>.button:only-child){grid-template-columns:1fr}

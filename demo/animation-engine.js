@@ -26,10 +26,15 @@
     const w = clamp(white, 0, 255) / 255;
     return rgb(slot).map(channel => 255 - (255 - channel) * (1 - w));
   }
+  // Mix/dim physical channels first, compose the screen colour only last.
+  // A saturated screen-white cannot represent (or reconstruct) RGB + W power.
+  const physical = (slot, white = 0) => [...rgb(slot), clamp(white, 0, 255)];
+  const display = channels => channels.slice(0, 3).map(c =>
+    Math.round(clamp(255 - (255 - c) * (1 - channels[3] / 255), 0, 255)));
   function palette(state, fallback = ['#FF0000']) {
     const colors = Array.isArray(state.colors) && state.colors.length ? state.colors : fallback;
     const size = Math.round(clamp(state.colorCount, 1, colors.length, colors.length));
-    return colors.slice(0, size).map((color, index) => optical(
+    return colors.slice(0, size).map((color, index) => physical(
       Array.isArray(state.rgbEnabled) && state.rgbEnabled[index] === false ? '#000000' : color,
       Array.isArray(state.whiteEnabled) && state.whiteEnabled[index] === false ? 0 :
         Array.isArray(state.whiteChannels) ? state.whiteChannels[index] : 0));
@@ -106,7 +111,8 @@
     // Brand is architectural ambient lighting, not a fast animation preset.
     // Adding a minimum duration preserves meaningful motion at every speed
     // slider value without a clipped/dead zone at the fast end.
-    return periodForSpeed(state.speed) + (BY_ID.get(state.v30Effect)?.category === 'brand' ? 4 : 0);
+    return periodForSpeed(state.speed) + (BY_ID.get(state.v30Effect)?.category === 'brand'
+      ? (state.v30Effect === 'v30-brand-focus' ? 6 : 4) : 0);
   }
   function catalog(type) {
     if (type !== 'SPI' && type !== 'RGBW') throw new Error('Unknown receiver type: ' + type);
@@ -137,7 +143,7 @@
   }
   function wholeSample(id, state, clock) {
     const fixed = id.includes('seven') ? SEVEN : RGB;
-    const colors = id.endsWith('jumping') ? fixed.map(color => rgb(color)) : palette(state, fixed);
+    const colors = id.endsWith('jumping') ? fixed.map(color => physical(color)) : palette(state, fixed);
     const step = clock.phase * colors.length;
     const index = Math.floor(step) % colors.length;
     return id.endsWith('jumping') ? colors[index] : mix(colors[index], colors[(index + 1) % colors.length], shaped(step - index, state));
@@ -166,10 +172,13 @@
       const offset = count % 2 === 0 ? 0.5 : 0;
       const distance = Math.abs(index - center) - offset;
       const furthest = center - offset;
-      const wave = mod(clock.time / step, furthest + 3) - 0.75;
+      // Begin and end outside the pulse radius. A fixed -.75 origin left
+      // wide pulses already lit when the clock/palette wrapped to the start.
+      const span = furthest + radius * 2;
+      const wave = mod(clock.time / step, span) - radius;
       const ordered = id === 'v30-tunnel-center' ? distance : furthest - distance;
       amount = softPulse(ordered - wave, radius, state);
-      colorCycle = Math.floor(clock.time / (step * (furthest + 3)));
+      colorCycle = Math.floor(clock.time / (step * span));
     } else if (id === 'v30-tunnel-cascade') {
       const position = mod(clock.time / step, count * 2 + 2);
       const fade = 0.15 + clamp(state.fadeAmount, 0, 100, 90) / 100 * 0.85;
@@ -216,9 +225,9 @@
     return { color: colors[mod(colorCycle, colors.length)], amount: clamp(amount, 0, 1) };
   }
   function brandSample(id, state, clock, index, count, input) {
-    const white = [255, 255, 255];
-    const warm = optical('#C55B13', 125);
-    const brand = rgb(state.brandColor || (state.colors || [])[0] || DEFAULT_BRAND);
+    const white = [0, 0, 0, 255];
+    const warm = physical('#C55B13', 125);
+    const brand = physical(state.brandColor || (state.colors || [])[0] || DEFAULT_BRAND);
     const direction = state.direction === 'reverse' || state.direction === 'left' ? -1 : 1;
     const wave = (1 - Math.cos(clock.phase * Math.PI * 2)) / 2;
     const breathe = shaped(wave, state);
@@ -260,16 +269,15 @@
     const brightness = clamp(state.bri == null ? state.brightness : state.bri, 0, 100, 100) / 100;
     if (entry.category === 'tunnel') {
       const foreground = tunnelSample(entry.id, state, clock, index, count, input);
-      const background = state.backgroundOn ? optical(
+      const background = state.backgroundOn ? physical(
         state.backgroundRgbEnabled === false ? '#000000' : state.background,
         state.backgroundWhiteEnabled === false ? 0 : state.backgroundWhite)
-        .map(channel => channel * clamp(state.bgBrightness, 0, 100, 10) / 100) : [0, 0, 0];
-      return mix(background, foreground.color.map(channel => channel * brightness), foreground.amount)
-        .map(channel => Math.round(clamp(channel, 0, 255)));
+        .map(channel => channel * clamp(state.bgBrightness, 0, 100, 10) / 100) : [0, 0, 0, 0];
+      return display(mix(background, foreground.color.map(channel => channel * brightness), foreground.amount));
     }
     const channels = entry.category === 'whole' ? wholeSample(entry.id, state, clock)
       : brandSample(entry.id, state, clock, index, count, input);
-    return channels.map(channel => Math.round(clamp(channel * brightness, 0, 255)));
+    return display(channels.map(channel => channel * brightness));
   }
   return Object.freeze({ version: '30-preview-1', catalog, sample, periodForSpeed, periodForEffect, optical,
     isLocalPreview: true, supportsFirmware: false });

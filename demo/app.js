@@ -6,6 +6,7 @@
   const M = window.LightningModel, P = window.LightningPreview, C = window.LightningColour, S = window.LightningPresets;
   const Colours = window.LightningColoursLibrary, Scenes = window.LightningScenes;
   const Preferences=window.LightningPreferences;
+  const Backup=window.LightningBackup;
   const Library=window.LightningAnimationLibrary;
   const runtime=window.LightningNativeRuntime;
   function pinRequired(){return window.AluvisionSecurityMode?.pinRequired!==false;}
@@ -43,6 +44,9 @@
   // Merely browsing must work even when a privacy policy denies local storage.
   // The demo shares an origin with the public root but never shares storage.
   const appStorage=webDemoContext?webDemo.storage:(()=>{try{return window.localStorage;}catch(_){return null;}})();
+  const backupTransaction=Backup?.transaction(appStorage);
+  let selectedBackup=null,backupNotice='',lightSaveTimer=null,lightIntentDirty=false;
+  const receiverContextStates=new Map(),receiverContextReads=new Set();
   try { presetStore = S.createStore(appStorage); } catch (_) { presetStore = S.createStore(null); }
   try { colourStore = Colours.createStore(appStorage); sceneStore=Scenes.createStore(appStorage); }
   catch (_) { colourStore=Colours.createStore(null);sceneStore=Scenes.createStore(null); }
@@ -57,6 +61,7 @@
   // through an intermediate page or clears their selected ledline.
   let controlMode='colour',showControlAnimationGallery=true,controlPreviewSize='small';
   let pinProtection=null,pinProtectionLoading=false,pinProtectionBusy=false,pinProtectionError='',pinProtectionReconnect=null;
+  let pinLoginAvailable=false,pinLoginChecking=false,pinLoginBusy=false,pinLoginError='',pinRecoveryAbort=null;
   const liveStates=new Map();
   const liveController=nativeContext&&runtime?.native===true&&typeof runtime.services?.applyLive==='function'
     ?window.LightningLiveControl?.create({send:request=>runtime.services.applyLive(request),
@@ -83,6 +88,19 @@
     }
   }
   window.addEventListener('scroll',updateControlPreviewDensity,{passive:true});
+  function revealAnimationStart(){
+    // Do not carry a deep gallery scroll position into the settings. Align
+    // their heading below the visible dock, including its compacted height.
+    const target=main.querySelector('.active-animation-workspace');if(!target)return;
+    const align=()=>{
+      if(!target.isConnected)return;
+      updateControlPreviewDensity();
+      const surface=main.querySelector('.control-dock-surface'),height=surface?.getBoundingClientRect().height||0;
+      window.scrollTo({top:Math.max(0,window.scrollY+target.getBoundingClientRect().top-height-12),behavior:'instant'});
+      updateControlPreviewDensity();
+    };
+    align();requestAnimationFrame(()=>{align();target.querySelector('.current-effect b')?.focus({preventScroll:true});});
+  }
   document.getElementById('effect-dialog').addEventListener('cancel',event=>{if(colourManagerReturn){event.preventDefault();closeColourManager();}});
   if(webDemoContext){
     document.getElementById('web-demo-banner').hidden=false;
@@ -122,6 +140,7 @@
     return 'Nog niet bevestigd door de receiver. Je keuzes blijven staan. Controleer de verbinding en probeer opnieuw.';
   }
   const onboarding=window.LightningOnboardingUI.create({getModel:()=>model,
+    allowPinLogin:nativeContext,
     services:webDemo||(runtime?.native===true?runtime.services||{}:{}),
     onManage:request=>manageSetupZones(request),
     onComplete:nextModel=>{model=nextModel;},
@@ -164,7 +183,7 @@
     const unassigned=name==='unassigned';
     return `<svg class="icon${unassigned?' icon-unassigned':''}"${unassigned?' data-icon="unassigned"':''} viewBox="0 0 24 24" aria-hidden="true"><path d="${iconPaths[name] || iconPaths.light}"/></svg>`;
   }
-  const stand = () => model.stands[0];
+  const stand = () => model.stands.find(item=>item.id===route.standId)||model.stands[0];
   // Before the first receiver is confirmed, the named stand exists only in
   // the persisted setup draft. PIN preference belongs to that same stand ID.
   function securityStand(){
@@ -316,10 +335,16 @@
       ${integratedControlHeading?`<div class="control-dock-context-line"><div class="control-dock-location"><small>JE LICHT · ${esc(modeName)}</small><b>${esc(z.name)}</b></div><span class="pill control-dock-type-badge">${zoneTypeLabel(z)}</span></div><div class="control-dock-actions"><button class="back back-to-zones control-dock-back" data-action="stand" aria-label="Terug naar zones" title="Terug naar zones">${icon('back')}<span>Zones</span></button>${modeTabs}</div>`:''}
       ${integratedControlHeading?'':`<div class="control-dock-heading"><div class="control-dock-location"><small>JE LICHT · ${esc(modeName)}</small><b>${esc(z.name)}</b></div>${modeTabs||`<span class="control-dock-mode">${esc(modeName)}</span>`}</div>`}
       <div class="preview-wrap${canTapLines?' preview-selectable':''}"><div class="preview-top"><span>Hele zone</span><span class="preview-summary">${esc(scope)}</span></div>${zonePreview(z,'',{selection:selection(),main:true,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1])),label})}${screen==='animations'||effectChosen?`<div class="preview-live-controls"><span>Voorbeeld volgt je keuze direct</span></div>`:''}</div>
-      <p class="live-confirmation" data-live-status="zone" role="status" aria-live="polite"></p>
+      ${animationWayfinding(screen)}<p class="live-confirmation" data-live-status="zone" role="status" aria-live="polite"></p>
     </div></section>`;
   }
   function zoneTypeLabel(z) { return z.type==='SPI'?'Pixel LED · SPI':z.type==='RGBW'?'RGBW':'Nog geen verlichting'; }
+  function animationWayfinding(screen){
+    if(!(screen==='animations'||screen==='controls'&&controlMode==='animations')||!activeEffect())return '';
+    const browsing=screen==='controls'&&showControlAnimationGallery;
+    const action=browsing?'animation-current-edit':screen==='controls'?'animation-gallery':'animations-gallery';
+    return `<nav class="animation-wayfinding" aria-label="${esc(t('animationNavigation'))}"><button class="button secondary animation-gallery-return" data-action="${action}" aria-label="${esc(t(browsing?'animationBackToSettings':'animationChooseAnother'))}">${icon(browsing?'back':'zones')}<span>${esc(t(browsing?'animationBackToSettings':'animationChooseAnother'))}</span>${icon('chevron')}</button></nav>`;
+  }
   function previewSizePickerMarkup(){
     const sizes=[['small','Klein'],['medium','Groter'],['large','Heel groot']],current=sizes.find(([size])=>size===controlPreviewSize)?.[1]||'Klein';
     return `<div class="preview-size-row"><details class="preview-size-control"><summary aria-label="Voorbeeldgrootte ${current}. Tik om te wijzigen"><span>Voorbeeld</span><b>${current}</b>${icon('chevron')}</summary><div class="preview-size-picker" role="group" aria-label="Grootte van het ledlinevoorbeeld">${sizes.map(([size,title])=>`<button type="button" data-action="preview-size" data-id="${size}" aria-label="${title} voorbeeld" aria-pressed="${controlPreviewSize===size}">${title}</button>`).join('')}</div></details></div>`;
@@ -327,7 +352,7 @@
   function zoneDeleteButton(z,css=''){return `<button type="button" class="zone-delete-shortcut ${css}" data-action="zone-delete" data-id="${esc(z.id)}" aria-label="Zone ${esc(z.name)} verwijderen">${icon('trash')}<span>Zone verwijderen</span></button>`;}
   function renderEmptyZone() {
     const z=zone();
-    return `<div class="page empty-zone-page"><div class="topline"><button class="back back-to-zones" data-action="stand">${icon('back')}<span>Terug naar zones</span></button><span class="context-name">${esc(standLabel())}</span></div><header class="page-heading"><div><div class="eyebrow">LEGE ZONE</div><h1>${esc(z.name)}</h1></div><button class="icon-button" data-action="zone-rename" data-id="${esc(z.id)}" aria-label="Naam van deze zone wijzigen">${icon('edit')}</button></header><section class="card empty empty-zone"><h2>Voeg verlichting toe</h2><p>Verplaats een receiver uit je stand. Zijn instellingen blijven bewaard.</p><button class="button full" data-action="zone-assign" data-id="${esc(z.id)}">Bestaande receiver kiezen</button><small>${z.type?`Deze zone is voor ${esc(z.type)}.`:'Voeg nieuwe verlichting toe via Receivers. De eerste receiver bepaalt het zonetype: RGBW of SPI.'}</small></section>${zoneDeleteButton(z)}</div>`;
+    return `<div class="page empty-zone-page"><div class="topline"><button class="back back-to-zones" data-action="stand">${icon('back')}<span>Terug naar zones</span></button><span class="context-name">${esc(standLabel())}</span></div><header class="page-heading"><div><div class="eyebrow">LEGE ZONE</div><h1>${esc(z.name)}</h1></div><button class="icon-button" data-action="zone-rename" data-id="${esc(z.id)}" aria-label="Naam van deze zone wijzigen">${icon('edit')}</button></header><section class="card empty empty-zone"><h2>Voeg verlichting toe</h2><p>Kies nieuwe verlichting of verplaats een receiver die al bij je stand hoort.</p><button class="button full" data-action="layout-new-receiver" data-zone="${esc(z.id)}">Nieuwe receiver toevoegen</button><button class="button secondary full" data-action="zone-assign" data-id="${esc(z.id)}">Bestaande receiver kiezen</button><small>${z.type?`Deze zone is voor ${esc(z.type)}.`:'De eerste receiver bepaalt het zonetype: RGBW of SPI.'}</small></section>${zoneDeleteButton(z)}</div>`;
   }
   function renderStand() {
     if(!stand()){
@@ -485,11 +510,11 @@
   function syncSettingResets() { document.querySelectorAll('[data-action="setting-reset"]').forEach(button=>{button.hidden=!settingChanged(button.dataset.id);}); }
   function animationEditorMarkup(effect) {
     const s = selectedState();
-    const galleryAction=route.screen==='controls'?'animation-gallery':'animations-gallery';
-    const galleryButton=['controls','animations'].includes(route.screen)?`<button class="button secondary animation-gallery-return" data-action="${galleryAction}" aria-label="Terug naar animatiegalerij">${icon('back')}<span>Galerij</span></button>`:'';
+    // Gallery navigation lives in the persistent dock, not a small action
+    // buried in this scrolling settings card.
     const paletteTitle=effect.category==='brand'?(effect.id==='v30-brand-focus'||effect.id.startsWith('v31-ref-'))?'Merkkleuren · tik om te wijzigen':'Accentkleur · tik om te wijzigen':effect.paletteEditable===false?'Kleurenreeks':'Animatiekleuren · tik om te wijzigen';
     const paletteHelp=effect.id==='v30-brand-focus'?'<p class="palette-guidance">Voeg kleuren toe voor je merkaccent. De gloed laat ze na elkaar zien langs de ledlines.</p>':'';
-    const content = `<div class="current-effect"><span class="menu-icon">${icon('animation')}</span><div><small>Actieve animatie · ${esc(categoryLabel(effect.category))}</small><b>${esc(Library.displayName(effect))}</b><small>${esc(effect.description)}</small></div>${galleryButton}</div>${effect.id.startsWith('v31-ref-')?referenceEditorPreview(effect):''}<section class="card palette-section"><h2>${paletteTitle}</h2>${paletteHelp}<div class="palette" aria-label="Animatiekleuren">${paletteMarkup(s)}</div>${animationSlider('bri','Kleurhelderheid',0,100,s.bri??100,'%')}${resetMarkup('bri','Kleurhelderheid')}${backgroundControls(effect)}${effect.controls.includes('speed')?`${animationSlider('speed','Snelheid',0,100,s.speed??30,'%')}${resetMarkup('speed','Snelheid')}`:''}</section>${animationControls(effect)}<button class="button secondary full" data-action="preset-save">＋ Animatie bewaren</button>`;
+    const content = `<div class="current-effect"><span class="menu-icon">${icon('animation')}</span><div><small>Actieve animatie · ${esc(categoryLabel(effect.category))}</small><b tabindex="-1" role="heading" aria-level="2">${esc(Library.displayName(effect))}</b><small>${esc(effect.description)}</small></div></div>${effect.category==='tunnel'?referenceEditorPreview(effect):''}<section class="card palette-section"><h2>${paletteTitle}</h2>${paletteHelp}<div class="palette" aria-label="Animatiekleuren">${paletteMarkup(s)}</div>${animationSlider('bri','Kleurhelderheid',0,100,s.bri??100,'%')}${resetMarkup('bri','Kleurhelderheid')}${backgroundControls(effect)}${effect.controls.includes('speed')?`${animationSlider('speed','Snelheid',0,100,s.speed??30,'%')}${resetMarkup('speed','Snelheid')}`:''}</section>${animationControls(effect)}<button class="button secondary full" data-action="preset-save">＋ Animatie bewaren</button>`;
     return `<section class="active-animation-workspace" aria-label="Animatie aanpassen">${content}</section>`;
   }
   function renderAnimations() {
@@ -507,8 +532,8 @@
     return `<section class="brand-tone-picker" aria-label="Merkaccent kiezen"><div class="brand-tone-heading"><b>Jouw merkkleuren</b><small>Kies tot vier kleuren. De voorbeelden hieronder gebruiken ze meteen.</small></div><div class="brand-palette-slots">${palette.map((hex,i)=>`<div class="brand-palette-slot"><label><input type="color" value="${hex}" data-brand-colour="${i}" aria-label="Merkkleur ${i+1}"><span>Kleur ${i+1}</span></label>${palette.length>1?`<button data-action="brand-colour-remove" data-id="${i}" aria-label="Merkkleur ${i+1} verwijderen">−</button>`:''}</div>`).join('')}${palette.length<4?'<button class="button secondary" data-action="brand-colour-add">＋ Kleur</button>':''}</div><details class="brand-suggestions"><summary>Kleurideeën</summary><div class="brand-tone-options" role="group" aria-label="Beschikbare merkkleuren">${BRAND_TONES.map(tone=>`<button class="brand-tone-option" type="button" data-action="brand-tone" data-id="${tone.id}" aria-label="${tone.name}" aria-pressed="${selected.toLowerCase()===tone.value.toLowerCase()}" title="${tone.name}" style="--brand-tone:${tone.value}"><i aria-hidden="true"></i><span>${tone.name}</span></button>`).join('')}</div></details><small class="brand-tone-note">Kies een animatie om deze kleuren op je verlichting toe te passen.</small></section>`;
   }
   function referenceEditorPreview(effect){
-    const list=effect.category==='tunnel'?receivers():selected(),shape=effect.referenceView==='frames'||effect.id==='v31-ref-brand-outline'?'frames':'canopy';
-    return `<details class="reference-editor-preview card" aria-label="Ruimtelijk animatievoorbeeld"><summary>${icon('zones')}<b>3D-voorbeeld bekijken</b>${icon('chevron')}</summary><div class="reference-preview-body"><div class="section-heading"><div><b>Zo beweegt je licht</b><small>${ledlineCount(list.length)} · voorbeeldopstelling</small></div><button class="button secondary" data-action="reference-view" aria-pressed="${spatialEffectView}">${spatialEffectView?'Lijnen':'3D'}</button></div>${addPreview(list,zone().layout,'reference-large-preview',{zoneId:zone().id,visibleReceiverIds:list.map(r=>r.id),preserveZoneGeometry:true,spatialShape:spatialEffectView?shape:null,label:Library.displayName(effect)+' op je ledlines'})}<small>De nummers volgen de volgorde in Opstelling.</small></div></details>`;
+    const list=receivers(),lineNumbers=Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1]));
+    return `<details open class="reference-editor-preview card" aria-label="Tunnelvoorbeeld"><summary>${icon('zones')}<b>Tunnelvoorbeeld</b>${icon('chevron')}</summary><div class="reference-preview-body"><div class="section-heading"><div><b>${ledlineCount(list.length)}</b><small>Elke boog is één ledline.</small></div><button class="button secondary" data-action="reference-view" aria-label="${spatialEffectView?'Toon rechte ledlines':'Toon de 3D-tunnel'}" aria-pressed="${spatialEffectView}">${spatialEffectView?'Rechte lijnen':'3D-tunnel'}</button></div>${addPreview(list,zone().layout,'reference-large-preview',{zoneId:zone().id,visibleReceiverIds:list.map(r=>r.id),preserveZoneGeometry:true,lineNumbers,presentation:'receivers',spatialShape:spatialEffectView?'tunnel':null,label:Library.displayName(effect)+' · '+ledlineCount(list.length)+' in de tunnel'})}<small>Van voor naar achter: de volgorde in Opstelling.</small></div></details>`;
   }
   function categoryLabel(key) {
     return Library.categories.find(category=>category.key===key)?.title||({catalogue:'Alle',presets:'Mijn animaties'})[key]||'Animaties';
@@ -569,65 +594,20 @@
       outputs:sampleType==='SPI'?[{port:1,enabled:true,pixels:32,reversed:false}]:[],state:previewState}]
       :physicalLines.map(r=>({...r,state:previewState}));
     const lineNumbers=Object.fromEntries(receivers().map((receiver,index)=>[receiver.id,index+1]));
-    return addPreview(list,representativeOnly?'stacked':zone().layout,reference?'reference-preview':'',{label:Library.displayName(effect),effectId:effect.id,brand:effect.category==='brand',brandPaletteLimit:effect.paletteEditable===false?0:effect.colorCountRange?.max||4,labels:!representativeOnly,lineNumbers,spatialShape:reference&&tunnel?effect.referenceView:null});
-  }
-  function tunnelIllustration() {
-    // Product-inspired teaching model, not a CAD model or the user's actual
-    // receiver geometry: a broad circular fascia and a continuous curved wall.
-    const outer=[[60,224],[20,190,12,148,18,110],[24,47,72,14,132,14],[194,14,241,59,244,116],[246,159,230,194,206,224]];
-    const inner=[[82,224],[55,196,40,162,43,122],[46,76,82,40,132,40],[181,40,216,73,220,123],[221,163,206,195,182,224]];
-    const rim=outer.map((points,i)=>points.map((value,j)=>(value+inner[i][j])/2));
-    // Extend the constant-width fascia below the ground, then cut both feet
-    // on one horizontal plane. Perspective and floor share one projection.
-    const fascia=copy(rim);fascia[0]=[83,240];fascia[1][0]=57;fascia[1][1]=211;fascia[4][2]=207;fascia[4][3]=211;fascia[4][4]=183;fascia[4][5]=240;
-    const depths=[1,.84,.70,.58,.48],vp=[164,108];
-    const project=(x,y,s)=>[vp[0]+(x-vp[0])*s,vp[1]+(y-vp[1])*s];
-    const point=(x,y,s)=>`${(vp[0]+(x-vp[0])*s).toFixed(2)} ${(vp[1]+(y-vp[1])*s).toFixed(2)}`;
-    const floor=(left,right,front=1.1,rear=.48)=>`M${point(left,224,front)}L${point(right,224,front)}L${point(right,224,rear)}L${point(left,224,rear)}Z`;
-    function curve(points,s,reverse=false,join=false){
-      if(!reverse)return (join?'L':'M')+point(...points[0],s)+points.slice(1).map(p=>'C'+point(p[0],p[1],s)+' '+point(p[2],p[3],s)+' '+point(p[4],p[5],s)).join('');
-      return (join?'L':'M')+point(...points.at(-1).slice(-2),s)+points.slice(1).map((p,i)=>'C'+point(p[2],p[3],s)+' '+point(p[0],p[1],s)+' '+point(...points[i].slice(-2),s)).reverse().join('');
-    }
-    const band=(a,b,front=inner,back=inner)=>curve(front,a)+curve(back,b,true,true)+'Z';
-    const panels=depths.slice(0,-1).map((depth,i)=>{
-      const rear=depths[i+1],middle=(depth+rear)/2;
-      return `<g class="tunnel-light-section" data-depth="${i}"><path class="tunnel-panel" d="${band(depth,rear)}"/><path class="tunnel-panel-light arch-${i}" d="${band(depth,rear)}"/><path class="tunnel-panel-seam" d="${curve(inner,rear)}"/><path class="tunnel-arch arch-${i}" d="${curve(inner,middle)}" style="--light-width:${(3.2*depth).toFixed(1)}px"/><path class="tunnel-ribbon arch-${i}" d="${curve(inner,depth-.025)}"/></g>`;
-    }).reverse().join('');
-    const reflections=depths.slice(0,-1).map((depth,i)=>{
-      const rear=depths[i+1];
-      return `<path class="tunnel-reflection arch-${i}" d="${floor(109,155,depth,rear)}"/>`;
-    }).join('');
-    return `<svg viewBox="0 0 360 260" role="img" aria-label="Uitlegvoorbeeld in 3D: een ronde ledtunnel met vier bewegende lichtzones en een reflecterend looppad"><defs>
-      <linearGradient id="tunnel-shell" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d1d5d5"/><stop offset=".4" stop-color="#bdc2c3"/><stop offset="1" stop-color="#a8aeb1"/></linearGradient>
-      <linearGradient id="tunnel-face" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="#d5d8d8"/><stop offset=".5" stop-color="#c6cacb"/><stop offset="1" stop-color="#b4b9bc"/></linearGradient>
-      <linearGradient id="tunnel-lining" x1="0" y1="0" x2="1" y2=".8"><stop stop-color="#202226"/><stop offset=".36" stop-color="#090c10"/><stop offset=".7" stop-color="#25272b"/><stop offset="1" stop-color="#111316"/></linearGradient>
-      <linearGradient id="tunnel-light" x1="0" y1="1" x2=".6" y2="0"><stop stop-color="#de6559" stop-opacity=".3"/><stop offset=".4" stop-color="#d15148" stop-opacity=".12"/><stop offset=".75" stop-color="#f5dfd8" stop-opacity=".18"/><stop offset="1" stop-color="#e36559" stop-opacity=".2"/></linearGradient>
-      <linearGradient id="tunnel-walkway" x1="0" y1="1" x2=".7" y2="0"><stop stop-color="#a3a09a"/><stop offset=".5" stop-color="#767573"/><stop offset="1" stop-color="#424345"/></linearGradient>
-      <linearGradient id="tunnel-reflect" x1="0" y1="1" x2="0" y2="0"><stop stop-color="#dfafa5" stop-opacity="0"/><stop offset=".42" stop-color="#dfafa5" stop-opacity=".14"/><stop offset=".58" stop-color="#e9e0da" stop-opacity=".2"/><stop offset="1" stop-color="#e9e0da" stop-opacity="0"/></linearGradient>
-      <linearGradient id="tunnel-exit" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#777d81" stop-opacity=".08"/><stop offset=".65" stop-color="#888e90" stop-opacity=".16"/><stop offset="1" stop-color="#a5a4a0" stop-opacity=".3"/></linearGradient>
-      <radialGradient id="tunnel-exit-glow"><stop stop-color="#d7d9d8" stop-opacity=".23"/><stop offset="1" stop-color="#d7d9d8" stop-opacity="0"/></radialGradient>
-      <clipPath id="tunnel-opening"><path d="${curve(inner,1)}Z"/></clipPath>
-      <clipPath id="tunnel-exit-boundary"><path d="${curve(inner,.48)}Z"/></clipPath>
-      <clipPath id="tunnel-ground-cut"><rect x="-20" y="-20" width="330" height="244"/></clipPath>
-    </defs><g transform="translate(44 5)"><ellipse class="tunnel-ground-shadow" cx="132" cy="231" rx="131" ry="12"/>
-      <path class="tunnel-exit-opening" d="${curve(inner,.48)}Z" fill="url(#tunnel-exit)"/><ellipse cx="${project(132,129,.48)[0]}" cy="${project(132,129,.48)[1]}" rx="39" ry="43" fill="url(#tunnel-exit-glow)"/>
-      <g clip-path="url(#tunnel-exit-boundary)" opacity=".4"><path d="${floor(82,182,.48,.08)}" fill="url(#tunnel-walkway)"/><path d="${floor(109,155,.48,.08)}" fill="#44474a"/></g>
-      <path class="tunnel-shell" d="${band(1,.48,outer,outer)}"/><g class="tunnel-interior" clip-path="url(#tunnel-opening)"><path class="tunnel-back-face" d="${band(.48,.48,outer,inner)}"/>
-      <path class="tunnel-inner-wall" d="${band(1,.48)}"/>${panels}</g>
-      <path class="tunnel-walkway" d="${floor(82,182)}"/><path class="tunnel-floor-edge" d="M${point(82,224,1.1)}L${point(82,224,.48)}M${point(182,224,1.1)}L${point(182,224,.48)}"/>
-      <path class="tunnel-floor-inlay" d="${floor(109,155)}"/>${reflections}
-      <g class="tunnel-fascia" clip-path="url(#tunnel-ground-cut)"><path class="tunnel-front-side" d="${curve(fascia,1)}" transform="translate(2 1)"/><path class="tunnel-front-edge" d="${curve(fascia,1)}"/><path class="tunnel-front-face" d="${curve(fascia,1)}"/></g><path class="tunnel-inner-bevel" d="${curve(inner,1)}"/>
-    </g></svg>`;
+    return addPreview(list,representativeOnly?'stacked':zone().layout,reference?'reference-preview':'',{label:Library.displayName(effect),effectId:effect.id,brand:effect.category==='brand',brandPaletteLimit:effect.paletteEditable===false?0:effect.colorCountRange?.max||4,labels:!representativeOnly,lineNumbers});
   }
   function tunnelGuide() {
-    const count=receivers().length,together=selection().kind==='all';
+    const list=receivers(),count=list.length,together=selection().kind==='all';
     const status=count<2?`Nog ${2-count} ${count===1?'ledline':'ledlines'} nodig`:together?'Klaar voor tunneleffecten':'Selecteer alle ledlines';
-    const detail=count<2?`${ledlineCount(count)} in ${zone().name}`:together?`${ledlineCount(count)} · in de volgorde van Opstelling`:`${ledlineCount(count)} · een tunnel bedien je samen`;
+    const detail=`${ledlineCount(count)} · in de volgorde van Opstelling`;
     const action=count<2?`<button class="button full" data-action="layout-receiver-add" data-zone="${esc(zone().id)}"><span aria-hidden="true">＋</span> Ledline toevoegen</button>`:!together?'<button class="button full" data-action="tunnel-together">Alle ledlines samen bedienen</button>':'';
-    if(zone().type==='SPI')return `<section class="tunnel-guide tunnel-guide-compact" aria-label="Tunneleffecten"><header class="tunnel-guide-heading"><div><h2>Licht over meerdere ledlines</h2><p>${count<2?'Vanaf twee ledlines wordt de beweging over de hele opstelling verdeeld.':`Kies een beweging. De app verdeelt die over je ${count} ledlines.`}</p></div></header><div class="tunnel-status"><div><strong>${status}</strong><small>${esc(detail)}</small></div>${action}</div><details class="tunnel-arrangement-help"><summary>Hoe zet ik mijn ledlines klaar?</summary><p>Leg de ledlines naast elkaar, met het begin aan dezelfde kant. Zet ze in <b>Opstelling</b> in de juiste volgorde. Kies <b>Onder elkaar</b> of <b>Verticaal</b>. De nummers in het voorbeeld volgen die volgorde.</p><p>Liggen ze achter elkaar als één lange lijn? Kies dan <b>Doorlopend</b>.</p><button class="button secondary full" data-action="layout">Opstelling bekijken</button></details></section>`;
-    // A teaching illustration, never a substitute for the actual installation.
-    // Effect cards below still use its real receiver count, order and layout.
-    return `<section class="tunnel-guide" aria-label="Tunneleffecten"><header class="tunnel-guide-heading"><div><h2>Licht door de tunnel</h2><p>Van voor naar achter, in één beweging.</p></div><span class="tunnel-motion-symbol" aria-hidden="true">${icon('chevron')}${icon('chevron')}</span></header><figure class="tunnel-visual">${tunnelIllustration()}<figcaption><span>Tunnelvoorbeeld · 4 lichtzones</span><span class="tunnel-sequence" aria-hidden="true">${[0,1,2,3].map(i=>`<i class="arch-${i}"></i>`).join('')}</span></figcaption></figure><div class="tunnel-status"><div><strong>${status}</strong><small>${esc(detail)}</small></div>${action}</div></section>`;
+    const active=activeEffect(),tunnelExamples=catalogue().filter(effect=>effect.category==='tunnel');
+    const example=active?.category==='tunnel'?active:tunnelExamples.find(effect=>Number(effect.state.variant)===93)||tunnelExamples[0];
+    // Match the gallery's readable sample pace only until an effect is chosen.
+    // An active tunnel always keeps its real colours, speed and power state.
+    const live=example===active,previewList=live||!example?list:list.map(receiver=>({...receiver,state:{...effectState(example),speed:Math.max(75,Number(example.state.speed)||0)}}));
+    const visual=addPreview(previewList,zone().layout,'tunnel-live-preview',{...(live?{zoneId:zone().id}:{}),spatialShape:'tunnel',label:`Tunnelvoorbeeld · ${ledlineCount(count)}`,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1]))});
+    return `<section class="tunnel-guide" aria-label="Tunneleffecten"><header class="tunnel-guide-heading"><div><h2>Jouw tunnel in 3D</h2><p>Elke boog is één ledline. De beweging volgt je opstelling.</p></div></header><figure class="tunnel-visual">${visual}<figcaption><span>${esc(detail)}</span></figcaption></figure>${example?`<p class="tunnel-example-name">${live?'Actief':'Voorbeeld'}: <b>${esc(Library.displayName(example))}</b></p>`:''}<div class="tunnel-status"><div><strong>${status}</strong></div>${action}</div><details class="tunnel-arrangement-help"><summary>Volgorde van mijn ledlines</summary><p>Boog 1 staat vooraan. De nummers volgen de volgorde in <b>Opstelling</b>. Het tunnelvoorbeeld verandert je opstelling niet.</p><button class="button secondary full" data-action="layout">Opstelling bekijken</button></details></section>`;
   }
   function presetContext() { return {type:zone().type,receiverCount:receivers().length,selection:selection(),layout:zone().layout}; }
   function renderPresets() {
@@ -809,18 +789,41 @@
     return `<div class="page scene-detail-page">${contextTitle(scene.name,'Opgeslagen scène · bekijken verandert niets.','Scènes','scenes')}<div class="scene-scope-summary"><span>${icon('zones')}<b>${zoneCount(zones.length)}</b></span><span>${icon('receiver')}<b>${receiverCount(count)}</b></span></div><section class="scene-detail"><div class="section-heading"><h2>Zones in deze scène</h2><small>Opgeslagen licht</small></div>${check.ok?'':`<p class="card scene-zone-warning" role="alert">${esc(check.reason)} Er wordt niets gedeeltelijk geactiveerd.</p>`}${sceneSearch('detail',zones.length)}<div class="scene-saved-zones">${zones.map((z,i)=>`<article class="scene-saved-zone" data-scene-zone="${esc(z.id)}" data-scene-zone-type="${z.type}" data-scene-filter-name="${esc(z.name+' '+z.type)}"><header><span class="scene-zone-number">${i+1}</span><div><h3>${esc(z.name)}</h3><small>${z.type} · ${receiverCount(z.receiverCount)}</small></div></header>${savedZonePreview(z)}${z.available?'':`<p class="scene-zone-warning">${esc(z.reason)}</p>`}</article>`).join('')}</div><p class="scene-search-empty card" hidden>Geen zones gevonden. Pas je zoekopdracht aan om je opgeslagen zones te zien.</p></section><div class="scene-save-bar scene-activate-bar"><p>${zoneCount(zones.length)} · samen toepassen</p><button class="button full" data-action="scene-apply" data-id="${esc(scene.id)}" ${check.ok?'':'disabled'}>Scène activeren</button><small>Andere zones blijven ongewijzigd.</small></div><button class="button secondary" data-action="scene-delete" data-id="${esc(scene.id)}">Scène verwijderen</button></div>`;
   }
   function renderPinLogin() {
-    if(!pinRequired())return renderSettings();
-    // Keep the requested entry visible, but do not collect a secret or reuse
-    // new-receiver commissioning as login. Existing-installation SRP, trusted
-    // import and atomic restore are not connected to the V30 native bridge yet.
+    if(pinLoginAvailable&&nativeContext)return `<div class="page pin-login-page">${contextTitle('Bestaande stand openen','Met je installatie-PIN','Instellingen','settings')}<section class="card"><h2>Verbind met je stand</h2><p>Kies eerst het <b>ALUVISION-wifi</b> van je stand in Instellingen → Wifi. Het wifi-wachtwoord is dezelfde PIN.</p><p>Je maakt geen nieuwe stand en reset geen receivers.</p><label class="dialog-field">Installatie-PIN<input data-recovery-pin type="password" inputmode="numeric" autocomplete="off" minlength="8" maxlength="12" pattern="[0-9]{8,12}" spellcheck="false" ${pinLoginBusy?'disabled':''}></label><p data-recovery-status role="status">${pinLoginBusy?'PIN controleren en je stand ophalen… Laat de receivers aan.':esc(pinLoginError)}</p><button class="button full" data-action="pin-login-submit" ${pinLoginBusy?'disabled':''}>${pinLoginBusy?'Stand ophalen…':'Stand openen'}</button>${pinLoginBusy?'<button class="button secondary full" data-action="pin-login-cancel">Ophalen stoppen</button>':''}</section><p>Je stand verschijnt pas nadat de receivers en de bewaarde instellingen veilig zijn gecontroleerd.</p></div>`;
+    if(!pinRequired()&&!nativeContext)return renderSettings();
+    // An older or unvalidated native host must never collect a recovery PIN.
+    // New-installation commissioning is not a substitute for authenticated recovery.
     return `<div class="page pin-login-page">${contextTitle('Inloggen met PIN','Je bestaande installatie openen','Instellingen','settings')}<section class="card pin-login-status" aria-labelledby="pin-login-status-title"><span class="menu-icon" aria-hidden="true">${icon('lock')}</span><h2 id="pin-login-status-title" data-pin-login-status>Nog niet beschikbaar in deze versie</h2><p>Veilig inloggen en je bewaarde installatie terughalen worden nog aangesloten. Je kunt hier daarom nog geen PIN invoeren.</p><p>Je huidige stand en receivers blijven ongewijzigd.</p></section><section class="card pin-login-guide"><h2>Waarvoor is deze optie?</h2><p>Je bestaande stand weer openen op een ander toestel of nadat je de app opnieuw hebt geïnstalleerd. Je gebruikt dan je bestaande installatie-PIN; je maakt geen nieuwe PIN of nieuwe stand aan.</p><ol><li><b>Verbind met het wifi van je installatie</b><span>Kies het ALUVISION-netwerk via de wifi-instellingen van je telefoon.</span></li><li><b>Open je installatie met je PIN</b><span>Zodra deze functie beschikbaar is, wordt je PIN veilig gecontroleerd voordat je bewaarde installatie wordt teruggehaald.</span></li></ol></section><button class="button full" data-action="settings">Terug naar Instellingen</button></div>`;
+  }
+  async function openPinLogin(){
+    navigate('pin-login');if(!nativeContext||typeof runtime?.services?.recoverInstallation!=='function'||pinLoginChecking)return;
+    pinLoginChecking=true;
+    try{const caps=await runtime.capabilities();pinLoginAvailable=caps?.pinLogin===true&&caps?.installationRestore===true;}
+    catch(_){pinLoginAvailable=false;}
+    finally{pinLoginChecking=false;if(route.screen==='pin-login')render({top:true});}
+  }
+  async function submitPinLogin(){
+    const input=main.querySelector('[data-recovery-pin]');if(!pinLoginAvailable||pinLoginBusy||!input)return;
+    let pin=input.value;input.value='';
+    if(!/^\d{8,12}$/.test(pin)){pinLoginError='Vul je bestaande PIN van 8–12 cijfers in.';render();return;}
+    pinLoginBusy=true;pinLoginError='';pinRecoveryAbort=new AbortController();render();
+    try{
+      const result=await runtime.services.recoverInstallation({pin,signal:pinRecoveryAbort.signal});pin='';
+      model=keepLocalPreviewStates(result.playbackModel,{exceptStandId:result.standId});nativeLoaded=true;selections.clear();liveStates.clear();
+      lightIntentDirty=true;saveLightIntent();
+      window.AluvisionSecurityMode?.updateFromNative?.({pinRequired:true});
+      route={...route,screen:'stand',standId:result.standId,zoneId:null};render({top:true});toast('Je stand is geopend. Kies een zone om je licht te bedienen.');
+    }catch(error){
+      const messages={PIN_RECOVERY_PIN_INVALID:'Deze PIN klopt niet. Controleer je installatie-PIN.',PIN_RECOVERY_LOCKED:'Er zijn te veel pogingen gedaan. Wacht even voordat je opnieuw probeert.',PIN_RECOVERY_EXPIRED:'De controle is verlopen. Controleer je wifi en probeer opnieuw.',PIN_RECOVERY_UNAVAILABLE:'Je stand kan nog niet volledig worden opgehaald. Controleer de receiverupdates en je wifi.',PIN_RECOVERY_CANCELLED:'Het ophalen is onderbroken. Je bestaande gegevens zijn niet vervangen.'};
+      pinLoginError=error?.code==='CANCELLED'?'Het ophalen is gestopt. Je kunt het opnieuw proberen.':messages[error?.code]||'Je stand is nog niet veilig hersteld. Laat de receivers aan, controleer het ALUVISION-wifi en probeer opnieuw.';
+    }finally{pin='';pinLoginBusy=false;pinRecoveryAbort=null;if(route.screen==='pin-login')render({top:true});}
   }
   function pinProtectionCard() {
     const selected=securityStand(),current=pinProtection?.standId===selected?.id?pinProtection:null;
     const available=nativeContext&&typeof runtime?.services?.securityStatus==='function'&&typeof runtime?.services?.setPinProtection==='function';
     const ready=!!current&&!pinProtectionLoading&&!pinProtectionBusy&&!pinProtectionReconnect&&!pinProtectionError;
     const message=!nativeContext?'Beschikbaar in de iPhone-app.':!selected?'Geef je stand eerst een naam.':pinProtectionLoading?'Beveiliging controleren…':pinProtectionError||(pinProtectionReconnect?'Verbind opnieuw met het wifi van je installatie.':!available?'De verbindingsdienst is niet beschikbaar.':current?.scope==='new-installation'?'Kies een PIN tijdens het instellen van je stand.':'Eén PIN voor wifi en netwerk verwijderen.');
-    return `<section class="card pin-protection-card" data-pin-protection><div class="pin-protection-heading"><span class="menu-icon" aria-hidden="true">${icon('lock')}</span><div><h2>PIN-beveiliging</h2><small>Tijdelijke testinstelling</small></div><button class="switch" role="switch" aria-label="PIN-beveiliging" aria-checked="${current?.pinRequired===true}" data-action="pin-protection-toggle" ${ready?'':'disabled'}><span>${current?current.pinRequired?'Aan':'Uit':'—'}</span><i aria-hidden="true"></i></button></div><p data-pin-protection-status role="status">${esc(message)}</p>${pinProtectionReconnect?'<button class="text-button" data-action="pin-protection-reconnect">Opnieuw verbinden</button>':pinProtectionError&&available&&selected?'<button class="text-button" data-action="pin-protection-refresh">Opnieuw controleren</button>':''}</section>`;
+    return `<section class="card pin-protection-card" data-pin-protection><div class="pin-protection-heading"><span class="menu-icon" aria-hidden="true">${icon('lock')}</span><div><h2>PIN-beveiliging</h2><small>Je PIN is ook je wifi-wachtwoord</small></div><button class="switch" role="switch" aria-label="PIN-beveiliging" aria-checked="${current?.pinRequired===true}" data-action="pin-protection-toggle" ${ready?'':'disabled'}><span>${current?current.pinRequired?'Aan':'Uit':'—'}</span><i aria-hidden="true"></i></button></div><p data-pin-protection-status role="status">${esc(message)}</p>${pinProtectionReconnect?'<button class="text-button" data-action="pin-protection-reconnect">Opnieuw verbinden</button>':pinProtectionError&&available&&selected?'<button class="text-button" data-action="pin-protection-refresh">Opnieuw controleren</button>':''}</section>`;
   }
   function syncPinProtectionCard(){
     const old=main.querySelector('[data-pin-protection]'),focused=document.activeElement;
@@ -881,10 +884,10 @@
   }
   function renderDemoWifi(){
     if(!webDemoContext)return renderSettings();
-    return `<div class="page demo-wifi-page"><header class="page-heading"><div><h1>Wifi-instellingen</h1><p>${esc(t('settings'))} · V31</p></div></header>${demoSettingsTabs(true)}<section class="card demo-wifi-notice" aria-labelledby="demo-wifi-title"><span class="pill red">DEMO · niet verbonden</span><h2 id="demo-wifi-title">Alleen een voorbeeld</h2><p>Hier bekijk je de wifi-instellingen. Deze demo zoekt geen echte netwerken, maakt geen verbinding en bewaart geen wifi-wachtwoorden.</p></section><section class="card demo-wifi-network"><div class="demo-wifi-heading"><span class="menu-icon" aria-hidden="true">${icon('wifi')}</span><div><h2>Wifi van je installatie</h2><p>Je telefoon bedient de verlichting via dit netwerk.</p></div></div><dl class="demo-wifi-details"><div><dt>Netwerk</dt><dd>Aluvision-DEMO</dd></div><div><dt>Status</dt><dd>Voorbeeld · geen echte verbinding</dd></div></dl><button class="button full" disabled aria-describedby="demo-wifi-disabled">Verbinding controleren</button><p id="demo-wifi-disabled" class="demo-wifi-caption">Alleen beschikbaar met een echte receiver in de iPhone-app.</p></section><section class="card demo-wifi-guide"><h2>Verbinden in de echte app</h2><ol><li>Open <b>Instellingen → Wifi</b> op je iPhone.</li><li>Kies het ALUVISION-wifi van je installatie.</li><li>Ga terug naar de app om je verlichting te bedienen.</li></ol><p>Je hoeft voor deze demo niets aan je wifi te veranderen.</p></section></div>`;
+    return `<div class="page demo-wifi-page"><header class="page-heading"><div><h1>Wifi-instellingen</h1><p>${esc(t('settings'))} · V32</p></div></header>${demoSettingsTabs(true)}<section class="card demo-wifi-notice" aria-labelledby="demo-wifi-title"><span class="pill red">DEMO · niet verbonden</span><h2 id="demo-wifi-title">Alleen een voorbeeld</h2><p>Hier bekijk je de wifi-instellingen. Deze demo zoekt geen echte netwerken, maakt geen verbinding en bewaart geen wifi-wachtwoorden.</p></section><section class="card demo-wifi-network"><div class="demo-wifi-heading"><span class="menu-icon" aria-hidden="true">${icon('wifi')}</span><div><h2>Wifi van je installatie</h2><p>Je telefoon bedient de verlichting via dit netwerk.</p></div></div><dl class="demo-wifi-details"><div><dt>Netwerk</dt><dd>Aluvision-DEMO</dd></div><div><dt>Status</dt><dd>Voorbeeld · geen echte verbinding</dd></div></dl><button class="button full" disabled aria-describedby="demo-wifi-disabled">Verbinding controleren</button><p id="demo-wifi-disabled" class="demo-wifi-caption">Alleen beschikbaar met een echte receiver in de iPhone-app.</p></section><section class="card demo-wifi-guide"><h2>Verbinden in de echte app</h2><ol><li>Open <b>Instellingen → Wifi</b> op je iPhone.</li><li>Kies het ALUVISION-wifi van je installatie.</li><li>Ga terug naar de app om je verlichting te bedienen.</li></ol><p>Je hoeft voor deze demo niets aan je wifi te veranderen.</p></section></div>`;
   }
   function renderSettings() {
-    return `<div class="page"><header class="page-heading"><div><h1>${esc(t('more'))}</h1><p>${esc(t('settings'))} · V31</p></div></header><section class="card"><h2>${esc(t('appearance'))}</h2><h3 class="preference-label">${esc(t('language'))}</h3><div class="preference-grid">${Preferences.languages.map(language=>`<button data-action="language" data-id="${language.code}" lang="${language.code}" aria-pressed="${uiPreferences.preferences.language===language.code}">${language.name}</button>`).join('')}</div><p class="preference-note">${esc(t('wipNotice'))}</p><h3 class="preference-label">${esc(t('theme'))}</h3><div class="preference-grid">${['light','dark'].map(theme=>`<button data-action="theme" data-id="${theme}" aria-pressed="${uiPreferences.preferences.theme===theme}">${esc(t(theme))}</button>`).join('')}</div>${uiPreferences.error?`<p role="alert">${esc(uiPreferences.error.message)}</p>`:''}</section><button class="menu-card" data-action="help"><span class="menu-icon">${icon('info')}</span><div><b>Stand en zones uitgelegd</b><small>Een eenvoudige weg naar je verlichting</small></div>${icon('chevron')}</button><section class="card connection-info" id="connection-info"><span class="pill">Niet verbonden</span><h2>Verbinding en gegevens</h2><p>Je bekijkt momenteel een voorbeeldstand met fictieve receivers. Er worden geen opdrachten naar echte verlichting verstuurd.</p><p>Indeling, poorten en lichtstanden zijn tijdelijk en beginnen na herladen opnieuw. Kleurpresets, animatiepresets, scènes en voorkeuren worden alleen op dit apparaat bewaard.</p><details class="technical-status"><summary>Technische gereedheid</summary><ul class="readiness-list"><li><b>Dezelfde bediening</b><span>Alle schermformaten volgen dezelfde compacte bediening voor zones, receivers, kleuren en animaties.</span></li><li><b>Nog aansluiten en fysiek testen</b><span>${pinRequired()?'Echte koppeling, beveiliging, ESP-NOW, herstel, veilig verwijderen en OTA moeten nog fysiek worden getest.':'Deze demo werkt zonder toegangscode. ESP-NOW, veilig verwijderen en OTA moeten nog fysiek worden getest.'} De app en receiver moeten bij elkaar passende software gebruiken.</span></li><li><b>Receiverbeelden</b><span>RGBW volgt de aangeleverde productreferentie. Het SPI-beeld is een concept; fysieke poortplaatsing moet nog worden bevestigd.</span></li><li><b>Bestaande functies behouden</b><span>Volledige vertalingen, Academy en overige bestaande beheerfuncties blijven in de overdrachtscontrole staan.${pinRequired()?' De bestaande beveiliging blijft behouden.':''}</span></li></ul></details></section></div>`;
+    return `<div class="page"><header class="page-heading"><div><h1>${esc(t('more'))}</h1><p>${esc(t('settings'))} · V32</p></div></header><section class="card"><h2>${esc(t('appearance'))}</h2><h3 class="preference-label">${esc(t('language'))}</h3><div class="preference-grid">${Preferences.languages.map(language=>`<button data-action="language" data-id="${language.code}" lang="${language.code}" aria-pressed="${uiPreferences.preferences.language===language.code}">${language.name}</button>`).join('')}</div><p class="preference-note">${esc(t('wipNotice'))}</p><h3 class="preference-label">${esc(t('theme'))}</h3><div class="preference-grid">${['light','dark'].map(theme=>`<button data-action="theme" data-id="${theme}" aria-pressed="${uiPreferences.preferences.theme===theme}">${esc(t(theme))}</button>`).join('')}</div>${uiPreferences.error?`<p role="alert">${esc(uiPreferences.error.message)}</p>`:''}</section><button class="menu-card" data-action="help"><span class="menu-icon">${icon('info')}</span><div><b>Stand en zones uitgelegd</b><small>Een eenvoudige weg naar je verlichting</small></div>${icon('chevron')}</button><section class="card connection-info" id="connection-info"><span class="pill">Niet verbonden</span><h2>Verbinding en gegevens</h2><p>Je bekijkt momenteel een voorbeeldstand met fictieve receivers. Er worden geen opdrachten naar echte verlichting verstuurd.</p><p>Indeling, poorten en lichtstanden zijn tijdelijk en beginnen na herladen opnieuw. Kleurpresets, animatiepresets, scènes en voorkeuren worden alleen op dit apparaat bewaard.</p><details class="technical-status"><summary>Technische gereedheid</summary><ul class="readiness-list"><li><b>Dezelfde bediening</b><span>Alle schermformaten volgen dezelfde compacte bediening voor zones, receivers, kleuren en animaties.</span></li><li><b>Nog aansluiten en fysiek testen</b><span>${pinRequired()?'Echte koppeling, beveiliging, ESP-NOW, herstel, veilig verwijderen en OTA moeten nog fysiek worden getest.':'Deze demo werkt zonder toegangscode. ESP-NOW, veilig verwijderen en OTA moeten nog fysiek worden getest.'} De app en receiver moeten bij elkaar passende software gebruiken.</span></li><li><b>Receiverbeelden</b><span>RGBW volgt de aangeleverde productreferentie. Het SPI-beeld is een concept; fysieke poortplaatsing moet nog worden bevestigd.</span></li><li><b>Bestaande functies behouden</b><span>Volledige vertalingen, Academy en overige bestaande beheerfuncties blijven in de overdrachtscontrole staan.${pinRequired()?' De bestaande beveiliging blijft behouden.':''}</span></li></ul></details></section></div>`;
   }
   function render({top=false,preserveScroll=true}={}) {
     // A replaced handle no longer represents an active drag. Cancel before
@@ -914,8 +917,15 @@
     main.classList.toggle('gallery-scroll-stable',Boolean(main.querySelector('#animation-results')));
     if(route.screen==='scene-detail')main.querySelector('.scene-activate-bar')?.insertAdjacentHTML('afterbegin','<p class="live-confirmation" data-live-status="scene" role="status" aria-live="polite"></p>');
     if(route.screen==='settings')main.querySelector('.page-heading')?.insertAdjacentHTML('afterend',pinProtectionCard());
-    if(pinRequired()&&route.screen==='settings')main.querySelector('[data-action="help"]')?.insertAdjacentHTML('afterend',
-      `<button class="menu-card pin-login-entry" data-action="pin-login"><span class="menu-icon">${icon('lock')}</span><div><b>Inloggen met PIN</b><small>Je bestaande installatie openen</small><small class="pin-login-availability">Nog niet beschikbaar</small></div>${icon('chevron')}</button>`);
+    if(route.screen==='settings'&&Backup)main.querySelector('[data-action="help"]')?.insertAdjacentHTML('afterend',backupPanel());
+    if(route.screen==='stand'&&!stand()&&nativeContext)main.querySelector('.onboarding-next-action')?.insertAdjacentHTML('afterend',`<button class="menu-card" data-action="pin-login"><span class="menu-icon">${icon('lock')}</span><span><b>Al een stand? Open met PIN</b><small>Je bestaande receivers en zones terughalen</small></span>${icon('chevron')}</button>`);
+    if(route.screen==='stand'&&model.stands.length>1)main.querySelector('.page-heading')?.insertAdjacentHTML('afterend','<button class="text-button" data-action="stand-switch-open">Andere stand openen</button>');
+    if(route.screen==='settings'&&nativeContext&&window.__lightningV32ReceiverContext===true&&standReceivers().length){
+      main.querySelector('[data-backup-panel]')?.insertAdjacentHTML('afterend',receiverContextPanel());
+      syncReceiverContextPanel();readReceiverContextStatus();
+    }
+    if((pinRequired()||nativeContext)&&route.screen==='settings')main.querySelector('[data-action="help"]')?.insertAdjacentHTML('afterend',
+      `<button class="menu-card pin-login-entry" data-action="pin-login"><span class="menu-icon">${icon('lock')}</span><div><b>Inloggen met PIN</b><small>Je bestaande installatie openen</small><small class="pin-login-availability">${pinLoginAvailable?'Je PIN is ook je wifi-wachtwoord':'Controleer de toegang tot je stand'}</small></div>${icon('chevron')}</button>`);
     if(route.screen==='settings')main.querySelector('[data-action="help"]')?.insertAdjacentHTML('afterend',`<button class="menu-card" data-action="preferences-reset"><span class="menu-icon">${icon('settings')}</span><div><b>Taal en thema herstellen</b><small>Alleen taal en thema van deze app</small></div>${icon('chevron')}</button>`);
     if(route.screen==='settings')main.querySelector('#connection-info')?.insertAdjacentHTML('afterend',`<section class="card app-erase-section"><h2>Gegevens op deze telefoon</h2><p>Dit verwijdert alleen de gegevens in de app. De fysieke receivers blijven gekoppeld en zijn daarna mogelijk pas na een afzonderlijke reset en nieuwe koppeling weer bedienbaar.</p><button class="button secondary full" data-action="app-erase">Verwijder alles uit de app</button></section>`);
     if(route.screen==='stand')main.querySelectorAll('.stand-summary>div').forEach((tile,index)=>{
@@ -939,8 +949,8 @@
       if(erase)erase.querySelector('p').textContent='Alleen deze tijdelijke demopagina wordt leeg gemaakt. Echte receivers en gegevens op de gewone site blijven onaangeroerd.';
     }else if(nativeContext&&route.screen==='settings'){
       const info=main.querySelector('#connection-info'),paragraphs=info?.querySelectorAll(':scope > p');
-      if(paragraphs?.[0])paragraphs[0].textContent=runtime?.native===true?'Deze V31-versie gebruikt de iPhone-verbindingsdienst. Kies voorlopig zelf het receiver-wifinetwerk in Instellingen → Wifi en keer daarna terug. Alleen zoeken voegt niets toe.':'De iPhone-verbindingsdienst is niet beschikbaar. Er worden geen receiveropdrachten verstuurd.';
-      if(paragraphs?.[1])paragraphs[1].textContent=pinRequired()?'Je stand en instellingen worden lokaal bewaard. Een receiver verschijnt pas na beveiligde bevestiging. Een back-up via je PIN is een aparte functie en is nog niet aangesloten; er wordt niets uit een bestaande installatie overgenomen of gewist.':'Je stand en instellingen worden lokaal bewaard. Een receiver verschijnt pas nadat de toevoeging is bevestigd. Deze versie vraagt geen toegangscode; er wordt niets uit een bestaande installatie overgenomen of gewist.';
+      if(paragraphs?.[0])paragraphs[0].textContent=runtime?.native===true?'Deze V32-versie gebruikt de iPhone-verbindingsdienst. Kies voorlopig zelf het receiver-wifinetwerk in Instellingen → Wifi en keer daarna terug. Alleen zoeken voegt niets toe.':'De iPhone-verbindingsdienst is niet beschikbaar. Er worden geen receiveropdrachten verstuurd.';
+      if(paragraphs?.[1])paragraphs[1].textContent='Je stand wordt op deze iPhone bewaard. Bij Instellingen op je receivers zie je of de indeling ook daar is opgeslagen. Bewaar met Back-up een extra kopie van je scènes, presets en appinstellingen.';
       const readiness=info?.querySelectorAll('.readiness-list li')[1];
       if(readiness){readiness.querySelector('b').textContent=runtime?.native===true?'Zoeken beschikbaar · receiverbeheer ingebouwd':'Verbindingsdienst niet beschikbaar';readiness.querySelector('span').textContent=runtime?.native===true?(pinRequired()?'Receiver koppelen, hervatten, draadloos bijwerken en verwijderen zijn aangesloten op de app. Je telefoon moet verbonden zijn met het ALUVISION-wifi van je installatie. Fysieke acceptatie moet nog gebeuren. Een softwaretest is geen fysieke verbindingstest.':'Receiver koppelen en hervatten gebruiken de iPhone-verbindingsdienst. PIN-beveiliging staat tijdelijk uit; je kunt haar hierboven aanzetten. Het verwijderen van receivers verloopt via de beveiligde app-verbinding. Fysieke acceptatie van koppeling, ESP-NOW en reset moet nog gebeuren; een softwaretest is geen fysieke verbindingstest.'):'Deze app laadt geen voorbeeldreceivers als de verbindingsdienst ontbreekt. Er worden geen receiveropdrachten uitgevoerd; de bestaande installatie blijft intact.';}
     }else if(!previewContext&&route.screen==='settings'){
@@ -1021,10 +1031,22 @@
     same.focus({preventScroll:true});return true;
   }
   function navigate(screen, extra={}) {
+    const previousRoute=route;
     if(screen!==route.screen)visualPlugMotions.clear();
-    if(!pinRequired()&&screen==='pin-login')screen='settings';
+    if(!pinRequired()&&!nativeContext&&screen==='pin-login')screen='settings';
     if(screen==='receiver-add'&&route.screen!=='receiver-add')extra={setupFrom:!stand()||!standReceivers().some(receiver=>receiver.role==='main')||route.screen!=='receivers'?'stand':'receivers',setupReturnZoneId:null,...extra};
-    if(route.screen==='receiver-add')onboarding.suspend();route = {...route,screen,...extra}; render({top:true});
+    if(route.screen==='receiver-add')onboarding.suspend();route = {...route,screen,...extra};
+    const changedZone=route.zoneId!==previousRoute.zoneId;
+    if(changedZone){
+      // Filters belong to the zone being browsed, not the last zone opened.
+      // Do not touch receiver selection, saved light or same-zone navigation.
+      route={...route,family:null,library:initialAnimationLibrary()};
+      settingsOpen=false;showControlAnimationGallery=!activeEffect();
+    }
+    const enteredZone=screen==='controls'&&(changedZone||!['controls','colour','animations','effects','layout'].includes(previousRoute.screen));
+    if(enteredZone&&activeEffect()){controlMode='animations';showControlAnimationGallery=false;}
+    render({top:true});
+    if(enteredZone&&controlMode==='animations'&&!showControlAnimationGallery)revealAnimationStart();
     if(screen==='settings')void refreshPinProtection();
   }
   function resetMarkup(key,label) { return `<button class="setting-reset" data-action="setting-reset" data-id="${key}" aria-label="${esc(label)} terug naar standaard" ${settingChanged(key)?'':'hidden'}>↺ Standaard</button>`; }
@@ -1057,7 +1079,8 @@
     }
     const ids=new Set(selectedReceiverIds());return receivers().filter(receiver=>ids.has(receiver.id));
   }
-  function sendReceiverStates(ids){
+  function sendReceiverStates(ids,{remember=true}={}){
+    if(remember)scheduleLightIntentSave();
     const time=performance.now()/1000;
     for(const id of ids){
       const receiver=model.receivers.find(item=>item.id===id);if(!receiver)continue;
@@ -1066,6 +1089,99 @@
       else if(liveController)liveController.preview(id);
       else liveStates.set(id,{kind:'preview'});
     }
+  }
+  function scheduleLightIntentSave(){
+    if(!nativeContext||!nativeLoaded||!Backup)return;
+    lightIntentDirty=true;
+    clearTimeout(lightSaveTimer);lightSaveTimer=setTimeout(saveLightIntent,180);
+  }
+  function saveLightIntent(){
+    if(!nativeContext||!nativeLoaded||!Backup||!lightIntentDirty)return;
+    clearTimeout(lightSaveTimer);lightSaveTimer=null;
+    try{if(backupTransaction.pending())return;appStorage.setItem(Backup.LIGHT_KEY,JSON.stringify(Backup.lightRecord(model)));lightIntentDirty=false;}
+    catch(_){backupNotice='Je laatste lichtkeuze kon niet worden bewaard. Controleer of er opslagruimte vrij is.';}
+  }
+  window.addEventListener('pagehide',saveLightIntent);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveLightIntent();});
+  function backupError(error){
+    if(error?.code?.startsWith('BACKUP_')&&error.message&&!['BACKUP_INVALID','BACKUP_UNCONFIRMED'].includes(error.code))return error.message;
+    return 'De backup kon niet volledig worden verwerkt. Je bestand is niet gewist. Probeer opnieuw nadat alle receiveracties klaar zijn.';
+  }
+  function backupPanel(){
+    return `<section class="card" data-backup-panel><h2>Backup en herstellen</h2><p>Bewaar je stand, zones, lichtkeuzes, scènes en presets in één bestand.</p><p class="muted">Je PIN en beveiligingssleutels staan nooit in dit bestand.</p>${backupNotice?`<p role="alert">${esc(backupNotice)}</p>`:''}<div class="actions"><button class="button full" data-action="backup-export">Backup bewaren</button><button class="button secondary full" data-action="backup-import">Backup openen</button></div></section>`;
+  }
+  function receiverContextPanel(){
+    return `<section class="card" data-receiver-context-panel><h2>Instellingen op je receivers</h2><p>Bewaar je standnaam en zones ook op de receivers, zodat je ze later op een andere telefoon kunt terugvinden.</p><p role="status" data-receiver-context-status></p><button class="button secondary full" data-action="receiver-context-sync">Instellingen bewaren op receivers</button></section>`;
+  }
+  function syncReceiverContextPanel(){
+    const panel=document.querySelector('[data-receiver-context-panel]');if(!panel)return;
+    const state=receiverContextStates.get(stand()?.id),busy=state?.status==='syncing';
+    panel.querySelector('[data-receiver-context-status]').textContent=busy?'Instellingen worden op de receivers bewaard…':state?.status==='synced'?`Bewaard op alle ${state.total} receivers.`:state?.status==='pending'?'Nog niet op alle receivers bewaard. Verbind met het ALUVISION-wifi en probeer opnieuw.':'De bewaarstatus wordt gecontroleerd…';
+    const button=panel.querySelector('button');button.disabled=busy;button.textContent=busy?'Even wachten…':state?.status==='synced'?'Opnieuw controleren en bewaren':'Instellingen bewaren op receivers';
+  }
+  async function readReceiverContextStatus(){
+    const standId=stand()?.id;
+    if(!standId||receiverContextStates.has(standId)||receiverContextReads.has(standId)||typeof runtime?.services?.receiverContextStatus!=='function')return;
+    receiverContextReads.add(standId);
+    try{receiverContextStates.set(standId,await runtime.services.receiverContextStatus({standId}));}
+    catch(_){receiverContextStates.set(standId,{status:'pending'});}
+    finally{receiverContextReads.delete(standId);syncReceiverContextPanel();}
+  }
+  async function syncReceiverContext(){
+    const standId=stand()?.id;if(!standId||receiverContextStates.get(standId)?.status==='syncing')return;
+    receiverContextStates.set(standId,{status:'syncing'});syncReceiverContextPanel();
+    try{receiverContextStates.set(standId,await runtime.services.syncInstallationContext({standId}));}
+    catch(_){receiverContextStates.set(standId,{status:'pending'});}
+    syncReceiverContextPanel();
+  }
+  window.addEventListener('lightning:receiver-context',event=>{
+    if(!nativeContext||!event.detail||typeof event.detail.standId!=='string')return;
+    receiverContextStates.set(event.detail.standId,event.detail);syncReceiverContextPanel();
+  });
+  function reloadBackupLibraries(){savedPresets=presetStore.load();savedScenes=sceneStore.load();savedColours=colourStore.load();uiPreferences=preferenceStore.load();}
+  async function exportBackup(){
+    if(!Backup)return;const loaded=[savedPresets,savedScenes,savedColours,uiPreferences];
+    if(loaded.some(item=>item.error))throw Error('Een bibliotheek kan niet worden gelezen. Herstel die eerst voordat je een backup bewaart.');
+    if(onboarding.summary()||backupTransaction.pending())throw Error('Rond eerst de lopende toevoeging of herstelactie af.');
+    const json=Backup.create({model,presets:savedPresets.presets,scenes:savedScenes.scenes,colors:savedColours.colors,preferences:uiPreferences.preferences});
+    const name='Aluvision-backup-'+new Date().toISOString().slice(0,10)+'.json';
+    if(nativeContext){const result=await runtime.services.exportBackup({name,json});if(result.status==='shared')toast('Backup gedeeld. Bewaar het bestand op een veilige plek.');}
+    else{const url=URL.createObjectURL(new Blob([json],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);toast('Backupbestand aangeboden om te bewaren.');}
+  }
+  function inspectBackup(raw){
+    const saved=Backup.read(raw);
+    if(saved.model.demo!==model.demo)throw Error('Een demobackup kan niet worden gebruikt voor echte receivers, of omgekeerd.');
+    selectedBackup=saved;
+    const zones=saved.model.stands.reduce((count,s)=>count+s.zones.length,0);
+    showEffectDialog('Backup herstellen?',`<section data-backup-confirm><h3>${esc(saved.model.stands.map(s=>s.name).join(', ')||'Lege stand')}</h3><p>${zones} zones · ${saved.model.receivers.length} receivers</p><p>${saved.libraries.scenes.length} scènes · ${saved.libraries.presets.length} animatiepresets · ${saved.libraries.colors.length} kleuren</p><p>Dit vervangt de indeling en bewaarde keuzes in deze app. Er wordt nu geen licht verstuurd.</p>${nativeContext?'<p>Alleen de reeds gekoppelde receivers kunnen worden hersteld. Poortinstellingen moeten overeenkomen. Gebruik je een andere telefoon? Open daar eerst dezelfde installatie.</p>':''}<p class="dialog-error" role="alert" hidden></p><button class="button full" data-action="backup-confirm">Instellingen herstellen</button><button class="button secondary full" data-action="effect-dialog-close">Annuleren</button></section>`);
+  }
+  async function chooseBackup(){
+    if(nativeContext){const result=await runtime.services.chooseBackup();if(result.status==='selected')inspectBackup(result.json);return;}
+    const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.hidden=true;document.body.append(input);
+    input.addEventListener('change',async()=>{try{const file=input.files?.[0];if(!file)return;if(file.size>Backup.MAX_BYTES)throw Error('Kies een backup van maximaal 4 MB.');inspectBackup(await file.text());}catch(error){toast(backupError(error));}finally{input.remove();}},{once:true});
+    input.addEventListener('cancel',()=>input.remove(),{once:true});input.click();
+  }
+  async function restoreBackup(button){
+    if(!selectedBackup||!document.querySelector('#effect-dialog[open] [data-backup-confirm]'))return;
+    const saved=selectedBackup;button.disabled=true;managementBusy=true;let before=null;
+    try{
+      clearTimeout(lightSaveTimer);lightSaveTimer=null;lightIntentDirty=false;
+      if(nativeContext){
+        const view=await runtime.services.loadState();if(view.draft)throw Error('Rond eerst het toevoegen van je receiver af.');before=view.model;
+        const target=Backup.nativeModel(saved.model,before);backupTransaction.prepare(saved,before,target);
+        const restored=await runtime.services.importInstallationView({model:target,confirmation:'RESTORE_LOCAL_SETTINGS'});
+        backupTransaction.finish(restored.model);model=Backup.restoreLight(restored.model,appStorage.getItem(Backup.LIGHT_KEY));
+      }else{before=model;backupTransaction.prepare(saved,before,saved.model);backupTransaction.finish(saved.model);model=copy(saved.model);}
+      reloadBackupLibraries();selections.clear();liveStates.clear();selectedBackup=null;backupNotice='';closeEffectDialog();route={...route,screen:'settings',zoneId:null};render({top:true});toast('Backup hersteld. Je lichtkeuzes staan klaar; er is nog niets verstuurd.');
+    }catch(error){
+      // A failed native reply can mean the commit happened. Reconcile by
+      // reading; never retry a mutation or discard a committed transaction.
+      if(nativeContext&&before)try{const view=await runtime.services.loadState();const journal=backupTransaction.pending();if(journal){
+        if(Backup.key(Backup.publicModel(view.model))===journal.afterModel){const done=backupTransaction.finish(view.model);model=Backup.restoreLight(view.model,appStorage.getItem(Backup.LIGHT_KEY));reloadBackupLibraries();selectedBackup=null;closeEffectDialog();render({top:true});toast('Backup hersteld na het controleren van de opslag.');return done;}
+        backupTransaction.discard(view.model);
+      }}catch(_){}
+      backupNotice=backupError(error);const note=document.querySelector('[data-backup-confirm] .dialog-error');if(note){note.hidden=false;note.textContent=backupNotice;}else toast(backupNotice);
+    }finally{managementBusy=false;button.disabled=false;}
   }
   function resumeConfiguredLighting(receiverId){
     if(!nativeContext)return;
@@ -1078,7 +1194,7 @@
     // native owner derives those from storage; JS never supplies geometry.
     const targets=targetZone?.type==='SPI'&&targetZone.layout==='continuous'
       ?M.zoneReceivers(model,targetZone.id):[receiver];
-    sendReceiverStates(targets.map(item=>item.id));
+    sendReceiverStates(targets.map(item=>item.id),{remember:false});
     // The queue reports LIVE failures separately. A failed resume must never
     // roll back confirmed outputs, reconfigure them, or turn an OFF light on.
   }
@@ -1472,11 +1588,11 @@
     else navigate('stand',{zoneId:null});
     toast(count?`Zone verwijderd. ${count} ${count===1?'receiver staat':'receivers staan'} bij Niet in een zone.`:'Zone verwijderd.');
   }
-  function keepLocalPreviewStates(stored) {
+  function keepLocalPreviewStates(stored,{exceptStandId=null}={}) {
     const next=copy(M.assertValid(stored)),previous=new Map(model.receivers.map(r=>[r.id,r]));
     for(const r of next.receivers){
       const old=previous.get(r.id);
-      if(old&&typeof r.rid==='string'&&r.rid&&typeof r.deviceFingerprint==='string'&&r.deviceFingerprint&&
+      if(r.standId!==exceptStandId&&old&&typeof r.rid==='string'&&r.rid&&typeof r.deviceFingerprint==='string'&&r.deviceFingerprint&&
         ['rid','deviceFingerprint','standId','type','role','lifecycle'].every(key=>old[key]===r[key]))r.state=copy(old.state);
     }
     // Preview-only colour edits remain local. Never merge identity, role, ports,
@@ -1604,7 +1720,7 @@
     const keyboardMove=document.activeElement?.classList.contains('order-handle')&&document.activeElement.closest('[data-receiver-detail]')?.dataset.receiverDetail===id;
     const next=M.moveReceiver(model,route.zoneId,id,toIndex),saved=await persistManagement(next,{kind:'reorder',zoneId:route.zoneId,receiverIds:M.getZone(next,route.zoneId).receiverIds});
     if(!saved)return;model=saved;
-    if(nativeContext)sendReceiverStates(M.zoneReceivers(model,route.zoneId).map(item=>item.id));
+    if(nativeContext)sendReceiverStates(M.zoneReceivers(model,route.zoneId).map(item=>item.id),{remember:false});
     render();
     if(keyboardMove)main.querySelector(`[data-receiver-detail="${CSS.escape(id)}"] .order-handle`)?.focus({preventScroll:true});
     const status=document.querySelector('.order-status');if(status)status.textContent=`${receiver.name} staat nu op plaats ${toIndex+1}.`;
@@ -1628,7 +1744,8 @@
   });
   document.addEventListener('click',async event=>{
     const button=event.target.closest('button[data-action]');if(!button||button.disabled)return;
-    if(managementBusy||pinProtectionBusy)return;
+    if(button.dataset.action==='pin-login-cancel'&&pinLoginBusy){pinRecoveryAbort?.abort();return;}
+    if(managementBusy||pinProtectionBusy||pinLoginBusy)return;
     const action=button.dataset.action,id=button.dataset.id;
     try {
       if(action==='preview-size'){
@@ -1637,6 +1754,17 @@
         controlPreviewSize=id;return render({preserveScroll:true});
       }
       if(action==='nav')return navigate(id);
+      if(action==='pin-login')return await openPinLogin();
+      if(action==='pin-login-submit')return await submitPinLogin();
+      if(action==='stand-switch-open')return showEffectDialog('Kies je stand',model.stands.map(item=>`<button class="menu-card" data-action="stand-switch" data-id="${esc(item.id)}" aria-pressed="${item.id===stand()?.id}"><span class="menu-icon">${icon('stand')}</span><span><b>${esc(item.name)}</b><small>${item.zones.length} zones${item.id===stand()?.id?' · Nu geopend':''}</small></span>${icon('chevron')}</button>`).join(''));
+      if(action==='stand-switch'){
+        if(!model.stands.some(item=>item.id===id))return;
+        closeEffectDialog();return navigate('stand',{standId:id,zoneId:null});
+      }
+      if(action==='backup-export')return await exportBackup();
+      if(action==='backup-import')return await chooseBackup();
+      if(action==='receiver-context-sync')return await syncReceiverContext();
+      if(action==='backup-confirm')return await restoreBackup(button);
       if(action==='demo-settings-tab'&&webDemoContext)return navigate(id==='wifi'?'demo-wifi':'settings');
       if(action==='pin-protection-toggle')return openPinProtection();
       if(action==='pin-protection-refresh')return refreshPinProtection();
@@ -1777,10 +1905,10 @@
         controlMode='animations';showControlAnimationGallery=true;return render({top:true});
       }
       if(action==='animations'&&route.screen==='controls'){
-        controlMode='animations';showControlAnimationGallery=!activeEffect();route={...route,family:null,library:initialAnimationLibrary(),effectsReturn:'controls'};return render({top:true});
+        controlMode='animations';showControlAnimationGallery=!activeEffect();route={...route,family:null,library:initialAnimationLibrary(),effectsReturn:'controls'};render({top:true});if(!showControlAnimationGallery)revealAnimationStart();return;
       }
       if(action==='animation-current-edit'&&route.screen==='controls'&&activeEffect()){
-        showControlAnimationGallery=false;return render({preserveScroll:true});
+        showControlAnimationGallery=false;render({top:true});return revealAnimationStart();
       }
       if(action==='animations-gallery'&&route.screen==='animations'&&activeEffect()){
         controlMode='animations';showControlAnimationGallery=true;
@@ -1929,9 +2057,9 @@
         const requiresWholeZone=effect.requireTogether||effect.category==='tunnel';
         if(selected().length<(effect.minimumReceivers||1)||requiresWholeZone&&selection().kind!=='all')return;
         apply(effectState(effect));settingsOpen=false;
-        if(route.screen==='controls'&&button.closest('[data-control-mode="animations"]')){controlMode='animations';showControlAnimationGallery=false;return render({preserveScroll:true});}
-        if(route.screen==='effects'&&route.effectsReturn==='controls'){controlMode='animations';return navigate('controls',{zoneId:route.zoneId});}
-        return navigate('animations');
+        if(route.screen==='controls'&&button.closest('[data-control-mode="animations"]')){controlMode='animations';showControlAnimationGallery=false;render({top:true});return revealAnimationStart();}
+        if(route.screen==='effects'&&route.effectsReturn==='controls'){controlMode='animations';showControlAnimationGallery=false;navigate('controls',{zoneId:route.zoneId});return revealAnimationStart();}
+        navigate('animations');return revealAnimationStart();
       }
       if(action==='palette-edit')return showPaletteEditor(Number(id));
       if(action==='palette-add')return changePalette();
@@ -2020,7 +2148,7 @@
         if(!next)return;model=next;if(continuousZone())selections.set(route.zoneId,{kind:'all'});
         // Saving layout is local metadata. Re-send unchanged light intent so
         // the native owner applies that confirmed geometry to every member.
-        if(nativeContext)sendReceiverStates(M.zoneReceivers(model,route.zoneId).map(item=>item.id));
+        if(nativeContext)sendReceiverStates(M.zoneReceivers(model,route.zoneId).map(item=>item.id),{remember:false});
         return render();
       }
     }catch(error){const message=error.message||'Dit kon nog niet worden toegepast.',notice=document.querySelector('#effect-dialog[open] .dialog-error');if(notice){notice.textContent=message;notice.hidden=false;}else toast(message);}
@@ -2115,7 +2243,7 @@
   },true);
   function resumePinConnection(){if(pinProtectionReconnect&&document.visibilityState==='visible')void refreshPinProtection({afterReconnect:true});}
   window.addEventListener('focus',resumePinConnection);document.addEventListener('visibilitychange',resumePinConnection);
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'31.0.0-stability',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'32.0.0-stability',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     try{
@@ -2130,7 +2258,16 @@
         window.AluvisionSecurityMode?.updateFromNative?.({pinRequired:preference.pinRequired});
       }
       if(state.draft)onboarding.restore(state.draft);
-      model=restored;nativeLoaded=true;
+      model=restored;
+      if(Backup)try{
+        const journal=backupTransaction.pending();
+        if(journal){
+          if(Backup.key(Backup.publicModel(restored))===journal.afterModel){backupTransaction.finish(restored);reloadBackupLibraries();}
+          else backupTransaction.discard(restored);
+        }
+        model=Backup.restoreLight(restored,appStorage.getItem(Backup.LIGHT_KEY));
+      }catch(_){backupNotice='Je bewaarde lichtkeuze of een onderbroken herstelactie kon niet volledig worden gelezen. Er is niets naar je receivers verstuurd.';}
+      nativeLoaded=true;
       // Only a successful load can establish that this is a first installation.
       // An existing stand with no receivers is not a reason to restart setup.
       if(state.draft||!restored.stands.length){route.screen='receiver-add';route.setupFrom='stand';}

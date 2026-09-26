@@ -70,6 +70,12 @@ main.gallery-scroll-stable{overflow-anchor:none}
 .reference-editor-preview small{color:var(--muted);font-size:12px;line-height:1.5}
 .reference-editor-preview .button{min-height:44px;padding:9px 14px;margin:0;flex:none}
 .reference-large-preview{width:100%;height:210px;border-radius:18px}
+.tunnel-live-preview{display:block;width:100%;height:200px;min-width:0;border-radius:14px}
+.tunnel-example-name{margin:0;font-size:12px;line-height:1.5;color:var(--muted)}
+.tunnel-guide{gap:10px}
+.tunnel-guide .tunnel-arrangement-help{margin-top:0}
+.reference-editor-preview .section-heading small{max-width:24ch}
+@media(max-width:360px){.tunnel-live-preview{height:180px}.reference-large-preview{height:190px}}
 .family-variant-grid:has(.reference-preview){grid-template-columns:1fr}
 .family-variant-card:has(.reference-preview){padding:10px;border-radius:18px}
 .family-variant-card canvas.reference-preview{height:155px}
