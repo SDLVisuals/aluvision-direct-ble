@@ -502,3 +502,21 @@ body[data-theme=dark] .control-mode-tabs button[aria-pressed=true]{background:#e
 @media(max-width:360px){.control-workspace{padding:11px}.control-mode-tabs button{gap:5px;padding-inline:7px;font-size:12px}.control-starter-grid .effect-card canvas{height:60px}.library-filter-heading{align-items:flex-start;flex-direction:column;gap:2px}}
 @media(max-width:360px){.receiver-zone-row{gap:9px;padding:12px}}
 [data-stand-overview]>.button{margin-top:12px}
+
+/* Native iPhone: let the warm white surface continue behind the status bar,
+   while keeping the wordmark clear of the Dynamic Island. Bring the floating
+   navigation closer to the home indicator without entering its touch area. */
+html.native-app body{min-height:100dvh;background:var(--bg)}
+html.native-app .brand-bar{height:calc(55px + env(safe-area-inset-top));padding-top:env(safe-area-inset-top)}
+html.native-app main{padding-bottom:calc(var(--nav) + env(safe-area-inset-bottom) + 14px)}
+html.native-app .navigation{bottom:max(4px,calc(env(safe-area-inset-bottom) - 14px))}
+
+/* The selected scope stays obvious, but no longer takes more height than a
+   comfortable tap needs on a small phone. Individual lines remain in a drawer. */
+.selection .scope-lines-toggle{min-height:52px;padding:7px 9px;border-radius:13px}
+.selection .scope-toggle-icon{width:32px;height:32px;border-radius:10px}
+.selection .scope-lines-toggle .scope-copy{gap:2px}
+.selection .scope-lines-toggle .scope-option-title{font-size:12px}
+.selection .scope-lines-toggle .scope-copy small{font-size:9px}
+.selection .scope-toggle-chevron{width:26px;height:26px}
+@media(max-width:360px){.selection .scope-lines-toggle{min-height:48px;padding:6px 8px}.selection .scope-toggle-icon{width:30px;height:30px}}

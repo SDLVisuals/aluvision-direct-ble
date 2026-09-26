@@ -437,7 +437,7 @@
     bri:{icon:'sun',description:'Hoe fel de bewegende kleuren branden.'},
     speed:{icon:'animation',description:'Hoe snel het licht over de ledlines beweegt.'},
     bgBrightness:{icon:'sun',description:'Hoe fel de vaste achtergrondkleur brandt.'},
-    smooth:{icon:'sparkle',description:'Animaties lopen altijd op maximale vloeiendheid.'},
+    smooth:{icon:'sparkle',description:'100% is het meest vloeiend. Je kunt dit zelf aanpassen.'},
     widthPixels:{icon:'light',description:'Hoeveel pixels één lichtpunt inneemt.'},
     objectCount:{icon:'together',description:'Hoeveel lichtpunten tegelijk bewegen.'},
     trailLength:{icon:'animation',description:'Hoe lang de lichtstaart achter een lichtpunt is.'},
@@ -469,7 +469,7 @@
     // A line-to-line delay cannot change a single selected line. Keep the
     // saved setting intact, but don't offer an inactive control in that scope.
     const controls=specs.filter(spec=>available.includes(spec[0])&&!(spec[0]==='lineDelayMs'&&selected().length<2));
-    const smoothness=available.includes('smooth')?`<div class="fixed-animation-setting" data-fixed-setting="smooth" aria-label="Vloeiendheid altijd 100 procent"><span class="setting-label-icon">${icon(animationSettingGuides.smooth.icon)}</span><span class="fixed-animation-copy"><b>Vloeiendheid</b><small>${esc(animationSettingGuides.smooth.description)}</small></span><strong>100%</strong></div>`:'';
+    const smoothness=available.includes('smooth')?`<div class="animation-setting">${animationSlider('smooth','Vloeiendheid',0,100,s.smooth??100,'%',animationSettingGuides.smooth.description)}${resetMarkup('smooth','Vloeiendheid')}</div>`:'';
     if(!controls.length&&!smoothness&&!['direction','bounce','mirror'].some(key=>available.includes(key)))return '';
     return `<button class="settings-toggle" data-action="settings-toggle" aria-expanded="${settingsOpen}" aria-controls="animation-settings">${icon('sliders')}<span>${settingsOpen?'Instellingen verbergen':'Beweging instellen'}</span>${icon(settingsOpen?'close':'chevron')}</button><section id="animation-settings" class="card settings-panel" ${settingsOpen?'':'hidden'}><p class="animation-preview-feedback"><span class="preview-feedback-icon">${icon('animation')}</span><span>Kijk bovenaan: het ledline-voorbeeld beweegt meteen mee.</span></p>${controls.map(spec=>`<div class="animation-setting">${animationSlider(...spec)}${resetMarkup(spec[0],spec[1])}</div>`).join('')}${smoothness}${available.includes('direction') ? `<div class="direction-setting"><p class="direction-setting-label"><span class="setting-label-icon">${icon('back')}</span><span><b>Richting</b><small>Kies welke kant het licht op beweegt.</small></span></p><div class="compact-direction" aria-label="Bewegingsrichting">${(effect.directions||['right','left']).map(value=>`<button data-action="direction" data-value="${value}" aria-pressed="${(s.direction||effect.state.direction)===value}">${esc(directionMap[value]||value)}</button>`).join('')}</div></div>`:''}</section>`;
   }
@@ -884,7 +884,6 @@
     if(!model.stands.length&&!['stand','scenes','settings','demo-wifi','pin-login','receivers','receiver-add'].includes(route.screen))route.screen='stand';
     const animationEditorOpen=route.screen==='animations'||(route.screen==='controls'&&controlMode==='animations'&&!showControlAnimationGallery);
     const visibleEffect=animationEditorOpen?activeEffect():null;
-    if(visibleEffect?.controls.includes('smooth')&&selected().some(receiver=>Number(receiver.state.smooth)!==100))apply({smooth:100});
     // No empty animation landing page. This also covers switching from an
     // animated receiver to a static one while its editor is already open.
     if(route.screen==='animations'&&zone()&&receivers().length&&!activeEffect()){
@@ -1097,7 +1096,6 @@
   }
   function apply(patch,scope=selection()) {
     const ids=standControlOpen?standReceivers().map(receiver=>receiver.id):selectedReceiverIds(scope);
-    if(activeEffect()?.controls.includes('smooth'))patch={...patch,smooth:100};
     if(Object.hasOwn(patch,'bri')&&!Object.hasOwn(patch,'brightness'))patch={...patch,brightness:patch.bri};
     else if(Object.hasOwn(patch,'brightness')&&!Object.hasOwn(patch,'bri'))patch={...patch,bri:patch.brightness};
     model=standControlOpen?M.applyStandState(model,stand().id,patch):M.applyState(model,route.zoneId,scope,patch);
@@ -1963,7 +1961,7 @@
       if(action==='preset-apply'){
         const preset=savedPresets.presets.find(p=>p.id===id);if(!preset)return;
         const restored=S.restore(preset,presetContext(),catalogue());if(!restored.compatible)return toast(restored.reason);
-        apply({...backgroundDefaults(),...restored.state,...(restored.effect.controls.includes('smooth')?{smooth:100}:{}),v30Effect:restored.state.v30Effect||null,previewFamily:restored.state.previewFamily||null});settingsOpen=false;
+        apply({...backgroundDefaults(),...restored.state,v30Effect:restored.state.v30Effect||null,previewFamily:restored.state.previewFamily||null});settingsOpen=false;
         if(route.screen==='controls'&&button.closest('[data-control-mode="animations"]')){controlMode='animations';showControlAnimationGallery=false;return render({preserveScroll:true});}
         if(route.screen==='effects'&&route.effectsReturn==='controls'){controlMode='animations';return navigate('controls',{zoneId:route.zoneId});}
         return navigate('animations');

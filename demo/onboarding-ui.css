@@ -90,6 +90,10 @@ body:has(.onboarding-page) .onboarding-page{gap:10px}
 .onboarding-destination>summary b{display:block;font-size:13px;overflow-wrap:anywhere}
 .onboarding-destination>summary em{display:flex;align-items:center;gap:3px;font-size:11px;color:var(--red);font-style:normal;white-space:nowrap}
 .onboarding-destination>summary em span{font-size:15px;line-height:1}
+.onboarding-destination-heading{display:grid;gap:3px;margin:14px 1px 7px}
+.onboarding-destination-heading b{font-size:14px}
+.onboarding-destination-heading small{font-size:11px;line-height:1.4}
+.onboarding-destination>summary em{min-height:38px;padding:7px 10px;border:1px solid #bf484133;border-radius:12px;background:#fbf0ee;color:var(--red);font-weight:750}
 .onboarding-destination[open]>summary{border-bottom:1px solid var(--line);padding-bottom:7px}
 .onboarding-destination .onboarding-zone-tiles{margin-bottom:4px}
 .onboarding-destination-title{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:6px}
