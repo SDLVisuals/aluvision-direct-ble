@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-20260927-white-mixes-01",
+  "revision": "v32-20260927-frontal-aluminium-01",
   "interfaceVersion": 32,
-  "interfaceBaseline": "V32 editable white mixes after native build 158. White and Warm White use explicit RGB plus neutral/cool W recipes; Brand accent selection does not override these recipes. One-colour legacy WARM breathes all channels together; two-colour WARM blends independent W levels. Updated receiver source is required for these rendering corrections; no firmware is published by this demo release. The restored oblique tunnel overview and per-animation selected-line previews are retained. Existing backup, PIN, scenes and receiver protocols are unchanged. This revision is not installed on iPhone and does not confirm physical warmth, orange calibration or receiver operation. This browser demo uses fictional receivers only, no hardware commands and no PIN collection. No calibrated colour temperature or exact reference-video equivalence is claimed.",
+  "interfaceBaseline": "V32 restores the user-confirmed frontal circular aluminium tunnel from bb93c89, including the walkway and dark lining. One general overview and each tunnel animation use the same camera with exactly the selected ledlines and current sampled pixels, not the old fixed four-line teaching animation. Labels stay below the model and cannot hide pixel endpoints. White/Warm White editable RGB plus W mixes from the preceding revision are retained; corresponding receiver source corrections still require a separately packaged receiver update. Existing backup, PIN, scenes, animation formulas and receiver protocols are unchanged by this presentation release. This revision is not installed on iPhone and does not confirm physical colour calibration or receiver operation. This browser demo uses fictional receivers only, no hardware commands and no PIN collection.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -72,7 +72,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "2b822b00c73ad2821a3d80266ccfb3615417a18abb60ffc51098ea13462772c9"
+      "sha256": "84f1ad4fd7c232dd69f522499f40df7493db517551a0ee857a5f8aa97e4ac288"
     },
     {
       "path": "live-control.js",
@@ -132,7 +132,7 @@
     },
     {
       "path": "preview.js",
-      "sha256": "edd7fdd2f55710ca995794888cfb550fbf342325a19f2e828b0a936940e10b2a"
+      "sha256": "27992aacf42a780e6d21f480a724b71875b25832b8125d02fe9daab3ab46d38b"
     },
     {
       "path": "receiver-playback.js",

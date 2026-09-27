@@ -647,17 +647,12 @@ function softChaseCoverage(distance,width,n,smooth){
     materials.set(css,material);
     return material;
   }
-  // The original walk-through tunnel, parameterised by arc length. This is only a
-  // camera projection: one receiver row is one light arch, in setup order.
-  // Equal pixel distances along the curve keep a chase's speed consistent
-  // through its round roof and sides. No independent CSS/demo animation.
-  const tunnelCurve = (() => {
-    const segments = [
-      [[44,224],[44,190],[44,156],[44,122]],
-      [[44,122],[44,70],[80,40],[132,40]],
-      [[132,40],[184,40],[220,70],[220,122]],
-      [[220,122],[220,156],[220,190],[220,224]]
-    ];
+  // The user-confirmed frontal aluminium tunnel from bb93c89. Only its camera
+  // and materials return: every light arch still uses one actual receiver row.
+  // Arc-length sampling prevents a slow chase from speeding up in the bends.
+  function tunnelCurveSamples(curve) {
+    const segments=curve.slice(1).map((control,index)=>[
+      curve[index].slice(-2),control.slice(0,2),control.slice(2,4),control.slice(4,6)]);
     const raw = [], distances = [0];
     segments.forEach((segment, part) => {
       for (let step = part ? 1 : 0; step <= 48; step++) {
@@ -674,29 +669,38 @@ function softChaseCoverage(distance,width,n,smooth){
       const ratio=(distance-distances[cursor-1])/(distances[cursor]-distances[cursor-1]);
       return [0,1].map(axis=>raw[cursor-1][axis]+(raw[cursor][axis]-raw[cursor-1][axis])*ratio);
     });
-  })();
+  }
+  const tunnelInner=[[82,224],[55,196,40,162,43,122],[46,76,82,40,132,40],[181,40,216,73,220,123],[221,163,206,195,182,224]];
+  const tunnelOuter=[[60,224],[20,190,12,148,18,110],[24,47,72,14,132,14],[194,14,241,59,244,116],[246,159,230,194,206,224]];
+  const tunnelRim=tunnelOuter.map((points,index)=>points.map((value,axis)=>(value+tunnelInner[index][axis])/2));
+  tunnelRim[0]=[83,240];tunnelRim[1][0]=57;tunnelRim[1][1]=211;
+  tunnelRim[4][2]=207;tunnelRim[4][3]=211;tunnelRim[4][4]=183;tunnelRim[4][5]=240;
+  const tunnelCurve=tunnelCurveSamples(tunnelInner),tunnelOuterCurve=tunnelCurveSamples(tunnelOuter),tunnelFasciaCurve=tunnelCurveSamples(tunnelRim);
   function tunnelProjection(lineCount, width=360, height=240) {
     const count=Math.max(0,Math.floor(number(lineCount,0)));
     width=Math.max(1,number(width,360));height=Math.max(1,number(height,240));
-    // Put the vanishing point OUTSIDE the entrance. The former camera put it
-    // inside the opening, turning each real ledline into a concentric ring.
-    // An oblique view, upright sides and a visible walkway explain front/back
-    // order without inventing extra lights or needing camera controls.
-    const vanishing=[width*.95,height*.43];
-    const project=scale=>tunnelCurve.map(([x,y])=>{
-      const front=[width*(.09+(x-44)/176*.54),height*(.08+(y-40)/184*.76)];
-      return [vanishing[0]+(front[0]-vanishing[0])*scale,vanishing[1]+(front[1]-vanishing[1])*scale];
-    });
-    const front=project(1), back=project(.46);
+    // Preserve the proportions of the original 360x260 illustration, including
+    // its slightly off-centre vanishing point. Never stretch the circular face
+    // to fit a wide gallery card or turn it back into an upright U-shaped arch.
+    const unit=Math.min(width/360,height/260),offset=[(width-360*unit)/2,(height-260*unit)/2];
+    const screen=(x,y)=>[offset[0]+(x+44)*unit,offset[1]+(y+5)*unit];
+    const point=(x,y,scale)=>screen(164+(x-164)*scale,108+(y-108)*scale);
+    const project=(scale,curve=tunnelCurve)=>curve.map(([x,y])=>point(x,y,scale));
+    const floor=(left,right,near=1.1,far=.48)=>[point(left,224,near),point(right,224,near),point(right,224,far),point(left,224,far)];
+    const front=project(1), back=project(.48);
     const arches=Array.from({length:count},(_,index)=>{
-      const depth=count>1?index/(count-1):0, scale=1-depth*.54;
-      // Dense installations retain ALL arches. Narrow the lens instead of
-      // silently clamping to four lines or hiding the rear of the tunnel.
-      const spacing=count>1?height*.76*.54/(count-1):height;
-      const thickness=Math.max(.7,Math.min(5.4,width*.016,height*.025,spacing*.62))*(.7+.3*scale);
-      return {index,depth,scale,thickness,points:project(scale)};
+      const depth=(index+.5)/count,scale=Math.pow(.48,depth);
+      // Each selected line gets its own depth. More lines narrow the diffuser
+      // instead of clipping the rear lines or imposing the old four-line cap.
+      const spacing=184*unit*scale*(1-Math.pow(.48,1/Math.max(1,count)));
+      const thickness=Math.max(.45,Math.min(3.2*unit*scale,spacing*.55));
+      return {index,depth,scale,thickness,points:project(scale),
+        panel:[...project(Math.pow(.48,index/count)),...project(Math.pow(.48,(index+1)/count)).reverse()]};
     });
-    return {width,height,arches,front,back,floor:[front[0],front.at(-1),back.at(-1),back[0]]};
+    return {width,height,unit,arches,front,back,vanishing:point(164,108,1),
+      outer:project(1,tunnelOuterCurve),outerBack:project(.48,tunnelOuterCurve),fascia:project(1,tunnelFasciaCurve),
+      groundY:point(132,224,1)[1],shadow:screen(132,231),exitCentre:point(132,129,.48),floor:floor(82,182),inlay:floor(109,155),
+      exitFloor:floor(82,182,.48,.08),exitInlay:floor(109,155,.48,.08)};
   }
   const tunnelProjectionCache=new Map();
   function drawTunnel(context,frame,width,height) {
@@ -711,25 +715,54 @@ function softChaseCoverage(distance,width,n,smooth){
       context.beginPath();points.forEach(([x,y],index)=>index?context.lineTo(x,y):context.moveTo(x,y));
       if(close)context.closePath();
     };
-    const material=(start,end,from,to)=>{
+    const material=(start,end,from,to,stops)=>{
       if(typeof context.createLinearGradient==='function'){
         const gradient=context.createLinearGradient(...start,...end);
-        if(gradient&&typeof gradient.addColorStop==='function'){gradient.addColorStop(0,from);gradient.addColorStop(1,to);return gradient;}
+        if(gradient&&typeof gradient.addColorStop==='function'){(stops||[[0,from],[1,to]]).forEach(([at,colour])=>gradient.addColorStop(at,colour));return gradient;}
       }
       return from;
     };
+    const radial=(x,y,r,from,to)=>{
+      const gradient=context.createRadialGradient?.(x,y,0,x,y,r);
+      if(gradient&&typeof gradient.addColorStop==='function'){gradient.addColorStop(0,from);gradient.addColorStop(1,to);return gradient;}
+      return from;
+    };
     context.shadowBlur=0;
-    // One continuous, quiet wall and floor make depth legible. There are no
-    // extra illuminated arches, floating tiles or thick occluding fascia.
+    // Neutral materials, the circular silver face and the dark central inlay
+    // reproduce the confirmed product illustration. No decorative light rows,
+    // baked-in pink animations or four-block floor reflections are introduced.
+    rounded(context,0,0,width,height,18);
+    context.fillStyle=material([0,0],[width,height],'#16191a','#2a2c2e');context.fill();
+    context.save();context.translate(...model.shadow);context.scale(1,12/131);
+    context.beginPath();context.arc(0,0,131*model.unit,0,Math.PI*2);
+    context.fillStyle=radial(0,0,131*model.unit,'rgba(0,0,0,.7)','rgba(0,0,0,0)');context.fill();context.restore();
+    path(model.back,true);context.fillStyle=material([width*.5,0],[width*.5,height],'#262a2e','#4b4e50');context.fill();
+    context.save();path(model.back,true);context.clip();
+    context.fillStyle=radial(...model.exitCentre,43*model.unit,'rgba(215,217,216,.23)','rgba(215,217,216,0)');
+    context.fillRect(0,0,width,height);
+    path(model.exitFloor,true);context.fillStyle='#66696a';context.fill();
+    path(model.exitInlay,true);context.fillStyle='#343739';context.fill();context.restore();
+    path([...model.outer,...model.outerBack.slice().reverse()],true);
+    context.fillStyle=material([0,0],[width,height],'#d1d5d5','#a8aeb1');context.fill();
     path([...model.front,...model.back.slice().reverse()],true);
-    context.fillStyle=material([width*.1,height],[width*.9,0],'#26302c','#131b17');context.fill();
+    const lining=material([width*.2,0],[width*.8,height*.8],'#202226','#111316',[[0,'#202226'],[.36,'#090c10'],[.7,'#25272b'],[1,'#111316']]);
+    context.fillStyle=lining;context.fill();
+    for(let rowIndex=frame.rows.length-1;rowIndex>=0;rowIndex--){
+      const row=frame.rows[rowIndex],pixels=row.identificationPixels||row.pixels;
+      const sum=[0,0,0];
+      for(const colour of pixels)for(let channel=0;channel<3;channel++)sum[channel]+=colour[channel];
+      const mean=sum.map(value=>Math.round(value/Math.max(1,pixels.length)));
+      path(model.arches[rowIndex].panel,true);
+      context.fillStyle=material([width*.3,height],[width*.7,0],'rgba('+mean.join(',')+',.08)','rgba('+mean.join(',')+',.025)');context.fill();
+    }
     path(model.floor,true);
-    context.fillStyle=material([width*.3,height*.84],[width*.95,height*.43],'#333c36','#17201b');context.fill();
-    // Quiet walkway edges are structural guides, never animated light. Avoid
-    // a broad front fascia: it would obscure short chases and the rear lines.
-    context.strokeStyle='#46514a';context.lineWidth=Math.max(.5,width*.002);
+    context.fillStyle=material([width*.4,height],[width*.6,height*.4],'#a3a09a','#424345');context.fill();
+    path(model.inlay,true);context.fillStyle='#252729';context.fill();
+    context.strokeStyle='#919493';context.lineWidth=Math.max(.45,model.unit*.7);
     path([model.floor[0],model.floor[3]]);context.stroke();
     path([model.floor[1],model.floor[2]]);context.stroke();
+    path([model.inlay[0],model.inlay[3]]);context.stroke();
+    path([model.inlay[1],model.inlay[2]]);context.stroke();
     context.lineCap='round';context.lineJoin='round';
     for(let rowIndex=frame.rows.length-1;rowIndex>=0;rowIndex--){
       const row=frame.rows[rowIndex],arch=model.arches[rowIndex];
@@ -743,8 +776,8 @@ function softChaseCoverage(distance,width,n,smooth){
         for(let index=begin;index<end;index++)points.push(arch.points[index]);
         points.push(point(to));path(points);
       };
-      path(arch.points);context.strokeStyle=material(arch.points[0],arch.points[64],'#3d4840','#566058');
-      context.lineWidth=arch.thickness+Math.max(.8,2.2*arch.scale);context.stroke();
+      path(arch.points);context.strokeStyle=material(arch.points[0],arch.points[64],'#393d40','#606467');
+      context.lineWidth=arch.thickness+Math.max(.45,1.4*model.unit*arch.scale);context.stroke();
       path(arch.points);context.strokeStyle='#29342f';context.lineWidth=arch.thickness+.8;context.stroke();
       const segments=row.type==='RGBW'?1:Math.min(384,pixels.length);
       // Blur is decoration, not pixel data. Rasterizing hundreds of separate
@@ -777,15 +810,26 @@ function softChaseCoverage(distance,width,n,smooth){
       }
       context.shadowBlur=0;
     }
-    // Labels are UI, not light. Paint them after ALL arches so the next
-    // foreground arch cannot cut through the number of a deeper ledline.
+    // Constant-width aluminium fascia with level-cut feet, as in bb93c89.
+    // Draw only OUTSIDE the opening so even dense front arches stay visible.
+    context.save();context.beginPath();context.rect(0,0,width,model.groundY);context.clip();
+    context.beginPath();context.rect(0,0,width,height);
+    model.front.forEach(([x,y],index)=>index?context.lineTo(x,y):context.moveTo(x,y));context.closePath();context.clip('evenodd');
+    context.lineCap='butt';path(model.fascia);context.strokeStyle='#969ea2';context.lineWidth=28*model.unit;context.stroke();
+    path(model.fascia);context.strokeStyle='#eceeed';context.lineWidth=27.5*model.unit;context.stroke();
+    path(model.fascia);context.strokeStyle=material([width*.25,0],[width*.7,height],'#d5d8d8','#b4b9bc');context.lineWidth=26*model.unit;context.stroke();
+    context.restore();context.lineCap='round';
+    path(model.front);context.strokeStyle='#858c90';context.lineWidth=Math.max(.5,model.unit);context.stroke();
+    // Numbers belong below the model, not on the walkway: the foot of a rear
+    // arch is very close to the next strip. Overlay labels used to hide those
+    // real SPI pixels. This small ordered key never covers the light itself.
     if(frame.rows.length<=8&&height>=130){
       context.font='10px system-ui';context.textAlign='center';context.textBaseline='top';
       context.strokeStyle='#111514';context.lineWidth=3;context.fillStyle='#d3ddd6';
       for(let rowIndex=frame.rows.length-1;rowIndex>=0;rowIndex--){
-        const row=frame.rows[rowIndex],arch=model.arches[rowIndex],position=arch.points[0];
+        const row=frame.rows[rowIndex];
         const order=(frame.geometry.receivers.find(item=>item.receiverId===row.receiverId)?.lineIndex??rowIndex)+1;
-        const x=position[0]-arch.thickness-7,y=position[1]+4;
+        const spread=Math.min(width*.6,180*model.unit),x=width/2+((rowIndex+.5)/frame.rows.length-.5)*spread,y=height-13;
         context.strokeText(String(order),x,y);context.fillText(String(order),x,y);
       }
     }
