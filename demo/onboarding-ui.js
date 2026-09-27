@@ -45,6 +45,19 @@
     if(['NATIVE_UNAVAILABLE','NATIVE_DOCUMENT_UNAVAILABLE'].includes(code))return {message:'De verbinding met de receiverdienst in de app is niet beschikbaar. Probeer opnieuw vanuit de iPhone-app. Je receiver wordt niet gereset.'};
     return {message:'Deze receiver kon nog niet veilig worden gecontroleerd. Je keuzes blijven staan. Tik op Verbinding controleren om opnieuw te proberen; reset je receiver niet.'};
   }
+  function finalizationFailure(failure,{viaMain=false,phase='receiver'}={}){
+    // Only fixed codes and our own phase choose copy. Never show native error
+    // messages, receiver replies, credentials or an arbitrary exception code.
+    const code=typeof failure?.code==='string'?failure.code:'';
+    if(['MAIN_RECEIPT_INVALID','V30_RECEIPT_UNVERIFIED','RECEIPT_REFERENCE','RECEIPT_UNVERIFIED','RECEIPT_MISMATCH'].includes(code))return {
+      refreshReceipt:true,message:'De laatste bevestiging van je receiver moet opnieuw worden gecontroleerd. Tik op Opnieuw proberen. Je keuzes blijven staan.'
+    };
+    if(['MAIN_STORAGE_UNCONFIRMED','V30_STORAGE_UNAVAILABLE','V30_STORAGE_UNCONFIRMED','V30_STORAGE_FULL','V30_STORAGE_CORRUPT','V30_CHECKPOINT_CONFLICT','V30_CHECKPOINT_INVALID','V30_CHECKPOINT_ROLLBACK','V30_BINDING_INVALID'].includes(code)||['save','publish'].includes(phase))return {
+      message:'De app kon de toevoeging nog niet bewaren. Tik op Opnieuw proberen. Je keuzes blijven op dit scherm staan.'
+    };
+    if(phase==='receiver'&&['DISCOVERY_UNAVAILABLE','MAIN_MANUAL_WIFI_REQUIRED','MAIN_CONNECTION_UNAVAILABLE','NATIVE_TIMEOUT','TIMEOUT','NATIVE_BUSY','MAIN_BUSY','OTA_BUSY','REMOVAL_BUSY','MAIN_PROTOCOL_UNSUPPORTED','ACTION_UNSUPPORTED'].includes(code))return connectionFailure(failure,{viaMain});
+    return {message:'De toevoeging kon nog niet veilig worden afgerond. Tik op Opnieuw proberen. Je receiver en instellingen blijven geselecteerd.'};
+  }
 
   function create({draftApi=window.LightningOnboardingDraft,visual=window.LightningReceiverVisual,pixelSetup=window.LightningPixelSetup,services={},getModel,onComplete=()=>{},onManage=null,onExit=()=>{},allowPinLogin=false}={}){
     if(!draftApi||!pixelSetup||typeof getModel!=='function')throw Error('Onboarding dependencies are required.');
@@ -789,8 +802,10 @@
     }
     async function finish({automatic=false}={}){
       if(busy)return 'stop';busy=true;finalizationStarted=true;automaticFinalizing=automatic;error='';notice='';const token=++operation;const controller=new AbortController();actionAbort=controller;paintPage(false);
+      let finishPhase='save';
       try{
         await persist();if(token!==operation)throw Error('SUSPENDED');
+        finishPhase='receiver';
         let response;
         if(finalReceiptRef)response={receiptRef:finalReceiptRef};
         else {if(typeof services.finalize!=='function')throw Error('UNAVAILABLE');response=await bounded(services.finalize({configuration:config(),securityReceiptRef,signal:controller.signal}),50000);}
@@ -798,14 +813,16 @@
         if(token!==operation)throw Error('SUSPENDED');
         if(automatic&&document.hidden){notice='Toevoegen is onderbroken. Kom terug en tik op Opnieuw proberen.';return 'stop';}
         const currentModel=getModel();
+        finishPhase='verify';
         const completed=await bounded(committer.finish(currentModel,draft,finalReceiptRef));
-        if(completed.error){finalReceiptRef=null;throw Error('UNCONFIRMED');}
+        if(completed.error){finalReceiptRef=null;throw Object.assign(Error('UNCONFIRMED'),{code:completed.error.code});}
         // Verification may await native storage/radio. Never overwrite edits
         // made elsewhere in the meantime, nor publish after this flow closed.
         // The private receipt can be reverified against the new model on retry.
         if(token!==operation||getModel()!==currentModel)throw Error('MODEL_CHANGED');
         if(automatic&&document.hidden){notice='Toevoegen is onderbroken. Kom terug en tik op Opnieuw proberen.';return 'stop';}
         if(typeof services.publishModel==='function'){
+          finishPhase='publish';
           const saved=await bounded(services.publishModel({model:completed.model,configuration:config(),receiptRef:finalReceiptRef}));
           if(!saved?.model||canonical(saved.model)!==canonical(completed.model))throw Error('MODEL_UNCONFIRMED');
           if(token!==operation||getModel()!==currentModel)throw Error('MODEL_CHANGED');
@@ -815,7 +832,11 @@
       }catch(failure){
         if(token!==operation)return 'stop';
         if(automatic&&pinRequired()&&transientRejoin(failure))return 'retry';
-        error=`Je receiver kon nog niet worden toegevoegd. Je ${pinRequired()?'PIN en ':''}keuzes blijven bewaard. Er is niets opnieuw ingesteld.`;
+        const problem=finalizationFailure(failure,{viaMain:draft.role==='node',phase:finishPhase});
+        // A stale proof may be refreshed on the next explicit retry; neither
+        // this failure nor that retry starts another security claim.
+        if(problem.refreshReceipt)finalReceiptRef=null;
+        error=problem.message;
         if(automatic)rejoinBlocked=true;
         return 'stop';
       }

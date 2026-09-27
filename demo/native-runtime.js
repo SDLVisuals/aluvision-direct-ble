@@ -50,9 +50,11 @@
       };
       // MAIN verification has its own 12 s handshake deadline. The bridge must
       // leave room for native key storage and delivering that bounded result.
-      const timeout=['exportBackup','chooseBackup','recoverInstallation'].includes(action)?300000:action==='syncInstallationContext'?180000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
+      // A routed OTA plan also checks journal/security/topology. Its bounded
+      // native checks may take up to 100s; let the read-only result arrive.
+      const timeout=['exportBackup','chooseBackup','recoverInstallation'].includes(action)?300000:action==='syncInstallationContext'?180000:action==='otaPlan'?120000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
         ['secure','reconcileSecurity'].includes(action)&&payload.configuration?.role==='node'?120000:
-        ['select','secure','reconcileSecurity','finalize','otaPlan','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain'].includes(action)?45000:12000;
+        ['select','secure','reconcileSecurity','finalize','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain'].includes(action)?45000:12000;
       const timer=root.setTimeout(()=>{cancelNative();receive({id,ok:false,code:'NATIVE_TIMEOUT'});},timeout);
       pending.set(id,{resolve,reject,timer,removeAbort:()=>signal?.removeEventListener('abort',abort)});
       signal?.addEventListener('abort',abort,{once:true});
@@ -101,11 +103,43 @@
       !(view.draft===null||(view.draft&&typeof view.draft==='object'&&!Array.isArray(view.draft))))throw fail('VIEW_INVALID');
     viewRevision=view.revision;viewModelKey=canonical(view.model);viewDraftKey=canonical(view.draft);viewLoaded=true;return view;
   }
+  function publicationModel(incoming,stored){
+    if(!incoming||!Array.isArray(incoming.receivers)||!stored||!Array.isArray(stored.receivers))throw fail('VIEW_INVALID');
+    const known=new Map(stored.receivers.map(receiver=>[receiver.id,receiver])),seen=new Set();
+    const next={...incoming,receivers:incoming.receivers.map(receiver=>{
+      const old=known.get(receiver?.id);
+      if(!old)return receiver; // The new receiver remains subject to native final proof and full validation.
+      if(seen.has(old.id))throw fail('V30_BINDING_INVALID');seen.add(old.id);
+      // Colours/animations and observed connectivity belong to the visible
+      // light model, not the neutral native membership journal. Preserve its
+      // exact stored baseline, including legacy state, for existing receivers.
+      // Every other field must still match: never conceal an identity, port,
+      // zone, name, role or membership change behind this projection.
+      const projected={...receiver,state:old.state,connection:old.connection};
+      if(canonical(projected)!==canonical(old))throw fail('V30_BINDING_INVALID');
+      return projected;
+    })};
+    if(seen.size!==known.size)throw fail('V30_BINDING_INVALID');
+    return next;
+  }
   function writeView(action,payload){
+    // Capture publication intent before entering the serial write queue. The
+    // UI may continue painting, but cannot change the graph being verified.
+    if(action==='publishModel')payload=JSON.parse(JSON.stringify(payload));
     const next=writeQueue.catch(()=>{}).then(async()=>{
       if(!viewLoaded)throw fail('VIEW_NOT_LOADED');
-      const previousModel=viewModelKey,requested=canonical(action==='saveDraft'?payload.draft:payload.model);
-      try{return acceptView(await call(action,{...payload,expectedRevision:viewRevision}));}
+      const publication=action==='publishModel',localModel=publication?canonical(payload.model):null;
+      const sent=publication?{...payload,model:publicationModel(payload.model,JSON.parse(viewModelKey))}:payload;
+      const previousModel=viewModelKey,requested=canonical(action==='saveDraft'?sent.draft:sent.model);
+      // acceptView always retains the exact neutral native result. Only this
+      // caller receives its unchanged local light overlay, and only after the
+      // complete projected graph and finished draft have been acknowledged.
+      const present=view=>publication?{...view,model:JSON.parse(localModel)}:view;
+      try{
+        const view=await call(action,{...sent,expectedRevision:viewRevision});
+        if(publication&&(view?.draft!==null||canonical(view?.model)!==requested))throw fail('VIEW_INVALID');
+        return present(acceptView(view));
+      }
       catch(error){
         // A Keychain CAS can commit while its WebKit reply is lost. Re-read
         // local state only: never repeat a claim, finalize, or storage write.
@@ -113,7 +147,7 @@
         try{
           const view=acceptView(await call('loadView'));
           if(action==='saveDraft'&&viewModelKey===previousModel&&canonical(view.draft)===requested)return view;
-          if(action==='publishModel'&&view.draft===null&&viewModelKey===requested)return view;
+          if(publication&&view.draft===null&&viewModelKey===requested)return present(view);
         }catch(_){}
         throw error;
       }

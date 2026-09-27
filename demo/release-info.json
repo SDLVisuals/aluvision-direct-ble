@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-20260927-layout-preview-02",
+  "revision": "v32-20260927-mobile-gallery-01",
   "interfaceVersion": 32,
-  "interfaceBaseline": "V32 preserves the existing interface and integrated Ledlines instellen. New SPI zones default to Doorlopend: one continuous preview line. Tunnel shows horizontal ledlines below one another; Wand shows vertical ledlines side by side. The main preview immediately follows proposed layout and order, without saving or sending light commands before Bewaren; Annuleren restores the saved arrangement. Existing zone choices, colours, effects, outputs and selection are preserved. Compact wall lines remain legible on narrow phones. The approved 3D tunnel/wall gallery examples and animation engines are unchanged. New-zone defaults also match native iPhone storage. The isolated demo uses fictional receivers only, no hardware commands, firmware downloads or PIN collection. Browser verification does not prove physical receiver acceptance.",
+  "interfaceBaseline": "V32 preserves the existing interface and approved 3D tunnel/wall examples. The phone-first animation gallery uses a rounded category sheet with large explained choices, readable full-width animated cards, and one clear return to active settings. Arrangement icons depict the chosen tunnel, vertical wall or continuous line. Arrangement and order choices apply directly, without a separate save/cancel step. New SPI zones default to Doorlopend; the main preview follows the selected geometry. Existing colours, effects, outputs, selection and edited animation settings are preserved. The isolated demo uses fictional receivers only, no hardware commands, firmware downloads or PIN collection. Browser verification does not prove an iPhone installation or physical receiver acceptance.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -28,11 +28,15 @@
     },
     {
       "path": "animation-library.css",
-      "sha256": "d9836b3f013bcf0b7d1a5387e0a57744640a3698569f90475a3dc455f23397a5"
+      "sha256": "7413b2c7a928e56062b476922591e938901edc0aaef33f37fb36cf52abcf8425"
     },
     {
       "path": "animation-library.js",
-      "sha256": "58c9fbe2dbf42ffd1febea01d5aed22abeca36cc2d03dc1166b081092a6e8f89"
+      "sha256": "003624ed3095c91c4b5b4d39d21a718817f787edf594fe50b64d87c1fe6780ec"
+    },
+    {
+      "path": "animation-mobile.css",
+      "sha256": "13393ef8f62824ac3e927bbf7acedbbaaa1ef61172494de888685fa0cf581cf2"
     },
     {
       "path": "animations.css",
@@ -40,7 +44,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "755638dd00e3ff83b4d2887f5fedaafa79203471e7f6c4c748dda834e08c306a"
+      "sha256": "bf94c75a8628c85b98a58995eacecb84592472263cb02a6a17c2f5c6331bfb8c"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -64,7 +68,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "4be3f86fd3ea490aa3fe0ee794ba8a931cc78fe51c7af0c2f43fab8427166f77"
+      "sha256": "1e91fa4be391a951ee614db65b584a5f106c3d194b7ccf5c596e4b4630170bbb"
     },
     {
       "path": "fixtures.js",
@@ -72,11 +76,11 @@
     },
     {
       "path": "index.html",
-      "sha256": "5edb57a99c3492dca6b1486b33b2d75db85c60c1f695435f17f024e41acce20e"
+      "sha256": "47e23d0a065c36141c4671afaadfcfa7bdc2ef71a14eb96b97d8b8070bdf03e2"
     },
     {
       "path": "live-control.js",
-      "sha256": "d8afc2a660025403f92ac6b251499e3b152fbc7fdb401aa031b0fd43fc00b33f"
+      "sha256": "1e75f5191a60337399ad519cdfe4a186897adebbf1926a3bbe2651dd632db1f8"
     },
     {
       "path": "migration.js",
@@ -88,7 +92,7 @@
     },
     {
       "path": "native-runtime.js",
-      "sha256": "dbdc1f0a09769c57ba65be2d66004477355b3dac3949ccc215caf17f3627e2e0"
+      "sha256": "13b24f0e2abeaff0b154b13eed75f3d3f8514e86c1b919c2fb838798984ff42f"
     },
     {
       "path": "onboarding-adapter.js",
@@ -108,7 +112,7 @@
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "a41f410b0435c3aca0f2be2b8a833b58409f67b0b255e713da8ffe0f0d26a8ed"
+      "sha256": "37c0d54695ca3a108803282aa4f8da7de467593777df95da1e764a6c2e4b3bf1"
     },
     {
       "path": "pixel-setup.css",
@@ -120,11 +124,11 @@
     },
     {
       "path": "preferences.js",
-      "sha256": "f0e24690efd12157cd09a725b372c9abc88c2768e7d5826bafa7298be4a5aada"
+      "sha256": "a337cb36776d43f8963834294196fdfb3edf9297e0b9959662726c5b5006c531"
     },
     {
       "path": "premium-surfaces.css",
-      "sha256": "0caa2c95f87ba51b42b3a2b5a76226c705c805bdb116128122a1f6fed2fe6db4"
+      "sha256": "85cb92ba77bd9842a85ef0b8148b05bb87cdc8ffd20ee122932a68b7c12a7b59"
     },
     {
       "path": "presets.js",
@@ -144,15 +148,15 @@
     },
     {
       "path": "receiver-removal-ui.js",
-      "sha256": "43292fd9b43ba6d95abcd86bc065b1f4d99ea019f599206c561bba48d18a9745"
+      "sha256": "206d647ae40d351efef90e630200962cf5be81793d83bf8de2e7f08510818784"
     },
     {
       "path": "receiver-update-ui.css",
-      "sha256": "5d4105481e3ea48bc74e2df599ca4f41048c4546d7c0818ecc5458964c12351c"
+      "sha256": "2f291a579ce55e99ca50715c70d3bb85dec221fa97b138c5fe82ecdc8fe18b1b"
     },
     {
       "path": "receiver-update-ui.js",
-      "sha256": "7ee22c1330b395636e0ad17f87bf92184e77f8f7810f2cce017c60fd58ee6f0e"
+      "sha256": "ccda036b859cc93e5f909813ab6dd8b8edf263fc7ba285f1741ec8ed5041451a"
     },
     {
       "path": "receiver-visual.css",

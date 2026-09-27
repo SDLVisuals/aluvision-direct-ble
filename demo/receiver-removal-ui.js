@@ -79,8 +79,19 @@
       if(next.status==='removed'&&(!next.progress||next.progress.completed!==next.count))throw Error('UNCONFIRMED');
     }
     async function acceptModel(next){
-      const model=next.view?.model;if(!model){if(next.status==='removed')throw Error('UNCONFIRMED');return;}
-      if(!Array.isArray(model.receivers))throw Error('UNCONFIRMED');
+      const nativeModel=next.view?.model;if(!nativeModel){if(next.status==='removed')throw Error('UNCONFIRMED');return;}
+      if(!Array.isArray(nativeModel.receivers))throw Error('UNCONFIRMED');
+      // Native storage authorizes the exact membership change, but stores a
+      // neutral light baseline. Keep the already visible colour/animation and
+      // reachability of retained receivers. Never mutate the native reply or
+      // project identity, outputs, zone, role or any other configuration field.
+      const model=clone(nativeModel);
+      if(baseline)for(const retained of model.receivers){
+        const previous=baseline.receivers.find(receiver=>receiver.id===retained.id);
+        if(previous)for(const field of ['state','connection']){
+          if(Object.prototype.hasOwnProperty.call(previous,field))retained[field]=clone(previous[field]);
+        }
+      }
       if(['checking','ready','blocked'].includes(next.status)&&baseline&&key(model)!==key(baseline))throw Error('UNCONFIRMED');
       const allowed=new Set(next.targets.map(t=>t.receiverId));
       if(next.status==='removed'&&model.receivers.some(r=>installation()?r.standId===receiver.standId:r.id===receiver.id||r.rid===receiver.rid))throw Error('UNCONFIRMED');

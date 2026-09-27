@@ -77,21 +77,24 @@
   // A small, contrasting introduction. These are references to the existing
   // recipes, never a second catalogue or a change to stored effect identities.
   const STARTERS = Object.freeze([
-    {ids:['rgbw-breathe-1','spi-breathe-99'],title:'Zacht ademen',summary:'De ledlines worden rustig lichter en donkerder.'},
-    {ids:['v30-rgb-jumping'],title:'Kleurwissel',summary:'Rood, groen en blauw wisselen elkaar direct af.'},
-    {ids:['spi-chase-8'],title:'Lopend licht',summary:'Een lichtpunt loopt over de pixels.'},
-    {ids:['spi-wave-29'],title:'Lichtgolf',summary:'Een zachte golf beweegt over de pixels.'},
-    {ids:['rgbw-gradient-2'],title:'Kleurverloop',summary:'De ledlines veranderen zacht van kleur.'},
-    {ids:['v30-brand-warm-white'],title:'Warm naar wit',summary:'Een warme witmix gaat rustig over in zacht wit.'}
+    {key:'Breathe',ids:['rgbw-breathe-1','spi-breathe-99'],title:'Zacht ademen',summary:'De ledlines worden rustig lichter en donkerder.'},
+    {key:'Colour',ids:['v30-rgb-jumping'],title:'Kleurwissel',summary:'Rood, groen en blauw wisselen elkaar direct af.'},
+    {key:'Chase',ids:['spi-chase-8'],title:'Lopend licht',summary:'Een lichtpunt loopt over de pixels.'},
+    {key:'Wave',ids:['spi-wave-29'],title:'Lichtgolf',summary:'Een zachte golf beweegt over de pixels.'},
+    {key:'Gradient',ids:['rgbw-gradient-2'],title:'Kleurverloop',summary:'De ledlines veranderen zacht van kleur.'},
+    {key:'Warm',ids:['v30-brand-warm-white'],title:'Warm naar wit',summary:'Een warme witmix gaat rustig over in zacht wit.'}
   ]);
   function starters(items) {
     const hasPixels=items.some(effect=>effect.category==='pixels');
     return Object.freeze(STARTERS.filter(item=>!hasPixels||!['Kleurverloop','Warm naar wit'].includes(item.title)).flatMap(item=>{
       const effect=items.find(effect=>item.ids.includes(effect.id));
-      return effect?[Object.freeze({effect,title:item.title,summary:item.summary})]:[];
+      return effect?[Object.freeze({effect,key:item.key,title:item.title,summary:item.summary})]:[];
     }));
   }
-  function displayName(effect) { return STARTERS.find(item=>item.ids.includes(effect.id))?.title||BRAND_NAMES[effect.id]||effect.name; }
+  function displayName(effect,translate) {
+    const starter=STARTERS.find(item=>item.ids.includes(effect.id));
+    return starter?(typeof translate==='function'?translate('animationStarter'+starter.key):starter.title):BRAND_NAMES[effect.id]||effect.name;
+  }
   const FALLBACK = descriptor('other','Overige bewegingen','Meer animaties uit deze categorie.','overig overige');
   const normalize = value => String(value == null ? '' : value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('nl').replace(/[^a-z0-9]+/g,' ').trim();
   const category = key => CATEGORIES.find(item => item.key === key) || null;

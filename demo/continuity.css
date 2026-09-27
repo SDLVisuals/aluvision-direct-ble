@@ -172,7 +172,7 @@ body[data-theme=dark] .section-tabs button:not([aria-selected=true]){color:var(-
    installation stays calm until someone chooses to address one line. */
 .selection .receiver-scope-grid{grid-template-columns:minmax(0,1fr)}
 .selection .scope-lines-toggle{grid-column:1/-1;justify-content:flex-start;min-height:64px;padding:10px 12px;border-radius:14px;background:var(--panel);text-align:left;white-space:normal}
-.selection[data-selection-mode=all] .scope-lines-toggle{border:2px solid var(--red);background:var(--ink);color:var(--panel);box-shadow:inset 3px 0 0 var(--red)}
+.selection[data-selection-mode=all] .scope-lines-toggle{border:2px solid var(--red);background:#202420;color:#fff;box-shadow:inset 3px 0 0 var(--red)}
 .selection[data-selection-mode=all] .scope-lines-toggle .scope-toggle-icon{background:#343834;color:#f5aaa4}
 .selection[data-selection-mode=all] .scope-lines-toggle .scope-copy small{color:#d4d8d3}
 .selection[data-selection-mode=all] .scope-lines-toggle .scope-toggle-chevron{background:#343834;color:#d4d8d3}
@@ -190,19 +190,20 @@ body[data-theme=dark] .section-tabs button:not([aria-selected=true]){color:var(-
 .selection .scope-lines-inner{display:grid;grid-template-columns:minmax(0,1fr);min-height:0;overflow:hidden}
 .selection .scope-choice-label{padding:4px 2px 8px;font-size:10px}
 .selection .scope-lines-reveal .scope-all-choice{display:flex;grid-column:1/-1;width:calc(100% - 4px);min-width:0;min-height:54px;margin:0 2px 8px;padding:8px 10px;border:1px solid var(--line);border-radius:13px;background:var(--panel);color:var(--ink);text-align:left}
-.selection .scope-lines-reveal .scope-all-choice[aria-pressed=true]{border-color:var(--red);background:#f7e8e6;color:var(--ink);box-shadow:inset 3px 0 0 var(--red)}
+.selection .scope-lines-reveal .scope-all-choice[aria-pressed=true]{border-color:var(--red);background:color-mix(in srgb,var(--red) 12%,var(--panel));color:var(--ink);box-shadow:inset 3px 0 0 var(--red)}
+.selection .scope-lines-reveal .scope-all-choice .scope-copy small{color:color-mix(in srgb,var(--muted) 85%,var(--ink))}
 .selection .scope-lines-reveal .scope-all-choice[aria-pressed=true] .scope-selected-mark{opacity:1;transform:scale(1)}
 .selection .scope-lines-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0;max-height:min(42dvh,360px);overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:0 2px 5px}
 .selection .scope-lines-list .scope-line{position:relative;display:flex;justify-content:flex-start;align-items:center;gap:8px;width:100%;min-width:0;min-height:58px;padding:9px 10px;border:1px solid var(--line);border-radius:13px;background:var(--panel);color:var(--ink);text-align:left;white-space:normal;flex-shrink:1}
 .selection .scope-lines-list .scope-line .scope-copy{display:grid;gap:3px;min-width:0;flex:1}
 .selection .scope-lines-list .scope-line .scope-option-title{font-size:12px;line-height:1.2;overflow-wrap:anywhere}
 .selection .scope-lines-list .scope-line .scope-copy small{font-size:10px;line-height:1.25;color:var(--muted)}
-.selection .scope-lines-list .scope-line[aria-pressed=true]{background:#fff5f4;border-color:var(--red);box-shadow:0 0 0 1px #bf484133;color:var(--ink)}
+.selection .scope-lines-list .scope-line[aria-pressed=true]{background:color-mix(in srgb,var(--red) 6%,var(--panel));border-color:var(--red);box-shadow:0 0 0 1px #bf484133;color:var(--ink)}
 .selection .scope-lines-list .scope-line[aria-pressed=true] .scope-selected-mark{opacity:1;transform:scale(1)}
 .selection.has-multiple-selection>header{align-items:flex-start}
-.selection.has-multiple-selection .selection-summary{max-width:62%;padding:4px 8px;border:1px solid #bf484133;border-radius:999px;background:#fbf0ee;color:#a63c36;font-size:10px;font-weight:700;line-height:1.35}
-.selection.has-multiple-selection:not([data-selection-mode=all]) .scope-lines-toggle{border-color:#e2c6c3;background:#fffdfc}
-.selection.has-multiple-selection:not([data-selection-mode=all]) .scope-lines-toggle .scope-toggle-icon{background:#f7e8e6}
+.selection.has-multiple-selection .selection-summary{max-width:62%;padding:4px 8px;border:1px solid #bf484133;border-radius:999px;background:color-mix(in srgb,var(--red) 9%,var(--panel));color:var(--ink);font-size:10px;font-weight:700;line-height:1.35}
+.selection.has-multiple-selection:not([data-selection-mode=all]) .scope-lines-toggle{border-color:color-mix(in srgb,var(--red) 28%,var(--line));background:var(--panel)}
+.selection.has-multiple-selection:not([data-selection-mode=all]) .scope-lines-toggle .scope-toggle-icon{background:color-mix(in srgb,var(--red) 12%,var(--panel))}
 .selection .scope-lines-list .scope-line .scope-number{width:27px;height:27px;border-radius:9px;flex:none}
 .selection .scope-lines-list .scope-line[aria-pressed=true] .scope-number{background:var(--red);color:white}
 .selection .scope-lines-list .scope-line:last-child:nth-child(odd){grid-column:1/-1;width:calc(50% - 4px);justify-self:center}
@@ -310,7 +311,61 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .animation-wayfinding .animation-gallery-return .icon{width:19px;height:19px;color:var(--red);flex:none}
 .animation-wayfinding .animation-gallery-return:focus-visible{outline:2px solid var(--red);outline-offset:2px}
 .control-preview-dock[data-scrolled=true] .animation-wayfinding{margin-top:5px;padding-bottom:5px}
+/* The editor's alternate-gallery action only floats below the dock after its
+   inline counterpart leaves view. Absolute positioning avoids resize jumps. */
+.control-dock-surface{position:relative}
+.control-preview-dock .animation-wayfinding[data-editor-shortcut]{position:absolute;top:100%;left:0;right:0;z-index:1;margin:0;padding:5px 0;background:var(--bg);border-radius:0 0 15px 15px;box-shadow:0 8px 16px -12px #17201980}
+.current-effect>.current-effect-gallery{display:flex;align-items:center;justify-content:space-between;gap:9px;flex:0 0 100%;min-width:0;min-height:44px;padding:8px 11px;border:1px solid var(--line);border-radius:12px;background:var(--soft);color:var(--ink);font-size:12px;font-weight:700;line-height:1.35;text-align:left}
+.current-effect-gallery>span{min-width:0;overflow-wrap:anywhere}
+.current-effect-gallery>.icon{width:17px;height:17px;flex:none;color:var(--red)}
+.current-effect-gallery:focus-visible{outline:2px solid var(--red);outline-offset:2px}
 .current-effect b:focus{outline:none}
+/* Animation choice is the task, not a second setup wizard. Keep the current
+   scope and direct arrangement controls, but reduce their closed footprint. */
+.animation-simple-page .control-workspace{padding:0;border:0;background:transparent;box-shadow:none}
+.animation-simple-page .animation-simple-workspace{padding:0;gap:8px}
+.animation-context{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:6px 9px;min-width:0}
+.animation-context>.selection{margin:0;padding:0;min-width:0}
+.animation-context>.selection>header,.animation-context .scope-copy>small,.animation-context .scope-toggle-icon{display:none}
+.animation-context .selection .receiver-scope-grid{padding:0;gap:0}
+.animation-context .selection .scope-lines-toggle{min-height:44px;padding:4px 10px!important;border-radius:13px}
+.animation-context .scope-option-title{font-size:12px;line-height:1.3}
+.animation-context .selection .scope-toggle-chevron{width:22px;height:22px}
+.animation-context .scope-lines-reveal{grid-column:1/-1}
+.animation-context .scope-lines-reveal.is-open{padding-top:7px}
+.animation-context>.continuous-scope,.animation-context>.single-scope{min-height:44px;padding:7px 9px;border-radius:13px;background:var(--soft);gap:7px}
+.animation-context>.continuous-scope strong,.animation-context>.single-scope b{font-size:11px;line-height:1.3}
+.animation-context>.continuous-scope small,.animation-context>.single-scope small{display:none}
+.animation-context .mixed-note{font-size:10px}
+.animation-context>.power-card{min-height:44px;padding:0;margin:0;border:0;box-shadow:none;background:transparent}
+.animation-context>.power-card>div{display:none}
+.animation-context .power-card .switch{min-height:44px;gap:5px;font-size:10px}
+.animation-context .power-card .switch i{width:34px;height:22px}
+.animation-context .power-card .switch i:after{width:16px;height:16px}
+.animation-context .power-card .switch[aria-checked=true] i:after{transform:translateX(12px)}
+.animation-context>.ledline-setup{grid-column:1/-1}
+.ledline-setup-compact .ledline-setup-toggle{min-height:44px;padding:8px 11px;gap:8px}
+.ledline-setup-compact .ledline-setup-toggle>span{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
+.ledline-setup-compact .ledline-setup-toggle b{font-size:12px}
+.ledline-setup-compact .ledline-setup-toggle small{font-size:12px}
+.ledline-setup-compact .ledline-setup-toggle>.icon{width:17px;height:17px}
+.animation-simple-page .active-animation-workspace{gap:10px}
+.animation-simple-page .current-effect{padding:11px 13px;gap:8px;border-radius:18px}
+.animation-simple-page .current-effect>div>small{font-size:10px;line-height:1.25}
+.animation-simple-page .current-effect b{font-size:15px;line-height:1.25}
+.animation-simple-page .current-effect-gallery{background:var(--ink);color:var(--panel);font-size:12px;min-height:44px}
+.animation-simple-page .current-effect-gallery>.icon{color:currentColor}
+.animation-daily-controls.card{padding:13px;gap:9px;border-radius:18px}
+.animation-daily-controls>.slider-row{margin:0}
+.animation-daily-controls>.slider-row>small{display:none}
+.animation-daily-controls .slider-row>label{min-height:26px}
+.animation-daily-controls .slider-row input[type=range]{min-height:30px;margin:0}
+.animation-daily-controls .animation-background{padding-top:6px;margin-top:0;gap:6px}
+.animation-daily-controls .background-control-heading{min-height:44px;gap:6px}
+.animation-daily-controls .background-control-copy b{font-size:12px}
+.animation-daily-controls .setting-label-icon{width:25px;height:25px;background:transparent}
+.animation-save-recipe{background:transparent!important;color:var(--red)!important;border-color:transparent!important;box-shadow:none!important}
+.animation-gallery-dock .live-confirmation:empty{display:none}
 /* Keep the LED preview visible by default. Open the three size choices only
    when requested; the menu stays in-flow above the LED, never on top of it. */
 .preview-size-row{display:flex;justify-content:flex-end;align-items:center;padding:3px 1px 4px}
@@ -487,7 +542,7 @@ body[data-theme=dark] .scope-lines-list .scope-line[aria-pressed=true] .scope-li
 .bediening-workspace-heading p{margin-top:3px;color:var(--muted);font-size:11px;line-height:1.45}
 .bediening-workspace-heading .menu-icon{width:38px;height:38px;border-radius:12px;color:var(--red)}
 .bediening-workspace-heading .menu-icon .icon{width:18px;height:18px}
-.bediening-workspace>.selection{margin:0;background:var(--bg)}
+.bediening-workspace>.selection{margin:0;border-radius:16px;background:var(--bg)}
 .control-animation-choices{display:grid;gap:11px;min-width:0}
 .animation-library-inline{display:grid;gap:12px;min-width:0}
 .current-animation-shortcut{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;min-height:66px;padding:10px 12px;border:1px solid var(--line);border-radius:15px;background:var(--panel);text-align:left}

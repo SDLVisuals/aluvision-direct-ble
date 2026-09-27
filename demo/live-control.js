@@ -11,6 +11,10 @@
   const V30_EFFECTS=['rgb-jumping','seven-jumping','rgb-gradient','seven-gradient','tunnel-travel','tunnel-bounce','tunnel-center','tunnel-outside','tunnel-cascade','tunnel-handoff','tunnel-pulse','tunnel-echo','tunnel-pixel-curtain','tunnel-pixel-cross','brand-white-breathe','brand-warm-white','brand-accent','brand-sweep','brand-focus','brand-soft-gradient'].map(id=>'v30-'+id);
   const SPI_TIMED_VARIANTS=new Set([...Array(13)].map((_,i)=>90+i).concat([104,105,106,107,108,109,110,111,128]));
   const SHARED_TUNNEL_VARIANTS=new Set([5,6,7,8,9,10,11,12,13,14,15,16,21,22,23,24,26,27,28,29,30,31]);
+  // Interpolate static wheel/dimmer targets on the receiver, without delaying
+  // dispatch or storing a history of pointer movements. Keep explicit off and
+  // animation changes immediate; animation smoothness is its own setting.
+  const STATIC_TRANSITION_MS=240;
   const clone=value=>JSON.parse(JSON.stringify(value));
   function spiPhaseLineDelay(state,variant,lineCount,parallel) {
     if(!parallel||lineCount<=1)return 0;
@@ -82,8 +86,10 @@
       if(state.on===false||state.power===false)scene.backgroundOn=false;
     }
     if(brightness===null||Object.values(scene).some(value=>value===null))return null;
+    const powered=state.on!==false&&state.power!==false;
     return {standId:receiver.standId,receiverId:receiver.id,kind:spi?'SPI_SCENE':'RGBW_SCENE',
-      brightness:state.on===false||state.power===false?0:brightness,transitionMs:0,channels:[],scene};
+      brightness:powered?brightness:0,
+      transitionMs:powered&&scene.engine==='STATIC'&&!extension?STATIC_TRANSITION_MS:0,channels:[],scene};
   }
   function create({send,sendBatch,onState,delay=0,setTimer=setTimeout,clearTimer=clearTimeout}) {
     if (typeof send !== 'function' || typeof onState !== 'function') throw Error('LIVE_QUEUE_INVALID');

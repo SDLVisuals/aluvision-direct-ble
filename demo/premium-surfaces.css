@@ -39,13 +39,15 @@ body:not([data-theme="dark"]) {
   border-bottom: 1px solid rgba(32, 34, 32, .035);
 }
 
+/* Zone power is an unboxed row; keep it out of shared card decoration in
+   both themes (including this selector's high-specificity dialog branch). */
 :is(
   .card,
   .stand-info-tile,
   .zone-entry,
   .zone-card,
   .menu-card,
-  .power-card,
+  .power-card:not(.power-card-zone),
   .current-effect,
   .settings-toggle,
   .assignment-choice,
@@ -343,7 +345,7 @@ body[data-theme="dark"] :is(
   .zone-entry,
   .zone-card,
   .menu-card,
-  .power-card,
+  .power-card:not(.power-card-zone),
   .current-effect,
   .settings-toggle,
   .assignment-choice,

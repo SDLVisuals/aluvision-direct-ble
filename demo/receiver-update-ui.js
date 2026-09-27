@@ -55,6 +55,7 @@
         OTA_RESTART_NOT_VERIFIED:'softwareErrorRestart',OTA_ROLLBACK:'softwareErrorRollback',
         OTA_TOPOLOGY_UNSUPPORTED:'softwareErrorTopology',OTA_TOPOLOGY_UNCONFIRMED:'softwareErrorTopologyUnconfirmed',
         OTA_PROFILE:'softwareErrorTopologyUnconfirmed',NATIVE_TIMEOUT:'softwareErrorTimeout',
+        OTA_JOURNAL_UNCONFIRMED:'softwareErrorStorage',
         OTA_BUSY:'softwareErrorTimeout',OTA_UNEXPECTED_OFFSET:'softwareErrorAck'
       };
       return map[code]||'softwareErrorGeneric';

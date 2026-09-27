@@ -24,6 +24,10 @@
   if(!nativeContext&&(!previewContext||webDemoContext))route={...route,screen:'receiver-add',setupFrom:'stand'};
   const selections = new Map();
   const expandedScopeZones = new Set();
+  // A gallery search is browsing context, not a receiver setting. Keep it
+  // through scope changes and editor returns, independently for each zone.
+  const animationQueries = new Map();
+  const animationGalleryPositions = new Map(), expandedAnimationFamilies = new Set();
   const brandColours = new Map();
   const brandPalettes = new Map();
   // Presentation only: shared by the gallery and editor, never a zone layout
@@ -57,7 +61,7 @@
   let sceneDetailSearch='';
   let dragOrder=null;
   let receiverAssignment=null,nameDialog=null,zoneDeletion=null,managementBusy=false;
-  let arrangementDraft=null,setupReturnContext=null;
+  let arrangementDraft=null,arrangementApplying=false,setupReturnContext=null;
   const openLineSetup=new Set(),openLineManagement=new Set(),zonePreviewViews=new Map();
   let standControlOpen=false;
   // Everyday controls share one zone screen. Keep the light mode local to
@@ -90,25 +94,63 @@
       delete dock.dataset.scrolled;
       dock.style.removeProperty('--control-preview-expanded-height');
     }
+    const shortcut=dock.querySelector('[data-editor-shortcut]'),effect=main.querySelector('.current-effect');
+    if(shortcut&&effect){
+      // The card owns this action initially. Reveal its sticky counterpart
+      // only after that card has scrolled away; the floating shortcut does
+      // not change document height or move the settings under the finger.
+      const bottom=dock.querySelector('.control-dock-surface').getBoundingClientRect().bottom;
+      shortcut.hidden=effect.getBoundingClientRect().bottom>bottom;
+    }
   }
   window.addEventListener('scroll',updateControlPreviewDensity,{passive:true});
   function revealAnimationStart(){
     // Do not carry a deep gallery scroll position into the settings. Align
     // their heading below the visible dock, including its compacted height.
     const workspace=main.querySelector('.active-animation-workspace');if(!workspace)return;
-    // The integrated setup entry belongs to these settings too. Starting at
-    // the old effect heading would hide it underneath the sticky toolbar.
-    const target=main.querySelector('.ledline-setup')||workspace;
+    // Start at the chosen animation, not the (potentially long) arrangement
+    // form above it. The arrangement remains accessible by scrolling up.
+    const target=workspace;
     const align=()=>{
       if(!target.isConnected)return;
       updateControlPreviewDensity();
-      const dock=main.querySelector('.control-preview-dock'),bottom=Math.max(0,dock?.getBoundingClientRect().bottom||0);
+      const surface=main.querySelector('.control-dock-surface'),bottom=Math.max(0,surface?.getBoundingClientRect().height||0);
       window.scrollTo({top:Math.max(0,window.scrollY+target.getBoundingClientRect().top-bottom-12),behavior:'instant'});
       updateControlPreviewDensity();
     };
     align();requestAnimationFrame(()=>{align();workspace.querySelector('.current-effect b')?.focus({preventScroll:true});});
   }
-  document.getElementById('effect-dialog').addEventListener('cancel',event=>{if(colourManagerReturn){event.preventDefault();closeColourManager();}});
+  function rememberAnimationGallery(){
+    if(!main.querySelector('.animation-library-inline'))return;
+    animationGalleryPositions.set(route.zoneId,{library:libraryTab(),family:route.family,scroll:window.scrollY});
+  }
+  function revealAnimationGallery(restore=false){
+    const target=main.querySelector('.animation-context')||main.querySelector('.animation-library-inline');if(!target)return;
+    const saved=restore?animationGalleryPositions.get(route.zoneId):null;
+    const align=()=>{
+      if(!target.isConnected)return;
+      updateControlPreviewDensity();
+      const bottom=Math.max(0,main.querySelector('.control-dock-surface')?.getBoundingClientRect().height||0);
+      window.scrollTo({top:saved?Math.max(0,saved.scroll):Math.max(0,window.scrollY+target.getBoundingClientRect().top-bottom-8),behavior:'instant'});
+      updateControlPreviewDensity();
+    };
+    align();requestAnimationFrame(align);
+  }
+  function chooseAnimationCategory(value){
+    if(!['start','catalogue','whole','pixels','tunnel','brand','presets'].includes(value)||value==='pixels'&&zone()?.type!=='SPI')return;
+    animationQueries.delete(route.zoneId);
+    route={...route,family:null,library:value,effectsReturn:'controls'};showControlAnimationGallery=true;
+    animationGalleryPositions.delete(route.zoneId);render({top:true});revealAnimationGallery();
+  }
+  document.getElementById('effect-dialog').addEventListener('cancel',event=>{
+    if(colourManagerReturn){event.preventDefault();closeColourManager();}
+    else if(document.querySelector('#effect-dialog [data-animation-categories]')){event.preventDefault();closeEffectDialog();}
+  });
+  document.getElementById('effect-dialog').addEventListener('click',event=>{
+    const dialog=event.currentTarget;if(event.target!==dialog||!dialog.querySelector('[data-animation-categories]'))return;
+    const rect=dialog.getBoundingClientRect();
+    if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)closeEffectDialog();
+  });
   if(webDemoContext){
     document.getElementById('web-demo-banner').hidden=false;
     document.body.dataset.webDemo='true';
@@ -183,6 +225,7 @@
     sliders:'M5 3v5M5 13v8M12 3v10M12 18v3M19 3v2M19 10v11M2 8h6v5H2zM9 13h6v5H9zM16 5h6v5h-6z',
     animation:'M3 9v6M7 5v14M12 2v20M17 6v12M21 9v6',
     power:'M12 2v10M6 5a9 9 0 1 0 12 0',
+    update:'M20 7a9 9 0 0 0-15-2L2 8M2 3v5h5M4 17a9 9 0 0 0 15 2l3-3M22 21v-5h-5',
     info:'M12 10v7M12 6v1M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',
     settings:'M4 7h16M4 17h16M8 4v6M16 14v6',
     wifi:'M2 8a16 16 0 0 1 20 0M5 12a11 11 0 0 1 14 0M8 16a6 6 0 0 1 8 0M12 20h.01',
@@ -200,6 +243,13 @@
     if(name==='receiver')name='light';
     const unassigned=name==='unassigned';
     return `<svg class="icon${unassigned?' icon-unassigned':''}"${unassigned?' data-icon="unassigned"':''} viewBox="0 0 24 24" aria-hidden="true"><path d="${iconPaths[name] || iconPaths.light}"/></svg>`;
+  }
+  function arrangementIcon(layout=zone()?.layout){
+    const kind=layout==='vertical'?'wall':layout==='continuous'?'continuous':'tunnel';
+    const shapes=kind==='wall'?[7,18,29].map(x=>`<rect x="${x}" y="5" width="4" height="30" rx="2"/>`).join(''):
+      kind==='continuous'?'<rect x="3" y="16" width="34" height="7" rx="3.5"/><path d="M14 17v5M26 17v5"/>':
+      '<path d="M4 34V20a16 16 0 0 1 32 0v14M10 34V20a10 10 0 0 1 20 0v14M16 34V20a4 4 0 0 1 8 0v14"/>';
+    return `<svg class="icon arrangement-icon" data-icon="layout-${kind}" viewBox="0 0 40 40" aria-hidden="true" focusable="false">${shapes}</svg>`;
   }
   const stand = () => model.stands.find(item=>item.id===route.standId)||model.stands[0];
   // Before the first receiver is confirmed, the named stand exists only in
@@ -348,6 +398,7 @@
     const integratedControlHeading=screen==='controls';
     const canTapLines=list.length>1&&!continuousZone()&&!draft&&['controls','colour','animations'].includes(screen);
     const effectChosen=screen==='controls'&&controlMode==='animations'&&Boolean(activeEffect());
+    const galleryBrowsing=screen==='controls'&&controlMode==='animations'&&(!effectChosen||showControlAnimationGallery);
     // Tunnel pages already have one readable overview in their content. Keep
     // navigation sticky, but don't stack a second, flat preview over the tunnel.
     const tunnelOverview=!openLineSetup.has(z.id)&&(screen==='animations'?activeEffect()?.category==='tunnel':screen==='controls'&&controlMode==='animations'&&(effectChosen&&!showControlAnimationGallery?activeEffect()?.category==='tunnel':libraryTab()==='tunnel'));
@@ -355,7 +406,7 @@
     const scope=selection().kind==='all'?total:t('scopeSelectedTap',{name:nameOfSelection()});
     const modeName=screen==='controls'?(controlMode==='colour'?'Kleur':'Effecten'):screen==='layout'?'Opstelling':screen==='colour'?'Kleur':screen==='animations'?'Effecten':'Bediening';
     const label=`LED-overzicht van ${z.name} · ${total}${selection().kind==='all'?'':` · ${nameOfSelection()} gekozen`}`;
-    return `<section class="control-preview-dock" aria-label="LED-overzicht en bediening"><div class="control-dock-surface">
+    return `<section class="control-preview-dock${galleryBrowsing?' animation-gallery-dock':''}" aria-label="LED-overzicht en bediening"><div class="control-dock-surface">
       ${integratedControlHeading?`<div class="control-dock-context-line"><div class="control-dock-location"><small>JE LICHT · ${esc(modeName)}</small><b>${esc(z.name)}</b></div><span class="pill control-dock-type-badge">${zoneTypeLabel(z)}</span></div><div class="control-dock-actions"><button class="back back-to-zones control-dock-back" data-action="stand" aria-label="Terug naar zones" title="Terug naar zones">${icon('back')}<span>Zones</span></button>${modeTabs}</div>`:''}
       ${integratedControlHeading?'':`<div class="control-dock-heading"><div class="control-dock-location"><small>JE LICHT · ${esc(modeName)}</small><b>${esc(z.name)}</b></div>${modeTabs||`<span class="control-dock-mode">${esc(modeName)}</span>`}</div>`}
       ${tunnelOverview?'':`<div class="preview-wrap${canTapLines?' preview-selectable':''}" data-preview-layout="${previewLayout}" style="--line-preview-min-height:${previewMinHeight}px"><div class="preview-top"><span>${esc(t('lineSetup'+previewMode[0]))}</span><span class="preview-summary">${esc(scope)}</span></div>${zonePreview(z,'',{selection:selection(),main:true,arrangementPreview:true,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1])),label})}${screen==='animations'||effectChosen?`<div class="preview-live-controls"><span>Voorbeeld volgt je keuze direct</span></div>`:''}</div>`}
@@ -366,8 +417,9 @@
   function animationWayfinding(screen){
     if(!(screen==='animations'||screen==='controls'&&controlMode==='animations')||!activeEffect())return '';
     const browsing=screen==='controls'&&showControlAnimationGallery;
+    if(browsing)return '';
     const action=browsing?'animation-current-edit':screen==='controls'?'animation-gallery':'animations-gallery';
-    return `<nav class="animation-wayfinding" aria-label="${esc(t('animationNavigation'))}"><button class="button secondary animation-gallery-return" data-action="${action}" aria-label="${esc(t(browsing?'animationBackToSettings':'animationChooseAnother'))}">${icon(browsing?'back':'zones')}<span>${esc(t(browsing?'animationBackToSettings':'animationChooseAnother'))}</span>${icon('chevron')}</button></nav>`;
+    return `<nav class="animation-wayfinding" ${browsing?'':'data-editor-shortcut hidden'} aria-label="${esc(t('animationNavigation'))}"><button class="button secondary animation-gallery-return" data-action="${action}" aria-label="${esc(t(browsing?'animationBackToSettings':'animationChooseAnother'))}">${icon(browsing?'back':'zones')}<span>${esc(t(browsing?'animationBackToSettings':'animationChooseAnother'))}</span>${icon('chevron')}</button></nav>`;
   }
   function previewSizePickerMarkup(){
     const sizes=[['small','Klein'],['medium','Groter'],['large','Heel groot']],current=sizes.find(([size])=>size===controlPreviewSize)?.[1]||'Klein';
@@ -397,15 +449,14 @@
     const oneLine=receivers().length===1;
     const modeContent=colour
       ?`<section class="bediening-workspace" aria-labelledby="bediening-colour-title"><header class="bediening-workspace-heading"><span class="menu-icon">${icon('sun')}</span><div><h2 id="bediening-colour-title">Vaste kleur</h2><p>${oneLine?'Kies een kleur voor deze ledline.':'Kies ledlines om samen te bedienen.'}</p></div></header>${selector()}${colourPickerMarkup()}${ledlineSetupMarkup()}</section>`
-      :`<section class="bediening-workspace" aria-labelledby="bediening-animation-title"><header class="bediening-workspace-heading"><span class="menu-icon">${icon('animation')}</span><div><h2 id="bediening-animation-title">Animaties</h2><p>${oneLine?'Kies een animatie voor deze ledline.':'Kies ledlines om samen te bedienen. Kies daarna een animatie.'}</p></div></header>${selector()}${ledlineSetupMarkup()}${controlAnimationPanel()}</section>`;
-    return `<div class="editor-grid">${controlContext('controls')}<section class="editor-controls editor-controls-zone">${powerControl()}<section class="control-workspace"><div class="control-mode-panel" role="region" aria-label="${colour?'Vaste kleur':'Animaties'}" data-control-mode="${controlMode}">${modeContent}</div></section></section></div>`;
+      :`<section class="bediening-workspace animation-simple-workspace" aria-label="${esc(t('animations'))}"><div class="animation-context">${selector()}${powerControl()}${ledlineSetupMarkup()}</div>${controlAnimationPanel()}</section>`;
+    return `<div class="editor-grid${colour?'':' animation-simple-page'}">${controlContext('controls')}<section class="editor-controls editor-controls-zone">${colour?powerControl():''}<section class="control-workspace"><div class="control-mode-panel" role="region" aria-label="${colour?'Vaste kleur':'Animaties'}" data-control-mode="${controlMode}">${modeContent}</div></section></section></div>`;
   }
 
   function controlAnimationPanel(){
     const effect=activeEffect();
     if(effect&&!showControlAnimationGallery)return animationEditorMarkup(effect);
-    const current=effect?`<button class="current-animation-shortcut" data-action="animation-current-edit"><span class="menu-icon">${icon('animation')}</span><span><small>NU ACTIEF</small><b>${esc(Library.displayName(effect))}</b></span><span class="current-animation-edit">Aanpassen ${icon('chevron')}</span></button>`:'';
-    return `<div class="control-animation-choices">${current}${animationLibraryContent()}</div>`;
+    return `<div class="control-animation-choices">${animationLibraryContent()}</div>`;
   }
   function slider(key,label,min,max,value,unit='',hint='',guide=null) {
     const title=guide?.icon?`<span class="setting-label-icon">${icon(guide.icon)}</span><span class="setting-label-copy">${esc(label)}</span>`:esc(label);
@@ -483,7 +534,8 @@
   function backgroundControls(effect){
     if(!effect.backgroundEditable)return '';
     const s=selectedState(),channels=backgroundChannels(),on=Boolean(s.backgroundOn);
-    return `<section class="animation-background" aria-label="Achtergrondkleur"><div class="background-control-heading"><span class="setting-label-icon">${icon('layers')}</span><span class="background-control-copy"><b>Achtergrondkleur</b><small>Achter de bewegende lichtpunten</small></span><button class="switch" data-action="background-toggle" aria-label="Achtergrondkleur aan of uit" aria-pressed="${on}" aria-checked="${on}" role="switch"><span>${on?'Aan':'Uit'}</span><i aria-hidden="true"></i></button></div><p class="background-explanation">Aan: kies een vaste kleur achter de animatie. Uit: alleen de animatiekleuren.</p><div class="background-details" data-background-details ${on?'':'hidden'}><button class="background-colour" data-action="background-edit"><span class="background-swatch" style="background:${C.hex(C.mixWhite(channels.slice(0,3),channels[3]))}"></span><span>Kies achtergrondkleur</span>${icon('chevron')}</button>${animationSlider('bgBrightness','Helderheid achtergrond',0,100,s.bgBrightness??10,'%')}${resetMarkup('bgBrightness','Helderheid achtergrond')}</div></section>`;
+    const description=t(zone().type==='RGBW'||effect.category==='whole'?'animationBackgroundWhole':'animationBackgroundPixels');
+    return `<section class="animation-background" aria-label="${esc(t('animationBackground'))}"><div class="background-control-heading"><span class="setting-label-icon">${icon('layers')}</span><span class="background-control-copy"><b>${esc(t('animationBackground'))}</b></span><button class="switch" data-action="background-toggle" aria-label="${esc(t('animationBackground'))}" aria-pressed="${on}" aria-checked="${on}" role="switch"><span>${on?'Aan':'Uit'}</span><i aria-hidden="true"></i></button></div><div class="background-details" data-background-details ${on?'':'hidden'}><p class="background-explanation">${esc(description)}</p><button class="background-colour" data-action="background-edit"><span class="background-swatch" style="background:${C.hex(C.mixWhite(channels.slice(0,3),channels[3]))}"></span><span>${esc(t('animationBackgroundChoose'))}</span>${icon('chevron')}</button>${animationSlider('bgBrightness',t('animationBackgroundBrightness'),0,100,s.bgBrightness??10,'%')}${resetMarkup('bgBrightness',t('animationBackgroundBrightness'))}</div></section>`;
   }
   const animationSettingGuides={
     bri:{icon:'sun',description:'Hoe fel de bewegende kleuren branden.'},
@@ -523,7 +575,7 @@
     const controls=specs.filter(spec=>available.includes(spec[0])&&!(spec[0]==='lineDelayMs'&&selected().length<2));
     const smoothness=available.includes('smooth')?`<div class="animation-setting">${animationSlider('smooth','Vloeiendheid',0,100,s.smooth??100,'%',animationSettingGuides.smooth.description)}${resetMarkup('smooth','Vloeiendheid')}</div>`:'';
     if(!controls.length&&!smoothness&&!['direction','bounce','mirror'].some(key=>available.includes(key)))return '';
-    return `<button class="settings-toggle" data-action="settings-toggle" aria-expanded="${settingsOpen}" aria-controls="animation-settings">${icon('sliders')}<span>${settingsOpen?'Instellingen verbergen':'Beweging instellen'}</span>${icon(settingsOpen?'close':'chevron')}</button><section id="animation-settings" class="card settings-panel" ${settingsOpen?'':'hidden'}><p class="animation-preview-feedback"><span class="preview-feedback-icon">${icon('animation')}</span><span>Kijk bovenaan: het ledline-voorbeeld beweegt meteen mee.</span></p>${controls.map(spec=>`<div class="animation-setting">${animationSlider(...spec)}${resetMarkup(spec[0],spec[1])}</div>`).join('')}${smoothness}${available.includes('direction') ? `<div class="direction-setting"><p class="direction-setting-label"><span class="setting-label-icon">${icon('back')}</span><span><b>Richting</b><small>Kies welke kant het licht op beweegt.</small></span></p><div class="compact-direction" aria-label="Bewegingsrichting">${(effect.directions||['right','left']).map(value=>`<button data-action="direction" data-value="${value}" aria-pressed="${(s.direction||effect.state.direction)===value}">${esc(directionMap[value]||value)}</button>`).join('')}</div></div>`:''}</section>`;
+    return `<button class="settings-toggle" data-action="settings-toggle" aria-expanded="${settingsOpen}" aria-controls="animation-settings">${icon('sliders')}<span>${esc(t(settingsOpen?'animationHideSettings':'animationMoreSettings'))}</span>${icon(settingsOpen?'close':'chevron')}</button><section id="animation-settings" class="card settings-panel" ${settingsOpen?'':'hidden'}><p class="animation-preview-feedback"><span class="preview-feedback-icon">${icon('animation')}</span><span>Kijk bovenaan: het ledline-voorbeeld beweegt meteen mee.</span></p>${controls.map(spec=>`<div class="animation-setting">${animationSlider(...spec)}${resetMarkup(spec[0],spec[1])}</div>`).join('')}${smoothness}${available.includes('direction') ? `<div class="direction-setting"><p class="direction-setting-label"><span class="setting-label-icon">${icon('back')}</span><span><b>Richting</b><small>Kies welke kant het licht op beweegt.</small></span></p><div class="compact-direction" aria-label="Bewegingsrichting">${(effect.directions||['right','left']).map(value=>`<button data-action="direction" data-value="${value}" aria-pressed="${(s.direction||effect.state.direction)===value}">${esc(directionMap[value]||value)}</button>`).join('')}</div></div>`:''}</section>`;
   }
   function animationSettingValue(key,value,unit='') { return ['delayMs','lineDelayMs'].includes(key)?`${Number((Number(value)/1000).toFixed(3)).toLocaleString('nl-BE',{maximumFractionDigits:3})} s`:Math.round(value)+unit; }
   function animationSlider(key,label,min,max,value,unit='',hint='') {
@@ -534,11 +586,12 @@
   function syncSettingResets() { document.querySelectorAll('[data-action="setting-reset"]').forEach(button=>{button.hidden=!settingChanged(button.dataset.id);}); }
   function animationEditorMarkup(effect) {
     const s = selectedState();
-    // Gallery navigation lives in the persistent dock, not a small action
-    // buried in this scrolling settings card.
+    // Place the change action next to the current animation as well as in
+    // the persistent dock, where it stays reachable deep in the settings.
+    const galleryAction=route.screen==='controls'?'animation-gallery':'animations-gallery';
     const paletteTitle=effect.whiteMixPreset?'Witmix · tik om aan te passen':effect.category==='brand'?(effect.id==='v30-brand-focus'||effect.id.startsWith('v31-ref-'))?'Merkkleuren · tik om te wijzigen':'Accentkleur · tik om te wijzigen':effect.paletteEditable===false?'Kleurenreeks':'Animatiekleuren · tik om te wijzigen';
     const paletteHelp=effect.whiteMixPreset?'<p class="palette-guidance">W geeft wit licht; rood en een beetje groen maken de mix warmer. Pas de mengkleur aan terwijl je naar je ledline kijkt.</p>':effect.id==='v30-brand-focus'?'<p class="palette-guidance">Voeg kleuren toe voor je merkaccent. De gloed laat ze na elkaar zien langs de ledlines.</p>':'';
-    const content = `<div class="current-effect"><span class="menu-icon">${icon('animation')}</span><div><small>Actieve animatie · ${esc(categoryLabel(effect.category))}</small><b tabindex="-1" role="heading" aria-level="2">${esc(Library.displayName(effect))}</b><small>${esc(effect.description)}</small></div></div>${effect.category==='tunnel'?referenceEditorPreview(effect):''}<section class="card palette-section"><h2>${paletteTitle}</h2>${paletteHelp}<div class="palette" aria-label="Animatiekleuren">${paletteMarkup(s)}</div>${animationSlider('bri','Kleurhelderheid',0,100,s.bri??100,'%')}${resetMarkup('bri','Kleurhelderheid')}${backgroundControls(effect)}${effect.controls.includes('speed')?`${animationSlider('speed','Snelheid',0,100,s.speed??30,'%')}${resetMarkup('speed','Snelheid')}`:''}</section>${animationControls(effect)}<button class="button secondary full" data-action="preset-save">＋ Animatie bewaren</button>`;
+    const content = `<div class="current-effect"><div><small>${esc(t('animationSettings'))}</small><b tabindex="-1" role="heading" aria-level="2">${esc(Library.displayName(effect,t))}</b></div><button class="current-effect-gallery" data-action="${galleryAction}"><span>${esc(t('animationChooseAnother'))}</span>${icon('chevron')}</button></div><section class="card palette-section animation-daily-controls"><h2>${effect.whiteMixPreset||effect.paletteEditable===false?paletteTitle:esc(t('animationColours'))}</h2>${paletteHelp}<div class="palette" aria-label="${esc(t('animationColours'))}">${paletteMarkup(s)}</div>${backgroundControls(effect)}${effect.controls.includes('speed')?`${animationSlider('speed',t('animationSpeed'),0,100,s.speed??30,'%')}${resetMarkup('speed',t('animationSpeed'))}`:''}${animationSlider('bri',t('animationBrightness'),0,100,s.bri??100,'%')}${resetMarkup('bri',t('animationBrightness'))}</section>${effect.category==='tunnel'?referenceEditorPreview(effect):''}${animationControls(effect)}<button class="button secondary full animation-save-recipe" data-action="preset-save">＋ ${esc(t('animationSaveOwn'))}</button>`;
     return `<section class="active-animation-workspace" aria-label="Animatie aanpassen">${content}</section>`;
   }
   function renderAnimations() {
@@ -559,7 +612,7 @@
     return t('spatial'+(tunnelPreviewView==='wall'?'Wall':'Tunnel')+part);
   }
   function spatialPreviewChoice(showTitle=true){
-    return `<div class="spatial-preview-choice">${showTitle?`<span>${esc(t('spatialPreviewTitle'))}</span>`:''}<div class="spatial-preview-switch" role="group" aria-label="${esc(t('spatialPreviewTitle'))}">${['tunnel','wall'].map(view=>`<button type="button" data-action="tunnel-preview-view" data-view="${view}" aria-pressed="${tunnelPreviewView===view}" aria-description="${esc(t('spatialPreviewOnly'))}">${icon(view)}<span>${esc(t(view==='wall'?'spatialWall':'spatialTunnel'))}</span></button>`).join('')}</div></div>`;
+    return `<div class="spatial-preview-choice"><span>${esc(t('spatialPreviewTitle'))}</span><div class="spatial-preview-switch" role="group" aria-label="${esc(t('spatialPreviewTitle'))}">${['tunnel','wall'].map(view=>`<button type="button" data-action="tunnel-preview-view" data-view="${view}" aria-pressed="${tunnelPreviewView===view}" aria-description="${esc(t('spatialPreviewOnly'))}">${icon(view)}<span>${esc(t(view==='wall'?'spatialWall':'spatialTunnel'))}</span></button>`).join('')}</div><small class="spatial-preview-only">${esc(t('spatialPreviewOnly'))}</small></div>`;
   }
   function tunnelPreviewOptions(prefix){
     return {tunnelPreview:true,spatialLabelPrefix:prefix,spatialShape:tunnelPreviewView,label:`${prefix} · ${spatialPreviewText('Preview')}`};
@@ -577,13 +630,13 @@
   }
   function referenceEditorPreview(effect){
     const list=selected(),lineNumbers=Object.fromEntries(receivers().map((receiver,index)=>[receiver.id,index+1]));
-    return `<details open class="reference-editor-preview card" aria-label="${esc(t('animationPreview'))}"><summary>${icon('zones')}<b data-spatial-text="Preview">${esc(spatialPreviewText('Preview'))}</b><small class="spatial-preview-count">${ledlineCount(list.length)}</small>${icon('chevron')}</summary><div class="reference-preview-body">${spatialPreviewChoice(false)}${addPreview(list,zone().layout,'reference-large-preview',{zoneId:zone().id,visibleReceiverIds:list.map(r=>r.id),preserveZoneGeometry:true,lineNumbers,presentation:'receivers',...tunnelPreviewOptions(Library.displayName(effect)+' · '+ledlineCount(list.length))})}<small data-spatial-text="Order">${esc(spatialPreviewText('Order'))}</small></div></details>`;
+    return `<details open class="reference-editor-preview card" aria-label="${esc(t('animationPreview'))}"><summary>${icon('zones')}<b data-spatial-text="Preview">${esc(spatialPreviewText('Preview'))}</b><small class="spatial-preview-count">${ledlineCount(list.length)}</small>${icon('chevron')}</summary><div class="reference-preview-body">${spatialPreviewChoice(false)}${addPreview(list,zone().layout,'reference-large-preview',{zoneId:zone().id,visibleReceiverIds:list.map(r=>r.id),preserveZoneGeometry:true,lineNumbers,presentation:'receivers',...tunnelPreviewOptions(Library.displayName(effect,t)+' · '+ledlineCount(list.length))})}<small data-spatial-text="Order">${esc(spatialPreviewText('Order'))}</small></div></details>`;
   }
   function categoryLabel(key) {
     return Library.categories.find(category=>category.key===key)?.title||({catalogue:'Alle',presets:'Mijn animaties'})[key]||'Animaties';
   }
-  function libraryTabLabel(key) { return key==='whole'&&zone()?.type==='SPI'?'RGBW-stijl':categoryLabel(key); }
-  function initialAnimationLibrary() { return zone()?.type==='SPI'?'pixels':'catalogue'; }
+  function libraryTabLabel(key) { return t(({catalogue:'animationAll',whole:'animationWhole',pixels:'animationMoving',tunnel:'animationAcross',brand:'animationBrand',presets:'animationOwn'})[key]); }
+  function initialAnimationLibrary() { return 'start'; }
   function libraryTab() { return route.library==='all'?'catalogue':route.library||initialAnimationLibrary(); }
   function backgroundDefaults(){return {backgroundOn:false,background:'#000000',backgroundWhite:0,bgBrightness:10,backgroundRgbEnabled:true,backgroundWhiteEnabled:true};}
   function effectState(effect) {
@@ -638,7 +691,7 @@
       outputs:sampleType==='SPI'?[{port:1,enabled:true,pixels:32,reversed:false}]:[],state:previewState}]
       :physicalLines.map(r=>({...r,state:previewState}));
     const lineNumbers=Object.fromEntries(receivers().map((receiver,index)=>[receiver.id,index+1]));
-    return addPreview(list,representativeOnly?'stacked':zone().layout,tunnel?'tunnel-effect-preview':reference?'reference-preview':'',{label:Library.displayName(effect),effectId:effect.id,brand:effect.category==='brand'&&!effect.whiteMixPreset,brandPaletteLimit:effect.paletteEditable===false?0:effect.colorCountRange?.max||4,labels:!representativeOnly,lineNumbers,...(tunnel?{...tunnelPreviewOptions(Library.displayName(effect)+' · '+ledlineCount(list.length)),geometryReceivers:receivers()}:{} )});
+    return addPreview(list,representativeOnly?'stacked':zone().layout,tunnel?'tunnel-effect-preview':reference?'reference-preview':'',{label:Library.displayName(effect,t),effectId:effect.id,brand:effect.category==='brand'&&!effect.whiteMixPreset,brandPaletteLimit:effect.paletteEditable===false?0:effect.colorCountRange?.max||4,labels:!representativeOnly,lineNumbers,...(tunnel?{...tunnelPreviewOptions(Library.displayName(effect,t)+' · '+ledlineCount(list.length)),geometryReceivers:receivers()}:{} )});
   }
   function tunnelGuide() {
     const list=selected(),count=list.length,zoneCount=receivers().length,together=selection().kind==='all';
@@ -656,7 +709,7 @@
     // An active tunnel always keeps its real colours, speed and power state.
     const previewList=live||!example?list:list.map(receiver=>({...receiver,state:{...effectState(example),speed:Math.max(75,Number(example.state.speed)||0)}}));
     const visual=addPreview(previewList,zone().layout,'tunnel-live-preview',{...(live?{zoneId:zone().id,visibleReceiverIds:list.map(receiver=>receiver.id),preserveZoneGeometry:true}:{geometryReceivers:receivers()}),...tunnelPreviewOptions(ledlineCount(count)),lineNumbers:Object.fromEntries(receivers().map((receiver,index)=>[receiver.id,index+1]))});
-    return `<section class="tunnel-guide" aria-label="Tunneleffecten">${spatialPreviewChoice()}<figure class="tunnel-visual">${visual}<figcaption><span>${esc(detail)} · <span data-spatial-text="Unit">${esc(spatialPreviewText('Unit'))}</span></span></figcaption></figure>${example||live?`<p class="tunnel-example-name">${live?'Actief':'Voorbeeld'}: <b>${example?esc(Library.displayName(example)):'Eigen instellingen per ledline'}</b></p>`:''}<div class="tunnel-status${action?'':' tunnel-ready'}"><div><strong>${status}</strong></div>${action}</div><button class="text-button tunnel-arrangement-help" data-action="line-setup-open">${icon('sliders')}${esc(t('lineSetupTitle'))}${icon('chevron')}</button></section>`;
+    return `<section class="tunnel-guide" aria-label="Tunneleffecten">${spatialPreviewChoice()}<figure class="tunnel-visual">${visual}<figcaption><span>${esc(detail)} · <span data-spatial-text="Unit">${esc(spatialPreviewText('Unit'))}</span></span></figcaption></figure>${example||live?`<p class="tunnel-example-name">${live?'Actief':'Voorbeeld'}: <b>${example?esc(Library.displayName(example,t)):'Eigen instellingen per ledline'}</b></p>`:''}<div class="tunnel-status${action?'':' tunnel-ready'}"><div><strong>${status}</strong></div>${action}</div><button class="text-button tunnel-arrangement-help" data-action="line-setup-open">${arrangementIcon()}${esc(t('lineSetupTitle'))}${icon('chevron')}</button></section>`;
   }
   function presetContext() { return {type:zone().type,receiverCount:receivers().length,selection:selection(),layout:zone().layout}; }
   function renderPresets() {
@@ -668,14 +721,15 @@
   function effectCards(effects,extraClass='') {
     const together=selection().kind==='all'&&receivers().length>=2,selectedCount=selected().length;
     const className=`effect-card${extraClass?` ${extraClass}`:''}`;
-    return effects.map(effect=>{const needsAll=effect.requireTogether||effect.category==='tunnel',tooFew=selectedCount<(effect.minimumReceivers||1),locked=needsAll?!together:tooFew;return `<button class="${className}" data-action="effect" data-id="${esc(effect.id)}" data-motion="${effectMotionKey(effect)}" aria-pressed="${activeEffect()?.id===effect.id}" ${locked?'disabled':''}>${effectPreview(effect)}<b>${esc(Library.displayName(effect))}</b><small>${esc(categoryLabel(effect.category))} · ${esc(effect.description)}</small>${locked?`<small>${needsAll?'Kies Alle ledlines samen':'Selecteer minstens '+(effect.minimumReceivers||1)+' ledlines'}</small>`:''}</button>`;}).join('');
+    return effects.map(effect=>{const needsAll=effect.requireTogether||effect.category==='tunnel',tooFew=selectedCount<(effect.minimumReceivers||1),locked=needsAll?!together:tooFew;return `<button class="${className}" data-action="effect" data-id="${esc(effect.id)}" data-motion="${effectMotionKey(effect)}" aria-pressed="${activeEffect()?.id===effect.id}" ${locked?'disabled':''}>${effectPreview(effect)}<b>${esc(Library.displayName(effect,t))}</b><small>${esc(categoryLabel(effect.category))} · ${esc(effect.description)}</small>${locked?`<small>${needsAll?'Kies Alle ledlines samen':'Selecteer minstens '+(effect.minimumReceivers||1)+' ledlines'}</small>`:''}</button>`;}).join('');
   }
   function animationFamilyCard(group,expandedKey=null) {
     const expanded=expandedKey===group.key,panelId=`animation-variants-${group.key.replace(/[^a-z0-9_-]/gi,'-')}`;
     const countLabel=t(group.count===1?'animationCountOne':'animationCountMany',{count:group.count});
     const type=zone()?.type==='SPI'?'SPI':'RGBW';
     const tunnel=group.preview.category==='tunnel';
-    return `<article class="animation-family-card${tunnel?' tunnel-family-card':''}${expanded?' is-expanded':''}"><button class="animation-family-trigger" data-action="family" data-id="${esc(group.key)}" data-ledline-type="${type}" aria-expanded="${expanded}" aria-controls="${panelId}">${tunnel?'':`<span class="animation-family-preview" data-motion-preview="${effectMotionKey(group.preview)}"><span class="animation-family-preview-label">${esc(t('animationPreview'))}</span>${effectPreview(group.preview)}</span>`}<span class="family-copy">${tunnel?'':`<span class="family-kicker"><span class="animation-type-badge" aria-label="${esc(t('animationBadgeForType',{type}))}">${type}</span></span>`}<b class="family-title">${esc(group.title)}</b><small class="family-summary">${esc(group.summary)}</small><span class="family-variants"><span>${expanded?t('hideAnimationOptions'):group.count===1?t('viewAnimation'):t('viewAnimationCount',{count:group.count})}</span>${icon('chevron')}</span></span></button><div class="family-variants-panel" id="${panelId}" ${expanded?'':'hidden'}><div class="family-variants-heading"><b>${esc(t('chooseAnimation'))}</b><small>${esc(countLabel)}</small></div><div class="family-variant-grid">${effectCards(group.effects,'family-variant-card')}</div></div></article>`;
+    const all=expandedAnimationFamilies.has(route.zoneId+':'+group.key),visible=all?group.effects:group.effects.slice(0,6);
+    return `<article class="animation-family-card${tunnel?' tunnel-family-card':''}${expanded?' is-expanded':''}"><button class="animation-family-trigger" data-action="family" data-id="${esc(group.key)}" data-ledline-type="${type}" aria-expanded="${expanded}" aria-controls="${panelId}">${tunnel?'':`<span class="animation-family-preview" data-motion-preview="${effectMotionKey(group.preview)}"><span class="animation-family-preview-label">${esc(t('animationPreview'))}</span>${effectPreview(group.preview)}</span>`}<span class="family-copy">${tunnel?'':`<span class="family-kicker"><span class="animation-type-badge" aria-label="${esc(t('animationBadgeForType',{type}))}">${type}</span></span>`}<b class="family-title">${esc(group.title)}</b><small class="family-summary">${esc(group.summary)}</small><span class="family-variants"><span>${expanded?t('hideAnimationOptions'):group.count===1?t('viewAnimation'):t('viewAnimationCount',{count:group.count})}</span>${icon('chevron')}</span></span></button><div class="family-variants-panel" id="${panelId}" ${expanded?'':'hidden'}><div class="family-variants-heading"><b>${esc(t('chooseAnimation'))}</b><small>${esc(countLabel)}</small></div><div class="family-variant-grid">${effectCards(visible,'family-variant-card')}</div>${visible.length<group.effects.length?`<button class="button secondary full" data-action="family-more" data-id="${esc(group.key)}">${esc(t('animationAllVariants',{count:group.count}))}</button>`:''}</div></article>`;
   }
   function animationCategorySection(section,expandedKey=null) {
     return `<section class="animation-family-section" aria-labelledby="animation-category-${esc(section.key)}"><header class="animation-family-heading"><div><h2 id="animation-category-${esc(section.key)}">${esc(section.title)}</h2><p>${esc(section.summary)}</p></div><small>${section.count} ${section.count===1?'animatie':'animaties'}</small></header>${section.key==='tunnel'?`<p class="animation-category-note">Tunnelanimaties werken met minimaal twee ledlines. Kies daarna <b>Alle ledlines samen</b>.</p>`:''}<div class="animation-family-grid">${section.groups.map(group=>animationFamilyCard(group,expandedKey)).join('')}</div></section>`;
@@ -696,19 +750,43 @@
   function renderEffects() {
     const currentEffect=activeEffect(),returnToEditor=Boolean(currentEffect)&&route.effectsReturn!=='controls',tab=libraryTab();
     const title=tab==='catalogue'?'Alle animaties':tab==='tunnel'||tab==='brand'||tab==='presets'?categoryLabel(tab):'Animatie kiezen';
-    const editCurrent=currentEffect&&route.effectsReturn==='controls'?`<button class="button secondary full" data-action="animations">Actieve animatie bewerken · ${esc(Library.displayName(currentEffect))}</button>`:'';
+    const editCurrent=currentEffect&&route.effectsReturn==='controls'?`<button class="button secondary full" data-action="animations">Actieve animatie bewerken · ${esc(Library.displayName(currentEffect,t))}</button>`:'';
     return `<div class="page">${contextTitle(title,`${zone().name} · ${nameOfSelection()}`,returnToEditor?'Terug naar instellingen':'Terug naar bediening',returnToEditor?'animations':'controls')}${tab==='tunnel'&&receivers().length<2?'':selector()}${ledlineSetupMarkup()}${editCurrent}${animationLibraryContent()}</div>`;
   }
   function animationLibraryContent(){
     savedPresets=presetStore.load();
     const items=catalogue(),tab=libraryTab(),active=route.family?Library.group(items,route.family):null;
-    const isSpi=zone().type==='SPI',canTunnel=receivers().length>=2&&selection().kind==='all',tabs=isSpi?['pixels','whole','catalogue','tunnel','brand','presets']:['catalogue','whole','tunnel','brand','presets'],counts={catalogue:items.length,...Object.fromEntries(Library.sections(items).map(section=>[section.key,section.count])),presets:savedPresets.presets.length};
-    const intro=tab==='whole'&&isSpi?`<p class="library-intro">Rustige kleurwissels en pulsen, zoals RGBW-effecten. Ook op SPI-ledlines.</p>`:tab==='whole'||tab==='pixels'?`<p class="library-intro">${esc(Library.categories.find(category=>category.key===tab).summary)} Open een groep en kies welke animatie je wilt gebruiken.</p>`:tab==='brand'?`${brandTonePicker()}<p class="library-intro">Kies een merkbeweging. Open de groep om de animaties te bekijken en kies er één.</p>`:tab==='tunnel'?tunnelGuide():tab==='catalogue'?`<p class="library-intro">${items.length} animaties. Open een groep om de animaties erin te zien en kies er één.</p>`:'';
+    if(tab==='start')return `<section class="animation-library-inline animation-start" aria-label="${esc(t('chooseAnimation'))}">${animationLibraryHeading()}<div class="animation-start-grid">${Library.starters(items).map(starter=>`<button class="effect-card animation-starter-card" data-action="effect" data-id="${esc(starter.effect.id)}" aria-pressed="${activeEffect()?.id===starter.effect.id}">${effectPreview(starter.effect)}<b>${esc(t('animationStarter'+starter.key))}</b><small>${esc(t('animationStarter'+starter.key+'Hint'))}</small></button>`).join('')}</div><button class="button secondary full" data-action="library" data-id="catalogue">${esc(t('animationBrowseAll'))}${icon('chevron')}</button></section>`;
+    const canTunnel=receivers().length>=2&&selection().kind==='all',counts={catalogue:items.length,...Object.fromEntries(Library.sections(items).map(section=>[section.key,section.count])),presets:savedPresets.presets.length};
+    const intro=tab==='brand'?brandTonePicker():tab==='tunnel'?tunnelGuide():'';
     const tunnelUnavailable=tab==='tunnel'&&!canTunnel;
-    const results=tab==='presets'?renderPresets():tunnelUnavailable?'':tab==='catalogue'?animationCategorySections(items,active?.key):animationCategoryFamilyList(items,tab,active?.key);
+    const query=animationQueries.get(route.zoneId)||'';
+    const results=tab==='presets'?renderPresets():tunnelUnavailable?'':query.trim()?effectResults(query):tab==='catalogue'?animationCategorySections(items,active?.key):animationCategoryFamilyList(items,tab,active?.key);
     // The tunnel guide already explains its requirements and provides the one
     // relevant action. Keep the gallery free of extra preview disclaimers.
-    return `<section class="animation-library-inline" aria-label="Animatiegalerij">${intro}<div class="library-filter-block"><div class="library-filter-heading"><b>Animatiegroepen</b><small>Open een groep om de animaties te zien</small></div><div class="filter-row" role="tablist" aria-label="Animatiecategorie">${tabs.map(key=>`<button role="tab" data-action="library" data-id="${key}" aria-selected="${tab===key}"><span>${libraryTabLabel(key)}</span><small aria-label="${counts[key]||0} animaties">${counts[key]||0}</small></button>`).join('')}</div></div>${tab!=='presets'&&!tunnelUnavailable?'<label class="animation-search"><span>Zoek in animaties</span><input type="search" id="animation-search" placeholder="Zoek een groep of beweging" autocomplete="off"></label>':''}<div id="animation-results">${results}</div></section>`;
+    return `<section class="animation-library-inline" aria-label="${esc(t('animationGallery'))}">${animationLibraryHeading()}<button type="button" id="animation-category" class="animation-category-trigger" data-action="animation-categories" data-category="${esc(tab)}" aria-haspopup="dialog" aria-expanded="false"><span class="animation-category-art">${animationCategoryIcon(tab)}</span><span class="animation-category-copy"><small>${esc(t('animationFilter'))}</small><b>${esc(libraryTabLabel(tab))}</b></span><span class="animation-category-count" aria-label="${esc(t('animationCountMany',{count:counts[tab]||0}))}">${counts[tab]||0}</span>${icon('chevron')}</button>${tab!=='presets'&&!tunnelUnavailable?`<label class="animation-search"><span>${esc(t('animationSearch'))}</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg><input type="search" id="animation-search" value="${esc(query)}" placeholder="${esc(t('animationSearchHint'))}" autocomplete="off"></label>`:''}${intro}<div id="animation-results">${results}</div></section>`;
+  }
+  function animationLibraryHeading(){
+    const current=activeEffect(),canReturn=current&&route.screen==='controls';
+    return `<header class="animation-library-heading"><div><h2>${esc(t('chooseAnimation'))}</h2>${canReturn?`<small>${esc(t('animationActiveName',{name:Library.displayName(current,t)}))}</small>`:''}</div>${canReturn?`<button class="animation-return-current" data-action="animation-current-edit" aria-label="${esc(t('animationBackToSettings'))} · ${esc(Library.displayName(current,t))}">${icon('back')}<span>${esc(t('animationSettingsShort'))}</span></button>`:''}</header>`;
+  }
+  function animationCategoryIcon(key){
+    return key==='tunnel'?arrangementIcon('stacked'):icon(({start:'sparkle',catalogue:'zones',whole:'sun',pixels:'animation',brand:'sparkle',presets:'scenes'})[key]||'zones');
+  }
+  function showAnimationCategories(){
+    const items=catalogue(),tab=libraryTab(),keys=['start','catalogue','whole',...(zone().type==='SPI'?['pixels']:[]),'tunnel','brand','presets'];
+    savedPresets=presetStore.load();
+    const counts={start:Library.starters(items).length,catalogue:items.length,...Object.fromEntries(Library.sections(items).map(section=>[section.key,section.count])),presets:savedPresets.presets.length};
+    const titleKey={start:'animationStartHint',catalogue:'animationAllHint',whole:'animationWholeHint',pixels:'animationMovingHint',tunnel:'animationAcrossHint',brand:'animationBrandHint',presets:'animationOwnHint'};
+    showEffectDialog(t('animationFilter'),`<div class="animation-category-options" data-animation-categories>${keys.map(key=>`<button type="button" class="animation-category-choice" data-action="animation-category-choice" data-id="${key}" aria-pressed="${tab===key}"><span class="animation-category-art">${animationCategoryIcon(key)}</span><span class="animation-category-copy"><b>${esc(key==='start'?t('animationStartSelection'):libraryTabLabel(key))}</b><small>${esc(t(titleKey[key]))}</small></span><span class="animation-category-meta"><span>${counts[key]||0}</span>${tab===key?icon('check'):icon('chevron')}</span></button>`).join('')}</div>`);
+    // Touch Safari does not focus the invoking button automatically.
+    // Restore this exact control on dismiss, not a stale gallery/back button.
+    dialogReturnFocus=main.querySelector('[data-action="animation-categories"]');
+    dialogReturnFocus?.setAttribute('aria-expanded','true');
+    document.querySelector('#effect-dialog [data-action="effect-dialog-close"]')?.setAttribute('aria-label',t('close'));
+    const selectedChoice=document.querySelector(`#effect-dialog [data-action="animation-category-choice"][data-id="${tab}"]`);
+    selectedChoice?.focus({preventScroll:true});
+    selectedChoice?.scrollIntoView({block:'nearest',behavior:'instant'});
   }
   function spiLayoutPreview(layout) {
     // These small teaching examples are separate from the installation. They
@@ -729,8 +807,8 @@
   const arrangementModes={stacked:['Tunnel','tunnel'],vertical:['Wall','wall'],continuous:['Continuous','light']};
   function arrangementSignature(z=zone()) {return JSON.stringify([z.id,z.name,z.type,z.receiverIds,z.layout]);}
   function arrangementDirty(){return Boolean(arrangementDraft&&JSON.stringify([arrangementDraft.layout,arrangementDraft.receiverIds])!==arrangementDraft.initial);}
-  // Preview the proposed geometry only. Saved zone data, selected receivers,
-  // animation state and hardware commands still change through Save alone.
+  // Preview a tap immediately while its atomic metadata update is in flight.
+  // Only a confirmed update changes saved geometry or resends receiver state.
   function previewArrangement(z){
     return z&&openLineSetup.has(z.id)&&arrangementDraft?.zoneId===z.id&&
       arrangementDraft.signature===arrangementSignature(z)?arrangementDraft:null;
@@ -738,6 +816,34 @@
   function beginArrangement(){
     const z=zone();if(!z)return;
     arrangementDraft={zoneId:z.id,layout:z.layout,receiverIds:[...z.receiverIds],signature:arrangementSignature(z),initial:JSON.stringify([z.layout,z.receiverIds]),error:''};
+  }
+  async function applyArrangement(){
+    const draft=arrangementDraft;if(!draft||arrangementApplying||(!arrangementDirty()&&!draft.error))return;
+    const zoneId=draft.zoneId;
+    if(zoneId!==route.zoneId||draft.signature!==arrangementSignature()){
+      beginArrangement();arrangementDraft.error=t('lineSetupChanged');renderArrangement();return;
+    }
+    arrangementApplying=true;
+    let failure='';
+    try{
+      const next=M.arrangeZone(model,zoneId,{layout:draft.layout,receiverIds:draft.receiverIds});
+      draft.error='';renderArrangement();
+      const saved=await persistManagement(next,{kind:'arrange',zoneId,layout:draft.layout,receiverIds:[...draft.receiverIds]},draft.signature);
+      if(saved){
+        model=saved;
+        if(continuousZone())selections.set(zoneId,{kind:'all'});
+        tunnelPreviewView=draft.layout==='vertical'?'wall':'tunnel';zonePreviewViews.set(zoneId,tunnelPreviewView);
+        if(nativeContext)sendReceiverStates(M.zoneReceivers(model,zoneId).map(r=>r.id),{remember:false});
+      }else failure=t('lineSetupSaveFailed');
+    }catch(error){failure=error.message||t('lineSetupSaveFailed');}
+    finally{
+      arrangementApplying=false;
+      // Failed or uncertain requests show the last authoritative model, not
+      // an unconfirmed selection. Tapping a choice again is a fresh retry.
+      if(zone()&&route.zoneId===zoneId){beginArrangement();arrangementDraft.error=failure;}
+      else arrangementDraft=null;
+      renderArrangement();
+    }
   }
   function arrangementBrowsing(){return {route:{...route},controlMode,showGallery:showControlAnimationGallery,query:main.querySelector('#animation-search')?.value||'',scroll:window.scrollY};}
   function restoreArrangementBrowsing(context){
@@ -748,22 +854,22 @@
   function renderArrangement(){const context=arrangementBrowsing();render();restoreArrangementBrowsing(context);}
   function revealLineSetup(){
     const target=main.querySelector('.ledline-setup');if(!target)return;
-    const align=()=>{if(!target.isConnected)return;const bottom=Math.max(0,main.querySelector('.control-preview-dock')?.getBoundingClientRect().bottom||0);window.scrollTo({top:Math.max(0,window.scrollY+target.getBoundingClientRect().top-bottom-12),behavior:'instant'});updateControlPreviewDensity();};
+    const align=()=>{if(!target.isConnected)return;const bottom=Math.max(0,main.querySelector('.control-dock-surface')?.getBoundingClientRect().bottom||0);window.scrollTo({top:Math.max(0,window.scrollY+target.getBoundingClientRect().top-bottom-12),behavior:'instant'});updateControlPreviewDensity();};
     align();requestAnimationFrame(align);target.querySelector('.ledline-setup-toggle')?.focus({preventScroll:true});
   }
   function ledlineSetupMarkup(){
     const z=zone(),open=openLineSetup.has(z.id);
-    if(open&&(!arrangementDraft||arrangementDraft.zoneId!==z.id||!arrangementDirty()))beginArrangement();
-    const draft=open?arrangementDraft:null,dirty=arrangementDirty(),stale=draft&&draft.signature!==arrangementSignature(z);
+    if(open&&(!arrangementDraft||arrangementDraft.zoneId!==z.id||(!arrangementApplying&&arrangementDraft.signature!==arrangementSignature(z))))beginArrangement();
+    const draft=open?arrangementDraft:null;
     const mode=arrangementModes[previewArrangement(z)?.layout||z.layout]||arrangementModes.stacked;
-    const summary=`${t(z.receiverIds.length===1?'scopeCountOne':'scopeCountMany',{count:z.receiverIds.length})} · ${t('lineSetup'+mode[0])}`;
+    const compact=route.screen==='controls'&&controlMode==='animations';
+    const summary=compact?t('lineSetup'+mode[0]):`${t('lineSetup'+mode[0])} · ${t(z.receiverIds.length===1?'scopeCountOne':'scopeCountMany',{count:z.receiverIds.length})}`;
     const choices=z.type==='SPI'?['stacked','vertical','continuous']:['stacked','vertical'];
-    return `<section class="ledline-setup card" aria-label="${esc(t('lineSetupTitle'))}"><button class="ledline-setup-toggle" data-action="layout" aria-expanded="${open}" aria-controls="ledline-setup-body">${icon('sliders')}<span><b>${esc(t('lineSetupTitle'))}</b><small>${esc(summary)}</small></span>${icon('chevron')}</button><div class="ledline-setup-body" id="ledline-setup-body" ${open?'':'hidden'}>${open?`
-      <section class="ledline-arrangement" aria-label="${esc(t('lineSetupChoose'))}"><h3>${esc(t('lineSetupChoose'))}</h3><div class="ledline-layout-choices" role="group" aria-label="${esc(t('lineSetupChoose'))}">${choices.map(id=>{const [key,glyph]=arrangementModes[id];return `<button data-action="draft-layout" data-id="${id}" aria-pressed="${draft.layout===id}">${icon(glyph)}<b>${esc(t('lineSetup'+key))}</b><small>${esc(t('lineSetup'+key+'Hint'))}</small></button>`;}).join('')}</div>
+    return `<section class="ledline-setup card${compact?' ledline-setup-compact':''}" aria-label="${esc(t('lineSetupTitle'))}"><button class="ledline-setup-toggle" data-action="layout" aria-label="${esc(t('lineSetupTitle'))} · ${esc(summary)}" aria-expanded="${open}" aria-controls="ledline-setup-body">${arrangementIcon()}<span><b>${esc(t(compact?'layout':'lineSetupTitle'))}</b><small>${esc(summary)}</small></span>${icon('chevron')}</button><div class="ledline-setup-body" id="ledline-setup-body" ${open?'':'hidden'}>${open?`
+      <section class="ledline-arrangement" aria-label="${esc(t('lineSetupChoose'))}" aria-busy="${arrangementApplying}"><h3>${esc(t('lineSetupChoose'))}</h3><p class="ledline-setup-hint">${esc(t('lineSetupPurpose'))}</p><p class="arrangement-error" role="alert" ${draft.error?'':'hidden'}>${esc(draft.error)}</p><div class="ledline-layout-choices" role="group" aria-label="${esc(t('lineSetupChoose'))}">${choices.map(id=>{const [key,glyph]=arrangementModes[id];return `<button data-action="draft-layout" data-id="${id}" aria-pressed="${draft.layout===id}">${arrangementIcon(id)}<b>${esc(t('lineSetup'+key))}</b><small>${esc(t('lineSetup'+key+'Hint'))}</small></button>`;}).join('')}</div>
       <div class="ledline-order-heading"><h3>${esc(t('lineSetupOrder'))}</h3><small>${esc(t('lineSetup'+arrangementModes[draft.layout][0]+'Hint'))}</small></div><p class="ledline-setup-hint">${esc(t('lineSetupOrderHint'))}</p>
-      <ol class="ledline-draft-order">${draft.receiverIds.map((id,index)=>{const r=model.receivers.find(r=>r.id===id);if(!r)return '';const blinking=identifying.get(id)?.scope==='all';return `<li data-draft-receiver="${esc(id)}"><span class="order-number">${index+1}</span><b>${esc(r.name)}</b><button class="receiver-blink" data-action="visual-identify" data-receiver="${esc(id)}" aria-pressed="${blinking}" aria-label="${esc(r.name)} · ${blinking?'stoppen met knipperen':'laten knipperen'}">${icon('sun')}<span>${blinking?'Stop':'Knipperen'}</span></button><div class="ledline-draft-arrows"><button class="icon-button" data-action="draft-order" data-id="${esc(id)}" data-delta="-1" aria-label="${esc(t('lineSetupUp',{name:r.name}))}" ${index===0?'disabled':''}>↑</button><button class="icon-button" data-action="draft-order" data-id="${esc(id)}" data-delta="1" aria-label="${esc(t('lineSetupDown',{name:r.name}))}" ${index===draft.receiverIds.length-1?'disabled':''}>↓</button></div></li>`;}).join('')}</ol>
-      <p class="ledline-setup-hint">${esc(t('lineSetupPreviewHint'))}</p><p class="arrangement-error" role="alert" ${stale||draft.error?'':'hidden'}>${esc(stale?t('lineSetupChanged'):draft.error)}</p><div class="ledline-setup-actions"><button class="button secondary" data-action="arrangement-cancel">${esc(t('lineSetupCancel'))}</button><button class="button" data-action="arrangement-save" ${!dirty||stale?'disabled':''}>${esc(t('lineSetupSave'))}</button></div></section>
-      ${dirty?`<p class="ledline-setup-hint">${esc(t('lineSetupUnsaved'))}</p>`:`<details class="ledline-management" ${openLineManagement.has(z.id)?'open':''}><summary>${icon('light')}<span><b>${esc(t('lineSetupManage'))}</b><small>${esc(t('lineSetupManageHint'))}</small></span>${icon('chevron')}</summary><div class="ledline-management-body">${layoutReceiverActions()}<div class="receiver-list">${receivers().map(r=>receiverCard(r)).join('')}</div></div></details>`}`:''}</div></section>`;
+      <ol class="ledline-draft-order">${draft.receiverIds.map((id,index)=>{const r=model.receivers.find(r=>r.id===id);if(!r)return '';const wall=draft.layout==='vertical',blinking=identifying.get(id)?.scope==='all';return `<li data-draft-receiver="${esc(id)}"><span class="order-number">${index+1}</span><b>${esc(r.name)}</b><button class="receiver-blink" data-action="visual-identify" data-receiver="${esc(id)}" aria-pressed="${blinking}" aria-label="${esc(r.name)} · ${blinking?'stoppen met knipperen':'laten knipperen'}">${icon('sun')}<span>${blinking?'Stop':'Knipperen'}</span></button><div class="ledline-draft-arrows"><button class="icon-button" data-action="draft-order" data-id="${esc(id)}" data-delta="-1" aria-label="${esc(t(wall?'lineSetupLeft':'lineSetupUp',{name:r.name}))}" ${index===0?'disabled':''}>${wall?'←':'↑'}</button><button class="icon-button" data-action="draft-order" data-id="${esc(id)}" data-delta="1" aria-label="${esc(t(wall?'lineSetupRight':'lineSetupDown',{name:r.name}))}" ${index===draft.receiverIds.length-1?'disabled':''}>${wall?'→':'↓'}</button></div></li>`;}).join('')}</ol>
+      </section><details class="ledline-management" ${openLineManagement.has(z.id)?'open':''}><summary>${icon('light')}<span><b>${esc(t('lineSetupManage'))}</b><small>${esc(t('lineSetupManageHint'))}</small></span>${icon('chevron')}</summary><div class="ledline-management-body">${layoutReceiverActions()}<div class="receiver-list">${receivers().map(r=>receiverCard(r)).join('')}</div></div></details>`:''}</div></section>`;
   }
   function layoutReceiverActions() {
     const z=zone(),list=receivers();
@@ -789,8 +895,8 @@
     const all=standReceivers(),unassigned=all.filter(r=>!r.zoneId);
     const shown=receiverFilter==='unassigned'?unassigned:all,cards=shown.map(r=>receiverCard(r)).join('');
     const canUpdate=nativeContext&&runtime?.native===true&&typeof runtime.services?.otaPlan==='function'&&all.length>0;
-    const updateEntry=canUpdate?`<section class="card receiver-update-entry"><h2>${esc(t('softwareUpdateSection'))}</h2><p>${esc(t('softwareUpdateSubtitle'))} ${esc(t('softwareUpdateSequence'))}</p><button class="button full" data-action="receiver-update-all">${esc(t('softwareUpdateButton'))}</button></section>`:'';
-    return `<div class="page"><header class="page-heading"><div><div class="eyebrow">${esc(standLabel())}</div><h1>Receivers</h1><p>Je receivers en hun plek in de stand.</p></div></header><button class="button" data-action="receiver-add">＋ Receiver toevoegen</button>${updateEntry}<div class="receiver-filters" role="group" aria-label="Receivers filteren">${[['all','Alle receivers',all.length],['unassigned','Niet in een zone',unassigned.length]].map(([id,label,count])=>`<button data-action="receiver-filter" data-id="${id}" aria-pressed="${receiverFilter===id}">${label}<span>${count}</span></button>`).join('')}</div><div class="receiver-list">${cards||`<section class="card empty connection-empty"><h2>${receiverFilter==='unassigned'&&all.length?'Alles heeft een plek':'Nog geen receivers'}</h2><p>${receiverFilter==='unassigned'&&all.length?'Alle receivers zijn aan een zone toegewezen.':stand()?'Voeg je eerste receiver toe om deze stand te verlichten.':'Begin met een naam voor je stand en een zone. Daarna zoek je je eerste receiver.'}</p>${receiverFilter==='unassigned'?'<button class="button secondary" data-action="receiver-filter" data-id="all">Alle receivers bekijken</button>':''}</section>`}</div></div>`;
+    const updateEntry=canUpdate?`<button class="button secondary receiver-update-entry" data-action="receiver-update-all" aria-label="${esc(t('softwareUpdateButton'))}">${icon('update')}<span>${esc(t('softwareUpdates'))}</span></button>`:'';
+    return `<div class="page receivers-page"><header class="page-heading"><div><div class="eyebrow">${esc(standLabel())}</div><h1>Receivers</h1><p>Je receivers en hun plek in de stand.</p></div></header><div class="receiver-toolbar${canUpdate?' has-updates':''}"><button class="button" data-action="receiver-add"><span aria-hidden="true">＋</span><span>${esc(t('addReceiver'))}</span></button>${updateEntry}</div><div class="receiver-filters" role="group" aria-label="Receivers filteren">${[['all','Alle receivers',all.length],['unassigned','Niet in een zone',unassigned.length]].map(([id,label,count])=>`<button data-action="receiver-filter" data-id="${id}" aria-pressed="${receiverFilter===id}">${label}<span>${count}</span></button>`).join('')}</div><div class="receiver-list">${cards||`<section class="card empty connection-empty"><h2>${receiverFilter==='unassigned'&&all.length?'Alles heeft een plek':'Nog geen receivers'}</h2><p>${receiverFilter==='unassigned'&&all.length?'Alle receivers zijn aan een zone toegewezen.':stand()?'Voeg je eerste receiver toe om deze stand te verlichten.':'Begin met een naam voor je stand en een zone. Daarna zoek je je eerste receiver.'}</p>${receiverFilter==='unassigned'?'<button class="button secondary" data-action="receiver-filter" data-id="all">Alle receivers bekijken</button>':''}</section>`}</div></div>`;
   }
   function renderReceiverAdd() {
     return '<div id="receiver-onboarding"></div>';
@@ -1124,7 +1230,7 @@
   function navigate(screen, extra={}, {restoreControls=false}={}) {
     // Compatibility for internal callers; layout is now a panel, not a page.
     if(screen==='layout'){screen='controls';openLineSetup.add(extra.zoneId||route.zoneId);}
-    if(arrangementDirty()){toast(t('lineSetupUnsaved'));return;}
+    if(arrangementApplying)return;
     const previousRoute=route;
     if(screen!==route.screen)visualPlugMotions.clear();
     if(!pinRequired()&&!nativeContext&&screen==='pin-login')screen='settings';
@@ -1538,7 +1644,7 @@
     const measureHeader=()=>dialog.style.setProperty('--dialog-header-height',`${Math.ceil(header.getBoundingClientRect().height)}px`);
     measureHeader();dialogHeaderObserver=new ResizeObserver(measureHeader);dialogHeaderObserver.observe(header);
   }
-  function closeEffectDialog() { if(pinProtectionBusy)return;const wasStand=standControlOpen;dialogHeaderObserver?.disconnect();document.getElementById('effect-dialog').close();document.querySelectorAll('#effect-dialog canvas[data-preview]').forEach(canvas=>previews.delete(canvas.dataset.preview));document.getElementById('effect-dialog-content').replaceChildren();standControlOpen=false;zoneDeletion=null;if(wasStand)render();restoreControlFocus(dialogReturnFocus);dialogReturnFocus=null; }
+  function closeEffectDialog() { if(pinProtectionBusy)return;const wasStand=standControlOpen;dialogHeaderObserver?.disconnect();document.getElementById('effect-dialog').close();document.querySelector('[data-action="animation-categories"]')?.setAttribute('aria-expanded','false');document.querySelectorAll('#effect-dialog canvas[data-preview]').forEach(canvas=>previews.delete(canvas.dataset.preview));document.getElementById('effect-dialog-content').replaceChildren();standControlOpen=false;zoneDeletion=null;if(wasStand)render();restoreControlFocus(dialogReturnFocus);dialogReturnFocus=null; }
   function syncStandPower(){
     const focused=document.activeElement,card=document.querySelector('#effect-dialog .power-card');if(card)card.outerHTML=powerControl();
     restoreControlFocus(focused);
@@ -1603,7 +1709,7 @@
   function showSavePreset() {
     const effect=activeEffect();if(!effect)return;
     if(mixedSelection())return toast('Kies één ledline, of geef alle ledlines eerst dezelfde instellingen. Zo is duidelijk wat je bewaart.');
-    showEffectDialog('Animatie bewaren',`<p>${esc(Library.displayName(effect))} · alle gekozen kleuren en instellingen worden bewaard in Mijn animaties. Je kiest later zelf op welke ledlines de animatie komt.</p><label class="dialog-field">Naam van je animatie<input id="preset-name" type="text" maxlength="64" placeholder="Bijvoorbeeld: zacht welkom" autocomplete="off"></label><p class="dialog-error" role="alert" hidden></p><button class="button full" data-action="preset-confirm" disabled>Animatie bewaren</button>`);
+    showEffectDialog('Animatie bewaren',`<p>${esc(Library.displayName(effect,t))} · alle gekozen kleuren en instellingen worden bewaard in Mijn animaties. Je kiest later zelf op welke ledlines de animatie komt.</p><label class="dialog-field">Naam van je animatie<input id="preset-name" type="text" maxlength="64" placeholder="Bijvoorbeeld: zacht welkom" autocomplete="off"></label><p class="dialog-error" role="alert" hidden></p><button class="button full" data-action="preset-confirm" disabled>Animatie bewaren</button>`);
     document.getElementById('preset-name').focus();
   }
   function showSceneNameDialog(id) {
@@ -1774,7 +1880,7 @@
     const controls=Array.from(document.querySelectorAll('#main button,#main input,#main select,#navigation button,#effect-dialog button,#effect-dialog input'),el=>({el,disabled:el.disabled}));
     controls.forEach(({el})=>{el.disabled=true;});
     const dialog=document.getElementById('effect-dialog'),host=dialog.open?document.getElementById('effect-dialog-content'):main;
-    const progress=document.createElement('p');progress.className='management-status';progress.setAttribute('role','status');progress.textContent='Wijziging opslaan…';host.prepend(progress);host.setAttribute('aria-busy','true');
+    const progress=document.createElement('p');progress.className='management-status';progress.setAttribute('role','status');progress.textContent='Wijziging opslaan…';if(operation?.kind!=='arrange')host.prepend(progress);host.setAttribute('aria-busy','true');
     try{
       if(typeof runtime?.services?.editZones!=='function')throw Error('ZONE_STORAGE_UNAVAILABLE');
       const view=await runtime.services.editZones({standId:stand().id,operation,...(expectedZoneSignature===undefined?{}:{expectedZoneSignature})});
@@ -1788,8 +1894,8 @@
       if(error.reconciledView?.model){
         refreshSuspendedSetup(error.reconciledView);
         if(operation?.kind==='arrange'){
-          // Reconcile only the authoritative model. Keep the unsaved draft
-          // here, visibly stale, so the customer can cancel and reopen it.
+          // Reconcile only the authoritative model. The automatic arrangement
+          // update then resets its preview to this state and offers a retry.
           model=keepLocalPreviewStates(error.reconciledView.model);retainSetupSelections();
           return null;
         }
@@ -1797,7 +1903,7 @@
         closeEffectDialog();navigate('stand',{zoneId:null});toast(message);
       }else{
         const notice=document.querySelector('#effect-dialog[open] .dialog-error');
-        if(notice){notice.textContent=message;notice.hidden=false;}else toast(message);
+        if(notice){notice.textContent=message;notice.hidden=false;}else if(operation?.kind!=='arrange')toast(message);
       }
       return null;
     }finally{
@@ -1836,7 +1942,7 @@
   }
   document.getElementById('effect-dialog').addEventListener('cancel',event=>{event.preventDefault();if(!managementBusy)closeEffectDialog();});
   main.addEventListener('click',event=>{
-    if(managementBusy||arrangementDirty())return;
+    if(managementBusy||arrangementApplying)return;
     const canvas=event.target.closest?.('canvas[data-preview]');
     if(!canvas||!['controls','colour','animations'].includes(route.screen)||continuousZone())return;
     const preview=previews.get(canvas.dataset.preview);
@@ -1855,49 +1961,31 @@
   document.addEventListener('click',async event=>{
     const button=event.target.closest('button[data-action]');if(!button||button.disabled)return;
     if(button.dataset.action==='pin-login-cancel'&&pinLoginBusy){pinRecoveryAbort?.abort();return;}
-    if(managementBusy||pinProtectionBusy||pinLoginBusy)return;
+    if(managementBusy||arrangementApplying||pinProtectionBusy||pinLoginBusy)return;
     const action=button.dataset.action,id=button.dataset.id;
     try {
-      // Draft layout/order is explicitly confirmed. Other changes cannot
-      // silently discard it or save a mixture of old and new zone membership.
-      if(arrangementDirty()&&!['draft-layout','draft-order','arrangement-save','arrangement-cancel','visual-identify','tunnel-preview-view','preview-size'].includes(action))return toast(t('lineSetupUnsaved'));
       if(action==='layout'||action==='line-setup-open'){
         if(!zone()||!receivers().length)return;
-        if(action==='layout'&&openLineSetup.has(route.zoneId)){openLineSetup.delete(route.zoneId);arrangementDraft=null;}
+        const closing=action==='layout'&&openLineSetup.has(route.zoneId);
+        if(closing){openLineSetup.delete(route.zoneId);arrangementDraft=null;}
         else {openLineSetup.add(route.zoneId);beginArrangement();}
         renderArrangement();
-        if(action==='line-setup-open')revealLineSetup();
+        // Safari can anchor the collapsed summary behind the sticky preview
+        // when removing a long receiver list. Keep that return target visible.
+        if(closing||action==='line-setup-open')revealLineSetup();
         main.querySelector('.ledline-setup-toggle')?.focus({preventScroll:true});return;
       }
       if(action==='draft-layout'){
         if(!arrangementDraft||arrangementDraft.zoneId!==route.zoneId||!(zone().type==='SPI'?['stacked','vertical','continuous']:['stacked','vertical']).includes(id))return;
-        arrangementDraft.layout=id;arrangementDraft.error='';return renderArrangement();
+        arrangementDraft.layout=id;return await applyArrangement();
       }
       if(action==='draft-order'){
         if(!arrangementDraft||arrangementDraft.zoneId!==route.zoneId)return;
         const ids=arrangementDraft.receiverIds,index=ids.indexOf(id),delta=Number(button.dataset.delta),target=index+delta;
         if(![-1,1].includes(delta)||index<0||target<0||target>=ids.length)return;
-        ids.splice(index,1);ids.splice(target,0,id);arrangementDraft.error='';renderArrangement();
+        ids.splice(index,1);ids.splice(target,0,id);await applyArrangement();
         const moved=main.querySelector(`[data-draft-receiver="${CSS.escape(id)}"]`);
         (moved?.querySelector(`[data-delta="${delta}"]:not(:disabled)`)||moved?.querySelector('[data-action="draft-order"]:not(:disabled)'))?.focus({preventScroll:true});return;
-      }
-      if(action==='arrangement-cancel'){
-        openLineSetup.delete(route.zoneId);arrangementDraft=null;renderArrangement();revealLineSetup();return;
-      }
-      if(action==='arrangement-save'){
-        const draft=arrangementDraft;if(!draft||!arrangementDirty())return;
-        if(draft.zoneId!==route.zoneId||draft.signature!==arrangementSignature()){draft.error=t('lineSetupChanged');return renderArrangement();}
-        try{
-          const next=M.arrangeZone(model,route.zoneId,{layout:draft.layout,receiverIds:draft.receiverIds});
-          const saved=await persistManagement(next,{kind:'arrange',zoneId:route.zoneId,layout:draft.layout,receiverIds:[...draft.receiverIds]},draft.signature);
-          if(!saved){if(arrangementDraft===draft){draft.error=t('lineSetupSaveFailed');renderArrangement();}return;}
-          model=saved;
-          if(continuousZone())selections.set(route.zoneId,{kind:'all'});
-          tunnelPreviewView=draft.layout==='vertical'?'wall':'tunnel';zonePreviewViews.set(route.zoneId,tunnelPreviewView);
-          arrangementDraft=null;openLineSetup.delete(route.zoneId);
-          if(nativeContext)sendReceiverStates(M.zoneReceivers(model,route.zoneId).map(r=>r.id),{remember:false});
-          renderArrangement();revealLineSetup();toast(t('lineSetupSaved'));return;
-        }catch(error){draft.error=error.message||'Bewaren is niet gelukt.';return renderArrangement();}
       }
       if(action==='preview-size'){
         if(!['small','medium','large'].includes(id))return;
@@ -2056,15 +2144,19 @@
         }
         return await updateManagement(kind==='zone-rename'?M.renameZone(model,targetId,name):M.renameReceiver(model,targetId,name),'Naam aangepast.',null,kind==='zone-rename'?{kind:'rename',zoneId:targetId,name}:{kind:'renameReceiver',receiverId:targetId,name});
       }
-      if(action==='colour'&&route.screen==='controls'){controlMode='colour';return render({top:true});}
+      if(action==='colour'&&route.screen==='controls'){rememberAnimationGallery();controlMode='colour';return render({top:true});}
       if(action==='animation-gallery'&&route.screen==='controls'&&activeEffect()){
-        controlMode='animations';showControlAnimationGallery=true;return render({top:true});
+        const saved=animationGalleryPositions.get(route.zoneId);
+        if(saved)route={...route,library:saved.library,family:saved.family};
+        controlMode='animations';showControlAnimationGallery=true;render({top:true});return revealAnimationGallery(true);
       }
       if(action==='animations'&&route.screen==='controls'){
-        controlMode='animations';showControlAnimationGallery=!activeEffect();route={...route,family:null,library:initialAnimationLibrary(),effectsReturn:'controls'};render({top:true});if(!showControlAnimationGallery)revealAnimationStart();return;
+        rememberAnimationGallery();
+        const saved=animationGalleryPositions.get(route.zoneId);
+        controlMode='animations';showControlAnimationGallery=!activeEffect();route={...route,family:saved?.family||null,library:saved?.library||initialAnimationLibrary(),effectsReturn:'controls'};render({top:true});if(!showControlAnimationGallery)revealAnimationStart();else revealAnimationGallery(Boolean(saved));return;
       }
       if(action==='animation-current-edit'&&route.screen==='controls'&&activeEffect()){
-        showControlAnimationGallery=false;render({top:true});return revealAnimationStart();
+        rememberAnimationGallery();showControlAnimationGallery=false;render({top:true});return revealAnimationStart();
       }
       if(action==='animations-gallery'&&route.screen==='animations'&&activeEffect()){
         controlMode='animations';showControlAnimationGallery=true;
@@ -2189,6 +2281,22 @@
         requestAnimationFrame(()=>{restoreFamilyViewport();requestAnimationFrame(restoreFamilyViewport);});
         return;
       }
+      if(action==='family-more'){
+        if(!Library.group(catalogue(),id))return;
+        expandedAnimationFamilies.add(route.zoneId+':'+id);route={...route,family:id};return render({preserveScroll:true});
+      }
+      if(action==='animation-categories')return showAnimationCategories();
+      if(action==='animation-category-choice'){
+        if(!button.closest('[data-animation-categories]'))return;
+        const previous=libraryTab();closeEffectDialog();
+        if(id!==previous)chooseAnimationCategory(id);
+        main.querySelector('[data-action="animation-categories"]')?.focus({preventScroll:true});
+        return;
+      }
+      if(action==='animation-start'){
+        route={...route,library:'start',family:null};animationQueries.delete(route.zoneId);animationGalleryPositions.delete(route.zoneId);
+        render({top:true});return revealAnimationGallery();
+      }
       if(action==='brand-tone'){
         const tone=BRAND_TONES.find(item=>item.id===id);if(!tone)return;
         brandColours.set(route.zoneId,tone.value);brandPalettes.set(route.zoneId,[tone.value]);return render({preserveScroll:true});
@@ -2201,9 +2309,8 @@
       }
       if(action==='tunnel-preview-view')return changeTunnelPreview(button.dataset.view);
       if(action==='library'){
-        if(route.screen==='controls'&&button.closest('[data-control-mode="animations"]')){
-          route={...route,family:null,library:id,effectsReturn:'controls'};showControlAnimationGallery=true;return render({preserveScroll:true});
-        }
+        if(route.screen==='controls'&&button.closest('[data-control-mode="animations"]'))return chooseAnimationCategory(id==='all'?'catalogue':id);
+        animationQueries.delete(route.zoneId);
         if(route.screen!=='effects')return navigate('effects',{family:null,library:id});
         route={...route,family:null,library:id};return render();
       }
@@ -2212,7 +2319,7 @@
         const effect=catalogue().find(e=>e.id===id);if(!effect)return;
         const requiresWholeZone=effect.requireTogether||effect.category==='tunnel';
         if(selected().length<(effect.minimumReceivers||1)||requiresWholeZone&&selection().kind!=='all')return;
-        apply(effectState(effect));settingsOpen=false;
+        rememberAnimationGallery();apply(effectState(effect));settingsOpen=false;
         if(route.screen==='controls'&&button.closest('[data-control-mode="animations"]')){controlMode='animations';showControlAnimationGallery=false;render({top:true});return revealAnimationStart();}
         if(route.screen==='effects'&&route.effectsReturn==='controls'){controlMode='animations';showControlAnimationGallery=false;navigate('controls',{zoneId:route.zoneId});return revealAnimationStart();}
         navigate('animations');return revealAnimationStart();
@@ -2310,6 +2417,7 @@
     }catch(error){const message=error.message||'Dit kon nog niet worden toegepast.',notice=document.querySelector('#effect-dialog[open] .dialog-error');if(notice){notice.textContent=message;notice.hidden=false;}else toast(message);}
   });
   document.addEventListener('input',event=>{
+    if(arrangementApplying)return;
     const input=event.target;
     try {
       if(input.matches('[data-brand-colour]')){
@@ -2326,9 +2434,11 @@
       if(input.id==='management-name'){document.querySelector('[data-action="management-name-save"]').disabled=!input.value.trim();return;}
       if(input.id==='preset-name'){document.querySelector('[data-action="preset-confirm"]').disabled=!input.value.trim();return;}
       if(input.id==='animation-search'){
-        const value=input.value;if(!value.trim()){render();document.getElementById('animation-search')?.focus({preventScroll:true});return;}
+        const value=input.value;animationQueries.set(route.zoneId,value);
+        if(!value.trim()){render();document.getElementById('animation-search')?.focus({preventScroll:true});return;}
         const results=document.getElementById('animation-results');results.querySelectorAll('canvas[data-preview]').forEach(c=>previews.delete(c.dataset.preview));results.innerHTML=effectResults(value);paint(performance.now()/1000);return;
       }
+      if(input.id==='animation-category')return chooseAnimationCategory(input.value);
       if(input.id==='scene-name'){if(sceneDraft){sceneDraft.name=input.value;syncSceneDraft();}return;}
       if(input.id==='scene-rename-name'){
         const save=document.querySelector('[data-action="scene-rename-save"]');
