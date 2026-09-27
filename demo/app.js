@@ -342,12 +342,15 @@
   }
   function controlPreviewDock(screen,modeTabs='') {
     const z=zone(),list=receivers(),pixels=z.type==='SPI'?P.geometry(list,z.layout).totalPixels:0;
+    const draft=previewArrangement(z),previewLayout=draft?.layout||z.layout;
+    const previewMode=arrangementModes[previewLayout]||arrangementModes.stacked;
+    const previewMinHeight=previewLayout==='continuous'?0:previewLayout==='vertical'?104:Math.min(96,16+list.length*22);
     const integratedControlHeading=screen==='controls';
-    const canTapLines=list.length>1&&!continuousZone()&&['controls','colour','animations'].includes(screen);
+    const canTapLines=list.length>1&&!continuousZone()&&!draft&&['controls','colour','animations'].includes(screen);
     const effectChosen=screen==='controls'&&controlMode==='animations'&&Boolean(activeEffect());
     // Tunnel pages already have one readable overview in their content. Keep
     // navigation sticky, but don't stack a second, flat preview over the tunnel.
-    const tunnelOverview=screen==='animations'?activeEffect()?.category==='tunnel':screen==='controls'&&controlMode==='animations'&&(effectChosen&&!showControlAnimationGallery?activeEffect()?.category==='tunnel':libraryTab()==='tunnel');
+    const tunnelOverview=!openLineSetup.has(z.id)&&(screen==='animations'?activeEffect()?.category==='tunnel':screen==='controls'&&controlMode==='animations'&&(effectChosen&&!showControlAnimationGallery?activeEffect()?.category==='tunnel':libraryTab()==='tunnel'));
     const total=z.type==='SPI'?t(list.length===1?'scopeTotalSpiOne':'scopeTotalSpiMany',{count:list.length,pixels}):t(list.length===1?'scopeCountOne':'scopeCountMany',{count:list.length});
     const scope=selection().kind==='all'?total:t('scopeSelectedTap',{name:nameOfSelection()});
     const modeName=screen==='controls'?(controlMode==='colour'?'Kleur':'Effecten'):screen==='layout'?'Opstelling':screen==='colour'?'Kleur':screen==='animations'?'Effecten':'Bediening';
@@ -355,7 +358,7 @@
     return `<section class="control-preview-dock" aria-label="LED-overzicht en bediening"><div class="control-dock-surface">
       ${integratedControlHeading?`<div class="control-dock-context-line"><div class="control-dock-location"><small>JE LICHT · ${esc(modeName)}</small><b>${esc(z.name)}</b></div><span class="pill control-dock-type-badge">${zoneTypeLabel(z)}</span></div><div class="control-dock-actions"><button class="back back-to-zones control-dock-back" data-action="stand" aria-label="Terug naar zones" title="Terug naar zones">${icon('back')}<span>Zones</span></button>${modeTabs}</div>`:''}
       ${integratedControlHeading?'':`<div class="control-dock-heading"><div class="control-dock-location"><small>JE LICHT · ${esc(modeName)}</small><b>${esc(z.name)}</b></div>${modeTabs||`<span class="control-dock-mode">${esc(modeName)}</span>`}</div>`}
-      ${tunnelOverview?'':`<div class="preview-wrap${canTapLines?' preview-selectable':''}"><div class="preview-top"><span>Hele zone</span><span class="preview-summary">${esc(scope)}</span></div>${zonePreview(z,'',{selection:selection(),main:true,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1])),label})}${screen==='animations'||effectChosen?`<div class="preview-live-controls"><span>Voorbeeld volgt je keuze direct</span></div>`:''}</div>`}
+      ${tunnelOverview?'':`<div class="preview-wrap${canTapLines?' preview-selectable':''}" data-preview-layout="${previewLayout}" style="--line-preview-min-height:${previewMinHeight}px"><div class="preview-top"><span>${esc(t('lineSetup'+previewMode[0]))}</span><span class="preview-summary">${esc(scope)}</span></div>${zonePreview(z,'',{selection:selection(),main:true,arrangementPreview:true,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1])),label})}${screen==='animations'||effectChosen?`<div class="preview-live-controls"><span>Voorbeeld volgt je keuze direct</span></div>`:''}</div>`}
       ${animationWayfinding(screen)}<p class="live-confirmation" data-live-status="zone" role="status" aria-live="polite"></p>
     </div></section>`;
   }
@@ -726,6 +729,12 @@
   const arrangementModes={stacked:['Tunnel','tunnel'],vertical:['Wall','wall'],continuous:['Continuous','light']};
   function arrangementSignature(z=zone()) {return JSON.stringify([z.id,z.name,z.type,z.receiverIds,z.layout]);}
   function arrangementDirty(){return Boolean(arrangementDraft&&JSON.stringify([arrangementDraft.layout,arrangementDraft.receiverIds])!==arrangementDraft.initial);}
+  // Preview the proposed geometry only. Saved zone data, selected receivers,
+  // animation state and hardware commands still change through Save alone.
+  function previewArrangement(z){
+    return z&&openLineSetup.has(z.id)&&arrangementDraft?.zoneId===z.id&&
+      arrangementDraft.signature===arrangementSignature(z)?arrangementDraft:null;
+  }
   function beginArrangement(){
     const z=zone();if(!z)return;
     arrangementDraft={zoneId:z.id,layout:z.layout,receiverIds:[...z.receiverIds],signature:arrangementSignature(z),initial:JSON.stringify([z.layout,z.receiverIds]),error:''};
@@ -743,9 +752,10 @@
     align();requestAnimationFrame(align);target.querySelector('.ledline-setup-toggle')?.focus({preventScroll:true});
   }
   function ledlineSetupMarkup(){
-    const z=zone(),open=openLineSetup.has(z.id),mode=arrangementModes[z.layout]||arrangementModes.stacked;
+    const z=zone(),open=openLineSetup.has(z.id);
     if(open&&(!arrangementDraft||arrangementDraft.zoneId!==z.id||!arrangementDirty()))beginArrangement();
     const draft=open?arrangementDraft:null,dirty=arrangementDirty(),stale=draft&&draft.signature!==arrangementSignature(z);
+    const mode=arrangementModes[previewArrangement(z)?.layout||z.layout]||arrangementModes.stacked;
     const summary=`${t(z.receiverIds.length===1?'scopeCountOne':'scopeCountMany',{count:z.receiverIds.length})} · ${t('lineSetup'+mode[0])}`;
     const choices=z.type==='SPI'?['stacked','vertical','continuous']:['stacked','vertical'];
     return `<section class="ledline-setup card" aria-label="${esc(t('lineSetupTitle'))}"><button class="ledline-setup-toggle" data-action="layout" aria-expanded="${open}" aria-controls="ledline-setup-body">${icon('sliders')}<span><b>${esc(t('lineSetupTitle'))}</b><small>${esc(summary)}</small></span>${icon('chevron')}</button><div class="ledline-setup-body" id="ledline-setup-body" ${open?'':'hidden'}>${open?`
@@ -1424,12 +1434,16 @@
       const rect=canvas.getBoundingClientRect();if(!rect.width||!rect.height||rect.bottom<0||rect.top>innerHeight)return;
       const spec=previews.get(canvas.dataset.preview);if(!spec)return;
       if(!secondary&&!spec.main)return;
-      const zoneList=spec.zoneId?M.zoneReceivers(model,spec.zoneId):null;
+      const savedZone=spec.zoneId?M.getZone(model,spec.zoneId):null;
+      const draft=spec.arrangementPreview?previewArrangement(savedZone):null;
+      const savedList=savedZone?M.zoneReceivers(model,spec.zoneId):null;
+      const zoneList=draft?draft.receiverIds.map(id=>savedList.find(receiver=>receiver.id===id)).filter(Boolean):savedList;
       const list=zoneList?(spec.visibleReceiverIds?zoneList.filter(receiver=>spec.visibleReceiverIds.includes(receiver.id)):zoneList):spec.brand?spec.receivers.map(r=>{
         const palette=brandPalettes.get(route.zoneId)?.slice(0,spec.brandPaletteLimit||0);
         return {...r,state:{...r.state,brandColor:brandColours.get(route.zoneId)||r.state.brandColor,...(palette?.length?{colors:palette,colorCount:palette.length,whiteChannels:palette.map(()=>0),rgbEnabled:palette.map(()=>true),whiteEnabled:palette.map(()=>false)}:{})}};
       }):spec.receivers;
-      P.draw(canvas,{...spec,receivers:list,geometryReceivers:spec.preserveZoneGeometry?zoneList:spec.geometryReceivers,selection:spec.main?selection():spec.selection,
+      P.draw(canvas,{...spec,layout:draft?.layout||spec.layout,receivers:list,geometryReceivers:spec.preserveZoneGeometry?zoneList:spec.geometryReceivers,selection:spec.main?selection():spec.selection,
+        ...(draft?{lineNumbers:Object.fromEntries(zoneList.map((receiver,index)=>[receiver.id,index+1]))}:{}),
         selectionFeedback:spec.main===true,identifying:spec.main?identifying:undefined,identificationTime:time,reducedMotion:reduce,
         time:reduce&&!spec.main?1.5:time});
     });

@@ -1003,12 +1003,14 @@ function softChaseCoverage(distance,width,n,smooth){
       // compact sticky preview. Scale with each lane so multi-line layouts
       // stay clearly separated on small screens.
       const showLabel = continuous ? false : vertical ? lane >= 48 : lane >= 30 || row.individuallySelected && lane >= 24;
-      const verticalStart = Math.min(showLabel ? 38 : 14, height / 3);
+      const compactVertical = vertical && options.main === true && height < 140;
+      const verticalStart = Math.min(showLabel ? compactVertical ? 24 : 38 : 14, height / 3);
+      const verticalBottom = compactVertical ? 18 : Math.min(24, height / 4);
       // In a short vertical thumbnail, strip length (not the much wider lane)
       // limits thickness. All lanes keep the same material/pixel pitch, while
       // even the shortest physical line still reads as a line, not a square.
-      const verticalThickness = (height - verticalStart - Math.min(24, height / 4)) * shortestFraction * .45;
-      const barHeight = continuous ? Math.min(18, height * 0.4) : Math.max(0.5, Math.min(18, lane * 0.62, vertical ? verticalThickness : Infinity));
+      const verticalThickness = (height - verticalStart - verticalBottom) * shortestFraction * .45;
+      const barHeight = continuous ? Math.min(18, height * 0.4) : Math.max(0.5, Math.min(compactVertical ? 10 : 18, lane * 0.62, vertical ? verticalThickness : Infinity));
       const continuousFraction = row.pixels.length / Math.max(1, frame.geometry.totalPixels);
       const continuousOffset = frame.geometry.receivers[index].offset / Math.max(1, frame.geometry.totalPixels);
       const x = continuous ? padding + (width - padding * 2) * continuousOffset : vertical ? padding + lane * index + lane / 2 - barHeight / 2 : padding;
@@ -1020,7 +1022,7 @@ function softChaseCoverage(distance,width,n,smooth){
         width:vertical?lane / width:1,
         height:vertical?1:lane / height});
       const availableLength = Math.max(0.5, continuous ? (width - padding * 2) * continuousFraction
-        : vertical ? height - y - Math.min(24, height / 4) : width - padding * 2);
+        : vertical ? height - y - verticalBottom : width - padding * 2);
       // One common physical pixel pitch for separate SPI rows. A 12-pixel
       // line must not get giant blocks beside a 28-pixel line merely because
       // each row was stretched independently to the full viewport width.
@@ -1081,7 +1083,7 @@ function softChaseCoverage(distance,width,n,smooth){
       // Pixel totals are actual active-output counts, never RGBW's sample size.
       if (options.labels !== false && !continuous && showLabel) {
         if (frame.rows.length > 1 || highlighted) context.fillText(String(options.lineNumbers?.[row.receiverId] || index + 1) + (highlighted ? ' · Actief' : ''),
-          vertical ? x + barHeight / 2 : x, vertical ? 19 : y - 12,
+          vertical ? x + barHeight / 2 : x, vertical ? compactVertical ? 12 : 19 : y - 12,
           vertical ? lane - 5 : Math.max(10, bw));
         if (row.type === 'SPI') {
           context.fillStyle = '#9fac9f'; context.font = '9px system-ui';

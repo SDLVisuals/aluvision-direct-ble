@@ -246,6 +246,7 @@ dialog{overscroll-behavior:contain}
 .control-preview-dock .preview-top{align-items:center;min-height:15px;font-size:9px}
 .control-preview-dock .preview-summary{max-width:58%;overflow:hidden;text-align:right;text-overflow:ellipsis;white-space:nowrap;color:#d4d9d4}
 .control-preview-dock .preview-wrap canvas{height:76px}
+.control-preview-dock .preview-wrap[data-preview-layout] canvas{min-height:var(--line-preview-min-height,0px)}
 .control-preview-dock .live-confirmation{min-height:0;margin:0}
 .control-preview-dock .preview-live-controls{padding:2px 4px 5px;font-size:9px}
 .control-preview-dock+.editor-controls{padding-top:7px}

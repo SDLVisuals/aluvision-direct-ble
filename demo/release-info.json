@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-20260927-inline-ledlines-01",
+  "revision": "v32-20260927-layout-preview-02",
   "interfaceVersion": 32,
-  "interfaceBaseline": "V32 keeps the established Aluvision interface and replaces the separate Opstelling tab with compact Ledlines instellen inside the existing animation page (also available below colour controls). Tunnel and Wand apply ordered zone arrangements; Doorlopend is SPI-only. Layout and order are drafted together and explicitly saved or cancelled, preserving light settings. Receiver management and multi-add reuse the existing flows and return to the same colour, gallery or animation context. The approved aluminium tunnel and vertical wall renderers and all animation engines are unchanged. The separate preview-view switch remains presentation-only and is remembered per zone. New setup labels are available in Dutch, English, French and German. Native source includes atomic revision-checked arrangement storage; this revision is not installed on iPhone and is not physical receiver acceptance. This isolated browser demo uses fictional receivers only, no hardware commands and no PIN collection.",
+  "interfaceBaseline": "V32 preserves the existing interface and integrated Ledlines instellen. New SPI zones default to Doorlopend: one continuous preview line. Tunnel shows horizontal ledlines below one another; Wand shows vertical ledlines side by side. The main preview immediately follows proposed layout and order, without saving or sending light commands before Bewaren; Annuleren restores the saved arrangement. Existing zone choices, colours, effects, outputs and selection are preserved. Compact wall lines remain legible on narrow phones. The approved 3D tunnel/wall gallery examples and animation engines are unchanged. New-zone defaults also match native iPhone storage. The isolated demo uses fictional receivers only, no hardware commands, firmware downloads or PIN collection. Browser verification does not prove physical receiver acceptance.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -40,7 +40,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "370e4b8567a767e5c955bf59f5b5a1ce7cfa00fa4daa839fdea948833f19b8a5"
+      "sha256": "755638dd00e3ff83b4d2887f5fedaafa79203471e7f6c4c748dda834e08c306a"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -64,7 +64,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "82d51d53386a83db067be06a191399291e841cba54bbc10f6c71ddae9a0759aa"
+      "sha256": "4be3f86fd3ea490aa3fe0ee794ba8a931cc78fe51c7af0c2f43fab8427166f77"
     },
     {
       "path": "fixtures.js",
@@ -72,7 +72,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "0d85fd07d2cca31631c757745f573257fa6391b56f2a8cb97604ad9c15a8006a"
+      "sha256": "5edb57a99c3492dca6b1486b33b2d75db85c60c1f695435f17f024e41acce20e"
     },
     {
       "path": "live-control.js",
@@ -84,7 +84,7 @@
     },
     {
       "path": "model.js",
-      "sha256": "b86181d7817446b36251ab723d6a497b1f31ba08fbcc26ad28fa8f4d228c83ac"
+      "sha256": "60e51e497e73c93c44cb3e659264bd7a5d74ceeff565f64be94c22c95e214bf7"
     },
     {
       "path": "native-runtime.js",
@@ -120,7 +120,7 @@
     },
     {
       "path": "preferences.js",
-      "sha256": "c7f989349acba339cecb26d75f0164cbf5c6d5fa1c9237dfd6943fcb841203e9"
+      "sha256": "f0e24690efd12157cd09a725b372c9abc88c2768e7d5826bafa7298be4a5aada"
     },
     {
       "path": "premium-surfaces.css",
@@ -132,7 +132,7 @@
     },
     {
       "path": "preview.js",
-      "sha256": "23b0f5118241f3cdd24f1557e46becf82218c122ba158ed97716a263c9553f4c"
+      "sha256": "85048456da570d6e882d7f4d7eeddb3f5429643f7c2cdb88c266d6feea0d12cc"
     },
     {
       "path": "receiver-playback.js",

@@ -228,7 +228,9 @@
       origin.receiverIds.splice(origin.receiverIds.indexOf(receiverId), 1);
     }
     var target = getZone(next, zoneId);
-    if (target.type === null) { target.type = receiver.type; target.layout = 'stacked'; }
+    // Bind the initial geometry only once. Saved choices (even when a typed
+    // zone has become empty) are never replaced by this new-zone default.
+    if (target.type === null) { target.type = receiver.type; target.layout = receiver.type === 'SPI' ? 'continuous' : 'stacked'; }
     target.receiverIds.push(receiverId); updated.zoneId = zoneId;
     // Includes all enabled SPI outputs/offline slots and the 8192-pixel limit
     // in a continuous destination. Rejection cannot mutate the caller's model.
