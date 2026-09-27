@@ -267,7 +267,7 @@
     return Array.from({length:count},(_,i)=>{
       const rgb=state.rgbEnabled?.[i]===false?[0,0,0]:rgbOf({colors:[palette[i%palette.length]]});
       const white=state.whiteEnabled?.[i]===false?0:(state.whiteChannels?.[i]||0);
-      const name=white>0 && rgb.every(v=>v===0)?'Wit':`Kleur ${i+1}`;
+      const name=activeEffect()?.whiteMixPreset?(count===1?'Witmix':`Witmix ${i+1}`):white>0 && rgb.every(v=>v===0)?'Wit':`Kleur ${i+1}`;
       const swatch=`<span role="img" aria-label="${name}" title="${name}" style="--swatch:${C.hex(C.mixWhite(rgb,white))}"></span>`;
       return activeEffect()?.paletteEditable === false ? swatch : `<div class="palette-item"><button class="palette-colour" data-action="palette-edit" data-id="${i}" aria-label="${name} aanpassen">${swatch}<small>${name}</small></button>${activeEffect()?.colorCountRange&&count>activeEffect().colorCountRange.min?`<button class="palette-remove" data-action="palette-remove" data-id="${i}" aria-label="Kleur ${i+1} verwijderen">−</button>`:''}</div>`;
     }).join('')+(activeEffect()?.colorCountRange&&count<activeEffect().colorCountRange.max?'<button class="palette-add" data-action="palette-add" aria-label="Animatiekleur toevoegen">＋ Kleur</button>':'');
@@ -515,8 +515,8 @@
     const s = selectedState();
     // Gallery navigation lives in the persistent dock, not a small action
     // buried in this scrolling settings card.
-    const paletteTitle=effect.category==='brand'?(effect.id==='v30-brand-focus'||effect.id.startsWith('v31-ref-'))?'Merkkleuren · tik om te wijzigen':'Accentkleur · tik om te wijzigen':effect.paletteEditable===false?'Kleurenreeks':'Animatiekleuren · tik om te wijzigen';
-    const paletteHelp=effect.id==='v30-brand-focus'?'<p class="palette-guidance">Voeg kleuren toe voor je merkaccent. De gloed laat ze na elkaar zien langs de ledlines.</p>':'';
+    const paletteTitle=effect.whiteMixPreset?'Witmix · tik om aan te passen':effect.category==='brand'?(effect.id==='v30-brand-focus'||effect.id.startsWith('v31-ref-'))?'Merkkleuren · tik om te wijzigen':'Accentkleur · tik om te wijzigen':effect.paletteEditable===false?'Kleurenreeks':'Animatiekleuren · tik om te wijzigen';
+    const paletteHelp=effect.whiteMixPreset?'<p class="palette-guidance">W geeft wit licht; rood en een beetje groen maken de mix warmer. Pas de mengkleur aan terwijl je naar je ledline kijkt.</p>':effect.id==='v30-brand-focus'?'<p class="palette-guidance">Voeg kleuren toe voor je merkaccent. De gloed laat ze na elkaar zien langs de ledlines.</p>':'';
     const content = `<div class="current-effect"><span class="menu-icon">${icon('animation')}</span><div><small>Actieve animatie · ${esc(categoryLabel(effect.category))}</small><b tabindex="-1" role="heading" aria-level="2">${esc(Library.displayName(effect))}</b><small>${esc(effect.description)}</small></div></div>${effect.category==='tunnel'?referenceEditorPreview(effect):''}<section class="card palette-section"><h2>${paletteTitle}</h2>${paletteHelp}<div class="palette" aria-label="Animatiekleuren">${paletteMarkup(s)}</div>${animationSlider('bri','Kleurhelderheid',0,100,s.bri??100,'%')}${resetMarkup('bri','Kleurhelderheid')}${backgroundControls(effect)}${effect.controls.includes('speed')?`${animationSlider('speed','Snelheid',0,100,s.speed??30,'%')}${resetMarkup('speed','Snelheid')}`:''}</section>${animationControls(effect)}<button class="button secondary full" data-action="preset-save">＋ Animatie bewaren</button>`;
     return `<section class="active-animation-workspace" aria-label="Animatie aanpassen">${content}</section>`;
   }
@@ -548,7 +548,7 @@
   function effectState(effect) {
     const state={...backgroundDefaults(),...copy(effect.state),category:effect.category,v30Effect:effect.state.v30Effect||null,previewFamily:effect.state.previewFamily||null,legacySpi:effect.state.legacySpi===true,bounce:effect.state.bounce===true,mirror:effect.state.mirror===true,on:true,power:true};
     if(effect.controls.includes('smooth'))state.smooth=100;
-    if(effect.category==='brand'){
+    if(effect.category==='brand'&&!effect.whiteMixPreset){
       const accent=currentBrandPalette()[0];
       state.brandColor=accent;
       if(effect.paletteEditable!==false){
@@ -597,7 +597,7 @@
       outputs:sampleType==='SPI'?[{port:1,enabled:true,pixels:32,reversed:false}]:[],state:previewState}]
       :physicalLines.map(r=>({...r,state:previewState}));
     const lineNumbers=Object.fromEntries(receivers().map((receiver,index)=>[receiver.id,index+1]));
-    return addPreview(list,representativeOnly?'stacked':zone().layout,tunnel?'tunnel-effect-preview':reference?'reference-preview':'',{label:Library.displayName(effect)+(tunnel?' · '+ledlineCount(list.length)+' in de tunnel':''),effectId:effect.id,brand:effect.category==='brand',brandPaletteLimit:effect.paletteEditable===false?0:effect.colorCountRange?.max||4,labels:!representativeOnly,lineNumbers,...(tunnel?{spatialShape:'tunnel',geometryReceivers:receivers()}:{} )});
+    return addPreview(list,representativeOnly?'stacked':zone().layout,tunnel?'tunnel-effect-preview':reference?'reference-preview':'',{label:Library.displayName(effect)+(tunnel?' · '+ledlineCount(list.length)+' in de tunnel':''),effectId:effect.id,brand:effect.category==='brand'&&!effect.whiteMixPreset,brandPaletteLimit:effect.paletteEditable===false?0:effect.colorCountRange?.max||4,labels:!representativeOnly,lineNumbers,...(tunnel?{spatialShape:'tunnel',geometryReceivers:receivers()}:{} )});
   }
   function tunnelGuide() {
     const list=selected(),count=list.length,zoneCount=receivers().length,together=selection().kind==='all';
@@ -1474,7 +1474,8 @@
   }
   function showPaletteEditor(index) {
     const s=selectedState();if(!Number.isInteger(index)||index<0||index>=Math.min(colours(s).length,s.colorCount||colours(s).length)||activeEffect()?.paletteEditable===false)return;
-    showEffectDialog(`Kleur ${index+1} aanpassen`,`${dialogAnimationPreview()}${colourPickerMarkup(index)}`);
+    const label=activeEffect()?.whiteMixPreset?'Witmix':'Kleur';
+    showEffectDialog(`${label} ${index+1} aanpassen`,`${dialogAnimationPreview()}${colourPickerMarkup(index)}`);
     paintWheel();syncColour();
   }
   function dialogAnimationPreview(){return `<div class="preview-wrap dialog-live-preview"><div class="preview-top">Live LED-voorbeeld</div>${zonePreview(zone(),'',{main:true,label:'Live voorbeeld met jouw animatiekleuren'})}</div>`;}

@@ -92,11 +92,12 @@
       { receiverTypes: ['SPI'], spatialResolution: 'pixel', controls: ['speed', 'smooth', 'fadeAmount', 'delayMs', 'direction', 'width'], directions: ['forward', 'reverse'] }),
     descriptor('tunnel-pixel-cross', 'Kruisende pixelgolven', 'tunnel', 'Twee pixelgolven ontmoeten elkaar per lijn; die beweging reist daarna naar de volgende receiver.', {},
       { receiverTypes: ['SPI'], spatialResolution: 'pixel', controls: ['speed', 'smooth', 'fadeAmount', 'delayMs', 'direction', 'width'], directions: ['forward', 'reverse'] }),
-    descriptor('brand-white-breathe', 'Wit ademen', 'brand', 'Neutraal wit ademt heel rustig; de verlichting gaat niet helemaal uit.',
-      { colors: ['#000000'], whiteChannels: [255], speed: 22 }, { controls: ['speed', 'smooth', 'fadeAmount'] }),
-    descriptor('brand-warm-white', 'Warm naar wit', 'brand', 'Een rustige overgang van een warme RGB + W-mix naar neutraal wit.',
-      { colors: ['#C55B13', '#000000'], whiteChannels: [125, 255], colorCount: 2, speed: 20 },
-      { controls: ['speed', 'smooth'] }),
+    descriptor('brand-white-breathe', 'Wit ademen', 'brand', 'Zacht wit met een warme tint ademt rustig. Pas de witmix aan voor jouw ledline.',
+      { colors: ['#400A00'], whiteChannels: [220], speed: 22 },
+      { controls: ['speed', 'smooth', 'fadeAmount'], paletteEditable:true, colorCountRange:{min:1,max:1}, whiteMixPreset:true }),
+    descriptor('brand-warm-white', 'Warm naar wit', 'brand', 'Een rustige overgang tussen warm en zacht wit. Beide RGB + W-mengkleuren zijn instelbaar.',
+      { colors: ['#FF2D00', '#400A00'], whiteChannels: [128, 220], colorCount: 2, speed: 20 },
+      { controls: ['speed', 'smooth'], paletteEditable:true, colorCountRange:{min:2,max:2}, whiteMixPreset:true }),
     descriptor('brand-accent', 'Merkaccent', 'brand', 'Je gekozen accentkleur keert zacht terug in een heldere witte basis.',
       { colors: [DEFAULT_BRAND], brandColor: DEFAULT_BRAND, speed: 22 }, { controls: ['speed', 'smooth', 'fadeAmount', 'brandColor'], paletteEditable: true, colorCountRange: { min: 1, max: 1 } }),
     descriptor('brand-sweep', 'Zachte lichtgloed', 'brand', 'Een subtiele merkglans beweegt over een rustige witte basis.',
@@ -226,7 +227,6 @@
   }
   function brandSample(id, state, clock, index, count, input) {
     const white = [0, 0, 0, 255];
-    const warm = physical('#C55B13', 125);
     const brand = physical(state.brandColor || (state.colors || [])[0] || DEFAULT_BRAND);
     const direction = state.direction === 'reverse' || state.direction === 'left' ? -1 : 1;
     const wave = (1 - Math.cos(clock.phase * Math.PI * 2)) / 2;
@@ -234,8 +234,15 @@
     const depth = clamp(state.fadeAmount, 0, 100, 90) / 100;
     const local = input.receiverType === 'SPI' ? (finite(input.pixelIndex, 0) + 0.5) / Math.max(1, input.pixelCount) : 0.5;
     const position = (index + local) / Math.max(1, count);
-    if (id === 'v30-brand-white-breathe') return white.map(channel => channel * (1 - 0.36 * depth + breathe * 0.36 * depth));
-    if (id === 'v30-brand-warm-white') return mix(warm, white, breathe);
+    if (id === 'v30-brand-white-breathe' || id === 'v30-brand-warm-white') {
+      // These are real RGB + W mixes, not a promise about the W die's colour
+      // temperature. Keep edited channels (including an all-off palette).
+      const colours = Array.isArray(state.colors) && state.colors.length ? palette(state) : [];
+      const softWhite = physical('#400A00', 220), warmWhite = physical('#FF2D00', 128);
+      if (id === 'v30-brand-white-breathe') return (colours[0] || softWhite)
+        .map(channel => channel * (1 - 0.36 * depth + breathe * 0.36 * depth));
+      return mix(colours[0] || warmWhite, colours[Math.min(1, colours.length - 1)] || softWhite, breathe);
+    }
     if (id === 'v30-brand-accent') return mix(white, brand, 0.08 + breathe * 0.45 * depth);
     if (id === 'v30-brand-focus') {
       const center = (1 - Math.cos(clock.phase * Math.PI * 2)) / 2;

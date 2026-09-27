@@ -72,7 +72,7 @@
     'spi-flow-73':'Meerkleurige merkflow','spi-breathe-74':'Kleur die rustig ademt','spi-chase-75':'Lopend merkaccent',
     'spi-flow-76':'Beursgolf','spi-flow-77':'Welkomsgolf','spi-breathe-78':'Zachte presentatiepuls','spi-breathe-79':'Avondsfeer',
     'spi-chase-80':'Productaccent','spi-sparkle-81':'Luxe schittering','spi-flow-82':'Rustige kleurgolf',
-    'spi-breathe-84':'Wit in beweging','spi-warm-85':'Warm naar neutraal wit'
+    'spi-breathe-84':'Wit in beweging','spi-warm-85':'Warm naar zacht wit'
   });
   // A small, contrasting introduction. These are references to the existing
   // recipes, never a second catalogue or a change to stored effect identities.
@@ -82,7 +82,7 @@
     {ids:['spi-chase-8'],title:'Lopend licht',summary:'Een lichtpunt loopt over de pixels.'},
     {ids:['spi-wave-29'],title:'Lichtgolf',summary:'Een zachte golf beweegt over de pixels.'},
     {ids:['rgbw-gradient-2'],title:'Kleurverloop',summary:'De ledlines veranderen zacht van kleur.'},
-    {ids:['v30-brand-warm-white'],title:'Warm naar wit',summary:'Warm licht gaat rustig over in neutraal wit.'}
+    {ids:['v30-brand-warm-white'],title:'Warm naar wit',summary:'Een warme witmix gaat rustig over in zacht wit.'}
   ]);
   function starters(items) {
     const hasPixels=items.some(effect=>effect.category==='pixels');

@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-20260927-tunnel-perspective-01",
+  "revision": "v32-20260927-white-mixes-01",
   "interfaceVersion": 32,
-  "interfaceBaseline": "V32 tunnel preview refinement after native build 158: restored oblique walk-through camera, one shared overview, compact family headings and one real selected-line tunnel per animation choice. Existing V32 backup, PIN, scenes, Brand, effect formulas and receiver protocols are unchanged. This demo revision is not yet installed on iPhone and does not confirm hardware operation or a receiver update. Native receiver context, PIN recovery, factory reset and playback persistence require compatible V32 firmware and physical acceptance. This browser demo is isolated: fictional receivers only, no hardware commands and no PIN collection. Exact visual equivalence to the reference videos is not claimed.",
+  "interfaceBaseline": "V32 editable white mixes after native build 158. White and Warm White use explicit RGB plus neutral/cool W recipes; Brand accent selection does not override these recipes. One-colour legacy WARM breathes all channels together; two-colour WARM blends independent W levels. Updated receiver source is required for these rendering corrections; no firmware is published by this demo release. The restored oblique tunnel overview and per-animation selected-line previews are retained. Existing backup, PIN, scenes and receiver protocols are unchanged. This revision is not installed on iPhone and does not confirm physical warmth, orange calibration or receiver operation. This browser demo uses fictional receivers only, no hardware commands and no PIN collection. No calibrated colour temperature or exact reference-video equivalence is claimed.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -24,7 +24,7 @@
   "assets": [
     {
       "path": "animation-engine.js",
-      "sha256": "50bb02244e63dc5d8e1b8203912f99d9ab506cbb6ac7c417c27055f9932a3f6d"
+      "sha256": "200d0c4a4a4cc24d3dbdc733ad11b11b8cec6acfe13898d3c32e442d11de3ebc"
     },
     {
       "path": "animation-library.css",
@@ -32,7 +32,7 @@
     },
     {
       "path": "animation-library.js",
-      "sha256": "0b43493345eef63c2f277e83c82e44c03f982ce2bb3a9388548ff927c4cfe5cc"
+      "sha256": "58c9fbe2dbf42ffd1febea01d5aed22abeca36cc2d03dc1166b081092a6e8f89"
     },
     {
       "path": "animations.css",
@@ -40,7 +40,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "b30ccb432cc50ffd7dbf29ff9a99523dce207503c09f2fc808305a616d610fde"
+      "sha256": "3e41dfff2b7fa1fdc710cbad85c47ec410df842e819c0b82e45145b7cb57f770"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -72,7 +72,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "51eed94e902afe2c21b18a994bcd74a8e51f88cace9fdda386e5a29c66930000"
+      "sha256": "2b822b00c73ad2821a3d80266ccfb3615417a18abb60ffc51098ea13462772c9"
     },
     {
       "path": "live-control.js",
@@ -132,7 +132,7 @@
     },
     {
       "path": "preview.js",
-      "sha256": "0182ce113568efe8b3658f7560ee6c61fabb5c75744a18dc03d9d89da4887130"
+      "sha256": "edd7fdd2f55710ca995794888cfb550fbf342325a19f2e828b0a936940e10b2a"
     },
     {
       "path": "receiver-playback.js",

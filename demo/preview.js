@@ -199,6 +199,7 @@
     const effectWireVariant = effect => Number(effect?.[3]);
     function effectColorCount(effect) {
       const variant = effectWireVariant(effect);
+      if (variant === 85) return 2;
       if ([98,99,102].includes(variant)) return 1;
       if ([100,103].includes(variant)) return 2;
       if (variant === 101) return 3;
@@ -365,9 +366,8 @@ function softChaseCoverage(distance,width,n,smooth){
         const q=wrap(u-temporal);foreground=mix(palette[Math.min(Math.floor(q*objects),objects-1)%count],gradient(q,true),curve);amount=objectAmount();
         if(engine==='CASCADE')amount=Math.floor(amount*65535*(60+Math.floor(q*40))/100)/65535;
       }else if(engine==='WARM'){
-        const clock=phaseSteps(temporal+u*.72),white=Math.max(...palette.map(c=>c[3]));
-        if(!palette.some(c=>c[0]||c[1]||c[2]))foreground=[0,0,0,(white||255)*(.68+.32*ease(.5+.5*Math.sin(clock*tau)))];
-        else{foreground=gradient(clock,true);if(white)foreground[3]=Math.max(foreground[3],white);}
+        const clock=phaseSteps(temporal+u*.72);
+        foreground=count===1?palette[0].map(channel=>channel*(.68+.32*ease(.5+.5*Math.sin(clock*tau)))):gradient(clock,true);
       }else if(engine==='ALL')foreground=gradient(temporal);
       else{foreground=gradient(temporal);amount=objectAmount();}
       const channels=mixAnimated(bg,foreground,amount),bright=engine==='WARM'?(palette.some(c=>c.some(x=>x!==0))?brightness:0):1;
@@ -377,12 +377,14 @@ function softChaseCoverage(distance,width,n,smooth){
       return effects.filter(effect=>effect[1]!=='STATIC').map(effect=>{
         const [name,engine,,variant,overrides={}]=effect;
         const count=effectColorCount(effect);
-        // WARM's dedicated white-emitter flow must not start with an opaque
-        // W=255 + one constant RGB tint, which produces a static physical look.
-        // Only defaults change; saved palettes/receiver state remain intact.
-        const palette=engine==='WARM'?['#000000']:variant===103 ? ['#FFF4D4','#F3A24D'] : ['#C94E46','#F0B95F','#669CC6'];
+        // The installed W emitter is neutral/cool, not inherently warm. Use
+        // an explicit, editable red-dominant RGB + W mix, without a Kelvin
+        // claim. New defaults only: never overwrite saved customer palettes.
+        const whiteMixPreset=[48,49,79,84,85].includes(variant);
+        const palette=variant===85?['#FF2D00','#400A00']:engine==='WARM'?['#FF2D00']:whiteMixPreset?['#400A00','#803000']:variant===103 ? ['#FFF4D4','#F3A24D'] : ['#C94E46','#F0B95F','#669CC6'];
+        const whites=variant===85?[128,220]:engine==='WARM'?[128]:whiteMixPreset?[220,190]:Array(count).fill(0);
         const state={animation:name,engine,variant,legacySpi:true,previewStartedAt:0,phaseMs:0,
-          colors:palette.slice(0,count),whiteChannels:Array(count).fill(engine==='WARM'?255:0),
+          colors:palette.slice(0,count),whiteChannels:whites.slice(0,count),
           rgbEnabled:Array(count).fill(true),whiteEnabled:Array(count).fill(true),colorCount:count,
           on:true,power:true,bri:85,brightness:85,backgroundOn:false,background:'#000000',
           backgroundWhite:0,bgBrightness:10,direction:'right',...animationDefaults(effect),...overrides};
@@ -424,10 +426,10 @@ function softChaseCoverage(distance,width,n,smooth){
           :BRAND_SPI_VARIANTS.has(Number(variant))?'brand':'pixels';
         const entryFamily=category==='tunnel'?'Tunnel':family({engine});
         return {id:'spi-'+engine.toLowerCase()+'-'+variant,name,family:entryFamily,state,
-          category,legacy:true,source:'v21-inline-catalog',paletteEditable:true,
-          colorCountRange:{min:1,max:engine==='WARM'||[90,91,92,94,96,98,99,102].includes(variant)?1:variant===103?2:4},
+          category,legacy:true,source:'v21-inline-catalog',paletteEditable:true,whiteMixPreset,
+          colorCountRange:{min:1,max:variant===85?2:engine==='WARM'||[90,91,92,94,96,98,99,102].includes(variant)?1:variant===103?2:4},
           backgroundEditable:variant===103||!['STATIC','GRADIENT','WARM','ALL'].includes(engine)&&![100,101].includes(variant),
-          description:category==='tunnel'?'Een bestaande beweging verdeeld over meerdere LED Lines.':
+          description:variant===49?'Een warme RGB + W-mix ademt rustig. Pas de witmix aan voor jouw ledline.':variant===85?'Warm en zacht wit gaan rustig in elkaar over. Beide witmixen zijn instelbaar.':category==='tunnel'?'Een bestaande beweging verdeeld over meerdere LED Lines.':
             category==='whole'?'De volledige SPI LED Line neemt samen dezelfde kleur of fade aan.':descriptions[engine],
           controls:controlKeys,directions:controlKeys.includes('direction')?['right','left']:[],
           minimumReceivers:category==='tunnel'?2:1,
