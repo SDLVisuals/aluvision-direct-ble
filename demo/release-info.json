@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-20260927-mobile-gallery-01",
+  "revision": "v32-20260928-effects-top-01",
   "interfaceVersion": 32,
-  "interfaceBaseline": "V32 preserves the existing interface and approved 3D tunnel/wall examples. The phone-first animation gallery uses a rounded category sheet with large explained choices, readable full-width animated cards, and one clear return to active settings. Arrangement icons depict the chosen tunnel, vertical wall or continuous line. Arrangement and order choices apply directly, without a separate save/cancel step. New SPI zones default to Doorlopend; the main preview follows the selected geometry. Existing colours, effects, outputs, selection and edited animation settings are preserved. The isolated demo uses fictional receivers only, no hardware commands, firmware downloads or PIN collection. Browser verification does not prove an iPhone installation or physical receiver acceptance.",
+  "interfaceBaseline": "V32 preserves the existing interface and approved 3D tunnel/wall examples. The phone-first animation gallery uses a rounded category sheet with large explained choices, readable full-width animated cards, and one clear return to active settings. Returning to the Effecten tab always opens at the top rather than restoring an old deep gallery scroll position. Arrangement icons depict the chosen tunnel, vertical wall or continuous line. Arrangement and order choices apply directly, without a separate save/cancel step. New SPI zones default to Doorlopend; the main preview follows the selected geometry. Existing colours, effects, outputs, selection and edited animation settings are preserved. The isolated demo uses fictional receivers only, no hardware commands, firmware downloads or PIN collection. Browser verification does not prove an iPhone installation or physical receiver acceptance.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -24,11 +24,11 @@
   "assets": [
     {
       "path": "animation-engine.js",
-      "sha256": "200d0c4a4a4cc24d3dbdc733ad11b11b8cec6acfe13898d3c32e442d11de3ebc"
+      "sha256": "1c06667d0ab4c75713567fe4d51057972ef3e14b1ad65dbafbb4f881973e442e"
     },
     {
       "path": "animation-library.css",
-      "sha256": "7413b2c7a928e56062b476922591e938901edc0aaef33f37fb36cf52abcf8425"
+      "sha256": "c61f3375e3e3d4b51d86333b27acfe6ae6106e93a835309fe849dd5746473e91"
     },
     {
       "path": "animation-library.js",
@@ -36,7 +36,7 @@
     },
     {
       "path": "animation-mobile.css",
-      "sha256": "13393ef8f62824ac3e927bbf7acedbbaaa1ef61172494de888685fa0cf581cf2"
+      "sha256": "5217933bd75eee4b9d55b6f1bf8b3db015015833149d35562ee3cc50ede809fb"
     },
     {
       "path": "animations.css",
@@ -44,7 +44,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "bf94c75a8628c85b98a58995eacecb84592472263cb02a6a17c2f5c6331bfb8c"
+      "sha256": "351da35041920a996c49e95b1f088ad78ce143d8522faff3529af65aa613ea06"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -52,7 +52,7 @@
     },
     {
       "path": "backup.js",
-      "sha256": "70275f54d934ae6d42791f6fb4680588572022db997d76e8f6eccaea8f3659ab"
+      "sha256": "7679f7d18e336f64368da4d2e79d4ac7260414db421a22a98abd06e8684fd9e0"
     },
     {
       "path": "colour-library-drag.js",
@@ -64,11 +64,11 @@
     },
     {
       "path": "colours-library.js",
-      "sha256": "7cd6eff981a6540a30f7c1d3bfdf328750d26c0e8837e51f1d8145c0f386a9f1"
+      "sha256": "b77a7e4bb6349d03dbda01efb20bf8ec56e078aa94f5a94fae1f8d0cda2e8355"
     },
     {
       "path": "continuity.css",
-      "sha256": "1e91fa4be391a951ee614db65b584a5f106c3d194b7ccf5c596e4b4630170bbb"
+      "sha256": "974b1e144ff26dbe5a7271ce22187cf3ff5645bf3b13825f391f41cfba33cd96"
     },
     {
       "path": "fixtures.js",
@@ -76,11 +76,11 @@
     },
     {
       "path": "index.html",
-      "sha256": "47e23d0a065c36141c4671afaadfcfa7bdc2ef71a14eb96b97d8b8070bdf03e2"
+      "sha256": "ca95d8cb8031ea662eb1a1eb403286eb73afc307fe7d982ee26591455f0e393a"
     },
     {
       "path": "live-control.js",
-      "sha256": "1e75f5191a60337399ad519cdfe4a186897adebbf1926a3bbe2651dd632db1f8"
+      "sha256": "71c117522894b2992090443afd6cb76659f90a77c43909f5ab74e1a190a52813"
     },
     {
       "path": "migration.js",
@@ -92,7 +92,7 @@
     },
     {
       "path": "native-runtime.js",
-      "sha256": "13b24f0e2abeaff0b154b13eed75f3d3f8514e86c1b919c2fb838798984ff42f"
+      "sha256": "179a547ea38e1641dad02d5bfc398a169d971c59af2837b805d9e9f280bb819d"
     },
     {
       "path": "onboarding-adapter.js",
@@ -112,19 +112,19 @@
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "37c0d54695ca3a108803282aa4f8da7de467593777df95da1e764a6c2e4b3bf1"
+      "sha256": "901c348d5b4c42c537d134f776546edb5393b7ea7764f6668b5dea465090890f"
     },
     {
       "path": "pixel-setup.css",
-      "sha256": "b98306b324966ee6eff961755ce76b31a117f9a7ab7cccc57531b28c3f3822fe"
+      "sha256": "cce965e3899d187b9956447cfd1ce06fb281c94f652ebbe183bb1b45114aa53b"
     },
     {
       "path": "pixel-setup.js",
-      "sha256": "0224e2829b1af29fe47517d97a14fb4675fbbf9d5ab7390b216b5d20b762d23f"
+      "sha256": "8a75f45cf944e1039a3c1f772b4a8d547c84c48dcde472ae69b99a265f40eca2"
     },
     {
       "path": "preferences.js",
-      "sha256": "a337cb36776d43f8963834294196fdfb3edf9297e0b9959662726c5b5006c531"
+      "sha256": "76f6a467a23161c5e87fcba2f420e5e5fdab57399f3b70892b01e3425d91573b"
     },
     {
       "path": "premium-surfaces.css",
@@ -152,11 +152,11 @@
     },
     {
       "path": "receiver-update-ui.css",
-      "sha256": "2f291a579ce55e99ca50715c70d3bb85dec221fa97b138c5fe82ecdc8fe18b1b"
+      "sha256": "1bcd03003d0a3da2a224c9b98c3793d99afb6f3bb378bc588857759547f18b4a"
     },
     {
       "path": "receiver-update-ui.js",
-      "sha256": "ccda036b859cc93e5f909813ab6dd8b8edf263fc7ba285f1741ec8ed5041451a"
+      "sha256": "4ab0de834f0ed69c8c9c3b55be254058b4e17b1f4ca90ed20044fddd3bba373b"
     },
     {
       "path": "receiver-visual.css",
@@ -172,7 +172,7 @@
     },
     {
       "path": "scenes.css",
-      "sha256": "c94a08ba17d0726fdcd2b631deefa39590dbe9fc3f97270dbb3d6ae1f260afb6"
+      "sha256": "f37c9c30ddb0478b87944ca0c6714696fe91c06abe26c0c543418eff5ce08812"
     },
     {
       "path": "scenes.js",
@@ -184,7 +184,7 @@
     },
     {
       "path": "styles.css",
-      "sha256": "bfae263c645f29455786f1bc565be7cb802623ef191f63cab67d91720be2b236"
+      "sha256": "c74b344259e889330e1cc7973dcfdcb38cfa60f19b1983c137cc9e5fa90d1929"
     },
     {
       "path": "vendor/v21_animation_catalog.js",

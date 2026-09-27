@@ -1,5 +1,6 @@
 /* Shared SPI setup presentation. This module edits copies only. It does not
- * send calibration commands, claim a receiver, change membership or persist.
+ * claim a receiver, change membership or persist. Optional bounded preview
+ * commands are sent only through the supplied, acknowledged native service.
  * A composition root must explicitly supply onSave and verify hardware there.
  */
 (function(root,factory){'use strict';const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.LightningPixelSetup=api;}(typeof globalThis!=='undefined'?globalThis:this,function(){
@@ -59,7 +60,7 @@
     // Right-side input reverses physical pixel order once; it is not a separate
     // animation-direction choice. Keep the cable and its marker together.
     const cableLabel='<span class="pixel-cable-label"><i></i>Stroom in</span>',otherEnd='<span></span>';
-    return `<div class="pixel-setup-visual pixel-connection-preview" data-pixel-visual="connection" data-side="${reversed?'right':'left'}" data-preview-pixels="${output.pixels}" data-ledline-reference="supplied-spi-profile" role="img" aria-label="${endpointLabel(output)}. LED-line met breed profiel, diffuser en aansluitkabel. De groene aansluiting is altijd bij de kabel. Schematisch, geen fysieke lichttest."><div class="pixel-setup-reference" aria-hidden="true"><span>Links</span><span>Rechts</span></div><div class="pixel-cable-line"><span class="pixel-cable-source" aria-hidden="true">${cableIcon}</span><span class="pixel-setup-track"><span class="pixel-setup-strip pixel-ledline-profile"><i class="start"></i></span></span></div><div class="pixel-setup-endpoint-labels">${reversed?otherEnd+cableLabel:cableLabel+otherEnd}</div></div>`;
+    return `<div class="pixel-setup-visual pixel-connection-preview" data-pixel-visual="connection" data-side="${reversed?'right':'left'}" data-preview-pixels="${output.pixels}" data-ledline-reference="supplied-spi-profile" role="img" aria-label="${endpointLabel(output)}. Het groene lichtblokje toont de gekozen stroomkant. Schematische weergave."><div class="pixel-setup-reference" aria-hidden="true"><span>Links</span><span>Rechts</span></div><div class="pixel-cable-line"><span class="pixel-cable-source" aria-hidden="true">${cableIcon}</span><span class="pixel-setup-track"><span class="pixel-setup-strip pixel-ledline-profile"><i class="start" data-power-marker="${reversed?'right':'left'}" aria-hidden="true"></i></span></span></div><div class="pixel-setup-endpoint-labels">${reversed?otherEnd+cableLabel:cableLabel+otherEnd}</div></div>`;
   }
   function renderOutputs(outputs,{onboarding=false,initialPort=null}={}){
     const attr=onboarding?'data-onboarding-action':'data-pixel-action';
@@ -80,10 +81,10 @@
     const attr=onboarding?'data-onboarding-action':'data-pixel-action',limits=pixelLimits({pixelsPerMeter}),valid=editablePixels(output.pixels,limits);
     return `<section class="pixel-setup-panel" data-pixel-panel="pixels" data-combined="${combined}" data-pixels-per-meter="${pixelsPerMeter}"><h2>Lengte van je ledline</h2><div data-pixel-preview data-pixel-scrub role="slider" tabindex="0" aria-label="Aantal pixels op poort ${output.port}; veeg links of rechts" aria-valuemin="${limits.min}" aria-valuemax="${limits.max}" aria-valuenow="${output.pixels}" aria-valuetext="${output.pixels} pixels, handmatig ingesteld">${strip(output,combined?'connection':'pixels',limits)}</div>${combined?'<small class="pixel-scrub-hint">↔ Veeg voor de lengte · voorbeeld, geen testlicht</small>':''}<div class="pixel-setup-meter-counter"><button type="button" ${attr}="meter-less" aria-label="Eén meter minder" ${output.pixels===MIN?'disabled':''}>− 1 meter</button><output data-pixel-meters>${meterLabel(output.pixels,limits)}</output><button type="button" ${attr}="meter-more" aria-label="Eén meter meer" ${output.pixels>=limits.max?'disabled':''}>＋ 1 meter</button></div><div class="pixel-setup-counter"><button type="button" ${attr}="pixel-less" aria-label="Eén pixel minder" ${output.pixels===MIN?'disabled':''}>−</button><label for="${esc(inputId)}"><input id="${esc(inputId)}" data-pixel-count type="number" inputmode="numeric" min="${limits.min}" max="${limits.max}" step="1" value="${output.pixels}" aria-invalid="${!valid}" aria-label="Aantal pixels op uitgang ${output.port}" aria-describedby="${esc(inputId)}-error"><span>pixels · exact aantal</span></label><button type="button" ${attr}="pixel-more" aria-label="Eén pixel meer" ${output.pixels>=limits.max?'disabled':''}>＋</button></div><p id="${esc(inputId)}-error" data-pixel-error class="pixel-setup-error" role="alert" ${valid?'hidden':''}>Maximaal 6,3 meter per strip. Kies 0 tot ${limits.max} pixels (${pixelsPerMeter} pixels/m).</p><p class="pixel-zero-hint" data-pixel-empty ${output.pixels===0?'':'hidden'}>Stel de lengte in om verder te gaan.</p><p class="pixel-meaning">Een pixel is één apart regelbaar stukje licht.</p><details class="pixel-setup-more"><summary>Lengte bepalen · max. 6,3 m</summary><p>Neem het aantal van je LED-line over of tel de pixels. De app meet de lengte niet automatisch. De meterwaarde is een schatting op basis van ${pixelsPerMeter} pixels per meter; het voorbeeld is geen fysieke lichttest.</p></details></section>`;
   }
-  function renderSide(output,{onboarding=false,combined=false}={}){
+  function renderSide(output,{onboarding=false,combined=false,live=false}={}){
     const attr=onboarding?'data-onboarding-action':'data-pixel-action';
     const choice=`${cableIcon}<span class="pixel-feed-mini-line"></span>`;
-    return `<section class="pixel-setup-panel" data-pixel-panel="connection"><h2>Aan welke kant komt de stroom binnen?</h2>${combined?'':`<p>Kijk waar de kabel van deze receiver je LED-line ingaat.</p><small class="pixel-preview-notice">Voorbeeld · geen testlicht</small>${strip(output,'connection')}`}<div class="pixel-setup-sides" role="group" aria-label="Kant waar de stroom binnenkomt"><button type="button" ${attr}="side" data-side="left" aria-pressed="${!output.reversed}"><span class="pixel-feed-choice" aria-hidden="true">${choice}</span><span>Links</span></button><button type="button" ${attr}="side" data-side="right" aria-pressed="${output.reversed}"><span class="pixel-feed-choice" aria-hidden="true">${choice}</span><span>Rechts</span></button></div><details class="pixel-setup-more"><summary>Waarom dit kiezen?</summary><p>Bekijk de LED-line zoals ze in je opstelling ligt. Kies de kant waar de kabel van deze receiver binnenkomt. Zo houdt de app rekening met de aansluiting wanneer lijnen samen bewegen. Je hoeft niets om te steken. Groen toont alleen de aansluiting in het voorbeeld, geen testlicht. De animatierichting kies je later.</p></details></section>`;
+    return `<section class="pixel-setup-panel" data-pixel-panel="connection"><h2>Aan welke kant komt de stroom binnen?</h2>${combined?'':`<p>Kijk waar de kabel van deze receiver je LED-line ingaat.${live?' Het groene testblokje wisselt mee met je keuze.':''}</p>${strip(output,'connection')}`}<small class="pixel-preview-notice" data-power-preview-status data-test-light="idle" role="status" aria-live="polite">Voorbeeld · geen testlicht</small><div class="pixel-setup-sides" role="group" aria-label="Kant waar de stroom binnenkomt"><button type="button" ${attr}="side" data-side="left" aria-pressed="${!output.reversed}"><span class="pixel-feed-choice" aria-hidden="true">${choice}</span><span>Links</span></button><button type="button" ${attr}="side" data-side="right" aria-pressed="${output.reversed}"><span class="pixel-feed-choice" aria-hidden="true">${choice}</span><span>Rechts</span></button></div><details class="pixel-setup-more"><summary>Waarom dit kiezen?</summary><p>Bekijk de LED-line zoals ze in je opstelling ligt. Kies de kant waar de kabel van deze receiver binnenkomt. Zo houdt de app rekening met de aansluiting wanneer lijnen samen bewegen. Je hoeft niets om te steken. ${live?'Het testlicht is tijdelijk. Als je verdergaat of sluit, keert je gewone verlichting terug.':'Groen toont alleen de aansluiting in het voorbeeld, geen testlicht.'} De animatierichting kies je later.</p></details></section>`;
   }
   function renderPort(output,options={}){return `<div class="pixel-combined-port">${renderPixels(output,{...options,combined:true})}${renderSide(output,{...options,combined:true})}</div>`;}
   function updatePixels(container,output,{source,pixelsPerMeter}={}){
@@ -156,7 +157,7 @@
   function createLivePreview({send,onState=()=>{},delay=170,setTimer=setTimeout,clearTimer=clearTimeout}={}){
     let queued=null,active=null,desired=null,running=null,timer=null,renew=null,version=0;
     const key=r=>JSON.stringify([r.standId,r.transactionId,r.receiver,r.role,r.mainReceiverId,r.port]);
-    const report=(kind,request)=>onState({kind,port:request?.port,pixels:request?.pixels});
+    const report=(kind,request)=>onState({kind,port:request?.port,pixels:request?.pixels,guide:request?.guide||'length',reversed:request?.reversed});
     function cancelTimers(){clearTimer(timer);clearTimer(renew);timer=renew=null;}
     async function stopActive(){
       if(!active)return;const previous=active;
@@ -171,15 +172,15 @@
         while(queued){
           const item=queued;queued=null;
           try{
-            if(item.stop){await stopActive();if(!desired)report('idle');continue;}
+            if(item.stop){const stopped=active;await stopActive();if(!desired)report('idle',stopped);continue;}
             const request=item.request;
             if(active&&key(active)!==key(request))await stopActive();
             const action=active?'update':'start';active=request;
             const answer=await send({...request,action});
-            if(answer?.applied!==true||answer.port!==request.port||answer.pixels!==request.pixels||!Number.isInteger(answer.previewTTLMS)||answer.previewTTLMS<1||answer.previewTTLMS>15000)throw Error('PIXEL_PREVIEW_UNCONFIRMED');
-            if(item.version===version&&desired){report('applied',request);clearTimer(renew);renew=setTimer(()=>{renew=null;if(desired){queued={request:desired,version};void drain();}},Math.min(10000,Math.max(500,answer.previewTTLMS-3000)));}
-          }catch(_){
-            if(item.version===version||item.stop){desired=null;clearTimer(renew);renew=null;report('failed',active);}
+            if(answer?.applied!==true||answer.port!==request.port||answer.pixels!==request.pixels||!Number.isInteger(answer.previewTTLMS)||answer.previewTTLMS<(request.pixels===0?0:1)||answer.previewTTLMS>15000||request.guide==='power'&&(answer.guide!=='power'||answer.reversed!==request.reversed))throw Error('PIXEL_PREVIEW_UNCONFIRMED');
+            if(item.version===version&&desired){report('applied',request);clearTimer(renew);if(answer.previewTTLMS>0)renew=setTimer(()=>{renew=null;if(desired){queued={request:desired,version};void drain();}},Math.min(10000,Math.max(500,answer.previewTTLMS-3000)));}
+          }catch(error){
+            if(item.version===version||item.stop){desired=null;clearTimer(renew);renew=null;report(error?.code==='PIXEL_GUIDE_UPDATE_REQUIRED'?'unsupported':'failed',active);}
           }
         }
       })().finally(()=>{running=null;if(queued)void drain();});
@@ -197,8 +198,8 @@
     }
     return Object.freeze({update,stop});
   }
-  function previewMessage(state){return state.kind==='failed'?'Testlicht niet bereikbaar. Controleer de receiververbinding; je aantal blijft bewaard.':state.kind==='applied'?(state.pixels?`Testlicht verstuurd naar poort ${state.port}. De laatste pixel (${state.pixels}) hoort rood te branden; de andere pixels wit.`:'0 pixels · testlicht uit.'):state.kind==='pending'?'Testlicht aanpassen…':'Testvoorbeeld · geen testlicht';}
-  function showPreviewStatus(container,state){const label=container?.querySelector('[data-pixel-preview] .pixel-preview-notice');if(label){label.textContent=previewMessage(state);label.dataset.testLight=state.kind;}}
+  function previewMessage(state){return state.kind==='unsupported'?'Werk deze receiver bij om de gekozen kant met groen testlicht te tonen. Je keuze blijft staan.':state.kind==='failed'?`Testlicht niet bereikbaar. Controleer de receiververbinding; ${state.guide==='power'?'je keuze blijft staan':'je aantal blijft bewaard'}.`:state.kind==='applied'?(state.guide==='power'?`Testlicht verstuurd naar poort ${state.port}. Groen hoort ${state.reversed?'rechts':'links'} te branden; de andere pixels wit.`:state.pixels?`Testlicht verstuurd naar poort ${state.port}. De laatste pixel (${state.pixels}) hoort rood te branden; de andere pixels wit.`:'0 pixels · testlicht uit.'):state.kind==='pending'?'Testlicht aanpassen…':'Testvoorbeeld · geen testlicht';}
+  function showPreviewStatus(container,state){const label=container?.querySelector(state.guide==='power'?'[data-power-preview-status]':'[data-pixel-preview] .pixel-preview-notice');if(label){label.textContent=previewMessage(state);label.dataset.testLight=state.kind;}}
   function create({onSave,onClose=()=>{},onPreview,mode='preview',pixelsPerMeter=DEFAULT_PIXELS_PER_METER}={}){
     if(typeof onSave!=='function')throw Error('PIXEL_SAVE_HANDLER_REQUIRED');
     const limits=pixelLimits({pixelsPerMeter});
@@ -208,10 +209,10 @@
     const livePreview=createLivePreview({send:mode==='native'?onPreview:null,onState:state=>{previewState=state;showPreviewStatus(dialog,state);}});
     const plan=()=>sequence(outputs),current=()=>plan()[index],output=()=>outputs.find(item=>item.port===current().port);
     function syncPreview(){
-      if(!dialog||document.hidden||current().stage!=='pixels'){void livePreview.stop();return;}
+      if(!dialog||document.hidden||!['pixels','connection'].includes(current().stage)){void livePreview.stop();return;}
       livePreview.update({standId:receiver.standId,transactionId:previewTransaction,
         receiver:{id:receiver.id,rid:receiver.rid,type:'SPI',deviceFingerprint:receiver.deviceFingerprint},role:receiver.role,
-        mainReceiverId:receiver.mainReceiverId||null,port:output().port,pixels:output().pixels});showPreviewStatus(dialog,previewState);
+        mainReceiverId:receiver.mainReceiverId||null,port:output().port,pixels:output().pixels,...(current().stage==='connection'?{guide:'power',reversed:output().reversed}:{})});showPreviewStatus(dialog,previewState);
     }
     function visibility(){syncPreview();}
     function paint(time){if(dialog?.open&&['outputs','pixels','connection'].includes(current().stage)){const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;paintOutputs(dialog,outputs,{time,reducedMotion,selectedPort:current().port||selectedPort,plugProgress:current().stage==='outputs'?plugMotion.sample(time,reducedMotion):{}});}}
@@ -221,7 +222,7 @@
       const focusedPort=dialog.contains(document.activeElement)&&document.activeElement.dataset.pixelAction==='output'?document.activeElement.dataset.port:null;
       let content='';
       if(step.stage==='outputs')content=`<p>Welke uitgangen gebruik je? Zet elke aangesloten uitgang aan.</p>${renderOutputs(outputs,{initialPort})}<small>Je kunt later een extra uitgang inschakelen. Je bestaande aantallen en aansluitingen blijven bewaard.</small>`;
-      if(active)content=`${renderPortContext(outputs,active.port,{stage:step.stage})}${step.stage==='connection'?renderSide(active):renderPixels(active,limits)}`;
+      if(active)content=`${renderPortContext(outputs,active.port,{stage:step.stage})}${step.stage==='connection'?renderSide(active,{live:mode==='native'&&typeof onPreview==='function'}):renderPixels(active,limits)}`;
       if(step.stage==='review')content=`<p>Controleer je uitgangen. Je receiver blijft in dezelfde zone.</p><div class="pixel-setup-review">${ports.map(item=>`<div><b>P${item.port}</b><span>${item.pixels} pixels · ${meterLabel(item.pixels,limits)}<small>${endpointLabel(item)}</small></span></div>`).join('')}</div>`;
       dialog.innerHTML=`<div class="pixel-setup-shell"><header class="pixel-setup-header"><div><small>${esc(receiver.name||'SPI-receiver')}</small><h1>${step.stage==='connection'?'Waar komt de stroom binnen?':'Pixels / aansluiting instellen'}</h1></div><button type="button" data-pixel-action="close" aria-label="Instellingen sluiten" ${busy?'disabled':''}>×</button></header>${renderProgress(step.stage)}<div class="pixel-setup-body" data-stage="${step.stage}" data-port="${step.port||''}">${content}<p class="pixel-setup-mode" id="pixel-setup-mode" ${mode==='preview'&&step.stage!=='review'?'hidden':''}>${mode==='preview'?'Voorbeeld aanpassen · dit stuurt nog geen signaal naar de LED-line.':mode==='native'?'Instellingen worden op de receiver bewaard.':'Je kunt de stappen bekijken. Opslaan en de echte LED-line testen zijn nog niet beschikbaar.'}</p><p class="pixel-setup-error" role="alert" ${error?'':'hidden'}>${esc(error)}</p></div><footer class="pixel-setup-footer"><button type="button" data-pixel-action="${index?'back':'close'}" ${busy?'disabled':''}>${index?'← Terug':'Annuleren'}</button><button type="button" data-pixel-action="${step.stage==='review'?'save':'next'}" ${busy||!ports.length||step.stage==='pixels'&&!configuredPixels(active.pixels,limits)||step.stage==='review'&&(!['preview','native'].includes(mode)||ports.some(item=>!configuredPixels(item.pixels,limits)))?'disabled aria-describedby="pixel-setup-mode"':''}>${busy?'Bewaren…':step.stage==='review'?'Instellingen bewaren':active?nextPortLabel(outputs,active.port,{stage:step.stage,last:'Controleren →'}):'Volgende →'}</button></footer></div>`;
       if(recovering){const back=dialog.querySelector('[data-pixel-action="back"]');if(back){back.dataset.pixelAction='close';back.textContent='Sluiten';}}
@@ -235,7 +236,7 @@
     async function click(event){
       const target=event.target.closest('[data-pixel-action]');if(!target||target.disabled||busy)return;
       const action=target.dataset.pixelAction,step=current();
-      if(['next','back','save'].includes(action)&&step.stage==='pixels'){busy=true;try{await livePreview.stop();}finally{busy=false;}if(!dialog)return;}
+      if(['next','back','save'].includes(action)&&['pixels','connection'].includes(step.stage)){busy=true;try{await livePreview.stop();}finally{busy=false;}if(!dialog)return;}
       if(action==='close')return close();
       if(action==='output'){const item=outputs.find(item=>item.port===Number(target.dataset.port));if(item.enabled&&outputs.filter(item=>item.enabled).length===1){error='Gebruik minstens één uitgang.';render();return;}item.enabled=!item.enabled;selectedPort=item.port;plugMotion.trigger(item.port,performance.now()/1000,item.enabled);error='';return render();}
       if(['pixel-less','pixel-more','meter-less','meter-more'].includes(action))return adjust(stepPixels(output().pixels,(action.endsWith('less')?-1:1)*(action.startsWith('meter')?Math.round(limits.pixelsPerMeter):1),limits));

@@ -51,7 +51,7 @@
     function errorKey(code){
       const map={
         OTA_DIRECT_WIFI_REQUIRED:'softwareErrorConnection',NATIVE_UNAVAILABLE:'softwareErrorConnection',
-        OTA_ACK_TIMEOUT:'softwareErrorAck',OTA_RECEIVER_REJECTED:'softwareErrorAck',
+        OTA_ACK_TIMEOUT:'softwareErrorAck',OTA_RECEIVER_REJECTED:'softwareErrorRejected',
         OTA_RESTART_NOT_VERIFIED:'softwareErrorRestart',OTA_ROLLBACK:'softwareErrorRollback',
         OTA_TOPOLOGY_UNSUPPORTED:'softwareErrorTopology',OTA_TOPOLOGY_UNCONFIRMED:'softwareErrorTopologyUnconfirmed',
         OTA_PROFILE:'softwareErrorTopologyUnconfirmed',NATIVE_TIMEOUT:'softwareErrorTimeout',
@@ -77,6 +77,7 @@
       let status='';
       if(entry.status==='checking')status=`<small>${escape(t('softwareChecking'))}</small>`;
       else if(entry.status==='ready')status=`<small>${escape(t('softwareUpdateAvailable',{current:entry.plan.currentVersion,version:entry.plan.toVersion}))}</small>`;
+      else if(entry.status==='main-recovery-ready')status=`<small>${escape(t('softwareMainRecoveryExplanation'))}</small><small>${escape(t('softwareUpdateAvailable',{current:entry.plan.currentVersion,version:entry.plan.toVersion}))}</small>`;
       else if(entry.status==='up-to-date')status=`<small>${escape(t('softwareUpToDate',{version:entry.plan.currentVersion}))}</small>`;
       else if(entry.status==='running')status=['arming','preflight'].includes(entry.job.phase)
         ?`<small>${escape(phaseLabel(entry.job))}</small><span class="update-activity"><i aria-hidden="true"></i>${escape(t('softwareConnectionChecking'))}</span>`
@@ -90,6 +91,8 @@
       else if(entry.status==='complete')status=`<small>${escape(t('softwareUpToDate',{version:entry.job.toVersion}))}</small>`;
       let action='';
       if(!busy&&entry.status==='recovery')action=`<button class="text-button" data-update="resume" data-id="${escape(receiver.id)}">${escape(t('softwareResumeCheck'))}</button>`;
+      else if(!busy&&entry.status==='main-recovery-ready')action=`<button class="button full" data-update="repair-start" data-id="${escape(receiver.id)}">${escape(t('softwareMainRecoveryStart'))}</button>`;
+      else if(!busy&&entry.status==='offline'&&entry.errorCode==='OTA_TOPOLOGY_UNCONFIRMED'&&receiver.role==='main'&&typeof services.otaMainRecoveryPlan==='function')action=`<button class="button secondary full" data-update="repair-check" data-id="${escape(receiver.id)}">${escape(t('softwareMainRecoveryCheck'))}</button>`;
       else if(!busy&&!entry.cancelling&&entry.status==='running'&&entry.job?.cancelAllowed&&!entry.job?.committed)action=`<button class="text-button" data-update="cancel" data-id="${escape(receiver.id)}">${escape(t('softwareCancel'))}</button>`;
       return `<section class="card receiver-update-progress" data-update-row="${escape(receiver.id)}" data-state="${entry.status}"><div class="update-receiver-copy"><b>${name}</b><small>${escape(receiver.type)}</small>${status}</div>${action}</section>`;
     }
@@ -112,6 +115,7 @@
       // Replacing the entire dialog every 800 ms loses focus and list position.
       if(!dialog.firstElementChild)dialog.innerHTML=`<header><div><h2>${escape(safeTitle())}</h2><p>${escape(t('softwareUpdateSubtitle'))}</p></div><button class="icon-button" data-update="close" aria-label="${escape(t('close'))}">×</button></header><p class="update-guidance">${escape(t('softwareUpdateKeepOpen'))} ${escape(t('softwareUpdateSequence'))}</p><div class="update-receiver-list"></div><div class="update-controls"></div><p class="update-run-status" role="status" aria-live="polite" hidden></p><button class="button secondary full" data-update="close">${escape(t('close'))}</button>`;
       const list=dialog.querySelector('.update-receiver-list'),footer=dialog.querySelector('.update-controls');
+      dialog.querySelector('.update-guidance').textContent=t('softwareUpdateKeepOpen')+' '+t(entries.some(entry=>entry.mainRecovery)?'softwareMainRecoveryGuidance':'softwareUpdateSequence');
       const focused=document.activeElement,focusAction=focused?.dataset?.update,focusId=focused?.dataset?.id;
       const listTop=list.scrollTop,dialogTop=dialog.scrollTop;
       const rows=entries.map(rowMarkup).join('');
@@ -131,7 +135,7 @@
     function close(){generation++;monitorEpoch++;activeMonitorId=null;dialog?.close();if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});}
     async function refreshPlans(token){
       success=false;
-      for(const entry of entries){entry.plan=null;entry.job=null;entry.cancelling=false;entry.errorCode='';entry.message='';entry.status='checking';}
+      for(const entry of entries){entry.plan=null;entry.job=null;entry.cancelling=false;entry.mainRecovery=false;entry.errorCode='';entry.message='';entry.status='checking';}
       paint();
       const order=[...entries].sort((a,b)=>Number(a.receiver.role==='main')-Number(b.receiver.role==='main'));
       for(let index=0;index<order.length;index++){
@@ -254,6 +258,38 @@
       }catch(error){if(!current(token))return;entry.status='recovery';entry.errorCode=error?.code||'OTA_RESTART_NOT_VERIFIED';entry.message=messageFor(entry.errorCode);}
       if(token!==generation)return;busy=false;busyKey='';paint();
     }
+    async function recoverMain(receiverId,start=false){
+      if(busy||activeMonitorId)return;
+      const entry=entries.find(item=>item.receiver.id===receiverId);
+      if(!entry||entry.receiver.role!=='main'||
+        (start?entry.status!=='main-recovery-ready':entry.status!=='offline'||entry.errorCode!=='OTA_TOPOLOGY_UNCONFIRMED'))return;
+      const token=generation,previous=entry.plan;
+      busy=true;busyKey='softwarePreflight';entry.mainRecovery=true;paint();
+      try{
+        // This is a distinct native read-only recovery plan, not a fallback
+        // to arbitrary firmware or an assumption that the mesh is healthy.
+        const plan=exactPlan(await services.otaMainRecoveryPlan({standId:entry.receiver.standId,receiverId}),entry);
+        if(!current(token))return;
+        if(plan.mode!=='main-recovery'||plan.status!=='ready'||start&&
+          (plan.artifactId!==previous?.artifactId||plan.toVersion!==previous?.toVersion))throw unconfirmed();
+        entry.plan=plan;entry.status='main-recovery-ready';entry.errorCode='';entry.message='';
+        if(start){
+          if(typeof services.otaMainRecoveryStart!=='function')throw unconfirmed();
+          entry.job=exactJob(await services.otaMainRecoveryStart({standId:entry.receiver.standId,receiverId,artifactId:plan.artifactId}),entry);
+          if(!current(token))return;
+          if(entry.job.toVersion!==plan.toVersion)throw unconfirmed();
+          entry.status='running';busyKey='softwareSending';paint();
+          const complete=await monitorJob(entry,token,{batchOwned:true});
+          if(!current(token))return;
+          // Re-check the network; never automatically continue to a NODE.
+          if(complete){busyKey='softwarePreflight';await refreshPlans(token);}
+        }
+      }catch(error){
+        if(!current(token))return;
+        entry.status=entry.job?.committed?'recovery':'uncertain';entry.errorCode=error?.code||'OTA_INVALID_REPLY';entry.message=messageFor(entry.errorCode);
+      }
+      if(!current(token))return;busy=false;busyKey='';paint();
+    }
     async function cancel(receiverId){
       if(busy)return;const entry=entries.find(item=>item.receiver.id===receiverId);if(!entry?.job||!entry.job.cancelAllowed||entry.job.committed)return;
       const token=generation;monitorEpoch++;activeMonitorId=null;entry.cancelling=true;busy=true;busyKey='softwareCancelling';paint();
@@ -275,6 +311,7 @@
           const button=event.target.closest('[data-update]');if(!button||button.disabled)return;
           const action=button.dataset.update;
           if(action==='close')close();else if(action==='all')void updateAll();else if(action==='check')void check();
+          else if(action==='repair-check')void recoverMain(button.dataset.id);else if(action==='repair-start')void recoverMain(button.dataset.id,true);
           else if(action==='resume')void resume(button.dataset.id);else if(action==='cancel')void cancel(button.dataset.id);
         });
         dialog.addEventListener('cancel',event=>{event.preventDefault();close();});

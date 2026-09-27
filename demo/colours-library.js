@@ -11,6 +11,7 @@
   'use strict';
   const STORAGE_KEY = 'aluvision.v30.colours-library.v1';
   const MAX_COLORS = 100;
+  const MAX_BRAND_COLORS = 4;
   const MAX_BYTES = 64000;
   const owns = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
   const plain = value => !!value && typeof value === 'object' && !Array.isArray(value) &&
@@ -73,9 +74,18 @@
     return name;
   }
   function validate(value) {
-    onlyKeys(value, ['version','id','name','color'], 'ENTRY');
+    onlyKeys(value, ['version','id','name','color','group'], 'ENTRY');
     if (value.version !== 1 || !validId(value.id) || !validName(value.name)) fail('ENTRY', 'Deze opgeslagen kleur is niet geldig.');
-    return { version:1, id:value.id, name:value.name, color:validateColor(value.color) };
+    if (owns(value,'group') && value.group !== 'brand') fail('ENTRY', 'Deze kleurgroep is niet geldig.');
+    return { version:1, id:value.id, name:value.name, color:validateColor(value.color),
+      ...(owns(value,'group') ? {group:'brand'} : {}) };
+  }
+  function validateColors(value) {
+    if (!Array.isArray(value) || value.length > MAX_COLORS) fail('COLOR_LIMIT', 'Je kunt maximaal 100 kleuren bewaren.');
+    const colors = Array.from(value,validate);
+    if (new Set(colors.map(color=>color.id)).size !== colors.length) fail('ENTRY', 'Een kleur staat meermaals in je kleurpresets.');
+    if (colors.filter(color=>color.group === 'brand').length > MAX_BRAND_COLORS) fail('BRAND_LIMIT', 'Kies maximaal 4 merkkleuren.');
+    return colors;
   }
   let sequence = 0;
   function newId() {
@@ -121,8 +131,7 @@
         const envelope = JSON.parse(raw);
         onlyKeys(envelope,['version','colors'],'STORAGE_CORRUPT');
         if (envelope.version !== 1 || !Array.isArray(envelope.colors) || envelope.colors.length > MAX_COLORS) throw new Error('Invalid colour envelope');
-        const colors = envelope.colors.map(validate);
-        if (new Set(colors.map(color=>color.id)).size !== colors.length) throw new Error('Duplicate colour identity');
+        const colors = validateColors(envelope.colors);
         return {colors,error:null};
       } catch (_) { return storageError('STORAGE_CORRUPT', 'Je opgeslagen kleuren konden niet veilig worden gelezen. Ze zijn niet overschreven.'); }
     }
@@ -145,7 +154,46 @@
       if (index < 0 && current.colors.length >= MAX_COLORS) return storageError('COLOR_LIMIT', 'Je hebt 100 kleuren. Verwijder eerst een ongebruikte kleur.', current.colors);
       const next = current.colors.slice();
       if (index < 0) next.push(saved); else next[index] = saved;
-      return write(next,current.colors);
+      try { return write(validateColors(next),current.colors); }
+      catch (error) { return storageError(error.code || 'ENTRY',error.message,current.colors); }
+    }
+    function setBrandColors(values) {
+      const current = load();
+      if (current.error) return current;
+      try {
+        if (!Array.isArray(values) || values.length > MAX_BRAND_COLORS) fail('BRAND_LIMIT', 'Kies maximaal 4 merkkleuren.');
+        const namedColors = Array.from(values,value=>{
+          // Brand slots may carry a user-facing name alongside RGBW values.
+          // Keep the older plain-colour shape fully compatible.
+          if (plain(value) && owns(value,'color')) {
+            onlyKeys(value,['name','color'],'BRAND_COLOR');
+            if (typeof value.name !== 'string' || !validName(value.name.trim())) fail('NAME','Geef je merkkleur een naam van 1 tot 64 tekens.');
+            return {name:value.name.trim(),color:validateColor(value.color)};
+          }
+          return {name:null,color:validateColor(value)};
+        });
+        const existing = current.colors.filter(entry=>entry.group === 'brand');
+        const used = new Set(current.colors.map(entry=>entry.id));
+        const brand = namedColors.map(({name,color},index)=>{
+          let id = existing[index]?.id;
+          if (!id) {
+            const base = 'colour-brand-' + (index+1);id = base;let suffix = 2;
+            // An older user preset may already use this identity. Never replace it.
+            while (used.has(id)) id = base + '-' + suffix++;
+            used.add(id);
+          }
+          return validate({version:1,id,name:name||existing[index]?.name||'Merkkleur ' + (index+1),color,group:'brand'});
+        });
+        // Preserve ordinary presets and their order, including entries between
+        // existing brand slots. Add only new slots at the end of the library.
+        let index = 0;
+        const next = current.colors.flatMap(entry=>entry.group === 'brand'
+          ? (index < brand.length ? [brand[index++]] : []) : [entry]);
+        next.push(...brand.slice(index));
+        const valid = validateColors(next);
+        if (JSON.stringify(valid) === JSON.stringify(current.colors)) return current;
+        return write(valid,current.colors);
+      } catch (error) { return storageError(error.code || 'ENTRY',error.message,current.colors); }
     }
     function remove(id) {
       const current = load();
@@ -169,7 +217,7 @@
       next.splice(toIndex, 0, entry);
       return write(next, current.colors);
     }
-    return Object.freeze({load,save,remove,move});
+    return Object.freeze({load,save,remove,move,setBrandColors});
   }
-  return Object.freeze({STORAGE_KEY,MAX_COLORS,capture,validate,suggestName,restore,defaults,createStore});
+  return Object.freeze({STORAGE_KEY,MAX_COLORS,MAX_BRAND_COLORS,capture,validate,validateColors,suggestName,restore,defaults,createStore});
 }));

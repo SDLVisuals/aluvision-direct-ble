@@ -73,7 +73,11 @@
 .animation-library-inline .tunnel-example-name,.animation-library-inline .tunnel-ready strong { font-size:14px; }
 .animation-library-inline .tunnel-guide { padding:14px; border-radius:23px; }
 .animation-library-inline .spatial-preview-choice > span,.animation-library-inline .spatial-preview-switch button { font-size:15px; }
-.animation-library-inline .spatial-preview-switch button { min-height:48px; }
+.animation-library-inline .spatial-preview-switch button { min-height:48px;font-size:13px;gap:4px;padding-inline:4px }
+@media(max-width:360px){
+  .animation-library-inline .spatial-preview-switch button{font-size:11px;gap:3px;padding-inline:2px}
+  .animation-library-inline .spatial-preview-switch button .arrangement-icon{width:14px;height:14px}
+}
 .animation-library-inline .animation-start-grid .animation-starter-card canvas { height:90px; }
 .animation-library-inline .animation-start-grid .animation-starter-card b { font-size:15px; line-height:1.35; }
 .animation-library-inline .animation-start-grid .animation-starter-card small { font-size:13px; line-height:1.4; }

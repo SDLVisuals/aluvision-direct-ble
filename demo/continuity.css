@@ -86,6 +86,7 @@ dialog :is(h2,h3,p){overflow-wrap:anywhere}dialog header h2{min-width:0}
 .colour-drag-ghost{position:fixed;pointer-events:none;z-index:100;display:grid;justify-items:center;gap:5px;width:90px;padding:8px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 6px 20px #0003;font-size:10px}.colour-drag-ghost i{width:34px;height:34px;border-radius:50%}
 .colour-library-feedback{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:24px}.colour-library-status{font-size:11px!important;line-height:1.4;color:var(--muted)}.colour-library-feedback .text-button{font-size:11px;min-height:36px;margin-left:auto}
 .saved-colour i{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--swatch,#eee);border:3px solid var(--panel);box-shadow:0 0 0 1px var(--line);font-style:normal;font-size:24px}.saved-colour span{max-width:100%;overflow-wrap:anywhere}.add-colour i{background:var(--soft);color:var(--ink);box-shadow:none}
+.saved-colour-kind{display:inline-flex;align-items:center;min-height:16px;padding:1px 6px;border:1px solid color-mix(in srgb,var(--red) 28%,var(--line));border-radius:999px;color:var(--red);font-size:9px;font-weight:750;line-height:1.2}
 .shared-colour-picker .wheel{outline-offset:4px}
 .shared-colour-picker .colour-values{grid-template-columns:minmax(0,1fr)}
 #effect-dialog-content{min-width:0}#effect-dialog section{display:block;min-width:0;margin:0}#effect-dialog .shared-colour-picker{margin:0;padding:12px}#effect-dialog .colour-tools{grid-template-columns:minmax(120px,1fr) minmax(0,1fr);gap:14px}#effect-dialog .my-colours{margin-top:15px;padding-top:9px}#effect-dialog .my-colours p{font-size:11px}#effect-dialog .section-heading h2{font-size:16px}#effect-dialog .section-heading small{font-size:10px}#effect-dialog .colour-values{min-width:0}
@@ -172,11 +173,12 @@ body[data-theme=dark] .section-tabs button:not([aria-selected=true]){color:var(-
    installation stays calm until someone chooses to address one line. */
 .selection .receiver-scope-grid{grid-template-columns:minmax(0,1fr)}
 .selection .scope-lines-toggle{grid-column:1/-1;justify-content:flex-start;min-height:64px;padding:10px 12px;border-radius:14px;background:var(--panel);text-align:left;white-space:normal}
-.selection[data-selection-mode=all] .scope-lines-toggle{border:2px solid var(--red);background:#202420;color:#fff;box-shadow:inset 3px 0 0 var(--red)}
+.selection[data-selection-mode=all] .scope-lines-toggle{border:1px solid #3b403b;background:linear-gradient(145deg,#252a26,#1c201d);color:#fff;box-shadow:inset 0 -2px 0 var(--red),0 4px 12px rgba(24,28,24,.12)}
 .selection[data-selection-mode=all] .scope-lines-toggle .scope-toggle-icon{background:#343834;color:#f5aaa4}
 .selection[data-selection-mode=all] .scope-lines-toggle .scope-copy small{color:#d4d8d3}
 .selection[data-selection-mode=all] .scope-lines-toggle .scope-toggle-chevron{background:#343834;color:#d4d8d3}
 .selection[data-selection-mode=all] .scope-lines-toggle[aria-expanded=true] .scope-toggle-chevron{background:#f5e8e6;color:var(--red)}
+body[data-theme=dark] .selection[data-selection-mode=all] .scope-lines-toggle{border-color:rgba(255,255,255,.13);background:linear-gradient(145deg,#333833,#202420);box-shadow:inset 0 -2px 0 var(--red),0 4px 12px rgba(0,0,0,.18)}
 .selection .scope-toggle-icon{display:grid;place-items:center;width:38px;height:38px;flex:none;border-radius:12px;background:var(--soft);color:var(--red)}
 .selection .scope-toggle-icon svg{width:20px;height:20px}
 .selection .scope-lines-toggle .scope-copy{gap:4px}
@@ -248,6 +250,13 @@ dialog{overscroll-behavior:contain}
 .control-preview-dock .preview-summary{max-width:58%;overflow:hidden;text-align:right;text-overflow:ellipsis;white-space:nowrap;color:#d4d9d4}
 .control-preview-dock .preview-wrap canvas{height:76px}
 .control-preview-dock .preview-wrap[data-preview-layout] canvas{min-height:var(--line-preview-min-height,0px)}
+.control-preview-dock .spatial-preview-wrap{padding-bottom:7px}
+.control-preview-dock .spatial-dock-preview{display:block;width:100%;min-width:0;border-radius:12px}
+.control-preview-dock .spatial-preview-wrap .preview-top>span:first-child{font-weight:800;letter-spacing:.25px}
+.animation-library-inline .tunnel-guide-compact{display:block;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible}
+.animation-library-inline .tunnel-guide-compact .tunnel-status{gap:8px}
+.animation-library-inline .tunnel-guide-compact .tunnel-status strong{font-size:12px}
+.animation-library-inline .tunnel-guide-compact .tunnel-status .button{min-height:44px}
 .control-preview-dock .live-confirmation{min-height:0;margin:0}
 .control-preview-dock .preview-live-controls{padding:2px 4px 5px;font-size:9px}
 .control-preview-dock+.editor-controls{padding-top:7px}
@@ -315,8 +324,10 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
    inline counterpart leaves view. Absolute positioning avoids resize jumps. */
 .control-dock-surface{position:relative}
 .control-preview-dock .animation-wayfinding[data-editor-shortcut]{position:absolute;top:100%;left:0;right:0;z-index:1;margin:0;padding:5px 0;background:var(--bg);border-radius:0 0 15px 15px;box-shadow:0 8px 16px -12px #17201980}
-.current-effect>.current-effect-gallery{display:flex;align-items:center;justify-content:space-between;gap:9px;flex:0 0 100%;min-width:0;min-height:44px;padding:8px 11px;border:1px solid var(--line);border-radius:12px;background:var(--soft);color:var(--ink);font-size:12px;font-weight:700;line-height:1.35;text-align:left}
-.current-effect-gallery>span{min-width:0;overflow-wrap:anywhere}
+.current-effect>.current-effect-gallery{display:flex;align-items:center;justify-content:space-between;gap:9px;flex:0 0 100%;min-width:0;min-height:48px;padding:7px 10px;border:1px solid color-mix(in srgb,var(--red) 34%,var(--line));border-radius:14px;background:linear-gradient(105deg,color-mix(in srgb,var(--red) 8%,var(--panel)),var(--panel));color:var(--ink);font-size:13px;font-weight:750;line-height:1.35;text-align:left;box-shadow:0 2px 8px #17181708}
+.current-effect-gallery>.gallery-action-label{display:flex;align-items:center;gap:9px;min-width:0;overflow-wrap:anywhere}
+.current-effect-gallery .gallery-action-icon{display:grid;place-items:center;width:32px;height:32px;flex:none;border-radius:10px;background:color-mix(in srgb,var(--red) 11%,var(--panel));color:var(--red)}
+.current-effect-gallery .gallery-action-icon>.icon{width:19px;height:19px}
 .current-effect-gallery>.icon{width:17px;height:17px;flex:none;color:var(--red)}
 .current-effect-gallery:focus-visible{outline:2px solid var(--red);outline-offset:2px}
 .current-effect b:focus{outline:none}
@@ -329,13 +340,21 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .animation-context>.selection>header,.animation-context .scope-copy>small,.animation-context .scope-toggle-icon{display:none}
 .animation-context .selection .receiver-scope-grid{padding:0;gap:0}
 .animation-context .selection .scope-lines-toggle{min-height:44px;padding:4px 10px!important;border-radius:13px}
+.animation-context .selection[data-selection-mode=all] .scope-lines-toggle{min-height:54px;gap:7px}
+.animation-context .selection[data-selection-mode=all] .scope-toggle-icon{display:grid;width:30px;height:30px;border-radius:9px;background:#343834;color:#f5aaa4}
+.animation-context .selection[data-selection-mode=all] .scope-toggle-icon .icon{width:20px;height:18px}
+.animation-context .selection[data-selection-mode=all] .scope-copy>small{display:block;font-size:10px;line-height:1.25;color:#d4d8d3}
 .animation-context .scope-option-title{font-size:12px;line-height:1.3}
 .animation-context .selection .scope-toggle-chevron{width:22px;height:22px}
 .animation-context .scope-lines-reveal{grid-column:1/-1}
 .animation-context .scope-lines-reveal.is-open{padding-top:7px}
 .animation-context>.continuous-scope,.animation-context>.single-scope{min-height:44px;padding:7px 9px;border-radius:13px;background:var(--soft);gap:7px}
+.animation-context>.continuous-scope{min-height:52px;border-left-width:3px}
+.animation-context>.continuous-scope>.scope-toggle-icon{width:30px;height:30px}
+.animation-context>.continuous-scope>.scope-toggle-icon .icon{width:21px;height:18px}
 .animation-context>.continuous-scope strong,.animation-context>.single-scope b{font-size:11px;line-height:1.3}
 .animation-context>.continuous-scope small,.animation-context>.single-scope small{display:none}
+.animation-context>.continuous-scope small{display:block}
 .animation-context .mixed-note{font-size:10px}
 .animation-context>.power-card{min-height:44px;padding:0;margin:0;border:0;box-shadow:none;background:transparent}
 .animation-context>.power-card>div{display:none}
@@ -349,12 +368,14 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .ledline-setup-compact .ledline-setup-toggle b{font-size:12px}
 .ledline-setup-compact .ledline-setup-toggle small{font-size:12px}
 .ledline-setup-compact .ledline-setup-toggle>.icon{width:17px;height:17px}
+.ledline-setup-compact .ledline-setup-toggle>.line-order-icon{width:32px;height:32px;padding:4px;border-radius:9px}
 .animation-simple-page .active-animation-workspace{gap:10px}
 .animation-simple-page .current-effect{padding:11px 13px;gap:8px;border-radius:18px}
 .animation-simple-page .current-effect>div>small{font-size:10px;line-height:1.25}
 .animation-simple-page .current-effect b{font-size:15px;line-height:1.25}
-.animation-simple-page .current-effect-gallery{background:var(--ink);color:var(--panel);font-size:12px;min-height:44px}
+.animation-simple-page .current-effect-gallery{background:var(--ink);color:var(--panel);font-size:13px;min-height:48px;border-color:color-mix(in srgb,var(--red) 48%,var(--ink));box-shadow:inset 0 -2px 0 color-mix(in srgb,var(--red) 72%,transparent),0 3px 10px #00000010}
 .animation-simple-page .current-effect-gallery>.icon{color:currentColor}
+.animation-simple-page .current-effect-gallery .gallery-action-icon{background:color-mix(in srgb,var(--red) 22%,var(--ink));color:color-mix(in srgb,var(--red) 35%,white)}
 .animation-daily-controls.card{padding:13px;gap:9px;border-radius:18px}
 .animation-daily-controls>.slider-row{margin:0}
 .animation-daily-controls>.slider-row>small{display:none}
@@ -383,10 +404,12 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .control-preview-dock[data-preview-size=small] .preview-wrap canvas{height:76px;transition:height .18s ease}
 .control-preview-dock[data-preview-size=medium] .preview-wrap canvas{height:136px;transition:height .18s ease}
 .control-preview-dock[data-preview-size=large] .preview-wrap canvas{height:224px;transition:height .18s ease}
+.control-preview-dock[data-spatial-preview=true][data-preview-size=large] .spatial-preview-wrap canvas{height:280px!important}
 @media(max-width:700px){
   .control-preview-dock[data-preview-size=small] .preview-wrap canvas{height:52px}
   .control-preview-dock[data-preview-size=medium] .preview-wrap canvas{height:104px}
   .control-preview-dock[data-preview-size=large] .preview-wrap canvas{height:164px}
+  .control-preview-dock[data-spatial-preview=true][data-preview-size=large] .spatial-preview-wrap canvas{height:260px!important}
 }
 @media(max-width:360px){
   .preview-size-control>summary{min-height:30px;padding-inline:8px}
@@ -396,6 +419,7 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
   .control-preview-dock[data-preview-size=small] .preview-wrap canvas{height:46px}
   .control-preview-dock[data-preview-size=medium] .preview-wrap canvas{height:82px}
   .control-preview-dock[data-preview-size=large] .preview-wrap canvas{height:128px}
+  .control-preview-dock[data-spatial-preview=true][data-preview-size=large] .spatial-preview-wrap canvas{height:220px!important}
 }
 /* Keep the chosen preview size perceptible while the dock is sticky. The
    compact option stays close to its normal phone size instead of collapsing
@@ -403,6 +427,7 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .control-preview-dock[data-scrolled=true][data-preview-size=small] .preview-wrap canvas{height:52px!important}
 .control-preview-dock[data-scrolled=true][data-preview-size=medium] .preview-wrap canvas{height:68px!important}
 .control-preview-dock[data-scrolled=true][data-preview-size=large] .preview-wrap canvas{height:88px!important}
+.control-preview-dock[data-scrolled=true][data-spatial-preview=true][data-preview-size=large] .spatial-preview-wrap canvas{height:126px!important}
 @media(prefers-reduced-motion:reduce){.control-preview-dock .preview-wrap canvas{transition:none}}
 .channel-row .channel-number{width:100%;min-width:0;height:44px;padding:2px 3px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);font-size:16px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
 .channel-number::-webkit-inner-spin-button,.channel-number::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
@@ -427,14 +452,18 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .colour-library-actions .icon-button{width:44px;height:44px}
 .colour-manager{display:grid;gap:12px;min-width:0}
 .colour-manager>p{font-size:12px;color:var(--muted);line-height:1.5}
-.colour-manager-list{display:grid;gap:8px;max-height:min(48dvh,430px);overflow:auto;overscroll-behavior:contain;padding:2px}
+.colour-manager-list{display:grid;gap:8px;padding:2px}
 .colour-manager-row{display:flex;align-items:center;gap:11px;min-width:0;padding:9px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
 .colour-manager-swatch{display:grid;place-items:center;flex:none;width:46px;height:46px;border-radius:13px;background:conic-gradient(#f05a56,#ffc54d,#4fb783,#4b9bdd,#a46ada,#f05a56);padding:3px}
 .colour-manager-swatch i{display:block;width:100%;height:100%;border:2px solid var(--panel);border-radius:11px;background:var(--swatch)}
 .colour-manager-copy{display:grid;gap:3px;flex:1;min-width:0}
 .colour-manager-copy b{font-size:13px;overflow-wrap:anywhere}
 .colour-manager-copy small{font-size:10px;font-variant-numeric:tabular-nums}
+.colour-manager-edit{flex:none;min-width:44px;padding-inline:8px;color:var(--red);font-size:11px}
 .colour-manager-remove{color:var(--red)}
+.colour-manager-remove:disabled{opacity:.42;cursor:not-allowed}
+.brand-name-field{margin:12px 0}
+.brand-name-field input{min-height:46px}
 .colour-manager-empty{display:grid;justify-items:center;gap:7px;padding:20px;text-align:center;border:1px dashed var(--line);border-radius:15px;background:var(--soft)}
 .colour-manager-empty small{max-width:260px;line-height:1.5}
 .colour-manager .colour-library-status{min-height:1.4em}

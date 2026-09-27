@@ -19,7 +19,7 @@
   let documentId=null;
   try{if(native&&typeof root.crypto?.randomUUID==='function')documentId=root.crypto.randomUUID().replace(/-/g,'').toUpperCase();}catch(_){}
   const pending=new Map();let serial=0;
-  const actions=new Set(['capabilities','securityPreference','securityStatus','setPinProtection','discover','discoverMesh','select','secure','reconcileSecurity','finalize','verifyFinalReceipt','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones','configureOutputs','previewPixels','eraseAppData','applyLive','applyLiveBatch','otaPlan','otaStart','otaStatus','otaResume','otaCancel','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain']);
+  const actions=new Set(['capabilities','securityPreference','securityStatus','setPinProtection','discover','discoverMesh','select','secure','reconcileSecurity','finalize','verifyFinalReceipt','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones','configureOutputs','previewPixels','eraseAppData','applyLive','applyLiveBatch','otaPlan','otaStart','otaStatus','otaResume','otaCancel','otaMainRecoveryPlan','otaMainRecoveryStart','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain']);
   actions.add('outputConfigurationStatus');
   ['exportBackup','chooseBackup','importInstallationView','recoverInstallation'].forEach(action=>actions.add(action));
   ['receiverContextStatus','syncInstallationContext'].forEach(action=>actions.add(action));
@@ -52,7 +52,7 @@
       // leave room for native key storage and delivering that bounded result.
       // A routed OTA plan also checks journal/security/topology. Its bounded
       // native checks may take up to 100s; let the read-only result arrive.
-      const timeout=['exportBackup','chooseBackup','recoverInstallation'].includes(action)?300000:action==='syncInstallationContext'?180000:action==='otaPlan'?120000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
+      const timeout=['exportBackup','chooseBackup','recoverInstallation'].includes(action)?300000:action==='syncInstallationContext'?180000:['otaPlan','otaMainRecoveryPlan'].includes(action)?120000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
         ['secure','reconcileSecurity'].includes(action)&&payload.configuration?.role==='node'?120000:
         ['select','secure','reconcileSecurity','finalize','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain'].includes(action)?45000:12000;
       const timer=root.setTimeout(()=>{cancelNative();receive({id,ok:false,code:'NATIVE_TIMEOUT'});},timeout);
@@ -453,11 +453,14 @@
     },
     async previewPixels(request){
       if(!request||!['start','update','stop'].includes(request.action)||request.receiver?.type!=='SPI'||
-        !Number.isInteger(request.port)||request.port<1||request.port>4||!Number.isInteger(request.pixels)||request.pixels<0||request.pixels>163)throw fail('PIXEL_PREVIEW_INVALID');
+        !Number.isInteger(request.port)||request.port<1||request.port>4||!Number.isInteger(request.pixels)||request.pixels<0||request.pixels>163||
+        request.guide!==undefined&&!['length','power'].includes(request.guide)||
+        (request.guide==='power'?(request.pixels===0||typeof request.reversed!=='boolean'):request.reversed!==undefined))throw fail('PIXEL_PREVIEW_INVALID');
       const payload=JSON.parse(JSON.stringify(request));
       const answer=await call('previewPixels',payload);
       if(answer?.applied!==true||answer.port!==request.port||answer.pixels!==request.pixels||
-        (request.action==='stop'?answer.previewTTLMS!==0:!Number.isInteger(answer.previewTTLMS)||answer.previewTTLMS<1||answer.previewTTLMS>15000))throw fail('PIXEL_PREVIEW_UNCONFIRMED');
+        (request.action==='stop'?answer.previewTTLMS!==0:!Number.isInteger(answer.previewTTLMS)||answer.previewTTLMS<(request.pixels===0?0:1)||answer.previewTTLMS>15000)||
+        request.guide==='power'&&(answer.guide!=='power'||answer.reversed!==request.reversed))throw fail('PIXEL_PREVIEW_UNCONFIRMED');
       return answer;
     },
     async select({standId,transactionId,receiver}){return call('select',{standId,transactionId,receiver:{id:receiver.id,rid:receiver.rid,type:receiver.type}});},
@@ -499,6 +502,8 @@
     async finalize({configuration,securityReceiptRef,signal}){return call('finalize',{configuration,securityReceiptRef},signal);},
     async verifyFinalReceipt({receiptRef,purpose,expected}){return call('verifyFinalReceipt',{receiptRef,purpose,expected});},
     async otaPlan({standId,receiverId}){return call('otaPlan',{standId,receiverId});},
+    async otaMainRecoveryPlan({standId,receiverId}){return call('otaMainRecoveryPlan',{standId,receiverId});},
+    async otaMainRecoveryStart({standId,receiverId,artifactId}){return call('otaMainRecoveryStart',{standId,receiverId,artifactId});},
     async otaStart({standId,receiverId,artifactId}){return call('otaStart',{standId,receiverId,artifactId});},
     async otaStatus({standId,receiverId,jobId}){return call('otaStatus',{standId,receiverId,jobId});},
     async otaResume({standId,receiverId,jobId}){return call('otaResume',{standId,receiverId,jobId});},

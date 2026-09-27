@@ -79,7 +79,8 @@
       if(Number.isFinite(rate)&&rate>=0&&rate<=20)scene.phaseRateMicroHz=Math.round(rate*1000000);
     }
     if(extension){
-      const brand=colour(state.v30Effect==='v30-brand-focus'?hex[0]||'#C94E46':state.brandColor||hex[0]||'#C94E46',0);
+      const brand=state.v30Effect==='v30-brand-focus'?palette[0]:
+        colour(state.brandColor||hex[0]||'#C94E46',state.whiteChannels?.[0]??state.w??0,true,state.whiteEnabled?.[0]);
       scene.v30={effect:extensionId,fadeAmount:number(extensionId>=21&&extensionId<=30?state.spacing:state.fadeAmount,90,0,100),
         width:number(state.width,65,0,100),delayMs:number(state.delayMs,300,0,10000),brand};
       if(Object.values(scene.v30).some(value=>value===null))return null;
@@ -90,6 +91,60 @@
     return {standId:receiver.standId,receiverId:receiver.id,kind:spi?'SPI_SCENE':'RGBW_SCENE',
       brightness:powered?brightness:0,
       transitionMs:powered&&scene.engine==='STATIC'&&!extension?STATIC_TRANSITION_MS:0,channels:[],scene};
+  }
+  // Membership has already been confirmed by native storage. A new line can
+  // join an unambiguous running animation, but never choose between separately
+  // controlled/mixed lines. Copy light intent only; physical geometry, identity
+  // and enrollment remain the confirmed next model's exclusive authority.
+  function joinZonePlayback(previous,next,receiverIds) {
+    const model=clone(next),inheritedIds=[],refreshIds=new Set(),changedZones=new Set();
+    const before=new Map(previous.receivers.map(receiver=>[receiver.id,receiver]));
+    const zones=new Map(model.stands.flatMap(stand=>stand.zones.map(zone=>[zone.id,{...zone,standId:stand.id}])));
+    const joined=new Map();
+    for(const id of new Set(receiverIds||[])){
+      const receiver=model.receivers.find(item=>item.id===id),old=before.get(id);
+      if(!receiver||receiver.lifecycle!=='added'||old?.zoneId===receiver.zoneId||
+         old&&old.standId!==receiver.standId)continue;
+      if(old?.zoneId)changedZones.add(old.zoneId);
+      const target=zones.get(receiver.zoneId);
+      if(!target||target.standId!==receiver.standId||target.type!==receiver.type||!target.receiverIds.includes(id))continue;
+      changedZones.add(target.id);
+      if(!joined.has(target.id))joined.set(target.id,[]);
+      joined.get(target.id).push(receiver);
+    }
+    for(const [zoneId,incoming]of joined){
+      const zone=zones.get(zoneId),oldZone=previous.stands.find(stand=>stand.id===zone.standId)?.zones.find(item=>item.id===zoneId);
+      const incomingIds=new Set(incoming.map(receiver=>receiver.id));
+      const peers=(oldZone?.receiverIds||[]).map(id=>before.get(id)).filter(receiver=>
+        receiver&&receiver.lifecycle==='added'&&receiver.type===zone.type&&receiver.standId===zone.standId&&
+        zone.receiverIds.includes(receiver.id)&&!incomingIds.has(receiver.id));
+      if(!peers.length)continue;
+      if(!peers.every(receiver=>{
+        const current=model.receivers.find(item=>item.id===receiver.id);
+        return current&&['rid','deviceFingerprint','physicalId','standId','type','role','lifecycle'].every(key=>current[key]===receiver[key]);
+      }))continue;
+      const intent=receiver=>{
+        const request=requestFor(receiver,{zone:oldZone,receivers:peers,time:0});
+        if(!request||request.brightness===0||request.scene.engine==='STATIC'&&!request.scene.v30)return null;
+        const {phaseMs,phaseRateMicroHz,...scene}=request.scene;
+        // Identical effects can still have deliberately independent clocks.
+        // A time-zero sample cannot distinguish two later start anchors, so
+        // compare their origins as well before choosing a group's leader.
+        const started=Number(receiver.state?.previewStartedAt),phase=Number(receiver.state?.phaseMs);
+        const timing={startedAt:Number.isFinite(started)&&started>0?started:0,
+          phaseMs:Number.isFinite(phase)?((phase%1000)+1000)%1000:0};
+        return JSON.stringify({brightness:request.brightness,scene,timing});
+      };
+      const common=intent(peers[0]);if(!common||!peers.every(receiver=>intent(receiver)===common))continue;
+      for(const receiver of incoming){receiver.state=clone(peers[0].state);inheritedIds.push(receiver.id);}
+    }
+    // Every surviving member needs the new line count/continuous offset. A
+    // single batch uses one phase sample, also when moving between two zones.
+    for(const zoneId of inheritedIds.length?changedZones:[]){
+      const zone=zones.get(zoneId);if(!zone)continue;
+      for(const id of zone.receiverIds)if(model.receivers.some(receiver=>receiver.id===id&&receiver.lifecycle==='added'))refreshIds.add(id);
+    }
+    return {model,inheritedIds,receiverIds:[...refreshIds]};
   }
   function create({send,sendBatch,onState,delay=0,setTimer=setTimeout,clearTimer=clearTimeout}) {
     if (typeof send !== 'function' || typeof onState !== 'function') throw Error('LIVE_QUEUE_INVALID');
@@ -165,5 +220,5 @@
     }
     return Object.freeze({request,preview,clear,state:id=>states.get(id)||{kind:'idle',code:''}});
   }
-  return Object.freeze({create,requestFor});
+  return Object.freeze({create,requestFor,joinZonePlayback});
 });

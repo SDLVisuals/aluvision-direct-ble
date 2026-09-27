@@ -81,7 +81,7 @@
     if(value.format!==FORMAT||value.version!==1||value.appVersion!=='32.0.0'||typeof value.createdAt!=='string'||!Number.isFinite(Date.parse(value.createdAt)))fail('BACKUP_VERSION','Deze backupversie wordt niet ondersteund.');
     keys(value.libraries,['presets','scenes','colors']);keys(value.preferences,['language','theme']);
     if(!U.languages.some(l=>l.code===value.preferences.language)||!U.themes.includes(value.preferences.theme))fail('BACKUP_PREFERENCES','Ongeldige taal of weergave.');
-    return {format:FORMAT,version:1,appVersion:'32.0.0',createdAt:value.createdAt,model:publicModel(value.model,true),libraries:{presets:list(value.libraries.presets,P.validate),scenes:list(value.libraries.scenes,S.validate),colors:list(value.libraries.colors,C.validate)},preferences:clone(value.preferences)};
+    return {format:FORMAT,version:1,appVersion:'32.0.0',createdAt:value.createdAt,model:publicModel(value.model,true),libraries:{presets:list(value.libraries.presets,P.validate),scenes:list(value.libraries.scenes,S.validate),colors:C.validateColors(value.libraries.colors)},preferences:clone(value.preferences)};
   }
   function create({model,presets,scenes,colors,preferences},now=new Date()){
     const result=validate({format:FORMAT,version:1,appVersion:'32.0.0',createdAt:now.toISOString(),model:publicModel(model),libraries:{presets,scenes,colors},preferences});

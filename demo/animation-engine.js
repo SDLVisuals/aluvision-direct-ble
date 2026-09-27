@@ -227,7 +227,8 @@
   }
   function brandSample(id, state, clock, index, count, input) {
     const white = [0, 0, 0, 255];
-    const brand = physical(state.brandColor || (state.colors || [])[0] || DEFAULT_BRAND);
+    const brand = physical(state.brandColor || (state.colors || [])[0] || DEFAULT_BRAND,
+      state.whiteEnabled?.[0] === false ? 0 : state.whiteChannels?.[0] ?? state.w ?? 0);
     const direction = state.direction === 'reverse' || state.direction === 'left' ? -1 : 1;
     const wave = (1 - Math.cos(clock.phase * Math.PI * 2)) / 2;
     const breathe = shaped(wave, state);

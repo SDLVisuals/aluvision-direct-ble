@@ -16,7 +16,8 @@
 .receiver-update-sheet header p { margin: 0; color: var(--muted); font-size: 13px; }
 .receiver-update-sheet .update-guidance { margin: 12px 0 16px; color: var(--muted); font-size: 12px; line-height: 1.45; }
 .receiver-update-sheet .update-receiver-list { display: grid; gap: 9px; max-height: 45dvh; overflow: auto; overscroll-behavior: contain; }
-.receiver-update-sheet .receiver-update-progress { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; margin: 0; padding: 14px; border-radius: 18px; }
+.receiver-update-sheet .receiver-update-progress { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: center; margin: 0; padding: 14px; border-radius: 18px; }
+.receiver-update-sheet .receiver-update-progress > button { min-width: 0; min-height: 44px; white-space: normal; overflow-wrap: anywhere; }
 .receiver-update-sheet .update-receiver-copy { min-width: 0; display: grid; gap: 4px; }
 .receiver-update-sheet .update-receiver-copy > b { overflow-wrap: anywhere; }
 .receiver-update-sheet .update-receiver-copy small { color: var(--muted); line-height: 1.4; }

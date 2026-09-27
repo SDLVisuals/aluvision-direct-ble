@@ -105,11 +105,11 @@
     let previewState={kind:'idle'};
     const pixelPreview=pixelSetup.createLivePreview({send:services.previewPixels,onState:state=>{previewState=state;pixelSetup.showPreviewStatus(container,state);}});
     function syncPixelPreview(){
-      if(!container||document.hidden||draft?.stage!=='pixels'){void pixelPreview.stop();return;}
+      if(!container||document.hidden||!['pixels','connection'].includes(draft?.stage)){void pixelPreview.stop();return;}
       const selected=draft.outputs.find(output=>output.port===draft.port);
       pixelPreview.update({standId:draft.stand.id,transactionId:draft.transactionId,
         receiver:{id:draft.receiver.id,rid:draft.receiver.rid,type:'SPI',deviceFingerprint:draft.receiver.deviceFingerprint},
-        role:draft.role,mainReceiverId:draft.mainReceiverId,port:draft.port,pixels:selected.pixels});
+        role:draft.role,mainReceiverId:draft.mainReceiverId,port:draft.port,pixels:selected.pixels,...(draft.stage==='connection'?{guide:'power',reversed:selected.reversed}:{})});
       pixelSetup.showPreviewStatus(container,previewState);
     }
     const saveNotice='Je keuzes zijn nog niet bewaard. Probeer opnieuw; je hoeft niets opnieuw in te vullen.';
@@ -481,7 +481,7 @@
         }
         case 'connection':{
           const output=draft.outputs.find(output=>output.port===draft.port);
-          return `${pixelSetup.renderPortContext(draft.outputs,draft.port,{stage:'connection'})}${pixelSetup.renderSide(output,{onboarding:true})}${footer(pixelSetup.nextPortLabel(draft.outputs,draft.port,{stage:'connection'}))}`;
+          return `${pixelSetup.renderPortContext(draft.outputs,draft.port,{stage:'connection'})}${pixelSetup.renderSide(output,{onboarding:true,live:typeof services.previewPixels==='function'})}${footer(pixelSetup.nextPortLabel(draft.outputs,draft.port,{stage:'connection'}))}`;
         }
         case 'pin':return pinRequired()?pinForm():securityPanel();
         case 'security':return securityPanel();
@@ -910,7 +910,7 @@
       }
       if(action==='save-retry')return saveChoices();
       if(action==='receivers-list')return browseReceivers();
-      if(['next','back','exit'].includes(action)&&draft.stage==='pixels'){
+      if(['next','back','exit'].includes(action)&&['pixels','connection'].includes(draft.stage)){
         busy=true;try{await pixelPreview.stop();}finally{busy=false;}
         if(!container)return;
       }
