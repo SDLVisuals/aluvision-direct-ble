@@ -26,7 +26,9 @@
   const expandedScopeZones = new Set();
   const brandColours = new Map();
   const brandPalettes = new Map();
-  let spatialEffectView=true;
+  // Presentation only: shared by the gallery and editor, never a zone layout
+  // or receiver setting. Keep the approved tunnel as the initial view.
+  let tunnelPreviewView='tunnel';
   const BRAND_TONES = Object.freeze([
     Object.freeze({id:'aluvision-rood',name:'Aluvision rood',value:'#C94E46'}),
     Object.freeze({id:'warm-amber',name:'Warm amber',value:'#E9A04B'}),
@@ -156,6 +158,8 @@
   const iconPaths = {
     stand:'M3 21V4h18v17M3 8h18M7 21V12h10v9M1 21h22',
     zones:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
+    tunnel:'M4 21V10a8 8 0 0 1 16 0v11M8 21V10a4 4 0 0 1 8 0v11',
+    wall:'M5 4v16M12 4v16M19 4v16',
     unassigned:'M12 22s7-4.35 7-12a7 7 0 1 0-14 0c0 7.65 7 12 7 12ZM9 10h6',
     light:'M3 9h18v6H3zM6 11v2M10 11v2M14 11v2M18 11v2M1 12h2M21 12h2',
     receiver:'M4 5h16v15H4zM8 2v3M16 2v3M7 9h10M7 13h2M11 13h2M15 13h2M7 17h10',
@@ -534,9 +538,29 @@
     const palette=currentBrandPalette(),selected=palette[0];
     return `<section class="brand-tone-picker" aria-label="Merkaccent kiezen"><div class="brand-tone-heading"><b>Jouw merkkleuren</b><small>Kies tot vier kleuren. De voorbeelden hieronder gebruiken ze meteen.</small></div><div class="brand-palette-slots">${palette.map((hex,i)=>`<div class="brand-palette-slot"><label><input type="color" value="${hex}" data-brand-colour="${i}" aria-label="Merkkleur ${i+1}"><span>Kleur ${i+1}</span></label>${palette.length>1?`<button data-action="brand-colour-remove" data-id="${i}" aria-label="Merkkleur ${i+1} verwijderen">−</button>`:''}</div>`).join('')}${palette.length<4?'<button class="button secondary" data-action="brand-colour-add">＋ Kleur</button>':''}</div><details class="brand-suggestions"><summary>Kleurideeën</summary><div class="brand-tone-options" role="group" aria-label="Beschikbare merkkleuren">${BRAND_TONES.map(tone=>`<button class="brand-tone-option" type="button" data-action="brand-tone" data-id="${tone.id}" aria-label="${tone.name}" aria-pressed="${selected.toLowerCase()===tone.value.toLowerCase()}" title="${tone.name}" style="--brand-tone:${tone.value}"><i aria-hidden="true"></i><span>${tone.name}</span></button>`).join('')}</div></details><small class="brand-tone-note">Kies een animatie om deze kleuren op je verlichting toe te passen.</small></section>`;
   }
+  function spatialPreviewText(part){
+    return t('spatial'+(tunnelPreviewView==='wall'?'Wall':'Tunnel')+part);
+  }
+  function spatialPreviewChoice(){
+    return `<div class="spatial-preview-choice"><span>${esc(t('spatialPreviewTitle'))}</span><div class="spatial-preview-switch" role="group" aria-label="${esc(t('spatialPreviewTitle'))}">${['tunnel','wall'].map(view=>`<button type="button" data-action="tunnel-preview-view" data-view="${view}" aria-pressed="${tunnelPreviewView===view}" aria-description="${esc(t('spatialPreviewOnly'))}">${icon(view)}<span>${esc(t(view==='wall'?'spatialWall':'spatialTunnel'))}</span></button>`).join('')}</div></div>`;
+  }
+  function tunnelPreviewOptions(prefix){
+    return {tunnelPreview:true,spatialLabelPrefix:prefix,spatialShape:tunnelPreviewView,label:`${prefix} · ${spatialPreviewText('Preview')}`};
+  }
+  function changeTunnelPreview(view){
+    if(!['tunnel','wall'].includes(view)||view===tunnelPreviewView)return;
+    tunnelPreviewView=view;
+    // Update in place: preserve scroll, open families, search text, focused
+    // controls and the animation clock. No render/apply/persistence command.
+    for(const spec of previews.values())if(spec.tunnelPreview)Object.assign(spec,tunnelPreviewOptions(spec.spatialLabelPrefix));
+    main.querySelectorAll('[data-action="tunnel-preview-view"]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.view===view)));
+    main.querySelectorAll('[data-spatial-text]').forEach(element=>element.textContent=spatialPreviewText(element.dataset.spatialText));
+    main.querySelectorAll('canvas[data-preview]').forEach(canvas=>{const spec=previews.get(canvas.dataset.preview);if(spec?.tunnelPreview)canvas.setAttribute('aria-label',spec.label);});
+    paint(performance.now()/1000);
+  }
   function referenceEditorPreview(effect){
     const list=selected(),lineNumbers=Object.fromEntries(receivers().map((receiver,index)=>[receiver.id,index+1]));
-    return `<details open class="reference-editor-preview card" aria-label="Tunnelvoorbeeld"><summary>${icon('zones')}<b>Tunnelvoorbeeld</b>${icon('chevron')}</summary><div class="reference-preview-body"><div class="section-heading"><div><b>${ledlineCount(list.length)}</b><small>Elke boog is één ledline.</small></div><button class="button secondary" data-action="reference-view" aria-label="${spatialEffectView?'Toon rechte ledlines':'Toon de 3D-tunnel'}" aria-pressed="${spatialEffectView}">${spatialEffectView?'Rechte lijnen':'3D-tunnel'}</button></div>${addPreview(list,zone().layout,'reference-large-preview',{zoneId:zone().id,visibleReceiverIds:list.map(r=>r.id),preserveZoneGeometry:true,lineNumbers,presentation:'receivers',spatialShape:spatialEffectView?'tunnel':null,label:Library.displayName(effect)+' · '+ledlineCount(list.length)+' in de tunnel'})}<small>Van voor naar achter: de volgorde in Opstelling.</small></div></details>`;
+    return `<details open class="reference-editor-preview card" aria-label="${esc(t('animationPreview'))}"><summary>${icon('zones')}<b data-spatial-text="Preview">${esc(spatialPreviewText('Preview'))}</b>${icon('chevron')}</summary><div class="reference-preview-body">${spatialPreviewChoice()}<div class="section-heading"><div><b>${ledlineCount(list.length)}</b><small data-spatial-text="Unit">${esc(spatialPreviewText('Unit'))}</small></div></div>${addPreview(list,zone().layout,'reference-large-preview',{zoneId:zone().id,visibleReceiverIds:list.map(r=>r.id),preserveZoneGeometry:true,lineNumbers,presentation:'receivers',...tunnelPreviewOptions(Library.displayName(effect)+' · '+ledlineCount(list.length))})}<small data-spatial-text="Order">${esc(spatialPreviewText('Order'))}</small></div></details>`;
   }
   function categoryLabel(key) {
     return Library.categories.find(category=>category.key===key)?.title||({catalogue:'Alle',presets:'Mijn animaties'})[key]||'Animaties';
@@ -597,12 +621,12 @@
       outputs:sampleType==='SPI'?[{port:1,enabled:true,pixels:32,reversed:false}]:[],state:previewState}]
       :physicalLines.map(r=>({...r,state:previewState}));
     const lineNumbers=Object.fromEntries(receivers().map((receiver,index)=>[receiver.id,index+1]));
-    return addPreview(list,representativeOnly?'stacked':zone().layout,tunnel?'tunnel-effect-preview':reference?'reference-preview':'',{label:Library.displayName(effect)+(tunnel?' · '+ledlineCount(list.length)+' in de tunnel':''),effectId:effect.id,brand:effect.category==='brand'&&!effect.whiteMixPreset,brandPaletteLimit:effect.paletteEditable===false?0:effect.colorCountRange?.max||4,labels:!representativeOnly,lineNumbers,...(tunnel?{spatialShape:'tunnel',geometryReceivers:receivers()}:{} )});
+    return addPreview(list,representativeOnly?'stacked':zone().layout,tunnel?'tunnel-effect-preview':reference?'reference-preview':'',{label:Library.displayName(effect),effectId:effect.id,brand:effect.category==='brand'&&!effect.whiteMixPreset,brandPaletteLimit:effect.paletteEditable===false?0:effect.colorCountRange?.max||4,labels:!representativeOnly,lineNumbers,...(tunnel?{...tunnelPreviewOptions(Library.displayName(effect)+' · '+ledlineCount(list.length)),geometryReceivers:receivers()}:{} )});
   }
   function tunnelGuide() {
     const list=selected(),count=list.length,zoneCount=receivers().length,together=selection().kind==='all';
     const status=zoneCount<2?`Nog ${2-zoneCount} ${zoneCount===1?'ledline':'ledlines'} nodig`:together?'Klaar voor tunneleffecten':'Selecteer alle ledlines';
-    const detail=`${ledlineCount(count)}${together?'':' geselecteerd'} · elke boog is één ledline`;
+    const detail=`${ledlineCount(count)}${together?'':' geselecteerd'}`;
     const action=zoneCount<2?`<button class="button full" data-action="layout-receiver-add" data-zone="${esc(zone().id)}"><span aria-hidden="true">＋</span> Ledline toevoegen</button>`:!together?'<button class="button full" data-action="tunnel-together">Alle ledlines samen bedienen</button>':'';
     const tunnelExamples=catalogue().filter(effect=>effect.category==='tunnel');
     // An individually powered-off line makes editor settings "mixed", not
@@ -614,8 +638,8 @@
     // Match the gallery's readable sample pace only until an effect is chosen.
     // An active tunnel always keeps its real colours, speed and power state.
     const previewList=live||!example?list:list.map(receiver=>({...receiver,state:{...effectState(example),speed:Math.max(75,Number(example.state.speed)||0)}}));
-    const visual=addPreview(previewList,zone().layout,'tunnel-live-preview',{...(live?{zoneId:zone().id,visibleReceiverIds:list.map(receiver=>receiver.id),preserveZoneGeometry:true}:{geometryReceivers:receivers()}),spatialShape:'tunnel',label:`Tunnelvoorbeeld · ${ledlineCount(count)}`,lineNumbers:Object.fromEntries(receivers().map((receiver,index)=>[receiver.id,index+1]))});
-    return `<section class="tunnel-guide" aria-label="Tunneleffecten"><header class="tunnel-guide-heading"><div><h2>Jouw tunnel</h2></div></header><figure class="tunnel-visual">${visual}<figcaption><span>${esc(detail)}</span></figcaption></figure>${example||live?`<p class="tunnel-example-name">${live?'Actief':'Voorbeeld'}: <b>${example?esc(Library.displayName(example)):'Eigen instellingen per ledline'}</b></p>`:''}<div class="tunnel-status${action?'':' tunnel-ready'}"><div><strong>${status}</strong></div>${action}</div><details class="tunnel-arrangement-help"><summary>Volgorde van mijn ledlines</summary><p>Van voor naar achter, zoals in <b>Opstelling</b>. Hieronder bekijk je elke animatie op deze ledlines.</p><button class="button secondary full" data-action="layout">Opstelling bekijken</button></details></section>`;
+    const visual=addPreview(previewList,zone().layout,'tunnel-live-preview',{...(live?{zoneId:zone().id,visibleReceiverIds:list.map(receiver=>receiver.id),preserveZoneGeometry:true}:{geometryReceivers:receivers()}),...tunnelPreviewOptions(ledlineCount(count)),lineNumbers:Object.fromEntries(receivers().map((receiver,index)=>[receiver.id,index+1]))});
+    return `<section class="tunnel-guide" aria-label="Tunneleffecten">${spatialPreviewChoice()}<figure class="tunnel-visual">${visual}<figcaption><span>${esc(detail)} · <span data-spatial-text="Unit">${esc(spatialPreviewText('Unit'))}</span></span></figcaption></figure>${example||live?`<p class="tunnel-example-name">${live?'Actief':'Voorbeeld'}: <b>${example?esc(Library.displayName(example)):'Eigen instellingen per ledline'}</b></p>`:''}<div class="tunnel-status${action?'':' tunnel-ready'}"><div><strong>${status}</strong></div>${action}</div><details class="tunnel-arrangement-help"><summary>Volgorde van mijn ledlines</summary><p data-spatial-text="Order">${esc(spatialPreviewText('Order'))}</p><button class="button secondary full" data-action="layout">Opstelling bekijken</button></details></section>`;
   }
   function presetContext() { return {type:zone().type,receiverCount:receivers().length,selection:selection(),layout:zone().layout}; }
   function renderPresets() {
@@ -2058,7 +2082,7 @@
         if(action==='brand-colour-remove'&&palette.length>1&&Number.isInteger(Number(id))&&Number(id)>=0&&Number(id)<palette.length)palette.splice(Number(id),1);
         brandPalettes.set(route.zoneId,palette);brandColours.set(route.zoneId,palette[0]);return render({preserveScroll:true});
       }
-      if(action==='reference-view'){spatialEffectView=!spatialEffectView;render({preserveScroll:true});const preview=main.querySelector('.reference-editor-preview');if(preview)preview.open=true;return;}
+      if(action==='tunnel-preview-view')return changeTunnelPreview(button.dataset.view);
       if(action==='library'){
         if(route.screen==='controls'&&button.closest('[data-control-mode="animations"]')){
           route={...route,family:null,library:id,effectsReturn:'controls'};showControlAnimationGallery=true;return render({preserveScroll:true});

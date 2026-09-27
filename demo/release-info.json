@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-20260927-frontal-aluminium-01",
+  "revision": "v32-20260927-tunnel-wall-01",
   "interfaceVersion": 32,
-  "interfaceBaseline": "V32 restores the user-confirmed frontal circular aluminium tunnel from bb93c89, including the walkway and dark lining. One general overview and each tunnel animation use the same camera with exactly the selected ledlines and current sampled pixels, not the old fixed four-line teaching animation. Labels stay below the model and cannot hide pixel endpoints. White/Warm White editable RGB plus W mixes from the preceding revision are retained; corresponding receiver source corrections still require a separately packaged receiver update. Existing backup, PIN, scenes, animation formulas and receiver protocols are unchanged by this presentation release. This revision is not installed on iPhone and does not confirm physical colour calibration or receiver operation. This browser demo uses fictional receivers only, no hardware commands and no PIN collection.",
+  "interfaceBaseline": "V32 adds the approved Strakke wand preview beside the unchanged frontal aluminium tunnel. The compact Tunnel/Wand choice switches the general overview, tunnel gallery cards and active animation preview together, using exactly the selected ledlines, physical output mapping and existing sampled animation pixels. The view changes in place without resetting search, open groups, scroll or animation settings; it does not change zone layout or issue receiver commands. Tunnel remains the initial view. Labels for this choice are available in Dutch, English, French and German. Existing animation formulas, white mixes, backup, PIN, scenes and receiver protocols are unchanged. This revision is not installed on iPhone and does not confirm physical colour calibration or receiver operation. This browser demo uses fictional receivers only, no hardware commands and no PIN collection.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -28,7 +28,7 @@
     },
     {
       "path": "animation-library.css",
-      "sha256": "82b6728561f1c9204c2e481dee5f0c552dbc04905f0ee629312b7082e839413f"
+      "sha256": "cab9bb2397feeaa332999de024732a7481d22dcfbc008d74358c081d1ac879c1"
     },
     {
       "path": "animation-library.js",
@@ -40,7 +40,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "3e41dfff2b7fa1fdc710cbad85c47ec410df842e819c0b82e45145b7cb57f770"
+      "sha256": "6687f8b427ca2e8dc5fe65700615a52867e6a481f8c3d5f069c15bbe76fa696f"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -72,7 +72,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "84f1ad4fd7c232dd69f522499f40df7493db517551a0ee857a5f8aa97e4ac288"
+      "sha256": "5aa9bc7fc74cc984a6a36218fd2668de05a53cad2a875c6ee617d0b1b442bc35"
     },
     {
       "path": "live-control.js",
@@ -120,7 +120,7 @@
     },
     {
       "path": "preferences.js",
-      "sha256": "20ab149061e88631fef04af87d80f98851b3955ff3228e468f39eb7d67f7d9c5"
+      "sha256": "9c4399baa21c37dc16dfd260388d7db380e7b6fa110defb521364ded598c0763"
     },
     {
       "path": "premium-surfaces.css",
@@ -132,7 +132,7 @@
     },
     {
       "path": "preview.js",
-      "sha256": "27992aacf42a780e6d21f480a724b71875b25832b8125d02fe9daab3ab46d38b"
+      "sha256": "23b0f5118241f3cdd24f1557e46becf82218c122ba158ed97716a263c9553f4c"
     },
     {
       "path": "receiver-playback.js",

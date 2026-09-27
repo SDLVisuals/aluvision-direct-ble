@@ -835,10 +835,102 @@ function softChaseCoverage(distance,width,n,smooth){
     }
     context.shadowBlur=0;
   }
+  // The approved "Strakke wand" is only another camera for these same rows.
+  // Setup order goes left to right, with each strip's first pixel at its foot.
+  // In particular, a view change must not reverse an output a second time.
+  function wallProjection(lineCount, width=360, height=240) {
+    const count=Math.max(0,Math.floor(number(lineCount,0)));
+    width=Math.max(1,number(width,360));height=Math.max(1,number(height,240));
+    const wall=[[width*.095,height*.11],[width*.905,height*.11],
+      [width*.905,height*.84],[width*.095,height*.84]];
+    const lane=width*.648/Math.max(1,count);
+    const thickness=Math.max(.2,Math.min(4.3,width*.012,height*.028,lane*.3));
+    const profile=Math.min(2,width*.006,height*.012,lane*.18);
+    const lines=Array.from({length:count},(_,index)=>{
+      const x=width*(.176+.648*(index+.5)/count);
+      return {index,thickness,profile,from:[x,height*.7816],to:[x,height*.1757]};
+    });
+    return {width,height,wall,lines,
+      floor:[wall[3],wall[2],[width,height*.98],[0,height*.98]]};
+  }
+  const wallProjectionCache=new Map();
+  function drawWall(context,frame,width,height) {
+    const key=[frame.rows.length,width,height].join(':');
+    let model=wallProjectionCache.get(key);
+    if(!model){
+      model=wallProjection(frame.rows.length,width,height);
+      if(wallProjectionCache.size>=8)wallProjectionCache.delete(wallProjectionCache.keys().next().value);
+      wallProjectionCache.set(key,model);
+    }
+    const path=(points,close=false)=>{
+      context.beginPath();points.forEach(([x,y],index)=>index?context.lineTo(x,y):context.moveTo(x,y));
+      if(close)context.closePath();
+    };
+    const material=(start,end,stops)=>{
+      const gradient=context.createLinearGradient?.(...start,...end);
+      if(gradient&&typeof gradient.addColorStop==='function'){
+        stops.forEach(([at,colour])=>gradient.addColorStop(at,colour));return gradient;
+      }
+      return stops[0][1];
+    };
+    context.save();context.shadowBlur=0;
+    rounded(context,0,0,width,height,18);context.clip();
+    context.fillStyle=material([0,0],[width,height],[[0,'#151b18'],[1,'#323a34']]);context.fillRect(0,0,width,height);
+    path(model.floor,true);
+    context.fillStyle=material([0,height*.77],[width,height],[[0,'#434a43'],[1,'#232c26']]);context.fill();
+    path(model.wall,true);
+    context.fillStyle=material([width*.1,height*.1],[width*.8,height*.8],[[0,'#404740'],[.55,'#272f28'],[1,'#1b231d']]);context.fill();
+    context.strokeStyle='#555e55';context.lineWidth=.75;context.stroke();
+    context.lineCap='butt';context.lineJoin='round';
+    frame.rows.forEach((row,rowIndex)=>{
+      const line=model.lines[rowIndex],pixels=row.identificationPixels||row.pixels;
+      const point=position=>position===0?line.from:position===1?line.to:
+        [line.from[0],line.from[1]+(line.to[1]-line.from[1])*position];
+      const part=(from,to)=>path([point(from),point(to)]);
+      part(0,1);context.strokeStyle='#646b67';context.lineWidth=line.thickness+line.profile;context.stroke();
+      part(0,1);context.strokeStyle='#101713';context.lineWidth=line.thickness+.4*line.profile;context.stroke();
+      const segments=row.type==='RGBW'?1:Math.min(384,pixels.length);
+      // Halo is surface decoration only. Bound expensive shadow masks to
+      // sixteen per line; keep all foreground samples exact below the limit.
+      const groupedHalo=row.type==='SPI'&&segments>64;
+      if(groupedHalo){
+        const groups=16;
+        for(let group=0;group<groups;group++){
+          const start=Math.floor(group*pixels.length/groups),end=Math.floor((group+1)*pixels.length/groups),sum=[0,0,0];
+          for(let pixel=start;pixel<end;pixel++)for(let channel=0;channel<3;channel++)sum[channel]+=pixels[pixel][channel];
+          const colour=sum.map(value=>Math.round(value/Math.max(1,end-start)));
+          if(Math.max(...colour)===0)continue;
+          const css='rgba('+colour.join(',')+',0.38)';context.strokeStyle=css;context.shadowColor=css;
+          context.shadowBlur=Math.min(7,line.thickness*2);context.lineWidth=line.thickness;
+          part(group/groups,(group+1)/groups);context.stroke();
+        }
+        context.shadowBlur=0;
+      }
+      for(let index=0;index<segments;index++){
+        const colour=pixels[Math.min(pixels.length-1,Math.floor((index+.5)/segments*pixels.length))]||[0,0,0];
+        const css='rgb('+colour.join(',')+')';
+        const gap=row.type==='SPI'&&pixels.length<=64?.035:0;
+        context.strokeStyle=css;context.shadowColor=css;context.lineWidth=line.thickness;
+        context.shadowBlur=Math.max(...colour)>0&&!groupedHalo?Math.min(7,line.thickness*2):0;
+        part((index+gap)/segments,(index+1-gap)/segments);context.stroke();
+      }
+      context.shadowBlur=0;
+    });
+    // An unobtrusive order key on the floor never covers the light itself.
+    if(frame.rows.length<=8&&height>=130){
+      context.font='10px system-ui';context.textAlign='center';context.textBaseline='middle';context.fillStyle='#c0c8c2';
+      frame.rows.forEach((row,index)=>{
+        const order=(frame.geometry.receivers.find(item=>item.receiverId===row.receiverId)?.lineIndex??index)+1;
+        context.fillText(String(order),model.lines[index].from[0],height*.9);
+      });
+    }
+    context.restore();context.shadowBlur=0;
+  }
   // A projection of the SAME sampled pixels, not a second canned animation.
   // View shape changes presentation only; it never changes output mapping.
   function drawSpatial(context,frame,width,height,shape) {
     if(shape==='tunnel'){drawTunnel(context,frame,width,height);return;}
+    if(shape==='wall'){drawWall(context,frame,width,height);return;}
     const count=frame.rows.length;
     const point=(index,u)=>{
       const spread=(index+.5)/count;
@@ -1002,6 +1094,6 @@ function softChaseCoverage(distance,width,n,smooth){
     if (canvas.dataset) canvas.dataset.lineHitRegions = JSON.stringify(hitRegions);
     return frame;
   }
-  return Object.freeze({ catalog, geometry, sample, draw, rows, selected, normalizeState, opticalWhite, tunnelProjection,
+  return Object.freeze({ catalog, geometry, sample, draw, rows, selected, normalizeState, opticalWhite, tunnelProjection, wallProjection,
     engineVersion: canonical.version, extensionVersion: extension.version, isLocalPreview: true });
 }));

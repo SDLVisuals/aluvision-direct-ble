@@ -60,6 +60,13 @@ main.gallery-scroll-stable{overflow-anchor:none}
 .reference-editor-preview>summary>.icon:last-child{margin-left:auto}
 .reference-editor-preview[open]>summary>.icon:last-child{transform:rotate(90deg)}
 .reference-preview-body{display:grid;gap:10px;padding-top:12px}
+.spatial-preview-choice{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;min-width:0}
+.spatial-preview-choice>span{font-size:13px;font-weight:750;color:var(--ink)}
+.spatial-preview-switch{display:flex;gap:3px;padding:3px;border:1px solid var(--line);border-radius:15px;background:var(--soft);max-width:100%}
+.spatial-preview-switch button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:44px;min-width:84px;padding:8px 12px;border:0;border-radius:11px;background:transparent;color:var(--muted);font:inherit;font-size:13px;font-weight:750;cursor:pointer}
+.spatial-preview-switch button .icon{width:19px;height:19px;flex:none}
+.spatial-preview-switch button[aria-pressed="true"]{background:var(--button,#1c231e);color:var(--button-text,#fff);box-shadow:inset 0 -3px var(--red)}
+@media(max-width:420px){.spatial-preview-switch{width:100%}.spatial-preview-switch button{flex:1}}
 .tunnel-arrangement-help{margin-top:12px;border-top:1px solid var(--line)}
 .tunnel-arrangement-help>summary{min-height:48px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:750;cursor:pointer;list-style:none}
 .tunnel-arrangement-help>summary::after{content:'⌄';margin-left:auto}
