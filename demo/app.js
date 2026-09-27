@@ -57,6 +57,8 @@
   let sceneDetailSearch='';
   let dragOrder=null;
   let receiverAssignment=null,nameDialog=null,zoneDeletion=null,managementBusy=false;
+  let arrangementDraft=null,setupReturnContext=null;
+  const openLineSetup=new Set(),openLineManagement=new Set(),zonePreviewViews=new Map();
   let standControlOpen=false;
   // Everyday controls share one zone screen. Keep the light mode local to
   // that screen so changing between colour and movement never sends users
@@ -93,15 +95,18 @@
   function revealAnimationStart(){
     // Do not carry a deep gallery scroll position into the settings. Align
     // their heading below the visible dock, including its compacted height.
-    const target=main.querySelector('.active-animation-workspace');if(!target)return;
+    const workspace=main.querySelector('.active-animation-workspace');if(!workspace)return;
+    // The integrated setup entry belongs to these settings too. Starting at
+    // the old effect heading would hide it underneath the sticky toolbar.
+    const target=main.querySelector('.ledline-setup')||workspace;
     const align=()=>{
       if(!target.isConnected)return;
       updateControlPreviewDensity();
-      const surface=main.querySelector('.control-dock-surface'),height=surface?.getBoundingClientRect().height||0;
-      window.scrollTo({top:Math.max(0,window.scrollY+target.getBoundingClientRect().top-height-12),behavior:'instant'});
+      const dock=main.querySelector('.control-preview-dock'),bottom=Math.max(0,dock?.getBoundingClientRect().bottom||0);
+      window.scrollTo({top:Math.max(0,window.scrollY+target.getBoundingClientRect().top-bottom-12),behavior:'instant'});
       updateControlPreviewDensity();
     };
-    align();requestAnimationFrame(()=>{align();target.querySelector('.current-effect b')?.focus({preventScroll:true});});
+    align();requestAnimationFrame(()=>{align();workspace.querySelector('.current-effect b')?.focus({preventScroll:true});});
   }
   document.getElementById('effect-dialog').addEventListener('cancel',event=>{if(colourManagerReturn){event.preventDefault();closeColourManager();}});
   if(webDemoContext){
@@ -148,7 +153,16 @@
     onComplete:nextModel=>{model=nextModel;},
     onExit:result=>{
       const returnZone=stand()?.zones.find(z=>z.id===route.setupReturnZoneId);
-      if(returnZone)return navigate('layout',{zoneId:returnZone.id,setupReturnZoneId:null});
+      if(returnZone){
+        const context=setupReturnContext;setupReturnContext=null;
+        openLineSetup.add(returnZone.id);openLineManagement.add(returnZone.id);arrangementDraft=null;
+        if(context&&context.route.zoneId===returnZone.id){
+          controlMode=context.controlMode;showControlAnimationGallery=context.showGallery;
+          navigate(context.route.screen,{...context.route,setupReturnZoneId:null},{restoreControls:true});
+          restoreArrangementBrowsing(context);return;
+        }
+        return navigate('controls',{zoneId:returnZone.id,setupReturnZoneId:null});
+      }
       navigate(result?.stand||route.setupFrom==='stand'||!stand()?'stand':'receivers',{setupReturnZoneId:null});
     }});
   const previews = new Map();
@@ -324,7 +338,7 @@
     const modeTabs=screen==='controls'?`<div class="section-tabs control-mode-tabs" role="group" aria-label="Kleur of animatie"><button data-action="colour" aria-pressed="${controlMode==='colour'}">${icon('sun')}Kleur</button><button data-action="animations" aria-label="Effecten" aria-pressed="${controlMode==='animations'}">${icon('animation')}Effecten</button></div>`:'';
     const galleryBack=screen==='animations'&&Boolean(activeEffect()),backLabel=atRoot?'Terug naar zones':galleryBack?'Animatiegalerij':`Bediening · ${z.name}`,backAction=atRoot?'stand':galleryBack?'animations-gallery':'controls';
     const integratedControlHeading=screen==='controls'&&atRoot;
-    return `<section class="control-context${list.length>=5?' many-receivers':''}">${integratedControlHeading?'':contextTitle(title,atRoot ? `${list.length} ledline${list.length===1?'':'s'} · in ${standLabel()}` : z.name,backLabel,backAction)}${atRoot ? `<div class="section-tabs" role="tablist" aria-label="Zonepagina"><button role="tab" data-action="controls" aria-selected="${screen === 'controls'}">${icon('sun')}Bediening</button><button role="tab" data-action="layout" aria-selected="${screen === 'layout'}">${icon('zones')}Opstelling</button></div>` : ''}</section>${controlPreviewDock(screen,modeTabs)}`;
+    return `${integratedControlHeading?'':`<section class="control-context${list.length>=5?' many-receivers':''}">${contextTitle(title,atRoot ? `${list.length} ledline${list.length===1?'':'s'} · in ${standLabel()}` : z.name,backLabel,backAction)}</section>`}${controlPreviewDock(screen,modeTabs)}`;
   }
   function controlPreviewDock(screen,modeTabs='') {
     const z=zone(),list=receivers(),pixels=z.type==='SPI'?P.geometry(list,z.layout).totalPixels:0;
@@ -379,8 +393,8 @@
     const colour=controlMode==='colour';
     const oneLine=receivers().length===1;
     const modeContent=colour
-      ?`<section class="bediening-workspace" aria-labelledby="bediening-colour-title"><header class="bediening-workspace-heading"><span class="menu-icon">${icon('sun')}</span><div><h2 id="bediening-colour-title">Vaste kleur</h2><p>${oneLine?'Kies een kleur voor deze ledline.':'Kies ledlines om samen te bedienen.'}</p></div></header>${selector()}${colourPickerMarkup()}</section>`
-      :`<section class="bediening-workspace" aria-labelledby="bediening-animation-title"><header class="bediening-workspace-heading"><span class="menu-icon">${icon('animation')}</span><div><h2 id="bediening-animation-title">Animaties</h2><p>${oneLine?'Kies een animatie voor deze ledline.':'Kies ledlines om samen te bedienen. Kies daarna een animatie.'}</p></div></header>${selector()}${controlAnimationPanel()}</section>`;
+      ?`<section class="bediening-workspace" aria-labelledby="bediening-colour-title"><header class="bediening-workspace-heading"><span class="menu-icon">${icon('sun')}</span><div><h2 id="bediening-colour-title">Vaste kleur</h2><p>${oneLine?'Kies een kleur voor deze ledline.':'Kies ledlines om samen te bedienen.'}</p></div></header>${selector()}${colourPickerMarkup()}${ledlineSetupMarkup()}</section>`
+      :`<section class="bediening-workspace" aria-labelledby="bediening-animation-title"><header class="bediening-workspace-heading"><span class="menu-icon">${icon('animation')}</span><div><h2 id="bediening-animation-title">Animaties</h2><p>${oneLine?'Kies een animatie voor deze ledline.':'Kies ledlines om samen te bedienen. Kies daarna een animatie.'}</p></div></header>${selector()}${ledlineSetupMarkup()}${controlAnimationPanel()}</section>`;
     return `<div class="editor-grid">${controlContext('controls')}<section class="editor-controls editor-controls-zone">${powerControl()}<section class="control-workspace"><div class="control-mode-panel" role="region" aria-label="${colour?'Vaste kleur':'Animaties'}" data-control-mode="${controlMode}">${modeContent}</div></section></section></div>`;
   }
 
@@ -396,7 +410,7 @@
     return `<div class="slider-row${guide?.icon?' has-setting-icon':''}"><label for="setting-${key}">${title}<output data-value-for="${key}">${Math.round(value)}${unit}</output></label><input id="setting-${key}" type="range" min="${min}" max="${max}" step="1" value="${value}" data-setting="${key}" data-unit="${unit}">${description ? `<small>${esc(description)}</small>` : ''}</div>`;
   }
   function renderColour() {
-    return `<div class="editor-grid">${controlContext('colour')}<section class="editor-controls">${selector()}${colourPickerMarkup()}</section></div>`;
+    return `<div class="editor-grid">${controlContext('colour')}<section class="editor-controls">${selector()}${colourPickerMarkup()}${ledlineSetupMarkup()}</section></div>`;
   }
   function myColoursMarkup() {
     return `<section class="my-colours"><div class="section-heading"><h3>${esc(t('myColours'))}</h3><div class="colour-library-actions"><button class="icon-button colour-manager-button" data-action="colours-manager" aria-label="Kleurpresets beheren" title="Kleurpresets beheren" ${savedColours.colors.length?'':'disabled'}>${icon('trash')}</button><button class="text-button" data-action="colours-manage" aria-pressed="${colourOrderMode}" ${savedColours.colors.length<2&&!colourOrderMode?'disabled':''}>${esc(t(colourOrderMode?'done':'colourOrder'))}</button></div></div><p class="colour-library-hint">${colourOrderMode?'Sleep een kleur naar haar nieuwe plek. De volgorde wordt meteen bewaard.':'＋ bewaart je ingestelde kleur. Tik op het prullenbakje om presets te beheren.'}</p><div class="saved-colour-grid ${colourOrderMode?'is-ordering':''}">${savedColours.colors.map(entry=>`<div class="saved-colour-item" data-colour-id="${esc(entry.id)}"><button class="saved-colour" data-action="swatch" data-id="${esc(entry.id)}" data-rgb="${entry.color.r},${entry.color.g},${entry.color.b}" data-white="${entry.color.w}" style="--swatch:${C.hex(C.mixWhite([entry.color.r,entry.color.g,entry.color.b],entry.color.w))}" aria-label="${esc(entry.name)}"><i></i><span>${esc(entry.name)}</span></button>${colourOrderMode?`<button class="colour-drag-handle" data-colour-drag="${esc(entry.id)}" aria-label="${esc(entry.name)} verslepen" title="Versleep om de volgorde te wijzigen"><span aria-hidden="true">⠿</span><small>Sleep</small></button>`:''}</div>`).join('')}<button class="saved-colour add-colour" data-action="colour-new" aria-label="${esc(t('saveCurrentColour'))}"><i aria-hidden="true">＋</i><span>${esc(t('saveColour'))}</span></button></div><div class="colour-library-feedback"><p class="colour-library-status" role="status">${esc(colourLibraryNotice)}</p></div>${savedColours.error?`<p role="alert">${esc(savedColours.error.message)}</p>`:''}</section>`;
@@ -527,7 +541,7 @@
   function renderAnimations() {
     const effect=activeEffect();
     if(!effect)return renderEffects();
-    return `<div class="editor-grid">${controlContext('animations')}<section class="editor-controls">${selector()}${animationEditorMarkup(effect)}</section></div>`;
+    return `<div class="editor-grid">${controlContext('animations')}<section class="editor-controls">${selector()}${ledlineSetupMarkup()}${animationEditorMarkup(effect)}</section></div>`;
   }
   function currentBrandPalette(){
     const chosen=brandPalettes.get(route.zoneId);if(chosen)return chosen;
@@ -549,7 +563,7 @@
   }
   function changeTunnelPreview(view){
     if(!['tunnel','wall'].includes(view)||view===tunnelPreviewView)return;
-    tunnelPreviewView=view;
+    tunnelPreviewView=view;zonePreviewViews.set(route.zoneId,view);
     // Update in place: preserve scroll, open families, search text, focused
     // controls and the animation clock. No render/apply/persistence command.
     for(const spec of previews.values())if(spec.tunnelPreview)Object.assign(spec,tunnelPreviewOptions(spec.spatialLabelPrefix));
@@ -639,7 +653,7 @@
     // An active tunnel always keeps its real colours, speed and power state.
     const previewList=live||!example?list:list.map(receiver=>({...receiver,state:{...effectState(example),speed:Math.max(75,Number(example.state.speed)||0)}}));
     const visual=addPreview(previewList,zone().layout,'tunnel-live-preview',{...(live?{zoneId:zone().id,visibleReceiverIds:list.map(receiver=>receiver.id),preserveZoneGeometry:true}:{geometryReceivers:receivers()}),...tunnelPreviewOptions(ledlineCount(count)),lineNumbers:Object.fromEntries(receivers().map((receiver,index)=>[receiver.id,index+1]))});
-    return `<section class="tunnel-guide" aria-label="Tunneleffecten">${spatialPreviewChoice()}<figure class="tunnel-visual">${visual}<figcaption><span>${esc(detail)} · <span data-spatial-text="Unit">${esc(spatialPreviewText('Unit'))}</span></span></figcaption></figure>${example||live?`<p class="tunnel-example-name">${live?'Actief':'Voorbeeld'}: <b>${example?esc(Library.displayName(example)):'Eigen instellingen per ledline'}</b></p>`:''}<div class="tunnel-status${action?'':' tunnel-ready'}"><div><strong>${status}</strong></div>${action}</div><details class="tunnel-arrangement-help"><summary>Volgorde van mijn ledlines</summary><p data-spatial-text="Order">${esc(spatialPreviewText('Order'))}</p><button class="button secondary full" data-action="layout">Opstelling bekijken</button></details></section>`;
+    return `<section class="tunnel-guide" aria-label="Tunneleffecten">${spatialPreviewChoice()}<figure class="tunnel-visual">${visual}<figcaption><span>${esc(detail)} · <span data-spatial-text="Unit">${esc(spatialPreviewText('Unit'))}</span></span></figcaption></figure>${example||live?`<p class="tunnel-example-name">${live?'Actief':'Voorbeeld'}: <b>${example?esc(Library.displayName(example)):'Eigen instellingen per ledline'}</b></p>`:''}<div class="tunnel-status${action?'':' tunnel-ready'}"><div><strong>${status}</strong></div>${action}</div><button class="text-button tunnel-arrangement-help" data-action="line-setup-open">${icon('sliders')}${esc(t('lineSetupTitle'))}${icon('chevron')}</button></section>`;
   }
   function presetContext() { return {type:zone().type,receiverCount:receivers().length,selection:selection(),layout:zone().layout}; }
   function renderPresets() {
@@ -680,7 +694,7 @@
     const currentEffect=activeEffect(),returnToEditor=Boolean(currentEffect)&&route.effectsReturn!=='controls',tab=libraryTab();
     const title=tab==='catalogue'?'Alle animaties':tab==='tunnel'||tab==='brand'||tab==='presets'?categoryLabel(tab):'Animatie kiezen';
     const editCurrent=currentEffect&&route.effectsReturn==='controls'?`<button class="button secondary full" data-action="animations">Actieve animatie bewerken · ${esc(Library.displayName(currentEffect))}</button>`:'';
-    return `<div class="page">${contextTitle(title,`${zone().name} · ${nameOfSelection()}`,returnToEditor?'Terug naar instellingen':'Terug naar bediening',returnToEditor?'animations':'controls')}${tab==='tunnel'&&receivers().length<2?'':selector()}${editCurrent}${animationLibraryContent()}</div>`;
+    return `<div class="page">${contextTitle(title,`${zone().name} · ${nameOfSelection()}`,returnToEditor?'Terug naar instellingen':'Terug naar bediening',returnToEditor?'animations':'controls')}${tab==='tunnel'&&receivers().length<2?'':selector()}${ledlineSetupMarkup()}${editCurrent}${animationLibraryContent()}</div>`;
   }
   function animationLibraryContent(){
     savedPresets=presetStore.load();
@@ -709,10 +723,37 @@
       ?'Licht gaat van de linker naar de rechter staande LED-line':'Licht gaat van de bovenste naar de onderste LED-line';
     return `<span class="layout-demo" data-layout-demo="${layout}" aria-hidden="true">${addPreview(list,layout,'layout-demo-preview',{labels:false,label})}</span>`;
   }
-  function renderLayout() {
-    const type = zone().type, choices=[['stacked','Onder elkaar','Een ledline per rij.'],['vertical','Verticaal','Ledlines rechtop naast elkaar.']];
-    if(type==='SPI')choices.push(['continuous','Doorlopend','Pixels vormen samen één lijn.']);
-    return `<div class="editor-grid">${controlContext('layout')}<section class="editor-controls"><div><div class="section-heading"><h2>Hoe staan je ledlines?</h2></div>${type==='SPI'?'<p class="layout-demo-help">Zo kan licht door je opstelling bewegen. Je huidige kleur of animatie blijft behouden.</p>':''}<div class="layout-grid">${choices.map(([id,name,desc])=>`<button class="layout-choice ${type==='SPI'?'layout-choice-spi':''}" data-action="set-layout" data-id="${id}" aria-pressed="${zone().layout===id}">${type==='SPI'?spiLayoutPreview(id):`<span class="layout-art ${id}" aria-hidden="true"><i></i><i></i><i></i></span>`}<b>${name}</b><small>${desc}</small></button>`).join('')}</div></div><section class="layout-receiver-section"><h3>Volgorde van ledlines</h3>${receiverOrderMarkup()}<p class="order-help">${type==='RGBW'?'RGBW stuurt de hele ledline als één geheel aan.':'De preview gebruikt alle actieve pixels en de ingestelde aansluitzijde per uitgang.'}</p></section></section></div>`;
+  const arrangementModes={stacked:['Tunnel','tunnel'],vertical:['Wall','wall'],continuous:['Continuous','light']};
+  function arrangementSignature(z=zone()) {return JSON.stringify([z.id,z.name,z.type,z.receiverIds,z.layout]);}
+  function arrangementDirty(){return Boolean(arrangementDraft&&JSON.stringify([arrangementDraft.layout,arrangementDraft.receiverIds])!==arrangementDraft.initial);}
+  function beginArrangement(){
+    const z=zone();if(!z)return;
+    arrangementDraft={zoneId:z.id,layout:z.layout,receiverIds:[...z.receiverIds],signature:arrangementSignature(z),initial:JSON.stringify([z.layout,z.receiverIds]),error:''};
+  }
+  function arrangementBrowsing(){return {route:{...route},controlMode,showGallery:showControlAnimationGallery,query:main.querySelector('#animation-search')?.value||'',scroll:window.scrollY};}
+  function restoreArrangementBrowsing(context){
+    const search=main.querySelector('#animation-search');
+    if(search&&context.query){search.value=context.query;const results=main.querySelector('#animation-results');if(results)results.innerHTML=effectResults(context.query);paint(performance.now()/1000);}
+    window.scrollTo({top:context.scroll,left:0,behavior:'instant'});updateControlPreviewDensity();
+  }
+  function renderArrangement(){const context=arrangementBrowsing();render();restoreArrangementBrowsing(context);}
+  function revealLineSetup(){
+    const target=main.querySelector('.ledline-setup');if(!target)return;
+    const align=()=>{if(!target.isConnected)return;const bottom=Math.max(0,main.querySelector('.control-preview-dock')?.getBoundingClientRect().bottom||0);window.scrollTo({top:Math.max(0,window.scrollY+target.getBoundingClientRect().top-bottom-12),behavior:'instant'});updateControlPreviewDensity();};
+    align();requestAnimationFrame(align);target.querySelector('.ledline-setup-toggle')?.focus({preventScroll:true});
+  }
+  function ledlineSetupMarkup(){
+    const z=zone(),open=openLineSetup.has(z.id),mode=arrangementModes[z.layout]||arrangementModes.stacked;
+    if(open&&(!arrangementDraft||arrangementDraft.zoneId!==z.id||!arrangementDirty()))beginArrangement();
+    const draft=open?arrangementDraft:null,dirty=arrangementDirty(),stale=draft&&draft.signature!==arrangementSignature(z);
+    const summary=`${t(z.receiverIds.length===1?'scopeCountOne':'scopeCountMany',{count:z.receiverIds.length})} · ${t('lineSetup'+mode[0])}`;
+    const choices=z.type==='SPI'?['stacked','vertical','continuous']:['stacked','vertical'];
+    return `<section class="ledline-setup card" aria-label="${esc(t('lineSetupTitle'))}"><button class="ledline-setup-toggle" data-action="layout" aria-expanded="${open}" aria-controls="ledline-setup-body">${icon('sliders')}<span><b>${esc(t('lineSetupTitle'))}</b><small>${esc(summary)}</small></span>${icon('chevron')}</button><div class="ledline-setup-body" id="ledline-setup-body" ${open?'':'hidden'}>${open?`
+      <section class="ledline-arrangement" aria-label="${esc(t('lineSetupChoose'))}"><h3>${esc(t('lineSetupChoose'))}</h3><div class="ledline-layout-choices" role="group" aria-label="${esc(t('lineSetupChoose'))}">${choices.map(id=>{const [key,glyph]=arrangementModes[id];return `<button data-action="draft-layout" data-id="${id}" aria-pressed="${draft.layout===id}">${icon(glyph)}<b>${esc(t('lineSetup'+key))}</b><small>${esc(t('lineSetup'+key+'Hint'))}</small></button>`;}).join('')}</div>
+      <div class="ledline-order-heading"><h3>${esc(t('lineSetupOrder'))}</h3><small>${esc(t('lineSetup'+arrangementModes[draft.layout][0]+'Hint'))}</small></div><p class="ledline-setup-hint">${esc(t('lineSetupOrderHint'))}</p>
+      <ol class="ledline-draft-order">${draft.receiverIds.map((id,index)=>{const r=model.receivers.find(r=>r.id===id);if(!r)return '';const blinking=identifying.get(id)?.scope==='all';return `<li data-draft-receiver="${esc(id)}"><span class="order-number">${index+1}</span><b>${esc(r.name)}</b><button class="receiver-blink" data-action="visual-identify" data-receiver="${esc(id)}" aria-pressed="${blinking}" aria-label="${esc(r.name)} · ${blinking?'stoppen met knipperen':'laten knipperen'}">${icon('sun')}<span>${blinking?'Stop':'Knipperen'}</span></button><div class="ledline-draft-arrows"><button class="icon-button" data-action="draft-order" data-id="${esc(id)}" data-delta="-1" aria-label="${esc(t('lineSetupUp',{name:r.name}))}" ${index===0?'disabled':''}>↑</button><button class="icon-button" data-action="draft-order" data-id="${esc(id)}" data-delta="1" aria-label="${esc(t('lineSetupDown',{name:r.name}))}" ${index===draft.receiverIds.length-1?'disabled':''}>↓</button></div></li>`;}).join('')}</ol>
+      <p class="ledline-setup-hint">${esc(t('lineSetupPreviewHint'))}</p><p class="arrangement-error" role="alert" ${stale||draft.error?'':'hidden'}>${esc(stale?t('lineSetupChanged'):draft.error)}</p><div class="ledline-setup-actions"><button class="button secondary" data-action="arrangement-cancel">${esc(t('lineSetupCancel'))}</button><button class="button" data-action="arrangement-save" ${!dirty||stale?'disabled':''}>${esc(t('lineSetupSave'))}</button></div></section>
+      ${dirty?`<p class="ledline-setup-hint">${esc(t('lineSetupUnsaved'))}</p>`:`<details class="ledline-management" ${openLineManagement.has(z.id)?'open':''}><summary>${icon('light')}<span><b>${esc(t('lineSetupManage'))}</b><small>${esc(t('lineSetupManageHint'))}</small></span>${icon('chevron')}</summary><div class="ledline-management-body">${layoutReceiverActions()}<div class="receiver-list">${receivers().map(r=>receiverCard(r)).join('')}</div></div></details>`}`:''}</div></section>`;
   }
   function layoutReceiverActions() {
     const z=zone(),list=receivers();
@@ -939,6 +980,12 @@
     }
     if(route.screen==='demo-wifi'&&!webDemoContext)route.screen='settings';
     if(!model.stands.length&&!['stand','scenes','settings','demo-wifi','pin-login','receivers','receiver-add'].includes(route.screen))route.screen='stand';
+    if(['controls','colour','animations','effects','layout'].includes(route.screen)&&!zone()){
+      // Another client may have removed the zone while a native edit was in
+      // flight. Never leave an impossible draft trapping the user here.
+      openLineSetup.delete(route.zoneId);openLineManagement.delete(route.zoneId);arrangementDraft=null;
+      route={...route,screen:'stand',zoneId:null};toast(t('lineSetupChanged'));
+    }
     const animationEditorOpen=route.screen==='animations'||(route.screen==='controls'&&controlMode==='animations'&&!showControlAnimationGallery);
     const visibleEffect=animationEditorOpen?activeEffect():null;
     // No empty animation landing page. This also covers switching from an
@@ -948,7 +995,7 @@
     }
     const focused=document.activeElement,focusKey=focused?.dataset?.id;
     previews.clear();
-    const views = {stand:renderStand,controls:renderControls,colour:renderColour,animations:renderAnimations,effects:renderEffects,layout:renderLayout,receivers:renderReceivers,settings:renderSettings,'demo-wifi':renderDemoWifi,'pin-login':renderPinLogin,scenes:renderScenes,'scene-draft':renderSceneDraft,'scene-detail':renderSceneDetail,'receiver-add':renderReceiverAdd};
+    const views = {stand:renderStand,controls:renderControls,colour:renderColour,animations:renderAnimations,effects:renderEffects,receivers:renderReceivers,settings:renderSettings,'demo-wifi':renderDemoWifi,'pin-login':renderPinLogin,scenes:renderScenes,'scene-draft':renderSceneDraft,'scene-detail':renderSceneDetail,'receiver-add':renderReceiverAdd};
     const zoneScreen=['controls','colour','animations','effects','layout'].includes(route.screen);
     main.innerHTML = (zoneScreen&&zone()&&!receivers().length?renderEmptyZone:(views[route.screen] || renderStand))();
     const previewDock=main.querySelector('.control-preview-dock');
@@ -1006,10 +1053,6 @@
       card.querySelector('.receiver-manage-content').insertAdjacentHTML('beforeend',`<section class="receiver-danger-section" aria-label="Receiver verwijderen"><h3>${r.role==='main'?'Alle receivers ontkoppelen':'Deze receiver ontkoppelen'}</h3><p>${r.role==='main'?'Hiermee verwijder je het volledige receivernetwerk.':'Hiermee verwijder je alleen deze receiver uit het netwerk.'}</p><button class="button secondary full" data-action="receiver-remove" data-id="${esc(r.id)}">${r.role==='main'?'Alle receivers ontkoppelen':'Deze receiver ontkoppelen'}</button></section>`);
     });
     if(zoneScreen&&zone()?.type===null)main.querySelector('.page-heading .pill')?.remove();
-    if(route.screen==='layout'&&receivers().length){
-      main.querySelector('.editor-controls').insertAdjacentHTML('afterbegin',layoutReceiverActions());
-      main.querySelector('.editor-controls').insertAdjacentHTML('beforeend',`<div class="zone-management-actions"><button class="text-button" data-action="zone-rename" data-id="${esc(zone().id)}">Naam van deze zone wijzigen</button>${zoneDeleteButton(zone())}</div>`);
-    }
     if(nativeContext&&window.__lightningV32Appearance===true)
       runtime?.services?.setAppearance?.({theme:uiPreferences.preferences.theme}).catch(()=>{});
     // Replace the old fixed shortcuts and read-only order list with their
@@ -1068,7 +1111,10 @@
     if(!same||same.disabled)return false;
     same.focus({preventScroll:true});return true;
   }
-  function navigate(screen, extra={}) {
+  function navigate(screen, extra={}, {restoreControls=false}={}) {
+    // Compatibility for internal callers; layout is now a panel, not a page.
+    if(screen==='layout'){screen='controls';openLineSetup.add(extra.zoneId||route.zoneId);}
+    if(arrangementDirty()){toast(t('lineSetupUnsaved'));return;}
     const previousRoute=route;
     if(screen!==route.screen)visualPlugMotions.clear();
     if(!pinRequired()&&!nativeContext&&screen==='pin-login')screen='settings';
@@ -1080,11 +1126,13 @@
       // Do not touch receiver selection, saved light or same-zone navigation.
       route={...route,family:null,library:initialAnimationLibrary()};
       settingsOpen=false;showControlAnimationGallery=!activeEffect();
+      arrangementDraft=null;tunnelPreviewView=zonePreviewViews.get(route.zoneId)||(zone()?.layout==='vertical'?'wall':'tunnel');
     }
     const enteredZone=screen==='controls'&&(changedZone||!['controls','colour','animations','effects','layout'].includes(previousRoute.screen));
-    if(enteredZone&&activeEffect()){controlMode='animations';showControlAnimationGallery=false;}
+    if(enteredZone&&!zonePreviewViews.has(route.zoneId))tunnelPreviewView=zone()?.layout==='vertical'?'wall':'tunnel';
+    if(enteredZone&&activeEffect()&&!restoreControls){controlMode='animations';showControlAnimationGallery=false;}
     render({top:true});
-    if(enteredZone&&controlMode==='animations'&&!showControlAnimationGallery)revealAnimationStart();
+    if(enteredZone&&controlMode==='animations'&&!showControlAnimationGallery&&!restoreControls)revealAnimationStart();
     if(screen==='settings')void refreshPinProtection();
   }
   function resetMarkup(key,label) { return `<button class="setting-reset" data-action="setting-reset" data-id="${key}" aria-label="${esc(label)} terug naar standaard" ${settingChanged(key)?'':'hidden'}>↺ Standaard</button>`; }
@@ -1266,6 +1314,7 @@
     });
   }
   function apply(patch,scope=selection()) {
+    if(managementBusy)return;
     const ids=standControlOpen?standReceivers().map(receiver=>receiver.id):selectedReceiverIds(scope);
     if(Object.hasOwn(patch,'bri')&&!Object.hasOwn(patch,'brightness'))patch={...patch,brightness:patch.bri};
     else if(Object.hasOwn(patch,'brightness')&&!Object.hasOwn(patch,'bri'))patch={...patch,bri:patch.brightness};
@@ -1306,6 +1355,7 @@
     const value=raw['rgbw'.indexOf(channel)];return Number.isInteger(value)&&value>0?value:255;
   }
   function writePicker(root,rgb,w,changed='both') {
+    if(managementBusy)return;
     if(root?.dataset.colourPicker==='animation'){
       const slot=Number(root.dataset.slot),state=selectedState(),count=Math.min(colours(state).length,state.colorCount||colours(state).length);
       if(!Number.isInteger(slot)||slot<0||slot>=count||activeEffect()?.paletteEditable===false)return;
@@ -1723,6 +1773,12 @@
       const message='Opslaan is niet bevestigd. Controleer de indeling en probeer opnieuw.';
       if(error.reconciledView?.model){
         refreshSuspendedSetup(error.reconciledView);
+        if(operation?.kind==='arrange'){
+          // Reconcile only the authoritative model. Keep the unsaved draft
+          // here, visibly stale, so the customer can cancel and reopen it.
+          model=keepLocalPreviewStates(error.reconciledView.model);retainSetupSelections();
+          return null;
+        }
         model=keepLocalPreviewStates(error.reconciledView.model);selections.clear();zoneDeletion=null;receiverAssignment=null;nameDialog=null;
         closeEffectDialog();navigate('stand',{zoneId:null});toast(message);
       }else{
@@ -1749,7 +1805,7 @@
         if(retained.length)storeLineSelection(retained,remaining,zoneId);else selections.delete(zoneId);
       }
     }
-    model=next;closeEffectDialog();receiverAssignment=null;nameDialog=null;render();
+    model=next;closeEffectDialog();receiverAssignment=null;nameDialog=null;renderArrangement();
     openIds.forEach(id=>{const detail=main.querySelector(`[data-receiver-detail="${CSS.escape(id)}"]`);if(detail)detail.open=true;});
     toast(message);return true;
   }
@@ -1766,6 +1822,7 @@
   }
   document.getElementById('effect-dialog').addEventListener('cancel',event=>{event.preventDefault();if(!managementBusy)closeEffectDialog();});
   main.addEventListener('click',event=>{
+    if(managementBusy||arrangementDirty())return;
     const canvas=event.target.closest?.('canvas[data-preview]');
     if(!canvas||!['controls','colour','animations'].includes(route.screen)||continuousZone())return;
     const preview=previews.get(canvas.dataset.preview);
@@ -1787,6 +1844,47 @@
     if(managementBusy||pinProtectionBusy||pinLoginBusy)return;
     const action=button.dataset.action,id=button.dataset.id;
     try {
+      // Draft layout/order is explicitly confirmed. Other changes cannot
+      // silently discard it or save a mixture of old and new zone membership.
+      if(arrangementDirty()&&!['draft-layout','draft-order','arrangement-save','arrangement-cancel','visual-identify','tunnel-preview-view','preview-size'].includes(action))return toast(t('lineSetupUnsaved'));
+      if(action==='layout'||action==='line-setup-open'){
+        if(!zone()||!receivers().length)return;
+        if(action==='layout'&&openLineSetup.has(route.zoneId)){openLineSetup.delete(route.zoneId);arrangementDraft=null;}
+        else {openLineSetup.add(route.zoneId);beginArrangement();}
+        renderArrangement();
+        if(action==='line-setup-open')revealLineSetup();
+        main.querySelector('.ledline-setup-toggle')?.focus({preventScroll:true});return;
+      }
+      if(action==='draft-layout'){
+        if(!arrangementDraft||arrangementDraft.zoneId!==route.zoneId||!(zone().type==='SPI'?['stacked','vertical','continuous']:['stacked','vertical']).includes(id))return;
+        arrangementDraft.layout=id;arrangementDraft.error='';return renderArrangement();
+      }
+      if(action==='draft-order'){
+        if(!arrangementDraft||arrangementDraft.zoneId!==route.zoneId)return;
+        const ids=arrangementDraft.receiverIds,index=ids.indexOf(id),delta=Number(button.dataset.delta),target=index+delta;
+        if(![-1,1].includes(delta)||index<0||target<0||target>=ids.length)return;
+        ids.splice(index,1);ids.splice(target,0,id);arrangementDraft.error='';renderArrangement();
+        const moved=main.querySelector(`[data-draft-receiver="${CSS.escape(id)}"]`);
+        (moved?.querySelector(`[data-delta="${delta}"]:not(:disabled)`)||moved?.querySelector('[data-action="draft-order"]:not(:disabled)'))?.focus({preventScroll:true});return;
+      }
+      if(action==='arrangement-cancel'){
+        openLineSetup.delete(route.zoneId);arrangementDraft=null;renderArrangement();revealLineSetup();return;
+      }
+      if(action==='arrangement-save'){
+        const draft=arrangementDraft;if(!draft||!arrangementDirty())return;
+        if(draft.zoneId!==route.zoneId||draft.signature!==arrangementSignature()){draft.error=t('lineSetupChanged');return renderArrangement();}
+        try{
+          const next=M.arrangeZone(model,route.zoneId,{layout:draft.layout,receiverIds:draft.receiverIds});
+          const saved=await persistManagement(next,{kind:'arrange',zoneId:route.zoneId,layout:draft.layout,receiverIds:[...draft.receiverIds]},draft.signature);
+          if(!saved){if(arrangementDraft===draft){draft.error=t('lineSetupSaveFailed');renderArrangement();}return;}
+          model=saved;
+          if(continuousZone())selections.set(route.zoneId,{kind:'all'});
+          tunnelPreviewView=draft.layout==='vertical'?'wall':'tunnel';zonePreviewViews.set(route.zoneId,tunnelPreviewView);
+          arrangementDraft=null;openLineSetup.delete(route.zoneId);
+          if(nativeContext)sendReceiverStates(M.zoneReceivers(model,route.zoneId).map(r=>r.id),{remember:false});
+          renderArrangement();revealLineSetup();toast(t('lineSetupSaved'));return;
+        }catch(error){draft.error=error.message||'Bewaren is niet gelukt.';return renderArrangement();}
+      }
       if(action==='preview-size'){
         if(!['small','medium','large'].includes(id))return;
         if(controlPreviewSize===id){button.closest('.preview-size-control')?.removeAttribute('open');return;}
@@ -1912,9 +2010,14 @@
       }
       if(action==='layout-new-receiver'){
         const target=stand()?.zones.find(z=>z.id===button.dataset.zone);if(!target)return;closeEffectDialog();
+        setupReturnContext=arrangementBrowsing();arrangementDraft=null;
         return navigate('receiver-add',{zoneId:target.id,setupReturnZoneId:target.id});
       }
-      if(action==='assignment-add-receiver'){receiverAssignment=null;closeEffectDialog();return navigate('receiver-add',route.screen==='layout'?{setupReturnZoneId:route.zoneId}:{});}
+      if(action==='assignment-add-receiver'){
+        const returnInline=main.querySelector('.ledline-setup');receiverAssignment=null;closeEffectDialog();
+        if(returnInline){setupReturnContext=arrangementBrowsing();arrangementDraft=null;}
+        return navigate('receiver-add',returnInline?{setupReturnZoneId:route.zoneId}:{});
+      }
       if(action==='assignment-zone'){
         if(!receiverAssignment)return;receiverAssignment.zoneId=id||null;
         const r=model.receivers.find(r=>r.id===receiverAssignment.receiverId);
@@ -2273,6 +2376,9 @@
     }
   });
   document.addEventListener('toggle',event=>{
+    if(event.target.matches?.('.ledline-management')&&event.target.isConnected){
+      event.target.open?openLineManagement.add(route.zoneId):openLineManagement.delete(route.zoneId);return;
+    }
     if(event.target.matches?.('[data-receiver-connections]')&&event.target.isConnected){
       const id=event.target.dataset.receiverConnections;event.target.open?expandedConnections.add(id):expandedConnections.delete(id);return;
     }

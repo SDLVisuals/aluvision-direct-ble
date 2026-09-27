@@ -340,6 +340,21 @@
     getZone(next, zoneId).receiverIds = orderedReceiverIds.slice();
     return assertValid(next);
   }
+  function arrangeZone(model, zoneId, arrangement) {
+    assertValid(model);
+    var zone = requireZone(model, zoneId);
+    if (!object(arrangement) || Object.keys(arrangement).length !== 2 ||
+        !Object.prototype.hasOwnProperty.call(arrangement, 'layout') || !Object.prototype.hasOwnProperty.call(arrangement, 'receiverIds')) {
+      issue('ARRANGEMENT', 'Kies een opstelling en de volledige ledlinevolgorde.');
+    }
+    if (allowedLayouts(zone.type).indexOf(arrangement.layout) < 0) issue('LAYOUT', 'Deze opstelling past niet bij dit type receiver.');
+    // Validate exact membership before changing either part. The result is a
+    // single immutable metadata transaction; current light states, outputs,
+    // identity and unrelated zones never participate in an arrangement edit.
+    var next = reorderReceivers(model, zoneId, arrangement.receiverIds);
+    getZone(next, zoneId).layout = arrangement.layout;
+    return assertValid(next);
+  }
   function moveReceiver(model, zoneId, receiverId, toIndex) {
     assertValid(model);
     var zone = requireZone(model, zoneId), fromIndex = zone.receiverIds.indexOf(receiverId);
@@ -364,5 +379,5 @@
     zoneReceivers: zoneReceivers, resolveTargets: resolveTargets, applyState: applyState, applyStandState: applyStandState, setLayout: setLayout,
     createZone: createZone, renameZone: renameZone, deleteZone: deleteZone, renameReceiver: renameReceiver,
     assignReceiverToZone: assignReceiverToZone, unassignReceiver: unassignReceiver, moveReceivers: moveReceivers,
-    reorderReceivers: reorderReceivers, moveReceiver: moveReceiver, configureSpiOutput: configureSpiOutput });
+    reorderReceivers: reorderReceivers, arrangeZone: arrangeZone, moveReceiver: moveReceiver, configureSpiOutput: configureSpiOutput });
 }));

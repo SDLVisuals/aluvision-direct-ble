@@ -157,7 +157,7 @@
     // uses the most recent accepted view. Callers may bind an explicit earlier
     // revision when their UI decision depends on that exact snapshot.
     const kinds={create:operation&&Object.prototype.hasOwnProperty.call(operation,'receiverId')?['kind','zoneId','name','receiverId']:['kind','zoneId','name'],rename:['kind','zoneId','name'],renameReceiver:['kind','receiverId','name'],delete:['kind','zoneId'],
-      assign:['kind','receiverId','zoneId'],assignMany:['kind','receiverIds','zoneId'],reorder:['kind','zoneId','receiverIds'],layout:['kind','zoneId','layout']};
+      assign:['kind','receiverId','zoneId'],assignMany:['kind','receiverIds','zoneId'],reorder:['kind','zoneId','receiverIds'],layout:['kind','zoneId','layout'],arrange:['kind','zoneId','layout','receiverIds']};
     const fields=typeof operation?.kind==='string'&&Object.prototype.hasOwnProperty.call(kinds,operation.kind)?kinds[operation.kind]:null;
     const boundedId=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(value);
     if(typeof standId!=='string'||expectedRevision!==undefined&&(!Number.isSafeInteger(expectedRevision)||expectedRevision<0)||!fields||
@@ -165,7 +165,10 @@
       operation.kind==='assignMany'&&(!Array.isArray(operation.receiverIds)||!operation.receiverIds.length||operation.receiverIds.length>128||
         operation.receiverIds.some(id=>!boundedId(id))||new Set(operation.receiverIds).size!==operation.receiverIds.length||
         !(operation.zoneId===null||boundedId(operation.zoneId)))||
-      expectedZoneSignature!==undefined&&(!['delete','rename'].includes(operation.kind)||typeof expectedZoneSignature!=='string'||expectedZoneSignature.length>16384)||
+      operation.kind==='arrange'&&(typeof expectedZoneSignature!=='string'||!boundedId(operation.zoneId)||
+        !['stacked','vertical','continuous'].includes(operation.layout)||!Array.isArray(operation.receiverIds)||operation.receiverIds.length>128||
+        Array.from(operation.receiverIds).some(id=>!boundedId(id))||new Set(operation.receiverIds).size!==operation.receiverIds.length)||
+      expectedZoneSignature!==undefined&&(!['delete','rename','arrange'].includes(operation.kind)||typeof expectedZoneSignature!=='string'||expectedZoneSignature.length>16384)||
       Object.keys(operation).length!==fields.length||!fields.every(key=>Object.prototype.hasOwnProperty.call(operation,key)))return Promise.reject(fail('ZONE_EDIT_INVALID'));
     let payload;
     try{payload={standId,operation:JSON.parse(JSON.stringify(operation))};}catch(_){return Promise.reject(fail('ZONE_EDIT_INVALID'));}
@@ -173,7 +176,7 @@
       if(!viewLoaded)throw fail('VIEW_NOT_LOADED');
       if(expectedRevision!==undefined&&expectedRevision!==viewRevision)throw fail('V30_CHECKPOINT_CONFLICT');
       const revision=viewRevision,previousDraft=JSON.parse(viewDraftKey);
-      let expectedSetupModel=null;
+      let expectedSetupModel=null,expectedArrangementModel=null;
       if(payload.operation.kind==='assignMany'){
         const op=payload.operation,Model=root.LightningModel,cached=JSON.parse(viewModelKey),stand=cached.stands?.find(item=>item.id===standId);
         if(!Model||!stand||op.receiverIds.some(id=>!cached.receivers?.some(item=>item.id===id&&item.standId===standId&&item.lifecycle==='added'))||
@@ -181,12 +184,26 @@
         try{Model.moveReceivers(cached,op.receiverIds,op.zoneId);}catch(_){throw fail('ZONE_EDIT_INVALID');}
       }
       try{
+        // Bind the visible draft to the full accepted arrangement after any
+        // earlier queued write. Native CAS then protects the durable commit.
+        // Old delete/rename callers retain their existing four-field guard.
+        if(expectedZoneSignature!==undefined){
+          const cached=JSON.parse(viewModelKey),zone=cached.stands?.find(stand=>stand.id===standId)?.zones?.find(zone=>zone.id===payload.operation.zoneId);
+          const signature=zone&&[zone.id,zone.name,zone.type,zone.receiverIds];
+          if(signature&&payload.operation.kind==='arrange')signature.push(zone.layout);
+          if(!zone||JSON.stringify(signature)!==expectedZoneSignature)throw fail('V30_CHECKPOINT_CONFLICT');
+        }
+        if(payload.operation.kind==='arrange'){
+          const op=payload.operation,Model=root.LightningModel,cached=JSON.parse(viewModelKey),stand=cached.stands?.find(item=>item.id===standId);
+          if(!Model||!stand?.zones.some(zone=>zone.id===op.zoneId))throw fail('V30_CHECKPOINT_CONFLICT');
+          try{expectedArrangementModel=Model.arrangeZone(cached,op.zoneId,{layout:op.layout,receiverIds:op.receiverIds});}catch(_){throw fail('ZONE_EDIT_INVALID');}
+        }
         if(previousDraft!==null){
           const kind=payload.operation.kind;
           if(previousDraft.stand?.id!==standId||previousDraft.receiver!==null||previousDraft.cancelled!==false||
             previousDraft.security?.status!=='not-started'||previousDraft.security?.phase!=='idle'||
             !['zones','receiver'].includes(previousDraft.stage)||
-            !(['delete','rename','assign','assignMany','layout','reorder'].includes(kind)||kind==='create'&&Object.prototype.hasOwnProperty.call(payload.operation,'receiverId')))
+            !(['delete','rename','assign','assignMany','layout','reorder','arrange'].includes(kind)||kind==='create'&&Object.prototype.hasOwnProperty.call(payload.operation,'receiverId')))
             throw fail('V30_CHECKPOINT_CONFLICT');
           const checked=root.LightningOnboardingDraft?.refreshZones(previousDraft,JSON.parse(viewModelKey));
           if(!checked||checked.error||canonical(checked.draft)!==viewDraftKey)throw fail('VIEW_INVALID');
@@ -196,7 +213,7 @@
           const Model=root.LightningModel,cached=JSON.parse(viewModelKey),op=payload.operation;
           if(!Model)throw fail('VIEW_INVALID');
           const stand=cached.stands?.find(item=>item.id===standId),receiver=cached.receivers?.find(item=>item.id===op.receiverId);
-          if(['delete','rename','layout','reorder'].includes(kind)&&!stand?.zones.some(zone=>zone.id===op.zoneId))throw fail('V30_CHECKPOINT_CONFLICT');
+          if(['delete','rename','layout','reorder','arrange'].includes(kind)&&!stand?.zones.some(zone=>zone.id===op.zoneId))throw fail('V30_CHECKPOINT_CONFLICT');
           if(kind==='assign'&&(receiver?.standId!==standId||op.zoneId!==null&&!stand?.zones.some(zone=>zone.id===op.zoneId)))throw fail('V30_CHECKPOINT_CONFLICT');
           if(kind==='assignMany'&&(!stand||!Array.isArray(op.receiverIds)||!op.receiverIds.length||op.receiverIds.length>128||
             op.receiverIds.some(id=>typeof id!=='string'||!cached.receivers?.some(item=>item.id===id&&item.standId===standId&&item.lifecycle==='added'))||
@@ -205,20 +222,15 @@
           else if(kind==='rename')expectedSetupModel=Model.renameZone(cached,op.zoneId,op.name);
           else if(kind==='layout')expectedSetupModel=Model.setLayout(cached,op.zoneId,op.layout);
           else if(kind==='reorder')expectedSetupModel=Model.reorderReceivers(cached,op.zoneId,op.receiverIds);
+          else if(kind==='arrange')expectedSetupModel=expectedArrangementModel;
           else if(kind==='assignMany')expectedSetupModel=Model.moveReceivers(cached,op.receiverIds,op.zoneId);
           else {
             const base=kind==='create'?Model.createZone(cached,standId,{id:op.zoneId,name:op.name}):cached;
             expectedSetupModel=op.zoneId===null?Model.unassignReceiver(base,op.receiverId):Model.assignReceiverToZone(base,op.receiverId,op.zoneId);
           }
         }
-        // The destructive confirmation names the exact visible zone/members.
-        // Compare after preceding queued writes, then let native CAS protect
-        // the gap between this snapshot and the actual durable mutation.
-        if(expectedZoneSignature!==undefined){
-          const cached=JSON.parse(viewModelKey),zone=cached.stands?.find(stand=>stand.id===standId)?.zones?.find(zone=>zone.id===payload.operation.zoneId);
-          if(!zone||JSON.stringify([zone.id,zone.name,zone.type,zone.receiverIds])!==expectedZoneSignature)throw fail('V30_CHECKPOINT_CONFLICT');
-        }
         const view=await call('editZones',{...payload,expectedRevision:revision});
+        if(expectedArrangementModel&&canonical(view?.model)!==canonical(expectedArrangementModel))throw fail('VIEW_INVALID');
         let expectedDraft=null;
         if(previousDraft!==null){
           if(canonical(view?.model)!==canonical(expectedSetupModel))throw fail('VIEW_INVALID');

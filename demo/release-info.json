@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-20260927-tunnel-wall-01",
+  "revision": "v32-20260927-inline-ledlines-01",
   "interfaceVersion": 32,
-  "interfaceBaseline": "V32 adds the approved Strakke wand preview beside the unchanged frontal aluminium tunnel. The compact Tunnel/Wand choice switches the general overview, tunnel gallery cards and active animation preview together, using exactly the selected ledlines, physical output mapping and existing sampled animation pixels. The view changes in place without resetting search, open groups, scroll or animation settings; it does not change zone layout or issue receiver commands. Tunnel remains the initial view. Labels for this choice are available in Dutch, English, French and German. Existing animation formulas, white mixes, backup, PIN, scenes and receiver protocols are unchanged. This revision is not installed on iPhone and does not confirm physical colour calibration or receiver operation. This browser demo uses fictional receivers only, no hardware commands and no PIN collection.",
+  "interfaceBaseline": "V32 keeps the established Aluvision interface and replaces the separate Opstelling tab with compact Ledlines instellen inside the existing animation page (also available below colour controls). Tunnel and Wand apply ordered zone arrangements; Doorlopend is SPI-only. Layout and order are drafted together and explicitly saved or cancelled, preserving light settings. Receiver management and multi-add reuse the existing flows and return to the same colour, gallery or animation context. The approved aluminium tunnel and vertical wall renderers and all animation engines are unchanged. The separate preview-view switch remains presentation-only and is remembered per zone. New setup labels are available in Dutch, English, French and German. Native source includes atomic revision-checked arrangement storage; this revision is not installed on iPhone and is not physical receiver acceptance. This isolated browser demo uses fictional receivers only, no hardware commands and no PIN collection.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -28,7 +28,7 @@
     },
     {
       "path": "animation-library.css",
-      "sha256": "762c9fe47c401e9f4d038c46be433114d39786563f967bcbf8eb928890577bb6"
+      "sha256": "d9836b3f013bcf0b7d1a5387e0a57744640a3698569f90475a3dc455f23397a5"
     },
     {
       "path": "animation-library.js",
@@ -40,7 +40,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "1302f370119b0360f5faa37a966c6883d16041808cc1235d4b85a4aceaaf6184"
+      "sha256": "370e4b8567a767e5c955bf59f5b5a1ce7cfa00fa4daa839fdea948833f19b8a5"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -72,7 +72,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "3052b860bbffd5b4bb1245c260b44bf7b44eb952fb71ed2ae095b1a3091c6f6f"
+      "sha256": "0d85fd07d2cca31631c757745f573257fa6391b56f2a8cb97604ad9c15a8006a"
     },
     {
       "path": "live-control.js",
@@ -84,11 +84,11 @@
     },
     {
       "path": "model.js",
-      "sha256": "07ad814b5e5f446da6103c0090471fbfe571e81eea53e5fbc0aa5de18e67f91b"
+      "sha256": "b86181d7817446b36251ab723d6a497b1f31ba08fbcc26ad28fa8f4d228c83ac"
     },
     {
       "path": "native-runtime.js",
-      "sha256": "9944d0d0dc2213b4bd0f8aa191204b99b2245fe560d1654085539315fd5ce3a4"
+      "sha256": "dbdc1f0a09769c57ba65be2d66004477355b3dac3949ccc215caf17f3627e2e0"
     },
     {
       "path": "onboarding-adapter.js",
@@ -108,7 +108,7 @@
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "f22d553aa094268f548cd132d17db9fb5165f1b0cf21019fee4e3c1501c85c45"
+      "sha256": "a41f410b0435c3aca0f2be2b8a833b58409f67b0b255e713da8ffe0f0d26a8ed"
     },
     {
       "path": "pixel-setup.css",
@@ -120,7 +120,7 @@
     },
     {
       "path": "preferences.js",
-      "sha256": "9c4399baa21c37dc16dfd260388d7db380e7b6fa110defb521364ded598c0763"
+      "sha256": "c7f989349acba339cecb26d75f0164cbf5c6d5fa1c9237dfd6943fcb841203e9"
     },
     {
       "path": "premium-surfaces.css",
