@@ -60,6 +60,11 @@ main.gallery-scroll-stable{overflow-anchor:none}
 .reference-editor-preview>summary>.icon:last-child{margin-left:auto}
 .reference-editor-preview[open]>summary>.icon:last-child{transform:rotate(90deg)}
 .reference-preview-body{display:grid;gap:10px;padding-top:12px}
+.reference-editor-preview>summary>b{min-width:0;overflow-wrap:anywhere}
+.reference-editor-preview>summary>.spatial-preview-count{margin-left:auto;flex:none;font-weight:600}
+.reference-editor-preview>summary>.spatial-preview-count+.icon{margin-left:0;flex:none}
+.reference-preview-body .spatial-preview-switch{width:100%}
+.reference-preview-body .spatial-preview-switch button{flex:1}
 .spatial-preview-choice{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;min-width:0}
 .spatial-preview-choice>span{font-size:13px;font-weight:750;color:var(--ink)}
 .spatial-preview-switch{display:flex;gap:3px;padding:3px;border:1px solid var(--line);border-radius:15px;background:var(--soft);max-width:100%}

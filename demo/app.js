@@ -541,8 +541,8 @@
   function spatialPreviewText(part){
     return t('spatial'+(tunnelPreviewView==='wall'?'Wall':'Tunnel')+part);
   }
-  function spatialPreviewChoice(){
-    return `<div class="spatial-preview-choice"><span>${esc(t('spatialPreviewTitle'))}</span><div class="spatial-preview-switch" role="group" aria-label="${esc(t('spatialPreviewTitle'))}">${['tunnel','wall'].map(view=>`<button type="button" data-action="tunnel-preview-view" data-view="${view}" aria-pressed="${tunnelPreviewView===view}" aria-description="${esc(t('spatialPreviewOnly'))}">${icon(view)}<span>${esc(t(view==='wall'?'spatialWall':'spatialTunnel'))}</span></button>`).join('')}</div></div>`;
+  function spatialPreviewChoice(showTitle=true){
+    return `<div class="spatial-preview-choice">${showTitle?`<span>${esc(t('spatialPreviewTitle'))}</span>`:''}<div class="spatial-preview-switch" role="group" aria-label="${esc(t('spatialPreviewTitle'))}">${['tunnel','wall'].map(view=>`<button type="button" data-action="tunnel-preview-view" data-view="${view}" aria-pressed="${tunnelPreviewView===view}" aria-description="${esc(t('spatialPreviewOnly'))}">${icon(view)}<span>${esc(t(view==='wall'?'spatialWall':'spatialTunnel'))}</span></button>`).join('')}</div></div>`;
   }
   function tunnelPreviewOptions(prefix){
     return {tunnelPreview:true,spatialLabelPrefix:prefix,spatialShape:tunnelPreviewView,label:`${prefix} · ${spatialPreviewText('Preview')}`};
@@ -560,7 +560,7 @@
   }
   function referenceEditorPreview(effect){
     const list=selected(),lineNumbers=Object.fromEntries(receivers().map((receiver,index)=>[receiver.id,index+1]));
-    return `<details open class="reference-editor-preview card" aria-label="${esc(t('animationPreview'))}"><summary>${icon('zones')}<b data-spatial-text="Preview">${esc(spatialPreviewText('Preview'))}</b>${icon('chevron')}</summary><div class="reference-preview-body">${spatialPreviewChoice()}<div class="section-heading"><div><b>${ledlineCount(list.length)}</b><small data-spatial-text="Unit">${esc(spatialPreviewText('Unit'))}</small></div></div>${addPreview(list,zone().layout,'reference-large-preview',{zoneId:zone().id,visibleReceiverIds:list.map(r=>r.id),preserveZoneGeometry:true,lineNumbers,presentation:'receivers',...tunnelPreviewOptions(Library.displayName(effect)+' · '+ledlineCount(list.length))})}<small data-spatial-text="Order">${esc(spatialPreviewText('Order'))}</small></div></details>`;
+    return `<details open class="reference-editor-preview card" aria-label="${esc(t('animationPreview'))}"><summary>${icon('zones')}<b data-spatial-text="Preview">${esc(spatialPreviewText('Preview'))}</b><small class="spatial-preview-count">${ledlineCount(list.length)}</small>${icon('chevron')}</summary><div class="reference-preview-body">${spatialPreviewChoice(false)}${addPreview(list,zone().layout,'reference-large-preview',{zoneId:zone().id,visibleReceiverIds:list.map(r=>r.id),preserveZoneGeometry:true,lineNumbers,presentation:'receivers',...tunnelPreviewOptions(Library.displayName(effect)+' · '+ledlineCount(list.length))})}<small data-spatial-text="Order">${esc(spatialPreviewText('Order'))}</small></div></details>`;
   }
   function categoryLabel(key) {
     return Library.categories.find(category=>category.key===key)?.title||({catalogue:'Alle',presets:'Mijn animaties'})[key]||'Animaties';

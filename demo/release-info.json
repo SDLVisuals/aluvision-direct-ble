@@ -28,7 +28,7 @@
     },
     {
       "path": "animation-library.css",
-      "sha256": "cab9bb2397feeaa332999de024732a7481d22dcfbc008d74358c081d1ac879c1"
+      "sha256": "762c9fe47c401e9f4d038c46be433114d39786563f967bcbf8eb928890577bb6"
     },
     {
       "path": "animation-library.js",
@@ -40,7 +40,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "6687f8b427ca2e8dc5fe65700615a52867e6a481f8c3d5f069c15bbe76fa696f"
+      "sha256": "1302f370119b0360f5faa37a966c6883d16041808cc1235d4b85a4aceaaf6184"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -72,7 +72,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "5aa9bc7fc74cc984a6a36218fd2668de05a53cad2a875c6ee617d0b1b442bc35"
+      "sha256": "3052b860bbffd5b4bb1245c260b44bf7b44eb952fb71ed2ae095b1a3091c6f6f"
     },
     {
       "path": "live-control.js",
