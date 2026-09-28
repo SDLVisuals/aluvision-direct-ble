@@ -91,8 +91,9 @@
     if(!compact&&window.scrollY>64)dock.dataset.scrolled='true';
     else if(compact&&window.scrollY<24)delete dock.dataset.scrolled;
     const familyShortcut=dock.querySelector('[data-family-back-shortcut]');
+    if(familyShortcut)familyShortcut.hidden=false;
     const shortcut=familyShortcut||dock.querySelector('[data-editor-shortcut]');
-    const inline=familyShortcut?main.querySelector('.family-detail-back'):main.querySelector('.current-effect-gallery');
+    const inline=familyShortcut?null:main.querySelector('.current-effect-gallery');
     if(shortcut&&inline){
       // Keep the route available unless the complete inline button is inside
       // the unobstructed area between the sticky preview and bottom navigation.
@@ -145,11 +146,12 @@
     align();requestAnimationFrame(align);
   }
   function revealAnimationFamily(){
-    const target=main.querySelector('.family-detail-back');if(!target)return;
+    const target=main.querySelector('.family-detail-heading');if(!target)return;
     const align=()=>{
       if(!target.isConnected)return;
       updateControlPreviewDensity();
-      const bottom=Math.max(0,main.querySelector('.control-dock-surface')?.getBoundingClientRect().height||0);
+      const returnButton=main.querySelector('[data-family-back-shortcut]');
+      const bottom=Math.max(0,returnButton?.getBoundingClientRect().bottom||main.querySelector('.control-dock-surface')?.getBoundingClientRect().bottom||0);
       window.scrollTo({top:Math.max(0,window.scrollY+target.getBoundingClientRect().top-bottom-8),behavior:'instant'});
       updateControlPreviewDensity();
     };
@@ -875,9 +877,8 @@
   }
   function animationFamilyDetail(group,tab) {
     const countLabel=t(group.count===1?'animationCountOne':'animationCountMany',{count:group.count});
-    const back=animationFamilyBackLabel(tab);
     const tunnel=group.preview.category==='tunnel',groupHint=tunnel?t('animationTunnelGroupAccessible',{name:group.title,count:receivers().length}):t('animationGroupPreviewHint');
-    return `<section class="animation-family-detail" aria-labelledby="animation-family-title"><button type="button" class="family-detail-back" data-action="family-back">${icon('back')}<span>${esc(back)}</span></button><header class="family-detail-heading"><div><small class="family-detail-step">${esc(t('animationFamilyStep'))}</small><h2 id="animation-family-title" tabindex="-1">${esc(group.title)}</h2><p>${esc(group.summary)}</p></div><span class="family-detail-count">${esc(countLabel)}</span></header><figure class="family-detail-preview"><figcaption><b>${esc(t('animationFamilyPreview'))}</b><small>${esc(groupHint)}</small></figcaption>${effectPreview(group.preview,tunnel?{tunnelLines:'all'}:{})}</figure><section class="family-variants-panel" aria-labelledby="animation-family-choices"><header class="family-variants-heading"><div><b id="animation-family-choices">${esc(t('animationFamilyChoose'))}</b><small>${esc(t('animationChooseVariant'))}</small></div><small class="family-variants-count">${esc(countLabel)}</small></header><div class="family-variant-grid">${effectCards(group.effects,'family-variant-card',group.count)}</div></section></section>`;
+    return `<section class="animation-family-detail" aria-labelledby="animation-family-title"><header class="family-detail-heading"><div><small class="family-detail-step">${esc(t('animationFamilyStep'))}</small><h2 id="animation-family-title" tabindex="-1">${esc(group.title)}</h2><p>${esc(group.summary)}</p></div><span class="family-detail-count">${esc(countLabel)}</span></header><figure class="family-detail-preview"><figcaption><b>${esc(t('animationFamilyPreview'))}</b><small>${esc(groupHint)}</small></figcaption>${effectPreview(group.preview,tunnel?{tunnelLines:'all'}:{})}</figure><section class="family-variants-panel" aria-labelledby="animation-family-choices"><header class="family-variants-heading"><div><b id="animation-family-choices">${esc(t('animationFamilyChoose'))}</b><small>${esc(t('animationChooseVariant'))}</small></div><small class="family-variants-count">${esc(countLabel)}</small></header><div class="family-variant-grid">${effectCards(group.effects,'family-variant-card',group.count)}</div></section></section>`;
   }
   function animationCategorySection(section) {
     const title=section.key==='tunnel'?t('animationAcross'):section.title,summary=section.key==='tunnel'?t('animationAcrossSummary'):section.summary;

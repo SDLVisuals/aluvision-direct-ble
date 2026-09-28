@@ -324,8 +324,8 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .animation-wayfinding .animation-gallery-return:active{transform:scale(.99)}
 @media(hover:hover){.animation-wayfinding .animation-gallery-return:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--red) 62%,var(--ink));box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--red) 72%,transparent),0 5px 14px #00000020}}
 .control-preview-dock[data-scrolled=true] .animation-wayfinding{margin-top:5px;padding-bottom:5px}
-/* The editor's alternate-gallery action only floats below the dock after its
-   inline counterpart leaves view. Absolute positioning avoids resize jumps. */
+/* Keep group return below the preview at every scroll position. The editor's
+   alternate-gallery action still appears only after its inline control leaves view. */
 .control-dock-surface{position:relative}
 .control-preview-dock .animation-wayfinding:is([data-editor-shortcut],[data-family-back-shortcut]){position:absolute;top:100%;left:0;right:0;z-index:1;margin:0;padding:5px 0;background:var(--bg);border-radius:0 0 15px 15px;box-shadow:0 8px 16px -12px #17201980}
 .current-effect>.current-effect-gallery{display:flex;align-items:center;justify-content:space-between;gap:10px;flex:0 0 100%;min-width:0;min-height:60px;padding:7px 10px;border:1px solid color-mix(in srgb,var(--red) 42%,var(--line));border-radius:17px;background:linear-gradient(110deg,color-mix(in srgb,var(--red) 9%,var(--panel)),var(--panel) 72%);color:var(--ink);font-size:13px;font-weight:750;line-height:1.3;text-align:left;box-shadow:0 3px 10px #1718170c;transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease}
