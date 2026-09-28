@@ -295,12 +295,10 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
   .control-context .page-heading p{display:none}
 }
 @media(prefers-reduced-motion:reduce){.control-preview-dock .preview-wrap canvas{transition:none}}
-/* While scrolling, retain the all-ledline overview and its mode/back controls
-   but release vertical room so gallery and setup choices underneath remain
-   visible and receive taps instead of being covered by the sticky preview. */
-.editor-grid>.control-preview-dock[data-scrolled=true]{min-height:var(--control-preview-expanded-height);padding-top:0;padding-bottom:4px;margin-bottom:7px;background:transparent;box-shadow:none;pointer-events:none}
-/* Only the visible header gets a backing. The taller layout reservation below
-   remains transparent/click-through, but moving text can no longer show through
+/* While scrolling, keep the compact sticky overview without reserving the old
+   expanded height; the preview itself now determines the dock's flow height. */
+.editor-grid>.control-preview-dock[data-scrolled=true]{min-height:0;padding-top:0;padding-bottom:4px;margin-bottom:7px;background:transparent;box-shadow:none;pointer-events:none}
+/* Only the visible header gets a backing, so moving content cannot show through
    the zone name, gaps between buttons, or the preview heading. */
 .control-preview-dock[data-scrolled=true] .control-dock-surface{padding-top:4px;background:var(--bg);border-radius:0 0 15px 15px;box-shadow:0 8px 16px -12px #17201980;pointer-events:auto}
 .control-preview-dock[data-scrolled=true] :is(.control-dock-context-line,.control-dock-actions,.preview-wrap){pointer-events:auto}
@@ -315,21 +313,35 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 /* One stable route between gallery and settings; never rename Effecten into
    Galerij and never bury this action in the scrolling effect description. */
 .animation-wayfinding{margin-top:7px;min-width:0;pointer-events:auto}
-.animation-wayfinding .animation-gallery-return{display:flex;align-items:center;gap:9px;width:100%;min-height:46px;margin:0;padding:9px 13px;border:1px solid color-mix(in srgb,var(--red) 36%,var(--line));border-radius:14px;background:var(--panel);color:var(--ink);box-shadow:0 2px 7px #17181709;font-size:13px;font-weight:750;line-height:1.25;text-align:left;white-space:normal}
-.animation-wayfinding .animation-gallery-return span{flex:1;min-width:0}
-.animation-wayfinding .animation-gallery-return .icon{width:19px;height:19px;color:var(--red);flex:none}
-.animation-wayfinding .animation-gallery-return:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.animation-wayfinding .animation-gallery-return{display:flex;align-items:center;justify-content:space-between;gap:11px;width:100%;min-height:56px;margin:0;padding:6px 10px;border:1px solid color-mix(in srgb,var(--red) 42%,var(--ink));border-radius:17px;background:linear-gradient(110deg,var(--ink),color-mix(in srgb,var(--ink) 92%,var(--red)));color:var(--panel);box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--red) 72%,transparent),0 4px 12px #00000012;font-size:13px;font-weight:750;line-height:1.3;text-align:left;white-space:normal;transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease}
+.animation-wayfinding .animation-gallery-return>.gallery-action-label{display:flex;align-items:center;gap:11px;min-width:0;overflow-wrap:anywhere}
+.animation-wayfinding .animation-gallery-return .gallery-action-icon{display:grid;place-items:center;width:36px;height:36px;flex:none;border-radius:11px;background:color-mix(in srgb,var(--red) 22%,var(--ink));color:color-mix(in srgb,var(--red) 78%,var(--panel))}
+.animation-wayfinding .animation-gallery-return .gallery-action-icon>.icon{width:21px;height:21px}
+.animation-wayfinding .animation-gallery-return .gallery-action-copy{display:grid;gap:3px;min-width:0}
+.animation-wayfinding .animation-gallery-return .gallery-action-copy>b{font-size:13px;font-weight:800;line-height:1.25}
+.animation-wayfinding .animation-gallery-return .gallery-action-copy>small{color:color-mix(in srgb,var(--panel) 72%,transparent);font-size:11px;font-weight:550;line-height:1.25}
+.animation-wayfinding .animation-gallery-return>.gallery-action-next{display:grid;place-items:center;width:34px;height:34px;flex:none;border:1px solid color-mix(in srgb,var(--panel) 18%,transparent);border-radius:50%;background:color-mix(in srgb,var(--panel) 10%,transparent);color:var(--panel)}
+.animation-wayfinding .animation-gallery-return .gallery-action-next>.icon{width:17px;height:17px}
+.animation-wayfinding .animation-gallery-return:focus-visible{outline:2px solid var(--red);outline-offset:3px}
+.animation-wayfinding .animation-gallery-return:active{transform:scale(.99)}
+@media(hover:hover){.animation-wayfinding .animation-gallery-return:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--red) 62%,var(--ink));box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--red) 72%,transparent),0 5px 14px #00000020}}
 .control-preview-dock[data-scrolled=true] .animation-wayfinding{margin-top:5px;padding-bottom:5px}
 /* The editor's alternate-gallery action only floats below the dock after its
    inline counterpart leaves view. Absolute positioning avoids resize jumps. */
 .control-dock-surface{position:relative}
 .control-preview-dock .animation-wayfinding[data-editor-shortcut]{position:absolute;top:100%;left:0;right:0;z-index:1;margin:0;padding:5px 0;background:var(--bg);border-radius:0 0 15px 15px;box-shadow:0 8px 16px -12px #17201980}
-.current-effect>.current-effect-gallery{display:flex;align-items:center;justify-content:space-between;gap:9px;flex:0 0 100%;min-width:0;min-height:48px;padding:7px 10px;border:1px solid color-mix(in srgb,var(--red) 34%,var(--line));border-radius:14px;background:linear-gradient(105deg,color-mix(in srgb,var(--red) 8%,var(--panel)),var(--panel));color:var(--ink);font-size:13px;font-weight:750;line-height:1.35;text-align:left;box-shadow:0 2px 8px #17181708}
-.current-effect-gallery>.gallery-action-label{display:flex;align-items:center;gap:9px;min-width:0;overflow-wrap:anywhere}
-.current-effect-gallery .gallery-action-icon{display:grid;place-items:center;width:32px;height:32px;flex:none;border-radius:10px;background:color-mix(in srgb,var(--red) 11%,var(--panel));color:var(--red)}
-.current-effect-gallery .gallery-action-icon>.icon{width:19px;height:19px}
-.current-effect-gallery>.icon{width:17px;height:17px;flex:none;color:var(--red)}
-.current-effect-gallery:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.current-effect>.current-effect-gallery{display:flex;align-items:center;justify-content:space-between;gap:11px;flex:0 0 100%;min-width:0;min-height:56px;padding:6px 10px;border:1px solid color-mix(in srgb,var(--red) 34%,var(--line));border-radius:17px;background:linear-gradient(110deg,color-mix(in srgb,var(--red) 8%,var(--panel)),var(--panel) 72%);color:var(--ink);font-size:13px;font-weight:750;line-height:1.3;text-align:left;box-shadow:0 3px 10px #1718170c;transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease}
+.current-effect-gallery>.gallery-action-label{display:flex;align-items:center;gap:11px;min-width:0;overflow-wrap:anywhere}
+.current-effect-gallery .gallery-action-icon{display:grid;place-items:center;width:36px;height:36px;flex:none;border-radius:11px;background:color-mix(in srgb,var(--red) 12%,var(--panel));color:var(--red)}
+.current-effect-gallery .gallery-action-icon>.icon{width:21px;height:21px}
+.current-effect-gallery .gallery-action-copy{display:grid;gap:3px;min-width:0}
+.current-effect-gallery .gallery-action-copy>b{font-size:13px;font-weight:800;line-height:1.25}
+.current-effect-gallery .gallery-action-copy>small{color:var(--muted);font-size:11px;font-weight:550;line-height:1.25}
+.current-effect-gallery>.gallery-action-next{display:grid;place-items:center;width:34px;height:34px;flex:none;border:1px solid color-mix(in srgb,var(--red) 19%,var(--line));border-radius:50%;background:color-mix(in srgb,var(--red) 6%,var(--panel));color:var(--red)}
+.current-effect-gallery .gallery-action-next>.icon{width:17px;height:17px}
+.current-effect-gallery:focus-visible{outline:2px solid var(--red);outline-offset:3px}
+.current-effect-gallery:active{transform:scale(.99)}
+@media(hover:hover){.current-effect-gallery:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--red) 62%,var(--line));box-shadow:0 5px 14px #17181716}}
 .current-effect b:focus{outline:none}
 /* Animation choice is the task, not a second setup wizard. Keep the current
    scope and direct arrangement controls, but reduce their closed footprint. */
@@ -370,12 +382,14 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .ledline-setup-compact .ledline-setup-toggle>.icon{width:17px;height:17px}
 .ledline-setup-compact .ledline-setup-toggle>.line-order-icon{width:32px;height:32px;padding:4px;border-radius:9px}
 .animation-simple-page .active-animation-workspace{gap:10px}
-.animation-simple-page .current-effect{padding:11px 13px;gap:8px;border-radius:18px}
+.animation-simple-page .current-effect{padding:6px 13px;gap:8px;border-radius:18px}
 .animation-simple-page .current-effect>div>small{font-size:10px;line-height:1.25}
 .animation-simple-page .current-effect b{font-size:15px;line-height:1.25}
-.animation-simple-page .current-effect-gallery{background:var(--ink);color:var(--panel);font-size:13px;min-height:48px;border-color:color-mix(in srgb,var(--red) 48%,var(--ink));box-shadow:inset 0 -2px 0 color-mix(in srgb,var(--red) 72%,transparent),0 3px 10px #00000010}
-.animation-simple-page .current-effect-gallery>.icon{color:currentColor}
-.animation-simple-page .current-effect-gallery .gallery-action-icon{background:color-mix(in srgb,var(--red) 22%,var(--ink));color:color-mix(in srgb,var(--red) 35%,white)}
+.animation-simple-page .current-effect-gallery{background:linear-gradient(110deg,var(--ink),color-mix(in srgb,var(--ink) 92%,var(--red)));color:var(--panel);font-size:13px;min-height:56px;border-color:color-mix(in srgb,var(--red) 42%,var(--ink));box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--red) 72%,transparent),0 4px 12px #00000012}
+.animation-simple-page .current-effect-gallery .gallery-action-icon{background:color-mix(in srgb,var(--red) 22%,var(--ink));color:color-mix(in srgb,var(--red) 78%,var(--panel))}
+.animation-simple-page .current-effect-gallery .gallery-action-copy>small{color:color-mix(in srgb,var(--panel) 72%,transparent)}
+.animation-simple-page .current-effect-gallery>.gallery-action-next{background:color-mix(in srgb,var(--panel) 10%,transparent);border-color:color-mix(in srgb,var(--panel) 18%,transparent);color:var(--panel)}
+@media(prefers-reduced-motion:reduce){.current-effect-gallery,.animation-wayfinding .animation-gallery-return{transition:none}}
 .animation-daily-controls.card{padding:13px;gap:9px;border-radius:18px}
 .animation-daily-controls>.slider-row{margin:0}
 .animation-daily-controls>.slider-row>small{display:none}
@@ -427,7 +441,8 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .control-preview-dock[data-scrolled=true][data-preview-size=small] .preview-wrap canvas{height:52px!important}
 .control-preview-dock[data-scrolled=true][data-preview-size=medium] .preview-wrap canvas{height:68px!important}
 .control-preview-dock[data-scrolled=true][data-preview-size=large] .preview-wrap canvas{height:88px!important}
-.control-preview-dock[data-scrolled=true][data-spatial-preview=true][data-preview-size=large] .spatial-preview-wrap canvas{height:126px!important}
+.control-preview-dock[data-scrolled=true][data-spatial-preview=true][data-preview-size=large] .spatial-preview-wrap canvas{height:190px!important}
+@media(max-height:700px){.control-preview-dock[data-scrolled=true][data-spatial-preview=true][data-preview-size=large] .spatial-preview-wrap canvas{height:164px!important}}
 @media(prefers-reduced-motion:reduce){.control-preview-dock .preview-wrap canvas{transition:none}}
 .channel-row .channel-number{width:100%;min-width:0;height:44px;padding:2px 3px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);font-size:16px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
 .channel-number::-webkit-inner-spin-button,.channel-number::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}

@@ -66,7 +66,7 @@
   // Everyday controls share one zone screen. Keep the light mode local to
   // that screen so changing between colour and movement never sends users
   // through an intermediate page or clears their selected ledline.
-  let controlMode='colour',showControlAnimationGallery=true,controlPreviewSize='small',controlSpatialPreviewSize='large';
+  let controlMode='colour',showControlAnimationGallery=true,controlPreviewSize='small';
   let pinProtection=null,pinProtectionLoading=false,pinProtectionBusy=false,pinProtectionError='',pinProtectionReconnect=null;
   let pinLoginAvailable=false,pinLoginChecking=false,pinLoginBusy=false,pinLoginError='',pinRecoveryAbort=null;
   const liveStates=new Map();
@@ -86,12 +86,10 @@
     if(!dock)return;
     if(window.scrollY>48){
       if(!dock.dataset.scrolled){
-        dock.style.setProperty('--control-preview-expanded-height',`${Math.ceil(dock.getBoundingClientRect().height)}px`);
         dock.dataset.scrolled='true';
       }
     }else{
       delete dock.dataset.scrolled;
-      dock.style.removeProperty('--control-preview-expanded-height');
     }
     const shortcut=dock.querySelector('[data-editor-shortcut]'),inline=main.querySelector('.current-effect-gallery');
     if(shortcut&&inline){
@@ -406,20 +404,19 @@
   function controlPreviewDock(screen,modeTabs='') {
     const z=zone(),list=receivers(),pixels=z.type==='SPI'?P.geometry(list,z.layout).totalPixels:0;
     const draft=previewArrangement(z),previewLayout=draft?.layout||z.layout;
-    const previewMode=previewModeKey(previewLayout,z);
     const previewMinHeight=previewLayout==='continuous'?0:previewLayout==='vertical'?104:Math.min(96,16+list.length*22);
     const integratedControlHeading=screen==='controls';
     const canTapLines=list.length>1&&!continuousZone()&&!draft&&['controls','colour','animations'].includes(screen);
     const effectChosen=screen==='controls'&&controlMode==='animations'&&Boolean(activeEffect());
     const galleryBrowsing=screen==='controls'&&controlMode==='animations'&&(!effectChosen||showControlAnimationGallery);
-    // Use the spatial model as the sticky overview for tunnel and wall modes;
-    // tunnel browsing gets a moving sample while the editor shows live state.
-    const spatialView=spatialMode(previewLayout,z),spatialPreview=['tunnel','wall'].includes(spatialView);
-    const tunnelGallery=screen==='controls'&&controlMode==='animations'&&galleryBrowsing&&libraryTab()==='tunnel';
-    const spatialPreviewLabel=spatialPreviewText('Preview',spatialView);
-    const tunnelExamples=tunnelGallery?catalogue().filter(effect=>effect.category==='tunnel'):[];
-    const galleryEffect=tunnelGallery?(activeEffect()?.category==='tunnel'?activeEffect():tunnelExamples.find(effect=>Number(effect.state.variant)===93)||tunnelExamples[0]):null;
-    const previewSize=spatialPreview?controlSpatialPreviewSize:controlPreviewSize;
+    // The full tunnel/wall render belongs to an actual selected tunnel effect,
+    // not to a stale camera choice or to browsing the tunnel category. In the
+    // editor the selected camera follows the customer's view choice.
+    const tunnelSettingsOpen=activeEffect()?.category==='tunnel'&&!galleryBrowsing&&(screen==='controls'||screen==='animations');
+    const spatialView=tunnelSettingsOpen?spatialMode(previewLayout,z):'normal';
+    const spatialPreview=tunnelSettingsOpen&&['tunnel','wall'].includes(spatialView);
+    const previewMode=spatialPreview?(spatialView==='wall'?'Wall':'Tunnel'):previewLayout==='continuous'?'Continuous':'Normal';
+    const spatialPreviewLabel=spatialPreview?spatialPreviewText('Preview',spatialView):'';
     const total=z.type==='SPI'?t(list.length===1?'scopeTotalSpiOne':'scopeTotalSpiMany',{count:list.length,pixels}):t(list.length===1?'scopeCountOne':'scopeCountMany',{count:list.length});
     const scope=selection().kind==='all'?total:t('scopeSelectedTap',{name:nameOfSelection()});
     const modeName=screen==='controls'?(controlMode==='colour'?'Kleur':'Effecten'):screen==='layout'?'Opstelling':screen==='colour'?'Kleur':screen==='animations'?'Effecten':'Bediening';
@@ -427,7 +424,7 @@
     return `<section class="control-preview-dock${galleryBrowsing?' animation-gallery-dock':''}" aria-label="LED-overzicht en bediening"><div class="control-dock-surface">
       ${integratedControlHeading?`<div class="control-dock-context-line"><div class="control-dock-location"><small>JE LICHT · ${esc(modeName)}</small><b>${esc(z.name)}</b></div><span class="pill control-dock-type-badge">${zoneTypeLabel(z)}</span></div><div class="control-dock-actions"><button class="back back-to-zones control-dock-back" data-action="stand" aria-label="Terug naar zones" title="Terug naar zones">${icon('back')}<span>Zones</span></button>${modeTabs}</div>`:''}
       ${integratedControlHeading?'':`<div class="control-dock-heading"><div class="control-dock-location"><small>JE LICHT · ${esc(modeName)}</small><b>${esc(z.name)}</b></div>${modeTabs||`<span class="control-dock-mode">${esc(modeName)}</span>`}</div>`}
-      <div class="preview-wrap${canTapLines?' preview-selectable':''}${spatialPreview?' spatial-preview-wrap':''}" data-preview-layout="${previewLayout}" style="--line-preview-min-height:${spatialPreview?0:previewMinHeight}px"><div class="preview-top"><span>${spatialPreview?esc(spatialPreviewLabel):esc(t('lineSetup'+previewMode))}</span><span class="preview-summary">${esc(scope)}</span></div>${previewSizePickerMarkup(previewSize,spatialPreview)}${galleryEffect?effectPreview(galleryEffect):zonePreview(z,spatialPreview?'spatial-dock-preview':'',{selection:selection(),main:true,arrangementPreview:true,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1])),...(spatialPreview?{spatialShape:spatialView,presentation:'receivers'}:{}),label:spatialPreview?`${spatialPreviewLabel} · ${z.name} · ${total}`:label})}${screen==='animations'||effectChosen?`<div class="preview-live-controls"><span>Voorbeeld volgt je keuze direct</span></div>`:''}</div>
+      <div class="preview-wrap${canTapLines?' preview-selectable':''}${spatialPreview?' spatial-preview-wrap':''}" data-preview-layout="${previewLayout}" style="--line-preview-min-height:${spatialPreview?0:previewMinHeight}px"><div class="preview-top"><span>${spatialPreview?esc(spatialPreviewLabel):esc(t('lineSetup'+previewMode))}</span><span class="preview-summary">${esc(scope)}</span></div>${spatialPreview?'':previewSizePickerMarkup(controlPreviewSize)}${zonePreview(z,spatialPreview?'spatial-dock-preview':'',{selection:selection(),main:true,arrangementPreview:true,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1])),...(spatialPreview?{spatialShape:spatialView,presentation:'receivers'}:{}),label:spatialPreview?`${spatialPreviewLabel} · ${z.name} · ${total}`:label})}</div>
       ${animationWayfinding(screen)}<p class="live-confirmation" data-live-status="zone" role="status" aria-live="polite"></p>
     </div></section>`;
   }
@@ -437,7 +434,7 @@
     const browsing=screen==='controls'&&showControlAnimationGallery;
     if(browsing)return '';
     const action=browsing?'animation-current-edit':screen==='controls'?'animation-gallery':'animations-gallery';
-    return `<nav class="animation-wayfinding" ${browsing?'':'data-editor-shortcut hidden'} aria-label="${esc(t('animationNavigation'))}"><button class="button secondary animation-gallery-return" data-action="${action}" aria-label="${esc(t(browsing?'animationBackToSettings':'animationChooseAnother'))}">${icon(browsing?'back':'gallery')}<span>${esc(t(browsing?'animationBackToSettings':'animationChooseAnother'))}</span>${icon('chevron')}</button></nav>`;
+    return `<nav class="animation-wayfinding" ${browsing?'':'data-editor-shortcut hidden'} aria-label="${esc(t('animationNavigation'))}"><button class="animation-gallery-return" data-action="${action}" aria-label="${esc(t(browsing?'animationBackToSettings':'animationChooseAnother'))}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon(browsing?'back':'gallery')}</span><span class="gallery-action-copy"><b>${esc(t(browsing?'animationBackToSettings':'animationChooseAnother'))}</b>${browsing?'':`<small>${esc(t('animationChooseAnotherHint'))}</small>`}</span></span><span class="gallery-action-next" aria-hidden="true">${icon('chevron')}</span></button></nav>`;
   }
   function previewSizePickerMarkup(size=controlPreviewSize,spatial=false){
     const sizes=[['small','Klein'],['medium','Groter'],['large','Heel groot']],current=sizes.find(([value])=>value===size)?.[1]||'Klein',subject=spatial?'3D-voorbeeld':'ledlinevoorbeeld';
@@ -620,7 +617,7 @@
     const galleryAction=route.screen==='controls'?'animation-gallery':'animations-gallery';
     const paletteTitle=effect.whiteMixPreset?'Witmix · tik om aan te passen':effect.category==='brand'?(effect.id==='v30-brand-focus'||effect.id.startsWith('v31-ref-'))?'Merkkleuren · tik om te wijzigen':'Accentkleur · tik om te wijzigen':effect.paletteEditable===false?'Kleurenreeks':'Animatiekleuren · tik om te wijzigen';
     const paletteHelp=effect.whiteMixPreset?'<p class="palette-guidance">W geeft wit licht; rood en een beetje groen maken de mix warmer. Pas de mengkleur aan terwijl je naar je ledline kijkt.</p>':effect.id==='v30-brand-focus'?'<p class="palette-guidance">Voeg kleuren toe voor je merkaccent. De gloed laat ze na elkaar zien langs de ledlines.</p>':'';
-    const content = `<div class="current-effect"><div><small>${esc(t('animationSettings'))}</small><b tabindex="-1" role="heading" aria-level="2">${esc(Library.displayName(effect,t))}</b></div><button class="current-effect-gallery" data-action="${galleryAction}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('gallery')}</span><span>${esc(t('animationChooseAnother'))}</span></span>${icon('chevron')}</button></div><section class="card palette-section animation-daily-controls"><h2>${effect.whiteMixPreset||effect.paletteEditable===false?paletteTitle:esc(t('animationColours'))}</h2>${paletteHelp}<div class="palette" aria-label="${esc(t('animationColours'))}">${paletteMarkup(s)}</div>${backgroundControls(effect)}${effect.controls.includes('speed')?`${animationSlider('speed',t('animationSpeed'),0,100,s.speed??30,'%')}${resetMarkup('speed',t('animationSpeed'))}`:''}${animationSlider('bri',t('animationBrightness'),0,100,s.bri??100,'%')}${resetMarkup('bri',t('animationBrightness'))}</section>${animationControls(effect)}<button class="button secondary full animation-save-recipe" data-action="preset-save">＋ ${esc(t('animationSaveOwn'))}</button>`;
+    const content = `<div class="current-effect"><div><small>${esc(t('animationSettings'))}</small><b tabindex="-1" role="heading" aria-level="2">${esc(Library.displayName(effect,t))}</b></div><button class="current-effect-gallery" data-action="${galleryAction}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('gallery')}</span><span class="gallery-action-copy"><b>${esc(t('animationChooseAnother'))}</b><small>${esc(t('animationChooseAnotherHint'))}</small></span></span><span class="gallery-action-next" aria-hidden="true">${icon('chevron')}</span></button></div><section class="card palette-section animation-daily-controls"><h2>${effect.whiteMixPreset||effect.paletteEditable===false?paletteTitle:esc(t('animationColours'))}</h2>${paletteHelp}<div class="palette" aria-label="${esc(t('animationColours'))}">${paletteMarkup(s)}</div>${backgroundControls(effect)}${effect.controls.includes('speed')?`${animationSlider('speed',t('animationSpeed'),0,100,s.speed??30,'%')}${resetMarkup('speed',t('animationSpeed'))}`:''}${animationSlider('bri',t('animationBrightness'),0,100,s.bri??100,'%')}${resetMarkup('bri',t('animationBrightness'))}</section>${animationControls(effect)}<button class="button secondary full animation-save-recipe" data-action="preset-save">＋ ${esc(t('animationSaveOwn'))}</button>`;
     return `<section class="active-animation-workspace" aria-label="Animatie aanpassen">${content}</section>`;
   }
   function renderAnimations() {
@@ -696,10 +693,6 @@
   }
   function spatialPreviewText(part,mode=spatialMode()){
     return t(`spatial${mode[0].toUpperCase()}${mode.slice(1)}${part}`);
-  }
-  function previewModeKey(layout=zone()?.layout,z=zone()){
-    const mode=spatialMode(layout,z);
-    return mode==='tunnel'?'Tunnel':mode==='wall'?'Wall':layout==='continuous'?'Continuous':'Normal';
   }
   function spatialOptionArt(mode,z=zone()){
     const list=receivers(),layout=mode==='wall'?'vertical':mode==='normal'&&z?.type==='SPI'?'continuous':'stacked';
@@ -1255,7 +1248,7 @@
     const zoneScreen=['controls','colour','animations','effects','layout'].includes(route.screen);
     main.innerHTML = (zoneScreen&&zone()&&!receivers().length?renderEmptyZone:(views[route.screen] || renderStand))();
     const previewDock=main.querySelector('.control-preview-dock');
-    if(previewDock){const spatial=previewDock.querySelector('.spatial-preview-wrap')!==null,size=spatial?controlSpatialPreviewSize:controlPreviewSize;previewDock.dataset.previewSize=size;previewDock.dataset.spatialPreview=spatial?'true':'false';}
+    if(previewDock){const spatial=previewDock.querySelector('.spatial-preview-wrap')!==null;previewDock.dataset.previewSize=spatial?'large':controlPreviewSize;previewDock.dataset.spatialPreview=spatial?'true':'false';}
     main.classList.toggle('gallery-scroll-stable',Boolean(main.querySelector('#animation-results')));
     if(route.screen==='scene-detail')main.querySelector('.scene-activate-bar')?.insertAdjacentHTML('afterbegin','<p class="live-confirmation" data-live-status="scene" role="status" aria-live="polite"></p>');
     if(route.screen==='settings')main.querySelector('.page-heading')?.insertAdjacentHTML('afterend',pinProtectionCard());
@@ -2178,9 +2171,9 @@
       }
       if(action==='preview-size'){
         if(!['small','medium','large'].includes(id))return;
-        const dock=button.closest('.control-preview-dock'),spatial=dock?.dataset.spatialPreview==='true',current=spatial?controlSpatialPreviewSize:controlPreviewSize;
+        const dock=button.closest('.control-preview-dock'),current=controlPreviewSize;
         if(current===id){button.closest('.preview-size-control')?.removeAttribute('open');return;}
-        if(spatial)controlSpatialPreviewSize=id;else controlPreviewSize=id;return render({preserveScroll:true});
+        controlPreviewSize=id;return render({preserveScroll:true});
       }
       if(action==='nav')return navigate(id);
       if(action==='pin-login')return await openPinLogin();
