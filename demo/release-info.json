@@ -1,6 +1,6 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-spatial-preview-colour-nav-20260929",
+  "revision": "v32-spatial-preview-ios187-20260929",
   "interfaceVersion": 32,
   "interfaceBaseline": "V32 preserves the existing interface and recognisable 3D tunnel/wall visuals. Spatial animations are grouped as Tunnel & wand. The gallery shows a four-line illustrative tunnel; opening a spatial effect group previews its sample over the actual connected lines and chosen geometry. The active tunnel/wall preview remains spatial while editing animation colours. The inline and sticky animation-gallery actions share one consistent visual component. Applying a tunnel or wall animation automatically targets every line in that zone, without asking the customer to manually create an all-lines selection first. The effect settings still allow selecting an individual line for its own colour. This changes animation targeting only, not receiver wiring or saved physical arrangement. The phone-first animation gallery uses a rounded category sheet with explained choices and a clear return to active settings. Returning to Effecten opens at the top rather than restoring an old deep gallery scroll position. Arrangement icons depict the chosen tunnel, vertical wall or continuous line. Arrangement and order choices apply directly, without a separate save/cancel step. New SPI zones default to Doorlopend; the main preview follows the selected geometry. The More screen no longer repeats a generic connection status, temporary-data disclaimer or technical-readiness checklist; the four primary navigation tabs and local app-management actions remain. The isolated demo keeps one concise fictional-receiver safety badge, uses no hardware commands, firmware downloads or PIN collection, and remains separate from the native app. Browser verification does not prove physical receiver acceptance.",
   "fakeReceivers": {
@@ -30,8 +30,8 @@
   "nativeAppModified": true,
   "nativeAppUpdatePending": false,
   "nativeAppInstalledVersion": "32.0.0",
-  "nativeAppInstalledBuild": 185,
-  "nativeAppInstallationPreservedData": true,
+  "nativeAppInstalledBuild": 187,
+  "nativeAppInstallationPreservedData": null,
   "firmwarePublished": false,
   "assets": [
     {
