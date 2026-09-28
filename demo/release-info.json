@@ -1,6 +1,6 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-spatial-preview-ios187-20260929",
+  "revision": "v32-ui-consistency-ios188-20260929",
   "interfaceVersion": 32,
   "interfaceBaseline": "V32 preserves the existing interface and recognisable 3D tunnel/wall visuals. Spatial animations are grouped as Tunnel & wand. The gallery shows a four-line illustrative tunnel; opening a spatial effect group previews its sample over the actual connected lines and chosen geometry. The active tunnel/wall preview remains spatial while editing animation colours. The inline and sticky animation-gallery actions share one consistent visual component. Applying a tunnel or wall animation automatically targets every line in that zone, without asking the customer to manually create an all-lines selection first. The effect settings still allow selecting an individual line for its own colour. This changes animation targeting only, not receiver wiring or saved physical arrangement. The phone-first animation gallery uses a rounded category sheet with explained choices and a clear return to active settings. Returning to Effecten opens at the top rather than restoring an old deep gallery scroll position. Arrangement icons depict the chosen tunnel, vertical wall or continuous line. Arrangement and order choices apply directly, without a separate save/cancel step. New SPI zones default to Doorlopend; the main preview follows the selected geometry. The More screen no longer repeats a generic connection status, temporary-data disclaimer or technical-readiness checklist; the four primary navigation tabs and local app-management actions remain. The isolated demo keeps one concise fictional-receiver safety badge, uses no hardware commands, firmware downloads or PIN collection, and remains separate from the native app. Browser verification does not prove physical receiver acceptance.",
   "fakeReceivers": {
@@ -30,8 +30,12 @@
   "nativeAppModified": true,
   "nativeAppUpdatePending": false,
   "nativeAppInstalledVersion": "32.0.0",
-  "nativeAppInstalledBuild": 187,
+  "nativeAppInstalledBuild": 188,
   "nativeAppInstallationPreservedData": null,
+  "interfaceAccessibility": {
+    "selectedLinesSubtitleContrastMinimum": 4.5,
+    "lightAndDarkVerified": true
+  },
   "firmwarePublished": false,
   "assets": [
     {
@@ -80,7 +84,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "08e36cc9eff5acb1df285132507b8272dc863a46339b548527e254db3db8af9f"
+      "sha256": "77fb4b1ef007c0dbda6843fc86edab3bbac0cc253273d67951e678cbe03e43ac"
     },
     {
       "path": "fixtures.js",
@@ -88,7 +92,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "a1a75de11cb15eaef370c886fd83016b70183d722e3d0871f5f94100d7bc8cb4"
+      "sha256": "d9ba07a07ca87e659294bc85479321fadc3dcdbc15e6bc504db16fcb8c08e58a"
     },
     {
       "path": "live-control.js",
