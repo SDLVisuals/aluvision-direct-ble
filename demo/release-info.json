@@ -28,7 +28,7 @@
     },
     {
       "path": "animation-library.css",
-      "sha256": "c61f3375e3e3d4b51d86333b27acfe6ae6106e93a835309fe849dd5746473e91"
+      "sha256": "1830a7db31624bb4451552599ffb1fb2c49a1478d19e551bbd46586bf263e968"
     },
     {
       "path": "animation-library.js",
@@ -36,7 +36,7 @@
     },
     {
       "path": "animation-mobile.css",
-      "sha256": "5217933bd75eee4b9d55b6f1bf8b3db015015833149d35562ee3cc50ede809fb"
+      "sha256": "ab7880e0bdec8a5ef77a306fa2698bf47d2d4f26cf6e894a7394a8304c52b762"
     },
     {
       "path": "animations.css",
@@ -44,7 +44,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "351da35041920a996c49e95b1f088ad78ce143d8522faff3529af65aa613ea06"
+      "sha256": "abcb4b2c846dca6c93a9a1148c489e82f534afc0c0f18a3baf8c4ab5f7b30eb0"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -68,7 +68,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "974b1e144ff26dbe5a7271ce22187cf3ff5645bf3b13825f391f41cfba33cd96"
+      "sha256": "d3c8cb5d05467c1d539495f202969461d104809dfaa92ecd9b474ae6ccc9f6fb"
     },
     {
       "path": "fixtures.js",
@@ -76,7 +76,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "ca95d8cb8031ea662eb1a1eb403286eb73afc307fe7d982ee26591455f0e393a"
+      "sha256": "9373db91ec6c535c43ca3804fd42d56dbbd4029b28eee75aed6adeecd67d49e3"
     },
     {
       "path": "live-control.js",
@@ -124,11 +124,11 @@
     },
     {
       "path": "preferences.js",
-      "sha256": "76f6a467a23161c5e87fcba2f420e5e5fdab57399f3b70892b01e3425d91573b"
+      "sha256": "fd32647a0209c86ad4e641c9368a96ce313d394daebf21d51060e9c03c0b26a3"
     },
     {
       "path": "premium-surfaces.css",
-      "sha256": "85cb92ba77bd9842a85ef0b8148b05bb87cdc8ffd20ee122932a68b7c12a7b59"
+      "sha256": "5825b2be7b60b1aa39c8888903db210bf26a133e65ba736985cf7a7065dd3fc0"
     },
     {
       "path": "presets.js",
@@ -136,7 +136,7 @@
     },
     {
       "path": "preview.js",
-      "sha256": "85048456da570d6e882d7f4d7eeddb3f5429643f7c2cdb88c266d6feea0d12cc"
+      "sha256": "333b9baaa23d2c72c7be84e3a419cdc41f67f57be748a89b9aef81de22424a6c"
     },
     {
       "path": "receiver-playback.js",

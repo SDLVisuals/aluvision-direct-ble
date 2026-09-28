@@ -226,8 +226,8 @@ dialog{overscroll-behavior:contain}
    browses colour/effect controls. The title and line-selection list can scroll,
    so a large installation never pins a tall panel over its own controls. */
 .editor-grid>.control-context{grid-column:1;grid-row:1;position:static;z-index:auto;padding:0 0 8px;background:transparent;min-width:0}
-.editor-grid>.control-preview-dock{grid-column:1;grid-row:2;position:sticky;top:0;z-index:8;align-self:start;min-width:0;margin:0 0 11px;padding:8px 0 9px;background:var(--bg);box-shadow:0 9px 14px -13px #17201980}
-.control-dock-surface{display:flow-root;min-width:0}
+.editor-grid>.control-preview-dock{grid-column:1;grid-row:2;position:sticky;top:0;z-index:8;align-self:start;min-width:0;margin:0 0 11px;padding:8px 0 9px;background:var(--bg);box-shadow:0 9px 14px -13px #17201980;transition:padding .34s cubic-bezier(.22,.61,.36,1),margin .34s cubic-bezier(.22,.61,.36,1),background-color .28s ease,box-shadow .28s ease}
+.control-dock-surface{display:flow-root;min-width:0;transition:padding .34s cubic-bezier(.22,.61,.36,1),border-radius .28s ease,background-color .28s ease,box-shadow .28s ease}
 .editor-grid>.editor-controls{grid-column:2;grid-row:1 / span 2;min-width:0}
 .control-dock-context-line{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;margin:0 1px 7px}
 .control-dock-context-line .control-dock-location{flex:1 1 auto}
@@ -245,11 +245,13 @@ dialog{overscroll-behavior:contain}
 .control-preview-dock .control-mode-tabs button{min-width:0;min-height:52px;padding:7px 5px;gap:5px;font-size:13px;font-weight:700;white-space:nowrap}
 .control-preview-dock .control-mode-tabs button[aria-pressed=true]{background:var(--ink);color:#fff;box-shadow:inset 0 -2px var(--red)}
 .control-preview-dock .control-mode-tabs button .icon{width:20px;height:20px}
-.control-preview-dock .preview-wrap{margin:0!important;border-radius:15px;padding:8px 9px 3px}
-.control-preview-dock .preview-top{align-items:center;min-height:15px;font-size:9px}
+.control-preview-dock .preview-wrap{margin:0!important;border-radius:15px;padding:8px 9px 3px;transition:padding .34s cubic-bezier(.22,.61,.36,1),border-radius .28s ease}
+.control-preview-dock .preview-top{align-items:center;min-height:15px;font-size:9px;transition:min-height .28s ease,font-size .28s ease}
+.control-preview-dock .preview-size-row{max-height:48px;overflow:hidden;opacity:1;transform:translateY(0);transition:max-height .34s cubic-bezier(.22,.61,.36,1),opacity .22s ease,transform .34s cubic-bezier(.22,.61,.36,1),margin .34s ease,padding .34s ease}
+.control-preview-dock:not([data-scrolled=true]) .preview-size-row:has(.preview-size-control[open]){max-height:180px;overflow:visible}
+.control-preview-dock :is(.preview-live-controls,.live-confirmation){max-height:64px;overflow:hidden;opacity:1;transition:max-height .34s cubic-bezier(.22,.61,.36,1),opacity .22s ease,margin .34s ease,padding .34s ease}
 .control-preview-dock .preview-summary{max-width:58%;overflow:hidden;text-align:right;text-overflow:ellipsis;white-space:nowrap;color:#d4d9d4}
 .control-preview-dock .preview-wrap canvas{height:76px}
-.control-preview-dock .preview-wrap[data-preview-layout] canvas{min-height:var(--line-preview-min-height,0px)}
 .control-preview-dock .spatial-preview-wrap{padding-bottom:7px}
 .control-preview-dock .spatial-dock-preview{display:block;width:100%;min-width:0;border-radius:12px}
 .control-preview-dock .spatial-preview-wrap .preview-top>span:first-child{font-weight:800;letter-spacing:.25px}
@@ -304,24 +306,22 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .control-preview-dock[data-scrolled=true] :is(.control-dock-context-line,.control-dock-actions,.preview-wrap){pointer-events:auto}
 .control-preview-dock[data-scrolled=true] .control-dock-context-line{margin-bottom:3px}
 .control-preview-dock[data-scrolled=true] .control-dock-actions{margin-bottom:3px}
-.control-preview-dock[data-scrolled=true] .preview-size-row,
-.control-preview-dock[data-scrolled=true] .preview-live-controls,
-.control-preview-dock[data-scrolled=true] .live-confirmation{display:none!important}
+.control-preview-dock[data-scrolled=true] .preview-size-row{max-height:0;opacity:0;transform:translateY(-4px);margin:0;padding-block:0;pointer-events:none}
+.control-preview-dock[data-scrolled=true] :is(.preview-live-controls,.live-confirmation){max-height:0;opacity:0;margin:0;padding-block:0;pointer-events:none}
 .control-preview-dock[data-scrolled=true] .preview-wrap{padding:4px 8px 2px;border-radius:12px}
 .control-preview-dock[data-scrolled=true] .preview-top{min-height:12px;font-size:8px}
-.control-preview-dock[data-scrolled=true] .preview-wrap canvas{height:44px!important;transition:none}
 /* One stable route between gallery and settings; never rename Effecten into
    Galerij and never bury this action in the scrolling effect description. */
 .animation-wayfinding{margin-top:7px;min-width:0;pointer-events:auto}
-.animation-wayfinding .animation-gallery-return{display:flex;align-items:center;justify-content:space-between;gap:11px;width:100%;min-height:56px;margin:0;padding:6px 10px;border:1px solid color-mix(in srgb,var(--red) 42%,var(--ink));border-radius:17px;background:linear-gradient(110deg,var(--ink),color-mix(in srgb,var(--ink) 92%,var(--red)));color:var(--panel);box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--red) 72%,transparent),0 4px 12px #00000012;font-size:13px;font-weight:750;line-height:1.3;text-align:left;white-space:normal;transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease}
-.animation-wayfinding .animation-gallery-return>.gallery-action-label{display:flex;align-items:center;gap:11px;min-width:0;overflow-wrap:anywhere}
-.animation-wayfinding .animation-gallery-return .gallery-action-icon{display:grid;place-items:center;width:36px;height:36px;flex:none;border-radius:11px;background:color-mix(in srgb,var(--red) 22%,var(--ink));color:color-mix(in srgb,var(--red) 78%,var(--panel))}
-.animation-wayfinding .animation-gallery-return .gallery-action-icon>.icon{width:21px;height:21px}
+.animation-wayfinding .animation-gallery-return{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:60px;margin:0;padding:7px 10px;border:1px solid color-mix(in srgb,var(--red) 42%,var(--ink));border-radius:17px;background:linear-gradient(110deg,var(--ink),color-mix(in srgb,var(--ink) 92%,var(--red)));color:var(--panel);box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--red) 72%,transparent),0 4px 12px #00000012;font-size:13px;font-weight:750;line-height:1.3;text-align:left;white-space:normal;transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease}
+.animation-wayfinding .animation-gallery-return>.gallery-action-label{display:flex;align-items:center;gap:10px;min-width:0;overflow-wrap:anywhere}
+.animation-wayfinding .animation-gallery-return .gallery-action-icon{display:grid;place-items:center;width:38px;height:38px;flex:none;border-radius:12px;background:color-mix(in srgb,var(--red) 22%,var(--ink));color:color-mix(in srgb,var(--red) 78%,var(--panel))}
+.animation-wayfinding .animation-gallery-return .gallery-action-icon>.icon{width:22px;height:22px}
 .animation-wayfinding .animation-gallery-return .gallery-action-copy{display:grid;gap:3px;min-width:0}
 .animation-wayfinding .animation-gallery-return .gallery-action-copy>b{font-size:13px;font-weight:800;line-height:1.25}
-.animation-wayfinding .animation-gallery-return .gallery-action-copy>small{color:color-mix(in srgb,var(--panel) 72%,transparent);font-size:11px;font-weight:550;line-height:1.25}
-.animation-wayfinding .animation-gallery-return>.gallery-action-next{display:grid;place-items:center;width:34px;height:34px;flex:none;border:1px solid color-mix(in srgb,var(--panel) 18%,transparent);border-radius:50%;background:color-mix(in srgb,var(--panel) 10%,transparent);color:var(--panel)}
-.animation-wayfinding .animation-gallery-return .gallery-action-next>.icon{width:17px;height:17px}
+.animation-wayfinding .animation-gallery-return .gallery-action-copy>small{color:color-mix(in srgb,var(--panel) 82%,transparent);font-size:11px;font-weight:550;line-height:1.3}
+.animation-wayfinding .animation-gallery-return>.gallery-action-next{display:grid;place-items:center;width:34px;height:34px;flex:none;border:1px solid color-mix(in srgb,var(--panel) 22%,transparent);border-radius:50%;background:color-mix(in srgb,var(--panel) 12%,transparent);color:var(--panel)}
+.animation-wayfinding .animation-gallery-return .gallery-action-next>.icon{width:18px;height:18px}
 .animation-wayfinding .animation-gallery-return:focus-visible{outline:2px solid var(--red);outline-offset:3px}
 .animation-wayfinding .animation-gallery-return:active{transform:scale(.99)}
 @media(hover:hover){.animation-wayfinding .animation-gallery-return:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--red) 62%,var(--ink));box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--red) 72%,transparent),0 5px 14px #00000020}}
@@ -330,15 +330,15 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
    inline counterpart leaves view. Absolute positioning avoids resize jumps. */
 .control-dock-surface{position:relative}
 .control-preview-dock .animation-wayfinding[data-editor-shortcut]{position:absolute;top:100%;left:0;right:0;z-index:1;margin:0;padding:5px 0;background:var(--bg);border-radius:0 0 15px 15px;box-shadow:0 8px 16px -12px #17201980}
-.current-effect>.current-effect-gallery{display:flex;align-items:center;justify-content:space-between;gap:11px;flex:0 0 100%;min-width:0;min-height:56px;padding:6px 10px;border:1px solid color-mix(in srgb,var(--red) 34%,var(--line));border-radius:17px;background:linear-gradient(110deg,color-mix(in srgb,var(--red) 8%,var(--panel)),var(--panel) 72%);color:var(--ink);font-size:13px;font-weight:750;line-height:1.3;text-align:left;box-shadow:0 3px 10px #1718170c;transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease}
-.current-effect-gallery>.gallery-action-label{display:flex;align-items:center;gap:11px;min-width:0;overflow-wrap:anywhere}
-.current-effect-gallery .gallery-action-icon{display:grid;place-items:center;width:36px;height:36px;flex:none;border-radius:11px;background:color-mix(in srgb,var(--red) 12%,var(--panel));color:var(--red)}
-.current-effect-gallery .gallery-action-icon>.icon{width:21px;height:21px}
+.current-effect>.current-effect-gallery{display:flex;align-items:center;justify-content:space-between;gap:10px;flex:0 0 100%;min-width:0;min-height:60px;padding:7px 10px;border:1px solid color-mix(in srgb,var(--red) 42%,var(--line));border-radius:17px;background:linear-gradient(110deg,color-mix(in srgb,var(--red) 9%,var(--panel)),var(--panel) 72%);color:var(--ink);font-size:13px;font-weight:750;line-height:1.3;text-align:left;box-shadow:0 3px 10px #1718170c;transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease}
+.current-effect-gallery>.gallery-action-label{display:flex;align-items:center;gap:10px;min-width:0;overflow-wrap:anywhere}
+.current-effect-gallery .gallery-action-icon{display:grid;place-items:center;width:38px;height:38px;flex:none;border-radius:12px;background:color-mix(in srgb,var(--red) 14%,var(--panel));color:var(--red)}
+.current-effect-gallery .gallery-action-icon>.icon{width:22px;height:22px}
 .current-effect-gallery .gallery-action-copy{display:grid;gap:3px;min-width:0}
-.current-effect-gallery .gallery-action-copy>b{font-size:13px;font-weight:800;line-height:1.25}
-.current-effect-gallery .gallery-action-copy>small{color:var(--muted);font-size:11px;font-weight:550;line-height:1.25}
-.current-effect-gallery>.gallery-action-next{display:grid;place-items:center;width:34px;height:34px;flex:none;border:1px solid color-mix(in srgb,var(--red) 19%,var(--line));border-radius:50%;background:color-mix(in srgb,var(--red) 6%,var(--panel));color:var(--red)}
-.current-effect-gallery .gallery-action-next>.icon{width:17px;height:17px}
+.current-effect-gallery .gallery-action-copy>b{font-size:14px;font-weight:800;line-height:1.25}
+.current-effect-gallery .gallery-action-copy>small{color:var(--muted);font-size:11px;font-weight:550;line-height:1.3}
+.current-effect-gallery>.gallery-action-next{display:grid;place-items:center;width:34px;height:34px;flex:none;border:1px solid color-mix(in srgb,var(--red) 25%,var(--line));border-radius:50%;background:color-mix(in srgb,var(--red) 8%,var(--panel));color:var(--red)}
+.current-effect-gallery .gallery-action-next>.icon{width:18px;height:18px}
 .current-effect-gallery:focus-visible{outline:2px solid var(--red);outline-offset:3px}
 .current-effect-gallery:active{transform:scale(.99)}
 @media(hover:hover){.current-effect-gallery:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--red) 62%,var(--line));box-shadow:0 5px 14px #17181716}}
@@ -385,9 +385,9 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .animation-simple-page .current-effect{padding:6px 13px;gap:8px;border-radius:18px}
 .animation-simple-page .current-effect>div>small{font-size:10px;line-height:1.25}
 .animation-simple-page .current-effect b{font-size:15px;line-height:1.25}
-.animation-simple-page .current-effect-gallery{background:linear-gradient(110deg,var(--ink),color-mix(in srgb,var(--ink) 92%,var(--red)));color:var(--panel);font-size:13px;min-height:56px;border-color:color-mix(in srgb,var(--red) 42%,var(--ink));box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--red) 72%,transparent),0 4px 12px #00000012}
+.animation-simple-page .current-effect-gallery{background:linear-gradient(110deg,var(--ink),color-mix(in srgb,var(--ink) 92%,var(--red)));color:var(--panel);font-size:14px;min-height:60px;border-color:color-mix(in srgb,var(--red) 48%,var(--ink));box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--red) 72%,transparent),0 4px 12px #00000012}
 .animation-simple-page .current-effect-gallery .gallery-action-icon{background:color-mix(in srgb,var(--red) 22%,var(--ink));color:color-mix(in srgb,var(--red) 78%,var(--panel))}
-.animation-simple-page .current-effect-gallery .gallery-action-copy>small{color:color-mix(in srgb,var(--panel) 72%,transparent)}
+.animation-simple-page .current-effect-gallery .gallery-action-copy>small{color:color-mix(in srgb,var(--panel) 84%,transparent)}
 .animation-simple-page .current-effect-gallery>.gallery-action-next{background:color-mix(in srgb,var(--panel) 10%,transparent);border-color:color-mix(in srgb,var(--panel) 18%,transparent);color:var(--panel)}
 @media(prefers-reduced-motion:reduce){.current-effect-gallery,.animation-wayfinding .animation-gallery-return{transition:none}}
 .animation-daily-controls.card{padding:13px;gap:9px;border-radius:18px}
@@ -415,35 +415,38 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .preview-size-picker button{min-width:0;min-height:38px;padding:5px 6px;border:0;border-radius:999px;background:transparent;color:#d4d9d4;font-size:10px;font-weight:750;white-space:nowrap}
 .preview-size-picker button[aria-pressed=true]{background:var(--red);color:#fff;box-shadow:0 2px 5px #0003}
 .preview-size-picker button:focus-visible{outline:2px solid #fff;outline-offset:1px}
-.control-preview-dock[data-preview-size=small] .preview-wrap canvas{height:76px;transition:height .18s ease}
-.control-preview-dock[data-preview-size=medium] .preview-wrap canvas{height:136px;transition:height .18s ease}
-.control-preview-dock[data-preview-size=large] .preview-wrap canvas{height:224px;transition:height .18s ease}
+.control-preview-dock[data-preview-size=small] .preview-wrap canvas{height:70px;transition:height .28s cubic-bezier(.22,.61,.36,1)}
+.control-preview-dock[data-preview-size=medium] .preview-wrap canvas{height:112px;transition:height .28s cubic-bezier(.22,.61,.36,1)}
+.control-preview-dock[data-preview-size=large] .preview-wrap canvas{height:156px;transition:height .28s cubic-bezier(.22,.61,.36,1)}
 .control-preview-dock[data-spatial-preview=true][data-preview-size=large] .spatial-preview-wrap canvas{height:280px!important}
 @media(max-width:700px){
-  .control-preview-dock[data-preview-size=small] .preview-wrap canvas{height:52px}
-  .control-preview-dock[data-preview-size=medium] .preview-wrap canvas{height:104px}
-  .control-preview-dock[data-preview-size=large] .preview-wrap canvas{height:164px}
+  .control-preview-dock[data-preview-size=small] .preview-wrap canvas{height:58px}
+  .control-preview-dock[data-preview-size=medium] .preview-wrap canvas{height:92px}
+  .control-preview-dock[data-preview-size=large] .preview-wrap canvas{height:132px}
   .control-preview-dock[data-spatial-preview=true][data-preview-size=large] .spatial-preview-wrap canvas{height:260px!important}
 }
 @media(max-width:360px){
   .preview-size-control>summary{min-height:30px;padding-inline:8px}
   .preview-size-picker button{min-height:38px;padding-inline:4px;font-size:9px}
+  .control-preview-dock[data-preview-size=small] .preview-wrap canvas{height:52px}
+  .control-preview-dock[data-preview-size=medium] .preview-wrap canvas{height:80px}
+  .control-preview-dock[data-preview-size=large] .preview-wrap canvas{height:116px}
 }
 @media(max-height:700px){
-  .control-preview-dock[data-preview-size=small] .preview-wrap canvas{height:46px}
-  .control-preview-dock[data-preview-size=medium] .preview-wrap canvas{height:82px}
-  .control-preview-dock[data-preview-size=large] .preview-wrap canvas{height:128px}
+  .control-preview-dock[data-preview-size=small] .preview-wrap canvas{height:50px}
+  .control-preview-dock[data-preview-size=medium] .preview-wrap canvas{height:76px}
+  .control-preview-dock[data-preview-size=large] .preview-wrap canvas{height:108px}
   .control-preview-dock[data-spatial-preview=true][data-preview-size=large] .spatial-preview-wrap canvas{height:220px!important}
 }
 /* Keep the chosen preview size perceptible while the dock is sticky. The
    compact option stays close to its normal phone size instead of collapsing
    the actual light to a hairline; larger choices remain visibly larger. */
-.control-preview-dock[data-scrolled=true][data-preview-size=small] .preview-wrap canvas{height:52px!important}
-.control-preview-dock[data-scrolled=true][data-preview-size=medium] .preview-wrap canvas{height:68px!important}
-.control-preview-dock[data-scrolled=true][data-preview-size=large] .preview-wrap canvas{height:88px!important}
-.control-preview-dock[data-scrolled=true][data-spatial-preview=true][data-preview-size=large] .spatial-preview-wrap canvas{height:190px!important}
+.control-preview-dock[data-scrolled=true][data-preview-size=small] .preview-wrap canvas{height:50px!important;transition:height .34s cubic-bezier(.22,.61,.36,1)}
+.control-preview-dock[data-scrolled=true][data-preview-size=medium] .preview-wrap canvas{height:76px!important;transition:height .34s cubic-bezier(.22,.61,.36,1)}
+.control-preview-dock[data-scrolled=true][data-preview-size=large] .preview-wrap canvas{height:106px!important;transition:height .34s cubic-bezier(.22,.61,.36,1)}
+.control-preview-dock[data-scrolled=true][data-spatial-preview=true][data-preview-size=large] .spatial-preview-wrap canvas{height:190px!important;transition:height .34s cubic-bezier(.22,.61,.36,1)}
 @media(max-height:700px){.control-preview-dock[data-scrolled=true][data-spatial-preview=true][data-preview-size=large] .spatial-preview-wrap canvas{height:164px!important}}
-@media(prefers-reduced-motion:reduce){.control-preview-dock .preview-wrap canvas{transition:none}}
+@media(prefers-reduced-motion:reduce){.editor-grid>.control-preview-dock,.control-dock-surface,.control-preview-dock .control-dock-context-line,.control-preview-dock .control-dock-actions,.control-preview-dock .preview-wrap,.control-preview-dock .preview-top,.control-preview-dock .preview-size-row,.control-preview-dock .preview-live-controls,.control-preview-dock .live-confirmation,.control-preview-dock .preview-wrap canvas{transition:none!important}}
 .channel-row .channel-number{width:100%;min-width:0;height:44px;padding:2px 3px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);font-size:16px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
 .channel-number::-webkit-inner-spin-button,.channel-number::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .scope-line-icon{display:grid;place-items:center;flex:none;width:38px;height:34px;border-radius:10px;background:var(--soft);color:var(--red)}

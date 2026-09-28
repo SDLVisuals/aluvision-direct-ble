@@ -1010,7 +1010,14 @@ function softChaseCoverage(distance,width,n,smooth){
       // limits thickness. All lanes keep the same material/pixel pitch, while
       // even the shortest physical line still reads as a line, not a square.
       const verticalThickness = (height - verticalStart - verticalBottom) * shortestFraction * .45;
-      const barHeight = continuous ? Math.min(18, height * 0.4) : Math.max(0.5, Math.min(compactVertical ? 10 : 18, lane * 0.62, vertical ? verticalThickness : Infinity));
+      // The main preview has an explicit size control. Let its lit strip grow
+      // with the chosen canvas height so “large” enlarges the actual example,
+      // not just an empty black area around the same thin line. Gallery cards
+      // stay compact and keep their established pixel pitch.
+      const mainBarLimit = options.main === true ? Math.min(42, Math.max(18, height * .29)) : 18;
+      const barHeight = continuous ? Math.min(mainBarLimit, height * .5)
+        : Math.max(0.5, Math.min(compactVertical && options.main !== true ? 10 : mainBarLimit,
+          lane * 0.62, vertical ? verticalThickness : Infinity));
       const continuousFraction = row.pixels.length / Math.max(1, frame.geometry.totalPixels);
       const continuousOffset = frame.geometry.receivers[index].offset / Math.max(1, frame.geometry.totalPixels);
       const x = continuous ? padding + (width - padding * 2) * continuousOffset : vertical ? padding + lane * index + lane / 2 - barHeight / 2 : padding;
