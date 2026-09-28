@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-clean-more-screen-20260928",
+  "revision": "v32-spatial-preview-colour-nav-20260929",
   "interfaceVersion": 32,
-  "interfaceBaseline": "V32 preserves the existing interface and recognisable 3D tunnel/wall visuals. Spatial animations are grouped as Tunnel & wand. The gallery shows a four-line illustrative tunnel; opening a spatial effect group previews its sample over the actual connected lines and chosen geometry. Applying a tunnel or wall animation automatically targets every line in that zone, without asking the customer to manually create an all-lines selection first. The effect settings still allow selecting an individual line for its own colour. This changes animation targeting only, not receiver wiring or saved physical arrangement. The phone-first animation gallery uses a rounded category sheet with explained choices and a clear return to active settings. Returning to Effecten opens at the top rather than restoring an old deep gallery scroll position. Arrangement icons depict the chosen tunnel, vertical wall or continuous line. Arrangement and order choices apply directly, without a separate save/cancel step. New SPI zones default to Doorlopend; the main preview follows the selected geometry. The More screen no longer repeats a generic connection status, temporary-data disclaimer or technical-readiness checklist; the four primary navigation tabs and local app-management actions remain. The isolated demo keeps one concise fictional-receiver safety badge, uses no hardware commands, firmware downloads or PIN collection, and remains separate from the native app. Browser verification does not prove physical receiver acceptance.",
+  "interfaceBaseline": "V32 preserves the existing interface and recognisable 3D tunnel/wall visuals. Spatial animations are grouped as Tunnel & wand. The gallery shows a four-line illustrative tunnel; opening a spatial effect group previews its sample over the actual connected lines and chosen geometry. The active tunnel/wall preview remains spatial while editing animation colours. The inline and sticky animation-gallery actions share one consistent visual component. Applying a tunnel or wall animation automatically targets every line in that zone, without asking the customer to manually create an all-lines selection first. The effect settings still allow selecting an individual line for its own colour. This changes animation targeting only, not receiver wiring or saved physical arrangement. The phone-first animation gallery uses a rounded category sheet with explained choices and a clear return to active settings. Returning to Effecten opens at the top rather than restoring an old deep gallery scroll position. Arrangement icons depict the chosen tunnel, vertical wall or continuous line. Arrangement and order choices apply directly, without a separate save/cancel step. New SPI zones default to Doorlopend; the main preview follows the selected geometry. The More screen no longer repeats a generic connection status, temporary-data disclaimer or technical-readiness checklist; the four primary navigation tabs and local app-management actions remain. The isolated demo keeps one concise fictional-receiver safety badge, uses no hardware commands, firmware downloads or PIN collection, and remains separate from the native app. Browser verification does not prove physical receiver acceptance.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -40,7 +40,7 @@
     },
     {
       "path": "animation-library.css",
-      "sha256": "2e1ec951b3917b5c19696d9a5309512c09a41e6fcd5b2d71d233fbfcea23ca15"
+      "sha256": "aa8ea7363920efce8ef70f5b26f5bd54d1a804d659321a445b1195d4173327c5"
     },
     {
       "path": "animation-library.js",
@@ -48,7 +48,7 @@
     },
     {
       "path": "animation-mobile.css",
-      "sha256": "edc6d5f0576bef65545ee472339ccb4f8c345434b08d0e0f263a316e5bec67de"
+      "sha256": "6e4deb4b650ec5428acbda39ed3a418a9d11c9f6d00672cfe6a7fe23e7f9ae9b"
     },
     {
       "path": "animations.css",
@@ -56,7 +56,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "e1693b85d685e4d2dcc2c5b83302ad179a5167948327e0e13a33da882daa1831"
+      "sha256": "6cf3e3359cc22e33df3632442053d0f5da0ed4dd99b54ea731512032d68e444a"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -80,7 +80,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "ed5e07a244410bf18f40ea8fdafb9a07b2e76de9f1e6e489ad22b343bca14f9b"
+      "sha256": "08e36cc9eff5acb1df285132507b8272dc863a46339b548527e254db3db8af9f"
     },
     {
       "path": "fixtures.js",
@@ -88,7 +88,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "26a862572bac689ef5e126bb6bd29612d0f7f7c3b655486d07966ea32dbd3345"
+      "sha256": "a1a75de11cb15eaef370c886fd83016b70183d722e3d0871f5f94100d7bc8cb4"
     },
     {
       "path": "live-control.js",
