@@ -164,9 +164,8 @@
     if(!trigger)return revealAnimationGallery();
     const restore=()=>{
       if(!trigger.isConnected)return;
-      window.scrollTo({top:saved.scrollY,left:0,behavior:'instant'});
       const delta=trigger.getBoundingClientRect().top-saved.viewportTop;
-      if(Math.abs(delta)>1)window.scrollBy({top:delta,left:0,behavior:'instant'});
+      if(Math.abs(delta)>1)window.scrollTo({top:Math.max(0,window.scrollY+delta),left:0,behavior:'instant'});
     };
     restore();requestAnimationFrame(()=>{restore();requestAnimationFrame(restore);});
     trigger.focus({preventScroll:true});
@@ -466,7 +465,7 @@
     const browsing=screen==='controls'&&showControlAnimationGallery;
     if(browsing&&route.family){
       const label=animationFamilyBackLabel();
-      return `<nav class="animation-wayfinding" data-family-back-shortcut hidden aria-label="${esc(t('animationNavigation'))}"><button class="animation-gallery-return" data-action="family-back" aria-label="${esc(label)}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('back')}</span><span class="gallery-action-copy"><b>${esc(label)}</b></span></span><span class="gallery-action-next" aria-hidden="true">${icon('chevron')}</span></button></nav>`;
+      return `<nav class="animation-wayfinding" data-family-back-shortcut hidden aria-label="${esc(t('animationNavigation'))}"><button class="animation-gallery-return family-back-action" data-action="family-back" aria-label="${esc(label)}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('back')}</span><span class="gallery-action-copy"><b>${esc(label)}</b></span></span></button></nav>`;
     }
     if(!activeEffect()||browsing)return '';
     const action=screen==='controls'?'animation-gallery':'animations-gallery';
