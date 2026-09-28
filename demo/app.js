@@ -137,7 +137,7 @@
     align();requestAnimationFrame(align);
   }
   function chooseAnimationCategory(value){
-    if(!['start','catalogue','whole','pixels','tunnel','brand','presets'].includes(value)||value==='pixels'&&zone()?.type!=='SPI')return;
+    if(!['catalogue','whole','pixels','tunnel','brand','presets'].includes(value)||value==='pixels'&&zone()?.type!=='SPI')return;
     animationQueries.delete(route.zoneId);
     route={...route,family:null,library:value,effectsReturn:'controls'};showControlAnimationGallery=true;setSpatialPreviewCategory(value);
     animationGalleryPositions.delete(route.zoneId);render({top:true});revealAnimationGallery();
@@ -732,8 +732,11 @@
     return Library.categories.find(category=>category.key===key)?.title||({catalogue:'Alle',presets:'Mijn animaties'})[key]||'Animaties';
   }
   function libraryTabLabel(key) { return t(({catalogue:'animationAll',whole:'animationWhole',pixels:'animationMoving',tunnel:'animationAcross',brand:'animationBrand',presets:'animationOwn'})[key]); }
-  function initialAnimationLibrary() { return 'start'; }
-  function libraryTab() { return route.library==='all'?'catalogue':route.library||initialAnimationLibrary(); }
+  function initialAnimationLibrary() { return zone()?.type==='SPI'?'pixels':'catalogue'; }
+  function libraryTab() {
+    const value=route.library==='all'?'catalogue':route.library||initialAnimationLibrary();
+    return value==='start'?initialAnimationLibrary():value;
+  }
   function backgroundDefaults(){return {backgroundOn:false,background:'#000000',backgroundWhite:0,bgBrightness:10,backgroundRgbEnabled:true,backgroundWhiteEnabled:true};}
   function effectState(effect) {
     const state={...backgroundDefaults(),...copy(effect.state),category:effect.category,v30Effect:effect.state.v30Effect||null,previewFamily:effect.state.previewFamily||null,legacySpi:effect.state.legacySpi===true,bounce:effect.state.bounce===true,mirror:effect.state.mirror===true,on:true,power:true};
@@ -844,7 +847,7 @@
   }
   function renderEffects() {
     const currentEffect=activeEffect(),returnToEditor=Boolean(currentEffect)&&route.effectsReturn!=='controls',tab=libraryTab();
-    const title=tab==='catalogue'?'Alle animaties':tab==='tunnel'||tab==='brand'||tab==='presets'?categoryLabel(tab):'Animatie kiezen';
+    const title=libraryTabLabel(tab);
     const editCurrent=currentEffect&&route.effectsReturn==='controls'?`<button class="button secondary full" data-action="animations">Actieve animatie bewerken · ${esc(Library.displayName(currentEffect,t))}</button>`:'';
     return `<div class="page">${contextTitle(title,`${zone().name} · ${nameOfSelection()}`,returnToEditor?'Terug naar instellingen':'Terug naar bediening',returnToEditor?'animations':'controls')}${ledlineSetupMarkup()}${tab==='tunnel'&&receivers().length<2?'':selector()}${editCurrent}${animationLibraryContent()}</div>`;
   }
@@ -852,19 +855,6 @@
     savedPresets=presetStore.load();
     const items=catalogue(),tab=libraryTab(),active=route.family?Library.group(items,route.family):null;
     const query=animationQueries.get(route.zoneId)||'';
-    if(tab==='start')return `<section class="animation-library-inline animation-start" aria-label="${esc(t('chooseAnimation'))}">
-      ${animationLibraryHeading()}
-      <section class="animation-quick-choices" aria-labelledby="animation-quick-heading">
-        <h3 id="animation-quick-heading">${esc(t('animationQuickChoices'))}</h3>
-        <div class="animation-start-grid">${Library.starters(items).map(starter=>`<button class="effect-card animation-starter-card" data-action="effect" data-id="${esc(starter.effect.id)}" aria-pressed="${activeEffect()?.id===starter.effect.id}">${effectPreview(starter.effect)}<b>${esc(t('animationStarter'+starter.key))}</b><small>${esc(t('animationStarter'+starter.key+'Hint'))}</small></button>`).join('')}</div>
-      </section>
-      <section class="animation-complete-catalogue" aria-labelledby="animation-complete-heading">
-        <header class="animation-complete-heading"><h3 id="animation-complete-heading">${esc(t('animationAll'))}</h3><small>${esc(t(items.length===1?'animationCountOne':'animationCountMany',{count:items.length}))}</small></header>
-        <button type="button" id="animation-category" class="animation-category-trigger" data-action="animation-categories" data-category="catalogue" aria-haspopup="dialog" aria-expanded="false"><span class="animation-category-art">${animationCategoryIcon('catalogue')}</span><span class="animation-category-copy"><small>${esc(t('animationFilter'))}</small><b>${esc(t('animationAll'))}</b></span><span class="animation-category-count" aria-label="${esc(t('animationCountMany',{count:items.length}))}">${items.length}</span>${icon('chevron')}</button>
-        <label class="animation-search"><span>${esc(t('animationSearch'))}</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg><input type="search" id="animation-search" value="${esc(query)}" placeholder="${esc(t('animationSearchHint'))}" autocomplete="off"></label>
-        <div id="animation-results">${query.trim()?effectResults(query):animationCategorySections(items,active?.key)}</div>
-      </section>
-    </section>`;
     const canTunnel=receivers().length>=2&&selection().kind==='all',counts={catalogue:items.length,...Object.fromEntries(Library.sections(items).map(section=>[section.key,section.count])),presets:savedPresets.presets.length};
     const intro=tab==='brand'?brandTonePicker():tab==='tunnel'?tunnelGuide({compact:route.screen==='controls'&&controlMode==='animations'}):'';
     const tunnelUnavailable=tab==='tunnel'&&!canTunnel;
@@ -875,17 +865,17 @@
   }
   function animationLibraryHeading(){
     const current=activeEffect(),canReturn=current&&route.screen==='controls';
-    return `<header class="animation-library-heading"><div><h2>${esc(t('chooseAnimation'))}</h2>${canReturn?`<small>${esc(t('animationActiveName',{name:Library.displayName(current,t)}))}</small>`:''}</div>${canReturn?`<button class="animation-return-current" data-action="animation-current-edit" aria-label="${esc(t('animationBackToSettings'))} · ${esc(Library.displayName(current,t))}">${icon('back')}<span>${esc(t('animationSettingsShort'))}</span></button>`:''}</header>`;
+    return `<header class="animation-library-heading"><div><h2>${esc(t('animationLibraryTitle'))}</h2>${canReturn?`<small>${esc(t('animationActiveName',{name:Library.displayName(current,t)}))}</small>`:''}</div>${canReturn?`<button class="animation-return-current" data-action="animation-current-edit" aria-label="${esc(t('animationBackToSettings'))} · ${esc(Library.displayName(current,t))}">${icon('back')}<span>${esc(t('animationSettingsShort'))}</span></button>`:''}</header>`;
   }
   function animationCategoryIcon(key){
-    return key==='tunnel'?arrangementIcon('stacked'):icon(({start:'sparkle',catalogue:'zones',whole:'sun',pixels:'animation',brand:'sparkle',presets:'scenes'})[key]||'zones');
+    return key==='tunnel'?arrangementIcon('stacked'):icon(({catalogue:'zones',whole:'sun',pixels:'animation',brand:'sparkle',presets:'scenes'})[key]||'zones');
   }
   function showAnimationCategories(){
-    const items=catalogue(),currentTab=libraryTab(),tab=currentTab==='start'?'catalogue':currentTab,keys=['start','catalogue','whole',...(zone().type==='SPI'?['pixels']:[]),'tunnel','brand','presets'];
+    const tab=libraryTab(),keys=['catalogue','whole',...(zone().type==='SPI'?['pixels']:[]),'tunnel','brand','presets'];
     savedPresets=presetStore.load();
-    const counts={start:Library.starters(items).length,catalogue:items.length,...Object.fromEntries(Library.sections(items).map(section=>[section.key,section.count])),presets:savedPresets.presets.length};
-    const titleKey={start:'animationStartHint',catalogue:'animationAllHint',whole:'animationWholeHint',pixels:'animationMovingHint',tunnel:'animationAcrossHint',brand:'animationBrandHint',presets:'animationOwnHint'};
-    showEffectDialog(t('animationFilter'),`<div class="animation-category-options" data-animation-categories>${keys.map(key=>`<button type="button" class="animation-category-choice" data-action="animation-category-choice" data-id="${key}" aria-pressed="${tab===key}"><span class="animation-category-art">${animationCategoryIcon(key)}</span><span class="animation-category-copy"><b>${esc(key==='start'?t('animationStartSelection'):libraryTabLabel(key))}</b><small>${esc(t(titleKey[key]))}</small></span><span class="animation-category-meta"><span>${counts[key]||0}</span>${tab===key?icon('check'):icon('chevron')}</span></button>`).join('')}</div>`);
+    const items=catalogue(),counts={catalogue:items.length,...Object.fromEntries(Library.sections(items).map(section=>[section.key,section.count])),presets:savedPresets.presets.length};
+    const titleKey={catalogue:'animationAllHint',whole:'animationWholeHint',pixels:'animationMovingHint',tunnel:'animationAcrossHint',brand:'animationBrandHint',presets:'animationOwnHint'};
+    showEffectDialog(t('animationFilter'),`<div class="animation-category-options" data-animation-categories>${keys.map(key=>`<button type="button" class="animation-category-choice" data-action="animation-category-choice" data-id="${key}" aria-pressed="${tab===key}"><span class="animation-category-art">${animationCategoryIcon(key)}</span><span class="animation-category-copy"><b>${esc(libraryTabLabel(key))}</b><small>${esc(t(titleKey[key]))}</small></span><span class="animation-category-meta"><span>${counts[key]||0}</span>${tab===key?icon('check'):icon('chevron')}</span></button>`).join('')}</div>`);
     // Touch Safari does not focus the invoking button automatically.
     // Restore this exact control on dismiss, not a stale gallery/back button.
     dialogReturnFocus=main.querySelector('[data-action="animation-categories"]');
@@ -2490,10 +2480,6 @@
         if(id!==previous)chooseAnimationCategory(id);
         main.querySelector('[data-action="animation-categories"]')?.focus({preventScroll:true});
         return;
-      }
-      if(action==='animation-start'){
-        route={...route,library:'start',family:null};setSpatialPreviewCategory('start');animationQueries.delete(route.zoneId);animationGalleryPositions.delete(route.zoneId);
-        render({top:true});return revealAnimationGallery();
       }
       if(action==='brand-tone'){
         const tone=BRAND_TONES.find(item=>item.id===id);if(!tone)return;
