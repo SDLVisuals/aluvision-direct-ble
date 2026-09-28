@@ -172,13 +172,15 @@ body[data-theme=dark] .section-tabs button:not([aria-selected=true]){color:var(-
 /* Individual LED lines live behind a clear, animated disclosure so a long
    installation stays calm until someone chooses to address one line. */
 .selection .receiver-scope-grid{grid-template-columns:minmax(0,1fr)}
-.selection .scope-lines-toggle{grid-column:1/-1;justify-content:flex-start;min-height:64px;padding:10px 12px;border-radius:14px;background:var(--panel);text-align:left;white-space:normal}
-.selection[data-selection-mode=all] .scope-lines-toggle{border:1px solid #3b403b;background:linear-gradient(145deg,#252a26,#1c201d);color:#fff;box-shadow:inset 0 -2px 0 var(--red),0 4px 12px rgba(24,28,24,.12)}
-.selection[data-selection-mode=all] .scope-lines-toggle .scope-toggle-icon{background:#343834;color:#f5aaa4}
-.selection[data-selection-mode=all] .scope-lines-toggle .scope-copy small{color:#d4d8d3}
-.selection[data-selection-mode=all] .scope-lines-toggle .scope-toggle-chevron{background:#343834;color:#d4d8d3}
+.selection .scope-lines-toggle{grid-column:1/-1;justify-content:flex-start;min-height:64px;padding:10px 12px;border-radius:16px;background:var(--panel);text-align:left;white-space:normal;transition:background-color .2s ease,border-color .2s ease,box-shadow .2s ease,transform .18s ease}
+.selection[data-selection-mode=all] .scope-lines-toggle{border:1px solid color-mix(in srgb,var(--red) 43%,var(--line));background:color-mix(in srgb,var(--red) 6%,var(--panel));color:var(--ink);box-shadow:inset 3px 0 0 var(--red),0 5px 16px rgba(32,34,32,.06)}
+.selection[data-selection-mode=all] .scope-lines-toggle .scope-toggle-icon{background:var(--red);color:#fff}
+.selection[data-selection-mode=all] .scope-lines-toggle .scope-copy small{color:var(--muted)}
+.selection[data-selection-mode=all] .scope-lines-toggle .scope-all-status{display:grid;place-items:center;width:25px;height:25px;flex:none;border-radius:50%;background:color-mix(in srgb,var(--red) 13%,var(--panel));color:var(--red)}
+.selection[data-selection-mode=all] .scope-lines-toggle .scope-all-status .icon{width:15px;height:15px;stroke-width:2.5}
+.selection[data-selection-mode=all] .scope-lines-toggle .scope-toggle-chevron{background:var(--soft);color:var(--ink)}
 .selection[data-selection-mode=all] .scope-lines-toggle[aria-expanded=true] .scope-toggle-chevron{background:#f5e8e6;color:var(--red)}
-body[data-theme=dark] .selection[data-selection-mode=all] .scope-lines-toggle{border-color:rgba(255,255,255,.13);background:linear-gradient(145deg,#333833,#202420);box-shadow:inset 0 -2px 0 var(--red),0 4px 12px rgba(0,0,0,.18)}
+body[data-theme=dark] .selection[data-selection-mode=all] .scope-lines-toggle{border-color:color-mix(in srgb,var(--red) 40%,var(--line));background:color-mix(in srgb,var(--red) 10%,var(--panel));box-shadow:inset 3px 0 0 var(--red),0 5px 16px rgba(0,0,0,.18)}
 .selection .scope-toggle-icon{display:grid;place-items:center;width:38px;height:38px;flex:none;border-radius:12px;background:var(--soft);color:var(--red)}
 .selection .scope-toggle-icon svg{width:20px;height:20px}
 .selection .scope-lines-toggle .scope-copy{gap:4px}
@@ -210,9 +212,9 @@ body[data-theme=dark] .selection[data-selection-mode=all] .scope-lines-toggle{bo
 .selection .scope-lines-list .scope-line[aria-pressed=true] .scope-number{background:var(--red);color:white}
 .selection .scope-lines-list .scope-line:last-child:nth-child(odd){grid-column:1/-1;width:calc(50% - 4px);justify-self:center}
 .selection .scope-lines-toggle:focus-visible,.selection .scope-lines-list .scope-line:focus-visible{outline:3px solid #bf484155;outline-offset:2px}
-@media(max-width:360px){.selection .scope-lines-list{gap:6px}.selection .scope-lines-list .scope-line{min-height:54px;padding:8px}.selection .scope-lines-list .scope-line .scope-number{width:24px;height:24px}.selection .scope-lines-list .scope-line .scope-option-title{font-size:11px}.selection .scope-lines-list .scope-line .scope-copy small{font-size:9px}.selection.has-multiple-selection .selection-summary{max-width:58%;font-size:9px}}
+@media(max-width:360px){.selection .scope-lines-list{grid-template-columns:minmax(0,1fr);gap:6px}.selection .scope-lines-list .scope-line{min-height:54px;padding:8px}.selection .scope-lines-list .scope-line .scope-number{width:24px;height:24px}.selection .scope-lines-list .scope-line .scope-option-title{font-size:11px}.selection .scope-lines-list .scope-line .scope-copy small{font-size:9px}.selection .scope-lines-list .scope-line:last-child:nth-child(odd){grid-column:1;width:100%;justify-self:stretch}.selection.has-multiple-selection .selection-summary{max-width:58%;font-size:9px}}
 @media(max-height:700px){.editor-controls .selection .scope-lines-toggle{min-height:56px;padding:7px 9px}.editor-controls .selection .scope-toggle-icon{width:32px;height:32px}.editor-controls .selection .scope-lines-list .scope-line{min-height:50px;padding:7px 8px}}
-@media(prefers-reduced-motion:reduce){.selection .scope-toggle-chevron,.selection .scope-lines-reveal{transition:none}}
+@media(prefers-reduced-motion:reduce){.selection .scope-lines-toggle,.selection .scope-toggle-chevron,.selection .scope-lines-reveal{transition:none}}
 /* A sheet owns the gesture: reaching its end must not scroll the page behind it. */
 html:has(dialog[open]){overflow:hidden}
 dialog{overscroll-behavior:contain}
@@ -329,7 +331,7 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 /* The editor's alternate-gallery action only floats below the dock after its
    inline counterpart leaves view. Absolute positioning avoids resize jumps. */
 .control-dock-surface{position:relative}
-.control-preview-dock .animation-wayfinding[data-editor-shortcut]{position:absolute;top:100%;left:0;right:0;z-index:1;margin:0;padding:5px 0;background:var(--bg);border-radius:0 0 15px 15px;box-shadow:0 8px 16px -12px #17201980}
+.control-preview-dock .animation-wayfinding:is([data-editor-shortcut],[data-family-back-shortcut]){position:absolute;top:100%;left:0;right:0;z-index:1;margin:0;padding:5px 0;background:var(--bg);border-radius:0 0 15px 15px;box-shadow:0 8px 16px -12px #17201980}
 .current-effect>.current-effect-gallery{display:flex;align-items:center;justify-content:space-between;gap:10px;flex:0 0 100%;min-width:0;min-height:60px;padding:7px 10px;border:1px solid color-mix(in srgb,var(--red) 42%,var(--line));border-radius:17px;background:linear-gradient(110deg,color-mix(in srgb,var(--red) 9%,var(--panel)),var(--panel) 72%);color:var(--ink);font-size:13px;font-weight:750;line-height:1.3;text-align:left;box-shadow:0 3px 10px #1718170c;transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease}
 .current-effect-gallery>.gallery-action-label{display:flex;align-items:center;gap:10px;min-width:0;overflow-wrap:anywhere}
 .current-effect-gallery .gallery-action-icon{display:grid;place-items:center;width:38px;height:38px;flex:none;border-radius:12px;background:color-mix(in srgb,var(--red) 14%,var(--panel));color:var(--red)}
@@ -353,9 +355,9 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .animation-context .selection .receiver-scope-grid{padding:0;gap:0}
 .animation-context .selection .scope-lines-toggle{min-height:44px;padding:4px 10px!important;border-radius:13px}
 .animation-context .selection[data-selection-mode=all] .scope-lines-toggle{min-height:54px;gap:7px}
-.animation-context .selection[data-selection-mode=all] .scope-toggle-icon{display:grid;width:30px;height:30px;border-radius:9px;background:#343834;color:#f5aaa4}
+.animation-context .selection[data-selection-mode=all] .scope-toggle-icon{display:grid;width:30px;height:30px;border-radius:9px;background:var(--red);color:#fff}
 .animation-context .selection[data-selection-mode=all] .scope-toggle-icon .icon{width:20px;height:18px}
-.animation-context .selection[data-selection-mode=all] .scope-copy>small{display:block;font-size:10px;line-height:1.25;color:#d4d8d3}
+.animation-context .selection[data-selection-mode=all] .scope-copy>small{display:block;font-size:10px;line-height:1.25;color:var(--muted)}
 .animation-context .scope-option-title{font-size:12px;line-height:1.3}
 .animation-context .selection .scope-toggle-chevron{width:22px;height:22px}
 .animation-context .scope-lines-reveal{grid-column:1/-1}
@@ -375,6 +377,7 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .animation-context .power-card .switch i:after{width:16px;height:16px}
 .animation-context .power-card .switch[aria-checked=true] i:after{transform:translateX(12px)}
 .animation-context>.ledline-setup{grid-column:1/-1}
+@media(max-width:360px){.animation-context{grid-template-columns:minmax(0,1fr)}.animation-context>.selection{grid-column:1}.animation-context>.power-card{grid-column:1;justify-self:end}}
 .ledline-setup-compact .ledline-setup-toggle{min-height:44px;padding:8px 11px;gap:8px}
 .ledline-setup-compact .ledline-setup-toggle>span{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
 .ledline-setup-compact .ledline-setup-toggle b{font-size:12px}

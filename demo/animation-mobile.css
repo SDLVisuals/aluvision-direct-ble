@@ -139,3 +139,32 @@
   .animation-context{align-items:center;gap:4px 6px}
   .animation-context .selection[data-selection-mode=all] .scope-lines-toggle{min-height:52px}
 }
+
+/* Keep the two setup actions visually parallel on phones: choosing the view
+   and opening line order are sibling cards. Inset focus rings stay fully
+   visible inside the rounded touch target instead of clipping as a red arc. */
+@media(max-width:540px){
+  .ledline-setup.card{display:grid;gap:7px;padding:0;border:0;border-radius:0;background:transparent;overflow:visible}
+  .ledline-setup>.spatial-preview-choice{gap:0;padding:0;border:0}
+  .ledline-setup .spatial-choice-toggle{min-height:56px;padding:7px 12px;border:1px solid var(--line);border-radius:17px;background:var(--panel)}
+  .ledline-setup .spatial-choice-current>b{font-size:14px;line-height:1.25}
+  .ledline-setup .ledline-setup-toggle{width:100%;min-height:56px;gap:12px;padding:7px 12px;border:1px solid var(--line);border-radius:17px;background:var(--panel);box-shadow:0 2px 8px #17181708}
+  .ledline-setup .ledline-setup-toggle>.line-order-icon{width:36px;height:36px;padding:4px;border-radius:10px}
+  .ledline-setup .ledline-setup-toggle b{font-size:14px;line-height:1.25}
+  .ledline-setup .ledline-setup-toggle:focus-visible{outline-offset:-3px;border-radius:14px}
+}
+
+/* A family card only opens the group; applying happens on the next screen. */
+.animation-library-inline .animation-family-card .family-variants{display:flex;align-items:center;justify-content:space-between;gap:9px;min-height:58px;margin-top:9px;padding:9px 10px;border:1px solid color-mix(in srgb,var(--red) 30%,var(--line));border-radius:14px;background:color-mix(in srgb,var(--red) 6%,var(--panel));box-shadow:none;color:var(--red);text-align:left}
+.animation-library-inline .family-variants-copy{display:grid;gap:3px;min-width:0}
+.animation-library-inline .family-variants-copy>b{font-size:15px;line-height:1.25;font-weight:850}
+.animation-library-inline .family-variants-copy>small{color:var(--muted);font-size:12px;line-height:1.35;font-weight:550;white-space:normal}
+.animation-library-inline .family-variants-action{display:flex;align-items:center;gap:4px;flex:none;color:var(--red)}
+.animation-library-inline .family-variants-action>small{font-size:11px;line-height:1.25;font-weight:750;white-space:nowrap}
+.family-detail-preview figcaption small{font-size:11px}
+@media(max-width:360px){
+  .animation-library-inline .animation-family-card .family-variants{gap:6px;padding:8px}
+  .animation-library-inline .family-variants-copy>b{font-size:14px}
+  .animation-library-inline .family-variants-copy>small{font-size:11px}
+  .animation-library-inline .family-variants-action>small{font-size:10px}
+}

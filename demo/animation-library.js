@@ -9,7 +9,7 @@
   const CATEGORIES = Object.freeze([
     Object.freeze({key:'whole',title:'Kleur & sfeer',summary:'Kleur of helderheid verandert tegelijk op alle ledlines.',aliases:'hele lijn volledig gelijk samen uniform rgbw'}),
     Object.freeze({key:'pixels',title:'Bewegend licht',summary:'Beweging over pixels: bijvoorbeeld golven of lopend licht.',aliases:'pixel pixels pixelanimatie pixelanimaties led strip spi'}),
-    Object.freeze({key:'tunnel',title:'Tunnel',summary:'Licht reist tussen twee of meer ledlines.',aliases:'tunnel diepte receiver receivers boog bogen achter elkaar'}),
+    Object.freeze({key:'tunnel',title:'Tunnel',summary:'Licht reist tussen twee of meer ledlines.',aliases:'tunnel tunnel-effect tunnelanimatie wand wanden wall walls muur muren diepte receiver receivers boog bogen achter elkaar ruimte architectuur'}),
     Object.freeze({key:'brand',title:'Brand animaties',summary:'Rustige kleur- en lichteffecten voor je merk en beursstand.',aliases:'brand brandanimaties huisstijl merk beurs stand presentatie corporate'})
   ]);
   const descriptor = (key, title, summary, aliases = '') => Object.freeze({key,title,summary,aliases});

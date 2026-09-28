@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-20260928-effects-top-01",
+  "revision": "v32-tunnel-wall-auto-group-20260928",
   "interfaceVersion": 32,
-  "interfaceBaseline": "V32 preserves the existing interface and approved 3D tunnel/wall examples. The phone-first animation gallery uses a rounded category sheet with large explained choices, readable full-width animated cards, and one clear return to active settings. Returning to the Effecten tab always opens at the top rather than restoring an old deep gallery scroll position. Arrangement icons depict the chosen tunnel, vertical wall or continuous line. Arrangement and order choices apply directly, without a separate save/cancel step. New SPI zones default to Doorlopend; the main preview follows the selected geometry. Existing colours, effects, outputs, selection and edited animation settings are preserved. The isolated demo uses fictional receivers only, no hardware commands, firmware downloads or PIN collection. Browser verification does not prove an iPhone installation or physical receiver acceptance.",
+  "interfaceBaseline": "V32 preserves the existing interface and recognisable 3D tunnel/wall visuals. Spatial animations are grouped as Tunnel & wand. The gallery shows a four-line illustrative tunnel; opening a spatial effect group previews its sample over the actual connected lines and chosen geometry. Applying a tunnel or wall animation automatically targets every line in that zone, without asking the customer to manually create an all-lines selection first. The effect settings still allow selecting an individual line for its own colour. This changes animation targeting only, not receiver wiring or saved physical arrangement. The phone-first animation gallery uses a rounded category sheet with explained choices and a clear return to active settings. Returning to Effecten opens at the top rather than restoring an old deep gallery scroll position. Arrangement icons depict the chosen tunnel, vertical wall or continuous line. Arrangement and order choices apply directly, without a separate save/cancel step. New SPI zones default to Doorlopend; the main preview follows the selected geometry. Existing outputs and edited animation settings are preserved. The isolated demo uses fictional receivers only, no hardware commands, firmware downloads or PIN collection. Browser verification does not prove physical receiver acceptance.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -17,9 +17,21 @@
   ],
   "previewSizeControl": "Sticky LED overview; display-only; no receiver commands",
   "activeAnimationEntry": "Effecten opens the existing animation settings directly; Galerij opens the library without changing effect, palette or selection",
+  "spatialEffects": {
+    "categoryLabel": "Tunnel & wand",
+    "gallerySampleLines": 4,
+    "groupPreviewUsesConnectedLines": true,
+    "autoTargetAllZoneLines": true,
+    "manualGroupSelectionRequired": false,
+    "perLineColourEditingAvailable": true,
+    "changesPhysicalArrangement": false
+  },
   "hardwareAccess": false,
   "nativeAppModified": false,
-  "nativeAppUpdatePending": true,
+  "nativeAppUpdatePending": false,
+  "nativeAppInstalledVersion": "32.0.0",
+  "nativeAppInstalledBuild": 184,
+  "nativeAppInstallationPreservedData": true,
   "firmwarePublished": false,
   "assets": [
     {
@@ -28,23 +40,23 @@
     },
     {
       "path": "animation-library.css",
-      "sha256": "1830a7db31624bb4451552599ffb1fb2c49a1478d19e551bbd46586bf263e968"
+      "sha256": "2e1ec951b3917b5c19696d9a5309512c09a41e6fcd5b2d71d233fbfcea23ca15"
     },
     {
       "path": "animation-library.js",
-      "sha256": "003624ed3095c91c4b5b4d39d21a718817f787edf594fe50b64d87c1fe6780ec"
+      "sha256": "c0060f4c925b02679333622e41957cd9bc8c488603577de58168c05dfe0d4b74"
     },
     {
       "path": "animation-mobile.css",
-      "sha256": "ab7880e0bdec8a5ef77a306fa2698bf47d2d4f26cf6e894a7394a8304c52b762"
+      "sha256": "edc6d5f0576bef65545ee472339ccb4f8c345434b08d0e0f263a316e5bec67de"
     },
     {
       "path": "animations.css",
-      "sha256": "71b425c0c7c6120b19ece7c2776726c9a41274b9f008a87f7ff3ab72a14c4bf1"
+      "sha256": "325bb013fd007bc11325cbc1a6857164b6ca7142ac858ba75456744491d42692"
     },
     {
       "path": "app.js",
-      "sha256": "abcb4b2c846dca6c93a9a1148c489e82f534afc0c0f18a3baf8c4ab5f7b30eb0"
+      "sha256": "2689be2038e5c4b8bf038c6440ee18b34c04be6daeaffd12de31218dff394018"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -68,7 +80,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "d3c8cb5d05467c1d539495f202969461d104809dfaa92ecd9b474ae6ccc9f6fb"
+      "sha256": "d878167df66ea06c548055ef97d4dcfc689ee9fdb65ab4e230c13a53c4cf956b"
     },
     {
       "path": "fixtures.js",
@@ -76,7 +88,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "9373db91ec6c535c43ca3804fd42d56dbbd4029b28eee75aed6adeecd67d49e3"
+      "sha256": "0edfec1c440d84a83d91a78ca472a7f336788afceb8c26da35b833d89c5efeaa"
     },
     {
       "path": "live-control.js",
@@ -124,7 +136,7 @@
     },
     {
       "path": "preferences.js",
-      "sha256": "fd32647a0209c86ad4e641c9368a96ce313d394daebf21d51060e9c03c0b26a3"
+      "sha256": "904968d15017c2ce736e13ae1d1d26ac0ad0fe7e006e43cd33a33d82fc17dc12"
     },
     {
       "path": "premium-surfaces.css",
