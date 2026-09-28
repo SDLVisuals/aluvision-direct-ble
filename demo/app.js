@@ -463,9 +463,9 @@
     const colour=controlMode==='colour';
     const oneLine=receivers().length===1;
     const modeContent=colour
-      ?`<section class="bediening-workspace" aria-labelledby="bediening-colour-title"><header class="bediening-workspace-heading"><span class="menu-icon">${icon('sun')}</span><div><h2 id="bediening-colour-title">Vaste kleur</h2><p>${oneLine?'Kies een kleur voor deze ledline.':'Kies ledlines om samen te bedienen.'}</p></div></header>${selector()}${colourPickerMarkup()}</section>`
+      ?`<section class="bediening-workspace" aria-labelledby="bediening-colour-title"><header class="bediening-workspace-heading"><span class="menu-icon">${icon('sun')}</span><div><h2 id="bediening-colour-title">Vaste kleur</h2><p>${oneLine?'Kies een kleur voor deze ledline.':'Kies ledlines om samen te bedienen.'}</p></div></header><div class="animation-context">${selector()}${powerControl()}</div>${colourPickerMarkup()}</section>`
       :`<section class="bediening-workspace animation-simple-workspace" aria-label="${esc(t('animations'))}"><div class="animation-context">${selector()}${powerControl()}</div>${controlAnimationPanel()}</section>`;
-    return `<div class="editor-grid${colour?'':' animation-simple-page'}">${controlContext('controls')}<section class="editor-controls editor-controls-zone">${ledlineSetupMarkup()}${colour?powerControl():''}<section class="control-workspace"><div class="control-mode-panel" role="region" aria-label="${colour?'Vaste kleur':'Animaties'}" data-control-mode="${controlMode}">${modeContent}</div></section></section></div>`;
+    return `<div class="editor-grid${colour?'':' animation-simple-page'}">${controlContext('controls')}<section class="editor-controls editor-controls-zone">${ledlineSetupMarkup()}<section class="control-workspace"><div class="control-mode-panel" role="region" aria-label="${colour?'Vaste kleur':'Animaties'}" data-control-mode="${controlMode}">${modeContent}</div></section></section></div>`;
   }
 
   function controlAnimationPanel(){
