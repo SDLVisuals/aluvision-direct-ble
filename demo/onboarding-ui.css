@@ -42,7 +42,6 @@
    steps remain inside milestone 3, rather than becoming a second navigation. */
 /* Setup has its own connection checks/errors. Avoid the normal dashboard's
    premature "not connected" status before the user has added any receiver. */
-body:has(.onboarding-page)>.connection-bar{display:none}
 /* The wizard owns navigation while mounted. :has restores the tabs on exit. */
 body:has(.onboarding-page){--nav:0px}
 body:has(.onboarding-page)>#navigation{display:none}

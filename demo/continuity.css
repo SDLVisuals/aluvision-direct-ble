@@ -4,12 +4,9 @@
 body{width:100%;max-width:var(--app-width);min-height:100dvh;margin:0 auto;background:var(--bg)}
 .brand-bar{padding-inline:17px}
 main{width:100%;max-width:var(--app-width)}
-.connection-bar{height:27px;display:flex;align-items:center;justify-content:flex-end;padding:0 17px;background:var(--bg)}
 .web-demo-banner{display:flex;align-items:center;justify-content:center;gap:9px;padding:8px 14px;background:#fff1d4;color:#573b10;text-align:center;font-size:11px;line-height:1.3}
 .web-demo-banner[hidden]{display:none}
 .web-demo-banner b{flex:none;border-radius:5px;background:#573b10;color:white;padding:3px 5px;letter-spacing:.09em;font-size:9px}
-.connection-status{display:inline-flex;align-items:center;gap:6px;background:transparent;color:var(--muted);font-size:10px;font-weight:500;padding:5px 0;min-height:25px}
-.connection-status>span{width:5px;height:5px;border-radius:50%;background:#979e94}
 .navigation{width:min(calc(var(--app-width) - 24px),calc(100% - 24px))}
 .toast{max-width:min(calc(var(--app-width) - 32px),calc(100vw - 32px))}
 dialog,#effect-dialog{width:min(calc(var(--app-width) - 24px),calc(100vw - 24px))}
@@ -18,7 +15,6 @@ dialog,#effect-dialog{width:min(calc(var(--app-width) - 24px),calc(100vw - 24px)
 .connection-empty>.icon{width:32px;height:32px;color:var(--muted);margin-bottom:12px}.connection-empty h2{margin-bottom:10px}
 .page-heading:has(>h1){display:block}.page-heading:has(>h1)>.eyebrow{margin-bottom:8px}
 .onboarding-page :is(button,input,summary){scroll-margin-block-end:calc(var(--nav) + env(safe-area-inset-bottom) + 18px)}
-.connection-info h2{margin-top:12px;margin-bottom:12px}.connection-info .pill{font-weight:600}.technical-status{margin-top:17px;border-top:1px solid var(--line);padding-top:13px}.technical-status>summary{font-size:13px;font-weight:700;cursor:pointer;min-height:30px}.technical-status .readiness-list{margin-top:12px}
 /* Names can contain 64 characters without spaces. Keep them inside the phone
    layout, with a compact title and back link above the shared light preview. */
 .page>*{min-width:0}.page-heading :is(h1,p,.eyebrow),.zone-copy b{overflow-wrap:anywhere}
@@ -118,7 +114,7 @@ dialog :is(h2,h3,p){overflow-wrap:anywhere}dialog header h2{min-width:0}
 .zone-delete-actions{position:sticky;bottom:-22px;display:grid;gap:8px;margin:0 -8px -8px;padding:12px 8px 8px;background:var(--panel);border-top:1px solid var(--line);box-shadow:0 -10px 16px var(--panel);z-index:2}
 .management-status{padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--muted);font-size:13px}
 #effect-dialog .zone-delete-scene-note{margin-top:12px;padding:12px;border-left:3px solid var(--red);background:var(--bg);font-size:12px}
-.preference-label{margin:17px 0 9px}.preference-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.preference-grid button{min-height:44px;padding:10px;border:1px solid var(--line);background:var(--soft);border-radius:10px;color:var(--ink);font-size:12px}.preference-grid button[aria-pressed=true]{border-color:var(--red);color:var(--red);box-shadow:inset 0 0 0 1px var(--red)}.preference-note{font-size:11px!important;margin-top:10px!important}.readiness-list{padding:0;list-style:none;display:grid;gap:14px}.readiness-list b{font-size:12px;display:block}.readiness-list span{display:block;font-size:12px;color:var(--muted);line-height:1.6;margin-top:4px}
+.preference-label{margin:17px 0 9px}.preference-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.preference-grid button{min-height:44px;padding:10px;border:1px solid var(--line);background:var(--soft);border-radius:10px;color:var(--ink);font-size:12px}.preference-grid button[aria-pressed=true]{border-color:var(--red);color:var(--red);box-shadow:inset 0 0 0 1px var(--red)}.preference-note{font-size:11px!important;margin-top:10px!important}
 .pin-login-entry>div{min-width:0}.pin-login-entry .pin-login-availability{font-size:11px;color:var(--muted);margin-top:7px}.pin-login-status{display:grid;gap:12px}.pin-login-status .menu-icon{background:var(--soft);color:var(--red)}.pin-login-status h2,.pin-login-guide h2{font-size:17px;line-height:1.4}.pin-login-status p+p{margin-top:0}.pin-login-guide>p{margin-top:10px}.pin-login-guide ol{list-style:none;counter-reset:pin-step;padding:0;margin:18px 0 0;display:grid;gap:18px}.pin-login-guide li{counter-increment:pin-step;display:grid;grid-template-columns:28px minmax(0,1fr);column-gap:10px;align-items:start}.pin-login-guide li:before{content:counter(pin-step);grid-row:span 2;display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:var(--soft);font-size:12px;font-weight:700}.pin-login-guide li b{font-size:13px}.pin-login-guide li span{grid-column:2;font-size:12px;color:var(--muted);margin-top:4px}
 body[data-theme=dark]{--bg:#131512;--panel:#20231e;--ink:#f1f2ee;--muted:#b6b9ae;--line:#3e443b;--soft:#2b3028;background:var(--bg);color:var(--ink);color-scheme:dark}
 body[data-theme=dark] .brand-bar{background:var(--bg)}body[data-theme=dark] .brand-bar img{filter:invert(1)}body[data-theme=dark] :is(.card,.menu-card,.zone-card,.receiver-list details,.layout-choice,.power-card,.receiver-chips button,.icon-button,dialog,.scene-card,.scene-zone){background:var(--panel);color:var(--ink)}

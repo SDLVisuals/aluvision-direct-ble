@@ -23,8 +23,7 @@ body:not([data-theme="dark"]) {
 }
 
 /* Glass is a surface treatment, not a veil over content. */
-.brand-bar,
-.connection-bar {
+.brand-bar {
   background: rgba(249, 248, 246, .88);
   border-color: rgba(255, 255, 255, .9);
   -webkit-backdrop-filter: blur(18px) saturate(125%);
@@ -35,9 +34,6 @@ body:not([data-theme="dark"]) {
   box-shadow: 0 3px 16px rgba(23, 28, 23, .035);
 }
 
-.connection-bar {
-  border-bottom: 1px solid rgba(32, 34, 32, .035);
-}
 
 /* Zone power is an unboxed row; keep it out of shared card decoration in
    both themes (including this selector's high-specificity dialog branch). */
@@ -291,10 +287,6 @@ body:not([data-theme="dark"]) {
   backdrop-filter: blur(18px);
 }
 
-.connection-status > span {
-  box-shadow: 0 0 0 3px rgba(122, 153, 128, .12);
-}
-
 @media (hover: hover) {
   :is(.stand-info-tile, .zone-card, .menu-card, .scene-card, .stand-scene-card, .animation-family-card, .effect-card, .family-card, .layout-choice):hover:not(:disabled) {
     transform: translateY(-1px);
@@ -333,8 +325,7 @@ body[data-theme="dark"] {
     linear-gradient(180deg, #151714 0%, #111310 100%);
 }
 
-body[data-theme="dark"] .brand-bar,
-body[data-theme="dark"] .connection-bar {
+body[data-theme="dark"] .brand-bar {
   background: rgba(21, 23, 20, .88);
   border-color: rgba(255, 255, 255, .06);
 }
