@@ -107,3 +107,23 @@
      each other. Use a complete, finger-sized row instead of shrinking type. */
 }
 @media(prefers-reduced-motion:reduce) { #effect-dialog:has([data-animation-categories]) { animation:none; } }
+
+/* Keep the arrangement picker a single calm card: the current-view control
+   and line-order action are related settings, not cards nested in a card. */
+@media(max-width:540px){
+  .ledline-setup.card{border-radius:17px;background:var(--panel)}
+  .ledline-setup>.spatial-preview-choice{padding:6px 10px;border-bottom:1px solid var(--line)}
+  .ledline-setup .spatial-choice-toggle{min-height:54px;gap:9px;padding:5px 7px;border:0;border-radius:12px;background:transparent}
+  .ledline-setup .spatial-choice-current-icon{width:36px;height:36px;border-radius:10px}
+  .ledline-setup .spatial-choice-current-icon>.arrangement-icon{width:24px;height:24px}
+  .ledline-setup .spatial-choice-current>small{font-size:10px}
+  .ledline-setup .spatial-choice-current>b{font-size:14px;line-height:1.25}
+  .ledline-setup .spatial-choice-current>.spatial-choice-topology{font-size:10px}
+  .ledline-setup .ledline-setup-toggle{min-height:56px;gap:9px;padding:8px 12px}
+  .ledline-setup .ledline-setup-toggle>.line-order-icon{width:34px;height:34px;padding:4px;border-radius:10px}
+  .ledline-setup .ledline-setup-toggle b{font-size:13px;line-height:1.25}
+  .ledline-setup .ledline-setup-toggle small{font-size:10px;line-height:1.35}
+  .ledline-setup .ledline-setup-toggle>.icon:last-child{width:17px;height:17px}
+  .animation-context{align-items:center;gap:4px 6px}
+  .animation-context .selection[data-selection-mode=all] .scope-lines-toggle{min-height:52px}
+}
