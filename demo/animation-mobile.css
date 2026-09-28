@@ -1,6 +1,6 @@
 /* Phone-first animation browsing. No recipe, receiver or preview-engine changes. */
 .animation-library-inline { gap: 12px; }
-.animation-library-inline .animation-library-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin:2px 0 3px; padding:13px 14px; border:1px solid color-mix(in srgb,var(--red) 20%,var(--line)); border-radius:19px; background:linear-gradient(115deg,color-mix(in srgb,var(--red) 6%,var(--panel)),var(--panel) 72%); box-shadow:0 4px 14px #20181408; }
+.animation-library-inline .animation-library-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin:2px 0 3px; padding:4px 2px 2px; border:0; border-radius:0; background:transparent; box-shadow:none; }
 .animation-library-title-copy { display:grid; gap:5px; min-width:0; flex:1; }
 .animation-library-kicker { display:flex; align-items:center; gap:6px; color:var(--red); font-size:10px; line-height:1.2; font-weight:850; letter-spacing:.09em; text-transform:uppercase; }
 .animation-library-kicker .icon { width:16px; height:16px; }
@@ -39,7 +39,7 @@
 .animation-category-choice:focus-visible,.animation-category-trigger:focus-visible { outline:3px solid color-mix(in srgb,var(--red) 55%,transparent); outline-offset:2px; }
 @keyframes animation-category-enter { from { transform:translateY(24px); opacity:.5; } to { transform:translateY(0); opacity:1; } }
 @media(max-width:360px) {
-  .animation-library-inline .animation-library-heading { gap:7px; padding:11px; border-radius:17px; }
+  .animation-library-inline .animation-library-heading { gap:7px; padding:4px 2px 2px; }
   .animation-library-heading h2 { font-size:19px; }
   .animation-library-guidance { font-size:12px; }
   .animation-library-heading .animation-return-current { min-height:42px; gap:4px; padding:7px; font-size:12px; }
