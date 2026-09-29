@@ -749,3 +749,89 @@ body[data-theme=dark] .control-preview-dock[data-scrolled=true] .control-dock-su
   body[data-theme=dark]{--glass:rgba(37,41,36,.94)}
   :is(.animation-category-trigger,.animation-category-choice,.animation-search input,.settings-toggle,.preview-size-control>summary,.family-variants-panel,.animation-family-card,.family-variant-card,.effect-card,.family-card,.animation-context){-webkit-backdrop-filter:none;backdrop-filter:none}
 }
+
+/* Whole-stand colour controls use the same colour-picker component as the
+   zone and animation editors, arranged as a compact phone sheet. */
+#effect-dialog:has([data-stand-control-sheet]){
+  width:min(calc(var(--app-width) - 16px),calc(100vw - 16px));
+  max-height:calc(100dvh - 24px);
+  padding:12px;
+  overflow-y:auto;
+}
+#effect-dialog:has([data-stand-control-sheet]) #effect-dialog-content{gap:8px}
+#effect-dialog:has([data-stand-control-sheet]) #effect-dialog-content>header{
+  margin:0 -2px;
+  padding:0 2px 5px;
+  border-radius:18px;
+  box-shadow:none;
+}
+#effect-dialog:has([data-stand-control-sheet]) #effect-dialog-content>header h2{font-size:18px}
+.stand-controls-sheet{display:grid;gap:6px;min-width:0}
+.stand-control-scope{font-size:11px!important;line-height:1.25;margin:0;color:var(--muted)}
+.stand-control-description{font-size:11px!important;line-height:1.35;margin:0;color:var(--muted)}
+.stand-controls-sheet .power-card{min-height:48px;padding:2px 10px;border-radius:14px}
+.stand-controls-sheet .power-card strong{font-size:12px}
+.stand-controls-sheet .power-card .switch{min-height:44px}
+.stand-controls-sheet .live-confirmation{min-height:12px;margin:0;font-size:10px;line-height:1.2}
+.stand-controls-sheet .mixed-note{margin:0;padding:6px 9px;border-radius:10px;background:color-mix(in srgb,var(--red) 7%,var(--glass));font-size:10px;line-height:1.35}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker{padding:9px}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .section-heading{flex-wrap:nowrap;gap:6px;margin-bottom:5px}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .section-heading h2{flex:1 1 auto;margin:0;font-size:14px}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .colour-tools{grid-template-columns:minmax(104px,.9fr) minmax(0,1.1fr);gap:10px}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .wheel-wrap{width:min(100%,132px);max-width:132px;margin:0 auto;justify-self:center}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .colour-values{gap:5px}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .colour-swatch{height:15px;margin:0}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .setting-hint{font-size:10px;line-height:1.25;margin:0}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .slider-row{margin:7px 0 0}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .slider-row>label{font-size:11px;margin-bottom:1px}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .slider-row input{height:20px}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .fine-controls{margin-top:5px;padding-top:5px}
+.stand-fine-controls>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;padding:0 2px;list-style:none;cursor:pointer}
+.stand-fine-controls>summary::-webkit-details-marker{display:none}
+.stand-fine-controls>summary>span{display:grid;gap:1px}
+.stand-fine-controls>summary b{font-size:12px}
+.stand-fine-controls>summary small{font-size:10px}
+.stand-fine-controls>summary>.icon{width:18px;height:18px;color:var(--muted);transition:transform .2s ease}
+.stand-fine-controls[open]>summary>.icon{transform:rotate(90deg)}
+.stand-fine-controls .fine-controls-body{display:grid;gap:5px;padding:4px 0 0}
+.stand-fine-controls .channel-help{display:none}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours{margin-top:5px;padding-top:5px}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .section-heading{margin:0 0 3px}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .section-heading h3{font-size:12px}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .colour-library-hint{display:none}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .colour-library-actions{gap:4px}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .colour-library-actions :is(.icon-button,.text-button){min-height:40px;height:40px}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .saved-colour-grid{display:flex;gap:5px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:thin;padding:1px 1px 4px}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .saved-colour-item{flex:0 0 66px;width:66px;padding:0}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .saved-colour{min-height:57px;height:57px;gap:2px;padding:2px 1px;font-size:9px}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .saved-colour i{width:28px;height:28px;font-size:18px}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .saved-colour span{max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .saved-colour-kind{display:none}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .add-colour{padding-top:2px}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .colour-library-feedback:empty{display:none}
+#effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry{min-height:48px;padding:5px 8px;border-radius:14px;gap:7px}
+#effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry-icon{width:32px;height:32px;border-radius:10px}
+#effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry-copy{gap:0}
+#effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry-copy b{font-size:12px}
+#effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry-copy small{font-size:9px;line-height:1.2}
+#effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry-open{font-size:10px}
+#effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry>.icon:last-child{width:14px;height:14px}
+#effect-dialog:has([data-stand-control-sheet] .stand-fine-controls[open]) .shared-colour-picker .colour-tools{grid-template-columns:minmax(0,1fr)}
+#effect-dialog:has([data-stand-control-sheet] .stand-fine-controls[open]) .shared-colour-picker .wheel-wrap{display:none}
+#effect-dialog:has([data-stand-control-sheet] .stand-fine-controls[open]) .shared-colour-picker .colour-swatch{height:12px}
+#effect-dialog:has([data-stand-control-sheet] .stand-fine-controls[open]) .shared-colour-picker .setting-hint{display:none}
+#effect-dialog:has([data-stand-control-sheet] .stand-fine-controls[open]) .my-colours,
+#effect-dialog:has([data-stand-control-sheet] .stand-fine-controls[open]) .stand-scenes-entry{display:none}
+.stand-fine-controls[open]>.fine-controls-body{animation:control-disclosure-enter .24s cubic-bezier(.2,.82,.24,1.06) both}
+@media(max-width:360px){
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .colour-tools{grid-template-columns:minmax(96px,.85fr) minmax(0,1.15fr);gap:8px}
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .wheel-wrap{width:min(100%,120px);max-width:120px}
+  #effect-dialog:has([data-stand-control-sheet]) .my-colours .saved-colour-item{flex-basis:60px;width:60px}
+}
+@media(max-height:740px){
+  .stand-control-description{display:none}
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .wheel-wrap{width:min(100%,116px);max-width:116px}
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .slider-row{margin-top:4px}
+  #effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry{min-height:44px}
+}
+@media(prefers-reduced-motion:reduce){.stand-fine-controls>summary>.icon,.stand-fine-controls[open]>.fine-controls-body{transition:none;animation:none}}

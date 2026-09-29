@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-milk-glass-polish-20260929",
+  "revision": "v32-stand-controls-fit-20260929",
   "interfaceVersion": 32,
-  "interfaceBaseline": "V32 keeps the established Aluvision interface while making animation browsing easier to understand and gentler to use. Customers first see clearly labelled effect groups; opening one enters a focused page with only that group’s variations, and choosing a variation is the action that starts it. A single back button returns to the originating list and moves beside the sticky LED overview only when its inline position is obscured. The active-animation action also moves one DOM button between the page and preview dock, so no duplicate or half-hidden copy remains. The spatial tunnel/wall overview appears on opening a spatial group and stays visible in its active settings. Page transitions use a light spring, smaller controls respond smoothly, and reduced-motion preferences are respected. Browsing preserves selected lights and active effects. Browser verification does not prove physical receiver acceptance.",
+  "interfaceBaseline": "V32 keeps the established Aluvision interface while making animation browsing easier to understand and gentler to use. Customers first see clearly labelled effect groups; opening one enters a focused page with only that group’s variations, and choosing a variation is the action that starts it. A single back button returns to the originating list and moves beside the sticky LED overview only when its inline position is obscured. The active-animation action also moves one DOM button between the page and preview dock, so no duplicate or half-hidden copy remains. The spatial tunnel/wall overview appears on opening a spatial group and stays visible in its active settings. Page transitions use a light spring, smaller controls respond smoothly, and reduced-motion preferences are respected. Whole-stand colour controls reuse the same shared colour picker, fit common phone heights without vertical scrolling, and put exact RGBW channels in an optional compact disclosure. Browsing preserves selected lights and active effects. Browser verification does not prove physical receiver acceptance.",
   "animationGroupNavigation": {
     "detailPage": true,
     "content": "selected effect group only",
@@ -48,8 +48,9 @@
   "nativeAppModified": true,
   "nativeAppUpdatePending": false,
   "nativeAppBuiltVersion": "32.0.0",
-  "nativeAppBuiltBuild": 201,
+  "nativeAppBuiltBuild": 202,
   "nativeAppInstalled": false,
+  "nativeAppSimulatorInstalled": true,
   "nativeAppInstallationPreservedData": null,
   "interfaceAccessibility": {
     "selectedLinesSubtitleContrastMinimum": 4.5,
@@ -79,7 +80,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "c30c5c9e623bc62d460f06d154f3beaf879a03dbdb1960de887bff264aabd33a"
+      "sha256": "7b5f20638b7f178204f522c7353d4303900e1ca31736608da6cc2d977fc2d264"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -111,7 +112,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "5483f65449e88b04b8887b7fda2333ffc364b320764ec5f7c9c509cdfef45a58"
+      "sha256": "a3d536b5e30536e2167bf59670bb3bce24af5dc509160be300ca605384b5e54f"
     },
     {
       "path": "live-control.js",
@@ -163,7 +164,7 @@
     },
     {
       "path": "premium-surfaces.css",
-      "sha256": "84bb2cf1273839ad56b081189c8f43a25883157dd93eae94c47053b12b2fe589"
+      "sha256": "e6088d28111fa8b909330048b50e91a276702600a475344b344a0c3ff9ce01a0"
     },
     {
       "path": "presets.js",
