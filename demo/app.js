@@ -86,10 +86,11 @@
     const dock=main.querySelector('.control-preview-dock');
     if(!dock)return;
     const compact=dock.dataset.scrolled==='true';
-    // Separate the enter/exit thresholds so small iOS scroll corrections at
-    // the top do not repeatedly expand and collapse the sticky preview.
-    if(!compact&&window.scrollY>64)dock.dataset.scrolled='true';
-    else if(compact&&window.scrollY<24)delete dock.dataset.scrolled;
+    // The dock gets shorter when compacted. Keep the threshold gap larger
+    // than that height change so scroll anchoring cannot bounce it across
+    // both thresholds and trap controls below the fold.
+    if(!compact&&window.scrollY>128)dock.dataset.scrolled='true';
+    else if(compact&&window.scrollY<8)delete dock.dataset.scrolled;
     const settingsShortcut=dock.querySelector('[data-editor-return-shortcut]');
     const shortcut=settingsShortcut||dock.querySelector('[data-editor-shortcut]');
     const inline=settingsShortcut?main.querySelector('[data-editor-return-inline]'):main.querySelector('.current-effect-gallery');
@@ -133,6 +134,10 @@
     align();requestAnimationFrame(()=>{align();workspace.querySelector('.current-effect b')?.focus({preventScroll:true});});
   }
   function rememberAnimationGallery(){
+    if(route.screen==='animation-family'&&route.family){
+      animationGalleryPositions.set(route.zoneId,{library:libraryTab(),family:route.family});
+      return;
+    }
     if(!main.querySelector('.animation-library-inline'))return;
     animationGalleryPositions.set(route.zoneId,{library:libraryTab(),family:route.family});
   }
@@ -437,9 +442,10 @@
     const z=zone(),list=receivers(),pixels=z.type==='SPI'?P.geometry(list,z.layout).totalPixels:0;
     const draft=previewArrangement(z),previewLayout=draft?.layout||z.layout;
     const integratedControlHeading=screen==='controls';
+    const familyGroup=screen==='animation-family'&&route.family?Library.group(catalogue(),route.family):null;
     const effectChosen=screen==='controls'&&controlMode==='animations'&&Boolean(activeEffect());
-    const galleryBrowsing=screen==='controls'&&controlMode==='animations'&&(!effectChosen||showControlAnimationGallery);
-    const galleryTunnel=screen==='controls'&&controlMode==='animations'&&galleryBrowsing&&libraryTab()==='tunnel';
+    const galleryBrowsing=Boolean(familyGroup)||screen==='controls'&&controlMode==='animations'&&(!effectChosen||showControlAnimationGallery);
+    const galleryTunnel=familyGroup?familyGroup.preview.category==='tunnel':screen==='controls'&&controlMode==='animations'&&galleryBrowsing&&libraryTab()==='tunnel';
     const canTapLines=list.length>1&&!continuousZone()&&!draft&&!galleryTunnel&&['controls','colour','animations'].includes(screen);
     // While browsing tunnel & wall effects, show a four-line example or the
     // currently opened family's recipe across the actual zone members. This
@@ -451,7 +457,7 @@
     const spatialPreviewLabel=spatialPreview?spatialPreviewText('Preview',spatialView):'';
     const total=z.type==='SPI'?t(list.length===1?'scopeTotalSpiOne':'scopeTotalSpiMany',{count:list.length,pixels}):t(list.length===1?'scopeCountOne':'scopeCountMany',{count:list.length});
     const scope=galleryTunnel?(route.family?`${Library.group(catalogue(),route.family)?.title||t('animationAcross')} · ${ledlineCount(list.length)}`:t('animationTunnelSampleLines')):selection().kind==='all'?total:t('scopeSelectedTap',{name:nameOfSelection()});
-    const modeName=screen==='controls'?(controlMode==='colour'?'Kleur':'Effecten'):screen==='layout'?'Opstelling':screen==='colour'?'Kleur':screen==='animations'?'Effecten':'Bediening';
+    const modeName=screen==='controls'?(controlMode==='colour'?'Kleur':'Effecten'):screen==='animation-family'?'Animatiegroep':screen==='layout'?'Opstelling':screen==='colour'?'Kleur':screen==='animations'?'Effecten':'Bediening';
     const label=`LED-overzicht van ${z.name} · ${total}${selection().kind==='all'?'':` · ${nameOfSelection()} gekozen`}`;
     return `<section class="control-preview-dock${galleryBrowsing?' animation-gallery-dock':''}" aria-label="LED-overzicht en bediening"><div class="control-dock-surface">
       ${integratedControlHeading?`<div class="control-dock-context-line"><div class="control-dock-location"><small>JE LICHT · ${esc(modeName)}</small><b>${esc(z.name)}</b></div><span class="pill control-dock-type-badge">${zoneTypeLabel(z)}</span></div><div class="control-dock-actions"><button class="back back-to-zones control-dock-back" data-action="stand" aria-label="Terug naar zones" title="Terug naar zones">${icon('back')}<span>Zones</span></button>${modeTabs}</div>`:''}
@@ -709,7 +715,8 @@
   }
   function tunnelSpatialContext(){
     const editorTunnel=!showControlAnimationGallery&&activeEffect()?.category==='tunnel';
-    const galleryTunnel=libraryTab()==='tunnel'&&(route.screen==='effects'||route.screen==='controls'&&controlMode==='animations'&&showControlAnimationGallery);
+    const familyTunnel=route.screen==='animation-family'&&Library.group(catalogue(),route.family)?.preview.category==='tunnel';
+    const galleryTunnel=familyTunnel||libraryTab()==='tunnel'&&(route.screen==='effects'||route.screen==='controls'&&controlMode==='animations'&&showControlAnimationGallery);
     return editorTunnel||galleryTunnel;
   }
   function setSpatialPreviewCategory(value){
@@ -872,11 +879,20 @@
     const tunnel=group.preview.category==='tunnel';
     return `<article class="animation-family-card${tunnel?' tunnel-family-card':''}"><button class="animation-family-trigger" data-action="family" data-id="${esc(group.key)}" data-ledline-type="${type}" aria-label="${esc(`${group.title}. ${openLabel}. ${countLabel}. ${nextStep}`)}">${tunnel?'':`<span class="animation-family-preview" data-motion-preview="${effectMotionKey(group.preview)}"><span class="animation-family-preview-label">${esc(t('animationPreview'))}</span>${effectPreview(group.preview)}</span>`}<span class="family-copy">${tunnel?'':`<span class="family-kicker"><span class="animation-type-badge" aria-label="${esc(t('animationBadgeForType',{type}))}">${type}</span></span>`}<b class="family-title">${esc(group.title)}</b><small class="family-summary">${esc(group.summary)}</small><span class="family-variants"><span class="family-variants-copy"><b>${esc(openLabel)}</b><small>${esc(nextStep)}</small></span><span class="family-variants-action"><small>${esc(countLabel)}</small>${icon('chevron')}</span></span></span></button></article>`;
   }
-  function animationFamilyDetail(group,tab) {
+  function animationFamilyDetail(group,tab,{includePreview=true}={}) {
     const countLabel=t(group.count===1?'animationCountOne':'animationCountMany',{count:group.count});
     const tunnel=group.preview.category==='tunnel',groupHint=tunnel?t('animationTunnelGroupAccessible',{name:group.title,count:receivers().length}):t('animationGroupPreviewHint');
     const backLabel=animationFamilyBackLabel(tab);
-    return `<section class="animation-family-detail" aria-labelledby="animation-family-title"><button type="button" class="animation-gallery-return family-back-action family-detail-back" data-action="family-back" aria-label="${esc(backLabel)}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('back')}</span><span class="gallery-action-copy"><b>${esc(backLabel)}</b></span></span></button><header class="family-detail-heading"><div><small class="family-detail-step">${esc(t('animationFamilyStep'))}</small><h2 id="animation-family-title" tabindex="-1">${esc(group.title)}</h2><p>${esc(group.summary)}</p></div><span class="family-detail-count">${esc(countLabel)}</span></header><figure class="family-detail-preview"><figcaption><b>${esc(t('animationFamilyPreview'))}</b><small>${esc(groupHint)}</small></figcaption>${effectPreview(group.preview,tunnel?{tunnelLines:'all'}:{})}</figure><section class="family-variants-panel" aria-labelledby="animation-family-choices"><header class="family-variants-heading"><div><b id="animation-family-choices">${esc(t('animationFamilyChoose'))}</b><small>${esc(t('animationChooseVariant'))}</small></div><small class="family-variants-count">${esc(countLabel)}</small></header><div class="family-variant-grid">${effectCards(group.effects,'family-variant-card',group.count)}</div></section></section>`;
+    return `<section class="animation-family-detail" aria-labelledby="animation-family-title"><button type="button" class="animation-gallery-return family-back-action family-detail-back" data-action="family-back" aria-label="${esc(backLabel)}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('back')}</span><span class="gallery-action-copy"><b>${esc(backLabel)}</b></span></span></button><header class="family-detail-heading"><div><small class="family-detail-step">${esc(t('animationFamilyStep'))}</small><h2 id="animation-family-title" tabindex="-1">${esc(group.title)}</h2><p>${esc(group.summary)}</p></div><span class="family-detail-count">${esc(countLabel)}</span></header>${includePreview?`<figure class="family-detail-preview"><figcaption><b>${esc(t('animationFamilyPreview'))}</b><small>${esc(groupHint)}</small></figcaption>${effectPreview(group.preview,tunnel?{tunnelLines:'all'}:{})}</figure>`:''}<section class="family-variants-panel" aria-labelledby="animation-family-choices"><header class="family-variants-heading"><div><b id="animation-family-choices">${esc(t('animationFamilyChoose'))}</b><small>${esc(t('animationChooseVariant'))}</small></div><small class="family-variants-count">${esc(countLabel)}</small></header><div class="family-variant-grid">${effectCards(group.effects,'family-variant-card',group.count)}</div></section></section>`;
+  }
+  function renderAnimationFamily(){
+    const group=Library.group(catalogue(),route.family);
+    if(!group){
+      const screen=route.familyReturnScreen||'controls';
+      route={...route,screen,family:null,familyReturnScreen:null};
+      return screen==='effects'?renderEffects():renderControls();
+    }
+    return `<div class="editor-grid animation-family-screen">${controlPreviewDock('animation-family')}<section class="editor-controls animation-family-controls">${animationFamilyDetail(group,libraryTab(),{includePreview:false})}</section></div>`;
   }
   function animationCategorySection(section) {
     const title=section.key==='tunnel'?t('animationAcross'):section.title,summary=section.key==='tunnel'?t('animationAcrossSummary'):section.summary;
@@ -1289,8 +1305,8 @@
     }
     const focused=document.activeElement,focusKey=focused?.dataset?.id;
     previews.clear();
-    const views = {stand:renderStand,controls:renderControls,colour:renderColour,animations:renderAnimations,effects:renderEffects,receivers:renderReceivers,settings:renderSettings,'demo-wifi':renderDemoWifi,'pin-login':renderPinLogin,scenes:renderScenes,'scene-draft':renderSceneDraft,'scene-detail':renderSceneDetail,'receiver-add':renderReceiverAdd};
-    const zoneScreen=['controls','colour','animations','effects','layout'].includes(route.screen);
+    const views = {stand:renderStand,controls:renderControls,colour:renderColour,animations:renderAnimations,effects:renderEffects,'animation-family':renderAnimationFamily,receivers:renderReceivers,settings:renderSettings,'demo-wifi':renderDemoWifi,'pin-login':renderPinLogin,scenes:renderScenes,'scene-draft':renderSceneDraft,'scene-detail':renderSceneDetail,'receiver-add':renderReceiverAdd};
+    const zoneScreen=['controls','colour','animations','effects','animation-family','layout'].includes(route.screen);
     main.innerHTML = (zoneScreen&&zone()&&!receivers().length?renderEmptyZone:(views[route.screen] || renderStand))();
     const previewDock=main.querySelector('.control-preview-dock');
     if(previewDock){const spatial=previewDock.querySelector('.spatial-preview-wrap')!==null;previewDock.dataset.previewSize=spatial?'large':controlPreviewSize;previewDock.dataset.spatialPreview=spatial?'true':'false';}
@@ -1397,6 +1413,7 @@
     if(screen!==route.screen)visualPlugMotions.clear();
     if(!pinRequired()&&!nativeContext&&screen==='pin-login')screen='settings';
     if(screen==='receiver-add'&&route.screen!=='receiver-add')extra={setupFrom:!stand()||!standReceivers().some(receiver=>receiver.role==='main')||route.screen!=='receivers'?'stand':'receivers',setupReturnZoneId:null,...extra};
+    if(screen!=='animation-family')extra={family:null,familyReturnScreen:null,...extra};
     if(route.screen==='receiver-add')onboarding.suspend();route = {...route,screen,...extra};
     const changedZone=route.zoneId!==previousRoute.zoneId;
     if(changedZone){
@@ -2378,7 +2395,12 @@
       if(action==='colour'&&route.screen==='controls'){rememberAnimationGallery();controlMode='colour';return render({top:true});}
       if(action==='animation-gallery'&&route.screen==='controls'&&activeEffect()){
         const saved=animationGalleryPositions.get(route.zoneId);
-        if(saved)route={...route,library:saved.library,family:saved.family};
+        if(saved?.family){
+          route={...route,screen:'animation-family',library:saved.library,family:saved.family,familyReturnScreen:'controls'};
+          setSpatialPreviewCategory(libraryTab());controlMode='animations';showControlAnimationGallery=true;render({top:true});
+          paint(performance.now()/1000);revealAnimationFamily();main.querySelector('#animation-family-title')?.focus({preventScroll:true});return;
+        }
+        route={...route,library:saved?.library||initialAnimationLibrary(),family:null,familyReturnScreen:null};
         setSpatialPreviewCategory(libraryTab());
         controlMode='animations';showControlAnimationGallery=true;return render({top:true});
       }
@@ -2496,7 +2518,7 @@
       if(action==='scene-delete-confirm'){const result=sceneStore.remove(id);if(result.error)return toast(result.error.message);savedScenes=result;closeEffectDialog();return navigate('scenes');}
       if(action==='effects'||action==='effects-root'||action==='animations-gallery'){
         if(route.screen==='controls'){
-          controlMode='animations';showControlAnimationGallery=true;route={...route,family:null,library:initialAnimationLibrary(),effectsReturn:'controls'};setSpatialPreviewCategory(initialAnimationLibrary());return render({top:true});
+          controlMode='animations';showControlAnimationGallery=true;route={...route,family:null,familyReturnScreen:null,library:initialAnimationLibrary(),effectsReturn:'controls'};setSpatialPreviewCategory(initialAnimationLibrary());return render({top:true});
         }
         const returnScreen=route.screen==='controls'||route.effectsReturn==='controls'?'controls':'animations';
         return navigate('effects',{family:null,library:initialAnimationLibrary(),effectsReturn:returnScreen});
@@ -2504,14 +2526,16 @@
       if(action==='animation-search-clear'){const search=document.getElementById('animation-search');if(search){search.value='';search.dispatchEvent(new Event('input',{bubbles:true}));}return;}
       if(action==='family'){
         const group=Library.group(catalogue(),id);if(!group)return;
-        animationFamilyReturnPositions.set(route.zoneId,{family:id,scrollY:window.scrollY,viewportTop:button.getBoundingClientRect().top});
-        route={...route,family:id};render();
+        animationFamilyReturnPositions.set(route.zoneId,{family:id,screen:route.screen,scrollY:window.scrollY,viewportTop:button.getBoundingClientRect().top});
+        route={...route,screen:'animation-family',family:id,familyReturnScreen:route.screen};render({top:true});
         paint(performance.now()/1000);revealAnimationFamily();
         main.querySelector('#animation-family-title')?.focus({preventScroll:true});
         return;
       }
       if(action==='family-back'){
-        route={...route,family:null};render();restoreAnimationFamilyList();
+        const savedGallery=animationGalleryPositions.get(route.zoneId);
+        if(savedGallery)animationGalleryPositions.set(route.zoneId,{...savedGallery,family:null});
+        route={...route,screen:route.familyReturnScreen||'controls',family:null,familyReturnScreen:null};render();restoreAnimationFamilyList();
         return;
       }
       if(action==='animation-categories')return showAnimationCategories();
@@ -2554,6 +2578,11 @@
         if(requiresWholeZone&&selection().kind!=='all')storeLineSelection(receivers().map(receiver=>receiver.id));
         setSpatialPreviewCategory(effect.category==='tunnel'?'tunnel':'');
         rememberAnimationGallery();apply(effectState(effect));settingsOpen=false;
+        if(route.screen==='animation-family'){
+          controlMode='animations';showControlAnimationGallery=false;
+          route={...route,screen:'controls',familyReturnScreen:null,effectsReturn:'controls'};
+          render({top:true});return revealAnimationStart();
+        }
         if(route.screen==='controls'&&button.closest('[data-control-mode="animations"]')){controlMode='animations';showControlAnimationGallery=false;render({top:true});return revealAnimationStart();}
         if(route.screen==='effects'&&route.effectsReturn==='controls'){controlMode='animations';showControlAnimationGallery=false;navigate('controls',{zoneId:route.zoneId});return revealAnimationStart();}
         navigate('animations');return revealAnimationStart();

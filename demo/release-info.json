@@ -1,13 +1,13 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-family-back-top-ios196-20260929",
+  "revision": "v32-animation-family-page-20260929",
   "interfaceVersion": 32,
   "interfaceBaseline": "V32 preserves the existing interface and recognisable 3D tunnel/wall visuals. Spatial animations are grouped as Tunnel & wand. The gallery shows a four-line illustrative tunnel; opening a spatial effect group previews its sample over the actual connected lines and chosen geometry. The active tunnel/wall preview remains spatial while editing animation colours. Identical ledline arrangement controls use the same size and styling in the Kleur and Effecten tabs. The inline and sticky animation-gallery actions share one consistent visual component. With an active animation, one grouped dark action clearly says “Ga naar instellingen van deze animatie”, names the active animation and uses a settings icon plus chevron; without an active animation, this action is omitted. The inline and sticky copies share the same component. An opened effect family is a focused detail page showing only that group’s animations; one “Terug naar alle animaties” action sits above the group title and scrolls with the page, never overlaying the variants. Applying a tunnel or wall animation automatically targets every line in that zone, without asking the customer to manually create an all-lines selection first. The effect settings still allow selecting an individual line for its own colour. This changes animation targeting only, not receiver wiring or saved physical arrangement. The phone-first animation gallery uses a rounded category sheet with explained choices and a clear return to active settings. Returning to Effecten opens at the top rather than restoring an old deep gallery scroll position. Arrangement icons depict the chosen tunnel, vertical wall or continuous line. Arrangement and order choices apply directly, without a separate save/cancel step. New SPI zones default to Doorlopend; the main preview follows the selected geometry. The More screen no longer repeats a generic connection status, temporary-data disclaimer or technical-readiness checklist; the four primary navigation tabs and local app-management actions remain. The isolated demo keeps one concise fictional-receiver safety badge, uses no hardware commands, firmware downloads or PIN collection, and remains separate from the native app. Browser verification does not prove physical receiver acceptance.",
   "animationGroupNavigation": {
     "detailPage": true,
-    "content": "selected effect group only",
-    "backAction": "Terug naar alle animaties or the originating category",
-    "placement": "top of group detail page",
+    "content": "only the selected group's animations, below the persistent LED overview",
+    "backAction": "Terug naar alle animatiegroepen or the originating category",
+    "placement": "directly below the persistent LED overview",
     "scrollBehavior": "normal document flow",
     "floatingDuplicate": false
   },
@@ -74,7 +74,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "d583f0a0c761c30529869622e04c1a100583edaf2bc4f95e482f20dc945625a5"
+      "sha256": "6e83f9cedbc35018e8deba3a5fc7c5ad8911e5a2ac6b5ec15704c7f02d5f1eda"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -98,7 +98,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "cb7257b3674f0d16452e91a605ab69c37a6a900d460af3c404c8ed9f7a3374a4"
+      "sha256": "312b0416a618ba0fcd35081689e3d78cccc9d57903868cb1e71e7fbe54c124e8"
     },
     {
       "path": "fixtures.js",
@@ -106,7 +106,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "656d5fa7b2453fa0e6f4bf92fd5f573df95f2bfb5d2550c479211ef3d5c36aa8"
+      "sha256": "a866bc8f87d39890b37b7917478851fa915519457bda8c5bc33238a8c3c6642f"
     },
     {
       "path": "live-control.js",
@@ -154,7 +154,7 @@
     },
     {
       "path": "preferences.js",
-      "sha256": "ef5178873d1d32815557c4ff27fde349904b9597f577edbb6e1720b2654988d2"
+      "sha256": "30113fe8b764ff61a9bc59ea9b78bae07615f8abc5a49683005b39c4cb5b5bfd"
     },
     {
       "path": "premium-surfaces.css",
