@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-animation-family-page-20260929",
+  "revision": "v32-active-animation-card-20260929",
   "interfaceVersion": 32,
-  "interfaceBaseline": "V32 preserves the existing interface and recognisable 3D tunnel/wall visuals. Spatial animations are grouped as Tunnel & wand. The gallery shows a four-line illustrative tunnel; opening a spatial effect group previews its sample over the actual connected lines and chosen geometry. The active tunnel/wall preview remains spatial while editing animation colours. Identical ledline arrangement controls use the same size and styling in the Kleur and Effecten tabs. The inline and sticky animation-gallery actions share one consistent visual component. With an active animation, one grouped dark action clearly says “Ga naar instellingen van deze animatie”, names the active animation and uses a settings icon plus chevron; without an active animation, this action is omitted. The inline and sticky copies share the same component. An opened effect family is a focused detail page showing only that group’s animations; one “Terug naar alle animaties” action sits above the group title and scrolls with the page, never overlaying the variants. Applying a tunnel or wall animation automatically targets every line in that zone, without asking the customer to manually create an all-lines selection first. The effect settings still allow selecting an individual line for its own colour. This changes animation targeting only, not receiver wiring or saved physical arrangement. The phone-first animation gallery uses a rounded category sheet with explained choices and a clear return to active settings. Returning to Effecten opens at the top rather than restoring an old deep gallery scroll position. Arrangement icons depict the chosen tunnel, vertical wall or continuous line. Arrangement and order choices apply directly, without a separate save/cancel step. New SPI zones default to Doorlopend; the main preview follows the selected geometry. The More screen no longer repeats a generic connection status, temporary-data disclaimer or technical-readiness checklist; the four primary navigation tabs and local app-management actions remain. The isolated demo keeps one concise fictional-receiver safety badge, uses no hardware commands, firmware downloads or PIN collection, and remains separate from the native app. Browser verification does not prove physical receiver acceptance.",
+  "interfaceBaseline": "V32 preserves the existing interface and recognisable 3D tunnel/wall visuals. Spatial animations are grouped as Tunnel & wand. The gallery shows a four-line illustrative tunnel; opening a spatial effect group previews its sample over the actual connected lines and chosen geometry. The active tunnel/wall preview remains spatial while editing animation colours. Identical ledline arrangement controls use the same size and styling in the Kleur and Effecten tabs. The inline and sticky animation-gallery actions share one consistent visual component. When an animation is active, a light glass card names it first and clearly opens its settings; it is omitted when no animation is active. An opened effect family is a focused detail page showing only that group’s animations; one “Terug naar alle animatiegroepen” action sits directly below the persistent LED overview and scrolls with the page, never overlaying the variants. Applying a tunnel or wall animation automatically targets every line in that zone, without asking the customer to manually create an all-lines selection first. The effect settings still allow selecting an individual line for its own colour. This changes animation targeting only, not receiver wiring or saved physical arrangement. The phone-first animation gallery uses a rounded category sheet with explained choices and a clear return to active settings. Returning to Effecten opens at the top rather than restoring an old deep gallery scroll position. Arrangement icons depict the chosen tunnel, vertical wall or continuous line. Arrangement and order choices apply directly, without a separate save/cancel step. New SPI zones default to Doorlopend; the main preview follows the selected geometry. The More screen no longer repeats a generic connection status, temporary-data disclaimer or technical-readiness checklist; the four primary navigation tabs and local app-management actions remain. The isolated demo keeps one concise fictional-receiver safety badge, uses no hardware commands, firmware downloads or PIN collection, and remains separate from the native app. Browser verification does not prove physical receiver acceptance.",
   "animationGroupNavigation": {
     "detailPage": true,
     "content": "only the selected group's animations, below the persistent LED overview",
@@ -16,6 +16,13 @@
     "icon": "animation motion waveform",
     "surface": "neutral glass; no red or brown fill",
     "visibleOnlyWhenActive": true
+  },
+  "activeAnimationCard": {
+    "visibleOnlyWhenActive": true,
+    "primaryContent": "name of the active animation",
+    "action": "Pas deze animatie aan",
+    "surface": "light glass, no dark fill",
+    "inlineAndStickyStylingMatch": true
   },
   "fakeReceivers": {
     "RGBW": 10,
@@ -74,7 +81,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "6e83f9cedbc35018e8deba3a5fc7c5ad8911e5a2ac6b5ec15704c7f02d5f1eda"
+      "sha256": "a34c33e2233761e03e76bac4cc8ab1b7d661b0ce6d041a67bbe05f6eb9dab531"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -98,7 +105,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "312b0416a618ba0fcd35081689e3d78cccc9d57903868cb1e71e7fbe54c124e8"
+      "sha256": "a9461e3052761967f15790c4d35af41744adbbce422d0cc3de4ba3794dc6f6fd"
     },
     {
       "path": "fixtures.js",
@@ -106,7 +113,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "a866bc8f87d39890b37b7917478851fa915519457bda8c5bc33238a8c3c6642f"
+      "sha256": "0d67d893d9d375e583f8df1e496e0aeeec6458bec81b4ae4ae5978bc5e19ac92"
     },
     {
       "path": "live-control.js",
@@ -154,7 +161,7 @@
     },
     {
       "path": "preferences.js",
-      "sha256": "30113fe8b764ff61a9bc59ea9b78bae07615f8abc5a49683005b39c4cb5b5bfd"
+      "sha256": "f0afa9a05c49a7911b9c56ba4f939388622abf798352dd8ebf2f134f7085b0ba"
     },
     {
       "path": "premium-surfaces.css",
