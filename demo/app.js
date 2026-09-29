@@ -92,8 +92,9 @@
     else if(compact&&window.scrollY<24)delete dock.dataset.scrolled;
     const familyShortcut=dock.querySelector('[data-family-back-shortcut]');
     if(familyShortcut)familyShortcut.hidden=false;
-    const shortcut=familyShortcut||dock.querySelector('[data-editor-shortcut]');
-    const inline=familyShortcut?null:main.querySelector('.current-effect-gallery');
+    const settingsShortcut=dock.querySelector('[data-editor-return-shortcut]');
+    const shortcut=familyShortcut||settingsShortcut||dock.querySelector('[data-editor-shortcut]');
+    const inline=familyShortcut?null:settingsShortcut?main.querySelector('[data-editor-return-inline]'):main.querySelector('.current-effect-gallery');
     if(shortcut&&inline){
       // Keep the route available unless the complete inline button is inside
       // the unobstructed area between the sticky preview and bottom navigation.
@@ -110,7 +111,10 @@
       const inlineFullyReachable=box.height>0&&box.top>=top&&box.bottom<=bottom;
       shortcut.hidden=overlapsSetup||inlineFullyReachable;
     }else if(shortcut){
-      shortcut.hidden=false;
+      const setup=main.querySelector('.ledline-setup'),setupBox=setup?.getBoundingClientRect();
+      const floating=shortcut.querySelector('button')?.getBoundingClientRect();
+      const overlapsSetup=!!setupBox&&!!floating&&setupBox.height>0&&floating.height>0&&floating.left<setupBox.right&&floating.right>setupBox.left&&floating.top<setupBox.bottom&&floating.bottom>setupBox.top;
+      shortcut.hidden=!familyShortcut&&overlapsSetup;
     }
   }
   window.addEventListener('scroll',updateControlPreviewDensity,{passive:true});
@@ -467,6 +471,7 @@
       const label=animationFamilyBackLabel();
       return `<nav class="animation-wayfinding" data-family-back-shortcut hidden aria-label="${esc(t('animationNavigation'))}"><button class="animation-gallery-return family-back-action" data-action="family-back" aria-label="${esc(label)}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('back')}</span><span class="gallery-action-copy"><b>${esc(label)}</b></span></span></button></nav>`;
     }
+    if(browsing&&activeEffect())return `<nav class="animation-wayfinding" data-editor-return-shortcut hidden aria-label="${esc(t('animationNavigation'))}">${animationSettingsReturnMarkup('sticky')}</nav>`;
     if(!activeEffect()||browsing)return '';
     const action=screen==='controls'?'animation-gallery':'animations-gallery';
     return `<nav class="animation-wayfinding" data-editor-shortcut hidden aria-label="${esc(t('animationNavigation'))}"><button class="animation-gallery-return" data-action="${action}" aria-label="${esc(t('animationChooseAnother'))}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('gallery')}</span><span class="gallery-action-copy"><b>${esc(t('animationChooseAnother'))}</b><small>${esc(t('animationChooseAnotherHint'))}</small></span></span><span class="gallery-action-next" aria-hidden="true">${icon('chevron')}</span></button></nav>`;
@@ -915,7 +920,12 @@
   }
   function animationLibraryHeading(){
     const current=activeEffect(),canReturn=current&&route.screen==='controls';
-    return `<header class="animation-library-heading"><div class="animation-library-title-copy"><small class="animation-library-kicker"><span aria-hidden="true">${icon('animation')}</span>${esc(t('animationSelector'))}</small><h2>${esc(t('chooseAnimation'))}</h2><p class="animation-library-guidance">${esc(t('animationPickerIntro'))}</p>${canReturn?`<small class="animation-active-choice">${esc(t('animationActiveName',{name:Library.displayName(current,t)}))}</small>`:''}</div>${canReturn?`<button class="animation-return-current" data-action="animation-current-edit" aria-label="${esc(t('animationBackToSettings'))} · ${esc(Library.displayName(current,t))}">${icon('back')}<span>${esc(t('animationSettingsShort'))}</span></button>`:''}</header>`;
+    return `<header class="animation-library-heading"><div class="animation-library-title-copy"><small class="animation-library-kicker"><span aria-hidden="true">${icon('animation')}</span>${esc(t('animationSelector'))}</small><h2>${esc(t('chooseAnimation'))}</h2><p class="animation-library-guidance">${esc(t('animationPickerIntro'))}</p>${current&&route.screen==='controls'?`<small class="animation-active-choice">${esc(t('animationActiveName',{name:Library.displayName(current,t)}))}</small>`:''}</div></header>${canReturn?animationSettingsReturnMarkup('inline'):''}`;
+  }
+  function animationSettingsReturnMarkup(location){
+    const current=activeEffect(),label=t('animationBackToSettings');
+    const attribute=location==='sticky'?'data-editor-return-sticky':'data-editor-return-inline';
+    return `<button type="button" class="animation-gallery-return animation-settings-return" ${attribute} data-action="animation-current-edit" aria-label="${esc(label)} · ${esc(Library.displayName(current,t))}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('back')}</span><span class="gallery-action-copy"><b>${esc(label)}</b></span></span></button>`;
   }
   function animationCategoryIcon(key){
     return key==='tunnel'?arrangementIcon('stacked'):icon(({catalogue:'zones',whole:'sun',pixels:'animation',brand:'sparkle',presets:'scenes'})[key]||'zones');
@@ -2375,7 +2385,9 @@
       if(action==='animations'&&route.screen==='controls'){
         rememberAnimationGallery();
         const saved=animationGalleryPositions.get(route.zoneId);
-        controlMode='animations';showControlAnimationGallery=!activeEffect();route={...route,family:saved?.family||null,library:saved?.library||initialAnimationLibrary(),effectsReturn:'controls'};setSpatialPreviewCategory(libraryTab());return render({top:true});
+        controlMode='animations';showControlAnimationGallery=!activeEffect();route={...route,family:saved?.family||null,library:saved?.library||initialAnimationLibrary(),effectsReturn:'controls'};setSpatialPreviewCategory(libraryTab());render({top:true});
+        if(!showControlAnimationGallery)return revealAnimationStart();
+        return;
       }
       if(action==='animation-current-edit'&&route.screen==='controls'&&activeEffect()){
         rememberAnimationGallery();showControlAnimationGallery=false;render({top:true});return revealAnimationStart();
