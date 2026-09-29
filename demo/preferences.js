@@ -304,6 +304,13 @@
     de:{animationSelector:'Animationsauswahl',animationPickerIntro:'Wähle eine Art, öffne eine Gruppe und tippe dann auf die gewünschte Animation.',animationSettingsShort:'Einstellungen',animationActiveName:'Aktiv: {name}',animationAcross:'Tunnel & Wand',animationStartHint:'Vier einfache Möglichkeiten zum Einstieg',animationAllHint:'Alle Arten und Bewegungen entdecken',animationChooseAnotherHint:'Tippe auf eine Animation zum Starten.',animationWholeHint:'Die ganze LED-Linie ändert Farbe oder Helligkeit',animationMovingHint:'Licht bewegt sich innerhalb einer LED-Linie',animationAcrossHint:'Für Tunnel und Wände: Bewegung über LED-Linien',animationAcrossSummary:'Tunnel- und Wandeffekte bewegen Licht über mehrere LED-Linien.',animationAcrossMinimum:'Zum Starten dieses Effekts sind mindestens 2 LED-Linien nötig.',animationAcrossAutoApply:'Ein gewählter Effekt nutzt automatisch alle LED-Linien in dieser Zone.',animationAcrossIndividualHint:'Andere Farbe pro Linie? Wähle nach dem Start in den Einstellungen eine LED-Linie.',animationTunnelSampleTitle:'Tunnelvorschau',animationWallSampleTitle:'Wandvorschau',animationTunnelSampleLines:'4 Beispiel-LED-Linien',animationTunnelSampleAccessible:'Tunnelvorschau mit vier Beispiel-LED-Linien',animationWallSampleAccessible:'Wandvorschau mit vier Beispiel-LED-Linien',animationTunnelGroupAccessible:'Vorschau von {name} über deine {count} verbundenen LED-Linien. Noch nicht gestartet.',animationSelectMinimum:'Mindestens {count} LED-Linien auswählen',animationBrandHint:'Ruhige Effekte mit Ihren Markenfarben',animationOwnHint:'Ihre gespeicherten Animationen'}
   };
   Object.keys(mobileGalleryTexts).forEach(code=>Object.assign(texts[code],mobileGalleryTexts[code]));
+  const animationChooserTexts = {
+    nl:{animationChooseAnother:'Andere animatie kiezen',animationChooseAnotherHint:'Bekijk alle animaties en varianten.'},
+    en:{animationChooseAnother:'Choose another animation',animationChooseAnotherHint:'Browse animations and variations.'},
+    fr:{animationChooseAnother:'Choisir une autre animation',animationChooseAnotherHint:'Parcourir les animations et variantes.'},
+    de:{animationChooseAnother:'Andere Animation wählen',animationChooseAnotherHint:'Animationen und Varianten ansehen.'}
+  };
+  Object.keys(animationChooserTexts).forEach(code=>Object.assign(texts[code],animationChooserTexts[code]));
   // State labels for the LED-line chooser's disclosure control.
   const scopeCloseLabels = {
     nl: { scopeClose: 'Ledlines verbergen', scopeCloseHint: 'Tik om de lijst te sluiten' },
