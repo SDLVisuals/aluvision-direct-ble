@@ -1830,6 +1830,11 @@
     const header=dialog.querySelector('#effect-dialog-content > header');
     const measureHeader=()=>dialog.style.setProperty('--dialog-header-height',`${Math.ceil(header.getBoundingClientRect().height)}px`);
     measureHeader();dialogHeaderObserver=new ResizeObserver(measureHeader);dialogHeaderObserver.observe(header);
+    // Draw a newly opened live preview before returning to the tap handler.
+    // Otherwise the continuously scheduled frame can arrive after the colour
+    // editor is already visible, briefly leaving its spatial preview blank or
+    // on a stale frame while the rest of the dialog is ready.
+    if(dialog.querySelector('canvas[data-preview]'))paint(performance.now()/1000);
   }
   function closeEffectDialog() {
     if(pinProtectionBusy)return;
