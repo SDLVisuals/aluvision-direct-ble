@@ -1,6 +1,6 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-animation-chooser-ux-20260929",
+  "revision": "v32-animation-return-continuity-20260929",
   "interfaceVersion": 32,
   "interfaceBaseline": "V32 keeps the established Aluvision interface while making animation browsing easier to understand and gentler to use. Customers first see clearly labelled effect groups; opening one enters a focused page with only that group’s variations, and choosing a variation is the action that starts it. A single back button returns to the originating list and moves beside the sticky LED overview only when its inline position is obscured. The active-animation action also moves one DOM button between the page and preview dock, so no duplicate or half-hidden copy remains. The spatial tunnel/wall overview appears on opening a spatial group and stays visible in its active settings. Page transitions use a light spring, smaller controls respond smoothly, and reduced-motion preferences are respected. Browsing preserves selected lights and active effects. Browser verification does not prove physical receiver acceptance.",
   "animationGroupNavigation": {
@@ -48,7 +48,7 @@
   "nativeAppModified": true,
   "nativeAppUpdatePending": false,
   "nativeAppBuiltVersion": "32.0.0",
-  "nativeAppBuiltBuild": 199,
+  "nativeAppBuiltBuild": 200,
   "nativeAppInstalled": false,
   "nativeAppInstallationPreservedData": null,
   "interfaceAccessibility": {
@@ -79,7 +79,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "623eafadfcc4cefd94efe175f1c4c3d04bbef8d645a6dee382f45f871e069de7"
+      "sha256": "c30c5c9e623bc62d460f06d154f3beaf879a03dbdb1960de887bff264aabd33a"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -111,7 +111,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "54f0081ed2ca53df06ff1dd8a16fef5e1e0ce32b91ca938954f8e0c944cd768e"
+      "sha256": "1e396e17da2b65f3546b58d14a930d3da2a8a13090529c4042643de147712057"
     },
     {
       "path": "live-control.js",

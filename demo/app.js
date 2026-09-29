@@ -246,6 +246,11 @@
         const reduce=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
         window.scrollTo({top:Math.max(0,window.scrollY+delta),left:0,behavior:reduce?'instant':'smooth'});
       }
+      // Restoring a deep list position can move the active-settings return
+      // action out of the viewport without producing a scroll event before
+      // the next paint (notably with reduced motion enabled). Re-evaluate its
+      // single inline/sticky slot now so it never appears lost after Back.
+      updateControlPreviewDensity();
     };
     const entering=main.querySelector('.app-page-enter');
     if(entering&&!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
