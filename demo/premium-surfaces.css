@@ -8,10 +8,10 @@
   --line: #deded9;
   --red: #bf4841;
   --soft: #eeede9;
-  --glass: rgba(255, 255, 255, .48);
-  --glass-edge: rgba(255, 255, 255, .96);
-  --surface-shadow: 0 10px 28px rgba(25, 30, 25, .065);
-  --surface-highlight: inset 0 1px rgba(255, 255, 255, .98), inset 0 0 0 1px rgba(255, 255, 255, .28);
+  --glass: rgba(255, 255, 255, .42);
+  --glass-edge: rgba(255, 255, 255, .9);
+  --surface-shadow: 0 12px 30px rgba(25, 30, 25, .052), 0 2px 5px rgba(25, 30, 25, .025);
+  --surface-highlight: inset 0 1px rgba(255, 255, 255, .86), inset 0 0 0 1px rgba(255, 255, 255, .2);
 }
 
 body:not([data-theme="dark"]) {
@@ -24,10 +24,10 @@ body:not([data-theme="dark"]) {
 
 /* Glass is a surface treatment, not a veil over content. */
 .brand-bar {
-  background: rgba(249, 248, 246, .88);
-  border-color: rgba(255, 255, 255, .9);
-  -webkit-backdrop-filter: blur(18px) saturate(125%);
-  backdrop-filter: blur(18px) saturate(125%);
+  background: rgba(249, 248, 246, .76);
+  border-color: rgba(255, 255, 255, .82);
+  -webkit-backdrop-filter: blur(22px) saturate(132%);
+  backdrop-filter: blur(22px) saturate(132%);
 }
 
 .brand-bar {
@@ -79,13 +79,13 @@ body:not([data-theme="dark"]) {
 ) {
   background-color: var(--glass);
   background-image:
-    linear-gradient(145deg, rgba(255, 255, 255, .36), rgba(255, 255, 255, .12)),
-    radial-gradient(110% 130% at 100% 0%, rgba(191, 72, 65, .10), transparent 70%),
-    radial-gradient(120% 100% at 0% 100%, rgba(234, 236, 232, .25), transparent 72%);
-  border-color: color-mix(in srgb, var(--line) 44%, white);
+    linear-gradient(145deg, rgba(255, 255, 255, .24), rgba(255, 255, 255, .07)),
+    radial-gradient(110% 130% at 100% 0%, rgba(191, 72, 65, .075), transparent 70%),
+    radial-gradient(120% 100% at 0% 100%, rgba(234, 236, 232, .18), transparent 72%);
+  border-color: color-mix(in srgb, var(--line) 52%, var(--glass-edge));
   box-shadow: var(--surface-shadow), var(--surface-highlight);
-  -webkit-backdrop-filter: blur(16px) saturate(128%);
-  backdrop-filter: blur(16px) saturate(128%);
+  -webkit-backdrop-filter: blur(20px) saturate(134%);
+  backdrop-filter: blur(20px) saturate(134%);
 }
 
 .zone-entry {
@@ -93,8 +93,8 @@ body:not([data-theme="dark"]) {
 }
 
 .zone-entry .zone-card {
-  background-color: rgba(255, 255, 255, .44);
-  background-image: linear-gradient(145deg, rgba(255, 255, 255, .38), rgba(255, 255, 255, .14));
+  background-color: rgba(255, 255, 255, .36);
+  background-image: linear-gradient(145deg, rgba(255, 255, 255, .24), rgba(255, 255, 255, .07));
   box-shadow: none;
 }
 
@@ -264,10 +264,10 @@ body:not([data-theme="dark"]) {
 
 .navigation {
   border: 1px solid rgba(255, 255, 255, .18);
-  background: linear-gradient(145deg, rgba(32, 36, 32, .97), rgba(17, 20, 17, .97));
-  box-shadow: 0 9px 28px rgba(13, 18, 13, .18), inset 0 1px rgba(255, 255, 255, .1);
-  -webkit-backdrop-filter: blur(20px) saturate(130%);
-  backdrop-filter: blur(20px) saturate(130%);
+  background: linear-gradient(145deg, rgba(32, 36, 32, .9), rgba(17, 20, 17, .88));
+  box-shadow: 0 12px 30px rgba(13, 18, 13, .2), inset 0 1px rgba(255, 255, 255, .14);
+  -webkit-backdrop-filter: blur(24px) saturate(136%);
+  backdrop-filter: blur(24px) saturate(136%);
 }
 
 .navigation button[aria-current="page"] {
@@ -315,10 +315,10 @@ body:not([data-theme="dark"]) {
 }
 
 body[data-theme="dark"] {
-  --glass: rgba(37, 41, 36, .84);
-  --glass-edge: rgba(255, 255, 255, .09);
-  --surface-shadow: 0 9px 24px rgba(0, 0, 0, .2);
-  --surface-highlight: inset 0 1px rgba(255, 255, 255, .055);
+  --glass: rgba(37, 41, 36, .74);
+  --glass-edge: rgba(255, 255, 255, .14);
+  --surface-shadow: 0 12px 28px rgba(0, 0, 0, .22), 0 2px 6px rgba(0, 0, 0, .12);
+  --surface-highlight: inset 0 1px rgba(255, 255, 255, .085), inset 0 0 0 1px rgba(255, 255, 255, .025);
   background:
     radial-gradient(90% 26rem at 100% 0%, rgba(191, 72, 65, .055), transparent 74%),
     radial-gradient(80% 26rem at 0% 22%, rgba(255, 255, 255, .025), transparent 75%),
@@ -326,8 +326,8 @@ body[data-theme="dark"] {
 }
 
 body[data-theme="dark"] .brand-bar {
-  background: rgba(21, 23, 20, .88);
-  border-color: rgba(255, 255, 255, .06);
+  background: rgba(21, 23, 20, .76);
+  border-color: rgba(255, 255, 255, .08);
 }
 
 body[data-theme="dark"] :is(
@@ -370,9 +370,9 @@ body[data-theme="dark"] :is(
   #effect-dialog
 ) {
   color: var(--ink);
-  background-color: rgba(32, 35, 30, .86);
-  background-image: linear-gradient(145deg, rgba(54, 59, 52, .88), rgba(31, 34, 29, .9)), radial-gradient(120% 110% at 100% 0%, rgba(191, 72, 65, .08), transparent 75%);
-  border-color: rgba(255, 255, 255, .12);
+  background-color: rgba(32, 35, 30, .76);
+  background-image: linear-gradient(145deg, rgba(54, 59, 52, .76), rgba(31, 34, 29, .79)), radial-gradient(120% 110% at 100% 0%, rgba(191, 72, 65, .07), transparent 75%);
+  border-color: rgba(255, 255, 255, .16);
   box-shadow: var(--surface-shadow), var(--surface-highlight);
 }
 
@@ -662,3 +662,90 @@ dialog[open]::backdrop{animation:app-backdrop-enter .2s ease-out both}
 .settings-panel.is-closing,.background-details.is-closing{pointer-events:none;animation:app-disclosure-exit .18s ease-in both}
 @keyframes app-disclosure-exit{from{opacity:1;transform:translate3d(0,0,0) scale(1)}to{opacity:0;transform:translate3d(0,-5px,0) scale(.99)}}
 @media(prefers-reduced-motion:reduce){.settings-panel.is-closing,.background-details.is-closing{animation:none!important}}
+
+/* V32 glass polish: strengthen the frosted depth and material contrast while
+   keeping the many scrolling animation tiles free of per-card blur. */
+:is(.animation-category-trigger,.animation-category-choice,.animation-search input,.settings-toggle,.preview-size-control>summary){
+  background-color:var(--glass);
+  background-image:linear-gradient(145deg,rgba(255,255,255,.3),rgba(255,255,255,.09));
+  border-color:color-mix(in srgb,var(--line) 52%,var(--glass-edge));
+  box-shadow:inset 0 1px rgba(255,255,255,.72),0 4px 14px rgba(24,30,24,.035);
+}
+:is(.animation-category-trigger,.animation-category-choice,.animation-search input,.settings-toggle,.preview-size-control>summary){
+  -webkit-backdrop-filter:blur(14px) saturate(128%);
+  backdrop-filter:blur(14px) saturate(128%);
+}
+:is(.animation-category-choice,.family-variant-card):is([aria-pressed=true]){
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+}
+.family-variants-panel{
+  border-color:color-mix(in srgb,var(--glass-edge) 28%,var(--line));
+  background-color:var(--glass);
+  background-image:linear-gradient(145deg,rgba(255,255,255,.22),rgba(255,255,255,.06)),radial-gradient(100% 120% at 100% 0%,rgba(191,72,65,.045),transparent 74%);
+  box-shadow:inset 0 1px rgba(255,255,255,.68),0 5px 16px rgba(25,30,25,.035);
+  -webkit-backdrop-filter:blur(16px) saturate(126%);
+  backdrop-filter:blur(16px) saturate(126%);
+}
+:is(.animation-family-card,.family-variant-card,.effect-card,.family-card){
+  background-color:var(--glass);
+  background-image:linear-gradient(145deg,rgba(255,255,255,.24),rgba(255,255,255,.055)),radial-gradient(110% 120% at 100% 0%,rgba(191,72,65,.045),transparent 76%);
+  border-color:color-mix(in srgb,var(--line) 60%,var(--glass-edge));
+  box-shadow:inset 0 1px rgba(255,255,255,.76),0 5px 16px rgba(25,30,25,.035);
+}
+.animation-simple-page .control-workspace{
+  background-image:linear-gradient(145deg,rgba(255,255,255,.25),rgba(255,255,255,.07)),radial-gradient(120% 100% at 100% 0%,rgba(191,72,65,.055),transparent 72%);
+}
+.animation-context{
+  background:linear-gradient(145deg,color-mix(in srgb,var(--glass) 86%,transparent),color-mix(in srgb,var(--glass) 66%,transparent));
+  border-color:color-mix(in srgb,var(--line) 56%,var(--glass-edge));
+  box-shadow:inset 0 1px rgba(255,255,255,.62),0 5px 14px rgba(25,30,25,.025);
+  -webkit-backdrop-filter:blur(14px) saturate(126%);
+  backdrop-filter:blur(14px) saturate(126%);
+}
+.animation-context>.power-card{
+  background:linear-gradient(145deg,color-mix(in srgb,var(--glass) 88%,transparent),color-mix(in srgb,var(--glass) 72%,transparent));
+  box-shadow:inset 0 1px rgba(255,255,255,.74),0 2px 8px rgba(25,30,25,.025);
+}
+.editor-grid>.control-preview-dock{
+  background:var(--bg);
+  -webkit-backdrop-filter:blur(22px) saturate(132%);
+  backdrop-filter:blur(22px) saturate(132%);
+}
+.editor-grid>.control-preview-dock[data-scrolled=true]{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
+.control-preview-dock[data-scrolled=true] .control-dock-surface{
+  background:var(--bg);
+  background-image:linear-gradient(145deg,rgba(255,255,255,.12),rgba(255,255,255,.025));
+  box-shadow:0 9px 22px -14px rgba(23,32,25,.28),inset 0 1px rgba(255,255,255,.86);
+  -webkit-backdrop-filter:blur(22px) saturate(132%);
+  backdrop-filter:blur(22px) saturate(132%);
+}
+body[data-theme=dark] :is(.animation-category-trigger,.animation-category-choice,.animation-search input,.settings-toggle,.preview-size-control>summary):not([aria-pressed=true]){
+  background-color:rgba(37,41,36,.72);
+  background-image:linear-gradient(145deg,rgba(255,255,255,.085),rgba(255,255,255,.018));
+  border-color:rgba(255,255,255,.14);
+  box-shadow:inset 0 1px rgba(255,255,255,.09),0 5px 16px rgba(0,0,0,.12);
+}
+body[data-theme=dark] .family-variants-panel{
+  background-color:rgba(37,41,36,.72);
+  background-image:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.012)),radial-gradient(100% 120% at 100% 0%,rgba(191,72,65,.055),transparent 74%);
+  border-color:rgba(255,255,255,.12);
+  box-shadow:inset 0 1px rgba(255,255,255,.08),0 8px 20px rgba(0,0,0,.12);
+}
+body[data-theme=dark] :is(.animation-family-card,.family-variant-card,.effect-card,.family-card){
+  background-color:rgba(37,41,36,.72);
+  background-image:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.012)),radial-gradient(110% 120% at 100% 0%,rgba(191,72,65,.055),transparent 76%);
+  border-color:rgba(255,255,255,.13);
+  box-shadow:inset 0 1px rgba(255,255,255,.09),0 5px 16px rgba(0,0,0,.13);
+}
+body[data-theme=dark] .animation-simple-page .control-workspace{background-image:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.018)),radial-gradient(120% 100% at 100% 0%,rgba(191,72,65,.07),transparent 72%)}
+body[data-theme=dark] .animation-context{background:linear-gradient(145deg,rgba(37,41,36,.74),rgba(37,41,36,.58));border-color:rgba(255,255,255,.12);box-shadow:inset 0 1px rgba(255,255,255,.075),0 5px 16px rgba(0,0,0,.1)}
+body[data-theme=dark] .animation-context>.power-card{background:linear-gradient(145deg,rgba(48,53,46,.78),rgba(32,36,31,.74));box-shadow:inset 0 1px rgba(255,255,255,.08),0 3px 9px rgba(0,0,0,.12)}
+body[data-theme=dark] .editor-grid>.control-preview-dock{background:var(--bg)}
+body[data-theme=dark] .editor-grid>.control-preview-dock[data-scrolled=true]{background:transparent}
+body[data-theme=dark] .control-preview-dock[data-scrolled=true] .control-dock-surface{background:var(--bg);background-image:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.012));box-shadow:0 9px 24px -14px rgba(0,0,0,.55),inset 0 1px rgba(255,255,255,.1)}
+@supports not (backdrop-filter:blur(1px)){
+  :root{--glass:rgba(255,255,255,.78)}
+  body[data-theme=dark]{--glass:rgba(37,41,36,.94)}
+  :is(.animation-category-trigger,.animation-category-choice,.animation-search input,.settings-toggle,.preview-size-control>summary,.family-variants-panel,.animation-family-card,.family-variant-card,.effect-card,.family-card,.animation-context){-webkit-backdrop-filter:none;backdrop-filter:none}
+}
