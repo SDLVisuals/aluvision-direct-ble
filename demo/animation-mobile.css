@@ -277,3 +277,101 @@
 @media(prefers-reduced-motion:reduce){
   .editor-controls-zone .current-effect-gallery-slot>.current-effect-gallery{transition:none}
 }
+
+/* Refine the three everyday control pages as one continuous workflow. Keep
+   one clear hierarchy, make all animation swatches fit naturally, and avoid
+   nested cards around the actual controls. */
+@media(max-width:540px){
+  .editor-controls-zone .shared-colour-picker{
+    padding:13px 1px 2px;
+    border:0;
+    border-top:1px solid color-mix(in srgb,var(--line) 72%,transparent);
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+  }
+  .editor-controls-zone .shared-colour-picker .section-heading{margin:0 2px 8px}
+  .editor-controls-zone .shared-colour-picker .wheel-wrap{width:min(100%,clamp(120px,35vw,148px));max-width:148px}
+  .editor-controls-zone .active-animation-workspace{
+    gap:10px;
+    padding:12px;
+    border:1px solid color-mix(in srgb,var(--line) 40%,var(--glass-edge));
+    border-radius:19px;
+    background-color:color-mix(in srgb,var(--glass) 76%,transparent);
+    background-image:linear-gradient(145deg,color-mix(in srgb,var(--glass) 83%,white 17%),color-mix(in srgb,var(--glass) 94%,transparent));
+    box-shadow:inset 0 1px rgba(255,255,255,.72),0 5px 16px rgba(25,30,25,.035);
+    -webkit-backdrop-filter:blur(14px) saturate(128%);
+    backdrop-filter:blur(14px) saturate(128%);
+  }
+  .editor-controls-zone .animation-daily-controls.card{
+    padding:10px 1px 2px;
+    border:0;
+    border-top:1px solid color-mix(in srgb,var(--line) 72%,transparent);
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+  }
+  .editor-controls-zone .animation-daily-controls .palette{
+    display:flex;
+    flex-wrap:nowrap;
+    align-items:stretch;
+    gap:6px;
+    min-width:0;
+    margin-inline:-1px;
+    padding:1px 1px 5px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    overscroll-behavior-x:contain;
+    scrollbar-width:thin;
+    scroll-snap-type:x proximity;
+  }
+  .editor-controls-zone .animation-daily-controls .palette-item,
+  .editor-controls-zone .animation-daily-controls .palette-add{flex:0 0 auto;scroll-snap-align:start}
+  .editor-controls-zone .animation-daily-controls .palette-item{border-radius:12px}
+  .editor-controls-zone .animation-daily-controls .palette-colour{min-height:44px;gap:5px;padding:4px 7px}
+  .editor-controls-zone .animation-daily-controls .palette-colour>span{width:20px;height:20px}
+  .editor-controls-zone .animation-daily-controls .palette-colour small{font-size:10px;white-space:nowrap}
+  .editor-controls-zone .animation-daily-controls .palette-remove{width:38px;min-height:44px}
+  .editor-controls-zone .animation-daily-controls .palette-add{min-height:44px;padding:7px 10px;font-size:11px;white-space:nowrap}
+  .animation-library-inline .animation-library-heading{padding-bottom:8px;border-bottom:1px solid color-mix(in srgb,var(--line) 68%,transparent)}
+  .animation-library-inline .animation-library-heading h2{letter-spacing:-.025em}
+
+  /* On the fixed-colour screen, keep the wheel fully clear of the bottom dock
+     on first load while preserving 50px+ actions and the chosen preview size. */
+  .editor-grid-colour>.control-preview-dock[data-preview-size="small"] .preview-wrap canvas{height:60px!important}
+  .editor-grid-colour>.control-preview-dock{margin-bottom:7px}
+  .editor-grid-colour>.editor-controls{padding-top:5px}
+  .editor-grid-colour>.editor-controls .ledline-setup{gap:5px}
+  .editor-grid-colour>.editor-controls .spatial-choice-toggle,
+  .editor-grid-colour>.editor-controls .ledline-setup-toggle{min-height:50px}
+  .editor-grid-colour>.editor-controls .spatial-choice-current-icon,
+  .editor-grid-colour>.editor-controls .ledline-setup-toggle>.line-order-icon{width:32px;height:32px}
+  .editor-grid-colour .editor-controls-zone .control-workspace{padding:6px 10px}
+  .editor-grid-colour .editor-controls-zone .control-mode-panel{gap:8px}
+  .editor-grid-colour .editor-controls-zone .bediening-workspace{gap:7px}
+  .editor-grid-colour .editor-controls-zone .bediening-workspace-heading{min-height:34px;padding-bottom:5px}
+  .editor-grid-colour .shared-colour-picker .section-heading{margin-bottom:6px}
+}
+@media(max-width:360px){
+  .editor-controls-zone .active-animation-workspace{padding:10px;border-radius:17px}
+  .editor-controls-zone .animation-daily-controls .palette{gap:5px}
+  .editor-controls-zone .animation-daily-controls .palette-colour{gap:4px;padding-inline:5px}
+  .editor-controls-zone .animation-daily-controls .palette-colour>span{width:18px;height:18px}
+  .editor-controls-zone .animation-daily-controls .palette-colour small{font-size:9px}
+  .editor-controls-zone .animation-daily-controls .palette-remove{width:34px}
+  .editor-controls-zone .animation-daily-controls .palette-add{padding-inline:8px;font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){
+  .editor-controls-zone .animation-daily-controls .palette{scroll-behavior:auto;scroll-snap-type:none}
+}
+@media(max-width:400px){
+  /* Phone widths cannot comfortably fit colour chips, remove controls, and
+     the add action on one line. Use a balanced two-chip row and a full-width
+     add action instead of leaving a lone button stranded at the left edge. */
+  .editor-controls-zone .animation-daily-controls .palette{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;overflow:visible;scroll-snap-type:none}
+  .editor-controls-zone .animation-daily-controls .palette-item{width:100%;min-width:0}
+  .editor-controls-zone .animation-daily-controls .palette-item .palette-colour{flex:1;min-width:0;padding-inline:6px}
+  .editor-controls-zone .animation-daily-controls .palette-add{grid-column:1/-1;width:100%;justify-content:center}
+}

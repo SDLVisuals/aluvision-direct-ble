@@ -588,10 +588,12 @@
     const oneLine=receivers().length===1;
     const activeAnimationEditor=!colour&&Boolean(activeEffect())&&!showControlAnimationGallery;
     const spatialGallery=!colour&&showControlAnimationGallery&&libraryTab()==='tunnel';
+    const workspaceHeadingId=colour?'bediening-colour-title':activeAnimationEditor?'active-animation-title':'animation-selector-heading';
+    const workspaceHeading=colour?`<header class="bediening-workspace-heading"><span class="menu-icon">${icon('sun')}</span><div><h2 id="bediening-colour-title">Vaste kleur</h2><p>${oneLine?'Kies een kleur voor deze ledline.':'Kies ledlines om samen te bedienen.'}</p></div></header>`:'';
     const modeContent=colour
-      ?`<section class="bediening-workspace" aria-labelledby="bediening-colour-title"><header class="bediening-workspace-heading"><span class="menu-icon">${icon('sun')}</span><div><h2 id="bediening-colour-title">Vaste kleur</h2><p>${oneLine?'Kies een kleur voor deze ledline.':'Kies ledlines om samen te bedienen.'}</p></div></header><div class="animation-context">${selector()}${powerControl()}</div>${colourPickerMarkup()}</section>`
-      :`<section class="bediening-workspace animation-simple-workspace${activeAnimationEditor?' has-active-animation':''}" aria-labelledby="${activeAnimationEditor?'active-animation-title':'bediening-effects-title'}">${activeAnimationEditor?'':`<header class="bediening-workspace-heading"><span class="menu-icon">${icon('animation')}</span><div><h2 id="bediening-effects-title">${esc(t('effects'))}</h2><p>Kies een animatie of pas je huidige effect aan.</p></div></header>`}${spatialGallery?'':`<div class="animation-context">${selector()}${powerControl()}</div>`}${controlAnimationPanel()}</section>`;
-    return `<div class="editor-grid${colour?'':' animation-simple-page'}">${controlContext('controls')}<section class="editor-controls editor-controls-zone">${ledlineSetupMarkup()}<section class="control-workspace"><div class="control-mode-panel" role="region" aria-label="${colour?'Vaste kleur':'Animaties'}" data-control-mode="${controlMode}">${modeContent}</div></section></section></div>`;
+      ?`<section class="bediening-workspace" aria-labelledby="${workspaceHeadingId}">${workspaceHeading}<div class="animation-context">${selector()}${powerControl()}</div>${colourPickerMarkup()}</section>`
+      :`<section class="bediening-workspace animation-simple-workspace${activeAnimationEditor?' has-active-animation':''}" aria-labelledby="${workspaceHeadingId}">${spatialGallery?'':`<div class="animation-context">${selector()}${powerControl()}</div>`}${controlAnimationPanel()}</section>`;
+    return `<div class="editor-grid${colour?' editor-grid-colour':' animation-simple-page'}">${controlContext('controls')}<section class="editor-controls editor-controls-zone">${ledlineSetupMarkup()}<section class="control-workspace"><div class="control-mode-panel" role="region" aria-label="${colour?'Vaste kleur':'Animaties'}" data-control-mode="${controlMode}">${modeContent}</div></section></section></div>`;
   }
 
   function controlAnimationPanel(){
@@ -605,7 +607,7 @@
     return `<div class="slider-row${guide?.icon?' has-setting-icon':''}"><label for="setting-${key}">${title}<output data-value-for="${key}">${Math.round(value)}${unit}</output></label><input id="setting-${key}" type="range" min="${min}" max="${max}" step="1" value="${value}" data-setting="${key}" data-unit="${unit}">${description ? `<small>${esc(description)}</small>` : ''}</div>`;
   }
   function renderColour() {
-    return `<div class="editor-grid">${controlContext('colour')}<section class="editor-controls">${ledlineSetupMarkup()}${selector()}${colourPickerMarkup()}</section></div>`;
+    return `<div class="editor-grid editor-grid-colour">${controlContext('colour')}<section class="editor-controls">${ledlineSetupMarkup()}${selector()}${colourPickerMarkup()}</section></div>`;
   }
   function myColoursMarkup() {
     const entries=savedColours.colors;
@@ -1023,7 +1025,7 @@
     const query=(animationQueries.get(route.zoneId)||'').trim(),groupsVisible=!query&&libraryTab()!=='presets';
     const heading=groupsVisible?t('animationGroupChooserTitle'):t('chooseAnimation');
     const guidance=groupsVisible?t('animationGroupChooserIntro'):query?t('animationSearchChooseHint'):t('animationOwnChooseHint');
-    return `<header class="animation-library-heading"><div class="animation-library-title-copy"><small class="animation-library-kicker"><span aria-hidden="true">${icon('animation')}</span>${esc(t('animationSelector'))}</small><h2>${esc(heading)}</h2><p class="animation-library-guidance">${esc(guidance)}</p></div></header>${canReturn?`<div class="animation-settings-return-slot" data-editor-return-slot>${animationSettingsReturnMarkup('inline')}</div>`:''}`;
+    return `<header class="animation-library-heading"><div class="animation-library-title-copy"><small class="animation-library-kicker"><span aria-hidden="true">${icon('animation')}</span>${esc(t('animationSelector'))}</small><h2 id="animation-selector-heading">${esc(heading)}</h2><p class="animation-library-guidance">${esc(guidance)}</p></div></header>${canReturn?`<div class="animation-settings-return-slot" data-editor-return-slot>${animationSettingsReturnMarkup('inline')}</div>`:''}`;
   }
   function animationSettingsReturnMarkup(location){
     const current=activeEffect();

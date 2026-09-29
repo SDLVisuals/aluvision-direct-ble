@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-three-control-pages-final-20260929",
+  "revision": "v32-control-pages-refined-20260929",
   "interfaceVersion": 32,
-  "interfaceBaseline": "V32 keeps the established Aluvision interface while making animation browsing easier to understand and gentler to use. Customers first see clearly labelled effect groups; opening one enters a focused page with only that group’s variations, and choosing a variation is the action that starts it. A single back button returns to the originating list and moves beside the sticky LED overview only when its inline position is obscured. The active-animation action also moves one DOM button between the page and preview dock, so no duplicate or half-hidden copy remains. The spatial tunnel/wall overview appears on opening a spatial group and stays visible in its active settings. Page transitions use a light spring, smaller controls respond smoothly, and reduced-motion preferences are respected. Fixed-colour, animation-family and active-animation workspaces now share a calmer mobile hierarchy: group cards are shorter and scannable, group instructions appear once, and the active editor leads with the actual running animation. The same shared colour picker is reused for fixed colour and animation palettes; fine RGBW values remain exact. Search text stays at the iPhone no-zoom size. Browsing preserves selected lights and active effects. Browser verification does not prove physical receiver acceptance.",
+  "interfaceBaseline": "V32 keeps the established Aluvision interface while making animation browsing easier to understand and gentler to use. Customers first see clearly labelled effect groups; opening one enters a focused page with only that group’s variations, and choosing a variation is the action that starts it. A single back button returns to the originating list and moves beside the sticky LED overview only when its inline position is obscured. The active-animation action also moves one DOM button between the page and preview dock, so no duplicate or half-hidden copy remains. The spatial tunnel/wall overview appears on opening a spatial group and stays visible in its active settings. Page transitions use a light spring, smaller controls respond smoothly, and reduced-motion preferences are respected. Fixed-colour, animation-family and active-animation workspaces now share one calmer mobile hierarchy: the gallery has one instruction heading, the running animation is named before its controls, two animation colours align together with a deliberate full-width add action, and the active editor uses one frosted surface instead of nested cards. The fixed-colour wheel stays fully above the bottom navigation on first load. The same shared colour picker is reused for fixed colour and animation palettes; fine RGBW values remain exact. Search text stays at the iPhone no-zoom size. Browsing preserves selected lights and active effects. Browser verification does not prove physical receiver acceptance.",
   "animationGroupNavigation": {
     "detailPage": true,
     "content": "selected effect group only",
@@ -46,11 +46,11 @@
   },
   "hardwareAccess": false,
   "nativeAppModified": true,
-  "nativeAppUpdatePending": false,
+  "nativeAppUpdatePending": true,
   "nativeAppBuiltVersion": "32.0.0",
-  "nativeAppBuiltBuild": 204,
+  "nativeAppBuiltBuild": 205,
   "nativeAppInstalled": false,
-  "nativeAppSimulatorInstalled": true,
+  "nativeAppSimulatorInstalled": false,
   "nativeAppInstallationPreservedData": null,
   "interfaceAccessibility": {
     "selectedLinesSubtitleContrastMinimum": 4.5,
@@ -72,7 +72,7 @@
     },
     {
       "path": "animation-mobile.css",
-      "sha256": "850f2be87c72e4161f51c96630298797155d657da5444ba464976bc204ca2915"
+      "sha256": "e0bf9c1709e87b19a16fe52944708466a4ea354ce5a4dd2dc4c8a645ea29aab4"
     },
     {
       "path": "animations.css",
@@ -80,7 +80,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "44cc872abe299531aeea8db96867bda9353f278198a44bbd571a7b5a718dbdd8"
+      "sha256": "a68c617bc135d505cfed76dbe19118077768edeb39f657da64866a9aaccfa51b"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -112,7 +112,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "8db10483ca46c650e8e83bf202219acdfaf95c4bb01b568fbb7304baf9002357"
+      "sha256": "594a7a892cb2b6d0021363d2c6d15603bda0d885aa1d6bdc0ce06207d6d3a7af"
     },
     {
       "path": "live-control.js",
