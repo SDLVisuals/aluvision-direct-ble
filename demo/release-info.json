@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-ui-consistency-ios193-20260929",
+  "revision": "v32-ui-consistency-ios194-20260929",
   "interfaceVersion": 32,
-  "interfaceBaseline": "V32 preserves the existing interface and recognisable 3D tunnel/wall visuals. Spatial animations are grouped as Tunnel & wand. The gallery shows a four-line illustrative tunnel; opening a spatial effect group previews its sample over the actual connected lines and chosen geometry. The active tunnel/wall preview remains spatial while editing animation colours. Identical ledline arrangement controls use the same size and styling in the Kleur and Effecten tabs. The inline and sticky animation-gallery actions share one consistent visual component. When an animation is active, its inline and sticky return-to-settings actions share the same dark component; an open effect group retains a clear back action to the group list. Applying a tunnel or wall animation automatically targets every line in that zone, without asking the customer to manually create an all-lines selection first. The effect settings still allow selecting an individual line for its own colour. This changes animation targeting only, not receiver wiring or saved physical arrangement. The phone-first animation gallery uses a rounded category sheet with explained choices and a clear return to active settings. Returning to Effecten opens at the top rather than restoring an old deep gallery scroll position. Arrangement icons depict the chosen tunnel, vertical wall or continuous line. Arrangement and order choices apply directly, without a separate save/cancel step. New SPI zones default to Doorlopend; the main preview follows the selected geometry. The More screen no longer repeats a generic connection status, temporary-data disclaimer or technical-readiness checklist; the four primary navigation tabs and local app-management actions remain. The isolated demo keeps one concise fictional-receiver safety badge, uses no hardware commands, firmware downloads or PIN collection, and remains separate from the native app. Browser verification does not prove physical receiver acceptance.",
+  "interfaceBaseline": "V32 preserves the existing interface and recognisable 3D tunnel/wall visuals. Spatial animations are grouped as Tunnel & wand. The gallery shows a four-line illustrative tunnel; opening a spatial effect group previews its sample over the actual connected lines and chosen geometry. The active tunnel/wall preview remains spatial while editing animation colours. Identical ledline arrangement controls use the same size and styling in the Kleur and Effecten tabs. The inline and sticky animation-gallery actions share one consistent visual component. With an active animation, one grouped dark action clearly says “Ga naar instellingen van deze animatie”, names the active animation and uses a settings icon plus chevron; without an active animation, this action is omitted. The inline and sticky copies share the same component, and an open effect group retains a clear back action to the group list. Applying a tunnel or wall animation automatically targets every line in that zone, without asking the customer to manually create an all-lines selection first. The effect settings still allow selecting an individual line for its own colour. This changes animation targeting only, not receiver wiring or saved physical arrangement. The phone-first animation gallery uses a rounded category sheet with explained choices and a clear return to active settings. Returning to Effecten opens at the top rather than restoring an old deep gallery scroll position. Arrangement icons depict the chosen tunnel, vertical wall or continuous line. Arrangement and order choices apply directly, without a separate save/cancel step. New SPI zones default to Doorlopend; the main preview follows the selected geometry. The More screen no longer repeats a generic connection status, temporary-data disclaimer or technical-readiness checklist; the four primary navigation tabs and local app-management actions remain. The isolated demo keeps one concise fictional-receiver safety badge, uses no hardware commands, firmware downloads or PIN collection, and remains separate from the native app. Browser verification does not prove physical receiver acceptance.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -28,7 +28,7 @@
   },
   "hardwareAccess": false,
   "nativeAppModified": true,
-  "nativeAppUpdatePending": false,
+  "nativeAppUpdatePending": true,
   "nativeAppInstalledVersion": "32.0.0",
   "nativeAppInstalledBuild": 193,
   "nativeAppInstallationPreservedData": null,
@@ -60,7 +60,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "88f0806181d261c77b83d830bca8ec069bf750e7d8cecce0f72740ccc54ac87b"
+      "sha256": "41dade58ef7032393120105837a81c9b9dd6796627e50ab0b59e52c4a3cec133"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -84,7 +84,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "547b6353a0cd0a4fd7ba6f7d2c91faf1036bf20142e723c804ca55bd7fb1e4e1"
+      "sha256": "648a6cc4c20b954340dca5e97b791a320b9ffbc62cbceba0cfe8b7b39860231d"
     },
     {
       "path": "fixtures.js",
@@ -92,7 +92,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "ce5fd462fe5eeba367d02c365ee64f61ac1b99f5242d6427bcc55f530e870dfc"
+      "sha256": "747820bc095c6b86a1f9f373d2231f7f1719fec5c28c2350dd7f44f7b7663393"
     },
     {
       "path": "live-control.js",
@@ -140,7 +140,7 @@
     },
     {
       "path": "preferences.js",
-      "sha256": "1dde829d0bfe91f5fe03584f68f9f326e9f5288fece11d18e64b685ee45c01ce"
+      "sha256": "f94a2b5c10d42318cea175ad98a70070eac82fda015356183686c7cd1971128d"
     },
     {
       "path": "premium-surfaces.css",

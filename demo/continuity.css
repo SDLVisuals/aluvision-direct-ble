@@ -318,6 +318,13 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .animation-gallery-return .gallery-action-copy{display:grid;gap:3px;min-width:0}
 .animation-gallery-return .gallery-action-copy>b{font-size:13px;font-weight:800;line-height:1.25}
 .animation-gallery-return .gallery-action-copy>small{color:color-mix(in srgb,var(--panel) 82%,transparent);font-size:11px;font-weight:550;line-height:1.3}
+.animation-settings-return{min-height:74px;padding:9px 12px}
+.animation-settings-return>.gallery-action-label{flex:1}
+.animation-settings-return .gallery-action-icon{width:42px;height:42px}
+.animation-settings-return .gallery-action-copy{gap:2px}
+.animation-settings-return .gallery-action-copy>.animation-settings-return-kicker{color:color-mix(in srgb,var(--red) 72%,var(--panel));font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase}
+.animation-settings-return .gallery-action-copy>b{font-size:13px;line-height:1.3;overflow-wrap:anywhere}
+.animation-settings-return .gallery-action-copy>.animation-settings-return-name{color:color-mix(in srgb,var(--panel) 78%,transparent);font-size:11px;overflow-wrap:anywhere}
 .animation-gallery-return>.gallery-action-next{display:grid;place-items:center;width:34px;height:34px;flex:none;border:1px solid color-mix(in srgb,var(--panel) 22%,transparent);border-radius:50%;background:color-mix(in srgb,var(--panel) 12%,transparent);color:var(--panel)}
 .animation-gallery-return .gallery-action-next>.icon{width:18px;height:18px}
 .animation-gallery-return:focus-visible{outline:2px solid var(--red);outline-offset:3px}
