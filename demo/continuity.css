@@ -363,12 +363,6 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .animation-context .power-card .switch[aria-checked=true] i:after{transform:translateX(12px)}
 .animation-context>.ledline-setup{grid-column:1/-1}
 @media(max-width:360px){.animation-context{grid-template-columns:minmax(0,1fr)}.animation-context>.selection{grid-column:1}.animation-context>.power-card{grid-column:1;justify-self:end}}
-.ledline-setup-compact .ledline-setup-toggle{min-height:44px;padding:8px 11px;gap:8px}
-.ledline-setup-compact .ledline-setup-toggle>span{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
-.ledline-setup-compact .ledline-setup-toggle b{font-size:12px}
-.ledline-setup-compact .ledline-setup-toggle small{font-size:12px}
-.ledline-setup-compact .ledline-setup-toggle>.icon{width:17px;height:17px}
-.ledline-setup-compact .ledline-setup-toggle>.line-order-icon{width:32px;height:32px;padding:4px;border-radius:9px}
 .animation-simple-page .active-animation-workspace{gap:10px}
 .animation-simple-page .current-effect{padding:6px 13px;gap:8px;border-radius:18px}
 .animation-simple-page .current-effect>div>small{font-size:10px;line-height:1.25}
