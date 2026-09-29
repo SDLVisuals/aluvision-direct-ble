@@ -19,7 +19,7 @@
   let documentId=null;
   try{if(native&&typeof root.crypto?.randomUUID==='function')documentId=root.crypto.randomUUID().replace(/-/g,'').toUpperCase();}catch(_){}
   const pending=new Map();let serial=0;
-  const actions=new Set(['capabilities','securityPreference','securityStatus','setPinProtection','discover','discoverMesh','select','secure','reconcileSecurity','finalize','verifyFinalReceipt','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones','configureOutputs','previewPixels','eraseAppData','applyLive','applyLiveBatch','otaPlan','otaStart','otaStatus','otaResume','otaCancel','otaMainRecoveryPlan','otaMainRecoveryStart','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain']);
+  const actions=new Set(['capabilities','securityPreference','securityStatus','setPinProtection','discover','discoverMesh','select','secure','reconcileSecurity','finalize','verifyFinalReceipt','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones','configureOutputs','previewPixels','eraseAppData','applyLive','applyLiveBatch','otaPlan','otaStart','otaStatus','otaResume','otaCancel','otaMainRecoveryPlan','otaMainRecoveryStart','otaImport','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain']);
   actions.add('outputConfigurationStatus');
   ['exportBackup','chooseBackup','importInstallationView','recoverInstallation'].forEach(action=>actions.add(action));
   ['receiverContextStatus','syncInstallationContext'].forEach(action=>actions.add(action));
@@ -52,7 +52,7 @@
       // leave room for native key storage and delivering that bounded result.
       // A routed OTA plan also checks journal/security/topology. Its bounded
       // native checks may take up to 100s; let the read-only result arrive.
-      const timeout=['exportBackup','chooseBackup','recoverInstallation'].includes(action)?300000:action==='syncInstallationContext'?180000:['otaPlan','otaMainRecoveryPlan'].includes(action)?120000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
+      const timeout=['exportBackup','chooseBackup','otaImport','recoverInstallation'].includes(action)?300000:action==='syncInstallationContext'?180000:['otaPlan','otaMainRecoveryPlan'].includes(action)?120000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
         ['secure','reconcileSecurity'].includes(action)&&payload.configuration?.role==='node'?120000:
         ['select','secure','reconcileSecurity','finalize','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain'].includes(action)?45000:12000;
       const timer=root.setTimeout(()=>{cancelNative();receive({id,ok:false,code:'NATIVE_TIMEOUT'});},timeout);
@@ -349,7 +349,9 @@
     }
     return {standId,receiverId,kind,brightness,transitionMs,channels:[...channels],...(full?{scene:JSON.parse(JSON.stringify(scene))}:{})};
   }
-  const services=Object.freeze(native?{
+  const userAgent=root.navigator?.userAgent||'';
+  const supportsOtaImport=/iPhone|iPad|iPod/i.test(userAgent)||(/Macintosh/i.test(userAgent)&&Number(root.navigator?.maxTouchPoints)>1);
+  const serviceSet=native?{
     connectionMode:'manual-wifi',
     async setAppearance(request){
       if(root.__lightningV32Appearance!==true)throw fail('APPEARANCE_UNAVAILABLE');
@@ -504,6 +506,7 @@
     async otaPlan({standId,receiverId}){return call('otaPlan',{standId,receiverId});},
     async otaMainRecoveryPlan({standId,receiverId}){return call('otaMainRecoveryPlan',{standId,receiverId});},
     async otaMainRecoveryStart({standId,receiverId,artifactId}){return call('otaMainRecoveryStart',{standId,receiverId,artifactId});},
+    async otaImport({standId,receiverId}){return call('otaImport',{standId,receiverId});},
     async otaStart({standId,receiverId,artifactId}){return call('otaStart',{standId,receiverId,artifactId});},
     async otaStatus({standId,receiverId,jobId}){return call('otaStatus',{standId,receiverId,jobId});},
     async otaResume({standId,receiverId,jobId}){return call('otaResume',{standId,receiverId,jobId});},
@@ -570,6 +573,8 @@
         deviceFingerprint:null,canConfigure:false,canVerifyIdentity:response.canVerifyIdentity===true,reachabilityOnly:true,
         unavailableReason:'Receiver gevonden. Beveiligd toevoegen is in deze V30-bouw nog niet beschikbaar.'}]};
     }
-  }:{});
+  }:{};
+  if(!supportsOtaImport)delete serviceSet.otaImport;
+  const services=Object.freeze(serviceSet);
   return Object.freeze({native,emptyModel,services,capabilities:()=>call('capabilities')});
 });

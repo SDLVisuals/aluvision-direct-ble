@@ -556,8 +556,10 @@
       if(draft.stage==='zones'&&container.querySelector('[data-onboarding-action="next"]'))container.querySelector('[data-onboarding-action="next"]').disabled=!canContinueZones();
       if(draft.stage==='pixels'){const input=container.querySelector('#onboarding-pixels');input.inputMode='numeric';container.querySelector('[data-onboarding-action="next"]').disabled=!pixelSetup.validateInput(container,input.value)||!pixelSetup.configuredPixels(Number(input.value));}
       if(draftSaving||pendingChoices)container.querySelectorAll('button,input').forEach(control=>{
+        if(control.dataset.onboardingAction==='zone-picker-close')return;
         if(draftSaving||!['save-retry','exit'].includes(control.dataset.onboardingAction))control.disabled=true;
       });
+      if(draftSaving||pendingChoices)container.querySelector('[data-onboarding-action="zone-picker-open"]')?.setAttribute('aria-disabled','true');
       if(managementBusy)container.querySelectorAll('button,input,summary').forEach(control=>{if(control.tagName==='SUMMARY')control.setAttribute('aria-disabled','true');else control.disabled=true;});
       if(disclosures)container.querySelectorAll('details').forEach(element=>{if(disclosures.has(disclosureKey(element)))element.open=disclosures.get(disclosureKey(element));});
       updateGuidance();
@@ -882,13 +884,14 @@
     async function click(event){
       const target=event.target.closest('[data-onboarding-action]');if(!target||target.disabled)return;
       const action=target.dataset.onboardingAction;
-      if(draftSaving||managementBusy)return;
+      if((draftSaving||managementBusy)&&action!=='zone-picker-close')return;
       if(action==='receiver-filter'){
         if(draft.stage!=='receiver'||busy||identifyPending.size||identifying.size||!['all','RGBW','SPI'].includes(target.dataset.filter))return;
         receiverFilter=target.dataset.filter;paintPage(false);
         container?.querySelector(`[data-onboarding-action="receiver-filter"][data-filter="${receiverFilter}"]`)?.focus({preventScroll:true});return;
       }
       if(action==='zone-picker-open'){
+        if(pendingChoices||draftSaving){event.preventDefault();return;}
         event.preventDefault();const picker=target.closest('[data-receiver-destination]');if(!picker)return;
         const dialog=picker.querySelector('[data-onboarding-zone-dialog]'),wasOpen=picker.open&&dialog?.open;
         picker.open=!wasOpen;if(wasOpen&&dialog?.open){dialog.close();receiverZoneSelection=undefined;}else if(receiverZoneSelection===undefined)receiverZoneSelection=draft.activeZoneId;
