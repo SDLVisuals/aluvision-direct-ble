@@ -168,3 +168,112 @@
   .animation-library-inline .family-variants-copy>small{font-size:11px}
   .animation-library-inline .family-variants-action>small{font-size:10px}
 }
+
+/* The three everyday control states share a lighter page hierarchy: one
+   task heading, one line scope, and one glass surface for the actual control. */
+@media(max-width:540px){
+  .editor-controls-zone .control-workspace{
+    gap:11px;
+    padding:11px;
+    border:1px solid color-mix(in srgb,var(--line) 36%,var(--glass-edge));
+    border-radius:18px;
+    background-color:color-mix(in srgb,var(--glass) 72%,transparent);
+    background-image:linear-gradient(145deg,color-mix(in srgb,var(--glass) 78%,white 22%),color-mix(in srgb,var(--glass) 92%,transparent));
+    box-shadow:inset 0 1px rgba(255,255,255,.66),0 5px 16px rgba(25,30,25,.025);
+    -webkit-backdrop-filter:blur(12px) saturate(126%);
+    backdrop-filter:blur(12px) saturate(126%);
+  }
+  .editor-controls-zone .control-mode-panel{gap:11px}
+  .editor-controls-zone .bediening-workspace{gap:10px;padding:0}
+  .editor-controls-zone .bediening-workspace-heading{
+    min-height:38px;
+    padding:0 2px 7px;
+    border-bottom:1px solid color-mix(in srgb,var(--line) 72%,transparent);
+  }
+  .editor-controls-zone .bediening-workspace-heading .menu-icon{width:32px;height:32px;border-radius:10px}
+  .editor-controls-zone .bediening-workspace-heading h2{font-size:15px}
+  .editor-controls-zone .bediening-workspace-heading p{font-size:12px;line-height:1.4}
+  .editor-controls-zone .animation-simple-workspace.has-active-animation .bediening-workspace-heading{display:none}
+  .editor-controls-zone .animation-context{gap:6px;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+  .editor-controls-zone .shared-colour-picker{padding:13px}
+  .editor-controls-zone .shared-colour-picker .section-heading{margin-bottom:8px}
+  .editor-controls-zone .shared-colour-picker .section-heading h2{font-size:16px}
+  .editor-controls-zone .shared-colour-picker .colour-tools{grid-template-columns:minmax(120px,.9fr) minmax(0,1.1fr);gap:10px}
+  .editor-controls-zone .shared-colour-picker .wheel-wrap{width:min(100%,clamp(124px,38vw,164px));max-width:164px;margin:4px auto 6px}
+  .editor-controls-zone .shared-colour-picker .colour-values{gap:7px}
+  .editor-controls-zone .shared-colour-picker .colour-swatch{height:25px;margin:2px 0 4px}
+  .editor-controls-zone .shared-colour-picker .setting-hint{font-size:11px;line-height:1.4}
+  #main .editor-controls-zone .current-effect{display:grid;gap:8px;align-items:stretch;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+  .editor-controls-zone .current-effect>.current-effect-heading{display:grid;gap:3px;padding:1px 3px 0}
+  .editor-controls-zone .current-effect .active-animation-kicker{color:var(--red);font-size:10px;line-height:1.25;font-weight:850;letter-spacing:.09em;text-transform:uppercase}
+  .editor-controls-zone .current-effect b{margin:0;font-size:20px;line-height:1.25;letter-spacing:-.35px}
+  .editor-controls-zone .current-effect>.current-effect-gallery-slot{display:grid;flex:auto;min-width:0}
+  .editor-controls-zone .current-effect-gallery-slot>.current-effect-gallery{min-height:58px;padding:8px 10px;border-radius:15px;box-shadow:inset 0 1px #ffffffa8,0 3px 10px #20252008}
+  .editor-controls-zone .current-effect-gallery .gallery-action-icon{width:38px;height:38px;border-radius:12px}
+  .editor-controls-zone .current-effect-gallery .gallery-action-icon>.icon{width:21px;height:21px}
+  .editor-controls-zone .current-effect-gallery .gallery-action-copy>b{font-size:13px}
+  .editor-controls-zone .current-effect-gallery .gallery-action-copy>small{font-size:10px;line-height:1.3}
+  .editor-controls-zone .animation-daily-controls.card{padding:13px;border-radius:17px}
+  .editor-controls-zone .active-animation-workspace{gap:11px}
+
+  /* A little breathing room after the sticky preview stops its edge shadow
+     from visually touching the next heading during mobile scroll. */
+  .editor-grid>.control-preview-dock[data-scrolled=true]{margin-bottom:11px;padding-bottom:7px}
+  .editor-grid>.control-preview-dock+.editor-controls{padding-top:11px}
+  .animation-family-screen>.control-preview-dock[data-scrolled=true]{margin-bottom:11px}
+  .animation-family-screen>.animation-family-controls{padding-top:11px}
+
+  .animation-library-inline{gap:9px}
+  .animation-library-inline .animation-library-heading{margin:0;padding:2px 2px 1px}
+  .animation-library-inline .animation-library-title-copy{gap:4px}
+  .animation-library-heading h2{font-size:20px;line-height:1.2}
+  .animation-library-guidance{font-size:12px;line-height:1.4}
+  .animation-library-inline .animation-category-trigger{min-height:60px;padding:8px 10px;border-radius:16px}
+  .animation-library-inline .animation-category-art{width:36px;height:36px;border-radius:11px}
+  .animation-library-inline .animation-category-art>.icon{width:22px;height:22px}
+  .animation-library-inline .animation-category-copy{gap:2px}
+  .animation-library-inline .animation-category-copy b{font-size:14px}
+  .animation-library-inline .animation-category-copy small{font-size:11px;line-height:1.3}
+  .animation-library-inline .animation-category-count{padding:4px 6px;font-size:11px}
+  /* Keep Safari's no-auto-zoom threshold even on the narrowest phone. */
+  .animation-library-inline .animation-search input{min-height:46px;border-radius:14px;font-size:16px}
+  .animation-library-inline .animation-search>.icon{top:13px}
+  .animation-library-inline .animation-family-section{gap:9px}
+  .animation-library-inline .animation-family-heading{gap:4px 8px}
+  .animation-library-inline .animation-family-heading h2{font-size:16px}
+  .animation-library-inline .animation-family-heading p{font-size:12px;line-height:1.4}
+  .animation-library-inline .animation-family-card{border-radius:18px}
+  .animation-library-inline .animation-family-trigger{padding:9px;border-radius:18px}
+  .animation-library-inline .animation-family-preview{grid-template-rows:12px 68px;gap:4px;padding:6px;border-radius:12px}
+  .animation-library-inline .animation-family-preview-label{font-size:9px;line-height:12px}
+  .animation-library-inline .animation-family-preview canvas{height:68px;border-radius:9px}
+  .animation-library-inline .family-copy{gap:4px;padding:8px 2px 1px}
+  .animation-library-inline .animation-family-card .family-title{font-size:16px;line-height:1.25}
+  .animation-library-inline .animation-family-card .family-summary{font-size:12px;line-height:1.35;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+  .animation-library-inline .animation-family-card .family-variants{gap:5px;min-height:48px;margin-top:4px;padding:6px 7px;border-radius:12px}
+  .animation-library-inline .family-variants-copy{gap:2px}
+  .animation-library-inline .family-variants-copy>b{font-size:13px;line-height:1.2}
+  .animation-library-inline .family-variants-copy>small{font-size:10px;line-height:1.3}
+  .animation-library-inline .family-variants-action{gap:2px}
+  .animation-library-inline .family-variants-action>small{font-size:10px}
+  .animation-library-inline .family-variants-action>.icon{width:16px;height:16px}
+}
+@media(min-width:380px) and (max-width:540px){
+  .animation-library-inline .animation-family-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:9px}
+  .animation-library-inline .animation-family-card{min-width:0}
+  .animation-library-inline .animation-family-trigger{grid-template-columns:minmax(0,1fr);align-content:start;min-height:0;gap:0}
+  .animation-library-inline .animation-family-preview canvas{height:62px}
+  .animation-library-inline .animation-family-preview{grid-template-rows:12px 62px}
+  .animation-library-inline .family-copy{min-height:128px;align-content:start}
+  .animation-library-inline .family-variants{margin-top:auto!important}
+  .animation-library-inline .tunnel-family-card{grid-column:1/-1}
+  .animation-library-inline .tunnel-family-card .animation-family-trigger{padding:12px}
+  .animation-library-inline .tunnel-family-card .family-copy{min-height:0}
+}
+@media(max-width:379px){
+  .animation-library-inline .animation-family-preview canvas{height:82px}
+  .animation-library-inline .animation-family-preview{grid-template-rows:12px 82px}
+}
+@media(prefers-reduced-motion:reduce){
+  .editor-controls-zone .current-effect-gallery-slot>.current-effect-gallery{transition:none}
+}

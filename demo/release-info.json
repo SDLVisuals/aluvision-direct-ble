@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-stand-controls-fit-20260929",
+  "revision": "v32-three-control-pages-final-20260929",
   "interfaceVersion": 32,
-  "interfaceBaseline": "V32 keeps the established Aluvision interface while making animation browsing easier to understand and gentler to use. Customers first see clearly labelled effect groups; opening one enters a focused page with only that group’s variations, and choosing a variation is the action that starts it. A single back button returns to the originating list and moves beside the sticky LED overview only when its inline position is obscured. The active-animation action also moves one DOM button between the page and preview dock, so no duplicate or half-hidden copy remains. The spatial tunnel/wall overview appears on opening a spatial group and stays visible in its active settings. Page transitions use a light spring, smaller controls respond smoothly, and reduced-motion preferences are respected. Whole-stand colour controls reuse the same shared colour picker, fit common phone heights without vertical scrolling, and put exact RGBW channels in an optional compact disclosure. Browsing preserves selected lights and active effects. Browser verification does not prove physical receiver acceptance.",
+  "interfaceBaseline": "V32 keeps the established Aluvision interface while making animation browsing easier to understand and gentler to use. Customers first see clearly labelled effect groups; opening one enters a focused page with only that group’s variations, and choosing a variation is the action that starts it. A single back button returns to the originating list and moves beside the sticky LED overview only when its inline position is obscured. The active-animation action also moves one DOM button between the page and preview dock, so no duplicate or half-hidden copy remains. The spatial tunnel/wall overview appears on opening a spatial group and stays visible in its active settings. Page transitions use a light spring, smaller controls respond smoothly, and reduced-motion preferences are respected. Fixed-colour, animation-family and active-animation workspaces now share a calmer mobile hierarchy: group cards are shorter and scannable, group instructions appear once, and the active editor leads with the actual running animation. The same shared colour picker is reused for fixed colour and animation palettes; fine RGBW values remain exact. Search text stays at the iPhone no-zoom size. Browsing preserves selected lights and active effects. Browser verification does not prove physical receiver acceptance.",
   "animationGroupNavigation": {
     "detailPage": true,
     "content": "selected effect group only",
@@ -48,7 +48,7 @@
   "nativeAppModified": true,
   "nativeAppUpdatePending": false,
   "nativeAppBuiltVersion": "32.0.0",
-  "nativeAppBuiltBuild": 202,
+  "nativeAppBuiltBuild": 204,
   "nativeAppInstalled": false,
   "nativeAppSimulatorInstalled": true,
   "nativeAppInstallationPreservedData": null,
@@ -72,7 +72,7 @@
     },
     {
       "path": "animation-mobile.css",
-      "sha256": "6e4deb4b650ec5428acbda39ed3a418a9d11c9f6d00672cfe6a7fe23e7f9ae9b"
+      "sha256": "850f2be87c72e4161f51c96630298797155d657da5444ba464976bc204ca2915"
     },
     {
       "path": "animations.css",
@@ -80,7 +80,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "7b5f20638b7f178204f522c7353d4303900e1ca31736608da6cc2d977fc2d264"
+      "sha256": "44cc872abe299531aeea8db96867bda9353f278198a44bbd571a7b5a718dbdd8"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -112,7 +112,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "a3d536b5e30536e2167bf59670bb3bce24af5dc509160be300ca605384b5e54f"
+      "sha256": "8db10483ca46c650e8e83bf202219acdfaf95c4bb01b568fbb7304baf9002357"
     },
     {
       "path": "live-control.js",
