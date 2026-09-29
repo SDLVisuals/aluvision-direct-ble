@@ -209,6 +209,10 @@ body[data-theme=dark] .animation-family-heading>small{background:var(--soft);col
 .family-variants-action{display:flex;align-items:center;gap:5px;flex:none;color:var(--red)}
 .family-variants-action>small{font-size:11px;line-height:1.25;font-weight:750;white-space:nowrap}
 .animation-family-detail{display:grid;gap:15px;min-width:0;animation:family-detail-enter .2s ease-out}
+.animation-family-detail>.family-detail-back{min-height:64px;padding:9px 13px;border-radius:18px}
+.animation-family-detail>.family-detail-back .gallery-action-icon{width:42px;height:42px}
+.animation-family-detail>.family-detail-back .gallery-action-icon>.icon{width:24px;height:24px}
+.animation-family-detail>.family-detail-back .gallery-action-copy>b{font-size:14px}
 .family-detail-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:2px 1px}
 .family-detail-heading>div{display:grid;gap:5px;min-width:0}
 .family-detail-heading>div>small{color:var(--red);font-size:11px;line-height:1.35;font-weight:800;letter-spacing:.045em;text-transform:uppercase}

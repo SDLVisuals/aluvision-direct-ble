@@ -90,11 +90,9 @@
     // the top do not repeatedly expand and collapse the sticky preview.
     if(!compact&&window.scrollY>64)dock.dataset.scrolled='true';
     else if(compact&&window.scrollY<24)delete dock.dataset.scrolled;
-    const familyShortcut=dock.querySelector('[data-family-back-shortcut]');
-    if(familyShortcut)familyShortcut.hidden=false;
     const settingsShortcut=dock.querySelector('[data-editor-return-shortcut]');
-    const shortcut=familyShortcut||settingsShortcut||dock.querySelector('[data-editor-shortcut]');
-    const inline=familyShortcut?null:settingsShortcut?main.querySelector('[data-editor-return-inline]'):main.querySelector('.current-effect-gallery');
+    const shortcut=settingsShortcut||dock.querySelector('[data-editor-shortcut]');
+    const inline=settingsShortcut?main.querySelector('[data-editor-return-inline]'):main.querySelector('.current-effect-gallery');
     if(shortcut&&inline){
       // Keep the route available unless the complete inline button is inside
       // the unobstructed area between the sticky preview and bottom navigation.
@@ -114,7 +112,7 @@
       const setup=main.querySelector('.ledline-setup'),setupBox=setup?.getBoundingClientRect();
       const floating=shortcut.querySelector('button')?.getBoundingClientRect();
       const overlapsSetup=!!setupBox&&!!floating&&setupBox.height>0&&floating.height>0&&floating.left<setupBox.right&&floating.right>setupBox.left&&floating.top<setupBox.bottom&&floating.bottom>setupBox.top;
-      shortcut.hidden=!familyShortcut&&overlapsSetup;
+      shortcut.hidden=overlapsSetup;
     }
   }
   window.addEventListener('scroll',updateControlPreviewDensity,{passive:true});
@@ -150,12 +148,11 @@
     align();requestAnimationFrame(align);
   }
   function revealAnimationFamily(){
-    const target=main.querySelector('.family-detail-heading');if(!target)return;
+    const target=main.querySelector('.family-detail-back');if(!target)return;
     const align=()=>{
       if(!target.isConnected)return;
       updateControlPreviewDensity();
-      const returnButton=main.querySelector('[data-family-back-shortcut]');
-      const bottom=Math.max(0,returnButton?.getBoundingClientRect().bottom||main.querySelector('.control-dock-surface')?.getBoundingClientRect().bottom||0);
+      const bottom=Math.max(0,main.querySelector('.control-dock-surface')?.getBoundingClientRect().bottom||0);
       window.scrollTo({top:Math.max(0,window.scrollY+target.getBoundingClientRect().top-bottom-8),behavior:'instant'});
       updateControlPreviewDensity();
     };
@@ -467,11 +464,7 @@
   function animationWayfinding(screen){
     if(!(screen==='animations'||screen==='controls'&&controlMode==='animations'))return '';
     const browsing=screen==='controls'&&showControlAnimationGallery;
-    if(browsing&&route.family){
-      const label=animationFamilyBackLabel();
-      return `<nav class="animation-wayfinding" data-family-back-shortcut hidden aria-label="${esc(t('animationNavigation'))}"><button class="animation-gallery-return family-back-action" data-action="family-back" aria-label="${esc(label)}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('back')}</span><span class="gallery-action-copy"><b>${esc(label)}</b></span></span></button></nav>`;
-    }
-    if(browsing&&activeEffect())return `<nav class="animation-wayfinding" data-editor-return-shortcut hidden aria-label="${esc(t('animationNavigation'))}">${animationSettingsReturnMarkup('sticky')}</nav>`;
+    if(browsing&&activeEffect()&&!route.family)return `<nav class="animation-wayfinding" data-editor-return-shortcut hidden aria-label="${esc(t('animationNavigation'))}">${animationSettingsReturnMarkup('sticky')}</nav>`;
     if(!activeEffect()||browsing)return '';
     const action=screen==='controls'?'animation-gallery':'animations-gallery';
     return `<nav class="animation-wayfinding" data-editor-shortcut hidden aria-label="${esc(t('animationNavigation'))}"><button type="button" class="animation-gallery-return animation-chooser-action" data-action="${action}" aria-label="${esc(t('animationChooseAnother'))}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('animation')}</span><span class="gallery-action-copy"><b>${esc(t('animationChooseAnother'))}</b><small>${esc(t('animationChooseAnotherHint'))}</small></span></span><span class="gallery-action-next" aria-hidden="true">${icon('chevron')}</span></button></nav>`;
@@ -882,7 +875,8 @@
   function animationFamilyDetail(group,tab) {
     const countLabel=t(group.count===1?'animationCountOne':'animationCountMany',{count:group.count});
     const tunnel=group.preview.category==='tunnel',groupHint=tunnel?t('animationTunnelGroupAccessible',{name:group.title,count:receivers().length}):t('animationGroupPreviewHint');
-    return `<section class="animation-family-detail" aria-labelledby="animation-family-title"><header class="family-detail-heading"><div><small class="family-detail-step">${esc(t('animationFamilyStep'))}</small><h2 id="animation-family-title" tabindex="-1">${esc(group.title)}</h2><p>${esc(group.summary)}</p></div><span class="family-detail-count">${esc(countLabel)}</span></header><figure class="family-detail-preview"><figcaption><b>${esc(t('animationFamilyPreview'))}</b><small>${esc(groupHint)}</small></figcaption>${effectPreview(group.preview,tunnel?{tunnelLines:'all'}:{})}</figure><section class="family-variants-panel" aria-labelledby="animation-family-choices"><header class="family-variants-heading"><div><b id="animation-family-choices">${esc(t('animationFamilyChoose'))}</b><small>${esc(t('animationChooseVariant'))}</small></div><small class="family-variants-count">${esc(countLabel)}</small></header><div class="family-variant-grid">${effectCards(group.effects,'family-variant-card',group.count)}</div></section></section>`;
+    const backLabel=animationFamilyBackLabel(tab);
+    return `<section class="animation-family-detail" aria-labelledby="animation-family-title"><button type="button" class="animation-gallery-return family-back-action family-detail-back" data-action="family-back" aria-label="${esc(backLabel)}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('back')}</span><span class="gallery-action-copy"><b>${esc(backLabel)}</b></span></span></button><header class="family-detail-heading"><div><small class="family-detail-step">${esc(t('animationFamilyStep'))}</small><h2 id="animation-family-title" tabindex="-1">${esc(group.title)}</h2><p>${esc(group.summary)}</p></div><span class="family-detail-count">${esc(countLabel)}</span></header><figure class="family-detail-preview"><figcaption><b>${esc(t('animationFamilyPreview'))}</b><small>${esc(groupHint)}</small></figcaption>${effectPreview(group.preview,tunnel?{tunnelLines:'all'}:{})}</figure><section class="family-variants-panel" aria-labelledby="animation-family-choices"><header class="family-variants-heading"><div><b id="animation-family-choices">${esc(t('animationFamilyChoose'))}</b><small>${esc(t('animationChooseVariant'))}</small></div><small class="family-variants-count">${esc(countLabel)}</small></header><div class="family-variant-grid">${effectCards(group.effects,'family-variant-card',group.count)}</div></section></section>`;
   }
   function animationCategorySection(section) {
     const title=section.key==='tunnel'?t('animationAcross'):section.title,summary=section.key==='tunnel'?t('animationAcrossSummary'):section.summary;

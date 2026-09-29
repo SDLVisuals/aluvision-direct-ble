@@ -305,10 +305,10 @@
   };
   Object.keys(mobileGalleryTexts).forEach(code=>Object.assign(texts[code],mobileGalleryTexts[code]));
   const animationChooserTexts = {
-    nl:{animationChooseAnother:'Andere animatie kiezen',animationChooseAnotherHint:'Bekijk alle animaties en varianten.'},
-    en:{animationChooseAnother:'Choose another animation',animationChooseAnotherHint:'Browse animations and variations.'},
-    fr:{animationChooseAnother:'Choisir une autre animation',animationChooseAnotherHint:'Parcourir les animations et variantes.'},
-    de:{animationChooseAnother:'Andere Animation wählen',animationChooseAnotherHint:'Animationen und Varianten ansehen.'}
+    nl:{animationChooseAnother:'Andere animatie kiezen',animationChooseAnotherHint:'Bekijk alle animaties en varianten.',animationFamilyBackAll:'Terug naar alle animaties'},
+    en:{animationChooseAnother:'Choose another animation',animationChooseAnotherHint:'Browse animations and variations.',animationFamilyBackAll:'Back to all animations'},
+    fr:{animationChooseAnother:'Choisir une autre animation',animationChooseAnotherHint:'Parcourir les animations et variantes.',animationFamilyBackAll:'Retour à toutes les animations'},
+    de:{animationChooseAnother:'Andere Animation wählen',animationChooseAnotherHint:'Animationen und Varianten ansehen.',animationFamilyBackAll:'Zurück zu allen Animationen'}
   };
   Object.keys(animationChooserTexts).forEach(code=>Object.assign(texts[code],animationChooserTexts[code]));
   // State labels for the LED-line chooser's disclosure control.
