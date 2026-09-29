@@ -1,6 +1,6 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-ui-consistency-ios192-20260929",
+  "revision": "v32-ui-consistency-ios193-20260929",
   "interfaceVersion": 32,
   "interfaceBaseline": "V32 preserves the existing interface and recognisable 3D tunnel/wall visuals. Spatial animations are grouped as Tunnel & wand. The gallery shows a four-line illustrative tunnel; opening a spatial effect group previews its sample over the actual connected lines and chosen geometry. The active tunnel/wall preview remains spatial while editing animation colours. Identical ledline arrangement controls use the same size and styling in the Kleur and Effecten tabs. The inline and sticky animation-gallery actions share one consistent visual component. When an animation is active, its inline and sticky return-to-settings actions share the same dark component; an open effect group retains a clear back action to the group list. Applying a tunnel or wall animation automatically targets every line in that zone, without asking the customer to manually create an all-lines selection first. The effect settings still allow selecting an individual line for its own colour. This changes animation targeting only, not receiver wiring or saved physical arrangement. The phone-first animation gallery uses a rounded category sheet with explained choices and a clear return to active settings. Returning to Effecten opens at the top rather than restoring an old deep gallery scroll position. Arrangement icons depict the chosen tunnel, vertical wall or continuous line. Arrangement and order choices apply directly, without a separate save/cancel step. New SPI zones default to Doorlopend; the main preview follows the selected geometry. The More screen no longer repeats a generic connection status, temporary-data disclaimer or technical-readiness checklist; the four primary navigation tabs and local app-management actions remain. The isolated demo keeps one concise fictional-receiver safety badge, uses no hardware commands, firmware downloads or PIN collection, and remains separate from the native app. Browser verification does not prove physical receiver acceptance.",
   "fakeReceivers": {
@@ -30,7 +30,7 @@
   "nativeAppModified": true,
   "nativeAppUpdatePending": false,
   "nativeAppInstalledVersion": "32.0.0",
-  "nativeAppInstalledBuild": 192,
+  "nativeAppInstalledBuild": 193,
   "nativeAppInstallationPreservedData": null,
   "interfaceAccessibility": {
     "selectedLinesSubtitleContrastMinimum": 4.5,
@@ -92,7 +92,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "58801ddef634459a8e0bcebf4f80b50cf669050dd7823993ecffb7eadd27d055"
+      "sha256": "ce5fd462fe5eeba367d02c365ee64f61ac1b99f5242d6427bcc55f530e870dfc"
     },
     {
       "path": "live-control.js",
@@ -140,7 +140,7 @@
     },
     {
       "path": "preferences.js",
-      "sha256": "904968d15017c2ce736e13ae1d1d26ac0ad0fe7e006e43cd33a33d82fc17dc12"
+      "sha256": "1dde829d0bfe91f5fe03584f68f9f326e9f5288fece11d18e64b685ee45c01ce"
     },
     {
       "path": "premium-surfaces.css",
