@@ -82,6 +82,19 @@
   let dialogReturnFocus = null,colourManagerReturn=null,colourManagerVisible=false;
   let settingsOpen = false, toastTimer, contextObserver, dialogHeaderObserver;
   const main = document.getElementById('main');
+  let lastRenderedMotionContext=null;
+  function motionContextKey(){
+    const parts=[route.screen,route.zoneId||''];
+    if(route.screen==='controls'){
+      parts.push(controlMode);
+      if(controlMode==='animations')parts.push(showControlAnimationGallery?'gallery':`editor:${activeEffect()?.id||''}`,libraryTab());
+    }
+    if(route.screen==='animation-family')parts.push(route.family||'');
+    if(route.screen==='effects')parts.push(libraryTab(),route.family||'');
+    if(route.screen.startsWith('scene'))parts.push(route.sceneId||'');
+    if(route.screen==='receiver-add')parts.push(route.setupFrom||'',route.setupReturnZoneId||'');
+    return parts.join('|');
+  }
   function updateControlPreviewDensity(){
     const dock=main.querySelector('.control-preview-dock');
     if(!dock)return;
@@ -92,8 +105,32 @@
     if(!compact&&window.scrollY>128)dock.dataset.scrolled='true';
     else if(compact&&window.scrollY<8)delete dock.dataset.scrolled;
     const settingsShortcut=dock.querySelector('[data-editor-return-shortcut]');
+    const settingsSlot=main.querySelector('[data-editor-return-slot]');
+    const settingsAction=settingsSlot?.querySelector('[data-editor-return-inline]')||settingsShortcut?.querySelector('[data-editor-return-inline]');
+    if(settingsShortcut&&settingsSlot&&settingsAction){
+      // There is one live button. It moves into the preview dock only when its
+      // inline position is obscured; a measured spacer keeps the page still.
+      const slot=settingsSlot.getBoundingClientRect();
+      const top=dock.querySelector('.control-dock-surface').getBoundingClientRect().bottom;
+      const bottom=main.querySelector('#navigation')?.getBoundingClientRect().top??innerHeight;
+      const inlineFullyReachable=slot.height>0&&slot.top>=top&&slot.bottom<=bottom;
+      if(inlineFullyReachable){
+        if(settingsAction.parentElement!==settingsSlot)settingsSlot.append(settingsAction);
+        settingsSlot.style.minHeight='';settingsShortcut.hidden=true;
+      }else{
+        settingsSlot.style.minHeight=`${Math.ceil(settingsAction.getBoundingClientRect().height)}px`;
+        settingsShortcut.hidden=false;
+        if(settingsAction.parentElement!==settingsShortcut)settingsShortcut.append(settingsAction);
+        const setup=main.querySelector('.ledline-setup'),setupBox=setup?.getBoundingClientRect(),floating=settingsAction.getBoundingClientRect();
+        const overlapsSetup=!!setupBox&&setupBox.height>0&&floating.height>0&&floating.left<setupBox.right&&floating.right>setupBox.left&&floating.top<setupBox.bottom&&floating.bottom>setupBox.top;
+        if(overlapsSetup){
+          settingsSlot.append(settingsAction);settingsSlot.style.minHeight='';settingsShortcut.hidden=true;
+        }
+      }
+      return;
+    }
     const shortcut=settingsShortcut||dock.querySelector('[data-editor-shortcut]');
-    const inline=settingsShortcut?main.querySelector('[data-editor-return-inline]'):main.querySelector('.current-effect-gallery');
+    const inline=main.querySelector('.current-effect-gallery');
     if(shortcut&&inline){
       // Keep the route available unless the complete inline button is inside
       // the unobstructed area between the sticky preview and bottom navigation.
@@ -470,7 +507,7 @@
   function animationWayfinding(screen){
     if(!(screen==='animations'||screen==='controls'&&controlMode==='animations'))return '';
     const browsing=screen==='controls'&&showControlAnimationGallery;
-    if(browsing&&activeEffect()&&!route.family)return `<nav class="animation-wayfinding" data-editor-return-shortcut hidden aria-label="${esc(t('animationNavigation'))}">${animationSettingsReturnMarkup('sticky')}</nav>`;
+    if(browsing&&activeEffect()&&!route.family)return `<nav class="animation-wayfinding" data-editor-return-shortcut hidden aria-label="${esc(t('animationNavigation'))}"></nav>`;
     if(!activeEffect()||browsing)return '';
     const action=screen==='controls'?'animation-gallery':'animations-gallery';
     return `<nav class="animation-wayfinding" data-editor-shortcut hidden aria-label="${esc(t('animationNavigation'))}"><button type="button" class="animation-gallery-return animation-chooser-action" data-action="${action}" aria-label="${esc(t('animationChooseAnother'))}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('animation')}</span><span class="gallery-action-copy"><b>${esc(t('animationChooseAnother'))}</b><small>${esc(t('animationChooseAnotherHint'))}</small></span></span><span class="gallery-action-next" aria-hidden="true">${icon('chevron')}</span></button></nav>`;
@@ -930,7 +967,7 @@
   }
   function animationLibraryHeading(){
     const current=activeEffect(),canReturn=current&&route.screen==='controls';
-    return `<header class="animation-library-heading"><div class="animation-library-title-copy"><small class="animation-library-kicker"><span aria-hidden="true">${icon('animation')}</span>${esc(t('animationSelector'))}</small><h2>${esc(t('chooseAnimation'))}</h2><p class="animation-library-guidance">${esc(t('animationPickerIntro'))}</p></div></header>${canReturn?animationSettingsReturnMarkup('inline'):''}`;
+    return `<header class="animation-library-heading"><div class="animation-library-title-copy"><small class="animation-library-kicker"><span aria-hidden="true">${icon('animation')}</span>${esc(t('animationSelector'))}</small><h2>${esc(t('chooseAnimation'))}</h2><p class="animation-library-guidance">${esc(t('animationPickerIntro'))}</p></div></header>${canReturn?`<div class="animation-settings-return-slot" data-editor-return-slot>${animationSettingsReturnMarkup('inline')}</div>`:''}`;
   }
   function animationSettingsReturnMarkup(location){
     const current=activeEffect();
@@ -1303,11 +1340,25 @@
     if(route.screen==='animations'&&zone()&&receivers().length&&!activeEffect()){
       route={...route,screen:'effects',family:null,library:initialAnimationLibrary(),effectsReturn:'controls'};top=true;
     }
+    const nextMotionContext=motionContextKey();
+    const animatePage=lastRenderedMotionContext!==null&&nextMotionContext!==lastRenderedMotionContext&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    lastRenderedMotionContext=nextMotionContext;
     const focused=document.activeElement,focusKey=focused?.dataset?.id;
     previews.clear();
     const views = {stand:renderStand,controls:renderControls,colour:renderColour,animations:renderAnimations,effects:renderEffects,'animation-family':renderAnimationFamily,receivers:renderReceivers,settings:renderSettings,'demo-wifi':renderDemoWifi,'pin-login':renderPinLogin,scenes:renderScenes,'scene-draft':renderSceneDraft,'scene-detail':renderSceneDetail,'receiver-add':renderReceiverAdd};
     const zoneScreen=['controls','colour','animations','effects','animation-family','layout'].includes(route.screen);
     main.innerHTML = (zoneScreen&&zone()&&!receivers().length?renderEmptyZone:(views[route.screen] || renderStand))();
+    if(animatePage){
+      const entering=main.firstElementChild;
+      if(entering){
+        entering.classList.add('app-page-enter');
+        const finishEntering=event=>{
+          if(event.target!==entering)return;
+          entering.classList.remove('app-page-enter');entering.removeEventListener('animationend',finishEntering);
+        };
+        entering.addEventListener('animationend',finishEntering);
+      }
+    }
     const previewDock=main.querySelector('.control-preview-dock');
     if(previewDock){const spatial=previewDock.querySelector('.spatial-preview-wrap')!==null;previewDock.dataset.previewSize=spatial?'large':controlPreviewSize;previewDock.dataset.spatialPreview=spatial?'true':'false';}
     main.classList.toggle('gallery-scroll-stable',Boolean(main.querySelector('#animation-results')));
@@ -1898,9 +1949,22 @@
   function syncBackground(){
     const on=Boolean(selectedState().backgroundOn),button=main.querySelector('[data-action="background-toggle"]');
     if(button){button.setAttribute('aria-pressed',on);button.setAttribute('aria-checked',on);button.querySelector('span').textContent=on?'Aan':'Uit';}
-    const details=main.querySelector('[data-background-details]');if(details)details.hidden=!on;
+    const details=main.querySelector('[data-background-details]');if(details)setPanelHidden(details,!on);
     const swatch=main.querySelector('.background-swatch'),channels=backgroundChannels();
     if(swatch)swatch.style.background=C.hex(C.mixWhite(channels.slice(0,3),channels[3]));
+  }
+  function setPanelHidden(panel,hidden){
+    if(!panel||panel.hidden===hidden&&!panel.classList.contains('is-closing'))return;
+    panel.classList.remove('is-closing');
+    if(!hidden){panel.hidden=false;return;}
+    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){panel.hidden=true;return;}
+    panel.classList.add('is-closing');
+    const finish=event=>{
+      if(event.target!==panel)return;
+      panel.removeEventListener('animationend',finish);
+      if(panel.classList.contains('is-closing')){panel.classList.remove('is-closing');panel.hidden=true;}
+    };
+    panel.addEventListener('animationend',finish);
   }
   function changePalette(removeIndex=null){
     const range=activeEffect()?.colorCountRange;if(!range||activeEffect()?.paletteEditable===false)return;
@@ -2662,7 +2726,7 @@
         const value=settingDefault(id);if(value===undefined)return;
         apply({[id]:value});const input=document.querySelector(`[data-setting="${CSS.escape(id)}"]`);if(input){input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}));}else render();return;
       }
-      if(action==='settings-toggle'){settingsOpen=!settingsOpen;button.setAttribute('aria-expanded',settingsOpen);button.querySelector('span').textContent=settingsOpen?'Instellingen verbergen':'Beweging instellen';button.lastElementChild.outerHTML=icon(settingsOpen?'close':'chevron');document.getElementById('animation-settings').hidden=!settingsOpen;return;}
+      if(action==='settings-toggle'){settingsOpen=!settingsOpen;button.setAttribute('aria-expanded',settingsOpen);button.querySelector('span').textContent=settingsOpen?'Instellingen verbergen':'Beweging instellen';button.lastElementChild.outerHTML=icon(settingsOpen?'close':'chevron');setPanelHidden(document.getElementById('animation-settings'),!settingsOpen);return;}
       if(action==='direction'){apply({direction:button.dataset.value});document.querySelectorAll('[data-action="direction"]').forEach(el=>el.setAttribute('aria-pressed',el===button));syncSettingResets();return;}
       if(action==='effect-boolean'){if(!['bounce','mirror'].includes(id)||!activeEffect()?.controls.includes(id))return;const value=!selectedState()[id];apply({[id]:value});button.setAttribute('aria-pressed',value);button.querySelector('b').textContent=value?'Aan':'Uit';syncSettingResets();return;}
       if(action==='set-layout'){

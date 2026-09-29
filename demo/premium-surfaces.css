@@ -591,13 +591,12 @@ dialog .pixel-setup-steps li {
 .control-mode-tabs button{transition:background-color .2s ease,color .2s ease,box-shadow .22s ease,transform .2s ease}
 .control-mode-tabs button[aria-pressed=true]{transform:translateY(-1px)}
 .preview-size-control>summary{transition:background-color .18s ease,border-color .18s ease,color .18s ease}
-.preview-size-control[open] .preview-size-picker{transform-origin:top right;animation:control-disclosure-enter .19s cubic-bezier(.2,.72,.25,1) both}
+.preview-size-control[open] .preview-size-picker{transform-origin:top right;animation:control-disclosure-enter .28s cubic-bezier(.2,.82,.24,1.06) both}
 .settings-panel:not([hidden]),
-.background-details:not([hidden]){animation:control-disclosure-enter .22s cubic-bezier(.2,.72,.25,1) both}
+.background-details:not([hidden]){animation:control-disclosure-enter .28s cubic-bezier(.2,.82,.24,1.06) both}
 .animation-category-choice{transition:transform .2s cubic-bezier(.2,.72,.25,1),border-color .2s ease,background-color .2s ease,box-shadow .2s ease}
-@keyframes control-mode-enter{from{opacity:.72;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-@keyframes control-disclosure-enter{from{opacity:0;transform:translateY(-5px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
-.control-mode-panel{animation:control-mode-enter .2s cubic-bezier(.2,.72,.25,1) both}
+@keyframes control-disclosure-enter{from{opacity:0;transform:translateY(-7px) scale(.988)}78%{opacity:1;transform:translateY(1px) scale(1.002)}to{opacity:1;transform:translateY(0) scale(1)}}
+.control-mode-panel{animation:none}
 
 /* A larger choice enlarges the strip itself, not a mostly-empty canvas. */
 .control-preview-dock[data-spatial-preview=false][data-preview-size=small] .preview-wrap canvas{height:70px!important;min-height:0!important;transition:height .28s cubic-bezier(.22,.61,.36,1)}
@@ -636,7 +635,30 @@ dialog .pixel-setup-steps li {
   .control-preview-dock[data-spatial-preview=false][data-scrolled=true][data-preview-size=large] .preview-wrap canvas{height:100px!important}
 }
 @media(prefers-reduced-motion:reduce){
-  .control-mode-panel,.preview-size-control[open] .preview-size-picker,.settings-panel:not([hidden]),.background-details:not([hidden]){animation:none!important}
+  .app-page-enter,.animation-settings-return-slot .animation-settings-return,.animation-wayfinding[data-editor-return-shortcut]:not([hidden]) .animation-settings-return,.preview-size-control[open] .preview-size-picker,.settings-panel:not([hidden]),.background-details:not([hidden]){animation:none!important}
+  .control-mode-panel{animation:none!important}
   .control-mode-tabs button,.preview-size-control>summary,.animation-category-choice{transition:none!important}
   .control-preview-dock[data-spatial-preview=false] .preview-wrap canvas{transition:none!important}
 }
+
+/* A small, consistent spring makes page changes and touch feedback feel quick
+   without making every data refresh replay a large card animation. */
+:root{--motion-spring:cubic-bezier(.2,.82,.24,1.08);--motion-ease:cubic-bezier(.22,.72,.25,1)}
+main>.app-page-enter{transform-origin:50% 0;will-change:opacity,transform;animation:app-page-enter .34s var(--motion-spring) both}
+@keyframes app-page-enter{from{opacity:0;transform:translate3d(0,9px,0) scale(.996)}76%{opacity:1;transform:translate3d(0,-1px,0) scale(1.001)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
+@keyframes app-action-enter{from{opacity:0;transform:translate3d(0,6px,0) scale(.99)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
+main :is(button,summary):active:not(:disabled){transform:scale(.988);transition-duration:110ms;transition-timing-function:var(--motion-spring)}
+.animation-gallery-return{transition:transform .24s var(--motion-spring),box-shadow .24s var(--motion-ease),border-color .2s var(--motion-ease)}
+.animation-settings-return-slot .animation-settings-return,
+.animation-wayfinding[data-editor-return-shortcut]:not([hidden]) .animation-settings-return{animation:app-action-enter .24s var(--motion-spring) both}
+dialog[open]{animation:app-dialog-enter .28s var(--motion-spring) both}
+dialog[open]::backdrop{animation:app-backdrop-enter .2s ease-out both}
+@keyframes app-dialog-enter{from{opacity:0;transform:translate3d(0,8px,0) scale(.986)}78%{opacity:1;transform:translate3d(0,-1px,0) scale(1.002)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
+@keyframes app-backdrop-enter{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){
+  main>.app-page-enter,dialog[open],dialog[open]::backdrop{animation:none!important;will-change:auto}
+  main :is(button,summary):active:not(:disabled){transform:none;transition:none!important}
+}
+.settings-panel.is-closing,.background-details.is-closing{pointer-events:none;animation:app-disclosure-exit .18s ease-in both}
+@keyframes app-disclosure-exit{from{opacity:1;transform:translate3d(0,0,0) scale(1)}to{opacity:0;transform:translate3d(0,-5px,0) scale(.99)}}
+@media(prefers-reduced-motion:reduce){.settings-panel.is-closing,.background-details.is-closing{animation:none!important}}

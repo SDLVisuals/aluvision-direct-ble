@@ -1,13 +1,13 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-active-animation-card-20260929",
+  "revision": "v32-motion-polish-20260929",
   "interfaceVersion": 32,
-  "interfaceBaseline": "V32 preserves the existing interface and recognisable 3D tunnel/wall visuals. Spatial animations are grouped as Tunnel & wand. The gallery shows a four-line illustrative tunnel; opening a spatial effect group previews its sample over the actual connected lines and chosen geometry. The active tunnel/wall preview remains spatial while editing animation colours. Identical ledline arrangement controls use the same size and styling in the Kleur and Effecten tabs. The inline and sticky animation-gallery actions share one consistent visual component. When an animation is active, a light glass card names it first and clearly opens its settings; it is omitted when no animation is active. An opened effect family is a focused detail page showing only that group’s animations; one “Terug naar alle animatiegroepen” action sits directly below the persistent LED overview and scrolls with the page, never overlaying the variants. Applying a tunnel or wall animation automatically targets every line in that zone, without asking the customer to manually create an all-lines selection first. The effect settings still allow selecting an individual line for its own colour. This changes animation targeting only, not receiver wiring or saved physical arrangement. The phone-first animation gallery uses a rounded category sheet with explained choices and a clear return to active settings. Returning to Effecten opens at the top rather than restoring an old deep gallery scroll position. Arrangement icons depict the chosen tunnel, vertical wall or continuous line. Arrangement and order choices apply directly, without a separate save/cancel step. New SPI zones default to Doorlopend; the main preview follows the selected geometry. The More screen no longer repeats a generic connection status, temporary-data disclaimer or technical-readiness checklist; the four primary navigation tabs and local app-management actions remain. The isolated demo keeps one concise fictional-receiver safety badge, uses no hardware commands, firmware downloads or PIN collection, and remains separate from the native app. Browser verification does not prove physical receiver acceptance.",
+  "interfaceBaseline": "V32 keeps the established Aluvision interface, tunnel/wall context and existing lighting flows while making transitions and touch feedback softer and more responsive. Page-level spring motion only runs when moving between major views, not on every control refresh; disclosures and dialogs open and close smoothly, with reduced-motion preferences respected. The active-animation settings shortcut is a light-glass card, omitted when nothing is active. Exactly one settings button exists: it moves between its inline position and the sticky control dock as needed, so it is never duplicated or hidden under the preview. The animation gallery stays phone-first and spatial previews remain visible while editing tunnel/wall effect colours. Browsing preserves the selected lights and active effect. Browser verification does not prove physical receiver acceptance.",
   "animationGroupNavigation": {
     "detailPage": true,
-    "content": "only the selected group's animations, below the persistent LED overview",
-    "backAction": "Terug naar alle animatiegroepen or the originating category",
-    "placement": "directly below the persistent LED overview",
+    "content": "selected effect group only",
+    "backAction": "Terug naar alle animaties or the originating category",
+    "placement": "top of group detail page",
     "scrollBehavior": "normal document flow",
     "floatingDuplicate": false
   },
@@ -16,13 +16,6 @@
     "icon": "animation motion waveform",
     "surface": "neutral glass; no red or brown fill",
     "visibleOnlyWhenActive": true
-  },
-  "activeAnimationCard": {
-    "visibleOnlyWhenActive": true,
-    "primaryContent": "name of the active animation",
-    "action": "Pas deze animatie aan",
-    "surface": "light glass, no dark fill",
-    "inlineAndStickyStylingMatch": true
   },
   "fakeReceivers": {
     "RGBW": 10,
@@ -50,8 +43,9 @@
   "hardwareAccess": false,
   "nativeAppModified": true,
   "nativeAppUpdatePending": true,
-  "nativeAppInstalledVersion": "32.0.0",
-  "nativeAppInstalledBuild": 193,
+  "nativeAppBuiltVersion": "32.0.0",
+  "nativeAppBuiltBuild": 197,
+  "nativeAppInstalled": false,
   "nativeAppInstallationPreservedData": null,
   "interfaceAccessibility": {
     "selectedLinesSubtitleContrastMinimum": 4.5,
@@ -81,7 +75,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "a34c33e2233761e03e76bac4cc8ab1b7d661b0ce6d041a67bbe05f6eb9dab531"
+      "sha256": "29e25487d3e725d50f3186829f8c7b801525ceb17a1e371c36b1430dc56ca908"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -105,7 +99,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "a9461e3052761967f15790c4d35af41744adbbce422d0cc3de4ba3794dc6f6fd"
+      "sha256": "af35115e7759b38a2c7316b4c0ec7ba80ea8b3481ee2694c5fb1af8bffbb7bb7"
     },
     {
       "path": "fixtures.js",
@@ -113,7 +107,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "0d67d893d9d375e583f8df1e496e0aeeec6458bec81b4ae4ae5978bc5e19ac92"
+      "sha256": "0187ae1649d986b59a7f868fb078608aa66df60a09309664bbec1b7e810c58a1"
     },
     {
       "path": "live-control.js",
@@ -165,7 +159,7 @@
     },
     {
       "path": "premium-surfaces.css",
-      "sha256": "ac3e40dbf236c8ff58927f7e935c9549212e15a81ee7469e0413f7930f82549d"
+      "sha256": "36db7b100ea3153f14ad1967c2973cec228b9bc0d9e79c53b0d3758deacaeef0"
     },
     {
       "path": "presets.js",

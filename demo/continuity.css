@@ -360,7 +360,11 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 /* Keep group return below the preview at every scroll position. The editor's
    alternate-gallery action still appears only after its inline control leaves view. */
 .control-dock-surface{position:relative}
-.control-preview-dock .animation-wayfinding[data-editor-shortcut]{position:absolute;top:100%;left:0;right:0;z-index:1;margin:0;padding:5px 0;background:var(--bg);border-radius:0 0 15px 15px;box-shadow:0 8px 16px -12px #17201980}
+.control-preview-dock .animation-wayfinding:is([data-editor-shortcut],[data-editor-return-shortcut]){position:absolute;top:100%;left:0;right:0;z-index:1;margin:0;padding:5px 0;background:var(--bg);border-radius:0 0 15px 15px;box-shadow:0 8px 16px -12px #17201980}
+.control-preview-dock .animation-wayfinding[data-editor-shortcut] .animation-gallery-return.animation-chooser-action{min-height:52px;gap:7px;padding:5px 8px}
+.control-preview-dock .animation-wayfinding[data-editor-shortcut] .gallery-action-icon{width:32px;height:32px;border-radius:10px}
+.control-preview-dock .animation-wayfinding[data-editor-shortcut] .gallery-action-next{width:30px;height:30px}
+.animation-settings-return-slot{min-width:0}
 .current-effect>.current-effect-gallery{flex:0 0 100%}
 .current-effect b:focus{outline:none}
 /* Animation choice is the task, not a second setup wizard. Keep the current
