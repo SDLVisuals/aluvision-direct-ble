@@ -1,21 +1,24 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-motion-polish-20260929",
+  "revision": "v32-animation-chooser-ux-20260929",
   "interfaceVersion": 32,
-  "interfaceBaseline": "V32 keeps the established Aluvision interface, tunnel/wall context and existing lighting flows while making transitions and touch feedback softer and more responsive. Page-level spring motion only runs when moving between major views, not on every control refresh; disclosures and dialogs open and close smoothly, with reduced-motion preferences respected. The active-animation settings shortcut is a light-glass card, omitted when nothing is active. Exactly one settings button exists: it moves between its inline position and the sticky control dock as needed, so it is never duplicated or hidden under the preview. The animation gallery stays phone-first and spatial previews remain visible while editing tunnel/wall effect colours. Browsing preserves the selected lights and active effect. Browser verification does not prove physical receiver acceptance.",
+  "interfaceBaseline": "V32 keeps the established Aluvision interface while making animation browsing easier to understand and gentler to use. Customers first see clearly labelled effect groups; opening one enters a focused page with only that group’s variations, and choosing a variation is the action that starts it. A single back button returns to the originating list and moves beside the sticky LED overview only when its inline position is obscured. The active-animation action also moves one DOM button between the page and preview dock, so no duplicate or half-hidden copy remains. The spatial tunnel/wall overview appears on opening a spatial group and stays visible in its active settings. Page transitions use a light spring, smaller controls respond smoothly, and reduced-motion preferences are respected. Browsing preserves selected lights and active effects. Browser verification does not prove physical receiver acceptance.",
   "animationGroupNavigation": {
     "detailPage": true,
     "content": "selected effect group only",
-    "backAction": "Terug naar alle animaties or the originating category",
-    "placement": "top of group detail page",
-    "scrollBehavior": "normal document flow",
+    "backAction": "Terug naar alle animatiegroepen or the originating category",
+    "placement": "immediately below the persistent LED overview",
+    "scrollBehavior": "smooth and restores the source list position",
+    "sameButtonMovesIntoDock": true,
     "floatingDuplicate": false
   },
   "animationPickerAction": {
     "label": "Andere animatie kiezen",
     "icon": "animation motion waveform",
     "surface": "neutral glass; no red or brown fill",
-    "visibleOnlyWhenActive": true
+    "visibleOnlyWhenActive": true,
+    "singleDomButton": true,
+    "movesBetweenPageAndPreviewDock": true
   },
   "fakeReceivers": {
     "RGBW": 10,
@@ -35,6 +38,7 @@
     "categoryLabel": "Tunnel & wand",
     "gallerySampleLines": 4,
     "groupPreviewUsesConnectedLines": true,
+    "previewAfterOpeningSpatialGroup": true,
     "autoTargetAllZoneLines": true,
     "manualGroupSelectionRequired": false,
     "perLineColourEditingAvailable": true,
@@ -42,9 +46,9 @@
   },
   "hardwareAccess": false,
   "nativeAppModified": true,
-  "nativeAppUpdatePending": true,
+  "nativeAppUpdatePending": false,
   "nativeAppBuiltVersion": "32.0.0",
-  "nativeAppBuiltBuild": 197,
+  "nativeAppBuiltBuild": 199,
   "nativeAppInstalled": false,
   "nativeAppInstallationPreservedData": null,
   "interfaceAccessibility": {
@@ -59,7 +63,7 @@
     },
     {
       "path": "animation-library.css",
-      "sha256": "015787c71cb7f85e86cf66c3e42d0055cc61462890acfdfe5e63c2ed7daa625f"
+      "sha256": "24bdf59a36284448e10ba1659f8515b55c464cc6e379277dfa9f6839abf178f6"
     },
     {
       "path": "animation-library.js",
@@ -75,7 +79,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "29e25487d3e725d50f3186829f8c7b801525ceb17a1e371c36b1430dc56ca908"
+      "sha256": "623eafadfcc4cefd94efe175f1c4c3d04bbef8d645a6dee382f45f871e069de7"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -99,7 +103,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "af35115e7759b38a2c7316b4c0ec7ba80ea8b3481ee2694c5fb1af8bffbb7bb7"
+      "sha256": "9c9d4561f7b397929cbc2fa8e10293aea616d999d1c183fc8d409ed1f89990bf"
     },
     {
       "path": "fixtures.js",
@@ -107,7 +111,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "0187ae1649d986b59a7f868fb078608aa66df60a09309664bbec1b7e810c58a1"
+      "sha256": "54f0081ed2ca53df06ff1dd8a16fef5e1e0ce32b91ca938954f8e0c944cd768e"
     },
     {
       "path": "live-control.js",
@@ -155,11 +159,11 @@
     },
     {
       "path": "preferences.js",
-      "sha256": "f0afa9a05c49a7911b9c56ba4f939388622abf798352dd8ebf2f134f7085b0ba"
+      "sha256": "38991eda3b407b7679b0f01f7d6755e14049547bbe4c1fb0ef12b245c4d7a600"
     },
     {
       "path": "premium-surfaces.css",
-      "sha256": "36db7b100ea3153f14ad1967c2973cec228b9bc0d9e79c53b0d3758deacaeef0"
+      "sha256": "ef5249d7c559074edf95faaac9a3afec1a2717ff8da04d61f573a410423b7e24"
     },
     {
       "path": "presets.js",

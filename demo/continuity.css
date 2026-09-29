@@ -350,22 +350,22 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .animation-family-screen .family-variant-grid{grid-template-columns:minmax(0,1fr);gap:10px}
 .animation-family-screen .family-variant-card{grid-template-columns:minmax(100px,34%) minmax(0,1fr);min-height:104px}
 .animation-family-screen .family-variant-card>canvas{height:104px}
-.animation-family-detail>.family-detail-back{min-height:56px;padding:8px 13px;justify-content:flex-start;border-color:var(--line);border-radius:16px;background:linear-gradient(125deg,color-mix(in srgb,var(--panel) 95%,var(--soft)),color-mix(in srgb,var(--panel) 87%,var(--soft)));color:var(--ink);box-shadow:0 4px 14px #2025200b,inset 0 1px #ffffffb0}
-.animation-family-detail>.family-detail-back .gallery-action-icon{width:39px;height:39px;border:1px solid color-mix(in srgb,var(--red) 14%,var(--line));border-radius:13px;background:color-mix(in srgb,var(--red) 10%,var(--panel));color:var(--red)}
-.animation-family-detail>.family-detail-back .gallery-action-icon>.icon{width:22px;height:22px}
-.animation-family-detail>.family-detail-back .gallery-action-copy>b{font-size:13px;letter-spacing:-.01em}
-@media(hover:hover){.animation-family-detail>.family-detail-back:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--red) 26%,var(--line));box-shadow:0 7px 18px #20252012,inset 0 1px #ffffffd0}}
-.animation-family-detail>.family-detail-back:active{transform:scale(.995)}
+.family-back-slot{display:grid;min-width:0}
+.family-back-slot>.family-detail-back,.family-wayfinding .family-detail-back{min-height:56px;padding:8px 13px;justify-content:flex-start;border-color:var(--line);border-radius:16px;background:linear-gradient(125deg,color-mix(in srgb,var(--panel) 95%,var(--soft)),color-mix(in srgb,var(--panel) 87%,var(--soft)));color:var(--ink);box-shadow:0 4px 14px #2025200b,inset 0 1px #ffffffb0}
+.family-back-slot>.family-detail-back .gallery-action-icon,.family-wayfinding .family-detail-back .gallery-action-icon{width:39px;height:39px;border:1px solid color-mix(in srgb,var(--red) 14%,var(--line));border-radius:13px;background:color-mix(in srgb,var(--red) 10%,var(--panel));color:var(--red)}
+.family-back-slot>.family-detail-back .gallery-action-icon>.icon,.family-wayfinding .family-detail-back .gallery-action-icon>.icon{width:22px;height:22px}
+.family-back-slot>.family-detail-back .gallery-action-copy>b,.family-wayfinding .family-detail-back .gallery-action-copy>b{font-size:13px;letter-spacing:-.01em}
+@media(hover:hover){.family-back-slot>.family-detail-back:hover,.family-wayfinding .family-detail-back:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--red) 26%,var(--line));box-shadow:0 7px 18px #20252012,inset 0 1px #ffffffd0}}
+.family-back-slot>.family-detail-back:active,.family-wayfinding .family-detail-back:active{transform:scale(.995)}
 .control-preview-dock[data-scrolled=true] .animation-wayfinding{margin-top:5px;padding-bottom:5px}
 /* Keep group return below the preview at every scroll position. The editor's
    alternate-gallery action still appears only after its inline control leaves view. */
 .control-dock-surface{position:relative}
-.control-preview-dock .animation-wayfinding:is([data-editor-shortcut],[data-editor-return-shortcut]){position:absolute;top:100%;left:0;right:0;z-index:1;margin:0;padding:5px 0;background:var(--bg);border-radius:0 0 15px 15px;box-shadow:0 8px 16px -12px #17201980}
-.control-preview-dock .animation-wayfinding[data-editor-shortcut] .animation-gallery-return.animation-chooser-action{min-height:52px;gap:7px;padding:5px 8px}
-.control-preview-dock .animation-wayfinding[data-editor-shortcut] .gallery-action-icon{width:32px;height:32px;border-radius:10px}
-.control-preview-dock .animation-wayfinding[data-editor-shortcut] .gallery-action-next{width:30px;height:30px}
+.control-preview-dock .animation-wayfinding:is([data-editor-shortcut],[data-editor-return-shortcut],[data-family-back-shortcut]){position:absolute;top:100%;left:0;right:0;z-index:1;margin:0;padding:5px 0;background:var(--bg);border-radius:0 0 15px 15px;box-shadow:0 8px 16px -12px #17201980}
+.control-preview-dock .family-wayfinding:not([hidden]){animation:app-action-enter .24s var(--motion-spring) both}
 .animation-settings-return-slot{min-width:0}
-.current-effect>.current-effect-gallery{flex:0 0 100%}
+.current-effect>.current-effect-gallery-slot{display:grid;flex:0 0 100%;min-width:0}
+.current-effect-gallery-slot>.current-effect-gallery{width:100%}
 .current-effect b:focus{outline:none}
 /* Animation choice is the task, not a second setup wizard. Keep the current
    scope and direct arrangement controls, but reduce their closed footprint. */

@@ -311,6 +311,13 @@
     de:{animationChooseAnother:'Andere Animation wählen',animationChooseAnotherHint:'Animationen und Varianten ansehen.',animationFamilyBackAll:'Zurück zu allen Animationsgruppen'}
   };
   Object.keys(animationChooserTexts).forEach(code=>Object.assign(texts[code],animationChooserTexts[code]));
+  const animationFlowCopy={
+    nl:{animationGroupChooserTitle:'Kies een effectgroep',animationGroupChooserIntro:'Open een groep om de animaties te bekijken. Er start pas iets als je een animatie kiest.',animationSearchChooseHint:'Tik op een resultaat om die animatie meteen te starten.',animationOwnChooseHint:'Kies een bewaarde animatie om die te starten.',animationOpenGroup:'Bekijk animaties',animationGroupNextStep:'Kies op de volgende pagina welke animatie start.'},
+    en:{animationGroupChooserTitle:'Choose an effect group',animationGroupChooserIntro:'Open a group to browse its animations. Nothing starts until you choose an animation.',animationSearchChooseHint:'Tap a result to start that animation now.',animationOwnChooseHint:'Choose a saved animation to start it.',animationOpenGroup:'View animations',animationGroupNextStep:'Choose which animation to start on the next screen.'},
+    fr:{animationGroupChooserTitle:'Choisir un groupe d’effets',animationGroupChooserIntro:'Ouvrez un groupe pour parcourir ses animations. Rien ne démarre avant votre choix.',animationSearchChooseHint:'Touchez un résultat pour lancer cette animation.',animationOwnChooseHint:'Choisissez une animation enregistrée pour la lancer.',animationOpenGroup:'Voir les animations',animationGroupNextStep:'Choisissez ensuite l’animation à lancer sur l’écran suivant.'},
+    de:{animationGroupChooserTitle:'Effektgruppe auswählen',animationGroupChooserIntro:'Öffne eine Gruppe, um ihre Animationen anzusehen. Erst deine Auswahl startet eine Animation.',animationSearchChooseHint:'Tippe auf ein Ergebnis, um diese Animation zu starten.',animationOwnChooseHint:'Wähle eine gespeicherte Animation zum Starten.',animationOpenGroup:'Animationen ansehen',animationGroupNextStep:'Wähle auf der nächsten Seite die gewünschte Animation.'}
+  };
+  Object.keys(animationFlowCopy).forEach(code=>Object.assign(texts[code],animationFlowCopy[code]));
   // State labels for the LED-line chooser's disclosure control.
   const scopeCloseLabels = {
     nl: { scopeClose: 'Ledlines verbergen', scopeCloseHint: 'Tik om de lijst te sluiten' },

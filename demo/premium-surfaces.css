@@ -635,7 +635,7 @@ dialog .pixel-setup-steps li {
   .control-preview-dock[data-spatial-preview=false][data-scrolled=true][data-preview-size=large] .preview-wrap canvas{height:100px!important}
 }
 @media(prefers-reduced-motion:reduce){
-  .app-page-enter,.animation-settings-return-slot .animation-settings-return,.animation-wayfinding[data-editor-return-shortcut]:not([hidden]) .animation-settings-return,.preview-size-control[open] .preview-size-picker,.settings-panel:not([hidden]),.background-details:not([hidden]){animation:none!important}
+  .app-page-enter,.animation-settings-return-slot .animation-settings-return,.animation-wayfinding[data-editor-return-shortcut]:not([hidden]) .animation-settings-return,.family-wayfinding:not([hidden]),.preview-size-control[open] .preview-size-picker,.settings-panel:not([hidden]),.background-details:not([hidden]){animation:none!important}
   .control-mode-panel{animation:none!important}
   .control-mode-tabs button,.preview-size-control>summary,.animation-category-choice{transition:none!important}
   .control-preview-dock[data-spatial-preview=false] .preview-wrap canvas{transition:none!important}

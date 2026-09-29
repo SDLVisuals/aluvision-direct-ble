@@ -24,7 +24,10 @@ main.gallery-scroll-stable{overflow-anchor:none}
 .animation-family-heading p{margin-top:4px;color:var(--muted);font-size:12px;line-height:1.45}
 .animation-family-heading>small{padding:4px 8px;border-radius:20px;background:var(--soft);font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .animation-family-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;min-width:0}
-.animation-family-card{min-width:0;overflow:hidden;border:1px solid var(--line);border-radius:18px;background:var(--panel);transition:border-color .16s ease,box-shadow .16s ease}
+.animation-family-card{min-width:0;overflow:hidden;border:1px solid var(--line);border-radius:18px;background:var(--panel);transition:border-color .2s cubic-bezier(.2,.8,.2,1),box-shadow .24s cubic-bezier(.2,.8,.2,1),transform .24s cubic-bezier(.2,.8,.2,1)}
+.animation-family-trigger{transition:transform .24s cubic-bezier(.2,.8,.2,1)}
+@media(hover:hover){.animation-family-card:hover{transform:translateY(-1px);box-shadow:0 7px 18px #20252010}}
+.animation-family-card:active{transform:scale(.995)}
 .animation-family-card.is-expanded{border-color:#d69b97;box-shadow:0 0 0 2px #bf484117}
 .animation-family-trigger{display:grid;grid-template-columns:minmax(104px,28%) minmax(0,1fr);align-items:center;gap:12px;width:100%;min-height:112px;padding:10px;background:transparent;color:var(--ink);text-align:left}
 .animation-family-trigger:focus-visible{position:relative;z-index:1;outline-offset:-3px}
@@ -176,7 +179,7 @@ body[data-theme=dark] .animation-family-heading>small{background:var(--soft);col
   .brand-tone-option span{font-size:8px}
   .family-variant-card b{font-size:10px}
 }
-@media(prefers-reduced-motion:reduce){.animation-family-card,.animation-family-card .family-variants .icon{transition:none}}
+@media(prefers-reduced-motion:reduce){.animation-family-card,.animation-family-trigger,.animation-family-card .family-variants .icon{transition:none}}
 
 /* One shared tunnel overview; the actual choices get the same camera, not a
    second decorative thumbnail in every accordion heading. */
@@ -208,11 +211,11 @@ body[data-theme=dark] .animation-family-heading>small{background:var(--soft);col
 .family-variants-copy>small{color:var(--muted);font-size:12px;line-height:1.35;font-weight:550;white-space:normal}
 .family-variants-action{display:flex;align-items:center;gap:5px;flex:none;color:var(--red)}
 .family-variants-action>small{font-size:11px;line-height:1.25;font-weight:750;white-space:nowrap}
-.animation-family-detail{display:grid;gap:15px;min-width:0;animation:family-detail-enter .2s ease-out}
-.animation-family-detail>.family-detail-back{min-height:64px;padding:9px 13px;border-radius:18px}
-.animation-family-detail>.family-detail-back .gallery-action-icon{width:42px;height:42px}
-.animation-family-detail>.family-detail-back .gallery-action-icon>.icon{width:24px;height:24px}
-.animation-family-detail>.family-detail-back .gallery-action-copy>b{font-size:14px}
+.animation-family-detail{display:grid;gap:15px;min-width:0;animation:family-detail-enter .32s cubic-bezier(.2,.9,.25,1.08)}
+.family-back-slot>.family-detail-back{min-height:64px;padding:9px 13px;border-radius:18px}
+.family-back-slot>.family-detail-back .gallery-action-icon{width:42px;height:42px}
+.family-back-slot>.family-detail-back .gallery-action-icon>.icon{width:24px;height:24px}
+.family-back-slot>.family-detail-back .gallery-action-copy>b{font-size:14px}
 .family-detail-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:2px 1px}
 .family-detail-heading>div{display:grid;gap:5px;min-width:0}
 .family-detail-heading>div>small{color:var(--red);font-size:11px;line-height:1.35;font-weight:800;letter-spacing:.045em;text-transform:uppercase}
