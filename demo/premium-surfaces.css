@@ -4,13 +4,16 @@
   --bg: #f5f4f2;
   --panel: #fff;
   --ink: #202220;
-  --muted: #696d67;
+  --muted: #60675f;
   --line: #deded9;
   --red: #bf4841;
   --soft: #eeede9;
-  --glass: rgba(255, 255, 255, .42);
-  --glass-edge: rgba(255, 255, 255, .9);
-  --surface-shadow: 0 12px 30px rgba(25, 30, 25, .052), 0 2px 5px rgba(25, 30, 25, .025);
+  --glass: rgba(255, 255, 255, .38);
+  --glass-edge: rgba(255, 255, 255, .84);
+  --glass-solid: #f8f7f4;
+  --glass-sheet: rgba(250, 249, 246, .9);
+  --action-ink: #ac3933;
+  --surface-shadow: 0 7px 22px rgba(25, 30, 25, .045), 0 2px 5px rgba(25, 30, 25, .022);
   --surface-highlight: inset 0 1px rgba(255, 255, 255, .86), inset 0 0 0 1px rgba(255, 255, 255, .2);
 }
 
@@ -79,8 +82,8 @@ body:not([data-theme="dark"]) {
 ) {
   background-color: var(--glass);
   background-image:
-    linear-gradient(145deg, rgba(255, 255, 255, .24), rgba(255, 255, 255, .07)),
-    radial-gradient(110% 130% at 100% 0%, rgba(191, 72, 65, .075), transparent 70%),
+    linear-gradient(145deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .04)),
+    radial-gradient(110% 130% at 100% 0%, rgba(191, 72, 65, .055), transparent 70%),
     radial-gradient(120% 100% at 0% 100%, rgba(234, 236, 232, .18), transparent 72%);
   border-color: color-mix(in srgb, var(--line) 52%, var(--glass-edge));
   box-shadow: var(--surface-shadow), var(--surface-highlight);
@@ -144,14 +147,14 @@ body:not([data-theme="dark"]) {
 
 .button.red,
 .button.removal-confirm {
-  background: linear-gradient(145deg, #ca5a52 0%, #ae3d37 82%);
+  background: linear-gradient(145deg, #bf4841 0%, #a63832 82%);
   box-shadow: 0 5px 13px rgba(160, 54, 48, .18), inset 0 1px rgba(255, 255, 255, .24);
 }
 
 .button.secondary {
-  border: 1px solid rgba(255, 255, 255, .92);
-  background: linear-gradient(145deg, rgba(255, 255, 255, .96), rgba(237, 236, 232, .88));
-  box-shadow: 0 3px 11px rgba(29, 33, 29, .045), inset 0 1px rgba(255, 255, 255, .95);
+  border: 1px solid color-mix(in srgb, var(--line) 66%, white);
+  background: linear-gradient(145deg, rgba(255, 255, 255, .82), rgba(244, 242, 237, .66));
+  box-shadow: 0 2px 7px rgba(29, 33, 29, .035), inset 0 1px rgba(255, 255, 255, .9);
 }
 
 .icon-button,
@@ -317,6 +320,9 @@ body:not([data-theme="dark"]) {
 body[data-theme="dark"] {
   --glass: rgba(37, 41, 36, .74);
   --glass-edge: rgba(255, 255, 255, .14);
+  --glass-solid: #252923;
+  --glass-sheet: rgba(34, 38, 32, .94);
+  --action-ink: #e59c93;
   --surface-shadow: 0 12px 28px rgba(0, 0, 0, .22), 0 2px 6px rgba(0, 0, 0, .12);
   --surface-highlight: inset 0 1px rgba(255, 255, 255, .085), inset 0 0 0 1px rgba(255, 255, 255, .025);
   background:
@@ -643,7 +649,7 @@ dialog .pixel-setup-steps li {
 
 /* A small, consistent spring makes page changes and touch feedback feel quick
    without making every data refresh replay a large card animation. */
-:root{--motion-spring:cubic-bezier(.2,.82,.24,1.08);--motion-ease:cubic-bezier(.22,.72,.25,1)}
+:root{--motion-spring:cubic-bezier(.2,.82,.24,1.08);--motion-ease:cubic-bezier(.22,.72,.25,1);--motion-sheet-in:320ms;--motion-sheet-out:150ms}
 main>.app-page-enter{transform-origin:50% 0;will-change:opacity,transform;animation:app-page-enter .34s var(--motion-spring) both}
 @keyframes app-page-enter{from{opacity:0;transform:translate3d(0,9px,0) scale(.996)}76%{opacity:1;transform:translate3d(0,-1px,0) scale(1.001)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
 @keyframes app-action-enter{from{opacity:0;transform:translate3d(0,6px,0) scale(.99)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
@@ -651,10 +657,16 @@ main :is(button,summary):active:not(:disabled){transform:scale(.988);transition-
 .animation-gallery-return{transition:transform .24s var(--motion-spring),box-shadow .24s var(--motion-ease),border-color .2s var(--motion-ease)}
 .animation-settings-return-slot .animation-settings-return,
 .animation-wayfinding[data-editor-return-shortcut]:not([hidden]) .animation-settings-return{animation:app-action-enter .24s var(--motion-spring) both}
-dialog[open]{animation:app-dialog-enter .28s var(--motion-spring) both}
+dialog[open],dialog#effect-dialog[open]{animation:app-dialog-enter var(--motion-sheet-in) var(--motion-spring) both}
 dialog[open]::backdrop{animation:app-backdrop-enter .2s ease-out both}
 @keyframes app-dialog-enter{from{opacity:0;transform:translate3d(0,8px,0) scale(.986)}78%{opacity:1;transform:translate3d(0,-1px,0) scale(1.002)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
 @keyframes app-backdrop-enter{from{opacity:0}to{opacity:1}}
+/* Only manual dismissal receives this class; native workflow completion
+   stays immediate. A sheet moves, never the scrolling content beneath it. */
+dialog[open].is-closing,dialog#effect-dialog[open].is-closing{pointer-events:none;animation:app-dialog-exit var(--motion-sheet-out) var(--motion-ease) both}
+dialog[open].is-closing::backdrop{animation:app-backdrop-exit var(--motion-sheet-out) ease-out both}
+@keyframes app-dialog-exit{from{opacity:1;transform:translate3d(0,0,0) scale(1)}to{opacity:0;transform:translate3d(0,8px,0) scale(.986)}}
+@keyframes app-backdrop-exit{from{opacity:1}to{opacity:0}}
 @media(prefers-reduced-motion:reduce){
   main>.app-page-enter,dialog[open],dialog[open]::backdrop{animation:none!important;will-change:auto}
   main :is(button,summary):active:not(:disabled){transform:none;transition:none!important}
@@ -744,7 +756,7 @@ body[data-theme=dark] .animation-context>.power-card{background:linear-gradient(
 body[data-theme=dark] .editor-grid>.control-preview-dock{background:var(--bg)}
 body[data-theme=dark] .editor-grid>.control-preview-dock[data-scrolled=true]{background:transparent}
 body[data-theme=dark] .control-preview-dock[data-scrolled=true] .control-dock-surface{background:var(--bg);background-image:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.012));box-shadow:0 9px 24px -14px rgba(0,0,0,.55),inset 0 1px rgba(255,255,255,.1)}
-@supports not (backdrop-filter:blur(1px)){
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
   :root{--glass:rgba(255,255,255,.78)}
   body[data-theme=dark]{--glass:rgba(37,41,36,.94)}
   :is(.animation-category-trigger,.animation-category-choice,.animation-search input,.settings-toggle,.preview-size-control>summary,.family-variants-panel,.animation-family-card,.family-variant-card,.effect-card,.family-card,.animation-context){-webkit-backdrop-filter:none;backdrop-filter:none}
@@ -835,3 +847,232 @@ body[data-theme=dark] .control-preview-dock[data-scrolled=true] .control-dock-su
   #effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry{min-height:44px}
 }
 @media(prefers-reduced-motion:reduce){.stand-fine-controls>summary>.icon,.stand-fine-controls[open]>.fine-controls-body{transition:none;animation:none}}
+
+/* Material refinement, not a new layout: one frosted sheet, quieter nested
+   surfaces and solid, legible actions. Never blur an LED or colour canvas. */
+dialog,
+dialog#effect-dialog {
+  background-color: var(--glass-sheet);
+  background-image: linear-gradient(145deg, rgba(255, 255, 255, .13), transparent 65%);
+  border-color: var(--glass-edge);
+  box-shadow: 0 18px 48px rgba(18, 23, 18, .16), var(--surface-highlight);
+  -webkit-backdrop-filter: blur(20px) saturate(125%);
+  backdrop-filter: blur(20px) saturate(125%);
+}
+
+#effect-dialog-content > header {
+  background: var(--glass-solid);
+  box-shadow: 0 6px 0 var(--glass-solid);
+}
+
+/* Readable text accents remain distinct from the red switch/primary fill.
+   This avoids pale red text on light buttons in the dark theme. */
+:is(.eyebrow, .text-button, .slider-row output, .current-animation-edit,
+    .stand-scenes-entry-open, .active-animation-kicker,
+    .animation-settings-return-kicker) {
+  color: var(--action-ink);
+}
+
+/* The mobile sheet follows this file: keep its small kicker and slider
+   glyphs readable without changing the red hardware/control accent. */
+body .editor-controls-zone .current-effect .active-animation-kicker,
+body .control-workspace .setting-label-icon {
+  color: var(--action-ink);
+}
+
+body[data-theme="dark"] .button.secondary:not(.receiver-danger-section .button.secondary) {
+  border-color: rgba(255, 255, 255, .19);
+  background: linear-gradient(145deg, rgba(62, 67, 57, .9), rgba(42, 47, 39, .82));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .09), 0 2px 7px rgba(0, 0, 0, .12);
+}
+
+body[data-theme="dark"] :is(.eyebrow, .text-button, .slider-row output,
+    .current-animation-edit, .stand-scenes-entry-open),
+body[data-theme="dark"] .current-effect .active-animation-kicker,
+body[data-theme="dark"] .animation-settings-return .gallery-action-copy > .animation-settings-return-kicker {
+  color: var(--action-ink);
+}
+
+:is(.control-workspace .shared-colour-picker,
+    .control-workspace .animation-daily-controls,
+    .receiver-list details details, .stand-scenes .stand-scene-card,
+    .animation-family-card, .family-variant-card, .effect-card, .family-card) {
+  /* Shared card rules also contain a dialog ID: these material-only
+     overrides must beat that specificity, not alter the card layout. */
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* The size chooser belongs to the pitch-dark preview, not the white UI.
+   Preserve its light labels without laying pale glass underneath them. */
+.preview-wrap .preview-size-control > summary {
+  color: #dce2dc;
+  background: rgba(255, 255, 255, .07);
+  border-color: rgba(255, 255, 255, .22);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .06);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* No-blur engines and reduced-transparency users get opaque backing rather
+   than transparent text over moving content. Scope important to material
+   properties only, so the later mobile layout keeps its unboxed controls. */
+@media (prefers-reduced-transparency: reduce) {
+  :root { --glass: var(--glass-solid); --glass-sheet: var(--glass-solid); }
+  body[data-theme="dark"] { --glass: var(--glass-solid); --glass-sheet: var(--glass-solid); }
+  dialog::backdrop {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  body :is(.card, .zone-entry, .zone-card, .menu-card, .stand-info-tile,
+      .receiver-list details, .scene-card, .stand-scenes, .stand-scene-card,
+      .family-variants-panel, .animation-family-card, .family-variant-card,
+      .animation-category-trigger, .animation-category-choice, .animation-search input,
+      .settings-toggle, .animation-context, .control-workspace, .brand-bar,
+      .control-preview-dock, .control-dock-surface, .navigation, .toast, dialog) {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  body :is(.card:not(.shared-colour-picker):not(.animation-daily-controls),
+      .zone-entry, .zone-card, .menu-card, .stand-info-tile, .receiver-list details,
+      .scene-card, .stand-scenes, .stand-scene-card, .animation-family-card,
+      .family-variant-card, .effect-card, .family-card,
+      .brand-bar, .family-variants-panel, .animation-category-trigger,
+      .animation-category-choice, .animation-search input, .settings-toggle,
+      .control-workspace:not(.active-animation-workspace), dialog) {
+    background-color: var(--glass-solid) !important;
+    background-image: none !important;
+  }
+  .navigation { background: #1c211c !important; }
+  .toast { background: #252b25 !important; }
+}
+
+/* One order disclosure, not another primary action. The view chooser stays
+   separate; the open header and rows share one quiet, blur-free glass surface. */
+.ledline-setup {
+  --order-surface: color-mix(in srgb, var(--glass-solid) 94%, var(--red));
+  --order-edge: color-mix(in srgb, var(--action-ink) 28%, var(--line));
+}
+
+body .editor-controls .ledline-setup.card[data-order-open="true"] {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+body .editor-grid .editor-controls .ledline-setup.card[data-order-open="true"] {
+  display: grid;
+  gap: 0;
+}
+
+.ledline-setup.card[data-order-open="true"] > .spatial-preview-choice {
+  margin-bottom: 7px;
+  padding: 0;
+  border: 0;
+}
+
+.ledline-setup.card[data-order-open="true"] .spatial-choice-toggle {
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: var(--glass-solid);
+}
+
+body .ledline-setup.card[data-order-open="true"] > .ledline-setup-toggle,
+body .ledline-setup.card[data-order-open="true"] > .ledline-setup-body {
+  border: 1px solid var(--order-edge);
+  background: var(--order-surface);
+}
+
+body .ledline-setup.card[data-order-open="true"] > .ledline-setup-toggle {
+  border-bottom: 0;
+  border-radius: 17px 17px 0 0;
+  box-shadow: inset 0 1px var(--glass-edge);
+}
+
+body .ledline-setup.card[data-order-open="true"] > .ledline-setup-body {
+  border-top: 0;
+  border-radius: 0 0 17px 17px;
+  box-shadow: 0 5px 14px rgba(25, 30, 25, .035);
+}
+
+.ledline-setup[data-order-open="true"] .ledline-arrangement {
+  border-color: color-mix(in srgb, var(--order-edge) 70%, transparent);
+}
+
+body .ledline-setup .ledline-setup-toggle > .ledline-setup-disclosure-action {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  min-height: 44px;
+  color: var(--action-ink);
+}
+
+.ledline-setup .ledline-setup-close-label {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ledline-setup .ledline-setup-disclosure-action > .icon {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  transition: transform .2s var(--motion-ease, ease);
+}
+
+.ledline-setup[data-order-open="true"] .ledline-setup-disclosure-action > .icon {
+  transform: rotate(-90deg);
+}
+
+.ledline-setup[data-order-open="true"] .ledline-setup-toggle > .line-order-icon {
+  color: var(--action-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ledline-setup .ledline-setup-disclosure-action > .icon { transition: none; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .ledline-setup { --order-surface: var(--glass-solid); }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .ledline-setup { --order-surface: var(--glass-solid); }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root { --glass: var(--glass-solid); --glass-sheet: var(--glass-solid); }
+  body[data-theme="dark"] { --glass: var(--glass-solid); --glass-sheet: var(--glass-solid); }
+  dialog::backdrop {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  body :is(.card, .zone-entry, .zone-card, .menu-card, .stand-info-tile,
+      .receiver-list details, .scene-card, .stand-scenes, .stand-scene-card,
+      .family-variants-panel, .animation-family-card, .family-variant-card,
+      .animation-category-trigger, .animation-category-choice, .animation-search input,
+      .settings-toggle, .animation-context, .control-workspace, .brand-bar,
+      .control-preview-dock, .control-dock-surface, .navigation, .toast, dialog) {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  body :is(.card:not(.shared-colour-picker):not(.animation-daily-controls),
+      .zone-entry, .zone-card, .menu-card, .stand-info-tile, .receiver-list details,
+      .scene-card, .stand-scenes, .stand-scene-card, .animation-family-card,
+      .family-variant-card, .effect-card, .family-card,
+      .brand-bar, .family-variants-panel, .animation-category-trigger,
+      .animation-category-choice, .animation-search input, .settings-toggle,
+      .control-workspace:not(.active-animation-workspace), dialog) {
+    background-color: var(--glass-solid) !important;
+    background-image: none !important;
+  }
+  .navigation { background: #1c211c !important; }
+  .toast { background: #252b25 !important; }
+}

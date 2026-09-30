@@ -562,13 +562,25 @@ body:has(.onboarding-page) .onboarding-page{gap:10px}
 .onboarding-page .onboarding-connecting>p{max-width:340px;margin-inline:auto;line-height:1.6}
 .onboarding-wifi-return>.onboarding-connecting-receiver{margin-bottom:0;padding-bottom:15px}
 .onboarding-result-enter{animation:onboarding-heading-enter .36s cubic-bezier(.22,1,.36,1) both}
+/* Keep the actual add/continue action in view on a small phone. Optional
+   recognition stays below it; no discovery or pairing steps are skipped. */
+@media(max-height:700px){
+  .onboarding-page[data-onboarding-stage=receiver]:has([data-onboarding-result]){gap:10px}
+  .onboarding-page[data-onboarding-stage=receiver]:has([data-onboarding-result]) .onboarding-heading h1{font-size:24px;line-height:1.15}
+  .onboarding-page[data-onboarding-stage=receiver]:has([data-onboarding-result]) .onboarding-destination{margin:3px 0 0;padding:6px 10px}
+  .onboarding-page .onboarding-result[data-discovery-status=found]{padding:14px}
+  .onboarding-result .onboarding-found-status{margin-bottom:10px}
+  .onboarding-page .onboarding-result[data-discovery-status=found] .onboarding-product{margin-top:10px}
+  .onboarding-page .onboarding-result[data-discovery-status=found] .onboarding-product canvas{height:112px}
+  .onboarding-result .onboarding-actions{margin-top:10px}
+}
 @media(max-width:350px){
   .onboarding-page .onboarding-result{padding:14px;border-radius:21px}
   .onboarding-receiver-symbol{width:35px;height:35px;border-radius:11px}
   .onboarding-page .onboarding-receiver-identity{gap:8px}
   .onboarding-page .onboarding-receiver-identity h2{font-size:14px}
   .onboarding-receiver-identity small{font-size:10px}
-  .onboarding-page .onboarding-result[data-discovery-status=found] .onboarding-product canvas{height:132px}
+  .onboarding-page .onboarding-result[data-discovery-status=found] .onboarding-product canvas{height:min(132px,20vh)}
   .onboarding-connecting-receiver{grid-template-columns:78px minmax(0,1fr);gap:10px}
   .onboarding-page .onboarding-connecting-receiver .onboarding-product canvas{height:74px}
 }

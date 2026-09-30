@@ -19,13 +19,14 @@
   let documentId=null;
   try{if(native&&typeof root.crypto?.randomUUID==='function')documentId=root.crypto.randomUUID().replace(/-/g,'').toUpperCase();}catch(_){}
   const pending=new Map();let serial=0;
-  const actions=new Set(['capabilities','securityPreference','securityStatus','setPinProtection','discover','discoverMesh','select','secure','reconcileSecurity','finalize','verifyFinalReceipt','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones','configureOutputs','previewPixels','eraseAppData','applyLive','applyLiveBatch','otaPlan','otaStart','otaStatus','otaResume','otaCancel','otaMainRecoveryPlan','otaMainRecoveryStart','otaImport','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain']);
+  const actions=new Set(['capabilities','securityPreference','securityStatus','setPinProtection','discover','discoverMesh','select','secure','reconcileSecurity','finalize','verifyFinalReceipt','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones','configureOutputs','previewPixels','eraseAppData','applyLive','applyLiveBatch','otaPlan','otaStart','otaStatus','otaResume','otaCancel','otaMainRecoveryPlan','otaMainRecoveryStart','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain']);
   actions.add('outputConfigurationStatus');
   ['exportBackup','chooseBackup','importInstallationView','recoverInstallation'].forEach(action=>actions.add(action));
   ['receiverContextStatus','syncInstallationContext'].forEach(action=>actions.add(action));
   actions.add('setAppearance');
   let appearanceTheme=null,appearanceRequest=null,appearanceSerial=0;
   const contextTimers=new Map(),contextEpochs=new Map();let contextQueue=Promise.resolve(),contextResetEpoch=0;
+  let contextWriteBarrier=null;
   let viewRevision=0,viewLoaded=false,viewModelKey=null,viewDraftKey='null',writeQueue=Promise.resolve();
   const fail=code=>Object.assign(new Error('De verbinding is nog niet beschikbaar.'),{code});
   function receive(message){
@@ -55,7 +56,7 @@
       // A cold SPI guide performs pinned MAIN/NODE proofs and may encounter a
       // retained proxy reply before its guide packet. This bounded allowance
       // cancels an uncertain operation once; it never retries that mutation.
-      const timeout=['exportBackup','chooseBackup','otaImport','recoverInstallation'].includes(action)?300000:action==='previewPixels'?45000:action==='syncInstallationContext'?180000:['otaPlan','otaMainRecoveryPlan'].includes(action)?120000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
+      const timeout=['exportBackup','chooseBackup','recoverInstallation'].includes(action)?300000:action==='previewPixels'?45000:action==='syncInstallationContext'?180000:['otaPlan','otaMainRecoveryPlan'].includes(action)?120000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
         ['secure','reconcileSecurity'].includes(action)&&payload.configuration?.role==='node'?120000:
         ['select','secure','reconcileSecurity','finalize','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain'].includes(action)?45000:12000;
       const timer=root.setTimeout(()=>{cancelNative();receive({id,ok:false,code:'NATIVE_TIMEOUT'});},timeout);
@@ -67,18 +68,57 @@
   }
   if(native)Object.defineProperty(root,'__lightningV30Reply',{value:receive,configurable:false,writable:false});
   function emptyModel(){return {schemaVersion:30,demo:false,stands:[],receivers:[],scenes:[],presets:[]};}
-  function contextEvent(detail){if(typeof root.dispatchEvent==='function'&&typeof root.CustomEvent==='function')root.dispatchEvent(new root.CustomEvent('lightning:receiver-context',{detail}));}
+  function contextEvent(detail,epoch,reset,phase){
+    if(typeof root.dispatchEvent==='function'&&typeof root.CustomEvent==='function')root.dispatchEvent(new root.CustomEvent('lightning:receiver-context',{
+      detail:{...detail,contextGeneration:epoch,contextResetGeneration:reset,contextPhase:phase}}));
+  }
+  function registerContextWriteBarrier(barrier){
+    if(typeof barrier!=='function'||contextWriteBarrier&&contextWriteBarrier!==barrier)throw fail('RECEIVER_CONTEXT_INVALID');
+    contextWriteBarrier=barrier;
+  }
+  async function waitForContextWrite(standId,signal){
+    if(!contextWriteBarrier)return;
+    const controller=new AbortController();let timer,finished=false,succeeded=false,abort;
+    const acquisition=Promise.resolve().then(()=>contextWriteBarrier({standId,signal:controller.signal})).then(ticket=>{
+      if(ticket!==undefined&&(!ticket||typeof ticket.release!=='function'))throw fail('RECEIVER_CONTEXT_INVALID');
+      // A timed-out/cancelled provider may still finish. It cannot leave LIVE
+      // held, nor may its late acquisition start a receiver mutation.
+      if(finished){ticket?.release();return;}
+      return ticket;
+    });
+    try{
+      const ticket=await Promise.race([acquisition,new Promise((_,reject)=>{
+        abort=()=>{finished=true;controller.abort();reject(fail('CANCELLED'));};
+        signal?.addEventListener('abort',abort,{once:true});
+        timer=root.setTimeout(()=>{finished=true;controller.abort();reject(fail('RECEIVER_CONTEXT_BUSY'));},35000);
+        if(signal?.aborted)abort();
+      })]);succeeded=true;return ticket;
+    }finally{finished=true;root.clearTimeout(timer);signal?.removeEventListener('abort',abort);if(!succeeded)controller.abort();}
+  }
   function contextResult(result,standId){
     if(!result||result.standId!==standId||!['synced','pending'].includes(result.status)||!Number.isInteger(result.synced)||!Number.isInteger(result.total)||result.total<1||result.total>30||result.synced<0||result.synced>result.total||(result.status==='synced'&&(result.synced!==result.total||result.librariesComplete===false)))throw fail('RECEIVER_CONTEXT_UNCONFIRMED');
     return {standId,status:result.status,synced:result.synced,total:result.total,...(typeof result.librariesComplete==='boolean'?{librariesComplete:result.librariesComplete}:{})};
   }
-  async function receiverContext(action,standId,current){
+  async function receiverContext(action,standId,current,signal){
     if(root.__lightningV32ReceiverContext!==true)throw fail('RECEIVER_CONTEXT_UNAVAILABLE');
     if(typeof standId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(standId))throw fail('RECEIVER_CONTEXT_INVALID');
     await writeQueue.catch(()=>{});
+    if(signal?.aborted)throw fail('CANCELLED');
     if(current&&!current())throw fail('RECEIVER_CONTEXT_STALE');
-    const libraries=typeof root.LightningInstallationLibraries?.capture==='function'?root.LightningInstallationLibraries.capture(standId):undefined;
-    return contextResult(await call(action,{standId,...(libraries===undefined?{}:{libraries})}),standId);
+    let ticket;
+    try{
+      if(action==='syncInstallationContext'){
+        // Hold one atomic idle lease through this single bounded native RPC.
+        // New gestures still preview/coalesce, then dispatch after its finally.
+        // No mutation is retried and the native foreground guard stays intact.
+        ticket=await waitForContextWrite(standId,signal);
+        await writeQueue.catch(()=>{});
+        if(signal?.aborted)throw fail('CANCELLED');
+        if(current&&!current())throw fail('RECEIVER_CONTEXT_STALE');
+      }
+      const libraries=typeof root.LightningInstallationLibraries?.capture==='function'?root.LightningInstallationLibraries.capture(standId):undefined;
+      return contextResult(await call(action,{standId,...(libraries===undefined?{}:{libraries})},signal),standId);
+    }finally{ticket?.release();}
   }
   function scheduleContext(view,standId,{immediate=false}={}){
     if(root.__lightningV32ReceiverContext!==true||!view?.model?.receivers?.some(receiver=>receiver.standId===standId&&receiver.lifecycle==='added'))return view;
@@ -86,15 +126,15 @@
     const epoch=(contextEpochs.get(standId)||0)+1,reset=contextResetEpoch;
     contextEpochs.set(standId,epoch);
     const current=()=>contextEpochs.get(standId)===epoch&&contextResetEpoch===reset;
-    contextEvent({standId,status:'pending'});
+    contextEvent({standId,status:'pending'},epoch,reset,'queued');
     const enqueue=()=>{
       if(!current())return;
       contextTimers.delete(standId);
       contextQueue=contextQueue.catch(()=>{}).then(async()=>{
         if(!current())return;
-        contextEvent({standId,status:'syncing'});
-        try{const result=await receiverContext('syncInstallationContext',standId,current);if(current())contextEvent(result);}
-        catch(_){if(current())contextEvent({standId,status:'pending'});}
+        contextEvent({standId,status:'syncing'},epoch,reset,'writing');
+        try{const result=await receiverContext('syncInstallationContext',standId,current);if(current())contextEvent(result,epoch,reset,'complete');}
+        catch(_){if(current())contextEvent({standId,status:'pending'},epoch,reset,'complete');}
       });
     };
     // A confirmed receiver addition is a discrete durable boundary. Launch its
@@ -361,8 +401,6 @@
     }
     return {standId,receiverId,kind,brightness,transitionMs,channels:[...channels],...(full?{scene:JSON.parse(JSON.stringify(scene))}:{})};
   }
-  const userAgent=root.navigator?.userAgent||'';
-  const supportsOtaImport=/iPhone|iPad|iPod/i.test(userAgent)||(/Macintosh/i.test(userAgent)&&Number(root.navigator?.maxTouchPoints)>1);
   const serviceSet=native?{
     connectionMode:'manual-wifi',
     async setAppearance(request){
@@ -384,13 +422,20 @@
       if(!viewLoaded||typeof standId!=='string')return;
       scheduleContext({model:JSON.parse(viewModelKey)},standId);
     },
-    async syncInstallationContext({standId}){
+    async syncInstallationContext({standId,signal}){
       root.clearTimeout(contextTimers.get(standId));contextTimers.delete(standId);
       const epoch=(contextEpochs.get(standId)||0)+1,reset=contextResetEpoch;contextEpochs.set(standId,epoch);
       const result=contextQueue.catch(()=>{}).then(async()=>{
         if(contextEpochs.get(standId)!==epoch||reset!==contextResetEpoch)throw fail('RECEIVER_CONTEXT_STALE');
-        const result=await receiverContext('syncInstallationContext',standId,()=>contextEpochs.get(standId)===epoch&&reset===contextResetEpoch);
+        contextEvent({standId,status:'syncing'},epoch,reset,'writing');
+        let result;
+        try{result=await receiverContext('syncInstallationContext',standId,()=>contextEpochs.get(standId)===epoch&&reset===contextResetEpoch,signal);}
+        catch(error){
+          if(contextEpochs.get(standId)!==epoch||reset!==contextResetEpoch)throw fail('RECEIVER_CONTEXT_STALE');
+          contextEvent({standId,status:'pending'},epoch,reset,'complete');throw error;
+        }
         if(contextEpochs.get(standId)!==epoch||reset!==contextResetEpoch)throw fail('RECEIVER_CONTEXT_STALE');
+        contextEvent(result,epoch,reset,'complete');
         return result;
       });contextQueue=result;
       return result;
@@ -530,7 +575,6 @@
     async otaPlan({standId,receiverId}){return call('otaPlan',{standId,receiverId});},
     async otaMainRecoveryPlan({standId,receiverId}){return call('otaMainRecoveryPlan',{standId,receiverId});},
     async otaMainRecoveryStart({standId,receiverId,artifactId}){return call('otaMainRecoveryStart',{standId,receiverId,artifactId});},
-    async otaImport({standId,receiverId}){return call('otaImport',{standId,receiverId});},
     async otaStart({standId,receiverId,artifactId}){return call('otaStart',{standId,receiverId,artifactId});},
     async otaStatus({standId,receiverId,jobId}){return call('otaStatus',{standId,receiverId,jobId});},
     async otaResume({standId,receiverId,jobId}){return call('otaResume',{standId,receiverId,jobId});},
@@ -598,7 +642,6 @@
         unavailableReason:'Receiver gevonden. Beveiligd toevoegen is in deze V30-bouw nog niet beschikbaar.'}]};
     }
   }:{};
-  if(!supportsOtaImport)delete serviceSet.otaImport;
   const services=Object.freeze(serviceSet);
-  return Object.freeze({native,emptyModel,services,capabilities:()=>call('capabilities')});
+  return Object.freeze({native,emptyModel,services,registerContextWriteBarrier,capabilities:()=>call('capabilities')});
 });

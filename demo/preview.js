@@ -268,6 +268,36 @@ function softChaseCoverage(distance,width,n,smooth){
   return crisp+(clamp(soft,0,1)-crisp)*blend;
 }
 
+// Reflect the same finite C2 band at a bounded scanner's two endpoints.
+// This conserves the selected width, with no far-end wrap or history delay.
+function softBoundedCoverage(samplePixel,position,width,n,smooth){
+  const core=clamp(Math.round(width),1,n);if(core>=n)return 1;
+  const center=clamp(position,0,1)*(n-core)+core*.5,sample=Math.round(samplePixel)+.5,half=core*.5;
+  const coverage=clamp((core+1)*.5-Math.abs(sample-.5-(center-.5)),0,1),crisp=coverage>=.999?1:0;
+  if(!smooth)return crisp;
+  const integral=p=>{const x=Math.abs(p),tail=1.5-x,v=x>=1.5?1:x<=.5?.5+x*(.75-x*x/3):1-tail*tail*tail/6;return p<0?1-v:v;};
+  const band=d=>integral(d+half)-integral(d-half),soft=clamp(band(sample-center)+band(sample+center)+band(sample-(2*n-center)),0,1);
+  const s=clamp(smooth,0,100,100)/100,blend=s<.5?4*s*s*s:1-4*Math.pow(1-s,3);
+  return crisp+(soft-crisp)*blend;
+}
+
+function continuousCascadeBrightness(phase,n,smooth){
+  phase-=Math.floor(phase);
+  const s=clamp(smooth,0,100,100)/100,blend=s<.5?4*s*s*s:1-4*Math.pow(1-s,3),edge=Math.min(.25,(1+2*blend)/Math.max(1,n));
+  let ramp=phase;
+  if(phase<edge||phase>1-edge){const unwrapped=phase<edge?phase+1:phase,t=clamp((unwrapped-(1-edge))/(2*edge),0,1);ramp=unwrapped-t*t*t*(t*(t*6-15)+10);}
+  return .6+.4*clamp(ramp,0,1);
+}
+
+function softTrailCoverage(behind,trail,n,smooth){
+  const amount=clamp(1-behind/trail,0,1),s=clamp(smooth,0,100,100)/100,blend=s<.5?4*s*s*s:1-4*Math.pow(1-s,3);
+  const legacy=Math.round(amount*65535);
+  if(!smooth)return legacy/65535;
+  const edge=Math.min(1.5,Math.max(1,n)*.5),taper=d=>{const t=clamp(d/edge,0,1);return t*t*t*(t*(t*6-15)+10);};
+  const gate=taper(behind)*taper(n-behind);
+  return Math.floor(legacy*(1+(gate-1)*blend))/65535;
+}
+
     // V32: mirror the CURRENT SPI scenePixel implementation, not the archived
     // V21 HTML mock-up. In particular colour/envelope quantisation, comet tails,
     // sparkle clocks and real four-channel W must agree before screen clipping.
@@ -348,15 +378,15 @@ function softChaseCoverage(distance,width,n,smooth){
         foreground=band(seed/7);amount=hash%1000<Math.min(820,8+clamp(s.randomness,0,100,25)*2+objects*9)?1:0;
       }else if(engine==='SCANNER'){
         let p=left?1-(s.bounce?bounce:raw):(s.bounce?bounce:raw);const core=clamp(Math.round(width),1,n),travel=Math.max(1,n-core),step=Math.round(p*travel)/travel;p=step+(p-step)*curve;
-        const coverage=position=>{if(core>=n)return 1;const c=clamp((core+1)*.5-Math.abs(Math.round(u*n-.5)-(clamp(position,0,1)*(n-core)+(core-1)*.5)),0,1),a=c>=.999?1:0;return q16(a+(c-a)*curve);};
+        const coverage=position=>q16(softBoundedCoverage(u*n-.5,position,core,n,smooth));
         foreground=gradient(temporal);amount=coverage(p);if(s.mirror)amount=Math.max(amount,coverage(1-p));
-        if(trail){const tail=wrap(left?u-p:p-u),a=q16(Math.max(0,1-tail*n/Math.max(1,width*(1+trail/12))));amount=Math.max(amount,Math.floor(a*65535*.72)/65535);}
+        if(trail){const tail=wrap(left?u-p:p-u),a=softTrailCoverage(tail*n,Math.max(1,width*(1+trail/12)),n,smooth);amount=Math.max(amount,Math.floor(a*65535*.72)/65535);}
       }else if(engine==='DUAL'||engine==='MIRROR'){
         foreground=gradient(u+temporal);amount=0;const copies=Math.max(2,objects);
-        for(let k=0;k<copies;k++){const p=motion(phase+k*(.35+spread*.65)/copies,width);amount=Math.max(amount,thickness(distance(u,p),width),thickness(distance(u,wrap(1-p)),width));}
+        for(let k=0;k<copies;k++){const p=motion(phase+k*(.35+spread*.65)/copies,width);amount=Math.max(amount,q16(softChaseCoverage(distance(u,p),width,n,smooth)),q16(softChaseCoverage(distance(u,wrap(1-p)),width,n,smooth)));}
       }else if(engine==='COMET'){
         foreground=gradient(temporal);amount=0;
-        for(let k=0;k<objects;k++){const p=motion(phase+(objects===1?0:k*span/objects),width),tail=wrap(left?u-p:p-u),a=q16(Math.max(0,1-tail*n/Math.max(1,width*(1.4+trail*.09))));amount=Math.max(amount,thickness(distance(u,p),width),Math.floor(a*65535*.88)/65535);}
+        for(let k=0;k<objects;k++){const p=motion(phase+(objects===1?0:k*span/objects),width),tail=wrap(left?u-p:p-u),a=softTrailCoverage(tail*n,Math.max(1,width*(1.4+trail*.09)),n,smooth);amount=Math.max(amount,q16(softChaseCoverage(distance(u,p),width,n,smooth)),Math.floor(a*65535*.88)/65535);}
       }else if(engine==='ALTERNATE'){
         const bandWidth=Math.max(1,Math.round(width)),gap=Math.max(1,Math.floor(Math.fround(bandWidth*Math.fround(.3+spacing*2.7)))),period=bandWidth+gap,p=motion(phase,width),centre=(bandWidth-1)*.5;
         const cyclicDistance=Math.max(period,Math.round(n/period)*period),continuous=phaseSteps(phase)*cyclicDistance,travel=p*n+(continuous-p*n)*curve;
@@ -364,7 +394,7 @@ function softChaseCoverage(distance,width,n,smooth){
         const c=clamp((bandWidth+1)*.5-Math.abs(delta),0,1),a=c>=.999?1:0;amount=q16(a+(c-a)*curve);
       }else if(engine==='CASCADE'||engine==='SEQUENCE'){
         const q=wrap(u-temporal);foreground=mix(palette[Math.min(Math.floor(q*objects),objects-1)%count],gradient(q,true),curve);amount=objectAmount();
-        if(engine==='CASCADE')amount=Math.floor(amount*65535*(60+Math.floor(q*40))/100)/65535;
+        if(engine==='CASCADE')amount=Math.floor(amount*65535*(smooth?continuousCascadeBrightness(q,n,smooth):(60+Math.floor(q*40))/100))/65535;
       }else if(engine==='WARM'){
         const clock=phaseSteps(temporal+u*.72);
         foreground=count===1?palette[0].map(channel=>channel*(.68+.32*ease(.5+.5*Math.sin(clock*tau)))):gradient(clock,true);

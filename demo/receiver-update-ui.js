@@ -51,8 +51,6 @@
     function errorKey(code){
       const map={
         OTA_DIRECT_WIFI_REQUIRED:'softwareErrorConnection',NATIVE_UNAVAILABLE:'softwareErrorConnection',
-        OTA_IMPORT_INVALID:'softwareErrorImportInvalid',OTA_IMPORT_WRONG_RECEIVER:'softwareErrorImportFamily',
-        OTA_IMPORT_TOO_LARGE:'softwareErrorImportTooLarge',OTA_IMPORT_UNAVAILABLE:'softwareErrorImportUnavailable',
         OTA_ACK_TIMEOUT:'softwareErrorAck',OTA_RECEIVER_REJECTED:'softwareErrorRejected',
         OTA_RESTART_NOT_VERIFIED:'softwareErrorRestart',OTA_ROLLBACK:'softwareErrorRollback',
         OTA_TOPOLOGY_UNSUPPORTED:'softwareErrorTopology',OTA_TOPOLOGY_UNCONFIRMED:'softwareErrorTopologyUnconfirmed',
@@ -91,14 +89,11 @@
         status=`<small class="update-warning" role="alert">${escape(entry.message||messageFor(code))}</small>`;
       }else if(entry.status==='cancelled')status=`<small>${escape(t('softwareCancelled'))}</small>`;
       else if(entry.status==='complete')status=`<small>${escape(t('softwareUpToDate',{version:entry.job.toVersion}))}</small>`;
-      if(entry.importError)status+=`<small class="update-warning" role="alert">${escape(entry.importError)}</small>`;
-      else if(entry.importedVersion)status+=`<small class="update-imported" role="status">${escape(t('softwareFirmwareImported',{version:entry.importedVersion}))}</small>`;
       let action='';
       if(!busy&&entry.status==='recovery')action=`<button class="text-button" data-update="resume" data-id="${escape(receiver.id)}">${escape(t('softwareResumeCheck'))}</button>`;
       else if(!busy&&entry.status==='main-recovery-ready')action=`<button class="button full" data-update="repair-start" data-id="${escape(receiver.id)}">${escape(t('softwareMainRecoveryStart'))}</button>`;
       else if(!busy&&entry.status==='offline'&&entry.errorCode==='OTA_TOPOLOGY_UNCONFIRMED'&&receiver.role==='main'&&typeof services.otaMainRecoveryPlan==='function')action=`<button class="button secondary full" data-update="repair-check" data-id="${escape(receiver.id)}">${escape(t('softwareMainRecoveryCheck'))}</button>`;
       else if(!busy&&!entry.cancelling&&entry.status==='running'&&entry.job?.cancelAllowed&&!entry.job?.committed)action=`<button class="text-button" data-update="cancel" data-id="${escape(receiver.id)}">${escape(t('softwareCancel'))}</button>`;
-      else if(!busy&&entry.status==='ready'&&typeof services.otaImport==='function')action=`<button class="button secondary full" data-update="import" data-id="${escape(receiver.id)}">${escape(t('softwareImportFirmware'))}</button>`;
       return `<section class="card receiver-update-progress" data-update-row="${escape(receiver.id)}" data-state="${entry.status}"><div class="update-receiver-copy"><b>${name}</b><small>${escape(receiver.type)}</small>${status}</div>${action}</section>`;
     }
     function paint(){
@@ -120,7 +115,7 @@
       // Replacing the entire dialog every 800 ms loses focus and list position.
       if(!dialog.firstElementChild)dialog.innerHTML=`<header><div><h2>${escape(safeTitle())}</h2><p>${escape(t('softwareUpdateSubtitle'))}</p></div><button class="icon-button" data-update="close" aria-label="${escape(t('close'))}">×</button></header><p class="update-guidance">${escape(t('softwareUpdateKeepOpen'))} ${escape(t('softwareUpdateSequence'))}</p><div class="update-receiver-list"></div><div class="update-controls"></div><p class="update-run-status" role="status" aria-live="polite" hidden></p><button class="button secondary full" data-update="close">${escape(t('close'))}</button>`;
       const list=dialog.querySelector('.update-receiver-list'),footer=dialog.querySelector('.update-controls');
-      dialog.querySelector('.update-guidance').textContent=t('softwareUpdateKeepOpen')+' '+t(entries.some(entry=>entry.mainRecovery)?'softwareMainRecoveryGuidance':'softwareUpdateSequence')+(typeof services.otaImport==='function'?' '+t('softwareImportGuidance'):'');
+      dialog.querySelector('.update-guidance').textContent=t('softwareUpdateKeepOpen')+' '+t(entries.some(entry=>entry.mainRecovery)?'softwareMainRecoveryGuidance':'softwareUpdateSequence');
       const focused=document.activeElement,focusAction=focused?.dataset?.update,focusId=focused?.dataset?.id;
       const listTop=list.scrollTop,dialogTop=dialog.scrollTop;
       const rows=entries.map(rowMarkup).join('');
@@ -306,26 +301,6 @@
       if(token!==generation)return;busy=false;busyKey='';paint();
       if(entry.status==='running')void monitorPending(entry,token);
     }
-    async function importFirmware(receiverId){
-      if(busy||typeof services.otaImport!=='function')return;
-      const entry=entries.find(item=>item.receiver.id===receiverId);
-      if(!entry||entry.status!=='ready'||!entry.plan)return;
-      const token=generation;busy=true;busyKey='softwareImporting';entry.importError='';paint();
-      try{
-        const imported=await services.otaImport({standId:entry.receiver.standId,receiverId:entry.receiver.id});
-        if(!current(token))return;
-        if(imported?.status==='cancelled'){busy=false;busyKey='';paint();return;}
-        const expectedId=`${entry.receiver.type.toLowerCase()}-${entry.plan.toVersion}-local-setup`;
-        if(!imported||imported.status!=='imported'||imported.receiverType!==entry.receiver.type||
-          imported.artifactId!==expectedId||imported.version!==entry.plan.toVersion||
-          imported.size!==entry.plan.size||typeof imported.sha256!=='string'||!/^[a-f0-9]{64}$/i.test(imported.sha256))throw unconfirmed();
-        entry.importedVersion=imported.version;entry.importError='';busy=false;busyKey='';paint();
-        await check();
-      }catch(error){
-        if(!current(token))return;
-        entry.importError=messageFor(error?.code||'OTA_IMPORT_INVALID');busy=false;busyKey='';paint();
-      }
-    }
     function openList(value,scopeAll){
       const normalized=normalize(Array.isArray(value)?value:[value]);if(!normalized)return false;
       generation++;monitorEpoch++;activeMonitorId=null;entries=normalized;allReceivers=scopeAll;
@@ -336,7 +311,6 @@
           const button=event.target.closest('[data-update]');if(!button||button.disabled)return;
           const action=button.dataset.update;
           if(action==='close')close();else if(action==='all')void updateAll();else if(action==='check')void check();
-          else if(action==='import')void importFirmware(button.dataset.id);
           else if(action==='repair-check')void recoverMain(button.dataset.id);else if(action==='repair-start')void recoverMain(button.dataset.id,true);
           else if(action==='resume')void resume(button.dataset.id);else if(action==='cancel')void cancel(button.dataset.id);
         });

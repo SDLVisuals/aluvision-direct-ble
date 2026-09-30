@@ -37,13 +37,6 @@
 .receiver-toolbar .button { min-width: 0; min-height: 48px; padding: 10px; gap: 6px; font-size: 12px; line-height: 1.3; }
 .receiver-toolbar .button span { min-width: 0; overflow-wrap: anywhere; }
 .receiver-toolbar .icon { width: 19px; height: 19px; flex: none; }
-.firmware-download-section { display: grid; gap: 12px; }
-.demo-firmware-heading { display: flex; align-items: center; gap: 12px; }
-.demo-firmware-heading h2 { margin: 0 0 3px; font-size: 18px; }
-.demo-firmware-heading p,
-.demo-firmware-note { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
-.firmware-download-actions { display: grid; gap: 8px; }
-.firmware-download-actions > a { text-decoration: none; text-align: center; }
 .receivers-page .receiver-filters { margin: 0; }
 body[data-theme="dark"] .receiver-update-sheet .update-run-status,
 body[data-theme="dark"] .receiver-update-sheet .update-all-current { background: rgba(255,255,255,.07); }

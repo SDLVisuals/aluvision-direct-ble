@@ -1,6 +1,6 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-receiver-reliability-207-20260930",
+  "revision": "v32-no-software-import-210-20260930",
   "interfaceVersion": 32,
   "interfaceBaseline": "V32 keeps the established Aluvision interface while making animation browsing easier to understand and gentler to use. Customers first see clearly labelled effect groups; opening one enters a focused page with only that group’s variations, and choosing a variation is the action that starts it. A single back button returns to the originating list and moves beside the sticky LED overview only when its inline position is obscured. The active-animation action also moves one DOM button between the page and preview dock, so no duplicate or half-hidden copy remains. The spatial tunnel/wall overview appears on opening a spatial group and stays visible in its active settings. Page transitions use a light spring, smaller controls respond smoothly, and reduced-motion preferences are respected. Fixed-colour, animation-family and active-animation workspaces now share one calmer mobile hierarchy: the gallery has one instruction heading, the running animation is named before its controls, two animation colours align together with a deliberate full-width add action, and the active editor uses one frosted surface instead of nested cards. The fixed-colour wheel stays fully above the bottom navigation on first load. The same shared colour picker is reused for fixed colour and animation palettes; fine RGBW values remain exact. Search text stays at the iPhone no-zoom size. Browsing preserves selected lights and active effects. Browser verification does not prove physical receiver acceptance.",
   "animationGroupNavigation": {
@@ -47,13 +47,11 @@
   "hardwareAccess": false,
   "nativeAppModified": true,
   "nativeAppUpdatePending": false,
-  "nativeAppBuildTarget": 207,
+  "nativeAppBuildTarget": 210,
   "nativeAppBundleVerified": true,
   "nativeAppBuiltVersion": "32.0.0",
-  "nativeAppBuiltBuild": 207,
+  "nativeAppBuiltBuild": 210,
   "nativeAppInstalled": true,
-  "nativeAppInstallationMode": "in-place",
-  "nativeAppVisibleLaunchVerified": false,
   "nativeAppSimulatorInstalled": false,
   "nativeAppInstallationPreservedData": null,
   "interfaceAccessibility": {
@@ -61,23 +59,9 @@
     "lightAndDarkVerified": true
   },
   "firmwarePublished": false,
-  "firmwareDownloadsIncluded": true,
-  "firmwareRelease": {
-    "version": "32.0.9",
-    "channel": "release-candidate",
-    "rgbwSha256": "1b689a3bfcdb077cb49f982d0a9d3c1ec480da639426e120b977994bb5f06fa6",
-    "spiSha256": "344b428b59a2754cbfe6fe670acd199b6981965daa022fa296afde6ce0480a96",
-    "otaImportAvailableInAppBuild": 207,
-    "physicalReceiverOtaVerified": true,
-    "physicalReceiverOtaValidation": {
-      "receiverCount": 3,
-      "RGBW": 2,
-      "SPI": 1,
-      "checks": "approved artifact and job binding; committed verified update; authenticated version readback",
-      "fullReliabilityMatrixCompleted": false
-    },
-    "physicalLedOutputVerified": false
-  },
+  "firmwareDownloadsIncluded": false,
+  "softwareFileImportAvailable": false,
+  "standardBundledReceiverUpdatesPreserved": true,
   "assets": [
     {
       "path": "animation-engine.js",
@@ -93,7 +77,7 @@
     },
     {
       "path": "animation-mobile.css",
-      "sha256": "e0bf9c1709e87b19a16fe52944708466a4ea354ce5a4dd2dc4c8a645ea29aab4"
+      "sha256": "c836b5c996f15262f435f05c3eccb6e5bcba1e169d6bebe1c21dd43178ea96a6"
     },
     {
       "path": "animations.css",
@@ -101,7 +85,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "369a6b0ef552b206f90bd10a211bc19865e9120358f5f0b79ce0120da0b5e842"
+      "sha256": "83f322a20000150466eee896882fcdce8029a29bae26631daeb8e57260c7def5"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -128,24 +112,12 @@
       "sha256": "9c9d4561f7b397929cbc2fa8e10293aea616d999d1c183fc8d409ed1f89990bf"
     },
     {
-      "path": "firmware/artifacts/rgbw-32.0.9-local-setup.app.bin",
-      "sha256": "1b689a3bfcdb077cb49f982d0a9d3c1ec480da639426e120b977994bb5f06fa6"
-    },
-    {
-      "path": "firmware/artifacts/spi-32.0.9-local-setup.app.bin",
-      "sha256": "344b428b59a2754cbfe6fe670acd199b6981965daa022fa296afde6ce0480a96"
-    },
-    {
-      "path": "firmware/catalog.json",
-      "sha256": "93057bbe9cc79aa36baa6e9c5396024036f280287732d1ef3d64160d79ca8fd0"
-    },
-    {
       "path": "fixtures.js",
       "sha256": "7ccc08ac36a6ab22e65c79d796f4dd3e60d42232ff6209ae866b616bc9d0beb8"
     },
     {
       "path": "index.html",
-      "sha256": "87eab08ca57c99bc89f64aca885d383accc8e9ccd5be4fbea9b71c247cfb190d"
+      "sha256": "9121e04237f7080a1a4571e22b715ac9a3e768fcbf2ad266db2cd44467f7e5a0"
     },
     {
       "path": "installation-libraries.js",
@@ -153,7 +125,7 @@
     },
     {
       "path": "live-control.js",
-      "sha256": "71c117522894b2992090443afd6cb76659f90a77c43909f5ab74e1a190a52813"
+      "sha256": "4a4458c255dd49a008f64642da3ff010d4c2846de88f778f1046fca1afea18ec"
     },
     {
       "path": "migration.js",
@@ -165,7 +137,7 @@
     },
     {
       "path": "native-runtime.js",
-      "sha256": "94e0971e034fae0ec715b1c59f1f91b04685754652fb3584ce28a242385ede72"
+      "sha256": "65c2e3cebdda867812379781aa5b8f975d6c2c49f96e13bf031c77343da4d99c"
     },
     {
       "path": "onboarding-adapter.js",
@@ -181,11 +153,19 @@
     },
     {
       "path": "onboarding-ui.css",
-      "sha256": "b61c0f552edcf3695cfd9f7c79ec54d5b70364a1c69c3cfd810c71b71d20603a"
+      "sha256": "d090f65d151168edd6f1ee01c26eb798a9f7882f36e797f9e9e0289dd1fb47c5"
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "c4f426189c83ff363d27972209da9a20d83611fc523296090451a500039c3f23"
+      "sha256": "3f7784d6fa61bd9325f6d692639c7e02db3b5bdf55490e8b4775bcff5dc97dde"
+    },
+    {
+      "path": "page-interaction.css",
+      "sha256": "9f55bcf272b842157322b9562739cc6fbafe697427d9690e980e735c09848b5b"
+    },
+    {
+      "path": "page-interaction.js",
+      "sha256": "e6d7b3ef5b03295c11fb801a64941e89dd28b982e9b1699f5bee4b66b75407d4"
     },
     {
       "path": "pixel-setup.css",
@@ -197,11 +177,11 @@
     },
     {
       "path": "preferences.js",
-      "sha256": "1b5c6368b45c6549577a2a35ff91d505f15f76074084b144f2e2db111d78e5a6"
+      "sha256": "af43b51bfda7d4099e865d3472b3f2ef5c86d7d12ca8a613429d69dc1aa58bc5"
     },
     {
       "path": "premium-surfaces.css",
-      "sha256": "e6088d28111fa8b909330048b50e91a276702600a475344b344a0c3ff9ce01a0"
+      "sha256": "5903eafa236ea54ca291b8d53a4bfc94dd516e5a7fa3b81c3a39733dc53de05c"
     },
     {
       "path": "presets.js",
@@ -209,7 +189,7 @@
     },
     {
       "path": "preview.js",
-      "sha256": "333b9baaa23d2c72c7be84e3a419cdc41f67f57be748a89b9aef81de22424a6c"
+      "sha256": "8ecc2b75d7b69daf087da152464553a57880e22c42a4036dfbae5310176593d4"
     },
     {
       "path": "receiver-playback.js",
@@ -225,11 +205,11 @@
     },
     {
       "path": "receiver-update-ui.css",
-      "sha256": "dc0e8217a378f961c8e5356dff92985473c5c4b117f9e58dad9c7fd6ed05b0aa"
+      "sha256": "1bcd03003d0a3da2a224c9b98c3793d99afb6f3bb378bc588857759547f18b4a"
     },
     {
       "path": "receiver-update-ui.js",
-      "sha256": "c868d5ea8cc06180064d3a771ad282eb77b1815329557bcb01b0ef6f2946b43b"
+      "sha256": "4ab0de834f0ed69c8c9c3b55be254058b4e17b1f4ca90ed20044fddd3bba373b"
     },
     {
       "path": "receiver-visual.css",

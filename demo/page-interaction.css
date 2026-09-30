@@ -1,0 +1,19 @@
+/* Keep the app at its designed scale, without blocking either scroll axis.
+   Descendant colour wheels and drag handles retain their touch-action:none.
+   Zoom permissions intersect all ancestors up to the document root. */
+html, body {
+  touch-action: pan-x pan-y;
+}
+
+textarea {
+  font: inherit;
+}
+
+/* These older compact fields were the only editable controls below 16px.
+   Prevent iPhone focus magnification; keep larger PIN/pixel fields unchanged. */
+@media (hover: none) and (pointer: coarse) {
+  .output-row input[type="number"],
+  .output-row select {
+    font-size: 16px;
+  }
+}

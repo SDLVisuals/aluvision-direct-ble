@@ -149,16 +149,56 @@
   function create({send,sendBatch,onState,delay=0,setTimer=setTimeout,clearTimer=clearTimeout}) {
     if (typeof send !== 'function' || typeof onState !== 'function') throw Error('LIVE_QUEUE_INVALID');
     if (sendBatch!==undefined && typeof sendBatch!=='function') throw Error('LIVE_QUEUE_INVALID');
-    const queue=new Map(), desired=new Map(), states=new Map();
-    let active=null,draining=false,timer=null,version=0,epoch=0;
+    const queue=new Map(), desired=new Map(), states=new Map(),idleWaiters=new Set();
+    let active=null,draining=false,timer=null,version=0,epoch=0,idleLease=null;
     const emit=(id,kind,code='')=>{const value={kind,code};states.set(id,value);onState(id,value);};
     const signature=request=>JSON.stringify(request);
+    const idleError=code=>Object.assign(Error(code),{code});
+    function otherStand(standId){
+      return !!standId&&(idleLease&&idleLease.standId!==standId||[...queue.values(),...(active?.items.values()||[])].some(item=>item.request.standId!==standId));
+    }
+    function finishWaiter(waiter,error,value){
+      if(!idleWaiters.delete(waiter))return;
+      clearTimer(waiter.timer);waiter.signal?.removeEventListener('abort',waiter.abort);
+      if(error)waiter.reject(error);else waiter.resolve(value);
+    }
+    function lease(standId){
+      const held={standId,epoch};idleLease=held;
+      return Object.freeze({release(){
+        if(idleLease!==held)return;
+        idleLease=null;schedule();settleIdle();
+      }});
+    }
+    function settleIdle(){
+      for(const waiter of [...idleWaiters]){
+        if(waiter.signal?.aborted)finishWaiter(waiter,idleError('LIVE_QUEUE_CANCELLED'));
+        else if(waiter.epoch!==epoch)finishWaiter(waiter,idleError('LIVE_QUEUE_CLEARED'));
+        else if(otherStand(waiter.standId))finishWaiter(waiter,idleError('LIVE_QUEUE_SCOPE_BUSY'));
+        else if(!idleLease&&!draining&&!active&&!queue.size)finishWaiter(waiter,null,waiter.acquire?lease(waiter.standId):undefined);
+      }
+    }
+    function waitIdle({standId,timeoutMs=35000,signal}={},acquire=false){
+      if(standId!==undefined&&(typeof standId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(standId))||
+         acquire&&standId===undefined||!Number.isInteger(timeoutMs)||timeoutMs<1||timeoutMs>35000||
+         signal!==undefined&&(!signal||typeof signal.aborted!=='boolean'||typeof signal.addEventListener!=='function'||typeof signal.removeEventListener!=='function'))return Promise.reject(idleError('LIVE_QUEUE_INVALID'));
+      if(signal?.aborted)return Promise.reject(idleError('LIVE_QUEUE_CANCELLED'));
+      if(active&&active.epoch!==epoch||idleLease&&idleLease.epoch!==epoch)return Promise.reject(idleError('LIVE_QUEUE_CLEARED'));
+      if(otherStand(standId))return Promise.reject(idleError('LIVE_QUEUE_SCOPE_BUSY'));
+      if(!idleLease&&!draining&&!active&&!queue.size)return Promise.resolve(acquire?lease(standId):undefined);
+      if(idleWaiters.size>=8)return Promise.reject(idleError('LIVE_QUEUE_BUSY'));
+      return new Promise((resolve,reject)=>{
+        const waiter={standId,epoch,acquire,signal,resolve,reject,timer:null,abort:null};idleWaiters.add(waiter);
+        waiter.abort=()=>finishWaiter(waiter,idleError('LIVE_QUEUE_CANCELLED'));signal?.addEventListener('abort',waiter.abort,{once:true});
+        waiter.timer=setTimer(()=>finishWaiter(waiter,idleError('LIVE_QUEUE_BUSY')),timeoutMs);
+      });
+    }
+    const whenIdle=options=>waitIdle(options),acquireIdle=options=>waitIdle(options,true);
     function schedule(){
-      if(draining||timer!==null||!queue.size)return;
+      if(draining||idleLease||timer!==null||!queue.size)return;
       timer=setTimer(()=>{timer=null;void drain();},delay);
     }
     async function drain(){
-      if(draining)return;
+      if(draining||idleLease)return;
       draining=true;
       try{
         while(queue.size){
@@ -204,21 +244,25 @@
             emit(id,code?'failed':'applied',code||'');
           }
         }
-      }finally{active=null;draining=false;schedule();}
+      }finally{active=null;draining=false;schedule();settleIdle();}
     }
     function request(input){
       const copied=clone(input),id=copied.receiverId,sig=signature(copied);
       desired.set(id,{signature:sig,version:++version});
       if(active?.epoch===epoch&&active.items.get(id)?.signature===sig){queue.delete(id);emit(id,'pending');return;}
       queue.set(id,{request:copied,signature:sig});emit(id,'pending');schedule();
+      // A newly selected other installation cannot inherit an existing idle
+      // barrier. Fail it closed rather than silently waiting for foreign work.
+      for(const waiter of [...idleWaiters])if(otherStand(waiter.standId))finishWaiter(waiter,idleError('LIVE_QUEUE_SCOPE_BUSY'));
     }
     function preview(id){
       desired.set(id,{signature:null,version:++version});queue.delete(id);emit(id,'preview');
     }
     function clear(){
       epoch++;if(timer!==null)clearTimer(timer);timer=null;queue.clear();desired.clear();states.clear();
+      for(const waiter of [...idleWaiters])finishWaiter(waiter,idleError('LIVE_QUEUE_CLEARED'));
     }
-    return Object.freeze({request,preview,clear,state:id=>states.get(id)||{kind:'idle',code:''}});
+    return Object.freeze({request,preview,clear,whenIdle,acquireIdle,state:id=>states.get(id)||{kind:'idle',code:''}});
   }
   return Object.freeze({create,requestFor,joinZonePlayback});
 });

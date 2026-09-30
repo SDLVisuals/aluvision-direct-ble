@@ -65,7 +65,7 @@
     let securityReceiptRef=null,finalReceiptRef=null,securityUncertain=false,finalizationStarted=false,completeModel=null,manualRejoinSSID=null;
     let returningFromWifi=false,rejoinTimer=null,registrationPending=false;
     let rejoinSession=0,rejoinAttempts=0,rejoinRunning=false,rejoinExhausted=false,rejoinBlocked=false,automaticFinalizing=false;
-    let identifying=new Map(),identifyPending=new Map(),zoneNameOpen=false,searchAbort=null,resumeSelection=null;
+    let identifying=new Map(),identifyPending=new Map(),identifyFocusOwner=null,zoneNameOpen=false,searchAbort=null,resumeSelection=null;
     let standNameInput=null,zoneNameInput='',draftSaving=false,pendingChoices=null,saveFailed=false,origin='stand';
     let zoneExtraNames=[],zoneRemoval=null,zoneRename=null,receiverMove=null,managementBusy=false,zoneListReturn=null;
     const visualEntrances=new Map(),presentedStages=new Set(),plugMotion=visual.createPlugMotion();
@@ -302,7 +302,7 @@
       if(container){container.removeEventListener('click',click);container.removeEventListener('input',input);container.removeEventListener('keydown',keydown);}
       document.removeEventListener('visibilitychange',visibilityChanged);window.removeEventListener('lightning:native-active',nativeActive);window.removeEventListener('pageshow',pageShown);stopAutomaticRejoin();returningFromWifi=false;
       container=null;cancelSearch();plugMotion.clear();selectedOutput=null;zoneListReturn=null;
-      for(const pending of identifyPending.values())pending.abort();identifyPending.clear();
+      for(const pending of identifyPending.values())pending.abort();identifyPending.clear();identifyFocusOwner=null;
       for(const id of identifying.keys())stopIdentify(id);
       if(!discard&&draft?.receiver&&draft.stage!=='done')void parkForSearch();
     }
@@ -369,7 +369,7 @@
     function foundReceiverCard(receiver){
       const isIdentifying=identifying.has(receiver.id),available=canIdentify(receiver);
       const entranceKey=`found:${draft.transactionId}:${receiver.id}`,entering=!presentedStages.has(entranceKey);presentedStages.add(entranceKey);
-      return `<article class="card onboarding-result${entering?' onboarding-result-enter':''}" data-onboarding-result="${escape(receiver.id)}" data-discovery-status="found"><div class="onboarding-found-status"><b><i aria-hidden="true"></i>Gevonden</b><span>Nog niet toegevoegd</span></div>${receiverIdentity(receiver)}${product(receiver,{compact:true})}<div class="onboarding-recognition"><span>${isIdentifying?'Dit licht knippert nu.':'Herken jouw verlichting'}</span>${button('identify',isIdentifying?'Stop knipperen':'Laat knipperen',`data-id="${escape(receiver.id)}" class="button secondary" aria-pressed="${isIdentifying}" ${busy||identifyPending.has(receiver.id)||!available?'disabled':''}`)}</div>${!available?`<small class="onboarding-identify-unavailable">${draft.role==='main'?'Deze receiver kan pas knipperen nadat hij is toegevoegd.':'Deze receiver kan nu niet knipperen. Controleer je verbinding en probeer opnieuw.'}</small>`:''}<div class="onboarding-actions">${receiverAction(receiver)}</div></article>`;
+      return `<article class="card onboarding-result${entering?' onboarding-result-enter':''}" data-onboarding-result="${escape(receiver.id)}" data-discovery-status="found"><div class="onboarding-found-status"><b><i aria-hidden="true"></i>Gevonden</b><span>Nog niet toegevoegd</span></div>${receiverIdentity(receiver)}${product(receiver,{compact:true})}<div class="onboarding-actions">${receiverAction(receiver)}</div><div class="onboarding-recognition"><span>${isIdentifying?'Dit licht knippert nu.':'Herken jouw verlichting'}</span>${button('identify',isIdentifying?'Stop knipperen':'Laat knipperen',`data-id="${escape(receiver.id)}" class="button secondary" aria-pressed="${isIdentifying}" ${busy||identifyPending.has(receiver.id)||!available?'disabled':''}`)}</div>${!available?`<small class="onboarding-identify-unavailable">${draft.role==='main'?'Deze receiver kan pas knipperen nadat hij is toegevoegd.':'Deze receiver kan nu niet knipperen. Controleer je verbinding en probeer opnieuw.'}</small>`:''}</article>`;
     }
     function connectingReceiver(){
       return draft.receiver?`<div class="onboarding-connecting-receiver">${product(draft.receiver,{compact:true})}${receiverIdentity(draft.receiver)}</div>`:'';
@@ -419,7 +419,8 @@
       const zoneEditor=zoneNameOpen?`<section class="onboarding-destination-create">${nameField('onboarding-zone-name','Zonenaam','Bijvoorbeeld: Demohoek',zoneNameInput)}${button('zone-create','Zone maken','disabled')}</section>`:`<div class="assignment-choices onboarding-zone-list onboarding-destination-choices" aria-label="Zone kiezen">${zones}${noZone}</div>`;
       const zoneChanged=receiverZoneSelection!==undefined&&receiverZoneSelection!==draft.activeZoneId;
       const confirm=zoneNameOpen?'':button('zone-picker-confirm',draft.activeZoneId?'Deze zone gebruiken':'Deze zone kiezen',`class="button full" ${zoneChanged&&!(draft.zoneChoiceRequired&&chosenZone===null)?'':'disabled'}`);
-      return `<div class="onboarding-destination-heading"><b>Waar komt deze ledline?</b><small>Kies een zone of wijs hem later toe.</small></div><details class="onboarding-destination" data-receiver-destination ${open?'open':''}><summary data-onboarding-action="zone-picker-open" aria-haspopup="dialog" aria-expanded="${open}" aria-controls="onboarding-zone-change"><span class="onboarding-destination-ledline" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 9h18v6H3zM6 11v2M10 11v2M14 11v2M18 11v2M1 12h2M21 12h2"/></svg></span><span class="onboarding-destination-name"><small>${hint}</small><b>${escape(destinationName)}</b></span><em>${destination?'Wijzig zone':'Kies zone'}<span aria-hidden="true">⌄</span></em></summary><dialog class="onboarding-zone-dialog" id="onboarding-zone-change" data-onboarding-zone-dialog aria-labelledby="onboarding-zone-change-title"><header class="onboarding-destination-title"><h2 id="onboarding-zone-change-title">${zoneNameOpen?'Nieuwe zone maken':destination?'Zone wijzigen':'Kies een zone'}</h2><button type="button" class="icon-button" data-onboarding-action="zone-picker-close" aria-label="Venster sluiten">×</button></header><p class="onboarding-destination-info">${explanation}</p>${zoneEditor}${zoneNameOpen?'':button('zone-add-from-receiver','＋ Nieuwe zone maken','class="button secondary full"')}${confirm}</dialog></details>`;
+      const destinationHeading=results.length?'':'<div class="onboarding-destination-heading"><b>Waar komt deze ledline?</b><small>Kies een zone of wijs hem later toe.</small></div>';
+      return `${destinationHeading}<details class="onboarding-destination" data-receiver-destination ${open?'open':''}><summary data-onboarding-action="zone-picker-open" aria-haspopup="dialog" aria-expanded="${open}" aria-controls="onboarding-zone-change"><span class="onboarding-destination-ledline" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 9h18v6H3zM6 11v2M10 11v2M14 11v2M18 11v2M1 12h2M21 12h2"/></svg></span><span class="onboarding-destination-name"><small>${hint}</small><b>${escape(destinationName)}</b></span><em>${destination?'Wijzig zone':'Kies zone'}<span aria-hidden="true">⌄</span></em></summary><dialog class="onboarding-zone-dialog" id="onboarding-zone-change" data-onboarding-zone-dialog aria-labelledby="onboarding-zone-change-title"><header class="onboarding-destination-title"><h2 id="onboarding-zone-change-title">${zoneNameOpen?'Nieuwe zone maken':destination?'Zone wijzigen':'Kies een zone'}</h2><button type="button" class="icon-button" data-onboarding-action="zone-picker-close" aria-label="Venster sluiten">×</button></header><p class="onboarding-destination-info">${explanation}</p>${zoneEditor}${zoneNameOpen?'':button('zone-add-from-receiver','＋ Nieuwe zone maken','class="button secondary full"')}${confirm}</dialog></details>`;
     }
     function product(receiver,{compact=false,port=null}={}){
       return `<div class="onboarding-product ${compact?'compact':''}"><canvas data-onboarding-visual="${escape(receiver.id)}" data-type="${receiver.type}" data-port="${port||''}" data-compact="${compact}" role="img" aria-label="${receiver.type}-receiver${port?` · uitgang ${port}`:''}" width="400" height="210"></canvas></div>`;
@@ -716,7 +717,19 @@
     async function identify(id){
       const receiver=results.find(receiver=>receiver.id===id);if(!receiver||identifyPending.has(id))return;
       if(!canIdentify(receiver)){notice='Knipperen is voor deze receiver nog niet beschikbaar.';paintPage(false);return;}
-      const controller=new AbortController();identifyPending.set(id,controller);const stopping=identifying.has(id),identifyOperation=operation;paintPage(false);
+      const focusButton=container?.querySelector(`[data-onboarding-action="identify"][data-id="${CSS.escape(id)}"]`);
+      const returnFocus=!!focusButton&&document.activeElement===focusButton;
+      const controller=new AbortController();if(returnFocus)identifyFocusOwner=controller;
+      identifyPending.set(id,controller);const stopping=identifying.has(id),identifyOperation=operation;paintPage(false);
+      let focusMoved=false;
+      const cancelFocusReturn=()=>{focusMoved=true;};
+      const stopWatchingFocus=()=>{
+        for(const event of ['focusin','pointerdown','keydown'])document.removeEventListener(event,cancelFocusReturn,true);
+      };
+      if(returnFocus){
+        for(const event of ['focusin','pointerdown','keydown'])document.addEventListener(event,cancelFocusReturn,true);
+        controller.signal.addEventListener('abort',stopWatchingFocus,{once:true});
+      }
       try{
         if(stopping)await stopIdentify(id);
         else {
@@ -727,7 +740,13 @@
           else identifying.set(id,performance.now()/1000+(Number.isInteger(answer.ttlMs)&&answer.ttlMs>0?answer.ttlMs/1000:10));
         }
       }catch(_){if(identifyOperation===operation)notice='Knipperen is niet bevestigd. Je kunt de receiver wel verder instellen.';}
-      finally{if(identifyPending.get(id)===controller)identifyPending.delete(id);paintPage(false);}
+      finally{
+        const restoreFocus=returnFocus&&!focusMoved&&identifyFocusOwner===controller&&identifyOperation===operation&&container&&draft.stage==='receiver'&&document.activeElement===document.body;
+        stopWatchingFocus();controller.signal.removeEventListener('abort',stopWatchingFocus);
+        if(identifyFocusOwner===controller)identifyFocusOwner=null;
+        if(identifyPending.get(id)===controller)identifyPending.delete(id);paintPage(false);
+        if(restoreFocus)container?.querySelector(`[data-onboarding-action="identify"][data-id="${CSS.escape(id)}"]`)?.focus({preventScroll:true});
+      }
     }
     async function secure(pin,repeat,{reconcile=false,automatic=false,resumeFinalization=false}={}){
       if(busy)return 'stop';
