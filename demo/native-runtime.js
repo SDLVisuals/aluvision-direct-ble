@@ -52,7 +52,10 @@
       // leave room for native key storage and delivering that bounded result.
       // A routed OTA plan also checks journal/security/topology. Its bounded
       // native checks may take up to 100s; let the read-only result arrive.
-      const timeout=['exportBackup','chooseBackup','otaImport','recoverInstallation'].includes(action)?300000:action==='syncInstallationContext'?180000:['otaPlan','otaMainRecoveryPlan'].includes(action)?120000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
+      // A cold SPI guide performs pinned MAIN/NODE proofs and may encounter a
+      // retained proxy reply before its guide packet. This bounded allowance
+      // cancels an uncertain operation once; it never retries that mutation.
+      const timeout=['exportBackup','chooseBackup','otaImport','recoverInstallation'].includes(action)?300000:action==='previewPixels'?45000:action==='syncInstallationContext'?180000:['otaPlan','otaMainRecoveryPlan'].includes(action)?120000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
         ['secure','reconcileSecurity'].includes(action)&&payload.configuration?.role==='node'?120000:
         ['select','secure','reconcileSecurity','finalize','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain'].includes(action)?45000:12000;
       const timer=root.setTimeout(()=>{cancelNative();receive({id,ok:false,code:'NATIVE_TIMEOUT'});},timeout);
@@ -66,31 +69,40 @@
   function emptyModel(){return {schemaVersion:30,demo:false,stands:[],receivers:[],scenes:[],presets:[]};}
   function contextEvent(detail){if(typeof root.dispatchEvent==='function'&&typeof root.CustomEvent==='function')root.dispatchEvent(new root.CustomEvent('lightning:receiver-context',{detail}));}
   function contextResult(result,standId){
-    if(!result||result.standId!==standId||!['synced','pending'].includes(result.status)||!Number.isInteger(result.synced)||!Number.isInteger(result.total)||result.total<1||result.total>30||result.synced<0||result.synced>result.total||(result.status==='synced'&&result.synced!==result.total))throw fail('RECEIVER_CONTEXT_UNCONFIRMED');
-    return {standId,status:result.status,synced:result.synced,total:result.total};
+    if(!result||result.standId!==standId||!['synced','pending'].includes(result.status)||!Number.isInteger(result.synced)||!Number.isInteger(result.total)||result.total<1||result.total>30||result.synced<0||result.synced>result.total||(result.status==='synced'&&(result.synced!==result.total||result.librariesComplete===false)))throw fail('RECEIVER_CONTEXT_UNCONFIRMED');
+    return {standId,status:result.status,synced:result.synced,total:result.total,...(typeof result.librariesComplete==='boolean'?{librariesComplete:result.librariesComplete}:{})};
   }
-  async function receiverContext(action,standId){
+  async function receiverContext(action,standId,current){
     if(root.__lightningV32ReceiverContext!==true)throw fail('RECEIVER_CONTEXT_UNAVAILABLE');
     if(typeof standId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(standId))throw fail('RECEIVER_CONTEXT_INVALID');
     await writeQueue.catch(()=>{});
-    return contextResult(await call(action,{standId}),standId);
+    if(current&&!current())throw fail('RECEIVER_CONTEXT_STALE');
+    const libraries=typeof root.LightningInstallationLibraries?.capture==='function'?root.LightningInstallationLibraries.capture(standId):undefined;
+    return contextResult(await call(action,{standId,...(libraries===undefined?{}:{libraries})}),standId);
   }
-  function scheduleContext(view,standId){
+  function scheduleContext(view,standId,{immediate=false}={}){
     if(root.__lightningV32ReceiverContext!==true||!view?.model?.receivers?.some(receiver=>receiver.standId===standId&&receiver.lifecycle==='added'))return view;
     root.clearTimeout(contextTimers.get(standId));
     const epoch=(contextEpochs.get(standId)||0)+1,reset=contextResetEpoch;
     contextEpochs.set(standId,epoch);
     const current=()=>contextEpochs.get(standId)===epoch&&contextResetEpoch===reset;
     contextEvent({standId,status:'pending'});
-    contextTimers.set(standId,root.setTimeout(()=>{
+    const enqueue=()=>{
+      if(!current())return;
       contextTimers.delete(standId);
       contextQueue=contextQueue.catch(()=>{}).then(async()=>{
         if(!current())return;
         contextEvent({standId,status:'syncing'});
-        try{const result=await receiverContext('syncInstallationContext',standId);if(current())contextEvent(result);}
+        try{const result=await receiverContext('syncInstallationContext',standId,current);if(current())contextEvent(result);}
         catch(_){if(current())contextEvent({standId,status:'pending'});}
       });
-    },1400));
+    };
+    // A confirmed receiver addition is a discrete durable boundary. Launch its
+    // archive from the current reply turn: a backgrounded WebKit document may
+    // suspend its timers before the ordinary edit debounce can ever fire.
+    // Libraries/continuous edits still coalesce, and reads never start radio.
+    if(immediate)Promise.resolve().then(enqueue);
+    else contextTimers.set(standId,root.setTimeout(enqueue,1400));
     return view;
   }
   function canonical(value){
@@ -368,12 +380,16 @@
       appearanceRequest={sequence,theme,promise};return promise;
     },
     async receiverContextStatus({standId}){return receiverContext('receiverContextStatus',standId);},
+    scheduleInstallationContext({standId}){
+      if(!viewLoaded||typeof standId!=='string')return;
+      scheduleContext({model:JSON.parse(viewModelKey)},standId);
+    },
     async syncInstallationContext({standId}){
       root.clearTimeout(contextTimers.get(standId));contextTimers.delete(standId);
       const epoch=(contextEpochs.get(standId)||0)+1,reset=contextResetEpoch;contextEpochs.set(standId,epoch);
       const result=contextQueue.catch(()=>{}).then(async()=>{
         if(contextEpochs.get(standId)!==epoch||reset!==contextResetEpoch)throw fail('RECEIVER_CONTEXT_STALE');
-        const result=await receiverContext('syncInstallationContext',standId);
+        const result=await receiverContext('syncInstallationContext',standId,()=>contextEpochs.get(standId)===epoch&&reset===contextResetEpoch);
         if(contextEpochs.get(standId)!==epoch||reset!==contextResetEpoch)throw fail('RECEIVER_CONTEXT_STALE');
         return result;
       });contextQueue=result;
@@ -386,7 +402,12 @@
         if(result?.status!=='restored'||typeof result.standId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(result.standId)||result.view?.model?.demo!==false||result.view?.draft!==null)throw fail('PIN_RECOVERY_UNCONFIRMED');
         if(result.lightStateComplete!==true||typeof root.LightningReceiverPlayback?.restore!=='function')throw fail('PLAYBACK_UNCONFIRMED');
         const playbackModel=root.LightningReceiverPlayback.restore(result.view.model,result.liveStatuses,{standId:result.standId});
-        return {status:'restored',standId:result.standId,view:acceptView(result.view),playbackModel};
+        if(result.librariesComplete===true){
+          if(typeof root.LightningInstallationLibraries?.restore!=='function')throw fail('LIBRARIES_RECOVERY_UNAVAILABLE');
+          const stored=await root.LightningInstallationLibraries.restore(result.libraries,result.standId);
+          if(stored?.restored!==true)throw fail('LIBRARIES_RECOVERY_UNCONFIRMED');
+        }
+        return {status:'restored',standId:result.standId,view:acceptView(result.view),playbackModel,librariesComplete:result.librariesComplete===true};
       });writeQueue=next;return next;
     },
     async exportBackup({name,json}){
@@ -439,7 +460,10 @@
     async persistDraft({draft}){return writeView('saveDraft',{draft});},
     async parkDraft({transactionId}){return moveDraft('parkDraft',{transactionId});},
     async resumeDraft({standId,receiverId,rid,fingerprint=null}){return moveDraft('resumeDraft',{standId,receiverId,rid,fingerprint});},
-    async publishModel({model,configuration,receiptRef}){return writeView('publishModel',{model,configuration,receiptRef}).then(view=>scheduleContext(view,configuration.standId));},
+    async publishModel({model,configuration,receiptRef}){
+      const reset=contextResetEpoch;
+      return writeView('publishModel',{model,configuration,receiptRef}).then(view=>reset===contextResetEpoch?scheduleContext(view,configuration.standId,{immediate:true}):view);
+    },
     async editZones(request){return editZones(request).then(view=>scheduleContext(view,request.standId));},
     async configureOutputs(request){return configureOutputs(request).then(view=>scheduleContext(view,request.standId));},
     async outputConfigurationStatus({standId,receiverId}){

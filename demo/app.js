@@ -55,6 +55,22 @@
   try { presetStore = S.createStore(appStorage); } catch (_) { presetStore = S.createStore(null); }
   try { colourStore = Colours.createStore(appStorage); sceneStore=Scenes.createStore(appStorage); }
   catch (_) { colourStore=Colours.createStore(null);sceneStore=Scenes.createStore(null); }
+  const installationLibraries=window.LightningInstallationLibraries?.create?.(appStorage,{onRestore:()=>{
+    savedPresets=presetStore.load();savedColours=colourStore.load();savedScenes=sceneStore.load();
+  }});
+  if(installationLibraries)window.LightningInstallationLibraries=installationLibraries;
+  function scheduleLibraryContext(field,result){
+    if(!nativeContext||result?.error||typeof runtime?.services?.scheduleInstallationContext!=='function')return;
+    const stands=field==='scenes'?[stand()?.id]:model.stands.map(item=>item.id);
+    for(const standId of new Set(stands.filter(Boolean))){try{Promise.resolve(runtime.services.scheduleInstallationContext({standId})).catch(()=>{});}catch(_){}}
+  }
+  function trackedLibraryStore(store,field){
+    return Object.freeze(Object.fromEntries(Object.entries(store).map(([method,implementation])=>[method,(...args)=>{
+      try{installationLibraries?.recover();}catch(error){return {[field]:[],error:{code:'LIBRARY_STORAGE',message:error.message}};}
+      const result=implementation(...args);if(method!=='load')scheduleLibraryContext(field,result);return result;
+    }])));
+  }
+  presetStore=trackedLibraryStore(presetStore,'presets');colourStore=trackedLibraryStore(colourStore,'colors');sceneStore=trackedLibraryStore(sceneStore,'scenes');
   let savedPresets = presetStore.load();
   let savedColours=colourStore.load(),savedScenes=sceneStore.load(),sceneDraft=null;
   let sceneDetailSearch='';
@@ -1288,10 +1304,11 @@
     pinLoginBusy=true;pinLoginError='';pinRecoveryAbort=new AbortController();render();
     try{
       const result=await runtime.services.recoverInstallation({pin,signal:pinRecoveryAbort.signal});pin='';
+      reloadBackupLibraries();
       model=keepLocalPreviewStates(result.playbackModel,{exceptStandId:result.standId});nativeLoaded=true;selections.clear();liveStates.clear();
       lightIntentDirty=true;saveLightIntent();
       window.AluvisionSecurityMode?.updateFromNative?.({pinRequired:true});
-      route={...route,screen:'stand',standId:result.standId,zoneId:null};render({top:true});toast('Je stand is geopend. Kies een zone om je licht te bedienen.');
+      route={...route,screen:'stand',standId:result.standId,zoneId:null};render({top:true});toast(result.librariesComplete===false?'Receivers en zones hersteld. Op deze receiver waren nog geen scènes, animatiepresets of kleuren bewaard.':'Je stand is geopend. Kies een zone om je licht te bedienen.');
     }catch(error){
       const messages={PIN_RECOVERY_PIN_INVALID:'Deze PIN klopt niet. Controleer je installatie-PIN.',PIN_RECOVERY_LOCKED:'Er zijn te veel pogingen gedaan. Wacht even voordat je opnieuw probeert.',PIN_RECOVERY_EXPIRED:'De controle is verlopen. Controleer je wifi en probeer opnieuw.',PIN_RECOVERY_UNAVAILABLE:'Je stand kan nog niet volledig worden opgehaald. Controleer de receiverupdates en je wifi.',PIN_RECOVERY_CANCELLED:'Het ophalen is onderbroken. Je bestaande gegevens zijn niet vervangen.'};
       pinLoginError=error?.code==='CANCELLED'?'Het ophalen is gestopt. Je kunt het opnieuw proberen.':messages[error?.code]||'Je stand is nog niet veilig hersteld. Laat de receivers aan, controleer het ALUVISION-wifi en probeer opnieuw.';
@@ -1332,7 +1349,7 @@
     showEffectDialog(enabled?'PIN-beveiliging aanzetten?':'PIN-beveiliging uitzetten?',`<section class="pin-protection-dialog" data-pin-protection-dialog data-enabled="${enabled}" data-stand="${esc(current.standId)}"><p>${enabled?(current.scope==='new-installation'?'Je kiest je PIN tijdens het instellen van je stand.':current.hasPin?'Je bestaande PIN wordt opnieuw gebruikt voor wifi en netwerk verwijderen.':'Beveilig het wifi van je installatie met één PIN.'):'Het receiver-wifinetwerk wordt open. Je stand, zones en koppelingen blijven bewaard.'}</p>${needsPin?'<label class="dialog-field">Kies je PIN · 8–12 cijfers<input data-security-pin type="password" inputmode="numeric" autocomplete="off" minlength="8" maxlength="12" pattern="[0-9]{8,12}" autocapitalize="off" spellcheck="false"></label><label class="dialog-field">Herhaal je PIN<input data-security-pin-repeat type="password" inputmode="numeric" autocomplete="off" minlength="8" maxlength="12" pattern="[0-9]{8,12}" autocapitalize="off" spellcheck="false"></label><small>Bewaar je PIN: voor wifi en netwerk verwijderen.</small>':''}<p class="dialog-error" role="alert" hidden></p><div class="pin-protection-actions"><button class="button secondary full" data-action="effect-dialog-close">Annuleren</button><button class="button full" data-action="pin-protection-save" ${needsPin?'disabled':''}>${enabled?'Aanzetten':'Uitzetten'}</button></div></section>`);
   }
   function showPinReconnect(result){
-    showEffectDialog('Verbind opnieuw met wifi',`<section class="pin-protection-dialog" data-pin-reconnect><span class="menu-icon" aria-hidden="true">${icon('lock')}</span><p>Het wifi van je installatie wordt aangepast. Je stand en receivers blijven bewaard.</p><ol><li>Open <b>Instellingen → Wifi</b>.</li><li>Kies ${result.ssid?`<b>${esc(result.ssid)}</b>`:'het ALUVISION-wifi van je installatie'}${result.pinRequired?' en gebruik je PIN':' zonder wachtwoord'}.</li><li>Kom terug naar de app.</li></ol><p role="status">We controleren de verbinding zodra je terugkomt.</p><button class="button secondary full" data-action="pin-protection-recheck">Verbinding controleren</button></section>`);
+    showEffectDialog('Verbind opnieuw met wifi',`<section class="pin-protection-dialog" data-pin-reconnect><span class="menu-icon" aria-hidden="true">${icon('lock')}</span><p>${result.unconfirmed===true?'De wijziging is nog niet bevestigd. Tijdens het aanpassen van wifi kan de verbinding even wegvallen.':'Het wifi van je installatie wordt aangepast.'} Je stand en receivers blijven bewaard.</p><ol><li>Open <b>Instellingen → Wifi</b>.</li><li>Kies ${result.ssid?`<b>${esc(result.ssid)}</b>`:'het ALUVISION-wifi van je installatie'}${result.pinRequired?' en gebruik je PIN':' zonder wachtwoord'}.</li><li>Kom terug naar de app.</li></ol><p role="status">We controleren de verbinding zodra je terugkomt.${result.unconfirmed===true?' De beveiliging staat pas bevestigd aan of uit na die controle.':''}</p><button class="button secondary full" data-action="pin-protection-recheck">Verbinding controleren</button></section>`);
   }
   async function savePinProtection(button){
     const panel=document.querySelector('[data-pin-protection-dialog]');if(!panel||pinProtectionBusy)return;
@@ -1349,10 +1366,17 @@
       if(result.status==='reconnect-required'||result.requiresWifiReconnect===true){pinProtectionReconnect={...result,standId};showPinReconnect(result);}
       else {pinProtectionBusy=false;window.AluvisionSecurityMode?.updateFromNative?.({pinRequired:result.pinRequired});closeEffectDialog();render();toast(enabled?'PIN-beveiliging staat aan.':'PIN-beveiliging staat uit.');}
     }catch(cause){
+      if(cause?.code==='PIN_MODE_RECONNECT_UNCONFIRMED'&&pinProtection?.standId===standId&&pinProtection.scope==='installation'){
+        // Native confirms only the saved intent + dispatched uncertain SET,
+        // never its result. Do not flip the switch or repeat the mutation.
+        panel.querySelectorAll('input').forEach(input=>{input.value='';});
+        pinProtectionReconnect={standId,pinRequired:enabled,ssid:pinProtection.ssid,unconfirmed:true};
+        showPinReconnect(pinProtectionReconnect);return;
+      }
       const error=panel.querySelector('.dialog-error');error.textContent=cause?.code==='OTA_PENDING'
         ?'Er is nog een software-update in deze stand niet afgerond. Controleer die eerst bij Receivers → Softwareversie en updates. De PIN-beveiliging is niet gewijzigd.'
         :cause?.code==='OTA_BUSY'?'Er wordt software bijgewerkt. Wacht tot de update klaar is. De PIN-beveiliging is niet gewijzigd.'
-        :'De wijziging is nog niet bevestigd. Je stand en receivers zijn niet gewist. Controleer de verbinding en probeer opnieuw.';error.hidden=false;
+        :'De wijziging is nog niet bevestigd. Je stand en receivers zijn niet gewist. Controleer de verbinding en probeer opnieuw.';error.dataset.closedCategory=['OTA_PENDING','OTA_BUSY','PIN_MODE_UNCONFIRMED','PIN_MODE_UPDATE_REQUIRED','PIN_MODE_INVALID','PIN_MODE_PROFILE','PIN_MODE_PENDING'].includes(cause?.code)?cause.code:'NATIVE_UNCONFIRMED';error.hidden=false;
       panel.querySelectorAll('input').forEach(input=>{input.disabled=false;});button.disabled=false;button.textContent='Opnieuw proberen';
     }finally{pinProtectionBusy=false;syncPinProtectionCard();}
   }
@@ -1370,7 +1394,7 @@
     const firmwareChannel=document.querySelector('meta[name="ota-channel"]')?.content||'';
     const firmwareReady=webDemoContext&&/^\d+\.\d+\.\d+$/.test(firmwareVersion);
     const candidate=firmwareChannel==='release-candidate';
-    const firmwareDownloads=firmwareReady?`<section class="card firmware-download-section" aria-labelledby="firmware-download-title"><div class="demo-firmware-heading"><span class="menu-icon" aria-hidden="true">${icon('update')}</span><div><h2 id="firmware-download-title">Receiverfirmware voor de iPhone-app</h2><p>${candidate?'Testkandidaat · ':''}OTA-appbestanden · versie ${esc(firmwareVersion)}</p></div></div><p>Download het bestand naar Bestanden. Open daarna in de iPhone-app <b>Receivers → Software-updates → kies de receiver → Importeer OTA-bestand</b>.</p><div class="firmware-download-actions"><a class="button secondary full" data-firmware-download="RGBW" href="firmware/artifacts/rgbw-${esc(firmwareVersion)}-local-setup.app.bin" download="aluvision-rgbw-${esc(firmwareVersion)}.app.bin">Download RGBW · ${esc(firmwareVersion)}</a><a class="button secondary full" data-firmware-download="SPI" href="firmware/artifacts/spi-${esc(firmwareVersion)}-local-setup.app.bin" download="aluvision-spi-${esc(firmwareVersion)}.app.bin">Download SPI · ${esc(firmwareVersion)}</a></div><p class="demo-firmware-note">Kies het bestand dat bij het receivertype hoort. ${candidate?'32.0.7 is nog een testkandidaat; OTA en lichtuitvoer zijn nog niet op echte receivers bevestigd. ':''}Dit zijn alleen OTA-appbestanden; de demo voert geen updates uit.</p></section>`:'';
+    const firmwareDownloads=firmwareReady?`<section class="card firmware-download-section" aria-labelledby="firmware-download-title"><div class="demo-firmware-heading"><span class="menu-icon" aria-hidden="true">${icon('update')}</span><div><h2 id="firmware-download-title">Receiverfirmware voor de iPhone-app</h2><p>${candidate?'Testkandidaat · ':''}OTA-appbestanden · versie ${esc(firmwareVersion)}</p></div></div><p>Download het bestand naar Bestanden. Open daarna in de iPhone-app <b>Receivers → Software-updates → kies de receiver → Importeer OTA-bestand</b>.</p><div class="firmware-download-actions"><a class="button secondary full" data-firmware-download="RGBW" href="firmware/artifacts/rgbw-${esc(firmwareVersion)}-local-setup.app.bin" download="aluvision-rgbw-${esc(firmwareVersion)}.app.bin">Download RGBW · ${esc(firmwareVersion)}</a><a class="button secondary full" data-firmware-download="SPI" href="firmware/artifacts/spi-${esc(firmwareVersion)}-local-setup.app.bin" download="aluvision-spi-${esc(firmwareVersion)}.app.bin">Download SPI · ${esc(firmwareVersion)}</a></div><p class="demo-firmware-note">Kies het bestand dat bij het receivertype hoort. ${candidate?`${esc(firmwareVersion)} is een testkandidaat, geen volledig vrijgegeven productierelease. De lichtuitvoer is nog niet fysiek bevestigd. `:''}Dit zijn alleen OTA-appbestanden; de demo voert geen updates uit.</p></section>`:'';
     return `<div class="page"><header class="page-heading"><div><h1>${esc(t('more'))}</h1><p>${esc(t('settings'))} · V32</p></div></header><section class="card"><h2>${esc(t('appearance'))}</h2><h3 class="preference-label">${esc(t('language'))}</h3><div class="preference-grid">${Preferences.languages.map(language=>`<button data-action="language" data-id="${language.code}" lang="${language.code}" aria-pressed="${uiPreferences.preferences.language===language.code}">${language.name}</button>`).join('')}</div><p class="preference-note">${esc(t('wipNotice'))}</p><h3 class="preference-label">${esc(t('theme'))}</h3><div class="preference-grid">${['light','dark'].map(theme=>`<button data-action="theme" data-id="${theme}" aria-pressed="${uiPreferences.preferences.theme===theme}">${esc(t(theme))}</button>`).join('')}</div>${uiPreferences.error?`<p role="alert">${esc(uiPreferences.error.message)}</p>`:''}</section>${firmwareDownloads}<button class="menu-card" data-action="help"><span class="menu-icon">${icon('info')}</span><div><b>Stand en zones uitgelegd</b><small>Een eenvoudige weg naar je verlichting</small></div>${icon('chevron')}</button></div>`;
   }
   function render({top=false,preserveScroll=true}={}) {
@@ -1611,12 +1635,12 @@
     return `<section class="card" data-backup-panel><h2>Backup en herstellen</h2><p>Bewaar je stand, zones, lichtkeuzes, scènes en presets in één bestand.</p><p class="muted">Je PIN en beveiligingssleutels staan nooit in dit bestand.</p>${backupNotice?`<p role="alert">${esc(backupNotice)}</p>`:''}<div class="actions"><button class="button full" data-action="backup-export">Backup bewaren</button><button class="button secondary full" data-action="backup-import">Backup openen</button></div></section>`;
   }
   function receiverContextPanel(){
-    return `<section class="card" data-receiver-context-panel><h2>Instellingen op je receivers</h2><p>Bewaar je standnaam en zones ook op de receivers, zodat je ze later op een andere telefoon kunt terugvinden.</p><p role="status" data-receiver-context-status></p><button class="button secondary full" data-action="receiver-context-sync">Instellingen bewaren op receivers</button></section>`;
+    return `<section class="card" data-receiver-context-panel><h2>Instellingen op je receivers</h2><p>Je stand en zones worden op de receivers bewaard. Scènes, animatiepresets en kleuren worden bij je hoofdreceiver bewaard, zodat je ze later op een andere telefoon kunt terughalen.</p><p role="status" data-receiver-context-status></p><button class="button secondary full" data-action="receiver-context-sync">Instellingen bewaren op receivers</button></section>`;
   }
   function syncReceiverContextPanel(){
     const panel=document.querySelector('[data-receiver-context-panel]');if(!panel)return;
     const state=receiverContextStates.get(stand()?.id),busy=state?.status==='syncing';
-    panel.querySelector('[data-receiver-context-status]').textContent=busy?'Instellingen worden op de receivers bewaard…':state?.status==='synced'?`Bewaard op alle ${state.total} receivers.`:state?.status==='pending'?'Nog niet op alle receivers bewaard. Verbind met het ALUVISION-wifi en probeer opnieuw.':'De bewaarstatus wordt gecontroleerd…';
+    panel.querySelector('[data-receiver-context-status]').textContent=busy?'Instellingen worden op de receivers bewaard…':state?.status==='synced'?`Bewaard op alle ${state.total} receivers.`:state?.status==='pending'?`Nog niet op alle receivers bewaard (${state.synced} van ${state.total}). Je wijzigingen blijven in de app. Controleer de verbinding en probeer opnieuw.`:'De bewaarstatus wordt gecontroleerd…';
     const button=panel.querySelector('button');button.disabled=busy;button.textContent=busy?'Even wachten…':state?.status==='synced'?'Opnieuw controleren en bewaren':'Instellingen bewaren op receivers';
   }
   async function readReceiverContextStatus(){

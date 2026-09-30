@@ -362,8 +362,20 @@
       const label=retryIdentity?'Opnieuw controleren':!pinRequired()&&receiver.type==='RGBW'?(compatible?`Toevoegen aan ${escape(zone.name)}`:!zone?'Zonder zone toevoegen':'Kies een passende zone'):`Verder met ${receiver.type}-receiver`;
       return `${zone&&!compatible?`<p class="onboarding-compatibility-note">${escape(receiver.type)} past niet in deze zone. Kies een andere zone of voeg hem zonder zone toe.</p>`:''}${button('receiver',busy||identifyPending.size?'Even wachten…':label,`data-id="${escape(receiver.id)}" ${busy||identifyPending.size||draft.zoneChoiceRequired||!(receiver.canConfigure||receiver.canVerifyIdentity)?'disabled':''}`)}`;
     }
+    function receiverIdentity(receiver){
+      const description=receiver.type==='SPI'?'Kleur en animaties per pixel':'Eén kleur over de hele ledline';
+      return `<header class="onboarding-receiver-identity"><span class="onboarding-receiver-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="4"/><path d="M7 10v4M11 10v4M15 10v4M19 10v4"/></svg></span><span class="onboarding-receiver-title"><h2>${escape(receiver.name||`${receiver.type}-receiver`)}</h2><small>${description}</small></span><span class="pill">${receiver.type}</span></header>`;
+    }
+    function foundReceiverCard(receiver){
+      const isIdentifying=identifying.has(receiver.id),available=canIdentify(receiver);
+      const entranceKey=`found:${draft.transactionId}:${receiver.id}`,entering=!presentedStages.has(entranceKey);presentedStages.add(entranceKey);
+      return `<article class="card onboarding-result${entering?' onboarding-result-enter':''}" data-onboarding-result="${escape(receiver.id)}" data-discovery-status="found"><div class="onboarding-found-status"><b><i aria-hidden="true"></i>Gevonden</b><span>Nog niet toegevoegd</span></div>${receiverIdentity(receiver)}${product(receiver,{compact:true})}<div class="onboarding-recognition"><span>${isIdentifying?'Dit licht knippert nu.':'Herken jouw verlichting'}</span>${button('identify',isIdentifying?'Stop knipperen':'Laat knipperen',`data-id="${escape(receiver.id)}" class="button secondary" aria-pressed="${isIdentifying}" ${busy||identifyPending.has(receiver.id)||!available?'disabled':''}`)}</div>${!available?`<small class="onboarding-identify-unavailable">${draft.role==='main'?'Deze receiver kan pas knipperen nadat hij is toegevoegd.':'Deze receiver kan nu niet knipperen. Controleer je verbinding en probeer opnieuw.'}</small>`:''}<div class="onboarding-actions">${receiverAction(receiver)}</div></article>`;
+    }
+    function connectingReceiver(){
+      return draft.receiver?`<div class="onboarding-connecting-receiver">${product(draft.receiver,{compact:true})}${receiverIdentity(draft.receiver)}</div>`:'';
+    }
     function receiverSearchView(){
-      const single=results.length===1,found=results.length>0;
+      const found=results.length>0;
       const searching=searchState==='searching';
       const zone=draft.zones.find(item=>item.id===draft.activeZoneId);
       const canFilter=results.length>4&&new Set(results.map(receiver=>receiver.type)).size>1;
@@ -378,8 +390,8 @@
       else if(searchState==='unavailable')content=`<section class="card onboarding-search-empty"><h2>Zoeken nog niet beschikbaar</h2><p>${unavailable}</p></section>`;
       else if(searchState==='ready'&&!found)content=`<section class="card onboarding-search-empty"><h2>Nog niets gevonden</h2><p>${manualWifi()?'Controleer of je iPhone met jouw ALUVISION-netwerk verbonden is.':'Controleer of de receiver aan staat en dicht bij je installatie staat.'}</p></section>`;
       else if(!found&&searchState==='idle'&&!manualWifi())content=`<p class="onboarding-search-help">${draft.zoneChoiceRequired?'Kies eerst een zone of “Zonder zone”.':'Zet de ledline aan die je wilt toevoegen.'}</p>`;
-      if(found)content+=`${resultHeading}<div class="onboarding-results" aria-label="Gevonden receivers">${shown.map(receiver=>`<article class="card onboarding-result" data-onboarding-result="${escape(receiver.id)}" data-discovery-status="found"><div class="onboarding-found-status"><b>Gevonden</b><span>Nog niet toegevoegd</span></div><header><h2>${escape(receiver.name||`${receiver.type}-receiver`)}</h2><span class="pill">${receiver.type}</span></header>${product(receiver,{compact:true})}<div class="onboarding-recognition"><span>${identifying.has(receiver.id)?'Dit licht knippert nu.':'Herken jouw verlichting'}</span>${button('identify',identifying.has(receiver.id)?'Stop knipperen':'Laat knipperen',`data-id="${escape(receiver.id)}" class="button secondary" aria-pressed="${identifying.has(receiver.id)}" ${busy||identifyPending.has(receiver.id)||!canIdentify(receiver)?'disabled':''}`)}</div>${!canIdentify(receiver)?`<small class="onboarding-identify-unavailable">${draft.role==='main'?'Deze receiver kan pas knipperen nadat hij is toegevoegd.':'Deze receiver kan nu niet knipperen. Controleer je verbinding en probeer opnieuw.'}</small>`:''}${single?'':`<div class="onboarding-actions">${receiverAction(receiver)}</div>`}</article>`).join('')}</div><div class="onboarding-search-again">${button('search',manualWifi()?'Verbinding opnieuw controleren':'Opnieuw zoeken','class="button secondary" '+(busy||identifyPending.size?'disabled':''))}</div>`;
-      return `${searchContext()}${found?'':manualWifiGuide()}${content}${found?manualWifiGuide():''}<div class="onboarding-actions onboarding-footer">${button('back','← Zones beheren',`class="button secondary" ${busy?'disabled':''}`)}${single?receiverAction(results[0]):found?'':button('search',searchLabel(),searching||busy||identifyPending.size||draft.zoneChoiceRequired?'disabled':'')}</div>`;
+      if(found)content+=`${resultHeading}<div class="onboarding-results" aria-label="Gevonden receivers">${shown.map(receiver=>foundReceiverCard(receiver)).join('')}</div><div class="onboarding-search-again">${button('search',manualWifi()?'Verbinding opnieuw controleren':'Opnieuw zoeken','class="button secondary" '+(busy||identifyPending.size?'disabled':''))}</div>`;
+      return `${searchContext()}${found?'':manualWifiGuide()}${content}${found?manualWifiGuide():''}<div class="onboarding-actions onboarding-footer">${button('back','← Zones beheren',`class="button secondary" ${busy?'disabled':''}`)}${found?'':button('search',searchLabel(),searching||busy||identifyPending.size||draft.zoneChoiceRequired?'disabled':'')}</div>`;
     }
     function lightExample(type){
       // Independent teaching motion. Physical identification stays exclusively
@@ -422,7 +434,7 @@
       return `<section class="card onboarding-review onboarding-review-product">${product(draft.receiver,{compact:true,port:null})}<dl><div><dt>Receiver</dt><dd>${escape(draft.receiver.name||draft.receiver.type)}</dd></div><div><dt>Zone</dt><dd>${escape(draft.zones.find(zone=>zone.id===draft.zoneId)?.name||'Later kiezen')}</dd></div></dl>${draft.receiver.type==='SPI'?`<ul>${active().map(output=>`<li><b>P${output.port}</b><span>${output.pixels} pixels<small>${pixelSetup.endpointLabel(output)}</small></span></li>`).join('')}</ul>`:lightExample('RGBW')}</section><div class="onboarding-actions onboarding-footer">${pinRequired()?button('back','← Zone kiezen',busy||finalizationStarted?'disabled':''):''}${button('finish',busy?'Toevoegen…':!pinRequired()&&finalizationStarted?'Opnieuw proberen':'Receiver toevoegen',busy?'disabled':'')}</div>`;
     }
     function addingPanel(){
-      return `<section class="card onboarding-security" role="status"><span class="onboarding-security-icon">${setupIcon('wifi')}</span><h2>Receiver toevoegen…</h2><p>We controleren de verbinding en bewaren je receiver${draft.zoneId?` in ${escape(draft.zones.find(zone=>zone.id===draft.zoneId)?.name)}`:''}.</p></section>`;
+      return `<section class="card onboarding-security onboarding-connecting" data-security-busy="true" role="status">${connectingReceiver()}<span class="onboarding-security-icon">${setupIcon('wifi')}</span><h2>Receiver toevoegen…</h2><p>We controleren de verbinding en bewaren je receiver${draft.zoneId?` in ${escape(draft.zones.find(zone=>zone.id===draft.zoneId)?.name)}`:''}.</p></section>`;
     }
     function completeCard(){
       const zone=draft.zones.find(zone=>zone.id===draft.zoneId),count=getModel().receivers.filter(receiver=>receiver.standId===draft.stand.id&&receiver.zoneId===draft.zoneId&&receiver.lifecycle==='added').length;
@@ -437,19 +449,23 @@
       return results.length?`<details class="card onboarding-manual-wifi onboarding-wifi-help"><summary>Wifi-stappen</summary>${instructions}</details>`:`<section class="card onboarding-manual-wifi" aria-label="Wifi met de hand verbinden">${instructions}</section>`;
     }
     function securityPanel(){
-      if(!pinRequired())return `${draft.role==='main'?pinNetwork():''}<section class="card onboarding-security" data-security-busy="${busy}" role="status"><span class="onboarding-security-icon">${setupIcon('wifi')}</span><h2>${busy?'Receiver verbinden':'Verbinding controleren'}</h2><p>${busy?'Je receiver wordt aan je stand toegevoegd. Blijf op dit scherm.':'De verbinding is nog niet bevestigd. Je instellingen blijven bewaard.'}</p></section>${busy?'':button('security-retry','Opnieuw controleren')}`;
+      if(!pinRequired())return `${draft.role==='main'?pinNetwork():''}<section class="card onboarding-security onboarding-connecting" data-security-busy="${busy}" role="status">${connectingReceiver()}<span class="onboarding-security-icon">${setupIcon('wifi')}</span><h2>${busy?(phaseLabels[draft.security.phase]||'Receiver verbinden'):'Verbinding controleren'}</h2>${connectionProgress()}<p>${busy?'Laat de receiver aan. We controleren dezelfde koppeling; je keuzes blijven bewaard.':'De verbinding is nog niet bevestigd. Je instellingen blijven bewaard.'}</p></section>${busy?'':button('security-retry','Opnieuw controleren')}`;
       if(automaticMain())return mainWifiReturn();
       if(manualRejoinSSID&&!registrationPending)return `<section class="card onboarding-manual-wifi" aria-label="Met beveiligde wifi verbinden"><h2>${busy?'Verbinding controleren…':'Verbind met je beveiligde wifi'}</h2><ol class="onboarding-wifi-tiles" data-setup-visual="wifi-rejoin"><li>${setupIcon('wifi')}<span><b>Instellingen → Wifi</b><small>Kies ${escape(manualRejoinSSID)}</small></span></li><li>${setupIcon('phone')}<span><b>Vul je eigen PIN in</b><small>Dit is nu je wifi-wachtwoord.</small></span></li><li>${setupIcon('return')}<span><b>Terug naar de app</b><small>We controleren dezelfde koppeling bij je terugkeer.</small></span></li></ol></section>${button('security-retry',busy?'Verbinding controleren…':'Ik ben verbonden · controleren',busy?'disabled':'')}<small class="onboarding-hint">Dezelfde receiver en PIN. Je keuzes blijven bewaard.</small>`;
-      if(registrationPending)return `<section class="card onboarding-security" role="status"><h2>Je receiver rondt af</h2><p>De toegang voor dit toestel wordt bewaard. Je hoeft geen nieuwe PIN te kiezen.</p></section>${button('security-retry',busy?'Afronden…':'Verder controleren',busy?'disabled':'')}`;
-      const phase=draft.security.phase,step={configuring:0,claiming:1,reconnecting:2,verifying:2}[phase];
-      return `<section class="card onboarding-security" data-security-busy="${busy}"><span class="onboarding-security-icon"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M10 14V9a6 6 0 0 1 12 0v5"/><rect x="6" y="14" width="20" height="15" rx="4"/><path d="M16 20v3"/></svg></span><h2>${phaseLabels[phase]||'Verbinding bevestigen'}</h2><ol class="onboarding-security-stages" data-setup-visual="security" aria-label="Verbindingsstappen">${['Bewaren','Beveiligen','Verbinden'].map((label,i)=>`<li ${busy&&step===i?'aria-current="step"':''}><i aria-hidden="true"></i>${label}</li>`).join('')}</ol><p>${busy?'Je keuzes blijven bewaard.':'Nog niet bevestigd. Controleer opnieuw.'}</p></section>${busy?'':button('security-retry','Verbinding opnieuw controleren')}<details class="onboarding-recovery"><summary>Meer uitleg</summary><p>We controleren dezelfde receiver. Er wordt niets opnieuw ingesteld. Hij verschijnt pas in je stand na de laatste stap.</p></details>`;
+      if(registrationPending)return `<section class="card onboarding-security onboarding-connecting" role="status">${connectingReceiver()}<h2>Je receiver rondt af</h2><p>De toegang voor dit toestel wordt bewaard. Je hoeft geen nieuwe PIN te kiezen.</p></section>${button('security-retry',busy?'Afronden…':'Verder controleren',busy?'disabled':'')}`;
+      const phase=draft.security.phase;
+      return `<section class="card onboarding-security onboarding-connecting" data-security-busy="${busy}" role="status">${connectingReceiver()}<span class="onboarding-security-icon"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M10 14V9a6 6 0 0 1 12 0v5"/><rect x="6" y="14" width="20" height="15" rx="4"/><path d="M16 20v3"/></svg></span><h2>${phaseLabels[phase]||'Verbinding bevestigen'}</h2>${connectionProgress()}<p>${busy?'Laat de receiver aan. We controleren dezelfde koppeling; je keuzes blijven bewaard.':'Nog niet bevestigd. Controleer opnieuw.'}</p></section>${busy?'':button('security-retry','Verbinding opnieuw controleren')}<details class="onboarding-recovery"><summary>Meer uitleg</summary><p>We controleren dezelfde receiver. Er wordt niets opnieuw ingesteld. Hij verschijnt pas in je stand na de laatste stap.</p></details>`;
+    }
+    function connectionProgress(){
+      const step={configuring:0,claiming:1,reconnecting:2,verifying:2,resuming:2}[draft.security.phase];
+      return `<ol class="onboarding-security-stages" data-setup-visual="security" aria-label="Verbindingsstappen">${['Instellingen','Koppelen','Controleren'].map((label,i)=>`<li data-state="${i<step?'completed':busy&&i===step?'current':'pending'}" ${busy&&i===step?'aria-current="step"':''}><i aria-hidden="true">${i<step?'✓':''}</i>${label}</li>`).join('')}</ol>`;
     }
     function mainWifiReturn(){
       const progressing=busy||rejoinRunning;
       const retry=(rejoinExhausted||rejoinBlocked||!!error)&&!progressing;
       const network=manualRejoinSSID||`jouw ALUVISION-${draft.receiver.type}-netwerk`;
       const instructions=`<ol class="onboarding-wifi-tiles onboarding-wifi-return-steps" data-setup-visual="wifi-rejoin"><li><i aria-hidden="true">1</i><span><b>Open Instellingen → Wifi</b><small>Kies <strong>${escape(network)}</strong></small></span></li><li><i aria-hidden="true">2</i><span><b>Vul je gekozen PIN in</b><small>Dit is nu ook je wifi-wachtwoord.</small></span></li><li><i aria-hidden="true">3</i><span><b>Ga terug naar deze app</b><small>Je receiver wordt automatisch toegevoegd.</small></span></li></ol>`;
-      return `<section class="card onboarding-manual-wifi onboarding-wifi-return" aria-label="Met beveiligde wifi verbinden"><div class="onboarding-wifi-return-symbol" aria-hidden="true">${setupIcon('wifi')}</div><h2>${automaticFinalizing?'Even afronden…':registrationPending?'Je receiver rondt af':progressing?'We verbinden automatisch…':'Nog één keer naar Wifi'}</h2>${progressing?`<p class="onboarding-auto-progress" role="status"><span aria-hidden="true"></span>${automaticFinalizing?'Je receiver veilig toevoegen…':registrationPending?'Je toegang wordt bewaard…':'Je receiver zoeken en verbinden…'}</p>`:instructions}<p class="onboarding-auto-note">${progressing?'Blijf even in de app. Je hoeft niets te doen.':'Je hoeft hier niets meer te bevestigen.'}</p></section>${retry?`<div class="onboarding-auto-retry">${button('security-retry','Opnieuw proberen','class="button secondary"')}</div>`:''}`;
+      return `<section class="card onboarding-manual-wifi onboarding-wifi-return" aria-label="Met beveiligde wifi verbinden">${connectingReceiver()}<div class="onboarding-wifi-return-symbol" aria-hidden="true">${setupIcon('wifi')}</div><h2>${automaticFinalizing?'Even afronden…':registrationPending?'Je receiver rondt af':progressing?'We verbinden automatisch…':'Nog één keer naar Wifi'}</h2>${progressing?`<p class="onboarding-auto-progress" role="status"><span aria-hidden="true"></span>${automaticFinalizing?'Je receiver veilig toevoegen…':registrationPending?'Je toegang wordt bewaard…':'Je receiver zoeken en verbinden…'}</p>`:instructions}<p class="onboarding-auto-note">${progressing?'Blijf even in de app. Je hoeft niets te doen.':'Je hoeft hier niets meer te bevestigen.'}</p></section>${retry?`<div class="onboarding-auto-retry">${button('security-retry','Opnieuw proberen','class="button secondary"')}</div>`:''}`;
     }
     function searchLabel(){
       if(manualWifi())return searchState==='searching'?'Controleren…':'Verbinding controleren';
@@ -728,14 +744,15 @@
       let attempted=false;
       try{
         await persist();if(token!==operation)throw Error('SUSPENDED');
+        change({type:'SECURITY_PROGRESS',phase:method==='reconcileSecurity'?'resuming':'claiming'},{top:false});
         securityUncertain=true;
         let response;
         if(method==='reconcileSecurity'&&securityReceiptRef)response={receiptRef:securityReceiptRef};
         else {
           if(typeof services[method]!=='function')throw Error('UNAVAILABLE');
-          attempted=true;const request=services[method]({configuration:config(),signal:controller.signal,...(pinRequired()&&method==='secure'&&draft.role==='main'?{pin}:{}),...(pinRequired()?{onProgress:phase=>{
+          attempted=true;const request=services[method]({configuration:config(),signal:controller.signal,...(pinRequired()&&method==='secure'&&draft.role==='main'?{pin}:{}),onProgress:phase=>{
             if(token===operation&&busy&&draft.stage==='security'&&phaseLabels[phase])change({type:'SECURITY_PROGRESS',phase},{top:false});
-          }}:{})});
+          }});
           pin='';repeat='';response=await bounded(request,draft.role==='node'?125000:50000);
         }
         pin='';repeat='';
@@ -767,6 +784,7 @@
         if(!response?.receiptRef)throw Error('NO_RECEIPT');
         securityReceiptRef=response.receiptRef;
         if(token!==operation)throw Error('SUSPENDED');
+        change({type:'SECURITY_PROGRESS',phase:'verifying'},{top:false});
         const confirmed=await bounded(committer.confirmSecurity(draft,response.receiptRef));
         if(confirmed.error){securityReceiptRef=null;throw Error('UNCONFIRMED');}
         if(token!==operation)throw Error('SUSPENDED');

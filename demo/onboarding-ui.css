@@ -360,6 +360,9 @@ body:has(.onboarding-page) .onboarding-page{gap:10px}
 .onboarding-security-stages li:last-child:after{display:none}
 .onboarding-security-stages [aria-current=step]{color:var(--ink);font-weight:650}
 .onboarding-security-stages [aria-current=step] i{background:var(--red);animation:onboarding-security-breathe 1.8s ease-in-out infinite}
+.onboarding-security-stages [data-state=completed]{color:var(--ink)}
+.onboarding-security-stages [data-state=completed] i{display:grid;place-items:center;width:16px;height:16px;margin:-4px 0;background:var(--soft);color:var(--red);font-size:11px;font-style:normal;font-weight:750}
+.onboarding-security-stages [data-state=completed]:after{background:color-mix(in srgb,var(--red) 40%,var(--line))}
 .onboarding-security[data-security-busy=true] .onboarding-security-icon svg{animation:onboarding-security-breathe 1.8s ease-in-out infinite}
 .onboarding-pin-match:not([hidden]){animation:onboarding-match .28s ease-out both}
 .onboarding-zone-input:last-child{animation:onboarding-heading-enter .24s ease-out both}
@@ -522,4 +525,53 @@ body:has(.onboarding-page) .onboarding-page{gap:10px}
   .onboarding-found-status{margin-bottom:8px;font-size:10px}
   .onboarding-result[data-discovery-status=found] .onboarding-product{margin-left:-14px;margin-right:-14px;margin-top:9px}
   .onboarding-recognition{gap:8px;margin-top:9px;padding-top:9px}
+}
+
+/* Discovery and connection share one product identity. A found device remains
+   a candidate until the existing confirmed membership step completes. */
+.onboarding-page .onboarding-result{padding:18px;border-radius:24px}
+.onboarding-result .onboarding-found-status{margin-bottom:16px;font-size:11px;line-height:1.35}
+.onboarding-result .onboarding-found-status b{display:flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid color-mix(in srgb,var(--line) 80%,transparent);border-radius:9px;background:var(--soft);color:var(--ink);font-size:11px}
+.onboarding-found-status b i{flex:none;width:6px;height:6px;border-radius:50%;background:var(--red)}
+.onboarding-page .onboarding-receiver-identity{display:flex;align-items:center;gap:10px;text-align:left;padding:0}
+.onboarding-receiver-symbol{display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:14px;background:var(--soft);color:var(--red);box-shadow:inset 0 1px color-mix(in srgb,var(--panel) 90%,transparent)}
+.onboarding-receiver-symbol svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.onboarding-receiver-title{flex:1;min-width:0}
+.onboarding-page .onboarding-receiver-identity h2{font-size:16px;line-height:1.25;letter-spacing:-.2px;margin:0!important;overflow-wrap:anywhere}
+.onboarding-receiver-identity small{display:block;color:var(--muted);font-size:11px;line-height:1.45;margin-top:4px}
+.onboarding-page .onboarding-receiver-identity .pill{flex:none;font-size:10px;padding:6px 7px;letter-spacing:.3px;box-shadow:none}
+.onboarding-page .onboarding-result[data-discovery-status=found] .onboarding-product{margin:16px 0 0;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:18px;background:radial-gradient(ellipse at 50% 35%,#fff 0,#f7f6f3 72%,#eeeee8 100%);box-shadow:inset 0 1px #fff}
+.onboarding-page .onboarding-result[data-discovery-status=found] .onboarding-product canvas{height:160px}
+.onboarding-result .onboarding-recognition{margin-top:13px;padding-top:13px;gap:8px}
+.onboarding-recognition>.button{border-radius:14px;min-height:44px;padding:9px 12px}
+.onboarding-recognition>.button[aria-pressed=true]{color:var(--red);border-color:color-mix(in srgb,var(--red) 42%,var(--line));background:var(--panel)}
+.onboarding-result .onboarding-identify-unavailable{display:block;margin-top:8px;font-size:11px;line-height:1.45;color:var(--muted)}
+.onboarding-result .onboarding-actions{margin-top:14px}
+.onboarding-result .onboarding-actions>.button{min-height:48px;border-radius:15px;font-size:13px}
+.onboarding-connecting-receiver{display:grid;grid-template-columns:94px minmax(0,1fr);align-items:center;gap:13px;text-align:left;padding-bottom:16px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+.onboarding-page .onboarding-connecting-receiver .onboarding-product{border-radius:14px;border:1px solid var(--line);margin:0;background:linear-gradient(145deg,#fcfbf9,#eeeee8)}
+.onboarding-page .onboarding-connecting-receiver .onboarding-product canvas{height:84px}
+.onboarding-connecting-receiver .onboarding-receiver-symbol{display:none}
+.onboarding-page .onboarding-connecting-receiver .onboarding-receiver-identity{display:block}
+.onboarding-connecting-receiver .pill{display:inline-block;margin-top:7px}
+.onboarding-page .onboarding-connecting{padding:20px;border-radius:24px}
+.onboarding-connecting>.onboarding-security-icon{width:45px;height:45px;margin:0 auto 13px;border-radius:15px;font-size:24px}
+.onboarding-connecting[data-security-busy=true]>.onboarding-security-icon{position:relative}
+.onboarding-connecting[data-security-busy=true]>.onboarding-security-icon::after{content:'';position:absolute;inset:-5px;border:1.5px solid transparent;border-top-color:var(--red);border-right-color:color-mix(in srgb,var(--red) 30%,transparent);border-radius:19px;animation:onboarding-spin 1.4s linear infinite}
+.onboarding-page .onboarding-connecting>h2{font-size:20px;letter-spacing:-.3px;margin-bottom:8px}
+.onboarding-page .onboarding-connecting>p{max-width:340px;margin-inline:auto;line-height:1.6}
+.onboarding-wifi-return>.onboarding-connecting-receiver{margin-bottom:0;padding-bottom:15px}
+.onboarding-result-enter{animation:onboarding-heading-enter .36s cubic-bezier(.22,1,.36,1) both}
+@media(max-width:350px){
+  .onboarding-page .onboarding-result{padding:14px;border-radius:21px}
+  .onboarding-receiver-symbol{width:35px;height:35px;border-radius:11px}
+  .onboarding-page .onboarding-receiver-identity{gap:8px}
+  .onboarding-page .onboarding-receiver-identity h2{font-size:14px}
+  .onboarding-receiver-identity small{font-size:10px}
+  .onboarding-page .onboarding-result[data-discovery-status=found] .onboarding-product canvas{height:132px}
+  .onboarding-connecting-receiver{grid-template-columns:78px minmax(0,1fr);gap:10px}
+  .onboarding-page .onboarding-connecting-receiver .onboarding-product canvas{height:74px}
+}
+@media(prefers-reduced-motion:reduce){
+  .onboarding-result-enter,.onboarding-connecting[data-security-busy=true]>.onboarding-security-icon::after{animation:none}
 }
