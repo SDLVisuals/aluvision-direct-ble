@@ -1982,12 +1982,22 @@
       if(failed&&nativeContext&&liveController)node.insertAdjacentHTML('beforeend',` <button class="text-button" data-action="live-retry" data-scope="${esc(node.dataset.liveStatus)}">Opnieuw versturen</button>`);
     });
   }
-  function apply(patch,scope=selection()) {
+  function apply(patch,scope=selection(),{freshRecipe=false}={}) {
     if(managementBusy)return;
     const ids=standControlOpen?standReceivers().map(receiver=>receiver.id):selectedReceiverIds(scope);
     if(Object.hasOwn(patch,'bri')&&!Object.hasOwn(patch,'brightness'))patch={...patch,brightness:patch.bri};
     else if(Object.hasOwn(patch,'brightness')&&!Object.hasOwn(patch,'bri'))patch={...patch,bri:patch.brightness};
-    model=standControlOpen?M.applyStandState(model,stand().id,patch):M.applyState(model,route.zoneId,scope,patch);
+    const next=freshRecipe===true?copy(model):model;
+    if(freshRecipe===true){
+      // A new built-in recipe replaces old animation controls, not memory,
+      // geometry or clocks. Absence retains the existing recipe fallbacks.
+      const controls=['speed','smooth','colorCount','widthPixels','objectCount','trailLength','spacing','direction','lineDelayMs','spread','randomness','fadeAmount','delayMs','width','brandColor'];
+      const targets=new Set(ids);
+      next.receivers.filter(receiver=>targets.has(receiver.id)).forEach(receiver=>{
+        controls.forEach(key=>{if(!Object.hasOwn(patch,key))delete receiver.state[key];});
+      });
+    }
+    model=standControlOpen?M.applyStandState(next,stand().id,patch):M.applyState(next,route.zoneId,scope,patch);
     if(Object.keys(patch).some(key=>key!=='rgbwLast'))sendReceiverStates(ids);
     const note=document.querySelector('.mixed-note');if(note)note.hidden=!mixedSelection();
     syncPresetAvailability();
@@ -3103,7 +3113,7 @@
         // choose one line later in the editor to make its colour different.
         if(requiresWholeZone&&selection().kind!=='all')storeLineSelection(receivers().map(receiver=>receiver.id));
         setSpatialPreviewCategory(effect.category==='tunnel'?'tunnel':'');
-        rememberAnimationGallery();apply(effectState(effect));settingsOpen=false;
+        rememberAnimationGallery();apply(effectState(effect),selection(),{freshRecipe:true});settingsOpen=false;
         if(route.screen==='animation-family'){
           controlMode='animations';showControlAnimationGallery=false;
           route={...route,screen:'controls',familyReturnScreen:null,effectsReturn:'controls'};
