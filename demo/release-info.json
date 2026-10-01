@@ -1,6 +1,6 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-no-software-import-210-20260930",
+  "revision": "v32-interface-polish-20261001",
   "interfaceVersion": 32,
   "interfaceBaseline": "V32 keeps the established Aluvision interface while making animation browsing easier to understand and gentler to use. Customers first see clearly labelled effect groups; opening one enters a focused page with only that group’s variations, and choosing a variation is the action that starts it. A single back button returns to the originating list and moves beside the sticky LED overview only when its inline position is obscured. The active-animation action also moves one DOM button between the page and preview dock, so no duplicate or half-hidden copy remains. The spatial tunnel/wall overview appears on opening a spatial group and stays visible in its active settings. Page transitions use a light spring, smaller controls respond smoothly, and reduced-motion preferences are respected. Fixed-colour, animation-family and active-animation workspaces now share one calmer mobile hierarchy: the gallery has one instruction heading, the running animation is named before its controls, two animation colours align together with a deliberate full-width add action, and the active editor uses one frosted surface instead of nested cards. The fixed-colour wheel stays fully above the bottom navigation on first load. The same shared colour picker is reused for fixed colour and animation palettes; fine RGBW values remain exact. Search text stays at the iPhone no-zoom size. Browsing preserves selected lights and active effects. Browser verification does not prove physical receiver acceptance.",
   "animationGroupNavigation": {
@@ -44,14 +44,27 @@
     "perLineColourEditingAvailable": true,
     "changesPhysicalArrangement": false
   },
+  "interfacePolish": {
+    "shorterGuidance": true,
+    "installationAndAppSettingsGrouped": true,
+    "visibleUnavailableSceneReasons": true,
+    "compatibleReceiverChoicesOnly": true,
+    "mixedPresetSavingExplained": true,
+    "sharedColourControls": true,
+    "exercisedTouchTargetsMinimumPixels": 44,
+    "neutralMilkGlass": true,
+    "boundedPassivePressFeedback": true,
+    "respectsReducedMotion": true,
+    "nativeScrollingPreserved": true
+  },
   "hardwareAccess": false,
-  "nativeAppModified": true,
-  "nativeAppUpdatePending": false,
-  "nativeAppBuildTarget": 210,
-  "nativeAppBundleVerified": true,
-  "nativeAppBuiltVersion": "32.0.0",
-  "nativeAppBuiltBuild": 210,
-  "nativeAppInstalled": true,
+  "nativeAppModified": false,
+  "nativeAppUpdatePending": true,
+  "nativeAppBuildTarget": null,
+  "nativeAppBundleVerified": false,
+  "nativeAppBuiltVersion": null,
+  "nativeAppBuiltBuild": null,
+  "nativeAppInstalled": false,
   "nativeAppSimulatorInstalled": false,
   "nativeAppInstallationPreservedData": null,
   "interfaceAccessibility": {
@@ -65,7 +78,7 @@
   "assets": [
     {
       "path": "animation-engine.js",
-      "sha256": "1c06667d0ab4c75713567fe4d51057972ef3e14b1ad65dbafbb4f881973e442e"
+      "sha256": "558426e1d06e5ad125a0412eb73d2e60670ee08d245038c744fdceba910b7352"
     },
     {
       "path": "animation-library.css",
@@ -85,7 +98,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "83f322a20000150466eee896882fcdce8029a29bae26631daeb8e57260c7def5"
+      "sha256": "ddde438c495cd5e09cf46073b5bfc0b6120bd5b405685f80f548171ed72de23b"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -101,7 +114,7 @@
     },
     {
       "path": "colour.js",
-      "sha256": "1a08dae3946d2d63729a69b6221a7882bf29d25889f6186651b06ee22967b3b8"
+      "sha256": "99aa10656e8a8657cdf6a40f8dccabb50fc8f3011d0f6d756960e46be953c42e"
     },
     {
       "path": "colours-library.js",
@@ -109,7 +122,7 @@
     },
     {
       "path": "continuity.css",
-      "sha256": "9c9d4561f7b397929cbc2fa8e10293aea616d999d1c183fc8d409ed1f89990bf"
+      "sha256": "99909e122aa70ea43984459d98da80ad527289a187e7d8a5d85369a7298da25a"
     },
     {
       "path": "fixtures.js",
@@ -117,15 +130,23 @@
     },
     {
       "path": "index.html",
-      "sha256": "9121e04237f7080a1a4571e22b715ac9a3e768fcbf2ad266db2cd44467f7e5a0"
+      "sha256": "78755c60022f2cc0435e8ee0b2a5864cb8fd820ae48dab70aa373005a2b666c4"
     },
     {
       "path": "installation-libraries.js",
       "sha256": "0abb9e98c8d4f05256eee44551a36c6a513561c09bb89b131bf6c796ccacb22a"
     },
     {
+      "path": "interface-motion.js",
+      "sha256": "678c13e2957e72c896ffa8f6414372a34c0289885583d76e3eece68452988e72"
+    },
+    {
+      "path": "interface-polish.css",
+      "sha256": "90c1f485c820d27481fb30ef333361e3df4d846d0fbe98430f0330f45381afe8"
+    },
+    {
       "path": "live-control.js",
-      "sha256": "4a4458c255dd49a008f64642da3ff010d4c2846de88f778f1046fca1afea18ec"
+      "sha256": "bfc423c2be8c088e3859fe874b383d60b69ecf60187f01aa09631b3071c1f657"
     },
     {
       "path": "migration.js",
@@ -137,7 +158,7 @@
     },
     {
       "path": "native-runtime.js",
-      "sha256": "65c2e3cebdda867812379781aa5b8f975d6c2c49f96e13bf031c77343da4d99c"
+      "sha256": "128d0ff41eeb4328ca632dadafa2142a468f0dd11ac6c63d7136fc0c2a8f61b8"
     },
     {
       "path": "onboarding-adapter.js",
@@ -157,7 +178,7 @@
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "3f7784d6fa61bd9325f6d692639c7e02db3b5bdf55490e8b4775bcff5dc97dde"
+      "sha256": "fe47e941f25c5df3d928a399dc82301f90bfb86147ef6466b54ac4af785b9151"
     },
     {
       "path": "page-interaction.css",
@@ -173,15 +194,15 @@
     },
     {
       "path": "pixel-setup.js",
-      "sha256": "8a75f45cf944e1039a3c1f772b4a8d547c84c48dcde472ae69b99a265f40eca2"
+      "sha256": "b1c6eed02c6ae1af1f6004f8077f53720d3a79616f89bcfc013ebcf8bee01070"
     },
     {
       "path": "preferences.js",
-      "sha256": "af43b51bfda7d4099e865d3472b3f2ef5c86d7d12ca8a613429d69dc1aa58bc5"
+      "sha256": "0feb0efcbcd35bdf5ff51c2c914da66cf05f50daba5b398c5870ac33b2e0d76b"
     },
     {
       "path": "premium-surfaces.css",
-      "sha256": "5903eafa236ea54ca291b8d53a4bfc94dd516e5a7fa3b81c3a39733dc53de05c"
+      "sha256": "8529ee65771fe2b0da8d7c97ba588d2a4547fbc5e44090abb128b91575cd7491"
     },
     {
       "path": "presets.js",
@@ -189,7 +210,7 @@
     },
     {
       "path": "preview.js",
-      "sha256": "8ecc2b75d7b69daf087da152464553a57880e22c42a4036dfbae5310176593d4"
+      "sha256": "0b960e9b20e4d7fe01667bc26322162cc50417aacb3f1472ffca1744da953e6f"
     },
     {
       "path": "receiver-playback.js",
@@ -209,7 +230,7 @@
     },
     {
       "path": "receiver-update-ui.js",
-      "sha256": "4ab0de834f0ed69c8c9c3b55be254058b4e17b1f4ca90ed20044fddd3bba373b"
+      "sha256": "2c4041d90b241217bae832266beb38f31f603369d809cf50b13d342c5f918aed"
     },
     {
       "path": "receiver-visual.css",
@@ -221,7 +242,7 @@
     },
     {
       "path": "reference-animations.js",
-      "sha256": "b9755022205b685a5ade1e7f353379ca280150e19914e476a111649351c90baf"
+      "sha256": "e7bd755a36d86964fb711686eb4f451e94c39fbb635ae9c491ceef2491bd0dcc"
     },
     {
       "path": "scenes.css",
@@ -241,7 +262,7 @@
     },
     {
       "path": "vendor/v21_animation_catalog.js",
-      "sha256": "96ce379842e153bf438e18bc659e995e418928e76c84acb383b2865f2608c744"
+      "sha256": "37a90c048d22a1d5efd25cf91336175aaa2f770f11d3aea9c3dc7d6a859f4014"
     },
     {
       "path": "vendor/v21_tunnel_engine.js",

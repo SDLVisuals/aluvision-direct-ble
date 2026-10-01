@@ -74,55 +74,55 @@
   var SPI_TUNNELS = Object.freeze([
     spi('Tunnel Halo', 104, 'BREATHE', 'Tunnel', {
       speed: 12, smooth: 98, widthPixels: 6, objectCount: 1, trailLength: 0,
-      spread: 45, randomness: 0, lineDelayMs: 260, direction: 'right', brightness: 70,
+      spread: 45, randomness: 0, lineDelayMs: 260, direction: 'right', brightness: 100,
       colorCount: 2, palette: [slot('#783CFF', 0), slot('#000000', 255)], backgroundOn: false
     }, ['speed', 'smooth', 'direction', 'lineDelayMs', 'colors'], 'spi-tunnel-halo-v1',
     copy('Een zachte halo reist lijn voor lijn door de tunnel', 'A soft halo travels line by line through the tunnel', 'Un halo doux traverse le tunnel ligne par ligne', 'Ein weicher Halo wandert Linie für Linie durch den Tunnel'), true),
     spi('Depth Scanner', 105, 'SCANNER', 'Tunnel', {
       speed: 16, smooth: 95, widthPixels: 4, objectCount: 1, trailLength: 0,
-      spread: 30, randomness: 0, lineDelayMs: 180, direction: 'right', brightness: 70,
+      spread: 30, randomness: 0, lineDelayMs: 180, direction: 'right', brightness: 100,
       colorCount: 2, palette: [slot('#00BEFF', 0), slot('#000000', 255)], backgroundOn: false
     }, ['speed', 'smooth', 'direction', 'lineDelayMs', 'colors'], 'spi-depth-scanner-v1',
     copy('Een smalle lichtlaag scant door de diepte', 'A narrow light layer scans through the depth', 'Une fine couche lumineuse balaie la profondeur', 'Eine schmale Lichtfläche scannt durch die Tiefe'), true),
     spi('Double Tunnel Wave', 106, 'WAVE', 'Tunnel', {
       speed: 14, smooth: 97, widthPixels: 5, objectCount: 2, trailLength: 0,
-      spread: 55, randomness: 0, lineDelayMs: 150, direction: 'right', brightness: 70,
+      spread: 55, randomness: 0, lineDelayMs: 150, direction: 'right', brightness: 100,
       colorCount: 3, palette: [slot('#783CFF', 0), slot('#00DCC8', 0), slot('#FF6428', 0)], backgroundOn: false
     }, ['speed', 'smooth', 'direction', 'lineDelayMs', 'colors'], 'spi-double-tunnel-wave-v1',
     copy('Twee golven volgen elkaar door alle rijen', 'Two waves follow one another through every row', 'Deux vagues se suivent dans toutes les rangées', 'Zwei Wellen folgen einander durch alle Reihen'), true),
     spi('Colour Relay', 107, 'GRADIENT', 'Tunnel', {
       speed: 11, smooth: 99, widthPixels: 8, objectCount: 1, trailLength: 0,
-      spread: 70, randomness: 0, lineDelayMs: 300, direction: 'right', brightness: 70,
+      spread: 70, randomness: 0, lineDelayMs: 300, direction: 'right', brightness: 100,
       colorCount: 4, palette: [slot('#FF503C', 0), slot('#FFC83C', 0), slot('#2DD09F', 0), slot('#328CFF', 0)], backgroundOn: false
     }, ['speed', 'smooth', 'direction', 'lineDelayMs', 'colors'], 'spi-colour-relay-v1',
     copy('Iedere rij geeft zijn kleur vloeiend door', 'Every row passes its colour smoothly onward', 'Chaque rangée transmet doucement sa couleur', 'Jede Reihe gibt ihre Farbe weich weiter'), true),
     spi('Tunnel Echo', 108, 'CASCADE', 'Tunnel', {
       speed: 16, smooth: 94, widthPixels: 5, objectCount: 2, trailLength: 42,
-      spread: 50, randomness: 0, spacing: 62, lineDelayMs: 220, direction: 'right', brightness: 70,
+      spread: 50, randomness: 0, spacing: 62, lineDelayMs: 220, direction: 'right', brightness: 100,
       colorCount: 2, palette: [slot('#FF5A32', 0), slot('#328CFF', 0)], backgroundOn: false
     }, ['speed', 'smooth', 'direction', 'spacing', 'lineDelayMs', 'colors'], 'spi-tunnel-echo-v1',
     copy('Een hoofdpuls laat per rij een zachte echo achter', 'A main pulse leaves a soft echo on each row', 'Une impulsion principale laisse un écho par rangée', 'Ein Hauptpuls hinterlässt pro Reihe ein weiches Echo'), true),
     spi('Curtain Sweep', 109, 'CHASE', 'Tunnel', {
       speed: 15, smooth: 96, widthPixels: 4, objectCount: 1, trailLength: 0,
-      spread: 50, randomness: 0, lineDelayMs: 180, direction: 'right', brightness: 70,
+      spread: 50, randomness: 0, lineDelayMs: 180, direction: 'right', brightness: 100,
       colorCount: 2, palette: [slot('#0096FF', 0), slot('#000000', 255)], backgroundOn: false
     }, ['speed', 'width', 'smooth', 'direction', 'lineDelayMs', 'colors'], 'spi-curtain-sweep-v1',
     copy('Een gordijn van licht opent rij na rij', 'A curtain of light opens row by row', 'Un rideau de lumière s’ouvre rangée après rangée', 'Ein Lichtvorhang öffnet sich Reihe für Reihe'), true),
     spi('Cross Tunnel', 110, 'MIRROR', 'Tunnel', {
       speed: 14, smooth: 96, widthPixels: 3, objectCount: 2, trailLength: 0,
-      spread: 45, randomness: 0, lineDelayMs: 180, direction: 'right', brightness: 70,
+      spread: 45, randomness: 0, lineDelayMs: 180, direction: 'right', brightness: 100,
       colorCount: 2, palette: [slot('#783CFF', 0), slot('#00DCC8', 0)], backgroundOn: false
     }, ['speed', 'width', 'smooth', 'direction', 'lineDelayMs', 'colors'], 'spi-cross-tunnel-v1',
     copy('Twee lichtpunten kruisen symmetrisch door iedere rij', 'Two light points cross symmetrically through every row', 'Deux points lumineux se croisent dans chaque rangée', 'Zwei Lichtpunkte kreuzen sich symmetrisch durch jede Reihe'), true),
     spi('Tunnel Comet', 111, 'COMET', 'Tunnel', {
       speed: 18, smooth: 95, widthPixels: 3, objectCount: 1, trailLength: 72,
-      spread: 45, randomness: 10, lineDelayMs: 200, direction: 'right', brightness: 70,
+      spread: 45, randomness: 10, lineDelayMs: 200, direction: 'right', brightness: 100,
       colorCount: 2, palette: [slot('#FFFFFF', 0), slot('#FF641E', 0)], backgroundOn: false
     }, ['speed', 'width', 'smooth', 'direction', 'trail', 'lineDelayMs', 'colors'], 'spi-tunnel-comet-v1',
     copy('Een komeet met staart loopt vertraagd door iedere rij', 'A tailed comet runs through every row with a delay', 'Une comète traverse chaque rangée avec retard', 'Ein Komet läuft verzögert durch jede Reihe'), true),
     spi('Diagonal Depth', 128, 'WAVE', 'Tunnel', {
       speed: 20, smooth: 100, widthPixels: 3, objectCount: 2, lineDelayMs: 320,
-      direction: 'right', brightness: 70, colorCount: 2,
+      direction: 'right', brightness: 100, colorCount: 2,
       palette: [slot('#287AFF', 0), slot('#EE42C5', 0)], backgroundOn: false
     }, ['speed', 'width', 'smooth', 'count', 'direction', 'lineDelayMs', 'colors'], 'spi-diagonal-depth-v1',
     copy('Tegengestelde diagonalen kruisen lijn voor lijn door de tunnel', 'Opposing diagonal stripes cross each tunnel row', 'Des diagonales opposées traversent les rangées', 'Gegenläufige Diagonalen kreuzen die Tunnelreihen'), true)
@@ -131,51 +131,51 @@
   var SPI_GENERAL = Object.freeze([
     spi('Edge Reveal', 112, 'CHASE', 'Reveal', {
       speed: 24, smooth: 92, widthPixels: 3, objectCount: 1, trailLength: 0,
-      spread: 20, randomness: 0, brightness: 70, colorCount: 2,
+      spread: 20, randomness: 0, brightness: 100, colorCount: 2,
       palette: [slot('#FF9628', 0), slot('#000000', 255)], backgroundOn: false, direction: 'right'
     }, ['speed', 'width', 'smooth', 'direction', 'colors'], 'spi-edge-reveal-v1',
     copy('Licht vult de lijn vanaf één rand en trekt daarna schoon terug', 'Light fills from one edge, then withdraws cleanly', 'La lumière remplit depuis un bord puis se retire', 'Licht füllt die Linie vom Rand und zieht sich sauber zurück')),
     spi('Center Reveal', 113, 'CHASE', 'Reveal', {
       speed: 22, smooth: 94, widthPixels: 4, objectCount: 1, trailLength: 0,
-      spread: 20, randomness: 0, brightness: 70, colorCount: 2,
+      spread: 20, randomness: 0, brightness: 100, colorCount: 2,
       palette: [slot('#0096FF', 0), slot('#000000', 255)], backgroundOn: false, direction: 'right'
     }, ['speed', 'width', 'smooth', 'colors'], 'spi-center-reveal-v1',
     copy('De lijn opent symmetrisch vanuit het midden', 'The line opens symmetrically from its centre', 'La ligne s’ouvre symétriquement depuis son centre', 'Die Linie öffnet sich symmetrisch aus der Mitte')),
     spi('Aurora Drift', 114, 'WAVE', 'Ambient', {
       speed: 12, smooth: 100, widthPixels: 8, objectCount: 3, trailLength: 35,
-      spread: 65, randomness: 20, brightness: 70, colorCount: 3,
+      spread: 65, randomness: 20, brightness: 100, colorCount: 3,
       palette: [slot('#2350FF', 0), slot('#BE23FF', 0), slot('#00D287', 0)],
       background: slot('#000008', 0), backgroundBrightness: 18, backgroundOn: true, direction: 'right'
     }, ['speed', 'smooth', 'spread', 'background', 'colors'], 'spi-aurora-drift-v1',
     copy('Drie langzaam verschuivende lichtgordijnen mengen zonder herhaling', 'Three drifting light curtains mix without obvious repetition', 'Trois rideaux lumineux dérivent sans répétition visible', 'Drei Lichtvorhänge driften ohne sichtbare Wiederholung')),
     spi('Dual Comet', 115, 'COMET', 'Dynamic', {
       speed: 30, smooth: 96, widthPixels: 3, objectCount: 2, trailLength: 48,
-      spread: 45, randomness: 10, brightness: 70, colorCount: 2,
+      spread: 45, randomness: 10, brightness: 100, colorCount: 2,
       palette: [slot('#000000', 255), slot('#FF6E12', 0)], backgroundOn: false, direction: 'right'
     }, ['speed', 'width', 'smooth', 'trail', 'direction', 'colors'], 'spi-dual-comet-v1',
     copy('Twee komeetkoppen bewegen tegengesteld met eigen staarten', 'Two comet heads counter-rotate with independent trails', 'Deux comètes tournent en sens opposé', 'Zwei Kometen bewegen sich gegenläufig')),
     spi('Interference Wave', 116, 'WAVE', 'Wave', {
       speed: 18, smooth: 94, widthPixels: 5, objectCount: 3, trailLength: 25,
-      spread: 60, randomness: 15, brightness: 70, colorCount: 2,
+      spread: 60, randomness: 15, brightness: 100, colorCount: 2,
       palette: [slot('#00BEFF', 0), slot('#962DFF', 0)],
       background: slot('#000006', 0), backgroundBrightness: 12, backgroundOn: true, direction: 'right'
     }, ['speed', 'smooth', 'count', 'spread', 'background', 'colors'], 'spi-interference-wave-v1',
     copy('Twee tegengestelde golven vormen een levend interferentiepatroon', 'Opposing waves form a living interference pattern', 'Deux vagues opposées forment des interférences vivantes', 'Gegenläufige Wellen bilden ein lebendiges Interferenzmuster')),
     spi('Meteor', 117, 'COMET', 'Dynamic', {
       speed: 34, smooth: 92, widthPixels: 2, objectCount: 1, trailLength: 58,
-      spread: 30, randomness: 45, brightness: 70, colorCount: 2,
+      spread: 30, randomness: 45, brightness: 100, colorCount: 2,
       palette: [slot('#000000', 255), slot('#FF5F0C', 0)], backgroundOn: false, direction: 'right'
     }, ['speed', 'width', 'smooth', 'trail', 'direction', 'randomness', 'colors'], 'spi-meteor-v1',
     copy('Een heldere kern trekt een korrelige, exponentieel uitdovende staart', 'A bright core pulls a granular, exponentially fading wake', 'Un noyau brillant entraîne une traînée granuleuse', 'Ein heller Kern zieht einen körnig ausklingenden Schweif')),
     spi('Firefly Field', 118, 'SPARKLE', 'Ambient', {
       speed: 16, smooth: 98, widthPixels: 2, objectCount: 6, trailLength: 20,
-      spread: 55, randomness: 63, brightness: 70, colorCount: 2,
+      spread: 55, randomness: 63, brightness: 100, colorCount: 2,
       palette: [slot('#000000', 255), slot('#FF9623', 0)], backgroundOn: false, direction: 'right'
     }, ['speed', 'width', 'smooth', 'count', 'randomness', 'colors'], 'spi-firefly-field-v1',
     copy('Vaste lichtpuntjes pulseren rustig en onafhankelijk', 'Stable light points pulse softly and independently', 'Des points fixes pulsent doucement et indépendamment', 'Feste Lichtpunkte pulsieren weich und unabhängig')),
     spi('Ripple', 119, 'WAVE', 'Wave', {
       speed: 22, smooth: 96, widthPixels: 2, objectCount: 2, trailLength: 25,
-      spread: 45, randomness: 10, brightness: 70, colorCount: 2,
+      spread: 45, randomness: 10, brightness: 100, colorCount: 2,
       palette: [slot('#1E64FF', 0), slot('#00DCFF', 0)], backgroundOn: false, direction: 'right'
     }, ['speed', 'width', 'smooth', 'count', 'colors'], 'spi-ripple-v1',
     copy('Gepaarde ringen groeien vanuit het midden naar buiten', 'Paired rings expand from the centre outwards', 'Des anneaux jumelés grandissent depuis le centre', 'Gepaarte Ringe wachsen aus der Mitte nach außen')),
@@ -187,62 +187,62 @@
     copy('Een gekalibreerde warm-witte lichtband met zacht hoofd en staart', 'A calibrated warm-white ribbon with a soft head and tail', 'Un ruban blanc chaud calibré avec tête et traînée douces', 'Ein kalibriertes warmweißes Lichtband mit weichem Kopf und Schweif')),
     spi('Blackout Reveal', 121, 'FLOW', 'Reveal', {
       speed: 35, smooth: 85, widthPixels: 8, spacing: 20, objectCount: 1, trailLength: 60,
-      spread: 20, randomness: 0, brightness: 70, colorCount: 2,
+      spread: 20, randomness: 0, brightness: 100, colorCount: 2,
       palette: [slot('#FFFFFF', 0), slot('#2478FF', 0)], backgroundOn: false, direction: 'right'
     }, ['speed', 'width', 'spacing', 'trail', 'smooth', 'direction', 'colors'], 'spi-blackout-reveal-v1',
     copy('Een donkere uitsparing onthult de kleur opnieuw met een lange zachte rand', 'A dark cut-out reveals the colour again with a long soft edge', 'Une découpe sombre révèle à nouveau la couleur avec un long bord doux', 'Eine dunkle Aussparung enthüllt die Farbe mit einer langen weichen Kante')),
     spi('Ribbon Weave', 122, 'WAVE', 'Wave', {
       speed: 28, smooth: 92, widthPixels: 3, spacing: 52, objectCount: 2, trailLength: 45,
-      spread: 45, randomness: 0, brightness: 70, colorCount: 3,
+      spread: 45, randomness: 0, brightness: 100, colorCount: 3,
       palette: [slot('#FF3D8E', 0), slot('#3C7CFF', 0), slot('#25E0C0', 0)], backgroundOn: false, direction: 'right'
     }, ['speed', 'width', 'spacing', 'trail', 'smooth', 'direction', 'colors'], 'spi-ribbon-weave-v1',
     copy('Twee smalle kleurribbons vlechten zichtbaar over en onder elkaar', 'Two narrow colour ribbons visibly weave over and under each other', 'Deux rubans colorés étroits s’entrelacent', 'Zwei schmale Farbbänder verweben sich sichtbar')),
     spi('Prism Stream', 123, 'GRADIENT', 'Gradient', {
       speed: 24, smooth: 96, widthPixels: 12, spacing: 36, objectCount: 1, trailLength: 70,
-      spread: 70, randomness: 0, brightness: 70, colorCount: 4,
+      spread: 70, randomness: 0, brightness: 100, colorCount: 4,
       palette: [slot('#FF3048', 0), slot('#FFC52E', 0), slot('#20D68F', 0), slot('#376CFF', 0)], backgroundOn: false, direction: 'right'
     }, ['speed', 'width', 'spacing', 'trail', 'smooth', 'direction', 'spread', 'colors'], 'spi-prism-stream-v1',
     copy('Een brede prismafilm stroomt als een continue kleurband vooruit', 'A broad prism film flows forward as a continuous colour band', 'Un large film prismatique s’écoule en bande continue', 'Ein breiter Prismenfilm fließt als durchgehendes Farbband vorwärts')),
     spi('Segment March', 124, 'CHASE', 'Chase', {
       speed: 45, smooth: 30, widthPixels: 4, spacing: 40, objectCount: 4, trailLength: 35,
-      spread: 35, randomness: 0, brightness: 70, colorCount: 2,
+      spread: 35, randomness: 0, brightness: 100, colorCount: 2,
       palette: [slot('#FFFFFF', 0), slot('#FF432E', 0)], backgroundOn: false, direction: 'right'
     }, ['speed', 'width', 'spacing', 'trail', 'smooth', 'direction', 'colors'], 'spi-segment-march-v1',
     copy('Korte harde lichtsegmenten marcheren met vaste tussenruimte', 'Short crisp light segments march at fixed spacing', 'De courts segments lumineux avancent à intervalle fixe', 'Kurze klare Lichtsegmente marschieren mit festem Abstand')),
     spi('Ember Drift', 125, 'SPARKLE', 'Ambient', {
       speed: 16, smooth: 88, widthPixels: 2, spacing: 64, objectCount: 6, trailLength: 78,
-      spread: 55, randomness: 64, brightness: 70, colorCount: 2,
+      spread: 55, randomness: 64, brightness: 100, colorCount: 2,
       palette: [slot('#FFB02E', 0), slot('#E63B0B', 0)], background: slot('#090100', 0),
       backgroundBrightness: 8, backgroundOn: true, direction: 'right'
     }, ['speed', 'width', 'spacing', 'trail', 'smooth', 'direction', 'randomness', 'background', 'colors'], 'spi-ember-drift-v1',
     copy('Warme vonkjes zweven traag vooruit en doven met een korrelige staart', 'Warm sparks drift slowly forward and fade with a granular tail', 'Des étincelles chaudes dérivent et s’éteignent en traînée', 'Warme Funken treiben langsam vorwärts und glimmen körnig aus')),
     spi('Orbit Cluster', 126, 'CHASE', 'Dynamic', {
       speed: 24, smooth: 100, widthPixels: 3, objectCount: 3, spacing: 60,
-      direction: 'right', brightness: 70, colorCount: 3,
+      direction: 'right', brightness: 100, colorCount: 3,
       palette: [slot('#FF6136', 0), slot('#23DCC7', 0), slot('#4169FF', 0)], backgroundOn: false
     }, ['speed', 'width', 'smooth', 'count', 'spacing', 'direction', 'colors'], 'spi-orbit-cluster-v1',
     copy('Een cluster lichtpunten draait rond en opent en sluit onderweg', 'A cluster of light cores orbits while expanding and contracting', 'Un groupe lumineux tourne en se dilatant', 'Ein Cluster aus Lichtpunkten kreist und dehnt sich aus')),
     spi('Shutter Bloom', 127, 'BREATHE', 'Reveal', {
       speed: 16, smooth: 100, widthPixels: 12, objectCount: 3, spacing: 55,
-      brightness: 70, colorCount: 3,
+      brightness: 100, colorCount: 3,
       palette: [slot('#F6B43B', 0), slot('#EE5285', 0), slot('#734DFF', 0)], backgroundOn: false
     }, ['speed', 'width', 'smooth', 'count', 'spacing', 'colors'], 'spi-shutter-bloom-v1',
     copy('Meerdere lichtvensters openen vanuit hun midden op eigen ritme', 'Several light windows open from their centres at staggered intervals', 'Plusieurs fenêtres lumineuses s’ouvrent depuis leur centre', 'Mehrere Lichtfenster öffnen sich versetzt aus ihrer Mitte')),
     spi('Colour Carriages', 129, 'CHASE', 'Chase', {
       speed: 42, smooth: 100, widthPixels: 4, objectCount: 4, spacing: 24,
-      direction: 'right', brightness: 70, colorCount: 4,
+      direction: 'right', brightness: 100, colorCount: 4,
       palette: [slot('#FF553B', 0), slot('#FFD24C', 0), slot('#29DCA8', 0), slot('#487CFF', 0)], backgroundOn: false
     }, ['speed', 'width', 'smooth', 'count', 'spacing', 'direction', 'background', 'colors'], 'spi-colour-carriages-v1',
     copy('Een trein van gekleurde lichtblokken met instelbare breedte en afstand', 'A train of coloured light blocks with adjustable width and gap', 'Un train de blocs colorés à largeur et espacement réglables', 'Ein Zug farbiger Lichtblöcke mit einstellbarer Breite und Abstand')),
     spi('Ripple Cascade', 130, 'WAVE', 'Wave', {
       speed: 34, smooth: 100, widthPixels: 2, objectCount: 3, spacing: 42,
-      direction: 'right', brightness: 70, colorCount: 3,
+      direction: 'right', brightness: 100, colorCount: 3,
       palette: [slot('#29CBFF', 0), slot('#7854FF', 0), slot('#ED5CB5', 0)], backgroundOn: false
     }, ['speed', 'width', 'smooth', 'count', 'spacing', 'direction', 'background', 'colors'], 'spi-ripple-cascade-v1',
     copy('Gekleurde rimpels groeien vanuit het midden; keer om om ze naar binnen te laten lopen', 'Coloured ripples grow from the centre; reverse to draw them inward', 'Des ondulations colorées partent du centre ou reviennent vers lui', 'Farbige Wellen wachsen aus der Mitte oder laufen nach innen')),
     spi('Meteor Rain', 131, 'COMET', 'Dynamic', {
       speed: 28, smooth: 100, widthPixels: 2, objectCount: 3, spacing: 38, trailLength: 24,
-      direction: 'right', brightness: 70, colorCount: 3,
+      direction: 'right', brightness: 100, colorCount: 3,
       palette: [slot('#FF8844', 0), slot('#35D8ED', 0), slot('#CA64FF', 0)], backgroundOn: false
     }, ['speed', 'width', 'smooth', 'count', 'spacing', 'trail', 'direction', 'background', 'colors'], 'spi-meteor-rain-v1',
     copy('Meerdere gekleurde kometen halen elkaar in met zachte, instelbare staarten', 'Several coloured comets overtake one another with adjustable soft trails', 'Plusieurs comètes colorées se dépassent avec des traînées douces', 'Mehrere farbige Kometen überholen sich mit weichen Schweifen'))
@@ -251,6 +251,9 @@
   var SPI_EFFECTS = Object.freeze(SPI_TUNNELS.concat(SPI_GENERAL).sort(function (a, b) { return a.variant - b.variant; }));
 
   function rgbw(name, variant, engine, kind, colors, defaults, formula, description) {
+    // Built-in selection defaults only; effectState overrides and saved light
+    // snapshots retain the brightness explicitly chosen by their owner.
+    defaults = Object.assign({ brightness: 100 }, defaults);
     if (Tunnel.kind('RGBW', variant)) {
       defaults = Object.assign({}, defaults, { speed: 55, smooth: 100,
         lineDelayMs: Math.round((defaults.lineDelayMs || 0)/40)*40 });
@@ -427,6 +430,17 @@
     return mixSlot(palette[index], palette[(index + 1) % palette.length], amount);
   }
 
+  // Use actual palette channels, not averaged cyclic palette coordinates.
+  // Fractional channels survive until the overlapping objects are combined.
+  function overlapPaletteChannels(palette, phase, smooth) {
+    var scaled = mod1(phase) * palette.length;
+    var index = Math.floor(scaled) % palette.length;
+    return tunnelPaletteChannels(palette, {
+      first: index, second: (index + 1) % palette.length,
+      mix: smoothstep(scaled - Math.floor(scaled))
+    }, smooth);
+  }
+
   function tunnelPaletteChannels(palette, spec, smooth) {
     var amount = spec.mix;
     var stepped = amount < 0.5 ? 0 : 1;
@@ -579,7 +593,8 @@
       var edgeCenter = edgeTravel * (n - width) + (width - 1) * 0.5;
       var edgeCoverage = width >= n ? 1 : clamp((width + 1) * 0.5 - Math.abs(Math.round(orientedPixel) - edgeCenter), 0, 1, 0);
       var edgeCrisp = edgeCoverage >= 0.999 ? 1 : 0;
-      amount = orientedPixel <= edgeTravel * n - 0.5 ? 1 : edgeCrisp + (edgeCoverage - edgeCrisp) * smoothnessCurve(smooth);
+      amount = smooth > 0 ? Math.max(edgeCoverage, clamp(edgeTravel * n - 0.5 - orientedPixel + 1, 0, 1, 0))
+        : orientedPixel <= edgeTravel * n - 0.5 ? 1 : edgeCrisp;
       colourPhase = orientedPixel / n * (1 + spread * 1.5);
     } else if (effect.variant === 113) {
       var centerTravel = phase < 0.5 ? phase * 2 : (1 - phase) * 2;
@@ -616,15 +631,54 @@
       colourPhase = (first - second) * 0.18 + temporal;
     } else if (effect.variant === 117) {
       var meteorHead = pixelMotionPosition(reverse ? 1 - phase : phase, width, n, smooth);
-      var meteorBehind = mod1(meteorHead - u) * n;
+      // Float-align the two coordinates before wrapping. Double mod1 could
+      // turn a rational head/pixel coincidence into a whole-tail colour swap.
+      var meteorBehind = mod1(Math.fround(Math.fround(meteorHead) - Math.fround(u))) * n;
       var meteorTrail = Math.max(width, n * Math.max(0.03, trail));
-      var meteorHash = Math.imul(Math.floor(u * n - 0.5) + 1, 0x9E3779B9);
-      meteorHash ^= Math.imul(Math.floor(seconds * 11), 0x85EBCA6B);
-      meteorHash ^= Math.imul(randomness, 0xC2B2AE35); meteorHash ^= meteorHash >>> 16;
-      var grain = 0.68 + (meteorHash & 255) / 800;
+      // Match SPI Meteor's deterministic 11Hz grain, with a C2 join rather
+      // than a brightness cut. Positive smoothness retains sub-frame clock
+      // precision on long-running receivers; zero keeps the original MCU tick.
+      var meteorClock = smooth ? seconds * 11 : Math.fround(Math.fround(seconds) * 11), meteorTick = Math.floor(meteorClock);
+      var meteorSeed = Math.floor(samplePixel);
+      var meteorGrain = function (tick) {
+        var hash = Math.imul(meteorSeed + 1, 0x9E3779B9);
+        hash ^= Math.imul(tick, 0x85EBCA6B);
+        hash ^= Math.imul(randomness, 0xC2B2AE35); hash ^= hash >>> 16;
+        return 0.68 + (hash & 255) / 800;
+      };
+      var grain = meteorGrain(meteorTick), meteorCurve = smoothnessCurve(smooth);
+      var meteorEase = function (x) { x = clamp(x, 0, 1, 0); return clamp(x*x*x*(x*(x*6-15)+10),0,1,0); };
+      if (smooth) grain += (meteorGrain(meteorTick + 1)-grain)*meteorEase(meteorClock-meteorTick)*meteorCurve;
       var wake = meteorBehind < meteorTrail ? Math.exp(-3.2 * meteorBehind / meteorTrail) * grain : 0;
-      amount = Math.max(thickness(circularDistance(u, meteorHead), width, n, smooth), wake);
+      if (smooth) {
+        var meteorEdge = Math.min(1.5, Math.min(Math.max(1,n),meteorTrail)*0.5);
+        var meteorGate = meteorEase(meteorBehind/meteorEdge)*meteorEase((meteorTrail-meteorBehind)/meteorEdge)*meteorEase((n-meteorBehind)/meteorEdge);
+        wake *= meteorGate;
+      }
+      var meteorDistance = circularDistance(u, meteorHead)*n, meteorHalf = width*0.5;
+      var meteorIntegral = function (p) {
+        var x=Math.abs(p),tail=1.5-x,value=x>=1.5?1:x<=0.5?0.5+x*(0.75-x*x/3):1-tail*tail*tail/6;
+        return p<0?1-value:value;
+      };
+      var meteorBand = function (d) { return meteorIntegral(d+meteorHalf)-meteorIntegral(d-meteorHalf); };
+      var meteorSoft = meteorBand(meteorDistance);
+      if (n-meteorDistance<meteorHalf+1.5) meteorSoft+=meteorBand(meteorDistance-n);
+      if (n+meteorDistance<meteorHalf+1.5) meteorSoft+=meteorBand(meteorDistance+n);
+      var meteorCrisp=clamp(meteorHalf+0.5-meteorDistance,0,1,0)>=0.999?1:0;
+      var meteorCore=width>=n?1:meteorCrisp+(clamp(meteorSoft,0,1,0)-meteorCrisp)*meteorCurve;
+      amount = Math.max(meteorCore, wake);
       colourPhase = meteorBehind / Math.max(1, meteorTrail);
+      if (smooth) {
+        // A lit head has its own stable colour. The finite wake's gradient
+        // fades to zero on both sides of the wrapped head coordinate.
+        var meteorHeadColour = paletteAt(palette,0,true,smooth);
+        var meteorWakeColour = paletteAt(palette,colourPhase,true,smooth);
+        var meteorWakeWeight = amount > 0 ? wake/amount : 0;
+        var meteorForeground = {
+          rgb:meteorHeadColour.rgb.map(function (value,index) { return Math.round(value+(meteorWakeColour.rgb[index]-value)*meteorWakeWeight); }),
+          white:Math.round(meteorHeadColour.white+(meteorWakeColour.white-meteorHeadColour.white)*meteorWakeWeight)
+        };
+      }
     } else if (effect.variant === 118) {
       for (var fly = 0; fly < count; fly += 1) {
         var seed = (Math.imul(fly + 1, 0xA511E9B3) + Math.imul(randomness, 0x63D83595)) >>> 0;
@@ -649,35 +703,47 @@
       var ribbon = Math.min(Math.max(1, n - 0.5), Math.max(width, n * trail));
       var leading = smootherstep((contourBehind + 0.5) / Math.max(0.75, ribbon * 0.1));
       var trailing = smootherstep((ribbon - contourBehind + 0.5) / Math.max(1, ribbon * 0.28));
+      var contourEdge = Math.min(1.5,Math.min(Math.max(1,n),ribbon)*0.5);
+      var contourTaper = function (value) { return clamp(smootherstep(value),0,1,0); };
+      var contourGate = smooth ? contourTaper(contourBehind/contourEdge)*contourTaper((ribbon-contourBehind)/contourEdge)*contourTaper((n-contourBehind)/contourEdge) : 1;
       amount = Math.max(thickness(circularDistance(local, contourHead), width, n, smooth),
-        contourBehind < ribbon ? leading * trailing * 242 / 255 : 0);
+        contourBehind < ribbon ? leading * trailing * contourGate * 242 / 255 : 0);
       colourPhase = clamp(contourBehind / ribbon, 0, 1, 0); smoothPalette = false;
     } else if (effect.variant === 121) {
       var shutters = Math.max(1, Math.min(6, 1 + Math.floor(spacing * 5)));
       var darkness = 0;
       var blackoutTail = Math.max(width, width + trail * n * 0.45);
       for (var shutterIndex = 0; shutterIndex < shutters; shutterIndex += 1) {
-        var blackoutHead = mod1(clock + shutterIndex / shutters);
+        var blackoutHead = mod1((smooth ? phase : clock) + shutterIndex / shutters);
         var blackoutBehind = mod1(blackoutHead - local) * n;
         var blackoutWake = blackoutBehind < blackoutTail ? Math.pow(Math.max(0, 1 - blackoutBehind / blackoutTail), 1.1 + (100 - smooth) * 0.018) : 0;
-        darkness = Math.max(darkness, thickness(circularDistance(local, blackoutHead), width, n, smooth), blackoutWake);
+        if (smooth) {
+          var blackoutEdge = Math.min(1.5,Math.min(Math.max(1,n),blackoutTail)*0.5);
+          blackoutWake *= clamp(smootherstep(blackoutBehind/blackoutEdge),0,1,0)*
+            clamp(smootherstep((blackoutTail-blackoutBehind)/blackoutEdge),0,1,0)*
+            clamp(smootherstep((n-blackoutBehind)/blackoutEdge),0,1,0);
+        }
+        darkness = Math.max(darkness, thickness(circularDistance(local, blackoutHead), width, n, smooth ? 100 : 0), blackoutWake);
       }
       amount = 1 - darkness;
-      var blackoutColourDrift = temporal + (0.5 - 0.5 * Math.cos(temporal * Math.PI * 2) - temporal) * smoothnessCurve(smooth);
+      var blackoutColourDrift = smooth ? 0.5 - 0.5 * Math.cos(phase * Math.PI * 2) : temporal + (0.5 - 0.5 * Math.cos(temporal * Math.PI * 2) - temporal) * smoothnessCurve(smooth);
       colourPhase = local * (1 + spacing * 1.5) + blackoutColourDrift * 0.035;
+      if (smooth) var blackoutForeground = paletteAt(palette,colourPhase,true,100);
     } else if (effect.variant === 122) {
+      var weaveClock = smooth ? phase : clock;
       var waves = 1.5 + spacing * 6.5;
-      var weaveA = 0.5 + 0.5 * Math.sin((local * waves - clock) * Math.PI * 2);
-      var weaveB = 0.5 + 0.5 * Math.sin((local * waves + clock + 0.5) * Math.PI * 2);
+      var weaveA = 0.5 + 0.5 * Math.sin((local * waves - weaveClock) * Math.PI * 2);
+      var weaveB = 0.5 + 0.5 * Math.sin((local * waves + weaveClock + 0.5) * Math.PI * 2);
       var threshold = Math.max(0.01, Math.max(0.5, width * 0.5) / n * waves);
       var edgeA = clamp((threshold - Math.abs(weaveA - 0.5) + 0.08 * smoothnessCurve(smooth)) / threshold, 0, 1, 0);
       var edgeB = clamp((threshold - Math.abs(weaveB - 0.5) + 0.08 * smoothnessCurve(smooth)) / threshold, 0, 1, 0);
-      var afterglow = trail * 0.42 * (0.5 + 0.5 * Math.sin((local * waves - clock + 0.22) * Math.PI * 2));
+      var afterglow = trail * 0.42 * (0.5 + 0.5 * Math.sin((local * waves - weaveClock + 0.22) * Math.PI * 2));
       amount = Math.max(edgeA, edgeB * (0.55 + 0.45 * weaveA), afterglow);
       var originalColour = edgeA + 0.00001 >= edgeB ? 0.08 + local * 0.18 : 0.58 + local * 0.18;
       var weaveWeight = edgeA + edgeB + afterglow * 2;
       var blendedColour = 0.08 + local * 0.18 + 0.5 * (weaveWeight > 0 ? (edgeB + afterglow) / weaveWeight : 0.5);
-      colourPhase = originalColour + (blendedColour - originalColour) * smoothnessCurve(smooth);
+      colourPhase = smooth ? blendedColour : originalColour;
+      if (smooth) var weaveForeground = paletteAt(palette,colourPhase,true,100);
     } else if (effect.variant === 123) {
       var prismSpatial = orientedPixel / width * (0.55 + spacing * 1.9);
       var prismCoordinate = prismSpatial - clock * (1 + Math.round(trail));
@@ -688,7 +754,7 @@
     } else if (effect.variant === 124) {
       var gapPixels = 1 + spacing * Math.max(2, n * 0.16);
       var periodPixels = width + gapPixels;
-      var travelPixels = clock * periodPixels * palette.length;
+      var travelPixels = (smooth > 0 ? phase : clock) * periodPixels * palette.length;
       var cell = (orientedPixel - travelPixels + periodPixels * 8) % periodPixels;
       var distanceToSegment = cell < width ? 0 : Math.min(cell - width, periodPixels - cell);
       var featherPixels = 0.15 + smoothnessCurve(smooth) * Math.min(1.5, gapPixels * 0.45);
@@ -698,6 +764,7 @@
       var segmentCoordinate = (orientedPixel-travelPixels)/periodPixels;
       var segmentBand = Math.floor(segmentCoordinate);
       colourPhase = (segmentBand+(segmentCoordinate-segmentBand)*smoothnessCurve(smooth))/palette.length;
+      if (smooth > 0) var segmentForeground = paletteAt(palette, segmentCoordinate / palette.length, true, 100);
     } else if (effect.variant === 125) {
       var emberCount = Math.max(2, Math.min(12, 2 + Math.floor(spacing * 10)));
       var heat = 0;
@@ -707,21 +774,23 @@
         hash = (hash ^ (hash >>> 16)) >>> 0;
         var origin = (hash & 65535) / 65536;
         var rate = 0.32 + ((hash >>> 16) & 255) / 510;
-        var motionRate = rate + (1 + ((hash >>> 24) & 1) - rate) * smoothnessCurve(smooth);
-        var center = mod1(origin + clock * motionRate);
+        var motionRate = smooth ? 1 + ((hash >>> 24) & 1) : rate;
+        var emberClock = smooth ? phase : clock;
+        var center = mod1(origin + emberClock * motionRate);
         var emberRadius = Math.max(0.5, width * (0.55 + ((hash >>> 24) & 127) / 255));
         var spatial = Math.max(0, 1 - circularDistance(local, center) * n / emberRadius);
-        var age = mod1(clock * motionRate + origin);
+        var age = mod1(emberClock * motionRate + origin);
         var life = Math.pow(Math.max(0, 1 - age), 0.7 + trail * 2.4);
         var birthPhase = clamp(age / 0.08, 0, 1, 0);
         var birth = birthPhase * birthPhase * (3 - 2 * birthPhase);
         var flicker = 0.70 + 0.30 * Math.sin((seconds * (2.2 + rate * 3) + origin) * Math.PI * 2);
-        var emberAmount = Math.pow(spatial, 0.7 + (100 - smooth) * 0.025) * life * flicker * (1 + (birth - 1) * smoothnessCurve(smooth));
+        var emberAmount = Math.pow(spatial, 0.7 + (100 - smooth) * 0.025) * life * flicker * (smooth ? birth : 1);
         heatWeight += emberAmount; heatSum += emberAmount * (1 - age);
         if (emberAmount > amount) { amount = emberAmount; heat = 1 - age; }
       }
-      if (heatWeight > 0) heat += (heatSum / heatWeight - heat) * smoothnessCurve(smooth);
+      if (smooth && heatWeight > 0) heat = heatSum / heatWeight;
       colourPhase = 0.02 + heat * (0.18 + spacing * 0.18);
+      if (smooth) var emberForeground = paletteAt(palette,colourPhase,true,100);
     } else if (effect.variant === 126) {
       var span = (0.08 + spacing * 0.72) * (0.65 + 0.35 * Math.sin(clock * Math.PI * 2));
       var selectedOrb = 0;
@@ -733,10 +802,12 @@
         if (orbAmount > amount) { amount = orbAmount; selectedOrb = orb / count; }
         orbWeight += orbAmount; orbSum += orbAmount * orb / count;
       }
-      if (orbWeight > 0) selectedOrb += (orbSum / orbWeight - selectedOrb) * smoothnessCurve(smooth);
+      if (orbWeight > 0) selectedOrb += (orbSum / orbWeight - selectedOrb) * (smooth > 0 ? 1 : 0);
       colourPhase = selectedOrb + clock;
+      if (smooth > 0 && smooth < 100) var orbForeground = paletteAt(palette, colourPhase, true, 100);
     } else if (effect.variant === 127) {
       var selectedShutter = 0;
+      var shutterForeground = null, shutterSum = [0, 0, 0, 0], shutterWeight = 0, shutterContributors = 0;
       for (var shutter = 0; shutter < count; shutter += 1) {
         var shutterCenter = (shutter + 0.5) / count;
         var opening = 0.5 - 0.5 * Math.cos((clock - shutter * (0.05 + spacing * 0.18)) * Math.PI * 2);
@@ -746,18 +817,42 @@
         var crisp = coverage >= 0.999 ? 1 : 0;
         var shutterAmount = crisp + (coverage - crisp) * smoothnessCurve(smooth);
         if (shutterAmount > amount) { amount = shutterAmount; selectedShutter = shutterCenter + opening * 0.22; }
+        var shutterCandidate = Math.round(shutterAmount * 65535);
+        if (smooth > 0 && shutterCandidate > 0) {
+          var shutterChannels = overlapPaletteChannels(palette, shutterCenter + opening * 0.22, smooth);
+          for (var shutterChannel = 0; shutterChannel < 4; shutterChannel += 1) shutterSum[shutterChannel] += shutterChannels[shutterChannel] * shutterCandidate;
+          shutterWeight += shutterCandidate; shutterContributors += 1;
+        }
       }
+      // Keep the original single-object preview byte-exact.
+      if (shutterContributors > 1) shutterForeground = {
+        rgb: shutterSum.slice(0, 3).map(function (value) { return Math.round(value / shutterWeight); }),
+        white: Math.round(shutterSum[3] / shutterWeight)
+      };
       colourPhase = selectedShutter;
     } else if (effect.variant === 129) {
       var carriageGap = 1 + spacing * n * 0.2;
+      var carriageForeground = null, carriageSum = [0, 0, 0, 0], carriageWeight = 0, carriageContributors = 0;
       for (var carriage = 0; carriage < count; carriage += 1) {
         var carriageHead = pixelMotionPosition(mod1(clock - carriage * (width + carriageGap) / n), width, n, smooth);
         var carriageAmount = thickness(circularDistance(local, carriageHead), width, n, smooth);
         if (carriageAmount > amount) { amount = carriageAmount; bandIndex = carriage % palette.length; }
+        var carriageCandidate = Math.round(carriageAmount * 65535);
+        if (smooth > 0 && carriageCandidate > 0) {
+          var carriageColour = palette[carriage % palette.length];
+          var carriageChannels = hexRgb(carriageColour.rgb).concat(carriageColour.white);
+          for (var carriageChannel = 0; carriageChannel < 4; carriageChannel += 1) carriageSum[carriageChannel] += carriageChannels[carriageChannel] * carriageCandidate;
+          carriageWeight += carriageCandidate; carriageContributors += 1;
+        }
       }
+      if (carriageContributors > 1) carriageForeground = {
+        rgb: carriageSum.slice(0, 3).map(function (value) { return Math.round(value / carriageWeight); }),
+        white: Math.round(carriageSum[3] / carriageWeight)
+      };
       band = true;
     } else if (effect.variant === 130) {
       var cascadeDistance = Math.abs(u - 0.5);
+      var cascadeForeground = null, cascadeSum = [0, 0, 0, 0], cascadeWeight = 0, cascadeContributors = 0;
       for (var ripple = 0; ripple < count; ripple += 1) {
         var cascadeCycle = mod1((reverse ? 1 - clock : clock) - ripple / count);
         var cascadeRadius = cascadeCycle * 0.5;
@@ -767,21 +862,54 @@
         var cascadeAmount = thickness(Math.abs(cascadeDistance - cascadeRadius), width, n, smooth) *
           Math.pow(Math.max(0, 1 - cascadeRadius * 2), spacing * 1.5) * cascadeBirthDeath;
         if (cascadeAmount > amount) { amount = cascadeAmount; bandIndex = ripple % palette.length; }
+        var cascadeCandidate = Math.floor(cascadeAmount * 65535);
+        if (smooth > 0 && cascadeCandidate > 0) {
+          var cascadeColour = palette[ripple % palette.length];
+          var cascadeChannels = hexRgb(cascadeColour.rgb).concat(cascadeColour.white);
+          for (var cascadeChannel = 0; cascadeChannel < 4; cascadeChannel += 1) cascadeSum[cascadeChannel] += cascadeChannels[cascadeChannel] * cascadeCandidate;
+          cascadeWeight += cascadeCandidate; cascadeContributors += 1;
+        }
       }
+      if (cascadeContributors > 1) cascadeForeground = {
+        rgb: cascadeSum.slice(0, 3).map(function (value) { return Math.round(value / cascadeWeight); }),
+        white: Math.round(cascadeSum[3] / cascadeWeight)
+      };
       band = true;
     } else if (effect.variant === 131) {
       var rainLength = Math.max(width, n * Math.max(0.01, trail));
+      var rainForeground = null, rainSum = [0, 0, 0, 0], rainWeight = 0, rainContributors = 0;
       for (var meteor = 0; meteor < count; meteor += 1) {
         var rainHead = pixelMotionPosition(mod1(clock * (1 + meteor % 3) + meteor / count), width, n, smooth);
         var rainBehind = mod1(rainHead - local) * n;
         var rainWake = rainBehind < rainLength ? Math.pow(Math.max(0, 1 - rainBehind / rainLength), 1 + spacing * 3) * 0.8 : 0;
         var rainAmount = Math.max(thickness(circularDistance(local, rainHead), width, n, smooth), rainWake);
         if (rainAmount > amount) { amount = rainAmount; bandIndex = meteor % palette.length; }
+        var rainCandidate = Math.max(Math.round(thickness(circularDistance(local, rainHead), width, n, smooth) * 65535), Math.round(rainWake * 65535));
+        if (smooth > 0 && rainCandidate > 0) {
+          var rainColour = palette[meteor % palette.length];
+          var rainChannels = hexRgb(rainColour.rgb).concat(rainColour.white);
+          for (var rainChannel = 0; rainChannel < 4; rainChannel += 1) rainSum[rainChannel] += rainChannels[rainChannel] * rainCandidate;
+          rainWeight += rainCandidate; rainContributors += 1;
+        }
       }
+      if (rainContributors > 1) rainForeground = {
+        rgb: rainSum.slice(0, 3).map(function (value) { return Math.round(value / rainWeight); }),
+        white: Math.round(rainSum[3] / rainWeight)
+      };
       band = true;
     }
     var foreground = bandIndex !== null ? mixSlot(palette[bandIndex], palette[bandIndex], 0) : band ? mixSlot(palette[Math.floor(mod1(colourPhase) * palette.length) % palette.length],
       palette[Math.floor(mod1(colourPhase) * palette.length) % palette.length], 0) : paletteAt(palette, colourPhase, smoothPalette, smooth);
+    if (meteorForeground) foreground = meteorForeground;
+    if (blackoutForeground) foreground = blackoutForeground;
+    if (weaveForeground) foreground = weaveForeground;
+    if (emberForeground) foreground = emberForeground;
+    if (shutterForeground) foreground = shutterForeground;
+    if (carriageForeground) foreground = carriageForeground;
+    if (orbForeground) foreground = orbForeground;
+    if (cascadeForeground) foreground = cascadeForeground;
+    if (rainForeground) foreground = rainForeground;
+    if (segmentForeground) foreground = segmentForeground;
     if (tunnelPalette) {
       var tunnelChannels = tunnelPaletteChannels(palette,tunnelPalette,
         effect.spatialResolution === 'logical-line' ? 100 : smooth);
@@ -887,6 +1015,11 @@
       var pulseB = smoothstep(1 - circularDistance(raw, 0.34) / pulseWidth);
       amount = 0.05 + 0.95 * Math.max(pulseA, pulseB * 0.78);
       band = true; colourPhase = raw < 0.25 ? 0 : 0.75;
+      if (smooth > 0) {
+        var heartbeatEase = function (value) { var x=clamp(value,0,1,0);return clamp(x*x*x*(x*(x*6-15)+10),0,1,0); };
+        var heartbeatMix = heartbeatEase((raw-0.19)/0.12)*(1-heartbeatEase((raw-0.84)/0.16));
+        var heartbeatSelected = mixSlot(palette[0],palette[Math.floor(0.75*palette.length)%palette.length],heartbeatMix);
+      }
     } else if (effect.variant === 19) {
       var hold = clamp(state.spacing, 0, 100, effect.defaults.spacing) / 100;
       var scaled = raw * palette.length;
@@ -932,6 +1065,7 @@
     }
     else if (band) selected = mixSlot(palette[Math.floor(mod1(colourPhase) * palette.length) % palette.length], palette[Math.floor(mod1(colourPhase) * palette.length) % palette.length], 0);
     else selected = paletteAt(palette, colourPhase, smoothPalette);
+    if (heartbeatSelected) selected = heartbeatSelected;
     return { receiverType: 'RGBW', variant: effect.variant, engine: effect.engine, formula: effect.previewFormula,
       rgb: selected.rgb, white: selected.white, amount: clamp(amount, 0, 1, 0) * clamp(state.brightness, 0, 100, 100) / 100,
       uniform: true, spatialResolution: 'logical-line', logicalLineIndex: line };

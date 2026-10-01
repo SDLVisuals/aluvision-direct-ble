@@ -1,0 +1,281 @@
+/* Optional final presentation layer, enabled by interface-motion.js. Layout,
+   receiver state, LED canvases and native scrolling remain owned by the app. */
+html.interface-polish {
+  --interface-milk: rgba(255, 255, 253, .72);
+  --interface-milk-solid: #f8f8f5;
+  --interface-inner: rgba(255, 255, 253, .46);
+  --interface-edge: rgba(115, 121, 111, .18);
+  --interface-highlight: rgba(255, 255, 255, .94);
+  --interface-shadow: 0 5px 18px rgba(28, 35, 27, .045);
+  --interface-choice: #ac3933;
+  --interface-choice-tint: rgba(191, 72, 65, .055);
+  --interface-release: cubic-bezier(.2, .85, .25, 1.12);
+}
+html.interface-polish body[data-theme="dark"] {
+  --interface-milk: rgba(43, 48, 41, .88);
+  --interface-milk-solid: #2b3029;
+  --interface-inner: rgba(52, 58, 49, .68);
+  --interface-edge: rgba(224, 232, 216, .2);
+  --interface-highlight: rgba(255, 255, 255, .1);
+  --interface-shadow: 0 5px 18px rgba(0, 0, 0, .15);
+  --interface-choice: #e59c93;
+  --interface-choice-tint: rgba(229, 156, 147, .075);
+}
+
+/* A milky outer surface and a quiet inside, not another blur for each tile.
+   Do not target generic .card: several mobile controls deliberately have no
+   box, while order disclosures have their own joined-header/body geometry. */
+html.interface-polish body :is(.stand-info-tile, .stand-control-shortcut,
+    .zone-entry, .menu-card, .receiver-list > details, .scene-card, .stand-scenes-entry,
+    .stand-scene-card, .assignment-choice, .assignment-family-choice,
+    .animation-category-trigger, .animation-category-choice,
+    .animation-family-card, .family-variant-card, .effect-card, .family-card,
+    .settings-toggle, .ledline-add-action, .onboarding-name-card,
+    .onboarding-zone, .onboarding-destination) {
+  background-color: var(--interface-milk);
+  background-image: linear-gradient(145deg, var(--interface-highlight), transparent 62%);
+  border-color: var(--interface-edge);
+  box-shadow: inset 0 1px var(--interface-highlight), var(--interface-shadow);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html.interface-polish body .zone-entry > .zone-card {
+  background-color: transparent;
+  background-image: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html.interface-polish body :is(.family-variants-panel,
+    .animation-category-options, .receiver-list details details,
+    .ledline-row-settings .receiver-connections) {
+  background-color: var(--interface-inner);
+  background-image: none;
+  box-shadow: inset 0 1px var(--interface-highlight);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html.interface-polish body :is(.brand-bar, .control-dock-surface,
+    #effect-dialog-content > header) {
+  border-color: var(--interface-edge);
+  box-shadow: inset 0 1px var(--interface-highlight), 0 5px 16px -10px rgba(24, 32, 24, .2);
+}
+/* Keep the shared sticky header's opaque backing: content must never read
+   through it. Only already-blurred outer sheets retain their existing blur. */
+html.interface-polish body #effect-dialog-content > header {
+  background-color: var(--glass-solid);
+}
+html.interface-polish body #effect-dialog:has([data-stand-control-sheet]) {
+  /* A full page must not reveal the previous page's labels, especially when
+     the older dark-dialog material selector would win the opaque base. The
+     picker and other inner surfaces keep their own soft glass material. */
+  background-color: var(--bg);
+  background-image: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+/* Group headings are wayfinding, not another card around existing actions. */
+html.interface-polish :is(.settings-installation, .settings-app-tools) {
+  display: grid;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+html.interface-polish .settings-group-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.4;
+  letter-spacing: -.01em;
+}
+html.interface-polish :is(.scene-unavailable-note, .animation-save-help) {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+html.interface-polish :is(.scene-card-row, .stand-scene-row) > .scene-unavailable-note {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0 3px 4px;
+}
+html.interface-polish .scene-unavailable-note > .icon {
+  flex: none;
+  width: 15px;
+  height: 15px;
+}
+html.interface-polish .scene-unavailable-note > span { min-width: 0; overflow-wrap: anywhere; }
+html.interface-polish .navigation {
+  border-color: rgba(255, 255, 255, .23);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .16), 0 9px 24px rgba(15, 22, 15, .16);
+}
+html.interface-polish .navigation button[aria-current="page"] {
+  box-shadow: inset 0 1px white, 0 2px 7px rgba(0, 0, 0, .1);
+}
+
+/* Options keep their existing labels/checks/ARIA. A stable inset edge adds
+   another selected-state cue without border-width jumps or red/brown fills. */
+html.interface-polish body :is(.assignment-choice, .assignment-family-choice,
+    .animation-category-choice, .layout-choice, .preference-grid button,
+    .family-spatial-options button, .spatial-preview-switch button,
+    .physical-port-picker button, .compact-direction button)[aria-pressed="true"] {
+  color: var(--ink);
+  background-color: var(--interface-milk-solid);
+  background-image: linear-gradient(var(--interface-choice-tint), var(--interface-choice-tint));
+  border-color: var(--interface-choice);
+  box-shadow: inset 0 0 0 1px var(--interface-choice), inset 0 1px var(--interface-highlight);
+}
+html.interface-polish body :is(.assignment-choice, .assignment-family-choice,
+    .animation-category-choice, .preference-grid button,
+    .family-spatial-options button, .spatial-preview-switch button,
+    .physical-port-picker button, .compact-direction button):not([aria-pressed="true"]) {
+  border-color: var(--interface-edge);
+}
+html.interface-polish body :is(.settings-toggle, .ledline-settings-toggle,
+    .ledline-setup-toggle)[aria-expanded="true"] {
+  border-color: var(--interface-choice);
+  box-shadow: inset 0 0 0 1px var(--interface-choice), inset 0 1px var(--interface-highlight);
+}
+html.interface-polish body :is(button, a, input, select, summary):focus-visible {
+  outline-color: var(--interface-choice);
+}
+html.interface-polish .preview-wrap :is(button, summary):focus-visible {
+  outline-color: #fff;
+}
+
+/* One transform authority for ordinary buttons. The matching JS selector is
+   intentionally explicit; preview tiles, summaries, drag handles and switches
+   stay with their original animation. No permanent compositor promotion. */
+html.interface-polish body :is(button.button, button.icon-button,
+    button.text-button, button.menu-card, button.settings-toggle,
+    button.spatial-choice-toggle, button.ledline-setup-toggle,
+    button.ledline-add-action, button.ledline-settings-toggle,
+    button.ledline-reuse-action, button.animation-category-trigger,
+    button.animation-category-choice, button.animation-gallery-return,
+    button.animation-settings-return, button.current-effect-gallery,
+    button.assignment-choice, button.assignment-family-choice, button.back,
+    .navigation > button, .control-mode-tabs > button, .section-tabs > button,
+    .filter-row > button, .preference-grid > button, .compact-direction > button,
+    .physical-port-picker > button, .family-spatial-options > button,
+    .spatial-preview-switch > button, .channel-row > button,
+    .preview-size-picker > button):not(:disabled):not([role="switch"]):not(:has(canvas)) {
+  transform: scale(var(--interface-press-scale, 1));
+  transition: transform var(--interface-press-time, 210ms) var(--interface-press-ease, var(--interface-release)),
+    background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+html.interface-polish body :is(button, .navigation > button)[data-interface-press="held"] {
+  --interface-press-scale: .984;
+  --interface-press-time: 85ms;
+  --interface-press-ease: ease-out;
+}
+html.interface-polish body summary:has(button[data-interface-press="held"]):active {
+  /* A nested close/action gets one press, not a second scaled summary. */
+  transform: none;
+}
+html.interface-polish body :is(button.button, button.icon-button,
+    button.text-button, button.menu-card, button.settings-toggle,
+    button.spatial-choice-toggle, button.ledline-setup-toggle,
+    button.ledline-add-action, button.ledline-settings-toggle,
+    button.ledline-reuse-action, button.animation-category-trigger,
+    button.animation-category-choice, button.animation-gallery-return,
+    button.animation-settings-return, button.current-effect-gallery,
+    button.assignment-choice, button.assignment-family-choice, button.back,
+    .navigation > button, .control-mode-tabs > button, .section-tabs > button,
+    .filter-row > button, .preference-grid > button, .compact-direction > button,
+    .physical-port-picker > button, .family-spatial-options > button,
+    .spatial-preview-switch > button, .channel-row > button,
+    .preview-size-picker > button):active:not(:disabled):not([role="switch"]):not(:has(canvas)) {
+  /* The passive pointer/keyboard listener, not an ancestor :active rule,
+     supplies press state. Modified clicks remain ordinary browser actions. */
+  transform: scale(var(--interface-press-scale, 1));
+}
+
+/* Generous hitboxes, unchanged canvas dimensions. The closed preview-size
+   row needs room for its 44px summary; its existing scrolled collapse wins. */
+html.interface-polish body .preview-size-control > summary,
+html.interface-polish body .preview-size-picker > button {
+  min-height: 44px;
+}
+html.interface-polish body .preview-size-control { min-width: 150px; }
+html.interface-polish body .preview-size-picker {
+  min-width: 150px;
+  grid-template-columns: repeat(3, minmax(44px, 1fr));
+}
+html.interface-polish body .preview-size-picker > button { min-width: 44px; }
+html.interface-polish body button:is(.text-button, .icon-button,
+    .palette-colour, .palette-add, .palette-remove, .saved-colour,
+    .colour-drag-handle, .colour-remove, .brand-colour-remove) {
+  min-width: 44px;
+  min-height: 44px;
+}
+html.interface-polish body .onboarding-setup-header button.back[data-onboarding-action="exit"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+html.interface-polish .control-preview-dock:not([data-scrolled="true"])
+    .preview-size-row:not(:has(.preview-size-control[open])) {
+  max-height: 56px;
+}
+html.interface-polish body :is(.slider-row, .animation-setting, .channel-row) input[type="range"] {
+  height: 44px;
+  min-height: 44px;
+}
+html.interface-polish body .channel-row {
+  grid-template-columns: 44px 44px minmax(0, 1fr) 44px 56px;
+}
+html.interface-polish body .channel-row button,
+html.interface-polish body .channel-row .channel-number {
+  min-width: 44px;
+  min-height: 44px;
+  height: 44px;
+}
+@media (max-width: 360px) {
+  html.interface-polish body .channel-row {
+    grid-template-columns: 44px 44px minmax(0, 1fr) 44px 50px;
+    gap: 3px;
+  }
+}
+
+/* Respect OS preferences without replacing native scroll or disabling any
+   action. Opaque fallbacks keep text legible in non-blur Safari/engines. */
+@media (prefers-reduced-motion: reduce) {
+  html.interface-polish body :is(button, summary)[data-interface-press],
+  html.interface-polish body :is(button.button, button.icon-button,
+      button.text-button, button.menu-card, button.settings-toggle,
+      button.spatial-choice-toggle, button.ledline-setup-toggle,
+      button.ledline-add-action, button.ledline-settings-toggle,
+      button.ledline-reuse-action, button.animation-category-trigger,
+      button.animation-category-choice, button.animation-gallery-return,
+      button.animation-settings-return, button.current-effect-gallery,
+      button.assignment-choice, button.assignment-family-choice, button.back,
+      .navigation > button, .control-mode-tabs > button, .section-tabs > button,
+      .filter-row > button, .preference-grid > button, .compact-direction > button,
+      .physical-port-picker > button, .family-spatial-options > button,
+      .spatial-preview-switch > button, .channel-row > button,
+      .preview-size-picker > button):not(:disabled):not([role="switch"]):not(:has(canvas)) {
+    transform: none !important;
+    transition: none !important;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  html.interface-polish { --interface-milk: var(--interface-milk-solid); --interface-inner: var(--interface-milk-solid); }
+  html.interface-polish body[data-theme="dark"] { --interface-milk: var(--interface-milk-solid); --interface-inner: var(--interface-milk-solid); }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  html.interface-polish { --interface-milk: var(--interface-milk-solid); --interface-inner: var(--interface-milk-solid); }
+  html.interface-polish body[data-theme="dark"] { --interface-milk: var(--interface-milk-solid); --interface-inner: var(--interface-milk-solid); }
+}
+@media (forced-colors: active) {
+  html.interface-polish body :is(.assignment-choice, .assignment-family-choice,
+      .animation-category-choice, .layout-choice, .preference-grid button,
+      .family-spatial-options button, .spatial-preview-switch button,
+      .physical-port-picker button, .compact-direction button)[aria-pressed="true"] {
+    border-color: Highlight;
+    outline: 2px solid Highlight;
+    outline-offset: -4px;
+    box-shadow: none;
+  }
+  html.interface-polish body :is(button, a, input, select, summary):focus-visible { outline-color: Highlight; }
+}

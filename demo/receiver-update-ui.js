@@ -8,6 +8,13 @@
     let dialog=null,entries=[],allReceivers=false,busy=false,busyKey='',generation=0,returnFocus=null;
     let activeMonitorId=null,monitorEpoch=0,success=false;
     const t=(key,params)=>typeof translate==='function'?translate(key,params):key;
+    function scopedKey(key){
+      if(allReceivers)return key;
+      return ({softwareUpdateSubtitle:"softwareReceiverSubtitle",
+        softwareUpdateSequence:"softwareReceiverSequence",softwareMainRecoveryGuidance:"softwareReceiverRecoveryGuidance",
+        softwarePreflight:"softwareReceiverPreflight",softwareAllCurrent:"softwareReceiverCurrent",
+        softwareUpdateFinished:"softwareReceiverUpdateFinished"})[key]||key;
+    }
     const current=token=>token===generation&&dialog?.open;
     const unconfirmed=()=>Object.assign(new Error('UNCONFIRMED'),{code:'OTA_INVALID_REPLY'});
     function normalize(list){
@@ -63,7 +70,7 @@
     function messageFor(code){return t(errorKey(code));}
     function phaseKey(job){
       const map={preflight:'softwarePreparing',arming:'softwarePreparing',uploading:'softwareSending',
-        verifying:'softwareVerifying',reconnecting:'softwareRestarting',verified:'softwareUpdateFinished',
+        verifying:'softwareVerifying',reconnecting:'softwareRestarting',verified:'softwareReceiverUpdateFinished',
         verification_required:'softwareRestarting',interrupted:'softwareFailed',error:'softwareFailed',
         cancelled:'softwareCancelled'};
       return map[job?.phase]||'softwareChecking';
@@ -107,15 +114,15 @@
       if(!busy&&allChecked&&readyCount>0){
         controls=`<button class="button full" data-update="all">${escape(allReceivers?t('softwareUpdateMany',{count:readyCount}):t('softwareUpdateOne'))}</button>`;
       }else if(!busy&&allChecked&&readyCount===0){
-        controls=`<p class="update-all-current" role="status">${escape(t(success?'softwareUpdateFinished':'softwareAllCurrent'))}</p>`;
+        controls=`<p class="update-all-current" role="status">${escape(t(scopedKey(success?'softwareUpdateFinished':'softwareAllCurrent')))}</p>`;
       }else if(!busy&&!hasRecovery&&!hasRunning&&needsCheck){
         controls=`<button class="button full" data-update="check">${escape(t('softwareCheckAgain'))}</button>`;
       }
       // Keep the dialog shell and scroll container mounted while polling.
       // Replacing the entire dialog every 800 ms loses focus and list position.
-      if(!dialog.firstElementChild)dialog.innerHTML=`<header><div><h2>${escape(safeTitle())}</h2><p>${escape(t('softwareUpdateSubtitle'))}</p></div><button class="icon-button" data-update="close" aria-label="${escape(t('close'))}">×</button></header><p class="update-guidance">${escape(t('softwareUpdateKeepOpen'))} ${escape(t('softwareUpdateSequence'))}</p><div class="update-receiver-list"></div><div class="update-controls"></div><p class="update-run-status" role="status" aria-live="polite" hidden></p><button class="button secondary full" data-update="close">${escape(t('close'))}</button>`;
+      if(!dialog.firstElementChild)dialog.innerHTML=`<header><div><h2>${escape(safeTitle())}</h2><p>${escape(t(scopedKey('softwareUpdateSubtitle')))}</p></div><button class="icon-button" data-update="close" aria-label="${escape(t('close'))}">×</button></header><p class="update-guidance">${escape(t('softwareUpdateKeepOpen'))} ${escape(t(scopedKey('softwareUpdateSequence')))}</p><div class="update-receiver-list"></div><div class="update-controls"></div><p class="update-run-status" role="status" aria-live="polite" hidden></p><button class="button secondary full" data-update="close">${escape(t('close'))}</button>`;
       const list=dialog.querySelector('.update-receiver-list'),footer=dialog.querySelector('.update-controls');
-      dialog.querySelector('.update-guidance').textContent=t('softwareUpdateKeepOpen')+' '+t(entries.some(entry=>entry.mainRecovery)?'softwareMainRecoveryGuidance':'softwareUpdateSequence');
+      dialog.querySelector('.update-guidance').textContent=t('softwareUpdateKeepOpen')+' '+t(scopedKey(entries.some(entry=>entry.mainRecovery)?'softwareMainRecoveryGuidance':'softwareUpdateSequence'));
       const focused=document.activeElement,focusAction=focused?.dataset?.update,focusId=focused?.dataset?.id;
       const listTop=list.scrollTop,dialogTop=dialog.scrollTop;
       const rows=entries.map(rowMarkup).join('');
@@ -128,7 +135,7 @@
       list.scrollTop=listTop;dialog.scrollTop=dialogTop;
       const statusLine=dialog.querySelector('.update-run-status');
       statusLine.hidden=!busy;
-      const statusText=busy?t(busyKey||'softwarePreflight'):'';
+      const statusText=busy?t(scopedKey(busyKey||'softwarePreflight')):'';
       if(statusLine.textContent!==statusText)statusLine.textContent=statusText;
       dialog.querySelectorAll('[data-update]:not([data-update="close"])').forEach(button=>{button.disabled=busy;});
     }

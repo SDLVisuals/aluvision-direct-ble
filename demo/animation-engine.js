@@ -51,12 +51,13 @@
       description, minimumReceivers: category === 'tunnel' ? 2 : 1,
       spatialResolution: 'receiver', paletteEditable: category !== 'brand', firmwareSupport: 'preview-only',
       backgroundEditable: category === 'tunnel',
+      fixedWhiteBase: ['brand-accent','brand-sweep','brand-focus','brand-soft-gradient'].includes(id),
       controls: category === 'whole' ? ['speed', 'smooth'] : ['speed', 'smooth', 'fadeAmount', 'delayMs'],
       directions: [], ...options,
       state: { v30Effect: 'v30-' + id, engine: 'V30', variant: 0, category,
         colors: ['#FF0000'], whiteChannels: [0], colorCount: 1,
         speed: 30, smooth: 100, fadeAmount: 90, delayMs: 300,
-        direction: 'forward', width: 65, bri: 85, on: true, power: true, ...defaults }
+        direction: 'forward', width: 65, bri: 100, brightness: 100, on: true, power: true, ...defaults }
     };
     entry.state.rgbEnabled = entry.state.colors.map(() => true);
     entry.state.whiteEnabled = entry.state.colors.map((_, i) => (entry.state.whiteChannels[i] || 0) > 0);
@@ -161,13 +162,14 @@
     const radius = 0.45 + width * 1.35;
     const cycle = step * (count + 2);
     let colorCycle = Math.floor(clock.time / cycle);
-    let amount = 0;
+    let amount = 0, colorMix = 0;
     if (id === 'v30-tunnel-bounce') {
       const duration = Math.max(clock.period, (count - 1) * step * 2);
       const phase = mod(clock.time / duration, 1);
       const position = (1 - Math.cos(phase * Math.PI * 2)) / 2 * (count - 1);
       amount = softPulse(index - position, radius, state);
       colorCycle = Math.floor(clock.time / duration);
+      if (clamp(state.smooth,0,100,100) > 0) { const x=clamp((phase-.8)/.2,0,1);colorMix=clamp(x*x*x*(x*(x*6-15)+10),0,1); }
     } else if (id === 'v30-tunnel-center' || id === 'v30-tunnel-outside') {
       const center = (count - 1) / 2;
       const offset = count % 2 === 0 ? 0.5 : 0;
@@ -222,12 +224,17 @@
         const fraction = input.receiverType === 'SPI' ? (finite(input.pixelIndex, 0) + 0.5) / Math.max(1, input.pixelCount) - 0.5 : 0;
         amount = softPulse(rank + (reversed ? -fraction : fraction) - position, 0.25 + width * 0.8, state);
       } else amount = softPulse(rank - position, radius, state);
+      if (clamp(state.smooth,0,100,100) > 0) {
+        const progress=position+1,span=count+2,edge=Math.min(1,span*.25);
+        const taper=value=>{const x=clamp(value,0,1);return clamp(x*x*x*(x*(x*6-15)+10),0,1);};
+        amount*=taper(progress/edge)*taper((span-progress)/edge);
+      }
     }
-    return { color: colors[mod(colorCycle, colors.length)], amount: clamp(amount, 0, 1) };
+    return { color: mix(colors[mod(colorCycle,colors.length)],colors[mod(colorCycle+1,colors.length)],colorMix), amount: clamp(amount, 0, 1) };
   }
   function brandSample(id, state, clock, index, count, input) {
     const white = [0, 0, 0, 255];
-    const brand = physical(state.brandColor || (state.colors || [])[0] || DEFAULT_BRAND,
+    const brand = physical(state.rgbEnabled?.[0] === false ? '#000000' : state.brandColor || (state.colors || [])[0] || DEFAULT_BRAND,
       state.whiteEnabled?.[0] === false ? 0 : state.whiteChannels?.[0] ?? state.w ?? 0);
     const direction = state.direction === 'reverse' || state.direction === 'left' ? -1 : 1;
     const wave = (1 - Math.cos(clock.phase * Math.PI * 2)) / 2;

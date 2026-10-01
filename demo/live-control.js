@@ -80,7 +80,7 @@
     }
     if(extension){
       const brand=state.v30Effect==='v30-brand-focus'?palette[0]:
-        colour(state.brandColor||hex[0]||'#C94E46',state.whiteChannels?.[0]??state.w??0,true,state.whiteEnabled?.[0]);
+        colour(state.brandColor||hex[0]||'#C94E46',state.whiteChannels?.[0]??state.w??0,state.rgbEnabled?.[0],state.whiteEnabled?.[0]);
       scene.v30={effect:extensionId,fadeAmount:number(extensionId>=21&&extensionId<=30?state.spacing:state.fadeAmount,90,0,100),
         width:number(state.width,65,0,100),delayMs:number(state.delayMs,300,0,10000),brand};
       if(Object.values(scene.v30).some(value=>value===null))return null;
@@ -163,8 +163,12 @@
       if(error)waiter.reject(error);else waiter.resolve(value);
     }
     function lease(standId){
-      const held={standId,epoch};idleLease=held;
-      return Object.freeze({release(){
+      const held={standId,epoch,onLiveIntent:null};idleLease=held;
+      return Object.freeze({onPendingLiveIntent(callback){
+        if(typeof callback!=='function'||idleLease!==held||held.epoch!==epoch)return;
+        held.onLiveIntent=callback;
+        if([...queue.values()].some(item=>item.request.standId===standId))callback();
+      },release(){
         if(idleLease!==held)return;
         idleLease=null;schedule();settleIdle();
       }});
@@ -250,7 +254,11 @@
       const copied=clone(input),id=copied.receiverId,sig=signature(copied);
       desired.set(id,{signature:sig,version:++version});
       if(active?.epoch===epoch&&active.items.get(id)?.signature===sig){queue.delete(id);emit(id,'pending');return;}
-      queue.set(id,{request:copied,signature:sig});emit(id,'pending');schedule();
+      queue.set(id,{request:copied,signature:sig});emit(id,'pending');
+      // Only an explicitly registered automatic archive may yield this lease.
+      // The callback cannot release it; actual native cleanup owns that proof.
+      if(idleLease?.epoch===epoch&&idleLease.standId===copied.standId)idleLease.onLiveIntent?.();
+      schedule();
       // A newly selected other installation cannot inherit an existing idle
       // barrier. Fail it closed rather than silently waiting for foreign work.
       for(const waiter of [...idleWaiters])if(otherStand(waiter.standId))finishWaiter(waiter,idleError('LIVE_QUEUE_SCOPE_BUSY'));

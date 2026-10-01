@@ -762,57 +762,80 @@ body[data-theme=dark] .control-preview-dock[data-scrolled=true] .control-dock-su
   :is(.animation-category-trigger,.animation-category-choice,.animation-search input,.settings-toggle,.preview-size-control>summary,.family-variants-panel,.animation-family-card,.family-variant-card,.effect-card,.family-card,.animation-context){-webkit-backdrop-filter:none;backdrop-filter:none}
 }
 
-/* Whole-stand colour controls use the same colour-picker component as the
-   zone and animation editors, arranged as a compact phone sheet. */
+/* The same picker in every fixed-colour editor. Warmth is an explicit RGB/W
+   mix, not a Kelvin reading; precise channels never hide behind a submenu. */
+.warm-white-controls{display:grid;gap:9px;margin-top:12px}
+.warm-white-choice{display:flex;align-items:center;gap:10px;min-height:52px;width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:16px;background:var(--glass);color:var(--ink);text-align:left;box-shadow:var(--surface-highlight)}
+.warm-white-choice[aria-pressed=true]{border-color:var(--action-ink);background:color-mix(in srgb,var(--glass) 93%,#ffd195)}
+.warm-white-choice>span:nth-child(2){display:grid;gap:2px;flex:1;min-width:0}
+.warm-white-choice b{font-size:14px}.warm-white-choice small{font-size:11px;color:var(--muted)}
+.warm-white-choice>.icon{width:21px;height:21px;color:var(--action-ink)}
+.warm-white-swatch{width:26px;height:26px;flex:none;border-radius:50%;background:#ffe2ae;box-shadow:inset 0 0 0 1px #99692630}
+.warm-white-controls .warmth-row{margin:0}
+.warmth-row input{accent-color:#bd894d}.warmth-row input:disabled{opacity:.4}
+.warmth-scale{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:11px}
+.warmth-help{display:block;margin-top:4px;font-size:11px;line-height:1.35;color:var(--muted)}
+
+/* Whole-stand controls are their own page on phones. Keep the familiar
+   wheel, dimmer and exact channels together, with one sticky exit. */
 #effect-dialog:has([data-stand-control-sheet]){
-  width:min(calc(var(--app-width) - 16px),calc(100vw - 16px));
-  max-height:calc(100dvh - 24px);
-  padding:12px;
+  position:fixed;inset:0;margin:0;width:100vw;max-width:none;
+  height:100dvh;max-height:100dvh;box-sizing:border-box;
+  padding:0;border:0;border-radius:0;
+  /* A full page needs a quiet base: translucency on nested surfaces must not
+     expose the previous page's readable text through the controls in Safari. */
+  background-color:var(--bg);
+  -webkit-backdrop-filter:none;backdrop-filter:none;
   overflow-y:auto;
+  overflow-x:hidden;overscroll-behavior:contain;
+  scroll-padding-top:calc(var(--dialog-header-height,64px) + 12px);
 }
-#effect-dialog:has([data-stand-control-sheet]) #effect-dialog-content{gap:8px}
+#effect-dialog:has([data-stand-control-sheet]) #effect-dialog-content{gap:0}
 #effect-dialog:has([data-stand-control-sheet]) #effect-dialog-content>header{
-  margin:0 -2px;
-  padding:0 2px 5px;
-  border-radius:18px;
-  box-shadow:none;
+  top:0;margin:0;
+  padding:calc(10px + env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 10px max(14px,env(safe-area-inset-left));
+  border-radius:0;box-shadow:0 3px 12px #00000008;
 }
-#effect-dialog:has([data-stand-control-sheet]) #effect-dialog-content>header h2{font-size:18px}
-.stand-controls-sheet{display:grid;gap:6px;min-width:0}
-.stand-control-scope{font-size:11px!important;line-height:1.25;margin:0;color:var(--muted)}
-.stand-control-description{font-size:11px!important;line-height:1.35;margin:0;color:var(--muted)}
-.stand-controls-sheet .power-card{min-height:48px;padding:2px 10px;border-radius:14px}
-.stand-controls-sheet .power-card strong{font-size:12px}
+#effect-dialog:has([data-stand-control-sheet]) #effect-dialog-content>header h2{font-size:20px}
+#effect-dialog:has([data-stand-control-sheet]) [data-action=effect-dialog-close]{width:44px;min-width:44px;height:44px;min-height:44px;border-radius:14px}
+.stand-controls-sheet{display:grid;gap:8px;min-width:0;padding:10px max(12px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+.stand-control-scope{font-size:12px!important;line-height:1.3;margin:0;color:var(--muted)}
+.stand-control-description{font-size:12px!important;line-height:1.4;margin:0;color:var(--muted)}
+.stand-controls-sheet .power-card{min-height:52px;padding:3px 12px;border-radius:16px}
+.stand-controls-sheet .power-card strong{font-size:14px}
 .stand-controls-sheet .power-card .switch{min-height:44px}
-.stand-controls-sheet .live-confirmation{min-height:12px;margin:0;font-size:10px;line-height:1.2}
-.stand-controls-sheet .mixed-note{margin:0;padding:6px 9px;border-radius:10px;background:color-mix(in srgb,var(--red) 7%,var(--glass));font-size:10px;line-height:1.35}
-#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker{padding:9px}
+.stand-controls-sheet .live-confirmation{min-height:0;margin:0;font-size:11px;line-height:1.3}
+.stand-controls-sheet .live-confirmation:empty{display:none}
+.stand-controls-sheet .mixed-note{margin:0;padding:8px 10px;border-radius:12px;background:color-mix(in srgb,var(--red) 7%,var(--glass));font-size:12px;line-height:1.35}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker{padding:12px}
 #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .section-heading{flex-wrap:nowrap;gap:6px;margin-bottom:5px}
-#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .section-heading h2{flex:1 1 auto;margin:0;font-size:14px}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .section-heading h2{flex:1 1 auto;margin:0;font-size:16px}
 #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .colour-tools{grid-template-columns:minmax(104px,.9fr) minmax(0,1.1fr);gap:10px}
-#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .wheel-wrap{width:min(100%,132px);max-width:132px;margin:0 auto;justify-self:center}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .wheel-wrap{width:min(100%,112px);max-width:112px;margin:0 auto;justify-self:center}
 #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .colour-values{gap:5px}
-#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .colour-swatch{height:15px;margin:0}
-#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .setting-hint{font-size:10px;line-height:1.25;margin:0}
-#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .slider-row{margin:7px 0 0}
-#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .slider-row>label{font-size:11px;margin-bottom:1px}
-#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .slider-row input{height:20px}
-#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .fine-controls{margin-top:5px;padding-top:5px}
-.stand-fine-controls>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;padding:0 2px;list-style:none;cursor:pointer}
-.stand-fine-controls>summary::-webkit-details-marker{display:none}
-.stand-fine-controls>summary>span{display:grid;gap:1px}
-.stand-fine-controls>summary b{font-size:12px}
-.stand-fine-controls>summary small{font-size:10px}
-.stand-fine-controls>summary>.icon{width:18px;height:18px;color:var(--muted);transition:transform .2s ease}
-.stand-fine-controls[open]>summary>.icon{transform:rotate(90deg)}
-.stand-fine-controls .fine-controls-body{display:grid;gap:5px;padding:4px 0 0}
-.stand-fine-controls .channel-help{display:none}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .colour-swatch{height:24px;margin:0}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .setting-hint{font-size:12px;line-height:1.3;margin:0}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .slider-row{margin:3px 0 0}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .slider-row>label{font-size:13px;margin-bottom:0}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .slider-row input{height:44px;min-height:44px}
+#effect-dialog:has([data-stand-control-sheet]) .warm-white-controls{grid-template-columns:minmax(80px,.75fr) minmax(0,1.7fr);gap:12px;margin-top:7px;align-items:center}
+#effect-dialog:has([data-stand-control-sheet]) .warm-white-choice{min-height:60px;padding:8px;gap:7px}
+#effect-dialog:has([data-stand-control-sheet]) .warm-white-choice small,
+#effect-dialog:has([data-stand-control-sheet]) .warm-white-choice>.icon{display:none}
+#effect-dialog:has([data-stand-control-sheet]) .warm-white-swatch{width:20px;height:20px}
+#effect-dialog:has([data-stand-control-sheet]) .warm-white-controls .slider-row{margin:0}
+#effect-dialog:has([data-stand-control-sheet]) .warmth-help{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .fine-controls{margin-top:10px;padding-top:8px}
+.stand-fine-controls h3{margin:0 0 6px;font-size:14px}
+.stand-fine-controls .fine-controls-body{display:grid;gap:4px;padding:0}
+.stand-fine-controls .channel-help{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+#effect-dialog:has([data-stand-control-sheet]) .channel-row{min-height:44px;padding:0 5px;gap:4px}
 #effect-dialog:has([data-stand-control-sheet]) .my-colours{margin-top:5px;padding-top:5px}
 #effect-dialog:has([data-stand-control-sheet]) .my-colours .section-heading{margin:0 0 3px}
 #effect-dialog:has([data-stand-control-sheet]) .my-colours .section-heading h3{font-size:12px}
 #effect-dialog:has([data-stand-control-sheet]) .my-colours .colour-library-hint{display:none}
 #effect-dialog:has([data-stand-control-sheet]) .my-colours .colour-library-actions{gap:4px}
-#effect-dialog:has([data-stand-control-sheet]) .my-colours .colour-library-actions :is(.icon-button,.text-button){min-height:40px;height:40px}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .colour-library-actions :is(.icon-button,.text-button){min-height:44px;height:44px}
 #effect-dialog:has([data-stand-control-sheet]) .my-colours .saved-colour-grid{display:flex;gap:5px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:thin;padding:1px 1px 4px}
 #effect-dialog:has([data-stand-control-sheet]) .my-colours .saved-colour-item{flex:0 0 66px;width:66px;padding:0}
 #effect-dialog:has([data-stand-control-sheet]) .my-colours .saved-colour{min-height:57px;height:57px;gap:2px;padding:2px 1px;font-size:9px}
@@ -828,25 +851,29 @@ body[data-theme=dark] .control-preview-dock[data-scrolled=true] .control-dock-su
 #effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry-copy small{font-size:9px;line-height:1.2}
 #effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry-open{font-size:10px}
 #effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry>.icon:last-child{width:14px;height:14px}
-#effect-dialog:has([data-stand-control-sheet] .stand-fine-controls[open]) .shared-colour-picker .colour-tools{grid-template-columns:minmax(0,1fr)}
-#effect-dialog:has([data-stand-control-sheet] .stand-fine-controls[open]) .shared-colour-picker .wheel-wrap{display:none}
-#effect-dialog:has([data-stand-control-sheet] .stand-fine-controls[open]) .shared-colour-picker .colour-swatch{height:12px}
-#effect-dialog:has([data-stand-control-sheet] .stand-fine-controls[open]) .shared-colour-picker .setting-hint{display:none}
-#effect-dialog:has([data-stand-control-sheet] .stand-fine-controls[open]) .my-colours,
-#effect-dialog:has([data-stand-control-sheet] .stand-fine-controls[open]) .stand-scenes-entry{display:none}
-.stand-fine-controls[open]>.fine-controls-body{animation:control-disclosure-enter .24s cubic-bezier(.2,.82,.24,1.06) both}
 @media(max-width:360px){
   #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .colour-tools{grid-template-columns:minmax(96px,.85fr) minmax(0,1.15fr);gap:8px}
   #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .wheel-wrap{width:min(100%,120px);max-width:120px}
   #effect-dialog:has([data-stand-control-sheet]) .my-colours .saved-colour-item{flex-basis:60px;width:60px}
 }
 @media(max-height:740px){
-  .stand-control-description{display:none}
   #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .wheel-wrap{width:min(100%,116px);max-width:116px}
   #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .slider-row{margin-top:4px}
   #effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry{min-height:44px}
 }
-@media(prefers-reduced-motion:reduce){.stand-fine-controls>summary>.icon,.stand-fine-controls[open]>.fine-controls-body{transition:none;animation:none}}
+@media(min-width:900px) and (min-height:600px){
+  #effect-dialog:has([data-stand-control-sheet]){inset:24px;margin:auto;width:min(860px,calc(100vw - 48px));height:fit-content;max-height:calc(100dvh - 48px);border:1px solid var(--glass-edge);border-radius:26px}
+  #effect-dialog:has([data-stand-control-sheet]) #effect-dialog-content>header{border-radius:25px 25px 0 0;padding:14px 20px}
+  .stand-controls-sheet{padding:16px 20px 20px;gap:10px}
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 24px;padding:18px}
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker>.section-heading,
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker>.my-colours{grid-column:1 / -1}
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker>.colour-tools{grid-column:1;grid-row:2}
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker>.slider-row{grid-column:1;grid-row:3}
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker>.warm-white-controls{grid-column:1;grid-row:4}
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker>.fine-controls{grid-column:2;grid-row:2 / 5;border-top:0;border-left:1px solid var(--line);padding:0 0 0 20px;margin:0}
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .wheel-wrap{width:150px;max-width:150px}
+}
 
 /* Material refinement, not a new layout: one frosted sheet, quieter nested
    surfaces and solid, legible actions. Never blur an LED or colour canvas. */
@@ -950,7 +977,7 @@ body[data-theme="dark"] .animation-settings-return .gallery-action-copy > .anima
 /* One order disclosure, not another primary action. The view chooser stays
    separate; the open header and rows share one quiet, blur-free glass surface. */
 .ledline-setup {
-  --order-surface: color-mix(in srgb, var(--glass-solid) 94%, var(--red));
+  --order-surface: color-mix(in srgb, var(--glass-solid) 97%, var(--soft));
   --order-edge: color-mix(in srgb, var(--action-ink) 28%, var(--line));
 }
 
@@ -1033,6 +1060,127 @@ body .ledline-setup .ledline-setup-toggle > .ledline-setup-disclosure-action {
 
 .ledline-setup[data-order-open="true"] .ledline-setup-toggle > .line-order-icon {
   color: var(--action-ink);
+}
+
+/* A single, contextual management panel: add first, then one compact row per
+   LED line. Receiver settings reuse the existing controls inside that row. */
+body .ledline-setup[data-order-open="true"] > .ledline-setup-toggle {
+  padding-block: 12px;
+}
+body .ledline-setup .ledline-menu-label {
+  color: var(--action-ink);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .09em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+body .ledline-setup-body > .layout-receiver-actions {
+  padding: 8px 0 12px;
+  border: 0;
+}
+.ledline-add-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 1px solid var(--order-edge);
+  border-radius: 14px;
+  background: linear-gradient(120deg, var(--glass), var(--glass-solid));
+  box-shadow: inset 0 1px var(--glass-edge), 0 3px 10px rgba(25,30,25,.035);
+  color: var(--ink);
+  text-align: left;
+}
+.ledline-add-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--soft);
+  color: var(--action-ink);
+  font-size: 23px;
+}
+.ledline-add-copy { display: grid; gap: 3px; flex: 1; min-width: 0; }
+.ledline-add-copy b { font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
+.ledline-add-copy small { color: var(--muted); font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
+.ledline-add-action > .icon { width: 16px; height: 16px; flex: none; color: var(--action-ink); }
+body .ledline-setup .ledline-arrangement { gap: 9px; padding-top: 12px; }
+.ledline-family-label { padding: 3px 7px; border: 1px solid var(--line); border-radius: 7px; background: var(--soft); font-weight: 700; }
+body .ledline-setup .ledline-order-tools { display: flex; gap: 8px; padding-top: 5px; }
+.ledline-row-actions { display: grid; grid-template-columns: minmax(0,.9fr) minmax(0,1.1fr); gap: 7px; width: 100%; }
+body .ledline-setup .ledline-row-actions > button {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--soft);
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.35;
+}
+.ledline-row-actions > button > span { min-width: 0; overflow-wrap: anywhere; }
+.ledline-row-actions > button > .icon { flex: none; width: 16px; height: 16px; }
+.ledline-settings-toggle > .icon:last-child { width: 12px; height: 12px; transition: transform .2s var(--motion-ease, ease); }
+.ledline-settings-toggle[aria-expanded="true"] > .icon:last-child { transform: rotate(90deg); }
+body .ledline-setup .ledline-settings-toggle[aria-expanded="true"],
+body .ledline-setup .ledline-row-actions > .receiver-blink[aria-pressed="true"] { border-color: var(--order-edge); color: var(--action-ink); background: var(--glass-solid); }
+.ledline-row-settings { grid-column: 1 / -1; min-width: 0; padding-top: 12px; border-top: 1px solid var(--line); }
+.ledline-row-settings[hidden] { display: none; }
+.ledline-row-settings h4 { margin: 0; color: var(--ink); font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
+.ledline-settings-context { margin: 4px 0 12px; color: var(--muted); font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
+body .ledline-row-settings > .receiver-details { display: grid; gap: 12px; padding: 0; }
+body .ledline-row-settings .receiver-management { padding: 0; margin: 0; border: 0; }
+body .ledline-row-settings .receiver-management > small { line-height: 1.5; }
+body .ledline-row-settings .receiver-connections { min-width: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--glass-solid); }
+body .ledline-row-settings .receiver-connections > summary { min-height: 54px; padding: 10px; }
+body .ledline-row-settings :is(.receiver-connections,.receiver-manage-menu) > summary { display: flex; align-items: center; gap: 8px; list-style: none; cursor: pointer; }
+body .ledline-row-settings :is(.receiver-connections,.receiver-manage-menu) > summary::-webkit-details-marker { display: none; }
+body .ledline-row-settings .receiver-connections > summary > span { display: grid; gap: 3px; flex: 1; min-width: 0; }
+body .ledline-row-settings .receiver-connections > summary b { display: block; font-size: 12px; line-height: 1.4; }
+body .ledline-row-settings .receiver-connections > summary small { display: block; color: var(--muted); font-size: 10px; line-height: 1.4; }
+body .ledline-row-settings :is(.receiver-connections,.receiver-manage-menu) > summary > .icon { width: 14px; height: 14px; flex: none; margin-left: auto; }
+body .ledline-row-settings :is(.receiver-connections,.receiver-manage-menu)[open] > summary > .icon { transform: rotate(90deg); }
+body .ledline-row-settings > .receiver-status { margin: -8px 0 10px; font-size: 11px; line-height: 1.4; color: var(--muted); }
+body .ledline-row-settings .receiver-connections-content { padding: 0 8px 8px; }
+body .ledline-row-settings .receiver-port-row { flex-wrap: wrap; }
+body .ledline-row-settings .receiver-port-select { flex: 1 1 70px; min-width: 0; }
+body .ledline-row-settings .receiver-port-row .receiver-blink { flex-direction: row; width: auto; min-height: 44px; padding: 6px 8px; }
+body .ledline-row-settings .receiver-manage-menu > summary { min-height: 44px; }
+body .ledline-setup .ledline-reuse-action { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 48px; margin-top: 12px; padding: 10px 4px 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; color: var(--muted); text-align: left; font-size: 11px; line-height: 1.4; }
+.ledline-reuse-action > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.ledline-reuse-action > .icon { flex: none; width: 17px; height: 17px; }
+/* One consistent disclosure for the less frequently used animation controls. */
+body .settings-toggle.advanced-settings-toggle { min-height: 72px; padding: 12px 14px; gap: 10px; border-radius: 17px; color: var(--ink); }
+body .advanced-settings-toggle > .advanced-settings-icon { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 12px; background: var(--glass); box-shadow: inset 0 1px 0 var(--glass-edge); color: var(--ink); }
+.advanced-settings-icon > .icon { width: 23px; height: 23px; }
+body .advanced-settings-toggle > .advanced-settings-copy { display: grid; gap: 4px; flex: 1; min-width: 0; }
+.advanced-settings-copy > b { font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; }
+.advanced-settings-copy > small { color: var(--muted); font-size: 11px; line-height: 1.45; overflow-wrap: anywhere; }
+body .advanced-settings-toggle > .advanced-settings-next { display: grid; place-items: center; flex: none; width: 20px; height: 24px; color: var(--muted); transition: transform 200ms cubic-bezier(.22,1,.36,1); }
+.advanced-settings-next > .icon { width: 18px; height: 18px; }
+.advanced-settings-toggle[aria-expanded="true"] > .advanced-settings-next { transform: rotate(90deg); }
+body .advanced-settings-toggle[aria-expanded="true"] { border-color: var(--line); }
+@media (prefers-reduced-motion: reduce) {
+  body .advanced-settings-toggle > .advanced-settings-next { transition: none; }
+}
+
+@media (min-width: 480px) {
+  body .ledline-setup .ledline-order-tools { flex-wrap: nowrap; }
+  .ledline-row-actions { flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ledline-settings-toggle > .icon:last-child { transition: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -9,10 +9,11 @@
   const extension = typeof module === 'object' && module.exports
     ? require('./animation-engine.js') : root.LightningAnimationEngine;
   const references = typeof module === 'object' && module.exports ? require('./reference-animations.js') : root.LightningReferenceAnimations;
-  const api = factory(canonical, extension, references);
+  const colour = typeof module === 'object' && module.exports ? require('./colour.js') : root.LightningColour;
+  const api = factory(canonical, extension, references, colour);
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.LightningPreview = api;
-}(typeof globalThis !== 'undefined' ? globalThis : this, function (canonical, extension, references) {
+}(typeof globalThis !== 'undefined' ? globalThis : this, function (canonical, extension, references, colour) {
   'use strict';
   if (!canonical) throw new Error('Load the V30 vendored animation catalog before preview.js');
   if (!extension) throw new Error('Load animation-engine.js before preview.js');
@@ -339,15 +340,23 @@ function softTrailCoverage(behind,trail,n,smooth){
         ...(s.backgroundRgbEnabled===false?[0,0,0]:rgb(backgroundValue.rgb)),s.backgroundWhiteEnabled===false?0:clamp(backgroundValue.white,0,255)
       ].map(x=>Math.floor(x*clamp(s.bgBrightness??s.backgroundBrightness,0,100,10)/100)):[0,0,0,0];
       let foreground=palette[0],amount=1;
-      const objectAmount=()=>{let best=0;for(let k=0;k<objects;k++){const p=motion(phase+(objects===1?0:k*span/objects),width);best=Math.max(best,q16(softChaseCoverage(distance(u,p),width,n,smooth)));if(s.mirror)best=Math.max(best,q16(softChaseCoverage(distance(u,wrap(1-p)),width,n,smooth)));}return best;};
+      const sequenceSmooth=smooth&&(engine==='CASCADE'||engine==='SEQUENCE')&&!(variant>=98&&variant<=103)&&!(variant>=90&&variant<=97&&lines>1);
+      const objectAmount=()=>{let best=0;for(let k=0;k<objects;k++){
+        const position=phase+(objects===1?0:k*span/objects),p=sequenceSmooth?wrap(position):motion(position,width);
+        const coverage=target=>{const d=distance(u,target);if(!sequenceSmooth)return q16(softChaseCoverage(d,width,n,smooth));
+          const overlap=q16(width>=n?1:clamp(width*.5+.5-d*n,0,1)),soft=q16(softChaseCoverage(d,width,n,100));return q16(overlap+(soft-overlap)*curve);};
+        best=Math.max(best,coverage(p));if(s.mirror)best=Math.max(best,coverage(wrap(1-p)));
+      }return best;};
       if(variant===103){
         const head=motion(left?1-raw:raw,width),behind=wrap(left?u-head:head-u)*n,ribbon=Math.max(width,Math.min(Math.max(1,n-.5),n*trail/100));
         const fade=Math.max(width*(.35+1.15*sm),ribbon*(.04+.08*sm)),warmZone=Math.min(ribbon,Math.max(fade*2,width*2));
-        amount=q16(ease((ribbon-behind+.5)/Math.max(.5,fade))*ease((behind+.5)/(.45+sm)));
+        const edge=Math.min(1.5,Math.min(Math.max(1,n),ribbon)*.5),taper=d=>{const x=clamp(d/edge,0,1);return clamp(x*x*x*(x*(x*6-15)+10),0,1);};
+        const gate=smooth?taper(behind)*taper(ribbon-behind)*taper(n-behind):1;
+        amount=q16(ease((ribbon-behind+.5)/Math.max(.5,fade))*ease((behind+.5)/(.45+sm))*gate);
         foreground=mixAnimated(palette[0],palette[count>1?1:0],ease((behind-(ribbon-warmZone))/Math.max(.5,warmZone)));
       }else if(variant>=98&&variant<=102){
         foreground=band(linePhase);
-        if(variant===98)amount=q16(.1+.9*(.5-.5*Math.cos(linePhase*tau)));
+        if(variant===98){amount=q16(.1+.9*(.5-.5*Math.cos(linePhase*tau)));if(smooth)foreground=gradient(linePhase,true);}
         else if(variant===99)amount=q16(ease(1-Math.abs(2*linePhase-1)));
         else if(variant===100)foreground=gradient(linePhase);
         else if(variant===101)foreground=gradient(linePhase,true);
@@ -358,7 +367,7 @@ function softTrailCoverage(behind,trail,n,smooth){
         if(variant===90||variant===91){let sweep=variant===91?1-panel:panel;const feather=(rowWidth*.5+.5)/lines;sweep+=(sweep*2-1)*feather*curve;amount=thickness(Math.abs(row-sweep),rowWidth,lines);foreground=palette[line%count];}
         else if(variant===92){const active=Math.min(lines-1,Math.floor(panel*lines)),next=(active+1)%lines,fade=ease(panel*lines-active),old=line===active?1:0,continuous=line===active?1-fade:line===next?fade:0;amount=q16(old+(continuous-old)*curve);foreground=palette[line%count];}
         else if(variant===93){amount=q16(Math.pow(.5+.5*Math.sin((local-panel+row*spread)*tau*objects),.8));foreground=gradient(row+local);}
-        else if(variant===94){const p=motion(panel-row*spacing/lines,width,physical);amount=thickness(distance(local,p),width,physical);foreground=palette[line%count];}
+        else if(variant===94){const continuous=left?wrap(1-wrap(raw-slot*delay)):wrap(raw-slot*delay),p=smooth?wrap(continuous-row*spacing/lines):motion(panel-row*spacing/lines,width,physical),d=distance(local,p);amount=smooth?q16(width>=physical?1:clamp(width*.5+.5-d*physical,0,1)):thickness(d,width,physical);foreground=palette[line%count];}
         else if(variant===95){const centre=(lines-1)*.5,d=Math.abs(line-centre)/Math.max(1,centre),feather=(rowWidth*.5+.5)/lines,sweep=panel+(panel*2-1)*feather*curve;amount=thickness(Math.abs(d-sweep),rowWidth,lines);foreground=band(Math.min(d,.999999));}
         else if(variant===96){const p=motion(line%2?1-panel:panel,width,physical);amount=thickness(distance(local,p),width,physical);foreground=palette[line%count];}
         else{const p=motion(panel,width,physical);amount=thickness(distance(local,p),width,physical);foreground=gradient(local);}
@@ -389,18 +398,22 @@ function softTrailCoverage(behind,trail,n,smooth){
         for(let k=0;k<objects;k++){const p=motion(phase+(objects===1?0:k*span/objects),width),tail=wrap(left?u-p:p-u),a=softTrailCoverage(tail*n,Math.max(1,width*(1.4+trail*.09)),n,smooth);amount=Math.max(amount,q16(softChaseCoverage(distance(u,p),width,n,smooth)),Math.floor(a*65535*.88)/65535);}
       }else if(engine==='ALTERNATE'){
         const bandWidth=Math.max(1,Math.round(width)),gap=Math.max(1,Math.floor(Math.fround(bandWidth*Math.fround(.3+spacing*2.7)))),period=bandWidth+gap,p=motion(phase,width),centre=(bandWidth-1)*.5;
-        const cyclicDistance=Math.max(period,Math.round(n/period)*period),continuous=phaseSteps(phase)*cyclicDistance,travel=p*n+(continuous-p*n)*curve;
+        const cyclicDistance=Math.max(period,Math.round(n/period)*period),continuous=phaseSteps(phase)*cyclicDistance,travel=smooth?phase*cyclicDistance:p*n+(continuous-p*n)*curve;
         foreground=palette[Math.floor(Math.floor(u*n)/period)%count];let delta=u*n-.5+travel-centre;delta-=Math.floor(delta/period+.5)*period;
-        const c=clamp((bandWidth+1)*.5-Math.abs(delta),0,1),a=c>=.999?1:0;amount=q16(a+(c-a)*curve);
+        const c=clamp((bandWidth+1)*.5-Math.abs(delta),0,1),a=c>=.999?1:0;
+        const integral=p=>{const x=Math.abs(p),tail=1.5-x,v=x>=1.5?1:x<=.5?.5+x*(.75-x*x/3):1-tail*tail*tail/6;return p<0?1-v:v;};
+        const band=x=>integral(x+bandWidth*.5)-integral(x-bandWidth*.5);
+        const soft=clamp(band(delta)+band(delta-period)+band(delta+period),0,1);amount=q16(smooth?c+(soft-c)*curve:a);
       }else if(engine==='CASCADE'||engine==='SEQUENCE'){
-        const q=wrap(u-temporal);foreground=mix(palette[Math.min(Math.floor(q*objects),objects-1)%count],gradient(q,true),curve);amount=objectAmount();
+        const q=wrap(u-(smooth?phase:temporal));foreground=mix(palette[Math.min(Math.floor(q*objects),objects-1)%count],gradient(q,true),curve);
+        if(smooth){const scaled=wrap(q)*count,i=Math.floor(scaled);foreground=mix(palette[i],palette[(i+1)%count],ease(scaled-i));}amount=objectAmount();
         if(engine==='CASCADE')amount=Math.floor(amount*65535*(smooth?continuousCascadeBrightness(q,n,smooth):(60+Math.floor(q*40))/100))/65535;
       }else if(engine==='WARM'){
         const clock=phaseSteps(temporal+u*.72);
         foreground=count===1?palette[0].map(channel=>channel*(.68+.32*ease(.5+.5*Math.sin(clock*tau)))):gradient(clock,true);
       }else if(engine==='ALL')foreground=gradient(temporal);
       else{foreground=gradient(temporal);amount=objectAmount();}
-      const channels=mixAnimated(bg,foreground,amount),bright=engine==='WARM'?(palette.some(c=>c.some(x=>x!==0))?brightness:0):1;
+      const channels=(engine==='ALTERNATE'||sequenceSmooth||variant===94&&lines>1)&&smooth?mix(bg,foreground,amount):mixAnimated(bg,foreground,amount),bright=engine==='WARM'?(palette.some(c=>c.some(x=>x!==0))?brightness:0):1;
       return channels.slice(0,3).map(x=>Math.round(clamp(255-(255-x*bright)*(1-channels[3]*bright/255),0,255)));
     }
     function catalog() {
@@ -416,7 +429,7 @@ function softTrailCoverage(behind,trail,n,smooth){
         const state={animation:name,engine,variant,legacySpi:true,previewStartedAt:0,phaseMs:0,
           colors:palette.slice(0,count),whiteChannels:whites.slice(0,count),
           rgbEnabled:Array(count).fill(true),whiteEnabled:Array(count).fill(true),colorCount:count,
-          on:true,power:true,bri:85,brightness:85,backgroundOn:false,background:'#000000',
+          on:true,power:true,bri:100,brightness:100,backgroundOn:false,background:'#000000',
           backgroundWhite:0,bgBrightness:10,direction:'right',...animationDefaults(effect),...overrides};
         let capabilities=effectCapabilities(effect);
         if(variant===103) capabilities={speed:true,width:true,smooth:true,direction:true,trail:true};
@@ -990,7 +1003,13 @@ function softTrailCoverage(behind,trail,n,smooth){
     }
   }
   function draw(canvas, options = {}) {
-    const frame = rows(options);
+    const rawFrame = rows(options);
+    // Sampling and transport keep exact receiver values. Encode once, only
+    // for canvas materials, after all effects, dimmers and W have been mixed.
+    // Never feed these screen bytes back into state, sampling or a receiver.
+    const frame = {...rawFrame,rows:rawFrame.rows.map(row=>({...row,
+      pixels:row.pixels.map(colour.screenRGB),
+      ...(row.identificationPixels?{identificationPixels:row.identificationPixels.map(colour.screenRGB)}:{})}))};
     if (canvas.dataset) {
       canvas.dataset.highlightedReceiverIds = frame.highlightedReceiverIds.join(',');
       canvas.dataset.identifyingReceiverIds = frame.identifyingReceiverIds.join(',');
@@ -1000,7 +1019,7 @@ function softTrailCoverage(behind,trail,n,smooth){
       canvas.dataset.spatialLineCount = options.spatialShape ? String(frame.rows.length) : '';
     }
     const context = canvas.getContext('2d');
-    if (!context) return frame;
+    if (!context) return rawFrame;
     const width = Math.max(1, canvas.clientWidth || canvas.width || 320);
     const height = Math.max(1, canvas.clientHeight || canvas.height || 180);
     const scale = typeof devicePixelRatio === 'number' ? Math.min(devicePixelRatio, 2) : 1;
@@ -1013,11 +1032,11 @@ function softTrailCoverage(behind,trail,n,smooth){
     if (!frame.rows.length) {
       context.fillStyle = '#a8b0ab'; context.font = '13px system-ui';
       context.textAlign = 'center'; context.fillText('Nog geen receivers in deze zone', width / 2, height / 2);
-      return frame;
+      return rawFrame;
     }
     if(options.spatialShape){
       if(canvas.dataset){canvas.dataset.spatialShape=options.spatialShape;canvas.dataset.spatialLineCount=String(frame.rows.length);}
-      drawSpatial(context,frame,width,height,options.spatialShape);return frame;
+      drawSpatial(context,frame,width,height,options.spatialShape);return rawFrame;
     }
     const byReceiver = options.presentation === 'receivers' || options.layout !== 'continuous' && frame.rows.some(row => row.category === 'tunnel');
     const vertical = options.layout === 'vertical' && options.presentation !== 'receivers';
@@ -1131,7 +1150,7 @@ function softTrailCoverage(behind,trail,n,smooth){
       }
     });
     if (canvas.dataset) canvas.dataset.lineHitRegions = JSON.stringify(hitRegions);
-    return frame;
+    return rawFrame;
   }
   return Object.freeze({ catalog, geometry, sample, draw, rows, selected, normalizeState, opticalWhite, tunnelProjection, wallProjection,
     engineVersion: canonical.version, extensionVersion: extension.version, isLocalPreview: true });

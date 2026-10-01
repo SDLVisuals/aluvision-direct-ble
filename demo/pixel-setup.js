@@ -200,6 +200,20 @@
   }
   function previewMessage(state){return state.kind==='unsupported'?'Werk deze receiver bij om de gekozen kant met groen testlicht te tonen. Je keuze blijft staan.':state.kind==='failed'?`Testlicht niet bereikbaar. Controleer de receiververbinding; ${state.guide==='power'?'je keuze blijft staan':'je aantal blijft bewaard'}.`:state.kind==='applied'?(state.guide==='power'?`Testlicht verstuurd naar poort ${state.port}. Groen hoort ${state.reversed?'rechts':'links'} te branden; de andere pixels wit.`:state.pixels?`Testlicht verstuurd naar poort ${state.port}. De laatste pixel (${state.pixels}) hoort rood te branden; de andere pixels wit.`:'0 pixels · testlicht uit.'):state.kind==='pending'?'Testlicht aanpassen…':'Testvoorbeeld · geen testlicht';}
   function showPreviewStatus(container,state){const label=container?.querySelector(state.guide==='power'?'[data-power-preview-status]':'[data-pixel-preview] .pixel-preview-notice');if(label){label.textContent=previewMessage(state);label.dataset.testLight=state.kind;}}
+  // Show bounded cleanup without repainting: repaint would enqueue the same
+  // test light again. Restore only these captured DOM nodes, never a new page.
+  function showPreviewStopping(container){
+    if(!container)return ()=>{};
+    const controls=Array.from(container.querySelectorAll('button,input'),control=>({control,disabled:control.disabled}));
+    const region=container.querySelector('[data-onboarding-stage]')||container,wasBusy=region.getAttribute('aria-busy');
+    const footer=container.querySelector('.pixel-setup-footer,.onboarding-footer');
+    const next=footer?.querySelector('[data-pixel-action="next"],[data-onboarding-action="next"]'),label=next?.textContent;
+    controls.forEach(({control})=>{control.disabled=true;});region.setAttribute('aria-busy','true');
+    if(next)next.textContent='Testlicht stoppen…';
+    const status=container.ownerDocument.createElement('p');status.className='pixel-preview-notice';status.dataset.previewStopping='true';status.setAttribute('role','status');status.setAttribute('aria-live','polite');status.textContent='Testlicht stoppen… Je keuzes blijven staan.';
+    if(footer)footer.before(status);
+    return ()=>{controls.forEach(({control,disabled})=>{control.disabled=disabled;});if(next)next.textContent=label;status.remove();if(wasBusy===null)region.removeAttribute('aria-busy');else region.setAttribute('aria-busy',wasBusy);};
+  }
   function create({onSave,onClose=()=>{},onPreview,mode='preview',pixelsPerMeter=DEFAULT_PIXELS_PER_METER}={}){
     if(typeof onSave!=='function')throw Error('PIXEL_SAVE_HANDLER_REQUIRED');
     const limits=pixelLimits({pixelsPerMeter});
@@ -209,6 +223,7 @@
     const livePreview=createLivePreview({send:mode==='native'?onPreview:null,onState:state=>{previewState=state;showPreviewStatus(dialog,state);}});
     const plan=()=>sequence(outputs),current=()=>plan()[index],output=()=>outputs.find(item=>item.port===current().port);
     function syncPreview(){
+      if(busy)return;
       if(!dialog||document.hidden||!['pixels','connection'].includes(current().stage)){void livePreview.stop();return;}
       livePreview.update({standId:receiver.standId,transactionId:previewTransaction,
         receiver:{id:receiver.id,rid:receiver.rid,type:'SPI',deviceFingerprint:receiver.deviceFingerprint},role:receiver.role,
@@ -236,7 +251,11 @@
     async function click(event){
       const target=event.target.closest('[data-pixel-action]');if(!target||target.disabled||busy)return;
       const action=target.dataset.pixelAction,step=current();
-      if(['next','back','save'].includes(action)&&['pixels','connection'].includes(step.stage)){busy=true;try{await livePreview.stop();}finally{busy=false;}if(!dialog)return;}
+      if(['next','back','save'].includes(action)&&['pixels','connection'].includes(step.stage)){
+        const stoppingDialog=dialog;busy=true;const restore=showPreviewStopping(stoppingDialog);
+        try{await livePreview.stop();}finally{restore();if(dialog===stoppingDialog)busy=false;}
+        if(dialog!==stoppingDialog)return;
+      }
       if(action==='close')return close();
       if(action==='output'){const item=outputs.find(item=>item.port===Number(target.dataset.port));if(item.enabled&&outputs.filter(item=>item.enabled).length===1){error='Gebruik minstens één uitgang.';render();return;}item.enabled=!item.enabled;selectedPort=item.port;plugMotion.trigger(item.port,performance.now()/1000,item.enabled);error='';return render();}
       if(['pixel-less','pixel-more','meter-less','meter-more'].includes(action))return adjust(stepPixels(output().pixels,(action.endsWith('less')?-1:1)*(action.startsWith('meter')?Math.round(limits.pixelsPerMeter):1),limits));
@@ -253,5 +272,5 @@
     }
     return Object.freeze({open,close,paint,isOpen:()=>!!dialog});
   }
-  return Object.freeze({create,createLivePreview,showPreviewStatus,renderOutputs,paintOutputs,renderPixels,renderSide,renderPort,renderProgress,renderPortContext,nextPortLabel,bindPixelScrub,updatePixels,validateInput,outputsOf,sequence,validPixels,pixelLimits,editablePixels,configuredPixels,stepPixels,meterLabel,endpointLabel});
+  return Object.freeze({create,createLivePreview,showPreviewStatus,showPreviewStopping,renderOutputs,paintOutputs,renderPixels,renderSide,renderPort,renderProgress,renderPortContext,nextPortLabel,bindPixelScrub,updatePixels,validateInput,outputsOf,sequence,validPixels,pixelLimits,editablePixels,configuredPixels,stepPixels,meterLabel,endpointLabel});
 }));

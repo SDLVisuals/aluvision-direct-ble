@@ -48,7 +48,7 @@
       manage: 'Beheren', newColour: 'Nieuwe kleur', saveColour: 'Kleur opslaan', newScene: 'Huidig licht bewaren', saveScene: 'Sfeer bewaren', updateScene: 'Scène bijwerken',
       colourOrder: 'Volgorde wijzigen', done: 'Klaar', saveCurrentColour: 'Ingestelde kleur toevoegen',
       animationGallery: 'Alle animaties', animationLibraryTitle: 'Animaties',
-      animationNavigation: 'Animatie kiezen of instellen', animationChooseAnother: 'Open animatiekiezer', animationCurrentSettingsTitle: 'Pas deze animatie aan', animationSettingsReturnKicker: 'Actieve animatie', animationCurrentSettingsAccessible: 'Ga naar de instellingen van de actieve animatie {name}', animationSettings: 'Animatie-instellingen',
+      animationNavigation: 'Animatie kiezen of instellen', animationChooseAnother: 'Open animatiekiezer', animationCurrentSettingsTitle: 'Instellingen openen', animationSettingsReturnKicker: 'Actieve animatie', animationCurrentSettingsAccessible: 'Ga naar de instellingen van de actieve animatie {name}', animationSettings: 'Animatie-instellingen',
       appearance: 'Weergave', language: 'Taal', theme: 'Thema', light: 'Licht', dark: 'Donker', readiness: 'Status werkversie',
       wipNotice: 'De navigatie en hoofdknoppen zijn vertaald. Langere ontwerpteksten zijn voorlopig nog Nederlands.',
       back: 'Terug', close: 'Sluiten', cancel: 'Annuleren', save: 'Opslaan', delete: 'Verwijderen',
@@ -57,6 +57,12 @@
       softwareUpdateSection: 'Receiver-software', softwareUpdateButton: 'Controleer en update alle receivers',
       softwareUpdateKeepOpen: 'Blijf op het ALUVISION-wifi en houd deze pagina open.',
       softwareUpdateSequence: 'Receivers worden één voor één bijgewerkt; de hoofdreceiver als laatste.',
+      softwareReceiverSubtitle: 'Controleer alleen deze receiver. Andere receivers worden hier niet gecontroleerd of bijgewerkt.',
+      softwareReceiverSequence: 'Alleen deze receiver wordt bijgewerkt.',
+      softwareReceiverRecoveryGuidance: 'Herstel deze hoofdreceiver. Andere receivers worden hier niet gecontroleerd of bijgewerkt.',
+      softwareReceiverPreflight: 'Deze receiver controleren…',
+      softwareReceiverCurrent: 'Deze receiver is bijgewerkt.',
+      softwareReceiverUpdateFinished: 'Deze receiver is bijgewerkt en gecontroleerd.',
       softwarePreparing: 'Update voorbereiden', softwareSending: 'Software versturen',
       softwareConnectionChecking: 'Verbinding met receiver controleren',
       softwareVerifying: 'Software controleren', softwareRestarting: 'Receiver start opnieuw',
@@ -113,7 +119,7 @@
       manage: 'Manage', newColour: 'New colour', saveColour: 'Save colour', newScene: 'Save current lighting', saveScene: 'Save atmosphere', updateScene: 'Update scene',
       colourOrder: 'Change order', done: 'Done', saveCurrentColour: 'Add current colour',
       animationGallery: 'All animations', animationLibraryTitle: 'Animations',
-      animationNavigation: 'Choose or edit animation', animationChooseAnother: 'Open animation picker', animationCurrentSettingsTitle: 'Edit this animation', animationSettingsReturnKicker: 'Active animation', animationCurrentSettingsAccessible: 'Open settings for active animation {name}', animationSettings: 'Animation settings',
+      animationNavigation: 'Choose or edit animation', animationChooseAnother: 'Open animation picker', animationCurrentSettingsTitle: 'Open settings', animationSettingsReturnKicker: 'Active animation', animationCurrentSettingsAccessible: 'Open settings for active animation {name}', animationSettings: 'Animation settings',
       appearance: 'Appearance', language: 'Language', theme: 'Theme', light: 'Light', dark: 'Dark', readiness: 'Preview status',
       wipNotice: 'Navigation and main controls are translated. Longer design notes remain in Dutch for now.',
       back: 'Back', close: 'Close', cancel: 'Cancel', save: 'Save', delete: 'Delete',
@@ -122,6 +128,12 @@
       softwareUpdateSection: 'Receiver software', softwareUpdateButton: 'Check and update all receivers',
       softwareUpdateKeepOpen: 'Stay on the ALUVISION Wi-Fi and keep this page open.',
       softwareUpdateSequence: 'Receivers update one at a time; the main receiver goes last.',
+      softwareReceiverSubtitle: 'Check only this receiver. Other receivers are not checked or updated here.',
+      softwareReceiverSequence: 'Only this receiver will be updated.',
+      softwareReceiverRecoveryGuidance: 'Recover this main receiver. Other receivers are not checked or updated here.',
+      softwareReceiverPreflight: 'Checking this receiver…',
+      softwareReceiverCurrent: 'This receiver is up to date.',
+      softwareReceiverUpdateFinished: 'This receiver is updated and verified.',
       softwarePreparing: 'Preparing update', softwareSending: 'Sending software',
       softwareConnectionChecking: 'Checking the receiver connection',
       softwareVerifying: 'Checking software', softwareRestarting: 'Receiver restarting',
@@ -178,7 +190,7 @@
       manage: 'Gérer', newColour: 'Nouvelle couleur', saveColour: 'Enregistrer la couleur', newScene: 'Enregistrer cet éclairage', saveScene: 'Enregistrer l’ambiance', updateScene: 'Mettre à jour la scène',
       colourOrder: 'Modifier l’ordre', done: 'Terminé', saveCurrentColour: 'Ajouter la couleur actuelle',
       animationGallery: 'Galerie d’animations', animationLibraryTitle: 'Animations',
-      animationNavigation: 'Choisir ou régler une animation', animationChooseAnother: 'Ouvrir le sélecteur', animationCurrentSettingsTitle: 'Modifier cette animation', animationSettingsReturnKicker: 'Animation active', animationCurrentSettingsAccessible: 'Ouvrir les réglages de l’animation active {name}', animationSettings: 'Réglages de l’animation',
+      animationNavigation: 'Choisir ou régler une animation', animationChooseAnother: 'Ouvrir le sélecteur', animationCurrentSettingsTitle: 'Ouvrir les réglages', animationSettingsReturnKicker: 'Animation active', animationCurrentSettingsAccessible: 'Ouvrir les réglages de l’animation active {name}', animationSettings: 'Réglages de l’animation',
       appearance: 'Apparence', language: 'Langue', theme: 'Thème', light: 'Clair', dark: 'Sombre', readiness: 'État de la version de travail',
       wipNotice: 'La navigation et les commandes principales sont traduites. Les textes explicatifs plus longs restent en néerlandais pour le moment.',
       back: 'Retour', close: 'Fermer', cancel: 'Annuler', save: 'Enregistrer', delete: 'Supprimer',
@@ -187,6 +199,12 @@
       softwareUpdateSection: 'Logiciel des récepteurs', softwareUpdateButton: 'Vérifier et mettre à jour tous les récepteurs',
       softwareUpdateKeepOpen: 'Restez connecté au Wi-Fi ALUVISION et gardez cette page ouverte.',
       softwareUpdateSequence: 'Les récepteurs sont mis à jour un par un ; le récepteur principal en dernier.',
+      softwareReceiverSubtitle: 'Vérifiez uniquement ce récepteur. Les autres récepteurs ne sont ni vérifiés ni mis à jour ici.',
+      softwareReceiverSequence: 'Seul ce récepteur sera mis à jour.',
+      softwareReceiverRecoveryGuidance: 'Réparez ce récepteur principal. Les autres récepteurs ne sont ni vérifiés ni mis à jour ici.',
+      softwareReceiverPreflight: 'Vérification de ce récepteur…',
+      softwareReceiverCurrent: 'Ce récepteur est à jour.',
+      softwareReceiverUpdateFinished: 'Ce récepteur est à jour et vérifié.',
       softwarePreparing: 'Préparation de la mise à jour', softwareSending: 'Envoi du logiciel',
       softwareConnectionChecking: 'Vérification de la connexion au récepteur',
       softwareVerifying: 'Vérification du logiciel', softwareRestarting: 'Redémarrage du récepteur',
@@ -243,7 +261,7 @@
       manage: 'Verwalten', newColour: 'Neue Farbe', saveColour: 'Farbe speichern', newScene: 'Aktuelles Licht speichern', saveScene: 'Stimmung speichern', updateScene: 'Szene aktualisieren',
       colourOrder: 'Reihenfolge ändern', done: 'Fertig', saveCurrentColour: 'Aktuelle Farbe hinzufügen',
       animationGallery: 'Animationsgalerie', animationLibraryTitle: 'Animationen',
-      animationNavigation: 'Animation wählen oder einstellen', animationChooseAnother: 'Animationsauswahl öffnen', animationCurrentSettingsTitle: 'Diese Animation anpassen', animationSettingsReturnKicker: 'Aktive Animation', animationCurrentSettingsAccessible: 'Einstellungen der aktiven Animation {name} öffnen', animationSettings: 'Animationseinstellungen',
+      animationNavigation: 'Animation wählen oder einstellen', animationChooseAnother: 'Animationsauswahl öffnen', animationCurrentSettingsTitle: 'Einstellungen öffnen', animationSettingsReturnKicker: 'Aktive Animation', animationCurrentSettingsAccessible: 'Einstellungen der aktiven Animation {name} öffnen', animationSettings: 'Animationseinstellungen',
       appearance: 'Darstellung', language: 'Sprache', theme: 'Design', light: 'Hell', dark: 'Dunkel', readiness: 'Status der Arbeitsversion',
       wipNotice: 'Navigation und wichtigste Bedienelemente sind übersetzt. Längere Erläuterungen bleiben vorerst auf Niederländisch.',
       back: 'Zurück', close: 'Schließen', cancel: 'Abbrechen', save: 'Speichern', delete: 'Löschen',
@@ -252,6 +270,12 @@
       softwareUpdateSection: 'Receiver-Software', softwareUpdateButton: 'Alle Receiver prüfen und aktualisieren',
       softwareUpdateKeepOpen: 'Mit dem ALUVISION-WLAN verbunden bleiben und diese Seite geöffnet lassen.',
       softwareUpdateSequence: 'Receiver werden nacheinander aktualisiert; der Hauptreceiver zuletzt.',
+      softwareReceiverSubtitle: 'Nur diesen Receiver prüfen. Andere Receiver werden hier nicht geprüft oder aktualisiert.',
+      softwareReceiverSequence: 'Nur dieser Receiver wird aktualisiert.',
+      softwareReceiverRecoveryGuidance: 'Diesen Hauptreceiver wiederherstellen. Andere Receiver werden hier nicht geprüft oder aktualisiert.',
+      softwareReceiverPreflight: 'Dieser Receiver wird geprüft…',
+      softwareReceiverCurrent: 'Dieser Receiver ist aktuell.',
+      softwareReceiverUpdateFinished: 'Dieser Receiver ist aktualisiert und geprüft.',
       softwarePreparing: 'Update wird vorbereitet', softwareSending: 'Software wird gesendet',
       softwareConnectionChecking: 'Verbindung zum Receiver wird geprüft',
       softwareVerifying: 'Software wird geprüft', softwareRestarting: 'Receiver startet neu',
@@ -305,6 +329,20 @@
     }
   };
   Object.keys(animationTexts).forEach(code => Object.assign(texts[code], animationTexts[code]));
+  const animationAdvancedCopy={
+    nl:{animationMoreSettings:'Geavanceerde instellingen',animationAdvancedOpen:'Geavanceerde instellingen openen',animationAdvancedClose:'Geavanceerde instellingen sluiten',animationAdvancedSmooth:'Vloeiendheid',animationAdvancedDirection:'Richting',animationAdvancedTrail:'Lichtstaart',animationAdvancedWidth:'Breedte',animationAdvancedPoints:'Lichtpunten',animationAdvancedSpacing:'Afstand',animationAdvancedTiming:'Timing',animationAdvancedFade:'Zacht aan en uit',animationAdvancedSpread:'Spreiding',animationAdvancedVariation:'Variatie',animationAdvancedBounce:'Heen en weer',animationAdvancedMirror:'Spiegelen',animationAdvancedMore:'meer opties'},
+    en:{animationMoreSettings:'Advanced settings',animationAdvancedOpen:'Open advanced settings',animationAdvancedClose:'Close advanced settings',animationAdvancedSmooth:'Smoothness',animationAdvancedDirection:'Direction',animationAdvancedTrail:'Light trail',animationAdvancedWidth:'Width',animationAdvancedPoints:'Light points',animationAdvancedSpacing:'Spacing',animationAdvancedTiming:'Timing',animationAdvancedFade:'Soft fades',animationAdvancedSpread:'Spread',animationAdvancedVariation:'Variation',animationAdvancedBounce:'Back and forth',animationAdvancedMirror:'Mirror',animationAdvancedMore:'more options'},
+    fr:{animationMoreSettings:'Réglages avancés',animationAdvancedOpen:'Ouvrir les réglages avancés',animationAdvancedClose:'Fermer les réglages avancés',animationAdvancedSmooth:'Fluidité',animationAdvancedDirection:'Direction',animationAdvancedTrail:'Traînée lumineuse',animationAdvancedWidth:'Largeur',animationAdvancedPoints:'Points lumineux',animationAdvancedSpacing:'Espacement',animationAdvancedTiming:'Temporisation',animationAdvancedFade:'Fondus doux',animationAdvancedSpread:'Répartition',animationAdvancedVariation:'Variation',animationAdvancedBounce:'Aller-retour',animationAdvancedMirror:'Miroir',animationAdvancedMore:'autres options'},
+    de:{animationMoreSettings:'Erweiterte Einstellungen',animationAdvancedOpen:'Erweiterte Einstellungen öffnen',animationAdvancedClose:'Erweiterte Einstellungen schließen',animationAdvancedSmooth:'Flüssigkeit',animationAdvancedDirection:'Richtung',animationAdvancedTrail:'Lichtschweif',animationAdvancedWidth:'Breite',animationAdvancedPoints:'Lichtpunkte',animationAdvancedSpacing:'Abstand',animationAdvancedTiming:'Timing',animationAdvancedFade:'Sanftes Ein-/Ausblenden',animationAdvancedSpread:'Verteilung',animationAdvancedVariation:'Variation',animationAdvancedBounce:'Hin und her',animationAdvancedMirror:'Spiegeln',animationAdvancedMore:'weitere Optionen'}
+  };
+  Object.keys(animationAdvancedCopy).forEach(code=>Object.assign(texts[code],animationAdvancedCopy[code]));
+  const animationColourCopy={
+    nl:{animationWhiteBase:'Witte basis',animationWhiteBaseHint:'Deze animatie mengt je accentkleur met een vaste witte basis. Beide kleuren zie je in het voorbeeld.'},
+    en:{animationWhiteBase:'White base',animationWhiteBaseHint:'This animation mixes your accent colour with a fixed white base. The preview shows both colours.'},
+    fr:{animationWhiteBase:'Base blanche',animationWhiteBaseHint:'Cette animation mélange votre couleur d’accent à une base blanche fixe. L’aperçu montre les deux couleurs.'},
+    de:{animationWhiteBase:'Weiße Basis',animationWhiteBaseHint:'Diese Animation mischt Ihre Akzentfarbe mit einer festen weißen Basis. Die Vorschau zeigt beide Farben.'}
+  };
+  Object.keys(animationColourCopy).forEach(code=>Object.assign(texts[code],animationColourCopy[code]));
   const mobileGalleryTexts={
     nl:{animationSelector:'Animatiekiezer',animationPickerIntro:'Kies een soort. Open daarna een groep en tik op je animatie; die start meteen.',animationSettingsShort:'Instellingen',animationActiveName:'Actief: {name}',animationAcross:'Tunnel & wand',animationStartHint:'Vier makkelijke keuzes om te beginnen',animationAllHint:'Bekijk alle soorten en bewegingen',animationChooseAnotherHint:'Tik op een animatie om te starten.',animationWholeHint:'De hele ledline verandert van kleur of helderheid',animationMovingHint:'Licht beweegt binnen één ledline',animationAcrossHint:'Voor tunnels en wanden: beweging tussen ledlines',animationAcrossSummary:'Tunnel- en wandeffecten bewegen licht door meerdere ledlines.',animationAcrossMinimum:'Voor starten zijn minimaal 2 ledlines nodig.',animationAcrossAutoApply:'Een gekozen effect gebruikt automatisch alle ledlines in deze zone.',animationAcrossIndividualHint:'Wil je per ledline een andere kleur? Kies na het starten in de instellingen een ledline.',animationTunnelSampleTitle:'Tunnelvoorbeeld',animationWallSampleTitle:'Wandvoorbeeld',animationTunnelSampleLines:'4 voorbeeld-ledlines',animationTunnelSampleAccessible:'Tunnelvoorbeeld met vier voorbeeld-ledlines',animationWallSampleAccessible:'Wandvoorbeeld met vier voorbeeld-ledlines',animationTunnelGroupAccessible:'{name} als voorbeeld over {count} gekoppelde ledlines. Er start nog niets.',animationSelectMinimum:'Selecteer minstens {count} ledlines',animationBrandHint:'Rustige effecten met je eigen merkkleuren',animationOwnHint:'Je zelf bewaarde animaties'},
     en:{animationSelector:'Animation picker',animationPickerIntro:'Choose a type, open a group, then tap an animation to start it.',animationSettingsShort:'Settings',animationActiveName:'Active: {name}',animationAcross:'Tunnel & wall',animationStartHint:'Four easy choices to get started',animationAllHint:'Explore every type and movement',animationChooseAnotherHint:'Tap an animation to start.',animationWholeHint:'The whole LED line changes colour or brightness',animationMovingHint:'Light moves within one LED line',animationAcrossHint:'For tunnels and walls: movement across LED lines',animationAcrossSummary:'Tunnel and wall effects move light through multiple LED lines.',animationAcrossMinimum:'At least 2 LED lines are needed to start this effect.',animationAcrossAutoApply:'A chosen effect automatically uses every LED line in this zone.',animationAcrossIndividualHint:'Want a different colour per line? Choose an LED line in settings after starting.',animationTunnelSampleTitle:'Tunnel preview',animationWallSampleTitle:'Wall preview',animationTunnelSampleLines:'4 example LED lines',animationTunnelSampleAccessible:'Tunnel preview with four example LED lines',animationWallSampleAccessible:'Wall preview with four example LED lines',animationTunnelGroupAccessible:'{name} preview across your {count} connected LED lines. Nothing has started yet.',animationSelectMinimum:'Select at least {count} LED lines',animationBrandHint:'Gentle effects with your brand colours',animationOwnHint:'Animations you have saved'},
@@ -326,6 +364,13 @@
     de:{animationGroupChooserTitle:'Effektgruppe auswählen',animationGroupChooserIntro:'Öffne eine Gruppe, um ihre Animationen anzusehen. Erst deine Auswahl startet eine Animation.',animationSearchChooseHint:'Tippe auf ein Ergebnis, um diese Animation zu starten.',animationOwnChooseHint:'Wähle eine gespeicherte Animation zum Starten.',animationOpenGroup:'Animationen ansehen',animationGroupNextStep:'Wähle auf der nächsten Seite die gewünschte Animation.'}
   };
   Object.keys(animationFlowCopy).forEach(code=>Object.assign(texts[code],animationFlowCopy[code]));
+  const ledlineManagementCopy={
+    nl:{lineSetupMenu:'Beheermenu',lineSetupAddContext:'Aan {zone}',lineSetupSettings:'Instellingen',lineSetupSettingsAccessible:'Instellingen van {name}',lineSetupReuse:'Al gekoppelde receiver kiezen',lineSetupBlink:'Knipperen',lineSetupBlinkStop:'Stop',lineSetupBlinkWaiting:'Wachten…',lineSetupBlinkAccessible:'laten knipperen',lineSetupBlinkStopAccessible:'stoppen met knipperen'},
+    en:{lineSetupMenu:'Management',lineSetupAddContext:'In {zone}',lineSetupSettings:'Settings',lineSetupSettingsAccessible:'Settings for {name}',lineSetupReuse:'Choose an already paired receiver',lineSetupBlink:'Blink',lineSetupBlinkStop:'Stop',lineSetupBlinkWaiting:'Waiting…',lineSetupBlinkAccessible:'blink to identify',lineSetupBlinkStopAccessible:'stop blinking'},
+    fr:{lineSetupMenu:'Gestion',lineSetupAddContext:'Dans {zone}',lineSetupSettings:'Réglages',lineSetupSettingsAccessible:'Réglages de {name}',lineSetupReuse:'Choisir un receiver déjà connecté',lineSetupBlink:'Clignoter',lineSetupBlinkStop:'Arrêter',lineSetupBlinkWaiting:'Patientez…',lineSetupBlinkAccessible:'faire clignoter',lineSetupBlinkStopAccessible:'arrêter le clignotement'},
+    de:{lineSetupMenu:'Verwaltung',lineSetupAddContext:'In {zone}',lineSetupSettings:'Einstellungen',lineSetupSettingsAccessible:'Einstellungen für {name}',lineSetupReuse:'Bereits gekoppelten Receiver wählen',lineSetupBlink:'Blinken',lineSetupBlinkStop:'Stopp',lineSetupBlinkWaiting:'Warten…',lineSetupBlinkAccessible:'zum Erkennen blinken',lineSetupBlinkStopAccessible:'Blinken beenden'}
+  };
+  Object.keys(ledlineManagementCopy).forEach(code=>Object.assign(texts[code],ledlineManagementCopy[code]));
   // State labels for the LED-line chooser's disclosure control.
   const scopeCloseLabels = {
     nl: { scopeClose: 'Ledlines verbergen', scopeCloseHint: 'Tik om de lijst te sluiten' },
@@ -358,6 +403,38 @@
     }
   };
   Object.keys(brandColourTexts).forEach(code => Object.assign(texts[code], brandColourTexts[code]));
+  // Compact everyday guidance only. Safety, receiver and security copy stays unchanged.
+  const compactGuidance = {
+    nl: {
+      settingsInstallation:'Je installatie',settingsThisApp:'Deze app',channelHelp:'Letter: aan/uit · getal: exacte waarde · W: wit licht.',colourWheelHint:'Tik of sleep om te kiezen.',
+      lineSetupOrientHint:'Knipperen en verplaatsen',lineSetupOrderHint:'Laat knipperen, verplaats naar de juiste plek. De volgorde geldt meteen.',lineSetupSingleHint:'Knipperen of instellingen openen',
+      scopeIndividual:'Kies één of meer ledlines',scopeSingleHint:'1 van {count} · tik om te wisselen',scopeMultiHint:'{count} gekozen · tik om te wijzigen',scopeTogetherMany:'Alle {count} ledlines',
+      animationPickerIntro:'Open een groep. Tik op een animatie om te starten.',animationGroupChooserIntro:'Open een groep. Er start nog niets.',animationGroupNextStep:'Kies daarna een animatie om te starten.',animationChooseVariant:'Tik op een animatie om te starten.',animationChooseAnotherHint:'Alle animaties en varianten.',
+      colourLibraryHint:'Tik op een preset of merkkleur om die te gebruiken.',colourLibraryOrderHint:'Sleep om de volgorde te wijzigen.',colourManagerIntro:'Beheer presets en merkkleuren. Merkkleuren kun je ook wijzigen.'
+    },
+    en: {
+      settingsInstallation:'Your installation',settingsThisApp:'This app',channelHelp:'Letter: on/off · number: exact value · W: white light.',colourWheelHint:'Tap or drag to choose.',
+      lineSetupOrientHint:'Blink and move',lineSetupOrderHint:'Blink to identify, then move into place. The order applies immediately.',lineSetupSingleHint:'Blink or open settings',
+      scopeIndividual:'Choose one or more LED lines',scopeSingleHint:'1 of {count} · tap to switch',scopeMultiHint:'{count} selected · tap to change',scopeTogetherMany:'All {count} LED lines',
+      animationPickerIntro:'Open a group. Tap an animation to start.',animationGroupChooserIntro:'Open a group. Nothing starts yet.',animationGroupNextStep:'Then choose an animation to start.',animationChooseVariant:'Tap an animation to start.',animationChooseAnotherHint:'All animations and variations.',
+      colourLibraryHint:'Tap a preset or brand colour to use it.',colourLibraryOrderHint:'Drag to change the order.',colourManagerIntro:'Manage presets and brand colours. Brand colours can also be edited.'
+    },
+    fr: {
+      settingsInstallation:'Votre installation',settingsThisApp:'Cette app',channelHelp:'Lettre : marche/arrêt · nombre : valeur exacte · W : lumière blanche.',colourWheelHint:'Touchez ou faites glisser pour choisir.',
+      lineSetupOrientHint:'Clignoter et déplacer',lineSetupOrderHint:'Faites clignoter, puis placez la ligne. L’ordre s’applique immédiatement.',lineSetupSingleHint:'Clignoter ou ouvrir les réglages',
+      scopeIndividual:'Choisissez une ou plusieurs lignes LED',scopeSingleHint:'1 sur {count} · touchez pour changer',scopeMultiHint:'{count} sélectionnées · touchez pour changer',scopeTogetherMany:'Les {count} lignes LED',
+      animationPickerIntro:'Ouvrez un groupe. Touchez une animation pour la lancer.',animationGroupChooserIntro:'Ouvrez un groupe. Rien ne démarre encore.',animationGroupNextStep:'Choisissez ensuite l’animation à lancer.',animationChooseVariant:'Touchez une animation pour la lancer.',animationChooseAnotherHint:'Toutes les animations et variantes.',
+      colourLibraryHint:'Touchez une couleur enregistrée ou de marque pour l’utiliser.',colourLibraryOrderHint:'Faites glisser pour changer l’ordre.',colourManagerIntro:'Gérez les couleurs enregistrées et de marque. Les couleurs de marque sont aussi modifiables.'
+    },
+    de: {
+      settingsInstallation:'Deine Installation',settingsThisApp:'Diese App',channelHelp:'Buchstabe: an/aus · Zahl: genauer Wert · W: weißes Licht.',colourWheelHint:'Tippen oder ziehen, um zu wählen.',
+      lineSetupOrientHint:'Blinken und verschieben',lineSetupOrderHint:'Blinken lassen, dann richtig einordnen. Die Reihenfolge gilt sofort.',lineSetupSingleHint:'Blinken oder Einstellungen öffnen',
+      scopeIndividual:'Eine oder mehrere LED-Linien wählen',scopeSingleHint:'1 von {count} · tippen zum Wechseln',scopeMultiHint:'{count} ausgewählt · tippen zum Ändern',scopeTogetherMany:'Alle {count} LED-Linien',
+      animationPickerIntro:'Öffne eine Gruppe. Tippe zum Starten auf eine Animation.',animationGroupChooserIntro:'Öffne eine Gruppe. Noch startet nichts.',animationGroupNextStep:'Wähle danach eine Animation zum Starten.',animationChooseVariant:'Tippe zum Starten auf eine Animation.',animationChooseAnotherHint:'Alle Animationen und Varianten.',
+      colourLibraryHint:'Tippe auf ein Preset oder eine Markenfarbe, um sie zu verwenden.',colourLibraryOrderHint:'Ziehen, um die Reihenfolge zu ändern.',colourManagerIntro:'Verwalte Presets und Markenfarben. Markenfarben kannst du auch bearbeiten.'
+    }
+  };
+  Object.keys(compactGuidance).forEach(code => Object.assign(texts[code], compactGuidance[code]));
   Object.keys(texts).forEach(code => Object.freeze(texts[code]));
   Object.freeze(texts);
   const has = (value, key) => Object.prototype.hasOwnProperty.call(value, key);

@@ -22,21 +22,28 @@
   const actions=new Set(['capabilities','securityPreference','securityStatus','setPinProtection','discover','discoverMesh','select','secure','reconcileSecurity','finalize','verifyFinalReceipt','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones','configureOutputs','previewPixels','eraseAppData','applyLive','applyLiveBatch','otaPlan','otaStart','otaStatus','otaResume','otaCancel','otaMainRecoveryPlan','otaMainRecoveryStart','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain']);
   actions.add('outputConfigurationStatus');
   ['exportBackup','chooseBackup','importInstallationView','recoverInstallation'].forEach(action=>actions.add(action));
-  ['receiverContextStatus','syncInstallationContext'].forEach(action=>actions.add(action));
+  ['receiverContextStatus','syncInstallationContext','interruptAutomaticContext'].forEach(action=>actions.add(action));
   actions.add('setAppearance');
   let appearanceTheme=null,appearanceRequest=null,appearanceSerial=0;
-  const contextTimers=new Map(),contextEpochs=new Map();let contextQueue=Promise.resolve(),contextResetEpoch=0;
+  const contextTimers=new Map(),contextEpochs=new Map(),contextJobs=new Map(),contextResumes=new Map();let contextQueue=Promise.resolve(),contextResetEpoch=0;
+  // Public availability marker only: never a PIN, library, key or receiver
+  // credential. An incomplete recovery must not make a fresh empty local
+  // library the automatic cold-start/PIN replacement for its remote archive.
+  const incompleteLibraryRecoveryKey='aluvision.v32.incomplete-library-recovery.v1',incompleteLibraryRecovery=new Set();
+  let incompleteLibraryRecoveryStorageBlocked=false;
   let contextWriteBarrier=null;
   let viewRevision=0,viewLoaded=false,viewModelKey=null,viewDraftKey='null',writeQueue=Promise.resolve();
+  let settledWriteQueue=writeQueue;
   const fail=code=>Object.assign(new Error('De verbinding is nog niet beschikbaar.'),{code});
-  function receive(message){
+  function receive(message,fromNative=false){
     if(!message||typeof message.id!=='string'||!pending.has(message.id))return;
     const request=pending.get(message.id);pending.delete(message.id);
+    if(fromNative)request.automatic?.nativeFinished();
     root.clearTimeout(request.timer);request.removeAbort();
     if(message.ok===true&&message.result&&typeof message.result==='object')request.resolve(message.result);
     else request.reject(fail(typeof message.code==='string'&&/^[A-Z][A-Z0-9_]{0,63}$/.test(message.code)?message.code:'NATIVE_FAILED'));
   }
-  function call(action,payload={},signal){
+  function call(action,payload={},signal,automatic){
     if(!native||!transportReady)return Promise.reject(fail('NATIVE_UNAVAILABLE'));
     if(!documentId||!/^[A-F0-9]{32}$/.test(documentId))return Promise.reject(fail('NATIVE_DOCUMENT_UNAVAILABLE'));
     if(!actions.has(action))return Promise.reject(fail('ACTION_UNSUPPORTED'));
@@ -44,10 +51,11 @@
     if(pending.size>=8)return Promise.reject(fail('NATIVE_BUSY'));
     return new Promise((resolve,reject)=>{
       const id='v30-'+documentId+'-'+(++serial),cancelNative=()=>{
-        if(pending.has(id)&&!['setAppearance','capabilities','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones','exportBackup','chooseBackup','importInstallationView'].includes(action))try{handler.postMessage({version:1,id:'v30-'+documentId+'-'+(++serial),action:action==='discover'?'cancelDiscover':'cancelOnboarding',payload:{requestId:id}});}catch(_){}
+        if(automatic){automatic.interrupt();return;}
+        if(pending.has(id)&&!['interruptAutomaticContext','setAppearance','capabilities','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones','exportBackup','chooseBackup','importInstallationView'].includes(action))try{handler.postMessage({version:1,id:'v30-'+documentId+'-'+(++serial),action:action==='discover'?'cancelDiscover':'cancelOnboarding',payload:{requestId:id}});}catch(_){}
       },abort=()=>{
         cancelNative();
-        receive({id,ok:false,code:'CANCELLED'});
+        if(!automatic)receive({id,ok:false,code:'CANCELLED'});
       };
       // MAIN verification has its own 12 s handshake deadline. The bridge must
       // leave room for native key storage and delivering that bounded result.
@@ -59,14 +67,15 @@
       const timeout=['exportBackup','chooseBackup','recoverInstallation'].includes(action)?300000:action==='previewPixels'?45000:action==='syncInstallationContext'?180000:['otaPlan','otaMainRecoveryPlan'].includes(action)?120000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
         ['secure','reconcileSecurity'].includes(action)&&payload.configuration?.role==='node'?120000:
         ['select','secure','reconcileSecurity','finalize','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain'].includes(action)?45000:12000;
-      const timer=root.setTimeout(()=>{cancelNative();receive({id,ok:false,code:'NATIVE_TIMEOUT'});},timeout);
-      pending.set(id,{resolve,reject,timer,removeAbort:()=>signal?.removeEventListener('abort',abort)});
+      const timer=root.setTimeout(()=>{cancelNative();if(!automatic)receive({id,ok:false,code:'NATIVE_TIMEOUT'});},timeout);
+      pending.set(id,{resolve,reject,timer,automatic,removeAbort:()=>signal?.removeEventListener('abort',abort)});
+      automatic?.start(id,code=>receive({id,ok:false,code}));
       signal?.addEventListener('abort',abort,{once:true});
       try{handler.postMessage({version:1,id,action,payload});}
       catch(_){receive({id,ok:false,code:'NATIVE_UNAVAILABLE'});}
     });
   }
-  if(native)Object.defineProperty(root,'__lightningV30Reply',{value:receive,configurable:false,writable:false});
+  if(native)Object.defineProperty(root,'__lightningV30Reply',{value:message=>receive(message,true),configurable:false,writable:false});
   function emptyModel(){return {schemaVersion:30,demo:false,stands:[],receivers:[],scenes:[],presets:[]};}
   function contextEvent(detail,epoch,reset,phase){
     if(typeof root.dispatchEvent==='function'&&typeof root.CustomEvent==='function')root.dispatchEvent(new root.CustomEvent('lightning:receiver-context',{
@@ -99,13 +108,29 @@
     if(!result||result.standId!==standId||!['synced','pending'].includes(result.status)||!Number.isInteger(result.synced)||!Number.isInteger(result.total)||result.total<1||result.total>30||result.synced<0||result.synced>result.total||(result.status==='synced'&&(result.synced!==result.total||result.librariesComplete===false)))throw fail('RECEIVER_CONTEXT_UNCONFIRMED');
     return {standId,status:result.status,synced:result.synced,total:result.total,...(typeof result.librariesComplete==='boolean'?{librariesComplete:result.librariesComplete}:{})};
   }
-  async function receiverContext(action,standId,current,signal){
+  function automaticContextControl(standId){
+    let requestId=null,settle,requested=false,interruption=null;
+    const control={started:false,cleaned:false,
+      start(id,finish){requestId=id;settle=finish;control.started=true;if(requested)control.interrupt();},
+      nativeFinished(){control.cleaned=true;},
+      interrupt(){
+        requested=true;if(!requestId||interruption)return;
+        // Post only after the original message turn. Request IDs bind one
+        // document and one archive; no retry, owner reopening or metadata ACK.
+        interruption=Promise.resolve().then(()=>call('interruptAutomaticContext',{standId,requestId})).then(result=>{
+          if(!result||Object.keys(result).sort().join(',')!=='requestId,standId,status'||result.status!=='context-cleaned'||result.standId!==standId||result.requestId!==requestId)throw fail('RECEIVER_CONTEXT_CANCEL_UNCONFIRMED');
+          control.cleaned=true;settle('CANCELLED');
+        }).catch(()=>settle('RECEIVER_CONTEXT_CANCEL_UNCONFIRMED'));
+      }
+    };return control;
+  }
+  async function receiverContext(action,standId,current,signal,automatic=false){
     if(root.__lightningV32ReceiverContext!==true)throw fail('RECEIVER_CONTEXT_UNAVAILABLE');
     if(typeof standId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(standId))throw fail('RECEIVER_CONTEXT_INVALID');
     await writeQueue.catch(()=>{});
     if(signal?.aborted)throw fail('CANCELLED');
     if(current&&!current())throw fail('RECEIVER_CONTEXT_STALE');
-    let ticket;
+    let ticket,control=automatic?automaticContextControl(standId):null;
     try{
       if(action==='syncInstallationContext'){
         // Hold one atomic idle lease through this single bounded native RPC.
@@ -117,24 +142,38 @@
         if(current&&!current())throw fail('RECEIVER_CONTEXT_STALE');
       }
       const libraries=typeof root.LightningInstallationLibraries?.capture==='function'?root.LightningInstallationLibraries.capture(standId):undefined;
-      return contextResult(await call(action,{standId,...(libraries===undefined?{}:{libraries})},signal),standId);
-    }finally{ticket?.release();}
+      if(control)ticket?.onPendingLiveIntent?.(()=>control.interrupt());
+      return contextResult(await call(action,{standId,...(libraries===undefined?{}:{libraries}),...(control?{automatic:true}:{})},signal,control),standId);
+    }finally{
+      // A local abort or timeout is not cleanup. An unconfirmed interrupt
+      // deliberately retains the lease; later gestures cannot overlap radio.
+      if(!control||!control.started||control.cleaned)ticket?.release();
+    }
   }
-  function scheduleContext(view,standId,{immediate=false}={}){
+  function scheduleContext(view,standId,{immediate=false,currentView}={}){
     if(root.__lightningV32ReceiverContext!==true||!view?.model?.receivers?.some(receiver=>receiver.standId===standId&&receiver.lifecycle==='added'))return view;
     root.clearTimeout(contextTimers.get(standId));
     const epoch=(contextEpochs.get(standId)||0)+1,reset=contextResetEpoch;
-    contextEpochs.set(standId,epoch);
-    const current=()=>contextEpochs.get(standId)===epoch&&contextResetEpoch===reset;
+    contextEpochs.set(standId,epoch);contextJobs.set(standId,epoch);
+    const owned=()=>contextEpochs.get(standId)===epoch&&contextResetEpoch===reset;
+    const current=()=>owned()&&(!currentView||currentView());
+    const finish=()=>{
+      // A local write can invalidate this pinned snapshot without scheduling
+      // a replacement epoch. Close its queued/writing UI state, but never
+      // confirm the stale edit or overwrite a newer/reset generation.
+      if(owned()&&currentView&&!currentView())contextEvent({standId,status:'pending'},epoch,reset,'complete');
+      if(contextJobs.get(standId)===epoch)contextJobs.delete(standId);
+    };
     contextEvent({standId,status:'pending'},epoch,reset,'queued');
     const enqueue=()=>{
-      if(!current())return;
+      if(!current()){finish();return;}
       contextTimers.delete(standId);
       contextQueue=contextQueue.catch(()=>{}).then(async()=>{
-        if(!current())return;
+        if(!current()){finish();return;}
         contextEvent({standId,status:'syncing'},epoch,reset,'writing');
-        try{const result=await receiverContext('syncInstallationContext',standId,current);if(current())contextEvent(result,epoch,reset,'complete');}
+        try{const result=await receiverContext('syncInstallationContext',standId,current,undefined,true);if(current())contextEvent(result,epoch,reset,'complete');}
         catch(_){if(current())contextEvent({standId,status:'pending'},epoch,reset,'complete');}
+        finally{finish();}
       });
     };
     // A confirmed receiver addition is a discrete durable boundary. Launch its
@@ -144,6 +183,70 @@
     if(immediate)Promise.resolve().then(enqueue);
     else contextTimers.set(standId,root.setTimeout(enqueue,1400));
     return view;
+  }
+  function contextStandReady(standId){
+    if(root.__lightningV32ReceiverContext!==true||!viewLoaded||viewDraftKey!=='null'||
+      typeof standId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(standId))return false;
+    const model=JSON.parse(viewModelKey);
+    return model.stands?.some(stand=>stand.id===standId)&&model.receivers?.some(receiver=>receiver.standId===standId&&receiver.lifecycle==='added');
+  }
+  function libraryRecoveryMarker(){
+    let storage;
+    try{storage=root.localStorage;}catch(_){return null;}
+    if(!storage||typeof storage.getItem!=='function'||typeof storage.setItem!=='function'||typeof storage.removeItem!=='function')return null;
+    try{
+      const raw=storage.getItem(incompleteLibraryRecoveryKey);
+      if(raw===null)return {storage,stands:new Set()};
+      const ids=typeof raw==='string'&&raw.length<=2048?JSON.parse(raw):null;
+      if(!Array.isArray(ids)||ids.length>20||ids.some(id=>typeof id!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(id))||
+        new Set(ids).size!==ids.length||JSON.stringify([...ids].sort())!==raw)throw fail('RECEIVER_CONTEXT_INVALID');
+      return {storage,stands:new Set(ids)};
+    }catch(_){incompleteLibraryRecoveryStorageBlocked=true;return null;}
+  }
+  function libraryRecoveryBlocked(standId){
+    const marker=libraryRecoveryMarker();
+    if(marker?.stands.has(standId))incompleteLibraryRecovery.add(standId);
+    return incompleteLibraryRecoveryStorageBlocked||incompleteLibraryRecovery.has(standId);
+  }
+  function setLibraryRecoveryBlock(standId,blocked){
+    if(blocked)incompleteLibraryRecovery.add(standId);
+    const marker=libraryRecoveryMarker();
+    if(!marker){if(!blocked&&!incompleteLibraryRecoveryStorageBlocked)incompleteLibraryRecovery.delete(standId);return;}
+    if(blocked)marker.stands.add(standId);else marker.stands.delete(standId);
+    try{
+      if(marker.stands.size>20)throw fail('RECEIVER_CONTEXT_INVALID');
+      const raw=marker.stands.size?JSON.stringify([...marker.stands].sort()):null;
+      if(raw===null)marker.storage.removeItem(incompleteLibraryRecoveryKey);else marker.storage.setItem(incompleteLibraryRecoveryKey,raw);
+      if(marker.storage.getItem(incompleteLibraryRecoveryKey)!==raw)throw fail('RECEIVER_CONTEXT_UNCONFIRMED');
+      if(!blocked)incompleteLibraryRecovery.delete(standId);
+    }catch(_){incompleteLibraryRecoveryStorageBlocked=true;}
+  }
+  function resumeContext(standId){
+    if(contextResumes.has(standId))return contextResumes.get(standId);
+    const resume=Promise.resolve().then(async()=>{
+      if(!contextStandReady(standId)||writeQueue!==settledWriteQueue||contextJobs.has(standId)||libraryRecoveryBlocked(standId))return null;
+      if(typeof root.LightningInstallationLibraries?.capture!=='function')throw fail('LIBRARIES_RECOVERY_UNAVAILABLE');
+      const writes=writeQueue;await writes.catch(()=>{});
+      if(writeQueue!==writes||!contextStandReady(standId)||contextJobs.has(standId))return null;
+      const revision=viewRevision,model=viewModelKey,draft=viewDraftKey,reset=contextResetEpoch,epoch=contextEpochs.get(standId);
+      const currentView=()=>writeQueue===writes&&viewRevision===revision&&viewModelKey===model&&viewDraftKey===draft&&
+        contextResetEpoch===reset&&contextStandReady(standId)&&!libraryRecoveryBlocked(standId)&&typeof root.LightningInstallationLibraries?.capture==='function';
+      const current=()=>currentView()&&contextEpochs.get(standId)===epoch&&!contextJobs.has(standId);
+      // This first RPC is a local exact-desired ledger read, with current
+      // libraries. Only its verified pending result may admit one archive.
+      const result=await receiverContext('receiverContextStatus',standId,current);
+      if(!current())return null;
+      if(result.status==='pending')scheduleContext({model:JSON.parse(model)},standId,{immediate:true,currentView});
+      return result;
+    }).finally(()=>{if(contextResumes.get(standId)===resume)contextResumes.delete(standId);});
+    contextResumes.set(standId,resume);return resume;
+  }
+  function trackWrite(next){
+    // Observe settlement only; the original queue, returned promise and its
+    // failures remain unchanged. Resume never enters a pending local write.
+    writeQueue=next;
+    const settled=()=>{if(writeQueue===next)settledWriteQueue=next;};
+    next.then(settled,settled);return next;
   }
   function canonical(value){
     if(Array.isArray(value))return '['+value.map(canonical).join(',')+']';
@@ -203,7 +306,7 @@
         }catch(_){}
         throw error;
       }
-    });writeQueue=next;return next;
+    });return trackWrite(next);
   }
   function removal(action,payload){
     // Serialize destructive model cleanup with ordinary local writes. Native
@@ -214,7 +317,7 @@
       if(result?.view)acceptView(result.view);
       else if(result?.status==='removed')throw fail('VIEW_INVALID');
       return result;
-    });writeQueue=next;return next;
+    });return trackWrite(next);
   }
   function moveDraft(action,payload){
     const next=writeQueue.catch(()=>{}).then(async()=>{
@@ -234,7 +337,7 @@
         try{const view=acceptView(await call('loadView'));if(view.revision===revision+1&&matches(view))return view;}catch(_){}
         throw error;
       }
-    });writeQueue=next;return next;
+    });return trackWrite(next);
   }
   function editZones(request){
     if(!request||typeof request!=='object'||Array.isArray(request))return Promise.reject(fail('ZONE_EDIT_INVALID'));
@@ -333,7 +436,7 @@
         try{error.reconciledView=acceptView(await call('loadView'));}catch(_){}
         throw error;
       }
-    });writeQueue=next;return next;
+    });return trackWrite(next);
   }
   function configureOutputs(request){
     const validId=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(value);
@@ -370,7 +473,7 @@
         try{error.reconciledView=acceptView(await call('loadView'));}catch(_){}
         throw error;
       }
-    });writeQueue=next;return next;
+    });return trackWrite(next);
   }
   function livePayload({standId,receiverId,kind,brightness,transitionMs,channels,scene}={}){
     const validID=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(value);
@@ -418,13 +521,22 @@
       appearanceRequest={sequence,theme,promise};return promise;
     },
     async receiverContextStatus({standId}){return receiverContext('receiverContextStatus',standId);},
-    scheduleInstallationContext({standId}){
-      if(!viewLoaded||typeof standId!=='string')return;
-      scheduleContext({model:JSON.parse(viewModelKey)},standId);
+    scheduleInstallationContext({standId,immediate=false,reason}){
+      if(!viewLoaded||typeof standId!=='string'||typeof immediate!=='boolean'||reason!==undefined&&reason!=='pin-confirmed')return;
+      let currentView;
+      if(reason==='pin-confirmed'){
+        if(!contextStandReady(standId)||writeQueue!==settledWriteQueue||contextJobs.has(standId)||libraryRecoveryBlocked(standId)||
+          typeof root.LightningInstallationLibraries?.capture!=='function')return;
+        const writes=writeQueue,revision=viewRevision,model=viewModelKey,draft=viewDraftKey,reset=contextResetEpoch;
+        currentView=()=>writeQueue===writes&&viewRevision===revision&&viewModelKey===model&&viewDraftKey===draft&&
+          contextResetEpoch===reset&&contextStandReady(standId)&&!libraryRecoveryBlocked(standId)&&typeof root.LightningInstallationLibraries?.capture==='function';
+      }
+      scheduleContext({model:JSON.parse(viewModelKey)},standId,{immediate,currentView});
     },
+    resumeInstallationContext({standId}){return resumeContext(standId);},
     async syncInstallationContext({standId,signal}){
       root.clearTimeout(contextTimers.get(standId));contextTimers.delete(standId);
-      const epoch=(contextEpochs.get(standId)||0)+1,reset=contextResetEpoch;contextEpochs.set(standId,epoch);
+      const epoch=(contextEpochs.get(standId)||0)+1,reset=contextResetEpoch;contextEpochs.set(standId,epoch);contextJobs.set(standId,epoch);
       const result=contextQueue.catch(()=>{}).then(async()=>{
         if(contextEpochs.get(standId)!==epoch||reset!==contextResetEpoch)throw fail('RECEIVER_CONTEXT_STALE');
         contextEvent({standId,status:'syncing'},epoch,reset,'writing');
@@ -437,7 +549,7 @@
         if(contextEpochs.get(standId)!==epoch||reset!==contextResetEpoch)throw fail('RECEIVER_CONTEXT_STALE');
         contextEvent(result,epoch,reset,'complete');
         return result;
-      });contextQueue=result;
+      }).finally(()=>{if(contextJobs.get(standId)===epoch)contextJobs.delete(standId);});contextQueue=result;
       return result;
     },
     async recoverInstallation({pin,signal}){
@@ -452,8 +564,11 @@
           const stored=await root.LightningInstallationLibraries.restore(result.libraries,result.standId);
           if(stored?.restored!==true)throw fail('LIBRARIES_RECOVERY_UNCONFIRMED');
         }
-        return {status:'restored',standId:result.standId,view:acceptView(result.view),playbackModel,librariesComplete:result.librariesComplete===true};
-      });writeQueue=next;return next;
+        if(result.librariesComplete!==true)setLibraryRecoveryBlock(result.standId,true);
+        const view=acceptView(result.view);
+        if(result.librariesComplete===true)setLibraryRecoveryBlock(result.standId,false);
+        return {status:'restored',standId:result.standId,view,playbackModel,librariesComplete:result.librariesComplete===true};
+      });return trackWrite(next);
     },
     async exportBackup({name,json}){
       if(typeof name!=='string'||!/^[A-Za-z0-9._-]{1,100}\.json$/.test(name)||typeof json!=='string'||new TextEncoder().encode(json).length>4*1024*1024)throw fail('BACKUP_INVALID');
@@ -480,7 +595,7 @@
             error.reconciledView=view;error.unchanged=canonical(view.model)===previous&&view.revision===expectedRevision;
           }catch(_){}throw error;
         }
-      });writeQueue=next;return next.then(view=>{for(const stand of view.model.stands)scheduleContext(view,stand.id);return view;});
+      });trackWrite(next);return next.then(view=>{for(const stand of view.model.stands)scheduleContext(view,stand.id);return view;});
     },
     async securityPreference({standId}){
       const result=await call('securityPreference',{standId});
@@ -539,8 +654,8 @@
     async reconcileSecurity({configuration,signal}){return call('reconcileSecurity',{configuration},signal);},
     async eraseAppData({confirmation}){
       if(confirmation!=='Alles verwijderen')throw fail('CONFIRMATION_REQUIRED');
-      contextTimers.forEach(timer=>root.clearTimeout(timer));contextTimers.clear();contextEpochs.clear();contextResetEpoch++;
-      const next=writeQueue.catch(()=>{}).then(()=>call('eraseAppData',{confirmation}));writeQueue=next;
+      contextTimers.forEach(timer=>root.clearTimeout(timer));contextTimers.clear();contextEpochs.clear();contextJobs.clear();contextResetEpoch++;
+      const next=writeQueue.catch(()=>{}).then(()=>call('eraseAppData',{confirmation}));trackWrite(next);
       const answer=await next;
       if(answer?.status!=='erased-local-only')throw fail('ERASE_UNCONFIRMED');
       viewRevision=0;viewLoaded=false;viewModelKey=null;viewDraftKey='null';

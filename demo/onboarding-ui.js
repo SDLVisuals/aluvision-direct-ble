@@ -31,6 +31,7 @@
   // message: network responses can contain credentials or untrusted content.
   function connectionFailure(failure,{viaMain=false}={}){
     const code=typeof failure?.code==='string'?failure.code:'';
+    if(code==='MAIN_WRONG_RECEIVER_NETWORK')return {message:viaMain?'Je toestel lijkt verbonden met een andere receiver. Kies in Instellingen → Wifi het ALUVISION-netwerk dat je al gebruikt voor deze installatie, niet het netwerk van de nieuwe receiver. Ga terug naar de app en tik op Verbinding controleren. Je keuzes blijven bewaard. Je hoeft geen receiver te resetten.':'Je toestel lijkt verbonden met een andere receiver. Kies in Instellingen → Wifi het ALUVISION-netwerk van de receiver die je wilt toevoegen. Ga terug naar de app en tik op Verbinding controleren. Je keuzes blijven bewaard. Je hoeft geen receiver te resetten.'};
     if(!pinRequired()&&['MAIN_RECOVERY_UNAVAILABLE','MAIN_RECOVERY_CONFLICT','MAIN_REGISTRATION_UNCONFIRMED','REMOVAL_PIN_REQUIRED'].includes(code))return {message:'De receiver antwoordt nog niet. Laat hem aan en controleer dezelfde verbinding opnieuw. Je keuzes blijven bewaard.'};
     if(code==='DISCOVERY_EXPIRED')return {expired:true,message:'De vorige verbindingscontrole is verlopen. Tik op Verbinding controleren om je receiver opnieuw te zoeken. Je keuzes blijven bewaard.'};
     if(['DISCOVERY_UNAVAILABLE','MAIN_MANUAL_WIFI_REQUIRED','MAIN_CONNECTION_UNAVAILABLE','NATIVE_TIMEOUT','TIMEOUT'].includes(code))return {message:viaMain?'Controleer op je iPhone bij Instellingen → Wifi of je verbonden bent met het ALUVISION-netwerk dat je al gebruikt. Laat de nieuwe receiver aan en verbind je telefoon niet met het eigen wifi van die receiver. Probeer daarna opnieuw; je keuzes blijven bewaard.':'De receiver antwoordt nog niet. Controleer op je iPhone via Instellingen → Wifi of je met het ALUVISION-netwerk van deze receiver verbonden bent. Ga terug en tik op Verbinding controleren. Je keuzes blijven bewaard.'};
@@ -55,7 +56,7 @@
     if(['MAIN_STORAGE_UNCONFIRMED','V30_STORAGE_UNAVAILABLE','V30_STORAGE_UNCONFIRMED','V30_STORAGE_FULL','V30_STORAGE_CORRUPT','V30_CHECKPOINT_CONFLICT','V30_CHECKPOINT_INVALID','V30_CHECKPOINT_ROLLBACK','V30_BINDING_INVALID'].includes(code)||['save','publish'].includes(phase))return {
       message:'De app kon de toevoeging nog niet bewaren. Tik op Opnieuw proberen. Je keuzes blijven op dit scherm staan.'
     };
-    if(phase==='receiver'&&['DISCOVERY_UNAVAILABLE','MAIN_MANUAL_WIFI_REQUIRED','MAIN_CONNECTION_UNAVAILABLE','NATIVE_TIMEOUT','TIMEOUT','NATIVE_BUSY','MAIN_BUSY','OTA_BUSY','REMOVAL_BUSY','MAIN_PROTOCOL_UNSUPPORTED','ACTION_UNSUPPORTED'].includes(code))return connectionFailure(failure,{viaMain});
+    if(phase==='receiver'&&['MAIN_WRONG_RECEIVER_NETWORK','DISCOVERY_UNAVAILABLE','MAIN_MANUAL_WIFI_REQUIRED','MAIN_CONNECTION_UNAVAILABLE','NATIVE_TIMEOUT','TIMEOUT','NATIVE_BUSY','MAIN_BUSY','OTA_BUSY','REMOVAL_BUSY','MAIN_PROTOCOL_UNSUPPORTED','ACTION_UNSUPPORTED'].includes(code))return connectionFailure(failure,{viaMain});
     return {message:'De toevoeging kon nog niet veilig worden afgerond. Tik op Opnieuw proberen. Je receiver en instellingen blijven geselecteerd.'};
   }
 
@@ -70,13 +71,13 @@
     let zoneExtraNames=[],zoneRemoval=null,zoneRename=null,receiverMove=null,managementBusy=false,zoneListReturn=null;
     const visualEntrances=new Map(),presentedStages=new Set(),plugMotion=visual.createPlugMotion();
     let selectedOutput=null,unbindPixelScrub=null,openZonePickerOnNextPaint=false,receiverZoneSelection;
-    let parkedChoices=new Map(),parkedTransactions=new Set(),parking=null,parkPending=null,actionAbort=null,searchOnMount=false;
+    let parkedChoices=new Map(),parkedTransactions=new Set(),parking=null,parkPending=null,actionAbort=null,searchOnMount=false,exiting=false;
     const searchable=()=>draft?.stage==='receiver';
     function searchDraft(value){
       return draftApi.snapshot({...clone(value),transactionId:'onboarding-'+uniqueId(),stage:'receiver',
         receiver:null,outputs:[],port:null,zoneId:null,security:{status:'not-started',phase:'idle'},cancelled:false,membership:'pending'});
     }
-    async function parkForSearch(){
+    async function parkForSearch({persistSearch=true}={}){
       if(parking)return parking;
       const saved=parkPending||(draft?.receiver&&draft.stage!=='done'?draft:null);
       if(!saved)return true;
@@ -92,12 +93,25 @@
             else parkedChoices.set(saved.receiver.id,clone(saved));
             parkedTransactions.add(saved.transactionId);
           }
-          if(typeof services.persistDraft==='function')await services.persistDraft({draft:clone(draft)});
+          if(persistSearch&&typeof services.persistDraft==='function')await services.persistDraft({draft:clone(draft)});
           parkPending=null;saveFailed=false;return true;
         }catch(_){error='De zoeklijst kon nog niet worden geopend. Probeer opnieuw. Je receivers zijn niet gewijzigd.';return false;}
         finally{parking=null;draftSaving=false;busy=false;paintPage(false);}
       })();
       return parking;
+    }
+    async function parkForExit(){
+      if(parking&&!(await parking))return false;
+      // A selected receiver is kept privately with its exact transaction.
+      // Unlike browsing another receiver, leaving needs no new active search.
+      if(parkPending||draft?.receiver&&draft.stage!=='done')return parkForSearch({persistSearch:false});
+      if(draft?.role==='node'&&draft.stage==='receiver'&&draft.receiver===null&&
+          draft.security.status==='not-started'&&draft.security.phase==='idle'&&
+          draft.outputs.length===0&&draft.port===null&&typeof services.parkDraft==='function'){
+        try{await services.parkDraft({transactionId:draft.transactionId});}
+        catch(_){error='De toevoeging kon nog niet worden afgesloten. Probeer opnieuw. Je receivers en keuzes blijven bewaard.';paintPage(false);return false;}
+      }
+      return true;
     }
     async function browseReceivers(){
       if(await parkForSearch()){paintPage(true);if(container)void search();}
@@ -105,6 +119,7 @@
     let previewState={kind:'idle'};
     const pixelPreview=pixelSetup.createLivePreview({send:services.previewPixels,onState:state=>{previewState=state;pixelSetup.showPreviewStatus(container,state);}});
     function syncPixelPreview(){
+      if(busy&&['pixels','connection'].includes(draft?.stage))return;
       if(!container||document.hidden||!['pixels','connection'].includes(draft?.stage)){void pixelPreview.stop();return;}
       const selected=draft.outputs.find(output=>output.port===draft.port);
       pixelPreview.update({standId:draft.stand.id,transactionId:draft.transactionId,
@@ -667,7 +682,7 @@
       updateGuidance();
     }
     function updatePixelCount(value,source){
-      if(draft.stage!=='pixels')return;
+      if(draft.stage!=='pixels'||busy)return;
       const valid=pixelSetup.validateInput(container,value);container.querySelector('[data-onboarding-action="next"]').disabled=!valid||!pixelSetup.configuredPixels(Number(value));
       if(valid&&change({type:'SET_PIXELS',port:draft.port,pixels:Number(value)},{render:false}))pixelSetup.updatePixels(container,draft.outputs.find(output=>output.port===draft.port),{source});
       if(valid)syncPixelPreview();
@@ -920,6 +935,10 @@
     }
     async function click(event){
       const target=event.target.closest('[data-onboarding-action]');if(!target||target.disabled)return;
+      // This guard precedes the awaited preview cleanup. A second navigation
+      // must not wait for the same STOP then advance the next port as well.
+      // Security/select cancellation retains its existing separate handling.
+      if(busy&&['pixels','connection'].includes(draft?.stage))return;
       const action=target.dataset.onboardingAction;
       if((draftSaving||managementBusy)&&action!=='zone-picker-close')return;
       if(action==='receiver-filter'){
@@ -951,16 +970,30 @@
       if(action==='save-retry')return saveChoices();
       if(action==='receivers-list')return browseReceivers();
       if(['next','back','exit'].includes(action)&&['pixels','connection'].includes(draft.stage)){
-        busy=true;try{await pixelPreview.stop();}finally{busy=false;}
-        if(!container)return;
+        const stoppingContainer=container,stoppingDraft=draft,token=operation;
+        busy=true;const restore=pixelSetup.showPreviewStopping(stoppingContainer);
+        try{await pixelPreview.stop();}finally{restore();if(token===operation&&container===stoppingContainer)busy=false;}
+        if(token!==operation||container!==stoppingContainer||draft!==stoppingDraft)return;
       }
       if(action==='exit'){
+        if(exiting)return;
         const beforeSave=operation;
         const name=container.querySelector('#onboarding-stand-name')?.value;
         const events=draft.stage==='stand'&&validName(name||'')?[{type:'SET_STAND',id:draft.stand?.id||'stand-'+uniqueId(),name}]:[];
         if((pendingChoices||['stand','zones'].includes(draft.stage))&&!(await saveChoices(events)))return;
         if(beforeSave!==operation||!container)return;
-        suspend();onExit();return;
+        const exitContainer=container;exiting=true;
+        try{
+          if(!(await parkForExit())||container!==exitContainer)return;
+          const closedSearch=draft?.role==='node'&&draft.stage==='receiver'&&draft.receiver===null;
+          suspend({discard:true});
+          // A closed search has no remaining active native checkpoint. Reopen
+          // against the current installation, not a MAIN removed meanwhile.
+          // Privately parked receiver transactions remain available by identity.
+          if(closedSearch)draft=null;
+          onExit();
+        }finally{exiting=false;}
+        return;
       }
       if(pendingChoices)return;
       if(action==='search')return search();
@@ -1085,12 +1118,24 @@
             // continuing its saved output/PIN screen or starting a claim.
             busy=true;
             try{
+              let selectionVerified=receiver.canConfigure!==false;
               if(receiver.canConfigure===false&&receiver.canVerifyIdentity){
                 const verified=await bounded(services.select({standId:draft.stand.id,transactionId:draft.transactionId,receiver:clone(receiver)}),50000);
                 if(token!==operation||!container)return;
                 if(!['id','rid','type','deviceFingerprint'].every(key=>verified?.[key]===draft.receiver[key]))throw Object.assign(Error('IDENTITY_MISMATCH'),{code:'IDENTITY_MISMATCH'});
+                selectionVerified=true;
               }
-              await persist();
+              if(draft.stage==='receiver'){
+                if(!selectionVerified)throw Object.assign(Error('IDENTITY_MISMATCH'),{code:'IDENTITY_MISMATCH'});
+                // BACK keeps exact unclaimed choices, not a completed step.
+                // Reuse normal placement/output/PIN rules without selecting a
+                // different identity or replacing the saved SPI configuration.
+                const continued=draftApi.transition(draft,{type:'NEXT'});
+                if(continued.error)throw Object.assign(Error('MAIN_CONFIGURATION_INVALID'),{code:'MAIN_CONFIGURATION_INVALID'});
+                if(typeof services.persistDraft==='function')await services.persistDraft({draft:draftApi.snapshot(continued.draft)});
+                if(token!==operation||!container)return;
+                draft=continued.draft;
+              }else await persist();
             }catch(failure){if(token===operation)error=connectionFailure(failure,{viaMain:draft.role==='node'}).message;return;}
             finally{if(token===operation){busy=false;paintPage(false);}}
             if(token!==operation||!container)return;

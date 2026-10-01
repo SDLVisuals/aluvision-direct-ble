@@ -34,7 +34,7 @@
     controls:['speed','smooth',...(['fill','curtain'].includes(key)?[]:['width']),...(['fill'].includes(key)?[]:['direction'])],
     directions:key==='fill'?[]:['forward','reverse'],firmwareSupport:'SPI-21.1.45',
     state:{engine:'V30',v30Effect:'v31-ref-'+key,variant:0,category,colors,whiteChannels:colors.map(()=>0),rgbEnabled:colors.map(()=>true),whiteEnabled:colors.map(()=>false),colorCount:colors.length,
-      speed:30,smooth:100,width:50,fadeAmount:90,delayMs:0,direction:'forward',bri:85,brightness:85,on:true,power:true,brandColor:colors[0]},seconds
+      speed:30,smooth:100,width:50,fadeAmount:90,delayMs:0,direction:'forward',bri:100,brightness:100,on:true,power:true,brandColor:colors[0]},seconds
   }));
   const byId=new Map(entries.map(e=>[e.id,e]));
   const supports=id=>byId.has(id);
@@ -62,7 +62,7 @@
     const band=(position,length,edge)=>ease((position-u)/edge)*ease((u-position+length)/edge);
     let color=colors[((cycle%colors.length)+colors.length)%colors.length],amount=0;
     const key=entry.wire;
-    if(key===31){amount=band(p*2.15-.1,.72+w*.35,.06+w*.12);}
+    if(key===31){amount=band(p*2.15-.1,.72+w*.35,.06+w*.12);if(smooth){const x=clamp((1-p)/.08);amount*=clamp(x*x*x*(x*(x*6-15)+10));}}
     if(key===32||key===42){
       const offset=key===32?y*.6+Math.sin(y*Math.PI*2)*.1:0;
       const distance=mod(p-u*(key===32?1.7:1)-offset),length=.13+w*.32;
