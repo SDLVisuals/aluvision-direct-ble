@@ -88,6 +88,7 @@
   let pinProtection=null,pinProtectionLoading=false,pinProtectionBusy=false,pinProtectionError='',pinProtectionReconnect=null;
   let pinProtectionRead=null,pinProtectionWaitingForLive=false;
   let pinProtectionDeferredStandId=null;
+  let pinProtectionGeneration=0,pinProtectionPendingCheckStandId=null,pinProtectionRefreshNeeded=null,pinProtectionWrite=null;
   let pinLoginAvailable=false,pinLoginChecking=false,pinLoginBusy=false,pinLoginError='',pinRecoveryAbort=null;
   const liveStates=new Map();
   const liveController=nativeContext&&runtime?.native===true&&typeof runtime.services?.applyLive==='function'
@@ -1411,59 +1412,125 @@
       pinLoginError=error?.code==='CANCELLED'?'Het ophalen is gestopt. Je kunt het opnieuw proberen.':messages[error?.code]||'Je stand is nog niet veilig hersteld. Laat de receivers aan, controleer het ALUVISION-wifi en probeer opnieuw.';
     }finally{pin='';pinLoginBusy=false;pinRecoveryAbort=null;if(route.screen==='pin-login')render({top:true});}
   }
-  function receiverContextBusy(standId){
-    const state=receiverContextStates.get(standId);
-    // A newer queued save may be waiting behind an older writing generation.
-    // Do not insert a security read between them or wait on that read again.
-    return state?.status==='syncing'||state?.contextPhase==='queued';
-  }
   function pinProtectionCard() {
     const selected=securityStand(),current=pinProtection?.standId===selected?.id?pinProtection:null;
     const available=nativeContext&&typeof runtime?.services?.securityStatus==='function'&&typeof runtime?.services?.setPinProtection==='function';
-    const contextBusy=receiverContextBusy(selected?.id);
-    const ready=!!current&&!contextBusy&&!pinProtectionLoading&&!pinProtectionBusy&&!pinProtectionReconnect&&!pinProtectionError;
-    const message=!nativeContext?'Beschikbaar in de iPhone-app.':!selected?'Geef je stand eerst een naam.':pinProtectionLoading?(pinProtectionWaitingForLive?'Laatste lichtinstelling afronden…':'Beveiliging controleren…'):contextBusy?'Instellingen worden eerst op de receivers bewaard…':pinProtectionError||(pinProtectionReconnect?'Verbind opnieuw met het wifi van je installatie.':!available?'De verbindingsdienst is niet beschikbaar.':current?.scope==='new-installation'?'Kies een PIN tijdens het instellen van je stand.':'Eén PIN voor wifi en netwerk verwijderen.');
-    return `<section class="card pin-protection-card" data-pin-protection><div class="pin-protection-heading"><span class="menu-icon" aria-hidden="true">${icon('lock')}</span><div><h2>PIN-beveiliging</h2><small>Je PIN is ook je wifi-wachtwoord</small></div><button class="switch" role="switch" aria-label="PIN-beveiliging" aria-checked="${current?.pinRequired===true}" data-action="pin-protection-toggle" ${ready?'':'disabled'}><span>${current?current.pinRequired?'Aan':'Uit':'—'}</span><i aria-hidden="true"></i></button></div><p data-pin-protection-status role="status">${esc(message)}</p>${pinProtectionReconnect?'<button class="text-button" data-action="pin-protection-reconnect">Opnieuw verbinden</button>':pinProtectionError&&available&&selected?'<button class="text-button" data-action="pin-protection-refresh">Opnieuw controleren</button>':''}</section>`;
+    const contextBusy=receiverContextStates.get(selected?.id)?.status==='syncing';
+    const pending=current?.status==='pending',needsCheck=pinProtectionPendingCheckStandId===selected?.id||!!pinProtectionNeedsRefresh();
+    const ready=!!current&&!pending&&!needsCheck&&!contextBusy&&!pinProtectionLoading&&!pinProtectionBusy&&!pinProtectionReconnect&&!pinProtectionError;
+    const message=!nativeContext?'Beschikbaar in de iPhone-app.':!selected?'Geef je stand eerst een naam.':pinProtectionLoading?(pinProtectionWaitingForLive?'Laatste lichtinstelling afronden…':'Beveiliging controleren…'):contextBusy?'Instellingen worden eerst op de receivers bewaard…':pinProtectionError||(pending?'Je eerdere beveiligingswijziging wordt nog bevestigd. Controleer opnieuw.':needsCheck?'Controleer de actuele beveiligingsstatus.':pinProtectionReconnect?'Verbind opnieuw met het wifi van je installatie.':!available?'De verbindingsdienst is niet beschikbaar.':current?.scope==='new-installation'?'Kies een PIN tijdens het instellen van je stand.':'Eén PIN voor wifi en netwerk verwijderen.');
+    return `<section class="card pin-protection-card" data-pin-protection><div class="pin-protection-heading"><span class="menu-icon" aria-hidden="true">${icon('lock')}</span><div><h2>PIN-beveiliging</h2><small>Je PIN is ook je wifi-wachtwoord</small></div><button class="switch" role="switch" aria-label="PIN-beveiliging" aria-checked="${current?.pinRequired===true}" data-action="pin-protection-toggle" ${ready?'':'disabled'}><span>${current?current.pinRequired?'Aan':'Uit':'—'}</span><i aria-hidden="true"></i></button></div><p data-pin-protection-status role="status">${esc(message)}</p>${pinProtectionReconnect?'<button class="text-button" data-action="pin-protection-reconnect">Opnieuw verbinden</button>':(pinProtectionError||pending||needsCheck)&&available&&selected?`<button class="text-button" data-action="pin-protection-refresh" ${pinProtectionLoading||pinProtectionBusy?'disabled':''}>Opnieuw controleren</button>`:''}</section>`;
   }
   function syncPinProtectionCard(){
     const old=main.querySelector('[data-pin-protection]'),focused=document.activeElement;
     if(old){old.outerHTML=pinProtectionCard();restoreControlFocus(focused);}
   }
+  function verifiedPendingPinStatus(result){
+    return !!result&&typeof result==='object'&&[Object.prototype,null].includes(Object.getPrototypeOf(result))&&
+      Object.keys(result).sort().join(',')==='desiredPinRequired,hasPin,pinRequired,scope,ssid,status'&&
+      result.status==='pending'&&result.scope==='installation'&&typeof result.pinRequired==='boolean'&&
+      typeof result.hasPin==='boolean'&&typeof result.desiredPinRequired==='boolean'&&
+      typeof result.ssid==='string'&&/^[A-Za-z0-9][A-Za-z0-9 _.-]{0,31}$/.test(result.ssid);
+  }
+  function pinProtectionScopeKey(standId){
+    return JSON.stringify(model.receivers.filter(receiver=>receiver.standId===standId&&receiver.role==='main'&&receiver.lifecycle==='added')
+      .map(receiver=>[receiver.id,receiver.rid||null,receiver.deviceFingerprint||null,receiver.physicalId||null]));
+  }
+  function pinProtectionNeedsRefresh(){
+    const cue=pinProtectionRefreshNeeded;
+    return cue&&cue.epoch===pinProtectionGeneration&&securityStand()?.id===cue.standId&&
+      pinProtectionScopeKey(cue.standId)===cue.scope?cue:null;
+  }
+  function rememberPinProtectionRead(read,{queue=false}={}){
+    if(!read||securityStand()?.id!==read.standId)return;
+    // Only a reread cue. No policy, desired PIN, reply or native authority is retained.
+    const previous=pinProtectionNeedsRefresh();
+    pinProtectionRefreshNeeded={standId:read.standId,scope:pinProtectionScopeKey(read.standId),
+      epoch:pinProtectionGeneration,queued:queue||!!previous?.queued};
+  }
+  function invalidatePinProtectionRead(){
+    const cue=pinProtectionNeedsRefresh();pinProtectionGeneration++;
+    if(pinProtectionRead)rememberPinProtectionRead(pinProtectionRead);
+    if(pinProtectionWrite)rememberPinProtectionRead(pinProtectionWrite);
+    if(!pinProtectionRead&&!pinProtectionWrite&&cue)pinProtectionRefreshNeeded={...cue,epoch:pinProtectionGeneration,queued:false};
+  }
+  function resumeQueuedPinProtectionRead(){
+    const cue=pinProtectionNeedsRefresh();
+    if(cue?.queued&&!pinProtectionLoading&&!pinProtectionBusy&&document.visibilityState==='visible'&&route.screen==='settings'){
+      cue.queued=false;void refreshPinProtection();
+    }
+  }
+  function currentPinProtectionOperation(operation){
+    // This is a local stale-UI fence, never native ownership authority.
+    return operation.epoch===pinProtectionGeneration&&document.visibilityState==='visible'&&route.screen==='settings'&&
+      securityStand()?.id===operation.standId&&pinProtectionScopeKey(operation.standId)===operation.scope;
+  }
+  function showPinPending(result){
+    showEffectDialog('Beveiliging nog in afwachting',`<section class="pin-protection-dialog" data-pin-pending><p>Je eerdere wijziging wordt nog bevestigd. Er wordt geen nieuwe wijziging verstuurd.</p><p>De laatst bevestigde beveiliging staat <b>${result.pinRequired?'aan':'uit'}</b>. De aangevraagde instelling is <b>${result.desiredPinRequired?'aan':'uit'}</b>.</p><p role="status">Controleer opnieuw om de bevestigde status op te halen. Je stand en receivers blijven bewaard.</p><button class="button full" data-action="pin-protection-refresh">Opnieuw controleren</button><button class="button secondary full" data-action="effect-dialog-close">Sluiten</button></section>`);
+  }
   function verifiedPinStatus(result){
     return !!result&&['applied','reconnect-required'].includes(result.status)&&typeof result.pinRequired==='boolean'&&typeof result.hasPin==='boolean'&&['installation','new-installation'].includes(result.scope);
   }
-  function saveContextAfterConfirmedPin(result,standId){
-    // A PIN policy ACK is not an archive ACK. Start a separate bounded save,
-    // only after the PIN operation/read has released its LIVE lease.
-    if(!nativeContext||result?.status!=='applied'||result.pinRequired!==true||result.hasPin!==true||result.scope!=='installation'||
-      pinProtectionBusy||pinProtectionLoading||pinProtectionReconnect||securityStand()?.id!==standId||
-      typeof runtime?.services?.scheduleInstallationContext!=='function')return;
-    try{Promise.resolve(runtime.services.scheduleInstallationContext({standId,immediate:true,reason:'pin-confirmed'})).catch(()=>{});}catch(_){}
-  }
   async function refreshPinProtection({afterReconnect=false}={}){
     const standId=securityStand()?.id;
-    if(!standId||pinProtectionLoading||pinProtectionBusy||typeof runtime?.services?.securityStatus!=='function')return;
-    if(receiverContextBusy(standId)){pinProtectionDeferredStandId=standId;return;}
-    let finishRead,ticket,confirmedPin;
-    const read={standId,promise:new Promise(resolve=>{finishRead=resolve;})};pinProtectionRead=read;
+    if(!standId||typeof runtime?.services?.securityStatus!=='function')return;
+    if(pinProtectionBusy){
+      if(pinProtectionWrite&&!currentPinProtectionOperation(pinProtectionWrite)){
+        rememberPinProtectionRead({standId},{queue:document.visibilityState==='visible'&&route.screen==='settings'});
+        syncPinProtectionCard();
+      }
+      return;
+    }
+    if(pinProtectionLoading){
+      if(pinProtectionRead&&!currentPinProtectionOperation(pinProtectionRead)){
+        rememberPinProtectionRead({standId},{queue:document.visibilityState==='visible'&&route.screen==='settings'});
+        syncPinProtectionCard();
+      }
+      return;
+    }
+    if(receiverContextStates.get(standId)?.status==='syncing'){pinProtectionDeferredStandId=standId;return;}
+    let finishRead,ticket;
+    const previousPending=pinProtection?.standId===standId&&pinProtection.status==='pending'?pinProtection:null;
+    const form=pinProtectionNeedsRefresh()?document.querySelector('[data-pin-protection-dialog]'):null;
+    const obsoleteForm=form?.dataset.stand===standId&&form.querySelector('[data-action="pin-protection-save"]')?.disabled===true?form:null;
+    const read={standId,epoch:pinProtectionGeneration,scope:pinProtectionScopeKey(standId),promise:new Promise(resolve=>{finishRead=resolve;})};pinProtectionRead=read;
+    const current=()=>pinProtectionRead===read&&currentPinProtectionOperation(read);
+    const obsoleteFormCurrent=()=>current()&&obsoleteForm?.isConnected&&obsoleteForm.dataset.stand===standId&&
+      document.querySelector('[data-pin-protection-dialog]')===obsoleteForm;
     pinProtectionLoading=true;pinProtectionError='';syncPinProtectionCard();
     try{
       pinProtectionWaitingForLive=true;syncPinProtectionCard();
       ticket=await liveController?.acquireIdle({standId});
       pinProtectionWaitingForLive=false;syncPinProtectionCard();
-      if(securityStand()?.id!==standId)return;
+      if(!current()){rememberPinProtectionRead(read);return;}
       const result=await runtime.services.securityStatus({standId});
-      if(!verifiedPinStatus(result))throw Error('SECURITY_UNCONFIRMED');
-      if(securityStand()?.id!==standId)return;
+      if(!verifiedPinStatus(result)&&!verifiedPendingPinStatus(result))throw Error('SECURITY_UNCONFIRMED');
+      if(!current()){rememberPinProtectionRead(read);return;}
+      pinProtectionRefreshNeeded=null;
       pinProtection={...result,standId};
+      if(verifiedPendingPinStatus(result)){
+        pinProtectionPendingCheckStandId=standId;pinProtectionReconnect=null;
+        if(obsoleteFormCurrent()||document.querySelector('[data-pin-pending]'))showPinPending(result);
+        return;
+      }
+      if(pinProtectionPendingCheckStandId===standId)pinProtectionPendingCheckStandId=null;
+      if(obsoleteFormCurrent()){closeEffectDialog();render();}
       if(result.status==='applied')window.AluvisionSecurityMode?.updateFromNative?.({pinRequired:result.pinRequired});
-      if(afterReconnect&&result.status==='applied'&&result.pinRequired===pinProtectionReconnect?.pinRequired){confirmedPin=result;pinProtectionReconnect=null;closeEffectDialog();render();toast(result.pinRequired?'PIN-beveiliging staat aan.':'PIN-beveiliging staat uit.');return;}
+      if(previousPending&&result.status==='applied'){
+        if(document.querySelector('[data-pin-pending]')){closeEffectDialog();render();}
+        if(result.pinRequired===previousPending.desiredPinRequired)toast(result.pinRequired?'PIN-beveiliging staat aan.':'PIN-beveiliging staat uit.');
+      }
+      if(afterReconnect&&result.status==='applied'&&result.pinRequired===pinProtectionReconnect?.pinRequired){pinProtectionReconnect=null;closeEffectDialog();render();toast(result.pinRequired?'PIN-beveiliging staat aan.':'PIN-beveiliging staat uit.');return;}
       if(result.status==='reconnect-required')pinProtectionReconnect={...result,standId};
-    }catch(error){pinProtectionError=['LIVE_QUEUE_BUSY','LIVE_QUEUE_SCOPE_BUSY','LIVE_QUEUE_CLEARED'].includes(error?.code)?'Er loopt nog een receiveractie. Laat die eerst afronden en controleer daarna opnieuw.':'Nog niet bevestigd. Verbind met het wifi van je installatie en probeer opnieuw.';}
-    finally{ticket?.release();if(pinProtectionRead===read)pinProtectionRead=null;pinProtectionWaitingForLive=false;pinProtectionLoading=false;finishRead();syncPinProtectionCard();if(confirmedPin)saveContextAfterConfirmedPin(confirmedPin,standId);}
+    }catch(error){if(current())pinProtectionError=['LIVE_QUEUE_BUSY','LIVE_QUEUE_SCOPE_BUSY','LIVE_QUEUE_CLEARED'].includes(error?.code)?'Er loopt nog een receiveractie. Laat die eerst afronden en controleer daarna opnieuw.':previousPending?'Nog niet bevestigd. Controleer later opnieuw; je eerdere wijziging wordt niet opnieuw verstuurd.':'Nog niet bevestigd. Verbind met het wifi van je installatie en probeer opnieuw.';else rememberPinProtectionRead(read);}
+    finally{
+      ticket?.release();if(pinProtectionRead===read)pinProtectionRead=null;
+      pinProtectionWaitingForLive=false;pinProtectionLoading=false;finishRead();syncPinProtectionCard();
+      resumeQueuedPinProtectionRead();
+    }
   }
   function openPinProtection(){
-    const current=pinProtection?.standId===securityStand()?.id?pinProtection:null;if(!current||pinProtectionBusy)return;
+    const current=pinProtection?.standId===securityStand()?.id?pinProtection:null;if(!current||pinProtectionBusy||current.status==='pending'||pinProtectionPendingCheckStandId===current.standId||pinProtectionNeedsRefresh())return;
     const enabled=!current.pinRequired,needsPin=enabled&&current.scope==='installation'&&!current.hasPin;
     showEffectDialog(enabled?'PIN-beveiliging aanzetten?':'PIN-beveiliging uitzetten?',`<section class="pin-protection-dialog" data-pin-protection-dialog data-enabled="${enabled}" data-stand="${esc(current.standId)}"><p>${enabled?(current.scope==='new-installation'?'Je kiest je PIN tijdens het instellen van je stand.':current.hasPin?'Je bestaande PIN wordt opnieuw gebruikt voor wifi en netwerk verwijderen.':'Beveilig het wifi van je installatie met één PIN.'):'Het receiver-wifinetwerk wordt open. Je stand, zones en koppelingen blijven bewaard.'}</p>${needsPin?'<label class="dialog-field">Kies je PIN · 8–12 cijfers<input data-security-pin type="password" inputmode="numeric" autocomplete="off" minlength="8" maxlength="12" pattern="[0-9]{8,12}" autocapitalize="off" spellcheck="false"></label><label class="dialog-field">Herhaal je PIN<input data-security-pin-repeat type="password" inputmode="numeric" autocomplete="off" minlength="8" maxlength="12" pattern="[0-9]{8,12}" autocapitalize="off" spellcheck="false"></label><small>Bewaar je PIN: voor wifi en netwerk verwijderen.</small>':''}<p class="dialog-error" role="alert" hidden></p><div class="pin-protection-actions"><button class="button secondary full" data-action="effect-dialog-close">Annuleren</button><button class="button full" data-action="pin-protection-save" ${needsPin?'disabled':''}>${enabled?'Aanzetten':'Uitzetten'}</button></div></section>`);
   }
@@ -1471,22 +1538,27 @@
     showEffectDialog('Verbind opnieuw met wifi',`<section class="pin-protection-dialog" data-pin-reconnect><span class="menu-icon" aria-hidden="true">${icon('lock')}</span><p>${result.unconfirmed===true?'De wijziging is nog niet bevestigd. Tijdens het aanpassen van wifi kan de verbinding even wegvallen.':'Het wifi van je installatie wordt aangepast.'} Je stand en receivers blijven bewaard.</p><ol><li>Open <b>Instellingen → Wifi</b>.</li><li>Kies ${result.ssid?`<b>${esc(result.ssid)}</b>`:'het ALUVISION-wifi van je installatie'}${result.pinRequired?' en gebruik je PIN':' zonder wachtwoord'}.</li><li>Kom terug naar de app.</li></ol><p role="status">We controleren de verbinding zodra je terugkomt.${result.unconfirmed===true?' De beveiliging staat pas bevestigd aan of uit na die controle.':''}</p><button class="button secondary full" data-action="pin-protection-recheck">Verbinding controleren</button></section>`);
   }
   async function savePinProtection(button){
-    const panel=document.querySelector('[data-pin-protection-dialog]');if(!panel||pinProtectionBusy)return;
+    const panel=document.querySelector('[data-pin-protection-dialog]');if(!panel||pinProtectionBusy||pinProtection?.status==='pending'||pinProtectionPendingCheckStandId===securityStand()?.id||pinProtectionNeedsRefresh())return;
     const enabled=panel.dataset.enabled==='true',standId=panel.dataset.stand,pin=panel.querySelector('[data-security-pin]')?.value;
     if(standId!==securityStand()?.id)return;
     if(pin!==undefined&&(!/^\d{8,12}$/.test(pin)||pin!==panel.querySelector('[data-security-pin-repeat]')?.value))return;
-    let confirmedPin;
+    const operation={standId,epoch:pinProtectionGeneration,scope:pinProtectionScopeKey(standId)};pinProtectionWrite=operation;
+    const current=()=>pinProtectionWrite===operation&&currentPinProtectionOperation(operation)&&panel.isConnected;
     pinProtectionBusy=true;button.disabled=true;button.textContent='Beveiliging aanpassen…';
     panel.querySelectorAll('input').forEach(input=>{input.disabled=true;});
     try{
       const result=await runtime.services.setPinProtection({standId,enabled,...(pin===undefined?{}:{pin}),...(enabled?{}:{confirmation:'DISABLE_PIN'})});
-      if(!verifiedPinStatus(result)||result.pinRequired!==enabled)throw Error('SECURITY_UNCONFIRMED');
-      if(securityStand()?.id!==standId)return;
+      const pending=verifiedPendingPinStatus(result);
+      if(!pending&&(!verifiedPinStatus(result)||result.pinRequired!==enabled))throw Error('SECURITY_UNCONFIRMED');
       panel.querySelectorAll('input').forEach(input=>{input.value='';});
+      if(!current()){rememberPinProtectionRead(operation);return;}
+      if(pending)pinProtectionPendingCheckStandId=standId;
+      if(pending){pinProtection={...result,standId};pinProtectionReconnect=null;pinProtectionError='';showPinPending(result);return;}
       pinProtection={...result,standId};
       if(result.status==='reconnect-required'||result.requiresWifiReconnect===true){pinProtectionReconnect={...result,standId};showPinReconnect(result);}
-      else {confirmedPin=result;pinProtectionBusy=false;window.AluvisionSecurityMode?.updateFromNative?.({pinRequired:result.pinRequired});closeEffectDialog();render();toast(enabled?'PIN-beveiliging staat aan.':'PIN-beveiliging staat uit.');}
+      else {pinProtectionBusy=false;window.AluvisionSecurityMode?.updateFromNative?.({pinRequired:result.pinRequired});closeEffectDialog();render();toast(enabled?'PIN-beveiliging staat aan.':'PIN-beveiliging staat uit.');}
     }catch(cause){
+      if(!current()){rememberPinProtectionRead(operation);return;}
       if(cause?.code==='PIN_MODE_RECONNECT_UNCONFIRMED'&&pinProtection?.standId===standId&&pinProtection.scope==='installation'){
         // Native confirms only the saved intent + dispatched uncertain SET,
         // never its result. Do not flip the switch or repeat the mutation.
@@ -1499,7 +1571,10 @@
         :cause?.code==='OTA_BUSY'?'Er wordt software bijgewerkt. Wacht tot de update klaar is. De PIN-beveiliging is niet gewijzigd.'
         :'De wijziging is nog niet bevestigd. Je stand en receivers zijn niet gewist. Controleer de verbinding en probeer opnieuw.';error.dataset.closedCategory=['OTA_PENDING','OTA_BUSY','PIN_MODE_UNCONFIRMED','PIN_MODE_UPDATE_REQUIRED','PIN_MODE_INVALID','PIN_MODE_PROFILE','PIN_MODE_PENDING'].includes(cause?.code)?cause.code:'NATIVE_UNCONFIRMED';error.hidden=false;
       panel.querySelectorAll('input').forEach(input=>{input.disabled=false;});button.disabled=false;button.textContent='Opnieuw proberen';
-    }finally{pinProtectionBusy=false;syncPinProtectionCard();if(confirmedPin)saveContextAfterConfirmedPin(confirmedPin,standId);}
+    }finally{
+      if(pinProtectionWrite===operation)pinProtectionWrite=null;
+      pinProtectionBusy=false;syncPinProtectionCard();resumeQueuedPinProtectionRead();
+    }
   }
   // Browser walkthrough only: no network service, credential field or native
   // bridge call is exposed by these example settings.
@@ -1508,10 +1583,10 @@
   }
   function renderDemoWifi(){
     if(!webDemoContext)return renderSettings();
-    return `<div class="page demo-wifi-page"><header class="page-heading"><div><h1>Wifi-instellingen</h1><p>${esc(t('settings'))} · V32</p></div></header>${demoSettingsTabs(true)}<section class="card demo-wifi-notice" aria-labelledby="demo-wifi-title"><span class="pill red">DEMO · niet verbonden</span><h2 id="demo-wifi-title">Alleen een voorbeeld</h2><p>Hier bekijk je de wifi-instellingen. Deze demo zoekt geen echte netwerken, maakt geen verbinding en bewaart geen wifi-wachtwoorden.</p></section><section class="card demo-wifi-network"><div class="demo-wifi-heading"><span class="menu-icon" aria-hidden="true">${icon('wifi')}</span><div><h2>Wifi van je installatie</h2><p>Je telefoon bedient de verlichting via dit netwerk.</p></div></div><dl class="demo-wifi-details"><div><dt>Netwerk</dt><dd>Aluvision-DEMO</dd></div><div><dt>Status</dt><dd>Voorbeeld · geen echte verbinding</dd></div></dl><button class="button full" disabled aria-describedby="demo-wifi-disabled">Verbinding controleren</button><p id="demo-wifi-disabled" class="demo-wifi-caption">Alleen beschikbaar met een echte receiver in de iPhone-app.</p></section><section class="card demo-wifi-guide"><h2>Verbinden in de echte app</h2><ol><li>Open <b>Instellingen → Wifi</b> op je iPhone.</li><li>Kies het ALUVISION-wifi van je installatie.</li><li>Ga terug naar de app om je verlichting te bedienen.</li></ol><p>Je hoeft voor deze demo niets aan je wifi te veranderen.</p></section></div>`;
+    return `<div class="page demo-wifi-page"><header class="page-heading"><div><h1>Wifi-instellingen</h1><p>${esc(t('settings'))} · V40</p></div></header>${demoSettingsTabs(true)}<section class="card demo-wifi-notice" aria-labelledby="demo-wifi-title"><span class="pill red">DEMO · niet verbonden</span><h2 id="demo-wifi-title">Alleen een voorbeeld</h2><p>Hier bekijk je de wifi-instellingen. Deze demo zoekt geen echte netwerken, maakt geen verbinding en bewaart geen wifi-wachtwoorden.</p></section><section class="card demo-wifi-network"><div class="demo-wifi-heading"><span class="menu-icon" aria-hidden="true">${icon('wifi')}</span><div><h2>Wifi van je installatie</h2><p>Je telefoon bedient de verlichting via dit netwerk.</p></div></div><dl class="demo-wifi-details"><div><dt>Netwerk</dt><dd>Aluvision-DEMO</dd></div><div><dt>Status</dt><dd>Voorbeeld · geen echte verbinding</dd></div></dl><button class="button full" disabled aria-describedby="demo-wifi-disabled">Verbinding controleren</button><p id="demo-wifi-disabled" class="demo-wifi-caption">Alleen beschikbaar met een echte receiver in de iPhone-app.</p></section><section class="card demo-wifi-guide"><h2>Verbinden in de echte app</h2><ol><li>Open <b>Instellingen → Wifi</b> op je iPhone.</li><li>Kies het ALUVISION-wifi van je installatie.</li><li>Ga terug naar de app om je verlichting te bedienen.</li></ol><p>Je hoeft voor deze demo niets aan je wifi te veranderen.</p></section></div>`;
   }
   function renderSettings() {
-    return `<div class="page settings-page"><header class="page-heading"><div><h1>${esc(t('more'))}</h1><p>${esc(t('settings'))} · V32</p></div></header><section class="card settings-appearance"><h2>${esc(t('appearance'))}</h2><h3 class="preference-label">${esc(t('language'))}</h3><div class="preference-grid">${Preferences.languages.map(language=>`<button data-action="language" data-id="${language.code}" lang="${language.code}" aria-pressed="${uiPreferences.preferences.language===language.code}">${language.name}</button>`).join('')}</div>${uiPreferences.preferences.language==='nl'?'':`<p class="preference-note">${esc(t('wipNotice'))}</p>`}<h3 class="preference-label">${esc(t('theme'))}</h3><div class="preference-grid">${['light','dark'].map(theme=>`<button data-action="theme" data-id="${theme}" aria-pressed="${uiPreferences.preferences.theme===theme}">${icon(theme==='dark'?'moon':'sun')}${esc(t(theme))}</button>`).join('')}</div>${uiPreferences.error?`<p role="alert">${esc(uiPreferences.error.message)}</p>`:''}</section><button class="menu-card" data-action="help"><span class="menu-icon">${icon('info')}</span><div><b>Stand en zones uitgelegd</b><small>Stand · zones · ledlines</small></div>${icon('chevron')}</button></div>`;
+    return `<div class="page settings-page"><header class="page-heading"><div><h1>${esc(t('more'))}</h1><p>${esc(t('settings'))} · V40</p></div></header><section class="card settings-appearance"><h2>${esc(t('appearance'))}</h2><h3 class="preference-label">${esc(t('language'))}</h3><div class="preference-grid">${Preferences.languages.map(language=>`<button data-action="language" data-id="${language.code}" lang="${language.code}" aria-pressed="${uiPreferences.preferences.language===language.code}">${language.name}</button>`).join('')}</div>${uiPreferences.preferences.language==='nl'?'':`<p class="preference-note">${esc(t('wipNotice'))}</p>`}<h3 class="preference-label">${esc(t('theme'))}</h3><div class="preference-grid">${['light','dark'].map(theme=>`<button data-action="theme" data-id="${theme}" aria-pressed="${uiPreferences.preferences.theme===theme}">${icon(theme==='dark'?'moon':'sun')}${esc(t(theme))}</button>`).join('')}</div>${uiPreferences.error?`<p role="alert">${esc(uiPreferences.error.message)}</p>`:''}</section><button class="menu-card" data-action="help"><span class="menu-icon">${icon('info')}</span><div><b>Stand en zones uitgelegd</b><small>Stand · zones · ledlines</small></div>${icon('chevron')}</button></div>`;
   }
   function organizeSettings() {
     const page=main.querySelector('.settings-page');if(!page)return;
@@ -1683,6 +1758,7 @@
     if(screen==='layout'){screen='controls';openLineSetup.add(extra.zoneId||route.zoneId);}
     if(arrangementApplying)return;
     const previousRoute=route;
+    if(screen!==route.screen||extra.standId&&extra.standId!==route.standId)invalidatePinProtectionRead();
     if(screen!==route.screen)visualPlugMotions.clear();
     if(!pinRequired()&&!nativeContext&&screen==='pin-login')screen='settings';
     if(screen==='receiver-add'&&route.screen!=='receiver-add')extra={setupFrom:!stand()||!standReceivers().some(receiver=>receiver.role==='main')||route.screen!=='receivers'?'stand':'receivers',setupReturnZoneId:null,...extra};
@@ -1804,25 +1880,6 @@
     if(receiverContextStates.get(standId)?.status==='syncing'||receiverContextEventVersions.get(standId)?.detail.contextPhase==='queued')return;
     pinProtectionDeferredStandId=null;
     if(securityStand()?.id===standId)void refreshPinProtection();
-  }
-  function resumeAutomaticReceiverContexts(){
-    // Foreground/online is a fresh opportunity, never permission to replay a
-    // lost mutation. The runtime checks the durable ledger before one save.
-    if(!nativeContext||window.__lightningV32ReceiverContext!==true||!nativeLoaded||nativeLoading||nativeLoadError||document.visibilityState!=='visible'||
-      pinProtectionLoading||pinProtectionReconnect||receiverWorkBusy()||
-      typeof runtime?.services?.resumeInstallationContext!=='function')return;
-    try{if(onboarding.summary()||backupTransaction?.pending())return;}catch(_){return;}
-    for(const {id:standId} of model.stands){
-      if(receiverContextReads.has(standId)||!model.receivers.some(receiver=>receiver.standId===standId&&receiver.lifecycle==='added'))continue;
-      const version=receiverContextVersions.get(standId)||0;
-      const read=Promise.resolve().then(()=>runtime.services.resumeInstallationContext({standId})).then(state=>{
-        if(state&&(receiverContextVersions.get(standId)||0)===version&&model.stands.some(item=>item.id===standId))receiverContextStates.set(standId,state);
-      }).catch(()=>{}).finally(()=>{
-        if(receiverContextReads.get(standId)===read)receiverContextReads.delete(standId);
-        syncPinProtectionCard();
-      });
-      receiverContextReads.set(standId,read);
-    }
   }
   window.addEventListener('lightning:receiver-context',event=>{
     if(!nativeContext||!event.detail||typeof event.detail.standId!=='string')return;
@@ -3263,12 +3320,25 @@
     open?expandedReceivers.add(details.dataset.receiverDetail):expandedReceivers.delete(details.dataset.receiverDetail);
     if(!open)visualPlugMotions.delete(details.dataset.receiverDetail);
   },true);
-  function resumeNativeConnection(){
+  function resumePinConnection(){
     if(document.visibilityState!=='visible')return;
+    const standId=securityStand()?.id;
+    if(pinProtectionRead&&!currentPinProtectionOperation(pinProtectionRead))rememberPinProtectionRead(pinProtectionRead);
+    if(pinProtectionWrite&&!currentPinProtectionOperation(pinProtectionWrite))rememberPinProtectionRead(pinProtectionWrite);
+    const cue=pinProtectionNeedsRefresh();
+    if(cue||(pinProtection?.standId===standId&&pinProtection.status==='pending')||pinProtectionPendingCheckStandId===standId){
+      if(route.screen==='settings'){
+        if(pinProtectionLoading||pinProtectionBusy){if(cue)cue.queued=true;}
+        else void refreshPinProtection();
+      }
+      return;
+    }
     if(pinProtectionReconnect)void refreshPinProtection({afterReconnect:true});
-    else resumeAutomaticReceiverContexts();
   }
-  window.addEventListener('focus',resumeNativeConnection);window.addEventListener('online',resumeNativeConnection);document.addEventListener('visibilitychange',resumeNativeConnection);
+  window.addEventListener('pagehide',invalidatePinProtectionRead);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')invalidatePinProtectionRead();});
+  window.addEventListener('online',()=>{if(pinProtection?.status==='pending'||pinProtectionPendingCheckStandId||pinProtectionNeedsRefresh())resumePinConnection();});
+  window.addEventListener('focus',resumePinConnection);document.addEventListener('visibilitychange',resumePinConnection);
   window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'32.0.0-stability',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
@@ -3298,7 +3368,7 @@
       // An existing stand with no receivers is not a reason to restart setup.
       if(state.draft||!restored.stands.length){route.screen='receiver-add';route.setupFrom='stand';}
     }catch(_){nativeLoadError=true;}
-    finally{nativeLoading=false;render({top:true});if(!nativeLoadError)resumeAutomaticReceiverContexts();}
+    finally{nativeLoading=false;render({top:true});}
   }
   render({top:true});if(nativeContext)loadNativeState();requestAnimationFrame(frame);
 })();

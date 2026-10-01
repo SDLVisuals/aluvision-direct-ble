@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v32-android-test-20261001",
-  "interfaceVersion": 32,
-  "interfaceBaseline": "V32 keeps the established Aluvision interface while making animation browsing easier to understand and gentler to use. Customers first see clearly labelled effect groups; opening one enters a focused page with only that group’s variations, and choosing a variation is the action that starts it. A single back button returns to the originating list and moves beside the sticky LED overview only when its inline position is obscured. The active-animation action also moves one DOM button between the page and preview dock, so no duplicate or half-hidden copy remains. The spatial tunnel/wall overview appears on opening a spatial group and stays visible in its active settings. Page transitions use a light spring, smaller controls respond smoothly, and reduced-motion preferences are respected. Fixed-colour, animation-family and active-animation workspaces now share one calmer mobile hierarchy: the gallery has one instruction heading, the running animation is named before its controls, two animation colours align together with a deliberate full-width add action, and the active editor uses one frosted surface instead of nested cards. The fixed-colour wheel stays fully above the bottom navigation on first load. The same shared colour picker is reused for fixed colour and animation palettes; fine RGBW values remain exact. Search text stays at the iPhone no-zoom size. Browsing preserves selected lights and active effects. Browser verification does not prove physical receiver acceptance.",
+  "revision": "v40-android-test-20261002",
+  "interfaceVersion": 40,
+  "interfaceBaseline": "V40 milkglass light and charcoal dark surfaces preserve the existing flows. V32 keeps the established Aluvision interface while making animation browsing easier to understand and gentler to use. Customers first see clearly labelled effect groups; opening one enters a focused page with only that group’s variations, and choosing a variation is the action that starts it. A single back button returns to the originating list and moves beside the sticky LED overview only when its inline position is obscured. The active-animation action also moves one DOM button between the page and preview dock, so no duplicate or half-hidden copy remains. The spatial tunnel/wall overview appears on opening a spatial group and stays visible in its active settings. Page transitions use a light spring, smaller controls respond smoothly, and reduced-motion preferences are respected. Fixed-colour, animation-family and active-animation workspaces now share one calmer mobile hierarchy: the gallery has one instruction heading, the running animation is named before its controls, two animation colours align together with a deliberate full-width add action, and the active editor uses one frosted surface instead of nested cards. The fixed-colour wheel stays fully above the bottom navigation on first load. The same shared colour picker is reused for fixed colour and animation palettes; fine RGBW values remain exact. Search text stays at the iPhone no-zoom size. Browsing preserves selected lights and active effects. Browser verification does not prove physical receiver acceptance.",
   "animationGroupNavigation": {
     "detailPage": true,
     "content": "selected effect group only",
@@ -85,8 +85,8 @@
       "sha256": "dbcc56b241d94f52818ebda85a4c9f8d035f9405832757d47e7e42e4e6858a54"
     },
     {
-      "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
-      "sha256": "cf1a36ef7a96cb1fd3ef84e9f12db014932e82896dda4217867ed563ba4cf214"
+      "path": "android/aluvision-android-test-0.1.0-test.2-2-50c034940069.apk",
+      "sha256": "50c034940069e525333392643b6c9f1569c255bcdc87662f7e048cd6e44abc9a"
     },
     {
       "path": "animation-engine.js",
@@ -110,7 +110,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "ddde438c495cd5e09cf46073b5bfc0b6120bd5b405685f80f548171ed72de23b"
+      "sha256": "5797261f301f686ba8e9e3f0e8050414041a98ee4dce0d01a9f768e89df2e960"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -142,7 +142,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "bba0aeb8abfd82891805228b675239997c9ed314ec2e8acb8ba04df883d731a4"
+      "sha256": "98062cd7e5670a178e50280b77aec20d4c977329c1b2e9ea2a2e7a8b81cb88fb"
     },
     {
       "path": "installation-libraries.js",
@@ -154,7 +154,7 @@
     },
     {
       "path": "interface-polish.css",
-      "sha256": "90c1f485c820d27481fb30ef333361e3df4d846d0fbe98430f0330f45381afe8"
+      "sha256": "1bc13ca600c954c14720316d624cd7c440ccbf75690728678db767e05371ece1"
     },
     {
       "path": "live-control.js",
@@ -170,7 +170,7 @@
     },
     {
       "path": "native-runtime.js",
-      "sha256": "128d0ff41eeb4328ca632dadafa2142a468f0dd11ac6c63d7136fc0c2a8f61b8"
+      "sha256": "020374b5c8b0439371316f0298c9cfcbfaa8db8a1037aca25114332bcb2cb8c2"
     },
     {
       "path": "onboarding-adapter.js",
@@ -214,7 +214,7 @@
     },
     {
       "path": "premium-surfaces.css",
-      "sha256": "8529ee65771fe2b0da8d7c97ba588d2a4547fbc5e44090abb128b91575cd7491"
+      "sha256": "dd758672b34f4452cc93af76a4862745e69d1e6a9105db4afe3f6b9de79423f7"
     },
     {
       "path": "presets.js",
@@ -223,6 +223,10 @@
     {
       "path": "preview.js",
       "sha256": "0b960e9b20e4d7fe01667bc26322162cc50417aacb3f1472ffca1744da953e6f"
+    },
+    {
+      "path": "receiver-library-hydration.js",
+      "sha256": "b131566d2742f91817416ca146f4fe0e317f3e0a56e8026efa575ff29486463f"
     },
     {
       "path": "receiver-playback.js",
@@ -242,7 +246,7 @@
     },
     {
       "path": "receiver-update-ui.js",
-      "sha256": "2c4041d90b241217bae832266beb38f31f603369d809cf50b13d342c5f918aed"
+      "sha256": "c1cb770169cd68714f864e5876da72b80789b29956bcffc4022b70fb2d47315c"
     },
     {
       "path": "receiver-visual.css",
@@ -286,26 +290,26 @@
     }
   ],
   "androidTestApp": {
-    "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
-    "size": 2323222,
-    "sha256": "cf1a36ef7a96cb1fd3ef84e9f12db014932e82896dda4217867ed563ba4cf214",
+    "path": "android/aluvision-android-test-0.1.0-test.2-2-50c034940069.apk",
+    "size": 2388844,
+    "sha256": "50c034940069e525333392643b6c9f1569c255bcdc87662f7e048cd6e44abc9a",
     "packageName": "com.aluvision.lighting.android.test",
-    "versionName": "0.1.0-test.1",
-    "versionCode": 1,
+    "versionName": "0.1.0-test.2",
+    "versionCode": 2,
     "minSdk": 26,
     "mode": "receiver",
     "signerCertificateSha256": "b598fc6fa30b423517d6ca68e3bb1191248a32723174d4703baaede9125936ac",
-    "sourceInventorySha256": "c794bddca2965b7ed65726421c88a539b989702a5cb13b919e7650c9f41e6716",
-    "approvalSha256": "db126607c7128d04252e14ed7184b420d867625b6fe967eee52ff5409d3c07e1",
+    "sourceInventorySha256": "41a5fb3365a393a35ab1c619ccb3339baeb5341b733d17f61f50a50407126301",
+    "approvalSha256": "1cd0a5c0522eb10fcca1bf79db49d8ae52124c208358998298febad555844807",
     "signatureVerified": true,
     "packageVerified": true,
-    "installedVerified": true,
-    "installationEvidenceSha256": "a5db339b04883a3467957e31f019277d65523f056cdc9b8c7e908cb5068d24ff",
+    "installedVerified": false,
+    "installationEvidenceSha256": null,
     "tools": {
       "apksignerSha256": "b47549e373b895ce6ca620d0c7887e674d9615ffa837a86ac601dcfd04adb0f0",
       "aaptSha256": "c0b5427aeabbbe05023ee2a55e3a9877c99ce57245bb15c21d4802326b86d099",
       "apksignerReportSha256": "ef52f4edab240b3377219b15da499a8e0fc005cd88b04ec035ac56b66774f089",
-      "aaptReportSha256": "7d64aaf545270c2b8d7862bc80cc92090693bba9b5966b6a93ed06b2e341d3fe"
+      "aaptReportSha256": "b95b1fb2f61583c18624a25c9cd54f0314fe37fb527ab7cc1cf0aba181ef54a4"
     }
   }
 }

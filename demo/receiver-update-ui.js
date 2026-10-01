@@ -67,7 +67,10 @@
       };
       return map[code]||'softwareErrorGeneric';
     }
-    function messageFor(code){return t(errorKey(code));}
+    function messageFor(code,checking=false){
+      const key=errorKey(code);
+      return t(checking&&key==='softwareErrorGeneric'?'softwareCheckUnavailable':key);
+    }
     function phaseKey(job){
       const map={preflight:'softwarePreparing',arming:'softwarePreparing',uploading:'softwareSending',
         verifying:'softwareVerifying',reconnecting:'softwareRestarting',verified:'softwareReceiverUpdateFinished',
@@ -159,7 +162,7 @@
             else if(result.job.committed&&result.job.state!=='completed')entry.status='recovery';
             else entry.status='failed';
           }else entry.status=result.status;
-        }catch(error){if(!current(token))return;entry.status='offline';entry.errorCode=error?.code||'NATIVE_UNAVAILABLE';entry.message=messageFor(entry.errorCode);}
+        }catch(error){if(!current(token))return;entry.status='offline';entry.errorCode=error?.code||'NATIVE_UNAVAILABLE';entry.message=messageFor(entry.errorCode,true);}
         if(['running','recovery','failed'].includes(entry.status)){
           for(const remaining of order.slice(index+1))remaining.status='waiting';
           paint();return;

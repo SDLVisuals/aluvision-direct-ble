@@ -25,15 +25,9 @@
   ['receiverContextStatus','syncInstallationContext','interruptAutomaticContext'].forEach(action=>actions.add(action));
   actions.add('setAppearance');
   let appearanceTheme=null,appearanceRequest=null,appearanceSerial=0;
-  const contextTimers=new Map(),contextEpochs=new Map(),contextJobs=new Map(),contextResumes=new Map();let contextQueue=Promise.resolve(),contextResetEpoch=0;
-  // Public availability marker only: never a PIN, library, key or receiver
-  // credential. An incomplete recovery must not make a fresh empty local
-  // library the automatic cold-start/PIN replacement for its remote archive.
-  const incompleteLibraryRecoveryKey='aluvision.v32.incomplete-library-recovery.v1',incompleteLibraryRecovery=new Set();
-  let incompleteLibraryRecoveryStorageBlocked=false;
+  const contextTimers=new Map(),contextEpochs=new Map();let contextQueue=Promise.resolve(),contextResetEpoch=0;
   let contextWriteBarrier=null;
   let viewRevision=0,viewLoaded=false,viewModelKey=null,viewDraftKey='null',writeQueue=Promise.resolve();
-  let settledWriteQueue=writeQueue;
   const fail=code=>Object.assign(new Error('De verbinding is nog niet beschikbaar.'),{code});
   function receive(message,fromNative=false){
     if(!message||typeof message.id!=='string'||!pending.has(message.id))return;
@@ -150,30 +144,21 @@
       if(!control||!control.started||control.cleaned)ticket?.release();
     }
   }
-  function scheduleContext(view,standId,{immediate=false,currentView}={}){
+  function scheduleContext(view,standId,{immediate=false}={}){
     if(root.__lightningV32ReceiverContext!==true||!view?.model?.receivers?.some(receiver=>receiver.standId===standId&&receiver.lifecycle==='added'))return view;
     root.clearTimeout(contextTimers.get(standId));
     const epoch=(contextEpochs.get(standId)||0)+1,reset=contextResetEpoch;
-    contextEpochs.set(standId,epoch);contextJobs.set(standId,epoch);
-    const owned=()=>contextEpochs.get(standId)===epoch&&contextResetEpoch===reset;
-    const current=()=>owned()&&(!currentView||currentView());
-    const finish=()=>{
-      // A local write can invalidate this pinned snapshot without scheduling
-      // a replacement epoch. Close its queued/writing UI state, but never
-      // confirm the stale edit or overwrite a newer/reset generation.
-      if(owned()&&currentView&&!currentView())contextEvent({standId,status:'pending'},epoch,reset,'complete');
-      if(contextJobs.get(standId)===epoch)contextJobs.delete(standId);
-    };
+    contextEpochs.set(standId,epoch);
+    const current=()=>contextEpochs.get(standId)===epoch&&contextResetEpoch===reset;
     contextEvent({standId,status:'pending'},epoch,reset,'queued');
     const enqueue=()=>{
-      if(!current()){finish();return;}
+      if(!current())return;
       contextTimers.delete(standId);
       contextQueue=contextQueue.catch(()=>{}).then(async()=>{
-        if(!current()){finish();return;}
+        if(!current())return;
         contextEvent({standId,status:'syncing'},epoch,reset,'writing');
         try{const result=await receiverContext('syncInstallationContext',standId,current,undefined,true);if(current())contextEvent(result,epoch,reset,'complete');}
         catch(_){if(current())contextEvent({standId,status:'pending'},epoch,reset,'complete');}
-        finally{finish();}
       });
     };
     // A confirmed receiver addition is a discrete durable boundary. Launch its
@@ -184,69 +169,12 @@
     else contextTimers.set(standId,root.setTimeout(enqueue,1400));
     return view;
   }
-  function contextStandReady(standId){
-    if(root.__lightningV32ReceiverContext!==true||!viewLoaded||viewDraftKey!=='null'||
-      typeof standId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(standId))return false;
-    const model=JSON.parse(viewModelKey);
-    return model.stands?.some(stand=>stand.id===standId)&&model.receivers?.some(receiver=>receiver.standId===standId&&receiver.lifecycle==='added');
-  }
-  function libraryRecoveryMarker(){
-    let storage;
-    try{storage=root.localStorage;}catch(_){return null;}
-    if(!storage||typeof storage.getItem!=='function'||typeof storage.setItem!=='function'||typeof storage.removeItem!=='function')return null;
-    try{
-      const raw=storage.getItem(incompleteLibraryRecoveryKey);
-      if(raw===null)return {storage,stands:new Set()};
-      const ids=typeof raw==='string'&&raw.length<=2048?JSON.parse(raw):null;
-      if(!Array.isArray(ids)||ids.length>20||ids.some(id=>typeof id!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(id))||
-        new Set(ids).size!==ids.length||JSON.stringify([...ids].sort())!==raw)throw fail('RECEIVER_CONTEXT_INVALID');
-      return {storage,stands:new Set(ids)};
-    }catch(_){incompleteLibraryRecoveryStorageBlocked=true;return null;}
-  }
-  function libraryRecoveryBlocked(standId){
-    const marker=libraryRecoveryMarker();
-    if(marker?.stands.has(standId))incompleteLibraryRecovery.add(standId);
-    return incompleteLibraryRecoveryStorageBlocked||incompleteLibraryRecovery.has(standId);
-  }
-  function setLibraryRecoveryBlock(standId,blocked){
-    if(blocked)incompleteLibraryRecovery.add(standId);
-    const marker=libraryRecoveryMarker();
-    if(!marker){if(!blocked&&!incompleteLibraryRecoveryStorageBlocked)incompleteLibraryRecovery.delete(standId);return;}
-    if(blocked)marker.stands.add(standId);else marker.stands.delete(standId);
-    try{
-      if(marker.stands.size>20)throw fail('RECEIVER_CONTEXT_INVALID');
-      const raw=marker.stands.size?JSON.stringify([...marker.stands].sort()):null;
-      if(raw===null)marker.storage.removeItem(incompleteLibraryRecoveryKey);else marker.storage.setItem(incompleteLibraryRecoveryKey,raw);
-      if(marker.storage.getItem(incompleteLibraryRecoveryKey)!==raw)throw fail('RECEIVER_CONTEXT_UNCONFIRMED');
-      if(!blocked)incompleteLibraryRecovery.delete(standId);
-    }catch(_){incompleteLibraryRecoveryStorageBlocked=true;}
-  }
-  function resumeContext(standId){
-    if(contextResumes.has(standId))return contextResumes.get(standId);
-    const resume=Promise.resolve().then(async()=>{
-      if(!contextStandReady(standId)||writeQueue!==settledWriteQueue||contextJobs.has(standId)||libraryRecoveryBlocked(standId))return null;
-      if(typeof root.LightningInstallationLibraries?.capture!=='function')throw fail('LIBRARIES_RECOVERY_UNAVAILABLE');
-      const writes=writeQueue;await writes.catch(()=>{});
-      if(writeQueue!==writes||!contextStandReady(standId)||contextJobs.has(standId))return null;
-      const revision=viewRevision,model=viewModelKey,draft=viewDraftKey,reset=contextResetEpoch,epoch=contextEpochs.get(standId);
-      const currentView=()=>writeQueue===writes&&viewRevision===revision&&viewModelKey===model&&viewDraftKey===draft&&
-        contextResetEpoch===reset&&contextStandReady(standId)&&!libraryRecoveryBlocked(standId)&&typeof root.LightningInstallationLibraries?.capture==='function';
-      const current=()=>currentView()&&contextEpochs.get(standId)===epoch&&!contextJobs.has(standId);
-      // This first RPC is a local exact-desired ledger read, with current
-      // libraries. Only its verified pending result may admit one archive.
-      const result=await receiverContext('receiverContextStatus',standId,current);
-      if(!current())return null;
-      if(result.status==='pending')scheduleContext({model:JSON.parse(model)},standId,{immediate:true,currentView});
-      return result;
-    }).finally(()=>{if(contextResumes.get(standId)===resume)contextResumes.delete(standId);});
-    contextResumes.set(standId,resume);return resume;
-  }
-  function trackWrite(next){
-    // Observe settlement only; the original queue, returned promise and its
-    // failures remain unchanged. Resume never enters a pending local write.
-    writeQueue=next;
-    const settled=()=>{if(writeQueue===next)settledWriteQueue=next;};
-    next.then(settled,settled);return next;
+  function verifiedPendingPinStatus(result){
+    return !!result&&typeof result==='object'&&[Object.prototype,null].includes(Object.getPrototypeOf(result))&&
+      Object.keys(result).sort().join(',')==='desiredPinRequired,hasPin,pinRequired,scope,ssid,status'&&
+      result.status==='pending'&&result.scope==='installation'&&typeof result.pinRequired==='boolean'&&
+      typeof result.hasPin==='boolean'&&typeof result.desiredPinRequired==='boolean'&&
+      typeof result.ssid==='string'&&/^[A-Za-z0-9][A-Za-z0-9 _.-]{0,31}$/.test(result.ssid);
   }
   function canonical(value){
     if(Array.isArray(value))return '['+value.map(canonical).join(',')+']';
@@ -306,7 +234,7 @@
         }catch(_){}
         throw error;
       }
-    });return trackWrite(next);
+    });writeQueue=next;return next;
   }
   function removal(action,payload){
     // Serialize destructive model cleanup with ordinary local writes. Native
@@ -317,7 +245,7 @@
       if(result?.view)acceptView(result.view);
       else if(result?.status==='removed')throw fail('VIEW_INVALID');
       return result;
-    });return trackWrite(next);
+    });writeQueue=next;return next;
   }
   function moveDraft(action,payload){
     const next=writeQueue.catch(()=>{}).then(async()=>{
@@ -337,7 +265,7 @@
         try{const view=acceptView(await call('loadView'));if(view.revision===revision+1&&matches(view))return view;}catch(_){}
         throw error;
       }
-    });return trackWrite(next);
+    });writeQueue=next;return next;
   }
   function editZones(request){
     if(!request||typeof request!=='object'||Array.isArray(request))return Promise.reject(fail('ZONE_EDIT_INVALID'));
@@ -436,7 +364,7 @@
         try{error.reconciledView=acceptView(await call('loadView'));}catch(_){}
         throw error;
       }
-    });return trackWrite(next);
+    });writeQueue=next;return next;
   }
   function configureOutputs(request){
     const validId=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(value);
@@ -473,7 +401,7 @@
         try{error.reconciledView=acceptView(await call('loadView'));}catch(_){}
         throw error;
       }
-    });return trackWrite(next);
+    });writeQueue=next;return next;
   }
   function livePayload({standId,receiverId,kind,brightness,transitionMs,channels,scene}={}){
     const validID=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(value);
@@ -521,22 +449,13 @@
       appearanceRequest={sequence,theme,promise};return promise;
     },
     async receiverContextStatus({standId}){return receiverContext('receiverContextStatus',standId);},
-    scheduleInstallationContext({standId,immediate=false,reason}){
-      if(!viewLoaded||typeof standId!=='string'||typeof immediate!=='boolean'||reason!==undefined&&reason!=='pin-confirmed')return;
-      let currentView;
-      if(reason==='pin-confirmed'){
-        if(!contextStandReady(standId)||writeQueue!==settledWriteQueue||contextJobs.has(standId)||libraryRecoveryBlocked(standId)||
-          typeof root.LightningInstallationLibraries?.capture!=='function')return;
-        const writes=writeQueue,revision=viewRevision,model=viewModelKey,draft=viewDraftKey,reset=contextResetEpoch;
-        currentView=()=>writeQueue===writes&&viewRevision===revision&&viewModelKey===model&&viewDraftKey===draft&&
-          contextResetEpoch===reset&&contextStandReady(standId)&&!libraryRecoveryBlocked(standId)&&typeof root.LightningInstallationLibraries?.capture==='function';
-      }
-      scheduleContext({model:JSON.parse(viewModelKey)},standId,{immediate,currentView});
+    scheduleInstallationContext({standId}){
+      if(!viewLoaded||typeof standId!=='string')return;
+      scheduleContext({model:JSON.parse(viewModelKey)},standId);
     },
-    resumeInstallationContext({standId}){return resumeContext(standId);},
     async syncInstallationContext({standId,signal}){
       root.clearTimeout(contextTimers.get(standId));contextTimers.delete(standId);
-      const epoch=(contextEpochs.get(standId)||0)+1,reset=contextResetEpoch;contextEpochs.set(standId,epoch);contextJobs.set(standId,epoch);
+      const epoch=(contextEpochs.get(standId)||0)+1,reset=contextResetEpoch;contextEpochs.set(standId,epoch);
       const result=contextQueue.catch(()=>{}).then(async()=>{
         if(contextEpochs.get(standId)!==epoch||reset!==contextResetEpoch)throw fail('RECEIVER_CONTEXT_STALE');
         contextEvent({standId,status:'syncing'},epoch,reset,'writing');
@@ -549,7 +468,7 @@
         if(contextEpochs.get(standId)!==epoch||reset!==contextResetEpoch)throw fail('RECEIVER_CONTEXT_STALE');
         contextEvent(result,epoch,reset,'complete');
         return result;
-      }).finally(()=>{if(contextJobs.get(standId)===epoch)contextJobs.delete(standId);});contextQueue=result;
+      });contextQueue=result;
       return result;
     },
     async recoverInstallation({pin,signal}){
@@ -564,11 +483,8 @@
           const stored=await root.LightningInstallationLibraries.restore(result.libraries,result.standId);
           if(stored?.restored!==true)throw fail('LIBRARIES_RECOVERY_UNCONFIRMED');
         }
-        if(result.librariesComplete!==true)setLibraryRecoveryBlock(result.standId,true);
-        const view=acceptView(result.view);
-        if(result.librariesComplete===true)setLibraryRecoveryBlock(result.standId,false);
-        return {status:'restored',standId:result.standId,view,playbackModel,librariesComplete:result.librariesComplete===true};
-      });return trackWrite(next);
+        return {status:'restored',standId:result.standId,view:acceptView(result.view),playbackModel,librariesComplete:result.librariesComplete===true};
+      });writeQueue=next;return next;
     },
     async exportBackup({name,json}){
       if(typeof name!=='string'||!/^[A-Za-z0-9._-]{1,100}\.json$/.test(name)||typeof json!=='string'||new TextEncoder().encode(json).length>4*1024*1024)throw fail('BACKUP_INVALID');
@@ -595,7 +511,7 @@
             error.reconciledView=view;error.unchanged=canonical(view.model)===previous&&view.revision===expectedRevision;
           }catch(_){}throw error;
         }
-      });trackWrite(next);return next.then(view=>{for(const stand of view.model.stands)scheduleContext(view,stand.id);return view;});
+      });writeQueue=next;return next.then(view=>{for(const stand of view.model.stands)scheduleContext(view,stand.id);return view;});
     },
     async securityPreference({standId}){
       const result=await call('securityPreference',{standId});
@@ -605,6 +521,7 @@
     async securityStatus({standId}){
       await writeQueue.catch(()=>{});
       const result=await call('securityStatus',{standId});
+      if(verifiedPendingPinStatus(result))return result;
       if(!['applied','reconnect-required'].includes(result?.status)||typeof result.pinRequired!=='boolean'||typeof result.hasPin!=='boolean'||!['installation','new-installation'].includes(result.scope))throw fail('PIN_MODE_UNCONFIRMED');
       return result;
     },
@@ -613,6 +530,7 @@
         (enabled?confirmation!==undefined:confirmation!=='DISABLE_PIN'||pin!==undefined))throw fail('PIN_MODE_INVALID');
       await writeQueue.catch(()=>{});
       const result=await call('setPinProtection',{standId,enabled,...(pin===undefined?{}:{pin}),...(confirmation===undefined?{}:{confirmation})});
+      if(verifiedPendingPinStatus(result))return result;
       if(!['applied','reconnect-required'].includes(result?.status)||result.pinRequired!==enabled||typeof result.hasPin!=='boolean'||!['installation','new-installation'].includes(result.scope))throw fail('PIN_MODE_UNCONFIRMED');
       return result;
     },
@@ -654,8 +572,8 @@
     async reconcileSecurity({configuration,signal}){return call('reconcileSecurity',{configuration},signal);},
     async eraseAppData({confirmation}){
       if(confirmation!=='Alles verwijderen')throw fail('CONFIRMATION_REQUIRED');
-      contextTimers.forEach(timer=>root.clearTimeout(timer));contextTimers.clear();contextEpochs.clear();contextJobs.clear();contextResetEpoch++;
-      const next=writeQueue.catch(()=>{}).then(()=>call('eraseAppData',{confirmation}));trackWrite(next);
+      contextTimers.forEach(timer=>root.clearTimeout(timer));contextTimers.clear();contextEpochs.clear();contextResetEpoch++;
+      const next=writeQueue.catch(()=>{}).then(()=>call('eraseAppData',{confirmation}));writeQueue=next;
       const answer=await next;
       if(answer?.status!=='erased-local-only')throw fail('ERASE_UNCONFIRMED');
       viewRevision=0;viewLoaded=false;viewModelKey=null;viewDraftKey='null';

@@ -1224,3 +1224,144 @@ body .advanced-settings-toggle[aria-expanded="true"] { border-color: var(--line)
   .navigation { background: #1c211c !important; }
   .toast { background: #252b25 !important; }
 }
+
+/* V40 material uplift. Presentation only: no geometry, canvas, sticky offset,
+   control state, scroll or workflow ownership changes. */
+:root {
+  --ink: #22252a;
+  --muted: #62656e;
+  --line: #d9dce0;
+  --soft: #eeefef;
+  --glass: rgba(255, 255, 253, .54);
+  --glass-edge: rgba(255, 255, 255, .92);
+  --glass-solid: #f8f8f6;
+  --glass-sheet: rgba(248, 249, 250, .92);
+  --surface-shadow: 0 8px 24px rgba(33, 39, 49, .055), 0 1px 4px rgba(33, 39, 49, .025);
+  --surface-highlight: inset 0 1px rgba(255, 255, 255, .96), inset 0 0 0 1px rgba(255, 255, 255, .22);
+}
+body:not([data-theme="dark"]) {
+  background:
+    radial-gradient(100% 32rem at 0% -8%, rgba(255, 255, 252, 1), transparent 74%),
+    radial-gradient(85% 28rem at 108% 18%, rgba(207, 222, 243, .46), transparent 75%),
+    radial-gradient(95% 32rem at -8% 76%, rgba(231, 219, 201, .28), transparent 76%),
+    linear-gradient(180deg, #f8f7f4, #e9eced);
+}
+body[data-theme="dark"] {
+  --bg: #15171b;
+  --panel: #272b32;
+  --ink: #f4f6fa;
+  --muted: #cdd2dc;
+  --line: #474d58;
+  --soft: #30353e;
+  --glass: rgba(45, 50, 60, .63);
+  --glass-edge: rgba(225, 234, 250, .21);
+  --glass-solid: #292d35;
+  --glass-sheet: rgba(34, 38, 46, .94);
+  --action-ink: #ffc6c0;
+  --surface-shadow: 0 10px 28px rgba(0, 0, 0, .2), 0 1px 5px rgba(0, 0, 0, .1);
+  --surface-highlight: inset 0 1px rgba(239, 244, 255, .18), inset 0 0 0 1px rgba(255, 255, 255, .035);
+  background:
+    radial-gradient(110% 30rem at 84% -8%, rgba(142, 162, 198, .18), transparent 70%),
+    radial-gradient(95% 32rem at -20% 55%, rgba(134, 149, 180, .075), transparent 76%),
+    linear-gradient(180deg, #1c2027, #121419);
+}
+body .brand-bar {
+  background: rgba(249, 249, 248, .78);
+  border-color: var(--glass-edge);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .72), 0 4px 20px rgba(31, 39, 52, .035);
+  -webkit-backdrop-filter: blur(22px) saturate(112%);
+  backdrop-filter: blur(22px) saturate(112%);
+}
+body[data-theme="dark"] .brand-bar { background: rgba(22, 25, 31, .82); }
+body[data-theme="dark"] :is(.card, .stand-info-tile, .zone-entry, .zone-card,
+    .menu-card, .power-card:not(.power-card-zone), .current-effect, .settings-toggle,
+    .receiver-list details, .scene-card, .scene-zone, .scene-saved-zone, .scene-save-bar,
+    .stand-scenes, .stand-scenes-empty, .stand-scenes-entry, .stand-scene-card,
+    .preset-card, .effect-card, .family-card, .animation-family-card, .family-variant-card,
+    .onboarding-name-card, .onboarding-zone, .onboarding-destination, .stand-setup-overview,
+    .pixel-setup-panel, .receiver-update-sheet, .receiver-removal-sheet, .pin-protection-card,
+    #effect-dialog) {
+  background-color: var(--glass);
+  background-image: linear-gradient(150deg, rgba(231, 239, 255, .1), rgba(255, 255, 255, .012) 72%);
+  border-color: var(--glass-edge);
+  box-shadow: var(--surface-shadow), var(--surface-highlight);
+}
+body[data-theme="dark"] :is(.section-tabs, .control-mode-tabs, .demo-settings-tabs,
+    .guide, .preview-notice, .receiver-zone-row-hint, .pixel-preview-notice, .management-status,
+    .receiver-chips button, .filter-row button, .compact-direction button,
+    .physical-port-picker button, .preference-grid button, .pill, .assignment-family-choice,
+    .family-variants-panel, .animation-category-trigger, .animation-category-choice,
+    .animation-search input) {
+  background-color: rgba(44, 49, 59, .68);
+  background-image: linear-gradient(150deg, rgba(233, 242, 255, .085), transparent 75%);
+  border-color: var(--glass-edge);
+}
+body[data-theme="dark"] .button.secondary:not(.receiver-danger-section .button.secondary) {
+  background: linear-gradient(150deg, rgba(63, 70, 83, .8), rgba(42, 47, 57, .75));
+  border-color: rgba(235, 242, 255, .22);
+}
+body .button:not(.red):not(.secondary):not(.removal-confirm) {
+  background: linear-gradient(150deg, #343a44, #20242b);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .18), 0 5px 13px rgba(20, 26, 35, .13);
+}
+body :is(.control-mode-tabs button[aria-pressed="true"],
+    .receiver-chips button[aria-pressed="true"], .filter-row button[aria-selected="true"]),
+body[data-theme="dark"] :is(.control-mode-tabs button[aria-pressed="true"],
+    .receiver-chips button[aria-pressed="true"], .filter-row button[aria-selected="true"]) {
+  color: #fff;
+  background-color: #252a33;
+  background-image: linear-gradient(150deg, #3c4350, #252a33);
+}
+body[data-theme="dark"] :is(.control-workspace, .animation-simple-page .control-workspace) {
+  background-color: var(--glass);
+  background-image: linear-gradient(150deg, rgba(235, 244, 255, .09), transparent 74%);
+  border-color: var(--glass-edge);
+}
+/* Nested controls have one quiet inner material, not another blur layer. */
+body .animation-context {
+  background: color-mix(in srgb, var(--glass-solid) 58%, transparent);
+  border-color: var(--line);
+  box-shadow: inset 0 1px var(--glass-edge);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+body .animation-context > .power-card {
+  background: color-mix(in srgb, var(--glass-solid) 68%, transparent);
+  background-image: none;
+  box-shadow: none;
+}
+/* Ordinary saved-scene actions retain their red accent, not a large red fill.
+   Destructive confirmations keep their existing warning material unchanged. */
+body .button.red:is([data-action="scene-new"], [data-action="scene-save"], [data-action="scene-apply"]) {
+  background: linear-gradient(150deg, #343a44, #20242b);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .18), inset 0 -2px var(--red), 0 4px 12px rgba(20, 26, 35, .12);
+  color: #fff;
+}
+/* A floating, translucent charcoal pill. Its safe-area/size rules are intact. */
+body .navigation, body[data-theme="dark"] .navigation {
+  background: linear-gradient(150deg, rgba(53, 59, 71, .8), rgba(25, 29, 36, .76));
+  border-color: rgba(238, 243, 255, .3);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .22), 0 10px 28px rgba(10, 15, 24, .22);
+  -webkit-backdrop-filter: blur(24px) saturate(118%);
+  backdrop-filter: blur(24px) saturate(118%);
+}
+body .navigation button:not([aria-current="page"]) { color: #e0e5ef; }
+body .navigation button[aria-current="page"], body[data-theme="dark"] .navigation button[aria-current="page"] {
+  color: #ad3934;
+  background: linear-gradient(145deg, #fff, #edf1f7);
+  box-shadow: inset 0 1px white, 0 2px 8px rgba(0, 0, 0, .15);
+}
+body .toast { background: linear-gradient(150deg, rgba(47, 54, 66, .97), rgba(24, 29, 36, .97)); }
+/* The sticky context intentionally remains opaque, so scrolling labels never
+   appear behind it. Fullscreen stand controls keep the same solid backing. */
+body .control-dock-surface, body #effect-dialog-content > header { border-color: var(--glass-edge); }
+@media (prefers-reduced-transparency: reduce) {
+  :root, body[data-theme="dark"] { --glass: var(--glass-solid); --glass-sheet: var(--glass-solid); }
+  body .navigation, body[data-theme="dark"] .navigation { background: #272c35 !important; }
+  body .toast { background: #272c35 !important; }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root, body[data-theme="dark"] { --glass: var(--glass-solid); --glass-sheet: var(--glass-solid); }
+  body .navigation, body[data-theme="dark"] .navigation { background: #272c35 !important; }
+  body .toast { background: #272c35 !important; }
+}

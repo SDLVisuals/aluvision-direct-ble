@@ -279,3 +279,93 @@ html.interface-polish body .channel-row .channel-number {
   }
   html.interface-polish body :is(button, a, input, select, summary):focus-visible { outline-color: Highlight; }
 }
+
+/* V40 final glass layer. Keep the established dimensions and press/fold
+   authority: only colour, light, edge and static material change here. */
+html.interface-polish {
+  --interface-milk: rgba(255, 255, 253, .58);
+  --interface-milk-solid: #f8f8f6;
+  --interface-inner: rgba(255, 255, 253, .3);
+  --interface-edge: rgba(134, 145, 162, .2);
+  --interface-highlight: rgba(255, 255, 255, .92);
+  --interface-shadow: 0 6px 20px rgba(31, 40, 55, .05);
+}
+html.interface-polish body[data-theme="dark"] {
+  --interface-milk: rgba(48, 54, 65, .66);
+  --interface-milk-solid: #303640;
+  --interface-inner: rgba(51, 58, 71, .36);
+  --interface-edge: rgba(227, 237, 255, .23);
+  --interface-highlight: rgba(239, 246, 255, .15);
+  --interface-shadow: 0 7px 22px rgba(0, 0, 0, .17);
+  --interface-choice: #f1aaa3;
+  --interface-choice-tint: rgba(241, 170, 163, .035);
+}
+/* Frost only the small outer surface. Nested cards, gallery tiles, canvases
+   and sticky opaque contexts keep their existing blur-free ownership. */
+html.interface-polish body :is(.stand-info-tile, .stand-control-shortcut,
+    .zone-entry, .receiver-list > details, .scene-card, .stand-scenes-entry,
+    .stand-scene-card) {
+  background-image: linear-gradient(150deg, var(--interface-highlight), transparent 72%) !important;
+  border-color: var(--interface-edge);
+  box-shadow: inset 0 1px var(--interface-highlight), inset 0 0 0 1px rgba(255, 255, 255, .025), var(--interface-shadow);
+  -webkit-backdrop-filter: blur(12px) saturate(110%) !important;
+  backdrop-filter: blur(12px) saturate(110%) !important;
+}
+html.interface-polish body :is(.menu-card, .settings-toggle, .assignment-choice,
+    .assignment-family-choice, .onboarding-name-card, .onboarding-zone,
+    .onboarding-destination, .animation-category-trigger, .animation-category-choice,
+    .animation-family-card, .family-variant-card, .effect-card, .family-card) {
+  background-image: linear-gradient(150deg, var(--interface-highlight), transparent 72%);
+}
+html.interface-polish body .zone-entry > .zone-card {
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html.interface-polish body :is(.receiver-list details details, .family-variants-panel,
+    .animation-category-options, .ledline-row-settings .receiver-connections) {
+  border-color: var(--interface-edge);
+  box-shadow: inset 0 1px var(--interface-highlight);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+/* Expanded disclosure state is legible in either theme without brown fill. */
+html.interface-polish body .receiver-list > details[open] {
+  border-color: color-mix(in srgb, var(--interface-choice) 32%, var(--interface-edge));
+}
+html.interface-polish body .receiver-list > details[open] > summary {
+  box-shadow: inset 0 -1px var(--interface-edge);
+}
+html.interface-polish body :is(.settings-toggle, .ledline-settings-toggle,
+    .ledline-setup-toggle)[aria-expanded="true"] {
+  background-color: var(--interface-milk-solid);
+  background-image: linear-gradient(150deg, var(--interface-highlight), transparent 72%);
+}
+@media (prefers-reduced-transparency: reduce) {
+  html.interface-polish, html.interface-polish body[data-theme="dark"] {
+    --interface-milk: var(--interface-milk-solid);
+    --interface-inner: var(--interface-milk-solid);
+  }
+  html.interface-polish body :is(.stand-info-tile, .stand-control-shortcut,
+      .zone-entry, .receiver-list > details, .scene-card, .stand-scenes-entry, .stand-scene-card) {
+    background-color: var(--interface-milk-solid);
+    background-image: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  html.interface-polish, html.interface-polish body[data-theme="dark"] {
+    --interface-milk: var(--interface-milk-solid);
+    --interface-inner: var(--interface-milk-solid);
+  }
+  html.interface-polish body :is(.stand-info-tile, .stand-control-shortcut,
+      .zone-entry, .receiver-list > details, .scene-card, .stand-scenes-entry, .stand-scene-card) {
+    background-color: var(--interface-milk-solid);
+    background-image: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
