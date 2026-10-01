@@ -1,0 +1,15 @@
+/* Demo-publication only. Reuse the installed app's neutral milk-glass style. */
+.android-download-section{display:grid;gap:10px;min-width:0}
+.android-download-action{color:var(--ink);text-decoration:none;min-height:88px;min-width:0}
+.android-download-action>div{min-width:0}
+.android-download-action b,.android-download-action small{overflow-wrap:anywhere}
+.android-download-action small{line-height:1.45}
+.android-download-action small+small{margin-top:3px}
+.android-download-action .menu-icon svg{width:24px;height:24px}
+.android-download-action>svg{width:20px;height:28px;flex:none}
+.android-download-action:focus-visible{outline:3px solid var(--red);outline-offset:3px}
+.android-download-note{color:var(--muted);font-size:14px;line-height:1.5;min-width:0}
+.android-download-note summary{display:list-item;min-height:44px;padding:11px 4px;cursor:pointer;color:var(--ink);font-weight:600}
+.android-download-note summary:focus-visible{outline:3px solid var(--red);outline-offset:2px;border-radius:10px}
+.android-download-note p{margin:0 0 8px;overflow-wrap:anywhere}
+@media(prefers-reduced-motion:no-preference){.android-download-action{transition:transform .16s ease}.android-download-action:active{transform:scale(.99)}}
