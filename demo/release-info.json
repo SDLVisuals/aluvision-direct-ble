@@ -1,6 +1,6 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v40-android-test6-download-20261002",
+  "revision": "v40-android-test7-pin-download-20261002",
   "interfaceVersion": 40,
   "interfaceBaseline": "V40 milkglass light and charcoal dark surfaces preserve the existing flows. V32 keeps the established Aluvision interface while making animation browsing easier to understand and gentler to use. Customers first see clearly labelled effect groups; opening one enters a focused page with only that group’s variations, and choosing a variation is the action that starts it. A single back button returns to the originating list and moves beside the sticky LED overview only when its inline position is obscured. The active-animation action also moves one DOM button between the page and preview dock, so no duplicate or half-hidden copy remains. The spatial tunnel/wall overview appears on opening a spatial group and stays visible in its active settings. Page transitions use a light spring, smaller controls respond smoothly, and reduced-motion preferences are respected. Fixed-colour, animation-family and active-animation workspaces now share one calmer mobile hierarchy: the gallery has one instruction heading, the running animation is named before its controls, two animation colours align together with a deliberate full-width add action, and the active editor uses one frosted surface instead of nested cards. The fixed-colour wheel stays fully above the bottom navigation on first load. The same shared colour picker is reused for fixed colour and animation palettes; fine RGBW values remain exact. Search text stays at the iPhone no-zoom size. Browsing preserves selected lights and active effects. Browser verification does not prove physical receiver acceptance.",
   "animationGroupNavigation": {
@@ -83,11 +83,15 @@
     },
     {
       "path": "android-download/android-download.js",
-      "sha256": "43dc9d8f4ddbef3400c5d8dd45a8040db24b37bd7910a183e7355ac0c831e6a4"
+      "sha256": "44fadae33887e2f841cf1938365e518377b463f0901755b2756cfb598b10a56f"
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.6-6-71d93291aea9.apk",
       "sha256": "71d93291aea9b814ff56f5b941592c5444b66742f07e45b48f3902c599dd22c3"
+    },
+    {
+      "path": "android/aluvision-android-test-0.1.0-test.7-7-c8d2b91b1880.apk",
+      "sha256": "c8d2b91b188015afd45260c780643ab772ebadfe0e36800d3c96845f9260563f"
     },
     {
       "path": "animation-engine.js",
@@ -143,7 +147,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "53f72f416f7f7242ffd93eb625b1148b9fdbe8149f541299a5eddeb727c917cf"
+      "sha256": "55d839eb739531590cabdd36e0fbe027a2b67c4559bf8134eb9218202e485be4"
     },
     {
       "path": "installation-libraries.js",
@@ -295,17 +299,17 @@
     }
   ],
   "androidTestApp": {
-    "path": "android/aluvision-android-test-0.1.0-test.6-6-71d93291aea9.apk",
-    "size": 2393011,
-    "sha256": "71d93291aea9b814ff56f5b941592c5444b66742f07e45b48f3902c599dd22c3",
+    "path": "android/aluvision-android-test-0.1.0-test.7-7-c8d2b91b1880.apk",
+    "size": 2397107,
+    "sha256": "c8d2b91b188015afd45260c780643ab772ebadfe0e36800d3c96845f9260563f",
     "packageName": "com.aluvision.lighting.android.test",
-    "versionName": "0.1.0-test.6",
-    "versionCode": 6,
+    "versionName": "0.1.0-test.7",
+    "versionCode": 7,
     "minSdk": 26,
     "mode": "receiver",
     "signerCertificateSha256": "b598fc6fa30b423517d6ca68e3bb1191248a32723174d4703baaede9125936ac",
-    "sourceInventorySha256": "b478c6bd1aaa461b4d6bbb21686e17cd2445b63782f37ed95af2a95ee7e3d71c",
-    "approvalSha256": "e94d3554f3432f47c66e34fe522820eabcdb8074167c61d6f16b379f141a9730",
+    "sourceInventorySha256": "b4a83d70e1ff23bfd31db7b66e54c25ca567f81dad322168e2fc4691c592a664",
+    "approvalSha256": "edd486d4c2c227616cfe48086a813a7172c2fe4a376cb619f3da42f820ca3895",
     "signatureVerified": true,
     "packageVerified": true,
     "installedVerified": false,
@@ -314,7 +318,28 @@
       "apksignerSha256": "b47549e373b895ce6ca620d0c7887e674d9615ffa837a86ac601dcfd04adb0f0",
       "aaptSha256": "c0b5427aeabbbe05023ee2a55e3a9877c99ce57245bb15c21d4802326b86d099",
       "apksignerReportSha256": "ef52f4edab240b3377219b15da499a8e0fc005cd88b04ec035ac56b66774f089",
-      "aaptReportSha256": "4dea460e67932d5dff3a086655f4a71a5110cc0ba78d3dd51f0a019856bf4ffd"
+      "aaptReportSha256": "71726fa24487a15fb7ee0a063a88838722e8ff6e12dbeb9f100e1742515afaf8"
+    },
+    "features": {
+      "pinLogin": true,
+      "installationRestore": true,
+      "recoveredLibraries": true,
+      "allReceiversOnlineRequiredForRecovery": true,
+      "receiverContextWriter": false,
+      "zoneEditing": false,
+      "ota": false,
+      "unpairing": false,
+      "firstClaimPIN": false
+    },
+    "validation": {
+      "scope": "software tests and isolated Android framework storage fixture; no physical receiver acceptance",
+      "composedPINBrowserCases": 26,
+      "androidFrameworkStoreChecks": 56,
+      "sourceFreezeSha256": "5ead40302c96688e8296d5456c86d1df77f55fec9fd85cbe1544ad935c59d212",
+      "toolReportSha256": "ce515483c50fd27730e93b1d0c64e0013d40eda878d5d64880745ddd5f99eece",
+      "physicalAndroidVerified": false,
+      "physicalReceiverVerified": false,
+      "simultaneousTwoClientControlVerified": false
     }
   }
 }
