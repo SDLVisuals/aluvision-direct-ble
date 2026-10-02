@@ -48,7 +48,10 @@ html body:not([data-theme="dark"]) {
   color: var(--ink);
 }
 
-html body[data-theme="dark"] {
+/* Match the earlier material layer so legacy dark tokens cannot win merely
+   through selector specificity. Keep the opaque fallbacks equally scoped. */
+html body[data-theme="dark"],
+html.interface-polish body[data-theme="dark"] {
   --bg: #14171e;
   --panel: #292e38;
   --ink: #f4f6fb;
@@ -191,6 +194,18 @@ html body .receiver-overview-summary > span {
 }
 html body .receiver-overview-summary b { color: var(--ink); }
 
+/* Keep corner geometry at its original specificity: unboxed mobile inner
+   controls must retain their existing zero-radius layout. */
+html body :is(.card, .stand-info-tile, .stand-control-shortcut, .zone-entry,
+    .menu-card, .receiver-list > details, .scene-card, .stand-scenes-entry,
+    .stand-scene-card, .stand-scenes-empty, .stand-setup-overview,
+    .control-workspace, .onboarding-name-card, .pixel-setup-panel),
+html.interface-polish body :is(.card, .stand-info-tile, .stand-control-shortcut,
+    .zone-entry, .menu-card, .receiver-list > details, .scene-card,
+    .stand-scenes-entry, .stand-scene-card, .stand-scenes-empty,
+    .stand-setup-overview, .control-workspace, .onboarding-name-card, .pixel-setup-panel) {
+  border-radius: 24px;
+}
 /* Primary cards: a real white/smoked glass edge, a luminous upper-left face
    and restrained depth. Repeated gallery cards use the material without blur. */
 html body :is(.card, .stand-info-tile, .stand-control-shortcut, .zone-entry,
@@ -200,10 +215,15 @@ html body :is(.card, .stand-info-tile, .stand-control-shortcut, .zone-entry,
 html.interface-polish body :is(.card, .stand-info-tile, .stand-control-shortcut,
     .zone-entry, .menu-card, .receiver-list > details, .scene-card,
     .stand-scenes-entry, .stand-scene-card, .stand-scenes-empty,
-    .stand-setup-overview, .control-workspace, .onboarding-name-card, .pixel-setup-panel) {
+    .stand-setup-overview, .control-workspace, .onboarding-name-card, .pixel-setup-panel),
+html.interface-polish body[data-theme="dark"] :is(.card, .stand-info-tile,
+    .stand-control-shortcut, .zone-entry, .menu-card, .receiver-list > details,
+    .scene-card, .stand-scenes, .stand-scenes-entry, .stand-scene-card, .stand-scenes-empty,
+    .current-effect, .settings-toggle, .stand-setup-overview, .control-workspace,
+    .onboarding-name-card, .pixel-setup-panel),
+html.interface-polish body[data-theme="dark"] .power-card:not(.power-card-zone) {
   color: var(--ink);
   border-color: var(--v40-edge);
-  border-radius: 24px;
   background-color: var(--glass);
   background-image: linear-gradient(145deg, var(--v40-gloss), var(--v40-tail) 68%) !important;
   box-shadow: var(--v40-edge-light), var(--v40-raised);
@@ -234,13 +254,16 @@ html body[data-theme="dark"] .zone-options-button {
   border-color: rgba(216, 229, 255, .055);
   box-shadow: 0 3px 8px -5px rgba(0, 0, 0, .4);
 }
-html.interface-polish body[data-theme="dark"] .zone-entry {
+html.interface-polish body[data-theme="dark"] main .zone-entry {
   border-color: rgba(216, 229, 255, .1);
   box-shadow: var(--v40-raised);
 }
 html.interface-polish body :is(.animation-family-card, .family-variant-card,
     .effect-card, .family-card, .assignment-choice, .assignment-family-choice,
-    .layout-choice, .onboarding-zone, .onboarding-destination) {
+    .layout-choice, .onboarding-zone, .onboarding-destination),
+html.interface-polish body[data-theme="dark"] :is(.animation-family-card,
+    .family-variant-card, .effect-card, .family-card, .assignment-choice,
+    .assignment-family-choice, .layout-choice, .onboarding-zone, .onboarding-destination) {
   background-color: var(--glass);
   background-image: linear-gradient(145deg, var(--v40-gloss), var(--v40-tail) 72%);
   border-color: var(--v40-edge);
@@ -258,7 +281,8 @@ html body .animation-context {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-html body .animation-context > .power-card {
+html body .animation-context > .power-card,
+html.interface-polish body[data-theme="dark"] .animation-context > .power-card {
   background: transparent;
   background-image: none;
   box-shadow: none;
@@ -267,10 +291,31 @@ html body .animation-context > .power-card {
 }
 /* One full-width context surface rather than a pink boxed selection inside
    another box. Keep the established scope/power columns and measured heights. */
-html body .animation-context {
+html body .animation-context,
+html.interface-polish body[data-theme="dark"] .animation-context {
   background: linear-gradient(145deg, var(--v40-gloss), var(--v40-tail)), var(--glass-solid);
   border-color: var(--v40-edge);
   box-shadow: var(--v40-edge-light), 0 7px 17px -12px rgba(27, 43, 67, .2);
+}
+/* Mobile previously removed the context radius before this surface gained a
+   fill. Give scope and power one rounded container, without clipping a folded
+   LED-line selector or adding a second box inside it. */
+html body .bediening-workspace .animation-context {
+  padding: 10px 12px;
+  border: 1px solid var(--v40-edge);
+  border-radius: 20px;
+  gap: 8px 10px;
+  align-items: center;
+  background: linear-gradient(145deg, var(--v40-gloss), var(--v40-tail)), var(--glass-solid);
+  box-shadow: var(--v40-edge-light), 0 7px 17px -12px rgba(27, 43, 67, .2);
+}
+@media (min-width: 361px) {
+  /* Keep power beside the disclosure heading, instead of moving it halfway
+     down the drawer when the individual LED-line choices are unfolded. */
+  html body .bediening-workspace .animation-context > .power-card {
+    align-self: start;
+    margin-top: 4px;
+  }
 }
 html body .animation-context > .selection { background: transparent; box-shadow: none; }
 html body .selection .scope-lines-toggle,
@@ -289,6 +334,28 @@ html body .animation-context > .selection.continuous-scope {
   border-left-width: 1px;
   box-shadow: inset 0 1px 0 var(--glass-edge);
 }
+html body .bediening-workspace .animation-context > :is(.continuous-scope, .single-scope) {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  gap: 10px;
+}
+html body .bediening-workspace .animation-context > .continuous-scope > div {
+  flex: 1;
+  min-width: 0;
+}
+html body .bediening-workspace .animation-context > .continuous-scope strong,
+html body .bediening-workspace .animation-context > .single-scope b {
+  font-size: 14px;
+  line-height: 1.35;
+}
+html body .bediening-workspace .animation-context > .continuous-scope small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
 html body .selection.continuous-scope > .scope-toggle-icon {
   display: grid;
   color: var(--action-ink);
@@ -302,6 +369,18 @@ html body .selection[data-selection-mode="all"] .scope-lines-toggle .scope-toggl
 html body .selection .scope-toggle-chevron { background: transparent; }
 html body .selection .scope-copy :is(.scope-option-title, small) { color: var(--ink); }
 html body .selection .scope-copy small { color: var(--muted); }
+@media (max-width: 720px) {
+  /* The open drawer shares its row with power. Two columns squeezed names
+     down to a letter per line; use legible, full-width choices on phones. */
+  html body .bediening-workspace .animation-context .scope-lines-list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+  }
+  html body .bediening-workspace .animation-context .scope-line:last-child:nth-child(odd) {
+    width: 100%;
+    justify-self: stretch;
+  }
+}
 html body .control-dock-surface { border-radius: 20px; }
 html body .control-preview-dock .preview-wrap {
   border-color: var(--v40-edge);
@@ -320,6 +399,37 @@ html body[data-theme="dark"] .warm-white-choice {
 html body .warm-white-choice[aria-pressed="true"] {
   border-color: var(--action-ink);
   box-shadow: inset 0 1px 0 var(--glass-edge), inset 0 0 0 1px var(--action-ink);
+}
+/* Use the same clear, full-width Warmwit choice in a zone and in Alles
+   bedienen. The old narrow stand column let the label spill into the slider. */
+html body .warm-white-choice {
+  min-height: 56px;
+  padding: 10px 14px;
+  gap: 12px;
+}
+html body .warm-white-choice > span:nth-child(2) { line-height: 1.35; }
+html body .warm-white-choice b { display: block; white-space: nowrap; }
+#effect-dialog:has([data-stand-control-sheet]) .warm-white-controls {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+#effect-dialog:has([data-stand-control-sheet]) .warm-white-choice {
+  min-height: 56px;
+  padding: 10px 14px;
+  gap: 12px;
+}
+#effect-dialog:has([data-stand-control-sheet]) .warm-white-choice small {
+  display: block;
+  font-size: 11px;
+}
+#effect-dialog:has([data-stand-control-sheet]) .warm-white-choice > .icon {
+  display: block;
+  flex: none;
+}
+#effect-dialog:has([data-stand-control-sheet]) .warm-white-swatch {
+  width: 26px;
+  height: 26px;
 }
 html.interface-polish body :is(.settings-installation, .settings-app-tools) {
   background: transparent;
@@ -385,6 +495,8 @@ html body .button.secondary:not(.receiver-danger-section .button.secondary) {
 }
 html.interface-polish body :is(.settings-toggle, .ledline-add-action,
     .animation-category-trigger, .animation-category-choice),
+html.interface-polish body[data-theme="dark"] :is(.settings-toggle, .ledline-add-action,
+    .animation-category-trigger, .animation-category-choice),
 html body :is(.animation-settings-return, .animation-chooser-action) {
   color: var(--ink);
   background-color: var(--glass-solid);
@@ -418,6 +530,8 @@ html.interface-polish body :is(.guide, .preview-notice, .pixel-preview-notice,
   backdrop-filter: none;
 }
 html body :is(.animation-search input, .dialog-field input, .output-row input,
+    .output-row select, .onboarding-name-card input),
+html.interface-polish body[data-theme="dark"] :is(.animation-search input, .dialog-field input, .output-row input,
     .output-row select, .onboarding-name-card input) {
   background: var(--v40-field);
   color: var(--ink);
@@ -489,7 +603,8 @@ html body :is(button, a, input, select, summary):focus-visible {
   }
 }
 @media (prefers-reduced-transparency: reduce) {
-  :root, html.interface-polish, html body[data-theme="dark"] {
+  :root, html.interface-polish, html body[data-theme="dark"],
+  html.interface-polish body[data-theme="dark"] {
     --glass: var(--glass-solid);
     --v40-inner: var(--glass-solid);
   }
@@ -501,7 +616,8 @@ html body :is(button, a, input, select, summary):focus-visible {
   }
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root, html.interface-polish, html body[data-theme="dark"] {
+  :root, html.interface-polish, html body[data-theme="dark"],
+  html.interface-polish body[data-theme="dark"] {
     --glass: var(--glass-solid);
     --v40-inner: var(--glass-solid);
   }

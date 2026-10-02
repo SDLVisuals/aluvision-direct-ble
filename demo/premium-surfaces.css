@@ -38,8 +38,9 @@ body:not([data-theme="dark"]) {
 }
 
 
-/* Zone power is an unboxed row; keep it out of shared card decoration in
-   both themes (including this selector's high-specificity dialog branch). */
+/* Zone power is an unboxed row. The dialog keeps its own ID specificity;
+   putting its ID inside :is would also overrule later styles on every card. */
+#effect-dialog,
 :is(
   .card,
   .stand-info-tile,
@@ -77,8 +78,7 @@ body:not([data-theme="dark"]) {
   .receiver-update-sheet,
   .receiver-removal-sheet,
   .pin-protection-card,
-  .assignment-choice,
-  #effect-dialog
+  .assignment-choice
 ) {
   background-color: var(--glass);
   background-image:
@@ -336,6 +336,8 @@ body[data-theme="dark"] .brand-bar {
   border-color: rgba(255, 255, 255, .08);
 }
 
+/* Keep dialog ID specificity on the dialog, not every class in this group. */
+body[data-theme="dark"] #effect-dialog,
 body[data-theme="dark"] :is(
   .card,
   .stand-info-tile,
@@ -372,8 +374,7 @@ body[data-theme="dark"] :is(
   .pixel-setup-shell,
   .receiver-update-sheet,
   .receiver-removal-sheet,
-  .pin-protection-card,
-  #effect-dialog
+  .pin-protection-card
 ) {
   color: var(--ink);
   background-color: rgba(32, 35, 30, .76);
@@ -1273,14 +1274,14 @@ body .brand-bar {
   backdrop-filter: blur(22px) saturate(112%);
 }
 body[data-theme="dark"] .brand-bar { background: rgba(22, 25, 31, .82); }
+body[data-theme="dark"] #effect-dialog,
 body[data-theme="dark"] :is(.card, .stand-info-tile, .zone-entry, .zone-card,
     .menu-card, .power-card:not(.power-card-zone), .current-effect, .settings-toggle,
     .receiver-list details, .scene-card, .scene-zone, .scene-saved-zone, .scene-save-bar,
     .stand-scenes, .stand-scenes-empty, .stand-scenes-entry, .stand-scene-card,
     .preset-card, .effect-card, .family-card, .animation-family-card, .family-variant-card,
     .onboarding-name-card, .onboarding-zone, .onboarding-destination, .stand-setup-overview,
-    .pixel-setup-panel, .receiver-update-sheet, .receiver-removal-sheet, .pin-protection-card,
-    #effect-dialog) {
+    .pixel-setup-panel, .receiver-update-sheet, .receiver-removal-sheet, .pin-protection-card) {
   background-color: var(--glass);
   background-image: linear-gradient(150deg, rgba(231, 239, 255, .1), rgba(255, 255, 255, .012) 72%);
   border-color: var(--glass-edge);

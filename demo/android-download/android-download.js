@@ -17,7 +17,7 @@
     !/^[a-f0-9]{64}$/.test(data.androidSha256||'')||!Number.isSafeInteger(size)||size<65536||size>67108864||!Number.isInteger(minSdk)||minSdk<26||minSdk>100||!Number.isInteger(code)||code<1||code>2147483647||
     !/^android\/aluvision-android-test-[a-zA-Z0-9.+_-]+-[1-9]\d*-[a-f0-9]{12}\.apk$/.test(data.androidApk||''))return;
   if(data.androidApk!==`android/aluvision-android-test-${data.androidVersion}-${code}-${data.androidSha256.slice(0,12)}.apk`)return;
-  const directory=new URL('.',location),apk=new URL(data.androidApk,directory);
+  const directory=new URL('.',location),apk=new URL(data.androidApk,directory),downloadPage=new URL('../android/',directory);
   if(apk.origin!==location.origin||!apk.pathname.startsWith(directory.pathname+'android/'))return;
   const translations={
     nl:{group:'Android-testapp',title:'Android-testapp downloaden',test:'Testversie',demo:'Interface-demo · geen echte verlichting',receiver:'APK',minimum:'Android 8 of nieuwer',limits:'Voor je begint',setup:'Begin met een nog niet gekoppelde hoofdreceiver. Een bestaande beveiligde installatie overnemen kan nog niet.',missing:'PIN-herstel, OTA en ontkoppelen zijn nog niet beschikbaar.',identity:'Verwijder de app niet tijdens je test: daarmee wis je de lokale koppelidentiteit. Bijwerken behoudt die.',physical:'Nog niet bevestigd op een echte Android-telefoon.'},
@@ -50,6 +50,7 @@
       const body=document.createElement('div'),title=document.createElement('b'),metadata=document.createElement('small'),description=document.createElement('small');
       title.dataset.androidDownloadTitle='';metadata.id='android-download-metadata';description.id='android-download-mode';
       body.append(title,metadata,description);link.append(body,svg(['m9 5 7 7-7 7'],'chevron'));section.append(link);
+      const pageLink=document.createElement('a');pageLink.className='android-download-page';pageLink.dataset.androidDownloadPage='';pageLink.href=downloadPage.href;section.append(pageLink);
       if(mode==='receiver'){
         const note=document.createElement('details');note.className='android-download-note';
         const summary=document.createElement('summary');summary.dataset.androidLimit='limits';note.append(summary);
@@ -59,6 +60,7 @@
     }
     const set=(selector,value)=>{const element=section.querySelector(selector);if(element.textContent!==value)element.textContent=value;};
     set('h2',copy.group);set('[data-android-download-title]',copy.title);
+    set('[data-android-download-page]',({nl:'Screenshots & installeren ↗',en:'Screenshots & installation ↗',fr:'Captures & installation ↗',de:'Screenshots & Installation ↗'})[language]);
     set('#android-download-metadata',`v${data.androidVersion} · ${new Intl.NumberFormat(language,{minimumFractionDigits:1,maximumFractionDigits:1}).format(size/1048576)} MB · ${copy.test}`);
     set('#android-download-mode',copy[mode]+' · '+(minSdk===26?copy.minimum:`Android API ${minSdk}+`));section.querySelector('a').setAttribute('aria-label',copy.title+' ('+copy.test.toLowerCase()+')');
     for(const element of section.querySelectorAll('[data-android-limit]'))if(element.textContent!==copy[element.dataset.androidLimit])element.textContent=copy[element.dataset.androidLimit];
