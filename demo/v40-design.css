@@ -19,8 +19,8 @@ html.interface-polish {
   --v40-inner: rgba(231, 237, 246, .56);
   --v40-gloss: rgba(255, 255, 255, .94);
   --v40-tail: rgba(242, 247, 255, .32);
-  --v40-raised: 0 14px 30px -14px rgba(35, 50, 77, .24),
-    0 4px 10px -5px rgba(35, 50, 77, .13);
+  --v40-raised: 0 10px 24px -14px rgba(35, 50, 77, .20),
+    0 3px 8px -5px rgba(35, 50, 77, .12);
   --v40-edge-light: inset 0 1px 0 rgba(255, 255, 255, .98),
     inset 0 0 0 1px rgba(255, 255, 255, .48);
   --v40-field: rgba(255, 255, 255, .74);
@@ -67,8 +67,8 @@ html.interface-polish body[data-theme="dark"] {
   --v40-inner: rgba(51, 59, 75, .58);
   --v40-gloss: rgba(222, 234, 255, .14);
   --v40-tail: rgba(24, 30, 41, .32);
-  --v40-raised: 0 16px 32px -14px rgba(0, 0, 0, .56),
-    0 4px 10px -4px rgba(0, 0, 0, .28);
+  --v40-raised: 0 12px 26px -14px rgba(0, 0, 0, .48),
+    0 3px 8px -4px rgba(0, 0, 0, .24);
   --v40-edge-light: inset 0 1px 0 rgba(230, 239, 255, .2),
     inset 0 0 0 1px rgba(230, 239, 255, .035);
   --v40-field: rgba(30, 36, 47, .82);
@@ -567,26 +567,78 @@ html.interface-polish body #effect-dialog:has([data-stand-control-sheet]) {
    by the existing layout; only its silhouette and materials change. */
 html.interface-polish body .navigation,
 html body .navigation {
-  background: linear-gradient(145deg, rgba(54, 65, 85, .96), rgba(24, 32, 48, .94));
-  border: 1px solid rgba(222, 233, 255, .34);
-  border-radius: 22px;
-  box-shadow: inset 0 1px 0 rgba(240, 246, 255, .26),
-    0 18px 34px -11px rgba(16, 27, 47, .38), 0 3px 9px rgba(16, 27, 47, .16);
-  -webkit-backdrop-filter: blur(22px) saturate(115%);
-  backdrop-filter: blur(22px) saturate(115%);
+  background: linear-gradient(145deg, rgba(57, 66, 81, .88), rgba(25, 32, 44, .90));
+  border: 1px solid rgba(226, 234, 246, .20);
+  border-radius: 32px;
+  box-shadow: inset 0 1px 0 rgba(240, 246, 255, .12),
+    0 12px 26px -11px rgba(16, 27, 47, .38), 0 3px 9px rgba(16, 27, 47, .12);
+  -webkit-backdrop-filter: blur(28px) saturate(115%);
+  backdrop-filter: blur(28px) saturate(115%);
 }
-html body .navigation > button { border-radius: 16px; font-weight: 650; }
-html body .navigation > button:not([aria-current="page"]) { color: #e1e8f5; }
+html body[data-theme="dark"] .navigation {
+  background: linear-gradient(145deg, rgba(48, 57, 73, .76), rgba(24, 31, 43, .84));
+}
+html body .navigation > button { border-radius: 26px; font-weight: 650; }
+html body .navigation > button:not([aria-current="page"]) { color: #d3dae6; }
 html.interface-polish body .navigation > button[aria-current="page"],
 html body .navigation > button[aria-current="page"] {
-  color: #ac3933;
-  background: linear-gradient(145deg, #fff, #e9eff9);
-  box-shadow: inset 0 1px 0 #fff, 0 3px 9px rgba(0, 0, 0, .22);
+  color: #fff;
+  background: linear-gradient(145deg, rgba(235, 242, 253, .15), rgba(235, 242, 253, .08));
+  box-shadow: inset 0 0 0 1px rgba(235, 242, 253, .12), 0 2px 6px rgba(0, 0, 0, .12);
+}
+html body .navigation > button[aria-current="page"] .icon { color: #ffd0c9; }
+/* A calm setup footer: primary light controls come first. Keep the existing
+   disclosure, selected layout and native actions rather than another submenu. */
+html body .editor-controls-zone > .ledline-setup { margin-top: 18px; }
+html body .editor-controls-zone > .ledline-setup[data-order-open="false"] {
+  background: var(--v40-inner);
+  box-shadow: inset 0 1px 0 var(--glass-edge);
 }
 html body .toast {
   color: #f5f7fc;
   background: linear-gradient(145deg, #343e51, #222c3e);
   border-color: rgba(238, 245, 255, .25);
+}
+/* Secondary scene activation is a compact, separate action, not a full-height
+   red slab. The details card never starts a scene; error/disabled explanations
+   and destructive confirmations keep their existing presentation. */
+html body :is(.scene-card-row, .stand-scene-row) { align-items: center; }
+html body .button.red.scene-quick-activate {
+  min-height: 62px;
+  color: var(--action-ink);
+  background: var(--v40-inner);
+  border: 1px solid var(--v40-edge);
+  box-shadow: inset 0 1px 0 var(--glass-edge);
+  border-radius: 18px;
+}
+/* Dialogs use one opaque neutral backing; blur belongs to the overlay and
+   outer cards, never to labels over another scrolling screen. */
+html body #effect-dialog:not(:has([data-stand-control-sheet])),
+html.interface-polish body[data-theme="dark"] #effect-dialog:not(:has([data-stand-control-sheet])) {
+  background: var(--glass-solid);
+  background-image: none;
+}
+html body .pixel-output-picker > .pixel-preview-notice {
+  padding: 7px 10px;
+  border-radius: 12px;
+  background: var(--v40-inner);
+  box-shadow: none;
+}
+html body .assignment-context { margin-block: 10px; }
+html body .assignment-context > span { color: var(--muted); font-size: 13px; }
+html body .assignment-retention-note { font-size: 12px; line-height: 1.5; margin: 8px 0 14px; }
+html body .backup-security-note { font-size: 12px; line-height: 1.45; }
+/* Nested controls are separated by spacing and a quiet edge, not concentric
+   bright rims. Outer glass still provides the depth in the dark workspace. */
+html.interface-polish body[data-theme="dark"] .editor-controls-zone .control-workspace {
+  border-color: rgba(216, 229, 255, .12);
+  box-shadow: var(--v40-raised);
+}
+html.interface-polish body[data-theme="dark"] .editor-controls-zone .shared-colour-picker,
+html.interface-polish body[data-theme="dark"] .bediening-workspace .animation-context,
+html.interface-polish body[data-theme="dark"] .bediening-workspace .scope-lines-toggle {
+  border-color: rgba(216, 229, 255, .12);
+  box-shadow: none;
 }
 html body :is(button, a, input, select, summary):focus-visible {
   outline: 2px solid var(--action-ink);
@@ -614,6 +666,8 @@ html body :is(button, a, input, select, summary):focus-visible {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
   }
+  html body .navigation { background: #293140 !important; }
+  html body .navigation > button[aria-current="page"] { background: #495464; }
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root, html.interface-polish, html body[data-theme="dark"],
@@ -621,6 +675,8 @@ html body :is(button, a, input, select, summary):focus-visible {
     --glass: var(--glass-solid);
     --v40-inner: var(--glass-solid);
   }
+  html body .navigation { background: #293140; }
+  html body .navigation > button[aria-current="page"] { background: #495464; }
 }
 @media (forced-colors: active) {
   html body :is(.card, .zone-entry, .menu-card, .receiver-list > details,
@@ -634,4 +690,11 @@ html body :is(button, a, input, select, summary):focus-visible {
     backdrop-filter: none !important;
   }
   html body :is(button, a, input, select, summary):focus-visible { outline-color: Highlight; }
+  html body .navigation > button { color: ButtonText !important; }
+  html body .navigation > button[aria-current="page"] {
+    background: Highlight !important;
+    color: HighlightText !important;
+    box-shadow: none;
+  }
+  html body .navigation > button[aria-current="page"] .icon { color: HighlightText; }
 }

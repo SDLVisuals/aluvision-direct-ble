@@ -1,8 +1,8 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v40-android-test7-pin-download-20261002",
+  "revision": "v40-ux-refinement-20261002",
   "interfaceVersion": 40,
-  "interfaceBaseline": "V40 milkglass light and charcoal dark surfaces preserve the existing flows. V32 keeps the established Aluvision interface while making animation browsing easier to understand and gentler to use. Customers first see clearly labelled effect groups; opening one enters a focused page with only that group’s variations, and choosing a variation is the action that starts it. A single back button returns to the originating list and moves beside the sticky LED overview only when its inline position is obscured. The active-animation action also moves one DOM button between the page and preview dock, so no duplicate or half-hidden copy remains. The spatial tunnel/wall overview appears on opening a spatial group and stays visible in its active settings. Page transitions use a light spring, smaller controls respond smoothly, and reduced-motion preferences are respected. Fixed-colour, animation-family and active-animation workspaces now share one calmer mobile hierarchy: the gallery has one instruction heading, the running animation is named before its controls, two animation colours align together with a deliberate full-width add action, and the active editor uses one frosted surface instead of nested cards. The fixed-colour wheel stays fully above the bottom navigation on first load. The same shared colour picker is reused for fixed colour and animation palettes; fine RGBW values remain exact. Search text stays at the iPhone no-zoom size. Browsing preserves selected lights and active effects. Browser verification does not prove physical receiver acceptance.",
+  "interfaceBaseline": "V40 UX refinement keeps the existing Aluvision flows with calmer smoked-glass navigation, readable labelled active tabs, colour controls before ledline management, shorter repeated copy, clearer settings, compact scene actions and reduced-motion support. RGBW and SPI retain distinct compatible controls; tunnel and wall context stays recognizable. The GitHub page is an isolated in-memory demo with fictional receivers and no physical hardware access. iPhone and Android release fields below refer to their existing builds, not this demo-only UX publication.",
   "animationGroupNavigation": {
     "detailPage": true,
     "content": "selected effect group only",
@@ -115,7 +115,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "9bb8ab5bdde5ac0a143ddfd037c350cc653734c0e1be6bf512ad406410990ba7"
+      "sha256": "f2877b15095cd42fd9ba9c4a786a82ac1cd092b6c880f9c4caf08c96ac25ce99"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -147,7 +147,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "55d839eb739531590cabdd36e0fbe027a2b67c4559bf8134eb9218202e485be4"
+      "sha256": "3501e7df55b10557567d168e9971f06f1536952ce7616a545e2825022abab2a3"
     },
     {
       "path": "installation-libraries.js",
@@ -283,7 +283,7 @@
     },
     {
       "path": "v40-design.css",
-      "sha256": "9b1966e6b163c6248e21ebe51952ceb3db39b86506d29095767eb1d049884178"
+      "sha256": "ea3255fda1a66d9f8179bd1289835f3a0bb44f688a94e4a48edddf519b9c90b2"
     },
     {
       "path": "vendor/v21_animation_catalog.js",
