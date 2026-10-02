@@ -1,6 +1,6 @@
 {
   "kind": "isolated-browser-demo",
-  "revision": "v40-android-test3-20261002",
+  "revision": "v40-visible-uplift-20261002",
   "interfaceVersion": 40,
   "interfaceBaseline": "V40 milkglass light and charcoal dark surfaces preserve the existing flows. V32 keeps the established Aluvision interface while making animation browsing easier to understand and gentler to use. Customers first see clearly labelled effect groups; opening one enters a focused page with only that group’s variations, and choosing a variation is the action that starts it. A single back button returns to the originating list and moves beside the sticky LED overview only when its inline position is obscured. The active-animation action also moves one DOM button between the page and preview dock, so no duplicate or half-hidden copy remains. The spatial tunnel/wall overview appears on opening a spatial group and stays visible in its active settings. Page transitions use a light spring, smaller controls respond smoothly, and reduced-motion preferences are respected. Fixed-colour, animation-family and active-animation workspaces now share one calmer mobile hierarchy: the gallery has one instruction heading, the running animation is named before its controls, two animation colours align together with a deliberate full-width add action, and the active editor uses one frosted surface instead of nested cards. The fixed-colour wheel stays fully above the bottom navigation on first load. The same shared colour picker is reused for fixed colour and animation palettes; fine RGBW values remain exact. Search text stays at the iPhone no-zoom size. Browsing preserves selected lights and active effects. Browser verification does not prove physical receiver acceptance.",
   "animationGroupNavigation": {
@@ -60,10 +60,10 @@
   "hardwareAccess": false,
   "nativeAppModified": false,
   "nativeAppUpdatePending": true,
-  "nativeAppBuildTarget": null,
-  "nativeAppBundleVerified": false,
-  "nativeAppBuiltVersion": null,
-  "nativeAppBuiltBuild": null,
+  "nativeAppBuildTarget": "be.aluvision.LightingControl",
+  "nativeAppBundleVerified": true,
+  "nativeAppBuiltVersion": "40.0.2",
+  "nativeAppBuiltBuild": "243",
   "nativeAppInstalled": false,
   "nativeAppSimulatorInstalled": false,
   "nativeAppInstallationPreservedData": null,
@@ -85,8 +85,8 @@
       "sha256": "dbcc56b241d94f52818ebda85a4c9f8d035f9405832757d47e7e42e4e6858a54"
     },
     {
-      "path": "android/aluvision-android-test-0.1.0-test.3-3-5c8921aa383c.apk",
-      "sha256": "5c8921aa383cbfb8180e483ef8cb0fdc6f1b5d0bb7011a894de9e3032af7fed5"
+      "path": "android/aluvision-android-test-0.1.0-test.5-5-bcb8b39b3543.apk",
+      "sha256": "bcb8b39b354387c14b17e9e86ddb740095c888bb012c9ade1c22d43b3118985d"
     },
     {
       "path": "animation-engine.js",
@@ -110,7 +110,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "b5c9c6e482b42bd673dadbd1a4c9bc78796c527e7218ba8c849b00366c3ee0d0"
+      "sha256": "9bb8ab5bdde5ac0a143ddfd037c350cc653734c0e1be6bf512ad406410990ba7"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -142,7 +142,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "bb810817023f06828270247ad96b0593c2e9818ec158dc7f6525f50bc0ce3ce6"
+      "sha256": "15ea4de6e16e8d5a7965cbb7f4b54f0825dac5847f0fdf606a512dbc2da78e7e"
     },
     {
       "path": "installation-libraries.js",
@@ -277,6 +277,10 @@
       "sha256": "c74b344259e889330e1cc7973dcfdcb38cfa60f19b1983c137cc9e5fa90d1929"
     },
     {
+      "path": "v40-design.css",
+      "sha256": "cf50bf8e51a6f5a836800e3737196979b82f25de1e9342d9352b748ac1fed0ec"
+    },
+    {
       "path": "vendor/v21_animation_catalog.js",
       "sha256": "37a90c048d22a1d5efd25cf91336175aaa2f770f11d3aea9c3dc7d6a859f4014"
     },
@@ -290,17 +294,17 @@
     }
   ],
   "androidTestApp": {
-    "path": "android/aluvision-android-test-0.1.0-test.3-3-5c8921aa383c.apk",
-    "size": 2388844,
-    "sha256": "5c8921aa383cbfb8180e483ef8cb0fdc6f1b5d0bb7011a894de9e3032af7fed5",
+    "path": "android/aluvision-android-test-0.1.0-test.5-5-bcb8b39b3543.apk",
+    "size": 2393011,
+    "sha256": "bcb8b39b354387c14b17e9e86ddb740095c888bb012c9ade1c22d43b3118985d",
     "packageName": "com.aluvision.lighting.android.test",
-    "versionName": "0.1.0-test.3",
-    "versionCode": 3,
+    "versionName": "0.1.0-test.5",
+    "versionCode": 5,
     "minSdk": 26,
     "mode": "receiver",
     "signerCertificateSha256": "b598fc6fa30b423517d6ca68e3bb1191248a32723174d4703baaede9125936ac",
-    "sourceInventorySha256": "e4350f69a4f2c67c2bee326b80d22914dbe6b26a14a837417e1b0593db7bfee3",
-    "approvalSha256": "4808c6e7d5072220cfb6bdce07a6c6ce32e3dd7bf46223cf87976dbd78f88142",
+    "sourceInventorySha256": "87348f4ca63281e2e3f36877a5d430d6d0a988d110d90c5c9c869850d391ba50",
+    "approvalSha256": "6573cf3d0457b0b90fdc4ac1baab15df74de3b475c9b1afefdd81749c1cada3c",
     "signatureVerified": true,
     "packageVerified": true,
     "installedVerified": false,
@@ -309,7 +313,7 @@
       "apksignerSha256": "b47549e373b895ce6ca620d0c7887e674d9615ffa837a86ac601dcfd04adb0f0",
       "aaptSha256": "c0b5427aeabbbe05023ee2a55e3a9877c99ce57245bb15c21d4802326b86d099",
       "apksignerReportSha256": "ef52f4edab240b3377219b15da499a8e0fc005cd88b04ec035ac56b66774f089",
-      "aaptReportSha256": "cd5fe65b5dff86faed604f61948530fdef6b919da2718003ff326f4bd96211a1"
+      "aaptReportSha256": "1b59ce4d76b1fb3973f9c9b09a3770795f85e5a70bd45dda1a2a16dd51ebfb7d"
     }
   }
 }
