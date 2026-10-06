@@ -1,0 +1,34 @@
+/* Whole-stand scope uses the same library/editor, in its existing fullscreen sheet. */
+.stand-controls-tabs{position:sticky;top:var(--dialog-header-height,64px);z-index:4;margin:0;padding:5px;background:var(--glass);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:20px;box-shadow:0 5px 20px #0000000b}
+/* Keep scrolling labels out of the sticky controls, including WKWebView's
+   nested glass surfaces. The raised buttons retain the existing glass style. */
+html body .stand-controls-tabs.section-tabs{background:var(--glass-solid);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
+.stand-controls-tabs button{flex:1;min-height:48px;gap:8px}
+.stand-controls-tabs button[aria-selected=true]{background:var(--ink);color:var(--bg);box-shadow:0 2px 8px #00000016}
+#stand-controls-panel{display:grid;gap:12px;min-width:0}
+.stand-controls-description{display:block;font-size:12px;line-height:1.5;color:var(--muted);margin:4px 0 12px;max-width:66ch}
+.stand-control-description>small{display:block;margin-top:4px;color:var(--muted);font-size:11px;line-height:1.45}
+.stand-animation-live{border-radius:24px;padding:16px;background:var(--glass);border:1px solid var(--line);overflow:hidden}
+.stand-animation-live-title{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.stand-animation-live-title b{font-size:20px;line-height:1.2}
+.stand-animation-live-title small,.stand-animation-guidance{font-size:12px;line-height:1.45;color:var(--muted)}
+.stand-animation-preview{display:grid;gap:9px;min-width:0}
+.stand-animation-zone{border-radius:16px;overflow:hidden;background:linear-gradient(145deg,#17251f,#0d1512);color:#f1f4f1;padding:10px 12px;border:1px solid #c9d5cf1c}
+.stand-animation-zone-label{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;line-height:1.3}
+.stand-animation-zone-label b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stand-animation-zone-label span{font-size:10px;color:#c9d5cf;flex:none}
+.stand-animation-role{display:inline-block;max-width:100%;font-size:11px;line-height:1.45;color:#dde9e2;margin-top:7px;padding:3px 7px;border-radius:7px;background:#e4f5e80d;overflow-wrap:anywhere}
+.stand-animation-zone canvas{display:block;width:100%;height:80px}
+.stand-animation-preview.is-compact{gap:4px;width:100%;padding:8px}
+.stand-animation-preview.is-compact .stand-animation-zone{padding:5px 7px;border-radius:11px}
+.stand-animation-preview.is-compact .stand-animation-zone-label{font-size:10px}
+.stand-animation-preview.is-compact .stand-animation-zone canvas{height:42px}
+[data-stand-control-mode=animations] .animation-family-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+[data-stand-control-mode=animations] .animation-library-inline{min-width:0}
+[data-stand-control-mode=animations] .animation-family-preview{min-height:146px}
+[data-stand-control-mode=animations] .animation-family-spatial-preview{height:auto}
+[data-stand-control-mode=animations] .animation-family-card .stand-animation-preview{align-self:center}
+[data-stand-control-mode=animations] .family-variant-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+[data-stand-control-mode=animations] :is(button,input){scroll-margin-block-start:calc(var(--dialog-header-height,64px) + 78px)}
+@media(max-width:350px){[data-stand-control-mode=animations] .animation-family-grid,[data-stand-control-mode=animations] .family-variant-grid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.stand-controls-tabs{scroll-behavior:auto}}

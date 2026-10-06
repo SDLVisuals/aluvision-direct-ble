@@ -1,0 +1,41 @@
+/* Only the arrangement editor changes. Keep the accepted Stand cards intact. */
+body .ledline-draft-order > [data-order-item] {
+  display:grid;grid-template-columns:36px minmax(0,1fr) 48px;
+  align-items:center;gap:10px;padding:12px;border-radius:22px;
+  position:relative;transition:box-shadow .16s ease,background .16s ease;
+}
+body .ledline-draft-order .scope-copy {min-width:0;}
+body .ledline-draft-order .scope-copy small {overflow-wrap:anywhere;}
+body .ledline-draft-order .order-number {
+  height:36px;min-width:36px;border-radius:12px;background:var(--glass-solid);
+  box-shadow:inset 0 -4px var(--identify-colour,transparent);color:var(--ink);
+}
+body .line-order-handle {
+  width:48px;height:48px;padding:0;display:grid;place-items:center;border:0;
+  border-radius:14px;color:var(--muted);background:transparent;touch-action:none;
+  cursor:grab;font-size:28px;line-height:1;user-select:none;
+}
+body .line-order-handle:disabled {opacity:.25;cursor:default;}
+body [data-order-item][data-order-grabbed] {opacity:.7;background:var(--glass-solid);}
+body [data-order-item][data-order-grabbed] .line-order-handle {cursor:grabbing;}
+body [data-order-item][data-order-drop]::before {
+  content:"";position:absolute;left:12px;right:12px;top:-5px;height:3px;
+  background:var(--accent,#c94e46);border-radius:4px;
+}
+body [data-order-item][data-order-drop="after"]::before {top:auto;bottom:-5px;}
+body .ledline-draft-order .ledline-output-overview,
+body .ledline-draft-order .ledline-order-tools,
+body .ledline-draft-order .ledline-row-settings {grid-column:1/-1;}
+body .ledline-draft-order .ledline-order-tools {padding-top:0;}
+body .ledline-draft-order .ledline-row-actions {width:100%;}
+body .ledline-draft-order .ledline-row-actions > button {min-height:44px;}
+body .ledline-setup .ledline-draft-order .ledline-row-actions > .order-blink-subtle {background:transparent;border-color:transparent;flex:0 1 40%;color:var(--muted);font-size:11px;}
+body .ledline-draft-order .ledline-settings-toggle {flex:1;}
+body .ledline-output-strip {box-shadow:inset 0 0 0 2px var(--identify-colour,transparent);}
+body .line-colour-name {font-size:10px;font-weight:600;color:var(--ink);}
+body .order-drop-status {min-height:1.4em;margin:0;font-size:12px;color:var(--muted);}
+body .order-recognition-status {min-height:1.4em;margin:0;font-size:11px;color:var(--muted);}
+body .editor-controls-zone > .ledline-setup {margin-bottom:14px;}
+body .control-location-summary {display:flex;flex-wrap:wrap;align-items:center;gap:5px 12px;margin:5px 2px 8px;color:var(--muted);font-size:11px;line-height:1.4;}
+body .control-location-summary [data-current-light] {color:var(--ink);font-weight:600;overflow-wrap:anywhere;}
+@media (prefers-reduced-motion:reduce) {body .ledline-draft-order > [data-order-item] {transition:none;}}

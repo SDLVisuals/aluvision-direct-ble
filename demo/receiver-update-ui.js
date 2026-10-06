@@ -57,6 +57,7 @@
     }
     function errorKey(code){
       const map={
+        LOCAL_NETWORK_DENIED:'softwareErrorLocalNetwork',
         OTA_DIRECT_WIFI_REQUIRED:'softwareErrorConnection',NATIVE_UNAVAILABLE:'softwareErrorConnection',
         OTA_ACK_TIMEOUT:'softwareErrorAck',OTA_RECEIVER_REJECTED:'softwareErrorRejected',
         OTA_RESTART_NOT_VERIFIED:'softwareErrorRestart',OTA_ROLLBACK:'softwareErrorRollback',
@@ -142,7 +143,14 @@
       if(statusLine.textContent!==statusText)statusLine.textContent=statusText;
       dialog.querySelectorAll('[data-update]:not([data-update="close"])').forEach(button=>{button.disabled=busy;});
     }
-    function close(){generation++;monitorEpoch++;activeMonitorId=null;dialog?.close();if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});}
+    function close(){
+      const wasOpen=dialog?.open===true,standId=entries[0]?.receiver.standId;
+      generation++;monitorEpoch++;activeMonitorId=null;dialog?.close();
+      if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});
+      // This is only a lifecycle hint. Runtime must obtain fresh current
+      // context status and verified cleanup; closing never confirms OTA.
+      if(wasOpen&&typeof root.CustomEvent==='function')root.dispatchEvent(new root.CustomEvent('lightning:receiver-work-idle',{detail:{standId}}));
+    }
     async function refreshPlans(token){
       success=false;
       for(const entry of entries){entry.plan=null;entry.job=null;entry.cancelling=false;entry.mainRecovery=false;entry.errorCode='';entry.message='';entry.status='checking';}

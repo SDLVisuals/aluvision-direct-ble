@@ -79,6 +79,7 @@
       softwarePreflight: 'Alle receivers controleren…', softwareFailed: 'Update niet bevestigd',
       softwareFailedGeneral: 'Deze update is niet bevestigd. De volgende receiver is niet bijgewerkt.',
       softwareErrorConnection: 'Controleer of je verbonden bent met het ALUVISION-wifi.',
+      softwareErrorLocalNetwork: 'Toegang tot het lokale netwerk is geblokkeerd. Sta Aluvision toe bij Instellingen → Privacy en beveiliging → Lokaal netwerk. Sluit de app en open haar daarna opnieuw; probeer vervolgens één keer opnieuw. Je stand blijft behouden.',
       softwareErrorAck: 'De receiver bevestigde de overdracht niet. Laat hem aan en controleer de verbinding.',
       softwareErrorRejected: 'De receiver heeft de update geweigerd. Gebruik de nieuwste appversie en probeer opnieuw.',
       softwareErrorRestart: 'De update is verstuurd, maar de herstart is nog niet bevestigd. Controleer dezelfde receiver; start geen nieuwe update.',
@@ -150,6 +151,7 @@
       softwarePreflight: 'Checking all receivers…', softwareFailed: 'Update not confirmed',
       softwareFailedGeneral: 'This update was not confirmed. The next receiver was not updated.',
       softwareErrorConnection: 'Check that you are connected to the ALUVISION Wi-Fi.',
+      softwareErrorLocalNetwork: 'Local network access is blocked. Allow Aluvision in Settings → Privacy & Security → Local Network. Close and reopen the app, then try again once. Your stand is preserved.',
       softwareErrorAck: 'The receiver did not confirm the transfer. Keep it powered and check the connection.',
       softwareErrorRejected: 'The receiver rejected the update. Use the latest app version and try again.',
       softwareErrorRestart: 'The update was sent, but the restart is not confirmed. Check this same receiver; do not start another update.',
@@ -221,6 +223,7 @@
       softwarePreflight: 'Vérification de tous les récepteurs…', softwareFailed: 'Mise à jour non confirmée',
       softwareFailedGeneral: 'Cette mise à jour n’est pas confirmée. Le récepteur suivant n’a pas été mis à jour.',
       softwareErrorConnection: 'Vérifiez la connexion au Wi-Fi ALUVISION.',
+      softwareErrorLocalNetwork: 'L’accès au réseau local est bloqué. Autorisez Aluvision dans Réglages → Confidentialité et sécurité → Réseau local. Fermez et rouvrez l’app, puis réessayez une fois. Votre stand est conservé.',
       softwareErrorAck: 'Le récepteur n’a pas confirmé le transfert. Laissez-le allumé et vérifiez la connexion.',
       softwareErrorRejected: 'Le récepteur a refusé la mise à jour. Utilisez la dernière version de l’application et réessayez.',
       softwareErrorRestart: 'La mise à jour a été envoyée, mais le redémarrage n’est pas confirmé. Vérifiez ce même récepteur ; ne relancez pas une mise à jour.',
@@ -292,6 +295,7 @@
       softwarePreflight: 'Alle Receiver werden geprüft…', softwareFailed: 'Update nicht bestätigt',
       softwareFailedGeneral: 'Dieses Update wurde nicht bestätigt. Der nächste Receiver wurde nicht aktualisiert.',
       softwareErrorConnection: 'Prüfe, ob du mit dem ALUVISION-WLAN verbunden bist.',
+      softwareErrorLocalNetwork: 'Der Zugriff auf das lokale Netzwerk ist blockiert. Erlaube Aluvision unter Einstellungen → Datenschutz & Sicherheit → Lokales Netzwerk. Schließe und öffne die App erneut und versuche es dann einmal. Dein Stand bleibt erhalten.',
       softwareErrorAck: 'Der Receiver hat die Übertragung nicht bestätigt. Eingeschaltet lassen und Verbindung prüfen.',
       softwareErrorRejected: 'Der Receiver hat das Update abgelehnt. Verwende die neueste App-Version und versuche es erneut.',
       softwareErrorRestart: 'Das Update wurde gesendet, aber der Neustart ist nicht bestätigt. Diesen Receiver prüfen; kein neues Update starten.',
@@ -407,28 +411,32 @@
   const compactGuidance = {
     nl: {
       settingsInstallation:'Je installatie',settingsThisApp:'Deze app',channelHelp:'Letter: aan/uit · getal: exacte waarde · W: wit licht.',colourWheelHint:'Tik of sleep om te kiezen.',
-      lineSetupOrientHint:'Knipperen en verplaatsen',lineSetupOrderHint:'Laat knipperen, verplaats naar de juiste plek. De volgorde geldt meteen.',lineSetupSingleHint:'Knipperen of instellingen openen',
+      lineActivePorts:'Actieve aansluitingen',lineStartLeft:'Begin links',lineStartRight:'Begin rechts',linePortInfo:'Ledline {number} · poort {port} · {pixels} pixels · {side}',
+      lineSetupOrientHint:'Herken en versleep je ledlines',lineSetupOrderHint:'Sleep aan de stippen naar de juiste plek. De kleur blijft bij dezelfde ledline.',lineSetupSingleHint:'Herkennen en instellen',
       scopeIndividual:'Kies één of meer ledlines',scopeSingleHint:'1 van {count} · tik om te wisselen',scopeMultiHint:'{count} gekozen · tik om te wijzigen',scopeTogetherMany:'Alle {count} ledlines',
       animationPickerIntro:'Open een groep. Tik op een animatie om te starten.',animationGroupChooserIntro:'Open een groep. Er start nog niets.',animationGroupNextStep:'Kies daarna een animatie om te starten.',animationChooseVariant:'Tik op een animatie om te starten.',animationChooseAnotherHint:'Alle animaties en varianten.',
       colourLibraryHint:'Tik op een preset of merkkleur om die te gebruiken.',colourLibraryOrderHint:'Sleep om de volgorde te wijzigen.',colourManagerIntro:'Beheer presets en merkkleuren. Merkkleuren kun je ook wijzigen.'
     },
     en: {
       settingsInstallation:'Your installation',settingsThisApp:'This app',channelHelp:'Letter: on/off · number: exact value · W: white light.',colourWheelHint:'Tap or drag to choose.',
-      lineSetupOrientHint:'Blink and move',lineSetupOrderHint:'Blink to identify, then move into place. The order applies immediately.',lineSetupSingleHint:'Blink or open settings',
+      lineActivePorts:'Active outputs',lineStartLeft:'Start left',lineStartRight:'Start right',linePortInfo:'LED line {number} · port {port} · {pixels} pixels · {side}',
+      lineSetupOrientHint:'Identify and drag your LED lines',lineSetupOrderHint:'Drag the dots into place. The colour stays with the same LED line.',lineSetupSingleHint:'Identify and configure',
       scopeIndividual:'Choose one or more LED lines',scopeSingleHint:'1 of {count} · tap to switch',scopeMultiHint:'{count} selected · tap to change',scopeTogetherMany:'All {count} LED lines',
       animationPickerIntro:'Open a group. Tap an animation to start.',animationGroupChooserIntro:'Open a group. Nothing starts yet.',animationGroupNextStep:'Then choose an animation to start.',animationChooseVariant:'Tap an animation to start.',animationChooseAnotherHint:'All animations and variations.',
       colourLibraryHint:'Tap a preset or brand colour to use it.',colourLibraryOrderHint:'Drag to change the order.',colourManagerIntro:'Manage presets and brand colours. Brand colours can also be edited.'
     },
     fr: {
       settingsInstallation:'Votre installation',settingsThisApp:'Cette app',channelHelp:'Lettre : marche/arrêt · nombre : valeur exacte · W : lumière blanche.',colourWheelHint:'Touchez ou faites glisser pour choisir.',
-      lineSetupOrientHint:'Clignoter et déplacer',lineSetupOrderHint:'Faites clignoter, puis placez la ligne. L’ordre s’applique immédiatement.',lineSetupSingleHint:'Clignoter ou ouvrir les réglages',
+      lineActivePorts:'Sorties actives',lineStartLeft:'Début à gauche',lineStartRight:'Début à droite',linePortInfo:'Ligne LED {number} · port {port} · {pixels} pixels · {side}',
+      lineSetupOrientHint:'Identifier et déplacer les lignes',lineSetupOrderHint:'Déplacez la ligne avec les points. Sa couleur ne change pas.',lineSetupSingleHint:'Identifier et configurer',
       scopeIndividual:'Choisissez une ou plusieurs lignes LED',scopeSingleHint:'1 sur {count} · touchez pour changer',scopeMultiHint:'{count} sélectionnées · touchez pour changer',scopeTogetherMany:'Les {count} lignes LED',
       animationPickerIntro:'Ouvrez un groupe. Touchez une animation pour la lancer.',animationGroupChooserIntro:'Ouvrez un groupe. Rien ne démarre encore.',animationGroupNextStep:'Choisissez ensuite l’animation à lancer.',animationChooseVariant:'Touchez une animation pour la lancer.',animationChooseAnotherHint:'Toutes les animations et variantes.',
       colourLibraryHint:'Touchez une couleur enregistrée ou de marque pour l’utiliser.',colourLibraryOrderHint:'Faites glisser pour changer l’ordre.',colourManagerIntro:'Gérez les couleurs enregistrées et de marque. Les couleurs de marque sont aussi modifiables.'
     },
     de: {
       settingsInstallation:'Deine Installation',settingsThisApp:'Diese App',channelHelp:'Buchstabe: an/aus · Zahl: genauer Wert · W: weißes Licht.',colourWheelHint:'Tippen oder ziehen, um zu wählen.',
-      lineSetupOrientHint:'Blinken und verschieben',lineSetupOrderHint:'Blinken lassen, dann richtig einordnen. Die Reihenfolge gilt sofort.',lineSetupSingleHint:'Blinken oder Einstellungen öffnen',
+      lineActivePorts:'Aktive Ausgänge',lineStartLeft:'Beginn links',lineStartRight:'Beginn rechts',linePortInfo:'LED-Linie {number} · Port {port} · {pixels} Pixel · {side}',
+      lineSetupOrientHint:'LED-Linien erkennen und ziehen',lineSetupOrderHint:'An den Punkten an die richtige Stelle ziehen. Die Farbe bleibt bei derselben LED-Linie.',lineSetupSingleHint:'Erkennen und einstellen',
       scopeIndividual:'Eine oder mehrere LED-Linien wählen',scopeSingleHint:'1 von {count} · tippen zum Wechseln',scopeMultiHint:'{count} ausgewählt · tippen zum Ändern',scopeTogetherMany:'Alle {count} LED-Linien',
       animationPickerIntro:'Öffne eine Gruppe. Tippe zum Starten auf eine Animation.',animationGroupChooserIntro:'Öffne eine Gruppe. Noch startet nichts.',animationGroupNextStep:'Wähle danach eine Animation zum Starten.',animationChooseVariant:'Tippe zum Starten auf eine Animation.',animationChooseAnotherHint:'Alle Animationen und Varianten.',
       colourLibraryHint:'Tippe auf ein Preset oder eine Markenfarbe, um sie zu verwenden.',colourLibraryOrderHint:'Ziehen, um die Reihenfolge zu ändern.',colourManagerIntro:'Verwalte Presets und Markenfarben. Markenfarben kannst du auch bearbeiten.'

@@ -1,0 +1,8 @@
+.stand-sharing{display:grid;gap:16px;max-width:620px;margin-inline:auto}
+.stand-sharing>h2,.stand-sharing>p{margin:0}
+.stand-sharing .dialog-field{display:grid;gap:8px;font-weight:600}
+.stand-sharing input{min-height:48px;width:100%;box-sizing:border-box;font:inherit}
+.stand-sharing-qr{padding:16px;background:white;border-radius:16px;align-self:center}
+.stand-sharing input[readonly]{user-select:all}
+.stand-sharing [role=status]{min-height:24px;overflow-wrap:anywhere}
+@media(prefers-reduced-motion:reduce){.stand-sharing *{scroll-behavior:auto}}

@@ -135,7 +135,12 @@
     if (!effect || effect.category !== saved.category) return { compatible: false, reason: 'Deze animatie is niet beschikbaar voor deze zone.', effectId: null };
     if (effect.state.engine !== saved.state.engine || effect.state.variant !== saved.state.variant || (effect.state.v30Effect || null) !== (saved.state.v30Effect || null)) return { compatible: false, reason: 'Deze bewaarde animatie hoort bij een andere animatieversie.', effectId: null };
     const minimum = Math.max(saved.constraints.minimumReceivers, effect.minimumReceivers || 1);
-    if (!integer(context.receiverCount, 1, 1000) || context.receiverCount < minimum) return { compatible: false, reason: 'Voeg minstens ' + minimum + ' receivers toe aan deze zone.', effectId: effect.id };
+    // Preserve the saved v1 constraint schema. Its historic name describes
+    // physical ledlines; a SPI device may provide several of those via ports.
+    // Older clients still supply receiverCount only. RGBW remains device-wide.
+    const portLines = context.type === 'SPI' && context.lineCount !== undefined;
+    const count = portLines ? context.lineCount : context.receiverCount;
+    if (!integer(context.receiverCount, 1, 1000) || !integer(count, 1, 1000) || count < minimum) return { compatible: false, reason: 'Voeg minstens ' + minimum + (portLines ? ' ledlines' : ' receivers') + ' toe aan deze zone.', effectId: effect.id };
     const currentLayouts = effect.supportedLayouts || effect.layouts || LAYOUTS;
     if (!saved.constraints.layouts.includes(context.layout) || !currentLayouts.includes(context.layout) || (context.type === 'RGBW' && context.layout === 'continuous')) return { compatible: false, reason: 'Deze animatie past niet bij de gekozen opstelling.', effectId: effect.id };
     if (!context.selection || !['all', 'receiver', 'receivers'].includes(context.selection.kind)) return { compatible: false, reason: 'Kies Alle ledlines of één of meer ledlines.', effectId: effect.id };

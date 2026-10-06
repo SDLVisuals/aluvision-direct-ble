@@ -32,7 +32,7 @@
   }
   function lightState(value,strict=false){
     if(!plain(value))fail('BACKUP_FORMAT','Ongeldige lichtinstellingen.');
-    const clean={...value};delete clean.rgbwLast;
+    const clean={...value};delete clean.rgbwLast;delete clean.standAnimation;
     const result=P.sanitizeLightState(clean,strict);
     if(Object.hasOwn(value,'rgbwLast')){
       const memory=value.rgbwLast;
@@ -40,6 +40,11 @@
         !/^(static|background|palette[0-7])$/.test(scope)||!plain(channels)||Object.entries(channels).some(([key,number])=>
           !/^[rgbw]$/.test(key)||!Number.isInteger(number)||number<1||number>255)))fail('BACKUP_FORMAT','De bewaarde kleurkanalen zijn ongeldig.');
       result.rgbwLast=clone(memory);
+    }
+    if(Object.hasOwn(value,'standAnimation')){
+      const standAnimations=typeof module==='object'&&module.exports?require('./stand-animations.js'):globalThis.LightningStandAnimations;
+      if(!standAnimations)fail('BACKUP_FORMAT','De gezamenlijke animatie kan niet worden gelezen.');
+      result.standAnimation=standAnimations.validateMarker(value.standAnimation);
     }
     return result;
   }
@@ -49,7 +54,7 @@
     const model={schemaVersion:30,demo:input.demo,stands:input.stands.map(s=>{
       const next=pick(s,['id','name','zones'],strict);
       if(!Array.isArray(s.zones)||s.zones.length>100)fail('BACKUP_MODEL','Te veel zones.');
-      next.zones=s.zones.map(z=>pick(z,['id','name','type','layout','receiverIds'],strict));return next;
+      next.zones=s.zones.map(z=>pick(z,['id','name','type','layout','receiverIds','lineOrder'],strict));return next;
     }),receivers:input.receivers.map(r=>{
       const next=pick(r,['id','rid','deviceFingerprint','name','type','standId','zoneId','role','lifecycle','connection','outputs','state','onboardingTransactionId'],strict);
       if(r.lifecycle!=='added')fail('BACKUP_SETUP','Rond eerst het toevoegen van je receiver af.');

@@ -99,12 +99,18 @@
         for(const old of baseline.receivers){const found=model.receivers.find(r=>r.id===old.id);if((!allowed.has(old.id)||found)&&key(found)!==key(old))throw Error('UNCONFIRMED');}
         if(model.receivers.some(r=>!baseline.receivers.some(old=>old.id===r.id)))throw Error('UNCONFIRMED');
         for(const field of ['schemaVersion','demo','scenes','presets'])if(key(model[field])!==key(baseline[field]))throw Error('UNCONFIRMED');
-        const expectedStands=clone(baseline.stands),remaining=new Set(model.receivers.map(r=>r.id));
-        for(const stand of expectedStands)for(const zone of stand.zones)zone.receiverIds=zone.receiverIds.filter(id=>!allowed.has(id)||remaining.has(id));
-        if(key(model.stands)!==key(expectedStands))throw Error('UNCONFIRMED');
+        const Model=root.LightningModel,remaining=new Set(model.receivers.map(r=>r.id));
+        if(typeof Model?.assertValid!=='function'||typeof Model?.unassignReceiver!=='function')throw Error('UNCONFIRMED');
+        // Native release preserves each surviving physical line's place and
+        // trims only the released receiver's lines. Use the existing semantic
+        // model operation, not an IDs-only approximation or the reply's order.
+        let expected=Model.assertValid(clone(baseline));
+        for(const old of baseline.receivers)if(allowed.has(old.id)&&!remaining.has(old.id))expected=Model.unassignReceiver(expected,old.id);
+        if(key(model.stands)!==key(expected.stands))throw Error('UNCONFIRMED');
+        Model.assertValid(model);
         if(installation()&&next.status!=='removed'&&!model.receivers.some(r=>r.id===receiver.id))throw Error('UNCONFIRMED');
       }
-      await onRemoved(model);baseline=clone(model);
+      await onRemoved(model,{status:next.status});baseline=clone(model);
     }
     function schedule(action){clearTimer();const token=generation;timer=root.setTimeout(()=>{timer=null;if(token===generation&&dialog?.open&&!busy)perform(action,true);},250);}
     async function perform(action,automatic=false){

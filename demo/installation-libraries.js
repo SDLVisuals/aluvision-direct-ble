@@ -111,7 +111,29 @@
       }
       onRestore(copy(merged));return {restored:true,scenes:merged.scenes.length,presets:merged.presets.length,colors:merged.colors.length};
     }
-    return Object.freeze({capture,restore,recover});
+    function replaceFromCentral(payload,standId){
+      // A connected phone is a cache. Do not merge stale local entries into
+      // MAIN's authoritative library or invent '.recovered' duplicates.
+      const incoming=validate(payload,standId),{libraries:current,before}=load();
+      const next={scenes:[...current.scenes.filter(scene=>scene.standId!==standId),...incoming.scenes],presets:incoming.presets,colors:incoming.colors};
+      const after=Object.fromEntries(definitions.map(definition=>{
+        const raw=JSON.stringify({version:1,[definition.field]:next[definition.field]});validateRaw(raw,definition);return [definition.key,raw];
+      }));
+      if(definitions.every(definition=>before[definition.key]===after[definition.key]))return {restored:true,unchanged:true};
+      const journal={version:1,phase:'prepared',before,after};
+      if(size(JSON.stringify(journal))>MAX_JOURNAL_BYTES)fail('LIBRARY_LIMIT','De bibliotheken zijn te groot. Je bestaande kopie blijft bewaard.');
+      let staged=false,committed=false;
+      try{
+        put(JOURNAL_KEY,JSON.stringify(journal));staged=true;
+        for(const definition of definitions)put(definition.key,after[definition.key]);
+        put(JOURNAL_KEY,JSON.stringify({...journal,phase:'committed'}));committed=true;put(JOURNAL_KEY,null);
+      }catch(_){
+        if(staged&&!committed)try{for(const definition of definitions)put(definition.key,before[definition.key]);put(JOURNAL_KEY,null);}catch(_){/* Recover retains the complete before-image. */}
+        fail('LIBRARY_STORAGE','De centrale bibliotheken konden niet volledig worden geladen. Je vorige kopie blijft herstelbaar.');
+      }
+      onRestore(copy(next));return {restored:true,scenes:next.scenes.length,presets:next.presets.length,colors:next.colors.length};
+    }
+    return Object.freeze({capture,restore,replaceFromCentral,recover});
   }
   return Object.freeze({create,validate,JOURNAL_KEY,MAX_BYTES});
 });

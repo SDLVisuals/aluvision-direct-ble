@@ -51,7 +51,6 @@
       description, minimumReceivers: category === 'tunnel' ? 2 : 1,
       spatialResolution: 'receiver', paletteEditable: category !== 'brand', firmwareSupport: 'preview-only',
       backgroundEditable: category === 'tunnel',
-      fixedWhiteBase: ['brand-accent','brand-sweep','brand-focus','brand-soft-gradient'].includes(id),
       controls: category === 'whole' ? ['speed', 'smooth'] : ['speed', 'smooth', 'fadeAmount', 'delayMs'],
       directions: [], ...options,
       state: { v30Effect: 'v30-' + id, engine: 'V30', variant: 0, category,
@@ -234,7 +233,7 @@
   }
   function brandSample(id, state, clock, index, count, input) {
     const white = [0, 0, 0, 255];
-    const brand = physical(state.rgbEnabled?.[0] === false ? '#000000' : state.brandColor || (state.colors || [])[0] || DEFAULT_BRAND,
+    const brand = physical(state.brandColor || (state.colors || [])[0] || DEFAULT_BRAND,
       state.whiteEnabled?.[0] === false ? 0 : state.whiteChannels?.[0] ?? state.w ?? 0);
     const direction = state.direction === 'reverse' || state.direction === 'left' ? -1 : 1;
     const wave = (1 - Math.cos(clock.phase * Math.PI * 2)) / 2;

@@ -1,63 +1,4 @@
 {
-  "kind": "isolated-browser-demo",
-  "revision": "v40-ux-refinement-20261002",
-  "interfaceVersion": 40,
-  "interfaceBaseline": "V40 UX refinement keeps the existing Aluvision flows with calmer smoked-glass navigation, readable labelled active tabs, colour controls before ledline management, shorter repeated copy, clearer settings, compact scene actions and reduced-motion support. RGBW and SPI retain distinct compatible controls; tunnel and wall context stays recognizable. The GitHub page is an isolated in-memory demo with fictional receivers and no physical hardware access. iPhone and Android release fields below refer to their existing builds, not this demo-only UX publication.",
-  "animationGroupNavigation": {
-    "detailPage": true,
-    "content": "selected effect group only",
-    "backAction": "Terug naar alle animatiegroepen or the originating category",
-    "placement": "immediately below the persistent LED overview",
-    "scrollBehavior": "smooth and restores the source list position",
-    "sameButtonMovesIntoDock": true,
-    "floatingDuplicate": false
-  },
-  "animationPickerAction": {
-    "label": "Andere animatie kiezen",
-    "icon": "animation motion waveform",
-    "surface": "neutral glass; no red or brown fill",
-    "visibleOnlyWhenActive": true,
-    "singleDomButton": true,
-    "movesBetweenPageAndPreviewDock": true
-  },
-  "fakeReceivers": {
-    "RGBW": 10,
-    "SPI": 10,
-    "preAdded": 0
-  },
-  "wifi": "nonfunctional example only",
-  "storage": "in-memory; cleared on page reload",
-  "previewSizes": [
-    "small",
-    "medium",
-    "large"
-  ],
-  "previewSizeControl": "Sticky LED overview; display-only; no receiver commands",
-  "activeAnimationEntry": "Effecten opens the existing animation settings directly; Galerij opens the library without changing effect, palette or selection",
-  "spatialEffects": {
-    "categoryLabel": "Tunnel & wand",
-    "gallerySampleLines": 4,
-    "groupPreviewUsesConnectedLines": true,
-    "previewAfterOpeningSpatialGroup": true,
-    "autoTargetAllZoneLines": true,
-    "manualGroupSelectionRequired": false,
-    "perLineColourEditingAvailable": true,
-    "changesPhysicalArrangement": false
-  },
-  "interfacePolish": {
-    "shorterGuidance": true,
-    "installationAndAppSettingsGrouped": true,
-    "visibleUnavailableSceneReasons": true,
-    "compatibleReceiverChoicesOnly": true,
-    "mixedPresetSavingExplained": true,
-    "sharedColourControls": true,
-    "exercisedTouchTargetsMinimumPixels": 44,
-    "neutralMilkGlass": true,
-    "boundedPassivePressFeedback": true,
-    "respectsReducedMotion": true,
-    "nativeScrollingPreserved": true
-  },
-  "hardwareAccess": false,
   "nativeAppModified": false,
   "nativeAppUpdatePending": true,
   "latestInterfaceBundledInIOS": false,
@@ -68,244 +9,6 @@
   "nativeAppInstalled": false,
   "nativeAppSimulatorInstalled": false,
   "nativeAppInstallationPreservedData": null,
-  "interfaceAccessibility": {
-    "selectedLinesSubtitleContrastMinimum": 4.5,
-    "lightAndDarkVerified": true
-  },
-  "firmwarePublished": false,
-  "firmwareDownloadsIncluded": false,
-  "softwareFileImportAvailable": false,
-  "standardBundledReceiverUpdatesPreserved": true,
-  "assets": [
-    {
-      "path": "android-download/android-download.css",
-      "sha256": "23ef08fd40d5090de0642e663a6e63da927b86e8273eb3a6064f7f496110ca5b"
-    },
-    {
-      "path": "android-download/android-download.js",
-      "sha256": "ac509762c2c7d3b0e46f51fc6c3ae089647c75857086726c6634e28ced6dc645"
-    },
-    {
-      "path": "android/aluvision-android-test-0.1.0-test.6-6-71d93291aea9.apk",
-      "sha256": "71d93291aea9b814ff56f5b941592c5444b66742f07e45b48f3902c599dd22c3"
-    },
-    {
-      "path": "android/aluvision-android-test-0.1.0-test.7-7-c8d2b91b1880.apk",
-      "sha256": "c8d2b91b188015afd45260c780643ab772ebadfe0e36800d3c96845f9260563f"
-    },
-    {
-      "path": "android/aluvision-android-test-0.1.0-test.8-8-2b9267c34bb6.apk",
-      "sha256": "2b9267c34bb6bde97708f98eef0d83a5c7678c958b24a150deffb5a7a58319bc"
-    },
-    {
-      "path": "android/aluvision-android-test-41.0.2-14-84d1e566b90c.apk",
-      "sha256": "84d1e566b90c46116445e16413525bce0082c1e25f480c1098017eaf6565b424"
-    },
-    {
-      "path": "animation-engine.js",
-      "sha256": "558426e1d06e5ad125a0412eb73d2e60670ee08d245038c744fdceba910b7352"
-    },
-    {
-      "path": "animation-library.css",
-      "sha256": "24bdf59a36284448e10ba1659f8515b55c464cc6e379277dfa9f6839abf178f6"
-    },
-    {
-      "path": "animation-library.js",
-      "sha256": "c0060f4c925b02679333622e41957cd9bc8c488603577de58168c05dfe0d4b74"
-    },
-    {
-      "path": "animation-mobile.css",
-      "sha256": "c836b5c996f15262f435f05c3eccb6e5bcba1e169d6bebe1c21dd43178ea96a6"
-    },
-    {
-      "path": "animations.css",
-      "sha256": "325bb013fd007bc11325cbc1a6857164b6ca7142ac858ba75456744491d42692"
-    },
-    {
-      "path": "app.js",
-      "sha256": "f2877b15095cd42fd9ba9c4a786a82ac1cd092b6c880f9c4caf08c96ac25ce99"
-    },
-    {
-      "path": "assets/aluvision-logo.png",
-      "sha256": "834524590fdae6c13804869c8c04cb3452ef68e80c189a3ea27e02a43d08f018"
-    },
-    {
-      "path": "backup.js",
-      "sha256": "7679f7d18e336f64368da4d2e79d4ac7260414db421a22a98abd06e8684fd9e0"
-    },
-    {
-      "path": "colour-library-drag.js",
-      "sha256": "a397d1cb53cc3496340f9ca6230a1a69901d32eeb07d58e49e25024f077bca8c"
-    },
-    {
-      "path": "colour.js",
-      "sha256": "99aa10656e8a8657cdf6a40f8dccabb50fc8f3011d0f6d756960e46be953c42e"
-    },
-    {
-      "path": "colours-library.js",
-      "sha256": "b77a7e4bb6349d03dbda01efb20bf8ec56e078aa94f5a94fae1f8d0cda2e8355"
-    },
-    {
-      "path": "continuity.css",
-      "sha256": "99909e122aa70ea43984459d98da80ad527289a187e7d8a5d85369a7298da25a"
-    },
-    {
-      "path": "fixtures.js",
-      "sha256": "7ccc08ac36a6ab22e65c79d796f4dd3e60d42232ff6209ae866b616bc9d0beb8"
-    },
-    {
-      "path": "index.html",
-      "sha256": "04bbf0c8eb3ab752c98c68e6347254a716ab9b3a5fd9eaf983557424ed57d33d"
-    },
-    {
-      "path": "installation-libraries.js",
-      "sha256": "0abb9e98c8d4f05256eee44551a36c6a513561c09bb89b131bf6c796ccacb22a"
-    },
-    {
-      "path": "interface-motion.js",
-      "sha256": "678c13e2957e72c896ffa8f6414372a34c0289885583d76e3eece68452988e72"
-    },
-    {
-      "path": "interface-polish.css",
-      "sha256": "1bc13ca600c954c14720316d624cd7c440ccbf75690728678db767e05371ece1"
-    },
-    {
-      "path": "live-control.js",
-      "sha256": "bfc423c2be8c088e3859fe874b383d60b69ecf60187f01aa09631b3071c1f657"
-    },
-    {
-      "path": "migration.js",
-      "sha256": "596a7f5b5a686183376de70a77229ebacd02bc785f0e88cf005ec2120a388537"
-    },
-    {
-      "path": "model.js",
-      "sha256": "60e51e497e73c93c44cb3e659264bd7a5d74ceeff565f64be94c22c95e214bf7"
-    },
-    {
-      "path": "native-runtime.js",
-      "sha256": "020374b5c8b0439371316f0298c9cfcbfaa8db8a1037aca25114332bcb2cb8c2"
-    },
-    {
-      "path": "onboarding-adapter.js",
-      "sha256": "495155567af18f5f234a30662a0f472610f3602b6b1dbd3bb5c46371614e08e0"
-    },
-    {
-      "path": "onboarding-contract.js",
-      "sha256": "47b7a0cc1e7a3cc21d57e1b701c61011b4519e96f93cccdec59fd91051274403"
-    },
-    {
-      "path": "onboarding-draft.js",
-      "sha256": "b55570bee8b85446bf5e1b2878b9815a1f108edacae7fcc036e2cef96b967dd0"
-    },
-    {
-      "path": "onboarding-ui.css",
-      "sha256": "d090f65d151168edd6f1ee01c26eb798a9f7882f36e797f9e9e0289dd1fb47c5"
-    },
-    {
-      "path": "onboarding-ui.js",
-      "sha256": "fe47e941f25c5df3d928a399dc82301f90bfb86147ef6466b54ac4af785b9151"
-    },
-    {
-      "path": "page-interaction.css",
-      "sha256": "9f55bcf272b842157322b9562739cc6fbafe697427d9690e980e735c09848b5b"
-    },
-    {
-      "path": "page-interaction.js",
-      "sha256": "e6d7b3ef5b03295c11fb801a64941e89dd28b982e9b1699f5bee4b66b75407d4"
-    },
-    {
-      "path": "pixel-setup.css",
-      "sha256": "cce965e3899d187b9956447cfd1ce06fb281c94f652ebbe183bb1b45114aa53b"
-    },
-    {
-      "path": "pixel-setup.js",
-      "sha256": "b1c6eed02c6ae1af1f6004f8077f53720d3a79616f89bcfc013ebcf8bee01070"
-    },
-    {
-      "path": "preferences.js",
-      "sha256": "0feb0efcbcd35bdf5ff51c2c914da66cf05f50daba5b398c5870ac33b2e0d76b"
-    },
-    {
-      "path": "premium-surfaces.css",
-      "sha256": "7335f24be5280c61cceb316ca61098fd7a6b351104e47f73116d98dce2318cea"
-    },
-    {
-      "path": "presets.js",
-      "sha256": "d4e512aa6c14705438a6238dd48eeff65ad56527adc9bb5aa44de2bd60ebdbb9"
-    },
-    {
-      "path": "preview.js",
-      "sha256": "0b960e9b20e4d7fe01667bc26322162cc50417aacb3f1472ffca1744da953e6f"
-    },
-    {
-      "path": "receiver-library-hydration.js",
-      "sha256": "b131566d2742f91817416ca146f4fe0e317f3e0a56e8026efa575ff29486463f"
-    },
-    {
-      "path": "receiver-playback.js",
-      "sha256": "83f83cb27bb6f14688387f1d2af384f776f33002fe318c81c709bc0d4b7e058d"
-    },
-    {
-      "path": "receiver-removal-ui.css",
-      "sha256": "751fb973574322565b51fbad6e4b42029d5b057c1a16faba0cf3adb53fca7bc4"
-    },
-    {
-      "path": "receiver-removal-ui.js",
-      "sha256": "206d647ae40d351efef90e630200962cf5be81793d83bf8de2e7f08510818784"
-    },
-    {
-      "path": "receiver-update-ui.css",
-      "sha256": "1bcd03003d0a3da2a224c9b98c3793d99afb6f3bb378bc588857759547f18b4a"
-    },
-    {
-      "path": "receiver-update-ui.js",
-      "sha256": "c1cb770169cd68714f864e5876da72b80789b29956bcffc4022b70fb2d47315c"
-    },
-    {
-      "path": "receiver-visual.css",
-      "sha256": "76b6f07b2fa02534534e951ee9689033aa4665eab9db7d7f5d0b9cef81252c09"
-    },
-    {
-      "path": "receiver-visual.js",
-      "sha256": "8c3196efcf8c93f8b514cc14a8f29a131de057bef91a21d37f81f2d7c9e303ef"
-    },
-    {
-      "path": "reference-animations.js",
-      "sha256": "e7bd755a36d86964fb711686eb4f451e94c39fbb635ae9c491ceef2491bd0dcc"
-    },
-    {
-      "path": "scenes.css",
-      "sha256": "f37c9c30ddb0478b87944ca0c6714696fe91c06abe26c0c543418eff5ce08812"
-    },
-    {
-      "path": "scenes.js",
-      "sha256": "270533e1d9b68b40c4712c1f592ec0d69201c76666c9a36f401435c6ebb637dd"
-    },
-    {
-      "path": "security-mode.js",
-      "sha256": "e4da258988fc8791d0d923d517f86ed3003792fe9d8a89b034bfdd05c8518ef2"
-    },
-    {
-      "path": "styles.css",
-      "sha256": "c74b344259e889330e1cc7973dcfdcb38cfa60f19b1983c137cc9e5fa90d1929"
-    },
-    {
-      "path": "v40-design.css",
-      "sha256": "ea3255fda1a66d9f8179bd1289835f3a0bb44f688a94e4a48edddf519b9c90b2"
-    },
-    {
-      "path": "vendor/v21_animation_catalog.js",
-      "sha256": "37a90c048d22a1d5efd25cf91336175aaa2f770f11d3aea9c3dc7d6a859f4014"
-    },
-    {
-      "path": "vendor/v21_tunnel_engine.js",
-      "sha256": "5e8f4170084d5a6a3597fe014a117597b6a2b2eee4869437ee3ff9a6cc288c3e"
-    },
-    {
-      "path": "web-demo-service.js",
-      "sha256": "e30b0ff2c98f25fe153cffd9a132e2dbda97f6508b1c2a0731ca3b2642840dfa"
-    }
-  ],
   "androidTestApp": {
     "path": "android/aluvision-android-test-41.0.2-14-84d1e566b90c.apk",
     "size": 16845968,
@@ -374,6 +77,416 @@
       "physicalAndroidVerified": false,
       "physicalReceiverVerified": false,
       "simultaneousTwoClientControlVerified": false
+    }
+  },
+  "kind": "isolated-browser-demo",
+  "revision": "V41interface-review36220261006",
+  "interfaceVersion": 41,
+  "interfaceBaseline": "V41 interface based on frozen361 with targeted interface-demo362 UI fixes. Browser walkthrough with fictional receivers and in-memory state; not a native or phone update.",
+  "fakeReceivers": {
+    "RGBW": 10,
+    "SPI": 10,
+    "preAdded": 0
+  },
+  "wifi": "nonfunctional example only",
+  "storage": "in-memory; cleared on page reload",
+  "hardwareAccess": false,
+  "firmwarePublished": false,
+  "firmwareDownloadsIncluded": false,
+  "softwareFileImportAvailable": false,
+  "assets": [
+    {
+      "path": "RELEASE_NOTES.md",
+      "sha256": "615ec019242b28c9c0f8041edb7bb69a352b1184efb0e528f55617ea473abaa4",
+      "bytes": 5899
+    },
+    {
+      "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
+      "sha256": "cf1a36ef7a96cb1fd3ef84e9f12db014932e82896dda4217867ed563ba4cf214",
+      "bytes": 2323222
+    },
+    {
+      "path": "android/aluvision-android-test-0.1.0-test.2-2-50c034940069.apk",
+      "sha256": "50c034940069e525333392643b6c9f1569c255bcdc87662f7e048cd6e44abc9a",
+      "bytes": 2388844
+    },
+    {
+      "path": "android/aluvision-android-test-0.1.0-test.3-3-5c8921aa383c.apk",
+      "sha256": "5c8921aa383cbfb8180e483ef8cb0fdc6f1b5d0bb7011a894de9e3032af7fed5",
+      "bytes": 2388844
+    },
+    {
+      "path": "android/aluvision-android-test-0.1.0-test.5-5-bcb8b39b3543.apk",
+      "sha256": "bcb8b39b354387c14b17e9e86ddb740095c888bb012c9ade1c22d43b3118985d",
+      "bytes": 2393011
+    },
+    {
+      "path": "android/aluvision-android-test-0.1.0-test.6-6-71d93291aea9.apk",
+      "sha256": "71d93291aea9b814ff56f5b941592c5444b66742f07e45b48f3902c599dd22c3",
+      "bytes": 2393011
+    },
+    {
+      "path": "android/aluvision-android-test-0.1.0-test.7-7-c8d2b91b1880.apk",
+      "sha256": "c8d2b91b188015afd45260c780643ab772ebadfe0e36800d3c96845f9260563f",
+      "bytes": 2397107
+    },
+    {
+      "path": "android/aluvision-android-test-0.1.0-test.8-8-2b9267c34bb6.apk",
+      "sha256": "2b9267c34bb6bde97708f98eef0d83a5c7678c958b24a150deffb5a7a58319bc",
+      "bytes": 2397107
+    },
+    {
+      "path": "android/aluvision-android-test-41.0.2-14-84d1e566b90c.apk",
+      "sha256": "84d1e566b90c46116445e16413525bce0082c1e25f480c1098017eaf6565b424",
+      "bytes": 16845968
+    },
+    {
+      "path": "android-download/android-download.css",
+      "sha256": "23ef08fd40d5090de0642e663a6e63da927b86e8273eb3a6064f7f496110ca5b",
+      "bytes": 1488
+    },
+    {
+      "path": "android-download/android-download.js",
+      "sha256": "ac509762c2c7d3b0e46f51fc6c3ae089647c75857086726c6634e28ced6dc645",
+      "bytes": 10358
+    },
+    {
+      "path": "animation-engine.js",
+      "sha256": "c59ff08862a8ce5d1fb450d2992180b28f6561e85f1753d1c0f9a1bc40a2cf43",
+      "bytes": 21745
+    },
+    {
+      "path": "animation-library.css",
+      "sha256": "24bdf59a36284448e10ba1659f8515b55c464cc6e379277dfa9f6839abf178f6",
+      "bytes": 31819
+    },
+    {
+      "path": "animation-library.js",
+      "sha256": "c0060f4c925b02679333622e41957cd9bc8c488603577de58168c05dfe0d4b74",
+      "bytes": 14085
+    },
+    {
+      "path": "animation-mobile.css",
+      "sha256": "c836b5c996f15262f435f05c3eccb6e5bcba1e169d6bebe1c21dd43178ea96a6",
+      "bytes": 32878
+    },
+    {
+      "path": "animations.css",
+      "sha256": "325bb013fd007bc11325cbc1a6857164b6ca7142ac858ba75456744491d42692",
+      "bytes": 12542
+    },
+    {
+      "path": "app.js",
+      "sha256": "0b4982b33aaff75eb235ade13247a2d66d2dc4f7723d1b09cac6fffd44662b01",
+      "bytes": 427496
+    },
+    {
+      "path": "assets/aluvision-logo.png",
+      "sha256": "834524590fdae6c13804869c8c04cb3452ef68e80c189a3ea27e02a43d08f018",
+      "bytes": 12522
+    },
+    {
+      "path": "backup.js",
+      "sha256": "43cdb95658d00afb6ec0c974630f8b34c6f45abfebc1a93bd742c36ddd8c81a6",
+      "bytes": 12485
+    },
+    {
+      "path": "colour-library-drag.js",
+      "sha256": "a397d1cb53cc3496340f9ca6230a1a69901d32eeb07d58e49e25024f077bca8c",
+      "bytes": 10206
+    },
+    {
+      "path": "colour.js",
+      "sha256": "99aa10656e8a8657cdf6a40f8dccabb50fc8f3011d0f6d756960e46be953c42e",
+      "bytes": 3760
+    },
+    {
+      "path": "colours-library.js",
+      "sha256": "b77a7e4bb6349d03dbda01efb20bf8ec56e078aa94f5a94fae1f8d0cda2e8355",
+      "bytes": 13288
+    },
+    {
+      "path": "continuity.css",
+      "sha256": "3ba94e0f22b9382ed8f5226551bf3aa0a7733648b711afb688edfe405dae2f8a",
+      "bytes": 82318
+    },
+    {
+      "path": "fixtures.js",
+      "sha256": "7ccc08ac36a6ab22e65c79d796f4dd3e60d42232ff6209ae866b616bc9d0beb8",
+      "bytes": 1566
+    },
+    {
+      "path": "index.html",
+      "sha256": "da06d1638ee33f0b91d531f7382e70d6d231d30a84e019445a31805da57ef9c2",
+      "bytes": 5809
+    },
+    {
+      "path": "installation-libraries.js",
+      "sha256": "f6f3178ddcc768b5a88c878da31e39f3d3a3909457ff016e6b3e8c92623b2f96",
+      "bytes": 12085
+    },
+    {
+      "path": "interface-motion.js",
+      "sha256": "678c13e2957e72c896ffa8f6414372a34c0289885583d76e3eece68452988e72",
+      "bytes": 4745
+    },
+    {
+      "path": "interface-polish.css",
+      "sha256": "90c1f485c820d27481fb30ef333361e3df4d846d0fbe98430f0330f45381afe8",
+      "bytes": 13447
+    },
+    {
+      "path": "ledline-identification-session.js",
+      "sha256": "304e396e1f059aa42bf033f07400a72e6f61cbf962b3efc1e93969e184a33d65",
+      "bytes": 17007
+    },
+    {
+      "path": "ledline-order-drag.js",
+      "sha256": "c9a653988f0a6632875fef454137be7e51633ea679724e290dd01770b9221cd2",
+      "bytes": 12288
+    },
+    {
+      "path": "ledline-order.css",
+      "sha256": "4943cfa255e91caeb841644e4d8eef709501c5d462500999bf78beeefcec3c3f",
+      "bytes": 2797
+    },
+    {
+      "path": "live-control.js",
+      "sha256": "59f665550c94e82e58c3f4aa60c719711e31e90f86915496510f5ca870844dcc",
+      "bytes": 41495
+    },
+    {
+      "path": "migration.js",
+      "sha256": "596a7f5b5a686183376de70a77229ebacd02bc785f0e88cf005ec2120a388537",
+      "bytes": 14866
+    },
+    {
+      "path": "model.js",
+      "sha256": "75d11782af15032e3335d872585d588bcc9ab18c1990360230a6590053fb0cb1",
+      "bytes": 34954
+    },
+    {
+      "path": "native-runtime.js",
+      "sha256": "d88efcf4d0d95203a1e2230cf2b101cd514bad2fb3d5abae6448f7c931595e1a",
+      "bytes": 112844
+    },
+    {
+      "path": "onboarding-adapter.js",
+      "sha256": "495155567af18f5f234a30662a0f472610f3602b6b1dbd3bb5c46371614e08e0",
+      "bytes": 11388
+    },
+    {
+      "path": "onboarding-contract.js",
+      "sha256": "47b7a0cc1e7a3cc21d57e1b701c61011b4519e96f93cccdec59fd91051274403",
+      "bytes": 22011
+    },
+    {
+      "path": "onboarding-draft.js",
+      "sha256": "b55570bee8b85446bf5e1b2878b9815a1f108edacae7fcc036e2cef96b967dd0",
+      "bytes": 37201
+    },
+    {
+      "path": "onboarding-ui.css",
+      "sha256": "d090f65d151168edd6f1ee01c26eb798a9f7882f36e797f9e9e0289dd1fb47c5",
+      "bytes": 64439
+    },
+    {
+      "path": "onboarding-ui.js",
+      "sha256": "e3b354943c047c0b247b2d14dca3ee94ab6872b8bdbfbb43c17d29516c791639",
+      "bytes": 126216
+    },
+    {
+      "path": "page-interaction.css",
+      "sha256": "9f55bcf272b842157322b9562739cc6fbafe697427d9690e980e735c09848b5b",
+      "bytes": 588
+    },
+    {
+      "path": "page-interaction.js",
+      "sha256": "e6d7b3ef5b03295c11fb801a64941e89dd28b982e9b1699f5bee4b66b75407d4",
+      "bytes": 495
+    },
+    {
+      "path": "pixel-setup.css",
+      "sha256": "fddace4b87965999cecdd9fa71527725e2daa932c37d24bac5b8055571171d3d",
+      "bytes": 31245
+    },
+    {
+      "path": "pixel-setup.js",
+      "sha256": "e2ee5c7804962b6276af772c8c6da64f51b1b2b6debb8732e21b349f92cc71ec",
+      "bytes": 38535
+    },
+    {
+      "path": "preferences.js",
+      "sha256": "41249e86057cd26ae271cefd58c1cdc656b6d051e4475346303a151708131a3f",
+      "bytes": 83919
+    },
+    {
+      "path": "premium-surfaces.css",
+      "sha256": "dd9eea2173cd912592c8f7e782ae07b858c416d6abaa2bbb14656a4f603ad0aa",
+      "bytes": 61863
+    },
+    {
+      "path": "presets.js",
+      "sha256": "46d72376d7e82efae61eafab27f6ee449a67baab5c633f6a0e7929a31c4b79d4",
+      "bytes": 17253
+    },
+    {
+      "path": "preview.js",
+      "sha256": "55e356bc9d14dbb8572491d4c4c85c747d5ec5b4fedc19ad8c2f9615aa42eb09",
+      "bytes": 90184
+    },
+    {
+      "path": "receiver-playback.js",
+      "sha256": "83f83cb27bb6f14688387f1d2af384f776f33002fe318c81c709bc0d4b7e058d",
+      "bytes": 8026
+    },
+    {
+      "path": "receiver-removal-ui.css",
+      "sha256": "751fb973574322565b51fbad6e4b42029d5b057c1a16faba0cf3adb53fca7bc4",
+      "bytes": 2572
+    },
+    {
+      "path": "receiver-removal-ui.js",
+      "sha256": "2066120114433b7fdb138bb6bed9a276d13bf7ad1da22fe340f662d8eec97c55",
+      "bytes": 18615
+    },
+    {
+      "path": "receiver-update-ui.css",
+      "sha256": "cbbc15b9e2f722027ec32a7dfd3be230f19d306ff2b30665681911b13213cb4a",
+      "bytes": 4536
+    },
+    {
+      "path": "receiver-update-ui.js",
+      "sha256": "69c10cc34499ede6eebc43f50d1d5ba7c564db9c6cecb86b7b1f1ceb04f1ee1c",
+      "bytes": 25142
+    },
+    {
+      "path": "receiver-visual.css",
+      "sha256": "76b6f07b2fa02534534e951ee9689033aa4665eab9db7d7f5d0b9cef81252c09",
+      "bytes": 4375
+    },
+    {
+      "path": "receiver-visual.js",
+      "sha256": "8c3196efcf8c93f8b514cc14a8f29a131de057bef91a21d37f81f2d7c9e303ef",
+      "bytes": 29209
+    },
+    {
+      "path": "reference-animations.js",
+      "sha256": "e7bd755a36d86964fb711686eb4f451e94c39fbb635ae9c491ceef2491bd0dcc",
+      "bytes": 8637
+    },
+    {
+      "path": "scenes.css",
+      "sha256": "f37c9c30ddb0478b87944ca0c6714696fe91c06abe26c0c543418eff5ce08812",
+      "bytes": 8246
+    },
+    {
+      "path": "scenes.js",
+      "sha256": "8a0a6451c059bf7ba132a2c7545c3aead5e8d1e14eecaa6379ed1c0b75f28c14",
+      "bytes": 10135
+    },
+    {
+      "path": "security-mode.js",
+      "sha256": "e4da258988fc8791d0d923d517f86ed3003792fe9d8a89b034bfdd05c8518ef2",
+      "bytes": 527
+    },
+    {
+      "path": "stand-animations.css",
+      "sha256": "0e484306b6aca9505cf4ad4422e986d93d1bcfc9a150dcb8a7badad3842e13e2",
+      "bytes": 3529
+    },
+    {
+      "path": "stand-animations.js",
+      "sha256": "1f4fc6b8c7d57865f0c55979d8948b57b1209cae552fb5f23d7d1905282dc22a",
+      "bytes": 16620
+    },
+    {
+      "path": "stand-connection.js",
+      "sha256": "c1cc30ae851708965cf3d87d3e6c444f4fffc1ecefc4ab65bd3b640dbec6b812",
+      "bytes": 25936
+    },
+    {
+      "path": "stand-live-checkpoint.js",
+      "sha256": "fd08c203347d3df44419f7d5474755996a62dbdd2fd21399e0e0934eb86c2e46",
+      "bytes": 8791
+    },
+    {
+      "path": "stand-management-capabilities.js",
+      "sha256": "ee94a897f2ca964813020efded9f182017bd36298cd90ca9ecf7ddebba427666",
+      "bytes": 1812
+    },
+    {
+      "path": "stand-sharing.css",
+      "sha256": "e8f9f3ba34ec227736be1530445d90a2a3fba7fe40b563e5de968b742e122e2a",
+      "bytes": 550
+    },
+    {
+      "path": "stand-sharing.js",
+      "sha256": "393ca3df4c967428c5533cbb0ce8b8e49dba02cc83355421a296c02c9bbdce34",
+      "bytes": 24221
+    },
+    {
+      "path": "styles.css",
+      "sha256": "c74b344259e889330e1cc7973dcfdcb38cfa60f19b1983c137cc9e5fa90d1929",
+      "bytes": 28613
+    },
+    {
+      "path": "v40-design.css",
+      "sha256": "f81e1cf9fbed1bb950ea2184c96df0d7e65b82ccb6fdaf5a544cd87bb918942c",
+      "bytes": 33992
+    },
+    {
+      "path": "vendor/v21_animation_catalog.js",
+      "sha256": "37a90c048d22a1d5efd25cf91336175aaa2f770f11d3aea9c3dc7d6a859f4014",
+      "bytes": 90530
+    },
+    {
+      "path": "vendor/v21_tunnel_engine.js",
+      "sha256": "5e8f4170084d5a6a3597fe014a117597b6a2b2eee4869437ee3ff9a6cc288c3e",
+      "bytes": 8498
+    },
+    {
+      "path": "web-demo-service.js",
+      "sha256": "e30b0ff2c98f25fe153cffd9a132e2dbda97f6508b1c2a0731ca3b2642840dfa",
+      "bytes": 2980
+    }
+  ],
+  "interfaceReviewScope": {
+    "sourceSnapshot": "interface-demo362",
+    "basedOnSourceSnapshot": "frozen361",
+    "sourceAssets": 60,
+    "sourceInventorySha256": "b1e1d17a6deffa20d71e52bbcead6bf8ebcfa35f95882e8ebd52e7b400cfc5d6",
+    "phoneReleaseMetadataPreserved": true,
+    "physicalReceiverAcceptance": false,
+    "phoneInstallationPerformed": false,
+    "browserVisualAcceptancePerformed": true,
+    "browserReview": {
+      "status": "root-verified-offline-demo",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "testedFlows": [
+        "onboarding",
+        "order",
+        "color",
+        "animations",
+        "scenes",
+        "settings"
+      ],
+      "evidenceNames": [
+        "stand-mobile-review",
+        "order-after-drag-mobile",
+        "mixed-stand-animation-mobile",
+        "animation-search-fixed-mobile"
+      ],
+      "evidenceScope": "Tested UI flows; post-fix search rechecked. First-round screenshots precede the final backup-copy-only change; not every screenshot is final-source byte-exact.",
+      "physicalPhone": false,
+      "hardware": false
     }
   }
 }

@@ -133,6 +133,17 @@
       if (model.receivers.filter(function (r) { return r && r.standId === stand.id && r.role === 'main' && r.lifecycle === 'added'; }).length > 1) add('MULTIPLE_MAIN', 'stands.' + stand.id, 'De receiverindeling van deze stand is ongeldig.');
     });
     zones.forEach(function (ref) {
+      if (Object.prototype.hasOwnProperty.call(ref.zone, 'lineOrder')) {
+        var expected = physicalLines(model, ref.zone.id).map(function (line) { return line.id; });
+        var order = ref.zone.lineOrder, seen = new Set();
+        if (!Array.isArray(order) || order.length !== expected.length) add('LINE_ORDER', ref.path + '.lineOrder', 'Neem iedere actieve fysieke ledline precies één keer op.');
+        else for (var li = 0; li < order.length; li++) {
+          if (!Object.prototype.hasOwnProperty.call(order, li) || typeof order[li] !== 'string' || expected.indexOf(order[li]) < 0 || seen.has(order[li])) {
+            add('LINE_ORDER', ref.path + '.lineOrder[' + li + ']', 'Gebruik alleen unieke actieve ledlines van deze zone.');
+          }
+          seen.add(order[li]);
+        }
+      }
       if (ref.zone.type !== 'SPI' || ref.zone.layout !== 'continuous' || !Array.isArray(ref.zone.receiverIds)) return;
       var total = ref.zone.receiverIds.reduce(function (sum, rid) {
         var receiver = receivers.get(rid);
@@ -159,7 +170,83 @@
     if (!zone) return [];
     return zone.receiverIds.map(function (rid) { return model.receivers.find(function (r) { return r.id === rid && r.zoneId === zone.id && r.lifecycle === 'added'; }); }).filter(Boolean);
   }
+  function standZoneReceivers(model, standId) {
+    assertValid(model);
+    var stand = model.stands.find(function (item) { return item.id === standId; });
+    if (!stand) issue('STAND_REFERENCE', 'Deze stand bestaat niet.');
+    // "Alles bedienen" means all configured zones, not spare/unassigned
+    // hardware. Keep exactly the same membership and order as zone control.
+    return stand.zones.reduce(function (result, zone) {
+      return result.concat(zoneReceivers(model, zone.id));
+    }, []);
+  }
   function requireZone(model, zoneId) { var zone = getZone(model, zoneId); if (!zone) issue('ZONE_NOT_FOUND', 'Deze zone bestaat niet.'); return zone; }
+  function physicalLines(model, zoneId) {
+    var lines = [], zone = null;
+    model.stands.forEach(function (stand) { if (stand && Array.isArray(stand.zones)) stand.zones.forEach(function (item) { if (item && item.id === zoneId) zone = item; }); });
+    if (!zone || !Array.isArray(zone.receiverIds)) return lines;
+    zone.receiverIds.map(function (rid) { return model.receivers.find(function (receiver) { return receiver && receiver.id === rid && receiver.zoneId === zoneId && receiver.lifecycle === 'added'; }); }).filter(Boolean).forEach(function (receiver, receiverIndex) {
+      var localOffset = 0;
+      var ports = receiver.type === 'RGBW' ? [{ port: 0, pixels: 1, reversed: false }] :
+        (Array.isArray(receiver.outputs) ? receiver.outputs.filter(function (p) { return p && p.enabled === true; }).slice().sort(function (a,b) { return a.port-b.port; }) : []);
+      ports.forEach(function (port) {
+        lines.push({ id: receiver.id + ':' + port.port, receiver: receiver, output: port, receiverIndex: receiverIndex, localOffset: localOffset });
+        localOffset += port.pixels;
+      });
+    });
+    return lines;
+  }
+  function lineIds(model, zoneId) {
+    assertValid(model);
+    var zone = requireZone(model, zoneId);
+    return Object.prototype.hasOwnProperty.call(zone, 'lineOrder') ? zone.lineOrder.slice() : physicalLines(model, zoneId).map(function (line) { return line.id; });
+  }
+  function ledlines(receivers, lineOrder) {
+    if (!Array.isArray(receivers)) issue('RECEIVERS', 'Receivers moeten een lijst zijn.');
+    var lines = [];
+    receivers.forEach(function (receiver, receiverIndex) {
+      if (!object(receiver) || TYPES.indexOf(receiver.type) < 0) return;
+      var seen = new Set(), localOffset = 0;
+      var outputs = receiver.type === 'RGBW' ? [{ port: 0, pixels: 1, reversed: false }] :
+        (Array.isArray(receiver.outputs) ? receiver.outputs : []).filter(function (output) {
+          return object(output) && output.enabled === true && integer(output.port, 1, LIMITS.spiPorts) && integer(output.pixels, 1, 8192);
+        }).slice().sort(function (a,b) { return a.port-b.port; });
+      outputs.forEach(function (output) {
+        if (seen.has(output.port)) return;
+        seen.add(output.port);
+        lines.push({ id: receiver.id + ':' + output.port, receiverId: receiver.id, type: receiver.type,
+          port: output.port, pixels: output.pixels, reversed: Boolean(output.reversed),
+          localOffset: localOffset, receiverIndex: receiverIndex, receiverCount: receivers.length });
+        localOffset += output.pixels;
+      });
+    });
+    if (lineOrder !== undefined) {
+      var byId = new Map(lines.map(function (line) { return [line.id, line]; })), seen = new Set();
+      if (!Array.isArray(lineOrder) || lineOrder.length !== lines.length || byId.size !== lines.length) issue('LINE_ORDER', 'Neem iedere actieve fysieke ledline op.');
+      for (var oi = 0; oi < lineOrder.length; oi++) if (!Object.prototype.hasOwnProperty.call(lineOrder,oi)) issue('LINE_ORDER', 'Een ledlinepositie mag niet ontbreken.');
+      lines = Array.from(lineOrder, function (lineId) {
+        if (typeof lineId !== 'string' || !byId.has(lineId) || seen.has(lineId)) issue('LINE_ORDER', 'Gebruik iedere actieve ledline precies één keer.');
+        seen.add(lineId); return byId.get(lineId);
+      });
+    }
+    var offset = 0, total = lines.reduce(function (sum,line) { return sum+line.pixels; },0);
+    return Object.freeze(lines.map(function (line,index) {
+      var result = Object.freeze(Object.assign(line,{offset:offset,lineIndex:index,lineCount:lines.length,totalPixels:total}));
+      offset += line.pixels; return result;
+    }));
+  }
+  function zoneLedlines(model, zoneId) { return ledlines(zoneReceivers(model,zoneId),lineIds(model,zoneId)); }
+  // Only an authenticated/topology edit calls this. Keep surviving physical
+  // identities in place; append newly enabled/assigned lines, never renumber ports.
+  function reconcileLineOrders(model) {
+    model.stands.forEach(function (stand) { stand.zones.forEach(function (zone) {
+      if (!Object.prototype.hasOwnProperty.call(zone, 'lineOrder')) return;
+      var expected = physicalLines(model, zone.id).map(function (line) { return line.id; });
+      zone.lineOrder = zone.lineOrder.filter(function (lineId) { return expected.indexOf(lineId) >= 0; });
+      expected.forEach(function (lineId) { if (zone.lineOrder.indexOf(lineId) < 0) zone.lineOrder.push(lineId); });
+    }); });
+    return model;
+  }
   function editName(value) {
     if (typeof value !== 'string' || !value.trim().length || value.trim().length > 64 ||
       /[<>\u0000-\u001F\u007F-\u009F\u202A-\u202E\u2066-\u2069]/.test(value)) {
@@ -232,6 +319,7 @@
     // zone has become empty) are never replaced by this new-zone default.
     if (target.type === null) { target.type = receiver.type; target.layout = receiver.type === 'SPI' ? 'continuous' : 'stacked'; }
     target.receiverIds.push(receiverId); updated.zoneId = zoneId;
+    reconcileLineOrders(next);
     // Includes all enabled SPI outputs/offline slots and the 8192-pixel limit
     // in a continuous destination. Rejection cannot mutate the caller's model.
     return assertValid(next);
@@ -243,6 +331,7 @@
       var origin = getZone(next, receiver.zoneId);
       origin.receiverIds.splice(origin.receiverIds.indexOf(receiverId), 1);
       next.receivers.find(function (item) { return item.id === receiverId; }).zoneId = null;
+      reconcileLineOrders(next);
     }
     // An empty typed zone keeps its type/layout; this is not device deletion,
     // release, reset or a change to stand membership.
@@ -278,24 +367,23 @@
   function resolveTargets(model, zoneId, selection) {
     assertValid(model);
     var zone = requireZone(model, zoneId), selected = selectionIds(model, zoneId, selection), receivers = zoneReceivers(model, zoneId), offset = 0;
+    var physical = physicalLines(model, zoneId), byId = new Map(physical.map(function (line) { return [line.id, line]; }));
+    var ordered = Object.prototype.hasOwnProperty.call(zone, 'lineOrder') ? zone.lineOrder.map(function (id) { return byId.get(id); }) : physical;
     var targets = [];
-    receivers.forEach(function (receiver, receiverIndex) {
-      var outputs = receiver.type === 'RGBW' ? [{ port: 0, pixels: 1, reversed: false }] : receiver.outputs.filter(function (p) { return p.enabled; }).slice().sort(function (a,b) { return a.port - b.port; });
-      var localOffset = 0;
-      outputs.forEach(function (output) {
-        targets.push({ id: receiver.id + ':' + output.port, receiverId: receiver.id, deviceId: receiver.id, rid: receiver.rid || '',
-          type: receiver.type, port: output.port, pixels: output.pixels, offset: offset, localOffset: localOffset,
-          reversed: output.reversed, receiverIndex: receiverIndex, receiverCount: receivers.length,
+    ordered.forEach(function (line) {
+      var receiver = line.receiver, output = line.output;
+        targets.push({ id: line.id, receiverId: receiver.id, deviceId: receiver.id, rid: receiver.rid || '',
+          type: receiver.type, port: output.port, pixels: output.pixels, offset: offset, localOffset: line.localOffset,
+          reversed: output.reversed, receiverIndex: line.receiverIndex, receiverCount: receivers.length,
           connection: receiver.connection, layout: zone.layout, state: clone(receiver.state) });
-        offset += output.pixels; localOffset += output.pixels;
-      });
+        offset += output.pixels;
     });
     return targets.map(function (target, index) { return Object.assign(target, { groupPixels: offset, totalPixels: offset, lineIndex: index, lineCount: targets.length }); }).filter(function (target) { return selected.indexOf(target.receiverId) >= 0; });
   }
   function applyState(model, zoneId, selection, patch) {
     assertValid(model);
     if (!object(patch)) issue('STATE_PATCH', 'Een lichtwijziging is vereist.');
-    if (['groupPixels', 'offset', 'receiverId', 'port', 'ports', 'outputs', 'reversed', '__proto__', 'constructor', 'prototype'].some(function (key) { return Object.prototype.hasOwnProperty.call(patch, key); })) issue('GEOMETRY_PATCH', 'Lichtbediening mag de receiverindeling niet wijzigen.');
+    if (['groupPixels', 'offset', 'lineOrder', 'lineIndex', 'lineCount', 'receiverId', 'port', 'ports', 'outputs', 'reversed', '__proto__', 'constructor', 'prototype'].some(function (key) { return Object.prototype.hasOwnProperty.call(patch, key); })) issue('GEOMETRY_PATCH', 'Lichtbediening mag de receiverindeling niet wijzigen.');
     var selected = selectionIds(model, zoneId, selection), next = clone(model);
     next.receivers.forEach(function (receiver) { if (selected.indexOf(receiver.id) >= 0) receiver.state = Object.assign({}, receiver.state, clone(patch)); });
     return assertValid(next);
@@ -315,9 +403,10 @@
       'engine','variant','v30Effect','category','animation','previewFamily','legacySpi','bounce','mirror'];
     if (!object(patch) || Object.keys(patch).some(function (key) { return allowed.indexOf(key) < 0; }) ||
         patch.engine !== undefined && patch.engine !== 'STATIC') issue('STAND_STATE_PATCH', 'Gebruik vaste kleur of aan/uit voor de hele stand.');
+    var selected = new Set(standZoneReceivers(model, standId).map(function (receiver) { return receiver.id; }));
     var next = clone(model);
     next.receivers.forEach(function (receiver) {
-      if (receiver.standId === standId && receiver.lifecycle === 'added') receiver.state = Object.assign({}, receiver.state, clone(patch));
+      if (selected.has(receiver.id)) receiver.state = Object.assign({}, receiver.state, clone(patch));
     });
     return assertValid(next);
   }
@@ -367,6 +456,20 @@
     ordered.splice(toIndex, 0, receiverId);
     return reorderReceivers(model, zoneId, ordered);
   }
+  function arrangeLines(model, zoneId, arrangement) {
+    assertValid(model);
+    var zone = requireZone(model, zoneId);
+    if (!object(arrangement) || Object.keys(arrangement).length !== 2 ||
+        !Object.prototype.hasOwnProperty.call(arrangement, 'layout') || !Object.prototype.hasOwnProperty.call(arrangement, 'lineOrder')) issue('ARRANGEMENT', 'Kies een opstelling en alle fysieke ledlines.');
+    if (allowedLayouts(zone.type).indexOf(arrangement.layout) < 0) issue('LAYOUT', 'Deze opstelling past niet bij dit type receiver.');
+    // Validate the caller's actual array before cloning; inherited numeric
+    // properties must not fill a sparse drag result during Array.map/JSON.
+    ledlines(zoneReceivers(model,zoneId),arrangement.lineOrder);
+    if (!Array.isArray(arrangement.lineOrder)) issue('LINE_ORDER', 'Geef alle fysieke ledlines als lijst.');
+    var next = clone(model), target = getZone(next, zoneId);
+    target.layout = arrangement.layout; target.lineOrder = clone(arrangement.lineOrder);
+    return assertValid(next);
+  }
   function configureSpiOutput(model, receiverId, port, patch) {
     assertValid(model);
     var receiver = model.receivers.find(function (r) { return r.id === receiverId; });
@@ -375,11 +478,13 @@
     if (!object(patch) || Object.keys(patch).some(function (key) { return ['enabled', 'pixels', 'reversed'].indexOf(key) < 0; })) issue('OUTPUT_PATCH', 'Wijzig alleen pixels, aansluiting of het gebruik van de uitgang.');
     var next = clone(model), updated = next.receivers.find(function (r) { return r.id === receiverId; });
     Object.assign(updated.outputs.find(function (p) { return p.port === port; }), clone(patch));
+    reconcileLineOrders(next);
     return assertValid(next);
   }
   return Object.freeze({ LIMITS: LIMITS, clone: clone, defaultState: defaultState, validate: validate, assertValid: assertValid, getZone: getZone,
-    zoneReceivers: zoneReceivers, resolveTargets: resolveTargets, applyState: applyState, applyStandState: applyStandState, setLayout: setLayout,
+    zoneReceivers: zoneReceivers, standZoneReceivers: standZoneReceivers, resolveTargets: resolveTargets, applyState: applyState, applyStandState: applyStandState, setLayout: setLayout,
     createZone: createZone, renameZone: renameZone, deleteZone: deleteZone, renameReceiver: renameReceiver,
     assignReceiverToZone: assignReceiverToZone, unassignReceiver: unassignReceiver, moveReceivers: moveReceivers,
-    reorderReceivers: reorderReceivers, arrangeZone: arrangeZone, moveReceiver: moveReceiver, configureSpiOutput: configureSpiOutput });
+    reorderReceivers: reorderReceivers, arrangeZone: arrangeZone, arrangeLines: arrangeLines, lineIds: lineIds, ledlines: ledlines, zoneLedlines: zoneLedlines,
+    moveReceiver: moveReceiver, configureSpiOutput: configureSpiOutput });
 }));

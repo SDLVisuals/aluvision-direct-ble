@@ -110,6 +110,10 @@
 .pixel-connection-preview[data-preview-pixels="0"] .pixel-ledline-profile .start{box-shadow:none}
 .pixel-count-preview-label b{font-size:14px;font-variant-numeric:tabular-nums}.pixel-count-preview-label span{font-size:9px;color:#aeb7ac;text-align:right}
 .pixel-count-preview .pixel-setup-track{transform:none!important;gap:7px}.pixel-count-preview .pixel-setup-track::before{display:none}
+.pixel-length-rail{display:block;width:100%;height:13px;border-radius:3px;background:#ffffff12}
+.pixel-length-rail>.pixel-setup-track{width:max(10px,var(--pixel-length-progress));height:13px;transition:none}
+.pixel-count-preview[data-preview-pixels="0"] .pixel-length-rail>.pixel-setup-track{width:0}
+.pixel-length-scale{display:flex;justify-content:space-between;margin-top:-8px;color:#aeb7ac;font-size:9px;line-height:12px}
 .pixel-count-preview .pixel-setup-track .pixel-setup-strip{width:auto;flex:1;min-width:0;justify-content:flex-start}
 .pixel-count-preview .pixel-setup-strip i{max-width:12px;background:#d2d9ce;box-shadow:none;animation:none}
 .pixel-count-preview .pixel-setup-strip i.end{background:#f0443d;box-shadow:0 0 10px #f0443d99,inset 0 0 0 1px #ffb2ac}
@@ -121,7 +125,7 @@
 .pixel-endpoint-guide.is-empty{color:#aeb7ac;font-weight:500}
 .pixel-setup-visual.pixel-count-preview .pixel-preview-notice{position:static;min-height:16px;padding:0;color:#bac3b8;text-align:left;background:transparent;border:0;box-shadow:none}
 /* Horizontal scrubbing shares the numeric controls; vertical gestures scroll. */
-[data-pixel-scrub]{min-width:0;border-radius:13px;touch-action:pan-y pinch-zoom;cursor:ew-resize;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+[data-pixel-scrub]{min-width:0;min-height:96px;border-radius:13px;touch-action:pan-y pinch-zoom;cursor:ew-resize;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 [data-pixel-scrub]>*{pointer-events:none}
 [data-pixel-scrub]:focus-visible,[data-pixel-scrub][data-scrubbing=true]{outline:2px solid var(--red,#bd4842);outline-offset:3px}
 [data-pixel-scrub][data-scrubbing=true] .pixel-count-preview-label b{color:#fff}
@@ -191,3 +195,10 @@
   .pixel-setup-visual.pixel-connection-preview{min-height:91px;gap:8px;padding:10px}
   .pixel-setup-panel[data-pixel-panel=connection] .pixel-setup-sides button{min-height:66px;gap:4px;padding:7px 5px}
 }
+/* Four direct meter steps; complete segments remain available underneath. */
+.pixel-setup-meter-counter{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.pixel-setup-meter-counter .pixel-length-caption{grid-column:1/-1;text-align:center;font-size:11px;color:var(--muted,#666);line-height:1.35}
+.pixel-setup-meter-counter output{grid-column:1/-1;font-size:24px;font-weight:750;padding:0 0 3px;line-height:1.2}
+.pixel-setup-meter-counter button{min-width:44px;min-height:44px;padding:8px 4px;font-size:12px;white-space:nowrap;touch-action:manipulation}
+.pixel-setup-panel>.pixel-segment-hint{font-size:11px;line-height:1.45;text-align:center}
+@media(max-width:350px){.pixel-setup-meter-counter{gap:4px}.pixel-setup-meter-counter button{font-size:11px}.pixel-setup-meter-counter output{font-size:22px}}

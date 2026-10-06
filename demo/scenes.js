@@ -11,7 +11,14 @@
   const text=(v,max=160)=>typeof v==='string'&&v.trim().length>0&&v.length<=max&&!/[\u0000-\u001f]/.test(v);
   function fail(message){throw Error(message);}
   function light(state,strict=false){
-    return P.sanitizeLightState(state,strict);
+    const clean={...state};delete clean.standAnimation;
+    const result=P.sanitizeLightState(clean,strict);
+    if(Object.hasOwn(state,'standAnimation')){
+      const standAnimations=typeof module==='object'&&module.exports?require('./stand-animations.js'):globalThis.LightningStandAnimations;
+      if(!standAnimations)fail('De gezamenlijke animatie kan niet worden gelezen.');
+      result.standAnimation=standAnimations.validateMarker(state.standAnimation);
+    }
+    return result;
   }
   function validate(scene){
     if(!plain(scene)||scene.version!==1||!text(scene.id)||!text(scene.standId)||!text(scene.name,64)||!Array.isArray(scene.zones)||!scene.zones.length||scene.zones.length>100)fail('Deze scène is niet geldig.');
@@ -30,6 +37,10 @@
     M.assertValid(model);
     if(!text(name,64)||!Array.isArray(zoneIds)||!zoneIds.length||new Set(zoneIds).size!==zoneIds.length)fail('Kies minstens één zone en geef je scène een naam.');
     const stand=model.stands.find(s=>s.id===standId);if(!stand)fail('Deze stand bestaat niet.');
+    const members=model.receivers.filter(receiver=>receiver.standId===standId&&receiver.lifecycle==='added');
+    const captured=members.filter(receiver=>zoneIds.includes(receiver.zoneId));
+    if(captured.some(receiver=>receiver.state.standAnimation)&&captured.length!==members.length)
+      fail('Deze animatie gebruikt de hele stand. Kies alle zones en wijs losse receivers eerst aan een zone toe.');
     return validate({version:1,id:options.id||'scene-'+(globalThis.crypto?.randomUUID?.()||Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)),standId,name,
       zones:zoneIds.map(id=>{const z=stand.zones.find(z=>z.id===id);if(!z)fail('De gekozen zone hoort niet bij deze stand.');
         return {id:z.id,name:z.name,type:z.type,receivers:M.zoneReceivers(model,z.id).map(r=>({id:r.id,state:light(r.state)}))};})});
@@ -74,6 +85,11 @@
     try{
       const scene=validate(input);M.assertValid(model);
       const stand=model.stands.find(s=>s.id===scene.standId);if(!stand)return {ok:false,reason:'Deze scène hoort bij een andere stand.'};
+      if(scene.zones.some(zone=>zone.receivers.some(receiver=>receiver.state.standAnimation))){
+        const saved=scene.zones.flatMap(zone=>zone.receivers),members=model.receivers.filter(receiver=>receiver.standId===scene.standId&&receiver.lifecycle==='added');
+        if(saved.length!==members.length||saved.some(receiver=>!members.some(member=>member.id===receiver.id)))
+          return {ok:false,reason:'De opstelling van deze standanimatie is gewijzigd. Bewaar een nieuwe scène voor de hele stand.'};
+      }
       for(const saved of scene.zones){
         const zone=stand.zones.find(z=>z.id===saved.id);if(!zone||zone.type!==saved.type)return {ok:false,reason:'Een zone uit deze scène ontbreekt of heeft een ander type.'};
         const live=M.zoneReceivers(model,zone.id);
@@ -85,6 +101,11 @@
   function apply(model,input){
     const check=compatibility(model,input);if(!check.ok)fail(check.reason);
     const scene=validate(input),next=copy(model);
+    if(!scene.zones.some(zone=>zone.receivers.some(receiver=>receiver.state.standAnimation))){
+      // A normal scene may replace only one zone. Keep the light on the other
+      // zones, but dissolve their shared recipe marker to prevent partial waves.
+      next.receivers.filter(receiver=>receiver.standId===scene.standId).forEach(receiver=>{delete receiver.state.standAnimation;});
+    }
     for(const zone of scene.zones)for(const saved of zone.receivers)next.receivers.find(r=>r.id===saved.id).state=copy(saved.state);
     return M.assertValid(next);
   }

@@ -60,8 +60,9 @@
     return {message:'De toevoeging kon nog niet veilig worden afgerond. Tik op Opnieuw proberen. Je receiver en instellingen blijven geselecteerd.'};
   }
 
-  function create({draftApi=window.LightningOnboardingDraft,visual=window.LightningReceiverVisual,pixelSetup=window.LightningPixelSetup,services={},getModel,onComplete=()=>{},onManage=null,onExit=()=>{},allowPinLogin=false}={}){
+  function create({draftApi=window.LightningOnboardingDraft,visual=window.LightningReceiverVisual,pixelSetup=window.LightningPixelSetup,pixelsPerMeter,services={},getModel,onComplete=()=>{},onManage=null,onExit=()=>{},allowPinLogin=false}={}){
     if(!draftApi||!pixelSetup||typeof getModel!=='function')throw Error('Onboarding dependencies are required.');
+    const pixelLimits=pixelSetup.pixelLimits({pixelsPerMeter});
     let draft=null,container=null,results=[],searchState='idle',receiverFilter='all',error='',notice='',busy=false,operation=0;
     let securityReceiptRef=null,finalReceiptRef=null,securityUncertain=false,finalizationStarted=false,completeModel=null,manualRejoinSSID=null;
     let returningFromWifi=false,rejoinTimer=null,registrationPending=false;
@@ -118,13 +119,14 @@
     }
     let previewState={kind:'idle'};
     const pixelPreview=pixelSetup.createLivePreview({send:services.previewPixels,onState:state=>{previewState=state;pixelSetup.showPreviewStatus(container,state);}});
-    function syncPixelPreview(){
+    function syncPixelPreview({commit=false}={}){
       if(busy&&['pixels','connection'].includes(draft?.stage))return;
       if(!container||document.hidden||!['pixels','connection'].includes(draft?.stage)){void pixelPreview.stop();return;}
       const selected=draft.outputs.find(output=>output.port===draft.port);
       pixelPreview.update({standId:draft.stand.id,transactionId:draft.transactionId,
         receiver:{id:draft.receiver.id,rid:draft.receiver.rid,type:'SPI',deviceFingerprint:draft.receiver.deviceFingerprint},
         role:draft.role,mainReceiverId:draft.mainReceiverId,port:draft.port,pixels:selected.pixels,...(draft.stage==='connection'?{guide:'power',reversed:selected.reversed}:{})});
+      if(commit)void pixelPreview.flush();
       pixelSetup.showPreviewStatus(container,previewState);
     }
     const saveNotice='Je keuzes zijn nog niet bewaard. Probeer opnieuw; je hoeft niets opnieuw in te vullen.';
@@ -300,8 +302,8 @@
     function mount(element,options){
       start({...options,retargetZone:options?.origin==='layout'&&!container});
       origin=['receivers','layout'].includes(options?.origin)&&draft.mainReceiverId?options.origin:'stand';container=element;
-      container.addEventListener('click',click);container.addEventListener('input',input);container.addEventListener('keydown',keydown);
-      unbindPixelScrub=pixelSetup.bindPixelScrub(container,{isEnabled:()=>draft?.stage==='pixels'&&!busy&&!draftSaving,onChange:value=>updatePixelCount(value)});
+      container.addEventListener('click',click);container.addEventListener('input',input);container.addEventListener('change',input);container.addEventListener('keydown',keydown);container.addEventListener('keyup',commitPixelKey);
+      unbindPixelScrub=pixelSetup.bindPixelScrub(container,{isEnabled:()=>draft?.stage==='pixels'&&!busy&&!draftSaving,onChange:value=>updatePixelCount(value,null,{haptic:false}),onCommit:()=>void pixelPreview.flush()});
       document.addEventListener('visibilitychange',visibilityChanged);window.addEventListener('lightning:native-active',nativeActive);window.addEventListener('pageshow',pageShown);
       if(parkPending||parking){void parkForSearch().then(ok=>{if(ok&&container)void search();});}
       else if((options?.autoSearch||searchOnMount)&&draft.stage==='receiver'&&searchState==='idle')queueMicrotask(()=>{if(container&&draft.stage==='receiver'&&!busy&&searchState==='idle')void search();});
@@ -314,7 +316,7 @@
       captureNames();container?.querySelectorAll('[data-onboarding-pin]').forEach(input=>{input.value='';});
       const zoneDialog=container?.querySelector('[data-onboarding-zone-dialog]');if(zoneDialog?.open)zoneDialog.close();receiverZoneSelection=undefined;openZonePickerOnNextPaint=false;
       unbindPixelScrub?.();unbindPixelScrub=null;
-      if(container){container.removeEventListener('click',click);container.removeEventListener('input',input);container.removeEventListener('keydown',keydown);}
+      if(container){container.removeEventListener('click',click);container.removeEventListener('input',input);container.removeEventListener('change',input);container.removeEventListener('keydown',keydown);container.removeEventListener('keyup',commitPixelKey);}
       document.removeEventListener('visibilitychange',visibilityChanged);window.removeEventListener('lightning:native-active',nativeActive);window.removeEventListener('pageshow',pageShown);stopAutomaticRejoin();returningFromWifi=false;
       container=null;cancelSearch();plugMotion.clear();selectedOutput=null;zoneListReturn=null;
       for(const pending of identifyPending.values())pending.abort();identifyPending.clear();identifyFocusOwner=null;
@@ -509,7 +511,7 @@
         case 'outputs':return `${pixelSetup.renderOutputs(draft.outputs,{onboarding:true})}<p class="onboarding-hint">Extra uitgangen inschakelen kan later.</p>${footer()}`;
         case 'pixels':{
           const output=draft.outputs.find(output=>output.port===draft.port);
-          return `${pixelSetup.renderPortContext(draft.outputs,draft.port)}${pixelSetup.renderPixels(output,{inputId:'onboarding-pixels',onboarding:true})}${footer(pixelSetup.nextPortLabel(draft.outputs,draft.port))}`;
+          return `${pixelSetup.renderPortContext(draft.outputs,draft.port)}${pixelSetup.renderPixels(output,{inputId:'onboarding-pixels',onboarding:true,pixelsPerMeter:pixelLimits.pixelsPerMeter})}${footer(pixelSetup.nextPortLabel(draft.outputs,draft.port))}`;
         }
         case 'connection':{
           const output=draft.outputs.find(output=>output.port===draft.port);
@@ -586,7 +588,7 @@
       }
       const rename=container.querySelector('#onboarding-zone-rename');if(rename)container.querySelector('[data-onboarding-action="zone-rename-confirm"]').disabled=!validName(rename.value)||rename.value.trim()===draft.zones.find(zone=>zone.id===zoneRename.zoneId)?.name;
       if(draft.stage==='zones'&&container.querySelector('[data-onboarding-action="next"]'))container.querySelector('[data-onboarding-action="next"]').disabled=!canContinueZones();
-      if(draft.stage==='pixels'){const input=container.querySelector('#onboarding-pixels');input.inputMode='numeric';container.querySelector('[data-onboarding-action="next"]').disabled=!pixelSetup.validateInput(container,input.value)||!pixelSetup.configuredPixels(Number(input.value));}
+      if(draft.stage==='pixels'){const input=container.querySelector('#onboarding-pixels');input.inputMode='numeric';container.querySelector('[data-onboarding-action="next"]').disabled=!pixelSetup.validateInput(container,input.value,pixelLimits)||!pixelSetup.configuredPixels(Number(input.value),pixelLimits);}
       if(draftSaving||pendingChoices)container.querySelectorAll('button,input').forEach(control=>{
         if(control.dataset.onboardingAction==='zone-picker-close')return;
         if(draftSaving||!['save-retry','exit'].includes(control.dataset.onboardingAction))control.disabled=true;
@@ -677,17 +679,19 @@
       if(action==='zone-create'&&draft.stage==='zones')container.querySelector('[data-onboarding-action="next"]').disabled=!canContinueZones();
       if(element.id==='onboarding-zone-rename'){captureNames();container.querySelector('[data-onboarding-action="zone-rename-confirm"]').disabled=!validName(element.value)||element.value.trim()===draft.zones.find(zone=>zone.id===zoneRename.zoneId)?.name;}
       if(element.matches('[data-pixel-count],[data-pixel-range]')){
-        updatePixelCount(element.value,element);
+        updatePixelCount(element.value,element,{commit:event.type==='change'});
       }
       updateGuidance();
     }
-    function updatePixelCount(value,source){
+    function updatePixelCount(value,source,{commit=false,haptic=true}={}){
       if(draft.stage!=='pixels'||busy)return;
-      const valid=pixelSetup.validateInput(container,value);container.querySelector('[data-onboarding-action="next"]').disabled=!valid||!pixelSetup.configuredPixels(Number(value));
-      if(valid&&change({type:'SET_PIXELS',port:draft.port,pixels:Number(value)},{render:false}))pixelSetup.updatePixels(container,draft.outputs.find(output=>output.port===draft.port),{source});
-      if(valid)syncPixelPreview();
+      const valid=pixelSetup.validateInput(container,value,pixelLimits);container.querySelector('[data-onboarding-action="next"]').disabled=!valid||!pixelSetup.configuredPixels(Number(value),pixelLimits);
+      const previous=draft.outputs.find(output=>output.port===draft.port).pixels;
+      if(valid&&change({type:'SET_PIXELS',port:draft.port,pixels:Number(value)},{render:false})){pixelSetup.updatePixels(container,draft.outputs.find(output=>output.port===draft.port),{source,pixelsPerMeter:pixelLimits.pixelsPerMeter});if(haptic&&Number(value)!==previous)pixelSetup.hapticStep();}
+      if(valid)syncPixelPreview({commit});
       updateGuidance();
     }
+    function commitPixelKey(event){if(['Enter','ArrowUp','ArrowDown'].includes(event.key)&&event.target.matches('[data-pixel-count]'))updatePixelCount(event.target.value,event.target,{commit:true});}
     function keydown(event){if(event.key==='Enter'&&event.target.matches('input:not([data-onboarding-pin])')){const button=container.querySelector('[data-onboarding-action="stand-save"], [data-onboarding-action="zone-create"], [data-onboarding-action="zone-rename-confirm"]')||(draft.stage==='zones'?container.querySelector('[data-onboarding-action="next"]'):null);if(button&&!button.disabled){event.preventDefault();button.click();}}}
     async function search(){
       if(parkPending||parking){if(!(await parkForSearch()))return;}
@@ -1177,11 +1181,12 @@
         if(change({type:'SET_OUTPUT_ENABLED',port:output.port,enabled},{render:false})){selectedOutput=output.port;plugMotion.trigger(output.port,performance.now()/1000,enabled);}
         return paintPage(false);
       }
-      if(['pixel-less','pixel-more','meter-less','meter-more'].includes(action)){
-        const step=action.startsWith('meter')?pixelSetup.pixelLimits().pixelsPerMeter:1;
-        return updatePixelCount(pixelSetup.stepPixels(draft.outputs.find(output=>output.port===draft.port).pixels,action.endsWith('less')?-step:step));
+      if(['pixel-less','pixel-more','meter-less','meter-more','meter-half-less','meter-half-more'].includes(action)){
+        const direction=action.endsWith('less')?-1:1,selected=draft.outputs.find(output=>output.port===draft.port).pixels;
+        const value=action.startsWith('meter')?pixelSetup.stepMeters(selected,direction*(action.includes('half')?0.5:1),pixelLimits):pixelSetup.stepPixels(selected,direction,pixelLimits);
+        return updatePixelCount(value,null,{commit:true});
       }
-      if(action==='side')return change({type:'SET_SIDE',port:draft.port,side:target.dataset.side},{top:false});
+      if(action==='side'){if(change({type:'SET_SIDE',port:draft.port,side:target.dataset.side},{top:false}))void pixelPreview.flush();return;}
       if(action==='zone'){
         const zoneId=target.hasAttribute('data-without-zone')?null:target.dataset.id;
         if(draft.stage==='placement')return saveChoices([{type:'SELECT_ZONE',zoneId},{type:'NEXT'}],()=>{if(draft.stage==='security')queueMicrotask(()=>secure());});

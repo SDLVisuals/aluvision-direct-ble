@@ -24,7 +24,20 @@
   function editablePixels(value,options){const limits=pixelLimits(options);return Number.isInteger(value)&&value>=MIN&&value<=limits.max;}
   function configuredPixels(value,options){return value>0&&editablePixels(value,options);}
   function stepPixels(value,delta,options){const limits=pixelLimits(options);if(!(value===0||validPixels(value))||!Number.isInteger(delta))throw Error('PIXEL_STEP_INVALID');return Math.max(limits.min,Math.min(limits.max,value+delta));}
+  function stepMeters(value,delta,options){
+    const limits=pixelLimits(options);if(!Number.isFinite(delta))throw Error('PIXEL_STEP_INVALID');
+    // Round the distance once, then apply its sign: half-metre buttons remain
+    // reversible even for an odd density. Only whole addressable pixels exist.
+    return stepPixels(value,Math.sign(delta)*Math.round(Math.abs(delta)*limits.pixelsPerMeter),limits);
+  }
   function meterLabel(value,options){const limits=pixelLimits(options);return `≈ ${(value/limits.pixelsPerMeter).toLocaleString('nl-BE',{maximumFractionDigits:2,minimumFractionDigits:2})} m`;}
+  let lastHaptic=-Infinity;
+  function hapticStep(){
+    const now=globalThis.performance?.now?.()??Date.now();if(now-lastHaptic<40)return;
+    lastHaptic=now;
+    try{if(globalThis.LightningNativeRuntime?.selectionFeedback?.()===true)return;}catch(_){/* Feedback is optional. */}
+    try{globalThis.navigator?.vibrate?.(8);}catch(_){/* Feedback is optional. */}
+  }
   const endpointLabel=output=>output.reversed?'Stroom komt rechts binnen':'Stroom komt links binnen';
   // The supplied LED-line uses a round plug and a flexible lead into the end
   // of a broad diffuser profile, not a receiver box attached to exposed LEDs.
@@ -49,12 +62,13 @@
   function strip(output,stage,options){
     const count=Math.min(24,output.pixels),reversed=stage==='connection'&&output.reversed;
     if(stage==='pixels'){
+      const limits=pixelLimits(options),progress=Math.max(0,Math.min(100,output.pixels/(limits.pixelsPerMeter*limits.maxMeters)*100));
       const represented=output.pixels>24?23:Math.max(0,output.pixels-1),cells=Array.from({length:represented},()=>'<i></i>').join('');
       const endpoint=output.pixels>0?'<i class="end"></i>':'';
       const terminal=output.pixels>24?`<span class="pixel-count-more" aria-hidden="true">···</span><span class="pixel-count-terminal" aria-hidden="true"><i class="end"></i></span>`:'';
       const guide=output.pixels>0?`<span class="pixel-endpoint-guide"><i aria-hidden="true"></i><span>Laatste pixel ${output.pixels} hoort rood te branden</span></span>`:'<span class="pixel-endpoint-guide is-empty">Stel eerst het aantal pixels in</span>';
       const aria=output.pixels>0?`Ingesteld: ${output.pixels} ${output.pixels===1?'pixel':'pixels'}. Laatste pixel ${output.pixels} hoort rood te branden.`:'Geen pixels ingesteld; er is geen rode eindpixel.';
-      return `<div class="pixel-setup-visual pixel-count-preview" data-pixel-visual="pixels" data-preview-pixels="${output.pixels}" role="img" aria-label="${aria} Schematisch aantal, geen gemeten striplengte."><div class="pixel-count-preview-label"><b>${output.pixels} ${output.pixels===1?'pixel':'pixels'}</b><span>↔ Veeg om aan te passen</span></div><span class="pixel-setup-track"><span class="pixel-setup-strip">${cells}${output.pixels>0&&output.pixels<=24?endpoint:''}</span>${terminal}</span>${guide}<small class="pixel-preview-notice">Testvoorbeeld · geen testlicht</small></div>`;
+      return `<div class="pixel-setup-visual pixel-count-preview" data-pixel-visual="pixels" data-preview-pixels="${output.pixels}" role="img" aria-label="${aria} Schematisch aantal, geen gemeten striplengte."><div class="pixel-count-preview-label"><b>${output.pixels} ${output.pixels===1?'pixel':'pixels'}</b><span>↔ Veeg om aan te passen</span></div><span class="pixel-length-rail" aria-hidden="true"><span class="pixel-setup-track" style="--pixel-length-progress:${progress}%"><span class="pixel-setup-strip">${cells}${output.pixels>0&&output.pixels<=24?endpoint:''}</span>${terminal}</span></span><small class="pixel-length-scale" aria-hidden="true"><span>0 m</span><span>6,3 m</span></small>${guide}<small class="pixel-preview-notice">Testvoorbeeld · geen testlicht</small></div>`;
     }
     // The customer identifies the incoming cable in the installed view.
     // Right-side input reverses physical pixel order once; it is not a separate
@@ -79,7 +93,8 @@
   }
   function renderPixels(output,{inputId='pixel-setup-number',onboarding=false,pixelsPerMeter=DEFAULT_PIXELS_PER_METER,combined=false}={}){
     const attr=onboarding?'data-onboarding-action':'data-pixel-action',limits=pixelLimits({pixelsPerMeter}),valid=editablePixels(output.pixels,limits);
-    return `<section class="pixel-setup-panel" data-pixel-panel="pixels" data-combined="${combined}" data-pixels-per-meter="${pixelsPerMeter}"><h2>Lengte van je ledline</h2><div data-pixel-preview data-pixel-scrub role="slider" tabindex="0" aria-label="Aantal pixels op poort ${output.port}; veeg links of rechts" aria-valuemin="${limits.min}" aria-valuemax="${limits.max}" aria-valuenow="${output.pixels}" aria-valuetext="${output.pixels} pixels, handmatig ingesteld">${strip(output,combined?'connection':'pixels',limits)}</div>${combined?'<small class="pixel-scrub-hint">↔ Veeg voor de lengte · voorbeeld, geen testlicht</small>':''}<div class="pixel-setup-meter-counter"><button type="button" ${attr}="meter-less" aria-label="Eén meter minder" ${output.pixels===MIN?'disabled':''}>− 1 meter</button><output data-pixel-meters>${meterLabel(output.pixels,limits)}</output><button type="button" ${attr}="meter-more" aria-label="Eén meter meer" ${output.pixels>=limits.max?'disabled':''}>＋ 1 meter</button></div><div class="pixel-setup-counter"><button type="button" ${attr}="pixel-less" aria-label="Eén pixel minder" ${output.pixels===MIN?'disabled':''}>−</button><label for="${esc(inputId)}"><input id="${esc(inputId)}" data-pixel-count type="number" inputmode="numeric" min="${limits.min}" max="${limits.max}" step="1" value="${output.pixels}" aria-invalid="${!valid}" aria-label="Aantal pixels op uitgang ${output.port}" aria-describedby="${esc(inputId)}-error"><span>pixels · exact aantal</span></label><button type="button" ${attr}="pixel-more" aria-label="Eén pixel meer" ${output.pixels>=limits.max?'disabled':''}>＋</button></div><p id="${esc(inputId)}-error" data-pixel-error class="pixel-setup-error" role="alert" ${valid?'hidden':''}>Maximaal 6,3 meter per strip. Kies 0 tot ${limits.max} pixels (${pixelsPerMeter} pixels/m).</p><p class="pixel-zero-hint" data-pixel-empty ${output.pixels===0?'':'hidden'}>Stel de lengte in om verder te gaan.</p><p class="pixel-meaning">Een pixel is één apart regelbaar stukje licht.</p><details class="pixel-setup-more"><summary>Lengte bepalen · max. 6,3 m</summary><p>Neem het aantal van je LED-line over of tel de pixels. De app meet de lengte niet automatisch. De meterwaarde is een schatting op basis van ${pixelsPerMeter} pixels per meter; het voorbeeld is geen fysieke lichttest.</p></details></section>`;
+    const meterControls=[['meter-less','−1 m','Eén meter minder',-1],['meter-half-less','−0,5 m','Een halve meter minder',-0.5],['meter-half-more','+0,5 m','Een halve meter meer',0.5],['meter-more','+1 m','Eén meter meer',1]].map(([action,label,aria,delta])=>`<button type="button" ${attr}="${action}" aria-label="${aria}" ${delta<0?output.pixels===MIN?'disabled':'':output.pixels>=limits.max?'disabled':''}>${label}</button>`).join('');
+    return `<section class="pixel-setup-panel" data-pixel-panel="pixels" data-combined="${combined}" data-pixels-per-meter="${pixelsPerMeter}"><h2>Lengte van je ledline</h2><div data-pixel-preview data-pixel-scrub role="slider" tabindex="0" aria-label="Aantal pixels op poort ${output.port}; veeg links of rechts" aria-valuemin="${limits.min}" aria-valuemax="${limits.max}" aria-valuenow="${output.pixels}" aria-valuetext="${output.pixels} pixels, ${meterLabel(output.pixels,limits)}, handmatig ingesteld">${strip(output,combined?'connection':'pixels',limits)}</div>${combined?'<small class="pixel-scrub-hint">↔ Veeg voor de lengte · voorbeeld, geen testlicht</small>':''}<div class="pixel-setup-meter-counter"><output data-pixel-meters>${meterLabel(output.pixels,limits)}</output><span class="pixel-length-caption">Lengte bij ${pixelsPerMeter} pixels/m</span>${meterControls}</div><div class="pixel-setup-counter"><button type="button" ${attr}="pixel-less" aria-label="Eén pixel minder" ${output.pixels===MIN?'disabled':''}>−</button><label for="${esc(inputId)}"><input id="${esc(inputId)}" data-pixel-count type="number" inputmode="numeric" min="${limits.min}" max="${limits.max}" step="1" value="${output.pixels}" aria-invalid="${!valid}" aria-label="Aantal pixels op uitgang ${output.port}" aria-describedby="${esc(inputId)}-error"><span>pixels · exact aantal</span></label><button type="button" ${attr}="pixel-more" aria-label="Eén pixel meer" ${output.pixels>=limits.max?'disabled':''}>＋</button></div><p id="${esc(inputId)}-error" data-pixel-error class="pixel-setup-error" role="alert" ${valid?'hidden':''}>Maximaal 6,3 meter per strip. Kies 0 tot ${limits.max} pixels (${pixelsPerMeter} pixels/m).</p><p class="pixel-zero-hint" data-pixel-empty ${output.pixels===0?'':'hidden'}>Stel de lengte in om verder te gaan.</p><p class="pixel-meaning">Een pixel is één apart regelbaar stukje licht.</p><p class="pixel-segment-hint">Meterstappen passen op volledige pixels. Met − en + stel je één pixel bij.</p><details class="pixel-setup-more"><summary>Lengte bepalen · max. 6,3 m</summary><p>Neem het aantal van je LED-line over of tel de pixels. De app meet de lengte niet automatisch. De meterwaarde volgt het gekozen aantal bij ${pixelsPerMeter} pixels per meter; het voorbeeld is geen fysieke lichttest.</p></details></section>`;
   }
   function renderSide(output,{onboarding=false,combined=false,live=false}={}){
     const attr=onboarding?'data-onboarding-action':'data-pixel-action';
@@ -94,31 +109,33 @@
     if(input!==source)input.value=String(output.pixels);if(range&&range!==source)range.value=String(output.pixels);
     input.setAttribute('aria-invalid',String(!editablePixels(output.pixels,limits)));panel.querySelector('[data-pixel-error]').hidden=editablePixels(output.pixels,limits);
     const preview=panel.querySelector('[data-pixel-preview]');
-    preview.setAttribute('aria-valuenow',String(output.pixels));preview.setAttribute('aria-valuetext',`${output.pixels} pixels, handmatig ingesteld`);
+    preview.setAttribute('aria-valuenow',String(output.pixels));preview.setAttribute('aria-valuetext',`${output.pixels} pixels, ${meterLabel(output.pixels,limits)}, handmatig ingesteld`);
     preview.innerHTML=strip(output,panel.dataset.combined==='true'?'connection':'pixels',limits);
     panel.querySelector('[data-pixel-meters]').textContent=meterLabel(output.pixels,limits);
     panel.querySelector('[data-pixel-empty]').hidden=output.pixels!==0;
     panel.querySelector('[aria-label="Eén pixel minder"]').disabled=output.pixels===MIN;panel.querySelector('[aria-label="Eén pixel meer"]').disabled=output.pixels>=limits.max;
     panel.querySelector('[aria-label="Eén meter minder"]').disabled=output.pixels===MIN;panel.querySelector('[aria-label="Eén meter meer"]').disabled=output.pixels>=limits.max;
+    panel.querySelector('[aria-label="Een halve meter minder"]').disabled=output.pixels===MIN;panel.querySelector('[aria-label="Een halve meter meer"]').disabled=output.pixels>=limits.max;
   }
   function validateInput(container,value,{pixelsPerMeter}={}){const panel=container.querySelector('[data-pixel-panel="pixels"]'),limits=pixelLimits({pixelsPerMeter:pixelsPerMeter??(Number(panel?.dataset.pixelsPerMeter)||DEFAULT_PIXELS_PER_METER)}),valid=editablePixels(Number(value),limits)&&String(value).trim()!=='';if(panel){panel.querySelector('[data-pixel-count]').setAttribute('aria-invalid',String(!valid));panel.querySelector('[data-pixel-error]').hidden=valid;}return valid;}
   // Relative scrubbing avoids a jump to an arbitrary absolute value on touch.
   // Capture the stable wrapper, not the preview children replaced on updates.
   // Vertical gestures stay native scrolling; edits remain owned by the host.
-  function bindPixelScrub(container,{onChange,isEnabled=()=>true}={}){
+  function bindPixelScrub(container,{onChange,onCommit=()=>{},isEnabled=()=>true}={}){
     if(typeof onChange!=='function')throw Error('PIXEL_SCRUB_HANDLER_REQUIRED');
     let gesture=null;
     const target=event=>event.target.closest?.('[data-pixel-scrub]');
     const available=element=>element&&element.isConnected&&container.contains(element)&&isEnabled();
-    function end(){
+    function end({commit=false}={}){
       const previous=gesture;gesture=null;if(!previous)return;
       previous.element.removeAttribute('data-scrubbing');
       if(previous.element.hasPointerCapture?.(previous.id))previous.element.releasePointerCapture(previous.id);
+      if(commit&&previous.dragging&&available(previous.element))onCommit(Number(previous.element.getAttribute('aria-valuenow')));
     }
     function change(element,value){
       const min=Number(element.getAttribute('aria-valuemin')),max=Number(element.getAttribute('aria-valuemax'));
       const next=Math.max(min,Math.min(max,Math.round(value)));
-      if(Number.isFinite(next)&&next!==Number(element.getAttribute('aria-valuenow')))onChange(next);
+      if(Number.isFinite(next)&&next!==Number(element.getAttribute('aria-valuenow'))){onChange(next);hapticStep();}
       return next;
     }
     function down(event){
@@ -141,12 +158,18 @@
       // At an end stop, allow an immediate change back in the other direction.
       if(next!==proposed){gesture.x=event.clientX;gesture.value=next;}
     }
-    function finish(event){if(gesture?.id===event.pointerId)end();}
+    function finish(event){
+      if(gesture?.id!==event.pointerId)return;
+      // A final pointerup can contain a newer coordinate than pointermove.
+      // Cancellation commits the last selected value without using its origin.
+      if(event.type==='pointerup'&&Number.isFinite(event.clientX)&&Number.isFinite(event.clientY))move(event);
+      end({commit:true});
+    }
     function keydown(event){
       const element=target(event);if(!available(element)||event.altKey||event.ctrlKey||event.metaKey)return;
       const value=Number(element.getAttribute('aria-valuenow'));
       const choices={ArrowRight:value+1,ArrowUp:value+1,ArrowLeft:value-1,ArrowDown:value-1,PageUp:value+10,PageDown:value-10,Home:Number(element.getAttribute('aria-valuemin')),End:Number(element.getAttribute('aria-valuemax'))};
-      if(!Object.hasOwn(choices,event.key))return;event.preventDefault();end();change(element,choices[event.key]);
+      if(!Object.hasOwn(choices,event.key))return;event.preventDefault();end();change(element,choices[event.key]);onCommit(Number(element.getAttribute('aria-valuenow')));
     }
     const handlers={pointerdown:down,pointermove:move,pointerup:finish,pointercancel:finish,lostpointercapture:finish,keydown};
     for(const [name,handler] of Object.entries(handlers))container.addEventListener(name,handler);
@@ -154,7 +177,7 @@
   }
   // One bounded latest-wins test-light queue. There is never a CONFIG/SAVE
   // command here. A lost reply remains an error, not a physical-light claim.
-  function createLivePreview({send,onState=()=>{},delay=170,setTimer=setTimeout,clearTimer=clearTimeout}={}){
+  function createLivePreview({send,onState=()=>{},delay=80,setTimer=setTimeout,clearTimer=clearTimeout}={}){
     let queued=null,active=null,desired=null,running=null,timer=null,renew=null,version=0;
     const key=r=>JSON.stringify([r.standId,r.transactionId,r.receiver,r.role,r.mainReceiverId,r.port]);
     const report=(kind,request)=>onState({kind,port:request?.port,pixels:request?.pixels,guide:request?.guide||'length',reversed:request?.reversed});
@@ -196,7 +219,11 @@
       if(typeof send!=='function')return Promise.resolve();
       desired=null;version++;cancelTimers();queued={stop:true,version};return drain();
     }
-    return Object.freeze({update,stop});
+    function flush(){
+      if(typeof send!=='function')return Promise.resolve();
+      clearTimer(timer);timer=null;return drain();
+    }
+    return Object.freeze({update,flush,stop});
   }
   function previewMessage(state){return state.kind==='unsupported'?'Werk deze receiver bij om de gekozen kant met groen testlicht te tonen. Je keuze blijft staan.':state.kind==='failed'?`Testlicht niet bereikbaar. Controleer de receiververbinding; ${state.guide==='power'?'je keuze blijft staan':'je aantal blijft bewaard'}.`:state.kind==='applied'?(state.guide==='power'?`Testlicht verstuurd naar poort ${state.port}. Groen hoort ${state.reversed?'rechts':'links'} te branden; de andere pixels wit.`:state.pixels?`Testlicht verstuurd naar poort ${state.port}. De laatste pixel (${state.pixels}) hoort rood te branden; de andere pixels wit.`:'0 pixels · testlicht uit.'):state.kind==='pending'?'Testlicht aanpassen…':'Testvoorbeeld · geen testlicht';}
   function showPreviewStatus(container,state){const label=container?.querySelector(state.guide==='power'?'[data-power-preview-status]':'[data-pixel-preview] .pixel-preview-notice');if(label){label.textContent=previewMessage(state);label.dataset.testLight=state.kind;}}
@@ -222,12 +249,12 @@
     let previewTransaction=null,previewState={kind:'idle'};
     const livePreview=createLivePreview({send:mode==='native'?onPreview:null,onState:state=>{previewState=state;showPreviewStatus(dialog,state);}});
     const plan=()=>sequence(outputs),current=()=>plan()[index],output=()=>outputs.find(item=>item.port===current().port);
-    function syncPreview(){
+    function syncPreview({commit=false}={}){
       if(busy)return;
       if(!dialog||document.hidden||!['pixels','connection'].includes(current().stage)){void livePreview.stop();return;}
       livePreview.update({standId:receiver.standId,transactionId:previewTransaction,
         receiver:{id:receiver.id,rid:receiver.rid,type:'SPI',deviceFingerprint:receiver.deviceFingerprint},role:receiver.role,
-        mainReceiverId:receiver.mainReceiverId||null,port:output().port,pixels:output().pixels,...(current().stage==='connection'?{guide:'power',reversed:output().reversed}:{})});showPreviewStatus(dialog,previewState);
+        mainReceiverId:receiver.mainReceiverId||null,port:output().port,pixels:output().pixels,...(current().stage==='connection'?{guide:'power',reversed:output().reversed}:{})});if(commit)void livePreview.flush();showPreviewStatus(dialog,previewState);
     }
     function visibility(){syncPreview();}
     function paint(time){if(dialog?.open&&['outputs','pixels','connection'].includes(current().stage)){const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;paintOutputs(dialog,outputs,{time,reducedMotion,selectedPort:current().port||selectedPort,plugProgress:current().stage==='outputs'?plugMotion.sample(time,reducedMotion):{}});}}
@@ -246,8 +273,9 @@
       paint(performance.now()/1000);
       syncPreview();
     }
-    function adjust(value,source){if(!validateInput(dialog,value)){dialog.querySelector('[data-pixel-action="next"]').disabled=true;return;}output().pixels=Number(value);updatePixels(dialog,output(),{source});dialog.querySelector('[data-pixel-action="next"]').disabled=!configuredPixels(output().pixels,limits);error='';syncPreview();}
-    function input(event){if(busy)return;if(event.target.matches('[data-pixel-count],[data-pixel-range]'))adjust(event.target.value,event.target);}
+    function adjust(value,source,{commit=false,haptic=true}={}){if(!dialog||busy||current().stage!=='pixels')return;if(!validateInput(dialog,value,limits)){dialog.querySelector('[data-pixel-action="next"]').disabled=true;return;}const previous=output().pixels;output().pixels=Number(value);updatePixels(dialog,output(),{source,pixelsPerMeter});dialog.querySelector('[data-pixel-action="next"]').disabled=!configuredPixels(output().pixels,limits);if(haptic&&output().pixels!==previous)hapticStep();error='';syncPreview({commit});}
+    function input(event){if(busy)return;if(event.target.matches('[data-pixel-count],[data-pixel-range]'))adjust(event.target.value,event.target,{commit:event.type==='change'});}
+    function commitKey(event){if(['Enter','ArrowUp','ArrowDown'].includes(event.key)&&event.target.matches('[data-pixel-count]'))adjust(event.target.value,event.target,{commit:true});}
     async function click(event){
       const target=event.target.closest('[data-pixel-action]');if(!target||target.disabled||busy)return;
       const action=target.dataset.pixelAction,step=current();
@@ -258,9 +286,9 @@
       }
       if(action==='close')return close();
       if(action==='output'){const item=outputs.find(item=>item.port===Number(target.dataset.port));if(item.enabled&&outputs.filter(item=>item.enabled).length===1){error='Gebruik minstens één uitgang.';render();return;}item.enabled=!item.enabled;selectedPort=item.port;plugMotion.trigger(item.port,performance.now()/1000,item.enabled);error='';return render();}
-      if(['pixel-less','pixel-more','meter-less','meter-more'].includes(action))return adjust(stepPixels(output().pixels,(action.endsWith('less')?-1:1)*(action.startsWith('meter')?Math.round(limits.pixelsPerMeter):1),limits));
-      if(action==='side'){output().reversed=target.dataset.side==='right';error='';return render();}
-      if(action==='next'){if(!outputs.some(item=>item.enabled)){error='Gebruik minstens één uitgang.';return render();}if(step.stage==='pixels'&&(!validateInput(dialog,dialog.querySelector('[data-pixel-count]').value)||!configuredPixels(output().pixels,limits)))return;index++;error='';return render(true);}
+      if(['pixel-less','pixel-more','meter-less','meter-more','meter-half-less','meter-half-more'].includes(action)){const direction=action.endsWith('less')?-1:1,value=action.startsWith('meter')?stepMeters(output().pixels,direction*(action.includes('half')?0.5:1),limits):stepPixels(output().pixels,direction,limits);return adjust(value,null,{commit:true});}
+      if(action==='side'){output().reversed=target.dataset.side==='right';error='';render();void livePreview.flush();return;}
+      if(action==='next'){if(!outputs.some(item=>item.enabled)){error='Gebruik minstens één uitgang.';return render();}if(step.stage==='pixels'&&(!validateInput(dialog,dialog.querySelector('[data-pixel-count]').value,limits)||!configuredPixels(output().pixels,limits)))return;index++;error='';return render(true);}
       if(action==='back'){index--;error='';return render(true);}
       if(action==='save'){if(!['preview','native'].includes(mode)||!outputs.some(item=>item.enabled)||outputs.some(item=>item.enabled&&!configuredPixels(item.pixels,limits)))return;busy=true;error='';render();try{await onSave({receiverId:receiver.id,outputs:outputs.map(item=>!item.enabled&&item.pixels===0?{...item,pixels:1,reversed:false}:copy(item))});busy=false;close();}catch(failure){busy=false;error=typeof failure?.message==='string'?failure.message:'Bewaren is nog niet gelukt. Je keuzes blijven staan.';render();}}
     }
@@ -268,9 +296,9 @@
       if(dialog)throw Error('PIXEL_SETUP_ALREADY_OPEN');outputs=outputsOf(value);receiver=copy(value);previewTransaction=previewId();previewState={kind:'idle'};document.addEventListener('visibilitychange',visibility);initialPort=Number.isInteger(port)&&port>=1&&port<=4?port:null;selectedPort=null;plugMotion.clear();index=0;error='';busy=false;focusBefore=document.activeElement;
       recovering=resumePending===true;
       if(recovering){index=plan().length-1;error='Je vorige wijziging wacht nog op bevestiging. Kies Instellingen bewaren om diezelfde wijziging af te ronden.';}
-      dialog=document.createElement('dialog');dialog.className='pixel-setup-dialog';dialog.setAttribute('aria-label','Pixels en aansluiting instellen');dialog.addEventListener('click',click);dialog.addEventListener('input',input);dialog.addEventListener('cancel',event=>{event.preventDefault();close();});unbindScrub=bindPixelScrub(dialog,{isEnabled:()=>!busy&&current().stage==='pixels',onChange:value=>adjust(value)});document.body.append(dialog);render(true);dialog.showModal();paint(performance.now()/1000);
+      dialog=document.createElement('dialog');dialog.className='pixel-setup-dialog';dialog.setAttribute('aria-label','Pixels en aansluiting instellen');dialog.addEventListener('click',click);dialog.addEventListener('input',input);dialog.addEventListener('change',input);dialog.addEventListener('keyup',commitKey);dialog.addEventListener('cancel',event=>{event.preventDefault();close();});unbindScrub=bindPixelScrub(dialog,{isEnabled:()=>!busy&&current().stage==='pixels',onChange:value=>adjust(value,null,{haptic:false}),onCommit:()=>void livePreview.flush()});document.body.append(dialog);render(true);dialog.showModal();paint(performance.now()/1000);
     }
     return Object.freeze({open,close,paint,isOpen:()=>!!dialog});
   }
-  return Object.freeze({create,createLivePreview,showPreviewStatus,showPreviewStopping,renderOutputs,paintOutputs,renderPixels,renderSide,renderPort,renderProgress,renderPortContext,nextPortLabel,bindPixelScrub,updatePixels,validateInput,outputsOf,sequence,validPixels,pixelLimits,editablePixels,configuredPixels,stepPixels,meterLabel,endpointLabel});
+  return Object.freeze({create,createLivePreview,showPreviewStatus,showPreviewStopping,renderOutputs,paintOutputs,renderPixels,renderSide,renderPort,renderProgress,renderPortContext,nextPortLabel,bindPixelScrub,updatePixels,validateInput,outputsOf,sequence,validPixels,pixelLimits,editablePixels,configuredPixels,stepPixels,stepMeters,meterLabel,endpointLabel,hapticStep});
 }));
