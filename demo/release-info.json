@@ -10,29 +10,21 @@
   "nativeAppSimulatorInstalled": false,
   "nativeAppInstallationPreservedData": null,
   "androidTestApp": {
-    "path": "android/aluvision-android-test-41.0.2-14-84d1e566b90c.apk",
-    "size": 16845968,
-    "sha256": "84d1e566b90c46116445e16413525bce0082c1e25f480c1098017eaf6565b424",
+    "path": "android/aluvision-android-test-41.0.3-16-4382140173e3.apk",
+    "size": 17009808,
+    "sha256": "4382140173e373718eab19fc8faaf5b9c182d6763ba9514140b91105812f5aa9",
     "packageName": "com.aluvision.lighting.android.test",
-    "versionName": "41.0.2",
-    "versionCode": 14,
+    "versionName": "41.0.3",
+    "versionCode": 16,
     "minSdk": 26,
     "mode": "receiver",
     "signerCertificateSha256": "b598fc6fa30b423517d6ca68e3bb1191248a32723174d4703baaede9125936ac",
-    "sourceInventorySha256": "08662b8ee69bf594f1ba0c586b3b2a897937f2d2f3b2d9c187ccde2b67eccc57",
-    "buildReceiptSha256": "11e9ab7f80e818bf1e74bd3140da9966922a9d2adefd233aa9fcdc45cd4db876",
+    "sourceInventorySha256": "8310e41f8c5d5b5f2ed54a8c898c88f041f40237bd95838a89fdf8f6317b0cf2",
+    "buildReceiptSha256": "53182f9da1d5920d9d1faa6869e8e569f7898a68673a8e11c053000a94a45a07",
     "signatureVerified": true,
     "packageVerified": true,
-    "installedVerified": true,
-    "installationEnvironment": "isolated-headless-android-emulator-api36-arm64",
-    "installationEvidenceSha256": "ddc9c41630afa316d3828413cad3973288d226970805b1dae5ddfd21f64369c3",
-    "installationEvidenceDetailSha256": "c6e6a9510de095e0ca99d58dfee3b9eb1c0bdf0bbce19d2a24bd16063f6d2554",
-    "tools": {
-      "apksignerSha256": "b47549e373b895ce6ca620d0c7887e674d9615ffa837a86ac601dcfd04adb0f0",
-      "aapt2Sha256": "729a6a8deba828992c50cb448d4ef3947003ec5a0d1deead7534897c8fc3486f",
-      "apksignerReportSha256": "ef52f4edab240b3377219b15da499a8e0fc005cd88b04ec035ac56b66774f089",
-      "aapt2ReportSha256": "f6fcfb4fb21d03eaa77e9f319ff8367848947c0690f6ef262a987a835834d630"
-    },
+    "installedVerified": false,
+    "installationEnvironment": null,
     "features": {
       "pinLogin": false,
       "standCode": true,
@@ -46,31 +38,26 @@
       "receiverContextWriter": false,
       "zoneEditing": true,
       "ota": true,
-      "unpairing": false,
-      "postCodeReceiverPairing": false,
+      "unpairing": true,
+      "postCodeReceiverPairing": true,
       "backupFiles": false,
       "macStaticGestureEnabled": false,
-      "firstClaimPIN": false
+      "firstClaimPIN": false,
+      "standSessionReceiverManagement": true
     },
     "validation": {
-      "scope": "Actual Release SDK, package/signature/asset verification, focused software tests and nine checks on this exact code14 APK in a fresh headless API36 arm64 emulator. Installed APK readback matched the signed APK SHA. Cold start and guest background/foreground return passed; WiFi off, airplane mode on, no guest routes and host outbound blocked except loopback. No physical Android or receiver acceptance; no reuse of test8 emulator results.",
-      "emulatorInstallVerified": true,
-      "emulatorColdStartVerified": true,
-      "emulatorBackgroundResumeVerified": true,
-      "emulatorChecks": 9,
-      "emulatorLogScope": "AndroidRuntime:E, chromium:E, cr_WebView:E only; no complete INFO-level JavaScript console capture. No fatal crash observed in these logs. Three Chromium cache-index / missing wasm-directory messages were observed; no all-runtime-errors-resolved claim.",
-      "emulatorScreenshot": {
-        "repositoryPath": "android/assets/android-code14-emulator-offline.png",
-        "sha256": "ed602d02b21a41e9192c2e9d0d5bcfab6100d03b2d4b9b9971b8d2c59627e0b9",
-        "size": 894469,
-        "width": 1080,
-        "height": 2400,
-        "environment": "offline-android-emulator-not-physical-device"
-      },
+      "scope": "Actual Android Release SDK, exact signed APK and assets, controlled native management software tests. Not installed, not emulator- or physically accepted.",
+      "emulatorInstallVerified": false,
+      "emulatorColdStartVerified": false,
+      "emulatorBackgroundResumeVerified": false,
+      "emulatorChecks": 0,
       "inPlaceUpdateVerified": false,
       "signerContinuityVerified": true,
       "actualPackagedWebAssets": 63,
-      "sourceFreezeSha256": "3e94908fba0ba146109996026d740a25acc5b997fbf6bf76a04eae25ef58d613",
+      "sourceFreezeSha256": "4ccfc445a4c5a13ea7d8cfd57326fe528b4c90b9eb97a94b2322b6270e91668d",
+      "nativeManagementTests": 12,
+      "nativeManagementAssertions": 4330,
+      "sharedWebTests": 287,
       "cameraAndOSPermissionsPhysicallyVerified": false,
       "wifiPhysicallyVerified": false,
       "mobileLatencyVerified": false,
@@ -97,8 +84,8 @@
   "assets": [
     {
       "path": "RELEASE_NOTES.md",
-      "sha256": "615ec019242b28c9c0f8041edb7bb69a352b1184efb0e528f55617ea473abaa4",
-      "bytes": 5899
+      "sha256": "c5028461ba05557935344abb68bd3070d76d24b82dcf8b89577c199a142ad2d4",
+      "bytes": 7333
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
@@ -217,7 +204,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "da06d1638ee33f0b91d531f7382e70d6d231d30a84e019445a31805da57ef9c2",
+      "sha256": "de327696b6c3b4bb5919ab0798408c1ed8f8af3be83917cb75991ea8b2be8904",
       "bytes": 5809
     },
     {
@@ -449,6 +436,11 @@
       "path": "web-demo-service.js",
       "sha256": "e30b0ff2c98f25fe153cffd9a132e2dbda97f6508b1c2a0731ca3b2642840dfa",
       "bytes": 2980
+    },
+    {
+      "path": "android/aluvision-android-test-41.0.3-16-4382140173e3.apk",
+      "sha256": "4382140173e373718eab19fc8faaf5b9c182d6763ba9514140b91105812f5aa9",
+      "bytes": 17009808
     }
   ],
   "interfaceReviewScope": {
@@ -488,5 +480,78 @@
       "physicalPhone": false,
       "hardware": false
     }
-  }
+  },
+  "previousAndroidTestApps": [
+    {
+      "path": "android/aluvision-android-test-41.0.2-14-84d1e566b90c.apk",
+      "size": 16845968,
+      "sha256": "84d1e566b90c46116445e16413525bce0082c1e25f480c1098017eaf6565b424",
+      "packageName": "com.aluvision.lighting.android.test",
+      "versionName": "41.0.2",
+      "versionCode": 14,
+      "minSdk": 26,
+      "mode": "receiver",
+      "signerCertificateSha256": "b598fc6fa30b423517d6ca68e3bb1191248a32723174d4703baaede9125936ac",
+      "sourceInventorySha256": "08662b8ee69bf594f1ba0c586b3b2a897937f2d2f3b2d9c187ccde2b67eccc57",
+      "buildReceiptSha256": "11e9ab7f80e818bf1e74bd3140da9966922a9d2adefd233aa9fcdc45cd4db876",
+      "signatureVerified": true,
+      "packageVerified": true,
+      "installedVerified": true,
+      "installationEnvironment": "isolated-headless-android-emulator-api36-arm64",
+      "installationEvidenceSha256": "ddc9c41630afa316d3828413cad3973288d226970805b1dae5ddfd21f64369c3",
+      "installationEvidenceDetailSha256": "c6e6a9510de095e0ca99d58dfee3b9eb1c0bdf0bbce19d2a24bd16063f6d2554",
+      "tools": {
+        "apksignerSha256": "b47549e373b895ce6ca620d0c7887e674d9615ffa837a86ac601dcfd04adb0f0",
+        "aapt2Sha256": "729a6a8deba828992c50cb448d4ef3947003ec5a0d1deead7534897c8fc3486f",
+        "apksignerReportSha256": "ef52f4edab240b3377219b15da499a8e0fc005cd88b04ec035ac56b66774f089",
+        "aapt2ReportSha256": "f6fcfb4fb21d03eaa77e9f319ff8367848947c0690f6ef262a987a835834d630"
+      },
+      "features": {
+        "pinLogin": false,
+        "standCode": true,
+        "shareQRAndLinkImplemented": true,
+        "migrationRequiresOriginalPairedApp": true,
+        "centralStandConfiguration": true,
+        "standSessionAnimations": true,
+        "standSessionIdentification": true,
+        "standSessionOutputs": true,
+        "standSessionOTA": true,
+        "receiverContextWriter": false,
+        "zoneEditing": true,
+        "ota": true,
+        "unpairing": false,
+        "postCodeReceiverPairing": false,
+        "backupFiles": false,
+        "macStaticGestureEnabled": false,
+        "firstClaimPIN": false
+      },
+      "validation": {
+        "scope": "Actual Release SDK, package/signature/asset verification, focused software tests and nine checks on this exact code14 APK in a fresh headless API36 arm64 emulator. Installed APK readback matched the signed APK SHA. Cold start and guest background/foreground return passed; WiFi off, airplane mode on, no guest routes and host outbound blocked except loopback. No physical Android or receiver acceptance; no reuse of test8 emulator results.",
+        "emulatorInstallVerified": true,
+        "emulatorColdStartVerified": true,
+        "emulatorBackgroundResumeVerified": true,
+        "emulatorChecks": 9,
+        "emulatorLogScope": "AndroidRuntime:E, chromium:E, cr_WebView:E only; no complete INFO-level JavaScript console capture. No fatal crash observed in these logs. Three Chromium cache-index / missing wasm-directory messages were observed; no all-runtime-errors-resolved claim.",
+        "emulatorScreenshot": {
+          "repositoryPath": "android/assets/android-code14-emulator-offline.png",
+          "sha256": "ed602d02b21a41e9192c2e9d0d5bcfab6100d03b2d4b9b9971b8d2c59627e0b9",
+          "size": 894469,
+          "width": 1080,
+          "height": 2400,
+          "environment": "offline-android-emulator-not-physical-device"
+        },
+        "inPlaceUpdateVerified": false,
+        "signerContinuityVerified": true,
+        "actualPackagedWebAssets": 63,
+        "sourceFreezeSha256": "3e94908fba0ba146109996026d740a25acc5b997fbf6bf76a04eae25ef58d613",
+        "cameraAndOSPermissionsPhysicallyVerified": false,
+        "wifiPhysicallyVerified": false,
+        "mobileLatencyVerified": false,
+        "physicalAndroidVerified": false,
+        "physicalReceiverVerified": false,
+        "simultaneousTwoClientControlVerified": false
+      }
+    }
+  ],
+  "androidDownloadRevision": "V41android36320261006"
 }

@@ -1,4 +1,14 @@
-# Demo V40 · rustigere bediening · 2 oktober 2026
+# Android 41.0.3 · code 16 · 6 oktober 2026
+
+De actuele download is Android **41.0.3, code 16**, 17.009.808 bytes. [Downloadpagina](../android/). Nieuw: receivers toevoegen en verwijderen via de standcode, gerichte centrale opslag en herstel na een verloren bevestiging. RGBW- en SPI-firmware 41.0.3 zijn in de app opgenomen; niet als losse browser-OTA-download.
+
+De Release-SDK-build, bestaande ondertekening, exacte assets en softwaretests zijn gecontroleerd. De native Android-beheerroute slaagde voor 12 tests met 4.330 controles met nagebootste radio en opslag. De gedeelde interface slaagde voor 287 softwaretests, inclusief Chromium en WebKit. **Code 16 is nog niet geïnstalleerd of met fysieke receivers getest.** De eerdere emulatoropname hieronder en op de downloadpagina blijft herkenbaar een opname van code 14.
+
+APK SHA-256: `4382140173e373718eab19fc8faaf5b9c182d6763ba9514140b91105812f5aa9`. Bestaande signer SHA-256: `b598fc6fa30b423517d6ca68e3bb1191248a32723174d4703baaede9125936ac`. Bronfreeze: `4ccfc445a4c5a13ea7d8cfd57326fe528b4c90b9eb97a94b2322b6270e91668d`. Android-bouwbewijs SHA-256: `53182f9da1d5920d9d1faa6869e8e569f7898a68673a8e11c053000a94a45a07`.
+
+Kies **Bijwerken**; verwijder de app niet. Eerdere APK-bestanden blijven behouden. De browserdemo blijft de reeds nagekeken interface362 zonder hardwaretoegang; deze publicatie vervangt alleen de Android-download en bijbehorende toelichting.
+
+## Historische notities · eerdere V40-demo en Android-code 14
 
 Release: `v40-ux-refinement-20261002`.
 
