@@ -83,7 +83,7 @@
     },
     {
       "path": "android-download/android-download.js",
-      "sha256": "44fadae33887e2f841cf1938365e518377b463f0901755b2756cfb598b10a56f"
+      "sha256": "ac509762c2c7d3b0e46f51fc6c3ae089647c75857086726c6634e28ced6dc645"
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.6-6-71d93291aea9.apk",
@@ -96,6 +96,10 @@
     {
       "path": "android/aluvision-android-test-0.1.0-test.8-8-2b9267c34bb6.apk",
       "sha256": "2b9267c34bb6bde97708f98eef0d83a5c7678c958b24a150deffb5a7a58319bc"
+    },
+    {
+      "path": "android/aluvision-android-test-41.0.2-14-84d1e566b90c.apk",
+      "sha256": "84d1e566b90c46116445e16413525bce0082c1e25f480c1098017eaf6565b424"
     },
     {
       "path": "animation-engine.js",
@@ -151,7 +155,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "91ecd6fb92745d97199220d9010b10cbe648041ae51e22550f6b8e436c138685"
+      "sha256": "04bbf0c8eb3ab752c98c68e6347254a716ab9b3a5fd9eaf983557424ed57d33d"
     },
     {
       "path": "installation-libraries.js",
@@ -303,48 +307,56 @@
     }
   ],
   "androidTestApp": {
-    "path": "android/aluvision-android-test-0.1.0-test.8-8-2b9267c34bb6.apk",
-    "size": 2397107,
-    "sha256": "2b9267c34bb6bde97708f98eef0d83a5c7678c958b24a150deffb5a7a58319bc",
+    "path": "android/aluvision-android-test-41.0.2-14-84d1e566b90c.apk",
+    "size": 16845968,
+    "sha256": "84d1e566b90c46116445e16413525bce0082c1e25f480c1098017eaf6565b424",
     "packageName": "com.aluvision.lighting.android.test",
-    "versionName": "0.1.0-test.8",
-    "versionCode": 8,
+    "versionName": "41.0.2",
+    "versionCode": 14,
     "minSdk": 26,
     "mode": "receiver",
     "signerCertificateSha256": "b598fc6fa30b423517d6ca68e3bb1191248a32723174d4703baaede9125936ac",
-    "sourceInventorySha256": "c0857a286ed5796b04075a8372e16073de26793b113aa60ad2ca2c18fa0c3c8f",
-    "approvalSha256": "aa95438ef57fce4655401f49b8896df5b9012df37fc6d994ad9e664950472a99",
+    "sourceInventorySha256": "08662b8ee69bf594f1ba0c586b3b2a897937f2d2f3b2d9c187ccde2b67eccc57",
+    "buildReceiptSha256": "11e9ab7f80e818bf1e74bd3140da9966922a9d2adefd233aa9fcdc45cd4db876",
     "signatureVerified": true,
     "packageVerified": true,
-    "installedVerified": true,
-    "installationEvidenceSha256": "4427602a77010b240bf969e294eb62cb8b7bfa9116cc07c197f480c294a00e47",
+    "installedVerified": false,
+    "installationEvidenceSha256": null,
     "tools": {
       "apksignerSha256": "b47549e373b895ce6ca620d0c7887e674d9615ffa837a86ac601dcfd04adb0f0",
-      "aaptSha256": "c0b5427aeabbbe05023ee2a55e3a9877c99ce57245bb15c21d4802326b86d099",
+      "aapt2Sha256": "729a6a8deba828992c50cb448d4ef3947003ec5a0d1deead7534897c8fc3486f",
       "apksignerReportSha256": "ef52f4edab240b3377219b15da499a8e0fc005cd88b04ec035ac56b66774f089",
-      "aaptReportSha256": "c10edb4730d71f4360acc8b3d5abd22bb0a7b7ba7f8b86e969482b14a640fc0f"
+      "aapt2ReportSha256": "f6fcfb4fb21d03eaa77e9f319ff8367848947c0690f6ef262a987a835834d630"
     },
     "features": {
-      "pinLogin": true,
-      "installationRestore": true,
-      "recoveredLibraries": true,
-      "allReceiversOnlineRequiredForRecovery": true,
+      "pinLogin": false,
+      "standCode": true,
+      "shareQRAndLinkImplemented": true,
+      "migrationRequiresOriginalPairedApp": true,
+      "centralStandConfiguration": true,
+      "standSessionAnimations": true,
+      "standSessionIdentification": true,
+      "standSessionOutputs": true,
+      "standSessionOTA": true,
       "receiverContextWriter": false,
-      "zoneEditing": false,
-      "ota": false,
+      "zoneEditing": true,
+      "ota": true,
       "unpairing": false,
+      "postCodeReceiverPairing": false,
+      "backupFiles": false,
+      "macStaticGestureEnabled": false,
       "firstClaimPIN": false
     },
     "validation": {
-      "scope": "test.8 emulator update and foreground cycles plus actual-asset lifecycle and composed PIN software tests; inherited native/security baseline, no physical receiver acceptance",
-      "composedPINBrowserCases": 26,
-      "freshLifecycleBrowserCases": 4,
-      "emulatorInstallVerified": true,
-      "emulatorAPI": 36,
-      "inPlaceUpdateFromVersionCode": 7,
-      "foregroundReturnCycles": 3,
-      "priorAndroidFrameworkStoreChecks": 56,
-      "sourceFreezeSha256": "c0857a286ed5796b04075a8372e16073de26793b113aa60ad2ca2c18fa0c3c8f",
+      "scope": "Actual Release SDK, package/signature/asset verification and focused native/typed-route/wrapper/browser software tests. No installation or physical Android acceptance for code14; no reuse of test8 emulator results.",
+      "emulatorInstallVerified": false,
+      "inPlaceUpdateVerified": false,
+      "signerContinuityVerified": true,
+      "actualPackagedWebAssets": 63,
+      "sourceFreezeSha256": "3e94908fba0ba146109996026d740a25acc5b997fbf6bf76a04eae25ef58d613",
+      "cameraAndOSPermissionsPhysicallyVerified": false,
+      "wifiPhysicallyVerified": false,
+      "mobileLatencyVerified": false,
       "physicalAndroidVerified": false,
       "physicalReceiverVerified": false,
       "simultaneousTwoClientControlVerified": false
