@@ -320,8 +320,10 @@
     "buildReceiptSha256": "11e9ab7f80e818bf1e74bd3140da9966922a9d2adefd233aa9fcdc45cd4db876",
     "signatureVerified": true,
     "packageVerified": true,
-    "installedVerified": false,
-    "installationEvidenceSha256": null,
+    "installedVerified": true,
+    "installationEnvironment": "isolated-headless-android-emulator-api36-arm64",
+    "installationEvidenceSha256": "ddc9c41630afa316d3828413cad3973288d226970805b1dae5ddfd21f64369c3",
+    "installationEvidenceDetailSha256": "c6e6a9510de095e0ca99d58dfee3b9eb1c0bdf0bbce19d2a24bd16063f6d2554",
     "tools": {
       "apksignerSha256": "b47549e373b895ce6ca620d0c7887e674d9615ffa837a86ac601dcfd04adb0f0",
       "aapt2Sha256": "729a6a8deba828992c50cb448d4ef3947003ec5a0d1deead7534897c8fc3486f",
@@ -348,8 +350,20 @@
       "firstClaimPIN": false
     },
     "validation": {
-      "scope": "Actual Release SDK, package/signature/asset verification and focused native/typed-route/wrapper/browser software tests. No installation or physical Android acceptance for code14; no reuse of test8 emulator results.",
-      "emulatorInstallVerified": false,
+      "scope": "Actual Release SDK, package/signature/asset verification, focused software tests and nine checks on this exact code14 APK in a fresh headless API36 arm64 emulator. Installed APK readback matched the signed APK SHA. Cold start and guest background/foreground return passed; WiFi off, airplane mode on, no guest routes and host outbound blocked except loopback. No physical Android or receiver acceptance; no reuse of test8 emulator results.",
+      "emulatorInstallVerified": true,
+      "emulatorColdStartVerified": true,
+      "emulatorBackgroundResumeVerified": true,
+      "emulatorChecks": 9,
+      "emulatorLogScope": "AndroidRuntime:E, chromium:E, cr_WebView:E only; no complete INFO-level JavaScript console capture. No fatal crash observed in these logs. Three Chromium cache-index / missing wasm-directory messages were observed; no all-runtime-errors-resolved claim.",
+      "emulatorScreenshot": {
+        "repositoryPath": "android/assets/android-code14-emulator-offline.png",
+        "sha256": "ed602d02b21a41e9192c2e9d0d5bcfab6100d03b2d4b9b9971b8d2c59627e0b9",
+        "size": 894469,
+        "width": 1080,
+        "height": 2400,
+        "environment": "offline-android-emulator-not-physical-device"
+      },
       "inPlaceUpdateVerified": false,
       "signerContinuityVerified": true,
       "actualPackagedWebAssets": 63,
