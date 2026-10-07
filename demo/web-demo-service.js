@@ -39,6 +39,7 @@
       return {receiptRef};
     };
     return Object.freeze({
+      factoryGuidePreview:true,
       storage,
       search:async()=>({receivers:copy(units.map(unit=>({...unit,canConfigure:true,canVerifyIdentity:true})))}),
       select:async({receiver})=>copy(receiver),

@@ -6,6 +6,10 @@
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
   var LIMITS = Object.freeze({ spiPorts: 4, pixelsPerPort: 1024, continuousPixels: 8192 });
+  var DEFAULT_SPI_PIXELS = 20;
+  // The editor's light-point width is not physical strip length. Keep the
+  // STATIC membership baseline below unchanged for existing native journals.
+  var DEFAULT_ANIMATION_WIDTH = 20;
   var TYPES = ['RGBW', 'SPI'];
   var LAYOUTS = Object.freeze({ RGBW: Object.freeze(['stacked', 'vertical']), SPI: Object.freeze(['continuous', 'stacked', 'vertical']) });
   function allowedLayouts(type) {
@@ -400,9 +404,10 @@
     // Whole-stand shortcuts intentionally expose only common light controls;
     // no output mapping, pairing, zone membership or effect geometry may leak.
     var allowed = ['on','power','r','g','b','w','bri','brightness','colors','whiteChannels','rgbEnabled','whiteEnabled','rgbwLast','colorCount',
-      'engine','variant','v30Effect','category','animation','previewFamily','legacySpi','bounce','mirror'];
+      'engine','variant','backgroundOn','v30Effect','category','animation','previewFamily','legacySpi','bounce','mirror'];
     if (!object(patch) || Object.keys(patch).some(function (key) { return allowed.indexOf(key) < 0; }) ||
-        patch.engine !== undefined && patch.engine !== 'STATIC') issue('STAND_STATE_PATCH', 'Gebruik vaste kleur of aan/uit voor de hele stand.');
+        patch.engine !== undefined && patch.engine !== 'STATIC' ||
+        patch.backgroundOn !== undefined && patch.backgroundOn !== false) issue('STAND_STATE_PATCH', 'Gebruik vaste kleur of aan/uit voor de hele stand.');
     var selected = new Set(standZoneReceivers(model, standId).map(function (receiver) { return receiver.id; }));
     var next = clone(model);
     next.receivers.forEach(function (receiver) {
@@ -481,7 +486,27 @@
     reconcileLineOrders(next);
     return assertValid(next);
   }
-  return Object.freeze({ LIMITS: LIMITS, clone: clone, defaultState: defaultState, validate: validate, assertValid: assertValid, getZone: getZone,
+  // The native membership journal has an explicit, smaller schema. It is not
+  // the central stand: physical descriptors, spatial metadata and libraries
+  // remain in the authenticated central projection, never overwritten here.
+  function membershipStructure(model) {
+    assertValid(model);
+    var receiverKeys = ['id','rid','deviceFingerprint','name','type','standId','zoneId','role','lifecycle','connection','outputs','state','onboardingTransactionId'];
+    var zoneKeys = ['id','name','type','layout','receiverIds','lineOrder'];
+    function pick(value, keys) {
+      var next = {};
+      keys.forEach(function (key) { if (Object.prototype.hasOwnProperty.call(value,key)) next[key] = clone(value[key]); });
+      return next;
+    }
+    return assertValid({schemaVersion:30,demo:false,scenes:[],presets:[],
+      stands:model.stands.map(function (stand) { return {id:stand.id,name:stand.name,zones:stand.zones.map(function (zone) { return pick(zone,zoneKeys); })}; }),
+      receivers:model.receivers.map(function (receiver) { var next=pick(receiver,receiverKeys);next.state=defaultState();next.connection='unknown';return next; })});
+  }
+  // A receiver-less local concept is presentation only, never an AP binding.
+  function localStand(id, name) {
+    return assertValid({schemaVersion:30,demo:false,stands:[{id:id,name:name,zones:[]}],receivers:[],scenes:[],presets:[]});
+  }
+  return Object.freeze({ LIMITS: LIMITS, DEFAULT_SPI_PIXELS: DEFAULT_SPI_PIXELS, DEFAULT_ANIMATION_WIDTH: DEFAULT_ANIMATION_WIDTH, localStand: localStand, clone: clone, defaultState: defaultState, validate: validate, assertValid: assertValid, membershipStructure: membershipStructure, getZone: getZone,
     zoneReceivers: zoneReceivers, standZoneReceivers: standZoneReceivers, resolveTargets: resolveTargets, applyState: applyState, applyStandState: applyStandState, setLayout: setLayout,
     createZone: createZone, renameZone: renameZone, deleteZone: deleteZone, renameReceiver: renameReceiver,
     assignReceiverToZone: assignReceiverToZone, unassignReceiver: unassignReceiver, moveReceivers: moveReceivers,

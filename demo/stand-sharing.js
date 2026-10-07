@@ -99,33 +99,42 @@
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${total}" role="img" aria-label="QR-code om deze stand te openen" style="display:block;width:100%;max-width:340px;margin:0 auto;shape-rendering:crispEdges"><rect width="${total}" height="${total}" fill="#fff"/><path d="${path}" fill="#000"/></svg>`;
   }
   const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const messages={STAND_SHARE_UNAVAILABLE:'Delen is nog niet beschikbaar in deze app. Je huidige stand blijft behouden.',
+  const messages={STAND_SHARE_UNAVAILABLE:'Delen is niet beschikbaar in deze appversie.',
     STAND_NOT_CONNECTED:'Open eerst je stand voordat je haar deelt.',STAND_SHARE_VERSION:'Deze deellink gebruikt een andere versie. Vraag een nieuwe link.',
-    STAND_SHARE_INVALID:'Deze deellink is ongeldig. Vraag een nieuwe link of gebruik de standcode.',
-    STAND_IDENTITY_UNCONFIRMED:'De verwachte stand is niet bevestigd. Er zijn geen standgegevens overgenomen.',
-    STAND_CONNECTION_CANCELLED:'Geannuleerd. Je stand op de hoofdreceiver blijft behouden.',
-    STAND_SHARE_SCAN_UNAVAILABLE:'Scannen is nog niet beschikbaar in deze app. Plak de deellink of gebruik de standcode.',
-    STAND_SHARE_CAMERA_DENIED:'De camera is niet toegestaan. Geef Aluvision cameratoegang in Instellingen, of plak de deellink.',
-    STAND_SHARE_LINK_UNAVAILABLE:'Het deelvenster is niet beschikbaar. Kopieer de deellink om haar zelf te versturen.',
+    STAND_SHARE_INVALID:'Deellink ongeldig. Vraag een nieuwe link of gebruik je standcode.',
+    STAND_IDENTITY_UNCONFIRMED:'Stand niet herkend. Er zijn geen gegevens overgenomen.',
+    STAND_CONNECTION_CANCELLED:'Geannuleerd.',
+    STAND_SHARE_SCAN_UNAVAILABLE:'Scannen niet beschikbaar. Plak de link of gebruik je standcode.',
+    STAND_SHARE_CAMERA_DENIED:'Geef Aluvision cameratoegang via Instellingen of plak de link.',
+    STAND_SHARE_LINK_UNAVAILABLE:'Delen niet beschikbaar. Kopieer de link.',
     STAND_CONNECTION_BUSY:'Er loopt nog een actie. Wacht tot die klaar is en probeer opnieuw.',
+    STAND_CANCELLED:'Verbinden geannuleerd. Je eerdere stand blijft bewaard.',
+    WIFI_JOIN_UNSUPPORTED:'Kies het getoonde netwerk in Instellingen → Wifi. Kom daarna terug en open je stand.',
+    WIFI_JOIN_DENIED:'Wifi verbinden is niet toegestaan. Kies het getoonde netwerk in Instellingen → Wifi en kom terug.',
+    WIFI_JOIN_TIMEOUT:'Wifi verbinden duurde te lang. Kies het getoonde netwerk in Instellingen → Wifi en kom terug.',
+    WIFI_JOIN_UNAVAILABLE:'Wifi is niet verbonden. Kies het getoonde netwerk in Instellingen → Wifi en kom terug.',
+    LOCAL_NETWORK_DENIED:'Geef Aluvision toegang tot het lokale netwerk via Instellingen en probeer opnieuw.',
     STAND_WRONG_WIFI:'Verbind in Instellingen → Wifi met het getoonde standnetwerk en probeer opnieuw.',
-    STAND_AUTH_FAILED:'De gedeelde standcode is niet bevestigd. Vraag een nieuwe link als de code intussen is gewijzigd.',
-    STAND_SHARE_COPY_UNAVAILABLE:'Kopiëren is niet beschikbaar. Je kunt de link zelf selecteren.',
-    STAND_INSPECTION_REQUIRED:'Herken eerst de hoofdreceiver op het wifi-netwerk waarmee je verbonden bent.'};
-  const friendly=error=>messages[error?.code]||'De verbinding of de gedeelde toegang is niet bevestigd. Probeer opnieuw wanneer je met het juiste wifi-netwerk verbonden bent.';
+    STAND_AUTH_FAILED:'Standcode niet bevestigd. Vraag een nieuwe link als de code is gewijzigd.',
+    STAND_SHARE_COPY_UNAVAILABLE:'Kopiëren niet beschikbaar. Selecteer de wifi-gegevens handmatig.',
+    STAND_WIFI_CREDENTIAL_UNAVAILABLE:'Stel je wifi-PIN opnieuw in om hem te delen.',
+    stand_wifi_credential_unavailable:'Stel je wifi-PIN opnieuw in om hem te delen.',
+    STAND_INSPECTION_REQUIRED:'Kies eerst het wifi van je stand in Instellingen en kom terug.'};
+  const friendly=error=>messages[error?.code]||'Verbinden mislukt. Controleer wifi en probeer opnieuw.';
   const closedCode=error=>Object.hasOwn(messages,error?.code)?error.code:'STAND_SHARE_UNCONFIRMED';
+  const wifiFallbackCodes=new Set(['WIFI_JOIN_UNSUPPORTED','WIFI_JOIN_DENIED','WIFI_JOIN_TIMEOUT','WIFI_JOIN_UNAVAILABLE']);
   // Secrets exist only for an explicit foreground share/join screen. Public
   // state, errors and callbacks never carry the link, passphrase or raw reply.
   function create({services={},capabilities={},standConnection,onConnected=()=>{},onManual=()=>{},onChange=()=>{},clipboard,document:doc,window:win,
     setTimer=setTimeout,clearTimer=clearTimeout,privacyMs=120000}={}){
-    let mode='join',phase='idle',message='',secret=null,showCode=false,epoch=0,job=null,disposed=false,element=null,privacyTimer=null,abortController=null;
+    let mode='join',phase='idle',message='',secret=null,showCode=false,wifiFallback=false,epoch=0,job=null,disposed=false,element=null,privacyTimer=null,abortController=null;
     const caps=()=>typeof capabilities==='function'?capabilities():capabilities;
     const snapshot=()=>standConnection?.snapshot?.();
     const state=()=>({mode,phase,message,busy:job!==null,hasAccess:secret!==null,
       shareAvailable:available(services,caps()),scanAvailable:caps()?.simpleStandScan===true&&typeof services.scanStandShare==='function'});
     const update=()=>{if(element)element.innerHTML=render();onChange(state());};
-    function clear(){secret=null;showCode=false;if(privacyTimer!==null)clearTimer(privacyTimer);privacyTimer=null;}
-    function touched(){if(!secret)return;if(privacyTimer!==null)clearTimer(privacyTimer);privacyTimer=setTimer(()=>{privacyTimer=null;conceal();message='QR-code en standcode zijn weer verborgen. Toon ze opnieuw als je verder wilt delen.';update();},privacyMs);}
+    function clear(){secret=null;showCode=false;wifiFallback=false;if(privacyTimer!==null)clearTimer(privacyTimer);privacyTimer=null;}
+    function touched(){if(!secret)return;if(privacyTimer!==null)clearTimer(privacyTimer);privacyTimer=setTimer(()=>{privacyTimer=null;conceal();message='Je wifi-gegevens zijn weer verborgen. Toon ze opnieuw om verder te delen.';update();},privacyMs);}
     function open(next){if(!['share','join'].includes(next))fail('STAND_SHARE_INVALID');++epoch;mode=next;phase='idle';message='';clear();update();return state();}
     async function operation(run,{joining=false}={}){
       if(disposed||job)fail('STAND_CONNECTION_BUSY');const ticket=epoch;phase=joining?'connecting':'loading';message='';
@@ -139,7 +148,7 @@
       const before=snapshot();const value=await obtain(services,caps(),before),after=snapshot();
       check();
       if(!after||after.standId!==before.standId||after.ssid!==before.ssid)fail('STAND_IDENTITY_UNCONFIRMED');
-      secret=value;phase='ready';message='Iedereen met deze QR-code of link krijgt dezelfde bediening. De bestaande standcode verandert niet.';touched();return state();
+      secret=value;showCode=true;phase='ready';message='';touched();return state();
     });}
     function parseLink(text,expectedStandId){if(disposed||job)fail('STAND_CONNECTION_BUSY');clear();message='';try{secret=parse(text,expectedStandId);phase='ready';touched();}
       catch(error){phase='error';message=friendly(error);update();throw Object.assign(Error(message),{code:error.code});}update();return state();}
@@ -148,22 +157,42 @@
       if(reply?.status!=='scanned'||Object.keys(reply).sort().join(',')!=='status,text')fail('STAND_SHARE_INVALID');
       secret=parse(reply.text);phase='ready';touched();return state();
     });}
-    async function join(){if(!secret||mode!=='join')fail('STAND_SHARE_INVALID');const request=connection(secret);clear();
+    async function join({joinWifi=true}={}){if(!secret||mode!=='join')fail('STAND_SHARE_INVALID');const request=connection(secret),ticket=epoch;clear();
       try{let connected=null;const outcome=await operation(async check=>{
         if(typeof standConnection?.connect!=='function')fail('STAND_SHARE_UNAVAILABLE');
-        const result=await standConnection.connect(request);check();
+        // Only this foreground Scan/Open button asks the platform to join.
+        // The QR/link codec remains unchanged; resume and background do not.
+        const result=await standConnection.connect(joinWifi?{...request,joinWifi:true}:request);check();
         if(result?.view){phase='connected';message='Je actuele stand is geopend.';connected=result;}
-        else{phase='error';message='Deze hoofdreceiver heeft nog geen deelbare standcode. Open de bestaande stand op het oorspronkelijke toestel; er wordt niets automatisch ingesteld.';}
+        else{phase='error';message='Deze stand moet eerst worden ingesteld.';}
         return state();
-      },{joining:true});if(connected)await onConnected(connected);return outcome;}finally{request.standCode='';}}
+      },{joining:true});if(connected)await onConnected(connected);return outcome;}
+      catch(error){
+        // Retain only this foreground QR/link's ephemeral credentials for the
+        // explicit system-Wifi fallback. Cancellation/background still wipe.
+        if(wifiFallbackCodes.has(error?.code)&&!disposed&&ticket===epoch&&mode==='join'&&!doc?.hidden){
+          secret=validate({version:VERSION,standId:request.expectedStandId,ssid:request.ssid,standCode:request.standCode});wifiFallback=true;phase='error';message=friendly(error);touched();update();
+        }
+        throw error;
+      }finally{request.standCode='';}}
     async function copyLink(){if(mode!=='share'||!secret)fail('STAND_SHARE_INVALID');const writer=clipboard||win?.navigator?.clipboard;
       if(typeof writer?.writeText!=='function')fail('STAND_SHARE_COPY_UNAVAILABLE');const link=format(secret),ticket=epoch;
-      try{await writer.writeText(link);if(ticket===epoch&&!disposed){message='Deellink gekopieerd. Behandel deze als je wifiwachtwoord.';update();}}
+      try{await writer.writeText(link);if(ticket===epoch&&!disposed){message='Deellink gekopieerd. Deel alleen met mensen die toegang mogen.';update();}}
       catch(_){fail('STAND_SHARE_COPY_UNAVAILABLE');}}
     async function copyCode(){if(!secret)fail('STAND_SHARE_INVALID');const writer=clipboard||win?.navigator?.clipboard;
       if(typeof writer?.writeText!=='function')fail('STAND_SHARE_COPY_UNAVAILABLE');const code=secret.standCode,ticket=epoch;
-      try{await writer.writeText(code);if(ticket===epoch&&!disposed){message='Standcode gekopieerd. Plak haar alleen in de wifi-instellingen of deel haar met iemand die je stand mag bedienen.';update();}}
+      try{await writer.writeText(code);if(ticket===epoch&&!disposed){message='Standcode gekopieerd.';update();}}
       catch(_){fail('STAND_SHARE_COPY_UNAVAILABLE');}}
+    async function copyWifi(){if(mode!=='share'||!secret)fail('STAND_SHARE_INVALID');const writer=clipboard||win?.navigator?.clipboard;
+      if(typeof writer?.writeText!=='function')fail('STAND_SHARE_COPY_UNAVAILABLE');const text=`Wifi-netwerk: ${secret.ssid}\nWifi-PIN: ${secret.standCode}`,ticket=epoch;
+      try{await writer.writeText(text);if(ticket===epoch&&!disposed){message='Wifi-netwerk en PIN gekopieerd.';update();}}
+      catch(_){fail('STAND_SHARE_COPY_UNAVAILABLE');}}
+    async function shareWifi(){if(mode!=='share'||!secret||caps()?.simpleStandShareSheet!==true||typeof services.shareStandWifi!=='function')fail('STAND_SHARE_LINK_UNAVAILABLE');
+      const standId=secret.standId;
+      return operation(async(check,signal)=>{const result=await services.shareStandWifi({standId},signal);check();
+        if(!plain(result)||Object.keys(result).join(',')!=='status'||!['shared','cancelled'].includes(result.status))fail('STAND_SHARE_INVALID');
+        phase='ready';message=result.status==='shared'?'Wifi-gegevens aangeboden aan het deelvenster.':'Delen geannuleerd.';return state();});
+    }
     async function shareLink(){if(mode!=='share'||!secret)fail('STAND_SHARE_INVALID');const text=format(secret),ticket=epoch;
       if(caps()?.simpleStandShareSheet===true&&typeof services.shareStandLink==='function'){
         return operation(async(check,signal)=>{const result=await services.shareStandLink({text},signal);check();
@@ -178,11 +207,11 @@
       abortController?.abort();
       if(joining&&typeof standConnection?.disconnect==='function')await standConnection.disconnect();}
     function render(){const s=state();
-      if(mode==='share')return `<section class="stand-sharing card"><h2>Deel mijn stand</h2><p>Laat iemand deze QR-code scannen in Aluvision, of stuur de deellink. Iedereen gebruikt dezelfde standcode en bedient dezelfde actuele stand.</p>${!s.shareAvailable?`<p role="status">${messages.STAND_SHARE_UNAVAILABLE}</p>`:secret?`<div class="stand-sharing-qr" data-stand-share-qr>${svg(secret)}</div><label class="dialog-field">Wifi-netwerk<input data-stand-share-network readonly value="${escape(secret.ssid)}"></label><label class="dialog-field">Bestaande standcode · je wifiwachtwoord<input data-stand-share-code type="${showCode?'text':'password'}" readonly autocomplete="off" spellcheck="false" value="${escape(secret.standCode)}"></label><button class="button secondary full" data-stand-sharing-action="show-code" aria-pressed="${showCode}">${showCode?'Standcode verbergen':'Standcode tonen'}</button><button class="button secondary full" data-stand-sharing-action="copy-code">Standcode kopiëren</button><button class="button full" data-stand-sharing-action="share" ${s.busy?'disabled':''}>Deellink delen</button><button class="button secondary full" data-stand-sharing-action="copy">Deellink kopiëren</button><details><summary>Deellink bekijken</summary><label class="dialog-field">Deellink<input data-stand-share-link readonly autocomplete="off" value="${escape(format(secret))}"></label></details><button class="text-button" data-stand-sharing-action="cancel">QR-code en code verbergen</button><small>De QR-code en link bevatten je wifiwachtwoord. Ze verdwijnen uit dit scherm zodra je het sluit of even niets doet.</small>`:`<button class="button full" data-stand-sharing-action="load" ${s.busy?'disabled':''}>${s.busy?'Toegang controleren…':'QR-code en bestaande standcode tonen'}</button>`}<p data-stand-share-status role="status" aria-live="polite">${escape(message)}</p></section>`;
-      return `<section class="stand-sharing card"><h2>Gedeelde stand openen</h2>${secret?`<p>1. Verbind in Instellingen → Wifi met <b>${escape(secret.ssid)}</b>.</p><label class="dialog-field">Standcode voor wifi<input data-stand-share-code type="${showCode?'text':'password'}" readonly autocomplete="off" value="${escape(secret.standCode)}"></label><button class="button secondary full" data-stand-sharing-action="show-code" aria-pressed="${showCode}">${showCode?'Standcode verbergen':'Standcode tonen'}</button><button class="button secondary full" data-stand-sharing-action="copy-code">Standcode kopiëren voor wifi</button><p>Ben je al met dit wifi verbonden? Open dan de actuele stand hieronder. Moet je nog naar Instellingen? Scan of plak bij terugkeer opnieuw: dit scherm verbergt je code zodra je de app verlaat.</p><button class="button full" data-stand-sharing-action="join" ${s.busy?'disabled':''}>${s.busy?'Stand openen…':'Deze stand openen'}</button>`:`<p>Scan de QR-code in Aluvision of plak de deellink. Je kiest daarna zelf wanneer je verbinding maakt. De app stelt nooit een nieuwe stand in op basis van een link.</p>${s.scanAvailable?`<button class="button full" data-stand-sharing-action="scan" ${s.busy?'disabled':''}>${phase==='loading'?'Camera openen…':'QR-code scannen'}</button>`:'<p class="muted">Scannen is hier niet beschikbaar. Plak de deellink of open met je standcode.</p>'}<label class="dialog-field">Deellink<input data-stand-join-link autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="${MAX_LINK}" placeholder="Plak je aluvision://stand-link" ${s.busy?'disabled':''}></label><button class="button secondary full" data-stand-sharing-action="parse" ${s.busy?'disabled':''}>Deellink controleren</button><button class="button secondary full" data-stand-sharing-action="manual" ${s.busy?'disabled':''}>Handmatig openen met standcode</button>`}<button class="text-button" data-stand-sharing-action="cancel">${s.busy?'Annuleren':'Andere QR-code of link gebruiken'}</button><p data-stand-share-status role="status" aria-live="polite">${escape(message)}</p></section>`;
+      if(mode==='share')return `<section class="stand-sharing card"><p>Deel je wifi-netwerk en PIN. De andere gebruiker verbindt via Instellingen → Wifi en kiest daarna Stand openen.</p>${!s.shareAvailable?`<p role="status">${messages.STAND_SHARE_UNAVAILABLE}</p>`:secret?`<label class="dialog-field">Wifi-netwerk<input data-stand-share-network readonly value="${escape(secret.ssid)}"></label><label class="dialog-field stand-pin-display">Wifi-PIN<input data-stand-share-code type="text" readonly autocomplete="off" spellcheck="false" value="${escape(secret.standCode)}"></label><button class="button full" data-stand-sharing-action="share-wifi" ${s.busy||caps()?.simpleStandShareSheet!==true?'disabled':''}>Deel wifi-gegevens</button><button class="button secondary full" data-stand-sharing-action="copy-wifi" ${s.busy?'disabled':''}>Gegevens kopiëren</button><small>Deze gegevens geven volledige toegang. Ze verdwijnen bij sluiten of inactiviteit.</small>`:s.busy?'<p role="status">Wifi-gegevens laden…</p>':`<button class="button full" data-stand-sharing-action="load">Wifi-gegevens tonen</button>`}<p data-stand-share-status role="status" aria-live="polite">${escape(message)}</p></section>`;
+      return '<section class="stand-sharing card"><p>Verbind met je standwifi in Instellingen en kies Stand openen.</p></section>';
     }
     async function click(event){const button=event.target.closest?.('[data-stand-sharing-action]');if(!button||!element?.contains(button))return;
-      const ticket=epoch;event.preventDefault();touched();try{switch(button.dataset.standSharingAction){case'load':await load();break;case'copy':await copyLink();break;case'copy-code':await copyCode();break;case'share':await shareLink();break;case'show-code':showCode=!showCode;update();break;case'manual':await cancel();await onManual();break;case'join':await join();break;case'scan':await scan();break;case'cancel':await cancel();break;case'parse':{const input=element.querySelector('[data-stand-join-link]'),text=input?.value||'';if(input)input.value='';parseLink(text);break;}}}
+      const ticket=epoch;event.preventDefault();touched();try{switch(button.dataset.standSharingAction){case'load':await load();break;case'copy-wifi':await copyWifi();break;case'share-wifi':await shareWifi();break;case'copy':await copyLink();break;case'copy-code':await copyCode();break;case'share':await shareLink();break;case'show-code':showCode=!showCode;update();break;case'manual':await cancel();await onManual();break;case'join':await join();break;case'join-connected':await join({joinWifi:false});break;case'scan':await scan();if(ticket===epoch&&!disposed&&mode==='join'&&secret)await join();break;case'cancel':await cancel();break;case'parse':{const input=element.querySelector('[data-stand-join-link]'),text=input?.value||'';if(input)input.value='';parseLink(text);break;}}}
       catch(error){if(!disposed&&ticket===epoch){phase='error';message=friendly(error);update();}}}
     function conceal(){++epoch;abortController?.abort();clear();phase='idle';message='';update();}
     function hidden(){if(doc?.hidden){const joining=phase==='connecting';conceal();if(joining)void standConnection?.disconnect?.();}}
@@ -190,7 +219,7 @@
     function mount(target){if(element){element.removeEventListener('click',click);element.removeEventListener('pointerdown',touched);element.removeEventListener('keydown',touched);}element=target;target.addEventListener('click',click);target.addEventListener('pointerdown',touched);target.addEventListener('keydown',touched);update();}
     function dispose(){++epoch;abortController?.abort();clear();disposed=true;if(element){element.removeEventListener('click',click);element.removeEventListener('pointerdown',touched);element.removeEventListener('keydown',touched);element.innerHTML='';element=null;}doc?.removeEventListener('visibilitychange',hidden);win?.removeEventListener('pagehide',pageHide);}
     doc?.addEventListener('visibilitychange',hidden);win?.addEventListener('pagehide',pageHide);
-    return Object.freeze({open,load,parseLink,scan,join,copyLink,copyCode,shareLink,cancel,mount,render,state,dispose});
+    return Object.freeze({open,load,parseLink,scan,join,copyLink,copyCode,shareLink,copyWifi,shareWifi,cancel,mount,render,state,dispose});
   }
   return Object.freeze({VERSION,MAX_LINK,validate,format,parse,connection,available,obtain,qr,svg,create});
 });

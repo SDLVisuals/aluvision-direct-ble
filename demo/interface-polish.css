@@ -279,3 +279,8 @@ html.interface-polish body .channel-row .channel-number {
   }
   html.interface-polish body :is(button, a, input, select, summary):focus-visible { outline-color: Highlight; }
 }
+
+/* A receiver-less concept is local planning, not a connection receipt. */
+.stand-skip-setup { display: block; margin: 22px auto 0; }
+.stand-skip-note { margin: 8px auto; max-width: 32ch; text-align: center; color: var(--muted); font-size: .85rem; }
+.local-stand-notice { margin: 0 0 18px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; color: var(--muted); font-size: .86rem; line-height: 1.5; }

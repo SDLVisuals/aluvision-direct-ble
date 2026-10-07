@@ -74,7 +74,7 @@
         sendBlink !== undefined && typeof sendBlink !== 'function' ||
         !Number.isInteger(idleMs) || idleMs < 1 || idleMs > 300000) throw fail('IDENTIFICATION_DEPENDENCIES');
 
-    let active = null, timer = null, lastNow = -Infinity, closedReason = 'not-opened';
+    let active = null, timer = null, lastNow = -Infinity, closedReason = 'not-opened', cleanup = null;
     const issued = new Set();
     function now() {
       const value = clock();
@@ -86,17 +86,20 @@
       if (!active) return {
         active: false, session: null, standId: null, zoneId: null, lines: [],
         status: 'closed', reason: closedReason, previewOnly: false, physicalConfirmed: false,
-        remainingMs: 0, expiresAtMs: null, confirmation: null, error: null
+        remainingMs: 0, expiresAtMs: null, confirmation: null, error: null,
+        cleanup: cleanup ? { session: cleanup.ctx.session, standId: cleanup.ctx.standId, zoneId: cleanup.ctx.zoneId, status: cleanup.status } : null
       };
       const c = active.confirmation;
       const physicalConfirmed = !!c && at < c.validUntilMs && at < active.deadline;
+      const expired = (!active.error || active.error === 'IDENTIFICATION_LEASE_EXPIRED') &&
+        (!!c && at >= c.validUntilMs || active.error === 'IDENTIFICATION_LEASE_EXPIRED');
       return {
         active: true, session: active.session, standId: active.standId, zoneId: active.zoneId,
         lines: active.lines.map((line, index) => ({ ...copy(line), number: index + 1 })),
-        status: physicalConfirmed ? 'confirmed' : (active.flight ? 'pending' : 'preview'),
+        status: physicalConfirmed ? 'confirmed' : active.flight ? 'pending' : expired ? 'expired' : active.error ? 'failed' : 'preview',
         reason: null, previewOnly: !physicalConfirmed, physicalConfirmed,
         remainingMs: Math.max(0, Math.floor(active.deadline - at)), expiresAtMs: active.deadline,
-        confirmation: physicalConfirmed ? copy(c) : null, error: active.error
+        confirmation: physicalConfirmed ? copy(c) : null, error: active.error, cleanup: null
       };
     }
     function emit(at) {
@@ -111,14 +114,24 @@
       // The adapter/hardware must apply STOP only to this exact active token.
       // A STOP reply is deliberately not proof that the previous animation resumed.
       const payload = { session: ctx.session, standId: ctx.standId, zoneId: ctx.zoneId, lineIds: ctx.lines.map(line => line.id) };
-      try { return Promise.resolve(sendStop(copy(payload))).then(() => undefined, () => undefined); }
-      catch (_) { return Promise.resolve(); }
+      const record = !active && cleanup?.ctx === ctx ? cleanup : null;
+      const attempt = record ? ++record.attempt : null;
+      if (record && record.status !== 'pending') { record.status = 'pending'; emit(lastNow); }
+      function completed(reply) {
+        // Cleanup from an older token/attempt can never change a newer session.
+        if (!record || active || cleanup !== record || record.attempt !== attempt) return;
+        record.status = keys(reply, ['stopped']) && Object.getPrototypeOf(reply) === Object.prototype && Object.keys(reply).length === 1 && reply.stopped === true ? 'confirmed' : 'unconfirmed';
+        emit(lastNow);
+      }
+      try { return Promise.resolve(sendStop(copy(payload))).then(completed, () => completed(null)); }
+      catch (_) { completed(null); return Promise.resolve(); }
     }
     function end(ctx, reason) {
       if (active !== ctx || ctx.closed) return Promise.resolve();
       ctx.closed = true; ctx.queued = false; ctx.confirmation = null;
       for (const blink of ctx.blinks.splice(0)) blink.reject(fail('IDENTIFICATION_BLINK_CANCELLED'));
       clear(); active = null; closedReason = reason;
+      cleanup = { ctx, status: 'pending', attempt: 0 };
       emit(lastNow);
       return stop(ctx);
     }
@@ -255,7 +268,7 @@
       const used = new Set();
       const ctx = { ...parsed, session, lines: parsed.lines.map((line, i) => ({ ...line, ...colour(i, used) })),
         deadline: time + idleMs, confirmation: null, revision: 1, queued: false, blinks: [], flight: null, closed: false, error: null };
-      active = ctx; emit(time); arm(ctx, time);
+      active = ctx; cleanup = null; emit(time); arm(ctx, time);
       if (active !== ctx) return Promise.resolve(getState());
       return request(ctx);
     }
@@ -278,7 +291,13 @@
       if (time === null) return Promise.resolve(snapshot(lastNow));
       if (time >= ctx.deadline) { void end(ctx, 'idle'); return Promise.resolve(snapshot(time)); }
       const byId = new Map(ctx.lines.map(line => [line.id, line]));
-      ctx.lines = lineIds.map(lineId => byId.get(lineId));
+      // Recognition follows the ordered position, not the physical endpoint.
+      // This is a temporary lease update; no normal light state is persisted.
+      const used = new Set();
+      ctx.lines = lineIds.map((lineId,index) => ({ ...byId.get(lineId), ...colour(index,used) }));
+      // The old receipt confirmed the old position colors only. New colors
+      // become physically confirmed solely after this new lease update ACK.
+      ctx.confirmation = null;
       return interaction();
     }
     function settle() {

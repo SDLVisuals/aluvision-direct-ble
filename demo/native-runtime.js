@@ -20,21 +20,24 @@
   try{if(native&&typeof root.crypto?.randomUUID==='function')documentId=root.crypto.randomUUID().replace(/-/g,'').toUpperCase();}catch(_){}
   const pending=new Map();let serial=0;
   let legacyStandAnimationsAvailable=null,standSessionAnimationsAvailable=null;
-  let standSessionOutputsAvailable=false;
+  let standSessionOutputsAvailable=false,standSessionReceiverManagementAvailable=false;
   let centralFlowEntered=false,standSessionObserved=false;
   let staticPreparingAvailable=null;
   let staticGestureAvailable=null;
-  let simpleStandAvailable=null,standMigrationReady=false,standSharingAvailable=false,standScanAvailable=false,standLinkAvailable=false,standShareSheetAvailable=false,centralStamp=null;
-  let standSharingEpoch=0;
+  let standSessionStaticGestureAvailable=null;
+  let simpleStandAvailable=null,standMigrationReady=false,standWifiOpenAvailable=false,standSharingAvailable=false,standScanAvailable=false,standLinkAvailable=false,standShareSheetAvailable=false,centralStamp=null;
+  let standSharingEpoch=0,centralProjectionModel=null,managementPreparedStand=null;
+  let centralConnectionAttempt=0,centralConnectionAttemptExhausted=false;
   root.document?.addEventListener?.('visibilitychange',()=>{if(root.document.hidden)standSharingEpoch++;});
   root.addEventListener?.('pagehide',()=>{standSharingEpoch++;});
   const actions=new Set(['capabilities','securityPreference','securityStatus','setPinProtection','discover','discoverMesh','select','secure','reconcileSecurity','finalize','verifyFinalReceipt','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones','configureOutputs','previewPixels','eraseAppData','applyLive','applyLiveBatch','otaPlan','otaStart','otaStatus','otaResume','otaCancel','otaMainRecoveryPlan','otaMainRecoveryStart','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain']);
   actions.add('outputConfigurationStatus');
+  actions.add('prepareReceiverManagement');
   ['exportBackup','chooseBackup','importInstallationView','recoverInstallation'].forEach(action=>actions.add(action));
   ['receiverContextStatus','syncInstallationContext','interruptAutomaticContext'].forEach(action=>actions.add(action));
   actions.add('setAppearance');
   actions.add('selectionFeedback');
-  ['standSessionStatus','standSessionShare','standInspect','standConnect','standMigrate','standResume','standRefresh','standMutation','standDisconnect','standForget','standCodeChange'].forEach(action=>actions.add(action));
+  ['standSessionStatus','standSessionShare','standInspect','standOpenWifi','standConnect','standMigrate','standResume','standRefresh','standMutation','standDisconnect','standForget','standCodeChange','shareStandWifi'].forEach(action=>actions.add(action));
   ['scanStandShare','takeStandShareLink','shareStandLink'].forEach(action=>actions.add(action));
   let selectionHaptics=false,selectionFeedbackPending=false;
   actions.add('supersedeLivePreparing');
@@ -57,6 +60,14 @@
   // retain their archive until a genuine central flow/session is selected;
   // an uncertain or disconnected selected flow never borrows Owner fallback.
   const legacyContextAllowed=()=>!centralFlowEntered&&!standSessionObserved&&centralStamp===null;
+  function observeStaticRoute(reason,count){try{
+    const flag=Object.getOwnPropertyDescriptor(root,'__lightningV41GestureDiagnostics');
+    if(flag?.value!==true||flag.writable!==false||flag.configurable!==false||
+       !['STATIC_PROFILE','LEGACY_CAP_OFF','LEGACY_CONTEXT_SELECTED','CENTRAL_CAP_OFF','CENTRAL_BINDING','CENTRAL_RECHECK',
+         'RECHECK_CAP_OFF','RECHECK_CONTEXT','NATIVE_ENTRY','NATIVE_RETURNED_UNAVAILABLE'].includes(reason)||
+       !Number.isInteger(count)||count<1||count>30)return;
+    root.dispatchEvent?.(new root.CustomEvent('lightning:static-route',{detail:Object.freeze({stage:'facade',reason,count})}));
+  }catch(_){/* Bench observation is not delivery or receiver authority. */}}
   let contextWriteBarrier=null;
   let viewRevision=0,viewLoaded=false,viewModelKey=null,viewDraftKey='null',writeQueue=Promise.resolve(),settledWriteQueue=writeQueue;
   const fail=code=>Object.assign(new Error('De verbinding is nog niet beschikbaar.'),{code});
@@ -96,7 +107,7 @@
       // A cold SPI guide performs pinned MAIN/NODE proofs and may encounter a
       // retained proxy reply before its guide packet. This bounded allowance
       // cancels an uncertain operation once; it never retries that mutation.
-      const timeout=['exportBackup','chooseBackup','recoverInstallation'].includes(action)?300000:['scanStandShare','shareStandLink','standConnect','standMigrate','standResume','standRefresh','standMutation','standCodeChange'].includes(action)?90000:action==='previewPixels'?45000:action==='syncInstallationContext'?180000:['otaPlan','otaMainRecoveryPlan'].includes(action)?120000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
+      const timeout=['exportBackup','chooseBackup','recoverInstallation'].includes(action)?300000:['scanStandShare','shareStandLink','shareStandWifi','standOpenWifi','standConnect','standMigrate','standResume','standRefresh','standMutation','standCodeChange','prepareReceiverManagement'].includes(action)||action==='publishModel'&&centralStamp!==null?90000:action==='previewPixels'?45000:action==='syncInstallationContext'?180000:['otaPlan','otaMainRecoveryPlan'].includes(action)?120000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
         ['secure','reconcileSecurity'].includes(action)&&payload.configuration?.role==='node'?120000:
         action==='identifyLayout'?35000:['select','secure','reconcileSecurity','finalize','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain'].includes(action)?45000:12000;
       const deadline=action==='applyStaticGesture'?45000:timeout;
@@ -479,8 +490,25 @@
       !(view.draft===null||(view.draft&&typeof view.draft==='object'&&!Array.isArray(view.draft))))throw fail('VIEW_INVALID');
     viewRevision=view.revision;viewModelKey=canonical(view.model);viewDraftKey=canonical(view.draft);viewLoaded=true;return view;
   }
-  function publicationModel(incoming,stored){
+  function publicationModel(incoming,stored,central=false,configuration=null){
     if(!incoming||!Array.isArray(incoming.receivers)||!stored||!Array.isArray(stored.receivers))throw fail('VIEW_INVALID');
+    if(central){
+      // A compact draft may omit central-only descriptors, never replace them.
+      // If supplied, rich fields must still match their authenticated baseline.
+      const baseline=centralProjectionModel;
+      if(!baseline)throw fail('STAND_NOT_CONNECTED');
+      const oldReceivers=new Map(baseline.receivers.map(r=>[r.id,r]));
+      for(const r of incoming.receivers){const old=oldReceivers.get(r.id);if(!old)continue;
+        for(const key of Object.keys(r))if(!['state','connection'].includes(key)&&Object.hasOwn(old,key)&&canonical(r[key])!==canonical(old[key]))throw fail('V30_BINDING_INVALID');
+      }
+      const oldZones=new Map(baseline.stands.flatMap(s=>s.zones).map(z=>[z.id,z]));
+      for(const s of incoming.stands)for(const z of s.zones){const old=oldZones.get(z.id);if(!old)continue;
+        const initialize=old.type===null&&old.receiverIds.length===0&&z.id===configuration?.zoneId&&z.type===configuration.type&&
+          z.layout===(configuration.type==='SPI'?'continuous':'stacked')&&z.receiverIds.length===1&&z.receiverIds[0]===configuration.receiverId;
+        for(const key of Object.keys(z))if(!['receiverIds','lineOrder',...(initialize?['type','layout']:[])].includes(key)&&Object.hasOwn(old,key)&&canonical(z[key])!==canonical(old[key]))throw fail('V30_BINDING_INVALID');
+      }
+      incoming=root.LightningModel.membershipStructure(incoming);
+    }
     const known=new Map(stored.receivers.map(receiver=>[receiver.id,receiver])),seen=new Set();
     const next={...incoming,receivers:incoming.receivers.map(receiver=>{
       const old=known.get(receiver?.id);
@@ -498,6 +526,10 @@
     if(seen.size!==known.size)throw fail('V30_BINDING_INVALID');
     return next;
   }
+  function membershipKey(model){
+    if(!model||!Array.isArray(model.receivers))throw fail('VIEW_INVALID');
+    return canonical(root.LightningModel.membershipStructure(model));
+  }
   function writeView(action,payload){
     // Capture publication intent before entering the serial write queue. The
     // UI may continue painting, but cannot change the graph being verified.
@@ -505,18 +537,39 @@
     const next=writeQueue.catch(()=>{}).then(async()=>{
       if(!viewLoaded)throw fail('VIEW_NOT_LOADED');
       const publication=action==='publishModel',localModel=publication?canonical(payload.model):null;
-      const sent=publication?{...payload,model:publicationModel(payload.model,JSON.parse(viewModelKey))}:payload;
+      const central=publication&&!legacyContextAllowed()?centralStamp&&{...centralStamp}:null,epoch=standSharingEpoch;
+      if(publication&&!legacyContextAllowed()&&(!central||!standSessionReceiverManagementAvailable||!contextVisible()||central.standId!==payload.configuration?.standId))throw fail('STAND_NOT_CONNECTED');
+      const sent=publication?{...payload,model:publicationModel(payload.model,JSON.parse(viewModelKey),!!central,payload.configuration),...(central?{expectedCentralRevision:central.configRevision}:{})}:payload;
       const previousModel=viewModelKey,requested=canonical(action==='saveDraft'?sent.draft:sent.model);
       // acceptView always retains the exact neutral native result. Only this
       // caller receives its unchanged local light overlay, and only after the
       // complete projected graph and finished draft have been acknowledged.
-      const present=view=>publication?{...view,model:JSON.parse(localModel)}:view;
+      const present=view=>publication&&!central?{...view,model:JSON.parse(localModel)}:view;
       try{
         const view=await call(action,{...sent,expectedRevision:viewRevision});
         if(publication&&(view?.draft!==null||canonical(view?.model)!==requested))throw fail('VIEW_INVALID');
+        if(central){
+          if(epoch!==standSharingEpoch||!contextVisible()||!centralStamp||centralStamp.standId!==central.standId||centralStamp.bootId!==central.bootId)throw fail('STAND_CONNECTION_CANCELLED');
+          return acceptManagementView(view,central,{kind:'receiver-added',receiverId:payload.configuration.receiverId,transactionId:payload.configuration.transactionId});
+        }
         return present(acceptView(view));
       }
       catch(error){
+        if(central){
+          // A local journal is not central storage. After a lost publication
+          // reply, only an authenticated MAIN read can confirm this exact
+          // completed membership; do not replay the claim or the mutation.
+          try{
+            if(epoch!==standSharingEpoch||!contextVisible()||!centralStamp||centralStamp.standId!==central.standId||centralStamp.bootId!==central.bootId)throw fail('STAND_CONNECTION_CANCELLED');
+            const fresh=await call('standRefresh',central);
+            if(epoch!==standSharingEpoch||fresh?.status!=='updated'||membershipKey(fresh.view?.model)!==membershipKey(sent.model))throw fail('STAND_SAVE_UNCONFIRMED');
+            // The confirmed central membership does not clear a private draft
+            // by inference. Also read its exact completed local journal.
+            const local=await call('loadView');
+            if(epoch!==standSharingEpoch||local?.draft!==null||canonical(local?.model)!==requested)throw fail('STAND_SAVE_UNCONFIRMED');
+            return acceptManagementView({...local,central:fresh},central,{kind:'receiver-added',receiverId:payload.configuration.receiverId,transactionId:payload.configuration.transactionId});
+          }catch(_){}throw error;
+        }
         // A Keychain CAS can commit while its WebKit reply is lost. Re-read
         // local state only: never repeat a claim, finalize, or storage write.
         // A matching draft alone must not accept an unrelated changed model.
@@ -534,8 +587,27 @@
     // code remains the only source of release authority and the resulting graph.
     const next=writeQueue.catch(()=>{}).then(async()=>{
       if(!viewLoaded)throw fail('VIEW_NOT_LOADED');
+      const central=!legacyContextAllowed()?centralStamp&&{...centralStamp}:null,epoch=standSharingEpoch;
+      if(!legacyContextAllowed()&&(!central||!standSessionReceiverManagementAvailable||!contextVisible()||central.standId!==payload.standId))throw fail('STAND_NOT_CONNECTED');
+      if(central&&payload.pin!==undefined)throw fail('STAND_LEGACY_ACCESS_RETIRED');
+      if(central&&managementPreparedStand!==central.standId){
+        // Removal can be opened without first adding a receiver. Seed its own
+        // private journal explicitly; an old phone-cache revision is not CAS.
+        installPreparedManagementView(await call('prepareReceiverManagement',{standId:central.standId}),central,epoch);
+      }
       const result=await call(action,payload);
-      if(result?.view)acceptView(result.view);
+      if(central){
+        if(epoch!==standSharingEpoch||!contextVisible()||!centralStamp||centralStamp.standId!==central.standId||centralStamp.bootId!==central.bootId)throw fail('STAND_CONNECTION_CANCELLED');
+        if(result?.view?.centralClosed){
+          const closed=result.view.centralClosed;
+          if(!layoutKeys(closed,['standId','bootId','configRevision','resetConfirmed'])||closed.standId!==central.standId||closed.bootId!==central.bootId||!Number.isSafeInteger(closed.configRevision)||closed.configRevision<central.configRevision||closed.resetConfirmed!==true||
+             result.status!=='removed'||result.scope!=='installation'||result.requiresPin!==false||!Array.isArray(result.targets)||!result.targets.some(target=>target.role==='main'&&target.receiverId===payload.receiverId)||result.count!==result.targets.length||result.progress?.completed!==result.count||result.progress?.total!==result.count||
+             result.view.draft!==null||result.view.model?.demo!==false||result.view.model.stands?.length!==0||result.view.model.receivers?.length!==0)throw fail('STAND_SAVE_UNCONFIRMED');
+          root.LightningModel.assertValid(result.view.model);acceptView(result.view);centralStamp=null;managementPreparedStand=null;
+        }else if(result?.view)result.view=acceptManagementView(result.view,central,{kind:'receiver-removed',receiverId:payload.receiverId,transactionId:result.jobId});
+        else if(result?.status==='removed')throw fail('STAND_SAVE_UNCONFIRMED');
+        if(result?.requiresPin!==false)throw fail('STAND_LEGACY_ACCESS_RETIRED');
+      }else if(result?.view)acceptView(result.view);
       else if(result?.status==='removed')throw fail('VIEW_INVALID');
       return result;
     });return trackWrite(next);
@@ -779,6 +851,14 @@
   }
   const serviceSet=native?{
     connectionMode:'manual-wifi',
+    async prepareReceiverManagement({standId}){
+      await writeQueue.catch(()=>{});
+      const before=centralStamp&&{...centralStamp},epoch=standSharingEpoch;
+      if(!layoutId(standId)||!before||standId!==before.standId||!standSessionReceiverManagementAvailable||!contextVisible())throw fail('STAND_NOT_CONNECTED');
+      const view=await call('prepareReceiverManagement',{standId});
+      installPreparedManagementView(view,before,epoch);
+      return JSON.parse(JSON.stringify(view));
+    },
     async standSessionStatus(){
       await requireSimpleStand();
       const result=root.LightningStandConnection.sessionStatus(await call('standSessionStatus'));
@@ -805,6 +885,12 @@
       finally{request.currentCode='';request.newCode='';}
     },
     async standConnect(input){return connectCentral('standConnect',input);},
+    async standOpenWifi(input={}){
+      await requireSimpleStand();
+      if(!standWifiOpenAvailable)throw fail('STAND_WIFI_UNSUPPORTED');
+      if(!contextVisible())throw fail('STAND_CONNECTION_CANCELLED');
+      return connectCentral('standOpenWifi',input);
+    },
     async standSessionShare(input){
       await requireSimpleStand();
       if(!standSharingAvailable||!centralStamp||!input||Object.keys(input).join(',')!=='standId'||input.standId!==centralStamp.standId)throw fail('STAND_NOT_CONNECTED');
@@ -837,6 +923,14 @@
       root.LightningStandSharing.parse(input.text,centralStamp.standId);
       const epoch=standSharingEpoch,result=await call('shareStandLink',{text:input.text},signal);
       if(epoch!==standSharingEpoch||!contextVisible())throw fail('STAND_CONNECTION_CANCELLED');
+      if(!layoutKeys(result,['status'])||!['shared','cancelled'].includes(result.status))throw fail('STAND_SHARE_UNCONFIRMED');
+      return {status:result.status};
+    },
+    async shareStandWifi(input={},signal){
+      await requireSimpleStand();
+      if(!standShareSheetAvailable||!layoutKeys(input,['standId'])||!contextVisible()||!centralStamp||input.standId!==centralStamp.standId)throw fail('STAND_NOT_CONNECTED');
+      const before={...centralStamp},epoch=standSharingEpoch,result=await call('shareStandWifi',{standId:input.standId},signal);
+      if(epoch!==standSharingEpoch||!contextVisible()||canonical(centralStamp)!==canonical(before))throw fail('STAND_CONNECTION_CANCELLED');
       if(!layoutKeys(result,['status'])||!['shared','cancelled'].includes(result.status))throw fail('STAND_SHARE_UNCONFIRMED');
       return {status:result.status};
     },
@@ -1045,7 +1139,7 @@
       }
     },
     applyStaticGesture({requests,held=false}={}){
-      let requestId=null,settled=false,closed=false,inFlight=false,endRequested=!held,postedHeld=false,sequence=1,payload,stagedSequence=1,expectedPorts,geometry;
+      let requestId=null,settled=false,closed=false,inFlight=false,endRequested=!held,postedHeld=false,sequence=1,payload,stagedSequence=1,expectedPorts,geometry,centralBinding=null;
       const ledger=new Map(),controller=new AbortController(),copy=value=>JSON.parse(JSON.stringify(value));
       const shape=request=>{
         const scene=request?.scene;
@@ -1058,7 +1152,8 @@
       const uniform=members=>members.every(item=>shape(item)!==null&&item.brightness===members[0].brightness&&
         item.transitionMs===members[0].transitionMs&&JSON.stringify(item.scene.palette)===JSON.stringify(members[0].scene.palette));
       const selection=()=>{
-        let model;try{model=JSON.parse(viewModelKey);}catch(_){throw fail('VIEW_NOT_LOADED');}
+        let model;if(centralBinding){model=centralProjectionModel;if(!model)throw fail('VIEW_NOT_LOADED');}
+        else try{model=JSON.parse(viewModelKey);}catch(_){throw fail('VIEW_NOT_LOADED');}
         const rows=payload.map(request=>{
           const matches=model.receivers.filter(row=>row.id===request.receiverId&&row.standId===request.standId&&row.lifecycle==='added');
           if(matches.length!==1||matches[0].type!==(request.kind==='SPI_SCENE'?'SPI':'RGBW'))throw fail('LIVE_INVALID');
@@ -1082,22 +1177,40 @@
       const operation=(async()=>{
         if(typeof held!=='boolean'||!Array.isArray(requests)||requests.length<1||requests.length>6)throw fail('LIVE_INVALID');
         payload=requests.map(livePayload);
-        if(new Set(payload.map(item=>item.receiverId)).size!==payload.length||payload.some(item=>item.standId!==payload[0].standId)||!uniform(payload))
-          return {status:'static-gesture-unavailable-before-open'};
-        if(staticGestureAvailable===null)await runtimeCapabilities();
-        if(staticGestureAvailable!==true||centralStamp!==null)return {status:'static-gesture-unavailable-before-open'};
+        if(new Set(payload.map(item=>item.receiverId)).size!==payload.length||payload.some(item=>item.standId!==payload[0].standId)||!uniform(payload)){
+          observeStaticRoute('STATIC_PROFILE',payload.length);return {status:'static-gesture-unavailable-before-open'};
+        }
+        if(staticGestureAvailable===null||standSessionStaticGestureAvailable===null)await runtimeCapabilities();
+        if(centralStamp){
+          if(standSessionStaticGestureAvailable!==true){observeStaticRoute('CENTRAL_CAP_OFF',payload.length);return {status:'static-gesture-unavailable-before-open'};}
+          if(payload[0].standId!==centralStamp.standId||centralStamp.configRevision>4294967295||
+             !(/^[A-F0-9]{16}$/.test(centralStamp.bootId))||/^0+$/.test(centralStamp.bootId)){
+            observeStaticRoute('CENTRAL_BINDING',payload.length);return {status:'static-gesture-unavailable-before-open'};
+          }
+          centralBinding={...centralStamp};
+        }else if(staticGestureAvailable!==true){observeStaticRoute('LEGACY_CAP_OFF',payload.length);return {status:'static-gesture-unavailable-before-open'};}
+        else if(!legacyContextAllowed()){observeStaticRoute('LEGACY_CONTEXT_SELECTED',payload.length);return {status:'static-gesture-unavailable-before-open'};}
         await writeQueue.catch(()=>{});if(!viewLoaded||!contextVisible())throw fail('VIEW_NOT_LOADED');
-        if(staticGestureAvailable!==true||centralStamp!==null)return {status:'static-gesture-unavailable-before-open'};
+        if(centralBinding){
+          if(standSessionStaticGestureAvailable!==true||!centralStamp||centralStamp.standId!==centralBinding.standId||centralStamp.configRevision!==centralBinding.configRevision||centralStamp.bootId!==centralBinding.bootId){
+            observeStaticRoute('CENTRAL_RECHECK',payload.length);return {status:'static-gesture-unavailable-before-open'};
+          }
+        }else if(staticGestureAvailable!==true){observeStaticRoute('RECHECK_CAP_OFF',payload.length);return {status:'static-gesture-unavailable-before-open'};}
+        else if(!legacyContextAllowed()){observeStaticRoute('RECHECK_CONTEXT',payload.length);return {status:'static-gesture-unavailable-before-open'};}
         ({ports:expectedPorts,geometry}=selection());
         ledger.set(1,copy(payload));postedHeld=!endRequested;
         try{
+          observeStaticRoute('NATIVE_ENTRY',payload.length);
           const answer=await call('applyStaticGesture',{requests:payload,held:postedHeld},controller.signal,undefined,id=>{requestId=id;});
-          if(answer?.status==='static-gesture-unavailable-before-open'&&Object.keys(answer).length===1)return answer;
-          if(!answer||Object.keys(answer).length!==5||answer.status!=='static-gesture-complete'||
+          if(answer?.status==='static-gesture-unavailable-before-open'&&Object.keys(answer).length===1){observeStaticRoute('NATIVE_RETURNED_UNAVAILABLE',payload.length);return answer;}
+          if(!answer||Object.keys(answer).length!==(centralBinding?8:5)||answer.status!=='static-gesture-complete'||
              !Number.isInteger(answer.sequence)||!ledger.has(answer.sequence)||answer.sequence<stagedSequence||
              !Array.isArray(answer.receiverIds)||answer.receiverIds.length!==payload.length||
              answer.receiverIds.some((id,index)=>id!==payload[index].receiverId)||
-             answer.ports!==expectedPorts||selection().geometry!==geometry||!contextVisible()||centralStamp!==null||
+             answer.ports!==expectedPorts||selection().geometry!==geometry||!contextVisible()||
+             (centralBinding?(!centralStamp||centralStamp.standId!==centralBinding.standId||centralStamp.configRevision!==centralBinding.configRevision||centralStamp.bootId!==centralBinding.bootId||
+               answer.standId!==centralBinding.standId||answer.configRevision!==centralBinding.configRevision||answer.bootId!==centralBinding.bootId):!legacyContextAllowed())||
+             centralBinding&&/^0+$/.test(answer.witness||'')||
              typeof answer.witness!=='string'||!/^([A-F0-9]{64})$/.test(answer.witness))throw fail('LIVE_UNCONFIRMED');
           return {...answer,requests:copy(ledger.get(answer.sequence))};
         }finally{settled=true;requestId=null;}
@@ -1341,15 +1454,17 @@
   }:{};
   const services=Object.freeze(serviceSet);
   async function runtimeCapabilities(){const value=await call('capabilities');selectionHaptics=value?.selectionHaptics===true;simpleStandAvailable=value?.simpleStand===true;
+    standSessionReceiverManagementAvailable=simpleStandAvailable&&value?.standSessionReceiverManagement===true;
     standSessionOutputsAvailable=simpleStandAvailable&&value?.standSessionOutputs===true;
     standMigrationReady=simpleStandAvailable&&value?.simpleStandMigrationReady===true;
+    standWifiOpenAvailable=simpleStandAvailable&&value?.standWifiOpen===true;
     standSharingAvailable=simpleStandAvailable&&value?.simpleStandShare===true;
     standScanAvailable=simpleStandAvailable&&value?.simpleStandScan===true;
     standLinkAvailable=simpleStandAvailable&&value?.simpleStandLink===true;
     standShareSheetAvailable=simpleStandAvailable&&value?.simpleStandShareSheet===true;
     legacyStandAnimationsAvailable=simpleStandAvailable?value?.legacyStandAnimations===true:value?.standAnimations===true;
     standSessionAnimationsAvailable=value?.standSessionAnimations===true;
-    staticPreparingAvailable=value?.staticPreparingReplacement===true;staticGestureAvailable=value?.nativeStaticGesture===true;return value;}
+    staticPreparingAvailable=value?.staticPreparingReplacement===true;staticGestureAvailable=value?.nativeStaticGesture===true;standSessionStaticGestureAvailable=value?.standSessionStaticGesture===true;return value;}
   function standAnimationCapability(){
     if(centralStamp)return standSessionAnimationsAvailable;
     // Merely implementing the new connection service does not select it. But
@@ -1366,24 +1481,62 @@
     // Local old journals and central revisions are different namespaces. A
     // new MAIN boot/download is allowed only after this verified projection.
     centralStamp={standId:projection.standId,configRevision:projection.configRevision,stateRevision:projection.stateRevision,bootId:projection.bootId};
-    viewRevision=projection.configRevision;viewModelKey=canonical(projection.view.model);viewDraftKey='null';viewLoaded=true;
+    centralProjectionModel=projection.view.model;
+    viewLoaded=true;
     return JSON.parse(JSON.stringify(result));
+  }
+  function acceptManagementView(view,before,intent){
+    const incoming=view?.central;
+    const transition=incoming?.managementTransition;
+    const bootOK=incoming?.bootId===before.bootId&&transition===undefined || root.LightningStandConnection.managementTransition(transition,before,incoming,intent);
+    if(!incoming||!validCentralStamp(incoming)||incoming.standId!==before.standId||!bootOK||incoming.configRevision<before.configRevision||incoming.stateRevision<before.stateRevision||
+       !centralStamp||incoming.configRevision<centralStamp.configRevision||incoming.stateRevision<centralStamp.stateRevision||view.draft!==null||membershipKey(view.model)!==membershipKey(incoming.view?.model))throw fail('STAND_SAVE_UNCONFIRMED');
+    acceptCentral(incoming,before.standId);
+    acceptView(view);
+    return JSON.parse(JSON.stringify({...view,model:incoming.view.model}));
+  }
+  function installPreparedManagementView(view,before,epoch){
+    const standId=before.standId;
+    if(epoch!==standSharingEpoch||!centralStamp||centralStamp.standId!==standId||centralStamp.bootId!==before.bootId||!contextVisible()||
+       !Number.isSafeInteger(view?.revision)||view.revision<0||view.draft!==null&&(!view.draft||typeof view.draft!=='object'||Array.isArray(view.draft)))throw fail('STAND_CONNECTION_CANCELLED');
+    const incoming=view.central;
+    if(!incoming||incoming.standId!==standId||incoming.bootId!==before.bootId||incoming.configRevision<before.configRevision||incoming.stateRevision<before.stateRevision||membershipKey(view.model)!==membershipKey(incoming.view?.model))throw fail('STAND_SAVE_UNCONFIRMED');
+    acceptCentral(incoming,standId);
+    // The proof-bound local draft journal has its own revision namespace.
+    viewRevision=view.revision;viewModelKey=canonical(view.model);viewDraftKey=canonical(view.draft);viewLoaded=true;managementPreparedStand=standId;
   }
   async function connectCentral(action,input){
     if(input!==undefined&&(!input||typeof input!=='object'||Array.isArray(input)))throw fail('STAND_CONNECTION_INVALID');
     await requireSimpleStand();
     input=JSON.parse(JSON.stringify(input||{}));
     const {payload:migration,...credentials}=input||{};
-    const payload=action==='standResume'?input:root.LightningStandConnection.connectionInput(credentials);
+    const payload=action==='standOpenWifi'?root.LightningStandConnection.wifiInput(input):action==='standResume'?root.LightningStandConnection.resumeInput(input):root.LightningStandConnection.connectionInput(credentials);
     if(action==='standMigrate'){
+      if(payload.joinWifi!==undefined)throw fail('STAND_CONNECTION_INVALID');
+      root.LightningStandConnection.newCode(payload.standCode);
       if(!migration||Object.keys(migration).join(',')!=='operations'||!Array.isArray(migration.operations)||migration.operations.length<1||migration.operations.length>128)throw fail('STAND_MIGRATION_INVALID');
       payload.payload=JSON.parse(JSON.stringify(migration));
     }else if(migration!==undefined)throw fail('STAND_CONNECTION_INVALID');
-    if(action==='standResume'&&(Object.keys(payload).some(key=>key!=='expectedStandId')||payload.expectedStandId!==undefined&&!layoutId(payload.expectedStandId)))throw fail('STAND_CONNECTION_INVALID');
-    centralFlowEntered=true;
+    const epoch=standSharingEpoch;
+    if(action==='standOpenWifi'&&!contextVisible())throw fail('STAND_CONNECTION_CANCELLED');
+    if(centralConnectionAttemptExhausted||!Number.isSafeInteger(centralConnectionAttempt)||centralConnectionAttempt<0||centralConnectionAttempt>=Number.MAX_SAFE_INTEGER){
+      centralConnectionAttemptExhausted=true;centralFlowEntered=true;throw fail('STAND_CONNECTION_CANCELLED');
+    }
+    const attempt=++centralConnectionAttempt,priorLegacy=legacyContextAllowed()&&contextVisible();
+    if(action==='standOpenWifi'){centralStamp=null;centralProjectionModel=null;}
+    centralFlowEntered=true;managementPreparedStand=null;
     try{
       const result=await call(action,payload);
+      if(action==='standOpenWifi'&&(epoch!==standSharingEpoch||!contextVisible()))throw fail('STAND_CONNECTION_CANCELLED');
       if(['setup-required','migration-required'].includes(result?.status)){
+        if(['standResume','standOpenWifi'].includes(action)){
+          const inspection=root.LightningStandConnection.inspectionResult(result);
+          // A first read-only inspection selected no session or mutation. Only
+          // its current attempt may retain the previously available Owner UX;
+          // native admission remains authoritative for every later command.
+          if(priorLegacy&&!centralConnectionAttemptExhausted&&attempt===centralConnectionAttempt&&epoch===standSharingEpoch&&contextVisible()&&centralFlowEntered&&!standSessionObserved&&centralStamp===null)centralFlowEntered=false;
+          return inspection;
+        }
         if(result.initialized!==(result.status==='migration-required')||typeof result.ssid!=='string'||new TextEncoder().encode(result.ssid).length>32)throw fail('STAND_DATA_UNCONFIRMED');return result;
       }
       if(action==='standMigrate'&&result?.status==='reconnect-required'){
@@ -1391,7 +1544,7 @@
         centralStamp=null;return result;
       }
       if(result?.status!=='connected')throw fail('STAND_CONNECTION_UNCONFIRMED');return acceptCentral(result,payload.expectedStandId);
-    }finally{if(action!=='standResume')payload.standCode='';}
+    }finally{if(['standConnect','standMigrate'].includes(action))payload.standCode='';}
   }
   return Object.freeze({native,emptyModel,services,registerContextWriteBarrier,
     capabilities:runtimeCapabilities,

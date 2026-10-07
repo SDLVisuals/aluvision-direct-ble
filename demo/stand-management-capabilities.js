@@ -23,15 +23,15 @@
   });
   function blocked(action,caps){
     const key=required[action];
-    return !!key&&caps?.standSessionReceiverManagement!==true&&caps?.[key]!==true;
+    return !!key&&caps?.[key]!==true;
   }
   function notice(caps){
-    if(caps?.standSessionReceiverManagement===true)return '';
-    const missing=['Receivers toevoegen en verwijderen'];
+    const missing=[];
+    if(caps?.standSessionReceiverManagement!==true)missing.push('Receivers toevoegen en verwijderen');
     if(caps?.standSessionOutputs!==true)missing.push('pixels en aansluitingen');
     if(caps?.standSessionIdentification!==true)missing.push('herkenningskleuren');
     if(caps?.standSessionOTA!==true)missing.push('software-updates');
-    return missing.join(', ')+' via de standcode zijn nog niet beschikbaar. Kleuren, animaties, zones en presets blijven bedienbaar.';
+    return missing.length?missing.join(', ')+' via de standcode zijn nog niet beschikbaar. Kleuren, animaties, zones en presets blijven bedienbaar.':'';
   }
   return Object.freeze({blocked,notice});
 }));

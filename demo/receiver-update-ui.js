@@ -240,7 +240,7 @@
       const allReady=entries.length&&entries.every(entry=>['ready','up-to-date'].includes(entry.status));
       if(!allReady){busy=false;busyKey='';paint();const pending=entries.find(entry=>entry.status==='running');if(pending)void monitorPending(pending,token);return;}
       const queue=orderedTargets().filter(entry=>entry.status==='ready');
-      if(!queue.length){busy=false;busyKey='';success=true;paint();return;}
+      if(!queue.length){busy=false;busyKey='';paint();return;}
       for(let index=0;index<queue.length;index++){
         if(token!==generation||!dialog?.open)return;
         const entry=queue[index];busyKey='softwarePreparing';entry.status='running';entry.job={id:'',rid:entry.receiver.rid,receiverType:entry.receiver.type,toVersion:entry.plan.toVersion,state:'queued',phase:'arming',progress:1,committed:false,cancelAllowed:false};

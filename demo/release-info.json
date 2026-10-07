@@ -67,9 +67,9 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V41interface-review36220261006",
+  "revision": "V41interface398-noqr-final-review20261007",
   "interfaceVersion": 41,
-  "interfaceBaseline": "V41 interface based on frozen361 with targeted interface-demo362 UI fixes. Browser walkthrough with fictional receivers and in-memory state; not a native or phone update.",
+  "interfaceBaseline": "V41 shared interface from verified Web397 with the approved setup398 five-asset overlay. Fictional receivers and in-memory state; not a native or phone update. ROOT desktop browser review completed for this demo source; publication authority is separate.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -128,6 +128,11 @@
       "bytes": 16845968
     },
     {
+      "path": "android/aluvision-android-test-41.0.3-16-4382140173e3.apk",
+      "sha256": "4382140173e373718eab19fc8faaf5b9c182d6763ba9514140b91105812f5aa9",
+      "bytes": 17009808
+    },
+    {
       "path": "android-download/android-download.css",
       "sha256": "23ef08fd40d5090de0642e663a6e63da927b86e8273eb3a6064f7f496110ca5b",
       "bytes": 1488
@@ -164,8 +169,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "0b4982b33aaff75eb235ade13247a2d66d2dc4f7723d1b09cac6fffd44662b01",
-      "bytes": 427496
+      "sha256": "f5cc7e30e5dc5d6ec27d22696221945f24d0eabd0d67d19ed353c5705693adfa",
+      "bytes": 457562
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -204,8 +209,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "de327696b6c3b4bb5919ab0798408c1ed8f8af3be83917cb75991ea8b2be8904",
-      "bytes": 5809
+      "sha256": "81981f792ebaf8f1df228b475f3c8b098c12d85542e1e1747fa678057436aea0",
+      "bytes": 5880
     },
     {
       "path": "installation-libraries.js",
@@ -219,13 +224,13 @@
     },
     {
       "path": "interface-polish.css",
-      "sha256": "90c1f485c820d27481fb30ef333361e3df4d846d0fbe98430f0330f45381afe8",
-      "bytes": 13447
+      "sha256": "c6805b04ed7b187c4c382c0ca0ae0721731ece041707d86c2604c8082ca35714",
+      "bytes": 13870
     },
     {
       "path": "ledline-identification-session.js",
-      "sha256": "304e396e1f059aa42bf033f07400a72e6f61cbf962b3efc1e93969e184a33d65",
-      "bytes": 17007
+      "sha256": "de9e5e725d745e446591b858d7e6966aaf340be3391e016a13991ba08b9fdfb8",
+      "bytes": 18569
     },
     {
       "path": "ledline-order-drag.js",
@@ -239,8 +244,8 @@
     },
     {
       "path": "live-control.js",
-      "sha256": "59f665550c94e82e58c3f4aa60c719711e31e90f86915496510f5ca870844dcc",
-      "bytes": 41495
+      "sha256": "23204cd880be86ec76b93d48d427afb57bd0436ecf3cc0d45a9cecded7d535aa",
+      "bytes": 42553
     },
     {
       "path": "migration.js",
@@ -249,13 +254,13 @@
     },
     {
       "path": "model.js",
-      "sha256": "75d11782af15032e3335d872585d588bcc9ab18c1990360230a6590053fb0cb1",
-      "bytes": 34954
+      "sha256": "ae6751cfe3dd7d02c012432031db3880b921ebd36d71c16a5c20e06a282b5c19",
+      "bytes": 36809
     },
     {
       "path": "native-runtime.js",
-      "sha256": "d88efcf4d0d95203a1e2230cf2b101cd514bad2fb3d5abae6448f7c931595e1a",
-      "bytes": 112844
+      "sha256": "631aa2e58c8258a3073a8286722f496031f3a98bf9d15f82535e323d2f5574cd",
+      "bytes": 127167
     },
     {
       "path": "onboarding-adapter.js",
@@ -269,18 +274,18 @@
     },
     {
       "path": "onboarding-draft.js",
-      "sha256": "b55570bee8b85446bf5e1b2878b9815a1f108edacae7fcc036e2cef96b967dd0",
-      "bytes": 37201
+      "sha256": "7dc3b3da47980846c329c571f65fd52fc2beb24504f7ee113406dcbb4f03a501",
+      "bytes": 37151
     },
     {
       "path": "onboarding-ui.css",
-      "sha256": "d090f65d151168edd6f1ee01c26eb798a9f7882f36e797f9e9e0289dd1fb47c5",
-      "bytes": 64439
+      "sha256": "e52ae51d492f0b2badbea2e38c07f6e72a459d732fb115d53ca091848101f094",
+      "bytes": 67505
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "e3b354943c047c0b247b2d14dca3ee94ab6872b8bdbfbb43c17d29516c791639",
-      "bytes": 126216
+      "sha256": "0f81db98e66fdd4292f6486c41710dca3982533a4654a68603cde5db402737fe",
+      "bytes": 140486
     },
     {
       "path": "page-interaction.css",
@@ -299,13 +304,13 @@
     },
     {
       "path": "pixel-setup.js",
-      "sha256": "e2ee5c7804962b6276af772c8c6da64f51b1b2b6debb8732e21b349f92cc71ec",
-      "bytes": 38535
+      "sha256": "5406c8a32a8017a7a7ef757dc8474d9ad1541a39665595a416cf2cb3f792714b",
+      "bytes": 37770
     },
     {
       "path": "preferences.js",
-      "sha256": "41249e86057cd26ae271cefd58c1cdc656b6d051e4475346303a151708131a3f",
-      "bytes": 83919
+      "sha256": "5075969f07c797f91a5c3762e914722fb3bfaaf90f75a44e1bb0a2164a6016ff",
+      "bytes": 83564
     },
     {
       "path": "premium-surfaces.css",
@@ -319,8 +324,8 @@
     },
     {
       "path": "preview.js",
-      "sha256": "55e356bc9d14dbb8572491d4c4c85c747d5ec5b4fedc19ad8c2f9615aa42eb09",
-      "bytes": 90184
+      "sha256": "2bc4e7c4336b3d4e391e391904d3f50849f475c901f39f9e0d735e4b41b10e0b",
+      "bytes": 92924
     },
     {
       "path": "receiver-playback.js",
@@ -334,8 +339,8 @@
     },
     {
       "path": "receiver-removal-ui.js",
-      "sha256": "2066120114433b7fdb138bb6bed9a276d13bf7ad1da22fe340f662d8eec97c55",
-      "bytes": 18615
+      "sha256": "391137c9b12a918e38412541cac7db0c8a30f4abf99fbae778fe69e6897120d9",
+      "bytes": 19872
     },
     {
       "path": "receiver-update-ui.css",
@@ -344,8 +349,8 @@
     },
     {
       "path": "receiver-update-ui.js",
-      "sha256": "69c10cc34499ede6eebc43f50d1d5ba7c564db9c6cecb86b7b1f1ceb04f1ee1c",
-      "bytes": 25142
+      "sha256": "6325074d965cc77eb6a50aa68cffb0b724affc305876c9df75363340b3552284",
+      "bytes": 25129
     },
     {
       "path": "receiver-visual.css",
@@ -378,6 +383,11 @@
       "bytes": 527
     },
     {
+      "path": "setup-wifi-guide.js",
+      "sha256": "614c8900ed6c691c9bbc58972295615f8b684a8019e2835db24687ab3bee9d3b",
+      "bytes": 2040
+    },
+    {
       "path": "stand-animations.css",
       "sha256": "0e484306b6aca9505cf4ad4422e986d93d1bcfc9a150dcb8a7badad3842e13e2",
       "bytes": 3529
@@ -389,28 +399,28 @@
     },
     {
       "path": "stand-connection.js",
-      "sha256": "c1cc30ae851708965cf3d87d3e6c444f4fffc1ecefc4ab65bd3b640dbec6b812",
-      "bytes": 25936
+      "sha256": "82dcecd4407e8ae75c0a938434566106c622dd357e33acb456d22d2157148a46",
+      "bytes": 29902
     },
     {
       "path": "stand-live-checkpoint.js",
-      "sha256": "fd08c203347d3df44419f7d5474755996a62dbdd2fd21399e0e0934eb86c2e46",
-      "bytes": 8791
+      "sha256": "7d49afade3043ba18050346cae4b805f8536826f6ba8f31dfe2a2abcf9e5572e",
+      "bytes": 9413
     },
     {
       "path": "stand-management-capabilities.js",
-      "sha256": "ee94a897f2ca964813020efded9f182017bd36298cd90ca9ecf7ddebba427666",
-      "bytes": 1812
+      "sha256": "66eae1729a03bb198a271f65a068ef8926b5648368b5a8b84025175086b4c0d9",
+      "bytes": 1790
     },
     {
       "path": "stand-sharing.css",
-      "sha256": "e8f9f3ba34ec227736be1530445d90a2a3fba7fe40b563e5de968b742e122e2a",
-      "bytes": 550
+      "sha256": "7b43dbe29f1fbbbb56350c2d06e30ecbec38b667b5febe15caeea83cb002e159",
+      "bytes": 1580
     },
     {
       "path": "stand-sharing.js",
-      "sha256": "393ca3df4c967428c5533cbb0ce8b8e49dba02cc83355421a296c02c9bbdce34",
-      "bytes": 24221
+      "sha256": "ac315f5b88d4c5a66c7c72044d58d5cd2ce3725d12bccc0e28428e6664df3fce",
+      "bytes": 24003
     },
     {
       "path": "styles.css",
@@ -419,8 +429,8 @@
     },
     {
       "path": "v40-design.css",
-      "sha256": "f81e1cf9fbed1bb950ea2184c96df0d7e65b82ccb6fdaf5a544cd87bb918942c",
-      "bytes": 33992
+      "sha256": "58d6dfb05822a0850f6defcb3737872161d29732b5f415b079ac376fce727f06",
+      "bytes": 34085
     },
     {
       "path": "vendor/v21_animation_catalog.js",
@@ -434,20 +444,17 @@
     },
     {
       "path": "web-demo-service.js",
-      "sha256": "e30b0ff2c98f25fe153cffd9a132e2dbda97f6508b1c2a0731ca3b2642840dfa",
-      "bytes": 2980
-    },
-    {
-      "path": "android/aluvision-android-test-41.0.3-16-4382140173e3.apk",
-      "sha256": "4382140173e373718eab19fc8faaf5b9c182d6763ba9514140b91105812f5aa9",
-      "bytes": 17009808
+      "sha256": "6cd73173e7752b20f955e69af2b8a9d9dcf7797751291b409c356954ac2d1fc5",
+      "bytes": 3012
     }
   ],
   "interfaceReviewScope": {
-    "sourceSnapshot": "interface-demo362",
-    "basedOnSourceSnapshot": "frozen361",
-    "sourceAssets": 60,
-    "sourceInventorySha256": "b1e1d17a6deffa20d71e52bbcead6bf8ebcfa35f95882e8ebd52e7b400cfc5d6",
+    "sourceSnapshot": "verified-Web397-setup398-private-copy",
+    "basedOnSourceSnapshot": "verified-Web397",
+    "setup398OverlayApplied": true,
+    "removalCheckingOverlayApplied": true,
+    "sourceAssets": 61,
+    "sourceInventorySha256": "bd8f8b5bed7e976c88d37117d2700afe10c2b2af0f7a05b1f5bbe9011900e9bb",
     "phoneReleaseMetadataPreserved": true,
     "physicalReceiverAcceptance": false,
     "phoneInstallationPerformed": false,
@@ -464,94 +471,18 @@
       ],
       "testedFlows": [
         "onboarding",
-        "order",
         "color",
         "animations",
-        "scenes",
         "settings"
       ],
       "evidenceNames": [
-        "stand-mobile-review",
-        "order-after-drag-mobile",
-        "mixed-stand-animation-mobile",
-        "animation-search-fixed-mobile"
+        "ROOT-CUA398-desktop-review",
+        "chromium-390-light-finder-desktop-software.png",
+        "chromium-390-light-mixed-stand-desktop-software.png"
       ],
-      "evidenceScope": "Tested UI flows; post-fix search rechecked. First-round screenshots precede the final backup-copy-only change; not every screenshot is final-source byte-exact.",
+      "evidenceScope": "ROOT reviewed exact noQR source and generator diff, then fresh390x844 desktop-browser fake-only onboarding/reload/20found/addRGBW/stand/settings noQR and overflow. Earlier unchanged mixed RGBW/SPI controls, pixel/metre/direction, galleries/Pulse and light/dark reviewed. Additional labeled screenshots are isolated headless desktop software fixtures. No phone, credentials, wifi or hardware acceptance.",
       "physicalPhone": false,
       "hardware": false
     }
-  },
-  "previousAndroidTestApps": [
-    {
-      "path": "android/aluvision-android-test-41.0.2-14-84d1e566b90c.apk",
-      "size": 16845968,
-      "sha256": "84d1e566b90c46116445e16413525bce0082c1e25f480c1098017eaf6565b424",
-      "packageName": "com.aluvision.lighting.android.test",
-      "versionName": "41.0.2",
-      "versionCode": 14,
-      "minSdk": 26,
-      "mode": "receiver",
-      "signerCertificateSha256": "b598fc6fa30b423517d6ca68e3bb1191248a32723174d4703baaede9125936ac",
-      "sourceInventorySha256": "08662b8ee69bf594f1ba0c586b3b2a897937f2d2f3b2d9c187ccde2b67eccc57",
-      "buildReceiptSha256": "11e9ab7f80e818bf1e74bd3140da9966922a9d2adefd233aa9fcdc45cd4db876",
-      "signatureVerified": true,
-      "packageVerified": true,
-      "installedVerified": true,
-      "installationEnvironment": "isolated-headless-android-emulator-api36-arm64",
-      "installationEvidenceSha256": "ddc9c41630afa316d3828413cad3973288d226970805b1dae5ddfd21f64369c3",
-      "installationEvidenceDetailSha256": "c6e6a9510de095e0ca99d58dfee3b9eb1c0bdf0bbce19d2a24bd16063f6d2554",
-      "tools": {
-        "apksignerSha256": "b47549e373b895ce6ca620d0c7887e674d9615ffa837a86ac601dcfd04adb0f0",
-        "aapt2Sha256": "729a6a8deba828992c50cb448d4ef3947003ec5a0d1deead7534897c8fc3486f",
-        "apksignerReportSha256": "ef52f4edab240b3377219b15da499a8e0fc005cd88b04ec035ac56b66774f089",
-        "aapt2ReportSha256": "f6fcfb4fb21d03eaa77e9f319ff8367848947c0690f6ef262a987a835834d630"
-      },
-      "features": {
-        "pinLogin": false,
-        "standCode": true,
-        "shareQRAndLinkImplemented": true,
-        "migrationRequiresOriginalPairedApp": true,
-        "centralStandConfiguration": true,
-        "standSessionAnimations": true,
-        "standSessionIdentification": true,
-        "standSessionOutputs": true,
-        "standSessionOTA": true,
-        "receiverContextWriter": false,
-        "zoneEditing": true,
-        "ota": true,
-        "unpairing": false,
-        "postCodeReceiverPairing": false,
-        "backupFiles": false,
-        "macStaticGestureEnabled": false,
-        "firstClaimPIN": false
-      },
-      "validation": {
-        "scope": "Actual Release SDK, package/signature/asset verification, focused software tests and nine checks on this exact code14 APK in a fresh headless API36 arm64 emulator. Installed APK readback matched the signed APK SHA. Cold start and guest background/foreground return passed; WiFi off, airplane mode on, no guest routes and host outbound blocked except loopback. No physical Android or receiver acceptance; no reuse of test8 emulator results.",
-        "emulatorInstallVerified": true,
-        "emulatorColdStartVerified": true,
-        "emulatorBackgroundResumeVerified": true,
-        "emulatorChecks": 9,
-        "emulatorLogScope": "AndroidRuntime:E, chromium:E, cr_WebView:E only; no complete INFO-level JavaScript console capture. No fatal crash observed in these logs. Three Chromium cache-index / missing wasm-directory messages were observed; no all-runtime-errors-resolved claim.",
-        "emulatorScreenshot": {
-          "repositoryPath": "android/assets/android-code14-emulator-offline.png",
-          "sha256": "ed602d02b21a41e9192c2e9d0d5bcfab6100d03b2d4b9b9971b8d2c59627e0b9",
-          "size": 894469,
-          "width": 1080,
-          "height": 2400,
-          "environment": "offline-android-emulator-not-physical-device"
-        },
-        "inPlaceUpdateVerified": false,
-        "signerContinuityVerified": true,
-        "actualPackagedWebAssets": 63,
-        "sourceFreezeSha256": "3e94908fba0ba146109996026d740a25acc5b997fbf6bf76a04eae25ef58d613",
-        "cameraAndOSPermissionsPhysicallyVerified": false,
-        "wifiPhysicallyVerified": false,
-        "mobileLatencyVerified": false,
-        "physicalAndroidVerified": false,
-        "physicalReceiverVerified": false,
-        "simultaneousTwoClientControlVerified": false
-      }
-    }
-  ],
-  "androidDownloadRevision": "V41android36320261006"
+  }
 }

@@ -20,15 +20,22 @@
   const entityId=value=>typeof value==='string'&&bytes(value)>=1&&bytes(value)<=160&&!/[\u0000-\u001f\u007f]/.test(value);
   const revision=value=>Number.isSafeInteger(value)&&value>=0;
   const boot=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(value);
+  function newCode(value){
+    // New customer PINs are also WPA passphrases. Never trim, coerce to a
+    // number or lose leading zeroes. Existing WPA codes retain their separate
+    // 8–63 character sign-in policy below.
+    if(typeof value!=='string'||! /^[0-9]{8,12}$/.test(value))fail('STAND_NEW_CODE_INVALID');
+    return value;
+  }
   function suggestCode(random=globalThis.crypto){
     if(typeof random?.getRandomValues!=='function')fail('STAND_CODE_RANDOM_UNAVAILABLE');
-    const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const alphabet='0123456789';
     let result='';
     // Rejection sampling, not modulo-biased Math.random. This is a proposal
     // only: no store, receiver write or password switch occurs here.
     for(let attempt=0;result.length<12&&attempt<16;attempt++){
       const values=new Uint8Array(24);random.getRandomValues(values);
-      for(const value of values)if(value<248&&result.length<12)result+=alphabet[value%62];
+      for(const value of values)if(value<250&&result.length<12)result+=alphabet[value%10];
     }
     if(result.length!==12)fail('STAND_CODE_RANDOM_UNAVAILABLE');return result;
   }
@@ -43,11 +50,12 @@
     }else if(typeof value==='number'&&!Number.isFinite(value))fail('STAND_DATA_INVALID');
   }
   function connectionInput(value){
-    if(!plain(value)||Object.keys(value).some(key=>!['ssid','standCode','expectedStandId'].includes(key)))fail('STAND_CONNECTION_INVALID');
+    if(!plain(value)||Object.keys(value).some(key=>!['ssid','standCode','expectedStandId','joinWifi'].includes(key)))fail('STAND_CONNECTION_INVALID');
     // Neither SSID nor WPA passphrase is trimmed, case-folded or made numeric.
     if(typeof value.ssid!=='string'||bytes(value.ssid)<1||bytes(value.ssid)>32||/[\u0000-\u001f\u007f]/.test(value.ssid)||
        typeof value.standCode!=='string'||! /^[\x20-\x7e]{8,63}$/.test(value.standCode)||
-       value.expectedStandId!==undefined&&!id(value.expectedStandId))fail('STAND_CONNECTION_INVALID');
+       value.expectedStandId!==undefined&&!id(value.expectedStandId)||
+       value.joinWifi!==undefined&&typeof value.joinWifi!=='boolean')fail('STAND_CONNECTION_INVALID');
     return {...value};
   }
   function inspectionInput(value){
@@ -56,8 +64,19 @@
        value.expectedStandId!==undefined&&!id(value.expectedStandId))fail('STAND_CONNECTION_INVALID');
     return {...value};
   }
+  function resumeInput(value={}){
+    if(!plain(value)||Object.keys(value).some(key=>!['expectedStandId','joinWifi'].includes(key))||
+       value.expectedStandId!==undefined&&!id(value.expectedStandId)||
+       value.joinWifi!==undefined&&typeof value.joinWifi!=='boolean')fail('STAND_CONNECTION_INVALID');
+    return {...value};
+  }
+  function wifiInput(value={}){
+    if(!plain(value)||Object.keys(value).some(key=>key!=='expectedStandId')||
+       value.expectedStandId!==undefined&&!id(value.expectedStandId))fail('STAND_CONNECTION_INVALID');
+    return {...value};
+  }
   function inspectionResult(value,ssid){
-    if(!plain(value)||!['setup-required','migration-required','code-required'].includes(value.status)||
+    if(!plain(value)||!['setup-required','migration-required','code-required','wifi-ready'].includes(value.status)||
        value.initialized!==(value.status!=='setup-required')||typeof value.ssid!=='string'||bytes(value.ssid)<1||bytes(value.ssid)>32||/[\u0000-\u001f\u007f]/.test(value.ssid)||
        ssid!==undefined&&value.ssid!==ssid||
        Object.keys(value).some(key=>!['status','initialized','ssid'].includes(key)))fail('STAND_DATA_UNCONFIRMED');
@@ -74,7 +93,8 @@
   }
   function codeChangeInput(value){
     if(!plain(value)||Object.keys(value).sort().join(',')!=='currentCode,newCode,standId'||!id(value.standId)||
-       ![value.currentCode,value.newCode].every(code=>typeof code==='string'&&/^[\x20-\x7e]{8,63}$/.test(code)))fail('STAND_CONNECTION_INVALID');
+       typeof value.currentCode!=='string'||! /^[\x20-\x7e]{8,63}$/.test(value.currentCode))fail('STAND_CONNECTION_INVALID');
+    newCode(value.newCode);
     if(value.currentCode===value.newCode)fail('STAND_CODE_UNCHANGED');return {...value};
   }
   function stamp(value,expectedStandId){
@@ -92,6 +112,15 @@
     if(model.stands.length!==1||model.stands[0].id!==current.standId||model.receivers.length>64)fail('STAND_DATA_UNCONFIRMED');
     const libraries=Libraries.validate(value.libraries,current.standId);
     return {...current,...(ssid===undefined?{}:{ssid}),view:{revision:current.configRevision,draft:null,model:copy(model)},libraries};
+  }
+  function managementTransition(value,before,after,intent){
+    // Only the native proof-bearing membership route may cross an intentional
+    // MAIN authority rotation. A generic refresh or arbitrary new boot cannot.
+    return plain(value)&&Object.keys(value).sort().join(',')==='fromBootId,kind,receiverId,standId,toBootId,transactionId'&&
+      ['receiver-added','receiver-removed'].includes(value.kind)&&id(value.receiverId)&&id(value.transactionId)&&
+      value.standId===before.standId&&after.standId===before.standId&&(value.fromBootId===before.bootId||after.bootId===before.bootId)&&value.toBootId===after.bootId&&
+      value.toBootId!==value.fromBootId&&after.configRevision>=before.configRevision&&after.stateRevision>=before.stateRevision&&
+      (!intent||value.kind===intent.kind&&value.receiverId===intent.receiverId&&value.transactionId===intent.transactionId);
   }
   function entities(model,libraries,standId,{migration=false}={}){
     Model.assertValid(model);const source=model.stands.find(stand=>stand.id===standId);
@@ -143,17 +172,21 @@
       if(epoch!==generation||disposed)fail('STAND_CONNECTION_CANCELLED');current=next;head=stamp(next);resumeStandId=null;inspected=null;
       publish({status:'connected',phase:'connected',standId:next.standId,error:null,...stamp(next)});return copy(next);
     }
-    async function connect(input,{migration=false,resume=false}={}){
+    async function connect(input,{migration=false,resume=false,wifi=false}={}){
       if(disposed)fail('STAND_CONNECTION_CLOSED');if(connectJob)fail('STAND_CONNECTION_BUSY');
       const {payload:importData,...credentials}=input||{};
-      const payload=resume?{...(input?.expectedStandId?{expectedStandId:input.expectedStandId}:{})}:connectionInput(credentials);
+      const payload=wifi?wifiInput(input):resume?resumeInput(input):connectionInput(credentials);
       if(migration){
+        // Explicit OS joining belongs only to opening an existing shared
+        // stand. A password transition uses the native committed handoff.
+        if(payload.joinWifi!==undefined)fail('STAND_CONNECTION_INVALID');
+        newCode(payload.standCode);
         if(!plain(importData)||!Array.isArray(importData.operations)||importData.operations.length<1||importData.operations.length>MAX_ENTITIES)fail('STAND_MIGRATION_INVALID');
         publicData(importData);if(bytes(encodeOperations(importData.operations))>MAX_BYTES)fail('STAND_STORAGE_LIMIT');payload.payload=copy(importData);
       }else if(importData!==undefined)fail('STAND_CONNECTION_INVALID');
       const epoch=++generation;paused=false;stopTimer();current=null;head=null;inspected=null;if(!resume)resumeStandId=null;
       publish({status:'connecting',phase:'reach-main',error:null,standId:payload.expectedStandId||null});
-      const method=resume?'standResume':migration?'standMigrate':'standConnect';
+      const method=wifi?'standOpenWifi':resume?'standResume':migration?'standMigrate':'standConnect';
       const job=(async()=>{
         if(typeof services[method]!=='function')fail('STAND_CONNECTION_UNAVAILABLE');
         const result=await services[method](payload);
@@ -184,7 +217,7 @@
         }
         throw error;
       }
-      finally{payload.standCode='';if(connectJob===job)connectJob=null;arm();}
+      finally{if(!wifi&&!resume)payload.standCode='';if(connectJob===job)connectJob=null;arm();}
     }
     async function inspect(input){
       if(disposed)fail('STAND_CONNECTION_CLOSED');if(connectJob)fail('STAND_CONNECTION_BUSY');
@@ -284,7 +317,31 @@
         throw error;
       }).finally(()=>{pendingWrites--;publish({});arm();});
     }
-    function resume(){const expectedStandId=current?.standId||resumeStandId;return connect(expectedStandId?{expectedStandId}:undefined,{resume:true});}
+    function resume(options={}){
+      // User-initiated rejoining may request an OS prompt, but credentials and
+      // receiver identity remain pinned natively. Foreground wake calls this
+      // without options and must never implicitly prompt for a network join.
+      const checked=resumeInput(options),known=current?.standId||resumeStandId;
+      if(known&&checked.expectedStandId!==undefined&&checked.expectedStandId!==known)fail('STAND_IDENTITY_UNCONFIRMED');
+      const expectedStandId=known||checked.expectedStandId;
+      return connect({...checked,...(expectedStandId?{expectedStandId}:{})},{resume:true});
+    }
+    function openWifi(options={}){return connect(wifiInput(options),{wifi:true});}
+    function acceptMembership(value){
+      // This snapshot comes from the typed native membership service after
+      // both physical receipt and central storage. Serialize its installation
+      // with our own writes/reads; never rebuild it from the phone cache.
+      if(disposed||!current||paused||!visible())return Promise.reject(Object.assign(Error('Open je stand opnieuw.'),{code:'STAND_NOT_CONNECTED'}));
+      const data=copy(value),epoch=generation,standId=current.standId,bootId=current.bootId,read=refreshJob;
+      projection(data,standId,current.ssid);pendingWrites++;publish({});stopTimer();
+      const job=writeQueue.catch(()=>{}).then(async()=>{
+        if(read)await read.catch(()=>{});
+        const rotated=managementTransition(data.managementTransition,{...current,standId,bootId},data);
+        if(disposed||paused||epoch!==generation||!current||current.standId!==standId||current.bootId!==bootId||(data.bootId!==bootId||data.managementTransition!==undefined)&&!rotated)fail('STAND_CONNECTION_CANCELLED');
+        return accept(data,standId,epoch,captureProjectionFence());
+      });writeQueue=job;
+      return job.finally(()=>{pendingWrites--;publish({});arm();});
+    }
     function pause(){
       paused=true;++generation;stopTimer();
       // Retire the presentation as well as the old result epoch. Otherwise a
@@ -322,8 +379,8 @@
       if(typeof services.standDisconnect==='function')await services.standDisconnect({});
     }
     function dispose(){disposed=true;++generation;current=null;head=null;resumeStandId=null;inspected=null;stopTimer();}
-    return Object.freeze({connect,connectDetected:input=>connectDetected(input),inspect,changeCode,migrate:input=>connect(input,{migration:true}),migrateDetected:input=>connectDetected(input,{migration:true}),resume,refresh,mutate,pause,wake,disconnect,dispose,canResume:()=>!!resumeStandId,
+    return Object.freeze({connect,connectDetected:input=>connectDetected(input),inspect,changeCode,migrate:input=>connect(input,{migration:true}),migrateDetected:input=>connectDetected(input,{migration:true}),resume,openWifi,refresh,mutate,acceptMembership,pause,wake,disconnect,dispose,canResume:()=>!!resumeStandId,
       snapshot:()=>current?copy(current):null,state:()=>copy(state)});
   }
-  return Object.freeze({connectionInput,inspectionInput,inspectionResult,sessionStatus,codeChangeInput,suggestCode,projection,entities,changes,encodeOperations,create,readFence:result=>readFences.get(result),MAX_BYTES,MAX_ENTITIES,POLL_MS});
+  return Object.freeze({connectionInput,resumeInput,wifiInput,inspectionInput,inspectionResult,sessionStatus,codeChangeInput,newCode,suggestCode,projection,managementTransition,entities,changes,encodeOperations,create,readFence:result=>readFences.get(result),MAX_BYTES,MAX_ENTITIES,POLL_MS});
 });

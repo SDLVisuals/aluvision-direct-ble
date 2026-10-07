@@ -4,6 +4,14 @@
 .onboarding-manual-wifi ol{margin:12px 0 0;padding-left:19px;display:grid;gap:9px;font-size:12px;line-height:1.5;color:var(--muted)}.onboarding-manual-wifi li{padding-left:3px}.onboarding-manual-wifi b{color:var(--ink)}
 .onboarding-page>.onboarding-task-hint:has(+.onboarding-manual-wifi){display:none}
 .onboarding-manual-wifi>ol:first-child{margin-top:0}
+.onboarding-factory-access{display:flex;align-items:flex-start;gap:12px;padding:18px 0 2px;margin-top:16px;border-top:1px solid var(--line)}
+.onboarding-factory-icon{display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:14px;background:var(--soft);color:var(--red);font-size:30px;font-weight:700}
+.onboarding-factory-access>div{flex:1;min-width:0}.onboarding-factory-access small{font-size:11px;color:var(--muted)}
+.onboarding-factory-code{display:flex;align-items:center;gap:10px;margin:8px 0}
+.onboarding-factory-code input{min-width:0;width:100%;padding:0;background:none;border:0;color:var(--ink);font-size:clamp(24px,7vw,32px);font-weight:750;letter-spacing:.04em;box-shadow:none}
+.onboarding-factory-code .button{flex:none;min-height:44px;padding:10px 13px;font-size:12px;border-radius:14px}
+.onboarding-factory-access p{font-size:12px!important;margin:7px 0 0!important}.onboarding-factory-access [role=status]{display:block;font-size:11px;color:var(--muted);margin-top:5px}
+@media(max-width:350px){.onboarding-factory-access{gap:8px}.onboarding-factory-icon{width:32px;height:32px}.onboarding-factory-code{gap:6px}.onboarding-factory-code .button{padding:9px}}
 
 /* Calm product presentation, independent of connection/claim progress. */
 .onboarding-product{background:radial-gradient(ellipse at 44% 22%,#fff 0,#faf9f6 58%,#f0efea 100%);border-color:#e2e1db}
@@ -149,6 +157,24 @@ body:has(.onboarding-page) .onboarding-page{gap:10px}
 .stand-draft-zones svg{grid-row:span 2;color:var(--red)}
 .stand-draft-zones b{font-size:13px;overflow-wrap:anywhere}
 .stand-draft-zones small{font-size:10px;color:var(--muted);margin-top:4px}
+.stand-entry-choices{display:grid;gap:14px}
+#navigation[data-first-entry]{display:none}
+.stand-entry-choice{display:grid;grid-template-columns:52px minmax(0,1fr) 20px;align-items:center;gap:15px;min-height:124px;padding:20px;text-align:left;border:1px solid var(--line);border-radius:22px;background:var(--panel);color:var(--ink);font:inherit;cursor:pointer}
+.stand-entry-choice>.menu-icon{width:52px;height:52px;border-radius:16px;background:var(--soft);color:var(--red);display:grid;place-items:center}
+.stand-entry-choice>.menu-icon svg{width:26px;height:26px}
+.stand-entry-choice>span:nth-child(2){display:grid;gap:7px;min-width:0}
+.stand-entry-choice b{font-size:20px;line-height:1.2}
+.stand-entry-choice small{font-size:14px;line-height:1.5;color:var(--muted)}
+.stand-entry-choice>svg{width:20px;height:20px;color:var(--muted)}
+.stand-entry-choice:focus-visible{outline:3px solid var(--red);outline-offset:3px}
+.onboarding-entry .page-heading p,.stand-entry-note{color:var(--muted);font-size:14px;line-height:1.6}
+.stand-entry-note{margin:18px 4px 0;max-width:38em}
+.onboarding-stand-context{display:block;color:var(--muted);font-size:11px;margin-top:5px;max-width:210px;overflow-wrap:anywhere}
+.onboarding-receiver-context{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 0;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.onboarding-receiver-context b{font-weight:600}
+.onboarding-receiver-context span{padding:4px 7px;border-radius:7px;background:var(--soft);font-size:10px;font-weight:700}
+.onboarding-receiver-steps[data-step-count="2"]{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:350px){.stand-entry-choice{grid-template-columns:44px minmax(0,1fr) 16px;padding:16px;gap:12px}.stand-entry-choice>.menu-icon{width:44px;height:44px}.stand-entry-choice b{font-size:18px}.onboarding-stand-context{max-width:160px}}
 .onboarding-setup-header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 0 12px;border-bottom:1px solid var(--line)}
 .onboarding-setup-header>div{display:flex;align-items:center;gap:8px;min-width:0}
 .onboarding-setup-label{font-size:9px;font-weight:750;text-transform:uppercase;letter-spacing:.8px;color:var(--red);background:#c94e4612;border:1px solid #c94e4630;border-radius:7px;padding:5px 6px}

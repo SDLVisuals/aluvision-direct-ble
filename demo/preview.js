@@ -328,10 +328,16 @@ function softTrailCoverage(behind,trail,n,smooth){
       const band=x=>palette[Math.min(count-1,Math.floor(wrap(x)*count))];
       const gradient=(x,eased=false)=>{const scaled=wrap(x)*count,i=Math.floor(scaled),fraction=scaled-i;return mixAnimated(palette[i],palette[(i+1)%count],eased?ease(fraction):fraction);};
       const elapsed=Math.max(0,time-(Number(s.previewStartedAt)||0)),speed=clamp(s.speed,.5,100,35),rate=.002+(speed/100)**2*.8;
-      // Match firmware40's narrowly scoped slow moving-band correction.
       // The 20..40 fade preserves the accepted fast recipe; it is not an
-      // optical calibration. Crisp0, original100 and other families stay exact.
-      const slowCorrection=variant>=90||!['CHASE','MINIMAL'].includes(engine)||!smooth||smooth>=100||speed>=40?0:speed<=20?1:(()=>{const x=(speed-20)/20;return 1-x*x*x*(10+x*(-15+6*x));})();
+      // optical calibration.
+      // Slow moving bands share fractional handover, not a shared effect/tail.
+      // Crisp zero, exact100, fast recipes and specialised variants stay exact.
+      const slowCorrection=variant>=90||!['CHASE','MINIMAL','FLOW','WAVE','DUAL','MIRROR','COMET','SCANNER'].includes(engine)||!smooth||smooth>=100||speed>=40?0:speed<=20?1:(()=>{const x=(speed-20)/20;return 1-x*x*x*(10+x*(-15+6*x));})();
+      const slowMotion=(x,w)=>{if(slowCorrection>=1)return wrap(x);const p=motion(x,w);if(!slowCorrection)return p;let delta=wrap(x)-wrap(p);if(delta>.5)delta--;if(delta<-.5)delta++;return wrap(p+delta*slowCorrection);};
+      const slowBand=(d,w)=>{const prior=slowCorrection>=1?0:q16(softChaseCoverage(d,w,n,smooth));if(!slowCorrection)return prior;
+        const overlap=q16(w>=n?1:clamp(w*.5+.5-d*n,0,1)),soft=q16(softChaseCoverage(d,w,n,100)),continuous=q16(overlap+(soft-overlap)*curve);
+        return slowCorrection>=1?continuous:q16(prior+(continuous-prior)*slowCorrection);};
+      const slowTrail=(behind,length)=>{const prior=softTrailCoverage(behind,length,n,smooth);if(!slowCorrection)return prior;const continuous=softTrailCoverage(behind,length,n,100);return q16(prior+(continuous-prior)*slowCorrection);};
       const raw=wrap(elapsed*rate+(Number(s.phaseMs)||0)/1000),triangle=1-Math.abs(2*raw-1),eased=.5-.5*Math.cos(raw*tau);
       const bounce=s.bounce?triangle+(eased-triangle)*curve:raw,left=s.direction==='left',phase=left?1-bounce:bounce,temporal=phaseSteps(phase);
       const width=Math.max(1,Number(s.widthPixels)||3),objects=clamp(Math.round(s.objectCount||1),1,8),spacing=clamp(s.spacing,0,100,50)/100,spread=clamp(s.spread,0,100,50)/100,trail=clamp(s.trailLength,0,100,45);
@@ -397,16 +403,19 @@ function softTrailCoverage(behind,trail,n,smooth){
         const hash=(Math.imul(seed,1103515245)+Math.imul(tick,12345)+Math.imul(variant,7919))>>>0;
         foreground=band(seed/7);amount=hash%1000<Math.min(820,8+clamp(s.randomness,0,100,25)*2+objects*9)?1:0;
       }else if(engine==='SCANNER'){
-        let p=left?1-(s.bounce?bounce:raw):(s.bounce?bounce:raw);const core=clamp(Math.round(width),1,n),travel=Math.max(1,n-core),step=Math.round(p*travel)/travel;p=step+(p-step)*curve;
-        const coverage=position=>q16(softBoundedCoverage(u*n-.5,position,core,n,smooth));
+        const continuousPosition=left?1-(s.bounce?bounce:raw):(s.bounce?bounce:raw);const core=clamp(Math.round(width),1,n),travel=Math.max(1,n-core),step=Math.round(continuousPosition*travel)/travel;let p=step+(continuousPosition-step)*curve;
+        if(slowCorrection)p+=(continuousPosition-p)*slowCorrection;
+        const coverage=position=>{const prior=q16(softBoundedCoverage(u*n-.5,position,core,n,smooth));if(!slowCorrection)return prior;
+          const centre=clamp(position,0,1)*(n-core)+(core-1)*.5,overlap=q16(core>=n?1:clamp((core+1)*.5-Math.abs(Math.round(u*n-.5)-centre),0,1)),soft=q16(softBoundedCoverage(u*n-.5,position,core,n,100)),continuous=q16(overlap+(soft-overlap)*curve);
+          return slowCorrection>=1?continuous:q16(prior+(continuous-prior)*slowCorrection);};
         foreground=gradient(temporal);amount=coverage(p);if(s.mirror)amount=Math.max(amount,coverage(1-p));
-        if(trail){const tail=wrap(left?u-p:p-u),a=softTrailCoverage(tail*n,Math.max(1,width*(1+trail/12)),n,smooth);amount=Math.max(amount,Math.floor(a*65535*.72)/65535);}
+        if(trail){const tail=wrap(left?u-p:p-u),a=slowTrail(tail*n,Math.max(1,width*(1+trail/12)));amount=Math.max(amount,Math.floor(a*65535*.72)/65535);}
       }else if(engine==='DUAL'||engine==='MIRROR'){
         foreground=gradient(u+temporal);amount=0;const copies=Math.max(2,objects);
-        for(let k=0;k<copies;k++){const p=motion(phase+k*(.35+spread*.65)/copies,width);amount=Math.max(amount,q16(softChaseCoverage(distance(u,p),width,n,smooth)),q16(softChaseCoverage(distance(u,wrap(1-p)),width,n,smooth)));}
+        for(let k=0;k<copies;k++){const p=slowMotion(phase+k*(.35+spread*.65)/copies,width);amount=Math.max(amount,slowBand(distance(u,p),width),slowBand(distance(u,wrap(1-p)),width));}
       }else if(engine==='COMET'){
         foreground=gradient(temporal);amount=0;
-        for(let k=0;k<objects;k++){const p=motion(phase+(objects===1?0:k*span/objects),width),tail=wrap(left?u-p:p-u),a=softTrailCoverage(tail*n,Math.max(1,width*(1.4+trail*.09)),n,smooth);amount=Math.max(amount,q16(softChaseCoverage(distance(u,p),width,n,smooth)),Math.floor(a*65535*.88)/65535);}
+        for(let k=0;k<objects;k++){const p=slowMotion(phase+(objects===1?0:k*span/objects),width),tail=wrap(left?u-p:p-u),a=slowTrail(tail*n,Math.max(1,width*(1.4+trail*.09)));amount=Math.max(amount,slowBand(distance(u,p),width),Math.floor(a*65535*.88)/65535);}
       }else if(engine==='ALTERNATE'){
         const bandWidth=Math.max(1,Math.round(width)),gap=Math.max(1,Math.floor(Math.fround(bandWidth*Math.fround(.3+spacing*2.7)))),period=bandWidth+gap,p=motion(phase,width),centre=(bandWidth-1)*.5;
         const cyclicDistance=Math.max(period,Math.round(n/period)*period),continuous=phaseSteps(phase)*cyclicDistance,travel=smooth?phase*cyclicDistance:p*n+(continuous-p*n)*curve;
@@ -502,7 +511,13 @@ function softTrailCoverage(behind,trail,n,smooth){
     const preserved = type === 'RGBW'
       ? canonical.rgbwEffects.filter(effect => effect.engine !== 'STATIC').map(effect => entry(effect, type))
       : legacySpi.catalog().concat(canonical.spiEffects.map(effect => entry(effect, type)), whole.map(effect => entry(effect, type, true)));
-    return preserved.concat(extension.catalog(type),references.catalog(type));
+    return preserved.concat(extension.catalog(type),references.catalog(type)).map(effect => {
+      // New built-in choices start at the editor's requested width. This is a
+      // descriptor default only: saved light states are never rewritten, and
+      // recipes without an editable pixel width retain their original shape.
+      if (!effect.controls.includes('widthPixels')) return effect;
+      return { ...effect, state: { ...effect.state, widthPixels: model.DEFAULT_ANIMATION_WIDTH } };
+    });
   }
   const descriptors = new Map(['RGBW', 'SPI'].flatMap(type => catalog(type).map(effect =>
     [effect.state.v30Effect || [type, effect.state.engine, effect.state.variant, effect.state.previewFamily || ''].join(':'), effect])));
@@ -511,6 +526,11 @@ function softTrailCoverage(behind,trail,n,smooth){
     return descriptors.get(state.v30Effect || [receiver.type, state.engine, state.variant, state.previewFamily || ''].join(':'));
   }
   function categoryFor(receiver) { return descriptorFor(receiver)?.category; }
+  function defaultWidthPixels(receiver) {
+    const effect = descriptorFor(receiver);
+    return effect?.controls.includes('widthPixels') ? model.DEFAULT_ANIMATION_WIDTH
+      : effect?.state.widthPixels ?? 4;
+  }
   function selected(receiver, selection) {
     return !selection || selection.kind === 'all' ||
       (selection.kind === 'receiver' && selection.receiverId === receiver.id) ||
@@ -569,6 +589,9 @@ function softTrailCoverage(behind,trail,n,smooth){
     // The earlier non-tunnel engine treats zero as pause. The V30 UI instead
     // promises its slowest speed. Keep every other speed/formula unchanged.
     if (!isStatic) state.speed = clamp(state.speed, state.v30Effect ? 0 : 0.5, 100, 35);
+    // Resolve an absent old field for display/transport only; do not mutate
+    // stored presets or replace any explicit width selected by the customer.
+    if (!isStatic && state.widthPixels == null) state.widthPixels = defaultWidthPixels(receiver);
     return state;
   }
   // A speed edit changes the slope of the preview clock, not its position.
@@ -1154,6 +1177,16 @@ function softTrailCoverage(behind,trail,n,smooth){
     context.fillStyle = '#111514';
     rounded(context, 0, 0, width, height, 18); context.fill();
     if (!frame.rows.length) {
+      if (width < 220) {
+        context.save();
+        context.strokeStyle = '#68736c'; context.lineWidth = 1.5;
+        rounded(context, width / 2 - 10, height / 2 - 17, 20, 8, 2); context.stroke();
+        context.fillStyle = '#a8b0ab'; context.font = '11px system-ui';
+        context.textAlign = 'center'; context.textBaseline = 'middle';
+        context.fillText('Geen receivers', width / 2, height / 2 + 8, Math.max(1, width - 16));
+        context.restore();
+        return rawFrame;
+      }
       context.fillStyle = '#a8b0ab'; context.font = '13px system-ui';
       context.textAlign = 'center'; context.fillText('Nog geen receivers in deze zone', width / 2, height / 2);
       return rawFrame;
@@ -1278,6 +1311,6 @@ function softTrailCoverage(behind,trail,n,smooth){
     if (canvas.dataset) canvas.dataset.lineHitRegions = JSON.stringify(hitRegions);
     return rawFrame;
   }
-  return Object.freeze({ catalog, geometry, ledlineCount, sample, draw, rows, selected, normalizeState, retimeMotion, opticalWhite, tunnelProjection, wallProjection,
+  return Object.freeze({ catalog, geometry, ledlineCount, sample, draw, rows, selected, normalizeState, defaultWidthPixels, retimeMotion, opticalWhite, tunnelProjection, wallProjection,
     engineVersion: canonical.version, extensionVersion: extension.version, isLocalPreview: true });
 }));

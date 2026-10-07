@@ -50,9 +50,8 @@
   'use strict';
   const STAGES = Object.freeze(['stand','zones','receiver','placement','outputs','pixels','connection','pin','security','zone','review','done']);
   const PHASES = Object.freeze(['idle','configuring','claiming','reconnecting','verifying','resuming','identity-confirmed']);
-  // New SPI runs start at the product's 6.3 m setup cap: 26 px/m gives 163
-  // whole pixels (about 6.27 m). Existing measured lengths remain untouched.
-  const DEFAULT_SPI_PIXELS=163;
+  // Only a newly selected SPI receiver starts at20px. Resumed choices stay exact.
+  const DEFAULT_SPI_PIXELS=Model.DEFAULT_SPI_PIXELS;
   // A single generated build setting controls whether commissioning asks for
   // credentials. Node/unit tests without the generated script retain PIN mode.
   const pinRequired=()=> SecurityMode?.pinRequired !== false;

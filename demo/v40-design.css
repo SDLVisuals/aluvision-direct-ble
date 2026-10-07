@@ -179,6 +179,7 @@ html body .stand-draft-zones > div {
 }
 html body .receiver-product-caption { color: var(--muted); }
 html body .receiver-product-caption strong { color: var(--ink); }
+html body[data-theme="dark"] .receiver-product-caption { --ink: #24272f; --muted: #626875; }
 html body .receiver-overview-summary {
   display: flex;
   flex-wrap: wrap;

@@ -2,10 +2,11 @@
  * immediate; a relay or late reply never proves that LEDs emitted light. */
 (function (root, factory) {
   const model = typeof module === 'object' && module.exports ? require('./model.js') : root.LightningModel;
-  const api = factory(model);
+  const preview = typeof module === 'object' && module.exports ? require('./preview.js') : root.LightningPreview;
+  const api = factory(model,root,preview);
   if (typeof module === 'object' && module.exports) module.exports = api;
   root.LightningLiveControl = api;
-})(typeof globalThis === 'object' ? globalThis : this, function (model) {
+})(typeof globalThis === 'object' ? globalThis : this, function (model,root,preview) {
   'use strict';
   const SPI_ENGINES=['STATIC','GRADIENT','BREATHE','CHASE','COMET','SCANNER','SPARKLE','WAVE','SEQUENCE','ALL','MIRROR','ALTERNATE','CASCADE','DUAL','FLOW','WARM','MINIMAL'];
   const RGBW_ENGINES=[...SPI_ENGINES,'PULSE','STROBE','SMOOTH'];
@@ -62,7 +63,8 @@
     const scene={engine,variant,palette,background,
       speed:number(state.speed,30,0,100),smooth:number(state.smooth,100,0,100),
       backgroundBrightness:number(state.bgBrightness,0,0,100),backgroundOn:state.backgroundOn===true,
-      motionReverse:['left','reverse'].includes(state.direction),widthPixels:number(state.widthPixels,4,1,8192),
+      motionReverse:['left','reverse'].includes(state.direction),widthPixels:number(state.widthPixels,
+        engine==='STATIC'&&!extension?4:preview.defaultWidthPixels(receiver),1,8192),
       spacing:number(state.spacing,50,0,100),objectCount:number(state.objectCount,1,1,8),
       trailLength:number(state.trailLength,45,0,100),spread:number(state.spread,50,0,100),
       randomness:number(state.randomness,25,0,100),bounce:state.bounce===true,mirror:state.mirror===true,
@@ -240,7 +242,7 @@
     }
     return {model,inheritedIds,receiverIds:[...refreshIds]};
   }
-  function create({send,sendBatch,sendGesture,onState,waitBeforeSend,delay=0,setTimer=setTimeout,clearTimer=clearTimeout}) {
+  function create({send,sendBatch,sendGesture,onState,onRoute,waitBeforeSend,delay=0,setTimer=setTimeout,clearTimer=clearTimeout}) {
     if (typeof send !== 'function' || typeof onState !== 'function') throw Error('LIVE_QUEUE_INVALID');
     if (sendBatch!==undefined && typeof sendBatch!=='function') throw Error('LIVE_QUEUE_INVALID');
     if (sendGesture!==undefined && typeof sendGesture!=='function') throw Error('LIVE_QUEUE_INVALID');
@@ -249,6 +251,12 @@
     let active=null,draining=false,timer=null,version=0,epoch=0,idleLease=null;
     let gestureHeld=false,gestureEpoch=0,failedGesture=null;
     const emit=(id,kind,code='')=>{const value={kind,code};states.set(id,value);onState(id,value);};
+    const observeRoute=(reason,count)=>{try{
+      const flag=Object.getOwnPropertyDescriptor(root,'__lightningV41GestureDiagnostics');
+      if(flag?.value===true&&flag.writable===false&&flag.configurable===false&&typeof onRoute==='function'&&
+         ['QUEUE_NO_PROVIDER','QUEUE_INELIGIBLE','QUEUE_ELIGIBLE'].includes(reason)&&Number.isInteger(count)&&count>=1&&count<=30)
+        onRoute(Object.freeze({stage:'queue',reason,count}));
+    }catch(_){/* Observation must never alter delivery. */}};
     const signature=request=>JSON.stringify(request);
     function staticGestureShape(request){
       const scene=request?.scene;
@@ -289,20 +297,20 @@
         if(waiter.signal?.aborted)finishWaiter(waiter,idleError('LIVE_QUEUE_CANCELLED'));
         else if(waiter.epoch!==epoch)finishWaiter(waiter,idleError('LIVE_QUEUE_CLEARED'));
         else if(otherStand(waiter.standId))finishWaiter(waiter,idleError('LIVE_QUEUE_SCOPE_BUSY'));
-        else if(!idleLease&&!draining&&!active&&!queue.size)finishWaiter(waiter,null,waiter.acquire?lease(waiter.standId):undefined);
+        else if(!idleLease&&!draining&&!active&&!queue.size&&(!waiter.waitForGesture||!gestureHeld))finishWaiter(waiter,null,waiter.acquire?lease(waiter.standId):undefined);
       }
     }
-    function waitIdle({standId,timeoutMs=35000,signal}={},acquire=false){
+    function waitIdle({standId,timeoutMs=35000,signal,waitForGesture=false}={},acquire=false){
       if(standId!==undefined&&(typeof standId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(standId))||
-         acquire&&standId===undefined||!Number.isInteger(timeoutMs)||timeoutMs<1||timeoutMs>35000||
+         acquire&&standId===undefined||typeof waitForGesture!=='boolean'||!Number.isInteger(timeoutMs)||timeoutMs<1||timeoutMs>35000||
          signal!==undefined&&(!signal||typeof signal.aborted!=='boolean'||typeof signal.addEventListener!=='function'||typeof signal.removeEventListener!=='function'))return Promise.reject(idleError('LIVE_QUEUE_INVALID'));
       if(signal?.aborted)return Promise.reject(idleError('LIVE_QUEUE_CANCELLED'));
       if(active&&active.epoch!==epoch||idleLease&&idleLease.epoch!==epoch)return Promise.reject(idleError('LIVE_QUEUE_CLEARED'));
       if(otherStand(standId))return Promise.reject(idleError('LIVE_QUEUE_SCOPE_BUSY'));
-      if(!idleLease&&!draining&&!active&&!queue.size)return Promise.resolve(acquire?lease(standId):undefined);
+      if(!idleLease&&!draining&&!active&&!queue.size&&(!waitForGesture||!gestureHeld))return Promise.resolve(acquire?lease(standId):undefined);
       if(idleWaiters.size>=8)return Promise.reject(idleError('LIVE_QUEUE_BUSY'));
       return new Promise((resolve,reject)=>{
-        const waiter={standId,epoch,acquire,signal,resolve,reject,timer:null,abort:null};idleWaiters.add(waiter);
+        const waiter={standId,epoch,acquire,signal,waitForGesture,resolve,reject,timer:null,abort:null};idleWaiters.add(waiter);
         waiter.abort=()=>finishWaiter(waiter,idleError('LIVE_QUEUE_CANCELLED'));signal?.addEventListener('abort',waiter.abort,{once:true});
         waiter.timer=setTimer(()=>finishWaiter(waiter,idleError('LIVE_QUEUE_BUSY')),timeoutMs);
       });
@@ -434,13 +442,14 @@
       },()=>{held.streamClosed=true;held.operation.stopStaticGesture?.();});
     }
     function beginGesture(){gestureHeld=true;gestureEpoch++;failedGesture=null;}
-    function endGesture(){gestureHeld=false;if(active?.stream)considerStaticGestureUpdate(active);}
+    function endGesture(){gestureHeld=false;if(active?.stream)considerStaticGestureUpdate(active);settleIdle();}
     function cancelGesture(){
       gestureHeld=false;
       if(active?.stream){
         active.streamClosed=true;failedGesture=active.gesture;active.operation?.stopStaticGesture?.();
         for(const [id,item]of queue)if(item.gesture===active.gesture){queue.delete(id);emit(id,'failed','LIVE_CONTROL_CANCELLED');}
       }
+      settleIdle();
     }
     async function drain(){
       if(draining||idleLease)return;
@@ -473,7 +482,9 @@
           try{
             if(readinessError)throw Object.assign(Error(readinessError),{code:readinessError});
             const initial=[...items.values()].map(item=>item.request);
-            if(sendGesture&&streamEligible(initial)){
+            const eligible=sendGesture&&streamEligible(initial);
+            observeRoute(!sendGesture?'QUEUE_NO_PROVIDER':eligible?'QUEUE_ELIGIBLE':'QUEUE_INELIGIBLE',initial.length);
+            if(eligible){
               held.stream=true;active.operation=sendGesture(initial,{held:gestureHeld&&gestureEpoch===held.gesture});
               const reply=await active.operation;
               if(reply?.status==='static-gesture-unavailable-before-open'&&Object.keys(reply).length===1){held.stream=false;}

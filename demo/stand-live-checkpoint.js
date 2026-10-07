@@ -40,8 +40,8 @@
     }
     if(batch.length)result.push(batch);return result;
   }
-  function create({send,afterSaved=async()=>{},onState=()=>{},setTimer=setTimeout,clearTimer=clearTimeout,idFactory=()=>crypto.randomUUID(),idleMs=1200}={}){
-    if(typeof send!=='function')throw error('STAND_CONNECTION_UNAVAILABLE');
+  function create({send,afterSaved=async()=>{},waitBeforeFlush,onState=()=>{},setTimer=setTimeout,clearTimer=clearTimeout,idFactory=()=>crypto.randomUUID(),idleMs=1200}={}){
+    if(typeof send!=='function'||waitBeforeFlush!==undefined&&typeof waitBeforeFlush!=='function')throw error('STAND_CONNECTION_UNAVAILABLE');
     let baseline=new Map(),pending=new Map(),originals=new Map(),standId=null,timer=null,job=null,generation=0,disposed=false;
     let intentGeneration=0,confirmedFence=null,unconfirmed=null;
     let status={status:'idle',pending:0,busy:false,error:null};
@@ -75,8 +75,14 @@
     }
     function flush(){
       cancelTimer();if(job)return job;if(disposed||!pending.size)return Promise.resolve(null);
-      const epoch=generation,operations=[...pending.values()],submittedIntent=intentGeneration,baseFence=confirmedFence&&{...confirmedFence};pending.clear();originals.clear();
+      const epoch=generation;let operations,submittedIntent,baseFence,submitted=false;
       const task=(async()=>{
+        // The held picker must keep its mailbox. Waiting is passive: no idle
+        // lease, packet or frozen intermediate checkpoint owns the radio.
+        if(waitBeforeFlush)await waitBeforeFlush({standId,receiverIds:()=>[...new Set([...pending.values()].map(operation=>operation.id))]});
+        if(disposed||epoch!==generation)throw error('STAND_CONNECTION_CANCELLED');
+        operations=[...pending.values()];submittedIntent=intentGeneration;baseFence=confirmedFence&&{...confirmedFence};pending.clear();originals.clear();submitted=true;
+        if(!operations.length)return null;
         let receipt=null;
         for(const batch of batches(operations)){
           if(disposed||epoch!==generation)throw error('STAND_CONNECTION_CANCELLED');
@@ -87,10 +93,10 @@
         await afterSaved(receipt);
         if(disposed||epoch!==generation)throw error('STAND_CONNECTION_CANCELLED');return receipt;
       })();job=task;publish({status:'saving',error:null});
-      return task.then(receipt=>{if(epoch===generation&&!disposed){unconfirmed=null;publish({status:pending.size?'pending':'saved',error:null});}return receipt;},failure=>{
+      return task.then(receipt=>{if(epoch===generation&&!disposed){unconfirmed=null;publish({status:pending.size?'pending':operations.length?'saved':'idle',error:null});}return receipt;},failure=>{
         // A lost reply is reconciled by reading, never replayed with a new ID.
         if(epoch===generation&&!disposed){unconfirmed=baseFence?{...baseFence,standId,intentGeneration:submittedIntent,operations}:null;publish({status:'unconfirmed',error:failure?.code||'STAND_SAVE_UNCONFIRMED'});}throw failure;
-      }).finally(()=>{if(job===task)job=null;if(epoch===generation&&!disposed){publish({});arm();}});
+      }).finally(()=>{if(job===task)job=null;if(epoch===generation&&!disposed){publish({});if(submitted)arm();}});
     }
     function projectionModel(next,readIntentGeneration){
       if(!unconfirmed)return next.view.model;

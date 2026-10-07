@@ -11,7 +11,7 @@
   const StandAnimations=window.LightningStandAnimations;
   const runtime=window.LightningNativeRuntime;
   const SimpleStand=window.LightningStandConnection;
-  let standSharingController=null,standSharingMode=null,standSharingAvailable=false,standScanAvailable=false,standLinkAvailable=false,standShareSheetAvailable=false,standReceiverManagementAvailable=false,standLinkPending=false,standLinkJob=null;
+  let standSharingController=null,standSharingMode=null,standSharingAvailable=false,standWifiOpenAvailable=false,standScanAvailable=false,standLinkAvailable=false,standShareSheetAvailable=false,standReceiverManagementAvailable=false,standLinkPending=false,standLinkJob=null;
   const standReceiverActions=new Set(['receiver-add','layout-receiver-add','layout-new-receiver','assignment-add-receiver','receiver-remove','receiver-update-all','receiver-update','receiver-pixel-setup','receiver-port-enabled','visual-identify','port-identify']);
   let standReceiverCapabilities=Object.freeze({});
   let standReceiverNotice=window.LightningStandManagementCapabilities.notice(standReceiverCapabilities);
@@ -25,10 +25,13 @@
     return simpleStandMode&&!!(centralApplied||centralPending||standSession?.snapshot()||standSession?.canResume())&&window.LightningStandManagementCapabilities.blocked(action,standReceiverCapabilities);
   }
   let simpleStandMode=false,simpleStandSupported=false,standMigrationReady=false,standSession=null,centralApplied=null,centralPending=null;
-  let centralPendingReadFence=null;
+  let centralPendingReadFence=null,standConnectionIntent='open',standManualEntry=false,firstFactorySetup=false;
   let legacyStandLandingId=null,legacyStandReturn=null;
   let centralLiveCheckpoint=null,centralLiveState={status:'idle',pending:0,busy:false,error:null};
   let standConnectionState={status:'disconnected',error:null},standNetworkName='',standInspectedNetworkName='',standConnectionBusy=false,standNetworkProbeAttempted=false,standNetworkLastProbeAt=-Infinity;
+  // A local import-preparation failure is not receiver authentication state.
+  // Keep its fixed, non-secret explanation across automatic public probes.
+  let standMigrationPreflightError=null;
   let centralLibraryPending=null,centralLibraryTimer=null,centralLibraryWriting=false,centralLibraryStatusTicket=0;
   function pinRequired(){return window.AluvisionSecurityMode?.pinRequired!==false;}
   // An absent/failed native script must never turn the real app into a demo.
@@ -70,6 +73,84 @@
   // Merely browsing must work even when a privacy policy denies local storage.
   // The demo shares an origin with the public root but never shares storage.
   const appStorage=webDemoContext?webDemo.storage:(()=>{try{return window.localStorage;}catch(_){return null;}})();
+  const FIRST_ACCESS_KEY='aluvision.first-wifi-pin.v1';
+  const LOCAL_STAND_KEY='aluvision.local-stand-concept.v1';
+  const localStandBase=M.assertValid({schemaVersion:30,demo:false,stands:[],receivers:[],scenes:[],presets:[]});
+  let localStandConceptId=null;
+  function localStandConcept(){return !!localStandConceptId&&model.stands.length===1&&model.stands[0].id===localStandConceptId&&model.receivers.length===0;}
+  function canStartLocalStand(){return nativeLoaded&&!nativeLoadError&&!nativeLoading&&!model.stands.length&&!model.receivers.length&&!onboarding.summary()&&!firstAccessCheckpoint&&!centralApplied&&!centralPending&&!standSession?.snapshot()&&!standSession?.canResume();}
+  function allowPendingLocalConcept(){return nativeLoaded&&!nativeLoadError&&!nativeLoading&&!model.stands.length&&!model.receivers.length&&!firstAccessCheckpoint&&!centralApplied&&!centralPending&&!standConnectionBusy&&!standSession?.snapshot()&&!standSession?.canResume();}
+  function canContinuePendingLocalStand(){return allowPendingLocalConcept()&&onboarding.canContinueLocalConcept();}
+  function storeLocalStandConcept(next,standId=localStandConceptId){
+    M.assertValid(next);if(next.stands.length!==1||next.stands[0].id!==standId||next.receivers.length||next.scenes.length||next.presets.length)throw Error('LOCAL_CONCEPT_INVALID');
+    const text=JSON.stringify({schema:1,model:next});
+    if(!appStorage)throw Error('LOCAL_CONCEPT_STORAGE');appStorage.setItem(LOCAL_STAND_KEY,text);
+    if(appStorage.getItem(LOCAL_STAND_KEY)!==text)throw Error('LOCAL_CONCEPT_STORAGE');
+  }
+  function retireLocalStandConcept(){localStandConceptId=null;try{appStorage?.removeItem(LOCAL_STAND_KEY);}catch(_){};}
+  function restoreLocalStandConcept(){
+    try{const value=JSON.parse(appStorage?.getItem(LOCAL_STAND_KEY)||'null'),next=value?.model;
+      if(!value||Object.keys(value).sort().join(',')!=='model,schema'||value.schema!==1||!next||next.demo!==false||next.stands?.length!==1||next.receivers?.length!==0||next.scenes?.length!==0||next.presets?.length!==0)return false;
+      M.assertValid(next);localStandConceptId=next.stands[0].id;model=next;simpleStandMode=false;return true;
+    }catch(_){return false;}
+  }
+  function prepareLocalStandReceiver(activeZoneId){
+    if(!localStandConcept()||onboarding.summary())return;
+    let draft=window.LightningOnboardingDraft.create({model:localStandBase,transactionId:'onboarding-'+crypto.randomUUID()});
+    function step(event){const next=window.LightningOnboardingDraft.transition(draft,event);if(next.error)throw Error(next.error.code);draft=next.draft;}
+    step({type:'SET_STAND',id:stand().id,name:stand().name});step({type:'NEXT'});
+    for(const z of stand().zones)step({type:'ADD_ZONE',id:z.id,name:z.name});
+    step({type:stand().zones.length?'NEXT':'SKIP_ZONES'});
+    if(stand().zones.some(z=>z.id===activeZoneId))step({type:'SELECT_ACTIVE_ZONE',zoneId:activeZoneId});
+    onboarding.restore(draft);
+  }
+  let firstAccessCheckpoint=null;
+  function firstAccessMarker(next,receiverId){
+    const receiver=next.receivers.find(item=>item.id===receiverId);
+    if(next.stands.length!==1||!receiver||receiver.role!=='main'||receiver.lifecycle!=='added'||!receiver.onboardingTransactionId)throw Object.assign(Error(),{code:'FIRST_ACCESS_IDENTITY'});
+    return {schema:1,stage:'wifi-pin',standId:receiver.standId,receiverId:receiver.id,rid:receiver.rid,fingerprint:receiver.deviceFingerprint,transactionId:receiver.onboardingTransactionId};
+  }
+  function storeFirstAccessMarker(value){
+    const text=JSON.stringify(value);
+    try{if(!appStorage)throw Error();appStorage.setItem(FIRST_ACCESS_KEY,text);if(appStorage.getItem(FIRST_ACCESS_KEY)!==text)throw Error();}
+    catch(_){throw Object.assign(Error(),{code:'FIRST_ACCESS_STORAGE'});}
+    firstAccessCheckpoint=copy(value);
+  }
+  function readFirstAccessMarker(next){
+    try{
+      const text=appStorage?.getItem(FIRST_ACCESS_KEY);if(!text)return null;const value=JSON.parse(text),expected=firstAccessMarker(next,value?.receiverId);
+      if(Object.keys(value).sort().join(',')!==Object.keys(expected).sort().join(',')||JSON.stringify(Object.entries(value).sort())!==JSON.stringify(Object.entries(expected).sort()))return null;
+      return expected;
+    }catch(_){return null;}
+  }
+  async function firstStandAccess({kind,identity,model:published,standCode}){
+    if(kind==='prepare'){
+      // This graph came from exact native publication, not a factory guess.
+      // Holding it never sends lighting or grants authority from local cache.
+      model=M.assertValid(published);retireLocalStandConcept();simpleStandMode=true;firstFactorySetup=false;firstAccessCheckpoint=copy(identity);
+    }
+    if(!firstAccessCheckpoint||JSON.stringify(firstAccessCheckpoint)!==JSON.stringify(identity))throw Object.assign(Error(),{code:'FIRST_ACCESS_IDENTITY'});
+    storeFirstAccessMarker(identity);ensureStandSession();
+    await refreshStandCapabilities();
+    if(kind==='set-code'){
+      SimpleStand.newCode(standCode);
+      const inspection=await standSession.inspect({expectedStandId:identity.standId});
+      if(inspection.status!=='migration-required')throw Object.assign(Error(),{code:'STAND_MIGRATION_UNCONFIRMED'});
+      const request={expectedStandId:identity.standId,standCode,payload:{operations:SimpleStand.entities(model,installationLibraries.capture(identity.standId),identity.standId,{migration:true})}};
+      try{
+        const result=await standSession.migrateDetected(request);
+        if(result?.status!=='reconnect-required')throw Object.assign(Error(),{code:'STAND_MIGRATION_UNCONFIRMED'});
+        return {phase:'reconnect',ssid:result.ssid};
+      }finally{request.standCode='';standCode='';}
+    }
+    const inspection=await standSession.inspect({expectedStandId:identity.standId});
+    if(inspection.status==='migration-required')return {phase:'pin',ssid:inspection.ssid};
+    if(inspection.status!=='wifi-ready')throw Object.assign(Error(),{code:'STAND_WIFI_UNSUPPORTED'});
+    if(kind==='prepare')return {phase:'reconnect',ssid:inspection.ssid};
+    // The native pending code was durable before WPA switched. Only complete
+    // authenticated readback can finish setup; public inspection cannot.
+    return {...await standSession.resume({expectedStandId:identity.standId}),status:'connected'};
+  }
   const backupTransaction=Backup?.transaction(appStorage);
   let selectedBackup=null,backupNotice='',lightSaveTimer=null,lightIntentDirty=false;
   const receiverContextStates=new Map(),receiverContextReads=new Set(),receiverContextVersions=new Map(),receiverContextWrites=new Map(),receiverContextEventVersions=new Map();
@@ -106,11 +187,11 @@
   let inlineOrderDrag=null,orderRenderDeferred=false;
   let activeControlPointer=null,controlRenderDeferred=false;
   let activeStaticGesturePointer=null;
-  // Recognition belongs to a physical output, not to its current position.
+  // Recognition follows the ordered position, never the saved playback state.
   // This map is deliberately presentation-only; it never enters the model,
   // colour library, a scene or an animation preset.
   const orderColours=new Map();
-  let orderIdentification=null,orderIdentificationState=null;
+  let orderIdentification=null,orderIdentificationState=null,orderCleanupResumedSession=null;
   let orderRecognitionDirty=true;
   function beginOrderColours(){
     if(!zone()||!orderIdentification)return;
@@ -122,6 +203,7 @@
     arrangementDraft=null;orderColours.clear();inlineOrderDrag?.cancel();void orderIdentification?.close();
   }
   let receiverAssignment=null,nameDialog=null,zoneDeletion=null,managementBusy=false;
+  let managementConnectionReturn=null;
   let arrangementDraft=null,arrangementApplying=false,arrangementReapplyIds=[],setupReturnContext=null;
   let familySpatialSwitch=null;
   const openLineSetup=new Set(),openLineSettings=new Set();
@@ -146,12 +228,40 @@
   let pinProtectionGeneration=0,pinProtectionPendingCheckStandId=null,pinProtectionRefreshNeeded=null,pinProtectionWrite=null;
   let pinLoginAvailable=false,pinLoginChecking=false,pinLoginBusy=false,pinLoginError='',pinRecoveryAbort=null;
   const liveStates=new Map();
+  const staticRouteLabels=Object.freeze({queue:Object.freeze({QUEUE_NO_PROVIDER:'geen streamprovider',QUEUE_INELIGIBLE:'kleurprofiel niet geschikt',QUEUE_ELIGIBLE:'kleurprofiel geschikt'}),
+    facade:Object.freeze({STATIC_PROFILE:'verzoekprofiel niet geschikt',LEGACY_CAP_OFF:'legacy-capability uit',LEGACY_CONTEXT_SELECTED:'centrale verbinding geselecteerd',
+      CENTRAL_CAP_OFF:'centrale capability uit',CENTRAL_BINDING:'centrale binding niet geschikt',CENTRAL_RECHECK:'centrale binding gewijzigd',
+      RECHECK_CAP_OFF:'capability gewijzigd',RECHECK_CONTEXT:'verbindingscontext gewijzigd',NATIVE_ENTRY:'native stream aangeroepen',NATIVE_RETURNED_UNAVAILABLE:'native stream niet beschikbaar'})});
+  let staticRouteDiagnostic=null;
+  function staticRouteBenchEnabled(){const flag=Object.getOwnPropertyDescriptor(window,'__lightningV41GestureDiagnostics');return flag?.value===true&&flag.writable===false&&flag.configurable===false;}
+  function observeStaticRoute(value){try{
+    if(!staticRouteBenchEnabled()||!value||Object.getPrototypeOf(value)!==Object.prototype||Object.keys(value).sort().join(',')!=='count,reason,stage')return;
+    const {stage,reason,count}=value;
+    if(typeof stage!=='string'||typeof reason!=='string'||!Object.hasOwn(staticRouteLabels,stage)||!Object.hasOwn(staticRouteLabels[stage],reason)||
+       !Number.isInteger(count)||count<1||count>30)return;
+    staticRouteDiagnostic={stage,reason,count};syncStaticRouteStatus();
+  }catch(_){/* A failed bench observer must not affect lighting. */}}
+  function syncStaticRouteStatus(){try{
+    if(!staticRouteBenchEnabled())return;
+    document.querySelectorAll('[data-live-status]').forEach(node=>{
+      let output=node.nextElementSibling;
+      if(!output?.matches('[data-static-route-diagnostic]')){
+        output=document.createElement('output');output.dataset.staticRouteDiagnostic='';output.setAttribute('aria-live','off');
+        output.style.cssText='display:block;height:16px;min-height:16px;margin:0;font-size:11px;line-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+        node.after(output);
+      }
+      output.textContent=staticRouteDiagnostic?`Testroute: ${staticRouteLabels[staticRouteDiagnostic.stage][staticRouteDiagnostic.reason]} · ${staticRouteDiagnostic.count}`:'Testroute: wacht op bediening.';
+    });
+  }catch(_){/* Diagnostic rendering is never an ACK or queue gate. */}}
+  window.addEventListener('lightning:static-route',event=>observeStaticRoute(event.detail));
   const liveController=nativeContext&&runtime?.native===true&&typeof runtime.services?.applyLive==='function'
     ?window.LightningLiveControl?.create({send:request=>runtime.services.applyLive(request),
       sendBatch:typeof runtime.services.applyLiveBatch==='function'?requests=>runtime.services.applyLiveBatch({requests}):undefined,
       sendGesture:typeof runtime.services.applyStaticGesture==='function'?(requests,options)=>runtime.services.applyStaticGesture({requests,...options}):undefined,
       waitBeforeSend:typeof runtime.services.whenLiveReady==='function'?()=>runtime.services.whenLiveReady():undefined,
-      onState:(id,state)=>{liveStates.set(id,state);syncLiveStatus();syncArrangementControls();}}):null;
+      onRoute:observeStaticRoute,
+      onState:(id,state)=>{liveStates.set(id,state);syncLiveStatus();syncArrangementControls();
+        if(state.kind==='applied'&&centralLiveCheckpoint?.state().status==='unconfirmed'&&centralLiveCheckpoint.state().pending)void centralLiveCheckpoint.flush().catch(()=>{});}}):null;
   let colourOrderMode=false,colourLibraryNotice='',removedColour=null;
   let preferenceStore;try{preferenceStore=Preferences.createStore(appStorage);}catch(_){preferenceStore=Preferences.createStore(null);}
   let uiPreferences=preferenceStore.load();
@@ -170,14 +280,7 @@
     },
     sendStop:request=>{
       if(typeof runtime?.services?.stopLayoutIdentification!=='function')return Promise.resolve();
-      return runtime.services.stopLayoutIdentification(request).then(result=>{
-        // Reconcile only after this exact cleanup returned. Unknown cleanup
-        // or a newly active layout may not acquire a second radio writer.
-        if(nativeContext&&contextWriteBarrierInstalled&&!orderIdentificationState?.active&&typeof runtime.services.resumeInstallationContext==='function'){
-          try{Promise.resolve(runtime.services.resumeInstallationContext({standId:request.standId})).catch(()=>{});}catch(_){}
-        }
-        return result;
-      });
+      return runtime.services.stopLayoutIdentification(request);
     },
     sendBlink:request=>{
       if(previewContext||typeof runtime?.services?.blinkLayoutIdentification!=='function')return Promise.reject(Error('IDENTIFICATION_NOT_CONNECTED'));
@@ -185,6 +288,12 @@
     },
     onState:state=>{
       orderIdentificationState=state;orderColours.clear();
+      // Only the current exact-token STOP receipt may resume existing context
+      // work. Old, pending or unknown cleanup never opens another radio writer.
+      if(!state.active&&state.cleanup?.status==='confirmed'&&state.cleanup.session!==orderCleanupResumedSession&&nativeContext&&contextWriteBarrierInstalled&&typeof runtime?.services?.resumeInstallationContext==='function'){
+        orderCleanupResumedSession=state.cleanup.session;
+        try{Promise.resolve(runtime.services.resumeInstallationContext({standId:state.cleanup.standId})).catch(()=>{});}catch(_){}
+      }
       for(const line of state.lines)orderColours.set(line.id,{name:line.colorName,hex:C.hex(line.rgb),rgb:line.rgb});
       for(const [receiverId,blink] of identifying){
         if(blink.layoutSession&&(!state.active||blink.layoutSession!==state.session||(!previewContext&&!state.physicalConfirmed))){
@@ -212,7 +321,7 @@
     const status=main.querySelector('[data-order-recognition-status]');
     if(status){
       const unsupportedHint={nl:'Werk de receivers bij om herkenningskleuren te gebruiken.',en:'Update the receivers to use identification colours.',fr:'Mettez les receivers à jour pour utiliser les couleurs d’identification.',de:'Aktualisiere die Receiver, um Erkennungsfarben zu verwenden.'}[uiPreferences.preferences.language]||'Werk de receivers bij om herkenningskleuren te gebruiken.';
-      status.textContent=!orderIdentificationState?.active?'Herkenning gestopt':previewContext?'Voorbeeldkleuren · niet verbonden':orderIdentificationState.physicalConfirmed?'Ledlines tonen hun herkenningskleur':orderIdentificationState.status==='pending'?'Herkenningskleuren instellen…':orderIdentificationState.error==='IDENTIFY_UNSUPPORTED'?unsupportedHint:'Herkenningskleuren niet bevestigd';
+      status.textContent=!orderIdentificationState?.active?previewContext?'Voorbeeldherkenning gestopt':orderIdentificationState?.cleanup?.status==='pending'?'Herkenning afsluiten…':orderIdentificationState?.cleanup?.status==='unconfirmed'?'Stoppen is nog niet bevestigd.':orderIdentificationState?.cleanup?.status==='confirmed'&&orderIdentificationState.reason==='idle'?'Herkenning automatisch gestopt.':'Herkenning gestopt':previewContext?'Voorbeeldkleuren · niet verbonden':orderIdentificationState.physicalConfirmed?'Ledlines tonen hun herkenningskleur':orderIdentificationState.status==='pending'?'Herkenningskleuren instellen…':orderIdentificationState.status==='expired'?'Herkenningskleuren verlopen. Tik of sleep om opnieuw te herkennen.':orderIdentificationState.error==='IDENTIFY_UNSUPPORTED'?unsupportedHint:'Herkenningskleuren niet bevestigd';
       status.dataset.confirmed=String(orderIdentificationState?.physicalConfirmed===true);
     }
     orderRecognitionDirty=false;
@@ -449,8 +558,14 @@
     document.body.dataset.webDemo='true';
   }
   const receiverUpdates=window.LightningReceiverUpdateUI.create({services:runtime?.native===true?runtime.services||{}:{},translate:(key,params)=>t(key,params)});
-  const receiverRemoval=window.LightningReceiverRemovalUI.create({services:runtime?.native===true?runtime.services||{}:{},getModel:()=>model,
-    onRemoved:(nextModel,{status}={})=>{
+  const receiverRemoval=window.LightningReceiverRemovalUI.create({services:runtime?.native===true?runtime.services||{}:{},getModel:()=>model,standCodeAccess:()=>simpleStandMode,
+    onRemoved:async(nextModel,{status,central,centralClosed}={})=>{
+      if(simpleStandMode&&(central||centralClosed)){
+        if(central)await ensureStandSession().acceptMembership(central);
+        else{await standSession?.disconnect();centralApplied=null;centralPending=null;centralLiveCheckpoint?.reset();}
+        model=M.assertValid(nextModel);flushCentralProjection();
+        selections.clear();visualPorts.clear();visualPlugMotions.clear();identifying.clear();navigate(centralClosed?'stand-connect':'receivers');return;
+      }
       const next=keepLocalPreviewStates(nextModel),remaining=new Set(next.receivers.map(receiver=>receiver.id)),
         removedIds=model.receivers.filter(receiver=>!remaining.has(receiver.id)).map(receiver=>receiver.id);
       if(status==='removed'&&removedIds.length)applyJoinedZonePlayback(next,[],{confirmedRemovedIds:removedIds});
@@ -484,11 +599,24 @@
     if(['OTA_BUSY','OUTPUT_CONFIGURATION_BUSY','LIVE_CONTROL_BUSY','NATIVE_BUSY','MAIN_BUSY','REMOVAL_BUSY'].includes(error?.code))return 'Er loopt nog een receiveractie. Wacht tot die klaar is en bewaar dan opnieuw. Je keuzes blijven staan.';
     return 'Nog niet bevestigd door de receiver. Je keuzes blijven staan. Controleer de verbinding en probeer opnieuw.';
   }
-  const onboarding=window.LightningOnboardingUI.create({getModel:()=>model,
-    allowPinLogin:nativeContext,
+  const onboarding=window.LightningOnboardingUI.create({getModel:()=>localStandConcept()?localStandBase:model,
+    allowLocalConcept:allowPendingLocalConcept,
+    onPreserveLocalConcept:next=>storeLocalStandConcept(next,next.stands[0].id),
+    allowPinLogin:false,
+    automaticFirstReceiver:()=>firstFactorySetup,
+    firstStandAccessRequired:()=>nativeContext,
+    onFirstStandAccess:firstStandAccess,
     services:webDemo||(runtime?.native===true?runtime.services||{}:{}),
     onManage:request=>manageSetupZones(request),
-    onComplete:(nextModel,{receiverId}={})=>{applyJoinedZonePlayback(nextModel,receiverId?[receiverId]:[]);},
+    onComplete:async(nextModel,{receiverId,central}={})=>{
+      if(simpleStandMode&&central)await ensureStandSession().acceptMembership(central);
+      if(firstAccessCheckpoint&&central){
+        const expected=firstAccessCheckpoint,receiver=nextModel.receivers.find(item=>item.id===expected.receiverId);
+        if(central.standId!==expected.standId||receiver?.rid!==expected.rid||receiver?.deviceFingerprint!==expected.fingerprint)throw Object.assign(Error(),{code:'FIRST_ACCESS_IDENTITY'});
+        model=M.assertValid(nextModel);appStorage?.removeItem(FIRST_ACCESS_KEY);firstAccessCheckpoint=null;
+      }else applyJoinedZonePlayback(nextModel,receiverId?[receiverId]:[]);
+      flushCentralProjection();if(central)firstFactorySetup=false;
+    },
     onExit:result=>{
       const returnZone=stand()?.zones.find(z=>z.id===route.setupReturnZoneId);
       if(returnZone){
@@ -527,6 +655,7 @@
     settings:'M4 7h16M4 17h16M8 4v6M16 14v6',
     wifi:'M2 8a16 16 0 0 1 20 0M5 12a11 11 0 0 1 14 0M8 16a6 6 0 0 1 8 0M12 20h.01',
     lock:'M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5zM12 14v3',
+    qr:'M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3zM15 15h2v2h-2zM19 15h2v6h-6v-2M11 3v3M11 10v3H3M3 11v2M15 11h6M11 15v6',
     scenes:'M7 3h14v14H7zM3 7v14h14M11 7h6M11 11h6',
     check:'m5 12 4 4L19 6', sun:'M12 2v2M12 20v2M2 12h2M20 12h2M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
     moon:'M20.2 15.4A8.7 8.7 0 0 1 8.6 3.8a8.8 8.8 0 1 0 11.6 11.6Z',
@@ -535,6 +664,7 @@
     sparkle:'m12 3 1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6L12 3ZM19 16l.7 2.3 2.3.7-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z'
   };
   function icon(name) {
+    if(name==='share')return '<svg class="icon icon-share" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4m-6.8 7 6.8 4"/></svg>';
     if(name==='advanced-settings')return `<svg class="icon icon-gear" data-icon="advanced-settings" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19.61 9.53L21.85 10.26L21.85 13.74L19.61 14.47L19.13 15.63L20.19 17.74L17.74 20.19L15.63 19.13L14.47 19.61L13.74 21.85L10.26 21.85L9.53 19.61L8.37 19.13L6.26 20.19L3.81 17.74L4.87 15.63L4.39 14.47L2.15 13.74L2.15 10.26L4.39 9.53L4.87 8.37L3.81 6.26L6.26 3.81L8.37 4.87L9.53 4.39L10.26 2.15L13.74 2.15L14.47 4.39L15.63 4.87L17.74 3.81L20.19 6.26L19.13 8.37Z"/><circle cx="12" cy="12" r="3.2"/></svg>`;
     // Three diffuser profiles on one connection: lighting selected together,
     // not a menu, receiver or reorder symbol. The check follows aria-pressed.
@@ -787,10 +917,11 @@
   function renderStand() {
     if(!stand()){
       const pending=onboarding.summary(),step=!pending?.stand||pending.stage==='stand'?1:pending.stage==='zones'?2:3;
-      return `<div class="page onboarding-welcome"><header class="page-heading"><div><div class="eyebrow">${pending?.stand?'SETUP NIET AFGEROND':'WELKOM'}</div><h1>${esc(pending?.stand?.name||'Je stand instellen')}</h1></div></header><section class="stand-setup-overview" aria-label="Je stand instellen">${['Standnaam','Zones maken','Receivers toevoegen'].map((label,i)=>`<div class="stand-setup-row ${i+1===step?'active':''}"><i>${i+1<step?'✓':i+1}</i><span><small>STAP ${i+1}</small><b>${label}</b></span><small>${i+1<step?'Klaar':i+1===step?'Volgende':''}</small></div>`).join('')}</section>${pending?.zones.length?`<div class="stand-draft-zones">${pending.zones.map(z=>`<div>${icon('zones')}<b>${esc(z.name)}</b><small>Nog geen receiver toegevoegd</small></div>`).join('')}</div>`:''}<button class="button full onboarding-next-action" data-setup-resume data-action="receiver-add">${pending?.stand?'Setup verderzetten':'Mijn stand instellen'}</button></div>`;
+      if(!pending?.stand)return `<div class="page onboarding-welcome onboarding-entry"><header class="page-heading"><div><h1>Je stand</h1></div></header><section class="stand-entry-choices" aria-label="Beginnen met je stand"><button type="button" class="stand-entry-choice" data-action="stand-create-open" data-stand-entry="setup"><span class="menu-icon" aria-hidden="true">${icon('zones')}</span><span><b>Stand instellen</b><small>Voeg receivers toe.</small></span>${icon('chevron')}</button><button type="button" class="stand-entry-choice" data-action="stand-connect" data-stand-entry="open"><span class="menu-icon" aria-hidden="true">${icon('wifi')}</span><span><b>Stand openen</b><small>Via je standwifi.</small></span>${icon('chevron')}</button></section>${canStartLocalStand()?'<button type="button" class="text-button stand-skip-setup" data-action="stand-continue-local">Verder zonder setup</button><p class="stand-skip-note">Maak alvast je zones. Je verbindt later je eerste receiver.</p>':''}</div>`;
+      return `<div class="page onboarding-welcome"><header class="page-heading"><div><div class="eyebrow">${pending?.stand?'SETUP NIET AFGEROND':'WELKOM'}</div><h1>${esc(pending?.stand?.name||'Je stand instellen')}</h1></div></header><section class="stand-setup-overview" aria-label="Je stand instellen">${['Standnaam','Zones maken','Receivers toevoegen'].map((label,i)=>`<div class="stand-setup-row ${i+1===step?'active':''}"><i>${i+1<step?'✓':i+1}</i><span><small>STAP ${i+1}</small><b>${label}</b></span><small>${i+1<step?'Klaar':i+1===step?'Volgende':''}</small></div>`).join('')}</section>${pending?.zones.length?`<div class="stand-draft-zones">${pending.zones.map(z=>`<div>${icon('zones')}<b>${esc(z.name)}</b><small>Nog geen receiver toegevoegd</small></div>`).join('')}</div>`:''}<button class="button full onboarding-next-action" data-setup-resume data-action="receiver-add">${pending?.stand?'Setup verderzetten':'Mijn stand instellen'}</button>${canContinuePendingLocalStand()?'<button type="button" class="text-button stand-skip-setup" data-action="stand-continue-local">Verder zonder setup</button><p class="stand-skip-note">Je standnaam en zones blijven op dit toestel bewaard.</p>':''}</div>`;
     }
     const s = stand(), added = standReceivers();
-    return `<div class="page stand-page"><header class="page-heading overview-heading"><div><div class="eyebrow">JOUW STAND</div><h1>${esc(standLabel())}</h1></div><button class="icon-button circle" data-action="help" aria-label="Uitleg over stand en zones">${icon('info')}</button></header><div class="stand-summary overview-summary"><div>${icon('zones')}<span><b>${s.zones.length}</b><small>Zones</small></span></div><div>${icon('light')}<span><b>${physicalLineCount(added)}</b><small>Ledlines</small></span></div></div><section class="zone-section"><div class="section-heading"><h2>${esc(t('zones'))}</h2><button class="text-button" data-action="zone-new">＋ Nieuwe zone</button></div><div class="zone-grid">${s.zones.map(z=>`<article class="zone-entry"><button class="zone-card" data-action="zone" data-id="${esc(z.id)}">${zonePreview(z,'',{label:`Voorbeeld van ${z.name}`})}<div class="zone-copy"><div class="zone-card-heading"><b>${esc(z.name)}</b><span class="zone-meta"><span class="zone-family-badge">${zoneTypeLabel(z)}</span>${z.type?` · <span class="zone-line-count">${ledlineCount(physicalLineCount(M.zoneReceivers(model,z.id)))}</span>`:''}</span></div><span class="open-label">${M.zoneReceivers(model,z.id).length?'Bedienen':'Instellen'} ${icon('chevron')}</span></div></button><button class="zone-options-button" data-action="zone-options" data-id="${esc(z.id)}" aria-label="Opties voor zone ${esc(z.name)}">•••</button></article>`).join('')}</div></section>${standScenesMarkup(false)}</div>`;
+    return `<div class="page stand-page"><header class="page-heading overview-heading"><div><div class="eyebrow">${localStandConcept()?'LOKAAL CONCEPT':'JOUW STAND'}</div><h1>${esc(standLabel())}</h1></div><button class="icon-button circle" data-action="help" aria-label="Uitleg over stand en zones">${icon('info')}</button></header>${localStandConcept()?'<p class="local-stand-notice" role="status">Alleen op dit toestel. Er is nog geen receiver verbonden. Bij je eerste receiver kies je de wifi-PIN.</p>':''}<div class="stand-summary overview-summary"><div>${icon('zones')}<span><b>${s.zones.length}</b><small>Zones</small></span></div><div>${icon('light')}<span><b>${physicalLineCount(added)}</b><small>Ledlines</small></span></div></div><section class="zone-section"><div class="section-heading"><h2>${esc(t('zones'))}</h2><button class="text-button" data-action="zone-new">＋ Nieuwe zone</button></div><div class="zone-grid">${s.zones.map(z=>`<article class="zone-entry"><button class="zone-card" data-action="zone" data-id="${esc(z.id)}">${zonePreview(z,'',{label:`Voorbeeld van ${z.name}`})}<div class="zone-copy"><div class="zone-card-heading"><b>${esc(z.name)}</b><span class="zone-meta"><span class="zone-family-badge">${zoneTypeLabel(z)}</span>${z.type?` · <span class="zone-line-count">${ledlineCount(physicalLineCount(M.zoneReceivers(model,z.id)))}</span>`:''}</span></div><span class="open-label">${M.zoneReceivers(model,z.id).length?'Bedienen':'Instellen'} ${icon('chevron')}</span></div></button><button class="zone-options-button" data-action="zone-options" data-id="${esc(z.id)}" aria-label="Opties voor zone ${esc(z.name)}">•••</button></article>`).join('')}</div></section>${standScenesMarkup(false)}</div>`;
   }
   function powerControl() {
     const states = powerTargets().map(r => r.state.on !== false && r.state.power !== false);
@@ -892,7 +1023,7 @@
     const channels=['r','g','b','w'].map((channel,i)=>{const value=i===3?white:rgb[i];return `<div class="channel-row" style="--channel:${['#c4473f','#258461','#3f69c7','#747670'][i]}"><button class="channel-toggle" data-action="channel-toggle" data-channel="${channel}" aria-label="Kanaal ${channel.toUpperCase()} ${value>0?'uitschakelen':'inschakelen'}" aria-pressed="${value>0}">${channel.toUpperCase()}</button><button data-action="channel-step" data-channel="${channel}" data-step="-1" aria-label="${channel.toUpperCase()} verminderen">−</button><input id="${prefix}-${channel}" type="range" min="0" max="255" value="${value}" data-channel="${channel}" aria-label="Kanaal ${channel.toUpperCase()} waarde"><button data-action="channel-step" data-channel="${channel}" data-step="1" aria-label="${channel.toUpperCase()} verhogen">+</button><input class="channel-number" type="number" inputmode="numeric" min="0" max="255" step="1" value="${value}" data-channel-number="${channel}" aria-label="Kanaal ${channel.toUpperCase()} exact instellen"></div>`;}).join('');
     const fineControls=`<div class="fine-controls${compact?' stand-fine-controls':''}" data-colour-fine><h3>Fijn instellen</h3><div class="fine-controls-body"><p class="channel-help">${esc(t('channelHelp'))}</p>${channels}</div></div>`;
     const warmth=slot===null?C.warmthOf(values):null;
-    const warmControls=slot===null?`<div class="warm-white-controls"><button type="button" class="warm-white-choice" data-action="warm-white" aria-pressed="${warmth!==null}"><span class="warm-white-swatch" aria-hidden="true"></span><span><b>Warmwit</b><small>RGB + W</small></span>${icon('sun')}</button><div class="slider-row warmth-row"><label for="${prefix}-warmth">Warmte <output data-warmth-value>${warmth===null?'Kies Warmwit':warmth+'%'}</output></label><input id="${prefix}-warmth" type="range" min="0" max="100" step="1" value="${warmth??50}" data-warmth aria-label="Warmte van de witmix" ${warmth===null?'disabled':''}><div class="warmth-scale"><span>Neutraler</span><span>Warmer</span></div><small class="warmth-help">${warmth===null?'Kies Warmwit om de warmte af te stemmen.':'De witmix verandert; helderheid stel je apart in.'}</small></div></div>`:'';
+    const warmControls=slot===null?`<div class="warm-white-controls"><button type="button" class="warm-white-choice" data-action="warm-white" aria-pressed="${warmth!==null}"><span class="warm-white-swatch" aria-hidden="true"></span><span><b>Warmwit</b><small>RGB + W</small></span>${icon('sun')}</button><div class="slider-row warmth-row"><label for="${prefix}-warmth">Warmte <output data-warmth-value>${warmth===null?'Kies Warmwit':warmth+'%'}</output></label><input id="${prefix}-warmth" type="range" min="0" max="100" step="1" value="${warmth??50}" data-warmth aria-label="Warmte van de witmix" ${warmth===null?'disabled':''}><div class="warmth-scale"><span>Neutraler</span><span>Warmer</span></div><small class="warmth-help">${warmth===null?'Kies Warmwit om in te stellen.':'Helderheid stel je apart in.'}</small></div></div>`:'';
     return `<section class="card colour-card shared-colour-picker" data-colour-picker="${brand?'brand':background?'background':slot===null?'static':'animation'}" data-slot="${brand?brandEditor.index:slot??''}">
       <div class="section-heading"><h2 ${slot===null?'id="bediening-colour-title" ':''}tabindex="-1">${background?'Achtergrondkleur':'Kleur kiezen'}</h2></div>
       <div class="colour-tools"><div class="wheel-wrap"><canvas class="wheel" id="colour-wheel" tabindex="0" role="img" aria-label="Kleurenwiel. Gebruik de pijltjestoetsen of de regelaars onder Fijn instellen voor exacte waarden." width="260" height="260"></canvas><span class="wheel-cursor"></span></div><div class="colour-values"><div class="colour-swatch" aria-label="Gekozen kleur"></div><p class="setting-hint">${esc(t('colourWheelHint'))}</p>${brand?`<small class="brand-picker-note">${esc(t(brandEditor.isNew?'brandPickerNewHint':'brandPickerHint'))}</small>`:slot===null?'':'<small>Je animatie blijft actief.</small>'}</div></div>
@@ -934,7 +1065,7 @@
     if (!effect) return '';
     const s = selectedState(), available = effect.controls;
     const specs = [
-      ['widthPixels','Breedte',1,60,s.widthPixels??8,' px',''],
+      ['widthPixels','Breedte',1,60,s.widthPixels??M.DEFAULT_ANIMATION_WIDTH,' px',''],
       ['objectCount','Aantal lichtpunten',1,8,s.objectCount??1,'',''],
       ['trailLength','Staart',0,100,s.trailLength??12,'%',''],
       ['spacing','Afstand',0,100,s.spacing??30,'%',''],
@@ -1327,16 +1458,21 @@
   function arrangementDirty(){return Boolean(arrangementDraft&&JSON.stringify([arrangementDraft.layout,arrangementDraft.lineOrder])!==arrangementDraft.initial);}
   function arrangementPlaybackPending(){return arrangementReapplyIds.some(id=>['pending','staged'].includes(liveStates.get(id)?.kind));}
   function arrangementInteractionBusy(){return arrangementApplying||managementBusy||arrangementPlaybackPending();}
+  function arrangementNeedsStandOpen(){
+    return simpleStandMode&&(!centralApplied||standConnectionState.status!=='connected'||!standSession?.snapshot());
+  }
   function syncArrangementControls(){
     if(!main)return;
-    const busy=arrangementInteractionBusy(),handles=[...main.querySelectorAll('[data-order-handle]')];
-    for(const handle of handles)handle.disabled=busy||handles.length<2;
+    const busy=arrangementInteractionBusy(),needsStandOpen=arrangementNeedsStandOpen(),handles=[...main.querySelectorAll('[data-order-handle]')];
+    for(const handle of handles)handle.disabled=busy||needsStandOpen||handles.length<2;
     main.querySelector('.ledline-arrangement')?.setAttribute('aria-busy',String(busy));
     const status=main.querySelector('[data-order-apply-status]');
     if(status){
       const pending=arrangementApplying||arrangementPlaybackPending(),error=arrangementDraft?.error||'';
-      status.hidden=!(pending||error);status.textContent=pending?'Volgorde toepassen op de verlichting…':error;
+      status.hidden=!(pending||error||needsStandOpen);status.textContent=pending?'Volgorde toepassen op de verlichting…':error||(needsStandOpen?'Open je stand om de volgorde te wijzigen.':'');
     }
+    const openStand=main.querySelector('[data-order-stand-open]');
+    if(openStand)openStand.hidden=busy||!(needsStandOpen||arrangementDraft?.needsStandOpen&&arrangementDraft.error);
   }
   // Preview receiver order while its atomic metadata update is in flight.
   // Only a confirmed update changes saved geometry or resends receiver state.
@@ -1347,16 +1483,17 @@
   function beginArrangement(){
     const z=zone();if(!z)return;
     const lineOrder=M.lineIds(model,z.id);
-    arrangementDraft={zoneId:z.id,layout:z.layout,lineOrder,signature:arrangementSignature(z),initial:JSON.stringify([z.layout,lineOrder]),error:''};
+    arrangementDraft={zoneId:z.id,layout:z.layout,lineOrder,signature:arrangementSignature(z),initial:JSON.stringify([z.layout,lineOrder]),error:'',needsStandOpen:false};
   }
   async function applyArrangement(){
     const draft=arrangementDraft;if(!draft||arrangementInteractionBusy()||(!arrangementDirty()&&!draft.error))return false;
+    if(arrangementNeedsStandOpen()){beginArrangement();syncArrangementControls();return false;}
     const zoneId=draft.zoneId;
     const browsing=arrangementBrowsing();
     if(zoneId!==route.zoneId||draft.signature!==arrangementSignature()){
       beginArrangement();arrangementDraft.error=t('lineSetupChanged');renderArrangement();return false;
     }
-    arrangementApplying=true;
+    arrangementApplying=true;draft.needsStandOpen=false;
     syncArrangementControls();
     let failure='',succeeded=false;
     try{
@@ -1391,7 +1528,7 @@
             failure='Volgorde bewaard. Niet alle receivers hebben het hervatten van de verlichting bevestigd. Controleer de verbinding.';
         }
         else if(nativeContext)failure='Volgorde bewaard. De hervatting is nog niet bevestigd; open de volgorde opnieuw en controleer de verbinding.';
-      }else failure=t('lineSetupSaveFailed');
+      }else failure=draft.error||t('lineSetupSaveFailed');
     }catch(error){failure=error.message||t('lineSetupSaveFailed');}
     finally{
       arrangementApplying=false;
@@ -1402,7 +1539,7 @@
       // Failed or uncertain requests show the last authoritative model, not
       // an unconfirmed selection. Tapping a choice again is a fresh retry.
       if(arrangementDraft===draft){
-        if(zone()&&route.zoneId===zoneId&&openLineSetup.has(zoneId)){beginArrangement();arrangementDraft.error=failure;}
+        if(zone()&&route.zoneId===zoneId&&openLineSetup.has(zoneId)){beginArrangement();arrangementDraft.error=failure;arrangementDraft.needsStandOpen=Boolean(failure&&draft.needsStandOpen);}
         else arrangementDraft=null;
       }
       renderArrangement(browsing);
@@ -1476,7 +1613,7 @@
   function ledlineSetupMarkup(){
     const z=zone(),open=openLineSetup.has(z.id);
     if(open&&(!arrangementDraft||arrangementDraft.zoneId!==z.id||(!arrangementApplying&&arrangementDraft.signature!==arrangementSignature(z))))beginArrangement();
-    const draft=open?arrangementDraft:null;
+    const draft=open?arrangementDraft:null,needsStandOpen=arrangementNeedsStandOpen();
     const count=physicalLineCount(),singleLine=count===1,title=t(singleLine?'lineSetupSingle':'lineSetupOrient'),hint=t(singleLine?'lineSetupSingleHint':'lineSetupOrientHint');
     const summary=t('lineSetup'+arrangementModeKey(z.layout,z))+' · '+t(count===1?'scopeCountOne':'scopeCountMany',{count});
     const lineCount=t(count===1?'scopeCountOne':'scopeCountMany',{count});
@@ -1492,7 +1629,7 @@
       return `<li data-draft-receiver="${esc(r.id)}" data-order-item="${esc(line.id)}" data-settings-open="${settingsOpen}">
         <span class="order-number" aria-label="Plaats ${index+1}" style="--identify-colour:${colour?.hex||'transparent'}">${index+1}</span>
         <span class="scope-copy"><span class="scope-option-title">${esc(name)}</span><small>${esc(r.name)} · ${line.port?`P${line.port} · ${line.pixels} px`:'RGBW'}<span data-order-colour-name>${colour?' · '+esc(colour.name):''}</span></small></span>
-        <button type="button" class="line-order-handle" data-order-handle aria-label="${esc(name)} · ${esc(r.name)}${line.port?' · P'+line.port:''} verslepen" title="Sleep naar de juiste plaats" aria-describedby="ledline-order-help" ${ordered.length<2||arrangementInteractionBusy()?'disabled':''}><span aria-hidden="true">⠿</span></button>
+        <button type="button" class="line-order-handle" data-order-handle aria-label="${esc(name)} · ${esc(r.name)}${line.port?' · P'+line.port:''} verslepen" title="Sleep naar de juiste plaats" aria-describedby="ledline-order-help" ${ordered.length<2||arrangementInteractionBusy()||needsStandOpen?'disabled':''}><span aria-hidden="true">⠿</span></button>
         ${line.port?`<div class="ledline-output-overview" data-output-count="1"><div class="ledline-output" data-line-id="${esc(line.id)}" data-port="${line.port}" data-line-number="${index+1}" data-pixels="${line.pixels}" style="--identify-colour:${colour?.hex||'transparent'}"><span class="ledline-output-strip" aria-hidden="true"><i></i></span><small class="ledline-output-side">${esc(t(line.reversed?'lineStartRight':'lineStartLeft'))}</small></div></div>`:''}
         <div class="ledline-order-tools"><div class="ledline-row-actions">
           <button class="receiver-blink order-blink-subtle" data-action="${line.port?'port-identify':'visual-identify'}" data-receiver="${esc(r.id)}" data-port="${line.port}" aria-pressed="${blinking}" aria-label="${esc(name)} · ${esc(t(blinking?'lineSetupBlinkStopAccessible':'lineSetupBlinkAccessible'))}">${icon('sun')}<span>${esc(t(blinking?'lineSetupBlinkStop':'lineSetupBlink'))}</span></button>
@@ -1503,7 +1640,7 @@
     }).join('');
     return `<section class="ledline-setup card" data-order-open="${open}" aria-label="${esc(t('lineSetupTitle'))}">${spatialPreviewChoice()}<button class="ledline-setup-toggle" data-action="layout" aria-label="${esc(toggleLabel)}" aria-expanded="${open}" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy">${open?`<span class="ledline-menu-label">${esc(t('lineSetupMenu'))}</span>`:''}<b>${esc(title)}</b><small id="ledline-setup-context">${esc(open?context:hint)}</small></span><span class="ledline-setup-disclosure-action">${open?`<span class="ledline-setup-close-label">${esc(t('close'))}</span>`:''}${icon('chevron')}</span></button><div class="ledline-setup-body" id="ledline-setup-body" role="region" ${open?'aria-labelledby="ledline-setup-heading" aria-describedby="ledline-setup-context"':'hidden'}>${open?`
       ${layoutReceiverActions()}
-      <section class="ledline-arrangement" aria-label="${esc(singleLine?title:t('lineSetupOrder'))}" aria-busy="${arrangementInteractionBusy()}"><div class="ledline-order-heading"><h3 id="ledline-setup-heading">${esc(singleLine?t('scopeCountOne'):t('lineSetupCurrentOrder'))}</h3><small class="ledline-family-label">${esc(family||'')}</small></div><p class="ledline-setup-hint" id="ledline-order-help">${esc(singleLine?hint:t('lineSetupOrderHint'))}</p><p class="order-recognition-status" data-order-recognition-status role="status"></p><p class="order-drop-status" role="status" aria-live="polite"></p><p data-order-apply-status role="status" ${arrangementApplying||arrangementPlaybackPending()||draft?.error?'':'hidden'}>${arrangementApplying||arrangementPlaybackPending()?'Volgorde toepassen op de verlichting…':esc(draft?.error||'')}</p>
+      <section class="ledline-arrangement" aria-label="${esc(singleLine?title:t('lineSetupOrder'))}" aria-busy="${arrangementInteractionBusy()}"><div class="ledline-order-heading"><h3 id="ledline-setup-heading">${esc(singleLine?t('scopeCountOne'):t('lineSetupCurrentOrder'))}</h3><small class="ledline-family-label">${esc(family||'')}</small></div><p class="ledline-setup-hint" id="ledline-order-help">${esc(singleLine?hint:t('lineSetupOrderHint'))}</p><p class="order-recognition-status" data-order-recognition-status role="status"></p><p class="order-drop-status" role="status" aria-live="polite"></p><p data-order-apply-status role="status" ${arrangementApplying||arrangementPlaybackPending()||draft?.error||needsStandOpen?'':'hidden'}>${arrangementApplying||arrangementPlaybackPending()?'Volgorde toepassen op de verlichting…':esc(draft?.error||(needsStandOpen?'Open je stand om de volgorde te wijzigen.':''))}</p><button type="button" class="button secondary full" data-order-stand-open data-action="management-stand-open" ${!arrangementInteractionBusy()&&(needsStandOpen||draft?.needsStandOpen&&draft.error)?'':'hidden'}>Stand openen</button>
       <ol class="ledline-draft-order">${rows}</ol>
       </section>${reusable?`<button class="ledline-reuse-action" data-action="zone-assign" data-id="${esc(z.id)}">${icon('receiver')}<span>${esc(t('lineSetupReuse'))}</span>${icon('chevron')}</button>`:''}`:''}</div></section>`;
   }
@@ -1515,18 +1652,21 @@
     const list=receivers();
     return `<p class="order-help">Laat een ledline knipperen om haar te herkennen. Sleep aan de stippen om de volgorde te wijzigen. Open een ledline voor de instellingen.</p><div class="receiver-list receiver-order combined-receiver-order" aria-label="Volgorde van ledlines">${list.map((r,i)=>receiverCard(r,i)).join('')}</div><p class="order-status" role="status" aria-live="polite"></p>`;
   }
+  function selectedVisualPort(receiver) {
+    return visualPorts.get(receiver.id)||receiver.outputs.find(output=>output.enabled)?.port||1;
+  }
   function productVisual(receiver,compact=false) {
-    return `<div class="receiver-product ${compact?'compact list-product':''}"><canvas data-product-receiver="${esc(receiver.id)}" data-compact="${compact}" width="400" height="240" role="img" aria-label="${receiver.type==='RGBW'?'RGBW: één uitgang met vier kleurkanalen':'SPI: schematische receiver met vier uitgangen'}"></canvas>${compact?'':`<p class="receiver-product-caption"><strong>${receiver.type==='RGBW'?'Eén RGBW-uitgang · vier kanalen':`Uitgang ${visualPorts.get(receiver.id)||1} geselecteerd`}</strong>${receiver.type==='RGBW'?'Rood, groen, blauw en wit sturen samen één ledline aan.':'Kies de uitgang die je wilt instellen.'}</p>`}</div>`;
+    return `<div class="receiver-product ${compact?'compact list-product':''}"><canvas data-product-receiver="${esc(receiver.id)}" data-compact="${compact}" width="400" height="240" role="img" aria-label="${receiver.type==='RGBW'?'RGBW: één uitgang met vier kleurkanalen':'SPI: schematische receiver met vier uitgangen'}"></canvas>${compact?'':`<p class="receiver-product-caption"><strong>${receiver.type==='RGBW'?'Eén RGBW-uitgang · vier kanalen':`Uitgang ${selectedVisualPort(receiver)} geselecteerd`}</strong>${receiver.type==='RGBW'?'Rood, groen, blauw en wit sturen samen één ledline aan.':'Kies de uitgang die je wilt instellen.'}</p>`}</div>`;
   }
   function receiverCard(r,orderIndex=null) {
     const z=M.getZone(model,r.zoneId),rid=esc(r.id);
     const wholeBlink=identifying.get(r.id)?.scope==='all';
     const ordered=route.screen==='layout'&&Number.isInteger(orderIndex);
-    return `<details class="receiver-overview-card" data-receiver-detail="${rid}" ${ordered?`data-order-receiver="${rid}"`:''} ${expandedReceivers.has(r.id)?'open':''}><summary>${ordered?`<button class="order-handle" aria-label="${esc(r.name)} verslepen" title="Sleep om te verplaatsen">⠿</button><span class="order-number">${orderIndex+1}</span>`:productVisual(r,true)}<div class="receiver-heading-copy"><b>${esc(r.name)}</b><small class="receiver-heading-meta"><span class="receiver-family-badge">${r.type}</span> · ${esc(z?.name||'Nog geen zone')}</small>${r.type==='SPI'?`<small class="receiver-geometry-summary">${ordered?'':`${r.outputs.filter(o=>o.enabled).length} ${r.outputs.filter(o=>o.enabled).length===1?'uitgang':'uitgangen'} · `}${r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)} pixels</small>`:ordered?'':'<small class="receiver-geometry-summary">Eén uitgang · R · G · B · W</small>'}</div><button type="button" class="receiver-blink ${ordered?'order-identify':''}" data-action="visual-identify" data-receiver="${rid}" aria-pressed="${wholeBlink}" aria-label="${esc(r.name)} · ${r.type==='SPI'?'alle actieve uitgangen samen':'hele receiver'} ${wholeBlink?'stoppen met knipperen':'laten knipperen'}">${icon('sun')}<span>${wholeBlink?'Stop':'Knipperen'}</span></button>${icon('chevron')}</summary><div class="receiver-details">${receiverDetailMarkup(r)}</div></details>`;
+    return `<details class="receiver-overview-card" data-receiver-detail="${rid}" ${ordered?`data-order-receiver="${rid}"`:''} ${expandedReceivers.has(r.id)?'open':''}><summary>${ordered?`<button class="order-handle" aria-label="${esc(r.name)} verslepen" title="Sleep om te verplaatsen">⠿</button><span class="order-number">${orderIndex+1}</span>`:productVisual(r,true)}<div class="receiver-heading-copy"><b>${esc(r.name)}</b><small class="receiver-heading-meta"><span class="receiver-family-badge">${r.type}</span> · ${esc(z?.name||'Nog geen zone')}</small>${r.type==='SPI'?`<small class="receiver-geometry-summary">${ordered?'':`${r.outputs.filter(o=>o.enabled).length} ${r.outputs.filter(o=>o.enabled).length===1?'uitgang':'uitgangen'} · `}${r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)} ${r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)===1?'pixel':'pixels'}</small>`:ordered?'':'<small class="receiver-geometry-summary">Eén uitgang · R · G · B · W</small>'}</div><button type="button" class="receiver-blink ${ordered?'order-identify':''}" data-action="visual-identify" data-receiver="${rid}" aria-pressed="${wholeBlink}" aria-label="${esc(r.name)} · ${r.type==='SPI'?'alle actieve uitgangen samen':'hele receiver'} ${wholeBlink?'stoppen met knipperen':'laten knipperen'}">${icon('sun')}<span>${wholeBlink?'Stop':'Knipperen'}</span></button>${icon('chevron')}</summary><div class="receiver-details">${receiverDetailMarkup(r)}</div></details>`;
   }
   function receiverDetailMarkup(r) {
-    const z=M.getZone(model,r.zoneId),rid=esc(r.id),port=visualPorts.get(r.id)||1;
-    return `${receiverAssignmentActions(r)}${r.type==='SPI'?`<details class="receiver-connections" data-receiver-connections="${rid}" ${expandedConnections.has(r.id)?'open':''}><summary><span><b>Aansluitingen</b><small>${r.outputs.filter(o=>o.enabled).length} van 4 uitgangen · ${r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)} pixels</small></span>${icon('chevron')}</summary><div class="receiver-connections-content">${productVisual(r)}<div class="receiver-ports-heading"><h3>Uitgangen</h3><small>Alle ingeschakelde uitgangen lichten op in het voorbeeld.</small></div><div class="receiver-port-list" aria-label="Uitgang bekijken">${r.outputs.map(o=>`<div class="receiver-port-row ${o.port===port?'port-focused':''}" data-port-row="${o.port}"><button type="button" class="receiver-port-select" data-action="visual-port" data-receiver="${rid}" data-id="${o.port}" aria-pressed="${o.port===port}"><b>P${o.port}</b><span>Uitgang ${o.port}</span></button><button type="button" class="switch receiver-port-switch" role="switch" data-action="receiver-port-enabled" data-receiver="${rid}" data-port="${o.port}" aria-checked="${o.enabled}" aria-label="Uitgang ${o.port} gebruiken" ${nativeContext&&typeof runtime?.services?.configureOutputs!=='function'?'disabled title="Verbind met je installatie-wifi om uitgangen te wijzigen"':''}><span>${o.enabled?'Aan':'Uit'}</span><i aria-hidden="true"></i></button><button type="button" class="receiver-blink" data-action="port-identify" data-receiver="${rid}" data-port="${o.port}" aria-pressed="${identifying.get(r.id)?.scope===String(o.port)}" aria-label="${esc(r.name)} uitgang ${o.port} laten knipperen" ${o.enabled?'':'disabled'}>${icon('sun')}<span>${identifying.get(r.id)?.scope===String(o.port)?'Stop':'Knipperen'}</span></button></div>`).join('')}</div><button class="button full pixel-setup-shortcut" data-action="receiver-pixel-setup" data-id="${rid}">${icon('sliders')}Pixels / aansluiting instellen ${icon('chevron')}</button><p class="port-preview-note">Stel per poort de pixels in en kies waar de stroom binnenkomt.</p></div></details>`:productVisual(r)}${z&&route.screen==='receivers'?`<button class="text-button" data-action="zone" data-id="${esc(z.id)}">Bedien ${esc(z.name)} →</button>`:''}<details class="receiver-manage-menu"><summary>Meer receiveropties ${icon('chevron')}</summary><div class="receiver-manage-content"><button class="text-button" data-action="receiver-rename" data-id="${rid}">Naam wijzigen</button></div></details>`;
+    const z=M.getZone(model,r.zoneId),rid=esc(r.id),port=selectedVisualPort(r);
+    return `${receiverAssignmentActions(r)}${r.type==='SPI'?`<details class="receiver-connections" data-receiver-connections="${rid}" ${expandedConnections.has(r.id)?'open':''}><summary><span><b>Aansluitingen</b><small>${r.outputs.filter(o=>o.enabled).length} van 4 uitgangen · ${r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)} ${r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)===1?'pixel':'pixels'}</small></span>${icon('chevron')}</summary><div class="receiver-connections-content">${productVisual(r)}<div class="receiver-ports-heading"><h3>Uitgangen</h3><small>Alle ingeschakelde uitgangen lichten op in het voorbeeld.</small></div><div class="receiver-port-list" aria-label="Uitgang bekijken">${r.outputs.map(o=>`<div class="receiver-port-row ${o.port===port?'port-focused':''}" data-port-row="${o.port}"><button type="button" class="receiver-port-select" data-action="visual-port" data-receiver="${rid}" data-id="${o.port}" aria-pressed="${o.port===port}"><b>P${o.port}</b><span>Uitgang ${o.port}</span></button><button type="button" class="switch receiver-port-switch" role="switch" data-action="receiver-port-enabled" data-receiver="${rid}" data-port="${o.port}" aria-checked="${o.enabled}" aria-label="Uitgang ${o.port} gebruiken" ${nativeContext&&typeof runtime?.services?.configureOutputs!=='function'?'disabled title="Verbind met je installatie-wifi om uitgangen te wijzigen"':''}><span>${o.enabled?'Aan':'Uit'}</span><i aria-hidden="true"></i></button><button type="button" class="receiver-blink" data-action="port-identify" data-receiver="${rid}" data-port="${o.port}" aria-pressed="${identifying.get(r.id)?.scope===String(o.port)}" aria-label="${esc(r.name)} uitgang ${o.port} laten knipperen" ${o.enabled?'':'disabled'}>${icon('sun')}<span>${identifying.get(r.id)?.scope===String(o.port)?'Stop':'Knipperen'}</span></button></div>`).join('')}</div><button class="button full pixel-setup-shortcut" data-action="receiver-pixel-setup" data-id="${rid}">${icon('sliders')}Pixels / aansluiting instellen ${icon('chevron')}</button><p class="port-preview-note">Stel per poort de pixels in en kies waar de stroom binnenkomt.</p></div></details>`:productVisual(r)}${z&&route.screen==='receivers'?`<button class="text-button" data-action="zone" data-id="${esc(z.id)}">Bedien ${esc(z.name)} →</button>`:''}<details class="receiver-manage-menu"><summary>Meer receiveropties ${icon('chevron')}</summary><div class="receiver-manage-content"><button class="text-button" data-action="receiver-rename" data-id="${rid}">Naam wijzigen</button></div></details>`;
   }
   function receiverAssignmentActions(r) {
     return `<div class="receiver-management"><button class="button secondary" data-action="receiver-move" data-id="${esc(r.id)}">${icon('zones')}Zone wijzigen</button><small>Je koppeling en aansluitingen blijven bewaard.</small></div>`;
@@ -1644,43 +1784,62 @@
   }
   function standConnectionMessage(){
     const state=standConnectionState;
+    if(route.screen==='stand-connect'&&standMigrationPreflightError)return standMigrationPreflightError==='STAND_STORAGE_LIMIT'?
+      'Je stand is te groot voor deze overdracht. Controleer je opgeslagen onderdelen en probeer opnieuw.':
+      'De standgegevens kunnen nog niet worden overgedragen. Controleer je inrichting en probeer opnieuw.';
+    if(['STAND_BUSY','STAND_CONNECTION_BUSY'].includes(state.error)){
+      if(state.status==='connecting')return state.phase==='load-stand'?'Actuele stand laden…':'Je stand veilig openen…';
+      if(state.status==='checking')return 'Je stand herkennen…';
+      if(state.status==='changing-code')return 'Nieuwe standcode veilig instellen…';
+      if(state.status==='offline')return 'Je vorige poging kon niet starten. Open je stand opnieuw.';
+    }
     const codeMessages={STAND_MIGRATION_NOT_READY:'De nieuwe toegang wordt nog afgewerkt. Je huidige stand, verlichting en toegang blijven behouden.',STAND_MIGRATION_CODE_UNCONFIRMED:'De nieuwe standcode is nog niet bevestigd. Verbind met de gekozen code en laad je stand opnieuw; stel niet nogmaals een code in.',STAND_CODE_UNCHANGED:'Kies een andere nieuwe standcode.',STAND_CODE_CHANGE_UNCONFIRMED:'De codewijziging is nog niet bevestigd. Verbind met de gekozen nieuwe code en laad je stand opnieuw; stel niet nogmaals een code in.',STAND_CONNECTION_BUSY:'Er loopt nog een actie. Wacht tot die klaar is en probeer opnieuw.'};
+    const storageMessages={STAND_UNCONFIRMED:'De actie is niet bevestigd. Controleer de verbinding en de actuele standstatus.',STAND_STORAGE:'De opslag is niet bevestigd. Controleer de actuele standstatus.',STAND_STORAGE_LIMIT:'Je stand is te groot voor deze overdracht. Controleer je opgeslagen onderdelen.',STAND_CREDENTIAL_UNCONFIRMED:'De standcode kon niet veilig op dit toestel worden bewaard. Controleer de actuele standstatus.'};
+    if(storageMessages[state.error])return storageMessages[state.error];
     if(state.error==='LOCAL_NETWORK_DENIED')return t('softwareErrorLocalNetwork');
+    if(['WIFI_JOIN_UNSUPPORTED','WIFI_JOIN_DENIED','WIFI_JOIN_TIMEOUT','WIFI_JOIN_UNAVAILABLE'].includes(state.error))return 'Kies het wifi van je stand in Instellingen en kom terug. Je stand blijft bewaard.';
     if(codeMessages[state.error])return codeMessages[state.error];
-    const messages={STAND_CREDENTIAL_MISSING:'Open je stand met de netwerknaam en standcode.',STAND_CODE_INVALID:'De standcode klopt niet. Controleer het wifiwachtwoord.',STAND_AUTH_FAILED:'De standcode is niet bevestigd. Controleer je huidige wifiwachtwoord.',STAND_MAIN_UNREACHABLE:'Hoofdreceiver niet bereikbaar. Controleer je wifi en probeer opnieuw.',STAND_UNAVAILABLE:'Hoofdreceiver niet bereikbaar. Controleer je wifi en probeer opnieuw.',STAND_WIFI_UNREACHABLE:'Verbind eerst met het wifi van je hoofdreceiver en probeer opnieuw.',STAND_WRONG_WIFI:'Je bent niet met het gekozen standnetwerk verbonden. Controleer Instellingen → Wifi.',STAND_IDENTITY_UNCONFIRMED:'Dit is niet de verwachte stand. Er zijn geen gegevens vervangen.',STAND_IDENTITY_MISMATCH:'Dit is niet de verwachte stand. Er zijn geen gegevens vervangen.',STAND_CONFIG_CONFLICT:'De inrichting is intussen gewijzigd. Haal de actuele stand op en probeer opnieuw.',STAND_REVISION_CONFLICT:'De inrichting is intussen gewijzigd. Haal de actuele stand op en probeer opnieuw.',STAND_CONNECTION_CANCELLED:'Verbinden is gestopt. Je eerdere stand blijft bewaard.',STAND_CANCELLED:'Verbinden is gestopt. Je eerdere stand blijft bewaard.',STAND_BUSY:'Er loopt nog een actie. Wacht tot die klaar is en probeer opnieuw.'};
+    const messages={STAND_CREDENTIAL_MISSING:'Open je stand met je standcode.',STAND_CODE_INVALID:'De standcode klopt niet. Controleer het wifiwachtwoord.',STAND_AUTH_FAILED:'De standcode is niet bevestigd. Controleer je huidige wifiwachtwoord.',STAND_MAIN_UNREACHABLE:'Je stand is niet bereikbaar. Controleer je wifi en probeer opnieuw.',STAND_UNAVAILABLE:'Je stand is niet bereikbaar. Controleer je wifi en probeer opnieuw.',STAND_WIFI_UNREACHABLE:'Verbind eerst met het wifi van je stand en probeer opnieuw.',STAND_WRONG_WIFI:'Je bent niet met het gekozen standnetwerk verbonden. Controleer Instellingen → Wifi.',STAND_IDENTITY_UNCONFIRMED:'Dit is niet de verwachte stand. Er zijn geen gegevens vervangen.',STAND_IDENTITY_MISMATCH:'Dit is niet de verwachte stand. Er zijn geen gegevens vervangen.',STAND_CONFIG_CONFLICT:'De inrichting is intussen gewijzigd. Haal de actuele stand op en probeer opnieuw.',STAND_REVISION_CONFLICT:'De inrichting is intussen gewijzigd. Haal de actuele stand op en probeer opnieuw.',STAND_CONNECTION_CANCELLED:'Verbinden is gestopt. Je eerdere stand blijft bewaard.',STAND_CANCELLED:'Verbinden is gestopt. Je eerdere stand blijft bewaard.',STAND_BUSY:'Er loopt nog een actie. Wacht tot die klaar is en probeer opnieuw.'};
     if(messages[state.error])return messages[state.error];
-    if(state.status==='connected')return state.pendingWrites||centralLiveState.busy||centralLiveState.pending?'Laatste keuze bewaren…':centralLiveState.status==='unconfirmed'?'Verbonden · opslag van de laatste lichtkeuze niet bevestigd':'Verbonden · actuele stand geladen';
-    if(state.status==='connecting')return state.phase==='load-stand'?'Actuele stand laden…':'Hoofdreceiver bereiken en standcode controleren…';
-    if(state.status==='checking')return 'Hoofdreceiver herkennen…';
+    if(state.status==='connected'){
+      if(centralLiveState.status==='unconfirmed'&&!centralLiveState.busy)return centralLiveState.error==='STAND_PHYSICAL_UNCONFIRMED'?'Verbonden · laatste lichtkeuze niet bevestigd op de receivers':'Verbonden · opslag van de laatste lichtkeuze niet bevestigd';
+      return state.pendingWrites||centralLiveState.busy||centralLiveState.pending?'Laatste keuze bewaren…':'Verbonden · actuele stand geladen';
+    }
+    if(state.status==='connecting')return state.phase==='load-stand'?'Actuele stand laden…':'Je stand veilig openen…';
+    if(state.status==='checking')return 'Je stand herkennen…';
     if(state.status==='changing-code')return 'Nieuwe standcode veilig instellen…';
-    if(state.status==='code-required')return 'Stand gevonden. Vul het wifiwachtwoord in om de actuele gegevens te laden.';
-    if(state.status==='migration-required')return 'Deze stand gebruikt nog de oude toegang. Je inrichting blijft bewaard.';
+    if(state.status==='code-required')return 'Deze receiver ondersteunt openen via verbonden wifi nog niet.';
+    if(state.status==='wifi-ready')return 'Stand gevonden. Open je actuele stand zonder extra appcode.';
+    if(state.status==='migration-required')return canMigrateCurrentStand()?'Kies je wifi-PIN. Je stand blijft behouden.':'Stel de wifi-PIN eerst in op het toestel waarmee je deze stand instelde. Kom daarna terug.';
     if(state.status==='reconnect-required')return 'Je stand is bewaard. Verbind in Instellingen → Wifi opnieuw met je stand en de gekozen standcode.';
-    if(state.status==='setup-required')return 'De hoofdreceiver heeft bevestigd dat er nog geen stand is ingesteld.';
-    return messages[state.error]||(state.error?'Verbinding niet bevestigd. Je eerdere gegevens blijven bewaard. Controleer je wifi en probeer opnieuw.':'Kies eerst het wifi van je hoofdreceiver.');
+    if(state.status==='setup-required')return 'Je kunt deze receiver gebruiken om je stand in te stellen.';
+    return messages[state.error]||(state.error?'Verbinding niet bevestigd. Je eerdere gegevens blijven bewaard. Controleer je wifi en probeer opnieuw.':'Kies eerst het wifi van je stand.');
   }
   function standConnectionCard(){
-    return `<section class="card" data-stand-connection><div class="section-heading"><h2>Verbinding met je stand</h2>${icon('lock')}</div><p data-stand-connection-status role="status">${esc(standConnectionMessage())}</p><div class="actions"><button class="button full" data-action="stand-connect">Stand openen</button>${standConnectionState.status==='connected'?`<button class="button secondary full" data-action="stand-share-open">${icon('share')} Stand delen · QR-code en link</button><button class="button secondary full" data-action="stand-code-change">Standcode wijzigen</button>`:''}${standSession?.snapshot()?`<button class="button secondary full" data-action="stand-refresh">Nu verversen</button>`:''}<button class="button secondary full" data-action="stand-join-open">Gedeelde stand openen</button></div><small>Eén standcode voor wifi en de app. Iedereen met die code heeft dezelfde toegang.</small></section>`;
+    return `<section class="card" data-stand-connection><div class="section-heading"><h2>Verbinding met je stand</h2>${icon('lock')}</div><p data-stand-connection-status role="status">${esc(standConnectionMessage())}</p><div class="actions"><button class="button full" data-action="stand-connect">Stand openen</button>${standConnectionState.status==='connected'?`<button class="button secondary full" data-action="stand-share-open">${icon('share')} Deel deze stand</button><button class="text-button" data-action="stand-code-change">Stand-PIN wijzigen</button>`:''}${standSession?.snapshot()?`<button class="text-button" data-action="stand-refresh">Nu verversen</button>`:''}</div><small>Je stand-PIN is ook je wifiwachtwoord.</small></section>`;
   }
   function ensureStandSharing(){
     if(standSharingController)return standSharingController;
     standSharingController=window.LightningStandSharing.create({services:runtime.services,
       capabilities:()=>({simpleStandShare:standSharingAvailable,simpleStandScan:standScanAvailable,simpleStandShareSheet:standShareSheetAvailable,standSessionReceiverManagement:standReceiverManagementAvailable}),
-      standConnection:ensureStandSession(),document,window,onManual:openCentralStandConnection,onConnected:result=>{
+      standConnection:ensureStandSession(),document,window,onManual:showStandCodeEntry,onConnected:result=>{
         simpleStandMode=true;route={...route,screen:'stand',standId:result.standId,zoneId:null};render({top:true});
       },onChange:state=>{if(!state.busy&&standLinkPending)queueMicrotask(consumeStandShareLink);}});
     return standSharingController;
   }
   function renderStandSharing(){
-    return `<div class="page stand-connect-page">${contextTitle(standSharingMode==='share'?'Stand delen':'Gedeelde stand openen','Dezelfde actuele stand op ieder toestel','Instellingen','settings')}<div data-stand-sharing-host></div>${!standReceiverManagementAvailable?`<p class="card" data-stand-receiver-management-notice role="status">${esc(standReceiverNotice)}</p>`:''}</div>`;
+    if(standSharingMode!=='share')return renderStandConnection();
+    return `<div class="page stand-connect-page">${contextTitle('Deel deze stand','','Je stand','stand')}<div data-stand-sharing-host></div></div>`;
   }
   async function refreshStandCapabilities(){
     const capabilities=await runtime.capabilities();
     simpleStandSupported=capabilities?.simpleStand===true;
     standMigrationReady=simpleStandSupported&&capabilities?.simpleStandMigrationReady===true;
     standSharingAvailable=simpleStandSupported&&capabilities?.simpleStandShare===true;
-    standScanAvailable=simpleStandSupported&&capabilities?.simpleStandScan===true;
-    standLinkAvailable=simpleStandSupported&&capabilities?.simpleStandLink===true;
+    standWifiOpenAvailable=simpleStandSupported&&capabilities?.standWifiOpen===true;
+    // The customer's only credential is the wifi PIN. Historical codecs are
+    // not a second opening route and cannot consume an unsolicited link.
+    standScanAvailable=false;standLinkAvailable=false;
     standShareSheetAvailable=simpleStandSupported&&capabilities?.simpleStandShareSheet===true;
     standReceiverManagementAvailable=simpleStandSupported&&capabilities?.standSessionReceiverManagement===true;
     standReceiverCapabilities=Object.freeze(simpleStandSupported?{
@@ -1692,12 +1851,47 @@
     standReceiverNotice=window.LightningStandManagementCapabilities.notice(standReceiverCapabilities);
     return capabilities;
   }
-  async function openCentralStandConnection(){
+  async function openCentralStandConnection({intent='open'}={}){
     if(standConnectionBusy)return;
+    standMigrationPreflightError=null;
     try{await refreshStandCapabilities();}catch(_){return toast('De verbinding is nog niet bevestigd. Probeer opnieuw.');}
-    if(!simpleStandSupported)return;
+    if(!simpleStandSupported)return toast('Stand openen is niet beschikbaar in deze appversie. Je bestaande stand blijft behouden.');
+    standConnectionIntent=intent;
+    standManualEntry=standConnectionState.status==='migration-required';
     legacyStandReturn=!simpleStandMode&&!standMigrationReady&&!centralApplied&&!centralPending&&legacyStandLandingId===stand()?.id?{standId:legacyStandLandingId}:null;
-    simpleStandMode=true;standNetworkProbeAttempted=false;ensureStandSession();route={...route,screen:'stand-connect'};render({top:true});
+    simpleStandMode=true;standNetworkProbeAttempted=false;ensureStandSession();
+    standSharingMode=null;
+    route={...route,screen:'stand-connect'};render({top:true});
+  }
+  function showStandCodeEntry(){
+    standManualEntry=true;render({preserveScroll:true});
+    main.querySelector('[data-stand-manual-open]')?.scrollIntoView({block:'start',behavior:'auto'});
+    main.querySelector('[data-stand-code]')?.focus({preventScroll:true});
+  }
+  async function openManagementStandConnection(){
+    if(managementBusy||standConnectionBusy)return;
+    const standId=stand()?.id;
+    managementConnectionReturn=standId&&receiverAssignment?{standId,assignment:copy(receiverAssignment)}:null;
+    closeEffectDialog();
+    await openCentralStandConnection();
+  }
+  function restoreManagementAssignment(standId){
+    const pending=managementConnectionReturn,current=standSession?.snapshot();
+    if(!pending||standConnectionState.status!=='connected'||current?.standId!==standId)return;
+    managementConnectionReturn=null;
+    if(pending.standId!==standId)return;
+    flushCentralProjection();
+    const assignment=pending.assignment;
+    if(assignment.mode==='many'){
+      const target=model.stands.find(s=>s.id===standId)?.zones.find(z=>z.id===assignment.zoneId);if(!target)return;
+      navigate('receivers',{standId,zoneId:null});receiverAssignment=assignment;renderZoneReceiverPicker();return;
+    }
+    const receiver=model.receivers.find(r=>r.id===assignment.receiverId&&r.standId===standId&&r.lifecycle==='added');
+    if(!receiver)return;
+    const target=assignment.zoneId?model.stands.find(s=>s.id===standId)?.zones.find(z=>z.id===assignment.zoneId):null;
+    const validTarget=!assignment.zoneId||target&&(!target.type||target.type===receiver.type);
+    navigate('receivers',{standId,zoneId:null});showReceiverAssignment(receiver.id,validTarget?assignment.zoneId:receiver.zoneId);
+    if(!validTarget)toast('Je eerdere zonekeuze is niet meer beschikbaar. Kies de zone opnieuw.');
   }
   function verifiedUnsetStand(){
     return simpleStandMode&&standConnectionState.status==='setup-required'&&!standConnectionState.error&&!standConnectionBusy&&
@@ -1713,29 +1907,51 @@
       // publication or expected identity change happens before confirmation.
       const checked=window.LightningStandSharing.parse(reply.text);
       if(document.hidden)return;
-      standSharingMode='join';const sharing=ensureStandSharing();sharing.open('join');sharing.parseLink(window.LightningStandSharing.format(checked));navigate('stand-sharing');
+      standConnectionIntent='open';standManualEntry=false;simpleStandMode=true;
+      standSharingMode='join';const sharing=ensureStandSharing();sharing.open('join');sharing.parseLink(window.LightningStandSharing.format(checked));navigate('stand-connect');
     }catch(_){if(!document.hidden)toast('De gedeelde stand is niet bevestigd. Vraag een nieuwe link of gebruik de standcode.');}
     finally{if(standLinkJob===job)standLinkJob=null;}});standLinkJob=job;await job;
     if(standLinkPending)queueMicrotask(consumeStandShareLink);
   }
   function renderStandCodeChange(){
     if(!standSession?.snapshot()||standConnectionState.status!=='connected'&&standConnectionState.status!=='changing-code')return renderStandConnection();
-    const field=(attribute,label)=>`<label class="dialog-field">${label}<input ${attribute} type="password" minlength="8" maxlength="63" autocomplete="off" spellcheck="false" autocapitalize="none" ${standConnectionBusy?'disabled':''}></label>`;
-    return `<div class="page stand-connect-page">${contextTitle('Standcode wijzigen','Je stand en receivers blijven behouden','Instellingen','settings')}<section class="card">${field('data-stand-current-code','Huidige standcode')}${field('data-stand-new-code','Nieuwe standcode')}${field('data-stand-new-code-confirm','Herhaal de nieuwe standcode')}<p>8–63 letters, cijfers of leestekens. Na wijzigen verbind je ieder toestel opnieuw met wifi. Oude QR-codes en links geven dan geen nieuwe toegang meer.</p><p data-stand-connection-status role="status" aria-live="polite">${esc(standConnectionMessage())}</p><button class="button full" data-action="stand-code-change-submit" ${standConnectionBusy?'disabled':''}>${standConnectionBusy?'Standcode instellen…':'Standcode wijzigen'}</button></section></div>`;
+    const field=(attribute,label,fresh=false)=>`<label class="dialog-field">${label}<input ${attribute} type="password" minlength="8" maxlength="${fresh?12:63}" ${fresh?'inputmode="numeric" pattern="[0-9]{8,12}"':''} autocomplete="off" spellcheck="false" autocapitalize="none" ${standConnectionBusy?'disabled':''}></label>`;
+    return `<div class="page stand-connect-page">${contextTitle('Stand-PIN wijzigen','Je stand blijft behouden','Instellingen','settings')}<section class="card">${field('data-stand-current-code','Huidige standcode')}${field('data-stand-new-code','Nieuwe stand-PIN · 8–12 cijfers',true)}${field('data-stand-new-code-confirm','Herhaal je nieuwe stand-PIN',true)}<p>Dit wordt ook je wifiwachtwoord. Verbind daarna ieder toestel opnieuw. Oude QR-codes en links werken dan niet meer.</p><p data-stand-connection-status role="status" aria-live="polite">${esc(standConnectionMessage())}</p><button class="button full" data-action="stand-code-change-submit" ${standConnectionBusy?'disabled':''}>${standConnectionBusy?'PIN instellen…':'Stand-PIN wijzigen'}</button></section></div>`;
+  }
+  function canMigrateCurrentStand(){
+    return !localStandConcept()&&standConnectionState.status==='migration-required'&&model.stands.length===1&&standMigrationReady;
   }
   function renderStandConnection(){
+    const settingUp=standConnectionIntent==='setup',fromWelcome=!stand();
     const migrated=standConnectionState.status==='migration-required',unset=standConnectionState.status==='setup-required',reconnect=standSession?.canResume(),connected=standConnectionState.status==='connected'&&standSession?.snapshot();
-    const canMigrate=migrated&&model.stands.length===1&&standMigrationReady,needsCode=standConnectionState.status==='code-required'||canMigrate;
-    const codeFields=needsCode?`<label class="dialog-field">${canMigrate?'Kies je nieuwe standcode':'Standcode · je wifiwachtwoord'}<input data-stand-code type="password" minlength="8" maxlength="63" autocomplete="off" spellcheck="false" autocapitalize="none" ${standConnectionBusy?'disabled':''}></label>${canMigrate?`<button class="button secondary full" data-action="stand-code-suggest" ${standConnectionBusy?'disabled':''}>Stel een standcode voor</button><label class="dialog-field">Herhaal je nieuwe standcode<input data-stand-code-confirm type="password" minlength="8" maxlength="63" autocomplete="off" spellcheck="false" autocapitalize="none" ${standConnectionBusy?'disabled':''}></label><p>Dit wordt je wifiwachtwoord. Je zones, receivers, kleuren en animaties blijven behouden. Gebruik 8–63 letters, cijfers of leestekens.</p>`:''}`:migrated&&!standMigrationReady?'<p data-stand-migration-pending role="status">De nieuwe toegang wordt nog afgewerkt. Je huidige stand, verlichting en toegang blijven behouden; stel nu nog geen nieuwe code in.</p>':'';
-    const submit=connected?'<button class="button full" data-action="stand-show-loaded">Ga naar je stand</button>':reconnect?`<button class="button full" data-action="stand-resume-submit" ${standConnectionBusy?'disabled':''}>${standConnectionBusy?'Opnieuw verbinden…':'Ik ben verbonden · stand laden'}</button>`:needsCode?`<button class="button full" data-action="${canMigrate?'stand-migrate-submit':'stand-connect-submit'}" ${standConnectionBusy?'disabled':''}>${standConnectionBusy?'Stand openen…':canMigrate?'Stand behouden en standcode instellen':'Stand openen'}</button>`:`<button class="button full" data-action="stand-find-submit" ${standConnectionBusy?'disabled':''}>${standConnectionBusy?'Hoofdreceiver zoeken…':standConnectionState.error?'Opnieuw zoeken':'Hoofdreceiver zoeken'}</button>`;
-    const originalSetupHint=migrated&&standMigrationReady&&model.stands.length!==1?'<p>Open deze stand één keer op het toestel waarop de huidige inrichting staat. Daar blijft alles behouden tijdens het instellen van de standcode.</p>':'';
-return `<div class="page stand-connect-page">${contextTitle('Stand openen','Dezelfde stand op iedere telefoon','Instellingen','settings')}<section class="card"><h2>1. Verbind met je stand</h2><p>Verbind in Instellingen → Wifi met de hoofdreceiver en kom terug. De app herkent je receiver; je hoeft geen netwerknaam in te typen.</p></section><section class="card"><h2>${reconnect?'2. Laad je bewaarde stand':'2. Open je stand'}</h2>${standNetworkName?`<p data-stand-detected-network>Wifi van je stand: <b>${esc(standNetworkName)}</b></p>`:''}${codeFields}<p data-stand-connection-status role="status" aria-live="polite">${esc(standConnectionMessage())}</p>${submit}${needsCode?`<button class="button secondary full" data-action="stand-find-submit" ${standConnectionBusy?'disabled':''}>Hoofdreceiver opnieuw herkennen</button>`:''}${originalSetupHint}${unset?`<p>Maak alleen een nieuwe stand op deze nog niet ingestelde hoofdreceiver. Een verbindingsfout is nooit een reden om je stand te wissen.</p>${verifiedUnsetStand()?'<button class="button full" data-action="stand-setup-start">Nieuwe stand instellen</button>':''}`:''}<button class="button secondary full" data-action="stand-join-open">QR-code scannen of deellink openen</button><details class="stand-manual-connection"><summary>Andere verbinding · handmatige hersteloptie</summary><label class="dialog-field">Netwerknaam<input data-stand-ssid maxlength="32" autocomplete="off" spellcheck="false" autocapitalize="none" value="${esc(standNetworkName)}" placeholder="ALUVISION-…" ${standConnectionBusy||reconnect?'disabled':''}></label><button class="button secondary full" data-action="stand-inspect-submit" ${standConnectionBusy||reconnect?'disabled':''}>Dit netwerk controleren</button></details></section><p class="muted">Zones, receivers, kleuren en animaties worden van de hoofdreceiver geladen. Geen aparte app-PIN.</p></div>`;
+    const canMigrate=canMigrateCurrentStand(),migrationElsewhere=migrated&&!canMigrate;
+    const codeFields=canMigrate?`<label class="dialog-field">Wifi-PIN · 8–12 cijfers<input data-stand-code type="password" minlength="8" maxlength="12" inputmode="numeric" pattern="[0-9]{8,12}" autocomplete="off" spellcheck="false" ${standConnectionBusy?'disabled':''}></label><label class="dialog-field">Herhaal je wifi-PIN<input data-stand-code-confirm type="password" inputmode="numeric" minlength="8" maxlength="12" pattern="[0-9]{8,12}" autocomplete="off" spellcheck="false" ${standConnectionBusy?'disabled':''}></label><button class="text-button" data-action="stand-code-suggest" ${standConnectionBusy?'disabled':''}>Stel een PIN voor</button><p>Je bestaande stand blijft behouden.</p>`:'';
+    const submit=migrationElsewhere?`<button class="button full" data-action="stand-find-submit" ${standConnectionBusy?'disabled':''}>${standConnectionBusy?'Wifi controleren…':'Opnieuw controleren'}</button>`:connected?'<button class="button full" data-action="stand-show-loaded">Ga naar je stand</button>':reconnect?`<button class="button full" data-action="stand-resume-submit" ${standConnectionBusy?'disabled':''}>${standConnectionBusy?'Stand openen…':'Stand openen'}</button>`:canMigrate?`<button class="button full" data-action="stand-migrate-submit" ${standConnectionBusy?'disabled':''}>${standConnectionBusy?'PIN bewaren…':'Stand behouden en PIN instellen'}</button>`:settingUp?`<button class="button full" data-action="stand-find-submit" ${standConnectionBusy?'disabled':''}>${standConnectionBusy?'Wifi controleren…':'Wifi controleren'}</button>`:`<button class="button full" data-action="stand-wifi-open" ${standConnectionBusy||!standWifiOpenAvailable?'disabled':''}>${standConnectionBusy?'Stand openen…':'Stand openen'}</button>`;
+    return `<div class="page stand-connect-page" data-stand-connection-intent="${settingUp?'setup':'open'}">${contextTitle(canMigrate?'Kies je wifi-PIN':migrationElsewhere?'Wifi-PIN afronden':settingUp?'Stand instellen':'Stand openen','','Welkom','stand')}${settingUp?'<ol class="stand-simple-steps" aria-label="Stand instellen in drie stappen"><li aria-current="step"><i>1</i><b>Wifi verbinden</b></li><li><i>2</i><b>PIN kiezen</b><small>8–12 cijfers</small></li><li><i>3</i><b>Klaar</b></li></ol>':''}<section class="card stand-code-entry" data-stand-manual-open>${canMigrate||migrationElsewhere?'':`<h2>${settingUp?'Verbind met wifi':'Open je stand'}</h2><p>${settingUp?'Zet je eerste receiver aan. Kies zijn ALUVISION-wifi in Instellingen en kom terug.':'Kies je standwifi in Instellingen → Wifi en kom terug.'}</p>`}${standNetworkName?`<p data-stand-detected-network>Wifi: <b>${esc(standNetworkName)}</b></p>`:''}${codeFields}<p data-stand-connection-status role="status" aria-live="polite">${esc(standConnectionMessage())}</p>${standConnectionState.status==='code-required'?'<p>Werk je receiver bij om je stand zonder extra appcode te openen. Er wordt niets opnieuw ingesteld.</p>':''}${!standWifiOpenAvailable&&!migrated&&!settingUp?'<p>Stand openen via verbonden wifi is nog niet beschikbaar in deze appversie.</p>':''}${unset&&verifiedUnsetStand()?'<button class="button full" data-action="stand-setup-start">Verder · stand instellen</button>':submit}${canMigrate?'<button class="text-button" data-action="stand-find-submit">Wifi opnieuw controleren</button>':''}</section></div>`;
+  }
+  async function openStandOnWifi(){
+    if(standConnectionBusy||!simpleStandMode||!standWifiOpenAvailable)return;
+    standMigrationPreflightError=null;standNetworkProbeAttempted=true;standNetworkLastProbeAt=performance.now();standConnectionBusy=true;render({preserveScroll:true});
+    let openedStandId=null;
+    try{
+      // A local concept ID is not a pinned MAIN identity.
+      const existing=!localStandConcept()&&model.stands.length===1?model.stands[0].id:undefined;
+      const inspection=await ensureStandSession().inspect(existing?{expectedStandId:existing}:{});
+      standNetworkName=inspection.ssid;standInspectedNetworkName=inspection.ssid;
+      if(inspection.status==='migration-required')standManualEntry=true;
+      if(inspection.status!=='wifi-ready')return;
+      const result=await standSession.openWifi(existing?{expectedStandId:existing}:{});
+      openedStandId=result.standId;route={...route,screen:'stand',standId:result.standId,zoneId:null};
+    }catch(error){standConnectionState={...standConnectionState,error:error?.code||'STAND_CONNECTION_FAILED'};}
+    finally{standConnectionBusy=false;render({preserveScroll:true});}
+    if(openedStandId)restoreManagementAssignment(openedStandId);
   }
   function syncStandConnectionStatus(){
     for(const node of document.querySelectorAll('[data-stand-connection-status]'))node.textContent=standConnectionMessage();
+    syncArrangementControls();
   }
   function centralEditing(){
-    return route.screen==='stand-sharing'||!!centralLibraryPending||centralLibraryWriting||centralLiveCheckpoint?.editing()||!!activeControlPointer||inlineOrderDrag?.isActive()||managementBusy||arrangementApplying||
+    return !!receiverSetupPreparation||route.screen==='stand-sharing'||route.screen==='receiver-add'&&!!onboarding.summary()||!!document.querySelector('.receiver-removal-sheet[open]')||!!centralLibraryPending||centralLibraryWriting||centralLiveCheckpoint?.editing()||!!activeControlPointer||inlineOrderDrag?.isActive()||managementBusy||arrangementApplying||
       !!document.querySelector('#effect-dialog[open] input:not([data-stand-code])');
   }
   function installCentralProjection(next,{redraw=true,readIntentGeneration,projectionCurrent}={}){
@@ -1748,6 +1964,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     installationLibraries.replaceFromCentral(next.libraries,next.standId);
     const preview=centralLiveCheckpoint?.projectionModel(next,readIntentGeneration) || next.view.model;
     centralApplied=copy(next);centralPending=null;centralPendingReadFence=null;model=M.assertValid(preview);
+    if(localStandConceptId)retireLocalStandConcept();
     centralLiveCheckpoint?.seed(model,next.standId,{bootId:next.bootId,stateRevision:next.stateRevision});
     retainSetupSelections();nativeLoaded=true;
     if(redraw)render({preserveScroll:true});
@@ -1766,6 +1983,10 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     standSession=SimpleStand.create({services:runtime.services,captureProjectionFence:()=>centralLiveCheckpoint?.intentGeneration(),onProjection:(next,fence)=>installCentralProjection(next,fence),onUnchangedProjection:reconcileCentralUnchanged,
       onState:state=>{standConnectionState=state;syncStandConnectionStatus();},visible:()=>!document.hidden});
     centralLiveCheckpoint=window.LightningStandLiveCheckpoint.create({
+      waitBeforeFlush:async({standId,receiverIds})=>{
+        await liveController?.whenIdle({standId,waitForGesture:true});
+        if(receiverIds().some(id=>liveController?.state(id).kind!=='applied'))throw Object.assign(Error('Laatste lichtkeuze nog niet bevestigd op de receivers.'),{code:'STAND_PHYSICAL_UNCONFIRMED'});
+      },
       send:request=>standSession.mutate(request),afterSaved:()=>standSession.refresh(),
       onState:state=>{centralLiveState=state;syncStandConnectionStatus();if(!state.busy&&!state.pending)flushCentralProjection();}
     });
@@ -1773,31 +1994,43 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
   }
   async function submitStandConnection({migration=false}={}){
     if(standConnectionBusy||!simpleStandMode)return;
+    standMigrationPreflightError=null;syncStandConnectionStatus();
     if(migration&&!standMigrationReady)return toast('De nieuwe toegang wordt nog afgewerkt. Je huidige stand blijft behouden.');
     if(centralLibraryPending||centralLibraryWriting||centralLiveCheckpoint?.editing())return toast('Je laatste wijziging wordt nog bewaard. Probeer daarna opnieuw.');
     const code=main.querySelector('[data-stand-code]');if(!code)return;
     if(standNetworkName!==standInspectedNetworkName)return toast('Controleer eerst deze hoofdreceiver opnieuw.');
     const confirmation=main.querySelector('[data-stand-code-confirm]');
     if(migration&&(!confirmation||confirmation.value!==code.value))return toast('De twee standcodes zijn niet hetzelfde.');
+    if(migration){try{SimpleStand.newCode(code.value);}catch(_){return toast('Kies een stand-PIN van 8–12 cijfers.');}}
     let standCode=code.value;code.value='';if(confirmation)confirmation.value='';
     let request={standCode};
-    if(migration){
-      const existing=model.stands[0];if(model.stands.length!==1||!existing)return;
-      request={...request,expectedStandId:existing.id,payload:{operations:SimpleStand.entities(model,installationLibraries.capture(existing.id),existing.id,{migration:true})}};
+    try{
+      if(migration){
+        const existing=model.stands[0];if(localStandConcept()||model.stands.length!==1||!existing)throw Object.assign(Error(),{code:'STAND_MIGRATION_INVALID'});
+        request={...request,expectedStandId:existing.id,payload:{operations:SimpleStand.entities(model,installationLibraries.capture(existing.id),existing.id,{migration:true})}};
+      }
+    }catch(error){
+      // No native request or authority reset has happened. Never display an
+      // arbitrary library/model exception, which could contain private data.
+      standMigrationPreflightError=['STAND_STORAGE_LIMIT','LIBRARY_LIMIT'].includes(error?.code)?'STAND_STORAGE_LIMIT':'STAND_MIGRATION_INVALID';
+      standCode='';request.standCode='';render({preserveScroll:true});return;
     }
     // An authentication/migration attempt is never allowed to turn a failure
     // into old access. The return witness is only for credential-free browsing.
     legacyStandLandingId=null;legacyStandReturn=null;
     centralLiveCheckpoint?.reset();standConnectionBusy=true;render({preserveScroll:true});
+    let openedStandId=null;
     try{
       const result=await (migration?ensureStandSession().migrateDetected(request):ensureStandSession().connectDetected(request));
-      if(result?.view){route={...route,screen:'stand',standId:result.standId,zoneId:null};toast('Je actuele stand is geopend.');}
+      if(result?.view){openedStandId=result.standId;route={...route,screen:'stand',standId:result.standId,zoneId:null};toast('Je actuele stand is geopend.');}
     }catch(error){
       standConnectionState={...standConnectionState,error:error?.code||'STAND_CONNECTION_FAILED'};
     }finally{standCode='';request.standCode='';standConnectionBusy=false;render({preserveScroll:true});}
+    if(openedStandId)restoreManagementAssignment(openedStandId);
   }
-  async function inspectCentralStand({automatic=false}={}){
+  async function inspectCentralStand({automatic=false,userInitiated=false}={}){
     if(standConnectionBusy||!simpleStandMode)return;
+    if(!automatic||userInitiated)standMigrationPreflightError=null;
     if(centralLibraryPending||centralLibraryWriting||centralLiveCheckpoint?.editing())return toast('Je laatste wijziging wordt nog bewaard. Probeer daarna opnieuw.');
     const network=main.querySelector('[data-stand-ssid]');if(!automatic&&!network)return;
     const request=automatic?{}:{ssid:network.value};
@@ -1810,15 +2043,17 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
   async function resumeCentralStand(){
     if(standConnectionBusy||!simpleStandMode||!standSession?.canResume())return;
     standConnectionBusy=true;render({preserveScroll:true});
-    try{const result=await standSession.resume();if(result?.view){route={...route,screen:'stand',standId:result.standId,zoneId:null};toast('Je bewaarde stand is geopend.');}}
+    let openedStandId=null;
+    try{const result=await standSession.resume();if(result?.view){openedStandId=result.standId;route={...route,screen:'stand',standId:result.standId,zoneId:null};toast('Je bewaarde stand is geopend.');}}
     catch(error){standConnectionState={...standConnectionState,error:error?.code||'STAND_CONNECTION_FAILED'};}
     finally{standConnectionBusy=false;render({preserveScroll:true});}
+    if(openedStandId)restoreManagementAssignment(openedStandId);
   }
   function wakeCentralStand(){
     if(!simpleStandMode||!standSession||standConnectionBusy)return;
     if(['connecting','checking','changing-code'].includes(standConnectionState.status))return;
     if(standSession.canResume())void resumeCentralStand();
-    else if(route.screen==='stand-connect'&&!standSession.snapshot()&&!document.hidden&&!main.querySelector('[data-stand-code]')?.value&&!main.querySelector('.stand-manual-connection[open]')&&performance.now()-standNetworkLastProbeAt>=7000)void inspectCentralStand({automatic:true});
+    else if(route.screen==='stand-connect'&&(standConnectionIntent==='setup'||standManualEntry)&&!standSession.snapshot()&&!document.hidden&&!main.querySelector('[data-stand-code]')?.value&&!main.querySelector('.stand-manual-connection[open]')&&performance.now()-standNetworkLastProbeAt>=7000)void inspectCentralStand({automatic:true});
     else void standSession.wake().catch(()=>{});
   }
   async function changeCentralStandCode(){
@@ -1827,6 +2062,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     const old=main.querySelector('[data-stand-current-code]'),next=main.querySelector('[data-stand-new-code]'),confirmation=main.querySelector('[data-stand-new-code-confirm]');
     if(!old||!next||!confirmation)return;
     if(next.value!==confirmation.value)return toast('De twee nieuwe standcodes zijn niet hetzelfde.');
+    try{SimpleStand.newCode(next.value);}catch(_){return toast('Kies een stand-PIN van 8–12 cijfers.');}
     const current=standSession.snapshot();
     standNetworkName=current.ssid;
     const request={standId:current.standId,currentCode:old.value,newCode:next.value};
@@ -1904,7 +2140,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     });
   }
   function renderPinLogin() {
-    if(simpleStandMode)return renderStandConnection();
+    if(simpleStandSupported)return renderStandConnection();
     if(pinLoginAvailable&&nativeContext)return `<div class="page pin-login-page">${contextTitle('Bestaande stand openen','Met je installatie-PIN','Instellingen','settings')}<section class="card"><h2>Verbind met je stand</h2><p>Kies eerst het <b>ALUVISION-wifi</b> van je stand in Instellingen → Wifi. Het wifi-wachtwoord is dezelfde PIN.</p><p>Je maakt geen nieuwe stand en reset geen receivers.</p><label class="dialog-field">Installatie-PIN<input data-recovery-pin type="password" inputmode="numeric" autocomplete="off" minlength="8" maxlength="12" pattern="[0-9]{8,12}" spellcheck="false" ${pinLoginBusy?'disabled':''}></label><p data-recovery-status role="status">${pinLoginBusy?'PIN controleren en je stand ophalen… Laat de receivers aan.':esc(pinLoginError)}</p><button class="button full" data-action="pin-login-submit" ${pinLoginBusy?'disabled':''}>${pinLoginBusy?'Stand ophalen…':'Stand openen'}</button>${pinLoginBusy?'<button class="button secondary full" data-action="pin-login-cancel">Ophalen stoppen</button>':''}</section><p>Je stand verschijnt pas nadat de receivers en de bewaarde instellingen veilig zijn gecontroleerd.</p></div>`;
     if(!pinRequired()&&!nativeContext)return renderSettings();
     // An older or unvalidated native host must never collect a recovery PIN.
@@ -1912,7 +2148,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     return `<div class="page pin-login-page">${contextTitle('Inloggen met PIN','Je bestaande installatie openen','Instellingen','settings')}<section class="card pin-login-status" aria-labelledby="pin-login-status-title"><span class="menu-icon" aria-hidden="true">${icon('lock')}</span><h2 id="pin-login-status-title" data-pin-login-status>Nog niet beschikbaar in deze versie</h2><p>Veilig inloggen en je bewaarde installatie terughalen worden nog aangesloten. Je kunt hier daarom nog geen PIN invoeren.</p><p>Je huidige stand en receivers blijven ongewijzigd.</p></section><section class="card pin-login-guide"><h2>Waarvoor is deze optie?</h2><p>Je bestaande stand weer openen op een ander toestel of nadat je de app opnieuw hebt geïnstalleerd. Je gebruikt dan je bestaande installatie-PIN; je maakt geen nieuwe PIN of nieuwe stand aan.</p><ol><li><b>Verbind met het wifi van je installatie</b><span>Kies het ALUVISION-netwerk via de wifi-instellingen van je telefoon.</span></li><li><b>Open je installatie met je PIN</b><span>Zodra deze functie beschikbaar is, wordt je PIN veilig gecontroleerd voordat je bewaarde installatie wordt teruggehaald.</span></li></ol></section><button class="button full" data-action="settings">Terug naar Instellingen</button></div>`;
   }
   async function openPinLogin(){
-    if(simpleStandMode)return navigate('stand-connect');
+    if(simpleStandSupported)return openCentralStandConnection();
     navigate('pin-login');if(!nativeContext||typeof runtime?.services?.recoverInstallation!=='function'||pinLoginChecking)return;
     pinLoginChecking=true;
     try{const caps=await runtime.capabilities();pinLoginAvailable=caps?.pinLogin===true&&caps?.installationRestore===true;}
@@ -1920,6 +2156,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     finally{pinLoginChecking=false;if(route.screen==='pin-login')render({top:true});}
   }
   async function submitPinLogin(){
+    if(simpleStandSupported)return;
     const input=main.querySelector('[data-recovery-pin]');if(!pinLoginAvailable||pinLoginBusy||!input)return;
     let pin=input.value;input.value='';
     if(!/^\d{8,12}$/.test(pin)){pinLoginError='Vul je bestaande PIN van 8–12 cijfers in.';render();return;}
@@ -1937,7 +2174,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     }finally{pin='';pinLoginBusy=false;pinRecoveryAbort=null;if(route.screen==='pin-login')render({top:true});}
   }
   function pinProtectionCard() {
-    if(webDemoContext)return `<section class="card" data-stand-connection><div class="section-heading"><h2>Verbinding met je stand</h2>${icon('lock')}</div><p>Deze demo gebruikt fictieve receivers en verbindt niet met wifi of echte verlichting.</p><p>In de app open je je stand met één standcode: het wifiwachtwoord van je hoofdreceiver. Geen aparte app-PIN.</p><small>Delen gaat via QR-code, link of netwerknaam en standcode. Iedereen met die gegevens heeft dezelfde toegang. De actuele stand wordt van de hoofdreceiver geladen.</small></section>`;
+    if(webDemoContext)return `<section class="card" data-stand-connection><div class="section-heading"><h2>Verbinding met je stand</h2>${icon('lock')}</div><p>Deze demo gebruikt fictieve receivers en verbindt niet met wifi of echte verlichting.</p><p>Je wifi-PIN geeft toegang tot je stand. Geen aparte appcode.</p><small>Deel de netwerknaam en je wifi-PIN. Nieuwe telefoons verbinden via Wifi-instellingen en laden daarna je stand in de app.</small></section>`;
     if(simpleStandSupported)return standConnectionCard();
     const selected=securityStand(),current=pinProtection?.standId===selected?.id?pinProtection:null;
     const available=nativeContext&&typeof runtime?.services?.securityStatus==='function'&&typeof runtime?.services?.setPinProtection==='function';
@@ -2069,6 +2306,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     }
   }
   function openPinProtection(){
+    if(simpleStandSupported)return;
     const current=pinProtection?.standId===securityStand()?.id?pinProtection:null;if(!current||pinProtectionBusy||current.status==='pending'||pinProtectionPendingCheckStandId===current.standId||pinProtectionNeedsRefresh())return;
     const enabled=!current.pinRequired,needsPin=enabled&&current.scope==='installation'&&!current.hasPin;
     showEffectDialog(enabled?'PIN-beveiliging aanzetten?':'PIN-beveiliging uitzetten?',`<section class="pin-protection-dialog" data-pin-protection-dialog data-enabled="${enabled}" data-stand="${esc(current.standId)}"><p>${enabled?(current.scope==='new-installation'?'Je kiest je PIN tijdens het instellen van je stand.':current.hasPin?'Je bestaande PIN wordt opnieuw gebruikt voor wifi en netwerk verwijderen.':'Beveilig het wifi van je installatie met één PIN.'):'Het receiver-wifinetwerk wordt open. Je stand, zones en koppelingen blijven bewaard.'}</p>${needsPin?'<label class="dialog-field">Kies je PIN · 8–12 cijfers<input data-security-pin type="password" inputmode="numeric" autocomplete="off" minlength="8" maxlength="12" pattern="[0-9]{8,12}" autocapitalize="off" spellcheck="false"></label><label class="dialog-field">Herhaal je PIN<input data-security-pin-repeat type="password" inputmode="numeric" autocomplete="off" minlength="8" maxlength="12" pattern="[0-9]{8,12}" autocapitalize="off" spellcheck="false"></label><small>Bewaar je PIN: voor wifi en netwerk verwijderen.</small>':''}<p class="dialog-error" role="alert" hidden></p><div class="pin-protection-actions"><button class="button secondary full" data-action="effect-dialog-close">Annuleren</button><button class="button full" data-action="pin-protection-save" ${needsPin?'disabled':''}>${enabled?'Aanzetten':'Uitzetten'}</button></div></section>`);
@@ -2077,6 +2315,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     showEffectDialog('Verbind opnieuw met wifi',`<section class="pin-protection-dialog" data-pin-reconnect><span class="menu-icon" aria-hidden="true">${icon('lock')}</span><p>${result.unconfirmed===true?'De wijziging is nog niet bevestigd. Tijdens het aanpassen van wifi kan de verbinding even wegvallen.':'Het wifi van je installatie wordt aangepast.'} Je stand en receivers blijven bewaard.</p><ol><li>Open <b>Instellingen → Wifi</b>.</li><li>Kies ${result.ssid?`<b>${esc(result.ssid)}</b>`:'het ALUVISION-wifi van je installatie'}${result.pinRequired?' en gebruik je PIN':' zonder wachtwoord'}.</li><li>Kom terug naar de app.</li></ol><p role="status">We controleren de verbinding zodra je terugkomt.${result.unconfirmed===true?' De beveiliging staat pas bevestigd aan of uit na die controle.':''}</p><button class="button secondary full" data-action="pin-protection-recheck">Verbinding controleren</button></section>`);
   }
   async function savePinProtection(button){
+    if(simpleStandSupported)return;
     const panel=document.querySelector('[data-pin-protection-dialog]');if(!panel||pinProtectionBusy||pinProtection?.status==='pending'||pinProtectionPendingCheckStandId===securityStand()?.id||pinProtectionNeedsRefresh())return;
     const enabled=panel.dataset.enabled==='true',standId=panel.dataset.stand,pin=panel.querySelector('[data-security-pin]')?.value;
     if(standId!==securityStand()?.id)return;
@@ -2147,7 +2386,9 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     const erase=page.querySelector('.app-erase-section');if(erase)page.append(erase);
   }
   function render({top=false,preserveScroll=true}={}) {
-    if(route.screen!=='stand-sharing'&&standSharingMode!==null){standSharingMode=null;void standSharingController?.cancel().catch(()=>{});}
+    if(firstAccessCheckpoint)route={...route,screen:'receiver-add',standId:firstAccessCheckpoint.standId,zoneId:null,setupFrom:'stand'};
+    const sharingVisible=route.screen==='stand-sharing'&&standSharingMode==='share'||route.screen==='stand-connect'&&standConnectionIntent==='open'&&standSharingMode==='join';
+    if(!sharingVisible&&standSharingMode!==null){standSharingMode=null;void standSharingController?.cancel().catch(()=>{});}
     if(simpleStandMode)flushCentralProjection();
     // Apply local presentation before loading/error early returns as well.
     // The optional native appearance acknowledgement remains in the loaded
@@ -2176,6 +2417,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     // These native <details> are not model data. A status repaint in the
     // SAME screen must not close them; real navigation starts closed.
     const keepDisclosures=!top&&lastRenderedMotionContext===motionContextKey();
+    const keepCompactPreview=keepDisclosures&&main.querySelector('.control-preview-dock')?.dataset.scrolled==='true';
     const disclosureState=keepDisclosures?Array.from(main.querySelectorAll('details')).map(details=>({
       classes:details.className,receiver:details.closest('[data-receiver-detail]')?.dataset.receiverDetail||'',
       open:details.open
@@ -2211,7 +2453,11 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     const views = {stand:renderStand,controls:renderControls,colour:renderColour,animations:renderAnimations,effects:renderEffects,'animation-family':renderAnimationFamily,receivers:renderReceivers,settings:renderSettings,'demo-wifi':renderDemoWifi,'pin-login':renderPinLogin,'stand-connect':renderStandConnection,'stand-sharing':renderStandSharing,'stand-code-change':renderStandCodeChange,scenes:renderScenes,'scene-draft':renderSceneDraft,'scene-detail':renderSceneDetail,'receiver-add':renderReceiverAdd};
     const zoneScreen=['controls','colour','animations','effects','animation-family','layout'].includes(route.screen);
     main.innerHTML = (zoneScreen&&zone()&&!receivers().length?renderEmptyZone:(views[route.screen] || renderStand))();
-    if(route.screen==='stand-sharing')ensureStandSharing().mount(main.querySelector('[data-stand-sharing-host]'));
+    if(route.screen==='stand'&&stand()&&standSharingAvailable&&standConnectionState.status==='connected'){
+      main.querySelector('.stand-page .overview-heading')?.insertAdjacentHTML('afterend',`<button class="button secondary full stand-share-entry" data-action="stand-share-open">${icon('share')} Deel deze stand</button>`);
+    }
+    const sharingHost=main.querySelector('[data-stand-sharing-host]');
+    if(sharingHost)ensureStandSharing().mount(sharingHost);
     if(keepDisclosures){
       const used=new Set();
       for(const previous of disclosureState){
@@ -2234,12 +2480,11 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
       }
     }
     const previewDock=main.querySelector('.control-preview-dock');
-    if(previewDock){const spatial=previewDock.querySelector('.spatial-preview-wrap')!==null;previewDock.dataset.previewSize=spatial?'large':controlPreviewSize;previewDock.dataset.spatialPreview=spatial?'true':'false';}
+    if(previewDock){const spatial=previewDock.querySelector('.spatial-preview-wrap')!==null;previewDock.dataset.previewSize=spatial?'large':controlPreviewSize;previewDock.dataset.spatialPreview=spatial?'true':'false';if(keepCompactPreview)previewDock.dataset.scrolled='true';}
     main.classList.toggle('gallery-scroll-stable',Boolean(main.querySelector('#animation-results')));
     if(route.screen==='scene-detail')main.querySelector('.scene-activate-bar')?.insertAdjacentHTML('afterbegin','<p class="live-confirmation" data-live-status="scene" role="status" aria-live="polite"></p>');
     if(route.screen==='settings')main.querySelector('.page-heading')?.insertAdjacentHTML('afterend',pinProtectionCard());
     if(route.screen==='settings'&&Backup)main.querySelector('[data-action="help"]')?.insertAdjacentHTML('afterend',backupPanel());
-    if(route.screen==='stand'&&!stand()&&nativeContext)main.querySelector('.onboarding-next-action')?.insertAdjacentHTML('afterend',`<button class="menu-card" data-action="${simpleStandMode?'stand-connect':'pin-login'}"><span class="menu-icon">${icon('lock')}</span><span><b>${simpleStandMode?'Stand openen':'Al een stand? Open met PIN'}</b><small>Je bestaande receivers en zones ophalen</small></span>${icon('chevron')}</button>`);
     if(route.screen==='stand'&&model.stands.length>1)main.querySelector('.page-heading')?.insertAdjacentHTML('afterend','<button class="text-button" data-action="stand-switch-open">Andere stand openen</button>');
     if(!simpleStandMode&&route.screen==='settings'&&nativeContext&&window.__lightningV32ReceiverContext===true&&standReceivers().length){
       main.querySelector('[data-backup-panel]')?.insertAdjacentHTML('afterend',receiverContextPanel());
@@ -2255,7 +2500,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
       button.setAttribute('aria-label',index?'Ledlines in deze stand bekijken':'Zones in deze stand bekijken');
       button.innerHTML=tile.innerHTML+icon('chevron');tile.replaceWith(button);
     });
-    if(route.screen==='stand-connect'&&simpleStandMode&&simpleStandSupported&&!standNetworkProbeAttempted&&!standConnectionBusy&&!standSession?.canResume()&&!standSession?.snapshot()&&!['connecting','checking','changing-code'].includes(standConnectionState.status)){
+    if(route.screen==='stand-connect'&&(standConnectionIntent==='setup'||standManualEntry)&&simpleStandMode&&simpleStandSupported&&!nativeLoading&&!standNetworkProbeAttempted&&!standConnectionBusy&&!standSession?.canResume()&&!standSession?.snapshot()&&!['connecting','checking','changing-code'].includes(standConnectionState.status)){
       standNetworkProbeAttempted=true;
       queueMicrotask(()=>{if(route.screen==='stand-connect'&&simpleStandMode&&!document.hidden)void inspectCentralStand({automatic:true});});
     }
@@ -2310,7 +2555,11 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     // its whole box so the final scroll margin follows both animations.
     if(previewDock){contextObserver=new ResizeObserver(measureControlPreviewDock);contextObserver.observe(previewDock,{box:'border-box'});}
     const current = route.screen.startsWith('scene')?'scenes':route.screen==='receiver-add'?route.setupFrom||'stand':['pin-login','stand-connect','stand-sharing','stand-code-change','demo-wifi'].includes(route.screen)?'settings':['receivers','settings'].includes(route.screen)?route.screen:'stand';
-    document.getElementById('navigation').innerHTML=[['stand','stand','stand'],['scenes','scenes','scenes'],['receivers','receivers','receiver'],['settings','more','settings']].map(([id,label,glyph])=>`<button data-action="nav" data-id="${id}" ${current===id?'aria-current="page"':''}>${icon(glyph)}<span>${esc(t(label))}</span></button>`).join('');
+    document.getElementById('navigation').toggleAttribute('data-first-entry',!stand()&&!onboarding.summary()?.stand&&['stand','stand-connect','stand-sharing'].includes(route.screen));
+    const connectionEntry=route.screen==='stand-connect'&&standConnectionState.status!=='connected';
+    const hideNavigation=!!firstAccessCheckpoint||connectionEntry||!stand()&&!onboarding.summary()?.stand&&route.screen==='stand';
+    document.getElementById('navigation').hidden=hideNavigation;
+    document.getElementById('navigation').innerHTML=hideNavigation?'':[['stand','stand','stand'],['scenes','scenes','scenes'],['receivers','receivers','receiver'],['settings','more','settings']].map(([id,label,glyph])=>`<button data-action="nav" data-id="${id}" ${current===id?'aria-current="page"':''}>${icon(glyph)}<span>${esc(t(label))}</span></button>`).join('');
     translateMainControls();
     if(route.screen==='receiver-add')onboarding.mount(main.querySelector('#receiver-onboarding'),{origin:route.setupReturnZoneId?'layout':current,activeZoneId:stand()?.zones.some(z=>z.id===route.zoneId)?route.zoneId:undefined,autoSearch:!!route.setupReturnZoneId});
     if(route.screen==='stand'&&stand())main.querySelector('.page').classList.add('stand-page');
@@ -2359,10 +2608,33 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     if(!same||same.disabled)return false;
     same.focus({preventScroll:true});return true;
   }
-  function navigate(screen, extra={}, {restoreControls=false}={}) {
+  let receiverSetupPreparation=null;
+  async function openManagedReceiverSetup(extra,options){
+    if(receiverSetupPreparation||managementBusy)return;
+    const standId=stand()?.id,previous=route;
+    if(!standId||typeof runtime.services?.prepareReceiverManagement!=='function')return toast('Open eerst je stand opnieuw.');
+    const token={standId};receiverSetupPreparation=token;
+    toast('Actuele receivers en inrichting laden…');
+    try{
+      const view=await runtime.services.prepareReceiverManagement({standId});
+      if(receiverSetupPreparation!==token||route!==previous||stand()?.id!==standId||document.hidden)return;
+      await ensureStandSession().acceptMembership(view.central);
+      if(receiverSetupPreparation!==token||route!==previous||document.hidden)return;
+      receiverSetupPreparation=null;flushCentralProjection();
+      if(view.draft)onboarding.restore(view.draft);
+      navigate('receiver-add',extra,{...options,managedPrepared:true});
+    }catch(error){
+      if(route===previous&&!document.hidden)toast(error?.code==='STAND_CONFIG_CONFLICT'?'De stand is op een ander toestel veranderd. Open hem opnieuw; er is niets toegevoegd.':'De actuele receiverlijst is nog niet bevestigd. Controleer de verbinding en probeer opnieuw.');
+    }finally{if(receiverSetupPreparation===token)receiverSetupPreparation=null;flushCentralProjection();}
+  }
+  function navigate(screen, extra={}, {restoreControls=false,managedPrepared=false}={}) {
+    if(firstAccessCheckpoint&&screen!=='receiver-add')return;
+    if(screen==='receiver-add'&&localStandConcept())prepareLocalStandReceiver(extra.setupReturnZoneId||extra.zoneId||route.zoneId);
+    if(screen==='receiver-add'&&route.screen!=='receiver-add'&&simpleStandMode&&centralApplied&&!managedPrepared){void openManagedReceiverSetup(extra,{restoreControls});return;}
     // Compatibility for internal callers; layout is now a panel, not a page.
     const requestedLayout=screen==='layout';if(requestedLayout)screen='controls';
     if(arrangementApplying)return;
+    if(route.screen==='stand-connect'&&screen!=='stand-connect')standMigrationPreflightError=null;
     if(route.screen==='stand-connect'&&screen!=='stand-connect'&&legacyStandReturn&&!standMigrationReady&&!standConnectionBusy&&
        !standSession?.snapshot()&&!standSession?.canResume()&&!centralApplied&&!centralPending&&
        legacyStandReturn.standId===legacyStandLandingId&&legacyStandReturn.standId===stand()?.id){
@@ -2696,6 +2968,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
       node.dataset.state=kind;node.textContent=message;
       node.setAttribute('aria-live',failed?'polite':'off');
     });
+    syncStaticRouteStatus();
   }
   function apply(patch,scope=selection(),{freshRecipe=false}={}) {
     if(orderIdentificationState?.active)void orderIdentification?.supersede();
@@ -2747,7 +3020,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     paint(performance.now()/1000);
   }
   function toast(text) { const el=document.getElementById('toast');el.textContent=text;el.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.hidden=true;},3500); }
-  function staticColour(rgb,w=0,memory=null) { apply({...C.state(rgb,w),...(memory?{rgbwLast:memory}:{}),engine:'STATIC',variant:0,v30Effect:null,category:null,animation:'Vaste kleur',previewFamily:null,legacySpi:false,bounce:false,mirror:false,on:true,power:true});syncColour(); }
+  function staticColour(rgb,w=0,memory=null) { apply({...C.state(rgb,w),...(memory?{rgbwLast:memory}:{}),engine:'STATIC',variant:0,backgroundOn:false,v30Effect:null,category:null,animation:'Vaste kleur',previewFamily:null,legacySpi:false,bounce:false,mirror:false,on:true,power:true});syncColour(); }
   function effectiveColourChannels(slot) {
     const state=selectedState(),isBrand=slot===0&&activeEffect()?.controls.includes('brandColor');
     const rgb=state.rgbEnabled?.[slot]===false?[0,0,0]:rgbOf({colors:[isBrand?state.brandColor||'#C94E46':colours(state)[slot]||'#000000']});
@@ -2918,7 +3191,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
       // Connector motion uses the shared monotonic clock, independently of a
       // blink session. Neither selecting nor animating a connector edits output state.
       const plugProgress=visualPlugMotions.get(r.id)?.sample(time,reduce)||{};
-      const metadata=window.LightningReceiverVisual.draw(canvas,{type:r.type,selectedPort:visualPorts.get(r.id)||1,enabledPorts:r.outputs.filter(p=>p.enabled).map(p=>p.port),plugProgress,compact:canvas.dataset.compact==='true',identifying:!!blink,identifyingPorts:blink?.ports||[],time:blink?time-blink.startedAt:time,reducedMotion:reduce});
+      const metadata=window.LightningReceiverVisual.draw(canvas,{type:r.type,selectedPort:selectedVisualPort(r),enabledPorts:r.outputs.filter(p=>p.enabled).map(p=>p.port),plugProgress,compact:canvas.dataset.compact==='true',identifying:!!blink,identifyingPorts:blink?.ports||[],time:blink?time-blink.startedAt:time,reducedMotion:reduce});
       canvas.dataset.activePorts=metadata.activePorts.join(',');canvas.dataset.highlightedPorts=(metadata.highlightedPorts||[]).join(',');canvas.dataset.selectedPort=String(metadata.selectedPort||'');
       canvas.dataset.identifyingPorts=(metadata.identifyingPorts||[]).join(',');canvas.dataset.identifying=String(!!blink);
       canvas.dataset.portLabelsVisible=String(metadata.portLabelsVisible===true);
@@ -3020,7 +3293,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
   function showHelp() {
     const help=document.getElementById('help');cancelDialogDismissal(help);
     if(!help.open)helpReturnFocus=dialogActionOpener||document.activeElement;
-    document.getElementById('help-content').innerHTML=`<header><h2 id="help-title" tabindex="-1" autofocus>Kies de plek.<br>Bedien het licht.</h2></header><section>${icon('stand')}<div><h3>Stand → je hele installatie</h3><p>Alles wat bij jouw beursstand hoort, bij elkaar.</p></div></section><section>${icon('zones')}<div><h3>Zone → een plek in je stand</h3><p>Bijvoorbeeld Demohoek, Balie of Plafond. Open een zone om meteen het licht te bedienen.</p></div></section><section>${icon('together')}<div><h3>Alle ledlines of één ledline</h3><p>Kies Alle ledlines samen voor de hele zone. Je kunt ook één ledline kiezen; de actieve lijn wordt gemarkeerd. Doorlopende SPI bedien je altijd samen.</p></div></section><aside class="guide"><p>RGBW en Pixel LED (SPI) krijgen ieder hun eigen zone. Zo zie je alleen de passende bediening.</p></aside><button class="button" data-action="close-help">Begrepen</button>`;
+    document.getElementById('help-content').innerHTML=`<header><h2 id="help-title" tabindex="-1" autofocus>Kies de plek.<br>Bedien het licht.</h2></header><section>${icon('stand')}<div><h3>Stand → je hele installatie</h3><p>Alles op één plek.</p></div></section><section>${icon('zones')}<div><h3>Zone → een plek in je stand</h3><p>Bijvoorbeeld Balie of Plafond. Open een zone om te bedienen.</p></div></section><section>${icon('together')}<div><h3>Alle ledlines of één ledline</h3><p>Kies de hele zone of één lijn. Doorlopende SPI bedien je samen.</p></div></section><aside class="guide"><p>RGBW en SPI hebben elk een eigen zone.</p></aside><button class="button" data-action="close-help">Begrepen</button>`;
     help.setAttribute('aria-labelledby','help-title');help.showModal();
     // Start the explanation at its title, not at the only button at the end.
     document.getElementById('help-title').focus({preventScroll:true});help.scrollTop=0;
@@ -3151,9 +3424,9 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     dialog.querySelectorAll('canvas[data-preview]').forEach(canvas=>previews.delete(canvas.dataset.preview));
     const effect=activeEffect(),family=standAnimationFamily?Library.group(catalogue(),standAnimationFamily):null;
     const shown=family?.preview||(!standAnimationGallery&&effect?effect:null)||catalogue().find(effect=>(effect.minimumReceivers||1)<=physicalLineCount(standControlReceivers()));
-    const animationContent=standControlMode==='animations'?`${shown?`<section class="stand-animation-live"><div class="stand-animation-live-title"><b>${esc(Library.displayName(shown,t))}</b><small>${standAnimationModeLabel(shown)}${standAnimationGallery?' · voorbeeld':''}</small></div>${standAnimationPreview(shown)}</section>`:''}${!standAnimationGallery&&effect?animationEditorMarkup(effect):animationLibraryContent()}`:'';
+    const animationContent=standControlMode==='animations'?`${shown&&!standAnimationGallery?`<section class="stand-animation-live"><div class="stand-animation-live-title"><b>${esc(Library.displayName(shown,t))}</b><small>${standAnimationModeLabel(shown)}${standAnimationGallery?' · voorbeeld':''}</small></div>${standAnimationPreview(shown)}</section>`:''}${!standAnimationGallery&&effect?animationEditorMarkup(effect):animationLibraryContent()}`:'';
     const zoneCount=standControlZoneCount();
-    const content=`<div class="stand-controls-sheet" data-stand-control-sheet data-stand-control-mode="${standControlMode}"><div class="stand-controls-tabs section-tabs" role="tablist" aria-label="Alles bedienen"><button type="button" role="tab" data-action="stand-control-mode" data-id="colour" aria-selected="${standControlMode==='colour'}" aria-controls="stand-controls-panel">${icon('sun')}Kleur</button><button type="button" role="tab" data-action="stand-control-mode" data-id="animations" aria-selected="${standControlMode==='animations'}" aria-controls="stand-controls-panel">${icon('animation')}Animaties</button></div><p class="stand-control-scope"><b>${esc(standLabel())}</b> · ${zoneCount} zone${zoneCount===1?'':'s'} · ${ledlineCount(physicalLineCount(standControlReceivers()))}</p><div id="stand-controls-panel" role="tabpanel"><p class="stand-control-description">${standControlMode==='colour'?'Voor RGBW en SPI. Aan/uit bewaart kleuren en animaties.':'Alle zones samen · RGBW en SPI'}<small>Receivers zonder zone worden niet meebediend.</small></p>${powerControl()}<p class="live-confirmation" data-live-status="stand" role="status" aria-live="polite"></p>${standControlMode==='colour'?`<p id="stand-control-mixed" class="mixed-note" ${mixedSelection()?'':'hidden'}>Verschillende instellingen actief. Een kleur kiezen vervangt ze voor alle zones.</p>${colourPickerMarkup(null,true)}${standScenesMarkup(true)}`:animationContent}</div></div>`;
+    const content=`<div class="stand-controls-sheet" data-stand-control-sheet data-stand-control-mode="${standControlMode}"><div class="stand-controls-tabs section-tabs" role="tablist" aria-label="Alles bedienen"><button type="button" role="tab" data-action="stand-control-mode" data-id="colour" aria-selected="${standControlMode==='colour'}" aria-controls="stand-controls-panel">${icon('sun')}Kleur</button><button type="button" role="tab" data-action="stand-control-mode" data-id="animations" aria-selected="${standControlMode==='animations'}" aria-controls="stand-controls-panel">${icon('animation')}Animaties</button></div><p class="stand-control-scope"><b>${esc(standLabel())}</b> · ${zoneCount} zone${zoneCount===1?'':'s'} · ${ledlineCount(physicalLineCount(standControlReceivers()))}</p><div id="stand-controls-panel" role="tabpanel"><p class="stand-control-description">${standControlMode==='colour'?'Kleur voor RGBW en SPI.':'Animaties over alle zones · RGBW en SPI.'}<small>Receivers zonder zone doen niet mee.</small></p>${powerControl()}<p class="live-confirmation" data-live-status="stand" role="status" aria-live="polite"></p>${standControlMode==='colour'?`<p id="stand-control-mixed" class="mixed-note" ${mixedSelection()?'':'hidden'}>Instellingen verschillen. Een nieuwe kleur geldt voor alle zones.</p>${colourPickerMarkup(null,true)}${standScenesMarkup(true)}`:animationContent}</div></div>`;
     buildingStandDialog=true;try{showEffectDialog('Alles bedienen',content);}finally{buildingStandDialog=false;}
     // A first colour edit may hide the mixed-settings explanation. Keep only
     // this dialog's initially visible footprint, so its wheel cannot move
@@ -3320,7 +3593,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
   function showReceiverAssignment(receiverId,targetZoneId=undefined) {
     const r=model.receivers.find(item=>item.id===receiverId&&item.lifecycle==='added'&&item.standId===stand().id);if(!r)return;
     receiverAssignment={receiverId,zoneId:targetZoneId===undefined?r.zoneId:targetZoneId};
-    showEffectDialog('Zone wijzigen',`<p class="assignment-context"><b>${esc(r.name)}</b><br><span>${esc(r.type)} · ${r.zoneId?esc(M.getZone(model,r.zoneId).name):'Nog geen zone'}</span></p><p class="assignment-retention-note">Koppeling en poorten blijven bewaard. In een zone met een gezamenlijke animatie doet deze ledline mee.</p><div class="assignment-choices" aria-label="Zone kiezen">${stand().zones.map(z=>{
+    showEffectDialog('Zone wijzigen',`<p class="assignment-context"><b>${esc(r.name)}</b><br><span>${esc(r.type)} · ${r.zoneId?esc(M.getZone(model,r.zoneId).name):'Nog geen zone'}</span></p><p class="assignment-retention-note">Doet mee met de groepsanimatie in de gekozen zone.</p><div class="assignment-choices" aria-label="Zone kiezen">${stand().zones.map(z=>{
       const compatible=!z.type||z.type===r.type,chosen=z.id===receiverAssignment.zoneId;
       return `<button class="assignment-choice" data-action="assignment-zone" data-id="${esc(z.id)}" aria-pressed="${chosen}" ${compatible?'':'disabled'}>${icon('zones')}<span><b>${esc(z.name)}</b><small>${z.id===r.zoneId?'Huidige zone':compatible?`${zoneTypeLabel(z)}${z.type?` · ${receiverCount(z.receiverIds.length)}`:''}`:`Alleen ${z.type} · past niet bij deze receiver`}</small></span><i aria-hidden="true">${chosen?'✓':''}</i></button>`;
     }).join('')}<button class="assignment-choice" data-action="assignment-zone" data-id="" aria-pressed="${!receiverAssignment.zoneId}">${icon('unassigned')}<span><b>Nog geen zone</b><small>Blijft gekoppeld aan je stand</small></span><i aria-hidden="true">${!receiverAssignment.zoneId?'✓':''}</i></button></div><button class="button secondary full" data-action="assignment-new-zone">＋ Nieuwe zone maken</button><p class="dialog-error" role="alert" hidden></p><button class="button full" data-action="assignment-confirm" ${receiverAssignment.zoneId===r.zoneId?'disabled':''}>Zone wijzigen</button>`);
@@ -3348,7 +3621,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
       return `<button class="assignment-choice assignment-many-choice" data-action="assignment-many-toggle" data-id="${esc(r.id)}" aria-pressed="${chosen}">${icon('receiver')}<span><b>${esc(r.name)}</b><small>${esc(r.type)} · ${esc(M.getZone(model,r.zoneId)?.name||'Nog geen zone')}</small></span><i aria-hidden="true">${chosen?'✓':''}</i></button>`;
     }).join('')||`<p class="assignment-many-empty">${available.length?`Er zijn geen andere passende ${esc(selectedType)}-ledlines om toe te wijzen.`:'Er zijn nog geen andere ledlines om toe te wijzen.'}</p>`}</div>`:`<p class="assignment-many-empty">${available.length?'Kies RGBW of SPI. Per zone kun je één soort ledline combineren.':'Er zijn nog geen andere ledlines om toe te wijzen.'}</p>`;
     const count=assignment.receiverIds.length;
-    showEffectDialog('Ledlines toewijzen',`<section class="assignment-many" data-assignment-many><p class="assignment-many-destination">Naar <b>${esc(z.name)}</b></p><p class="assignment-many-note">Ledlines uit een andere zone worden verplaatst. Speelt hier één gezamenlijke animatie? Dan doen ze automatisch mee. Hun aansluitingen blijven bewaard.</p>${familyChoices}${list}<p class="assignment-many-summary" data-assignment-many-summary role="status">${count?`${ledlineCount(count)} gekozen`:'Kies één of meer ledlines.'}</p><button class="button full" data-action="assignment-many-confirm" ${count?'':'disabled'}>${count?`${ledlineCount(count)} toewijzen`:'Ledlines toewijzen'}</button><button class="button secondary full" data-action="assignment-add-receiver">＋ Nieuwe ledline zoeken</button></section>`);
+    showEffectDialog('Ledlines toewijzen',`<section class="assignment-many" data-assignment-many><p class="assignment-many-destination">Naar <b>${esc(z.name)}</b></p><p class="assignment-many-note">De gekozen ledlines verplaatsen naar deze zone.</p>${familyChoices}${list}<p class="assignment-many-summary" data-assignment-many-summary role="status">${count?`${ledlineCount(count)} gekozen`:'Kies ledlines.'}</p><button class="button full" data-action="assignment-many-confirm" ${count?'':'disabled'}>${count?`${ledlineCount(count)} toewijzen`:'Ledlines toewijzen'}</button><button class="button secondary full" data-action="assignment-add-receiver">＋ Nieuwe ledline zoeken</button></section>`);
     if(focusType)document.querySelector(`[data-action="assignment-many-type"][data-id="${CSS.escape(focusType)}"]`)?.focus({preventScroll:true});
   }
   function syncZoneReceiverPicker() {
@@ -3364,12 +3637,12 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     const target=kind==='receiver-rename'?model.receivers.find(r=>r.id===id):kind==='zone-rename'?M.getZone(model,id):null;
     const creating=kind==='zone-create',receiverId=creating?id:null;
     nameDialog={kind,id};
-    showEffectDialog(creating?'Nieuwe zone':kind==='zone-rename'?'Zone hernoemen':'Receiver hernoemen',`<p>${creating?'Geef de plek een herkenbare naam, zoals Balie of Demohoek.':'Alle koppelingen en lichtinstellingen blijven behouden.'}</p><label class="dialog-field">${kind==='receiver-rename'?'Naam receiver':'Naam zone'}<input id="management-name" maxlength="64" autocomplete="off" value="${esc(target?.name||'')}" placeholder="${kind==='receiver-rename'?'Bijvoorbeeld: links bij de balie':'Bijvoorbeeld: Balie'}"></label><p class="dialog-error" role="alert" hidden></p><button class="button full" data-action="management-name-save" ${creating?'disabled':''}>${receiverId?'Zone maken en receiver verplaatsen':creating?'Zone maken':'Naam opslaan'}</button>${receiverId?'<button class="button secondary full" data-action="assignment-back">Terug naar zones</button>':''}`);
+    showEffectDialog(creating?'Nieuwe zone':kind==='zone-rename'?'Zone hernoemen':'Receiver hernoemen',`<p>${creating?'Kies een herkenbare pleknaam.':'Alleen de naam wijzigt.'}</p><label class="dialog-field">${kind==='receiver-rename'?'Naam receiver':'Naam zone'}<input id="management-name" maxlength="64" autocomplete="off" value="${esc(target?.name||'')}" placeholder="${kind==='receiver-rename'?'Bijvoorbeeld: links bij de balie':'Bijvoorbeeld: Balie'}"></label><p class="dialog-error" role="alert" hidden></p><button class="button full" data-action="management-name-save" ${creating?'disabled':''}>${receiverId?'Zone maken en receiver verplaatsen':creating?'Zone maken':'Naam opslaan'}</button>${receiverId?'<button class="button secondary full" data-action="assignment-back">Terug naar zones</button>':''}`);
     document.getElementById('management-name').focus();
   }
   function showUnassign(receiverId) {
     const r=model.receivers.find(item=>item.id===receiverId);if(!r?.zoneId)return;
-    showEffectDialog('Uit deze zone halen?',`<p><b>${esc(r.name)}</b> blijft in je stand, maar hoort niet meer bij ${esc(M.getZone(model,r.zoneId).name)}.</p><p>Kleuren en poortinstellingen blijven bewaard${pinRequired()?', net als je PIN':''}. Je kunt deze receiver daarna aan een andere zone toewijzen.</p><p class="dialog-error" role="alert" hidden></p><button class="button full" data-action="receiver-unassign-confirm" data-id="${esc(r.id)}">Uit zone halen</button><button class="button secondary full" data-action="effect-dialog-close">Annuleren</button>`);
+    showEffectDialog('Uit deze zone halen?',`<p><b>${esc(r.name)}</b> blijft in je stand, maar hoort niet meer bij ${esc(M.getZone(model,r.zoneId).name)}.</p><p>Instellingen blijven behouden.</p><p class="dialog-error" role="alert" hidden></p><button class="button full" data-action="receiver-unassign-confirm" data-id="${esc(r.id)}">Uit zone halen</button><button class="button secondary full" data-action="effect-dialog-close">Annuleren</button>`);
   }
   function zoneDeletionSignature(z) { return JSON.stringify([z.id,z.name,z.type,z.receiverIds]); }
   function showZoneDelete(zoneId,changed=false) {
@@ -3471,16 +3744,23 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     if(route.screen!=='receiver-add'&&view?.draft?.receiver===null)onboarding.restore(view.draft);
   }
   async function persistManagement(next,operation,expectedZoneSignature) {
+    if(localStandConcept()){
+      // A concept edits only its receiver-less local graph. It is never a
+      // central config, native Owner view or successful device save.
+      try{storeLocalStandConcept(next);return next;}catch(_){toast('Je lokale concept kon niet worden bewaard. Er is niets naar receivers verstuurd.');return null;}
+    }
     if(!nativeContext)return next;
     if(managementBusy)return null;
     managementBusy=true;
     const controls=Array.from(document.querySelectorAll('#main button,#main input,#main select,#navigation button,#effect-dialog button,#effect-dialog input'),el=>({el,disabled:el.disabled}));
     controls.forEach(({el})=>{el.disabled=true;});
     const dialog=document.getElementById('effect-dialog'),host=dialog.open?document.getElementById('effect-dialog-content'):main;
+    host.querySelector('[data-action="management-stand-open"]')?.remove();
     const isArrangement=['arrange','arrangeLines'].includes(operation?.kind);
+    const arrangement=isArrangement?arrangementDraft:null;
     const progress=document.createElement('p');progress.className='management-status';progress.setAttribute('role','status');progress.textContent='Wijziging opslaan…';if(!isArrangement)host.prepend(progress);host.setAttribute('aria-busy','true');
     try{
-      if(typeof runtime?.services?.[simpleStandMode?'standMutation':'editZones']!=='function')throw Error('ZONE_STORAGE_UNAVAILABLE');
+      if(typeof runtime?.services?.[simpleStandMode?'standMutation':'editZones']!=='function')throw Object.assign(Error('ZONE_STORAGE_UNAVAILABLE'),{code:'ZONE_STORAGE_UNAVAILABLE'});
       const view=simpleStandMode?await saveCentralModel(next):await runtime.services.editZones({standId:stand().id,operation,...(expectedZoneSignature===undefined?{}:{expectedZoneSignature})});
       // Metadata edits also refresh an unfinished, receiver-less setup in the
       // native store. Resume that exact draft instead of later saving stale
@@ -3488,6 +3768,20 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
       refreshSuspendedSetup(view);
       return simpleStandMode?M.assertValid(view.model):keepLocalPreviewStates(view.model);
     }catch(error){
+      // Diagnostics contain only reviewed constant codes, never the exception,
+      // message, receiver response or caller's connection/configuration data.
+      const diagnosticCode=error?.code;
+      const diagnosticCodes=new Set(['ZONE_STORAGE_UNAVAILABLE','ZONE_EDIT_INVALID','VIEW_NOT_LOADED','VIEW_INVALID','STAND_NOT_CONNECTED','STAND_CONFIG_CONFLICT','STAND_SAVE_UNCONFIRMED','STAND_MUTATION_INVALID','STAND_DATA_INVALID','STAND_CONNECTION_CANCELLED','STAND_LEGACY_ACCESS_RETIRED','STAND_INVALID_REQUEST','STAND_UNAVAILABLE','STAND_WIFI_UNREACHABLE','STAND_WRONG_WIFI','STAND_AUTH_FAILED','STAND_SESSION_EXPIRED','STAND_CANCELLED','STAND_BUSY','STAND_UNCONFIRMED','STAND_IDENTITY_MISMATCH','STAND_MIGRATION_REQUIRED','STAND_NOT_CONFIGURED','STAND_REVISION_CONFLICT','MAIN_BUSY','MAIN_CONNECTION_UNAVAILABLE','MAIN_STORAGE_UNCONFIRMED','MAIN_ACTION_UNCERTAIN','V30_BINDING_INVALID','V30_CHECKPOINT_INVALID','V30_CHECKPOINT_CONFLICT','V30_CHECKPOINT_ROLLBACK','V30_STORAGE_UNAVAILABLE','V30_STORAGE_CORRUPT','V30_STORAGE_UNCONFIRMED','V30_STORAGE_FULL','V30_RECEIPT_UNVERIFIED','LOCAL_NETWORK_DENIED','NATIVE_BUSY','NATIVE_TIMEOUT','NATIVE_UNCONFIRMED']);
+      console.warn('V41_MANAGEMENT_SAVE_FAILED '+(diagnosticCodes.has(diagnosticCode)?diagnosticCode:'UNCLASSIFIED'));
+      if(diagnosticCode==='STAND_NOT_CONNECTED'||diagnosticCode==='STAND_CONNECTION_CANCELLED'){
+        const message='Open eerst je stand om de indeling te wijzigen. Je wijziging is nog niet bevestigd.',notice=document.querySelector('#effect-dialog[open] .dialog-error');
+        if(arrangement){arrangement.error=message;arrangement.needsStandOpen=true;}
+        else{
+          if(notice){notice.textContent=message;notice.hidden=false;}else toast(message);
+          const action=document.createElement('button');action.type='button';action.className='button secondary full';action.dataset.action='management-stand-open';action.textContent='Stand openen';host.append(action);
+        }
+        return null;
+      }
       const message='Opslaan is niet bevestigd. Controleer de indeling en probeer opnieuw.';
       if(error.reconciledView?.model){
         refreshSuspendedSetup(error.reconciledView);
@@ -3560,6 +3854,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     expandedScopeZones.add(route.zoneId);render({preserveScroll:true});
   });
   document.addEventListener('click',async event=>{
+    if(firstAccessCheckpoint&&event.target.closest?.('[data-action]'))return;
     const button=event.target.closest('button[data-action]');if(!button||button.disabled)return;
     if(button.dataset.action==='pin-login-cancel'&&pinLoginBusy){pinRecoveryAbort?.abort();return;}
     if(managementBusy||arrangementApplying||pinProtectionBusy||pinLoginBusy)return;
@@ -3630,7 +3925,9 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
         if(opening&&r.type==='SPI')visualPorts.set(r.id,Number(button.dataset.port));
         renderArrangement(browsing);
         const target=opening?document.getElementById('ledline-settings-'+id)?.querySelector('h4'):main.querySelector(`[data-action="layout-receiver-settings"][data-id="${CSS.escape(id)}"]`);
-        if(target){revealBelowControlPreview(target,12);target.focus({preventScroll:true});}return;
+        // Opening may reveal the new fields. Closing is not navigation and
+        // must not drag the page back to a far-away row under the sticky dock.
+        if(target){if(opening)revealBelowControlPreview(target,12);target.focus({preventScroll:true});}return;
       }
       if(action==='spatial-toggle'){
         const z=zone();if(!z)return;
@@ -3674,11 +3971,35 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
         return navigate(id);
       }
       if(action==='pin-login')return await openPinLogin();
+      if(action==='stand-create-open'){
+        if(nativeContext)return await openCentralStandConnection({intent:'setup'});
+        return navigate('receiver-add',{setupFrom:'stand'});
+      }
+      if(action==='stand-continue-local'){
+        if(onboarding.summary()){
+          if(!canContinuePendingLocalStand())return;
+          try{
+            const next=await onboarding.continueLocalConcept();localStandConceptId=next.stands[0].id;
+            model=next;simpleStandMode=false;firstFactorySetup=false;route={...route,screen:'stand',standId:localStandConceptId,zoneId:null};render({top:true});
+          }catch(_){toast('Omzetten is nog niet bevestigd. Je namen blijven bewaard. Probeer opnieuw.');}
+          return;
+        }
+        if(!canStartLocalStand())return;
+        const next=M.localStand('stand-'+crypto.randomUUID(),'Mijn stand');localStandConceptId=next.stands[0].id;
+        try{storeLocalStandConcept(next);}catch(_){localStandConceptId=null;toast('Je lokale concept kon niet worden bewaard.');return;}
+        model=next;simpleStandMode=false;route={...route,screen:'stand',standId:localStandConceptId,zoneId:null};render({top:true});return;
+      }
       if(action==='stand-connect'){
         return await openCentralStandConnection();
       }
+      if(action==='stand-open-options'){
+        if(standConnectionBusy)return;
+        standMigrationPreflightError=null;standManualEntry=false;render({top:true});return;
+      }
+      if(action==='management-stand-open')return await openManagementStandConnection();
       if(action==='stand-setup-start'){
         if(!verifiedUnsetStand())return;
+        firstFactorySetup=true;
         simpleStandMode=false;legacyStandReturn=null;return navigate('receiver-add',{setupFrom:'stand'});
       }
       if(action==='stand-code-suggest'){
@@ -3688,21 +4009,23 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
         catch(_){toast('Een veilige standcode kon niet worden voorgesteld. Vul zelf een code in.');}return;
       }
       if(action==='stand-connect-submit')return await submitStandConnection();
-      if(action==='stand-share-open'||action==='stand-join-open'){
+      if(action==='stand-wifi-open')return await openStandOnWifi();
+      if(action==='stand-join-open')return await openCentralStandConnection();
+      if(action==='stand-share-open'){
         if(!simpleStandSupported)return;
-        const mode=action==='stand-share-open'?'share':'join';
-        if(mode==='share'&&!standSession?.snapshot())return toast('Open eerst je stand voordat je haar deelt.');
-        standSharingMode=mode;ensureStandSharing().open(mode);navigate('stand-sharing');return;
+        if(!standSession?.snapshot())return toast('Open eerst je stand voordat je haar deelt.');
+        standSharingMode='share';const sharing=ensureStandSharing();sharing.open('share');navigate('stand-sharing');
+        try{await sharing.load();}catch(_){}return;
       }
       if(action==='stand-migrate-submit')return await submitStandConnection({migration:true});
       if(action==='stand-inspect-submit')return await inspectCentralStand();
-      if(action==='stand-find-submit')return await inspectCentralStand({automatic:true});
-      if(action==='stand-show-loaded'){const current=standSession?.snapshot();if(current&&standConnectionState.status==='connected')return navigate('stand',{standId:current.standId,zoneId:null});return;}
+      if(action==='stand-find-submit')return await inspectCentralStand({automatic:true,userInitiated:true});
+      if(action==='stand-show-loaded'){const current=standSession?.snapshot();if(current&&standConnectionState.status==='connected'){navigate('stand',{standId:current.standId,zoneId:null});restoreManagementAssignment(current.standId);}return;}
       if(action==='stand-resume-submit')return await resumeCentralStand();
       if(action==='stand-code-change'){if(standSession?.snapshot())return navigate('stand-code-change');return;}
       if(action==='stand-code-change-submit')return await changeCentralStandCode();
       if(action==='stand-refresh')return await refreshCentralStand();
-      if(action==='stand-forget')return showEffectDialog('Stand vergeten op deze telefoon?',`<section><p>De stand, zones, receivers en animaties blijven op de hoofdreceiver. Je kunt later opnieuw openen met je standcode.</p><button class="button full" data-action="stand-forget-confirm">Alleen op deze telefoon vergeten</button><button class="button secondary full" data-action="effect-dialog-close">Annuleren</button></section>`);
+      if(action==='stand-forget')return showEffectDialog('Stand vergeten op deze telefoon?',`<section><p>Alleen deze telefoon wordt losgekoppeld. Je stand blijft op de hoofdreceiver.</p><button class="button full" data-action="stand-forget-confirm">Alleen op deze telefoon vergeten</button><button class="button secondary full" data-action="effect-dialog-close">Annuleren</button></section>`);
       if(action==='stand-forget-confirm'){
         const current=stand();if(!current)return;
         try{centralLiveCheckpoint?.reset();await runtime.services.standForget({standId:current.id,confirmation:'FORGET_LOCAL_STAND'});await standSession.disconnect();centralApplied=null;centralPending=null;model=runtime.emptyModel();closeEffectDialog();route={...route,screen:'stand-connect',standId:null,zoneId:null};render({top:true});}
@@ -3733,7 +4056,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
       if(action==='language'||action==='theme'){
         const result=preferenceStore.save({[action]:id});if(result.error)return toast(result.error.message);uiPreferences=result;return render();
       }
-      if(action==='preferences-reset')return showEffectDialog('Taal en thema herstellen?',`<section data-preferences-reset><p>Alleen de appvoorkeuren veranderen: <b>Nederlands</b> en het <b>lichte thema</b>.</p><p>Je ${pinRequired()?'PIN, ':''}receivers, zones, scènes, kleurpresets en animatiepresets blijven bewaard. Dit is geen fabrieksreset van je receivers.</p><p class="dialog-error" role="alert" hidden></p><button class="button full" data-action="preferences-reset-confirm">Taal en thema herstellen</button><button class="button secondary full" data-action="effect-dialog-close">Annuleren</button></section>`);
+      if(action==='preferences-reset')return showEffectDialog('Taal en thema herstellen?',`<section data-preferences-reset><p>Stelt Nederlands en het lichte thema in.</p><p>Je stand en receivers blijven ongewijzigd.</p><p class="dialog-error" role="alert" hidden></p><button class="button full" data-action="preferences-reset-confirm">Taal en thema herstellen</button><button class="button secondary full" data-action="effect-dialog-close">Annuleren</button></section>`);
       if(action==='app-erase')return showEffectDialog('Alles verwijderen?',`<section data-app-erase><p>${webDemoContext?'Alleen de tijdelijke demogegevens op deze pagina worden verwijderd. Gegevens van de gewone site en fysieke receivers blijven onaangeroerd.':'Alle opgeslagen gegevens en configuraties worden uit de app verwijderd. Dit kan niet ongedaan worden gemaakt. De fysieke receivers worden niet teruggezet naar de fabrieksinstellingen.'}</p><p class="dialog-error" role="alert" hidden></p><button class="button secondary full" data-action="effect-dialog-close">Annuleren</button><button class="button red full" data-action="app-erase-confirm">Alles verwijderen</button></section>`);
       if(action==='app-erase-confirm'){
         const panel=document.querySelector('[data-app-erase]');
@@ -3789,7 +4112,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
           const pending=nativeContext&&typeof runtime?.services?.outputConfigurationStatus==='function'
             ?await runtime.services.outputConfigurationStatus({standId:receiver.standId,receiverId:id}):{status:'none'};
           pixelSetupReceiverId=id;
-          pixelSetup.open(pending.status==='pending'?{...receiver,outputs:pending.outputs}:receiver,{initialPort:visualPorts.get(id)||1,resumePending:pending.status==='pending'});
+          pixelSetup.open(pending.status==='pending'?{...receiver,outputs:pending.outputs}:receiver,{initialPort:selectedVisualPort(receiver),resumePending:pending.status==='pending'});
         }catch(_){toast('De vorige poortwijziging kon niet worden gelezen. Probeer opnieuw; er is niets gewist.');}
         finally{managementBusy=false;button.disabled=false;}return;
       }
@@ -4185,8 +4508,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
       if(input.id==='preset-name'){document.querySelector('[data-action="preset-confirm"]').disabled=!input.value.trim();return;}
       if(input.id==='animation-search'){
         const value=input.value;animationQueryStore().set(animationQueryKey(),value);
-        // Update only the instructions. Rebuilding the gallery on each
-        // keystroke would discard focus, caret and the user's scroll position.
+        // Preserve the input focus, caret and scroll while filtering.
         const library=input.closest('.animation-library-inline'),heading=library?.querySelector('#animation-selector-heading'),guidance=library?.querySelector('.animation-library-guidance');
         if(heading)heading.textContent=value.trim()?t('chooseAnimation'):t('animationGroupChooserTitle');
         if(guidance)guidance.textContent=value.trim()?t('animationSearchChooseHint'):t('animationGroupChooserIntro');
@@ -4235,7 +4557,8 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     const number=event.target.closest?.('input[data-channel-number]');if(!number)return;
     const root=number.closest('[data-colour-picker]'),range=root?.querySelector(`input[data-channel="${number.dataset.channelNumber}"]`);if(!range)return;
     const raw=Number(number.value),value=number.value.trim()===''?Number(range.value):Math.max(0,Math.min(255,Math.round(Number.isFinite(raw)?raw:Number(range.value))));
-    number.value=String(value);range.value=String(value);range.dispatchEvent(new Event('input',{bubbles:true}));
+    number.value=String(value);
+    if(range.value!==String(value)){range.value=String(value);range.dispatchEvent(new Event('input',{bubbles:true}));}
   });
   document.addEventListener('keydown',event=>{if(event.key==='Enter'&&event.target.matches?.('input[data-channel-number]'))event.target.blur();});
   document.addEventListener('pointerdown',event=>{
@@ -4295,7 +4618,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
   },true);
   inlineOrderDrag=window.LightningLedlineOrderDrag?.install({
     root:document,
-    getItems:()=>!arrangementInteractionBusy()&&openLineSetup.has(route.zoneId)&&arrangementDraft?.zoneId===route.zoneId?[...arrangementDraft.lineOrder]:[],
+    getItems:()=>!arrangementInteractionBusy()&&!arrangementNeedsStandOpen()&&openLineSetup.has(route.zoneId)&&arrangementDraft?.zoneId===route.zoneId?[...arrangementDraft.lineOrder]:[],
     getRowId:row=>row.dataset.orderItem,
     getScrollBounds:()=>({top:Math.max(0,main.querySelector('.control-dock-surface')?.getBoundingClientRect().bottom||0)+8,bottom:Math.min(innerHeight,document.getElementById('navigation')?.getBoundingClientRect().top||innerHeight)-8}),
     onActivity:()=>{if(!arrangementInteractionBusy()&&orderIdentificationState?.active)void orderIdentification?.interaction();},
@@ -4306,7 +4629,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     },
     onDrop:async({id,toIndex})=>{
       const draft=arrangementDraft;
-      if(!draft||!openLineSetup.has(route.zoneId)||draft.zoneId!==route.zoneId||arrangementInteractionBusy())return;
+      if(!draft||!openLineSetup.has(route.zoneId)||draft.zoneId!==route.zoneId||arrangementInteractionBusy()||arrangementNeedsStandOpen())return syncArrangementControls();
       if(draft.signature!==arrangementSignature())return renderArrangement();
       const from=draft.lineOrder.indexOf(id);
       if(from<0||toIndex<0||toIndex>=draft.lineOrder.length||from===toIndex)return;
@@ -4315,7 +4638,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
       const handle=main.querySelector(`[data-order-item="${CSS.escape(id)}"] [data-order-handle]`);
       handle?.focus({preventScroll:true});
       const physical=M.zoneLedlines(model,route.zoneId).find(line=>line.id===id),receiver=model.receivers.find(r=>r.id===physical?.receiverId);
-      const status=main.querySelector('.order-drop-status');if(status)status.textContent=saved?`${receiver?.name||'Ledline'}${physical?.port?' · P'+physical.port:''} · plaats ${toIndex+1}`:t('lineSetupSaveFailed');
+      const status=main.querySelector('.order-drop-status');if(status)status.textContent=saved?`${receiver?.name||'Ledline'}${physical?.port?' · P'+physical.port:''} · plaats ${toIndex+1}`:'';
     }
   });
   document.addEventListener('pointerdown',event=>{
@@ -4367,7 +4690,7 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
     legacyStandLandingId=null;legacyStandReturn=null;
     try{
       if(typeof runtime?.services?.loadState!=='function')throw Error('NATIVE_UNAVAILABLE');
-      await refreshStandCapabilities();simpleStandMode=simpleStandSupported;
+      const startupCapabilities=await refreshStandCapabilities();simpleStandMode=simpleStandSupported;
       const state=await runtime.services.loadState();
       if(state.model?.demo!==false)throw Error('NATIVE_MODEL_INVALID');
       const restored=M.assertValid(state.model);
@@ -4388,14 +4711,44 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
       }
       if(state.draft)onboarding.restore(state.draft);
       model=restored;
+      if(simpleStandSupported&&standMigrationReady){
+        let marker=readFirstAccessMarker(restored),inspection=null;
+        const singleMain=restored.receivers.length===1&&restored.receivers[0].role==='main'&&restored.receivers[0].lifecycle==='added'&&restored.receivers[0].onboardingTransactionId;
+        // Recover the crash gap after native publication but before the
+        // local presentation marker. Neither cache nor network failure can
+        // classify a receiver as factory/new or complete the customer flow.
+        if(marker||singleMain){
+          try{inspection=await ensureStandSession().inspect({expectedStandId:standId});}
+          catch(_){/* Retain published setup; unavailable is neither fresh nor complete. */}
+          // This is only a presentation hold for an already published MAIN.
+          // No cached identity authorizes writes or declares factory status.
+          // A fresh wifi-ready observation leaves a completed stand on its
+          // ordinary reconnect path; all other results need explicit proof.
+          if(!marker&&singleMain&&inspection?.status!=='wifi-ready')marker=firstAccessMarker(restored,restored.receivers[0].id);
+        }
+        if(marker){
+          firstAccessCheckpoint=copy(marker);simpleStandMode=true;nativeLoaded=true;
+          let phase=inspection?.status==='migration-required'?'pin':inspection?.status==='wifi-ready'?'reconnect':'checking';
+          try{storeFirstAccessMarker(marker);}catch(_){phase='checking';}
+          onboarding.restoreFirstStandAccess(marker,{phase});
+          route={...route,screen:'receiver-add',standId:marker.standId,zoneId:null,setupFrom:'stand'};
+          return;
+        }
+      }
       if(simpleStandMode){
         nativeLoaded=true;ensureStandSession();
-        route={...route,screen:startupError&&restored.stands.length?'stand':'stand-connect',standId:standId||null,zoneId:null};
+        route={...route,screen:startupError&&restored.stands.length||!restored.stands.length&&!startupError?'stand':'stand-connect',standId:standId||null,zoneId:null};
+        if(route.screen==='stand-connect'){
+          standConnectionIntent='open';standManualEntry=false;standSharingMode=null;
+        }
         if(startupError)standConnectionState={...standConnectionState,error:startupError};
-        if(standMigrationReady||startupSession?.status==='connected'){
+        if(startupCapabilities?.legacyStandAnimations===true){
+          if(restored.stands.length)route={...route,screen:'stand',standId:standId||null,zoneId:null};
+        }else if(standMigrationReady||startupSession?.status==='connected'){
           try{await standSession.resume();route={...route,screen:'stand',standId:standSession.snapshot().standId,zoneId:null};}
           catch(_){/* Keep the former cache. Only explicit MAIN-unset status may start setup. */}
         }
+        if(!state.draft&&!model.stands.length&&!standSession.snapshot()&&!standSession.canResume()&&restoreLocalStandConcept())route={...route,screen:'stand',standId:localStandConceptId,zoneId:null};
         return;
       }
       if(Backup)try{
@@ -4407,9 +4760,11 @@ return `<div class="page stand-connect-page">${contextTitle('Stand openen','Deze
         model=Backup.restoreLight(restored,appStorage.getItem(Backup.LIGHT_KEY));
       }catch(_){backupNotice='Je bewaarde lichtkeuze of een onderbroken herstelactie kon niet volledig worden gelezen. Er is niets naar je receivers verstuurd.';}
       nativeLoaded=true;
+      if(!state.draft&&!restored.stands.length&&restoreLocalStandConcept())route={...route,screen:'stand',standId:localStandConceptId,zoneId:null};
       // Only a successful load can establish that this is a first installation.
       // An existing stand with no receivers is not a reason to restart setup.
-      if(state.draft||!restored.stands.length){route.screen='receiver-add';route.setupFrom='stand';}
+      if(state.draft){route.screen='receiver-add';route.setupFrom='stand';}
+      else if(!restored.stands.length&&!localStandConcept()){route.screen='stand';route.standId=null;route.zoneId=null;}
     }catch(_){nativeLoadError=true;}
     finally{nativeLoading=false;render({top:true});if(standLinkAvailable){standLinkPending=true;void consumeStandShareLink();}}
   }
