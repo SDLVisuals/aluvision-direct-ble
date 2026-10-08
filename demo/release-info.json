@@ -9,55 +9,59 @@
   "nativeAppInstalled": false,
   "nativeAppSimulatorInstalled": false,
   "nativeAppInstallationPreservedData": null,
+  "nativeAppMetadataScope": "Historical native build243 record; this Pages release does not update or attest an iPhone installation.",
   "androidTestApp": {
-    "path": "android/aluvision-android-test-41.0.3-16-4382140173e3.apk",
-    "size": 17009808,
-    "sha256": "4382140173e373718eab19fc8faaf5b9c182d6763ba9514140b91105812f5aa9",
+    "path": "android/aluvision-android-test-41.0.13-19-8de577778854.apk",
+    "size": 2566110,
+    "sha256": "8de5777788549c3be531634ccee283d876c8d0c4f320bc51a58c75a8d1fac290",
     "packageName": "com.aluvision.lighting.android.test",
-    "versionName": "41.0.3",
-    "versionCode": 16,
+    "versionName": "41.0.13",
+    "versionCode": 19,
     "minSdk": 26,
     "mode": "receiver",
     "signerCertificateSha256": "b598fc6fa30b423517d6ca68e3bb1191248a32723174d4703baaede9125936ac",
-    "sourceInventorySha256": "8310e41f8c5d5b5f2ed54a8c898c88f041f40237bd95838a89fdf8f6317b0cf2",
-    "buildReceiptSha256": "53182f9da1d5920d9d1faa6869e8e569f7898a68673a8e11c053000a94a45a07",
+    "sourceInventorySha256": "cce308f3af514d0f5bf6a8a109af0c3ad2cc0f110bbd7e6a1802bd780a170ce1",
+    "buildReceiptSha256": "fb2cb1f53e2bbcd5095125db65a7cd63a0de6164df29c26bcf02088dc64b51c9",
     "signatureVerified": true,
     "packageVerified": true,
-    "installedVerified": false,
-    "installationEnvironment": null,
+    "installedVerified": true,
+    "installationEnvironment": "isolated Android API36 emulator only; no physical phone",
     "features": {
+      "temporarySingleUser": true,
       "pinLogin": false,
-      "standCode": true,
-      "shareQRAndLinkImplemented": true,
-      "migrationRequiresOriginalPairedApp": true,
-      "centralStandConfiguration": true,
-      "standSessionAnimations": true,
-      "standSessionIdentification": true,
-      "standSessionOutputs": true,
-      "standSessionOTA": true,
+      "standCode": false,
+      "shareQRAndLinkImplemented": false,
+      "centralStandConfiguration": false,
+      "standSessionAnimations": false,
+      "standSessionIdentification": false,
+      "standSessionOutputs": false,
+      "standSessionOTA": false,
       "receiverContextWriter": false,
-      "zoneEditing": true,
-      "ota": true,
-      "unpairing": true,
-      "postCodeReceiverPairing": true,
+      "zoneEditing": false,
+      "ota": false,
+      "unpairing": false,
+      "postCodeReceiverPairing": false,
+      "mainOnboarding": true,
+      "meshOnboarding": true,
+      "liveControl": true,
+      "outputRecovery": true,
       "backupFiles": false,
       "macStaticGestureEnabled": false,
       "firstClaimPIN": false,
-      "standSessionReceiverManagement": true
+      "standSessionReceiverManagement": false
     },
     "validation": {
-      "scope": "Actual Android Release SDK, exact signed APK and assets, controlled native management software tests. Not installed, not emulator- or physically accepted.",
-      "emulatorInstallVerified": false,
-      "emulatorColdStartVerified": false,
+      "scope": "Actual Android Release SDK, exact signed APK and68 packaged Web assets, same existing signer. Isolated API36 emulator install/startup and first local setup tap passed. No physical Android or receiver/RF acceptance.",
+      "emulatorInstallVerified": true,
+      "emulatorColdStartVerified": true,
       "emulatorBackgroundResumeVerified": false,
-      "emulatorChecks": 0,
+      "emulatorReceiptSha256": "4c4421b0b316cb1c64d068cc50d9eca6d0a820175a66909ad91d6d2b9203c9d0",
       "inPlaceUpdateVerified": false,
       "signerContinuityVerified": true,
-      "actualPackagedWebAssets": 63,
-      "sourceFreezeSha256": "4ccfc445a4c5a13ea7d8cfd57326fe528b4c90b9eb97a94b2322b6270e91668d",
-      "nativeManagementTests": 12,
-      "nativeManagementAssertions": 4330,
-      "sharedWebTests": 287,
+      "actualPackagedWebAssets": 68,
+      "sourceFreezeSha256": "20588f188604bbe39ea4c15a668d53b473b1bae2f8620e50cd3d04af6a456c8e",
+      "buildBindingSha256": "d7e845bc568dfc59e350642038078f14a3aa486917a14420258978b3cfd48916",
+      "capabilityScope": "Original temporary-single-user native capabilities unchanged from468; unsupported features remain disabled.",
       "cameraAndOSPermissionsPhysicallyVerified": false,
       "wifiPhysicallyVerified": false,
       "mobileLatencyVerified": false,
@@ -67,9 +71,9 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V41interface398-noqr-final-review20261007",
+  "revision": "V41interface474-single-user-android19-20261009",
   "interfaceVersion": 41,
-  "interfaceBaseline": "V41 shared interface from verified Web397 with the approved setup398 five-asset overlay. Fictional receivers and in-memory state; not a native or phone update. ROOT desktop browser review completed for this demo source; publication authority is separate.",
+  "interfaceBaseline": "Existing fake-only demo with scoped474 gallery, pixel, Wi-Fi-guide and continuity updates from commit3267d0b. Original20 fictional receivers and native/security adapters retained. Not a native or phone update.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -133,14 +137,19 @@
       "bytes": 17009808
     },
     {
+      "path": "android/aluvision-android-test-41.0.13-19-8de577778854.apk",
+      "sha256": "8de5777788549c3be531634ccee283d876c8d0c4f320bc51a58c75a8d1fac290",
+      "bytes": 2566110
+    },
+    {
       "path": "android-download/android-download.css",
       "sha256": "23ef08fd40d5090de0642e663a6e63da927b86e8273eb3a6064f7f496110ca5b",
       "bytes": 1488
     },
     {
       "path": "android-download/android-download.js",
-      "sha256": "ac509762c2c7d3b0e46f51fc6c3ae089647c75857086726c6634e28ced6dc645",
-      "bytes": 10358
+      "sha256": "8405946b1a3240f59b8c0b153526133965638ae652895dee41a5547e629fc9d1",
+      "bytes": 10557
     },
     {
       "path": "animation-engine.js",
@@ -169,8 +178,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "f5cc7e30e5dc5d6ec27d22696221945f24d0eabd0d67d19ed353c5705693adfa",
-      "bytes": 457562
+      "sha256": "701b18e7551cd4c3b0ab51bc38bfff3f2f237cfc0ffc295837f0428f597f49f2",
+      "bytes": 461812
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -209,8 +218,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "81981f792ebaf8f1df228b475f3c8b098c12d85542e1e1747fa678057436aea0",
-      "bytes": 5880
+      "sha256": "28a94d423da0827d017f71401bf7f949c0edb5021d5257a5789325d295e7a89e",
+      "bytes": 5949
     },
     {
       "path": "installation-libraries.js",
@@ -304,8 +313,8 @@
     },
     {
       "path": "pixel-setup.js",
-      "sha256": "5406c8a32a8017a7a7ef757dc8474d9ad1541a39665595a416cf2cb3f792714b",
-      "bytes": 37770
+      "sha256": "597b01f60c6ef9c4c2f479c3491b16a0201033706c05d001a71274538a5ccd77",
+      "bytes": 38272
     },
     {
       "path": "preferences.js",
@@ -384,13 +393,13 @@
     },
     {
       "path": "setup-wifi-guide.js",
-      "sha256": "614c8900ed6c691c9bbc58972295615f8b684a8019e2835db24687ab3bee9d3b",
-      "bytes": 2040
+      "sha256": "9c85b3866a3c7ed08cef09b9997bc7615fbd85cb1294a9b2ea1eea8c3b8fe28f",
+      "bytes": 2549
     },
     {
       "path": "stand-animations.css",
-      "sha256": "0e484306b6aca9505cf4ad4422e986d93d1bcfc9a150dcb8a7badad3842e13e2",
-      "bytes": 3529
+      "sha256": "c63a11852b215ba2c36b3c48442a231c5e0764a117de77771d17699bbfc0f0c2",
+      "bytes": 5721
     },
     {
       "path": "stand-animations.js",
@@ -428,6 +437,11 @@
       "bytes": 28613
     },
     {
+      "path": "ui-continuity.js",
+      "sha256": "ae28fd0b92d3100c27eef1c94ecea46bf30d6d4aa93d43b662ab2cc0eb9acb34",
+      "bytes": 5114
+    },
+    {
       "path": "v40-design.css",
       "sha256": "58d6dfb05822a0850f6defcb3737872161d29732b5f415b079ac376fce727f06",
       "bytes": 34085
@@ -449,6 +463,17 @@
     }
   ],
   "interfaceReviewScope": {
+    "sourceCommit": "3267d0b08c89992d0ac6dcf41209286a677073d4",
+    "sourceClosureReceiptSha256": "8652c74697e10599275677c701aefdc24fb7d7c4adb34d50069f141ea64b15b0",
+    "mobileBrowserReceiptSha256": "c64921939d59e4d2affd6ab4082746a00baf47676527f4ac9e075d2a2625a7fa",
+    "fakeReceiversPreserved": 20,
+    "hostTests": 20,
+    "mobileWebKitCases": 7,
+    "physicalPhone": false,
+    "hardware": false,
+    "scope": "Scoped demo UI overlay; original fake fixtures and native/security adapters byte-identical. Offline software browser tests only, no real receiver route."
+  },
+  "historicalInterfaceReviewScope398": {
     "sourceSnapshot": "verified-Web397-setup398-private-copy",
     "basedOnSourceSnapshot": "verified-Web397",
     "setup398OverlayApplied": true,
