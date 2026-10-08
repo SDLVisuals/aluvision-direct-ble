@@ -177,7 +177,7 @@
   }
   // One bounded latest-wins test-light queue. There is never a CONFIG/SAVE
   // command here. A lost reply remains an error, not a physical-light claim.
-  function createLivePreview({send,onState=()=>{},delay=80,setTimer=setTimeout,clearTimer=clearTimeout}={}){
+  function createLivePreview({send,onState=()=>{},delay=170,setTimer=setTimeout,clearTimer=clearTimeout}={}){
     let queued=null,active=null,desired=null,running=null,timer=null,renew=null,version=0;
     const key=r=>JSON.stringify([r.standId,r.transactionId,r.receiver,r.role,r.mainReceiverId,r.port]);
     const report=(kind,request)=>onState({kind,port:request?.port,pixels:request?.pixels,guide:request?.guide||'length',reversed:request?.reversed});
@@ -203,7 +203,7 @@
             if(answer?.applied!==true||answer.port!==request.port||answer.pixels!==request.pixels||!Number.isInteger(answer.previewTTLMS)||answer.previewTTLMS<(request.pixels===0?0:1)||answer.previewTTLMS>15000||request.guide==='power'&&(answer.guide!=='power'||answer.reversed!==request.reversed))throw Error('PIXEL_PREVIEW_UNCONFIRMED');
             if(item.version===version&&desired){report('applied',request);clearTimer(renew);if(answer.previewTTLMS>0)renew=setTimer(()=>{renew=null;if(desired){queued={request:desired,version};void drain();}},Math.min(10000,Math.max(500,answer.previewTTLMS-3000)));}
           }catch(error){
-            if(item.version===version||item.stop){desired=null;clearTimer(renew);renew=null;report(error?.code==='PIXEL_GUIDE_UPDATE_REQUIRED'?'unsupported':'failed',active);}
+            if(item.version===version){desired=null;clearTimer(renew);renew=null;report(error?.code==='PIXEL_GUIDE_UPDATE_REQUIRED'?'unsupported':'failed',active);}
           }
         }
       })().finally(()=>{running=null;if(queued)void drain();});
@@ -244,7 +244,7 @@
   function create({onSave,onClose=()=>{},onPreview,mode='preview',pixelsPerMeter=DEFAULT_PIXELS_PER_METER}={}){
     if(typeof onSave!=='function')throw Error('PIXEL_SAVE_HANDLER_REQUIRED');
     const limits=pixelLimits({pixelsPerMeter});
-    let dialog=null,receiver=null,outputs=[],index=0,busy=false,error='',focusBefore=null,initialPort=null,selectedPort=null,unbindScrub=null,recovering=false;
+    let dialog=null,receiver=null,outputs=[],index=0,busy=false,error='',focusBefore=null,initialPort=null,selectedPort=null,unbindScrub=null,recovering=false,previewStopJob=null;
     const plugMotion=globalThis.LightningReceiverVisual.createPlugMotion();
     let previewTransaction=null,previewState={kind:'idle'};
     const livePreview=createLivePreview({send:mode==='native'?onPreview:null,onState:state=>{previewState=state;showPreviewStatus(dialog,state);}});
@@ -258,7 +258,7 @@
     }
     function visibility(){syncPreview();}
     function paint(time){if(dialog?.open&&['outputs','pixels','connection'].includes(current().stage)){const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;paintOutputs(dialog,outputs,{time,reducedMotion,selectedPort:current().port||selectedPort,plugProgress:current().stage==='outputs'?plugMotion.sample(time,reducedMotion):{}});}}
-    function close(){if(!dialog||busy)return;void livePreview.stop();document.removeEventListener('visibilitychange',visibility);unbindScrub?.();unbindScrub=null;dialog.close();dialog.remove();dialog=null;plugMotion.clear();focusBefore?.focus?.({preventScroll:true});onClose();}
+    function close(){if(!dialog||busy&&!previewStopJob)return;previewStopJob=null;busy=false;void livePreview.stop();document.removeEventListener('visibilitychange',visibility);unbindScrub?.();unbindScrub=null;dialog.close();dialog.remove();dialog=null;plugMotion.clear();focusBefore?.focus?.({preventScroll:true});onClose();}
     function render(top=false){
       if(!dialog)return;const previousScroll=dialog.querySelector('.pixel-setup-body')?.scrollTop||0,step=current(),ports=outputs.filter(item=>item.enabled),active=output();
       const focusedPort=dialog.contains(document.activeElement)&&document.activeElement.dataset.pixelAction==='output'?document.activeElement.dataset.port:null;
@@ -275,18 +275,22 @@
     }
     function adjust(value,source,{commit=false,haptic=true}={}){if(!dialog||busy||current().stage!=='pixels')return;if(!validateInput(dialog,value,limits)){dialog.querySelector('[data-pixel-action="next"]').disabled=true;return;}const previous=output().pixels;output().pixels=Number(value);updatePixels(dialog,output(),{source,pixelsPerMeter});dialog.querySelector('[data-pixel-action="next"]').disabled=!configuredPixels(output().pixels,limits);if(haptic&&output().pixels!==previous)hapticStep();error='';syncPreview({commit});}
     function input(event){if(busy)return;if(event.target.matches('[data-pixel-count],[data-pixel-range]'))adjust(event.target.value,event.target,{commit:event.type==='change'});}
-    function commitKey(event){if(['Enter','ArrowUp','ArrowDown'].includes(event.key)&&event.target.matches('[data-pixel-count]'))adjust(event.target.value,event.target,{commit:true});}
+    function commitKey(event){if(['Enter','ArrowUp','ArrowDown'].includes(event.key)&&event.target.matches('[data-pixel-count]'))adjust(event.target.value,event.target,{commit:event.key==='Enter'});}
     async function click(event){
-      const target=event.target.closest('[data-pixel-action]');if(!target||target.disabled||busy)return;
+      const target=event.target.closest('[data-pixel-action]');if(!target||target.disabled||busy&&!(previewStopJob&&target.dataset.pixelAction==='close'))return;
       const action=target.dataset.pixelAction,step=current();
       if(['next','back','save'].includes(action)&&['pixels','connection'].includes(step.stage)){
-        const stoppingDialog=dialog;busy=true;const restore=showPreviewStopping(stoppingDialog);
-        try{await livePreview.stop();}finally{restore();if(dialog===stoppingDialog)busy=false;}
-        if(dialog!==stoppingDialog)return;
+        const stoppingDialog=dialog,job={dialog:stoppingDialog};previewStopJob=job;busy=true;const restore=showPreviewStopping(stoppingDialog);
+        // Leaving the editor never waits for transport cleanup. Navigation
+        // within it still waits; a late STOP cannot advance a newer dialog.
+        stoppingDialog.querySelector('[data-pixel-action="close"]')?.removeAttribute('disabled');
+        try{await livePreview.stop();}finally{restore();if(previewStopJob===job&&dialog===stoppingDialog)busy=false;}
+        if(previewStopJob!==job||dialog!==stoppingDialog)return;
+        previewStopJob=null;
       }
       if(action==='close')return close();
       if(action==='output'){const item=outputs.find(item=>item.port===Number(target.dataset.port));if(item.enabled&&outputs.filter(item=>item.enabled).length===1){error='Gebruik minstens één uitgang.';render();return;}item.enabled=!item.enabled;selectedPort=item.port;plugMotion.trigger(item.port,performance.now()/1000,item.enabled);error='';return render();}
-      if(['pixel-less','pixel-more','meter-less','meter-more','meter-half-less','meter-half-more'].includes(action)){const direction=action.endsWith('less')?-1:1,value=action.startsWith('meter')?stepMeters(output().pixels,direction*(action.includes('half')?0.5:1),limits):stepPixels(output().pixels,direction,limits);return adjust(value,null,{commit:true});}
+      if(['pixel-less','pixel-more','meter-less','meter-more','meter-half-less','meter-half-more'].includes(action)){const direction=action.endsWith('less')?-1:1,value=action.startsWith('meter')?stepMeters(output().pixels,direction*(action.includes('half')?0.5:1),limits):stepPixels(output().pixels,direction,limits);return adjust(value,null,{commit:false});}
       if(action==='side'){output().reversed=target.dataset.side==='right';error='';render();void livePreview.flush();return;}
       if(action==='next'){if(!outputs.some(item=>item.enabled)){error='Gebruik minstens één uitgang.';return render();}if(step.stage==='pixels'&&(!validateInput(dialog,dialog.querySelector('[data-pixel-count]').value,limits)||!configuredPixels(output().pixels,limits)))return;index++;error='';return render(true);}
       if(action==='back'){index--;error='';return render(true);}

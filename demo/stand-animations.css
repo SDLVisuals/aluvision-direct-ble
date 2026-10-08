@@ -1,5 +1,6 @@
 /* Whole-stand scope uses the same library/editor, in its existing fullscreen sheet. */
-.stand-controls-tabs{position:sticky;top:var(--dialog-header-height,64px);z-index:4;margin:0;padding:5px;background:var(--glass);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:20px;box-shadow:0 5px 20px #0000000b}
+.stand-controls-tabs{grid-column:1/-1;position:static;margin:0;padding:5px;background:var(--glass);border-radius:20px;box-shadow:0 5px 20px #0000000b;min-width:0}
+html body #effect-dialog:has([data-stand-control-sheet]) #effect-dialog-content>header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none}
 /* Keep scrolling labels out of the sticky controls, including WKWebView's
    nested glass surfaces. The raised buttons retain the existing glass style. */
 html body .stand-controls-tabs.section-tabs{background:var(--glass-solid);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
@@ -26,9 +27,28 @@ html body .stand-controls-tabs.section-tabs{background:var(--glass-solid);backdr
 [data-stand-control-mode=animations] .animation-family-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 [data-stand-control-mode=animations] .animation-library-inline{min-width:0}
 [data-stand-control-mode=animations] .animation-family-preview{min-height:146px}
+/* Mixed stand previews already name each zone. Keep the generic gallery
+   label in its own row instead of overlaying the first zone's name. */
+[data-stand-control-mode=animations] .animation-family-preview:has(.stand-animation-preview){display:flex;flex-direction:column;align-items:stretch;height:auto}
+[data-stand-control-mode=animations] .animation-family-preview:has(.stand-animation-preview)>.animation-family-preview-label{position:static;flex:none;margin:6px 8px 0}
 [data-stand-control-mode=animations] .animation-family-spatial-preview{height:auto}
 [data-stand-control-mode=animations] .animation-family-card .stand-animation-preview{align-self:center}
 [data-stand-control-mode=animations] .family-variant-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-[data-stand-control-mode=animations] :is(button,input){scroll-margin-block-start:calc(var(--dialog-header-height,64px) + 78px)}
+/* A preview and a text column cannot share half of a phone screen. Keep the
+   actual spatial canvas/stand plan, but give its title a full card width. */
+[data-stand-control-mode=animations] .family-variant-card{display:flex;flex-direction:column;align-items:stretch;gap:4px;min-width:0;padding:10px;overflow:hidden}
+[data-stand-control-mode=animations] .family-variant-card>:is(canvas,.stand-animation-preview){width:100%;min-width:0;align-self:stretch;grid-column:auto;grid-row:auto}
+[data-stand-control-mode=animations] .family-variant-card>b{grid-column:auto;grid-row:auto;padding:4px 2px;font-size:15px;line-height:1.3;overflow-wrap:normal;word-break:normal}
+[data-stand-control-mode=animations] .family-variant-card>small{grid-column:auto;padding:0 2px}
+[data-stand-control-mode=animations] .family-variant-card>.animation-variant-description{display:none}
+[data-stand-control-mode=animations] .family-variant-card>.animation-variant-position{align-self:flex-start;grid-column:auto;grid-row:auto;margin:0;font-size:11px!important}
+.stand-animation-explanation{min-width:0;font-size:12px;line-height:1.5;color:var(--muted);margin-top:8px}
+.stand-animation-explanation>summary{min-height:40px;display:list-item;cursor:pointer;padding:9px 4px;color:var(--ink);font-weight:700}
+.stand-animation-explanation p{margin:7px 4px}
+.stand-animation-live .stand-animation-preview.is-compact{padding:0}
+[data-stand-control-mode=animations] .animation-family-trigger{min-width:0}
+[data-stand-control-mode=animations] .family-copy{min-width:0}
+/* The dialog already reserves the measured title + tabs via scroll-padding. */
+[data-stand-control-mode=animations] :is(button,input){scroll-margin-block-start:12px}
 @media(max-width:350px){[data-stand-control-mode=animations] .animation-family-grid,[data-stand-control-mode=animations] .family-variant-grid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.stand-controls-tabs{scroll-behavior:auto}}

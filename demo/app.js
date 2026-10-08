@@ -6,6 +6,7 @@
   const M = window.LightningModel, P = window.LightningPreview, C = window.LightningColour, S = window.LightningPresets;
   const Colours = window.LightningColoursLibrary, Scenes = window.LightningScenes;
   const Preferences=window.LightningPreferences;
+  const UIContinuity=window.LightningUIContinuity;
   const Backup=window.LightningBackup;
   const Library=window.LightningAnimationLibrary;
   const StandAnimations=window.LightningStandAnimations;
@@ -40,6 +41,9 @@
   // query flags and native iPhone bundle keep their non-demo paths.
   const webDemoContext=!nativeContext&&window.LightningWebDemo?.available===true;
   const webDemo=webDemoContext?window.LightningWebDemo.create():null;
+  // The browser walkthrough has no PIN/share/open authority, even if an
+  // obsolete action is injected. Fake onboarding remains the only setup.
+  const demoAccessActions=new Set(['pin-login','pin-login-submit','pin-login-cancel','pin-protection-toggle','pin-protection-refresh','pin-protection-reconnect','pin-protection-recheck','pin-protection-save','stand-connect','stand-open-options','stand-connect-submit','stand-wifi-open','stand-join-open','stand-share-open','stand-code-suggest','stand-code-change','stand-code-change-submit','stand-setup-start','stand-migrate-submit','stand-inspect-submit','stand-find-submit','stand-show-loaded','stand-resume-submit','stand-refresh','stand-forget','stand-forget-confirm']);
   const localPreviewContext=!nativeContext&&['localhost','127.0.0.1','[::1]','::1'].includes(window.location.hostname)&&!webDemoContext;
   const previewContext=localPreviewContext||webDemoContext;
   let model = localPreviewContext ? window.LightningFixtures.create() : M.assertValid({schemaVersion:30,demo:webDemoContext,stands:[],receivers:[],scenes:[],presets:[]});
@@ -209,7 +213,11 @@
   const openLineSetup=new Set(),openLineSettings=new Set();
   const openSpatialChoices=new Set(),spatialViews=new Map();
   let standControlOpen=false;
+  let standControlEpoch=0,lastStandControlContext=null;
+  function standControlIntent(){return {epoch:++standControlEpoch,standId:stand()?.id};}
+  function currentStandControlIntent(intent){return standControlOpen&&standControlMode==='animations'&&intent.epoch===standControlEpoch&&intent.standId===stand()?.id;}
   let standControlMode='colour',standAnimationGallery=true,standAnimationFamily=null,standAnimationTab='catalogue';
+  let standAnimationFamilyReturn=null;
   let standDialogNested=null,buildingStandDialog=false;
   const standAnimationQueries=new Map();
   function animationQueryKey(){return standControlOpen?stand()?.id:route.zoneId;}
@@ -540,8 +548,9 @@
   function chooseAnimationCategory(value){
     if(standControlOpen){
       if(!['catalogue','whole','pixels','tunnel','brand','presets'].includes(value))return;
+      standControlEpoch++;
       standAnimationTab=value;standAnimationFamily=null;standAnimationGallery=true;standAnimationQueries.delete(stand()?.id);
-      standDialogNested=null;return renderStandControls();
+      standDialogNested=null;return renderStandControls({preserveScroll:false});
     }
     if(!['catalogue','whole','pixels','tunnel','brand','presets'].includes(value)||value==='pixels'&&zone()?.type!=='SPI')return;
     animationQueries.delete(route.zoneId);
@@ -917,7 +926,7 @@
   function renderStand() {
     if(!stand()){
       const pending=onboarding.summary(),step=!pending?.stand||pending.stage==='stand'?1:pending.stage==='zones'?2:3;
-      if(!pending?.stand)return `<div class="page onboarding-welcome onboarding-entry"><header class="page-heading"><div><h1>Je stand</h1></div></header><section class="stand-entry-choices" aria-label="Beginnen met je stand"><button type="button" class="stand-entry-choice" data-action="stand-create-open" data-stand-entry="setup"><span class="menu-icon" aria-hidden="true">${icon('zones')}</span><span><b>Stand instellen</b><small>Voeg receivers toe.</small></span>${icon('chevron')}</button><button type="button" class="stand-entry-choice" data-action="stand-connect" data-stand-entry="open"><span class="menu-icon" aria-hidden="true">${icon('wifi')}</span><span><b>Stand openen</b><small>Via je standwifi.</small></span>${icon('chevron')}</button></section>${canStartLocalStand()?'<button type="button" class="text-button stand-skip-setup" data-action="stand-continue-local">Verder zonder setup</button><p class="stand-skip-note">Maak alvast je zones. Je verbindt later je eerste receiver.</p>':''}</div>`;
+      if(!pending?.stand)return `<div class="page onboarding-welcome onboarding-entry"><header class="page-heading"><div><h1>Je stand</h1></div></header><section class="stand-entry-choices" aria-label="Beginnen met je stand"><button type="button" class="stand-entry-choice" data-action="stand-create-open" data-stand-entry="setup"><span class="menu-icon" aria-hidden="true">${icon('zones')}</span><span><b>Stand instellen</b><small>Voeg receivers toe.</small></span>${icon('chevron')}</button>${webDemoContext?'':`<button type="button" class="stand-entry-choice" data-action="stand-connect" data-stand-entry="open"><span class="menu-icon" aria-hidden="true">${icon('wifi')}</span><span><b>Stand openen</b><small>Via je standwifi.</small></span>${icon('chevron')}</button>`}</section>${canStartLocalStand()?'<button type="button" class="text-button stand-skip-setup" data-action="stand-continue-local">Verder zonder setup</button><p class="stand-skip-note">Maak alvast je zones. Je verbindt later je eerste receiver.</p>':''}</div>`;
       return `<div class="page onboarding-welcome"><header class="page-heading"><div><div class="eyebrow">${pending?.stand?'SETUP NIET AFGEROND':'WELKOM'}</div><h1>${esc(pending?.stand?.name||'Je stand instellen')}</h1></div></header><section class="stand-setup-overview" aria-label="Je stand instellen">${['Standnaam','Zones maken','Receivers toevoegen'].map((label,i)=>`<div class="stand-setup-row ${i+1===step?'active':''}"><i>${i+1<step?'✓':i+1}</i><span><small>STAP ${i+1}</small><b>${label}</b></span><small>${i+1<step?'Klaar':i+1===step?'Volgende':''}</small></div>`).join('')}</section>${pending?.zones.length?`<div class="stand-draft-zones">${pending.zones.map(z=>`<div>${icon('zones')}<b>${esc(z.name)}</b><small>Nog geen receiver toegevoegd</small></div>`).join('')}</div>`:''}<button class="button full onboarding-next-action" data-setup-resume data-action="receiver-add">${pending?.stand?'Setup verderzetten':'Mijn stand instellen'}</button>${canContinuePendingLocalStand()?'<button type="button" class="text-button stand-skip-setup" data-action="stand-continue-local">Verder zonder setup</button><p class="stand-skip-note">Je standnaam en zones blijven op dit toestel bewaard.</p>':''}</div>`;
     }
     const s = stand(), added = standReceivers();
@@ -1341,7 +1350,7 @@
   function effectCards(effects,extraClass='',variantTotal=0) {
     const selectedCount=physicalLineCount(selected());
     const className=`effect-card${extraClass?` ${extraClass}`:''}`;
-    return effects.map((effect,index)=>{const needsAll=effect.requireTogether||effect.category==='tunnel',minimum=effect.minimumReceivers||1,tooFew=selectedCount<minimum,locked=needsAll?(standControlOpen?selectedCount:physicalLineCount())<minimum:tooFew;return `<button class="${className}" data-action="effect" data-id="${esc(effect.id)}" data-motion="${effectMotionKey(effect)}" aria-pressed="${activeEffect()?.id===effect.id}" ${locked?'disabled':''}>${effectPreview(effect,needsAll?{tunnelLines:'all'}:{})}<b>${esc(Library.displayName(effect,t))}</b>${variantTotal>1?`<small class="animation-variant-position">${esc(t('animationVariantPosition',{current:index+1,total:variantTotal}))}</small>`:''}<small>${esc(categoryLabel(effect.category))} · ${esc(effect.description)}</small>${locked?`<small>${needsAll?t('animationAcrossMinimum'):t('animationSelectMinimum',{count:minimum})}</small>`:''}</button>`;}).join('');
+    return effects.map((effect,index)=>{const needsAll=effect.requireTogether||effect.category==='tunnel',minimum=effect.minimumReceivers||1,tooFew=selectedCount<minimum,locked=needsAll?(standControlOpen?selectedCount:physicalLineCount())<minimum:tooFew;return `<button class="${className}" data-action="effect" data-id="${esc(effect.id)}" data-motion="${effectMotionKey(effect)}" aria-pressed="${activeEffect()?.id===effect.id}" ${locked?'disabled':''}>${effectPreview(effect,needsAll?{tunnelLines:'all'}:{})}<b>${esc(Library.displayName(effect,t))}</b>${variantTotal>1?`<small class="animation-variant-position">${esc(t('animationVariantPosition',{current:index+1,total:variantTotal}))}</small>`:''}<small class="animation-variant-description">${esc(categoryLabel(effect.category))} · ${esc(effect.description)}</small>${locked?`<small>${needsAll?t('animationAcrossMinimum'):t('animationSelectMinimum',{count:minimum})}</small>`:''}</button>`;}).join('');
   }
   function animationFamilyCard(group) {
     const type=standControlOpen?[...new Set(standControlReceivers().map(receiver=>receiver.type))].join(' + '):zone()?.type==='SPI'?'SPI':'RGBW',openLabel=t('animationOpenGroup'),countLabel=t(group.count===1?'animationCountOne':'animationCountMany',{count:group.count}),nextStep=t('animationGroupNextStep');
@@ -1354,7 +1363,7 @@
     const countLabel=t(group.count===1?'animationCountOne':'animationCountMany',{count:group.count});
     const tunnel=group.preview.category==='tunnel',groupHint=tunnel?t('animationTunnelGroupAccessible',{name:group.title,count:physicalLineCount(standControlOpen?standControlReceivers():receivers())}):t('animationGroupPreviewHint');
     const backLabel=animationFamilyBackLabel(tab);
-    return `<section class="animation-family-detail" aria-labelledby="animation-family-title"><div class="family-back-slot" data-family-back-slot><button type="button" class="animation-gallery-return family-back-action family-detail-back" data-action="family-back" aria-label="${esc(backLabel)}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('back')}</span><span class="gallery-action-copy"><b>${esc(backLabel)}</b></span></span></button></div><header class="family-detail-heading"><div><small class="family-detail-step">${esc(t('animationFamilyStep'))}</small><h2 id="animation-family-title" tabindex="-1">${esc(group.title)}</h2><p>${esc(group.summary)}</p></div><span class="family-detail-count">${esc(countLabel)}</span></header>${includePreview?`<figure class="family-detail-preview"><figcaption><b>${esc(t('animationFamilyPreview'))}</b><small>${esc(groupHint)}</small></figcaption>${effectPreview(group.preview,tunnel?{tunnelLines:'all'}:{})}</figure>`:''}<section class="family-variants-panel" aria-labelledby="animation-family-choices"><header class="family-variants-heading"><div><b id="animation-family-choices">${esc(t('animationFamilyChoose'))}</b><small>${esc(t('animationChooseVariant'))}</small></div></header><div class="family-variant-grid">${effectCards(group.effects,'family-variant-card',group.count)}</div></section></section>`;
+    return `<section class="animation-family-detail" aria-labelledby="animation-family-title"><div class="family-back-slot" data-family-back-slot><button type="button" class="animation-gallery-return family-back-action family-detail-back" data-action="family-back" aria-label="${esc(backLabel)}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('back')}</span><span class="gallery-action-copy"><b>${esc(backLabel)}</b></span></span></button></div><header class="family-detail-heading"><div><small class="family-detail-step">${esc(t('animationFamilyStep'))}</small><h2 id="animation-family-title" tabindex="-1">${esc(group.title)}</h2><p>${esc(group.summary)}</p></div><span class="family-detail-count">${esc(countLabel)}</span></header>${includePreview?`<figure class="family-detail-preview"><figcaption><b>${esc(t('animationFamilyPreview'))}</b><small>${esc(groupHint)}</small></figcaption>${effectPreview(group.preview,tunnel?{tunnelLines:'all'}:{})}</figure>`:''}<section class="family-variants-panel" aria-labelledby="animation-family-choices"><header class="family-variants-heading"><div><b id="animation-family-choices">${esc(t('animationFamilyChoose'))}</b><small>${esc(t('animationChooseVariant'))}</small></div></header><div class="family-variant-grid">${effectCards(group.effects,'family-variant-card',group.count)}</div>${standControlOpen?`<details class="stand-animation-explanation" data-continuity-id="stand-variant-explanation"><summary>Uitleg bij de varianten</summary>${group.effects.map(effect=>`<p><b>${esc(Library.displayName(effect,t))}</b> · ${esc(effect.description)}</p>`).join('')}</details>`:''}</section></section>`;
   }
   function renderAnimationFamily(){
     const group=Library.group(catalogue(),route.family);
@@ -2174,7 +2183,7 @@
     }finally{pin='';pinLoginBusy=false;pinRecoveryAbort=null;if(route.screen==='pin-login')render({top:true});}
   }
   function pinProtectionCard() {
-    if(webDemoContext)return `<section class="card" data-stand-connection><div class="section-heading"><h2>Verbinding met je stand</h2>${icon('lock')}</div><p>Deze demo gebruikt fictieve receivers en verbindt niet met wifi of echte verlichting.</p><p>Je wifi-PIN geeft toegang tot je stand. Geen aparte appcode.</p><small>Deel de netwerknaam en je wifi-PIN. Nieuwe telefoons verbinden via Wifi-instellingen en laden daarna je stand in de app.</small></section>`;
+    if(webDemoContext)return `<section class="card" data-stand-connection><div class="section-heading"><h2>Eén gebruiker</h2>${icon('wifi')}</div><p>Deze demo gebruikt fictieve receivers en verbindt niet met wifi of echte verlichting.</p><p>In de tijdelijke testversie staan PIN, standcode en delen via QR-code uit.</p><small>Probeer de bediening met de voorbeeldreceivers. Je hoeft je wifi niet te veranderen.</small></section>`;
     if(simpleStandSupported)return standConnectionCard();
     const selected=securityStand(),current=pinProtection?.standId===selected?.id?pinProtection:null;
     const available=nativeContext&&typeof runtime?.services?.securityStatus==='function'&&typeof runtime?.services?.setPinProtection==='function';
@@ -2365,7 +2374,7 @@
   }
   function renderDemoWifi(){
     if(!webDemoContext)return renderSettings();
-    return `<div class="page demo-wifi-page"><header class="page-heading"><div><h1>Wifi-instellingen</h1><p>${esc(t('settings'))} · V41</p></div></header>${demoSettingsTabs(true)}<section class="card demo-wifi-notice" aria-labelledby="demo-wifi-title"><span class="pill red">DEMO · niet verbonden</span><h2 id="demo-wifi-title">Alleen een voorbeeld</h2><p>Hier bekijk je de wifi-instellingen. Deze demo zoekt geen echte netwerken, maakt geen verbinding en bewaart geen wifi-wachtwoorden.</p></section><section class="card demo-wifi-network"><div class="demo-wifi-heading"><span class="menu-icon" aria-hidden="true">${icon('wifi')}</span><div><h2>Wifi van je installatie</h2><p>Je telefoon bedient de verlichting via dit netwerk.</p></div></div><dl class="demo-wifi-details"><div><dt>Netwerk</dt><dd>Aluvision-DEMO</dd></div><div><dt>Status</dt><dd>Voorbeeld · geen echte verbinding</dd></div></dl><button class="button full" disabled aria-describedby="demo-wifi-disabled">Verbinding controleren</button><p id="demo-wifi-disabled" class="demo-wifi-caption">Alleen beschikbaar met een echte receiver in de iPhone-app.</p></section><section class="card demo-wifi-guide"><h2>Verbinden in de echte app</h2><ol><li>Open <b>Instellingen → Wifi</b> op je iPhone.</li><li>Kies het ALUVISION-wifi van je installatie.</li><li>Ga terug naar de app om je verlichting te bedienen.</li></ol><p>Je hoeft voor deze demo niets aan je wifi te veranderen.</p></section></div>`;
+    return `<div class="page demo-wifi-page"><header class="page-heading"><div><h1>Wifi-instellingen</h1><p>${esc(t('settings'))} · V41</p></div></header>${demoSettingsTabs(true)}<section class="card demo-wifi-notice" aria-labelledby="demo-wifi-title"><span class="pill red">DEMO · niet verbonden</span><h2 id="demo-wifi-title">Alleen een voorbeeld</h2><p>Hier bekijk je de wifi-instellingen. Deze demo zoekt geen echte netwerken, maakt geen verbinding en bewaart geen wifi-wachtwoorden. PIN en delen via QR-code staan in deze tijdelijke ééngebruikerstest uit.</p></section><section class="card demo-wifi-network"><div class="demo-wifi-heading"><span class="menu-icon" aria-hidden="true">${icon('wifi')}</span><div><h2>Wifi van je installatie</h2><p>Je telefoon bedient de verlichting via dit netwerk.</p></div></div><dl class="demo-wifi-details"><div><dt>Netwerk</dt><dd>Aluvision-DEMO</dd></div><div><dt>Status</dt><dd>Voorbeeld · geen echte verbinding</dd></div></dl><button class="button full" disabled aria-describedby="demo-wifi-disabled">Verbinding controleren</button><p id="demo-wifi-disabled" class="demo-wifi-caption">Alleen beschikbaar met een echte receiver in een ondersteunde app.</p></section><section class="card demo-wifi-guide"><h2>Verbinden in de echte app</h2><ol><li>Open <b>Instellingen → Wifi</b> op je iPhone.</li><li>Kies het ALUVISION-wifi van je installatie.</li><li>Ga terug naar de app om je verlichting te bedienen.</li></ol><p>Je hoeft voor deze demo niets aan je wifi te veranderen.</p></section></div>`;
   }
   function renderSettings() {
     return `<div class="page settings-page"><header class="page-heading overview-heading settings-overview-heading"><div><h1>${esc(t('settings'))}</h1></div></header><section class="card settings-appearance"><h2 class="settings-appearance-heading">${icon('settings')}<span>${esc(t('appearance'))}</span></h2><h3 class="preference-label">${esc(t('language'))}</h3><div class="preference-grid">${Preferences.languages.map(language=>`<button data-action="language" data-id="${language.code}" lang="${language.code}" aria-pressed="${uiPreferences.preferences.language===language.code}">${language.name}</button>`).join('')}</div>${uiPreferences.preferences.language==='nl'?'':`<p class="preference-note">${esc(t('wipNotice'))}</p>`}<h3 class="preference-label">${esc(t('theme'))}</h3><div class="preference-grid">${['light','dark'].map(theme=>`<button data-action="theme" data-id="${theme}" aria-pressed="${uiPreferences.preferences.theme===theme}">${icon(theme==='dark'?'moon':'sun')}${esc(t(theme))}</button>`).join('')}</div>${uiPreferences.error?`<p role="alert">${esc(uiPreferences.error.message)}</p>`:''}</section><button class="menu-card settings-help-entry" data-action="help"><span class="menu-icon">${icon('info')}</span><div><b>Stand en zones uitgelegd</b><small>Zo organiseer je je verlichting</small></div>${icon('chevron')}</button></div>`;
@@ -3301,15 +3310,16 @@
   function closeHelp(){
     document.getElementById('help').close();restoreControlFocus(helpReturnFocus);helpReturnFocus=null;
   }
-  function showEffectDialog(title,content) {
+  function showEffectDialog(title,content,headerContent='') {
     if(standControlOpen&&!buildingStandDialog&&!standDialogNested&&!colourManagerReturn){
+      standControlEpoch++;
       const focused=dialogActionOpener||document.activeElement;
       standDialogNested={scrollTop:document.getElementById('effect-dialog').scrollTop,action:focused?.dataset?.action,id:focused?.dataset?.id};
     }
     if(!document.getElementById('effect-dialog').open)dialogReturnFocus=dialogActionOpener||document.activeElement;
     const dialog=document.getElementById('effect-dialog');
     cancelDialogDismissal(dialog);
-    document.getElementById('effect-dialog-content').innerHTML=`<header><h2 id="effect-dialog-title">${esc(title)}</h2><button class="icon-button" data-action="effect-dialog-close" aria-label="Venster sluiten">${icon('close')}</button></header>${content}`;
+    document.getElementById('effect-dialog-content').innerHTML=`<header><h2 id="effect-dialog-title">${esc(title)}</h2><button class="icon-button" data-action="effect-dialog-close" aria-label="Venster sluiten">${icon('close')}</button>${headerContent}</header>${content}`;
     if(!dialog.open)dialog.showModal();dialog.scrollTop=0;
     // Keep a way out visible even while the shared colour picker is scrolled.
     // Measure instead of guessing: translated/long titles can wrap to 2 lines.
@@ -3357,7 +3367,7 @@
     dialogHeaderObserver?.disconnect();document.getElementById('effect-dialog').close();
     document.querySelector('[data-action="animation-categories"]')?.setAttribute('aria-expanded','false');
     document.querySelectorAll('#effect-dialog canvas[data-preview]').forEach(canvas=>previews.delete(canvas.dataset.preview));
-    document.getElementById('effect-dialog-content').replaceChildren();standControlOpen=false;standDialogNested=null;zoneDeletion=null;brandEditor=null;
+    document.getElementById('effect-dialog-content').replaceChildren();standControlOpen=false;standControlEpoch++;lastStandControlContext=null;standDialogNested=null;zoneDeletion=null;brandEditor=null;
     if(wasStand||(centralPending&&!centralEditing()))render({preserveScroll:true});
     if(!restoreControlFocus(dialogReturnFocus)&&Number.isInteger(brandIndex))
       main.querySelector(`[data-action="brand-colour-edit"][data-id="${brandIndex}"]`)?.focus({preventScroll:true});
@@ -3379,7 +3389,7 @@
   }
   function showStandControls(){
     if(!standControlReceivers().length)return toast('Voeg eerst verlichting toe aan een zone. Losse receivers worden niet meebediend.');
-    standControlOpen=true;standDialogNested=null;standAnimationFamily=null;standAnimationTab='catalogue';
+    standControlOpen=true;standControlEpoch++;lastStandControlContext=null;standDialogNested=null;standAnimationFamily=null;standAnimationFamilyReturn=null;standAnimationTab='catalogue';
     standControlMode=standAnimationMarker()?'animations':'colour';standAnimationGallery=!standAnimationMarker();settingsOpen=false;
     renderStandControls();
   }
@@ -3393,7 +3403,7 @@
     return false;
   }
   function restoreStandDialog(){
-    const saved=standDialogNested;standDialogNested=null;renderStandControls();
+    const saved=standDialogNested;standControlEpoch++;standDialogNested=null;renderStandControls();
     const dialog=document.getElementById('effect-dialog');dialog.scrollTop=saved?.scrollTop||0;
     if(saved?.action)dialog.querySelector(`[data-action="${CSS.escape(saved.action)}"]${saved.id?`[data-id="${CSS.escape(saved.id)}"]`:''}`)?.focus({preventScroll:true});
   }
@@ -3419,21 +3429,30 @@
     const types=new Set(standControlReceivers().map(receiver=>receiver.type));
     return types.size>1?'SPI beweegt · RGBW volgt':types.has('SPI')?'SPI · samen over je stand':'RGBW · lijn voor lijn';
   }
-  function renderStandControls(){
+  function renderStandControls({preserveScroll=true}={}){
     const dialog=document.getElementById('effect-dialog');
+    const context=JSON.stringify([stand()?.id,standControlMode,standAnimationGallery,standAnimationFamily,standAnimationTab]);
+    const keep=preserveScroll&&dialog.open&&lastStandControlContext===context,scrollTop=keep?dialog.scrollTop:0;
+    const disclosures=keep?UIContinuity.captureDisclosures(dialog):[],editor=keep?UIContinuity.captureEditor(dialog,document.activeElement):null,action=keep?UIContinuity.captureAction(dialog,document.activeElement):null;
     dialog.querySelectorAll('canvas[data-preview]').forEach(canvas=>previews.delete(canvas.dataset.preview));
     const effect=activeEffect(),family=standAnimationFamily?Library.group(catalogue(),standAnimationFamily):null;
     const shown=family?.preview||(!standAnimationGallery&&effect?effect:null)||catalogue().find(effect=>(effect.minimumReceivers||1)<=physicalLineCount(standControlReceivers()));
-    const animationContent=standControlMode==='animations'?`${shown&&!standAnimationGallery?`<section class="stand-animation-live"><div class="stand-animation-live-title"><b>${esc(Library.displayName(shown,t))}</b><small>${standAnimationModeLabel(shown)}${standAnimationGallery?' · voorbeeld':''}</small></div>${standAnimationPreview(shown)}</section>`:''}${!standAnimationGallery&&effect?animationEditorMarkup(effect):animationLibraryContent()}`:'';
+    const animationContent=standControlMode==='animations'?`${shown&&!standAnimationGallery?`<section class="stand-animation-live"><div class="stand-animation-live-title"><b>${esc(Library.displayName(shown,t))}</b><small>${standAnimationModeLabel(shown)}</small></div>${standAnimationPreview(shown,{compact:true})}<details class="stand-animation-explanation" data-continuity-id="stand-zone-previews"><summary>Alle zones bekijken</summary>${standAnimationPreview(shown)}</details></section>`:''}${!standAnimationGallery&&effect?animationEditorMarkup(effect):animationLibraryContent()}`:'';
     const zoneCount=standControlZoneCount();
-    const content=`<div class="stand-controls-sheet" data-stand-control-sheet data-stand-control-mode="${standControlMode}"><div class="stand-controls-tabs section-tabs" role="tablist" aria-label="Alles bedienen"><button type="button" role="tab" data-action="stand-control-mode" data-id="colour" aria-selected="${standControlMode==='colour'}" aria-controls="stand-controls-panel">${icon('sun')}Kleur</button><button type="button" role="tab" data-action="stand-control-mode" data-id="animations" aria-selected="${standControlMode==='animations'}" aria-controls="stand-controls-panel">${icon('animation')}Animaties</button></div><p class="stand-control-scope"><b>${esc(standLabel())}</b> · ${zoneCount} zone${zoneCount===1?'':'s'} · ${ledlineCount(physicalLineCount(standControlReceivers()))}</p><div id="stand-controls-panel" role="tabpanel"><p class="stand-control-description">${standControlMode==='colour'?'Kleur voor RGBW en SPI.':'Animaties over alle zones · RGBW en SPI.'}<small>Receivers zonder zone doen niet mee.</small></p>${powerControl()}<p class="live-confirmation" data-live-status="stand" role="status" aria-live="polite"></p>${standControlMode==='colour'?`<p id="stand-control-mixed" class="mixed-note" ${mixedSelection()?'':'hidden'}>Instellingen verschillen. Een nieuwe kleur geldt voor alle zones.</p>${colourPickerMarkup(null,true)}${standScenesMarkup(true)}`:animationContent}</div></div>`;
-    buildingStandDialog=true;try{showEffectDialog('Alles bedienen',content);}finally{buildingStandDialog=false;}
+    // Title and mode tabs share one opaque sticky surface, including the
+    // safe area. Two separate sticky layers leaked scrolling previews at
+    // the rounded tab corners and could diverge when the title wrapped.
+    const tabs=`<div class="stand-controls-tabs section-tabs" role="tablist" aria-label="Alles bedienen"><button type="button" role="tab" data-action="stand-control-mode" data-id="colour" aria-selected="${standControlMode==='colour'}" aria-controls="stand-controls-panel">${icon('sun')}Kleur</button><button type="button" role="tab" data-action="stand-control-mode" data-id="animations" aria-selected="${standControlMode==='animations'}" aria-controls="stand-controls-panel">${icon('animation')}Animaties</button></div>`;
+    const content=`<div class="stand-controls-sheet" data-stand-control-sheet data-stand-control-mode="${standControlMode}"><p class="stand-control-scope"><b>${esc(standLabel())}</b> · ${zoneCount} zone${zoneCount===1?'':'s'} · ${ledlineCount(physicalLineCount(standControlReceivers()))}</p><div id="stand-controls-panel" role="tabpanel"><p class="stand-control-description">${standControlMode==='colour'?'Kleur voor RGBW en SPI.':'Animaties over alle zones · RGBW en SPI.'}<small>Receivers zonder zone doen niet mee.</small></p>${powerControl()}<p class="live-confirmation" data-live-status="stand" role="status" aria-live="polite"></p>${standControlMode==='colour'?`<p id="stand-control-mixed" class="mixed-note" ${mixedSelection()?'':'hidden'}>Instellingen verschillen. Een nieuwe kleur geldt voor alle zones.</p>${colourPickerMarkup(null,true)}${standScenesMarkup(true)}`:animationContent}</div></div>`;
+    buildingStandDialog=true;try{showEffectDialog('Alles bedienen',content,tabs);}finally{buildingStandDialog=false;}
     // A first colour edit may hide the mixed-settings explanation. Keep only
     // this dialog's initially visible footprint, so its wheel cannot move
     // underneath the active pointer. A fresh uniform dialog has no reserve.
     const mixedHint=dialog.querySelector('#stand-control-mixed');
     if(mixedHint&&!mixedHint.hidden)mixedHint.dataset.preserveMixedSpace='';
     syncLiveStatus();paintWheel();syncColour();paint(performance.now()/1000);
+    if(keep){UIContinuity.restoreDisclosures(dialog,disclosures);if(editor)UIContinuity.restoreEditor(dialog,editor);else UIContinuity.restoreCapturedAction(dialog,action);}
+    dialog.scrollTop=scrollTop;lastStandControlContext=context;
   }
   function showPaletteEditor(index) {
     const s=selectedState();if(!Number.isInteger(index)||index<0||index>=Math.min(colours(s).length,s.colorCount||colours(s).length)||activeEffect()?.paletteEditable===false)return;
@@ -3859,6 +3878,7 @@
     if(button.dataset.action==='pin-login-cancel'&&pinLoginBusy){pinRecoveryAbort?.abort();return;}
     if(managementBusy||arrangementApplying||pinProtectionBusy||pinLoginBusy)return;
     const action=button.dataset.action,id=button.dataset.id;
+    if(webDemoContext&&demoAccessActions.has(action))return;
     if(standReceiverActions.has(action)&&standReceiverActionUnavailable(action,button))return toast(standReceiverNotice);
     // Safari does not focus every pointer-activated button. Remember the
     // actual synchronous opener, not an unrelated heading that kept focus.
@@ -3870,39 +3890,58 @@
       if(standControlOpen){
         if(action==='stand-control-mode'){
           if(!['colour','animations'].includes(id))return;
-          standControlMode=id;standAnimationFamily=null;standDialogNested=null;renderStandControls();
+          standControlEpoch++;
+          standControlMode=id;standAnimationFamily=null;standAnimationFamilyReturn=null;standDialogNested=null;renderStandControls();
           document.querySelector(`[data-action="stand-control-mode"][data-id="${id}"]`)?.focus({preventScroll:true});return;
         }
-        if(action==='family'){standAnimationFamily=id;renderStandControls();document.querySelector('#animation-family-title')?.focus({preventScroll:true});return;}
-        if(action==='family-back'){standAnimationFamily=null;renderStandControls();return;}
+        if(action==='family'){
+          standControlEpoch++;
+          standAnimationFamilyReturn={id,scrollTop:document.getElementById('effect-dialog').scrollTop};
+          standAnimationFamily=id;renderStandControls();document.querySelector('#animation-family-title')?.focus({preventScroll:true});return;
+        }
+        if(action==='family-back'){
+          standControlEpoch++;
+          const saved=standAnimationFamilyReturn;standAnimationFamily=null;standAnimationFamilyReturn=null;renderStandControls();
+          const dialog=document.getElementById('effect-dialog');dialog.scrollTop=saved?.scrollTop||0;
+          if(saved?.id)dialog.querySelector(`[data-action="family"][data-id="${CSS.escape(saved.id)}"]`)?.focus({preventScroll:true});
+          return;
+        }
         if(['stand-animation-gallery','animation-gallery','animations-gallery','library'].includes(action)){
+          standControlEpoch++;
           standAnimationGallery=true;standAnimationFamily=null;
           if(action==='library')standAnimationTab=id==='all'?'catalogue':id;
-          renderStandControls();return;
+          renderStandControls({preserveScroll:false});return;
         }
-        if(action==='animation-current-edit'){standAnimationGallery=false;standAnimationFamily=null;renderStandControls();return;}
+        if(action==='animation-current-edit'){standControlEpoch++;standAnimationGallery=false;standAnimationFamily=null;renderStandControls({preserveScroll:false});return;}
         if(action==='animation-category-choice'&&button.closest('[data-animation-categories]'))return chooseAnimationCategory(id);
         if(action==='effect'){
           const effect=catalogue().find(effect=>effect.id===id);if(!effect)return;
+          const intent=standControlIntent();
           if(nativeContext&&!(await standAnimationsAvailable()))return;
+          if(!currentStandControlIntent(intent))return;
           void orderIdentification?.supersede();
           const plan=StandAnimations.plan(model,stand().id,id,{state:effectState(effect),time:performance.now()/1000});
           model=plan.model;sendReceiverStates(plan.receivers.map(receiver=>receiver.id));
-          standAnimationGallery=false;standAnimationFamily=null;settingsOpen=false;renderStandControls();return;
+          standAnimationGallery=false;standAnimationFamily=null;settingsOpen=false;renderStandControls({preserveScroll:false});return;
         }
         if(action==='preset-confirm'){
+          const epoch=standControlEpoch,standId=stand()?.id;
           try{const result=presetStore.save(S.capture(document.getElementById('preset-name').value,activeEffect(),selectedState()));
-            if(result.error)throw Error(result.error.message);await confirmCentralLibrary(result);savedPresets=result;standDialogNested=null;renderStandControls();toast('Animatie bewaard in Mijn animaties.');
-          }catch(error){const el=document.querySelector('.dialog-error');el.textContent=error.message;el.hidden=false;}return;
+            if(result.error)throw Error(result.error.message);await confirmCentralLibrary(result);savedPresets=result;
+            if(!standControlOpen||epoch!==standControlEpoch||standId!==stand()?.id)return;
+            standDialogNested=null;renderStandControls();toast('Animatie bewaard in Mijn animaties.');
+          }catch(error){if(!standControlOpen||epoch!==standControlEpoch||standId!==stand()?.id)return;const el=document.querySelector('.dialog-error');if(el){el.textContent=error.message;el.hidden=false;}}return;
         }
         if(action==='preset-apply'){
           const preset=savedPresets.presets.find(preset=>preset.id===id),effect=catalogue().find(effect=>effect.id===preset?.effectId);
           if(!effect)return toast('Deze animatie past niet bij alle ledlines in je stand.');
+          const intent=standControlIntent();
           if(nativeContext&&!(await standAnimationsAvailable()))return;
+          if(!currentStandControlIntent(intent))return;
           const plan=StandAnimations.plan(model,stand().id,effect.id,{state:preset.state,time:performance.now()/1000});model=plan.model;
-          sendReceiverStates(plan.receivers.map(receiver=>receiver.id));standAnimationGallery=false;standAnimationFamily=null;renderStandControls();return;
+          sendReceiverStates(plan.receivers.map(receiver=>receiver.id));standAnimationGallery=false;standAnimationFamily=null;renderStandControls({preserveScroll:false});return;
         }
-        if(action==='preset-delete-confirm'){const result=presetStore.remove(id);if(result.error)return toast(result.error.message);await confirmCentralLibrary(result);savedPresets=result;standDialogNested=null;renderStandControls();return;}
+        if(action==='preset-delete-confirm'){const epoch=standControlEpoch,standId=stand()?.id,result=presetStore.remove(id);if(result.error)return toast(result.error.message);await confirmCentralLibrary(result);savedPresets=result;if(standControlOpen&&epoch===standControlEpoch&&standId===stand()?.id){standDialogNested=null;renderStandControls();}return;}
       }
       if(openLineSetup.has(route.zoneId)&&button.closest('.ledline-setup')&&action!=='layout'&&!['visual-identify','port-identify'].includes(action)){
         if(orderIdentificationState?.active)void orderIdentification?.interaction();else beginOrderColours();
