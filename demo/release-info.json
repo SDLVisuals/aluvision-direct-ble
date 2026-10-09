@@ -71,9 +71,9 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V41interface474-single-user-android19-20261009",
+  "revision": "V41interface509-phone-style-single-user-20261009",
   "interfaceVersion": 41,
-  "interfaceBaseline": "Existing fake-only demo with scoped474 gallery, pixel, Wi-Fi-guide and continuity updates from commit3267d0b. Original20 fictional receivers and native/security adapters retained. Not a native or phone update.",
+  "interfaceBaseline": "Existing reviewed fake-only interface474, with exact frozen phone CSS material/visual styling and SPI selector presentation. Root bookmarks now open the isolated demo. No application logic, native adapter, firmware or APK change.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -87,9 +87,14 @@
   "softwareFileImportAvailable": false,
   "assets": [
     {
-      "path": "RELEASE_NOTES.md",
-      "sha256": "c5028461ba05557935344abb68bd3070d76d24b82dcf8b89577c199a142ad2d4",
-      "bytes": 7333
+      "path": "android-download/android-download.css",
+      "sha256": "23ef08fd40d5090de0642e663a6e63da927b86e8273eb3a6064f7f496110ca5b",
+      "bytes": 1488
+    },
+    {
+      "path": "android-download/android-download.js",
+      "sha256": "8405946b1a3240f59b8c0b153526133965638ae652895dee41a5547e629fc9d1",
+      "bytes": 10557
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
@@ -127,6 +132,11 @@
       "bytes": 2397107
     },
     {
+      "path": "android/aluvision-android-test-41.0.13-19-8de577778854.apk",
+      "sha256": "8de5777788549c3be531634ccee283d876c8d0c4f320bc51a58c75a8d1fac290",
+      "bytes": 2566110
+    },
+    {
       "path": "android/aluvision-android-test-41.0.2-14-84d1e566b90c.apk",
       "sha256": "84d1e566b90c46116445e16413525bce0082c1e25f480c1098017eaf6565b424",
       "bytes": 16845968
@@ -135,21 +145,6 @@
       "path": "android/aluvision-android-test-41.0.3-16-4382140173e3.apk",
       "sha256": "4382140173e373718eab19fc8faaf5b9c182d6763ba9514140b91105812f5aa9",
       "bytes": 17009808
-    },
-    {
-      "path": "android/aluvision-android-test-41.0.13-19-8de577778854.apk",
-      "sha256": "8de5777788549c3be531634ccee283d876c8d0c4f320bc51a58c75a8d1fac290",
-      "bytes": 2566110
-    },
-    {
-      "path": "android-download/android-download.css",
-      "sha256": "23ef08fd40d5090de0642e663a6e63da927b86e8273eb3a6064f7f496110ca5b",
-      "bytes": 1488
-    },
-    {
-      "path": "android-download/android-download.js",
-      "sha256": "8405946b1a3240f59b8c0b153526133965638ae652895dee41a5547e629fc9d1",
-      "bytes": 10557
     },
     {
       "path": "animation-engine.js",
@@ -218,8 +213,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "28a94d423da0827d017f71401bf7f949c0edb5021d5257a5789325d295e7a89e",
-      "bytes": 5949
+      "sha256": "2d4e94fa5198ff59c27256b30ef400fe22bc5399077fbc4d21e93fb4ba397e51",
+      "bytes": 6086
     },
     {
       "path": "installation-libraries.js",
@@ -377,6 +372,11 @@
       "bytes": 8637
     },
     {
+      "path": "RELEASE_NOTES.md",
+      "sha256": "c5028461ba05557935344abb68bd3070d76d24b82dcf8b89577c199a142ad2d4",
+      "bytes": 7333
+    },
+    {
       "path": "scenes.css",
       "sha256": "f37c9c30ddb0478b87944ca0c6714696fe91c06abe26c0c543418eff5ce08812",
       "bytes": 8246
@@ -443,8 +443,18 @@
     },
     {
       "path": "v40-design.css",
-      "sha256": "58d6dfb05822a0850f6defcb3737872161d29732b5f415b079ac376fce727f06",
-      "bytes": 34085
+      "sha256": "15e28696be4862733ba2fbb6a7d089dc7ce720d1ba8aea30ba523641abf62958",
+      "bytes": 34730
+    },
+    {
+      "path": "v41-materials.css",
+      "sha256": "1fd1f545a946a333d866c7aadf4aac1a861d454aed8efd99a080d04b50451ad0",
+      "bytes": 28163
+    },
+    {
+      "path": "v41-visual.css",
+      "sha256": "938f6d81e36e2758fd828eb1c6d3f541668c74595504092a03b17f2681e60f6b",
+      "bytes": 7060
     },
     {
       "path": "vendor/v21_animation_catalog.js",
@@ -508,6 +518,59 @@
       "evidenceScope": "ROOT reviewed exact noQR source and generator diff, then fresh390x844 desktop-browser fake-only onboarding/reload/20found/addRGBW/stand/settings noQR and overflow. Earlier unchanged mixed RGBW/SPI controls, pixel/metre/direction, galleries/Pulse and light/dark reviewed. Additional labeled screenshots are isolated headless desktop software fixtures. No phone, credentials, wifi or hardware acceptance.",
       "physicalPhone": false,
       "hardware": false
+    }
+  },
+  "interfaceStylingScope509": {
+    "sourceSnapshot": "pending-combined498.uu4JVG/source/WebApp",
+    "sourceFreezeSha256": "78f321214ef09d2ad4be1c7e16326beb2fe7376fb57f3f493595964e00be05f1",
+    "stylingIdenticalInFrozenAppBuilds": [
+      474,
+      481,
+      498
+    ],
+    "files": [
+      {
+        "path": "v40-design.css",
+        "sha256": "15e28696be4862733ba2fbb6a7d089dc7ce720d1ba8aea30ba523641abf62958",
+        "bytes": 34730
+      },
+      {
+        "path": "v41-materials.css",
+        "sha256": "1fd1f545a946a333d866c7aadf4aac1a861d454aed8efd99a080d04b50451ad0",
+        "bytes": 28163
+      },
+      {
+        "path": "v41-visual.css",
+        "sha256": "938f6d81e36e2758fd828eb1c6d3f541668c74595504092a03b17f2681e60f6b",
+        "bytes": 7060
+      }
+    ],
+    "scope": "Presentation CSS only. Existing fictional demo behavior, 20 receiver discovery fixtures, in-memory storage and disabled PIN/sharing/hardware adapters retained.",
+    "nativeCallsModified": false,
+    "physicalPhone": false,
+    "hardware": false,
+    "validation": {
+      "status": "OFFLINE_STYLING_REDIRECT_PASS",
+      "receiptSha256": "e30a07ef5e96c198b5edb2cbb0baf26273a8cb58454d1eb274c40322531749e8",
+      "cases": 4,
+      "viewports": [
+        390,
+        1440
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "fakeDiscoveryCount": 20,
+      "enabledSPIPorts": 4,
+      "fourPortVisualPreviewSelection": true,
+      "rootRedirectQueryHashPreserved": true,
+      "nativeCalls": 0,
+      "receiverNetworkCalls": 0,
+      "physicalPhone": false,
+      "hardware": false,
+      "existingSeparateSpiPortControlAvailable": false,
+      "scope": "Offline desktop-WebKit rendering and fictional onboarding/settings/order/gallery only. Existing four-port individual live-colour selection is not added by this styling-only release. Receipt predates this metadata-only evidence annotation; rendered asset hashes are unchanged."
     }
   }
 }

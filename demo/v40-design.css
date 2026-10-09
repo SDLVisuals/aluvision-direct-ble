@@ -377,6 +377,23 @@ html body .selection[data-selection-mode="all"] .scope-lines-toggle .scope-toggl
 html body .selection .scope-toggle-chevron { background: transparent; }
 html body .selection .scope-copy :is(.scope-option-title, small) { color: var(--ink); }
 html body .selection .scope-copy small { color: var(--muted); }
+/* Physical SPI outputs need a readable name and port, including in the
+   narrow colour drawer beside power. Do not squeeze four ports into chips. */
+html body .selection[data-selection-family="SPI"] .scope-lines-list {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 7px;
+}
+html body .selection[data-selection-family="SPI"] .scope-line:last-child:nth-child(odd) {
+  width: 100%;
+  justify-self: stretch;
+}
+html body .selection[data-selection-family="SPI"] .scope-line .scope-option-title {
+  word-break: normal;
+  overflow-wrap: normal;
+}
+html body .selection[data-selection-family="SPI"] .scope-line .scope-copy > small {
+  display: block;
+}
 @media (max-width: 720px) {
   /* The open drawer shares its row with power. Two columns squeezed names
      down to a letter per line; use legible, full-width choices on phones. */

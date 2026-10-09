@@ -1,0 +1,565 @@
+/* V41 material finish. Load last.
+   Presentation only: the existing screens retain their layout, safe areas,
+   drag/drop geometry, lighting palette, measured dock and motion ownership.
+   Repeated surfaces are painted milk, not expensive nested backdrop filters. */
+
+:root,
+html.interface-polish {
+  --bg: #eef2f6;
+  --panel: #fafbfd;
+  --ink: #252a34;
+  --muted: #606978;
+  --line: #d2d9e3;
+  --soft: #e5eaf0;
+  --glass: rgba(255, 255, 255, .86);
+  --glass-edge: rgba(255, 255, 255, .84);
+  --glass-solid: #f8fafc;
+  --glass-sheet: #f8fafc;
+  --surface: var(--glass-solid);
+  --action-ink: #a63832;
+  --milk-edge: rgba(115, 131, 155, .18);
+  --milk-face: rgba(255, 255, 255, .68);
+  --milk-inner: rgba(223, 231, 240, .52);
+  --milk-field: #ffffff;
+  --milk-field-edge: #c7d1de;
+  --milk-shadow: 0 10px 25px -16px rgba(35, 50, 75, .22), 0 2px 5px -4px rgba(35, 50, 75, .08);
+  --milk-nav: rgba(247, 250, 254, .93);
+  --milk-nav-solid: #f4f7fb;
+  --milk-nav-active: #343d4e;
+  --milk-nav-active-ink: #ffffff;
+  --milk-primary: #353e50;
+  --milk-primary-tail: #252d3b;
+  --milk-primary-ink: #ffffff;
+  --milk-choice: rgba(166, 56, 50, .055);
+  --milk-danger: #a63832;
+  --milk-success: #277755;
+  --v40-edge: var(--milk-edge);
+  --v40-inner: var(--milk-inner);
+  --v40-gloss: var(--milk-face);
+  --v40-tail: transparent;
+  --v40-raised: var(--milk-shadow);
+  --v40-edge-light: inset 0 1px 0 rgba(255, 255, 255, .55);
+  --v40-field: var(--milk-field);
+  --v40-selected: var(--milk-primary);
+  --v40-selected-tail: var(--milk-primary-tail);
+  --surface-shadow: var(--milk-shadow);
+  --surface-highlight: var(--v40-edge-light);
+  --interface-milk: var(--glass);
+  --interface-milk-solid: var(--glass-solid);
+  --interface-inner: var(--milk-inner);
+  --interface-edge: var(--milk-edge);
+  --interface-highlight: var(--milk-face);
+  --interface-shadow: var(--milk-shadow);
+  --interface-choice: var(--action-ink);
+  --interface-choice-tint: var(--milk-choice);
+}
+
+html body[data-theme="dark"],
+html.interface-polish body[data-theme="dark"] {
+  --bg: #171717;
+  --panel: #292929;
+  --ink: #f4f3f1;
+  --muted: #bcbab7;
+  --line: #494846;
+  --soft: #333231;
+  --glass: rgba(43, 42, 41, .94);
+  --glass-edge: rgba(235, 232, 227, .11);
+  --glass-solid: #2b2a29;
+  --glass-sheet: #242322;
+  --surface: var(--glass-solid);
+  --action-ink: #ffc0b7;
+  --milk-edge: rgba(225, 221, 216, .13);
+  --milk-face: rgba(245, 242, 236, .045);
+  --milk-inner: rgba(68, 65, 62, .36);
+  --milk-field: #201f1e;
+  --milk-field-edge: #53514e;
+  --milk-shadow: 0 12px 26px -16px rgba(0, 0, 0, .55), 0 2px 6px -4px rgba(0, 0, 0, .25);
+  --milk-nav: rgba(37, 36, 35, .95);
+  --milk-nav-solid: #292827;
+  --milk-nav-active: #ece9e4;
+  --milk-nav-active-ink: #282624;
+  --milk-primary: #ece9e4;
+  --milk-primary-tail: #dcd8d2;
+  --milk-primary-ink: #282624;
+  --milk-choice: rgba(255, 192, 183, .075);
+  --milk-danger: #ffb4aa;
+  --milk-success: #8cd4b1;
+  --v40-edge: var(--milk-edge);
+  --v40-inner: var(--milk-inner);
+  --v40-gloss: var(--milk-face);
+  --v40-tail: transparent;
+  --v40-raised: var(--milk-shadow);
+  --v40-edge-light: inset 0 1px 0 rgba(235, 232, 227, .05);
+  --v40-field: var(--milk-field);
+  --v40-selected: var(--milk-primary);
+  --v40-selected-tail: var(--milk-primary-tail);
+  --surface-shadow: var(--milk-shadow);
+  --surface-highlight: var(--v40-edge-light);
+  --interface-milk: var(--glass);
+  --interface-milk-solid: var(--glass-solid);
+  --interface-inner: var(--milk-inner);
+  --interface-edge: var(--milk-edge);
+  --interface-highlight: var(--milk-face);
+  --interface-shadow: var(--milk-shadow);
+  --interface-choice: var(--action-ink);
+  --interface-choice-tint: var(--milk-choice);
+  color-scheme: dark;
+  background:
+    radial-gradient(125% 33rem at 9% -12%, rgba(196, 188, 177, .10), transparent 75%),
+    radial-gradient(110% 30rem at 115% 70%, rgba(156, 151, 143, .04), transparent 80%),
+    linear-gradient(160deg, #22211f 0%, #171717 75%);
+}
+
+html:has(> body[data-theme="dark"]) { background: #171717; color-scheme: dark; }
+html body:not([data-theme="dark"]) {
+  background:
+    radial-gradient(135% 29rem at 4% -10%, #ffffff 10%, rgba(255, 255, 255, .2) 74%, transparent),
+    radial-gradient(125% 36rem at 120% 35%, rgba(235, 224, 211, .35), transparent 77%),
+    linear-gradient(155deg, #f6f7f8 5%, #edf0f4 70%, #f0f2f4 100%);
+}
+
+/* Header and navigation are the two bounded frosted surfaces. */
+html.interface-polish body .brand-bar,
+html body .brand-bar {
+  background: rgba(249, 251, 254, .91);
+  border-color: var(--milk-edge);
+  box-shadow: 0 4px 17px -13px rgba(29, 41, 60, .25);
+  -webkit-backdrop-filter: blur(22px) saturate(108%);
+  backdrop-filter: blur(22px) saturate(108%);
+}
+html.interface-polish body[data-theme="dark"] .brand-bar,
+html body[data-theme="dark"] .brand-bar {
+  background: rgba(25, 24, 23, .96);
+  box-shadow: 0 4px 17px -12px rgba(0, 0, 0, .3);
+}
+html body .brand-bar > span { color: var(--muted); }
+html body .brand-bar > span > b { color: var(--action-ink); }
+html body :is(h1, h2, h3) { color: var(--ink); }
+html body h1 { font-weight: 780; letter-spacing: -.04em; }
+html body h2 { font-weight: 730; letter-spacing: -.025em; }
+html body :is(.context-name, .page-heading p, .footer-note, .control-location-summary) { color: var(--muted); }
+html body :is(.eyebrow, .text-button, .active-animation-kicker, .animation-settings-return-kicker,
+    .animation-library-kicker) { color: var(--action-ink); }
+
+/* A single quiet edge; no nested shiny picture-frame outlines. */
+html.interface-polish body :is(.card, .stand-info-tile, .stand-control-shortcut,
+    .zone-entry, .menu-card, .receiver-list > details, .scene-card,
+    .stand-scenes, .stand-scenes-entry, .stand-scene-card, .stand-scenes-empty,
+    .stand-setup-overview, .control-workspace, .onboarding-name-card,
+    .pixel-setup-panel, .pixel-setup-shell, .stand-animation-live),
+html.interface-polish body[data-theme="dark"] :is(.card, .stand-info-tile,
+    .stand-control-shortcut, .zone-entry, .menu-card, .receiver-list > details,
+    .scene-card, .stand-scenes, .stand-scenes-entry, .stand-scene-card,
+    .stand-scenes-empty, .stand-setup-overview, .control-workspace,
+    .onboarding-name-card, .pixel-setup-panel, .pixel-setup-shell, .stand-animation-live) {
+  color: var(--ink);
+  border-color: var(--milk-edge);
+  background-color: var(--glass);
+  background-image: linear-gradient(140deg, var(--milk-face), transparent 72%) !important;
+  box-shadow: var(--milk-shadow);
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html.interface-polish body :is(.animation-family-card, .family-variant-card,
+    .effect-card, .family-card, .assignment-choice, .assignment-family-choice,
+    .layout-choice, .onboarding-zone, .onboarding-destination),
+html.interface-polish body[data-theme="dark"] :is(.animation-family-card,
+    .family-variant-card, .effect-card, .family-card, .assignment-choice,
+    .assignment-family-choice, .layout-choice, .onboarding-zone, .onboarding-destination) {
+  color: var(--ink);
+  background-color: var(--glass);
+  background-image: linear-gradient(145deg, var(--milk-face), transparent 72%);
+  border-color: var(--milk-edge);
+  box-shadow: 0 8px 19px -14px rgba(28, 43, 68, .22);
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html.interface-polish body :is(.stand-page, .onboarding-welcome) > .page-heading {
+  background: linear-gradient(135deg, var(--milk-face), transparent 72%), var(--glass);
+  border-color: var(--milk-edge);
+  box-shadow: var(--milk-shadow);
+}
+html.interface-polish body .zone-entry > .zone-card {
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+html.interface-polish body :is(.family-variants-panel, .animation-category-options,
+    .receiver-list details details, .ledline-row-settings .receiver-connections,
+    .stand-scenes .stand-scenes-empty) {
+  background-color: var(--milk-inner);
+  background-image: none !important;
+  border-color: var(--milk-edge);
+  box-shadow: none;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html.interface-polish body :is(.zone-options-button, .menu-icon:not(.colour-icon),
+    .receiver-type-icon, .advanced-settings-icon, .gallery-action-icon) {
+  color: var(--ink);
+  background: var(--milk-inner);
+  border-color: transparent;
+  box-shadow: none;
+}
+html.interface-polish body :is(.settings-toggle, .ledline-add-action,
+    .animation-category-trigger, .animation-category-choice,
+    .animation-settings-return, .animation-chooser-action),
+html.interface-polish body[data-theme="dark"] :is(.settings-toggle,
+    .ledline-add-action, .animation-category-trigger, .animation-category-choice,
+    .animation-settings-return, .animation-chooser-action) {
+  color: var(--ink);
+  background: linear-gradient(145deg, var(--milk-face), transparent), var(--glass-solid);
+  border-color: var(--milk-edge);
+  box-shadow: 0 4px 12px -9px rgba(28, 43, 68, .24);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Primary/secondary hierarchy also stays legible in dark mode. Deliberate
+   destructive red actions and saved colour/palette buttons are excluded. */
+html.interface-polish body .button:not(.red):not(.secondary):not(.removal-confirm):not(.animation-save-recipe) {
+  color: var(--milk-primary-ink);
+  background: linear-gradient(145deg, var(--milk-primary), var(--milk-primary-tail));
+  border-color: transparent;
+  box-shadow: 0 7px 15px -10px rgba(20, 33, 55, .4);
+}
+html.interface-polish body .button.secondary:not(.receiver-danger-section .button.secondary),
+html.interface-polish body[data-theme="dark"] .button.secondary:not(.receiver-danger-section .button.secondary) {
+  color: var(--ink);
+  background: var(--glass-solid);
+  border-color: var(--milk-edge);
+  box-shadow: 0 3px 8px -6px rgba(30, 43, 63, .2);
+}
+html.interface-polish body :is(.back, .icon-button) {
+  color: var(--ink);
+  border-color: var(--milk-edge);
+  background: var(--glass-solid);
+  box-shadow: none;
+}
+html.interface-polish body :is(.button, .back, .menu-card, .settings-toggle) { font-weight: 650; }
+html.interface-polish body :is(.pill:not(.red), .guide, .preview-notice,
+    .pixel-preview-notice, .management-status, .receiver-zone-row-hint) {
+  background: var(--milk-inner);
+  border-color: transparent;
+  color: var(--muted);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Opaque selected buttons plus existing checks/titles: selection is not only
+   a colour difference. Keep border widths fixed to prevent layout jumps. */
+html.interface-polish body :is(.section-tabs, .control-mode-tabs, .demo-settings-tabs) {
+  background: var(--milk-inner);
+  border-color: var(--milk-edge);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html.interface-polish body :is(.section-tabs, .demo-settings-tabs) > button { color: var(--muted); }
+html.interface-polish body :is(.receiver-chips button, .filter-row button,
+    .compact-direction button, .physical-port-picker button):not([aria-pressed="true"]):not([aria-selected="true"]) {
+  color: var(--ink);
+  background: var(--glass-solid);
+  border-color: var(--milk-edge);
+  box-shadow: none;
+}
+html.interface-polish body :is(.section-tabs, .demo-settings-tabs) > button[aria-selected="true"],
+html.interface-polish body .demo-settings-tabs > button[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--glass-solid);
+  box-shadow: 0 2px 6px -3px rgba(23, 37, 59, .24);
+  font-weight: 750;
+}
+html.interface-polish body :is(.control-mode-tabs button[aria-pressed="true"],
+    .receiver-chips button[aria-pressed="true"], .filter-row button[aria-selected="true"],
+    .compact-direction button[aria-pressed="true"]),
+html.interface-polish body[data-theme="dark"] :is(.control-mode-tabs button[aria-pressed="true"],
+    .receiver-chips button[aria-pressed="true"], .filter-row button[aria-selected="true"],
+    .compact-direction button[aria-pressed="true"]) {
+  color: var(--milk-primary-ink);
+  background: linear-gradient(145deg, var(--milk-primary), var(--milk-primary-tail));
+  border-color: transparent;
+  box-shadow: inset 0 -2px 0 var(--red);
+  font-weight: 750;
+}
+html.interface-polish body :is(.assignment-choice, .assignment-family-choice,
+    .layout-choice, .animation-category-choice, .effect-card,
+    .physical-port-picker button, .preference-grid > button)[aria-pressed="true"] {
+  color: var(--ink);
+  background-color: var(--glass-solid);
+  background-image: linear-gradient(var(--milk-choice), var(--milk-choice));
+  border-color: var(--action-ink);
+  box-shadow: inset 3px 0 0 var(--action-ink);
+}
+html.interface-polish body .onboarding-page .onboarding-zone[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--glass-solid);
+  border-color: var(--action-ink);
+  box-shadow: inset 3px 0 0 var(--action-ink);
+}
+html.interface-polish body :is(.onboarding-count, .onboarding-side) .button {
+  color: var(--ink);
+  background: var(--glass-solid);
+  border-color: var(--milk-edge);
+  box-shadow: none;
+}
+html.interface-polish body :is(.onboarding-count, .onboarding-side) .button[aria-pressed="true"],
+html.interface-polish body .onboarding-page .onboarding-result-filter .button[aria-pressed="true"] {
+  color: var(--milk-primary-ink);
+  background: var(--milk-primary);
+  border-color: transparent;
+  box-shadow: inset 0 -2px 0 var(--red);
+}
+html.interface-polish body .selection .scope-lines-toggle,
+html.interface-polish body .selection[data-selection-mode="all"] .scope-lines-toggle,
+html.interface-polish body[data-theme="dark"] .selection[data-selection-mode="all"] .scope-lines-toggle {
+  color: var(--ink);
+  background: var(--milk-inner);
+  border-color: transparent;
+  box-shadow: none;
+}
+html.interface-polish body .selection .scope-line[aria-pressed="true"],
+html.interface-polish body[data-theme="dark"] .selection .scope-line[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--glass-solid);
+  border-color: var(--action-ink);
+  box-shadow: inset 3px 0 0 var(--action-ink);
+}
+html.interface-polish body .selection .scope-copy small { color: var(--muted); }
+html.interface-polish body .selection .scope-lines-toggle[aria-expanded="true"] .scope-toggle-chevron { color: var(--action-ink); background: var(--milk-inner); }
+html.interface-polish body .selection .scope-number { color: var(--ink); background: var(--milk-inner); }
+html.interface-polish body .selection .scope-line[aria-pressed="true"] .scope-number { color: #fff; background: var(--red); }
+html.interface-polish body .selection .scope-selected-mark { color: #fff; background: var(--red); }
+html.interface-polish body .selection .selection-together[aria-pressed="true"],
+html.interface-polish body[data-theme="dark"] .selection .selection-together[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--glass-solid);
+  border-color: var(--action-ink);
+  box-shadow: inset 3px 0 0 var(--action-ink);
+}
+html.interface-polish body .selection .selection-together[aria-pressed="true"] .scope-copy :is(.scope-option-title, small) { color: var(--ink); }
+html.interface-polish body .selection .selection-together[aria-pressed="true"] > .icon { color: var(--action-ink); }
+html.interface-polish body .bediening-workspace .animation-context {
+  background: var(--glass-solid);
+  border-color: var(--milk-edge);
+  box-shadow: none;
+}
+
+/* Fields have their own quiet inset depth; no canvas, range-track, channel or
+   swatch colours are changed by the generic form treatment. */
+html.interface-polish body :is(input[type="text"], input[type="password"],
+    input[type="search"], input[type="number"], input[type="tel"], input:not([type]),
+    select, textarea),
+html.interface-polish body[data-theme="dark"] :is(input[type="text"],
+    input[type="password"], input[type="search"], input[type="number"],
+    input[type="tel"], input:not([type]), select, textarea) {
+  color: var(--ink);
+  background: var(--milk-field);
+  border-color: var(--milk-field-edge);
+  box-shadow: inset 0 1px 3px rgba(17, 30, 49, .035);
+  caret-color: var(--action-ink);
+}
+html.interface-polish body :is(input, textarea)::placeholder { color: var(--muted); opacity: 1; }
+html.interface-polish body :is(input, select, textarea)[aria-invalid="true"] { border-color: var(--action-ink); }
+html.interface-polish body .channel-row > button:not(.channel-toggle) { color: var(--muted); background: var(--milk-field); box-shadow: none; }
+html.interface-polish body .channel-row > .channel-number { color: var(--ink); background: var(--milk-field); border-color: var(--milk-field-edge); box-shadow: none; }
+
+/* Clear navigation in both themes, keeping the exact fixed geometry and
+   safe-area position. The selected tab has strong fill and stronger type. */
+html.interface-polish body .navigation,
+html.interface-polish body[data-theme="dark"] .navigation {
+  background: var(--milk-nav);
+  border-color: var(--milk-edge);
+  box-shadow: 0 8px 23px -10px rgba(22, 36, 57, .25), 0 1px 4px rgba(22, 36, 57, .04);
+  -webkit-backdrop-filter: blur(24px) saturate(110%);
+  backdrop-filter: blur(24px) saturate(110%);
+}
+html.interface-polish body .navigation > button:not([aria-current="page"]) { color: var(--muted); font-weight: 600; }
+html.interface-polish body .navigation > button[aria-current="page"] {
+  color: var(--milk-nav-active-ink);
+  background: var(--milk-nav-active);
+  box-shadow: 0 2px 6px -3px rgba(24, 34, 53, .2);
+  font-weight: 750;
+}
+html.interface-polish body .navigation > button[aria-current="page"] .icon { color: var(--milk-nav-active-ink); }
+
+/* The content behind dialogs/sticky controls must not show through labels. */
+html.interface-polish body :is(.control-dock-surface, #effect-dialog-content > header),
+html.interface-polish body .control-preview-dock[data-scrolled="true"] .control-dock-surface,
+html.interface-polish body[data-theme="dark"] .control-preview-dock[data-scrolled="true"] .control-dock-surface,
+html.interface-polish body .stand-controls-tabs.section-tabs {
+  background: var(--glass-solid);
+  background-image: none;
+  border-color: var(--milk-edge);
+  box-shadow: 0 8px 17px -14px rgba(26, 38, 59, .38);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+/* This sticky tray intentionally has an opaque backing. Its active segment
+   cannot use that same fill: keep Kleur/Animaties obvious in either theme. */
+html.interface-polish body .stand-controls-tabs.section-tabs > button[aria-selected="true"] {
+  color: var(--milk-primary-ink);
+  background: var(--milk-primary);
+  box-shadow: 0 2px 6px -3px rgba(23, 37, 59, .24);
+}
+html.interface-polish body :is(dialog, .receiver-update-sheet, .receiver-removal-sheet),
+html.interface-polish body #effect-dialog:not(:has([data-stand-control-sheet])),
+html.interface-polish body[data-theme="dark"] #effect-dialog:not(:has([data-stand-control-sheet])) {
+  color: var(--ink);
+  background: var(--glass-sheet);
+  background-image: none !important;
+  border-color: var(--milk-edge);
+  box-shadow: 0 24px 55px -24px rgba(14, 25, 44, .35);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html.interface-polish body[data-theme="dark"] .receiver-update-sheet {
+  /* This legacy sheet declared its own olive tokens. Keep descendants on
+     the same dark family rather than recolouring only the outer dialog. */
+  --panel: #292929;
+  --ink: #f4f3f1;
+  --muted: #bcbab7;
+  --line: #494846;
+  --soft: #333231;
+}
+html.interface-polish body #effect-dialog:has([data-stand-control-sheet]) { background: var(--bg); background-image: none !important; }
+html.interface-polish body dialog::backdrop { background: rgba(14, 23, 37, .38); -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
+html.interface-polish body[data-theme="dark"] dialog::backdrop { background: rgba(8, 8, 8, .63); }
+html.interface-polish body .toast { color: #fff; background: #283449; border-color: rgba(255, 255, 255, .18); box-shadow: 0 8px 21px -12px rgba(8, 20, 38, .5); }
+html.interface-polish body[data-theme="dark"] .toast { color: #f4f3f1; background: #3b3936; }
+html.interface-polish body :is(.live-confirmation[data-state="failed"], .onboarding-error,
+    .pixel-setup-error, .removal-pin-hint, .update-warning) { color: var(--milk-danger) !important; }
+html.interface-polish body :is(.onboarding-pin-match, .live-confirmation[data-state="applied"]) { color: var(--milk-success); }
+html.interface-polish body[data-theme="dark"] .live-confirmation[data-state="pending"] { color: #efc785; }
+html.interface-polish body[data-theme="dark"] .live-confirmation[data-state="applied"] { color: #8cd4b1; }
+/* Preview is neither success nor failure. Neutral status text must still be
+   readable above the dark LED canvas and in the pinned control dock. */
+html.interface-polish body .live-confirmation[data-state="preview"] { color: var(--muted); }
+
+/* Small theme samples use real material families, rather than two identical
+   text buttons. The always-mounted check avoids width/height shifts. */
+html.interface-polish body .preference-grid.theme-choice-grid { gap: 12px; }
+html.interface-polish body .preference-grid > button.theme-choice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20px;
+  align-content: start;
+  gap: 10px 7px;
+  min-width: 0;
+  min-height: 137px;
+  padding: 12px;
+  background: var(--glass-solid);
+  border-color: var(--milk-edge);
+  border-radius: 19px;
+  text-align: left;
+  box-shadow: none;
+}
+html.interface-polish body .theme-choice-preview {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-rows: 7px 30px 13px;
+  gap: 7px;
+  padding: 9px 11px;
+  overflow: hidden;
+  border: 1px solid rgba(113, 128, 153, .17);
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fdfdfd, #e8edf4);
+}
+html.interface-polish body .theme-choice-preview i { display: block; border-radius: 4px; }
+html.interface-polish body .theme-preview-header { width: 45%; background: #697488; }
+html.interface-polish body .theme-preview-card { border: 1px solid #e1e6ed; background: rgba(255, 255, 255, .94); }
+html.interface-polish body .theme-preview-nav { width: 76%; margin: 0 auto; border-radius: 9px; background: #ced8e6; box-shadow: inset 20px 0 #354054; }
+html.interface-polish body .theme-choice[data-id="dark"] .theme-choice-preview { background: linear-gradient(135deg, #2b2a29, #171717); border-color: rgba(210, 205, 198, .14); }
+html.interface-polish body .theme-choice[data-id="dark"] .theme-preview-header { background: #dedad4; }
+html.interface-polish body .theme-choice[data-id="dark"] .theme-preview-card { background: #3b3936; border-color: #54504b; }
+html.interface-polish body .theme-choice[data-id="dark"] .theme-preview-nav { background: #4a4641; box-shadow: inset 20px 0 #ece9e4; }
+html.interface-polish body .theme-choice-label { display: inline-flex; align-items: center; gap: 7px; min-width: 0; color: var(--ink); font-size: 13px; font-weight: 700; }
+html.interface-polish body .theme-choice-label > .icon { width: 17px; height: 17px; flex: none; }
+html.interface-polish body .theme-choice-check { display: grid; place-items: center; width: 20px; height: 20px; color: #fff; background: var(--red); border-radius: 50%; opacity: 0; }
+html.interface-polish body .theme-choice-check > .icon { width: 12px; height: 12px; stroke-width: 2.4; }
+html.interface-polish body .preference-grid > button.theme-choice[aria-pressed="true"] { background: var(--glass-solid); border-color: var(--action-ink); box-shadow: inset 3px 0 0 var(--action-ink); }
+html.interface-polish body .theme-choice[aria-pressed="true"] .theme-choice-check { opacity: 1; }
+
+/* Inner mobile colour/animation sections are deliberately flat. Never paint
+   them as square glass slabs over their accepted, unboxed workspace. */
+@media (max-width: 720px) {
+  html.interface-polish body #main .editor-controls-zone :is(.shared-colour-picker,
+      .animation-daily-controls.card, .current-effect) {
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+}
+html.interface-polish body .editor-controls .ledline-setup.card[data-order-open="true"] {
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+html.interface-polish body :is(button, a, input, select, textarea, summary):focus-visible { outline: 2px solid var(--action-ink); outline-offset: 3px; }
+html.interface-polish body .preview-wrap :is(button, summary):focus-visible { outline-color: #fff; }
+
+@media (hover: hover) {
+  html.interface-polish body :is(.stand-info-tile, .zone-entry, .menu-card,
+      .animation-family-card, .family-card, .effect-card):hover:not(:disabled) {
+    border-color: var(--line);
+    box-shadow: 0 11px 24px -15px rgba(30, 45, 70, .26);
+  }
+}
+
+/* Opaque fallbacks retain the same hierarchy, not the legacy dark nav. */
+@media (prefers-reduced-transparency: reduce) {
+  :root, html.interface-polish, html body[data-theme="dark"], html.interface-polish body[data-theme="dark"] {
+    --glass: var(--glass-solid);
+    --glass-sheet: var(--glass-solid);
+    --milk-inner: var(--soft);
+    --milk-face: transparent;
+    --milk-nav: var(--milk-nav-solid);
+  }
+  html.interface-polish body :is(.brand-bar, .navigation),
+  html.interface-polish body dialog::backdrop { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  html.interface-polish body .brand-bar { background: var(--glass-solid) !important; }
+  html.interface-polish body .navigation { background: var(--milk-nav-solid) !important; }
+  html.interface-polish body .navigation > button[aria-current="page"] { background: var(--milk-nav-active) !important; }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root, html.interface-polish, html body[data-theme="dark"], html.interface-polish body[data-theme="dark"] {
+    --glass: var(--glass-solid);
+    --milk-inner: var(--soft);
+    --milk-face: transparent;
+    --milk-nav: var(--milk-nav-solid);
+  }
+  html.interface-polish body .brand-bar { background: var(--glass-solid) !important; }
+  html.interface-polish body .navigation { background: var(--milk-nav-solid) !important; }
+  html.interface-polish body .navigation > button[aria-current="page"] { background: var(--milk-nav-active) !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.interface-polish body :is(.theme-choice, .theme-choice-check) { animation: none; transition: none; }
+}
+@media (forced-colors: active) {
+  html.interface-polish body :is(.card, .stand-info-tile, .zone-entry, .menu-card,
+      .receiver-list details, .animation-family-card, .effect-card, .family-card,
+      .settings-toggle, .navigation, .control-dock-surface, .stand-controls-tabs,
+      .animation-settings-return, .animation-chooser-action, .stand-animation-live,
+      .theme-choice, .theme-choice-preview, dialog, .button, input, select, textarea) {
+    background: Canvas !important;
+    background-image: none !important;
+    color: CanvasText !important;
+    border-color: ButtonText !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  html.interface-polish body :is(button, a, input, select, textarea, summary):focus-visible { outline-color: Highlight; }
+  html.interface-polish body .navigation > button { color: ButtonText !important; }
+  html.interface-polish body .navigation > button[aria-current="page"],
+  html.interface-polish body :is(.section-tabs, .demo-settings-tabs) > button[aria-selected="true"],
+  html.interface-polish body .selection .scope-line[aria-pressed="true"] {
+    color: HighlightText !important;
+    background: Highlight !important;
+    box-shadow: none !important;
+  }
+  html.interface-polish body .navigation > button[aria-current="page"] .icon { color: HighlightText; }
+  html.interface-polish body .theme-choice[aria-pressed="true"] { outline: 2px solid Highlight; outline-offset: -3px; }
+  html.interface-polish body .theme-choice-check { background: Highlight; color: HighlightText; }
+  html.interface-polish body .theme-choice-label { color: CanvasText; }
+}

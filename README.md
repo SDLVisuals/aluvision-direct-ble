@@ -1,55 +1,19 @@
-# Aluvision Lighting Control — 21.0.8, build 34
+# Aluvision Lighting · V41
 
-De volledige webinterface: https://sdlvisuals.github.io/aluvision-direct-ble/?release=21.0.8-build34
+[Open de interactieve demo](https://sdlvisuals.github.io/aluvision-direct-ble/demo/) · [Android-testapp](https://sdlvisuals.github.io/aluvision-direct-ble/android/)
 
-Build 34 bevat verdere verbeteringen aan live kleuren, het wisselen en annuleren
-van verbindingen, grote groepen en RGBW-voorbeelden. Oude opdrachten volgen niet
-meer naar een andere receiver. Een verwijderde groep krijgt geen wachtende
-kleurwijziging meer. Veegbewegingen blijven beschermd tijdens setup en kleuren
-kiezen. Lege presets/scènes leiden rechtstreeks naar het aanmaken van een groep.
-De gebundelde SPI- en RGBW-receiverfirmware zijn beide 21.0.8. SPI annuleert oude
-geplande opdrachten op uitgeschakelde poorten; RGBW bewaart de geplande starttijd
-bij het aflopen van een herkenningstest. De eerdere fijnere fades en
-pixelovergangen blijven behouden.
+## Interactieve demo
 
-Deze publicatie bevat Home, zones, groepen, kleuren, SPI/RGBW-effecten,
-receiverinstellingen en de bestaande Studio/Academy. De nieuwe SPI-effecten zijn
-Colour Carriages, Ripple Cascade en Meteor Rain. Instellingen en previews delen
-dezelfde effectbeschrijvingen als de bijbehorende receiverfirmware.
+De hoofdlink opent nu dezelfde V41-demo. Probeer zones, kleuren, RGBW/SPI-animaties, opgeslagen scènes en licht/donker in de telefooninterface.
+
+De demo gebruikt uitsluitend fictieve receivers. Ze begint leeg en bewaart haar voorbeeldstand alleen tijdelijk; herladen begint opnieuw. Ze bestuurt geen fysieke verlichting, maakt geen echte wifi-verbinding en biedt geen browser-OTA. PIN en delen zijn in deze tijdelijke ééngebruikerversie uitgeschakeld.
+
+Deze stylingupdate neemt de melkglasafwerking en neutralere darkmodus over uit de gecontroleerde telefoonbron. Zij wijzigt geen app-, receiver-, beveiligings- of firmwarelogica.
+
+## Android-testapp
+
+De actuele download is **41.0.13, code 19**. Het pakket is ondertekend en in een geïsoleerde Android-emulator gestart. Bediening van fysieke receivers vanaf een echt Android-toestel is nog niet bevestigd; de downloadpagina noemt de beschikbare en ontbrekende functies. Interfacevoorbeelden zijn geen bewijs van native Android-functionaliteit.
 
 ## Website en geïnstalleerde app
 
-De interface wordt ook in de iPhone-app gebruikt, maar een website heeft niet
-dezelfde toegang tot de hardware van een telefoon. De rechtstreekse Wi-Fi- en
-Bluetooth-keuze van de geïnstalleerde iPhone-app gebruikt native functies die
-Safari niet aanbiedt. Een GitHub-update installeert of flasht niets op een
-telefoon of receiver. Bestaande lokale installatiegegevens worden niet gewist.
-
-De optionele lokale netwerkbridge wordt niet automatisch op een privécomputer
-gezocht. Deze is alleen actief op een lokale ontwikkelserver of wanneer een
-beheerder expliciet een `wifiBridge`-URL meegeeft. Er staat geen persoonlijke
-Tailscale-host of wifi-wachtwoord in deze configuratie.
-
-## Receiverbestanden
-
-`firmware/catalog.json` verwijst naar de SPI- en RGBW-application images van
-21.0.8 en hun exacte grootte, SHA-256 en hardware-identiteit. Dit zijn
-OTA-application images, geen volledige USB-flashbundels. De bestaande
-V18-bestanden blijven beschikbaar voor reeds uitgegeven verwijzingen; de
-actuele catalogus biedt alleen V21.0.8 aan.
-
-De firmware is een release candidate. Lokale builds en regressietests zijn
-geslaagd. Een geslaagde service-OTA naar één RGBW-receiver bewijst niet dat de
-native iPhone-updateknop of iedere netwerksituatie werkt. Automatische
-gatewayovername, ondertekende firmware, versleuteld/geauthenticeerd meshverkeer
-en migratie van reeds botsende oude identiteiten blijven open releasepunten.
-Er wordt geen volledig gevalideerde multihopmesh, 60-receivercapaciteit of
-productiegarantie geclaimd. NFC blijft uitgeschakeld.
-
-## Publicatiecontrole
-
-- Alle shell-assets en beide OTA-images gecontroleerd op exacte inhoud.
-- Volledige interface en navigatie gecontroleerd op mobiele en desktopbreedte.
-- Nieuwe SPI-effecten, instellingen, sfeerkeuzes en Studio-overlayregressie getest.
-- Versiegebonden service-worker-cache en offline heropenen gecontroleerd.
-- Oorspronkelijke lokale werkbestanden niet overschreven bij publicatie.
+Een GitHub Pages-update installeert niets op een iPhone, Android-telefoon of receiver. De browserdemo en APK hebben afzonderlijke controlebewijzen in [demo/release-info.json](demo/release-info.json). Oude APK's en legacy-assets blijven bestaan voor reeds gedeelde verwijzingen, maar zijn niet de actuele startpagina.

@@ -15,3 +15,49 @@ footer{display:flex;align-items:center;justify-content:space-between;gap:22px;bo
 @media(max-width:360px){.nav-preview{display:none}.hero-actions{flex-direction:column;align-items:stretch}.hero-actions .button{font-size:12px}.hero-points{gap:11px}.label-zone{font-size:9px;padding:11px}.hero-device{width:220px}.light-card-bottom b{font-size:12px}}
 @media(prefers-color-scheme:dark){:root{color-scheme:dark;--paper:#1c1b19;--ink:#f1eee7;--muted:#aea99f;--red:#df8b7e;--edge:#ffffff17;--glass:#ffffff09}body{background:radial-gradient(ellipse at 72% 10%,#393226 0,transparent 29%),var(--paper)}.topbar{background:#1c1b19d9}.brand img{filter:brightness(0) invert(1)}.nav-download{background:#ffffff09}h1 span{color:#bab2a2}.hero-points i{color:#c8c0b1}.hero-stage{border-color:#ffffff18;background:radial-gradient(ellipse at 25% 15%,#5b5342,transparent 65%),linear-gradient(145deg,#3a342c,#292620)}.hero-stage figcaption{color:#c3bbae}.stage-orbit{border-color:#ffffff18}.float-label{background:#302b25db;border-color:#ffffff20;color:#eee6d8}.colour-dots i{border-color:#403930}.light-card{background:#26231e;border:1px solid #ffffff0b}.spi-card{background:#2b262a}.system-plus{background:#494137;color:#e6ded0}.app-card{background:#37312b;border-color:#ffffff12}.animation-card{background:#2d312b}.dark-card{background:#292725}.card-index,.app-card figcaption>p{color:#bfb6a8}.benefit-symbol{background:#37312b;border-color:#ffffff12}.download-panel{background:#27241fd9;border-color:#ffffff17;box-shadow:inset 0 1px 0 #ffffff05}.android-mark{background:#363127;color:#ccc1ac}.beta-label,.beta-summary{color:#bbb09c}.button-dark{background:#e9e4d9;color:#292620}.button-glass{color:#ede6d9}.skip{background:#37312b}.button-glass:hover,.nav-download:hover{background:#ffffff12}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.button,.disclosure summary>span{transition:none}.button:hover{transform:none}}
+
+/* Product508: neutral frosted surfaces and a CSS-only phone surround. Screens
+   remain unaltered captures of the local interface, not hardware evidence. */
+:root{--paper:#f6f5f2;--ink:#292928;--muted:#76746f;--edge:rgba(66,62,56,.13);--glass:rgba(255,255,255,.7)}
+body{background:radial-gradient(ellipse at 76% 9%,#eae7e1 0,transparent 33%),radial-gradient(ellipse at 8% 38%,#efedE8 0,transparent 32%),var(--paper)}
+.topbar{background:rgba(246,245,242,.76)}
+h1 span{color:#97928a}
+.hero-stage{border-color:#ffffffd9;background:radial-gradient(ellipse at 20% 12%,#ffffffd9,transparent 62%),linear-gradient(140deg,#f1efe9af,#dedbd3a8);backdrop-filter:blur(26px);-webkit-backdrop-filter:blur(26px);box-shadow:inset 0 1px 0 #fff,0 32px 70px -44px #57514770}
+.hero-stage figcaption{color:#777268}
+.stage-lines{opacity:.52}
+.stage-lines span,.stage-lines span:nth-child(2),.stage-lines span:nth-child(3){background:#f5fbff;box-shadow:0 0 9px #fff,0 0 34px #eef5f8,0 0 70px #f2f6f570}
+.float-label{background:#ffffffc9;border-color:#ffffffe8;box-shadow:0 12px 28px -18px #524c4480}
+.colour-dots i:nth-child(2){background:#eeeae0}
+.device{background:linear-gradient(145deg,#a19f9b,#2b2b2b 22%,#3d3d3b 79%,#93928e);border-color:#343433;box-shadow:0 24px 44px -22px #302f2c90,inset 0 0 0 1px #e7e5e070}
+.device::after{content:"";position:absolute;z-index:4;top:13px;left:50%;width:29%;height:19px;transform:translateX(-50%);border-radius:99px;background:#11151a;box-shadow:inset 0 0 0 1px #ffffff0b;pointer-events:none}
+.device-screen{padding-top:28px;background:#f6f6f5}
+.hero-device{transform:rotate(-2deg)}
+.light-card{background:#252525}
+.spi-card{background:#2c2b2d}
+.light-card-top{color:#dfdcd5}
+.light-card-top>span:last-child{color:#a09b92}
+.light-card-bottom>span{color:#c3bfb6}
+.rgbw-light{background:#f5fbff;box-shadow:0 0 8px #fff,0 0 25px #e9f4f9,0 0 68px 17px #eaf4f55c}
+.system-plus{background:#f5f3ef;color:#6f695f}
+.app-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}
+.app-card{background:linear-gradient(145deg,#ffffff9e,#e8e4dbb5);border-color:#ffffffe0;box-shadow:inset 0 1px 0 #fff;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.animation-card{background:linear-gradient(145deg,#f5f3edd9,#e6e4dcbd)}
+.scenes-card{background:linear-gradient(145deg,#f7f5efbd,#e8e3d9c7)}
+.card-index,.app-card figcaption>p{color:#7d776c}
+.dark-card{background:linear-gradient(145deg,#353535,#242424);border-color:#484847;color:#f4f3ef}
+.dark-card .card-index,.dark-card figcaption>p{color:#c2bdb4}
+.benefit-symbol{background:#ece8e0;border-color:#ffffffdd}
+.download-panel{background:#ffffff9e;border-color:#ffffffe0;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);box-shadow:0 24px 55px -37px #514a3e70,inset 0 1px 0 #fff}
+.android-mark{background:#eeeae2;color:#7a7468}
+.beta-label,.beta-summary{color:#7a7468}
+@media(max-width:700px){.device::after{height:17px;top:12px}.device-screen{padding-top:25px}.hero-stage{padding-top:29px}.hero-stage figcaption{margin-top:21px}}
+@media(prefers-color-scheme:dark){
+  :root{--paper:#1b1b1b;--ink:#f1f0ed;--muted:#b0ada7;--edge:#e1dfd81c;--glass:#ffffff09}
+  body{background:radial-gradient(ellipse at 78% 7%,#343434 0,transparent 34%),var(--paper)}
+  .topbar{background:#1b1b1bd6}h1 span{color:#beb9b0}
+  .hero-stage{border-color:#e1dfd81c;background:radial-gradient(ellipse at 20% 12%,#62625f80,transparent 65%),linear-gradient(140deg,#3c3c3bb3,#272727e6)}
+  .hero-stage figcaption{color:#c6c0b6}.float-label{background:#333332d9;border-color:#e1dfd826;color:#eeeae2}.colour-dots i{border-color:#454543}
+  .device-screen{background:#202020}.light-card{background:#262626}.spi-card{background:#2d2b2e}.system-plus{background:#484643;color:#e7e2d9}
+  .app-card{background:linear-gradient(145deg,#50504c70,#303030bb);border-color:#e1dfd81b;box-shadow:inset 0 1px 0 #ffffff0b}.animation-card{background:linear-gradient(145deg,#4d504c65,#2f322fb8)}.scenes-card{background:linear-gradient(145deg,#53504a60,#36332fbd)}.dark-card{background:linear-gradient(145deg,#353535,#242424)}
+  .card-index,.app-card figcaption>p{color:#c1bbb1}.benefit-symbol{background:#363532;border-color:#e1dfd817}.download-panel{background:#333332b8;border-color:#e1dfd81c}.android-mark{background:#41403a;color:#ccc4b7}.beta-label,.beta-summary{color:#c0b8ac}
+}
