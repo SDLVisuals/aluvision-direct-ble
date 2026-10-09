@@ -129,8 +129,8 @@
 [data-pixel-scrub]>*{pointer-events:none}
 [data-pixel-scrub]:focus-visible,[data-pixel-scrub][data-scrubbing=true]{outline:2px solid var(--red,#bd4842);outline-offset:3px}
 [data-pixel-scrub][data-scrubbing=true] .pixel-count-preview-label b{color:#fff}
-/* Left/right stay fixed in the installed view. The chosen incoming cable and
-   its connection marker move together; no logical-start choice is exposed. */
+/* Legacy cable presentation. The direction schematic below keeps the physical
+   connection fixed and changes only the logical travel arrow. */
 .pixel-setup-visual.pixel-connection-preview{height:auto;min-height:122px;display:grid;gap:12px;padding:12px;flex-direction:column}
 .pixel-connection-preview .pixel-setup-reference{padding:0;color:#f0f3ed;font-size:11px;gap:5px}
 .pixel-connection-preview .pixel-setup-reference>span{min-width:49px}.pixel-connection-preview .pixel-setup-reference>span:last-child{justify-content:flex-end}
@@ -224,13 +224,17 @@
 .pixel-setup-review [data-preserved=true]{border-style:dashed;opacity:.75}
 .pixel-direction-preview .pixel-cable-line{transform:none!important}
 .pixel-direction-preview .pixel-setup-track .pixel-setup-strip{flex-direction:row!important}
-.pixel-direction-preview .pixel-setup-reference>span{font-variant-numeric:tabular-nums;font-weight:750}
-.pixel-direction-preview .pixel-direction-arrow{position:absolute;left:40px;right:40px;top:-4px;color:#26704e;font-size:29px;text-align:center;line-height:32px}
-.pixel-direction-preview .pixel-setup-endpoint-labels>span:last-child{display:none}
-.pixel-direction-preview[data-direction=reverse] .pixel-setup-endpoint-labels>span:first-child{visibility:hidden}
-.pixel-direction-preview[data-direction=reverse] .pixel-setup-endpoint-labels>span:last-child{display:block}
-.pixel-direction-choice{display:block;font-size:20px;line-height:1.3;font-variant-numeric:tabular-nums;color:var(--muted,#666)}
+.pixel-direction-preview .pixel-setup-reference>span{font-weight:750;overflow-wrap:anywhere}
+.pixel-direction-preview .pixel-cable-source{flex:0 0 54px;width:54px;transform:none!important}
+.pixel-direction-preview .pixel-cable-source svg{width:54px;transform:none!important}
+.pixel-direction-preview .pixel-direction-arrow{position:absolute;left:10px;right:10px;top:-1px;color:#26704e;font-size:29px;text-align:center;line-height:30px}
+.pixel-direction-preview .pixel-setup-strip .pixel-fixed-cable-marker{width:4px;height:18px;background:#e1e8dc;box-shadow:none}
+.pixel-direction-choice{display:block;font-size:25px;line-height:1.1;color:var(--muted,#666)}
 .pixel-setup-sides [aria-pressed=true] .pixel-direction-choice{color:var(--red,#bd4842)}
-.pixel-setup-panel[data-pixel-panel=connection] .pixel-setup-sides button{min-height:78px;font-size:11px}
+.pixel-setup-panel[data-pixel-panel=connection] .pixel-setup-sides{grid-template-columns:minmax(0,1fr);gap:7px}
+.pixel-setup-panel[data-pixel-panel=connection] .pixel-setup-sides button{display:grid;grid-template-columns:30px minmax(0,1fr);align-items:center;justify-items:start;text-align:left;min-height:52px;padding:10px 28px 10px 12px;gap:8px;font-size:12px;line-height:1.35;overflow-wrap:anywhere}
+.pixel-setup-panel[data-pixel-panel=connection] .pixel-preview-notice[data-power-preview-status]{font-size:10px!important;line-height:1.4!important;text-align:center;padding:0;border:0;background:transparent}
+/* The short question must remain readable on a small phone too. */
+.pixel-setup-body .pixel-port-context+[data-pixel-panel=connection]>p{display:block}
 @media(prefers-reduced-motion:reduce){.pixel-swipe-cue>i{animation:none;will-change:auto}}
 @media(max-width:350px){.pixel-setup-pixel-steps{gap:4px}.pixel-setup-pixel-steps button{font-size:12px}.pixel-output-picker .pixel-port-colour{font-size:8px}.pixel-output-picker .pixel-setup-outputs button{min-height:101px}.pixel-count-preview-label{gap:8px}.pixel-swipe-cue{max-width:117px}}

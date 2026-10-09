@@ -1,3 +1,15 @@
+# Browserdemo V50 · kandidaat551 · 9 oktober 2026
+
+Deze browserdemo gebruikt de bevroren interface van kandidaat **50.0.0, build551**. Nieuw in deze update: duidelijke versleepfeedback van de oorspronkelijke ledline naar de nieuwe plaats, een herkenbare kopie met receiver en poort, een invoegmarkering, een live voorbeeldvolgorde en een tijdelijk aankomstaccent na bevestigen. Escape of annuleren laat de volgorde intact. Ook de ledlinekeuze en richtingweergave zijn verduidelijkt: kabelkant en eindkant zijn explicieter herkenbaar in de richtingbediening. De bestaande V50 welkomst- en instelstappen, poort- en pixelkeuzes tot163, het schermvullende overzicht, compacte volgorde-instellingen, direct zichtbare kunstmatige witmix bij RGBW-kleuren, los van het fysieke W-kanaal en bijgewerkte animatiegroepen blijven behouden. De taaluitwerking is gedeeltelijk: sommige oudere schermen bevatten nog Nederlandse tekst.
+
+Er zijn twintig fictieve receivers, tien RGBW en tien SPI. De demo gebruikt uitsluitend tijdelijk geheugen en begint opnieuw na herladen. PIN-, standtoegang en deelacties zijn uitgeschakeld. Er wordt geen echte wifi, receiver, firmware of verlichting aangestuurd. Richting- en herkenningsbeelden zijn schermvoorbeelden; ze bewijzen geen fysiek effect.
+
+De bestaande Android-download blijft **41.0.14, code20**. Dit is geen Android-V50-build. De browserdemo bevestigt ook geen iPhone-installatie: die heeft een eigen installatiebewijs nodig.
+
+Bronfreeze SHA-256: `e3cf33c79b1b7cb97d63f51b36a9dce749612480beaf4f9b634696a3a7cfee83`. Firmwarebestanden uit de appbron zijn uitgesloten van de browserpublicatie.
+
+## Historische Android- en demonotities
+
 # Browserdemo V50 · kandidaat550 · 9 oktober 2026
 
 Deze browserdemo gebruikt de bevroren interface van kandidaat **50.0.0, build550**. Nieuw zijn de welkomst- en instelstappen, poort- en pixelkeuzes tot163, de afzonderlijke ledlineselectie, het schermvullende overzicht, compacte volgorde-instellingen, geneste warmwitkeuzes en bijgewerkte animatiegroepen en vertalingen. De taaluitwerking is gedeeltelijk: sommige oudere schermen bevatten nog Nederlandse tekst.

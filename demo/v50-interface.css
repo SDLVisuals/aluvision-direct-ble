@@ -89,3 +89,46 @@ html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-o
 html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-setup-hint,html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-preview figcaption small{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;margin:0;padding:0}
 html.interface-polish body #main .ledline-setup[data-order-open=true] .order-recognition-status{margin:8px 0 12px;min-height:0;font-size:11px;line-height:1.4}
 @media(max-width:360px){.v50-preview-actions{align-items:flex-start}.v50-preview-expand{font-size:11px}.ledline-setup[data-order-open=true] .ledline-output-side{font-size:8px}.ledline-setup[data-order-open=true] .scope-copy>small{font-size:9px}}
+/* The preview header describes the installation; selection has its own
+   compact toolbar. Nothing disappears into a clipped selection sentence. */
+.v50-preview-actions{display:grid;gap:8px;margin-top:10px;min-width:0}
+.v50-preview-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.v50-selection-summary{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.v50-selection-summary>.icon{width:26px;height:26px;flex:none;color:var(--red)}
+.v50-selection-summary>span{display:grid;gap:2px;min-width:0}
+.v50-selection-summary small{font-size:10px;color:var(--muted);line-height:1.2}
+.v50-selection-summary b{font-size:12px;line-height:1.3;overflow-wrap:anywhere}
+.v50-preview-expand{min-height:44px;padding:6px 10px;border:1px solid var(--line);background:var(--panel);border-radius:14px;font-size:11px;gap:6px;flex:none}
+.v50-preview-expand .icon{width:17px;height:17px}
+.v50-line-selection{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;scroll-padding-inline:2px;gap:6px;padding:2px 1px 5px;max-width:100%}
+.v50-line-selection button{flex:none;min-width:44px;min-height:44px;padding:7px 11px;border-radius:13px;font-size:14px}
+.v50-line-selection button:focus-visible,.v50-preview-expand:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.v50-line-selection .v50-select-all{display:flex;align-items:center;gap:6px;font-size:12px}
+.v50-select-all .icon{width:23px;height:22px}
+.control-preview-dock .v50-control-preview .preview-top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0;min-height:34px;font-size:11px}
+.control-preview-dock .v50-control-preview .preview-top>span{flex:1;min-width:0;line-height:1.3;overflow-wrap:anywhere}
+.control-preview-dock .v50-control-preview .preview-summary{max-width:none;width:100%;overflow:visible;text-overflow:clip;white-space:normal;text-align:left;font-size:10px;line-height:1.4;padding:0 0 4px;color:#c0c9c3}
+.control-preview-dock .v50-control-preview .preview-size-row{flex:none;max-height:none;overflow:visible;padding:0;max-width:48%;width:auto!important}
+.v50-control-preview .preview-size-control summary{min-height:34px;padding:5px 8px;font-size:10px;border-radius:11px;gap:5px}
+.v50-control-preview .preview-size-control summary>span{display:none}
+.v50-control-preview .preview-size-control summary>b{padding:0;background:transparent;font-size:11px}
+.v50-control-preview .preview-size-control .icon{width:13px;height:13px}
+.control-preview-dock[data-spatial-preview=false] .v50-control-preview.preview-selectable canvas[data-preview]{min-height:var(--v50-preview-min-height,112px)!important}
+.v50-preview-tap-hint{display:flex;align-items:center;gap:6px;margin:2px 2px 7px;color:#d9dfdb;font-size:10px;line-height:1.4}
+.v50-preview-tap-hint .icon{flex:none;width:17px;height:17px;color:#f0f3ef}
+.v50-full-preview>.v50-preview-tap-hint{color:var(--muted);font-size:12px}
+.v50-full-preview>.v50-preview-tap-hint .icon{color:var(--red)}
+.v50-full-canvas-scroll{max-height:58dvh;overflow:auto;border-radius:20px;overscroll-behavior:contain;background:#111514}
+.v50-full-canvas-scroll .v50-expanded-canvas{min-height:var(--v50-preview-min-height,160px)!important}
+/* Warm white remains inside RGBW fine controls, but is no longer hidden
+   behind a separate disclosure or presented as the physical W channel. */
+.v50-white-mix{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.v50-white-mix .warm-white-choice{min-height:56px;padding:9px 12px;border-radius:15px;background:color-mix(in srgb,#e7b669 10%,var(--panel));box-shadow:none}
+.v50-white-mix .warm-white-choice b{font-size:13px;line-height:1.3}
+.v50-white-mix .warm-white-choice small{font-size:10px}
+.v50-white-mix .warm-white-swatch{width:26px;height:26px;flex:none}
+.v50-white-mix .warm-white-choice>.icon{width:18px;height:18px}
+.v50-white-mix-hint{font-size:10px;line-height:1.5;color:var(--muted);margin:8px 1px 10px}
+.v50-white-mix .warmth-row{margin-bottom:0}
+.v50-white-mix .warmth-help{font-size:10px;line-height:1.4}
+@media(max-width:360px){.v50-selection-summary b{font-size:11px}.v50-preview-expand{font-size:10px;padding-inline:8px}.v50-selection-summary>.icon{width:23px;height:23px}}

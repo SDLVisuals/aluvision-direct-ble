@@ -268,6 +268,7 @@
   let sceneDetailSearch='';
   let dragOrder=null;
   let inlineOrderDrag=null,orderRenderDeferred=false;
+  let orderPreviewGesture=null,orderMoveResult=null,orderMoveTimer=null;
   let activeControlPointer=null,controlRenderDeferred=false;
   let activeStaticGesturePointer=null;
   // Recognition follows the ordered position, never the saved playback state.
@@ -739,6 +740,7 @@
     light:'M3 9h18v6H3zM6 11v2M10 11v2M14 11v2M18 11v2M1 12h2M21 12h2',
     receiver:'M4 5h16v15H4zM8 2v3M16 2v3M7 9h10M7 13h2M11 13h2M15 13h2M7 17h10',
     back:'m14 6-6 6 6 6M8 12h13', chevron:'m9 5 7 7-7 7', close:'m6 6 12 12M6 18 18 6',
+    expand:'M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5',
     edit:'m16 3 5 5-12 12-6 1 1-6ZM14 5l5 5',
     trash:'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7',
     sliders:'M5 3v5M5 13v8M12 3v10M12 18v3M19 3v2M19 10v11M2 8h6v5H2zM9 13h6v5H9zM16 5h6v5h-6z',
@@ -755,6 +757,7 @@
     moon:'M20.2 15.4A8.7 8.7 0 0 1 8.6 3.8a8.8 8.8 0 1 0 11.6 11.6Z',
     clock:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 7v5l3 2',
     layers:'M12 3 2 8l10 5 10-5-10-5ZM2 12l10 5 10-5M2 16l10 5 10-5',
+    tap:'M10 12V5a2 2 0 0 1 4 0v6l2-1 4 2v5l-4 5h-6l-6-7a2 2 0 0 1 3-2l3 3M6 3 4 1M3 8H1M18 3l2-2',
     sparkle:'m12 3 1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6L12 3ZM19 16l.7 2.3 2.3.7-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z'
   };
   function icon(name) {
@@ -989,7 +992,8 @@
     const spatialPreviewLabel=spatialPreview?spatialPreviewText('Preview',spatialView):'';
     const count=physicalLineCount(list);
     const total=z.type==='SPI'?t(count===1?'scopeTotalSpiOne':'scopeTotalSpiMany',{count,pixels}):t(count===1?'scopeCountOne':'scopeCountMany',{count});
-    const scope=galleryTunnel?(route.family?`${Library.group(catalogue(),route.family)?.title||t('animationAcross')} · ${ledlineCount(count)}`:t('animationTunnelSampleLines')):selection().kind==='all'?total:t('scopeSelectedTap',{name:nameOfSelection()});
+    const scope=galleryTunnel?(route.family?`${Library.group(catalogue(),route.family)?.title||t('animationAcross')} · ${ledlineCount(count)}`:t('animationTunnelSampleLines')):total;
+    const directTap=canTapLines&&!spatialPreview;
     const modeName=screen==='controls'?(controlMode==='colour'?'Kleur':'Effecten'):screen==='animation-family'?'Animatiegroep':screen==='layout'?'Opstelling':screen==='colour'?'Kleur':screen==='animations'?'Effecten':'Bediening';
     const label=`LED-overzicht van ${z.name} · ${total}${selection().kind==='all'?'':` · ${nameOfSelection()} gekozen`}`;
     const currentEffect=activeEffect(),currentLight=currentLightLabel();
@@ -998,7 +1002,7 @@
       ${integratedControlHeading?`<div class="control-dock-context-line"><div class="control-dock-location"><small>JE LICHT · ${esc(modeName)}</small><b>${esc(z.name)}</b></div><span class="pill control-dock-type-badge">${zoneTypeLabel(z)}</span></div><div class="control-dock-actions"><button class="back back-to-zones control-dock-back" data-action="stand" aria-label="Terug naar zones" title="Terug naar zones">${icon('back')}<span>Zones</span></button>${modeTabs}</div>`:''}
       ${integratedControlHeading?'':`<div class="control-dock-heading"><div class="control-dock-location"><small>JE LICHT · ${esc(screenLabel)}</small><b>${esc(z.name)}</b></div>${modeTabs||`<span class="control-dock-mode">${zoneTypeLabel(z)}</span>`}</div>`}
       <div class="control-location-summary" aria-label="Huidige bediening"><span>${esc(screenLabel)}</span><span data-current-light>${esc(currentLight)}</span></div>
-      <div class="preview-wrap${canTapLines?' preview-selectable':''}${spatialPreview?' spatial-preview-wrap':''}" data-preview-layout="${previewLayout}"><div class="preview-top"><span>${galleryTunnel?esc(t(spatialView==='wall'?'animationWallSampleTitle':'animationTunnelSampleTitle')):spatialPreview?esc(spatialPreviewLabel):esc(t('lineSetup'+previewMode))}</span><span class="preview-summary">${esc(scope)}</span></div>${spatialPreview?'':previewSizePickerMarkup(controlPreviewSize)}${galleryTunnel?tunnelGalleryPreviewMarkup(route.family?Library.group(catalogue(),route.family):null,'spatial-dock-preview'):zonePreview(z,spatialPreview?'spatial-dock-preview':'',{selection:selection(),main:true,arrangementPreview:true,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1])),...(spatialPreview?{spatialShape:spatialView,presentation:'receivers'}:{}),label:spatialPreview?`${spatialPreviewLabel} · ${z.name} · ${total}`:label})}</div>
+      <div class="preview-wrap v50-control-preview${directTap?' preview-selectable':''}${spatialPreview?' spatial-preview-wrap':''}" data-preview-layout="${previewLayout}" style="--v50-preview-min-height:${Math.min(count,6)*24+16}px"><div class="preview-top"><span>${galleryTunnel?esc(t(spatialView==='wall'?'animationWallSampleTitle':'animationTunnelSampleTitle')):spatialPreview?esc(spatialPreviewLabel):esc(t('lineSetup'+previewMode))}</span>${spatialPreview?'':previewSizePickerMarkup(controlPreviewSize)}</div><div class="preview-summary">${esc(scope)}</div>${galleryTunnel?tunnelGalleryPreviewMarkup(route.family?Library.group(catalogue(),route.family):null,'spatial-dock-preview'):zonePreview(z,spatialPreview?'spatial-dock-preview':'',{selection:selection(),main:true,interactiveLines:directTap,arrangementPreview:true,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1])),...(spatialPreview?{spatialShape:spatialView,presentation:'receivers'}:{}),label:spatialPreview?`${spatialPreviewLabel} · ${z.name} · ${total}`:label})}${directTap?`<p class="v50-preview-tap-hint">${icon('tap')}<span>${esc(t('v50TapLine'))}</span></p>`:''}</div>
       ${galleryBrowsing?'':previewSelectionMarkup(canTapLines)}
       ${galleryTunnel?familySpatialChoice():''}${animationWayfinding(screen)}<p class="live-confirmation" data-live-status="zone" role="status" aria-live="polite"></p>
     </div></section>`;
@@ -1007,11 +1011,13 @@
     const spi=zone()?.type==='SPI',all=selection().kind==='all';
     const choices=spi?M.zoneLedlines(model,route.zoneId).map(line=>({id:line.id,number:line.lineIndex+1})):receivers().map((r,i)=>({id:r.id,number:i+1}));
     const ids=spi?selectedLineIds():selectedReceiverIds();
-    return `<div class="v50-preview-actions"><div class="v50-line-selection" role="group" aria-label="${esc(t('v50SelectLines'))}">${canTapLines?`<button type="button" data-action="select" data-id="all" aria-pressed="${all}">${esc(t('v50All'))}</button>${choices.map(line=>`<button type="button" data-action="select" data-id="${esc(line.id)}" aria-label="${esc(t('scopeLine',{number:line.number}))}" aria-pressed="${!all&&ids.includes(line.id)}">${line.number}</button>`).join('')}`:`<span>${esc(t(continuousZone()?'v50Continuous':'v50AllTogether'))}</span>`}</div><button class="v50-preview-expand" type="button" data-action="preview-fullscreen">${icon('expand')}${esc(t('v50ViewAll'))}</button></div>`;
+    const chosen=choices.filter(line=>ids.includes(line.id)),summary=continuousZone()?t('v50Continuous'):choices.length===1?t('scopeLine',{number:1}):all?t('v50AllCount',{count:choices.length}):chosen.length===1?t('scopeLine',{number:chosen[0].number}):t('v50SelectedCount',{count:chosen.length});
+    return `<div class="v50-preview-actions" data-selection-kind="${esc(selection().kind)}"><div class="v50-preview-toolbar"><div class="v50-selection-summary" role="status" aria-live="polite">${icon(all?'together':'light')}<span><small>${esc(t('v50ControlScope'))}</small><b>${esc(summary)}</b></span></div><button class="v50-preview-expand" type="button" data-action="preview-fullscreen">${icon('expand')}${esc(t('v50ViewAll'))}</button></div>${canTapLines?`<div class="v50-line-selection" role="group" aria-label="${esc(t('v50SelectLines'))}"><button class="v50-select-all" type="button" data-action="select" data-id="all" aria-pressed="${all}">${icon('together')}${esc(t('v50All'))}</button>${choices.map(line=>`<button type="button" data-action="select" data-id="${esc(line.id)}" aria-label="${esc(t('scopeLine',{number:line.number}))}" aria-pressed="${!all&&ids.includes(line.id)}">${line.number}</button>`).join('')}</div>`:''}</div>`;
   }
   function openFullscreenPreview(){
     if(!zone())return;
-    showEffectDialog(t('v50ViewAll'),`<section class="v50-full-preview">${zonePreview(zone(),'v50-expanded-canvas',{main:true,selection:selection(),label:zone().name,arrangementPreview:true})}${previewSelectionMarkup(!continuousZone()&&physicalLineCount()>1)}<p>${esc(t('v50PreviewTapHint'))}</p><button class="button secondary full" data-action="effect-dialog-close">${icon('back')}${esc(t('v50ReturnControl'))}</button></section>`);
+    const interactive=!continuousZone()&&physicalLineCount()>1;
+    showEffectDialog(t('v50ViewAll'),`<section class="v50-full-preview"><div class="v50-full-canvas-scroll" style="--v50-preview-min-height:${physicalLineCount()*44+16}px">${zonePreview(zone(),'v50-expanded-canvas',{main:true,interactiveLines:interactive,selection:selection(),label:zone().name,arrangementPreview:true})}</div>${previewSelectionMarkup(interactive)}${interactive?`<p class="v50-preview-tap-hint">${icon('tap')}<span>${esc(t('v50PreviewTapHint'))}</span></p>`:''}<button class="button secondary full" data-action="effect-dialog-close">${icon('back')}${esc(t('v50ReturnControl'))}</button></section>`);
     document.getElementById('effect-dialog').classList.add('v50-fullscreen-preview');
     paint(performance.now()/1000);
   }
@@ -1142,7 +1148,7 @@
     const prefix=slot===null?'static':'palette-'+slot;
     const channels=['r','g','b','w'].map((channel,i)=>{const value=i===3?white:rgb[i];return `<div class="channel-row" style="--channel:${['#c4473f','#258461','#3f69c7','#747670'][i]}"><button class="channel-toggle" data-action="channel-toggle" data-channel="${channel}" aria-label="Kanaal ${channel.toUpperCase()} ${value>0?'uitschakelen':'inschakelen'}" aria-pressed="${value>0}">${channel.toUpperCase()}</button><button data-action="channel-step" data-channel="${channel}" data-step="-1" aria-label="${channel.toUpperCase()} verminderen">−</button><input id="${prefix}-${channel}" type="range" min="0" max="255" value="${value}" data-channel="${channel}" aria-label="Kanaal ${channel.toUpperCase()} waarde"><button data-action="channel-step" data-channel="${channel}" data-step="1" aria-label="${channel.toUpperCase()} verhogen">+</button><input class="channel-number" type="number" inputmode="numeric" min="0" max="255" step="1" value="${value}" data-channel-number="${channel}" aria-label="Kanaal ${channel.toUpperCase()} exact instellen"></div>`;}).join('');
     const warmth=C.warmthOf(values);
-    const warmControls=`<details class="v50-white-fine"><summary>${icon('sun')}<span>${esc(t('v50WhiteFine'))}</span>${icon('chevron')}</summary><div class="warm-white-controls"><p>${esc(t('v50ArtificialWhiteHint'))}</p><button type="button" class="warm-white-choice" data-action="warm-white" aria-pressed="${warmth!==null}"><span class="warm-white-swatch" aria-hidden="true"></span><span><b>${esc(t('v50ArtificialWhite'))}</b><small>RGB + W</small></span>${icon('sun')}</button><div class="slider-row warmth-row"><label for="${prefix}-warmth">${esc(t('v50Warmth'))} <output data-warmth-value>${warmth===null?esc(t('v50ChooseMix')):warmth+'%'}</output></label><input id="${prefix}-warmth" type="range" min="0" max="100" step="1" value="${warmth??50}" data-warmth aria-label="${esc(t('v50Warmth'))}" ${warmth===null?'disabled':''}><div class="warmth-scale"><span>${esc(t('v50Neutral'))}</span><span>${esc(t('v50Warmer'))}</span></div><small class="warmth-help">${esc(t(warmth===null?'v50ChooseMixHint':'v50MixBrightnessHint'))}</small></div></div></details>`;
+    const warmControls=`<section class="v50-white-mix" aria-label="${esc(t('v50ArtificialWhite'))}"><div class="warm-white-controls"><button type="button" class="warm-white-choice" data-action="warm-white" aria-pressed="${warmth!==null}"><span class="warm-white-swatch" aria-hidden="true"></span><span><b>${esc(t('v50ArtificialWhite'))}</b><small>RGB + W</small></span>${icon('sun')}</button><p class="v50-white-mix-hint">${esc(t('v50WhiteMixShort'))}</p><div class="slider-row warmth-row"><label for="${prefix}-warmth">${esc(t('v50Warmth'))} <output data-warmth-value>${warmth===null?esc(t('v50ChooseMix')):warmth+'%'}</output></label><input id="${prefix}-warmth" type="range" min="0" max="100" step="1" value="${warmth??50}" data-warmth aria-label="${esc(t('v50Warmth'))}" ${warmth===null?'disabled':''}><div class="warmth-scale"><span>${esc(t('v50Neutral'))}</span><span>${esc(t('v50Warmer'))}</span></div><small class="warmth-help">${esc(t(warmth===null?'v50ChooseMixHint':'v50MixBrightnessHint'))}</small></div></div></section>`;
     const fineControls=`<div class="fine-controls${compact?' stand-fine-controls':''}" data-colour-fine><h3>${esc(t('v50FineTune'))}</h3><div class="fine-controls-body"><p class="channel-help">${esc(t('channelHelp'))}</p>${channels}${warmControls}</div></div>`;
     return `<section class="card colour-card shared-colour-picker" data-colour-picker="${brand?'brand':background?'background':slot===null?'static':'animation'}" data-slot="${brand?brandEditor.index:slot??''}">
       <div class="section-heading"><h2 ${slot===null?'id="bediening-colour-title" ':''}tabindex="-1">${background?'Achtergrondkleur':'Kleur kiezen'}</h2></div>
@@ -1779,10 +1785,21 @@
       </li>`;
     }).join('');
     return `<section class="ledline-setup card" data-order-open="${open}" ${open?'role="dialog" aria-modal="true"':''} aria-label="${esc(t('lineSetupTitle'))}">${open?'':spatialPreviewChoice()}<button class="ledline-setup-toggle" data-action="layout" aria-label="${esc(toggleLabel)}" aria-expanded="${open}" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy">${open?`<span class="ledline-menu-label">${esc(t('lineSetupMenu'))}</span>`:''}<b>${esc(title)}</b><small id="ledline-setup-context">${esc(open?context:hint)}</small></span><span class="ledline-setup-disclosure-action">${open?`<span class="ledline-setup-close-label">${icon('close')}${esc(t('close'))}</span>`:icon('chevron')}</span></button><div class="ledline-setup-body" id="ledline-setup-body" role="region" ${open?'aria-labelledby="ledline-setup-heading" aria-describedby="ledline-setup-context"':'hidden'}>${open?`
-      <figure class="v50-order-preview"><figcaption><b>${esc(t('v50LineOverview'))}</b><small>${esc(t('v50RecognitionHint'))}</small></figcaption>${zonePreview(z,'v50-order-canvas',{main:true,arrangementPreview:true,orderOverview:true,standLiveZoneId:null,selection:{kind:'all'},label:t('v50OrderOverviewLabel',{zone:z.name})})}</figure>
+      <div class="v50-order-feedback" data-order-feedback role="status" aria-live="polite" ${orderPreviewGesture?.zoneId===z.id||orderMoveResult?.zoneId===z.id?'':'hidden'}>${orderFeedbackMarkup()}</div><figure class="v50-order-preview"><figcaption><b>${esc(t('v50LineOverview'))}</b><small>${esc(t('v50RecognitionHint'))}</small></figcaption>${zonePreview(z,'v50-order-canvas',{main:true,arrangementPreview:true,orderOverview:true,standLiveZoneId:null,selection:{kind:'all'},label:t('v50OrderOverviewLabel',{zone:z.name})})}</figure>
       <section class="ledline-arrangement" aria-label="${esc(singleLine?title:t('lineSetupOrder'))}" aria-busy="${arrangementInteractionBusy()}"><div class="ledline-order-heading"><h3 id="ledline-setup-heading">${esc(singleLine?t('scopeCountOne'):t('lineSetupCurrentOrder'))}</h3><small class="ledline-family-label">${esc(family||'')}</small></div><p class="ledline-setup-hint" id="ledline-order-help">${esc(singleLine?hint:t('lineSetupOrderHint'))}</p><p class="order-recognition-status" data-order-recognition-status role="status"></p><p class="order-drop-status" role="status" aria-live="polite"></p><p data-order-apply-status role="status" ${arrangementApplying||arrangementPlaybackPending()||draft?.error||needsStandOpen?'':'hidden'}>${arrangementApplying||arrangementPlaybackPending()?esc(orderText('orderApplying')):esc(draft?.error||(needsStandOpen?orderText('orderOpenStandHint'):''))}</p><button type="button" class="button secondary full" data-order-stand-open data-action="management-stand-open" ${!arrangementInteractionBusy()&&(needsStandOpen||draft?.needsStandOpen&&draft.error)?'':'hidden'}>${esc(orderText('orderOpenStand'))}</button>
       <ol class="ledline-draft-order">${rows}</ol>
       </section>${reusable?`<button class="ledline-reuse-action" data-action="zone-assign" data-id="${esc(z.id)}">${icon('receiver')}<span>${esc(t('lineSetupReuse'))}</span>${icon('chevron')}</button>`:''}${layoutReceiverActions()}`:''}</div></section>`;
+  }
+  function orderFeedbackMarkup(){
+    const state=orderPreviewGesture||orderMoveResult;
+    if(!state||state.zoneId!==route.zoneId)return '';
+    return `<div class="v50-order-feedback-route"><span class="v50-order-feedback-source">${esc(t('scopeLine',{number:state.fromIndex+1}))}</span><span aria-hidden="true">→</span><span class="v50-order-feedback-target">${esc(t('v50OrderPlace',{number:state.toIndex+1}))}</span>${state.saved?icon('check'):''}</div><small>${esc(state.receiverName)}${state.port?' · P'+state.port:''} · ${esc(t(state.saved?'v50OrderMoved':'v50OrderDropHere'))}</small>`;
+  }
+  function syncOrderFeedback(){
+    const state=orderPreviewGesture||orderMoveResult,node=main.querySelector('[data-order-feedback]');
+    if(!node)return;
+    node.hidden=!state||state.zoneId!==route.zoneId;node.innerHTML=orderFeedbackMarkup();
+    if(state?.colour){node.style.setProperty('--order-drag-colour',state.colour);node.closest('[data-order-open]')?.style.setProperty('--order-drag-colour',state.colour);}
   }
   function portEditMarkup(receiver,port){
     const selected=pixelEditSelections.get(receiver.id)||new Set([port]);
@@ -3326,7 +3343,7 @@
       });
     });
   }
-  function paint(time,{secondary=true}={}) {
+  function paint(time,{secondary=true,orderFeedback=false}={}) {
     if(document.hidden)return;
     if(orderRecognitionDirty)syncOrderRecognition();
     if(secondary)pixelSetup.paint(time);
@@ -3344,7 +3361,7 @@
     document.querySelectorAll('canvas[data-preview]').forEach(canvas=>{
       const spec=previews.get(canvas.dataset.preview);if(!spec)return;
       if(!secondary&&!spec.main)return;
-      const rect=canvas.getBoundingClientRect();if(!rect.width||!rect.height||rect.bottom<0||rect.top>innerHeight)return;
+      const rect=canvas.getBoundingClientRect();if(!rect.width||!rect.height||((rect.bottom<0||rect.top>innerHeight)&&!(orderFeedback&&spec.orderOverview)))return;
       if(spec.capturedStandPlan){
         const zone=spec.capturedStandPlan.zones.find(item=>item.zoneId===spec.capturedStandZoneId);
         if(!zone)return;
@@ -3362,6 +3379,7 @@
       }
       const savedZone=spec.zoneId?M.getZone(model,spec.zoneId):null;
       const draft=spec.arrangementPreview?previewArrangement(savedZone):null;
+      const proposedOrder=spec.orderOverview&&orderPreviewGesture?.zoneId===savedZone?.id?orderPreviewGesture.previewOrder:null;
       const savedList=savedZone?M.zoneReceivers(model,spec.zoneId):null;
       const zoneList=savedList;
       const list=zoneList?(spec.visibleReceiverIds?zoneList.filter(receiver=>spec.visibleReceiverIds.includes(receiver.id)):zoneList):spec.brand?spec.receivers.map(r=>{
@@ -3373,11 +3391,12 @@
       P.draw(canvas,{...spec,...globalOptions,layout:spec.orderOverview?'stacked':globalPlan?'stacked':draft?.layout||spec.layout,receivers:list,
         presentation:globalPlan?undefined:spec.presentation,
         geometryReceivers:globalPlan?globalPlan.receivers:spec.preserveZoneGeometry?zoneList:spec.geometryReceivers,selection:spec.orderOverview?{kind:'all'}:spec.main?selection():spec.selection,
-        ...(savedZone&&!globalPlan?{lineOrder:draft?.lineOrder||M.lineIds(model,savedZone.id)}:{}),
-        ...(draft?{lineNumbers:Object.fromEntries(draft.lineOrder.map((id,index)=>[id,index+1]))}:{}),
+        ...(savedZone&&!globalPlan?{lineOrder:proposedOrder||draft?.lineOrder||M.lineIds(model,savedZone.id)}:{}),
+        ...(proposedOrder||draft?{lineNumbers:Object.fromEntries((proposedOrder||draft.lineOrder).map((id,index)=>[id,index+1]))}:{}),
         selectionFeedback:spec.main===true,identifying:spec.main?identifying:undefined,identificationTime:time,reducedMotion:reduce,
-        identificationColours:spec.main&&openLineSetup.has(route.zoneId)?new Map([...orderColours].map(([id,colour])=>[id,colour.rgb])):undefined,
+        identificationColours:spec.main&&openLineSetup.has(route.zoneId)?proposedOrder?new Map(proposedOrder.map((id,index)=>[id,orderPreviewGesture.positionColours[index]?.rgb]).filter(([,rgb])=>rgb)):new Map([...orderColours].map(([id,colour])=>[id,colour.rgb])):undefined,
         time:reduce&&!spec.main?1.5:time});
+      if(spec.orderOverview)canvas.dataset.proposedOrder=JSON.stringify(proposedOrder||draft?.lineOrder||M.lineIds(model,savedZone.id));
     });
     document.querySelectorAll('canvas[data-product-receiver]').forEach(canvas=>{
       if(!secondary&&canvas.dataset.compact==='true')return;
@@ -4869,18 +4888,45 @@
     onActivity:()=>{if(!arrangementInteractionBusy()&&orderIdentificationState?.active)void orderIdentification?.interaction();},
     message:(key,params)=>window.LightningV50OrderTexts.t(key,uiPreferences.preferences.language,params),
     onStatus:text=>{const status=main.querySelector('.order-drop-status');if(status)status.textContent=text;},
+    onFeedback:feedback=>{
+      if(feedback.phase==='cancel'){orderPreviewGesture=null;syncOrderFeedback();paint(performance.now()/1000,{orderFeedback:true});return;}
+      if(feedback.phase==='start'){
+        if(orderMoveTimer!==null)clearTimeout(orderMoveTimer);orderMoveTimer=null;orderMoveResult=null;
+        const physical=M.zoneLedlines(model,route.zoneId).find(line=>line.id===feedback.id),receiver=model.receivers.find(item=>item.id===physical?.receiverId);
+        orderPreviewGesture={...feedback,zoneId:route.zoneId,receiverName:receiver?.name||'',port:physical?.port||0,colour:orderColours.get(feedback.id)?.hex,positionColours:arrangementDraft.lineOrder.map(id=>orderColours.get(id))};
+      }else if(orderPreviewGesture?.id===feedback.id)orderPreviewGesture={...orderPreviewGesture,...feedback};
+      syncOrderFeedback();paint(performance.now()/1000,{orderFeedback:true});
+    },
     onInteraction:active=>{
       if(active&&!arrangementInteractionBusy()){if(orderIdentificationState?.active)void orderIdentification?.interaction();else beginOrderColours();}
       if(!active&&orderRenderDeferred){orderRenderDeferred=false;queueMicrotask(()=>renderArrangement());}
     },
     onDrop:async({id,toIndex})=>{
       const draft=arrangementDraft;
-      if(!draft||!openLineSetup.has(route.zoneId)||draft.zoneId!==route.zoneId||arrangementInteractionBusy()||arrangementNeedsStandOpen())return syncArrangementControls();
-      if(draft.signature!==arrangementSignature())return renderArrangement();
+      if(!draft||!openLineSetup.has(route.zoneId)||draft.zoneId!==route.zoneId||arrangementInteractionBusy()||arrangementNeedsStandOpen()){orderPreviewGesture=null;syncOrderFeedback();return syncArrangementControls();}
+      if(draft.signature!==arrangementSignature()){orderPreviewGesture=null;return renderArrangement();}
       const from=draft.lineOrder.indexOf(id);
-      if(from<0||toIndex<0||toIndex>=draft.lineOrder.length||from===toIndex)return;
+      if(from<0||toIndex<0||toIndex>=draft.lineOrder.length||from===toIndex){orderPreviewGesture=null;syncOrderFeedback();paint(performance.now()/1000,{orderFeedback:true});return;}
       draft.lineOrder.splice(from,1);draft.lineOrder.splice(toIndex,0,id);
-      const saved=await applyArrangement();
+      const moving=orderPreviewGesture;let saved=false;
+      try{saved=await applyArrangement();}finally{orderPreviewGesture=null;}
+      if(saved&&moving&&moving.id===id){
+        orderMoveResult={...moving,saved:true,toIndex};syncOrderFeedback();
+        const landed=main.querySelector(`[data-order-item="${CSS.escape(id)}"]`);landed?.setAttribute('data-order-settled','true');
+        if(landed&&moving.colour)landed.style.setProperty('--order-drag-colour',moving.colour);
+        if(landed){
+          const sheet=landed.closest('[data-order-open="true"]'),bounds=landed.getBoundingClientRect();
+          if(sheet){
+            const header=sheet.querySelector(':scope>.ledline-setup-toggle');
+            const feedback=sheet.querySelector('[data-order-feedback]:not([hidden])');
+            const visibleTop=Math.max(sheet.getBoundingClientRect().top,header?.getBoundingClientRect().bottom||0,feedback?.getBoundingClientRect().bottom||0)+12;
+            const visibleBottom=Math.min(innerHeight,sheet.getBoundingClientRect().bottom)-16;
+            if(bounds.top<visibleTop)sheet.scrollTop+=bounds.top-visibleTop;
+            else if(bounds.bottom>visibleBottom)sheet.scrollTop+=bounds.bottom-visibleBottom;
+          }
+        }
+        orderMoveTimer=setTimeout(()=>{orderMoveTimer=null;orderMoveResult=null;landed?.removeAttribute('data-order-settled');syncOrderFeedback();},3200);
+      }else {orderMoveResult=null;syncOrderFeedback();}
       const handle=main.querySelector(`[data-order-item="${CSS.escape(id)}"] [data-order-handle]`);
       handle?.focus({preventScroll:true});
       const physical=M.zoneLedlines(model,route.zoneId).find(line=>line.id===id),receiver=model.receivers.find(r=>r.id===physical?.receiverId);
@@ -4930,7 +4976,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden)void orderIdentification?.hide();});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate550',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate551',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

@@ -1241,6 +1241,8 @@ function softTrailCoverage(behind,trail,n,smooth){
     const vertical = layout === 'vertical' && options.presentation !== 'receivers';
     const continuous = layout === 'continuous' && !byReceiver && frame.rows.every(row => row.type === 'SPI');
     const padding = Math.min(18, width / 8);
+    const numberedTargets=options.interactiveLines===true&&!continuous;
+    const labelGutter=numberedTargets&&!vertical?24:0;
     const maxRowPixels = Math.max(1, ...frame.rows.filter(row => row.type === 'SPI').map(row => row.pixels.length));
     const shortestFraction = Math.min(1, ...frame.rows.filter(row => row.type === 'SPI').map(row => row.pixels.length / maxRowPixels));
     const hitRegions = [];
@@ -1250,7 +1252,7 @@ function softTrailCoverage(behind,trail,n,smooth){
       // A single ledline should read as a light bar, not a hairline, in the
       // compact sticky preview. Scale with each lane so multi-line layouts
       // stay clearly separated on small screens.
-      const showLabel = continuous ? false : vertical ? lane >= 48 : lane >= 30 || row.individuallySelected && lane >= 24;
+      const showLabel = numberedTargets ? false : continuous ? false : vertical ? lane >= 48 : lane >= 30 || row.individuallySelected && lane >= 24;
       const compactVertical = vertical && options.main === true && height < 140;
       const verticalStart = Math.min(showLabel ? compactVertical ? 24 : 38 : 14, height / 3);
       const verticalBottom = compactVertical ? 18 : Math.min(24, height / 4);
@@ -1268,7 +1270,7 @@ function softTrailCoverage(behind,trail,n,smooth){
           lane * 0.62, vertical ? verticalThickness : Infinity));
       const continuousFraction = row.pixels.length / Math.max(1, frame.geometry.totalPixels);
       const continuousOffset = (row.offset ?? frame.geometry.receivers.find(item=>item.receiverId===row.receiverId).offset) / Math.max(1, frame.geometry.totalPixels);
-      const x = continuous ? padding + (width - padding * 2) * continuousOffset : vertical ? padding + lane * index + lane / 2 - barHeight / 2 : padding;
+      const x = continuous ? padding + (width - padding * 2) * continuousOffset : vertical ? padding + lane * index + lane / 2 - barHeight / 2 : padding+labelGutter;
       const y = continuous ? (height - barHeight) / 2 : vertical ? verticalStart
         : 8 + lane * index + (lane - barHeight) / 2 + (showLabel ? 4 : 0);
       if (options.main === true && !continuous) hitRegions.push({receiverId:row.receiverId,
@@ -1278,7 +1280,7 @@ function softTrailCoverage(behind,trail,n,smooth){
         width:vertical?lane / width:1,
         height:vertical?1:lane / height});
       const availableLength = Math.max(0.5, continuous ? (width - padding * 2) * continuousFraction
-        : vertical ? height - y - verticalBottom : width - padding * 2);
+        : vertical ? height - y - verticalBottom : width - padding * 2-labelGutter);
       // One common physical pixel pitch for separate SPI rows. A 12-pixel
       // line must not get giant blocks beside a 28-pixel line merely because
       // each row was stretched independently to the full viewport width.
@@ -1322,7 +1324,7 @@ function softTrailCoverage(behind,trail,n,smooth){
       }
       context.shadowBlur = 0;
       const highlighted = frame.highlightedReceiverIds.includes(row.receiverId) || frame.highlightedLineIds.includes(row.lineId);
-      if (highlighted) {
+      if (highlighted&&!numberedTargets) {
         context.fillStyle = '#f5f6f1';
         // An open accent marks position without changing the displayed colour
         // or introducing a rounded enclosure. Dense layouts use a short side
@@ -1334,6 +1336,18 @@ function softTrailCoverage(behind,trail,n,smooth){
       context.fillStyle = row.selected ? '#eef1ec' : '#85948c';
       context.font = (row.selected ? '600 ' : '') + '10px system-ui';
       context.textAlign = vertical ? 'center' : 'left';
+      if(numberedTargets){
+        // A stable number target shows selection without changing LED RGB,
+        // blinking the example, or losing the identity of a physical port.
+        const number=options.lineNumbers?.[row.lineId]||(row.port?row.lineIndex+1:options.lineNumbers?.[row.receiverId]||index+1);
+        const size=Math.min(22,vertical?lane-3:lane-3),cx=vertical?x+barHeight/2:padding+7,cy=vertical?height-15:8+lane*index+lane/2;
+        if(size>=10){
+          context.fillStyle=highlighted?'#edf1ed':'#29322e';
+          rounded(context,cx-size/2,cy-size/2,size,size,Math.min(7,size/3));context.fill();
+          context.fillStyle=highlighted?'#18201c':'#bbc6be';context.font='650 '+Math.min(11,size*.6)+'px system-ui';
+          context.textAlign='center';context.fillText(String(number),cx,cy);context.textAlign=vertical?'center':'left';
+        }
+      }
       // The light example is not a receiver list. Separate lines use only
       // their spatial order; a continuous strip has no per-receiver captions.
       // Pixel totals are actual active-output counts, never RGBW's sample size.

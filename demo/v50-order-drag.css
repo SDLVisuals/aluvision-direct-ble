@@ -1,0 +1,24 @@
+/* Presentation feedback only. Physical identity and saved order remain owned by app.js. */
+.v50-order-feedback[hidden]{display:none!important}
+.v50-order-feedback{position:sticky;top:76px;z-index:5;display:grid;gap:7px;margin:8px 0 16px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--order-drag-colour,var(--red,#bb4841)) 48%,var(--line));border-radius:18px;background:var(--panel,#fff);box-shadow:0 8px 24px #101a2412;color:var(--ink,#232a33)}
+.v50-order-feedback-route{display:flex;align-items:center;gap:10px;font-size:16px;line-height:1.2;font-weight:750}
+.v50-order-feedback-source{min-width:0;overflow-wrap:anywhere}
+.v50-order-feedback-target{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;min-width:44px;min-height:32px;padding:6px 10px;border-radius:11px;background:color-mix(in srgb,var(--order-drag-colour,var(--red,#bb4841)) 13%,var(--panel,#fff));color:var(--ink,#232a33)}
+.v50-order-feedback>small,.v50-order-feedback-detail{font-size:11px;line-height:1.4;color:var(--muted,#6a727d);overflow-wrap:anywhere}
+html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item][data-order-grabbed]{opacity:1;background:color-mix(in srgb,var(--order-drag-colour,var(--red,#bb4841)) 8%,var(--panel,#fff));outline:2px solid var(--order-drag-colour,var(--red,#bb4841));outline-offset:1px;box-shadow:0 8px 22px #12192712}
+html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-grabbed] .line-order-handle{background:var(--ink,#313a45);color:var(--panel,#fff)}
+html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item][data-order-drop]::before{left:0;right:0;top:-7px;height:5px;background:var(--order-drag-colour,var(--red,#bb4841));border-radius:8px;box-shadow:0 0 0 3px var(--bg,#eef1f4);z-index:3}
+html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item][data-order-drop=after]::before{top:auto;bottom:-7px}
+html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item][data-order-drop]::after{content:'→ ' attr(data-order-drop-position);position:absolute;right:7px;top:-21px;min-width:40px;padding:5px 9px;border-radius:10px;background:var(--ink,#313a45);color:var(--panel,#fff);font-size:12px;font-weight:750;line-height:1;z-index:4;box-shadow:0 3px 10px #11192724;pointer-events:none}
+html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item][data-order-drop=after]::after{top:auto;bottom:-21px}
+.v50-order-drag-ghost{position:fixed;top:0;left:0;z-index:1012;display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:10px;box-sizing:border-box;padding:12px;border:2px solid var(--order-drag-colour,var(--red,#bb4841));border-radius:19px;background:var(--panel,#fff);box-shadow:0 18px 48px #0d172b32;color:var(--ink,#232a33);pointer-events:none;user-select:none;will-change:transform}
+.v50-order-ghost-number{display:grid;place-items:center;min-width:42px;height:42px;border-radius:12px;font-size:22px;font-weight:800;background:color-mix(in srgb,var(--order-drag-colour,var(--red,#bb4841)) 16%,var(--panel,#fff));border:1px solid var(--order-drag-colour,var(--red,#bb4841))}
+.v50-order-ghost-copy{display:grid;gap:3px;min-width:0;line-height:1.25}
+.v50-order-ghost-copy b{font-size:14px;overflow-wrap:anywhere}
+.v50-order-ghost-copy small{font-size:10px;color:var(--muted,#6a727d);overflow-wrap:anywhere}
+.v50-order-ghost-route{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.v50-order-drag-ghost[data-order-ghost-input=keyboard]{opacity:.96}
+html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item][data-order-settled]{outline:2px solid var(--order-drag-colour,var(--red,#bb4841));outline-offset:1px;background:color-mix(in srgb,var(--order-drag-colour,var(--red,#bb4841)) 11%,var(--panel,#fff));box-shadow:0 8px 24px #182e3b17;animation:v50-order-land 360ms ease-out}
+@keyframes v50-order-land{from{transform:scale(.975);box-shadow:0 0 0 7px color-mix(in srgb,var(--order-drag-colour,var(--red,#bb4841)) 16%,transparent)}to{transform:scale(1);box-shadow:0 8px 24px #182e3b17}}
+@media(max-width:360px){.v50-order-drag-ghost{gap:8px;padding:10px}.v50-order-ghost-route{font-size:12px}.v50-order-feedback-route{font-size:14px}}
+@media(prefers-reduced-motion:reduce){html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item][data-order-settled]{animation:none}.v50-order-drag-ghost{will-change:auto}}

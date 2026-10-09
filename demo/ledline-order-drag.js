@@ -17,6 +17,7 @@
     var view = document.defaultView, active = null, destroyed = false, scrollFrame = null;
     var interaction = typeof options.onInteraction === 'function' ? options.onInteraction : function () {};
     var status = typeof options.onStatus === 'function' ? options.onStatus : function () {};
+    var feedback = typeof options.onFeedback === 'function' ? options.onFeedback : function () {};
     var messageDefaults = {
       orderDragUnconfirmed: 'De volgorde is nog niet bevestigd.',
       orderDragSubmitted: 'Volgorde doorgegeven.',
@@ -57,6 +58,66 @@
     }
     function announce(text) { try { status(text); } catch (_) { /* Status never grants authority or retries a drop. */ } }
     function notify(value, state) { interaction(value, { id: state.id, input: state.input }); }
+    function previewOrder(state) {
+      var order = state.ids.slice(), moved = order.splice(state.fromIndex, 1)[0];
+      order.splice(state.toIndex, 0, moved); return order;
+    }
+    function emitFeedback(phase, state) {
+      // A proposed order is a presentation copy. Neither callbacks nor the
+      // ghost grant persistence/transport authority or mutate the item list.
+      try { feedback(Object.freeze({ phase: phase, active: phase === 'start' || phase === 'update',
+        id: state.id, fromIndex: state.fromIndex, toIndex: state.toIndex, input: state.input,
+        previewOrder: Object.freeze(previewOrder(state)) })); } catch (_) {}
+    }
+    function positionGhost(state) {
+      if (!state.ghost || !view || !Number.isFinite(view.innerWidth) || !Number.isFinite(view.innerHeight)) return;
+      var box = state.row.getBoundingClientRect(), width = Math.max(0, Math.min(box.width, view.innerWidth - 24));
+      if (!Number.isFinite(width) || !width) return;
+      var left = Math.max(12, Math.min(box.left, view.innerWidth - width - 12));
+      state.ghost.style.width = width + 'px';
+      var height = state.ghost.getBoundingClientRect().height;
+      var target = state.rows[state.toIndex].getBoundingClientRect();
+      var y = state.input === 'pointer' && Number.isFinite(state.pointerY) ? state.pointerY : target.top;
+      // The sheet may have a fixed title above its scrolling content. Keep
+      // the ghost inside that content viewport even for an offscreen target.
+      var minimumTop = 12, maximumTop = Math.max(12, view.innerHeight - height - 12);
+      try {
+        var bounds = typeof options.getScrollBounds === 'function' ? options.getScrollBounds() : null;
+        if (bounds && Number.isFinite(bounds.top) && Number.isFinite(bounds.bottom) &&
+            bounds.top >= 0 && bounds.bottom <= view.innerHeight && bounds.bottom > bounds.top) {
+          minimumTop = Math.min(maximumTop, Math.max(12, bounds.top + 12));
+        }
+      } catch (_) { /* Overlay geometry does not change interaction authority. */ }
+      var top = Math.max(minimumTop, Math.min(y - height - 16, maximumTop));
+      state.ghost.style.transform = 'translate(' + left + 'px,' + top + 'px)';
+      state.ghostRoute.textContent = (state.fromIndex + 1) + ' → ' + (state.toIndex + 1);
+    }
+    function createGhost(state) {
+      if (!document.body || typeof document.createElement !== 'function' || typeof state.row.querySelector !== 'function') return;
+      try {
+        var ghost = document.createElement('div'), number = document.createElement('span');
+        var copy = document.createElement('span'), title = document.createElement('b'), detail = document.createElement('small');
+        var route = document.createElement('span'), originalCopy = state.row.querySelector('.scope-copy');
+        ghost.className = 'v50-order-drag-ghost'; ghost.setAttribute('aria-hidden', 'true');
+        // Essential overlay geometry is inline so a delayed/missing stylesheet
+        // cannot turn presentation feedback into a layout/scroll mutation.
+        ghost.style.position = 'fixed'; ghost.style.left = '0'; ghost.style.top = '0';
+        ghost.style.pointerEvents = 'none'; ghost.style.zIndex = '1012';
+        ghost.setAttribute('data-order-ghost-id', state.id); ghost.setAttribute('data-order-ghost-input', state.input);
+        number.className = 'v50-order-ghost-number'; number.textContent = String(state.fromIndex + 1);
+        copy.className = 'v50-order-ghost-copy';
+        title.textContent = originalCopy?.querySelector('.scope-option-title')?.textContent || originalCopy?.querySelector('b')?.textContent || state.id;
+        detail.textContent = originalCopy?.querySelector('small')?.textContent || '';
+        copy.appendChild(title); copy.appendChild(detail);
+        route.className = 'v50-order-ghost-route';
+        var badge = state.row.querySelector('.order-number');
+        state.colour = badge && view?.getComputedStyle ? view.getComputedStyle(badge).getPropertyValue('--identify-colour').trim() : '';
+        if (state.colour) ghost.style.setProperty('--order-drag-colour', state.colour);
+        ghost.appendChild(number); ghost.appendChild(copy); ghost.appendChild(route);
+        state.ghost = ghost; state.ghostRoute = route; document.body.appendChild(ghost);
+        positionGhost(state);
+      } catch (_) { if (state.ghost) state.ghost.remove(); state.ghost = null; }
+    }
     function activity() {
       var state = active;
       if (!state || typeof options.onActivity !== 'function') return;
@@ -104,8 +165,9 @@
       state.handle.removeAttribute('aria-grabbed');
       state.row.removeAttribute('data-order-grabbed');
       state.rows.forEach(function (row) {
-        row.removeAttribute('data-order-drop'); row.removeAttribute('data-order-drop-index');
+        row.removeAttribute('data-order-drop'); row.removeAttribute('data-order-drop-index'); row.removeAttribute('data-order-drop-position');
       });
+      if (state.ghost) { state.ghost.remove(); state.ghost = null; }
       if (state.pointerId !== null && typeof state.handle.hasPointerCapture === 'function' &&
           state.handle.hasPointerCapture(state.pointerId)) {
         try { state.handle.releasePointerCapture(state.pointerId); } catch (_) {}
@@ -117,6 +179,7 @@
       active = null; // releasePointerCapture can synchronously dispatch a lost event.
       clean(state);
       var dropped = false, failed = false;
+      emitFeedback(commit && state.toIndex !== state.fromIndex ? 'drop' : 'cancel', state);
       try {
         if (commit && state.toIndex !== state.fromIndex) {
           dropped = true;
@@ -149,23 +212,29 @@
         if (index < 0 || !contains(row)) return false;
         active = { handle: handle, row: row, rows: allRows, id: id, ids: ids,
           fromIndex: index, toIndex: index, input: input, pointerId: pointerId, pointerY: null };
+        allRows.forEach(function (item) { item.removeAttribute('data-order-settled'); });
         handle.setAttribute('aria-grabbed', 'true'); row.setAttribute('data-order-grabbed', 'true');
         if (typeof handle.focus === 'function') handle.focus({ preventScroll: true });
         if (pointerId !== null) handle.setPointerCapture(pointerId);
         notify(true, active);
         if (!valid()) return false; // caller may change the scope in onInteraction.
+        var state = active; createGhost(state); emitFeedback('start', state);
+        if (!valid()) return false; // Feedback may close its own presentation.
         announce(message('orderDragPicked', { position: index + 1, count: ids.length }));
         return true;
       } catch (_) { finish(false); return false; }
     }
     function mark(row, edge, index) {
-      active.rows.forEach(function (item) {
-        item.removeAttribute('data-order-drop'); item.removeAttribute('data-order-drop-index');
+      var state = active, changed = state.toIndex !== index;
+      state.rows.forEach(function (item) {
+        item.removeAttribute('data-order-drop'); item.removeAttribute('data-order-drop-index'); item.removeAttribute('data-order-drop-position');
       });
-      active.toIndex = index;
+      state.toIndex = index;
       row.setAttribute('data-order-drop', edge);
       row.setAttribute('data-order-drop-index', String(index));
-      announce(message('orderDragPosition', { position: index + 1, count: active.ids.length }));
+      row.setAttribute('data-order-drop-position', String(index + 1));
+      positionGhost(state); if (changed) emitFeedback('update', state);
+      if (active === state) announce(message('orderDragPosition', { position: index + 1, count: state.ids.length }));
     }
     function point(event) {
       if (!valid() || !Number.isFinite(event.clientY)) return;
