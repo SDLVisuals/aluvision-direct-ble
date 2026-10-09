@@ -56,6 +56,44 @@
       })) throw new TypeError('ORDER_ROWS_CHANGED');
       return values;
     }
+    function slots(ids) {
+      if (typeof options.getSlotElements !== 'function') return null;
+      var values = Array.from(options.getSlotElements() || []);
+      if (values.length !== ids.length || values.some(function (slot, index) {
+        return !contains(slot) || slot.getAttribute('data-order-position') !== String(index + 1);
+      })) throw new TypeError('ORDER_SLOTS_CHANGED');
+      return values;
+    }
+    function captureLayout(state) {
+      if (!state.slots) return;
+      // Read the untransformed cards once. Slot height and hit geometry stay
+      // attached to their positions for the whole gesture, including scroll.
+      var boxes = state.rows.map(function (row) { return row.getBoundingClientRect(); });
+      if (boxes.some(function (box) { return !Number.isFinite(box.top) || !Number.isFinite(box.height) || box.height <= 0; })) {
+        throw new TypeError('ORDER_LAYOUT_INVALID');
+      }
+      state.layout = boxes.map(function (box) { return { top: box.top, height: box.height }; });
+      state.slots.forEach(function (slot, index) {
+        slot.style.height = boxes[index].height + 'px';
+      });
+      state.slotLayout = state.slots.map(function (slot) { return slot.getBoundingClientRect(); });
+      if (state.slotLayout.some(function (box) { return !Number.isFinite(box.top) || !Number.isFinite(box.height) || box.height <= 0; })) {
+        throw new TypeError('ORDER_SLOT_LAYOUT_INVALID');
+      }
+      previewCards(state);
+    }
+    function previewCards(state) {
+      if (!state.slots || !state.layout) return;
+      var order = previewOrder(state);
+      order.forEach(function (id, index) {
+        var originalIndex = state.ids.indexOf(id), row = state.rows[originalIndex], box = state.layout[originalIndex], target = state.slotLayout[index];
+        row.style.setProperty('--order-preview-y', (target.top - box.top) + 'px');
+        row.style.setProperty('--order-preview-clip', Math.max(0, box.height - target.height) + 'px');
+        row.setAttribute('data-order-preview', 'true');
+        // Keep the DOM and settings state intact. A taller card is clipped
+        // only for this preview so it fits its fixed target without overlap.
+      });
+    }
     function announce(text) { try { status(text); } catch (_) { /* Status never grants authority or retries a drop. */ } }
     function notify(value, state) { interaction(value, { id: state.id, input: state.input }); }
     function previewOrder(state) {
@@ -76,7 +114,7 @@
       var left = Math.max(12, Math.min(box.left, view.innerWidth - width - 12));
       state.ghost.style.width = width + 'px';
       var height = state.ghost.getBoundingClientRect().height;
-      var target = state.rows[state.toIndex].getBoundingClientRect();
+      var target = (state.slots || state.rows)[state.toIndex].getBoundingClientRect();
       var y = state.input === 'pointer' && Number.isFinite(state.pointerY) ? state.pointerY : target.top;
       // The sheet may have a fixed title above its scrolling content. Keep
       // the ghost inside that content viewport even for an offscreen target.
@@ -90,7 +128,7 @@
       } catch (_) { /* Overlay geometry does not change interaction authority. */ }
       var top = Math.max(minimumTop, Math.min(y - height - 16, maximumTop));
       state.ghost.style.transform = 'translate(' + left + 'px,' + top + 'px)';
-      state.ghostRoute.textContent = (state.fromIndex + 1) + ' → ' + (state.toIndex + 1);
+      state.ghostRoute.textContent = state.fromPosition + ' → ' + (state.toIndex + 1);
     }
     function createGhost(state) {
       if (!document.body || typeof document.createElement !== 'function' || typeof state.row.querySelector !== 'function') return;
@@ -104,16 +142,18 @@
         ghost.style.position = 'fixed'; ghost.style.left = '0'; ghost.style.top = '0';
         ghost.style.pointerEvents = 'none'; ghost.style.zIndex = '1012';
         ghost.setAttribute('data-order-ghost-id', state.id); ghost.setAttribute('data-order-ghost-input', state.input);
-        number.className = 'v50-order-ghost-number'; number.textContent = String(state.fromIndex + 1);
+        number.className = 'v50-order-ghost-number'; number.textContent = String(state.fromPosition);
+        if (state.slots) ghost.setAttribute('data-order-ghost-slots', 'true');
         copy.className = 'v50-order-ghost-copy';
         title.textContent = originalCopy?.querySelector('.scope-option-title')?.textContent || originalCopy?.querySelector('b')?.textContent || state.id;
         detail.textContent = originalCopy?.querySelector('small')?.textContent || '';
         copy.appendChild(title); copy.appendChild(detail);
         route.className = 'v50-order-ghost-route';
         var badge = state.row.querySelector('.order-number');
-        state.colour = badge && view?.getComputedStyle ? view.getComputedStyle(badge).getPropertyValue('--identify-colour').trim() : '';
+        state.colour = view?.getComputedStyle ? view.getComputedStyle(badge || state.row).getPropertyValue('--identify-colour').trim() : '';
         if (state.colour) ghost.style.setProperty('--order-drag-colour', state.colour);
-        ghost.appendChild(number); ghost.appendChild(copy); ghost.appendChild(route);
+        if (!state.slots) ghost.appendChild(number);
+        ghost.appendChild(copy); ghost.appendChild(route);
         state.ghost = ghost; state.ghostRoute = route; document.body.appendChild(ghost);
         positionGhost(state);
       } catch (_) { if (state.ghost) state.ghost.remove(); state.ghost = null; }
@@ -166,6 +206,12 @@
       state.row.removeAttribute('data-order-grabbed');
       state.rows.forEach(function (row) {
         row.removeAttribute('data-order-drop'); row.removeAttribute('data-order-drop-index'); row.removeAttribute('data-order-drop-position');
+        row.removeAttribute('data-order-preview');
+        if (state.slots) { row.style.removeProperty('--order-preview-y'); row.style.removeProperty('--order-preview-clip'); }
+      });
+      if (state.slots) state.slots.forEach(function (slot) {
+        slot.removeAttribute('data-order-drop'); slot.removeAttribute('data-order-drop-index'); slot.removeAttribute('data-order-drop-position');
+        slot.removeAttribute('data-order-slot-target');
       });
       if (state.ghost) { state.ghost.remove(); state.ghost = null; }
       if (state.pointerId !== null && typeof state.handle.hasPointerCapture === 'function' &&
@@ -201,6 +247,7 @@
         if (!contains(active.handle) || !contains(active.row) ||
             fresh.length !== active.ids.length || fresh.some(function (id, i) { return id !== active.ids[i]; }) ||
             rows(fresh).some(function (row, i) { return row !== active.rows[i]; })) throw new Error('ORDER_CHANGED');
+        if (active.slots && slots(fresh).some(function (slot, i) { return slot !== active.slots[i]; })) throw new Error('ORDER_SLOTS_CHANGED');
         return true;
       } catch (_) { finish(false); return false; }
     }
@@ -210,9 +257,12 @@
         var ids = items(), row = handle.closest('[data-order-item]'), allRows = rows(ids);
         var id = options.getRowId(row), index = ids.indexOf(id);
         if (index < 0 || !contains(row)) return false;
-        active = { handle: handle, row: row, rows: allRows, id: id, ids: ids,
-          fromIndex: index, toIndex: index, input: input, pointerId: pointerId, pointerY: null };
+        var allSlots = slots(ids), originalPosition = Number(row.dataset && row.dataset.orderPosition);
+        active = { handle: handle, row: row, rows: allRows, slots: allSlots, id: id, ids: ids,
+          fromIndex: index, fromPosition: Number.isInteger(originalPosition) && originalPosition > 0 ? originalPosition : index + 1,
+          toIndex: index, input: input, pointerId: pointerId, pointerY: null };
         allRows.forEach(function (item) { item.removeAttribute('data-order-settled'); });
+        captureLayout(active);
         handle.setAttribute('aria-grabbed', 'true'); row.setAttribute('data-order-grabbed', 'true');
         if (typeof handle.focus === 'function') handle.focus({ preventScroll: true });
         if (pointerId !== null) handle.setPointerCapture(pointerId);
@@ -226,20 +276,23 @@
     }
     function mark(row, edge, index) {
       var state = active, changed = state.toIndex !== index;
-      state.rows.forEach(function (item) {
+      (state.slots || state.rows).forEach(function (item) {
         item.removeAttribute('data-order-drop'); item.removeAttribute('data-order-drop-index'); item.removeAttribute('data-order-drop-position');
+        if (state.slots) item.removeAttribute('data-order-slot-target');
       });
       state.toIndex = index;
+      if (state.slots) { row = state.slots[index]; row.setAttribute('data-order-slot-target', 'true'); }
       row.setAttribute('data-order-drop', edge);
       row.setAttribute('data-order-drop-index', String(index));
       row.setAttribute('data-order-drop-position', String(index + 1));
+      if (changed) previewCards(state);
       positionGhost(state); if (changed) emitFeedback('update', state);
-      if (active === state) announce(message('orderDragPosition', { position: index + 1, count: state.ids.length }));
+      if (changed && active === state) announce(message('orderDragPosition', { position: index + 1, count: state.ids.length }));
     }
     function point(event) {
       if (!valid() || !Number.isFinite(event.clientY)) return;
       var nearest, distance = Infinity;
-      active.rows.forEach(function (row, index) {
+      (active.slots || active.rows).forEach(function (row, index) {
         var box = row.getBoundingClientRect(), middle = box.top + box.height / 2;
         if (!Number.isFinite(middle) || box.height <= 0) return;
         var next = Math.abs(event.clientY - middle);
@@ -247,6 +300,7 @@
       });
       if (!nearest) { finish(false); return; }
       var edge = event.clientY < nearest.middle ? 'before' : 'after';
+      if (active.slots) { mark(nearest.row, edge, nearest.index); return; }
       var boundary = nearest.index + (edge === 'after' ? 1 : 0);
       var to = boundary > active.fromIndex ? boundary - 1 : boundary;
       mark(nearest.row, edge, Math.max(0, Math.min(active.ids.length - 1, to)));
@@ -255,7 +309,7 @@
       var handle = handleOf(event.target);
       if (!handle || event.button !== 0 || event.isPrimary === false) return;
       if (begin(handle, 'pointer', event.pointerId) && active) {
-        event.preventDefault(); active.pointerY = event.clientY; queueScroll();
+        event.preventDefault(); active.pointerY = event.clientY; positionGhost(active); queueScroll();
       }
     }
     function pointerMove(event) {

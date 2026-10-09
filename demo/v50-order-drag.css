@@ -18,7 +18,12 @@ html.interface-polish body #main .ledline-setup[data-order-open=true] [data-orde
 .v50-order-ghost-copy small{font-size:10px;color:var(--muted,#6a727d);overflow-wrap:anywhere}
 .v50-order-ghost-route{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
 .v50-order-drag-ghost[data-order-ghost-input=keyboard]{opacity:.96}
+/* Only receiver cards animate. Position numbers/colours have their own rail. */
+html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item][data-order-preview]{transform:translate3d(0,var(--order-preview-y,0px),0);clip-path:inset(0 0 var(--order-preview-clip,0px) 0 round 18px);transition:transform 190ms cubic-bezier(.22,.8,.25,1),opacity 130ms ease;will-change:transform;z-index:1}
+html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item][data-order-preview][data-order-grabbed]{opacity:.12;outline:none;box-shadow:none;pointer-events:none}
+html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-slot][data-order-slot-target]{background:color-mix(in srgb,var(--identify-colour,var(--red,#bb4841)) 15%,var(--panel,#fff));outline:2px solid var(--identify-colour,var(--red,#bb4841));outline-offset:-2px;box-shadow:0 0 0 3px color-mix(in srgb,var(--identify-colour,var(--red,#bb4841)) 12%,transparent)}
+.v50-order-drag-ghost[data-order-ghost-slots]{grid-template-columns:minmax(0,1fr) auto}
 html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item][data-order-settled]{outline:2px solid var(--order-drag-colour,var(--red,#bb4841));outline-offset:1px;background:color-mix(in srgb,var(--order-drag-colour,var(--red,#bb4841)) 11%,var(--panel,#fff));box-shadow:0 8px 24px #182e3b17;animation:v50-order-land 360ms ease-out}
 @keyframes v50-order-land{from{transform:scale(.975);box-shadow:0 0 0 7px color-mix(in srgb,var(--order-drag-colour,var(--red,#bb4841)) 16%,transparent)}to{transform:scale(1);box-shadow:0 8px 24px #182e3b17}}
 @media(max-width:360px){.v50-order-drag-ghost{gap:8px;padding:10px}.v50-order-ghost-route{font-size:12px}.v50-order-feedback-route{font-size:14px}}
-@media(prefers-reduced-motion:reduce){html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item][data-order-settled]{animation:none}.v50-order-drag-ghost{will-change:auto}}
+@media(prefers-reduced-motion:reduce){html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item][data-order-settled]{animation:none}html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item][data-order-preview]{transition:none;will-change:auto}.v50-order-drag-ghost{will-change:auto}}

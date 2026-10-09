@@ -82,7 +82,9 @@ html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-s
 html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-row-settings{grid-row:3;grid-column:1/-1;margin-top:4px;padding-top:12px;border-top:1px solid var(--line)}
 html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-row-settings[hidden]{display:none}
 html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-draft-order{gap:8px}
-html.interface-polish body #main .ledline-setup[data-order-open=true] .order-drop-status:empty{display:none}
+/* Announce movement to assistive technology without inserting a second
+   visible message above the fixed slots. The feedback card is always there. */
+html.interface-polish body #main .ledline-setup[data-order-open=true] .order-drop-status{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;margin:0;padding:0}
 html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-menu-label{display:none}
 html.interface-polish body #main .ledline-setup[data-order-open=true]>.ledline-setup-toggle .ledline-setup-copy b{font-size:18px;line-height:1.2}
 html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-order-heading h3{font-size:14px;margin:0}
@@ -132,3 +134,37 @@ html.interface-polish body #main .ledline-setup[data-order-open=true] .order-rec
 .v50-white-mix .warmth-row{margin-bottom:0}
 .v50-white-mix .warmth-help{font-size:10px;line-height:1.4}
 @media(max-width:360px){.v50-selection-summary b{font-size:11px}.v50-preview-expand{font-size:10px;padding-inline:8px}.v50-selection-summary>.icon{width:23px;height:23px}}
+/* Positions are a separate, stationary rail. Only physical endpoint cards
+   move; numbers and recognition colours belong to the destination slots. */
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-lanes{display:grid;grid-template-columns:48px minmax(0,1fr);gap:8px;align-items:start;min-width:0}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-slots,
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-lanes .ledline-draft-order{display:flex!important;flex-direction:column;gap:8px!important;margin:0!important;padding:0!important;list-style:none;min-width:0}
+html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-slot]{box-sizing:border-box;flex:none;min-height:84px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:12px 0 0!important;margin:0!important;border:0!important;background:transparent!important;box-shadow:none!important;border-radius:0;gap:5px}
+.v50-order-slot-number{display:grid;place-items:center;width:40px;height:42px;flex:none;font-size:23px;font-weight:750;font-variant-numeric:tabular-nums;border:2px solid var(--identify-colour);border-radius:13px;color:var(--ink);background:color-mix(in srgb,var(--identify-colour) 14%,var(--panel))}
+[data-slot-colour-name]{max-width:48px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8px;line-height:1.3;color:var(--muted)}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-lanes [data-order-item]{grid-template-columns:minmax(0,1fr) 88px 44px!important;min-width:0;min-height:84px;gap:4px 4px!important;padding:8px!important}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-lanes .scope-copy{grid-column:1/3;grid-row:1;min-width:0;align-self:center}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-lanes .scope-option-title{display:flex;align-items:center;gap:6px;min-width:0;font-size:12px;line-height:1.4}
+.v50-order-lanes .scope-option-title>b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:650}
+.v50-order-port{flex:none;padding:3px 5px;border-radius:6px;background:var(--soft);color:var(--muted);font-size:9px;font-weight:650}
+.v50-order-separator{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-lanes .line-order-handle{grid-column:3;grid-row:1/3;height:48px;width:44px;align-self:center}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-lanes [data-order-item]>.ledline-output-overview{grid-column:1;grid-row:2}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-lanes .ledline-order-tools{grid-column:2;grid-row:2}
+.v50-order-line-direction{flex:none;font-size:16px;line-height:1;color:var(--muted)}
+.v50-order-lanes .ledline-output-side{overflow-wrap:anywhere}
+/* Reserving feedback height avoids a layout jump when a drag starts. */
+.v50-order-feedback{box-sizing:border-box;height:84px;min-height:84px;grid-template-rows:32px minmax(0,1fr);gap:4px;padding:10px 12px;overflow:hidden}
+.v50-order-feedback-route{min-width:0;white-space:nowrap;font-size:14px}
+.v50-order-feedback-source{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v50-order-feedback>small{overflow:hidden;line-height:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-slot][data-order-slot-target]{background:color-mix(in srgb,var(--identify-colour) 10%,var(--panel))!important;border-radius:16px;outline:2px solid var(--identify-colour);outline-offset:-2px;box-shadow:0 0 0 3px color-mix(in srgb,var(--identify-colour) 12%,transparent)!important}
+/* A brief opacity-only entrance keeps drag geometry stable even when the
+   customer starts moving a line immediately after opening the sheet. */
+html.interface-polish body #main .ledline-setup[data-order-open=true]{animation:v50-order-sheet-in 150ms ease-out}
+@keyframes v50-order-sheet-in{from{opacity:.6}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){html.interface-polish body #main .ledline-setup[data-order-open=true]{animation:none}}
+html.interface-polish body #main .ledline-setup[data-order-open=true]>.ledline-setup-toggle{box-sizing:border-box;gap:8px}
+html.interface-polish body #main .ledline-setup[data-order-open=true]>.ledline-setup-toggle>.ledline-setup-copy{flex:1;min-width:0}
+html.interface-polish body #main .ledline-setup[data-order-open=true]>.ledline-setup-toggle>.ledline-setup-disclosure-action{flex:none;min-width:0;white-space:nowrap;margin:0;padding:0}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-setup-close-label{font-size:11px;gap:4px}

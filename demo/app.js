@@ -268,13 +268,14 @@
   let sceneDetailSearch='';
   let dragOrder=null;
   let inlineOrderDrag=null,orderRenderDeferred=false;
-  let orderPreviewGesture=null,orderMoveResult=null,orderMoveTimer=null;
+  let orderPreviewGesture=null,orderMoveResult=null,orderMoveTimer=null,orderSlotObserver=null;
   let activeControlPointer=null,controlRenderDeferred=false;
   let activeStaticGesturePointer=null;
   // Recognition follows the ordered position, never the saved playback state.
   // This map is deliberately presentation-only; it never enters the model,
   // colour library, a scene or an animation preset.
   const orderColours=new Map();
+  const orderPositionColours=new Map();
   let orderIdentification=null,orderIdentificationState=null,orderCleanupResumedSession=null;
   let orderRecognitionDirty=true;
   function beginOrderColours(){
@@ -378,6 +379,7 @@
         try{Promise.resolve(runtime.services.resumeInstallationContext({standId:state.cleanup.standId})).catch(()=>{});}catch(_){}
       }
       for(const line of state.lines)orderColours.set(line.id,{name:line.colorName,hex:C.hex(line.rgb),rgb:line.rgb});
+      if(state.active&&state.zoneId&&state.lines.length)orderPositionColours.set(state.zoneId,state.lines.map(line=>({name:line.colorName,hex:C.hex(line.rgb),rgb:[...line.rgb]})));
       for(const [receiverId,blink] of identifying){
         if(blink.layoutSession&&(!state.active||blink.layoutSession!==state.session||(!previewContext&&!state.physicalConfirmed))){
           identifying.delete(receiverId);syncIdentifyControls(receiverId);
@@ -396,8 +398,13 @@
     const colourLabel=colour=>window.LightningV50OrderTexts.paletteLabel(colour?.name,uiPreferences.preferences.language);
     for(const row of main.querySelectorAll('[data-order-item]')){
       const colour=orderColours.get(row.dataset.orderItem);
-      row.querySelector('.order-number')?.style.setProperty('--identify-colour',colour?.hex||'transparent');
+      row.style.setProperty('--identify-colour',colour?.hex||'transparent');
       const name=row.querySelector('[data-order-colour-name]');if(name)name.textContent=colour?' · '+colourLabel(colour):'';
+    }
+    const positionColours=orderPositionColours.get(route.zoneId)||[];
+    for(const slot of main.querySelectorAll('[data-order-slot]')){
+      const colour=positionColours[Number(slot.dataset.orderPosition)-1];
+      if(colour){slot.style.setProperty('--identify-colour',colour.hex);const name=slot.querySelector('[data-slot-colour-name]');if(name)name.textContent=colourLabel(colour);}
     }
     for(const port of main.querySelectorAll('[data-line-id]')){
       const colour=orderColours.get(port.dataset.lineId);port.style.setProperty('--identify-colour',colour?.hex||'transparent');
@@ -1731,6 +1738,7 @@
     v50LayoutInert.clear();document.body.classList.remove('v50-layout-modal');
   }
   function syncLayoutModal(scroll=0){
+    orderSlotObserver?.disconnect();orderSlotObserver=null;
     const sheet=main.querySelector('[data-order-open="true"]');if(!sheet)return;
     document.body.classList.add('v50-layout-modal');sheet.scrollTop=scroll;
     // Only siblings of the modal ancestry are made inert. Existing inert
@@ -1741,6 +1749,22 @@
         node.inert=true;v50LayoutInert.add(node);
       }
     }
+    syncOrderSlots();
+    orderSlotObserver=new ResizeObserver(()=>syncOrderSlots());
+    for(const row of sheet.querySelectorAll('[data-order-item]'))orderSlotObserver.observe(row);
+  }
+  function syncOrderSlots(){
+    if(inlineOrderDrag?.isActive())return;
+    const sheet=main.querySelector('[data-order-open="true"]');if(!sheet)return;
+    const rows=[...sheet.querySelectorAll('[data-order-item]')],slots=[...sheet.querySelectorAll('[data-order-slot]')];
+    if(rows.length!==slots.length)return;
+    // Layout height, not the temporary scaled rectangle of a landing animation.
+    const heights=rows.map(row=>{
+      const style=getComputedStyle(row),height=parseFloat(style.height);
+      const boxHeight=style.boxSizing==='border-box'?height:height+['paddingTop','paddingBottom','borderTopWidth','borderBottomWidth'].reduce((sum,key)=>sum+(parseFloat(style[key])||0),0);
+      return Math.round((Number.isFinite(boxHeight)&&boxHeight>0?boxHeight:row.offsetHeight)*100)/100;
+    });
+    slots.forEach((slot,index)=>{if(heights[index]>0&&slot.style.height!==heights[index]+'px')slot.style.height=heights[index]+'px';});
   }
   function receiverPortOverview(receiver,list){
     if(receiver.type!=='SPI')return '';
@@ -1772,11 +1796,10 @@
       const r=model.receivers.find(item=>item.id===line.receiverId),name=t('scopeLine',{number:index+1});
       const blinking=identifying.get(r.id)?.scope===(line.port?String(line.port):'all'),settingsOpen=openLineSettings.has(line.id),settingsId='ledline-settings-'+line.id,headingId=settingsId+'-heading';
       const colour=orderColours.get(line.id);
-      return `<li data-draft-receiver="${esc(r.id)}" data-order-item="${esc(line.id)}" data-settings-open="${settingsOpen}">
-        <span class="order-number" aria-label="${esc(orderText('orderPosition',{position:index+1}))}" style="--identify-colour:${colour?.hex||'transparent'}">${index+1}</span>
-        <span class="scope-copy"><span class="scope-option-title">${esc(name)}</span><small>${esc(r.name)} · ${line.port?`P${line.port} · ${line.pixels} px`:'RGBW'}<span data-order-colour-name>${colour?' · '+esc(colourLabel(colour)):''}</span></small></span>
+      return `<li data-draft-receiver="${esc(r.id)}" data-order-item="${esc(line.id)}" data-order-position="${index+1}" data-settings-open="${settingsOpen}" style="--identify-colour:${colour?.hex||'transparent'}" aria-label="${esc(orderText('orderPosition',{position:index+1}))} · ${esc(r.name)}${line.port?' · P'+line.port:''}">
+        <span class="scope-copy"><span class="scope-option-title"><b title="${esc(r.name)}">${esc(r.name)}</b><span class="v50-order-separator" aria-hidden="true"> · </span><span class="v50-order-port">${line.port?'P'+line.port:'RGBW'}</span></span><small>${line.port?`${line.pixels} px · SPI`:'RGBW'}</small></span>
         <button type="button" class="line-order-handle" data-order-handle aria-label="${esc(orderText('orderDragAccessible',{name,receiver:r.name,port:line.port?' · P'+line.port:''}))}" title="${esc(orderText('orderDragHint'))}" aria-describedby="ledline-order-help" ${ordered.length<2||arrangementInteractionBusy()||needsStandOpen?'disabled':''}><span aria-hidden="true">⠿</span></button>
-        ${line.port?`<div class="ledline-output-overview" data-output-count="1"><div class="ledline-output" data-line-id="${esc(line.id)}" data-port="${line.port}" data-line-number="${index+1}" data-pixels="${line.pixels}" style="--identify-colour:${colour?.hex||'transparent'}"><span class="ledline-output-strip" aria-hidden="true"><i></i></span><small class="ledline-output-side">${esc(t(line.reversed?'lineStartRight':'lineStartLeft'))}</small></div></div>`:''}
+        ${line.port?`<div class="ledline-output-overview" data-output-count="1"><div class="ledline-output" data-line-id="${esc(line.id)}" data-port="${line.port}" data-line-number="${index+1}" data-pixels="${line.pixels}"><span class="v50-order-line-direction" aria-hidden="true">${line.reversed?'←':'→'}</span><small class="ledline-output-side">${esc(t(line.reversed?'lineStartRight':'lineStartLeft'))}</small></div></div>`:''}
         <div class="ledline-order-tools"><div class="ledline-row-actions">
           <button class="receiver-blink order-blink-subtle" data-action="${line.port?'port-identify':'visual-identify'}" data-receiver="${esc(r.id)}" data-port="${line.port}" aria-pressed="${blinking}" aria-label="${esc(name)} · ${esc(t(blinking?'lineSetupBlinkStopAccessible':'lineSetupBlinkAccessible'))}">${icon('sun')}<span>${esc(t(blinking?'lineSetupBlinkStop':'lineSetupBlink'))}</span></button>
           <button class="ledline-settings-toggle" data-action="layout-receiver-settings" data-id="${esc(line.id)}" data-receiver="${esc(r.id)}" data-port="${line.port}" aria-label="${esc(t('lineSetupSettingsAccessible',{name}))}" aria-expanded="${settingsOpen}" aria-controls="${esc(settingsId)}">${icon('sliders')}<span>${esc(t('lineSetupSettings'))}</span>${icon('chevron')}</button>
@@ -1785,20 +1808,20 @@
       </li>`;
     }).join('');
     return `<section class="ledline-setup card" data-order-open="${open}" ${open?'role="dialog" aria-modal="true"':''} aria-label="${esc(t('lineSetupTitle'))}">${open?'':spatialPreviewChoice()}<button class="ledline-setup-toggle" data-action="layout" aria-label="${esc(toggleLabel)}" aria-expanded="${open}" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy">${open?`<span class="ledline-menu-label">${esc(t('lineSetupMenu'))}</span>`:''}<b>${esc(title)}</b><small id="ledline-setup-context">${esc(open?context:hint)}</small></span><span class="ledline-setup-disclosure-action">${open?`<span class="ledline-setup-close-label">${icon('close')}${esc(t('close'))}</span>`:icon('chevron')}</span></button><div class="ledline-setup-body" id="ledline-setup-body" role="region" ${open?'aria-labelledby="ledline-setup-heading" aria-describedby="ledline-setup-context"':'hidden'}>${open?`
-      <div class="v50-order-feedback" data-order-feedback role="status" aria-live="polite" ${orderPreviewGesture?.zoneId===z.id||orderMoveResult?.zoneId===z.id?'':'hidden'}>${orderFeedbackMarkup()}</div><figure class="v50-order-preview"><figcaption><b>${esc(t('v50LineOverview'))}</b><small>${esc(t('v50RecognitionHint'))}</small></figcaption>${zonePreview(z,'v50-order-canvas',{main:true,arrangementPreview:true,orderOverview:true,standLiveZoneId:null,selection:{kind:'all'},label:t('v50OrderOverviewLabel',{zone:z.name})})}</figure>
+      <div class="v50-order-feedback" data-order-feedback data-order-feedback-phase="${orderPreviewGesture?.zoneId===z.id?'proposal':orderMoveResult?.zoneId===z.id?'saved':'idle'}" role="status" aria-live="polite">${orderFeedbackMarkup()}</div><figure class="v50-order-preview"><figcaption><b>${esc(t('v50LineOverview'))}</b><small>${esc(t('v50RecognitionHint'))}</small></figcaption>${zonePreview(z,'v50-order-canvas',{main:true,arrangementPreview:true,orderOverview:true,standLiveZoneId:null,selection:{kind:'all'},label:t('v50OrderOverviewLabel',{zone:z.name})})}</figure>
       <section class="ledline-arrangement" aria-label="${esc(singleLine?title:t('lineSetupOrder'))}" aria-busy="${arrangementInteractionBusy()}"><div class="ledline-order-heading"><h3 id="ledline-setup-heading">${esc(singleLine?t('scopeCountOne'):t('lineSetupCurrentOrder'))}</h3><small class="ledline-family-label">${esc(family||'')}</small></div><p class="ledline-setup-hint" id="ledline-order-help">${esc(singleLine?hint:t('lineSetupOrderHint'))}</p><p class="order-recognition-status" data-order-recognition-status role="status"></p><p class="order-drop-status" role="status" aria-live="polite"></p><p data-order-apply-status role="status" ${arrangementApplying||arrangementPlaybackPending()||draft?.error||needsStandOpen?'':'hidden'}>${arrangementApplying||arrangementPlaybackPending()?esc(orderText('orderApplying')):esc(draft?.error||(needsStandOpen?orderText('orderOpenStandHint'):''))}</p><button type="button" class="button secondary full" data-order-stand-open data-action="management-stand-open" ${!arrangementInteractionBusy()&&(needsStandOpen||draft?.needsStandOpen&&draft.error)?'':'hidden'}>${esc(orderText('orderOpenStand'))}</button>
-      <ol class="ledline-draft-order">${rows}</ol>
+      <div class="v50-order-lanes"><ol class="v50-order-slots" aria-hidden="true">${ordered.map((line,index)=>{const colour=(orderPositionColours.get(z.id)||[])[index]||orderColours.get(line.id);return `<li data-order-slot data-order-position="${index+1}" style="--identify-colour:${colour?.hex||'transparent'}"><span class="v50-order-slot-number">${index+1}</span><small data-slot-colour-name>${colour?esc(colourLabel(colour)):''}</small></li>`;}).join('')}</ol><ol class="ledline-draft-order">${rows}</ol></div>
       </section>${reusable?`<button class="ledline-reuse-action" data-action="zone-assign" data-id="${esc(z.id)}">${icon('receiver')}<span>${esc(t('lineSetupReuse'))}</span>${icon('chevron')}</button>`:''}${layoutReceiverActions()}`:''}</div></section>`;
   }
   function orderFeedbackMarkup(){
     const state=orderPreviewGesture||orderMoveResult;
-    if(!state||state.zoneId!==route.zoneId)return '';
+    if(!state||state.zoneId!==route.zoneId)return `<div class="v50-order-feedback-route">${esc(t('v50FixedPlaces'))}</div><small>${esc(t('v50MoveLineOnly'))}</small>`;
     return `<div class="v50-order-feedback-route"><span class="v50-order-feedback-source">${esc(t('scopeLine',{number:state.fromIndex+1}))}</span><span aria-hidden="true">→</span><span class="v50-order-feedback-target">${esc(t('v50OrderPlace',{number:state.toIndex+1}))}</span>${state.saved?icon('check'):''}</div><small>${esc(state.receiverName)}${state.port?' · P'+state.port:''} · ${esc(t(state.saved?'v50OrderMoved':'v50OrderDropHere'))}</small>`;
   }
   function syncOrderFeedback(){
     const state=orderPreviewGesture||orderMoveResult,node=main.querySelector('[data-order-feedback]');
     if(!node)return;
-    node.hidden=!state||state.zoneId!==route.zoneId;node.innerHTML=orderFeedbackMarkup();
+    node.hidden=false;node.dataset.orderFeedbackPhase=!state||state.zoneId!==route.zoneId?'idle':state.saved?'saved':'proposal';node.innerHTML=orderFeedbackMarkup();
     if(state?.colour){node.style.setProperty('--order-drag-colour',state.colour);node.closest('[data-order-open]')?.style.setProperty('--order-drag-colour',state.colour);}
   }
   function portEditMarkup(receiver,port){
@@ -4882,6 +4905,7 @@
     root:document,
     getItems:()=>!arrangementInteractionBusy()&&!arrangementNeedsStandOpen()&&openLineSetup.has(route.zoneId)&&arrangementDraft?.zoneId===route.zoneId?[...arrangementDraft.lineOrder]:[],
     getRowId:row=>row.dataset.orderItem,
+    getSlotElements:()=>[...main.querySelectorAll('[data-order-slot]')],
     getScrollBounds:()=>({top:openLineSetup.has(route.zoneId)?80:Math.max(0,main.querySelector('.control-dock-surface')?.getBoundingClientRect().bottom||0)+8,bottom:openLineSetup.has(route.zoneId)?innerHeight-16:Math.min(innerHeight,document.getElementById('navigation')?.getBoundingClientRect().top||innerHeight)-8}),
     getScrollTop:()=>main.querySelector('[data-order-open="true"]')?.scrollTop??window.scrollY,
     scrollBy:delta=>{const sheet=main.querySelector('[data-order-open="true"]');if(sheet)sheet.scrollTop+=delta;else window.scrollBy({top:delta,left:0,behavior:'instant'});},
@@ -4900,6 +4924,7 @@
     onInteraction:active=>{
       if(active&&!arrangementInteractionBusy()){if(orderIdentificationState?.active)void orderIdentification?.interaction();else beginOrderColours();}
       if(!active&&orderRenderDeferred){orderRenderDeferred=false;queueMicrotask(()=>renderArrangement());}
+      if(!active)requestAnimationFrame(()=>syncOrderSlots());
     },
     onDrop:async({id,toIndex})=>{
       const draft=arrangementDraft;
@@ -4913,7 +4938,8 @@
       if(saved&&moving&&moving.id===id){
         orderMoveResult={...moving,saved:true,toIndex};syncOrderFeedback();
         const landed=main.querySelector(`[data-order-item="${CSS.escape(id)}"]`);landed?.setAttribute('data-order-settled','true');
-        if(landed&&moving.colour)landed.style.setProperty('--order-drag-colour',moving.colour);
+        const targetColour=(orderPositionColours.get(route.zoneId)||[])[toIndex]||orderColours.get(id);
+        if(landed&&targetColour)landed.style.setProperty('--order-drag-colour',targetColour.hex);
         if(landed){
           const sheet=landed.closest('[data-order-open="true"]'),bounds=landed.getBoundingClientRect();
           if(sheet){
@@ -4976,7 +5002,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden)void orderIdentification?.hide();});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate551',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate552',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

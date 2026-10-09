@@ -24,6 +24,8 @@
     v50OrderPlace:['plaats {number}','position {number}','position {number}','Position {number}'],
     v50OrderDropHere:['Laat los om hier te plaatsen','Release to place here','Relâchez pour placer ici','Loslassen, um hier zu platzieren'],
     v50OrderMoved:['Verplaatst','Moved','Déplacée','Verschoben'],
+    v50FixedPlaces:['Plaatsen blijven vast','Positions stay fixed','Les positions restent fixes','Positionen bleiben fest'],
+    v50MoveLineOnly:['Sleep alleen de ledlines rechts.','Drag only the LED lines on the right.','Déplacez uniquement les lignes LED à droite.','Ziehe nur die LED-Linien rechts.'],
     v50ViewAll:['Bekijk alles','View all','Tout voir','Alles ansehen'],
     v50Continuous:['Eén doorlopende ledline','One continuous LED line','Une ligne LED continue','Eine durchgehende LED-Linie'],
     v50AllTogether:['Alle ledlines samen','All LED lines together','Toutes les lignes LED ensemble','Alle LED-Linien gemeinsam'],
