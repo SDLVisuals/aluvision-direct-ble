@@ -1,3 +1,15 @@
+# Browserdemo V50 · kandidaat553 · 9 oktober 2026
+
+Deze browserdemo gebruikt de bevroren interface van kandidaat **50.0.0, build553**. Nieuw in deze update: het overzicht ‘Je ledlines’ blijft zichtbaar boven de lijst terwijl je door je ledlines scrollt. Ook de bevestigingsbalk blijft bij dit overzicht, zodat je de voorgestelde volgorde blijft zien. De plaatsnummers en herkenningskleuren blijven in hun aparte linkerkolom staan. Alleen de kaarten met de fysieke receiver en poort bewegen; de naastliggende kaarten schuiven vloeiend naar hun nieuwe plek. Een duidelijke kopie, invoegmarkering en live voorbeeldvolgorde tonen de voorgestelde verplaatsing. Na bevestigen verschijnt een tijdelijk aankomstaccent. Escape of annuleren laat de volgorde intact. Ook de ledlinekeuze en richtingweergave zijn verduidelijkt: kabelkant en eindkant zijn explicieter herkenbaar in de richtingbediening. De bestaande V50 welkomst- en instelstappen, poort- en pixelkeuzes tot163, het schermvullende overzicht, compacte volgorde-instellingen, direct zichtbare kunstmatige witmix bij RGBW-kleuren, los van het fysieke W-kanaal en bijgewerkte animatiegroepen blijven behouden. De taaluitwerking is gedeeltelijk: sommige oudere schermen bevatten nog Nederlandse tekst.
+
+Er zijn twintig fictieve receivers, tien RGBW en tien SPI. De demo gebruikt uitsluitend tijdelijk geheugen en begint opnieuw na herladen. PIN-, standtoegang en deelacties zijn uitgeschakeld. Er wordt geen echte wifi, receiver, firmware of verlichting aangestuurd. Richting- en herkenningsbeelden zijn schermvoorbeelden; ze bewijzen geen fysiek effect.
+
+De bestaande Android-download blijft **41.0.14, code20**. Dit is geen Android-V50-build. De browserdemo bevestigt ook geen iPhone-installatie: die heeft een eigen installatiebewijs nodig.
+
+Bronfreeze SHA-256: `b0042c5364d057daca4eb1db00b7dc0e215805f1f25a6bc6dae93000394b8b8c`. Firmwarebestanden uit de appbron zijn uitgesloten van de browserpublicatie.
+
+## Historische Android- en demonotities
+
 # Browserdemo V50 · kandidaat552 · 9 oktober 2026
 
 Deze browserdemo gebruikt de bevroren interface van kandidaat **50.0.0, build552**. Nieuw in deze update: de plaatsnummers en herkenningskleuren blijven in een aparte linkerkolom staan. Alleen de kaarten met de fysieke receiver en poort bewegen; de naastliggende kaarten schuiven vloeiend naar hun nieuwe plek. Een duidelijke kopie, invoegmarkering en live voorbeeldvolgorde tonen de voorgestelde verplaatsing. Na bevestigen verschijnt een tijdelijk aankomstaccent. Escape of annuleren laat de volgorde intact. Ook de ledlinekeuze en richtingweergave zijn verduidelijkt: kabelkant en eindkant zijn explicieter herkenbaar in de richtingbediening. De bestaande V50 welkomst- en instelstappen, poort- en pixelkeuzes tot163, het schermvullende overzicht, compacte volgorde-instellingen, direct zichtbare kunstmatige witmix bij RGBW-kleuren, los van het fysieke W-kanaal en bijgewerkte animatiegroepen blijven behouden. De taaluitwerking is gedeeltelijk: sommige oudere schermen bevatten nog Nederlandse tekst.

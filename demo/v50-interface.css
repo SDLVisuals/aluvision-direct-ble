@@ -168,3 +168,13 @@ html.interface-polish body #main .ledline-setup[data-order-open=true]>.ledline-s
 html.interface-polish body #main .ledline-setup[data-order-open=true]>.ledline-setup-toggle>.ledline-setup-copy{flex:1;min-width:0}
 html.interface-polish body #main .ledline-setup[data-order-open=true]>.ledline-setup-toggle>.ledline-setup-disclosure-action{flex:none;min-width:0;white-space:nowrap;margin:0;padding:0}
 html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-setup-close-label{font-size:11px;gap:4px}
+/* Keep the instruction and live LED overview together while the endpoint
+   list scrolls behind them. The header height follows text and viewport size. */
+html.interface-polish body #main .ledline-setup[data-order-open=true]{padding-top:0!important;scroll-padding-top:calc(var(--v50-order-header-height,80px) + var(--v50-order-dock-height,300px) + 16px);scroll-padding-bottom:24px}
+html.interface-polish body #main .ledline-setup[data-order-open=true]>.ledline-setup-toggle{z-index:8;padding-top:calc(15px + max(14px,env(safe-area-inset-top)));padding-bottom:15px}
+.v50-order-dock{position:sticky;top:calc(var(--v50-order-header-height,66px) + 4px);z-index:6;display:grid;gap:8px;padding:6px 0 10px;margin:0;background:var(--bg);isolation:isolate}
+.v50-order-dock .v50-order-feedback{position:static;top:auto;margin:0;box-shadow:none}
+.v50-order-dock .v50-order-feedback>small{line-height:13px}
+.v50-order-dock .v50-order-preview{margin:0}
+.v50-order-dock .v50-order-canvas{height:clamp(112px,20dvh,160px)}
+@media(max-height:600px){.v50-order-dock{gap:6px;padding:4px 0 8px}.v50-order-dock .v50-order-feedback{height:72px;min-height:72px;grid-template-rows:24px minmax(0,1fr);gap:3px;padding:6px 10px}.v50-order-dock .v50-order-feedback-route{font-size:13px}.v50-order-dock .v50-order-feedback-target{min-height:24px;padding:4px 8px}.v50-order-dock .v50-order-preview{padding:8px 10px;border-radius:16px}.v50-order-dock .v50-order-preview figcaption{margin-bottom:5px;font-size:12px}.v50-order-dock .v50-order-canvas{height:clamp(64px,16dvh,112px)}}

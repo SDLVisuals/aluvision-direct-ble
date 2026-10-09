@@ -5,13 +5,13 @@
   "nativeAppBuildTarget": "be.aluvision.LightingControl",
   "nativeAppBundleVerified": true,
   "nativeAppBuiltVersion": "50.0.0",
-  "nativeAppBuiltBuild": "552",
+  "nativeAppBuiltBuild": "553",
   "nativeAppInstalled": false,
   "nativeAppSimulatorInstalled": false,
   "nativeAppInstallationPreservedData": null,
-  "nativeAppMetadataScope": "Current signed build552 metadata only; private device installation is separately verified. This website does not attest or publish private-device installation details.",
-  "nativeAppBuildSourceFreezeSha256": "92a255ed5b8ff354dd969889df5dcdef0bfffaa2db794f60b25c0d58203e416e",
-  "nativeAppBuildReceiptSha256": "55ef080855c8db98a08523cfff096cbbc9d7ebbab7ea3e265e62c7eaad0ba706",
+  "nativeAppMetadataScope": "Current signed build553 metadata only; private device installation is separately verified. This website does not attest or publish private-device installation details.",
+  "nativeAppBuildSourceFreezeSha256": "b0042c5364d057daca4eb1db00b7dc0e215805f1f25a6bc6dae93000394b8b8c",
+  "nativeAppBuildReceiptSha256": "d141b961c1920f0c8eb0325e288eb12e528ef7dcae808f4b4e9b27444ef2e0a0",
   "historicalNativeAppMetadataBefore550": {
     "nativeAppModified": false,
     "nativeAppUpdatePending": true,
@@ -87,9 +87,9 @@
     "targetSdk": 36
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate552-browser-demo",
+  "revision": "V50candidate553-browser-demo",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Frozen V50 candidate552 browser interface, excluding all firmware files; existing 20 fictional-receiver adapter and Android code20 download retained. Public-only welcome, temporary single-user and reset isolation adaptations; no hardware access.",
+  "interfaceBaseline": "Frozen V50 candidate553 browser interface, excluding all firmware files; existing 20 fictional-receiver adapter and Android code20 download retained. Public-only welcome, temporary single-user and reset isolation adaptations; no hardware access.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -194,8 +194,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "2f1d2a895665bddf9a29ce38f25a49b00b83cad656c086ae22633ee66a510327",
-      "bytes": 489018
+      "sha256": "e84f994feaf3d092056ccd69ff95723b2e32338fd5977a82dff063edb9bd27e0",
+      "bytes": 490083
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -234,7 +234,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "75244aaadcf8e5bfe67fe0841c870cdd0fee466449d674da0fda591a6eef4d55",
+      "sha256": "415bcf6e456d73dcd944364d4af730036a2115939d9e0530839203ac9c3aed38",
       "bytes": 6811
     },
     {
@@ -404,8 +404,8 @@
     },
     {
       "path": "RELEASE_NOTES.md",
-      "sha256": "419cda7051eef47f564aa62c81fe5ffb0a38466d6d2ffbc6c25acddd35ac6a52",
-      "bytes": 12024
+      "sha256": "135d3ab3d3884b373731b079511072917ea7498a679b7278b0b5af1756145924",
+      "bytes": 14030
     },
     {
       "path": "scenes.css",
@@ -514,8 +514,8 @@
     },
     {
       "path": "v50-interface.css",
-      "sha256": "c146de83e74a9aba6d502c99d690755053cb8204d8df1ba26dbf9187cc68ff0c",
-      "bytes": 21686
+      "sha256": "4f7e65c9dfa0dc53ec998af87360dafefa70f73e0aad541e1bccd94dca838b10",
+      "bytes": 23237
     },
     {
       "path": "v50-order-drag.css",
@@ -800,6 +800,70 @@
       "Existing Android code20 download and visible V50 demo settings label"
     ],
     "orderFeedback": {
+      "fixedPositionRail": true,
+      "stationaryRecognitionColours": true,
+      "movingPhysicalCards": true,
+      "smoothNeighbourMotion": true,
+      "originalPhysicalIdentity": true,
+      "insertionTarget": true,
+      "livePreviewProposal": true,
+      "confirmedArrival": true,
+      "cancellationPreservesOrder": true,
+      "pointerAndKeyboard": true
+    },
+    "capabilities": {
+      "pinLogin": false,
+      "standCode": false,
+      "sharing": false,
+      "hardware": false,
+      "wifi": false,
+      "firmwareDownloads": false,
+      "physicalDirectionProof": false
+    },
+    "knownLimits": [
+      "Candidate hardware and physical receiver acceptance remain separate.",
+      "Some legacy text remains Dutch.",
+      "Android download remains V41 code20; no Android V50 claim."
+    ],
+    "physicalPhoneAcceptance": false,
+    "physicalReceiverAcceptance": false
+  },
+  "historicalNativeAppMetadataBefore553": {
+    "nativeAppModified": false,
+    "nativeAppUpdatePending": false,
+    "latestInterfaceBundledInIOS": true,
+    "nativeAppBuildTarget": "be.aluvision.LightingControl",
+    "nativeAppBundleVerified": true,
+    "nativeAppBuiltVersion": "50.0.0",
+    "nativeAppBuiltBuild": "552",
+    "nativeAppInstalled": false,
+    "nativeAppSimulatorInstalled": false,
+    "nativeAppInstallationPreservedData": null,
+    "nativeAppMetadataScope": "Current signed build552 metadata only; private device installation is separately verified. This website does not attest or publish private-device installation details.",
+    "nativeAppBuildSourceFreezeSha256": "92a255ed5b8ff354dd969889df5dcdef0bfffaa2db794f60b25c0d58203e416e",
+    "nativeAppBuildReceiptSha256": "55ef080855c8db98a08523cfff096cbbc9d7ebbab7ea3e265e62c7eaad0ba706"
+  },
+  "historicalInterfaceReviewScopeBefore553": "Complete public demo over loopback HTTP: stock app and fictional service, separate browser contexts, RGBW/SPI setup and V50 interaction checks. Software UI validation only; no receiver or physical phone acceptance.",
+  "interfaceCandidate553": {
+    "appVersion": "50.0.0",
+    "privateBuild": 553,
+    "webRuntimeVersion": "50.0.0-candidate553",
+    "sourceFreezeSha256": "b0042c5364d057daca4eb1db00b7dc0e215805f1f25a6bc6dae93000394b8b8c",
+    "sourceFiles": 83,
+    "firmwareFilesExcluded": 8,
+    "sourceRuntimeFiles": 75,
+    "preservedFakeAdapter": "web-demo-service.js",
+    "publicOnlyAdaptations": [
+      "V50 demo title and exact asset cache tags",
+      "V50 welcome before mandatory name step",
+      "Temporary single-user mode disables PIN and stand sharing",
+      "Demo reset retains demo:true and returns to welcome",
+      "Existing Android code20 download and visible V50 demo settings label"
+    ],
+    "orderFeedback": {
+      "persistentLedlineOverview": true,
+      "scrollablePhysicalList": true,
+      "ghostBelowFixedOverview": true,
       "fixedPositionRail": true,
       "stationaryRecognitionColours": true,
       "movingPhysicalCards": true,

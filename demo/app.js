@@ -547,7 +547,7 @@
     }
   }
   window.addEventListener('scroll',updateControlPreviewDensity,{passive:true});
-  window.addEventListener('resize',()=>{measureControlPreviewDock();updateControlPreviewDensity();},{passive:true});
+  window.addEventListener('resize',()=>{measureControlPreviewDock();updateControlPreviewDensity();if(openLineSetup.has(route.zoneId)){if(inlineOrderDrag?.isActive())inlineOrderDrag.cancel();syncOrderSlots();}},{passive:true});
   function revealAnimationStart(){
     // Do not carry a deep gallery scroll position into the settings. Align
     // their heading below the visible dock, including its compacted height.
@@ -1740,6 +1740,7 @@
   function syncLayoutModal(scroll=0){
     orderSlotObserver?.disconnect();orderSlotObserver=null;
     const sheet=main.querySelector('[data-order-open="true"]');if(!sheet)return;
+    sheet.dataset.orderScroll='true';
     document.body.classList.add('v50-layout-modal');sheet.scrollTop=scroll;
     // Only siblings of the modal ancestry are made inert. Existing inert
     // states belong to their owners and must not be changed on dismissal.
@@ -1752,10 +1753,16 @@
     syncOrderSlots();
     orderSlotObserver=new ResizeObserver(()=>syncOrderSlots());
     for(const row of sheet.querySelectorAll('[data-order-item]'))orderSlotObserver.observe(row);
+    const header=sheet.querySelector(':scope>.ledline-setup-toggle');if(header)orderSlotObserver.observe(header);
+    const dock=sheet.querySelector('[data-order-dock]');if(dock)orderSlotObserver.observe(dock);
   }
   function syncOrderSlots(){
     if(inlineOrderDrag?.isActive())return;
     const sheet=main.querySelector('[data-order-open="true"]');if(!sheet)return;
+    const header=sheet.querySelector(':scope>.ledline-setup-toggle');
+    if(header){const height=Math.round(header.getBoundingClientRect().height*100)/100;if(height>0&&sheet.style.getPropertyValue('--v50-order-header-height')!==height+'px')sheet.style.setProperty('--v50-order-header-height',height+'px');}
+    const dock=sheet.querySelector('[data-order-dock]');
+    if(dock){const height=Math.round(dock.getBoundingClientRect().height*100)/100;if(height>0&&sheet.style.getPropertyValue('--v50-order-dock-height')!==height+'px')sheet.style.setProperty('--v50-order-dock-height',height+'px');}
     const rows=[...sheet.querySelectorAll('[data-order-item]')],slots=[...sheet.querySelectorAll('[data-order-slot]')];
     if(rows.length!==slots.length)return;
     // Layout height, not the temporary scaled rectangle of a landing animation.
@@ -1808,7 +1815,7 @@
       </li>`;
     }).join('');
     return `<section class="ledline-setup card" data-order-open="${open}" ${open?'role="dialog" aria-modal="true"':''} aria-label="${esc(t('lineSetupTitle'))}">${open?'':spatialPreviewChoice()}<button class="ledline-setup-toggle" data-action="layout" aria-label="${esc(toggleLabel)}" aria-expanded="${open}" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy">${open?`<span class="ledline-menu-label">${esc(t('lineSetupMenu'))}</span>`:''}<b>${esc(title)}</b><small id="ledline-setup-context">${esc(open?context:hint)}</small></span><span class="ledline-setup-disclosure-action">${open?`<span class="ledline-setup-close-label">${icon('close')}${esc(t('close'))}</span>`:icon('chevron')}</span></button><div class="ledline-setup-body" id="ledline-setup-body" role="region" ${open?'aria-labelledby="ledline-setup-heading" aria-describedby="ledline-setup-context"':'hidden'}>${open?`
-      <div class="v50-order-feedback" data-order-feedback data-order-feedback-phase="${orderPreviewGesture?.zoneId===z.id?'proposal':orderMoveResult?.zoneId===z.id?'saved':'idle'}" role="status" aria-live="polite">${orderFeedbackMarkup()}</div><figure class="v50-order-preview"><figcaption><b>${esc(t('v50LineOverview'))}</b><small>${esc(t('v50RecognitionHint'))}</small></figcaption>${zonePreview(z,'v50-order-canvas',{main:true,arrangementPreview:true,orderOverview:true,standLiveZoneId:null,selection:{kind:'all'},label:t('v50OrderOverviewLabel',{zone:z.name})})}</figure>
+      <div class="v50-order-dock" data-order-dock><div class="v50-order-feedback" data-order-feedback data-order-feedback-phase="${orderPreviewGesture?.zoneId===z.id?'proposal':orderMoveResult?.zoneId===z.id?'saved':'idle'}" role="status" aria-live="polite">${orderFeedbackMarkup()}</div><figure class="v50-order-preview"><figcaption><b>${esc(t('v50LineOverview'))}</b><small>${esc(t('v50RecognitionHint'))}</small></figcaption>${zonePreview(z,'v50-order-canvas',{main:true,arrangementPreview:true,orderOverview:true,standLiveZoneId:null,selection:{kind:'all'},label:t('v50OrderOverviewLabel',{zone:z.name})})}</figure></div>
       <section class="ledline-arrangement" aria-label="${esc(singleLine?title:t('lineSetupOrder'))}" aria-busy="${arrangementInteractionBusy()}"><div class="ledline-order-heading"><h3 id="ledline-setup-heading">${esc(singleLine?t('scopeCountOne'):t('lineSetupCurrentOrder'))}</h3><small class="ledline-family-label">${esc(family||'')}</small></div><p class="ledline-setup-hint" id="ledline-order-help">${esc(singleLine?hint:t('lineSetupOrderHint'))}</p><p class="order-recognition-status" data-order-recognition-status role="status"></p><p class="order-drop-status" role="status" aria-live="polite"></p><p data-order-apply-status role="status" ${arrangementApplying||arrangementPlaybackPending()||draft?.error||needsStandOpen?'':'hidden'}>${arrangementApplying||arrangementPlaybackPending()?esc(orderText('orderApplying')):esc(draft?.error||(needsStandOpen?orderText('orderOpenStandHint'):''))}</p><button type="button" class="button secondary full" data-order-stand-open data-action="management-stand-open" ${!arrangementInteractionBusy()&&(needsStandOpen||draft?.needsStandOpen&&draft.error)?'':'hidden'}>${esc(orderText('orderOpenStand'))}</button>
       <div class="v50-order-lanes"><ol class="v50-order-slots" aria-hidden="true">${ordered.map((line,index)=>{const colour=(orderPositionColours.get(z.id)||[])[index]||orderColours.get(line.id);return `<li data-order-slot data-order-position="${index+1}" style="--identify-colour:${colour?.hex||'transparent'}"><span class="v50-order-slot-number">${index+1}</span><small data-slot-colour-name>${colour?esc(colourLabel(colour)):''}</small></li>`;}).join('')}</ol><ol class="ledline-draft-order">${rows}</ol></div>
       </section>${reusable?`<button class="ledline-reuse-action" data-action="zone-assign" data-id="${esc(z.id)}">${icon('receiver')}<span>${esc(t('lineSetupReuse'))}</span>${icon('chevron')}</button>`:''}${layoutReceiverActions()}`:''}</div></section>`;
@@ -4906,7 +4913,7 @@
     getItems:()=>!arrangementInteractionBusy()&&!arrangementNeedsStandOpen()&&openLineSetup.has(route.zoneId)&&arrangementDraft?.zoneId===route.zoneId?[...arrangementDraft.lineOrder]:[],
     getRowId:row=>row.dataset.orderItem,
     getSlotElements:()=>[...main.querySelectorAll('[data-order-slot]')],
-    getScrollBounds:()=>({top:openLineSetup.has(route.zoneId)?80:Math.max(0,main.querySelector('.control-dock-surface')?.getBoundingClientRect().bottom||0)+8,bottom:openLineSetup.has(route.zoneId)?innerHeight-16:Math.min(innerHeight,document.getElementById('navigation')?.getBoundingClientRect().top||innerHeight)-8}),
+    getScrollBounds:()=>({top:openLineSetup.has(route.zoneId)?Math.max(0,main.querySelector('[data-order-dock]')?.getBoundingClientRect().bottom||80)+8:Math.max(0,main.querySelector('.control-dock-surface')?.getBoundingClientRect().bottom||0)+8,bottom:openLineSetup.has(route.zoneId)?innerHeight-16:Math.min(innerHeight,document.getElementById('navigation')?.getBoundingClientRect().top||innerHeight)-8}),
     getScrollTop:()=>main.querySelector('[data-order-open="true"]')?.scrollTop??window.scrollY,
     scrollBy:delta=>{const sheet=main.querySelector('[data-order-open="true"]');if(sheet)sheet.scrollTop+=delta;else window.scrollBy({top:delta,left:0,behavior:'instant'});},
     onActivity:()=>{if(!arrangementInteractionBusy()&&orderIdentificationState?.active)void orderIdentification?.interaction();},
@@ -4944,8 +4951,8 @@
           const sheet=landed.closest('[data-order-open="true"]'),bounds=landed.getBoundingClientRect();
           if(sheet){
             const header=sheet.querySelector(':scope>.ledline-setup-toggle');
-            const feedback=sheet.querySelector('[data-order-feedback]:not([hidden])');
-            const visibleTop=Math.max(sheet.getBoundingClientRect().top,header?.getBoundingClientRect().bottom||0,feedback?.getBoundingClientRect().bottom||0)+12;
+            const dock=sheet.querySelector('[data-order-dock]');
+            const visibleTop=Math.max(sheet.getBoundingClientRect().top,header?.getBoundingClientRect().bottom||0,dock?.getBoundingClientRect().bottom||0)+12;
             const visibleBottom=Math.min(innerHeight,sheet.getBoundingClientRect().bottom)-16;
             if(bounds.top<visibleTop)sheet.scrollTop+=bounds.top-visibleTop;
             else if(bounds.bottom>visibleBottom)sheet.scrollTop+=bounds.bottom-visibleBottom;
@@ -5002,7 +5009,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden)void orderIdentification?.hide();});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate552',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate553',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;
