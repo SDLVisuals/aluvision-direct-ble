@@ -11,17 +11,17 @@
   "nativeAppInstallationPreservedData": null,
   "nativeAppMetadataScope": "Historical native build243 record; this Pages release does not update or attest an iPhone installation.",
   "androidTestApp": {
-    "path": "android/aluvision-android-test-41.0.13-19-8de577778854.apk",
-    "size": 2566110,
-    "sha256": "8de5777788549c3be531634ccee283d876c8d0c4f320bc51a58c75a8d1fac290",
+    "path": "android/aluvision-android-test-41.0.14-20-c2f304b6ed84.apk",
+    "size": 2570285,
+    "sha256": "c2f304b6ed842bcf202057038abb4cb2a67a4838143b4462484fda32e702e726",
     "packageName": "com.aluvision.lighting.android.test",
-    "versionName": "41.0.13",
-    "versionCode": 19,
+    "versionName": "41.0.14",
+    "versionCode": 20,
     "minSdk": 26,
     "mode": "receiver",
     "signerCertificateSha256": "b598fc6fa30b423517d6ca68e3bb1191248a32723174d4703baaede9125936ac",
-    "sourceInventorySha256": "cce308f3af514d0f5bf6a8a109af0c3ad2cc0f110bbd7e6a1802bd780a170ce1",
-    "buildReceiptSha256": "fb2cb1f53e2bbcd5095125db65a7cd63a0de6164df29c26bcf02088dc64b51c9",
+    "sourceInventorySha256": "fc4d0059068492a256ba4e655dfcbfdb3f75988dd26e731c9c4c810279a4b43b",
+    "buildReceiptSha256": "537b7b1e601faa081012584c75447b90d90021fed1ad6755ebfb56906cc2485b",
     "signatureVerified": true,
     "packageVerified": true,
     "installedVerified": true,
@@ -51,29 +51,30 @@
       "standSessionReceiverManagement": false
     },
     "validation": {
-      "scope": "Actual Android Release SDK, exact signed APK and68 packaged Web assets, same existing signer. Isolated API36 emulator install/startup and first local setup tap passed. No physical Android or receiver/RF acceptance.",
+      "scope": "Actual Android Release SDK, exact signed APK and69 packaged Web assets, existing signer. In-place code19 to20 update and startup in dedicated API36 emulator. Connecting UI separately verified in offline browser fixtures. No physical Android/receiver acceptance.",
       "emulatorInstallVerified": true,
       "emulatorColdStartVerified": true,
       "emulatorBackgroundResumeVerified": false,
-      "emulatorReceiptSha256": "4c4421b0b316cb1c64d068cc50d9eca6d0a820175a66909ad91d6d2b9203c9d0",
-      "inPlaceUpdateVerified": false,
+      "emulatorReceiptSha256": "01e250427f968133507ee201f6a5cd8edee20e508c9922c67bc056570780e2b0",
+      "inPlaceUpdateVerified": true,
       "signerContinuityVerified": true,
-      "actualPackagedWebAssets": 68,
-      "sourceFreezeSha256": "20588f188604bbe39ea4c15a668d53b473b1bae2f8620e50cd3d04af6a456c8e",
-      "buildBindingSha256": "d7e845bc568dfc59e350642038078f14a3aa486917a14420258978b3cfd48916",
-      "capabilityScope": "Original temporary-single-user native capabilities unchanged from468; unsupported features remain disabled.",
+      "actualPackagedWebAssets": 69,
+      "sourceFreezeSha256": "8659ede4e2f1ab337d2ebd9eff6383967e64a0c33abaf38a1d8ad896e3528f1f",
+      "capabilityScope": "Native Java, Android runtime and temporary single-user capabilities unchanged from code19; unsupported features remain disabled.",
       "cameraAndOSPermissionsPhysicallyVerified": false,
       "wifiPhysicallyVerified": false,
       "mobileLatencyVerified": false,
       "physicalAndroidVerified": false,
       "physicalReceiverVerified": false,
-      "simultaneousTwoClientControlVerified": false
-    }
+      "simultaneousTwoClientControlVerified": false,
+      "connectingCardEmulatorTransactionVerified": false
+    },
+    "targetSdk": 36
   },
   "kind": "isolated-browser-demo",
-  "revision": "V41interface509-phone-style-single-user-20261009",
+  "revision": "V41interface513-receiver-connect-20261009",
   "interfaceVersion": 41,
-  "interfaceBaseline": "Existing reviewed fake-only interface474, with exact frozen phone CSS material/visual styling and SPI selector presentation. Root bookmarks now open the isolated demo. No application logic, native adapter, firmware or APK change.",
+  "interfaceBaseline": "Existing fake-only interface509 and adapters retained. Receiver connection presentation consolidated into one zone/product/progress card; no transport, lighting, PIN/sharing, firmware or NFC functionality added.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -135,6 +136,11 @@
       "path": "android/aluvision-android-test-41.0.13-19-8de577778854.apk",
       "sha256": "8de5777788549c3be531634ccee283d876c8d0c4f320bc51a58c75a8d1fac290",
       "bytes": 2566110
+    },
+    {
+      "path": "android/aluvision-android-test-41.0.14-20-c2f304b6ed84.apk",
+      "sha256": "c2f304b6ed842bcf202057038abb4cb2a67a4838143b4462484fda32e702e726",
+      "bytes": 2570285
     },
     {
       "path": "android/aluvision-android-test-41.0.2-14-84d1e566b90c.apk",
@@ -213,8 +219,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "2d4e94fa5198ff59c27256b30ef400fe22bc5399077fbc4d21e93fb4ba397e51",
-      "bytes": 6086
+      "sha256": "0b3f27d5b725f1e7c3be92b5bcb5008f90a42af0372b9cad6cab6d6dceeddbfe",
+      "bytes": 6161
     },
     {
       "path": "installation-libraries.js",
@@ -272,6 +278,11 @@
       "bytes": 11388
     },
     {
+      "path": "onboarding-connect.css",
+      "sha256": "621c70136b7482d0aa02d6a2aa0a70e336e7a937e2b70f70882918efb60a5e3d",
+      "bytes": 5262
+    },
+    {
       "path": "onboarding-contract.js",
       "sha256": "47b7a0cc1e7a3cc21d57e1b701c61011b4519e96f93cccdec59fd91051274403",
       "bytes": 22011
@@ -288,8 +299,8 @@
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "0f81db98e66fdd4292f6486c41710dca3982533a4654a68603cde5db402737fe",
-      "bytes": 140486
+      "sha256": "e4786b5d7300f557d90f43d679ce70ef2065779dd2eb521b67ef7a09829e5098",
+      "bytes": 141282
     },
     {
       "path": "page-interaction.css",
@@ -571,6 +582,33 @@
       "hardware": false,
       "existingSeparateSpiPortControlAvailable": false,
       "scope": "Offline desktop-WebKit rendering and fictional onboarding/settings/order/gallery only. Existing four-port individual live-colour selection is not added by this styling-only release. Receipt predates this metadata-only evidence annotation; rendered asset hashes are unchanged."
+    }
+  },
+  "interfaceConnectScope513": {
+    "scope": "Presentation-only receiver connection card and closed-set progress phase guard. Existing verified receipt, retry and cancellation boundaries retained.",
+    "receiverTypes": [
+      "RGBW",
+      "SPI"
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "viewports": [
+      390,
+      320
+    ],
+    "offlineReceiptSha256": "fe10b9126f8eb8be8f70b04ba7add3d24e9b29d471c9f990cdfb463661469a90",
+    "cssSha256": "621c70136b7482d0aa02d6a2aa0a70e336e7a937e2b70f70882918efb60a5e3d",
+    "nativeCallsModified": false,
+    "physicalPhone": false,
+    "hardware": false,
+    "iosCandidate": {
+      "version": "41.0.14",
+      "build": 513,
+      "signedReceiptSha256": "27aaeb043b9105b8e4ffb395435a498dbb3b204ca53b075f7b58e74642be7b3a",
+      "installed": false,
+      "scope": "Separate signed development candidate; this website does not attest a device installation."
     }
   }
 }

@@ -1,0 +1,77 @@
+/* Receiver connection: one device, one destination, actual transaction phases. */
+.onboarding-page .onboarding-connect-card {
+  --connect-surface: color-mix(in srgb, var(--panel) 92%, transparent);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: linear-gradient(150deg, var(--panel), var(--connect-surface));
+  box-shadow: 0 16px 40px #2422240b, inset 0 1px 0 #ffffffb8;
+  text-align: center;
+}
+.onboarding-connect-card .onboarding-connect-destination {
+  display: flex; align-items: center; gap: 10px;
+  text-align: left; padding: 0 2px 15px; border-bottom: 1px solid var(--line);
+}
+.onboarding-connect-destination svg {width: 20px; height: 20px; flex: none; fill: none; stroke: var(--red); stroke-width: 1.6}
+.onboarding-connect-destination span {min-width: 0}
+.onboarding-connect-destination small {display: block; color: var(--muted); font-size: 10px; margin-bottom: 3px}
+.onboarding-connect-destination b {display: block; font-size: 14px; line-height: 1.3; overflow-wrap: anywhere}
+.onboarding-connect-device {display: grid; gap: 14px; padding: 20px 0 22px}
+.onboarding-page .onboarding-connect-device .onboarding-product {
+  width: min(100%, 280px); margin: 0 auto; border: 0; border-radius: 24px;
+  background: radial-gradient(ellipse at center, #ffffffcf, #eeede700 74%);
+}
+.onboarding-page .onboarding-connect-device .onboarding-product canvas {height: 148px; width: 100%}
+.onboarding-connect-identity .pill {display: inline-block; font-size: 10px; letter-spacing: .5px; margin: 0 0 8px; padding: 5px 9px}
+.onboarding-connect-identity h3 {font-size: 20px; line-height: 1.2; letter-spacing: -.45px; margin: 0; overflow-wrap: anywhere; color: var(--ink)}
+.onboarding-page .onboarding-connect-identity p {margin: 7px 0 0; font-size: 12px}
+.onboarding-page .onboarding-connect-card > .onboarding-connect-signal {
+  width: 42px; height: 42px; margin: 0 auto 12px; border-radius: 50%;
+  color: var(--red); background: color-mix(in srgb, var(--red) 7%, var(--panel));
+}
+.onboarding-connect-signal svg {width: 23px; height: 23px}
+.onboarding-connect-card[data-security-busy=true] > .onboarding-connect-signal::after {
+  inset: -4px; border-radius: 50%; border-top-color: color-mix(in srgb, var(--red) 70%, transparent);
+  border-right-color: transparent; animation-duration: 2s;
+}
+.onboarding-page .onboarding-connect-card > h2 {font-size: 20px; line-height: 1.25; margin: 0 0 8px; overflow-wrap: anywhere}
+.onboarding-page .onboarding-connect-card > .onboarding-connect-hint {font-size: 12px; margin: 0 auto 19px}
+.onboarding-connect-card .onboarding-security-stages {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;
+  margin: 0; padding: 0; border: 0; list-style: none;
+}
+.onboarding-connect-card .onboarding-security-stages li {
+  display: grid; justify-items: center; align-content: start; gap: 8px;
+  padding: 12px 4px; border-radius: 15px; background: var(--soft);
+  color: var(--muted); min-width: 0; font-size: 10px;
+}
+.onboarding-connect-card .onboarding-security-stages li::before,
+.onboarding-connect-card .onboarding-security-stages li::after {display: none}
+.onboarding-connect-card .onboarding-security-stages li i {
+  display: grid; place-items: center; width: 23px; height: 23px; margin: 0;
+  border: 1px solid var(--line); border-radius: 50%; background: var(--panel);
+  font-style: normal; font-size: 11px; color: inherit; box-shadow: none;
+}
+.onboarding-connect-card .onboarding-security-stages li b {font-weight: 550; font-size: 10px; line-height: 1.3; overflow-wrap: anywhere}
+.onboarding-connect-card .onboarding-security-stages li[data-state=completed] {color: #39785c}
+.onboarding-connect-card .onboarding-security-stages li[data-state=completed] i {border-color: transparent; background: #39785c12}
+.onboarding-connect-card .onboarding-security-stages li[data-state=current] {background: color-mix(in srgb, var(--red) 8%, var(--panel)); color: var(--red)}
+.onboarding-connect-card .onboarding-security-stages li[data-state=current] i {background: var(--red); border-color: var(--red); color: #fff}
+.onboarding-connect-card .onboarding-security-stages li[data-state=current] b {font-weight: 700}
+body[data-theme=dark] .onboarding-connect-card {box-shadow: 0 18px 44px #0003, inset 0 1px 0 #ffffff0a}
+body[data-theme=dark] .onboarding-connect-device .onboarding-product {background: radial-gradient(ellipse at center, #ffffff0c, transparent 74%)}
+body[data-theme=dark] .onboarding-connect-card .onboarding-security-stages li[data-state=completed] {color: #97c8b0}
+body[data-theme=dark] .onboarding-connect-card .onboarding-security-stages li[data-state=completed] i {background: #97c8b010}
+@media(max-height:720px) {
+  .onboarding-page .onboarding-connect-card {padding: 15px; border-radius: 24px}
+  .onboarding-connect-device {padding: 13px 0 17px; gap: 10px}
+  .onboarding-page .onboarding-connect-device .onboarding-product canvas {height: 108px}
+  .onboarding-connect-identity h3 {font-size: 18px}
+}
+@media(prefers-reduced-motion:reduce) {
+  .onboarding-connect-card *, .onboarding-connect-card *::before, .onboarding-connect-card *::after {animation: none !important; transition: none !important}
+}
+

@@ -21,7 +21,7 @@
     return `<button type="button" class="${classes?classes[1]:'button'}" data-onboarding-action="${action}" ${extra.replace(/\bclass="[^"]*"/,'')}>${label}</button>`;
   };
   const labels={stand:'Je stand',zones:'Zones maken',receiver:'Receiver zoeken',placement:'Kies een passende zone',outputs:'Kies je uitgangen',pixels:'Lengte instellen',connection:'Beginpunt kiezen',pin:'Kies je installatie-PIN',get security(){return pinRequired()?'Verbinding bevestigen':'Receiver verbinden';},zone:'Kies de zone',review:'Klaar om toe te voegen',done:'Je receiver is klaar'};
-  const phaseLabels={configuring:'Instellingen bewaren',claiming:'Receiver beveiligen',reconnecting:'Opnieuw met wifi verbinden',verifying:'Verbinding controleren',resuming:'Beveiliging controleren'};
+  const phaseLabels={configuring:'Instellingen opslaan',claiming:'Receiver koppelen',reconnecting:'Verbinding herstellen',verifying:'Verbinding controleren',resuming:'Verbinding controleren'};
   const unavailable='Er is nog geen verbindingsdienst beschikbaar. Je keuzes blijven bewaard.';
   const clone=value=>JSON.parse(JSON.stringify(value));
   const uniqueId=()=>typeof crypto.randomUUID==='function'?crypto.randomUUID():Array.from(crypto.getRandomValues(new Uint8Array(16)),byte=>byte.toString(16).padStart(2,'0')).join('');
@@ -440,9 +440,10 @@
     function heading(){
       const firstSetup=origin==='stand';
       const step=draft.stage==='stand'?1:draft.stage==='zones'?2:3;
+      const connectionCardStage=draft.stage==='security'||draft.stage==='pin'&&!pinRequired()||draft.stage==='review'&&!pinRequired()&&automaticFinalizing&&busy;
       const title=draft.stage==='stand'?'Hoe heet je stand?':draft.stage==='zones'?(zoneRemoval?'Zones beheren':zoneRename?'Zone hernoemen':receiverMove?'Ledline verplaatsen':'Je zones'):draft.stage==='receiver'?(receiverMove?'Ledline verplaatsen':busy?'Receiver controleren':searchState==='searching'?'Receiver zoeken…':results.length===1?'Receiver gevonden':results.length>1?'Kies je receiver':'Receiver zoeken'):automaticMain()&&draft.stage==='security'?(busy||rejoinRunning?'Je receiver toevoegen':'Verbind opnieuw met wifi'):automaticMain()&&automaticFinalizing&&draft.stage==='review'?'Je receiver toevoegen':labels[draft.stage]||'Receiver toevoegen';
-      const receiverContext=draft.receiver&&!['receiver','done'].includes(draft.stage)?`<p class="onboarding-receiver-context"><b>${escape(draft.receiver.name||'Receiver')}</b><span>${escape(draft.receiver.type)}</span></p>`:'';
-      return `<header class="onboarding-setup-header"><div><span class="onboarding-setup-label">${firstSetup?(automaticFirstReceiver()?'Je stand instellen':`Stap ${step} · ${step===1?'Standnaam':step===2?'Zones':'Verlichting aansluiten'}`):'Receiver toevoegen'}</span>${draft.stand?.name&&!['stand','zones'].includes(draft.stage)?`<small class="onboarding-stand-context">${escape(draft.stand.name)}</small>`:''}</div><button type="button" class="back" data-onboarding-action="exit">Later verder <span aria-hidden="true">×</span></button></header>${receiverSetupProgress()}<header class="onboarding-heading"><h1>${title}</h1>${receiverContext}</header>${!['stand','zones','receiver','placement','done'].includes(draft.stage)?zoneContext():''}`;
+      const receiverContext=draft.receiver&&!connectionCardStage&&!['receiver','done'].includes(draft.stage)?`<p class="onboarding-receiver-context"><b>${escape(draft.receiver.name||'Receiver')}</b><span>${escape(draft.receiver.type)}</span></p>`:'';
+      return `<header class="onboarding-setup-header"><div><span class="onboarding-setup-label">${firstSetup?(automaticFirstReceiver()?'Je stand instellen':`Stap ${step} · ${step===1?'Standnaam':step===2?'Zones':'Verlichting aansluiten'}`):'Receiver toevoegen'}</span>${draft.stand?.name&&!['stand','zones'].includes(draft.stage)?`<small class="onboarding-stand-context">${escape(draft.stand.name)}</small>`:''}</div><button type="button" class="back" data-onboarding-action="exit">Later verder <span aria-hidden="true">×</span></button></header>${receiverSetupProgress()}<header class="onboarding-heading"><h1>${title}</h1>${receiverContext}</header>${!connectionCardStage&&!['stand','zones','receiver','placement','done'].includes(draft.stage)?zoneContext():''}`;
     }
     function zoneVisual(index){
       return `<span class="onboarding-zone-number" aria-hidden="true">${index+1}</span>`;
@@ -561,7 +562,7 @@
       return `<section class="card onboarding-review onboarding-review-product">${product(draft.receiver,{compact:true,port:null})}<dl><div><dt>Receiver</dt><dd>${escape(draft.receiver.name||draft.receiver.type)}</dd></div><div><dt>Zone</dt><dd>${escape(draft.zones.find(zone=>zone.id===draft.zoneId)?.name||'Later kiezen')}</dd></div></dl>${draft.receiver.type==='SPI'?`<ul>${active().map(output=>`<li><b>P${output.port}</b><span>${output.pixels} pixels<small>${pixelSetup.endpointLabel(output)}</small></span></li>`).join('')}</ul>`:lightExample('RGBW')}</section><div class="onboarding-actions onboarding-footer">${pinRequired()?button('back','← Zone kiezen',busy||finalizationStarted?'disabled':''):''}${button('finish',busy?'Toevoegen…':!pinRequired()&&finalizationStarted?'Opnieuw proberen':'Receiver toevoegen',busy?'disabled':'')}</div>`;
     }
     function addingPanel(){
-      return `<section class="card onboarding-security onboarding-connecting" data-security-busy="true" role="status">${connectingReceiver()}<span class="onboarding-security-icon">${setupIcon('wifi')}</span><h2>Receiver toevoegen…</h2><p>${draft.zoneId?`Opslaan in ${escape(draft.zones.find(zone=>zone.id===draft.zoneId)?.name)}.`:'Verbinding controleren en opslaan.'}</p></section>`;
+      return connectionCard({title:'Receiver toevoegen…',hint:'Je instellingen worden bewaard.',progress:false});
     }
     function completeCard(){
       const zone=draft.zones.find(zone=>zone.id===draft.zoneId),count=getModel().receivers.filter(receiver=>receiver.standId===draft.stand.id&&receiver.zoneId===draft.zoneId&&receiver.lifecycle==='added').length;
@@ -577,16 +578,23 @@
       return results.length?`<details class="card onboarding-manual-wifi onboarding-wifi-help"><summary>Wifi-stappen</summary>${instructions}</details>`:`<section class="card onboarding-manual-wifi" aria-label="Wifi met de hand verbinden">${instructions}</section>`;
     }
     function securityPanel(){
-      if(!pinRequired())return `${draft.role==='main'?pinNetwork():''}<section class="card onboarding-security onboarding-connecting" data-security-busy="${busy}" role="status">${connectingReceiver()}<span class="onboarding-security-icon">${setupIcon('wifi')}</span><h2>${busy?(phaseLabels[draft.security.phase]||'Receiver verbinden'):'Verbinding controleren'}</h2>${connectionProgress()}<p>${busy?'Laat de receiver aan.':'Verbinding nog niet bevestigd.'}</p></section>${busy?'':button('security-retry','Opnieuw controleren')}`;
+      if(!pinRequired())return `${connectionCard({title:busy?(phaseLabels[draft.security.phase]||'Receiver verbinden'):'Verbinding controleren',hint:busy?'Laat de receiver aan.':'Verbinding nog niet bevestigd.'})}${busy?'':button('security-retry','Opnieuw controleren')}`;
       if(automaticMain())return mainWifiReturn();
       if(manualRejoinSSID&&!registrationPending)return `<section class="card onboarding-manual-wifi" aria-label="Met beveiligde wifi verbinden"><h2>${busy?'Verbinding controleren…':'Verbind met je wifi'}</h2><ol class="onboarding-wifi-tiles" data-setup-visual="wifi-rejoin"><li>${setupIcon('wifi')}<span><b>Instellingen → Wifi</b><small>Kies ${escape(manualRejoinSSID)}</small></span></li><li>${setupIcon('phone')}<span><b>Standcode invoeren</b><small>Dit is je wifiwachtwoord.</small></span></li><li>${setupIcon('return')}<span><b>Terug naar de app</b><small>We controleren automatisch.</small></span></li></ol></section>${button('security-retry',busy?'Verbinding controleren…':'Ik ben verbonden · controleren',busy?'disabled':'')}`;
       if(registrationPending)return `<section class="card onboarding-security onboarding-connecting" role="status">${connectingReceiver()}<h2>Je receiver rondt af</h2><p>Toegang wordt bewaard.</p></section>${button('security-retry',busy?'Afronden…':'Verder controleren',busy?'disabled':'')}`;
       const phase=draft.security.phase;
-      return `<section class="card onboarding-security onboarding-connecting" data-security-busy="${busy}" role="status">${connectingReceiver()}<span class="onboarding-security-icon"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M10 14V9a6 6 0 0 1 12 0v5"/><rect x="6" y="14" width="20" height="15" rx="4"/><path d="M16 20v3"/></svg></span><h2>${phaseLabels[phase]||'Verbinding bevestigen'}</h2>${connectionProgress()}<p>${busy?'Laat de receiver aan.':'Nog niet bevestigd.'}</p></section>${busy?'':button('security-retry','Opnieuw controleren')}<details class="onboarding-recovery"><summary>Meer uitleg</summary><p>De receiver verschijnt na bevestiging in je stand.</p></details>`;
+      return `${connectionCard({title:phaseLabels[phase]||'Verbinding bevestigen',hint:busy?'Laat de receiver aan.':'Nog niet bevestigd.'})}${busy?'':button('security-retry','Opnieuw controleren')}<details class="onboarding-recovery"><summary>Meer uitleg</summary><p>De receiver verschijnt na bevestiging in je stand.</p></details>`;
+    }
+    function connectionCard({title,hint,progress=true}){
+      const receiver=draft.receiver,zone=draft.zones.find(item=>item.id===(draft.zoneId||draft.activeZoneId));
+      const destination=zone?escape(zone.name):'Nog geen zone';
+      // Presentation only: phase changes, trusted receipts and retry actions
+      // still use the existing transaction. No timer invents a success state.
+      return `<section class="card onboarding-security onboarding-connecting onboarding-connect-card" data-security-busy="${busy}" data-connect-type="${receiver?.type||''}" role="status" aria-live="polite" aria-atomic="true"><header class="onboarding-connect-destination"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg><span><small>${zone?'Toevoegen aan':'Zone'}</small><b>${destination}</b></span></header>${receiver?`<div class="onboarding-connect-device">${product(receiver,{compact:true})}<div class="onboarding-connect-identity"><span class="pill">${escape(receiver.type)}</span><h3>${escape(receiver.name||`${receiver.type}-receiver`)}</h3><p>${receiver.type==='SPI'?'Licht en beweging per pixel.':'Eén kleur over de hele ledline.'}</p></div></div>`:''}<span class="onboarding-security-icon onboarding-connect-signal" aria-hidden="true">${setupIcon('wifi')}</span><h2>${escape(title)}</h2><p class="onboarding-connect-hint">${escape(hint)}</p>${progress?connectionProgress():''}</section>`;
     }
     function connectionProgress(){
       const step={configuring:0,claiming:1,reconnecting:2,verifying:2,resuming:2}[draft.security.phase];
-      return `<ol class="onboarding-security-stages" data-setup-visual="security" aria-label="Verbindingsstappen">${['Instellingen','Koppelen','Controleren'].map((label,i)=>`<li data-state="${i<step?'completed':busy&&i===step?'current':'pending'}" ${busy&&i===step?'aria-current="step"':''}><i aria-hidden="true">${i<step?'✓':''}</i>${label}</li>`).join('')}</ol>`;
+      return `<ol class="onboarding-security-stages" data-setup-visual="security" aria-label="Verbindingsstappen">${['Instellingen','Koppelen','Controleren'].map((label,i)=>`<li data-state="${i<step?'completed':busy&&i===step?'current':'pending'}" ${busy&&i===step?'aria-current="step"':''}><i aria-hidden="true">${i<step?'✓':i+1}</i><b>${label}</b></li>`).join('')}</ol>`;
     }
     function mainWifiReturn(){
       const progressing=busy||rejoinRunning;
@@ -910,7 +918,7 @@
         else {
           if(typeof services[method]!=='function')throw Error('UNAVAILABLE');
           attempted=true;const request=services[method]({configuration:config(),signal:controller.signal,...(pinRequired()&&method==='secure'&&draft.role==='main'?{pin}:{}),onProgress:phase=>{
-            if(token===operation&&busy&&draft.stage==='security'&&phaseLabels[phase])change({type:'SECURITY_PROGRESS',phase},{top:false});
+            if(token===operation&&busy&&draft.stage==='security'&&Object.hasOwn(phaseLabels,phase))change({type:'SECURITY_PROGRESS',phase},{top:false});
           }});
           pin='';repeat='';response=await bounded(request,draft.role==='node'?125000:50000);
         }
