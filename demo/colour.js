@@ -39,18 +39,16 @@
   });
   function screenRGB(rgb) { return rgb.map(channel=>screenTransfer[Math.round(clamp(channel,0,255))]); }
   function screenHex(rgb,white=0) { return hex(screenRGB(mixWhite(rgb,white))); }
-  // A practical RGB/W mix, not a measured colour temperature. Follow the
-  // existing white-mix recipes (red + a little green, less W when warmer),
-  // but share one 255-unit channel budget: this shortcut never adds full RGB
-  // on top of full W. The separate brightness control remains authoritative.
+  // A practical RGB/W mix, not a measured colour temperature. Reduce the
+  // neutral/cool W emitter and support it with red + amber as warmth rises.
+  // One smooth curve keeps all slider positions distinct, without a recipe
+  // seam at 50%. Share one 255-unit channel budget, not full RGB on full W;
+  // the separate brightness control remains authoritative. This is a new
+  // explicit shortcut only: saved/manual channel values are never remapped.
   function warmWhite(warmth = 50) {
     const amount=Math.round(clamp(warmth,0,100));
-    const from=amount<=50?[0,0,0,255]:[64,10,0,220];
-    const to=amount<=50?[64,10,0,220]:[255,45,0,128];
-    const t=amount<=50?amount/50:(amount-50)/50;
-    const mix=from.map((channel,index)=>channel+(to[index]-channel)*t);
-    const scale=255/mix.reduce((sum,channel)=>sum+channel,0);
-    const r=Math.round(mix[0]*scale),g=Math.round(mix[1]*scale);
+    const t=amount/100,blend=t*(1.6-.6*t);
+    const r=Math.round(196*blend),g=Math.round(48*blend);
     return [r,g,0,255-r-g];
   }
   function warmthOf(channels) {

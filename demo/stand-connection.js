@@ -8,6 +8,8 @@
 })(typeof globalThis==='object'?globalThis:this,function(Model,Libraries){
   'use strict';
   const MAX_BYTES=128*1024,MAX_ENTITIES=128,POLL_MS=30000;
+  // Native emits these only before the chosen code is saved or submitted.
+  const migrationStoreErrors=new Set(['STAND_MIGRATION_PAYLOAD_INVALID','STAND_MIGRATION_STORE_UNAVAILABLE','STAND_MIGRATION_UPLOAD_BUSY','STAND_MIGRATION_UPLOAD_EXPIRED','STAND_MIGRATION_CAPACITY','STAND_MIGRATION_MEMORY_PRESSURE']);
   const copy=value=>JSON.parse(JSON.stringify(value));
   // Local presentation provenance only, never wire/storage/authority.
   const readFences=new WeakMap();
@@ -74,6 +76,12 @@
     if(!plain(value)||Object.keys(value).some(key=>key!=='expectedStandId')||
        value.expectedStandId!==undefined&&!id(value.expectedStandId))fail('STAND_CONNECTION_INVALID');
     return {...value};
+  }
+  function resumeIntent(value){
+    if(!plain(value))fail('STAND_DATA_UNCONFIRMED');
+    if(value.status==='available'&&Object.keys(value).sort().join(',')==='standId,status'&&id(value.standId))return {status:'available',standId:value.standId};
+    if(['none','ambiguous','unavailable'].includes(value.status)&&Object.keys(value).join(',')==='status')return {status:value.status};
+    fail('STAND_DATA_UNCONFIRMED');
   }
   function inspectionResult(value,ssid){
     if(!plain(value)||!['setup-required','migration-required','code-required','wifi-ready'].includes(value.status)||
@@ -159,6 +167,7 @@
     // has just been saved, leaving this phone on its old local contents.
     let current=null,head=null,resumeStandId=null,inspected=null,generation=0,refreshJob=null,connectJob=null,wakeJob=null,timer=null,disposed=false,paused=false,writeQueue=Promise.resolve(),pendingWrites=0;
     let state={status:'disconnected',phase:null,standId:null,error:null,pendingWrites:0};
+    let liveReadyJob=null;
     const publish=patch=>{state={...state,...patch,pendingWrites};onState(copy(state));};
     function stopTimer(){if(timer!==null)clearTimer(timer);timer=null;}
     function arm(){stopTimer();if(!disposed&&!paused&&current&&visible())timer=setTimer(()=>{timer=null;void refresh().catch(()=>{});},POLL_MS);}
@@ -176,6 +185,9 @@
       if(disposed)fail('STAND_CONNECTION_CLOSED');if(connectJob)fail('STAND_CONNECTION_BUSY');
       const {payload:importData,...credentials}=input||{};
       const payload=wifi?wifiInput(input):resume?resumeInput(input):connectionInput(credentials);
+      // Retain only an admitted pinned presentation intent on an unsuccessful
+      // cold resume. Busy/invalid calls cannot replace another pending intent.
+      if(resume&&payload.expectedStandId)resumeStandId=payload.expectedStandId;
       if(migration){
         // Explicit OS joining belongs only to opening an existing shared
         // stand. A password transition uses the native committed handoff.
@@ -184,6 +196,7 @@
         if(!plain(importData)||!Array.isArray(importData.operations)||importData.operations.length<1||importData.operations.length>MAX_ENTITIES)fail('STAND_MIGRATION_INVALID');
         publicData(importData);if(bytes(encodeOperations(importData.operations))>MAX_BYTES)fail('STAND_STORAGE_LIMIT');payload.payload=copy(importData);
       }else if(importData!==undefined)fail('STAND_CONNECTION_INVALID');
+      const previousInspection=inspected;
       const epoch=++generation;paused=false;stopTimer();current=null;head=null;inspected=null;if(!resume)resumeStandId=null;
       publish({status:'connecting',phase:'reach-main',error:null,standId:payload.expectedStandId||null});
       const method=wifi?'standOpenWifi':resume?'standResume':migration?'standMigrate':'standConnect';
@@ -213,6 +226,12 @@
             // presentation only; resume still needs pinned proof + readback.
             resumeStandId=payload.expectedStandId;
             publish({status:'reconnect-required',phase:null,standId:resumeStandId,error:error.code});
+          }else if(migration&&migrationStoreErrors.has(error?.code)&&previousInspection?.status==='migration-required'){
+            // Keep the existing PIN screen, not a misleading sign-in screen.
+            // No retry or code replay. Native repeats all identity/readback
+            // checks on an explicit next attempt; fields are cleared by UI.
+            inspected={...previousInspection,epoch};
+            publish({status:'migration-required',phase:null,standId:payload.expectedStandId||null,error:error.code});
           }else publish({status:'offline',phase:null,error:error?.code||'STAND_CONNECTION_FAILED'});
         }
         throw error;
@@ -342,6 +361,31 @@
       });writeQueue=job;
       return job.finally(()=>{pendingWrites--;publish({});arm();});
     }
+    function prepareLive(){
+      if(liveReadyJob)return liveReadyJob;
+      if(disposed||paused||!visible()||!current&&!resumeStandId)return Promise.reject(Object.assign(Error('Open je stand opnieuw.'),{code:'STAND_NOT_CONNECTED'}));
+      const epoch=generation,pinned=current?copy(current):null,expected=pinned?.standId||resumeStandId;
+      const task=(async()=>{
+        if(pinned){
+          if(typeof services.standSessionStatus!=='function')fail('STAND_CONNECTION_UNAVAILABLE');
+          const native=sessionStatus(await services.standSessionStatus());
+          if(disposed||paused||epoch!==generation||!visible())fail('STAND_CONNECTION_CANCELLED');
+          if(native.status==='connected'){
+            if(native.standId!==pinned.standId||native.ssid!==pinned.ssid)fail('STAND_IDENTITY_UNCONFIRMED');
+            return copy(current);
+          }
+        }
+        // A new, not-yet-dispatched control may re-open only an explicitly
+        // disconnected native session. wake retains the original pinned
+        // stand, waits existing writes and performs a fresh native proof.
+        // Never retry a failed control, OPEN, or mutation here.
+        const result=await wake();
+        if(disposed||paused||!visible())fail('STAND_CONNECTION_CANCELLED');
+        if(!result||result.standId!==expected||pinned&&result.ssid!==pinned.ssid)fail('STAND_IDENTITY_UNCONFIRMED');
+        return result;
+      })();liveReadyJob=task;
+      return task.finally(()=>{if(liveReadyJob===task)liveReadyJob=null;});
+    }
     function pause(){
       paused=true;++generation;stopTimer();
       // Retire the presentation as well as the old result epoch. Otherwise a
@@ -379,8 +423,8 @@
       if(typeof services.standDisconnect==='function')await services.standDisconnect({});
     }
     function dispose(){disposed=true;++generation;current=null;head=null;resumeStandId=null;inspected=null;stopTimer();}
-    return Object.freeze({connect,connectDetected:input=>connectDetected(input),inspect,changeCode,migrate:input=>connect(input,{migration:true}),migrateDetected:input=>connectDetected(input,{migration:true}),resume,openWifi,refresh,mutate,acceptMembership,pause,wake,disconnect,dispose,canResume:()=>!!resumeStandId,
+    return Object.freeze({connect,connectDetected:input=>connectDetected(input),inspect,changeCode,migrate:input=>connect(input,{migration:true}),migrateDetected:input=>connectDetected(input,{migration:true}),resume,openWifi,refresh,mutate,acceptMembership,prepareLive,pause,wake,disconnect,dispose,canResume:()=>!!resumeStandId,
       snapshot:()=>current?copy(current):null,state:()=>copy(state)});
   }
-  return Object.freeze({connectionInput,resumeInput,wifiInput,inspectionInput,inspectionResult,sessionStatus,codeChangeInput,newCode,suggestCode,projection,managementTransition,entities,changes,encodeOperations,create,readFence:result=>readFences.get(result),MAX_BYTES,MAX_ENTITIES,POLL_MS});
+  return Object.freeze({connectionInput,resumeInput,resumeIntent,wifiInput,inspectionInput,inspectionResult,sessionStatus,codeChangeInput,newCode,suggestCode,projection,managementTransition,entities,changes,encodeOperations,create,readFence:result=>readFences.get(result),MAX_BYTES,MAX_ENTITIES,POLL_MS});
 });

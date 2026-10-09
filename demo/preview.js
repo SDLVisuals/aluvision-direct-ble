@@ -534,8 +534,14 @@ function softTrailCoverage(behind,trail,n,smooth){
   function selected(receiver, selection) {
     return !selection || selection.kind === 'all' ||
       (selection.kind === 'receiver' && selection.receiverId === receiver.id) ||
-      (selection.kind === 'receivers' && Array.isArray(selection.receiverIds) && selection.receiverIds.includes(receiver.id));
+      (selection.kind === 'receivers' && Array.isArray(selection.receiverIds) && selection.receiverIds.includes(receiver.id)) ||
+      (['line','lines'].includes(selection.kind) && model.ledlines([receiver]).some(line =>
+        selection.kind === 'line' ? selection.lineId === line.id :
+          Array.isArray(selection.lineIds) && selection.lineIds.includes(line.id)));
   }
+  const lineSelection = selection => ['line','lines'].includes(selection?.kind);
+  const selectedLine = (lineId, selection) => selection?.kind === 'line' ? selection.lineId === lineId :
+    selection?.kind === 'lines' && Array.isArray(selection.lineIds) && selection.lineIds.includes(lineId);
   function geometry(receivers, layout = 'stacked', { lineOrder } = {}) {
     if (!Array.isArray(receivers)) throw new Error('Receivers must be an array');
     const seen = new Set();
@@ -646,6 +652,15 @@ function softTrailCoverage(behind,trail,n,smooth){
     const group = sceneGeometry || geometry([receiver]);
     const geo = group.receivers.find(item => item.receiverId === receiver.id);
     if (!geo) throw new Error('Receiver is not in the full-zone geometry');
+    if (receiver.type === 'SPI' && group.layout !== 'continuous' && receiver.state?.portStates) {
+      // Separate SPI outputs may have independent lighting intent and clocks.
+      // Keep the full-zone physical indices/directions, but sample each port
+      // with only its own override. Continuous mode always uses the one shared
+      // receiver intent; a stale separate override cannot break that strip.
+      return geo.outputs.flatMap(output => sample({...receiver,state:model.lightStateFor(receiver,output.port)},
+        {...group,receivers:group.receivers.map(item => item.receiverId === receiver.id
+          ? {...item,pixelCount:output.pixels,outputs:[output]} : item)},time));
+    }
     const state = normalizeState(receiver);
     const background = descriptorFor(receiver)?.backgroundEditable ? backgroundSample(state) : null;
     const continuous = group.layout === 'continuous';
@@ -761,7 +776,7 @@ function softTrailCoverage(behind,trail,n,smooth){
     frame.highlightedReceiverIds = individualFeedback
       ? frame.rows.filter(row => row.individuallySelected).map(row => row.receiverId) : [];
     frame.identifyingReceiverIds = frame.rows.filter(row => row.identifying).map(row => row.receiverId);
-    if (options.lineOrder !== undefined) {
+    if (options.lineOrder !== undefined || lineSelection(options.selection)) {
       const byReceiver = new Map(frame.rows.map(row=>[row.receiverId,row]));
       // Expose a physical projection separately: rows remains the unchanged
       // receiver-scoped/electrical sample contract used by live control.
@@ -770,11 +785,15 @@ function softTrailCoverage(behind,trail,n,smooth){
         const start = output?.localOffset || 0, blink = options.identifying?.get?.(line.receiverId);
         return {...row,port:line.port,lineId:line.id,lineIndex:line.lineIndex,lineCount:line.lineCount,
           offset:line.offset,localOffset:line.localOffset,
+          ...(lineSelection(options.selection)?{selected:selectedLine(line.id,options.selection),
+            individuallySelected:selectedLine(line.id,options.selection)}:{}),
           pixels:row.pixels.slice(start,start+line.pixels),outputs:output?[{...output,localOffset:0}]:[],
           identifying:row.identifying && (row.type==='RGBW'||blink?.scope==='all'||Array.isArray(blink?.ports)&&blink.ports.map(Number).includes(line.port)),
           identificationPixels:row.identificationPixels?row.identificationPixels.slice(start,start+line.pixels):null};
       });
     }
+    frame.highlightedLineIds = individualFeedback && lineSelection(options.selection)
+      ? (frame.lineRows || []).filter(row=>row.individuallySelected).map(row=>row.lineId) : [];
     return frame;
   }
   function rounded(context, x, y, width, height, radius) {
@@ -1128,13 +1147,35 @@ function softTrailCoverage(behind,trail,n,smooth){
   }
   function draw(canvas, options = {}) {
     const rawFrame = rows(options);
+    // A stand-wide recipe is sampled on its shared clock/global line indices.
+    // A zone canvas nevertheless shows that zone's saved physical topology.
+    // Keep these contracts separate: projection must not resample the effect
+    // as an unrelated continuous mixed stand, or restart each zone's phase.
+    const renderGeometry = options.renderGeometry || rawFrame.geometry;
+    const layout = options.renderGeometry ? renderGeometry.layout : options.layout;
+    const renderLines = new Map();
+    if (options.renderGeometry) {
+      const sampleLines = new Map(rawFrame.geometry.lines.map(line => [line.id,line]));
+      let offset = 0;
+      const invalid = () => { const error = new Error('Invalid preview render geometry'); error.code = 'RENDER_GEOMETRY'; throw error; };
+      if (!renderGeometry || !['stacked','continuous','vertical'].includes(layout) ||
+          !Array.isArray(renderGeometry.lines) || !Array.isArray(rawFrame.lineRows)) invalid();
+      for (const line of renderGeometry.lines) {
+        const sample = line && sampleLines.get(line.id);
+        if (!sample || renderLines.has(line.id) || line.offset !== offset ||
+            ['receiverId','port','type','pixels','reversed'].some(key => line[key] !== sample[key]) ||
+            layout === 'continuous' && line.type !== 'SPI') invalid();
+        renderLines.set(line.id,line);offset += line.pixels;
+      }
+      if (offset !== renderGeometry.totalPixels || rawFrame.lineRows.some(row => !renderLines.has(row.lineId))) invalid();
+    }
     // Sampling and transport keep exact receiver values. Encode once, only
     // for canvas materials, after all effects, dimmers and W have been mixed.
     // Never feed these screen bytes back into state, sampling or a receiver.
     // Raw samples retain the receiver's electrical DIN-to-DOUT order.
     // A continuous installation is drawn in its physical zone order instead:
     // a right-side cable must not mirror that output in the on-screen line.
-    const spatialPixels=(row,pixels)=>options.layout==='continuous'&&row.type==='SPI'
+    const spatialPixels=(row,pixels)=>layout==='continuous'&&row.type==='SPI'
       ? row.outputs.flatMap(output=>{
         const segment=pixels.slice(output.localOffset,output.localOffset+output.pixels);
         return output.reversed?segment.reverse():segment;
@@ -1145,13 +1186,13 @@ function softTrailCoverage(behind,trail,n,smooth){
     // Keep raw receiver samples and selection scope intact. A separate or
     // spatial view projects each physical active SPI port as its own line.
     // A regular continuous view remains one end-to-end virtual strip.
-    const splitPorts = options.layout !== 'continuous' || Boolean(options.spatialShape) || options.presentation === 'receivers';
+    const splitPorts = layout !== 'continuous' || Boolean(options.spatialShape) || options.presentation === 'receivers';
     const physicalRows = rawFrame.lineRows?.map(row=>{
-      const toScreen=pixels=>(options.layout==='continuous'&&row.outputs[0]?.reversed?[...pixels].reverse():pixels).map(colour.screenRGB);
-      return {...row,pixels:toScreen(row.pixels),
+      const toScreen=pixels=>(layout==='continuous'&&row.outputs[0]?.reversed?[...pixels].reverse():pixels).map(colour.screenRGB);
+      return {...row,...(options.renderGeometry?{offset:renderLines.get(row.lineId).offset}:{}),pixels:toScreen(row.pixels),
         ...(row.identificationPixels?{identificationPixels:toScreen(row.identificationPixels)}:{})};
     });
-    const frame = {...rawFrame,rows:physicalRows || colouredRows.flatMap(row=>splitPorts&&row.type==='SPI'
+    const frame = {...rawFrame,geometry:renderGeometry,rows:physicalRows || colouredRows.flatMap(row=>splitPorts&&row.type==='SPI'
       ? row.outputs.map(output=>({...row,port:output.port,lineId:output.lineId,lineIndex:output.lineIndex,
         pixels:row.pixels.slice(output.localOffset,output.localOffset+output.pixels),
         outputs:[{...output,localOffset:0}],
@@ -1159,6 +1200,7 @@ function softTrailCoverage(behind,trail,n,smooth){
       : [row])};
     if (canvas.dataset) {
       canvas.dataset.highlightedReceiverIds = frame.highlightedReceiverIds.join(',');
+      canvas.dataset.highlightedLineIds = frame.highlightedLineIds.join(',');
       canvas.dataset.identifyingReceiverIds = frame.identifyingReceiverIds.join(',');
       canvas.dataset.renderedLineCount = String(frame.rows.length);
       canvas.dataset.lineHitRegions = '[]';
@@ -1195,9 +1237,9 @@ function softTrailCoverage(behind,trail,n,smooth){
       if(canvas.dataset){canvas.dataset.spatialShape=options.spatialShape;canvas.dataset.spatialLineCount=String(frame.rows.length);}
       drawSpatial(context,frame,width,height,options.spatialShape,options.lineNumbers);return rawFrame;
     }
-    const byReceiver = options.presentation === 'receivers' || options.layout !== 'continuous' && frame.rows.some(row => row.category === 'tunnel');
-    const vertical = options.layout === 'vertical' && options.presentation !== 'receivers';
-    const continuous = options.layout === 'continuous' && !byReceiver && frame.rows.every(row => row.type === 'SPI');
+    const byReceiver = options.presentation === 'receivers' || layout !== 'continuous' && frame.rows.some(row => row.category === 'tunnel');
+    const vertical = layout === 'vertical' && options.presentation !== 'receivers';
+    const continuous = layout === 'continuous' && !byReceiver && frame.rows.every(row => row.type === 'SPI');
     const padding = Math.min(18, width / 8);
     const maxRowPixels = Math.max(1, ...frame.rows.filter(row => row.type === 'SPI').map(row => row.pixels.length));
     const shortestFraction = Math.min(1, ...frame.rows.filter(row => row.type === 'SPI').map(row => row.pixels.length / maxRowPixels));
@@ -1279,7 +1321,7 @@ function softTrailCoverage(behind,trail,n,smooth){
         context.fill();
       }
       context.shadowBlur = 0;
-      const highlighted = frame.highlightedReceiverIds.includes(row.receiverId);
+      const highlighted = frame.highlightedReceiverIds.includes(row.receiverId) || frame.highlightedLineIds.includes(row.lineId);
       if (highlighted) {
         context.fillStyle = '#f5f6f1';
         // An open accent marks position without changing the displayed colour

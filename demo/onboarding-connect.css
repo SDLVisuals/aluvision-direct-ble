@@ -74,4 +74,3 @@ body[data-theme=dark] .onboarding-connect-card .onboarding-security-stages li[da
 @media(prefers-reduced-motion:reduce) {
   .onboarding-connect-card *, .onboarding-connect-card *::before, .onboarding-connect-card *::after {animation: none !important; transition: none !important}
 }
-

@@ -166,8 +166,8 @@
           sentAt + reply.ttlMs <= at) return false;
       return true;
     }
-    function request(ctx) {
-      ctx.queued = true;
+    function request(ctx,refresh=true) {
+      if(refresh)ctx.queued = true;
       if (ctx.flight) return ctx.flight.then(() => getState());
       const completedBlinks=[];
       // This microtask allows flight to be installed before an injected adapter is called.
@@ -281,6 +281,9 @@
       ctx.deadline = time + idleMs; ctx.revision++; ctx.error = null;
       emit(time); arm(ctx, time);
       if (active !== ctx) return Promise.resolve(getState());
+      // Local activity is not a new physical receipt. Reuse only a still-valid
+      // exact lease, with a renewal margin; never extend validUntilMs locally.
+      if(!ctx.flight&&!ctx.queued&&ctx.confirmation&&ctx.confirmation.validUntilMs-time>5000)return Promise.resolve(getState());
       return request(ctx);
     }
     function reorder(lineIds) {
@@ -316,7 +319,7 @@
       // the blink; never call interaction/request from inside their own flight.
       void interaction();
       if(active!==ctx || ctx.closed)return Promise.reject(fail('IDENTIFICATION_BLINK_CANCELLED'));
-      return new Promise((resolve,reject)=>{ctx.blinks.push({lineId,enabled,resolve,reject});});
+      return new Promise((resolve,reject)=>{ctx.blinks.push({lineId,enabled,resolve,reject});void request(ctx,false);});
     }
     function close(reason = 'closed') {
       if (typeof reason !== 'string' || reason.length > 96) throw fail('IDENTIFICATION_REASON');

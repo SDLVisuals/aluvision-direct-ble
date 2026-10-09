@@ -119,7 +119,8 @@
       if (value.outputs.length !== 4) fail('OUTPUT','Een SPI-receiver heeft vier uitgangen.');
       const allowZero=['receiver','placement','outputs','pixels','connection'].includes(value.stage)&&value.security?.status==='not-started';
       value.outputs.forEach((output,index)=>validOutput(output,index,allowZero));
-      if (!value.outputs.some(output => output.enabled)) fail('OUTPUT','Gebruik minstens één uitgang.');
+      const allowAllOff=['receiver','placement','outputs'].includes(value.stage)&&value.security?.status==='not-started';
+      if (!allowAllOff&&!value.outputs.some(output => output.enabled)) fail('OUTPUT','Minstens één poort moet actief zijn.');
     } else if (value.outputs.length) fail('RGBW_OUTPUTS','RGBW werkt als één geheel, zonder afzonderlijke uitgangen.');
     if (value.port !== null && (!int(value.port,1,4) || !value.outputs.some(output => output.port === value.port && output.enabled))) fail('PORT','Kies een actieve uitgang.');
     if (['outputs','pixels','connection'].includes(value.stage) && (!value.receiver || value.receiver.type !== 'SPI')) fail('SPI_STAGE','Deze stap is alleen voor SPI.');
@@ -175,7 +176,10 @@
     if (zone.layout === 'continuous' && zone.type === 'SPI' && zone.pixels + activeOutputs(draft).reduce((sum,output) => sum + output.pixels,0) > Model.LIMITS.continuousPixels) fail('ZONE_PIXEL_LIMIT','Deze doorlopende zone ondersteunt maximaal 8192 pixels. Kies een andere zone.');
   }
   function toSecurity(draft) {
-    if(activeOutputs(draft).some(output=>output.pixels===0))fail('PIXELS_REQUIRED','Stel de lengte in voor elke gebruikte uitgang.');
+    if(draft.receiver.type==='SPI') {
+      if(!activeOutputs(draft).length)fail('OUTPUT','Minstens één poort moet actief zijn.');
+      if(activeOutputs(draft).some(output=>output.pixels<1||output.pixels>163))fail('PIXELS_REQUIRED','Stel voor elke gebruikte poort 1 tot 163 pixels in.');
+    }
     // Zero belongs to the editable draft, never to a physical configuration.
     // Disabled outputs retain existing lengths; only untouched zeros receive
     // the protocol placeholder. They stay disabled and produce no light.
@@ -200,19 +204,20 @@
           if (!id(event.id) || next.context.standIds.includes(event.id)) fail('STAND_ID','Kies een nieuwe stand-ID.');
           next.stand={id:event.id,name:name(event.name),isNew:true}; break;
         case 'ADD_ZONE':
-          requireStage(next,['zones','receiver','placement','zone']);
+          requireStage(next,['zones','receiver','placement','outputs','zone']);
           if (!id(event.id) || next.context.zoneIds.includes(event.id) || next.zones.some(zone => zone.id === event.id)) fail('ZONE_ID','Deze zone bestaat al.');
           next.zones.push({id:event.id,name:name(event.name),type:null,layout:'stacked',isNew:true,pixels:0});
           if (next.activeZoneId === null) next.activeZoneId=event.id;
           if (next.stage === 'zone') next.zoneId=event.id;
-          if (next.stage === 'placement') next.activeZoneId=event.id;
+          if (['placement','outputs'].includes(next.stage)) next.activeZoneId=event.id;
           delete next.zoneChoiceRequired;
           break;
         case 'SELECT_ACTIVE_ZONE':
           // A destination preference is not membership or a security claim.
           // Actual assignment stays locked behind identity/final receipt checks.
-          unlocked(next);requireStage(next,['zones','receiver']);
+          unlocked(next);requireStage(next,['zones','receiver','outputs']);
           if(event.zoneId!==null&&!next.zones.some(zone=>zone.id===event.zoneId))fail('ZONE_NOT_FOUND','Kies een zone in deze stand.');
+          if(next.stage==='outputs'&&event.zoneId!==null)compatible(next,next.zones.find(zone=>zone.id===event.zoneId));
           next.activeZoneId=event.zoneId;delete next.zoneChoiceRequired;break;
         case 'RENAME_ZONE':
         case 'REMOVE_ZONE': {
@@ -240,7 +245,7 @@
         }
         case 'SET_OUTPUT_COUNT':
           unlocked(next);requireStage(next,['outputs']);
-          if (!int(event.count,1,4)) fail('OUTPUT_COUNT','Kies één, twee, drie of vier uitgangen.');
+          if (!int(event.count,0,4)) fail('OUTPUT_COUNT','Kies nul, één, twee, drie of vier uitgangen.');
           next.outputs.forEach(output => {
             const enabled=output.port<=event.count;
             if(enabled&&!output.enabled&&output.pixels===0)output.pixels=DEFAULT_SPI_PIXELS;
@@ -249,7 +254,6 @@
         case 'SET_OUTPUT_ENABLED':
           unlocked(next);requireStage(next,['outputs']);
           if(!int(event.port,1,4)||typeof event.enabled!=='boolean')fail('OUTPUT','Kies een geldige uitgang.');
-          if(!event.enabled&&next.outputs[event.port-1].enabled&&activeOutputs(next).length===1)fail('OUTPUT','Gebruik minstens één uitgang.');
           {
             const output=next.outputs[event.port-1];
             if(event.enabled&&!output.enabled&&output.pixels===0)output.pixels=DEFAULT_SPI_PIXELS;
@@ -258,12 +262,12 @@
           break;
         case 'SET_PIXELS':
           unlocked(next);requireStage(next,['pixels']);
-          if (event.port !== next.port || !int(event.pixels,0,Model.LIMITS.pixelsPerPort)) fail('PIXELS','Kies een geldig aantal pixels voor de getoonde uitgang.');
+          if (event.port !== next.port || !int(event.pixels,0,163)) fail('PIXELS','Kies een heel aantal van 0 tot 163 pixels voor de getoonde poort.');
           next.outputs[event.port-1].pixels=event.pixels;break;
         case 'SET_SIDE':
           unlocked(next);requireStage(next,['connection']);
-          if (event.port !== next.port || !['left','right'].includes(event.side)) fail('SIDE','Kies welk gemarkeerd uiteinde bij het begin van je opstelling ligt.');
-          next.outputs[event.port-1].reversed=event.side === 'right';break;
+          if (event.port !== next.port || !['forward','reverse','left','right'].includes(event.side)) fail('SIDE','Kies de looprichting vanaf pixel 1 op deze LED Line.');
+          next.outputs[event.port-1].reversed=['reverse','right'].includes(event.side);break;
         case 'SELECT_ZONE': {
           requireStage(next,['placement','zone']);const zone=next.zones.find(item => item.id === event.zoneId);
           if(event.zoneId===null){next.activeZoneId=null;next.zoneId=null;delete next.zoneChoiceRequired;break;}
@@ -286,9 +290,9 @@
               if(next.zoneChoiceRequired||zone&&zone.type&&zone.type!==next.receiver.type)next.stage='placement';else toConfiguration(next);break;
             }
             case 'placement': {if(next.zoneChoiceRequired)fail('ZONE_REQUIRED','Kies een passende zone of voeg de receiver zonder zone toe.');const zone=next.zones.find(zone=>zone.id===next.activeZoneId);if(zone)compatible(next,zone);toConfiguration(next);break;}
-            case 'outputs': next.stage='pixels';next.port=activeOutputs(next)[0].port;break;
+            case 'outputs': if(!activeOutputs(next).length)fail('OUTPUT','Minstens één poort moet actief zijn.');next.stage='pixels';next.port=activeOutputs(next)[0].port;break;
             case 'pixels': {
-              if(next.outputs[next.port-1].pixels===0)fail('PIXELS_REQUIRED',`Stel eerst de lengte van poort ${next.port} in.`);
+              if(next.outputs[next.port-1].pixels<1||next.outputs[next.port-1].pixels>163)fail('PIXELS_REQUIRED',`Stel voor poort ${next.port} 1 tot 163 pixels in.`);
               next.stage='connection';break;
             }
             case 'connection': {

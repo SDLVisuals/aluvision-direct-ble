@@ -5,7 +5,15 @@
 .onboarding-page>.onboarding-task-hint:has(+.onboarding-manual-wifi){display:none}
 .onboarding-manual-wifi>ol:first-child{margin-top:0}
 .onboarding-factory-access{display:flex;align-items:flex-start;gap:12px;padding:18px 0 2px;margin-top:16px;border-top:1px solid var(--line)}
+.first-access-network{display:grid;gap:8px;padding:16px;border-radius:18px;background:var(--soft);margin-bottom:20px;min-width:0}
+.first-access-network>small{color:var(--muted);font-size:.8rem}.first-access-network>div{display:flex;align-items:center;gap:12px;min-width:0}
+.first-access-network strong{font-size:1rem;overflow-wrap:anywhere;flex:1;min-width:0;user-select:text}.first-access-network .button{flex-shrink:0;min-height:44px;padding:10px 14px}
+.first-access-network [role=status]{font-size:.8rem;color:var(--muted)}.first-access-network [role=status]:empty{display:none}
+.first-access-rejoin-steps{padding-left:24px;display:grid;gap:14px;line-height:1.5;margin:0 0 20px}.first-access-rejoin-help{margin:0 0 20px;color:var(--muted)}
+.first-access-rejoin-help summary{min-height:44px;display:list-item;cursor:pointer;padding:10px 0}.first-access-rejoin-help p{font-size:.85rem;line-height:1.5}
+@media(max-width:350px){.first-access-network>div{flex-wrap:wrap}.first-access-network strong{flex-basis:100%}}
 .onboarding-factory-icon{display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:14px;background:var(--soft);color:var(--red);font-size:30px;font-weight:700}
+.onboarding-factory-icon svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .onboarding-factory-access>div{flex:1;min-width:0}.onboarding-factory-access small{font-size:11px;color:var(--muted)}
 .onboarding-factory-code{display:flex;align-items:center;gap:10px;margin:8px 0}
 .onboarding-factory-code input{min-width:0;width:100%;padding:0;background:none;border:0;color:var(--ink);font-size:clamp(24px,7vw,32px);font-weight:750;letter-spacing:.04em;box-shadow:none}
@@ -571,6 +579,19 @@ body:has(.onboarding-page) .onboarding-page{gap:10px}
 .onboarding-result .onboarding-recognition{margin-top:13px;padding-top:13px;gap:8px}
 .onboarding-recognition>.button{border-radius:14px;min-height:44px;padding:9px 12px}
 .onboarding-recognition>.button[aria-pressed=true]{color:var(--red);border-color:color-mix(in srgb,var(--red) 42%,var(--line));background:var(--panel)}
+.onboarding-recognition>.receiver-blink{width:96px;min-height:48px;flex:none;color:var(--ink)}
+.onboarding-result .onboarding-actions>.button{background:var(--ink);color:var(--panel)}
+.onboarding-page .onboarding-destination{border-width:1px;min-width:0;margin-block:0 4px}
+.onboarding-destination>summary .onboarding-destination-name small{font-size:11px;line-height:1.35}
+.onboarding-destination>summary .onboarding-destination-name b{font-size:15px;line-height:1.3}
+.onboarding-destination>summary em{min-height:44px;padding:10px 12px;font-size:12px}
+.onboarding-followup{display:grid;gap:11px;margin-top:0}
+.onboarding-followup>.button[data-onboarding-action=another]{min-height:54px;background:var(--ink);color:var(--panel);font-size:15px;font-weight:700}
+.onboarding-followup>.button[data-onboarding-action=done]{min-height:48px;background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+.onboarding-followup>.text-button{justify-content:center;min-height:44px;font-size:12px;color:var(--muted)}
+.onboarding-page[data-onboarding-stage=outputs]>.onboarding-footer>[data-pixel-all-off]{grid-column:1/-1;margin:0;padding:9px 10px;font-size:12px;line-height:1.4;text-align:center;color:#9c352e;background:#fcf3f1;border:1px solid #eac3bf;border-radius:10px}
+.onboarding-page[data-onboarding-stage=outputs]>.onboarding-footer>[data-pixel-all-off][hidden]{display:none}
+@media(max-height:650px){.onboarding-page[data-onboarding-stage=outputs] .pixel-output-picker canvas{height:112px}}
 .onboarding-result .onboarding-identify-unavailable{display:block;margin-top:8px;font-size:11px;line-height:1.45;color:var(--muted)}
 .onboarding-result .onboarding-actions{margin-top:14px}
 .onboarding-result .onboarding-actions>.button{min-height:48px;border-radius:15px;font-size:13px}

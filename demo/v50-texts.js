@@ -1,0 +1,68 @@
+(function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.LightningV50Texts=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+  // Explicit interface keys only. Receiver/zone/stand/scene names never pass
+  // through this dictionary; parameters are inserted after translation.
+  const rows={
+    v50WelcomeTitle:['Jouw stand. Jouw licht.','Your stand. Your light.','Votre stand. Votre lumière.','Dein Stand. Dein Licht.'],
+    v50WelcomeHint:['Geef je stand een naam, kies je zones en sluit je verlichting aan.','Name your stand, choose zones and connect your lights.','Nommez votre stand, choisissez vos zones et connectez vos éclairages.','Benenne deinen Stand, wähle Zonen und verbinde deine Beleuchtung.'],
+    v50Name:['Standnaam','Stand name','Nom du stand','Standname'],
+    v50SetupPending:['SETUP VERDERZETTEN','CONTINUE SETUP','CONTINUER LA CONFIGURATION','EINRICHTUNG FORTSETZEN'],
+    v50Step:['STAP {number}','STEP {number}','ÉTAPE {number}','SCHRITT {number}'],
+    v50Ready:['Klaar','Done','Terminé','Fertig'],v50Next:['Volgende','Next','Suivant','Weiter'],v50Later:['','', '', ''],
+    v50ResumeSetup:['Setup verderzetten','Continue setup','Continuer la configuration','Einrichtung fortsetzen'],
+    v50SelectLines:['Ledlines kiezen','Select LED lines','Choisir les lignes LED','LED-Linien wählen'],
+    v50LineOverview:['Je ledlines','Your LED lines','Vos lignes LED','Deine LED-Linien'],
+    v50OrderTitle:['Ledlinevolgorde','LED line order','Ordre des lignes LED','LED-Linienreihenfolge'],
+    v50RecognitionHint:['Nummers en herkenningskleuren volgen de volgorde.','Numbers and identification colours follow the order.','Les numéros et couleurs de repérage suivent l’ordre.','Nummern und Erkennungsfarben folgen der Reihenfolge.'],
+    v50OrderOverviewLabel:['Ledlinevolgorde in {zone}','LED line order in {zone}','Ordre des lignes LED dans {zone}','LED-Linienreihenfolge in {zone}'],
+    v50All:['Alle','All','Toutes','Alle'],
+    v50ViewAll:['Bekijk alles','View all','Tout voir','Alles ansehen'],
+    v50Continuous:['Eén doorlopende ledline','One continuous LED line','Une ligne LED continue','Eine durchgehende LED-Linie'],
+    v50AllTogether:['Alle ledlines samen','All LED lines together','Toutes les lignes LED ensemble','Alle LED-Linien gemeinsam'],
+    v50PreviewTapHint:['Tik op een ledline of nummer om te kiezen.','Tap a LED line or number to select it.','Touchez une ligne LED ou un numéro pour la sélectionner.','Tippe auf eine LED-Linie oder Nummer, um sie zu wählen.'],
+    v50ReturnControl:['Terug naar bediening','Back to controls','Retour aux commandes','Zurück zur Steuerung'],
+    v50MoveColour:['Kleur {number} verplaatsen · pijltjestoetsen of slepen','Move colour {number} · arrow keys or drag','Déplacer la couleur {number} · flèches ou glisser','Farbe {number} verschieben · Pfeiltasten oder ziehen'],
+    v50DragColours:['Sleep om de kleurenvolgorde te wijzigen','Drag to reorder colours','Glissez pour réorganiser les couleurs','Ziehen, um Farben neu anzuordnen'],
+    v50ColoursReordered:['Kleurenvolgorde gewijzigd.','Colour order changed.','Ordre des couleurs modifié.','Farbreihenfolge geändert.'],
+    v50WhiteFine:['Wit fijn instellen','Fine-tune white','Ajuster le blanc','Weiß fein einstellen'],
+    v50ArtificialWhiteHint:['Koud wit komt uit het W-kanaal. Deze warmere witmix is kunstmatig: RGB + W.','Cool white uses the W channel. This warmer white mix is artificial: RGB + W.','Le blanc froid utilise le canal W. Ce mélange plus chaud est artificiel : RGB + W.','Kaltweiß nutzt den W-Kanal. Diese wärmere Weißmischung ist künstlich: RGB + W.'],
+    v50ArtificialWhite:['Kunstmatig warmwit','Artificial warm white','Blanc chaud artificiel','Künstliches Warmweiß'],
+    v50Warmth:['Warmte','Warmth','Chaleur','Wärme'],v50ChooseMix:['Kies witmix','Choose white mix','Choisir le mélange','Weißmischung wählen'],
+    v50ChooseMixHint:['Kies de witmix om de warmte af te stemmen.','Choose the white mix to adjust warmth.','Choisissez le mélange pour ajuster la chaleur.','Wähle die Weißmischung, um die Wärme anzupassen.'],
+    v50MixBrightnessHint:['De witmix verandert; helderheid stel je apart in.','The white mix changes; brightness is adjusted separately.','Le mélange change ; la luminosité se règle séparément.','Die Weißmischung ändert sich; die Helligkeit wird separat eingestellt.'],
+    v50Neutral:['Neutraler','More neutral','Plus neutre','Neutraler'],v50Warmer:['Warmer','Warmer','Plus chaud','Wärmer'],
+    v50FineTune:['Fijn instellen','Fine-tune','Réglage précis','Fein einstellen'],
+    v50PixelsDirection:['Pixels en richting','Pixels and direction','Pixels et direction','Pixel und Richtung'],
+    v50EditPorts:['Welke poorten wil je aanpassen?','Which ports would you like to edit?','Quels ports voulez-vous modifier ?','Welche Ausgänge möchtest du anpassen?'],
+    v50EditPort:['Poort {port} aanpassen','Edit port {port}','Modifier le port {port}','Ausgang {port} bearbeiten'],
+    v50PixelLimit:['Stel eerst de pixels in. Maximaal 163 pixels per ledline.','Set the pixels first. Maximum 163 pixels per LED line.','Réglez d’abord les pixels. Maximum 163 pixels par ligne LED.','Stelle zuerst die Pixel ein. Maximal 163 Pixel pro LED-Linie.'],
+    v50VariantExplanation:['Uitleg bij de varianten','About the variations','À propos des variantes','Hinweise zu den Varianten'],
+    v50StandSameEffect:['In dezelfde animatie','In the same animation','Dans la même animation','In derselben Animation'],
+    v50StandMinimum:['Minstens twee ledlines nodig.','At least two LED lines are needed.','Au moins deux lignes LED sont nécessaires.','Mindestens zwei LED-Linien sind erforderlich.'],
+    v50StandPreview:['Voorbeeld van alle zones','Preview of all zones','Aperçu de toutes les zones','Vorschau aller Zonen'],
+    v50StandGuidanceMixed:['SPI beweegt over de pixels. RGBW volgt als volledige ledline, in de volgorde van je zones.','SPI moves across the pixels. RGBW follows as complete LED lines, in zone order.','SPI se déplace sur les pixels. RGBW suit par lignes entières, dans l’ordre des zones.','SPI bewegt sich über die Pixel. RGBW folgt als ganze LED-Linie in Zonenreihenfolge.'],
+    v50StandGuidanceSpi:['Het effect loopt over de pixels, in de volgorde van je zones en ledlines.','The effect moves across the pixels, in the order of your zones and LED lines.','L’effet parcourt les pixels, dans l’ordre de vos zones et lignes LED.','Der Effekt läuft über die Pixel in der Reihenfolge deiner Zonen und LED-Linien.'],
+    v50StandGuidanceRgbw:['Het effect gaat van ledline naar ledline, in de volgorde van je zones.','The effect moves from LED line to LED line, in zone order.','L’effet passe d’une ligne LED à l’autre, dans l’ordre des zones.','Der Effekt wandert von LED-Linie zu LED-Linie in Zonenreihenfolge.'],
+    v50StandModeTogether:['Overal hetzelfde · samen','The same everywhere · together','Identique partout · ensemble','Überall gleich · gemeinsam'],
+    v50StandModeMixed:['SPI beweegt · RGBW volgt','SPI moves · RGBW follows','SPI se déplace · RGBW suit','SPI bewegt sich · RGBW folgt'],
+    v50StandModeSpi:['SPI · samen over je stand','SPI · together across your stand','SPI · ensemble sur votre stand','SPI · gemeinsam über deinen Stand'],
+    v50StandModeRgbw:['RGBW · lijn voor lijn','RGBW · line by line','RGBW · ligne par ligne','RGBW · Linie für Linie'],
+    v50StandViewZones:['Alle zones bekijken','View all zones','Voir toutes les zones','Alle Zonen ansehen'],
+    v50StandControls:['Alles bedienen','Control everything','Tout contrôler','Alles steuern'],
+    v50StandColour:['Kleur','Colour','Couleur','Farbe'],v50StandAnimations:['Animaties','Animations','Animations','Animationen'],
+    v50StandZoneOne:['1 zone','1 zone','1 zone','1 Zone'],v50StandZoneMany:['{count} zones','{count} zones','{count} zones','{count} Zonen'],
+    v50StandColourHint:['Kleur voor RGBW en SPI.','Colour for RGBW and SPI.','Couleur pour RGBW et SPI.','Farbe für RGBW und SPI.'],
+    v50StandAnimationHint:['Animaties over alle zones · RGBW en SPI.','Animations across all zones · RGBW and SPI.','Animations sur toutes les zones · RGBW et SPI.','Animationen über alle Zonen · RGBW und SPI.'],
+    v50StandUnassignedHint:['Receivers zonder zone doen niet mee.','Receivers without a zone are not included.','Les récepteurs sans zone ne participent pas.','Receiver ohne Zone sind nicht enthalten.'],
+    v50StandMixedHint:['Instellingen verschillen. Een nieuwe kleur geldt voor alle zones.','Settings differ. A new colour applies to all zones.','Les réglages diffèrent. Une nouvelle couleur s’applique à toutes les zones.','Die Einstellungen unterscheiden sich. Eine neue Farbe gilt für alle Zonen.'],
+    v50RgbwLineHint:['Eén kleur over deze RGBW-ledline. Kies de kleur of het effect bij Bediening.','One colour across this RGBW LED line. Choose the colour or effect in Controls.','Une couleur sur cette ligne RGBW. Choisissez la couleur ou l’effet dans les commandes.','Eine Farbe auf dieser RGBW-LED-Linie. Wähle Farbe oder Effekt in der Steuerung.'],
+    animationChooseAnother:['Andere animaties','Other animations','Autres animations','Andere Animationen'],
+    animationChooseAnotherHint:['Kies een groep of zoek een effect.','Choose a group or search for an effect.','Choisissez un groupe ou cherchez un effet.','Wähle eine Gruppe oder suche einen Effekt.'],
+    lineStartLeft:['Normale richting','Normal direction','Direction normale','Normale Richtung'],
+    lineStartRight:['Omgekeerde richting','Reversed direction','Direction inversée','Umgekehrte Richtung']
+  };
+  const languages=['nl','en','fr','de'];
+  function has(key){return Object.prototype.hasOwnProperty.call(rows,key);}
+  function t(key,language='nl',params={}){const value=has(key)?rows[key][Math.max(0,languages.indexOf(language))]:key;return value.replace(/\{([A-Za-z][A-Za-z0-9_]*)\}/g,(match,name)=>['string','number'].includes(typeof params?.[name])?String(params[name]):match);}
+  return Object.freeze({has,t,keys:Object.freeze(Object.keys(rows))});
+});

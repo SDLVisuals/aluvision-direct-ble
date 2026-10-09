@@ -1,3 +1,15 @@
+# Browserdemo V50 · kandidaat550 · 9 oktober 2026
+
+Deze browserdemo gebruikt de bevroren interface van kandidaat **50.0.0, build550**. Nieuw zijn de welkomst- en instelstappen, poort- en pixelkeuzes tot163, de afzonderlijke ledlineselectie, het schermvullende overzicht, compacte volgorde-instellingen, geneste warmwitkeuzes en bijgewerkte animatiegroepen en vertalingen. De taaluitwerking is gedeeltelijk: sommige oudere schermen bevatten nog Nederlandse tekst.
+
+Er zijn twintig fictieve receivers, tien RGBW en tien SPI. De demo gebruikt uitsluitend tijdelijk geheugen en begint opnieuw na herladen. PIN-, standtoegang en deelacties zijn uitgeschakeld. Er wordt geen echte wifi, receiver, firmware of verlichting aangestuurd. Richting- en herkenningsbeelden zijn schermvoorbeelden; ze bewijzen geen fysiek effect.
+
+De bestaande Android-download blijft **41.0.14, code20**. Dit is geen Android-V50-build. De browserdemo bevestigt ook geen iPhone-installatie: die heeft een eigen installatiebewijs nodig.
+
+Bronfreeze SHA-256: `e4a49677fe1cb77a54af9a07f21fceb0fb2a2b2f301beccb1dda1ad3aa9a0cfd`. Firmwarebestanden uit de appbron zijn uitgesloten van de browserpublicatie.
+
+## Historische Android- en demonotities
+
 # Android 41.0.3 · code 16 · 6 oktober 2026
 
 De actuele download is Android **41.0.3, code 16**, 17.009.808 bytes. [Downloadpagina](../android/). Nieuw: receivers toevoegen en verwijderen via de standcode, gerichte centrale opslag en herstel na een verloren bevestiging. RGBW- en SPI-firmware 41.0.3 zijn in de app opgenomen; niet als losse browser-OTA-download.

@@ -56,12 +56,21 @@
   const receivers=standId===undefined?next.receivers:next.receivers.filter(receiver=>receiver.standId===standId);
   if(standId!==undefined&&!receivers.length)fail();
   for(const receiver of receivers){
-   const rows=statuses.filter(s=>s?.receiverId===receiver.id);if(!rows.length)fail();
+   const rows=statuses.filter(s=>s?.receiverId===receiver.id).sort((a,b)=>a.port-b.port);if(!rows.length)fail();
    const values=rows.map(row=>{const key=row.receiverId+'/'+row.port;if(seen.has(key))fail();seen.add(key);return decode(receiver,row);});
    const first=values[0],expectedMask=receiver.type==='SPI'?receiver.outputs.reduce((v,o)=>v|(o.enabled?1<<(o.port-1):0),0):first.mask;
-   if(values.some(v=>v.mask!==expectedMask||v.installation!==first.installation||JSON.stringify(v.state)!==JSON.stringify(first.state))||rows.reduce((v,s)=>v|(1<<(s.port-1)),0)!==expectedMask)fail();
+   if(values.some(v=>v.mask!==expectedMask||v.installation!==first.installation||receiver.type!=='SPI'&&JSON.stringify(v.state)!==JSON.stringify(first.state))||rows.reduce((v,s)=>v|(1<<(s.port-1)),0)!==expectedMask)fail();
    const prior=installations.get(receiver.standId);if(prior&&prior!==first.installation)fail();installations.set(receiver.standId,first.installation);
    receiver.state=first.state;
+   if(receiver.type==='SPI'){
+    const ports={};
+    values.forEach((value,index)=>{
+     const delta={};
+     for(const key of Object.keys(value.state))if(!['bri','on','standAnimation','portStates'].includes(key)&&JSON.stringify(value.state[key])!==JSON.stringify(first.state[key]))delta[key]=copy(value.state[key]);
+     if(Object.keys(delta).length)ports[String(rows[index].port)]=delta;
+    });
+    if(Object.keys(ports).length)receiver.state.portStates=ports;
+   }
   }
   if(seen.size!==statuses.length)fail();return M.assertValid(next);
  }

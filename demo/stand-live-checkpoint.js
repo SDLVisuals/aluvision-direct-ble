@@ -8,8 +8,14 @@
   'use strict';
   const FIELDS=new Set(('engine animation effectId category variant r g b w brightness speed smooth power colors whiteChannels rgbEnabled whiteEnabled direction widthPixels transitionMs background backgroundOn bgBrightness fadeAmount width delayMs brandColor motionReverse spacing objectCount trailLength spread randomness bounce mirror phaseMs phaseRateMicroHz previewStartedAt standAnimation rgbwLast previewFamily backgroundBrightness backgroundRgbEnabled backgroundWhite backgroundWhiteEnabled colorCount legacySpi lineDelayMs v30Effect').split(' '));
   const NULLABLE=new Set(('effectId category v30Effect previewFamily rgbwLast standAnimation brandColor speed smooth colorCount widthPixels objectCount trailLength spacing direction lineDelayMs spread randomness fadeAmount delayMs width').split(' '));
+  const PORT_FIELDS=new Set(['portState1','portState2','portState3','portState4']);
+  for(const name of PORT_FIELDS){FIELDS.add(name);NULLABLE.add(name);}
   const copy=value=>JSON.parse(JSON.stringify(value));
-  const equal=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+  // Native durable JSON sorts object keys. Object insertion order is not a
+  // light change; array order, scalar values and explicit nulls still are.
+  const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'
+    ?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value;
+  const equal=(a,b)=>JSON.stringify(canonical(a))===JSON.stringify(canonical(b));
   const key=operation=>operation.id+'\u0000'+operation.setting;
   const error=code=>Object.assign(Error('Je laatste lichtkeuze is nog niet bevestigd opgeslagen.'),{code});
   function state(value){
@@ -17,6 +23,19 @@
     if(result.brightness===undefined&&result.bri!==undefined)result.brightness=result.bri;
     if(result.power===undefined&&result.on!==undefined)result.power=result.on;
     delete result.bri;delete result.on;
+    if(Object.hasOwn(result,'portStates')){
+      const ports=result.portStates;delete result.portStates;
+      if(!ports||typeof ports!=='object'||Array.isArray(ports)||Object.keys(ports).length>4)throw error('STAND_PORT_STATE_INVALID');
+      for(const [port,raw]of Object.entries(ports)){
+        if(!/^[1-4]$/.test(port)||!raw||typeof raw!=='object'||Array.isArray(raw))throw error('STAND_PORT_STATE_INVALID');
+        const delta=copy(raw);
+        if(delta.brightness===undefined&&delta.bri!==undefined)delta.brightness=delta.bri;
+        if(delta.power===undefined&&delta.on!==undefined)delta.power=delta.on;
+        delete delta.bri;delete delta.on;
+        if(!Object.keys(delta).length||Object.keys(delta).length>64||Object.keys(delta).some(key=>!FIELDS.has(key)||PORT_FIELDS.has(key)||key==='standAnimation'||delta[key]===null&&!NULLABLE.has(key)))throw error('STAND_PORT_STATE_INVALID');
+        result['portState'+port]=delta;
+      }
+    }
     return result;
   }
   function difference(before,after,{standId,receiverId}){
@@ -107,7 +126,11 @@
       const model=copy(next.view.model);
       for(const operation of unconfirmed.operations){
         const receiver=model.receivers.find(x=>x.id===operation.id&&x.standId===unconfirmed.standId);if(!receiver)continue;
-        if(operation.value===null)delete receiver.state[operation.setting];else receiver.state[operation.setting]=copy(operation.value);
+        if(PORT_FIELDS.has(operation.setting)){
+          const port=operation.setting.slice(-1),ports=receiver.state.portStates||{};
+          if(operation.value===null)delete ports[port];else ports[port]=copy(operation.value);
+          if(Object.keys(ports).length)receiver.state.portStates=ports;else delete receiver.state.portStates;
+        }else if(operation.value===null)delete receiver.state[operation.setting];else receiver.state[operation.setting]=copy(operation.value);
         if(operation.setting==='brightness')receiver.state.bri=operation.value;
         if(operation.setting==='power')receiver.state.on=operation.value;
       }

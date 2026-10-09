@@ -13,10 +13,10 @@
   const V30_EFFECTS=['rgb-jumping','seven-jumping','rgb-gradient','seven-gradient','tunnel-travel','tunnel-bounce','tunnel-center','tunnel-outside','tunnel-cascade','tunnel-handoff','tunnel-pulse','tunnel-echo','tunnel-pixel-curtain','tunnel-pixel-cross','brand-white-breathe','brand-warm-white','brand-accent','brand-sweep','brand-focus','brand-soft-gradient'].map(id=>'v30-'+id);
   const SPI_TIMED_VARIANTS=new Set([...Array(13)].map((_,i)=>90+i).concat([104,105,106,107,108,109,110,111,128]));
   const SHARED_TUNNEL_VARIANTS=new Set([5,6,7,8,9,10,11,12,13,14,15,16,21,22,23,24,26,27,28,29,30,31]);
-  // Interpolate static wheel/dimmer targets on the receiver, without delaying
+  // Use a 120 ms receiver ramp for static wheel/dimmer targets, without delaying
   // dispatch or storing a history of pointer movements. Keep explicit off and
   // animation changes immediate; animation smoothness is its own setting.
-  const STATIC_TRANSITION_MS=240;
+  const STATIC_TRANSITION_MS=120;
   const clone=value=>JSON.parse(JSON.stringify(value));
   function spiPhaseLineDelay(state,variant,lineCount,parallel) {
     if(!parallel||lineCount<=1)return 0;
@@ -30,9 +30,20 @@
   }
   // Full lighting intent. Geometry is deliberately not accepted from this
   // object; the native owner resolves it against its persisted receiver list.
-  function requestFor(receiver,{zone,receivers,time}={}) {
+  function requestFor(receiver,{zone,receivers,time,outputPorts}={}) {
     if(!receiver||!['RGBW','SPI'].includes(receiver.type))return null;
     const state=receiver.state||{},spi=receiver.type==='SPI';
+    const portScope=outputPorts!==undefined?outputPorts:spi&&zone?.layout!=='continuous'&&state.portStates&&Object.keys(state.portStates).length?receiver.outputs.filter(output=>output.enabled).map(output=>output.port):null;
+    if(portScope!==null){
+      if(!spi||zone?.layout==='continuous'||!Array.isArray(portScope)||!portScope.length||portScope.length>4||
+         Array.from(portScope).some((port,index)=>!Number.isInteger(port)||port<1||port>4||index>0&&port<=portScope[index-1]||!receiver.outputs.some(output=>output.port===port&&output.enabled)))return null;
+      const children=portScope.map(port=>{
+        const intent=requestFor({...receiver,state:model.lightStateFor(receiver,port)},{zone,receivers,time});
+        if(!intent||intent.kind!=='SPI_SCENE'||intent.scene?.standAnimation)return null;
+        const {standId,receiverId,...child}=intent;return {port,...child};
+      });
+      return children.some(child=>!child)?null:{standId:receiver.standId,receiverId:receiver.id,kind:'SPI_PORTS',portScenes:children};
+    }
     let extension=state.engine==='V30'||state.v30Effect;
     const reference=typeof module==='object'&&module.exports?require('./reference-animations.js'):globalThis.LightningReferenceAnimations;
     let extensionId=extension?(reference.wireId(state.v30Effect)||V30_EFFECTS.indexOf(state.v30Effect)+1):0;
@@ -322,6 +333,7 @@
     }
     function considerPreparingSupersession(){
       const held=active;
+      if(held?.preludeOpen)return;
       if(held?.stream){considerStaticGestureUpdate(held);return;}
       if(!held||held.epoch!==epoch||held.supersessionCheck||held.supersessionRequested||
          typeof held.operation?.supersedePreparing!=='function')return;
@@ -481,6 +493,32 @@
           let streamComplete=false;
           try{
             if(readinessError)throw Object.assign(Error(readinessError),{code:readinessError});
+            // A scoped edit cannot erase a never-submitted full-board intent.
+            // Finish that bounded full-board prelude once, then send the latest
+            // physical-port intents. It is not a replay after an unknown ACK.
+            let preludes=[...items.values()].filter(item=>item.prelude).map(item=>item.prelude);
+            while(preludes.length){
+              held.preludeOpen=true;
+              active.operation=sendBatch&&preludes.length>1?sendBatch(preludes):send(preludes[0]);
+              const reply=await active.operation;
+              if(epoch!==runEpoch||active!==held)throw Error('LIVE_QUEUE_CLEARED');
+              const results=preludes.length>1?reply?.status==='batch-complete'&&reply.results:[reply];
+              const expected=new Set(preludes.map(request=>request.receiverId)),received=new Set();
+              if(!Array.isArray(results)||results.length!==preludes.length||results.some(result=>{
+                if(result?.status!=='applied-in-firmware'||!expected.has(result.receiverId)||received.has(result.receiverId)||!Number.isSafeInteger(result.generation)||result.generation<1)return true;
+                received.add(result.receiverId);return false;
+              }))throw Error('LIVE_UNCONFIRMED');
+              held.preludeOpen=false;
+              for(const [id,item]of items){
+                delete item.prelude;
+                const latest=queue.get(id);
+                if(latest&&desired.get(id)?.signature===latest.signature&&latest.request.standId===item.request.standId){items.set(id,latest);queue.delete(id);}
+              }
+              // A genuinely newer full-board edit may have arrived while the
+              // previous prelude was in flight. Keep that newest base before
+              // its later scoped edit; never replay an already submitted base.
+              preludes=[...items.values()].filter(item=>item.prelude).map(item=>item.prelude);
+            }
             const initial=[...items.values()].map(item=>item.request);
             const eligible=sendGesture&&streamEligible(initial);
             observeRoute(!sendGesture?'QUEUE_NO_PROVIDER':eligible?'QUEUE_ELIGIBLE':'QUEUE_INELIGIBLE',initial.length);
@@ -587,11 +625,21 @@
       }finally{active=null;draining=false;schedule();settleIdle();}
     }
     function request(input){
-      const copied=clone(input),id=copied.receiverId,sig=signature(copied);
+      let copied=clone(input);const id=copied.receiverId;
+      const pending=queue.get(id),previous=pending||(active?.preludeOpen?active.items.get(id):null);
+      let prelude=pending?.prelude;
+      if(copied.kind==='SPI_PORTS'&&previous?.request.standId===copied.standId){
+        if(previous.request.kind==='SPI_PORTS'){
+          const ports=new Map(previous.request.portScenes.map(child=>[child.port,clone(child)]));
+          copied.portScenes.forEach(child=>ports.set(child.port,child));
+          copied={...copied,portScenes:[...ports.values()].sort((a,b)=>a.port-b.port)};
+        }else if(['SPI_SCENE','SPI_BRIGHTNESS'].includes(previous.request.kind)&&(pending||!active?.preludeOpen))prelude=clone(previous.request);
+      }else if(copied.kind!=='SPI_PORTS')prelude=undefined;
+      const sig=signature(copied);
       const intentVersion=++version;desired.set(id,{signature:sig,version:intentVersion});
       if(active?.epoch===epoch&&active.items.get(id)?.signature===sig&&!active.supersessionRequested&&!active.preparingTouched&&!active.streamTouched){queue.delete(id);emit(id,'pending');return;}
       if(gestureHeld&&failedGesture===gestureEpoch){queue.delete(id);emit(id,'failed','LIVE_UNCONFIRMED');return;}
-      queue.set(id,{request:copied,signature:sig,version:intentVersion,gesture:gestureEpoch});emit(id,'pending');
+      queue.set(id,{request:copied,signature:sig,version:intentVersion,gesture:gestureEpoch,...(prelude?{prelude}:{})});emit(id,'pending');
       // Only an explicitly registered automatic archive may yield this lease.
       // The callback cannot release it; actual native cleanup owns that proof.
       if(idleLease?.epoch===epoch&&idleLease.standId===copied.standId)idleLease.onLiveIntent?.();
@@ -604,12 +652,15 @@
     function preview(id){
       desired.set(id,{signature:null,version:++version});queue.delete(id);emit(id,'preview');
     }
+    function reject(id,code){
+      desired.set(id,{signature:null,version:++version});queue.delete(id);emit(id,'failed',code);
+    }
     function clear(){
       active?.operation?.stopStaticGesture?.();gestureHeld=false;gestureEpoch++;failedGesture=null;
       epoch++;if(timer!==null)clearTimer(timer);timer=null;queue.clear();desired.clear();states.clear();
       for(const waiter of [...idleWaiters])finishWaiter(waiter,idleError('LIVE_QUEUE_CLEARED'));
     }
-    return Object.freeze({request,preview,clear,beginGesture,endGesture,cancelGesture,whenIdle,acquireIdle,state:id=>states.get(id)||{kind:'idle',code:''}});
+    return Object.freeze({request,preview,reject,clear,beginGesture,endGesture,cancelGesture,whenIdle,acquireIdle,state:id=>states.get(id)||{kind:'idle',code:''}});
   }
   return Object.freeze({create,requestFor,joinZonePlayback});
 });

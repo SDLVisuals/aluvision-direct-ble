@@ -143,7 +143,8 @@
     if (!integer(context.receiverCount, 1, 1000) || !integer(count, 1, 1000) || count < minimum) return { compatible: false, reason: 'Voeg minstens ' + minimum + (portLines ? ' ledlines' : ' receivers') + ' toe aan deze zone.', effectId: effect.id };
     const currentLayouts = effect.supportedLayouts || effect.layouts || LAYOUTS;
     if (!saved.constraints.layouts.includes(context.layout) || !currentLayouts.includes(context.layout) || (context.type === 'RGBW' && context.layout === 'continuous')) return { compatible: false, reason: 'Deze animatie past niet bij de gekozen opstelling.', effectId: effect.id };
-    if (!context.selection || !['all', 'receiver', 'receivers'].includes(context.selection.kind)) return { compatible: false, reason: 'Kies Alle ledlines of één of meer ledlines.', effectId: effect.id };
+    if (!context.selection || !['all', 'receiver', 'receivers', 'line', 'lines'].includes(context.selection.kind)) return { compatible: false, reason: 'Kies Alle ledlines of één of meer ledlines.', effectId: effect.id };
+    if (['line','lines'].includes(context.selection.kind) && (context.type !== 'SPI' || context.layout === 'continuous')) return { compatible: false, reason: 'Een doorlopende ledline bedien je samen.', effectId: effect.id };
     if ((saved.constraints.requireTogether || effect.requireTogether || effect.category === 'tunnel') && context.selection.kind !== 'all') return { compatible: false, reason: 'Kies Samen om dit effect over de opstelling te gebruiken.', effectId: effect.id };
     return { compatible: true, reason: '', effectId: effect.id };
   }

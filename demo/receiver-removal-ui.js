@@ -8,6 +8,29 @@
   const validPin=value=>typeof value==='string'&&/^[0-9]{8,12}$/.test(value);
   const pinRequired=()=>root.AluvisionSecurityMode?.pinRequired!==false;
   const statuses=new Set(['checking','ready','blocked','in-progress','pin-required','verification-required','removed']);
+  function removalErrorMessage(action,failure){
+    const code=failure?.code;
+    // Preserve the existing bounded internal UNCONFIRMED classification only.
+    // No raw receiver exception/message is displayed or newly classified.
+    const messageKey=action==='check'&&code==='VIEW_NOT_LOADED'?'removalViewNotLoaded':action==='check'&&code===undefined&&failure?.message==='UNCONFIRMED'?'removalDataUnconfirmed':action==='check'&&['STAND_NOT_CONNECTED','STAND_SESSION_EXPIRED','STAND_CONNECTION_CANCELLED','STAND_CANCELLED'].includes(code)?'removalStandRequired':code==='REMOVAL_PIN_INVALID'?'removalPinInvalid':code==='REMOVAL_RATE_LIMITED'?'removalRateLimited':code==='REMOVAL_PLAN_STALE'?'removalPlanStale':code==='REMOVAL_SETUP_PENDING'?'removalSetupPending':code==='REMOVAL_OFFLINE'?'removalOffline':code==='REMOVAL_MEMBERSHIP_UNVERIFIED'?'removalMembershipUnverified':code==='REMOVAL_BLOCKED'?'removalBlocked':code==='REMOVAL_PIN_REQUIRED'?'removalPinRequired':action==='start'?'removalStartUnconfirmed':action==='check'?'removalCheckFailed':'removalResumeUnconfirmed';
+    const fallback={
+      removalViewNotLoaded:'Je standgegevens zijn nog niet geladen. Open je stand en controleer daarna opnieuw.',
+      removalDataUnconfirmed:'De receivergegevens konden niet veilig worden bevestigd. Open je stand opnieuw en controleer daarna opnieuw.',
+      removalStandRequired:'Open eerst je stand om de receivers te controleren. Controleer daarna opnieuw voordat je verwijdert.',
+      removalPinInvalid:'Deze PIN klopt niet. Er is geen nieuwe reset gestart.',
+      removalRateLimited:'Te veel PIN-pogingen. Wacht even en probeer opnieuw.',
+      removalPlanStale:'De lijst met receivers is veranderd. Controleer opnieuw voordat je wist.',
+      removalSetupPending:'Rond de open receiverinstelling eerst af. Er is niets gewist.',
+      removalOffline:'Een receiver is niet bereikbaar. Zet alle receivers aan en controleer dezelfde verwijdering opnieuw.',
+      removalMembershipUnverified:'Een gekoppelde receiver kon nog niet veilig worden herkend. Er is geen nieuwe reset gestart.',
+      removalBlocked:'Wissen kan nog niet veilig worden gestart. Laat alle receivers aan en wacht tot eventuele updates klaar zijn.',
+      removalPinRequired:'Voer je installatie-PIN opnieuw in om verder te gaan.',
+      removalStartUnconfirmed:'Het wissen is nog niet bevestigd. Controleer eerst de bestaande verwijderopdracht.',
+      removalCheckFailed:'De controle is niet gelukt. Controleer de verbinding en probeer opnieuw.',
+      removalResumeUnconfirmed:'Verwijderen is nog niet bevestigd. Controleer de verbinding; onbevestigde receivers blijven behouden.'
+    };
+    return root.LightningV50ErrorTexts?.t(messageKey,root.document?.documentElement?.lang||'nl')||fallback[messageKey];
+  }
   function create({services={},getModel,onRemoved=()=>{},standCodeAccess=()=>false}={}){
     let dialog,receiver,result,baseline,targets=[],busy=false,error='',generation=0,returnFocus,timer=null,autoContinue=false;
     const installation=()=>receiver?.role==='main',scope=()=>installation()?'installation':'receiver';
@@ -149,7 +172,7 @@
       }catch(failure){
         delete request.pin;if(token!==generation)return;autoContinue=false;
         const code=failure?.code;
-        error=action==='check'&&['STAND_NOT_CONNECTED','STAND_SESSION_EXPIRED','STAND_CONNECTION_CANCELLED','STAND_CANCELLED'].includes(code)?'Open eerst je stand om de receivers te controleren. Controleer daarna opnieuw voordat je verwijdert.':code==='REMOVAL_PIN_INVALID'?'Deze PIN klopt niet. Er is geen nieuwe reset gestart.':code==='REMOVAL_RATE_LIMITED'?'Te veel PIN-pogingen. Wacht even en probeer opnieuw.':code==='REMOVAL_PLAN_STALE'?'De lijst met receivers is veranderd. Controleer opnieuw voordat je wist.':code==='REMOVAL_SETUP_PENDING'?'Rond de open receiverinstelling eerst af. Er is niets gewist.':code==='REMOVAL_OFFLINE'?'Een receiver is niet bereikbaar. Zet alle receivers aan en controleer dezelfde verwijdering opnieuw.':code==='REMOVAL_MEMBERSHIP_UNVERIFIED'?'Een gekoppelde receiver kon nog niet veilig worden herkend. Er is geen nieuwe reset gestart.':code==='REMOVAL_BLOCKED'?'Wissen kan nog niet veilig worden gestart. Laat alle receivers aan en wacht tot eventuele updates klaar zijn.':code==='REMOVAL_PIN_REQUIRED'?'Voer je installatie-PIN opnieuw in om verder te gaan.':action==='start'?'Het wissen is nog niet bevestigd. Controleer eerst de bestaande verwijderopdracht.':action==='check'?'De controle is niet gelukt. Controleer de verbinding en probeer opnieuw.':'Verwijderen is nog niet bevestigd. Controleer de verbinding; onbevestigde receivers blijven behouden.';
+        error=removalErrorMessage(action,failure);
         // An uncertain start must not leave a second destructive start button.
         if(action==='start'&&!['REMOVAL_PIN_INVALID','REMOVAL_RATE_LIMITED'].includes(code))result=null;
         if(action==='check')result=null;

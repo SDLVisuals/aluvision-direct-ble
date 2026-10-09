@@ -25,7 +25,8 @@
   let staticPreparingAvailable=null;
   let staticGestureAvailable=null;
   let standSessionStaticGestureAvailable=null;
-  let simpleStandAvailable=null,standMigrationReady=false,standWifiOpenAvailable=false,standSharingAvailable=false,standScanAvailable=false,standLinkAvailable=false,standShareSheetAvailable=false,centralStamp=null;
+  let spiPortScenesAvailable=null;
+  let simpleStandAvailable=null,standMigrationReady=false,standMigrationBlockedReason='NONE',firstStandAccessDiagnosticsAvailable=false,standWifiOpenAvailable=false,standSharingAvailable=false,standScanAvailable=false,standLinkAvailable=false,standShareSheetAvailable=false,centralStamp=null;
   let standSharingEpoch=0,centralProjectionModel=null,managementPreparedStand=null;
   let centralConnectionAttempt=0,centralConnectionAttemptExhausted=false;
   root.document?.addEventListener?.('visibilitychange',()=>{if(root.document.hidden)standSharingEpoch++;});
@@ -38,6 +39,9 @@
   actions.add('setAppearance');
   actions.add('selectionFeedback');
   ['standSessionStatus','standSessionShare','standInspect','standOpenWifi','standConnect','standMigrate','standResume','standRefresh','standMutation','standDisconnect','standForget','standCodeChange','shareStandWifi'].forEach(action=>actions.add(action));
+  actions.add('standFirstAccessPreflight');
+  actions.add('standFirstAccessDiagnosticFailure');
+  const firstAccessDiagnosticCodes=new Set(['OTHER','FIRST_ACCESS_IDENTITY','FIRST_ACCESS_STORAGE','FIRST_ACCESS_UNCONFIRMED','ACTION_UNSUPPORTED','NATIVE_UNAVAILABLE','NATIVE_DOCUMENT_UNAVAILABLE','NATIVE_BUSY','NATIVE_TIMEOUT','CANCELLED','TIMEOUT','LOCAL_NETWORK_DENIED','STAND_CONNECTION_CLOSED','STAND_CONNECTION_BUSY','STAND_CONNECTION_UNAVAILABLE','STAND_CONNECTION_INVALID','STAND_CONNECTION_CANCELLED','STAND_DATA_INVALID','STAND_DATA_UNCONFIRMED','STAND_INVALID_REQUEST','STAND_STORAGE_LIMIT','STAND_MIGRATION_INVALID','STAND_PREFLIGHT_INVALID','STAND_PREFLIGHT_UNCONFIRMED','STAND_PREFLIGHT_NOT_REQUIRED','STAND_MIGRATION_NOT_READY','STAND_RECEIVER_SAVED_ELSEWHERE','STAND_CURRENT_ACCESS_CONFLICT','STAND_UNAVAILABLE','STAND_WIFI_UNREACHABLE','STAND_WRONG_WIFI','STAND_BUSY','STAND_CANCELLED','STAND_IDENTITY_MISMATCH','STAND_AUTH_FAILED','STAND_UNCONFIRMED','STAND_CREDENTIAL_UNCONFIRMED']);
   ['scanStandShare','takeStandShareLink','shareStandLink'].forEach(action=>actions.add(action));
   let selectionHaptics=false,selectionFeedbackPending=false;
   actions.add('supersedeLivePreparing');
@@ -110,7 +114,7 @@
       const timeout=['exportBackup','chooseBackup','recoverInstallation'].includes(action)?300000:['scanStandShare','shareStandLink','shareStandWifi','standOpenWifi','standConnect','standMigrate','standResume','standRefresh','standMutation','standCodeChange','prepareReceiverManagement'].includes(action)||action==='publishModel'&&centralStamp!==null?90000:action==='previewPixels'?45000:action==='syncInstallationContext'?180000:['otaPlan','otaMainRecoveryPlan'].includes(action)?120000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
         ['secure','reconcileSecurity'].includes(action)&&payload.configuration?.role==='node'?120000:
         action==='identifyLayout'?35000:['select','secure','reconcileSecurity','finalize','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain'].includes(action)?45000:12000;
-      const deadline=action==='applyStaticGesture'?45000:timeout;
+      const deadline=['applyStaticGesture','standFirstAccessPreflight'].includes(action)?45000:timeout;
       const timer=root.setTimeout(()=>{cancelNative();if(!automatic)receive({id,ok:false,code:'NATIVE_TIMEOUT'});},deadline);
       pending.set(id,{resolve,reject,timer,automatic,removeAbort:()=>signal?.removeEventListener('abort',abort)});
       posted?.(id);
@@ -530,6 +534,26 @@
     if(!model||!Array.isArray(model.receivers))throw fail('VIEW_INVALID');
     return canonical(root.LightningModel.membershipStructure(model));
   }
+  function matchesPublicationView(model,expected,previous,configuration,receiptRef){
+    if(canonical(model)===canonical(expected))return true;
+    // A finalized native new-MAIN context adds its public physical MAC. This
+    // is metadata from the authenticated native publication/readback, never
+    // discovery, a supplied browser MAC or authority inferred from the RID.
+    const c=configuration;
+    if(c?.role!=='main'||c.mainReceiverId!==null||typeof receiptRef!=='string'||!/^receipt:[A-Za-z0-9._-]{8,128}$/.test(receiptRef)||
+       !Array.isArray(model?.receivers)||!Array.isArray(expected?.receivers)||!Array.isArray(previous?.receivers))return false;
+    const next=JSON.parse(JSON.stringify(model)),rows=next.receivers,
+      incoming=rows.filter(r=>r.id===c.receiverId),wanted=expected.receivers.filter(r=>r.id===c.receiverId);
+    if(incoming.length!==1||wanted.length!==1||previous.receivers.some(r=>r.id===c.receiverId||r.rid===c.rid||r.deviceFingerprint===c.deviceFingerprint))return false;
+    const receiver=incoming[0],old=wanted[0];
+    if(Object.hasOwn(old,'physicalId')||old.role!=='main'||old.lifecycle!=='added'||old.id!==c.receiverId||old.rid!==c.rid||
+       old.deviceFingerprint!==c.deviceFingerprint||old.type!==c.type||old.standId!==c.standId||old.zoneId!==c.zoneId||
+       old.onboardingTransactionId!==c.transactionId||canonical(old.outputs)!==canonical(c.outputs)||
+       typeof receiver.physicalId!=='string'||!/^[0-9A-F]{12}$/.test(receiver.physicalId)||/^0+$/.test(receiver.physicalId)||
+       rows.some(r=>r!==receiver&&r.physicalId===receiver.physicalId))return false;
+    delete receiver.physicalId;
+    return canonical(next)===canonical(expected);
+  }
   function writeView(action,payload){
     // Capture publication intent before entering the serial write queue. The
     // UI may continue painting, but cannot change the graph being verified.
@@ -544,10 +568,16 @@
       // acceptView always retains the exact neutral native result. Only this
       // caller receives its unchanged local light overlay, and only after the
       // complete projected graph and finished draft have been acknowledged.
-      const present=view=>publication&&!central?{...view,model:JSON.parse(localModel)}:view;
+      const matches=view=>central?canonical(view.model)===requested:matchesPublicationView(view.model,sent.model,JSON.parse(previousModel),payload.configuration,payload.receiptRef);
+      const present=view=>{
+        if(!publication||central)return view;
+        const visible=JSON.parse(localModel),added=view.model.receivers.find(r=>r.id===payload.configuration.receiverId),receiver=visible.receivers.find(r=>r.id===payload.configuration.receiverId);
+        if(receiver&&added&&Object.hasOwn(added,'physicalId'))receiver.physicalId=added.physicalId;
+        return {...view,model:visible};
+      };
       try{
         const view=await call(action,{...sent,expectedRevision:viewRevision});
-        if(publication&&(view?.draft!==null||canonical(view?.model)!==requested))throw fail('VIEW_INVALID');
+        if(publication&&(view?.draft!==null||!matches(view)))throw fail('VIEW_INVALID');
         if(central){
           if(epoch!==standSharingEpoch||!contextVisible()||!centralStamp||centralStamp.standId!==central.standId||centralStamp.bootId!==central.bootId)throw fail('STAND_CONNECTION_CANCELLED');
           return acceptManagementView(view,central,{kind:'receiver-added',receiverId:payload.configuration.receiverId,transactionId:payload.configuration.transactionId});
@@ -576,7 +606,7 @@
         try{
           const view=acceptView(await call('loadView'));
           if(action==='saveDraft'&&viewModelKey===previousModel&&canonical(view.draft)===requested)return view;
-          if(publication&&view.draft===null&&viewModelKey===requested)return present(view);
+          if(publication&&view.draft===null&&matches(view))return present(view);
         }catch(_){}
         throw error;
       }
@@ -804,7 +834,20 @@
       }
     });return trackWrite(next);
   }
-  function livePayload({standId,receiverId,kind,brightness,transitionMs,channels,scene}={}){
+  function livePayload(input={}){
+    if(input?.kind==='SPI_PORTS'){
+      if(!input||Object.getPrototypeOf(input)!==Object.prototype||Object.keys(input).sort().join(',')!=='kind,portScenes,receiverId,standId'||
+         !Array.isArray(input.portScenes)||!input.portScenes.length||input.portScenes.length>4||Array.from(input.portScenes).some((child,index)=>
+           !child||Object.getPrototypeOf(child)!==Object.prototype||!Number.isInteger(child.port)||child.port<1||child.port>4||index>0&&child.port<=input.portScenes[index-1].port||
+           !['SPI_SCENE','SPI_BRIGHTNESS'].includes(child.kind)||Object.keys(child).sort().join(',')!==(child.kind==='SPI_SCENE'?'brightness,channels,kind,port,scene,transitionMs':'brightness,channels,kind,port,transitionMs')))throw fail('LIVE_INVALID');
+      const portScenes=input.portScenes.map(child=>{
+        const {port,...settings}=child,request=livePayload({standId:input.standId,receiverId:input.receiverId,...settings});
+        if(request.scene?.standAnimation)throw fail('LIVE_INVALID');
+        const {standId,receiverId,...intent}=request;return {port,...intent};
+      });
+      return {standId:input.standId,receiverId:input.receiverId,kind:'SPI_PORTS',portScenes};
+    }
+    const {standId,receiverId,kind,brightness,transitionMs,channels,scene}=input;
     const validID=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(value);
     const byte=value=>Number.isInteger(value)&&value>=0&&value<=255;
     const full=['RGBW_SCENE','SPI_SCENE'].includes(kind);
@@ -871,6 +914,46 @@
       const result=await call('standInspect',request);
       return root.LightningStandConnection.inspectionResult(result,request.ssid);
     },
+    get firstStandAccessDiagnosticsAvailable(){return firstStandAccessDiagnosticsAvailable;},
+    async standFirstAccessDiagnosticFailure(input){
+      await requireSimpleStand();
+      if(!firstStandAccessDiagnosticsAvailable)throw fail('ACTION_UNSUPPORTED');
+      if(!layoutKeys(input,['code']))throw fail('STAND_PREFLIGHT_INVALID');
+      // Only closed codes cross the explicit DEBUG recorder boundary. Do not
+      // forward messages, stacks, arbitrary code strings or a model snapshot.
+      const code=typeof input.code==='string'&&firstAccessDiagnosticCodes.has(input.code)?input.code:'OTHER';
+      const result=await call('standFirstAccessDiagnosticFailure',{code});
+      if(!layoutKeys(result,['status'])||result.status!=='diagnostic-recorded')throw fail('STAND_PREFLIGHT_UNCONFIRMED');
+      return {status:'diagnostic-recorded'};
+    },
+    async standFirstAccessPreflight(input){
+      await requireSimpleStand();
+      // Explicit native DEBUG launch only. This read-only probe cannot accept
+      // credentials, select a session or create a receiver configuration.
+      if(!firstStandAccessDiagnosticsAvailable)throw fail('ACTION_UNSUPPORTED');
+      if(!contextVisible()||!layoutKeys(input,['ssid','expectedStandId','payload'])||
+         !layoutKeys(input.payload,['operations'])||!Array.isArray(input.payload.operations)||
+         input.payload.operations.length<1||input.payload.operations.length>128)throw fail('STAND_PREFLIGHT_INVALID');
+      const identity=root.LightningStandConnection.inspectionInput({ssid:input.ssid,expectedStandId:input.expectedStandId});
+      if(typeof identity.ssid!=='string'||typeof identity.expectedStandId!=='string')throw fail('STAND_PREFLIGHT_INVALID');
+      function publicOnly(value,depth=0){
+        if(depth>20)throw fail('STAND_PREFLIGHT_INVALID');
+        if(value&&typeof value==='object'){
+          if(!Array.isArray(value)&&Object.getPrototypeOf(value)!==Object.prototype)throw fail('STAND_PREFLIGHT_INVALID');
+          for(const key of Object.keys(value)){
+            if(['__proto__','prototype','constructor','standCode','password','pin','privateKey','ownerKey','sessionKey'].includes(key))throw fail('STAND_PREFLIGHT_INVALID');
+            publicOnly(value[key],depth+1);
+          }
+        }else if(typeof value==='number'&&!Number.isFinite(value))throw fail('STAND_PREFLIGHT_INVALID');
+      }
+      publicOnly(input.payload);
+      if(new TextEncoder().encode(root.LightningStandConnection.encodeOperations(input.payload.operations)).length>root.LightningStandConnection.MAX_BYTES)throw fail('STAND_STORAGE_LIMIT');
+      const result=await call('standFirstAccessPreflight',{...identity,payload:JSON.parse(JSON.stringify(input.payload))});
+      if(!layoutKeys(result,['status','localGraphValidated','ownerStatusValidated','ready','configRevision','configBytes'])||
+         result.status!=='first-access-preflight-complete'||result.localGraphValidated!==true||result.ownerStatusValidated!==true||typeof result.ready!=='boolean'||
+         !Number.isSafeInteger(result.configRevision)||result.configRevision<0||!Number.isSafeInteger(result.configBytes)||result.configBytes<0||result.configBytes>root.LightningStandConnection.MAX_BYTES)throw fail('STAND_PREFLIGHT_UNCONFIRMED');
+      return {...result};
+    },
     async standCodeChange(input){
       await requireSimpleStand();
       const request=root.LightningStandConnection.codeChangeInput(input);
@@ -934,7 +1017,7 @@
       if(!layoutKeys(result,['status'])||!['shared','cancelled'].includes(result.status))throw fail('STAND_SHARE_UNCONFIRMED');
       return {status:result.status};
     },
-    async standMigrate(input){await requireSimpleStand();if(!standMigrationReady)throw fail('STAND_MIGRATION_NOT_READY');return connectCentral('standMigrate',input);},
+    async standMigrate(input){await requireSimpleStand();if(!standMigrationReady)throw fail(standMigrationBlockedReason==='CURRENT_RECEIVER_OTHER_STAND'?'STAND_RECEIVER_SAVED_ELSEWHERE':standMigrationBlockedReason==='CURRENT_STAND_CREDENTIAL_CONFLICT'?'STAND_CURRENT_ACCESS_CONFLICT':'STAND_MIGRATION_NOT_READY');return connectCentral('standMigrate',input);},
     async standResume(input={}){return connectCentral('standResume',input);},
     async standRefresh(input){
       input=JSON.parse(JSON.stringify(input));
@@ -1141,6 +1224,9 @@
     applyStaticGesture({requests,held=false}={}){
       let requestId=null,settled=false,closed=false,inFlight=false,endRequested=!held,postedHeld=false,sequence=1,payload,stagedSequence=1,expectedPorts,geometry,centralBinding=null;
       const ledger=new Map(),controller=new AbortController(),copy=value=>JSON.parse(JSON.stringify(value));
+      let openingTimer=null,resolveOpening;
+      const openingReady=new Promise(resolve=>{resolveOpening=resolve;});
+      const finishOpening=()=>{if(openingTimer!==null)root.clearTimeout(openingTimer);openingTimer=null;resolveOpening();};
       const shape=request=>{
         const scene=request?.scene;
         if(!['RGBW_SCENE','SPI_SCENE'].includes(request?.kind)||request.brightness<1||request.brightness>100||
@@ -1166,8 +1252,9 @@
       };
       const end=()=>{
         endRequested=true;
-        if(settled||closed||!requestId||!postedHeld)return Promise.resolve({status:'ended',submitted:false});
+        if(settled||closed)return Promise.resolve({status:'ended',submitted:false});
         if(inFlight)return Promise.resolve({status:'deferred',submitted:false});
+        if(!requestId||!postedHeld)return Promise.resolve({status:'ended',submitted:false});
         postedHeld=false;
         return call('endStaticGesture',{requestId,standId:payload[0].standId,receiverIds:payload.map(item=>item.receiverId)}).then(answer=>{
           if(!answer||Object.keys(answer).length!==1||answer.status!=='static-gesture-ended')throw fail('LIVE_UNCONFIRMED');
@@ -1198,10 +1285,10 @@
         }else if(staticGestureAvailable!==true){observeStaticRoute('RECHECK_CAP_OFF',payload.length);return {status:'static-gesture-unavailable-before-open'};}
         else if(!legacyContextAllowed()){observeStaticRoute('RECHECK_CONTEXT',payload.length);return {status:'static-gesture-unavailable-before-open'};}
         ({ports:expectedPorts,geometry}=selection());
-        ledger.set(1,copy(payload));postedHeld=!endRequested;
+        ledger.set(1,copy(payload));postedHeld=!endRequested||inFlight;
         try{
           observeStaticRoute('NATIVE_ENTRY',payload.length);
-          const answer=await call('applyStaticGesture',{requests:payload,held:postedHeld},controller.signal,undefined,id=>{requestId=id;});
+          const answer=await call('applyStaticGesture',{requests:payload,held:postedHeld},controller.signal,undefined,id=>{requestId=id;Promise.resolve().then(finishOpening);});
           if(answer?.status==='static-gesture-unavailable-before-open'&&Object.keys(answer).length===1){observeStaticRoute('NATIVE_RETURNED_UNAVAILABLE',payload.length);return answer;}
           if(!answer||Object.keys(answer).length!==(centralBinding?8:5)||answer.status!=='static-gesture-complete'||
              !Number.isInteger(answer.sequence)||!ledger.has(answer.sequence)||answer.sequence<stagedSequence||
@@ -1214,27 +1301,38 @@
              typeof answer.witness!=='string'||!/^([A-F0-9]{64})$/.test(answer.witness))throw fail('LIVE_UNCONFIRMED');
           return {...answer,requests:copy(ledger.get(answer.sequence))};
         }finally{settled=true;requestId=null;}
-      })();
+      })().finally(()=>{settled=true;requestId=null;finishOpening();});
       Object.defineProperty(operation,'updateStaticGesture',{value:replacement=>{
-        if(settled||closed||inFlight||endRequested||!requestId||sequence>=65535||!Array.isArray(replacement)||replacement.length!==payload?.length)
+        if(settled||closed||inFlight||endRequested||sequence>=65535||!Array.isArray(replacement)||replacement.length!==payload?.length)
           return Promise.resolve({status:'unavailable',submitted:false});
         let normalized;try{normalized=replacement.map(livePayload);}catch(_){return Promise.resolve({status:'unavailable',submitted:false});}
         if(!uniform(normalized)||normalized.some((item,index)=>shape(item)!==shape(payload[index])))return Promise.resolve({status:'unavailable',submitted:false});
-        const submitted=++sequence;inFlight=true;ledger.set(submitted,copy(normalized));
-        return call('updateStaticGesture',{requestId,sequence:submitted,requests:normalized}).then(answer=>{
-          if(!answer||Object.keys(answer).length!==2||answer.sequence!==submitted||!['static-gesture-staged','static-gesture-unavailable'].includes(answer.status))throw fail('LIVE_UNCONFIRMED');
-          if(answer.status==='static-gesture-unavailable'){ledger.delete(submitted);closed=true;controller.abort();return {status:'unavailable',sequence:submitted,submitted:true};}
-          stagedSequence=submitted;for(const key of ledger.keys())if(key>1&&key<submitted)ledger.delete(key);
-          return {status:'staged',sequence:submitted,submitted:true};
-        }).catch(()=>{closed=true;controller.abort();return {status:'unknown',sequence:submitted,submitted:true};})
-          .finally(()=>{inFlight=false;if(endRequested&&!closed)void end();});
+        // A cold capability/local-write wait is not a closed stream. Reserve
+        // one replacement, retain the queue's newest successor, and wait only
+        // for the original native ticket; no sequence or staged ACK is invented.
+        inFlight=true;
+        return (async()=>{
+          if(!requestId){
+            openingTimer=root.setTimeout(()=>{closed=true;controller.abort();finishOpening();},45000);
+            await openingReady;
+          }
+          if(settled||closed||!requestId)return {status:'unavailable',submitted:false};
+          const submitted=++sequence;ledger.set(submitted,copy(normalized));
+          return call('updateStaticGesture',{requestId,sequence:submitted,requests:normalized}).then(answer=>{
+            if(!answer||Object.keys(answer).length!==2||answer.sequence!==submitted||!['static-gesture-staged','static-gesture-unavailable'].includes(answer.status))throw fail('LIVE_UNCONFIRMED');
+            if(answer.status==='static-gesture-unavailable'){ledger.delete(submitted);closed=true;controller.abort();return {status:'unavailable',sequence:submitted,submitted:true};}
+            stagedSequence=submitted;for(const key of ledger.keys())if(key>1&&key<submitted)ledger.delete(key);
+            return {status:'staged',sequence:submitted,submitted:true};
+          }).catch(()=>{closed=true;controller.abort();return {status:'unknown',sequence:submitted,submitted:true};});
+        })().finally(()=>{inFlight=false;if(endRequested&&!closed)void end();});
       }});
       Object.defineProperty(operation,'endStaticGesture',{value:end});
-      Object.defineProperty(operation,'stopStaticGesture',{value:()=>{closed=true;controller.abort();}});
+      Object.defineProperty(operation,'stopStaticGesture',{value:()=>{closed=true;controller.abort();finishOpening();}});
       return operation;
     },
     async applyLive(request){
       const payload=livePayload(request),{receiverId}=payload;
+      if(payload.kind==='SPI_PORTS'){if(spiPortScenesAvailable===null)await runtimeCapabilities();if(spiPortScenesAvailable!==true)throw fail('SPI_PORT_SCENES_UNSUPPORTED');}
       if(payload.scene?.standAnimation){if(standAnimationCapability()===null)await runtimeCapabilities();if(standAnimationCapability()!==true)throw fail('LIVE_CONTROL_STAND_UNAVAILABLE');}
       await writeQueue.catch(()=>{});
       if(!viewLoaded)throw fail('VIEW_NOT_LOADED');
@@ -1256,6 +1354,7 @@
       const operation=(async()=>{
         if(!Array.isArray(requests)||requests.length<1||requests.length>30||requests.some(request=>!request||typeof request!=='object'||Array.isArray(request)))throw fail('LIVE_INVALID');
         payload=requests.map(livePayload);ids=new Set(payload.map(request=>request.receiverId));
+        if(payload.some(request=>request.kind==='SPI_PORTS')){if(spiPortScenesAvailable===null)await runtimeCapabilities();if(spiPortScenesAvailable!==true)throw fail('SPI_PORT_SCENES_UNSUPPORTED');}
         if(payload.some(request=>request.scene?.standAnimation)){if(standAnimationCapability()===null)await runtimeCapabilities();if(standAnimationCapability()!==true)throw fail('LIVE_CONTROL_STAND_UNAVAILABLE');}
         if(ids.size!==payload.length||payload.some(request=>request.standId!==payload[0].standId))throw fail('LIVE_INVALID');
         if(staticPreparingAvailable===null)await runtimeCapabilities();
@@ -1454,9 +1553,12 @@
   }:{};
   const services=Object.freeze(serviceSet);
   async function runtimeCapabilities(){const value=await call('capabilities');selectionHaptics=value?.selectionHaptics===true;simpleStandAvailable=value?.simpleStand===true;
+    spiPortScenesAvailable=value?.spiPortScenes===true;
     standSessionReceiverManagementAvailable=simpleStandAvailable&&value?.standSessionReceiverManagement===true;
     standSessionOutputsAvailable=simpleStandAvailable&&value?.standSessionOutputs===true;
     standMigrationReady=simpleStandAvailable&&value?.simpleStandMigrationReady===true;
+    standMigrationBlockedReason=['CURRENT_RECEIVER_OTHER_STAND','CURRENT_STAND_CREDENTIAL_CONFLICT'].includes(value?.simpleStandMigrationBlockedReason)?value.simpleStandMigrationBlockedReason:'NONE';
+    firstStandAccessDiagnosticsAvailable=simpleStandAvailable&&value?.firstStandAccessDiagnostics===true;
     standWifiOpenAvailable=simpleStandAvailable&&value?.standWifiOpen===true;
     standSharingAvailable=simpleStandAvailable&&value?.simpleStandShare===true;
     standScanAvailable=simpleStandAvailable&&value?.simpleStandScan===true;

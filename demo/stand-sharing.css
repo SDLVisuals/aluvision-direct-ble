@@ -17,4 +17,15 @@
 .stand-code-entry{display:grid;gap:14px;scroll-margin-top:20px}
 .stand-share-entry{margin-bottom:18px}
 .stand-code-entry h2,.stand-code-entry p{margin:0}
+.stand-setup-wifi-guide .onboarding-wifi-steps{margin:0;gap:6px}
+.stand-setup-wifi-guide .onboarding-wifi-steps li{padding:10px 8px;grid-template-columns:30px minmax(0,1fr);gap:12px}
+.stand-setup-wifi-guide .onboarding-wifi-steps li::before{width:30px;height:30px;font-size:13px;border-radius:10px}
+.stand-setup-wifi-guide .onboarding-wifi-steps li>span{font-size:15px;line-height:1.4}
+.stand-setup-wifi-guide .onboarding-wifi-steps small{font-size:13px;line-height:1.45}
+.stand-setup-wifi-guide .onboarding-wifi-steps li:nth-child(2){background:color-mix(in srgb,var(--red) 7%,transparent)}
+.stand-setup-wifi-guide .onboarding-factory-access{margin-top:18px;padding-top:18px}
+.stand-setup-wifi-guide .onboarding-factory-code input{font-size:clamp(23px,6.2vw,32px);letter-spacing:.01em}
+.stand-setup-wifi-guide .onboarding-factory-access small,.stand-setup-wifi-guide .onboarding-factory-access p{font-size:13px!important;line-height:1.45}
+.stand-setup-wifi-guide [data-factory-copy-status]:empty{display:none}
+@media(max-width:350px){.stand-setup-wifi-guide .onboarding-factory-code{flex-wrap:wrap}.stand-setup-wifi-guide .onboarding-factory-code .button{width:100%}.stand-setup-wifi-guide .onboarding-wifi-steps li>span{font-size:14px}}
 @media(prefers-reduced-motion:reduce){.stand-sharing *{scroll-behavior:auto}}

@@ -1,0 +1,91 @@
+/* V50 additions are scoped; saved model and transport behavior remain owned by app.js. */
+.v50-welcome{max-width:540px;margin:auto;padding-top:clamp(24px,7vh,90px)}
+.v50-welcome-art{display:flex;gap:16px;width:max-content;padding:26px;border:1px solid var(--line,#dde1e7);background:var(--panel,#fff);border-radius:32px;box-shadow:0 20px 50px #00000009;margin-bottom:28px;color:var(--red,#ba433d)}
+.v50-welcome-art .icon{width:38px;height:38px}
+.v50-welcome h1{font-size:clamp(32px,8vw,50px);line-height:1.1}
+.v50-welcome-steps{display:flex;gap:10px;list-style:none;padding:0;margin:30px 0;color:var(--muted,#656b75)}
+.v50-welcome-steps li{flex:1;display:grid;gap:9px;min-width:0;font-size:13px}
+.v50-welcome-steps b{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--panel,#fff);border:1px solid var(--line,#dde1e7);color:var(--ink,#232830)}
+.v50-preview-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
+.v50-line-selection{display:flex;align-items:center;flex-wrap:wrap;gap:5px;min-width:0}
+.v50-line-selection button{min-width:34px;min-height:36px;padding:6px 10px;border:1px solid var(--line,#dce1e9);background:var(--panel,#fff);border-radius:12px;font-weight:650}
+.v50-line-selection button[aria-pressed=true]{background:var(--ink,#343b49);color:var(--panel,#fff);border-color:transparent}
+.v50-line-selection>span{font-size:12px;color:var(--muted,#696f7a)}
+.v50-preview-expand{display:flex;align-items:center;gap:6px;flex-shrink:0;min-height:38px;background:transparent;border:0;font-size:12px;font-weight:650}
+.v50-preview-expand .icon{width:18px;height:18px}
+body.v50-layout-modal{overflow:hidden}
+.ledline-setup[data-order-open=true]{position:fixed!important;inset:0!important;width:100vw!important;max-width:none!important;height:100dvh!important;margin:0!important;padding:max(14px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))!important;border-radius:0!important;overflow:auto!important;overscroll-behavior:contain;z-index:1000;background:var(--bg,#eef1f4)!important;animation:v50-sheet-in 180ms ease-out}
+.ledline-setup[data-order-open=true]>.ledline-setup-toggle{position:sticky;top:0;z-index:2;background:var(--bg,#eef1f4);padding:15px 0;margin:0;max-width:720px;margin-inline:auto;display:flex;width:100%;border-bottom:1px solid var(--line,#dce1e9)}
+.ledline-setup[data-order-open=true] .ledline-setup-body{max-width:720px;margin-inline:auto;max-height:none!important;overflow:visible!important;display:block}
+.ledline-setup[data-order-open=true] .ledline-setup-close-label{display:flex;gap:5px;align-items:center}
+.ledline-setup[data-order-open=true] .ledline-setup-copy small{display:none}
+.ledline-setup[data-order-open=true] .ledline-arrangement{padding:18px 0}
+.ledline-setup[data-order-open=true] .ledline-draft-order{gap:12px}
+.ledline-setup[data-order-open=true] [data-order-item]{padding:16px!important;border-radius:22px!important;background:var(--panel,#fff)}
+.ledline-setup[data-order-open=true] .order-number{width:48px!important;height:48px!important;flex-shrink:0;font-size:27px!important;border:2px solid var(--identify-colour);color:var(--ink,#282d35);border-radius:16px;background:color-mix(in srgb,var(--identify-colour) 14%,var(--panel,#fff))}
+.ledline-setup[data-order-open=true] .line-order-handle{width:46px;height:46px;font-size:25px;touch-action:none}
+.ledline-setup[data-order-open=true] .layout-receiver-actions{margin:18px 0 0}
+.ledline-setup[data-order-open=true] .ledline-row-settings{grid-column:1/-1;min-width:0}
+.ledline-setup[data-order-open=true] .scope-copy{min-width:0;overflow-wrap:anywhere}
+dialog.v50-fullscreen-preview{inset:0;width:100vw!important;max-width:none!important;max-height:none!important;height:100dvh!important;border-radius:0!important;margin:0!important;padding:max(16px,env(safe-area-inset-top)) 18px max(24px,env(safe-area-inset-bottom));overscroll-behavior:contain}
+.v50-full-preview{max-width:960px;margin:auto;display:grid;gap:18px}
+.v50-expanded-canvas{width:100%;height:min(55vh,540px);border-radius:24px;background:#111917}
+.v50-full-preview [data-action=preview-fullscreen]{display:none}
+.v50-order-preview{margin:14px 0 0;padding:12px;border-radius:20px;background:#111917;color:#f6f7f5}
+.v50-order-preview figcaption{display:grid;gap:5px;margin-bottom:8px;font-size:13px}
+.v50-order-preview figcaption small{font-size:11px;color:#bfc7c1}
+.v50-order-canvas{display:block;width:100%;height:clamp(140px,18vh,172px);border-radius:14px}
+.v50-edit-ports{padding:0;margin:12px 0;border:0}
+.v50-edit-ports legend{font-size:12px;color:var(--muted);margin-bottom:8px}
+.v50-edit-ports>div{display:flex;gap:6px;flex-wrap:wrap}
+.v50-edit-ports button{display:flex;align-items:center;justify-content:center;gap:5px;min-height:44px;min-width:54px;border:1px solid var(--line);border-radius:12px;background:var(--panel);font-weight:650}
+.v50-edit-ports button[aria-checked=true]{background:var(--ink);color:var(--panel);border-color:transparent}
+.v50-edit-ports .icon{width:14px;height:14px}
+.v50-white-fine{margin-top:18px;border-top:1px solid var(--line,#dce1e9);padding-top:14px}
+.v50-white-fine>summary{display:flex;align-items:center;gap:9px;cursor:pointer;list-style:none;font-weight:650;min-height:44px}
+.v50-white-fine>summary::-webkit-details-marker{display:none}
+.v50-white-fine>summary .icon:last-child{margin-left:auto}
+.v50-white-fine .warm-white-controls{padding-top:12px}
+.v50-white-fine p{font-size:13px;line-height:1.5;color:var(--muted,#656b75)}
+.palette-item{position:relative}
+.palette-drag-handle{display:block;width:44px;min-height:34px;background:transparent;border:0;font-size:21px;touch-action:none;margin:0 auto;color:var(--muted,#656b75)}
+.palette-item[data-palette-drop]{outline:2px solid var(--red,#ba433d);outline-offset:3px;border-radius:14px}
+.palette-drag-handle[aria-grabbed=true]{color:var(--red,#ba433d)}
+@keyframes v50-sheet-in{from{opacity:.6;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.ledline-setup[data-order-open=true]{animation:none}}
+/* Override the old inline-card skin, including its high-specificity
+   transparent !important surface. A modal must cover the workspace. */
+html.interface-polish body #main .editor-controls .ledline-setup.card[data-order-open=true]{background:var(--bg)!important;background-image:none!important;border:0!important;box-shadow:none!important;display:block}
+html.interface-polish body #main .ledline-setup.card[data-order-open=true]>.ledline-setup-toggle{border:0;border-bottom:1px solid var(--line);border-radius:0;background:var(--bg);box-shadow:none}
+html.interface-polish body #main .ledline-setup.card[data-order-open=true]>.ledline-setup-body{border:0;border-radius:0;background:transparent;box-shadow:none;padding:0}
+/* Compact rows keep each touch target usable. Settings stay in this row,
+   rather than opening an unrelated receiver-management page. */
+html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item]{grid-template-columns:40px minmax(0,1fr) 88px 44px!important;gap:4px 8px!important;padding:10px!important;border-radius:18px!important;border:1px solid var(--line);box-shadow:0 3px 12px #00000003}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .order-number{grid-column:1;grid-row:1/3;width:40px!important;height:44px!important;border-radius:13px;font-size:24px!important}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .scope-copy{grid-column:2/4;grid-row:1;padding:0;align-self:end;line-height:1.25}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .scope-option-title{font-size:14px;line-height:1.3}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .scope-copy>small{font-size:10px;line-height:1.3;margin-top:2px;display:block}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .line-order-handle{grid-column:4;grid-row:1/3;width:44px;height:48px;border-radius:12px;font-size:23px;color:var(--muted)}
+html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item]>.ledline-output-overview{grid-column:2;grid-row:2;margin:0!important;padding:0!important;border:0!important;background:transparent!important;align-self:center}
+html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item]>.ledline-output-overview .ledline-output{display:flex;gap:5px;align-items:center;padding:0!important;border:0!important;background:transparent!important;min-height:0;box-shadow:none}
+html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item]>.ledline-output-overview .ledline-output-strip{width:26px;min-width:26px;height:5px;margin:0;box-shadow:none;background:var(--identify-colour);border-radius:3px}
+html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item]>.ledline-output-overview .ledline-output-strip i{display:none}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-output-side{font-size:9px;line-height:1.2;color:var(--muted)}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-order-tools{grid-column:3;grid-row:2;padding:0;margin:0}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-row-actions{display:flex;gap:0;width:88px}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-row-actions>button{position:relative;flex:0 0 44px;width:44px;min-height:44px;padding:0;border-radius:11px;border:0;background:transparent;display:grid;place-items:center;box-shadow:none;color:var(--muted)}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-row-actions>button:hover{background:var(--glass-solid,var(--panel))}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-row-actions>button[aria-expanded=true],html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-row-actions>button[aria-pressed=true]{color:var(--red);background:color-mix(in srgb,var(--red) 8%,var(--panel))}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-row-actions>button>span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-row-actions>button>.icon{width:18px;height:18px}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-settings-toggle>.icon:last-child{display:none}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-row-settings{grid-row:3;grid-column:1/-1;margin-top:4px;padding-top:12px;border-top:1px solid var(--line)}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-row-settings[hidden]{display:none}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-draft-order{gap:8px}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .order-drop-status:empty{display:none}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-menu-label{display:none}
+html.interface-polish body #main .ledline-setup[data-order-open=true]>.ledline-setup-toggle .ledline-setup-copy b{font-size:18px;line-height:1.2}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-order-heading h3{font-size:14px;margin:0}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-setup-hint,html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-preview figcaption small{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;margin:0;padding:0}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .order-recognition-status{margin:8px 0 12px;min-height:0;font-size:11px;line-height:1.4}
+@media(max-width:360px){.v50-preview-actions{align-items:flex-start}.v50-preview-expand{font-size:11px}.ledline-setup[data-order-open=true] .ledline-output-side{font-size:8px}.ledline-setup[data-order-open=true] .scope-copy>small{font-size:9px}}

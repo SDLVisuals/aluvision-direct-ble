@@ -163,6 +163,7 @@
     catch (_) { return null; }
     for (const receiver of receivers) {
       try {
+        if (receiver.type === 'SPI' && receiver.state.portStates && Object.keys(receiver.state.portStates).length) return null;
         if (!equal(validateMarker(receiver.state.standAnimation), first)) return null;
         const expected = Object.assign({}, first.state, {receiverType: receiver.type,
           previewFamily: receiver.type === 'SPI' && !first.state.v30Effect ? 'RGBW' : null});
@@ -205,6 +206,9 @@
         previewStartedAt: keepingEffect ? old.state.previewStartedAt ?? 0 : time,
         phaseMs: keepingEffect ? old.state.phaseMs ?? 0 : 0, standAnimation: clone(marker)
       });
+      // A shared stand recipe replaces every participating physical line.
+      // Old independent-port edits must not override the newly chosen effect.
+      delete receiver.state.portStates;
       if (keepingEffect && !state.v30Effect) receiver.state =
         Preview.retimeMotion(old, receiver, time, {lineCount: geometry.lines.length}).state;
     });
@@ -228,16 +232,26 @@
     const marker = active(model, standId);
     return marker ? assembled(model, standId, marker) : null;
   }
-  function previewOptions(planned, time = 0) {
+  function previewOptions(planned, time = 0, options = {}) {
     if (!planned || !Array.isArray(planned.receivers) || !Array.isArray(planned.lineOrder) ||
       planned.receivers.some(receiver => !receiver || receiver.zoneId === null ||
         receiver.standId !== planned.standId || receiver.lifecycle !== 'added') ||
-      typeof time !== 'number' || !Number.isFinite(time) || time < 0)
+      typeof time !== 'number' || !Number.isFinite(time) || time < 0 ||
+      !plain(options) || Object.keys(options).some(key => key !== 'zoneId'))
       fail('STAND_PREVIEW', 'Het animatievoorbeeld is niet geldig.');
-    // One parallel physical-line geometry on both families. A zone's saved
-    // continuous/tunnel setting is kept, but never leaks into this stand view.
-    return {receivers: planned.receivers, geometryReceivers: planned.receivers,
+    // The native stand recipe uses one shared clock and global physical-line
+    // indices. Keep that sampling contract; a visible zone must not restart
+    // the effect at index zero. Its saved topology is a separate projection:
+    // continuous SPI is drawn as one strip, not independent receiver rows.
+    const result = {receivers: planned.receivers, geometryReceivers: planned.receivers,
       layout: 'stacked', lineOrder: planned.lineOrder, time, selection: {kind: 'all'}};
+    if (has(options, 'zoneId')) {
+      const zone = planned.zones.find(zone => zone.zoneId === options.zoneId);
+      if (!zone) fail('STAND_PREVIEW_ZONE', 'Deze zone hoort niet bij het animatievoorbeeld.');
+      result.receivers = zone.receivers;
+      result.renderGeometry = Preview.geometry(zone.receivers, zone.layout, {lineOrder: zone.lineOrder});
+    }
+    return result;
   }
   function preview(planned, time = 0) {
     const frame = Preview.rows(previewOptions(planned, time));
@@ -249,19 +263,16 @@
     frame.rows.forEach(label);
     if (frame.lineRows) frame.lineRows.forEach(label);
     frame.zones = planned.zones.map(zone => ({zoneId: zone.zoneId, zoneName: zone.zoneName, type: zone.type,
+      layout: zone.layout, renderGeometry: Preview.geometry(zone.receivers, zone.layout, {lineOrder: zone.lineOrder}),
       lineRows: (frame.lineRows || []).filter(row => row.zoneId === zone.zoneId)}));
     return frame;
   }
   function draw(canvas, planned, options = {}) {
-    const all = previewOptions(planned, options.time === undefined ? 0 : options.time);
-    if (has(options, 'zoneId')) {
-      const zone = planned.zones.find(zone => zone.zoneId === options.zoneId);
-      if (!zone) fail('STAND_PREVIEW_ZONE', 'Deze zone hoort niet bij het animatievoorbeeld.');
-      all.receivers = zone.receivers;
-    }
+    const all = previewOptions(planned, options.time === undefined ? 0 : options.time,
+      has(options, 'zoneId') ? {zoneId: options.zoneId} : {});
     return Preview.draw(canvas, Object.assign(all, {
       reducedMotion: options.reducedMotion === true, labels: options.labels !== false,
-      presentation: 'receivers'
+      presentation: all.renderGeometry ? undefined : 'receivers'
     }));
   }
   return Object.freeze({catalogFor, plan, current, preview, previewOptions, draw, validateMarker, active});

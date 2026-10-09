@@ -11,9 +11,25 @@
   const text=(v,max=160)=>typeof v==='string'&&v.trim().length>0&&v.length<=max&&!/[\u0000-\u001f]/.test(v);
   function fail(message){throw Error(message);}
   function light(state,strict=false){
-    const clean={...state};delete clean.standAnimation;
+    if(!plain(state))fail('De lichtinstellingen in de scène zijn niet geldig.');
+    const clean={...state};delete clean.standAnimation;delete clean.portStates;
     const result=P.sanitizeLightState(clean,strict);
+    if(Object.hasOwn(state,'portStates')){
+      const overrides=state.portStates;
+      if(!plain(overrides)||Object.keys(overrides).length>4||Object.keys(overrides).some(port=>!/^[1-4]$/.test(port)))fail('De lichtinstellingen per SPI-ledline zijn niet geldig.');
+      const portStates={};
+      for(const [port,override]of Object.entries(overrides)){
+        if(!M.validPortLightState(override))fail('De lichtinstellingen per SPI-ledline zijn niet geldig.');
+        // A scene is still light-only. Preserve each explicit sparse delta;
+        // inherit missing fields from its real receiver, never another port.
+        const effective=M.lightStateFor({type:'SPI',state:{...clean,portStates:{[port]:override}}},Number(port)),merged=P.sanitizeLightState(effective,strict);
+        const delta=Object.fromEntries(Object.keys(override).filter(key=>P.STATE_FIELDS.includes(key)&&(override[key]===null||Object.hasOwn(merged,key))).map(key=>[key,override[key]===null?null:copy(merged[key])]));
+        if(Object.keys(delta).length)portStates[port]=delta;
+      }
+      if(Object.keys(portStates).length)result.portStates=portStates;
+    }
     if(Object.hasOwn(state,'standAnimation')){
+      if(result.portStates)fail('Een standanimatie kan geen afzonderlijke SPI-ledline-instellingen bevatten.');
       const standAnimations=typeof module==='object'&&module.exports?require('./stand-animations.js'):globalThis.LightningStandAnimations;
       if(!standAnimations)fail('De gezamenlijke animatie kan niet worden gelezen.');
       result.standAnimation=standAnimations.validateMarker(state.standAnimation);
@@ -28,7 +44,9 @@
       zoneIds.add(z.id);
       return {id:z.id,name:z.name,type:z.type,receivers:z.receivers.map(r=>{
         if(!plain(r)||!text(r.id)||receiverIds.has(r.id))fail('Een receiver staat meermaals in de scène.');
-        receiverIds.add(r.id);return {id:r.id,state:light(r.state,true)};
+        receiverIds.add(r.id);const state=light(r.state,true);
+        if(z.type!=='SPI'&&state.portStates)fail('Afzonderlijke uitgangsinstellingen zijn alleen voor SPI.');
+        return {id:r.id,state};
       })};
     });
     return {version:1,id:scene.id,standId:scene.standId,name:scene.name.trim(),zones};
@@ -44,6 +62,13 @@
     return validate({version:1,id:options.id||'scene-'+(globalThis.crypto?.randomUUID?.()||Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)),standId,name,
       zones:zoneIds.map(id=>{const z=stand.zones.find(z=>z.id===id);if(!z)fail('De gekozen zone hoort niet bij deze stand.');
         return {id:z.id,name:z.name,type:z.type,receivers:M.zoneReceivers(model,z.id).map(r=>({id:r.id,state:light(r.state)}))};})});
+  }
+  function portCompatibility(zone,current,state){
+    if(!state.portStates)return '';
+    if(zone.layout==='continuous')return 'Deze scène gebruikt losse SPI-ledlines. Kies die opstelling of bewaar een nieuwe scène.';
+    if(Object.keys(state.portStates).some(port=>!current.outputs.some(output=>output.enabled&&output.port===Number(port))))
+      return 'Een SPI-uitgang uit deze scène is uitgeschakeld of ontbreekt. Bewaar een nieuwe scène.';
+    return '';
   }
   function previewZones(model,input){
     const scene=validate(input);M.assertValid(model);
@@ -68,6 +93,10 @@
       if(zone.receiverIds.length!==saved.receivers.length){
         result.reason='Deze zone heeft extra receivers. De scène wijzigt alleen opgeslagen receivers. Bewaar een nieuwe scène voor een passend voorbeeld.';
         return result;
+      }
+      for(const snapshot of saved.receivers){
+        const reason=portCompatibility(zone,receivers.get(snapshot.id),snapshot.state);
+        if(reason){result.reason=reason;return result;}
       }
       // Activation keeps current physical order and geometry; match them using only saved lights.
       // Project rendering fields explicitly so credentials and extra device data stay out.
@@ -94,6 +123,10 @@
         const zone=stand.zones.find(z=>z.id===saved.id);if(!zone||zone.type!==saved.type)return {ok:false,reason:'Een zone uit deze scène ontbreekt of heeft een ander type.'};
         const live=M.zoneReceivers(model,zone.id);
         if(saved.receivers.some(r=>!live.some(unit=>unit.id===r.id)))return {ok:false,reason:'Een receiver uit deze scène is verplaatst of verwijderd. Bewaar een nieuwe scène.'};
+        for(const snapshot of saved.receivers){
+          const reason=portCompatibility(zone,live.find(unit=>unit.id===snapshot.id),snapshot.state);
+          if(reason)return {ok:false,reason};
+        }
       }
       return {ok:true,reason:''};
     }catch(error){return {ok:false,reason:error.message};}

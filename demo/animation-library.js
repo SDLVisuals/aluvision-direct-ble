@@ -84,20 +84,29 @@
     {key:'Gradient',ids:['rgbw-gradient-2'],title:'Kleurverloop',summary:'De ledlines veranderen zacht van kleur.'},
     {key:'Warm',ids:['v30-brand-warm-white'],title:'Warm naar wit',summary:'Een warme witmix gaat rustig over in zacht wit.'}
   ]);
-  function starters(items) {
+  function text(key,fallback,translate,params={}) {
+    if(typeof translate!=='function')return fallback;
+    const value=translate(key,params);return typeof value==='string'&&value!==key?value:fallback;
+  }
+  function starters(items,translate) {
     const hasPixels=items.some(effect=>effect.category==='pixels');
     return Object.freeze(STARTERS.filter(item=>!hasPixels||!['Kleurverloop','Warm naar wit'].includes(item.title)).flatMap(item=>{
       const effect=items.find(effect=>item.ids.includes(effect.id));
-      return effect?[Object.freeze({effect,key:item.key,title:item.title,summary:item.summary})]:[];
+      return effect?[Object.freeze({effect,key:item.key,title:text('animationStarter'+item.key,item.title,translate),summary:text('animationStarter'+item.key+'Hint',item.summary,translate)})]:[];
     }));
   }
   function displayName(effect,translate) {
+    if(effect.id==='v30-tunnel-pulse'&&effect.standMode==='coordinated'&&Array.isArray(effect.supportedTypes)&&effect.supportedTypes.includes('RGBW')&&effect.supportedTypes.includes('SPI'))return text('v50AnimationStandPulseName',effect.standName||effect.name,translate);
     const starter=STARTERS.find(item=>item.ids.includes(effect.id));
-    return starter?(typeof translate==='function'?translate('animationStarter'+starter.key):starter.title):BRAND_NAMES[effect.id]||effect.name;
+    return starter?text('animationStarter'+starter.key,starter.title,translate):BRAND_NAMES[effect.id]||effect.id.startsWith('v30-')||effect.id.startsWith('v31-ref-')?text('v50AnimationName:'+effect.id,BRAND_NAMES[effect.id]||effect.name,translate):effect.name;
   }
   const FALLBACK = descriptor('other','Overige bewegingen','Meer animaties uit deze categorie.','overig overige');
-  const normalize = value => String(value == null ? '' : value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('nl').replace(/[^a-z0-9]+/g,' ').trim();
+  const normalize = value => String(value == null ? '' : value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('nl').replace(/ß/g,'ss').replace(/[^a-z0-9]+/g,' ').trim();
   const category = key => CATEGORIES.find(item => item.key === key) || null;
+  function categoryInfo(key,translate) {
+    const section=category(key);return section?Object.freeze({...section,title:text('v50AnimationCategory:'+key+':title',section.title,translate),summary:text('v50AnimationCategory:'+key+':summary',section.summary,translate)}):null;
+  }
+  const categoriesFor=translate=>Object.freeze(CATEGORIES.map(section=>categoryInfo(section.key,translate)));
   function classification(effect) {
     if (!effect || !category(effect.category)) return null;
     if(effect.id.startsWith('v31-ref-'))return DEFINITIONS[effect.category].find(item=>item.key==='reference');
@@ -108,8 +117,9 @@
     if (effect.category === 'brand') key = BRAND_IDS[effect.id];
     return DEFINITIONS[effect.category].find(item => item.key === key) || FALLBACK;
   }
-  function groups(items, selectedCategory = 'catalogue') {
+  function groups(items, selectedCategory = 'catalogue',translate) {
     if (!Array.isArray(items)) throw new TypeError('An animation catalog is required');
+    if(typeof selectedCategory==='function'){translate=selectedCategory;selectedCategory='catalogue';}
     const selected = selectedCategory === 'all' ? 'catalogue' : selectedCategory;
     if (selected !== 'catalogue' && !category(selected)) return [];
     const result = [];
@@ -119,37 +129,41 @@
         const effects = items.filter(effect => effect.category === section.key && classification(effect).key === family.key);
         if (!effects.length) continue;
         const count = effects.length, extra = count - 1;
-        result.push(Object.freeze({key:section.key + ':' + family.key,title:family.title,summary:family.summary,
-          category:section.key,categoryTitle:section.title,effects:Object.freeze(effects),preview:effects[0],
-          count,additionalCount:extra,totalLabel:count + (count === 1 ? ' animatie' : ' animaties'),
-          variantLabel:extra ? '+ ' + extra + (extra === 1 ? ' variant' : ' varianten') : 'Bekijk animatie'}));
+        const prefix='v50AnimationGroup:'+(family.key==='other'?'other':section.key+':'+family.key);
+        result.push(Object.freeze({key:section.key + ':' + family.key,title:text(prefix+':title',family.title,translate),summary:text(prefix+':summary',family.summary,translate),
+          category:section.key,categoryTitle:categoryInfo(section.key,translate).title,effects:Object.freeze(effects),preview:effects[0],
+          count,additionalCount:extra,totalLabel:text(count===1?'animationCountOne':'animationCountMany',count + (count === 1 ? ' animatie' : ' animaties'),translate,{count}),
+          variantLabel:extra?text(extra===1?'v50AnimationAdditionalVariantOne':'v50AnimationAdditionalVariantMany','+ ' + extra + (extra === 1 ? ' variant' : ' varianten'),translate,{count:extra}):text('viewAnimation','Bekijk animatie',translate)}));
       }
     }
     return Object.freeze(result);
   }
-  function group(items, key) { return groups(items).find(item => item.key === key) || null; }
-  function sections(items) {
+  function group(items, key,translate) { return groups(items,'catalogue',translate).find(item => item.key === key) || null; }
+  function sections(items,translate) {
     return Object.freeze(CATEGORIES.map(section => {
-      const families = groups(items,section.key);
-      return Object.freeze({key:section.key,title:section.title,summary:section.summary,groups:families,count:families.reduce((sum,family) => sum + family.count,0)});
+      const families = groups(items,section.key,translate),info=categoryInfo(section.key,translate);
+      return Object.freeze({key:section.key,title:info.title,summary:info.summary,groups:families,count:families.reduce((sum,family) => sum + family.count,0)});
     }).filter(section => section.count > 0));
   }
-  function search(items, query = '') {
+  function search(items, query = '',translate) {
     const terms = normalize(query).split(' ').filter(Boolean);
     const phrase=terms.join(' ');
-    const categoryMatch=CATEGORIES.find(section=>normalize(section.title)===phrase||terms.length===1&&normalize(section.aliases).split(' ').includes(phrase));
+    const categoryMatch=CATEGORIES.find(section=>normalize(section.title)===phrase||normalize(categoryInfo(section.key,translate).title)===phrase||terms.length===1&&normalize(section.aliases).split(' ').includes(phrase));
     if(categoryMatch)return items.filter(effect=>effect.category===categoryMatch.key);
     const ordered = groups(items).flatMap(family => family.effects);
     if (!terms.length) return ordered;
     return ordered.map((effect,index) => {
       const family = classification(effect), section = category(effect.category);
-      const name = normalize(displayName(effect)), familyText = normalize([effect.family,family.title,family.aliases].join(' '));
-      const haystack = normalize([effect.name,displayName(effect),effect.family,effect.description,family.title,family.summary,family.aliases,section.title,section.aliases].join(' '));
+      const prefix='v50AnimationGroup:'+(family.key==='other'?'other':section.key+':'+family.key),localCategory=categoryInfo(section.key,translate),localFamilyTitle=text(prefix+':title',family.title,translate),localFamilySummary=text(prefix+':summary',family.summary,translate);
+      const standPulse=effect.id==='v30-tunnel-pulse'&&effect.standMode==='coordinated'&&Array.isArray(effect.supportedTypes)&&effect.supportedTypes.includes('RGBW')&&effect.supportedTypes.includes('SPI');
+      const description=text(standPulse?'v50AnimationStandPulseDescription':'v50AnimationDescription:'+effect.id,effect.description,translate);
+      const name = normalize(displayName(effect,translate)), familyText = normalize([effect.family,family.title,localFamilyTitle,family.aliases].join(' '));
+      const haystack = normalize([effect.name,displayName(effect),displayName(effect,translate),effect.family,effect.description,description,family.title,localFamilyTitle,family.summary,localFamilySummary,family.aliases,section.title,localCategory.title,localCategory.summary,section.aliases].join(' '));
       if (!terms.every(term => haystack.includes(term))) return null;
       const full = terms.join(' ');
       const rank = name === full ? 4 : name.startsWith(full) ? 3 : terms.every(term => name.includes(term)) ? 2 : terms.every(term => familyText.includes(term)) ? 1 : 0;
       return {effect,index,rank};
     }).filter(Boolean).sort((a,b) => b.rank - a.rank || a.index - b.index).map(item => item.effect);
   }
-  return Object.freeze({categories:CATEGORIES,groups,group,sections,search,normalize,starters,displayName});
+  return Object.freeze({categories:CATEGORIES,categoriesFor,categoryInfo,groups,group,sections,search,normalize,starters,displayName});
 }));

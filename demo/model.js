@@ -11,6 +11,10 @@
   // STATIC membership baseline below unchanged for existing native journals.
   var DEFAULT_ANIMATION_WIDTH = 20;
   var TYPES = ['RGBW', 'SPI'];
+  // Port deltas cross the same durable light boundary as scalar settings.
+  // No geometry, credentials, shared marker or nested port map belongs here.
+  var PORT_LIGHT_FIELDS = new Set(('engine animation effectId category variant r g b w bri brightness speed smooth on power colors whiteChannels rgbEnabled whiteEnabled direction widthPixels transitionMs background backgroundOn bgBrightness fadeAmount width delayMs brandColor motionReverse spacing objectCount trailLength spread randomness bounce mirror phaseMs phaseRateMicroHz previewStartedAt rgbwLast previewFamily backgroundBrightness backgroundRgbEnabled backgroundWhite backgroundWhiteEnabled colorCount legacySpi lineDelayMs v30Effect').split(' '));
+  var PORT_NULLABLE_FIELDS = new Set(('effectId category v30Effect previewFamily rgbwLast brandColor speed smooth colorCount widthPixels objectCount trailLength spacing direction lineDelayMs spread randomness fadeAmount delayMs width').split(' '));
   var LAYOUTS = Object.freeze({ RGBW: Object.freeze(['stacked', 'vertical']), SPI: Object.freeze(['continuous', 'stacked', 'vertical']) });
   function allowedLayouts(type) {
     if (type === null || type === 'SPI') return LAYOUTS.SPI;
@@ -27,6 +31,35 @@
   }
   function id(value) { return typeof value === 'string' && value.trim().length > 0; }
   function integer(value, min, max) { return Number.isInteger(value) && value >= min && value <= max; }
+  function validChannelMemory(value) {
+    return object(value) && [Object.prototype,null].includes(Object.getPrototypeOf(value)) && Object.keys(value).every(function (scope) {
+      var channels=value[scope];
+      return /^(static|background|palette[0-7])$/.test(scope) && object(channels) && [Object.prototype,null].includes(Object.getPrototypeOf(channels)) &&
+        Object.keys(channels).every(function (channel) { return /^[rgbw]$/.test(channel) && integer(channels[channel],1,255); });
+    });
+  }
+  function validPortLightState(state) {
+    if(!object(state)||![Object.prototype,null].includes(Object.getPrototypeOf(state))||!Object.keys(state).length||Object.keys(state).length>64)return false;
+    var ranges={r:[0,255],g:[0,255],b:[0,255],w:[0,255],backgroundWhite:[0,255],bri:[0,100],brightness:[0,100],speed:[0,100],smooth:[0,100],width:[0,100],spacing:[0,100],spread:[0,100],randomness:[0,100],trailLength:[0,100],fadeAmount:[0,100],bgBrightness:[0,100],backgroundBrightness:[0,100],widthPixels:[1,8192],objectCount:[1,128],variant:[0,65535],colorCount:[1,16],transitionMs:[0,60000],lineDelayMs:[0,60000],delayMs:[0,60000],phaseMs:[0,Number.MAX_SAFE_INTEGER],phaseRateMicroHz:[0,Number.MAX_SAFE_INTEGER],previewStartedAt:[0,Number.MAX_SAFE_INTEGER]};
+    var booleans=new Set(('on power backgroundOn backgroundRgbEnabled backgroundWhiteEnabled motionReverse bounce mirror legacySpi').split(' '));
+    return Object.keys(state).every(function (key) {
+      var value=state[key];if(!PORT_LIGHT_FIELDS.has(key))return false;
+      if(value===null)return PORT_NULLABLE_FIELDS.has(key);
+      if(Object.prototype.hasOwnProperty.call(ranges,key))return typeof value==='number'&&Number.isFinite(value)&&value>=ranges[key][0]&&value<=ranges[key][1]&&(!['objectCount','variant','colorCount'].includes(key)||Number.isInteger(value));
+      if(booleans.has(key))return typeof value==='boolean';
+      if(['colors','whiteChannels','rgbEnabled','whiteEnabled'].includes(key))return Array.isArray(value)&&value.length>=1&&value.length<=16&&Array.from(value).every(function (item) { return key==='colors'?typeof item==='string'&&/^#[0-9a-f]{6}$/i.test(item):key==='whiteChannels'?typeof item==='number'&&Number.isFinite(item)&&item>=0&&item<=255:typeof item==='boolean'; });
+      if(key==='rgbwLast')return validChannelMemory(value);
+      if(key==='engine')return typeof value==='string'&&/^[A-Z][A-Z0-9_-]{0,31}$/.test(value);
+      if(key==='animation')return typeof value==='string'&&value.trim().length>0&&value.length<=120&&!/[\u0000-\u001f\u007f]/.test(value);
+      if(key==='direction')return ['right','left','forward','reverse','backward','up','down','center-out','outside-in','bounce'].includes(value);
+      if(key==='category')return ['whole','pixels','tunnel','brand'].includes(value);
+      if(key==='previewFamily')return TYPES.includes(value);
+      if(key==='effectId'||key==='v30Effect')return typeof value==='string'&&/^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,159}$/.test(value);
+      if(key==='brandColor')return typeof value==='string'&&/^#[0-9a-f]{6}$/i.test(value);
+      if(key==='background')return typeof value==='string'?/^#[0-9a-f]{6}$/i.test(value):object(value)&&[Object.prototype,null].includes(Object.getPrototypeOf(value))&&Object.keys(value).every(function (name) { return ['rgb','white'].includes(name); })&&typeof value.rgb==='string'&&/^#[0-9a-f]{6}$/i.test(value.rgb)&&typeof value.white==='number'&&Number.isFinite(value.white)&&value.white>=0&&value.white<=255;
+      return false;
+    });
+  }
   function issue(code, message) { var error = new Error(message); error.code = code; throw error; }
   function defaultState() {
     return { engine: 'STATIC', animation: 'Vaste kleur', variant: 0, r: 201, g: 78, b: 70, w: 0,
@@ -129,6 +162,15 @@
             return !/^(static|background|palette[0-7])$/.test(scope) || !object(channels) ||
               Object.keys(channels).some(function (channel) { return !/^[rgbw]$/.test(channel) || !integer(channels[channel], 1, 255); });
           })) add('CHANNEL_MEMORY', rp + '.state.rgbwLast', 'Bewaarde RGBW-kanaalwaarden zijn ongeldig.');
+        }
+        if (Object.prototype.hasOwnProperty.call(receiver.state,'portStates')) {
+          var overrides = receiver.state.portStates;
+          if (receiver.type !== 'SPI' || !object(overrides) || ![Object.prototype,null].includes(Object.getPrototypeOf(overrides)) ||
+              Object.keys(overrides).length > LIMITS.spiPorts || Object.keys(overrides).some(function (port) {
+                var state = overrides[port];
+                return !/^[1-4]$/.test(port) || !receiver.outputs.some(function (output) { return output.port === Number(port) && output.enabled; }) ||
+                  !validPortLightState(state);
+              })) add('PORT_LIGHT_STATE', rp + '.state.portStates', 'Kies alleen lichtinstellingen van actieve SPI-ledlines.');
         }
       }
     });
@@ -355,9 +397,42 @@
     });
     return assertValid(next);
   }
+  function lightStateFor(receiver, port) {
+    var base = clone(receiver.state || {}); delete base.portStates;
+    var override = receiver.type === 'SPI' && receiver.state && receiver.state.portStates && receiver.state.portStates[String(port)];
+    if (!override) return base;
+    var effective=base,delta=clone(override);
+    Object.keys(delta).forEach(function (key) {
+      if(delta[key]===null&&PORT_NULLABLE_FIELDS.has(key))delete effective[key];
+      else effective[key]=delta[key];
+    });
+    if (Object.prototype.hasOwnProperty.call(override,'brightness')) effective.bri=override.brightness;
+    if (Object.prototype.hasOwnProperty.call(override,'power')) effective.on=override.power;
+    return effective;
+  }
+  function selectionLines(model, zoneId, selection) {
+    var zone=requireZone(model,zoneId), lines=zoneLedlines(model,zoneId);
+    if (!selection || !['all','receiver','receivers','line','lines'].includes(selection.kind)) issue('SELECTION', 'Kies Alle ledlines of één of meer ledlines.');
+    if (selection.kind === 'all') return lines;
+    if (selection.kind === 'line' || selection.kind === 'lines') {
+      if (zone.type !== 'SPI' || zone.layout === 'continuous') issue('LINE_SELECTION_LAYOUT', 'Een doorlopende ledline bedien je samen.');
+      var requested=selection.kind === 'line' ? [selection.lineId] : selection.lineIds;
+      if (!Array.isArray(requested) || !requested.length || requested.length > lines.length ||
+          Array.from(requested).some(function (id) { return typeof id !== 'string'; }) || new Set(requested).size !== requested.length) issue('SELECTION','Kies iedere ledline maximaal één keer.');
+      var wanted=new Set(requested);
+      if (requested.some(function (id) { return !lines.some(function (line) { return line.id === id; }); })) issue('TARGET_OUTSIDE_ZONE','Deze ledline is niet actief in de gekozen zone.');
+      return lines.filter(function (line) { return wanted.has(line.id); });
+    }
+    var ids=selectionIds(model,zoneId,selection);
+    return lines.filter(function (line) { return ids.indexOf(line.receiverId) >= 0; });
+  }
   function selectionIds(model, zoneId, selection) {
     requireZone(model, zoneId);
     var receivers = zoneReceivers(model, zoneId);
+    if (selection && ['line','lines'].includes(selection.kind)) {
+      var members=new Set(selectionLines(model,zoneId,selection).map(function (line) { return line.receiverId; }));
+      return receivers.filter(function (receiver) { return members.has(receiver.id); }).map(function (receiver) { return receiver.id; });
+    }
     if (!selection || !['all', 'receiver', 'receivers'].includes(selection.kind)) issue('SELECTION', 'Kies Alle ledlines of één of meer ledlines.');
     if (selection.kind === 'all') return receivers.map(function (r) { return r.id; });
     var requested = selection.kind === 'receiver' ? [selection.receiverId] : selection.receiverIds;
@@ -370,7 +445,7 @@
   }
   function resolveTargets(model, zoneId, selection) {
     assertValid(model);
-    var zone = requireZone(model, zoneId), selected = selectionIds(model, zoneId, selection), receivers = zoneReceivers(model, zoneId), offset = 0;
+    var zone = requireZone(model, zoneId), selected = new Set(selectionLines(model,zoneId,selection).map(function (line) { return line.id; })), receivers = zoneReceivers(model, zoneId), offset = 0;
     var physical = physicalLines(model, zoneId), byId = new Map(physical.map(function (line) { return [line.id, line]; }));
     var ordered = Object.prototype.hasOwnProperty.call(zone, 'lineOrder') ? zone.lineOrder.map(function (id) { return byId.get(id); }) : physical;
     var targets = [];
@@ -379,17 +454,41 @@
         targets.push({ id: line.id, receiverId: receiver.id, deviceId: receiver.id, rid: receiver.rid || '',
           type: receiver.type, port: output.port, pixels: output.pixels, offset: offset, localOffset: line.localOffset,
           reversed: output.reversed, receiverIndex: line.receiverIndex, receiverCount: receivers.length,
-          connection: receiver.connection, layout: zone.layout, state: clone(receiver.state) });
+          connection: receiver.connection, layout: zone.layout, state: zone.layout === 'continuous' ? lightStateFor(receiver,0) : lightStateFor(receiver,output.port) });
         offset += output.pixels;
     });
-    return targets.map(function (target, index) { return Object.assign(target, { groupPixels: offset, totalPixels: offset, lineIndex: index, lineCount: targets.length }); }).filter(function (target) { return selected.indexOf(target.receiverId) >= 0; });
+    return targets.map(function (target, index) { return Object.assign(target, { groupPixels: offset, totalPixels: offset, lineIndex: index, lineCount: targets.length }); }).filter(function (target) { return selected.has(target.id); });
   }
   function applyState(model, zoneId, selection, patch) {
     assertValid(model);
     if (!object(patch)) issue('STATE_PATCH', 'Een lichtwijziging is vereist.');
-    if (['groupPixels', 'offset', 'lineOrder', 'lineIndex', 'lineCount', 'receiverId', 'port', 'ports', 'outputs', 'reversed', '__proto__', 'constructor', 'prototype'].some(function (key) { return Object.prototype.hasOwnProperty.call(patch, key); })) issue('GEOMETRY_PATCH', 'Lichtbediening mag de receiverindeling niet wijzigen.');
+    if (['groupPixels', 'offset', 'lineOrder', 'lineIndex', 'lineCount', 'receiverId', 'port', 'ports', 'outputs', 'reversed', 'portStates', '__proto__', 'constructor', 'prototype'].some(function (key) { return Object.prototype.hasOwnProperty.call(patch, key); })) issue('GEOMETRY_PATCH', 'Lichtbediening mag de receiverindeling niet wijzigen.');
     var selected = selectionIds(model, zoneId, selection), next = clone(model);
-    next.receivers.forEach(function (receiver) { if (selected.indexOf(receiver.id) >= 0) receiver.state = Object.assign({}, receiver.state, clone(patch)); });
+    if (selection.kind === 'line' || selection.kind === 'lines') {
+      var chosen=selectionLines(model,zoneId,selection), standId=requireZone(model,zoneId) && next.stands.find(function (stand) { return stand.zones.some(function (zone) { return zone.id === zoneId; }); }).id;
+      if (Object.keys(patch).some(function (key) { return key !== 'rgbwLast'; })) next.receivers.forEach(function (receiver) { if (receiver.standId === standId) delete receiver.state.standAnimation; });
+      chosen.forEach(function (line) {
+        var receiver=next.receivers.find(function (item) { return item.id === line.receiverId; }), normalized=clone(patch);
+        if (Object.prototype.hasOwnProperty.call(normalized,'bri') && !Object.prototype.hasOwnProperty.call(normalized,'brightness')) normalized.brightness=normalized.bri;
+        if (Object.prototype.hasOwnProperty.call(normalized,'on') && !Object.prototype.hasOwnProperty.call(normalized,'power')) normalized.power=normalized.on;
+        // Catalogue hints are resolved from the real device/recipe. They do
+        // not change light, and are not part of the central sparse contract.
+        delete normalized.receiverType;delete normalized.speedMode;
+        var state=Object.assign(lightStateFor(receiver,line.port),normalized);
+        delete state.standAnimation;
+        var base=lightStateFor(receiver,0), override={};
+        Object.keys(state).forEach(function (key) { if (JSON.stringify(state[key]) !== JSON.stringify(base[key])) override[key]=clone(state[key]); });
+        Object.keys(base).forEach(function (key) { if(!Object.prototype.hasOwnProperty.call(state,key)&&PORT_NULLABLE_FIELDS.has(key))override[key]=null; });
+        delete override.bri;delete override.on;
+        if (!receiver.state.portStates) receiver.state.portStates={};
+        if (Object.keys(override).length) receiver.state.portStates[String(line.port)]=override;
+        else delete receiver.state.portStates[String(line.port)];
+        if (!Object.keys(receiver.state.portStates).length) delete receiver.state.portStates;
+      });
+    } else next.receivers.forEach(function (receiver) {
+      if (selected.indexOf(receiver.id) < 0) return;
+      receiver.state = Object.assign({}, receiver.state, clone(patch));delete receiver.state.portStates;
+    });
     return assertValid(next);
   }
   function setLayout(model, zoneId, layout) {
@@ -411,7 +510,7 @@
     var selected = new Set(standZoneReceivers(model, standId).map(function (receiver) { return receiver.id; }));
     var next = clone(model);
     next.receivers.forEach(function (receiver) {
-      if (selected.has(receiver.id)) receiver.state = Object.assign({}, receiver.state, clone(patch));
+      if (selected.has(receiver.id)) { receiver.state = Object.assign({}, receiver.state, clone(patch));delete receiver.state.portStates; }
     });
     return assertValid(next);
   }
@@ -483,6 +582,7 @@
     if (!object(patch) || Object.keys(patch).some(function (key) { return ['enabled', 'pixels', 'reversed'].indexOf(key) < 0; })) issue('OUTPUT_PATCH', 'Wijzig alleen pixels, aansluiting of het gebruik van de uitgang.');
     var next = clone(model), updated = next.receivers.find(function (r) { return r.id === receiverId; });
     Object.assign(updated.outputs.find(function (p) { return p.port === port; }), clone(patch));
+    if (patch.enabled === false && updated.state.portStates) { delete updated.state.portStates[String(port)];if (!Object.keys(updated.state.portStates).length) delete updated.state.portStates; }
     reconcileLineOrders(next);
     return assertValid(next);
   }
@@ -507,7 +607,7 @@
     return assertValid({schemaVersion:30,demo:false,stands:[{id:id,name:name,zones:[]}],receivers:[],scenes:[],presets:[]});
   }
   return Object.freeze({ LIMITS: LIMITS, DEFAULT_SPI_PIXELS: DEFAULT_SPI_PIXELS, DEFAULT_ANIMATION_WIDTH: DEFAULT_ANIMATION_WIDTH, localStand: localStand, clone: clone, defaultState: defaultState, validate: validate, assertValid: assertValid, membershipStructure: membershipStructure, getZone: getZone,
-    zoneReceivers: zoneReceivers, standZoneReceivers: standZoneReceivers, resolveTargets: resolveTargets, applyState: applyState, applyStandState: applyStandState, setLayout: setLayout,
+    zoneReceivers: zoneReceivers, standZoneReceivers: standZoneReceivers, lightStateFor: lightStateFor, validPortLightState: validPortLightState, selectionLines: selectionLines, resolveTargets: resolveTargets, applyState: applyState, applyStandState: applyStandState, setLayout: setLayout,
     createZone: createZone, renameZone: renameZone, deleteZone: deleteZone, renameReceiver: renameReceiver,
     assignReceiverToZone: assignReceiverToZone, unassignReceiver: unassignReceiver, moveReceivers: moveReceivers,
     reorderReceivers: reorderReceivers, arrangeZone: arrangeZone, arrangeLines: arrangeLines, lineIds: lineIds, ledlines: ledlines, zoneLedlines: zoneLedlines,

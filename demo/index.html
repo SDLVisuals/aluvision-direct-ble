@@ -2,17 +2,17 @@
 <html lang="nl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#171817">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'none'">
-  <title>Aluvision Lighting · Demo V41</title>
+  <title>Aluvision Lighting · Demo V50</title>
   <link rel="stylesheet" href="styles.css?v=c74b344259e88933">
   <link rel="stylesheet" href="animations.css?v=325bb013fd007bc1">
   <link rel="stylesheet" href="animation-library.css?v=24bdf59a36284448">
   <link rel="stylesheet" href="receiver-visual.css?v=76b6f07b2fa02534">
   <link rel="stylesheet" href="continuity.css?v=3ba94e0f22b9382e">
-  <link rel="stylesheet" href="onboarding-ui.css?v=e52ae51d492f0b2b">
-  <link rel="stylesheet" href="pixel-setup.css?v=fddace4b87965999">
+  <link rel="stylesheet" href="onboarding-ui.css?v=8cccb37879be0ac7">
+  <link rel="stylesheet" href="pixel-setup.css?v=f7e3a1d02d96d9a3">
   <link rel="stylesheet" href="receiver-update-ui.css?v=cbbc15b9e2f72202">
   <link rel="stylesheet" href="receiver-removal-ui.css?v=751fb97357432256">
   <link rel="stylesheet" href="scenes.css?v=f37c9c30ddb0478b">
@@ -22,57 +22,66 @@
   <link rel="stylesheet" href="interface-polish.css?v=c6805b04ed7b187c">
   <link rel="stylesheet" href="v40-design.css?v=15e28696be486273">
   <link rel="stylesheet" href="ledline-order.css?v=4943cfa255e91cae">
-  <link rel="stylesheet" href="stand-sharing.css?v=7b43dbe29f1fbbbb">
+  <link rel="stylesheet" href="stand-sharing.css?v=20a37d117fa6b87a">
   <script defer src="page-interaction.js?v=e6d7b3ef5b03295c"></script>
   <script defer src="vendor/v21_tunnel_engine.js?v=5e8f4170084d5a6a"></script>
   <script defer src="vendor/v21_animation_catalog.js?v=37a90c048d22a1d5"></script>
-  <script defer src="model.js?v=ae6751cfe3dd7d02"></script>
+  <script defer src="model.js?v=85cd0e15641d88f2"></script>
   <script defer src="fixtures.js?v=7ccc08ac36a6ab22"></script>
-  <script defer src="colour.js?v=99aa10656e8a8657"></script>
+  <script defer src="colour.js?v=bf28a9488d090e3d"></script>
   <script defer src="animation-engine.js?v=c59ff08862a8ce5d"></script>
   <script defer src="reference-animations.js?v=e7bd755a36d86964"></script>
-  <script defer src="preview.js?v=2bc4e7c4336b3d4e"></script>
-  <script defer src="animation-library.js?v=c0060f4c925b0267"></script>
-  <script defer src="presets.js?v=46d72376d7e82efa"></script>
+  <script defer src="preview.js?v=983e09300cf9ed0a"></script>
+  <script defer src="animation-library.js?v=ecbb1b829c64689f"></script>
+  <script defer src="presets.js?v=31146d0b765bd2b6"></script>
   <script defer src="colours-library.js?v=b77a7e4bb6349d03"></script>
   <script defer src="colour-library-drag.js?v=a397d1cb53cc3496"></script>
-  <script defer src="scenes.js?v=8a0a6451c059bf7b"></script>
+  <script defer src="scenes.js?v=17cd2a68405b15ac"></script>
   <script defer src="installation-libraries.js?v=f6f3178ddcc768b5"></script>
-  <script defer src="stand-connection.js?v=82dcecd4407e8ae7"></script>
+  <script defer src="stand-connection.js?v=8a7a0c411593ee98"></script>
   <script defer src="stand-sharing.js?v=ac315f5b88d4c5a6"></script>
   <script defer src="stand-management-capabilities.js?v=66eae1729a03bb19"></script>
-  <script defer src="stand-live-checkpoint.js?v=7d49afade3043ba1"></script>
+  <script defer src="stand-live-checkpoint.js?v=74d06af5d71342be"></script>
   <script defer src="preferences.js?v=5075969f07c797f9"></script>
-  <script defer src="backup.js?v=43cdb95658d00afb"></script>
-  <script defer src="receiver-playback.js?v=83f83cb27bb6f146"></script>
+  <script defer src="v50-texts.js?v=6b9f9df3fdf839b6"></script>
+  <script defer src="v50-order-texts.js?v=0976cc57f1aa038b"></script>
+  <script defer src="v50-animation-texts.js?v=b4d08256d97b7a6e"></script>
+  <script defer src="v50-error-texts.js?v=714403ec38267b5f"></script>
+  <script defer src="backup.js?v=a1f66923a08db98c"></script>
+  <script defer src="stand-cache.js?v=fa2732da4929a14d"></script>
+  <script defer src="receiver-playback.js?v=0a70b4023243e50a"></script>
   <script defer src="receiver-visual.js?v=8c3196efcf8c93f8"></script>
   <script defer src="security-mode.js?v=e4da258988fc8791"></script>
   <script defer src="onboarding-contract.js?v=47b7a0cc1e7a3cc2"></script>
-  <script defer src="onboarding-draft.js?v=7dc3b3da47980846"></script>
-  <script defer src="pixel-setup.js?v=597b01f60c6ef9c4"></script>
-  <script defer src="setup-wifi-guide.js?v=9c85b3866a3c7ed0"></script>
-  <script defer src="onboarding-ui.js?v=e4786b5d7300f557"></script>
-  <script defer src="native-runtime.js?v=631aa2e58c8258a3"></script>
+  <script defer src="onboarding-draft.js?v=80ba13f9cd2e87ee"></script>
+  <script defer src="pixel-setup.js?v=d0f66e05f0a54730"></script>
+  <script defer src="pixel-translations.js?v=39772f11b597f817"></script>
+  <script defer src="setup-translations.js?v=4232ee0b5b346158"></script>
+  <script defer src="setup-wifi-guide.js?v=22f2ee084dadc37d"></script>
+  <script defer src="onboarding-ui.js?v=58f79cc612ab088f"></script>
+  <script defer src="native-runtime.js?v=8c8a245bd7a9c2ec"></script>
   <script defer src="web-demo-service.js?v=6cd73173e7752b20"></script>
-  <script defer src="live-control.js?v=23204cd880be86ec"></script>
+  <script defer src="live-control.js?v=47a276e3f7e9262c"></script>
   <script defer src="receiver-update-ui.js?v=6325074d965cc77e"></script>
-  <script defer src="receiver-removal-ui.js?v=391137c9b12a918e"></script>
+  <script defer src="receiver-removal-ui.js?v=0f9ce9300c7f1029"></script>
   <script defer src="interface-motion.js?v=678c13e2957e72c8"></script>
-  <script defer src="ledline-order-drag.js?v=c9a653988f0a6632"></script>
-  <script defer src="ledline-identification-session.js?v=de9e5e725d745e44"></script>
+  <script defer src="ledline-order-drag.js?v=17fc92b60b4bccdd"></script>
+  <script defer src="ledline-identification-session.js?v=86dcb0c42a414334"></script>
   <link rel="stylesheet" href="stand-animations.css?v=c63a11852b215ba2">
   <link rel="stylesheet" href="v41-materials.css?v=1fd1f545a946a333">
   <link rel="stylesheet" href="v41-visual.css?v=938f6d81e36e2758">
-  <link rel="stylesheet" href="onboarding-connect.css?v=621c70136b7482d0">
-  <script defer src="stand-animations.js?v=1f4fc6b8c7d57865"></script>
+  <link rel="stylesheet" href="onboarding-connect.css?v=56b0c6de04df9c58">
+  <link rel="stylesheet" href="v50-interface.css?v=3b4f38c3c1d2a14b">
+  <script defer src="stand-animations.js?v=90938c1d79d94a76"></script>
   <script defer src="ui-continuity.js?v=ae28fd0b92d3100c"></script>
-  <script defer src="app.js?v=701b18e7551cd4c3"></script>
+  <script defer src="v50-interactions.js?v=226f8ddd22fb74ee"></script>
+  <script defer src="app.js?v=158fa368d2ab3e6f"></script>
   <link rel="stylesheet" href="android-download/android-download.css?v=23ef08fd40d5090d">
   <script defer src="android-download/android-download.js?v=8405946b1a3240f5" data-android-apk="android/aluvision-android-test-41.0.14-20-c2f304b6ed84.apk" data-android-version="41.0.14" data-android-version-code="20" data-android-size="2570285" data-android-sha256="c2f304b6ed842bcf202057038abb4cb2a67a4838143b4462484fda32e702e726" data-android-mode="receiver" data-android-min-sdk="26"></script>
 </head>
 <body>
   <a class="skip" href="#main">Naar de bediening</a>
-  <header class="brand-bar"><img src="assets/aluvision-logo.png?v=834524590fdae6c1" alt="Aluvision"><span>LIGHTING <b>V41</b></span></header>
+  <header class="brand-bar"><img src="assets/aluvision-logo.png?v=834524590fdae6c1" alt="Aluvision"><span>LIGHTING <b>V50</b></span></header>
   <div id="web-demo-banner" class="web-demo-banner" role="status" hidden><b>DEMO</b><span>Fictieve receivers · geen verbinding met echte verlichting</span></div>
   <main id="main" tabindex="-1"></main>
   <nav id="navigation" class="navigation" aria-label="Hoofdnavigatie"></nav>

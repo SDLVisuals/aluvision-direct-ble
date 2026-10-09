@@ -32,7 +32,7 @@
   }
   function lightState(value,strict=false){
     if(!plain(value))fail('BACKUP_FORMAT','Ongeldige lichtinstellingen.');
-    const clean={...value};delete clean.rgbwLast;delete clean.standAnimation;
+    const clean={...value};delete clean.rgbwLast;delete clean.standAnimation;delete clean.portStates;
     const result=P.sanitizeLightState(clean,strict);
     if(Object.hasOwn(value,'rgbwLast')){
       const memory=value.rgbwLast;
@@ -45,6 +45,18 @@
       const standAnimations=typeof module==='object'&&module.exports?require('./stand-animations.js'):globalThis.LightningStandAnimations;
       if(!standAnimations)fail('BACKUP_FORMAT','De gezamenlijke animatie kan niet worden gelezen.');
       result.standAnimation=standAnimations.validateMarker(value.standAnimation);
+    }
+    if(Object.hasOwn(value,'portStates')){
+      const overrides=value.portStates;
+      if(!plain(overrides)||Object.keys(overrides).length>4||Object.keys(overrides).some(port=>!/^[1-4]$/.test(port)))fail('BACKUP_FORMAT','De lichtinstellingen per SPI-ledline zijn ongeldig.');
+      const portStates={};
+      for(const [port,override]of Object.entries(overrides)){
+        if(!M.validPortLightState(override))fail('BACKUP_FORMAT','De lichtinstellingen per SPI-ledline zijn ongeldig.');
+        const effective=M.lightStateFor({type:'SPI',state:{...clean,portStates:{[port]:override}}},Number(port)),merged=lightState(effective,strict),allowed=new Set([...P.STATE_FIELDS,'rgbwLast']);
+        const delta=Object.fromEntries(Object.keys(override).filter(key=>allowed.has(key)&&(override[key]===null||Object.hasOwn(merged,key))).map(key=>[key,override[key]===null?null:clone(merged[key])]));
+        if(Object.keys(delta).length)portStates[port]=delta;
+      }
+      if(Object.keys(portStates).length)result.portStates=portStates;
     }
     return result;
   }
@@ -64,7 +76,7 @@
     }),scenes:[],presets:[]};
     for(const s of model.stands)for(const item of [s,...s.zones])if(typeof item.name!=='string'||item.name.length>64)fail('BACKUP_MODEL','Een naam is te lang.');
     for(const r of model.receivers)if(typeof r.name!=='string'||r.name.length>64)fail('BACKUP_MODEL','Een naam is te lang.');
-    for(const r of model.receivers)validateAnimation(r.type,r.state);
+    for(const r of model.receivers)validateReceiverAnimations(r);
     return M.assertValid(model);
   }
   const catalogues=new Map();
@@ -76,6 +88,10 @@
       ?effect.state.v30Effect===state.v30Effect&&effect.state.engine===state.engine
       :effect.state.engine===state.engine&&effect.state.variant===(state.variant??0)&&(effect.state.previewFamily||'')===(state.previewFamily||''));
     if(!found)fail('BACKUP_ANIMATION','Deze backup bevat een animatie die deze app niet ondersteunt.');
+  }
+  function validateReceiverAnimations(receiver){
+    validateAnimation(receiver.type,receiver.state);
+    for(const port of Object.keys(receiver.state.portStates||{}))validateAnimation(receiver.type,M.lightStateFor(receiver,Number(port)));
   }
   function list(value,validate){
     if(!Array.isArray(value)||value.length>100)fail('BACKUP_LIBRARY','Deze bibliotheek is te groot.');
@@ -96,12 +112,21 @@
   const identity=r=>JSON.stringify([r.id,r.rid||null,r.deviceFingerprint||null,r.standId,r.type,r.role,r.lifecycle,r.onboardingTransactionId||null]);
   const key=v=>JSON.stringify(v,(_,value)=>plain(value)?Object.fromEntries(Object.keys(value).sort().map(k=>[k,value[k]])):value);
   function nativeModel(saved,current){
-    const desired=publicModel(saved,true),trusted=publicModel(current),byID=new Map(trusted.receivers.map(r=>[r.id,r]));
+    const desired=publicModel(saved,true),trusted=publicModel(current),byID=new Map(trusted.receivers.map(r=>[r.id,r])),nativeByID=new Map(current.receivers.map(r=>[r.id,r]));
     if(desired.demo||trusted.demo||key(desired.stands.map(s=>s.id).sort())!==key(trusted.stands.map(s=>s.id).sort())||desired.receivers.length!==trusted.receivers.length)fail('BACKUP_INSTALLATION','Open eerst dezelfde installatie op deze telefoon.');
     desired.receivers=desired.receivers.map(r=>{
       const old=byID.get(r.id);if(!old||identity(r)!==identity(old))fail('BACKUP_INSTALLATION','Deze backup hoort niet bij de gekoppelde receivers.');
       if(key(r.outputs)!==key(old.outputs))fail('BACKUP_PORTS','De poortinstellingen verschillen. Herstel die eerst bij je SPI-receiver.');
-      return {...r,connection:'unknown',state:clone(old.state)};
+      const result={...r,connection:'unknown',state:clone(old.state)},native=nativeByID.get(r.id);
+      // The portable format deliberately excludes this immutable MAIN field.
+      // Preserve it only from the same native-loaded current receiver after
+      // exact identity/geometry checks. Native import revalidates the context
+      // and every immutable field; the file never grants receiver authority.
+      if(Object.hasOwn(native,'physicalId')){
+        if(native.role!=='main'||typeof native.physicalId!=='string'||! /^[0-9A-F]{12}$/.test(native.physicalId)||/^0+$/.test(native.physicalId))fail('BACKUP_INSTALLATION','De gekoppelde hoofdreceiver kon niet worden gecontroleerd.');
+        result.physicalId=native.physicalId;
+      }
+      return result;
     });return desired;
   }
   function lightRecord(model){return {version:1,receivers:publicModel(model).receivers.map(r=>({identity:identity(r),state:r.state}))};}
@@ -109,7 +134,7 @@
     if(!raw)return clone(model);const data=parse(raw);keys(data,['version','receivers']);
     if(data.version!==1||!Array.isArray(data.receivers)||data.receivers.length>1200)fail('LIGHT_STORAGE','De bewaarde lichtkeuze is beschadigd.');
     const states=new Map();for(const r of data.receivers){keys(r,['identity','state']);if(typeof r.identity!=='string'||states.has(r.identity))fail('LIGHT_STORAGE','Ongeldige lichtkeuze.');states.set(r.identity,lightState(r.state,true));}
-    const next=clone(model);for(const r of next.receivers)if(states.has(identity(r))){const state=states.get(identity(r));validateAnimation(r.type,state);r.state=state;}return M.assertValid(next);
+    const next=clone(model);for(const r of next.receivers)if(states.has(identity(r))){r.state=states.get(identity(r));validateReceiverAnimations(r);}return M.assertValid(next);
   }
   function values(backup){return {[P.STORAGE_KEY]:JSON.stringify({version:1,presets:backup.libraries.presets}),[S.STORAGE_KEY]:JSON.stringify({version:1,scenes:backup.libraries.scenes}),[C.STORAGE_KEY]:JSON.stringify({version:1,colors:backup.libraries.colors}),[U.STORAGE_KEY]:JSON.stringify({version:1,preferences:backup.preferences}),[LIGHT_KEY]:JSON.stringify(lightRecord(backup.model))};}
   const storageKeys=[P.STORAGE_KEY,S.STORAGE_KEY,C.STORAGE_KEY,U.STORAGE_KEY,LIGHT_KEY];

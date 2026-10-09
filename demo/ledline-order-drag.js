@@ -17,6 +17,25 @@
     var view = document.defaultView, active = null, destroyed = false, scrollFrame = null;
     var interaction = typeof options.onInteraction === 'function' ? options.onInteraction : function () {};
     var status = typeof options.onStatus === 'function' ? options.onStatus : function () {};
+    var messageDefaults = {
+      orderDragUnconfirmed: 'De volgorde is nog niet bevestigd.',
+      orderDragSubmitted: 'Volgorde doorgegeven.',
+      orderDragUnchanged: 'Volgorde niet gewijzigd.',
+      orderDragCancelled: 'Verplaatsen geannuleerd.',
+      orderDragPicked: 'Ledline opgepakt. Plaats {position} van {count}.',
+      orderDragPosition: 'Plaats {position} van {count}.'
+    };
+    function message(key, params) {
+      var translated;
+      try { if (typeof options.message === 'function') translated = options.message(key, params || {}); }
+      catch (_) { /* Copy failure never changes interaction/persistence authority. */ }
+      var text = typeof translated === 'string' && translated && translated !== key ? translated : messageDefaults[key];
+      return text.replace(/\{([A-Za-z][A-Za-z0-9_]*)\}/g, function (match, name) {
+        return params && ['string', 'number'].includes(typeof params[name]) ? String(params[name]) : match;
+      });
+    }
+    var scrollTop = typeof options.getScrollTop === 'function' ? options.getScrollTop : function () { return view.scrollY; };
+    var scrollBy = typeof options.scrollBy === 'function' ? options.scrollBy : function (delta) { view.scrollBy({ top: delta, left: 0, behavior: 'instant' }); };
     function items() {
       var values = options.getItems();
       if (!Array.isArray(values) || values.length > 1024 || values.some(function (id) {
@@ -72,13 +91,13 @@
     function scrollTick() {
       scrollFrame = null;
       if (!active || active.input !== 'pointer' || !valid()) return;
-      var state = active, delta = scrollDelta(state.pointerY), before = view.scrollY;
+      var state = active, delta = scrollDelta(state.pointerY), before = scrollTop();
       if (active !== state || !valid() || !delta || !Number.isFinite(before)) return;
       // Viewport only, one bounded scroll per frame. No flush, navigation or model mutation.
-      try { view.scrollBy({ top: delta, left: 0, behavior: 'instant' }); } catch (_) { return; }
+      try { scrollBy(delta); } catch (_) { return; }
       if (active !== state || !valid()) return;
       point({ clientY: state.pointerY }); // Rows have moved even when the captured pointer has not.
-      if (active === state && view.scrollY !== before) queueScroll(); // Stop at a saturated viewport.
+      if (active === state && scrollTop() !== before) queueScroll(); // Stop at a saturated viewport.
     }
     function clean(state) {
       stopScroll();
@@ -104,13 +123,13 @@
           var result = options.onDrop({ id: state.id, toIndex: state.toIndex });
           // Report failure only, never retry or label persistence as confirmed.
           if (result && typeof result.then === 'function') Promise.resolve(result).catch(function () {
-            announce('De volgorde is nog niet bevestigd.');
+            announce(message('orderDragUnconfirmed'));
           });
         }
       } catch (_) { failed = true; }
       finally { try { notify(false, state); } catch (_) {} }
-      announce(failed ? 'De volgorde is nog niet bevestigd.' : commit ?
-        (dropped ? 'Volgorde doorgegeven.' : 'Volgorde niet gewijzigd.') : 'Verplaatsen geannuleerd.');
+      announce(message(failed ? 'orderDragUnconfirmed' : commit ?
+        (dropped ? 'orderDragSubmitted' : 'orderDragUnchanged') : 'orderDragCancelled'));
     }
     function valid() {
       if (!active) return false;
@@ -135,7 +154,7 @@
         if (pointerId !== null) handle.setPointerCapture(pointerId);
         notify(true, active);
         if (!valid()) return false; // caller may change the scope in onInteraction.
-        announce('Ledline opgepakt. Plaats ' + (index + 1) + ' van ' + ids.length + '.');
+        announce(message('orderDragPicked', { position: index + 1, count: ids.length }));
         return true;
       } catch (_) { finish(false); return false; }
     }
@@ -146,7 +165,7 @@
       active.toIndex = index;
       row.setAttribute('data-order-drop', edge);
       row.setAttribute('data-order-drop-index', String(index));
-      announce('Plaats ' + (index + 1) + ' van ' + active.ids.length + '.');
+      announce(message('orderDragPosition', { position: index + 1, count: active.ids.length }));
     }
     function point(event) {
       if (!valid() || !Number.isFinite(event.clientY)) return;
