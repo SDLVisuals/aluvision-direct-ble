@@ -576,6 +576,8 @@ body:has(.onboarding-page) .onboarding-page{gap:10px}
 .onboarding-receiver-title{flex:1;min-width:0}
 .onboarding-page .onboarding-receiver-identity h2{font-size:16px;line-height:1.25;letter-spacing:-.2px;margin:0!important;overflow-wrap:anywhere}
 .onboarding-receiver-identity small{display:block;color:var(--muted);font-size:11px;line-height:1.45;margin-top:4px}
+.onboarding-page .onboarding-receiver-identity .onboarding-receiver-id{display:flex;align-items:baseline;gap:6px;font-size:10px;line-height:1.35;margin-top:5px}
+.onboarding-receiver-id b{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;font-weight:650;letter-spacing:.6px;color:var(--ink)}
 .onboarding-page .onboarding-receiver-identity .pill{flex:none;font-size:10px;padding:6px 7px;letter-spacing:.3px;box-shadow:none}
 .onboarding-page .onboarding-result[data-discovery-status=found] .onboarding-product{margin:16px 0 0;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:18px;background:radial-gradient(ellipse at 50% 35%,#fff 0,#f7f6f3 72%,#eeeee8 100%);box-shadow:inset 0 1px #fff}
 .onboarding-page .onboarding-result[data-discovery-status=found] .onboarding-product canvas{height:160px}

@@ -38,6 +38,7 @@
     ['Receiver toevoegen','Add receiver','Ajouter un récepteur','Receiver hinzufügen'],
     ['Receiver zoeken','Find receiver','Rechercher un récepteur','Receiver suchen'],['Receiver zoeken…','Finding receiver…','Recherche du récepteur…','Receiver wird gesucht…'],
     ['Receiver controleren','Check receiver','Vérifier le récepteur','Receiver prüfen'],['Receiver gevonden','Receiver found','Récepteur trouvé','Receiver gefunden'],
+    ['Gevonden receiver-ID','Discovered receiver ID','Identifiant du récepteur trouvé','Gefundene Receiver-ID'],
     ['Kies je receiver','Choose your receiver','Choisissez votre récepteur','Wähle deinen Receiver'],
     ['Kies een passende zone','Choose a compatible zone','Choisir une zone compatible','Passende Zone wählen'],
     ['Kies je uitgangen','Choose your outputs','Choisissez vos sorties','Wähle deine Ausgänge'],

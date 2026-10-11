@@ -1388,7 +1388,7 @@
     const s=selectedState(),brand=slot==='brand',background=slot==='background',values=brand?brandEditorChannels():background?backgroundChannels():effectiveColourChannels(slot??0),rgb=values.slice(0,3),white=values[3];
     const prefix=slot===null?'static':'palette-'+slot;
     const channels=['r','g','b','w'].map((channel,i)=>{const value=i===3?white:rgb[i];return `<div class="channel-row" style="--channel:${['#c4473f','#258461','#3f69c7','#747670'][i]}"><button class="channel-toggle" data-action="channel-toggle" data-channel="${channel}" aria-label="${esc(t(value>0?'v50ChannelDisable':'v50ChannelEnable',{channel:channel.toUpperCase()}))}" aria-pressed="${value>0}">${channel.toUpperCase()}</button><button data-action="channel-step" data-channel="${channel}" data-step="-1" aria-label="${esc(t('v50ChannelDecrease',{channel:channel.toUpperCase()}))}">−</button><input id="${prefix}-${channel}" type="range" min="0" max="255" value="${value}" data-channel="${channel}" aria-label="${esc(t('v50ChannelValue',{channel:channel.toUpperCase()}))}"><button data-action="channel-step" data-channel="${channel}" data-step="1" aria-label="${esc(t('v50ChannelIncrease',{channel:channel.toUpperCase()}))}">+</button><input class="channel-number" type="number" inputmode="numeric" min="0" max="255" step="1" value="${value}" data-channel-number="${channel}" aria-label="${esc(t('v50ChannelExact',{channel:channel.toUpperCase()}))}"></div>`;}).join('');
-    const warmth=C.warmthOf(values);
+    const warmth=C.artificialWarmthOf(values);
     const warmControls=`<section class="v50-white-mix" aria-label="${esc(t('v50ArtificialWhite'))}"><div class="warm-white-controls"><button type="button" class="warm-white-choice" data-action="warm-white" aria-pressed="${warmth!==null}"><span class="warm-white-swatch" aria-hidden="true"></span><span><b>${esc(t('v50ArtificialWhite'))}</b><small>RGB + W</small></span>${icon('sun')}</button><p class="v50-white-mix-hint">${esc(t('v50WhiteMixShort'))}</p><div class="slider-row warmth-row"><label for="${prefix}-warmth">${esc(t('v50Warmth'))} <output data-warmth-value>${warmth===null?esc(t('v50ChooseMix')):warmth+'%'}</output></label><input id="${prefix}-warmth" type="range" min="0" max="100" step="1" value="${warmth??50}" data-warmth aria-label="${esc(t('v50Warmth'))}" ${warmth===null?'disabled':''}><div class="warmth-scale"><span>${esc(t('v50Neutral'))}</span><span>${esc(t('v50Warmer'))}</span></div><small class="warmth-help">${esc(t(warmth===null?'v50ChooseMixHint':'v50MixBrightnessHint'))}</small></div></div></section>`;
     const fineControls=`<div class="fine-controls${compact?' stand-fine-controls':''}" data-colour-fine><h3>${esc(t('v50FineTune'))}</h3><div class="fine-controls-body"><p class="channel-help">${esc(t('channelHelp'))}</p>${channels}${warmControls}</div></div>`;
     return `<section class="card colour-card shared-colour-picker" data-colour-picker="${brand?'brand':background?'background':slot===null?'static':'animation'}" data-slot="${brand?brandEditor.index:slot??''}">
@@ -3702,7 +3702,7 @@
       const swatch=root.querySelector('.colour-swatch');if(swatch)swatch.style.background=C.screenHex(rgb,w);
       const warmthControl=root.querySelector('[data-warmth]');
       if(warmthControl){
-        const warmth=C.warmthOf(values),chosen=warmth!==null;
+        const warmth=C.artificialWarmthOf(values),chosen=warmth!==null;
         warmthControl.disabled=!chosen;warmthControl.value=String(warmth??50);
         root.querySelector('[data-action="warm-white"]')?.setAttribute('aria-pressed',String(chosen));
         root.querySelector('[data-warmth-value]').textContent=chosen?warmth+'%':t('v50ChooseMix');
@@ -4998,7 +4998,7 @@
       if(action==='power'){const on=!powerTargets().every(r=>r.state.on!==false && r.state.power!==false);apply({on,power:on},{kind:'all'});if(standControlOpen)return;return render();}
       if(action==='warm-white'){
         const root=button.closest('[data-colour-picker]');if(!root)return;
-        const values=C.warmWhite(C.warmthOf(pickerChannels(root))??50);
+        const values=C.warmWhite(C.artificialWarmthOf(pickerChannels(root))??50);
         return writePicker(root,values.slice(0,3),values[3]);
       }
       if(action==='preview-fullscreen')return openFullscreenPreview();

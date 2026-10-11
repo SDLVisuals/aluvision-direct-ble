@@ -194,8 +194,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "dd894e1082dd00cfd281b819e7951d362c51786c1234b468d582834e0295ee52",
-      "bytes": 535572
+      "sha256": "4d241ce42347c62e63473533e055c28541932e74d45b86a6ed073f9fb9c4bd7c",
+      "bytes": 535602
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -214,8 +214,8 @@
     },
     {
       "path": "colour.js",
-      "sha256": "bf28a9488d090e3db503237084b976722d1b6b3eed601b983b91a9fe06238410",
-      "bytes": 3655
+      "sha256": "0624b2a75d0fbbbde342f061a7d8702bfea6a2283249217cdeb9011a0b15a32f",
+      "bytes": 4029
     },
     {
       "path": "colours-library.js",
@@ -234,7 +234,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "5c832403d0101742ac2cbada155e4f48986e589a584d0acfb5b51324d9de2672",
+      "sha256": "87a8e1d0265a6ad4bc0681a73daab2b7f0e8c73c3c72a3f8350817f20572d3d2",
       "bytes": 7441
     },
     {
@@ -324,13 +324,13 @@
     },
     {
       "path": "onboarding-ui.css",
-      "sha256": "59470bf9839068b656082bf89f08ba4c0608de5353bfc69abbb078c18fe94e13",
-      "bytes": 70475
+      "sha256": "d786649a8843b4a8ccd2862f67c419a46174e8422ccf3f673eff4f99bcedea57",
+      "bytes": 70787
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "70f021d67cbd8d0b9ea4bf33268b38199d3f537e2e951d9e64da3d42780d41ba",
-      "bytes": 163428
+      "sha256": "14725a4a81df9f42a30889007d4bba696fabac1b3621e07989edcc27b9817dfa",
+      "bytes": 164101
     },
     {
       "path": "page-interaction.css",
@@ -439,8 +439,8 @@
     },
     {
       "path": "setup-translations.js",
-      "sha256": "e50ac1f384bd763716f64d574a5b1e81d65aab011b6603882e48c2db54a08d4a",
-      "bytes": 83595
+      "sha256": "219c050fefc2984405295aab848bc66de56d7ddc04c0af8dd0e111404d0d33ac",
+      "bytes": 83710
     },
     {
       "path": "setup-wifi-guide.js",
@@ -1824,7 +1824,7 @@
     "sourceFiles": 90,
     "firmwareFilesExcluded": 8,
     "sourceRuntimeFiles": 82,
-    "publicRuntimeSourceInventorySha256": "251f5e4ba20a482a7bf142df3f1b4c8192d021ee51da4e4e3cfd2f1cff49ac82",
+    "publicRuntimeSourceInventorySha256": "84d137aaf8b280d88d7627cb4f6549de9fc47429f7e65b7722dd843d83bb7af3",
     "preservedFakeAdapter": "web-demo-service.js",
     "historicalAndroidDownloadRetained": true,
     "publicOnlyAdaptations": 7,

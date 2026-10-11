@@ -56,9 +56,16 @@
     for(let warmth=0;warmth<=100;warmth++)if(warmWhite(warmth).every((channel,index)=>channel===channels[index]))return warmth;
     return null;
   }
+  // The zero-warmth recipe is pure cold W, not an artificial RGB + W mix.
+  // Keep its channel recipe and inverse intact for saved values, but do not
+  // label the ordinary White preset as a selected warm-white shortcut.
+  function artificialWarmthOf(channels) {
+    const warmth=warmthOf(channels);
+    return warmth!==null&&warmth>0?warmth:null;
+  }
   function state(rgb, white = 0) {
     const [r,g,b] = rgb.map(n => Math.round(clamp(n,0,255))), w = Math.round(clamp(white,0,255));
     return {r,g,b,w,colors:[hex([r,g,b])],whiteChannels:[w],colorCount:1,rgbEnabled:[true],whiteEnabled:[true]};
   }
-  return {hsv,toHsv,fromPoint,position,hex,mixWhite,screenRGB,screenHex,warmWhite,warmthOf,state};
+  return {hsv,toHsv,fromPoint,position,hex,mixWhite,screenRGB,screenHex,warmWhite,warmthOf,artificialWarmthOf,state};
 });
