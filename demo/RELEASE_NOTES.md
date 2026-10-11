@@ -1,3 +1,15 @@
+# Browserdemo V50 · interfacekandidaat570 · 11 oktober 2026
+
+De klantteksten gebruiken nu consequent animaties en animatiegroepen in vier talen. Een zone openen brengt je naar Kleur, zonder je verlichting te wijzigen. In het schermvullende voorbeeld blijft je positie en bediening behouden wanneer je meerdere ledlines selecteert. De animatie-instellingen uit kandidaat569 en de ledlinevolgorde, vaste plaatsnummers en korte tutorial uit kandidaat568 blijven behouden.
+
+Dit is alleen een browserdemo met twintig fictieve receivers: tien RGBW en tien SPI. Gegevens blijven tijdelijk in geheugen en verdwijnen bij herladen. Geen echte wifi, receiververbinding, fysieke verlichting of firmwarebestanden. PIN en delen blijven uitgeschakeld. Een schermvoorbeeld is geen bewijs van fysiek licht.
+
+Kandidaat570 is uitsluitend een interfacebronupdate. Er is geen iPhone-build570 gecompileerd of geïnstalleerd; de iPhone-update staat nog open. De historische ondertekende build568-metadata blijft bewaard en claimt geen installatie of fysieke acceptatie op deze website. De bestaande Android-download blijft **41.0.14, code20** en is niet gewijzigd.
+
+De 707 gerichte softwaretests zijn geslaagd. De vier bestaande legacytestfouten zijn apart gerapporteerd; browsercontrole en fysieke acceptatie blijven afzonderlijke controles. QA-broninventaris SHA-256: 692fdbf161d50dfd7a7bc96dffd09f166f6b6c9517bb78da935005711a4a513c.
+
+## Historische release-informatie
+
 # Browserdemo V50 · interfacekandidaat569 · 11 oktober 2026
 
 De animatiebediening is opnieuw ingedeeld: de huidige animatie is herkenbaar in de kiezer, met een aparte knop om haar instellingen te openen. Het instelscherm groepeert kleuren, snelheid, helderheid en de overige opties. Terug naar de kiezer verandert de gekozen animatie niet. De ledlinevolgorde, vaste plaatsnummers, korte tutorial en cumulatieve selecties uit kandidaat568 blijven behouden.

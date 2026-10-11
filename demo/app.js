@@ -1199,7 +1199,16 @@
     const chosen=choices.filter(line=>ids.includes(line.id)),summary=continuousZone()?t('v50Continuous'):choices.length===1?t('scopeLine',{number:1}):all?t('v50AllCount',{count:choices.length}):chosen.length===1?t('scopeLine',{number:chosen[0].number}):t('v50SelectedNumbers',{numbers:formatLineNumbers(ids)});
     return `<div class="v50-preview-actions" data-selection-kind="${esc(selection().kind)}"><div class="v50-preview-toolbar"><div class="v50-selection-summary" role="status" aria-live="polite"><span><small>${esc(t('v50ControlScope'))}</small><b>${esc(summary)}</b>${canTapLines?`<em class="v50-preview-inline-hint">${esc(t('v50TapLine'))}</em>`:''}</span></div>${canTapLines?`<button class="v50-select-all" type="button" data-action="select" data-id="all" aria-pressed="${all}">${icon('together')}${esc(t('v50All'))}</button>`:''}${expand?`<button class="v50-preview-expand" type="button" data-action="preview-fullscreen">${icon('expand')}<span>${esc(t('v50ViewAll'))}</span></button>`:''}</div></div>`;
   }
-  function openFullscreenPreview(){
+  function captureFullscreenPreview(opener=document.activeElement){
+    const dialog=document.getElementById('effect-dialog');
+    if(!dialog.open||!dialog.classList.contains('v50-fullscreen-preview'))return null;
+    const surface=dialog.querySelector('.v50-full-canvas-scroll'),canvasScroll=dialog.querySelector('.v50-preview-canvas-scroll');
+    return {zoneId:route.zoneId,scrollTop:dialog.scrollTop,scrollLeft:dialog.scrollLeft,
+      surface:surface?{top:surface.scrollTop,left:surface.scrollLeft}:null,
+      canvasScroll:canvasScroll?{top:canvasScroll.scrollTop,left:canvasScroll.scrollLeft}:null,
+      actionKey:UIContinuity.captureAction(dialog,opener)};
+  }
+  function openFullscreenPreview({restore=null}={}){
     if(!zone())return;
     const interactive=!continuousZone()&&physicalLineCount()>1;
     const view=spatialMode(zone().layout,zone()),spatial=['tunnel','wall'].includes(view);
@@ -1207,6 +1216,13 @@
     showEffectDialog(t('v50ViewAll'),`<section class="v50-full-preview"><div class="preview-wrap v50-control-preview v50-full-canvas-scroll" style="--v50-preview-min-height:${metrics.height}px;--v50-preview-min-width:${metrics.width}px">${interactiveZonePreview(zone(),'v50-expanded-canvas',{main:true,previewSize:'large',interactiveLines:interactive,selection:selection(),label:zone().name,arrangementPreview:true,...(spatial?{spatialShape:view,presentation:'receivers'}:{})})}${previewSelectionMarkup(interactive,{expand:false})}</div><button class="button secondary full" data-action="effect-dialog-close">${icon('back')}${esc(t('v50ReturnControl'))}</button></section>`);
     document.getElementById('effect-dialog').classList.add('v50-fullscreen-preview');
     paint(performance.now()/1000);
+    if(restore?.zoneId===route.zoneId){
+      const dialog=document.getElementById('effect-dialog'),surface=dialog.querySelector('.v50-full-canvas-scroll'),canvasScroll=dialog.querySelector('.v50-preview-canvas-scroll');
+      if(surface&&restore.surface){surface.scrollTop=restore.surface.top;surface.scrollLeft=restore.surface.left;}
+      if(canvasScroll&&restore.canvasScroll){canvasScroll.scrollTop=restore.canvasScroll.top;canvasScroll.scrollLeft=restore.canvasScroll.left;}
+      dialog.scrollTop=restore.scrollTop;dialog.scrollLeft=restore.scrollLeft;
+      UIContinuity.restoreCapturedAction(dialog,restore.actionKey);
+    }
   }
   function zoneTypeLabel(z) { return z.type==='SPI'?'Pixel LED · SPI':z.type==='RGBW'?'RGBW':'Nog geen verlichting'; }
   function animationWayfinding(screen){
@@ -3169,7 +3185,7 @@
       if(route===previous&&!document.hidden)toast(error?.code==='STAND_CONFIG_CONFLICT'?'De stand is op een ander toestel veranderd. Open hem opnieuw; er is niets toegevoegd.':'De actuele receiverlijst is nog niet bevestigd. Controleer de verbinding en probeer opnieuw.');
     }finally{if(receiverSetupPreparation===token)receiverSetupPreparation=null;flushCentralProjection();}
   }
-  function navigate(screen, extra={}, {restoreControls=false,managedPrepared=false}={}) {
+  function navigate(screen, extra={}, {restoreControls=false,managedPrepared=false,zoneEntry=false}={}) {
     if(temporarySingleUser&&['pin-login','stand-connect','stand-sharing','stand-code-change'].includes(screen))screen='settings';
     if(firstAccessCheckpoint&&screen!=='receiver-add')return;
     if(screen==='receiver-add'&&localStandConcept())prepareLocalStandReceiver(extra.setupReturnZoneId||extra.zoneId||route.zoneId);
@@ -3204,12 +3220,13 @@
       settingsOpen=false;showControlAnimationGallery=!activeEffect();
       arrangementDraft=null;
     }
-    const enteredZone=screen==='controls'&&(changedZone||!['controls','colour','animations','effects','layout'].includes(previousRoute.screen));
-    if(enteredZone&&!restoreControls){settingsOpen=false;++advancedSettingsRevision;}
-    if(enteredZone&&activeEffect()&&!restoreControls){controlMode='animations';showControlAnimationGallery=false;}
+    // Opening a zone is presentation-only: start on Colour even when its
+    // saved light is animated. Internal gallery/editor returns stay in their
+    // current mode and must never restart or replace the receiver recipe.
+    const enteredZone=screen==='controls'&&(zoneEntry||changedZone||!['controls','colour','animations','effects','layout','animation-family'].includes(previousRoute.screen));
+    if(enteredZone&&!restoreControls){controlMode='colour';showControlAnimationGallery=true;settingsOpen=false;++advancedSettingsRevision;}
     if(requestedLayout){openLineSetup.add(route.zoneId);beginArrangement();beginOrderColours();}
     render({top:true});
-    if(enteredZone&&controlMode==='animations'&&!showControlAnimationGallery&&!restoreControls)revealAnimationStart();
     if(screen==='settings')void refreshPinProtection();
   }
   function resetMarkup(key,label) { return `<button class="setting-reset" data-action="setting-reset" data-id="${key}" aria-label="${esc(t('v50ResetSetting',{name:label}))}" ${settingChanged(key)?'':'hidden'}>↺ ${esc(t('v50Default'))}</button>`; }
@@ -3867,7 +3884,7 @@
   function showHelp() {
     const help=document.getElementById('help');cancelDialogDismissal(help);
     if(!help.open)helpReturnFocus=dialogActionOpener||document.activeElement;
-    document.getElementById('help-content').innerHTML=`<header><h2 id="help-title" tabindex="-1" autofocus>Kies de plek.<br>Bedien het licht.</h2></header><section>${icon('stand')}<div><h3>Stand → je hele installatie</h3><p>Alles op één plek.</p></div></section><section>${icon('zones')}<div><h3>Zone → een plek in je stand</h3><p>Bijvoorbeeld Balie of Plafond. Open een zone om te bedienen.</p></div></section><section>${icon('together')}<div><h3>Alle ledlines of één ledline</h3><p>Kies de hele zone of één lijn. Doorlopende SPI bedien je samen.</p></div></section><aside class="guide"><p>RGBW en SPI hebben elk een eigen zone.</p></aside><button class="button" data-action="close-help">Begrepen</button>`;
+    document.getElementById('help-content').innerHTML=`<header><h2 id="help-title" tabindex="-1" autofocus>Kies de plek.<br>Bedien het licht.</h2></header><section>${icon('stand')}<div><h3>Stand → je hele installatie</h3><p>Alles op één plek.</p></div></section><section>${icon('zones')}<div><h3>Zone → een plek in je stand</h3><p>Bijvoorbeeld Balie of Plafond. Open een zone om te bedienen.</p></div></section><section>${icon('together')}<div><h3>${esc(t('v570HelpLinesTitle'))}</h3><p>${esc(t('v570HelpLinesBody'))}</p></div></section><aside class="guide"><p>RGBW en SPI hebben elk een eigen zone.</p></aside><button class="button" data-action="close-help">Begrepen</button>`;
     help.setAttribute('aria-labelledby','help-title');help.showModal();
     // Start the explanation at its title, not at the only button at the end.
     document.getElementById('help-title').focus({preventScroll:true});help.scrollTop=0;
@@ -4477,8 +4494,8 @@
     if(zone()?.type==='SPI'&&!M.zoneLedlines(model,route.zoneId).some(line=>line.id===id))return;
     event.preventDefault();
     toggleLineSelection(id);
-    const full=document.getElementById('effect-dialog').classList.contains('v50-fullscreen-preview');
-    expandedScopeZones.add(route.zoneId);render({preserveScroll:true});if(full)openFullscreenPreview();
+    const full=captureFullscreenPreview();
+    expandedScopeZones.add(route.zoneId);render({preserveScroll:true});if(full)openFullscreenPreview({restore:full});
   });
   document.addEventListener('click',async event=>{
     if(firstAccessCheckpoint&&event.target.closest?.('[data-action]'))return;
@@ -4769,11 +4786,14 @@
       if(action==='stand-controls')return showStandControls();
       if(action==='stand-zones-info'||action==='stand-receivers-info')return showStandOverview(action==='stand-zones-info'?'zones':'receivers');
       if(action==='zone'||action==='overview-zone'){
+        // A retained overview can outlive a remotely removed/moved zone.
+        // Reject that stale entry before dismissing the sheet or changing UI.
+        if(!stand()?.zones.some(item=>item.id===id))return toast(t('v570ZoneUnavailable'));
         if(action==='overview-zone')closeEffectDialog();
         // Only explicit zone entry starts closed; same-zone browsing, sync and
         // internal edit/add returns keep the order panel and its scroll state.
         if(!arrangementApplying&&(route.zoneId!==id||!['controls','colour','animations','effects','layout','animation-family'].includes(route.screen)))openLineSetup.delete(id);
-        return navigate('controls',{zoneId:id});
+        return navigate('controls',{zoneId:id},{zoneEntry:true});
       }
       if(action==='overview-receivers'){closeEffectDialog();receiverFilter=id==='unassigned'?'unassigned':'all';return navigate('receivers');}
       if(action==='overview-zone-new'){closeEffectDialog();return showNameDialog('zone-create');}
@@ -4899,8 +4919,8 @@
         if(id==='all')expandedScopeZones.delete(route.zoneId);else expandedScopeZones.add(route.zoneId);
         // Keep the chosen line list open without moving the document; a
         // scrollIntoView here would pull the whole page away from the user.
-        const full=document.getElementById('effect-dialog').classList.contains('v50-fullscreen-preview');
-        render({preserveScroll:true});if(full)openFullscreenPreview();return;
+        const full=captureFullscreenPreview(button);
+        render({preserveScroll:true});if(full)openFullscreenPreview({restore:full});return;
       }
       if(action==='scope-toggle-lines'){
         if(expandedScopeZones.has(route.zoneId))expandedScopeZones.delete(route.zoneId);else expandedScopeZones.add(route.zoneId);
@@ -5395,7 +5415,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate569',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate570',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

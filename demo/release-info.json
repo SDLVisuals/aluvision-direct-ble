@@ -9,7 +9,7 @@
   "nativeAppInstalled": false,
   "nativeAppSimulatorInstalled": false,
   "nativeAppInstallationPreservedData": null,
-  "nativeAppMetadataScope": "Historical signed build568 metadata retained; candidate569 is source-only. No iPhone569 compilation, installation, launch or physical acceptance is claimed.",
+  "nativeAppMetadataScope": "Historical signed build568 metadata retained; candidate570 is source-only. No iPhone570 compilation, installation, launch or physical acceptance is claimed.",
   "nativeAppBuildSourceFreezeSha256": "c4eab2eb1036f846f6929792db395a0d5483e4783c96d29a0485a4e1eaa9f864",
   "nativeAppBuildReceiptSha256": "7c8885d4e418b2853d8f1157fb170d89351eace821dbffeba33b25082109e7a6",
   "historicalNativeAppMetadataBefore550": {
@@ -87,9 +87,9 @@
     "targetSdk": 36
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate569-browser-demo",
+  "revision": "V50candidate570-browser-demo",
   "interfaceVersion": 50,
-  "interfaceBaseline": "QA-verified V50 candidate569 interface source only; eight firmware files excluded. Existing20 fictional-receiver adapter and Android code20 download retained; six public-only welcome/reset/single-user/V50 adaptations. No hardware access.",
+  "interfaceBaseline": "QA-verified V50 candidate570 interface source only; eight firmware files excluded. Existing20 fictional-receiver adapter and Android code20 download retained; six public-only welcome/reset/single-user/V50 adaptations. No hardware access.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -179,8 +179,8 @@
     },
     {
       "path": "animation-library.js",
-      "sha256": "ecbb1b829c64689f33ce3db78a7d0cd29c7ecb97e4a5990ccbbe081a4e1c28f7",
-      "bytes": 16681
+      "sha256": "9ea42bce29c1674f2da3410bb48451eb6f9537c7b3a072c8b145eb0707dcc57a",
+      "bytes": 16680
     },
     {
       "path": "animation-mobile.css",
@@ -194,8 +194,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "d915a06a3bab9666675fcc3143106191ea08fb455b0d25f33ddec94050673ce2",
-      "bytes": 526119
+      "sha256": "29ad51c94e55a1c3763bacfe65abb283c4626d914f2119f58e80b7d8d84b11a5",
+      "bytes": 527677
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -234,7 +234,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "3e64d4cea3e3794208150fe89f58e3e54faefcedce78e40e515f57f54373d1db",
+      "sha256": "ea687d31d4e447dbe3d833332954a7f6d7ca45f94a6005a98c87b18facd2a0db",
       "bytes": 7369
     },
     {
@@ -354,8 +354,8 @@
     },
     {
       "path": "preferences.js",
-      "sha256": "8801e2b71f11f07055662409e15cf0b74792a419af5e782ee7ab85d5124ac2de",
-      "bytes": 92562
+      "sha256": "5cce532059f285ca695500f661a69a69d3a8f1c4ff3a547242fb534ec73eefee",
+      "bytes": 94100
     },
     {
       "path": "premium-surfaces.css",
@@ -414,8 +414,8 @@
     },
     {
       "path": "RELEASE_NOTES.md",
-      "sha256": "b1ff170f342d22807c9b074d2366b1cdd7604d3f07f60f4ead4f72ed7c900b17",
-      "bytes": 17132
+      "sha256": "5e02636afc8358a49b609906d0350c86aef34499a825ce44bb525d2d19fae00d",
+      "bytes": 18583
     },
     {
       "path": "scenes.css",
@@ -509,8 +509,8 @@
     },
     {
       "path": "v50-animation-texts.js",
-      "sha256": "b4d08256d97b7a6e0389a21c0ef6ed2eea9d2eb32cd84561184646c063210ed8",
-      "bytes": 43567
+      "sha256": "6caea70083933587fba6c19514a7ce5e0789936d344eb7e9c807abe17950b1c0",
+      "bytes": 43587
     },
     {
       "path": "v50-error-texts.js",
@@ -559,8 +559,8 @@
     },
     {
       "path": "v50-texts.js",
-      "sha256": "b451cdadc0ec7395a3448b962386a0f74046b53e126e56836c0f13fb265810d4",
-      "bytes": 33593
+      "sha256": "34b72f9b17c04bd50e707a38aec45ab3e3a8b8ffc4749a812feda67c683be1f9",
+      "bytes": 33641
     },
     {
       "path": "vendor/v21_animation_catalog.js",
@@ -578,7 +578,7 @@
       "bytes": 3012
     }
   ],
-  "interfaceReviewScope": "Exact public runtime bytes, unchanged fictional adapter, CSP, Android download and Pages preflight checked separately. Browser visual acceptance and native/receiver acceptance are separate; no native569 build.",
+  "interfaceReviewScope": "Exact public runtime bytes, unchanged fictional adapter, CSP, Android download and Pages preflight checked separately. Browser visual acceptance and native/receiver acceptance are separate; no native570 build.",
   "historicalInterfaceReviewScope398": {
     "sourceSnapshot": "verified-Web397-setup398-private-copy",
     "basedOnSourceSnapshot": "verified-Web397",
@@ -995,7 +995,22 @@
     ]
   },
   "iPhoneUpdatePending": true,
-  "interfaceCandidate569": {
+  "historicalNativeAppMetadataBefore570": {
+    "nativeAppModified": false,
+    "nativeAppUpdatePending": true,
+    "latestInterfaceBundledInIOS": false,
+    "nativeAppBuildTarget": "be.aluvision.LightingControl",
+    "nativeAppBundleVerified": true,
+    "nativeAppBuiltVersion": "50.0.0",
+    "nativeAppBuiltBuild": "568",
+    "nativeAppInstalled": false,
+    "nativeAppSimulatorInstalled": false,
+    "nativeAppInstallationPreservedData": null,
+    "nativeAppMetadataScope": "Historical signed build568 metadata retained; candidate569 is source-only. No iPhone569 compilation, installation, launch or physical acceptance is claimed.",
+    "nativeAppBuildSourceFreezeSha256": "c4eab2eb1036f846f6929792db395a0d5483e4783c96d29a0485a4e1eaa9f864",
+    "nativeAppBuildReceiptSha256": "7c8885d4e418b2853d8f1157fb170d89351eace821dbffeba33b25082109e7a6"
+  },
+  "historicalInterfaceCandidate569": {
     "candidate": 569,
     "appVersion": "50.0.0",
     "webRuntimeVersion": "50.0.0-candidate569",
@@ -1044,6 +1059,61 @@
       "Browser preview only, not physical output proof.",
       "iPhone candidate569 update remains pending.",
       "Some legacy text remains Dutch.",
+      "Android download remains V41 code20."
+    ]
+  },
+  "interfaceCandidate570": {
+    "candidate": 570,
+    "appVersion": "50.0.0",
+    "webRuntimeVersion": "50.0.0-candidate570",
+    "sourceOnly": true,
+    "nativeBuildProduced": false,
+    "iPhoneUpdatePending": true,
+    "sourceInventorySha256": "692fdbf161d50dfd7a7bc96dffd09f166f6b6c9517bb78da935005711a4a513c",
+    "sourceInventoryScope": "Full203-file source inventory matched to the passing570 QA receipt; not an iOS build freeze.",
+    "sourceFiles": 89,
+    "firmwareFilesExcluded": 8,
+    "sourceRuntimeFiles": 81,
+    "changedSourceFiles": [
+      "WebApp/animation-library.js",
+      "WebApp/app.js",
+      "WebApp/index.html",
+      "WebApp/preferences.js",
+      "WebApp/v50-animation-texts.js",
+      "WebApp/v50-texts.js"
+    ],
+    "preservedFakeAdapter": "web-demo-service.js",
+    "publicOnlyAdaptations": 6,
+    "changes": [
+      "Consistent customer animation terminology in Dutch, English, French and German",
+      "Explicit existing-zone entry opens Colour without changing the live lighting state; stale zone identifiers rejected",
+      "Fullscreen cumulative line selection retains modal/nested scrolling and unique action focus after paint",
+      "Cumulative one-or-more line selection help copy; existing569 editor and568 swap/tutorial retained"
+    ],
+    "capabilities": {
+      "pinLogin": false,
+      "standCode": false,
+      "sharing": false,
+      "hardware": false,
+      "wifi": false,
+      "firmwareDownloads": false
+    },
+    "softwareQA": {
+      "directedTests": 707,
+      "directedPassed": 707,
+      "legacyTests": 83,
+      "legacyPassed": 79,
+      "legacyKnownBaselineFailures": 4,
+      "receiptSha256": "26e2bc40471c2ffd17efde9eed5bbbe7ae2b8305a8452d8ff34938eafc0b3273",
+      "scope": "Source and logic checks only; no native build, browser-device or physical output proof."
+    },
+    "browserVisualAcceptance": false,
+    "physicalPhoneAcceptance": false,
+    "physicalReceiverAcceptance": false,
+    "knownLimits": [
+      "Browser preview only, not physical output proof.",
+      "iPhone candidate570 update remains pending.",
+      "Some unrelated legacy text remains Dutch.",
       "Android download remains V41 code20."
     ]
   }

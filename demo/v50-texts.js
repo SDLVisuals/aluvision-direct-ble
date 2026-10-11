@@ -52,8 +52,8 @@
     v50StandMinimum:['Minstens twee ledlines nodig.','At least two LED lines are needed.','Au moins deux lignes LED sont nécessaires.','Mindestens zwei LED-Linien sind erforderlich.'],
     v50StandPreview:['Voorbeeld van alle zones','Preview of all zones','Aperçu de toutes les zones','Vorschau aller Zonen'],
     v50StandGuidanceMixed:['SPI beweegt over de pixels. RGBW volgt als volledige ledline, in de volgorde van je zones.','SPI moves across the pixels. RGBW follows as complete LED lines, in zone order.','SPI se déplace sur les pixels. RGBW suit par lignes entières, dans l’ordre des zones.','SPI bewegt sich über die Pixel. RGBW folgt als ganze LED-Linie in Zonenreihenfolge.'],
-    v50StandGuidanceSpi:['Het effect loopt over de pixels, in de volgorde van je zones en ledlines.','The effect moves across the pixels, in the order of your zones and LED lines.','L’effet parcourt les pixels, dans l’ordre de vos zones et lignes LED.','Der Effekt läuft über die Pixel in der Reihenfolge deiner Zonen und LED-Linien.'],
-    v50StandGuidanceRgbw:['Het effect gaat van ledline naar ledline, in de volgorde van je zones.','The effect moves from LED line to LED line, in zone order.','L’effet passe d’une ligne LED à l’autre, dans l’ordre des zones.','Der Effekt wandert von LED-Linie zu LED-Linie in Zonenreihenfolge.'],
+    v50StandGuidanceSpi:['De animatie loopt over de pixels, in de volgorde van je zones en ledlines.','The animation moves across the pixels, in the order of your zones and LED lines.','L’animation parcourt les pixels, dans l’ordre de vos zones et lignes LED.','Die Animation läuft über die Pixel in der Reihenfolge deiner Zonen und LED-Linien.'],
+    v50StandGuidanceRgbw:['De animatie gaat van ledline naar ledline, in de volgorde van je zones.','The animation moves from LED line to LED line, in zone order.','L’animation passe d’une ligne LED à l’autre, dans l’ordre des zones.','Die Animation wandert von LED-Linie zu LED-Linie in Zonenreihenfolge.'],
     v50StandModeTogether:['Overal hetzelfde · samen','The same everywhere · together','Identique partout · ensemble','Überall gleich · gemeinsam'],
     v50StandModeMixed:['SPI beweegt · RGBW volgt','SPI moves · RGBW follows','SPI se déplace · RGBW suit','SPI bewegt sich · RGBW folgt'],
     v50StandModeSpi:['SPI · samen over je stand','SPI · together across your stand','SPI · ensemble sur votre stand','SPI · gemeinsam über deinen Stand'],
@@ -66,7 +66,7 @@
     v50StandAnimationHint:['Animaties over alle zones · RGBW en SPI.','Animations across all zones · RGBW and SPI.','Animations sur toutes les zones · RGBW et SPI.','Animationen über alle Zonen · RGBW und SPI.'],
     v50StandUnassignedHint:['Receivers zonder zone doen niet mee.','Receivers without a zone are not included.','Les récepteurs sans zone ne participent pas.','Receiver ohne Zone sind nicht enthalten.'],
     v50StandMixedHint:['Instellingen verschillen. Een nieuwe kleur geldt voor alle zones.','Settings differ. A new colour applies to all zones.','Les réglages diffèrent. Une nouvelle couleur s’applique à toutes les zones.','Die Einstellungen unterscheiden sich. Eine neue Farbe gilt für alle Zonen.'],
-    v50RgbwLineHint:['Eén kleur over deze RGBW-ledline. Kies de kleur of het effect bij Bediening.','One colour across this RGBW LED line. Choose the colour or effect in Controls.','Une couleur sur cette ligne RGBW. Choisissez la couleur ou l’effet dans les commandes.','Eine Farbe auf dieser RGBW-LED-Linie. Wähle Farbe oder Effekt in der Steuerung.'],
+    v50RgbwLineHint:['Eén kleur over deze RGBW-ledline. Kies de kleur of animatie bij Bediening.','One colour across this RGBW LED line. Choose the colour or animation in Controls.','Une couleur sur cette ligne RGBW. Choisissez la couleur ou l’animation dans les commandes.','Eine Farbe auf dieser RGBW-LED-Linie. Wähle Farbe oder Animation in der Steuerung.'],
     // Common controls and palette. Channel letters and colour values remain data.
     v50NoLine:['Geen ledline','No LED line','Aucune ligne LED','Keine LED-Linie'],
     v50DifferentSettings:['Verschillende instellingen','Different settings','Réglages différents','Unterschiedliche Einstellungen'],
@@ -192,7 +192,7 @@
     v50AnimationResultsOne:['{count} animatie gevonden in de volledige bibliotheek','{count} animation found in the full library','{count} animation trouvée dans toute la bibliothèque','{count} Animation in der gesamten Bibliothek gefunden'],
     v50AnimationResultsMany:['{count} animaties gevonden in de volledige bibliotheek','{count} animations found in the full library','{count} animations trouvées dans toute la bibliothèque','{count} Animationen in der gesamten Bibliothek gefunden'],
     v50NoAnimationResults:['Geen animaties gevonden','No animations found','Aucune animation trouvée','Keine Animationen gefunden'],
-    v50AnimationSearchEmptyHint:['Probeer een andere naam of bekijk alle effectfamilies.','Try another name or browse all effect families.','Essayez un autre nom ou consultez toutes les familles d’effets.','Versuche einen anderen Namen oder sieh dir alle Effektfamilien an.'],
+    v50AnimationSearchEmptyHint:['Probeer een andere naam of bekijk alle animatiegroepen.','Try another name or browse all animation groups.','Essayez un autre nom ou consultez tous les groupes d’animations.','Versuche einen anderen Namen oder sieh dir alle Animationsgruppen an.'],
     v50ClearSearch:['Zoekopdracht wissen','Clear search','Effacer la recherche','Suche löschen'],
     v50EditCurrentAnimation:['Actieve animatie bewerken · {name}','Edit active animation · {name}','Modifier l’animation active · {name}','Aktive Animation bearbeiten · {name}'],
     v50BackSettings:['Terug naar instellingen','Back to settings','Retour aux réglages','Zurück zu den Einstellungen'],
@@ -200,7 +200,7 @@
     v50LivePalettePreview:['Live voorbeeld met jouw animatiekleuren','Live preview with your animation colours','Aperçu en direct avec vos couleurs d’animation','Live-Vorschau mit deinen Animationsfarben'],
     v50LivePreviewTitle:['{name} · live','{name} · live','{name} · en direct','{name} · live'],
     animationChooseAnother:['Andere animaties','Other animations','Autres animations','Andere Animationen'],
-    animationChooseAnotherHint:['Kies een groep of zoek een effect.','Choose a group or search for an effect.','Choisissez un groupe ou cherchez un effet.','Wähle eine Gruppe oder suche einen Effekt.'],
+    animationChooseAnotherHint:['Kies een groep of zoek een animatie.','Choose a group or search for an animation.','Choisissez un groupe ou cherchez une animation.','Wähle eine Gruppe oder suche eine Animation.'],
     lineStartLeft:['Normale richting','Normal direction','Direction normale','Normale Richtung'],
     lineStartRight:['Omgekeerde richting','Reversed direction','Direction inversée','Umgekehrte Richtung']
   };
