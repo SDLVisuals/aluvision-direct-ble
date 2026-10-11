@@ -1164,7 +1164,8 @@
   function interactiveZonePreview(z,css,options){
     if(options.main&&['tunnel','wall'].includes(options.spatialShape))options={...options,spatialFraming:'focus'};
     if(!options.interactiveLines)return zonePreview(z,css,options);
-    return `<div class="v50-preview-canvas-scroll"><div class="v50-preview-canvas-stage" data-preview-ui="571" data-preview-spatial="${options.spatialShape||''}" data-preview-vertical="${z.layout==='vertical'&&options.presentation!=='receivers'}">${zonePreview(z,css,{...options,selectionOverlay:true,decorative:true})}${previewTargetsMarkup()}</div></div>`;
+    const spatialSelection=['tunnel','wall'].includes(options.spatialShape)?` data-spatial-ui="576" data-selection-mode="${selection().kind==='all'?'all':'subset'}"`:'';
+    return `<div class="v50-preview-canvas-scroll"><div class="v50-preview-canvas-stage" data-preview-ui="571"${spatialSelection} data-preview-spatial="${options.spatialShape||''}" data-preview-vertical="${z.layout==='vertical'&&options.presentation!=='receivers'}">${zonePreview(z,css,{...options,selectionOverlay:true,decorative:true})}${previewTargetsMarkup()}</div></div>`;
   }
   function syncPreviewTargets(canvas){
     const stage=canvas.closest('.v50-preview-canvas-stage');if(!stage)return;
@@ -5424,7 +5425,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate575',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate576',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

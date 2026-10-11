@@ -1,3 +1,15 @@
+# Browserdemo V50 · interfacekandidaat576 · 11 oktober 2026
+
+De tunnel- en wandvoorbeelden tonen de ledlinenummers nu direct op hun eigen lichtlijn. Individueel gekozen ledlines hebben een duidelijk wit selectienummer; als alle ledlines gekozen zijn, blijven de nummers rustig en neutraal. Ledline1 en3 kunnen samen geselecteerd blijven bij wisselen tussen tunnel, wand en volledig scherm. Aanraakvlakken blijven begrensd en overlappen niet in de gecontroleerde mobiele voorbeelden. De oorspronkelijke startpagina, taalkeuze, koudwitte LIGHTING-animatie en alle bestaande receiver-, model- en transportacties blijven behouden. Deze wijziging omvat alleen de vier afgebakende interfacebestanden; de algemene interfacevormgeving en productpagina veranderen niet.
+
+Dit is alleen een browserdemo met twintig fictieve receivers: tien RGBW en tien SPI. Gegevens blijven tijdelijk in geheugen en verdwijnen bij herladen. Geen echte wifi, receiververbinding, fysieke verlichting of firmwarebestanden. PIN en delen blijven uitgeschakeld. Een schermvoorbeeld is geen bewijs van fysiek licht.
+
+Deze browserdemo en de private iPhone-app zijn afzonderlijke leveringen. De private iPhone-build576 is gecompileerd, ondertekend en op dezelfde volledige576-bron gecontroleerd. De installatie op de iPhone staat nog open. Geen fysieke ledline- of radiotest wordt geclaimd. De historische ondertekende build568-metadata blijft bewaard; actuele576-status staat apart. De bestaande Android-download blijft **41.0.14, code20** en is niet gewijzigd.
+
+De 815 gerichte softwaretests zijn geslaagd. De vier bestaande legacytestfouten zijn apart gerapporteerd; browsercontrole en fysieke acceptatie blijven afzonderlijke controles. QA-broninventaris SHA-256: 4b50cd30ff8f633b2cc92ac3962b462b002e669dfa29f80bef04f992ec179e64.
+
+## Historische release-informatie
+
 # Browserdemo V50 · interfacekandidaat575 · 11 oktober 2026
 
 LIGHTING staat nu exact onder het woord Aluvision in het originele logo, in plaats van onder het bredere beeldbestand inclusief het losse merkteken. Het oorspronkelijke logo wordt alleen visueel verschoven; de afbeelding zelf blijft ongewijzigd. De gecentreerde koudwitte letteranimatie, compacte taalkeuze en alle bestaande574-interface- en receiveracties blijven behouden.

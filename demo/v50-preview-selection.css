@@ -67,6 +67,32 @@
   outline:3px solid #fff;outline-offset:0;
 }
 
+/* V50.576: quiet, on-line markers for spatial views. Keep 44px touch areas;
+   only the badge changes, never the light colour or physical line identity. */
+html.interface-polish body .v50-preview-canvas-stage[data-spatial-ui="576"] .v50-preview-line-target[data-spatial=true] .v50-preview-line-badge{
+  width:32px;
+  height:32px;
+  border:1px solid #84908a;
+  border-radius:10px;
+  background:#17201c;
+  color:#f4f7f5;
+  font-size:15px;
+  box-shadow:0 1px 4px #0005;
+}
+html.interface-polish body .v50-preview-canvas-stage[data-spatial-ui="576"] .v50-preview-line-target[data-spatial=true] .v50-preview-line-check{
+  display:none;
+}
+html.interface-polish body .v50-preview-canvas-stage[data-spatial-ui="576"][data-selection-mode="subset"] .v50-preview-line-target[data-spatial=true][aria-pressed=true] .v50-preview-line-badge{
+  border-color:#fff;
+  background:#f1f5f3;
+  color:#17201c;
+  box-shadow:0 0 0 2px #17201c,0 1px 4px #0005;
+}
+html.interface-polish body .v50-preview-canvas-stage[data-spatial-ui="576"] .v50-preview-line-target:focus-visible .v50-preview-line-badge{
+  outline:2px solid #fff;
+  outline-offset:3px;
+}
+
 /* V50.566: spend the preview's space on light, not separate caption rows.
    The chosen size owns BOTH height values. Older sticky rules changed only
    height, leaving a large min-height behind and inflating the dock. */

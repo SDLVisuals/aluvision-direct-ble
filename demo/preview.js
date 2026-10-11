@@ -921,52 +921,113 @@ function softTrailCoverage(behind,trail,n,smooth){
     spatialInteractionCache.set(key,result);return result;
   }
   function tunnelFocusAnchors(model,width,height) {
-    const count=model.arches.length,margin=Math.min(22,width/2,height/2),slots=[];
-    // Separate touch targets live in the free background, not on top of the
-    // nested arch feet. Every tether still ends on its OWN sampled path.
-    if(count<=3){
-      if(count)slots.push({x:margin,y:height/2,side:'left'});
-      if(count===3)slots.push({x:width/2,y:margin,side:'top'});
-      if(count>=2)slots.push({x:width-margin,y:height/2,side:'right'});
-    }else{
-      const capacity=Math.max(1,Math.floor((height-2*margin)/44)+1);
-      const sideCount=Math.min(count,capacity*2),left=Math.ceil(sideCount/2),right=Math.floor(sideCount/2);
-      for(let index=0;index<sideCount;index++){
-        const isLeft=index%2===0,total=isLeft?left:right,at=Math.floor(index/2);
-        slots.push({x:isLeft?margin:width-margin,
-          y:total===1?height/2:margin+at*(height-2*margin)/(total-1),side:isLeft?'left':'right'});
-      }
-      const railLeft=Math.min(width/2,margin+44),railRight=Math.max(width/2,width-margin-44);
-      const railCapacity=Math.max(1,Math.floor((railRight-railLeft)/44)+1);
-      let remaining=count-slots.length;
-      for(const side of ['top','bottom']){
-        const total=Math.min(remaining,railCapacity);
-        for(let index=0;index<total;index++)slots.push({
-          x:total===1?width/2:railLeft+index*(railRight-railLeft)/(total-1),
-          y:side==='top'?margin:height-margin,side});
-        remaining-=total;
-      }
-      // A finite canvas cannot contain unlimited 44px targets. Dense cases
-      // retain every identity instead of silently dropping physical lines.
-      while(slots.length<count){const index=slots.length;slots.push({
-        x:margin+(width-2*margin)*(index+.5)/count,y:height-margin,side:'bottom'});}
+    const count=model.arches.length,marginX=Math.min(22,width/2),marginY=Math.min(22,height/2);
+    const separate=(a,b)=>Math.abs(a.x-b.x)>=44-1e-7||Math.abs(a.y-b.y)>=44-1e-7;
+    // In a roomy main preview the number sits DIRECTLY on its own arch: there
+    // is no leader to misread as another nested LEDline. Sampling different
+    // curve points preserves independent 44px targets without a distant rail.
+    // This bounded first attempt cannot add an unbounded layout-search pause.
+    if(count<=12&&width>=160&&height>=200){
+      const direct=model.arches.map((arch,index)=>{
+        const preferred=10+108*index/Math.max(1,count-1),list=[];
+        for(let at=0;at<=128;at+=4){
+          const path=arch.points[at];
+          if(path[0]<marginX||path[0]>width-marginX||path[1]<marginY||path[1]>height-marginY)continue;
+          list.push({x:path[0],y:path[1],path,cost:Math.abs(at-preferred)});
+        }
+        return list.sort((a,b)=>a.cost-b.cost);
+      });
+      const picked=[];let visits=0;
+      const place=index=>{
+        if(index===count)return true;
+        if(++visits>1500)return false;
+        for(const anchor of direct[index]){
+          if(!picked.every(other=>separate(anchor,other)))continue;
+          picked.push(anchor);if(place(index+1))return true;picked.pop();
+        }
+        return false;
+      };
+      if(place(0))return picked.map(({x,y,path})=>({x,y,path}));
     }
+    // Compact references retain short local offsets beside their OWN arch,
+    // never an unrelated canvas-edge rail. The usual 3–8 mobile lines need
+    // only 20px, almost entirely hidden behind the number badge.
+    if(count<=12&&width>=160&&height>=120){
+      const candidates=model.arches.map((arch,index)=>{
+        const preferred=10+108*index/Math.max(1,count-1),list=[];
+        for(let at=0;at<=128;at+=4){
+          const path=arch.points[at],dx=path[0]-model.vanishing[0],dy=path[1]-model.vanishing[1];
+          const length=Math.max(1,Math.hypot(dx,dy));
+          for(const offset of [20,-20,24,-24,28,-28,36,-36,48,-48,64,-64]){
+            const x=clamp(path[0]+dx/length*offset,marginX,width-marginX);
+            const y=clamp(path[1]+dy/length*offset,marginY,height-marginY);
+            const distance=Math.hypot(x-path[0],y-path[1]);
+            if(distance<15)continue;
+            list.push({x,y,path,distance,cost:distance+Math.abs(at-preferred)*.4+(offset<0?8:0)});
+          }
+        }
+        return list.sort((a,b)=>a.cost-b.cost);
+      });
+      // This bounded search runs only once per cached projection. Prefer short
+      // local links before allowing more space for genuinely dense canvases.
+      for(const maximum of [20,28,48,64]){
+        const available=candidates.map(list=>list.filter(anchor=>anchor.distance<=maximum+1e-8));
+        const picked=[];let visits=0;
+        const place=index=>{
+          if(index===count)return true;
+          if(++visits>3000)return false;
+          for(const anchor of available[index]){
+            if(!picked.every(other=>separate(anchor,other)))continue;
+            picked.push(anchor);if(place(index+1))return true;picked.pop();
+          }
+          return false;
+        };
+        if(place(0))return picked.map(({x,y,path})=>({x,y,path}));
+      }
+    }
+    // There is a finite number of 44px squares in a canvas. A close-packed
+    // fallback still links each number to its own nearest sampled arch and
+    // retains EVERY physical identity, including intentionally tiny previews.
+    const columns=Math.max(1,Math.floor((width-2*marginX)/44)+1);
+    const rows=Math.max(1,Math.floor((height-2*marginY)/44)+1),slots=[];
+    for(let row=0;row<rows;row++)for(let column=0;column<columns;column++)slots.push({
+      x:width/2+(column-(columns-1)/2)*44,y:height/2+(row-(rows-1)/2)*44});
     return model.arches.map((arch,index)=>{
-      const slot=slots[index];
-      const candidates=arch.points.filter((_,at)=>slot.side==='left'?at<=64:
-        slot.side==='right'?at>=64:slot.side==='top'?at>=32&&at<=96:at<=20||at>=108);
-      const path=candidates.reduce((best,point)=>Math.hypot(point[0]-slot.x,point[1]-slot.y)<
-        Math.hypot(best[0]-slot.x,best[1]-slot.y)?point:best,candidates[0]);
-      return {x:slot.x,y:slot.y,path};
+      const nearest=slot=>arch.points.reduce((best,point)=>Math.hypot(point[0]-slot.x,point[1]-slot.y)<
+        Math.hypot(best[0]-slot.x,best[1]-slot.y)?point:best,arch.points[0]);
+      let slot;
+      if(slots.length){
+        const best=slots.reduce((best,current,at)=>{
+          const point=nearest(current),distance=Math.hypot(point[0]-current.x,point[1]-current.y);
+          return distance<best.distance?{at,distance}:best;
+        },{at:0,distance:Infinity});
+        slot=slots.splice(best.at,1)[0];
+      }else slot={x:marginX+(width-2*marginX)*(index+.5)/count,y:height-marginY};
+      return {...slot,path:nearest(slot)};
     });
   }
   function wallFocusAnchors(model,width,height) {
-    const margin=Math.min(22,width/2,height/2),count=model.lines.length;
-    return model.lines.map((line,index)=>{
-      const top=index%2===0,railCount=Math.ceil((count-(top?0:1))/2),at=Math.floor(index/2);
-      return {x:railCount<=1?width/2:margin+at*(width-2*margin)/(railCount-1),
-        y:top?margin:height-margin,path:top?line.to:line.from};
+    const marginX=Math.min(22,width/2),marginY=Math.min(22,height/2),count=model.lines.length;
+    const pitch=count>1?model.lines[1].from[0]-model.lines[0].from[0]:Infinity;
+    const oneRow=pitch>=44-1e-7;
+    const anchors=model.lines.map((line,index)=>{
+      const top=!oneRow&&index%2===0,path=top?line.to:line.from;
+      return {x:path[0],y:clamp(path[1]+(top?-20:20),marginY,height-marginY),path,top};
     });
+    // Numbers remain aligned with their own strip endpoint. When columns are
+    // closer than 44px, alternate only the endpoint and spread that small row
+    // by the minimum required amount, not across a disconnected outer rail.
+    for(const top of [false,true]){
+      const row=anchors.filter(anchor=>anchor.top===top);
+      if(row.length<2)continue;
+      const spacing=Math.min(44,(width-2*marginX)/(row.length-1));
+      const needed=spacing*(row.length-1),actual=row.at(-1).x-row[0].x;
+      if(actual<needed||row[0].x<marginX||row.at(-1).x>width-marginX){
+        const centre=clamp((row[0].x+row.at(-1).x)/2,marginX+needed/2,width-marginX-needed/2);
+        row.forEach((anchor,index)=>{anchor.x=clamp(centre+(index-(row.length-1)/2)*spacing,marginX,width-marginX);});
+      }
+    }
+    return anchors.map(({x,y,path})=>({x,y,path}));
   }
   function drawSpatialTethers(context,anchors) {
     context.save();context.shadowBlur=0;context.lineWidth=1;
@@ -1035,14 +1096,15 @@ function softTrailCoverage(behind,trail,n,smooth){
     path([model.floor[1],model.floor[2]]);context.stroke();
     path([model.inlay[0],model.inlay[3]]);context.stroke();
     path([model.inlay[1],model.inlay[2]]);context.stroke();
-    const focusAnchors=focused&&interactive?tunnelFocusAnchors(model,width,height):null;
+    const focusAnchors=focused&&interactive?(model.focusAnchors||
+      (model.focusAnchors=tunnelFocusAnchors(model,width,height))):null;
     // Leaders are painted UNDER all exact light strokes, never over pixels.
     if(focusAnchors)drawSpatialTethers(context,focusAnchors);
     context.lineCap='round';context.lineJoin='round';
-    if(focused&&selection)frame.rows.forEach((row,index)=>{
+    if(focused&&selection&&frame.rows.some(row=>!row.selected))frame.rows.forEach((row,index)=>{
       if(!row.selected)return;
       const arch=model.arches[index];path(arch.points);
-      context.strokeStyle='rgba(240,245,242,0.62)';context.lineWidth=arch.thickness+7;
+      context.strokeStyle='rgba(240,245,242,0.5)';context.lineWidth=arch.thickness+2.4;
       context.shadowBlur=0;context.stroke();
     });
     for(let rowIndex=frame.rows.length-1;rowIndex>=0;rowIndex--){
@@ -1180,13 +1242,14 @@ function softTrailCoverage(behind,trail,n,smooth){
     path(model.wall,true);
     context.fillStyle=material([width*.1,height*.1],[width*.8,height*.8],[[0,'#404740'],[.55,'#272f28'],[1,'#1b231d']]);context.fill();
     context.strokeStyle='#555e55';context.lineWidth=.75;context.stroke();
-    const focusAnchors=focused&&interactive?wallFocusAnchors(model,width,height):null;
+    const focusAnchors=focused&&interactive?(model.focusAnchors||
+      (model.focusAnchors=wallFocusAnchors(model,width,height))):null;
     if(focusAnchors)drawSpatialTethers(context,focusAnchors);
     context.lineCap='butt';context.lineJoin='round';
-    if(focused&&selection)frame.rows.forEach((row,index)=>{
+    if(focused&&selection&&frame.rows.some(row=>!row.selected))frame.rows.forEach((row,index)=>{
       if(!row.selected)return;
       const line=model.lines[index];path([line.from,line.to]);
-      context.strokeStyle='rgba(240,245,242,0.62)';context.lineWidth=line.thickness+8;
+      context.strokeStyle='rgba(240,245,242,0.5)';context.lineWidth=line.thickness+2.4;
       context.shadowBlur=0;context.stroke();
     });
     frame.rows.forEach((row,rowIndex)=>{
