@@ -471,6 +471,13 @@
     de:{v568OrderReference:'So ordnen Sie Ihre LED-Linien an',v568MatchReference:'Diese Farbreihenfolge nachbilden',v568Adjust:'Anpassen',v568AdjustLine:'{name} anpassen',v568OrderDragHint:'Ziehen, um zwei LED-Linien zu tauschen',v568OrderReleaseHint:'Loslassen: Nur diese beiden tauschen die Plätze',v568PlaceColumn:'Position',v568LineColumn:'Ihre LED-Linie',v568ChoosePlace:'Mit Position tauschen',v568PlaceNamed:'Position {number} · {colour}',v568ReceiverName:'Receiver umbenennen',v568ReceiverAllOutputs:'Gesamter Receiver · alle Ausgänge',v568ChangeZone:'Zone ändern',v568PixelsDirection:'Pixel und Richtung',v568ReturnOrder:'Zurück zur Reihenfolge'}
   };
   Object.keys(orderUsability568).forEach(code => Object.assign(texts[code],orderUsability568[code]));
+  const animationEditor569 = {
+    nl:{v569BackPicker:'Terug naar animatiekiezer',v569Adjust:'Aanpassen',v569PaletteHint:'Tik op een kleur om te wijzigen.',v569Playback:'Snelheid en helderheid',v569CurrentAnimation:'Huidige animatie',v569CurrentOff:'Gekozen · verlichting uit',v569CurrentInGroup:'Jouw huidige animatie'},
+    en:{v569BackPicker:'Back to animation picker',v569Adjust:'Adjust',v569PaletteHint:'Tap a colour to change it.',v569Playback:'Speed and brightness',v569CurrentAnimation:'Current animation',v569CurrentOff:'Selected · lights off',v569CurrentInGroup:'Your current animation'},
+    fr:{v569BackPicker:'Retour au choix d’animation',v569Adjust:'Modifier',v569PaletteHint:'Touchez une couleur pour la modifier.',v569Playback:'Vitesse et luminosité',v569CurrentAnimation:'Animation actuelle',v569CurrentOff:'Choisie · éclairage éteint',v569CurrentInGroup:'Votre animation actuelle'},
+    de:{v569BackPicker:'Zurück zur Animationsauswahl',v569Adjust:'Anpassen',v569PaletteHint:'Tippe auf eine Farbe, um sie zu ändern.',v569Playback:'Tempo und Helligkeit',v569CurrentAnimation:'Aktuelle Animation',v569CurrentOff:'Gewählt · Licht aus',v569CurrentInGroup:'Deine aktuelle Animation'}
+  };
+  Object.keys(animationEditor569).forEach(code => Object.assign(texts[code],animationEditor569[code]));
   Object.keys(texts).forEach(code => Object.freeze(texts[code]));
   Object.freeze(texts);
   const has = (value, key) => Object.prototype.hasOwnProperty.call(value, key);

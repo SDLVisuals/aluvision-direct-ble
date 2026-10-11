@@ -1,3 +1,15 @@
+# Browserdemo V50 · interfacekandidaat569 · 11 oktober 2026
+
+De animatiebediening is opnieuw ingedeeld: de huidige animatie is herkenbaar in de kiezer, met een aparte knop om haar instellingen te openen. Het instelscherm groepeert kleuren, snelheid, helderheid en de overige opties. Terug naar de kiezer verandert de gekozen animatie niet. De ledlinevolgorde, vaste plaatsnummers, korte tutorial en cumulatieve selecties uit kandidaat568 blijven behouden.
+
+Dit is alleen een browserdemo met twintig fictieve receivers: tien RGBW en tien SPI. Gegevens blijven tijdelijk in geheugen en verdwijnen bij herladen. Geen echte wifi, receiververbinding, fysieke verlichting of firmwarebestanden. PIN en delen blijven uitgeschakeld. Een schermvoorbeeld is geen bewijs van fysiek licht.
+
+Kandidaat569 is uitsluitend een interfacebronupdate. Er is geen iPhone-build569 gecompileerd of geïnstalleerd; de iPhone-update staat nog open. De historische ondertekende build568-metadata blijft bewaard en claimt geen installatie of fysieke acceptatie op deze website. De bestaande Android-download blijft **41.0.14, code20** en is niet gewijzigd.
+
+De 639 gerichte softwaretests zijn geslaagd. De vier bestaande legacytestfouten zijn apart gerapporteerd; browsercontrole en fysieke acceptatie blijven afzonderlijke controles. QA-broninventaris SHA-256: 4f38364d204c212c582a9924b4d38db4a33aed509fbf5a03b3db34b449c95c44.
+
+## Historische release-informatie
+
 # Browserdemo V50 · kandidaat568 · 11 oktober 2026
 
 Deze browserdemo toont de bevroren interface van **50.0.0, build568**. Ledlines omwisselen is visueel verduidelijkt: wissel bijvoorbeeld ledline3 met plaats1; ledline2 blijft staan. Vaste plaatsnummers en herkenningskleuren staan naast de fysieke kaarten. Een kort geanimeerd tutorialvoorbeeld, genummerde doelvolgorde en aparte ledline-instellingen helpen bij het instellen. SPI opent de bestaande pixel- en richtingeditor voor precies de gekozen poort. De nieuwe animatiekiezer onderscheidt een groep bekijken van een animatie starten. Ledline-selecties zijn cumulatief (bijvoorbeeld1 en3), ook in tunnel- en wandweergave. De compacte livepreview blijft bij bediening zichtbaar.

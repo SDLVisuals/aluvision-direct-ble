@@ -640,6 +640,15 @@
     const editorGallerySlot=main.querySelector('[data-editor-gallery-slot]');
     const editorGalleryAction=editorGallerySlot?.querySelector('.current-effect-gallery')||shortcut?.querySelector('.current-effect-gallery');
     if(shortcut?.matches('[data-editor-shortcut]')&&editorGallerySlot&&editorGalleryAction){
+      if(shortcut.dataset.animationEditorNav==='569'){
+        // Keep the one picker action in normal dock flow at every scroll
+        // position. Its measured height reserves space rather than covering
+        // the title, power switch or a slider while the preview compacts.
+        shortcut.hidden=false;
+        if(editorGalleryAction.parentElement!==shortcut)shortcut.append(editorGalleryAction);
+        editorGallerySlot.style.minHeight='';
+        measureControlPreviewDock();return;
+      }
       // The inline and sticky locations are two places for one DOM button.
       // Moving it prevents a duplicate or a half-visible copy under the nav.
       const slot=editorGallerySlot.getBoundingClientRect();
@@ -677,11 +686,11 @@
     // Do not carry a deep gallery scroll position into the settings. Align
     // their heading below the visible dock, including its compacted height.
     const workspace=main.querySelector('.active-animation-workspace');if(!workspace)return;
-    // Start at the chosen animation, not the (potentially long) arrangement
-    // form above it. The arrangement remains accessible by scrolling up.
+    // Start at the chosen animation. Arrangement tools remain below the
+    // settings, while the picker action stays in the measured preview dock.
     const target=workspace;
     revealBelowControlPreview(target,12);
-    requestAnimationFrame(()=>workspace.querySelector('.current-effect b')?.focus({preventScroll:true}));
+    requestAnimationFrame(()=>workspace.querySelector('#active-animation-title')?.focus({preventScroll:true}));
   }
   function revealColourControls(){
     const picker=main.querySelector('[data-control-mode="colour"] .shared-colour-picker');if(!picker)return;
@@ -1206,7 +1215,7 @@
     const browsing=screen==='controls'&&showControlAnimationGallery;
     if(browsing&&activeEffect()&&!route.family)return `<nav class="animation-wayfinding" data-editor-return-shortcut hidden aria-label="${esc(t('animationNavigation'))}"></nav>`;
     if(!activeEffect()||browsing)return '';
-    return `<nav class="animation-wayfinding" data-editor-shortcut hidden aria-label="${esc(t('animationNavigation'))}"></nav>`;
+    return `<nav class="animation-wayfinding" data-editor-shortcut data-animation-editor-nav="569" hidden aria-label="${esc(t('animationNavigation'))}"></nav>`;
   }
   function previewSizePickerMarkup(size=controlPreviewSize,spatial=false){
     const sizes=[['small',t('v50PreviewSmall')],['medium',t('v50PreviewMedium')],['large',t('v50PreviewLarge')]],current=sizes.find(([value])=>value===size)?.[1]||t('v50PreviewSmall'),subject=t(spatial?'v50Preview3D':'v50PreviewLine');
@@ -1239,8 +1248,8 @@
     const workspaceHeadingId=colour?'bediening-colour-title':activeAnimationEditor?'active-animation-title':'animation-selector-heading';
     const modeContent=colour
       ?`<section class="bediening-workspace" aria-labelledby="${workspaceHeadingId}">${colourPickerMarkup(null,false,{power:true})}</section>`
-      :`<section class="bediening-workspace animation-simple-workspace${activeAnimationEditor?' has-active-animation':''}" aria-labelledby="${workspaceHeadingId}">${activeAnimationEditor?`<div class="animation-context">${selector()}${powerControl()}</div>`:''}${controlAnimationPanel()}</section>`;
-    return `<div class="editor-grid${colour?' editor-grid-colour':' animation-simple-page'}">${controlContext('controls')}<section class="editor-controls editor-controls-zone">${activeAnimationEditor?ledlineSetupMarkup():''}<section class="control-workspace"><div class="control-mode-panel" role="region" aria-label="${esc(t(colour?'staticColour':'animations'))}" data-control-mode="${controlMode}">${modeContent}</div></section>${colour?ledlineSetupMarkup():''}</section></div>`;
+      :`<section class="bediening-workspace animation-simple-workspace${activeAnimationEditor?' has-active-animation':''}" aria-labelledby="${workspaceHeadingId}">${controlAnimationPanel()}</section>`;
+    return `<div class="editor-grid${colour?' editor-grid-colour':' animation-simple-page'}">${controlContext('controls')}<section class="editor-controls editor-controls-zone"><section class="control-workspace"><div class="control-mode-panel" role="region" aria-label="${esc(t(colour?'staticColour':'animations'))}" data-control-mode="${controlMode}">${modeContent}</div></section>${colour||activeAnimationEditor?ledlineSetupMarkup():''}</section></div>`;
   }
 
   function controlAnimationPanel(){
@@ -1410,15 +1419,38 @@
     hint.hidden=!mixed;
     if(mixed)button.setAttribute('aria-describedby',hint.id);else button.removeAttribute('aria-describedby');
   }
-  function animationEditorMarkup(effect) {
+  function animationEditorMarkup(effect,{preview=''}={}) {
     const s = selectedState();
-    // Place the change action next to the current animation as well as in
-    // the persistent dock, where it stays reachable deep in the settings.
+    // This single back action also moves into the persistent dock while
+    // scrolling. Browsing the picker must never reapply the current recipe.
     const galleryAction=standControlOpen?'stand-animation-gallery':route.screen==='controls'?'animation-gallery':'animations-gallery';
     const paletteTitle=effect.whiteMixPreset?'Witmix · tik om aan te passen':effect.category==='brand'?(effect.id==='v30-brand-focus'||effect.id.startsWith('v31-ref-'))?'Merkkleuren · tik om te wijzigen':'Accentkleur · tik om te wijzigen':effect.paletteEditable===false?'Kleurenreeks':'Animatiekleuren · tik om te wijzigen';
     const paletteHelp=effect.whiteMixPreset?'<p class="palette-guidance">W geeft wit licht; rood en een beetje groen maken de mix warmer. Pas de mengkleur aan terwijl je naar je ledline kijkt.</p>':effect.id==='v30-brand-focus'?'<p class="palette-guidance">Voeg kleuren toe voor je merkaccent. De gloed laat ze na elkaar zien langs de ledlines.</p>':'';
-    const content = `<div class="current-effect"><div class="current-effect-heading"><small class="active-animation-kicker">${esc(t('animationSettingsReturnKicker'))}</small><b id="active-animation-title" tabindex="-1" role="heading" aria-level="2">${esc(Library.displayName(effect,t))}</b></div><div class="current-effect-gallery-slot" data-editor-gallery-slot><button type="button" class="current-effect-gallery animation-gallery-return animation-chooser-action" data-action="${galleryAction}" aria-label="${esc(t('animationChooseAnother'))}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('animation')}</span><span class="gallery-action-copy"><b>${esc(t('animationChooseAnother'))}</b><small>${esc(t('animationChooseAnotherHint'))}</small></span></span><span class="gallery-action-next" aria-hidden="true">${icon('chevron')}</span></button></div></div><section class="card palette-section animation-daily-controls"><h2>${effect.whiteMixPreset||effect.paletteEditable===false?paletteTitle:esc(t('animationColours'))}</h2>${paletteHelp}<div class="palette" aria-label="${esc(t('animationColours'))}">${paletteMarkup(s)}</div>${backgroundControls(effect)}${effect.controls.includes('speed')?`${animationSlider('speed',t('animationSpeed'),0,100,s.speed??30,'%')}${resetMarkup('speed',t('animationSpeed'))}`:''}${animationSlider('bri',t('animationBrightness'),0,100,s.bri??100,'%')}${resetMarkup('bri',t('animationBrightness'))}</section>${animationControls(effect)}<button class="button secondary full animation-save-recipe" data-action="preset-save">＋ ${esc(t('animationSaveOwn'))}</button>`;
-    return `<section class="active-animation-workspace" aria-label="Animatie aanpassen">${content}</section>`;
+    const content = `<div class="current-effect v569-animation-header"><div class="current-effect-gallery-slot" data-editor-gallery-slot><button type="button" class="current-effect-gallery animation-gallery-return animation-chooser-action" data-animation-back-version="569" data-action="${galleryAction}" aria-label="${esc(t('v569BackPicker'))}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('back')}</span><span class="gallery-action-copy"><b>${esc(t('v569BackPicker'))}</b></span></span></button></div><div class="current-effect-heading"><small class="active-animation-kicker"><span aria-hidden="true">${icon('check')}</span>${esc(animationCurrentLabel())}</small><b id="active-animation-title" tabindex="-1" role="heading" aria-level="2">${esc(Library.displayName(effect,t))}</b></div>${standControlOpen?'':`<div class="v569-animation-power animation-context">${powerControl()}</div>`}</div>${preview}<section class="card palette-section animation-daily-controls v569-colour-panel"><h2>${effect.whiteMixPreset||effect.paletteEditable===false?paletteTitle:esc(t('animationColours'))}</h2>${effect.paletteEditable===false?'':`<p class="v569-palette-hint">${esc(t('v569PaletteHint'))}</p>`}${paletteHelp}<div class="palette" aria-label="${esc(t('animationColours'))}">${paletteMarkup(s)}</div>${backgroundControls(effect)}</section><section class="card v569-playback-panel" aria-label="${esc(t('v569Playback'))}">${effect.controls.includes('speed')?`<div class="v569-primary-setting">${animationSlider('speed',t('animationSpeed'),0,100,s.speed??30,'%')}${resetMarkup('speed',t('animationSpeed'))}</div>`:''}<div class="v569-primary-setting">${animationSlider('bri',t('animationBrightness'),0,100,s.bri??100,'%')}${resetMarkup('bri',t('animationBrightness'))}</div></section>${animationControls(effect)}<button class="button secondary full animation-save-recipe" data-action="preset-save">＋ ${esc(t('animationSaveOwn'))}</button>`;
+    return `<section class="active-animation-workspace" data-animation-editor-version="569" aria-label="${esc(t('v569Adjust'))}">${content}</section>`;
+  }
+  function animationCurrentLabel() {
+    const s=selectedState(),targets=standControlOpen?standControlReceivers():[];
+    const off=standControlOpen?targets.length>0&&targets.every(receiver=>receiver.state.on===false||receiver.state.power===false):s.on===false||s.power===false;
+    // A saved/current recipe is not a receipt that physical lighting is on.
+    return t(off?'v569CurrentOff':'v569CurrentAnimation');
+  }
+  function openCurrentAnimationSettings(id) {
+    const current=activeEffect();
+    // Revalidate a gallery card after a scope/state update. A stale edit
+    // card is not permission to start another animation or reset a recipe.
+    if(!current||id&&current.id!==id){
+      if(standControlOpen)renderStandControls();else render({preserveScroll:true});
+      return;
+    }
+    if(standControlOpen){
+      standControlEpoch++;standAnimationGallery=false;standAnimationFamily=null;
+      return renderStandControls({preserveScroll:false});
+    }
+    if(!['controls','animation-family','effects','animations'].includes(route.screen))return;
+    rememberAnimationGallery();closeZoneMenus();controlMode='animations';showControlAnimationGallery=false;
+    route={...route,screen:'controls',familyReturnScreen:null,effectsReturn:'controls'};
+    render({top:true});return revealAnimationStart();
   }
   function renderAnimations() {
     const effect=activeEffect();
@@ -1675,14 +1707,15 @@
   function effectCards(effects,extraClass='',variantTotal=0) {
     const selectedCount=selectedLineCount();
     const className=`effect-card${extraClass?` ${extraClass}`:''}`;
-    return effects.map((effect,index)=>{const needsAll=effect.requireTogether||effect.category==='tunnel',minimum=effect.minimumReceivers||1,tooFew=selectedCount<minimum,locked=needsAll?(standControlOpen?selectedCount:physicalLineCount())<minimum:tooFew,active=activeEffect()?.id===effect.id,name=Library.displayName(effect,t);return `<button type="button" class="${className}" data-chooser-version="567" data-animation-category="${esc(effect.category)}" data-action="effect" data-id="${esc(effect.id)}" data-motion="${effectMotionKey(effect)}" aria-label="${esc(t('v567StartNamed',{name}))}" aria-pressed="${active}" ${locked?'disabled':''}><span class="animation-effect-preview"><span class="animation-effect-preview-label">${esc(t('v567AnimationExample'))}</span>${effectPreview(effect,needsAll?{tunnelLines:'all'}:{})}${active?`<span class="animation-current-badge">${esc(t('v567ActiveAnimation'))}</span>`:''}</span><b>${esc(name)}</b>${variantTotal>1?`<small class="animation-variant-position">${esc(t('animationVariantPosition',{current:index+1,total:variantTotal}))}</small>`:''}<small class="animation-variant-description">${esc(window.LightningV50AnimationTexts.effectDescription(effect,uiPreferences.preferences.language))}</small>${locked?`<small class="animation-start-unavailable">${needsAll?t('animationAcrossMinimum'):t('animationSelectMinimum',{count:minimum})}</small>`:`<span class="animation-start-action"><span aria-hidden="true">${icon('play')}</span>${esc(t('v567StartAnimation'))}</span>`}</button>`;}).join('');
+    return effects.map((effect,index)=>{const needsAll=effect.requireTogether||effect.category==='tunnel',minimum=effect.minimumReceivers||1,tooFew=selectedCount<minimum,locked=needsAll?(standControlOpen?selectedCount:physicalLineCount())<minimum:tooFew,active=activeEffect()?.id===effect.id,name=Library.displayName(effect,t);return `<button type="button" class="${className}${active?' is-current-animation':''}" data-chooser-version="567" data-active-effect="${active}" data-animation-category="${esc(effect.category)}" data-action="${active?'animation-current-edit':'effect'}" data-id="${esc(effect.id)}" data-motion="${effectMotionKey(effect)}" aria-label="${esc(t(active?'animationCurrentSettingsAccessible':'v567StartNamed',{name}))}" aria-pressed="${active}" ${locked&&!active?'disabled':''}><span class="animation-effect-preview"><span class="animation-effect-preview-label">${esc(t('v567AnimationExample'))}</span>${effectPreview(effect,needsAll?{tunnelLines:'all'}:{})}${active?`<span class="animation-current-badge"><span aria-hidden="true">${icon('check')}</span>${esc(animationCurrentLabel())}</span>`:''}</span><b>${esc(name)}</b>${variantTotal>1?`<small class="animation-variant-position">${esc(t('animationVariantPosition',{current:index+1,total:variantTotal}))}</small>`:''}<small class="animation-variant-description">${esc(window.LightningV50AnimationTexts.effectDescription(effect,uiPreferences.preferences.language))}</small>${locked&&!active?`<small class="animation-start-unavailable">${needsAll?t('animationAcrossMinimum'):t('animationSelectMinimum',{count:minimum})}</small>`:`<span class="animation-start-action"><span aria-hidden="true">${icon(active?'advanced-settings':'play')}</span>${esc(t(active?'v569Adjust':'v567StartAnimation'))}</span>`}</button>`;}).join('');
   }
   function animationFamilyCard(group) {
     const type=standControlOpen?[...new Set(standControlReceivers().map(receiver=>receiver.type))].join(' + '):zone()?.type==='SPI'?'SPI':'RGBW',openLabel=t(group.count===1?'v567ViewOne':'v567ViewMany',{count:group.count}),countLabel=t(group.count===1?'animationCountOne':'animationCountMany',{count:group.count}),nextStep=t('v567BrowseOnly');
     const tunnel=group.preview.category==='tunnel';
     const previewLabel=t('animationFamilyPreview');
     const preview=standControlOpen?effectPreview(group.preview):tunnel?tunnelGalleryPreviewMarkup(group,'animation-spatial-sample',{illustrative:true,main:false}):effectPreview(group.preview);
-    return `<article class="animation-family-card${tunnel?' tunnel-family-card':''}" data-chooser-version="567" data-animation-category="${esc(group.category)}" data-group-browse-only="true"><button type="button" class="animation-family-trigger" data-action="family" data-id="${esc(group.key)}" data-ledline-type="${type}" aria-label="${esc(`${group.title}. ${openLabel}. ${nextStep}`)}"><span class="animation-family-preview${tunnel?' animation-family-spatial-preview':''}" data-motion-preview="${effectMotionKey(group.preview)}"><span class="animation-family-preview-label">${esc(previewLabel)}</span>${preview}<span class="animation-family-preview-notice">${esc(t('v567OpensGroup'))}</span></span><span class="family-copy"><span class="family-kicker"><span aria-hidden="true">${icon('folder')}</span>${esc(t('animationFamilyLabel'))}<span class="animation-type-badge" aria-label="${esc(t('animationBadgeForType',{type}))}">${type}</span></span><b class="family-title">${esc(group.title)}</b><small class="family-summary">${esc(group.summary)}</small><span class="family-variants" aria-label="${esc(countLabel)}"><span class="family-variants-copy"><b>${esc(openLabel)}</b></span><span class="family-variants-action" aria-hidden="true">${icon('chevron')}</span></span></span></button></article>`;
+    const current=activeEffect(),containsCurrent=Boolean(current&&group.effects.some(effect=>effect.id===current.id));
+    return `<article class="animation-family-card${tunnel?' tunnel-family-card':''}${containsCurrent?' is-active-family':''}" data-chooser-version="567" data-animation-category="${esc(group.category)}" data-group-browse-only="true"><button type="button" class="animation-family-trigger" data-action="family" data-id="${esc(group.key)}" data-ledline-type="${type}" aria-label="${esc(`${group.title}. ${openLabel}. ${nextStep}`)}"><span class="animation-family-preview${tunnel?' animation-family-spatial-preview':''}" data-motion-preview="${effectMotionKey(group.preview)}"><span class="animation-family-preview-label">${esc(previewLabel)}</span>${preview}<span class="animation-family-preview-notice">${esc(t('v567OpensGroup'))}</span></span><span class="family-copy"><span class="family-kicker"><span aria-hidden="true">${icon('folder')}</span>${esc(t('animationFamilyLabel'))}<span class="animation-type-badge" aria-label="${esc(t('animationBadgeForType',{type}))}">${type}</span></span><b class="family-title">${esc(group.title)}</b>${containsCurrent?`<span class="v569-family-current"><span aria-hidden="true">${icon('check')}</span>${esc(t('v569CurrentInGroup'))}</span>`:''}<small class="family-summary">${esc(group.summary)}</small><span class="family-variants" aria-label="${esc(countLabel)}"><span class="family-variants-copy"><b>${esc(openLabel)}</b></span><span class="family-variants-action" aria-hidden="true">${icon('chevron')}</span></span></span></button></article>`;
   }
   function animationFamilyDetail(group,tab,{includePreview=true}={}) {
     const countLabel=t(group.count===1?'animationCountOne':'animationCountMany',{count:group.count});
@@ -1757,9 +1790,9 @@
   function animationSettingsReturnMarkup(location){
     const current=activeEffect();
     if(!current||!standControlOpen&&route.screen!=='controls')return '';
-    const name=Library.displayName(current,t),label=t('animationCurrentSettingsTitle');
+    const name=Library.displayName(current,t),label=t('v569Adjust');
     const attribute=location==='sticky'?'data-editor-return-sticky':'data-editor-return-inline';
-    return `<button type="button" class="animation-gallery-return animation-settings-return" ${attribute} data-action="animation-current-edit" aria-label="${esc(t('animationCurrentSettingsAccessible',{name}))}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('advanced-settings')}</span><span class="gallery-action-copy"><small class="animation-settings-return-kicker">${esc(t('animationSettingsReturnKicker'))}</small><b class="animation-settings-return-name">${esc(name)}</b><small class="animation-settings-return-action">${esc(label)}</small></span></span><span class="gallery-action-next" aria-hidden="true">${icon('chevron')}</span></button>`;
+    return `<button type="button" class="animation-gallery-return animation-settings-return" data-active-summary-version="569" ${attribute} data-action="animation-current-edit" data-id="${esc(current.id)}" aria-label="${esc(t('animationCurrentSettingsAccessible',{name}))}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('check')}</span><span class="gallery-action-copy"><small class="animation-settings-return-kicker">${esc(animationCurrentLabel())}</small><b class="animation-settings-return-name">${esc(name)}</b><small class="animation-settings-return-action">${esc(label)}</small></span></span><span class="gallery-action-next" aria-hidden="true">${icon('chevron')}</span></button>`;
   }
   function animationCategoryIcon(key){
     return key==='tunnel'?arrangementIcon('stacked'):icon(({catalogue:'zones',whole:'sun',pixels:'animation',brand:'sparkle',presets:'scenes'})[key]||'zones');
@@ -3982,7 +4015,8 @@
     dialog.querySelectorAll('canvas[data-preview]').forEach(canvas=>previews.delete(canvas.dataset.preview));
     const effect=activeEffect(),family=standAnimationFamily?Library.group(catalogue(),standAnimationFamily):null;
     const shown=family?.preview||(!standAnimationGallery&&effect?effect:null)||catalogue().find(effect=>(effect.minimumReceivers||1)<=physicalLineCount(standControlReceivers()));
-    const animationContent=standControlMode==='animations'?`${shown&&!standAnimationGallery?`<section class="stand-animation-live"><div class="stand-animation-live-title"><b>${esc(Library.displayName(shown,t))}</b><small>${esc(standAnimationModeLabel(shown))}</small></div>${standAnimationPreview(shown,{compact:true})}<details class="stand-animation-explanation" data-continuity-id="stand-zone-previews"><summary>${esc(t('v50StandViewZones'))}</summary>${standAnimationPreview(shown)}</details></section>`:''}${!standAnimationGallery&&effect?animationEditorMarkup(effect):animationLibraryContent()}`:'';
+    const editorPreview=shown&&!standAnimationGallery?`<section class="stand-animation-live"><div class="stand-animation-live-title"><b>${esc(Library.displayName(shown,t))}</b><small>${esc(standAnimationModeLabel(shown))}</small></div>${standAnimationPreview(shown,{compact:true})}<details class="stand-animation-explanation" data-continuity-id="stand-zone-previews"><summary>${esc(t('v50StandViewZones'))}</summary>${standAnimationPreview(shown)}</details></section>`:'';
+    const animationContent=standControlMode==='animations'?(!standAnimationGallery&&effect?animationEditorMarkup(effect,{preview:editorPreview}):animationLibraryContent()):'';
     const zoneCount=standControlZoneCount();
     // Title and mode tabs share one opaque sticky surface, including the
     // safe area. Two separate sticky layers leaked scrolling previews at
@@ -4496,11 +4530,12 @@
           if(action==='library')standAnimationTab=id==='all'?'catalogue':id;
           renderStandControls({preserveScroll:false});return;
         }
-        if(action==='animation-current-edit'){standControlEpoch++;standAnimationGallery=false;standAnimationFamily=null;renderStandControls({preserveScroll:false});return;}
+        if(action==='animation-current-edit')return openCurrentAnimationSettings(id);
         if(action==='animation-category-tab'&&button.closest('.animation-category-tabs'))return chooseAnimationCategoryTab(id);
         if(action==='animation-category-choice'&&button.closest('[data-animation-categories]'))return chooseAnimationCategory(id);
         if(action==='effect'){
           const effect=catalogue().find(effect=>effect.id===id);if(!effect)return;
+          if(activeEffect()?.id===id)return openCurrentAnimationSettings(id);
           const intent=standControlIntent();
           if(nativeContext&&!(await standAnimationsAvailable()))return;
           if(!currentStandControlIntent(intent))return;
@@ -4847,9 +4882,7 @@
         if(!showControlAnimationGallery)return revealAnimationStart();
         return;
       }
-      if(action==='animation-current-edit'&&route.screen==='controls'&&activeEffect()){
-        rememberAnimationGallery();showControlAnimationGallery=false;render({top:true});return revealAnimationStart();
-      }
+      if(action==='animation-current-edit')return openCurrentAnimationSettings(id);
       if(action==='animations-gallery'&&route.screen==='animations'&&activeEffect()){
         controlMode='animations';showControlAnimationGallery=true;
         setSpatialPreviewCategory(initialAnimationLibrary());
@@ -5019,6 +5052,7 @@
       }
       if(action==='effect'){
         const effect=catalogue().find(e=>e.id===id);if(!effect)return;
+        if(activeEffect()?.id===id)return openCurrentAnimationSettings(id);
         const requiresWholeZone=effect.requireTogether||effect.category==='tunnel';
         const available=requiresWholeZone?physicalLineCount():selectedLineCount();
         if(available<(effect.minimumReceivers||1))return;
@@ -5361,7 +5395,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate568',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate569',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;
