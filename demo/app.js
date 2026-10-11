@@ -512,9 +512,10 @@
     }
   }
   function orderReferenceMarkup(z,count){
-    const plan=orderGuide.referencePlan({count,type:z.type,view:spatialMode(z.layout,z),layout:z.layout});
+    const view=spatialMode(z.layout,z),spatialReference=['tunnel','wall'].includes(view);
+    const plan=orderGuide.referencePlan({count,type:z.type,view,layout:z.layout});
     const legend=plan.colours.map((colour,index)=>`<li style="--identify-colour:${C.hex(colour.rgb)}" aria-label="${esc((index+1)+' · '+window.LightningV50OrderTexts.paletteLabel(colour.colorName,uiPreferences.preferences.language))}"><span aria-hidden="true"></span><b>${index+1}</b></li>`).join('');
-    return `<figure class="v50-order-reference" aria-label="${esc(orderGuideText('example'))}"><figcaption><b>${esc(t('v568OrderReference'))}</b><button type="button" class="v50-order-tutorial-open" data-action="order-tutorial-open">${icon('play')}${esc(orderGuideText('tutorialView'))}</button></figcaption>${addPreview(plan.receivers,plan.layout,'v50-order-canvas v50-order-target-canvas',{...plan.options,orderTarget:true,numberLabels:true,label:orderGuideText('referenceTitle')+' · '+orderGuideText(plan.direction)})}<ol class="v50-order-reference-legend" aria-label="${esc(orderGuideText('referenceTitle'))}">${legend}</ol><p class="v50-order-reference-direction"><span>${esc(orderGuideText(plan.direction))}</span><span>${esc(t('v568MatchReference'))}</span></p></figure>`;
+    return `<figure class="v50-order-reference" data-reference-view="${view}" aria-label="${esc(orderGuideText('example'))}"><figcaption><b>${esc(t('v568OrderReference'))}</b><button type="button" class="v50-order-tutorial-open" data-action="order-tutorial-open">${icon('play')}${esc(orderGuideText('tutorialView'))}</button></figcaption>${addPreview(plan.receivers,plan.layout,'v50-order-canvas v50-order-target-canvas',{...plan.options,orderTarget:true,numberLabels:true,...(spatialReference?{spatialFraming:'focus'}:{}),label:orderGuideText('referenceTitle')+' · '+orderGuideText(plan.direction)})}<ol class="v50-order-reference-legend" aria-label="${esc(orderGuideText('referenceTitle'))}">${legend}</ol><p class="v50-order-reference-direction"><span>${esc(orderGuideText(plan.direction))}</span><span>${esc(t('v568MatchReference'))}</span></p></figure>`;
   }
   function syncOrderRecognition(){
     if(!main)return;
@@ -1161,8 +1162,9 @@
     return `<div class="v50-preview-line-targets" role="group" aria-label="${esc(t('v50SelectLines'))}">${previewLineChoices().map(line=>`<button type="button" class="v50-preview-line-target" data-action="select" data-id="${esc(line.id)}" aria-label="${esc(t('scopeLine',{number:line.number}))}" aria-pressed="${all||ids.includes(line.id)}"><span class="v50-preview-line-badge"><b>${line.number}</b><span class="v50-preview-line-check" aria-hidden="true">✓</span></span></button>`).join('')}</div>`;
   }
   function interactiveZonePreview(z,css,options){
+    if(options.main&&['tunnel','wall'].includes(options.spatialShape))options={...options,spatialFraming:'focus'};
     if(!options.interactiveLines)return zonePreview(z,css,options);
-    return `<div class="v50-preview-canvas-scroll"><div class="v50-preview-canvas-stage" data-preview-spatial="${options.spatialShape||''}" data-preview-vertical="${z.layout==='vertical'&&options.presentation!=='receivers'}">${zonePreview(z,css,{...options,selectionOverlay:true,decorative:true})}${previewTargetsMarkup()}</div></div>`;
+    return `<div class="v50-preview-canvas-scroll"><div class="v50-preview-canvas-stage" data-preview-ui="571" data-preview-spatial="${options.spatialShape||''}" data-preview-vertical="${z.layout==='vertical'&&options.presentation!=='receivers'}">${zonePreview(z,css,{...options,selectionOverlay:true,decorative:true})}${previewTargetsMarkup()}</div></div>`;
   }
   function syncPreviewTargets(canvas){
     const stage=canvas.closest('.v50-preview-canvas-stage');if(!stage)return;
@@ -5415,7 +5417,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate570',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate571',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

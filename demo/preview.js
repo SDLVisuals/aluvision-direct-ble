@@ -854,14 +854,21 @@ function softTrailCoverage(behind,trail,n,smooth){
   tunnelRim[0]=[83,240];tunnelRim[1][0]=57;tunnelRim[1][1]=211;
   tunnelRim[4][2]=207;tunnelRim[4][3]=211;tunnelRim[4][4]=183;tunnelRim[4][5]=240;
   const tunnelCurve=tunnelCurveSamples(tunnelInner),tunnelOuterCurve=tunnelCurveSamples(tunnelOuter),tunnelFasciaCurve=tunnelCurveSamples(tunnelRim);
-  function tunnelProjection(lineCount, width=360, height=240) {
+  function tunnelProjection(lineCount, width=360, height=240, framing='') {
     const count=Math.max(0,Math.floor(number(lineCount,0)));
     width=Math.max(1,number(width,360));height=Math.max(1,number(height,240));
     // Preserve the proportions of the original 360x260 illustration, including
     // its slightly off-centre vanishing point. Never stretch the circular face
     // to fit a wide gallery card or turn it back into an upright U-shaped arch.
-    const unit=Math.min(width/360,height/260),offset=[(width-360*unit)/2,(height-260*unit)/2];
-    const screen=(x,y)=>[offset[0]+(x+44)*unit,offset[1]+(y+5)*unit];
+    const focused=framing==='focus';
+    const unit=focused?Math.max(.001,Math.min(Math.max(1,width-48)/260,Math.max(1,height-10)/224)):
+      Math.min(width/360,height/260),offset=[(width-360*unit)/2,(height-260*unit)/2];
+    // The main/setup camera trims unused background, never the light paths.
+    // Both axes use the SAME scale and the original vanishing point is kept.
+    // Default/gallery projections deliberately retain their exact old bytes.
+    const screen=focused?(x,y)=>[width/2+(x-132)*unit,
+      5+(y-14)*unit+Math.max(0,(height-10-224*unit)/2)]:
+      (x,y)=>[offset[0]+(x+44)*unit,offset[1]+(y+5)*unit];
     const point=(x,y,scale)=>screen(164+(x-164)*scale,108+(y-108)*scale);
     const project=(scale,curve=tunnelCurve)=>curve.map(([x,y])=>point(x,y,scale));
     const floor=(left,right,near=1.1,far=.48)=>[point(left,224,near),point(right,224,near),point(right,224,far),point(left,224,far)];
@@ -895,12 +902,12 @@ function softTrailCoverage(behind,trail,n,smooth){
       ...(Number.isInteger(row.port)?{port:row.port}:row.type==='RGBW'?{port:0}:{})};
   }
   const spatialInteractionCache=new Map();
-  function spatialInteractions(frame,paths,width,height,anchors,shape) {
+  function spatialInteractions(frame,paths,width,height,anchors,shape,framing='') {
     // Geometry and identities do not change with animation/selection state.
     // Cache only this presentation metadata, not pixels or light settings.
-    const key=JSON.stringify([shape,width,height,frame.rows.map(row=>[row.receiverId,row.lineId,row.port])]);
+    const key=JSON.stringify([shape,framing,width,height,frame.rows.map(row=>[row.receiverId,row.lineId,row.port])]);
     if(spatialInteractionCache.has(key))return spatialInteractionCache.get(key);
-    const marginX=Math.min(13,width/2),marginY=Math.min(13,height/2);
+    const marginX=Math.min(framing==='focus'?22:13,width/2),marginY=Math.min(framing==='focus'?22:13,height/2);
     const result={
       paths:frame.rows.map((row,index)=>({...spatialIdentity(row),
         points:paths[index].map(([x,y])=>[x/width,y/height]),tolerancePx:12})),
@@ -913,11 +920,66 @@ function softTrailCoverage(behind,trail,n,smooth){
     if(spatialInteractionCache.size>=8)spatialInteractionCache.delete(spatialInteractionCache.keys().next().value);
     spatialInteractionCache.set(key,result);return result;
   }
-  function drawTunnel(context,frame,width,height,lineNumbers,interactive=false) {
-    const key=[frame.rows.length,width,height].join(':');
+  function tunnelFocusAnchors(model,width,height) {
+    const count=model.arches.length,margin=Math.min(22,width/2,height/2),slots=[];
+    // Separate touch targets live in the free background, not on top of the
+    // nested arch feet. Every tether still ends on its OWN sampled path.
+    if(count<=3){
+      if(count)slots.push({x:margin,y:height/2,side:'left'});
+      if(count===3)slots.push({x:width/2,y:margin,side:'top'});
+      if(count>=2)slots.push({x:width-margin,y:height/2,side:'right'});
+    }else{
+      const capacity=Math.max(1,Math.floor((height-2*margin)/44)+1);
+      const sideCount=Math.min(count,capacity*2),left=Math.ceil(sideCount/2),right=Math.floor(sideCount/2);
+      for(let index=0;index<sideCount;index++){
+        const isLeft=index%2===0,total=isLeft?left:right,at=Math.floor(index/2);
+        slots.push({x:isLeft?margin:width-margin,
+          y:total===1?height/2:margin+at*(height-2*margin)/(total-1),side:isLeft?'left':'right'});
+      }
+      const railLeft=Math.min(width/2,margin+44),railRight=Math.max(width/2,width-margin-44);
+      const railCapacity=Math.max(1,Math.floor((railRight-railLeft)/44)+1);
+      let remaining=count-slots.length;
+      for(const side of ['top','bottom']){
+        const total=Math.min(remaining,railCapacity);
+        for(let index=0;index<total;index++)slots.push({
+          x:total===1?width/2:railLeft+index*(railRight-railLeft)/(total-1),
+          y:side==='top'?margin:height-margin,side});
+        remaining-=total;
+      }
+      // A finite canvas cannot contain unlimited 44px targets. Dense cases
+      // retain every identity instead of silently dropping physical lines.
+      while(slots.length<count){const index=slots.length;slots.push({
+        x:margin+(width-2*margin)*(index+.5)/count,y:height-margin,side:'bottom'});}
+    }
+    return model.arches.map((arch,index)=>{
+      const slot=slots[index];
+      const candidates=arch.points.filter((_,at)=>slot.side==='left'?at<=64:
+        slot.side==='right'?at>=64:slot.side==='top'?at>=32&&at<=96:at<=20||at>=108);
+      const path=candidates.reduce((best,point)=>Math.hypot(point[0]-slot.x,point[1]-slot.y)<
+        Math.hypot(best[0]-slot.x,best[1]-slot.y)?point:best,candidates[0]);
+      return {x:slot.x,y:slot.y,path};
+    });
+  }
+  function wallFocusAnchors(model,width,height) {
+    const margin=Math.min(22,width/2,height/2),count=model.lines.length;
+    return model.lines.map((line,index)=>{
+      const top=index%2===0,railCount=Math.ceil((count-(top?0:1))/2),at=Math.floor(index/2);
+      return {x:railCount<=1?width/2:margin+at*(width-2*margin)/(railCount-1),
+        y:top?margin:height-margin,path:top?line.to:line.from};
+    });
+  }
+  function drawSpatialTethers(context,anchors) {
+    context.save();context.shadowBlur=0;context.lineWidth=1;
+    context.strokeStyle='rgba(226,235,230,.44)';context.lineCap='round';
+    anchors.forEach(anchor=>{context.beginPath();context.moveTo(anchor.x,anchor.y);
+      context.lineTo(...anchor.path);context.stroke();});
+    context.restore();
+  }
+  function drawTunnel(context,frame,width,height,lineNumbers,interactive=false,framing='',selection=interactive) {
+    const focused=framing==='focus',key=[frame.rows.length,width,height,framing].join(':');
     let model=tunnelProjectionCache.get(key);
     if(!model){
-      model=tunnelProjection(frame.rows.length,width,height);
+      model=tunnelProjection(frame.rows.length,width,height,framing);
       if(tunnelProjectionCache.size>=8)tunnelProjectionCache.delete(tunnelProjectionCache.keys().next().value);
       tunnelProjectionCache.set(key,model);
     }
@@ -973,7 +1035,16 @@ function softTrailCoverage(behind,trail,n,smooth){
     path([model.floor[1],model.floor[2]]);context.stroke();
     path([model.inlay[0],model.inlay[3]]);context.stroke();
     path([model.inlay[1],model.inlay[2]]);context.stroke();
+    const focusAnchors=focused&&interactive?tunnelFocusAnchors(model,width,height):null;
+    // Leaders are painted UNDER all exact light strokes, never over pixels.
+    if(focusAnchors)drawSpatialTethers(context,focusAnchors);
     context.lineCap='round';context.lineJoin='round';
+    if(focused&&selection)frame.rows.forEach((row,index)=>{
+      if(!row.selected)return;
+      const arch=model.arches[index];path(arch.points);
+      context.strokeStyle='rgba(240,245,242,0.62)';context.lineWidth=arch.thickness+7;
+      context.shadowBlur=0;context.stroke();
+    });
     for(let rowIndex=frame.rows.length-1;rowIndex>=0;rowIndex--){
       const row=frame.rows[rowIndex],arch=model.arches[rowIndex];
       const pixels=row.identificationPixels||row.pixels;
@@ -986,7 +1057,7 @@ function softTrailCoverage(behind,trail,n,smooth){
         for(let index=begin;index<end;index++)points.push(arch.points[index]);
         points.push(point(to));path(points);
       };
-      if(interactive&&row.selected){
+      if(!focused&&selection&&row.selected){
         // Selection traces the spatial light path, outside its sampled core.
         // The exact RGB/SPI strokes below remain untouched and fully visible.
         path(arch.points);context.strokeStyle='rgba(240,245,242,0.2)';
@@ -1051,7 +1122,7 @@ function softTrailCoverage(behind,trail,n,smooth){
     }
     context.shadowBlur=0;
     if(interactive){
-      const anchors=model.arches.map((arch,index)=>{
+      const anchors=focusAnchors||model.arches.map((arch,index)=>{
         // Nested arch feet are too close for separate targets. Stagger their
         // badges around the actual curves, just outside the luminous paths.
         const at=Math.round(10+108*index/Math.max(1,frame.rows.length-1));
@@ -1059,7 +1130,7 @@ function softTrailCoverage(behind,trail,n,smooth){
         const norm=Math.max(1,Math.hypot(dx,dy));
         return {x:point[0]+dx/norm*18,y:point[1]+dy/norm*18,path:point};
       });
-      return spatialInteractions(frame,model.arches.map(arch=>arch.points),width,height,anchors,'tunnel');
+      return spatialInteractions(frame,model.arches.map(arch=>arch.points),width,height,anchors,'tunnel',framing);
     }
   }
   // The approved "Strakke wand" is only another camera for these same rows.
@@ -1081,7 +1152,8 @@ function softTrailCoverage(behind,trail,n,smooth){
       floor:[wall[3],wall[2],[width,height*.98],[0,height*.98]]};
   }
   const wallProjectionCache=new Map();
-  function drawWall(context,frame,width,height,lineNumbers,interactive=false) {
+  function drawWall(context,frame,width,height,lineNumbers,interactive=false,framing='',selection=interactive) {
+    const focused=framing==='focus';
     const key=[frame.rows.length,width,height].join(':');
     let model=wallProjectionCache.get(key);
     if(!model){
@@ -1108,13 +1180,21 @@ function softTrailCoverage(behind,trail,n,smooth){
     path(model.wall,true);
     context.fillStyle=material([width*.1,height*.1],[width*.8,height*.8],[[0,'#404740'],[.55,'#272f28'],[1,'#1b231d']]);context.fill();
     context.strokeStyle='#555e55';context.lineWidth=.75;context.stroke();
+    const focusAnchors=focused&&interactive?wallFocusAnchors(model,width,height):null;
+    if(focusAnchors)drawSpatialTethers(context,focusAnchors);
     context.lineCap='butt';context.lineJoin='round';
+    if(focused&&selection)frame.rows.forEach((row,index)=>{
+      if(!row.selected)return;
+      const line=model.lines[index];path([line.from,line.to]);
+      context.strokeStyle='rgba(240,245,242,0.62)';context.lineWidth=line.thickness+8;
+      context.shadowBlur=0;context.stroke();
+    });
     frame.rows.forEach((row,rowIndex)=>{
       const line=model.lines[rowIndex],pixels=row.identificationPixels||row.pixels;
       const point=position=>position===0?line.from:position===1?line.to:
         [line.from[0],line.from[1]+(line.to[1]-line.from[1])*position];
       const part=(from,to)=>path([point(from),point(to)]);
-      if(interactive&&row.selected){
+      if(!focused&&selection&&row.selected){
         part(0,1);context.strokeStyle='rgba(240,245,242,0.2)';
         context.lineWidth=line.thickness+6;context.shadowBlur=0;context.stroke();
       }
@@ -1158,14 +1238,14 @@ function softTrailCoverage(behind,trail,n,smooth){
     context.restore();context.shadowBlur=0;
     if(interactive){
       return spatialInteractions(frame,model.lines.map(line=>[line.from,line.to]),width,height,
-        model.lines.map(line=>({x:line.from[0],y:height*.87,path:line.from})),'wall');
+        focusAnchors||model.lines.map(line=>({x:line.from[0],y:height*.87,path:line.from})),'wall',framing);
     }
   }
   // A projection of the SAME sampled pixels, not a second canned animation.
   // View shape changes presentation only; it never changes output mapping.
-  function drawSpatial(context,frame,width,height,shape,lineNumbers,interactive=false) {
-    if(shape==='tunnel')return drawTunnel(context,frame,width,height,lineNumbers,interactive);
-    if(shape==='wall')return drawWall(context,frame,width,height,lineNumbers,interactive);
+  function drawSpatial(context,frame,width,height,shape,lineNumbers,interactive=false,framing='',selection=interactive) {
+    if(shape==='tunnel')return drawTunnel(context,frame,width,height,lineNumbers,interactive,framing,selection);
+    if(shape==='wall')return drawWall(context,frame,width,height,lineNumbers,interactive,framing,selection);
     const count=frame.rows.length;
     const point=(index,u)=>{
       const spread=(index+.5)/count;
@@ -1288,11 +1368,13 @@ function softTrailCoverage(behind,trail,n,smooth){
       if(canvas.dataset){canvas.dataset.spatialShape=options.spatialShape;canvas.dataset.spatialLineCount=String(frame.rows.length);}
       const continuousSPI=layout==='continuous'&&frame.rows.every(row=>row.type==='SPI');
       const interactive=!continuousSPI&&options.main===true&&options.interactiveLines===true&&options.selectionOverlay===true;
-      const interaction=drawSpatial(context,frame,width,height,options.spatialShape,options.lineNumbers,interactive||options.numberLabels===true);
+      const focused=options.spatialFraming==='focus';
+      const interaction=drawSpatial(context,frame,width,height,options.spatialShape,options.lineNumbers,
+        interactive||options.numberLabels===true,focused?'focus':'',focused?interactive:interactive||options.numberLabels===true);
       if(options.numberLabels===true&&interaction){
         context.save();context.shadowBlur=0;context.textAlign='center';context.textBaseline='middle';
-        const size=Math.max(9,Math.min(18,width/Math.max(1,frame.rows.length)*.65));
-        context.font='650 '+Math.min(10,size*.65)+'px system-ui';
+        const size=focused?28:Math.max(9,Math.min(18,width/Math.max(1,frame.rows.length)*.65));
+        context.font='650 '+(focused?14:Math.min(10,size*.65))+'px system-ui';
         interaction.badges.forEach((badge,index)=>{
           const x=badge.x*width,y=badge.y*height;
           context.fillStyle='#26332b';rounded(context,x-size/2,y-size/2,size,size,Math.min(5,size/3));context.fill();
@@ -1441,7 +1523,7 @@ function softTrailCoverage(behind,trail,n,smooth){
         if(size>=10){
           context.fillStyle=highlighted?'#edf1ed':'#29322e';
           rounded(context,cx-size/2,cy-size/2,size,size,Math.min(7,size/3));context.fill();
-          context.fillStyle=highlighted?'#18201c':'#bbc6be';context.font='650 '+Math.min(11,size*.6)+'px system-ui';
+          context.fillStyle=highlighted?'#18201c':'#bbc6be';context.font='650 '+(options.numberLabels===true?12:Math.min(11,size*.6))+'px system-ui';
           context.textAlign='center';context.fillText(String(number),cx,cy);context.textAlign=vertical?'center':'left';
         }
       }

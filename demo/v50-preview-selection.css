@@ -39,6 +39,34 @@
 @media(max-width:360px){.v50-control-preview .v50-preview-expand{padding-inline:7px;font-size:10px}.v50-control-preview .v50-select-all{padding-inline:7px}.v50-control-preview .v50-selection-summary b{font-size:11px}}
 @media(prefers-reduced-motion:reduce){.v50-preview-line-badge{transition:none}}
 
+/* V50.571: same physical touch targets, with legible numbers and a distinct
+   chosen state. Selection never changes the sampled LED colours. */
+.v50-preview-canvas-stage[data-preview-ui="571"] .v50-preview-line-badge{
+  box-sizing:border-box;
+  width:36px;height:36px;border:2px solid #85938b;border-radius:11px;
+  background:#18201c;color:#f1f5f2;
+}
+.v50-preview-canvas-stage[data-preview-ui="571"] .v50-preview-line-badge b{
+  font-size:16px;font-weight:800;line-height:1;
+}
+.v50-preview-canvas-stage[data-preview-ui="571"] .v50-preview-line-target[data-spatial=true] .v50-preview-line-badge{
+  width:36px;height:36px;border-radius:11px;
+}
+.v50-preview-canvas-stage[data-preview-ui="571"] .v50-preview-line-target[data-spatial=true] .v50-preview-line-badge b{
+  font-size:16px;
+}
+.v50-preview-canvas-stage[data-preview-ui="571"] .v50-preview-line-target[aria-pressed=true] .v50-preview-line-badge{
+  background:#b6443f;color:#fff;border-color:#fff;
+  box-shadow:0 0 0 2px #111514,0 0 0 3px #ffffff70;
+}
+.v50-preview-canvas-stage[data-preview-ui="571"] .v50-preview-line-check{
+  box-sizing:border-box;width:18px;height:18px;right:-5px;top:-5px;
+  font-size:11px;border:2px solid #111514;background:#fff;color:#9b322f;
+}
+.v50-preview-canvas-stage[data-preview-ui="571"] .v50-preview-line-target:focus-visible{
+  outline:3px solid #fff;outline-offset:0;
+}
+
 /* V50.566: spend the preview's space on light, not separate caption rows.
    The chosen size owns BOTH height values. Older sticky rules changed only
    height, leaving a large min-height behind and inflating the dock. */

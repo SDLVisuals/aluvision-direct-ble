@@ -183,6 +183,25 @@ html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-
 html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-target-canvas{
   height:92px!important;min-height:92px!important;max-height:92px!important;margin:0;border-radius:12px;
 }
+/* Spatial instructions need room for the actual tunnel and readable numbers.
+   Normal rows keep their compact92px reference; the pinned instruction stays. */
+html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-reference:is([data-reference-view="tunnel"],[data-reference-view="wall"]) .v50-order-target-canvas{
+  height:168px!important;min-height:168px!important;max-height:168px!important;
+}
+html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-reference:is([data-reference-view="tunnel"],[data-reference-view="wall"]) .v50-order-reference-legend{
+  height:30px;min-height:30px;gap:6px;align-items:center;
+}
+html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-reference:is([data-reference-view="tunnel"],[data-reference-view="wall"]) .v50-order-reference-legend>li{
+  height:25px;min-width:34px;padding:3px 7px;
+}
+html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-reference:is([data-reference-view="tunnel"],[data-reference-view="wall"]) .v50-order-reference-legend>li>b{
+  font-size:12px;
+}
+@media(max-height:600px){
+  html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-reference:is([data-reference-view="tunnel"],[data-reference-view="wall"]) .v50-order-target-canvas{
+    height:136px!important;min-height:136px!important;max-height:136px!important;
+  }
+}
 html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-reference-legend{
   margin:0;gap:5px;min-height:20px;
 }

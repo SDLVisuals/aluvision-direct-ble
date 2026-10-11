@@ -1,3 +1,15 @@
+# Browserdemo V50 · interfacekandidaat571 · 11 oktober 2026
+
+Het volgordevoorbeeld voor tunnel en wand is groter en de ledlinenummers zijn beter leesbaar. Geselecteerde ledlines en hun bedieningsscope blijven herkenbaar in het voorbeeld. Deze aanpassingen betreffen alleen de weergave: zone openen op Kleur, meervoudige selectie en de eerdere volgorde/tutorial blijven behouden.
+
+Dit is alleen een browserdemo met twintig fictieve receivers: tien RGBW en tien SPI. Gegevens blijven tijdelijk in geheugen en verdwijnen bij herladen. Geen echte wifi, receiververbinding, fysieke verlichting of firmwarebestanden. PIN en delen blijven uitgeschakeld. Een schermvoorbeeld is geen bewijs van fysiek licht.
+
+Deze browserdemo en de private iPhone-app zijn afzonderlijke leveringen. De private iPhone-build571 is gecompileerd, ondertekend, geïnstalleerd en gestart; de geïnstalleerde versie is opnieuw uitgelezen. Het geopende native appscherm is apart visueel bevestigd. Geen fysieke ledline- of radiotest wordt geclaimd. De historische ondertekende build568-metadata blijft bewaard; actuele571-status staat apart. De bestaande Android-download blijft **41.0.14, code20** en is niet gewijzigd.
+
+De 746 gerichte softwaretests zijn geslaagd. De vier bestaande legacytestfouten zijn apart gerapporteerd; browsercontrole en fysieke acceptatie blijven afzonderlijke controles. QA-broninventaris SHA-256: edb9da199e28fd8fb133fa134e3da830c182ff96b65d5d98af4bbfc1dbd3a3bf.
+
+## Historische release-informatie
+
 # Browserdemo V50 · interfacekandidaat570 · 11 oktober 2026
 
 De klantteksten gebruiken nu consequent animaties en animatiegroepen in vier talen. Een zone openen brengt je naar Kleur, zonder je verlichting te wijzigen. In het schermvullende voorbeeld blijft je positie en bediening behouden wanneer je meerdere ledlines selecteert. De animatie-instellingen uit kandidaat569 en de ledlinevolgorde, vaste plaatsnummers en korte tutorial uit kandidaat568 blijven behouden.
