@@ -9,7 +9,7 @@ html.interface-polish {
   --interface-shadow: 0 5px 18px rgba(28, 35, 27, .045);
   --interface-choice: #ac3933;
   --interface-choice-tint: rgba(191, 72, 65, .055);
-  --interface-release: cubic-bezier(.2, .85, .25, 1.12);
+  --interface-release: cubic-bezier(.22, .72, .25, 1);
 }
 html.interface-polish body[data-theme="dark"] {
   --interface-milk: rgba(43, 48, 41, .88);
@@ -162,7 +162,7 @@ html.interface-polish body :is(button.button, button.icon-button,
     .spatial-preview-switch > button, .channel-row > button,
     .preview-size-picker > button):not(:disabled):not([role="switch"]):not(:has(canvas)) {
   transform: scale(var(--interface-press-scale, 1));
-  transition: transform var(--interface-press-time, 210ms) var(--interface-press-ease, var(--interface-release)),
+  transition: transform var(--interface-press-time, 165ms) var(--interface-press-ease, var(--interface-release)),
     background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
 }
 html.interface-polish body :is(button, .navigation > button)[data-interface-press="held"] {
@@ -284,3 +284,63 @@ html.interface-polish body .channel-row .channel-number {
 .stand-skip-setup { display: block; margin: 22px auto 0; }
 .stand-skip-note { margin: 8px auto; max-width: 32ch; text-align: center; color: var(--muted); font-size: .85rem; }
 .local-stand-notice { margin: 0 0 18px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; color: var(--muted); font-size: .86rem; line-height: 1.5; }
+
+/* V50/build578: one motion authority, no bouncing layout ancestors. Entry
+   hooks run only for genuinely new sheets/panels, not their status rerenders.
+   Pages stay in the same coordinate space as their sticky live preview. */
+html.interface-polish body main > .app-page-enter {
+  transform: none;
+  will-change: auto;
+  animation: interface-page-enter 160ms cubic-bezier(.22, .72, .25, 1) both;
+}
+@keyframes interface-page-enter { from { opacity: .65; } to { opacity: 1; } }
+html.interface-polish body dialog[open][data-interface-sheet="dialog"],
+html.interface-polish body dialog[open][data-interface-sheet="dialog"]::backdrop {
+  animation: none !important;
+  will-change: auto;
+}
+html.interface-polish body dialog[open][data-interface-sheet="dialog"][data-interface-entry="true"]:not(.is-closing)::backdrop {
+  animation: interface-backdrop-enter 180ms ease-out both !important;
+}
+@keyframes interface-backdrop-enter { from { opacity: 0; } to { opacity: 1; } }
+/* Unique keyframe names prevent later legacy stylesheet declarations from
+   restoring scale/overshoot. Save/apply/navigation still close synchronously;
+   only explicit user dismissal gets this brief, app-owned exit lifecycle. */
+html.interface-polish body dialog[open][data-interface-sheet="dialog"].is-closing {
+  animation: interface-dialog-exit 160ms cubic-bezier(.22, .72, .25, 1) both !important;
+}
+html.interface-polish body dialog[open][data-interface-sheet="dialog"].is-closing::backdrop {
+  animation: interface-backdrop-exit 160ms ease-out both !important;
+}
+@keyframes interface-dialog-exit {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translate3d(0, 6px, 0); }
+}
+@keyframes interface-backdrop-exit { from { opacity: 1; } to { opacity: 0; } }
+/* Fullscreen/stand pages never become a transformed containing block for
+   their sticky/fixed controls, including while dismissing. */
+html.interface-polish body dialog[open][data-interface-sheet="dialog"].is-closing:is(.v50-fullscreen-preview, :has([data-stand-control-sheet])) {
+  transform: none !important;
+}
+html.interface-polish body :is(.settings-panel, .background-details):not([hidden]):not(.is-closing) {
+  animation: none;
+}
+html.interface-polish body .preview-size-control[open] .preview-size-picker {
+  animation: interface-menu-enter 160ms ease-out both;
+  transform-origin: initial;
+}
+@keyframes interface-menu-enter { from { opacity: .65; } to { opacity: 1; } }
+html.interface-polish body :is(.settings-panel, .background-details).is-closing {
+  animation: interface-panel-exit 140ms ease-out both;
+}
+@keyframes interface-panel-exit { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  html.interface-polish body main > .app-page-enter,
+  html.interface-polish body dialog[open][data-interface-sheet="dialog"],
+  html.interface-polish body dialog[open][data-interface-sheet="dialog"]::backdrop,
+  html.interface-polish body .preview-size-control[open] .preview-size-picker,
+  html.interface-polish body :is(.settings-panel, .background-details) {
+    animation: none !important;
+    will-change: auto;
+  }
+}

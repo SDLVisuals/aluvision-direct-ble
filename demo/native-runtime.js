@@ -38,12 +38,13 @@
   ['receiverContextStatus','syncInstallationContext','interruptAutomaticContext'].forEach(action=>actions.add(action));
   actions.add('setAppearance');
   actions.add('selectionFeedback');
+  actions.add('interfaceFeedback');
   ['standSessionStatus','standSessionShare','standInspect','standOpenWifi','standConnect','standMigrate','standResume','standRefresh','standMutation','standDisconnect','standForget','standCodeChange','shareStandWifi'].forEach(action=>actions.add(action));
   actions.add('standFirstAccessPreflight');
   actions.add('standFirstAccessDiagnosticFailure');
   const firstAccessDiagnosticCodes=new Set(['OTHER','FIRST_ACCESS_IDENTITY','FIRST_ACCESS_STORAGE','FIRST_ACCESS_UNCONFIRMED','ACTION_UNSUPPORTED','NATIVE_UNAVAILABLE','NATIVE_DOCUMENT_UNAVAILABLE','NATIVE_BUSY','NATIVE_TIMEOUT','CANCELLED','TIMEOUT','LOCAL_NETWORK_DENIED','STAND_CONNECTION_CLOSED','STAND_CONNECTION_BUSY','STAND_CONNECTION_UNAVAILABLE','STAND_CONNECTION_INVALID','STAND_CONNECTION_CANCELLED','STAND_DATA_INVALID','STAND_DATA_UNCONFIRMED','STAND_INVALID_REQUEST','STAND_STORAGE_LIMIT','STAND_MIGRATION_INVALID','STAND_PREFLIGHT_INVALID','STAND_PREFLIGHT_UNCONFIRMED','STAND_PREFLIGHT_NOT_REQUIRED','STAND_MIGRATION_NOT_READY','STAND_RECEIVER_SAVED_ELSEWHERE','STAND_CURRENT_ACCESS_CONFLICT','STAND_UNAVAILABLE','STAND_WIFI_UNREACHABLE','STAND_WRONG_WIFI','STAND_BUSY','STAND_CANCELLED','STAND_IDENTITY_MISMATCH','STAND_AUTH_FAILED','STAND_UNCONFIRMED','STAND_CREDENTIAL_UNCONFIRMED']);
   ['scanStandShare','takeStandShareLink','shareStandLink'].forEach(action=>actions.add(action));
-  let selectionHaptics=false,selectionFeedbackPending=false;
+  let selectionHaptics=false,selectionFeedbackPending=false,interfaceHaptics=false,interfaceFeedbackPending=false;
   actions.add('supersedeLivePreparing');
   actions.add('replacePreparingStatic');
   ['applyStaticGesture','updateStaticGesture','endStaticGesture'].forEach(action=>actions.add(action));
@@ -99,7 +100,7 @@
     return new Promise((resolve,reject)=>{
       const id='v30-'+documentId+'-'+(++serial),cancelNative=()=>{
         if(automatic){automatic.interrupt();return;}
-        if(pending.has(id)&&!['interruptAutomaticContext','setAppearance','selectionFeedback','capabilities','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones','exportBackup','chooseBackup','importInstallationView'].includes(action))try{handler.postMessage({version:1,id:'v30-'+documentId+'-'+(++serial),action:action==='discover'?'cancelDiscover':'cancelOnboarding',payload:{requestId:id}});}catch(_){}
+        if(pending.has(id)&&!['interruptAutomaticContext','setAppearance','selectionFeedback','interfaceFeedback','capabilities','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones','exportBackup','chooseBackup','importInstallationView'].includes(action))try{handler.postMessage({version:1,id:'v30-'+documentId+'-'+(++serial),action:action==='discover'?'cancelDiscover':'cancelOnboarding',payload:{requestId:id}});}catch(_){}
       },abort=()=>{
         cancelNative();
         if(!automatic)receive({id,ok:false,code:'CANCELLED'});
@@ -1552,7 +1553,7 @@
     }
   }:{};
   const services=Object.freeze(serviceSet);
-  async function runtimeCapabilities(){const value=await call('capabilities');selectionHaptics=value?.selectionHaptics===true;simpleStandAvailable=value?.simpleStand===true;
+  async function runtimeCapabilities(){const value=await call('capabilities');selectionHaptics=value?.selectionHaptics===true;interfaceHaptics=value?.interfaceHaptics===true;simpleStandAvailable=value?.simpleStand===true;
     spiPortScenesAvailable=value?.spiPortScenes===true;
     standSessionReceiverManagementAvailable=simpleStandAvailable&&value?.standSessionReceiverManagement===true;
     standSessionOutputsAvailable=simpleStandAvailable&&value?.standSessionOutputs===true;
@@ -1655,7 +1656,17 @@
     selectionFeedback:()=>{
       if(!selectionHaptics||!transportReady)return false;
       // Presentation only; one outstanding tick cannot fill the bridge queue.
-      if(!selectionFeedbackPending){selectionFeedbackPending=true;call('selectionFeedback').catch(()=>{}).finally(()=>{selectionFeedbackPending=false;});}
+      if(!selectionFeedbackPending&&!interfaceFeedbackPending){selectionFeedbackPending=true;call('selectionFeedback').catch(()=>{}).finally(()=>{selectionFeedbackPending=false;});}
+      return true;
+    },
+    interfaceFeedback:kind=>{
+      // Never borrow a receiver/authentication action for optional feedback.
+      // Leave at least six of the eight bridge slots free for actual work.
+      if(!interfaceHaptics||!transportReady||!contextVisible()||
+         !['selection','impact','success','warning'].includes(kind)||
+         selectionFeedbackPending||interfaceFeedbackPending||pending.size>=2)return false;
+      interfaceFeedbackPending=true;
+      call('interfaceFeedback',{kind}).catch(()=>{}).finally(()=>{interfaceFeedbackPending=false;});
       return true;
     }});
 });

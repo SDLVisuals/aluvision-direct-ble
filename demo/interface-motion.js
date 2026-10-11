@@ -1,5 +1,6 @@
-/* Passive presentation only. One bounded press, no click synthesis, scroll
-   interception, model access, observers, network or receiver operations. */
+/* Passive presentation only. One bounded press and explicit entry hooks,
+   no click synthesis, scroll interception, model access, observers, network
+   or receiver operations. The app retains close/focus/state authority. */
 (function () {
   'use strict';
   if (window.InterfaceMotion) return;
@@ -19,6 +20,7 @@
   ].join(',');
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)');
   const listeners = [];
+  const surfaces = new Map();
   let press = null, destroyed = false;
   function cancel() {
     if (!press) return;
@@ -61,9 +63,90 @@
   function keyUp(event) {
     if (press?.input === 'key:' + event.key) cancel();
   }
-  function visibility() { if (document.hidden) cancel(); }
+  function visibility() { if (document.hidden) { cancel(); cancelEntries(); } }
   function windowBlur(event) { if (event.target === window) cancel(); }
-  function preference() { if (reduced?.matches) cancel(); }
+  function preference() { if (reduced?.matches) { cancel(); cancelEntries(); } }
+  function cancelEntry(target) {
+    const surface = surfaces.get(target);
+    if (!surface) return;
+    if (surface.entryAttribute === null) target.removeAttribute('data-interface-entry');
+    else target.setAttribute('data-interface-entry', surface.entryAttribute);
+    if (!surface.animation) return;
+    const animation = surface.animation;
+    surface.animation = null;
+    // An aborted animation must immediately reveal the authoritative DOM,
+    // not retain a faded/translated fill while settings are rerendered.
+    try { animation.cancel(); } catch (_) {}
+  }
+  function cancelEntries() {
+    for (const target of surfaces.keys()) cancelEntry(target);
+  }
+  function releaseSurface(target) {
+    const surface = surfaces.get(target);
+    if (!surface) return;
+    cancelEntry(target);
+    if (surface.close) target.removeEventListener('close', surface.close);
+    if (surface.attribute === null) target.removeAttribute('data-interface-sheet');
+    else target.setAttribute('data-interface-sheet', surface.attribute);
+    surfaces.delete(target);
+  }
+  function manageSurface(target, kind) {
+    // Status rerenders can replace a spatial picker. Release detached nodes
+    // on the next explicit hook; no DOM observer or permanent node retention.
+    for (const previous of surfaces.keys()) if (!previous.isConnected) releaseSurface(previous);
+    let surface = surfaces.get(target);
+    if (surface) return surface;
+    surface = {kind, attribute: target.getAttribute('data-interface-sheet'),
+      entryAttribute: target.getAttribute('data-interface-entry'), animation: null};
+    surfaces.set(target, surface);
+    target.setAttribute('data-interface-sheet', kind);
+    if (kind === 'dialog') {
+      surface.close = () => {
+        // Native close events are queued. A rapid reopen must not be
+        // cancelled by the previous session's late close notification.
+        if (!target.open) cancelEntry(target);
+      };
+      target.addEventListener('close', surface.close);
+    }
+    return surface;
+  }
+  function enterSurface(target, kind, wasOpen) {
+    if (destroyed || !target?.isConnected || kind === 'dialog' && !target.open ||
+        kind === 'panel' && target.hidden) return false;
+    const surface = manageSurface(target, kind);
+    cancelEntry(target);
+    // An open dialog's content may change on every colour/status update.
+    // The caller passes its prior open state (also for a restored new node),
+    // so those updates never replay a menu entrance or move its viewport.
+    if (wasOpen || reduced?.matches || document.hidden || typeof target.animate !== 'function') return false;
+    const translated = kind === 'dialog' && !target.classList?.contains('v50-fullscreen-preview') &&
+      !target.querySelector?.('[data-stand-control-sheet], .v50-full-preview');
+    const frames = translated
+      ? [{opacity: .55, transform: 'translate3d(0,6px,0)'}, {opacity: 1, transform: 'none'}]
+      : [{opacity: .65}, {opacity: 1}];
+    let animation;
+    try {
+      animation = target.animate(frames, {duration: kind === 'dialog' ? 220 : 160,
+        easing: 'cubic-bezier(.22,.72,.25,1)', fill: 'both'});
+    } catch (_) { return false; }
+    surface.animation = animation;
+    target.setAttribute('data-interface-entry', 'true');
+    const finish = () => {
+      // Completion/cancellation of an old session cannot clear a new entry.
+      if (surface.animation !== animation) return;
+      surface.animation = null;
+      if (surface.entryAttribute === null) target.removeAttribute('data-interface-entry');
+      else target.setAttribute('data-interface-entry', surface.entryAttribute);
+      try { animation.cancel(); } catch (_) {}
+    };
+    if (animation.finished?.then) animation.finished.then(finish, finish);
+    else {
+      // A partial WAAPI implementation is safer as an instant reveal than
+      // an indefinite fill with an unobservable completion lifecycle.
+      finish();
+    }
+    return true;
+  }
   function listen(surface, name, handler) {
     const options = {capture: true, passive: true};
     surface.addEventListener(name, handler, options);
@@ -75,7 +158,7 @@
   // Capture also sees ordinary element focus changes; those must not erase
   // the pointer press which just gave this button its accessible focus.
   listen(window, 'blur', windowBlur);
-  listen(window, 'pagehide', cancel);
+  listen(window, 'pagehide', () => { cancel(); cancelEntries(); });
   if (reduced?.addEventListener) {
     reduced.addEventListener('change', preference);
     listeners.push(() => reduced.removeEventListener('change', preference));
@@ -86,10 +169,15 @@
   root.classList.add('interface-polish');
   window.InterfaceMotion = Object.freeze({
     cancel,
+    openDialog(dialog, wasOpen = false) { return enterSurface(dialog, 'dialog', wasOpen); },
+    cancelDialog: cancelEntry,
+    openPanel(panel, wasOpen = false) { return enterSurface(panel, 'panel', wasOpen); },
+    cancelPanel: cancelEntry,
     destroy() {
       if (destroyed) return;
       destroyed = true;
       cancel();
+      for (const target of [...surfaces.keys()]) releaseSurface(target);
       for (const remove of listeners) remove();
       root.classList.remove('interface-polish');
     }

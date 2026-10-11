@@ -113,7 +113,7 @@
       // A proposed order is a presentation copy. Neither callbacks nor the
       // ghost grant persistence/transport authority or mutate the item list.
       try { feedback(Object.freeze({ phase: phase, active: phase === 'start' || phase === 'update',
-        id: state.id, fromIndex: state.fromIndex, toIndex: state.toIndex, input: state.input,
+        id: state.id, fromIndex: state.fromIndex, toIndex: state.toIndex, input: state.input, trusted: state.trusted,
         previewOrder: Object.freeze(previewOrder(state)) })); } catch (_) {}
     }
     function positionGhost(state) {
@@ -247,7 +247,7 @@
       try {
         if (commit && state.toIndex !== state.fromIndex) {
           dropped = true;
-          var result = options.onDrop({ id: state.id, toIndex: state.toIndex });
+          var result = options.onDrop({ id: state.id, toIndex: state.toIndex, trusted: state.trusted });
           // Report failure only, never retry or label persistence as confirmed.
           if (result && typeof result.then === 'function') Promise.resolve(result).catch(function () {
             announce(message('orderDragUnconfirmed'));
@@ -269,7 +269,7 @@
         return true;
       } catch (_) { finish(false); return false; }
     }
-    function begin(handle, input, pointerId, pointerY) {
+    function begin(handle, input, pointerId, pointerY, trusted) {
       if (destroyed || active || handle.disabled || handle.getAttribute('aria-disabled') === 'true') return false;
       try {
         var ids = items(), row = handle.closest('[data-order-item]'), allRows = rows(ids);
@@ -279,7 +279,7 @@
         active = { handle: handle, row: row, rows: allRows, slots: allSlots, id: id, ids: ids,
           fromIndex: index, fromPosition: Number.isInteger(originalPosition) && originalPosition > 0 ? originalPosition : index + 1,
           toIndex: index, input: input, pointerId: pointerId, pointerY: pointerY,
-          pointerOriginY: pointerY, moved: false, pickupOffset: 0, pickupFraction: .5 };
+          pointerOriginY: pointerY, moved: false, pickupOffset: 0, pickupFraction: .5, trusted: trusted === true };
         allRows.forEach(function (item) { item.removeAttribute('data-order-settled'); });
         captureLayout(active);
         if (input === 'pointer') {
@@ -345,7 +345,7 @@
     function pointerDown(event) {
       var handle = handleOf(event.target);
       if (!handle || event.button !== 0 || event.isPrimary === false) return;
-      if (begin(handle, 'pointer', event.pointerId, event.clientY) && active) {
+      if (begin(handle, 'pointer', event.pointerId, event.clientY, event.isTrusted === true) && active) {
         event.preventDefault(); active.pointerY = event.clientY; positionGhost(active); queueScroll();
       }
     }
@@ -386,7 +386,7 @@
       var handle = handleOf(event.target);
       if (!handle) return;
       if (!active && (event.key === ' ' || event.key === 'Spacebar' || event.key === 'Enter')) {
-        event.preventDefault(); begin(handle, 'keyboard', null); return;
+        event.preventDefault(); begin(handle, 'keyboard', null, undefined, event.isTrusted === true); return;
       }
       if (!active || active.input !== 'keyboard' || active.handle !== handle || !valid()) return;
       if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') { event.preventDefault(); finish(true); return; }

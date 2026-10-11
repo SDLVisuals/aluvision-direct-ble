@@ -1,3 +1,15 @@
+# Browserdemo V50 · interfacekandidaat578 · 11 oktober 2026
+
+Het tunnelvoorbeeld gebruikt opnieuw de vertrouwde nummering vooraan. Meerdere ledlines blijven samen selecteerbaar, ook in volledig scherm; de wandweergave behoudt haar nummering onderaan. Subtiele interfaceovergangen respecteren verminderde beweging. Optionele korte voelbare feedback is alleen voor bewuste interfacehandelingen in de native iPhone-app; in deze browserdemo doet dezelfde helper veilig niets. Een voelbaar signaal is geen bewijs dat echte verlichting is gewijzigd. De oorspronkelijke startpagina, taalkeuze, koudwitte LIGHTING-animatie en alle bestaande receiver-, model- en transportacties blijven behouden. Alleen acht bestaande WebApp-bestanden, een nieuwe haptics-helper en de native UIKit-feedbackbridge behoren tot de bronwijziging. De bridge wordt niet in deze browserdemo gepubliceerd. De productpagina verandert niet.
+
+Dit is alleen een browserdemo met twintig fictieve receivers: tien RGBW en tien SPI. Gegevens blijven tijdelijk in geheugen en verdwijnen bij herladen. Geen echte wifi, receiververbinding, fysieke verlichting of firmwarebestanden. PIN en delen blijven uitgeschakeld. Een schermvoorbeeld is geen bewijs van fysiek licht.
+
+Deze browserdemo en de private iPhone-app zijn afzonderlijke leveringen. De private iPhone-build578 is gecompileerd, ondertekend en geïnstalleerd; de geïnstalleerde versie is opnieuw uitgelezen. De app is na deze installatie niet opnieuw op de voorgrond gestart. Het native appscherm is nog niet apart visueel bevestigd; een geslaagde processtart is geen visuele controle. Geen fysieke ledline- of radiotest wordt geclaimd. De historische ondertekende build568-metadata blijft bewaard; actuele578-status staat apart. De bestaande Android-download blijft **41.0.14, code20** en is niet gewijzigd.
+
+De 974 gerichte softwaretests zijn geslaagd. De vier bestaande legacytestfouten zijn apart gerapporteerd; browsercontrole en fysieke acceptatie blijven afzonderlijke controles. QA-broninventaris SHA-256: bd1fd020a711c0b0cc5989b1bdbc7266c3cd72d0978c87ad8065970cb37c59a3.
+
+## Historische release-informatie
+
 # Browserdemo V50 · interfacekandidaat577 · 11 oktober 2026
 
 In het tunnelvoorbeeld staat ieder nummer bij het onderste einde van zijn eigen lichtboog. Bij de wand staan alle nummers onderaan bij hun eigen ledline. De volledige lichtlijn blijft zichtbaar; ledline1 en3 kunnen samen geselecteerd blijven, ook in volledig scherm. In een drukker voorbeeld blijft je zijwaartse kijkpositie behouden wanneer je een nummer of de lichtboog zelf aantikt. De oorspronkelijke startpagina, taalkeuze, koudwitte LIGHTING-animatie en alle bestaande receiver-, model- en transportacties blijven behouden. Deze wijziging omvat alleen de vier afgebakende interfacebestanden; de algemene interfacevormgeving en productpagina veranderen niet.

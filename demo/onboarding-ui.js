@@ -790,6 +790,7 @@
       const disclosureKey=element=>element.className+'|'+element.querySelector(':scope > summary')?.textContent;
       const disclosures=!top?new Map(Array.from(container.querySelectorAll('details'),element=>[disclosureKey(element),element.open])):null;
       const zoneScroll=container.querySelector('.onboarding-destination .onboarding-zone-list')?.scrollTop||0;
+      const zoneDialogWasOpen=container.querySelector('[data-onboarding-zone-dialog]')?.open===true;
       const zonePickerOpen=container.querySelector('.onboarding-destination')?.open===true||openZonePickerOnNextPaint;openZonePickerOnNextPaint=false;
       presentedStages.add(stageKey);
       container.innerHTML=`<div class="page onboarding-page${entering?' onboarding-stage-enter':''}" data-setup-origin="${origin}" data-onboarding-stage="${draft.stage}" aria-busy="${draftSaving||busy}">${heading()}${body()}${errorBox()}</div>`;
@@ -827,6 +828,7 @@
               paintPage(false);container?.querySelector('[data-receiver-destination]>summary')?.focus({preventScroll:true});
             });
             dialog.showModal();
+            window.InterfaceMotion?.openDialog?.(dialog,zoneDialogWasOpen);
           }
       }
       // Read-only native discovery can show the real product without pretending
@@ -1284,6 +1286,7 @@
         return;
       }
       if((draftSaving||managementBusy)&&action!=='zone-picker-close')return;
+      window.LightningInterfaceHaptics?.activate?.(event,'onboarding:'+action);
       if(action==='copy-factory-wifi'){
         const preview=services.factoryGuidePreview===true&&!draft.mainReceiverId;
         if((!manualWifi()&&!preview)||draft.stage!=='receiver'||results.length||busy)return;

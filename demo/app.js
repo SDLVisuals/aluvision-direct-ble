@@ -416,12 +416,14 @@
     dialog.dataset.tutorialVersion='568';
     dialog.innerHTML=`<header><div><span class="v568-tutorial-badge">${icon('play')}${esc(orderGuideText('tutorialBadge'))}</span><h2 id="order-tutorial-title" tabindex="-1">${esc(orderGuideText('tutorialTitle'))}</h2></div><button type="button" data-action="order-tutorial-close" aria-label="${esc(orderGuideText('tutorialClose'))}">${icon('close')}<span>${esc(t('close'))}</span></button></header><div class="v50-order-tutorial-body">${orderGuide.tutorialMarkup({count,language:uiPreferences.preferences.language})}</div><footer class="v50-order-tutorial-footer"><button type="button" data-action="order-tutorial-close">${esc(orderGuideText('tutorialStart'))}${icon('chevron')}</button></footer>`;
     try{dialog.showModal();}catch(_){orderTutorialContext=null;orderTutorialReturnFocus=null;dialog.replaceChildren();return false;}
+    window.InterfaceMotion?.openDialog?.(dialog,false);
     dialog.querySelector('#order-tutorial-title')?.focus({preventScroll:true});return true;
   }
   function closeOrderTutorial({acknowledge=true,restoreFocus=true}={}){
     const dialog=document.getElementById('order-tutorial');if(!orderTutorialContext&&!dialog?.open)return false;
     if(acknowledge){orderTutorialSeenMemory=true;try{appStorage?.setItem(ORDER_TUTORIAL_KEY,'1');}catch(_){/* Keep dismissal for this session. */}}
     const previous=orderTutorialReturnFocus;orderTutorialContext=null;orderTutorialReturnFocus=null;
+    window.InterfaceMotion?.cancelDialog?.(dialog);
     if(dialog?.open)dialog.close();dialog?.replaceChildren();
     if(restoreFocus&&!restoreControlFocus(previous))main.querySelector('[data-action="order-tutorial-open"]')?.focus({preventScroll:true});
     return true;
@@ -759,8 +761,8 @@
       if(!trigger.isConnected)return;
       const delta=trigger.getBoundingClientRect().top-saved.viewportTop;
       if(Math.abs(delta)>1){
-        const reduce=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-        window.scrollTo({top:Math.max(0,window.scrollY+delta),left:0,behavior:reduce?'instant':'smooth'});
+        // Back restores the known list position; it is not a new scroll gesture.
+        window.scrollTo({top:Math.max(0,window.scrollY+delta),left:0,behavior:'instant'});
       }
       // Restoring a deep list position can move the active-settings return
       // action out of the viewport without producing a scroll event before
@@ -768,10 +770,9 @@
       // single inline/sticky slot now so it never appears lost after Back.
       updateControlPreviewDensity();
     };
-    const entering=main.querySelector('.app-page-enter');
-    if(entering&&!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
-      entering.addEventListener('animationend',()=>requestAnimationFrame(restore),{once:true});
-    else requestAnimationFrame(restore);
+    // The page entrance is opacity-only. Restore before its next paint instead
+    // of waiting for an animationend which cancellation/reduced motion can omit.
+    requestAnimationFrame(restore);
     trigger.focus({preventScroll:true});
   }
   function chooseAnimationCategory(value){
@@ -1594,6 +1595,7 @@
   function closeSpatialChoice(){
     const z=zone();if(!z||!openSpatialChoices.has(z.id)||arrangementApplying||managementBusy)return false;
     const browsing=arrangementBrowsing();openSpatialChoices.delete(z.id);
+    window.InterfaceMotion?.cancelDialog?.(main.querySelector('[data-spatial-choice-dialog]'));
     main.querySelector('[data-spatial-choice-dialog]')?.close();
     renderArrangement(browsing);return true;
   }
@@ -1601,10 +1603,10 @@
     const dialog=main.querySelector('[data-spatial-choice-dialog]');if(!dialog)return;
     if(!dialog.dataset.cancelWired){
       dialog.dataset.cancelWired='true';
-      dialog.addEventListener('cancel',event=>{event.preventDefault();closeSpatialChoice();});
+      dialog.addEventListener('cancel',event=>{event.preventDefault();dismissDialog(dialog,closeSpatialChoice);});
     }
-    if(!dialog.open)dialog.showModal();
     const same=browsing?.zoneId===dialog.dataset.zone;
+    if(!dialog.open){dialog.showModal();window.InterfaceMotion?.openDialog?.(dialog,Boolean(same));}
     if(!same||!UIContinuity.restoreCapturedAction(dialog,browsing.action))
       (dialog.querySelector('.spatial-choice-option[aria-pressed="true"]')||dialog.querySelector('#spatial-choice-title'))?.focus({preventScroll:true});
     dialog.scrollTop=same?browsing.scrollTop:0;
@@ -3903,13 +3905,16 @@
   }
   function showHelp() {
     const help=document.getElementById('help');cancelDialogDismissal(help);
+    const wasOpen=help.open;
     if(!help.open)helpReturnFocus=dialogActionOpener||document.activeElement;
     document.getElementById('help-content').innerHTML=`<header><h2 id="help-title" tabindex="-1" autofocus>Kies de plek.<br>Bedien het licht.</h2></header><section>${icon('stand')}<div><h3>Stand → je hele installatie</h3><p>Alles op één plek.</p></div></section><section>${icon('zones')}<div><h3>Zone → een plek in je stand</h3><p>Bijvoorbeeld Balie of Plafond. Open een zone om te bedienen.</p></div></section><section>${icon('together')}<div><h3>${esc(t('v570HelpLinesTitle'))}</h3><p>${esc(t('v570HelpLinesBody'))}</p></div></section><aside class="guide"><p>RGBW en SPI hebben elk een eigen zone.</p></aside><button class="button" data-action="close-help">Begrepen</button>`;
     help.setAttribute('aria-labelledby','help-title');help.showModal();
+    window.InterfaceMotion?.openDialog?.(help,wasOpen);
     // Start the explanation at its title, not at the only button at the end.
     document.getElementById('help-title').focus({preventScroll:true});help.scrollTop=0;
   }
   function closeHelp(){
+    window.InterfaceMotion?.cancelDialog?.(document.getElementById('help'));
     document.getElementById('help').close();restoreControlFocus(helpReturnFocus);helpReturnFocus=null;
   }
   function showEffectDialog(title,content,headerContent='') {
@@ -3928,7 +3933,9 @@
     const dialog=document.getElementById('effect-dialog');
     cancelDialogDismissal(dialog);
     document.getElementById('effect-dialog-content').innerHTML=`<header><h2 id="effect-dialog-title">${esc(title)}</h2><button class="icon-button" data-action="effect-dialog-close" aria-label="Venster sluiten">${icon('close')}</button>${headerContent}</header>${content}`;
-    if(!dialog.open)dialog.showModal();dialog.scrollTop=0;
+    const wasOpen=dialog.open;
+    if(!dialog.open)dialog.showModal();
+    window.InterfaceMotion?.openDialog?.(dialog,wasOpen);dialog.scrollTop=0;
     // Keep a way out visible even while the shared colour picker is scrolled.
     // Measure instead of guessing: translated/long titles can wrap to 2 lines.
     dialogHeaderObserver?.disconnect();
@@ -3941,9 +3948,10 @@
     // on a stale frame while the rest of the dialog is ready.
     if(dialog.querySelector('canvas[data-preview]'))paint(performance.now()/1000);
   }
-  function cancelDialogDismissal(dialog){pendingDialogDismissals.get(dialog)?.();}
+  function cancelDialogDismissal(dialog){window.InterfaceMotion?.cancelDialog?.(dialog);pendingDialogDismissals.get(dialog)?.();}
   function dismissDialog(dialog,close){
     if(!dialog.open||pendingDialogDismissals.has(dialog))return;
+    window.InterfaceMotion?.cancelDialog?.(dialog);
     if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return close();
     // Only user dismissal waits for its short exit. Save/apply/navigation
     // workflows keep their synchronous close and authoritative state order.
@@ -3953,10 +3961,10 @@
       dialog.classList.remove('is-closing');dialog.inert=wasInert;pendingDialogDismissals.delete(dialog);
     };
     const finish=()=>{cancel();if(dialog.open)close();};
-    const onEnd=event=>{if(event.target===dialog&&event.animationName==='app-dialog-exit')finish();};
+    const onEnd=event=>{if(event.target===dialog&&['app-dialog-exit','interface-dialog-exit'].includes(event.animationName))finish();};
     pendingDialogDismissals.set(dialog,cancel);
     dialog.addEventListener('animationend',onEnd);dialog.classList.add('is-closing');dialog.inert=true;
-    if(!getComputedStyle(dialog).animationName.split(',').some(name=>name.trim()==='app-dialog-exit'))return finish();
+    if(!getComputedStyle(dialog).animationName.split(',').some(name=>['app-dialog-exit','interface-dialog-exit'].includes(name.trim())))return finish();
     timeout=setTimeout(finish,220);
   }
   function dismissEffectDialog(){
@@ -3969,8 +3977,8 @@
     dismissDialog(document.getElementById('effect-dialog'),closeEffectDialog);
   }
   function closeEffectDialog() {
-    document.getElementById('effect-dialog').classList.remove('v50-fullscreen-preview');
     if(pinProtectionBusy)return;
+    document.getElementById('effect-dialog').classList.remove('v50-fullscreen-preview');
     cancelDialogDismissal(document.getElementById('effect-dialog'));
     const wasStand=standControlOpen,brandIndex=brandEditor?.index;
     dialogHeaderObserver?.disconnect();document.getElementById('effect-dialog').close();
@@ -4095,7 +4103,8 @@
   function setPanelHidden(panel,hidden,onHidden){
     if(!panel||hidden&&pendingPanelDismissals.has(panel)||panel.hidden===hidden&&!pendingPanelDismissals.has(panel))return;
     pendingPanelDismissals.get(panel)?.();
-    if(!hidden){panel.hidden=false;return;}
+    window.InterfaceMotion?.cancelPanel?.(panel);
+    if(!hidden){panel.hidden=false;window.InterfaceMotion?.openPanel?.(panel,false);return;}
     if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){panel.hidden=true;onHidden?.();return;}
     let timeout;const wasInert=panel.inert;
     const cancel=()=>{
@@ -4106,7 +4115,7 @@
       cancel();panel.hidden=true;onHidden?.();
     };
     pendingPanelDismissals.set(panel,cancel);panel.classList.add('is-closing');panel.inert=true;
-    const animation=panel.getAnimations().find(animation=>animation.animationName==='app-disclosure-exit');
+    const animation=panel.getAnimations().find(animation=>['app-disclosure-exit','interface-panel-exit'].includes(animation.animationName));
     if(!animation)return finish();
     // A live reduced-motion preference change cancels CSS animation rather
     // than ending it. Both completion paths finish only their own dismissal;
@@ -4479,7 +4488,7 @@
     const status=document.querySelector('.order-status');if(status)status.textContent=t('orderReceiverMoved',{name:receiver.name,position:toIndex+1});
   }
   document.getElementById('effect-dialog').addEventListener('cancel',event=>{event.preventDefault();dismissEffectDialog();});
-  document.getElementById('order-tutorial').addEventListener('cancel',event=>{event.preventDefault();closeOrderTutorial();});
+  document.getElementById('order-tutorial').addEventListener('cancel',event=>{event.preventDefault();dismissDialog(event.currentTarget,closeOrderTutorial);});
   document.getElementById('help').addEventListener('cancel',event=>{
     event.preventDefault();dismissDialog(event.currentTarget,closeHelp);
   });
@@ -4514,6 +4523,7 @@
     if(zone()?.type==='SPI'&&!M.zoneLedlines(model,route.zoneId).some(line=>line.id===id))return;
     event.preventDefault();
     toggleLineSelection(id);
+    window.LightningInterfaceHaptics?.emit?.('selection','preview-line',{event});
     const full=captureFullscreenPreview();
     const spatialStage=canvas.closest('.v50-preview-canvas-stage[data-spatial-ui="577"]');
     const spatialScroll=spatialStage?{shape:spatialStage.dataset.previewSpatial,left:spatialStage.parentElement.scrollLeft,top:spatialStage.parentElement.scrollTop}:null;
@@ -4527,8 +4537,8 @@
   document.addEventListener('click',async event=>{
     if(firstAccessCheckpoint&&event.target.closest?.('[data-action]'))return;
     const button=event.target.closest('button[data-action]');if(!button||button.disabled)return;
-    if(button.dataset.action==='order-tutorial-close')return closeOrderTutorial();
-    if(button.dataset.action==='order-tutorial-open')return openOrderTutorial();
+    if(button.dataset.action==='order-tutorial-close'){window.LightningInterfaceHaptics?.activate?.(event,button.dataset.action);return dismissDialog(document.getElementById('order-tutorial'),closeOrderTutorial);}
+    if(button.dataset.action==='order-tutorial-open'){window.LightningInterfaceHaptics?.activate?.(event,button.dataset.action);return openOrderTutorial();}
     if(button.dataset.action==='order-guide-replay'){
       const instruction=button.closest('.v50-order-instruction');if(!instruction)return;
       instruction.dataset.guidePlaying='false';requestAnimationFrame(()=>{if(instruction.isConnected)requestAnimationFrame(()=>{if(instruction.isConnected)instruction.dataset.guidePlaying='true';});});return;
@@ -4538,10 +4548,11 @@
     const action=button.dataset.action,id=button.dataset.id;
     // Closing a presentation-only chooser needs no receiver connection.
     // Keep it available if a saved stand goes offline while this sheet is open.
-    if(action==='spatial-close')return closeSpatialChoice();
+    if(action==='spatial-close'){window.LightningInterfaceHaptics?.activate?.(event,action);return dismissDialog(main.querySelector('[data-spatial-choice-dialog]'),closeSpatialChoice);}
     if(temporarySingleUser&&temporaryAccessActions.has(action))return;
     if(!standPresentationActionAllowed(action))return toast('Je stand is nog niet verbonden. Je bewaarde stand blijft zichtbaar.');
     if(standReceiverActions.has(action)&&standReceiverActionUnavailable(action,button))return toast(standReceiverNotice);
+    window.LightningInterfaceHaptics?.activate?.(event,action);
     // Safari does not focus every pointer-activated button. Remember the
     // actual synchronous opener, not an unrelated heading that kept focus.
     // Clear at this event's microtask boundary so async workflows cannot
@@ -4642,7 +4653,7 @@
         [previewOrder[fromIndex],previewOrder[toIndex]]=[previewOrder[toIndex],previewOrder[fromIndex]];
         orderPreviewGesture={id,zoneId:z.id,fromIndex,toIndex,previewOrder,receiverName:receiver?.name||'',port:physical.port||0,colour:palette[fromIndex].hex,positionColours:palette};
         closeEffectDialog();
-        return await moveOrderLine({id,toIndex});
+        return await moveOrderLine({id,toIndex,trusted:event.isTrusted===true});
       }
       if(action==='pixel-edit-port'){
         const receiver=receivers().find(value=>value.id===button.dataset.receiver&&value.type==='SPI'),port=Number(button.dataset.port);
@@ -5032,7 +5043,7 @@
       if(action==='scene-save'){
         if(!sceneDraft||!stand())return;
         const editingId=sceneDraft.sceneId,scene=Scenes.capture(model,stand().id,sceneDraft.zoneIds,sceneDraft.name,{id:editingId}),result=sceneStore.save(scene);if(result.error){sceneDraft.error='Opslaan is niet gelukt. Je naam en gekozen zones blijven bewaard. Probeer opnieuw.';syncSceneDraft();return toast(result.error.message);}
-        await confirmCentralLibrary(result);savedScenes=result;sceneDraft=null;if(editingId)navigate('scene-detail',{sceneId:editingId});else navigate('scenes');toast(editingId?'Scène bijgewerkt met het huidige licht. Er is niets geactiveerd.':'Scène opgeslagen. Je verlichting is niet veranderd.');return;
+        await confirmCentralLibrary(result);window.LightningInterfaceHaptics?.emit?.('success','scene-save',{confirmed:true,event});savedScenes=result;sceneDraft=null;if(editingId)navigate('scene-detail',{sceneId:editingId});else navigate('scenes');toast(editingId?'Scène bijgewerkt met het huidige licht. Er is niets geactiveerd.':'Scène opgeslagen. Je verlichting is niet veranderd.');return;
       }
       if(action==='scene-open'){sceneDetailSearch='';if(button.closest('#effect-dialog'))closeEffectDialog();return navigate('scene-detail',{sceneId:id});}
       if(action==='stand-scenes'){if(document.getElementById('effect-dialog').open)closeEffectDialog();return navigate('scenes');}
@@ -5352,7 +5363,7 @@
     open?expandedReceivers.add(details.dataset.receiverDetail):expandedReceivers.delete(details.dataset.receiverDetail);
     if(!open)visualPlugMotions.delete(details.dataset.receiverDetail);
   },true);
-  async function moveOrderLine({id,toIndex}){
+  async function moveOrderLine({id,toIndex,trusted=false}){
     const draft=arrangementDraft;
     if(!draft||!openLineSetup.has(route.zoneId)||draft.zoneId!==route.zoneId||arrangementInteractionBusy()||arrangementNeedsStandOpen()){orderPreviewGesture=null;syncOrderFeedback();return syncArrangementControls();}
     if(draft.signature!==arrangementSignature()){orderPreviewGesture=null;return renderArrangement();}
@@ -5361,6 +5372,7 @@
     [draft.lineOrder[from],draft.lineOrder[toIndex]]=[draft.lineOrder[toIndex],draft.lineOrder[from]];
     const moving=orderPreviewGesture;let saved=false;
     try{saved=await applyArrangement();}finally{orderPreviewGesture=null;}
+    if(saved)window.LightningInterfaceHaptics?.emit?.('success','order-drop',{confirmed:true,userInitiated:trusted});
     if(saved&&moving&&moving.id===id){
       orderMoveResult={...moving,saved:true,toIndex};syncOrderFeedback();
       const landed=main.querySelector(`[data-order-item="${CSS.escape(id)}"]`);landed?.setAttribute('data-order-settled','true');
@@ -5396,6 +5408,7 @@
     message:(key,params)=>window.LightningV50OrderTexts.t(key,uiPreferences.preferences.language,params),
     onStatus:text=>{const status=main.querySelector('.order-drop-status');if(status)status.textContent=text;},
     onFeedback:feedback=>{
+      if(feedback.phase==='start'||feedback.phase==='update')window.LightningInterfaceHaptics?.emit?.('selection','order-position',{userInitiated:feedback.trusted===true});
       if(feedback.phase==='cancel'){orderPreviewGesture=null;syncOrderFeedback();paint(performance.now()/1000,{orderFeedback:true});return;}
       if(feedback.phase==='start'){
         if(orderMoveTimer!==null)clearTimeout(orderMoveTimer);orderMoveTimer=null;orderMoveResult=null;
@@ -5454,7 +5467,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate577',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate578',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

@@ -861,23 +861,16 @@ function softTrailCoverage(behind,trail,n,smooth){
     // its slightly off-centre vanishing point. Never stretch the circular face
     // to fit a wide gallery card or turn it back into an upright U-shaped arch.
     const focused=framing==='focus';
-    const unit=focused?Math.max(.001,Math.max(1,height-60)/224):
+    // Retain the familiar front-facing tunnel. Reserve only the bottom number
+    // row; adding labels must not turn its nested arches into a sideways train.
+    const unit=focused?Math.max(.001,Math.min(Math.max(1,width-48)/260,Math.max(1,height-52)/224)):
       Math.min(width/360,height/260),offset=[(width-360*unit)/2,(height-260*unit)/2];
-    // Focus uses an oblique depth camera: circular arches remain circular,
-    // but their OWN left endpoints stand44px apart. Default/gallery keeps
-    // the original frontal camera and all its projection bytes unchanged.
-    const screen=focused?(x,y)=>[(x-82)*unit,5+(y-14)*unit]:
+    const screen=focused?(x,y)=>[width/2+(x-132)*unit,
+      5+(y-14)*unit+Math.max(0,(height-52-224*unit)/2)]:
       (x,y)=>[offset[0]+(x+44)*unit,offset[1]+(y+5)*unit];
-    let endpointSpacing=44;
-    const point=(x,y,scale)=>{
-      if(!focused)return screen(164+(x-164)*scale,108+(y-108)*scale);
-      const depth=Math.log(scale)/Math.log(.48),step=endpointSpacing*clamp(count*depth-.5,0,Math.max(0,count-1));
-      const projected=screen(82+(x-82)*scale,108+(y-108)*scale);
-      return [projected[0]+step,projected[1]];
-    };
+    const point=(x,y,scale)=>screen(164+(x-164)*scale,108+(y-108)*scale);
     const project=(scale,curve=tunnelCurve)=>curve.map(([x,y])=>point(x,y,scale));
     const floor=(left,right,near=1.1,far=.48)=>[point(left,224,near),point(right,224,near),point(right,224,far),point(left,224,far)];
-    const makeGeometry=()=>{
     const front=project(1), back=project(.48);
     const arches=Array.from({length:count},(_,index)=>{
       const depth=(index+.5)/count,scale=Math.pow(.48,depth);
@@ -891,35 +884,8 @@ function softTrailCoverage(behind,trail,n,smooth){
     return {width,height,unit,arches,front,back,vanishing:point(164,108,1),
       outer:project(1,tunnelOuterCurve),outerBack:project(.48,tunnelOuterCurve),fascia:project(1,tunnelFasciaCurve),
       groundY:point(132,224,1)[1],shadow:screen(132,231),exitCentre:point(132,129,.48),floor:floor(82,182),inlay:floor(109,155),
-      exitFloor:floor(82,182,.48,.08),exitInlay:floor(109,155,.48,.08)};
-    };
-    let result=makeGeometry();
-    if(!focused)return result;
-    // Tight visual bounds include the silver fascia and complete44px number
-    // targets, not an arbitrary extra width per line. The host may scroll this
-    // content horizontally rather than overlap labels or distort the arches.
-    const paths=['front','back','outer','outerBack','floor','inlay','exitFloor','exitInlay'];
-    const boundXs=model=>paths.flatMap(name=>model[name].map(([x])=>x))
-      .concat(model.arches.flatMap(arch=>arch.points.map(([x])=>x)),model.fascia.flatMap(([x])=>[x-14*unit,x+14*unit]),
-        model.arches.flatMap(arch=>[arch.points[0][0]-22,arch.points[0][0]+22]));
-    const nominal=boundXs(result),minimumWidth=Math.ceil(Math.max(...nominal)-Math.min(...nominal)+8);
-    if(count>1&&width<minimumWidth){
-      // An intentionally undersized direct draw cannot contain N44px targets.
-      // Fit only the DEPTH translation, never stretch a circular arch. Keep
-      // nominalminimumWidth for the host's scrolling full-size presentation.
-      endpointSpacing=0;const zero=boundXs(makeGeometry()),rightLimit=width-8+Math.min(...zero);
-      endpointSpacing=44;
-      nominal.forEach((x,index)=>{const coefficient=(x-zero[index])/44;
-        if(coefficient>1e-8)endpointSpacing=Math.min(endpointSpacing,Math.max(0,(rightLimit-zero[index])/coefficient));});
-      result=makeGeometry();
-    }
-    const actual=boundXs(result),minimum=Math.min(...actual),contentWidth=Math.ceil(Math.max(...actual)-minimum+8);
-    const shift=4-minimum+Math.max(0,(width-contentWidth)/2);
-    const translate=([x,y])=>[x+shift,y];
-    for(const name of [...paths,'fascia'])result[name]=result[name].map(translate);
-    for(const name of ['vanishing','shadow','exitCentre'])result[name]=translate(result[name]);
-    result.arches=result.arches.map(arch=>({...arch,points:arch.points.map(translate),panel:arch.panel.map(translate)}));
-    return {...result,minimumWidth,endpointSpacing};
+      exitFloor:floor(82,182,.48,.08),exitInlay:floor(109,155,.48,.08),
+      ...(focused?{minimumWidth:Math.max(176,count*44)}:{})};
   }
   const tunnelProjectionCache=new Map();
   // Identification can name the visible zone lines locally without changing
@@ -955,11 +921,16 @@ function softTrailCoverage(behind,trail,n,smooth){
     spatialInteractionCache.set(key,result);return result;
   }
   function tunnelFocusAnchors(model,width,height) {
-    // Exact OWN left endpoint, never a point on another arch or a detached
-    // perimeter key. Focused depth projection guarantees44px horizontal
-    // separation; the marker sits directly underneath this physical line.
-    return model.arches.map(arch=>({x:arch.points[0][0],
-      y:Math.min(arch.points[0][1]+24,Math.max(arch.points[0][1],height-Math.min(22,height/2))),path:arch.points[0]}));
+    // The customer requested one clear1..N row in FRONT of the original
+    // tunnel. The number still carries its own exact physical-line identity;
+    // tapping it highlights that complete arch without changing the camera.
+    const count=model.arches.length,margin=Math.min(22,width/2);
+    // Normal controls reserve44px per number. A tiny thumbnail fallback keeps
+    // identities distinct instead of clamping several numbers to one edge.
+    const xFor=index=>width<count*44&&count>1
+      ?margin+(width-2*margin)*index/(count-1):width*(index+.5)/Math.max(1,count);
+    return model.arches.map((arch,index)=>({x:xFor(index),
+      y:height-Math.min(22,height/2),path:arch.points[0]}));
   }
   function wallFocusAnchors(model,width,height) {
     // A single consistent baseline: every number is directly beneath its own
@@ -1036,17 +1007,8 @@ function softTrailCoverage(behind,trail,n,smooth){
     path([model.inlay[1],model.inlay[2]]);context.stroke();
     const focusAnchors=focused&&interactive?(model.focusAnchors||
       (model.focusAnchors=tunnelFocusAnchors(model,width,height))):null;
-    // A short vertical stem and terminal marker connect the number to its
-    // exact own endpoint. Decoration is BELOW and UNDER the original light.
-    if(focusAnchors){context.save();context.shadowBlur=0;
-      focusAnchors.forEach((anchor,index)=>{
-        const selected=selection&&frame.rows[index].selected;
-        context.strokeStyle=selected?'rgba(244,250,247,0.9)':'rgba(197,212,204,0.55)';
-        context.fillStyle=context.strokeStyle;context.lineWidth=selected?2:1;context.lineCap='round';
-        context.beginPath();context.moveTo(anchor.path[0],anchor.path[1]+3);
-        context.lineTo(anchor.x,anchor.y-16);context.stroke();
-        context.beginPath();context.arc(anchor.path[0],anchor.path[1]+4,selected?2.5:1.7,0,Math.PI*2);context.fill();
-      });context.restore();}
+    // Front numbers form one quiet row. No crossing leaders over the tunnel;
+    // the existing whole-arch highlight shows the selected physical line.
     context.lineCap='round';context.lineJoin='round';
     if(focused&&selection)frame.rows.forEach((row,index)=>{
       if(!row.selected)return;
