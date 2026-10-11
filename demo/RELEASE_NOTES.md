@@ -1,3 +1,15 @@
+# Browserdemo V50 · interfacekandidaat577 · 11 oktober 2026
+
+In het tunnelvoorbeeld staat ieder nummer bij het onderste einde van zijn eigen lichtboog. Bij de wand staan alle nummers onderaan bij hun eigen ledline. De volledige lichtlijn blijft zichtbaar; ledline1 en3 kunnen samen geselecteerd blijven, ook in volledig scherm. In een drukker voorbeeld blijft je zijwaartse kijkpositie behouden wanneer je een nummer of de lichtboog zelf aantikt. De oorspronkelijke startpagina, taalkeuze, koudwitte LIGHTING-animatie en alle bestaande receiver-, model- en transportacties blijven behouden. Deze wijziging omvat alleen de vier afgebakende interfacebestanden; de algemene interfacevormgeving en productpagina veranderen niet.
+
+Dit is alleen een browserdemo met twintig fictieve receivers: tien RGBW en tien SPI. Gegevens blijven tijdelijk in geheugen en verdwijnen bij herladen. Geen echte wifi, receiververbinding, fysieke verlichting of firmwarebestanden. PIN en delen blijven uitgeschakeld. Een schermvoorbeeld is geen bewijs van fysiek licht.
+
+Deze browserdemo en de private iPhone-app zijn afzonderlijke leveringen. De private iPhone-build577 is gecompileerd, ondertekend en geïnstalleerd; de geïnstalleerde versie is opnieuw uitgelezen. De app is na deze installatie niet opnieuw op de voorgrond gestart. Het native appscherm is nog niet apart visueel bevestigd; een geslaagde processtart is geen visuele controle. Geen fysieke ledline- of radiotest wordt geclaimd. De historische ondertekende build568-metadata blijft bewaard; actuele577-status staat apart. De bestaande Android-download blijft **41.0.14, code20** en is niet gewijzigd.
+
+De 845 gerichte softwaretests zijn geslaagd. De vier bestaande legacytestfouten zijn apart gerapporteerd; browsercontrole en fysieke acceptatie blijven afzonderlijke controles. QA-broninventaris SHA-256: 6008f86ae10a8d8dd1b21924180260db05a7a371c714ad7a98b37bf49984d53d.
+
+## Historische release-informatie
+
 # Browserdemo V50 · interfacekandidaat576 · 11 oktober 2026
 
 De tunnel- en wandvoorbeelden tonen de ledlinenummers nu direct op hun eigen lichtlijn. Individueel gekozen ledlines hebben een duidelijk wit selectienummer; als alle ledlines gekozen zijn, blijven de nummers rustig en neutraal. Ledline1 en3 kunnen samen geselecteerd blijven bij wisselen tussen tunnel, wand en volledig scherm. Aanraakvlakken blijven begrensd en overlappen niet in de gecontroleerde mobiele voorbeelden. De oorspronkelijke startpagina, taalkeuze, koudwitte LIGHTING-animatie en alle bestaande receiver-, model- en transportacties blijven behouden. Deze wijziging omvat alleen de vier afgebakende interfacebestanden; de algemene interfacevormgeving en productpagina veranderen niet.

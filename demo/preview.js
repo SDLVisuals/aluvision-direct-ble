@@ -861,17 +861,23 @@ function softTrailCoverage(behind,trail,n,smooth){
     // its slightly off-centre vanishing point. Never stretch the circular face
     // to fit a wide gallery card or turn it back into an upright U-shaped arch.
     const focused=framing==='focus';
-    const unit=focused?Math.max(.001,Math.min(Math.max(1,width-48)/260,Math.max(1,height-10)/224)):
+    const unit=focused?Math.max(.001,Math.max(1,height-60)/224):
       Math.min(width/360,height/260),offset=[(width-360*unit)/2,(height-260*unit)/2];
-    // The main/setup camera trims unused background, never the light paths.
-    // Both axes use the SAME scale and the original vanishing point is kept.
-    // Default/gallery projections deliberately retain their exact old bytes.
-    const screen=focused?(x,y)=>[width/2+(x-132)*unit,
-      5+(y-14)*unit+Math.max(0,(height-10-224*unit)/2)]:
+    // Focus uses an oblique depth camera: circular arches remain circular,
+    // but their OWN left endpoints stand44px apart. Default/gallery keeps
+    // the original frontal camera and all its projection bytes unchanged.
+    const screen=focused?(x,y)=>[(x-82)*unit,5+(y-14)*unit]:
       (x,y)=>[offset[0]+(x+44)*unit,offset[1]+(y+5)*unit];
-    const point=(x,y,scale)=>screen(164+(x-164)*scale,108+(y-108)*scale);
+    let endpointSpacing=44;
+    const point=(x,y,scale)=>{
+      if(!focused)return screen(164+(x-164)*scale,108+(y-108)*scale);
+      const depth=Math.log(scale)/Math.log(.48),step=endpointSpacing*clamp(count*depth-.5,0,Math.max(0,count-1));
+      const projected=screen(82+(x-82)*scale,108+(y-108)*scale);
+      return [projected[0]+step,projected[1]];
+    };
     const project=(scale,curve=tunnelCurve)=>curve.map(([x,y])=>point(x,y,scale));
     const floor=(left,right,near=1.1,far=.48)=>[point(left,224,near),point(right,224,near),point(right,224,far),point(left,224,far)];
+    const makeGeometry=()=>{
     const front=project(1), back=project(.48);
     const arches=Array.from({length:count},(_,index)=>{
       const depth=(index+.5)/count,scale=Math.pow(.48,depth);
@@ -886,6 +892,34 @@ function softTrailCoverage(behind,trail,n,smooth){
       outer:project(1,tunnelOuterCurve),outerBack:project(.48,tunnelOuterCurve),fascia:project(1,tunnelFasciaCurve),
       groundY:point(132,224,1)[1],shadow:screen(132,231),exitCentre:point(132,129,.48),floor:floor(82,182),inlay:floor(109,155),
       exitFloor:floor(82,182,.48,.08),exitInlay:floor(109,155,.48,.08)};
+    };
+    let result=makeGeometry();
+    if(!focused)return result;
+    // Tight visual bounds include the silver fascia and complete44px number
+    // targets, not an arbitrary extra width per line. The host may scroll this
+    // content horizontally rather than overlap labels or distort the arches.
+    const paths=['front','back','outer','outerBack','floor','inlay','exitFloor','exitInlay'];
+    const boundXs=model=>paths.flatMap(name=>model[name].map(([x])=>x))
+      .concat(model.arches.flatMap(arch=>arch.points.map(([x])=>x)),model.fascia.flatMap(([x])=>[x-14*unit,x+14*unit]),
+        model.arches.flatMap(arch=>[arch.points[0][0]-22,arch.points[0][0]+22]));
+    const nominal=boundXs(result),minimumWidth=Math.ceil(Math.max(...nominal)-Math.min(...nominal)+8);
+    if(count>1&&width<minimumWidth){
+      // An intentionally undersized direct draw cannot contain N44px targets.
+      // Fit only the DEPTH translation, never stretch a circular arch. Keep
+      // nominalminimumWidth for the host's scrolling full-size presentation.
+      endpointSpacing=0;const zero=boundXs(makeGeometry()),rightLimit=width-8+Math.min(...zero);
+      endpointSpacing=44;
+      nominal.forEach((x,index)=>{const coefficient=(x-zero[index])/44;
+        if(coefficient>1e-8)endpointSpacing=Math.min(endpointSpacing,Math.max(0,(rightLimit-zero[index])/coefficient));});
+      result=makeGeometry();
+    }
+    const actual=boundXs(result),minimum=Math.min(...actual),contentWidth=Math.ceil(Math.max(...actual)-minimum+8);
+    const shift=4-minimum+Math.max(0,(width-contentWidth)/2);
+    const translate=([x,y])=>[x+shift,y];
+    for(const name of [...paths,'fascia'])result[name]=result[name].map(translate);
+    for(const name of ['vanishing','shadow','exitCentre'])result[name]=translate(result[name]);
+    result.arches=result.arches.map(arch=>({...arch,points:arch.points.map(translate),panel:arch.panel.map(translate)}));
+    return {...result,minimumWidth,endpointSpacing};
   }
   const tunnelProjectionCache=new Map();
   // Identification can name the visible zone lines locally without changing
@@ -921,113 +955,17 @@ function softTrailCoverage(behind,trail,n,smooth){
     spatialInteractionCache.set(key,result);return result;
   }
   function tunnelFocusAnchors(model,width,height) {
-    const count=model.arches.length,marginX=Math.min(22,width/2),marginY=Math.min(22,height/2);
-    const separate=(a,b)=>Math.abs(a.x-b.x)>=44-1e-7||Math.abs(a.y-b.y)>=44-1e-7;
-    // In a roomy main preview the number sits DIRECTLY on its own arch: there
-    // is no leader to misread as another nested LEDline. Sampling different
-    // curve points preserves independent 44px targets without a distant rail.
-    // This bounded first attempt cannot add an unbounded layout-search pause.
-    if(count<=12&&width>=160&&height>=200){
-      const direct=model.arches.map((arch,index)=>{
-        const preferred=10+108*index/Math.max(1,count-1),list=[];
-        for(let at=0;at<=128;at+=4){
-          const path=arch.points[at];
-          if(path[0]<marginX||path[0]>width-marginX||path[1]<marginY||path[1]>height-marginY)continue;
-          list.push({x:path[0],y:path[1],path,cost:Math.abs(at-preferred)});
-        }
-        return list.sort((a,b)=>a.cost-b.cost);
-      });
-      const picked=[];let visits=0;
-      const place=index=>{
-        if(index===count)return true;
-        if(++visits>1500)return false;
-        for(const anchor of direct[index]){
-          if(!picked.every(other=>separate(anchor,other)))continue;
-          picked.push(anchor);if(place(index+1))return true;picked.pop();
-        }
-        return false;
-      };
-      if(place(0))return picked.map(({x,y,path})=>({x,y,path}));
-    }
-    // Compact references retain short local offsets beside their OWN arch,
-    // never an unrelated canvas-edge rail. The usual 3–8 mobile lines need
-    // only 20px, almost entirely hidden behind the number badge.
-    if(count<=12&&width>=160&&height>=120){
-      const candidates=model.arches.map((arch,index)=>{
-        const preferred=10+108*index/Math.max(1,count-1),list=[];
-        for(let at=0;at<=128;at+=4){
-          const path=arch.points[at],dx=path[0]-model.vanishing[0],dy=path[1]-model.vanishing[1];
-          const length=Math.max(1,Math.hypot(dx,dy));
-          for(const offset of [20,-20,24,-24,28,-28,36,-36,48,-48,64,-64]){
-            const x=clamp(path[0]+dx/length*offset,marginX,width-marginX);
-            const y=clamp(path[1]+dy/length*offset,marginY,height-marginY);
-            const distance=Math.hypot(x-path[0],y-path[1]);
-            if(distance<15)continue;
-            list.push({x,y,path,distance,cost:distance+Math.abs(at-preferred)*.4+(offset<0?8:0)});
-          }
-        }
-        return list.sort((a,b)=>a.cost-b.cost);
-      });
-      // This bounded search runs only once per cached projection. Prefer short
-      // local links before allowing more space for genuinely dense canvases.
-      for(const maximum of [20,28,48,64]){
-        const available=candidates.map(list=>list.filter(anchor=>anchor.distance<=maximum+1e-8));
-        const picked=[];let visits=0;
-        const place=index=>{
-          if(index===count)return true;
-          if(++visits>3000)return false;
-          for(const anchor of available[index]){
-            if(!picked.every(other=>separate(anchor,other)))continue;
-            picked.push(anchor);if(place(index+1))return true;picked.pop();
-          }
-          return false;
-        };
-        if(place(0))return picked.map(({x,y,path})=>({x,y,path}));
-      }
-    }
-    // There is a finite number of 44px squares in a canvas. A close-packed
-    // fallback still links each number to its own nearest sampled arch and
-    // retains EVERY physical identity, including intentionally tiny previews.
-    const columns=Math.max(1,Math.floor((width-2*marginX)/44)+1);
-    const rows=Math.max(1,Math.floor((height-2*marginY)/44)+1),slots=[];
-    for(let row=0;row<rows;row++)for(let column=0;column<columns;column++)slots.push({
-      x:width/2+(column-(columns-1)/2)*44,y:height/2+(row-(rows-1)/2)*44});
-    return model.arches.map((arch,index)=>{
-      const nearest=slot=>arch.points.reduce((best,point)=>Math.hypot(point[0]-slot.x,point[1]-slot.y)<
-        Math.hypot(best[0]-slot.x,best[1]-slot.y)?point:best,arch.points[0]);
-      let slot;
-      if(slots.length){
-        const best=slots.reduce((best,current,at)=>{
-          const point=nearest(current),distance=Math.hypot(point[0]-current.x,point[1]-current.y);
-          return distance<best.distance?{at,distance}:best;
-        },{at:0,distance:Infinity});
-        slot=slots.splice(best.at,1)[0];
-      }else slot={x:marginX+(width-2*marginX)*(index+.5)/count,y:height-marginY};
-      return {...slot,path:nearest(slot)};
-    });
+    // Exact OWN left endpoint, never a point on another arch or a detached
+    // perimeter key. Focused depth projection guarantees44px horizontal
+    // separation; the marker sits directly underneath this physical line.
+    return model.arches.map(arch=>({x:arch.points[0][0],
+      y:Math.min(arch.points[0][1]+24,Math.max(arch.points[0][1],height-Math.min(22,height/2))),path:arch.points[0]}));
   }
   function wallFocusAnchors(model,width,height) {
-    const marginX=Math.min(22,width/2),marginY=Math.min(22,height/2),count=model.lines.length;
-    const pitch=count>1?model.lines[1].from[0]-model.lines[0].from[0]:Infinity;
-    const oneRow=pitch>=44-1e-7;
-    const anchors=model.lines.map((line,index)=>{
-      const top=!oneRow&&index%2===0,path=top?line.to:line.from;
-      return {x:path[0],y:clamp(path[1]+(top?-20:20),marginY,height-marginY),path,top};
-    });
-    // Numbers remain aligned with their own strip endpoint. When columns are
-    // closer than 44px, alternate only the endpoint and spread that small row
-    // by the minimum required amount, not across a disconnected outer rail.
-    for(const top of [false,true]){
-      const row=anchors.filter(anchor=>anchor.top===top);
-      if(row.length<2)continue;
-      const spacing=Math.min(44,(width-2*marginX)/(row.length-1));
-      const needed=spacing*(row.length-1),actual=row.at(-1).x-row[0].x;
-      if(actual<needed||row[0].x<marginX||row.at(-1).x>width-marginX){
-        const centre=clamp((row[0].x+row.at(-1).x)/2,marginX+needed/2,width-marginX-needed/2);
-        row.forEach((anchor,index)=>{anchor.x=clamp(centre+(index-(row.length-1)/2)*spacing,marginX,width-marginX);});
-      }
-    }
-    return anchors.map(({x,y,path})=>({x,y,path}));
+    // A single consistent baseline: every number is directly beneath its own
+    // physical line. Dense interactive walls scroll horizontally rather than
+    // scattering the numbers above/below, or overlapping their touch targets.
+    return model.lines.map(line=>({x:line.from[0],y:height-Math.min(22,height/2),path:line.from}));
   }
   function drawSpatialTethers(context,anchors) {
     context.save();context.shadowBlur=0;context.lineWidth=1;
@@ -1098,14 +1036,27 @@ function softTrailCoverage(behind,trail,n,smooth){
     path([model.inlay[1],model.inlay[2]]);context.stroke();
     const focusAnchors=focused&&interactive?(model.focusAnchors||
       (model.focusAnchors=tunnelFocusAnchors(model,width,height))):null;
-    // Leaders are painted UNDER all exact light strokes, never over pixels.
-    if(focusAnchors)drawSpatialTethers(context,focusAnchors);
+    // A short vertical stem and terminal marker connect the number to its
+    // exact own endpoint. Decoration is BELOW and UNDER the original light.
+    if(focusAnchors){context.save();context.shadowBlur=0;
+      focusAnchors.forEach((anchor,index)=>{
+        const selected=selection&&frame.rows[index].selected;
+        context.strokeStyle=selected?'rgba(244,250,247,0.9)':'rgba(197,212,204,0.55)';
+        context.fillStyle=context.strokeStyle;context.lineWidth=selected?2:1;context.lineCap='round';
+        context.beginPath();context.moveTo(anchor.path[0],anchor.path[1]+3);
+        context.lineTo(anchor.x,anchor.y-16);context.stroke();
+        context.beginPath();context.arc(anchor.path[0],anchor.path[1]+4,selected?2.5:1.7,0,Math.PI*2);context.fill();
+      });context.restore();}
     context.lineCap='round';context.lineJoin='round';
-    if(focused&&selection&&frame.rows.some(row=>!row.selected))frame.rows.forEach((row,index)=>{
+    if(focused&&selection)frame.rows.forEach((row,index)=>{
       if(!row.selected)return;
       const arch=model.arches[index];path(arch.points);
-      context.strokeStyle='rgba(240,245,242,0.5)';context.lineWidth=arch.thickness+2.4;
-      context.shadowBlur=0;context.stroke();
+      // Clear selection traces the complete physical arch, including All.
+      // Dark separation and a neutral outer edge sit UNDER the original exact
+      // RGB/SPI cores: selecting a line never changes its actual sampled light.
+      context.strokeStyle='rgba(5,10,8,0.94)';context.lineWidth=arch.thickness+7.2;
+      context.shadowBlur=0;context.stroke();path(arch.points);
+      context.strokeStyle='rgba(244,250,247,0.86)';context.lineWidth=arch.thickness+4.8;context.stroke();
     });
     for(let rowIndex=frame.rows.length-1;rowIndex>=0;rowIndex--){
       const row=frame.rows[rowIndex],arch=model.arches[rowIndex];
@@ -1198,7 +1149,7 @@ function softTrailCoverage(behind,trail,n,smooth){
   // The approved "Strakke wand" is only another camera for these same rows.
   // Setup order goes left to right, with each strip's first pixel at its foot.
   // In particular, a view change must not reverse an output a second time.
-  function wallProjection(lineCount, width=360, height=240) {
+  function wallProjection(lineCount, width=360, height=240, framing='') {
     const count=Math.max(0,Math.floor(number(lineCount,0)));
     width=Math.max(1,number(width,360));height=Math.max(1,number(height,240));
     const wall=[[width*.095,height*.11],[width*.905,height*.11],
@@ -1210,16 +1161,25 @@ function softTrailCoverage(behind,trail,n,smooth){
       const x=width*(.176+.648*(index+.5)/count);
       return {index,thickness,profile,from:[x,height*.7816],to:[x,height*.1757]};
     });
+    if(framing==='focus'){
+      const margin=Math.min(22,width/2),span=Math.max(0,width-2*margin);
+      lines.forEach((line,index)=>{
+        const x=count===1?width/2:margin+span*index/(count-1);
+        line.from=[x,Math.max(22,height-52)];line.to=[x,Math.min(22,height/2)];
+      });
+      wall.splice(0,wall.length,[Math.min(8,width/2),8],[width-Math.min(8,width/2),8],
+        [width-Math.min(8,width/2),height-40],[Math.min(8,width/2),height-40]);
+    }
     return {width,height,wall,lines,
       floor:[wall[3],wall[2],[width,height*.98],[0,height*.98]]};
   }
   const wallProjectionCache=new Map();
   function drawWall(context,frame,width,height,lineNumbers,interactive=false,framing='',selection=interactive) {
     const focused=framing==='focus';
-    const key=[frame.rows.length,width,height].join(':');
+    const key=[frame.rows.length,width,height,framing].join(':');
     let model=wallProjectionCache.get(key);
     if(!model){
-      model=wallProjection(frame.rows.length,width,height);
+      model=wallProjection(frame.rows.length,width,height,framing);
       if(wallProjectionCache.size>=8)wallProjectionCache.delete(wallProjectionCache.keys().next().value);
       wallProjectionCache.set(key,model);
     }
@@ -1246,11 +1206,13 @@ function softTrailCoverage(behind,trail,n,smooth){
       (model.focusAnchors=wallFocusAnchors(model,width,height))):null;
     if(focusAnchors)drawSpatialTethers(context,focusAnchors);
     context.lineCap='butt';context.lineJoin='round';
-    if(focused&&selection&&frame.rows.some(row=>!row.selected))frame.rows.forEach((row,index)=>{
+    if(focused&&selection)frame.rows.forEach((row,index)=>{
       if(!row.selected)return;
       const line=model.lines[index];path([line.from,line.to]);
-      context.strokeStyle='rgba(240,245,242,0.5)';context.lineWidth=line.thickness+2.4;
+      context.strokeStyle='rgba(240,245,242,0.9)';context.lineWidth=line.thickness+line.profile+7;
       context.shadowBlur=0;context.stroke();
+      context.strokeStyle='#17201c';context.lineWidth=line.thickness+line.profile+4.5;
+      context.stroke();
     });
     frame.rows.forEach((row,rowIndex)=>{
       const line=model.lines[rowIndex],pixels=row.identificationPixels||row.pixels;

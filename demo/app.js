@@ -515,7 +515,8 @@
     const view=spatialMode(z.layout,z),spatialReference=['tunnel','wall'].includes(view);
     const plan=orderGuide.referencePlan({count,type:z.type,view,layout:z.layout});
     const legend=plan.colours.map((colour,index)=>`<li style="--identify-colour:${C.hex(colour.rgb)}" aria-label="${esc((index+1)+' · '+window.LightningV50OrderTexts.paletteLabel(colour.colorName,uiPreferences.preferences.language))}"><span aria-hidden="true"></span><b>${index+1}</b></li>`).join('');
-    return `<figure class="v50-order-reference" data-reference-view="${view}" aria-label="${esc(orderGuideText('example'))}"><figcaption><b>${esc(t('v568OrderReference'))}</b><button type="button" class="v50-order-tutorial-open" data-action="order-tutorial-open">${icon('play')}${esc(orderGuideText('tutorialView'))}</button></figcaption>${addPreview(plan.receivers,plan.layout,'v50-order-canvas v50-order-target-canvas',{...plan.options,orderTarget:true,numberLabels:true,...(spatialReference?{spatialFraming:'focus'}:{}),label:orderGuideText('referenceTitle')+' · '+orderGuideText(plan.direction)})}<ol class="v50-order-reference-legend" aria-label="${esc(orderGuideText('referenceTitle'))}">${legend}</ol><p class="v50-order-reference-direction"><span>${esc(orderGuideText(plan.direction))}</span><span>${esc(t('v568MatchReference'))}</span></p></figure>`;
+    const preview=addPreview(plan.receivers,plan.layout,'v50-order-canvas v50-order-target-canvas',{...plan.options,orderTarget:true,numberLabels:true,...(spatialReference?{spatialFraming:'focus'}:{}),label:orderGuideText('referenceTitle')+' · '+orderGuideText(plan.direction)});
+    return `<figure class="v50-order-reference" data-reference-view="${view}" aria-label="${esc(orderGuideText('example'))}"><figcaption><b>${esc(t('v568OrderReference'))}</b><button type="button" class="v50-order-tutorial-open" data-action="order-tutorial-open">${icon('play')}${esc(orderGuideText('tutorialView'))}</button></figcaption>${spatialReference?`<div class="v50-spatial-reference-scroll">${preview}</div>`:preview}<ol class="v50-order-reference-legend" aria-label="${esc(orderGuideText('referenceTitle'))}">${legend}</ol><p class="v50-order-reference-direction"><span>${esc(orderGuideText(plan.direction))}</span><span>${esc(t('v568MatchReference'))}</span></p></figure>`;
   }
   function syncOrderRecognition(){
     if(!main)return;
@@ -1164,8 +1165,20 @@
   function interactiveZonePreview(z,css,options){
     if(options.main&&['tunnel','wall'].includes(options.spatialShape))options={...options,spatialFraming:'focus'};
     if(!options.interactiveLines)return zonePreview(z,css,options);
-    const spatialSelection=['tunnel','wall'].includes(options.spatialShape)?` data-spatial-ui="576" data-selection-mode="${selection().kind==='all'?'all':'subset'}"`:'';
+    const count=previewLineChoices().length,spatialHeight=controlPreviewMetrics(count,options.previewSize||'large',{spatial:true}).height;
+    const minimumWidth=options.spatialShape==='tunnel'?P.tunnelProjection(count,1,spatialHeight,'focus').minimumWidth:count*44;
+    const spatialSelection=['tunnel','wall'].includes(options.spatialShape)?` data-spatial-ui="577" data-selection-mode="${selection().kind==='all'?'all':'subset'}" style="--v50-spatial-min-width:${minimumWidth}px"`:'';
     return `<div class="v50-preview-canvas-scroll"><div class="v50-preview-canvas-stage" data-preview-ui="571"${spatialSelection} data-preview-spatial="${options.spatialShape||''}" data-preview-vertical="${z.layout==='vertical'&&options.presentation!=='receivers'}">${zonePreview(z,css,{...options,selectionOverlay:true,decorative:true})}${previewTargetsMarkup()}</div></div>`;
+  }
+  function sizeFocusedSpatialPreview(canvas,spec){
+    if(spec.spatialFraming!=='focus'||!['tunnel','wall'].includes(spec.spatialShape))return;
+    const count=Number(canvas.dataset.previewLineCount)||0,height=canvas.clientHeight;
+    const host=canvas.closest('.v50-preview-canvas-stage')||canvas,key=[spec.spatialShape,count,height].join(':');
+    if(host.dataset.spatialSizeKey===key)return;
+    const width=spec.spatialShape==='tunnel'?P.tunnelProjection(count,1,height,'focus').minimumWidth:count*44;
+    if(host===canvas)canvas.style.minWidth=width+'px';
+    else host.style.setProperty('--v50-spatial-min-width',width+'px');
+    host.dataset.spatialSizeKey=key;
   }
   function syncPreviewTargets(canvas){
     const stage=canvas.closest('.v50-preview-canvas-stage');if(!stage)return;
@@ -3738,6 +3751,7 @@
       const spec=previews.get(canvas.dataset.preview);if(!spec)return;
       if(!secondary&&!spec.main)return;
       const rect=canvas.getBoundingClientRect();if(!rect.width||!rect.height||((rect.bottom<0||rect.top>innerHeight)&&!(orderFeedback&&spec.orderOverview)))return;
+      sizeFocusedSpatialPreview(canvas,spec);
       if(spec.capturedStandPlan){
         const zone=spec.capturedStandPlan.zones.find(item=>item.zoneId===spec.capturedStandZoneId);
         if(!zone)return;
@@ -4501,7 +4515,14 @@
     event.preventDefault();
     toggleLineSelection(id);
     const full=captureFullscreenPreview();
-    expandedScopeZones.add(route.zoneId);render({preserveScroll:true});if(full)openFullscreenPreview({restore:full});
+    const spatialStage=canvas.closest('.v50-preview-canvas-stage[data-spatial-ui="577"]');
+    const spatialScroll=spatialStage?{shape:spatialStage.dataset.previewSpatial,left:spatialStage.parentElement.scrollLeft,top:spatialStage.parentElement.scrollTop}:null;
+    expandedScopeZones.add(route.zoneId);render({preserveScroll:true});
+    if(full)openFullscreenPreview({restore:full});
+    else if(spatialScroll){
+      const restored=main.querySelector('.v50-preview-canvas-stage[data-spatial-ui="577"]');
+      if(restored?.dataset.previewSpatial===spatialScroll.shape){restored.parentElement.scrollLeft=spatialScroll.left;restored.parentElement.scrollTop=spatialScroll.top;}
+    }
   });
   document.addEventListener('click',async event=>{
     if(firstAccessCheckpoint&&event.target.closest?.('[data-action]'))return;
@@ -4930,7 +4951,15 @@
         // Keep the chosen line list open without moving the document; a
         // scrollIntoView here would pull the whole page away from the user.
         const full=captureFullscreenPreview(button);
-        render({preserveScroll:true});if(full)openFullscreenPreview({restore:full});return;
+        const spatialStage=main.querySelector('.v50-preview-canvas-stage[data-spatial-ui="577"]');
+        const spatialScroll=spatialStage?{shape:spatialStage.dataset.previewSpatial,left:spatialStage.parentElement.scrollLeft,top:spatialStage.parentElement.scrollTop}:null;
+        render({preserveScroll:true});
+        if(full)openFullscreenPreview({restore:full});
+        else if(spatialScroll){
+          const restored=main.querySelector('.v50-preview-canvas-stage[data-spatial-ui="577"]');
+          if(restored?.dataset.previewSpatial===spatialScroll.shape){restored.parentElement.scrollLeft=spatialScroll.left;restored.parentElement.scrollTop=spatialScroll.top;}
+        }
+        return;
       }
       if(action==='scope-toggle-lines'){
         if(expandedScopeZones.has(route.zoneId))expandedScopeZones.delete(route.zoneId);else expandedScopeZones.add(route.zoneId);
@@ -5425,7 +5454,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate576',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate577',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;
