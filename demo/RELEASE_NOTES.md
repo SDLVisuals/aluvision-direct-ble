@@ -1,3 +1,15 @@
+# Browserdemo V50 · kandidaat568 · 11 oktober 2026
+
+Deze browserdemo toont de bevroren interface van **50.0.0, build568**. Ledlines omwisselen is visueel verduidelijkt: wissel bijvoorbeeld ledline3 met plaats1; ledline2 blijft staan. Vaste plaatsnummers en herkenningskleuren staan naast de fysieke kaarten. Een kort geanimeerd tutorialvoorbeeld, genummerde doelvolgorde en aparte ledline-instellingen helpen bij het instellen. SPI opent de bestaande pixel- en richtingeditor voor precies de gekozen poort. De nieuwe animatiekiezer onderscheidt een groep bekijken van een animatie starten. Ledline-selecties zijn cumulatief (bijvoorbeeld1 en3), ook in tunnel- en wandweergave. De compacte livepreview blijft bij bediening zichtbaar.
+
+Dit is uitsluitend een browserdemo met twintig fictieve receivers, tien RGBW en tien SPI. Gegevens blijven tijdelijk in geheugen en verdwijnen bij herladen. Geen echte wifi- of receiververbinding, fysieke verlichting of firmwarebestanden. PIN- en deelfuncties zijn uitgeschakeld. Schermvoorbeelden bewijzen geen fysiek lichteffect.
+
+De bestaande Android-download blijft **41.0.14, code20**; dit is geen Android-V50-update. De iPhone-build568 is gecompileerd en ondertekend, maar deze website claimt geen installatie, opening of fysieke test op een privé-iPhone. Enkele oudere teksten blijven Nederlandstalig.
+
+Bronfreeze SHA-256: c4eab2eb1036f846f6929792db395a0d5483e4783c96d29a0485a4e1eaa9f864. De596 gerichte softwaretests zijn geslaagd; de vier eerder bekende legacytestfouten zijn apart gerapporteerd. Publieke browsercontrole en fysieke receiveracceptatie zijn afzonderlijke controles.
+
+## Historische release-informatie
+
 # Browserdemo V50 · kandidaat553 · 9 oktober 2026
 
 Deze browserdemo gebruikt de bevroren interface van kandidaat **50.0.0, build553**. Nieuw in deze update: het overzicht ‘Je ledlines’ blijft zichtbaar boven de lijst terwijl je door je ledlines scrollt. Ook de bevestigingsbalk blijft bij dit overzicht, zodat je de voorgestelde volgorde blijft zien. De plaatsnummers en herkenningskleuren blijven in hun aparte linkerkolom staan. Alleen de kaarten met de fysieke receiver en poort bewegen; de naastliggende kaarten schuiven vloeiend naar hun nieuwe plek. Een duidelijke kopie, invoegmarkering en live voorbeeldvolgorde tonen de voorgestelde verplaatsing. Na bevestigen verschijnt een tijdelijk aankomstaccent. Escape of annuleren laat de volgorde intact. Ook de ledlinekeuze en richtingweergave zijn verduidelijkt: kabelkant en eindkant zijn explicieter herkenbaar in de richtingbediening. De bestaande V50 welkomst- en instelstappen, poort- en pixelkeuzes tot163, het schermvullende overzicht, compacte volgorde-instellingen, direct zichtbare kunstmatige witmix bij RGBW-kleuren, los van het fysieke W-kanaal en bijgewerkte animatiegroepen blijven behouden. De taaluitwerking is gedeeltelijk: sommige oudere schermen bevatten nog Nederlandse tekst.

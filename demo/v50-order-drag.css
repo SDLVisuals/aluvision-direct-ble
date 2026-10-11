@@ -19,7 +19,7 @@ html.interface-polish body #main .ledline-setup[data-order-open=true] [data-orde
 .v50-order-ghost-route{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
 .v50-order-drag-ghost[data-order-ghost-input=keyboard]{opacity:.96}
 /* Only receiver cards animate. Position numbers/colours have their own rail. */
-html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item][data-order-preview]{transform:translate3d(0,var(--order-preview-y,0px),0);clip-path:inset(0 0 var(--order-preview-clip,0px) 0 round 18px);transition:transform 190ms cubic-bezier(.22,.8,.25,1),opacity 130ms ease;will-change:transform;z-index:1}
+html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item][data-order-preview]{transform:translate3d(0,var(--order-preview-y,0px),0);transition:transform 140ms cubic-bezier(.22,.8,.25,1),opacity 100ms ease;will-change:transform;z-index:1}
 html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item][data-order-preview][data-order-grabbed]{opacity:.12;outline:none;box-shadow:none;pointer-events:none}
 html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-slot][data-order-slot-target]{background:color-mix(in srgb,var(--identify-colour,var(--red,#bb4841)) 15%,var(--panel,#fff));outline:2px solid var(--identify-colour,var(--red,#bb4841));outline-offset:-2px;box-shadow:0 0 0 3px color-mix(in srgb,var(--identify-colour,var(--red,#bb4841)) 12%,transparent)}
 .v50-order-drag-ghost[data-order-ghost-slots]{grid-template-columns:minmax(0,1fr) auto}

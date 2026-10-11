@@ -5,13 +5,13 @@
   "nativeAppBuildTarget": "be.aluvision.LightingControl",
   "nativeAppBundleVerified": true,
   "nativeAppBuiltVersion": "50.0.0",
-  "nativeAppBuiltBuild": "553",
+  "nativeAppBuiltBuild": "568",
   "nativeAppInstalled": false,
   "nativeAppSimulatorInstalled": false,
   "nativeAppInstallationPreservedData": null,
-  "nativeAppMetadataScope": "Current signed build553 metadata only; private device installation is separately verified. This website does not attest or publish private-device installation details.",
-  "nativeAppBuildSourceFreezeSha256": "b0042c5364d057daca4eb1db00b7dc0e215805f1f25a6bc6dae93000394b8b8c",
-  "nativeAppBuildReceiptSha256": "d141b961c1920f0c8eb0325e288eb12e528ef7dcae808f4b4e9b27444ef2e0a0",
+  "nativeAppMetadataScope": "Signed build568 metadata only; no private-device installation, launch or physical acceptance is claimed or published.",
+  "nativeAppBuildSourceFreezeSha256": "c4eab2eb1036f846f6929792db395a0d5483e4783c96d29a0485a4e1eaa9f864",
+  "nativeAppBuildReceiptSha256": "7c8885d4e418b2853d8f1157fb170d89351eace821dbffeba33b25082109e7a6",
   "historicalNativeAppMetadataBefore550": {
     "nativeAppModified": false,
     "nativeAppUpdatePending": true,
@@ -87,9 +87,9 @@
     "targetSdk": 36
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate553-browser-demo",
+  "revision": "V50candidate568-browser-demo",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Frozen V50 candidate553 browser interface, excluding all firmware files; existing 20 fictional-receiver adapter and Android code20 download retained. Public-only welcome, temporary single-user and reset isolation adaptations; no hardware access.",
+  "interfaceBaseline": "Frozen V50 candidate568 browser interface; eight firmware files excluded. Existing20 fictional-receiver adapter and Android code20 download retained; seven public-only welcome/reset/single-user/version adaptations. No hardware access.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -194,8 +194,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "e84f994feaf3d092056ccd69ff95723b2e32338fd5977a82dff063edb9bd27e0",
-      "bytes": 490083
+      "sha256": "027a8673e43ec7c62e28b7ddaeeab6f96c1f14ce5fa150c609c42f3267ae4b61",
+      "bytes": 523427
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -234,8 +234,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "415bcf6e456d73dcd944364d4af730036a2115939d9e0530839203ac9c3aed38",
-      "bytes": 6811
+      "sha256": "01799338a3f00eec58edc9201f05c88c63551c948330ea6499396b273350a5c8",
+      "bytes": 7369
     },
     {
       "path": "installation-libraries.js",
@@ -254,13 +254,23 @@
     },
     {
       "path": "ledline-identification-session.js",
-      "sha256": "86dcb0c42a4143348e4e03a275a2a416938ea4a0009ad49c59181f87a581b029",
-      "bytes": 18906
+      "sha256": "e9e80d436d5239cbeb2e4311b532b07b0ec071cc1899cd00e7fae042b54431bb",
+      "bytes": 19314
     },
     {
       "path": "ledline-order-drag.js",
-      "sha256": "d4ad9fec277fbf35dd0f35bbe77e94aef9c00679bcce4e6b68fadc82e147f1b6",
-      "bytes": 22301
+      "sha256": "96c7863d238028c708517920d5df5edb28b7c9b914b6c870a4b8eecfe08cd228",
+      "bytes": 27296
+    },
+    {
+      "path": "ledline-order-guide.js",
+      "sha256": "aa792a4b1bfd3e9f20071a7c123fa6f1714b243b708dba5df063cea46a04f81c",
+      "bytes": 19355
+    },
+    {
+      "path": "ledline-order-test.js",
+      "sha256": "45da1c6aa08f07fb088a13b22363b70f8c543dd174aa9e35b42f502dca2f2012",
+      "bytes": 15680
     },
     {
       "path": "ledline-order.css",
@@ -309,13 +319,13 @@
     },
     {
       "path": "onboarding-ui.css",
-      "sha256": "8cccb37879be0ac7f4525e1869ab5b531d685bd98bd67cdecdfdd6fc2c04f209",
-      "bytes": 70161
+      "sha256": "59470bf9839068b656082bf89f08ba4c0608de5353bfc69abbb078c18fe94e13",
+      "bytes": 70475
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "58f79cc612ab088f1eae6579a52472779b81adc9b386c2ff1dd054086ac4963d",
-      "bytes": 160702
+      "sha256": "acaad1d778453879653745cb659929bce7d61df14c7917e4cf59e8cfb9ed567c",
+      "bytes": 162529
     },
     {
       "path": "page-interaction.css",
@@ -344,8 +354,8 @@
     },
     {
       "path": "preferences.js",
-      "sha256": "5075969f07c797f91a5c3762e914722fb3bfaaf90f75a44e1bb0a2164a6016ff",
-      "bytes": 83564
+      "sha256": "d714e136bdffd1c7f8d5f4a24b6a54bdc1901d1ecfd281d8cd0342bf1bf6b3f6",
+      "bytes": 91244
     },
     {
       "path": "premium-surfaces.css",
@@ -359,8 +369,8 @@
     },
     {
       "path": "preview.js",
-      "sha256": "c58caf67b8b2c6ecd39d7b089417dc518cbd8bb8d567670335440844aba3fea7",
-      "bytes": 97326
+      "sha256": "3ef7e82c316b732f1fe2420919e103138988c521d1cf2a97985acc5e57e89cb9",
+      "bytes": 103657
     },
     {
       "path": "receiver-playback.js",
@@ -404,8 +414,8 @@
     },
     {
       "path": "RELEASE_NOTES.md",
-      "sha256": "135d3ab3d3884b373731b079511072917ea7498a679b7278b0b5af1756145924",
-      "bytes": 14030
+      "sha256": "7d6bcf2e1c9986f80371ef01dec78ca121f1ee510af4c2e69e7eba7f566e7d46",
+      "bytes": 15694
     },
     {
       "path": "scenes.css",
@@ -514,13 +524,23 @@
     },
     {
       "path": "v50-interface.css",
-      "sha256": "4f7e65c9dfa0dc53ec998af87360dafefa70f73e0aad541e1bccd94dca838b10",
-      "bytes": 23237
+      "sha256": "fe2a117db4d25c189bfe022bb3695b5741a39b1a68cda5b48916b04a98381092",
+      "bytes": 62495
+    },
+    {
+      "path": "v50-order-clarity.css",
+      "sha256": "e131901a750624595692f59766c5799d03ac3f62ab5418241bd6abba69f29ef0",
+      "bytes": 14097
     },
     {
       "path": "v50-order-drag.css",
-      "sha256": "f13d3d6dc7810eeed0168991202e134b336ed3d8695ce7ac2df65e3781a2b131",
-      "bytes": 5759
+      "sha256": "5ece98a05abc7a7a9d4b1aec50622122057afa958102ecc98618992b15998555",
+      "bytes": 5695
+    },
+    {
+      "path": "v50-order-guide.css",
+      "sha256": "8711468801d9d0853fe178b44115f03f32e6de32f8f7203d33c485435cf44a96",
+      "bytes": 15357
     },
     {
       "path": "v50-order-texts.js",
@@ -528,9 +548,19 @@
       "bytes": 9098
     },
     {
+      "path": "v50-order-tutorial.css",
+      "sha256": "51dfb7614a492adc22ffa8366facf23b669421b5fdfbaec647e2d98a6eafed73",
+      "bytes": 26061
+    },
+    {
+      "path": "v50-preview-selection.css",
+      "sha256": "3a8b564dd6aed3092cd8395425135fe1772fc0e32e920819e844497ccb4cd04c",
+      "bytes": 12082
+    },
+    {
       "path": "v50-texts.js",
-      "sha256": "afe17f092cac3959b37e540bb1a39807f70680ca2acd3d2c1f74e8ef39b838b5",
-      "bytes": 11592
+      "sha256": "b451cdadc0ec7395a3448b962386a0f74046b53e126e56836c0f13fb265810d4",
+      "bytes": 33593
     },
     {
       "path": "vendor/v21_animation_catalog.js",
@@ -548,7 +578,7 @@
       "bytes": 3012
     }
   ],
-  "interfaceReviewScope": "Complete public demo over loopback HTTP: stock app and fictional service, separate browser contexts, RGBW/SPI setup and V50 interaction checks. Software UI validation only; no receiver or physical phone acceptance.",
+  "interfaceReviewScope": "Exact public runtime bytes, unchanged fictional adapter, CSP, Android download and current GitHub Pages preflight checked locally. Browser visual acceptance is recorded separately; no physical receiver acceptance.",
   "historicalInterfaceReviewScope398": {
     "sourceSnapshot": "verified-Web397-setup398-private-copy",
     "basedOnSourceSnapshot": "verified-Web397",
@@ -844,7 +874,22 @@
     "nativeAppBuildReceiptSha256": "55ef080855c8db98a08523cfff096cbbc9d7ebbab7ea3e265e62c7eaad0ba706"
   },
   "historicalInterfaceReviewScopeBefore553": "Complete public demo over loopback HTTP: stock app and fictional service, separate browser contexts, RGBW/SPI setup and V50 interaction checks. Software UI validation only; no receiver or physical phone acceptance.",
-  "interfaceCandidate553": {
+  "historicalNativeAppMetadataBefore568": {
+    "nativeAppModified": false,
+    "nativeAppUpdatePending": false,
+    "latestInterfaceBundledInIOS": true,
+    "nativeAppBuildTarget": "be.aluvision.LightingControl",
+    "nativeAppBundleVerified": true,
+    "nativeAppBuiltVersion": "50.0.0",
+    "nativeAppBuiltBuild": "553",
+    "nativeAppInstalled": false,
+    "nativeAppSimulatorInstalled": false,
+    "nativeAppInstallationPreservedData": null,
+    "nativeAppMetadataScope": "Current signed build553 metadata only; private device installation is separately verified. This website does not attest or publish private-device installation details.",
+    "nativeAppBuildSourceFreezeSha256": "b0042c5364d057daca4eb1db00b7dc0e215805f1f25a6bc6dae93000394b8b8c",
+    "nativeAppBuildReceiptSha256": "d141b961c1920f0c8eb0325e288eb12e528ef7dcae808f4b4e9b27444ef2e0a0"
+  },
+  "historicalInterfaceCandidate553": {
     "appVersion": "50.0.0",
     "privateBuild": 553,
     "webRuntimeVersion": "50.0.0-candidate553",
@@ -891,5 +936,47 @@
     ],
     "physicalPhoneAcceptance": false,
     "physicalReceiverAcceptance": false
+  },
+  "interfaceCandidate568": {
+    "appVersion": "50.0.0",
+    "privateBuild": 568,
+    "webRuntimeVersion": "50.0.0-candidate568",
+    "sourceFreezeSha256": "c4eab2eb1036f846f6929792db395a0d5483e4783c96d29a0485a4e1eaa9f864",
+    "sourceFiles": 89,
+    "firmwareFilesExcluded": 8,
+    "sourceRuntimeFiles": 81,
+    "preservedFakeAdapter": "web-demo-service.js",
+    "publicOnlyAdaptations": 7,
+    "changes": [
+      "Fixed place rail with explicit two-line swap; uninvolved lines remain in place",
+      "Animated three-line tutorial and numbered target reference",
+      "Separate ledline settings; SPI settings retain exact selected port",
+      "Distinct animation groups and explicit Start animation cards",
+      "Cumulative LEDline selection in normal, tunnel and wall previews",
+      "Compact sticky livepreview"
+    ],
+    "capabilities": {
+      "pinLogin": false,
+      "standCode": false,
+      "sharing": false,
+      "hardware": false,
+      "wifi": false,
+      "firmwareDownloads": false
+    },
+    "softwareQA": {
+      "directedTests": 596,
+      "directedPassed": 596,
+      "legacyTests": 83,
+      "legacyPassed": 79,
+      "legacyKnownBaselineFailures": 4,
+      "receiptSha256": "7cfe73b142f67c9b42a96ea59e62a654c26f7c4aaa8a2e52fc878fb398b2b2e7"
+    },
+    "physicalPhoneAcceptance": false,
+    "physicalReceiverAcceptance": false,
+    "knownLimits": [
+      "Browser preview only, not physical output proof.",
+      "Some legacy text remains Dutch.",
+      "Android download remains V41 code20."
+    ]
   }
 }

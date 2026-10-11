@@ -277,6 +277,7 @@
   const orderColours=new Map();
   const orderPositionColours=new Map();
   let orderIdentification=null,orderIdentificationState=null,orderCleanupResumedSession=null;
+  let orderTest=null,orderTestState={status:'idle',busy:false},orderTestPreparing=false,orderTestRequest=0,orderTestFingerprint=null,orderTestConfirmation=null;
   let orderRecognitionDirty=true;
   function beginOrderColours(){
     if(standPresentationOnly()||!zone()||!orderIdentification)return;
@@ -286,6 +287,8 @@
     void orderIdentification.open(input);
   }
   function closeZoneMenus(){
+    closeOrderTutorial({acknowledge:false,restoreFocus:false});
+    cancelOrderTest();
     openLineSetup.clear();openLineSettings.clear();openSpatialChoices.clear();expandedScopeZones.clear();
     expandedReceivers.clear();expandedConnections.clear();settingsOpen=false;advancedSettingsRevision++;
     arrangementDraft=null;orderColours.clear();inlineOrderDrag?.cancel();void orderIdentification?.close();
@@ -313,7 +316,7 @@
   // Everyday controls share one zone screen. Keep the light mode local to
   // that screen so changing between colour and movement never sends users
   // through an intermediate page or clears their selected ledline.
-  let controlMode='colour',showControlAnimationGallery=true,controlPreviewSize='small';
+  let controlMode='colour',showControlAnimationGallery=true,controlPreviewSize='large';
   let pinProtection=null,pinProtectionLoading=false,pinProtectionBusy=false,pinProtectionError='',pinProtectionReconnect=null;
   let pinProtectionRead=null,pinProtectionWaitingForLive=false;
   let pinProtectionDeferredStandId=null;
@@ -392,6 +395,127 @@
       syncOrderRecognition();
     }
   });
+  const orderGuide=window.LightningLedlineOrderGuide;
+  function orderGuideText(key,params){return orderGuide.t(key,uiPreferences.preferences.language,params);}
+  const ORDER_TUTORIAL_KEY='aluvision.ui.ledline-order-tutorial.v2';
+  let orderTutorialSeenMemory=false,orderTutorialContext=null,orderTutorialReturnFocus=null;
+  function hasSeenOrderTutorial(){
+    if(orderTutorialSeenMemory)return true;
+    try{orderTutorialSeenMemory=appStorage?.getItem(ORDER_TUTORIAL_KEY)==='1';}catch(_){/* Optional device-local preference. */}
+    return orderTutorialSeenMemory;
+  }
+  function openOrderTutorial({automatic=false}={}){
+    const z=zone(),dialog=document.getElementById('order-tutorial');
+    if(!z||!stand()||!dialog||dialog.open||document.hidden||!openLineSetup.has(z.id)||
+      !main.querySelector('.ledline-setup[data-order-open="true"]')||document.querySelector('dialog[open]')||
+      arrangementApplying||managementBusy||orderTestBusy()||inlineOrderDrag?.isActive())return false;
+    if(automatic&&hasSeenOrderTutorial())return false;
+    const count=M.zoneLedlines(model,z.id).length;if(!count)return false;
+    orderTutorialReturnFocus=document.activeElement;
+    orderTutorialContext={standId:stand().id,zoneId:z.id};
+    dialog.dataset.tutorialVersion='568';
+    dialog.innerHTML=`<header><div><span class="v568-tutorial-badge">${icon('play')}${esc(orderGuideText('tutorialBadge'))}</span><h2 id="order-tutorial-title" tabindex="-1">${esc(orderGuideText('tutorialTitle'))}</h2></div><button type="button" data-action="order-tutorial-close" aria-label="${esc(orderGuideText('tutorialClose'))}">${icon('close')}<span>${esc(t('close'))}</span></button></header><div class="v50-order-tutorial-body">${orderGuide.tutorialMarkup({count,language:uiPreferences.preferences.language})}</div><footer class="v50-order-tutorial-footer"><button type="button" data-action="order-tutorial-close">${esc(orderGuideText('tutorialStart'))}${icon('chevron')}</button></footer>`;
+    try{dialog.showModal();}catch(_){orderTutorialContext=null;orderTutorialReturnFocus=null;dialog.replaceChildren();return false;}
+    dialog.querySelector('#order-tutorial-title')?.focus({preventScroll:true});return true;
+  }
+  function closeOrderTutorial({acknowledge=true,restoreFocus=true}={}){
+    const dialog=document.getElementById('order-tutorial');if(!orderTutorialContext&&!dialog?.open)return false;
+    if(acknowledge){orderTutorialSeenMemory=true;try{appStorage?.setItem(ORDER_TUTORIAL_KEY,'1');}catch(_){/* Keep dismissal for this session. */}}
+    const previous=orderTutorialReturnFocus;orderTutorialContext=null;orderTutorialReturnFocus=null;
+    if(dialog?.open)dialog.close();dialog?.replaceChildren();
+    if(restoreFocus&&!restoreControlFocus(previous))main.querySelector('[data-action="order-tutorial-open"]')?.focus({preventScroll:true});
+    return true;
+  }
+  function syncOrderTutorial(){
+    const z=zone(),valid=!!z&&openLineSetup.has(z.id)&&!!main.querySelector('.ledline-setup[data-order-open="true"]');
+    if(orderTutorialContext&&(!valid||orderTutorialContext.zoneId!==z.id||orderTutorialContext.standId!==stand()?.id))
+      closeOrderTutorial({acknowledge:false,restoreFocus:false});
+    if(valid&&!orderTutorialContext&&!hasSeenOrderTutorial())openOrderTutorial({automatic:true});
+  }
+  function orderTestGeometry(){
+    const z=zone();return z?JSON.stringify([arrangementSignature(z),M.zoneLedlines(model,z.id).map(({id,receiverId,port,pixels,reversed})=>({id,receiverId,port,pixels,reversed}))]):null;
+  }
+  function orderTestContext(){
+    const z=zone(),state=orderIdentificationState,lines=z?M.zoneLedlines(model,z.id):[];
+    const matches=!!z&&!!state?.active&&state.standId===stand()?.id&&state.zoneId===z.id&&openLineSetup.has(z.id)&&
+      JSON.stringify(state.lines.map(({id,receiverId,port})=>({id,receiverId,port})))===JSON.stringify(lines.map(({id,receiverId,port})=>({id,receiverId,port})));
+    const stable=!document.hidden&&!standPresentationOnly()&&!arrangementApplying&&!managementBusy&&!arrangementPlaybackPending()&&!orderPreviewGesture&&
+      identifyPending.size===0&&![...identifying.values()].some(blink=>!blink.orderTest&&blink.until>performance.now()/1000)&&
+      !arrangementDirty()&&(!orderTestBusy()||!orderTestFingerprint||orderTestFingerprint===orderTestGeometry());
+    return {session:matches?state.session:'',standId:stand()?.id||'',zoneId:z?.id||'',lineIds:lines.map(line=>line.id),preview:previewContext,
+      ready:matches&&stable&&(previewContext||state.physicalConfirmed===true&&!standReceiverActionUnavailable('order-identify')&&!arrangementNeedsStandOpen())};
+  }
+  function orderTestBusy(){return orderTestPreparing||orderTestState.busy===true;}
+  function cancelOrderTest(){
+    orderTestRequest++;orderTestPreparing=false;orderTestConfirmation=null;
+    void orderTest?.stop();
+    syncArrangementControls();
+  }
+  orderTest=window.LightningLedlineOrderTest?.create({
+    clock:()=>performance.now(),setTimer:(callback,ms)=>setTimeout(callback,ms),clearTimer:timer=>clearTimeout(timer),getContext:orderTestContext,
+    blink:request=>{
+      const context=orderTestContext();
+      if(previewContext||!context.ready||context.session!==request.session||!context.lineIds.includes(request.lineId))return Promise.reject(Error('ORDER_TEST_NOT_READY'));
+      return orderIdentification.blink(request.lineId,request.enabled);
+    },
+    onState:state=>{
+      orderTestState=state;
+      for(const [id,blink] of identifying)if(blink.orderTest)identifying.delete(id);
+      if(state.status==='running'&&state.session===orderIdentificationState?.session&&state.lineId){
+        const line=orderIdentificationState.lines.find(line=>line.id===state.lineId);
+        if(line)identifying.set(line.receiverId,{orderTest:true,layoutSession:state.session,scope:line.port?String(line.port):'all',ports:line.port?[line.port]:[],startedAt:performance.now()/1000,until:performance.now()/1000+1.2});
+      }
+      if(state.status==='failed'&&!state.preview){
+        // An unconfirmed ON may not have a native blink binding. Close the
+        // exact full overlay instead; never stop a newer identification token.
+        const session=state.session;
+        Promise.resolve().then(()=>{if(orderIdentificationState?.active&&orderIdentificationState.session===session)void orderIdentification.close('order-test-unconfirmed');});
+      }
+      syncArrangementControls();for(const receiver of model.receivers)syncIdentifyControls(receiver.id);
+    }
+  });
+  async function startOrderTest(){
+    if(!orderTest||orderTestBusy()||!orderTestContext().ready)return;
+    const request=++orderTestRequest,session=orderIdentificationState.session;
+    orderTestFingerprint=orderTestGeometry();orderTestConfirmation=null;orderTestPreparing=true;syncArrangementControls();
+    try{
+      if(!previewContext){await orderIdentification.interaction();await orderIdentification.settle();}
+      if(request!==orderTestRequest||session!==orderIdentificationState?.session||!orderTestContext().ready)return;
+      orderTestPreparing=false;
+      await orderTest.start();
+    }catch(_){if(request===orderTestRequest)orderTestState={status:'failed',busy:false,session,zoneId:zone()?.id,preview:previewContext};}
+    finally{if(request===orderTestRequest){orderTestPreparing=false;syncArrangementControls();}}
+  }
+  function orderTestMarkup(){
+    return `<section class="v50-order-test"><h4>${esc(orderGuideText('testTitle'))}</h4><p data-order-test-status role="status" aria-live="polite"></p><button type="button" class="v50-order-test-start" data-action="order-test-start">${esc(orderGuideText(previewContext?'previewStart':'testStart'))}</button><button type="button" class="v50-order-test-stop" data-action="order-test-stop" hidden>${esc(orderGuideText('testStop'))}</button><button type="button" class="v50-order-test-confirm" data-action="order-test-confirm" hidden>${esc(orderGuideText('confirm'))}</button></section>`;
+  }
+  function syncOrderTestControls(){
+    const panel=main?.querySelector('.v50-order-test');if(!panel)return;
+    const context=orderTestContext(),same=orderTestState.session===context.session&&orderTestFingerprint===orderTestGeometry(),busy=orderTestBusy();
+    // Geometry can change through another metadata view while the same token
+    // is alive. Cancel both native and visual tests, not just radio steps.
+    if(orderTestState.busy&&['preparing','running'].includes(orderTestState.status)&&!same){
+      orderTestRequest++;orderTestPreparing=false;orderTestConfirmation=null;orderTest.contextChanged();return;
+    }
+    const terminalHere=orderTestState.zoneId===context.zoneId&&orderTestFingerprint===orderTestGeometry()&&['failed','cancelled'].includes(orderTestState.status);
+    const state=same||terminalHere?orderTestState:{status:'idle'},confirmed=orderTestConfirmation===orderTestGeometry()&&same&&state.status==='complete'&&!previewContext;
+    const key=confirmed?'confirmed':orderTestPreparing?'preparing':state.status==='complete'?previewContext?'previewComplete':'complete':['running','preparing','cancelled','failed'].includes(state.status)?state.status:state.status==='stopping'?'cancelled':!context.ready?'unavailable':previewContext?'previewIdle':'idle';
+    panel.querySelector('[data-order-test-status]').textContent=orderGuideText(key,{number:state.index+1,count:state.count});
+    const start=panel.querySelector('[data-action="order-test-start"]'),stop=panel.querySelector('[data-action="order-test-stop"]'),confirm=panel.querySelector('[data-action="order-test-confirm"]');
+    start.disabled=!context.ready||busy;start.hidden=busy;stop.hidden=!busy;confirm.hidden=state.status!=='complete'||previewContext||confirmed||busy||!context.ready;
+    panel.dataset.testState=confirmed?'checked':state.status;panel.setAttribute('aria-busy',String(busy));
+    for(const row of main.querySelectorAll('[data-order-item]'))row.dataset.orderTestLine=String(same&&state.status==='running'&&row.dataset.orderItem===state.lineId);
+    for(const slot of main.querySelectorAll('[data-order-slot]'))slot.dataset.orderTestLine=String(same&&state.status==='running'&&Number(slot.dataset.orderPosition)===state.index+1);
+    for(const button of main.querySelectorAll('.ledline-row-actions button')){
+      if(['visual-identify','port-identify'].includes(button.dataset.action)){syncIdentifyControls(button.dataset.receiver);continue;}
+      button.disabled=busy||standReceiverActionUnavailable(button.dataset.action,button);
+    }
+  }
+  function orderReferenceMarkup(z,count){
+    const plan=orderGuide.referencePlan({count,type:z.type,view:spatialMode(z.layout,z),layout:z.layout});
+    const legend=plan.colours.map((colour,index)=>`<li style="--identify-colour:${C.hex(colour.rgb)}" aria-label="${esc((index+1)+' · '+window.LightningV50OrderTexts.paletteLabel(colour.colorName,uiPreferences.preferences.language))}"><span aria-hidden="true"></span><b>${index+1}</b></li>`).join('');
+    return `<figure class="v50-order-reference" aria-label="${esc(orderGuideText('example'))}"><figcaption><b>${esc(t('v568OrderReference'))}</b><button type="button" class="v50-order-tutorial-open" data-action="order-tutorial-open">${icon('play')}${esc(orderGuideText('tutorialView'))}</button></figcaption>${addPreview(plan.receivers,plan.layout,'v50-order-canvas v50-order-target-canvas',{...plan.options,orderTarget:true,numberLabels:true,label:orderGuideText('referenceTitle')+' · '+orderGuideText(plan.direction)})}<ol class="v50-order-reference-legend" aria-label="${esc(orderGuideText('referenceTitle'))}">${legend}</ol><p class="v50-order-reference-direction"><span>${esc(orderGuideText(plan.direction))}</span><span>${esc(t('v568MatchReference'))}</span></p></figure>`;
+  }
   function syncOrderRecognition(){
     if(!main)return;
     const orderText=(key,params)=>window.LightningV50OrderTexts.t(key,uiPreferences.preferences.language,params);
@@ -416,6 +540,7 @@
       status.dataset.confirmed=String(orderIdentificationState?.physicalConfirmed===true);
     }
     orderRecognitionDirty=false;
+    syncOrderTestControls();
   }
   const pendingDialogDismissals=new WeakMap();
   const pendingPanelDismissals=new WeakMap();
@@ -774,6 +899,9 @@
     // not a menu, receiver or reorder symbol. The check follows aria-pressed.
     if(name==='together')return `<svg class="icon icon-together" viewBox="0 0 40 32" aria-hidden="true" focusable="false"><path class="together-link" d="M5 5.5H2v18h3M2 14.5h3"/>${[3,12,21].map(y=>`<rect class="together-line" x="7" y="${y}" width="21" height="5" rx="2.5"/>`).join('')}<path class="together-check" d="m30 24 3 3 5-7"/></svg>`;
     if(name==='receiver')name='light';
+    if(name==='folder')return '<svg class="icon icon-folder" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 7V5h7l2 2h9v13H3Z"/></svg>';
+    if(name==='play')return '<svg class="icon icon-play" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m8 5 11 7-11 7Z"/></svg>';
+    if(name==='grip')return '<svg class="icon icon-grip" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'+[7,12,17].map(y=>`<circle cx="9" cy="${y}" r="1.1"/><circle cx="15" cy="${y}" r="1.1"/>`).join('')+'</svg>';
     const unassigned=name==='unassigned';
     return `<svg class="icon${unassigned?' icon-unassigned':''}"${unassigned?' data-icon="unassigned"':''} viewBox="0 0 24 24" aria-hidden="true"><path d="${iconPaths[name] || iconPaths.light}"/></svg>`;
   }
@@ -889,7 +1017,7 @@
   }
   function ledlineName(receiver,index) { return `${receiverLineLabel(receiver,index)} · ${receiver.type==='RGBW'?'RGBW':'SPI'}`; }
   function nameOfSelection() {
-    if(continuousZone())return 'Eén doorlopende ledline';
+    if(continuousZone())return t('v50Continuous');
     if(selection().kind==='all')return `${t('together')} · ${ledlineCount(physicalLineCount())}`;
     if(['line','lines'].includes(selection().kind)){
       const ids=selectedLineIds();
@@ -898,7 +1026,7 @@
     const ids=selectedReceiverIds();
     if(selection().kind==='receivers')return t('scopeSelectedLines',{count:physicalLineCount(selected()),numbers:formatLineNumbers(ids)});
     const index=receivers().findIndex(receiver=>receiver.id===ids[0]);
-    return index<0?'Geen ledline':ledlineName(receivers()[index],index);
+    return index<0?t('v50NoLine'):ledlineName(receivers()[index],index);
   }
   function statusText(receiver) { return receiver.connection === 'offline' ? 'Offline' : ''; }
   function catalogue() { return standControlOpen?StandAnimations.catalogFor(standControlReceivers()):P.catalog(zone()?.type || 'RGBW'); }
@@ -912,7 +1040,7 @@
     if(!s.engine||String(s.engine).toUpperCase()==='STATIC')return null;
     return catalogue().find(e => s.v30Effect ? e.state.v30Effect === s.v30Effect : !e.state.v30Effect && e.state.engine === s.engine && e.state.variant === s.variant && (e.state.previewFamily || null) === (s.previewFamily || null));
   }
-  function effectName(state) { return (!state.engine || state.engine === 'STATIC') ? 'Vaste kleur' : state.animation || state.engine; }
+  function effectName(state) { return (!state.engine || state.engine === 'STATIC') ? t('staticColour') : state.animation || state.engine; }
   function colours(state) {
     if (state.colors?.length) return state.colors;
     return [C.hex([state.r || 0, state.g || 0, state.b || 0])];
@@ -926,15 +1054,15 @@
     return Array.from({length:count},(_,i)=>{
       const rgb=state.rgbEnabled?.[i]===false?[0,0,0]:rgbOf({colors:[palette[i%palette.length]]});
       const white=state.whiteEnabled?.[i]===false?0:(state.whiteChannels?.[i]||0);
-      const name=activeEffect()?.whiteMixPreset?(count===1?'Witmix':`Witmix ${i+1}`):white>0 && rgb.every(v=>v===0)?'Wit':`Kleur ${i+1}`;
-      const swatch=`<span role="img" aria-label="${name}" title="${name}" style="--swatch:${C.screenHex(rgb,white)}"></span>`;
-      return activeEffect()?.paletteEditable === false ? swatch : `<div class="palette-item" data-palette-item="${i}"><button class="palette-colour" data-action="palette-edit" data-id="${i}" aria-label="${name} aanpassen">${swatch}<small>${name}</small></button>${count>1?`<button type="button" class="palette-drag-handle" data-palette-handle aria-label="${esc(t('v50MoveColour',{number:i+1}))}" title="${esc(t('v50DragColours'))}">⠿</button>`:''}${activeEffect()?.colorCountRange&&count>activeEffect().colorCountRange.min?`<button class="palette-remove" data-action="palette-remove" data-id="${i}" aria-label="Kleur ${i+1} verwijderen">−</button>`:''}</div>`;
-    }).join('')+(activeEffect()?.colorCountRange&&count<activeEffect().colorCountRange.max?'<button class="palette-add" data-action="palette-add" aria-label="Animatiekleur toevoegen">＋ Kleur</button>':'');
+      const name=activeEffect()?.whiteMixPreset?(count===1?t('v50WhiteMix'):t('v50WhiteMixNumber',{number:i+1})):white>0 && rgb.every(v=>v===0)?t('v50White'):t('v50ColourNumber',{number:i+1});
+      const swatch=`<span role="img" aria-label="${esc(name)}" title="${esc(name)}" style="--swatch:${C.screenHex(rgb,white)}"></span>`;
+      return activeEffect()?.paletteEditable === false ? swatch : `<div class="palette-item" data-palette-item="${i}"><button class="palette-colour" data-action="palette-edit" data-id="${i}" aria-label="${esc(t('v50EditColour',{name}))}">${swatch}<small>${esc(name)}</small></button>${count>1?`<button type="button" class="palette-drag-handle" data-palette-handle aria-label="${esc(t('v50MoveColour',{number:i+1}))}" title="${esc(t('v50DragColours'))}">⠿</button>`:''}${activeEffect()?.colorCountRange&&count>activeEffect().colorCountRange.min?`<button class="palette-remove" data-action="palette-remove" data-id="${i}" aria-label="${esc(t('v50RemoveColour',{number:i+1}))}">−</button>`:''}</div>`;
+    }).join('')+(activeEffect()?.colorCountRange&&count<activeEffect().colorCountRange.max?`<button class="palette-add" data-action="palette-add" aria-label="${esc(t('v50AddAnimationColour'))}">${esc(t('v50AddColour'))}</button>`:'');
   }
   function addPreview(list, layout, css = '', options = {}) {
     const key = String(++previewKey);
     previews.set(key, {receivers:list, layout, ...options});
-    const accessibility=options.decorative?'aria-hidden="true"':`role="img" aria-label="${esc(options.label || 'Lichtvoorbeeld')}"`;
+    const accessibility=options.decorative?'aria-hidden="true"':`role="img" aria-label="${esc(options.label || t('v50LightPreview'))}"`;
     return `<canvas class="${css}" data-preview="${key}" data-preview-line-count="${physicalLineCount(list)}" ${accessibility} width="400" height="160"></canvas>`;
   }
   function zonePreview(z, css, options) {
@@ -962,69 +1090,112 @@
   // Scope selection is integrated with the actual LED preview in V50.
   function selector() { return ''; }
   function controlContext(screen) {
-    const z = zone(), title = screen === 'colour' ? 'Vaste kleur' : screen === 'animations' ? 'Animaties' : z.name;
+    const z = zone(), title = screen === 'colour' ? t('staticColour') : screen === 'animations' ? t('animations') : z.name;
     const atRoot = screen === 'controls' || screen === 'layout';
     const list=receivers();
-    const modeTabs=screen==='controls'?`<div class="section-tabs control-mode-tabs" role="group" aria-label="Kleur of animatie"><button data-action="colour" aria-pressed="${controlMode==='colour'}">${icon('sun')}Kleur</button><button data-action="animations" aria-label="Effecten" aria-pressed="${controlMode==='animations'}">${icon('animation')}Effecten</button></div>`:'';
-    const galleryBack=screen==='animations'&&Boolean(activeEffect()),backLabel=atRoot?'Terug naar zones':galleryBack?'Animatiegalerij':`Bediening · ${z.name}`,backAction=atRoot?'stand':galleryBack?'animations-gallery':'controls';
+    const modeTabs=screen==='controls'?`<div class="section-tabs control-mode-tabs" role="group" aria-label="${esc(t('v50ColourOrAnimation'))}"><button data-action="colour" aria-pressed="${controlMode==='colour'}">${icon('sun')}${esc(t('v50StandColour'))}</button><button data-action="animations" aria-label="${esc(t('effects'))}" aria-pressed="${controlMode==='animations'}">${icon('animation')}${esc(t('effects'))}</button></div>`:'';
+    const galleryBack=screen==='animations'&&Boolean(activeEffect()),backLabel=atRoot?t('v50BackZones'):galleryBack?t('v50AnimationGallery'):t('v50ZoneControls',{name:z.name}),backAction=atRoot?'stand':galleryBack?'animations-gallery':'controls';
     const integratedControlHeading=screen==='controls'&&atRoot;
     const pickerDetail=screen==='animation-family';
     return `${integratedControlHeading||pickerDetail?'':`<section class="control-context${list.length>=5?' many-receivers':''}">${contextTitle(title,atRoot ? `${ledlineCount(physicalLineCount(list))} · in ${standLabel()}` : z.name,backLabel,backAction)}</section>`}${controlPreviewDock(screen,modeTabs)}`;
   }
   function currentLightLabel(){
-    const effect=activeEffect();return mixedSelection()?'Verschillende instellingen':effect?Library.displayName(effect,t):'Vaste kleur';
+    const effect=activeEffect();return mixedSelection()?t('v50DifferentSettings'):effect?Library.displayName(effect,t):t('staticColour');
   }
   function syncControlLocation(){
     if(!zone())return;
     for(const label of main.querySelectorAll('[data-current-light]'))label.textContent=currentLightLabel();
   }
+  function controlPreviewMetrics(count,size=controlPreviewSize,{spatial=false,vertical=false,continuous=false}={}){
+    const index={small:0,medium:1,large:2}[size]??2;
+    const lines=Number.isFinite(Number(count))?Math.max(1,Math.min(120,Math.floor(Number(count)))):1;
+    const row=[44,48,52][index];
+    return {height:spatial?[160,184,208][index]:continuous?[56,72,88][index]:vertical?[120,144,168][index]:lines*row+8,
+      width:vertical?lines*44+36:0};
+  }
   function controlPreviewDock(screen,modeTabs='') {
-    const z=zone(),list=receivers(),pixels=z.type==='SPI'?P.geometry(list,z.layout).totalPixels:0;
-    const draft=previewArrangement(z),previewLayout=draft?.layout||z.layout;
+    const z=zone(),list=receivers();
     const integratedControlHeading=screen==='controls';
-    const familyGroup=screen==='animation-family'&&route.family?Library.group(catalogue(),route.family):null;
     const effectChosen=screen==='controls'&&controlMode==='animations'&&Boolean(activeEffect());
-    const galleryBrowsing=Boolean(familyGroup)||screen==='controls'&&controlMode==='animations'&&(!effectChosen||showControlAnimationGallery);
-    // Keep the tunnel/wall hero out of the category list. It appears when the
-    // customer opens a spatial effect group, and remains on the active effect.
-    const galleryTunnel=Boolean(familyGroup&&familyGroup.preview.category==='tunnel');
-    const canTapLines=physicalLineCount(list)>1&&!continuousZone()&&!draft&&!galleryTunnel&&['controls','colour','animations'].includes(screen);
-    // While browsing tunnel & wall effects, show a four-line example or the
-    // currently opened family's recipe across the actual zone members. This
-    // is presentation only; the selected animation is applied only on a tap.
-    const tunnelSettingsOpen=activeEffect()?.category==='tunnel'&&!galleryBrowsing&&(screen==='controls'||screen==='animations');
-    const spatialView=galleryTunnel?spatialEffectView(z):tunnelSettingsOpen?spatialMode(previewLayout,z):'normal';
-    const spatialPreview=(tunnelSettingsOpen||galleryTunnel)&&['tunnel','wall'].includes(spatialView);
+    const galleryBrowsing=screen==='animation-family'||screen==='effects'||screen==='controls'&&controlMode==='animations'&&(!effectChosen||showControlAnimationGallery);
+    const modeName=screen==='controls'?(controlMode==='colour'?t('v50StandColour'):t('effects')):screen==='animation-family'?t('v50AnimationGroup'):screen==='layout'?t('layout'):screen==='colour'?t('v50StandColour'):screen==='animations'?t('effects'):t('controls');
+    const currentEffect=activeEffect();
+    const screenLabel=screen==='animation-family'?t('v50AnimationGroup'):galleryBrowsing?t('v50ChooseAnimations'):currentEffect&&modeName===t('effects')?t('v50EditAnimation'):modeName;
+    const heading=integratedControlHeading?`<div class="control-dock-context-line"><div class="control-dock-location"><small>${esc(t('v50YourLight',{mode:modeName}))}</small><b>${esc(z.name)}</b></div><span class="pill control-dock-type-badge">${zoneTypeLabel(z)}</span></div><div class="control-dock-actions"><button class="back back-to-zones control-dock-back" data-action="stand" aria-label="${esc(t('v50BackZones'))}" title="${esc(t('v50BackZones'))}">${icon('back')}<span>${esc(t('zones'))}</span></button>${modeTabs}</div>`:`<div class="control-dock-heading"><div class="control-dock-location"><small>${esc(t('v50YourLight',{mode:screenLabel}))}</small><b>${esc(z.name)}</b></div>${modeTabs||`<span class="control-dock-mode">${zoneTypeLabel(z)}</span>`}</div>`;
+    // Browsing never creates a live zone preview or editable line controls.
+    // Keep only navigation here; previews on the effect cards remain samples.
+    if(galleryBrowsing)return `<section class="control-preview-dock animation-gallery-dock" aria-label="${esc(t('v50OverviewControls'))}"><div class="control-dock-surface">${heading}</div></section>`;
+    const pixels=z.type==='SPI'?P.geometry(list,z.layout).totalPixels:0;
+    const draft=previewArrangement(z),previewLayout=draft?.layout||z.layout;
+    const canTapLines=physicalLineCount(list)>1&&!continuousZone()&&!draft&&['controls','colour','animations'].includes(screen);
+    const spatialView=spatialMode(previewLayout,z);
+    const spatialPreview=['tunnel','wall'].includes(spatialView);
     const previewMode=spatialPreview?(spatialView==='wall'?'Wall':'Tunnel'):previewLayout==='continuous'?'Continuous':'Normal';
     const spatialPreviewLabel=spatialPreview?spatialPreviewText('Preview',spatialView):'';
     const count=physicalLineCount(list);
+    const metrics=controlPreviewMetrics(count,controlPreviewSize,{spatial:spatialPreview,vertical:previewLayout==='vertical',continuous:previewLayout==='continuous'});
     const total=z.type==='SPI'?t(count===1?'scopeTotalSpiOne':'scopeTotalSpiMany',{count,pixels}):t(count===1?'scopeCountOne':'scopeCountMany',{count});
-    const scope=galleryTunnel?(route.family?`${Library.group(catalogue(),route.family)?.title||t('animationAcross')} · ${ledlineCount(count)}`:t('animationTunnelSampleLines')):total;
-    const directTap=canTapLines&&!spatialPreview;
-    const modeName=screen==='controls'?(controlMode==='colour'?'Kleur':'Effecten'):screen==='animation-family'?'Animatiegroep':screen==='layout'?'Opstelling':screen==='colour'?'Kleur':screen==='animations'?'Effecten':'Bediening';
-    const label=`LED-overzicht van ${z.name} · ${total}${selection().kind==='all'?'':` · ${nameOfSelection()} gekozen`}`;
-    const currentEffect=activeEffect(),currentLight=currentLightLabel();
-    const screenLabel=screen==='animation-family'?'Animatiegroep':galleryBrowsing?'Animaties kiezen':currentEffect&&modeName==='Effecten'?'Animatie instellen':modeName;
-    return `<section class="control-preview-dock${galleryBrowsing?' animation-gallery-dock':''}" aria-label="LED-overzicht en bediening"><div class="control-dock-surface">
-      ${integratedControlHeading?`<div class="control-dock-context-line"><div class="control-dock-location"><small>JE LICHT · ${esc(modeName)}</small><b>${esc(z.name)}</b></div><span class="pill control-dock-type-badge">${zoneTypeLabel(z)}</span></div><div class="control-dock-actions"><button class="back back-to-zones control-dock-back" data-action="stand" aria-label="Terug naar zones" title="Terug naar zones">${icon('back')}<span>Zones</span></button>${modeTabs}</div>`:''}
-      ${integratedControlHeading?'':`<div class="control-dock-heading"><div class="control-dock-location"><small>JE LICHT · ${esc(screenLabel)}</small><b>${esc(z.name)}</b></div>${modeTabs||`<span class="control-dock-mode">${zoneTypeLabel(z)}</span>`}</div>`}
-      <div class="control-location-summary" aria-label="Huidige bediening"><span>${esc(screenLabel)}</span><span data-current-light>${esc(currentLight)}</span></div>
-      <div class="preview-wrap v50-control-preview${directTap?' preview-selectable':''}${spatialPreview?' spatial-preview-wrap':''}" data-preview-layout="${previewLayout}" style="--v50-preview-min-height:${Math.min(count,6)*24+16}px"><div class="preview-top"><span>${galleryTunnel?esc(t(spatialView==='wall'?'animationWallSampleTitle':'animationTunnelSampleTitle')):spatialPreview?esc(spatialPreviewLabel):esc(t('lineSetup'+previewMode))}</span>${spatialPreview?'':previewSizePickerMarkup(controlPreviewSize)}</div><div class="preview-summary">${esc(scope)}</div>${galleryTunnel?tunnelGalleryPreviewMarkup(route.family?Library.group(catalogue(),route.family):null,'spatial-dock-preview'):zonePreview(z,spatialPreview?'spatial-dock-preview':'',{selection:selection(),main:true,interactiveLines:directTap,arrangementPreview:true,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1])),...(spatialPreview?{spatialShape:spatialView,presentation:'receivers'}:{}),label:spatialPreview?`${spatialPreviewLabel} · ${z.name} · ${total}`:label})}${directTap?`<p class="v50-preview-tap-hint">${icon('tap')}<span>${esc(t('v50TapLine'))}</span></p>`:''}</div>
-      ${galleryBrowsing?'':previewSelectionMarkup(canTapLines)}
-      ${galleryTunnel?familySpatialChoice():''}${animationWayfinding(screen)}<p class="live-confirmation" data-live-status="zone" role="status" aria-live="polite"></p>
+    const directTap=canTapLines;
+    const label=t('v50LedOverview',{name:z.name,summary:total})+(selection().kind==='all'?'':' · '+t('v50ChosenScope',{name:nameOfSelection()}));
+    return `<section class="control-preview-dock" aria-label="${esc(t('v50OverviewControls'))}"><div class="control-dock-surface">${heading}
+      <div class="control-location-summary" aria-label="${esc(t('v50CurrentControls'))}"><span>${esc(screenLabel)}</span><span data-current-light>${esc(currentLightLabel())}</span></div>
+      <div class="preview-wrap v50-control-preview${directTap?' preview-selectable':''}${spatialPreview?' spatial-preview-wrap':''}" data-preview-layout="${previewLayout}" style="--v50-preview-min-height:${metrics.height}px;--v50-preview-min-width:${metrics.width}px"><div class="preview-top"><div class="v50-preview-heading"><span>${spatialPreview?esc(spatialPreviewLabel):esc(t('lineSetup'+previewMode))}</span><small class="preview-summary">${esc(total)}</small></div>${previewSizePickerMarkup(controlPreviewSize,spatialPreview)}</div>${interactiveZonePreview(z,spatialPreview?'spatial-dock-preview':'',{selection:selection(),main:true,previewSize:controlPreviewSize,interactiveLines:directTap,arrangementPreview:true,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1])),...(spatialPreview?{spatialShape:spatialView,presentation:'receivers'}:{}),label:spatialPreview?`${spatialPreviewLabel} · ${z.name} · ${total}`:label})}${previewSelectionMarkup(canTapLines)}</div>
+      ${animationWayfinding(screen)}<p class="live-confirmation" data-live-status="zone" role="status" aria-live="polite"></p>
     </div></section>`;
   }
-  function previewSelectionMarkup(canTapLines){
-    const spi=zone()?.type==='SPI',all=selection().kind==='all';
-    const choices=spi?M.zoneLedlines(model,route.zoneId).map(line=>({id:line.id,number:line.lineIndex+1})):receivers().map((r,i)=>({id:r.id,number:i+1}));
+  function previewLineChoices(){
+    const spi=zone()?.type==='SPI';
+    return M.zoneLedlines(model,route.zoneId).map(line=>({id:spi?line.id:line.receiverId,number:line.lineIndex+1}));
+  }
+  function previewTargetsMarkup(){
+    const all=selection().kind==='all',ids=zone()?.type==='SPI'?selectedLineIds():selectedReceiverIds();
+    return `<div class="v50-preview-line-targets" role="group" aria-label="${esc(t('v50SelectLines'))}">${previewLineChoices().map(line=>`<button type="button" class="v50-preview-line-target" data-action="select" data-id="${esc(line.id)}" aria-label="${esc(t('scopeLine',{number:line.number}))}" aria-pressed="${all||ids.includes(line.id)}"><span class="v50-preview-line-badge"><b>${line.number}</b><span class="v50-preview-line-check" aria-hidden="true">✓</span></span></button>`).join('')}</div>`;
+  }
+  function interactiveZonePreview(z,css,options){
+    if(!options.interactiveLines)return zonePreview(z,css,options);
+    return `<div class="v50-preview-canvas-scroll"><div class="v50-preview-canvas-stage" data-preview-spatial="${options.spatialShape||''}" data-preview-vertical="${z.layout==='vertical'&&options.presentation!=='receivers'}">${zonePreview(z,css,{...options,selectionOverlay:true,decorative:true})}${previewTargetsMarkup()}</div></div>`;
+  }
+  function syncPreviewTargets(canvas){
+    const stage=canvas.closest('.v50-preview-canvas-stage');if(!stage)return;
+    const key=canvas.dataset.lineHitRegions+'|'+canvas.dataset.lineHitPaths+'|'+canvas.dataset.lineTargetBadges+'|'+canvas.clientWidth+'|'+canvas.clientHeight;
+    if(stage.dataset.positionKey===key)return;
+    let regions=[],badges=[];try{regions=JSON.parse(canvas.dataset.lineHitRegions||'[]');badges=JSON.parse(canvas.dataset.lineTargetBadges||'[]');}catch(_){return;}
+    const spi=zone()?.type==='SPI';
+    stage.querySelectorAll('.v50-preview-line-target').forEach(button=>{
+      if(['tunnel','wall'].includes(canvas.dataset.spatialShape)){
+        const badge=badges.find(item=>(spi?item.lineId:item.receiverId)===button.dataset.id);
+        button.hidden=!badge;if(!badge)return;
+        const width=Math.min(1,44/Math.max(1,canvas.clientWidth)),height=Math.min(1,44/Math.max(1,canvas.clientHeight));
+        const x=Math.max(0,Math.min(1-width,badge.x-width/2)),y=Math.max(0,Math.min(1-height,badge.y-height/2));
+        button.style.left=x*100+'%';button.style.top=y*100+'%';button.style.width=width*100+'%';button.style.height=height*100+'%';
+        button.style.setProperty('--badge-x',(badge.x-x)/width*100+'%');button.style.setProperty('--badge-y',(badge.y-y)/height*100+'%');
+        button.dataset.spatial='true';button.dataset.vertical='false';button.dataset.positioned='true';return;
+      }
+      delete button.dataset.spatial;
+      const region=regions.find(item=>(spi?item.lineId:item.receiverId)===button.dataset.id);
+      button.hidden=!region;if(!region)return;
+      button.style.left=region.x*100+'%';button.style.top=region.y*100+'%';button.style.width=region.width*100+'%';button.style.height=region.height*100+'%';
+      const badge=badges.find(item=>(spi?item.lineId:item.receiverId)===button.dataset.id),vertical=region.height===1&&region.width<1;
+      button.dataset.vertical=String(vertical);
+      const position=badge||{x:vertical?region.x+region.width/2:28/canvas.clientWidth,y:vertical?1-18/canvas.clientHeight:region.y+region.height/2};
+      button.style.setProperty('--badge-x',(position.x-region.x)/region.width*100+'%');
+      button.style.setProperty('--badge-y',(position.y-region.y)/region.height*100+'%');
+      button.dataset.positioned='true';
+    });
+    stage.dataset.positionKey=key;
+  }
+  function previewSelectionMarkup(canTapLines,{expand=true}={}){
+    const spi=zone()?.type==='SPI',all=selection().kind==='all',choices=previewLineChoices();
     const ids=spi?selectedLineIds():selectedReceiverIds();
-    const chosen=choices.filter(line=>ids.includes(line.id)),summary=continuousZone()?t('v50Continuous'):choices.length===1?t('scopeLine',{number:1}):all?t('v50AllCount',{count:choices.length}):chosen.length===1?t('scopeLine',{number:chosen[0].number}):t('v50SelectedCount',{count:chosen.length});
-    return `<div class="v50-preview-actions" data-selection-kind="${esc(selection().kind)}"><div class="v50-preview-toolbar"><div class="v50-selection-summary" role="status" aria-live="polite">${icon(all?'together':'light')}<span><small>${esc(t('v50ControlScope'))}</small><b>${esc(summary)}</b></span></div><button class="v50-preview-expand" type="button" data-action="preview-fullscreen">${icon('expand')}${esc(t('v50ViewAll'))}</button></div>${canTapLines?`<div class="v50-line-selection" role="group" aria-label="${esc(t('v50SelectLines'))}"><button class="v50-select-all" type="button" data-action="select" data-id="all" aria-pressed="${all}">${icon('together')}${esc(t('v50All'))}</button>${choices.map(line=>`<button type="button" data-action="select" data-id="${esc(line.id)}" aria-label="${esc(t('scopeLine',{number:line.number}))}" aria-pressed="${!all&&ids.includes(line.id)}">${line.number}</button>`).join('')}</div>`:''}</div>`;
+    const chosen=choices.filter(line=>ids.includes(line.id)),summary=continuousZone()?t('v50Continuous'):choices.length===1?t('scopeLine',{number:1}):all?t('v50AllCount',{count:choices.length}):chosen.length===1?t('scopeLine',{number:chosen[0].number}):t('v50SelectedNumbers',{numbers:formatLineNumbers(ids)});
+    return `<div class="v50-preview-actions" data-selection-kind="${esc(selection().kind)}"><div class="v50-preview-toolbar"><div class="v50-selection-summary" role="status" aria-live="polite"><span><small>${esc(t('v50ControlScope'))}</small><b>${esc(summary)}</b>${canTapLines?`<em class="v50-preview-inline-hint">${esc(t('v50TapLine'))}</em>`:''}</span></div>${canTapLines?`<button class="v50-select-all" type="button" data-action="select" data-id="all" aria-pressed="${all}">${icon('together')}${esc(t('v50All'))}</button>`:''}${expand?`<button class="v50-preview-expand" type="button" data-action="preview-fullscreen">${icon('expand')}<span>${esc(t('v50ViewAll'))}</span></button>`:''}</div></div>`;
   }
   function openFullscreenPreview(){
     if(!zone())return;
     const interactive=!continuousZone()&&physicalLineCount()>1;
-    showEffectDialog(t('v50ViewAll'),`<section class="v50-full-preview"><div class="v50-full-canvas-scroll" style="--v50-preview-min-height:${physicalLineCount()*44+16}px">${zonePreview(zone(),'v50-expanded-canvas',{main:true,interactiveLines:interactive,selection:selection(),label:zone().name,arrangementPreview:true})}</div>${previewSelectionMarkup(interactive)}${interactive?`<p class="v50-preview-tap-hint">${icon('tap')}<span>${esc(t('v50PreviewTapHint'))}</span></p>`:''}<button class="button secondary full" data-action="effect-dialog-close">${icon('back')}${esc(t('v50ReturnControl'))}</button></section>`);
+    const view=spatialMode(zone().layout,zone()),spatial=['tunnel','wall'].includes(view);
+    const metrics=controlPreviewMetrics(physicalLineCount(),'large',{spatial,vertical:zone().layout==='vertical',continuous:continuousZone()});
+    showEffectDialog(t('v50ViewAll'),`<section class="v50-full-preview"><div class="preview-wrap v50-control-preview v50-full-canvas-scroll" style="--v50-preview-min-height:${metrics.height}px;--v50-preview-min-width:${metrics.width}px">${interactiveZonePreview(zone(),'v50-expanded-canvas',{main:true,previewSize:'large',interactiveLines:interactive,selection:selection(),label:zone().name,arrangementPreview:true,...(spatial?{spatialShape:view,presentation:'receivers'}:{})})}${previewSelectionMarkup(interactive,{expand:false})}</div><button class="button secondary full" data-action="effect-dialog-close">${icon('back')}${esc(t('v50ReturnControl'))}</button></section>`);
     document.getElementById('effect-dialog').classList.add('v50-fullscreen-preview');
     paint(performance.now()/1000);
   }
@@ -1038,8 +1209,8 @@
     return `<nav class="animation-wayfinding" data-editor-shortcut hidden aria-label="${esc(t('animationNavigation'))}"></nav>`;
   }
   function previewSizePickerMarkup(size=controlPreviewSize,spatial=false){
-    const sizes=[['small','Klein'],['medium','Middel'],['large','Groot']],current=sizes.find(([value])=>value===size)?.[1]||'Klein',subject=spatial?'3D-voorbeeld':'ledlinevoorbeeld';
-    return `<div class="preview-size-row"><details class="preview-size-control"><summary aria-label="Grootte van het ${subject} ${current}. Tik om te wijzigen"><span>${spatial?'3D-voorbeeld':'Voorbeeld'}</span><b>${current}</b>${icon('chevron')}</summary><div class="preview-size-picker" role="group" aria-label="Grootte van het ${subject}">${sizes.map(([value,title])=>`<button type="button" data-action="preview-size" data-id="${value}" aria-label="${title} ${spatial?'3D-voorbeeld':'voorbeeld'}" aria-pressed="${size===value}">${title}</button>`).join('')}</div></details></div>`;
+    const sizes=[['small',t('v50PreviewSmall')],['medium',t('v50PreviewMedium')],['large',t('v50PreviewLarge')]],current=sizes.find(([value])=>value===size)?.[1]||t('v50PreviewSmall'),subject=t(spatial?'v50Preview3D':'v50PreviewLine');
+    return `<div class="preview-size-row"><details class="preview-size-control"><summary aria-label="${esc(t('v50PreviewSizeChange',{subject,size:current}))}"><span>${esc(t(spatial?'v50Preview3D':'animationPreview'))}</span><b>${esc(current)}</b>${icon('chevron')}</summary><div class="preview-size-picker" role="group" aria-label="${esc(t('v50PreviewSize',{subject}))}">${sizes.map(([value,title])=>`<button type="button" data-action="preview-size" data-id="${value}" aria-label="${esc(t('v50PreviewSizeChoice',{size:title,subject}))}" aria-pressed="${size===value}">${esc(title)}</button>`).join('')}</div></details></div>`;
   }
   function zoneDeleteButton(z,css=''){return `<button type="button" class="zone-delete-shortcut ${css}" data-action="zone-delete" data-id="${esc(z.id)}" aria-label="Zone ${esc(z.name)} verwijderen">${icon('trash')}<span>Zone verwijderen</span></button>`;}
   function renderEmptyZone() {
@@ -1050,7 +1221,7 @@
   function renderStand() {
     if(!stand()){
       const pending=onboarding.summary(),step=!pending?.stand||pending.stage==='stand'?1:pending.stage==='zones'?2:3;
-      if(!pending?.stand)return `<div class="page onboarding-welcome onboarding-entry v50-welcome"><span class="v50-welcome-art" aria-hidden="true">${icon('light')}${icon('zones')}</span><header class="page-heading"><div><div class="eyebrow">ALUVISION LIGHTING</div><h1>${esc(t('v50WelcomeTitle'))}</h1><p>${esc(t('v50WelcomeHint'))}</p></div></header><ol class="v50-welcome-steps"><li><b>1</b>${esc(t('v50Name'))}</li><li><b>2</b>${esc(t('zones'))}</li><li><b>3</b>${esc(t('receivers'))}</li></ol><button type="button" class="button full" data-action="stand-create-open" data-stand-entry="setup">${esc(t('setupStand'))}${icon('chevron')}</button></div>`;
+      if(!pending?.stand)return `<div class="page onboarding-welcome onboarding-entry v50-welcome"><header class="page-heading"><div><div class="eyebrow">ALUVISION LIGHTING</div><h1>${esc(t('v50WelcomeTitle'))}</h1><p>${esc(t('v50WelcomeHint'))}</p></div></header><ol class="v50-welcome-steps" aria-label="${esc(t('setupStand'))}">${[t('v50Name'),t('zones'),t('receivers')].map((label,index)=>`<li><b aria-hidden="true">${index+1}</b><span>${esc(label)}</span></li>`).join('')}</ol><button type="button" class="button full v50-welcome-start" data-action="stand-create-open" data-stand-entry="setup">${esc(t('setupStand'))}${icon('chevron')}</button></div>`;
       return `<div class="page onboarding-welcome"><header class="page-heading"><div><div class="eyebrow">${esc(t('v50SetupPending'))}</div><h1>${esc(pending.stand.name)}</h1></div></header><section class="stand-setup-overview" aria-label="${esc(t('setupStand'))}">${[t('v50Name'),t('zones'),t('receivers')].map((label,i)=>`<div class="stand-setup-row ${i+1===step?'active':''}"><i>${i+1<step?'✓':i+1}</i><span><small>${esc(t('v50Step',{number:i+1}))}</small><b>${esc(label)}</b></span><small>${esc(t(i+1<step?'v50Ready':i+1===step?'v50Next':'v50Later'))}</small></div>`).join('')}</section><button class="button full onboarding-next-action" data-setup-resume data-action="receiver-add">${esc(t('v50ResumeSetup'))}</button></div>`;
     }
     const s = stand(), added = standReceivers();
@@ -1060,17 +1231,16 @@
     const states = powerTargets().map(r => r.state.on !== false && r.state.power !== false);
     const value = states.length&&states.every(Boolean) ? true : states.some(Boolean) ? 'mixed' : false;
     const scope=standControlOpen?'stand':'zone';
-    return `<div class="power-card power-card-${scope}"><div><strong>${icon('power')}Hele ${scope}</strong></div><button class="switch" role="switch" aria-label="${value==='mixed'?`Deels aan; zet de hele ${scope} aan`:`Hele ${scope} aan of uit`}" aria-checked="${value===true}" data-mixed="${value==='mixed'}" data-action="power" ${states.length?'':'disabled'}><span>${value === 'mixed' ? 'Deels aan' : value ? 'Aan' : 'Uit'}</span><i aria-hidden="true"></i></button></div>`;
+    return `<div class="power-card power-card-${scope}"><div><strong>${icon('power')}${esc(t(scope==='stand'?'v50PowerStand':'v50PowerZone'))}</strong></div><button class="switch" role="switch" aria-label="${esc(t(value==='mixed'?(scope==='stand'?'v50PowerStandMixed':'v50PowerZoneMixed'):(scope==='stand'?'v50PowerStandAccessible':'v50PowerZoneAccessible')))}" aria-checked="${value===true}" data-mixed="${value==='mixed'}" data-action="power" ${states.length?'':'disabled'}><span>${esc(t(value==='mixed'?'v50PartlyOn':value?'v50On':'v50Off'))}</span><i aria-hidden="true"></i></button></div>`;
   }
   function renderControls() {
     const colour=controlMode==='colour';
     const activeAnimationEditor=!colour&&Boolean(activeEffect())&&!showControlAnimationGallery;
-    const spatialGallery=!colour&&showControlAnimationGallery&&libraryTab()==='tunnel';
     const workspaceHeadingId=colour?'bediening-colour-title':activeAnimationEditor?'active-animation-title':'animation-selector-heading';
     const modeContent=colour
-      ?`<section class="bediening-workspace" aria-labelledby="${workspaceHeadingId}"><div class="animation-context">${selector()}${powerControl()}</div>${colourPickerMarkup()}</section>`
-      :`<section class="bediening-workspace animation-simple-workspace${activeAnimationEditor?' has-active-animation':''}" aria-labelledby="${workspaceHeadingId}">${spatialGallery?'':`<div class="animation-context">${selector()}${powerControl()}</div>`}${controlAnimationPanel()}</section>`;
-    return `<div class="editor-grid${colour?' editor-grid-colour':' animation-simple-page'}">${controlContext('controls')}<section class="editor-controls editor-controls-zone">${ledlineSetupMarkup()}<section class="control-workspace"><div class="control-mode-panel" role="region" aria-label="${colour?'Vaste kleur':'Animaties'}" data-control-mode="${controlMode}">${modeContent}</div></section></section></div>`;
+      ?`<section class="bediening-workspace" aria-labelledby="${workspaceHeadingId}">${colourPickerMarkup(null,false,{power:true})}</section>`
+      :`<section class="bediening-workspace animation-simple-workspace${activeAnimationEditor?' has-active-animation':''}" aria-labelledby="${workspaceHeadingId}">${activeAnimationEditor?`<div class="animation-context">${selector()}${powerControl()}</div>`:''}${controlAnimationPanel()}</section>`;
+    return `<div class="editor-grid${colour?' editor-grid-colour':' animation-simple-page'}">${controlContext('controls')}<section class="editor-controls editor-controls-zone">${activeAnimationEditor?ledlineSetupMarkup():''}<section class="control-workspace"><div class="control-mode-panel" role="region" aria-label="${esc(t(colour?'staticColour':'animations'))}" data-control-mode="${controlMode}">${modeContent}</div></section>${colour?ledlineSetupMarkup():''}</section></div>`;
   }
 
   function controlAnimationPanel(){
@@ -1150,18 +1320,18 @@
     try{await confirmCentralLibrary(result);refreshColourLibraries(source,'Volgorde bewaard.');}
     catch(_){refreshColourLibraries(source,'Opslaan bij de hoofdreceiver is niet bevestigd.');}
   }});
-  function colourPickerMarkup(slot=null,compact=false) {
+  function colourPickerMarkup(slot=null,compact=false,{power=false}={}) {
     const s=selectedState(),brand=slot==='brand',background=slot==='background',values=brand?brandEditorChannels():background?backgroundChannels():effectiveColourChannels(slot??0),rgb=values.slice(0,3),white=values[3];
     const prefix=slot===null?'static':'palette-'+slot;
-    const channels=['r','g','b','w'].map((channel,i)=>{const value=i===3?white:rgb[i];return `<div class="channel-row" style="--channel:${['#c4473f','#258461','#3f69c7','#747670'][i]}"><button class="channel-toggle" data-action="channel-toggle" data-channel="${channel}" aria-label="Kanaal ${channel.toUpperCase()} ${value>0?'uitschakelen':'inschakelen'}" aria-pressed="${value>0}">${channel.toUpperCase()}</button><button data-action="channel-step" data-channel="${channel}" data-step="-1" aria-label="${channel.toUpperCase()} verminderen">−</button><input id="${prefix}-${channel}" type="range" min="0" max="255" value="${value}" data-channel="${channel}" aria-label="Kanaal ${channel.toUpperCase()} waarde"><button data-action="channel-step" data-channel="${channel}" data-step="1" aria-label="${channel.toUpperCase()} verhogen">+</button><input class="channel-number" type="number" inputmode="numeric" min="0" max="255" step="1" value="${value}" data-channel-number="${channel}" aria-label="Kanaal ${channel.toUpperCase()} exact instellen"></div>`;}).join('');
+    const channels=['r','g','b','w'].map((channel,i)=>{const value=i===3?white:rgb[i];return `<div class="channel-row" style="--channel:${['#c4473f','#258461','#3f69c7','#747670'][i]}"><button class="channel-toggle" data-action="channel-toggle" data-channel="${channel}" aria-label="${esc(t(value>0?'v50ChannelDisable':'v50ChannelEnable',{channel:channel.toUpperCase()}))}" aria-pressed="${value>0}">${channel.toUpperCase()}</button><button data-action="channel-step" data-channel="${channel}" data-step="-1" aria-label="${esc(t('v50ChannelDecrease',{channel:channel.toUpperCase()}))}">−</button><input id="${prefix}-${channel}" type="range" min="0" max="255" value="${value}" data-channel="${channel}" aria-label="${esc(t('v50ChannelValue',{channel:channel.toUpperCase()}))}"><button data-action="channel-step" data-channel="${channel}" data-step="1" aria-label="${esc(t('v50ChannelIncrease',{channel:channel.toUpperCase()}))}">+</button><input class="channel-number" type="number" inputmode="numeric" min="0" max="255" step="1" value="${value}" data-channel-number="${channel}" aria-label="${esc(t('v50ChannelExact',{channel:channel.toUpperCase()}))}"></div>`;}).join('');
     const warmth=C.warmthOf(values);
     const warmControls=`<section class="v50-white-mix" aria-label="${esc(t('v50ArtificialWhite'))}"><div class="warm-white-controls"><button type="button" class="warm-white-choice" data-action="warm-white" aria-pressed="${warmth!==null}"><span class="warm-white-swatch" aria-hidden="true"></span><span><b>${esc(t('v50ArtificialWhite'))}</b><small>RGB + W</small></span>${icon('sun')}</button><p class="v50-white-mix-hint">${esc(t('v50WhiteMixShort'))}</p><div class="slider-row warmth-row"><label for="${prefix}-warmth">${esc(t('v50Warmth'))} <output data-warmth-value>${warmth===null?esc(t('v50ChooseMix')):warmth+'%'}</output></label><input id="${prefix}-warmth" type="range" min="0" max="100" step="1" value="${warmth??50}" data-warmth aria-label="${esc(t('v50Warmth'))}" ${warmth===null?'disabled':''}><div class="warmth-scale"><span>${esc(t('v50Neutral'))}</span><span>${esc(t('v50Warmer'))}</span></div><small class="warmth-help">${esc(t(warmth===null?'v50ChooseMixHint':'v50MixBrightnessHint'))}</small></div></div></section>`;
     const fineControls=`<div class="fine-controls${compact?' stand-fine-controls':''}" data-colour-fine><h3>${esc(t('v50FineTune'))}</h3><div class="fine-controls-body"><p class="channel-help">${esc(t('channelHelp'))}</p>${channels}${warmControls}</div></div>`;
     return `<section class="card colour-card shared-colour-picker" data-colour-picker="${brand?'brand':background?'background':slot===null?'static':'animation'}" data-slot="${brand?brandEditor.index:slot??''}">
-      <div class="section-heading"><h2 ${slot===null?'id="bediening-colour-title" ':''}tabindex="-1">${background?'Achtergrondkleur':'Kleur kiezen'}</h2></div>
-      <div class="colour-tools"><div class="wheel-wrap"><canvas class="wheel" id="colour-wheel" tabindex="0" role="img" aria-label="Kleurenwiel. Gebruik de pijltjestoetsen of de regelaars onder Fijn instellen voor exacte waarden." width="260" height="260"></canvas><span class="wheel-cursor"></span></div><div class="colour-values"><div class="colour-swatch" aria-label="Gekozen kleur"></div><p class="setting-hint">${esc(t('colourWheelHint'))}</p>${brand?`<small class="brand-picker-note">${esc(t(brandEditor.isNew?'brandPickerNewHint':'brandPickerHint'))}</small>`:slot===null?'':'<small>Je animatie blijft actief.</small>'}</div></div>
+      <div class="section-heading"><h2 ${slot===null?'id="bediening-colour-title" ':''}tabindex="-1">${esc(t(background?'animationBackground':'v50ChooseColour'))}</h2>${power&&slot===null?powerControl():''}</div>
+      <div class="colour-tools"><div class="wheel-wrap"><canvas class="wheel" id="colour-wheel" tabindex="0" role="img" aria-label="${esc(t('v50WheelAccessible'))}" width="260" height="260"></canvas><span class="wheel-cursor"></span></div><div class="colour-values"><div class="colour-swatch" aria-label="${esc(t('v50ChosenColour'))}"></div><p class="setting-hint">${esc(t('colourWheelHint'))}</p>${brand?`<small class="brand-picker-note">${esc(t(brandEditor.isNew?'brandPickerNewHint':'brandPickerHint'))}</small>`:slot===null?'':`<small>${esc(t('v50AnimationStaysActive'))}</small>`}</div></div>
       ${brand?`<label class="dialog-field brand-name-field">${esc(t('brandNameLabel'))}<input type="text" data-brand-name maxlength="64" autocomplete="off" value="${esc(brandEditor.name)}"></label><p class="brand-picker-status" role="status" aria-live="polite"></p>`:''}
-      ${slot===null?slider('bri','Helderheid',0,100,s.bri??100,'%'):''}
+      ${slot===null?slider('bri',t('animationBrightness'),0,100,s.bri??100,'%'):''}
       ${fineControls}
       ${myColoursMarkup()}
     </section>`;
@@ -1175,7 +1345,7 @@
     if(!effect.backgroundEditable)return '';
     const s=selectedState(),channels=backgroundChannels(),on=Boolean(s.backgroundOn);
     const description=t(standControlOpen||zone()?.type==='RGBW'||effect.category==='whole'?'animationBackgroundWhole':'animationBackgroundPixels');
-    return `<section class="animation-background" aria-label="${esc(t('animationBackground'))}"><div class="background-control-heading"><span class="setting-label-icon">${icon('layers')}</span><span class="background-control-copy"><b>${esc(t('animationBackground'))}</b></span><button class="switch" data-action="background-toggle" aria-label="${esc(t('animationBackground'))}" aria-pressed="${on}" aria-checked="${on}" role="switch"><span>${on?'Aan':'Uit'}</span><i aria-hidden="true"></i></button></div><div class="background-details" data-background-details ${on?'':'hidden'}><p class="background-explanation">${esc(description)}</p><button class="background-colour" data-action="background-edit"><span class="background-swatch" style="background:${C.screenHex(channels.slice(0,3),channels[3])}"></span><span>${esc(t('animationBackgroundChoose'))}</span>${icon('chevron')}</button>${animationSlider('bgBrightness',t('animationBackgroundBrightness'),0,100,s.bgBrightness??10,'%')}${resetMarkup('bgBrightness',t('animationBackgroundBrightness'))}</div></section>`;
+    return `<section class="animation-background" aria-label="${esc(t('animationBackground'))}"><div class="background-control-heading"><span class="setting-label-icon">${icon('layers')}</span><span class="background-control-copy"><b>${esc(t('animationBackground'))}</b></span><button class="switch" data-action="background-toggle" aria-label="${esc(t('animationBackground'))}" aria-pressed="${on}" aria-checked="${on}" role="switch"><span>${esc(t(on?'v50On':'v50Off'))}</span><i aria-hidden="true"></i></button></div><div class="background-details" data-background-details ${on?'':'hidden'}><p class="background-explanation">${esc(description)}</p><button class="background-colour" data-action="background-edit"><span class="background-swatch" style="background:${C.screenHex(channels.slice(0,3),channels[3])}"></span><span>${esc(t('animationBackgroundChoose'))}</span>${icon('chevron')}</button>${animationSlider('bgBrightness',t('animationBackgroundBrightness'),0,100,s.bgBrightness??10,'%')}${resetMarkup('bgBrightness',t('animationBackgroundBrightness'))}</div></section>`;
   }
   const animationSettingGuides={
     bri:{icon:'sun',description:''},
@@ -1218,7 +1388,7 @@
     const advancedKeys=new Set([...controls.map(spec=>spec[0]),...['smooth','direction','bounce','mirror'].filter(key=>available.includes(key))]);
     const hintKeys=[['smooth','Smooth'],['direction','Direction'],['trailLength','Trail'],['widthPixels','Width'],['width','Width'],['objectCount','Points'],['spacing','Spacing'],['lineDelayMs','Timing'],['delayMs','Timing'],['fadeAmount','Fade'],['spread','Spread'],['randomness','Variation'],['bounce','Bounce'],['mirror','Mirror']].filter(([key])=>advancedKeys.has(key)).map(([,label])=>'animationAdvanced'+label);
     const hintOptions=[...new Set(hintKeys)],hint=hintOptions.slice(0,3).map(key=>t(key)).join(' · ')+(hintOptions.length>3?' · '+t('animationAdvancedMore'):'');
-    return `<button type="button" class="settings-toggle advanced-settings-toggle" data-action="settings-toggle" aria-expanded="${settingsOpen}" aria-controls="animation-settings" aria-label="${esc(t(settingsOpen?'animationAdvancedClose':'animationAdvancedOpen'))}" aria-describedby="animation-advanced-hint"><span class="advanced-settings-icon" aria-hidden="true">${icon('advanced-settings')}</span><span class="advanced-settings-copy"><b id="animation-advanced-title">${esc(t('animationMoreSettings'))}</b><small id="animation-advanced-hint">${esc(hint)}</small></span><span class="advanced-settings-next" aria-hidden="true">${icon('chevron')}</span></button><section id="animation-settings" class="card settings-panel" role="region" aria-labelledby="animation-advanced-title" ${settingsOpen?'':'hidden'}><p class="animation-preview-feedback"><span class="preview-feedback-icon">${icon('animation')}</span><span>Kijk bovenaan: het ledline-voorbeeld beweegt meteen mee.</span></p>${controls.map(spec=>`<div class="animation-setting">${animationSlider(...spec)}${resetMarkup(spec[0],spec[1])}</div>`).join('')}${smoothness}${available.includes('direction') ? `<div class="direction-setting"><p class="direction-setting-label"><span class="setting-label-icon">${icon('back')}</span><span><b>Richting</b><small>Kies welke kant het licht op beweegt.</small></span></p><div class="compact-direction" aria-label="Bewegingsrichting">${(effect.directions||['right','left']).map(value=>`<button data-action="direction" data-value="${value}" aria-pressed="${(s.direction||effect.state.direction)===value}">${esc(directionMap[value]||value)}</button>`).join('')}</div></div>`:''}</section>`;
+    return `<button type="button" class="settings-toggle advanced-settings-toggle" data-action="settings-toggle" aria-expanded="${settingsOpen}" aria-controls="animation-settings" aria-label="${esc(t(settingsOpen?'animationAdvancedClose':'animationAdvancedOpen'))}" aria-describedby="animation-advanced-hint"><span class="advanced-settings-icon" aria-hidden="true">${icon('advanced-settings')}</span><span class="advanced-settings-copy"><b id="animation-advanced-title">${esc(t('animationMoreSettings'))}</b><small id="animation-advanced-hint">${esc(hint)}</small></span><span class="advanced-settings-next" aria-hidden="true">${icon('chevron')}</span></button><section id="animation-settings" class="card settings-panel" role="region" aria-labelledby="animation-advanced-title" ${settingsOpen?'':'hidden'}><p class="animation-preview-feedback"><span class="preview-feedback-icon">${icon('animation')}</span><span>${esc(t('v50PreviewFollows'))}</span></p>${controls.map(spec=>`<div class="animation-setting">${animationSlider(...spec)}${resetMarkup(spec[0],spec[1])}</div>`).join('')}${smoothness}${available.includes('direction') ? `<div class="direction-setting"><p class="direction-setting-label"><span class="setting-label-icon">${icon('back')}</span><span><b>Richting</b><small>Kies welke kant het licht op beweegt.</small></span></p><div class="compact-direction" aria-label="Bewegingsrichting">${(effect.directions||['right','left']).map(value=>`<button data-action="direction" data-value="${value}" aria-pressed="${(s.direction||effect.state.direction)===value}">${esc(directionMap[value]||value)}</button>`).join('')}</div></div>`:''}</section>`;
   }
   function animationSettingValue(key,value,unit='') { return ['delayMs','lineDelayMs'].includes(key)?`${Number((Number(value)/1000).toFixed(3)).toLocaleString('nl-BE',{maximumFractionDigits:3})} s`:Math.round(value)+unit; }
   function animationSlider(key,label,min,max,value,unit='',hint='') {
@@ -1337,7 +1507,7 @@
     return t(`spatial${mode[0].toUpperCase()}${mode.slice(1)}${part}`);
   }
   function spatialOptionArt(mode,z=zone()){
-    const list=receivers(),layout=mode==='wall'?'vertical':mode==='normal'&&z?.type==='SPI'?'continuous':'stacked';
+    const list=receivers(),layout=mode==='wall'?'vertical':mode==='normal'&&z?.type==='SPI'&&z.layout==='continuous'?'continuous':'stacked';
     const shape=mode==='tunnel'?'tunnel':mode==='wall'?'wall':undefined;
     const label=spatialPreviewText('Preview',mode);
     const lineNumbers=Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1]));
@@ -1350,6 +1520,37 @@
       selection:{kind:'all'},selectionFeedback:false,lineNumbers,decorative:true,label
     });
   }
+  function spatialChoiceBrowsing(){
+    const dialog=main.querySelector('[data-spatial-choice-dialog]');
+    return dialog?.open?{zoneId:dialog.dataset.zone,scrollTop:dialog.scrollTop,action:UIContinuity.captureAction(dialog,document.activeElement)}:null;
+  }
+  function closeSpatialChoice(){
+    const z=zone();if(!z||!openSpatialChoices.has(z.id)||arrangementApplying||managementBusy)return false;
+    const browsing=arrangementBrowsing();openSpatialChoices.delete(z.id);
+    main.querySelector('[data-spatial-choice-dialog]')?.close();
+    renderArrangement(browsing);return true;
+  }
+  function syncSpatialChoiceDialog(browsing=null){
+    const dialog=main.querySelector('[data-spatial-choice-dialog]');if(!dialog)return;
+    if(!dialog.dataset.cancelWired){
+      dialog.dataset.cancelWired='true';
+      dialog.addEventListener('cancel',event=>{event.preventDefault();closeSpatialChoice();});
+    }
+    if(!dialog.open)dialog.showModal();
+    const same=browsing?.zoneId===dialog.dataset.zone;
+    if(!same||!UIContinuity.restoreCapturedAction(dialog,browsing.action))
+      (dialog.querySelector('.spatial-choice-option[aria-pressed="true"]')||dialog.querySelector('#spatial-choice-title'))?.focus({preventScroll:true});
+    dialog.scrollTop=same?browsing.scrollTop:0;
+    syncSpatialChoiceControls();
+    paint(performance.now()/1000);
+  }
+  function syncSpatialChoiceControls(){
+    const dialog=main.querySelector('[data-spatial-choice-dialog]');if(!dialog)return;
+    const busy=arrangementInteractionBusy();dialog.setAttribute('aria-busy',String(busy));
+    dialog.querySelectorAll('.spatial-choice-option,.spatial-topology-choice button').forEach(button=>{button.disabled=busy;});
+    const close=dialog.querySelector('[data-action="spatial-close"]');if(close)close.disabled=arrangementApplying||managementBusy;
+    const status=dialog.querySelector('.v50-spatial-saving');if(status)status.hidden=!busy;
+  }
   function spatialPreviewChoice(){
     const z=zone(),view=spatialMode(z.layout,z),open=openSpatialChoices.has(z.id);
     const title=view==='tunnel'?t('spatialTunnel'):view==='wall'?t('spatialWall'):t('lineSetupNormal');
@@ -1358,13 +1559,14 @@
     const choices=[
       {mode:'tunnel',layout:'stacked',title:t('spatialTunnel'),hint:t('spatialTunnelHint'),action:'draft-layout'},
       {mode:'wall',layout:'vertical',title:t('spatialWall'),hint:t('spatialWallHint'),action:'draft-layout'},
-      {mode:'normal',layout:z.type==='SPI'?'continuous':'stacked',title:t('lineSetupNormal'),hint:z.type==='SPI'?t('spatialNormalSpiHint'):t('spatialNormalHint'),action:z.type==='SPI'?'draft-layout':'spatial-mode'}
+      {mode:'normal',layout:z.type==='SPI'&&topology==='continuous'?'continuous':'stacked',title:t('lineSetupNormal'),hint:z.type==='SPI'?t('spatialNormalSpiHint'):t('spatialNormalHint'),action:z.type==='SPI'?'draft-layout':'spatial-mode'}
     ];
     const selectedChoice=(mode)=>view===mode;
     const choicesMarkup=choices.map(choice=>`<button type="button" class="spatial-choice-option" data-action="${choice.action}" data-id="${choice.action==='spatial-mode'?choice.mode:choice.layout}" data-view="${choice.mode}" aria-pressed="${selectedChoice(choice.mode)}" aria-label="${esc(choice.title)}. ${esc(choice.hint)}" ${arrangementApplying||managementBusy?'disabled':''}><span class="spatial-choice-art">${spatialOptionArt(choice.mode,z)}</span><span class="spatial-choice-copy"><b>${esc(choice.title)}</b><small>${esc(choice.hint)}</small></span><span class="spatial-choice-check" aria-hidden="true">${icon('check')}</span></button>`).join('');
     const topologyMarkup=z.type==='SPI'&&view==='normal'?`<fieldset class="spatial-topology-choice" aria-label="${esc(t('spatialTopologyTitle'))}"><legend>${esc(t('spatialTopologyTitle'))}</legend><button type="button" data-action="spatial-topology" data-id="continuous" aria-pressed="${topology==='continuous'}" ${arrangementApplying||managementBusy?'disabled':''}><span class="spatial-topology-glyph">${arrangementIcon('continuous')}</span><span><b>${esc(t('spatialTopologyOne'))}</b><small>${esc(t('spatialTopologyOneHint'))}</small></span></button><button type="button" data-action="spatial-topology" data-id="stacked" aria-pressed="${topology==='stacked'}" ${arrangementApplying||managementBusy?'disabled':''}><span class="spatial-topology-glyph">${arrangementIcon('stacked')}</span><span><b>${esc(t('spatialTopologySeparate'))}</b><small>${esc(t('spatialTopologySeparateHint'))}</small></span></button></fieldset>`:'';
     const error=arrangementDraft?.zoneId===z.id?arrangementDraft.error:'';
-    return `<section class="spatial-preview-choice" aria-label="${esc(t('spatialPreviewTitle'))}" aria-busy="${arrangementApplying}"><button type="button" class="spatial-choice-toggle" data-action="spatial-toggle" aria-expanded="${open}" aria-controls="spatial-choice-options"><span class="spatial-choice-current-icon">${arrangementIcon(view==='normal'?(z.type==='SPI'&&topology==='continuous'?'continuous':z.type==='SPI'?'separate':'normal'):view==='wall'?'vertical':'stacked')}</span><span class="spatial-choice-current"><small>${esc(t('spatialPreviewTitle'))}</small><b>${esc(title)}</b>${currentHint?`<small class="spatial-choice-topology">${esc(currentHint)}</small>`:''}</span>${icon('chevron')}</button><div class="spatial-choice-panel" id="spatial-choice-options" ${open?'':'hidden'}><p class="spatial-choice-help">${esc(t('spatialChoiceHint'))}</p><div class="spatial-choice-options" role="group" aria-label="${esc(t('spatialPreviewTitle'))}">${choicesMarkup}</div>${topologyMarkup}<small class="spatial-preview-only">${esc(t('spatialPreviewApplied'))}</small><p class="arrangement-error" role="alert" ${error?'':'hidden'}>${esc(error)}</p></div></section>`;
+    const busy=arrangementInteractionBusy();
+    return `<section class="spatial-preview-choice" aria-label="${esc(t('spatialPreviewTitle'))}" aria-busy="${busy}"><button type="button" class="spatial-choice-toggle" data-action="spatial-toggle" aria-haspopup="dialog" aria-expanded="${open}" aria-controls="spatial-choice-options"><span class="spatial-choice-current-icon">${arrangementIcon(view==='normal'?(z.type==='SPI'&&topology==='continuous'?'continuous':z.type==='SPI'?'separate':'normal'):view==='wall'?'vertical':'stacked')}</span><span class="spatial-choice-current"><small>${esc(t('spatialPreviewTitle'))}</small><b>${esc(title)}</b>${currentHint?`<small class="spatial-choice-topology">${esc(currentHint)}</small>`:''}</span>${icon('chevron')}</button><dialog class="spatial-choice-panel v50-spatial-dialog" id="spatial-choice-options" data-spatial-choice-dialog data-zone="${esc(z.id)}" aria-labelledby="spatial-choice-title" aria-describedby="spatial-choice-help" aria-busy="${busy}"><header class="v50-spatial-header"><div><small>${esc(z.name)}</small><h2 id="spatial-choice-title" tabindex="-1">${esc(t('spatialPreviewTitle'))}</h2></div><button type="button" class="spatial-choice-close" data-action="spatial-close" aria-label="${esc(t('close'))}" ${busy?'disabled':''}>${icon('close')}<span>${esc(t('close'))}</span></button></header><div class="v50-spatial-content"><p class="spatial-choice-help" id="spatial-choice-help">${esc(t('spatialChoiceHint'))}</p><div class="spatial-choice-options" role="group" aria-label="${esc(t('spatialPreviewTitle'))}">${choicesMarkup}</div>${topologyMarkup}<p class="v50-spatial-saving" role="status" ${busy?'':'hidden'}>${esc(t('spatialLayoutSaving'))}</p><small class="spatial-preview-only">${esc(t('spatialPreviewApplied'))}</small><p class="arrangement-error" role="alert" ${error?'':'hidden'}>${esc(error)}</p></div></dialog></section>`;
   }
   function tunnelPreviewOptions(prefix){
     const view=spatialEffectView();
@@ -1459,7 +1661,7 @@
     const count=physicalLineCount();
     const status=count<2?t('animationAcrossMinimum'):t('animationAcrossAutoApply');
     const explanation=t('animationAcrossIndividualHint');
-    if(compact)return `<section class="tunnel-guide tunnel-guide-compact" aria-label="${esc(t('animationAcross'))}"><strong>${esc(status)}</strong><small>${esc(explanation)}</small></section>`;
+    if(compact)return `<section class="tunnel-guide tunnel-guide-compact animation-scope-note" aria-label="${esc(t('animationAcross'))}"><span aria-hidden="true">${icon('together')}</span><strong>${esc(count<2?status:t('v567TogetherHint'))}</strong></section>`;
     const visual=tunnelGalleryPreviewMarkup(null,'tunnel-live-preview'),sampleTitle=t(spatialEffectView()==='wall'?'animationWallSampleTitle':'animationTunnelSampleTitle');
     return `<section class="tunnel-guide" aria-label="${esc(t('animationAcross'))}"><figure class="tunnel-visual"><figcaption><b>${esc(sampleTitle)}</b><small>${esc(t('animationTunnelSampleLines'))}</small></figcaption>${visual}</figure><div class="tunnel-status"><strong>${esc(status)}</strong><small>${esc(explanation)}</small></div></section>`;
   }
@@ -1473,20 +1675,20 @@
   function effectCards(effects,extraClass='',variantTotal=0) {
     const selectedCount=selectedLineCount();
     const className=`effect-card${extraClass?` ${extraClass}`:''}`;
-    return effects.map((effect,index)=>{const needsAll=effect.requireTogether||effect.category==='tunnel',minimum=effect.minimumReceivers||1,tooFew=selectedCount<minimum,locked=needsAll?(standControlOpen?selectedCount:physicalLineCount())<minimum:tooFew;return `<button class="${className}" data-action="effect" data-id="${esc(effect.id)}" data-motion="${effectMotionKey(effect)}" aria-pressed="${activeEffect()?.id===effect.id}" ${locked?'disabled':''}>${effectPreview(effect,needsAll?{tunnelLines:'all'}:{})}<b>${esc(Library.displayName(effect,t))}</b>${variantTotal>1?`<small class="animation-variant-position">${esc(t('animationVariantPosition',{current:index+1,total:variantTotal}))}</small>`:''}<small class="animation-variant-description">${esc(categoryLabel(effect.category))} · ${esc(window.LightningV50AnimationTexts.effectDescription(effect,uiPreferences.preferences.language))}</small>${locked?`<small>${needsAll?t('animationAcrossMinimum'):t('animationSelectMinimum',{count:minimum})}</small>`:''}</button>`;}).join('');
+    return effects.map((effect,index)=>{const needsAll=effect.requireTogether||effect.category==='tunnel',minimum=effect.minimumReceivers||1,tooFew=selectedCount<minimum,locked=needsAll?(standControlOpen?selectedCount:physicalLineCount())<minimum:tooFew,active=activeEffect()?.id===effect.id,name=Library.displayName(effect,t);return `<button type="button" class="${className}" data-chooser-version="567" data-animation-category="${esc(effect.category)}" data-action="effect" data-id="${esc(effect.id)}" data-motion="${effectMotionKey(effect)}" aria-label="${esc(t('v567StartNamed',{name}))}" aria-pressed="${active}" ${locked?'disabled':''}><span class="animation-effect-preview"><span class="animation-effect-preview-label">${esc(t('v567AnimationExample'))}</span>${effectPreview(effect,needsAll?{tunnelLines:'all'}:{})}${active?`<span class="animation-current-badge">${esc(t('v567ActiveAnimation'))}</span>`:''}</span><b>${esc(name)}</b>${variantTotal>1?`<small class="animation-variant-position">${esc(t('animationVariantPosition',{current:index+1,total:variantTotal}))}</small>`:''}<small class="animation-variant-description">${esc(window.LightningV50AnimationTexts.effectDescription(effect,uiPreferences.preferences.language))}</small>${locked?`<small class="animation-start-unavailable">${needsAll?t('animationAcrossMinimum'):t('animationSelectMinimum',{count:minimum})}</small>`:`<span class="animation-start-action"><span aria-hidden="true">${icon('play')}</span>${esc(t('v567StartAnimation'))}</span>`}</button>`;}).join('');
   }
   function animationFamilyCard(group) {
-    const type=standControlOpen?[...new Set(standControlReceivers().map(receiver=>receiver.type))].join(' + '):zone()?.type==='SPI'?'SPI':'RGBW',openLabel=t('animationOpenGroup'),countLabel=t(group.count===1?'animationCountOne':'animationCountMany',{count:group.count}),nextStep=t('animationGroupNextStep');
+    const type=standControlOpen?[...new Set(standControlReceivers().map(receiver=>receiver.type))].join(' + '):zone()?.type==='SPI'?'SPI':'RGBW',openLabel=t(group.count===1?'v567ViewOne':'v567ViewMany',{count:group.count}),countLabel=t(group.count===1?'animationCountOne':'animationCountMany',{count:group.count}),nextStep=t('v567BrowseOnly');
     const tunnel=group.preview.category==='tunnel';
-    const previewLabel=t(tunnel?(spatialEffectView()==='wall'?'animationWallSampleTitle':'animationTunnelSampleTitle'):'animationPreview');
+    const previewLabel=t('animationFamilyPreview');
     const preview=standControlOpen?effectPreview(group.preview):tunnel?tunnelGalleryPreviewMarkup(group,'animation-spatial-sample',{illustrative:true,main:false}):effectPreview(group.preview);
-    return `<article class="animation-family-card${tunnel?' tunnel-family-card':''}"><button class="animation-family-trigger" data-action="family" data-id="${esc(group.key)}" data-ledline-type="${type}" aria-label="${esc(`${group.title}. ${openLabel}. ${countLabel}. ${nextStep}`)}"><span class="animation-family-preview${tunnel?' animation-family-spatial-preview':''}" data-motion-preview="${effectMotionKey(group.preview)}"><span class="animation-family-preview-label">${esc(previewLabel)}</span>${preview}</span><span class="family-copy">${tunnel?'':`<span class="family-kicker"><span class="animation-type-badge" aria-label="${esc(t('animationBadgeForType',{type}))}">${type}</span></span>`}<b class="family-title">${esc(group.title)}</b><small class="family-summary">${esc(group.summary)}</small><span class="family-variants"><span class="family-variants-copy"><b>${esc(openLabel)}</b></span><span class="family-variants-action"><small aria-label="${esc(countLabel)}">${group.count}</small>${icon('chevron')}</span></span></span></button></article>`;
+    return `<article class="animation-family-card${tunnel?' tunnel-family-card':''}" data-chooser-version="567" data-animation-category="${esc(group.category)}" data-group-browse-only="true"><button type="button" class="animation-family-trigger" data-action="family" data-id="${esc(group.key)}" data-ledline-type="${type}" aria-label="${esc(`${group.title}. ${openLabel}. ${nextStep}`)}"><span class="animation-family-preview${tunnel?' animation-family-spatial-preview':''}" data-motion-preview="${effectMotionKey(group.preview)}"><span class="animation-family-preview-label">${esc(previewLabel)}</span>${preview}<span class="animation-family-preview-notice">${esc(t('v567OpensGroup'))}</span></span><span class="family-copy"><span class="family-kicker"><span aria-hidden="true">${icon('folder')}</span>${esc(t('animationFamilyLabel'))}<span class="animation-type-badge" aria-label="${esc(t('animationBadgeForType',{type}))}">${type}</span></span><b class="family-title">${esc(group.title)}</b><small class="family-summary">${esc(group.summary)}</small><span class="family-variants" aria-label="${esc(countLabel)}"><span class="family-variants-copy"><b>${esc(openLabel)}</b></span><span class="family-variants-action" aria-hidden="true">${icon('chevron')}</span></span></span></button></article>`;
   }
   function animationFamilyDetail(group,tab,{includePreview=true}={}) {
     const countLabel=t(group.count===1?'animationCountOne':'animationCountMany',{count:group.count});
     const tunnel=group.preview.category==='tunnel',groupHint=tunnel?t('animationTunnelGroupAccessible',{name:group.title,count:physicalLineCount(standControlOpen?standControlReceivers():receivers())}):t('animationGroupPreviewHint');
     const backLabel=animationFamilyBackLabel(tab);
-    return `<section class="animation-family-detail" aria-labelledby="animation-family-title"><div class="family-back-slot" data-family-back-slot><button type="button" class="animation-gallery-return family-back-action family-detail-back" data-action="family-back" aria-label="${esc(backLabel)}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('back')}</span><span class="gallery-action-copy"><b>${esc(backLabel)}</b></span></span></button></div><header class="family-detail-heading"><div><small class="family-detail-step">${esc(t('animationFamilyStep'))}</small><h2 id="animation-family-title" tabindex="-1">${esc(group.title)}</h2><p>${esc(group.summary)}</p></div><span class="family-detail-count">${esc(countLabel)}</span></header>${includePreview?`<figure class="family-detail-preview"><figcaption><b>${esc(t('animationFamilyPreview'))}</b><small>${esc(groupHint)}</small></figcaption>${effectPreview(group.preview,tunnel?{tunnelLines:'all'}:{})}</figure>`:''}<section class="family-variants-panel" aria-labelledby="animation-family-choices"><header class="family-variants-heading"><div><b id="animation-family-choices">${esc(t('animationFamilyChoose'))}</b><small>${esc(t('animationChooseVariant'))}</small></div></header><div class="family-variant-grid">${effectCards(group.effects,'family-variant-card',group.count)}</div>${standControlOpen?`<details class="stand-animation-explanation" data-continuity-id="stand-variant-explanation"><summary>${esc(t('v50VariantExplanation'))}</summary>${group.effects.map(effect=>`<p><b>${esc(Library.displayName(effect,t))}</b> · ${esc(window.LightningV50AnimationTexts.effectDescription(effect,uiPreferences.preferences.language))}</p>`).join('')}</details>`:''}</section></section>`;
+    return `<section class="animation-family-detail" data-chooser-version="567" data-animation-category="${esc(group.category)}" aria-labelledby="animation-family-title"><div class="family-back-slot" data-family-back-slot><button type="button" class="animation-gallery-return family-back-action family-detail-back" data-action="family-back" aria-label="${esc(backLabel)}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('back')}</span><span class="gallery-action-copy"><b>${esc(backLabel)}</b></span></span></button></div>${animationPickerSteps(true)}<header class="family-detail-heading"><div><span class="family-detail-category"><span aria-hidden="true">${animationCategoryIcon(group.category)}</span>${esc(animationChooserCategoryLabel(group.category))}</span><h2 id="animation-family-title" tabindex="-1">${esc(group.title)}</h2><p>${esc(group.summary)}</p></div><span class="family-detail-count">${esc(countLabel)}</span></header>${includePreview?`<figure class="family-detail-preview"><figcaption><b>${esc(t('animationFamilyPreview'))}</b><small>${esc(groupHint)}</small></figcaption>${effectPreview(group.preview,tunnel?{tunnelLines:'all'}:{})}</figure>`:''}<section class="family-variants-panel" aria-labelledby="animation-family-choices"><header class="family-variants-heading"><div><b id="animation-family-choices">${esc(t('animationFamilyChoose'))}</b><small>${esc(t('v567StartHint'))}</small></div></header><div class="family-variant-grid">${effectCards(group.effects,'family-variant-card',group.count)}</div>${standControlOpen?`<details class="stand-animation-explanation" data-continuity-id="stand-variant-explanation"><summary>${esc(t('v50VariantExplanation'))}</summary>${group.effects.map(effect=>`<p><b>${esc(Library.displayName(effect,t))}</b> · ${esc(window.LightningV50AnimationTexts.effectDescription(effect,uiPreferences.preferences.language))}</p>`).join('')}</details>`:''}</section></section>`;
   }
   function renderAnimationFamily(){
     const group=Library.group(catalogue(),route.family);
@@ -1498,8 +1700,8 @@
     return `<div class="editor-grid animation-family-screen">${controlPreviewDock('animation-family')}<section class="editor-controls animation-family-controls">${animationFamilyDetail(group,libraryTab(),{includePreview:false})}</section></div>`;
   }
   function animationCategorySection(section) {
-    const title=section.key==='tunnel'?t('animationAcross'):section.title,summary=section.key==='tunnel'?t('animationAcrossSummary'):section.summary;
-    return `<section class="animation-family-section" aria-labelledby="animation-category-${esc(section.key)}"><header class="animation-family-heading"><div><h2 id="animation-category-${esc(section.key)}">${esc(title)}</h2><p>${esc(summary)}</p></div><small>${section.count} ${section.count===1?'animatie':'animaties'}</small></header><div class="animation-family-grid">${section.groups.map(animationFamilyCard).join('')}</div></section>`;
+    const title=animationChooserCategoryLabel(section.key),summary=t('v567CategoryHint:'+section.key);
+    return `<section class="animation-family-section" data-chooser-version="567" data-animation-category="${esc(section.key)}" aria-labelledby="animation-category-${esc(section.key)}"><header class="animation-family-heading"><span class="animation-section-icon" aria-hidden="true">${animationCategoryIcon(section.key)}</span><div><small class="animation-category-eyebrow">${esc(t('animationFilter'))}</small><h2 id="animation-category-${esc(section.key)}">${esc(title)}</h2><p>${esc(summary)}</p></div><small>${esc(t(section.count===1?'animationCountOne':'animationCountMany',{count:section.count}))}</small></header><div class="animation-family-grid">${section.groups.map(animationFamilyCard).join('')}</div></section>`;
   }
   function animationCategorySections(items) {
     const sections=[...Library.sections(items)];
@@ -1512,31 +1714,45 @@
   }
   function effectResults(query='') {
     const results=Library.search(catalogue(),query);
-    return `<p class="library-result-count" role="status">${results.length} ${results.length===1?'animatie':'animaties'} gevonden in de volledige bibliotheek</p>${results.length?`<div class="effect-grid">${effectCards(results)}</div>`:'<section class="card empty animation-search-empty"><h2>Geen animaties gevonden</h2><p>Probeer een andere naam of bekijk alle effectfamilies.</p><button class="button secondary" data-action="animation-search-clear">Zoekopdracht wissen</button></section>'}`;
+    return `<p class="library-result-count" role="status">${esc(t(results.length===1?'v50AnimationResultsOne':'v50AnimationResultsMany',{count:results.length}))}</p>${results.length?`<div class="effect-grid">${effectCards(results)}</div>`:`<section class="card empty animation-search-empty"><h2>${esc(t('v50NoAnimationResults'))}</h2><p>${esc(t('v50AnimationSearchEmptyHint'))}</p><button class="button secondary" data-action="animation-search-clear">${esc(t('v50ClearSearch'))}</button></section>`}`;
   }
   function renderEffects() {
     const currentEffect=activeEffect(),returnToEditor=Boolean(currentEffect)&&route.effectsReturn!=='controls',tab=libraryTab();
     const title=libraryTabLabel(tab);
-    const editCurrent=currentEffect&&route.effectsReturn==='controls'?`<button class="button secondary full" data-action="animations">Actieve animatie bewerken · ${esc(Library.displayName(currentEffect,t))}</button>`:'';
-    return `<div class="page">${contextTitle(title,`${zone().name} · ${nameOfSelection()}`,returnToEditor?'Terug naar instellingen':'Terug naar bediening',returnToEditor?'animations':'controls')}${ledlineSetupMarkup()}${selector()}${editCurrent}${animationLibraryContent()}</div>`;
+    const editCurrent=currentEffect&&route.effectsReturn==='controls'?`<button class="button secondary full" data-action="animations">${esc(t('v50EditCurrentAnimation',{name:Library.displayName(currentEffect,t)}))}</button>`:'';
+    return `<div class="page">${contextTitle(title,`${zone().name} · ${nameOfSelection()}`,t(returnToEditor?'v50BackSettings':'v50ReturnControl'),returnToEditor?'animations':'controls')}${editCurrent}${animationLibraryContent()}</div>`;
   }
   function animationLibraryContent(){
     savedPresets=presetStore.load();
     const items=catalogue(),tab=libraryTab(),family=animationFamilyKey(),active=family?Library.group(items,family):null;
     const query=animationQueryStore().get(animationQueryKey())||'';
     const counts={catalogue:items.length,...Object.fromEntries(Library.sections(items).map(section=>[section.key,section.count])),presets:savedPresets.presets.length};
-    const intro=tab==='brand'?brandTonePicker():tab==='tunnel'?(standControlOpen?`<p class="stand-animation-guidance">${esc(standAnimationGuidance())}</p>`:tunnelGuide({compact:route.screen==='controls'&&controlMode==='animations'})):'';
-    const inFamily=Boolean(active),results=inFamily?animationFamilyDetail(active,tab):tab==='presets'?renderPresets():query.trim()?effectResults(query):tab==='catalogue'?animationCategorySections(items):animationCategoryFamilyList(items,tab);
-    // The tunnel guide already explains its requirements and provides the one
-    // relevant action. Keep the gallery free of extra preview disclaimers.
-    return `<section class="animation-library-inline" aria-label="${esc(t('animationSelector'))}">${animationLibraryHeading()}${inFamily?'':`<button type="button" id="animation-category" class="animation-category-trigger" data-action="animation-categories" data-category="${esc(tab)}" aria-haspopup="dialog" aria-expanded="false"><span class="animation-category-art">${animationCategoryIcon(tab)}</span><span class="animation-category-copy"><small>${esc(t('animationFilter'))}</small><b>${esc(libraryTabLabel(tab))}</b></span><span class="animation-category-count" aria-label="${esc(t('animationCountMany',{count:counts[tab]||0}))}">${counts[tab]||0}</span>${icon('chevron')}</button>${tab!=='presets'?`<label class="animation-search"><span>${esc(t('animationSearch'))}</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg><input type="search" id="animation-search" value="${esc(query)}" placeholder="${esc(t('animationSearchHint'))}" autocomplete="off"></label>`:''}${intro}` }<div id="animation-results">${results}</div></section>`;
+    const intro=tab==='brand'?brandTonePicker():tab==='tunnel'?(standControlOpen?`<p class="stand-animation-guidance">${esc(standAnimationGuidance())}</p>`:tunnelGuide({compact:true})):'';
+    const inFamily=Boolean(active),results=inFamily?animationFamilyDetail(active,tab,{includePreview:false}):tab==='presets'?renderPresets():query.trim()?effectResults(query):tab==='catalogue'?animationCategorySections(items):animationCategoryFamilyList(items,tab);
+    return `<section class="animation-library-inline" data-chooser-version="567" data-animation-category="${esc(tab)}" aria-label="${esc(t('animationSelector'))}">${animationLibraryHeading()}${inFamily?'':`${animationCategoryTabs(items,counts,tab)}${tab!=='presets'?`<label class="animation-search"><span>${esc(t('animationSearch'))}</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg><input type="search" id="animation-search" value="${esc(query)}" placeholder="${esc(t('v567SearchHint'))}" autocomplete="off"></label>`:''}${intro}` }<div id="animation-results">${results}</div></section>`;
   }
   function animationLibraryHeading(){
     const current=activeEffect(),canReturn=current&&(standControlOpen||route.screen==='controls');
     const query=(animationQueryStore().get(animationQueryKey())||'').trim(),inFamily=Boolean(animationFamilyKey()),groupsVisible=!query&&!inFamily&&libraryTab()!=='presets';
-    const heading=groupsVisible?t('animationGroupChooserTitle'):t('chooseAnimation');
-    const guidance=groupsVisible?t('animationGroupChooserIntro'):query||inFamily?t('animationSearchChooseHint'):t('animationOwnChooseHint');
-    return `<header class="animation-library-heading"><div class="animation-library-title-copy"><small class="animation-library-kicker"><span aria-hidden="true">${icon('animation')}</span>${esc(t('animationSelector'))}</small><h2 id="animation-selector-heading">${esc(heading)}</h2><p class="animation-library-guidance">${esc(guidance)}</p></div></header>${canReturn?`<div class="animation-settings-return-slot" data-editor-return-slot>${animationSettingsReturnMarkup('inline')}</div>`:''}`;
+    const heading=groupsVisible?t('v567ChooserTitle'):t('chooseAnimation');
+    return `${inFamily?'':`<header class="animation-library-heading"><div class="animation-library-title-copy"><h2 id="animation-selector-heading">${esc(heading)}</h2></div></header>${animationPickerSteps(!groupsVisible)}`}${canReturn?`<div class="animation-settings-return-slot" data-editor-return-slot>${animationSettingsReturnMarkup('inline')}</div>`:''}`;
+  }
+  function animationChooserCategoryLabel(key){return t('v567Category:'+key);}
+  function animationPickerSteps(choosingAnimation=false){
+    return `<ol class="animation-picker-steps" aria-label="${esc(t('animationNavigation'))}"><li ${choosingAnimation?'':'aria-current="step"'}><span>1</span>${esc(t('v567BrowseGroups'))}</li><li ${choosingAnimation?'aria-current="step"':''}><span>2</span>${esc(t('v567StartAnimation'))}</li></ol>`;
+  }
+  function animationCategoryTabs(items,counts,tab){
+    const keys=['catalogue',...Library.sections(items).map(section=>section.key),'presets'];
+    return `<nav class="animation-category-tabs" aria-label="${esc(t('animationFilter'))}">${keys.map(key=>`<button type="button" class="animation-category-tab" data-action="animation-category-tab" data-id="${esc(key)}" aria-pressed="${tab===key}" aria-label="${esc(animationChooserCategoryLabel(key))} · ${esc(t(counts[key]===1?'animationCountOne':'animationCountMany',{count:counts[key]||0}))}"><span aria-hidden="true">${animationCategoryIcon(key)}</span><b>${esc(animationChooserCategoryLabel(key))}</b><small>${counts[key]||0}</small></button>`).join('')}</nav>`;
+  }
+  function chooseAnimationCategoryTab(value){
+    chooseAnimationCategory(value);
+    // Keep the chosen type visible in the horizontal strip after rendering;
+    // this is focus/scroll only, never a lighting command or saved setting.
+    const surface=standControlOpen?document.getElementById('effect-dialog'):main;
+    const button=surface?.querySelector(`.animation-category-tabs [data-id="${CSS.escape(value)}"]`);
+    button?.focus({preventScroll:true});
+    button?.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});
   }
   function animationSettingsReturnMarkup(location){
     const current=activeEffect();
@@ -1589,12 +1805,13 @@
   function arrangementSignature(z=zone()) {return JSON.stringify([z.id,z.name,z.type,z.receiverIds,z.layout,M.lineIds(model,z.id)]);}
   function arrangementDirty(){return Boolean(arrangementDraft&&JSON.stringify([arrangementDraft.layout,arrangementDraft.lineOrder])!==arrangementDraft.initial);}
   function arrangementPlaybackPending(){return arrangementReapplyIds.some(id=>['pending','staged'].includes(liveStates.get(id)?.kind));}
-  function arrangementInteractionBusy(){return arrangementApplying||managementBusy||arrangementPlaybackPending();}
+  function arrangementInteractionBusy(){return arrangementApplying||managementBusy||arrangementPlaybackPending()||orderTestBusy();}
   function arrangementNeedsStandOpen(){
     return simpleStandMode&&(!centralApplied||standConnectionState.status!=='connected'||!standSession?.snapshot());
   }
   function syncArrangementControls(){
     if(!main)return;
+    syncSpatialChoiceControls();
     const orderText=(key,params)=>window.LightningV50OrderTexts.t(key,uiPreferences.preferences.language,params);
     const busy=arrangementInteractionBusy(),needsStandOpen=arrangementNeedsStandOpen(),handles=[...main.querySelectorAll('[data-order-handle]')];
     for(const handle of handles)handle.disabled=busy||needsStandOpen||handles.length<2;
@@ -1606,6 +1823,7 @@
     }
     const openStand=main.querySelector('[data-order-stand-open]');
     if(openStand)openStand.hidden=busy||!(needsStandOpen||arrangementDraft?.needsStandOpen&&arrangementDraft.error);
+    syncOrderTestControls();
   }
   // Preview receiver order while its atomic metadata update is in flight.
   // Only a confirmed update changes saved geometry or resends receiver state.
@@ -1620,9 +1838,13 @@
   }
   async function applyArrangement(){
     const draft=arrangementDraft;if(!draft||arrangementInteractionBusy()||(!arrangementDirty()&&!draft.error))return false;
+    orderTestConfirmation=null;
     if(arrangementNeedsStandOpen()){beginArrangement();syncArrangementControls();return false;}
     const zoneId=draft.zoneId;
     const browsing=arrangementBrowsing();
+    // The chooser may close optimistically for a selected layout. Retain its
+    // operation context so an unconfirmed save/playback stays visible there.
+    const spatialChoice=main.querySelector('[data-spatial-choice-dialog][open]')?.dataset.zone===zoneId;
     if(zoneId!==route.zoneId||draft.signature!==arrangementSignature()){
       beginArrangement();arrangementDraft.error=t('lineSetupChanged');renderArrangement();return false;
     }
@@ -1672,7 +1894,10 @@
       // Failed or uncertain requests show the last authoritative model, not
       // an unconfirmed selection. Tapping a choice again is a fresh retry.
       if(arrangementDraft===draft){
-        if(zone()&&route.zoneId===zoneId&&openLineSetup.has(zoneId)){beginArrangement();arrangementDraft.error=failure;arrangementDraft.needsStandOpen=Boolean(failure&&draft.needsStandOpen);}
+        if(zone()&&route.zoneId===zoneId&&(openLineSetup.has(zoneId)||spatialChoice)){
+          beginArrangement();arrangementDraft.error=failure;arrangementDraft.needsStandOpen=Boolean(failure&&draft.needsStandOpen);
+          if(spatialChoice&&failure)openSpatialChoices.add(zoneId);
+        }
         else arrangementDraft=null;
       }
       renderArrangement(browsing);
@@ -1680,7 +1905,7 @@
     return succeeded;
   }
   async function chooseSpatialLayout(view,layout,{keepOpen=false}={}){
-    const z=zone();if(!z)return false;
+    const z=zone();if(!z||arrangementInteractionBusy())return false;
     const previousView=spatialMode(z.layout,z),browsing=arrangementBrowsing();
     if(keepOpen)openSpatialChoices.add(z.id);else openSpatialChoices.delete(z.id);
     spatialViews.set(z.id,view);
@@ -1720,13 +1945,19 @@
     }
     return saved;
   }
-  function arrangementBrowsing(){const active=document.activeElement;return {route:{...route},controlMode,showGallery:showControlAnimationGallery,query:main.querySelector('#animation-search')?.value||'',scroll:window.scrollY,sheetScroll:main.querySelector('[data-order-open="true"]')?.scrollTop||0,focus:active?.dataset?.action?{action:active.dataset.action,id:active.dataset.id||'',receiver:active.dataset.receiver||'',delta:active.dataset.delta||''}:null};}
+  function arrangementBrowsing(){const active=document.activeElement;return {route:{...route},controlMode,showGallery:showControlAnimationGallery,query:main.querySelector('#animation-search')?.value||'',scroll:window.scrollY,sheetScroll:main.querySelector('[data-order-open="true"]')?.scrollTop||0,spatial:spatialChoiceBrowsing(),focus:active?.dataset?.action?{action:active.dataset.action,id:active.dataset.id||'',receiver:active.dataset.receiver||'',delta:active.dataset.delta||''}:null};}
   function restoreArrangementBrowsing(context){
     const search=main.querySelector('#animation-search');
     if(search&&context.query){search.value=context.query;const results=main.querySelector('#animation-results');if(results)results.innerHTML=effectResults(context.query);paint(performance.now()/1000);}
     window.scrollTo({top:context.scroll,left:0,behavior:'instant'});updateControlPreviewDensity();
     const sheet=main.querySelector('[data-order-open="true"]');if(sheet)sheet.scrollTop=context.sheetScroll||0;
-    if(context.focus){const target=[...main.querySelectorAll('[data-action]')].find(element=>element.dataset.action===context.focus.action&&(element.dataset.id||'')===context.focus.id&&(element.dataset.receiver||'')===context.focus.receiver&&(element.dataset.delta||'')===context.focus.delta);const closedSpatialOption=target?.closest('.spatial-choice-panel[hidden]');(closedSpatialOption?closedSpatialOption.parentElement?.querySelector('.spatial-choice-toggle'):target)?.focus({preventScroll:true});}
+    const spatialDialog=main.querySelector('[data-spatial-choice-dialog]');
+    if(spatialDialog&&openSpatialChoices.has(zone()?.id)){syncSpatialChoiceDialog(context.spatial);return;}
+    if(context.focus){
+      const target=[...main.querySelectorAll('[data-action]')].find(element=>element.dataset.action===context.focus.action&&(element.dataset.id||'')===context.focus.id&&(element.dataset.receiver||'')===context.focus.receiver&&(element.dataset.delta||'')===context.focus.delta);
+      const closedSpatialOption=target?.closest('.spatial-choice-panel:not([open])');
+      (closedSpatialOption||!target&&context.spatial?.zoneId===zone()?.id?main.querySelector('.spatial-choice-toggle'):target)?.focus({preventScroll:true});
+    }
   }
   function renderArrangement(context=arrangementBrowsing()){render();restoreArrangementBrowsing(context);}
   function revealLineSetup(){
@@ -1785,6 +2016,48 @@
       return `<div class="ledline-output" role="listitem" data-ledline-output data-receiver="${esc(receiver.id)}" data-port="${line.port}" data-line-id="${esc(line.id)}" data-line-number="${number}" data-pixels="${line.pixels}" data-start-side="${line.reversed?'right':'left'}" style="--identify-colour:${colour?.hex||'transparent'}" aria-label="${esc(label)}${colour?' · '+esc(colourLabel(colour)):''}"><div class="ledline-output-heading"><b>P${line.port}</b><small>L${number}</small></div><span class="ledline-output-strip" aria-hidden="true"><i></i></span><span class="ledline-output-pixels">${line.pixels} px</span><small class="ledline-output-side">${esc(side)}</small>${colour?`<span class="line-colour-name">${esc(colourLabel(colour))}</span>`:''}</div>`;
     }).join('')}</div>`;
   }
+  function orderPositionPalette(z,count){
+    const saved=orderPositionColours.get(z.id);
+    if(saved?.length===count)return saved;
+    return window.LightningLedlineIdentificationSession.positionColours(count).map(colour=>({name:colour.colorName,hex:C.hex(colour.rgb),rgb:[...colour.rgb]}));
+  }
+  function orderCardPreviewMarkup(colour){
+    const name=window.LightningV50OrderTexts.paletteLabel(colour?.name,uiPreferences.preferences.language);
+    return `<div class="v568-order-card-light" style="--order-card-colour:${colour?.hex||'transparent'}" aria-hidden="true"><i></i><span data-order-card-colour-name>${esc(name)}</span></div>`;
+  }
+  function syncOrderCardColours(){
+    const z=zone(),draft=arrangementDraft;if(!z||!draft||draft.zoneId!==z.id)return;
+    const order=orderPreviewGesture?.zoneId===z.id?orderPreviewGesture.previewOrder:draft.lineOrder;
+    if(!Array.isArray(order))return;
+    const palette=orderPositionPalette(z,order.length);
+    for(const row of main.querySelectorAll('[data-order-item]')){
+      const index=order.indexOf(row.dataset.orderItem),colour=palette[index],preview=row.querySelector('.v568-order-card-light');
+      if(!preview||!colour)continue;
+      preview.style.setProperty('--order-card-colour',colour.hex);
+      const label=preview.querySelector('[data-order-card-colour-name]');
+      if(label)label.textContent=window.LightningV50OrderTexts.paletteLabel(colour.name,uiPreferences.preferences.language);
+      row.dataset.orderProposedPosition=String(index+1);
+    }
+  }
+  function orderPlaceChoicesMarkup(z,line){
+    const draft=arrangementDraft,lines=draft?.zoneId===z.id?draft.lineOrder:M.zoneLedlines(model,z.id).map(item=>item.id);
+    const current=lines.indexOf(line.id),palette=orderPositionPalette(z,lines.length);
+    const blocked=arrangementInteractionBusy()||arrangementNeedsStandOpen()||standPresentationOnly();
+    return `<fieldset class="v568-order-place-choices"><legend>${esc(t('v568ChoosePlace'))}</legend><div>${lines.map((_,index)=>`<button type="button" data-action="order-place-choice" data-id="${esc(line.id)}" data-zone="${esc(z.id)}" data-position="${index}" aria-pressed="${index===current}" aria-label="${esc(t('v568PlaceNamed',{number:index+1,colour:window.LightningV50OrderTexts.paletteLabel(palette[index].name,uiPreferences.preferences.language)}))}" style="--place-colour:${palette[index].hex}" ${blocked||index===current?'disabled':''}><b>${index+1}</b><span>${esc(window.LightningV50OrderTexts.paletteLabel(palette[index].name,uiPreferences.preferences.language))}</span>${index===current?icon('check'):''}</button>`).join('')}</div></fieldset>`;
+  }
+  function orderLineSettingsMarkup(z,line,receiver){
+    const index=(arrangementDraft?.lineOrder||[]).indexOf(line.id),palette=orderPositionPalette(z,physicalLineCount());
+    const blocked=arrangementInteractionBusy()||arrangementNeedsStandOpen()||standPresentationOnly();
+    const action=(name,label,glyph,extra='')=>`<button type="button" class="v568-order-setting-action" data-action="${name}" data-id="${esc(receiver.id)}" ${extra} ${blocked?'disabled':''}>${icon(glyph)}<span>${esc(t(label))}</span>${icon('chevron')}</button>`;
+    return `<section class="v568-order-settings" data-order-line-settings data-order-line-id="${esc(line.id)}" data-zone="${esc(z.id)}" data-signature="${esc(arrangementSignature(z))}"><div class="v568-order-settings-identity"><span>${esc(receiver.name)}${line.port?' · P'+line.port:''}</span><small>${line.port?line.pixels+' px · SPI':'RGBW'}</small>${orderCardPreviewMarkup(palette[Math.max(0,index)])}</div>${orderPlaceChoicesMarkup(z,line)}<div class="v568-order-setting-actions">${receiver.type==='SPI'?action('receiver-pixel-setup','v568PixelsDirection','sliders',`data-ports="${line.port}"`):''}<div class="v568-receiver-action-heading">${esc(t('v568ReceiverAllOutputs'))}</div>${action('receiver-rename','v568ReceiverName','edit')}${action('receiver-move','v568ChangeZone','zones')}</div><button type="button" class="button secondary full" data-action="effect-dialog-close">${esc(t('v568ReturnOrder'))}</button></section>`;
+  }
+  function openOrderLineSettings(id){
+    const z=zone();if(!z||!openLineSetup.has(z.id)||arrangementDraft?.zoneId!==z.id||arrangementDraft.signature!==arrangementSignature(z))return;
+    const line=M.zoneLedlines(model,z.id).find(item=>item.id===id),receiver=model.receivers.find(item=>item.id===line?.receiverId);
+    if(!line||!receiver)return;
+    if(receiver.type==='SPI')visualPorts.set(receiver.id,line.port);
+    return showEffectDialog(t('v568AdjustLine',{name:receiver.name+(line.port?' · P'+line.port:'')}),orderLineSettingsMarkup(z,line,receiver));
+  }
   function ledlineSetupMarkup(){
     const orderText=(key,params)=>window.LightningV50OrderTexts.t(key,uiPreferences.preferences.language,params);
     const colourLabel=colour=>window.LightningV50OrderTexts.paletteLabel(colour?.name,uiPreferences.preferences.language);
@@ -1798,38 +2071,47 @@
     const toggleLabel=open?t('lineSetupCloseAccessible',{title,zone:z.name}):`${title} · ${summary}`;
     const horizontalOrder=['vertical','continuous'].includes(z.layout);
     const family=z.type||receivers()[0]?.type,reusable=standReceivers().some(r=>r.zoneId!==z.id&&r.type===family);
-    const ordered=open?M.ledlines(receivers(),draft.lineOrder):[];
+    const ordered=open?M.ledlines(receivers(),draft.lineOrder):[],palette=open?orderPositionPalette(z,count):[];
     const rows=ordered.map((line,index)=>{
       const r=model.receivers.find(item=>item.id===line.receiverId),name=t('scopeLine',{number:index+1});
-      const blinking=identifying.get(r.id)?.scope===(line.port?String(line.port):'all'),settingsOpen=openLineSettings.has(line.id),settingsId='ledline-settings-'+line.id,headingId=settingsId+'-heading';
+      const blinking=identifying.get(r.id)?.scope===(line.port?String(line.port):'all');
       const colour=orderColours.get(line.id);
-      return `<li data-draft-receiver="${esc(r.id)}" data-order-item="${esc(line.id)}" data-order-position="${index+1}" data-settings-open="${settingsOpen}" style="--identify-colour:${colour?.hex||'transparent'}" aria-label="${esc(orderText('orderPosition',{position:index+1}))} · ${esc(r.name)}${line.port?' · P'+line.port:''}">
+      return `<li data-draft-receiver="${esc(r.id)}" data-order-item="${esc(line.id)}" data-order-position="${index+1}" data-settings-open="false" style="--identify-colour:${colour?.hex||'transparent'}" aria-label="${esc(orderText('orderPosition',{position:index+1}))} · ${esc(r.name)}${line.port?' · P'+line.port:''}">
         <span class="scope-copy"><span class="scope-option-title"><b title="${esc(r.name)}">${esc(r.name)}</b><span class="v50-order-separator" aria-hidden="true"> · </span><span class="v50-order-port">${line.port?'P'+line.port:'RGBW'}</span></span><small>${line.port?`${line.pixels} px · SPI`:'RGBW'}</small></span>
-        <button type="button" class="line-order-handle" data-order-handle aria-label="${esc(orderText('orderDragAccessible',{name,receiver:r.name,port:line.port?' · P'+line.port:''}))}" title="${esc(orderText('orderDragHint'))}" aria-describedby="ledline-order-help" ${ordered.length<2||arrangementInteractionBusy()||needsStandOpen?'disabled':''}><span aria-hidden="true">⠿</span></button>
-        ${line.port?`<div class="ledline-output-overview" data-output-count="1"><div class="ledline-output" data-line-id="${esc(line.id)}" data-port="${line.port}" data-line-number="${index+1}" data-pixels="${line.pixels}"><span class="v50-order-line-direction" aria-hidden="true">${line.reversed?'←':'→'}</span><small class="ledline-output-side">${esc(t(line.reversed?'lineStartRight':'lineStartLeft'))}</small></div></div>`:''}
+        <button type="button" class="line-order-handle" data-order-handle aria-label="${esc(orderText('orderDragAccessible',{name,receiver:r.name,port:line.port?' · P'+line.port:''}))}" title="${esc(orderText('orderDragHint'))}" aria-describedby="ledline-order-help" ${ordered.length<2||arrangementInteractionBusy()||needsStandOpen?'disabled':''}>${icon('grip')}</button>
+        ${orderCardPreviewMarkup(palette[index])}
         <div class="ledline-order-tools"><div class="ledline-row-actions">
           <button class="receiver-blink order-blink-subtle" data-action="${line.port?'port-identify':'visual-identify'}" data-receiver="${esc(r.id)}" data-port="${line.port}" aria-pressed="${blinking}" aria-label="${esc(name)} · ${esc(t(blinking?'lineSetupBlinkStopAccessible':'lineSetupBlinkAccessible'))}">${icon('sun')}<span>${esc(t(blinking?'lineSetupBlinkStop':'lineSetupBlink'))}</span></button>
-          <button class="ledline-settings-toggle" data-action="layout-receiver-settings" data-id="${esc(line.id)}" data-receiver="${esc(r.id)}" data-port="${line.port}" aria-label="${esc(t('lineSetupSettingsAccessible',{name}))}" aria-expanded="${settingsOpen}" aria-controls="${esc(settingsId)}">${icon('sliders')}<span>${esc(t('lineSetupSettings'))}</span>${icon('chevron')}</button>
+          <button type="button" class="ledline-settings-toggle" data-action="layout-receiver-settings" data-id="${esc(line.id)}" data-receiver="${esc(r.id)}" data-port="${line.port}" aria-label="${esc(t('v568AdjustLine',{name:r.name+(line.port?' · P'+line.port:'')}))}" aria-haspopup="dialog" aria-controls="effect-dialog">${icon('edit')}<span>${esc(t('v568Adjust'))}</span></button>
         </div></div>
-        <div class="ledline-row-settings" id="${esc(settingsId)}" role="region" aria-labelledby="${esc(headingId)}" ${settingsOpen?'':'hidden'}>${settingsOpen?`<h4 id="${esc(headingId)}" tabindex="-1">${esc(t('lineSetupSettings'))} · ${esc(name)}</h4><p class="ledline-settings-context">${esc(r.name)}${line.port?' · P'+line.port:''} · ${esc(z.name)}</p>${line.port?portEditMarkup(r,line.port):`<p>${esc(t('v50RgbwLineHint'))}</p>`}`:''}</div>
       </li>`;
     }).join('');
-    return `<section class="ledline-setup card" data-order-open="${open}" ${open?'role="dialog" aria-modal="true"':''} aria-label="${esc(t('lineSetupTitle'))}">${open?'':spatialPreviewChoice()}<button class="ledline-setup-toggle" data-action="layout" aria-label="${esc(toggleLabel)}" aria-expanded="${open}" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy">${open?`<span class="ledline-menu-label">${esc(t('lineSetupMenu'))}</span>`:''}<b>${esc(title)}</b><small id="ledline-setup-context">${esc(open?context:hint)}</small></span><span class="ledline-setup-disclosure-action">${open?`<span class="ledline-setup-close-label">${icon('close')}${esc(t('close'))}</span>`:icon('chevron')}</span></button><div class="ledline-setup-body" id="ledline-setup-body" role="region" ${open?'aria-labelledby="ledline-setup-heading" aria-describedby="ledline-setup-context"':'hidden'}>${open?`
-      <div class="v50-order-dock" data-order-dock><div class="v50-order-feedback" data-order-feedback data-order-feedback-phase="${orderPreviewGesture?.zoneId===z.id?'proposal':orderMoveResult?.zoneId===z.id?'saved':'idle'}" role="status" aria-live="polite">${orderFeedbackMarkup()}</div><figure class="v50-order-preview"><figcaption><b>${esc(t('v50LineOverview'))}</b><small>${esc(t('v50RecognitionHint'))}</small></figcaption>${zonePreview(z,'v50-order-canvas',{main:true,arrangementPreview:true,orderOverview:true,standLiveZoneId:null,selection:{kind:'all'},label:t('v50OrderOverviewLabel',{zone:z.name})})}</figure></div>
-      <section class="ledline-arrangement" aria-label="${esc(singleLine?title:t('lineSetupOrder'))}" aria-busy="${arrangementInteractionBusy()}"><div class="ledline-order-heading"><h3 id="ledline-setup-heading">${esc(singleLine?t('scopeCountOne'):t('lineSetupCurrentOrder'))}</h3><small class="ledline-family-label">${esc(family||'')}</small></div><p class="ledline-setup-hint" id="ledline-order-help">${esc(singleLine?hint:t('lineSetupOrderHint'))}</p><p class="order-recognition-status" data-order-recognition-status role="status"></p><p class="order-drop-status" role="status" aria-live="polite"></p><p data-order-apply-status role="status" ${arrangementApplying||arrangementPlaybackPending()||draft?.error||needsStandOpen?'':'hidden'}>${arrangementApplying||arrangementPlaybackPending()?esc(orderText('orderApplying')):esc(draft?.error||(needsStandOpen?orderText('orderOpenStandHint'):''))}</p><button type="button" class="button secondary full" data-order-stand-open data-action="management-stand-open" ${!arrangementInteractionBusy()&&(needsStandOpen||draft?.needsStandOpen&&draft.error)?'':'hidden'}>${esc(orderText('orderOpenStand'))}</button>
-      <div class="v50-order-lanes"><ol class="v50-order-slots" aria-hidden="true">${ordered.map((line,index)=>{const colour=(orderPositionColours.get(z.id)||[])[index]||orderColours.get(line.id);return `<li data-order-slot data-order-position="${index+1}" style="--identify-colour:${colour?.hex||'transparent'}"><span class="v50-order-slot-number">${index+1}</span><small data-slot-colour-name>${colour?esc(colourLabel(colour)):''}</small></li>`;}).join('')}</ol><ol class="ledline-draft-order">${rows}</ol></div>
-      </section>${reusable?`<button class="ledline-reuse-action" data-action="zone-assign" data-id="${esc(z.id)}">${icon('receiver')}<span>${esc(t('lineSetupReuse'))}</span>${icon('chevron')}</button>`:''}${layoutReceiverActions()}`:''}</div></section>`;
+    return `<section class="ledline-setup card" data-order-ui="568" data-order-open="${open}" ${open?'role="dialog" aria-modal="true"':''} aria-label="${esc(t('lineSetupTitle'))}">${open?'':spatialPreviewChoice()}<button class="ledline-setup-toggle" data-action="layout" aria-label="${esc(toggleLabel)}" aria-expanded="${open}" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy">${open?`<span class="ledline-menu-label">${esc(t('lineSetupMenu'))}</span>`:''}<b>${esc(title)}</b><small id="ledline-setup-context">${esc(open?context:hint)}</small></span><span class="ledline-setup-disclosure-action">${open?`<span class="ledline-setup-close-label">${icon('close')}${esc(t('close'))}</span>`:icon('chevron')}</span></button><div class="ledline-setup-body" id="ledline-setup-body" role="region" ${open?'aria-labelledby="ledline-setup-heading" aria-describedby="ledline-setup-context"':'hidden'}>${open?`
+      <div class="v50-order-dock" data-order-dock><div class="v50-order-feedback" data-order-feedback data-order-feedback-phase="${orderPreviewGesture?.zoneId===z.id?'proposal':orderMoveResult?.zoneId===z.id?'saved':'idle'}" role="status" aria-live="polite">${orderFeedbackMarkup()}</div>${orderReferenceMarkup(z,count)}</div>
+      <section class="ledline-arrangement" aria-label="${esc(singleLine?title:t('lineSetupOrder'))}" aria-busy="${arrangementInteractionBusy()}"><div class="ledline-order-heading"><h3 id="ledline-setup-heading">${esc(t('v568LineColumn'))}</h3><small class="ledline-family-label">${esc(family||'')}</small></div><p class="ledline-setup-hint" id="ledline-order-help">${esc(t('v568OrderDragHint'))}</p><p class="order-recognition-status" data-order-recognition-status role="status"></p><p class="order-drop-status" role="status" aria-live="polite"></p><p data-order-apply-status role="status" ${arrangementApplying||arrangementPlaybackPending()||draft?.error||needsStandOpen?'':'hidden'}>${arrangementApplying||arrangementPlaybackPending()?esc(orderText('orderApplying')):esc(draft?.error||(needsStandOpen?orderText('orderOpenStandHint'):''))}</p><button type="button" class="button secondary full" data-order-stand-open data-action="management-stand-open" ${!arrangementInteractionBusy()&&(needsStandOpen||draft?.needsStandOpen&&draft.error)?'':'hidden'}>${esc(orderText('orderOpenStand'))}</button>
+      <div class="v568-order-column-labels" aria-hidden="true"><span>${esc(t('v568PlaceColumn'))}</span><span>${esc(t('v568LineColumn'))}</span></div><div class="v50-order-lanes"><ol class="v50-order-slots" aria-hidden="true">${ordered.map((line,index)=>{const colour=palette[index];return `<li data-order-slot data-order-position="${index+1}" style="--identify-colour:${colour?.hex||'transparent'}"><span class="v50-order-slot-number">${index+1}</span><small data-slot-colour-name>${colour?esc(colourLabel(colour)):''}</small></li>`;}).join('')}</ol><ol class="ledline-draft-order">${rows}</ol></div>
+      </section>${orderTestMarkup()}${reusable?`<button class="ledline-reuse-action" data-action="zone-assign" data-id="${esc(z.id)}">${icon('receiver')}<span>${esc(t('lineSetupReuse'))}</span>${icon('chevron')}</button>`:''}${layoutReceiverActions()}`:''}</div></section>`;
+  }
+  function orderLiveChangeMarkup(state){
+    const from=state?.colour,to=state?.positionColours?.[state.toIndex]?.hex;
+    if(!state||state.zoneId!==route.zoneId||!Array.isArray(state.positionColours)||
+      !Number.isInteger(state.fromIndex)||!Number.isInteger(state.toIndex)||state.fromIndex<0||state.toIndex<0||
+      state.fromIndex>=state.positionColours.length||state.toIndex>=state.positionColours.length||
+      state.fromIndex===state.toIndex||!/^#[0-9a-f]{6}$/i.test(from||'')||!/^#[0-9a-f]{6}$/i.test(to||''))return '';
+    const caption=orderGuideText('liveMoveCaption',{line:state.fromIndex+1,from:state.fromIndex+1,to:state.toIndex+1});
+    return `<div class="v50-order-live-change" data-order-live-phase="${state.saved?'saved':'proposal'}" style="--order-from-colour:${from};--order-to-colour:${to}"><div class="v50-order-light-before"><span>${esc(orderGuideText('liveBefore'))}</span><i aria-hidden="true"></i></div><span class="v50-order-colour-arrow" aria-hidden="true">→</span><div class="v50-order-light-after"><span>${esc(orderGuideText('liveAfter'))}</span><i aria-hidden="true"></i></div><small class="v50-order-live-caption">${esc(caption)}${state.saved?'':' · '+esc(orderGuideText('livePending'))}</small></div>`;
   }
   function orderFeedbackMarkup(){
     const state=orderPreviewGesture||orderMoveResult;
-    if(!state||state.zoneId!==route.zoneId)return `<div class="v50-order-feedback-route">${esc(t('v50FixedPlaces'))}</div><small>${esc(t('v50MoveLineOnly'))}</small>`;
-    return `<div class="v50-order-feedback-route"><span class="v50-order-feedback-source">${esc(t('scopeLine',{number:state.fromIndex+1}))}</span><span aria-hidden="true">→</span><span class="v50-order-feedback-target">${esc(t('v50OrderPlace',{number:state.toIndex+1}))}</span>${state.saved?icon('check'):''}</div><small>${esc(state.receiverName)}${state.port?' · P'+state.port:''} · ${esc(t(state.saved?'v50OrderMoved':'v50OrderDropHere'))}</small>`;
+    if(!state||state.zoneId!==route.zoneId)return `<div class="v50-order-feedback-route">${icon('grip')}<span>${esc(t('v568OrderDragHint'))}</span></div><small>${esc(t('v568OrderReleaseHint'))}</small>`;
+    return `<div class="v50-order-feedback-route"><span class="v50-order-feedback-source">${esc(t('scopeLine',{number:state.fromIndex+1}))}</span><span aria-hidden="true">↔</span><span class="v50-order-feedback-target">${esc(t('v50OrderPlace',{number:state.toIndex+1}))}</span>${state.saved?icon('check'):''}</div><small>${esc(state.receiverName)}${state.port?' · P'+state.port:''} · ${esc(t(state.saved?'v50OrderMoved':'v50OrderDropHere'))}</small>${orderLiveChangeMarkup(state)}`;
   }
   function syncOrderFeedback(){
     const state=orderPreviewGesture||orderMoveResult,node=main.querySelector('[data-order-feedback]');
     if(!node)return;
     node.hidden=false;node.dataset.orderFeedbackPhase=!state||state.zoneId!==route.zoneId?'idle':state.saved?'saved':'proposal';node.innerHTML=orderFeedbackMarkup();
     if(state?.colour){node.style.setProperty('--order-drag-colour',state.colour);node.closest('[data-order-open]')?.style.setProperty('--order-drag-colour',state.colour);}
+    syncOrderCardColours();
   }
   function portEditMarkup(receiver,port){
     const selected=pixelEditSelections.get(receiver.id)||new Set([port]);
@@ -1848,46 +2130,46 @@
     return visualPorts.get(receiver.id)||receiver.outputs.find(output=>output.enabled)?.port||1;
   }
   function productVisual(receiver,compact=false) {
-    return `<div class="receiver-product ${compact?'compact list-product':''}"><canvas data-product-receiver="${esc(receiver.id)}" data-compact="${compact}" width="400" height="240" role="img" aria-label="${receiver.type==='RGBW'?'RGBW: één uitgang met vier kleurkanalen':'SPI: schematische receiver met vier uitgangen'}"></canvas>${compact?'':`<p class="receiver-product-caption"><strong>${receiver.type==='RGBW'?'Eén RGBW-uitgang · vier kanalen':`Uitgang ${selectedVisualPort(receiver)} geselecteerd`}</strong>${receiver.type==='RGBW'?'Rood, groen, blauw en wit sturen samen één ledline aan.':'Kies de uitgang die je wilt instellen.'}</p>`}</div>`;
+    return `<div class="receiver-product ${compact?'compact list-product':''}"><canvas data-product-receiver="${esc(receiver.id)}" data-compact="${compact}" width="400" height="240" role="img" aria-label="${esc(t(receiver.type==='RGBW'?'v50RgbwProductAccessible':'v50SpiProductAccessible'))}"></canvas>${compact?'':`<p class="receiver-product-caption"><strong>${esc(t(receiver.type==='RGBW'?'v50RgbwOutputCaption':'v50OutputChosen',{port:selectedVisualPort(receiver)}))}</strong>${esc(t(receiver.type==='RGBW'?'v50RgbwOutputHint':'v50ChooseOutputHint'))}</p>`}</div>`;
   }
   function receiverCard(r,orderIndex=null) {
     const z=M.getZone(model,r.zoneId),rid=esc(r.id);
     const wholeBlink=identifying.get(r.id)?.scope==='all';
     const ordered=route.screen==='layout'&&Number.isInteger(orderIndex);
-    return `<details class="receiver-overview-card" data-receiver-detail="${rid}" ${ordered?`data-order-receiver="${rid}"`:''} ${expandedReceivers.has(r.id)?'open':''}><summary>${ordered?`<button class="order-handle" aria-label="${esc(r.name)} verslepen" title="Sleep om te verplaatsen">⠿</button><span class="order-number">${orderIndex+1}</span>`:productVisual(r,true)}<div class="receiver-heading-copy"><b>${esc(r.name)}</b><small class="receiver-heading-meta"><span class="receiver-family-badge">${r.type}</span> · ${esc(z?.name||'Nog geen zone')}</small>${r.type==='SPI'?`<small class="receiver-geometry-summary">${ordered?'':`${r.outputs.filter(o=>o.enabled).length} ${r.outputs.filter(o=>o.enabled).length===1?'uitgang':'uitgangen'} · `}${r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)} ${r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)===1?'pixel':'pixels'}</small>`:ordered?'':'<small class="receiver-geometry-summary">Eén uitgang · R · G · B · W</small>'}</div><button type="button" class="receiver-blink ${ordered?'order-identify':''}" data-action="visual-identify" data-receiver="${rid}" aria-pressed="${wholeBlink}" aria-label="${esc(r.name)} · ${r.type==='SPI'?'alle actieve uitgangen samen':'hele receiver'} ${wholeBlink?'stoppen met knipperen':'laten knipperen'}">${icon('sun')}<span>${wholeBlink?'Stop':'Knipperen'}</span></button>${icon('chevron')}</summary><div class="receiver-details">${receiverDetailMarkup(r)}</div></details>`;
+    return `<details class="receiver-overview-card" data-receiver-detail="${rid}" ${ordered?`data-order-receiver="${rid}"`:''} ${expandedReceivers.has(r.id)?'open':''}><summary>${ordered?`<button class="order-handle" aria-label="${esc(t('v50DragReceiver',{name:r.name}))}" title="${esc(t('v50DragToMove'))}">⠿</button><span class="order-number">${orderIndex+1}</span>`:productVisual(r,true)}<div class="receiver-heading-copy"><b>${esc(r.name)}</b><small class="receiver-heading-meta"><span class="receiver-family-badge">${r.type}</span> · ${esc(z?.name||t('v50NoZone'))}</small>${r.type==='SPI'?`<small class="receiver-geometry-summary">${ordered?'':`${esc(t(r.outputs.filter(o=>o.enabled).length===1?'v50OutputsOne':'v50OutputsMany',{count:r.outputs.filter(o=>o.enabled).length}))} · `}${esc(t(r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)===1?'v50PixelsOne':'v50PixelsMany',{count:r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)}))}</small>`:ordered?'':`<small class="receiver-geometry-summary">${esc(t('v50RgbwGeometry'))}</small>`}</div><button type="button" class="receiver-blink ${ordered?'order-identify':''}" data-action="visual-identify" data-receiver="${rid}" aria-pressed="${wholeBlink}" aria-label="${esc(t(r.type==='SPI'?(wholeBlink?'v50StopAllOutputs':'v50BlinkAllOutputs'):(wholeBlink?'v50StopReceiver':'v50BlinkReceiver'),{name:r.name}))}">${icon('sun')}<span>${esc(t(wholeBlink?'lineSetupBlinkStop':'lineSetupBlink'))}</span></button>${icon('chevron')}</summary><div class="receiver-details">${receiverDetailMarkup(r)}</div></details>`;
   }
   function receiverDetailMarkup(r) {
     const z=M.getZone(model,r.zoneId),rid=esc(r.id),port=selectedVisualPort(r);
-    return `${receiverAssignmentActions(r)}${r.type==='SPI'?`<details class="receiver-connections" data-receiver-connections="${rid}" ${expandedConnections.has(r.id)?'open':''}><summary><span><b>Aansluitingen</b><small>${r.outputs.filter(o=>o.enabled).length} van 4 uitgangen · ${r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)} ${r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)===1?'pixel':'pixels'}</small></span>${icon('chevron')}</summary><div class="receiver-connections-content">${productVisual(r)}<div class="receiver-ports-heading"><h3>Uitgangen</h3><small>Alle ingeschakelde uitgangen lichten op in het voorbeeld.</small></div><div class="receiver-port-list" aria-label="Uitgang bekijken">${r.outputs.map(o=>`<div class="receiver-port-row ${o.port===port?'port-focused':''}" data-port-row="${o.port}"><button type="button" class="receiver-port-select" data-action="visual-port" data-receiver="${rid}" data-id="${o.port}" aria-pressed="${o.port===port}"><b>P${o.port}</b><span>Uitgang ${o.port}</span></button><button type="button" class="switch receiver-port-switch" role="switch" data-action="receiver-port-enabled" data-receiver="${rid}" data-port="${o.port}" aria-checked="${o.enabled}" aria-label="Uitgang ${o.port} gebruiken" ${nativeContext&&typeof runtime?.services?.configureOutputs!=='function'?'disabled title="Verbind met je installatie-wifi om uitgangen te wijzigen"':''}><span>${o.enabled?'Aan':'Uit'}</span><i aria-hidden="true"></i></button><button type="button" class="receiver-blink" data-action="port-identify" data-receiver="${rid}" data-port="${o.port}" aria-pressed="${identifying.get(r.id)?.scope===String(o.port)}" aria-label="${esc(r.name)} uitgang ${o.port} laten knipperen" ${o.enabled?'':'disabled'}>${icon('sun')}<span>${identifying.get(r.id)?.scope===String(o.port)?'Stop':'Knipperen'}</span></button></div>`).join('')}</div><button class="button full pixel-setup-shortcut" data-action="receiver-pixel-setup" data-id="${rid}">${icon('sliders')}Pixels / aansluiting instellen ${icon('chevron')}</button><p class="port-preview-note">Stel per poort de pixels in en kies waar de stroom binnenkomt.</p></div></details>`:productVisual(r)}${z&&route.screen==='receivers'?`<button class="text-button" data-action="zone" data-id="${esc(z.id)}">Bedien ${esc(z.name)} →</button>`:''}<details class="receiver-manage-menu"><summary>Meer receiveropties ${icon('chevron')}</summary><div class="receiver-manage-content"><button class="text-button" data-action="receiver-rename" data-id="${rid}">Naam wijzigen</button></div></details>`;
+    return `${receiverAssignmentActions(r)}${r.type==='SPI'?`<details class="receiver-connections" data-receiver-connections="${rid}" ${expandedConnections.has(r.id)?'open':''}><summary><span><b>${esc(t('v50Connections'))}</b><small>${esc(t('v50ActiveOutputs',{count:r.outputs.filter(o=>o.enabled).length}))} · ${esc(t(r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)===1?'v50PixelsOne':'v50PixelsMany',{count:r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)}))}</small></span>${icon('chevron')}</summary><div class="receiver-connections-content">${productVisual(r)}<div class="receiver-ports-heading"><h3>${esc(t('v50Outputs'))}</h3><small>${esc(t('v50EnabledOutputPreview'))}</small></div><div class="receiver-port-list" aria-label="${esc(t('v50ViewOutput'))}">${r.outputs.map(o=>`<div class="receiver-port-row ${o.port===port?'port-focused':''}" data-port-row="${o.port}"><button type="button" class="receiver-port-select" data-action="visual-port" data-receiver="${rid}" data-id="${o.port}" aria-pressed="${o.port===port}"><b>P${o.port}</b><span>${esc(t('v50OutputNumber',{port:o.port}))}</span></button><button type="button" class="switch receiver-port-switch" role="switch" data-action="receiver-port-enabled" data-receiver="${rid}" data-port="${o.port}" aria-checked="${o.enabled}" aria-label="${esc(t('v50UseOutput',{port:o.port}))}" ${nativeContext&&typeof runtime?.services?.configureOutputs!=='function'?`disabled title="${esc(t('v50OutputsWifiHint'))}"`:''}><span>${esc(t(o.enabled?'v50On':'v50Off'))}</span><i aria-hidden="true"></i></button><button type="button" class="receiver-blink" data-action="port-identify" data-receiver="${rid}" data-port="${o.port}" aria-pressed="${identifying.get(r.id)?.scope===String(o.port)}" aria-label="${esc(t('v50BlinkOutput',{name:r.name,port:o.port}))}" ${o.enabled?'':'disabled'}>${icon('sun')}<span>${esc(t(identifying.get(r.id)?.scope===String(o.port)?'lineSetupBlinkStop':'lineSetupBlink'))}</span></button></div>`).join('')}</div><button class="button full pixel-setup-shortcut" data-action="receiver-pixel-setup" data-id="${rid}">${icon('sliders')}${esc(t('v50PixelConnections'))} ${icon('chevron')}</button><p class="port-preview-note">${esc(t('v50PortPreviewHint'))}</p></div></details>`:productVisual(r)}${z&&route.screen==='receivers'?`<button class="text-button" data-action="zone" data-id="${esc(z.id)}">${esc(t('v50ControlZone',{name:z.name}))} →</button>`:''}<details class="receiver-manage-menu"><summary>${esc(t('v50MoreReceiverOptions'))} ${icon('chevron')}</summary><div class="receiver-manage-content"><button class="text-button" data-action="receiver-rename" data-id="${rid}">${esc(t('v50Rename'))}</button></div></details>`;
   }
   function receiverAssignmentActions(r) {
-    return `<div class="receiver-management"><button class="button secondary" data-action="receiver-move" data-id="${esc(r.id)}">${icon('zones')}Zone wijzigen</button><small>Je koppeling en aansluitingen blijven bewaard.</small></div>`;
+    return `<div class="receiver-management"><button class="button secondary" data-action="receiver-move" data-id="${esc(r.id)}">${icon('zones')}${esc(t('v50ChangeZone'))}</button><small>${esc(t('v50AssignmentPreserved'))}</small></div>`;
   }
   function renderReceivers() {
     const all=standReceivers(),unassigned=all.filter(r=>!r.zoneId);
     const shown=receiverFilter==='unassigned'?unassigned:all,cards=shown.map(r=>receiverCard(r)).join('');
     const canUpdate=nativeContext&&runtime?.native===true&&typeof runtime.services?.otaPlan==='function'&&all.length>0;
     const updateEntry=canUpdate?`<button class="button secondary receiver-update-entry" data-action="receiver-update-all" aria-label="${esc(t('softwareUpdateButton'))}">${icon('update')}<span>${esc(t('softwareUpdates'))}</span></button>`:'';
-    return `<div class="page receivers-page"><header class="page-heading overview-heading"><div><div class="eyebrow">${esc(standLabel())}</div><h1>Receivers</h1><p>Kies een receiver voor zone of aansluitingen.</p>${all.length?`<div class="receiver-overview-summary">${['RGBW','SPI'].filter(type=>all.some(receiver=>receiver.type===type)).map(type=>`<span><b>${all.filter(receiver=>receiver.type===type).length}</b> ${type}</span>`).join('')}${unassigned.length?`<span class="receiver-unassigned-summary">${unassigned.length} zonder zone</span>`:''}</div>`:''}</div></header><div class="receiver-toolbar${canUpdate?' has-updates':''}"><button class="button receiver-primary-action" data-action="receiver-add"><span aria-hidden="true">＋</span><span>${esc(t('addReceiver'))}</span></button>${updateEntry}</div><div class="receiver-filters" role="group" aria-label="Receivers filteren">${[['all','Alle receivers',all.length],['unassigned','Niet in een zone',unassigned.length]].map(([id,label,count])=>`<button data-action="receiver-filter" data-id="${id}" aria-pressed="${receiverFilter===id}">${label}<span>${count}</span></button>`).join('')}</div><div class="receiver-list">${cards||`<section class="card empty connection-empty receiver-empty-card"><span class="menu-icon" aria-hidden="true">${icon('receiver')}</span><h2>${receiverFilter==='unassigned'&&all.length?'Alles heeft een plek':'Nog geen receivers'}</h2><p>${receiverFilter==='unassigned'&&all.length?'Elke receiver is aan een zone toegewezen.':stand()?'Begin hierboven met Receiver toevoegen.':'Begin met Receiver toevoegen: eerst je stand, dan je zone.'}</p>${receiverFilter==='unassigned'?'<button class="button secondary" data-action="receiver-filter" data-id="all">Alle receivers bekijken</button>':''}</section>`}</div></div>`;
+    return `<div class="page receivers-page"><header class="page-heading overview-heading"><div><div class="eyebrow">${esc(standLabel())}</div><h1>${esc(t('receivers'))}</h1><p>${esc(t('v50ReceiverChoiceHint'))}</p>${all.length?`<div class="receiver-overview-summary">${['RGBW','SPI'].filter(type=>all.some(receiver=>receiver.type===type)).map(type=>`<span><b>${all.filter(receiver=>receiver.type===type).length}</b> ${type}</span>`).join('')}${unassigned.length?`<span class="receiver-unassigned-summary">${esc(t('v50UnassignedCount',{count:unassigned.length}))}</span>`:''}</div>`:''}</div></header><div class="receiver-toolbar${canUpdate?' has-updates':''}"><button class="button receiver-primary-action" data-action="receiver-add"><span aria-hidden="true">＋</span><span>${esc(t('addReceiver'))}</span></button>${updateEntry}</div><div class="receiver-filters" role="group" aria-label="${esc(t('v50FilterReceivers'))}">${[['all',t('v50AllReceivers'),all.length],['unassigned',t('v50OutsideZone'),unassigned.length]].map(([id,label,count])=>`<button data-action="receiver-filter" data-id="${id}" aria-pressed="${receiverFilter===id}">${esc(label)}<span>${count}</span></button>`).join('')}</div><div class="receiver-list">${cards||`<section class="card empty connection-empty receiver-empty-card"><span class="menu-icon" aria-hidden="true">${icon('receiver')}</span><h2>${esc(t(receiverFilter==='unassigned'&&all.length?'v50EverythingAssigned':'v50NoReceivers'))}</h2><p>${esc(t(receiverFilter==='unassigned'&&all.length?'v50AllReceiversAssigned':stand()?'v50AddReceiverAbove':'v50AddReceiverFirst'))}</p>${receiverFilter==='unassigned'?`<button class="button secondary" data-action="receiver-filter" data-id="all">${esc(t('v50ViewAllReceivers'))}</button>`:''}</section>`}</div></div>`;
   }
   function renderReceiverAdd() {
     return '<div id="receiver-onboarding"></div>';
   }
   function renderScenes() {
-    if(!stand())return `<div class="page"><header class="page-heading"><h1>Scènes</h1><p>Stel eerst je stand en verlichting in. Daarna kun je de gewenste sfeer bewaren.</p></header><button class="button full" data-action="receiver-add">Mijn stand instellen</button></div>`;
+    if(!stand())return `<div class="page"><header class="page-heading"><h1>${esc(t('scenes'))}</h1><p>${esc(t('v50SceneSetupHint'))}</p></header><button class="button full" data-action="receiver-add">${esc(t('setupStand'))}</button></div>`;
     const list=savedScenes.scenes.filter(s=>s.standId===stand().id);
     const ready=stand().zones.some(z=>M.zoneReceivers(model,z.id).length);
     const cards=list.map(scene=>{
       const count=scene.zones.reduce((n,z)=>n+z.receivers.length,0),names=scene.zones.slice(0,2).map(z=>z.name).join(' · '),extra=scene.zones.length-2;
-      return `<article class="scene-card-row"><button class="scene-card" data-action="scene-open" data-id="${esc(scene.id)}">${scenePreview(scene)}<span class="scene-card-copy"><b>${esc(scene.name)}</b><small class="scene-card-count">${zoneCount(scene.zones.length)} · ${receiverCount(count)}</small><small class="scene-card-names">${esc(names)}${extra>0?' …':''}</small><span class="scene-open-label">Details ${icon('chevron')}</span></span></button>${sceneActivateButtonMarkup(scene)}</article>`;
+      return `<article class="scene-card-row"><button class="scene-card" data-action="scene-open" data-id="${esc(scene.id)}">${scenePreview(scene)}<span class="scene-card-copy"><b>${esc(scene.name)}</b><small class="scene-card-count">${zoneCount(scene.zones.length)} · ${receiverCount(count)}</small><small class="scene-card-names">${esc(names)}${extra>0?' …':''}</small><span class="scene-open-label">${esc(t('v50Details'))} ${icon('chevron')}</span></span></button>${sceneActivateButtonMarkup(scene)}</article>`;
     }).join('');
-    return `<div class="page scenes-page"><header class="page-heading"><div><div class="eyebrow">${esc(standLabel())}</div><h1>Scènes</h1><p>Bewaar en wissel van sfeer.</p></div></header>${list.length?'':sceneWorkflow()}<button class="button red" data-action="scene-new" ${ready?'':'disabled'}>＋ Huidig licht bewaren</button>${savedScenes.error?`<p class="card" role="alert">${esc(savedScenes.error.message)}</p>`:''}<div class="section-heading scene-list-heading"><h2>Jouw scènes</h2><small>${list.length} ${list.length===1?'scène':'scènes'}</small></div><div class="scene-list">${cards||`<section class="card empty">${icon('scenes')}<h2>Bewaar je eerste sfeer</h2><p>${ready?'Stel je licht in en kies Huidig licht bewaren.':'Voeg eerst verlichting toe via Stand.'}</p></section>`}</div>${list.length?`<details class="scene-workflow-help"><summary>Hoe werkt dit?</summary>${sceneWorkflow()}</details><p class="scene-reading-note"><b>Activeren</b> past de scène toe. <b>Details</b> verandert niets.</p>`:''}</div>`;
+    return `<div class="page scenes-page"><header class="page-heading"><div><div class="eyebrow">${esc(standLabel())}</div><h1>${esc(t('scenes'))}</h1><p>${esc(t('v50SceneIntro'))}</p></div></header>${list.length?'':sceneWorkflow()}<button class="button red" data-action="scene-new" ${ready?'':'disabled'}>＋ ${esc(t('newScene'))}</button>${savedScenes.error?`<p class="card" role="alert">${esc(savedScenes.error.message)}</p>`:''}<div class="section-heading scene-list-heading"><h2>${esc(t('v50YourScenes'))}</h2><small>${esc(t(list.length===1?'v50ScenesOne':'v50ScenesMany',{count:list.length}))}</small></div><div class="scene-list">${cards||`<section class="card empty">${icon('scenes')}<h2>${esc(t('v50SaveFirstScene'))}</h2><p>${esc(t(ready?'v50SaveFirstSceneHint':'v50SceneAddLightsHint'))}</p></section>`}</div>${list.length?`<details class="scene-workflow-help"><summary>${esc(t('v50HowItWorks'))}</summary>${sceneWorkflow()}</details><p class="scene-reading-note">${esc(t('v50SceneReadHint'))}</p>`:''}</div>`;
   }
-  function receiverCount(count) { return `${count} ${count===1?'receiver':'receivers'}`; }
-  function ledlineCount(count) { return `${count} ${count===1?'ledline':'ledlines'}`; }
-  function zoneCount(count) { return `${count} ${count===1?'zone':'zones'}`; }
+  function receiverCount(count) { return t(count===1?'v50ReceiversOne':'v50ReceiversMany',{count}); }
+  function ledlineCount(count) { return count===1?t('scopeCountOne'):t('scopeCountMany',{count}); }
+  function zoneCount(count) { return count===1?t('v50StandZoneOne'):t('v50StandZoneMany',{count}); }
   function sceneWorkflow() {
-    return `<section class="card scene-workflow" aria-labelledby="scene-workflow-title"><h2 id="scene-workflow-title">Van licht naar scène</h2><ol><li><i aria-hidden="true">${icon('stand')}</i><b>1 · Licht</b><small>Kleur of animatie</small></li><li><i aria-hidden="true">${icon('zones')}</i><b>2 · Zones</b><small>Kies wat je bewaart</small></li><li><i aria-hidden="true">${icon('scenes')}</i><b>3 · Bewaren</b><small>Geef je scène een naam</small></li></ol><button class="text-button" data-action="stand">Licht instellen ${icon('chevron')}</button></section>`;
+    return `<section class="card scene-workflow" aria-labelledby="scene-workflow-title"><h2 id="scene-workflow-title">${esc(t('v50LightToScene'))}</h2><ol><li><i aria-hidden="true">${icon('stand')}</i><b>${esc(t('v50SceneStepLight'))}</b><small>${esc(t('v50ColourOrAnimation'))}</small></li><li><i aria-hidden="true">${icon('zones')}</i><b>${esc(t('v50SceneStepZones'))}</b><small>${esc(t('v50ChooseWhatToSave'))}</small></li><li><i aria-hidden="true">${icon('scenes')}</i><b>${esc(t('v50SceneStepSave'))}</b><small>${esc(t('v50NameScene'))}</small></li></ol><button class="text-button" data-action="stand">${esc(t('v50SetLighting'))} ${icon('chevron')}</button></section>`;
   }
   function savedSceneStandPlan(scene) {
     // A scene is an immutable light snapshot. Reconstruct its full stand
@@ -1900,47 +2182,47 @@
     catch(_){return null;}
   }
   function savedZonePreview(saved,css='',standPlan=null) {
-    if(!saved.available)return `<span class="scene-preview scene-preview-unavailable ${css}" role="img" aria-label="${esc(saved.name)}: voorbeeld niet beschikbaar">${icon('info')}<small>Indeling gewijzigd</small></span>`;
+    if(!saved.available)return `<span class="scene-preview scene-preview-unavailable ${css}" role="img" aria-label="${esc(t('v50PreviewUnavailable',{name:saved.name}))}">${icon('info')}<small>${esc(t('v50LayoutChanged'))}</small></span>`;
     if(saved.receivers.some(receiver=>receiver.state?.standAnimation)){
-      if(!standPlan)return `<span class="scene-preview scene-preview-unavailable ${css}" role="img" aria-label="${esc(saved.name)}: gezamenlijk voorbeeld niet beschikbaar">${icon('info')}<small>Opstelling gewijzigd</small></span>`;
-      return addPreview(saved.receivers,'stacked',`scene-preview ${css}`,{capturedStandPlan:standPlan,capturedStandZoneId:saved.id,label:`Opgeslagen licht · ${saved.name} · ${saved.type}`});
+      if(!standPlan)return `<span class="scene-preview scene-preview-unavailable ${css}" role="img" aria-label="${esc(t('v50SharedPreviewUnavailable',{name:saved.name}))}">${icon('info')}<small>${esc(t('v50InstallationChanged'))}</small></span>`;
+      return addPreview(saved.receivers,'stacked',`scene-preview ${css}`,{capturedStandPlan:standPlan,capturedStandZoneId:saved.id,label:t('v50SavedLightPreview',{name:saved.name,type:saved.type})});
     }
     // No zoneId here: paint must retain the captured scene state instead of
     // substituting the currently edited zone's live light settings.
-    return addPreview(saved.receivers,saved.layout,`scene-preview ${css}`,{label:`Opgeslagen licht · ${saved.name} · ${saved.type}`});
+    return addPreview(saved.receivers,saved.layout,`scene-preview ${css}`,{label:t('v50SavedLightPreview',{name:saved.name,type:saved.type})});
   }
   function scenePreview(scene) {
     const zones=Scenes.previewZones(model,scene),shown=zones.slice(0,4),extra=zones.length-shown.length,standPlan=savedSceneStandPlan(scene);
-    return `<span class="scene-mosaic" data-zone-count="${zones.length}" aria-label="${zoneCount(zones.length)} in ${esc(scene.name)}">${shown.map(z=>`<span class="scene-mosaic-tile" data-scene-thumbnail-zone="${esc(z.id)}">${savedZonePreview(z,'',standPlan)}</span>`).join('')}${extra?`<span class="scene-mosaic-overflow">+${zoneCount(extra)}</span>`:''}</span>`;
+    return `<span class="scene-mosaic" data-zone-count="${zones.length}" aria-label="${esc(t('v50ScenePreviewLabel',{count:zoneCount(zones.length),name:scene.name}))}">${shown.map(z=>`<span class="scene-mosaic-tile" data-scene-thumbnail-zone="${esc(z.id)}">${savedZonePreview(z,'',standPlan)}</span>`).join('')}${extra?`<span class="scene-mosaic-overflow">+${zoneCount(extra)}</span>`:''}</span>`;
   }
   function sceneActivateButtonMarkup(scene){
-    const check=Scenes.compatibility(model,scene),label=check.ok?'Activeren':'Niet beschikbaar';
-    const explanation=check.ok?`Scène ${scene.name} direct activeren`:`Scène ${scene.name} niet beschikbaar: ${check.reason}`;
+    const check=Scenes.compatibility(model,scene),label=t(check.ok?'v50Activate':'v50Unavailable');
+    const explanation=t(check.ok?'v50ActivateSceneAccessible':'v50SceneUnavailableAccessible',{name:scene.name,reason:check.reason});
     // A disabled control cannot reveal a hover tooltip on a phone. Show why
     // the scene is unavailable without allowing partial activation.
-    return `<button type="button" class="button red scene-quick-activate" data-action="scene-apply" data-id="${esc(scene.id)}" aria-label="${esc(explanation)}" title="${esc(check.ok?'Past deze scène direct toe.':check.reason)}" ${check.ok?'':'disabled'}>${icon('power')}<span>${label}</span></button>${check.ok?'':`<p class="scene-unavailable-note">${icon('info')}<span>${esc(check.reason)}</span></p>`}`;
+    return `<button type="button" class="button red scene-quick-activate" data-action="scene-apply" data-id="${esc(scene.id)}" aria-label="${esc(explanation)}" title="${esc(check.ok?t('v50ActivateSceneHint'):check.reason)}" ${check.ok?'':'disabled'}>${icon('power')}<span>${esc(label)}</span></button>${check.ok?'':`<p class="scene-unavailable-note">${icon('info')}<span>${esc(check.reason)}</span></p>`}`;
   }
   function standScenesMarkup(compact=false) {
     const list=savedScenes.scenes.filter(scene=>scene.standId===stand()?.id);
     if(compact){
-      const summary=list.length?`${list.length} bewaarde ${list.length===1?'scène':'scènes'}`:'Bekijk en bewaar lichtinstellingen';
-      return `<button class="stand-scenes-entry" data-action="stand-scenes"><span class="stand-scenes-entry-icon">${icon('scenes')}</span><span class="stand-scenes-entry-copy"><b>Scènes</b><small>${esc(summary)}</small></span><span class="stand-scenes-entry-open">Openen</span>${icon('chevron')}</button>`;
+      const summary=list.length?t(list.length===1?'v50SavedScenesOne':'v50SavedScenesMany',{count:list.length}):t('v50ViewSaveLighting');
+      return `<button class="stand-scenes-entry" data-action="stand-scenes"><span class="stand-scenes-entry-icon">${icon('scenes')}</span><span class="stand-scenes-entry-copy"><b>${esc(t('scenes'))}</b><small>${esc(summary)}</small></span><span class="stand-scenes-entry-open">${esc(t('v50Open'))}</span>${icon('chevron')}</button>`;
     }
     const shown=list.slice(0,4);
-    const cards=shown.map(scene=>`<article class="stand-scene-row"><button class="stand-scene-card" data-action="scene-open" data-id="${esc(scene.id)}">${scenePreview(scene)}<span><b>${esc(scene.name)}</b><small>${zoneCount(scene.zones.length)} · ${receiverCount(scene.zones.reduce((count,item)=>count+item.receivers.length,0))}</small><i>Details ${icon('chevron')}</i></span></button>${sceneActivateButtonMarkup(scene)}</article>`).join('');
-    return `<section class="stand-scenes${compact?' stand-scenes-compact':''}"><div class="section-heading"><div><h2>Scènes</h2><small>${list.length?`${list.length} bewaarde ${list.length===1?'sfeer':'sferen'}`:'Bewaar een lichtinstelling om die later terug te halen.'}</small></div><button class="text-button" data-action="stand-scenes">${list.length?'Alle scènes':'Scènes openen'} ${icon('chevron')}</button></div>${cards?`<div class="stand-scene-list">${cards}</div>`:`<button class="stand-scenes-empty" data-action="stand-scenes">${icon('scenes')}<span><b>Nog geen scènes bewaard</b><small>Open Scènes om je eerste lichtinstelling op te slaan.</small></span>${icon('chevron')}</button>`}</section>`;
+    const cards=shown.map(scene=>`<article class="stand-scene-row"><button class="stand-scene-card" data-action="scene-open" data-id="${esc(scene.id)}">${scenePreview(scene)}<span><b>${esc(scene.name)}</b><small>${zoneCount(scene.zones.length)} · ${receiverCount(scene.zones.reduce((count,item)=>count+item.receivers.length,0))}</small><i>${esc(t('v50Details'))} ${icon('chevron')}</i></span></button>${sceneActivateButtonMarkup(scene)}</article>`).join('');
+    return `<section class="stand-scenes${compact?' stand-scenes-compact':''}"><div class="section-heading"><div><h2>${esc(t('scenes'))}</h2><small>${list.length?esc(t(list.length===1?'v50SavedAtmospheresOne':'v50SavedAtmospheresMany',{count:list.length})):esc(t('v50SaveLightingLater'))}</small></div><button class="text-button" data-action="stand-scenes">${esc(t(list.length?'v50AllScenes':'v50OpenScenes'))} ${icon('chevron')}</button></div>${cards?`<div class="stand-scene-list">${cards}</div>`:`<button class="stand-scenes-empty" data-action="stand-scenes">${icon('scenes')}<span><b>${esc(t('v50NoSavedScenes'))}</b><small>${esc(t('v50FirstSceneHint'))}</small></span>${icon('chevron')}</button>`}</section>`;
   }
   function sceneSearch(mode,count) {
     if(count<6)return '';
     const id=mode==='draft'?'scene-zone-search':'scene-detail-search',value=mode==='draft'?sceneDraft.search||'':sceneDetailSearch;
-    return `<label class="scene-search" for="${id}"><span>Zoek een zone</span><input type="search" id="${id}" maxlength="64" autocomplete="off" placeholder="Bijvoorbeeld: balie" value="${esc(value)}"></label><p class="scene-filter-count" data-scene-filter-count role="status" aria-live="polite"></p>`;
+    return `<label class="scene-search" for="${id}"><span>${esc(t('v50SearchZone'))}</span><input type="search" id="${id}" maxlength="64" autocomplete="off" placeholder="${esc(t('v50ZoneSearchExample'))}" value="${esc(value)}"></label><p class="scene-filter-count" data-scene-filter-count role="status" aria-live="polite"></p>`;
   }
   function filterSceneZones(mode) {
     const normalized=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
     const query=normalized(mode==='draft'?sceneDraft?.search:sceneDetailSearch),rows=Array.from(main.querySelectorAll('[data-scene-filter-name]'));
     let visible=0;
     rows.forEach(row=>{row.hidden=!normalized(row.dataset.sceneFilterName).includes(query);if(!row.hidden)visible++;});
-    const count=main.querySelector('[data-scene-filter-count]');if(count)count.textContent=query?`${visible} van ${zoneCount(rows.length)} zichtbaar`:`${zoneCount(rows.length)} · zoek op naam of type`;
+    const count=main.querySelector('[data-scene-filter-count]');if(count)count.textContent=query?t('v50VisibleZones',{visible,count:zoneCount(rows.length)}):t('v50SearchZoneHint',{count:zoneCount(rows.length)});
     const empty=main.querySelector('.scene-search-empty');if(empty)empty.hidden=visible>0;
     paint(performance.now()/1000);
   }
@@ -2616,6 +2898,7 @@
     if(paletteDrag?.isActive()&&!top){paletteRenderDeferred=true;return;}
     paletteDrag?.cancel();
     const oldSheetScroll=main.querySelector('[data-order-open="true"]')?.scrollTop||0;
+    const oldSpatialBrowsing=spatialChoiceBrowsing();
     restoreLayoutInert();
     if(firstAccessCheckpoint)route={...route,screen:'receiver-add',standId:firstAccessCheckpoint.standId,zoneId:null,setupFrom:'stand'};
     const sharingVisible=route.screen==='stand-sharing'&&standSharingMode==='share'||route.screen==='stand-connect'&&standConnectionIntent==='open'&&standSharingMode==='join';
@@ -2703,7 +2986,7 @@
       }
     }
     const previewDock=main.querySelector('.control-preview-dock');
-    if(previewDock){const spatial=previewDock.querySelector('.spatial-preview-wrap')!==null;previewDock.dataset.previewSize=spatial?'large':controlPreviewSize;previewDock.dataset.spatialPreview=spatial?'true':'false';if(keepCompactPreview)previewDock.dataset.scrolled='true';}
+    if(previewDock){const spatial=previewDock.querySelector('.spatial-preview-wrap')!==null;previewDock.dataset.previewSize=controlPreviewSize;previewDock.dataset.spatialPreview=spatial?'true':'false';if(keepCompactPreview)previewDock.dataset.scrolled='true';}
     main.classList.toggle('gallery-scroll-stable',Boolean(main.querySelector('#animation-results')));
     if(route.screen==='scene-detail')main.querySelector('.scene-activate-bar')?.insertAdjacentHTML('afterbegin','<p class="live-confirmation" data-live-status="scene" role="status" aria-live="polite"></p>');
     if(route.screen==='settings')main.querySelector('.page-heading')?.insertAdjacentHTML('afterend',pinProtectionCard());
@@ -2823,6 +3106,8 @@
       if(activeEditor)UIContinuity.restoreEditor(main,activeEditor);
       else if(!UIContinuity.restoreCapturedAction(document,activeAction)&&focusKey)document.querySelector(`[data-order-receiver="${CSS.escape(focusKey)}"] .order-handle`)?.focus({preventScroll:true});
     }
+    if(openSpatialChoices.has(zone()?.id))syncSpatialChoiceDialog(oldSpatialBrowsing);
+    syncOrderTutorial();
   }
   function restoreControlFocus(previous,host=document) {
     if(!previous?.matches?.('button[data-action]'))return false;
@@ -2868,11 +3153,14 @@
       simpleStandMode=false;legacyStandReturn=null;
     }
     const previousRoute=route;
+    if(screen!==route.screen||extra.zoneId&&extra.zoneId!==route.zoneId||extra.standId&&extra.standId!==route.standId)openSpatialChoices.clear();
     if(screen!==route.screen||extra.standId&&extra.standId!==route.standId)invalidatePinProtectionRead();
     if(screen!==route.screen||(extra.zoneId&&extra.zoneId!==route.zoneId))closeZoneMenus();
     if(screen!==route.screen)visualPlugMotions.clear();
     if(!pinRequired()&&!nativeContext&&screen==='pin-login')screen='settings';
-    if(screen==='receiver-add'&&route.screen!=='receiver-add')extra={setupFrom:!stand()||!standReceivers().some(receiver=>receiver.role==='main')||route.screen!=='receivers'?'stand':'receivers',setupReturnZoneId:null,...extra};
+    // The return destination is a UI context, not a receiver role. A saved
+    // stand without a MAIN must still return to the receiver list normally.
+    if(screen==='receiver-add'&&route.screen!=='receiver-add')extra={setupFrom:stand()&&route.screen==='receivers'?'receivers':'stand',setupReturnZoneId:null,...extra};
     if(screen!=='animation-family')extra={family:null,familyReturnScreen:null,...extra};
     if(route.screen==='receiver-add')onboarding.suspend();route = {...route,screen,...extra};
     const changedZone=route.zoneId!==previousRoute.zoneId;
@@ -2891,7 +3179,7 @@
     if(enteredZone&&controlMode==='animations'&&!showControlAnimationGallery&&!restoreControls)revealAnimationStart();
     if(screen==='settings')void refreshPinProtection();
   }
-  function resetMarkup(key,label) { return `<button class="setting-reset" data-action="setting-reset" data-id="${key}" aria-label="${esc(label)} terug naar standaard" ${settingChanged(key)?'':'hidden'}>↺ Standaard</button>`; }
+  function resetMarkup(key,label) { return `<button class="setting-reset" data-action="setting-reset" data-id="${key}" aria-label="${esc(t('v50ResetSetting',{name:label}))}" ${settingChanged(key)?'':'hidden'}>↺ ${esc(t('v50Default'))}</button>`; }
   function translateMainControls() {
     // Only known UI controls: never walk and replace arbitrary text or names.
     main.querySelector('.scene-draft-page')?.classList.toggle('is-editing',Boolean(sceneDraft?.sceneId));
@@ -3377,7 +3665,9 @@
     if(document.hidden)return;
     if(orderRecognitionDirty)syncOrderRecognition();
     if(secondary)pixelSetup.paint(time);
-    for(const [id,blink] of identifying)if(time>=blink.until){identifying.delete(id);syncIdentifyControls(id);}
+    let orderBlinkExpired=false;
+    for(const [id,blink] of identifying)if(time>=blink.until){identifying.delete(id);syncIdentifyControls(id);orderBlinkExpired=true;}
+    if(orderBlinkExpired)syncOrderTestControls();
     if(route.screen==='receiver-add')onboarding.paint(time);
     const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const standPlayback=standControlOpen?StandAnimations.current(model,stand().id):null;
@@ -3418,14 +3708,18 @@
       }):spec.receivers;
       const globalPlan=spec.standLiveZoneId?liveZoneStandPlan(spec.standLiveZoneId):null;
       const globalOptions=globalPlan?StandAnimations.previewOptions(globalPlan,time,{zoneId:spec.standLiveZoneId}):null;
+      const exampleBlink=identifying.get(orderIdentificationState?.lines[orderTestState.index]?.receiverId);
+      const guidePulse=spec.orderTarget&&orderTestState.preview&&orderTestState.status==='running'&&orderTestState.session===orderIdentificationState?.session&&orderTestFingerprint===orderTestGeometry()?new Map([['order-example-'+(orderTestState.index+1),{scope:zone()?.type==='SPI'?'1':'all',ports:zone()?.type==='SPI'?[1]:[],startedAt:exampleBlink?.startedAt??time,until:exampleBlink?.until??time+0.1}]]):undefined;
+      const guideColours=guidePulse?new Map(spec.receivers.map(receiver=>[receiver.id+':'+(receiver.type==='SPI'?1:0),[receiver.state.r,receiver.state.g,receiver.state.b]])):undefined;
       P.draw(canvas,{...spec,...globalOptions,layout:spec.orderOverview?'stacked':globalPlan?'stacked':draft?.layout||spec.layout,receivers:list,
         presentation:globalPlan?undefined:spec.presentation,
         geometryReceivers:globalPlan?globalPlan.receivers:spec.preserveZoneGeometry?zoneList:spec.geometryReceivers,selection:spec.orderOverview?{kind:'all'}:spec.main?selection():spec.selection,
         ...(savedZone&&!globalPlan?{lineOrder:proposedOrder||draft?.lineOrder||M.lineIds(model,savedZone.id)}:{}),
         ...(proposedOrder||draft?{lineNumbers:Object.fromEntries((proposedOrder||draft.lineOrder).map((id,index)=>[id,index+1]))}:{}),
-        selectionFeedback:spec.main===true,identifying:spec.main?identifying:undefined,identificationTime:time,reducedMotion:reduce,
-        identificationColours:spec.main&&openLineSetup.has(route.zoneId)?proposedOrder?new Map(proposedOrder.map((id,index)=>[id,orderPreviewGesture.positionColours[index]?.rgb]).filter(([,rgb])=>rgb)):new Map([...orderColours].map(([id,colour])=>[id,colour.rgb])):undefined,
+        selectionFeedback:spec.main===true,identifying:spec.orderTarget?guidePulse:spec.main?identifying:undefined,identificationTime:time,reducedMotion:reduce,
+        identificationColours:spec.orderTarget?guideColours:spec.main&&openLineSetup.has(route.zoneId)?proposedOrder?new Map(proposedOrder.map((id,index)=>[id,orderPreviewGesture.positionColours[index]?.rgb]).filter(([,rgb])=>rgb)):new Map([...orderColours].map(([id,colour])=>[id,colour.rgb])):undefined,
         time:reduce&&!spec.main?1.5:time});
+      if(spec.selectionOverlay)syncPreviewTargets(canvas);
       if(spec.orderOverview)canvas.dataset.proposedOrder=JSON.stringify(proposedOrder||draft?.lineOrder||M.lineIds(model,savedZone.id));
     });
     document.querySelectorAll('canvas[data-product-receiver]').forEach(canvas=>{
@@ -3449,8 +3743,8 @@
       const scope=button.dataset.action==='visual-identify'?'all':button.dataset.port,pressed=blink?.scope===scope;
       const waiting=identifyPending.has(receiverId);
       const enabled=receiver.type!=='SPI'||receiver.outputs.some(o=>o.enabled&&(scope==='all'||String(o.port)===scope));
-      button.disabled=waiting||!enabled||standReceiverActionUnavailable(button.dataset.action,button);button.setAttribute('aria-busy',String(waiting));
       const inline=button.closest('.ledline-row-actions');
+      button.disabled=waiting||!enabled||!!inline&&orderTestBusy()||standReceiverActionUnavailable(button.dataset.action,button);button.setAttribute('aria-busy',String(waiting));
       // Keep the compact row label stable: a longer stop/wait label would wrap
       // and move the focused button while identifying this line.
       button.setAttribute('aria-pressed',String(pressed));button.querySelector('span').textContent=inline?t(waiting?'lineSetupBlinkWaiting':pressed?'lineSetupBlinkStop':'lineSetupBlink'):waiting?'Even wachten…':pressed?'Stop knipperen':'Knipperen';
@@ -3458,6 +3752,7 @@
     });
   }
   async function toggleIdentification(receiver,scope){
+    if(openLineSetup.has(route.zoneId)&&orderTestBusy())return;
     if(standPresentationOnly())return toast('Je stand is nog niet verbonden. Je bewaarde stand blijft zichtbaar.');
     if(identifyPending.has(receiver.id))return;
     const ports=receiver.type==='SPI'?receiver.outputs.filter(o=>o.enabled&&(scope==='all'||String(o.port)===scope)).map(o=>o.port):[];
@@ -3489,7 +3784,7 @@
         if(layoutStopping)identifying.delete(receiver.id);
         else {const now=performance.now()/1000;identifying.set(receiver.id,{scope,ports,startedAt:now,until:now+reply.ttlMs/1000,layoutSession:layout.session});}
       }catch(_){toast('Knipperen niet bevestigd. De vaste herkenningskleuren blijven tijdelijk actief.');}
-      finally{identifyPending.delete(receiver.id);syncIdentifyControls(receiver.id);paint(performance.now()/1000);}
+      finally{identifyPending.delete(receiver.id);syncIdentifyControls(receiver.id);syncOrderTestControls();paint(performance.now()/1000);}
       return;
     }
     if(previewContext){
@@ -3524,7 +3819,7 @@
       if(stopping)identifying.delete(receiver.id);
       else {const now=performance.now()/1000;identifying.set(receiver.id,{scope,ports,startedAt:now,until:now+reply.ttlMs/1000});}
     }catch(_){toast(awaitingStop?'Stoppen is nog niet bevestigd. De herkenning stopt vanzelf; probeer opnieuw.':'Knipperen is niet bevestigd. Controleer de verbinding en probeer opnieuw.');}
-    finally{identifyPending.delete(receiver.id);syncIdentifyControls(receiver.id);paint(performance.now()/1000);}
+    finally{identifyPending.delete(receiver.id);syncIdentifyControls(receiver.id);syncOrderTestControls();paint(performance.now()/1000);}
   }
   let lastPaint=0,lastSecondaryPaint=0;
   function frame(now){
@@ -3551,7 +3846,13 @@
     if(standControlOpen&&!buildingStandDialog&&!standDialogNested&&!colourManagerReturn){
       standControlEpoch++;
       const focused=dialogActionOpener||document.activeElement;
-      standDialogNested={scrollTop:document.getElementById('effect-dialog').scrollTop,action:focused?.dataset?.action,id:focused?.dataset?.id};
+      const parent=document.getElementById('effect-dialog');
+      // Nested colour/category sheets replace this same DOM. Capture the
+      // parent now, not its replacement when returning from the sheet.
+      standDialogNested={scrollTop:parent.scrollTop,context:lastStandControlContext,
+        disclosures:UIContinuity.captureDisclosures(parent),
+        actionKey:UIContinuity.captureAction(parent,focused),
+        action:focused?.dataset?.action,id:focused?.dataset?.id};
     }
     if(!document.getElementById('effect-dialog').open)dialogReturnFocus=dialogActionOpener||document.activeElement;
     const dialog=document.getElementById('effect-dialog');
@@ -3641,9 +3942,14 @@
     return false;
   }
   function restoreStandDialog(){
-    const saved=standDialogNested;standControlEpoch++;standDialogNested=null;renderStandControls();
-    const dialog=document.getElementById('effect-dialog');dialog.scrollTop=saved?.scrollTop||0;
-    if(saved?.action)dialog.querySelector(`[data-action="${CSS.escape(saved.action)}"]${saved.id?`[data-id="${CSS.escape(saved.id)}"]`:''}`)?.focus({preventScroll:true});
+    const saved=standDialogNested;standControlEpoch++;standDialogNested=null;renderStandControls({preserveScroll:false});
+    const dialog=document.getElementById('effect-dialog');
+    // Never replay UI from a different stand, tab, family or editor context.
+    if(saved?.context!==lastStandControlContext)return;
+    UIContinuity.restoreDisclosures(dialog,saved.disclosures||[]);
+    dialog.scrollTop=saved.scrollTop||0;
+    if(!UIContinuity.restoreCapturedAction(dialog,saved.actionKey)&&saved.action)
+      dialog.querySelector(`[data-action="${CSS.escape(saved.action)}"]${saved.id?`[data-id="${CSS.escape(saved.id)}"]`:''}`)?.focus({preventScroll:true});
   }
   function standAnimationPreview(effect,{compact=false}={}){
     const sample=copy(model);sample.receivers.forEach(receiver=>{delete receiver.state.standAnimation;});
@@ -3695,22 +4001,22 @@
   }
   function showPaletteEditor(index) {
     const s=selectedState();if(!Number.isInteger(index)||index<0||index>=Math.min(colours(s).length,s.colorCount||colours(s).length)||activeEffect()?.paletteEditable===false)return;
-    const label=activeEffect()?.whiteMixPreset?'Witmix':'Kleur';
-    showEffectDialog(`${label} ${index+1} aanpassen`,`${dialogAnimationPreview()}${colourPickerMarkup(index)}`);
+    const label=t(activeEffect()?.whiteMixPreset?'v50WhiteMixNumber':'v50ColourNumber',{number:index+1});
+    showEffectDialog(t('v50EditColour',{name:label}),`${dialogAnimationPreview()}${colourPickerMarkup(index)}`);
     paintWheel();syncColour();
   }
   function dialogAnimationPreview(){
     if(standControlOpen&&activeEffect())return standAnimationPreview(activeEffect());
     const view=tunnelSpatialContext()?spatialMode():null,spatial=['tunnel','wall'].includes(view);
-    const title=spatial?spatialPreviewText('Preview',view):'Live LED-voorbeeld';
-    const label=spatial?`${title} · ${zone().name} · ${ledlineCount(physicalLineCount())}`:'Live voorbeeld met jouw animatiekleuren';
+    const title=spatial?spatialPreviewText('Preview',view):t('v50LiveLedPreview');
+    const label=spatial?`${title} · ${zone().name} · ${ledlineCount(physicalLineCount())}`:t('v50LivePalettePreview');
     const options={main:true,label,...(spatial?{spatialShape:view,presentation:'receivers',geometryReceivers:receivers()}: {})};
-    return `<div class="preview-wrap dialog-live-preview${spatial?' is-spatial-preview':''}"><div class="preview-top">${esc(spatial?`${title} · live`:title)}</div>${zonePreview(zone(),spatial?'dialog-spatial-preview':'',options)}</div>`;
+    return `<div class="preview-wrap dialog-live-preview${spatial?' is-spatial-preview':''}"><div class="preview-top">${esc(spatial?t('v50LivePreviewTitle',{name:title}):title)}</div>${zonePreview(zone(),spatial?'dialog-spatial-preview':'',options)}</div>`;
   }
   function syncBackground(){
     const host=standControlOpen?document.getElementById('effect-dialog-content'):main;
     const on=Boolean(selectedState().backgroundOn),button=host.querySelector('[data-action="background-toggle"]');
-    if(button){button.setAttribute('aria-pressed',on);button.setAttribute('aria-checked',on);button.querySelector('span').textContent=on?'Aan':'Uit';}
+    if(button){button.setAttribute('aria-pressed',on);button.setAttribute('aria-checked',on);button.querySelector('span').textContent=t(on?'v50On':'v50Off');}
     const details=host.querySelector('[data-background-details]');if(details)setPanelHidden(details,!on);
     const swatch=host.querySelector('.background-swatch'),channels=backgroundChannels();
     if(swatch)swatch.style.background=C.screenHex(channels.slice(0,3),channels[3]);
@@ -4102,35 +4408,59 @@
     const status=document.querySelector('.order-status');if(status)status.textContent=t('orderReceiverMoved',{name:receiver.name,position:toIndex+1});
   }
   document.getElementById('effect-dialog').addEventListener('cancel',event=>{event.preventDefault();dismissEffectDialog();});
+  document.getElementById('order-tutorial').addEventListener('cancel',event=>{event.preventDefault();closeOrderTutorial();});
   document.getElementById('help').addEventListener('cancel',event=>{
     event.preventDefault();dismissDialog(event.currentTarget,closeHelp);
   });
+  function spatialPreviewHit(paths,x,y,width,height){
+    if(!Array.isArray(paths)||![x,y,width,height].every(Number.isFinite)||width<=0||height<=0||x<0||x>1||y<0||y>1)return null;
+    const px=x*width,py=y*height;let nearest=null,best=Infinity;
+    const valid=point=>Array.isArray(point)&&point.length===2&&point.every(value=>Number.isFinite(value)&&value>=0&&value<=1);
+    for(const path of paths){
+      if(!Array.isArray(path?.points)||path.points.length<2||!path.points.every(valid))continue;
+      const tolerance=Math.max(1,Math.min(24,Number(path.tolerancePx)||12));let distance=Infinity;
+      for(let i=1;i<path.points.length;i++){
+        const ax=path.points[i-1][0]*width,ay=path.points[i-1][1]*height,bx=path.points[i][0]*width,by=path.points[i][1]*height;
+        const dx=bx-ax,dy=by-ay,length=dx*dx+dy*dy,fraction=length?Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/length)):0;
+        distance=Math.min(distance,(px-ax-fraction*dx)**2+(py-ay-fraction*dy)**2);
+      }
+      if(distance<=tolerance*tolerance&&distance<best){best=distance;nearest=path;}
+    }
+    return nearest;
+  }
   document.addEventListener('click',event=>{
     if(managementBusy||arrangementApplying)return;
     const canvas=event.target.closest?.('canvas[data-preview]');
     if(!canvas||!['controls','colour','animations'].includes(route.screen)||continuousZone())return;
     const preview=previews.get(canvas.dataset.preview);
     if(!preview?.main||preview.orderOverview||preview.zoneId!==route.zoneId)return;
-    let regions=[];try{regions=JSON.parse(canvas.dataset.lineHitRegions||'[]');}catch(_){return;}
-    if(!regions.length)return;
+    let regions=[],paths=[];try{regions=JSON.parse(canvas.dataset.lineHitRegions||'[]');paths=JSON.parse(canvas.dataset.lineHitPaths||'[]');}catch(_){return;}
+    if(!regions.length&&!paths.length)return;
     const bounds=canvas.getBoundingClientRect(),x=(event.clientX-bounds.left)/bounds.width,y=(event.clientY-bounds.top)/bounds.height;
-    const hit=regions.find(region=>x>=region.x&&x<=region.x+region.width&&y>=region.y&&y<=region.y+region.height);
+    const hit=paths.length?spatialPreviewHit(paths,x,y,bounds.width,bounds.height):regions.find(region=>x>=region.x&&x<=region.x+region.width&&y>=region.y&&y<=region.y+region.height);
     if(!hit||!receivers().some(receiver=>receiver.id===hit.receiverId))return;
     const id=zone()?.type==='SPI'?hit.lineId:hit.receiverId;
     if(zone()?.type==='SPI'&&!M.zoneLedlines(model,route.zoneId).some(line=>line.id===id))return;
-    if(selection().kind==='receiver'&&selection().receiverId===id||selection().kind==='line'&&selection().lineId===id)return;
     event.preventDefault();
-    if(['receivers','lines'].includes(selection().kind))toggleLineSelection(id);
-    else storeLineSelection([id]);
+    toggleLineSelection(id);
     const full=document.getElementById('effect-dialog').classList.contains('v50-fullscreen-preview');
     expandedScopeZones.add(route.zoneId);render({preserveScroll:true});if(full)openFullscreenPreview();
   });
   document.addEventListener('click',async event=>{
     if(firstAccessCheckpoint&&event.target.closest?.('[data-action]'))return;
     const button=event.target.closest('button[data-action]');if(!button||button.disabled)return;
+    if(button.dataset.action==='order-tutorial-close')return closeOrderTutorial();
+    if(button.dataset.action==='order-tutorial-open')return openOrderTutorial();
+    if(button.dataset.action==='order-guide-replay'){
+      const instruction=button.closest('.v50-order-instruction');if(!instruction)return;
+      instruction.dataset.guidePlaying='false';requestAnimationFrame(()=>{if(instruction.isConnected)requestAnimationFrame(()=>{if(instruction.isConnected)instruction.dataset.guidePlaying='true';});});return;
+    }
     if(button.dataset.action==='pin-login-cancel'&&pinLoginBusy){pinRecoveryAbort?.abort();return;}
     if(managementBusy||arrangementApplying||pinProtectionBusy||pinLoginBusy)return;
     const action=button.dataset.action,id=button.dataset.id;
+    // Closing a presentation-only chooser needs no receiver connection.
+    // Keep it available if a saved stand goes offline while this sheet is open.
+    if(action==='spatial-close')return closeSpatialChoice();
     if(temporarySingleUser&&temporaryAccessActions.has(action))return;
     if(!standPresentationActionAllowed(action))return toast('Je stand is nog niet verbonden. Je bewaarde stand blijft zichtbaar.');
     if(standReceiverActions.has(action)&&standReceiverActionUnavailable(action,button))return toast(standReceiverNotice);
@@ -4167,6 +4497,7 @@
           renderStandControls({preserveScroll:false});return;
         }
         if(action==='animation-current-edit'){standControlEpoch++;standAnimationGallery=false;standAnimationFamily=null;renderStandControls({preserveScroll:false});return;}
+        if(action==='animation-category-tab'&&button.closest('.animation-category-tabs'))return chooseAnimationCategoryTab(id);
         if(action==='animation-category-choice'&&button.closest('[data-animation-categories]'))return chooseAnimationCategory(id);
         if(action==='effect'){
           const effect=catalogue().find(effect=>effect.id===id);if(!effect)return;
@@ -4197,30 +4528,42 @@
         }
         if(action==='preset-delete-confirm'){const epoch=standControlEpoch,standId=stand()?.id,result=presetStore.remove(id);if(result.error)return toast(result.error.message);await confirmCentralLibrary(result);savedPresets=result;if(standControlOpen&&epoch===standControlEpoch&&standId===stand()?.id){standDialogNested=null;renderStandControls();}return;}
       }
+      if(action==='order-test-start'){void startOrderTest();return;}
+      if(action==='order-test-stop'){cancelOrderTest();return;}
+      if(action==='order-test-confirm'){
+        if(!previewContext&&orderTestState.status==='complete'&&!orderTestBusy()&&orderTestContext().ready&&orderTestState.session===orderIdentificationState?.session&&orderTestFingerprint===orderTestGeometry())orderTestConfirmation=orderTestGeometry();
+        syncOrderTestControls();return;
+      }
+      if(orderTestBusy()&&button.closest('.ledline-row-actions'))return;
       if(openLineSetup.has(route.zoneId)&&button.closest('.ledline-setup')&&action!=='layout'&&!['visual-identify','port-identify'].includes(action)){
         if(orderIdentificationState?.active)void orderIdentification?.interaction();else beginOrderColours();
       }
       if(action==='layout'||action==='line-setup-open'){
         if(!zone()||!receivers().length)return;
         const closing=action==='layout'&&openLineSetup.has(route.zoneId);
-        if(closing){openLineSetup.delete(route.zoneId);openLineSettings.clear();arrangementDraft=null;orderColours.clear();void orderIdentification?.close();}
+        if(closing){cancelOrderTest();openLineSetup.delete(route.zoneId);openLineSettings.clear();arrangementDraft=null;orderColours.clear();void orderIdentification?.close();}
         else {openLineSetup.add(route.zoneId);beginArrangement();beginOrderColours();}
         renderArrangement();
         // Safari can anchor the collapsed summary behind the sticky preview
         // when removing a long receiver list. Keep that return target visible.
         if(closing||action==='line-setup-open')revealLineSetup();
-        main.querySelector('.ledline-setup-toggle')?.focus({preventScroll:true});return;
+        if(!document.getElementById('order-tutorial').open)main.querySelector('.ledline-setup-toggle')?.focus({preventScroll:true});return;
       }
       if(action==='layout-receiver-settings'){
-        const r=receivers().find(r=>r.id===button.dataset.receiver);if(!r)return;
-        const browsing=arrangementBrowsing(),opening=!openLineSettings.has(id);
-        openLineSettings.clear();if(opening)openLineSettings.add(id);
-        if(opening&&r.type==='SPI'){visualPorts.set(r.id,Number(button.dataset.port));pixelEditSelections.set(r.id,new Set([Number(button.dataset.port)]));}
-        renderArrangement(browsing);
-        const target=opening?document.getElementById('ledline-settings-'+id)?.querySelector('h4'):main.querySelector(`[data-action="layout-receiver-settings"][data-id="${CSS.escape(id)}"]`);
-        // Opening may reveal the new fields. Closing is not navigation and
-        // must not drag the page back to a far-away row under the sticky dock.
-        if(target){if(opening)revealBelowControlPreview(target,12);target.focus({preventScroll:true});}return;
+        return openOrderLineSettings(id);
+      }
+      if(action==='order-place-choice'){
+        const z=zone(),draft=arrangementDraft,panel=button.closest('[data-order-line-settings]'),toIndex=Number(button.dataset.position);
+        if(!z||!panel||panel.dataset.zone!==z.id||button.dataset.zone!==z.id||panel.dataset.orderLineId!==id||
+          !draft||draft.zoneId!==z.id||panel.dataset.signature!==arrangementSignature(z)||arrangementInteractionBusy()||arrangementNeedsStandOpen()||
+          !Number.isInteger(toIndex)||toIndex<0||toIndex>=draft.lineOrder.length)return;
+        const fromIndex=draft.lineOrder.indexOf(id),physical=M.zoneLedlines(model,z.id).find(line=>line.id===id);
+        if(fromIndex<0||fromIndex===toIndex||!physical)return;
+        const previewOrder=[...draft.lineOrder],receiver=model.receivers.find(item=>item.id===physical.receiverId),palette=orderPositionPalette(z,previewOrder.length);
+        [previewOrder[fromIndex],previewOrder[toIndex]]=[previewOrder[toIndex],previewOrder[fromIndex]];
+        orderPreviewGesture={id,zoneId:z.id,fromIndex,toIndex,previewOrder,receiverName:receiver?.name||'',port:physical.port||0,colour:palette[fromIndex].hex,positionColours:palette};
+        closeEffectDialog();
+        return await moveOrderLine({id,toIndex});
       }
       if(action==='pixel-edit-port'){
         const receiver=receivers().find(value=>value.id===button.dataset.receiver&&value.type==='SPI'),port=Number(button.dataset.port);
@@ -4231,14 +4574,14 @@
       }
       if(action==='spatial-toggle'){
         const z=zone();if(!z)return;
+        if(openSpatialChoices.has(z.id))return closeSpatialChoice();
         const browsing=arrangementBrowsing();
-        if(openSpatialChoices.has(z.id))openSpatialChoices.delete(z.id);else openSpatialChoices.add(z.id);
-        renderArrangement(browsing);main.querySelector('.spatial-choice-toggle')?.focus({preventScroll:true});return;
+        openSpatialChoices.add(z.id);renderArrangement(browsing);return;
       }
       if(action==='family-spatial-layout')return await chooseFamilySpatialLayout(id);
       if(action==='spatial-mode'){
         const z=zone();if(!z||id!=='normal')return;
-        const layout=z.type==='SPI'?(spatialMode(z.layout,z)==='normal'?z.layout:'continuous'):'stacked';
+        const layout=z.type==='SPI'&&z.layout==='continuous'?'continuous':'stacked';
         return await chooseSpatialLayout('normal',layout,{keepOpen:z.type==='SPI'});
       }
       if(action==='spatial-topology'){
@@ -4254,15 +4597,20 @@
       if(action==='preview-size'){
         if(!['small','medium','large'].includes(id))return;
         const dock=button.closest('.control-preview-dock'),picker=button.closest('.preview-size-control'),summary=picker?.querySelector('summary');
-        const names={small:'Klein',medium:'Middel',large:'Groot'},current=controlPreviewSize;
+        const sizeNames={small:'v50PreviewSmall',medium:'v50PreviewMedium',large:'v50PreviewLarge'},current=controlPreviewSize;
         if(current===id){picker?.removeAttribute('open');summary?.focus({preventScroll:true});return;}
         controlPreviewSize=id;
         if(dock){
           // Update this small control in place so its canvas can glide to the
           // chosen size. Rebuilding the full page here made the preview snap.
           dock.dataset.previewSize=id;
+          const wrap=dock.querySelector('.v50-control-preview'),spatial=dock.dataset.spatialPreview==='true';
+          const metrics=controlPreviewMetrics(physicalLineCount(),id,{spatial,vertical:zone()?.layout==='vertical',continuous:continuousZone()});
+          wrap?.style.setProperty('--v50-preview-min-height',metrics.height+'px');
+          wrap?.style.setProperty('--v50-preview-min-width',metrics.width+'px');
+          dock.querySelectorAll('canvas[data-preview]').forEach(canvas=>{const spec=previews.get(canvas.dataset.preview);if(spec?.main)spec.previewSize=id;});
           dock.querySelectorAll('.preview-size-picker [data-action="preview-size"]').forEach(option=>option.setAttribute('aria-pressed',String(option.dataset.id===id)));
-          if(summary){summary.querySelector('b').textContent=names[id];summary.setAttribute('aria-label',`Grootte van het ledlinevoorbeeld ${names[id]}. Tik om te wijzigen`);}
+          if(summary){const size=t(sizeNames[id]);summary.querySelector('b').textContent=size;summary.setAttribute('aria-label',t('v50PreviewSizeChange',{subject:t(spatial?'v50Preview3D':'v50PreviewLine'),size}));}
         }
         picker?.removeAttribute('open');summary?.focus({preventScroll:true});paint(performance.now()/1000);return;
       }
@@ -4406,6 +4754,7 @@
             ?await runtime.services.outputConfigurationStatus({standId:receiver.standId,receiverId:id}):{status:'none'};
           pixelSetupReceiverId=id;
           const selectedPorts=button.dataset.ports?.split(',').map(Number);
+          if(button.closest('[data-order-line-settings]'))closeEffectDialog();
           pixelSetup.open(pending.status==='pending'?{...receiver,outputs:pending.outputs}:receiver,{initialPort:selectedVisualPort(receiver),...(selectedPorts?{selectedPorts}:{}),resumePending:pending.status==='pending'});
         }catch(_){toast('De vorige poortwijziging kon niet worden gelezen. Probeer opnieuw; er is niets gewist.');}
         finally{managementBusy=false;button.disabled=false;}return;
@@ -4639,6 +4988,7 @@
         return;
       }
       if(action==='animation-categories')return showAnimationCategories();
+      if(action==='animation-category-tab'&&button.closest('.animation-category-tabs'))return chooseAnimationCategoryTab(id);
       if(action==='animation-category-choice'){
         if(!button.closest('[data-animation-categories]'))return;
         const previous=libraryTab();closeEffectDialog();
@@ -4801,9 +5151,10 @@
       if(input.id==='animation-search'){
         const value=input.value;animationQueryStore().set(animationQueryKey(),value);
         // Preserve the input focus, caret and scroll while filtering.
-        const library=input.closest('.animation-library-inline'),heading=library?.querySelector('#animation-selector-heading'),guidance=library?.querySelector('.animation-library-guidance');
-        if(heading)heading.textContent=value.trim()?t('chooseAnimation'):t('animationGroupChooserTitle');
-        if(guidance)guidance.textContent=value.trim()?t('animationSearchChooseHint'):t('animationGroupChooserIntro');
+        const library=input.closest('.animation-library-inline'),heading=library?.querySelector('#animation-selector-heading');
+        if(heading)heading.textContent=value.trim()?t('chooseAnimation'):t('v567ChooserTitle');
+        const steps=library?.querySelectorAll('.animation-picker-steps li');
+        steps?.forEach((step,index)=>{if(index===(value.trim()?1:0))step.setAttribute('aria-current','step');else step.removeAttribute('aria-current');});
         if(!value.trim()){standControlOpen?renderStandControls({preserveScroll:true}):render();document.getElementById('animation-search')?.focus({preventScroll:true});return;}
         const results=document.getElementById('animation-results');results.querySelectorAll('canvas[data-preview]').forEach(c=>previews.delete(c.dataset.preview));results.innerHTML=effectResults(value);paint(performance.now()/1000);return;
       }
@@ -4908,6 +5259,38 @@
     open?expandedReceivers.add(details.dataset.receiverDetail):expandedReceivers.delete(details.dataset.receiverDetail);
     if(!open)visualPlugMotions.delete(details.dataset.receiverDetail);
   },true);
+  async function moveOrderLine({id,toIndex}){
+    const draft=arrangementDraft;
+    if(!draft||!openLineSetup.has(route.zoneId)||draft.zoneId!==route.zoneId||arrangementInteractionBusy()||arrangementNeedsStandOpen()){orderPreviewGesture=null;syncOrderFeedback();return syncArrangementControls();}
+    if(draft.signature!==arrangementSignature()){orderPreviewGesture=null;return renderArrangement();}
+    const from=draft.lineOrder.indexOf(id);
+    if(from<0||toIndex<0||toIndex>=draft.lineOrder.length||from===toIndex){orderPreviewGesture=null;syncOrderFeedback();paint(performance.now()/1000,{orderFeedback:true});return;}
+    [draft.lineOrder[from],draft.lineOrder[toIndex]]=[draft.lineOrder[toIndex],draft.lineOrder[from]];
+    const moving=orderPreviewGesture;let saved=false;
+    try{saved=await applyArrangement();}finally{orderPreviewGesture=null;}
+    if(saved&&moving&&moving.id===id){
+      orderMoveResult={...moving,saved:true,toIndex};syncOrderFeedback();
+      const landed=main.querySelector(`[data-order-item="${CSS.escape(id)}"]`);landed?.setAttribute('data-order-settled','true');
+      const targetColour=(orderPositionColours.get(route.zoneId)||[])[toIndex]||orderColours.get(id);
+      if(landed&&targetColour)landed.style.setProperty('--order-drag-colour',targetColour.hex);
+      if(landed){
+        const sheet=landed.closest('[data-order-open="true"]'),bounds=landed.getBoundingClientRect();
+        if(sheet){
+          const header=sheet.querySelector(':scope>.ledline-setup-toggle');
+          const dock=sheet.querySelector('[data-order-dock]');
+          const visibleTop=Math.max(sheet.getBoundingClientRect().top,header?.getBoundingClientRect().bottom||0,dock?.getBoundingClientRect().bottom||0)+12;
+          const visibleBottom=Math.min(innerHeight,sheet.getBoundingClientRect().bottom)-16;
+          if(bounds.top<visibleTop)sheet.scrollTop+=bounds.top-visibleTop;
+          else if(bounds.bottom>visibleBottom)sheet.scrollTop+=bounds.bottom-visibleBottom;
+        }
+      }
+      orderMoveTimer=setTimeout(()=>{orderMoveTimer=null;orderMoveResult=null;landed?.removeAttribute('data-order-settled');syncOrderFeedback();},3200);
+    }else {orderMoveResult=null;syncOrderFeedback();}
+    const handle=main.querySelector(`[data-order-item="${CSS.escape(id)}"] [data-order-handle]`);
+    handle?.focus({preventScroll:true});
+    const physical=M.zoneLedlines(model,route.zoneId).find(line=>line.id===id),receiver=model.receivers.find(r=>r.id===physical?.receiverId);
+    const status=main.querySelector('.order-drop-status');if(status)status.textContent=saved?window.LightningV50OrderTexts.t('orderDropSaved',uiPreferences.preferences.language,{name:receiver?.name||window.LightningV50OrderTexts.t('orderLineFallback',uiPreferences.preferences.language),port:physical?.port?' · P'+physical.port:'',position:toIndex+1}):'';
+  }
   inlineOrderDrag=window.LightningLedlineOrderDrag?.install({
     root:document,
     getItems:()=>!arrangementInteractionBusy()&&!arrangementNeedsStandOpen()&&openLineSetup.has(route.zoneId)&&arrangementDraft?.zoneId===route.zoneId?[...arrangementDraft.lineOrder]:[],
@@ -4924,7 +5307,7 @@
       if(feedback.phase==='start'){
         if(orderMoveTimer!==null)clearTimeout(orderMoveTimer);orderMoveTimer=null;orderMoveResult=null;
         const physical=M.zoneLedlines(model,route.zoneId).find(line=>line.id===feedback.id),receiver=model.receivers.find(item=>item.id===physical?.receiverId);
-        orderPreviewGesture={...feedback,zoneId:route.zoneId,receiverName:receiver?.name||'',port:physical?.port||0,colour:orderColours.get(feedback.id)?.hex,positionColours:arrangementDraft.lineOrder.map(id=>orderColours.get(id))};
+        orderPreviewGesture={...feedback,zoneId:route.zoneId,receiverName:receiver?.name||'',port:physical?.port||0,colour:orderPositionPalette(zone(),arrangementDraft.lineOrder.length)[feedback.fromIndex]?.hex,positionColours:orderPositionPalette(zone(),arrangementDraft.lineOrder.length)};
       }else if(orderPreviewGesture?.id===feedback.id)orderPreviewGesture={...orderPreviewGesture,...feedback};
       syncOrderFeedback();paint(performance.now()/1000,{orderFeedback:true});
     },
@@ -4933,38 +5316,7 @@
       if(!active&&orderRenderDeferred){orderRenderDeferred=false;queueMicrotask(()=>renderArrangement());}
       if(!active)requestAnimationFrame(()=>syncOrderSlots());
     },
-    onDrop:async({id,toIndex})=>{
-      const draft=arrangementDraft;
-      if(!draft||!openLineSetup.has(route.zoneId)||draft.zoneId!==route.zoneId||arrangementInteractionBusy()||arrangementNeedsStandOpen()){orderPreviewGesture=null;syncOrderFeedback();return syncArrangementControls();}
-      if(draft.signature!==arrangementSignature()){orderPreviewGesture=null;return renderArrangement();}
-      const from=draft.lineOrder.indexOf(id);
-      if(from<0||toIndex<0||toIndex>=draft.lineOrder.length||from===toIndex){orderPreviewGesture=null;syncOrderFeedback();paint(performance.now()/1000,{orderFeedback:true});return;}
-      draft.lineOrder.splice(from,1);draft.lineOrder.splice(toIndex,0,id);
-      const moving=orderPreviewGesture;let saved=false;
-      try{saved=await applyArrangement();}finally{orderPreviewGesture=null;}
-      if(saved&&moving&&moving.id===id){
-        orderMoveResult={...moving,saved:true,toIndex};syncOrderFeedback();
-        const landed=main.querySelector(`[data-order-item="${CSS.escape(id)}"]`);landed?.setAttribute('data-order-settled','true');
-        const targetColour=(orderPositionColours.get(route.zoneId)||[])[toIndex]||orderColours.get(id);
-        if(landed&&targetColour)landed.style.setProperty('--order-drag-colour',targetColour.hex);
-        if(landed){
-          const sheet=landed.closest('[data-order-open="true"]'),bounds=landed.getBoundingClientRect();
-          if(sheet){
-            const header=sheet.querySelector(':scope>.ledline-setup-toggle');
-            const dock=sheet.querySelector('[data-order-dock]');
-            const visibleTop=Math.max(sheet.getBoundingClientRect().top,header?.getBoundingClientRect().bottom||0,dock?.getBoundingClientRect().bottom||0)+12;
-            const visibleBottom=Math.min(innerHeight,sheet.getBoundingClientRect().bottom)-16;
-            if(bounds.top<visibleTop)sheet.scrollTop+=bounds.top-visibleTop;
-            else if(bounds.bottom>visibleBottom)sheet.scrollTop+=bounds.bottom-visibleBottom;
-          }
-        }
-        orderMoveTimer=setTimeout(()=>{orderMoveTimer=null;orderMoveResult=null;landed?.removeAttribute('data-order-settled');syncOrderFeedback();},3200);
-      }else {orderMoveResult=null;syncOrderFeedback();}
-      const handle=main.querySelector(`[data-order-item="${CSS.escape(id)}"] [data-order-handle]`);
-      handle?.focus({preventScroll:true});
-      const physical=M.zoneLedlines(model,route.zoneId).find(line=>line.id===id),receiver=model.receivers.find(r=>r.id===physical?.receiverId);
-      const status=main.querySelector('.order-drop-status');if(status)status.textContent=saved?window.LightningV50OrderTexts.t('orderDropSaved',uiPreferences.preferences.language,{name:receiver?.name||window.LightningV50OrderTexts.t('orderLineFallback',uiPreferences.preferences.language),port:physical?.port?' · P'+physical.port:'',position:toIndex+1}):'';
-    }
+    onDrop:moveOrderLine
   });
   document.addEventListener('pointerdown',event=>{
     const target=event.target.closest?.('input[type="range"],canvas.wheel');
@@ -4996,7 +5348,7 @@
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')invalidatePinProtectionRead();});
   window.addEventListener('online',()=>{if(pinProtection?.status==='pending'||pinProtectionPendingCheckStandId||pinProtectionNeedsRefresh())resumePinConnection();});
   window.addEventListener('focus',resumePinConnection);document.addEventListener('visibilitychange',resumePinConnection);
-  window.addEventListener('offline',()=>void orderIdentification?.offline());
+  window.addEventListener('offline',()=>{cancelOrderTest();void orderIdentification?.offline();});
   window.addEventListener('focus',wakeCentralStand);
   window.addEventListener('lightning:native-active',wakeCentralStand);
   window.addEventListener('online',wakeCentralStand);
@@ -5005,11 +5357,11 @@
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&standLinkPending)void consumeStandShareLink();});
   document.addEventListener('visibilitychange',()=>{if(!simpleStandMode||!standSession)return;if(document.hidden)standSession.pause();else wakeCentralStand();});
   window.addEventListener('pagehide',()=>standSession?.pause());
-  window.addEventListener('pagehide',()=>void orderIdentification?.hide());
+  window.addEventListener('pagehide',()=>{cancelOrderTest();void orderIdentification?.hide();});
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden)void orderIdentification?.hide();});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate553',hardwareEnabled:false});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelOrderTest();void orderIdentification?.hide();}});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate568',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

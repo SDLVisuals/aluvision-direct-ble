@@ -1,0 +1,381 @@
+/* V50.564: fullscreen explanatory tutorial and compact move-colour feedback.
+   These styles never request light output or imply a physical test succeeded. */
+body:has(dialog.v50-order-tutorial-modal[open]){overflow:hidden}
+dialog.v50-order-tutorial-modal{
+  box-sizing:border-box;position:fixed;inset:0;width:100vw;max-width:none;
+  height:100vh;height:100dvh;max-height:none;min-height:0;margin:0;padding:0;
+  border:0;border-radius:0;overflow:hidden;color:var(--ink,#252729);
+  background:#f1f2f1;background-image:linear-gradient(150deg,#ffffffa3,#ffffff08);
+  box-shadow:none;isolation:isolate;overscroll-behavior:contain;
+}
+dialog.v50-order-tutorial-modal:not([open]){display:none!important}
+dialog.v50-order-tutorial-modal[open]{display:grid;grid-template-rows:auto minmax(0,1fr) auto}
+dialog.v50-order-tutorial-modal::backdrop{background:#eff0ef;-webkit-backdrop-filter:none;backdrop-filter:none}
+dialog.v50-order-tutorial-modal>header{
+  box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;min-width:0;margin:0;padding:calc(16px + env(safe-area-inset-top))
+    max(18px,env(safe-area-inset-right)) 15px max(18px,env(safe-area-inset-left));
+  border-bottom:1px solid #dce0dc;background:#f7f8f7e8;z-index:2;
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+}
+dialog.v50-order-tutorial-modal>header h2{
+  min-width:0;margin:0;font-size:clamp(20px,5vw,28px);line-height:1.15;
+  font-weight:750;letter-spacing:-.4px;overflow-wrap:anywhere;
+}
+dialog.v50-order-tutorial-modal>header button{
+  box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
+  flex:none;gap:6px;min-width:44px;min-height:44px;max-width:44%;margin:0;padding:10px;
+  border:1px solid #dce0dc;border-radius:13px;background:#ffffffa6;color:inherit;
+  font:inherit;font-size:12px;font-weight:650;line-height:1.2;touch-action:manipulation;
+}
+dialog.v50-order-tutorial-modal>header button .icon{width:18px;height:18px;flex:none}
+.v50-order-tutorial-body{
+  box-sizing:border-box;min-width:0;min-height:0;width:100%;overflow-x:hidden;overflow-y:auto;
+  padding:22px max(18px,env(safe-area-inset-right)) 26px max(18px,env(safe-area-inset-left));
+  overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+}
+dialog.v50-order-tutorial-modal .v50-order-tutorial-content{
+  box-sizing:border-box;display:block;position:static;inset:auto;max-width:600px;width:100%;
+  min-width:0;height:auto;min-height:0;max-height:none;margin:0 auto;padding:0;
+  border:0;border-radius:0;background:none;box-shadow:none;overflow:visible;
+}
+.v50-order-tutorial-hint{margin:0 1px 18px;color:var(--muted,#626963);font-size:15px;line-height:1.5;overflow-wrap:anywhere}
+dialog.v50-order-tutorial-modal .v50-order-instruction[data-guide-detailed=true]{
+  box-sizing:border-box;position:relative;display:grid;grid-template-columns:minmax(0,1fr);
+  align-items:center;min-width:0;gap:15px;margin:0;padding:20px;
+  border:1px solid #dce0dc;border-radius:24px;background:#ffffffbb;
+  background-image:linear-gradient(150deg,#ffffff8c,#ffffff0a);
+  box-shadow:inset 0 1px 0 #fff,0 10px 28px #00000006;
+}
+dialog.v50-order-tutorial-modal .v50-guide-move-example{
+  margin:0;padding:11px 13px;border-radius:13px;background:#eff1ef;color:var(--ink,#252729);
+  font-size:15px;line-height:1.3;font-weight:750;
+}
+dialog.v50-order-tutorial-modal .v50-guide-demo-labels{display:flex;justify-content:space-between;gap:12px;color:var(--muted,#626963);font-size:12px;font-weight:650;line-height:1.35}
+dialog.v50-order-tutorial-modal [data-guide-detailed=true] .v50-order-instruction-demo{
+  box-sizing:border-box;position:relative;display:grid;width:100%;min-width:0;padding:0;overflow:visible;pointer-events:none;
+  height:calc(var(--guide-rows) * 58px - 12px);grid-template-rows:repeat(var(--guide-rows),46px);
+  gap:12px;margin:0 0 10px;
+}
+dialog.v50-order-tutorial-modal [data-guide-detailed=true] .v50-instruction-slot{
+  position:relative;display:grid;align-items:center;min-width:0;
+  height:46px;grid-template-columns:42px minmax(0,1fr);gap:13px;
+}
+dialog.v50-order-tutorial-modal [data-guide-detailed=true] .v50-instruction-slot>b{
+  box-sizing:border-box;display:grid;place-items:center;width:42px;height:46px;border:1px solid var(--guide-slot-colour);
+  border-radius:12px;color:var(--ink,#252729);background:color-mix(in srgb,var(--guide-slot-colour) 13%,var(--panel,#fff));
+  font-size:19px;line-height:1;font-weight:750;font-variant-numeric:tabular-nums;
+}
+dialog.v50-order-tutorial-modal [data-guide-detailed=true] .v50-instruction-slot>i{
+  box-sizing:border-box;display:block;width:100%;height:46px;border-radius:13px;
+  border:1px dashed color-mix(in srgb,var(--guide-slot-colour) 28%,var(--line,#dce0dc));
+  background:color-mix(in srgb,var(--guide-slot-colour) 4%,var(--soft,#eef1f4));
+}
+dialog.v50-order-tutorial-modal [data-guide-detailed=true] .v50-instruction-card{
+  box-sizing:border-box;position:absolute;top:0;left:55px;display:flex;align-items:center;justify-content:space-between;
+  gap:8px;width:calc(100% - 55px);height:46px;padding:0 12px;border:2px solid var(--guide-to-colour);
+  border-radius:13px;background:var(--panel,#fff);color:var(--guide-to-colour);font-size:15px;
+  font-weight:750;line-height:1;box-shadow:0 5px 12px #00000014;transform:translateY(0);z-index:1;
+}
+dialog.v50-order-tutorial-modal .v50-instruction-identity{position:static;font-weight:750}
+dialog.v50-order-tutorial-modal .v50-instruction-grip{font-size:19px;line-height:1;opacity:.75}
+dialog.v50-order-tutorial-modal .v50-order-instruction-demo[data-guide-slots="3"]{--guide-from-y:116px!important}
+dialog.v50-order-tutorial-modal .v50-order-instruction-demo[data-guide-slots="2"]{--guide-from-y:58px!important}
+dialog.v50-order-tutorial-modal [data-guide-detailed=true] .v50-instruction-hand{
+  position:absolute;right:17px;bottom:-20px;width:31px;height:36px;margin:0;color:var(--ink,#252729);
+  fill:var(--panel,#fff);filter:drop-shadow(0 1px 2px #00000026);opacity:0;pointer-events:none;
+}
+dialog.v50-order-tutorial-modal [data-guide-playing=true] .v50-instruction-card{animation:v50-guide-card 4s cubic-bezier(.22,1,.36,1) 3 forwards}
+dialog.v50-order-tutorial-modal [data-guide-playing=true] .v50-instruction-hand{animation:v50-guide-hand 4s linear 3 forwards}
+dialog.v50-order-tutorial-modal .v50-guide-physical{display:grid;gap:9px;color:var(--muted,#626963);font-size:12px;font-weight:650;line-height:1.3}
+dialog.v50-order-tutorial-modal .v50-guide-physical-line{display:flex;align-items:center;height:52px;padding:0 18px;border-radius:14px;background:#131716;color:var(--guide-to-colour)}
+dialog.v50-order-tutorial-modal .v50-guide-physical-line>i{display:block;width:100%;height:7px;border-radius:4px;background:currentColor;box-shadow:0 0 8px currentColor,0 0 15px currentColor}
+dialog.v50-order-tutorial-modal [data-guide-playing=true] .v50-guide-physical-line{animation:v50-guide-physical-colour 4s linear 3 forwards}
+dialog.v50-order-tutorial-modal .v50-guide-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:0}
+dialog.v50-order-tutorial-modal .v50-guide-footer>small{flex:1 1 130px;color:var(--muted,#626963);font-size:11px;line-height:1.3}
+dialog.v50-order-tutorial-modal .v50-guide-footer .v50-guide-replay{
+  box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;max-width:100%;min-height:44px;
+  margin:0;padding:8px 11px;border:1px solid var(--line,#dce0dc);border-radius:11px;color:var(--ink,#252729);
+  background:var(--panel,#fff);font:inherit;font-size:12px;font-weight:650;line-height:1.3;touch-action:manipulation;
+}
+.v50-order-tutorial-note{margin:15px 1px 0;color:var(--muted,#626963);font-size:11px;line-height:1.45;overflow-wrap:anywhere}
+dialog.v50-order-tutorial-modal>.v50-order-tutorial-footer{
+  box-sizing:border-box;min-width:0;margin:0;padding:12px max(18px,env(safe-area-inset-right))
+    max(16px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));
+  border-top:1px solid #dce0dc;background:#f7f8f7f0;z-index:2;
+}
+.v50-order-tutorial-footer>button{
+  box-sizing:border-box;display:flex;align-items:center;justify-content:center;width:100%;max-width:600px;
+  min-height:50px;margin:0 auto!important;padding:12px 16px;border:0;border-radius:16px;
+  background:#292d2a;color:#fff;font:inherit;font-size:15px;font-weight:700;line-height:1.3;touch-action:manipulation;
+}
+.v50-order-tutorial-open{
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:44px;max-width:100%;
+  margin:0;padding:7px 9px;border:1px solid var(--line,#dce0dc);border-radius:10px;
+  color:var(--ink,#252729);background:var(--panel,#fff);font:inherit;font-size:11px;font-weight:650;line-height:1.2;
+}
+dialog.v50-order-tutorial-modal button:focus-visible,.v50-order-tutorial-open:focus-visible{
+  outline:2px solid var(--red,#ba433d);outline-offset:3px;
+}
+/* One narrow feedback strip sits below the fixed example; it is illustrative
+   until the caller explicitly reports a saved/confirmed move. */
+.v50-order-dock>.v50-order-feedback{
+  box-sizing:border-box;height:104px;min-height:104px;grid-template-rows:28px minmax(0,1fr);
+  gap:4px;padding:10px 12px;overflow:hidden;
+}
+.v50-order-dock>.v50-order-feedback[data-order-feedback-phase=proposal]>small,
+.v50-order-dock>.v50-order-feedback[data-order-feedback-phase=saved]>small{display:none}
+.v50-order-dock .v50-order-feedback-target{box-sizing:border-box;min-height:28px;height:28px;padding:4px 8px}
+.v50-order-live-change{
+  box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) 18px minmax(0,1fr);
+  align-items:center;align-self:center;gap:2px 8px;min-width:0;height:45px;min-height:45px;margin:0;padding:5px 10px;
+  border:1px solid var(--line,#dce0dc);border-radius:11px;color:var(--ink,#252729);
+  background:var(--panel,#fff);box-shadow:inset 0 1px 0 #ffffff70;
+}
+.v50-order-live-change[hidden]{display:none!important}
+.v50-order-live-change>*{min-width:0}
+.v50-order-live-change .v50-order-light-before,.v50-order-live-change .v50-order-light-after{
+  box-sizing:border-box;display:flex;align-items:center;justify-content:center;min-width:0;
+  gap:6px;height:16px;padding:0 8px;border-radius:5px;background:#151a17;
+}
+.v50-order-live-change .v50-order-light-before{color:var(--order-from-colour,#ff3030)}
+.v50-order-live-change .v50-order-light-after{color:var(--order-to-colour,#0070ff)}
+.v50-order-live-change .v50-order-light-before>i,.v50-order-live-change .v50-order-light-after>i{
+  display:block;flex:1;min-width:0;width:auto;height:3px;border-radius:3px;background:currentColor;box-shadow:0 0 4px currentColor;
+}
+.v50-order-live-change .v50-order-light-before>span,.v50-order-live-change .v50-order-light-after>span{flex:none;color:#c6cdc7;font-size:9px;line-height:1}
+.v50-order-live-change[data-order-live-phase=proposal] .v50-order-light-after,
+.v50-order-live-change[data-phase=proposal] .v50-order-light-after{outline:1px dashed color-mix(in srgb,var(--order-to-colour,#0070ff) 55%,transparent);outline-offset:2px;opacity:.75}
+.v50-order-live-change[data-order-live-phase=saved] .v50-order-light-after,
+.v50-order-live-change[data-phase=saved] .v50-order-light-after{outline:none;opacity:1}
+.v50-order-colour-arrow{display:grid;place-items:center;grid-column:2;grid-row:1;color:var(--muted,#626963);font-size:17px;line-height:1}
+.v50-order-live-caption{
+  grid-column:1/-1;min-width:0;margin:0;color:var(--muted,#626963);font-size:10px;line-height:1.2;
+  text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.v50-order-live-change small{font-size:9px;line-height:1.2;color:var(--muted,#626963)}
+body[data-theme=dark] dialog.v50-order-tutorial-modal{background:#1b1c1b;background-image:linear-gradient(150deg,#ffffff05,#ffffff01)}
+body[data-theme=dark] dialog.v50-order-tutorial-modal::backdrop{background:#1b1c1b}
+body[data-theme=dark] dialog.v50-order-tutorial-modal>header,body[data-theme=dark] dialog.v50-order-tutorial-modal>.v50-order-tutorial-footer{
+  background:#222322ef;border-color:#ffffff14;
+}
+body[data-theme=dark] dialog.v50-order-tutorial-modal>header button{background:#303230;border-color:#ffffff18}
+body[data-theme=dark] dialog.v50-order-tutorial-modal .v50-order-instruction[data-guide-detailed=true]{
+  background:#282a28;background-image:linear-gradient(150deg,#ffffff06,#ffffff01);border-color:#ffffff14;box-shadow:inset 0 1px 0 #ffffff08;
+}
+body[data-theme=dark] dialog.v50-order-tutorial-modal .v50-guide-move-example{background:#333633}
+body[data-theme=dark] .v50-order-tutorial-footer>button{background:#e7ebe7;color:#1e211e}
+body[data-theme=dark] .v50-order-live-change{background:#282a28;border-color:#ffffff14;box-shadow:inset 0 1px 0 #ffffff06}
+@media(max-width:360px){
+  dialog.v50-order-tutorial-modal>header{gap:8px;padding-inline:14px}
+  dialog.v50-order-tutorial-modal>header h2{font-size:20px}
+  .v50-order-tutorial-body{padding:18px 14px 22px}
+  dialog.v50-order-tutorial-modal .v50-order-instruction[data-guide-detailed=true]{padding:14px;gap:12px;border-radius:20px}
+  .v50-order-tutorial-hint{font-size:14px;margin-bottom:14px}
+  dialog.v50-order-tutorial-modal .v50-guide-move-example{font-size:14px;padding:10px 11px}
+  dialog.v50-order-tutorial-modal [data-guide-detailed=true] .v50-instruction-card{font-size:13px}
+  .v50-order-live-change{gap:2px 6px;padding-inline:8px}
+}
+@media(prefers-reduced-motion:reduce){
+  dialog.v50-order-tutorial-modal [data-guide-detailed=true] .v50-instruction-card{animation:none!important;transform:translateY(0)}
+  dialog.v50-order-tutorial-modal [data-guide-detailed=true] .v50-instruction-hand{display:none;animation:none!important}
+  dialog.v50-order-tutorial-modal [data-guide-detailed=true] .v50-guide-physical-line{animation:none!important;color:var(--guide-to-colour)}
+}
+
+/* V50.568: three visual teaching steps. The fixed example, moving cards and
+   simulated physical light share one finite timeline. No real output is used. */
+dialog.v50-order-tutorial-modal:has([data-tutorial-version="568"])>header{
+  padding-top:calc(12px + env(safe-area-inset-top));padding-bottom:12px;
+}
+dialog.v50-order-tutorial-modal:has([data-tutorial-version="568"])>header h2{
+  font-size:clamp(20px,5vw,24px);line-height:1.2;overflow-wrap:normal;word-break:normal;
+}
+dialog.v50-order-tutorial-modal:has([data-tutorial-version="568"]) .v50-order-tutorial-body{
+  padding-top:14px;padding-bottom:14px;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"].v50-order-tutorial-content{
+  display:grid;gap:10px;max-width:540px;position:static;inset:auto;height:auto;
+  min-height:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-badges{
+  display:flex;align-items:center;flex-wrap:wrap;gap:6px 9px;min-width:0;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-badges>small{
+  display:inline-flex;align-items:center;min-width:0;min-height:24px;padding:4px 8px;
+  border:1px solid var(--line,#dce0dc);border-radius:8px;background:var(--soft,#eef1f4);
+  color:var(--muted,#626963);font-size:11px;line-height:1.2;font-weight:500;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-steps{
+  display:grid;gap:9px;min-width:0;margin:0;padding:0;list-style:none;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-steps>li{
+  min-width:0;margin:0;padding:11px 12px;border:1px solid var(--line,#dce0dc);
+  border-radius:17px;background:var(--panel,#fff);box-shadow:0 4px 14px #00000004;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-step-heading{
+  display:flex;align-items:center;gap:8px;min-width:0;margin:0 0 9px;padding:0;
+  color:var(--ink,#252729);font-size:14px;line-height:1.3;font-weight:750;
+  letter-spacing:-.1px;overflow-wrap:normal;word-break:normal;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-step-heading>span{
+  display:grid;place-items:center;flex:none;width:26px;height:26px;
+  border-radius:9px;background:var(--soft,#eef1f4);color:var(--muted,#626963);
+  font-size:13px;line-height:1;font-weight:750;font-variant-numeric:tabular-nums;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-targets{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;min-width:0;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-target{
+  display:grid;grid-template-columns:18px minmax(0,1fr);align-items:center;
+  gap:5px 6px;min-width:0;padding:7px;border-radius:10px;background:#131916;
+  color:var(--tutorial-line-colour);font-size:12px;line-height:1.2;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-target>b{
+  display:grid;place-items:center;color:#eef4ef;font-size:13px;line-height:1;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-target>i,
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-position>i{
+  display:block;min-width:0;width:100%;height:5px;border-radius:3px;
+  background:currentColor;box-shadow:0 0 5px currentColor;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-target>small{
+  grid-column:1/-1;color:#d4ddd7;font-size:10px;line-height:1.2;text-align:center;
+  white-space:normal;overflow-wrap:normal;word-break:normal;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-move-label{
+  margin:0 0 8px 34px;color:var(--muted,#626963);font-size:12px;
+  line-height:1.25;font-weight:600;overflow-wrap:normal;word-break:normal;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-reorder-demo{
+  display:grid;grid-template-columns:66px minmax(0,1fr);gap:8px;min-width:0;
+  pointer-events:none;--tutorial-row-step:52px;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-positions{
+  display:grid;grid-template-rows:repeat(3,44px);gap:8px;min-width:0;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-position{
+  display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;
+  gap:6px;min-width:0;padding:0 5px 0 0;color:var(--tutorial-line-colour);
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-position>b{
+  box-sizing:border-box;display:grid;place-items:center;width:28px;height:36px;
+  border:1px solid var(--tutorial-line-colour);border-radius:9px;
+  background:color-mix(in srgb,var(--tutorial-line-colour) 11%,var(--panel,#fff));
+  color:var(--ink,#252729);font-size:15px;line-height:1;font-weight:750;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-cards{
+  position:relative;min-width:0;height:148px;border-radius:12px;
+  background:repeating-linear-gradient(to bottom,var(--soft,#eef1f4) 0 44px,transparent 44px 52px);
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-card{
+  box-sizing:border-box;position:absolute;top:0;left:0;display:flex;align-items:center;
+  justify-content:space-between;gap:8px;width:100%;min-width:0;height:44px;padding:0 10px;
+  border:2px solid var(--tutorial-to-colour);border-radius:12px;background:var(--panel,#fff);
+  color:var(--tutorial-to-colour);font-size:13px;font-weight:750;line-height:1.2;
+  box-shadow:0 3px 8px #0000000b;transform:translateY(var(--tutorial-to-y));
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-card[data-tutorial-line="1"]{
+  --tutorial-from-y:0px;--tutorial-to-y:104px;
+  --tutorial-from-colour:var(--tutorial-colour-1);--tutorial-to-colour:var(--tutorial-colour-3);
+  z-index:1;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-card[data-tutorial-line="2"]{
+  --tutorial-from-y:52px;--tutorial-to-y:52px;
+  --tutorial-from-colour:var(--tutorial-colour-2);--tutorial-to-colour:var(--tutorial-colour-2);
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-card[data-tutorial-line="3"]{
+  --tutorial-from-y:104px;--tutorial-to-y:0px;
+  --tutorial-from-colour:var(--tutorial-colour-3);--tutorial-to-colour:var(--tutorial-colour-1);
+  z-index:2;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-card>span:first-child{
+  min-width:0;color:var(--ink,#252729);font-size:13px;line-height:1.2;font-weight:700;
+  overflow-wrap:normal;word-break:normal;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-card-light{
+  display:block;flex:0 0 23px;height:4px;border-radius:3px;
+  background:currentColor;box-shadow:0 0 4px currentColor;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-grip{
+  flex:none;font-size:20px;line-height:1;color:var(--muted,#626963);
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-hand{
+  position:absolute;right:3px;bottom:-17px;width:25px;height:29px;opacity:0;
+  color:var(--ink,#252729);fill:var(--panel,#fff);filter:drop-shadow(0 1px 2px #00000026);
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-physical-example{
+  display:flex;align-items:center;gap:12px;min-width:0;padding:10px 11px;
+  border:1px solid #ffffff13;border-radius:11px;background:#131916;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-physical-example>b{
+  flex:none;color:#edf2ee;font-size:11px;line-height:1.3;font-weight:600;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-physical-light{
+  display:flex;gap:2px;flex:1;min-width:0;height:10px;color:var(--tutorial-colour-1);
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-physical-light>i{
+  display:block;flex:1;min-width:0;height:10px;border-radius:2px;
+  background:currentColor;box-shadow:0 0 6px currentColor;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-result-row{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;
+  margin:6px 0 -3px;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-result-row>p{
+  min-width:0;margin:0;padding:0;color:var(--muted,#626963);font-size:11px;line-height:1.35;
+  font-weight:500;overflow-wrap:normal;word-break:normal;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-guide-replay{
+  box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;
+  min-height:44px;max-width:44%;margin:0;padding:6px 8px;border:1px solid var(--line,#dce0dc);
+  border-radius:10px;background:var(--panel,#fff);color:var(--ink,#252729);
+  font:inherit;font-size:11px;line-height:1.25;font-weight:650;touch-action:manipulation;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-order-tutorial-note{
+  margin:0 1px;color:var(--muted,#626963);font-size:10px;line-height:1.4;
+  overflow-wrap:normal;word-break:normal;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"][data-guide-playing="true"] .v50-tutorial-card{
+  animation:v50-tutorial-card-shift 5.2s cubic-bezier(.22,1,.36,1) 3 forwards;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"][data-guide-playing="true"] .v50-tutorial-card[data-tutorial-line="2"]{
+  animation:none;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"][data-guide-playing="true"] .v50-tutorial-hand{
+  animation:v50-tutorial-hand 5.2s linear 3 forwards;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"][data-guide-playing="true"] .v50-tutorial-physical-light{
+  animation:v50-tutorial-light-change 5.2s linear 3 forwards;
+}
+@keyframes v50-tutorial-card-shift{
+  0%,18%{transform:translateY(var(--tutorial-from-y));color:var(--tutorial-from-colour);border-color:var(--tutorial-from-colour);box-shadow:0 3px 8px #0000000b}
+  56%{transform:translateY(var(--tutorial-to-y));color:var(--tutorial-from-colour);border-color:var(--tutorial-from-colour);box-shadow:0 8px 16px #0000001b}
+  58%,100%{transform:translateY(var(--tutorial-to-y));color:var(--tutorial-to-colour);border-color:var(--tutorial-to-colour);box-shadow:0 3px 8px #0000000b}
+}
+@keyframes v50-tutorial-hand{
+  0%,8%,58%,100%{opacity:0}
+  18%,56%{opacity:1}
+}
+@keyframes v50-tutorial-light-change{
+  0%,56%{color:var(--tutorial-colour-3)}
+  58%,100%{color:var(--tutorial-colour-1)}
+}
+@media(max-width:360px){
+  dialog.v50-order-tutorial-modal:has([data-tutorial-version="568"]) .v50-order-tutorial-body{padding-inline:12px}
+  dialog.v50-order-tutorial-modal [data-tutorial-version="568"].v50-order-tutorial-content{gap:8px}
+  dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-steps{gap:8px}
+  dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-steps>li{padding:10px;border-radius:15px}
+  dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-step-heading{font-size:13px;gap:7px}
+  dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-targets{gap:5px}
+  dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-target{padding:6px;gap:4px}
+  dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-reorder-demo{grid-template-columns:60px minmax(0,1fr);gap:6px}
+  dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-physical-example{gap:9px;padding-inline:9px}
+  dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-card{padding-inline:8px}
+}
+@media(prefers-reduced-motion:reduce){
+  dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-card{
+    animation:none!important;transform:translateY(var(--tutorial-to-y));color:var(--tutorial-to-colour);border-color:var(--tutorial-to-colour);
+  }
+  dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-hand{display:none;animation:none!important}
+  dialog.v50-order-tutorial-modal [data-tutorial-version="568"] .v50-tutorial-physical-light{animation:none!important;color:var(--tutorial-colour-1)}
+}

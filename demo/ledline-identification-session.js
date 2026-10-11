@@ -333,5 +333,12 @@
       hide: () => close('hidden'), offline: () => close('offline'),
       supersede: () => close('superseded') });
   }
-  return Object.freeze({ create, MAX_LINES });
+  // Pure presentation helper. It uses the same fixed position colours as a
+  // lease, but never opens a session or sends anything to a receiver.
+  function positionColours(count) {
+    if (!Number.isInteger(count) || count < 1 || count > MAX_LINES) throw fail('IDENTIFICATION_LINES');
+    const used = new Set();
+    return Array.from({length:count}, (_,index) => colour(index,used));
+  }
+  return Object.freeze({ create, MAX_LINES, positionColours });
 }));

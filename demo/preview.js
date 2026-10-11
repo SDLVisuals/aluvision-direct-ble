@@ -889,7 +889,31 @@ function softTrailCoverage(behind,trail,n,smooth){
     return Number.isInteger(local)&&local>0?local:
       (row.lineIndex??frame.geometry.receivers.find(item=>item.receiverId===row.receiverId)?.lineIndex??rowIndex)+1;
   }
-  function drawTunnel(context,frame,width,height,lineNumbers) {
+  function spatialIdentity(row) {
+    return {receiverId:row.receiverId,
+      ...(row.lineId?{lineId:row.lineId}:row.type==='RGBW'?{lineId:row.receiverId+':0'}:{}),
+      ...(Number.isInteger(row.port)?{port:row.port}:row.type==='RGBW'?{port:0}:{})};
+  }
+  const spatialInteractionCache=new Map();
+  function spatialInteractions(frame,paths,width,height,anchors,shape) {
+    // Geometry and identities do not change with animation/selection state.
+    // Cache only this presentation metadata, not pixels or light settings.
+    const key=JSON.stringify([shape,width,height,frame.rows.map(row=>[row.receiverId,row.lineId,row.port])]);
+    if(spatialInteractionCache.has(key))return spatialInteractionCache.get(key);
+    const marginX=Math.min(13,width/2),marginY=Math.min(13,height/2);
+    const result={
+      paths:frame.rows.map((row,index)=>({...spatialIdentity(row),
+        points:paths[index].map(([x,y])=>[x/width,y/height]),tolerancePx:12})),
+      badges:frame.rows.map((row,index)=>({...spatialIdentity(row),
+        x:clamp(anchors[index].x,marginX,width-marginX)/width,
+        y:clamp(anchors[index].y,marginY,height-marginY)/height,
+        pathX:anchors[index].path[0]/width,pathY:anchors[index].path[1]/height}))
+    };
+    result.pathsJSON=JSON.stringify(result.paths);result.badgesJSON=JSON.stringify(result.badges);
+    if(spatialInteractionCache.size>=8)spatialInteractionCache.delete(spatialInteractionCache.keys().next().value);
+    spatialInteractionCache.set(key,result);return result;
+  }
+  function drawTunnel(context,frame,width,height,lineNumbers,interactive=false) {
     const key=[frame.rows.length,width,height].join(':');
     let model=tunnelProjectionCache.get(key);
     if(!model){
@@ -962,6 +986,12 @@ function softTrailCoverage(behind,trail,n,smooth){
         for(let index=begin;index<end;index++)points.push(arch.points[index]);
         points.push(point(to));path(points);
       };
+      if(interactive&&row.selected){
+        // Selection traces the spatial light path, outside its sampled core.
+        // The exact RGB/SPI strokes below remain untouched and fully visible.
+        path(arch.points);context.strokeStyle='rgba(240,245,242,0.2)';
+        context.lineWidth=arch.thickness+5;context.shadowBlur=0;context.stroke();
+      }
       path(arch.points);context.strokeStyle=material(arch.points[0],arch.points[64],'#393d40','#606467');
       context.lineWidth=arch.thickness+Math.max(.45,1.4*model.unit*arch.scale);context.stroke();
       path(arch.points);context.strokeStyle='#29342f';context.lineWidth=arch.thickness+.8;context.stroke();
@@ -1009,7 +1039,7 @@ function softTrailCoverage(behind,trail,n,smooth){
     // Numbers belong below the model, not on the walkway: the foot of a rear
     // arch is very close to the next strip. Overlay labels used to hide those
     // real SPI pixels. This small ordered key never covers the light itself.
-    if(frame.rows.length<=8&&height>=130){
+    if(!interactive&&frame.rows.length<=8&&height>=130){
       context.font='10px system-ui';context.textAlign='center';context.textBaseline='top';
       context.strokeStyle='#111514';context.lineWidth=3;context.fillStyle='#d3ddd6';
       for(let rowIndex=frame.rows.length-1;rowIndex>=0;rowIndex--){
@@ -1020,6 +1050,17 @@ function softTrailCoverage(behind,trail,n,smooth){
       }
     }
     context.shadowBlur=0;
+    if(interactive){
+      const anchors=model.arches.map((arch,index)=>{
+        // Nested arch feet are too close for separate targets. Stagger their
+        // badges around the actual curves, just outside the luminous paths.
+        const at=Math.round(10+108*index/Math.max(1,frame.rows.length-1));
+        const point=arch.points[at],dx=point[0]-model.vanishing[0],dy=point[1]-model.vanishing[1];
+        const norm=Math.max(1,Math.hypot(dx,dy));
+        return {x:point[0]+dx/norm*18,y:point[1]+dy/norm*18,path:point};
+      });
+      return spatialInteractions(frame,model.arches.map(arch=>arch.points),width,height,anchors,'tunnel');
+    }
   }
   // The approved "Strakke wand" is only another camera for these same rows.
   // Setup order goes left to right, with each strip's first pixel at its foot.
@@ -1040,7 +1081,7 @@ function softTrailCoverage(behind,trail,n,smooth){
       floor:[wall[3],wall[2],[width,height*.98],[0,height*.98]]};
   }
   const wallProjectionCache=new Map();
-  function drawWall(context,frame,width,height,lineNumbers) {
+  function drawWall(context,frame,width,height,lineNumbers,interactive=false) {
     const key=[frame.rows.length,width,height].join(':');
     let model=wallProjectionCache.get(key);
     if(!model){
@@ -1073,6 +1114,10 @@ function softTrailCoverage(behind,trail,n,smooth){
       const point=position=>position===0?line.from:position===1?line.to:
         [line.from[0],line.from[1]+(line.to[1]-line.from[1])*position];
       const part=(from,to)=>path([point(from),point(to)]);
+      if(interactive&&row.selected){
+        part(0,1);context.strokeStyle='rgba(240,245,242,0.2)';
+        context.lineWidth=line.thickness+6;context.shadowBlur=0;context.stroke();
+      }
       part(0,1);context.strokeStyle='#646b67';context.lineWidth=line.thickness+line.profile;context.stroke();
       part(0,1);context.strokeStyle='#101713';context.lineWidth=line.thickness+.4*line.profile;context.stroke();
       const segments=row.type==='RGBW'?1:Math.min(384,pixels.length);
@@ -1103,7 +1148,7 @@ function softTrailCoverage(behind,trail,n,smooth){
       context.shadowBlur=0;
     });
     // An unobtrusive order key on the floor never covers the light itself.
-    if(frame.rows.length<=8&&height>=130){
+    if(!interactive&&frame.rows.length<=8&&height>=130){
       context.font='10px system-ui';context.textAlign='center';context.textBaseline='middle';context.fillStyle='#c0c8c2';
       frame.rows.forEach((row,index)=>{
         const order=spatialLineNumber(frame,row,index,lineNumbers);
@@ -1111,12 +1156,16 @@ function softTrailCoverage(behind,trail,n,smooth){
       });
     }
     context.restore();context.shadowBlur=0;
+    if(interactive){
+      return spatialInteractions(frame,model.lines.map(line=>[line.from,line.to]),width,height,
+        model.lines.map(line=>({x:line.from[0],y:height*.87,path:line.from})),'wall');
+    }
   }
   // A projection of the SAME sampled pixels, not a second canned animation.
   // View shape changes presentation only; it never changes output mapping.
-  function drawSpatial(context,frame,width,height,shape,lineNumbers) {
-    if(shape==='tunnel'){drawTunnel(context,frame,width,height,lineNumbers);return;}
-    if(shape==='wall'){drawWall(context,frame,width,height,lineNumbers);return;}
+  function drawSpatial(context,frame,width,height,shape,lineNumbers,interactive=false) {
+    if(shape==='tunnel')return drawTunnel(context,frame,width,height,lineNumbers,interactive);
+    if(shape==='wall')return drawWall(context,frame,width,height,lineNumbers,interactive);
     const count=frame.rows.length;
     const point=(index,u)=>{
       const spread=(index+.5)/count;
@@ -1204,6 +1253,8 @@ function softTrailCoverage(behind,trail,n,smooth){
       canvas.dataset.identifyingReceiverIds = frame.identifyingReceiverIds.join(',');
       canvas.dataset.renderedLineCount = String(frame.rows.length);
       canvas.dataset.lineHitRegions = '[]';
+      canvas.dataset.lineHitPaths = '[]';
+      canvas.dataset.lineTargetBadges = '[]';
       canvas.dataset.spatialShape = options.spatialShape && frame.rows.length ? options.spatialShape : '';
       canvas.dataset.spatialLineCount = options.spatialShape ? String(frame.rows.length) : '';
     }
@@ -1235,27 +1286,51 @@ function softTrailCoverage(behind,trail,n,smooth){
     }
     if(options.spatialShape){
       if(canvas.dataset){canvas.dataset.spatialShape=options.spatialShape;canvas.dataset.spatialLineCount=String(frame.rows.length);}
-      drawSpatial(context,frame,width,height,options.spatialShape,options.lineNumbers);return rawFrame;
+      const continuousSPI=layout==='continuous'&&frame.rows.every(row=>row.type==='SPI');
+      const interactive=!continuousSPI&&options.main===true&&options.interactiveLines===true&&options.selectionOverlay===true;
+      const interaction=drawSpatial(context,frame,width,height,options.spatialShape,options.lineNumbers,interactive||options.numberLabels===true);
+      if(options.numberLabels===true&&interaction){
+        context.save();context.shadowBlur=0;context.textAlign='center';context.textBaseline='middle';
+        const size=Math.max(9,Math.min(18,width/Math.max(1,frame.rows.length)*.65));
+        context.font='650 '+Math.min(10,size*.65)+'px system-ui';
+        interaction.badges.forEach((badge,index)=>{
+          const x=badge.x*width,y=badge.y*height;
+          context.fillStyle='#26332b';rounded(context,x-size/2,y-size/2,size,size,Math.min(5,size/3));context.fill();
+          context.fillStyle='#ecf2ed';context.fillText(String(spatialLineNumber(frame,frame.rows[index],index,options.lineNumbers)),x,y);
+        });
+        context.restore();
+      }
+      if(canvas.dataset&&interaction&&interactive){
+        canvas.dataset.lineHitPaths=interaction.pathsJSON;
+        canvas.dataset.lineTargetBadges=interaction.badgesJSON;
+      }
+      return rawFrame;
     }
     const byReceiver = options.presentation === 'receivers' || layout !== 'continuous' && frame.rows.some(row => row.category === 'tunnel');
     const vertical = layout === 'vertical' && options.presentation !== 'receivers';
     const continuous = layout === 'continuous' && !byReceiver && frame.rows.every(row => row.type === 'SPI');
     const padding = Math.min(18, width / 8);
-    const numberedTargets=options.interactiveLines===true&&!continuous;
-    const labelGutter=numberedTargets&&!vertical?24:0;
+    const numberedTargets=(options.interactiveLines===true||options.numberLabels===true)&&!continuous;
+    // The main interactive example owns its accessible selection controls.
+    // Leave room for their numbered check badges, without painting a second
+    // number or reducing the sampled light when a line is not selected.
+    const selectionOverlay=numberedTargets&&options.selectionOverlay===true&&options.main===true;
+    const rowInset=selectionOverlay&&['small','medium','large'].includes(options.previewSize)?4:8;
+    const labelGutter=numberedTargets&&!vertical?(selectionOverlay?42:24):0;
     const maxRowPixels = Math.max(1, ...frame.rows.filter(row => row.type === 'SPI').map(row => row.pixels.length));
     const shortestFraction = Math.min(1, ...frame.rows.filter(row => row.type === 'SPI').map(row => row.pixels.length / maxRowPixels));
     const hitRegions = [];
+    const targetBadges = [];
     context.font = '11px system-ui'; context.textBaseline = 'middle';
     frame.rows.forEach((row, index) => {
-      const lane = vertical ? (width - padding * 2) / frame.rows.length : Math.max(1, height - 16) / frame.rows.length;
+      const lane = vertical ? (width - padding * 2) / frame.rows.length : Math.max(1, height - rowInset*2) / frame.rows.length;
       // A single ledline should read as a light bar, not a hairline, in the
       // compact sticky preview. Scale with each lane so multi-line layouts
       // stay clearly separated on small screens.
       const showLabel = numberedTargets ? false : continuous ? false : vertical ? lane >= 48 : lane >= 30 || row.individuallySelected && lane >= 24;
       const compactVertical = vertical && options.main === true && height < 140;
       const verticalStart = Math.min(showLabel ? compactVertical ? 24 : 38 : 14, height / 3);
-      const verticalBottom = compactVertical ? 18 : Math.min(24, height / 4);
+      const verticalBottom = selectionOverlay&&vertical?36:compactVertical ? 18 : Math.min(24, height / 4);
       // In a short vertical thumbnail, strip length (not the much wider lane)
       // limits thickness. All lanes keep the same material/pixel pitch, while
       // even the shortest physical line still reads as a line, not a square.
@@ -1264,7 +1339,8 @@ function softTrailCoverage(behind,trail,n,smooth){
       // with the chosen canvas height so “large” enlarges the actual example,
       // not just an empty black area around the same thin line. Gallery cards
       // stay compact and keep their established pixel pitch.
-      const mainBarLimit = options.main === true ? Math.min(42, Math.max(18, height * .29)) : 18;
+      const chosenBarLimit={small:18,medium:25,large:32}[options.previewSize];
+      const mainBarLimit = options.main === true ? chosenBarLimit??Math.min(42, Math.max(18, height * .29)) : 18;
       const barHeight = continuous ? Math.min(mainBarLimit, height * .5)
         : Math.max(0.5, Math.min(compactVertical && options.main !== true ? 10 : mainBarLimit,
           lane * 0.62, vertical ? verticalThickness : Infinity));
@@ -1272,13 +1348,29 @@ function softTrailCoverage(behind,trail,n,smooth){
       const continuousOffset = (row.offset ?? frame.geometry.receivers.find(item=>item.receiverId===row.receiverId).offset) / Math.max(1, frame.geometry.totalPixels);
       const x = continuous ? padding + (width - padding * 2) * continuousOffset : vertical ? padding + lane * index + lane / 2 - barHeight / 2 : padding+labelGutter;
       const y = continuous ? (height - barHeight) / 2 : vertical ? verticalStart
-        : 8 + lane * index + (lane - barHeight) / 2 + (showLabel ? 4 : 0);
+        : rowInset + lane * index + (lane - barHeight) / 2 + (showLabel ? 4 : 0);
       if (options.main === true && !continuous) hitRegions.push({receiverId:row.receiverId,
         ...(row.port?{port:row.port,lineId:row.lineId}:{}),
         x:vertical?(padding + lane * index) / width:0,
-        y:vertical?0:(8 + lane * index) / height,
+        y:vertical?0:(rowInset + lane * index) / height,
         width:vertical?lane / width:1,
         height:vertical?1:lane / height});
+      if(selectionOverlay){
+        targetBadges.push({receiverId:row.receiverId,...(row.lineId?{lineId:row.lineId}:{}),
+          x:(vertical?padding+lane*index+lane/2:padding+10)/width,
+          y:(vertical?height-18:rowInset+lane*index+lane/2)/height});
+        if(row.selected){
+          // Selection belongs to the whole touch lane, not a casing around
+          // the luminous strip. Paint it first so every LED keeps its colour.
+          context.save();context.shadowBlur=0;context.lineWidth=1;
+          context.fillStyle='rgba(238,244,239,0.055)';
+          context.strokeStyle='rgba(238,244,239,0.19)';
+          rounded(context,vertical?padding+lane*index+3:8,vertical?8:rowInset+lane*index+3,
+            vertical?Math.max(.5,lane-6):Math.max(.5,width-16),
+            vertical?Math.max(.5,height-16):Math.max(.5,lane-6),12);
+          context.fill();context.stroke();context.restore();
+        }
+      }
       const availableLength = Math.max(0.5, continuous ? (width - padding * 2) * continuousFraction
         : vertical ? height - y - verticalBottom : width - padding * 2-labelGutter);
       // One common physical pixel pitch for separate SPI rows. A 12-pixel
@@ -1293,7 +1385,7 @@ function softTrailCoverage(behind,trail,n,smooth){
       const bw = vertical ? barHeight : Math.max(0.5, length - gap);
       // Light floats directly on the shared dark canvas. No separate casing,
       // border or pill-shaped ring around a receiver's individual LED line.
-      // The main preview can mark one selected line beside/below its light.
+      // The main preview can mark selected lines beside/below their light.
       // It never dims unselected lines or adds a ring around an LED strip.
       // Sampling stays at real pixel resolution. Only the final canvas drawing
       // is downsampled when a strip has more LEDs than visible screen pixels.
@@ -1336,7 +1428,12 @@ function softTrailCoverage(behind,trail,n,smooth){
       context.fillStyle = row.selected ? '#eef1ec' : '#85948c';
       context.font = (row.selected ? '600 ' : '') + '10px system-ui';
       context.textAlign = vertical ? 'center' : 'left';
-      if(numberedTargets){
+      if(options.numberLabels===true&&continuous){
+        context.save();context.font='650 10px system-ui';context.textAlign='center';context.fillStyle='#d3ddd6';
+        context.fillText(String(options.lineNumbers?.[row.lineId]||options.lineNumbers?.[row.receiverId]||index+1),x+availableLength/2,Math.min(height-10,y+barHeight+15));
+        context.restore();
+      }
+      if(numberedTargets&&!selectionOverlay){
         // A stable number target shows selection without changing LED RGB,
         // blinking the example, or losing the identity of a physical port.
         const number=options.lineNumbers?.[row.lineId]||(row.port?row.lineIndex+1:options.lineNumbers?.[row.receiverId]||index+1);
@@ -1364,7 +1461,10 @@ function softTrailCoverage(behind,trail,n,smooth){
         }
       }
     });
-    if (canvas.dataset) canvas.dataset.lineHitRegions = JSON.stringify(hitRegions);
+    if (canvas.dataset) {
+      canvas.dataset.lineHitRegions = JSON.stringify(hitRegions);
+      canvas.dataset.lineTargetBadges = JSON.stringify(targetBadges);
+    }
     return rawFrame;
   }
   return Object.freeze({ catalog, geometry, ledlineCount, sample, draw, rows, selected, normalizeState, defaultWidthPixels, retimeMotion, opticalWhite, tunnelProjection, wallProjection,

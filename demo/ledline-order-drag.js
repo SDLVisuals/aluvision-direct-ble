@@ -14,7 +14,7 @@
         typeof options.getItems !== 'function' || typeof options.getRowId !== 'function' ||
         typeof options.onDrop !== 'function') throw new TypeError('ORDER_INSTALL_INVALID');
     var document = host.ownerDocument || host;
-    var view = document.defaultView, active = null, destroyed = false, scrollFrame = null;
+    var view = document.defaultView, active = null, destroyed = false, scrollFrame = null, pointerFrame = null;
     var interaction = typeof options.onInteraction === 'function' ? options.onInteraction : function () {};
     var status = typeof options.onStatus === 'function' ? options.onStatus : function () {};
     var feedback = typeof options.onFeedback === 'function' ? options.onFeedback : function () {};
@@ -65,14 +65,22 @@
       return values;
     }
     function captureLayout(state) {
-      if (!state.slots) return;
       // Read the untransformed cards once. Slot height and hit geometry stay
       // attached to their positions for the whole gesture, including scroll.
       var boxes = state.rows.map(function (row) { return row.getBoundingClientRect(); });
       if (boxes.some(function (box) { return !Number.isFinite(box.top) || !Number.isFinite(box.height) || box.height <= 0; })) {
         throw new TypeError('ORDER_LAYOUT_INVALID');
       }
-      state.layout = boxes.map(function (box) { return { top: box.top, height: box.height }; });
+      state.layout = boxes.map(function (box) { return { top: box.top, height: box.height, left: box.left, width: box.width }; });
+      state.scrollOrigin = scrollTop();
+      if (!Number.isFinite(state.scrollOrigin)) throw new TypeError('ORDER_SCROLL_INVALID');
+      state.originalIndexes = new Map(state.ids.map(function (id, index) { return [id, index]; }));
+      // The compact order cards are equally high. If a caller supplies an
+      // expanded card, keep its content intact rather than clipping controls
+      // into a shorter position. Destination/ghost feedback still works.
+      state.previewCardsEnabled = !!state.slots && Math.max.apply(null, boxes.map(function (box) { return box.height; })) -
+        Math.min.apply(null, boxes.map(function (box) { return box.height; })) <= 2;
+      if (!state.slots) { state.slotLayout = state.layout; return; }
       state.slots.forEach(function (slot, index) {
         slot.style.height = boxes[index].height + 'px';
       });
@@ -86,19 +94,20 @@
       if (!state.slots || !state.layout) return;
       var order = previewOrder(state);
       order.forEach(function (id, index) {
-        var originalIndex = state.ids.indexOf(id), row = state.rows[originalIndex], box = state.layout[originalIndex], target = state.slotLayout[index];
+        var originalIndex = state.originalIndexes.get(id), row = state.rows[originalIndex], box = state.layout[originalIndex], target = state.slotLayout[index];
+        if (!state.previewCardsEnabled) return;
         row.style.setProperty('--order-preview-y', (target.top - box.top) + 'px');
-        row.style.setProperty('--order-preview-clip', Math.max(0, box.height - target.height) + 'px');
         row.setAttribute('data-order-preview', 'true');
-        // Keep the DOM and settings state intact. A taller card is clipped
-        // only for this preview so it fits its fixed target without overlap.
       });
     }
     function announce(text) { try { status(text); } catch (_) { /* Status never grants authority or retries a drop. */ } }
     function notify(value, state) { interaction(value, { id: state.id, input: state.input }); }
     function previewOrder(state) {
-      var order = state.ids.slice(), moved = order.splice(state.fromIndex, 1)[0];
-      order.splice(state.toIndex, 0, moved); return order;
+      var order = state.ids.slice(), displaced = order[state.toIndex];
+      // A destination exchanges its card with the picked-up card. All other
+      // fixed positions keep their receiver; dragging never inserts a chain.
+      order[state.toIndex] = order[state.fromIndex];
+      order[state.fromIndex] = displaced; return order;
     }
     function emitFeedback(phase, state) {
       // A proposed order is a presentation copy. Neither callbacks nor the
@@ -109,13 +118,16 @@
     }
     function positionGhost(state) {
       if (!state.ghost || !view || !Number.isFinite(view.innerWidth) || !Number.isFinite(view.innerHeight)) return;
-      var box = state.row.getBoundingClientRect(), width = Math.max(0, Math.min(box.width, view.innerWidth - 24));
+      var box = state.layout[state.fromIndex], width = Math.max(0, Math.min(box.width, view.innerWidth - 24));
       if (!Number.isFinite(width) || !width) return;
       var left = Math.max(12, Math.min(box.left, view.innerWidth - width - 12));
       state.ghost.style.width = width + 'px';
-      var height = state.ghost.getBoundingClientRect().height;
-      var target = (state.slots || state.rows)[state.toIndex].getBoundingClientRect();
-      var y = state.input === 'pointer' && Number.isFinite(state.pointerY) ? state.pointerY : target.top;
+      var height = state.ghostHeight || state.ghost.getBoundingClientRect().height;
+      if (!Number.isFinite(height) || height <= 0) return;
+      state.ghostHeight = height;
+      var target = state.slotLayout[state.toIndex], offset = scrollTop() - state.scrollOrigin;
+      var y = state.input === 'pointer' && Number.isFinite(state.pointerY) ?
+        state.pointerY - height * state.pickupFraction : target.top - offset + (target.height - height) / 2;
       // The sheet may have a fixed title above its scrolling content. Keep
       // the ghost inside that content viewport even for an offscreen target.
       var minimumTop = 12, maximumTop = Math.max(12, view.innerHeight - height - 12);
@@ -123,10 +135,11 @@
         var bounds = typeof options.getScrollBounds === 'function' ? options.getScrollBounds() : null;
         if (bounds && Number.isFinite(bounds.top) && Number.isFinite(bounds.bottom) &&
             bounds.top >= 0 && bounds.bottom <= view.innerHeight && bounds.bottom > bounds.top) {
-          minimumTop = Math.min(maximumTop, Math.max(12, bounds.top + 12));
+          maximumTop = Math.max(12, Math.min(maximumTop, bounds.bottom - height - 8));
+          minimumTop = Math.min(maximumTop, Math.max(12, bounds.top + 8));
         }
       } catch (_) { /* Overlay geometry does not change interaction authority. */ }
-      var top = Math.max(minimumTop, Math.min(y - height - 16, maximumTop));
+      var top = Math.max(minimumTop, Math.min(y, maximumTop));
       state.ghost.style.transform = 'translate(' + left + 'px,' + top + 'px)';
       state.ghostRoute.textContent = state.fromPosition + ' → ' + (state.toIndex + 1);
     }
@@ -169,6 +182,10 @@
       if (scrollFrame !== null && view && typeof view.cancelAnimationFrame === 'function') view.cancelAnimationFrame(scrollFrame);
       scrollFrame = null;
     }
+    function stopPointerFrame() {
+      if (pointerFrame !== null && view && typeof view.cancelAnimationFrame === 'function') view.cancelAnimationFrame(pointerFrame);
+      pointerFrame = null;
+    }
     function scrollDelta(y) {
       if (!view || !Number.isFinite(y) || !Number.isFinite(view.innerHeight) || view.innerHeight <= 0) return 0;
       try {
@@ -182,7 +199,7 @@
       return 0;
     }
     function queueScroll() {
-      if (!active || active.input !== 'pointer' || !view || typeof view.requestAnimationFrame !== 'function' ||
+      if (!active || active.input !== 'pointer' || !active.moved || !view || typeof view.requestAnimationFrame !== 'function' ||
           typeof view.scrollBy !== 'function') return;
       var state = active, delta = scrollDelta(state.pointerY);
       if (active !== state || !valid()) return;
@@ -202,12 +219,13 @@
     }
     function clean(state) {
       stopScroll();
+      stopPointerFrame();
       state.handle.removeAttribute('aria-grabbed');
       state.row.removeAttribute('data-order-grabbed');
       state.rows.forEach(function (row) {
         row.removeAttribute('data-order-drop'); row.removeAttribute('data-order-drop-index'); row.removeAttribute('data-order-drop-position');
         row.removeAttribute('data-order-preview');
-        if (state.slots) { row.style.removeProperty('--order-preview-y'); row.style.removeProperty('--order-preview-clip'); }
+        if (state.slots) row.style.removeProperty('--order-preview-y');
       });
       if (state.slots) state.slots.forEach(function (slot) {
         slot.removeAttribute('data-order-drop'); slot.removeAttribute('data-order-drop-index'); slot.removeAttribute('data-order-drop-position');
@@ -251,7 +269,7 @@
         return true;
       } catch (_) { finish(false); return false; }
     }
-    function begin(handle, input, pointerId) {
+    function begin(handle, input, pointerId, pointerY) {
       if (destroyed || active || handle.disabled || handle.getAttribute('aria-disabled') === 'true') return false;
       try {
         var ids = items(), row = handle.closest('[data-order-item]'), allRows = rows(ids);
@@ -260,9 +278,16 @@
         var allSlots = slots(ids), originalPosition = Number(row.dataset && row.dataset.orderPosition);
         active = { handle: handle, row: row, rows: allRows, slots: allSlots, id: id, ids: ids,
           fromIndex: index, fromPosition: Number.isInteger(originalPosition) && originalPosition > 0 ? originalPosition : index + 1,
-          toIndex: index, input: input, pointerId: pointerId, pointerY: null };
+          toIndex: index, input: input, pointerId: pointerId, pointerY: pointerY,
+          pointerOriginY: pointerY, moved: false, pickupOffset: 0, pickupFraction: .5 };
         allRows.forEach(function (item) { item.removeAttribute('data-order-settled'); });
         captureLayout(active);
+        if (input === 'pointer') {
+          if (!Number.isFinite(pointerY)) throw new TypeError('ORDER_POINTER_INVALID');
+          var pickup = active.layout[index];
+          active.pickupOffset = pointerY - pickup.top;
+          active.pickupFraction = Math.max(0, Math.min(1, active.pickupOffset / pickup.height));
+        }
         handle.setAttribute('aria-grabbed', 'true'); row.setAttribute('data-order-grabbed', 'true');
         if (typeof handle.focus === 'function') handle.focus({ preventScroll: true });
         if (pointerId !== null) handle.setPointerCapture(pointerId);
@@ -276,6 +301,7 @@
     }
     function mark(row, edge, index) {
       var state = active, changed = state.toIndex !== index;
+      if (!changed && state.marked) { positionGhost(state); return; }
       (state.slots || state.rows).forEach(function (item) {
         item.removeAttribute('data-order-drop'); item.removeAttribute('data-order-drop-index'); item.removeAttribute('data-order-drop-position');
         if (state.slots) item.removeAttribute('data-order-slot-target');
@@ -285,42 +311,72 @@
       row.setAttribute('data-order-drop', edge);
       row.setAttribute('data-order-drop-index', String(index));
       row.setAttribute('data-order-drop-position', String(index + 1));
+      state.marked = true;
       if (changed) previewCards(state);
       positionGhost(state); if (changed) emitFeedback('update', state);
       if (changed && active === state) announce(message('orderDragPosition', { position: index + 1, count: state.ids.length }));
     }
     function point(event) {
       if (!valid() || !Number.isFinite(event.clientY)) return;
+      var state = active, offset = scrollTop() - state.scrollOrigin;
+      if (!Number.isFinite(offset)) { finish(false); return; }
+      // Use the picked-up card centre, not the handle/finger position. A
+      // handle near its top otherwise selects the previous slot immediately.
+      var centre = event.clientY - state.pickupOffset + state.layout[state.fromIndex].height / 2;
+      if (state.slots) {
+        var next = state.toIndex, last = state.slotLayout.length - 1;
+        function middle(index) { var box = state.slotLayout[index]; return box.top - offset + box.height / 2; }
+        var hysteresis = 6;
+        while (next < last && centre > (middle(next) + middle(next + 1)) / 2 + hysteresis) next++;
+        while (next > 0 && centre < (middle(next - 1) + middle(next)) / 2 - hysteresis) next--;
+        mark(state.slots[next], next < state.fromIndex ? 'before' : 'after', next); return;
+      }
       var nearest, distance = Infinity;
-      (active.slots || active.rows).forEach(function (row, index) {
-        var box = row.getBoundingClientRect(), middle = box.top + box.height / 2;
+      state.rows.forEach(function (row, index) {
+        var box = state.layout[index], middle = box.top - offset + box.height / 2;
         if (!Number.isFinite(middle) || box.height <= 0) return;
-        var next = Math.abs(event.clientY - middle);
+        var next = Math.abs(centre - middle);
         if (next < distance) { distance = next; nearest = { row: row, index: index, middle: middle }; }
       });
       if (!nearest) { finish(false); return; }
-      var edge = event.clientY < nearest.middle ? 'before' : 'after';
-      if (active.slots) { mark(nearest.row, edge, nearest.index); return; }
-      var boundary = nearest.index + (edge === 'after' ? 1 : 0);
-      var to = boundary > active.fromIndex ? boundary - 1 : boundary;
-      mark(nearest.row, edge, Math.max(0, Math.min(active.ids.length - 1, to)));
+      var edge = nearest.index < state.fromIndex ? 'before' : 'after';
+      mark(nearest.row, edge, nearest.index);
     }
     function pointerDown(event) {
       var handle = handleOf(event.target);
       if (!handle || event.button !== 0 || event.isPrimary === false) return;
-      if (begin(handle, 'pointer', event.pointerId) && active) {
+      if (begin(handle, 'pointer', event.pointerId, event.clientY) && active) {
         event.preventDefault(); active.pointerY = event.clientY; positionGhost(active); queueScroll();
       }
     }
     function pointerMove(event) {
       if (!active || active.input !== 'pointer' || active.pointerId !== event.pointerId) return;
-      event.preventDefault(); active.pointerY = event.clientY; point(event);
-      if (active && Number.isFinite(event.clientY)) activity();
+      event.preventDefault();
+      if (!Number.isFinite(event.clientY)) return;
+      active.pointerY = event.clientY;
+      if (Math.abs(event.clientY - active.pointerOriginY) >= 5) active.moved = true;
+      queuePointerFrame();
+    }
+    function flushPointerFrame() {
+      stopPointerFrame();
+      var state = active;
+      if (!state || state.input !== 'pointer' || !valid()) return;
+      if (state.moved) { point({ clientY: state.pointerY }); if (active === state) activity(); }
+      else positionGhost(state);
       queueScroll();
+    }
+    function queuePointerFrame() {
+      if (pointerFrame !== null) return;
+      if (!view || typeof view.requestAnimationFrame !== 'function') { flushPointerFrame(); return; }
+      pointerFrame = view.requestAnimationFrame(function () { pointerFrame = null; flushPointerFrame(); });
     }
     function pointerUp(event) {
       if (!active || active.input !== 'pointer' || active.pointerId !== event.pointerId) return;
-      event.preventDefault(); point(event); if (valid()) finish(true);
+      event.preventDefault();
+      if (!Number.isFinite(event.clientY)) { finish(false); return; }
+      active.pointerY = event.clientY;
+      if (Math.abs(event.clientY - active.pointerOriginY) >= 5) active.moved = true;
+      flushPointerFrame(); if (valid()) finish(true);
     }
     function pointerCancel(event) {
       if (active && active.input === 'pointer' && active.pointerId === event.pointerId) finish(false);
@@ -329,23 +385,44 @@
       if (event.key === 'Escape' && active) { event.preventDefault(); finish(false); return; }
       var handle = handleOf(event.target);
       if (!handle) return;
-      if (!active && (event.key === ' ' || event.key === 'Spacebar')) {
+      if (!active && (event.key === ' ' || event.key === 'Spacebar' || event.key === 'Enter')) {
         event.preventDefault(); begin(handle, 'keyboard', null); return;
       }
       if (!active || active.input !== 'keyboard' || active.handle !== handle || !valid()) return;
-      if (event.key === 'Enter') { event.preventDefault(); finish(true); return; }
-      if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+      if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') { event.preventDefault(); finish(true); return; }
+      if (!['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
       event.preventDefault();
-      var next = Math.max(0, Math.min(active.ids.length - 1, active.toIndex + (event.key === 'ArrowUp' ? -1 : 1)));
+      var next = event.key === 'Home' ? 0 : event.key === 'End' ? active.ids.length - 1 :
+        Math.max(0, Math.min(active.ids.length - 1, active.toIndex + (event.key === 'ArrowUp' ? -1 : 1)));
       mark(active.rows[next], next < active.fromIndex ? 'before' : 'after', next);
       activity();
+      ensureKeyboardVisible();
     }
+    function ensureKeyboardVisible() {
+      var state = active;
+      if (!state || state.input !== 'keyboard' || !valid()) return;
+      try {
+        var bounds = typeof options.getScrollBounds === 'function' ? options.getScrollBounds() : { top: 0, bottom: view.innerHeight };
+        var offset = scrollTop() - state.scrollOrigin, box = state.slotLayout[state.toIndex];
+        if (!bounds || !Number.isFinite(bounds.top) || !Number.isFinite(bounds.bottom) ||
+            bounds.top < 0 || bounds.bottom > view.innerHeight || bounds.bottom <= bounds.top) return;
+        var top = box.top - offset, bottom = top + box.height, delta = top < bounds.top + 8 ? top - bounds.top - 8 :
+          bottom > bounds.bottom - 8 ? bottom - bounds.bottom + 8 : 0;
+        if (delta) scrollBy(delta);
+        if (active === state && valid()) positionGhost(state);
+      } catch (_) { /* Visibility does not change order or grant authority. */ }
+    }
+    function scroll() { if (active && active.input === 'pointer') queuePointerFrame(); }
+    function leave() { if (active) finish(false); }
+    function visibility() { if (document.visibilityState === 'hidden') leave(); }
     function click(event) {
       if (handleOf(event.target)) { event.preventDefault(); event.stopPropagation(); }
     }
     var listeners = [['pointerdown', pointerDown], ['pointermove', pointerMove], ['pointerup', pointerUp],
-      ['pointercancel', pointerCancel], ['lostpointercapture', pointerCancel], ['keydown', keyDown], ['click', click]];
+      ['pointercancel', pointerCancel], ['lostpointercapture', pointerCancel], ['keydown', keyDown], ['click', click],
+      ['scroll', scroll], ['visibilitychange', visibility]];
     listeners.forEach(function (pair) { host.addEventListener(pair[0], pair[1], true); });
+    if (view && typeof view.addEventListener === 'function') { view.addEventListener('blur', leave); view.addEventListener('resize', leave); }
     var observer = view && typeof view.MutationObserver === 'function' ? new view.MutationObserver(function () {
       if (active) valid();
     }) : null;
@@ -357,6 +434,7 @@
       destroy: function () {
         if (destroyed) return; destroyed = true; finish(false);
         listeners.forEach(function (pair) { host.removeEventListener(pair[0], pair[1], true); });
+        if (view && typeof view.removeEventListener === 'function') { view.removeEventListener('blur', leave); view.removeEventListener('resize', leave); }
         if (observer) observer.disconnect();
       }
     });

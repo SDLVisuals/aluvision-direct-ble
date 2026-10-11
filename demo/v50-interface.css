@@ -48,7 +48,7 @@ dialog.v50-fullscreen-preview{inset:0;width:100vw!important;max-width:none!impor
 .v50-white-fine .warm-white-controls{padding-top:12px}
 .v50-white-fine p{font-size:13px;line-height:1.5;color:var(--muted,#656b75)}
 .palette-item{position:relative}
-.palette-drag-handle{display:block;width:44px;min-height:34px;background:transparent;border:0;font-size:21px;touch-action:none;margin:0 auto;color:var(--muted,#656b75)}
+.palette-drag-handle{display:block;width:44px;min-height:44px;background:transparent;border:0;font-size:21px;touch-action:none;margin:0 auto;color:var(--muted,#656b75)}
 .palette-item[data-palette-drop]{outline:2px solid var(--red,#ba433d);outline-offset:3px;border-radius:14px}
 .palette-drag-handle[aria-grabbed=true]{color:var(--red,#ba433d)}
 @keyframes v50-sheet-in{from{opacity:.6;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
@@ -178,3 +178,252 @@ html.interface-polish body #main .ledline-setup[data-order-open=true]>.ledline-s
 .v50-order-dock .v50-order-preview{margin:0}
 .v50-order-dock .v50-order-canvas{height:clamp(112px,20dvh,160px)}
 @media(max-height:600px){.v50-order-dock{gap:6px;padding:4px 0 8px}.v50-order-dock .v50-order-feedback{height:72px;min-height:72px;grid-template-rows:24px minmax(0,1fr);gap:3px;padding:6px 10px}.v50-order-dock .v50-order-feedback-route{font-size:13px}.v50-order-dock .v50-order-feedback-target{min-height:24px;padding:4px 8px}.v50-order-dock .v50-order-preview{padding:8px 10px;border-radius:16px}.v50-order-dock .v50-order-preview figcaption{margin-bottom:5px;font-size:12px}.v50-order-dock .v50-order-canvas{height:clamp(64px,16dvh,112px)}}
+
+/* V50.557: Bekijk als is a true native fullscreen sheet. The dialog itself
+   scrolls; the safe-area header and close action remain in view. */
+body:has(dialog.v50-spatial-dialog[open]){overflow:hidden}
+dialog.spatial-choice-panel.v50-spatial-dialog{box-sizing:border-box;position:fixed;inset:0;display:block;width:100vw;max-width:none;height:100vh;height:100dvh;min-height:0;max-height:none;margin:0;padding:0;border:0;border-radius:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scroll-padding-block:110px 32px;isolation:isolate;color:var(--ink,#232830);background:var(--bg,#eef1f4);background-image:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+/* Earlier disclosure styling sets display:grid, so explicitly retain the
+   native closed-dialog invariant instead of relying on the browser's UA rule. */
+dialog.spatial-choice-panel.v50-spatial-dialog:not([open]){display:none!important}
+dialog.spatial-choice-panel.v50-spatial-dialog[open]{animation:v50-spatial-sheet-in 150ms ease-out both}
+dialog.v50-spatial-dialog::backdrop{background:var(--bg,#eef1f4);-webkit-backdrop-filter:none;backdrop-filter:none;animation:none}
+dialog.v50-spatial-dialog>.v50-spatial-header{box-sizing:border-box;position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;margin:0;padding:calc(15px + env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) 15px max(18px,env(safe-area-inset-left));border-bottom:1px solid var(--line,#dce1e9);background:var(--bg,#eef1f4);box-shadow:0 5px 16px #00000004}
+dialog.v50-spatial-dialog>.v50-spatial-header>div{flex:1;min-width:0;max-width:900px}
+.v50-spatial-header small{display:block;margin-bottom:5px;color:var(--muted,#656b75);font-size:12px;line-height:1.35;overflow-wrap:anywhere}
+.v50-spatial-header h2{margin:0;font-size:clamp(23px,4vw,32px);line-height:1.12;letter-spacing:-.5px;overflow-wrap:anywhere}
+.v50-spatial-header .spatial-choice-close{display:inline-flex;align-items:center;justify-content:center;gap:7px;flex:none;min-width:44px;min-height:44px;max-width:45%;padding:10px 12px;border:1px solid var(--line,#dce1e9);border-radius:14px;background:var(--panel,#fff);color:var(--ink,#232830);font:inherit;font-size:13px;font-weight:650;line-height:1.2;cursor:pointer;touch-action:manipulation}
+.v50-spatial-header .spatial-choice-close>.icon{width:18px;height:18px;flex:none}
+dialog.v50-spatial-dialog>.v50-spatial-content{box-sizing:border-box;display:grid;gap:18px;width:100%;max-width:1120px;min-width:0;margin:0 auto;padding:22px max(18px,env(safe-area-inset-right)) max(32px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left))}
+.v50-spatial-dialog .spatial-choice-help{max-width:760px;margin:0;color:var(--muted,#656b75);font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.v50-spatial-dialog .spatial-choice-options{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0}
+.v50-spatial-dialog .spatial-choice-option{box-sizing:border-box;display:grid;grid-template-columns:minmax(100px,36%) minmax(0,1fr) 24px;align-items:center;gap:12px;min-width:0;min-height:124px;width:100%;padding:12px;border:1px solid var(--line,#dce1e9);border-radius:22px;background:var(--panel,#fff);color:var(--ink,#232830);box-shadow:0 4px 14px #00000004;text-align:left;cursor:pointer;touch-action:manipulation;transition:border-color 140ms ease,background-color 140ms ease,box-shadow 140ms ease}
+.v50-spatial-dialog .spatial-choice-option[aria-pressed=true]{border-color:var(--red,#ba433d);background:color-mix(in srgb,var(--red,#ba433d) 5%,var(--panel,#fff));box-shadow:inset 0 0 0 1px var(--red,#ba433d),0 4px 16px #00000004}
+.v50-spatial-dialog .spatial-choice-art{display:block;width:100%;min-width:0;height:clamp(98px,22vw,152px);margin:0;overflow:hidden;border-radius:14px;background:#111514}
+.v50-spatial-dialog .spatial-choice-art>.spatial-choice-preview{display:block;width:100%;height:100%;border-radius:inherit;background:#111514;-webkit-backdrop-filter:none;backdrop-filter:none}
+.v50-spatial-dialog .spatial-choice-copy{display:grid;gap:7px;min-width:0}
+.v50-spatial-dialog .spatial-choice-copy>b{font-size:17px;font-weight:700;line-height:1.2;letter-spacing:-.25px;overflow-wrap:anywhere}
+.v50-spatial-dialog .spatial-choice-copy>small{color:var(--muted,#656b75);font-size:12px;line-height:1.45;overflow-wrap:anywhere}
+.v50-spatial-dialog .spatial-choice-check{display:grid;place-items:center;align-self:start;width:24px;height:24px;margin-top:3px;border:1px solid var(--line,#dce1e9);border-radius:50%;color:transparent;background:var(--soft,#f1f3f6)}
+.v50-spatial-dialog .spatial-choice-check>.icon{width:14px;height:14px}
+.v50-spatial-dialog .spatial-choice-option[aria-pressed=true] .spatial-choice-check{color:#fff;background:var(--red,#ba433d);border-color:var(--red,#ba433d)}
+.v50-spatial-dialog .spatial-choice-option:disabled{opacity:.55;cursor:progress}
+.v50-spatial-dialog :is(.spatial-choice-option,.spatial-choice-close,.spatial-topology-choice>button):focus-visible{outline:3px solid var(--red,#ba433d);outline-offset:3px}
+.v50-spatial-dialog .spatial-choice-option:active:not(:disabled){transform:none}
+.v50-spatial-dialog .spatial-topology-choice{gap:10px;padding:14px;border-radius:20px;min-width:0;background:var(--panel,#fff)}
+.v50-spatial-dialog .spatial-topology-choice legend{font-size:14px;line-height:1.35}
+.v50-spatial-dialog .spatial-topology-choice>button{min-height:84px;padding:12px;border-radius:14px}
+.v50-spatial-dialog .spatial-topology-choice b{font-size:13px;line-height:1.3}
+.v50-spatial-dialog .spatial-topology-choice small{font-size:11px;line-height:1.4}
+.v50-spatial-dialog :is(.spatial-preview-only,.v50-spatial-saving,.arrangement-error){margin:0;font-size:12px;line-height:1.45;overflow-wrap:anywhere}
+.v50-spatial-dialog .spatial-preview-only{color:var(--muted,#656b75)}
+.v50-spatial-dialog .v50-spatial-saving{padding:12px 14px;border:1px solid var(--line,#dce1e9);border-radius:14px;background:var(--panel,#fff);color:var(--muted,#656b75)}
+.v50-spatial-dialog :is(.v50-spatial-saving,.arrangement-error)[hidden]{display:none!important}
+@keyframes v50-spatial-sheet-in{from{opacity:.65}to{opacity:1}}
+@media(min-width:780px){
+  dialog.v50-spatial-dialog>.v50-spatial-header{padding-inline:max(28px,env(safe-area-inset-left)) max(28px,env(safe-area-inset-right))}
+  dialog.v50-spatial-dialog>.v50-spatial-content{padding-top:30px;gap:24px}
+  .v50-spatial-dialog .spatial-choice-options{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+  .v50-spatial-dialog .spatial-choice-option{grid-template-columns:minmax(0,1fr) 24px;grid-template-rows:auto minmax(76px,1fr);align-items:start;gap:16px 10px;padding:16px}
+  .v50-spatial-dialog .spatial-choice-art{grid-column:1/-1;height:clamp(150px,24dvh,220px);border-radius:16px}
+  .v50-spatial-dialog .spatial-choice-copy>b{font-size:20px}
+  .v50-spatial-dialog .spatial-choice-copy>small{font-size:13px}
+  .v50-spatial-dialog .spatial-topology-choice{max-width:720px;width:100%;justify-self:start}
+}
+@media(max-width:360px){
+  dialog.v50-spatial-dialog>.v50-spatial-header{gap:9px;padding-inline:max(14px,env(safe-area-inset-left)) max(14px,env(safe-area-inset-right))}
+  .v50-spatial-header .spatial-choice-close{gap:4px;padding-inline:9px;font-size:12px}
+  dialog.v50-spatial-dialog>.v50-spatial-content{gap:15px;padding-inline:max(14px,env(safe-area-inset-left)) max(14px,env(safe-area-inset-right))}
+  .v50-spatial-dialog .spatial-choice-option{grid-template-columns:100px minmax(0,1fr) 22px;gap:8px;padding:10px;min-height:114px;border-radius:18px}
+  .v50-spatial-dialog .spatial-choice-art{height:92px;border-radius:12px}
+  .v50-spatial-dialog .spatial-choice-copy>b{font-size:15px}
+  .v50-spatial-dialog .spatial-choice-copy>small{font-size:11px;line-height:1.4}
+  .v50-spatial-dialog .spatial-choice-check{width:22px;height:22px}
+  .v50-spatial-dialog .spatial-topology-choice{grid-template-columns:minmax(0,1fr);padding:11px}
+}
+@media(max-height:520px){.v50-spatial-dialog .spatial-choice-art{height:120px}dialog.v50-spatial-dialog>.v50-spatial-content{padding-top:16px}}
+@media(prefers-reduced-motion:reduce){dialog.v50-spatial-dialog[open],dialog.v50-spatial-dialog::backdrop{animation:none!important}.v50-spatial-dialog :is(.spatial-choice-option,.spatial-choice-close,.spatial-topology-choice>button){transition:none!important}}
+
+/* App chrome is not document text: a long press must not select labels or
+   controls. Editable fields and explicitly copyable data retain native text
+   selection/callouts; no pointer/keyboard events are cancelled by JavaScript. */
+html,body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body input:not(:is([type=range],[type=button],[type=submit],[type=reset],[type=checkbox],[type=radio],[type=color],[type=file],[type=image],[type=hidden])),
+body textarea,
+body :is([contenteditable=""],[contenteditable="true" i],[contenteditable="plaintext-only" i],[data-selectable-text]),
+body :is([contenteditable=""],[contenteditable="true" i],[contenteditable="plaintext-only" i],[data-selectable-text]) *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+body :is(button,input[type=range],input[type=button],input[type=submit],input[type=reset],input[type=checkbox],input[type=radio],input[type=color],input[type=file],input[type=image],input[type=hidden]),
+body :is(button,input[type=range],input[type=button],input[type=submit],input[type=reset]) *,
+body [contenteditable="false" i],body [contenteditable="false" i] *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+
+/* V50.558: A quiet first-start screen, with three centred steps rather than
+   unexplained decorative icons. Only the initial welcome component changes. */
+.v50-welcome{display:grid;align-content:start;gap:0;width:100%;max-width:460px;margin:0 auto;padding-top:clamp(28px,7dvh,64px);padding-bottom:24px}
+.v50-welcome>.v50-welcome-art{display:none}
+html body .v50-welcome>.page-heading,
+html.interface-polish body .v50-welcome>.page-heading{display:flex;justify-content:center;margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;text-align:center}
+.v50-welcome>.page-heading>div{width:100%;min-width:0}
+.v50-welcome>.page-heading .eyebrow{margin:0 0 10px;font-size:10px;line-height:1.4;letter-spacing:1.7px;color:var(--action-ink,var(--red,#ba433d))}
+html body .v50-welcome>.page-heading h1{margin:0;font-size:clamp(30px,8.4vw,40px);font-weight:750;line-height:1.14;letter-spacing:-.9px;color:var(--ink,#232830);overflow-wrap:anywhere;text-wrap:balance}
+.v50-welcome>.page-heading p{max-width:31ch;margin:12px auto 0;color:var(--muted,#656b75);font-size:14px;line-height:1.6;text-wrap:balance}
+.v50-welcome>.v50-welcome-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start;gap:10px;list-style:none;padding:0;margin:28px 0 26px;color:var(--muted,#656b75)}
+.v50-welcome>.v50-welcome-steps>li{display:grid;grid-template-rows:38px auto;justify-items:center;align-content:start;gap:9px;min-width:0;margin:0;padding:0;text-align:center;font-size:13px;line-height:1.35}
+.v50-welcome>.v50-welcome-steps>li>b{display:grid;place-items:center;width:38px;height:38px;margin:0;border:1px solid var(--line,#dce1e9);border-radius:50%;background:var(--panel,#fff);color:var(--ink,#232830);box-shadow:none;font-size:15px;font-weight:750;line-height:1;font-variant-numeric:tabular-nums}
+.v50-welcome>.v50-welcome-steps>li>span{display:block;max-width:100%;min-width:0;color:var(--muted,#656b75);font-size:13px;font-weight:600;line-height:1.35;overflow-wrap:anywhere;text-wrap:balance}
+.v50-welcome>.v50-welcome-start{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;min-height:52px;margin:0;padding:14px 18px;border-radius:17px;font-size:14px;font-weight:650;line-height:1.3;text-align:center;touch-action:manipulation}
+.v50-welcome>.v50-welcome-start>.icon{width:18px;height:18px;flex:none}
+@media(max-width:360px){
+  .v50-welcome{padding-top:26px}
+  .v50-welcome>.v50-welcome-steps{gap:6px;margin-block:25px 24px}
+  .v50-welcome>.v50-welcome-steps>li>span{font-size:12px}
+}
+@media(max-height:600px){
+  .v50-welcome{padding-top:12px;padding-bottom:16px}
+  .v50-welcome>.page-heading p{margin-top:9px}
+  .v50-welcome>.v50-welcome-steps{margin-block:22px}
+}
+
+/* V50.567: first browse a group, then explicitly start an animation.
+   Every rule belongs to the new chooser marker; live/sticky previews and the
+   ledline-order workflow retain their accepted 566 layout. */
+html.interface-polish body [data-chooser-version="567"]{--chooser-accent:var(--red,#b8433c)}
+html.interface-polish body [data-chooser-version="567"][data-animation-category="pixels"],
+html.interface-polish body [data-chooser-version="567"] .animation-category-tab[data-id="pixels"]{--chooser-accent:#7862a4}
+html.interface-polish body [data-chooser-version="567"][data-animation-category="tunnel"],
+html.interface-polish body [data-chooser-version="567"] .animation-category-tab[data-id="tunnel"]{--chooser-accent:#277b67}
+html.interface-polish body [data-chooser-version="567"][data-animation-category="brand"],
+html.interface-polish body [data-chooser-version="567"] .animation-category-tab[data-id="brand"]{--chooser-accent:#97672f}
+html.interface-polish body [data-chooser-version="567"] .animation-category-tab:is([data-id="catalogue"],[data-id="presets"]){--chooser-accent:var(--ink)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-chooser-version="567"]{gap:10px;min-width:0}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-chooser-version="567"] .animation-library-heading{margin:0;padding:0;border:0;background:transparent;box-shadow:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-chooser-version="567"] .animation-library-title-copy{gap:4px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-chooser-version="567"] .animation-library-heading h2{margin:0;font-size:19px;line-height:1.25;letter-spacing:-.35px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-chooser-version="567"] .animation-library-guidance{max-width:none;margin:0;font-size:12px;line-height:1.4;color:var(--muted)}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-picker-steps{display:flex;align-items:stretch;gap:7px;list-style:none;margin:0;padding:7px;border:1px solid var(--line);border-radius:13px;background:color-mix(in srgb,var(--soft) 66%,transparent)}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-picker-steps>li{display:flex;align-items:center;flex:1;gap:6px;min-width:0;margin:0;padding:3px 2px;font-size:11px;line-height:1.3;font-weight:600;color:var(--muted)}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-picker-steps>li>span{display:grid;place-items:center;flex:none;width:24px;height:24px;border:1px solid var(--line);border-radius:8px;background:var(--panel);font-size:12px;line-height:1;font-weight:750;font-variant-numeric:tabular-nums}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-picker-steps>li[aria-current="step"]{color:var(--ink);font-weight:750}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-picker-steps>li[aria-current="step"]>span{border-color:var(--chooser-accent);background:color-mix(in srgb,var(--chooser-accent) 10%,var(--panel));color:var(--chooser-accent)}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-category-tabs{display:flex;align-items:stretch;gap:6px;min-width:0;max-width:100%;margin-inline:-2px;padding:3px 2px 6px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none;scroll-snap-type:x proximity}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-category-tabs::-webkit-scrollbar{display:none;width:0;height:0}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-category-tab{display:flex;align-items:center;justify-content:center;flex:none;gap:6px;min-width:44px;min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--muted);font-size:12px;line-height:1.25;white-space:nowrap;scroll-snap-align:start;touch-action:pan-x;box-shadow:none}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-category-tab>span{display:grid;place-items:center;flex:none}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-category-tab .icon,
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-category-tab .arrangement-icon{width:18px;height:18px}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-category-tab>b{font-size:12px;font-weight:650}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-category-tab>small{padding:2px 4px;border-radius:5px;background:var(--soft);font-size:10px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--muted)}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-category-tab[aria-pressed="true"]{border-color:var(--chooser-accent);background:color-mix(in srgb,var(--chooser-accent) 7%,var(--panel));color:var(--ink);box-shadow:inset 0 -3px var(--chooser-accent)}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-category-tab[aria-pressed="true"]>span{color:var(--chooser-accent)}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-search input{box-sizing:border-box;width:100%;min-height:44px;height:44px;padding:9px 12px 9px 38px;border-radius:13px;font-size:16px;line-height:1.3}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-search>.icon{top:13px;left:12px;width:18px;height:18px}
+
+/* Category names and geometry icons carry the distinction; colour is only
+   an additional cue, with a quiet tint in both light and dark mode. */
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"]{gap:9px;min-width:0}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"]+.animation-family-section{margin-top:18px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"]>.animation-family-heading{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:9px;margin:0;padding:10px;border:1px solid color-mix(in srgb,var(--chooser-accent) 24%,var(--line));border-left:3px solid var(--chooser-accent);border-radius:13px;background:color-mix(in srgb,var(--chooser-accent) 5%,var(--panel));box-shadow:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"] .animation-section-icon{display:grid;place-items:center;align-self:start;width:36px;height:36px;border-radius:11px;background:color-mix(in srgb,var(--chooser-accent) 11%,var(--panel));color:var(--chooser-accent)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"] .animation-section-icon :is(.icon,.arrangement-icon){width:22px;height:22px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"] .animation-family-heading>div{display:grid;gap:2px;min-width:0}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"] .animation-category-eyebrow{color:var(--muted);font-size:9px;line-height:1.2;font-weight:700;letter-spacing:.045em;text-transform:uppercase}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"] .animation-family-heading h2{margin:0;font-size:16px;line-height:1.25;letter-spacing:-.2px;overflow-wrap:normal;word-break:normal}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"] .animation-family-heading p{margin:1px 0 0;font-size:11px;line-height:1.35;color:var(--muted)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"] .animation-family-heading>small{align-self:start;max-width:76px;padding:4px 6px;border-radius:8px;background:var(--panel);color:var(--muted);font-size:10px;line-height:1.3;text-align:center;white-space:normal;font-variant-numeric:tabular-nums}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"]>.animation-family-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:9px;align-items:stretch}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"]{min-width:0;border-radius:16px;border-color:var(--line);box-shadow:0 4px 12px #10151005;grid-column:auto}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"]>.animation-family-trigger{display:grid;grid-template-columns:104px minmax(0,1fr);align-items:center;gap:10px;width:100%;min-height:44px;padding:10px;background:transparent;color:var(--ink);text-align:left;white-space:normal;box-shadow:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .animation-family-preview{display:grid;position:relative;grid-template-rows:auto 70px auto;gap:4px;align-self:center;width:100%;height:auto;min-height:0;min-width:0;padding:6px;border:1px solid #ffffff16;border-radius:12px;background:#111613;overflow:hidden}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .animation-family-preview-label{display:block;position:static;max-width:100%;margin:0;padding:0;color:#cad4cd;font-size:10px;line-height:1.3;font-weight:600;letter-spacing:0;white-space:normal;overflow:visible;text-overflow:clip}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .animation-family-preview canvas{display:block;width:100%;height:70px!important;min-height:0!important;max-height:none;margin:0;border-radius:8px;background:#111613}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .animation-family-preview-notice{display:flex;align-items:center;justify-content:space-between;gap:4px;margin:0;padding:2px 0 0;border-top:1px solid #ffffff16;color:#aebdb3;font-size:10px;line-height:1.3;font-weight:500}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .animation-family-preview-notice::after{content:'›';flex:none;color:#d9e1dc;font-size:15px;line-height:1}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .family-copy{display:grid;align-content:center;gap:5px;min-height:0;min-width:0;margin:0;padding:0}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .family-kicker{display:flex;align-items:center;flex-wrap:wrap;gap:5px;color:var(--muted);font-size:10px;line-height:1.3}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .animation-type-badge{min-height:18px;padding:2px 5px;border-color:var(--line);background:var(--soft);color:var(--muted);font-size:9px;line-height:1.25;letter-spacing:0}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .family-title{display:block;margin:0;padding:0;font-size:16px;line-height:1.25;letter-spacing:-.15px;overflow-wrap:normal;word-break:normal}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .family-summary{display:block;-webkit-line-clamp:unset;-webkit-box-orient:initial;margin:0;padding:0;color:var(--muted);font-size:12px;font-weight:400;line-height:1.35;white-space:normal;overflow:visible;overflow-wrap:normal;word-break:normal}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .family-variants{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:44px;margin:2px 0 0!important;padding:6px 8px;border:1px solid color-mix(in srgb,var(--chooser-accent) 27%,var(--line));border-radius:11px;background:color-mix(in srgb,var(--chooser-accent) 6%,var(--panel));color:var(--chooser-accent);box-shadow:none;font-size:12px;line-height:1.3}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .family-variants-copy{display:block;flex:1;min-width:0}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .family-variants-copy>b{font-size:12px;line-height:1.3;font-weight:750;white-space:normal;overflow-wrap:normal;word-break:normal}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .family-variants-action{display:flex;flex:none;color:inherit}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .family-variants-action>.icon{width:16px;height:16px;transform:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .stand-animation-preview{max-height:70px;min-height:0;padding:0;gap:3px;overflow:hidden}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .stand-animation-zone{padding:2px 4px;gap:2px;border-radius:6px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .stand-animation-zone-label{font-size:9px;line-height:1.2}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .stand-animation-zone canvas{height:18px!important;border-radius:4px}
+
+/* Detail cards are the only chooser controls with a play/start action. The
+   same styles apply to standalone and inline group-detail routes. */
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"]{gap:10px;min-width:0}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-back-slot>.family-detail-back{min-height:44px;padding:6px 9px;border-radius:13px;font-size:12px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-detail-back .gallery-action-icon{width:28px;height:28px;border-radius:9px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-detail-back .gallery-action-icon>.icon{width:17px;height:17px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-detail-back .gallery-action-copy>b{font-size:12px;line-height:1.35}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"]>.family-detail-heading{align-items:flex-start;gap:10px;padding:0}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-detail-heading>div{gap:5px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-detail-category{display:flex;align-items:center;gap:6px;width:max-content;max-width:100%;color:var(--chooser-accent);font-size:11px;line-height:1.3;font-weight:750}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-detail-category>span{display:flex;flex:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-detail-category :is(.icon,.arrangement-icon){width:18px;height:18px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-detail-heading h2{margin:0;font-size:21px;line-height:1.22;letter-spacing:-.4px;overflow-wrap:normal;word-break:normal}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-detail-heading p{margin:0;font-size:12px;line-height:1.4}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-detail-count{min-height:25px;max-width:80px;padding:5px 7px;border-radius:10px;font-size:11px;line-height:1.3;text-align:center;white-space:normal}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-variants-panel{margin:0;padding:10px;border-radius:16px;background:var(--panel)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-variants-heading{margin:0 0 9px;padding:0;gap:8px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-variants-heading>div>b{font-size:15px;line-height:1.3}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-variants-heading>div>small{font-size:11px;line-height:1.35}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] :is(.family-variant-grid,.effect-grid){display:grid;grid-template-columns:minmax(0,1fr);align-items:stretch;gap:8px;min-width:0}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]{display:flex;flex-direction:column;align-items:stretch;gap:5px;min-width:0;min-height:44px;padding:8px;border:1px solid var(--line);border-radius:13px;background-color:var(--panel);text-align:left;white-space:normal;overflow:hidden}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]>.animation-effect-preview{position:relative;display:grid;grid-template-rows:auto 84px;align-items:stretch;gap:4px;width:100%;min-width:0;padding:6px;border:1px solid #ffffff16;border-radius:10px;background:#111613;overflow:hidden}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"] .animation-effect-preview-label{display:block;margin:0;padding:0;color:#bbc8c0;font-size:10px;line-height:1.3;font-weight:600;white-space:normal}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"] .animation-effect-preview>canvas{display:block;width:100%;height:84px!important;min-height:0!important;min-width:0;border-radius:7px;grid-column:auto;grid-row:auto;align-self:stretch}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]:is([data-animation-category="tunnel"],:has(.reference-preview))>.animation-effect-preview{grid-template-rows:auto 104px}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]:is([data-animation-category="tunnel"],:has(.reference-preview)) .animation-effect-preview>canvas{height:104px!important}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]>b{margin:0;padding:2px 1px;font-size:14px;line-height:1.3;overflow-wrap:normal;word-break:normal;text-wrap:balance}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]>.animation-variant-position{grid-column:auto;grid-row:auto;align-self:flex-start;max-width:100%;margin:0!important;padding:3px 5px;font-size:10px!important;line-height:1.25!important;white-space:normal}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]>.animation-variant-description{display:block;margin:0;padding:0 1px;font-size:11px;font-weight:400;line-height:1.4;color:var(--muted);overflow-wrap:normal;word-break:normal}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]>.animation-start-action{display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;margin-top:auto;padding:7px 6px;border-radius:10px;border:1px solid color-mix(in srgb,var(--chooser-accent) 30%,var(--line));background:color-mix(in srgb,var(--chooser-accent) 7%,var(--panel));color:var(--chooser-accent);font-size:11px;line-height:1.3;font-weight:750;text-align:center}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]>.animation-start-action>span{display:flex;flex:none}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]>.animation-start-action .icon{width:16px;height:16px}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"] .animation-current-badge{position:absolute;right:6px;bottom:6px;display:flex;align-items:center;max-width:calc(100% - 12px);min-height:21px;margin:0;padding:4px 6px;border:1px solid #8db19c;border-radius:7px;background:#243d2e;color:#f0f7f2;font-size:10px;line-height:1.2;font-weight:700;white-space:normal;pointer-events:none}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"][aria-pressed="true"]{border-color:var(--chooser-accent);box-shadow:0 0 0 1px var(--chooser-accent)}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]>.animation-start-unavailable{display:block;margin-top:auto;padding:7px 4px;font-size:11px;line-height:1.35;color:var(--muted)}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"] .stand-animation-preview{min-height:0;padding:0;gap:4px;background:transparent}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"] .stand-animation-zone{padding:3px 5px;gap:2px;border-radius:7px}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"] .stand-animation-zone-label{font-size:10px;line-height:1.25}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"] .stand-animation-zone canvas{height:32px!important;border-radius:5px}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] :is(.animation-category-tab,.animation-family-trigger,.effect-card):focus-visible{outline:2px solid var(--chooser-accent);outline-offset:-2px}
+@media(min-width:360px){
+  html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] :is(.family-variant-grid,.effect-grid){grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(min-width:760px){
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"]>.animation-family-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:359px){
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"]>.animation-family-trigger{grid-template-columns:98px minmax(0,1fr);gap:8px;padding:8px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .family-title{font-size:15px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .family-summary{font-size:11px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"]>.animation-family-heading{grid-template-columns:30px minmax(0,1fr) auto;gap:7px;padding:8px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"] .animation-section-icon{width:30px;height:30px;border-radius:9px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"] .animation-family-heading h2{font-size:15px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"] .animation-family-heading>small{max-width:64px;font-size:9px}
+  html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-picker-steps{gap:5px;padding:6px}
+  html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-picker-steps>li{gap:5px;font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"]{animation:none}
+  html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] :is(.animation-family-card,.animation-family-trigger,.effect-card,.animation-category-tab){transition:none!important}
+  html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-category-tabs{scroll-snap-type:none;scroll-behavior:auto}
+}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-chooser-version="567"] .animation-scope-note{display:flex;align-items:center;gap:9px;margin:0;padding:9px 11px;min-height:40px;border:0;border-radius:12px;background:var(--soft);text-align:left}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-chooser-version="567"] .animation-scope-note>span{display:flex;flex:none;color:var(--muted)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-chooser-version="567"] .animation-scope-note .icon{width:21px;height:21px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-chooser-version="567"] .animation-scope-note>strong{display:block;margin:0;padding:0;font-size:12px;font-weight:500;line-height:1.4;color:var(--ink)}
+/* A visual route replaces the ignored explanatory paragraph. Folder = browse;
+   the triangular play icon is reserved for actual start actions. */
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-picker-steps{position:relative;gap:20px}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-picker-steps::after{content:'→';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:17px;font-weight:600;color:var(--muted);pointer-events:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .family-kicker>span:first-child{display:flex;color:var(--chooser-accent)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .family-kicker .icon{width:13px;height:13px}
+/* The app can stay phone-width inside a wide browser. Use the section's actual
+   space, not the viewport breakpoint, before placing groups side by side. */
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"]>.animation-family-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}

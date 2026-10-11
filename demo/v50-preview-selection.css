@@ -1,0 +1,256 @@
+/* Selection is part of the physical preview, never a second number strip. */
+.v50-control-preview{color:#f4f5f4}
+.v50-preview-canvas-scroll{max-height:min(280px,35dvh);overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#68736c #111514;border-radius:14px}
+.v50-preview-canvas-stage{position:relative;min-width:0}
+.control-preview-dock .v50-control-preview .v50-preview-canvas-stage canvas[data-preview],
+.v50-full-preview .v50-control-preview .v50-preview-canvas-stage canvas[data-preview]{display:block;width:100%;height:max(96px,var(--v50-preview-min-height));min-height:var(--v50-preview-min-height)!important;max-height:none!important;margin:0!important}
+.v50-preview-canvas-stage[data-preview-vertical=true]{min-width:var(--v50-preview-min-width)}
+.control-preview-dock .v50-control-preview .v50-preview-canvas-stage[data-preview-vertical=true] canvas[data-preview],
+.v50-full-preview .v50-control-preview .v50-preview-canvas-stage[data-preview-vertical=true] canvas[data-preview]{height:180px!important;min-height:180px!important}
+.v50-preview-line-targets{position:absolute;inset:0;pointer-events:none}
+.v50-preview-line-target{position:absolute;pointer-events:auto;display:block;padding:0!important;min-width:0;min-height:0;border:0!important;background:transparent!important;box-shadow:none!important;border-radius:11px;color:#c4cbc7;touch-action:manipulation;visibility:hidden}
+.v50-preview-line-target[data-positioned=true]{visibility:visible}
+.v50-preview-line-target[hidden]{display:none!important}
+.v50-preview-line-badge{position:absolute;left:var(--badge-x,28px);top:var(--badge-y,50%);transform:translate(-50%,-50%);width:34px;height:34px;display:grid;place-items:center;border:1px solid #6a736d;border-radius:11px;background:#202622;color:#c4cbc7;transition:background .15s ease,border-color .15s ease,color .15s ease}
+.v50-preview-line-badge b{font-size:13px;line-height:1;font-weight:700;font-variant-numeric:tabular-nums}
+.v50-preview-line-target[data-spatial=true]{width:44px;height:44px;min-width:44px;min-height:44px}
+.v50-preview-line-target[data-spatial=true] .v50-preview-line-badge{width:26px;height:26px;border-radius:9px}
+.v50-preview-line-target[data-spatial=true] .v50-preview-line-badge b{font-size:11px}
+.v50-preview-line-check{position:absolute;right:-4px;top:-4px;display:none;width:15px;height:15px;place-items:center;border:2px solid #111514;border-radius:50%;font-size:9px;font-weight:800;color:#17201b;background:#f2f5f3}
+.v50-preview-line-target[aria-pressed=true] .v50-preview-line-badge{color:#fff;background:#455149;border-color:#b6cbbd}
+.v50-preview-line-target[aria-pressed=true] .v50-preview-line-check{display:grid}
+.v50-preview-line-target:focus-visible{outline:2px solid #eac8c4;outline-offset:-2px}
+.v50-control-preview .v50-preview-actions{border-top:1px solid #ffffff1c;padding:8px 0 0;margin-top:6px;gap:0;grid-template-columns:minmax(0,1fr)}
+.v50-control-preview .v50-preview-toolbar{width:100%;gap:6px;flex-wrap:wrap}
+.control-preview-dock .v50-control-preview .preview-size-control{min-width:0}
+.v50-control-preview .v50-selection-summary{flex:1 1 100px;min-width:75px}
+.v50-control-preview .v50-selection-summary small{color:#aab5ae;font-size:9px}
+.v50-control-preview .v50-selection-summary b{color:#f4f5f4;font-size:12px;line-height:1.4}
+.v50-control-preview .v50-select-all,.v50-control-preview .v50-preview-expand{display:flex;align-items:center;justify-content:center;flex:none;gap:5px;min-height:44px;padding:7px 9px;border:1px solid #ffffff2b;border-radius:12px;box-shadow:none;background:#ffffff0b;color:#e3e9e5;font-size:11px}
+.v50-control-preview .v50-select-all[aria-pressed=true]{background:#465149;border-color:#afc5b7;color:#fff}
+.v50-control-preview .v50-select-all .icon,.v50-control-preview .v50-preview-expand .icon{width:16px;height:16px;color:inherit}
+.v50-control-preview .v50-preview-tap-hint{color:#b3bfb6;font-size:10px;margin:7px 0 4px;gap:5px}
+.v50-control-preview .v50-preview-tap-hint .icon{width:15px;height:15px}
+.v50-control-preview :is(.v50-select-all,.v50-preview-expand):focus-visible{outline:2px solid #eac8c4;outline-offset:2px}
+.v50-full-preview .v50-control-preview{background:#111514;border:1px solid #ffffff24;padding:12px;border-radius:21px}
+.v50-full-preview .v50-preview-canvas-scroll{max-height:60dvh}
+.v50-full-preview .v50-control-preview .v50-preview-canvas-stage:is([data-preview-spatial=tunnel],[data-preview-spatial=wall]){width:100%;max-width:100%;min-width:0!important}
+.v50-full-preview .v50-control-preview .v50-preview-canvas-stage:is([data-preview-spatial=tunnel],[data-preview-spatial=wall]) canvas[data-preview]{height:clamp(240px,45dvh,420px)!important;min-height:240px!important}
+@media(max-width:360px){.v50-control-preview .v50-preview-expand{padding-inline:7px;font-size:10px}.v50-control-preview .v50-select-all{padding-inline:7px}.v50-control-preview .v50-selection-summary b{font-size:11px}}
+@media(prefers-reduced-motion:reduce){.v50-preview-line-badge{transition:none}}
+
+/* V50.566: spend the preview's space on light, not separate caption rows.
+   The chosen size owns BOTH height values. Older sticky rules changed only
+   height, leaving a large min-height behind and inflating the dock. */
+html.interface-polish body #main .control-preview-dock .v50-control-preview{
+  padding:2px 8px 4px;
+  border-radius:16px;
+}
+html.interface-polish body #main .control-preview-dock .v50-control-preview .preview-top{
+  gap:8px;
+  min-height:44px;
+  padding:0;
+}
+html.interface-polish body #main .control-preview-dock .v50-preview-heading{
+  display:flex;
+  align-items:baseline;
+  flex:1;
+  flex-wrap:wrap;
+  gap:2px 7px;
+  min-width:0;
+}
+html.interface-polish body #main .control-preview-dock .v50-preview-heading>span{
+  color:#e1e7e3;
+  font-size:11px;
+  font-weight:700;
+  line-height:1.3;
+}
+html.interface-polish body #main .control-preview-dock .v50-preview-heading>.preview-summary{
+  flex:0 1 auto;
+  width:auto;
+  max-width:100%;
+  margin:0;
+  padding:0;
+  color:#aab6ae;
+  font-size:10px;
+  line-height:1.3;
+  text-align:left;
+}
+html.interface-polish body #main .control-preview-dock .v50-control-preview .preview-size-row{
+  flex:none;
+  max-height:none;
+  padding:0;
+  opacity:1;
+  transform:none;
+  overflow:visible;
+  pointer-events:auto;
+}
+html.interface-polish body #main .control-preview-dock .v50-control-preview .preview-size-control{
+  min-width:0;
+}
+html.interface-polish body #main .control-preview-dock .v50-control-preview .preview-size-row:has(.preview-size-control[open]){
+  max-width:none;
+}
+html.interface-polish body #main .control-preview-dock .v50-control-preview .preview-size-control>summary{
+  box-sizing:border-box;
+  min-height:44px;
+  min-width:60px;
+  padding:4px 8px;
+  border-radius:11px;
+  font-size:10px;
+  gap:5px;
+}
+html.interface-polish body #main .control-preview-dock .v50-control-preview .preview-size-picker>button{
+  min-width:44px;
+  min-height:44px;
+}
+html.interface-polish body #main .control-preview-dock .v50-control-preview .v50-preview-canvas-scroll{
+  max-height:200px;
+  border-radius:11px;
+}
+html.interface-polish body #main .control-preview-dock .v50-control-preview .v50-preview-canvas-stage canvas[data-preview]{
+  height:var(--v50-preview-min-height,112px)!important;
+  min-height:var(--v50-preview-min-height,112px)!important;
+  max-height:none!important;
+  transition:none;
+}
+html.interface-polish body #main .control-preview-dock .v50-control-preview .v50-preview-canvas-stage:is([data-preview-spatial=tunnel],[data-preview-spatial=wall]){
+  width:100%;
+  max-width:100%;
+  min-width:0!important;
+}
+html.interface-polish body #main .control-preview-dock .spatial-preview-wrap .v50-preview-canvas-scroll{
+  max-height:220px;
+}
+.v50-control-preview .v50-preview-actions{
+  margin-top:3px;
+  padding-top:4px;
+}
+.v50-control-preview .v50-preview-toolbar{
+  min-height:44px;
+  flex-wrap:nowrap;
+  gap:6px;
+}
+.v50-control-preview .v50-selection-summary{
+  flex:1 1 80px;
+  min-width:64px;
+}
+.v50-control-preview .v50-selection-summary>span{
+  gap:1px;
+}
+.v50-control-preview .v50-selection-summary b{
+  font-size:11px;
+  line-height:1.25;
+}
+.v50-control-preview .v50-preview-inline-hint{
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  color:#aab6ae;
+  font-size:9px;
+  font-weight:400;
+  font-style:normal;
+  line-height:1.25;
+  white-space:nowrap;
+}
+.v50-control-preview :is(.v50-select-all,.v50-preview-expand){
+  padding:5px 8px;
+  border-radius:11px;
+}
+html.interface-polish body :is(#main,#effect-dialog) .shared-colour-picker>.section-heading>.power-card{
+  min-height:44px;
+  margin:0;
+  padding:0;
+  border:0;
+  box-shadow:none;
+  background:transparent!important;
+  background-image:none!important;
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+}
+html.interface-polish body :is(#main,#effect-dialog) .shared-colour-picker>.section-heading>.power-card>div{
+  display:none;
+}
+html.interface-polish body :is(#main,#effect-dialog) .shared-colour-picker>.section-heading>.power-card>.switch{
+  min-height:44px;
+  padding:0;
+  gap:6px;
+}
+
+/* Keep the established compact two-column colour tools. A larger, stacked
+   wheel would reduce the amount of everyday control visible on a phone. */
+/* Keep the light visible while using its controls. Only the live preview
+   stays after scrolling; its context and navigation do not pin a tall page. */
+@media(max-width:700px){
+  html.interface-polish body #main .editor-grid>.control-preview-dock{
+    position:sticky;
+    top:var(--app-safe-top);
+    padding:2px 0 4px;
+    margin-bottom:6px;
+    pointer-events:auto;
+  }
+  html.interface-polish body #main .editor-grid>.control-preview-dock .control-dock-surface{
+    padding-top:0;
+  }
+  html.interface-polish body #main .editor-grid>.control-preview-dock .control-dock-context-line{
+    min-height:20px;
+    margin:0 0 4px;
+    gap:7px;
+  }
+  html.interface-polish body #main .editor-grid>.control-preview-dock .control-dock-context-line .control-dock-location{
+    display:block;
+  }
+  html.interface-polish body #main .editor-grid>.control-preview-dock .control-dock-context-line .control-dock-location>small{
+    display:none;
+  }
+  html.interface-polish body #main .editor-grid>.control-preview-dock .control-dock-context-line .control-dock-location>b{
+    display:block;
+    font-size:13px;
+    line-height:1.3;
+  }
+  html.interface-polish body #main .editor-grid>.control-preview-dock .control-dock-type-badge{
+    min-height:0;
+    padding:3px 6px;
+    font-size:9px;
+    line-height:1.2;
+  }
+  html.interface-polish body #main .editor-grid>.control-preview-dock .control-dock-actions{
+    margin:0 0 4px;
+    gap:6px;
+  }
+  html.interface-polish body #main .editor-grid>.control-preview-dock .control-dock-back{
+    min-height:44px!important;
+    padding:0 9px!important;
+    border-radius:12px!important;
+  }
+  html.interface-polish body #main .editor-grid>.control-preview-dock .control-mode-tabs{
+    padding:0;
+    gap:3px;
+    border:0;
+    border-radius:12px;
+  }
+  html.interface-polish body #main .editor-grid>.control-preview-dock .control-mode-tabs>button{
+    min-height:44px!important;
+    padding:4px 6px;
+    font-size:12px!important;
+    gap:4px;
+  }
+  html.interface-polish body #main .editor-grid>.control-preview-dock .control-location-summary{
+    gap:3px 8px;
+    margin:2px 0 3px;
+    font-size:10px;
+    line-height:1.3;
+  }
+  html.interface-polish body #main .editor-grid>.control-preview-dock:not(.animation-gallery-dock)[data-scrolled=true] :is(.control-dock-context-line,.control-dock-heading,.control-dock-actions,.control-location-summary){
+    display:none;
+  }
+  html.interface-polish body #main .control-preview-dock .v50-control-preview .v50-preview-canvas-scroll{
+    max-height:min(200px,30dvh);
+  }
+  html.interface-polish body #main .control-preview-dock .spatial-preview-wrap .v50-preview-canvas-scroll{
+    max-height:min(220px,32dvh);
+  }
+  html.interface-polish body #main .editor-controls .shared-colour-picker canvas.wheel{
+    scroll-margin-block-start:calc(var(--sticky-height,0px) + 12px);
+  }
+}
