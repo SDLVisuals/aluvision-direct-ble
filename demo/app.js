@@ -1780,7 +1780,7 @@
     const counts={catalogue:items.length,...Object.fromEntries(Library.sections(items).map(section=>[section.key,section.count])),presets:savedPresets.presets.length};
     const intro=tab==='brand'?brandTonePicker():tab==='tunnel'?(standControlOpen?`<p class="stand-animation-guidance">${esc(standAnimationGuidance())}</p>`:tunnelGuide({compact:true})):'';
     const inFamily=Boolean(active),results=inFamily?animationFamilyDetail(active,tab,{includePreview:false}):tab==='presets'?renderPresets():query.trim()?effectResults(query):tab==='catalogue'?animationCategorySections(items):animationCategoryFamilyList(items,tab);
-    return `<section class="animation-library-inline" data-chooser-version="567" data-animation-category="${esc(tab)}" aria-label="${esc(t('animationSelector'))}">${animationLibraryHeading()}${inFamily?'':`${animationCategoryTabs(items,counts,tab)}${tab!=='presets'?`<label class="animation-search"><span>${esc(t('animationSearch'))}</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg><input type="search" id="animation-search" value="${esc(query)}" placeholder="${esc(t('v567SearchHint'))}" autocomplete="off"></label>`:''}${intro}` }<div id="animation-results">${results}</div></section>`;
+    return `<section class="animation-library-inline" data-library-ui-version="573" data-chooser-version="567" data-animation-category="${esc(tab)}" aria-label="${esc(t('animationSelector'))}">${animationLibraryHeading()}${inFamily?'':`${animationCategoryTabs(items,counts,tab)}${tab!=='presets'?`<label class="animation-search"><span>${esc(t('animationSearch'))}</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg><input type="search" id="animation-search" value="${esc(query)}" placeholder="${esc(t('v567SearchHint'))}" autocomplete="off"></label>`:''}${intro}` }<div id="animation-results">${results}</div></section>`;
   }
   function animationLibraryHeading(){
     const current=activeEffect(),canReturn=current&&(standControlOpen||route.screen==='controls');
@@ -1794,7 +1794,7 @@
   }
   function animationCategoryTabs(items,counts,tab){
     const keys=['catalogue',...Library.sections(items).map(section=>section.key),'presets'];
-    return `<nav class="animation-category-tabs" aria-label="${esc(t('animationFilter'))}">${keys.map(key=>`<button type="button" class="animation-category-tab" data-action="animation-category-tab" data-id="${esc(key)}" aria-pressed="${tab===key}" aria-label="${esc(animationChooserCategoryLabel(key))} · ${esc(t(counts[key]===1?'animationCountOne':'animationCountMany',{count:counts[key]||0}))}"><span aria-hidden="true">${animationCategoryIcon(key)}</span><b>${esc(animationChooserCategoryLabel(key))}</b><small>${counts[key]||0}</small></button>`).join('')}</nav>`;
+    return `<nav class="animation-category-tabs" data-categories-ui-version="573" aria-label="${esc(t('animationFilter'))}">${keys.map(key=>`<button type="button" class="animation-category-tab" data-action="animation-category-tab" data-id="${esc(key)}" aria-pressed="${tab===key}" aria-label="${esc(animationChooserCategoryLabel(key))} · ${esc(t(counts[key]===1?'animationCountOne':'animationCountMany',{count:counts[key]||0}))}"><span aria-hidden="true">${animationCategoryIcon(key)}</span><b>${esc(animationChooserCategoryLabel(key))}</b><small>${counts[key]||0}</small></button>`).join('')}</nav>`;
   }
   function chooseAnimationCategoryTab(value){
     chooseAnimationCategory(value);
@@ -1810,7 +1810,7 @@
     if(!current||!standControlOpen&&route.screen!=='controls')return '';
     const name=Library.displayName(current,t),label=t('v569Adjust');
     const attribute=location==='sticky'?'data-editor-return-sticky':'data-editor-return-inline';
-    return `<button type="button" class="animation-gallery-return animation-settings-return" data-active-summary-version="569" ${attribute} data-action="animation-current-edit" data-id="${esc(current.id)}" aria-label="${esc(t('animationCurrentSettingsAccessible',{name}))}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('check')}</span><span class="gallery-action-copy"><small class="animation-settings-return-kicker">${esc(animationCurrentLabel())}</small><b class="animation-settings-return-name">${esc(name)}</b><small class="animation-settings-return-action">${esc(label)}</small></span></span><span class="gallery-action-next" aria-hidden="true">${icon('chevron')}</span></button>`;
+    return `<button type="button" class="animation-gallery-return animation-settings-return" data-current-shortcut-version="573" data-active-summary-version="569" ${attribute} data-action="animation-current-edit" data-id="${esc(current.id)}" aria-label="${esc(t('animationCurrentSettingsAccessible',{name}))}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('check')}</span><span class="gallery-action-copy"><small class="animation-settings-return-kicker">${esc(animationCurrentLabel())}</small><b class="animation-settings-return-name">${esc(name)}</b><small class="animation-settings-return-action">${esc(label)}</small></span></span><span class="gallery-action-next" aria-hidden="true">${icon('chevron')}</span></button>`;
   }
   function animationCategoryIcon(key){
     return key==='tunnel'?arrangementIcon('stacked'):icon(({catalogue:'zones',whole:'sun',pixels:'animation',brand:'sparkle',presets:'scenes'})[key]||'zones');
@@ -5417,7 +5417,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate572',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate573',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

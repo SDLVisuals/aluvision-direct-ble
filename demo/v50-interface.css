@@ -576,3 +576,50 @@ html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data
   html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .family-variants{gap:5px;padding-inline:7px}
 }
 @media(prefers-reduced-motion:reduce){html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"]>.animation-family-trigger{transition:none}}
+
+/* V50.573: a clear gallery header without nested frames or hidden filters.
+   Browsing and the current-animation shortcut keep their existing actions. */
+html.interface-polish body #main .control-workspace:has([data-library-ui-version="573"]){margin:0;padding:0;border:0;border-radius:0;background:transparent;background-image:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]{gap:10px;min-width:0;margin:0;padding:0;border:0;border-radius:0;background:transparent;background-image:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-library-heading{padding:0 2px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"] .animation-library-heading h2{font-size:20px;line-height:1.25;letter-spacing:-.4px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-picker-steps{align-items:center;gap:24px;margin-top:-3px;padding:0 2px;border:0;border-radius:0;background:transparent;box-shadow:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-picker-steps>li{gap:6px;min-height:28px;padding:0;font-size:11px;line-height:1.35;font-weight:500}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-picker-steps>li>span{width:21px;height:21px;border:0;border-radius:50%;background:var(--soft);font-size:11px;font-weight:650}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-picker-steps>li[aria-current="step"]{font-weight:650}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-picker-steps>li[aria-current="step"]>span{background:color-mix(in srgb,var(--chooser-accent) 10%,var(--panel));color:var(--chooser-accent)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-picker-steps::after{font-size:14px;font-weight:500}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-current-shortcut-version="573"]{gap:8px;min-height:58px;padding:8px 10px;border-left-width:3px;border-radius:12px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-current-shortcut-version="573"]>.gallery-action-label{gap:8px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-current-shortcut-version="573"] .gallery-action-icon{width:26px;height:26px;border-radius:50%;background:color-mix(in srgb,var(--v569-current) 10%,var(--panel))}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-current-shortcut-version="573"] .gallery-action-icon>.icon{width:16px;height:16px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-current-shortcut-version="573"] .gallery-action-copy{gap:3px 8px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-current-shortcut-version="573"] .animation-settings-return-kicker{grid-column:1;grid-row:1;font-size:10px;line-height:1.25}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-current-shortcut-version="573"] .animation-settings-return-name{grid-column:1;grid-row:2;font-size:14px;line-height:1.25;font-weight:700;text-wrap:pretty}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-current-shortcut-version="573"] .animation-settings-return-action{grid-column:2;grid-row:1/3;min-height:0;max-width:86px;padding:0;border:0;border-radius:0;background:transparent;color:var(--ink);font-size:11px;line-height:1.3;font-weight:600}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-current-shortcut-version="573"]>.gallery-action-next{width:14px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:6px;max-width:100%;margin:0;padding:0;overflow:visible;scroll-snap-type:none;overscroll-behavior:auto}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab{display:grid;grid-template-columns:18px minmax(0,1fr) auto;align-items:center;gap:6px;min-width:0;min-height:44px;margin:0;padding:7px 9px;border:1px solid var(--line);border-radius:11px;background:var(--panel);background-image:none;box-shadow:none;color:var(--muted);font-size:12px;line-height:1.3;white-space:normal;text-align:left;scroll-snap-align:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab>b{min-width:0;font-size:12px;line-height:1.3;font-weight:600;overflow-wrap:anywhere}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab>span{display:grid;place-items:center;width:18px;height:18px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab>span>:is(.icon,.arrangement-icon){width:18px;height:18px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab>small{min-width:20px;padding:3px 4px;border-radius:6px;background:var(--soft);color:var(--muted);font-size:10px;line-height:1.2;font-weight:600;text-align:center;font-variant-numeric:tabular-nums}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--panel);box-shadow:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab[aria-pressed="true"]>small{background:var(--panel);color:var(--ink)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab[aria-pressed="true"]>span{color:var(--panel)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab[aria-pressed="true"]>span>:is(.icon,.arrangement-icon){color:inherit}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab:last-child:nth-child(odd){grid-column:1/-1}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-search{position:relative;display:block;margin:0}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-search>span{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-search input{height:44px;min-height:44px;padding:9px 12px 9px 37px;border:1px solid var(--line);border-radius:11px;background:var(--panel);background-image:none;box-shadow:none;font-size:16px;line-height:1.3}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-search>.icon{position:absolute;z-index:1;top:13px;left:12px;width:18px;height:18px;pointer-events:none;color:var(--muted)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab:focus-visible{outline:2px solid var(--chooser-accent);outline-offset:2px}
+@media(min-width:760px){
+  html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]{grid-template-columns:repeat(3,minmax(0,1fr))}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab:last-child:nth-child(odd){grid-column:auto}
+}
+@media(max-width:359px){
+  html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab{gap:5px;padding:7px;font-size:11px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab>b{font-size:11px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-current-shortcut-version="573"] .animation-settings-return-action{max-width:64px;font-size:10px}
+}

@@ -1,3 +1,15 @@
+# Browserdemo V50 · interfacekandidaat573 · 11 oktober 2026
+
+De animatiegalerie heeft een rustigere, compacte kop en duidelijker gegroepeerde categorieën. De bestaande animatiegroepkaarten, voorbeelden en acties blijven behouden. Een groep openen start nog geen animatie; alleen de bestaande startactie bedient het licht.
+
+Dit is alleen een browserdemo met twintig fictieve receivers: tien RGBW en tien SPI. Gegevens blijven tijdelijk in geheugen en verdwijnen bij herladen. Geen echte wifi, receiververbinding, fysieke verlichting of firmwarebestanden. PIN en delen blijven uitgeschakeld. Een schermvoorbeeld is geen bewijs van fysiek licht.
+
+Deze browserdemo en de private iPhone-app zijn afzonderlijke leveringen. De private iPhone-build573 is gecompileerd, ondertekend, geïnstalleerd en gestart; de geïnstalleerde versie is opnieuw uitgelezen. Het geopende native appscherm is apart visueel bevestigd. Geen fysieke ledline- of radiotest wordt geclaimd. De historische ondertekende build568-metadata blijft bewaard; actuele573-status staat apart. De bestaande Android-download blijft **41.0.14, code20** en is niet gewijzigd.
+
+De 770 gerichte softwaretests zijn geslaagd. De vier bestaande legacytestfouten zijn apart gerapporteerd; browsercontrole en fysieke acceptatie blijven afzonderlijke controles. QA-broninventaris SHA-256: f83b49489e18a8fc1b6380a2656f66a2e61ed45e18cb9f7c5692ad7c3951ee7d.
+
+## Historische release-informatie
+
 # Browserdemo V50 · interfacekandidaat572 · 11 oktober 2026
 
 De animatiegroepkaarten hebben een rustigere, compacte indeling. Het groepsvoorbeeld, de animatiesoort en de actie om de groep te openen zijn visueel van elkaar gescheiden. De vier talen krijgen dezelfde korte kaart-specifieke voorbeeldtekst. Een groep openen start nog geen animatie; de bestaande start- en aanpasacties blijven ongewijzigd.
