@@ -9,7 +9,7 @@
   "nativeAppInstalled": false,
   "nativeAppSimulatorInstalled": false,
   "nativeAppInstallationPreservedData": null,
-  "nativeAppMetadataScope": "All legacy top-level nativeApp* and latestInterfaceBundledInIOS fields describe historical signed build568, not current573. Current private573 build/delivery evidence is exclusively privateNativeBuild573; global iPhoneUpdatePending follows its verified delivery. Browser source publication and physical output acceptance are separate.",
+  "nativeAppMetadataScope": "All legacy top-level nativeApp* and latestInterfaceBundledInIOS fields describe historical signed build568, not current574. Current private574 build/delivery evidence is exclusively privateNativeBuild574; global iPhoneUpdatePending follows its verified delivery. Browser source publication and physical output acceptance are separate.",
   "nativeAppBuildSourceFreezeSha256": "c4eab2eb1036f846f6929792db395a0d5483e4783c96d29a0485a4e1eaa9f864",
   "nativeAppBuildReceiptSha256": "7c8885d4e418b2853d8f1157fb170d89351eace821dbffeba33b25082109e7a6",
   "historicalNativeAppMetadataBefore550": {
@@ -87,9 +87,9 @@
     "targetSdk": 36
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate573-browser-demo",
+  "revision": "V50candidate574-browser-demo",
   "interfaceVersion": 50,
-  "interfaceBaseline": "QA-verified V50 candidate573 interface source only; eight firmware files excluded. Existing20 fictional-receiver adapter and Android code20 download retained; six public-only welcome/reset/single-user/V50 adaptations. No hardware access.",
+  "interfaceBaseline": "QA-verified V50 candidate574 interface source only; eight firmware files excluded. Existing20 fictional-receiver adapter and Android code20 download retained; six public-only welcome/reset/single-user/V50 adaptations. No hardware access.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -194,8 +194,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "b50de93ed7c4f149f3553d30d3ac91816922c9214ba8a3786539a36913ad31e1",
-      "bytes": 528036
+      "sha256": "7b4fa7b15c6c83f96f3694fdbfaf905d29410a6a5238e5ea523ad1054f01c4bd",
+      "bytes": 529934
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -234,7 +234,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "4255e7bf37fced570d49a52b97aa73255a38fe83de55cc0bc01cbc7756bce0d4",
+      "sha256": "b596cd1277bff632653eb29d0351abd49ccbbb9317b8bd7b67561dd1d517bbb1",
       "bytes": 7369
     },
     {
@@ -414,8 +414,8 @@
     },
     {
       "path": "RELEASE_NOTES.md",
-      "sha256": "0193d673677f1b8ec8277acfdcc372e323c7a88ef228a96f0b8dd8dd4770b13b",
-      "bytes": 23042
+      "sha256": "fe55f14fb57d34eb0a6096a823941dea9fd6855e871081f33786ba5c79c8d72c",
+      "bytes": 24972
     },
     {
       "path": "scenes.css",
@@ -524,8 +524,8 @@
     },
     {
       "path": "v50-interface.css",
-      "sha256": "d0f0df66faff49155f1f4d0d965d2a9ae5dc972adb37757ec1d863fec7a49b98",
-      "bytes": 101619
+      "sha256": "64788b66722a7fffef90ec261f1a3aa0502598a8b1b340f904486832f7b2a047",
+      "bytes": 105217
     },
     {
       "path": "v50-order-clarity.css",
@@ -578,7 +578,7 @@
       "bytes": 3012
     }
   ],
-  "interfaceReviewScope": "Exact public runtime bytes, unchanged fictional adapter, CSP, Android download and Pages preflight checked separately. Optional privateNativeBuild573 contains only independently reviewed native evidence hashes and results; browser visual acceptance, native UI review and receiver acceptance remain separate.",
+  "interfaceReviewScope": "Exact public runtime bytes, unchanged fictional adapter, CSP, Android download and Pages preflight checked separately. Optional privateNativeBuild574 contains only independently reviewed native evidence hashes and results; browser visual acceptance, native UI review and receiver acceptance remain separate.",
   "historicalInterfaceReviewScope398": {
     "sourceSnapshot": "verified-Web397-setup398-private-copy",
     "basedOnSourceSnapshot": "verified-Web397",
@@ -1321,7 +1321,22 @@
     "sourceQASha256": "7393bdbe222117da024b079765a072e685b355a6a192288589cb3a81aa02fe55",
     "deliveryReceiptSha256": "ca1dc959764d0cbda260085a5b985d3e779fe46f58211752a57591227d6ba7a1"
   },
-  "interfaceCandidate573": {
+  "historicalNativeAppMetadataBefore574": {
+    "nativeAppModified": false,
+    "nativeAppUpdatePending": true,
+    "latestInterfaceBundledInIOS": false,
+    "nativeAppBuildTarget": "be.aluvision.LightingControl",
+    "nativeAppBundleVerified": true,
+    "nativeAppBuiltVersion": "50.0.0",
+    "nativeAppBuiltBuild": "568",
+    "nativeAppInstalled": false,
+    "nativeAppSimulatorInstalled": false,
+    "nativeAppInstallationPreservedData": null,
+    "nativeAppMetadataScope": "All legacy top-level nativeApp* and latestInterfaceBundledInIOS fields describe historical signed build568, not current573. Current private573 build/delivery evidence is exclusively privateNativeBuild573; global iPhoneUpdatePending follows its verified delivery. Browser source publication and physical output acceptance are separate.",
+    "nativeAppBuildSourceFreezeSha256": "c4eab2eb1036f846f6929792db395a0d5483e4783c96d29a0485a4e1eaa9f864",
+    "nativeAppBuildReceiptSha256": "7c8885d4e418b2853d8f1157fb170d89351eace821dbffeba33b25082109e7a6"
+  },
+  "historicalInterfaceCandidate573": {
     "candidate": 573,
     "appVersion": "50.0.0",
     "webRuntimeVersion": "50.0.0-candidate573",
@@ -1368,6 +1383,77 @@
     "knownLimits": [
       "Browser preview only, not physical output proof.",
       "Native573 UI separately confirmed; no receiver-output acceptance.",
+      "Some unrelated legacy text remains Dutch.",
+      "Android download remains V41 code20."
+    ]
+  },
+  "privateNativeBuild574": {
+    "produced": true,
+    "version": "50.0.0",
+    "build": 574,
+    "installed": true,
+    "postInstallationVersionVerified": true,
+    "launched": true,
+    "nativeVisualVerified": false,
+    "physicalReceiverAcceptance": false,
+    "signatureVerified": true,
+    "exactSourceVerified": true,
+    "swiftFiles": 98,
+    "packagedWebFiles": 89,
+    "buildReceiptSha256": "88062286d5ac083b0a57788f0ca3f38a815b22d09fb65e3215cff98f3cb28c01",
+    "sourceFreezeSha256": "f659281e9817f1fbb261d44df31fe8e8c30547cb020cbd5e1c2dda04b9c515c1",
+    "sourceQASha256": "c5a06cd3fe181479452230a896770d7344886ef4684bdae9a7b3077cc78e2e54",
+    "deliveryReceiptSha256": "f6ec7b5f1145ae7a499f425447e51f1672bc545d2e5ac366402dddaaa9ddce27"
+  },
+  "interfaceCandidate574": {
+    "candidate": 574,
+    "appVersion": "50.0.0",
+    "webRuntimeVersion": "50.0.0-candidate574",
+    "sourceOnly": true,
+    "nativeBuildProduced": true,
+    "iPhoneUpdatePending": false,
+    "sourceInventorySha256": "add039548002cb5c211b7d78a90b84030158a16c38719a3c972b711743995f2d",
+    "sourceInventoryScope": "Full203-file source inventory matched to the passing574 QA receipt; not an iOS build freeze.",
+    "sourceFiles": 89,
+    "firmwareFilesExcluded": 8,
+    "sourceRuntimeFiles": 81,
+    "changedSourceFiles": [
+      "WebApp/app.js",
+      "WebApp/index.html",
+      "WebApp/v50-interface.css"
+    ],
+    "preservedFakeAdapter": "web-demo-service.js",
+    "publicOnlyAdaptations": 6,
+    "changes": [
+      "Original Aluvision logo centred and enlarged on the empty setup welcome screen; duplicate welcome-only app header hidden",
+      "Centred twenty-pixel LIGHTING glyphs pulse sequentially in cold white over a ten-second cycle with a 0.16-second per-letter delay; no underline or brand-colour glow; disabled when reduced motion is requested",
+      "Compact centred app-language selection available at the bottom of the empty setup welcome screen",
+      "Existing app preference, supported languages and rerender mechanism reused; no stand or receiver changes",
+      "Existing573 compact gallery, group cards, animation actions and transport behavior retained"
+    ],
+    "capabilities": {
+      "pinLogin": false,
+      "standCode": false,
+      "sharing": false,
+      "hardware": false,
+      "wifi": false,
+      "firmwareDownloads": false
+    },
+    "softwareQA": {
+      "directedTests": 788,
+      "directedPassed": 788,
+      "legacyTests": 83,
+      "legacyPassed": 79,
+      "legacyKnownBaselineFailures": 4,
+      "receiptSha256": "c5a06cd3fe181479452230a896770d7344886ef4684bdae9a7b3077cc78e2e54",
+      "scope": "Source and logic checks only; private native build/delivery evidence, browser visual review and physical output proof are separate."
+    },
+    "browserVisualAcceptance": false,
+    "physicalPhoneAcceptance": false,
+    "physicalReceiverAcceptance": false,
+    "knownLimits": [
+      "Browser preview only, not physical output proof.",
+      "Native574 installed and launched; foreground app UI remains visually unverified.",
       "Some unrelated legacy text remains Dutch.",
       "Android download remains V41 code20."
     ]

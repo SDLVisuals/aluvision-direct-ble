@@ -623,3 +623,36 @@ html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[da
   html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab>b{font-size:11px}
   html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-current-shortcut-version="573"] .animation-settings-return-action{max-width:64px;font-size:10px}
 }
+
+/* 574: local app-language choice before a stand exists. */
+html body .onboarding-welcome>.welcome-language{position:relative;justify-self:center;width:max-content;max-width:100%;margin:14px auto 0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;z-index:3}
+html body .welcome-language>summary{display:flex;align-items:center;gap:7px;min-height:44px;padding:8px 12px;list-style:none;border:0;border-radius:10px;background:none;color:var(--muted,#656b75);font-size:12px;line-height:1.4;cursor:pointer;touch-action:manipulation}
+.welcome-language>summary::-webkit-details-marker{display:none}
+.welcome-language>summary::marker{content:''}
+html body .welcome-language>summary>span{color:var(--muted,#656b75)}
+html body .welcome-language>summary>b{color:var(--ink,#232830);font-size:12px;font-weight:600}
+html body .welcome-language .icon{flex:none;width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7}
+.welcome-language[open] .welcome-language-chevron{transform:rotate(180deg)}
+html body .welcome-language>.welcome-language-options{position:absolute;top:calc(100% + 4px);left:50%;transform:translateX(-50%);display:grid;width:224px;max-width:calc(100vw - 40px);padding:5px;border:1px solid var(--line,#dce1e9);border-radius:15px;background:var(--panel,#fff);box-shadow:0 12px 32px #00000022}
+html body .welcome-language-options>button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:44px;margin:0;padding:11px 12px;border:0;border-radius:10px;background:transparent;color:var(--ink,#232830);font-size:14px;text-align:left;touch-action:manipulation}
+html body .welcome-language-options>button[aria-pressed="true"]{background:var(--soft,#eef2f6);color:var(--action-ink,var(--red,#ba433d));font-weight:650}
+.welcome-language-options>button[aria-pressed="false"]>.icon{visibility:hidden}
+html body .welcome-language :is(summary,button):focus-visible{outline:2px solid var(--action-ink,var(--red,#ba433d));outline-offset:3px}
+/* The original wordmark belongs to the welcome hero, not a second header. */
+html body:has(#main>.v50-welcome)>.brand-bar{display:none}
+html body .v50-welcome:has(.welcome-brand){padding-top:clamp(24px,5dvh,46px)}
+html body .v50-welcome>.welcome-brand{display:grid;justify-items:center;gap:14px;width:100%;max-width:100%;margin:0 auto 30px;text-align:center}
+html body .welcome-brand>img{display:block;width:clamp(190px,60vw,238px);max-width:100%;height:auto;object-fit:contain;filter:none}
+html body[data-theme="dark"] .welcome-brand>img{filter:invert(1)}
+html body .welcome-brand-lighting{display:flex;align-items:center;justify-content:center;gap:7px;margin:0;padding:0;color:var(--ink,#232830);font-size:20px;font-weight:650;line-height:1.4;letter-spacing:0;text-indent:0}
+html body .welcome-brand-lighting>span{display:block;animation:welcome-cold-white574 10s ease-in-out infinite;animation-delay:calc(var(--light-letter)*.16s)}
+html body .v50-welcome:has(.welcome-brand)>.page-heading .eyebrow{display:none}
+@keyframes welcome-cold-white574{
+  0%,20%,62%,100%{color:var(--ink,#232830);text-shadow:none;-webkit-text-stroke:0 transparent}
+  38%,44%{color:#f5faff;text-shadow:0 0 5px #e5f2ff,0 0 12px #dfedff99;-webkit-text-stroke:.3px #65768b88}
+}
+html body .v50-welcome:has(.welcome-brand){text-align:center;justify-items:stretch}
+html body .v50-welcome:has(.welcome-brand)>.page-heading{width:100%;text-align:center}
+@media(prefers-reduced-motion:reduce){
+  html body .welcome-brand-lighting>span{animation:none;color:var(--ink,#232830);text-shadow:none;-webkit-text-stroke:0 transparent}
+}
