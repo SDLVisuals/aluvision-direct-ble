@@ -643,6 +643,9 @@ html body:has(#main>.v50-welcome)>.brand-bar{display:none}
 html body .v50-welcome:has(.welcome-brand){padding-top:clamp(24px,5dvh,46px)}
 html body .v50-welcome>.welcome-brand{display:grid;justify-items:center;gap:14px;width:100%;max-width:100%;margin:0 auto 30px;text-align:center}
 html body .welcome-brand>img{display:block;width:clamp(190px,60vw,238px);max-width:100%;height:auto;object-fit:contain;filter:none}
+/* 575: centre the 438px wordmark inside the original 512px asset.
+   The separate A occupies the remaining right-hand area; preserve that asset. */
+html body .welcome-brand>img{transform:translateX(7.2265625%)}
 html body[data-theme="dark"] .welcome-brand>img{filter:invert(1)}
 html body .welcome-brand-lighting{display:flex;align-items:center;justify-content:center;gap:7px;margin:0;padding:0;color:var(--ink,#232830);font-size:20px;font-weight:650;line-height:1.4;letter-spacing:0;text-indent:0}
 html body .welcome-brand-lighting>span{display:block;animation:welcome-cold-white574 10s ease-in-out infinite;animation-delay:calc(var(--light-letter)*.16s)}

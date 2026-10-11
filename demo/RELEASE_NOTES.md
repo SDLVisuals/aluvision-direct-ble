@@ -1,3 +1,15 @@
+# Browserdemo V50 · interfacekandidaat575 · 11 oktober 2026
+
+LIGHTING staat nu exact onder het woord Aluvision in het originele logo, in plaats van onder het bredere beeldbestand inclusief het losse merkteken. Het oorspronkelijke logo wordt alleen visueel verschoven; de afbeelding zelf blijft ongewijzigd. De gecentreerde koudwitte letteranimatie, compacte taalkeuze en alle bestaande574-interface- en receiveracties blijven behouden.
+
+Dit is alleen een browserdemo met twintig fictieve receivers: tien RGBW en tien SPI. Gegevens blijven tijdelijk in geheugen en verdwijnen bij herladen. Geen echte wifi, receiververbinding, fysieke verlichting of firmwarebestanden. PIN en delen blijven uitgeschakeld. Een schermvoorbeeld is geen bewijs van fysiek licht.
+
+Deze browserdemo en de private iPhone-app zijn afzonderlijke leveringen. De private iPhone-build575 is gecompileerd, ondertekend en geïnstalleerd; de geïnstalleerde versie is opnieuw uitgelezen. De app is na deze installatie niet opnieuw op de voorgrond gestart. Het native appscherm is nog niet apart visueel bevestigd; een geslaagde processtart is geen visuele controle. Geen fysieke ledline- of radiotest wordt geclaimd. De historische ondertekende build568-metadata blijft bewaard; actuele575-status staat apart. De bestaande Android-download blijft **41.0.14, code20** en is niet gewijzigd.
+
+De 791 gerichte softwaretests zijn geslaagd. De vier bestaande legacytestfouten zijn apart gerapporteerd; browsercontrole en fysieke acceptatie blijven afzonderlijke controles. QA-broninventaris SHA-256: e9225b118e98fa0ef03bba77066b6b9f565e385d67cbc0311264f60fd71a666a.
+
+## Historische release-informatie
+
 # Browserdemo V50 · interfacekandidaat574 · 11 oktober 2026
 
 Het lege startscherm heeft nu een groter, gecentreerd oorspronkelijk Aluvision-logo met LIGHTING eronder. De gecentreerde letters lichten rustig een voor een op in koud wit, in een cyclus van tien seconden met een kleine vertraging per letter. Er staat geen lijn onder de letters en de lichtanimatie gebruikt geen merkkleur. Bij verminderde beweging wordt de animatie uitgeschakeld. De gewone appkop is alleen op dit startscherm verborgen. Titel, startknop en compacte taalkeuze staan op dezelfde middenlijn. De bestaande taalvoorkeur wordt direct toegepast en blijft bij heropenen behouden. De compacte573-animatiegalerie en alle bestaande receiver-, animatie- en navigatieacties blijven behouden.
