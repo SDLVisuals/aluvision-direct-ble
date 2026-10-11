@@ -1,3 +1,15 @@
+# Browserdemo V50 · interfacekandidaat572 · 11 oktober 2026
+
+De animatiegroepkaarten hebben een rustigere, compacte indeling. Het groepsvoorbeeld, de animatiesoort en de actie om de groep te openen zijn visueel van elkaar gescheiden. De vier talen krijgen dezelfde korte kaart-specifieke voorbeeldtekst. Een groep openen start nog geen animatie; de bestaande start- en aanpasacties blijven ongewijzigd.
+
+Dit is alleen een browserdemo met twintig fictieve receivers: tien RGBW en tien SPI. Gegevens blijven tijdelijk in geheugen en verdwijnen bij herladen. Geen echte wifi, receiververbinding, fysieke verlichting of firmwarebestanden. PIN en delen blijven uitgeschakeld. Een schermvoorbeeld is geen bewijs van fysiek licht.
+
+Deze browserdemo en de private iPhone-app zijn afzonderlijke leveringen. De private iPhone-build572 is gecompileerd, ondertekend, geïnstalleerd en gestart; de geïnstalleerde versie is opnieuw uitgelezen. Het geopende native appscherm is apart visueel bevestigd. Geen fysieke ledline- of radiotest wordt geclaimd. De historische ondertekende build568-metadata blijft bewaard; actuele572-status staat apart. De bestaande Android-download blijft **41.0.14, code20** en is niet gewijzigd.
+
+De 758 gerichte softwaretests zijn geslaagd. De vier bestaande legacytestfouten zijn apart gerapporteerd; browsercontrole en fysieke acceptatie blijven afzonderlijke controles. QA-broninventaris SHA-256: d938d20fcc4795ce23db1ef7ddc8ed0d5e572ff223a2f960969cf72a94e8ab4c.
+
+## Historische release-informatie
+
 # Browserdemo V50 · interfacekandidaat571 · 11 oktober 2026
 
 Het volgordevoorbeeld voor tunnel en wand is groter en de ledlinenummers zijn beter leesbaar. Geselecteerde ledlines en hun bedieningsscope blijven herkenbaar in het voorbeeld. Deze aanpassingen betreffen alleen de weergave: zone openen op Kleur, meervoudige selectie en de eerdere volgorde/tutorial blijven behouden.

@@ -548,3 +548,31 @@ html.interface-polish body :is(#main,#effect-dialog) :is([data-animation-editor-
 html.interface-polish body :is(#main,#effect-dialog) .control-preview-dock [data-animation-editor-nav="569"]{display:block;position:static!important;inset:auto!important;top:auto!important;right:auto!important;bottom:auto!important;left:auto!important;z-index:auto;box-sizing:border-box;width:100%;max-width:100%;min-width:0;height:auto;min-height:0;max-height:none;margin:0;padding:5px 0;border:0;border-radius:0;background:var(--glass-solid,var(--bg));background-image:none;box-shadow:none;transform:none;pointer-events:auto;-webkit-backdrop-filter:none;backdrop-filter:none}
 html.interface-polish body :is(#main,#effect-dialog) .control-preview-dock [data-animation-editor-nav="569"][hidden]{display:none!important}
 html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-animation-header [data-editor-gallery-slot]:empty{display:none}
+
+/* V50.572: one calm group card, one browse affordance. The folder belongs
+   to the CTA; the animated illustration has no second action or play icon. */
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"]{border-radius:18px;background:var(--panel);box-shadow:0 3px 10px #10151004;overflow:hidden}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"]>.animation-family-trigger{grid-template-columns:96px minmax(0,1fr);align-items:stretch;gap:12px;padding:12px;border-radius:inherit;transition:background-color .15s ease}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .animation-family-preview{box-sizing:border-box;grid-template-rows:auto minmax(72px,1fr);align-self:stretch;align-items:center;gap:4px;padding:8px 6px;border-radius:13px;background:linear-gradient(155deg,#1c2420,#0d120f);border-color:#ffffff0f}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .animation-family-preview-label{align-self:start;text-align:center;font-size:9px;font-weight:500;line-height:1.35;color:#b7c4bb;overflow-wrap:anywhere}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .animation-family-preview canvas{height:72px!important;background:transparent}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .family-copy{gap:5px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .family-kicker{gap:6px;font-size:9px;font-weight:600;letter-spacing:.025em}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .family-kicker>.animation-type-badge{display:inline-flex;align-items:center;min-height:17px;padding:2px 5px;font-size:9px;color:var(--muted)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .family-title{font-size:16px;line-height:1.25;letter-spacing:-.25px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .family-summary{font-size:11px;line-height:1.4}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .family-variants{justify-content:flex-start;gap:7px;min-height:44px;margin-top:4px!important;padding:7px 9px;border:0;border-radius:10px;background:color-mix(in srgb,var(--chooser-accent) 8%,var(--panel));color:var(--chooser-accent)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .family-variants-folder{display:grid;place-items:center;flex:none;width:18px;height:18px;color:inherit}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .family-variants-folder>.icon{width:18px;height:18px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .family-variants-copy>b{font-size:12px;font-weight:650;line-height:1.3}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .family-variants-action>.icon{width:15px;height:15px}
+html.interface-polish body[data-theme="dark"] :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .family-variants{color:var(--ink)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"].is-active-family{border-color:color-mix(in srgb,var(--v569-current) 50%,var(--line));box-shadow:inset 3px 0 var(--v569-current)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"]>.animation-family-trigger:focus-visible{outline:2px solid var(--chooser-accent);outline-offset:-3px}
+@media(hover:hover){html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"]>.animation-family-trigger:hover{background:color-mix(in srgb,var(--chooser-accent) 3%,var(--panel))}}
+@media(max-width:359px){
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"]>.animation-family-trigger{grid-template-columns:80px minmax(0,1fr);gap:9px;padding:10px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .family-title{font-size:15px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .family-variants{gap:5px;padding-inline:7px}
+}
+@media(prefers-reduced-motion:reduce){html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"]>.animation-family-trigger{transition:none}}

@@ -485,6 +485,13 @@
     de:{v570ZoneUnavailable:'Diese Zone ist nicht mehr verfügbar. Öffne deinen Stand, um die aktuellen Zonen zu sehen.',v570HelpLinesTitle:'Wähle deine LED-Linien',v570HelpLinesBody:'Tippe eine oder mehrere LED-Linien in der Vorschau an. Wähle Alle, um die ganze Zone zu steuern. Durchgehende SPI-Linien werden gemeinsam gesteuert.'}
   };
   Object.keys(interfaceConsistency570).forEach(code => Object.assign(texts[code],interfaceConsistency570[code]));
+  const animationCards572 = {
+    nl:{v572FamilyPreview:'Sfeerimpressie'},
+    en:{v572FamilyPreview:'Mood preview'},
+    fr:{v572FamilyPreview:'Aperçu d’ambiance'},
+    de:{v572FamilyPreview:'Stimmungsvorschau'}
+  };
+  Object.keys(animationCards572).forEach(code => Object.assign(texts[code],animationCards572[code]));
   Object.keys(texts).forEach(code => Object.freeze(texts[code]));
   Object.freeze(texts);
   const has = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
