@@ -87,9 +87,9 @@
     "targetSdk": 36
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate578-browser-demo",
+  "revision": "V50candidate579-browser-demo",
   "interfaceVersion": 50,
-  "interfaceBaseline": "QA-verified V50 candidate578 interface source only; eight firmware files and the native UIKit feedback bridge excluded from browser publication. Existing20 fictional-receiver adapter and Android code20 download retained; six public-only welcome/reset/single-user/V50 adaptations. Optional browser haptics helper safely does nothing. No hardware access.",
+  "interfaceBaseline": "V50 candidate579 public Web interface only. Firmware directory, native code, private evidence and receiver profiles excluded. Existing20 fictional receivers and Android code20 download retained; no hardware access.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -194,8 +194,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "41e87bb18d5e0348cbae8217cc04234b2e42aa97eee7aa64c4ee8a1ce9b8d53f",
-      "bytes": 534105
+      "sha256": "dd894e1082dd00cfd281b819e7951d362c51786c1234b468d582834e0295ee52",
+      "bytes": 535572
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -234,7 +234,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "4e7889f3b4a8de7f8c8690622ad5a3a983a49537cee55ae37395f580029e1fe1",
+      "sha256": "5c832403d0101742ac2cbada155e4f48986e589a584d0acfb5b51324d9de2672",
       "bytes": 7441
     },
     {
@@ -299,8 +299,8 @@
     },
     {
       "path": "native-runtime.js",
-      "sha256": "38af7d8be692e03125329ddefbdfedbb0e2c275b2105fb9a639e392db93bce54",
-      "bytes": 137670
+      "sha256": "6c593b581cf8efc590595b7e3db19ef60567562719b3cffb37f66843b175fc88",
+      "bytes": 139091
     },
     {
       "path": "onboarding-adapter.js",
@@ -329,8 +329,8 @@
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "05e6839571aea6f07301c6f88564bff01ac241b3e61c00ad98116c5362adc3e1",
-      "bytes": 162786
+      "sha256": "70f021d67cbd8d0b9ea4bf33268b38199d3f537e2e951d9e64da3d42780d41ba",
+      "bytes": 163428
     },
     {
       "path": "page-interaction.css",
@@ -344,18 +344,18 @@
     },
     {
       "path": "pixel-setup.css",
-      "sha256": "e306de21e7547788d2409d8222cb00fe2838a8719514ca42fdf08b27e5edae5a",
-      "bytes": 35463
+      "sha256": "81fec7bab4c9b4d6b84646e3ffecd1fac8b5c4cb84e14311e0aa8dcb4749d052",
+      "bytes": 36423
     },
     {
       "path": "pixel-setup.js",
-      "sha256": "0fed5fe37b81e46ba5b779711f70da1d3750849a6f490fc65d52d0dd4ecb69e5",
-      "bytes": 47174
+      "sha256": "513f6448bc349cea3952f2d742a07a30488a0656579c0eab635ee514d860f11a",
+      "bytes": 47660
     },
     {
       "path": "pixel-translations.js",
-      "sha256": "326f30093d0d0cfc90bd3cb1c097f7a163ffeac5d94135e126d49f7ea349dc85",
-      "bytes": 15803
+      "sha256": "0459adbb1d3f371b03b61f9af6f8e48bea1a1f68ad560eb814ce8c77b25a57f1",
+      "bytes": 15863
     },
     {
       "path": "preferences.js",
@@ -374,8 +374,8 @@
     },
     {
       "path": "preview.js",
-      "sha256": "cfca952018c80db89653a941db4c854454c616754a27044232ba92faf4b2f51c",
-      "bytes": 108189
+      "sha256": "e8efc3a487a6a1d304f579513dc322c236ff2c20f6bed2a5238b8ed9c93e883d",
+      "bytes": 108188
     },
     {
       "path": "receiver-playback.js",
@@ -419,8 +419,8 @@
     },
     {
       "path": "RELEASE_NOTES.md",
-      "sha256": "675c806cf4648d28dd4b5d431b890ed742c77b704579245fb1ca9409fbfbff6b",
-      "bytes": 32562
+      "sha256": "54c54f35d62fa9bdaf4b0298d104397169048c95b1eba66bb43c344d5f6a60ef",
+      "bytes": 33323
     },
     {
       "path": "scenes.css",
@@ -439,8 +439,8 @@
     },
     {
       "path": "setup-translations.js",
-      "sha256": "4232ee0b5b34615819fa0f63febb2bc6e1c25d9d3216c61f63072c3c6459ec29",
-      "bytes": 82314
+      "sha256": "e50ac1f384bd763716f64d574a5b1e81d65aab011b6603882e48c2db54a08d4a",
+      "bytes": 83595
     },
     {
       "path": "setup-wifi-guide.js",
@@ -529,8 +529,8 @@
     },
     {
       "path": "v50-interface.css",
-      "sha256": "26140df844bbc50edabbeb92cfb36b7c27421ba8f1cd60063ffbdb78b5e5fa79",
-      "bytes": 105429
+      "sha256": "2c4049352bc05542a003b8d0e847d007ca02c0e3d86137b806f4a69b65e7fad2",
+      "bytes": 106099
     },
     {
       "path": "v50-order-clarity.css",
@@ -559,8 +559,8 @@
     },
     {
       "path": "v50-preview-selection.css",
-      "sha256": "001769e3f48b97c23135ef16a7806ff0981269b8bcf061f06cc667b848b7a50e",
-      "bytes": 15076
+      "sha256": "da3856be676f15eef92fffd25d60794ca607acd7923026566e07f4cc3fc49e66",
+      "bytes": 15083
     },
     {
       "path": "v50-texts.js",
@@ -583,7 +583,7 @@
       "bytes": 3012
     }
   ],
-  "interfaceReviewScope": "Exact public runtime bytes, unchanged fictional adapter, CSP, Android download and Pages preflight checked separately. Optional privateNativeBuild578 contains only independently reviewed native evidence hashes and results; browser visual acceptance, native UI review and receiver acceptance remain separate.",
+  "interfaceReviewScope": "Source-bound renderer and WebKit interface tests, then separate exact public asset/cache and browser smoke checks. Existing native metadata is historical only; this UI publication attests no new phone, firmware, radio or physical output acceptance.",
   "historicalInterfaceReviewScope398": {
     "sourceSnapshot": "verified-Web397-setup398-private-copy",
     "basedOnSourceSnapshot": "verified-Web397",
@@ -1814,6 +1814,48 @@
       "Native578 installed and version read back; no foreground launch or native visual acceptance.",
       "Some unrelated legacy text remains Dutch.",
       "Android download remains V41 code20."
+    ]
+  },
+  "interfaceCandidate579": {
+    "candidate": 579,
+    "appVersion": "50.0.0",
+    "webRuntimeVersion": "50.0.0-candidate579",
+    "sourceOnly": true,
+    "sourceFiles": 90,
+    "firmwareFilesExcluded": 8,
+    "sourceRuntimeFiles": 82,
+    "publicRuntimeSourceInventorySha256": "251f5e4ba20a482a7bf142df3f1b4c8192d021ee51da4e4e3cfd2f1cff49ac82",
+    "preservedFakeAdapter": "web-demo-service.js",
+    "historicalAndroidDownloadRetained": true,
+    "publicOnlyAdaptations": 7,
+    "changes": [
+      "Centred welcome, language choice and calm cold-white LIGHTING animation",
+      "Uniform circular LED-line selection in normal, tunnel and wall views without masking light colours",
+      "Sticky light preview keeps its chosen size and scroll position stable",
+      "SPI pixel count and green start-point presentation clarified; browser guide is explicitly a simulation",
+      "Fixed translated connection messages"
+    ],
+    "capabilities": {
+      "pinLogin": false,
+      "standCode": false,
+      "sharing": false,
+      "hardware": false,
+      "wifi": false,
+      "firmwareDownloads": false
+    },
+    "softwareQA": {
+      "rendererInvariants": 72,
+      "webkitCases": 33,
+      "fixedDenialCopyAssertions": 54,
+      "scope": "Actual source and offline WebKit browser fixtures; not physical receiver acceptance"
+    },
+    "browserVisualAcceptance": false,
+    "physicalPhoneAcceptance": false,
+    "physicalReceiverAcceptance": false,
+    "knownLimits": [
+      "Fictitious in-memory browser walkthrough; reload clears its model",
+      "No radio, OTA or real LED output is exercised",
+      "Existing Android download remains41.0.14/code20"
     ]
   }
 }

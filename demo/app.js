@@ -563,10 +563,18 @@
   }
   function measureControlPreviewDock(){
     const dock=main.querySelector('.control-preview-dock');
+    const preview=dock?.querySelector('.v50-control-preview');
+    if(dock?.dataset.stickyPreview==='579'&&preview){
+      // Keep the heading in document flow. Its measured offset slides above
+      // the safe edge naturally; the preview itself never loses height.
+      const offset=Math.max(0,preview.getBoundingClientRect().top-dock.getBoundingClientRect().top);
+      const value=`${offset.toFixed(2)}px`;
+      if(dock.style.getPropertyValue('--sticky-preview-offset')!==value)dock.style.setProperty('--sticky-preview-offset',value);
+    }
     const style=dock&&getComputedStyle(dock);
     // Scroll-to-control margins include the unsafe screen edge as well as
     // the dock itself. Use the resolved inset, never an iPhone-size constant.
-    const height=style?.position==='sticky'?dock.getBoundingClientRect().height+Math.max(0,parseFloat(style.top)||0):0;
+    const height=style?.position==='sticky'?Math.max(0,dock.getBoundingClientRect().height+(parseFloat(style.top)||0)):0;
     document.documentElement.style.setProperty('--sticky-height',`${Math.ceil(height)}px`);
   }
   function shortcutOverlapsControls(floating){
@@ -583,13 +591,21 @@
     const dock=main.querySelector('.control-preview-dock');
     if(!dock)return;
     const compact=dock.dataset.scrolled==='true';
+    if(dock.dataset.stickyPreview==='579'){
+      // Sticky positioning, not a collapsed header, owns the scroll state.
+      // This attribute now changes only decoration, never document height.
+      const preview=dock.querySelector('.v50-control-preview');
+      const edge=(parseFloat(getComputedStyle(dock).top)||0)+(parseFloat(dock.style.getPropertyValue('--sticky-preview-offset'))||0);
+      if(preview&&window.scrollY>0&&preview.getBoundingClientRect().top<=edge+.5)dock.dataset.scrolled='true';
+      else delete dock.dataset.scrolled;
+    }
     // The dock gets shorter when compacted. Keep the threshold gap larger
     // than that height change so scroll anchoring cannot bounce it across
     // both thresholds and trap controls below the fold.
     // The full mobile dock can lose 139px when compacted. The old 120px
     // hysteresis let browser scroll anchoring switch it back every frame.
     // Freeze density while its size picker is being used, too.
-    if(!dock.querySelector('.preview-size-control[open]')){
+    if(dock.dataset.stickyPreview!=='579'&&!dock.querySelector('.preview-size-control[open]')){
       if(!compact&&window.scrollY>224)dock.dataset.scrolled='true';
       else if(compact&&window.scrollY<8)delete dock.dataset.scrolled;
     }
@@ -741,8 +757,10 @@
     const dock=main.querySelector('.control-preview-dock'),surface=dock?.querySelector('.control-dock-surface');
     const compactHeight=Math.max(0,surface?.getBoundingClientRect().height||0);
     const projected=Math.max(0,window.scrollY+target.getBoundingClientRect().top-compactHeight-gap);
-    if(projected>224)dock.dataset.scrolled='true';
-    else if(projected<8)delete dock.dataset.scrolled;
+    if(dock&&dock.dataset.stickyPreview!=='579'){
+      if(projected>224)dock.dataset.scrolled='true';
+      else if(projected<8)delete dock.dataset.scrolled;
+    }
     updateControlPreviewDensity();
     const bottom=Math.max(0,surface?.getBoundingClientRect().bottom||0);
     const next=Math.max(0,window.scrollY+target.getBoundingClientRect().top-bottom-gap);
@@ -811,6 +829,7 @@
       else model=M.assertValid(next);
       selections.clear();visualPorts.clear();visualPlugMotions.clear();identifying.clear();navigate('receivers');}});
   const pixelSetup=window.LightningPixelSetup.create({mode:previewContext?'preview':nativeContext&&typeof runtime?.services?.configureOutputs==='function'?'native':'native-unavailable',
+    previewCapabilities:{get identifyPorts(){return runtime?.native===true&&runtime.services?.previewCapabilities?.identifyPorts===true;},get power(){return runtime?.native===true&&runtime.services?.previewCapabilities?.power===true;}},
     onPreview:runtime?.native===true&&typeof runtime.services?.previewPixels==='function'?request=>{requireStandPresentationConnection();return runtime.services.previewPixels({...request,mainReceiverId:request.role==='node'?model.receivers.find(r=>r.standId===request.standId&&r.role==='main'&&r.lifecycle==='added')?.id:null});}:undefined,
     onClose:()=>{document.querySelector(`[data-action="receiver-pixel-setup"][data-id="${CSS.escape(pixelSetupReceiverId||'')}"]`)?.focus({preventScroll:true});pixelSetupReceiverId=null;},
     onSave:async({receiverId,outputs})=>{
@@ -1149,7 +1168,7 @@
     const total=z.type==='SPI'?t(count===1?'scopeTotalSpiOne':'scopeTotalSpiMany',{count,pixels}):t(count===1?'scopeCountOne':'scopeCountMany',{count});
     const directTap=canTapLines;
     const label=t('v50LedOverview',{name:z.name,summary:total})+(selection().kind==='all'?'':' · '+t('v50ChosenScope',{name:nameOfSelection()}));
-    return `<section class="control-preview-dock" aria-label="${esc(t('v50OverviewControls'))}"><div class="control-dock-surface">${heading}
+    return `<section class="control-preview-dock" data-sticky-preview="579" aria-label="${esc(t('v50OverviewControls'))}"><div class="control-dock-surface">${heading}
       <div class="control-location-summary" aria-label="${esc(t('v50CurrentControls'))}"><span>${esc(screenLabel)}</span><span data-current-light>${esc(currentLightLabel())}</span></div>
       <div class="preview-wrap v50-control-preview${directTap?' preview-selectable':''}${spatialPreview?' spatial-preview-wrap':''}" data-preview-layout="${previewLayout}" style="--v50-preview-min-height:${metrics.height}px;--v50-preview-min-width:${metrics.width}px"><div class="preview-top"><div class="v50-preview-heading"><span>${spatialPreview?esc(spatialPreviewLabel):esc(t('lineSetup'+previewMode))}</span><small class="preview-summary">${esc(total)}</small></div>${previewSizePickerMarkup(controlPreviewSize,spatialPreview)}</div>${interactiveZonePreview(z,spatialPreview?'spatial-dock-preview':'',{selection:selection(),main:true,previewSize:controlPreviewSize,interactiveLines:directTap,arrangementPreview:true,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1])),...(spatialPreview?{spatialShape:spatialView,presentation:'receivers'}:{}),label:spatialPreview?`${spatialPreviewLabel} · ${z.name} · ${total}`:label})}${previewSelectionMarkup(canTapLines)}</div>
       ${animationWayfinding(screen)}<p class="live-confirmation" data-live-status="zone" role="status" aria-live="polite"></p>
@@ -3142,8 +3161,8 @@
     const context=main.querySelector('.control-context');
     if(context)context.dataset.page=route.screen;
     measureControlPreviewDock();
-    // Compacting animates the dock's padding as well as its content. Observe
-    // its whole box so the final scroll margin follows both animations.
+    // Measure real layout/size changes only. Scrolling keeps this box's height
+    // stable, so the observer cannot chase a collapse or scroll-anchor loop.
     if(previewDock){contextObserver=new ResizeObserver(measureControlPreviewDock);contextObserver.observe(previewDock,{box:'border-box'});}
     if(route.screen==='stand'&&stand())main.querySelector('.page').classList.add('stand-page');
     if(route.screen==='scene-draft'){syncSceneDraft();filterSceneZones('draft');}
@@ -5467,7 +5486,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate578',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate579',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

@@ -656,6 +656,25 @@ html body .v50-welcome:has(.welcome-brand)>.page-heading .eyebrow{display:none}
 }
 html body .v50-welcome:has(.welcome-brand){text-align:center;justify-items:stretch}
 html body .v50-welcome:has(.welcome-brand)>.page-heading{width:100%;text-align:center}
+/* 579: centre the complete welcome, not just the logo. A short screen still
+   grows naturally and scrolls; no fixed height can clip the language menu. */
+html body:has(#main>.v50-welcome){display:flex;flex-direction:column}
+html body:has(#main>.v50-welcome) #main{
+  display:flex;
+  align-items:center;
+  flex:1 0 auto;
+  min-height:0;
+  margin-block:0;
+  padding-block:calc(24px + env(safe-area-inset-top,0px)) calc(24px + env(safe-area-inset-bottom,0px));
+}
+html body #main>.v50-welcome:has(.welcome-brand){
+  flex:none;
+  margin-block:auto;
+  padding-block:0;
+}
+@media(max-height:600px){
+  html body #main>.v50-welcome>.welcome-brand{margin-bottom:22px;gap:10px}
+}
 @media(prefers-reduced-motion:reduce){
   html body .welcome-brand-lighting>span{animation:none;color:var(--ink,#232830);text-shadow:none;-webkit-text-stroke:0 transparent}
 }

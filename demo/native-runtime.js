@@ -44,7 +44,7 @@
   actions.add('standFirstAccessDiagnosticFailure');
   const firstAccessDiagnosticCodes=new Set(['OTHER','FIRST_ACCESS_IDENTITY','FIRST_ACCESS_STORAGE','FIRST_ACCESS_UNCONFIRMED','ACTION_UNSUPPORTED','NATIVE_UNAVAILABLE','NATIVE_DOCUMENT_UNAVAILABLE','NATIVE_BUSY','NATIVE_TIMEOUT','CANCELLED','TIMEOUT','LOCAL_NETWORK_DENIED','STAND_CONNECTION_CLOSED','STAND_CONNECTION_BUSY','STAND_CONNECTION_UNAVAILABLE','STAND_CONNECTION_INVALID','STAND_CONNECTION_CANCELLED','STAND_DATA_INVALID','STAND_DATA_UNCONFIRMED','STAND_INVALID_REQUEST','STAND_STORAGE_LIMIT','STAND_MIGRATION_INVALID','STAND_PREFLIGHT_INVALID','STAND_PREFLIGHT_UNCONFIRMED','STAND_PREFLIGHT_NOT_REQUIRED','STAND_MIGRATION_NOT_READY','STAND_RECEIVER_SAVED_ELSEWHERE','STAND_CURRENT_ACCESS_CONFLICT','STAND_UNAVAILABLE','STAND_WIFI_UNREACHABLE','STAND_WRONG_WIFI','STAND_BUSY','STAND_CANCELLED','STAND_IDENTITY_MISMATCH','STAND_AUTH_FAILED','STAND_UNCONFIRMED','STAND_CREDENTIAL_UNCONFIRMED']);
   ['scanStandShare','takeStandShareLink','shareStandLink'].forEach(action=>actions.add(action));
-  let selectionHaptics=false,selectionFeedbackPending=false,interfaceHaptics=false,interfaceFeedbackPending=false;
+  let selectionHaptics=false,selectionFeedbackPending=false,interfaceHaptics=false,interfaceFeedbackPending=false,pixelPreviewV50=false;
   actions.add('supersedeLivePreparing');
   actions.add('replacePreparingStatic');
   ['applyStaticGesture','updateStaticGesture','endStaticGesture'].forEach(action=>actions.add(action));
@@ -895,6 +895,9 @@
   }
   const serviceSet=native?{
     connectionMode:'manual-wifi',
+    // Native contract availability, never evidence of receiver support. The
+    // actual request requires that receiver's authenticated guide capability.
+    get previewCapabilities(){return Object.freeze({identifyPorts:pixelPreviewV50,power:pixelPreviewV50});},
     async prepareReceiverManagement({standId}){
       await writeQueue.catch(()=>{});
       const before=centralStamp&&{...centralStamp},epoch=standSharingEpoch;
@@ -1186,16 +1189,23 @@
       return JSON.parse(JSON.stringify(result));
     },
     async previewPixels(request){
+      const ports=request?.guide==='ports',colours=['#2563eb','#ea580c','#9333ea','#0d9488'];
       if(!request||!['start','update','stop'].includes(request.action)||request.receiver?.type!=='SPI'||
-        !Number.isInteger(request.port)||request.port<1||request.port>4||!Number.isInteger(request.pixels)||request.pixels<0||request.pixels>163||
-        request.guide!==undefined&&!['length','power'].includes(request.guide)||
-        (request.guide==='power'?(request.pixels===0||typeof request.reversed!=='boolean'):request.reversed!==undefined))throw fail('PIXEL_PREVIEW_INVALID');
+        !Number.isInteger(request.pixels)||request.pixels<0||request.pixels>163||request.guide!==undefined&&!['length','power','ports'].includes(request.guide)||
+        (ports?request.port!==null||request.pixels!==0||request.reversed!==undefined||request.previewTTLMS!==12000||!Array.isArray(request.outputs)||request.outputs.length!==4||request.outputs.some((item,index)=>
+          !layoutKeys(item,['port','enabled','pixels','reversed','colour'])||item.port!==index+1||typeof item.enabled!=='boolean'||typeof item.reversed!=='boolean'||!Number.isInteger(item.pixels)||item.pixels<0||item.pixels>163||item.colour!==colours[index])
+        :!Number.isInteger(request.port)||request.port<1||request.port>4||request.outputs!==undefined||
+          (request.guide==='power'?(request.pixels===0||typeof request.reversed!=='boolean'):request.reversed!==undefined))||
+        request.previewTTLMS!==undefined&&(request.guide==='length'||request.guide===undefined||request.previewTTLMS!==12000))throw fail('PIXEL_PREVIEW_INVALID');
+      if(ports&&!pixelPreviewV50)throw fail('PIXEL_GUIDE_UPDATE_REQUIRED');
       const payload=JSON.parse(JSON.stringify(request));
       if(centralStamp&&(centralStamp.standId!==request.standId||!standSessionOutputsAvailable||!contextVisible()))throw fail('STAND_NOT_CONNECTED');
       const answer=await call('previewPixels',payload);
       if(answer?.applied!==true||answer.port!==request.port||answer.pixels!==request.pixels||
-        (request.action==='stop'?answer.previewTTLMS!==0:!Number.isInteger(answer.previewTTLMS)||answer.previewTTLMS<(request.pixels===0?0:1)||answer.previewTTLMS>15000)||
-        request.guide==='power'&&(answer.guide!=='power'||answer.reversed!==request.reversed))throw fail('PIXEL_PREVIEW_UNCONFIRMED');
+        (request.action==='stop'?answer.previewTTLMS!==0:!Number.isInteger(answer.previewTTLMS)||answer.previewTTLMS<((ports?request.outputs.some(item=>item.enabled&&item.pixels>0):request.pixels>0)?1:0)||answer.previewTTLMS>15000)||
+        !(ports?request.outputs.some(item=>item.enabled&&item.pixels>0):request.pixels>0)&&answer.previewTTLMS!==0||
+        request.guide==='power'&&(answer.guide!=='power'||answer.reversed!==request.reversed)||
+        ports&&(answer.guide!=='ports'||canonical(answer.outputs)!==canonical(request.outputs)))throw fail('PIXEL_PREVIEW_UNCONFIRMED');
       return answer;
     },
     async select({standId,transactionId,receiver}){return call('select',{standId,transactionId,receiver:{id:receiver.id,rid:receiver.rid,type:receiver.type}});},
@@ -1553,7 +1563,7 @@
     }
   }:{};
   const services=Object.freeze(serviceSet);
-  async function runtimeCapabilities(){const value=await call('capabilities');selectionHaptics=value?.selectionHaptics===true;interfaceHaptics=value?.interfaceHaptics===true;simpleStandAvailable=value?.simpleStand===true;
+  async function runtimeCapabilities(){const value=await call('capabilities');selectionHaptics=value?.selectionHaptics===true;interfaceHaptics=value?.interfaceHaptics===true;simpleStandAvailable=value?.simpleStand===true;pixelPreviewV50=value?.pixelPreviewV50===true;
     spiPortScenesAvailable=value?.spiPortScenes===true;
     standSessionReceiverManagementAvailable=simpleStandAvailable&&value?.standSessionReceiverManagement===true;
     standSessionOutputsAvailable=simpleStandAvailable&&value?.standSessionOutputs===true;

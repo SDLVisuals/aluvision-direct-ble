@@ -53,6 +53,8 @@
   // message: network responses can contain credentials or untrusted content.
   function connectionFailure(failure,{viaMain=false}={}){
     const code=typeof failure?.code==='string'?failure.code:'';
+    if(code==='MAIN_EXISTING_STAND_ACCESS_REQUIRED')return {message:'Deze app heeft nog geen toegang tot deze receiver. Open je bestaande stand met de app die al toegang heeft. Er is niets toegevoegd of gereset.'};
+    if(code==='MAIN_TRUST_MIGRATION_REQUIRED')return {message:'Deze receiver heeft bestaande standinstellingen. Gebruik je bestaande standtoegang om verder te gaan. Er is niets toegevoegd of gereset.'};
     if(code==='LOCAL_NETWORK_DENIED')return {message:'Geef de Aluvision-app toegang tot het lokale netwerk via Instellingen. Heropen de app. Reset je receiver niet.'};
     if(code==='MAIN_WRONG_RECEIVER_NETWORK')return {message:viaMain?'Verkeerde wifi. Kies in Instellingen → Wifi je bestaande ALUVISION-standnetwerk (niet de nieuwe receiver) en tik op Verbinding controleren.':'Verkeerde wifi. Kies het ALUVISION-netwerk van deze receiver en tik op Verbinding controleren.'};
     if(!pinRequired()&&['MAIN_RECOVERY_UNAVAILABLE','MAIN_RECOVERY_CONFLICT','MAIN_REGISTRATION_UNCONFIRMED','REMOVAL_PIN_REQUIRED'].includes(code))return {message:'Receiver niet bereikbaar. Laat hem aan en controleer de verbinding opnieuw.'};
@@ -80,7 +82,7 @@
     if(['MAIN_STORAGE_UNCONFIRMED','V30_STORAGE_UNAVAILABLE','V30_STORAGE_UNCONFIRMED','V30_STORAGE_FULL','V30_STORAGE_CORRUPT','V30_CHECKPOINT_CONFLICT','V30_CHECKPOINT_INVALID','V30_CHECKPOINT_ROLLBACK','V30_BINDING_INVALID'].includes(code)||['save','publish'].includes(phase))return {
       message:'Toevoegen is nog niet opgeslagen. Je keuzes staan hier; probeer opnieuw.'
     };
-    if(phase==='receiver'&&['LOCAL_NETWORK_DENIED','MAIN_WRONG_RECEIVER_NETWORK','DISCOVERY_UNAVAILABLE','MAIN_MANUAL_WIFI_REQUIRED','MAIN_CONNECTION_UNAVAILABLE','NATIVE_TIMEOUT','TIMEOUT','NATIVE_BUSY','MAIN_BUSY','OTA_BUSY','REMOVAL_BUSY','MAIN_PROTOCOL_UNSUPPORTED','ACTION_UNSUPPORTED'].includes(code))return connectionFailure(failure,{viaMain});
+    if(phase==='receiver'&&['MAIN_EXISTING_STAND_ACCESS_REQUIRED','MAIN_TRUST_MIGRATION_REQUIRED','LOCAL_NETWORK_DENIED','MAIN_WRONG_RECEIVER_NETWORK','DISCOVERY_UNAVAILABLE','MAIN_MANUAL_WIFI_REQUIRED','MAIN_CONNECTION_UNAVAILABLE','NATIVE_TIMEOUT','TIMEOUT','NATIVE_BUSY','MAIN_BUSY','OTA_BUSY','REMOVAL_BUSY','MAIN_PROTOCOL_UNSUPPORTED','ACTION_UNSUPPORTED'].includes(code))return connectionFailure(failure,{viaMain});
     return {message:'Toevoegen niet afgerond. Probeer opnieuw.'};
   }
   function firstAccessFailure(failure){
@@ -765,7 +767,7 @@
         }
         case 'connection':{
           const output=draft.outputs.find(output=>output.port===draft.port);
-          return `${pixelSetup.renderPortContext(draft.outputs,draft.port,{stage:'connection'})}${pixelSetup.renderSide(output,{onboarding:true,live:services.previewCapabilities?.direction===true&&typeof services.previewPixels==='function'})}${footer(pixelSetup.nextPortLabel(draft.outputs,draft.port,{stage:'connection'}))}`;
+          return `${pixelSetup.renderPortContext(draft.outputs,draft.port,{stage:'connection'})}${pixelSetup.renderSide(output,{onboarding:true,live:services.previewCapabilities?.power===true&&typeof services.previewPixels==='function'})}${footer(pixelSetup.nextPortLabel(draft.outputs,draft.port,{stage:'connection'}))}`;
         }
         case 'pin':return pinRequired()?pinForm():securityPanel();
         case 'security':return securityPanel();
@@ -1321,7 +1323,8 @@
       }
       if(action==='save-retry')return saveChoices();
       if(action==='receivers-list')return browseReceivers();
-      if(['next','back','exit'].includes(action)&&['outputs','pixels','connection'].includes(draft.stage)){
+      const leavesPixelGuide=action==='exit'||action==='back'&&draft.stage==='outputs'||action==='next'&&draft.stage==='connection'&&!active().some(output=>output.port>draft.port);
+      if(leavesPixelGuide&&['outputs','pixels','connection'].includes(draft.stage)){
         const stoppingContainer=container,stoppingDraft=draft,token=operation;
         const job={container:stoppingContainer,draft:stoppingDraft,token,restore:pixelSetup.showPreviewStopping(stoppingContainer),exitPending:false,stopSettled:false,failed:false};
         previewStopJob=job;busy=true;

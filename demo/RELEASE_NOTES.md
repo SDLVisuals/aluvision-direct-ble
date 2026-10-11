@@ -1,3 +1,11 @@
+# Browserdemo V50 · interfacekandidaat579
+
+Het startscherm is rustiger gecentreerd. In normaal, tunnel en wand werken de ronde ledlinenummers en selectie op dezelfde manier, terwijl de lichtkleur zichtbaar blijft. Het voorbeeld blijft bij scrollen op dezelfde grootte staan zonder verspringen. De SPI-pixelkeuze en het groene beginpunt zijn duidelijker uitgewerkt.
+
+Dit is een browserdemo met twintig fictieve receivers, geen bediening van echte verlichting. De gegevens verdwijnen bij herladen. Er worden geen nieuwe firmware of private receivergegevens gepubliceerd; de bestaande Android-download blijft 41.0.14/code20. Deze publicatie bevestigt alleen de Webinterface, niet een iPhone-installatie of fysieke netwerktest.
+
+## Historische release-informatie
+
 # Browserdemo V50 · interfacekandidaat578 · 11 oktober 2026
 
 Het tunnelvoorbeeld gebruikt opnieuw de vertrouwde nummering vooraan. Meerdere ledlines blijven samen selecteerbaar, ook in volledig scherm; de wandweergave behoudt haar nummering onderaan. Subtiele interfaceovergangen respecteren verminderde beweging. Optionele korte voelbare feedback is alleen voor bewuste interfacehandelingen in de native iPhone-app; in deze browserdemo doet dezelfde helper veilig niets. Een voelbaar signaal is geen bewijs dat echte verlichting is gewijzigd. De oorspronkelijke startpagina, taalkeuze, koudwitte LIGHTING-animatie en alle bestaande receiver-, model- en transportacties blijven behouden. Alleen acht bestaande WebApp-bestanden, een nieuwe haptics-helper en de native UIKit-feedbackbridge behoren tot de bronwijziging. De bridge wordt niet in deze browserdemo gepubliceerd. De productpagina verandert niet.

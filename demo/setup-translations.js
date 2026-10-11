@@ -312,6 +312,14 @@
   // Each group enumerates exact app-owned messages. Equivalent failure codes
   // share actionable copy; no receiver reply or arbitrary exception is mapped.
   const failureGroups=[
+    [['Deze app heeft nog geen toegang tot deze receiver. Open je bestaande stand met de app die al toegang heeft. Er is niets toegevoegd of gereset.'],
+      'This app does not have access to this receiver yet. Open your existing booth with the app that already has access. Nothing was added or reset.',
+      'Cette application n’a pas encore accès à ce récepteur. Ouvrez votre stand existant avec l’application qui y a déjà accès. Rien n’a été ajouté ni réinitialisé.',
+      'Diese App hat noch keinen Zugriff auf diesen Receiver. Öffne deinen bestehenden Stand mit der App, die bereits Zugriff hat. Es wurde nichts hinzugefügt oder zurückgesetzt.'],
+    [['Deze receiver heeft bestaande standinstellingen. Gebruik je bestaande standtoegang om verder te gaan. Er is niets toegevoegd of gereset.'],
+      'This receiver has existing booth settings. Use your existing booth access to continue. Nothing was added or reset.',
+      'Ce récepteur possède des réglages de stand existants. Utilisez votre accès au stand existant pour continuer. Rien n’a été ajouté ni réinitialisé.',
+      'Dieser Receiver hat bestehende Standeinstellungen. Verwende deinen bestehenden Standzugang, um fortzufahren. Es wurde nichts hinzugefügt oder zurückgesetzt.'],
     [['Geef de Aluvision-app toegang tot het lokale netwerk via Instellingen. Heropen de app. Reset je receiver niet.'],
       'Allow local network access for the Aluvision app in Settings. Reopen the app. Do not reset your receiver.',
       'Autorisez l’accès au réseau local pour Aluvision dans Réglages. Rouvrez l’application. Ne réinitialisez pas le récepteur.',

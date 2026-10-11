@@ -1013,12 +1013,12 @@ function softTrailCoverage(behind,trail,n,smooth){
     if(focused&&selection)frame.rows.forEach((row,index)=>{
       if(!row.selected)return;
       const arch=model.arches[index];path(arch.points);
-      // Clear selection traces the complete physical arch, including All.
-      // Dark separation and a neutral outer edge sit UNDER the original exact
-      // RGB/SPI cores: selecting a line never changes its actual sampled light.
-      context.strokeStyle='rgba(5,10,8,0.94)';context.lineWidth=arch.thickness+7.2;
+      // A fine edge identifies the arch without making thin coloured lights
+      // look white. The number/check is the primary selection indicator.
+      const casing=Math.max(.45,1.4*model.unit*arch.scale);
+      context.strokeStyle='rgba(5,10,8,0.7)';context.lineWidth=arch.thickness+casing+2.4;
       context.shadowBlur=0;context.stroke();path(arch.points);
-      context.strokeStyle='rgba(244,250,247,0.86)';context.lineWidth=arch.thickness+4.8;context.stroke();
+      context.strokeStyle='rgba(230,241,235,0.3)';context.lineWidth=arch.thickness+casing+1.2;context.stroke();
     });
     for(let rowIndex=frame.rows.length-1;rowIndex>=0;rowIndex--){
       const row=frame.rows[rowIndex],arch=model.arches[rowIndex];
@@ -1171,9 +1171,9 @@ function softTrailCoverage(behind,trail,n,smooth){
     if(focused&&selection)frame.rows.forEach((row,index)=>{
       if(!row.selected)return;
       const line=model.lines[index];path([line.from,line.to]);
-      context.strokeStyle='rgba(240,245,242,0.9)';context.lineWidth=line.thickness+line.profile+7;
+      context.strokeStyle='rgba(5,10,8,0.7)';context.lineWidth=line.thickness+line.profile+2.4;
       context.shadowBlur=0;context.stroke();
-      context.strokeStyle='#17201c';context.lineWidth=line.thickness+line.profile+4.5;
+      context.strokeStyle='rgba(230,241,235,0.3)';context.lineWidth=line.thickness+line.profile+1.2;
       context.stroke();
     });
     frame.rows.forEach((row,rowIndex)=>{
