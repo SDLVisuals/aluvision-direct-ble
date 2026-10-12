@@ -762,7 +762,10 @@
       else if(projected<8)delete dock.dataset.scrolled;
     }
     updateControlPreviewDensity();
-    const bottom=Math.max(0,surface?.getBoundingClientRect().bottom||0);
+    const stickyPreview=dock?.dataset.stickyPreview==='579'?dock.querySelector('.v50-control-preview'):null;
+    // Reveal controls below the preview's final pinned edge. Measuring the
+    // whole unpinned heading stopped early and spent colour space on tabs.
+    const bottom=stickyPreview?Math.max(0,(parseFloat(getComputedStyle(dock).top)||0)+(parseFloat(dock.style.getPropertyValue('--sticky-preview-offset'))||0)+stickyPreview.getBoundingClientRect().height):Math.max(0,surface?.getBoundingClientRect().bottom||0);
     const next=Math.max(0,window.scrollY+target.getBoundingClientRect().top-bottom-gap);
     if(Math.abs(next-window.scrollY)>1){
       const reduce=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -1137,10 +1140,12 @@
     if(!zone())return;
     for(const label of main.querySelectorAll('[data-current-light]'))label.textContent=currentLightLabel();
   }
-  function controlPreviewMetrics(count,size=controlPreviewSize,{spatial=false,vertical=false,continuous=false}={}){
+  function controlPreviewMetrics(count,size=controlPreviewSize,{spatial=false,vertical=false,continuous=false,completeNormal=false}={}){
     const index={small:0,medium:1,large:2}[size]??2;
     const lines=Number.isFinite(Number(count))?Math.max(1,Math.min(120,Math.floor(Number(count)))):1;
-    const row=[44,48,52][index];
+    // Four to six normal lines fit complete 44px touch lanes; size still
+    // changes the light-bar thickness, not a hidden inner scroll position.
+    const row=completeNormal&&!spatial&&!vertical&&!continuous&&lines>=4&&lines<=6?44:[44,48,52][index];
     return {height:spatial?[160,184,208][index]:continuous?[56,72,88][index]:vertical?[120,144,168][index]:lines*row+8,
       width:vertical?lines*44+36:0};
   }
@@ -1164,13 +1169,13 @@
     const previewMode=spatialPreview?(spatialView==='wall'?'Wall':'Tunnel'):previewLayout==='continuous'?'Continuous':'Normal';
     const spatialPreviewLabel=spatialPreview?spatialPreviewText('Preview',spatialView):'';
     const count=physicalLineCount(list);
-    const metrics=controlPreviewMetrics(count,controlPreviewSize,{spatial:spatialPreview,vertical:previewLayout==='vertical',continuous:previewLayout==='continuous'});
+    const metrics=controlPreviewMetrics(count,controlPreviewSize,{spatial:spatialPreview,vertical:previewLayout==='vertical',continuous:previewLayout==='continuous',completeNormal:true});
     const total=z.type==='SPI'?t(count===1?'scopeTotalSpiOne':'scopeTotalSpiMany',{count,pixels}):t(count===1?'scopeCountOne':'scopeCountMany',{count});
     const directTap=canTapLines;
     const label=t('v50LedOverview',{name:z.name,summary:total})+(selection().kind==='all'?'':' · '+t('v50ChosenScope',{name:nameOfSelection()}));
     return `<section class="control-preview-dock" data-sticky-preview="579" aria-label="${esc(t('v50OverviewControls'))}"><div class="control-dock-surface">${heading}
       <div class="control-location-summary" aria-label="${esc(t('v50CurrentControls'))}"><span>${esc(screenLabel)}</span><span data-current-light>${esc(currentLightLabel())}</span></div>
-      <div class="preview-wrap v50-control-preview${directTap?' preview-selectable':''}${spatialPreview?' spatial-preview-wrap':''}" data-preview-layout="${previewLayout}" style="--v50-preview-min-height:${metrics.height}px;--v50-preview-min-width:${metrics.width}px"><div class="preview-top"><div class="v50-preview-heading"><span>${spatialPreview?esc(spatialPreviewLabel):esc(t('lineSetup'+previewMode))}</span><small class="preview-summary">${esc(total)}</small></div>${previewSizePickerMarkup(controlPreviewSize,spatialPreview)}</div>${interactiveZonePreview(z,spatialPreview?'spatial-dock-preview':'',{selection:selection(),main:true,previewSize:controlPreviewSize,interactiveLines:directTap,arrangementPreview:true,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1])),...(spatialPreview?{spatialShape:spatialView,presentation:'receivers'}:{}),label:spatialPreview?`${spatialPreviewLabel} · ${z.name} · ${total}`:label})}${previewSelectionMarkup(canTapLines)}</div>
+      <div class="preview-wrap v50-control-preview${directTap?' preview-selectable':''}${spatialPreview?' spatial-preview-wrap':''}" data-preview-layout="${previewLayout}" data-preview-complete="${!spatialPreview&&previewLayout==='stacked'&&count<=6}" style="--v50-preview-min-height:${metrics.height}px;--v50-preview-min-width:${metrics.width}px"><div class="preview-top"><div class="v50-preview-heading"><span>${spatialPreview?esc(spatialPreviewLabel):esc(t('lineSetup'+previewMode))}</span><small class="preview-summary">${esc(total)}</small></div>${previewSizePickerMarkup(controlPreviewSize,spatialPreview)}</div>${interactiveZonePreview(z,spatialPreview?'spatial-dock-preview':'',{selection:selection(),main:true,previewSize:controlPreviewSize,interactiveLines:directTap,arrangementPreview:true,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1])),...(spatialPreview?{spatialShape:spatialView,presentation:'receivers'}:{}),label:spatialPreview?`${spatialPreviewLabel} · ${z.name} · ${total}`:label})}${previewSelectionMarkup(canTapLines)}</div>
       ${animationWayfinding(screen)}<p class="live-confirmation" data-live-status="zone" role="status" aria-live="polite"></p>
     </div></section>`;
   }
@@ -4714,7 +4719,7 @@
           // chosen size. Rebuilding the full page here made the preview snap.
           dock.dataset.previewSize=id;
           const wrap=dock.querySelector('.v50-control-preview'),spatial=dock.dataset.spatialPreview==='true';
-          const metrics=controlPreviewMetrics(physicalLineCount(),id,{spatial,vertical:zone()?.layout==='vertical',continuous:continuousZone()});
+          const metrics=controlPreviewMetrics(physicalLineCount(),id,{spatial,vertical:zone()?.layout==='vertical',continuous:continuousZone(),completeNormal:true});
           wrap?.style.setProperty('--v50-preview-min-height',metrics.height+'px');
           wrap?.style.setProperty('--v50-preview-min-width',metrics.width+'px');
           dock.querySelectorAll('canvas[data-preview]').forEach(canvas=>{const spec=previews.get(canvas.dataset.preview);if(spec?.main)spec.previewSize=id;});

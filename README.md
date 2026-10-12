@@ -12,7 +12,7 @@ De demo gebruikt de huidige gedeelde interface. Native functies blijven afhankel
 
 ## Android-testapp
 
-De actuele download is **50.0.0, code 23**. Het pakket is ondertekend met dezelfde bestaande identiteit en zonder gegevens te wissen gecontroleerd in een Android 36-emulator. De echte appschermen, opnieuw openen en herstel van keuzes zijn getest; de extra native test gebruikt een aparte test-APK met nagebootste receivers. Die testcode zit niet in de download. Bediening van fysieke receivers vanaf een echt Android-toestel is nog niet bevestigd.
+De actuele download is **50.0.0, code 24**. Het pakket is ondertekend met dezelfde bestaande identiteit en zonder gegevens te wissen gecontroleerd in een Android 36-emulator. De echte appschermen, opnieuw openen en herstel van keuzes zijn getest; de extra native test gebruikt een aparte test-APK met nagebootste receivers. Die testcode zit niet in de download. Bediening van fysieke receivers vanaf een echt Android-toestel is nog niet bevestigd.
 
 ## Website en geïnstalleerde app
 

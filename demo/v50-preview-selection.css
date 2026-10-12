@@ -309,3 +309,9 @@ html.interface-polish body #main .control-preview-dock[data-sticky-preview="579"
   padding-block:0;
   pointer-events:auto;
 }
+
+/* Complete normal previews keep every line and its touch lane visible.
+   Larger sets retain bounded inner scrolling; spatial framing is unchanged. */
+html.interface-polish body #main .control-preview-dock .v50-control-preview[data-preview-complete="true"] .v50-preview-canvas-scroll{
+  max-height:none;
+}
