@@ -19,7 +19,7 @@
   let documentId=null;
   try{if(native&&typeof root.crypto?.randomUUID==='function')documentId=root.crypto.randomUUID().replace(/-/g,'').toUpperCase();}catch(_){}
   const pending=new Map();let serial=0;
-  let legacyStandAnimationsAvailable=null,standSessionAnimationsAvailable=null;
+  let legacyStandAnimationsAvailable=null,standSessionAnimationsAvailable=null,atomicPreviewExitAvailable=false;
   let standSessionOutputsAvailable=false,standSessionReceiverManagementAvailable=false;
   let centralFlowEntered=false,standSessionObserved=false;
   let staticPreparingAvailable=null;
@@ -32,6 +32,7 @@
   root.document?.addEventListener?.('visibilitychange',()=>{if(root.document.hidden)standSharingEpoch++;});
   root.addEventListener?.('pagehide',()=>{standSharingEpoch++;});
   const actions=new Set(['capabilities','securityPreference','securityStatus','setPinProtection','discover','discoverMesh','select','secure','reconcileSecurity','finalize','verifyFinalReceipt','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones','configureOutputs','previewPixels','eraseAppData','applyLive','applyLiveBatch','otaPlan','otaStart','otaStatus','otaResume','otaCancel','otaMainRecoveryPlan','otaMainRecoveryStart','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain']);
+  actions.add('checkpointPreviewExit');
   actions.add('outputConfigurationStatus');
   actions.add('prepareReceiverManagement');
   ['exportBackup','chooseBackup','importInstallationView','recoverInstallation'].forEach(action=>actions.add(action));
@@ -100,7 +101,7 @@
     return new Promise((resolve,reject)=>{
       const id='v30-'+documentId+'-'+(++serial),cancelNative=()=>{
         if(automatic){automatic.interrupt();return;}
-        if(pending.has(id)&&!['interruptAutomaticContext','setAppearance','selectionFeedback','interfaceFeedback','capabilities','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones','exportBackup','chooseBackup','importInstallationView'].includes(action))try{handler.postMessage({version:1,id:'v30-'+documentId+'-'+(++serial),action:action==='discover'?'cancelDiscover':'cancelOnboarding',payload:{requestId:id}});}catch(_){}
+        if(pending.has(id)&&!['interruptAutomaticContext','setAppearance','selectionFeedback','interfaceFeedback','capabilities','loadView','saveDraft','parkDraft','checkpointPreviewExit','resumeDraft','publishModel','editZones','exportBackup','chooseBackup','importInstallationView'].includes(action))try{handler.postMessage({version:1,id:'v30-'+documentId+'-'+(++serial),action:action==='discover'?'cancelDiscover':'cancelOnboarding',payload:{requestId:id}});}catch(_){}
       },abort=()=>{
         cancelNative();
         if(!automatic)receive({id,ok:false,code:'CANCELLED'});
@@ -112,7 +113,7 @@
       // A cold SPI guide performs pinned MAIN/NODE proofs and may encounter a
       // retained proxy reply before its guide packet. This bounded allowance
       // cancels an uncertain operation once; it never retries that mutation.
-      const timeout=['exportBackup','chooseBackup','recoverInstallation'].includes(action)?300000:['scanStandShare','shareStandLink','shareStandWifi','standOpenWifi','standConnect','standMigrate','standResume','standRefresh','standMutation','standCodeChange','prepareReceiverManagement'].includes(action)||action==='publishModel'&&centralStamp!==null?90000:action==='previewPixels'?45000:action==='syncInstallationContext'?180000:['otaPlan','otaMainRecoveryPlan'].includes(action)?120000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
+      const timeout=['exportBackup','chooseBackup','recoverInstallation'].includes(action)?300000:['scanStandShare','shareStandLink','shareStandWifi','standOpenWifi','standConnect','standMigrate','standResume','standRefresh','standMutation','standCodeChange','prepareReceiverManagement'].includes(action)||action==='publishModel'&&centralStamp!==null?90000:action==='checkpointPreviewExit'?30000:action==='previewPixels'?45000:action==='syncInstallationContext'?180000:['otaPlan','otaMainRecoveryPlan'].includes(action)?120000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
         ['secure','reconcileSecurity'].includes(action)&&payload.configuration?.role==='node'?120000:
         action==='identifyLayout'?35000:['select','secure','reconcileSecurity','finalize','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain'].includes(action)?45000:12000;
       const deadline=['applyStaticGesture','standFirstAccessPreflight'].includes(action)?45000:timeout;
@@ -897,6 +898,7 @@
     connectionMode:'manual-wifi',
     // Native contract availability, never evidence of receiver support. The
     // actual request requires that receiver's authenticated guide capability.
+    get atomicPreviewExit579(){return atomicPreviewExitAvailable===true&&legacyContextAllowed()&&contextVisible();},
     get previewCapabilities(){return Object.freeze({identifyPorts:pixelPreviewV50,power:pixelPreviewV50});},
     async prepareReceiverManagement({standId}){
       await writeQueue.catch(()=>{});
@@ -1165,6 +1167,30 @@
       return result;
     },
     async loadState(){const view=acceptView(await call('loadView'));wakeAndDiscoverContexts();return view;},
+    async checkpointPreviewExit({draft}){
+      // Explicit native capability only: method presence/demo services never
+      // authorizes a native local exception or a modern STAND fallback.
+      if(!services.atomicPreviewExit579)throw fail('ACTION_UNSUPPORTED');
+      const chosen=root.LightningOnboardingDraft.snapshot(draft),input=canonical(chosen);
+      const next=writeQueue.catch(()=>{}).then(async()=>{
+        if(!services.atomicPreviewExit579||!viewLoaded||viewDraftKey==='null')throw fail('NATIVE_STORAGE_BINDING');
+        const previousModel=viewModelKey,previousDraft=viewDraftKey,revision=viewRevision,epoch=standSharingEpoch;
+        const current=()=>services.atomicPreviewExit579&&epoch===standSharingEpoch&&viewModelKey===previousModel&&viewDraftKey===previousDraft&&viewRevision===revision;
+        const payload={intent:'EXIT_PREVIEW_LOCAL',draft:chosen,expectedRevision:revision};
+        const valid=result=>layoutKeys(result,['view','checkpoint'])&&layoutKeys(result.checkpoint,['kind','draft'])&&
+          result.checkpoint.kind==='pixel-preview-exit-local'&&canonical(result.checkpoint.draft)===input&&
+          layoutKeys(result.view,['model','draft','revision'])&&result.view.draft===null&&result.view.revision===revision+1&&canonical(result.view.model)===previousModel;
+        let result;try{result=await call('checkpointPreviewExit',payload);}catch(error){
+          // Only an exact lost local reply is reconciled by this same endpoint.
+          // No generic loadView inference, membership/STOP receipt or radio retry.
+          if(!['NATIVE_TIMEOUT','NATIVE_UNAVAILABLE','NATIVE_UNCONFIRMED'].includes(error?.code)||!current())throw error;
+          result=await call('checkpointPreviewExit',payload);
+        }
+        if(!current()||!valid(result))throw fail('NATIVE_STORAGE_UNCONFIRMED');
+        root.LightningModel.assertValid(result.view.model);root.LightningOnboardingDraft.snapshot(result.checkpoint.draft);
+        acceptView(result.view);return JSON.parse(JSON.stringify(result));
+      });return trackWrite(next);
+    },
     async persistDraft({draft}){return writeView('saveDraft',{draft});},
     async parkDraft({transactionId}){return moveDraft('parkDraft',{transactionId});},
     async resumeDraft({standId,receiverId,rid,fingerprint=null}){return moveDraft('resumeDraft',{standId,receiverId,rid,fingerprint});},
@@ -1563,7 +1589,7 @@
     }
   }:{};
   const services=Object.freeze(serviceSet);
-  async function runtimeCapabilities(){const value=await call('capabilities');selectionHaptics=value?.selectionHaptics===true;interfaceHaptics=value?.interfaceHaptics===true;simpleStandAvailable=value?.simpleStand===true;pixelPreviewV50=value?.pixelPreviewV50===true;
+  async function runtimeCapabilities(){const value=await call('capabilities');selectionHaptics=value?.selectionHaptics===true;interfaceHaptics=value?.interfaceHaptics===true;simpleStandAvailable=value?.simpleStand===true;pixelPreviewV50=value?.pixelPreviewV50===true;atomicPreviewExitAvailable=value?.atomicPreviewExit579===true;
     spiPortScenesAvailable=value?.spiPortScenes===true;
     standSessionReceiverManagementAvailable=simpleStandAvailable&&value?.standSessionReceiverManagement===true;
     standSessionOutputsAvailable=simpleStandAvailable&&value?.standSessionOutputs===true;

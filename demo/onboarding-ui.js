@@ -311,16 +311,38 @@
     async function browseReceivers(){
       if(await parkForSearch()){paintPage(true);if(container)void search();}
     }
-    let previewState={kind:'idle'},previewStopJob=null;
-    const pixelPreview=pixelSetup.createLivePreview({send:services.previewPixels,onState:state=>{previewState=state;pixelSetup.showPreviewStatus(container,state);}});
+    let previewState={kind:'idle'},previewStopJob=null,localExitPreviewCleanup=false,localCleanup579=null,previewReconcile579=null;
+    function previewReconcileCurrent579(){const r=previewReconcile579;return !!r&&!document.hidden&&container===r.container&&container?.ownerDocument===document&&draft===r.draft&&operation===r.operation&&canonical(draft)===r.choices&&canonical(getModel())===r.model;}
+    function previewReconcileCopy579(){const copies={nl:['Je keuzes zijn bewaard. Stoppen van het testlicht is nog niet bevestigd. Open de pagina opnieuw.','Opnieuw openen'],en:['Your choices are saved. Stopping the test light is not confirmed. Reopen the page.','Reopen'],fr:['Vos choix sont enregistrés. L’arrêt de la lumière de test n’est pas confirmé. Rouvrez la page.','Rouvrir'],de:['Deine Auswahl ist gespeichert. Das Stoppen des Testlichts ist nicht bestätigt. Öffne die Seite erneut.','Erneut öffnen']};return copies[document.documentElement.lang.split('-')[0]]||copies.nl;}
+    function atomicExitEligible579(){return services.atomicPreviewExit579===true&&typeof services.checkpointPreviewExit==='function'&&
+      !!draft&&draft.receiver?.type==='SPI'&&draft.role==='node'&&draft.stand?.isNew===false&&
+      ['outputs','pixels','connection'].includes(draft.stage)&&draft.membership==='pending'&&!draft.cancelled&&
+      draft.security?.status==='not-started'&&draft.security.phase==='idle';}
+    function mainFingerprint579(value){return getModel()?.receivers?.find(receiver=>receiver.id===value.mainReceiverId&&receiver.role==='main')?.deviceFingerprint;}
+    function previewScope579(request,job){return job.container?.ownerDocument===document&&job.mainFingerprint===mainFingerprint579(job.draft)&&request.action==='stop'&&request.standId===job.draft.stand.id&&request.transactionId===job.draft.transactionId&&
+      request.receiver.id===job.draft.receiver.id&&request.receiver.rid===job.draft.receiver.rid&&request.receiver.deviceFingerprint===job.draft.receiver.deviceFingerprint&&request.role===job.draft.role&&request.mainReceiverId===job.draft.mainReceiverId;}
+    function renderCleanup579(status){
+      if(localCleanup579!==status||!status.node?.isConnected)return;
+      const copies={nl:['Testlicht stoppen wordt nog gecontroleerd…','Testlicht gestopt.','Stop niet bevestigd. Je keuzes zijn bewaard.'],en:['Stopping the test light is still being checked…','Test light stopped.','Stop not confirmed. Your choices are saved.'],fr:['L’arrêt de la lumière de test est encore vérifié…','Lumière de test arrêtée.','Arrêt non confirmé. Vos choix sont enregistrés.'],de:['Das Stoppen des Testlichts wird noch geprüft…','Testlicht gestoppt.','Stopp nicht bestätigt. Deine Auswahl ist gespeichert.']};
+      const copy=copies[document.documentElement.lang.split('-')[0]]||copies.nl;status.node.textContent=copy[status.kind==='pending'?0:status.kind==='confirmed'?1:2];status.node.dataset.previewCleanupState=status.kind;
+    }
+    function settleCleanup579(job){const status=localCleanup579;if(!status||status.job!==job)return;clearTimeout(status.timer);status.kind=job.stopConfirmed===true&&!job.failed?'confirmed':'unconfirmed';renderCleanup579(status);}
+    function cleanupPending579(job){
+      localCleanup579?.node?.remove();clearTimeout(localCleanup579?.timer);
+      const status={job,kind:'pending',node:null,timer:null};localCleanup579=status;
+      status.timer=setTimeout(()=>{if(localCleanup579===status&&status.kind==='pending'){status.kind='unconfirmed';renderCleanup579(status);}},45000);return status;
+    }
+    function mountCleanup579(status){if(localCleanup579!==status)return;const node=document.createElement('p');node.setAttribute('role','status');node.dataset.previewCleanup579='';node.style.cssText='margin:8px 12px;padding:10px 12px;border-radius:12px;background:#eef1f5;color:#39424e;font-size:14px';if(status.job.container?.isConnected){status.job.container.appendChild(node);status.node=node;renderCleanup579(status);}}
+    const pixelPreview=pixelSetup.createLivePreview({send:typeof services.previewPixels==='function'?async request=>{const job=previewStopJob||localCleanup579?.job,owned=job&&previewScope579(request,job);try{const answer=await services.previewPixels(request);if(owned&&previewScope579(request,job))job.stopConfirmed=answer?.applied===true&&answer.previewTTLMS===0;return answer;}catch(error){if(owned)job.failed=true;throw error;}}:undefined,onState:state=>{previewState=state;pixelSetup.showPreviewStatus(container,state);}});
     function syncPixelPreview({commit=false}={}){
       if(busy&&['outputs','pixels','connection'].includes(draft?.stage))return;
-      if(!container||document.hidden||!['outputs','pixels','connection'].includes(draft?.stage)){void pixelPreview.stop();return;}
+      if(!container||document.hidden||!['outputs','pixels','connection'].includes(draft?.stage)){if(!localExitPreviewCleanup)void pixelPreview.stop();return;}
       const selected=draft.outputs.find(output=>output.port===draft.port);
       const request=pixelSetup.guideRequest({context:{standId:draft.stand.id,transactionId:draft.transactionId,
         receiver:{id:draft.receiver.id,rid:draft.receiver.rid,type:'SPI',deviceFingerprint:draft.receiver.deviceFingerprint},
         role:draft.role,mainReceiverId:draft.mainReceiverId},outputs:draft.outputs,output:selected,stage:draft.stage,capabilities:services.previewCapabilities||{}});
-      if(!request){void pixelPreview.stop();return;}
+      if(!request){if(!localExitPreviewCleanup)void pixelPreview.stop();return;}
+      localExitPreviewCleanup=false;localCleanup579?.node?.remove();clearTimeout(localCleanup579?.timer);localCleanup579=null;
       pixelPreview.update(request);
       if(commit)void pixelPreview.flush();
       pixelSetup.showPreviewStatus(container,previewState);
@@ -344,6 +366,12 @@
     function refreshNotice(){
       const region=container?.querySelector('.onboarding-notice');
       if(region){region.hidden=!notice&&!draftSaving;region.textContent=draftSaving?tx('Je keuzes bewaren…'):tx(notice);}
+      if(previewReconcile579&&!previewReconcileCurrent579())previewReconcile579=null;
+      if(region&&previewReconcileCurrent579()){
+        const copy=previewReconcileCopy579();region.hidden=false;region.textContent=copy[0]+' ';
+        const button=document.createElement('button');button.type='button';button.className='button secondary';button.dataset.onboardingAction='preview-reopen';button.textContent=copy[1];region.appendChild(button);
+        container.querySelector('[data-onboarding-action="exit"]')?.setAttribute('disabled','');
+      }
       updateGuidance();
     }
     function keepDraft(){persist().catch(()=>{saveFailed=true;notice=saveNotice;refreshNotice();});}
@@ -533,7 +561,7 @@
     }
     function suspend({discard=false}={}){
       if(previewStopJob){const job=previewStopJob;previewStopJob=null;job.restore();busy=false;}
-      void pixelPreview.stop();
+      if(!localExitPreviewCleanup)void pixelPreview.stop();
       // Release only this presentation's job. Its late native result cannot
       // repaint, complete setup, or release a newer job after remount.
       if(firstAccessJob){firstAccessJob=null;busy=false;}
@@ -575,7 +603,7 @@
       const receiverContext=draft.receiver&&!connectionCardStage&&!['receiver','done'].includes(draft.stage)?`<p class="onboarding-receiver-context"><b>${escape(draft.receiver.name||tx('Receiver'))}</b><span>${escape(draft.receiver.type)}</span></p>`:'';
       const returnToStand=savedStand()&&draft.stage!=='done';
       const closeLabel=origin==='layout'?tx('Terug naar ledlines'):tx('Naar mijn stand');
-      return `<header class="onboarding-setup-header"><div><span class="onboarding-setup-label">${firstSetup?(automaticFirstReceiver()?tx('Je stand instellen'):`${tx('Stap')} ${step} · ${tx(step===1?tx('Standnaam'):step===2?tx('Zones'):tx('Verlichting aansluiten'))}`):tx('Receiver toevoegen')}</span>${draft.stand?.name&&!['stand','zones'].includes(draft.stage)?`<small class="onboarding-stand-context">${escape(draft.stand.name)}</small>`:''}</div>${returnToStand?button('exit',closeLabel,`class="button secondary back" ${origin==='layout'?'':'data-return-stand="true"'} ${busy||draftSaving?'disabled':''}`):''}</header>${receiverSetupProgress()}<header class="onboarding-heading"><h1>${tx(title)}</h1>${receiverContext}</header>${!connectionCardStage&&!['stand','zones','receiver','placement','outputs','done'].includes(draft.stage)?zoneContext():''}`;
+      return `<header class="onboarding-setup-header"><div><span class="onboarding-setup-label">${firstSetup?(automaticFirstReceiver()?tx('Je stand instellen'):`${tx('Stap')} ${step} · ${tx(step===1?tx('Standnaam'):step===2?tx('Zones'):tx('Verlichting aansluiten'))}`):tx('Receiver toevoegen')}</span>${draft.stand?.name&&!['stand','zones'].includes(draft.stage)?`<small class="onboarding-stand-context">${escape(draft.stand.name)}</small>`:''}</div>${returnToStand?button('exit',closeLabel,`class="button secondary back" ${origin==='layout'?'':'data-return-stand="true"'} ${draftSaving||busy&&!atomicExitEligible579()?'disabled':''}`):''}</header>${receiverSetupProgress()}<header class="onboarding-heading"><h1>${tx(title)}</h1>${receiverContext}</header>${!connectionCardStage&&!['stand','zones','receiver','placement','outputs','done'].includes(draft.stage)?zoneContext():''}`;
     }
     function zoneVisual(index){
       return `<span class="onboarding-zone-number" aria-hidden="true">${index+1}</span>`;
@@ -1244,6 +1272,29 @@
         error='De indeling is nog niet bevestigd. Controleer je zones en probeer opnieuw. Je receivers worden niet gereset.';notice='';
       }finally{managementBusy=false;busy=false;paintPage(false);}
     }
+    async function exitAtomicPreview579(){
+      if(!atomicExitEligible579()||draftSaving||pendingChoices||managementBusy||exiting)return;
+      let job=previewStopJob;
+      if(!job){job={container,draft,mainFingerprint:mainFingerprint579(draft),token:operation,restore:pixelSetup.showPreviewStopping(container),exitPending:false,stopSettled:false,failed:false,stopConfirmed:false};previewStopJob=job;busy=true;
+        container.querySelector('[data-onboarding-action="exit"]')?.removeAttribute('disabled');
+        void pixelPreview.stop().catch(()=>{job.failed=true;}).finally(()=>{job.stopSettled=true;if(job.atomic)settleCleanup579(job);if(previewStopJob===job&&!job.exitPending){previewStopJob=null;job.restore();if(container===job.container&&operation===job.token)busy=false;}});}
+      if(job.exitPending||container!==job.container||draft!==job.draft||operation!==job.token)return;
+      job.atomic=true;job.exitPending=true;const retained=clone(job.draft),model=canonical(getModel());
+      const current=()=>previewStopJob===job&&container===job.container&&draft===job.draft&&operation===job.token&&canonical(draft)===canonical(retained)&&canonical(getModel())===model;
+      try{
+        const result=await services.checkpointPreviewExit({draft:retained});
+        if(!current())return;
+        if(!result||Object.keys(result).sort().join(',')!=='checkpoint,view'||result.checkpoint?.kind!=='pixel-preview-exit-local'||canonical(result.checkpoint.draft)!==canonical(retained)||result.view?.draft!==null||canonical(result.view.model)!==model)throw Error('LOCAL_CHECKPOINT_UNCONFIRMED');
+        parkedTransactions.add(retained.transactionId);localExitPreviewCleanup=true;const cleanup=cleanupPending579(job);if(job.stopSettled)settleCleanup579(job);
+        const returnToStand=savedStand()&&origin!=='layout';suspend({discard:true});draft=searchDraft(retained);parkPending=null;searchOnMount=true;results=[];searchState='idle';
+        securityReceiptRef=null;finalReceiptRef=null;securityUncertain=false;finalizationStarted=false;resumeSelection=null;manualRejoinSSID=null;
+        onExit(returnToStand?{stand:true}:undefined);mountCleanup579(cleanup);
+      }catch(failure){if(current()){
+        if(failure?.code==='NATIVE_STORAGE_RECONCILE_REQUIRED')previewReconcile579={container,draft,operation,choices:canonical(retained),model};
+        notice='Teruggaan is nog niet bevestigd. Je keuzes blijven staan; probeer opnieuw.';refreshNotice();
+      }}
+      finally{job.exitPending=false;if(previewStopJob===job&&job.stopSettled){previewStopJob=null;job.restore();if(container===job.container&&operation===job.token)busy=false;}if(previewReconcileCurrent579())refreshNotice();}
+    }
     async function exitDuringPreviewStop(){
       const job=previewStopJob;
       if(!job||job.exitPending||container!==job.container||draft!==job.draft||operation!==job.token)return;
@@ -1291,6 +1342,14 @@
       // Security/select cancellation retains its existing separate handling.
       const action=target.dataset.onboardingAction;
       const returnToStand=target.dataset.returnStand==='true';
+      if(action==='preview-reopen'){
+        if(!previewReconcileCurrent579())return;
+        // Explicit normal document reload, not another save, STOP, resume or
+        // success receipt. Native lifecycle invalidates the old presentation.
+        localExitPreviewCleanup=true;window.location.reload();return;
+      }
+      if(action==='exit'&&previewReconcileCurrent579()){refreshNotice();return;}
+      if(action==='exit'&&atomicExitEligible579())return exitAtomicPreview579();
       if(busy&&['outputs','pixels','connection'].includes(draft?.stage)){
         if(action==='exit'&&previewStopJob)return exitDuringPreviewStop();
         return;
@@ -1334,11 +1393,11 @@
       const leavesPixelGuide=action==='exit'||action==='back'&&draft.stage==='outputs'||action==='next'&&draft.stage==='connection'&&!active().some(output=>output.port>draft.port);
       if(leavesPixelGuide&&['outputs','pixels','connection'].includes(draft.stage)){
         const stoppingContainer=container,stoppingDraft=draft,token=operation;
-        const job={container:stoppingContainer,draft:stoppingDraft,token,restore:pixelSetup.showPreviewStopping(stoppingContainer),exitPending:false,stopSettled:false,failed:false};
+        const job={container:stoppingContainer,draft:stoppingDraft,mainFingerprint:mainFingerprint579(stoppingDraft),token,restore:pixelSetup.showPreviewStopping(stoppingContainer),exitPending:false,stopSettled:false,failed:false};
         previewStopJob=job;busy=true;
         stoppingContainer.querySelector('[data-onboarding-action="exit"]')?.removeAttribute('disabled');
         try{await pixelPreview.stop();}catch(_){job.failed=true;}
-        finally{job.stopSettled=true;if(previewStopJob===job&&!job.exitPending){job.restore();if(token===operation&&container===stoppingContainer)busy=false;}}
+        finally{job.stopSettled=true;if(job.atomic)settleCleanup579(job);if(previewStopJob===job&&!job.exitPending){job.restore();if(token===operation&&container===stoppingContainer)busy=false;}}
         if(previewStopJob!==job||token!==operation||container!==stoppingContainer||draft!==stoppingDraft)return;
         if(job.exitPending)return;
         previewStopJob=null;

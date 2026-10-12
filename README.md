@@ -1,18 +1,18 @@
-# Aluvision Lighting · V41
+# Aluvision Lighting · V50
 
 [Open de interactieve demo](https://sdlvisuals.github.io/aluvision-direct-ble/demo/) · [Android-testapp](https://sdlvisuals.github.io/aluvision-direct-ble/android/)
 
 ## Interactieve demo
 
-De hoofdlink opent nu dezelfde V41-demo. Probeer zones, kleuren, RGBW/SPI-animaties, opgeslagen scènes en licht/donker in de telefooninterface.
+De hoofdlink opent de V50-demo. Probeer zones, kleuren, RGBW/SPI-animaties, opgeslagen scènes en licht/donker in de telefooninterface.
 
 De demo gebruikt uitsluitend fictieve receivers. Ze begint leeg en bewaart haar voorbeeldstand alleen tijdelijk; herladen begint opnieuw. Ze bestuurt geen fysieke verlichting, maakt geen echte wifi-verbinding en biedt geen browser-OTA. PIN en delen zijn in deze tijdelijke ééngebruikerversie uitgeschakeld.
 
-Deze stylingupdate neemt de melkglasafwerking en neutralere darkmodus over uit de gecontroleerde telefoonbron. Zij wijzigt geen app-, receiver-, beveiligings- of firmwarelogica.
+De demo gebruikt de huidige gedeelde interface. Native functies blijven afhankelijk van expliciete appmogelijkheden; de browser krijgt geen receiver-, beveiligings- of firmwaretoegang.
 
 ## Android-testapp
 
-De actuele download is **41.0.13, code 19**. Het pakket is ondertekend en in een geïsoleerde Android-emulator gestart. Bediening van fysieke receivers vanaf een echt Android-toestel is nog niet bevestigd; de downloadpagina noemt de beschikbare en ontbrekende functies. Interfacevoorbeelden zijn geen bewijs van native Android-functionaliteit.
+De actuele download is **50.0.0, code 23**. Het pakket is ondertekend met dezelfde bestaande identiteit en zonder gegevens te wissen gecontroleerd in een Android 36-emulator. De echte appschermen, opnieuw openen en herstel van keuzes zijn getest; de extra native test gebruikt een aparte test-APK met nagebootste receivers. Die testcode zit niet in de download. Bediening van fysieke receivers vanaf een echt Android-toestel is nog niet bevestigd.
 
 ## Website en geïnstalleerde app
 
