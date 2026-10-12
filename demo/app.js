@@ -139,6 +139,19 @@
   function canStartLocalStand(){return standKnownResumeIntent.status==='none'&&nativeLoaded&&!nativeLoadError&&!nativeLoading&&!model.stands.length&&!model.receivers.length&&!onboarding.summary()&&!firstAccessCheckpoint&&!centralApplied&&!centralPending&&!standSession?.snapshot()&&!standSession?.canResume();}
   function allowPendingLocalConcept(){return standKnownResumeIntent.status==='none'&&nativeLoaded&&!nativeLoadError&&!nativeLoading&&!model.stands.length&&!model.receivers.length&&!firstAccessCheckpoint&&!centralApplied&&!centralPending&&!standConnectionBusy&&!standSession?.snapshot()&&!standSession?.canResume();}
   function canContinuePendingLocalStand(){return allowPendingLocalConcept()&&onboarding.canContinueLocalConcept();}
+  async function continueLocalStandLater590(){
+    // A receiver-less local concept is not receiver membership or stand access.
+    if(document.hidden||route.screen!=='receiver-add'||route.setupFrom!=='stand'||!canContinuePendingLocalStand())throw Error('LOCAL_CONCEPT_BLOCKED');
+    const beforeRoute=route,beforeRouteKey=JSON.stringify(route),beforeModel=JSON.stringify(model),summary=onboarding.summary();
+    const next=await onboarding.continueLocalConcept();
+    if(document.hidden||route!==beforeRoute||JSON.stringify(route)!==beforeRouteKey||JSON.stringify(model)!==beforeModel||!allowPendingLocalConcept())throw Error('LOCAL_CONCEPT_CANCELLED');
+    let expected=M.localStand(summary.stand.id,summary.stand.name);
+    for(const zone of summary.zones)expected=M.createZone(expected,summary.stand.id,{id:zone.id,name:zone.name});
+    M.assertValid(next);
+    if(JSON.stringify(next)!==JSON.stringify(expected))throw Error('LOCAL_CONCEPT_UNCONFIRMED');
+    localStandConceptId=next.stands[0].id;model=next;simpleStandMode=false;
+    navigate('stand',{standId:localStandConceptId,zoneId:null,setupReturnZoneId:null});
+  }
   function storeLocalStandConcept(next,standId=localStandConceptId){
     M.assertValid(next);if(next.stands.length!==1||next.stands[0].id!==standId||next.receivers.length||next.scenes.length||next.presets.length)throw Error('LOCAL_CONCEPT_INVALID');
     const text=JSON.stringify({schema:1,model:next});
@@ -287,6 +300,7 @@
     void orderIdentification.open(input);
   }
   function closeZoneMenus(){
+    retireOrderSave588();
     closeOrderTutorial({acknowledge:false,restoreFocus:false});
     cancelOrderTest();
     openLineSetup.clear();openLineSettings.clear();openSpatialChoices.clear();expandedScopeZones.clear();
@@ -296,6 +310,12 @@
   let receiverAssignment=null,nameDialog=null,zoneDeletion=null,managementBusy=false;
   let managementConnectionReturn=null;
   let arrangementDraft=null,arrangementApplying=false,arrangementReapplyIds=[],setupReturnContext=null;
+  // Only unsent public order choices are coalesced. The original CAS/radio
+  // pipeline remains single-flight and retains all native admission guards.
+  let orderSaveQueue588=null,orderSaveEpoch588=0;
+  // Presentation-only: no native lease, receipt or wire capability is stored.
+  let orderClose589=null;
+  let orderCancelNotice590=null;
   let familySpatialSwitch=null;
   const openLineSetup=new Set(),openLineSettings=new Set();
   const openSpatialChoices=new Set(),spatialViews=new Map();
@@ -540,8 +560,9 @@
     }
     const status=main.querySelector('[data-order-recognition-status]');
     if(status){
-      status.textContent=orderText(!orderIdentificationState?.active?previewContext?'orderPreviewStopped':orderIdentificationState?.cleanup?.status==='pending'?'orderRecognitionClosing':orderIdentificationState?.cleanup?.status==='unconfirmed'?'orderStopUnconfirmed':orderIdentificationState?.cleanup?.status==='confirmed'&&orderIdentificationState.reason==='idle'?'orderRecognitionIdleStopped':'orderRecognitionStopped':previewContext?'orderPreviewColours':orderIdentificationState.physicalConfirmed?'orderColoursConfirmed':orderIdentificationState.status==='pending'?'orderColoursPending':orderIdentificationState.status==='expired'?'orderColoursExpired':orderIdentificationState.error==='IDENTIFY_UNSUPPORTED'?'orderColoursUnsupported':'orderColoursUnconfirmed');
-      status.dataset.confirmed=String(orderIdentificationState?.physicalConfirmed===true);
+      const orderPending=!!orderSaveQueue588&&orderSaveQueue588.zoneId===route.zoneId&&orderSaveQueue588.version>orderSaveQueue588.confirmedVersion;
+      status.textContent=orderText(orderPending?'orderColoursPending':!orderIdentificationState?.active?previewContext?'orderPreviewStopped':orderIdentificationState?.cleanup?.status==='pending'?'orderRecognitionClosing':orderIdentificationState?.cleanup?.status==='unconfirmed'?'orderStopUnconfirmed':orderIdentificationState?.cleanup?.status==='confirmed'&&orderIdentificationState.reason==='idle'?'orderRecognitionIdleStopped':'orderRecognitionStopped':previewContext?'orderPreviewColours':orderIdentificationState.physicalConfirmed?'orderColoursConfirmed':orderIdentificationState.status==='pending'?'orderColoursPending':orderIdentificationState.status==='expired'?'orderColoursExpired':orderIdentificationState.error==='IDENTIFY_UNSUPPORTED'?'orderColoursUnsupported':'orderColoursUnconfirmed');
+      status.dataset.confirmed=String(!orderPending&&orderIdentificationState?.physicalConfirmed===true);
     }
     orderRecognitionDirty=false;
     syncOrderTestControls();
@@ -863,6 +884,7 @@
   const onboarding=window.LightningOnboardingUI.create({getModel:()=>localStandConcept()?localStandBase:model,
     allowLocalConcept:allowPendingLocalConcept,
     onPreserveLocalConcept:next=>storeLocalStandConcept(next,next.stands[0].id),
+    onContinueLocalConcept:continueLocalStandLater590,
     allowPinLogin:false,
     automaticFirstReceiver:()=>firstFactorySetup,
     firstStandAccessRequired:()=>nativeContext&&simpleStandSupported,
@@ -1900,6 +1922,165 @@
   function arrangementDirty(){return Boolean(arrangementDraft&&JSON.stringify([arrangementDraft.layout,arrangementDraft.lineOrder])!==arrangementDraft.initial);}
   function arrangementPlaybackPending(){return arrangementReapplyIds.some(id=>['pending','staged'].includes(liveStates.get(id)?.kind));}
   function arrangementInteractionBusy(){return arrangementApplying||managementBusy||arrangementPlaybackPending()||orderTestBusy();}
+  function orderGeometry588(z=zone()){
+    return z&&JSON.stringify(M.zoneLedlines(model,z.id).map(line=>{const r=model.receivers.find(item=>item.id===line.receiverId);return [line.id,line.receiverId,line.port,line.pixels,line.reversed,r?.rid,r?.deviceFingerprint,r?.type];}).sort((a,b)=>a[0].localeCompare(b[0])));
+  }
+  function sameOrderDraft588(job){
+    return !!job&&orderSaveQueue588===job&&route.zoneId===job.zoneId&&stand()?.id===job.standId&&
+      openLineSetup.has(job.zoneId)&&arrangementDraft===job.draft&&zone()?.layout===job.layout&&job.geometry===orderGeometry588();
+  }
+  function currentOrderSave588(job){
+    return sameOrderDraft588(job)&&!job.invalid&&!document.hidden&&job.epoch===orderSaveEpoch588&&
+      job.draft.signature===arrangementSignature()&&
+      (job.session===null?!orderIdentificationState?.active:orderIdentificationState?.active&&orderIdentificationState.session===job.session);
+  }
+  function orderPanelCloseRequest589(button){
+    // This grants only a wait-for-existing-job presentation close, not radio.
+    return !!button?.matches?.('.ledline-setup-toggle[data-action="layout"]')&&
+      openLineSetup.has(route.zoneId)&&(currentOrderSave588(orderSaveQueue588)||
+        orderClose589&&currentOrderClose589(orderClose589));
+  }
+  function orderDragBusy588(){
+    // This exemption grants local editing only, never another native writer.
+    // Every non-order control keeps the original transport/management locks.
+    const own=currentOrderSave588(orderSaveQueue588);
+    return !!orderClose589||orderTestBusy()||arrangementPlaybackPending()&&!own||
+      (arrangementApplying||managementBusy)&&!own;
+  }
+  function retireOrderSave588(){orderSaveEpoch588++;orderClose589=null;if(orderSaveQueue588)orderSaveQueue588.invalid=true;}
+  function rebaseOrderSave588(job){
+    if(!sameOrderDraft588(job))return false;
+    job.draft.signature=arrangementSignature();job.draft.initial=JSON.stringify([zone().layout,M.lineIds(model,job.zoneId)]);return true;
+  }
+  async function resumeOrderPlayback589(job){
+    const pending=job.resumePending589,ready=orderIdentification?.getState();
+    if(!pending||!currentOrderSave588(job)||pending.signature!==arrangementSignature()||
+       pending.geometry!==orderGeometry588()||pending.session!==job.session||
+       !ready?.active||ready.session!==pending.session||nativeContext&&!ready.physicalConfirmed)
+      throw Error(t('orderResumeUnconfirmed'));
+    // The native holder alone validates/consumes its one-use CAS/token/boot fence.
+    // This call is the unchanged ordinary LIVE queue, never a new writer/retry.
+    arrangementReapplyIds=sendReceiverStates(M.zoneReceivers(model,job.zoneId).map(r=>r.id),{remember:false});
+    syncArrangementControls();
+    if(!liveController?.whenIdle)throw Error(t('orderResumeUnconfirmed'));
+    try{await liveController.whenIdle({standId:model.receivers.find(r=>arrangementReapplyIds.includes(r.id))?.standId});}
+    catch(_){throw Error(t('orderResumeCheck'));}
+    if(!currentOrderSave588(job)||job.resumePending589!==pending)throw Error(t('lineSetupChanged'));
+    if(!arrangementReapplyIds.length||arrangementReapplyIds.some(id=>liveStates.get(id)?.kind!=='applied'))
+      throw Error(t('orderResumePartial'));
+    job.resumePending589=null;
+    // Only a new genuine current final wave can clear a prior cancel warning.
+    if(orderCancelNotice590?.standId===job.standId&&orderCancelNotice590.zoneId===job.zoneId)orderCancelNotice590=null;
+  }
+  async function drainOrderSave588(job){
+    let saved=false;
+    try{
+      while(currentOrderSave588(job)){
+        saved=false;
+        let version=job.version;const snapshot={...job.draft,lineOrder:[...job.draft.lineOrder]};
+        job.dispatchedVersion589=version;
+        if(JSON.stringify([snapshot.layout,snapshot.lineOrder])===snapshot.initial){
+          // A net-zero later permutation may still owe the last real CAS resume.
+          if(job.resumePending589){arrangementApplying=true;try{await resumeOrderPlayback589(job);}catch(error){job.error=error.message||t('orderResumeUnconfirmed');break;}finally{arrangementApplying=false;if(!arrangementPlaybackPending())arrangementReapplyIds=[];}}
+          if(!currentOrderSave588(job))break;
+          saved=true;job.confirmedVersion=version;if(version===job.version)break;else continue;
+        }
+        saved=await applyArrangement(job,snapshot);
+        // An uncertain mutation/lease never authorizes replay of queued work.
+        if(!saved||!currentOrderSave588(job))break;
+        version=job.dispatchedVersion589;job.confirmedVersion=version;
+        if(version===job.version)break;
+      }
+    }finally{
+      const visible=sameOrderDraft588(job);
+      if(orderSaveQueue588===job)orderSaveQueue588=null;
+      if(visible){
+        if(!saved){job.draft.lineOrder=M.lineIds(model,job.zoneId);job.draft.signature=arrangementSignature();job.draft.initial=JSON.stringify([zone().layout,job.draft.lineOrder]);job.draft.error=job.error||t('lineSetupSaveFailed');orderMoveResult=null;}
+        else if(job.latest&&job.confirmedVersion===job.version&&!job.resumePending589&&!inlineOrderDrag?.isActive()&&!orderPreviewGesture){
+          orderMoveResult={...job.latest,saved:true};
+          window.LightningInterfaceHaptics?.emit?.('success','order-drop',{confirmed:true,userInitiated:job.trusted});
+          const result=orderMoveResult;
+          if(orderMoveTimer!==null)clearTimeout(orderMoveTimer);
+          orderMoveTimer=setTimeout(()=>{if(orderMoveResult===result){orderMoveResult=null;syncOrderFeedback();}orderMoveTimer=null;},3200);
+        }
+        // Current browsing only: an old ACK cannot restore an old scroll/focus
+        // or replace handles belonging to a newer active gesture.
+        if(!document.hidden){if(inlineOrderDrag?.isActive())orderRenderDeferred=true;else renderArrangement({...arrangementBrowsing(),focus:null});}
+      }
+      syncArrangementControls();syncOrderRecognition();
+    }
+    return saved;
+  }
+  function currentOrderClose589(close){
+    return orderClose589===close&&close.epoch===orderSaveEpoch588&&!document.hidden&&
+      route.zoneId===close.zoneId&&stand()?.id===close.standId&&openLineSetup.has(close.zoneId)&&
+      arrangementDraft===close.draft&&close.geometry===orderGeometry588()&&
+      (close.session===null?!orderIdentificationState?.active:orderIdentificationState?.active&&orderIdentificationState.session===close.session);
+  }
+  function orderCancelNoticeMarkup590(z){
+    const notice=orderCancelNotice590;
+    return z&&notice?.zoneId===z.id&&notice.standId===stand()?.id
+      ?`<p class="order-recognition-status" data-order-resume-unconfirmed role="status" aria-live="polite">${esc(t(notice.code))}</p>`:'';
+  }
+  async function stopOrderPresentation590(close,{cancelled=false,playbackConfirmed=false}={}){
+    if(!currentOrderClose589(close))return {closed:false,playbackConfirmed:false,cleanupConfirmed:false};
+    // Explicit UI cancellation is NOT a successful scene resume. No LIVE,
+    // CAS/START retry or pending-queue clear occurs on this escape lane.
+    retireOrderSave588();cancelOrderTest();openLineSetup.delete(close.zoneId);openLineSettings.clear();arrangementDraft=null;orderColours.clear();
+    const epoch=orderSaveEpoch588,notice=cancelled?{standId:close.standId,zoneId:close.zoneId,code:'orderResumeUnconfirmed'}:null;
+    if(notice)orderCancelNotice590=notice;
+    // The unchanged adapter targets its original active session. If native is
+    // busy it uses its existing exact stopLayoutLocally route, returns false,
+    // and leaves the original operation's radioOperation/defer/pending intact.
+    const identification=orderIdentification,stopped=await identification?.close(cancelled?'cancelled-unconfirmed':'closed');
+    // STOP settles its original token only. A newer presentation, navigation,
+    // draft or session cannot borrow that completion for warning/paint/focus.
+    if(epoch!==orderSaveEpoch588||document.hidden||route.zoneId!==close.zoneId||stand()?.id!==close.standId||
+       close.geometry!==orderGeometry588()||openLineSetup.has(close.zoneId)||arrangementDraft||
+       orderIdentification!==identification||orderIdentificationState?.active||stopped?.active)
+      return {closed:false,playbackConfirmed:false,cleanupConfirmed:false,presentationEpoch:epoch};
+    const cleanup=stopped?.cleanup,cleanupConfirmed=!!close.session&&cleanup?.session===close.session&&
+      cleanup.standId===close.standId&&cleanup.zoneId===close.zoneId&&cleanup.status==='confirmed';
+    // This is an already-released UI ledger, NOT a new STOP ACK or playback
+    // receipt. Only the exact prior confirmed same-scope session qualifies.
+    const prior=close.priorConfirmedCleanup,alreadyReleased=!cancelled&&!close.session&&prior?.status==='confirmed'&&
+      cleanup?.status==='confirmed'&&cleanup.session===prior.session&&cleanup.standId===prior.standId&&
+      cleanup.zoneId===prior.zoneId&&prior.standId===close.standId&&prior.zoneId===close.zoneId;
+    if(!cancelled&&!cleanupConfirmed&&!alreadyReleased)
+      orderCancelNotice590={standId:close.standId,zoneId:close.zoneId,code:'orderStopUnconfirmed'};
+    return {closed:true,playbackConfirmed:!cancelled&&playbackConfirmed,cleanupConfirmed,alreadyReleased,cancelled,presentationEpoch:epoch};
+  }
+  async function closeOrderPanel589(){
+    if(orderClose589){
+      // A second explicit click can escape a genuinely pending original LIVE;
+      // it never cancels another session or resets that operation's busy flag.
+      if(arrangementPlaybackPending())return stopOrderPresentation590(orderClose589,{cancelled:true});
+      return orderClose589.flight;
+    }
+    const job=orderSaveQueue588,draft=arrangementDraft,zoneId=route.zoneId;
+    if(!draft||!openLineSetup.has(zoneId)||!zone())return {closed:false,playbackConfirmed:false,cleanupConfirmed:false};
+    const previous=orderIdentificationState?.active?null:orderIdentification?.getState(),cleanup=previous?.cleanup;
+    const priorConfirmedCleanup=previous?.active===false&&cleanup?.status==='confirmed'&&
+      typeof cleanup.session==='string'&&cleanup.session.length>0&&cleanup.standId===stand().id&&cleanup.zoneId===zoneId
+      ?{session:cleanup.session,standId:cleanup.standId,zoneId:cleanup.zoneId,status:'confirmed'}:null;
+    const close={epoch:orderSaveEpoch588,zoneId,standId:stand().id,draft,geometry:orderGeometry588(),session:orderIdentificationState?.active?orderIdentificationState.session:null,priorConfirmedCleanup,flight:null};
+    orderClose589=close;syncArrangementControls();
+    if(arrangementPlaybackPending())return stopOrderPresentation590(close,{cancelled:true});
+    // Only this explicit panel close waits for its existing one-flight job.
+    // Navigation/hide/offline still invalidate it, with no replay or new LIVE.
+    close.flight=Promise.resolve().then(async()=>{
+      try{
+        const saved=job?await job.flight:true;
+        if(!currentOrderClose589(close))return {closed:false,playbackConfirmed:false,cleanupConfirmed:false};
+        if(!saved||draft.error||job&&(job.resumePending589||job.confirmedVersion!==job.version)){
+          return stopOrderPresentation590(close,{cancelled:true});
+        }
+        if(arrangementApplying||managementBusy)return {closed:false,playbackConfirmed:false,cleanupConfirmed:false};
+        return stopOrderPresentation590(close,{playbackConfirmed:!!job&&saved});
+      }finally{if(orderClose589===close)orderClose589=null;syncArrangementControls();syncOrderRecognition();}
+    });
+    return close.flight;
+  }
   function arrangementNeedsStandOpen(){
     return simpleStandMode&&(!centralApplied||standConnectionState.status!=='connected'||!standSession?.snapshot());
   }
@@ -1907,12 +2088,15 @@
     if(!main)return;
     syncSpatialChoiceControls();
     const orderText=(key,params)=>window.LightningV50OrderTexts.t(key,uiPreferences.preferences.language,params);
-    const busy=arrangementInteractionBusy(),needsStandOpen=arrangementNeedsStandOpen(),handles=[...main.querySelectorAll('[data-order-handle]')];
-    for(const handle of handles)handle.disabled=busy||needsStandOpen||handles.length<2;
+    const busy=arrangementInteractionBusy()||!!orderSaveQueue588||!!orderClose589,needsStandOpen=arrangementNeedsStandOpen(),handles=[...main.querySelectorAll('[data-order-handle]')];
+    for(const handle of handles)handle.disabled=orderDragBusy588()||needsStandOpen||handles.length<2;
+    if(busy)for(const control of main.querySelectorAll('.ledline-setup button[data-action]'))control.disabled=true;
+    const closeButton=main.querySelector('.ledline-setup-toggle[data-action="layout"]');
+    if(orderPanelCloseRequest589(closeButton))closeButton.disabled=false;
     main.querySelector('.ledline-arrangement')?.setAttribute('aria-busy',String(busy));
     const status=main.querySelector('[data-order-apply-status]');
     if(status){
-      const pending=arrangementApplying||arrangementPlaybackPending(),error=arrangementDraft?.error||'';
+      const pending=arrangementApplying||arrangementPlaybackPending()||!!orderSaveQueue588,error=arrangementDraft?.error||'';
       status.hidden=!(pending||error||needsStandOpen);status.textContent=pending?orderText('orderApplying'):error||(needsStandOpen?orderText('orderOpenStandHint'):'');
     }
     const openStand=main.querySelector('[data-order-stand-open]');
@@ -1926,12 +2110,15 @@
       arrangementDraft.signature===arrangementSignature(z)?arrangementDraft:null;
   }
   function beginArrangement(){
+    retireOrderSave588();
     const z=zone();if(!z)return;
     const lineOrder=M.lineIds(model,z.id);
     arrangementDraft={zoneId:z.id,layout:z.layout,lineOrder,signature:arrangementSignature(z),initial:JSON.stringify([z.layout,lineOrder]),error:'',needsStandOpen:false};
   }
-  async function applyArrangement(){
-    const draft=arrangementDraft;if(!draft||arrangementInteractionBusy()||(!arrangementDirty()&&!draft.error))return false;
+  async function applyArrangement(orderJob=null,orderSnapshot=null){
+    let draft=orderJob?orderSnapshot:arrangementDraft;
+    const dirty=draft&&JSON.stringify([draft.layout,draft.lineOrder])!==draft.initial;
+    if(!draft||arrangementInteractionBusy()||orderJob&&!currentOrderSave588(orderJob)||(!dirty&&!draft.error))return false;
     orderTestConfirmation=null;
     if(arrangementNeedsStandOpen()){beginArrangement();syncArrangementControls();return false;}
     const zoneId=draft.zoneId;
@@ -1952,20 +2139,40 @@
         if(!ready.active||ready.session!==identification||nativeContext&&!ready.physicalConfirmed)throw Error(t('orderIdentificationRetry'));
       }
       // The radio wait does not grant permission to save an obsolete draft.
-      if(zoneId!==route.zoneId||draft.signature!==arrangementSignature())throw Error(t('lineSetupChanged'));
+      if(zoneId!==route.zoneId||draft.signature!==arrangementSignature()||orderJob&&!currentOrderSave588(orderJob))throw Error(t('lineSetupChanged'));
+      if(orderJob){
+        // The current immutable CAS input is captured AFTER the radio settled.
+        draft={...orderJob.draft,lineOrder:[...orderJob.draft.lineOrder]};
+        orderJob.dispatchedVersion589=orderJob.version;
+        if(JSON.stringify([draft.layout,draft.lineOrder])===draft.initial&&!draft.error){
+          if(orderJob.resumePending589)await resumeOrderPlayback589(orderJob);
+          succeeded=true;return true;
+        }
+      }
       const next=M.arrangeLines(model,zoneId,{layout:draft.layout,lineOrder:draft.lineOrder});
-      draft.error='';renderArrangement({...browsing,focus:null});
-      const saved=await persistManagement(next,{kind:'arrangeLines',zoneId,layout:draft.layout,lineOrder:[...draft.lineOrder]},draft.signature);
+      draft.error='';
+      if(!orderJob)renderArrangement({...browsing,focus:null});
+      else if(inlineOrderDrag?.isActive())orderRenderDeferred=true;
+      else renderArrangement({...arrangementBrowsing(),focus:null});
+      const saved=await persistManagement(next,{kind:'arrangeLines',zoneId,layout:draft.layout,lineOrder:[...draft.lineOrder]},draft.signature,orderJob);
       if(saved){
         model=saved;
         succeeded=true;
+        if(orderJob&&(!rebaseOrderSave588(orderJob)||!currentOrderSave588(orderJob)))throw Error(t('lineSetupChanged'));
         let canResume=!identification;
         if(identification&&orderIdentificationState?.active&&orderIdentificationState.session===identification){
           const ready=await orderIdentification.reorder(M.lineIds(model,zoneId));
           canResume=ready.active&&ready.session===identification&&ready.physicalConfirmed;
         }
+        if(orderJob&&!currentOrderSave588(orderJob))throw Error(t('lineSetupChanged'));
         if(continuousZone())selections.set(zoneId,{kind:'all'});
-        if(nativeContext&&canResume){
+        if(nativeContext&&canResume&&orderJob&&identification){
+          // Mint this DATA marker only after genuine CAS + new colour lease ACK.
+          // It cannot mint/extend the actual native arrangement lease.
+          orderJob.resumePending589={version:orderJob.dispatchedVersion589,signature:arrangementSignature(),geometry:orderGeometry588(),session:identification};
+          if(orderJob.version===orderJob.dispatchedVersion589)await resumeOrderPlayback589(orderJob);
+        }
+        else if(nativeContext&&canResume){
           // Keep the order interaction locked until the original queue has
           // actually settled. A saved CAS alone is not a lighting receipt.
           arrangementReapplyIds=sendReceiverStates(M.zoneReceivers(model,zoneId).map(r=>r.id),{remember:false});
@@ -1973,6 +2180,7 @@
           if(!liveController?.whenIdle)throw Error(t('orderResumeUnconfirmed'));
           try{await liveController.whenIdle({standId:model.receivers.find(r=>arrangementReapplyIds.includes(r.id))?.standId});}
           catch(_){throw Error(t('orderResumeCheck'));}
+          if(orderJob&&!currentOrderSave588(orderJob))throw Error(t('lineSetupChanged'));
           if(!arrangementReapplyIds.length||arrangementReapplyIds.some(id=>liveStates.get(id)?.kind!=='applied'))
             failure=t('orderResumePartial');
         }
@@ -1987,16 +2195,19 @@
       if(!arrangementPlaybackPending())arrangementReapplyIds=[];
       // Failed or uncertain requests show the last authoritative model, not
       // an unconfirmed selection. Tapping a choice again is a fresh retry.
-      if(arrangementDraft===draft){
+      if(orderJob){
+        if(orderSaveQueue588===orderJob)orderJob.error=failure;
+        if(rebaseOrderSave588(orderJob)&&currentOrderSave588(orderJob)){orderJob.error=failure;orderJob.draft.error=failure;syncArrangementControls();}
+      }else if(arrangementDraft===draft){
         if(zone()&&route.zoneId===zoneId&&(openLineSetup.has(zoneId)||spatialChoice)){
           beginArrangement();arrangementDraft.error=failure;arrangementDraft.needsStandOpen=Boolean(failure&&draft.needsStandOpen);
           if(spatialChoice&&failure)openSpatialChoices.add(zoneId);
         }
         else arrangementDraft=null;
       }
-      renderArrangement(browsing);
+      if(!orderJob)renderArrangement(browsing);
     }
-    return succeeded;
+    return succeeded&&(!orderJob||!failure);
   }
   async function chooseSpatialLayout(view,layout,{keepOpen=false}={}){
     const z=zone();if(!z||arrangementInteractionBusy())return false;
@@ -2172,7 +2383,7 @@
       const colour=orderColours.get(line.id);
       return `<li data-draft-receiver="${esc(r.id)}" data-order-item="${esc(line.id)}" data-order-position="${index+1}" data-settings-open="false" style="--identify-colour:${colour?.hex||'transparent'}" aria-label="${esc(orderText('orderPosition',{position:index+1}))} · ${esc(r.name)}${line.port?' · P'+line.port:''}">
         <span class="scope-copy"><span class="scope-option-title"><b title="${esc(r.name)}">${esc(r.name)}</b><span class="v50-order-separator" aria-hidden="true"> · </span><span class="v50-order-port">${line.port?'P'+line.port:'RGBW'}</span></span><small>${line.port?`${line.pixels} px · SPI`:'RGBW'}</small></span>
-        <button type="button" class="line-order-handle" data-order-handle aria-label="${esc(orderText('orderDragAccessible',{name,receiver:r.name,port:line.port?' · P'+line.port:''}))}" title="${esc(orderText('orderDragHint'))}" aria-describedby="ledline-order-help" ${ordered.length<2||arrangementInteractionBusy()||needsStandOpen?'disabled':''}>${icon('grip')}</button>
+        <button type="button" class="line-order-handle" data-order-handle aria-label="${esc(orderText('orderDragAccessible',{name,receiver:r.name,port:line.port?' · P'+line.port:''}))}" title="${esc(orderText('orderDragHint'))}" aria-describedby="ledline-order-help" ${ordered.length<2||orderDragBusy588()||needsStandOpen?'disabled':''}>${icon('grip')}</button>
         ${orderCardPreviewMarkup(palette[index])}
         <div class="ledline-order-tools"><div class="ledline-row-actions">
           <button class="receiver-blink order-blink-subtle" data-action="${line.port?'port-identify':'visual-identify'}" data-receiver="${esc(r.id)}" data-port="${line.port}" aria-pressed="${blinking}" aria-label="${esc(name)} · ${esc(t(blinking?'lineSetupBlinkStopAccessible':'lineSetupBlinkAccessible'))}">${icon('sun')}<span>${esc(t(blinking?'lineSetupBlinkStop':'lineSetupBlink'))}</span></button>
@@ -2180,7 +2391,7 @@
         </div></div>
       </li>`;
     }).join('');
-    return `<section class="ledline-setup card" data-order-ui="568" data-order-open="${open}" ${open?'role="dialog" aria-modal="true"':''} aria-label="${esc(t('lineSetupTitle'))}">${open?'':spatialPreviewChoice()}<button class="ledline-setup-toggle" data-action="layout" aria-label="${esc(toggleLabel)}" aria-expanded="${open}" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy">${open?`<span class="ledline-menu-label">${esc(t('lineSetupMenu'))}</span>`:''}<b>${esc(title)}</b><small id="ledline-setup-context">${esc(open?context:hint)}</small></span><span class="ledline-setup-disclosure-action">${open?`<span class="ledline-setup-close-label">${icon('close')}${esc(t('close'))}</span>`:icon('chevron')}</span></button><div class="ledline-setup-body" id="ledline-setup-body" role="region" ${open?'aria-labelledby="ledline-setup-heading" aria-describedby="ledline-setup-context"':'hidden'}>${open?`
+    return `<section class="ledline-setup card" data-order-ui="568" data-order-open="${open}" ${open?'role="dialog" aria-modal="true"':''} aria-label="${esc(t('lineSetupTitle'))}">${open?'':spatialPreviewChoice()}<button class="ledline-setup-toggle" data-action="layout" aria-label="${esc(toggleLabel)}" aria-expanded="${open}" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy">${open?`<span class="ledline-menu-label">${esc(t('lineSetupMenu'))}</span>`:''}<b>${esc(title)}</b><small id="ledline-setup-context">${esc(open?context:hint)}</small></span><span class="ledline-setup-disclosure-action">${open?`<span class="ledline-setup-close-label">${icon('close')}${esc(t('close'))}</span>`:icon('chevron')}</span></button>${orderCancelNoticeMarkup590(z)}<div class="ledline-setup-body" id="ledline-setup-body" role="region" ${open?'aria-labelledby="ledline-setup-heading" aria-describedby="ledline-setup-context"':'hidden'}>${open?`
       <div class="v50-order-dock" data-order-dock><div class="v50-order-feedback" data-order-feedback data-order-feedback-phase="${orderPreviewGesture?.zoneId===z.id?'proposal':orderMoveResult?.zoneId===z.id?'saved':'idle'}" role="status" aria-live="polite">${orderFeedbackMarkup()}</div>${orderReferenceMarkup(z,count)}</div>
       <section class="ledline-arrangement" aria-label="${esc(singleLine?title:t('lineSetupOrder'))}" aria-busy="${arrangementInteractionBusy()}"><div class="ledline-order-heading"><h3 id="ledline-setup-heading">${esc(t('v568LineColumn'))}</h3><small class="ledline-family-label">${esc(family||'')}</small></div><p class="ledline-setup-hint" id="ledline-order-help">${esc(t('v568OrderDragHint'))}</p><p class="order-recognition-status" data-order-recognition-status role="status"></p><p class="order-drop-status" role="status" aria-live="polite"></p><p data-order-apply-status role="status" ${arrangementApplying||arrangementPlaybackPending()||draft?.error||needsStandOpen?'':'hidden'}>${arrangementApplying||arrangementPlaybackPending()?esc(orderText('orderApplying')):esc(draft?.error||(needsStandOpen?orderText('orderOpenStandHint'):''))}</p><button type="button" class="button secondary full" data-order-stand-open data-action="management-stand-open" ${!arrangementInteractionBusy()&&(needsStandOpen||draft?.needsStandOpen&&draft.error)?'':'hidden'}>${esc(orderText('orderOpenStand'))}</button>
       <div class="v568-order-column-labels" aria-hidden="true"><span>${esc(t('v568PlaceColumn'))}</span><span>${esc(t('v568LineColumn'))}</span></div><div class="v50-order-lanes"><ol class="v50-order-slots" aria-hidden="true">${ordered.map((line,index)=>{const colour=palette[index];return `<li data-order-slot data-order-position="${index+1}" style="--identify-colour:${colour?.hex||'transparent'}"><span class="v50-order-slot-number">${index+1}</span><small data-slot-colour-name>${colour?esc(colourLabel(colour)):''}</small></li>`;}).join('')}</ol><ol class="ledline-draft-order">${rows}</ol></div>
@@ -2991,6 +3202,7 @@
   function render({top=false,preserveScroll=true}={}) {
     if(paletteDrag?.isActive()&&!top){paletteRenderDeferred=true;return;}
     paletteDrag?.cancel();
+    const oldSheetOpen588=!!main.querySelector('[data-order-open="true"]');
     const oldSheetScroll=main.querySelector('[data-order-open="true"]')?.scrollTop||0;
     const oldSpatialBrowsing=spatialChoiceBrowsing();
     restoreLayoutInert();
@@ -3051,6 +3263,7 @@
     const animatePage=lastRenderedMotionContext!==null&&nextMotionContext!==lastRenderedMotionContext&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     lastRenderedMotionContext=nextMotionContext;
     const focused=document.activeElement,focusKey=focused?.dataset?.id;
+    const focusedOrder588=samePresentationContext&&focused?.matches?.('[data-order-handle]')&&main.contains(focused)?{zoneId:route.zoneId,id:focused.closest('[data-order-item]')?.dataset.orderItem}:null;
     const activeEditor=samePresentationContext?UIContinuity.captureEditor(main,focused):null;
     const activeAction=samePresentationContext?UIContinuity.captureAction(document,focused):null;
     previews.clear();
@@ -3058,6 +3271,8 @@
     const zoneScreen=['controls','colour','animations','effects','animation-family','layout'].includes(route.screen);
     main.innerHTML = (zoneScreen&&zone()&&!receivers().length?renderEmptyZone:(views[route.screen] || renderStand))();
     syncLayoutModal(oldSheetScroll);
+    const orderSheet588=main.querySelector('.ledline-setup');
+    if(orderSheet588){const opened=orderSheet588.dataset.orderOpen==='true';orderSheet588.dataset.orderMotion588=opened===oldSheetOpen588?'none':opened?'enter':'exit';}
     if(standPresentationId===stand()?.id&&route.screen==='stand')main.querySelector('.overview-heading')?.insertAdjacentHTML('afterend',
       `<p class="stand-connection-hint" data-stand-presentation-status role="status" style="margin:0 0 14px;font-size:12px;opacity:.7">${esc(standPresentationMessage())}</p>`);
     if(route.screen==='stand'&&stand()&&standSharingAvailable&&standConnectionState.status==='connected'){
@@ -3199,6 +3414,10 @@
       updateControlPreviewDensity();
       if(activeEditor)UIContinuity.restoreEditor(main,activeEditor);
       else if(!UIContinuity.restoreCapturedAction(document,activeAction)&&focusKey)document.querySelector(`[data-order-receiver="${CSS.escape(focusKey)}"] .order-handle`)?.focus({preventScroll:true});
+      if(focusedOrder588?.id&&route.zoneId===focusedOrder588.zoneId&&!document.hidden&&openLineSetup.has(route.zoneId)){
+        const handles=[...main.querySelectorAll(`[data-order-item="${CSS.escape(focusedOrder588.id)}"] [data-order-handle]`)];
+        if(handles.length===1&&!handles[0].disabled&&!handles[0].closest('[hidden],[inert]'))handles[0].focus({preventScroll:true});
+      }
     }
     if(openSpatialChoices.has(zone()?.id))syncSpatialChoiceDialog(oldSpatialBrowsing);
     syncOrderTutorial();
@@ -4422,7 +4641,7 @@
   function refreshSuspendedSetup(view){
     if(route.screen!=='receiver-add'&&view?.draft?.receiver===null)onboarding.restore(view.draft);
   }
-  async function persistManagement(next,operation,expectedZoneSignature) {
+  async function persistManagement(next,operation,expectedZoneSignature,orderJob=null) {
     if(localStandConcept()){
       // A concept edits only its receiver-less local graph. It is never a
       // central config, native Owner view or successful device save.
@@ -4432,7 +4651,8 @@
     if(managementBusy)return null;
     managementBusy=true;
     const controls=Array.from(document.querySelectorAll('#main button,#main input,#main select,#navigation button,#effect-dialog button,#effect-dialog input'),el=>({el,disabled:el.disabled}));
-    controls.forEach(({el})=>{el.disabled=true;});
+    const localOrderOnly=currentOrderSave588(orderJob)&&operation?.kind==='arrangeLines'&&operation.zoneId===orderJob.zoneId&&operation.layout===orderJob.layout;
+    controls.forEach(({el})=>{if(!localOrderOnly||!el.matches('[data-order-handle]')&&!orderPanelCloseRequest589(el))el.disabled=true;});
     const dialog=document.getElementById('effect-dialog'),host=dialog.open?document.getElementById('effect-dialog-content'):main;
     host.querySelector('[data-action="management-stand-open"]')?.remove();
     const isArrangement=['arrange','arrangeLines'].includes(operation?.kind);
@@ -4571,7 +4791,7 @@
       instruction.dataset.guidePlaying='false';requestAnimationFrame(()=>{if(instruction.isConnected)requestAnimationFrame(()=>{if(instruction.isConnected)instruction.dataset.guidePlaying='true';});});return;
     }
     if(button.dataset.action==='pin-login-cancel'&&pinLoginBusy){pinRecoveryAbort?.abort();return;}
-    if(managementBusy||arrangementApplying||pinProtectionBusy||pinLoginBusy)return;
+    if(pinProtectionBusy||pinLoginBusy||(managementBusy||arrangementApplying)&&!orderPanelCloseRequest589(button))return;
     const action=button.dataset.action,id=button.dataset.id;
     // Closing a presentation-only chooser needs no receiver connection.
     // Keep it available if a saved stand goes offline while this sheet is open.
@@ -4658,7 +4878,7 @@
       if(action==='layout'||action==='line-setup-open'){
         if(!zone()||!receivers().length)return;
         const closing=action==='layout'&&openLineSetup.has(route.zoneId);
-        if(closing){cancelOrderTest();openLineSetup.delete(route.zoneId);openLineSettings.clear();arrangementDraft=null;orderColours.clear();void orderIdentification?.close();}
+        if(closing){const closingZone=route.zoneId,closed=await closeOrderPanel589();if(closed?.closed!==true||closed.presentationEpoch!==orderSaveEpoch588||openLineSetup.has(closingZone)||route.zoneId!==closingZone||document.hidden)return;}
         else {openLineSetup.add(route.zoneId);beginArrangement();beginOrderColours();}
         renderArrangement();
         // Safari can anchor the collapsed summary behind the sticky preview
@@ -5392,46 +5612,36 @@
   },true);
   async function moveOrderLine({id,toIndex,trusted=false}){
     const draft=arrangementDraft;
-    if(!draft||!openLineSetup.has(route.zoneId)||draft.zoneId!==route.zoneId||arrangementInteractionBusy()||arrangementNeedsStandOpen()){orderPreviewGesture=null;syncOrderFeedback();return syncArrangementControls();}
+    if(!draft||!openLineSetup.has(route.zoneId)||draft.zoneId!==route.zoneId||orderDragBusy588()||arrangementNeedsStandOpen()){orderPreviewGesture=null;syncOrderFeedback();return syncArrangementControls();}
     if(draft.signature!==arrangementSignature()){orderPreviewGesture=null;return renderArrangement();}
     const from=draft.lineOrder.indexOf(id);
     if(from<0||toIndex<0||toIndex>=draft.lineOrder.length||from===toIndex){orderPreviewGesture=null;syncOrderFeedback();paint(performance.now()/1000,{orderFeedback:true});return;}
     [draft.lineOrder[from],draft.lineOrder[toIndex]]=[draft.lineOrder[toIndex],draft.lineOrder[from]];
-    const moving=orderPreviewGesture;let saved=false;
-    try{saved=await applyArrangement();}finally{orderPreviewGesture=null;}
-    if(saved)window.LightningInterfaceHaptics?.emit?.('success','order-drop',{confirmed:true,userInitiated:trusted});
-    if(saved&&moving&&moving.id===id){
-      orderMoveResult={...moving,saved:true,toIndex};syncOrderFeedback();
-      const landed=main.querySelector(`[data-order-item="${CSS.escape(id)}"]`);landed?.setAttribute('data-order-settled','true');
-      const targetColour=(orderPositionColours.get(route.zoneId)||[])[toIndex]||orderColours.get(id);
-      if(landed&&targetColour)landed.style.setProperty('--order-drag-colour',targetColour.hex);
-      if(landed){
-        const sheet=landed.closest('[data-order-open="true"]'),bounds=landed.getBoundingClientRect();
-        if(sheet){
-          const header=sheet.querySelector(':scope>.ledline-setup-toggle');
-          const dock=sheet.querySelector('[data-order-dock]');
-          const visibleTop=Math.max(sheet.getBoundingClientRect().top,header?.getBoundingClientRect().bottom||0,dock?.getBoundingClientRect().bottom||0)+12;
-          const visibleBottom=Math.min(innerHeight,sheet.getBoundingClientRect().bottom)-16;
-          if(bounds.top<visibleTop)sheet.scrollTop+=bounds.top-visibleTop;
-          else if(bounds.bottom>visibleBottom)sheet.scrollTop+=bounds.bottom-visibleBottom;
-        }
-      }
-      orderMoveTimer=setTimeout(()=>{orderMoveTimer=null;orderMoveResult=null;landed?.removeAttribute('data-order-settled');syncOrderFeedback();},3200);
-    }else {orderMoveResult=null;syncOrderFeedback();}
+    const moving=orderPreviewGesture;orderPreviewGesture=null;draft.error='';
+    let job=orderSaveQueue588;
+    if(!currentOrderSave588(job)){
+      job={epoch:orderSaveEpoch588,standId:stand().id,zoneId:route.zoneId,layout:zone().layout,geometry:orderGeometry588(),session:orderIdentificationState?.active?orderIdentificationState.session:null,draft,version:0,confirmedVersion:0,invalid:false,error:'',flight:null};
+      orderSaveQueue588=job;
+    }
+    job.version++;job.trusted=trusted;job.latest=moving&&moving.id===id?{...moving,toIndex,previewOrder:[...draft.lineOrder]}:null;
+    orderMoveResult=job.latest?{...job.latest,saved:false}:null;
+    // Update both exchanged cards now, independently of radio/CAS latency.
+    // The authoritative model is untouched until the original pipeline ACK.
+    renderArrangement({...arrangementBrowsing(),focus:null});syncOrderFeedback();syncArrangementControls();
     const handle=main.querySelector(`[data-order-item="${CSS.escape(id)}"] [data-order-handle]`);
     handle?.focus({preventScroll:true});
-    const physical=M.zoneLedlines(model,route.zoneId).find(line=>line.id===id),receiver=model.receivers.find(r=>r.id===physical?.receiverId);
-    const status=main.querySelector('.order-drop-status');if(status)status.textContent=saved?window.LightningV50OrderTexts.t('orderDropSaved',uiPreferences.preferences.language,{name:receiver?.name||window.LightningV50OrderTexts.t('orderLineFallback',uiPreferences.preferences.language),port:physical?.port?' · P'+physical.port:'',position:toIndex+1}):'';
+    if(!job.flight)job.flight=Promise.resolve().then(()=>drainOrderSave588(job));
+    return job.flight;
   }
   inlineOrderDrag=window.LightningLedlineOrderDrag?.install({
     root:document,
-    getItems:()=>!arrangementInteractionBusy()&&!arrangementNeedsStandOpen()&&openLineSetup.has(route.zoneId)&&arrangementDraft?.zoneId===route.zoneId?[...arrangementDraft.lineOrder]:[],
+    getItems:()=>!orderDragBusy588()&&!arrangementNeedsStandOpen()&&openLineSetup.has(route.zoneId)&&arrangementDraft?.zoneId===route.zoneId?[...arrangementDraft.lineOrder]:[],
     getRowId:row=>row.dataset.orderItem,
     getSlotElements:()=>[...main.querySelectorAll('[data-order-slot]')],
     getScrollBounds:()=>({top:openLineSetup.has(route.zoneId)?Math.max(0,main.querySelector('[data-order-dock]')?.getBoundingClientRect().bottom||80)+8:Math.max(0,main.querySelector('.control-dock-surface')?.getBoundingClientRect().bottom||0)+8,bottom:openLineSetup.has(route.zoneId)?innerHeight-16:Math.min(innerHeight,document.getElementById('navigation')?.getBoundingClientRect().top||innerHeight)-8}),
     getScrollTop:()=>main.querySelector('[data-order-open="true"]')?.scrollTop??window.scrollY,
     scrollBy:delta=>{const sheet=main.querySelector('[data-order-open="true"]');if(sheet)sheet.scrollTop+=delta;else window.scrollBy({top:delta,left:0,behavior:'instant'});},
-    onActivity:()=>{if(!arrangementInteractionBusy()&&orderIdentificationState?.active)void orderIdentification?.interaction();},
+    onActivity:()=>{if(!orderSaveQueue588&&!arrangementInteractionBusy()&&orderIdentificationState?.active)void orderIdentification?.interaction();},
     message:(key,params)=>window.LightningV50OrderTexts.t(key,uiPreferences.preferences.language,params),
     onStatus:text=>{const status=main.querySelector('.order-drop-status');if(status)status.textContent=text;},
     onFeedback:feedback=>{
@@ -5445,7 +5655,7 @@
       syncOrderFeedback();paint(performance.now()/1000,{orderFeedback:true});
     },
     onInteraction:active=>{
-      if(active&&!arrangementInteractionBusy()){if(orderIdentificationState?.active)void orderIdentification?.interaction();else beginOrderColours();}
+      if(active&&!orderSaveQueue588&&!arrangementInteractionBusy()){if(orderIdentificationState?.active)void orderIdentification?.interaction();else beginOrderColours();}
       if(!active&&orderRenderDeferred){orderRenderDeferred=false;queueMicrotask(()=>renderArrangement());}
       if(!active)requestAnimationFrame(()=>syncOrderSlots());
     },
@@ -5481,7 +5691,7 @@
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')invalidatePinProtectionRead();});
   window.addEventListener('online',()=>{if(pinProtection?.status==='pending'||pinProtectionPendingCheckStandId||pinProtectionNeedsRefresh())resumePinConnection();});
   window.addEventListener('focus',resumePinConnection);document.addEventListener('visibilitychange',resumePinConnection);
-  window.addEventListener('offline',()=>{cancelOrderTest();void orderIdentification?.offline();});
+  window.addEventListener('offline',()=>{retireOrderSave588();cancelOrderTest();void orderIdentification?.offline();});
   window.addEventListener('focus',wakeCentralStand);
   window.addEventListener('lightning:native-active',wakeCentralStand);
   window.addEventListener('online',wakeCentralStand);
@@ -5490,11 +5700,11 @@
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&standLinkPending)void consumeStandShareLink();});
   document.addEventListener('visibilitychange',()=>{if(!simpleStandMode||!standSession)return;if(document.hidden)standSession.pause();else wakeCentralStand();});
   window.addEventListener('pagehide',()=>standSession?.pause());
-  window.addEventListener('pagehide',()=>{cancelOrderTest();void orderIdentification?.hide();});
+  window.addEventListener('pagehide',()=>{retireOrderSave588();cancelOrderTest();void orderIdentification?.hide();});
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate587',hardwareEnabled:false});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();void orderIdentification?.hide();}});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate591',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

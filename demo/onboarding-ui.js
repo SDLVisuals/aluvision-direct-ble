@@ -149,7 +149,7 @@
     return {code,message:messages[code]||'Afronden is niet bevestigd. Controleer je standwifi en probeer opnieuw. Stel geen tweede stand in.'};
   }
 
-  function create({draftApi=window.LightningOnboardingDraft,visual=window.LightningReceiverVisual,pixelSetup=window.LightningPixelSetup,pixelsPerMeter,services={},getModel,onComplete=()=>{},onManage=null,onExit=()=>{},allowPinLogin=false,automaticFirstReceiver=()=>false,firstStandAccessRequired=()=>false,onFirstStandAccess=null,allowLocalConcept=()=>false,onPreserveLocalConcept=null}={}){
+  function create({draftApi=window.LightningOnboardingDraft,visual=window.LightningReceiverVisual,pixelSetup=window.LightningPixelSetup,pixelsPerMeter,services={},getModel,onComplete=()=>{},onManage=null,onExit=()=>{},allowPinLogin=false,automaticFirstReceiver=()=>false,firstStandAccessRequired=()=>false,onFirstStandAccess=null,allowLocalConcept=()=>false,onPreserveLocalConcept=null,onContinueLocalConcept=null}={}){
     if(!draftApi||!pixelSetup||typeof getModel!=='function')throw Error('Onboarding dependencies are required.');
     const pixelLimits=pixelSetup.pixelLimits({pixelsPerMeter});
     let draft=null,container=null,results=[],searchState='idle',receiverFilter='all',error='',notice='',busy=false,operation=0;
@@ -250,6 +250,30 @@
     }
     function canContinueLocalConcept(){return !localConceptPending&&localConceptEligible();}
     function firstStandSetup587(){return origin==='stand'&&!receiverMove&&!draft.mainReceiverId&&(draft.stage==='stand'||draft.stand?.isNew===true);}
+    function canOfferReceiversLater590(){
+      // Only a names-only first stand. A read-only search may be cancelled;
+      // selected/uncertain receivers, identification and private intents cannot.
+      const base=getModel();
+      return !document.hidden&&firstStandSetup587()&&draft.stage==='receiver'&&allowLocalConcept()===true&&typeof onContinueLocalConcept==='function'&&
+        !firstAccess&&!busy&&!draftSaving&&!pendingChoices&&!localConceptPending&&!managementBusy&&!saveFailed&&!parking&&!parkPending&&!resumeSelection&&!exiting&&
+        !zoneNameOpen&&!zoneRemoval&&!zoneRename&&!receiverMove&&!actionAbort&&!securityReceiptRef&&!finalReceiptRef&&!securityUncertain&&!finalizationStarted&&!registrationPending&&!rejoinRunning&&!automaticFinalizing&&
+        identifyPending.size===0&&identifying.size===0&&parkedChoices.size===0&&parkedTransactions.size===0&&
+        base?.demo===false&&['stands','receivers','scenes','presets'].every(key=>Array.isArray(base[key])&&base[key].length===0)&&
+        draft.role==='main'&&draft.mainReceiverId===null&&draft.stand?.isNew===true&&draft.receiver===null&&draft.outputs.length===0&&draft.port===null&&draft.zoneId===null&&
+        !draft.cancelled&&draft.membership==='pending'&&draft.security.status==='not-started'&&draft.security.phase==='idle'&&
+        ['standIds','zoneIds','receivers'].every(key=>draft.context[key].length===0)&&typeof services.persistDraft==='function'&&typeof services.parkDraft==='function';
+    }
+    function receiversLaterMarkup590(){return canOfferReceiversLater590()?`<div class="onboarding-later-action">${button('receivers-later',tx('Receivers later toevoegen'),'class="button secondary full"')}</div>`:'';}
+    async function continueReceiversLater590(){
+      if(!canOfferReceiversLater590())return;
+      // Keep the existing local-concept admission restricted to stand/zones.
+      // Normal BACK is saved through the same immutable draft/CAS path first.
+      cancelSearch();const owner=container,token=operation;
+      if(!(await saveChoices([{type:'BACK'}],()=>{},{top:false})))return;
+      if(document.hidden||container!==owner||operation!==token||draft.stage!=='zones'||!canContinueLocalConcept())return;
+      try{await onContinueLocalConcept();}
+      catch(_){if(container===owner&&operation===token){notice=tx('Bewaren is nog niet bevestigd. Je namen blijven staan. Probeer opnieuw.');refreshNotice();}}
+    }
     function standSetupProgress587(){
       if(!firstStandSetup587())return '';
       const current=draft.stage==='stand'?0:draft.stage==='zones'?1:2,done=draft.stage==='done';
@@ -257,11 +281,11 @@
     }
     async function continueLocalConcept(){
       if(!canContinueLocalConcept())throw Object.assign(Error(),{code:'LOCAL_CONCEPT_BLOCKED'});
-      const retained=draft,token=operation,base=canonical(getModel());
+      const retained=draft,owner=container,token=operation,base=canonical(getModel()),choices=canonical(draft);
       let next=window.LightningModel.localStand(retained.stand.id,retained.stand.name);
       for(const zone of retained.zones)next=window.LightningModel.createZone(next,retained.stand.id,{id:zone.id,name:zone.name});
       localConceptPending=true;
-      const current=()=>draft===retained&&operation===token&&canonical(getModel())===base&&localConceptEligible();
+      const current=()=>!document.hidden&&container===owner&&draft===retained&&canonical(draft)===choices&&operation===token&&canonical(getModel())===base&&localConceptEligible();
       try{
         // The non-secret concept is durably read back before the active local
         // draft is cleared. A crash on either side retains names and IDs.
@@ -806,7 +830,7 @@
           const backLabel=!draft.stand.isNew?tx('← Receiver toevoegen'):tx('← Terug');
           return `<p class="onboarding-task-hint">${escape(t('setupZonesHint','Maak zones voor de plekken in je stand. Daarna voeg je receivers toe.'))}</p>${setupZones({editable:true})}${zoneNameFields()}${receiverPlacement()}<div class="onboarding-actions onboarding-footer onboarding-zones-continue">${button('next',escape(t('addReceiver','Receiver toevoegen')),'disabled')}${!draft.zones.length?button('zones-later',escape(t('setupZonesLater','Zones later toevoegen')),'class="button secondary"'):''}<div class="onboarding-zones-footer-row">${button('back',backLabel,`class="button secondary" ${busy||draftSaving?'disabled':''}`)}</div></div>`;
         }
-        case 'receiver':return receiverSearchView();
+        case 'receiver':return `${receiverSearchView()}${receiversLaterMarkup590()}`;
         case 'placement':return `<p class="onboarding-task-hint">${draft.zoneChoiceRequired?tx('Je gekozen zone is niet meer beschikbaar.'):escape(tx('{type} past niet in de gekozen zone.',{type:draft.receiver.type}))} ${tx('Kies een andere zone of voeg hem zonder zone toe.')}</p><div class="onboarding-zone-list">${zoneChoices()}</div>${zoneNameOpen?`<section class="card">${nameField('onboarding-zone-name',tx('Naam van de nieuwe zone'),tx('Bijvoorbeeld: Lichttunnel'),zoneNameInput)}${button('zone-create',tx('Verder'),'disabled')}</section>`:button('zone-new',tx('＋ Nieuwe zone'),'class="button secondary"')}${button('back',tx('← Terug'),'class="button secondary"')}`;
         case 'outputs':return `${pixelSetup.renderOutputs(draft.outputs,{onboarding:true,live:services.previewCapabilities?.identifyPorts===true&&typeof services.previewPixels==='function'})}${active().length?`<p class="onboarding-hint">${escape(t('setupExtraOutputsLater','Extra uitgangen inschakelen kan later.'))}</p>`:''}${footer(tx('Volgende'),active().length===0)}`;
         case 'pixels':{
@@ -1401,6 +1425,7 @@
         },{top:false,focusDestination:true});
       }
       if(action==='save-retry')return saveChoices();
+      if(action==='receivers-later')return continueReceiversLater590();
       if(action==='receivers-list')return browseReceivers();
       const leavesPixelGuide=action==='exit'||action==='back'&&draft.stage==='outputs'||action==='next'&&draft.stage==='connection'&&!active().some(output=>output.port>draft.port);
       if(leavesPixelGuide&&['outputs','pixels','connection'].includes(draft.stage)){

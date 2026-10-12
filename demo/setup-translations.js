@@ -9,6 +9,7 @@
     ['Maak zones voor de plekken in je stand. Daarna voeg je receivers toe.','Create zones for the areas in your booth. Then add receivers.','Créez des zones pour les espaces de votre stand. Ajoutez ensuite les récepteurs.','Erstelle Zonen für die Bereiche deines Stands. Danach fügst du Receiver hinzu.'],
     ['Zones later toevoegen','Add zones later','Ajouter des zones plus tard','Zonen später hinzufügen'],
     ['Receivers later toevoegen','Add receivers later','Ajouter les récepteurs plus tard','Receiver später hinzufügen'],
+    ['Bewaren is nog niet bevestigd. Je namen blijven staan. Probeer opnieuw.','Saving is not yet confirmed. Your names remain unchanged. Please try again.','L’enregistrement n’est pas encore confirmé. Vos noms sont conservés. Réessayez.','Das Speichern ist noch nicht bestätigt. Deine Namen bleiben erhalten. Versuche es erneut.'],
     ['Zone voor deze receiver','Zone for this receiver','Zone de ce récepteur','Zone für diesen Receiver'],
     ['Zone wijzigen','Change zone','Changer de zone','Zone ändern'],
     ['Zone kiezen','Choose zone','Choisir une zone','Zone wählen'],

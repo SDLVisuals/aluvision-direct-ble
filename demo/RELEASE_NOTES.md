@@ -1,3 +1,9 @@
+## Interface-update591
+
+Ledlines omwisselen reageert direct in het voorbeeld. Alleen de twee gekozen ledlines wisselen; een volgend paar kan meteen worden gekozen. De opslag volgt gecontroleerd de nieuwste volledige volgorde. Bij het sluiten maakt de interface onderscheid tussen bevestigde opslag, eerder beëindigde herkenningskleuren en een nog onbevestigde terugkeer. De bestaande drie instelstappen blijven behouden.
+
+Deze browserdemo gebruikt uitsluitend fictieve receivers en heeft geen verbinding met echte verlichting. De optie om een lege stand voor later lokaal te bewaren blijft een functie van de echte app en wordt niet nagebootst als receiverkoppeling. Deze update bevat geen native code, receiverfirmware of nieuwe Android-app. De bestaande Android-download code27 en de bestaande publieke vormgeving blijven ongewijzigd. De demo bewijst geen fysieke reactiesnelheid, fade of synchronisatie.
+
 ## Interface-update587
 
 De instelpagina’s voor standnaam, zones en receivers gebruiken dezelfde ronde stappen1–2–3. De huidige stap is duidelijk actief, de pagina’s zijn rustiger gecentreerd en de welkomsttitel staat op twee regels. Bestaande veilige terugnavigatie blijft behouden.

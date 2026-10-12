@@ -146,7 +146,7 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate587-setup-interface-android27",
+  "revision": "V50candidate591-order-ui-android27",
   "interfaceVersion": 50,
   "interfaceBaseline": "V50 shared UI: local light intent is not presented as confirmed receiver state; compact complete six-line previews unchanged. Fictitious browser demo only. Android50.0.0/code26 adds exact firmware admission and75s native configuration budget; no receiver firmware or physical acceptance promotion.",
   "fakeReceivers": {
@@ -273,8 +273,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "b3926d964d4e6d1fd9efcd52a734beea8e65f7adc3dd29e8fac209a7357721c8",
-      "bytes": 536815
+      "sha256": "ff03f2faf907b5f8fe08b114cfff66935962d07ec3dc71417a1e836628742943",
+      "bytes": 552678
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -313,7 +313,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "57ca1fe0f56a62f7a59a80c2e8c795fa3d09599093af33c699ca03ff2b80ba36",
+      "sha256": "e2b65a13f0c558ed3a6ac3660405440db75573cf26ce1b13410afaf1f33d8d14",
       "bytes": 7445
     },
     {
@@ -408,8 +408,8 @@
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "2b6ecf2834f520899d2c62c2ac788b6d738a6b6f2d181f7252eca04577427d5e",
-      "bytes": 174526
+      "sha256": "11bf005ce3dc7bdb23295704be5b658981b5734dbd95c887454bcf2ab975a279",
+      "bytes": 177184
     },
     {
       "path": "page-interaction.css",
@@ -498,8 +498,8 @@
     },
     {
       "path": "RELEASE_NOTES.md",
-      "sha256": "1a4a4f82c02ecc53d6d31a60eb2e289ea8411c665083b762b83be453e9617726",
-      "bytes": 33905
+      "sha256": "f2070c2e9b845602e41fa987c47b2b94ff9fffb7e9451a1318f68275cb6925b8",
+      "bytes": 34814
     },
     {
       "path": "scenes.css",
@@ -518,8 +518,8 @@
     },
     {
       "path": "setup-translations.js",
-      "sha256": "d01ec1d43f1dc25cd5e730acf2a95dfa803850e83896d8ac8eae768fe5b63143",
-      "bytes": 83834
+      "sha256": "4cb6883b9021c4333e8b9b38f1ae7bec85fcc75780ed6b0aa00302b6dc24e691",
+      "bytes": 84175
     },
     {
       "path": "setup-wifi-guide.js",
@@ -2248,5 +2248,37 @@
     "physicalAcceptance": false,
     "androidDownloadRetained": 27,
     "newZeroReceiverSkipPending": true
+  },
+  "interfaceCandidate591": {
+    "candidate": 591,
+    "scope": "Three shared Web UI files only; seven established fictitious-demo adaptations retained. Native code, firmware and private persistence excluded.",
+    "sourceUIFiles": [
+      {
+        "path": "app.js",
+        "sha256": "a41bd9752fdd61a3945a5cd080c0525db498146e8f34bd06c8a587a57179d949"
+      },
+      {
+        "path": "onboarding-ui.js",
+        "sha256": "11bf005ce3dc7bdb23295704be5b658981b5734dbd95c887454bcf2ab975a279"
+      },
+      {
+        "path": "setup-translations.js",
+        "sha256": "4cb6883b9021c4333e8b9b38f1ae7bec85fcc75780ed6b0aa00302b6dc24e691"
+      }
+    ],
+    "changes": [
+      "Rapid two-item swaps retain the newest complete unsent order without moving unrelated lines",
+      "Order-panel close distinguishes saved playback, confirmed cleanup, prior already-released cleanup and unresolved outcomes",
+      "Existing 1/2/3 stand-setup circles retained; storage failure guidance translated consistently"
+    ],
+    "sourceProofScope": "Actual Web functions with declared in-memory DOM/CAS/Owner/STOP peers; no physical receiver confirmation",
+    "hardwareAccess": false,
+    "physicalAcceptance": false,
+    "androidDownloadRetained": 27,
+    "nativeReceiversLaterExcluded": true,
+    "receiversLaterReason": "Names-only native local concepts require demo=false and private persistence; no fictitious receiver membership is invented",
+    "publicCSSRetained587": true,
+    "publicCSSReason": "Only the three reviewed Web UI files are in this proposal; the separate native opacity-only CSS delta is not imported",
+    "actualMac591UIReviewPending": true
   }
 }
