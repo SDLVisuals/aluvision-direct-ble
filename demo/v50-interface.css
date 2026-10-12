@@ -265,6 +265,7 @@ html.interface-polish body .v50-welcome>.page-heading{display:flex;justify-conte
 .v50-welcome>.page-heading>div{width:100%;min-width:0}
 .v50-welcome>.page-heading .eyebrow{margin:0 0 10px;font-size:10px;line-height:1.4;letter-spacing:1.7px;color:var(--action-ink,var(--red,#ba433d))}
 html body .v50-welcome>.page-heading h1{margin:0;font-size:clamp(30px,8.4vw,40px);font-weight:750;line-height:1.14;letter-spacing:-.9px;color:var(--ink,#232830);overflow-wrap:anywhere;text-wrap:balance}
+html body .v50-welcome>.page-heading h1{white-space:pre-line;text-wrap:wrap}
 .v50-welcome>.page-heading p{max-width:31ch;margin:12px auto 0;color:var(--muted,#656b75);font-size:14px;line-height:1.6;text-wrap:balance}
 .v50-welcome>.v50-welcome-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start;gap:10px;list-style:none;padding:0;margin:28px 0 26px;color:var(--muted,#656b75)}
 .v50-welcome>.v50-welcome-steps>li{display:grid;grid-template-rows:38px auto;justify-items:center;align-content:start;gap:9px;min-width:0;margin:0;padding:0;text-align:center;font-size:13px;line-height:1.35}

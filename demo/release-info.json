@@ -146,7 +146,7 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate579-idle-light-intent-android26",
+  "revision": "V50candidate587-setup-interface-android27",
   "interfaceVersion": 50,
   "interfaceBaseline": "V50 shared UI: local light intent is not presented as confirmed receiver state; compact complete six-line previews unchanged. Fictitious browser demo only. Android50.0.0/code26 adds exact firmware admission and75s native configuration budget; no receiver firmware or physical acceptance promotion.",
   "fakeReceivers": {
@@ -273,7 +273,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "1c376913170dbb68939ff952b61d84e93e4e966e3a7945a5be59083541ef6f12",
+      "sha256": "b3926d964d4e6d1fd9efcd52a734beea8e65f7adc3dd29e8fac209a7357721c8",
       "bytes": 536815
     },
     {
@@ -313,7 +313,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "8268286e6459effe7401323e3d5dfbe4f7a5b370141b5248c90b06b7b19233eb",
+      "sha256": "57ca1fe0f56a62f7a59a80c2e8c795fa3d09599093af33c699ca03ff2b80ba36",
       "bytes": 7445
     },
     {
@@ -403,13 +403,13 @@
     },
     {
       "path": "onboarding-ui.css",
-      "sha256": "d786649a8843b4a8ccd2862f67c419a46174e8422ccf3f673eff4f99bcedea57",
-      "bytes": 70787
+      "sha256": "89828c23b73da8efaae3682970182857b4fe6b721f4cdc6bddfc36b571ca9e51",
+      "bytes": 75726
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "4ae6762d3248f2b935ccd80379d73102f09b8a96879bee21e0c9985e169e26da",
-      "bytes": 172460
+      "sha256": "2b6ecf2834f520899d2c62c2ac788b6d738a6b6f2d181f7252eca04577427d5e",
+      "bytes": 174526
     },
     {
       "path": "page-interaction.css",
@@ -498,8 +498,8 @@
     },
     {
       "path": "RELEASE_NOTES.md",
-      "sha256": "54c54f35d62fa9bdaf4b0298d104397169048c95b1eba66bb43c344d5f6a60ef",
-      "bytes": 33323
+      "sha256": "1a4a4f82c02ecc53d6d31a60eb2e289ea8411c665083b762b83be453e9617726",
+      "bytes": 33905
     },
     {
       "path": "scenes.css",
@@ -518,8 +518,8 @@
     },
     {
       "path": "setup-translations.js",
-      "sha256": "219c050fefc2984405295aab848bc66de56d7ddc04c0af8dd0e111404d0d33ac",
-      "bytes": 83710
+      "sha256": "d01ec1d43f1dc25cd5e730acf2a95dfa803850e83896d8ac8eae768fe5b63143",
+      "bytes": 83834
     },
     {
       "path": "setup-wifi-guide.js",
@@ -608,8 +608,8 @@
     },
     {
       "path": "v50-interface.css",
-      "sha256": "2c4049352bc05542a003b8d0e847d007ca02c0e3d86137b806f4a69b65e7fad2",
-      "bytes": 106099
+      "sha256": "81fd9b118f3084dc72c81cd296b218825bf92e196655aa4464a64088ff195f16",
+      "bytes": 106176
     },
     {
       "path": "v50-order-clarity.css",
@@ -643,8 +643,8 @@
     },
     {
       "path": "v50-texts.js",
-      "sha256": "34b72f9b17c04bd50e707a38aec45ab3e3a8b8ffc4749a812feda67c683be1f9",
-      "bytes": 33641
+      "sha256": "c9f98feafd8a1bf55b78ea2713432f37302a7094b9f09ab8213573266d153358",
+      "bytes": 33645
     },
     {
       "path": "vendor/v21_animation_catalog.js",
@@ -2218,5 +2218,35 @@
       "wifiPhysicallyVerified": false,
       "mobileLatencyVerified": false
     }
+  },
+  "interfaceCandidate587": {
+    "candidate": 587,
+    "sourceSHA256": "08f1b7a5281d9580a2e9c5c4abecbba4c4e7a6c9a7d904e0b095246b24a775b4",
+    "scope": "Visual stand setup only; native and receiver firmware not published",
+    "changes": [
+      "Same numbered round1/2/3 stand progress on setup pages",
+      "Centred calm stand-name, zones and receiver setup pages",
+      "Two-line welcome headline in Dutch, English, French and German",
+      "Existing safe stand exit retained"
+    ],
+    "sourceVisualFiles": 5,
+    "softwareQA": {
+      "webkitChecks": 272,
+      "phoneWidthCases": [
+        320,
+        390,
+        430
+      ],
+      "languages": [
+        "nl",
+        "en",
+        "fr",
+        "de"
+      ]
+    },
+    "hardwareAccess": false,
+    "physicalAcceptance": false,
+    "androidDownloadRetained": 27,
+    "newZeroReceiverSkipPending": true
   }
 }

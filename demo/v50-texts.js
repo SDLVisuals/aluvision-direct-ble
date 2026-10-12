@@ -3,7 +3,7 @@
   // Explicit interface keys only. Receiver/zone/stand/scene names never pass
   // through this dictionary; parameters are inserted after translation.
   const rows={
-    v50WelcomeTitle:['Jouw stand. Jouw licht.','Your stand. Your light.','Votre stand. Votre lumière.','Dein Stand. Dein Licht.'],
+    v50WelcomeTitle:['Jouw stand.\nJouw licht.','Your stand.\nYour light.','Votre stand.\nVotre lumière.','Dein Stand.\nDein Licht.'],
     v50WelcomeHint:['Geef je stand een naam, kies je zones en sluit je verlichting aan.','Name your stand, choose zones and connect your lights.','Nommez votre stand, choisissez vos zones et connectez vos éclairages.','Benenne deinen Stand, wähle Zonen und verbinde deine Beleuchtung.'],
     v50Name:['Standnaam','Stand name','Nom du stand','Standname'],
     v50SetupPending:['SETUP VERDERZETTEN','CONTINUE SETUP','CONTINUER LA CONFIGURATION','EINRICHTUNG FORTSETZEN'],

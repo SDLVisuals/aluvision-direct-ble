@@ -1,3 +1,9 @@
+## Interface-update587
+
+De instelpagina’s voor standnaam, zones en receivers gebruiken dezelfde ronde stappen1–2–3. De huidige stap is duidelijk actief, de pagina’s zijn rustiger gecentreerd en de welkomsttitel staat op twee regels. Bestaande veilige terugnavigatie blijft behouden.
+
+Dit is uitsluitend een browserdemo met fictieve receivers. Deze publicatie wijzigt geen receiverfirmware en bewijst geen fysieke verlichting of synchronisatie. De Android-download blijft de bestaande code27. De nieuwe route voor een geheel lege stand zonder receiver is nog niet afgerond.
+
 # Browserdemo V50 · interfacekandidaat579
 
 Het startscherm is rustiger gecentreerd. In normaal, tunnel en wand werken de ronde ledlinenummers en selectie op dezelfde manier, terwijl de lichtkleur zichtbaar blijft. Het voorbeeld blijft bij scrollen op dezelfde grootte staan zonder verspringen. De SPI-pixelkeuze en het groene beginpunt zijn duidelijker uitgewerkt.

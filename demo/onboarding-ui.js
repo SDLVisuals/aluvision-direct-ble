@@ -249,6 +249,12 @@
         typeof services.parkDraft==='function'&&typeof onPreserveLocalConcept==='function';
     }
     function canContinueLocalConcept(){return !localConceptPending&&localConceptEligible();}
+    function firstStandSetup587(){return origin==='stand'&&!receiverMove&&!draft.mainReceiverId&&(draft.stage==='stand'||draft.stand?.isNew===true);}
+    function standSetupProgress587(){
+      if(!firstStandSetup587())return '';
+      const current=draft.stage==='stand'?0:draft.stage==='zones'?1:2,done=draft.stage==='done';
+      return `<ol class="v50-welcome-steps onboarding-stand-steps" data-stand-progress="587" aria-label="${escape(tx('Je stand instellen'))}">${[tx('Standnaam'),tx('Zones'),tx('Receivers')].map((label,i)=>`<li class="${done||i<current?'completed':''}" aria-label="${escape(label)}${done||i<current?' · '+escape(tx('Klaar')):''}" ${!done&&i===current?'aria-current="step"':''}><b aria-hidden="true">${i+1}</b><span>${escape(label)}</span></li>`).join('')}</ol>`;
+    }
     async function continueLocalConcept(){
       if(!canContinueLocalConcept())throw Object.assign(Error(),{code:'LOCAL_CONCEPT_BLOCKED'});
       const retained=draft,token=operation,base=canonical(getModel());
@@ -586,6 +592,12 @@
       resumeSelection=null;manualRejoinSSID=null;error='';notice='';busy=false;
     }
     function receiverSetupProgress(){
+      if(firstStandSetup587()){
+        if(['stand','zones'].includes(draft.stage))return '';
+        const spi=draft.receiver?.type==='SPI',steps=spi?[tx('Zoeken'),tx('Instellen'),tx('Verbinden')]:[tx('Zoeken'),tx('Verbinden')];
+        const current=draft.stage==='receiver'?0:spi&&['placement','outputs','pixels','connection','zone'].includes(draft.stage)?1:steps.length-1;
+        return `<ol class="onboarding-receiver-phases" data-receiver-phases="587" aria-label="${escape(tx('Receiver toevoegen in stappen'))}">${steps.map((label,i)=>`<li ${draft.stage!=='done'&&i===current?'aria-current="step"':''} data-completed="${draft.stage==='done'||i<current}"><span>${escape(label)}</span></li>`).join('')}</ol>`;
+      }
       if(origin==='stand'&&automaticFirstReceiver()&&pinRequired()){
         return `<ol class="stand-simple-steps" data-onboarding-first-steps aria-label="${escape(tx("Stand instellen in drie stappen"))}"><li aria-current="step"><i>1</i><b>${escape(tx("Wifi verbinden"))}</b></li><li><i>2</i><b>${escape(tx("PIN kiezen"))}</b><small>${escape(tx("8–12 cijfers"))}</small></li><li><i>3</i><b>${escape(tx("Klaar"))}</b></li></ol>`;
       }
@@ -596,14 +608,14 @@
       return `<ol class="onboarding-setup-steps onboarding-receiver-steps" data-onboarding-receiver-steps data-step-count="${steps.length}" data-receiver-setup-type="${draft.receiver?.type||'any'}" aria-label="${escape(tx("Receiver toevoegen in stappen"))}">${steps.map((label,i)=>`<li class="${done||i<current?'completed':''}" ${!done&&i===current?'aria-current="step"':''}><span aria-hidden="true">${done||i<current?'✓':i+1}</span><b>${label}</b></li>`).join('')}</ol>`;
     }
     function heading(){
-      const firstSetup=origin==='stand'&&draft.stand?.isNew===true&&!draft.mainReceiverId;
+      const firstSetup=firstStandSetup587();
       const step=draft.stage==='stand'?1:draft.stage==='zones'?2:3;
       const connectionCardStage=draft.stage==='security'||draft.stage==='pin'&&!pinRequired()||draft.stage==='review'&&!pinRequired()&&automaticFinalizing&&busy;
       const title=draft.stage==='stand'?tx('Hoe heet je stand?'):draft.stage==='zones'?(zoneRemoval?tx('Zones beheren'):zoneRename?tx('Zone hernoemen'):receiverMove?tx('Ledline verplaatsen'):tx('Je zones')):draft.stage==='receiver'?(receiverMove?tx('Ledline verplaatsen'):busy?tx('Receiver controleren'):searchState==='searching'?tx('Receiver zoeken…'):results.length===1?tx('Receiver gevonden'):results.length>1?tx('Kies je receiver'):tx('Receiver zoeken')):automaticMain()&&draft.stage==='security'?(busy||rejoinRunning?tx('Je receiver toevoegen'):tx('Verbind opnieuw met wifi')):automaticMain()&&automaticFinalizing&&draft.stage==='review'?tx('Je receiver toevoegen'):labels[draft.stage]||tx('Receiver toevoegen');
       const receiverContext=draft.receiver&&!connectionCardStage&&!['receiver','done'].includes(draft.stage)?`<p class="onboarding-receiver-context"><b>${escape(draft.receiver.name||tx('Receiver'))}</b><span>${escape(draft.receiver.type)}</span></p>`:'';
       const returnToStand=savedStand()&&draft.stage!=='done';
-      const closeLabel=origin==='layout'?tx('Terug naar ledlines'):tx('Naar mijn stand');
-      return `<header class="onboarding-setup-header"><div><span class="onboarding-setup-label">${firstSetup?(automaticFirstReceiver()?tx('Je stand instellen'):`${tx('Stap')} ${step} · ${tx(step===1?tx('Standnaam'):step===2?tx('Zones'):tx('Verlichting aansluiten'))}`):tx('Receiver toevoegen')}</span>${draft.stand?.name&&!['stand','zones'].includes(draft.stage)?`<small class="onboarding-stand-context">${escape(draft.stand.name)}</small>`:''}</div>${returnToStand?button('exit',closeLabel,`class="button secondary back" ${origin==='layout'?'':'data-return-stand="true"'} ${draftSaving||busy&&!atomicExitEligible579()?'disabled':''}`):''}</header>${receiverSetupProgress()}<header class="onboarding-heading"><h1>${tx(title)}</h1>${receiverContext}</header>${!connectionCardStage&&!['stand','zones','receiver','placement','outputs','done'].includes(draft.stage)?zoneContext():''}`;
+      const closeLabel=origin==='layout'?tx('Terug naar ledlines'):draft.stage==='receiver'&&draft.receiver===null?tx('Receivers later toevoegen'):tx('Naar mijn stand');
+      return `<header class="onboarding-setup-header"><div><span class="onboarding-setup-label">${firstSetup?tx('Je stand instellen'):tx('Receiver toevoegen')}</span>${draft.stand?.name&&!['stand','zones'].includes(draft.stage)?`<small class="onboarding-stand-context">${escape(draft.stand.name)}</small>`:''}</div>${returnToStand?button('exit',closeLabel,`class="button secondary back" ${origin==='layout'?'':'data-return-stand="true"'} ${draftSaving||busy&&!atomicExitEligible579()?'disabled':''}`):''}</header>${standSetupProgress587()}${receiverSetupProgress()}<header class="onboarding-heading"><h1>${tx(title)}</h1>${receiverContext}</header>${!connectionCardStage&&!['stand','zones','receiver','placement','outputs','done'].includes(draft.stage)?zoneContext():''}`;
     }
     function zoneVisual(index){
       return `<span class="onboarding-zone-number" aria-hidden="true">${index+1}</span>`;
@@ -831,7 +843,7 @@
       const zoneDialogWasOpen=container.querySelector('[data-onboarding-zone-dialog]')?.open===true;
       const zonePickerOpen=container.querySelector('.onboarding-destination')?.open===true||openZonePickerOnNextPaint;openZonePickerOnNextPaint=false;
       presentedStages.add(stageKey);
-      container.innerHTML=`<div class="page onboarding-page${entering?' onboarding-stage-enter':''}" data-setup-origin="${origin}" data-onboarding-stage="${draft.stage}" aria-busy="${draftSaving||busy}">${heading()}${body()}${errorBox()}</div>`;
+      container.innerHTML=`<div class="page onboarding-page onboarding-layout587${entering?' onboarding-stage-enter':''}" data-setup-origin="${origin}" data-onboarding-stage="${draft.stage}" aria-busy="${draftSaving||busy}">${heading()}${body()}${errorBox()}</div>`;
       document.title=`${container.querySelector('h1').textContent} · Aluvision Lighting`;
       if(draft.stage==='receiver'){
         const heading=container.querySelector('.onboarding-heading');
@@ -1524,36 +1536,43 @@
         // Other receivers remain ordinary selectable results in the meantime.
         if(typeof services.resumeDraft==='function'||parkedChoices.has(receiver.id)){
           const token=++operation;busy=true;error='';paintPage(false);
-          let restored=null;
+          let restored=null,restoredSelectionVerified=false;
           try{
             const view=typeof services.resumeDraft==='function'?await services.resumeDraft({standId:draft.stand.id,receiverId:receiver.id,rid:receiver.rid,fingerprint:receiver.deviceFingerprint}):{draft:parkedChoices.get(receiver.id)};
             if(token!==operation||!container)return;
             if(view?.draft?.receiver){
               const saved=draftApi.snapshot(view.draft),identity=saved.receiver;
               if(saved.stand.id!==draft.stand.id||identity.id!==receiver.id||identity.rid!==receiver.rid||identity.type!==receiver.type||receiver.deviceFingerprint&&identity.deviceFingerprint!==receiver.deviceFingerprint)throw Error('IDENTITY_MISMATCH');
-              parkedChoices.delete(receiver.id);parkedTransactions.delete(saved.transactionId);restored=saved;
+              restored=saved;
             }
           }catch(failure){if(token===operation){error=connectionFailure(failure,{viaMain:draft.role==='node'}).message;return;}}
           finally{busy=false;paintPage(false);}
           if(token!==operation||!container)return;
+          if(restored?.security.status==='not-started'&&typeof services.select==='function'){
+            // Restoring choices never restores the native selected-candidate
+            // lease. Reattest before painting a page that starts test light.
+            busy=true;notice='Receiver veilig controleren…';paintPage(false);
+            try{
+              const verified=await bounded(services.select({standId:restored.stand.id,transactionId:restored.transactionId,receiver:clone(receiver)}),50000);
+              if(token!==operation||!container)return;
+              if(!/^[A-F0-9]{64}$/.test(verified?.deviceFingerprint||'')||!['id','rid','type','deviceFingerprint'].every(key=>verified?.[key]===restored.receiver[key]))throw Object.assign(Error('IDENTITY_MISMATCH'),{code:'IDENTITY_MISMATCH'});
+              restoredSelectionVerified=true;
+            }catch(failure){if(token===operation)error=connectionFailure(failure,{viaMain:draft.role==='node'}).message;return;}
+            finally{if(token===operation){busy=false;notice='';paintPage(false);}}
+            if(token!==operation||!container)return;
+          }
           if(restored){
+            parkedChoices.delete(receiver.id);parkedTransactions.delete(restored.transactionId);
             draft=restored;securityReceiptRef=null;finalReceiptRef=null;
             securityUncertain=draft.security.status!=='not-started';
             if(securityUncertain)draft=draftApi.snapshot({...clone(draft),stage:'security',security:{status:'pending',phase:'resuming'},cancelled:false});
             paintPage(true);
             if(securityUncertain)return secure(undefined,undefined,{reconcile:true,resumeFinalization:['zone','review'].includes(restored.stage)});
-            // Unclaimed choices are not fresh identity proof. A native
-            // reachability-only result must reattest the original pin before
-            // continuing its saved output/PIN screen or starting a claim.
+            // The native lease above is for this exact saved transaction;
+            // service-less local demos retain their existing data-only flow.
             busy=true;
             try{
-              let selectionVerified=receiver.canConfigure!==false;
-              if(receiver.canConfigure===false&&receiver.canVerifyIdentity){
-                const verified=await bounded(services.select({standId:draft.stand.id,transactionId:draft.transactionId,receiver:clone(receiver)}),50000);
-                if(token!==operation||!container)return;
-                if(!['id','rid','type','deviceFingerprint'].every(key=>verified?.[key]===draft.receiver[key]))throw Object.assign(Error('IDENTITY_MISMATCH'),{code:'IDENTITY_MISMATCH'});
-                selectionVerified=true;
-              }
+              const selectionVerified=restoredSelectionVerified||receiver.canConfigure!==false;
               if(draft.stage==='receiver'){
                 if(!selectionVerified)throw Object.assign(Error('IDENTITY_MISMATCH'),{code:'IDENTITY_MISMATCH'});
                 // BACK keeps exact unclaimed choices, not a completed step.

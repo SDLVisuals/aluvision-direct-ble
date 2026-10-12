@@ -527,6 +527,38 @@ body:has(.onboarding-page) .onboarding-page{gap:10px}
 .onboarding-auto-retry .button{width:100%;min-height:46px}.onboarding-auto-retry{margin-top:0}
 @keyframes onboarding-connecting{50%{opacity:.35;transform:scale(.8)}}
 @media(prefers-reduced-motion:reduce){.onboarding-auto-progress>span{animation:none}}
+
+/*587: one calm stand-level route, with unnumbered receiver task phases inside.*/
+html.interface-polish body #main .onboarding-layout587{width:100%;max-width:520px;margin-inline:auto;padding-top:24px;padding-bottom:20px;gap:18px;align-content:start}
+html.interface-polish body #main .onboarding-layout587>.onboarding-setup-header{margin:0;padding:0;min-height:24px;border:0;box-shadow:none;background:none}
+html.interface-polish body #main .onboarding-layout587 .onboarding-setup-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+html.interface-polish body #main .onboarding-layout587:has(>.onboarding-stand-steps)>.onboarding-setup-header{justify-content:center;text-align:center}
+html.interface-polish body #main .onboarding-layout587:has(>.onboarding-stand-steps)>.onboarding-setup-header>div{display:grid;justify-items:center;gap:5px}
+html.interface-polish body #main .onboarding-layout587:has(>.onboarding-stand-steps)>.onboarding-setup-header .onboarding-stand-context{display:block;margin:0;max-width:100%;overflow-wrap:anywhere}
+html.interface-polish body #main .onboarding-layout587>.onboarding-heading{padding:0;margin:0;text-align:center}
+html.interface-polish body #main .onboarding-layout587>.onboarding-heading h1:focus{outline:none}
+html.interface-polish body #main .onboarding-layout587>.onboarding-heading h1{margin:0;font-size:clamp(28px,7.6vw,36px);line-height:1.15;font-weight:750;letter-spacing:-.7px}
+html.interface-polish body #main .onboarding-layout587>.onboarding-task-hint{max-width:38ch;margin:0 auto;text-align:center;line-height:1.6;font-size:14px}
+html.interface-polish body #main .onboarding-layout587>.card{padding:22px;border-radius:22px;border:1px solid var(--line);box-shadow:none;background:var(--panel)}
+html.interface-polish body #main .onboarding-layout587 .onboarding-field{text-align:left;gap:9px;font-size:13px}
+html.interface-polish body #main .onboarding-layout587 .onboarding-field input{min-height:52px;border-radius:15px;padding:14px;font-size:16px}
+html.interface-polish body #main .onboarding-layout587 .button{min-height:50px;border-radius:17px;padding:13px 16px;box-shadow:none;line-height:1.35;font-size:14px}
+html.interface-polish body #main .onboarding-layout587 .onboarding-footer{gap:10px;padding-top:10px}
+html.interface-polish body #main .onboarding-layout587>.onboarding-stand-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;list-style:none;padding:0;margin:10px 0 8px}
+html.interface-polish body #main .onboarding-layout587>.onboarding-stand-steps>li{display:grid;grid-template-rows:38px auto;justify-items:center;align-content:start;gap:9px;min-width:0;font-size:13px;line-height:1.35;text-align:center;color:var(--muted)}
+html.interface-polish body #main .onboarding-layout587>.onboarding-stand-steps>li>b{display:grid;place-items:center;width:38px;height:38px;border:1px solid var(--line);border-radius:50%;background:var(--panel);color:var(--ink);font-size:15px;font-weight:750}
+html.interface-polish body #main .onboarding-layout587>.onboarding-stand-steps>li[aria-current=step]{color:var(--ink);font-weight:650}
+html.interface-polish body #main .onboarding-layout587>.onboarding-stand-steps>li[aria-current=step]>b{background:var(--ink);border-color:var(--ink);color:var(--panel)}
+html.interface-polish body #main .onboarding-layout587>.onboarding-stand-steps>li.completed>b{background:var(--soft);color:#287656;border-color:var(--line)}
+html.interface-polish body #main .onboarding-layout587>.onboarding-receiver-phases{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;list-style:none;padding:0;margin:0;color:var(--muted);font-size:12px;line-height:1.4}
+html.interface-polish body #main .onboarding-layout587>.onboarding-receiver-phases>li{display:flex;align-items:center;gap:8px}
+html.interface-polish body #main .onboarding-layout587>.onboarding-receiver-phases>li+li:before{content:'·';color:var(--muted)}
+html.interface-polish body #main .onboarding-layout587>.onboarding-receiver-phases>li[aria-current=step]{color:var(--ink);font-weight:650}
+html.interface-polish body #main .onboarding-layout587>.onboarding-receiver-phases>li[data-completed=true]{color:#287656}
+html.interface-polish body #main .onboarding-layout587 .onboarding-zone,.onboarding-layout587 .onboarding-name-card{border-radius:18px}
+html.interface-polish body #main .onboarding-layout587 .onboarding-later-action{padding-top:4px}
+@media(max-width:350px){html.interface-polish body #main .onboarding-layout587{padding-top:16px;gap:15px}html.interface-polish body #main .onboarding-layout587>.card{padding:18px}html.interface-polish body #main .onboarding-layout587>.onboarding-stand-steps{gap:6px}html.interface-polish body #main .onboarding-layout587>.onboarding-stand-steps>li{font-size:12px}}
+@media(max-height:650px){html.interface-polish body #main .onboarding-layout587{padding-top:12px;gap:14px}}
 @media(max-width:350px){.onboarding-wifi-return{padding:17px!important;gap:12px}.onboarding-wifi-return h2{font-size:19px}.onboarding-wifi-return-steps b{font-size:13px}.onboarding-wifi-return-steps small{font-size:11px}}
 @media(max-width:350px){.onboarding-pin-network{padding:10px 7px 8px}.onboarding-pin-network-route{grid-template-columns:35px 11px minmax(74px,1fr) 11px 57px;gap:2px}.onboarding-pin-network b{font-size:9px}.onboarding-pin-main>b{font-size:10px}.onboarding-pin-main .onboarding-product canvas{height:65px!important}}
 @media(max-height:650px){
