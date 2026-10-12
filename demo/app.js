@@ -3568,6 +3568,9 @@
       // pending footprint while a pointer is held; text must not move its wheel.
       else if(states.includes('staged')){kind='pending';}
       else if(states.includes('preview')){kind='preview';message=applied?`Deels bevestigd (${applied}/${targets.length}) · overige wijziging alleen in voorbeeld.`:'Alleen voorbeeld · deze wijziging is niet naar de receiver verstuurd.';}
+      // The model restores local light intent, not a receiver readback. An
+      // empty/new delivery ledger must not silently display it as current light.
+      else if(states.includes('idle')){kind='preview';message=applied?`Deels bevestigd (${applied}/${targets.length}) · overige lichtkeuze nog niet gecontroleerd.`:'Voorbeeld van je lichtkeuze · actuele verlichting nog niet gecontroleerd.';}
       else if(applied===targets.length){kind='applied';}
       node.dataset.state=kind;node.textContent=message;
       node.setAttribute('aria-live',failed?'polite':'off');

@@ -26,12 +26,12 @@
     "nativeAppMetadataScope": "Historical native build243 record; the earlier Pages release did not update or attest an iPhone installation."
   },
   "androidTestApp": {
-    "path": "android/aluvision-android-test-50.0.0-24-c1f06e41d6d7.apk",
+    "path": "android/aluvision-android-test-50.0.0-26-1f58de3c5649.apk",
     "size": 2735353,
-    "sha256": "c1f06e41d6d792f32f0f3794d56a6df5e3eb02ee1a970b49091f07aac7ab0cf7",
+    "sha256": "1f58de3c56494cbb3a37282ece253e48545c0ea38aabed653f77b393a24a714c",
     "packageName": "com.aluvision.lighting.android.test",
     "versionName": "50.0.0",
-    "versionCode": 24,
+    "versionCode": 26,
     "minSdk": 26,
     "targetSdk": 36,
     "mode": "receiver",
@@ -94,15 +94,24 @@
       "androidBeta": true
     },
     "validation": {
-      "scope": "Exact signed non-debuggable release APK, real emulator update/startup/reopen and public WebView capability. Separate signed test APK runs real NativeService with injected memory/synthetic authenticated peers. No physical Android/receiver/STOP proof.",
+      "scope": "Exact signed non-debuggable code26 release; real API36 emulator25-to26 update/startup/Back/empty-draft cold recovery. Source-bound real Java backend with encrypted synthetic peers; no real Android receiver/Wi-Fi/STOP proof.",
       "canonicalReleaseSourceFiles": 135,
-      "canonicalInputParitySHA256": "fc473f0a63e9694f491a47cc5fea6eb82d84e879cce6432434f87455c5c6ed0b",
+      "canonicalReleaseSourceInventorySHA256": "a16c83aecff26ea29241c222c65a54094e4cfd6d4a8159063d5f8017668b3a13",
       "emulatorInPlaceUpdateVerified": true,
       "emulatorNameFormReturnVerified": true,
-      "emulatorColdDraftRecoveryVerified": true,
-      "emulatorReleaseFacadeVerified": true,
-      "emulatorNativeCases": 100,
-      "emulatorNativeChecks": 1375,
+      "emulatorColdEmptyDraftRecoveryVerified": true,
+      "installedReleaseAPKExactBytesVerified": true,
+      "installedReleaseAssetsVerified": true,
+      "priorPackageUIDAndFirstInstallPreserved": true,
+      "sourceBoundSoftwareSuites": 5,
+      "sourceBoundSoftwareTests": 18,
+      "currentNativeSourceEncryptedFixtures": true,
+      "configureExecutionBudgetSeconds": 75,
+      "configureBudgetIncludesQueueWait": false,
+      "hardOSStorageDeadlineProven": false,
+      "uncertainOutputIntentRetained": true,
+      "receiverMayBeCommittedBeforeNativeReconciliation": true,
+      "supportedFirmwareCheckedBeforeLightSET": true,
       "testHooksInRelease": false,
       "syntheticPeersInRelease": false,
       "physicalAndroidVerified": false,
@@ -112,9 +121,9 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate579-complete-six-line-preview-android24",
+  "revision": "V50candidate579-idle-light-intent-android26",
   "interfaceVersion": 50,
-  "interfaceBaseline": "V50 current shared UI: complete compact normal previews up to six ledlines, stable sticky colour reveal. Fictitious browser demo only; signed Android50.0.0/code24. No receiver firmware or physical acceptance promotion.",
+  "interfaceBaseline": "V50 shared UI: local light intent is not presented as confirmed receiver state; compact complete six-line previews unchanged. Fictitious browser demo only. Android50.0.0/code26 adds exact firmware admission and75s native configuration budget; no receiver firmware or physical acceptance promotion.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -134,8 +143,8 @@
     },
     {
       "path": "android-download/android-download.js",
-      "sha256": "a647983f74fa748cc33479ec71b9b09d8c5488ef71ac32cc95c61c33ec81d55f",
-      "bytes": 10738
+      "sha256": "9d0bb0817728c36222599733bbdf289a547635aa997a183ba3f252aa8401a216",
+      "bytes": 11057
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
@@ -203,6 +212,11 @@
       "bytes": 2735353
     },
     {
+      "path": "android/aluvision-android-test-50.0.0-26-1f58de3c5649.apk",
+      "sha256": "1f58de3c56494cbb3a37282ece253e48545c0ea38aabed653f77b393a24a714c",
+      "bytes": 2735353
+    },
+    {
       "path": "animation-engine.js",
       "sha256": "c59ff08862a8ce5d1fb450d2992180b28f6561e85f1753d1c0f9a1bc40a2cf43",
       "bytes": 21745
@@ -229,8 +243,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "d0f5120aa64d815f12b04ead48407d43f2d8f9f1fbd145bfc3e15af455f5efa9",
-      "bytes": 536413
+      "sha256": "1c376913170dbb68939ff952b61d84e93e4e966e3a7945a5be59083541ef6f12",
+      "bytes": 536815
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -269,7 +283,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "c80ec1518002f5b53207002509e0ca9645bb206f50e8c4b7e8f54fede42e2b1b",
+      "sha256": "1b7484f56913da58d01f1c2a0458f7592e1dbb2be4ba36188ea619d5a58e80c7",
       "bytes": 7439
     },
     {
@@ -2062,5 +2076,22 @@
     "sourceSelectionCSSSHA256": "7ad6841dec0a76c120e12c6ef3463e9799e7d31da0fcb7ac0805a01ea78eef41",
     "browserProof": "Actual WebKit30 cases/1869 checks and renderer72/UI33 regressions; explicit fictional public gallery flow31 steps.",
     "physicalReceiverAcceptance": false
+  },
+  "historicalAndroid24Validation": {
+    "scope": "Exact signed non-debuggable release APK, real emulator update/startup/reopen and public WebView capability. Separate signed test APK runs real NativeService with injected memory/synthetic authenticated peers. No physical Android/receiver/STOP proof.",
+    "canonicalReleaseSourceFiles": 135,
+    "canonicalInputParitySHA256": "fc473f0a63e9694f491a47cc5fea6eb82d84e879cce6432434f87455c5c6ed0b",
+    "emulatorInPlaceUpdateVerified": true,
+    "emulatorNameFormReturnVerified": true,
+    "emulatorColdDraftRecoveryVerified": true,
+    "emulatorReleaseFacadeVerified": true,
+    "emulatorNativeCases": 100,
+    "emulatorNativeChecks": 1375,
+    "testHooksInRelease": false,
+    "syntheticPeersInRelease": false,
+    "physicalAndroidVerified": false,
+    "physicalReceiverVerified": false,
+    "wifiPhysicallyVerified": false,
+    "mobileLatencyVerified": false
   }
 }
