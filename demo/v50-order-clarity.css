@@ -168,72 +168,72 @@ body[data-theme=dark] .ledline-setup[data-order-open=true] .v50-guide-move-examp
 
 /* V50.568: fixed colour rail + compact, actionable LED line cards.
    Feedback keeps identical geometry while a drag is in flight. */
-html.interface-polish body #main .ledline-setup[data-order-ui="568"][data-order-open=true] .v50-order-dock{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"][data-order-open=true] .v50-order-dock{
   gap:6px;padding-bottom:6px;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-reference{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-reference{
   margin:0;padding:10px 12px;border-radius:17px;gap:4px;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-reference figcaption{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-reference figcaption{
   display:flex;align-items:center;gap:8px;justify-content:space-between;margin:0;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-reference figcaption>b{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-reference figcaption>b{
   font-size:13px;line-height:1.25;max-width:55%;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-target-canvas{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-target-canvas{
   height:92px!important;min-height:92px!important;max-height:92px!important;margin:0;border-radius:12px;
 }
 /* Spatial instructions need room for the actual tunnel and readable numbers.
    Normal rows keep their compact92px reference; the pinned instruction stays. */
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-reference:is([data-reference-view="tunnel"],[data-reference-view="wall"]) .v50-order-target-canvas{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-reference:is([data-reference-view="tunnel"],[data-reference-view="wall"]) .v50-order-target-canvas{
   height:168px!important;min-height:168px!important;max-height:168px!important;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-reference:is([data-reference-view="tunnel"],[data-reference-view="wall"]) .v50-order-reference-legend{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-reference:is([data-reference-view="tunnel"],[data-reference-view="wall"]) .v50-order-reference-legend{
   height:30px;min-height:30px;gap:6px;align-items:center;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-reference:is([data-reference-view="tunnel"],[data-reference-view="wall"]) .v50-order-reference-legend>li{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-reference:is([data-reference-view="tunnel"],[data-reference-view="wall"]) .v50-order-reference-legend>li{
   height:25px;min-width:34px;padding:3px 7px;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-reference:is([data-reference-view="tunnel"],[data-reference-view="wall"]) .v50-order-reference-legend>li>b{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-reference:is([data-reference-view="tunnel"],[data-reference-view="wall"]) .v50-order-reference-legend>li>b{
   font-size:12px;
 }
 @media(max-height:600px){
-  html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-reference:is([data-reference-view="tunnel"],[data-reference-view="wall"]) .v50-order-target-canvas{
+  html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-reference:is([data-reference-view="tunnel"],[data-reference-view="wall"]) .v50-order-target-canvas{
     height:136px!important;min-height:136px!important;max-height:136px!important;
   }
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-reference-legend{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-reference-legend{
   margin:0;gap:5px;min-height:20px;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-reference-direction{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-reference-direction{
   margin:0;font-size:10px;gap:6px;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-tutorial-open{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-tutorial-open{
   padding:6px 8px;font-size:11px;white-space:normal;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-feedback{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-feedback{
   display:grid;grid-template-rows:24px 36px;align-items:center;gap:0;
   height:74px;min-height:74px;max-height:74px;padding:7px 10px;overflow:hidden;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-feedback-route{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-feedback-route{
   min-width:0;font-size:13px;line-height:1.2;gap:6px;white-space:nowrap;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-feedback-route .icon{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-feedback-route .icon{
   width:18px;height:18px;flex:none;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-feedback>small{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-feedback>small{
   font-size:11px;line-height:1.3;margin:0;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-live-change{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-live-change{
   height:36px;min-height:36px;gap:2px 6px;padding:3px 7px;border-radius:8px;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-live-change .v50-order-live-caption{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-live-change .v50-order-live-caption{
   font-size:9px;line-height:1.1;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .ledline-order-heading{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .ledline-order-heading{
   display:none;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .ledline-setup-hint{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .ledline-setup-hint{
   position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden;
 }
 .v568-order-column-labels{
@@ -243,48 +243,48 @@ html.interface-polish body #main .ledline-setup[data-order-ui="568"] .ledline-se
 /* Status updates never insert a long paragraph before the draggable rows.
    Essential compact status stays visible; the untouched full explanation is
    a deliberately opened disclosure, positioned outside normal row flow. */
-html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-original-status{position:absolute!important;width:1px!important;height:1px!important;margin:0!important;padding:0!important;overflow:hidden!important;clip-path:inset(50%);white-space:nowrap}
-html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status{box-sizing:border-box;position:relative;display:grid;grid-template-columns:minmax(0,1fr) 52px;align-items:center;gap:8px;height:66px;min-height:66px;margin:8px 0;padding:6px 8px;border:1px solid var(--line,#dce0dc);border-radius:12px;background:var(--panel,#fff)}
-html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status-copy{min-width:0;display:grid;grid-template-rows:28px 22px;align-items:center;font-size:11px;line-height:1.25;color:var(--muted,#626963)}
-html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status-copy>*{margin:0;overflow:visible;white-space:normal;overflow-wrap:normal;text-overflow:clip}
-html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status-copy>b{color:var(--ink,#252729);font-size:11px;font-weight:650}
-html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status[data-order-status-kind="unconfirmed"]{border-color:var(--red,#ba433d)}
-html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status-details>summary{box-sizing:border-box;min-height:44px;padding:10px 2px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:var(--glass-solid,#eef0ee);color:var(--ink,#252729);font-size:11px;line-height:1.25;font-weight:600;list-style:none;cursor:pointer}
-html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status-details>summary::-webkit-details-marker{display:none}
-html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status-details>summary:focus-visible{outline:2px solid var(--red,#ba433d);outline-offset:2px}
-html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status-explanation{box-sizing:border-box;position:absolute;left:-1px;right:-1px;top:calc(100% + 5px);z-index:8;max-height:min(280px,40dvh);overflow:auto;padding:12px;border:1px solid var(--line,#dce0dc);border-radius:12px;background:var(--panel,#fff);box-shadow:0 8px 24px #101a2420;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
-html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status-explanation p{margin:8px 0}
-html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status-explanation button{width:100%;min-height:44px;margin:4px 0 0;padding:8px;border:1px solid var(--line,#dce0dc);border-radius:9px;font:inherit;background:var(--glass-solid,#eef0ee);color:var(--ink,#252729)}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open="true"] .v593-order-original-status{position:absolute!important;width:1px!important;height:1px!important;margin:0!important;padding:0!important;overflow:hidden!important;clip-path:inset(50%);white-space:nowrap}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open="true"] .v593-order-status{box-sizing:border-box;position:relative;display:grid;grid-template-columns:minmax(0,1fr) 52px;align-items:center;gap:8px;height:66px;min-height:66px;margin:8px 0;padding:6px 8px;border:1px solid var(--line,#dce0dc);border-radius:12px;background:var(--panel,#fff)}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open="true"] .v593-order-status-copy{min-width:0;display:grid;grid-template-rows:28px 22px;align-items:center;font-size:11px;line-height:1.25;color:var(--muted,#626963)}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open="true"] .v593-order-status-copy>*{margin:0;overflow:visible;white-space:normal;overflow-wrap:normal;text-overflow:clip}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open="true"] .v593-order-status-copy>b{color:var(--ink,#252729);font-size:11px;font-weight:650}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open="true"] .v593-order-status[data-order-status-kind="unconfirmed"]{border-color:var(--red,#ba433d)}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open="true"] .v593-order-status-details>summary{box-sizing:border-box;min-height:44px;padding:10px 2px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:var(--glass-solid,#eef0ee);color:var(--ink,#252729);font-size:11px;line-height:1.25;font-weight:600;list-style:none;cursor:pointer}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open="true"] .v593-order-status-details>summary::-webkit-details-marker{display:none}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open="true"] .v593-order-status-details>summary:focus-visible{outline:2px solid var(--red,#ba433d);outline-offset:2px}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open="true"] .v593-order-status-explanation{box-sizing:border-box;position:absolute;left:-1px;right:-1px;top:calc(100% + 5px);z-index:8;max-height:min(280px,40dvh);overflow:auto;padding:12px;border:1px solid var(--line,#dce0dc);border-radius:12px;background:var(--panel,#fff);box-shadow:0 8px 24px #101a2420;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open="true"] .v593-order-status-explanation p{margin:8px 0}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open="true"] .v593-order-status-explanation button{width:100%;min-height:44px;margin:4px 0 0;padding:8px;border:1px solid var(--line,#dce0dc);border-radius:9px;font:inherit;background:var(--glass-solid,#eef0ee);color:var(--ink,#252729)}
 .v568-order-column-labels>span:first-child{text-align:center}
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-lanes{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-lanes{
   grid-template-columns:52px minmax(0,1fr);gap:8px;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-slots>li{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-slots>li{
   min-height:116px;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-lanes [data-order-item]{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-lanes [data-order-item]{
   grid-template-columns:minmax(0,1fr) 44px!important;
   grid-template-rows:34px 18px 44px!important;column-gap:6px;row-gap:6px;
   min-height:124px!important;padding:9px 10px!important;border-radius:15px!important;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] [data-order-item] .scope-copy{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] [data-order-item] .scope-copy{
   grid-column:1;grid-row:1;align-self:center;min-width:0;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] [data-order-item] .scope-option-title{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] [data-order-item] .scope-option-title{
   display:flex;gap:4px;align-items:center;font-size:13px;line-height:1.2;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] [data-order-item] .scope-option-title>b{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] [data-order-item] .scope-option-title>b{
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] [data-order-item] .scope-copy>small{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] [data-order-item] .scope-copy>small{
   font-size:10px;line-height:1.2;margin-top:3px;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] [data-order-item] .line-order-handle{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] [data-order-item] .line-order-handle{
   grid-column:2!important;grid-row:1/4!important;align-self:stretch;
   width:44px;min-width:44px;height:100%;min-height:44px;margin:0;padding:0;border-radius:10px;
   color:var(--muted,#737970);background:var(--soft,#f0f2ef);border:1px solid var(--line,#dce0dc);
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] [data-order-item] .line-order-handle .icon{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] [data-order-item] .line-order-handle .icon{
   width:22px;height:26px;
 }
 .v568-order-card-light{
@@ -296,22 +296,22 @@ html.interface-polish body #main .ledline-setup[data-order-ui="568"] [data-order
   box-shadow:0 0 5px currentColor;
 }
 .v568-order-card-light>span{color:#d3d8d3;font-size:9px;line-height:1;flex:none}
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .ledline-order-tools{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .ledline-order-tools{
   grid-column:1!important;grid-row:3!important;min-width:0;width:100%;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .ledline-row-actions{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .ledline-row-actions{
   display:flex;align-items:stretch;gap:6px;width:100%;margin:0;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .ledline-row-actions button{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .ledline-row-actions button{
   display:inline-flex;align-items:center;justify-content:center;gap:5px;flex:1;min-width:0;
   width:auto;height:44px;min-height:44px;padding:4px 5px;border-radius:9px;
   background:var(--soft,#f2f3f1);color:var(--ink,#252729);border:1px solid var(--line,#dce0dc);
   font-size:11px;font-weight:600;line-height:1.1;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .ledline-row-actions button>span{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .ledline-row-actions button>span{
   position:static;width:auto;height:auto;overflow:visible;clip:auto;clip-path:none;white-space:normal;
 }
-html.interface-polish body #main .ledline-setup[data-order-ui="568"] .ledline-row-actions button>.icon{
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .ledline-row-actions button>.icon{
   width:16px;height:16px;flex:none;
 }
 .v568-order-settings{display:grid;gap:17px;min-width:0;margin:4px 0 0}
@@ -346,9 +346,9 @@ html.interface-polish body #main .ledline-setup[data-order-ui="568"] .ledline-ro
 .v568-tutorial-badge{display:inline-flex;align-items:center;gap:5px;color:var(--red,#ba433d);font-size:11px;font-weight:750;line-height:1;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px}
 .v568-tutorial-badge>.icon{width:13px;height:13px}
 @media(max-width:360px){
-  html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-feedback-route{font-size:11px}
-  html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-reference figcaption>b{font-size:12px}
-  html.interface-polish body #main .ledline-setup[data-order-ui="568"] [data-order-item]{padding-inline:8px!important}
-  html.interface-polish body #main .ledline-setup[data-order-ui="568"] .ledline-row-actions button{font-size:10px;gap:4px;padding-inline:3px}
+  html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-feedback-route{font-size:11px}
+  html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .v50-order-reference figcaption>b{font-size:12px}
+  html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] [data-order-item]{padding-inline:8px!important}
+  html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .ledline-row-actions button{font-size:10px;gap:4px;padding-inline:3px}
 }
 

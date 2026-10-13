@@ -146,7 +146,7 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate593-order-status-ui-android27",
+  "revision": "V50candidate595-order-fade-ui-android27",
   "interfaceVersion": 50,
   "interfaceBaseline": "V50 shared UI: local light intent is not presented as confirmed receiver state; compact complete six-line previews unchanged. Fictitious browser demo only. Android50.0.0/code26 adds exact firmware admission and75s native configuration budget; no receiver firmware or physical acceptance promotion.",
   "fakeReceivers": {
@@ -273,8 +273,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "21e0d2c25e13a5dfa1e88375e93b61025fdd42f9733c5ab0034bd9579b5e0d1f",
-      "bytes": 560033
+      "sha256": "3f8a69007b09617bcda5e7498195a523d41156ac81dfd94550abc67c10414352",
+      "bytes": 566905
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -313,7 +313,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "e89e8b97a4f4d75e82641c6185b3b3702857da2c6bee03606c85a2ba41580df5",
+      "sha256": "df2ec11a20e4cbc1662715b4bc57e35747dbc8bba795e48487c6ce81859351c9",
       "bytes": 7445
     },
     {
@@ -498,8 +498,8 @@
     },
     {
       "path": "RELEASE_NOTES.md",
-      "sha256": "0671a1faeb0d36f7999e284f5a2c5b4e93e39bb24f5c33d2cf5d3f2c186cabd9",
-      "bytes": 35750
+      "sha256": "a2c92ad1a7aab7b6e9af4e7a642773e213bff1d488e8d45136782d43d420c8dd",
+      "bytes": 36798
     },
     {
       "path": "scenes.css",
@@ -608,23 +608,23 @@
     },
     {
       "path": "v50-interface.css",
-      "sha256": "5ccec0fc3ce97705289d131d654b3886deff61bf8de7a62aa067849444a2f950",
-      "bytes": 106579
+      "sha256": "d22762429726e0396bff7e10c0c07b7dc78facc137cd36788bf972aa6ffc99cf",
+      "bytes": 108284
     },
     {
       "path": "v50-order-clarity.css",
-      "sha256": "cc66256952015eb81993aeec97958e3b0af8c62303a8b9b0d867eeb1d66cadc6",
-      "bytes": 18626
+      "sha256": "cdcbd1708ef044a6b46a19fbc437aad101aab512bc067d5d5e3a702a3bee70fc",
+      "bytes": 20207
     },
     {
       "path": "v50-order-drag.css",
-      "sha256": "5ece98a05abc7a7a9d4b1aec50622122057afa958102ecc98618992b15998555",
-      "bytes": 5695
+      "sha256": "c5db0a5cc3e4bb2254e648ed80062284c6f1ea08c0bbc71220f8877f3718d184",
+      "bytes": 6067
     },
     {
       "path": "v50-order-guide.css",
-      "sha256": "8711468801d9d0853fe178b44115f03f32e6de32f8f7203d33c485435cf44a96",
-      "bytes": 15357
+      "sha256": "8d364ca3c96f178969ad560e0d8ff9c39a57e416cd8e7424bc000439b82d672a",
+      "bytes": 15419
     },
     {
       "path": "v50-order-texts.js",
@@ -638,13 +638,13 @@
     },
     {
       "path": "v50-preview-selection.css",
-      "sha256": "8470839047fb34f8ffb4869a86029c585ee8d9cee059c35deacd08f2f413eb59",
-      "bytes": 15989
+      "sha256": "b953890dd76463563878f1b9d492d62972b00930a6e96da3799b12570f87d2a9",
+      "bytes": 15991
     },
     {
       "path": "v50-texts.js",
-      "sha256": "c9f98feafd8a1bf55b78ea2713432f37302a7094b9f09ab8213573266d153358",
-      "bytes": 33645
+      "sha256": "b8f7885fcb9658afd99b1f8738721178317c6183bcb0c51c4f0d3efa2fd5d3de",
+      "bytes": 34276
     },
     {
       "path": "vendor/v21_animation_catalog.js",
@@ -2326,5 +2326,61 @@
     "publicOpacity588Imported": true,
     "publicCSSReason": "Six exact merged593 Web presentation files imported. Existing native588 opacity-only entry220ms/exit180ms styling is now included explicitly; this is browser presentation, not physical receiver fade.",
     "actualMac593UIReviewPending": true
+  },
+  "interfaceCandidate595": {
+    "candidate": 595,
+    "scope": "Seven composed shared Web presentation files only. Existing public fake adapter, CSP network denial, Android27 download and native exclusions retained.",
+    "sourceUIFiles": [
+      {
+        "path": "app.js",
+        "sha256": "b387ff061ddd905f0d5337315c029447c678572957526517a09541be2648918f"
+      },
+      {
+        "path": "v50-interface.css",
+        "sha256": "d22762429726e0396bff7e10c0c07b7dc78facc137cd36788bf972aa6ffc99cf"
+      },
+      {
+        "path": "v50-order-clarity.css",
+        "sha256": "cdcbd1708ef044a6b46a19fbc437aad101aab512bc067d5d5e3a702a3bee70fc"
+      },
+      {
+        "path": "v50-order-drag.css",
+        "sha256": "c5db0a5cc3e4bb2254e648ed80062284c6f1ea08c0bbc71220f8877f3718d184"
+      },
+      {
+        "path": "v50-order-guide.css",
+        "sha256": "8d364ca3c96f178969ad560e0d8ff9c39a57e416cd8e7424bc000439b82d672a"
+      },
+      {
+        "path": "v50-preview-selection.css",
+        "sha256": "b953890dd76463563878f1b9d492d62972b00930a6e96da3799b12570f87d2a9"
+      },
+      {
+        "path": "v50-texts.js",
+        "sha256": "b8f7885fcb9658afd99b1f8738721178317c6183bcb0c51c4f0d3efa2fd5d3de"
+      }
+    ],
+    "changes": [
+      "Chosen light caption distinguishes the selected recipe from the visible colour/animation editor tab",
+      "Normal, tunnel and wall use the same compact rounded-square selection badges",
+      "A single ledline uses recognition/settings wording, without an automatic three-line swap tutorial",
+      "The220ms order-sheet entrance preserves its visible phase across status redraws",
+      "After the original close decision, the real old sheet/canvases fade out in a bounded inert presentation host while the fresh colour/animation editor is immediately available"
+    ],
+    "sourceProofScope": "Actual Web function/pure memory and isolated WebKit/style/canvas fixtures. No genuine native close acknowledgement, phone/touch/haptic or optical acceptance.",
+    "existingEstablishedPublicAdaptations": 7,
+    "sourceUI594V2Included": true,
+    "sourceUI595Included": true,
+    "sharedCSSScopeOnly": true,
+    "hardwareAccess": false,
+    "physicalAcceptance": false,
+    "firmwarePublished": false,
+    "nativePublished": false,
+    "androidDownloadRetained": 27,
+    "nativeReceiversLaterExcluded": true,
+    "actualPublicBrowser595UIReviewPending": true,
+    "actualPhone595UIReviewPending": true,
+    "previewCaptionOnly": true,
+    "previewCaptionScope": "Closing a fictitious/preview-only order panel uses the existing display-only caption. Real unconfirmed STOP/playback notices, their codes and authority are unchanged. No native30 source or binaries are published."
   }
 }

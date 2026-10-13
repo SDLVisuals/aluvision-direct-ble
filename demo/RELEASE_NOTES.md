@@ -1,3 +1,11 @@
+## Interface-update595
+
+Het voorbeeld maakt duidelijk welk licht is gekozen, onafhankelijk van de geopende kleur- of animatietab. Normaal, tunnel en wand gebruiken dezelfde compacte selectieknoppen. Bij één ledline gaat de uitleg over herkennen en instellen; de tutorial voor omwisselen verschijnt pas wanneer er meerdere ledlines zijn.
+
+De openingsfade van de ledlinevolgorde blijft doorlopen bij een tussentijdse schermupdate. Na het sluiten verdwijnt de bestaande weergave met de zichtbare voorbeelden rustig, terwijl de huidige kleur- of animatiepagina direct terugkomt. Verminderde beweging blijft gerespecteerd. Dit is uitsluitend een overgang van de interface, geen bewijs van een fade op echte verlichting.
+
+Deze browserdemo gebruikt twintig fictieve receivers en kan geen echte verlichting bedienen. Er wordt geen native code, receiverfirmware of nieuwe Android-app gepubliceerd. De bestaande Android-download code27 blijft exact behouden. Fysieke reactiesnelheid, synchronisatie en ledlicht-fades worden niet door deze demo bevestigd.
+
 ## Interface-update593
 
 De animatiekiezer benoemt duidelijk de gekozen animatie en of de opdracht nog wordt verstuurd of onbevestigd is. Het zonevoorbeeld houdt een compacte vaste statusruimte. Ook bij de ledlinevolgorde staat nu één vaste statusstrook: de belangrijke korte melding blijft zichtbaar en Details geeft de volledige uitleg, zonder de lijst te laten verspringen. De bestaande rustige openings- en sluitovergang is toegevoegd aan de interface. Alle teksten zijn beschikbaar in Nederlands, Engels, Frans en Duits.

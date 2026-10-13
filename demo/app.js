@@ -430,7 +430,7 @@
       !main.querySelector('.ledline-setup[data-order-open="true"]')||document.querySelector('dialog[open]')||
       arrangementApplying||managementBusy||orderTestBusy()||inlineOrderDrag?.isActive())return false;
     if(automatic&&hasSeenOrderTutorial())return false;
-    const count=M.zoneLedlines(model,z.id).length;if(!count)return false;
+    const count=M.zoneLedlines(model,z.id).length;if(count<2)return false;
     orderTutorialReturnFocus=document.activeElement;
     orderTutorialContext={standId:stand().id,zoneId:z.id};
     dialog.dataset.tutorialVersion='568';
@@ -449,7 +449,7 @@
     return true;
   }
   function syncOrderTutorial(){
-    const z=zone(),valid=!!z&&openLineSetup.has(z.id)&&!!main.querySelector('.ledline-setup[data-order-open="true"]');
+    const z=zone(),valid=!!z&&openLineSetup.has(z.id)&&physicalLineCount()>1&&!!main.querySelector('.ledline-setup[data-order-open="true"]');
     if(orderTutorialContext&&(!valid||orderTutorialContext.zoneId!==z.id||orderTutorialContext.standId!==stand()?.id))
       closeOrderTutorial({acknowledge:false,restoreFocus:false});
     if(valid&&!orderTutorialContext&&!hasSeenOrderTutorial())openOrderTutorial({automatic:true});
@@ -537,8 +537,8 @@
     const view=spatialMode(z.layout,z),spatialReference=['tunnel','wall'].includes(view);
     const plan=orderGuide.referencePlan({count,type:z.type,view,layout:z.layout});
     const legend=plan.colours.map((colour,index)=>`<li style="--identify-colour:${C.hex(colour.rgb)}" aria-label="${esc((index+1)+' · '+window.LightningV50OrderTexts.paletteLabel(colour.colorName,uiPreferences.preferences.language))}"><span aria-hidden="true"></span><b>${index+1}</b></li>`).join('');
-    const preview=addPreview(plan.receivers,plan.layout,'v50-order-canvas v50-order-target-canvas',{...plan.options,orderTarget:true,numberLabels:true,...(spatialReference?{spatialFraming:'focus'}:{}),label:orderGuideText('referenceTitle')+' · '+orderGuideText(plan.direction)});
-    return `<figure class="v50-order-reference" data-reference-view="${view}" aria-label="${esc(orderGuideText('example'))}"><figcaption><b>${esc(t('v568OrderReference'))}</b><button type="button" class="v50-order-tutorial-open" data-action="order-tutorial-open">${icon('play')}${esc(orderGuideText('tutorialView'))}</button></figcaption>${spatialReference?`<div class="v50-spatial-reference-scroll">${preview}</div>`:preview}<ol class="v50-order-reference-legend" aria-label="${esc(orderGuideText('referenceTitle'))}">${legend}</ol><p class="v50-order-reference-direction"><span>${esc(orderGuideText(plan.direction))}</span><span>${esc(t('v568MatchReference'))}</span></p></figure>`;
+    const preview=addPreview(plan.receivers,plan.layout,'v50-order-canvas v50-order-target-canvas',{...plan.options,orderTarget:true,numberLabels:true,...(spatialReference?{spatialFraming:'focus'}:{}),label:(count===1?t('lineSetupSingle'):orderGuideText('referenceTitle'))+' · '+orderGuideText(plan.direction)});
+    return `<figure class="v50-order-reference" data-reference-view="${view}" aria-label="${esc(count===1?t('lineSetupSingle'):orderGuideText('example'))}"><figcaption><b>${esc(t(count===1?'lineSetupSingle':'v568OrderReference'))}</b>${count>1?`<button type="button" class="v50-order-tutorial-open" data-action="order-tutorial-open">${icon('play')}${esc(orderGuideText('tutorialView'))}</button>`:''}</figcaption>${spatialReference?`<div class="v50-spatial-reference-scroll">${preview}</div>`:preview}<ol class="v50-order-reference-legend" aria-label="${esc(count===1?t('v594SingleReferenceHint'):orderGuideText('referenceTitle'))}">${legend}</ol><p class="v50-order-reference-direction"><span>${esc(orderGuideText(plan.direction))}</span><span>${esc(t(count===1?'v594SingleReferenceHint':'v568MatchReference'))}</span></p></figure>`;
   }
   function syncOrderRecognition(){
     if(!main)return;
@@ -1197,7 +1197,7 @@
     const directTap=canTapLines;
     const label=t('v50LedOverview',{name:z.name,summary:total})+(selection().kind==='all'?'':' · '+t('v50ChosenScope',{name:nameOfSelection()}));
     return `<section class="control-preview-dock" data-sticky-preview="579" aria-label="${esc(t('v50OverviewControls'))}"><div class="control-dock-surface">${heading}
-      <div class="control-location-summary" aria-label="${esc(t('v50CurrentControls'))}"><span>${esc(screenLabel)}</span><span data-current-light>${esc(currentLightLabel())}</span></div>
+      <div class="control-location-summary" aria-label="${esc(t('v594ChosenLight'))}"><span>${esc(t('v594ChosenLight'))}</span><span data-current-light>${esc(currentLightLabel())}</span></div>
       <div class="preview-wrap v50-control-preview${directTap?' preview-selectable':''}${spatialPreview?' spatial-preview-wrap':''}" data-preview-layout="${previewLayout}" data-preview-complete="${!spatialPreview&&previewLayout==='stacked'&&count<=6}" style="--v50-preview-min-height:${metrics.height}px;--v50-preview-min-width:${metrics.width}px"><div class="preview-top"><div class="v50-preview-heading"><span>${spatialPreview?esc(spatialPreviewLabel):esc(t('lineSetup'+previewMode))}</span><small class="preview-summary">${esc(total)}</small></div>${previewSizePickerMarkup(controlPreviewSize,spatialPreview)}</div>${interactiveZonePreview(z,spatialPreview?'spatial-dock-preview':'',{selection:selection(),main:true,previewSize:controlPreviewSize,interactiveLines:directTap,arrangementPreview:true,lineNumbers:Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1])),...(spatialPreview?{spatialShape:spatialView,presentation:'receivers'}:{}),label:spatialPreview?`${spatialPreviewLabel} · ${z.name} · ${total}`:label})}${previewSelectionMarkup(canTapLines)}</div>
       ${animationWayfinding(screen)}<p class="live-confirmation" data-live-status="zone" role="status" aria-live="polite"></p>
     </div></section>`;
@@ -2036,7 +2036,7 @@
   function orderCancelNoticeMarkup590(z){
     const notice=orderCancelNotice590;
     return z&&notice?.zoneId===z.id&&notice.standId===stand()?.id&&!openLineSetup.has(z.id)
-      ?`<p class="order-recognition-status" data-order-resume-unconfirmed role="status" aria-live="polite">${esc(t(notice.code))}</p>`:'';
+      ?`<p class="order-recognition-status" data-order-resume-unconfirmed role="status" aria-live="polite">${esc(t(previewContext?'orderPreviewStopped':notice.code))}</p>`:'';
   }
   async function stopOrderPresentation590(close,{cancelled=false,playbackConfirmed=false}={}){
     if(!currentOrderClose589(close))return {closed:false,playbackConfirmed:false,cleanupConfirmed:false};
@@ -2134,12 +2134,12 @@
     return {kind,title,recognition,full,recognitionFull:t(recognition)};
   }
   function orderStatusMarkup593(){
-    const status=orderStatusPresentation593();
+    const status=singleLineOrderStatus594(orderStatusPresentation593());
     return `<div class="v593-order-status" data-order-status-kind="${status.kind}"><div class="v593-order-status-copy" role="status" aria-live="polite"><b data-order-compact-status>${esc(t(status.title))}</b><span data-order-compact-recognition>${esc(t('v593'+status.recognition))}</span></div><details class="v593-order-status-details"><summary aria-label="${esc(t('v593OrderDetailsAccessible'))}">${esc(t('v593OrderDetails'))}</summary><div class="v593-order-status-explanation"><b>${esc(t('v593OrderDetailsTitle'))}</b><p data-order-status-apply-detail>${esc(status.full)}</p><p data-order-status-recognition-detail>${esc(status.recognitionFull)}</p><button type="button" data-order-status-details-close>${esc(t('close'))}</button></div></details></div>`;
   }
   function syncOrderStatus593(){
     const node=main?.querySelector('.ledline-setup[data-order-open="true"] .v593-order-status');if(!node)return;
-    const status=orderStatusPresentation593();node.dataset.orderStatusKind=status.kind;
+    const status=singleLineOrderStatus594(orderStatusPresentation593());node.dataset.orderStatusKind=status.kind;
     for(const [selector,text]of [['[data-order-compact-status]',t(status.title)],['[data-order-compact-recognition]',t('v593'+status.recognition)],['[data-order-status-apply-detail]',status.full],['[data-order-status-recognition-detail]',status.recognitionFull]]){const label=node.querySelector(selector);if(label)label.textContent=text;}
   }
   // Preview receiver order while its atomic metadata update is in flight.
@@ -2147,6 +2147,12 @@
   function previewArrangement(z){
     return z&&openLineSetup.has(z.id)&&arrangementDraft?.zoneId===z.id&&
       arrangementDraft.signature===arrangementSignature(z)?arrangementDraft:null;
+  }
+  // Single-line copy is presentation only. Original pending/failure/saved
+  // authority remains exact; only a neutral idle hint is replaced.
+  function singleLineOrderStatus594(status){
+    return physicalLineCount()===1&&status.kind==='idle'
+      ?{...status,title:'lineSetupSingleHint',full:t('v594SingleOrderHint')}:status;
   }
   function beginArrangement(){
     retireOrderSave588();
@@ -2303,7 +2309,7 @@
       (closedSpatialOption||!target&&context.spatial?.zoneId===zone()?.id?main.querySelector('.spatial-choice-toggle'):target)?.focus({preventScroll:true});
     }
   }
-  function renderArrangement(context=arrangementBrowsing()){render();restoreArrangementBrowsing(context);}
+  function renderArrangement(context=arrangementBrowsing(),{orderExit595=false}={}){render({orderExit595});restoreArrangementBrowsing(context);}
   function revealLineSetup(){
     const target=main.querySelector('.ledline-setup-toggle');if(!target)return;
     revealBelowControlPreview(target,12);target.focus({preventScroll:true});
@@ -2387,13 +2393,13 @@
     const draft=arrangementDraft,lines=draft?.zoneId===z.id?draft.lineOrder:M.zoneLedlines(model,z.id).map(item=>item.id);
     const current=lines.indexOf(line.id),palette=orderPositionPalette(z,lines.length);
     const blocked=arrangementInteractionBusy()||arrangementNeedsStandOpen()||standPresentationOnly();
-    return `<fieldset class="v568-order-place-choices"><legend>${esc(t('v568ChoosePlace'))}</legend><div>${lines.map((_,index)=>`<button type="button" data-action="order-place-choice" data-id="${esc(line.id)}" data-zone="${esc(z.id)}" data-position="${index}" aria-pressed="${index===current}" aria-label="${esc(t('v568PlaceNamed',{number:index+1,colour:window.LightningV50OrderTexts.paletteLabel(palette[index].name,uiPreferences.preferences.language)}))}" style="--place-colour:${palette[index].hex}" ${blocked||index===current?'disabled':''}><b>${index+1}</b><span>${esc(window.LightningV50OrderTexts.paletteLabel(palette[index].name,uiPreferences.preferences.language))}</span>${index===current?icon('check'):''}</button>`).join('')}</div></fieldset>`;
+    return `<fieldset class="v568-order-place-choices"><legend>${esc(t(lines.length===1?'v568PlaceColumn':'v568ChoosePlace'))}</legend><div>${lines.map((_,index)=>`<button type="button" data-action="order-place-choice" data-id="${esc(line.id)}" data-zone="${esc(z.id)}" data-position="${index}" aria-pressed="${index===current}" aria-label="${esc(t('v568PlaceNamed',{number:index+1,colour:window.LightningV50OrderTexts.paletteLabel(palette[index].name,uiPreferences.preferences.language)}))}" style="--place-colour:${palette[index].hex}" ${blocked||index===current?'disabled':''}><b>${index+1}</b><span>${esc(window.LightningV50OrderTexts.paletteLabel(palette[index].name,uiPreferences.preferences.language))}</span>${index===current?icon('check'):''}</button>`).join('')}</div></fieldset>`;
   }
   function orderLineSettingsMarkup(z,line,receiver){
     const index=(arrangementDraft?.lineOrder||[]).indexOf(line.id),palette=orderPositionPalette(z,physicalLineCount());
     const blocked=arrangementInteractionBusy()||arrangementNeedsStandOpen()||standPresentationOnly();
     const action=(name,label,glyph,extra='')=>`<button type="button" class="v568-order-setting-action" data-action="${name}" data-id="${esc(receiver.id)}" ${extra} ${blocked?'disabled':''}>${icon(glyph)}<span>${esc(t(label))}</span>${icon('chevron')}</button>`;
-    return `<section class="v568-order-settings" data-order-line-settings data-order-line-id="${esc(line.id)}" data-zone="${esc(z.id)}" data-signature="${esc(arrangementSignature(z))}"><div class="v568-order-settings-identity"><span>${esc(receiver.name)}${line.port?' · P'+line.port:''}</span><small>${line.port?line.pixels+' px · SPI':'RGBW'}</small>${orderCardPreviewMarkup(palette[Math.max(0,index)])}</div>${orderPlaceChoicesMarkup(z,line)}<div class="v568-order-setting-actions">${receiver.type==='SPI'?action('receiver-pixel-setup','v568PixelsDirection','sliders',`data-ports="${line.port}"`):''}<div class="v568-receiver-action-heading">${esc(t('v568ReceiverAllOutputs'))}</div>${action('receiver-rename','v568ReceiverName','edit')}${action('receiver-move','v568ChangeZone','zones')}</div><button type="button" class="button secondary full" data-action="effect-dialog-close">${esc(t('v568ReturnOrder'))}</button></section>`;
+    return `<section class="v568-order-settings" data-order-line-settings data-order-line-id="${esc(line.id)}" data-zone="${esc(z.id)}" data-signature="${esc(arrangementSignature(z))}"><div class="v568-order-settings-identity"><span>${esc(receiver.name)}${line.port?' · P'+line.port:''}</span><small>${line.port?line.pixels+' px · SPI':'RGBW'}</small>${orderCardPreviewMarkup(palette[Math.max(0,index)])}</div>${orderPlaceChoicesMarkup(z,line)}<div class="v568-order-setting-actions">${receiver.type==='SPI'?action('receiver-pixel-setup','v568PixelsDirection','sliders',`data-ports="${line.port}"`):''}<div class="v568-receiver-action-heading">${esc(t('v568ReceiverAllOutputs'))}</div>${action('receiver-rename','v568ReceiverName','edit')}${action('receiver-move','v568ChangeZone','zones')}</div><button type="button" class="button secondary full" data-action="effect-dialog-close">${esc(t(physicalLineCount()===1?'v594SingleReturn':'v568ReturnOrder'))}</button></section>`;
   }
   function openOrderLineSettings(id){
     const z=zone();if(!z||!openLineSetup.has(z.id)||arrangementDraft?.zoneId!==z.id||arrangementDraft.signature!==arrangementSignature(z))return;
@@ -2408,7 +2414,7 @@
     const z=zone(),open=openLineSetup.has(z.id);
     if(open&&(!arrangementDraft||arrangementDraft.zoneId!==z.id||(!arrangementApplying&&arrangementDraft.signature!==arrangementSignature(z))))beginArrangement();
     const draft=open?arrangementDraft:null,needsStandOpen=arrangementNeedsStandOpen();
-    const count=physicalLineCount(),singleLine=count===1,title=t(open?'v50OrderTitle':singleLine?'lineSetupSingle':'lineSetupOrient'),hint=t(singleLine?'lineSetupSingleHint':'lineSetupOrientHint');
+    const count=physicalLineCount(),singleLine=count===1,title=t(open?singleLine?'lineSetupSingle':'v50OrderTitle':singleLine?'lineSetupSingle':'lineSetupOrient'),hint=t(singleLine?'lineSetupSingleHint':'lineSetupOrientHint');
     const summary=t('lineSetup'+arrangementModeKey(z.layout,z))+' · '+t(count===1?'scopeCountOne':'scopeCountMany',{count});
     const lineCount=t(count===1?'scopeCountOne':'scopeCountMany',{count});
     const context=t('lineSetupOpenContext',{zone:z.name,count:lineCount});
@@ -2422,7 +2428,7 @@
       const colour=orderColours.get(line.id);
       return `<li data-draft-receiver="${esc(r.id)}" data-order-item="${esc(line.id)}" data-order-position="${index+1}" data-settings-open="false" style="--identify-colour:${colour?.hex||'transparent'}" aria-label="${esc(orderText('orderPosition',{position:index+1}))} · ${esc(r.name)}${line.port?' · P'+line.port:''}">
         <span class="scope-copy"><span class="scope-option-title"><b title="${esc(r.name)}">${esc(r.name)}</b><span class="v50-order-separator" aria-hidden="true"> · </span><span class="v50-order-port">${line.port?'P'+line.port:'RGBW'}</span></span><small>${line.port?`${line.pixels} px · SPI`:'RGBW'}</small></span>
-        <button type="button" class="line-order-handle" data-order-handle aria-label="${esc(orderText('orderDragAccessible',{name,receiver:r.name,port:line.port?' · P'+line.port:''}))}" title="${esc(orderText('orderDragHint'))}" aria-describedby="ledline-order-help" ${ordered.length<2||orderDragBusy588()||needsStandOpen?'disabled':''}>${icon('grip')}</button>
+        <button type="button" class="line-order-handle" data-order-handle aria-label="${esc(ordered.length===1?t('lineSetupSingle'):orderText('orderDragAccessible',{name,receiver:r.name,port:line.port?' · P'+line.port:''}))}" title="${esc(ordered.length===1?t('lineSetupSingleHint'):orderText('orderDragHint'))}" aria-describedby="ledline-order-help" ${ordered.length<2||orderDragBusy588()||needsStandOpen?'disabled':''}>${icon('grip')}</button>
         ${orderCardPreviewMarkup(palette[index])}
         <div class="ledline-order-tools"><div class="ledline-row-actions">
           <button class="receiver-blink order-blink-subtle" data-action="${line.port?'port-identify':'visual-identify'}" data-receiver="${esc(r.id)}" data-port="${line.port}" aria-pressed="${blinking}" aria-label="${esc(name)} · ${esc(t(blinking?'lineSetupBlinkStopAccessible':'lineSetupBlinkAccessible'))}">${icon('sun')}<span>${esc(t(blinking?'lineSetupBlinkStop':'lineSetupBlink'))}</span></button>
@@ -2432,7 +2438,7 @@
     }).join('');
     return `<section class="ledline-setup card" data-order-ui="568" data-order-open="${open}" ${open?'role="dialog" aria-modal="true"':''} aria-label="${esc(t('lineSetupTitle'))}">${open?'':spatialPreviewChoice()}<button class="ledline-setup-toggle" data-action="layout" aria-label="${esc(toggleLabel)}" aria-expanded="${open}" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy">${open?`<span class="ledline-menu-label">${esc(t('lineSetupMenu'))}</span>`:''}<b>${esc(title)}</b><small id="ledline-setup-context">${esc(open?context:hint)}</small></span><span class="ledline-setup-disclosure-action">${open?`<span class="ledline-setup-close-label">${icon('close')}${esc(t('close'))}</span>`:icon('chevron')}</span></button>${orderCancelNoticeMarkup590(z)}<div class="ledline-setup-body" id="ledline-setup-body" role="region" ${open?'aria-labelledby="ledline-setup-heading" aria-describedby="ledline-setup-context"':'hidden'}>${open?`
       <div class="v50-order-dock" data-order-dock><div class="v50-order-feedback" data-order-feedback data-order-feedback-phase="${orderPreviewGesture?.zoneId===z.id?'proposal':orderMoveResult?.zoneId===z.id?'saved':'idle'}" role="status" aria-live="polite">${orderFeedbackMarkup()}</div>${orderReferenceMarkup(z,count)}</div>
-      <section class="ledline-arrangement" aria-label="${esc(singleLine?title:t('lineSetupOrder'))}" aria-busy="${arrangementInteractionBusy()}"><div class="ledline-order-heading"><h3 id="ledline-setup-heading">${esc(t('v568LineColumn'))}</h3><small class="ledline-family-label">${esc(family||'')}</small></div><p class="ledline-setup-hint" id="ledline-order-help">${esc(t('v568OrderDragHint'))}</p><p class="order-recognition-status v593-order-original-status" data-order-recognition-status aria-hidden="true"></p><p class="order-drop-status" role="status" aria-live="polite"></p><p class="v593-order-original-status" data-order-apply-status aria-hidden="true" ${arrangementApplying||arrangementPlaybackPending()||draft?.error||needsStandOpen?'':'hidden'}>${arrangementApplying||arrangementPlaybackPending()?esc(orderText('orderApplying')):esc(draft?.error||(needsStandOpen?orderText('orderOpenStandHint'):''))}</p>${orderStatusMarkup593()}<button type="button" class="button secondary full" data-order-stand-open data-action="management-stand-open" ${!arrangementInteractionBusy()&&(needsStandOpen||draft?.needsStandOpen&&draft.error)?'':'hidden'}>${esc(orderText('orderOpenStand'))}</button>
+      <section class="ledline-arrangement" aria-label="${esc(singleLine?title:t('lineSetupOrder'))}" aria-busy="${arrangementInteractionBusy()}"><div class="ledline-order-heading"><h3 id="ledline-setup-heading">${esc(t('v568LineColumn'))}</h3><small class="ledline-family-label">${esc(family||'')}</small></div><p class="ledline-setup-hint" id="ledline-order-help">${esc(t(singleLine?'lineSetupSingleHint':'v568OrderDragHint'))}</p><p class="order-recognition-status v593-order-original-status" data-order-recognition-status aria-hidden="true"></p><p class="order-drop-status" role="status" aria-live="polite"></p><p class="v593-order-original-status" data-order-apply-status aria-hidden="true" ${arrangementApplying||arrangementPlaybackPending()||draft?.error||needsStandOpen?'':'hidden'}>${arrangementApplying||arrangementPlaybackPending()?esc(orderText('orderApplying')):esc(draft?.error||(needsStandOpen?orderText('orderOpenStandHint'):''))}</p>${orderStatusMarkup593()}<button type="button" class="button secondary full" data-order-stand-open data-action="management-stand-open" ${!arrangementInteractionBusy()&&(needsStandOpen||draft?.needsStandOpen&&draft.error)?'':'hidden'}>${esc(orderText('orderOpenStand'))}</button>
       <div class="v568-order-column-labels" aria-hidden="true"><span>${esc(t('v568PlaceColumn'))}</span><span>${esc(t('v568LineColumn'))}</span></div><div class="v50-order-lanes"><ol class="v50-order-slots" aria-hidden="true">${ordered.map((line,index)=>{const colour=palette[index];return `<li data-order-slot data-order-position="${index+1}" style="--identify-colour:${colour?.hex||'transparent'}"><span class="v50-order-slot-number">${index+1}</span><small data-slot-colour-name>${colour?esc(colourLabel(colour)):''}</small></li>`;}).join('')}</ol><ol class="ledline-draft-order">${rows}</ol></div>
       </section>${orderTestMarkup()}${reusable?`<button class="ledline-reuse-action" data-action="zone-assign" data-id="${esc(z.id)}">${icon('receiver')}<span>${esc(t('lineSetupReuse'))}</span>${icon('chevron')}</button>`:''}${layoutReceiverActions()}`:''}</div></section>`;
   }
@@ -2447,6 +2453,7 @@
   }
   function orderFeedbackMarkup(){
     const state=orderPreviewGesture||orderMoveResult;
+    if(physicalLineCount()===1)return `<div class="v50-order-feedback-route">${icon('sun')}<span>${esc(t('lineSetupSingleHint'))}</span></div><small>${esc(t('v594SingleOrderHint'))}</small>`;
     if(!state||state.zoneId!==route.zoneId)return `<div class="v50-order-feedback-route">${icon('grip')}<span>${esc(t('v568OrderDragHint'))}</span></div><small>${esc(t('v568OrderReleaseHint'))}</small>`;
     return `<div class="v50-order-feedback-route"><span class="v50-order-feedback-source">${esc(t('scopeLine',{number:state.fromIndex+1}))}</span><span aria-hidden="true">↔</span><span class="v50-order-feedback-target">${esc(t('v50OrderPlace',{number:state.toIndex+1}))}</span>${state.saved?icon('check'):''}</div><small>${esc(state.receiverName)}${state.port?' · P'+state.port:''} · ${esc(t(state.saved?'v50OrderMoved':'v50OrderDropHere'))}</small>${orderLiveChangeMarkup(state)}`;
   }
@@ -3238,7 +3245,77 @@
     group('settings-app-tools','settingsThisApp',['.settings-appearance','[data-action="preferences-reset"]']);
     const erase=page.querySelector('.app-erase-section');if(erase)page.append(erase);
   }
-  function render({top=false,preserveScroll=true}={}) {
+  // Presentation only: this short-lived sheet owns no recognition, save or
+  // radio. Its caller has already completed the existing close decision and
+  // fresh guards; this visual never waits for or repeats that operation.
+  let orderExitGhost595=null;
+  function orderEntryPhase595(sheet){
+    if(!sheet||document.hidden||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return null;
+    const animation=sheet.getAnimations?.().find(item=>item.animationName==='v50-order-sheet-in'&&item.playState==='running');
+    const timing=animation?.effect?.getTiming();
+    const frames=animation?.effect?.getKeyframes();
+    // CSS applies its timing function to the keyframes, while the Web
+    // Animations effect itself is linear. Resume only this exact known fade.
+    if(!timing||timing.duration!==220||timing.easing!=='linear'||timing.iterations!==1||
+       !frames||frames.length!==2||frames[0].opacity!=='0'||frames[1].opacity!=='1'||
+       frames.some(frame=>frame.easing!=='ease-out')||
+       timing.direction!=='normal'||animation.playbackRate!==1||!Number.isFinite(animation.currentTime)||!Number.isFinite(timing.delay)||timing.delay>0)return null;
+    const elapsed=animation.currentTime-timing.delay;
+    if(elapsed<0||elapsed>=220)return null;
+    const opacity=Number(getComputedStyle(sheet).opacity);
+    if(!Number.isFinite(opacity)||opacity<0||opacity>=1)return null;
+    // WebKit's CSS currentTime can lag the painted compositor fraction. Invert
+    // the known ease-out cubic-bezier(0,0,.58,1) to preserve what is visible,
+    // not a slightly older clock sample that makes the replacement jump back.
+    let low=0,high=1;
+    for(let i=0;i<24;i++){const t=(low+high)/2;if(t*t*(3-2*t)<opacity)low=t;else high=t;}
+    const t=(low+high)/2;
+    return 220*t*t*(1.74-.74*t);
+  }
+  function retireOrderExit595(){
+    const ghost=orderExitGhost595;if(!ghost)return;
+    orderExitGhost595=null;clearTimeout(ghost.timer);
+    if(ghost.animation){ghost.animation.onfinish=null;ghost.animation.oncancel=null;ghost.animation.cancel();}
+    ghost.host.remove();
+  }
+  function preserveOrderExit595(sheet){
+    retireOrderExit595();
+    if(!sheet||!main.contains(sheet)||document.hidden||window.matchMedia('(prefers-reduced-motion: reduce)').matches||typeof sheet.animate!=='function')return;
+    const style=getComputedStyle(sheet),opacity=Number(style.opacity);
+    if(!Number.isFinite(opacity)||opacity<=0)return;
+    const ancestors=[];
+    for(let node=sheet.parentElement;node&&node!==main;node=node.parentElement)ancestors.push(node);
+    // Retain only style ancestry, never a second live editor. Order CSS shares
+    // its #main scope with this external, inert presentation host.
+    const host=document.createElement('div');host.dataset.orderExitHost595='true';host.inert=true;host.setAttribute('aria-hidden','true');
+    host.style.cssText='position:fixed;inset:0;z-index:1100;pointer-events:none;overflow:hidden;isolation:isolate;';
+    for(const property of ['font-family','font-size','line-height','font-weight','color','text-align'])host.style.setProperty(property,style.getPropertyValue(property));
+    let parent=host;
+    for(const ancestor of ancestors.reverse()){
+      const wrapper=document.createElement('div');wrapper.className=ancestor.className;wrapper.style.cssText=ancestor.style.cssText;
+      wrapper.style.setProperty('animation','none','important');wrapper.style.setProperty('transition','none','important');wrapper.style.setProperty('transform','none','important');
+      parent.append(wrapper);parent=wrapper;
+    }
+    const scroll=sheet.scrollTop;
+    // Moving original canvases preserves their painted bitmaps. Remove every
+    // copied action, focus ID and canvas callback before attaching the ghost.
+    for(const node of [sheet,...sheet.querySelectorAll('*')]){
+      for(const attribute of ['id','data-action','data-preview','data-product-receiver','data-order-receiver','data-order-handle','data-order-status-details-close','autofocus','contenteditable','name'])node.removeAttribute(attribute);
+      if(node.matches('button,input,select,textarea,a,summary,[tabindex]'))node.setAttribute('tabindex','-1');
+    }
+    sheet.removeAttribute('role');sheet.removeAttribute('aria-modal');sheet.inert=true;sheet.setAttribute('aria-hidden','true');
+    sheet.dataset.orderMotion588='none';sheet.style.setProperty('animation','none','important');sheet.style.setProperty('opacity','1');
+    parent.append(sheet);document.body.append(host);sheet.scrollTop=scroll;
+    const ghost={host,animation:null,timer:null};orderExitGhost595=ghost;
+    ghost.animation=host.animate([{opacity},{opacity:0}],{duration:180,easing:'ease-out',fill:'both'});
+    const finish=()=>{if(orderExitGhost595===ghost)retireOrderExit595();};
+    ghost.animation.onfinish=finish;ghost.animation.oncancel=finish;
+    // Bounded fallback if the browser loses the animation completion event.
+    ghost.timer=setTimeout(finish,220);
+  }
+  window.addEventListener('pagehide',retireOrderExit595);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)retireOrderExit595();});
+  function render({top=false,preserveScroll=true,orderExit595=false}={}) {
     if(paletteDrag?.isActive()&&!top){paletteRenderDeferred=true;return;}
     paletteDrag?.cancel();
     const oldSheetOpen588=!!main.querySelector('[data-order-open="true"]');
@@ -3299,12 +3376,16 @@
     }
     const nextMotionContext=motionContextKey();
     const samePresentationContext=keepDisclosures&&nextMotionContext===lastRenderedMotionContext;
+    if(orderExitGhost595&&(!samePresentationContext||openLineSetup.has(route.zoneId)))retireOrderExit595();
     const animatePage=lastRenderedMotionContext!==null&&nextMotionContext!==lastRenderedMotionContext&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     lastRenderedMotionContext=nextMotionContext;
     const focused=document.activeElement,focusKey=focused?.dataset?.id;
     const focusedOrder588=samePresentationContext&&focused?.matches?.('[data-order-handle]')&&main.contains(focused)?{zoneId:route.zoneId,id:focused.closest('[data-order-item]')?.dataset.orderItem}:null;
     const activeEditor=samePresentationContext?UIContinuity.captureEditor(main,focused):null;
     const activeAction=samePresentationContext?UIContinuity.captureAction(document,focused):null;
+    const priorOrderSheet595=main.querySelector('[data-order-open="true"]');
+    const entryPhase595=samePresentationContext?orderEntryPhase595(priorOrderSheet595):null;
+    if(orderExit595&&samePresentationContext&&!openLineSetup.has(route.zoneId))preserveOrderExit595(priorOrderSheet595);
     previews.clear();
     const views = {stand:renderStand,controls:renderControls,colour:renderColour,animations:renderAnimations,effects:renderEffects,'animation-family':renderAnimationFamily,receivers:renderReceivers,settings:renderSettings,'demo-wifi':renderDemoWifi,'pin-login':renderPinLogin,'stand-connect':renderStandConnection,'stand-sharing':renderStandSharing,'stand-code-change':renderStandCodeChange,scenes:renderScenes,'scene-draft':renderSceneDraft,'scene-detail':renderSceneDetail,'receiver-add':renderReceiverAdd};
     const zoneScreen=['controls','colour','animations','effects','animation-family','layout'].includes(route.screen);
@@ -3312,6 +3393,8 @@
     syncLayoutModal(oldSheetScroll);
     const orderSheet588=main.querySelector('.ledline-setup');
     if(orderSheet588){const opened=orderSheet588.dataset.orderOpen==='true';orderSheet588.dataset.orderMotion588=opened===oldSheetOpen588?'none':opened?'enter':'exit';}
+    if(entryPhase595!==null&&orderSheet588?.dataset.orderOpen==='true'&&orderSheet588.dataset.orderMotion588==='none')
+      orderSheet588.style.animation=`v50-order-sheet-in 220ms ease-out -${entryPhase595}ms`;
     if(standPresentationId===stand()?.id&&route.screen==='stand')main.querySelector('.overview-heading')?.insertAdjacentHTML('afterend',
       `<p class="stand-connection-hint" data-stand-presentation-status role="status" style="margin:0 0 14px;font-size:12px;opacity:.7">${esc(standPresentationMessage())}</p>`);
     if(route.screen==='stand'&&stand()&&standSharingAvailable&&standConnectionState.status==='connected'){
@@ -4956,7 +5039,7 @@
         const closing=action==='layout'&&openLineSetup.has(route.zoneId);
         if(closing){const closingZone=route.zoneId,closed=await closeOrderPanel589();if(closed?.closed!==true||closed.presentationEpoch!==orderSaveEpoch588||openLineSetup.has(closingZone)||route.zoneId!==closingZone||document.hidden)return;}
         else {openLineSetup.add(route.zoneId);beginArrangement();beginOrderColours();}
-        renderArrangement();
+        renderArrangement(undefined,{orderExit595:closing});
         // Safari can anchor the collapsed summary behind the sticky preview
         // when removing a long receiver list. Keep that return target visible.
         if(closing||action==='line-setup-open')revealLineSetup();
@@ -5780,7 +5863,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate593',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate595',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

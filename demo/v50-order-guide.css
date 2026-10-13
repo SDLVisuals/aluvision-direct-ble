@@ -406,13 +406,13 @@
   margin:0;
   accent-color:var(--red,#ba433d);
 }
-html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item][data-order-test-line=true] {
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] [data-order-item][data-order-test-line=true] {
   border-color:var(--identify-colour,var(--red,#ba433d))!important;
   outline:2px solid var(--identify-colour,var(--red,#ba433d));
   outline-offset:1px;
   box-shadow:0 0 0 4px color-mix(in srgb,var(--identify-colour,var(--red,#ba433d)) 10%,transparent)!important;
 }
-html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-slot][data-order-test-line=true] .v50-order-slot-number {
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] [data-order-slot][data-order-test-line=true] .v50-order-slot-number {
   outline:2px solid var(--identify-colour,var(--red,#ba433d));
   outline-offset:3px;
 }

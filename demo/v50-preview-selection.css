@@ -39,11 +39,11 @@
 @media(max-width:360px){.v50-control-preview .v50-preview-expand{padding-inline:7px;font-size:10px}.v50-control-preview .v50-select-all{padding-inline:7px}.v50-control-preview .v50-selection-summary b{font-size:11px}}
 @media(prefers-reduced-motion:reduce){.v50-preview-line-badge{transition:none}}
 
-/* 579: one selection language for normal, tunnel and wall. The neutral round
+/* 579: one selection language for normal, tunnel and wall. The rounded square
    number and check are unmistakable without repainting the customer's light. */
 html.interface-polish body .v50-preview-canvas-stage[data-preview-ui="571"] .v50-preview-line-badge{
   box-sizing:border-box;
-  width:34px;height:34px;border:1px solid #85938b;border-radius:50%;
+  width:34px;height:34px;border:1px solid #85938b;border-radius:11px;
   background:#18201c;color:#f1f5f2;
   box-shadow:none;
 }
