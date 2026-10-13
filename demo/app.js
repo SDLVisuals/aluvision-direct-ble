@@ -337,6 +337,7 @@
   // that screen so changing between colour and movement never sends users
   // through an intermediate page or clears their selected ledline.
   let controlMode='colour',showControlAnimationGallery=true,controlPreviewSize='large';
+  let animationEditorChoice=null;
   let pinProtection=null,pinProtectionLoading=false,pinProtectionBusy=false,pinProtectionError='',pinProtectionReconnect=null;
   let pinProtectionRead=null,pinProtectionWaitingForLive=false;
   let pinProtectionDeferredStandId=null;
@@ -728,9 +729,9 @@
     // Do not carry a deep gallery scroll position into the settings. Align
     // their heading below the visible dock, including its compacted height.
     const workspace=main.querySelector('.active-animation-workspace');if(!workspace)return;
-    // Start at the chosen animation. Arrangement tools remain below the
-    // settings, while the picker action stays in the measured preview dock.
-    const target=workspace;
+    // Keep the view/order tools in sight when leaving a deeply scrolled
+    // gallery. They now belong above the settings, directly under the preview.
+    const target=main.querySelector('.ui606-line-tools')||workspace;
     revealBelowControlPreview(target,12);
     requestAnimationFrame(()=>workspace.querySelector('#active-animation-title')?.focus({preventScroll:true}));
   }
@@ -785,9 +786,10 @@
     }
     updateControlPreviewDensity();
     const stickyPreview=dock?.dataset.stickyPreview==='579'?dock.querySelector('.v50-control-preview'):null;
-    // Reveal controls below the preview's final pinned edge. Measuring the
-    // whole unpinned heading stopped early and spent colour space on tabs.
-    const bottom=stickyPreview?Math.max(0,(parseFloat(getComputedStyle(dock).top)||0)+(parseFloat(dock.style.getPropertyValue('--sticky-preview-offset'))||0)+stickyPreview.getBoundingClientRect().height):Math.max(0,surface?.getBoundingClientRect().bottom||0);
+    // Include the return action/status below the pinned preview. Ignoring
+    // that tail scrolls the view/order tools underneath the dock.
+    const previewTail=stickyPreview&&surface?Math.max(0,surface.getBoundingClientRect().bottom-stickyPreview.getBoundingClientRect().bottom):0;
+    const bottom=stickyPreview?Math.max(0,(parseFloat(getComputedStyle(dock).top)||0)+(parseFloat(dock.style.getPropertyValue('--sticky-preview-offset'))||0)+stickyPreview.getBoundingClientRect().height+previewTail):Math.max(0,surface?.getBoundingClientRect().bottom||0);
     const next=Math.max(0,window.scrollY+target.getBoundingClientRect().top-bottom-gap);
     if(Math.abs(next-window.scrollY)>1){
       const reduce=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -1087,7 +1089,23 @@
   }
   function statusText(receiver) { return receiver.connection === 'offline' ? 'Offline' : ''; }
   function catalogue() { return standControlOpen?StandAnimations.catalogFor(standControlReceivers()):P.catalog(zone()?.type || 'RGBW'); }
+  function zoneAnimationEditorContext() {
+    const z=zone();
+    if(standControlOpen||!z||!(route.screen==='animations'||
+        route.screen==='controls'&&controlMode==='animations'&&!showControlAnimationGallery))return null;
+    return {standId:stand()?.id||null,zoneId:z.id,type:z.type};
+  }
   function activeEffect() {
+    const editor=zoneAnimationEditorContext();
+    // An editor is the animation the user chose to adjust, not a new readback
+    // claim for every selected line. Changing targets must not open the picker.
+    // Outside this exact editor, badges still use the original model checks.
+    if(!editor||animationEditorChoice&&['standId','zoneId','type'].some(key=>animationEditorChoice[key]!==editor[key]))animationEditorChoice=null;
+    if(editor&&animationEditorChoice){
+      const choice=catalogue().find(effect=>effect.id===animationEditorChoice.effectId);
+      if(choice)return choice;
+      animationEditorChoice=null;
+    }
     if(standControlOpen){const marker=standAnimationMarker();return marker?catalogue().find(effect=>effect.id===marker.effectId)||null:null;}
     // Smoothness is a fixed 100% rule for effects that support it. Older
     // installations may differ only in their saved smoothness value; treat
@@ -1095,7 +1113,9 @@
     if(selectedLightEntries().length>1&&mixedSelection(true))return null;
     const s = selectedState();
     if(!s.engine||String(s.engine).toUpperCase()==='STATIC')return null;
-    return catalogue().find(e => s.v30Effect ? e.state.v30Effect === s.v30Effect : !e.state.v30Effect && e.state.engine === s.engine && e.state.variant === s.variant && (e.state.previewFamily || null) === (s.previewFamily || null));
+    const effect=catalogue().find(e => s.v30Effect ? e.state.v30Effect === s.v30Effect : !e.state.v30Effect && e.state.engine === s.engine && e.state.variant === s.variant && (e.state.previewFamily || null) === (s.previewFamily || null));
+    if(editor&&effect)animationEditorChoice={...editor,effectId:effect.id};
+    return effect;
   }
   function effectName(state) { return (!state.engine || state.engine === 'STATIC') ? t('staticColour') : state.animation || state.engine; }
   function colours(state) {
@@ -1332,7 +1352,7 @@
     const modeContent=colour
       ?`<section class="bediening-workspace" aria-labelledby="${workspaceHeadingId}">${colourPickerMarkup(null,false,{power:true})}</section>`
       :`<section class="bediening-workspace animation-simple-workspace${activeAnimationEditor?' has-active-animation':''}" aria-labelledby="${workspaceHeadingId}">${controlAnimationPanel()}</section>`;
-    return `<div class="editor-grid${colour?' editor-grid-colour':' animation-simple-page'}">${controlContext('controls')}<section class="editor-controls editor-controls-zone"><section class="control-workspace"><div class="control-mode-panel" role="region" aria-label="${esc(t(colour?'staticColour':'animations'))}" data-control-mode="${controlMode}">${modeContent}</div></section>${colour||activeAnimationEditor?ledlineSetupMarkup():''}</section></div>`;
+    return `<div class="editor-grid${colour?' editor-grid-colour':' animation-simple-page'}">${controlContext('controls')}<section class="editor-controls editor-controls-zone">${colour||activeAnimationEditor?ledlineSetupMarkup():''}<section class="control-workspace"><div class="control-mode-panel" role="region" aria-label="${esc(t(colour?'staticColour':'animations'))}" data-control-mode="${controlMode}">${modeContent}</div></section></section></div>`;
   }
 
   function controlAnimationPanel(){
@@ -1815,14 +1835,19 @@
     const current=activeEffect(),containsCurrent=Boolean(current&&group.effects.some(effect=>effect.id===current.id));
     return `<article class="animation-family-card${tunnel?' tunnel-family-card':''}${containsCurrent?' is-active-family':''}" data-chooser-version="567" data-family-card-version="572" data-animation-category="${esc(group.category)}" data-group-browse-only="true"><button type="button" class="animation-family-trigger" data-action="family" data-id="${esc(group.key)}" data-ledline-type="${type}" aria-label="${esc(`${group.title}. ${openLabel}. ${nextStep}`)}"><span class="animation-family-preview${tunnel?' animation-family-spatial-preview':''}" data-motion-preview="${effectMotionKey(group.preview)}"><span class="animation-family-preview-label">${esc(previewLabel)}</span>${preview}</span><span class="family-copy"><span class="family-kicker">${esc(t('animationFamilyLabel'))}<span class="animation-type-badge" aria-label="${esc(t('animationBadgeForType',{type}))}">${type}</span></span><b class="family-title">${esc(group.title)}</b>${containsCurrent?`<span class="v569-family-current" data-animation-choice-label><span aria-hidden="true">${icon('animation')}</span>${esc(animationCurrentLabel())}</span>`:''}<small class="family-summary">${esc(group.summary)}</small><span class="family-variants" aria-label="${esc(countLabel)}"><span class="family-variants-folder" aria-hidden="true">${icon('folder')}</span><span class="family-variants-copy"><b>${esc(openLabel)}</b></span><span class="family-variants-action" aria-hidden="true">${icon('chevron')}</span></span></span></button></article>`;
   }
+  function animationFamilyChoices(group) {
+    const choices=Library.curate(group,activeEffect()?.id),hasMore=choices.more.length>0;
+    const title=hasMore?t('v606FeaturedAnimations'):t('animationFamilyChoose');
+    return `<section class="family-variants-panel" aria-labelledby="animation-family-choices"><header class="family-variants-heading"><div><b id="animation-family-choices">${esc(title)}</b></div></header><div class="family-variant-grid family-featured-grid">${effectCards(choices.featured,'family-variant-card')}</div>${hasMore?`<details class="family-more-variants" data-continuity-id="family-more-${esc(group.key)}"><summary><span class="family-more-label"><b class="family-more-closed">${esc(t('v606MoreVariants'))}</b><b class="family-more-open">${esc(t('v606FewerVariants'))}</b><span class="family-more-count">${choices.more.length}</span></span><span class="family-more-chevron" aria-hidden="true">${icon('chevron')}</span></summary><div class="family-variant-grid family-more-grid">${effectCards(choices.more,'family-variant-card')}</div></details>`:''}</section>`;
+  }
   function animationFamilyDetail(group,tab,{includePreview=true}={}) {
     const countLabel=t(group.count===1?'animationCountOne':'animationCountMany',{count:group.count});
     const tunnel=group.preview.category==='tunnel',groupHint=tunnel?t('animationTunnelGroupAccessible',{name:group.title,count:physicalLineCount(standControlOpen?standControlReceivers():receivers())}):t('animationGroupPreviewHint');
     const backLabel=animationFamilyBackLabel(tab);
-    return `<section class="animation-family-detail" data-chooser-version="567" data-animation-category="${esc(group.category)}" aria-labelledby="animation-family-title"><div class="family-back-slot" data-family-back-slot><button type="button" class="animation-gallery-return family-back-action family-detail-back" data-action="family-back" aria-label="${esc(backLabel)}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('back')}</span><span class="gallery-action-copy"><b>${esc(backLabel)}</b></span></span></button></div>${animationPickerSteps(true)}<header class="family-detail-heading"><div><span class="family-detail-category"><span aria-hidden="true">${animationCategoryIcon(group.category)}</span>${esc(animationChooserCategoryLabel(group.category))}</span><h2 id="animation-family-title" tabindex="-1">${esc(group.title)}</h2><p>${esc(group.summary)}</p></div><span class="family-detail-count">${esc(countLabel)}</span></header>${includePreview?`<figure class="family-detail-preview"><figcaption><b>${esc(t('animationFamilyPreview'))}</b><small>${esc(groupHint)}</small></figcaption>${effectPreview(group.preview,tunnel?{tunnelLines:'all'}:{})}</figure>`:''}<section class="family-variants-panel" aria-labelledby="animation-family-choices"><header class="family-variants-heading"><div><b id="animation-family-choices">${esc(t('animationFamilyChoose'))}</b><small>${esc(t('v567StartHint'))}</small></div></header><div class="family-variant-grid">${effectCards(group.effects,'family-variant-card',group.count)}</div>${standControlOpen?`<details class="stand-animation-explanation" data-continuity-id="stand-variant-explanation"><summary>${esc(t('v50VariantExplanation'))}</summary>${group.effects.map(effect=>`<p><b>${esc(Library.displayName(effect,t))}</b> · ${esc(window.LightningV50AnimationTexts.effectDescription(effect,uiPreferences.preferences.language))}</p>`).join('')}</details>`:''}</section></section>`;
+    return `<section class="animation-family-detail" data-chooser-version="567" data-curated-gallery="606" data-animation-category="${esc(group.category)}" aria-labelledby="animation-family-title"><div class="family-back-slot" data-family-back-slot><button type="button" class="animation-gallery-return family-back-action family-detail-back" data-action="family-back" aria-label="${esc(backLabel)}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('back')}</span><span class="gallery-action-copy"><b>${esc(backLabel)}</b></span></span></button></div>${animationPickerSteps(true)}<header class="family-detail-heading"><div><span class="family-detail-category"><span aria-hidden="true">${animationCategoryIcon(group.category)}</span>${esc(animationChooserCategoryLabel(group.category))}</span><h2 id="animation-family-title" tabindex="-1">${esc(group.title)}</h2><p>${esc(group.summary)}</p></div><span class="family-detail-count">${esc(countLabel)}</span></header>${includePreview?`<figure class="family-detail-preview"><figcaption><b>${esc(t('animationFamilyPreview'))}</b><small>${esc(groupHint)}</small></figcaption>${effectPreview(group.preview,tunnel?{tunnelLines:'all'}:{})}</figure>`:''}${animationFamilyChoices(group)}</section>`;
   }
   function renderAnimationFamily(){
-    const group=Library.group(catalogue(),route.family);
+    const group=Library.group(catalogue(),route.family,t);
     if(!group){
       const screen=route.familyReturnScreen||'controls';
       route={...route,screen,family:null,familyReturnScreen:null};
@@ -1844,7 +1869,7 @@
     return section?animationCategorySection(section):'';
   }
   function effectResults(query='') {
-    const results=Library.search(catalogue(),query);
+    const results=Library.search(catalogue(),query,t);
     return `<p class="library-result-count" role="status">${esc(t(results.length===1?'v50AnimationResultsOne':'v50AnimationResultsMany',{count:results.length}))}</p>${results.length?`<div class="effect-grid">${effectCards(results)}</div>`:`<section class="card empty animation-search-empty"><h2>${esc(t('v50NoAnimationResults'))}</h2><p>${esc(t('v50AnimationSearchEmptyHint'))}</p><button class="button secondary" data-action="animation-search-clear">${esc(t('v50ClearSearch'))}</button></section>`}`;
   }
   function renderEffects() {
@@ -1855,7 +1880,7 @@
   }
   function animationLibraryContent(){
     savedPresets=presetStore.load();
-    const items=catalogue(),tab=libraryTab(),family=animationFamilyKey(),active=family?Library.group(items,family):null;
+    const items=catalogue(),tab=libraryTab(),family=animationFamilyKey(),active=family?Library.group(items,family,t):null;
     const query=animationQueryStore().get(animationQueryKey())||'';
     const counts={catalogue:items.length,...Object.fromEntries(Library.sections(items).map(section=>[section.key,section.count])),presets:savedPresets.presets.length};
     const intro=tab==='brand'?brandTonePicker():tab==='tunnel'?(standControlOpen?`<p class="stand-animation-guidance">${esc(standAnimationGuidance())}</p>`:tunnelGuide({compact:true})):'';
@@ -2398,14 +2423,14 @@
     const index=(arrangementDraft?.lineOrder||[]).indexOf(line.id),palette=orderPositionPalette(z,physicalLineCount());
     const blocked=arrangementInteractionBusy()||arrangementNeedsStandOpen()||standPresentationOnly();
     const action=(name,label,glyph,extra='')=>`<button type="button" class="v568-order-setting-action" data-action="${name}" data-id="${esc(receiver.id)}" ${extra} ${blocked?'disabled':''}>${icon(glyph)}<span>${esc(t(label))}</span>${icon('chevron')}</button>`;
-    return `<section class="v568-order-settings" data-order-line-settings data-order-line-id="${esc(line.id)}" data-zone="${esc(z.id)}" data-signature="${esc(arrangementSignature(z))}"><div class="v568-order-settings-identity"><span>${esc(receiver.name)}${line.port?' · P'+line.port:''}</span><small>${line.port?line.pixels+' px · SPI':'RGBW'}</small>${orderCardPreviewMarkup(palette[Math.max(0,index)])}</div>${orderPlaceChoicesMarkup(z,line)}<div class="v568-order-setting-actions">${receiver.type==='SPI'?action('receiver-pixel-setup','v568PixelsDirection','sliders',`data-ports="${line.port}"`):''}<div class="v568-receiver-action-heading">${esc(t('v568ReceiverAllOutputs'))}</div>${action('receiver-rename','v568ReceiverName','edit')}${action('receiver-move','v568ChangeZone','zones')}</div><button type="button" class="button secondary full" data-action="effect-dialog-close">${esc(t(physicalLineCount()===1?'v594SingleReturn':'v568ReturnOrder'))}</button></section>`;
+    return `<section class="v568-order-settings" data-order-line-settings data-order-line-id="${esc(line.id)}" data-zone="${esc(z.id)}" data-signature="${esc(arrangementSignature(z))}"><div class="v568-order-settings-identity"><span>${esc(receiver.name)}${line.port?' · P'+line.port:''}</span><small>${line.port?line.pixels+' px · SPI':'RGBW'}</small>${orderCardPreviewMarkup(palette[Math.max(0,index)])}</div>${orderPlaceChoicesMarkup(z,line)}<details class="ui606-order-more" ${physicalLineCount()===1?'open':''}><summary>${icon('sliders')}<span>${esc(t('v606LineOptions'))}</span>${icon('chevron')}</summary><div class="v568-order-setting-actions">${receiver.type==='SPI'?action('receiver-pixel-setup','v568PixelsDirection','sliders',`data-ports="${line.port}"`):''}<div class="v568-receiver-action-heading">${esc(t('v568ReceiverAllOutputs'))}</div>${action('receiver-rename','v568ReceiverName','edit')}${action('receiver-move','v568ChangeZone','zones')}</div></details><button type="button" class="button secondary full" data-action="effect-dialog-close">${esc(t(physicalLineCount()===1?'v594SingleReturn':'v568ReturnOrder'))}</button></section>`;
   }
   function openOrderLineSettings(id){
     const z=zone();if(!z||!openLineSetup.has(z.id)||arrangementDraft?.zoneId!==z.id||arrangementDraft.signature!==arrangementSignature(z))return;
     const line=M.zoneLedlines(model,z.id).find(item=>item.id===id),receiver=model.receivers.find(item=>item.id===line?.receiverId);
     if(!line||!receiver)return;
     if(receiver.type==='SPI')visualPorts.set(receiver.id,line.port);
-    return showEffectDialog(t('v568AdjustLine',{name:receiver.name+(line.port?' · P'+line.port:'')}),orderLineSettingsMarkup(z,line,receiver));
+    return showEffectDialog(physicalLineCount()>1?t('v606ChoosePlace'):t('v568AdjustLine',{name:receiver.name+(line.port?' · P'+line.port:'')}),orderLineSettingsMarkup(z,line,receiver));
   }
   function ledlineSetupMarkup(){
     const orderText=(key,params)=>window.LightningV50OrderTexts.t(key,uiPreferences.preferences.language,params);
@@ -2418,6 +2443,7 @@
     const lineCount=t(count===1?'scopeCountOne':'scopeCountMany',{count});
     const context=t('lineSetupOpenContext',{zone:z.name,count:lineCount});
     const toggleLabel=open?t('lineSetupCloseAccessible',{title,zone:z.name}):`${title} · ${summary}`;
+    if(!open)return `<section class="ledline-setup card ui606-line-tools" data-order-ui="606" data-order-open="false" aria-label="${esc(t('lineSetupTitle'))}">${spatialPreviewChoice()}<button class="ledline-setup-toggle" data-action="layout" aria-label="${esc(toggleLabel)}" aria-expanded="false" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy"><b>${esc(t(singleLine?'v568Adjust':'v606OrderShort'))}</b><small>${esc(lineCount)}</small></span>${icon('chevron')}</button>${orderCancelNoticeMarkup590(z)}<div class="ledline-setup-body" id="ledline-setup-body" hidden></div></section>`;
     const horizontalOrder=['vertical','continuous'].includes(z.layout);
     const family=z.type||receivers()[0]?.type,reusable=standReceivers().some(r=>r.zoneId!==z.id&&r.type===family);
     const ordered=open?M.ledlines(receivers(),draft.lineOrder):[],palette=open?orderPositionPalette(z,count):[];
@@ -2427,16 +2453,16 @@
       const colour=orderColours.get(line.id);
       return `<li data-draft-receiver="${esc(r.id)}" data-order-item="${esc(line.id)}" data-order-position="${index+1}" data-settings-open="false" style="--identify-colour:${colour?.hex||'transparent'}" aria-label="${esc(orderText('orderPosition',{position:index+1}))} · ${esc(r.name)}${line.port?' · P'+line.port:''}">
         <span class="scope-copy"><span class="scope-option-title"><b title="${esc(r.name)}">${esc(r.name)}</b><span class="v50-order-separator" aria-hidden="true"> · </span><span class="v50-order-port">${line.port?'P'+line.port:'RGBW'}</span></span><small>${line.port?`${line.pixels} px · SPI`:'RGBW'}</small></span>
-        <button type="button" class="line-order-handle" data-order-handle aria-label="${esc(ordered.length===1?t('lineSetupSingle'):orderText('orderDragAccessible',{name,receiver:r.name,port:line.port?' · P'+line.port:''}))}" title="${esc(ordered.length===1?t('lineSetupSingleHint'):orderText('orderDragHint'))}" aria-describedby="ledline-order-help" ${ordered.length<2||orderDragBusy588()||needsStandOpen?'disabled':''}>${icon('grip')}</button>
+        <button type="button" class="line-order-handle" data-order-handle aria-label="${esc(ordered.length===1?t('lineSetupSingle'):orderText('orderDragAccessible',{name,receiver:r.name,port:line.port?' · P'+line.port:''}))}" title="${esc(ordered.length===1?t('lineSetupSingleHint'):orderText('orderDragHint'))}" aria-describedby="ledline-order-help" ${ordered.length<2||orderDragBusy588()||needsStandOpen?'disabled':''}>${icon('grip')}<span>${esc(t('v606Drag'))}</span></button>
         ${orderCardPreviewMarkup(palette[index])}
         <div class="ledline-order-tools"><div class="ledline-row-actions">
           <button class="receiver-blink order-blink-subtle" data-action="${line.port?'port-identify':'visual-identify'}" data-receiver="${esc(r.id)}" data-port="${line.port}" aria-pressed="${blinking}" aria-label="${esc(name)} · ${esc(t(blinking?'lineSetupBlinkStopAccessible':'lineSetupBlinkAccessible'))}">${icon('sun')}<span>${esc(t(blinking?'lineSetupBlinkStop':'lineSetupBlink'))}</span></button>
-          <button type="button" class="ledline-settings-toggle" data-action="layout-receiver-settings" data-id="${esc(line.id)}" data-receiver="${esc(r.id)}" data-port="${line.port}" aria-label="${esc(t('v568AdjustLine',{name:r.name+(line.port?' · P'+line.port:'')}))}" aria-haspopup="dialog" aria-controls="effect-dialog">${icon('edit')}<span>${esc(t('v568Adjust'))}</span></button>
+          <button type="button" class="ledline-settings-toggle" data-action="layout-receiver-settings" data-id="${esc(line.id)}" data-receiver="${esc(r.id)}" data-port="${line.port}" aria-label="${esc(t('v606ChoosePlace'))} · ${esc(name)}" aria-haspopup="dialog" aria-controls="effect-dialog">${icon('sliders')}<span>${esc(t(singleLine?'v568Adjust':'v606ChoosePlace'))}</span></button>
         </div></div>
       </li>`;
     }).join('');
     return `<section class="ledline-setup card" data-order-ui="568" data-order-open="${open}" ${open?'role="dialog" aria-modal="true"':''} aria-label="${esc(t('lineSetupTitle'))}">${open?'':spatialPreviewChoice()}<button class="ledline-setup-toggle" data-action="layout" aria-label="${esc(toggleLabel)}" aria-expanded="${open}" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy">${open?`<span class="ledline-menu-label">${esc(t('lineSetupMenu'))}</span>`:''}<b>${esc(title)}</b><small id="ledline-setup-context">${esc(open?context:hint)}</small></span><span class="ledline-setup-disclosure-action">${open?`<span class="ledline-setup-close-label">${icon('close')}${esc(t('close'))}</span>`:icon('chevron')}</span></button>${orderCancelNoticeMarkup590(z)}<div class="ledline-setup-body" id="ledline-setup-body" role="region" ${open?'aria-labelledby="ledline-setup-heading" aria-describedby="ledline-setup-context"':'hidden'}>${open?`
-      <div class="v50-order-dock" data-order-dock><div class="v50-order-feedback" data-order-feedback data-order-feedback-phase="${orderPreviewGesture?.zoneId===z.id?'proposal':orderMoveResult?.zoneId===z.id?'saved':'idle'}" role="status" aria-live="polite">${orderFeedbackMarkup()}</div>${orderReferenceMarkup(z,count)}</div>
+      <div class="v50-order-dock" data-order-dock>${orderReferenceMarkup(z,count)}<div class="v50-order-feedback" data-order-feedback data-order-feedback-phase="${orderPreviewGesture?.zoneId===z.id?'proposal':orderMoveResult?.zoneId===z.id?'saved':'idle'}" role="status" aria-live="polite">${orderFeedbackMarkup()}</div></div>
       <section class="ledline-arrangement" aria-label="${esc(singleLine?title:t('lineSetupOrder'))}" aria-busy="${arrangementInteractionBusy()}"><div class="ledline-order-heading"><h3 id="ledline-setup-heading">${esc(t('v568LineColumn'))}</h3><small class="ledline-family-label">${esc(family||'')}</small></div><p class="ledline-setup-hint" id="ledline-order-help">${esc(t(singleLine?'lineSetupSingleHint':'v568OrderDragHint'))}</p><p class="order-recognition-status v593-order-original-status" data-order-recognition-status aria-hidden="true"></p><p class="order-drop-status" role="status" aria-live="polite"></p><p class="v593-order-original-status" data-order-apply-status aria-hidden="true" ${arrangementApplying||arrangementPlaybackPending()||draft?.error||needsStandOpen?'':'hidden'}>${arrangementApplying||arrangementPlaybackPending()?esc(orderText('orderApplying')):esc(draft?.error||(needsStandOpen?orderText('orderOpenStandHint'):''))}</p>${orderStatusMarkup593()}<button type="button" class="button secondary full" data-order-stand-open data-action="management-stand-open" ${!arrangementInteractionBusy()&&(needsStandOpen||draft?.needsStandOpen&&draft.error)?'':'hidden'}>${esc(orderText('orderOpenStand'))}</button>
       <div class="v568-order-column-labels" aria-hidden="true"><span>${esc(t('v568PlaceColumn'))}</span><span>${esc(t('v568LineColumn'))}</span></div><div class="v50-order-lanes"><ol class="v50-order-slots" aria-hidden="true">${ordered.map((line,index)=>{const colour=palette[index];return `<li data-order-slot data-order-position="${index+1}" style="--identify-colour:${colour?.hex||'transparent'}"><span class="v50-order-slot-number">${index+1}</span><small data-slot-colour-name>${colour?esc(colourLabel(colour)):''}</small></li>`;}).join('')}</ol><ol class="ledline-draft-order">${rows}</ol></div>
       </section>${orderTestMarkup()}${reusable?`<button class="ledline-reuse-action" data-action="zone-assign" data-id="${esc(z.id)}">${icon('receiver')}<span>${esc(t('lineSetupReuse'))}</span>${icon('chevron')}</button>`:''}${layoutReceiverActions()}`:''}</div></section>`;
@@ -2453,7 +2479,7 @@
   function orderFeedbackMarkup(){
     const state=orderPreviewGesture||orderMoveResult;
     if(physicalLineCount()===1)return `<div class="v50-order-feedback-route">${icon('sun')}<span>${esc(t('lineSetupSingleHint'))}</span></div><small>${esc(t('v594SingleOrderHint'))}</small>`;
-    if(!state||state.zoneId!==route.zoneId)return `<div class="v50-order-feedback-route">${icon('grip')}<span>${esc(t('v568OrderDragHint'))}</span></div><small>${esc(t('v568OrderReleaseHint'))}</small>`;
+    if(!state||state.zoneId!==route.zoneId)return `<div class="v50-order-feedback-route">${icon('grip')}<span>${esc(t('v606OrderHint'))}</span></div><small>${esc(t('v606OrderFixed'))}</small>`;
     return `<div class="v50-order-feedback-route"><span class="v50-order-feedback-source">${esc(t('scopeLine',{number:state.fromIndex+1}))}</span><span aria-hidden="true">↔</span><span class="v50-order-feedback-target">${esc(t('v50OrderPlace',{number:state.toIndex+1}))}</span>${state.saved?icon('check'):''}</div><small>${esc(state.receiverName)}${state.port?' · P'+state.port:''} · ${esc(t(state.saved?'v50OrderMoved':'v50OrderDropHere'))}</small>${orderLiveChangeMarkup(state)}`;
   }
   function syncOrderFeedback(){
@@ -2500,26 +2526,26 @@
     const shown=receiverFilter==='unassigned'?unassigned:all,cards=shown.map(r=>receiverCard(r)).join('');
     const canUpdate=nativeContext&&runtime?.native===true&&typeof runtime.services?.otaPlan==='function'&&all.length>0;
     const updateEntry=canUpdate?`<button class="button secondary receiver-update-entry" data-action="receiver-update-all" aria-label="${esc(t('softwareUpdateButton'))}">${icon('update')}<span>${esc(t('softwareUpdates'))}</span></button>`:'';
-    return `<div class="page receivers-page"><header class="page-heading overview-heading"><div><div class="eyebrow">${esc(standLabel())}</div><h1>${esc(t('receivers'))}</h1><p>${esc(t('v50ReceiverChoiceHint'))}</p>${all.length?`<div class="receiver-overview-summary">${['RGBW','SPI'].filter(type=>all.some(receiver=>receiver.type===type)).map(type=>`<span><b>${all.filter(receiver=>receiver.type===type).length}</b> ${type}</span>`).join('')}${unassigned.length?`<span class="receiver-unassigned-summary">${esc(t('v50UnassignedCount',{count:unassigned.length}))}</span>`:''}</div>`:''}</div></header><div class="receiver-toolbar${canUpdate?' has-updates':''}"><button class="button receiver-primary-action" data-action="receiver-add"><span aria-hidden="true">＋</span><span>${esc(t('addReceiver'))}</span></button>${updateEntry}</div><div class="receiver-filters" role="group" aria-label="${esc(t('v50FilterReceivers'))}">${[['all',t('v50AllReceivers'),all.length],['unassigned',t('v50OutsideZone'),unassigned.length]].map(([id,label,count])=>`<button data-action="receiver-filter" data-id="${id}" aria-pressed="${receiverFilter===id}">${esc(label)}<span>${count}</span></button>`).join('')}</div><div class="receiver-list">${cards||`<section class="card empty connection-empty receiver-empty-card"><span class="menu-icon" aria-hidden="true">${icon('receiver')}</span><h2>${esc(t(receiverFilter==='unassigned'&&all.length?'v50EverythingAssigned':'v50NoReceivers'))}</h2><p>${esc(t(receiverFilter==='unassigned'&&all.length?'v50AllReceiversAssigned':stand()?'v50AddReceiverAbove':'v50AddReceiverFirst'))}</p>${receiverFilter==='unassigned'?`<button class="button secondary" data-action="receiver-filter" data-id="all">${esc(t('v50ViewAllReceivers'))}</button>`:''}</section>`}</div></div>`;
+    return `<div class="page receivers-page ui606-pages ui606-receivers-page"><header class="page-heading overview-heading ui606-page-heading"><div><div class="eyebrow">${esc(standLabel())}</div><div class="ui606-title-row"><h1>${esc(t('receivers'))}</h1><span class="ui606-page-count" aria-label="${esc(receiverCount(all.length))}">${all.length}</span></div><p>${esc(t('v50ReceiverChoiceHint'))}</p></div></header><div class="receiver-toolbar${canUpdate?' has-updates':''}"><button class="button receiver-primary-action" data-action="receiver-add"><span aria-hidden="true">＋</span><span>${esc(t('addReceiver'))}</span></button>${updateEntry}</div>${all.length?`<div class="receiver-overview-summary">${['RGBW','SPI'].filter(type=>all.some(receiver=>receiver.type===type)).map(type=>`<span><b>${all.filter(receiver=>receiver.type===type).length}</b> ${type}</span>`).join('')}${unassigned.length?`<span class="receiver-unassigned-summary">${esc(t('v50UnassignedCount',{count:unassigned.length}))}</span>`:''}</div>`:''}<div class="receiver-filters" role="group" aria-label="${esc(t('v50FilterReceivers'))}">${[['all',t('v50AllReceivers'),all.length],['unassigned',t('v50OutsideZone'),unassigned.length]].map(([id,label,count])=>`<button type="button" data-action="receiver-filter" data-id="${id}" aria-pressed="${receiverFilter===id}"><span class="ui606-filter-label">${esc(label)}</span><span class="ui606-filter-count">${count}</span></button>`).join('')}</div><div class="receiver-list">${cards||`<section class="card empty connection-empty receiver-empty-card"><span class="menu-icon" aria-hidden="true">${icon('receiver')}</span><h2>${esc(t(receiverFilter==='unassigned'&&all.length?'v50EverythingAssigned':'v50NoReceivers'))}</h2><p>${esc(t(receiverFilter==='unassigned'&&all.length?'v50AllReceiversAssigned':stand()?'v50AddReceiverAbove':'v50AddReceiverFirst'))}</p>${receiverFilter==='unassigned'?`<button class="button secondary" data-action="receiver-filter" data-id="all">${esc(t('v50ViewAllReceivers'))}</button>`:''}</section>`}</div></div>`;
   }
   function renderReceiverAdd() {
     return '<div id="receiver-onboarding"></div>';
   }
   function renderScenes() {
-    if(!stand())return `<div class="page"><header class="page-heading"><h1>${esc(t('scenes'))}</h1><p>${esc(t('v50SceneSetupHint'))}</p></header><button class="button full" data-action="receiver-add">${esc(t('setupStand'))}</button></div>`;
+    if(!stand())return `<div class="page scenes-page ui606-pages"><header class="page-heading ui606-page-heading"><div><h1>${esc(t('scenes'))}</h1><p>${esc(t('v50SceneSetupHint'))}</p></div></header><section class="card empty ui606-empty"><span class="menu-icon" aria-hidden="true">${icon('scenes')}</span><button class="button full" data-action="receiver-add">${esc(t('setupStand'))} ${icon('chevron')}</button></section></div>`;
     const list=savedScenes.scenes.filter(s=>s.standId===stand().id);
     const ready=stand().zones.some(z=>M.zoneReceivers(model,z.id).length);
     const cards=list.map(scene=>{
       const count=scene.zones.reduce((n,z)=>n+z.receivers.length,0),names=scene.zones.slice(0,2).map(z=>z.name).join(' · '),extra=scene.zones.length-2;
-      return `<article class="scene-card-row"><button class="scene-card" data-action="scene-open" data-id="${esc(scene.id)}">${scenePreview(scene)}<span class="scene-card-copy"><b>${esc(scene.name)}</b><small class="scene-card-count">${zoneCount(scene.zones.length)} · ${receiverCount(count)}</small><small class="scene-card-names">${esc(names)}${extra>0?' …':''}</small><span class="scene-open-label">${esc(t('v50Details'))} ${icon('chevron')}</span></span></button>${sceneActivateButtonMarkup(scene)}</article>`;
+      return `<article class="scene-card-row ui606-scene-card"><button type="button" class="scene-card" data-action="scene-open" data-id="${esc(scene.id)}">${scenePreview(scene)}<span class="scene-card-copy"><b>${esc(scene.name)}</b><small class="scene-card-count">${zoneCount(scene.zones.length)} · ${receiverCount(count)}</small><small class="scene-card-names">${esc(names)}${extra>0?' …':''}</small><span class="scene-open-label">${esc(t('v50Details'))} ${icon('chevron')}</span></span></button><div class="ui606-scene-card-action">${sceneActivateButtonMarkup(scene)}</div></article>`;
     }).join('');
-    return `<div class="page scenes-page"><header class="page-heading"><div><div class="eyebrow">${esc(standLabel())}</div><h1>${esc(t('scenes'))}</h1><p>${esc(t('v50SceneIntro'))}</p></div></header>${list.length?'':sceneWorkflow()}<button class="button red" data-action="scene-new" ${ready?'':'disabled'}>＋ ${esc(t('newScene'))}</button>${savedScenes.error?`<p class="card" role="alert">${esc(savedScenes.error.message)}</p>`:''}<div class="section-heading scene-list-heading"><h2>${esc(t('v50YourScenes'))}</h2><small>${esc(t(list.length===1?'v50ScenesOne':'v50ScenesMany',{count:list.length}))}</small></div><div class="scene-list">${cards||`<section class="card empty">${icon('scenes')}<h2>${esc(t('v50SaveFirstScene'))}</h2><p>${esc(t(ready?'v50SaveFirstSceneHint':'v50SceneAddLightsHint'))}</p></section>`}</div>${list.length?`<details class="scene-workflow-help"><summary>${esc(t('v50HowItWorks'))}</summary>${sceneWorkflow()}</details><p class="scene-reading-note">${esc(t('v50SceneReadHint'))}</p>`:''}</div>`;
+    return `<div class="page scenes-page ui606-pages"><header class="page-heading ui606-page-heading"><div><div class="eyebrow">${esc(standLabel())}</div><div class="ui606-title-row"><h1>${esc(t('scenes'))}</h1><span class="ui606-page-count" aria-label="${esc(t(list.length===1?'v50ScenesOne':'v50ScenesMany',{count:list.length}))}">${list.length}</span></div><p>${esc(t('v50SceneIntro'))}</p></div></header><button class="button ui606-main-action" data-action="scene-new" ${ready?'':'disabled'}><span aria-hidden="true">＋</span><span>${esc(t('newScene'))}</span></button>${savedScenes.error?`<p class="card ui606-page-error" role="alert">${esc(savedScenes.error.message)}</p>`:''}<div class="section-heading scene-list-heading"><h2>${esc(t('v50YourScenes'))}</h2><small>${esc(t(list.length===1?'v50ScenesOne':'v50ScenesMany',{count:list.length}))}</small></div><div class="scene-list">${cards||`<section class="card empty ui606-empty"><span class="menu-icon" aria-hidden="true">${icon('scenes')}</span><h2>${esc(t('v50SaveFirstScene'))}</h2><p>${esc(t(ready?'v50SaveFirstSceneHint':'v50SceneAddLightsHint'))}</p></section>`}</div>${list.length?`<details class="scene-workflow-help"><summary>${icon('info')}<span>${esc(t('v50HowItWorks'))}</span>${icon('chevron')}</summary>${sceneWorkflow()}</details>`:sceneWorkflow()}</div>`;
   }
   function receiverCount(count) { return t(count===1?'v50ReceiversOne':'v50ReceiversMany',{count}); }
   function ledlineCount(count) { return count===1?t('scopeCountOne'):t('scopeCountMany',{count}); }
   function zoneCount(count) { return count===1?t('v50StandZoneOne'):t('v50StandZoneMany',{count}); }
   function sceneWorkflow() {
-    return `<section class="card scene-workflow" aria-labelledby="scene-workflow-title"><h2 id="scene-workflow-title">${esc(t('v50LightToScene'))}</h2><ol><li><i aria-hidden="true">${icon('stand')}</i><b>${esc(t('v50SceneStepLight'))}</b><small>${esc(t('v50ColourOrAnimation'))}</small></li><li><i aria-hidden="true">${icon('zones')}</i><b>${esc(t('v50SceneStepZones'))}</b><small>${esc(t('v50ChooseWhatToSave'))}</small></li><li><i aria-hidden="true">${icon('scenes')}</i><b>${esc(t('v50SceneStepSave'))}</b><small>${esc(t('v50NameScene'))}</small></li></ol><button class="text-button" data-action="stand">${esc(t('v50SetLighting'))} ${icon('chevron')}</button></section>`;
+    return `<section class="card scene-workflow ui606-scene-workflow" aria-labelledby="scene-workflow-title"><h2 id="scene-workflow-title">${esc(t('v50LightToScene'))}</h2><ol><li><i aria-hidden="true">1</i><b>${esc(t('v50SceneStepLight'))}</b><small>${esc(t('v50ColourOrAnimation'))}</small></li><li><i aria-hidden="true">2</i><b>${esc(t('v50SceneStepZones'))}</b><small>${esc(t('v50ChooseWhatToSave'))}</small></li><li><i aria-hidden="true">3</i><b>${esc(t('v50SceneStepSave'))}</b><small>${esc(t('v50NameScene'))}</small></li></ol><button class="text-button" data-action="stand">${icon('stand')}<span>${esc(t('v50SetLighting'))}</span>${icon('chevron')}</button></section>`;
   }
   function savedSceneStandPlan(scene) {
     // A scene is an immutable light snapshot. Reconstruct its full stand
@@ -2595,7 +2621,7 @@
     if(!sceneDraft)sceneDraft={zoneIds:[],name:'',search:''};
     const editing=Boolean(sceneDraft.sceneId),subtitle=editing?'Vervang deze scène met het huidige licht van je gekozen zones.':'Bewaar het licht zoals het nu is ingesteld.';
     const omitted=sceneDraft.omittedZoneCount?`<p class="card scene-edit-warning" role="status">${sceneDraft.omittedZoneCount} zone${sceneDraft.omittedZoneCount===1?' is':'s zijn'} niet meer beschikbaar en ${sceneDraft.omittedZoneCount===1?'wordt':'worden'} niet opgenomen in de bijgewerkte scène.</p>`:'';
-    return `<div class="page scene-draft-page">${contextTitle(editing?'Scène aanpassen':'Sfeer bewaren',subtitle,'Scènes','scenes')}${omitted}<label class="dialog-field scene-name-field">Geef je scène een naam<input id="scene-name" maxlength="64" value="${esc(sceneDraft.name)}" placeholder="Bijvoorbeeld: warm welkom"></label><section class="scene-zone-picker" aria-labelledby="scene-zone-picker-title"><div class="section-heading"><h2 id="scene-zone-picker-title">Welke zones wil je bewaren?</h2></div><div class="scene-bulk-actions"><button class="text-button" data-action="scene-select-all">Alle zones kiezen</button><button class="text-button" data-action="scene-clear-selection">Selectie wissen</button></div>${sceneSearch('draft',stand().zones.length)}<div class="scene-zone-list">${stand().zones.map(z=>{
+    return `<div class="page scene-draft-page ui606-pages">${contextTitle(editing?'Scène aanpassen':'Sfeer bewaren',subtitle,'Scènes','scenes')}${omitted}<label class="dialog-field scene-name-field ui606-scene-name"><span class="ui606-step-heading"><span class="ui606-step-number" aria-hidden="true">1</span><span>Geef je scène een naam</span></span><input id="scene-name" maxlength="64" value="${esc(sceneDraft.name)}" placeholder="Bijvoorbeeld: warm welkom"></label><section class="scene-zone-picker" aria-labelledby="scene-zone-picker-title"><div class="section-heading ui606-step-heading"><span class="ui606-step-number" aria-hidden="true">2</span><h2 id="scene-zone-picker-title">Welke zones wil je bewaren?</h2></div><div class="scene-bulk-actions"><button class="text-button" data-action="scene-select-all">Alle zones kiezen</button><button class="text-button" data-action="scene-clear-selection">Selectie wissen</button></div>${sceneSearch('draft',stand().zones.length)}<div class="scene-zone-list">${stand().zones.map(z=>{
       const count=M.zoneReceivers(model,z.id).length;
       return `<button class="scene-zone" data-action="scene-zone" data-id="${esc(z.id)}" data-scene-filter-name="${esc(z.name+' '+(z.type||''))}" aria-pressed="${sceneDraft.zoneIds.includes(z.id)}" ${count?'':'disabled'}>${count?zonePreview(z,'scene-preview',{label:`Huidig licht · ${z.name} · ${z.type}`}):`<span class="scene-preview scene-preview-unavailable">${icon('zones')}</span>`}<span><b>${esc(z.name)}</b><small>${count?`${receiverCount(count)} · ${z.type}`:'Nog geen verlichting'}</small></span><i aria-hidden="true">${sceneDraft.zoneIds.includes(z.id)?'✓':'+'}</i></button>`;
     }).join('')}</div><p class="scene-search-empty card" hidden>Geen zones gevonden. Pas je zoekopdracht aan; je selectie blijft bewaard.</p></section><div class="scene-save-bar"><p data-scene-selection-summary role="status" aria-live="polite"></p><p class="scene-save-error" data-scene-save-error role="alert" hidden></p><button class="button red full" data-action="scene-save" disabled>${editing?'Scène bijwerken':'Scène opslaan'}</button><small>${editing?'Vervangt het opgeslagen licht. Je verlichting verandert niet.':'Opslaan verandert je verlichting niet.'}</small></div><button class="button secondary full" data-action="scenes">Annuleren</button></div>`;
@@ -2604,7 +2630,7 @@
     if(!stand())return renderScenes();
     const scene=savedScenes.scenes.find(s=>s.id===route.sceneId&&s.standId===stand().id);if(!scene)return renderScenes();
     const check=Scenes.compatibility(model,scene),zones=Scenes.previewZones(model,scene),count=zones.reduce((n,z)=>n+z.receiverCount,0),standPlan=savedSceneStandPlan(scene);
-    return `<div class="page scene-detail-page">${contextTitle(scene.name,'Opgeslagen scène · bekijken verandert niets.','Scènes','scenes')}<button class="button secondary full scene-edit-button" data-action="scene-edit" data-id="${esc(scene.id)}">${icon('edit')} ${esc(t('updateScene'))}</button><div class="scene-scope-summary"><span>${icon('zones')}<b>${zoneCount(zones.length)}</b></span><span>${icon('receiver')}<b>${receiverCount(count)}</b></span></div><section class="scene-detail"><div class="section-heading"><h2>Zones in deze scène</h2><small>Opgeslagen licht</small></div>${check.ok?'':`<p class="card scene-zone-warning" role="alert">${esc(check.reason)} Er wordt niets gedeeltelijk geactiveerd.</p>`}${sceneSearch('detail',zones.length)}<div class="scene-saved-zones">${zones.map((z,i)=>`<article class="scene-saved-zone" data-scene-zone="${esc(z.id)}" data-scene-zone-type="${z.type}" data-scene-filter-name="${esc(z.name+' '+z.type)}"><header><span class="scene-zone-number">${i+1}</span><div><h3>${esc(z.name)}</h3><small>${z.type} · ${receiverCount(z.receiverCount)}</small></div></header>${savedZonePreview(z,'',standPlan)}${z.available?'':`<p class="scene-zone-warning">${esc(z.reason)}</p>`}</article>`).join('')}</div><p class="scene-search-empty card" hidden>Geen zones gevonden. Pas je zoekopdracht aan om je opgeslagen zones te zien.</p></section><div class="scene-save-bar scene-activate-bar"><p>${zoneCount(zones.length)} · samen toepassen</p><button class="button full" data-action="scene-apply" data-id="${esc(scene.id)}" ${check.ok?'':'disabled'}>Scène activeren</button><small>Andere zones blijven ongewijzigd.</small></div><button class="button secondary" data-action="scene-delete" data-id="${esc(scene.id)}">Scène verwijderen</button></div>`;
+    return `<div class="page scene-detail-page ui606-pages">${contextTitle(scene.name,'Opgeslagen scène · bekijken verandert niets.','Scènes','scenes')}<div class="ui606-scene-detail-tools"><div class="scene-scope-summary"><span>${icon('zones')}<b>${zoneCount(zones.length)}</b></span><span>${icon('receiver')}<b>${receiverCount(count)}</b></span></div><button class="button secondary scene-edit-button" data-action="scene-edit" data-id="${esc(scene.id)}">${icon('edit')} ${esc(t('updateScene'))}</button></div><section class="scene-detail"><div class="section-heading"><h2>Zones in deze scène</h2><small>Opgeslagen licht</small></div>${check.ok?'':`<p class="card scene-zone-warning" role="alert">${esc(check.reason)} Er wordt niets gedeeltelijk geactiveerd.</p>`}${sceneSearch('detail',zones.length)}<div class="scene-saved-zones">${zones.map((z,i)=>`<article class="scene-saved-zone" data-scene-zone="${esc(z.id)}" data-scene-zone-type="${z.type}" data-scene-filter-name="${esc(z.name+' '+z.type)}"><header><span class="scene-zone-number">${i+1}</span><div><h3>${esc(z.name)}</h3><small>${z.type} · ${receiverCount(z.receiverCount)}</small></div></header>${savedZonePreview(z,'',standPlan)}${z.available?'':`<p class="scene-zone-warning">${esc(z.reason)}</p>`}</article>`).join('')}</div><p class="scene-search-empty card" hidden>Geen zones gevonden. Pas je zoekopdracht aan om je opgeslagen zones te zien.</p></section><div class="scene-save-bar scene-activate-bar"><p>${zoneCount(zones.length)} · samen toepassen</p><button class="button full" data-action="scene-apply" data-id="${esc(scene.id)}" ${check.ok?'':'disabled'}>${icon('power')}<span>Scène activeren</span></button><small>Andere zones blijven ongewijzigd.</small></div><button class="text-button ui606-scene-delete" data-action="scene-delete" data-id="${esc(scene.id)}">${icon('trash')}<span>Scène verwijderen</span></button></div>`;
   }
   function standConnectionMessage(){
     const errorText=key=>window.LightningV50ErrorTexts.t(key,uiPreferences.preferences.language);
@@ -3542,6 +3568,7 @@
     }
     if(openSpatialChoices.has(zone()?.id))syncSpatialChoiceDialog(oldSpatialBrowsing);
     syncOrderTutorial();
+    window.InterfaceMotion?.showPage?.(main.firstElementChild,[route.screen,route.zoneId,route.family,route.sceneId,controlMode,showControlAnimationGallery].join('|'));
   }
   function restoreControlFocus(previous,host=document) {
     if(!previous?.matches?.('button[data-action]'))return false;
@@ -3983,6 +4010,7 @@
       }
     }
     model=standControlOpen?M.applyStandState(next,stand().id,patch):M.applyState(next,route.zoneId,scope,patch);
+    if(freshRecipe===true)animationEditorChoice=null;
     if(Object.keys(patch).some(key=>key!=='rgbwLast'))sendReceiverStates(ids,portScope?{scope}:{});
     const note=document.querySelector('.mixed-note');if(note)note.hidden=!mixedSelection();
     if(standControlOpen)syncStandPower();
@@ -5851,7 +5879,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate603',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate606',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

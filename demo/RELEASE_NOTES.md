@@ -1,3 +1,9 @@
+## Interface-update606
+
+Compactere bediening, een overzichtelijkere animatiekeuze met meer varianten achter één knop, duidelijkere ledline-instellingen en rustigere Scènes- en Receivers-pagina’s. Op geschikte schermen kun je met een bewuste veeg vanaf de linkerrand teruggaan via dezelfde bestaande terugknop.
+
+Dit is een fictieve browserdemo. De update publiceert geen receiverfirmware, native app of nieuwe Android-download. Bestaande foutmeldingen, bevestigingsregels, opgeslagen scènebetekenis en alle animatierecepten blijven behouden. De eerdere private iPhonebuild605 is geen bewijs voor deze606-interface en wordt niet als606-installatie voorgesteld.
+
 ## Interface-update603
 
 Een scène starten toont geen gewone verzendmelding meer. In de fictieve browserdemo blijft duidelijk dat alleen het voorbeeld verandert. De bestaande scènekeuze, opgeslagen instellingen, foutmeldingen en bediening blijven behouden.

@@ -21,7 +21,7 @@
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)');
   const listeners = [];
   const surfaces = new Map();
-  let press = null, destroyed = false;
+  let press = null, destroyed = false, pageContext = null;
   function cancel() {
     if (!press) return;
     clearTimeout(press.timer);
@@ -169,6 +169,11 @@
   root.classList.add('interface-polish');
   window.InterfaceMotion = Object.freeze({
     cancel,
+    showPage(page, context) {
+      if(context===pageContext)return false;
+      const initial=pageContext===null;pageContext=context;
+      return enterSurface(page,'panel',initial);
+    },
     openDialog(dialog, wasOpen = false) { return enterSurface(dialog, 'dialog', wasOpen); },
     cancelDialog: cancelEntry,
     openPanel(panel, wasOpen = false) { return enterSurface(panel, 'panel', wasOpen); },

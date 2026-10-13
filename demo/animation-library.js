@@ -1,5 +1,5 @@
-/* Pure display grouping/search. Original effect IDs, recipes, order within a
- * family and availability remain owned by preview.catalog(); no hardware API. */
+/* Pure display grouping/search. Original effect IDs, recipes and availability
+ * remain owned by preview.catalog(); curation changes presentation only. */
 (function (root, factory) {
   const api = factory();
   if (typeof module === 'object' && module.exports) module.exports = api;
@@ -145,6 +145,46 @@
       return Object.freeze({key:section.key,title:info.title,summary:info.summary,groups:families,count:families.reduce((sum,family) => sum + family.count,0)});
     }).filter(section => section.count > 0));
   }
+  // A short first row of choices with different motions, rather than every
+  // small variation of the same recipe. Each slot names existing equivalents
+  // for RGBW/SPI; missing entries fall back to the untouched catalogue order.
+  const FEATURED = Object.freeze({
+    'whole:pulse':[['rgbw-breathe-1','spi-breathe-99'],['rgbw-breathe-18','spi-line-breathe-18'],['rgbw-breathe-25','spi-line-breathe-25'],['rgbw-breathe-17','spi-line-breathe-17'],['rgbw-breathe-0','spi-breathe-98']],
+    'pixels:flow':[['spi-gradient-2'],['spi-flow-21'],['spi-flow-42'],['spi-flow-121'],['spi-gradient-123']],
+    'pixels:pulse':[['spi-breathe-22'],['spi-breathe-24'],['spi-breathe-39'],['spi-breathe-69'],['spi-breathe-127']],
+    'pixels:wave':[['spi-wave-29'],['spi-wave-31'],['spi-wave-116'],['spi-wave-122'],['spi-wave-130']],
+    'pixels:chase':[['spi-chase-8'],['spi-dual-11'],['spi-chase-112'],['spi-chase-126'],['spi-chase-129']],
+    'pixels:comet':[['spi-comet-14'],['spi-comet-103'],['spi-comet-115'],['spi-comet-117'],['spi-comet-131']],
+    'pixels:sparkle':[['spi-sparkle-18'],['spi-sparkle-86'],['spi-sparkle-87'],['spi-sparkle-118'],['spi-sparkle-125']],
+    'tunnel:reference':[['v31-ref-sheet'],['v31-ref-stagger'],['v31-ref-ribbons'],['v31-ref-packets'],['v31-ref-outline']],
+    'tunnel:waves':[['v30-tunnel-travel'],['v30-tunnel-bounce'],['v30-tunnel-echo'],['rgbw-wave-16','spi-wave-106'],['rgbw-wave-24','spi-wave-128']],
+    'tunnel:symmetry':[['v30-tunnel-center'],['v30-tunnel-outside'],['rgbw-mirror-29','spi-mirror-179'],['spi-mirror-110'],['spi-dual-96']],
+    'tunnel:build':[['v30-tunnel-cascade'],['v30-tunnel-handoff'],['rgbw-sequence-30','spi-sequence-180'],['rgbw-cascade-22','spi-cascade-108'],['rgbw-sequence-5','spi-sequence-155']],
+    'brand:white':[['v30-brand-white-breathe'],['v30-brand-warm-white'],['spi-flow-48'],['spi-breathe-79'],['spi-warm-49']],
+    'brand:colour':[['v30-brand-accent'],['v30-brand-soft-gradient'],['spi-flow-73'],['spi-flow-76'],['spi-flow-82']]
+  });
+  function curate(family,currentId=null) {
+    if(!family||!Array.isArray(family.effects))throw new TypeError('An animation family is required');
+    const effects=family.effects,featured=[];
+    if(effects.length<=6)return Object.freeze({featured:Object.freeze([...effects]),more:Object.freeze([])});
+    for(const alternatives of FEATURED[family.key]||[]) {
+      const effect=alternatives.map(id=>effects.find(item=>item.id===id)).find(Boolean);
+      if(effect&&!featured.includes(effect))featured.push(effect);
+    }
+    for(const effect of effects) {
+      if(featured.length>=5)break;
+      if(!featured.includes(effect))featured.push(effect);
+    }
+    // A saved or active legacy variant stays directly accessible, even when
+    // it normally belongs to More variants. Nothing is copied into storage.
+    const current=effects.find(effect=>effect.id===currentId);
+    if(current) {
+      const index=featured.indexOf(current);if(index>=0)featured.splice(index,1);
+      featured.unshift(current);
+    }
+    const chosen=new Set(featured.map(effect=>effect.id));
+    return Object.freeze({featured:Object.freeze(featured),more:Object.freeze(effects.filter(effect=>!chosen.has(effect.id)))});
+  }
   function search(items, query = '',translate) {
     const terms = normalize(query).split(' ').filter(Boolean);
     const phrase=terms.join(' ');
@@ -165,5 +205,5 @@
       return {effect,index,rank};
     }).filter(Boolean).sort((a,b) => b.rank - a.rank || a.index - b.index).map(item => item.effect);
   }
-  return Object.freeze({categories:CATEGORIES,categoriesFor,categoryInfo,groups,group,sections,search,normalize,starters,displayName});
+  return Object.freeze({categories:CATEGORIES,categoriesFor,categoryInfo,groups,group,sections,curate,search,normalize,starters,displayName});
 }));

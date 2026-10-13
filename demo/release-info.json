@@ -146,9 +146,9 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate603-quiet-scene-ui-android27",
+  "revision": "V50candidate606-interface-android27",
   "interfaceVersion": 50,
-  "interfaceBaseline": "V50 shared UI: local light intent is not presented as confirmed receiver state; compact complete six-line previews unchanged. Fictitious browser demo only. Android50.0.0/code26 adds exact firmware admission and75s native configuration budget; no receiver firmware or physical acceptance promotion.",
+  "interfaceBaseline": "V50 shared interface606 presentation, over the established fictitious browser demo603. No native or receiver transport changes are included; normal delivery remains silent and problems stay visible.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -258,8 +258,8 @@
     },
     {
       "path": "animation-library.js",
-      "sha256": "9ea42bce29c1674f2da3410bb48451eb6f9537c7b3a072c8b145eb0707dcc57a",
-      "bytes": 16680
+      "sha256": "0ca66e8c63820ceb17180918b77ae106ba7781d1a3b346d9083d670277fd9d9e",
+      "bytes": 19896
     },
     {
       "path": "animation-mobile.css",
@@ -273,8 +273,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "73489533de056e3b059eff161d7e263884d547b186c39a3ca402fa4fcbb7205f",
-      "bytes": 564685
+      "sha256": "2dfee8aaf1330c23e00680756e59b8a58fdb9dd6fdc6fbf0ed287d6dc28fc803",
+      "bytes": 568624
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -313,8 +313,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "8964bf7032c87af98bfbbfcd22c8a7fd7fd3fdecd07b5d241813e72d254d49fa",
-      "bytes": 7445
+      "sha256": "6d3caf861df7ff202fe5e1b66fcff29b6c75663981d40bc1f66b5c7532098738",
+      "bytes": 7725
     },
     {
       "path": "installation-libraries.js",
@@ -328,8 +328,8 @@
     },
     {
       "path": "interface-motion.js",
-      "sha256": "7f3092d22a28dd8ebe4fcbd1e7768c11efc4187734f12ca4fb3a48026aa3fa4f",
-      "bytes": 9190
+      "sha256": "96f3041f1bcee0146db0f54964b8994b6f4a682276b985a4a4092778cb449992",
+      "bytes": 9401
     },
     {
       "path": "interface-polish.css",
@@ -498,8 +498,8 @@
     },
     {
       "path": "RELEASE_NOTES.md",
-      "sha256": "3b8883940447d6e4588f0218450d7f6700b04f0a3cb4c2ddd436d7883023edad",
-      "bytes": 38662
+      "sha256": "b89e2a2f9be028602e969fbf31c75ad32bec1299a2f329006bc8b568a7052b41",
+      "bytes": 39328
     },
     {
       "path": "scenes.css",
@@ -577,6 +577,26 @@
       "bytes": 5114
     },
     {
+      "path": "ui606-controls.css",
+      "sha256": "934d7026152220f4bb7237b6af650817195b98213ff9024e7b3359e77db1a12f",
+      "bytes": 8140
+    },
+    {
+      "path": "ui606-gallery.css",
+      "sha256": "1bbc48cf7cc623dd93d68b232ffef30fc478aa87b645aabe6c7ccc613d89a03b",
+      "bytes": 2484
+    },
+    {
+      "path": "ui606-navigation.js",
+      "sha256": "ff933c09736f23fbcd27ace6c873b0061d4bfa7dc31291063eb604d4e609debc",
+      "bytes": 7255
+    },
+    {
+      "path": "ui606-pages.css",
+      "sha256": "fe63a76f17fe83fa1c71029ff08659e60f1bc69c3d6c9dabb54bc892fb7d93cf",
+      "bytes": 17587
+    },
+    {
       "path": "v40-design.css",
       "sha256": "15e28696be4862733ba2fbb6a7d089dc7ce720d1ba8aea30ba523641abf62958",
       "bytes": 34730
@@ -643,8 +663,8 @@
     },
     {
       "path": "v50-texts.js",
-      "sha256": "b8f7885fcb9658afd99b1f8738721178317c6183bcb0c51c4f0d3efa2fd5d3de",
-      "bytes": 34276
+      "sha256": "3beb272302349b4a119b9c03d6949619e6a678c67655da97a0203dd57b3c71f9",
+      "bytes": 35812
     },
     {
       "path": "vendor/v21_animation_catalog.js",
@@ -662,7 +682,7 @@
       "bytes": 3012
     }
   ],
-  "interfaceReviewScope": "Source-bound renderer and WebKit interface tests, then separate exact public asset/cache and browser smoke checks. Existing native metadata is historical only; this UI publication attests no new phone, firmware, radio or physical output acceptance.",
+  "interfaceReviewScope": "Exact source UI hunks and isolated asset/cache verification. Browser visual review and public deployment remain separate; this candidate attests no iPhone606 install, receiver output, radio performance or physical acceptance.",
   "historicalInterfaceReviewScope398": {
     "sourceSnapshot": "verified-Web397-setup398-private-copy",
     "basedOnSourceSnapshot": "verified-Web397",
@@ -2433,5 +2453,35 @@
     "firmwarePublished": false,
     "androidDownloadChanged": false,
     "actualPublicBrowser603UIReviewPending": true
+  },
+  "interfaceCandidate606": {
+    "scope": "Minimal605-to606 reviewed Web UI delta over public603; seven existing public adaptations and all unrelated assets retained.",
+    "sourceInventorySHA256": "99eff7c71f7115802badc8da580241c277370833b82682f062502c77abfcc77e",
+    "sourceUIFiles": [
+      "animation-library.js",
+      "app.js",
+      "index.html",
+      "interface-motion.js",
+      "ui606-controls.css",
+      "ui606-gallery.css",
+      "ui606-navigation.js",
+      "ui606-pages.css",
+      "v50-texts.js"
+    ],
+    "existingPublicAdaptations": 7,
+    "appHunkCount": 18,
+    "fullPrivateAppCopied": false,
+    "hardwareAccess": false,
+    "physicalAcceptance": false,
+    "nativePublished": false,
+    "firmwarePublished": false,
+    "androidDownloadChanged": false,
+    "androidDownloadRetained": 27,
+    "nativeAppHistoricalMetadataChanged": false,
+    "previousPrivateNativeBuild": 605,
+    "previousPrivateNativeScope": "Historical private handoff only; this browser candidate does not re-attest that installation or claim a606 install.",
+    "iPhone606InstallationPerformed": false,
+    "actualPublicBrowser606UIReviewPending": true,
+    "published": false
   }
 }

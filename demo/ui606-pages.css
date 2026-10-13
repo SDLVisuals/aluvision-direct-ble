@@ -1,0 +1,575 @@
+/* Scènes and Receivers share the same compact V50 page hierarchy.
+   Deliberately scoped: ordering, light controls and saved-light painting
+   keep their own layouts and behavior. */
+html body .ui606-pages {
+  --ui606-edge: var(--interface-edge, var(--line));
+  --ui606-surface: var(--interface-milk, var(--panel));
+  --ui606-inner: var(--interface-inner, var(--soft));
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+html body .ui606-pages :is(button, input, summary) {
+  min-height: 44px;
+}
+html body .ui606-pages .page-heading {
+  margin: 0;
+  align-items: flex-start;
+}
+html body .ui606-pages .page-heading > div { width: 100%; }
+html body .ui606-pages .page-heading h1 {
+  font-size: clamp(26px, 6vw, 32px);
+  line-height: 1.16;
+  letter-spacing: -.85px;
+  overflow-wrap: anywhere;
+}
+html body .ui606-pages .page-heading p {
+  max-width: 48ch;
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+html body .ui606-pages .eyebrow {
+  margin-bottom: 7px;
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  overflow-wrap: anywhere;
+}
+html body .ui606-pages .ui606-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+html body .ui606-pages .ui606-page-count {
+  display: grid;
+  place-items: center;
+  flex: none;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 6px 11px;
+  border: 1px solid var(--ui606-edge);
+  border-radius: 14px;
+  background: var(--ui606-inner);
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+html body .ui606-pages :is(.ui606-main-action, .receiver-primary-action) {
+  width: 100%;
+  min-height: 50px;
+  border-radius: 16px;
+  font-size: 14px;
+  gap: 9px;
+}
+html body .ui606-pages :is(.ui606-main-action, .receiver-primary-action) > [aria-hidden] {
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 450;
+}
+html body .ui606-pages .section-heading {
+  margin: 0 0 10px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+html body .ui606-pages .section-heading h2 {
+  font-size: 16px;
+  line-height: 1.35;
+}
+html body .ui606-pages .section-heading small { font-size: 11px; }
+html body .ui606-pages .ui606-empty {
+  padding: 22px 17px;
+  border-radius: 22px;
+}
+html body .ui606-pages .empty .menu-icon {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 12px;
+  background: var(--ui606-inner);
+  color: var(--muted);
+}
+html body .ui606-pages .empty h2 { margin: 0 0 7px; font-size: 17px; }
+html body .ui606-pages .empty p { max-width: 35ch; margin-inline: auto; }
+html body .ui606-pages .ui606-page-error {
+  color: var(--red);
+  border-color: color-mix(in srgb, var(--red) 35%, var(--line));
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Receivers: one action row, one segmented filter and quiet disclosures. */
+html body .ui606-receivers-page .receiver-toolbar { gap: 9px; }
+html body .ui606-receivers-page .receiver-toolbar.has-updates {
+  grid-template-columns: minmax(0, 1fr) minmax(0, .9fr);
+}
+html body .ui606-receivers-page .receiver-update-entry {
+  min-height: 50px;
+  border: 1px solid var(--ui606-edge);
+  border-radius: 16px;
+  font-size: 12px;
+}
+html body .ui606-receivers-page .receiver-overview-summary {
+  margin: -5px 0 -3px;
+  gap: 6px;
+}
+html body .ui606-receivers-page .receiver-overview-summary > span {
+  padding: 5px 9px;
+  border-radius: 9px;
+  background: var(--ui606-inner);
+  font-size: 11px;
+}
+html body .ui606-receivers-page .receiver-unassigned-summary {
+  color: var(--red);
+}
+html body .ui606-receivers-page .receiver-filters {
+  margin: 0;
+  padding: 4px;
+  gap: 4px;
+  border: 1px solid var(--ui606-edge);
+  border-radius: 17px;
+  background: var(--ui606-inner);
+}
+html body .ui606-receivers-page .receiver-filters button {
+  min-width: 0;
+  min-height: 44px;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  gap: 7px;
+  font-size: 12px;
+  transition: background-color .18s ease, border-color .18s ease;
+}
+html body .ui606-receivers-page .receiver-filters button[aria-pressed="true"] {
+  background: var(--panel);
+  border-color: var(--ui606-edge);
+  color: var(--ink);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--ink) 6%, transparent);
+}
+html body .ui606-receivers-page .receiver-filters .ui606-filter-label {
+  min-width: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+html body .ui606-receivers-page .receiver-filters .ui606-filter-count {
+  display: grid;
+  place-items: center;
+  flex: none;
+  min-width: 23px;
+  min-height: 23px;
+  padding: 2px 5px;
+  border-radius: 8px;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+html body .ui606-receivers-page .receiver-list { gap: 10px; }
+html body .ui606-receivers-page .receiver-list > .receiver-overview-card {
+  border-radius: 21px;
+  background-color: var(--ui606-surface);
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html body .ui606-receivers-page .receiver-overview-card > summary {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) 66px 14px;
+  min-height: 106px;
+  padding: 13px 12px;
+  gap: 10px;
+}
+html body .ui606-receivers-page .receiver-overview-card > summary .list-product {
+  width: 58px !important;
+  min-width: 0;
+  border-radius: 12px;
+}
+html body .ui606-receivers-page .receiver-overview-card > summary .list-product canvas {
+  height: 64px;
+}
+html body .ui606-receivers-page .receiver-heading-copy > b {
+  font-size: 14px;
+  line-height: 1.35;
+  margin-bottom: 5px;
+}
+html body .ui606-receivers-page .receiver-heading-meta {
+  font-size: 11px;
+  line-height: 1.45;
+}
+html body .ui606-receivers-page .receiver-geometry-summary {
+  margin-top: 4px;
+  font-size: 10px;
+  line-height: 1.45;
+}
+html body .ui606-receivers-page .receiver-overview-card > summary > .receiver-blink {
+  width: 66px;
+  min-height: 56px;
+  border-radius: 13px;
+  background: var(--ui606-inner);
+  font-size: 10px;
+  gap: 5px;
+}
+html body .ui606-receivers-page .receiver-overview-card > summary > .receiver-blink[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--red) 10%, var(--panel));
+  border-color: var(--red);
+}
+html body .ui606-receivers-page .receiver-overview-card > summary > .icon {
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  transition: transform .2s ease;
+}
+html body .ui606-receivers-page .receiver-overview-card[open] > summary > .icon {
+  transform: rotate(90deg);
+}
+html body .ui606-receivers-page .receiver-overview-card[open] > summary {
+  border-bottom: 1px solid var(--ui606-edge);
+}
+html body .ui606-receivers-page .receiver-details { padding: 0 13px 13px; }
+html body .ui606-receivers-page .receiver-details .receiver-management {
+  margin-top: 12px;
+  padding-top: 0;
+  border-top: 0;
+}
+html body .ui606-receivers-page .receiver-details > .text-button {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+}
+html body .ui606-receivers-page .receiver-details :is(.receiver-connections, .receiver-manage-menu) {
+  border-radius: 15px;
+}
+
+/* Saved scenes: the preview opens details; the full-width action activates.
+   Keep the preview's saved-state canvas and all compatibility errors intact. */
+html body .ui606-pages .scene-list-heading { margin: 2px 0 -6px; }
+html body .ui606-pages .scene-list { display: grid; gap: 12px; }
+html body .ui606-pages .ui606-scene-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--ui606-edge);
+  border-radius: 22px;
+  background: var(--ui606-surface);
+  box-shadow: inset 0 1px var(--interface-highlight, transparent), 0 3px 12px color-mix(in srgb, var(--ink) 4%, transparent);
+}
+html body .ui606-pages .ui606-scene-card > .scene-card {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 116px;
+  padding: 13px;
+  gap: 13px;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  background-image: none !important;
+  box-shadow: none;
+  text-align: left;
+}
+html body .ui606-pages .ui606-scene-card .scene-card > .scene-mosaic {
+  width: 88px;
+  height: 88px;
+  flex-basis: 88px;
+  border-radius: 13px;
+}
+html body .ui606-pages .ui606-scene-card .scene-card-copy {
+  display: grid;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+html body .ui606-pages .ui606-scene-card .scene-card-copy > b {
+  font-size: 16px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+html body .ui606-pages .ui606-scene-card .scene-card-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+html body .ui606-pages .ui606-scene-card .scene-card-names {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+}
+html body .ui606-pages .ui606-scene-card .scene-open-label {
+  margin-top: 3px;
+  font-size: 12px;
+  gap: 5px;
+  color: var(--ink);
+}
+html body .ui606-pages .ui606-scene-card-action {
+  display: grid;
+  gap: 7px;
+  border-top: 1px solid var(--ui606-edge);
+  padding: 9px 12px 12px;
+  background: var(--ui606-inner);
+}
+html body .ui606-pages .ui606-scene-card-action .scene-quick-activate {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  max-width: none;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 13px;
+  gap: 8px;
+}
+html body .ui606-pages .ui606-scene-card-action .scene-quick-activate > span {
+  font-size: 13px;
+  line-height: 1.3;
+}
+html body .ui606-pages .ui606-scene-card-action .scene-unavailable-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+html body .ui606-pages .scene-workflow-help {
+  border: 1px solid var(--ui606-edge);
+  border-radius: 17px;
+  background: var(--ui606-inner);
+  overflow: hidden;
+}
+html body .ui606-pages .scene-workflow-help > summary {
+  display: flex;
+  gap: 9px;
+  padding: 10px 13px;
+  color: var(--muted);
+  font-size: 12px;
+  list-style: none;
+}
+html body .ui606-pages .scene-workflow-help > summary::-webkit-details-marker { display: none; }
+html body .ui606-pages .scene-workflow-help > summary > .icon { width: 17px; height: 17px; }
+html body .ui606-pages .scene-workflow-help > summary > .icon:last-child { margin-left: auto; }
+html body .ui606-pages .scene-workflow-help[open] > summary > .icon:last-child { transform: rotate(90deg); }
+html body .ui606-pages .ui606-scene-workflow {
+  padding: 15px;
+  border-radius: 20px;
+  background: var(--ui606-inner);
+  box-shadow: none;
+}
+html body .ui606-pages .scene-workflow-help .ui606-scene-workflow {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--ui606-edge);
+  border-radius: 0;
+  background: transparent;
+}
+html body .ui606-pages .ui606-scene-workflow h2 { font-size: 15px; }
+html body .ui606-pages .ui606-scene-workflow ol {
+  margin: 15px 0 5px;
+  gap: 10px;
+}
+html body .ui606-pages .ui606-scene-workflow li { text-align: center; }
+html body .ui606-pages .ui606-scene-workflow li i {
+  width: 32px;
+  height: 32px;
+  margin: 0 auto 8px;
+  border: 1px solid var(--ui606-edge);
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 750;
+}
+html body .ui606-pages .ui606-scene-workflow li:not(:last-child)::after { content: none; }
+html body .ui606-pages .ui606-scene-workflow li b { font-size: 11px; }
+html body .ui606-pages .ui606-scene-workflow li small { font-size: 10px; }
+html body .ui606-pages .ui606-scene-workflow .text-button {
+  justify-content: center;
+  width: 100%;
+  gap: 7px;
+  margin-top: 8px;
+  border-top: 1px solid var(--ui606-edge);
+  padding-top: 8px;
+}
+
+/* A name, then zones, then one save action. Selected zones retain their
+   previews rather than being covered by an opaque selection colour. */
+html body .ui606-pages .ui606-scene-name {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--ui606-edge);
+  border-radius: 20px;
+  background: var(--ui606-surface);
+}
+html body .ui606-pages .ui606-step-heading {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 9px;
+  font-size: 14px;
+  font-weight: 750;
+}
+html body .ui606-pages .ui606-step-number {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border: 1px solid var(--ui606-edge);
+  border-radius: 50%;
+  background: var(--ui606-inner);
+  color: var(--muted);
+  font-size: 12px;
+}
+html body .ui606-pages .scene-zone-picker .ui606-step-heading { margin-bottom: 4px; }
+html body .ui606-pages .scene-zone-picker .ui606-step-heading h2 { flex: 1; font-size: 14px; }
+html body .ui606-pages .scene-bulk-actions {
+  margin: 0 0 6px;
+  gap: 8px;
+}
+html body .ui606-pages .scene-bulk-actions .text-button {
+  padding: 4px 5px;
+  font-size: 12px;
+}
+html body .ui606-pages .scene-zone-list { display: grid; gap: 9px; }
+html body .ui606-pages .scene-zone {
+  display: flex;
+  align-items: center;
+  min-height: 84px;
+  padding: 10px;
+  gap: 11px;
+  border: 1px solid var(--ui606-edge);
+  border-radius: 17px;
+  background: var(--ui606-surface);
+  color: var(--ink);
+}
+html body .ui606-pages .scene-zone[aria-pressed="true"] {
+  padding: 10px;
+  border-color: var(--red);
+  background: color-mix(in srgb, var(--red) 4%, var(--panel));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--red) 20%, transparent);
+}
+html body .ui606-pages .scene-zone > .scene-preview {
+  width: 78px;
+  height: 58px;
+  flex: none;
+  border-radius: 10px;
+}
+html body .ui606-pages .scene-zone > span:not(.scene-preview) { flex: 1; text-align: left; }
+html body .ui606-pages .scene-zone b { display: block; font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; }
+html body .ui606-pages .scene-zone small { font-size: 11px; }
+html body .ui606-pages .scene-zone > i {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 27px;
+  height: 27px;
+  border: 1px solid var(--ui606-edge);
+  border-radius: 9px;
+  background: var(--ui606-inner);
+  color: var(--muted);
+  font-size: 15px;
+  font-style: normal;
+}
+html body .ui606-pages .scene-zone[aria-pressed="true"] > i {
+  background: var(--red);
+  border-color: var(--red);
+  color: var(--action-ink, #fff);
+}
+html body .ui606-pages .scene-save-bar {
+  border-radius: 19px;
+  gap: 8px;
+  padding: 12px;
+  background: var(--panel);
+}
+html body .ui606-pages .scene-save-bar .button { min-height: 48px; border-radius: 14px; font-size: 14px; }
+html body .ui606-pages .scene-save-bar > p { font-size: 12px; }
+html body .ui606-pages .scene-save-bar > small { font-size: 11px; }
+html body .ui606-pages .scene-save-bar > .scene-save-error { font-size: 12px; }
+html body .ui606-pages.scene-draft-page[data-has-selection="true"] .scene-save-bar {
+  padding: 10px 12px;
+  gap: 6px;
+}
+html body .ui606-pages .ui606-scene-detail-tools { display: grid; gap: 10px; }
+html body .ui606-pages .scene-scope-summary { gap: 6px; }
+html body .ui606-pages .scene-scope-summary > span {
+  padding: 6px 9px;
+  border-radius: 10px;
+  background: var(--ui606-inner);
+  font-size: 11px;
+}
+html body .ui606-pages .scene-scope-summary .icon { width: 15px; height: 15px; }
+html body .ui606-pages .scene-edit-button {
+  justify-self: start;
+  min-height: 44px;
+  padding: 9px 13px;
+  font-size: 12px;
+}
+html body .ui606-pages .scene-saved-zones { gap: 10px; }
+html body .ui606-pages .scene-saved-zone {
+  padding: 13px;
+  border-color: var(--ui606-edge);
+  border-radius: 20px;
+  background: var(--ui606-surface);
+}
+html body .ui606-pages .scene-saved-zone > header { gap: 10px; margin-bottom: 11px; }
+html body .ui606-pages .scene-zone-number {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: var(--ui606-inner);
+  font-size: 12px;
+}
+html body .ui606-pages .scene-saved-zone h3 { font-size: 15px; line-height: 1.35; }
+html body .ui606-pages .scene-saved-zone small { font-size: 11px; }
+html body .ui606-pages .scene-detail .scene-saved-zone > .scene-preview {
+  height: 92px;
+  border-radius: 12px;
+}
+html body .ui606-pages .scene-detail .scene-saved-zone > .scene-preview-unavailable {
+  height: auto;
+  min-height: 92px;
+}
+html body .ui606-pages .ui606-scene-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  color: var(--muted);
+}
+html body .ui606-pages .ui606-scene-delete .icon { width: 17px; height: 17px; }
+
+@media (min-width: 720px) {
+  html body .ui606-pages .scene-list,
+  html body .ui606-receivers-page .receiver-list,
+  html body .ui606-pages .scene-saved-zones {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  html body .ui606-pages .scene-list > .empty,
+  html body .ui606-receivers-page .receiver-list > .empty { grid-column: 1 / -1; }
+  html body .ui606-pages .ui606-scene-detail-tools {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+}
+@media (max-width: 359px) {
+  html body .ui606-pages { gap: 13px; }
+  html body .ui606-receivers-page .receiver-overview-card > summary {
+    grid-template-columns: 42px minmax(0, 1fr) 58px 12px;
+    padding: 11px 10px;
+    gap: 7px;
+  }
+  html body .ui606-receivers-page .receiver-overview-card > summary .list-product { width: 42px !important; }
+  html body .ui606-receivers-page .receiver-overview-card > summary > .receiver-blink { width: 58px; }
+  html body .ui606-pages .ui606-scene-card > .scene-card { gap: 10px; padding: 11px; }
+  html body .ui606-pages .ui606-scene-card .scene-card > .scene-mosaic { width: 72px; height: 78px; flex-basis: 72px; }
+  html body .ui606-pages .ui606-scene-card .scene-card-copy > b { font-size: 14px; }
+  html body .ui606-pages .scene-zone > .scene-preview { width: 62px; }
+  html body .ui606-pages .scene-zone b { font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html body .ui606-pages :is(button, summary, .icon) { transition: none; }
+}

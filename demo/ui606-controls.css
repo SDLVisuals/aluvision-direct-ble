@@ -1,0 +1,73 @@
+/* Shared, compact controls. Light data and order mechanics are unchanged. */
+html.interface-polish #main .ui606-line-tools[data-order-open=false] {
+  display:grid;grid-template-columns:minmax(0,1.18fr) minmax(0,1fr);gap:8px;
+  margin:0 0 6px;padding:0;border:0;border-radius:0;background:none;box-shadow:none;
+}
+html.interface-polish #main .ui606-line-tools>.spatial-preview-choice {margin:0;padding:0;min-width:0;border:0;background:none;box-shadow:none}
+html.interface-polish #main .ui606-line-tools :is(.spatial-choice-toggle,.ledline-setup-toggle) {
+  display:flex;align-items:center;gap:8px;box-sizing:border-box;width:100%;min-height:62px;
+  margin:0;padding:10px;border:1px solid var(--line);border-radius:16px;
+  background:var(--panel,#fff);box-shadow:0 2px 5px #11182704;text-align:left;
+}
+html.interface-polish #main .ui606-line-tools :is(.spatial-choice-current-icon,.ledline-setup-toggle>.icon) {
+  flex:none;width:27px;height:27px;padding:0;border-radius:0;background:none;color:var(--red);
+}
+html.interface-polish #main .ui606-line-tools :is(.spatial-choice-current,.ledline-setup-copy){display:grid;gap:3px;min-width:0;flex:1}
+html.interface-polish #main .ui606-line-tools :is(.spatial-choice-current,.ledline-setup-copy)>b{font-size:12px;line-height:1.25;letter-spacing:0}
+html.interface-polish #main .ui606-line-tools :is(.spatial-choice-current,.ledline-setup-copy)>small{font-size:10px;line-height:1.25;margin:0;color:var(--muted)}
+html.interface-polish #main .ui606-line-tools .spatial-choice-topology{display:none}
+html.interface-polish #main .ui606-line-tools :is(.spatial-choice-toggle,.ledline-setup-toggle)>.icon:last-child{width:14px;height:14px;flex:none;color:var(--muted)}
+html.interface-polish #main .ui606-line-tools>[data-order-cancel-notice]{grid-column:1/-1}
+/* Prominent return, shared by the settings page and the persistent dock. */
+html.interface-polish body :is(#main,#effect-dialog) .animation-gallery-return {
+  display:flex;align-items:center;justify-content:flex-start;min-height:52px;width:100%;max-width:none;
+  padding:12px 14px;border:1px solid var(--line);border-radius:15px;
+  color:var(--ink);background:var(--panel,#fff);box-shadow:0 3px 10px #18203208;
+}
+html.interface-polish body :is(#main,#effect-dialog) .animation-gallery-return .gallery-action-copy b{font-size:14px;line-height:1.3;font-weight:750}
+html.interface-polish body :is(#main,#effect-dialog) .animation-gallery-return .gallery-action-icon {width:30px;height:30px;background:var(--soft);border-radius:10px;color:var(--red);display:grid;place-items:center;flex:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-gallery-return .gallery-action-icon .icon{width:20px;height:20px}
+html.interface-polish body .v50-preview-expand{white-space:normal;min-height:44px}
+html.interface-polish body .v50-preview-expand span{font-size:11px;line-height:1.2}
+/* The target stays visible above the two ways to swap. Fixed left-hand slots
+   keep their colours; only the chosen pair of receiver cards moves. */
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-dock{gap:10px;padding-bottom:10px}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-reference {margin:0;padding:12px;border-radius:18px;box-shadow:none}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-reference figcaption{gap:8px;align-items:center;margin-bottom:9px}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-reference figcaption>b{font-size:13px;line-height:1.35;max-width:65%}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-reference canvas{border-radius:12px}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-reference-legend{margin:7px 0 0}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-reference-direction{font-size:10px;margin:6px 0 0}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-feedback {
+  height:auto;min-height:76px;display:grid;grid-template-rows:auto auto;align-content:center;
+  gap:5px;padding:10px 12px;border:0;border-radius:14px;background:var(--soft);box-shadow:none;
+}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-feedback-route{font-size:12px;line-height:1.4;font-weight:650;white-space:normal}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-feedback>small{font-size:10px;line-height:1.35;color:var(--muted);padding-left:26px}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-setup-hint{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-order-heading{display:none}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v593-order-status[data-order-status-kind=idle] [data-order-compact-status]{display:none}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v593-order-status[data-order-status-kind=idle]{padding:8px 10px;margin:0 0 10px;background:transparent;box-shadow:none}
+html.interface-polish body #main .ledline-setup[data-order-open=true] [data-order-item]{border-radius:16px;box-shadow:0 2px 8px #18203205}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .line-order-handle{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:44px;border:0;border-left:1px solid var(--line);border-radius:0 12px 12px 0;background:transparent}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .line-order-handle>span{font-size:9px;line-height:1.2;color:var(--muted);font-weight:650}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-row-actions{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:6px}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-row-actions button{min-height:44px;font-size:11px;border-radius:10px}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-settings-toggle{background:var(--ink);border-color:var(--ink);color:var(--panel,#fff)}
+html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-settings-toggle>.icon{color:inherit;width:16px}
+html.interface-polish body .v568-order-place-choices>div{gap:8px}
+html.interface-polish body .v568-order-place-choices button{min-height:64px;border-radius:13px}
+html.interface-polish body .ui606-order-more{border:1px solid var(--line);border-radius:14px;padding:0 12px;margin:12px 0}
+html.interface-polish body .ui606-order-more>summary{display:flex;align-items:center;gap:9px;min-height:48px;cursor:pointer;list-style:none;font-size:13px;font-weight:650}
+html.interface-polish body .ui606-order-more>summary::-webkit-details-marker{display:none}
+html.interface-polish body .ui606-order-more>summary>.icon{width:18px;height:18px;flex:none}
+html.interface-polish body .ui606-order-more>summary>.icon:last-child{margin-left:auto;transition:transform .18s ease}
+html.interface-polish body .ui606-order-more[open]>summary>.icon:last-child{transform:rotate(90deg)}
+/* Motion transforms only: no height collapse or scroll-position animation. */
+.ui606-back-gesture{position:fixed;z-index:2147483000;left:8px;top:46%;width:38px;height:48px;display:grid;place-items:center;border:1px solid var(--line);border-radius:16px;background:var(--panel,#fff);color:var(--ink);box-shadow:0 4px 20px #0002;font-size:36px;line-height:1;pointer-events:none;opacity:var(--swipe-progress,0);transform:translateX(calc(-12px + 12px * var(--swipe-progress,0)))}
+@media(prefers-reduced-motion:no-preference){
+  html.interface-polish summary{transition:background-color .18s ease,color .18s ease}
+  html.interface-polish details[open]>.receiver-details,
+  html.interface-polish details[open]>.receiver-connections-content{animation:ui606-reveal .2s ease both}
+  @keyframes ui606-reveal{from{opacity:.45;transform:translateY(4px)}to{opacity:1;transform:none}}
+}
