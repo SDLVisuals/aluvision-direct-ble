@@ -1,3 +1,9 @@
+## Interface-update593
+
+De animatiekiezer benoemt duidelijk de gekozen animatie en of de opdracht nog wordt verstuurd of onbevestigd is. Het zonevoorbeeld houdt een compacte vaste statusruimte. Ook bij de ledlinevolgorde staat nu één vaste statusstrook: de belangrijke korte melding blijft zichtbaar en Details geeft de volledige uitleg, zonder de lijst te laten verspringen. De bestaande rustige openings- en sluitovergang is toegevoegd aan de interface. Alle teksten zijn beschikbaar in Nederlands, Engels, Frans en Duits.
+
+Deze browserdemo gebruikt uitsluitend fictieve receivers en heeft geen verbinding met echte verlichting. De overgang betreft alleen de weergave van de interface, niet een bewezen fade van echte ledlines. Deze update bevat geen native code, receiverfirmware of nieuwe Android-app. De bestaande Android-download code27 blijft ongewijzigd. De demo bewijst geen fysieke reactiesnelheid, fade of synchronisatie.
+
 ## Interface-update591
 
 Ledlines omwisselen reageert direct in het voorbeeld. Alleen de twee gekozen ledlines wisselen; een volgend paar kan meteen worden gekozen. De opslag volgt gecontroleerd de nieuwste volledige volgorde. Bij het sluiten maakt de interface onderscheid tussen bevestigde opslag, eerder beëindigde herkenningskleuren en een nog onbevestigde terugkeer. De bestaande drie instelstappen blijven behouden.

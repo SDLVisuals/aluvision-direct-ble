@@ -146,7 +146,7 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate591-order-ui-android27",
+  "revision": "V50candidate593-order-status-ui-android27",
   "interfaceVersion": 50,
   "interfaceBaseline": "V50 shared UI: local light intent is not presented as confirmed receiver state; compact complete six-line previews unchanged. Fictitious browser demo only. Android50.0.0/code26 adds exact firmware admission and75s native configuration budget; no receiver firmware or physical acceptance promotion.",
   "fakeReceivers": {
@@ -273,8 +273,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "ff03f2faf907b5f8fe08b114cfff66935962d07ec3dc71417a1e836628742943",
-      "bytes": 552678
+      "sha256": "21e0d2c25e13a5dfa1e88375e93b61025fdd42f9733c5ab0034bd9579b5e0d1f",
+      "bytes": 560033
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -313,7 +313,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "e2b65a13f0c558ed3a6ac3660405440db75573cf26ce1b13410afaf1f33d8d14",
+      "sha256": "e89e8b97a4f4d75e82641c6185b3b3702857da2c6bee03606c85a2ba41580df5",
       "bytes": 7445
     },
     {
@@ -438,8 +438,8 @@
     },
     {
       "path": "preferences.js",
-      "sha256": "1de8058cb2fd5a2d44cafb3dfd70705b4d9eaf055cb1af2dbb4d5734be19b40f",
-      "bytes": 94423
+      "sha256": "a8abd74743a4dfcb33c5b8a6f1420354c3587bc71335579de9773a6ecb361252",
+      "bytes": 100381
     },
     {
       "path": "premium-surfaces.css",
@@ -498,8 +498,8 @@
     },
     {
       "path": "RELEASE_NOTES.md",
-      "sha256": "f2070c2e9b845602e41fa987c47b2b94ff9fffb7e9451a1318f68275cb6925b8",
-      "bytes": 34814
+      "sha256": "0671a1faeb0d36f7999e284f5a2c5b4e93e39bb24f5c33d2cf5d3f2c186cabd9",
+      "bytes": 35750
     },
     {
       "path": "scenes.css",
@@ -608,13 +608,13 @@
     },
     {
       "path": "v50-interface.css",
-      "sha256": "81fd9b118f3084dc72c81cd296b218825bf92e196655aa4464a64088ff195f16",
-      "bytes": 106176
+      "sha256": "5ccec0fc3ce97705289d131d654b3886deff61bf8de7a62aa067849444a2f950",
+      "bytes": 106579
     },
     {
       "path": "v50-order-clarity.css",
-      "sha256": "80b0516210150a1fe9c9ae946c577b7de3481bfab60c51d05ff2d61b071318cb",
-      "bytes": 15500
+      "sha256": "cc66256952015eb81993aeec97958e3b0af8c62303a8b9b0d867eeb1d66cadc6",
+      "bytes": 18626
     },
     {
       "path": "v50-order-drag.css",
@@ -628,8 +628,8 @@
     },
     {
       "path": "v50-order-texts.js",
-      "sha256": "0976cc57f1aa038be804f0e11ddbf964e171c2292b9c11c7f0a2189a56711e58",
-      "bytes": 9098
+      "sha256": "3dc7060422a7d30392f4219871cf78e868e795443385df5af2414e122cfd8af6",
+      "bytes": 11920
     },
     {
       "path": "v50-order-tutorial.css",
@@ -638,8 +638,8 @@
     },
     {
       "path": "v50-preview-selection.css",
-      "sha256": "7ad6841dec0a76c120e12c6ef3463e9799e7d31da0fcb7ac0805a01ea78eef41",
-      "bytes": 15391
+      "sha256": "8470839047fb34f8ffb4869a86029c585ee8d9cee059c35deacd08f2f413eb59",
+      "bytes": 15989
     },
     {
       "path": "v50-texts.js",
@@ -2280,5 +2280,51 @@
     "publicCSSRetained587": true,
     "publicCSSReason": "Only the three reviewed Web UI files are in this proposal; the separate native opacity-only CSS delta is not imported",
     "actualMac591UIReviewPending": true
+  },
+  "interfaceCandidate593": {
+    "candidate": 593,
+    "scope": "Six exact shared Web presentation files only; seven established fictitious-demo adaptations retained. Native code, firmware and private persistence excluded.",
+    "sourceUIFiles": [
+      {
+        "path": "app.js",
+        "sha256": "c758a3fc322526910f541c9f1c041ad99e35dc872da4e71d81d6cc98f1891495"
+      },
+      {
+        "path": "preferences.js",
+        "sha256": "a8abd74743a4dfcb33c5b8a6f1420354c3587bc71335579de9773a6ecb361252"
+      },
+      {
+        "path": "v50-preview-selection.css",
+        "sha256": "8470839047fb34f8ffb4869a86029c585ee8d9cee059c35deacd08f2f413eb59"
+      },
+      {
+        "path": "v50-order-clarity.css",
+        "sha256": "cc66256952015eb81993aeec97958e3b0af8c62303a8b9b0d867eeb1d66cadc6"
+      },
+      {
+        "path": "v50-order-texts.js",
+        "sha256": "3dc7060422a7d30392f4219871cf78e868e795443385df5af2414e122cfd8af6"
+      },
+      {
+        "path": "v50-interface.css",
+        "sha256": "5ccec0fc3ce97705289d131d654b3886deff61bf8de7a62aa067849444a2f950"
+      }
+    ],
+    "changes": [
+      "Selected animation captions identify the chosen recipe, never a claim that physical lighting is active",
+      "Pending and unconfirmed choices use concise closed translated labels in all existing gallery/settings contexts",
+      "Zone-preview status reserves its compact two-line footprint and reports meaningful closed status without clipping or hiding failure reasons",
+      "LED-line order uses one stable compact status with original full errors available in Details",
+      "Existing opacity-only UI opening/closing motion is imported without changing native transport or physical lighting"
+    ],
+    "sourceProofScope": "Actual extracted Web functions and unchanged LIVE queue over declared memory peers; no native receiver confirmation or optical acceptance",
+    "hardwareAccess": false,
+    "physicalAcceptance": false,
+    "androidDownloadRetained": 27,
+    "nativeReceiversLaterExcluded": true,
+    "publicUIExactMerged593": true,
+    "publicOpacity588Imported": true,
+    "publicCSSReason": "Six exact merged593 Web presentation files imported. Existing native588 opacity-only entry220ms/exit180ms styling is now included explicitly; this is browser presentation, not physical receiver fade.",
+    "actualMac593UIReviewPending": true
   }
 }

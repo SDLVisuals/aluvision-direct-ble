@@ -240,6 +240,21 @@ html.interface-polish body #main .ledline-setup[data-order-ui="568"] .ledline-se
   display:grid;grid-template-columns:52px minmax(0,1fr);gap:8px;margin:10px 0 7px;
   color:var(--muted,#69716c);font-size:11px;line-height:1.2;font-weight:650;
 }
+/* Status updates never insert a long paragraph before the draggable rows.
+   Essential compact status stays visible; the untouched full explanation is
+   a deliberately opened disclosure, positioned outside normal row flow. */
+html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-original-status{position:absolute!important;width:1px!important;height:1px!important;margin:0!important;padding:0!important;overflow:hidden!important;clip-path:inset(50%);white-space:nowrap}
+html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status{box-sizing:border-box;position:relative;display:grid;grid-template-columns:minmax(0,1fr) 52px;align-items:center;gap:8px;height:66px;min-height:66px;margin:8px 0;padding:6px 8px;border:1px solid var(--line,#dce0dc);border-radius:12px;background:var(--panel,#fff)}
+html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status-copy{min-width:0;display:grid;grid-template-rows:28px 22px;align-items:center;font-size:11px;line-height:1.25;color:var(--muted,#626963)}
+html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status-copy>*{margin:0;overflow:visible;white-space:normal;overflow-wrap:normal;text-overflow:clip}
+html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status-copy>b{color:var(--ink,#252729);font-size:11px;font-weight:650}
+html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status[data-order-status-kind="unconfirmed"]{border-color:var(--red,#ba433d)}
+html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status-details>summary{box-sizing:border-box;min-height:44px;padding:10px 2px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:var(--glass-solid,#eef0ee);color:var(--ink,#252729);font-size:11px;line-height:1.25;font-weight:600;list-style:none;cursor:pointer}
+html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status-details>summary::-webkit-details-marker{display:none}
+html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status-details>summary:focus-visible{outline:2px solid var(--red,#ba433d);outline-offset:2px}
+html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status-explanation{box-sizing:border-box;position:absolute;left:-1px;right:-1px;top:calc(100% + 5px);z-index:8;max-height:min(280px,40dvh);overflow:auto;padding:12px;border:1px solid var(--line,#dce0dc);border-radius:12px;background:var(--panel,#fff);box-shadow:0 8px 24px #101a2420;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status-explanation p{margin:8px 0}
+html.interface-polish body #main .ledline-setup[data-order-open="true"] .v593-order-status-explanation button{width:100%;min-height:44px;margin:4px 0 0;padding:8px;border:1px solid var(--line,#dce0dc);border-radius:9px;font:inherit;background:var(--glass-solid,#eef0ee);color:var(--ink,#252729)}
 .v568-order-column-labels>span:first-child{text-align:center}
 html.interface-polish body #main .ledline-setup[data-order-ui="568"] .v50-order-lanes{
   grid-template-columns:52px minmax(0,1fr);gap:8px;

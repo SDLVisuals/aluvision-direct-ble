@@ -566,6 +566,7 @@
     }
     orderRecognitionDirty=false;
     syncOrderTestControls();
+    syncOrderStatus593();
   }
   const pendingDialogDismissals=new WeakMap();
   const pendingPanelDismissals=new WeakMap();
@@ -1508,14 +1509,29 @@
     const galleryAction=standControlOpen?'stand-animation-gallery':route.screen==='controls'?'animation-gallery':'animations-gallery';
     const paletteTitle=effect.whiteMixPreset?'Witmix · tik om aan te passen':effect.category==='brand'?(effect.id==='v30-brand-focus'||effect.id.startsWith('v31-ref-'))?'Merkkleuren · tik om te wijzigen':'Accentkleur · tik om te wijzigen':effect.paletteEditable===false?'Kleurenreeks':'Animatiekleuren · tik om te wijzigen';
     const paletteHelp=effect.whiteMixPreset?'<p class="palette-guidance">W geeft wit licht; rood en een beetje groen maken de mix warmer. Pas de mengkleur aan terwijl je naar je ledline kijkt.</p>':effect.id==='v30-brand-focus'?'<p class="palette-guidance">Voeg kleuren toe voor je merkaccent. De gloed laat ze na elkaar zien langs de ledlines.</p>':'';
-    const content = `<div class="current-effect v569-animation-header"><div class="current-effect-gallery-slot" data-editor-gallery-slot><button type="button" class="current-effect-gallery animation-gallery-return animation-chooser-action" data-animation-back-version="569" data-action="${galleryAction}" aria-label="${esc(t('v569BackPicker'))}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('back')}</span><span class="gallery-action-copy"><b>${esc(t('v569BackPicker'))}</b></span></span></button></div><div class="current-effect-heading"><small class="active-animation-kicker"><span aria-hidden="true">${icon('check')}</span>${esc(animationCurrentLabel())}</small><b id="active-animation-title" tabindex="-1" role="heading" aria-level="2">${esc(Library.displayName(effect,t))}</b></div>${standControlOpen?'':`<div class="v569-animation-power animation-context">${powerControl()}</div>`}</div>${preview}<section class="card palette-section animation-daily-controls v569-colour-panel"><h2>${effect.whiteMixPreset||effect.paletteEditable===false?paletteTitle:esc(t('animationColours'))}</h2>${effect.paletteEditable===false?'':`<p class="v569-palette-hint">${esc(t('v569PaletteHint'))}</p>`}${paletteHelp}<div class="palette" aria-label="${esc(t('animationColours'))}">${paletteMarkup(s)}</div>${backgroundControls(effect)}</section><section class="card v569-playback-panel" aria-label="${esc(t('v569Playback'))}">${effect.controls.includes('speed')?`<div class="v569-primary-setting">${animationSlider('speed',t('animationSpeed'),0,100,s.speed??30,'%')}${resetMarkup('speed',t('animationSpeed'))}</div>`:''}<div class="v569-primary-setting">${animationSlider('bri',t('animationBrightness'),0,100,s.bri??100,'%')}${resetMarkup('bri',t('animationBrightness'))}</div></section>${animationControls(effect)}<button class="button secondary full animation-save-recipe" data-action="preset-save">＋ ${esc(t('animationSaveOwn'))}</button>`;
+    const content = `<div class="current-effect v569-animation-header"><div class="current-effect-gallery-slot" data-editor-gallery-slot><button type="button" class="current-effect-gallery animation-gallery-return animation-chooser-action" data-animation-back-version="569" data-action="${galleryAction}" aria-label="${esc(t('v569BackPicker'))}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('back')}</span><span class="gallery-action-copy"><b>${esc(t('v569BackPicker'))}</b></span></span></button></div><div class="current-effect-heading"><small class="active-animation-kicker" data-animation-choice-label><span aria-hidden="true">${icon('animation')}</span>${esc(animationCurrentLabel())}</small><b id="active-animation-title" tabindex="-1" role="heading" aria-level="2">${esc(Library.displayName(effect,t))}</b></div>${standControlOpen?'':`<div class="v569-animation-power animation-context">${powerControl()}</div>`}</div>${preview}<section class="card palette-section animation-daily-controls v569-colour-panel"><h2>${effect.whiteMixPreset||effect.paletteEditable===false?paletteTitle:esc(t('animationColours'))}</h2>${effect.paletteEditable===false?'':`<p class="v569-palette-hint">${esc(t('v569PaletteHint'))}</p>`}${paletteHelp}<div class="palette" aria-label="${esc(t('animationColours'))}">${paletteMarkup(s)}</div>${backgroundControls(effect)}</section><section class="card v569-playback-panel" aria-label="${esc(t('v569Playback'))}">${effect.controls.includes('speed')?`<div class="v569-primary-setting">${animationSlider('speed',t('animationSpeed'),0,100,s.speed??30,'%')}${resetMarkup('speed',t('animationSpeed'))}</div>`:''}<div class="v569-primary-setting">${animationSlider('bri',t('animationBrightness'),0,100,s.bri??100,'%')}${resetMarkup('bri',t('animationBrightness'))}</div></section>${animationControls(effect)}<button class="button secondary full animation-save-recipe" data-action="preset-save">＋ ${esc(t('animationSaveOwn'))}</button>`;
     return `<section class="active-animation-workspace" data-animation-editor-version="569" aria-label="${esc(t('v569Adjust'))}">${content}</section>`;
   }
   function animationCurrentLabel() {
-    const s=selectedState(),targets=standControlOpen?standControlReceivers():[];
+    const s=selectedState(),targets=standControlOpen?standControlReceivers():selected();
     const off=standControlOpen?targets.length>0&&targets.every(receiver=>receiver.state.on===false||receiver.state.power===false):s.on===false||s.power===false;
-    // A saved/current recipe is not a receipt that physical lighting is on.
-    return t(off?'v569CurrentOff':'v569CurrentAnimation');
+    // The model is chosen intent. A receiver-level applied ledger can be old
+    // or for another recipe/port; it never proves this animation is current.
+    const kinds=targets.map(receiver=>liveStates.get(receiver.id)?.kind||'idle');
+    const suffix=!nativeContext||!liveController?'v592ChoicePreview':
+      kinds.includes('failed')?'v592ChoiceUnconfirmed':
+      kinds.some(kind=>kind==='pending'||kind==='staged')?'v592ChoicePending':null;
+    const chosen=t(off?'v592ChosenOff':'v592ChosenAnimation');
+    return suffix?chosen+' · '+t(suffix):chosen;
+  }
+  function syncAnimationChoiceLabels() {
+    // Only text in the currently mounted scope changes. No render, focus,
+    // recipe mutation, queue retry or receiver command on terminal delivery.
+    const surface=standControlOpen?document.getElementById('effect-dialog'):main;
+    surface?.querySelectorAll('[data-animation-choice-label]').forEach(node=>{
+      const text=node.lastChild;
+      if(text?.nodeType===3)text.nodeValue=animationCurrentLabel();
+    });
   }
   function openCurrentAnimationSettings(id) {
     const current=activeEffect();
@@ -1790,7 +1806,7 @@
   function effectCards(effects,extraClass='',variantTotal=0) {
     const selectedCount=selectedLineCount();
     const className=`effect-card${extraClass?` ${extraClass}`:''}`;
-    return effects.map((effect,index)=>{const needsAll=effect.requireTogether||effect.category==='tunnel',minimum=effect.minimumReceivers||1,tooFew=selectedCount<minimum,locked=needsAll?(standControlOpen?selectedCount:physicalLineCount())<minimum:tooFew,active=activeEffect()?.id===effect.id,name=Library.displayName(effect,t);return `<button type="button" class="${className}${active?' is-current-animation':''}" data-chooser-version="567" data-active-effect="${active}" data-animation-category="${esc(effect.category)}" data-action="${active?'animation-current-edit':'effect'}" data-id="${esc(effect.id)}" data-motion="${effectMotionKey(effect)}" aria-label="${esc(t(active?'animationCurrentSettingsAccessible':'v567StartNamed',{name}))}" aria-pressed="${active}" ${locked&&!active?'disabled':''}><span class="animation-effect-preview"><span class="animation-effect-preview-label">${esc(t('v567AnimationExample'))}</span>${effectPreview(effect,needsAll?{tunnelLines:'all'}:{})}${active?`<span class="animation-current-badge"><span aria-hidden="true">${icon('check')}</span>${esc(animationCurrentLabel())}</span>`:''}</span><b>${esc(name)}</b>${variantTotal>1?`<small class="animation-variant-position">${esc(t('animationVariantPosition',{current:index+1,total:variantTotal}))}</small>`:''}<small class="animation-variant-description">${esc(window.LightningV50AnimationTexts.effectDescription(effect,uiPreferences.preferences.language))}</small>${locked&&!active?`<small class="animation-start-unavailable">${needsAll?t('animationAcrossMinimum'):t('animationSelectMinimum',{count:minimum})}</small>`:`<span class="animation-start-action"><span aria-hidden="true">${icon(active?'advanced-settings':'play')}</span>${esc(t(active?'v569Adjust':'v567StartAnimation'))}</span>`}</button>`;}).join('');
+    return effects.map((effect,index)=>{const needsAll=effect.requireTogether||effect.category==='tunnel',minimum=effect.minimumReceivers||1,tooFew=selectedCount<minimum,locked=needsAll?(standControlOpen?selectedCount:physicalLineCount())<minimum:tooFew,active=activeEffect()?.id===effect.id,name=Library.displayName(effect,t);return `<button type="button" class="${className}${active?' is-current-animation':''}" data-chooser-version="567" data-active-effect="${active}" data-animation-category="${esc(effect.category)}" data-action="${active?'animation-current-edit':'effect'}" data-id="${esc(effect.id)}" data-motion="${effectMotionKey(effect)}" aria-label="${esc(t(active?'animationCurrentSettingsAccessible':'v567StartNamed',{name}))}" aria-pressed="${active}" ${locked&&!active?'disabled':''}><span class="animation-effect-preview"><span class="animation-effect-preview-label">${esc(t('v567AnimationExample'))}</span>${effectPreview(effect,needsAll?{tunnelLines:'all'}:{})}${active?`<span class="animation-current-badge" data-animation-choice-label><span aria-hidden="true">${icon('animation')}</span>${esc(animationCurrentLabel())}</span>`:''}</span><b>${esc(name)}</b>${variantTotal>1?`<small class="animation-variant-position">${esc(t('animationVariantPosition',{current:index+1,total:variantTotal}))}</small>`:''}<small class="animation-variant-description">${esc(window.LightningV50AnimationTexts.effectDescription(effect,uiPreferences.preferences.language))}</small>${locked&&!active?`<small class="animation-start-unavailable">${needsAll?t('animationAcrossMinimum'):t('animationSelectMinimum',{count:minimum})}</small>`:`<span class="animation-start-action"><span aria-hidden="true">${icon(active?'advanced-settings':'play')}</span>${esc(t(active?'v569Adjust':'v567StartAnimation'))}</span>`}</button>`;}).join('');
   }
   function animationFamilyCard(group) {
     const type=standControlOpen?[...new Set(standControlReceivers().map(receiver=>receiver.type))].join(' + '):zone()?.type==='SPI'?'SPI':'RGBW',openLabel=t(group.count===1?'v567ViewOne':'v567ViewMany',{count:group.count}),countLabel=t(group.count===1?'animationCountOne':'animationCountMany',{count:group.count}),nextStep=t('v567BrowseOnly');
@@ -1798,7 +1814,7 @@
     const previewLabel=t('v572FamilyPreview');
     const preview=standControlOpen?effectPreview(group.preview):tunnel?tunnelGalleryPreviewMarkup(group,'animation-spatial-sample',{illustrative:true,main:false}):effectPreview(group.preview);
     const current=activeEffect(),containsCurrent=Boolean(current&&group.effects.some(effect=>effect.id===current.id));
-    return `<article class="animation-family-card${tunnel?' tunnel-family-card':''}${containsCurrent?' is-active-family':''}" data-chooser-version="567" data-family-card-version="572" data-animation-category="${esc(group.category)}" data-group-browse-only="true"><button type="button" class="animation-family-trigger" data-action="family" data-id="${esc(group.key)}" data-ledline-type="${type}" aria-label="${esc(`${group.title}. ${openLabel}. ${nextStep}`)}"><span class="animation-family-preview${tunnel?' animation-family-spatial-preview':''}" data-motion-preview="${effectMotionKey(group.preview)}"><span class="animation-family-preview-label">${esc(previewLabel)}</span>${preview}</span><span class="family-copy"><span class="family-kicker">${esc(t('animationFamilyLabel'))}<span class="animation-type-badge" aria-label="${esc(t('animationBadgeForType',{type}))}">${type}</span></span><b class="family-title">${esc(group.title)}</b>${containsCurrent?`<span class="v569-family-current"><span aria-hidden="true">${icon('check')}</span>${esc(t('v569CurrentInGroup'))}</span>`:''}<small class="family-summary">${esc(group.summary)}</small><span class="family-variants" aria-label="${esc(countLabel)}"><span class="family-variants-folder" aria-hidden="true">${icon('folder')}</span><span class="family-variants-copy"><b>${esc(openLabel)}</b></span><span class="family-variants-action" aria-hidden="true">${icon('chevron')}</span></span></span></button></article>`;
+    return `<article class="animation-family-card${tunnel?' tunnel-family-card':''}${containsCurrent?' is-active-family':''}" data-chooser-version="567" data-family-card-version="572" data-animation-category="${esc(group.category)}" data-group-browse-only="true"><button type="button" class="animation-family-trigger" data-action="family" data-id="${esc(group.key)}" data-ledline-type="${type}" aria-label="${esc(`${group.title}. ${openLabel}. ${nextStep}`)}"><span class="animation-family-preview${tunnel?' animation-family-spatial-preview':''}" data-motion-preview="${effectMotionKey(group.preview)}"><span class="animation-family-preview-label">${esc(previewLabel)}</span>${preview}</span><span class="family-copy"><span class="family-kicker">${esc(t('animationFamilyLabel'))}<span class="animation-type-badge" aria-label="${esc(t('animationBadgeForType',{type}))}">${type}</span></span><b class="family-title">${esc(group.title)}</b>${containsCurrent?`<span class="v569-family-current" data-animation-choice-label><span aria-hidden="true">${icon('animation')}</span>${esc(animationCurrentLabel())}</span>`:''}<small class="family-summary">${esc(group.summary)}</small><span class="family-variants" aria-label="${esc(countLabel)}"><span class="family-variants-folder" aria-hidden="true">${icon('folder')}</span><span class="family-variants-copy"><b>${esc(openLabel)}</b></span><span class="family-variants-action" aria-hidden="true">${icon('chevron')}</span></span></span></button></article>`;
   }
   function animationFamilyDetail(group,tab,{includePreview=true}={}) {
     const countLabel=t(group.count===1?'animationCountOne':'animationCountMany',{count:group.count});
@@ -1875,7 +1891,7 @@
     if(!current||!standControlOpen&&route.screen!=='controls')return '';
     const name=Library.displayName(current,t),label=t('v569Adjust');
     const attribute=location==='sticky'?'data-editor-return-sticky':'data-editor-return-inline';
-    return `<button type="button" class="animation-gallery-return animation-settings-return" data-current-shortcut-version="573" data-active-summary-version="569" ${attribute} data-action="animation-current-edit" data-id="${esc(current.id)}" aria-label="${esc(t('animationCurrentSettingsAccessible',{name}))}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('check')}</span><span class="gallery-action-copy"><small class="animation-settings-return-kicker">${esc(animationCurrentLabel())}</small><b class="animation-settings-return-name">${esc(name)}</b><small class="animation-settings-return-action">${esc(label)}</small></span></span><span class="gallery-action-next" aria-hidden="true">${icon('chevron')}</span></button>`;
+    return `<button type="button" class="animation-gallery-return animation-settings-return" data-current-shortcut-version="573" data-active-summary-version="569" ${attribute} data-action="animation-current-edit" data-id="${esc(current.id)}" aria-label="${esc(t('animationCurrentSettingsAccessible',{name}))}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('animation')}</span><span class="gallery-action-copy"><small class="animation-settings-return-kicker" data-animation-choice-label>${esc(animationCurrentLabel())}</small><b class="animation-settings-return-name">${esc(name)}</b><small class="animation-settings-return-action">${esc(label)}</small></span></span><span class="gallery-action-next" aria-hidden="true">${icon('chevron')}</span></button>`;
   }
   function animationCategoryIcon(key){
     return key==='tunnel'?arrangementIcon('stacked'):icon(({catalogue:'zones',whole:'sun',pixels:'animation',brand:'sparkle',presets:'scenes'})[key]||'zones');
@@ -2019,7 +2035,7 @@
   }
   function orderCancelNoticeMarkup590(z){
     const notice=orderCancelNotice590;
-    return z&&notice?.zoneId===z.id&&notice.standId===stand()?.id
+    return z&&notice?.zoneId===z.id&&notice.standId===stand()?.id&&!openLineSetup.has(z.id)
       ?`<p class="order-recognition-status" data-order-resume-unconfirmed role="status" aria-live="polite">${esc(t(notice.code))}</p>`:'';
   }
   async function stopOrderPresentation590(close,{cancelled=false,playbackConfirmed=false}={}){
@@ -2102,6 +2118,29 @@
     const openStand=main.querySelector('[data-order-stand-open]');
     if(openStand)openStand.hidden=busy||!(needsStandOpen||arrangementDraft?.needsStandOpen&&arrangementDraft.error);
     syncOrderTestControls();
+    syncOrderStatus593();
+  }
+  // Compact presentation only. Original queue/draft/recognition authority and
+  // full error sentences remain untouched; a short label is never an ACK.
+  function orderStatusPresentation593(){
+    const pending=arrangementApplying||arrangementPlaybackPending()||!!orderSaveQueue588;
+    const notice=orderCancelNotice590,matchingNotice=notice?.zoneId===route.zoneId&&notice.standId===stand()?.id;
+    const error=arrangementDraft?.error||(matchingNotice?t(notice.code):''),needsStandOpen=arrangementNeedsStandOpen();
+    const orderPending=!!orderSaveQueue588&&orderSaveQueue588.zoneId===route.zoneId&&orderSaveQueue588.version>orderSaveQueue588.confirmedVersion;
+    const recognition=orderPending?'orderColoursPending':!orderIdentificationState?.active?previewContext?'orderPreviewStopped':orderIdentificationState?.cleanup?.status==='pending'?'orderRecognitionClosing':orderIdentificationState?.cleanup?.status==='unconfirmed'?'orderStopUnconfirmed':orderIdentificationState?.cleanup?.status==='confirmed'&&orderIdentificationState.reason==='idle'?'orderRecognitionIdleStopped':'orderRecognitionStopped':previewContext?'orderPreviewColours':orderIdentificationState.physicalConfirmed?'orderColoursConfirmed':orderIdentificationState.status==='pending'?'orderColoursPending':orderIdentificationState.status==='expired'?'orderColoursExpired':orderIdentificationState.error==='IDENTIFY_UNSUPPORTED'?'orderColoursUnsupported':'orderColoursUnconfirmed';
+    const kind=pending?'pending':error?'unconfirmed':needsStandOpen?'stand-required':orderMoveResult?.zoneId===route.zoneId&&orderMoveResult.saved?'saved':'idle';
+    const title=pending?'v593OrderPending':error?'v593OrderUnconfirmed':needsStandOpen?'v593OrderStandRequired':kind==='saved'?'v593OrderSaved':'v593OrderReady';
+    const full=pending?t('orderApplying'):error||(needsStandOpen?t('orderOpenStandHint'):kind==='saved'?t('v593OrderSaved'):t('v593OrderReady'));
+    return {kind,title,recognition,full,recognitionFull:t(recognition)};
+  }
+  function orderStatusMarkup593(){
+    const status=orderStatusPresentation593();
+    return `<div class="v593-order-status" data-order-status-kind="${status.kind}"><div class="v593-order-status-copy" role="status" aria-live="polite"><b data-order-compact-status>${esc(t(status.title))}</b><span data-order-compact-recognition>${esc(t('v593'+status.recognition))}</span></div><details class="v593-order-status-details"><summary aria-label="${esc(t('v593OrderDetailsAccessible'))}">${esc(t('v593OrderDetails'))}</summary><div class="v593-order-status-explanation"><b>${esc(t('v593OrderDetailsTitle'))}</b><p data-order-status-apply-detail>${esc(status.full)}</p><p data-order-status-recognition-detail>${esc(status.recognitionFull)}</p><button type="button" data-order-status-details-close>${esc(t('close'))}</button></div></details></div>`;
+  }
+  function syncOrderStatus593(){
+    const node=main?.querySelector('.ledline-setup[data-order-open="true"] .v593-order-status');if(!node)return;
+    const status=orderStatusPresentation593();node.dataset.orderStatusKind=status.kind;
+    for(const [selector,text]of [['[data-order-compact-status]',t(status.title)],['[data-order-compact-recognition]',t('v593'+status.recognition)],['[data-order-status-apply-detail]',status.full],['[data-order-status-recognition-detail]',status.recognitionFull]]){const label=node.querySelector(selector);if(label)label.textContent=text;}
   }
   // Preview receiver order while its atomic metadata update is in flight.
   // Only a confirmed update changes saved geometry or resends receiver state.
@@ -2393,7 +2432,7 @@
     }).join('');
     return `<section class="ledline-setup card" data-order-ui="568" data-order-open="${open}" ${open?'role="dialog" aria-modal="true"':''} aria-label="${esc(t('lineSetupTitle'))}">${open?'':spatialPreviewChoice()}<button class="ledline-setup-toggle" data-action="layout" aria-label="${esc(toggleLabel)}" aria-expanded="${open}" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy">${open?`<span class="ledline-menu-label">${esc(t('lineSetupMenu'))}</span>`:''}<b>${esc(title)}</b><small id="ledline-setup-context">${esc(open?context:hint)}</small></span><span class="ledline-setup-disclosure-action">${open?`<span class="ledline-setup-close-label">${icon('close')}${esc(t('close'))}</span>`:icon('chevron')}</span></button>${orderCancelNoticeMarkup590(z)}<div class="ledline-setup-body" id="ledline-setup-body" role="region" ${open?'aria-labelledby="ledline-setup-heading" aria-describedby="ledline-setup-context"':'hidden'}>${open?`
       <div class="v50-order-dock" data-order-dock><div class="v50-order-feedback" data-order-feedback data-order-feedback-phase="${orderPreviewGesture?.zoneId===z.id?'proposal':orderMoveResult?.zoneId===z.id?'saved':'idle'}" role="status" aria-live="polite">${orderFeedbackMarkup()}</div>${orderReferenceMarkup(z,count)}</div>
-      <section class="ledline-arrangement" aria-label="${esc(singleLine?title:t('lineSetupOrder'))}" aria-busy="${arrangementInteractionBusy()}"><div class="ledline-order-heading"><h3 id="ledline-setup-heading">${esc(t('v568LineColumn'))}</h3><small class="ledline-family-label">${esc(family||'')}</small></div><p class="ledline-setup-hint" id="ledline-order-help">${esc(t('v568OrderDragHint'))}</p><p class="order-recognition-status" data-order-recognition-status role="status"></p><p class="order-drop-status" role="status" aria-live="polite"></p><p data-order-apply-status role="status" ${arrangementApplying||arrangementPlaybackPending()||draft?.error||needsStandOpen?'':'hidden'}>${arrangementApplying||arrangementPlaybackPending()?esc(orderText('orderApplying')):esc(draft?.error||(needsStandOpen?orderText('orderOpenStandHint'):''))}</p><button type="button" class="button secondary full" data-order-stand-open data-action="management-stand-open" ${!arrangementInteractionBusy()&&(needsStandOpen||draft?.needsStandOpen&&draft.error)?'':'hidden'}>${esc(orderText('orderOpenStand'))}</button>
+      <section class="ledline-arrangement" aria-label="${esc(singleLine?title:t('lineSetupOrder'))}" aria-busy="${arrangementInteractionBusy()}"><div class="ledline-order-heading"><h3 id="ledline-setup-heading">${esc(t('v568LineColumn'))}</h3><small class="ledline-family-label">${esc(family||'')}</small></div><p class="ledline-setup-hint" id="ledline-order-help">${esc(t('v568OrderDragHint'))}</p><p class="order-recognition-status v593-order-original-status" data-order-recognition-status aria-hidden="true"></p><p class="order-drop-status" role="status" aria-live="polite"></p><p class="v593-order-original-status" data-order-apply-status aria-hidden="true" ${arrangementApplying||arrangementPlaybackPending()||draft?.error||needsStandOpen?'':'hidden'}>${arrangementApplying||arrangementPlaybackPending()?esc(orderText('orderApplying')):esc(draft?.error||(needsStandOpen?orderText('orderOpenStandHint'):''))}</p>${orderStatusMarkup593()}<button type="button" class="button secondary full" data-order-stand-open data-action="management-stand-open" ${!arrangementInteractionBusy()&&(needsStandOpen||draft?.needsStandOpen&&draft.error)?'':'hidden'}>${esc(orderText('orderOpenStand'))}</button>
       <div class="v568-order-column-labels" aria-hidden="true"><span>${esc(t('v568PlaceColumn'))}</span><span>${esc(t('v568LineColumn'))}</span></div><div class="v50-order-lanes"><ol class="v50-order-slots" aria-hidden="true">${ordered.map((line,index)=>{const colour=palette[index];return `<li data-order-slot data-order-position="${index+1}" style="--identify-colour:${colour?.hex||'transparent'}"><span class="v50-order-slot-number">${index+1}</span><small data-slot-colour-name>${colour?esc(colourLabel(colour)):''}</small></li>`;}).join('')}</ol><ol class="ledline-draft-order">${rows}</ol></div>
       </section>${orderTestMarkup()}${reusable?`<button class="ledline-reuse-action" data-action="zone-assign" data-id="${esc(z.id)}">${icon('receiver')}<span>${esc(t('lineSetupReuse'))}</span>${icon('chevron')}</button>`:''}${layoutReceiverActions()}`:''}</div></section>`;
   }
@@ -3791,10 +3830,35 @@
       // empty/new delivery ledger must not silently display it as current light.
       else if(states.includes('idle')){kind='preview';message=applied?`Deels bevestigd (${applied}/${targets.length}) · overige lichtkeuze nog niet gecontroleerd.`:'Voorbeeld van je lichtkeuze · actuele verlichting nog niet gecontroleerd.';}
       else if(applied===targets.length){kind='applied';}
+      if(node.dataset.liveStatus==='zone'&&node.closest('.control-preview-dock[data-sticky-preview="579"]'))
+        message=compactLiveDockMessage592({targets,states,applied,failed,kind,connected:nativeContext&&!!liveController});
       node.dataset.state=kind;node.textContent=message;
       node.setAttribute('aria-live',failed?'polite':'off');
     });
     syncStaticRouteStatus();
+    syncAnimationChoiceLabels();
+  }
+  function compactLiveDockMessage592({targets,states,applied,failed,kind,connected}) {
+    if(!connected)return t('v592LiveNoConnection');
+    if(!targets.length)return t('v592LiveNoSelection');
+    if(failed){
+      const codes=new Set(targets.map(receiver=>liveStates.get(receiver.id)).filter(state=>state?.kind==='failed').map(state=>state.code));
+      let key='v592LiveUnconfirmed';
+      if(codes.has('OUTPUT_CONFIGURATION_PENDING'))key='v592LiveOutputPending';
+      else if(codes.has('LIVE_CONTROL_PROFILE'))key='v592LiveProfile';
+      else if(codes.has('LIVE_CONTROL_FIRMWARE_UPDATE'))key='v592LiveFirmware';
+      else if(codes.has('LIVE_CONTROL_STAND_UNAVAILABLE'))key='v592LiveStandUnavailable';
+      else if(codes.has('SPI_PORT_SCENES_UNSUPPORTED'))key='v592LiveSpiUnsupported';
+      else if(['LIVE_CONTROL_BUSY','STAND_BUSY','STAND_CONNECTION_BUSY','NATIVE_BUSY','OTA_BUSY','REMOVAL_BUSY'].some(code=>codes.has(code)))key='v592LiveBusy';
+      else if(['LIVE_CONTROL_CANCELLED','CANCELLED'].some(code=>codes.has(code)))key='v592LiveCancelled';
+      const reason=t(key);
+      return applied?t('v592LivePartial',{count:targets.length-applied,total:targets.length,reason}):reason;
+    }
+    if(kind==='pending')return t('v592LivePending');
+    // This names the delivery ledger only, never current recipe or light.
+    if(kind==='applied')return t('v592LiveLastReceipt');
+    if(states.includes('preview'))return t(applied?'v592LivePartialPreview':'v592LivePreview',{applied,total:targets.length});
+    return t(applied?'v592LivePartialUnchecked':'v592LiveUnchecked',{applied,total:targets.length});
   }
   function apply(patch,scope=selection(),{freshRecipe=false}={}) {
     if(standPresentationOnly())return toast('Je stand is nog niet verbonden. Je bewaarde stand blijft zichtbaar.');
@@ -4781,6 +4845,18 @@
       if(restored?.dataset.previewSpatial===spatialScroll.shape){restored.parentElement.scrollLeft=spatialScroll.left;restored.parentElement.scrollTop=spatialScroll.top;}
     }
   });
+  // A native details disclosure carries no data-action and cannot renew the
+  // recognition lease, save an order or enter the receiver action dispatcher.
+  document.addEventListener('click',event=>{
+    const button=event.target.closest?.('[data-order-status-details-close]'),details=button?.closest('.v593-order-status-details');
+    if(!details||!details.closest('.ledline-setup[data-order-open="true"]'))return;
+    details.open=false;details.querySelector('summary')?.focus({preventScroll:true});
+  });
+  document.addEventListener('keydown',event=>{
+    if(event.key!=='Escape')return;
+    const details=event.target.closest?.('.v593-order-status-details[open]');if(!details)return;
+    event.preventDefault();event.stopImmediatePropagation();details.open=false;details.querySelector('summary')?.focus({preventScroll:true});
+  },true);
   document.addEventListener('click',async event=>{
     if(firstAccessCheckpoint&&event.target.closest?.('[data-action]'))return;
     const button=event.target.closest('button[data-action]');if(!button||button.disabled)return;
@@ -5704,7 +5780,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate591',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate593',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

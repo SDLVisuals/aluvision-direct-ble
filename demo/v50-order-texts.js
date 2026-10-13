@@ -39,7 +39,26 @@
     orderResumeCheck:['Volgorde bewaard. Het hervatten van de verlichting is nog niet bevestigd. Controleer de verbinding.','Order saved. Resuming the lighting is not confirmed yet. Check the connection.','Ordre enregistré. La reprise de l’éclairage n’est pas encore confirmée. Vérifiez la connexion.','Reihenfolge gespeichert. Das Fortsetzen der Beleuchtung ist noch nicht bestätigt. Prüfe die Verbindung.'],
     orderResumePartial:['Volgorde bewaard. Niet alle receivers hebben het hervatten van de verlichting bevestigd. Controleer de verbinding.','Order saved. Not all receivers confirmed resuming the lighting. Check the connection.','Ordre enregistré. Tous les récepteurs n’ont pas confirmé la reprise de l’éclairage. Vérifiez la connexion.','Reihenfolge gespeichert. Nicht alle Receiver haben das Fortsetzen der Beleuchtung bestätigt. Prüfe die Verbindung.'],
     orderResumeReopen:['Volgorde bewaard. De hervatting is nog niet bevestigd; open de volgorde opnieuw en controleer de verbinding.','Order saved. Resuming is not confirmed yet; reopen the order and check the connection.','Ordre enregistré. La reprise n’est pas encore confirmée ; rouvrez l’ordre et vérifiez la connexion.','Reihenfolge gespeichert. Das Fortsetzen ist noch nicht bestätigt; öffne die Reihenfolge erneut und prüfe die Verbindung.'],
-    orderReceiverMoved:['{name} staat nu op plaats {position}.','{name} is now in position {position}.','{name} est maintenant en position {position}.','{name} steht jetzt auf Position {position}.']
+    orderReceiverMoved:['{name} staat nu op plaats {position}.','{name} is now in position {position}.','{name} est maintenant en position {position}.','{name} steht jetzt auf Position {position}.'],
+    v593OrderReady:['Sleep om twee ledlines te wisselen','Drag to swap two LED lines','Glissez pour échanger deux lignes','Ziehen, um zwei LED-Linien zu tauschen'],
+    v593OrderPending:['Volgorde wordt verwerkt…','Updating the order…','Mise à jour de l’ordre…','Reihenfolge wird aktualisiert…'],
+    v593OrderUnconfirmed:['Wijziging nog niet bevestigd','Change not confirmed yet','Modification non confirmée','Änderung noch nicht bestätigt'],
+    v593OrderStandRequired:['Open je stand om te wijzigen','Open your stand to make changes','Ouvrez le stand pour modifier','Stand öffnen, um zu ändern'],
+    v593OrderSaved:['Volgorde bewaard','Order saved','Ordre enregistré','Reihenfolge gespeichert'],
+    v593OrderDetails:['Details','Details','Détails','Details'],
+    v593OrderDetailsAccessible:['Volledige status en uitleg bekijken','View the full status and explanation','Voir l’état complet et l’explication','Vollständigen Status und Erklärung ansehen'],
+    v593OrderDetailsTitle:['Status van je ledlines','Your LED-line status','État de vos lignes LED','Status deiner LED-Linien'],
+    v593orderPreviewStopped:['Voorbeeldherkenning gestopt','Preview identification stopped','Repérage d’exemple arrêté','Vorschauerkennung gestoppt'],
+    v593orderRecognitionClosing:['Herkenning afsluiten…','Closing identification…','Fermeture du repérage…','Erkennung wird beendet…'],
+    v593orderStopUnconfirmed:['Stoppen niet bevestigd','Stop not confirmed','Arrêt non confirmé','Stoppen nicht bestätigt'],
+    v593orderRecognitionIdleStopped:['Herkenning automatisch gestopt','Identification stopped automatically','Repérage arrêté automatiquement','Erkennung automatisch gestoppt'],
+    v593orderRecognitionStopped:['Herkenning gestopt','Identification stopped','Repérage arrêté','Erkennung gestoppt'],
+    v593orderPreviewColours:['Voorbeeld · niet verbonden','Preview · not connected','Exemple · non connecté','Vorschau · nicht verbunden'],
+    v593orderColoursConfirmed:['Herkenningskleuren bevestigd','Identification colours confirmed','Couleurs de repérage confirmées','Erkennungsfarben bestätigt'],
+    v593orderColoursPending:['Herkenningskleuren instellen…','Setting identification colours…','Réglage des couleurs de repérage…','Erkennungsfarben einstellen…'],
+    v593orderColoursExpired:['Herkenning verlopen · tik of sleep','Identification expired · tap or drag','Repérage expiré · touchez ou glissez','Erkennung abgelaufen · tippen/ziehen'],
+    v593orderColoursUnsupported:['Receiverupdate nodig','Receiver update needed','Mise à jour du récepteur requise','Receiverupdate erforderlich'],
+    v593orderColoursUnconfirmed:['Herkenning niet bevestigd','Identification not confirmed','Repérage non confirmé','Erkennung nicht bestätigt']
   };
   const languages=Object.freeze(['nl','en','fr','de']);
   Object.values(rows).forEach(Object.freeze);Object.freeze(rows);

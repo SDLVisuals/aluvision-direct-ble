@@ -310,6 +310,24 @@ html.interface-polish body #main .control-preview-dock[data-sticky-preview="579"
   pointer-events:auto;
 }
 
+/* The live delivery ledger has its own compact two-line footprint. Every
+   closed reason stays visible; pending/receipt transitions never resize it.
+   Stand/scene feedback and its existing gesture reserve remain untouched. */
+html.interface-polish body #main .control-preview-dock[data-sticky-preview="579"] .control-dock-surface > .live-confirmation[data-live-status="zone"]{
+  display:flex;
+  align-items:center;
+  box-sizing:border-box;
+  height:2.7em;
+  min-height:2.7em;
+  max-height:none;
+  margin:0;
+  padding:0;
+  line-height:1.35;
+  overflow:visible;
+  opacity:1;
+  transition:none;
+}
+
 /* Complete normal previews keep every line and its touch lane visible.
    Larger sets retain bounded inner scrolling; spatial framing is unchanged. */
 html.interface-polish body #main .control-preview-dock .v50-control-preview[data-preview-complete="true"] .v50-preview-canvas-scroll{
