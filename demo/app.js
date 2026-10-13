@@ -1519,8 +1519,7 @@
     // or for another recipe/port; it never proves this animation is current.
     const kinds=targets.map(receiver=>liveStates.get(receiver.id)?.kind||'idle');
     const suffix=!nativeContext||!liveController?'v592ChoicePreview':
-      kinds.includes('failed')?'v592ChoiceUnconfirmed':
-      kinds.some(kind=>kind==='pending'||kind==='staged')?'v592ChoicePending':null;
+      kinds.includes('failed')?'v592ChoiceUnconfirmed':null;
     const chosen=t(off?'v592ChosenOff':'v592ChosenAnimation');
     return suffix?chosen+' · '+t(suffix):chosen;
   }
@@ -3886,36 +3885,25 @@
       const targets=liveTargets(node.dataset.liveStatus);
       const states=targets.map(receiver=>liveStates.get(receiver.id)?.kind||'idle');
       const applied=states.filter(kind=>kind==='applied').length,failed=states.filter(kind=>kind==='failed').length;
-      let kind='idle',message='';
-      if(!nativeContext||!liveController){kind='preview';message='Alleen voorbeeld · geen receiververbinding.';}
-      else if(!targets.length){message='Geen ledline geselecteerd.';}
-      else if(failed){
-        kind='failed';
-        // Native error codes are untrusted input. Only these fixed, known
-        // reasons get a customer-facing explanation; never render raw errors.
-        const codes=new Set(targets.map(receiver=>liveStates.get(receiver.id)).filter(state=>state?.kind==='failed').map(state=>state.code));
-        let reason='Niet alle receivers hebben deze wijziging bevestigd. Controleer de verbinding.';
-        if(codes.has('OUTPUT_CONFIGURATION_PENDING'))reason='De gewijzigde poortinstellingen zijn nog niet bevestigd. Controleer Pixels / kant instellen bij je receiver.';
-        else if(codes.has('LIVE_CONTROL_PROFILE'))reason='Deze receiver komt niet overeen met je opgeslagen installatie. Open Receivers om dit te controleren.';
-        else if(codes.has('LIVE_CONTROL_FIRMWARE_UPDATE'))reason='Werk de receiversoftware bij om deze bediening te gebruiken. Je huidige verlichting is niet gewijzigd.';
-        else if(codes.has('LIVE_CONTROL_STAND_UNAVAILABLE'))reason='Gezamenlijke standanimaties zijn nog niet beschikbaar voor deze verbinding. Je verlichting is niet gewijzigd.';
-        else if(codes.has('SPI_PORT_SCENES_UNSUPPORTED'))reason='Werk de app bij om SPI-ledlines apart te bedienen. Er is niets verstuurd.';
-        else if(['LIVE_CONTROL_BUSY','STAND_BUSY','STAND_CONNECTION_BUSY','NATIVE_BUSY','OTA_BUSY','REMOVAL_BUSY'].some(code=>codes.has(code)))reason='Er loopt nog een receiveractie. Deze wijziging is nog niet bevestigd.';
-        else if(['LIVE_CONTROL_CANCELLED','CANCELLED'].some(code=>codes.has(code)))reason='Versturen is onderbroken. Je keuze staat nog in het voorbeeld.';
-        message=applied?`${targets.length-applied} van ${targets.length} receivers hebben deze wijziging nog niet bevestigd. ${reason}`:reason;
-      }
+      let kind='idle';
+      if(!nativeContext||!liveController){kind='preview';}
+      else if(!targets.length){kind='idle';}
+      else if(failed){kind='failed';}
       else if(states.includes('pending')){kind='pending';}
       // Local staging is still pending, not applied. Keep the same quiet
       // pending footprint while a pointer is held; text must not move its wheel.
       else if(states.includes('staged')){kind='pending';}
-      else if(states.includes('preview')){kind='preview';message=applied?`Deels bevestigd (${applied}/${targets.length}) · overige wijziging alleen in voorbeeld.`:'Alleen voorbeeld · deze wijziging is niet naar de receiver verstuurd.';}
+      else if(states.includes('preview')){kind='preview';}
       // The model restores local light intent, not a receiver readback. An
       // empty/new delivery ledger must not silently display it as current light.
-      else if(states.includes('idle')){kind='preview';message=applied?`Deels bevestigd (${applied}/${targets.length}) · overige lichtkeuze nog niet gecontroleerd.`:'Voorbeeld van je lichtkeuze · actuele verlichting nog niet gecontroleerd.';}
+      else if(states.includes('idle')){kind='preview';}
       else if(applied===targets.length){kind='applied';}
-      if(node.dataset.liveStatus==='zone'&&node.closest('.control-preview-dock[data-sticky-preview="579"]'))
-        message=compactLiveDockMessage592({targets,states,applied,failed,kind,connected:nativeContext&&!!liveController});
-      node.dataset.state=kind;node.textContent=message;
+      // Zone, whole-stand and scene controls share the same quiet translated
+      // presentation. Only closed problem reasons may become visible.
+      const message=compactLiveDockMessage592({targets,states,applied,failed,kind,connected:nativeContext&&!!liveController});
+      // Delivery continues in the existing ledger. Normal pending/receipt
+      // states stay silent; an empty label must not reserve screen space.
+      node.dataset.state=kind;node.textContent=message;node.hidden=!message;
       node.setAttribute('aria-live',failed?'polite':'off');
     });
     syncStaticRouteStatus();
@@ -3935,13 +3923,13 @@
       else if(['LIVE_CONTROL_BUSY','STAND_BUSY','STAND_CONNECTION_BUSY','NATIVE_BUSY','OTA_BUSY','REMOVAL_BUSY'].some(code=>codes.has(code)))key='v592LiveBusy';
       else if(['LIVE_CONTROL_CANCELLED','CANCELLED'].some(code=>codes.has(code)))key='v592LiveCancelled';
       const reason=t(key);
-      return applied?t('v592LivePartial',{count:targets.length-applied,total:targets.length,reason}):reason;
+      return failed<targets.length?t('v592LivePartial',{count:failed,total:targets.length,reason}):reason;
     }
-    if(kind==='pending')return t('v592LivePending');
-    // This names the delivery ledger only, never current recipe or light.
-    if(kind==='applied')return t('v592LiveLastReceipt');
-    if(states.includes('preview'))return t(applied?'v592LivePartialPreview':'v592LivePreview',{applied,total:targets.length});
-    return t(applied?'v592LivePartialUnchecked':'v592LiveUnchecked',{applied,total:targets.length});
+    if(kind==='pending'||kind==='applied')return '';
+    if(states.includes('preview'))return t('v592LivePreview');
+    // A saved local choice is not a new physical-state assertion. The
+    // selected animation stays labelled as a choice, not an ACK or success.
+    return '';
   }
   function apply(patch,scope=selection(),{freshRecipe=false}={}) {
     if(standPresentationOnly())return toast('Je stand is nog niet verbonden. Je bewaarde stand blijft zichtbaar.');
@@ -4248,7 +4236,7 @@
            !model.receivers.some(r=>r.id===receiver.id&&r.rid===receiver.rid&&r.standId===receiver.standId&&r.deviceFingerprint===receiver.deviceFingerprint))return;
         if(layoutStopping)identifying.delete(receiver.id);
         else {const now=performance.now()/1000;identifying.set(receiver.id,{scope,ports,startedAt:now,until:now+reply.ttlMs/1000,layoutSession:layout.session});}
-      }catch(_){toast('Knipperen niet bevestigd. De vaste herkenningskleuren blijven tijdelijk actief.');}
+      }catch(_){toast('Knipperen niet gelukt. Controleer de verbinding. De vaste herkenningskleuren blijven tijdelijk actief.');}
       finally{identifyPending.delete(receiver.id);syncIdentifyControls(receiver.id);syncOrderTestControls();paint(performance.now()/1000);}
       return;
     }
@@ -4283,7 +4271,7 @@
       if(!stillPresent())return;
       if(stopping)identifying.delete(receiver.id);
       else {const now=performance.now()/1000;identifying.set(receiver.id,{scope,ports,startedAt:now,until:now+reply.ttlMs/1000});}
-    }catch(_){toast(awaitingStop?'Stoppen is nog niet bevestigd. De herkenning stopt vanzelf; probeer opnieuw.':'Knipperen is niet bevestigd. Controleer de verbinding en probeer opnieuw.');}
+    }catch(_){toast(awaitingStop?'Controleer de verbinding om het knipperen te stoppen. De herkenning stopt vanzelf; probeer opnieuw.':'Knipperen niet gelukt. Controleer de verbinding en probeer opnieuw.');}
     finally{identifyPending.delete(receiver.id);syncIdentifyControls(receiver.id);syncOrderTestControls();paint(performance.now()/1000);}
   }
   let lastPaint=0,lastSecondaryPaint=0;
@@ -5466,7 +5454,7 @@
         const scene=savedScenes.scenes.find(item=>item.id===id&&item.standId===stand()?.id);if(!scene)return;
         const check=Scenes.compatibility(model,scene);if(!check.ok){toast(`${check.reason} Er is niets gewijzigd.`);return;}
         try{model=Scenes.apply(model,scene);}catch(error){toast(`${error.message} Er is niets gewijzigd.`);return;}
-        sendReceiverStates(scene.zones.flatMap(item=>item.receivers.map(receiver=>receiver.id)));render();toast(nativeContext?'Scène wordt naar de receivers verstuurd.':'Scène direct geactiveerd in het voorbeeld.');return;
+        sendReceiverStates(scene.zones.flatMap(item=>item.receivers.map(receiver=>receiver.id)));render();if(!nativeContext)toast('Scène direct geactiveerd in het voorbeeld.');return;
       }
       if(action==='scene-delete'){const scene=savedScenes.scenes.find(s=>s.id===id&&s.standId===stand().id);if(!scene)return;showEffectDialog('Scène verwijderen?',`<p>“${esc(scene.name)}” wordt uit je opgeslagen scènes verwijderd. Je verlichting verandert niet.</p><button class="button full" data-action="scene-delete-confirm" data-id="${esc(id)}">Scène verwijderen</button><button class="button secondary full" data-action="effect-dialog-close">Behouden</button>`);return;}
       if(action==='scene-delete-confirm'){const result=sceneStore.remove(id);if(result.error)return toast(result.error.message);await confirmCentralLibrary(result);savedScenes=result;closeEffectDialog();return navigate('scenes');}
@@ -5863,7 +5851,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate595',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate603',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

@@ -1,3 +1,21 @@
+## Interface-update603
+
+Een scène starten toont geen gewone verzendmelding meer. In de fictieve browserdemo blijft duidelijk dat alleen het voorbeeld verandert. De bestaande scènekeuze, opgeslagen instellingen, foutmeldingen en bediening blijven behouden.
+
+Deze kleine interface-update wijzigt geen lichtopdracht, synchronisatie, receiverfirmware of native code. De bestaande Android-download code27 blijft ongewijzigd. Deze demo bewijst geen fysieke prestaties of installatie op een telefoon.
+
+## Interface-update602
+
+Bij kleur-, animatie- en scènebediening staan geen gewone verzend- of ontvangstmeldingen meer. De gekozen animatie blijft herkenbaar. Alleen een verbindingsprobleem of andere concrete beperking wordt getoond. Lege statusruimte verdwijnt; een bestaande waarschuwing verschuift het kleurenwiel niet tijdens een lopende sleepbeweging. Ook de uitleg bij de ledlinevolgorde gebruikt directere taal.
+
+Dit blijft een browserdemo met fictieve receivers. Er wordt geen native appcode, nieuwe receiverfirmware of private catalogus gepubliceerd. De bestaande Android-download code27 blijft ongewijzigd. Deze interface-update bewijst geen fysieke reactiesnelheid, synchronisatie of licht-fade.
+
+## Ledlinevolgorde-update596
+
+Bij meerdere snelle handelingen met dezelfde volgorde verwerkt de herkenningssessie dezelfde al bevestigde opdracht niet onnodig opnieuw. Zodra je twee ledlines omwisselt, blijft een nieuwe bevestiging van de actuele volgorde nodig. De bestaande eindtijd, afsluiting, terugkeer en knipperfunctie blijven behouden. De vormgeving verandert niet.
+
+Dit is uitsluitend een browserdemo met fictieve receivers. Deze update publiceert geen native code, receiverfirmware of private animatiecatalogus. De bestaande Android-download code27 blijft exact behouden. De demo bewijst geen fysieke reactiesnelheid, synchronisatie of licht-fade.
+
 ## Interface-update595
 
 Het voorbeeld maakt duidelijk welk licht is gekozen, onafhankelijk van de geopende kleur- of animatietab. Normaal, tunnel en wand gebruiken dezelfde compacte selectieknoppen. Bij één ledline gaat de uitleg over herkennen en instellen; de tutorial voor omwisselen verschijnt pas wanneer er meerdere ledlines zijn.

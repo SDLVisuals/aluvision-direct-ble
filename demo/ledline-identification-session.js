@@ -210,6 +210,11 @@
           if (sentAt === null) break;
           const ttlMs = Math.min(idleMs, Math.floor(ctx.deadline - sentAt));
           if (ttlMs <= 0) { void end(ctx, 'idle'); break; }
+          // Only real payload changes retire a receipt. Activity queued while
+          // this same payload was in flight may already be covered by its ACK.
+          // Reuse its original finite expiry, never extend it locally; a reorder
+          // clears confirmation and therefore can never enter this reuse lane.
+          if (ctx.confirmation && ctx.confirmation.validUntilMs - sentAt > 5000) continue;
           const revision = ctx.revision;
           const payload = { session: ctx.session, standId: ctx.standId, zoneId: ctx.zoneId, lines: copy(ctx.lines), ttlMs };
           emit(sentAt);
@@ -278,7 +283,7 @@
       const time = read(ctx);
       if (time === null) return Promise.resolve(snapshot(lastNow));
       if (time >= ctx.deadline) { void end(ctx, 'idle'); return Promise.resolve(snapshot(time)); }
-      ctx.deadline = time + idleMs; ctx.revision++; ctx.error = null;
+      ctx.deadline = time + idleMs; ctx.error = null;
       emit(time); arm(ctx, time);
       if (active !== ctx) return Promise.resolve(getState());
       // Local activity is not a new physical receipt. Reuse only a still-valid
@@ -300,6 +305,7 @@
       ctx.lines = lineIds.map((lineId,index) => ({ ...byId.get(lineId), ...colour(index,used) }));
       // The old receipt confirmed the old position colors only. New colors
       // become physically confirmed solely after this new lease update ACK.
+      ctx.revision++;
       ctx.confirmation = null;
       return interaction();
     }

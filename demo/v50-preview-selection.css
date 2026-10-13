@@ -310,9 +310,8 @@ html.interface-polish body #main .control-preview-dock[data-sticky-preview="579"
   pointer-events:auto;
 }
 
-/* The live delivery ledger has its own compact two-line footprint. Every
-   closed reason stays visible; pending/receipt transitions never resize it.
-   Stand/scene feedback and its existing gesture reserve remain untouched. */
+/* Normal delivery is silent. A failure has room for two compact lines, but
+   no empty receipt/pending row takes space away from the light controls. */
 html.interface-polish body #main .control-preview-dock[data-sticky-preview="579"] .control-dock-surface > .live-confirmation[data-live-status="zone"]{
   display:flex;
   align-items:center;
@@ -327,6 +326,11 @@ html.interface-polish body #main .control-preview-dock[data-sticky-preview="579"
   opacity:1;
   transition:none;
 }
+
+html.interface-polish body .live-confirmation[hidden]{display:none!important}
+/* If a gesture started below an existing warning, retain only that measured
+   space until pointer release. Clearing the warning must not move its wheel. */
+html.interface-polish body .stand-controls-sheet .live-confirmation[hidden][data-static-feedback-held]{display:block!important;visibility:hidden}
 
 /* Complete normal previews keep every line and its touch lane visible.
    Larger sets retain bounded inner scrolling; spatial framing is unchanged. */

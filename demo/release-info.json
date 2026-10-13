@@ -146,7 +146,7 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate595-order-fade-ui-android27",
+  "revision": "V50candidate603-quiet-scene-ui-android27",
   "interfaceVersion": 50,
   "interfaceBaseline": "V50 shared UI: local light intent is not presented as confirmed receiver state; compact complete six-line previews unchanged. Fictitious browser demo only. Android50.0.0/code26 adds exact firmware admission and75s native configuration budget; no receiver firmware or physical acceptance promotion.",
   "fakeReceivers": {
@@ -273,8 +273,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "3f8a69007b09617bcda5e7498195a523d41156ac81dfd94550abc67c10414352",
-      "bytes": 566905
+      "sha256": "73489533de056e3b059eff161d7e263884d547b186c39a3ca402fa4fcbb7205f",
+      "bytes": 564685
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -313,7 +313,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "df2ec11a20e4cbc1662715b4bc57e35747dbc8bba795e48487c6ce81859351c9",
+      "sha256": "8964bf7032c87af98bfbbfcd22c8a7fd7fd3fdecd07b5d241813e72d254d49fa",
       "bytes": 7445
     },
     {
@@ -338,8 +338,8 @@
     },
     {
       "path": "ledline-identification-session.js",
-      "sha256": "e9e80d436d5239cbeb2e4311b532b07b0ec071cc1899cd00e7fae042b54431bb",
-      "bytes": 19314
+      "sha256": "cd52e3b7675d485a8aeec0eaa2e9741ce2697427fb7bfc48c08063abcf162182",
+      "bytes": 19732
     },
     {
       "path": "ledline-order-drag.js",
@@ -438,8 +438,8 @@
     },
     {
       "path": "preferences.js",
-      "sha256": "a8abd74743a4dfcb33c5b8a6f1420354c3587bc71335579de9773a6ecb361252",
-      "bytes": 100381
+      "sha256": "9a24afb0821f9ef9c6441bd6890efb2c9142719feedeb34cac5e5bef1968082f",
+      "bytes": 99401
     },
     {
       "path": "premium-surfaces.css",
@@ -498,8 +498,8 @@
     },
     {
       "path": "RELEASE_NOTES.md",
-      "sha256": "a2c92ad1a7aab7b6e9af4e7a642773e213bff1d488e8d45136782d43d420c8dd",
-      "bytes": 36798
+      "sha256": "3b8883940447d6e4588f0218450d7f6700b04f0a3cb4c2ddd436d7883023edad",
+      "bytes": 38662
     },
     {
       "path": "scenes.css",
@@ -628,8 +628,8 @@
     },
     {
       "path": "v50-order-texts.js",
-      "sha256": "3dc7060422a7d30392f4219871cf78e868e795443385df5af2414e122cfd8af6",
-      "bytes": 11920
+      "sha256": "d0b3cb4cd689f7175a0ccde75dcd2de049a5f877f802fb8fd6ce593b400f7085",
+      "bytes": 11657
     },
     {
       "path": "v50-order-tutorial.css",
@@ -638,8 +638,8 @@
     },
     {
       "path": "v50-preview-selection.css",
-      "sha256": "b953890dd76463563878f1b9d492d62972b00930a6e96da3799b12570f87d2a9",
-      "bytes": 15991
+      "sha256": "a30121a1f615f1d05f7a095eeb4ba16dc2999f74f9dd1cd43cebd1f8097411b8",
+      "bytes": 16298
     },
     {
       "path": "v50-texts.js",
@@ -2382,5 +2382,56 @@
     "actualPhone595UIReviewPending": true,
     "previewCaptionOnly": true,
     "previewCaptionScope": "Closing a fictitious/preview-only order panel uses the existing display-only caption. Real unconfirmed STOP/playback notices, their codes and authority are unchanged. No native30 source or binaries are published."
+  },
+  "interfaceCandidate596": {
+    "scope": "Existing public595 UI plus the exact three reviewed596 same-payload identification renewal hunks only. No new design, receiver/native code, automatic network change or private33 catalogue.",
+    "basePublicCommit": "f028b9819bed74ecf604a4a2888405d6c55cbcee",
+    "sourceComponentSHA256": "cd52e3b7675d485a8aeec0eaa2e9741ce2697427fb7bfc48c08063abcf162182",
+    "existingPublicAdaptations": 7,
+    "publicVersionStampOnly": true,
+    "sourceChangedFiles": [
+      "ledline-identification-session.js"
+    ],
+    "payloadRevisionOnlyReorder": true,
+    "finiteConfirmationExpiryUnchanged": true,
+    "samePayloadReuseMarginMs": 5000,
+    "newOrderStillRequiresNewReceipt": true,
+    "hardwareAccess": false,
+    "physicalAcceptance": false,
+    "firmwarePublished": false,
+    "nativePublished": false,
+    "androidDownloadChanged": false,
+    "actualPublicBrowser596UIReviewPending": true,
+    "actualPhone596UIReviewPending": true
+  },
+  "interfaceCandidate602": {
+    "scope": "Public596 plus four quiet light-control presentation paths, version stamp and cache/metadata only. Existing seven fictitious demo adaptations retained. No receiver or native transport code.",
+    "sourceComponentSHA256": "d45cc62e62e3875584ca56f5ecb877eeb0a8c31a8cc56fb0e83ddb10a0cbfdff",
+    "existingPublicAdaptations": 7,
+    "normalCommandDeliverySilent": true,
+    "chosenAnimationIntentRetained": true,
+    "closedProblemsStillVisible": true,
+    "lightQueueAndAcknowledgementsChanged": false,
+    "receiverSoftwareChanged": false,
+    "hardwareAccess": false,
+    "physicalAcceptance": false,
+    "firmwarePublished": false,
+    "nativePublished": false,
+    "androidDownloadChanged": false,
+    "actualPublicBrowser602UIReviewPending": true
+  },
+  "interfaceCandidate603": {
+    "scope": "Public602 plus normal native scene-start delivery toast removal and603 version/cache/release metadata only. No new design or transport behavior.",
+    "sourceComponentSHA256": "b0efbc78a328c7e4ecbaed48a49e965c2ba34546bf17ba3ffb79c4219ed6da3d",
+    "existingPublicAdaptations": 7,
+    "nativeSceneStartToastSilent": true,
+    "previewToastAndProblemsRetained": true,
+    "sceneQueueAndModelSemanticsChanged": false,
+    "hardwareAccess": false,
+    "physicalAcceptance": false,
+    "nativePublished": false,
+    "firmwarePublished": false,
+    "androidDownloadChanged": false,
+    "actualPublicBrowser603UIReviewPending": true
   }
 }
