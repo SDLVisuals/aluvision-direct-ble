@@ -5,8 +5,8 @@ html.interface-polish #main .ui606-line-tools[data-order-open=false] {
 }
 html.interface-polish #main .ui606-line-tools>.spatial-preview-choice {margin:0;padding:0;min-width:0;border:0;background:none;box-shadow:none}
 html.interface-polish #main .ui606-line-tools :is(.spatial-choice-toggle,.ledline-setup-toggle) {
-  display:flex;align-items:center;gap:8px;box-sizing:border-box;width:100%;min-height:62px;
-  margin:0;padding:10px;border:1px solid var(--line);border-radius:16px;
+  display:flex;align-items:center;gap:8px;box-sizing:border-box;width:100%;min-height:52px;
+  margin:0;padding:8px 10px;border:1px solid var(--line);border-radius:16px;
   background:var(--panel,#fff);box-shadow:0 2px 5px #11182704;text-align:left;
 }
 html.interface-polish #main .ui606-line-tools :is(.spatial-choice-current-icon,.ledline-setup-toggle>.icon) {
@@ -36,10 +36,12 @@ html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order
 html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-reference figcaption{gap:8px;align-items:center;margin-bottom:9px}
 html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-reference figcaption>b{font-size:13px;line-height:1.35;max-width:65%}
 html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-reference canvas{border-radius:12px}
-html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-reference-legend{margin:7px 0 0}
+/* Canvas numbers already sit beside each reference line. Preserve the
+   explicit colour/number list for screen readers without a second number row. */
+html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-reference-legend{position:absolute;width:1px;height:1px;margin:0;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-reference-direction{font-size:10px;margin:6px 0 0}
 html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-feedback {
-  height:auto;min-height:76px;display:grid;grid-template-rows:auto auto;align-content:center;
+  height:auto;min-height:60px;display:grid;grid-template-rows:auto auto;align-content:center;
   gap:5px;padding:10px 12px;border:0;border-radius:14px;background:var(--soft);box-shadow:none;
 }
 html.interface-polish body #main .ledline-setup[data-order-open=true] .v50-order-feedback-route{font-size:12px;line-height:1.4;font-weight:650;white-space:normal}
@@ -63,6 +65,60 @@ html.interface-polish body .ui606-order-more>summary::-webkit-details-marker{dis
 html.interface-polish body .ui606-order-more>summary>.icon{width:18px;height:18px;flex:none}
 html.interface-polish body .ui606-order-more>summary>.icon:last-child{margin-left:auto;transition:transform .18s ease}
 html.interface-polish body .ui606-order-more[open]>summary>.icon:last-child{transform:rotate(90deg)}
+/* Everyday colour controls first; exact RGBW remains one tap away.
+   This uses the existing shared picker and fold animation, not a new picker. */
+html.interface-polish body :is(#main,#effect-dialog) .shared-colour-picker{
+  min-width:0;
+}
+html.interface-polish body :is(#main,#effect-dialog) .shared-colour-picker .colour-tools,
+html.interface-polish body :is(#main,#effect-dialog) .shared-colour-picker .colour-values{
+  min-width:0;
+}
+html.interface-polish body :is(#main,#effect-dialog) .shared-colour-picker .ui609-colour-fine{
+  margin-top:12px;padding:0;border:1px solid var(--line);border-radius:14px;
+  background:var(--panel);box-shadow:none;
+}
+html.interface-polish body :is(#main,#effect-dialog) .ui609-colour-fine>summary{
+  display:flex;align-items:center;gap:8px;min-height:48px;padding:0 11px;
+  color:var(--ink);cursor:pointer;list-style:none;
+}
+.ui609-colour-fine>summary::-webkit-details-marker{display:none}
+.ui609-colour-fine>summary>span{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.ui609-colour-fine>summary b{font-size:12px;font-weight:650}
+.ui609-colour-fine>summary small{font-size:10px;color:var(--muted)}
+.ui609-colour-fine>summary .icon{width:17px;height:17px;flex:none;color:var(--red)}
+.ui609-colour-fine>summary>.icon{color:var(--muted);transition:transform .18s ease}
+.ui609-colour-fine[open]>summary>.icon{transform:rotate(90deg)}
+html.interface-polish body :is(#main,#effect-dialog) .ui609-colour-fine>.fine-controls-body{
+  padding:6px 11px 12px;
+}
+.ui609-colour-fine>summary:focus-visible{outline:2px solid var(--red);outline-offset:-3px;border-radius:13px}
+html.interface-polish body :is(#main,#effect-dialog) .palette-drag-handle{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+}
+.palette-drag-handle>span{font-size:18px;line-height:1}
+.palette-drag-handle>small{font-size:8px;line-height:1.2;font-weight:600}
+/* Reuse the compact saved-colour strip used by All zones. In reorder mode
+   the existing grid and its pointer/keyboard drag targets stay unchanged. */
+html.interface-polish body :is(#main,#effect-dialog) .shared-colour-picker[data-colour-picker="static"] .saved-colour-grid:not(.is-ordering){
+  display:flex;gap:5px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;
+  scrollbar-width:thin;padding:2px 1px 5px;
+}
+html.interface-polish body :is(#main,#effect-dialog) .shared-colour-picker[data-colour-picker="static"] .saved-colour-grid:not(.is-ordering)>.saved-colour-item{
+  flex:0 0 62px;width:62px;padding:0;
+}
+html.interface-polish body :is(#main,#effect-dialog) .shared-colour-picker[data-colour-picker="static"] .saved-colour-grid:not(.is-ordering) .saved-colour{
+  min-height:64px;height:auto;gap:4px;padding:4px 1px;font-size:10px;
+}
+html.interface-polish body :is(#main,#effect-dialog) .shared-colour-picker[data-colour-picker="static"] .saved-colour-grid:not(.is-ordering)>.add-colour{
+  flex:0 0 62px;width:62px;padding:4px 1px;
+}
+html.interface-polish body :is(#main,#effect-dialog) .shared-colour-picker[data-colour-picker="static"] .saved-colour-grid:not(.is-ordering) .saved-colour>span{
+  max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+html.interface-polish body :is(#main,#effect-dialog) .shared-colour-picker[data-colour-picker="static"] .saved-colour-grid:not(.is-ordering) .saved-colour.add-colour>span{
+  white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25;
+}
 /* Motion transforms only: no height collapse or scroll-position animation. */
 .ui606-back-gesture{position:fixed;z-index:2147483000;left:8px;top:46%;width:38px;height:48px;display:grid;place-items:center;border:1px solid var(--line);border-radius:16px;background:var(--panel,#fff);color:var(--ink);box-shadow:0 4px 20px #0002;font-size:36px;line-height:1;pointer-events:none;opacity:var(--swipe-progress,0);transform:translateX(calc(-12px + 12px * var(--swipe-progress,0)))}
 @media(prefers-reduced-motion:no-preference){
@@ -71,3 +127,4 @@ html.interface-polish body .ui606-order-more[open]>summary>.icon:last-child{tran
   html.interface-polish details[open]>.receiver-connections-content{animation:ui606-reveal .2s ease both}
   @keyframes ui606-reveal{from{opacity:.45;transform:translateY(4px)}to{opacity:1;transform:none}}
 }
+@media(prefers-reduced-motion:reduce){.ui609-colour-fine>summary>.icon{transition:none}}

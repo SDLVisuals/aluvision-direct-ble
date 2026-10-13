@@ -146,9 +146,9 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate606-interface-android27",
+  "revision": "V50candidate612-colour-gallery-interface-android27",
   "interfaceVersion": 50,
-  "interfaceBaseline": "V50 shared interface606 presentation, over the established fictitious browser demo603. No native or receiver transport changes are included; normal delivery remains silent and problems stay visible.",
+  "interfaceBaseline": "Shared V50 UI612 over the existing fictitious public demo606. Colour/order clarity, gallery-return/search/Back fixes, and consistent category-neutral result wording. No native transport or receiver firmware publication.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -161,16 +161,6 @@
   "firmwareDownloadsIncluded": false,
   "softwareFileImportAvailable": false,
   "assets": [
-    {
-      "path": "android-download/android-download.css",
-      "sha256": "23ef08fd40d5090de0642e663a6e63da927b86e8273eb3a6064f7f496110ca5b",
-      "bytes": 1488
-    },
-    {
-      "path": "android-download/android-download.js",
-      "sha256": "6e8dd3e4069ad9ed58ed774bdfbf28cb13a65fbc676459363b769ef8993f2191",
-      "bytes": 11215
-    },
     {
       "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
       "sha256": "cf1a36ef7a96cb1fd3ef84e9f12db014932e82896dda4217867ed563ba4cf214",
@@ -247,6 +237,16 @@
       "bytes": 2735353
     },
     {
+      "path": "android-download/android-download.css",
+      "sha256": "23ef08fd40d5090de0642e663a6e63da927b86e8273eb3a6064f7f496110ca5b",
+      "bytes": 1488
+    },
+    {
+      "path": "android-download/android-download.js",
+      "sha256": "6e8dd3e4069ad9ed58ed774bdfbf28cb13a65fbc676459363b769ef8993f2191",
+      "bytes": 11215
+    },
+    {
       "path": "animation-engine.js",
       "sha256": "c59ff08862a8ce5d1fb450d2992180b28f6561e85f1753d1c0f9a1bc40a2cf43",
       "bytes": 21745
@@ -273,8 +273,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "2dfee8aaf1330c23e00680756e59b8a58fdb9dd6fdc6fbf0ed287d6dc28fc803",
-      "bytes": 568624
+      "sha256": "8f74eb918e2425ecfc15e26bb7d9235acc763311b89d4053f32c974461a3877d",
+      "bytes": 573273
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -313,7 +313,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "6d3caf861df7ff202fe5e1b66fcff29b6c75663981d40bc1f66b5c7532098738",
+      "sha256": "26f1a0ff1374e4a37f0ec710e42ba39f426e94d7869d0cbc762ac8ae2ca9f2dd",
       "bytes": 7725
     },
     {
@@ -578,8 +578,8 @@
     },
     {
       "path": "ui606-controls.css",
-      "sha256": "934d7026152220f4bb7237b6af650817195b98213ff9024e7b3359e77db1a12f",
-      "bytes": 8140
+      "sha256": "066b60bcfb9225059f641d02199a4f38c19362da5cc4ab97c0a2b5548f617222",
+      "bytes": 11939
     },
     {
       "path": "ui606-gallery.css",
@@ -663,8 +663,8 @@
     },
     {
       "path": "v50-texts.js",
-      "sha256": "3beb272302349b4a119b9c03d6949619e6a678c67655da97a0203dd57b3c71f9",
-      "bytes": 35812
+      "sha256": "ad9de1f7dbc2e414ca2db2419c5cbd9ad8a912caaebc56164adbd0e6f8763fe4",
+      "bytes": 35436
     },
     {
       "path": "vendor/v21_animation_catalog.js",
@@ -2483,5 +2483,48 @@
     "iPhone606InstallationPerformed": false,
     "actualPublicBrowser606UIReviewPending": true,
     "published": false
+  },
+  "interfaceCandidate611": {
+    "sourceHostValidated": true,
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "opticalAcceptance": false,
+    "features": [
+      "Compact colour workspace with persistent LED preview and saved colours before exact RGBW disclosure.",
+      "Two-line positional swap keeps other lines in place.",
+      "Remembered chosen-editor return for mixed selection without active-light claim or lighting command.",
+      "Search follows visible animation category; Back restores previous list position.",
+      "Selection hint consistent in four supported languages."
+    ],
+    "limits": [
+      "Earlier intermittent localhost loader cause remains unproven; exact current-package reopening is tested separately.",
+      "Public demo is intentionally RAM-only; reload resets its fictitious walkthrough.",
+      "Demo QA is not receiver, timing, optical or iPhone acceptance."
+    ]
+  },
+  "interfaceCandidate612": {
+    "sourceHostValidated": true,
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "opticalAcceptance": false,
+    "features": [
+      "Compact colour workspace with persistent LED preview and saved colours before exact RGBW disclosure.",
+      "Two-line positional swap keeps other lines in place.",
+      "Remembered chosen-editor return for mixed selection without active-light claim or lighting command.",
+      "Search follows visible animation category; Back restores previous list position.",
+      "Selection hint consistent in four supported languages."
+    ],
+    "limits": [
+      "Earlier intermittent localhost loader cause remains unproven; exact current-package reopening is tested separately.",
+      "Public demo is intentionally RAM-only; reload resets its fictitious walkthrough.",
+      "Demo QA is not receiver, timing, optical or iPhone acceptance."
+    ],
+    "copyCorrection": "Search result counts no longer incorrectly say full library when a category is selected."
   }
 }
