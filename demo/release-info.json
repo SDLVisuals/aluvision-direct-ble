@@ -146,9 +146,9 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate612-colour-gallery-interface-android27",
+  "revision": "V50candidate613-colour-presets-interface-android27",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Shared V50 UI612 over the existing fictitious public demo606. Colour/order clarity, gallery-return/search/Back fixes, and consistent category-neutral result wording. No native transport or receiver firmware publication.",
+  "interfaceBaseline": "Public demo613 retains the existing demo612 code and safety boundaries. UI-only CSS shows saved colour presets beneath the wheel and puts fine RGBW controls beneath the presets. No native transport or receiver firmware publication.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -273,7 +273,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "8f74eb918e2425ecfc15e26bb7d9235acc763311b89d4053f32c974461a3877d",
+      "sha256": "d7ff71444f3c2de377ac356f9eed24ad1fc84eb0934163578effa3d33ea6a58e",
       "bytes": 573273
     },
     {
@@ -313,7 +313,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "26f1a0ff1374e4a37f0ec710e42ba39f426e94d7869d0cbc762ac8ae2ca9f2dd",
+      "sha256": "73aa6834137f6d1be6397c92bf0746afd66575751619c212639668aa50cc2476",
       "bytes": 7725
     },
     {
@@ -443,8 +443,8 @@
     },
     {
       "path": "premium-surfaces.css",
-      "sha256": "dd9eea2173cd912592c8f7e782ae07b858c416d6abaa2bbb14656a4f603ad0aa",
-      "bytes": 61863
+      "sha256": "acad20b4c23101f5b90045d1764b9ee4f47e2729fe31cd815467552aa57f7895",
+      "bytes": 62220
     },
     {
       "path": "presets.js",
@@ -2526,5 +2526,24 @@
       "Demo QA is not receiver, timing, optical or iPhone acceptance."
     ],
     "copyCorrection": "Search result counts no longer incorrectly say full library when a category is selected."
+  },
+  "interfaceCandidate613": {
+    "styleOnly": true,
+    "sourceBoundaryVerified": true,
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "opticalAcceptance": false,
+    "features": [
+      "Saved colour presets stay visible beneath the colour wheel at medium and wide viewports.",
+      "Fine RGBW controls retain their existing disclosure and appear below saved colours with a clean horizontal separator."
+    ],
+    "limits": [
+      "Demo fixtures are RAM-only, not a receiver test.",
+      "The internal demo debug-build marker is613; app behavior remains byte-exact612 aside from this marker.",
+      "Native/iPhone613 installation is not established by this publication."
+    ]
   }
 }
