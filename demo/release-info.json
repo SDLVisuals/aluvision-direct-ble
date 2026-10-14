@@ -146,9 +146,9 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate613-colour-presets-interface-android27",
+  "revision": "V50candidate614-inline-fine-colour-presets-interface-android27",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo613 retains the existing demo612 code and safety boundaries. UI-only CSS shows saved colour presets beneath the wheel and puts fine RGBW controls beneath the presets. No native transport or receiver firmware publication.",
+  "interfaceBaseline": "Public demo614 changes only the colour-picker renderer and presentation over demo613. Fine RGBW controls are directly visible inline, with saved colour presets below Fine. No native transport or receiver firmware publication.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -273,8 +273,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "d7ff71444f3c2de377ac356f9eed24ad1fc84eb0934163578effa3d33ea6a58e",
-      "bytes": 573273
+      "sha256": "d34ec3e4f02d01bf50ccf48b2d8290efed800f6bb83c9cfe9c3aebcba7d5e333",
+      "bytes": 572943
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -313,7 +313,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "73aa6834137f6d1be6397c92bf0746afd66575751619c212639668aa50cc2476",
+      "sha256": "65f27d4c956deea7742fb23e5aa59a878efd954ce1921c292a710e9dad6fe455",
       "bytes": 7725
     },
     {
@@ -443,8 +443,8 @@
     },
     {
       "path": "premium-surfaces.css",
-      "sha256": "acad20b4c23101f5b90045d1764b9ee4f47e2729fe31cd815467552aa57f7895",
-      "bytes": 62220
+      "sha256": "af472ccec57b51ffea62dec35345a7f0ea8faecf4c59ab5871ee1fa783ce3d61",
+      "bytes": 62166
     },
     {
       "path": "presets.js",
@@ -2544,6 +2544,25 @@
       "Demo fixtures are RAM-only, not a receiver test.",
       "The internal demo debug-build marker is613; app behavior remains byte-exact612 aside from this marker.",
       "Native/iPhone613 installation is not established by this publication."
+    ]
+  },
+  "interfaceCandidate614": {
+    "rendererAndStyleOnly": true,
+    "sourceBoundaryVerified": true,
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "opticalAcceptance": false,
+    "features": [
+      "Fine RGBW controls are fully visible inline, without a details disclosure or submenu.",
+      "Saved colour presets follow Fine, also in the wide All-zones sheet."
+    ],
+    "limits": [
+      "Demo fixtures are RAM-only, not a receiver test.",
+      "Outside the single colourPickerMarkup renderer, app behavior remains byte-exact613 aside from the614 debug marker.",
+      "Native/iPhone614 installation is not established by this publication."
     ]
   }
 }

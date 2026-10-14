@@ -1469,20 +1469,17 @@
     const channels=['r','g','b','w'].map((channel,i)=>{const value=i===3?white:rgb[i];return `<div class="channel-row" style="--channel:${['#c4473f','#258461','#3f69c7','#747670'][i]}"><button class="channel-toggle" data-action="channel-toggle" data-channel="${channel}" aria-label="${esc(t(value>0?'v50ChannelDisable':'v50ChannelEnable',{channel:channel.toUpperCase()}))}" aria-pressed="${value>0}">${channel.toUpperCase()}</button><button data-action="channel-step" data-channel="${channel}" data-step="-1" aria-label="${esc(t('v50ChannelDecrease',{channel:channel.toUpperCase()}))}">−</button><input id="${prefix}-${channel}" type="range" min="0" max="255" value="${value}" data-channel="${channel}" aria-label="${esc(t('v50ChannelValue',{channel:channel.toUpperCase()}))}"><button data-action="channel-step" data-channel="${channel}" data-step="1" aria-label="${esc(t('v50ChannelIncrease',{channel:channel.toUpperCase()}))}">+</button><input class="channel-number" type="number" inputmode="numeric" min="0" max="255" step="1" value="${value}" data-channel-number="${channel}" aria-label="${esc(t('v50ChannelExact',{channel:channel.toUpperCase()}))}"></div>`;}).join('');
     const warmth=C.artificialWarmthOf(values);
     const warmControls=`<section class="v50-white-mix" aria-label="${esc(t('v50ArtificialWhite'))}"><div class="warm-white-controls"><button type="button" class="warm-white-choice" data-action="warm-white" aria-pressed="${warmth!==null}"><span class="warm-white-swatch" aria-hidden="true"></span><span><b>${esc(t('v50ArtificialWhite'))}</b><small>RGB + W</small></span>${icon('sun')}</button><p class="v50-white-mix-hint">${esc(t('v50WhiteMixShort'))}</p><div class="slider-row warmth-row"><label for="${prefix}-warmth">${esc(t('v50Warmth'))} <output data-warmth-value>${warmth===null?esc(t('v50ChooseMix')):warmth+'%'}</output></label><input id="${prefix}-warmth" type="range" min="0" max="100" step="1" value="${warmth??50}" data-warmth aria-label="${esc(t('v50Warmth'))}" ${warmth===null?'disabled':''}><div class="warmth-scale"><span>${esc(t('v50Neutral'))}</span><span>${esc(t('v50Warmer'))}</span></div><small class="warmth-help">${esc(t(warmth===null?'v50ChooseMixHint':'v50MixBrightnessHint'))}</small></div></div></section>`;
-    // Ordinary colour work keeps the wheel, brightness and saved colours
-    // close together. Exact channel controls remain one accessible disclosure
-    // away; UIContinuity keeps an opened disclosure open across selections.
+    // Exact RGBW controls remain directly visible below colour and brightness.
+    // Saved colour presets follow underneath, never inside a disclosure.
     const fineBody=`<div class="fine-controls-body"><p class="channel-help">${esc(t('channelHelp'))}</p>${channels}${warmControls}</div>`;
-    const fineControls=slot===null
-      ?`<details class="fine-controls stand-fine-controls ui609-colour-fine" data-colour-fine><summary><span>${icon('sliders')}<b>${esc(t('v50FineTune'))}</b></span><small>RGBW</small>${icon('chevron')}</summary>${fineBody}</details>`
-      :`<div class="fine-controls${compact?' stand-fine-controls':''}" data-colour-fine><h3>${esc(t('v50FineTune'))}</h3>${fineBody}</div>`;
+    const fineControls=`<div class="fine-controls${compact?' stand-fine-controls':''}" data-colour-fine><h3>${esc(t('v50FineTune'))}</h3>${fineBody}</div>`;
     return `<section class="card colour-card shared-colour-picker" data-colour-picker="${brand?'brand':background?'background':slot===null?'static':'animation'}" data-slot="${brand?brandEditor.index:slot??''}">
       <div class="section-heading"><h2 ${slot===null?'id="bediening-colour-title" ':''}tabindex="-1">${esc(t(background?'animationBackground':'v50ChooseColour'))}</h2>${power&&slot===null?powerControl():''}</div>
       <div class="colour-tools"><div class="wheel-wrap"><canvas class="wheel" id="colour-wheel" tabindex="0" role="img" aria-label="${esc(t('v50WheelAccessible'))}" width="260" height="260"></canvas><span class="wheel-cursor"></span></div><div class="colour-values"><div class="colour-swatch" aria-label="${esc(t('v50ChosenColour'))}"></div><p class="setting-hint">${esc(t('colourWheelHint'))}</p>${brand?`<small class="brand-picker-note">${esc(t(brandEditor.isNew?'brandPickerNewHint':'brandPickerHint'))}</small>`:slot===null?'':`<small>${esc(t('v50AnimationStaysActive'))}</small>`}</div></div>
       ${brand?`<label class="dialog-field brand-name-field">${esc(t('brandNameLabel'))}<input type="text" data-brand-name maxlength="64" autocomplete="off" value="${esc(brandEditor.name)}"></label><p class="brand-picker-status" role="status" aria-live="polite"></p>`:''}
       ${slot===null?slider('bri',t('animationBrightness'),0,100,s.bri??100,'%'):''}
-      ${myColoursMarkup()}
       ${fineControls}
+      ${myColoursMarkup()}
     </section>`;
   }
   function backgroundChannels(){
@@ -5935,7 +5932,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate613',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate614',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

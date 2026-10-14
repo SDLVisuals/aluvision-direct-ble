@@ -876,9 +876,8 @@ body[data-theme=dark] .control-preview-dock[data-scrolled=true] .control-dock-su
   #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker>.slider-row{grid-column:1;grid-row:3}
   #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker>.warm-white-controls{grid-column:1;grid-row:4}
   #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker>.fine-controls{grid-column:2;grid-row:2 / 5;border-top:0;border-left:1px solid var(--line);padding:0 0 0 20px;margin:0}
-  /* Static colour presets remain visible directly above exact tuning, also
-     in the wide All-zones sheet. Other colour editors keep their layout. */
-  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker[data-colour-picker="static"]>.fine-controls{grid-column:1 / -1;grid-row:auto;border:1px solid var(--line);padding:0;margin:12px 0 0}
+  /* Inline RGBW tuning follows brightness; colour presets stay underneath. */
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker[data-colour-picker="static"]>.fine-controls{grid-column:1 / -1;grid-row:auto;border:0;border-top:1px solid var(--line);padding:12px 0 0;margin:12px 0 0}
   #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .wheel-wrap{width:150px;max-width:150px}
 }
 
