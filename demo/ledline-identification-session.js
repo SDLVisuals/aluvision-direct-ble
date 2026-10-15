@@ -26,9 +26,21 @@
   }
   function id(value) { return typeof value === 'string' && ID.test(value); }
   function copy(value) { return JSON.parse(JSON.stringify(value)); }
+  // Recognition swatches are designed in display sRGB. Receiver channels
+  // are linear PWM; decode only these temporary identity markers once.
+  // Palette numbers/names, normal light state and physical channel maps stay.
+  function recognitionWireRGB(srgb) {
+    return srgb.map(channel => {
+      const encoded = channel / 255;
+      const linear = encoded <= .04045 ? encoded / 12.92 :
+        Math.pow((encoded + .055) / 1.055, 2.4);
+      return Math.round(linear * 255);
+    });
+  }
   function colour(index, used) {
     if (index < PALETTE.length) {
-      const [colorName, rgb] = PALETTE[index];
+      const [colorName, srgb] = PALETTE[index];
+      const rgb = recognitionWireRGB(srgb);
       used.add(rgb.join(','));
       return { colorName, rgb: rgb.slice() };
     }
@@ -41,7 +53,7 @@
       const c = value * saturation, x = c * (1 - Math.abs((hue / 60) % 2 - 1)), m = value - c;
       const sector = Math.floor(hue / 60);
       const v = [[c,x,0], [x,c,0], [0,c,x], [0,x,c], [x,0,c], [c,0,x]][sector];
-      rgb = v.map(channel => Math.round((channel + m) * 255));
+      rgb = recognitionWireRGB(v.map(channel => Math.round((channel + m) * 255)));
       hue = (hue + 1) % 360;
     } while (used.has(rgb.join(',')));
     used.add(rgb.join(','));

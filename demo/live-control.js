@@ -14,9 +14,11 @@
   const SPI_TIMED_VARIANTS=new Set([...Array(13)].map((_,i)=>90+i).concat([104,105,106,107,108,109,110,111,128]));
   const SHARED_TUNNEL_VARIANTS=new Set([5,6,7,8,9,10,11,12,13,14,15,16,21,22,23,24,26,27,28,29,30,31]);
   // Use a 120 ms receiver ramp for static wheel/dimmer targets, without delaying
-  // dispatch or storing a history of pointer movements. Keep explicit off and
-  // animation changes immediate; animation smoothness is its own setting.
+  // dispatch or storing a history of pointer movements. A new powered
+  // animation cue blends briefly; OFF and explicit zero remain immediate.
+  // Receiver cue classification prevents duplicates restarting that blend.
   const STATIC_TRANSITION_MS=120;
+  const ANIMATION_CUE_TRANSITION_MS=180;
   const clone=value=>JSON.parse(JSON.stringify(value));
   function spiPhaseLineDelay(state,variant,lineCount,parallel) {
     if(!parallel||lineCount<=1)return 0;
@@ -30,15 +32,16 @@
   }
   // Full lighting intent. Geometry is deliberately not accepted from this
   // object; the native owner resolves it against its persisted receiver list.
-  function requestFor(receiver,{zone,receivers,time,outputPorts}={}) {
+  function requestFor(receiver,{zone,receivers,time,outputPorts,transitionMs}={}) {
     if(!receiver||!['RGBW','SPI'].includes(receiver.type))return null;
+    if(transitionMs!==undefined&&(!Number.isInteger(transitionMs)||transitionMs<0||transitionMs>750))return null;
     const state=receiver.state||{},spi=receiver.type==='SPI';
     const portScope=outputPorts!==undefined?outputPorts:spi&&zone?.layout!=='continuous'&&state.portStates&&Object.keys(state.portStates).length?receiver.outputs.filter(output=>output.enabled).map(output=>output.port):null;
     if(portScope!==null){
       if(!spi||zone?.layout==='continuous'||!Array.isArray(portScope)||!portScope.length||portScope.length>4||
          Array.from(portScope).some((port,index)=>!Number.isInteger(port)||port<1||port>4||index>0&&port<=portScope[index-1]||!receiver.outputs.some(output=>output.port===port&&output.enabled)))return null;
       const children=portScope.map(port=>{
-        const intent=requestFor({...receiver,state:model.lightStateFor(receiver,port)},{zone,receivers,time});
+        const intent=requestFor({...receiver,state:model.lightStateFor(receiver,port)},{zone,receivers,time,transitionMs});
         if(!intent||intent.kind!=='SPI_SCENE'||intent.scene?.standAnimation)return null;
         const {standId,receiverId,...child}=intent;return {port,...child};
       });
@@ -123,9 +126,21 @@
     }
     if(brightness===null||Object.values(scene).some(value=>value===null))return null;
     const powered=state.on!==false&&state.power!==false;
+    // A solid colour must not inherit irrelevant animation history in its
+    // wire recipe: native compares the complete recipe before sharing a bank.
+    // Canonicalize only this fresh, fully validated intent, never saved state
+    // or physical geometry. Smooth remains meaningful for SPI output precision.
+    if(powered&&brightness>0&&!extension&&scene.engine==='STATIC'&&scene.variant===0&&
+       scene.palette.length===1&&!scene.backgroundOn&&!scene.v30&&!scene.standAnimation&&
+       scene.phaseMs===undefined&&scene.phaseRateMicroHz===undefined){
+      Object.assign(scene,{background:[0,0,0,0],backgroundBrightness:0,speed:30,
+        motionReverse:false,widthPixels:4,spacing:50,objectCount:1,trailLength:45,
+        spread:50,randomness:25,bounce:false,mirror:false,lineDelayMs:0});
+    }
     return {standId:receiver.standId,receiverId:receiver.id,kind:spi?'SPI_SCENE':'RGBW_SCENE',
       brightness:powered?brightness:0,
-      transitionMs:powered&&scene.engine==='STATIC'&&!extension?STATIC_TRANSITION_MS:0,channels:[],scene};
+      transitionMs:!powered?0:transitionMs??(scene.engine==='STATIC'&&!extension?STATIC_TRANSITION_MS:
+        brightness>0?ANIMATION_CUE_TRANSITION_MS:0),channels:[],scene};
   }
   // Membership has already been confirmed by native storage. A new line can
   // join an unambiguous running animation, but never choose between separately
@@ -327,6 +342,34 @@
       });
     }
     const whenIdle=options=>waitIdle(options),acquireIdle=options=>waitIdle(options,true);
+    function captureCurrentIntent(scope){
+      // Observation only: retain the already queued intent's exact local
+      // versions, never a new request, receipt, lease or authority token.
+      if(!scope||typeof scope!=='object'||Array.isArray(scope)||Object.keys(scope).sort().join(',')!=='receiverIds,standId'||
+         typeof scope.standId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(scope.standId)||
+         !Array.isArray(scope.receiverIds)||!scope.receiverIds.length||scope.receiverIds.length>30||
+         new Set(scope.receiverIds).size!==scope.receiverIds.length)return null;
+      const capturedEpoch=epoch,standId=scope.standId,bindings=new Map();
+      for(const id of scope.receiverIds){
+        const wanted=desired.get(id),item=queue.get(id)||active?.items.get(id);
+        if(typeof id!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(id)||!wanted||!item||item.request.standId!==standId||
+           item.version!==wanted.version||item.signature!==wanted.signature)return null;
+        bindings.set(id,{version:item.version,signature:item.signature});
+      }
+      return Object.freeze({observeActiveTerminal(afterTerminal){
+        const held=active;
+        if(typeof afterTerminal!=='function'||epoch!==capturedEpoch||!held||held.epoch!==capturedEpoch||
+           !held.operation||typeof held.operation.then!=='function'||held.preludeOpen||held.stream||
+           held.preparingTouched||held.retirementTouched||held.supersessionRequested||held.terminalObserver||
+           held.items.size!==bindings.size||[...bindings].some(([id,binding])=>{
+             const item=held.items.get(id);return !item||item.request.standId!==standId||
+               item.version!==binding.version||item.signature!==binding.signature;
+           }))return null;
+        let resolve;const completion=new Promise(done=>{resolve=done;});
+        held.terminalObserver={operation:held.operation,afterTerminal,resolve};
+        return Object.freeze({completion});
+      }});
+    }
     function schedule(){
       if(draining||idleLease||timer!==null||!queue.size)return;
       timer=setTimer(()=>{timer=null;void drain();},delay);
@@ -335,6 +378,9 @@
       const held=active;
       if(held?.preludeOpen)return;
       if(held?.stream){considerStaticGestureUpdate(held);return;}
+      if(held&&typeof held.operation?.retireEarlyAnimation==='function'&&[...held.items.values()].every(({request})=>
+         request.kind!=='SPI_PORTS'&&request.brightness>0&&request.scene&&
+         (request.scene.engine!=='STATIC'||request.scene.v30))){considerAnimationRetirement(held);return;}
       if(!held||held.epoch!==epoch||held.supersessionCheck||held.supersessionRequested||
          typeof held.operation?.supersedePreparing!=='function')return;
       held.supersessionCheck=true;
@@ -376,6 +422,29 @@
           if(accepted||active!==held||epoch!==held.epoch)return;
           unavailable();
         },unavailable);
+      });
+    }
+    function considerAnimationRetirement(held){
+      if(active!==held||epoch!==held.epoch||held.retirementCheck||held.retirementInFlight||held.retirementRequested)return;
+      held.retirementCheck=true;
+      Promise.resolve().then(()=>{
+        held.retirementCheck=false;
+        if(active!==held||epoch!==held.epoch||held.retirementInFlight||held.retirementRequested||queue.size!==held.items.size)return;
+        const newer=new Map();
+        for(const[id,item]of held.items){
+          const latest=queue.get(id);
+          if(!latest||desired.get(id)?.version!==latest.version||latest.request.standId!==item.request.standId)return;
+          newer.set(id,latest);
+        }
+        if(![...newer].some(([id,item])=>item.signature!==held.items.get(id).signature))return;
+        held.retirementInFlight=true;held.retirementTouched=true;
+        Promise.resolve(held.operation.retireEarlyAnimation([...newer.values()].map(item=>item.request))).then(answer=>{
+          if(active!==held||epoch!==held.epoch)return;
+          held.retirementInFlight=false;
+          if(answer?.status==='requested')held.retirementRequested=true;
+          // Neither a missing local ACK nor rejection means receiver success.
+          // Keep all latest intents queued until the original Task truly ends.
+        },()=>{if(active===held)held.retirementInFlight=false;});
       });
     }
     function considerPreparingStaticReplacement(held,replacement){
@@ -489,7 +558,7 @@
           const runEpoch=epoch;
           active={items,epoch:runEpoch,gesture:[...items.values()][0].gesture};
           const held=active;
-          let error=null,results,superseded=false,completedItems=items;
+          let error=null,results,superseded=false,retired=false,completedItems=items;
           let streamComplete=false;
           try{
             if(readinessError)throw Object.assign(Error(readinessError),{code:readinessError});
@@ -541,7 +610,13 @@
             if(!streamComplete&&sendBatch && items.size>1){
               active.operation=sendBatch([...items.values()].map(item=>item.request));
               const reply=await active.operation;
-              if(reply?.status==='batch-superseded-before-dispatch'){
+              if(reply?.status==='early-animation-retired'){
+                if(Object.keys(reply).sort().join(',')!=='receiverIds,sequence,status'||
+                   !Number.isInteger(reply.sequence)||reply.sequence<1||reply.sequence>65535||!held.retirementTouched||
+                   !Array.isArray(reply.receiverIds)||reply.receiverIds.length!==items.size||
+                   new Set(reply.receiverIds).size!==items.size||reply.receiverIds.some(id=>!items.has(id)))throw Error('LIVE_UNCONFIRMED');
+                retired=true;
+              }else if(reply?.status==='batch-superseded-before-dispatch'){
                 if(Object.keys(reply).length!==2||!Array.isArray(reply.receiverIds)||reply.receiverIds.length!==items.size||
                    new Set(reply.receiverIds).size!==items.size||reply.receiverIds.some(id=>!items.has(id)))throw Error('LIVE_UNCONFIRMED');
                 superseded=true;
@@ -570,13 +645,30 @@
               }
               }
             }else if(!streamComplete){
-              const [id,item]=items.entries().next().value,reply=await send(item.request);
+              const [id,item]=items.entries().next().value;
+              active.operation=send(item.request);const reply=await active.operation;
               if(reply?.status!=='applied-in-firmware'||reply.receiverId!==id||
                  !Number.isSafeInteger(reply.generation)||reply.generation<1)throw Error('LIVE_UNCONFIRMED');
               results=new Map([[id,reply]]);
             }
           }catch(cause){error=cause?.code||cause?.message||'LIVE_UNCONFIRMED';}
+          const observer=held.terminalObserver;
+          if(observer&&observer.operation===held.operation){
+            const terminal=Object.freeze({applied:epoch===runEpoch&&!error&&!retired&&!superseded&&completedItems===items&&
+              results?.size===items.size&&[...results.values()].every(result=>result.status==='applied-in-firmware')});
+            // The original operation has actually settled. Its exact cleanup
+            // observer runs BEFORE a queued next writer, without clearing,
+            // retrying or granting success to any original/new request.
+            try{await observer.afterTerminal(terminal);}catch(_){/* Cleanup cannot rewrite the original result. */}
+            observer.resolve(terminal);
+          }
           active=null;
+          if(retired){
+            // No APPLIED, no zero-write supersession claim. Even reversion to
+            // the original colour needs its fresh ordinary admitted wave.
+            if(epoch===runEpoch)for(const[id,item]of items)if(!queue.has(id)&&desired.get(id)?.signature===item.signature)queue.set(id,item);
+            continue;
+          }
           if(error&&held.stream){
             failedGesture=held.gesture;
             for(const [id,item]of queue)if(item.gesture===held.gesture){queue.delete(id);if(desired.get(id)?.version===item.version)emit(id,'failed',error);}
@@ -637,7 +729,7 @@
       }else if(copied.kind!=='SPI_PORTS')prelude=undefined;
       const sig=signature(copied);
       const intentVersion=++version;desired.set(id,{signature:sig,version:intentVersion});
-      if(active?.epoch===epoch&&active.items.get(id)?.signature===sig&&!active.supersessionRequested&&!active.preparingTouched&&!active.streamTouched){queue.delete(id);emit(id,'pending');return;}
+      if(active?.epoch===epoch&&active.items.get(id)?.signature===sig&&!active.supersessionRequested&&!active.preparingTouched&&!active.streamTouched&&!active.retirementTouched){queue.delete(id);emit(id,'pending');return;}
       if(gestureHeld&&failedGesture===gestureEpoch){queue.delete(id);emit(id,'failed','LIVE_UNCONFIRMED');return;}
       queue.set(id,{request:copied,signature:sig,version:intentVersion,gesture:gestureEpoch,...(prelude?{prelude}:{})});emit(id,'pending');
       // Only an explicitly registered automatic archive may yield this lease.
@@ -660,7 +752,7 @@
       epoch++;if(timer!==null)clearTimer(timer);timer=null;queue.clear();desired.clear();states.clear();
       for(const waiter of [...idleWaiters])finishWaiter(waiter,idleError('LIVE_QUEUE_CLEARED'));
     }
-    return Object.freeze({request,preview,reject,clear,beginGesture,endGesture,cancelGesture,whenIdle,acquireIdle,state:id=>states.get(id)||{kind:'idle',code:''}});
+    return Object.freeze({request,preview,reject,clear,beginGesture,endGesture,cancelGesture,whenIdle,acquireIdle,captureCurrentIntent,state:id=>states.get(id)||{kind:'idle',code:''}});
   }
   return Object.freeze({create,requestFor,joinZonePlayback});
 });

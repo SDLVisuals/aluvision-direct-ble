@@ -167,7 +167,7 @@
     // has just been saved, leaving this phone on its old local contents.
     let current=null,head=null,resumeStandId=null,inspected=null,generation=0,refreshJob=null,connectJob=null,wakeJob=null,timer=null,disposed=false,paused=false,writeQueue=Promise.resolve(),pendingWrites=0;
     let state={status:'disconnected',phase:null,standId:null,error:null,pendingWrites:0};
-    let liveReadyJob=null;
+    let liveReadyJob=null,wakeCompletion=null,foregroundWake=null;
     const publish=patch=>{state={...state,...patch,pendingWrites};onState(copy(state));};
     function stopTimer(){if(timer!==null)clearTimer(timer);timer=null;}
     function arm(){stopTimer();if(!disposed&&!paused&&current&&visible())timer=setTimer(()=>{timer=null;void refresh().catch(()=>{});},POLL_MS);}
@@ -394,6 +394,25 @@
     }
     function wake(){
       if(disposed||!visible())return Promise.resolve(null);
+      if(foregroundWake?.epoch===generation&&foregroundWake.current===current)return foregroundWake.promise;
+      if(paused&&wakeJob&&wakeCompletion&&current&&!connectJob&&!pendingWrites){
+        // A foreground hint cannot borrow a pre-pause read's cancelled epoch.
+        // Await its actual catch/finally cleanup, then obtain fresh native proof.
+        // This narrow continuation never repeats a connect/code change/write.
+        const token={epoch:generation,current,writes:writeQueue,promise:null},completion=wakeCompletion;
+        foregroundWake=token;
+        token.promise=completion.catch(()=>{}).then(()=>{
+          if(foregroundWake!==token||disposed||!visible()||token.epoch!==generation||current!==token.current||
+             connectJob||wakeJob||pendingWrites||writeQueue!==token.writes)fail('STAND_CONNECTION_CANCELLED');
+          paused=false;
+          // Keep this token installed while the one fresh, pinned wake runs.
+          return startWake();
+        }).finally(()=>{if(foregroundWake===token)foregroundWake=null;});
+        return token.promise;
+      }
+      return startWake();
+    }
+    function startWake(){
       if(connectJob)return connectJob;if(wakeJob)return wakeJob;
       paused=false;
       if(!current)return resumeStandId?resume():Promise.resolve(null);
@@ -415,8 +434,9 @@
         publish({status:'reconnect-required',phase:null,error:null,standId:resumeStandId});
         return resume();
       })();wakeJob=task;
-      return task.catch(error=>{if(epoch===generation&&!disposed&&!paused)publish({status:'offline',phase:null,error:error?.code||'STAND_REFRESH_FAILED'});throw error;})
-        .finally(()=>{if(wakeJob===task)wakeJob=null;arm();});
+      const completion=task.catch(error=>{if(epoch===generation&&!disposed&&!paused)publish({status:'offline',phase:null,error:error?.code||'STAND_REFRESH_FAILED'});throw error;})
+        .finally(()=>{if(wakeJob===task)wakeJob=null;if(wakeCompletion===completion)wakeCompletion=null;arm();});
+      wakeCompletion=completion;return completion;
     }
     async function disconnect(){
       ++generation;current=null;head=null;resumeStandId=null;inspected=null;stopTimer();publish({status:'disconnected',phase:null,standId:null,error:null});

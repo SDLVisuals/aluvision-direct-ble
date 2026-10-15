@@ -5,6 +5,7 @@
   'use strict';
   const M = window.LightningModel, P = window.LightningPreview, C = window.LightningColour, S = window.LightningPresets;
   const Colours = window.LightningColoursLibrary, Scenes = window.LightningScenes;
+  const SceneEditing=window.LightningSceneEditing;
   const Preferences=window.LightningPreferences;
   const UIContinuity=window.LightningUIContinuity;
   const Backup=window.LightningBackup;
@@ -75,6 +76,9 @@
   const animationQueries = new Map();
   const animationGalleryPositions = new Map();
   const animationFamilyReturnPositions = new Map();
+  // An explicit spatial-start consent owns one exact zone/selection only.
+  // Browsing and dismissal never change topology or send an animation.
+  let spatialAnimationStart620=null;
   // Brand presets share the colour library, independently of zone/receiver
   // state. Editing a brand swatch must never send light to a receiver.
   let brandEditor=null;
@@ -105,6 +109,8 @@
     if(standPresentationOnly())throw Object.assign(Error('Je stand is nog niet verbonden. Je bewaarde stand blijft zichtbaar.'),{code:'STAND_NOT_CONNECTED'});
   }
   const standPresentationBrowsingActions=new Set(['nav','stand','zone','overview-zone','overview-receivers','controls','colour','animations','effects','effects-root','animations-gallery','animation-gallery','animation-current-edit','animation-search-clear','animation-categories','animation-category-choice','family','family-back','library','layout','line-setup-open','layout-receiver-settings','receivers','receiver-filter','settings','stand-controls','stand-control-mode','stand-animation-gallery','stand-scenes','scene-open','visual-port','preview-size','help','close-help','effect-dialog-close','stand-connect','stand-inspect','stand-resume','stand-refresh','stand-open-wifi','management-stand-open','native-load-retry','stand-forget','stand-forget-confirm','app-erase','app-erase-confirm','backup-export','language','theme','preferences-reset','preferences-reset-confirm']);
+  // Leaving an editor is local navigation, even after the stand goes offline.
+  for(const action of ['scenes','scene-edit-stop','scene-edit-stand'])standPresentationBrowsingActions.add(action);
   function standPresentationActionAllowed(action){return !standPresentationOnly()||standPresentationBrowsingActions.has(action);}
   // This retries an existing read service only. The cached stand never gains
   // a save, replay or receiver-management permission from this UI action.
@@ -282,7 +288,7 @@
   }
   presetStore=trackedLibraryStore(presetStore,'presets');colourStore=trackedLibraryStore(colourStore,'colors');sceneStore=trackedLibraryStore(sceneStore,'scenes');
   let savedPresets = presetStore.load();
-  let savedColours=colourStore.load(),savedScenes=sceneStore.load(),sceneDraft=null;
+  let savedColours=colourStore.load(),savedScenes=sceneStore.load(),sceneDraft=null,sceneEdit640=null;
   let sceneDetailSearch='';
   let dragOrder=null;
   let inlineOrderDrag=null,orderRenderDeferred=false;
@@ -320,6 +326,7 @@
   let orderSaveQueue588=null,orderSaveEpoch588=0;
   // Presentation-only: no native lease, receipt or wire capability is stored.
   let orderClose589=null;
+  let orderResumeClose639=null;
   let orderCancelNotice590=null;
   let familySpatialSwitch=null;
   const openLineSetup=new Set(),openLineSettings=new Set();
@@ -409,8 +416,8 @@
         orderCleanupResumedSession=state.cleanup.session;
         try{Promise.resolve(runtime.services.resumeInstallationContext({standId:state.cleanup.standId})).catch(()=>{});}catch(_){}
       }
-      for(const line of state.lines)orderColours.set(line.id,{name:line.colorName,hex:C.hex(line.rgb),rgb:line.rgb});
-      if(state.active&&state.zoneId&&state.lines.length)orderPositionColours.set(state.zoneId,state.lines.map(line=>({name:line.colorName,hex:C.hex(line.rgb),rgb:[...line.rgb]})));
+      for(const line of state.lines)orderColours.set(line.id,{name:line.colorName,hex:C.screenHex(line.rgb),rgb:line.rgb});
+      if(state.active&&state.zoneId&&state.lines.length)orderPositionColours.set(state.zoneId,state.lines.map(line=>({name:line.colorName,hex:C.screenHex(line.rgb),rgb:[...line.rgb]})));
       for(const [receiverId,blink] of identifying){
         if(blink.layoutSession&&(!state.active||blink.layoutSession!==state.session||(!previewContext&&!state.physicalConfirmed))){
           identifying.delete(receiverId);syncIdentifyControls(receiverId);
@@ -544,7 +551,7 @@
   function orderReferenceMarkup(z,count){
     const view=spatialMode(z.layout,z),spatialReference=['tunnel','wall'].includes(view);
     const plan=orderGuide.referencePlan({count,type:z.type,view,layout:z.layout});
-    const legend=plan.colours.map((colour,index)=>`<li style="--identify-colour:${C.hex(colour.rgb)}" aria-label="${esc((index+1)+' · '+window.LightningV50OrderTexts.paletteLabel(colour.colorName,uiPreferences.preferences.language))}"><span aria-hidden="true"></span><b>${index+1}</b></li>`).join('');
+    const legend=plan.colours.map((colour,index)=>`<li style="--identify-colour:${C.screenHex(colour.rgb)}" aria-label="${esc((index+1)+' · '+window.LightningV50OrderTexts.paletteLabel(colour.colorName,uiPreferences.preferences.language))}"><span aria-hidden="true"></span><b>${index+1}</b></li>`).join('');
     const preview=addPreview(plan.receivers,plan.layout,'v50-order-canvas v50-order-target-canvas',{...plan.options,orderTarget:true,numberLabels:true,...(spatialReference?{spatialFraming:'focus'}:{}),label:(count===1?t('lineSetupSingle'):orderGuideText('referenceTitle'))+' · '+orderGuideText(plan.direction)});
     return `<figure class="v50-order-reference" data-reference-view="${view}" aria-label="${esc(count===1?t('lineSetupSingle'):orderGuideText('example'))}"><figcaption><b>${esc(t(count===1?'lineSetupSingle':'v568OrderReference'))}</b>${count>1?`<button type="button" class="v50-order-tutorial-open" data-action="order-tutorial-open">${icon('play')}${esc(orderGuideText('tutorialView'))}</button>`:''}</figcaption>${spatialReference?`<div class="v50-spatial-reference-scroll">${preview}</div>`:preview}<ol class="v50-order-reference-legend" aria-label="${esc(count===1?t('v594SingleReferenceHint'):orderGuideText('referenceTitle'))}">${legend}</ol><p class="v50-order-reference-direction"><span>${esc(orderGuideText(plan.direction))}</span><span>${esc(t(count===1?'v594SingleReferenceHint':'v568MatchReference'))}</span></p></figure>`;
   }
@@ -1558,13 +1565,15 @@
   }
   function animationEditorMarkup(effect,{preview=''}={}) {
     const s = selectedState();
+    const spatialSetup=!standControlOpen&&continuousZone()&&effect.category==='tunnel'
+      ?`<section class="card" data-tunnel-setup-notice><h3>${esc(t('v620TunnelSetupTitle'))}</h3><p>${esc(t('v620TunnelSetupBody'))}</p><button type="button" class="button full" data-action="tunnel-animation-setup" data-id="${esc(effect.id)}">${esc(t('v620TunnelSetupFix'))}</button></section>`:'';
     // This single back action also moves into the persistent dock while
     // scrolling. Browsing the picker must never reapply the current recipe.
     const galleryAction=standControlOpen?'stand-animation-gallery':route.screen==='controls'?'animation-gallery':'animations-gallery';
     const paletteTitle=effect.whiteMixPreset?'Witmix · tik om aan te passen':effect.category==='brand'?(effect.id==='v30-brand-focus'||effect.id.startsWith('v31-ref-'))?'Merkkleuren · tik om te wijzigen':'Accentkleur · tik om te wijzigen':effect.paletteEditable===false?'Kleurenreeks':'Animatiekleuren · tik om te wijzigen';
     const paletteHelp=effect.whiteMixPreset?'<p class="palette-guidance">W geeft wit licht; rood en een beetje groen maken de mix warmer. Pas de mengkleur aan terwijl je naar je ledline kijkt.</p>':effect.id==='v30-brand-focus'?'<p class="palette-guidance">Voeg kleuren toe voor je merkaccent. De gloed laat ze na elkaar zien langs de ledlines.</p>':'';
     const content = `<div class="current-effect v569-animation-header"><div class="current-effect-gallery-slot" data-editor-gallery-slot><button type="button" class="current-effect-gallery animation-gallery-return animation-chooser-action" data-animation-back-version="569" data-action="${galleryAction}" aria-label="${esc(t('v569BackPicker'))}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('back')}</span><span class="gallery-action-copy"><b>${esc(t('v569BackPicker'))}</b></span></span></button></div><div class="current-effect-heading"><small class="active-animation-kicker" data-animation-choice-label><span aria-hidden="true">${icon('animation')}</span>${esc(animationCurrentLabel())}</small><b id="active-animation-title" tabindex="-1" role="heading" aria-level="2">${esc(Library.displayName(effect,t))}</b></div>${standControlOpen?'':`<div class="v569-animation-power animation-context">${powerControl()}</div>`}</div>${preview}<section class="card palette-section animation-daily-controls v569-colour-panel"><h2>${effect.whiteMixPreset||effect.paletteEditable===false?paletteTitle:esc(t('animationColours'))}</h2>${effect.paletteEditable===false?'':`<p class="v569-palette-hint">${esc(t('v569PaletteHint'))}</p>`}${paletteHelp}<div class="palette" aria-label="${esc(t('animationColours'))}">${paletteMarkup(s)}</div>${backgroundControls(effect)}</section><section class="card v569-playback-panel" aria-label="${esc(t('v569Playback'))}">${effect.controls.includes('speed')?`<div class="v569-primary-setting">${animationSlider('speed',t('animationSpeed'),0,100,s.speed??30,'%')}${resetMarkup('speed',t('animationSpeed'))}</div>`:''}<div class="v569-primary-setting">${animationSlider('bri',t('animationBrightness'),0,100,s.bri??100,'%')}${resetMarkup('bri',t('animationBrightness'))}</div></section>${animationControls(effect)}<button class="button secondary full animation-save-recipe" data-action="preset-save">＋ ${esc(t('animationSaveOwn'))}</button>`;
-    return `<section class="active-animation-workspace" data-animation-editor-version="569" aria-label="${esc(t('v569Adjust'))}">${content}</section>`;
+    return `<section class="active-animation-workspace" data-animation-editor-version="569" aria-label="${esc(t('v569Adjust'))}">${spatialSetup}${content}</section>`;
   }
   function animationCurrentLabel() {
     const s=selectedState(),targets=standControlOpen?standControlReceivers():selected();
@@ -1783,6 +1792,86 @@
     }
     return state;
   }
+  function spatialAnimationGeometry620(){
+    const z=zone();if(!z)return null;
+    return JSON.stringify([z.id,z.name,z.type,z.receiverIds,M.lineIds(model,z.id),receivers().map(receiver=>[
+      receiver.id,receiver.rid,receiver.deviceFingerprint,receiver.standId,receiver.zoneId,
+      receiver.type,receiver.role,receiver.lifecycle,receiver.outputs.map(output=>[
+        output.port,output.enabled,output.pixels,output.reversed
+      ]).sort((a,b)=>a[0]-b[0])
+    ])]);
+  }
+  function spatialAnimationRoute620(){
+    return JSON.stringify([route.screen,route.family,route.library,route.effectsReturn,controlMode,showControlAnimationGallery]);
+  }
+  function retireSpatialAnimationStart620(){spatialAnimationStart620=null;}
+  function currentSpatialAnimationStart620(job,layout=null){
+    const z=zone();
+    return spatialAnimationStart620===job&&!document.hidden&&!standControlOpen&&!standPresentationOnly()&&
+      stand()?.id===job.standId&&z?.id===job.zoneId&&z.type==='SPI'&&
+      (!layout||z.layout===layout)&&spatialAnimationRoute620()===job.route&&
+      JSON.stringify(selection())===job.scope&&spatialAnimationGeometry620()===job.geometry&&
+      catalogue().some(effect=>effect.id===job.effectId&&effect.category==='tunnel');
+  }
+  function offerSpatialAnimationStart620(effect,{inline=false,repair=false}={}){
+    if(standControlOpen||!continuousZone()||effect?.category!=='tunnel')return false;
+    if(standPresentationOnly()||arrangementInteractionBusy())return true;
+    if(physicalLineCount()<(effect.minimumReceivers||2)){toast(t('animationAcrossMinimum'));return true;}
+    const job={effectId:effect.id,standId:stand()?.id,zoneId:zone().id,
+      route:spatialAnimationRoute620(),scope:JSON.stringify(selection()),geometry:spatialAnimationGeometry620(),inline,repair,phase:'consent'};
+    showEffectDialog(t('v620TunnelSetupTitle'),`<section data-tunnel-start-consent><p>${esc(t('v620TunnelSetupBody'))}</p><p class="dialog-error" role="alert" hidden></p><button type="button" class="button full" data-action="tunnel-animation-start-confirm">${esc(t('v620TunnelSetupStart'))}</button><button type="button" class="button secondary full" data-action="tunnel-animation-start-cancel">${esc(t('v620TunnelSetupCancel'))}</button></section>`);
+    spatialAnimationStart620=job;
+    return true;
+  }
+  async function confirmSpatialAnimationStart620(){
+    const job=spatialAnimationStart620;
+    if(!job||job.phase!=='consent'||!currentSpatialAnimationStart620(job,'continuous')||arrangementInteractionBusy())return false;
+    job.phase='saving';
+    const button=document.querySelector('[data-tunnel-start-consent] [data-action="tunnel-animation-start-confirm"]');
+    if(button){button.disabled=true;button.textContent=t('v620TunnelSetupSaving');}
+    let saved=false;
+    try{saved=await chooseSpatialLayout('tunnel','stacked',{strictPlayback:true,
+      currentStart:()=>currentSpatialAnimationStart620(job,'continuous')});}catch(_){}
+    // A close/cancel, changed stand/zone/selection, or changed physical input
+    // retires this consent. A late save must never resurrect its old route.
+    if(spatialAnimationStart620!==job)return false;
+    if(!currentSpatialAnimationStart620(job)){
+      spatialAnimationStart620=null;closeEffectDialog();toast(t('v620TunnelSetupChanged'));return false;
+    }
+    if(!saved||zone().layout!=='stacked'||arrangementInteractionBusy()){
+      job.phase='failed';
+      const notice=document.querySelector('[data-tunnel-start-consent] .dialog-error');
+      if(notice){notice.hidden=false;notice.textContent=t('v620TunnelSetupFailed');}
+      if(button?.isConnected)button.textContent=t('v620TunnelSetupStart');
+      return false;
+    }
+    const effect=catalogue().find(effect=>effect.id===job.effectId);
+    if(!effect)return false;
+    spatialAnimationStart620=null;closeEffectDialog();
+    if(job.repair){
+      // The existing arrangement transaction already resumed each line's
+      // own settings. Repairing topology must not reset the user's palette,
+      // speed or background to this descriptor's fresh defaults.
+      render({preserveScroll:true});revealAnimationStart();return true;
+    }
+    startZoneAnimationEffect620(effect,{inline:job.inline});return true;
+  }
+  function startZoneAnimationEffect620(effect,{inline=false}={}){
+    const requiresWholeZone=effect.requireTogether||effect.category==='tunnel';
+    const available=requiresWholeZone?physicalLineCount():selectedLineCount();
+    if(available<(effect.minimumReceivers||1))return;
+    if(requiresWholeZone&&selection().kind!=='all')storeLineSelection(receivers().map(receiver=>receiver.id));
+    setSpatialPreviewCategory(effect.category==='tunnel'?'tunnel':'');
+    rememberAnimationGallery();apply(effectState(effect),selection(),{freshRecipe:true});settingsOpen=false;
+    if(route.screen==='animation-family'){
+      controlMode='animations';showControlAnimationGallery=false;
+      route={...route,screen:'controls',familyReturnScreen:null,effectsReturn:'controls'};
+      render({top:true});return revealAnimationStart();
+    }
+    if(route.screen==='controls'&&inline){controlMode='animations';showControlAnimationGallery=false;render({top:true});return revealAnimationStart();}
+    if(route.screen==='effects'&&route.effectsReturn==='controls'){controlMode='animations';showControlAnimationGallery=false;navigate('controls',{zoneId:route.zoneId});return revealAnimationStart();}
+    navigate('animations');return revealAnimationStart();
+  }
   function effectMotionKey(effect) {
     const id=effect.id,variant=Number(effect.state?.variant),engine=String(effect.state?.engine||'').toUpperCase();
     if(effect.category==='tunnel'){
@@ -1818,11 +1907,24 @@
     const separateSelection=['receivers','lines'].includes(selection().kind),representativeOnly=!tunnel&&!separateSelection;
     const sampleType=zone().type||'RGBW';
     const physicalLines=tunnel&&tunnelLines==='all'?receivers():selected().map(receiver=>zone()?.type==='SPI'&&!continuousZone()?{...receiver,outputs:receiver.outputs.map(output=>({...output,enabled:output.enabled&&selectedLineIds().includes(receiver.id+':'+output.port)}))}:receiver);
-    const list=representativeOnly?[{id:'library-sample-strip',type:sampleType,name:'LED-voorbeeld',
+    let list=representativeOnly?[{id:'library-sample-strip',type:sampleType,name:'LED-voorbeeld',
       outputs:sampleType==='SPI'?[{port:1,enabled:true,pixels:32,reversed:false}]:[],state:previewState}]
       :physicalLines.map(r=>({...r,state:previewState}));
-    const lineNumbers=Object.fromEntries(receivers().map((receiver,index)=>[receiver.id,index+1]));
-    return addPreview(list,representativeOnly?'stacked':zone().layout,tunnel?'tunnel-effect-preview':reference?'reference-preview':'',{label:Library.displayName(effect,t),effectId:effect.id,brand:effect.category==='brand'&&!effect.whiteMixPreset,brandPaletteLimit:effect.paletteEditable===false?0:effect.colorCountRange?.max||4,labels:!representativeOnly,lineNumbers,...(tunnel?{...tunnelPreviewOptions(Library.displayName(effect,t)+' · '+ledlineCount(physicalLineCount(list))),geometryReceivers:receivers()}:{} )});
+    let galleryGeometry=receivers();
+    // These canvases illustrate a recipe, not current receiver output. A
+    // continuous zone is one logical line and would freeze a line-to-line
+    // bounce. Only disposable gallery samples use the spatial topology;
+    // the live editor continues to sample its genuine saved arrangement.
+    if(tunnel&&physicalLineCount(galleryGeometry)<(effect.minimumReceivers||2)){
+      list=Array.from({length:Math.max(2,effect.minimumReceivers||2)},(_,index)=>({
+        id:`animation-example-${index+1}`,name:`Ledline ${index+1}`,type:sampleType,
+        outputs:sampleType==='SPI'?[{port:1,enabled:true,pixels:48,reversed:false}]:[],state:copy(previewState)
+      }));
+      galleryGeometry=list;
+    }
+    const lineNumbers=Object.fromEntries(galleryGeometry.map((receiver,index)=>[receiver.id,index+1]));
+    const galleryLayout=tunnel?(spatialEffectView()==='wall'?'vertical':'stacked'):representativeOnly?'stacked':zone().layout;
+    return addPreview(list,galleryLayout,tunnel?'tunnel-effect-preview':reference?'reference-preview':'',{label:Library.displayName(effect,t),effectId:effect.id,brand:effect.category==='brand'&&!effect.whiteMixPreset,brandPaletteLimit:effect.paletteEditable===false?0:effect.colorCountRange?.max||4,labels:!representativeOnly,lineNumbers,...(tunnel?{...tunnelPreviewOptions(Library.displayName(effect,t)+' · '+ledlineCount(physicalLineCount(list))),geometryReceivers:galleryGeometry,illustrativeTunnel:true}:{} )});
   }
   function tunnelGalleryPreviewMarkup(group=null,css='tunnel-live-preview',{illustrative=!group,main=true}={}) {
     const connected=receivers(),example=group?.preview||catalogue().find(effect=>effect.category==='tunnel'&&Number(effect.state.variant)===93)||catalogue().find(effect=>effect.category==='tunnel');
@@ -2015,10 +2117,10 @@
       (job.session===null?!orderIdentificationState?.active:orderIdentificationState?.active&&orderIdentificationState.session===job.session);
   }
   function orderPanelCloseRequest589(button){
-    // This grants only a wait-for-existing-job presentation close, not radio.
+    // Leaving this presentation never requires a receiver, save or STOP ACK.
+    // The original native operation retains its own writer/cleanup fences.
     return !!button?.matches?.('.ledline-setup-toggle[data-action="layout"]')&&
-      openLineSetup.has(route.zoneId)&&(currentOrderSave588(orderSaveQueue588)||
-        orderClose589&&currentOrderClose589(orderClose589));
+      openLineSetup.has(route.zoneId);
   }
   function orderDragBusy588(){
     // This exemption grants local editing only, never another native writer.
@@ -2027,7 +2129,10 @@
     return !!orderClose589||orderTestBusy()||arrangementPlaybackPending()&&!own||
       (arrangementApplying||managementBusy)&&!own;
   }
-  function retireOrderSave588(){orderSaveEpoch588++;orderClose589=null;if(orderSaveQueue588)orderSaveQueue588.invalid=true;}
+  function retireOrderSave588(retainedClose639=null){
+    if(orderResumeClose639&&orderResumeClose639!==retainedClose639){orderResumeClose639.cancelled=true;orderResumeClose639=null;}
+    orderSaveEpoch588++;orderClose589=null;if(orderSaveQueue588)orderSaveQueue588.invalid=true;
+  }
   function rebaseOrderSave588(job){
     if(!sameOrderDraft588(job))return false;
     job.draft.signature=arrangementSignature();job.draft.initial=JSON.stringify([zone().layout,M.lineIds(model,job.zoneId)]);return true;
@@ -2040,7 +2145,9 @@
       throw Error(t('orderResumeUnconfirmed'));
     // The native holder alone validates/consumes its one-use CAS/token/boot fence.
     // This call is the unchanged ordinary LIVE queue, never a new writer/retry.
+    const resume639={pending,capture:null};job.resumeFlight639=resume639;
     arrangementReapplyIds=sendReceiverStates(M.zoneReceivers(model,job.zoneId).map(r=>r.id),{remember:false});
+    resume639.capture=liveController?.captureCurrentIntent?.({standId:job.standId,receiverIds:[...arrangementReapplyIds]});
     syncArrangementControls();
     if(!liveController?.whenIdle)throw Error(t('orderResumeUnconfirmed'));
     try{await liveController.whenIdle({standId:model.receivers.find(r=>arrangementReapplyIds.includes(r.id))?.standId});}
@@ -2061,7 +2168,7 @@
         job.dispatchedVersion589=version;
         if(JSON.stringify([snapshot.layout,snapshot.lineOrder])===snapshot.initial){
           // A net-zero later permutation may still owe the last real CAS resume.
-          if(job.resumePending589){arrangementApplying=true;try{await resumeOrderPlayback589(job);}catch(error){job.error=error.message||t('orderResumeUnconfirmed');break;}finally{arrangementApplying=false;if(!arrangementPlaybackPending())arrangementReapplyIds=[];}}
+          if(job.resumePending589){arrangementApplying=true;try{await resumeOrderPlayback589(job);}catch(error){job.error=error.message||t('orderResumeUnconfirmed');break;}finally{arrangementApplying=!!orderResumeClose639;if(!arrangementPlaybackPending())arrangementReapplyIds=[];}}
           if(!currentOrderSave588(job))break;
           saved=true;job.confirmedVersion=version;if(version===job.version)break;else continue;
         }
@@ -2102,17 +2209,54 @@
     return z&&notice?.zoneId===z.id&&notice.standId===stand()?.id&&!openLineSetup.has(z.id)
       ?`<p class="order-recognition-status" data-order-resume-unconfirmed role="status" aria-live="polite">${esc(t(previewContext?'orderPreviewStopped':notice.code))}</p>`:'';
   }
-  async function stopOrderPresentation590(close,{cancelled=false,playbackConfirmed=false}={}){
+  function currentOrderResumeClose639(token){
+    return orderResumeClose639===token&&!token.cancelled&&token.epoch===orderSaveEpoch588&&!document.hidden&&
+      route.zoneId===token.zoneId&&stand()?.id===token.standId&&token.geometry===orderGeometry588()&&
+      !openLineSetup.has(token.zoneId)&&!arrangementDraft&&orderIdentification===token.identification&&
+      orderIdentificationState?.active&&orderIdentificationState.session===token.session;
+  }
+  function captureOrderResumeClose639(job,close){
+    const pending=job?.resumePending589,resume=job?.resumeFlight639;
+    if(!currentOrderSave588(job)||!arrangementPlaybackPending()||!pending||resume?.pending!==pending||
+       !resume.capture||job.version!==job.dispatchedVersion589||close.session!==pending.session||
+       pending.signature!==arrangementSignature()||pending.geometry!==orderGeometry588()||
+       !orderIdentificationState?.physicalConfirmed)return null;
+    const token={job,identification:orderIdentification,standId:close.standId,zoneId:close.zoneId,
+      geometry:close.geometry,session:close.session,epoch:null,cancelled:false,stopped:null};
+    const observation=resume.capture.observeActiveTerminal(async()=>{
+      // A normal visual close observes its original dispatched LIVE only.
+      // A route/hide/new session still revokes consent immediately.
+      if(!currentOrderResumeClose639(token))return;
+      try{token.stopped=await token.identification.close('closed');}catch(_){token.stopped=null;}
+    });
+    if(!observation)return null;
+    token.observation=observation;orderResumeClose639=token;return token;
+  }
+  async function stopOrderPresentation590(close,{cancelled=false,playbackConfirmed=false,deferredResume639=null}={}){
     if(!currentOrderClose589(close))return {closed:false,playbackConfirmed:false,cleanupConfirmed:false};
+    const browsing=arrangementBrowsing();
     // Explicit UI cancellation is NOT a successful scene resume. No LIVE,
     // CAS/START retry or pending-queue clear occurs on this escape lane.
-    retireOrderSave588();cancelOrderTest();openLineSetup.delete(close.zoneId);openLineSettings.clear();arrangementDraft=null;orderColours.clear();
-    const epoch=orderSaveEpoch588,notice=cancelled?{standId:close.standId,zoneId:close.zoneId,code:'orderResumeUnconfirmed'}:null;
-    if(notice)orderCancelNotice590=notice;
+    retireOrderSave588(deferredResume639);cancelOrderTest();openLineSetup.delete(close.zoneId);openLineSettings.clear();arrangementDraft=null;orderColours.clear();
+    inlineOrderDrag?.cancel();orderPreviewGesture=null;orderRenderDeferred=false;
+    const epoch=orderSaveEpoch588,notice={standId:close.standId,zoneId:close.zoneId,code:cancelled?'orderResumeUnconfirmed':'orderRecognitionClosing'};
+    if(deferredResume639){deferredResume639.epoch=epoch;arrangementApplying=true;}
+    orderCancelNotice590=notice;
+    // Restore the normal page and its inert/focus ledger BEFORE waiting for
+    // the exact-token STOP. A slow/lost reply must never trap this full screen.
+    renderArrangement(browsing,{orderExit595:true});revealLineSetup();
     // The unchanged adapter targets its original active session. If native is
     // busy it uses its existing exact stopLayoutLocally route, returns false,
     // and leaves the original operation's radioOperation/defer/pending intact.
-    const identification=orderIdentification,stopped=await identification?.close(cancelled?'cancelled-unconfirmed':'closed');
+    const identification=orderIdentification;
+    let stopped;
+    if(deferredResume639){
+      // Not whenIdle's bounded timer: the captured original operation must
+      // really settle, then its exact STOP finishes before any queued writer.
+      const terminal=await deferredResume639.observation.completion;
+      playbackConfirmed=terminal.applied===true;cancelled=!playbackConfirmed;stopped=deferredResume639.stopped;
+      if(cancelled&&orderCancelNotice590===notice)notice.code='orderResumeUnconfirmed';
+    }else{try{stopped=await identification?.close(cancelled?'cancelled-unconfirmed':'closed');}catch(_){stopped=null;}}
     // STOP settles its original token only. A newer presentation, navigation,
     // draft or session cannot borrow that completion for warning/paint/focus.
     if(epoch!==orderSaveEpoch588||document.hidden||route.zoneId!==close.zoneId||stand()?.id!==close.standId||
@@ -2126,8 +2270,10 @@
     const prior=close.priorConfirmedCleanup,alreadyReleased=!cancelled&&!close.session&&prior?.status==='confirmed'&&
       cleanup?.status==='confirmed'&&cleanup.session===prior.session&&cleanup.standId===prior.standId&&
       cleanup.zoneId===prior.zoneId&&prior.standId===close.standId&&prior.zoneId===close.zoneId;
-    if(!cancelled&&!cleanupConfirmed&&!alreadyReleased)
-      orderCancelNotice590={standId:close.standId,zoneId:close.zoneId,code:'orderStopUnconfirmed'};
+    if(!cancelled&&orderCancelNotice590===notice)
+      orderCancelNotice590=cleanupConfirmed||alreadyReleased?null:{standId:close.standId,zoneId:close.zoneId,code:'orderStopUnconfirmed'};
+    const label=main.querySelector('[data-order-resume-unconfirmed]');
+    if(label){label.hidden=!orderCancelNotice590;label.textContent=orderCancelNotice590?t(previewContext?'orderPreviewStopped':orderCancelNotice590.code):'';}
     return {closed:true,playbackConfirmed:!cancelled&&playbackConfirmed,cleanupConfirmed,alreadyReleased,cancelled,presentationEpoch:epoch};
   }
   async function closeOrderPanel589(){
@@ -2138,26 +2284,21 @@
       return orderClose589.flight;
     }
     const job=orderSaveQueue588,draft=arrangementDraft,zoneId=route.zoneId;
-    if(!draft||!openLineSetup.has(zoneId)||!zone())return {closed:false,playbackConfirmed:false,cleanupConfirmed:false};
+    if(!openLineSetup.has(zoneId)||!zone())return {closed:false,playbackConfirmed:false,cleanupConfirmed:false};
     const previous=orderIdentificationState?.active?null:orderIdentification?.getState(),cleanup=previous?.cleanup;
     const priorConfirmedCleanup=previous?.active===false&&cleanup?.status==='confirmed'&&
       typeof cleanup.session==='string'&&cleanup.session.length>0&&cleanup.standId===stand().id&&cleanup.zoneId===zoneId
       ?{session:cleanup.session,standId:cleanup.standId,zoneId:cleanup.zoneId,status:'confirmed'}:null;
     const close={epoch:orderSaveEpoch588,zoneId,standId:stand().id,draft,geometry:orderGeometry588(),session:orderIdentificationState?.active?orderIdentificationState.session:null,priorConfirmedCleanup,flight:null};
     orderClose589=close;syncArrangementControls();
-    if(arrangementPlaybackPending())return stopOrderPresentation590(close,{cancelled:true});
-    // Only this explicit panel close waits for its existing one-flight job.
-    // Navigation/hide/offline still invalidate it, with no replay or new LIVE.
-    close.flight=Promise.resolve().then(async()=>{
-      try{
-        const saved=job?await job.flight:true;
-        if(!currentOrderClose589(close))return {closed:false,playbackConfirmed:false,cleanupConfirmed:false};
-        if(!saved||draft.error||job&&(job.resumePending589||job.confirmedVersion!==job.version)){
-          return stopOrderPresentation590(close,{cancelled:true});
-        }
-        if(arrangementApplying||managementBusy)return {closed:false,playbackConfirmed:false,cleanupConfirmed:false};
-        return stopOrderPresentation590(close,{playbackConfirmed:!!job&&saved});
-      }finally{if(orderClose589===close)orderClose589=null;syncArrangementControls();syncOrderRecognition();}
+    const deferredResume639=captureOrderResumeClose639(job,close);
+    // Closing once follows the existing explicit escape lane even while a
+    // metadata save/LIVE is pending. Retire only unsent UI continuation; an
+    // already-dispatched CAS still reconciles its authoritative saved model.
+    const uncertain=!!job||arrangementApplying||managementBusy||arrangementPlaybackPending()||orderTestBusy()||!!draft?.error;
+    close.flight=stopOrderPresentation590(close,{cancelled:uncertain&&!deferredResume639,deferredResume639}).finally(()=>{
+      if(orderResumeClose639===deferredResume639&&deferredResume639){orderResumeClose639=null;if(!orderSaveQueue588||orderSaveQueue588===job)arrangementApplying=false;}
+      if(orderClose589===close)orderClose589=null;syncArrangementControls();syncOrderRecognition();
     });
     return close.flight;
   }
@@ -2171,6 +2312,10 @@
     const busy=arrangementInteractionBusy()||!!orderSaveQueue588||!!orderClose589,needsStandOpen=arrangementNeedsStandOpen(),handles=[...main.querySelectorAll('[data-order-handle]')];
     for(const handle of handles)handle.disabled=orderDragBusy588()||needsStandOpen||handles.length<2;
     if(busy)for(const control of main.querySelectorAll('.ledline-setup button[data-action]'))control.disabled=true;
+    // A closed sheet may have been rendered while its original resume was
+    // still pending. Restore only its two outer entry controls after cleanup;
+    // inner choices retain their own setup, connection and capability guards.
+    for(const control of main.querySelectorAll('.ledline-setup[data-order-open="false"] > .ledline-setup-toggle[data-action="layout"],.ledline-setup[data-order-open="false"] > .spatial-preview-choice > .spatial-choice-toggle[data-action="spatial-toggle"]'))control.disabled=busy;
     const closeButton=main.querySelector('.ledline-setup-toggle[data-action="layout"]');
     if(orderPanelCloseRequest589(closeButton))closeButton.disabled=false;
     main.querySelector('.ledline-arrangement')?.setAttribute('aria-busy',String(busy));
@@ -2224,7 +2369,7 @@
     const lineOrder=M.lineIds(model,z.id);
     arrangementDraft={zoneId:z.id,layout:z.layout,lineOrder,signature:arrangementSignature(z),initial:JSON.stringify([z.layout,lineOrder]),error:'',needsStandOpen:false};
   }
-  async function applyArrangement(orderJob=null,orderSnapshot=null){
+  async function applyArrangement(orderJob=null,orderSnapshot=null,{strictPlayback=false,currentStart=null}={}){
     let draft=orderJob?orderSnapshot:arrangementDraft;
     const dirty=draft&&JSON.stringify([draft.layout,draft.lineOrder])!==draft.initial;
     if(!draft||arrangementInteractionBusy()||orderJob&&!currentOrderSave588(orderJob)||(!dirty&&!draft.error))return false;
@@ -2265,8 +2410,15 @@
       else renderArrangement({...arrangementBrowsing(),focus:null});
       const saved=await persistManagement(next,{kind:'arrangeLines',zoneId,layout:draft.layout,lineOrder:[...draft.lineOrder]},draft.signature,orderJob);
       if(saved){
+        // Only this explicit start flow supplies the additional scope/board
+        // gate. A late metadata result cannot overwrite changed input and
+        // replay old light on behalf of retired consent.
+        const continuationAllowed=!currentStart||currentStart();
         model=saved;
         succeeded=true;
+        // Preserve the genuinely committed authoritative model even when
+        // consent was retired. That save is not permission to replay/start.
+        if(!continuationAllowed)throw Error(t('lineSetupChanged'));
         if(orderJob&&(!rebaseOrderSave588(orderJob)||!currentOrderSave588(orderJob)))throw Error(t('lineSetupChanged'));
         let canResume=!identification;
         if(identification&&orderIdentificationState?.active&&orderIdentificationState.session===identification){
@@ -2297,7 +2449,7 @@
       }else failure=draft.error||t('lineSetupSaveFailed');
     }catch(error){failure=error.message||t('lineSetupSaveFailed');}
     finally{
-      arrangementApplying=false;
+      arrangementApplying=!!orderResumeClose639;
       // A bounded idle wait may expire before the native operation returns.
       // Its genuine pending states keep only the order interaction disabled;
       // never renew the lease or replay the unknown effect automatically.
@@ -2316,9 +2468,12 @@
       }
       if(!orderJob)renderArrangement(browsing);
     }
-    return succeeded&&(!orderJob||!failure);
+    // The new spatial-start consent must not launch its animation after a
+    // metadata-only success with uncertain restoration. Existing layout
+    // callers retain their original metadata-result contract.
+    return succeeded&&(!(orderJob||strictPlayback)||!failure);
   }
-  async function chooseSpatialLayout(view,layout,{keepOpen=false}={}){
+  async function chooseSpatialLayout(view,layout,{keepOpen=false,strictPlayback=false,currentStart=null}={}){
     const z=zone();if(!z||arrangementInteractionBusy())return false;
     const previousView=spatialMode(z.layout,z),browsing=arrangementBrowsing();
     if(keepOpen)openSpatialChoices.add(z.id);else openSpatialChoices.delete(z.id);
@@ -2326,8 +2481,14 @@
     if(layout===z.layout){renderArrangement(browsing);return true;}
     if(!arrangementDraft||arrangementDraft.zoneId!==z.id||arrangementDraft.signature!==arrangementSignature(z))beginArrangement();
     arrangementDraft.layout=layout;
-    const saved=await applyArrangement();
-    if(!saved){spatialViews.set(z.id,previousView);openSpatialChoices.add(z.id);renderArrangement(browsing);}
+    const saved=await applyArrangement(null,null,{strictPlayback,currentStart});
+    if(!saved){
+      spatialViews.set(z.id,previousView);
+      // The explicit animation-start dialog owns this failure. Do not put
+      // another modal above its explanation or cancel action.
+      if(!currentStart)openSpatialChoices.add(z.id);
+      renderArrangement(browsing);
+    }
     return saved;
   }
   async function chooseFamilySpatialLayout(view){
@@ -2433,7 +2594,7 @@
   function orderPositionPalette(z,count){
     const saved=orderPositionColours.get(z.id);
     if(saved?.length===count)return saved;
-    return window.LightningLedlineIdentificationSession.positionColours(count).map(colour=>({name:colour.colorName,hex:C.hex(colour.rgb),rgb:[...colour.rgb]}));
+    return window.LightningLedlineIdentificationSession.positionColours(count).map(colour=>({name:colour.colorName,hex:C.screenHex(colour.rgb),rgb:[...colour.rgb]}));
   }
   function orderCardPreviewMarkup(colour){
     const name=window.LightningV50OrderTexts.paletteLabel(colour?.name,uiPreferences.preferences.language);
@@ -2579,7 +2740,7 @@
       const count=scene.zones.reduce((n,z)=>n+z.receivers.length,0),names=scene.zones.slice(0,2).map(z=>z.name).join(' · '),extra=scene.zones.length-2;
       return `<article class="scene-card-row ui606-scene-card"><button type="button" class="scene-card" data-action="scene-open" data-id="${esc(scene.id)}">${scenePreview(scene)}<span class="scene-card-copy"><b>${esc(scene.name)}</b><small class="scene-card-count">${zoneCount(scene.zones.length)} · ${receiverCount(count)}</small><small class="scene-card-names">${esc(names)}${extra>0?' …':''}</small><span class="scene-open-label">${esc(t('v50Details'))} ${icon('chevron')}</span></span></button><div class="ui606-scene-card-action">${sceneActivateButtonMarkup(scene)}</div></article>`;
     }).join('');
-    return `<div class="page scenes-page ui606-pages"><header class="page-heading ui606-page-heading"><div><div class="eyebrow">${esc(standLabel())}</div><div class="ui606-title-row"><h1>${esc(t('scenes'))}</h1><span class="ui606-page-count" aria-label="${esc(t(list.length===1?'v50ScenesOne':'v50ScenesMany',{count:list.length}))}">${list.length}</span></div><p>${esc(t('v50SceneIntro'))}</p></div></header><button class="button ui606-main-action" data-action="scene-new" ${ready?'':'disabled'}><span aria-hidden="true">＋</span><span>${esc(t('newScene'))}</span></button>${savedScenes.error?`<p class="card ui606-page-error" role="alert">${esc(savedScenes.error.message)}</p>`:''}<div class="section-heading scene-list-heading"><h2>${esc(t('v50YourScenes'))}</h2><small>${esc(t(list.length===1?'v50ScenesOne':'v50ScenesMany',{count:list.length}))}</small></div><div class="scene-list">${cards||`<section class="card empty ui606-empty"><span class="menu-icon" aria-hidden="true">${icon('scenes')}</span><h2>${esc(t('v50SaveFirstScene'))}</h2><p>${esc(t(ready?'v50SaveFirstSceneHint':'v50SceneAddLightsHint'))}</p></section>`}</div>${list.length?`<details class="scene-workflow-help"><summary>${icon('info')}<span>${esc(t('v50HowItWorks'))}</span>${icon('chevron')}</summary>${sceneWorkflow()}</details>`:sceneWorkflow()}</div>`;
+    return `<div class="page scenes-page ui606-pages" data-scene-ui="640"><header class="page-heading ui606-page-heading"><div><div class="eyebrow">${esc(standLabel())}</div><div class="ui606-title-row"><h1>${esc(t('scenes'))}</h1><span class="ui606-page-count" aria-label="${esc(t(list.length===1?'v50ScenesOne':'v50ScenesMany',{count:list.length}))}">${list.length}</span></div><p>Bewaar je licht en haal je favoriete sfeer met één tik terug.</p></div></header><button class="button ui606-main-action" data-action="scene-new" ${ready?'':'disabled'}><span aria-hidden="true">＋</span><span>${esc(t('newScene'))}</span></button>${savedScenes.error?`<p class="card ui606-page-error" role="alert">${esc(savedScenes.error.message)}</p>`:''}<div class="section-heading scene-list-heading"><h2>${esc(t('v50YourScenes'))}</h2><small>${esc(t(list.length===1?'v50ScenesOne':'v50ScenesMany',{count:list.length}))}</small></div><div class="scene-list">${cards||`<section class="card empty ui606-empty"><span class="menu-icon" aria-hidden="true">${icon('scenes')}</span><h2>${esc(t('v50SaveFirstScene'))}</h2><p>${esc(t(ready?'v50SaveFirstSceneHint':'v50SceneAddLightsHint'))}</p></section>`}</div>${list.length?`<details class="scene-workflow-help"><summary>${icon('info')}<span>${esc(t('v50HowItWorks'))}</span>${icon('chevron')}</summary>${sceneWorkflow()}</details>`:sceneWorkflow()}</div>`;
   }
   function receiverCount(count) { return t(count===1?'v50ReceiversOne':'v50ReceiversMany',{count}); }
   function ledlineCount(count) { return count===1?t('scopeCountOne'):t('scopeCountMany',{count}); }
@@ -2624,9 +2785,108 @@
       const summary=list.length?t(list.length===1?'v50SavedScenesOne':'v50SavedScenesMany',{count:list.length}):t('v50ViewSaveLighting');
       return `<button class="stand-scenes-entry" data-action="stand-scenes"><span class="stand-scenes-entry-icon">${icon('scenes')}</span><span class="stand-scenes-entry-copy"><b>${esc(t('scenes'))}</b><small>${esc(summary)}</small></span><span class="stand-scenes-entry-open">${esc(t('v50Open'))}</span>${icon('chevron')}</button>`;
     }
-    const shown=list.slice(0,4);
+    const shown=list;
     const cards=shown.map(scene=>`<article class="stand-scene-row"><button class="stand-scene-card" data-action="scene-open" data-id="${esc(scene.id)}">${scenePreview(scene)}<span><b>${esc(scene.name)}</b><small>${zoneCount(scene.zones.length)} · ${receiverCount(scene.zones.reduce((count,item)=>count+item.receivers.length,0))}</small><i>${esc(t('v50Details'))} ${icon('chevron')}</i></span></button>${sceneActivateButtonMarkup(scene)}</article>`).join('');
-    return `<section class="stand-scenes${compact?' stand-scenes-compact':''}"><div class="section-heading"><div><h2>${esc(t('scenes'))}</h2><small>${list.length?esc(t(list.length===1?'v50SavedAtmospheresOne':'v50SavedAtmospheresMany',{count:list.length})):esc(t('v50SaveLightingLater'))}</small></div><button class="text-button" data-action="stand-scenes">${esc(t(list.length?'v50AllScenes':'v50OpenScenes'))} ${icon('chevron')}</button></div>${cards?`<div class="stand-scene-list">${cards}</div>`:`<button class="stand-scenes-empty" data-action="stand-scenes">${icon('scenes')}<span><b>${esc(t('v50NoSavedScenes'))}</b><small>${esc(t('v50FirstSceneHint'))}</small></span>${icon('chevron')}</button>`}</section>`;
+    const ready=stand()?.zones.some(zone=>M.zoneReceivers(model,zone.id).length);
+    return `<section class="stand-scenes" data-scene-ui="640"><div class="section-heading"><div><h2>${esc(t('scenes'))}</h2><small>${list.length?esc(t(list.length===1?'v50SavedAtmospheresOne':'v50SavedAtmospheresMany',{count:list.length})):esc(t('v50SaveLightingLater'))}</small></div><button class="text-button" data-action="stand-scenes">${esc(t(list.length?'v50AllScenes':'v50OpenScenes'))} ${icon('chevron')}</button></div>${cards?`<div class="stand-scene-list">${cards}</div>`:`<p class="stand-scenes-empty">${ready?'Stel je licht in en kies hierboven ‘Sla je stand op als scène’.':'Voeg eerst verlichting aan een zone toe.'}</p>`}</section>`;
+  }
+  function sceneCaptureMarkup640(){
+    const ready=stand()?.zones.some(zone=>M.zoneReceivers(model,zone.id).length);
+    if(sceneEdit640)return '';
+    return `<div class="scene-capture-panel" data-scene-ui="640"><button class="button secondary full scene-capture-current" data-action="scene-new-current" ${ready?'':'disabled'}>${icon('scenes')}<span><b>Sla je stand op als scène</b><small>Bewaar het huidige licht van je zones.</small></span>${icon('chevron')}</button></div>`;
+  }
+  function sceneWorkbenchMarkup640(){
+    if(!sceneEdit640)return '';
+    const edit=sceneEdit640,atStand=route.screen==='stand'&&sceneEdit640.session.standId===stand()?.id;
+    const zones=model.stands.find(stand=>stand.id===edit.session.standId)?.zones||[];
+    const chips=edit.zoneIds.map(id=>{
+      const zone=zones.find(zone=>zone.id===id),modified=zone?.receiverIds.some(id=>Object.hasOwn(edit.session.dirtyByReceiverId,id));
+      const label=(zone?.name||'Zone niet beschikbaar')+(modified?' · gewijzigd':'');
+      return `<button type="button" class="scene-edit-zone-chip${modified?' is-modified':''}" data-action="scene-edit-zone" data-zone="${esc(id)}" aria-label="${esc(label)}" title="${esc(label)}" aria-pressed="${!atStand&&route.zoneId===id&&['controls','colour','animations','effects','animation-family'].includes(route.screen)}" ${!zone||edit.saving?'disabled':''}><span>${esc(zone?.name||'Zone niet beschikbaar')}</span><i aria-hidden="true" ${modified?'':'hidden'}></i></button>`;
+    }).join('');
+    return `<aside class="scene-edit-workbench" data-scene-ui="640" aria-label="Scène bewerken"><div class="scene-edit-workbench-copy"><small>Scène bewerken</small><b title="${esc(edit.name||edit.session.original.name)}">${esc(edit.name||edit.session.original.name)}</b></div><div class="scene-edit-workbench-actions"><button class="button" data-action="scene-edit-save" ${edit.saving?'disabled':''}>${edit.saving?'Opslaan…':'Scène opslaan'}</button><button class="icon-button" data-action="scene-edit-stop" aria-label="Stoppen met bewerken" title="Stoppen zonder verder op te slaan" ${edit.saving?'disabled':''}>${icon('close')}</button></div><div class="scene-edit-zones" role="group" aria-label="Zones van deze scène"><button class="scene-edit-overview" data-action="scene-edit-stand" aria-pressed="${atStand}" ${edit.saving?'disabled':''}>Alle ${zoneCount(edit.zoneIds.length)}</button>${chips}</div>${edit.error||edit.notice?`<p class="scene-edit-workbench-message" role="status">${esc(edit.error||edit.notice)}</p>`:''}</aside>`;
+  }
+  function syncSceneWorkbench640(){
+    if(!sceneEdit640||typeof document==='undefined')return;
+    const panel=main.querySelector('.scene-edit-workbench');if(!panel)return;
+    for(const chip of panel.querySelectorAll('[data-action="scene-edit-zone"]')){
+      const zone=model.stands.find(stand=>stand.id===sceneEdit640.session.standId)?.zones.find(zone=>zone.id===chip.dataset.zone);
+      const modified=!!zone?.receiverIds.some(id=>Object.hasOwn(sceneEdit640.session.dirtyByReceiverId,id));
+      chip.classList.toggle('is-modified',modified);const dot=chip.querySelector('i');if(dot)dot.hidden=!modified;
+      const label=(zone?.name||'Zone niet beschikbaar')+(modified?' · gewijzigd':'');chip.setAttribute('aria-label',label);chip.title=label;
+    }
+    if(sceneEdit640.error){
+      let message=panel.querySelector('.scene-edit-workbench-message');
+      if(!message){message=document.createElement('p');message.className='scene-edit-workbench-message';message.setAttribute('role','status');panel.append(message);}
+      message.textContent=sceneEdit640.error;
+    }
+  }
+  function sceneEditBusy640(sceneId=null){
+    if(!sceneEdit640)return false;
+    if(!sceneEdit640.saving&&sceneId===sceneEdit640.session.original.id)return false;
+    toast(sceneEdit640.saving?'Je scène wordt nog bewaard.':'Sla je scène eerst op of kies ‘Stoppen met bewerken’.');return true;
+  }
+  function openSceneEditing640(scene,{zoneId=null}={}){
+    if(sceneEditBusy640(scene.id))return;
+    const previous=sceneEdit640,draft=route.screen==='scene-draft'&&!zoneId&&sceneDraft?.sceneId===scene.id?sceneDraft:null;
+    const metadata=draft?{zoneIds:draft.zoneIds,name:draft.name}:previous?{zoneIds:previous.zoneIds,name:previous.name}:{};
+    const loaded=sceneEdit640
+      ?(zoneId?SceneEditing.loadZone(sceneEdit640.session,model,zoneId):SceneEditing.loadAll(sceneEdit640.session,model,metadata))
+      :draft&&!zoneId?SceneEditing.loadAll(SceneEditing.begin(model,scene).session,model,metadata):SceneEditing.begin(model,scene,{zoneId});
+    if(nativeLoaded&&!spiPortScenesAvailable&&loaded.receiverIds.some(id=>loaded.model.receivers.find(receiver=>receiver.id===id)?.state.portStates))throw Error('Werk de receiversoftware bij om deze opgeslagen SPI-poortinstellingen te gebruiken.');
+    sceneEdit640={session:loaded.session,name:draft?.name??previous?.name??scene.name,zoneIds:[...(draft?.zoneIds??previous?.zoneIds??loaded.session.zoneIds)],savedLocally:!!previous?.savedLocally,centralUnconfirmed:!!previous?.centralUnconfirmed,error:'',notice:loaded.wholeStandLoaded&&zoneId?'Deze animatie gebruikt de hele stand. De volledige scène is geladen.':'',saving:false};model=loaded.model;
+    sendReceiverStates(loaded.receiverIds,{sceneRestore640:true});
+    sceneDraft=null;
+    if(zoneId){selections.set(zoneId,{kind:'all'});navigate('controls',{zoneId,standId:scene.standId},{zoneEntry:true,scenePrepared640:true});}
+    else navigate('stand',{standId:scene.standId,zoneId:null});
+  }
+  function buildSceneDraft640(){
+    if(sceneEdit640&&sceneDraft.sceneId===sceneEdit640.session.original.id)
+      return SceneEditing.build(sceneEdit640.session,model,{zoneIds:sceneDraft.zoneIds,name:sceneDraft.name});
+    if(!sceneDraft.original)return Scenes.capture(model,stand().id,sceneDraft.zoneIds,sceneDraft.name);
+    const original=sceneDraft.original,saved=new Map(original.zones.map(zone=>[zone.id,zone]));
+    const missing=sceneDraft.zoneIds.filter(id=>!saved.has(id));
+    const fresh=missing.length?Scenes.capture(model,stand().id,sceneDraft.zoneIds,sceneDraft.name,{id:original.id}):null;
+    const zones=sceneDraft.zoneIds.map(id=>copy(saved.get(id)||fresh.zones.find(zone=>zone.id===id)));
+    const scene=Scenes.validate({...original,name:sceneDraft.name,zones});
+    SceneEditing.begin(model,scene); // Validate exact membership/shared scope without applying or sending.
+    return scene;
+  }
+  async function saveScene640(scene,{event=null,fromWorkbench=false}={}){
+    if(sceneEdit640?.saving||sceneDraft?.saving)return;
+    const edit=sceneEdit640,draft=sceneDraft;
+    const editSession=edit?.session,editMetadata=edit?JSON.stringify({name:edit.name,zoneIds:edit.zoneIds}):null;
+    const draftMetadata=draft?JSON.stringify({name:draft.name,zoneIds:draft.zoneIds}):null;
+    if(edit){edit.saving=true;edit.error='';}
+    if(draft){draft.saving=true;draft.error='';}
+    render({preserveScroll:true});
+    try{
+      const result=sceneStore.save(scene);if(result.error)throw Error(result.error.message);
+      // Local persistence precedes the central commit in the existing store.
+      // Keep the editor and retry context until that commit is confirmed.
+      savedScenes=result;
+      if(edit){edit.savedLocally=true;edit.centralUnconfirmed=true;}
+      await confirmCentralLibrary(result);
+      window.LightningInterfaceHaptics?.emit?.('success','scene-save',{confirmed:true,event});
+      if(edit)edit.centralUnconfirmed=false;
+      // An in-flight gesture/intent can finish while storage is waiting.
+      // Acknowledging the older snapshot must not discard that newer edit.
+      const newerEdit=edit&&(sceneEdit640!==edit||edit.session!==editSession||JSON.stringify({name:edit.name,zoneIds:edit.zoneIds})!==editMetadata);
+      const newerDraft=draft&&(sceneDraft!==draft||JSON.stringify({name:draft.name,zoneIds:draft.zoneIds})!==draftMetadata);
+      if(newerEdit||newerDraft){
+        if(sceneEdit640===edit){edit.saving=false;edit.notice='Scène opgeslagen. Je nieuwere wijzigingen zijn nog niet opgeslagen.';}
+        if(sceneDraft===draft&&draft){draft.saving=false;draft.error='De vorige versie is opgeslagen. Sla je nieuwere wijzigingen ook op.';}
+        render({preserveScroll:true});return;
+      }
+      sceneEdit640=null;sceneDraft=null;flushCentralProjection();
+      navigate(fromWorkbench?'stand':'scene-detail',{sceneId:scene.id,standId:scene.standId,zoneId:null});
+      toast('Scène opgeslagen. Je verlichting blijft zoals je die hebt ingesteld.');
+    }catch(error){
+      const message=error?.message||'Opslaan is niet gelukt. Probeer opnieuw.';
+      if(edit&&sceneEdit640===edit){edit.saving=false;edit.error=message;}
+      if(draft&&sceneDraft===draft){draft.saving=false;draft.error=message;}
+      render({preserveScroll:true});toast(message);
+    }
   }
   function sceneSearch(mode,count) {
     if(count<6)return '';
@@ -2651,26 +2911,32 @@
       const selected=sceneDraft.zoneIds.includes(row.dataset.id);row.setAttribute('aria-pressed',String(selected));row.querySelector('i').textContent=selected?'✓':'+';
     });
     const summary=main.querySelector('[data-scene-selection-summary]');if(summary)summary.textContent=`${zoneCount(chosen.length)} gekozen · ${receiverCount(total)}`;
-    const save=main.querySelector('[data-action="scene-save"]');if(save)save.disabled=!chosen.length||!sceneDraft.name.trim();
-    const all=main.querySelector('[data-action="scene-select-all"]');if(all)all.disabled=!available.length||chosen.length===available.length;
-    const clear=main.querySelector('[data-action="scene-clear-selection"]');if(clear)clear.disabled=!chosen.length;
+    const save=main.querySelector('[data-action="scene-save"]');if(save)save.disabled=!!sceneDraft.saving||!chosen.length||!sceneDraft.name.trim();
+    const all=main.querySelector('[data-action="scene-select-all"]');if(all)all.disabled=!!sceneDraft.saving||!available.length||chosen.length===available.length;
+    const clear=main.querySelector('[data-action="scene-clear-selection"]');if(clear)clear.disabled=!!sceneDraft.saving||!chosen.length;
     const error=main.querySelector('[data-scene-save-error]');if(error){error.hidden=!sceneDraft.error;error.textContent=sceneDraft.error||'';}
   }
   function renderSceneDraft() {
     if(!stand())return renderScenes();
     if(!sceneDraft)sceneDraft={zoneIds:[],name:'',search:''};
-    const editing=Boolean(sceneDraft.sceneId),subtitle=editing?'Vervang deze scène met het huidige licht van je gekozen zones.':'Bewaar het licht zoals het nu is ingesteld.';
+    const editing=Boolean(sceneDraft.sceneId),subtitle=editing?'Pas de naam of zones aan. Wil je het licht wijzigen? Kies onderaan ‘Deze scène bewerken’.':'Je huidige licht staat klaar. Geef het een naam en sla het op.';
     const omitted=sceneDraft.omittedZoneCount?`<p class="card scene-edit-warning" role="status">${sceneDraft.omittedZoneCount} zone${sceneDraft.omittedZoneCount===1?' is':'s zijn'} niet meer beschikbaar en ${sceneDraft.omittedZoneCount===1?'wordt':'worden'} niet opgenomen in de bijgewerkte scène.</p>`:'';
-    return `<div class="page scene-draft-page ui606-pages">${contextTitle(editing?'Scène aanpassen':'Sfeer bewaren',subtitle,'Scènes','scenes')}${omitted}<label class="dialog-field scene-name-field ui606-scene-name"><span class="ui606-step-heading"><span class="ui606-step-number" aria-hidden="true">1</span><span>Geef je scène een naam</span></span><input id="scene-name" maxlength="64" value="${esc(sceneDraft.name)}" placeholder="Bijvoorbeeld: warm welkom"></label><section class="scene-zone-picker" aria-labelledby="scene-zone-picker-title"><div class="section-heading ui606-step-heading"><span class="ui606-step-number" aria-hidden="true">2</span><h2 id="scene-zone-picker-title">Welke zones wil je bewaren?</h2></div><div class="scene-bulk-actions"><button class="text-button" data-action="scene-select-all">Alle zones kiezen</button><button class="text-button" data-action="scene-clear-selection">Selectie wissen</button></div>${sceneSearch('draft',stand().zones.length)}<div class="scene-zone-list">${stand().zones.map(z=>{
+    return `<div class="page scene-draft-page ui606-pages" data-scene-ui="640">${contextTitle(editing?'Scène aanpassen':'Sfeer bewaren',subtitle,'Scènes','scenes')}${omitted}<label class="dialog-field scene-name-field ui606-scene-name"><span class="ui606-step-heading"><span class="ui606-step-number" aria-hidden="true">1</span><span>Geef je scène een naam</span></span><input id="scene-name" maxlength="64" value="${esc(sceneDraft.name)}" placeholder="Bijvoorbeeld: warm welkom" ${sceneDraft.saving?'disabled':''}></label><section class="scene-zone-picker" aria-labelledby="scene-zone-picker-title"><div class="section-heading ui606-step-heading"><span class="ui606-step-number" aria-hidden="true">2</span><h2 id="scene-zone-picker-title">Welke zones wil je bewaren?</h2></div><div class="scene-bulk-actions"><button class="text-button" data-action="scene-select-all" ${sceneDraft.saving?'disabled':''}>Alle zones kiezen</button><button class="text-button" data-action="scene-clear-selection" ${sceneDraft.saving?'disabled':''}>Selectie wissen</button></div>${sceneSearch('draft',stand().zones.length)}<div class="scene-zone-list">${stand().zones.map(z=>{
       const count=M.zoneReceivers(model,z.id).length;
-      return `<button class="scene-zone" data-action="scene-zone" data-id="${esc(z.id)}" data-scene-filter-name="${esc(z.name+' '+(z.type||''))}" aria-pressed="${sceneDraft.zoneIds.includes(z.id)}" ${count?'':'disabled'}>${count?zonePreview(z,'scene-preview',{label:`Huidig licht · ${z.name} · ${z.type}`}):`<span class="scene-preview scene-preview-unavailable">${icon('zones')}</span>`}<span><b>${esc(z.name)}</b><small>${count?`${receiverCount(count)} · ${z.type}`:'Nog geen verlichting'}</small></span><i aria-hidden="true">${sceneDraft.zoneIds.includes(z.id)?'✓':'+'}</i></button>`;
-    }).join('')}</div><p class="scene-search-empty card" hidden>Geen zones gevonden. Pas je zoekopdracht aan; je selectie blijft bewaard.</p></section><div class="scene-save-bar"><p data-scene-selection-summary role="status" aria-live="polite"></p><p class="scene-save-error" data-scene-save-error role="alert" hidden></p><button class="button red full" data-action="scene-save" disabled>${editing?'Scène bijwerken':'Scène opslaan'}</button><small>${editing?'Vervangt het opgeslagen licht. Je verlichting verandert niet.':'Opslaan verandert je verlichting niet.'}</small></div><button class="button secondary full" data-action="scenes">Annuleren</button></div>`;
+      const saved=sceneDraft.original&&Scenes.previewZones(model,sceneDraft.original).find(saved=>saved.id===z.id);
+      return `<button class="scene-zone" data-action="scene-zone" data-id="${esc(z.id)}" data-scene-filter-name="${esc(z.name+' '+(z.type||''))}" aria-pressed="${sceneDraft.zoneIds.includes(z.id)}" ${count&&!sceneDraft.saving?'':'disabled'}>${saved?savedZonePreview(saved,'',savedSceneStandPlan(sceneDraft.original)):count?zonePreview(z,'scene-preview',{label:`Huidig licht · ${z.name} · ${z.type}`}):`<span class="scene-preview scene-preview-unavailable">${icon('zones')}</span>`}<span><b>${esc(z.name)}</b><small>${count?`${receiverCount(count)} · ${z.type}${saved?' · opgeslagen licht':''}`:'Nog geen verlichting'}</small></span><i aria-hidden="true">${sceneDraft.zoneIds.includes(z.id)?'✓':'+'}</i></button>`;
+    }).join('')}</div><p class="scene-search-empty card" hidden>Geen zones gevonden. Pas je zoekopdracht aan; je selectie blijft bewaard.</p></section><div class="scene-save-bar"><p data-scene-selection-summary role="status" aria-live="polite"></p><p class="scene-save-error" data-scene-save-error role="alert" hidden></p><button class="button red full" data-action="scene-save" disabled>${sceneDraft.saving?'Opslaan…':editing?'Scène bijwerken':'Scène opslaan'}</button><small>${editing?'Niet-bewerkte zones houden hun opgeslagen licht. Nieuwe zones gebruiken het huidige licht.':'Opslaan verandert je verlichting niet.'}</small></div>${editing?`<button class="button full scene-detail-edit" data-action="scene-start-edit" data-id="${esc(sceneDraft.sceneId)}" ${sceneDraft.saving?'disabled':''}>${icon('edit')} Deze scène bewerken ${icon('chevron')}</button><p class="scene-edit-hint">Laadt het opgeslagen licht en brengt je naar de stand. Pas daar je zones aan en sla de scène opnieuw op.</p>`:''}<button class="button secondary full" data-action="scenes" ${sceneDraft.saving?'disabled':''}>Annuleren</button></div>`;
   }
   function renderSceneDetail() {
     if(!stand())return renderScenes();
     const scene=savedScenes.scenes.find(s=>s.id===route.sceneId&&s.standId===stand().id);if(!scene)return renderScenes();
     const check=Scenes.compatibility(model,scene),zones=Scenes.previewZones(model,scene),count=zones.reduce((n,z)=>n+z.receiverCount,0),standPlan=savedSceneStandPlan(scene);
-    return `<div class="page scene-detail-page ui606-pages">${contextTitle(scene.name,'Opgeslagen scène · bekijken verandert niets.','Scènes','scenes')}<div class="ui606-scene-detail-tools"><div class="scene-scope-summary"><span>${icon('zones')}<b>${zoneCount(zones.length)}</b></span><span>${icon('receiver')}<b>${receiverCount(count)}</b></span></div><button class="button secondary scene-edit-button" data-action="scene-edit" data-id="${esc(scene.id)}">${icon('edit')} ${esc(t('updateScene'))}</button></div><section class="scene-detail"><div class="section-heading"><h2>Zones in deze scène</h2><small>Opgeslagen licht</small></div>${check.ok?'':`<p class="card scene-zone-warning" role="alert">${esc(check.reason)} Er wordt niets gedeeltelijk geactiveerd.</p>`}${sceneSearch('detail',zones.length)}<div class="scene-saved-zones">${zones.map((z,i)=>`<article class="scene-saved-zone" data-scene-zone="${esc(z.id)}" data-scene-zone-type="${z.type}" data-scene-filter-name="${esc(z.name+' '+z.type)}"><header><span class="scene-zone-number">${i+1}</span><div><h3>${esc(z.name)}</h3><small>${z.type} · ${receiverCount(z.receiverCount)}</small></div></header>${savedZonePreview(z,'',standPlan)}${z.available?'':`<p class="scene-zone-warning">${esc(z.reason)}</p>`}</article>`).join('')}</div><p class="scene-search-empty card" hidden>Geen zones gevonden. Pas je zoekopdracht aan om je opgeslagen zones te zien.</p></section><div class="scene-save-bar scene-activate-bar"><p>${zoneCount(zones.length)} · samen toepassen</p><button class="button full" data-action="scene-apply" data-id="${esc(scene.id)}" ${check.ok?'':'disabled'}>${icon('power')}<span>Scène activeren</span></button><small>Andere zones blijven ongewijzigd.</small></div><button class="text-button ui606-scene-delete" data-action="scene-delete" data-id="${esc(scene.id)}">${icon('trash')}<span>Scène verwijderen</span></button></div>`;
+    return `<div class="page scene-detail-page ui606-pages" data-scene-ui="640">
+      <div class="topline"><button class="back" data-action="scenes" aria-label="Terug naar Scènes">${icon('back')}<span>Scènes</span></button><span class="context-name">${esc(standLabel())}</span></div>
+      <div class="scene-detail-header"><div class="scene-detail-heading"><header class="page-heading"><div><h1>${esc(scene.name)}</h1><p>Tik op een zone om het opgeslagen licht te laden en aan te passen.</p></div></header><div class="scene-scope-summary"><span>${icon('zones')}<b>${zoneCount(zones.length)}</b></span><span>${icon('receiver')}<b>${receiverCount(count)}</b></span></div></div><div class="scene-detail-activate scene-activate-bar">${sceneActivateButtonMarkup(scene)}</div></div>
+      <div class="ui606-scene-detail-tools"><button class="button secondary scene-edit-button" data-action="scene-edit" data-id="${esc(scene.id)}">${icon('edit')} Naam en zones</button></div>
+      <section class="scene-detail"><div class="section-heading"><h2>Zones in deze scène</h2><small>Tik om te bewerken</small></div>${check.ok?'':`<p class="card scene-zone-warning" role="alert">${esc(check.reason)} Er wordt niets gedeeltelijk geactiveerd.</p>`}${sceneSearch('detail',zones.length)}<div class="scene-saved-zones">${zones.map((z,i)=>`<button type="button" class="scene-saved-zone" data-action="scene-zone-edit" data-id="${esc(scene.id)}" data-zone="${esc(z.id)}" data-scene-zone="${esc(z.id)}" data-scene-zone-type="${z.type}" data-scene-filter-name="${esc(z.name+' '+z.type)}" ${check.ok&&zones.every(zone=>zone.available)?'':'disabled'} aria-label="${esc(z.name)}: opgeslagen licht laden en bewerken"><span class="scene-saved-zone-heading"><span class="scene-zone-number">${i+1}</span><span><b>${esc(z.name)}</b><small>${z.type} · ${receiverCount(z.receiverCount)}</small></span><span class="scene-zone-edit-label">Bewerken ${icon('chevron')}</span></span>${savedZonePreview(z,'',standPlan)}${z.available?'':`<span class="scene-zone-warning">${esc(z.reason)}</span>`}</button>`).join('')}</div><p class="scene-search-empty card" hidden>Geen zones gevonden. Pas je zoekopdracht aan om je opgeslagen zones te zien.</p></section>
+      <button class="button full scene-detail-edit" data-action="scene-start-edit" data-id="${esc(scene.id)}" ${check.ok&&zones.every(zone=>zone.available)?'':'disabled'}>${icon('edit')} Deze scène bewerken ${icon('chevron')}</button><p class="scene-edit-hint">Laadt de scène en opent je stand. Stel je zones daar opnieuw in en kies ‘Scène opslaan’.</p><button class="text-button ui606-scene-delete" data-action="scene-delete" data-id="${esc(scene.id)}">${icon('trash')}<span>Scène verwijderen</span></button></div>`;
   }
   function standConnectionMessage(){
     const errorText=key=>window.LightningV50ErrorTexts.t(key,uiPreferences.preferences.language);
@@ -2862,7 +3128,7 @@
     syncArrangementControls();
   }
   function centralEditing(){
-    return !!receiverSetupPreparation||route.screen==='stand-sharing'||route.screen==='receiver-add'&&!!onboarding.summary()||!!document.querySelector('.receiver-removal-sheet[open]')||!!centralLibraryPending||centralLibraryWriting||centralLiveCheckpoint?.editing()||!!activeControlPointer||inlineOrderDrag?.isActive()||managementBusy||arrangementApplying||
+    return !!sceneEdit640||!!receiverSetupPreparation||route.screen==='stand-sharing'||route.screen==='receiver-add'&&!!onboarding.summary()||!!document.querySelector('.receiver-removal-sheet[open]')||!!centralLibraryPending||centralLibraryWriting||centralLiveCheckpoint?.editing()||!!activeControlPointer||inlineOrderDrag?.isActive()||managementBusy||arrangementApplying||
       !!document.querySelector('#effect-dialog[open] input:not([data-stand-code])');
   }
   function installCentralProjection(next,{redraw=true,readIntentGeneration,projectionCurrent}={}){
@@ -3286,7 +3552,7 @@
   }
   function renderDemoWifi(){
     if(!webDemoContext)return renderSettings();
-    return `<div class="page demo-wifi-page"><header class="page-heading"><div><h1>Wifi-instellingen</h1><p>${esc(t('settings'))} · V50</p></div></header>${demoSettingsTabs(true)}<section class="card demo-wifi-notice" aria-labelledby="demo-wifi-title"><span class="pill red">DEMO · niet verbonden</span><h2 id="demo-wifi-title">Alleen een voorbeeld</h2><p>Hier bekijk je de wifi-instellingen. Deze demo zoekt geen echte netwerken, maakt geen verbinding en bewaart geen wifi-wachtwoorden.</p></section><section class="card demo-wifi-network"><div class="demo-wifi-heading"><span class="menu-icon" aria-hidden="true">${icon('wifi')}</span><div><h2>Wifi van je installatie</h2><p>Je telefoon bedient de verlichting via dit netwerk.</p></div></div><dl class="demo-wifi-details"><div><dt>Netwerk</dt><dd>Aluvision-DEMO</dd></div><div><dt>Status</dt><dd>Voorbeeld · geen echte verbinding</dd></div></dl><button class="button full" disabled aria-describedby="demo-wifi-disabled">Verbinding controleren</button><p id="demo-wifi-disabled" class="demo-wifi-caption">Alleen beschikbaar met een echte receiver in de iPhone-app.</p></section><section class="card demo-wifi-guide"><h2>Verbinden in de echte app</h2><ol><li>Open <b>Instellingen → Wifi</b> op je iPhone.</li><li>Kies het ALUVISION-wifi van je installatie.</li><li>Ga terug naar de app om je verlichting te bedienen.</li></ol><p>Je hoeft voor deze demo niets aan je wifi te veranderen.</p></section></div>`;
+    return `<div class="page demo-wifi-page"><header class="page-heading"><div><h1>Wifi-instellingen</h1><p>${esc(t('settings'))} · V41</p></div></header>${demoSettingsTabs(true)}<section class="card demo-wifi-notice" aria-labelledby="demo-wifi-title"><span class="pill red">DEMO · niet verbonden</span><h2 id="demo-wifi-title">Alleen een voorbeeld</h2><p>Hier bekijk je de wifi-instellingen. Deze demo zoekt geen echte netwerken, maakt geen verbinding en bewaart geen wifi-wachtwoorden.</p></section><section class="card demo-wifi-network"><div class="demo-wifi-heading"><span class="menu-icon" aria-hidden="true">${icon('wifi')}</span><div><h2>Wifi van je installatie</h2><p>Je telefoon bedient de verlichting via dit netwerk.</p></div></div><dl class="demo-wifi-details"><div><dt>Netwerk</dt><dd>Aluvision-DEMO</dd></div><div><dt>Status</dt><dd>Voorbeeld · geen echte verbinding</dd></div></dl><button class="button full" disabled aria-describedby="demo-wifi-disabled">Verbinding controleren</button><p id="demo-wifi-disabled" class="demo-wifi-caption">Alleen beschikbaar met een echte receiver in de iPhone-app.</p></section><section class="card demo-wifi-guide"><h2>Verbinden in de echte app</h2><ol><li>Open <b>Instellingen → Wifi</b> op je iPhone.</li><li>Kies het ALUVISION-wifi van je installatie.</li><li>Ga terug naar de app om je verlichting te bedienen.</li></ol><p>Je hoeft voor deze demo niets aan je wifi te veranderen.</p></section></div>`;
   }
   function themeChoiceMarkup(theme) {
     const active=uiPreferences.preferences.theme===theme;
@@ -3380,6 +3646,8 @@
   }
   window.addEventListener('pagehide',retireOrderExit595);
   document.addEventListener('visibilitychange',()=>{if(document.hidden)retireOrderExit595();});
+  window.addEventListener('pagehide',retireSpatialAnimationStart620);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)retireSpatialAnimationStart620();});
   function render({top=false,preserveScroll=true,orderExit595=false}={}) {
     if(paletteDrag?.isActive()&&!top){paletteRenderDeferred=true;return;}
     paletteDrag?.cancel();
@@ -3455,6 +3723,9 @@
     const views = {stand:renderStand,controls:renderControls,colour:renderColour,animations:renderAnimations,effects:renderEffects,'animation-family':renderAnimationFamily,receivers:renderReceivers,settings:renderSettings,'demo-wifi':renderDemoWifi,'pin-login':renderPinLogin,'stand-connect':renderStandConnection,'stand-sharing':renderStandSharing,'stand-code-change':renderStandCodeChange,scenes:renderScenes,'scene-draft':renderSceneDraft,'scene-detail':renderSceneDetail,'receiver-add':renderReceiverAdd};
     const zoneScreen=['controls','colour','animations','effects','animation-family','layout'].includes(route.screen);
     main.innerHTML = (zoneScreen&&zone()&&!receivers().length?renderEmptyZone:(views[route.screen] || renderStand))();
+    if(sceneEdit640?.saving&&main.firstElementChild)main.firstElementChild.inert=true;
+    if(route.screen==='stand')main.querySelector('.zone-section')?.insertAdjacentHTML('beforebegin',sceneCaptureMarkup640());
+    main.insertAdjacentHTML('afterbegin',sceneWorkbenchMarkup640());
     syncLayoutModal(oldSheetScroll);
     const orderSheet588=main.querySelector('.ledline-setup');
     if(orderSheet588){const opened=orderSheet588.dataset.orderOpen==='true';orderSheet588.dataset.orderMotion588=opened===oldSheetOpen588?'none':opened?'enter':'exit';}
@@ -3470,7 +3741,7 @@
     if(samePresentationContext)UIContinuity.restoreDisclosures(main,disclosureState);
     orderRecognitionDirty=true;
     if(animatePage){
-      const entering=main.firstElementChild;
+      const entering=main.querySelector('.page')||main.firstElementChild;
       if(entering){
         entering.classList.add('app-page-enter');
         const finishEntering=event=>{
@@ -3608,7 +3879,7 @@
     }
     if(openSpatialChoices.has(zone()?.id))syncSpatialChoiceDialog(oldSpatialBrowsing);
     syncOrderTutorial();
-    window.InterfaceMotion?.showPage?.(main.firstElementChild,[route.screen,route.zoneId,route.family,route.sceneId,controlMode,showControlAnimationGallery].join('|'));
+    window.InterfaceMotion?.showPage?.(main.querySelector('.page')||main.firstElementChild,[route.screen,route.zoneId,route.family,route.sceneId,controlMode,showControlAnimationGallery].join('|'));
   }
   function restoreControlFocus(previous,host=document) {
     if(!previous?.matches?.('button[data-action]'))return false;
@@ -3637,7 +3908,7 @@
       if(route===previous&&!document.hidden)toast(error?.code==='STAND_CONFIG_CONFLICT'?'De stand is op een ander toestel veranderd. Open hem opnieuw; er is niets toegevoegd.':'De actuele receiverlijst is nog niet bevestigd. Controleer de verbinding en probeer opnieuw.');
     }finally{if(receiverSetupPreparation===token)receiverSetupPreparation=null;flushCentralProjection();}
   }
-  function navigate(screen, extra={}, {restoreControls=false,managedPrepared=false,zoneEntry=false}={}) {
+  function navigate(screen, extra={}, {restoreControls=false,managedPrepared=false,zoneEntry=false,scenePrepared640=false}={}) {
     if(temporarySingleUser&&['pin-login','stand-connect','stand-sharing','stand-code-change'].includes(screen))screen='settings';
     if(firstAccessCheckpoint&&screen!=='receiver-add')return;
     if(screen==='receiver-add'&&localStandConcept())prepareLocalStandReceiver(extra.setupReturnZoneId||extra.zoneId||route.zoneId);
@@ -3645,6 +3916,20 @@
     // Compatibility for internal callers; layout is now a panel, not a page.
     const requestedLayout=screen==='layout';if(requestedLayout)screen='controls';
     if(arrangementApplying)return;
+    // In a scene workbench, opening its next zone from Stand must show that
+    // zone's saved/draft light too, not unrelated light left active earlier.
+    const editZone=extra.zoneId||route.zoneId;
+    if(!scenePrepared640&&sceneEdit640&&!sceneEdit640.saving&&screen==='controls'&&
+       (zoneEntry||editZone!==route.zoneId||route.screen==='stand')&&
+       sceneEdit640.session.standId===(extra.standId||stand()?.id)&&sceneEdit640.session.zoneIds.includes(editZone)){
+      try{
+        const loaded=SceneEditing.loadZone(sceneEdit640.session,model,editZone);
+        if(nativeLoaded&&!spiPortScenesAvailable&&loaded.receiverIds.some(id=>loaded.model.receivers.find(receiver=>receiver.id===id)?.state.portStates))throw Error('Werk de receiversoftware bij om deze opgeslagen SPI-poortinstellingen te gebruiken.');
+        model=loaded.model;
+        sendReceiverStates(loaded.receiverIds,{sceneRestore640:true});selections.set(editZone,{kind:'all'});
+      }catch(error){sceneEdit640.error=error.message;toast(error.message);return;}
+    }
+    if(screen!==route.screen||extra.zoneId&&extra.zoneId!==route.zoneId||extra.standId&&extra.standId!==route.standId)spatialAnimationStart620=null;
     if(route.screen==='stand-connect'&&screen!=='stand-connect')standMigrationPreflightError=null;
     if(route.screen==='stand-connect'&&screen!=='stand-connect'&&legacyStandReturn&&!standMigrationReady&&!standConnectionBusy&&
        !standSession?.snapshot()&&!standSession?.canResume()&&!centralApplied&&!centralPending&&
@@ -3654,6 +3939,7 @@
       simpleStandMode=false;legacyStandReturn=null;
     }
     const previousRoute=route;
+    if(route.screen==='scene-draft'&&screen!=='scene-draft'&&!sceneDraft?.saving)sceneDraft=null;
     if(extra.zoneId&&extra.zoneId!==route.zoneId||extra.standId&&extra.standId!==route.standId||
        !['controls','animations','effects','animation-family','layout'].includes(screen))clearAnimationEditorBrowseReturn();
     if(screen!==route.screen||extra.zoneId&&extra.zoneId!==route.zoneId||extra.standId&&extra.standId!==route.standId)openSpatialChoices.clear();
@@ -3692,6 +3978,7 @@
     const actions={'scene-new':'newScene','scene-save':sceneDraft?.sceneId?'updateScene':'saveScene','receiver-add':'addReceiver'};
     main.querySelectorAll('button[data-action]').forEach(button=>{
       if(button.hasAttribute('data-setup-resume')&&onboarding.summary()?.stand)return;
+      if(button.dataset.action==='scene-save'&&sceneDraft?.saving)return;
       const key=button.dataset.action==='receiver-add'&&!stand()?'setupStand':actions[button.dataset.action];if(!key)return;
       const glyphs=Array.from(button.children).filter(node=>node.tagName.toLowerCase()==='svg');button.replaceChildren(...glyphs,document.createTextNode(t(key)));
     });
@@ -3714,7 +4001,7 @@
     }
     const ids=new Set(selectedReceiverIds());return receivers().filter(receiver=>ids.has(receiver.id));
   }
-  function sendReceiverStates(ids,{remember=true,scope=null}={}){
+  function sendReceiverStates(ids,{remember=true,scope=null,sceneRestore640=false}={}){
     if(standPresentationOnly()){
       for(const id of new Set(ids))liveController?.reject?.(id,'STAND_CONNECTION_BUSY');
       return [];
@@ -3734,6 +4021,11 @@
         // control again. Keep every other light state; remove only the scope.
         members.forEach(receiver=>{delete receiver.state.standAnimation;});
       }
+    }
+    if(sceneEdit640&&!sceneRestore640){
+      try{sceneEdit640.session=SceneEditing.record(sceneEdit640.session,model,[...requested]);sceneEdit640.error='';}
+      catch(error){sceneEdit640.error=error.message;}
+      syncSceneWorkbench640();
     }
     if(remember)scheduleLightIntentSave();
     const time=performance.now()/1000;
@@ -4373,6 +4665,7 @@
     document.getElementById('help').close();restoreControlFocus(helpReturnFocus);helpReturnFocus=null;
   }
   function showEffectDialog(title,content,headerContent='') {
+    spatialAnimationStart620=null;
     if(standControlOpen&&!buildingStandDialog&&!standDialogNested&&!colourManagerReturn){
       standControlEpoch++;
       const focused=dialogActionOpener||document.activeElement;
@@ -4424,6 +4717,8 @@
   }
   function dismissEffectDialog(){
     if(managementBusy||pinProtectionBusy)return;
+    // Dismissal revokes consent immediately, not after the exit animation.
+    retireSpatialAnimationStart620();
     if(colourManagerReturn){
       if(colourManagerVisible)return closeColourManager();
       brandEditor=colourManagerReturn.brandEditor||null;savedColours=colourStore.load();return showColourManager();
@@ -4433,6 +4728,7 @@
   }
   function closeEffectDialog() {
     if(pinProtectionBusy)return;
+    spatialAnimationStart620=null;
     document.getElementById('effect-dialog').classList.remove('v50-fullscreen-preview');
     cancelDialogDismissal(document.getElementById('effect-dialog'));
     const wasStand=standControlOpen,brandIndex=brandEditor?.index;
@@ -5011,6 +5307,12 @@
       const instruction=button.closest('.v50-order-instruction');if(!instruction)return;
       instruction.dataset.guidePlaying='false';requestAnimationFrame(()=>{if(instruction.isConnected)requestAnimationFrame(()=>{if(instruction.isConnected)instruction.dataset.guidePlaying='true';});});return;
     }
+    if(orderPanelCloseRequest589(button)){
+      // Local dismissal precedes connection/management guards. It starts no
+      // second writer and never clears a native task's busy or pending state.
+      window.LightningInterfaceHaptics?.activate?.(event,button.dataset.action);
+      void closeOrderPanel589().catch(()=>{});return;
+    }
     if(button.dataset.action==='pin-login-cancel'&&pinLoginBusy){pinRecoveryAbort?.abort();return;}
     if(pinProtectionBusy||pinLoginBusy||(managementBusy||arrangementApplying)&&!orderPanelCloseRequest589(button))return;
     const action=button.dataset.action,id=button.dataset.id;
@@ -5416,6 +5718,13 @@
         if(!showControlAnimationGallery)return revealAnimationStart();
         return;
       }
+      if(action==='tunnel-animation-start-cancel'){spatialAnimationStart620=null;return closeEffectDialog();}
+      if(action==='tunnel-animation-start-confirm')return await confirmSpatialAnimationStart620();
+      if(action==='tunnel-animation-setup'){
+        const effect=catalogue().find(effect=>effect.id===id);
+        if(effect)return offerSpatialAnimationStart620(effect,{inline:route.screen==='controls',repair:true});
+        return;
+      }
       if(action==='animation-current-edit')return openCurrentAnimationSettings(id);
       if(action==='animation-editor-return')return openAnimationEditorBrowseReturn(id);
       if(action==='animations-gallery'&&route.screen==='animations'&&activeEffect()){
@@ -5499,29 +5808,54 @@
         return;
       }
       if(action==='order-up'||action==='order-down'){const index=receivers().findIndex(r=>r.id===id),next=index+(action==='order-up'?-1:1);if(next<0||next>=receivers().length)return;return moveReceiver(id,next);}
-      if(action==='scene-new'){if(!stand())return;sceneDraft={zoneIds:[],name:'',search:'',error:''};return navigate('scene-draft');}
+      if(action==='scene-new'||action==='scene-new-current'){
+        if(!stand()||sceneEditBusy640())return;
+        sceneDraft={zoneIds:stand().zones.filter(zone=>M.zoneReceivers(model,zone.id).length).map(zone=>zone.id),name:'',search:'',error:''};return navigate('scene-draft');
+      }
       if(action==='scene-edit'){
+        if(sceneEditBusy640(id))return;
         const scene=savedScenes.scenes.find(item=>item.id===id&&item.standId===stand()?.id);if(!scene)return;
         const validZones=new Set(stand().zones.filter(zone=>M.zoneReceivers(model,zone.id).length).map(zone=>zone.id));
         const zoneIds=scene.zones.filter(saved=>validZones.has(saved.id)&&stand().zones.some(zone=>zone.id===saved.id&&zone.type===saved.type)).map(saved=>saved.id);
-        sceneDraft={sceneId:scene.id,zoneIds,name:scene.name,search:'',error:'',omittedZoneCount:scene.zones.length-zoneIds.length};
+        sceneDraft={sceneId:scene.id,zoneIds:sceneEdit640?[...sceneEdit640.zoneIds]:zoneIds,name:sceneEdit640?.name??scene.name,original:sceneEdit640?SceneEditing.build(sceneEdit640.session,model):copy(scene),search:'',error:'',omittedZoneCount:scene.zones.length-zoneIds.length};
         return navigate('scene-draft');
       }
+      if(action==='scene-start-edit'||action==='scene-zone-edit'){
+        const scene=savedScenes.scenes.find(item=>item.id===id&&item.standId===stand()?.id);if(!scene||sceneDraft?.saving)return;
+        return openSceneEditing640(scene,{zoneId:action==='scene-zone-edit'?button.dataset.zone:null});
+      }
+      if(action==='scene-edit-stand')return navigate('stand',{standId:sceneEdit640?.session.standId??route.standId,zoneId:null});
+      if(action==='scene-edit-zone'){
+        if(!sceneEdit640||sceneEdit640.saving||!sceneEdit640.zoneIds.includes(button.dataset.zone))return;
+        if(route.screen==='controls'&&route.zoneId===button.dataset.zone)return;
+        return navigate('controls',{standId:sceneEdit640.session.standId,zoneId:button.dataset.zone},{zoneEntry:true});
+      }
+      if(action==='scene-edit-save'){
+        if(!sceneEdit640||sceneEdit640.saving)return;
+        return await saveScene640(SceneEditing.build(sceneEdit640.session,model,{name:sceneEdit640.name,zoneIds:sceneEdit640.zoneIds}),{event,fromWorkbench:true});
+      }
+      if(action==='scene-edit-stop'){
+        if(!sceneEdit640||sceneEdit640.saving)return;
+        const unconfirmed=sceneEdit640.centralUnconfirmed;
+        sceneEdit640=null;sceneDraft=null;flushCentralProjection();render({preserveScroll:true});
+        return toast(unconfirmed?'Bewerking gesloten. Opslaan bij de hoofdreceiver is nog niet bevestigd.':'Bewerking gestopt. De laatst opgeslagen scène blijft bewaard; je verlichting blijft zoals je die hebt ingesteld.');
+      }
       if(action==='scene-zone'){
-        if(!sceneDraft||!stand()?.zones.some(z=>z.id===id)||!M.zoneReceivers(model,id).length)return;
+        if(!sceneDraft||sceneDraft.saving||!stand()?.zones.some(z=>z.id===id)||!M.zoneReceivers(model,id).length)return;
         sceneDraft.zoneIds=sceneDraft.zoneIds.includes(id)?sceneDraft.zoneIds.filter(z=>z!==id):[...sceneDraft.zoneIds,id];return syncSceneDraft();
       }
       if(action==='scene-select-all'||action==='scene-clear-selection'){
-        if(!sceneDraft||!stand())return;sceneDraft.zoneIds=action==='scene-select-all'?stand().zones.filter(z=>M.zoneReceivers(model,z.id).length).map(z=>z.id):[];return syncSceneDraft();
+        if(!sceneDraft||sceneDraft.saving||!stand())return;sceneDraft.zoneIds=action==='scene-select-all'?stand().zones.filter(z=>M.zoneReceivers(model,z.id).length).map(z=>z.id):[];return syncSceneDraft();
       }
       if(action==='scene-save'){
-        if(!sceneDraft||!stand())return;
-        const editingId=sceneDraft.sceneId,scene=Scenes.capture(model,stand().id,sceneDraft.zoneIds,sceneDraft.name,{id:editingId}),result=sceneStore.save(scene);if(result.error){sceneDraft.error='Opslaan is niet gelukt. Je naam en gekozen zones blijven bewaard. Probeer opnieuw.';syncSceneDraft();return toast(result.error.message);}
-        await confirmCentralLibrary(result);window.LightningInterfaceHaptics?.emit?.('success','scene-save',{confirmed:true,event});savedScenes=result;sceneDraft=null;if(editingId)navigate('scene-detail',{sceneId:editingId});else navigate('scenes');toast(editingId?'Scène bijgewerkt met het huidige licht. Er is niets geactiveerd.':'Scène opgeslagen. Je verlichting is niet veranderd.');return;
+        if(!sceneDraft||sceneDraft.saving||!stand())return;
+        if(sceneEdit640){sceneEdit640.name=sceneDraft.name;sceneEdit640.zoneIds=[...sceneDraft.zoneIds];}
+        try{return await saveScene640(buildSceneDraft640(),{event});}
+        catch(error){sceneDraft.error=error.message;syncSceneDraft();return toast(error.message);}
       }
       if(action==='scene-open'){sceneDetailSearch='';if(button.closest('#effect-dialog'))closeEffectDialog();return navigate('scene-detail',{sceneId:id});}
       if(action==='stand-scenes'){if(document.getElementById('effect-dialog').open)closeEffectDialog();return navigate('scenes');}
-      if(action==='scene-rename')return showSceneNameDialog(id);
+      if(action==='scene-rename'){if(sceneEditBusy640())return;return showSceneNameDialog(id);}
       if(action==='scene-rename-save'){
         if(!savedScenes.scenes.some(scene=>scene.id===id&&scene.standId===stand()?.id))return;
         const input=document.getElementById('scene-rename-name');if(!input)return;
@@ -5531,12 +5865,13 @@
         savedScenes=result;closeEffectDialog();render({preserveScroll:true});toast('Scènenaam gewijzigd. Je verlichting blijft hetzelfde.');return;
       }
       if(action==='scene-apply'){
+        if(sceneEditBusy640())return;
         const scene=savedScenes.scenes.find(item=>item.id===id&&item.standId===stand()?.id);if(!scene)return;
         const check=Scenes.compatibility(model,scene);if(!check.ok){toast(`${check.reason} Er is niets gewijzigd.`);return;}
         try{model=Scenes.apply(model,scene);}catch(error){toast(`${error.message} Er is niets gewijzigd.`);return;}
         sendReceiverStates(scene.zones.flatMap(item=>item.receivers.map(receiver=>receiver.id)));render();if(!nativeContext)toast('Scène direct geactiveerd in het voorbeeld.');return;
       }
-      if(action==='scene-delete'){const scene=savedScenes.scenes.find(s=>s.id===id&&s.standId===stand().id);if(!scene)return;showEffectDialog('Scène verwijderen?',`<p>“${esc(scene.name)}” wordt uit je opgeslagen scènes verwijderd. Je verlichting verandert niet.</p><button class="button full" data-action="scene-delete-confirm" data-id="${esc(id)}">Scène verwijderen</button><button class="button secondary full" data-action="effect-dialog-close">Behouden</button>`);return;}
+      if(action==='scene-delete'){if(sceneEditBusy640())return;const scene=savedScenes.scenes.find(s=>s.id===id&&s.standId===stand().id);if(!scene)return;showEffectDialog('Scène verwijderen?',`<p>“${esc(scene.name)}” wordt uit je opgeslagen scènes verwijderd. Je verlichting verandert niet.</p><button class="button full" data-action="scene-delete-confirm" data-id="${esc(id)}">Scène verwijderen</button><button class="button secondary full" data-action="effect-dialog-close">Behouden</button>`);return;}
       if(action==='scene-delete-confirm'){const result=sceneStore.remove(id);if(result.error)return toast(result.error.message);await confirmCentralLibrary(result);savedScenes=result;closeEffectDialog();return navigate('scenes');}
       if(action==='effects'||action==='effects-root'||action==='animations-gallery'){
         if(route.screen==='controls'&&controlMode==='animations'&&!showControlAnimationGallery)rememberAnimationEditorForBrowse();
@@ -5598,23 +5933,9 @@
       if(action==='effect'){
         const effect=catalogue().find(e=>e.id===id);if(!effect)return;
         if(activeEffect()?.id===id)return openCurrentAnimationSettings(id);
-        const requiresWholeZone=effect.requireTogether||effect.category==='tunnel';
-        const available=requiresWholeZone?physicalLineCount():selectedLineCount();
-        if(available<(effect.minimumReceivers||1))return;
-        // A spatial animation is a zone effect: include every connected
-        // ledline as a single playback group automatically. Users can still
-        // choose one line later in the editor to make its colour different.
-        if(requiresWholeZone&&selection().kind!=='all')storeLineSelection(receivers().map(receiver=>receiver.id));
-        setSpatialPreviewCategory(effect.category==='tunnel'?'tunnel':'');
-        rememberAnimationGallery();apply(effectState(effect),selection(),{freshRecipe:true});settingsOpen=false;
-        if(route.screen==='animation-family'){
-          controlMode='animations';showControlAnimationGallery=false;
-          route={...route,screen:'controls',familyReturnScreen:null,effectsReturn:'controls'};
-          render({top:true});return revealAnimationStart();
-        }
-        if(route.screen==='controls'&&button.closest('[data-control-mode="animations"]')){controlMode='animations';showControlAnimationGallery=false;render({top:true});return revealAnimationStart();}
-        if(route.screen==='effects'&&route.effectsReturn==='controls'){controlMode='animations';showControlAnimationGallery=false;navigate('controls',{zoneId:route.zoneId});return revealAnimationStart();}
-        navigate('animations');return revealAnimationStart();
+        const inline=Boolean(button.closest('[data-control-mode="animations"]'));
+        if(offerSpatialAnimationStart620(effect,{inline}))return;
+        return startZoneAnimationEffect620(effect,{inline});
       }
       if(action==='palette-edit')return showPaletteEditor(Number(id));
       if(action==='palette-add')return changePalette();
@@ -5932,7 +6253,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate614',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate640',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

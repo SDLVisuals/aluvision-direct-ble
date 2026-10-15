@@ -47,6 +47,7 @@
   ['scanStandShare','takeStandShareLink','shareStandLink'].forEach(action=>actions.add(action));
   let selectionHaptics=false,selectionFeedbackPending=false,interfaceHaptics=false,interfaceFeedbackPending=false,pixelPreviewV50=false;
   actions.add('supersedeLivePreparing');
+  actions.add('yieldEarlyAnimation');
   actions.add('replacePreparingStatic');
   ['applyStaticGesture','updateStaticGesture','endStaticGesture'].forEach(action=>actions.add(action));
   actions.add('identifyLayout');actions.add('stopLayoutIdentification');actions.add('blinkLayoutIdentification');
@@ -1379,6 +1380,8 @@
     },
     applyLiveBatch({requests}={}){
       let requestId=null,settled=false,payload,ids,preparing=false,sequence=0,replacementClosed=false,replacementInFlight=false,acceptedSequence=0;
+      let retirementSequence=0,retirementInFlight=false,retirementNoticeId=null,posted;
+      const retirementLedger=new Set(),postedReady=new Promise(resolve=>{posted=resolve;});
       const ledger=new Map();
       const copy=value=>JSON.parse(JSON.stringify(value));
       const staticShape=request=>{
@@ -1388,6 +1391,30 @@
            scene.v30!==undefined||scene.standAnimation!==undefined||scene.phaseMs!==undefined||scene.phaseRateMicroHz!==undefined)return null;
         const shape=copy(request);shape.brightness=1;shape.scene.palette=[];return JSON.stringify(shape);
       };
+      // Intent classification only. Native independently chooses/admit the
+      // guarded mixed bank; no capability, mask, clock or authority is granted.
+      const mixedFixedBank=values=>{
+        if(!values.some(r=>r.kind==='RGBW_SCENE')||!values.some(r=>r.kind==='SPI_SCENE'||r.kind==='SPI_PORTS'))return false;
+        // Match native canonicalFixedStaticDelivery, without changing the
+        // original payload. This narrow STATIC profile does not render the
+        // previous animation's speed/background/motion/geometry parameters.
+        // Each receiver keeps its own foreground (including W), SMOOTH,
+        // brightness and transition. Only selected SPI children WITHIN one
+        // receiver must agree. Native independently admits the exact-recipe
+        // groups/common clock and retains all original identity/port scopes.
+        const recipe=r=>JSON.stringify([r.scene.palette,r.scene.smooth,r.brightness,r.transitionMs,r.channels]);
+        // Shipping bound only: three or more distinct visible recipes retain
+        // the previous preparing/envelope route instead of reserving a long
+        // multi-bank start. This grants no native clock or delivery authority.
+        const recipes=new Set();
+        return values.every(request=>{
+          const children=request.kind==='SPI_PORTS'?(request.portScenes||[]).map(({port,...child})=>child):[request];
+          if(!children.length||children.some(r=>!['RGBW_SCENE','SPI_SCENE'].includes(r.kind)||staticShape(r)===null))return false;
+          const key=recipe(children[0]);
+          if(!children.every(r=>recipe(r)===key))return false;
+          recipes.add(key);return recipes.size<=2;
+        });
+      };
       const operation=(async()=>{
         if(!Array.isArray(requests)||requests.length<1||requests.length>30||requests.some(request=>!request||typeof request!=='object'||Array.isArray(request)))throw fail('LIVE_INVALID');
         payload=requests.map(livePayload);ids=new Set(payload.map(request=>request.receiverId));
@@ -1395,12 +1422,20 @@
         if(payload.some(request=>request.scene?.standAnimation)){if(standAnimationCapability()===null)await runtimeCapabilities();if(standAnimationCapability()!==true)throw fail('LIVE_CONTROL_STAND_UNAVAILABLE');}
         if(ids.size!==payload.length||payload.some(request=>request.standId!==payload[0].standId))throw fail('LIVE_INVALID');
         if(staticPreparingAvailable===null)await runtimeCapabilities();
-        preparing=staticPreparingAvailable===true&&centralStamp===null&&payload.length>1&&payload.every(request=>staticShape(request)!==null);
+        preparing=staticPreparingAvailable===true&&centralStamp===null&&payload.length>1&&
+          !mixedFixedBank(payload)&&payload.every(request=>staticShape(request)!==null);
         if(preparing)ledger.set(0,copy(payload));
         await writeQueue.catch(()=>{});
         if(!viewLoaded)throw fail('VIEW_NOT_LOADED');
         try{
-          const answer=await call('applyLiveBatch',{requests:payload,...(preparing?{preparingStatic:true}:{})},undefined,undefined,id=>{requestId=id;});
+          const answer=await call('applyLiveBatch',{requests:payload,...(preparing?{preparingStatic:true}:{})},undefined,undefined,id=>{requestId=id;posted();});
+          if(answer?.status==='early-animation-retired'){
+            if(Object.keys(answer).sort().join(',')!=='receiverIds,requestId,sequence,status'||
+               answer.requestId!==requestId||!retirementLedger.has(answer.sequence)||
+               !Array.isArray(answer.receiverIds)||answer.receiverIds.length!==ids.size||
+               new Set(answer.receiverIds).size!==ids.size||answer.receiverIds.some(id=>!ids.has(id)))throw fail('LIVE_UNCONFIRMED');
+            return {status:'early-animation-retired',receiverIds:[...ids],sequence:answer.sequence};
+          }
           if(answer?.status==='batch-superseded-before-dispatch'){
             if(Object.keys(answer).length!==2||!Array.isArray(answer.receiverIds)||answer.receiverIds.length!==ids.size||
                new Set(answer.receiverIds).size!==ids.size||answer.receiverIds.some(id=>!ids.has(id)))throw fail('LIVE_UNCONFIRMED');
@@ -1418,8 +1453,39 @@
           });
           return {status:'batch-complete',results,...(preparing?{
             preparingSequence:answer.preparingSequence,preparingRequests:copy(ledger.get(answer.preparingSequence))}:{})};
-        }finally{settled=true;requestId=null;}
+        }finally{
+          settled=true;requestId=null;posted();
+          // The original task has settled. Retire only its exact local notice
+          // observer/timer; no native cancellation, Owner release or success.
+          if(retirementNoticeId!==null){const id=retirementNoticeId;retirementNoticeId=null;receive({id,ok:false,code:'CANCELLED'});}
+        }
       })();
+      operation.then(()=>posted(),()=>posted());
+      Object.defineProperty(operation,'retireEarlyAnimation',{value:replacement=>{
+        if(settled||retirementInFlight||retirementSequence>=65535)return Promise.resolve({status:'unavailable'});
+        let normalized;
+        try{normalized=replacement.map(livePayload);}catch(_){return Promise.resolve({status:'unavailable'});}
+        retirementInFlight=true;
+        return postedReady.then(()=>{
+          if(settled||!requestId||!payload||preparing||centralStamp!==null||normalized.length!==payload.length||
+             payload.some(r=>!r.scene||r.brightness<=0||r.kind==='SPI_PORTS'||r.scene.engine==='STATIC'&&!r.scene.v30))return {status:'unavailable'};
+          const expected=new Set(payload.map(r=>r.receiverId));
+          // livePayload already closed-validates each SPI child and port list.
+          // This is only a yield notice: native independently checks the fresh
+          // original full physical coverset before retiring its active task.
+          if(normalized.some(r=>r.standId!==payload[0].standId||!['RGBW_SCENE','SPI_SCENE','SPI_PORTS'].includes(r.kind)||
+             (r.kind!=='SPI_PORTS'&&!r.scene)||!expected.delete(r.receiverId))||expected.size)return {status:'unavailable'};
+          const submitted=++retirementSequence;retirementLedger.add(submitted);
+          // This is a local yield notice, never a submitted lighting version.
+          // Lost notice ACK cannot discard the queue's newer desired intent.
+          let noticeId=null;
+          return call('yieldEarlyAnimation',{requestId,sequence:submitted,requests:normalized},undefined,undefined,id=>{noticeId=id;retirementNoticeId=id;}).then(answer=>{
+            if(!answer||Object.keys(answer).length!==2||answer.sequence!==submitted||
+               !['early-animation-retirement-requested','early-animation-retirement-unavailable'].includes(answer.status))throw fail('LIVE_UNCONFIRMED');
+            return {status:answer.status==='early-animation-retirement-requested'?'requested':'unavailable',sequence:submitted};
+          }).catch(()=>({status:'unknown',sequence:submitted})).finally(()=>{if(retirementNoticeId===noticeId)retirementNoticeId=null;});
+        }).finally(()=>{retirementInFlight=false;});
+      }});
       Object.defineProperty(operation,'supersedePreparing',{value:replacement=>{
         if(settled||!requestId||!payload||!Array.isArray(replacement)||replacement.length!==payload.length)return Promise.resolve(false);
         const expected=new Set(payload.map(request=>request.receiverId));

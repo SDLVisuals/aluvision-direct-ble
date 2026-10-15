@@ -146,9 +146,9 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate614-inline-fine-colour-presets-interface-android27",
+  "revision": "V50candidate640-scene-editing-interface-android27",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo614 changes only the colour-picker renderer and presentation over demo613. Fine RGBW controls are directly visible inline, with saved colour presets below Fine. No native transport or receiver firmware publication.",
+  "interfaceBaseline": "Public demo640 uses the latest scene-editing UI and supporting Web sources. Public-only RAM/demo admission and reset fences remain explicit. No native binary, receiver firmware or OTA catalog is published.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -161,6 +161,21 @@
   "firmwareDownloadsIncluded": false,
   "softwareFileImportAvailable": false,
   "assets": [
+    {
+      "path": "RELEASE_NOTES.md",
+      "sha256": "b89e2a2f9be028602e969fbf31c75ad32bec1299a2f329006bc8b568a7052b41",
+      "bytes": 39328
+    },
+    {
+      "path": "android-download/android-download.css",
+      "sha256": "23ef08fd40d5090de0642e663a6e63da927b86e8273eb3a6064f7f496110ca5b",
+      "bytes": 1488
+    },
+    {
+      "path": "android-download/android-download.js",
+      "sha256": "6e8dd3e4069ad9ed58ed774bdfbf28cb13a65fbc676459363b769ef8993f2191",
+      "bytes": 11215
+    },
     {
       "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
       "sha256": "cf1a36ef7a96cb1fd3ef84e9f12db014932e82896dda4217867ed563ba4cf214",
@@ -237,16 +252,6 @@
       "bytes": 2735353
     },
     {
-      "path": "android-download/android-download.css",
-      "sha256": "23ef08fd40d5090de0642e663a6e63da927b86e8273eb3a6064f7f496110ca5b",
-      "bytes": 1488
-    },
-    {
-      "path": "android-download/android-download.js",
-      "sha256": "6e8dd3e4069ad9ed58ed774bdfbf28cb13a65fbc676459363b769ef8993f2191",
-      "bytes": 11215
-    },
-    {
       "path": "animation-engine.js",
       "sha256": "c59ff08862a8ce5d1fb450d2992180b28f6561e85f1753d1c0f9a1bc40a2cf43",
       "bytes": 21745
@@ -273,8 +278,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "d34ec3e4f02d01bf50ccf48b2d8290efed800f6bb83c9cfe9c3aebcba7d5e333",
-      "bytes": 572943
+      "sha256": "0d4174af4ad7d7ef49aacfe18afc25117a4066cf0f3ebeed586a245511702132",
+      "bytes": 598985
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -313,8 +318,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "65f27d4c956deea7742fb23e5aa59a878efd954ce1921c292a710e9dad6fe455",
-      "bytes": 7725
+      "sha256": "c84c8569d317380c6b3f8723942ce527a5864c1d65f858e39894f5219a02a1de",
+      "bytes": 7793
     },
     {
       "path": "installation-libraries.js",
@@ -338,8 +343,8 @@
     },
     {
       "path": "ledline-identification-session.js",
-      "sha256": "cd52e3b7675d485a8aeec0eaa2e9741ce2697427fb7bfc48c08063abcf162182",
-      "bytes": 19732
+      "sha256": "0fba2470ce8b513c0ec7f1bb6090203961640c4d448b93c5daa1c0ace677c5c5",
+      "bytes": 20289
     },
     {
       "path": "ledline-order-drag.js",
@@ -348,8 +353,8 @@
     },
     {
       "path": "ledline-order-guide.js",
-      "sha256": "aa792a4b1bfd3e9f20071a7c123fa6f1714b243b708dba5df063cea46a04f81c",
-      "bytes": 19355
+      "sha256": "c50bbe4cd975971de1ec4a668eb87421efb67eba418e2882d3b343b98ae716ed",
+      "bytes": 19586
     },
     {
       "path": "ledline-order-test.js",
@@ -363,8 +368,8 @@
     },
     {
       "path": "live-control.js",
-      "sha256": "47a276e3f7e9262c11630f0379d9e3cc1a7f50a9b7884d423c3b8654c850aa14",
-      "bytes": 46498
+      "sha256": "fab6d3f38065732832abe35e18beeaf89e6319d541e97e41468fcaa4a5d33dfa",
+      "bytes": 53058
     },
     {
       "path": "migration.js",
@@ -378,8 +383,8 @@
     },
     {
       "path": "native-runtime.js",
-      "sha256": "77a9857edaef6625966c75b320bdc4deb129f8500e4ec34bacfb81e2033e205e",
-      "bytes": 141479
+      "sha256": "0250cbd24d7facc49f9fc5baf8f649d25d650a717e070683fc9ab4da54f397df",
+      "bytes": 146611
     },
     {
       "path": "onboarding-adapter.js",
@@ -497,14 +502,14 @@
       "bytes": 8637
     },
     {
-      "path": "RELEASE_NOTES.md",
-      "sha256": "b89e2a2f9be028602e969fbf31c75ad32bec1299a2f329006bc8b568a7052b41",
-      "bytes": 39328
+      "path": "scene-editing.js",
+      "sha256": "71ac434a443b510bc7e22d9f33ffac6111a2e0e019dd47d5677bde2deb809ba7",
+      "bytes": 9015
     },
     {
       "path": "scenes.css",
-      "sha256": "f37c9c30ddb0478b87944ca0c6714696fe91c06abe26c0c543418eff5ce08812",
-      "bytes": 8246
+      "sha256": "bdffe7a7430de2b085ee7274241491631a3c2075dddddd9424cdf33d94888308",
+      "bytes": 21379
     },
     {
       "path": "scenes.js",
@@ -543,8 +548,8 @@
     },
     {
       "path": "stand-connection.js",
-      "sha256": "8a7a0c411593ee981b392024ca29bf82c25644a4e59ed035bef894f0a8efb2e0",
-      "bytes": 33011
+      "sha256": "902e553828731e70fffc073cb1b0933f662c42d685c4ece0d74be3ce206d10e7",
+      "bytes": 34311
     },
     {
       "path": "stand-live-checkpoint.js",
@@ -613,8 +618,8 @@
     },
     {
       "path": "v50-animation-texts.js",
-      "sha256": "6caea70083933587fba6c19514a7ce5e0789936d344eb7e9c807abe17950b1c0",
-      "bytes": 43587
+      "sha256": "4b83d17b46440b619ea9045c73792849a014360ec9d17b7e6e55ff06d6d099c0",
+      "bytes": 46114
     },
     {
       "path": "v50-error-texts.js",
@@ -628,8 +633,8 @@
     },
     {
       "path": "v50-interface.css",
-      "sha256": "d22762429726e0396bff7e10c0c07b7dc78facc137cd36788bf972aa6ffc99cf",
-      "bytes": 108284
+      "sha256": "31ca7185c381309624e0e796a8a2842f4d13c32224af0335c8ce0bd1c96e00be",
+      "bytes": 114319
     },
     {
       "path": "v50-order-clarity.css",
@@ -2563,6 +2568,27 @@
       "Demo fixtures are RAM-only, not a receiver test.",
       "Outside the single colourPickerMarkup renderer, app behavior remains byte-exact613 aside from the614 debug marker.",
       "Native/iPhone614 installation is not established by this publication."
+    ]
+  },
+  "interfaceCandidate640": {
+    "sourceSnapshotOnly": true,
+    "sourceBoundaryVerified": true,
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "opticalAcceptance": false,
+    "features": [
+      "All saved scenes remain visible on Stand with bounded four-zone mosaics and an overflow count.",
+      "Direct current-Stand capture above zones; separate activation beside scene cards.",
+      "One editing session loads saved zones on demand with a compact inline all-zone switcher and explicit save.",
+      "Latest Web ordering-close and foreground-wake fixes are retained; this demo does not exercise native receiver behavior."
+    ],
+    "limits": [
+      "RAM-only fictitious devices; no receiver or radio acceptance.",
+      "Android27 download and existing APK files are retained unchanged, not updated by this interface.",
+      "A public Web publication does not attest iPhone installation or firmware deployment."
     ]
   }
 }
