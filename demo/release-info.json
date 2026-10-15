@@ -146,9 +146,9 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate645-zone-tools-bottom-interface-android27",
+  "revision": "V50candidate646-centred-colour-wheel-interface-android27",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo645 places the existing zone view and ledline-order tools below the colour and active-animation controls. Clear Done exits from644, scene UI640, SPI default163, RAM-only demo admission and existing Android27 downloads are preserved. No native product, firmware or OTA catalog is published.",
+  "interfaceBaseline": "Public demo646 removes the redundant colour display bar and centres a larger shared colour wheel. Brightness, exact RGBW controls, presets, clear Done exits644, bottom zone tools645, scene UI640, SPI default163, RAM-only demo admission and Android27 downloads are preserved. No native product, firmware or OTA catalog is published.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -278,8 +278,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "423ba9df4d23a4ca027b794abcfe5247d37c005dbe8dd614c80649654572e175",
-      "bytes": 600871
+      "sha256": "08132268bbe6aa3e9459eac231c10fc69576563e1426f5744fa253e10aa32592",
+      "bytes": 600796
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -300,6 +300,11 @@
       "path": "colour-picker-dialog.css",
       "sha256": "f6f64eab333496f3026a7e6a1a46170886ef7ece89f2b586310c2a80569d99a7",
       "bytes": 2170
+    },
+    {
+      "path": "colour-wheel.css",
+      "sha256": "58780a9bdf7453dfa5d6e92c47990e71ac587cede072d7436af9ea7de31e2f42",
+      "bytes": 771
     },
     {
       "path": "colour.js",
@@ -323,8 +328,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "2afcdcc78486ac7145772b7e1521f976f78ce6e305e22481f53a9b502c5de6e0",
-      "bytes": 7870
+      "sha256": "c7bc98dce053da38f19e89ec424313470572dd7580e105a1a1957fbd3d4945d8",
+      "bytes": 7939
     },
     {
       "path": "installation-libraries.js",
@@ -2663,6 +2668,32 @@
       "Existing zone view and ledline-order tools follow the colour or active-animation controls.",
       "The existing animation-gallery hidden rule and all tool handlers, selection and native lifecycle are preserved.",
       "Clear colour-picker Done exits644, scene UI640, explicit pixel lengths and new SPI default163 are retained."
+    ],
+    "limits": [
+      "RAM-only fictitious devices; no receiver, radio, OTA or timing acceptance.",
+      "Android27 and existing APK bytes are retained, not rebuilt.",
+      "Public Web publication does not install an iPhone app or receiver firmware."
+    ]
+  },
+  "interfaceCandidate646": {
+    "sourceSnapshotOnly": true,
+    "sourceBoundaryVerified": true,
+    "sourceInputSHA256": {
+      "app.js": "e45235439f8fbea16cbc896edcd8777915ac7b6444d5448ad1152e6b8eaeaf85",
+      "colour-wheel.css": "58780a9bdf7453dfa5d6e92c47990e71ac587cede072d7436af9ea7de31e2f42",
+      "index.html": "9890f20eb603124d2d3f13af0d76886ec1c913b40b89c2e226ef3b37562db085"
+    },
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "opticalAcceptance": false,
+    "features": [
+      "One larger centred shared colour wheel replaces the wheel-plus-redundant-display-bar layout.",
+      "Brightness, exact RGBW controls, presets and all original pointer/keyboard colour input remain.",
+      "Clear Done exits644, bottom zone tools645, scene UI640 and new SPI default163 are retained."
     ],
     "limits": [
       "RAM-only fictitious devices; no receiver, radio, OTA or timing acceptance.",
