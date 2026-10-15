@@ -1395,6 +1395,14 @@
       // guarded mixed bank; no capability, mask, clock or authority is granted.
       const mixedFixedBank=values=>{
         if(!values.some(r=>r.kind==='RGBW_SCENE')||!values.some(r=>r.kind==='SPI_SCENE'||r.kind==='SPI_PORTS'))return false;
+        // A complete bare mixed STATIC group with one exact foreground uses
+        // native's quoted immediate lane, including its existing pre-cut latest
+        // replacement. Brightness, SMOOTH and transition remain each receiver's
+        // original intent. Native independently rechecks every identity/GEN;
+        // this routing hint never enables the disabled iOS gesture stream.
+        if(values.length>=2&&values.length<=30&&values.every(request=>
+          ['RGBW_SCENE','SPI_SCENE'].includes(request.kind)&&staticShape(request)!==null&&
+          JSON.stringify(request.scene.palette)===JSON.stringify(values[0].scene.palette)))return false;
         // Match native canonicalFixedStaticDelivery, without changing the
         // original payload. This narrow STATIC profile does not render the
         // previous animation's speed/background/motion/geometry parameters.

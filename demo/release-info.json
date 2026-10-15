@@ -146,9 +146,9 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate640-scene-editing-interface-android27",
+  "revision": "V50candidate642-spi-max-default-interface-android27",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo640 uses the latest scene-editing UI and supporting Web sources. Public-only RAM/demo admission and reset fences remain explicit. No native binary, receiver firmware or OTA catalog is published.",
+  "interfaceBaseline": "Public demo642 retains scene-editing UI640 and uses the latest642 Web support sources, including the new SPI-port default163. Public-only RAM/demo admission and reset fences remain explicit. No native binary, receiver firmware or OTA catalog is published.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -278,7 +278,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "0d4174af4ad7d7ef49aacfe18afc25117a4066cf0f3ebeed586a245511702132",
+      "sha256": "3529768f599f2dc58237c6535e20be1c23285a7c0cf6a332c2d6e2d36a3f51ff",
       "bytes": 598985
     },
     {
@@ -318,7 +318,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "c84c8569d317380c6b3f8723942ce527a5864c1d65f858e39894f5219a02a1de",
+      "sha256": "7c6465fbba9dd56b0ba5376a1316d6e04194534b9cf98ee1e2d770340ede744e",
       "bytes": 7793
     },
     {
@@ -378,13 +378,13 @@
     },
     {
       "path": "model.js",
-      "sha256": "85cd0e15641d88f2ed3f5655af9efa523936973bd33625e7ec1e11a3e3580f57",
-      "bytes": 47066
+      "sha256": "60c26a506d50ce3bd5a2ccef4dec605cf8e2988f5214cd7828758bd1fcd2dcee",
+      "bytes": 47067
     },
     {
       "path": "native-runtime.js",
-      "sha256": "0250cbd24d7facc49f9fc5baf8f649d25d650a717e070683fc9ab4da54f397df",
-      "bytes": 146611
+      "sha256": "38a5499475d2ad55260114308a97147abc16f7ee3222dddf9e07505f2aac9f6c",
+      "bytes": 147271
     },
     {
       "path": "onboarding-adapter.js",
@@ -403,8 +403,8 @@
     },
     {
       "path": "onboarding-draft.js",
-      "sha256": "80ba13f9cd2e87eecccbb15d35a67860d4cb477f252274a84a7c2ae84c58b50f",
-      "bytes": 37610
+      "sha256": "b1975bea57f756214828a50763e62557b5fa2a5dcfa9ad07b3b8fdd7ce063eff",
+      "bytes": 37632
     },
     {
       "path": "onboarding-ui.css",
@@ -2589,6 +2589,29 @@
       "RAM-only fictitious devices; no receiver or radio acceptance.",
       "Android27 download and existing APK files are retained unchanged, not updated by this interface.",
       "A public Web publication does not attest iPhone installation or firmware deployment."
+    ]
+  },
+  "interfaceCandidate642": {
+    "sourceSnapshotOnly": true,
+    "sourceBoundaryVerified": true,
+    "sourceFreezeSHA256": "feda5402a8b1aa5d81e08c73988841d2c7811c83143813df210d7ccd06c23f87",
+    "sourceInventorySHA256": "7caa72a91627d3f90fcefaf9a5c46560fd51706e2f7ef262882664cf03647364",
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "opticalAcceptance": false,
+    "features": [
+      "Scene capture, all-zone editing and responsive scene cards remain byte-exact640.",
+      "Untouched new SPI ports start at163pixels; saved explicit lengths and disabled outputs remain preserved.",
+      "Supporting Web runtime is taken from frozen642; this RAM-only demo does not test native live control."
+    ],
+    "limits": [
+      "No receiver, OTA, radio, physical timing or optical acceptance.",
+      "Android27 and its existing APKs remain unchanged.",
+      "The public Web build does not install or attest iPhone642 or firmware46."
     ]
   }
 }

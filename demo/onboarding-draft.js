@@ -50,7 +50,7 @@
   'use strict';
   const STAGES = Object.freeze(['stand','zones','receiver','placement','outputs','pixels','connection','pin','security','zone','review','done']);
   const PHASES = Object.freeze(['idle','configuring','claiming','reconnecting','verifying','resuming','identity-confirmed']);
-  // Only a newly selected SPI receiver starts at20px. Resumed choices stay exact.
+  // Only untouched SPI choices start at the supported maximum. Resumed choices stay exact.
   const DEFAULT_SPI_PIXELS=Model.DEFAULT_SPI_PIXELS;
   // A single generated build setting controls whether commissioning asks for
   // credentials. Node/unit tests without the generated script retain PIN mode.
@@ -182,8 +182,8 @@
     }
     // Zero belongs to the editable draft, never to a physical configuration.
     // Disabled outputs retain existing lengths; only untouched zeros receive
-    // the protocol placeholder. They stay disabled and produce no light.
-    for(const output of draft.outputs)if(!output.enabled&&output.pixels===0){output.pixels=1;output.reversed=false;}
+    // the new-port default. They stay disabled and produce no light.
+    for(const output of draft.outputs)if(!output.enabled&&output.pixels===0){output.pixels=DEFAULT_SPI_PIXELS;output.reversed=false;}
     draft.port=null;draft.stage=draft.role==='main'&&pinRequired()?'pin':'security';
     if(draft.stage==='security')draft.security={status:'pending',phase:'configuring'};
   }

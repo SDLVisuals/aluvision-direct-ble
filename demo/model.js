@@ -6,7 +6,7 @@
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
   var LIMITS = Object.freeze({ spiPorts: 4, pixelsPerPort: 1024, continuousPixels: 8192 });
-  var DEFAULT_SPI_PIXELS = 20;
+  var DEFAULT_SPI_PIXELS = 163;
   // The editor's light-point width is not physical strip length. Keep the
   // STATIC membership baseline below unchanged for existing native journals.
   var DEFAULT_ANIMATION_WIDTH = 20;
