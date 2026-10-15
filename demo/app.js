@@ -1413,7 +1413,7 @@
   function showColourManager(notice=colourLibraryNotice) {
     if(!colourManagerReturn){
       const dialog=document.getElementById('effect-dialog');
-      colourManagerReturn={open:dialog.open,title:dialog.querySelector('#effect-dialog-title')?.textContent||'',content:document.getElementById('effect-dialog-content').innerHTML,scrollTop:dialog.scrollTop,brandEditor:brandEditor?{...brandEditor,color:{...brandEditor.color},memory:{...brandEditor.memory}}:null};
+      colourManagerReturn={open:dialog.open,title:dialog.querySelector('#effect-dialog-title')?.textContent||'',...captureEffectDialogContent(),scrollTop:dialog.scrollTop,brandEditor:brandEditor?{...brandEditor,color:{...brandEditor.color},memory:{...brandEditor.memory}}:null};
     }
     colourManagerVisible=true;
     colourLibraryNotice=notice;
@@ -1431,7 +1431,7 @@
       closeEffectDialog();return;
     }
     const wasBuilding=buildingStandDialog;buildingStandDialog=standControlOpen;
-    try{showEffectDialog(previous.title,previous.content);}finally{buildingStandDialog=wasBuilding;}
+    try{showEffectDialog(previous.title,previous.content,previous.headerContent||'');}finally{buildingStandDialog=wasBuilding;}
     document.querySelectorAll('#effect-dialog .my-colours').forEach(section=>section.outerHTML=myColoursMarkup());
     document.querySelectorAll('#effect-dialog .brand-tone-picker').forEach(section=>{
       const open=section.querySelector('details')?.open,wrapper=document.createElement('div');wrapper.innerHTML=brandTonePicker();
@@ -4664,6 +4664,15 @@
     window.InterfaceMotion?.cancelDialog?.(document.getElementById('help'));
     document.getElementById('help').close();restoreControlFocus(helpReturnFocus);helpReturnFocus=null;
   }
+  function captureEffectDialogContent(){
+    // Save only the body and optional tabs. Reopening must not nest another
+    // title, close button or sticky colour-picker footer inside the new sheet.
+    const snapshot=document.getElementById('effect-dialog-content').cloneNode(true);
+    const header=snapshot.querySelector(':scope > header');
+    const headerContent=header?Array.from(header.children).filter(node=>!node.matches('#effect-dialog-title,[data-action="effect-dialog-close"]')).map(node=>node.outerHTML).join(''):'';
+    header?.remove();snapshot.querySelector(':scope > [data-colour-picker-actions]')?.remove();
+    return {content:snapshot.innerHTML,headerContent};
+  }
   function showEffectDialog(title,content,headerContent='') {
     spatialAnimationStart620=null;
     if(standControlOpen&&!buildingStandDialog&&!standDialogNested&&!colourManagerReturn){
@@ -4680,7 +4689,15 @@
     if(!document.getElementById('effect-dialog').open)dialogReturnFocus=dialogActionOpener||document.activeElement;
     const dialog=document.getElementById('effect-dialog');
     cancelDialogDismissal(dialog);
-    document.getElementById('effect-dialog-content').innerHTML=`<header><h2 id="effect-dialog-title">${esc(title)}</h2><button class="icon-button" data-action="effect-dialog-close" aria-label="Venster sluiten">${icon('close')}</button>${headerContent}</header>${content}`;
+    // Colour edits are already live. "Done" closes through the existing
+    // guarded/nested return path; it does not save a preset or send light again.
+    const colourDialog=/<section\b[^>]*\sdata-colour-picker="(?:static|animation|background|brand)"/.test(content);
+    dialog.classList.toggle('colour-picker-dialog',colourDialog);
+    const closeButton=colourDialog
+      ?`<button type="button" class="colour-picker-done colour-picker-done-header" data-colour-picker-done data-action="effect-dialog-close">${esc(t('done'))}</button>`
+      :`<button class="icon-button" data-action="effect-dialog-close" aria-label="Venster sluiten">${icon('close')}</button>`;
+    const colourActions=colourDialog?`<footer class="colour-picker-actions" data-colour-picker-actions><button type="button" class="colour-picker-done colour-picker-done-footer" data-colour-picker-done data-action="effect-dialog-close">${icon('check')}<span>${esc(t('done'))}</span></button></footer>`:'';
+    document.getElementById('effect-dialog-content').innerHTML=`<header><h2 id="effect-dialog-title">${esc(title)}</h2>${closeButton}${headerContent}</header>${content}${colourActions}`;
     const wasOpen=dialog.open;
     if(!dialog.open)dialog.showModal();
     window.InterfaceMotion?.openDialog?.(dialog,wasOpen);dialog.scrollTop=0;
@@ -4729,7 +4746,7 @@
   function closeEffectDialog() {
     if(pinProtectionBusy)return;
     spatialAnimationStart620=null;
-    document.getElementById('effect-dialog').classList.remove('v50-fullscreen-preview');
+    document.getElementById('effect-dialog').classList.remove('v50-fullscreen-preview','colour-picker-dialog');
     cancelDialogDismissal(document.getElementById('effect-dialog'));
     const wasStand=standControlOpen,brandIndex=brandEditor?.index;
     dialogHeaderObserver?.disconnect();document.getElementById('effect-dialog').close();
@@ -6253,7 +6270,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate642',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate644',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

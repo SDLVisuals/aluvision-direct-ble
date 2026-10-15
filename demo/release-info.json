@@ -146,9 +146,9 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate642-spi-max-default-interface-android27",
+  "revision": "V50candidate644-colour-picker-done-interface-android27",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo642 retains scene-editing UI640 and uses the latest642 Web support sources, including the new SPI-port default163. Public-only RAM/demo admission and reset fences remain explicit. No native binary, receiver firmware or OTA catalog is published.",
+  "interfaceBaseline": "Public demo644 adds clear Done exits to live colour pickers and preserves scene editing UI640, SPI default163, RAM-only demo admission and all existing Android27 downloads. No native product, firmware or OTA catalog is published.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -278,8 +278,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "3529768f599f2dc58237c6535e20be1c23285a7c0cf6a332c2d6e2d36a3f51ff",
-      "bytes": 598985
+      "sha256": "1ac0b15c31758c60fb64e8e0834c41eb216c2bb30cfc534ed34c6752df635c60",
+      "bytes": 600572
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -295,6 +295,11 @@
       "path": "colour-library-drag.js",
       "sha256": "a397d1cb53cc3496340f9ca6230a1a69901d32eeb07d58e49e25024f077bca8c",
       "bytes": 10206
+    },
+    {
+      "path": "colour-picker-dialog.css",
+      "sha256": "f6f64eab333496f3026a7e6a1a46170886ef7ece89f2b586310c2a80569d99a7",
+      "bytes": 2170
     },
     {
       "path": "colour.js",
@@ -318,8 +323,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "7c6465fbba9dd56b0ba5376a1316d6e04194534b9cf98ee1e2d770340ede744e",
-      "bytes": 7793
+      "sha256": "1ccbd24692c23494c0aa9940bf8ef50979d7c611166db6e4cc67a6ee94ce7922",
+      "bytes": 7870
     },
     {
       "path": "installation-libraries.js",
@@ -2612,6 +2617,32 @@
       "No receiver, OTA, radio, physical timing or optical acceptance.",
       "Android27 and its existing APKs remain unchanged.",
       "The public Web build does not install or attest iPhone642 or firmware46."
+    ]
+  },
+  "interfaceCandidate644": {
+    "sourceSnapshotOnly": true,
+    "sourceBoundaryVerified": true,
+    "sourceInputSHA256": {
+      "app.js": "2e8c3d10b661f1478c503b3a099469ee28ba64f9c4d2d5ef7bb476e0dcde8388",
+      "colour-picker-dialog.css": "f6f64eab333496f3026a7e6a1a46170886ef7ece89f2b586310c2a80569d99a7",
+      "index.html": "fbbcd4f8d74729099f157547493b20f25613566779998fe27e26f19990e86c3c"
+    },
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "opticalAcceptance": false,
+    "features": [
+      "Colour picker sheets have clear Done controls; existing live edits are not sent or saved again on closing.",
+      "Colour-manager return preserves one header, one footer and any parent Stand tabs.",
+      "Scene UI640, explicit pixel lengths and the new SPI default163 are preserved."
+    ],
+    "limits": [
+      "RAM-only fictitious devices; no receiver, radio, OTA or timing acceptance.",
+      "Android27 and existing APK bytes are retained, not rebuilt.",
+      "Public Web publication does not install an iPhone app or receiver firmware."
     ]
   }
 }
