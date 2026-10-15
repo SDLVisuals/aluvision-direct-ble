@@ -146,9 +146,9 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate644-colour-picker-done-interface-android27",
+  "revision": "V50candidate645-zone-tools-bottom-interface-android27",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo644 adds clear Done exits to live colour pickers and preserves scene editing UI640, SPI default163, RAM-only demo admission and all existing Android27 downloads. No native product, firmware or OTA catalog is published.",
+  "interfaceBaseline": "Public demo645 places the existing zone view and ledline-order tools below the colour and active-animation controls. Clear Done exits from644, scene UI640, SPI default163, RAM-only demo admission and existing Android27 downloads are preserved. No native product, firmware or OTA catalog is published.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -278,8 +278,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "1ac0b15c31758c60fb64e8e0834c41eb216c2bb30cfc534ed34c6752df635c60",
-      "bytes": 600572
+      "sha256": "423ba9df4d23a4ca027b794abcfe5247d37c005dbe8dd614c80649654572e175",
+      "bytes": 600871
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -323,7 +323,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "1ccbd24692c23494c0aa9940bf8ef50979d7c611166db6e4cc67a6ee94ce7922",
+      "sha256": "2afcdcc78486ac7145772b7e1521f976f78ce6e305e22481f53a9b502c5de6e0",
       "bytes": 7870
     },
     {
@@ -2638,6 +2638,31 @@
       "Colour picker sheets have clear Done controls; existing live edits are not sent or saved again on closing.",
       "Colour-manager return preserves one header, one footer and any parent Stand tabs.",
       "Scene UI640, explicit pixel lengths and the new SPI default163 are preserved."
+    ],
+    "limits": [
+      "RAM-only fictitious devices; no receiver, radio, OTA or timing acceptance.",
+      "Android27 and existing APK bytes are retained, not rebuilt.",
+      "Public Web publication does not install an iPhone app or receiver firmware."
+    ]
+  },
+  "interfaceCandidate645": {
+    "sourceSnapshotOnly": true,
+    "sourceBoundaryVerified": true,
+    "sourceInputSHA256": {
+      "app.js": "724eae09158608183861ca3d9ac95578455e589bdb577b8fb1a94d4c8ff2d6ca",
+      "index.html": "fa6cf0f0d97c22741dda3053f8b18f4ccbf7cde85bf3c6f2e2e36a6b763465ed"
+    },
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "opticalAcceptance": false,
+    "features": [
+      "Existing zone view and ledline-order tools follow the colour or active-animation controls.",
+      "The existing animation-gallery hidden rule and all tool handlers, selection and native lifecycle are preserved.",
+      "Clear colour-picker Done exits644, scene UI640, explicit pixel lengths and new SPI default163 are retained."
     ],
     "limits": [
       "RAM-only fictitious devices; no receiver, radio, OTA or timing acceptance.",

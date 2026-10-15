@@ -1390,7 +1390,10 @@
     const modeContent=colour
       ?`<section class="bediening-workspace" aria-labelledby="${workspaceHeadingId}">${colourPickerMarkup(null,false,{power:true})}</section>`
       :`<section class="bediening-workspace animation-simple-workspace${activeAnimationEditor?' has-active-animation':''}" aria-labelledby="${workspaceHeadingId}">${controlAnimationPanel()}</section>`;
-    return `<div class="editor-grid${colour?' editor-grid-colour':' animation-simple-page'}">${controlContext('controls')}<section class="editor-controls editor-controls-zone">${colour||activeAnimationEditor?ledlineSetupMarkup():''}<section class="control-workspace"><div class="control-mode-panel" role="region" aria-label="${esc(t(colour?'staticColour':'animations'))}" data-control-mode="${controlMode}">${modeContent}</div></section></section></div>`;
+    const context=controlContext('controls'),lineTools=colour||activeAnimationEditor?ledlineSetupMarkup():'';
+    // Colour/animation controls come first; occasional view/order tools stay
+    // available at the end. Keep their existing rendering and lifecycle order.
+    return `<div class="editor-grid${colour?' editor-grid-colour':' animation-simple-page'}">${context}<section class="editor-controls editor-controls-zone"><section class="control-workspace"><div class="control-mode-panel" role="region" aria-label="${esc(t(colour?'staticColour':'animations'))}" data-control-mode="${controlMode}">${modeContent}</div></section>${lineTools}</section></div>`;
   }
 
   function controlAnimationPanel(){
@@ -1404,7 +1407,8 @@
     return `<div class="slider-row${guide?.icon?' has-setting-icon':''}"><label for="setting-${key}">${title}<output data-value-for="${key}">${Math.round(value)}${unit}</output></label><input id="setting-${key}" type="range" min="${min}" max="${max}" step="1" value="${value}" data-setting="${key}" data-unit="${unit}">${description ? `<small>${esc(description)}</small>` : ''}</div>`;
   }
   function renderColour() {
-    return `<div class="editor-grid editor-grid-colour">${controlContext('colour')}<section class="editor-controls">${ledlineSetupMarkup()}${selector()}${colourPickerMarkup()}</section></div>`;
+    const context=controlContext('colour'),lineTools=ledlineSetupMarkup();
+    return `<div class="editor-grid editor-grid-colour">${context}<section class="editor-controls">${selector()}${colourPickerMarkup()}${lineTools}</section></div>`;
   }
   function myColoursMarkup() {
     const entries=savedColours.colors;
@@ -1616,7 +1620,8 @@
   function renderAnimations() {
     const effect=activeEffect();
     if(!effect)return renderEffects();
-    return `<div class="editor-grid">${controlContext('animations')}<section class="editor-controls">${ledlineSetupMarkup()}${selector()}${animationEditorMarkup(effect)}</section></div>`;
+    const context=controlContext('animations'),lineTools=ledlineSetupMarkup();
+    return `<div class="editor-grid">${context}<section class="editor-controls">${selector()}${animationEditorMarkup(effect)}${lineTools}</section></div>`;
   }
   function currentBrandPalette(){
     return currentBrandColors().map(color=>C.hex([color.r,color.g,color.b]));
@@ -6270,7 +6275,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate644',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate645',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;
