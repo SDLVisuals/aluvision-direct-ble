@@ -146,9 +146,9 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate648-animation-clarity-interface-android27",
+  "revision": "V50candidate649-stand-preview-logical-spi-interface-android27",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo648 makes the group/start steps, chosen-animation settings card, categories and group cards clearer. Current-versus-selected/demo/failure wording remains bounded by existing source semantics, not a new physical-active claim. Animation home647, centred wheel646, Done exits644, bottom tools645, scene UI640, default163 and Android27 remain. No native product, firmware or OTA catalog is published.",
+  "interfaceBaseline": "Public demo649 restores unclipped mixed-Stand animation thumbnails and counts a continuous SPI zone as one logical line for specifically supported shared tunnel effects. Separate SPI outputs and ordinary whole/brand geometry keep their semantics. Clarity648, home647, wheel646, Done644, bottomtools645, scenes640, default163 and Android27 remain. This RAM-only Web demo is not a native or receiver update.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -253,8 +253,8 @@
     },
     {
       "path": "animation-chooser.css",
-      "sha256": "93ba70c107158d3de90b85ff8372c921871845e79d1c984f8629d8c201d71a4b",
-      "bytes": 9629
+      "sha256": "cca48352835554a319129df6964fff7fb5876cd3d7b96aa8d0a22f7929e34eef",
+      "bytes": 10306
     },
     {
       "path": "animation-engine.js",
@@ -283,8 +283,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "8ad4c308ee29adb0e607fcb8ca636899a399a78c4079330d8f82482db5ae8d51",
-      "bytes": 602170
+      "sha256": "6c2147ed71edeb819d552e90a5efa3f56a9366a71db7d9599582ffa819124119",
+      "bytes": 602303
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -333,7 +333,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "513de22fc643e279d0497ce8bba71fd607b1be6bc3746c0aea8078dff50a0ff4",
+      "sha256": "697423140d124e13d8c20048643965bd5def4f5ec8206c0320e0cc6b51f3276e",
       "bytes": 8013
     },
     {
@@ -473,8 +473,8 @@
     },
     {
       "path": "preview.js",
-      "sha256": "e8efc3a487a6a1d304f579513dc322c236ff2c20f6bed2a5238b8ed9c93e883d",
-      "bytes": 108188
+      "sha256": "4546527ff27b515770efd00d16233e12b3bebd6982fa954f9a33e82ec40a0915",
+      "bytes": 110044
     },
     {
       "path": "receiver-playback.js",
@@ -553,8 +553,8 @@
     },
     {
       "path": "stand-animations.js",
-      "sha256": "90938c1d79d94a769bd611bfa3c743f82c4333a69324545afcf0ec0544c0abef",
-      "bytes": 17538
+      "sha256": "adda30f999fea06e7a9bfd01ab5ba607cbac3d50a886d954f0794efab73928e2",
+      "bytes": 20004
     },
     {
       "path": "stand-cache.js",
@@ -2751,6 +2751,34 @@
       "Clearer Choose group and Start animation steps, larger category and group-card text.",
       "A clearer current/selected-animation settings card keeps original actions and honest chosen/demo/off/failure labels.",
       "Animation home647, centred wheel646, Done exits644, bottom tools645, scenes640 and SPI default163 are retained."
+    ],
+    "limits": [
+      "RAM-only fictitious devices; no receiver, radio, OTA or timing acceptance.",
+      "Android27 and existing APK bytes are retained, not rebuilt.",
+      "Public Web publication does not install an iPhone app or receiver firmware."
+    ]
+  },
+  "interfaceCandidate649": {
+    "sourceSnapshotOnly": true,
+    "sourceBoundaryVerified": true,
+    "sourceInputSHA256": {
+      "animation-chooser.css": "cca48352835554a319129df6964fff7fb5876cd3d7b96aa8d0a22f7929e34eef",
+      "app.js": "49c15bccd4873705d9e6ceb12cbd86ca0b0abda45faf3fa613829da830da2443",
+      "index.html": "f76758c877e6399d47c9f04cb2adfb75748af13212cfb9d3bb6305f5fb86ae8a",
+      "preview.js": "4546527ff27b515770efd00d16233e12b3bebd6982fa954f9a33e82ec40a0915",
+      "stand-animations.js": "adda30f999fea06e7a9bfd01ab5ba607cbac3d50a886d954f0794efab73928e2"
+    },
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "opticalAcceptance": false,
+    "features": [
+      "Mixed-Stand family thumbnails keep their RGBW and SPI canvases visible below compact zone labels.",
+      "The specifically supported shared tunnel effects count each continuous SPI zone as one logical line; insufficient logical scope cannot start.",
+      "Separate SPI outputs and ordinary whole/brand effects keep their existing geometry; current labels and all earlier UI updates remain."
     ],
     "limits": [
       "RAM-only fictitious devices; no receiver, radio, OTA or timing acceptance.",

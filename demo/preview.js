@@ -667,7 +667,7 @@ function softTrailCoverage(behind,trail,n,smooth){
     if (state.on === false || state.power === false) return Array.from({ length: geo.pixelCount }, () => [0, 0, 0]);
     const isStatic = state.engine === 'STATIC';
     if (!isStatic && state.v30Effect) {
-      const input = { state, receiverIndex: geo.lineIndex, receiverCount: geo.lineCount,
+      const input = { state, receiverIndex: geo.sampleIndex??geo.lineIndex, receiverCount: geo.sampleCount??geo.lineCount,
         receiverType: receiver.type, time, pixelCount: geo.pixelCount,
         totalPixels: group.totalPixels, layout: group.layout };
       const engine=references.supports(state.v30Effect)?references:extension;
@@ -675,8 +675,8 @@ function softTrailCoverage(behind,trail,n,smooth){
       return geo.outputs.flatMap(output => Array.from({ length: output.pixels }, (_, pixel) => {
         const oriented = output.reversed ? output.pixels - 1 - pixel : pixel;
         return engine.sample({ ...input,
-          ...(continuous ? {} : { receiverIndex: output.lineIndex, receiverCount: output.lineCount, pixelCount: output.pixels }),
-          pixelIndex: continuous ? output.localOffset + oriented : oriented, globalPixel: output.offset + oriented });
+          ...(continuous ? {} : { receiverIndex: output.sampleIndex??output.lineIndex, receiverCount: output.sampleCount??output.lineCount, pixelCount: output.samplePixels??output.pixels }),
+          pixelIndex: continuous ? output.localOffset + oriented : (output.sampleOffset??0)+oriented, globalPixel: output.offset + oriented });
       }));
     }
     if (isStatic || receiver.type === 'RGBW' || state.previewFamily === 'RGBW') {
@@ -716,9 +716,32 @@ function softTrailCoverage(behind,trail,n,smooth){
       return opticalWhite(value);
     }));
   }
+  function checkedSamplingGeometry(candidate,physical) {
+    const invalid=()=>{throw new Error('Invalid internal sampling geometry');};
+    if(!candidate||typeof candidate!=='object'||!Array.isArray(candidate.receivers)||candidate.receivers.length!==physical.receivers.length)invalid();
+    const stripped=JSON.parse(JSON.stringify(candidate));let count=null;
+    const integer=(value,min,max)=>Number.isInteger(value)&&value>=min&&value<=max;
+    for(const receiver of stripped.receivers){
+      const original=physical.receivers.find(row=>row.receiverId===receiver.receiverId);if(!original)invalid();
+      if(!integer(receiver.sampleCount,2,120)||!integer(receiver.sampleIndex,0,receiver.sampleCount-1))invalid();
+      if(count!==null&&receiver.sampleCount!==count)invalid();count=receiver.sampleCount;
+      delete receiver.sampleIndex;delete receiver.sampleCount;
+      if(!Array.isArray(receiver.outputs))invalid();
+      for(const output of receiver.outputs){
+        if(!integer(output.sampleCount,2,120)||output.sampleCount!==count||!integer(output.sampleIndex,0,count-1)||
+           !integer(output.samplePixels,output.pixels,8192)||!integer(output.sampleOffset,0,output.samplePixels-output.pixels))invalid();
+        delete output.sampleIndex;delete output.sampleCount;delete output.samplePixels;delete output.sampleOffset;
+      }
+    }
+    // Only the four bounded sample coordinates may differ. Electrical/visual
+    // identity, line order, physical lengths/reversal and all other fields match.
+    if(JSON.stringify(stripped)!==JSON.stringify(physical))invalid();
+    return candidate;
+  }
   function rows(options) {
     const receivers = options.receivers || [];
-    const group = geometry(options.geometryReceivers || receivers, options.layout, {lineOrder:options.lineOrder});
+    const physical = geometry(options.geometryReceivers || receivers, options.layout, {lineOrder:options.lineOrder});
+    const group = options.samplingGeometry===undefined?physical:checkedSamplingGeometry(options.samplingGeometry,physical);
     const frame = {
       geometry: group,
       rows: receivers.map(receiver => {

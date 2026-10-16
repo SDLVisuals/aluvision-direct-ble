@@ -38,6 +38,7 @@
   const equal = (a, b) => JSON.stringify(stable(a)) === JSON.stringify(stable(b));
   const WHOLE_VARIANTS = new Set([0, 1, 2, 3, 4, 17, 18, 19, 20, 25]);
   const COORDINATED_BRAND = new Set(['v30-brand-sweep', 'v30-brand-focus', 'v30-brand-soft-gradient']);
+  const LOGICAL_TUNNELS = new Set(['travel','bounce','center','outside','cascade','handoff','pulse','echo'].map(name=>'v30-tunnel-'+name));
   const rgbw = Preview.catalog('RGBW');
   const spi = Preview.catalog('SPI');
   const descriptors = rgbw.filter(effect => {
@@ -155,6 +156,32 @@
     const lines = Model.ledlines(ordered, lineOrder);
     return {receivers: ordered, lineOrder, lines};
   }
+  function usesLogicalTunnelLines(effect) { return effect.standMode==='coordinated'&&LOGICAL_TUNNELS.has(effect.id); }
+  // Sampling-only coordinates. Physical line identity/order, local electrical
+  // offsets, reversal and the model remain untouched. Native derives the same
+  // projection independently; these objects never enter the LIVE payload.
+  function tunnelSamplingGeometry(model,standId,ordered) {
+    const geometry=clone(Preview.geometry(ordered.receivers,'stacked',{lineOrder:ordered.lineOrder})),samples=new Map();
+    let count=0;
+    for(const zone of model.stands.find(item=>item.id===standId).zones){
+      const ids=new Set(zone.receiverIds),lines=ordered.lines.filter(line=>ids.has(line.receiverId));
+      if(zone.type==='SPI'&&zone.layout==='continuous'&&lines.length){
+        const pixels=lines.reduce((sum,line)=>sum+line.pixels,0);let offset=0;
+        for(const line of lines){samples.set(line.id,{sampleIndex:count,samplePixels:pixels,sampleOffset:offset});offset+=line.pixels;}
+        count++;
+      }else for(const line of lines)samples.set(line.id,{sampleIndex:count++,samplePixels:line.pixels,sampleOffset:0});
+    }
+    for(const receiver of geometry.receivers){
+      const own=ordered.lines.filter(line=>line.receiverId===receiver.receiverId),first=samples.get(own[0].id);
+      Object.assign(receiver,{sampleIndex:first.sampleIndex,sampleCount:count});
+      for(const output of receiver.outputs)Object.assign(output,samples.get(output.lineId),{sampleCount:count});
+    }
+    return geometry;
+  }
+  function lineCountFor(model,standId,effectId) {
+    const effect=effectFor(effectId),ordered=arrangement(model,standId,addedReceivers(model,standId));
+    return usesLogicalTunnelLines(effect)?tunnelSamplingGeometry(model,standId,ordered).receivers[0]?.sampleCount||0:ordered.lines.length;
+  }
   function active(model, standId) {
     const receivers = addedReceivers(model, standId);
     if (!receivers.length) return null;
@@ -185,7 +212,8 @@
     if (typeof time !== 'number' || !Number.isFinite(time) || time < 0)
       fail('STAND_EFFECT_CLOCK', 'De animatieklok is niet geldig.');
     const geometry = arrangement(model, standId, before);
-    if (geometry.lines.length < (effect.minimumReceivers || 1))
+    const logicalCount=usesLogicalTunnelLines(effect)?tunnelSamplingGeometry(model,standId,geometry).receivers[0]?.sampleCount||0:geometry.lines.length;
+    if (logicalCount < (effect.minimumReceivers || 1))
       fail('STAND_EFFECT_MINIMUM', 'Deze animatie heeft minstens twee ledlines nodig.');
     const state = canonicalState(effect, has(options, 'state') ? options.state : {});
     const prior = active(model, standId);
@@ -217,6 +245,7 @@
   }
   function assembled(model, standId, marker) {
     const ordered = arrangement(model, standId, addedReceivers(model, standId));
+    const effect=effectFor(marker.effectId),samplingGeometry=usesLogicalTunnelLines(effect)?tunnelSamplingGeometry(model,standId,ordered):null;
     const zones = model.stands.find(stand => stand.id === standId).zones.map(zone => ({
       zoneId: zone.id, zoneName: zone.name, type: zone.type, layout: zone.layout,
       receivers: ordered.receivers.filter(receiver => receiver.zoneId === zone.id),
@@ -224,6 +253,7 @@
     }));
     return {model, standId, effectId: marker.effectId, effect: clone(effectFor(marker.effectId)),
       mode: marker.mode, state: clone(marker.state), clockId: marker.clockId,
+      ...(samplingGeometry?{samplingGeometry}:{}),
       receivers: ordered.receivers, receiverIds: ordered.receivers.map(receiver => receiver.id),
       lineOrder: ordered.lineOrder, lines: ordered.lines, zones,
       sharedClock: {clockId: marker.clockId, nativeGroupStartRequired: true}};
@@ -239,12 +269,13 @@
       typeof time !== 'number' || !Number.isFinite(time) || time < 0 ||
       !plain(options) || Object.keys(options).some(key => key !== 'zoneId'))
       fail('STAND_PREVIEW', 'Het animatievoorbeeld is niet geldig.');
-    // The native stand recipe uses one shared clock and global physical-line
-    // indices. Keep that sampling contract; a visible zone must not restart
-    // the effect at index zero. Its saved topology is a separate projection:
-    // continuous SPI is drawn as one strip, not independent receiver rows.
+    // A visible zone never restarts the global timeline/rank. Continuous SPI
+    // contributes one logical tunnel row while retaining every physical port.
+    if(planned.samplingGeometry&&planned.samplingGeometry.receivers[0]?.sampleCount<(planned.effect.minimumReceivers||1))
+      fail('STAND_EFFECT_MINIMUM','Deze animatie heeft minstens twee ledlines nodig.');
     const result = {receivers: planned.receivers, geometryReceivers: planned.receivers,
       layout: 'stacked', lineOrder: planned.lineOrder, time, selection: {kind: 'all'}};
+    if(planned.samplingGeometry)result.samplingGeometry=planned.samplingGeometry;
     if (has(options, 'zoneId')) {
       const zone = planned.zones.find(zone => zone.zoneId === options.zoneId);
       if (!zone) fail('STAND_PREVIEW_ZONE', 'Deze zone hoort niet bij het animatievoorbeeld.');
@@ -275,5 +306,5 @@
       presentation: all.renderGeometry ? undefined : 'receivers'
     }));
   }
-  return Object.freeze({catalogFor, plan, current, preview, previewOptions, draw, validateMarker, active});
+  return Object.freeze({catalogFor, plan, current, preview, previewOptions, draw, validateMarker, active, lineCountFor});
 }));

@@ -144,3 +144,16 @@ html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[dat
   html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] > .animation-family-trigger { grid-template-columns: 84px minmax(0, 1fr); gap: 10px; padding: 12px; }
   html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] .family-title { font-size: 18px; }
 }
+
+/* Mixed Stand thumbnails contain several labelled canvases, not one strip.
+   Let that content size its row and neutralise inherited variant-title styles
+   on the nested zone labels, so neither family's animation is clipped away. */
+html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] .effect-card[data-chooser-version="567"] > .animation-effect-preview:has(.stand-animation-preview) {
+  grid-template-rows: auto auto;
+}
+html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] .effect-card[data-chooser-version="567"] .stand-animation-zone-label > b {
+  margin: 0;
+  padding: 0;
+  font-size: 11px;
+  line-height: 1.3;
+}
