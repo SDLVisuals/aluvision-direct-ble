@@ -3,6 +3,10 @@
   // Explicit interface keys only. Receiver/zone/stand/scene names never pass
   // through this dictionary; parameters are inserted after translation.
   const rows={
+    v651ZoneLighting:['Verlichting','Lighting','Éclairage','Beleuchtung'],
+    v651ZonePowerAccessible:['Zone {name} aan of uit','Turn zone {name} on or off','Allumer ou éteindre la zone {name}','Zone {name} ein- oder ausschalten'],
+    v651ZonePowerMixed:['Zone {name} is deels aan. Schakel alle ledlines in.','Zone {name} is partly on. Turn on all LED lines.','La zone {name} est partiellement allumée. Allumer toutes les lignes LED.','Zone {name} ist teilweise an. Alle LED-Linien einschalten.'],
+    v651ZoneEmpty:['Zone {name} heeft nog geen verlichting','Zone {name} has no lighting yet','La zone {name} ne contient pas encore d’éclairage','Zone {name} hat noch keine Beleuchtung'],
     v650PaletteSwapHint:['Sleep om twee kleuren om te wisselen. De rest blijft staan.','Drag to swap two colours. The others stay in place.','Glissez pour échanger deux couleurs. Les autres restent en place.','Ziehe, um zwei Farben zu tauschen. Die anderen bleiben stehen.'],
     v650Direction:['Richting','Direction','Direction','Richtung'],
     v650DirectionHint:['Kies welke kant de animatie op beweegt.','Choose which way the animation moves.','Choisissez le sens de déplacement de l’animation.','Wähle die Bewegungsrichtung der Animation.'],

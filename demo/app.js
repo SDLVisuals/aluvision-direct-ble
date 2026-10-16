@@ -1370,6 +1370,37 @@
     const reusable=standReceivers().some(receiver=>receiver.zoneId!==z.id&&(!z.type||receiver.type===z.type));
     return `<div class="page empty-zone-page"><div class="topline"><button class="back back-to-zones" data-action="stand">${icon('back')}<span>Terug naar zones</span></button><span class="context-name">${esc(standLabel())}</span></div><header class="page-heading overview-heading"><div><div class="eyebrow">LEGE ZONE</div><h1>${esc(z.name)}</h1></div><button class="icon-button" data-action="zone-rename" data-id="${esc(z.id)}" aria-label="Naam van deze zone wijzigen">${icon('edit')}</button></header><section class="card empty empty-zone zone-start-card"><span class="menu-icon" aria-hidden="true">${icon('receiver')}</span><h2>Voeg verlichting toe</h2><p>${reusable?'Nieuwe receiver, of eentje uit je stand.':'Begin met een receiver in deze zone.'}</p><button class="button full zone-primary-action" data-action="layout-new-receiver" data-zone="${esc(z.id)}">${icon('receiver')}Nieuwe receiver toevoegen</button>${reusable?`<button class="button secondary full" data-action="zone-assign" data-id="${esc(z.id)}">Bestaande receiver kiezen</button>`:''}<small class="zone-family-note">${z.type?`Voor ${esc(z.type)}-verlichting.`:'RGBW of SPI · je eerste receiver bepaalt het type.'}</small></section>${zoneDeleteButton(z)}</div>`;
   }
+  function zonePowerState651(input,standId,zoneId){
+    const current=input.stands.find(item=>item.id===standId);
+    const currentZone=current?.zones.find(item=>item.id===zoneId);if(!currentZone)return null;
+    const members=M.zoneReceivers(input,zoneId).filter(receiver=>receiver.standId===standId),byId=new Map(members.map(receiver=>[receiver.id,receiver]));
+    const lines=M.zoneLedlines(input,zoneId).filter(line=>byId.has(line.receiverId));
+    const entries=currentZone.type==='SPI'&&currentZone.layout==='continuous'
+      ?[...new Set(lines.map(line=>line.receiverId))].map(id=>M.lightStateFor(byId.get(id),0))
+      :lines.map(line=>M.lightStateFor(byId.get(line.receiverId),line.port));
+    const states=entries.map(state=>state.on!==false&&state.power!==false);
+    return {receiverIds:members.map(receiver=>receiver.id),empty:!states.length,value:states.length&&states.every(Boolean)?true:states.some(Boolean)?'mixed':false};
+  }
+  function planZonePower651(input,standId,zoneId){
+    const power=zonePowerState651(input,standId,zoneId);if(!power||power.empty)return null;
+    const next=copy(input),targets=new Set(power.receiverIds),on=power.value!==true;
+    // A zone shortcut ends the shared stand scope, not its colours/effect or
+    // timeline. Otherwise dispatch could restart unrelated zones in a batch.
+    M.standZoneReceivers(next,standId).forEach(receiver=>{delete receiver.state.standAnimation;});
+    next.receivers.filter(receiver=>targets.has(receiver.id)).forEach(receiver=>{
+      receiver.state.on=on;receiver.state.power=on;
+      if(receiver.type==='SPI')M.ledlines([receiver]).forEach(line=>{
+        const delta=receiver.state.portStates?.[String(line.port)];
+        if(delta){delta.on=on;delta.power=on;}
+      });
+    });
+    return {model:M.assertValid(next),receiverIds:power.receiverIds,on};
+  }
+  function standZonePowerMarkup651(z){
+    const power=zonePowerState651(model,stand()?.id,z.id),empty=!power||power.empty,value=power?.value||false;
+    const label=t(empty?'v651ZoneEmpty':value==='mixed'?'v651ZonePowerMixed':'v651ZonePowerAccessible',{name:z.name});
+    return `<div class="stand-zone-power" data-zone-power-version="651"><span class="stand-zone-power-label">${icon('power')}<span>${esc(t('v651ZoneLighting'))}</span></span><button type="button" class="switch" role="switch" aria-label="${esc(label)}" aria-checked="${value===true}" data-mixed="${value==='mixed'}" data-action="zone-power" data-id="${esc(z.id)}" ${empty?'disabled':''}><span>${esc(t(value==='mixed'?'v50PartlyOn':value?'v50On':'v50Off'))}</span><i aria-hidden="true"></i></button><p class="stand-zone-power-status" data-live-status="zone-card" data-zone-power-zone="${esc(z.id)}" aria-live="off" hidden></p></div>`;
+  }
   function renderStand() {
     if(!stand()){
       const pending=onboarding.summary(),step=!pending?.stand||pending.stage==='stand'?1:pending.stage==='zones'?2:3;
@@ -1380,7 +1411,7 @@
       return `<div class="page onboarding-welcome"><header class="page-heading"><div><div class="eyebrow">${esc(t('v50SetupPending'))}</div><h1>${esc(pending.stand.name)}</h1></div></header><section class="stand-setup-overview" aria-label="${esc(t('setupStand'))}">${[t('v50Name'),t('zones'),t('receivers')].map((label,i)=>`<div class="stand-setup-row ${i+1===step?'active':''}"><i>${i+1<step?'✓':i+1}</i><span><small>${esc(t('v50Step',{number:i+1}))}</small><b>${esc(label)}</b></span><small>${esc(t(i+1<step?'v50Ready':i+1===step?'v50Next':'v50Later'))}</small></div>`).join('')}</section><button class="button full onboarding-next-action" data-setup-resume data-action="receiver-add">${esc(t('v50ResumeSetup'))}</button>${languagePicker}</div>`;
     }
     const s = stand(), added = standReceivers();
-    return `<div class="page stand-page"><header class="page-heading overview-heading"><div><div class="eyebrow">${localStandConcept()?'LOKAAL CONCEPT':'JOUW STAND'}</div><h1>${esc(standLabel())}</h1></div><button class="icon-button circle" data-action="help" aria-label="Uitleg over stand en zones">${icon('info')}</button></header>${localStandConcept()?'<p class="local-stand-notice" role="status">Alleen op dit toestel. Er is nog geen receiver verbonden. '+(temporarySingleUser?'Je voegt je eerste receiver toe zonder PIN.':'Bij je eerste receiver kies je de wifi-PIN.')+'</p>':''}<div class="stand-summary overview-summary"><div>${icon('zones')}<span><b>${s.zones.length}</b><small>Zones</small></span></div><div>${icon('light')}<span><b>${physicalLineCount(added)}</b><small>Ledlines</small></span></div></div><section class="zone-section"><div class="section-heading"><h2>${esc(t('zones'))}</h2><button class="text-button" data-action="zone-new">＋ Nieuwe zone</button></div><div class="zone-grid">${s.zones.map(z=>`<article class="zone-entry"><button class="zone-card" data-action="zone" data-id="${esc(z.id)}">${zonePreview(z,'',{label:`Voorbeeld van ${z.name}`})}<div class="zone-copy"><div class="zone-card-heading"><b>${esc(z.name)}</b><span class="zone-meta"><span class="zone-family-badge">${zoneTypeLabel(z)}</span>${z.type?` · <span class="zone-line-count">${ledlineCount(physicalLineCount(M.zoneReceivers(model,z.id)))}</span>`:''}</span></div><span class="open-label">${M.zoneReceivers(model,z.id).length?'Bedienen':'Instellen'} ${icon('chevron')}</span></div></button><button class="zone-options-button" data-action="zone-options" data-id="${esc(z.id)}" aria-label="Opties voor zone ${esc(z.name)}">•••</button></article>`).join('')}</div></section>${standScenesMarkup(false)}</div>`;
+    return `<div class="page stand-page"><header class="page-heading overview-heading"><div><div class="eyebrow">${localStandConcept()?'LOKAAL CONCEPT':'JOUW STAND'}</div><h1>${esc(standLabel())}</h1></div><button class="icon-button circle" data-action="help" aria-label="Uitleg over stand en zones">${icon('info')}</button></header>${localStandConcept()?'<p class="local-stand-notice" role="status">Alleen op dit toestel. Er is nog geen receiver verbonden. '+(temporarySingleUser?'Je voegt je eerste receiver toe zonder PIN.':'Bij je eerste receiver kies je de wifi-PIN.')+'</p>':''}<div class="stand-summary overview-summary"><div>${icon('zones')}<span><b>${s.zones.length}</b><small>Zones</small></span></div><div>${icon('light')}<span><b>${physicalLineCount(added)}</b><small>Ledlines</small></span></div></div><section class="zone-section"><div class="section-heading"><h2>${esc(t('zones'))}</h2><button class="text-button" data-action="zone-new">＋ Nieuwe zone</button></div><div class="zone-grid">${s.zones.map(z=>`<article class="zone-entry"><button class="zone-card" data-action="zone" data-id="${esc(z.id)}">${zonePreview(z,'',{label:`Voorbeeld van ${z.name}`})}<div class="zone-copy"><div class="zone-card-heading"><b>${esc(z.name)}</b><span class="zone-meta"><span class="zone-family-badge">${zoneTypeLabel(z)}</span>${z.type?` · <span class="zone-line-count">${ledlineCount(physicalLineCount(M.zoneReceivers(model,z.id)))}</span>`:''}</span></div><span class="open-label">${M.zoneReceivers(model,z.id).length?'Bedienen':'Instellen'} ${icon('chevron')}</span></div></button><button class="zone-options-button" data-action="zone-options" data-id="${esc(z.id)}" aria-label="Opties voor zone ${esc(z.name)}">•••</button>${standZonePowerMarkup651(z)}</article>`).join('')}</div></section>${standScenesMarkup(false)}</div>`;
   }
   function powerControl() {
     const states = powerTargets().map(r => r.state.on !== false && r.state.power !== false);
@@ -4283,7 +4314,8 @@
   }
   function syncLiveStatus() {
     document.querySelectorAll('[data-live-status]').forEach(node=>{
-      const targets=liveTargets(node.dataset.liveStatus);
+      const zoneCard=node.dataset.liveStatus==='zone-card',zoneId=node.dataset.zonePowerZone;
+      const targets=zoneCard?(stand()?.zones.some(item=>item.id===zoneId)?M.zoneReceivers(model,zoneId):[]):liveTargets(node.dataset.liveStatus);
       const states=targets.map(receiver=>liveStates.get(receiver.id)?.kind||'idle');
       const applied=states.filter(kind=>kind==='applied').length,failed=states.filter(kind=>kind==='failed').length;
       let kind='idle';
@@ -4301,7 +4333,7 @@
       else if(applied===targets.length){kind='applied';}
       // Zone, whole-stand and scene controls share the same quiet translated
       // presentation. Only closed problem reasons may become visible.
-      const message=compactLiveDockMessage592({targets,states,applied,failed,kind,connected:nativeContext&&!!liveController});
+      const message=zoneCard&&kind!=='failed'?'':compactLiveDockMessage592({targets,states,applied,failed,kind,connected:nativeContext&&!!liveController});
       // Delivery continues in the existing ledger. Normal pending/receipt
       // states stay silent; an empty label must not reserve screen space.
       node.dataset.state=kind;node.textContent=message;node.hidden=!message;
@@ -5825,6 +5857,12 @@
         if(expandedScopeZones.has(route.zoneId))expandedScopeZones.delete(route.zoneId);else expandedScopeZones.add(route.zoneId);
         return render({preserveScroll:true});
       }
+      if(action==='zone-power'){
+        if(route.screen!=='stand'||standControlOpen||!button.closest('.stand-page')||standPresentationOnly()||receiverWorkBusy())return;
+        const plan=planZonePower651(model,stand()?.id,id);if(!plan)return;
+        model=plan.model;sendReceiverStates(plan.receiverIds);render();
+        main.querySelector(`[data-action="zone-power"][data-id="${CSS.escape(id)}"]`)?.focus({preventScroll:true});return;
+      }
       if(action==='power'){const on=!powerTargets().every(r=>r.state.on!==false && r.state.power!==false);apply({on,power:on},{kind:'all'});if(standControlOpen)return;return render();}
       if(action==='warm-white'){
         const root=button.closest('[data-colour-picker]');if(!root)return;
@@ -6319,7 +6357,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate650',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate651',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

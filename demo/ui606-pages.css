@@ -1,3 +1,20 @@
+/* Stand overview: a separate quick switch never nests inside the open-zone button. */
+html.interface-polish body .stand-page .stand-zone-power {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  gap: 0 12px; min-width: 0; padding: 7px 15px 9px;
+  border-top: 1px solid var(--line); border-radius: 0 0 20px 20px;
+  background: color-mix(in srgb, var(--soft) 55%, var(--panel));
+}
+html.interface-polish body .stand-page .stand-zone-power-label { display: inline-flex; align-items: center; gap: 8px; min-width: 0; color: var(--muted); font-size: 12px; font-weight: 650; }
+html.interface-polish body .stand-page .stand-zone-power-label > .icon { width: 18px; height: 18px; flex: none; }
+html.interface-polish body .stand-page .stand-zone-power .switch { min-height: 44px; padding: 0 2px; font-size: 13px; font-weight: 700; gap: 9px; }
+html.interface-polish body .stand-page .stand-zone-power .switch[data-mixed="true"] i { background: var(--muted); }
+html.interface-polish body .stand-page .stand-zone-power .switch[data-mixed="true"] i::after { transform: translateX(9px); }
+html.interface-polish body .stand-page .stand-zone-power .switch:disabled { opacity: .5; cursor: default; }
+html.interface-polish body .stand-page .stand-zone-power-status { flex-basis: 100%; margin: 0 0 4px; color: var(--red); font-size: 12px; line-height: 1.45; }
+html.interface-polish body .stand-page .stand-zone-power-status[hidden] { display: none !important; }
+html.interface-polish body .stand-page .zone-entry:has(> .stand-zone-power) > .zone-card { border-radius: 20px 20px 0 0; }
+
 /* Scènes and Receivers share the same compact V50 page hierarchy.
    Deliberately scoped: ordering, light controls and saved-light painting
    keep their own layouts and behavior. */

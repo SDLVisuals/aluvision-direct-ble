@@ -146,9 +146,9 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate650-editable-animation-refinement-interface-android27",
+  "revision": "V50candidate651-zone-power-interface-android27",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo650 offers a smaller editable animation chooser with full-width variant rows, contextual controls, direction outside advanced settings, clear return navigation and presentation-only palette pair swaps. Existing saved animation identities and UI649 continuous SPI tunnel semantics remain. RAM-only demo: no native app, receiver firmware or OTA is installed or published.",
+  "interfaceBaseline": "Public demo651 adds directly accessible zone on/off control while preserving the prior650 interface and animation refinements. RAM-only demo: no native app, receiver firmware or OTA is installed or published.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -293,8 +293,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "7aa157a2514c9f490c2044ceb6084c9cc08465d38a8f9db6ffc579bf5d5149a2",
-      "bytes": 605468
+      "sha256": "fdbd184c86de3de6e4e21285377d23c811c7f4e1ef490d6e1c9299a65c231aff",
+      "bytes": 608904
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -343,7 +343,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "e41ce6fb5b8d9a86a66d403fef8d893ab478f5fc140256a18c196730039539e6",
+      "sha256": "30d405b9bd671483e0bc0d941a316ed4b5e68d25150b0af06c91a3ec90b1a06e",
       "bytes": 8169
     },
     {
@@ -623,8 +623,8 @@
     },
     {
       "path": "ui606-pages.css",
-      "sha256": "fe63a76f17fe83fa1c71029ff08659e60f1bc69c3d6c9dabb54bc892fb7d93cf",
-      "bytes": 17587
+      "sha256": "6220bee1528d52c888eabc9a49993f00eaab9c02d34c500061b4f7fb143cfb7c",
+      "bytes": 19191
     },
     {
       "path": "v40-design.css",
@@ -693,8 +693,8 @@
     },
     {
       "path": "v50-texts.js",
-      "sha256": "b41e43ba879db1c4ce540ced36e0c62fed585fd9fd229bac6808b6e50710ce91",
-      "bytes": 39064
+      "sha256": "6521079cdcfcad571fba336ba33baca3542c9f597c24ab5036d4934063cccde2",
+      "bytes": 39759
     },
     {
       "path": "vendor/v21_animation_catalog.js",
@@ -2825,6 +2825,31 @@
     "limits": [
       "This RAM-only demo uses fictitious devices: no receiver, OTA, radio, speed or optical acceptance.",
       "Custom reference1 palettes need native authenticated firmware48 support on real hardware; no firmware is distributed by this demo.",
+      "Android27 APKs/history are retained unchanged, not rebuilt; Web publication does not update iPhone."
+    ]
+  },
+  "interfaceCandidate651": {
+    "sourceSnapshotOnly": true,
+    "sourceBoundaryVerified": true,
+    "sourceInputSHA256": {
+      "app.js": "4ecc0760f8147698e06cbbb74095f0275a7159bddb31f34cc19089abec9dbf18",
+      "index.html": "c924708c8d8908ec18561aeef7587c21e2e3e83c2614ede9679826a619192abf",
+      "ui606-pages.css": "6220bee1528d52c888eabc9a49993f00eaab9c02d34c500061b4f7fb143cfb7c",
+      "v50-texts.js": "6521079cdcfcad571fba336ba33baca3542c9f597c24ab5036d4934063cccde2"
+    },
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "opticalAcceptance": false,
+    "features": [
+      "Direct zone on/off control in the existing zone interface; other650 behaviour and animation controls remain retained."
+    ],
+    "limits": [
+      "This RAM-only demo uses fictitious devices: no receiver, OTA, radio, speed or optical acceptance.",
+      "All private native sources, firmware48 catalogue and bundled images remain exact650; no firmware is distributed by this demo.",
       "Android27 APKs/history are retained unchanged, not rebuilt; Web publication does not update iPhone."
     ]
   }
