@@ -394,3 +394,58 @@ dialog.v50-order-tutorial-modal .v652-order-tutorial-content p{margin:0;font-siz
 dialog.v50-order-tutorial-modal .v652-order-tutorial-content .v652-order-tutorial-rule{margin:18px 4px}
 @media(max-width:360px){.order-colour-choices652{grid-template-columns:minmax(0,1fr)}.order-colour-choice652{min-height:76px;flex-wrap:nowrap}.order-assignment-intro652{padding:16px}.order-assignment652{padding:12px}}
 @media(min-width:700px){.order-assignments652{grid-template-columns:repeat(2,minmax(0,1fr))}.order-colour-choices652{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* 655: visual observed-colour assignment. Numbers and colour swatches are
+   interface controls, not an illustration of a physical LED arrangement. */
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="652"][data-order-visual="655"][data-order-open="true"]{
+  scroll-padding-top:calc(var(--v50-order-header-height,80px) + 12px);
+  scroll-padding-bottom:calc(96px + env(safe-area-inset-bottom));
+}
+.order-visual-intro655{margin:12px 0;padding:14px;gap:10px}
+.order-visual-heading655{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+.order-visual-heading655 h3{flex:1;min-width:0;margin:0;font-size:20px;line-height:1.3;overflow-wrap:anywhere}
+.order-visual-help655{display:inline-flex;flex:none;align-items:center;justify-content:center;gap:6px;min-width:44px;min-height:44px;margin:0;padding:8px 10px;border:1px solid var(--line,#dce0dc);border-radius:13px;background:var(--soft,#eef1f4);color:var(--action-ink,var(--ink,#252729));font:inherit;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation}
+.order-visual-help655>.icon{width:18px;height:18px;flex:none}
+.order-visual-intro655 .order-visual-hint655{font-size:14px;line-height:1.45;color:var(--ink,#252729)}
+.order-visual-intro655 .order-assignment-direction652{display:inline-flex;justify-self:start;align-items:center;gap:7px;min-height:30px;padding:5px 9px;border:1px solid var(--line,#dce0dc);border-radius:10px;background:var(--soft,#eef1f4);font-size:12px;line-height:1.4;color:var(--muted,#626963)}
+.order-visual-intro655 .order-assignment-rule652{font-size:12px;line-height:1.4}
+.ledline-setup[data-order-visual="655"] .order-assignments652{grid-template-columns:minmax(0,1fr);gap:10px;margin:12px 0}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="652"][data-order-visual="655"] .order-assignment652{grid-template-columns:38px minmax(0,1fr) 44px;align-items:center;gap:8px;padding:10px;border-radius:20px;min-width:0}
+.ledline-setup[data-order-visual="655"] .order-assignment-place652{justify-content:center;min-width:0}
+.ledline-setup[data-order-visual="655"] .order-assignment-place652>span{width:38px;height:44px;border-radius:13px;background:var(--soft,#eef1f4);font-size:24px;line-height:1;font-weight:800}
+.ledline-setup[data-order-visual="655"] .order-assignment-choice652{gap:9px;min-height:68px;padding:9px;border-radius:15px;background:var(--glass-solid,#f6f8fa);transition:border-color .16s ease,background .16s ease}
+.ledline-setup[data-order-visual="655"] .order-assignment-choice652 .order-marker652,[data-order-visual="655"] .order-colour-choice652 .order-marker652{width:48px;height:48px;border-color:color-mix(in srgb,var(--ink,#252729) 25%,transparent);box-shadow:inset 0 0 0 3px #ffffff70}
+.ledline-setup[data-order-visual="655"] .order-assignment-choice652 b{font-size:16px;line-height:1.3;overflow-wrap:anywhere}
+.ledline-setup[data-order-visual="655"] .order-assignment-choice652>.icon{width:18px;height:18px}
+.ledline-setup[data-order-visual="655"] .order-assignment-settings652{width:44px;min-width:44px;height:44px;min-height:44px;margin:0;padding:0;border:1px solid var(--line,#dce0dc);border-radius:13px;background:var(--soft,#eef1f4);color:var(--action-ink,var(--ink,#252729));touch-action:manipulation}
+.ledline-setup[data-order-visual="655"] .order-assignment-settings652>.icon{width:21px;height:21px}
+.ledline-setup[data-order-visual="655"] .order-assignment-footer652{position:sticky;bottom:0;z-index:7;gap:0;margin:12px 0 0;padding:12px 0 calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line,#dce0dc);background:var(--bg,#eef1f4);box-shadow:0 -8px 16px var(--bg,#eef1f4)}
+.ledline-setup[data-order-visual="655"] .order-assignment-done652{min-height:54px!important;margin:0}
+[data-order-visual="655"] .order-colour-choices652{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:10px 0 14px}
+[data-order-visual="655"] .order-colour-choice652{display:grid;grid-template-columns:48px minmax(0,1fr);gap:9px;align-items:center;min-width:0;min-height:132px;padding:12px;border-radius:18px;transition:border-color .16s ease,background .16s ease}
+[data-order-visual="655"] .order-colour-choice652>span:not(.order-marker652){grid-column:1/-1;grid-row:2;gap:6px;align-self:start}
+[data-order-visual="655"] .order-colour-choice652>.icon{grid-column:2;grid-row:1;justify-self:end;width:20px;height:20px;margin:0}
+[data-order-visual="655"] .order-colour-choice652 b{font-size:17px;line-height:1.3;overflow-wrap:anywhere}
+[data-order-visual="655"] .order-colour-choice652 .order-colour-position655{justify-self:start;padding:3px 7px;border:1px solid var(--line,#dce0dc);border-radius:8px;background:var(--soft,#eef1f4);color:var(--muted,#626963);font-size:11px;line-height:1.4;overflow-wrap:anywhere}
+[data-order-visual="655"] .order-colour-choice652[aria-pressed="true"]{border-color:var(--action-ink,var(--ink,#252729));box-shadow:inset 0 0 0 1px var(--action-ink,var(--ink,#252729));background:var(--panel,#fff)}
+[data-order-visual="655"] .order-colour-choice652[aria-pressed="true"]>.icon{color:var(--action-ink,var(--ink,#252729))}
+[data-order-visual="655"] .order-assignment-rule652{margin:0 0 14px;font-size:12px;line-height:1.45}
+.order-visual-help655:focus-visible,.ledline-setup[data-order-visual="655"] :is(.order-assignment-choice652,.order-assignment-settings652):focus-visible,[data-order-visual="655"] .order-colour-choice652:focus-visible{outline:3px solid var(--action-ink,var(--ink,#252729));outline-offset:3px}
+dialog.v50-order-tutorial-modal .v652-order-tutorial-content[data-order-visual="655"] .v50-tutorial-steps{gap:12px}
+dialog.v50-order-tutorial-modal .v652-order-tutorial-content[data-order-visual="655"] .v50-tutorial-steps>li{display:grid;grid-template-columns:56px minmax(0,1fr);gap:14px;align-items:start;padding:18px;border-radius:20px}
+dialog.v50-order-tutorial-modal .v652-order-tutorial-content[data-order-visual="655"] .order-guide-icon655{display:grid;place-items:center;width:56px;height:56px;border:1px solid var(--line,#dce0dc);border-radius:18px;background:var(--soft,#eef1f4);color:var(--action-ink,var(--ink,#252729))}
+dialog.v50-order-tutorial-modal .v652-order-tutorial-content[data-order-visual="655"] .order-guide-icon655>svg{display:block;width:32px;height:32px}
+dialog.v50-order-tutorial-modal .v652-order-tutorial-content[data-order-visual="655"] .v50-tutorial-step-heading{gap:7px;margin:0 0 7px;font-size:18px;line-height:1.3}
+dialog.v50-order-tutorial-modal .v652-order-tutorial-content[data-order-visual="655"] .v50-tutorial-step-heading>span{width:23px;height:23px;border-radius:7px;background:var(--soft,#eef1f4);color:var(--muted,#626963);font-size:12px}
+dialog.v50-order-tutorial-modal .v652-order-tutorial-content[data-order-visual="655"] p{font-size:14px;line-height:1.45}
+dialog.v50-order-tutorial-modal .v652-order-tutorial-content[data-order-visual="655"] .v652-order-tutorial-rule{margin:10px 0 0;font-size:12px;line-height:1.45}
+@media(max-width:359px){
+  html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="652"][data-order-visual="655"] .order-assignment652{grid-template-columns:32px minmax(0,1fr) 44px;gap:6px;padding:8px}
+  .ledline-setup[data-order-visual="655"] .order-assignment-place652>span{width:32px;font-size:22px}
+  .ledline-setup[data-order-visual="655"] .order-assignment-choice652{gap:7px;padding:7px}
+  .order-visual-heading655 h3{font-size:18px}
+  dialog.v50-order-tutorial-modal .v652-order-tutorial-content[data-order-visual="655"] .v50-tutorial-steps>li{grid-template-columns:48px minmax(0,1fr);gap:10px;padding:14px}
+  dialog.v50-order-tutorial-modal .v652-order-tutorial-content[data-order-visual="655"] .order-guide-icon655{width:48px;height:48px;border-radius:15px}
+}
+@media(max-width:299px){[data-order-visual="655"] .order-colour-choices652{grid-template-columns:minmax(0,1fr)}}
+@media(prefers-reduced-motion:reduce){.ledline-setup[data-order-visual="655"] .order-assignment-choice652,[data-order-visual="655"] .order-colour-choice652{transition:none}}

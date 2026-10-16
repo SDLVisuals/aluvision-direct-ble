@@ -32,6 +32,14 @@
   // physical lines to match an illustration. Keep legacy lookup keys and the
   // referencePlan export available, but never render their old swap animation.
   const observedOrder={
+    tutorialLookTitle655:['Kijk','Look','Regardez','Schauen'],
+    tutorialLookText655:['Kijk naar de kleuren op je echte ledlines.','Look at the colours on your real LED lines.','Regardez les couleurs de vos lignes LED réelles.','Schau auf die Farben deiner echten LED-Linien.'],
+    tutorialChooseTitle655:['Kies de kleur','Choose the colour','Choisissez la couleur','Farbe wählen'],
+    tutorialChooseText655:['Tik per plaats op de kleur die je daar ziet.','For each position, tap the colour you see there.','Pour chaque position, touchez la couleur que vous y voyez.','Tippe für jede Position auf die Farbe, die du dort siehst.'],
+    tutorialChooseSingleText655:['Bij plaats 1 staat de kleur van je ledline.','Position 1 shows your LED line’s colour.','La position 1 indique la couleur de votre ligne LED.','Position 1 zeigt die Farbe deiner LED-Linie.'],
+    tutorialSwapHint655:['Twee plaatsen wisselen; de echte kleuren blijven gelijk.','Two positions swap; the real colours stay the same.','Deux positions s’échangent ; les couleurs réelles restent identiques.','Zwei Positionen tauschen; die echten Farben bleiben gleich.'],
+    tutorialResultTitle655:['Klaar','Done','Terminé','Fertig'],
+    tutorialResultHint655:['Tik op Klaar om terug te gaan.','Tap Done to go back.','Touchez Terminé pour revenir.','Tippe auf Fertig, um zurückzugehen.'],
     referenceTitle:['Huidige volgorde','Current order','Ordre actuel','Aktuelle Reihenfolge'],
     positionHint:['Elke kleur hoort bij één echte ledline.','Each colour belongs to one real LED line.','Chaque couleur correspond à une ligne LED réelle.','Jede Farbe gehört zu einer echten LED-Linie.'],
     instructionTitle:['Kleur per plaats','Colour for each position','Une couleur par position','Farbe pro Position'],
@@ -88,12 +96,14 @@
     if(!Number.isInteger(count)||count<0||count>Identification.MAX_LINES){const error=new Error('IDENTIFICATION_LINES');error.code='IDENTIFICATION_LINES';throw error;}
   }
   function tutorialMarkup({count,language='nl'}){
-    // Text guidance only: no synthetic LED output, swap illustration or radio
-    // request. The customer always follows the real setup in front of them.
+    // Abstract eye/tap/check symbols explain the existing steps. There is no
+    // synthetic LED output, target colour pattern, swap animation or radio
+    // request: the customer follows the real setup in front of them.
     validateCount(count);
     if(count===0)return `<section class="v50-order-tutorial-content v652-order-tutorial-content" data-tutorial-version="652"><p class="v652-order-empty">${esc(t('empty',language))}</p></section>`;
     const heading=(number,key)=>`<h3 class="v50-tutorial-step-heading"><span aria-hidden="true">${number}</span>${esc(t(key,language))}</h3>`;
-    return `<section class="v50-order-tutorial-content v652-order-tutorial-content" data-tutorial-version="652" aria-label="${esc(t('tutorialAccessible',language))}"><ol class="v50-tutorial-steps"><li>${heading(1,'tutorialLookTitle')}<p>${esc(t('tutorialLookText',language))}</p></li><li>${heading(2,'tutorialChooseTitle')}<p>${esc(t(count===1?'tutorialChooseSingleText':'tutorialChooseText',language))}</p>${count>1?`<p class="v652-order-tutorial-rule">${esc(t('tutorialSwapHint',language))}</p>`:''}</li><li>${heading(3,'tutorialResultTitle')}<p>${esc(t('tutorialResultHint',language))}</p></li></ol></section>`;
+    const glyph=kind=>`<span class="order-guide-icon655" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">${kind==='eye'?'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>':kind==='tap'?'<path d="M10 12V5a2 2 0 0 1 4 0v5l1-.5a2 2 0 0 1 2 .3l3 2.4v4.4A4.4 4.4 0 0 1 15.6 21H13a4 4 0 0 1-3.2-1.6L6 14.3a1.8 1.8 0 0 1 2.6-2.4L10 13"/><path d="m5 6-2-1m3-2L5 1m13 5 2-1"/>':'<circle cx="12" cy="12" r="9"/><path d="m7.8 12 2.8 2.8 5.6-5.6"/>'}</svg></span>`;
+    return `<section class="v50-order-tutorial-content v652-order-tutorial-content" data-tutorial-version="652" data-order-visual="655" aria-label="${esc(t('tutorialAccessible',language))}"><ol class="v50-tutorial-steps"><li>${glyph('eye')}<div>${heading(1,'tutorialLookTitle655')}<p>${esc(t('tutorialLookText655',language))}</p></div></li><li>${glyph('tap')}<div>${heading(2,'tutorialChooseTitle655')}<p>${esc(t(count===1?'tutorialChooseSingleText655':'tutorialChooseText655',language))}</p>${count>1?`<p class="v652-order-tutorial-rule">${esc(t('tutorialSwapHint655',language))}</p>`:''}</div></li><li>${glyph('check')}<div>${heading(3,'tutorialResultTitle655')}<p>${esc(t('tutorialResultHint655',language))}</p></div></li></ol></section>`;
   }
   return Object.freeze({t,referencePlan,instructionMarkup,tutorialMarkup});
 }));

@@ -108,9 +108,9 @@
     "opticalAcceptance": false
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate654-translations-dark-interface-android30",
+  "revision": "V50candidate655-visual-ledline-order-interface-android30",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo654 improves NL/EN/FR/DE authored interface copy and targeted dark-theme contrast while retaining simple/advanced controls and saved configuration. RAM-only demo: no receiver firmware or OTA is installed or published.",
+  "interfaceBaseline": "Public demo655 makes LED-line ordering more visual with less copy, while preserving direct colour-to-place assignment, saved choices and all current controls. RAM-only demo: no receiver firmware or OTA is installed or published.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -260,8 +260,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "136208eff7445403cfcb143d86b67fb711dcd6e7b70011292977e556727208dc",
-      "bytes": 628412
+      "sha256": "aaac66b2caf2b4271bfb6698ea2ff5014c2bcf84945ed7094887f4b91ff057df",
+      "bytes": 628542
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -310,7 +310,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "18b6092b929417c1ef8d0d60c976affe0d7f29c933896bff64cd95f80f3a8272",
+      "sha256": "0c08c90eb72ea079dc365fbb3c7f384364cdb3b4c51e0acbedd524d8ea9b0653",
       "bytes": 8506
     },
     {
@@ -355,8 +355,8 @@
     },
     {
       "path": "ledline-order-guide.js",
-      "sha256": "766661e4dc964421602083e4243990c012b4f777afd50c291ee3979a7d905120",
-      "bytes": 25253
+      "sha256": "585ce7f2cbeddb355b43196ab7509725d8dcb41169f7417fdb4e52d3aa5246d7",
+      "bytes": 27425
     },
     {
       "path": "ledline-order-test.js",
@@ -655,8 +655,8 @@
     },
     {
       "path": "v50-order-clarity.css",
-      "sha256": "3acee77018a4a1b884636ae0e05ef1c77c342847f0699d444bd0f6c8f5e9e731",
-      "bytes": 25869
+      "sha256": "802a85b5c0d762c50a3befa51e6aa85dec7ae9894a598a1543c79e9884ffcd04",
+      "bytes": 34014
     },
     {
       "path": "v50-order-drag.css",
@@ -670,8 +670,8 @@
     },
     {
       "path": "v50-order-texts.js",
-      "sha256": "ad7bd4d8ebb64ca223049b00830010ca2a8cced68f64786205870fc4031dc5da",
-      "bytes": 14739
+      "sha256": "c8868ca57c233678b25b2103ba269075ddc40a38912a5bb8a25825f2de34f7ba",
+      "bytes": 15468
     },
     {
       "path": "v50-order-tutorial.css",
@@ -3046,5 +3046,32 @@
       "currentInstallReconcileReceiptSHA256": "52839f7fa85df4059a1e504f27f01ab2e464800c2c5b75a1f6b56a029818b73a",
       "softwareReviewReceiptSHA256": "e7be0c7297ec01a9ba3e66bf200101f8bd5ca9091e74ee18a50b17a28617d372"
     }
+  },
+  "interfaceCandidate655": {
+    "sourceSnapshotOnly": true,
+    "sourceBoundaryVerified": true,
+    "sourceInputSHA256": {
+      "app.js": "32ad8369d663e13c254b1da573849040e9870db34959d06bbf9dac81a2cd8faf",
+      "index.html": "05b607ebe20f66df18139c3e527b4c08da25d3f44e3707dceee0dd4c413fb3bb",
+      "ledline-order-guide.js": "585ce7f2cbeddb355b43196ab7509725d8dcb41169f7417fdb4e52d3aa5246d7",
+      "v50-order-clarity.css": "802a85b5c0d762c50a3befa51e6aa85dec7ae9894a598a1543c79e9884ffcd04",
+      "v50-order-texts.js": "c8868ca57c233678b25b2103ba269075ddc40a38912a5bb8a25825f2de34f7ba"
+    },
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "opticalAcceptance": false,
+    "features": [
+      "A more visual LED-line order page with compact coloured place assignment and less explanatory copy.",
+      "Clear large actions, visual selection feedback, translated accessible controls and light/dark layout without changing the identification protocol or saved order."
+    ],
+    "limits": [
+      "RAM-only demo with fictitious devices: not receiver, OTA, radio, speed or optical acceptance.",
+      "All private native/Mac sources, firmware48 catalogue and248 retained inputs remain exact654; this demo distributes no firmware.",
+      "The existing Android30 downloads, metadata, overlay, landing and16historical APKs are unchanged; no Android31 build or phone installation is claimed."
+    ]
   }
 }

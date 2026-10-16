@@ -3,6 +3,11 @@
   // Explicit order-interface copy only. Customer names, physical IDs, layout
   // values, pixel counts and colour/RGB protocol values are never translated.
   const rows={
+    orderIntro655:['Kies de kleur die je op elke plaats ziet.','Choose the colour you see at each position.','Choisissez la couleur visible à chaque position.','Wähle die sichtbare Farbe für jede Position.'],
+    orderHelp655:['Uitleg','Guide','Aide','Hilfe'],
+    orderSwap655:['Twee plaatsen wisselen; je ledlines houden hun kleur.','Two positions swap; your LED lines keep their colours.','Deux positions s’échangent ; les lignes LED gardent leur couleur.','Zwei Positionen tauschen; die LED-Linien behalten ihre Farbe.'],
+    orderChooseShort655:['Kies kleur','Choose colour','Choisir','Farbe wählen'],
+    orderPositionShort655:['Plaats {position}','Position {position}','Position {position}','Position {position}'],
     orderAssignTitle:['Kleur per plaats','Colour for each position','Une couleur par position','Farbe pro Position'],
     orderAssignIntro:['Kijk naar je echte ledlines. Kies bij elke plaats de kleur die je daar ziet.','Look at your real LED lines. For each position, choose the colour you see there.','Regardez vos lignes LED réelles. Pour chaque position, choisissez la couleur que vous y voyez.','Schau auf deine echten LED-Linien. Wähle für jede Position die Farbe, die du dort siehst.'],
     orderAssignRule:['Elke kleur hoort bij één ledline en blijft gelijk.','Each colour belongs to one LED line and stays the same.','Chaque couleur correspond à une ligne LED et reste identique.','Jede Farbe gehört zu einer LED-Linie und bleibt gleich.'],
