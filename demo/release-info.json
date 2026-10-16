@@ -146,9 +146,9 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate652-observed-order-interface-android27",
+  "revision": "V50candidate653-simple-mode-interface-android27",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo652 lets customers assign the real observed LED-line identification colour to each place while preserving the prior651 interface. RAM-only demo: no native app, receiver firmware or OTA is installed or published.",
+  "interfaceBaseline": "Public demo653 adds an optional simpler colour and animation interface while retaining the complete advanced interface and saved configuration. RAM-only demo: no native app, receiver firmware or OTA is installed or published.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -293,8 +293,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "a2a62af5e640ef67f6dbcf4d9722faffaf9d5ac9c732ec70ea1c71bf8e1fd426",
-      "bytes": 612363
+      "sha256": "b5f9112eba003af05de0669a9455d0506b3dee34779fcdb142324dd61d3d2ebf",
+      "bytes": 621208
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -343,8 +343,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "c602466de520cc17267ccc4e50176cdda5f70c1a4ff8b7db21208aff4e5b43e5",
-      "bytes": 8169
+      "sha256": "5f631928912682aaebf6235dbacb3ee666de04c6fd313a3b5498ea785e278932",
+      "bytes": 8309
     },
     {
       "path": "installation-libraries.js",
@@ -355,6 +355,16 @@
       "path": "interface-haptics.js",
       "sha256": "8464a40b23581b167473c10e5a89dd8fa912d230837b55427292098817897315",
       "bytes": 4830
+    },
+    {
+      "path": "interface-mode.css",
+      "sha256": "1f33b657b627afdd61b37a5d5f240cfa0b0f418aec8ab1e2091bd61cdf70b5de",
+      "bytes": 5087
+    },
+    {
+      "path": "interface-mode.js",
+      "sha256": "94419015d1addd7af0fe750800c6872a346855018039896fb971fd6c4ed934a1",
+      "bytes": 8931
     },
     {
       "path": "interface-motion.js",
@@ -468,8 +478,8 @@
     },
     {
       "path": "preferences.js",
-      "sha256": "9a24afb0821f9ef9c6441bd6890efb2c9142719feedeb34cac5e5bef1968082f",
-      "bytes": 99401
+      "sha256": "43f46ef56eb3a2da1851ce8c1736442b5bb0c4192dcfa7c62673cf4c7e3a9cf4",
+      "bytes": 102687
     },
     {
       "path": "premium-surfaces.css",
@@ -2877,6 +2887,32 @@
     "limits": [
       "This RAM-only demo uses fictitious devices: no receiver, OTA, radio, speed or optical acceptance.",
       "All private native sources, firmware48 catalogue and bundled images remain exact651; no firmware is distributed by this demo.",
+      "Android27 APKs/history are retained unchanged, not rebuilt; Web publication does not update iPhone."
+    ]
+  },
+  "interfaceCandidate653": {
+    "sourceSnapshotOnly": true,
+    "sourceBoundaryVerified": true,
+    "sourceInputSHA256": {
+      "app.js": "1f017f39302ed6db523d8fc33f63a9bc189a8002c49337121895fbba28376a56",
+      "index.html": "808f5b29a974c3fad0e362e40831ae6b46732b4c79488d5d8f3949e05241862f",
+      "interface-mode.css": "1f33b657b627afdd61b37a5d5f240cfa0b0f418aec8ab1e2091bd61cdf70b5de",
+      "interface-mode.js": "94419015d1addd7af0fe750800c6872a346855018039896fb971fd6c4ed934a1",
+      "preferences.js": "43f46ef56eb3a2da1851ce8c1736442b5bb0c4192dcfa7c62673cf4c7e3a9cf4"
+    },
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "opticalAcceptance": false,
+    "features": [
+      "Geavanceerd on/off offers fewer colour and simple-animation controls without deleting saved configurations. Advanced mode restores the retained complete interface, including observed-colour LED-line ordering."
+    ],
+    "limits": [
+      "This RAM-only demo uses fictitious devices: no receiver, OTA, radio, speed or optical acceptance.",
+      "All private native sources, firmware48 catalogue and bundled images remain exact652; no firmware is distributed by this demo.",
       "Android27 APKs/history are retained unchanged, not rebuilt; Web publication does not update iPhone."
     ]
   }

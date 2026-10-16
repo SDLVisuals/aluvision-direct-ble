@@ -7,6 +7,7 @@
   const Colours = window.LightningColoursLibrary, Scenes = window.LightningScenes;
   const SceneEditing=window.LightningSceneEditing;
   const Preferences=window.LightningPreferences;
+  const InterfaceMode=window.LightningInterfaceMode;
   const UIContinuity=window.LightningUIContinuity;
   const Backup=window.LightningBackup;
   const LibrarySource=window.LightningAnimationLibrary;
@@ -393,6 +394,31 @@
   let colourOrderMode=false,colourLibraryNotice='',removedColour=null;
   let preferenceStore;try{preferenceStore=Preferences.createStore(appStorage);}catch(_){preferenceStore=Preferences.createStore(null);}
   let uiPreferences=preferenceStore.load();
+  const interfaceModeStore=Preferences.createModeStore(appStorage);
+  let interfaceModeState=interfaceModeStore.load();
+  const advancedInterface=()=>interfaceModeState.advancedEnabled!==false;
+  const modeText=key=>InterfaceMode.t(key,uiPreferences.preferences.language);
+  const interfaceContext=()=>({advancedEnabled:advancedInterface(),stand:standControlOpen,type:zone()?.type});
+  function interfaceEffectAllowed(effect){
+    if(InterfaceMode.allowsEffect(effect,interfaceContext()))return true;
+    // Stand pulse uses this original SPI whole-line descriptor. It is only
+    // editable while already current; never add another chooser/start recipe.
+    return !advancedInterface()&&!standControlOpen&&zone()?.type==='SPI'&&
+      effect?.id==='spi-line-breathe-1'&&activeEffect()?.id===effect.id;
+  }
+  // Presentation only; never confuse this with the native stand architecture.
+  standPresentationBrowsingActions.add('interface-mode-toggle');
+  function interfaceActionAllowed(action,id){
+    if(advancedInterface())return true;
+    if(InterfaceMode.blockedAction(action))return false;
+    if(action==='setting-reset'&&!['speed','bri'].includes(id))return false;
+    if(action==='setting-reset'&&id==='speed'&&!interfaceEffectAllowed(activeEffect()))return false;
+    if(['palette-edit','palette-add','palette-remove'].includes(action))
+      return interfaceEffectAllowed(activeEffect());
+    if(['effect','animation-current-edit','animation-editor-return'].includes(action))
+      return interfaceEffectAllowed(catalogue().find(effect=>effect.id===id));
+    return true;
+  }
   const t=(key,params)=>window.LightningV50Texts?.has(key)?window.LightningV50Texts.t(key,uiPreferences.preferences.language,params):window.LightningV50OrderTexts?.has(key)?window.LightningV50OrderTexts.t(key,uiPreferences.preferences.language,params):window.LightningV50AnimationTexts?.has(key)?window.LightningV50AnimationTexts.t(key,uiPreferences.preferences.language,params):Preferences.t(key,uiPreferences.preferences.language,params);
   let dialogReturnFocus = null,dialogActionOpener=null,helpReturnFocus=null,colourManagerReturn=null,colourManagerVisible=false;
   let settingsOpen = false, advancedSettingsRevision = 0, toastTimer, contextObserver, dialogHeaderObserver;
@@ -1033,7 +1059,7 @@
   // A continuous SPI installation is a single control target. Normalize here,
   // not only in the chips, so colours, power, effects and presets cannot retain
   // an invisible old individual selection after a layout change.
-  const selection = () => continuousZone()?{kind:'all'}:selections.get(route.zoneId)||{kind:'all'};
+  const selection = () => !advancedInterface()||continuousZone()?{kind:'all'}:selections.get(route.zoneId)||{kind:'all'};
   const standReceivers=()=>model.receivers.filter(r=>r.standId===stand()?.id&&r.lifecycle==='added');
   const standControlReceivers=()=>stand()?.id?M.standZoneReceivers(model,stand().id):[];
   const standControlZoneCount=()=>stand()?.zones.filter(zone=>M.zoneReceivers(model,zone.id).length).length||0;
@@ -1126,7 +1152,7 @@
   // Browse a smaller library without erasing any saved recipe identity.
   // Editors, scene restore and explicit current-animation shortcuts still use
   // the full catalogue above, including older fixed-colour variants.
-  function visibleCatalogue(){return LibrarySource.visibleCatalog(catalogue());}
+  function visibleCatalogue(){return InterfaceMode.visibleCatalog(LibrarySource.visibleCatalog(catalogue()),interfaceContext());}
   function zoneAnimationEditorContext() {
     const z=zone();
     if(standControlOpen||!z||!(route.screen==='animations'||
@@ -1195,8 +1221,21 @@
       const white=state.whiteEnabled?.[i]===false?0:(state.whiteChannels?.[i]||0);
       const name=activeEffect()?.whiteMixPreset?(count===1?t('v50WhiteMix'):t('v50WhiteMixNumber',{number:i+1})):white>0 && rgb.every(v=>v===0)?t('v50White'):t('v50ColourNumber',{number:i+1});
       const swatch=`<span role="img" aria-label="${esc(name)}" title="${esc(name)}" style="--swatch:${C.screenHex(rgb,white)}"></span>`;
-      return activeEffect()?.paletteEditable === false ? swatch : `<div class="palette-item" data-palette-item="${i}"><button class="palette-colour" data-action="palette-edit" data-id="${i}" aria-label="${esc(t('v50EditColour',{name}))}">${swatch}<small>${esc(name)}</small></button>${count>1?`<button type="button" class="palette-drag-handle" data-palette-handle aria-label="${esc(t('v50MoveColour',{number:i+1}))}" title="${esc(t('v50DragColours'))}"><span aria-hidden="true">⠿</span><small>${esc(t('v606Drag'))}</small></button>`:''}${activeEffect()?.colorCountRange&&count>activeEffect().colorCountRange.min?`<button class="palette-remove" data-action="palette-remove" data-id="${i}" aria-label="${esc(t('v50RemoveColour',{number:i+1}))}">−</button>`:''}</div>`;
+      return activeEffect()?.paletteEditable === false ? swatch : `<div class="palette-item" data-palette-item="${i}"><button class="palette-colour" data-action="palette-edit" data-id="${i}" aria-label="${esc(t('v50EditColour',{name}))}">${swatch}<small>${esc(name)}</small></button>${advancedInterface()&&count>1?`<button type="button" class="palette-drag-handle" data-palette-handle aria-label="${esc(t('v50MoveColour',{number:i+1}))}" title="${esc(t('v50DragColours'))}"><span aria-hidden="true">⠿</span><small>${esc(t('v606Drag'))}</small></button>`:''}${activeEffect()?.colorCountRange&&count>activeEffect().colorCountRange.min?`<button class="palette-remove" data-action="palette-remove" data-id="${i}" aria-label="${esc(t('v50RemoveColour',{number:i+1}))}">−</button>`:''}</div>`;
     }).join('')+(activeEffect()?.colorCountRange&&count<activeEffect().colorCountRange.max?`<button class="palette-add" data-action="palette-add" aria-label="${esc(t('v50AddAnimationColour'))}">${esc(t('v50AddColour'))}</button>`:'');
+  }
+  function basicAnimationLibraryMarkup(){
+    const current=activeEffect(),supported=interfaceEffectAllowed(current);
+    const currentChoice=current?(supported?animationSettingsReturnMarkup('inline'):basicAdvancedCurrentMarkup(current)):'';
+    return `<section class="basic-animation-library" aria-labelledby="animation-selector-heading"><header><h2 id="animation-selector-heading" tabindex="-1">${esc(modeText('basicAnimationTitle'))}</h2><p>${esc(modeText('basicAnimationHint'))}</p></header>${currentChoice}<div class="effect-grid basic-effect-list">${effectCards(visibleCatalogue(),'basic-effect-card')}</div></section>`;
+  }
+  function basicAdvancedCurrentMarkup(effect){
+    return `<section class="card basic-current-light"><small>${esc(modeText('basicAdvancedCurrentTitle'))}</small><h2 id="active-animation-title" tabindex="-1">${esc(Library.displayName(effect,t))}</h2><p>${esc(modeText('basicAdvancedCurrentHint'))}</p></section>`;
+  }
+  function basicAnimationEditorMarkup(effect){
+    if(!interfaceEffectAllowed(effect))return basicAnimationLibraryMarkup();
+    const s=selectedState(),galleryAction=standControlOpen?'stand-animation-gallery':route.screen==='controls'?'animation-gallery':'animations-gallery';
+    return `<section class="active-animation-workspace basic-animation-editor" aria-labelledby="active-animation-title"><button type="button" class="button secondary full basic-gallery-return" data-action="${galleryAction}">${icon('back')}${esc(t('v569BackPicker'))}</button><header class="card current-effect-heading"><small class="active-animation-kicker" data-animation-choice-label>${esc(animationCurrentLabel())}</small><h2 id="active-animation-title" tabindex="-1">${esc(Library.displayName(effect,t))}</h2></header>${standControlOpen?'':powerControl()}<section class="card palette-section"><h3>${esc(t('animationColours'))}</h3><p>${esc(t('v569PaletteHint'))}</p><div class="palette" aria-label="${esc(t('animationColours'))}">${paletteMarkup(s)}</div></section><section class="card basic-playback">${effect.controls.includes('speed')?animationSlider('speed',t('animationSpeed'),0,100,s.speed??30,'%'):''}${animationSlider('bri',t('animationBrightness'),0,100,s.bri??100,'%')}</section></section>`;
   }
   function addPreview(list, layout, css = '', options = {}) {
     const key = String(++previewKey);
@@ -1265,7 +1304,7 @@
     const heading=integratedControlHeading?`<div class="control-dock-context-line"><div class="control-dock-location"><small>${esc(t('v50YourLight',{mode:modeName}))}</small><b>${esc(z.name)}</b></div><span class="pill control-dock-type-badge">${zoneTypeLabel(z)}</span></div><div class="control-dock-actions"><button class="back back-to-zones control-dock-back" data-action="stand" aria-label="${esc(t('v50BackZones'))}" title="${esc(t('v50BackZones'))}">${icon('back')}<span>${esc(t('zones'))}</span></button>${modeTabs}</div>`:`<div class="control-dock-heading"><div class="control-dock-location"><small>${esc(t('v50YourLight',{mode:screenLabel}))}</small><b>${esc(z.name)}</b></div>${modeTabs||`<span class="control-dock-mode">${zoneTypeLabel(z)}</span>`}</div>`;
     // Browsing never creates a live zone preview or editable line controls.
     // Keep only navigation here; previews on the effect cards remain samples.
-    if(galleryBrowsing)return `<section class="control-preview-dock animation-gallery-dock" aria-label="${esc(t('v50OverviewControls'))}"><div class="control-dock-surface">${heading}</div></section>`;
+    if(galleryBrowsing||!advancedInterface())return `<section class="control-preview-dock animation-gallery-dock" aria-label="${esc(t('v50OverviewControls'))}"><div class="control-dock-surface">${heading}${!advancedInterface()?`<p class="basic-scope-note">${esc(modeText('basicWholeZone'))}</p>`:''}</div></section>`;
     const pixels=z.type==='SPI'?P.geometry(list,z.layout).totalPixels:0;
     const draft=previewArrangement(z),previewLayout=draft?.layout||z.layout;
     const canTapLines=physicalLineCount(list)>1&&!continuousZone()&&!draft&&['controls','colour','animations'].includes(screen);
@@ -1430,7 +1469,7 @@
       return `<div class="page onboarding-welcome"><header class="page-heading"><div><div class="eyebrow">${esc(t('v50SetupPending'))}</div><h1>${esc(pending.stand.name)}</h1></div></header><section class="stand-setup-overview" aria-label="${esc(t('setupStand'))}">${[t('v50Name'),t('zones'),t('receivers')].map((label,i)=>`<div class="stand-setup-row ${i+1===step?'active':''}"><i>${i+1<step?'✓':i+1}</i><span><small>${esc(t('v50Step',{number:i+1}))}</small><b>${esc(label)}</b></span><small>${esc(t(i+1<step?'v50Ready':i+1===step?'v50Next':'v50Later'))}</small></div>`).join('')}</section><button class="button full onboarding-next-action" data-setup-resume data-action="receiver-add">${esc(t('v50ResumeSetup'))}</button>${languagePicker}</div>`;
     }
     const s = stand(), added = standReceivers();
-    return `<div class="page stand-page"><header class="page-heading overview-heading"><div><div class="eyebrow">${localStandConcept()?'LOKAAL CONCEPT':'JOUW STAND'}</div><h1>${esc(standLabel())}</h1></div><button class="icon-button circle" data-action="help" aria-label="Uitleg over stand en zones">${icon('info')}</button></header>${localStandConcept()?'<p class="local-stand-notice" role="status">Alleen op dit toestel. Er is nog geen receiver verbonden. '+(temporarySingleUser?'Je voegt je eerste receiver toe zonder PIN.':'Bij je eerste receiver kies je de wifi-PIN.')+'</p>':''}<div class="stand-summary overview-summary"><div>${icon('zones')}<span><b>${s.zones.length}</b><small>Zones</small></span></div><div>${icon('light')}<span><b>${physicalLineCount(added)}</b><small>Ledlines</small></span></div></div><section class="zone-section"><div class="section-heading"><h2>${esc(t('zones'))}</h2><button class="text-button" data-action="zone-new">＋ Nieuwe zone</button></div><div class="zone-grid">${s.zones.map(z=>`<article class="zone-entry"><button class="zone-card" data-action="zone" data-id="${esc(z.id)}">${zonePreview(z,'',{label:`Voorbeeld van ${z.name}`})}<div class="zone-copy"><div class="zone-card-heading"><b>${esc(z.name)}</b><span class="zone-meta"><span class="zone-family-badge">${zoneTypeLabel(z)}</span>${z.type?` · <span class="zone-line-count">${ledlineCount(physicalLineCount(M.zoneReceivers(model,z.id)))}</span>`:''}</span></div><span class="open-label">${M.zoneReceivers(model,z.id).length?'Bedienen':'Instellen'} ${icon('chevron')}</span></div></button><button class="zone-options-button" data-action="zone-options" data-id="${esc(z.id)}" aria-label="Opties voor zone ${esc(z.name)}">•••</button>${standZonePowerMarkup651(z)}</article>`).join('')}</div></section>${standScenesMarkup(false)}</div>`;
+    return `<div class="page stand-page"><header class="page-heading overview-heading"><div><div class="eyebrow">${localStandConcept()?'LOKAAL CONCEPT':'JOUW STAND'}</div><h1>${esc(standLabel())}</h1></div><button class="icon-button circle" data-action="help" aria-label="Uitleg over stand en zones">${icon('info')}</button></header>${localStandConcept()?'<p class="local-stand-notice" role="status">Alleen op dit toestel. Er is nog geen receiver verbonden. '+(temporarySingleUser?'Je voegt je eerste receiver toe zonder PIN.':'Bij je eerste receiver kies je de wifi-PIN.')+'</p>':''}${advancedInterface()?`<div class="stand-summary overview-summary"><div>${icon('zones')}<span><b>${s.zones.length}</b><small>Zones</small></span></div><div>${icon('light')}<span><b>${physicalLineCount(added)}</b><small>Ledlines</small></span></div></div>`:''}<section class="zone-section"><div class="section-heading"><h2>${esc(t('zones'))}</h2><button class="text-button" data-action="zone-new">＋ Nieuwe zone</button></div><div class="zone-grid">${s.zones.map(z=>`<article class="zone-entry"><button class="zone-card" data-action="zone" data-id="${esc(z.id)}">${zonePreview(z,'',{label:`Voorbeeld van ${z.name}`})}<div class="zone-copy"><div class="zone-card-heading"><b>${esc(z.name)}</b><span class="zone-meta"><span class="zone-family-badge">${zoneTypeLabel(z)}</span>${z.type?` · <span class="zone-line-count">${ledlineCount(physicalLineCount(M.zoneReceivers(model,z.id)))}</span>`:''}</span></div><span class="open-label">${M.zoneReceivers(model,z.id).length?'Bedienen':'Instellen'} ${icon('chevron')}</span></div></button><button class="zone-options-button" data-action="zone-options" data-id="${esc(z.id)}" aria-label="Opties voor zone ${esc(z.name)}">•••</button>${standZonePowerMarkup651(z)}</article>`).join('')}</div></section>${standScenesMarkup(false)}</div>`;
   }
   function powerControl() {
     const states = powerTargets().map(r => r.state.on !== false && r.state.power !== false);
@@ -1467,6 +1506,7 @@
   }
   function myColoursMarkup() {
     const entries=savedColours.colors;
+    if(!advancedInterface())return `<section class="my-colours basic-colours"><h3>${esc(t('myColours'))}</h3><div class="saved-colour-grid">${entries.map(entry=>`<div class="saved-colour-item"><button class="saved-colour" data-action="swatch" data-id="${esc(entry.id)}" data-rgb="${entry.color.r},${entry.color.g},${entry.color.b}" data-white="${entry.color.w}" style="--swatch:${C.screenHex([entry.color.r,entry.color.g,entry.color.b],entry.color.w)}" aria-label="${esc(entry.name)}"><i></i><span>${esc(entry.name)}</span></button></div>`).join('')}<button class="saved-colour add-colour" data-action="colour-new" aria-label="${esc(t('saveCurrentColour'))}"><i aria-hidden="true">＋</i><span>${esc(t('saveColour'))}</span></button></div><p class="colour-library-status" role="status">${esc(colourLibraryNotice)}</p>${savedColours.error?`<p role="alert">${esc(savedColours.error.message)}</p>`:''}</section>`;
     return `<section class="my-colours"><div class="section-heading"><h3>${esc(t('myColours'))}</h3><div class="colour-library-actions"><button class="icon-button colour-manager-button" data-action="colours-manager" aria-label="${esc(t('colourManagerTitle'))}" title="${esc(t('colourManagerTitle'))}" ${entries.length?'':'disabled'}>${icon('settings')}</button><button class="text-button" data-action="colours-manage" aria-pressed="${colourOrderMode}" ${entries.length<2&&!colourOrderMode?'disabled':''}>${esc(t(colourOrderMode?'done':'colourOrder'))}</button></div></div>${colourOrderMode?`<p class="colour-library-hint">${esc(t('colourLibraryOrderHint'))}</p>`:''}<div class="saved-colour-grid ${colourOrderMode?'is-ordering':''}">${entries.map(entry=>`<div class="saved-colour-item${entry.group==='brand'?' is-brand':''}" data-colour-id="${esc(entry.id)}"><button class="saved-colour" data-action="swatch" data-id="${esc(entry.id)}" data-rgb="${entry.color.r},${entry.color.g},${entry.color.b}" data-white="${entry.color.w}" style="--swatch:${C.screenHex([entry.color.r,entry.color.g,entry.color.b],entry.color.w)}" aria-label="${esc(entry.name)}${entry.group==='brand'?` · ${esc(t('brandTag'))}`:''}"><i></i><span>${esc(entry.name)}</span>${entry.group==='brand'?`<small class="saved-colour-kind">${esc(t('brandTag'))}</small>`:''}</button>${colourOrderMode?`<button class="colour-drag-handle" data-colour-drag="${esc(entry.id)}" aria-label="${esc(entry.name)} verslepen" title="Versleep om de volgorde te wijzigen"><span aria-hidden="true">⠿</span><small>Sleep</small></button>`:''}</div>`).join('')}<button class="saved-colour add-colour" data-action="colour-new" aria-label="${esc(t('saveCurrentColour'))}"><i aria-hidden="true">＋</i><span>${esc(t('saveColour'))}</span></button></div><div class="colour-library-feedback"><p class="colour-library-status" role="status">${esc(colourLibraryNotice)}</p></div>${savedColours.error?`<p role="alert">${esc(savedColours.error.message)}</p>`:''}</section>`;
   }
   function showColourManager(notice=colourLibraryNotice) {
@@ -1521,6 +1561,7 @@
     savedColours=result;refreshColourLibraries(button,`${name} toegevoegd aan Kleurpresets.`);
   }
   window.LightningColourLibraryDrag?.install({document,onMove:async({id,toIndex,source})=>{
+    if(!advancedInterface())return;
     // The one visible grid now represents the complete shared library.
     const target=savedColours.colors[toIndex];
     if(!target)return;
@@ -1541,10 +1582,10 @@
     const fineControls=`<div class="fine-controls${compact?' stand-fine-controls':''}" data-colour-fine><h3>${esc(t('v50FineTune'))}</h3>${fineBody}</div>`;
     return `<section class="card colour-card shared-colour-picker" data-colour-picker="${brand?'brand':background?'background':slot===null?'static':'animation'}" data-slot="${brand?brandEditor.index:slot??''}">
       <div class="section-heading"><h2 ${slot===null?'id="bediening-colour-title" ':''}tabindex="-1">${esc(t(background?'animationBackground':'v50ChooseColour'))}</h2>${power&&slot===null?powerControl():''}</div>
-      <div class="colour-tools"><div class="wheel-wrap"><canvas class="wheel" id="colour-wheel" tabindex="0" role="img" aria-label="${esc(t('v50WheelAccessible'))}" width="260" height="260"></canvas><span class="wheel-cursor"></span></div><div class="colour-values"><p class="setting-hint">${esc(t('colourWheelHint'))}</p>${brand?`<small class="brand-picker-note">${esc(t(brandEditor.isNew?'brandPickerNewHint':'brandPickerHint'))}</small>`:slot===null?'':`<small>${esc(t('v50AnimationStaysActive'))}</small>`}</div></div>
+      <div class="colour-tools"><div class="wheel-wrap"><canvas class="wheel" id="colour-wheel" tabindex="0" role="img" aria-label="${esc(advancedInterface()?t('v50WheelAccessible'):modeText('basicWheelAccessible'))}" width="260" height="260"></canvas><span class="wheel-cursor"></span></div><div class="colour-values"><p class="setting-hint">${esc(t('colourWheelHint'))}</p>${brand?`<small class="brand-picker-note">${esc(t(brandEditor.isNew?'brandPickerNewHint':'brandPickerHint'))}</small>`:slot===null?'':`<small>${esc(t('v50AnimationStaysActive'))}</small>`}</div></div>
       ${brand?`<label class="dialog-field brand-name-field">${esc(t('brandNameLabel'))}<input type="text" data-brand-name maxlength="64" autocomplete="off" value="${esc(brandEditor.name)}"></label><p class="brand-picker-status" role="status" aria-live="polite"></p>`:''}
       ${slot===null?slider('bri',t('animationBrightness'),0,100,s.bri??100,'%'):''}
-      ${fineControls}
+      ${advancedInterface()?fineControls:warmControls}
       ${myColoursMarkup()}
     </section>`;
   }
@@ -1657,6 +1698,7 @@
     if(mixed)button.setAttribute('aria-describedby',hint.id);else button.removeAttribute('aria-describedby');
   }
   function animationEditorMarkup(effect,{preview=''}={}) {
+    if(!advancedInterface())return basicAnimationEditorMarkup(effect);
     const s = selectedState();
     const spatialSetup=!standControlOpen&&continuousZone()&&effect.category==='tunnel'
       ?`<section class="card" data-tunnel-setup-notice><h3>${esc(t('v620TunnelSetupTitle'))}</h3><p>${esc(t('v620TunnelSetupBody'))}</p><button type="button" class="button full" data-action="tunnel-animation-setup" data-id="${esc(effect.id)}">${esc(t('v620TunnelSetupFix'))}</button></section>`:'';
@@ -2056,7 +2098,12 @@
   function effectCards(effects,extraClass='',variantTotal=0) {
     const selectedCount=selectedLineCount();
     const className=`effect-card${extraClass?` ${extraClass}`:''}`;
-    return effects.map((effect,index)=>{const needsAll=effect.requireTogether||effect.category==='tunnel',minimum=effect.minimumReceivers||1,availableCount=standControlOpen&&effect.category==='tunnel'?StandAnimations.lineCountFor(model,stand().id,effect.id):selectedCount,tooFew=availableCount<minimum,locked=needsAll?(standControlOpen?availableCount:physicalLineCount())<minimum:tooFew,active=activeEffect()?.id===effect.id,name=Library.displayName(effect,t);return `<button type="button" class="${className}${active?' is-current-animation':''}" data-chooser-version="567" data-active-effect="${active}" data-animation-category="${esc(effect.category)}" data-action="${active?'animation-current-edit':'effect'}" data-id="${esc(effect.id)}" data-motion="${effectMotionKey(effect)}" aria-label="${esc(t(active?'animationCurrentSettingsAccessible':'v567StartNamed',{name}))}" aria-pressed="${active}" ${locked&&!active?'disabled':''}><span class="animation-effect-preview"><span class="animation-effect-preview-label">${esc(t('v567AnimationExample'))}</span>${effectPreview(effect,needsAll?{tunnelLines:'all'}:{})}${active?`<span class="animation-current-badge" data-animation-choice-label><span aria-hidden="true">${icon('animation')}</span>${esc(animationCurrentLabel())}</span>`:''}</span><b>${esc(name)}</b>${variantTotal>1?`<small class="animation-variant-position">${esc(t('animationVariantPosition',{current:index+1,total:variantTotal}))}</small>`:''}<small class="animation-variant-description">${esc(window.LightningV50AnimationTexts.effectDescription(effect,uiPreferences.preferences.language))}</small>${locked&&!active?`<small class="animation-start-unavailable">${needsAll?t('animationAcrossMinimum'):t('animationSelectMinimum',{count:minimum})}</small>`:`<span class="animation-start-action"><span aria-hidden="true">${icon(active?'advanced-settings':'play')}</span>${esc(t(active?'v569Adjust':'v567StartAnimation'))}</span>`}</button>`;}).join('');
+    return effects.map((effect,index)=>{const needsAll=effect.requireTogether||effect.category==='tunnel',minimum=effect.minimumReceivers||1,availableCount=standControlOpen&&effect.category==='tunnel'?StandAnimations.lineCountFor(model,stand().id,effect.id):selectedCount,tooFew=availableCount<minimum,locked=needsAll?(standControlOpen?availableCount:physicalLineCount())<minimum:tooFew,active=activeEffect()?.id===effect.id,name=Library.displayName(effect,t);return `<button type="button" class="${className}${active?' is-current-animation':''}" data-chooser-version="567" data-active-effect="${active}" data-animation-category="${esc(effect.category)}" data-action="${active?'animation-current-edit':'effect'}" data-id="${esc(effect.id)}" data-motion="${effectMotionKey(effect)}" aria-label="${esc(t(active?'animationCurrentSettingsAccessible':'v567StartNamed',{name}))}" aria-pressed="${active}" ${locked&&!active?'disabled':''}><span class="animation-effect-preview"><span class="animation-effect-preview-label">${esc(t('v567AnimationExample'))}</span>${effectPreview(effect,needsAll?{tunnelLines:'all'}:{})}${active?`<span class="animation-current-badge" data-animation-choice-label><span aria-hidden="true">${icon('animation')}</span>${esc(animationCurrentLabel())}</span>`:''}</span><b>${esc(name)}</b>${variantTotal>1?`<small class="animation-variant-position">${esc(t('animationVariantPosition',{current:index+1,total:variantTotal}))}</small>`:''}<small class="animation-variant-description">${esc(effectDescriptionForInterface(effect))}</small>${locked&&!active?`<small class="animation-start-unavailable">${needsAll?t('animationAcrossMinimum'):t('animationSelectMinimum',{count:minimum})}</small>`:`<span class="animation-start-action"><span aria-hidden="true">${icon(active?'advanced-settings':'play')}</span>${esc(t(active?'v569Adjust':'v567StartAnimation'))}</span>`}</button>`;}).join('');
+  }
+  function effectDescriptionForInterface(effect){
+    if(!advancedInterface()&&['v30-rgb-jumping','v30-rgb-gradient'].includes(effect.id))
+      return modeText(effect.id==='v30-rgb-jumping'?'basicJumpHint':'basicGradientHint');
+    return window.LightningV50AnimationTexts.effectDescription(effect,uiPreferences.preferences.language);
   }
   function animationFamilyCard(group) {
     const type=standControlOpen?[...new Set(standControlReceivers().map(receiver=>receiver.type))].join(' + '):zone()?.type==='SPI'?'SPI':'RGBW',openLabel=t(group.count===1?'v567ViewOne':'v567ViewMany',{count:group.count}),countLabel=t(group.count===1?'animationCountOne':'animationCountMany',{count:group.count}),nextStep=t('v567BrowseOnly');
@@ -2078,6 +2125,10 @@
     return `<section class="animation-family-detail" data-chooser-version="567" data-curated-gallery="606" data-animation-category="${esc(group.category)}" aria-labelledby="animation-family-title"><div class="family-back-slot" data-family-back-slot><button type="button" class="animation-gallery-return family-back-action family-detail-back" data-action="family-back" aria-label="${esc(backLabel)}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('back')}</span><span class="gallery-action-copy"><b>${esc(backLabel)}</b></span></span></button></div>${animationPickerSteps(true)}<header class="family-detail-heading"><div><span class="family-detail-category"><span aria-hidden="true">${animationCategoryIcon(group.category)}</span>${esc(animationChooserCategoryLabel(group.category))}</span><h2 id="animation-family-title" tabindex="-1">${esc(group.title)}</h2><p>${esc(group.summary)}</p></div><span class="family-detail-count">${esc(countLabel)}</span></header>${includePreview?`<figure class="family-detail-preview"><figcaption><b>${esc(t('animationFamilyPreview'))}</b><small>${esc(groupHint)}</small></figcaption>${effectPreview(group.preview,tunnel?{tunnelLines:'all'}:{})}</figure>`:''}${animationFamilyChoices(group)}</section>`;
   }
   function renderAnimationFamily(){
+    if(!advancedInterface()){
+      route={...route,screen:'controls',family:null,familyReturnScreen:null,library:'catalogue'};
+      controlMode='animations';showControlAnimationGallery=true;return renderControls();
+    }
     const group=Library.group(catalogue(),route.family,t);
     if(!group){
       const screen=route.familyReturnScreen||'controls';
@@ -2115,6 +2166,7 @@
     return `<div class="page">${contextTitle(title,`${zone().name} · ${nameOfSelection()}`,t(returnToEditor?'v50BackSettings':'v50ReturnControl'),returnToEditor?'animations':'controls')}${editCurrent}${animationLibraryContent()}</div>`;
   }
   function animationLibraryContent(){
+    if(!advancedInterface())return basicAnimationLibraryMarkup();
     savedPresets=presetStore.load();
     const items=visibleCatalogue(),tab=libraryTab(),family=animationFamilyKey(),active=family?Library.group(items,family,t):null;
     const query=animationQueryStore().get(animationQueryKey())||'';
@@ -2754,6 +2806,7 @@
     showEffectDialog(orderText652('orderChooseForPosition',{position:position+1}),`<section class="order-colour-picker652" data-order-colour-choice="652" data-zone="${esc(z.id)}" data-signature="${esc(context.signature)}"><p>${esc(orderText652('orderAssignIntro'))}</p><div class="order-colour-choices652">${choices}</div><p class="order-assignment-rule652">${esc(orderText652('orderAssignmentChanged'))}</p><button type="button" class="button secondary full" data-action="effect-dialog-close">${esc(t('back'))}</button></section>`);
   }
   function ledlineSetupMarkup(){
+    if(!advancedInterface())return '';
     const z=zone(),open=openLineSetup.has(z.id);
     if(open&&(!arrangementDraft||arrangementDraft.zoneId!==z.id||(!arrangementApplying&&arrangementDraft.signature!==arrangementSignature(z))))beginArrangement();
     const draft=open?arrangementDraft:null,needsStandOpen=arrangementNeedsStandOpen(),count=physicalLineCount(),singleLine=count===1;
@@ -3660,7 +3713,11 @@
     return `<button class="theme-choice" data-action="theme" data-id="${theme}" aria-pressed="${active}"><span class="theme-choice-preview" aria-hidden="true"><i class="theme-preview-header"></i><i class="theme-preview-card"></i><i class="theme-preview-nav"></i></span><span class="theme-choice-label">${icon(theme==='dark'?'moon':'sun')}${esc(t(theme))}</span><span class="theme-choice-check" aria-hidden="true">${icon('check')}</span></button>`;
   }
   function renderSettings() {
-    return `<div class="page settings-page"><header class="page-heading overview-heading settings-overview-heading"><div><h1>${esc(t('settings'))}</h1></div></header><section class="card settings-appearance"><h2 class="settings-appearance-heading">${icon('settings')}<span>${esc(t('appearance'))}</span></h2><h3 class="preference-label">${esc(t('language'))}</h3><div class="preference-grid">${Preferences.languages.map(language=>`<button data-action="language" data-id="${language.code}" lang="${language.code}" aria-pressed="${uiPreferences.preferences.language===language.code}">${language.name}</button>`).join('')}</div>${uiPreferences.preferences.language==='nl'?'':`<p class="preference-note">${esc(t('wipNotice'))}</p>`}<h3 class="preference-label">${esc(t('theme'))}</h3><div class="preference-grid theme-choice-grid">${['light','dark'].map(themeChoiceMarkup).join('')}</div>${uiPreferences.error?`<p role="alert">${esc(uiPreferences.error.message)}</p>`:''}</section><button class="menu-card settings-help-entry" data-action="help"><span class="menu-icon">${icon('info')}</span><div><b>Stand en zones uitgelegd</b><small>Zo organiseer je je verlichting</small></div>${icon('chevron')}</button></div>`;
+    return `<div class="page settings-page"><header class="page-heading overview-heading settings-overview-heading"><div><h1>${esc(t('settings'))}</h1></div></header>${interfaceModeMarkup()}<section class="card settings-appearance"><h2 class="settings-appearance-heading">${icon('settings')}<span>${esc(t('appearance'))}</span></h2><h3 class="preference-label">${esc(t('language'))}</h3><div class="preference-grid">${Preferences.languages.map(language=>`<button data-action="language" data-id="${language.code}" lang="${language.code}" aria-pressed="${uiPreferences.preferences.language===language.code}">${language.name}</button>`).join('')}</div>${uiPreferences.preferences.language==='nl'?'':`<p class="preference-note">${esc(t('wipNotice'))}</p>`}<h3 class="preference-label">${esc(t('theme'))}</h3><div class="preference-grid theme-choice-grid">${['light','dark'].map(themeChoiceMarkup).join('')}</div>${uiPreferences.error?`<p role="alert">${esc(uiPreferences.error.message)}</p>`:''}</section><button class="menu-card settings-help-entry" data-action="help"><span class="menu-icon">${icon('info')}</span><div><b>Stand en zones uitgelegd</b><small>Zo organiseer je je verlichting</small></div>${icon('chevron')}</button></div>`;
+  }
+  function interfaceModeMarkup(){
+    const advanced=advancedInterface();
+    return `<section class="card settings-interface-mode" aria-labelledby="interface-mode-title"><div class="interface-mode-heading"><div><h2 id="interface-mode-title">${esc(modeText('interfaceModeTitle'))}</h2><p class="interface-mode-state">${esc(modeText(advanced?'interfaceModeAdvanced':'interfaceModeSimple'))}</p></div><button type="button" class="switch interface-mode-switch" role="switch" data-action="interface-mode-toggle" aria-label="${esc(modeText('interfaceModeTitle'))}" aria-checked="${advanced}" aria-describedby="interface-mode-hint interface-mode-preserved"><span>${esc(t(advanced?'v50On':'v50Off'))}</span><i aria-hidden="true"></i></button></div><p id="interface-mode-hint">${esc(modeText(advanced?'interfaceModeAdvancedHint':'interfaceModeSimpleHint'))}</p><p id="interface-mode-preserved" class="interface-mode-preserved">${icon('check')}${esc(modeText('interfaceModePreservation'))}</p>${interfaceModeState.error?`<p class="interface-mode-error" role="alert">${esc(interfaceModeState.error.message)}</p>`:''}</section>`;
   }
   function organizeSettings() {
     const page=main.querySelector('.settings-page');if(!page)return;
@@ -3765,6 +3822,7 @@
     // path below; this does not start any native or receiver work earlier.
     document.documentElement.lang=uiPreferences.preferences.language;
     document.body.dataset.theme=uiPreferences.preferences.theme;
+    document.body.dataset.interfaceMode=advancedInterface()?'advanced':'basic';
     document.querySelector('meta[name="theme-color"]').content=uiPreferences.preferences.theme==='dark'?'#171717':'#eef2f6';
     if(activeControlPointer){
       if(!top&&activeControlPointer.context===motionContextKey()&&activeControlPointer.target.isConnected){controlRenderDeferred=true;return;}
@@ -3881,8 +3939,11 @@
         else void inspectCentralStand({automatic:true});
       }});
     }
-    if(route.screen==='stand'&&standControlReceivers().length)main.querySelector('.stand-summary')?.insertAdjacentHTML('afterend',
-      `<button class="menu-card stand-control-shortcut" data-action="stand-controls"><span class="menu-icon colour-icon" aria-hidden="true"></span><span><b>Alles bedienen</b><small>Alle zones · kleur en animaties</small></span>${icon('chevron')}</button>`);
+    if(route.screen==='stand'&&standControlReceivers().length){
+      const summary=main.querySelector('.stand-summary'),anchor=summary||main.querySelector('.scene-capture-panel')||main.querySelector('.zone-section');
+      anchor?.insertAdjacentHTML(summary?'afterend':'beforebegin',
+        `<button class="menu-card stand-control-shortcut" data-action="stand-controls"><span class="menu-icon colour-icon" aria-hidden="true"></span><span><b>Alles bedienen</b><small>Alle zones · kleur en animaties</small></span>${icon('chevron')}</button>`);
+    }
     if(route.screen==='stand'&&stand()&&!stand().zones.length)main.querySelector('.zone-grid')?.insertAdjacentHTML('beforeend',
       `<section class="card empty stand-empty-zones"><span class="menu-icon" aria-hidden="true">${icon('zones')}</span><h2>Maak je eerste zone</h2><p>Maak een zone en voeg je verlichting toe.</p></section>`);
     if(webDemoContext&&route.screen==='settings'){
@@ -4003,6 +4064,9 @@
     }finally{if(receiverSetupPreparation===token)receiverSetupPreparation=null;flushCentralProjection();}
   }
   function navigate(screen, extra={}, {restoreControls=false,managedPrepared=false,zoneEntry=false,scenePrepared640=false}={}) {
+    if(!advancedInterface()&&['layout','animation-family'].includes(screen)){
+      screen='controls';extra={...extra,family:null,familyReturnScreen:null,library:'catalogue'};
+    }
     if(temporarySingleUser&&['pin-login','stand-connect','stand-sharing','stand-code-change'].includes(screen))screen='settings';
     if(firstAccessCheckpoint&&screen!=='receiver-add')return;
     if(screen==='receiver-add'&&localStandConcept())prepareLocalStandReceiver(extra.setupReturnZoneId||extra.zoneId||route.zoneId);
@@ -4924,7 +4988,7 @@
     dialog.querySelectorAll('canvas[data-preview]').forEach(canvas=>previews.delete(canvas.dataset.preview));
     const effect=activeEffect(),family=standAnimationFamily?Library.group(catalogue(),standAnimationFamily):null;
     const shown=family?.preview||(!standAnimationGallery&&effect?effect:null)||catalogue().find(effect=>(effect.minimumReceivers||1)<=physicalLineCount(standControlReceivers()));
-    const editorPreview=shown&&!standAnimationGallery?`<section class="stand-animation-live"><div class="stand-animation-live-title"><b>${esc(Library.displayName(shown,t))}</b><small>${esc(standAnimationModeLabel(shown))}</small></div>${standAnimationPreview(shown,{compact:true})}<details class="stand-animation-explanation" data-continuity-id="stand-zone-previews"><summary>${esc(t('v50StandViewZones'))}</summary>${standAnimationPreview(shown)}</details></section>`:'';
+    const editorPreview=advancedInterface()&&shown&&!standAnimationGallery?`<section class="stand-animation-live"><div class="stand-animation-live-title"><b>${esc(Library.displayName(shown,t))}</b><small>${esc(standAnimationModeLabel(shown))}</small></div>${standAnimationPreview(shown,{compact:true})}<details class="stand-animation-explanation" data-continuity-id="stand-zone-previews"><summary>${esc(t('v50StandViewZones'))}</summary>${standAnimationPreview(shown)}</details></section>`:'';
     const animationContent=standControlMode==='animations'?(!standAnimationGallery&&effect?animationEditorMarkup(effect,{preview:editorPreview}):animationLibraryContent()):'';
     const zoneCount=standControlZoneCount();
     // Title and mode tabs share one opaque sticky surface, including the
@@ -4949,6 +5013,7 @@
     paintWheel();syncColour();
   }
   function dialogAnimationPreview(){
+    if(!advancedInterface())return '';
     if(standControlOpen&&activeEffect())return standAnimationPreview(activeEffect());
     const view=tunnelSpatialContext()?spatialMode():null,spatial=['tunnel','wall'].includes(view);
     const title=spatial?spatialPreviewText('Preview',view):t('v50LiveLedPreview');
@@ -5435,6 +5500,7 @@
     if(action==='spatial-close'){window.LightningInterfaceHaptics?.activate?.(event,action);return dismissDialog(main.querySelector('[data-spatial-choice-dialog]'),closeSpatialChoice);}
     if(temporarySingleUser&&temporaryAccessActions.has(action))return;
     if(!standPresentationActionAllowed(action))return toast('Je stand is nog niet verbonden. Je bewaarde stand blijft zichtbaar.');
+    if(!interfaceActionAllowed(action,id))return toast(modeText('basicAdvancedCurrentHint'));
     if(standReceiverActions.has(action)&&standReceiverActionUnavailable(action,button))return toast(standReceiverNotice);
     window.LightningInterfaceHaptics?.activate?.(event,action);
     // Safari does not focus every pointer-activated button. Remember the
@@ -5694,6 +5760,16 @@
         if(welcomePicker)main.querySelector('.welcome-language>summary')?.focus();
         return;
       }
+      if(action==='interface-mode-toggle'){
+        if(route.screen!=='settings'||!button.closest('.settings-interface-mode'))return;
+        const next=interfaceModeStore.save(!advancedInterface());
+        interfaceModeState=next;
+        if(next.error){render({preserveScroll:true});main.querySelector('[data-action="interface-mode-toggle"]')?.focus({preventScroll:true});return;}
+        // No apply/send/model/selection writes here. An existing animation and
+        // every advanced selection/setting remain exactly as they were.
+        render({preserveScroll:true});
+        main.querySelector('[data-action="interface-mode-toggle"]')?.focus({preventScroll:true});return;
+      }
       if(action==='preferences-reset')return showEffectDialog('Taal en thema herstellen?',`<section data-preferences-reset><p>Stelt Nederlands en het lichte thema in.</p><p>Je stand en receivers blijven ongewijzigd.</p><p class="dialog-error" role="alert" hidden></p><button class="button full" data-action="preferences-reset-confirm">Taal en thema herstellen</button><button class="button secondary full" data-action="effect-dialog-close">Annuleren</button></section>`);
       if(action==='app-erase')return showEffectDialog('Alles verwijderen?',`<section data-app-erase><p>${webDemoContext?'Alleen de tijdelijke demogegevens op deze pagina worden verwijderd. Gegevens van de gewone site en fysieke receivers blijven onaangeroerd.':'Alle opgeslagen gegevens en configuraties worden uit de app verwijderd. Dit kan niet ongedaan worden gemaakt. De fysieke receivers worden niet teruggezet naar de fabrieksinstellingen.'}</p><p class="dialog-error" role="alert" hidden></p><button class="button secondary full" data-action="effect-dialog-close">Annuleren</button><button class="button red full" data-action="app-erase-confirm">Alles verwijderen</button></section>`);
       if(action==='app-erase-confirm'){
@@ -5710,7 +5786,7 @@
           else {window.localStorage.clear();window.sessionStorage.clear();}
           if(nativeContext){window.location.reload();return;}
           onboarding.reset();model=M.assertValid(webDemoContext?{schemaVersion:30,demo:true,stands:[],receivers:[],scenes:[],presets:[]}:runtime?.emptyModel?.()||{schemaVersion:30,demo:false,stands:[],receivers:[],scenes:[],presets:[]});
-          savedPresets=presetStore.load();savedColours=colourStore.load();savedScenes=sceneStore.load();uiPreferences=preferenceStore.load();
+          savedPresets=presetStore.load();savedColours=colourStore.load();savedScenes=sceneStore.load();uiPreferences=preferenceStore.load();interfaceModeState=interfaceModeStore.load();
           selections.clear();brandEditor=null;visualPorts.clear();visualPlugMotions.clear();identifying.clear();expandedReceivers.clear();expandedConnections.clear();
           sceneDraft=null;receiverFilter='all';route={screen:webDemoContext?'stand':'receiver-add',setupFrom:'stand',zoneId:null,family:null,library:'all'};
           closeEffectDialog();render({top:true});return;
@@ -6187,6 +6263,10 @@
   document.addEventListener('input',event=>{
     if(arrangementApplying)return;
     const input=event.target;
+    if(!advancedInterface()&&(input.matches('[data-channel],[data-channel-number],#animation-search,#animation-category')||
+       input.matches('[data-setting]')&&!['bri','speed'].includes(input.dataset.setting)||
+       input.dataset.setting==='speed'&&!interfaceEffectAllowed(activeEffect())||
+       (input.dataset.effectColour!==undefined||input.dataset.effectWhite!==undefined)&&!interfaceEffectAllowed(activeEffect())))return;
     try {
       if(input.matches('[data-security-pin],[data-security-pin-repeat]')){
         const panel=input.closest('[data-pin-protection-dialog]'),first=panel?.querySelector('[data-security-pin]'),repeat=panel?.querySelector('[data-security-pin-repeat]');
@@ -6235,6 +6315,7 @@
     }catch(error){toast(error.message);}
   });
   document.addEventListener('change',event=>{
+    if(!advancedInterface()&&event.target.matches?.('[data-brand-name],[data-channel-number]'))return;
     const brandName=event.target.closest?.('input[data-brand-name]');
     if(brandName){
       if(!brandEditor)return;
@@ -6400,7 +6481,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate652',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate653',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;
@@ -6513,7 +6594,7 @@
   paletteDrag=window.LightningV50Interactions?.installPaletteDrag({document,
     onActivity:active=>{if(!active&&paletteRenderDeferred){paletteRenderDeferred=false;queueMicrotask(()=>render({preserveScroll:true}));}},
     onMove:(from,to,host)=>{
-      if(managementBusy||arrangementApplying||activeEffect()?.paletteEditable===false)return;
+      if(!advancedInterface()||managementBusy||arrangementApplying||activeEffect()?.paletteEditable===false)return;
       const state=selectedState(),count=Math.min(8,state.colorCount||colours(state).length,colours(state).length);
       const patch=window.LightningV50Interactions.reorderPalette({...state,colors:colours(state)},from,to,count);
       apply(patch);host.innerHTML=paletteMarkup(selectedState());

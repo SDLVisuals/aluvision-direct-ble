@@ -1,0 +1,59 @@
+/* Reversible UI-only simplification. Essential setup and receiver recovery
+   keep their original native guards and are never hidden by this sheet. */
+html.interface-polish body .settings-interface-mode {
+  padding: 22px;
+  border: 1px solid color-mix(in srgb, var(--red) 24%, var(--line));
+  background: linear-gradient(130deg, color-mix(in srgb, var(--red) 5%, var(--panel)), var(--panel));
+}
+html.interface-polish body .interface-mode-heading {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; margin-bottom: 14px;
+}
+html.interface-polish body .interface-mode-heading > div { min-width: 0; }
+html.interface-polish body .interface-mode-heading h2 { margin: 0; font-size: 19px; line-height: 1.3; overflow-wrap: anywhere; }
+html.interface-polish body .interface-mode-heading .interface-mode-state {
+  display: inline-block; margin: 8px 0 0; padding: 4px 10px; border-radius: 100px;
+  font-size: 12px; font-weight: 750; color: var(--red);
+  background: color-mix(in srgb, var(--red) 9%, var(--panel));
+}
+html.interface-polish body .interface-mode-switch { flex: 0 0 auto; min-height: 48px; }
+html.interface-polish body .settings-interface-mode > p { margin: 10px 0 0; font-size: 14px; line-height: 1.55; color: var(--muted); }
+html.interface-polish body .settings-interface-mode .interface-mode-preserved { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; }
+html.interface-polish body .interface-mode-preserved .icon { flex: 0 0 16px; width: 16px; height: 16px; margin-top: 2px; }
+html.interface-polish body .settings-interface-mode .interface-mode-error { color: var(--red); }
+html.interface-polish body[data-interface-mode="basic"] :is(#main, #effect-dialog) .basic-scope-note {
+  margin: 0; padding: 0 16px 12px; font-size: 12px; line-height: 1.4; color: var(--muted);
+}
+html.interface-polish body[data-interface-mode="basic"] .basic-animation-library { display: grid; gap: 16px; min-width: 0; }
+html.interface-polish body[data-interface-mode="basic"] .basic-animation-library > header h2 { margin: 0 0 7px; font-size: 22px; }
+html.interface-polish body[data-interface-mode="basic"] .basic-animation-library > header p,
+html.interface-polish body[data-interface-mode="basic"] .basic-current-light p { margin: 0; color: var(--muted); line-height: 1.5; font-size: 14px; }
+html.interface-polish body[data-interface-mode="basic"] .basic-effect-list {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px;
+}
+html.interface-polish body[data-interface-mode="basic"] .basic-effect-list .effect-card { width: 100%; text-align: left; }
+html.interface-polish body[data-interface-mode="basic"] .basic-current-light { display: grid; gap: 9px; margin: 0; }
+html.interface-polish body[data-interface-mode="basic"] .basic-current-light > small { font-size: 12px; font-weight: 700; color: var(--muted); }
+html.interface-polish body[data-interface-mode="basic"] .basic-current-light h2 { margin: 0; font-size: 19px; }
+html.interface-polish body[data-interface-mode="basic"] .basic-animation-editor { display: grid; gap: 16px; }
+html.interface-polish body[data-interface-mode="basic"] .basic-animation-editor > * { margin: 0; }
+html.interface-polish body[data-interface-mode="basic"] .basic-animation-editor .current-effect-heading { display: grid; gap: 8px; }
+html.interface-polish body[data-interface-mode="basic"] .basic-animation-editor h2 { margin: 0; font-size: 23px; }
+html.interface-polish body[data-interface-mode="basic"] .basic-gallery-return { min-height: 56px; justify-content: flex-start; white-space: normal; text-align: left; line-height: 1.4; }
+html.interface-polish body[data-interface-mode="basic"] .basic-animation-editor .palette { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+html.interface-polish body[data-interface-mode="basic"] .basic-animation-editor .palette-item { min-height: 50px; }
+html.interface-polish body[data-interface-mode="basic"] .basic-animation-editor .palette-colour {
+  display: flex; align-items: center; justify-content: flex-start; gap: 12px;
+  min-height: 50px; width: 100%; padding: 8px 12px;
+}
+html.interface-polish body[data-interface-mode="basic"] .basic-animation-editor .palette-colour > span { width: 30px; height: 30px; flex: 0 0 30px; }
+html.interface-polish body[data-interface-mode="basic"] .basic-animation-editor .palette-item:has(.palette-remove) .palette-colour { padding-right: 48px; }
+html.interface-polish body[data-interface-mode="basic"] .basic-playback { display: grid; gap: 18px; }
+html.interface-polish body[data-interface-mode="basic"] .basic-colours > h3 { margin: 0 0 12px; }
+html.interface-polish body[data-interface-mode="basic"] :is(#main, #effect-dialog) .v50-white-mix-hint,
+html.interface-polish body[data-interface-mode="basic"] :is(#main, #effect-dialog) .warmth-help { display: none; }
+@media (max-width: 359px) {
+  html.interface-polish body .settings-interface-mode { padding: 16px; }
+  html.interface-polish body .interface-mode-heading { gap: 10px; }
+  html.interface-polish body .interface-mode-heading h2 { font-size: 17px; }
+}

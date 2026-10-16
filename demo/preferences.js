@@ -11,6 +11,9 @@
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
   const STORAGE_KEY = 'aluvision.v30.ui-preferences.v1';
+  // Device-local interface choice, deliberately outside portable backups and
+  // the existing language/theme schema. Missing means the full existing UI.
+  const MODE_STORAGE_KEY = 'aluvision.ui.advanced-mode.v1';
   const defaults = Object.freeze({ language: 'nl', theme: 'light' });
   const languages = Object.freeze([
     Object.freeze({ code: 'nl', name: 'Nederlands' }),
@@ -563,5 +566,61 @@
     function reset() { return save(defaults); }
     return Object.freeze({ load, save, reset });
   }
-  return Object.freeze({ STORAGE_KEY, defaults, languages, themes, keys: Object.freeze(Object.keys(texts.nl)), t, createStore });
+  function createModeStore(storage) {
+    let lastValid = true;
+    const result = (advancedEnabled = lastValid, error = null) => ({ advancedEnabled, error });
+    function read() {
+      let raw;
+      try {
+        if (!storage || typeof storage.getItem !== 'function') throw new Error('Unavailable');
+        raw = storage.getItem(MODE_STORAGE_KEY);
+      } catch (_) {
+        return { response: result(lastValid, { code: 'STORAGE_UNAVAILABLE', message: 'De appmodus kan niet lokaal worden gelezen.' }) };
+      }
+      if (raw === null || raw === undefined) {
+        lastValid = true;
+        return { raw: null, response: result(true) };
+      }
+      try {
+        if (typeof raw !== 'string' || raw.length > 256) throw new Error('Invalid length');
+        const value = JSON.parse(raw);
+        if (!plain(value) || Object.keys(value).length !== 2 || !has(value, 'version') || !has(value, 'advancedEnabled') ||
+          value.version !== 1 || typeof value.advancedEnabled !== 'boolean') throw new Error('Invalid mode');
+        lastValid = value.advancedEnabled;
+        return { raw, response: result(lastValid) };
+      } catch (_) {
+        return { raw, response: result(lastValid, { code: 'STORAGE_CORRUPT', message: 'De opgeslagen appmodus is ongeldig en is niet overschreven.' }) };
+      }
+    }
+    function load() { return read().response; }
+    function save(advancedEnabled) {
+      const previous = read();
+      if (previous.response.error) return previous.response;
+      if (typeof advancedEnabled !== 'boolean') return result(lastValid, { code: 'MODE_VALUE', message: 'Kies of Geavanceerd aan of uit staat.' });
+      if (previous.response.advancedEnabled === advancedEnabled) return previous.response;
+      try {
+        if (typeof storage.setItem !== 'function' || typeof storage.removeItem !== 'function') throw new Error('Unavailable');
+      } catch (_) {
+        return result(lastValid, { code: 'STORAGE_UNAVAILABLE', message: 'De appmodus kan hier niet lokaal worden bewaard.' });
+      }
+      const raw = JSON.stringify({ version: 1, advancedEnabled });
+      try {
+        storage.setItem(MODE_STORAGE_KEY, raw);
+        if (storage.getItem(MODE_STORAGE_KEY) !== raw) throw new Error('Unconfirmed mode');
+        lastValid = advancedEnabled;
+        return result(lastValid);
+      } catch (_) {
+        // Web Storage normally writes atomically. A host adapter may throw
+        // after writing or fail readback; restore only this exact namespace.
+        // Never clear other preferences, installation data or saved lighting.
+        try {
+          if (previous.raw === null) storage.removeItem(MODE_STORAGE_KEY);
+          else storage.setItem(MODE_STORAGE_KEY, previous.raw);
+        } catch (_) { /* Keep the last confirmed choice active in this UI. */ }
+        return result(previous.response.advancedEnabled, { code: 'STORAGE_WRITE', message: 'De appmodus kon niet worden bewaard. Je vorige keuze blijft in de app actief.' });
+      }
+    }
+    return Object.freeze({ load, save });
+  }
+  return Object.freeze({ STORAGE_KEY, MODE_STORAGE_KEY, defaults, languages, themes, keys: Object.freeze(Object.keys(texts.nl)), t, createStore, createModeStore });
 }));
