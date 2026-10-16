@@ -146,9 +146,9 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate646-centred-colour-wheel-interface-android27",
+  "revision": "V50candidate647-animation-home-interface-android27",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo646 removes the redundant colour display bar and centres a larger shared colour wheel. Brightness, exact RGBW controls, presets, clear Done exits644, bottom zone tools645, scene UI640, SPI default163, RAM-only demo admission and Android27 downloads are preserved. No native product, firmware or OTA catalog is published.",
+  "interfaceBaseline": "Public demo647 opens the animation tab at its group-list home rather than a remembered editor, family or search. Existing light intent is not reapplied. The centred colour wheel646, Done exits644, bottom zone tools645, scene UI640, SPI default163, RAM-only demo admission and Android27 downloads are preserved. No native product, firmware or OTA catalog is published.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -278,8 +278,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "08132268bbe6aa3e9459eac231c10fc69576563e1426f5744fa253e10aa32592",
-      "bytes": 600796
+      "sha256": "8995780213a1bde2b1f27f49d8170f88d518ebd996af1ea98ded711acec469c9",
+      "bytes": 601727
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -328,7 +328,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "c7bc98dce053da38f19e89ec424313470572dd7580e105a1a1957fbd3d4945d8",
+      "sha256": "38fd0eaa6e4c76e4a7c9996536b587af7bf94123e7230e785dc196fbebda47eb",
       "bytes": 7939
     },
     {
@@ -2694,6 +2694,31 @@
       "One larger centred shared colour wheel replaces the wheel-plus-redundant-display-bar layout.",
       "Brightness, exact RGBW controls, presets and all original pointer/keyboard colour input remain.",
       "Clear Done exits644, bottom zone tools645, scene UI640 and new SPI default163 are retained."
+    ],
+    "limits": [
+      "RAM-only fictitious devices; no receiver, radio, OTA or timing acceptance.",
+      "Android27 and existing APK bytes are retained, not rebuilt.",
+      "Public Web publication does not install an iPhone app or receiver firmware."
+    ]
+  },
+  "interfaceCandidate647": {
+    "sourceSnapshotOnly": true,
+    "sourceBoundaryVerified": true,
+    "sourceInputSHA256": {
+      "app.js": "ed5c3c2652b219654cf5567278fc4f45826b378e271938863dd210f9e0f6ef12",
+      "index.html": "f8fb78d61c81474c7eef8f4fc5434ec99fe909de89b8517e7739da2a1ad9c346"
+    },
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "opticalAcceptance": false,
+    "features": [
+      "The genuine zone Animation tab resets only its browsing UI to the default groups, without reapplying light.",
+      "Stand Animation tab/opening uses chooser home; explicit current-animation editing and intentional return links remain.",
+      "Centred wheel646, clear Done exits644, bottom tools645, scene UI640 and SPI default163 are retained."
     ],
     "limits": [
       "RAM-only fictitious devices; no receiver, radio, OTA or timing acceptance.",

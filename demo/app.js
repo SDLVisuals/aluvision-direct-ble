@@ -4780,7 +4780,7 @@
   function showStandControls(){
     if(!standControlReceivers().length)return toast('Voeg eerst verlichting toe aan een zone. Losse receivers worden niet meebediend.');
     standControlOpen=true;standControlEpoch++;lastStandControlContext=null;standDialogNested=null;standAnimationFamily=null;standAnimationFamilyReturn=null;standAnimationTab='catalogue';
-    standControlMode=standAnimationMarker()?'animations':'colour';standAnimationGallery=!standAnimationMarker();settingsOpen=false;
+    standControlMode=standAnimationMarker()?'animations':'colour';standAnimationGallery=true;standAnimationQueries.delete(stand()?.id);settingsOpen=false;
     renderStandControls();
   }
   async function standAnimationsAvailable(){
@@ -5356,7 +5356,9 @@
         if(action==='stand-control-mode'){
           if(!['colour','animations'].includes(id))return;
           standControlEpoch++;
-          standControlMode=id;standAnimationFamily=null;standAnimationFamilyReturn=null;standDialogNested=null;renderStandControls();
+          standControlMode=id;standAnimationFamily=null;standAnimationFamilyReturn=null;standDialogNested=null;
+          if(id==='animations'){standAnimationGallery=true;standAnimationTab='catalogue';standAnimationQueries.delete(stand()?.id);settingsOpen=false;}
+          renderStandControls({preserveScroll:false});
           document.querySelector(`[data-action="stand-control-mode"][data-id="${id}"]`)?.focus({preventScroll:true});return;
         }
         if(action==='family'){
@@ -5731,6 +5733,15 @@
         controlMode='animations';showControlAnimationGallery=true;return render({top:true});
       }
       if(action==='animations'&&route.screen==='controls'){
+        // The tab always opens the chooser home; explicit editor/Back actions
+        // retain their own return context. Browsing never restarts the light.
+        if(button.closest('.control-mode-tabs')){
+          clearAnimationEditorBrowseReturn();closeZoneMenus();
+          animationQueries.delete(route.zoneId);animationGalleryPositions.delete(route.zoneId);animationFamilyReturnPositions.delete(route.zoneId);
+          controlMode='animations';showControlAnimationGallery=true;
+          route={...route,family:null,familyReturnScreen:null,library:initialAnimationLibrary(),effectsReturn:'controls'};
+          setSpatialPreviewCategory(libraryTab());render({top:true});return revealAnimationGallery();
+        }
         const remembered=animationEditorBrowseChoice();
         if(remembered)return openAnimationEditorBrowseReturn(remembered.id);
         rememberAnimationGallery();
@@ -6275,7 +6286,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate646',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate647',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;
