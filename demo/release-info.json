@@ -130,8 +130,8 @@
     },
     {
       "path": "android-download/android-download.css",
-      "sha256": "23ef08fd40d5090de0642e663a6e63da927b86e8273eb3a6064f7f496110ca5b",
-      "bytes": 1488
+      "sha256": "f459f0a297a7076b87b5d421550a8a8d5fb6d5118c4dee5f9033c5644eb80a93",
+      "bytes": 1506
     },
     {
       "path": "android-download/android-download.js",
@@ -310,7 +310,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "d8e0a3becd63d6a2d0cf2a7eb56f91dc2c194242843e1c7f5a859ad4e69b5d0e",
+      "sha256": "18b6092b929417c1ef8d0d60c976affe0d7f29c933896bff64cd95f80f3a8272",
       "bytes": 8506
     },
     {
