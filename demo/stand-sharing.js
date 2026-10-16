@@ -1,11 +1,13 @@
 /* Explicit sharing only. A link contains access credentials, never stand data.
  * No storage, networking, navigation, enrollment or code generation lives here. */
 (function(root,factory){
-  const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.LightningStandSharing=api;
-})(typeof globalThis==='object'?globalThis:this,function(){
+  const cjs=typeof module==='object'&&module.exports;
+  const api=factory(cjs?require('./stand-sharing-copy.js'):root.LightningStandSharingCopy);if(cjs)module.exports=api;else root.LightningStandSharing=api;
+})(typeof globalThis==='object'?globalThis:this,function(SharingCopy){
   'use strict';
+  if(!SharingCopy)throw new Error('Load stand-sharing-copy.js before stand-sharing.js');
   const VERSION=1,MAX_LINK=1024,keys='ssid,standCode,standId,version';
-  const fail=code=>{throw Object.assign(Error('De gedeelde stand is niet bevestigd.'),{code});};
+  const fail=code=>{throw Object.assign(Error(SharingCopy.t('sharingNotConfirmed','nl')),{code});};
   const plain=value=>value&&typeof value==='object'&&!Array.isArray(value)&&[Object.prototype,null].includes(Object.getPrototypeOf(value));
   const utf8=value=>new TextEncoder().encode(value);
   function validate(value,expectedStandId){
@@ -95,53 +97,49 @@
     let index=0;for(let right=size-1;right>=1;right-=2){if(right===6)right=5;for(let vertical=0;vertical<size;vertical++)for(let j=0;j<2;j++){const x=right-j,y=((right+1)&2)===0?size-1-vertical:vertical;if(!fixed[y][x]){const on=index<codewords.length*8?bit(codewords[index>>>3],7-(index&7)):false;matrix[y][x]=on!==((x+y)%2===0);index++;}}}
     return {version,size,matrix};
   }
-  function svg(value){const {size,matrix}=qr(value),total=size+8;let path='';for(let y=0;y<size;y++)for(let x=0;x<size;x++)if(matrix[y][x])path+=`M${x+4},${y+4}h1v1h-1z`;
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${total}" role="img" aria-label="QR-code om deze stand te openen" style="display:block;width:100%;max-width:340px;margin:0 auto;shape-rendering:crispEdges"><rect width="${total}" height="${total}" fill="#fff"/><path d="${path}" fill="#000"/></svg>`;
+  function svg(value,{translate:tx=key=>SharingCopy.t(key,'nl')}={}){const {size,matrix}=qr(value),total=size+8;let path='';for(let y=0;y<size;y++)for(let x=0;x<size;x++)if(matrix[y][x])path+=`M${x+4},${y+4}h1v1h-1z`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${total}" role="img" aria-label="${escape(copyText(tx,'sharingQrLabel'))}" style="display:block;width:100%;max-width:340px;margin:0 auto;shape-rendering:crispEdges"><rect width="${total}" height="${total}" fill="#fff"/><path d="${path}" fill="#000"/></svg>`;
   }
   const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const messages={STAND_SHARE_UNAVAILABLE:'Delen is niet beschikbaar in deze appversie.',
-    STAND_NOT_CONNECTED:'Open eerst je stand voordat je haar deelt.',STAND_SHARE_VERSION:'Deze deellink gebruikt een andere versie. Vraag een nieuwe link.',
-    STAND_SHARE_INVALID:'Deellink ongeldig. Vraag een nieuwe link of gebruik je standcode.',
-    STAND_IDENTITY_UNCONFIRMED:'Stand niet herkend. Er zijn geen gegevens overgenomen.',
-    STAND_CONNECTION_CANCELLED:'Geannuleerd.',
-    STAND_SHARE_SCAN_UNAVAILABLE:'Scannen niet beschikbaar. Plak de link of gebruik je standcode.',
-    STAND_SHARE_CAMERA_DENIED:'Geef Aluvision cameratoegang via Instellingen of plak de link.',
-    STAND_SHARE_LINK_UNAVAILABLE:'Delen niet beschikbaar. Kopieer de link.',
-    STAND_CONNECTION_BUSY:'Er loopt nog een actie. Wacht tot die klaar is en probeer opnieuw.',
-    STAND_CANCELLED:'Verbinden geannuleerd. Je eerdere stand blijft bewaard.',
-    WIFI_JOIN_UNSUPPORTED:'Kies het getoonde netwerk in Instellingen → Wifi. Kom daarna terug en open je stand.',
-    WIFI_JOIN_DENIED:'Wifi verbinden is niet toegestaan. Kies het getoonde netwerk in Instellingen → Wifi en kom terug.',
-    WIFI_JOIN_TIMEOUT:'Wifi verbinden duurde te lang. Kies het getoonde netwerk in Instellingen → Wifi en kom terug.',
-    WIFI_JOIN_UNAVAILABLE:'Wifi is niet verbonden. Kies het getoonde netwerk in Instellingen → Wifi en kom terug.',
-    LOCAL_NETWORK_DENIED:'Geef Aluvision toegang tot het lokale netwerk via Instellingen en probeer opnieuw.',
-    STAND_WRONG_WIFI:'Verbind in Instellingen → Wifi met het getoonde standnetwerk en probeer opnieuw.',
-    STAND_AUTH_FAILED:'Standcode niet bevestigd. Vraag een nieuwe link als de code is gewijzigd.',
-    STAND_SHARE_COPY_UNAVAILABLE:'Kopiëren niet beschikbaar. Selecteer de wifi-gegevens handmatig.',
-    STAND_WIFI_CREDENTIAL_UNAVAILABLE:'Stel je wifi-PIN opnieuw in om hem te delen.',
-    stand_wifi_credential_unavailable:'Stel je wifi-PIN opnieuw in om hem te delen.',
-    STAND_INSPECTION_REQUIRED:'Kies eerst het wifi van je stand in Instellingen en kom terug.'};
-  const friendly=error=>messages[error?.code]||'Verbinden mislukt. Controleer wifi en probeer opnieuw.';
+  function copyText(tx,key){
+    const fallback=SharingCopy.t(key,'nl');
+    try{const value=typeof tx==='function'?tx(key):null;return typeof value==='string'&&value!==key?value:fallback;}
+    catch(_){return fallback;}
+  }
+  const messages={STAND_SHARE_UNAVAILABLE:'sharingErrorUnavailable',
+    STAND_NOT_CONNECTED:'sharingErrorNotConnected',STAND_SHARE_VERSION:'sharingErrorVersion',
+    STAND_SHARE_INVALID:'sharingErrorInvalid',STAND_IDENTITY_UNCONFIRMED:'sharingErrorIdentity',
+    STAND_CONNECTION_CANCELLED:'sharingErrorCancelled',STAND_SHARE_SCAN_UNAVAILABLE:'sharingErrorScanUnavailable',
+    STAND_SHARE_CAMERA_DENIED:'sharingErrorCameraDenied',STAND_SHARE_LINK_UNAVAILABLE:'sharingErrorLinkUnavailable',
+    STAND_CONNECTION_BUSY:'sharingErrorBusy',STAND_CANCELLED:'sharingErrorConnectCancelled',
+    WIFI_JOIN_UNSUPPORTED:'sharingErrorWifiUnsupported',WIFI_JOIN_DENIED:'sharingErrorWifiDenied',
+    WIFI_JOIN_TIMEOUT:'sharingErrorWifiTimeout',WIFI_JOIN_UNAVAILABLE:'sharingErrorWifiUnavailable',
+    LOCAL_NETWORK_DENIED:'sharingErrorLocalNetwork',STAND_WRONG_WIFI:'sharingErrorWrongWifi',STAND_AUTH_FAILED:'sharingErrorAuth',
+    STAND_SHARE_COPY_UNAVAILABLE:'sharingErrorCopyUnavailable',STAND_WIFI_CREDENTIAL_UNAVAILABLE:'sharingErrorWifiCredential',
+    stand_wifi_credential_unavailable:'sharingErrorWifiCredential',STAND_INSPECTION_REQUIRED:'sharingErrorInspection'};
+  const friendlyKey=error=>Object.hasOwn(messages,error?.code)?messages[error.code]:'sharingConnectFailed';
+  const friendly=(error,tx)=>copyText(tx,friendlyKey(error));
   const closedCode=error=>Object.hasOwn(messages,error?.code)?error.code:'STAND_SHARE_UNCONFIRMED';
   const wifiFallbackCodes=new Set(['WIFI_JOIN_UNSUPPORTED','WIFI_JOIN_DENIED','WIFI_JOIN_TIMEOUT','WIFI_JOIN_UNAVAILABLE']);
   // Secrets exist only for an explicit foreground share/join screen. Public
   // state, errors and callbacks never carry the link, passphrase or raw reply.
   function create({services={},capabilities={},standConnection,onConnected=()=>{},onManual=()=>{},onChange=()=>{},clipboard,document:doc,window:win,
-    setTimer=setTimeout,clearTimer=clearTimeout,privacyMs=120000}={}){
+    setTimer=setTimeout,clearTimer=clearTimeout,privacyMs=120000,translate:tx=key=>SharingCopy.t(key,'nl')}={}){
     let mode='join',phase='idle',message='',secret=null,showCode=false,wifiFallback=false,epoch=0,job=null,disposed=false,element=null,privacyTimer=null,abortController=null;
     const caps=()=>typeof capabilities==='function'?capabilities():capabilities;
     const snapshot=()=>standConnection?.snapshot?.();
-    const state=()=>({mode,phase,message,busy:job!==null,hasAccess:secret!==null,
+    const state=()=>({mode,phase,message:message?copyText(tx,message):'',busy:job!==null,hasAccess:secret!==null,
       shareAvailable:available(services,caps()),scanAvailable:caps()?.simpleStandScan===true&&typeof services.scanStandShare==='function'});
     const update=()=>{if(element)element.innerHTML=render();onChange(state());};
     function clear(){secret=null;showCode=false;wifiFallback=false;if(privacyTimer!==null)clearTimer(privacyTimer);privacyTimer=null;}
-    function touched(){if(!secret)return;if(privacyTimer!==null)clearTimer(privacyTimer);privacyTimer=setTimer(()=>{privacyTimer=null;conceal();message='Je wifi-gegevens zijn weer verborgen. Toon ze opnieuw om verder te delen.';update();},privacyMs);}
+    function touched(){if(!secret)return;if(privacyTimer!==null)clearTimer(privacyTimer);privacyTimer=setTimer(()=>{privacyTimer=null;conceal();message='sharingPrivacyHidden';update();},privacyMs);}
     function open(next){if(!['share','join'].includes(next))fail('STAND_SHARE_INVALID');++epoch;mode=next;phase='idle';message='';clear();update();return state();}
     async function operation(run,{joining=false}={}){
       if(disposed||job)fail('STAND_CONNECTION_BUSY');const ticket=epoch;phase=joining?'connecting':'loading';message='';
       const check=()=>{if(disposed||ticket!==epoch)fail('STAND_CONNECTION_CANCELLED');};
       abortController=new AbortController();const signal=abortController.signal;
       const pending=(async()=>{try{const result=await Promise.resolve().then(()=>{check();return run(check,signal);});check();return result;}
-        catch(error){if(!disposed&&ticket===epoch){clear();phase='error';message=friendly(error);}throw Object.assign(Error(friendly(error)),{code:closedCode(error)});}
+        catch(error){if(!disposed&&ticket===epoch){clear();phase='error';message=friendlyKey(error);}throw Object.assign(Error(friendly(error,tx)),{code:closedCode(error)});}
         finally{if(job===pending){job=null;abortController=null;}if(!disposed&&ticket===epoch)update();}})();job=pending;update();return pending;
     }
     async function load(){return operation(async check=>{
@@ -151,9 +149,9 @@
       secret=value;showCode=true;phase='ready';message='';touched();return state();
     });}
     function parseLink(text,expectedStandId){if(disposed||job)fail('STAND_CONNECTION_BUSY');clear();message='';try{secret=parse(text,expectedStandId);phase='ready';touched();}
-      catch(error){phase='error';message=friendly(error);update();throw Object.assign(Error(message),{code:error.code});}update();return state();}
+      catch(error){phase='error';message=friendlyKey(error);update();throw Object.assign(Error(friendly(error,tx)),{code:error.code});}update();return state();}
     async function scan(){if(!state().scanAvailable)fail('STAND_SHARE_SCAN_UNAVAILABLE');return operation(async(check,signal)=>{
-      const reply=await services.scanStandShare({},signal);check();if(reply?.status==='cancelled'&&Object.keys(reply).join(',')==='status'){clear();phase='idle';message='Scannen geannuleerd.';return state();}
+      const reply=await services.scanStandShare({},signal);check();if(reply?.status==='cancelled'&&Object.keys(reply).join(',')==='status'){clear();phase='idle';message='sharingScanCancelled';return state();}
       if(reply?.status!=='scanned'||Object.keys(reply).sort().join(',')!=='status,text')fail('STAND_SHARE_INVALID');
       secret=parse(reply.text);phase='ready';touched();return state();
     });}
@@ -163,56 +161,56 @@
         // Only this foreground Scan/Open button asks the platform to join.
         // The QR/link codec remains unchanged; resume and background do not.
         const result=await standConnection.connect(joinWifi?{...request,joinWifi:true}:request);check();
-        if(result?.view){phase='connected';message='Je actuele stand is geopend.';connected=result;}
-        else{phase='error';message='Deze stand moet eerst worden ingesteld.';}
+        if(result?.view){phase='connected';message='sharingStandOpened';connected=result;}
+        else{phase='error';message='sharingSetupRequired';}
         return state();
       },{joining:true});if(connected)await onConnected(connected);return outcome;}
       catch(error){
         // Retain only this foreground QR/link's ephemeral credentials for the
         // explicit system-Wifi fallback. Cancellation/background still wipe.
         if(wifiFallbackCodes.has(error?.code)&&!disposed&&ticket===epoch&&mode==='join'&&!doc?.hidden){
-          secret=validate({version:VERSION,standId:request.expectedStandId,ssid:request.ssid,standCode:request.standCode});wifiFallback=true;phase='error';message=friendly(error);touched();update();
+          secret=validate({version:VERSION,standId:request.expectedStandId,ssid:request.ssid,standCode:request.standCode});wifiFallback=true;phase='error';message=friendlyKey(error);touched();update();
         }
         throw error;
       }finally{request.standCode='';}}
     async function copyLink(){if(mode!=='share'||!secret)fail('STAND_SHARE_INVALID');const writer=clipboard||win?.navigator?.clipboard;
       if(typeof writer?.writeText!=='function')fail('STAND_SHARE_COPY_UNAVAILABLE');const link=format(secret),ticket=epoch;
-      try{await writer.writeText(link);if(ticket===epoch&&!disposed){message='Deellink gekopieerd. Deel alleen met mensen die toegang mogen.';update();}}
+      try{await writer.writeText(link);if(ticket===epoch&&!disposed){message='sharingLinkCopied';update();}}
       catch(_){fail('STAND_SHARE_COPY_UNAVAILABLE');}}
     async function copyCode(){if(!secret)fail('STAND_SHARE_INVALID');const writer=clipboard||win?.navigator?.clipboard;
       if(typeof writer?.writeText!=='function')fail('STAND_SHARE_COPY_UNAVAILABLE');const code=secret.standCode,ticket=epoch;
-      try{await writer.writeText(code);if(ticket===epoch&&!disposed){message='Standcode gekopieerd.';update();}}
+      try{await writer.writeText(code);if(ticket===epoch&&!disposed){message='sharingCodeCopied';update();}}
       catch(_){fail('STAND_SHARE_COPY_UNAVAILABLE');}}
     async function copyWifi(){if(mode!=='share'||!secret)fail('STAND_SHARE_INVALID');const writer=clipboard||win?.navigator?.clipboard;
       if(typeof writer?.writeText!=='function')fail('STAND_SHARE_COPY_UNAVAILABLE');const text=`Wifi-netwerk: ${secret.ssid}\nWifi-PIN: ${secret.standCode}`,ticket=epoch;
-      try{await writer.writeText(text);if(ticket===epoch&&!disposed){message='Wifi-netwerk en PIN gekopieerd.';update();}}
+      try{await writer.writeText(text);if(ticket===epoch&&!disposed){message='sharingWifiCopied';update();}}
       catch(_){fail('STAND_SHARE_COPY_UNAVAILABLE');}}
     async function shareWifi(){if(mode!=='share'||!secret||caps()?.simpleStandShareSheet!==true||typeof services.shareStandWifi!=='function')fail('STAND_SHARE_LINK_UNAVAILABLE');
       const standId=secret.standId;
       return operation(async(check,signal)=>{const result=await services.shareStandWifi({standId},signal);check();
         if(!plain(result)||Object.keys(result).join(',')!=='status'||!['shared','cancelled'].includes(result.status))fail('STAND_SHARE_INVALID');
-        phase='ready';message=result.status==='shared'?'Wifi-gegevens aangeboden aan het deelvenster.':'Delen geannuleerd.';return state();});
+        phase='ready';message=result.status==='shared'?'sharingWifiOffered':'sharingCancelled';return state();});
     }
     async function shareLink(){if(mode!=='share'||!secret)fail('STAND_SHARE_INVALID');const text=format(secret),ticket=epoch;
       if(caps()?.simpleStandShareSheet===true&&typeof services.shareStandLink==='function'){
         return operation(async(check,signal)=>{const result=await services.shareStandLink({text},signal);check();
           if(!plain(result)||Object.keys(result).join(',')!=='status'||!['shared','cancelled'].includes(result.status))fail('STAND_SHARE_INVALID');
-          phase='ready';message=result.status==='shared'?'Deellink aangeboden aan het deelvenster.':'Delen geannuleerd.';return state();});
+          phase='ready';message=result.status==='shared'?'sharingLinkOffered':'sharingCancelled';return state();});
       }
       if(typeof win?.navigator?.share!=='function')fail('STAND_SHARE_LINK_UNAVAILABLE');
-      try{await win.navigator.share({title:'Open mijn Aluvision-stand',url:text});if(ticket===epoch&&!disposed){message='Deellink aangeboden aan het deelvenster.';update();}}
-      catch(error){if(error?.name==='AbortError'){if(ticket===epoch&&!disposed){message='Delen geannuleerd.';update();}}else fail('STAND_SHARE_LINK_UNAVAILABLE');}
+      try{await win.navigator.share({title:copyText(tx,'sharingShareTitle'),url:text});if(ticket===epoch&&!disposed){message='sharingLinkOffered';update();}}
+      catch(error){if(error?.name==='AbortError'){if(ticket===epoch&&!disposed){message='sharingCancelled';update();}}else fail('STAND_SHARE_LINK_UNAVAILABLE');}
     }
     async function cancel(){const joining=phase==='connecting';++epoch;clear();phase='idle';message='';update();
       abortController?.abort();
       if(joining&&typeof standConnection?.disconnect==='function')await standConnection.disconnect();}
     function render(){const s=state();
-      if(mode==='share')return `<section class="stand-sharing card"><p>Deel je wifi-netwerk en PIN. De andere gebruiker verbindt via Instellingen → Wifi en kiest daarna Stand openen.</p>${!s.shareAvailable?`<p role="status">${messages.STAND_SHARE_UNAVAILABLE}</p>`:secret?`<label class="dialog-field">Wifi-netwerk<input data-stand-share-network readonly value="${escape(secret.ssid)}"></label><label class="dialog-field stand-pin-display">Wifi-PIN<input data-stand-share-code type="text" readonly autocomplete="off" spellcheck="false" value="${escape(secret.standCode)}"></label><button class="button full" data-stand-sharing-action="share-wifi" ${s.busy||caps()?.simpleStandShareSheet!==true?'disabled':''}>Deel wifi-gegevens</button><button class="button secondary full" data-stand-sharing-action="copy-wifi" ${s.busy?'disabled':''}>Gegevens kopiëren</button><small>Deze gegevens geven volledige toegang. Ze verdwijnen bij sluiten of inactiviteit.</small>`:s.busy?'<p role="status">Wifi-gegevens laden…</p>':`<button class="button full" data-stand-sharing-action="load">Wifi-gegevens tonen</button>`}<p data-stand-share-status role="status" aria-live="polite">${escape(message)}</p></section>`;
-      return '<section class="stand-sharing card"><p>Verbind met je standwifi in Instellingen en kies Stand openen.</p></section>';
+      if(mode==='share')return `<section class="stand-sharing card"><p>${escape(copyText(tx,'sharingWifiIntro'))}</p>${!s.shareAvailable?`<p role="status">${escape(copyText(tx,'sharingErrorUnavailable'))}</p>`:secret?`<label class="dialog-field">${escape(copyText(tx,'sharingWifiNetwork'))}<input data-stand-share-network readonly value="${escape(secret.ssid)}"></label><label class="dialog-field stand-pin-display">${escape(copyText(tx,'sharingWifiPin'))}<input data-stand-share-code type="text" readonly autocomplete="off" spellcheck="false" value="${escape(secret.standCode)}"></label><button class="button full" data-stand-sharing-action="share-wifi" ${s.busy||caps()?.simpleStandShareSheet!==true?'disabled':''}>${escape(copyText(tx,'sharingWifiShare'))}</button><button class="button secondary full" data-stand-sharing-action="copy-wifi" ${s.busy?'disabled':''}>${escape(copyText(tx,'sharingCopyDetails'))}</button><small>${escape(copyText(tx,'sharingAccessWarning'))}</small>`:s.busy?`<p role="status">${escape(copyText(tx,'sharingLoading'))}</p>`:`<button class="button full" data-stand-sharing-action="load">${escape(copyText(tx,'sharingShowDetails'))}</button>`}<p data-stand-share-status role="status" aria-live="polite">${escape(s.message)}</p></section>`;
+      return `<section class="stand-sharing card"><p>${escape(copyText(tx,'sharingJoinIntro'))}</p></section>`;
     }
     async function click(event){const button=event.target.closest?.('[data-stand-sharing-action]');if(!button||!element?.contains(button))return;
       const ticket=epoch;event.preventDefault();touched();try{switch(button.dataset.standSharingAction){case'load':await load();break;case'copy-wifi':await copyWifi();break;case'share-wifi':await shareWifi();break;case'copy':await copyLink();break;case'copy-code':await copyCode();break;case'share':await shareLink();break;case'show-code':showCode=!showCode;update();break;case'manual':await cancel();await onManual();break;case'join':await join();break;case'join-connected':await join({joinWifi:false});break;case'scan':await scan();if(ticket===epoch&&!disposed&&mode==='join'&&secret)await join();break;case'cancel':await cancel();break;case'parse':{const input=element.querySelector('[data-stand-join-link]'),text=input?.value||'';if(input)input.value='';parseLink(text);break;}}}
-      catch(error){if(!disposed&&ticket===epoch){phase='error';message=friendly(error);update();}}}
+      catch(error){if(!disposed&&ticket===epoch){phase='error';message=friendlyKey(error);update();}}}
     function conceal(){++epoch;abortController?.abort();clear();phase='idle';message='';update();}
     function hidden(){if(doc?.hidden){const joining=phase==='connecting';conceal();if(joining)void standConnection?.disconnect?.();}}
     function pageHide(){const joining=phase==='connecting';conceal();if(joining)void standConnection?.disconnect?.();}

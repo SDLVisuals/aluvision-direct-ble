@@ -1,0 +1,84 @@
+/* 654: targeted contrast corrections. No layout, disabled-action authority,
+   lighting colours, LED previews or receiver state are changed here. Load
+   after the component sheets so their geometry and behaviour stay intact. */
+
+/* The selected marker is painted red in either theme. Its check needs the
+   foreground for a filled accent, not the dark/light accent-text token. */
+html.interface-polish body .ui606-pages .scene-zone[aria-pressed="true"] > i {
+  color: #fff;
+}
+
+/* Legacy error labels used dark red even on a dark dialog or card. Keep
+   the existing messages and visibility; change only their readable ink. */
+html.interface-polish body[data-theme="dark"] :is(#main, #effect-dialog) :is(
+  .dialog-error, .scene-save-error, .scene-zone-warning,
+  .scene-edit-workbench-message[role="alert"], .interface-mode-error
+) {
+  color: var(--milk-danger) !important;
+}
+html.interface-polish body[data-theme="dark"] .mixed-note {
+  color: var(--muted);
+}
+
+/* Text and small icons need light accent ink in dark mode. The underlying
+   red token still paints switches, filled checks and other real accents. */
+html.interface-polish body[data-theme="dark"] :is(
+  .settings-interface-mode .interface-mode-state,
+  .scene-edit-workbench-copy small,
+  .scene-edit-zones > .scene-edit-zone-chip[aria-pressed="true"],
+  .scene-edit-zones > .scene-edit-overview[aria-pressed="true"]
+) {
+  color: var(--action-ink);
+}
+html.interface-polish body[data-theme="dark"] #main .ui606-line-tools :is(
+  .spatial-choice-current-icon, .ledline-setup-toggle > .icon
+),
+html.interface-polish body[data-theme="dark"] :is(#main, #effect-dialog) .animation-gallery-return .gallery-action-icon {
+  color: var(--action-ink);
+}
+
+/* These setup instructions are interface surfaces, not product artwork or
+   LED examples. Their old cream fills made inherited white text disappear. */
+html.interface-polish body[data-theme="dark"] .onboarding-wifi-tiles li:nth-child(2) {
+  background: color-mix(in srgb, var(--action-ink) 7%, var(--glass-solid));
+}
+html.interface-polish body[data-theme="dark"] .onboarding-wifi-tiles li:nth-child(2) > svg {
+  stroke: var(--action-ink);
+}
+html.interface-polish body[data-theme="dark"] .onboarding-role-cards :is(
+  .onboarding-first-card, .onboarding-extra-card
+) {
+  color: var(--ink);
+  background: var(--glass-solid);
+  border-color: color-mix(in srgb, var(--action-ink) 24%, var(--line));
+}
+html.interface-polish body[data-theme="dark"] .onboarding-connect-visual:not(.onboarding-role-cards) {
+  background: var(--glass-solid);
+}
+/* This compact route is deliberately unboxed in both themes. */
+html.interface-polish body[data-theme="dark"] .onboarding-manual-wifi > .onboarding-connect-visual {
+  background: none;
+}
+html.interface-polish body[data-theme="dark"] .onboarding-destination > summary em {
+  color: var(--action-ink);
+  background: color-mix(in srgb, var(--action-ink) 7%, var(--glass-solid));
+  border-color: color-mix(in srgb, var(--action-ink) 24%, var(--line));
+}
+
+/* Completion is still driven by existing markup. These rules neither mark
+   a step complete nor change the current/off/disabled state of a control. */
+html.interface-polish body[data-theme="dark"] #main .onboarding-layout587 > .onboarding-stand-steps > li.completed > b,
+html.interface-polish body[data-theme="dark"] #main .onboarding-layout587 > .onboarding-receiver-phases > li[data-completed="true"],
+html.interface-polish body[data-theme="dark"] .onboarding-setup-steps li.completed > span,
+html.interface-polish body[data-theme="dark"] .onboarding-done > span {
+  color: var(--milk-success);
+}
+html.interface-polish body[data-theme="dark"] .onboarding-setup-steps li.completed > span,
+html.interface-polish body[data-theme="dark"] .onboarding-done > span {
+  background: var(--soft);
+  border-color: var(--line);
+}
+html.interface-polish body[data-theme="dark"] .pixel-port-step[data-state="complete"] {
+  color: var(--milk-success);
+  background: color-mix(in srgb, var(--milk-success) 7%, var(--panel));
+}

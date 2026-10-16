@@ -26,12 +26,12 @@
     "nativeAppMetadataScope": "Historical native build243 record; the earlier Pages release did not update or attest an iPhone installation."
   },
   "androidTestApp": {
-    "path": "android/aluvision-android-test-50.0.0-27-27-f7df9f29d295.apk",
-    "size": 2735353,
-    "sha256": "f7df9f29d2951e97819ecfd753c63de68b83d27e699d80b280d2f441472a2a9b",
+    "path": "android/aluvision-android-test-50.0.0-30-939f8a250774.apk",
+    "size": 2867558,
+    "sha256": "939f8a250774f1864f506b7df0dcf0a0a5178ceaec643d07feaf1fada32f846f",
     "packageName": "com.aluvision.lighting.android.test",
-    "versionName": "50.0.0-27",
-    "versionCode": 27,
+    "versionName": "50.0.0",
+    "versionCode": 30,
     "minSdk": 26,
     "targetSdk": 36,
     "mode": "receiver",
@@ -61,6 +61,9 @@
         "applyLive",
         "applyLiveBatch",
         "identify",
+        "identifyLayout",
+        "stopLayoutIdentification",
+        "blinkLayoutIdentification",
         "identifyFactoryMain",
         "configureOutputs",
         "outputConfigurationStatus",
@@ -93,62 +96,21 @@
       "factoryReset": false,
       "androidBeta": true
     },
-    "validation": {
-      "scope": "Exact signed non-debuggable code27 release; actual installed API36 emulator bytes/certificate/UID/install time independently reconciled. Real welcome/Back/empty-name cold-reopen UI verified. The original installer wrapper remained unconfirmed; current-content proof is separate. Source-bound Java/SDK and encrypted synthetic receiver fixtures; no actual Android receiver/Wi-Fi/STOP or optical proof.",
-      "emulatorInPlaceUpdateVerified": false,
-      "emulatorNameFormReturnVerified": true,
-      "emulatorColdEmptyDraftRecoveryVerified": true,
-      "installedReleaseAPKExactBytesVerified": true,
-      "installedReleaseAssetsVerified": true,
-      "priorPackageUIDAndFirstInstallPreserved": true,
-      "sourceBoundSoftwareSuites": 5,
-      "sourceBoundSoftwareTests": 18,
-      "currentNativeSourceEncryptedFixtures": true,
-      "configureExecutionBudgetSeconds": 75,
-      "configureBudgetIncludesQueueWait": false,
-      "hardOSStorageDeadlineProven": false,
-      "uncertainOutputIntentRetained": true,
-      "receiverMayBeCommittedBeforeNativeReconciliation": true,
-      "supportedFirmwareCheckedBeforeLightSET": true,
-      "testHooksInRelease": false,
-      "syntheticPeersInRelease": false,
-      "physicalAndroidVerified": false,
-      "physicalReceiverVerified": false,
-      "wifiPhysicallyVerified": false,
-      "mobileLatencyVerified": false,
-      "signedReleaseSourceFiles": 135,
-      "signedReleaseSourceInventorySHA256": "9e476ce4d1a9e94ff95ada37e2b80d0a69c80f9f80df846d53c27f3beb575416",
-      "publicAndroidNativeSourcePublished": false,
-      "publicDemoEqualsPackagedAndroidSource": false,
-      "emulatorCurrentInstallReconciled": true,
-      "originalInstallWrapperCompletionVerified": false,
-      "originalInstallFailureCauseKnown": false,
-      "sourceDeltaFrom26": [
-        {
-          "path": "Android_App/app/build.gradle",
-          "beforeSHA256": "2bc773b356b750e69a6785e6bbdfe682e6914e7144af14fa5046244651c35a82",
-          "afterSHA256": "253442cc82993121b602b9358fbb6ff9de1756bbf5e11e54a9a03847922eed8c"
-        },
-        {
-          "path": "Android_App/app/src/main/java/com/aluvision/lighting/android/AlvControls.java",
-          "beforeSHA256": "5d7cbc6b8ad544beaf812a944054a226edbf200a2a04f666a092cd2097faae37",
-          "afterSHA256": "92b297cb01d65564d61d357fb0ec50dba7e61771e31a8101c7b7dd23e7c726aa"
-        },
-        {
-          "path": "Android_App/app/src/main/java/com/aluvision/lighting/android/AlvGroupClock.java",
-          "beforeSHA256": "8b755fbad2d4edf1228e028e3109eeed64c11f6a849c9df4879cb997b9904dbf",
-          "afterSHA256": "db3edeac6c92ee35a700821d310e0a04a114fccd496a02f1fb0481d965758b9d"
-        }
-      ],
-      "actualUIReceiptSHA256": "3c0e96356ebbf9400ae3ab725f9fc3899d4125d68c557d02d2dc1b597f590cc2",
-      "currentInstallReconcileReceiptSHA256": "52839f7fa85df4059a1e504f27f01ab2e464800c2c5b75a1f6b56a029818b73a",
-      "softwareReviewReceiptSHA256": "e7be0c7297ec01a9ba3e66bf200101f8bd5ca9091e74ee18a50b17a28617d372"
-    }
+    "interfaceBuild": 654,
+    "sourceFreezeSha256": "04cd8ce404e3e697b814132baa885755ba3afcf4681b10e90df0eeadbd9a991f",
+    "sourceBoundary": "97 byte-exact non-firmware shared654 Web inputs plus three retained Android adapters; no receiver binaries/catalogue",
+    "sdkReceiptSha256": "9775be210750b5c794e0b655642ee652a04d92d4eb34d922a82f4f02fe68ec93",
+    "independentProductReviewSha256": "4ef099d2e538f31fd5232f20e5d17320cb6438630b00a0ab5753090947d2f4d9",
+    "emulatorReviewSha256": "47569adc04aef02b9495bb8489f282259753482642148f6f0da75560f22f21b3",
+    "physicalAndroidVerified": false,
+    "physicalReceiverVerified": false,
+    "firmwareIncluded": false,
+    "opticalAcceptance": false
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate653-simple-mode-interface-android27",
+  "revision": "V50candidate654-translations-dark-interface-android30",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo653 adds an optional simpler colour and animation interface while retaining the complete advanced interface and saved configuration. RAM-only demo: no native app, receiver firmware or OTA is installed or published.",
+  "interfaceBaseline": "Public demo654 improves NL/EN/FR/DE authored interface copy and targeted dark-theme contrast while retaining simple/advanced controls and saved configuration. RAM-only demo: no receiver firmware or OTA is installed or published.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -173,8 +135,8 @@
     },
     {
       "path": "android-download/android-download.js",
-      "sha256": "6e8dd3e4069ad9ed58ed774bdfbf28cb13a65fbc676459363b769ef8993f2191",
-      "bytes": 11215
+      "sha256": "ab0736ee268cf12cbab148434e533c11f9385b489807728d89bdfea6101160c4",
+      "bytes": 10918
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
@@ -252,6 +214,11 @@
       "bytes": 2735353
     },
     {
+      "path": "android/aluvision-android-test-50.0.0-30-939f8a250774.apk",
+      "sha256": "939f8a250774f1864f506b7df0dcf0a0a5178ceaec643d07feaf1fada32f846f",
+      "bytes": 2867558
+    },
+    {
       "path": "animation-chooser.css",
       "sha256": "cca48352835554a319129df6964fff7fb5876cd3d7b96aa8d0a22f7929e34eef",
       "bytes": 10306
@@ -293,8 +260,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "b5f9112eba003af05de0669a9455d0506b3dee34779fcdb142324dd61d3d2ebf",
-      "bytes": 621208
+      "sha256": "136208eff7445403cfcb143d86b67fb711dcd6e7b70011292977e556727208dc",
+      "bytes": 628412
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -343,8 +310,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "5f631928912682aaebf6235dbacb3ee666de04c6fd313a3b5498ea785e278932",
-      "bytes": 8309
+      "sha256": "d8e0a3becd63d6a2d0cf2a7eb56f91dc2c194242843e1c7f5a859ad4e69b5d0e",
+      "bytes": 8506
     },
     {
       "path": "installation-libraries.js",
@@ -508,8 +475,8 @@
     },
     {
       "path": "receiver-removal-ui.js",
-      "sha256": "0f9ce9300c7f10293fa744e4c1e02147c6a82bb3a4edaac7990f2c3604c8f785",
-      "bytes": 21316
+      "sha256": "d49fd3e0eed07accce784fc6eed3ef669d07431c6f73254003421f667f45092e",
+      "bytes": 22579
     },
     {
       "path": "receiver-update-ui.css",
@@ -597,14 +564,19 @@
       "bytes": 1790
     },
     {
+      "path": "stand-sharing-copy.js",
+      "sha256": "55bf5aca18c32d0ffdc4a0a1f66cc2758618946d09c56763253bc391e7f22534",
+      "bytes": 12571
+    },
+    {
       "path": "stand-sharing.css",
       "sha256": "20a37d117fa6b87a4e4464085ec9217d5c7552d1ae5ec7317b2650b4034a498f",
       "bytes": 2819
     },
     {
       "path": "stand-sharing.js",
-      "sha256": "ac315f5b88d4c5a66c7c72044d58d5cd2ce3725d12bccc0e28428e6664df3fce",
-      "bytes": 24003
+      "sha256": "fdbdc72f95251f5661ca2166379f9f99353d3b0e8244e23a04088285c50ca6f2",
+      "bytes": 23540
     },
     {
       "path": "styles.css",
@@ -612,9 +584,19 @@
       "bytes": 28613
     },
     {
+      "path": "theme-audit.css",
+      "sha256": "45d7dd15cd3814bac17dfc8e3f6e1f466b9b974de2866c9ed244e64d6ea0d81c",
+      "bytes": 4014
+    },
+    {
       "path": "ui-continuity.js",
       "sha256": "ae28fd0b92d3100c27eef1c94ecea46bf30d6d4aa93d43b662ab2cc0eb9acb34",
       "bytes": 5114
+    },
+    {
+      "path": "ui-copy.js",
+      "sha256": "b3cd04d0526bef5b9dd28d8f4eb7a591e36a53e85d169f4c9782a80d0fe66a92",
+      "bytes": 123290
     },
     {
       "path": "ui606-controls.css",
@@ -2915,5 +2897,154 @@
       "All private native sources, firmware48 catalogue and bundled images remain exact652; no firmware is distributed by this demo.",
       "Android27 APKs/history are retained unchanged, not rebuilt; Web publication does not update iPhone."
     ]
+  },
+  "interfaceCandidate654": {
+    "sourceSnapshotOnly": true,
+    "sourceBoundaryVerified": true,
+    "sourceInputSHA256": {
+      "app.js": "0c8b997ded5cbaaab359bd9f87d56d9b913e270e3ff68244cadcc1640e15ff94",
+      "index.html": "801103681a0eb829317bc04c6fd2da83e4c5caf20c5d5a648b9638cb697baff4",
+      "receiver-removal-ui.js": "d49fd3e0eed07accce784fc6eed3ef669d07431c6f73254003421f667f45092e",
+      "stand-sharing-copy.js": "55bf5aca18c32d0ffdc4a0a1f66cc2758618946d09c56763253bc391e7f22534",
+      "stand-sharing.js": "fdbdc72f95251f5661ca2166379f9f99353d3b0e8244e23a04088285c50ca6f2",
+      "theme-audit.css": "45d7dd15cd3814bac17dfc8e3f6e1f466b9b974de2866c9ed244e64d6ea0d81c",
+      "ui-copy.js": "b3cd04d0526bef5b9dd28d8f4eb7a591e36a53e85d169f4c9782a80d0fe66a92"
+    },
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "opticalAcceptance": false,
+    "features": [
+      "Closed authored-interface translations for Dutch, English, French and German, including sharing and receiver-removal messages.",
+      "Targeted light/dark contrast repairs without changing LED palette, saved choices, disabled guards or receiver/native behavior."
+    ],
+    "limits": [
+      "This RAM-only demo uses fictitious devices: no receiver, OTA, radio, speed or optical acceptance.",
+      "All private native sources, firmware48 catalogue and bundled images remain exact653; no firmware is distributed by this demo.",
+      "Android30 download is separately admitted against its exact signed SDK/product receipts; emulator wording follows only the separately pinned validation profile."
+    ]
+  },
+  "historicalAndroidCode27Before30": {
+    "path": "android/aluvision-android-test-50.0.0-27-27-f7df9f29d295.apk",
+    "size": 2735353,
+    "sha256": "f7df9f29d2951e97819ecfd753c63de68b83d27e699d80b280d2f441472a2a9b",
+    "packageName": "com.aluvision.lighting.android.test",
+    "versionName": "50.0.0-27",
+    "versionCode": 27,
+    "minSdk": 26,
+    "targetSdk": 36,
+    "mode": "receiver",
+    "signerCertificateSha256": "b598fc6fa30b423517d6ca68e3bb1191248a32723174d4703baaede9125936ac",
+    "signatureVerified": true,
+    "packageVerified": true,
+    "installedVerified": true,
+    "installationEnvironment": "isolated Android API36 emulator only; no physical phone",
+    "features": {
+      "schemaVersion": 1,
+      "mode": "receiver",
+      "backendImplemented": true,
+      "services": [
+        "loadState",
+        "persistDraft",
+        "parkDraft",
+        "checkpointPreviewExit",
+        "resumeDraft",
+        "search",
+        "select",
+        "secure",
+        "reconcileSecurity",
+        "finalize",
+        "verifyFinalReceipt",
+        "publishModel",
+        "previewPixels",
+        "applyLive",
+        "applyLiveBatch",
+        "identify",
+        "identifyFactoryMain",
+        "configureOutputs",
+        "outputConfigurationStatus",
+        "editZones"
+      ],
+      "appearance": false,
+      "outputRecovery": true,
+      "mainOnboarding": true,
+      "meshOnboarding": true,
+      "liveControl": true,
+      "standAnimations": true,
+      "temporarySingleUser": true,
+      "simpleStand": false,
+      "standWifiOpen": false,
+      "standSessionAnimations": false,
+      "pinModeToggle": false,
+      "pinLogin": false,
+      "installationRestore": false,
+      "backupFiles": false,
+      "localBackupRestore": false,
+      "receiverContext": false,
+      "localZoneEditing": true,
+      "spiPortScenes": true,
+      "pixelPreviewV50": true,
+      "zoneHardwareSync": false,
+      "mainOTA": false,
+      "networkOTA": false,
+      "mainRemoval": false,
+      "nodeRemoval": false,
+      "factoryReset": false,
+      "androidBeta": true
+    },
+    "validation": {
+      "scope": "Exact signed non-debuggable code27 release; actual installed API36 emulator bytes/certificate/UID/install time independently reconciled. Real welcome/Back/empty-name cold-reopen UI verified. The original installer wrapper remained unconfirmed; current-content proof is separate. Source-bound Java/SDK and encrypted synthetic receiver fixtures; no actual Android receiver/Wi-Fi/STOP or optical proof.",
+      "emulatorInPlaceUpdateVerified": false,
+      "emulatorNameFormReturnVerified": true,
+      "emulatorColdEmptyDraftRecoveryVerified": true,
+      "installedReleaseAPKExactBytesVerified": true,
+      "installedReleaseAssetsVerified": true,
+      "priorPackageUIDAndFirstInstallPreserved": true,
+      "sourceBoundSoftwareSuites": 5,
+      "sourceBoundSoftwareTests": 18,
+      "currentNativeSourceEncryptedFixtures": true,
+      "configureExecutionBudgetSeconds": 75,
+      "configureBudgetIncludesQueueWait": false,
+      "hardOSStorageDeadlineProven": false,
+      "uncertainOutputIntentRetained": true,
+      "receiverMayBeCommittedBeforeNativeReconciliation": true,
+      "supportedFirmwareCheckedBeforeLightSET": true,
+      "testHooksInRelease": false,
+      "syntheticPeersInRelease": false,
+      "physicalAndroidVerified": false,
+      "physicalReceiverVerified": false,
+      "wifiPhysicallyVerified": false,
+      "mobileLatencyVerified": false,
+      "signedReleaseSourceFiles": 135,
+      "signedReleaseSourceInventorySHA256": "9e476ce4d1a9e94ff95ada37e2b80d0a69c80f9f80df846d53c27f3beb575416",
+      "publicAndroidNativeSourcePublished": false,
+      "publicDemoEqualsPackagedAndroidSource": false,
+      "emulatorCurrentInstallReconciled": true,
+      "originalInstallWrapperCompletionVerified": false,
+      "originalInstallFailureCauseKnown": false,
+      "sourceDeltaFrom26": [
+        {
+          "path": "Android_App/app/build.gradle",
+          "beforeSHA256": "2bc773b356b750e69a6785e6bbdfe682e6914e7144af14fa5046244651c35a82",
+          "afterSHA256": "253442cc82993121b602b9358fbb6ff9de1756bbf5e11e54a9a03847922eed8c"
+        },
+        {
+          "path": "Android_App/app/src/main/java/com/aluvision/lighting/android/AlvControls.java",
+          "beforeSHA256": "5d7cbc6b8ad544beaf812a944054a226edbf200a2a04f666a092cd2097faae37",
+          "afterSHA256": "92b297cb01d65564d61d357fb0ec50dba7e61771e31a8101c7b7dd23e7c726aa"
+        },
+        {
+          "path": "Android_App/app/src/main/java/com/aluvision/lighting/android/AlvGroupClock.java",
+          "beforeSHA256": "8b755fbad2d4edf1228e028e3109eeed64c11f6a849c9df4879cb997b9904dbf",
+          "afterSHA256": "db3edeac6c92ee35a700821d310e0a04a114fccd496a02f1fb0481d965758b9d"
+        }
+      ],
+      "actualUIReceiptSHA256": "3c0e96356ebbf9400ae3ab725f9fc3899d4125d68c557d02d2dc1b597f590cc2",
+      "currentInstallReconcileReceiptSHA256": "52839f7fa85df4059a1e504f27f01ab2e464800c2c5b75a1f6b56a029818b73a",
+      "softwareReviewReceiptSHA256": "e7be0c7297ec01a9ba3e66bf200101f8bd5ca9091e74ee18a50b17a28617d372"
+    }
   }
 }

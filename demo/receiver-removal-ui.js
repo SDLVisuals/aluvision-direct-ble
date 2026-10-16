@@ -31,7 +31,13 @@
     };
     return root.LightningV50ErrorTexts?.t(messageKey,root.document?.documentElement?.lang||'nl')||fallback[messageKey];
   }
-  function create({services={},getModel,onRemoved=()=>{},standCodeAccess=()=>false}={}){
+  function create({services={},translate,getModel,onRemoved=()=>{},standCodeAccess=()=>false}={}){
+    // Closed authored UI keys only; no receiver/customer/native message lookup.
+    // Without an injected translator the original Dutch copy remains valid.
+    const t=(copy,params={})=>{
+      const value=typeof translate==='function'?translate(copy,params):copy;
+      return String(value??copy).replace(/\{([A-Za-z][A-Za-z0-9_]*)\}/g,(match,name)=>Object.prototype.hasOwnProperty.call(params,name)&&['string','number'].includes(typeof params[name])?String(params[name]):match);
+    };
     let dialog,receiver,result,baseline,targets=[],busy=false,error='',generation=0,returnFocus,timer=null,autoContinue=false;
     const installation=()=>receiver?.role==='main',scope=()=>installation()?'installation':'receiver';
     const requiresPin=()=>installation()&&result?.requiresPin===true;
@@ -49,35 +55,35 @@
       const input=dialog?.querySelector('[data-removal-pin]'),hint=dialog?.querySelector('[data-removal-pin-hint]');
       if(input&&hint){const invalid=input.value!==''&&!validPin(input.value);hint.hidden=!invalid;input.setAttribute('aria-invalid',String(invalid));}
     }
-    function pinFields(){return `${requiresPin()?'<label class="removal-pin-label" for="removal-installation-pin">Voer je installatie-PIN in<input id="removal-installation-pin" data-removal-pin type="password" inputmode="numeric" autocomplete="off" maxlength="12" minlength="8" autocapitalize="off" spellcheck="false" aria-describedby="removal-pin-help"></label><p id="removal-pin-help" class="removal-help">De bestaande PIN van deze installatie · 8–12 cijfers.</p><p data-removal-pin-hint class="removal-pin-hint" hidden>Gebruik je volledige PIN van 8–12 cijfers.</p>':''}<label class="removal-consent"><input type="checkbox" data-removal-consent><span>Ik begrijp dat alle receivers uit deze installatie worden gewist.</span></label>`;}
+    function pinFields(){return `${requiresPin()?`<label class="removal-pin-label" for="removal-installation-pin">${escape(t("Voer je installatie-PIN in"))}<input id="removal-installation-pin" data-removal-pin type="password" inputmode="numeric" autocomplete="off" maxlength="12" minlength="8" autocapitalize="off" spellcheck="false" aria-describedby="removal-pin-help"></label><p id="removal-pin-help" class="removal-help">${escape(t("De bestaande PIN van deze installatie · 8–12 cijfers."))}</p><p data-removal-pin-hint class="removal-pin-hint" hidden>${escape(t("Gebruik je volledige PIN van 8–12 cijfers."))}</p>`:''}<label class="removal-consent"><input type="checkbox" data-removal-consent><span>${escape(t("Ik begrijp dat alle receivers uit deze installatie worden gewist."))}</span></label>`;}
     function warning(){
-      if(!installation())return `<section class="card removal-warning"><h3>Deze receiver ontkoppelen</h3><p><strong>${escape(receiver.name)}</strong> wordt losgekoppeld en start opnieuw. Voeg hem daarna opnieuw toe.</p><p>${legacyPinCopy()?'Je andere receivers en PIN blijven behouden.':'De rest van je stand blijft behouden.'}</p></section>`;
+      if(!installation())return `<section class="card removal-warning"><h3>${escape(t("Deze receiver ontkoppelen"))}</h3><p>${escape(t('{name} wordt losgekoppeld en start opnieuw. Voeg hem daarna opnieuw toe.',{name:receiver.name}))}</p><p>${legacyPinCopy()?t("Je andere receivers en PIN blijven behouden."):t("De rest van je stand blijft behouden.")}</p></section>`;
       const count=Number.isSafeInteger(result?.count)?result.count:targets.length;
-      const targetSummary=count===1?'Er is één receiver in deze installatie.':count>1?`Je ontkoppelt alle ${count} receivers uit deze installatie.`:'Je ontkoppelt alle receivers uit deze installatie.';
-      return `<section class="card removal-warning"><h3>Alle receivers ontkoppelen</h3><p>${targetSummary}</p><p>De koppeling${legacyPinCopy()?' en installatie-PIN':''} wordt gewist. Voeg daarna alle receivers opnieuw toe. Andere stands blijven behouden.</p><p class="removal-help">Laat alle receivers aan tot de reset is bevestigd.</p></section>`;
+      const targetSummary=count===1?t("Er is één receiver in deze installatie."):count>1?t('Je ontkoppelt alle {count} receivers uit deze installatie.',{count}):t("Je ontkoppelt alle receivers uit deze installatie.");
+      return `<section class="card removal-warning"><h3>${escape(t("Alle receivers ontkoppelen"))}</h3><p>${escape(targetSummary)}</p><p>${escape(t(legacyPinCopy()?'De koppeling en installatie-PIN worden gewist. Voeg daarna alle receivers opnieuw toe. Andere stands blijven behouden.':'De koppeling wordt gewist. Voeg daarna alle receivers opnieuw toe. Andere stands blijven behouden.'))}</p><p class="removal-help">${escape(t("Laat alle receivers aan tot de reset is bevestigd."))}</p></section>`;
     }
     function progress(){
       const value=result?.progress;if(!value||!Number.isSafeInteger(value.completed)||!Number.isSafeInteger(value.total))return '';
-      return `<div class="removal-progress" role="status"><b>${value.completed} van ${value.total} bevestigd</b><progress max="${Math.max(1,value.total)}" value="${value.completed}"></progress><span>${installation()?'Verbonden tot de laatste stap.':'Wacht op bevestiging.'}</span></div>`;
+      return `<div class="removal-progress" role="status"><b>${escape(t('{completed} van {total} bevestigd',{completed:value.completed,total:value.total}))}</b><progress max="${Math.max(1,value.total)}" value="${value.completed}"></progress><span>${installation()?t("Verbonden tot de laatste stap."):t("Wacht op bevestiging.")}</span></div>`;
     }
     function paint(){
       if(!dialog?.open)return;
       const status=result?.status,removed=status==='removed';let content='';
-      if(removed)content=`<section class="card"><h3>${installation()?'Alle receivers ontkoppeld':'Deze receiver ontkoppeld'}</h3><p>${installation()?`Reset bevestigd. Alle receivers starten opnieuw.${legacyPinCopy()?' De oude PIN is verwijderd.':''}`:`Reset bevestigd. De receiver start opnieuw; je andere receivers${legacyPinCopy()?' en PIN':''} blijven behouden.`}</p><p>Daarna kun je ${installation()?'ze':'hem'} opnieuw toevoegen.</p></section>`;
+      if(removed)content=`<section class="card"><h3>${installation()?t("Alle receivers ontkoppeld"):t("Deze receiver ontkoppeld")}</h3><p>${installation()?`${escape(t("Reset bevestigd. Alle receivers starten opnieuw."))}${legacyPinCopy()?' '+escape(t('De oude PIN is verwijderd.')):''}`:escape(t(legacyPinCopy()?'Reset bevestigd. De receiver start opnieuw; je andere receivers en PIN blijven behouden.':'Reset bevestigd. De receiver start opnieuw; je andere receivers blijven behouden.'))}</p><p>${escape(t(installation()?'Daarna kun je alle receivers opnieuw toevoegen.':'Daarna kun je deze receiver opnieuw toevoegen.'))}</p></section>`;
       else if(['verification-required','in-progress','pin-required'].includes(status)){
         content=warning()+progress();
-        if(status==='pin-required'&&requiresPin())content+=`<section class="card"><h3>Verdergaan met wissen</h3><p>Voer je PIN opnieuw in. Bevestigde resets worden niet herhaald.</p></section>${pinFields()}<button class="button full removal-confirm" data-removal="resume">PIN bevestigen en verdergaan</button>`;
-        else if(status==='pin-required')content+='<section class="card"><h3>Verwijderen gepauzeerd</h3><p>Deze oudere installatie kan niet in deze versie zonder toegangscode worden gewist. Er is niets extra verwijderd.</p></section>';
-        else if(status==='verification-required')content+=`<section class="card"><h3>Verwijdering nog niet bevestigd</h3><p>Laat de overige receivers aan en verbonden. Alleen bevestigde resets worden als voltooid getoond.</p></section><button class="button full" data-removal="resume">Opnieuw controleren</button>`;
-        else content+=`<section class="card"><h3>Receivers worden gewist</h3><p>Houd dit scherm open tot de bevestiging.</p></section>${autoContinue?'':'<button class="button full" data-removal="resume">Verdergaan</button>'}`;
+        if(status==='pin-required'&&requiresPin())content+=`<section class="card"><h3>${escape(t("Verdergaan met wissen"))}</h3><p>${escape(t("Voer je PIN opnieuw in. Bevestigde resets worden niet herhaald."))}</p></section>${pinFields()}<button class="button full removal-confirm" data-removal="resume">${escape(t("PIN bevestigen en verdergaan"))}</button>`;
+        else if(status==='pin-required')content+=`<section class="card"><h3>${escape(t("Verwijderen gepauzeerd"))}</h3><p>${escape(t("Deze oudere installatie kan niet in deze versie zonder toegangscode worden gewist. Er is niets extra verwijderd."))}</p></section>`;
+        else if(status==='verification-required')content+=`<section class="card"><h3>${escape(t("Verwijdering nog niet bevestigd"))}</h3><p>${escape(t("Laat de overige receivers aan en verbonden. Alleen bevestigde resets worden als voltooid getoond."))}</p></section><button class="button full" data-removal="resume">${escape(t("Opnieuw controleren"))}</button>`;
+        else content+=`<section class="card"><h3>${escape(t("Receivers worden gewist"))}</h3><p>${escape(t("Houd dit scherm open tot de bevestiging."))}</p></section>${autoContinue?'':`<button class="button full" data-removal="resume">${escape(t("Verdergaan"))}</button>`}`;
       }else{
         content=warning();
-        if(status==='ready')content+=(installation()?pinFields():'')+`<button class="button full removal-confirm" data-removal="start">${installation()?'Alle receivers ontkoppelen':'Deze receiver ontkoppelen'}</button>`;
-        else if(status==='checking')content+='<p class="removal-help" role="status">Gekoppelde receivers worden veilig gecontroleerd…</p>';
-        else content+=`<button class="button full" data-removal="check">${status==='blocked'?'Bereikbaarheid opnieuw controleren':'Verbinding controleren'}</button>`;
-        if(status==='blocked')content+='<p class="removal-help">Geen nieuwe reset gestart. Zet alle receivers aan en controleer opnieuw.</p>';
+        if(status==='ready')content+=(installation()?pinFields():'')+`<button class="button full removal-confirm" data-removal="start">${installation()?t("Alle receivers ontkoppelen"):t("Deze receiver ontkoppelen")}</button>`;
+        else if(status==='checking')content+=`<p class="removal-help" role="status">${escape(t("Gekoppelde receivers worden veilig gecontroleerd…"))}</p>`;
+        else content+=`<button class="button full" data-removal="check">${status==='blocked'?t("Bereikbaarheid opnieuw controleren"):t("Verbinding controleren")}</button>`;
+        if(status==='blocked')content+=`<p class="removal-help">${escape(t("Geen nieuwe reset gestart. Zet alle receivers aan en controleer opnieuw."))}</p>`;
       }
-      dialog.innerHTML=`<header><div><h2>${removed?'Ontkoppeld':installation()?'Alle receivers ontkoppelen':'Deze receiver ontkoppelen'}</h2><p>${installation()?escape(baseline?.stands.find(s=>s.id===receiver.standId)?.name||'Je stand')+' · ':''}${escape(receiver.name)} · ${escape(receiver.type)}</p></div><button class="icon-button" data-removal="close" aria-label="Verwijdervenster sluiten">×</button></header>${content}<p role="alert" ${error?'':'hidden'}>${escape(error)}</p><p role="status" ${busy?'':'hidden'}>${['start','resume'].includes(dialog.dataset.action)?'Resetopdracht controleren…':'Even controleren…'}</p><button class="button secondary full" data-removal="close">${removed?'Terug naar receivers':result?.jobId?'Sluiten · later verdergaan':'Niet verwijderen'}</button>`;
+      dialog.innerHTML=`<header><div><h2>${removed?t("Ontkoppeld"):installation()?t("Alle receivers ontkoppelen"):t("Deze receiver ontkoppelen")}</h2><p>${installation()?escape(baseline?.stands.find(s=>s.id===receiver.standId)?.name||t("Je stand"))+' · ':''}${escape(receiver.name)} · ${escape(receiver.type)}</p></div><button class="icon-button" data-removal="close" aria-label="${escape(t("Verwijdervenster sluiten"))}">×</button></header>${content}<p role="alert" ${error?'':'hidden'}>${escape(error)}</p><p role="status" ${busy?'':'hidden'}>${['start','resume'].includes(dialog.dataset.action)?t("Resetopdracht controleren…"):t("Even controleren…")}</p><button class="button secondary full" data-removal="close">${removed?t("Terug naar receivers"):result?.jobId?t("Sluiten · later verdergaan"):t("Niet verwijderen")}</button>`;
       dialog.querySelectorAll('[data-removal],input').forEach(element=>{element.disabled=busy;});controls();
     }
     function validate(next,action,previous){
@@ -184,7 +190,7 @@
       if(busy)throw Error('REMOVAL_BUSY');
       if(!value||value.lifecycle!=='added'||!['main','node'].includes(value.role))throw Error('ADDED_RECEIVER_REQUIRED');
       clearTimer();generation++;receiver={...value};baseline=typeof getModel==='function'?clone(getModel()):null;targets=[];result=null;busy=false;autoContinue=false;error='';returnFocus=document.activeElement;
-      if(!dialog){dialog=document.createElement('dialog');dialog.className='receiver-removal-sheet';dialog.setAttribute('aria-label','Receiver verwijderen');document.body.append(dialog);
+      if(!dialog){dialog=document.createElement('dialog');dialog.className='receiver-removal-sheet';dialog.setAttribute('aria-label',t("Receiver verwijderen"));document.body.append(dialog);
         dialog.addEventListener('click',event=>{const button=event.target.closest('[data-removal]');if(!button||button.disabled)return;button.dataset.removal==='close'?close():perform(button.dataset.removal);});
         dialog.addEventListener('input',controls);dialog.addEventListener('change',controls);dialog.addEventListener('cancel',event=>{event.preventDefault();close();});}
       dialog.showModal();paint();dialog.scrollTop=0;perform('check');
