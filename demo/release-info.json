@@ -146,9 +146,9 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate647-animation-home-interface-android27",
+  "revision": "V50candidate648-animation-clarity-interface-android27",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo647 opens the animation tab at its group-list home rather than a remembered editor, family or search. Existing light intent is not reapplied. The centred colour wheel646, Done exits644, bottom zone tools645, scene UI640, SPI default163, RAM-only demo admission and Android27 downloads are preserved. No native product, firmware or OTA catalog is published.",
+  "interfaceBaseline": "Public demo648 makes the group/start steps, chosen-animation settings card, categories and group cards clearer. Current-versus-selected/demo/failure wording remains bounded by existing source semantics, not a new physical-active claim. Animation home647, centred wheel646, Done exits644, bottom tools645, scene UI640, default163 and Android27 remain. No native product, firmware or OTA catalog is published.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -252,6 +252,11 @@
       "bytes": 2735353
     },
     {
+      "path": "animation-chooser.css",
+      "sha256": "93ba70c107158d3de90b85ff8372c921871845e79d1c984f8629d8c201d71a4b",
+      "bytes": 9629
+    },
+    {
       "path": "animation-engine.js",
       "sha256": "c59ff08862a8ce5d1fb450d2992180b28f6561e85f1753d1c0f9a1bc40a2cf43",
       "bytes": 21745
@@ -278,8 +283,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "8995780213a1bde2b1f27f49d8170f88d518ebd996af1ea98ded711acec469c9",
-      "bytes": 601727
+      "sha256": "8ad4c308ee29adb0e607fcb8ca636899a399a78c4079330d8f82482db5ae8d51",
+      "bytes": 602170
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -328,8 +333,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "38fd0eaa6e4c76e4a7c9996536b587af7bf94123e7230e785dc196fbebda47eb",
-      "bytes": 7939
+      "sha256": "513de22fc643e279d0497ce8bba71fd607b1be6bc3746c0aea8078dff50a0ff4",
+      "bytes": 8013
     },
     {
       "path": "installation-libraries.js",
@@ -678,8 +683,8 @@
     },
     {
       "path": "v50-texts.js",
-      "sha256": "ad9de1f7dbc2e414ca2db2419c5cbd9ad8a912caaebc56164adbd0e6f8763fe4",
-      "bytes": 35436
+      "sha256": "9b8c73cf2584afb7f6e4b49ecbc17b189aaf7b4a63dd0b598beaf35f310dd129",
+      "bytes": 35999
     },
     {
       "path": "vendor/v21_animation_catalog.js",
@@ -2719,6 +2724,33 @@
       "The genuine zone Animation tab resets only its browsing UI to the default groups, without reapplying light.",
       "Stand Animation tab/opening uses chooser home; explicit current-animation editing and intentional return links remain.",
       "Centred wheel646, clear Done exits644, bottom tools645, scene UI640 and SPI default163 are retained."
+    ],
+    "limits": [
+      "RAM-only fictitious devices; no receiver, radio, OTA or timing acceptance.",
+      "Android27 and existing APK bytes are retained, not rebuilt.",
+      "Public Web publication does not install an iPhone app or receiver firmware."
+    ]
+  },
+  "interfaceCandidate648": {
+    "sourceSnapshotOnly": true,
+    "sourceBoundaryVerified": true,
+    "sourceInputSHA256": {
+      "animation-chooser.css": "93ba70c107158d3de90b85ff8372c921871845e79d1c984f8629d8c201d71a4b",
+      "app.js": "155d83b3a7f7cd8338bd6cea179a0eecd5d298f1b7bae5a2eb107611a86ed2d6",
+      "index.html": "7efe75c31acdb11203908535d91f0150b4f7d0fa4087cd9aaeb426c248e9f6d7",
+      "v50-texts.js": "9b8c73cf2584afb7f6e4b49ecbc17b189aaf7b4a63dd0b598beaf35f310dd129"
+    },
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "opticalAcceptance": false,
+    "features": [
+      "Clearer Choose group and Start animation steps, larger category and group-card text.",
+      "A clearer current/selected-animation settings card keeps original actions and honest chosen/demo/off/failure labels.",
+      "Animation home647, centred wheel646, Done exits644, bottom tools645, scenes640 and SPI default163 are retained."
     ],
     "limits": [
       "RAM-only fictitious devices; no receiver, radio, OTA or timing acceptance.",

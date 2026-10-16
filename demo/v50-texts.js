@@ -3,6 +3,11 @@
   // Explicit interface keys only. Receiver/zone/stand/scene names never pass
   // through this dictionary; parameters are inserted after translation.
   const rows={
+    v648GroupHint:['Bekijk de groepen','Explore the groups','Parcourir les groupes','Gruppen entdecken'],
+    v648StartStep:['Animatie starten','Start animation','Lancer une animation','Animation starten'],
+    v648StartHint:['Kies je animatie','Choose your animation','Choisir votre animation','Deine Animation wählen'],
+    v648AdjustSettings:['Instellingen aanpassen','Adjust settings','Modifier les réglages','Einstellungen anpassen'],
+    v648EditingAnimation:['Animatie om te bewerken','Animation to edit','Animation à modifier','Animation bearbeiten'],
     v50WelcomeTitle:['Jouw stand.\nJouw licht.','Your stand.\nYour light.','Votre stand.\nVotre lumière.','Dein Stand.\nDein Licht.'],
     v50WelcomeHint:['Geef je stand een naam, kies je zones en sluit je verlichting aan.','Name your stand, choose zones and connect your lights.','Nommez votre stand, choisissez vos zones et connectez vos éclairages.','Benenne deinen Stand, wähle Zonen und verbinde deine Beleuchtung.'],
     v50Name:['Standnaam','Stand name','Nom du stand','Standname'],

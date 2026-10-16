@@ -1,0 +1,146 @@
+/* Larger chooser affordances only. Existing actions, previews and status
+   qualifiers remain authoritative; browsing never changes the lighting. */
+html.interface-polish body :is(#main, #effect-dialog) [data-chooser-version="567"] .animation-picker-steps[data-animation-steps="648"] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+html.interface-polish body :is(#main, #effect-dialog) [data-chooser-version="567"] .animation-picker-steps[data-animation-steps="648"]::after { content: none; }
+html.interface-polish body :is(#main, #effect-dialog) [data-chooser-version="567"] .animation-picker-steps[data-animation-steps="648"] > li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  min-height: 78px;
+  padding: 12px 10px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+  color: var(--muted);
+}
+html.interface-polish body :is(#main, #effect-dialog) [data-chooser-version="567"] .animation-picker-steps[data-animation-steps="648"] > li[aria-current="step"] {
+  border-color: color-mix(in srgb, var(--chooser-accent, var(--red)) 45%, var(--line));
+  background: color-mix(in srgb, var(--chooser-accent, var(--red)) 5%, var(--panel));
+  color: var(--ink);
+}
+html.interface-polish body :is(#main, #effect-dialog) [data-chooser-version="567"] .animation-picker-steps[data-animation-steps="648"] > li > .animation-step-number {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 15px;
+}
+.animation-step-copy { display: grid; gap: 4px; min-width: 0; }
+.animation-step-copy > b { font-size: 14px; line-height: 1.3; font-weight: 750; overflow-wrap: anywhere; }
+.animation-step-copy > small { color: var(--muted); font-size: 11px; line-height: 1.4; font-weight: 500; }
+
+html.interface-polish body :is(#main, #effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"][data-animation-summary="648"] {
+  align-items: stretch;
+  gap: 10px;
+  min-height: 0;
+  padding: 16px;
+  border-left-width: 4px;
+  border-radius: 20px;
+}
+html.interface-polish body :is(#main, #effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"][data-animation-summary="648"] > .gallery-action-label {
+  align-items: flex-start;
+  gap: 12px;
+}
+html.interface-polish body :is(#main, #effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"][data-animation-summary="648"] .gallery-action-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+}
+html.interface-polish body :is(#main, #effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"][data-animation-summary="648"] .gallery-action-icon > .icon { width: 22px; height: 22px; }
+html.interface-polish body :is(#main, #effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"][data-animation-summary="648"] .gallery-action-copy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+html.interface-polish body :is(#main, #effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"][data-animation-summary="648"] .animation-settings-return-title {
+  color: var(--v569-current, var(--ink));
+  font-size: 13px;
+  line-height: 1.3;
+  font-weight: 750;
+}
+html.interface-polish body :is(#main, #effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"][data-animation-summary="648"] .animation-settings-return-name {
+  grid-column: 1;
+  grid-row: auto;
+  font-size: 21px;
+  line-height: 1.25;
+  font-weight: 800;
+}
+html.interface-polish body :is(#main, #effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"][data-animation-summary="648"] .animation-settings-return-kicker {
+  grid-column: 1;
+  grid-row: auto;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+html.interface-polish body :is(#main, #effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"][data-animation-summary="648"] .animation-settings-return-action {
+  grid-column: 1;
+  grid-row: auto;
+  gap: 8px;
+  min-height: 44px;
+  max-width: none;
+  margin-top: 4px;
+  padding: 9px 12px;
+  border: 1px solid color-mix(in srgb, var(--v569-current) 40%, var(--line));
+  border-radius: 12px;
+  background: var(--panel);
+  font-size: 14px;
+  line-height: 1.35;
+  font-weight: 700;
+}
+html.interface-polish body :is(#main, #effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"][data-animation-summary="648"] .animation-settings-return-action > .icon { flex: none; width: 18px; height: 18px; }
+html.interface-polish body :is(#main, #effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"][data-animation-summary="648"] > .gallery-action-next { align-self: center; }
+
+html.interface-polish body :is(#main, #effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] {
+  gap: 9px;
+}
+html.interface-polish body :is(#main, #effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab {
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  min-height: 70px;
+  padding: 9px 10px;
+  border-radius: 14px;
+}
+html.interface-polish body :is(#main, #effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab > b { grid-column: 1 / -1; grid-row: 2; font-size: 14px; line-height: 1.35; font-weight: 700; overflow-wrap: normal; word-break: normal; }
+html.interface-polish body :is(#main, #effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab > span { grid-column: 1; grid-row: 1; }
+html.interface-polish body :is(#main, #effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab > span,
+html.interface-polish body :is(#main, #effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab > span > :is(.icon, .arrangement-icon) { width: 22px; height: 22px; }
+html.interface-polish body :is(#main, #effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab > small { grid-column: 3; grid-row: 1; font-size: 12px; min-width: 24px; padding: 4px 5px; }
+
+html.interface-polish body :is(#main, #effect-dialog) .animation-family-section[data-chooser-version="567"] > .animation-family-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 14px;
+}
+html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] { border-radius: 22px; }
+html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] > .animation-family-trigger {
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px;
+}
+html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] .animation-family-preview {
+  grid-template-rows: auto minmax(96px, 1fr);
+  padding: 10px 8px;
+  border-radius: 16px;
+}
+html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] .animation-family-preview canvas { height: 96px !important; }
+html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] .animation-family-preview-label { font-size: 11px; }
+html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] .family-copy { gap: 8px; }
+html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] .family-kicker { font-size: 11px; }
+html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] .family-title { font-size: 19px; line-height: 1.3; overflow-wrap: anywhere; }
+html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] .family-summary { font-size: 14px; line-height: 1.5; }
+html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] .family-variants { min-height: 46px; padding: 10px; }
+html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] .family-variants-copy > b { font-size: 14px; line-height: 1.35; }
+@media (max-width: 359px) {
+  html.interface-polish body :is(#main, #effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] { grid-template-columns: minmax(0, 1fr); }
+  html.interface-polish body :is(#main, #effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab { min-height: 58px; }
+  html.interface-polish body :is(#main, #effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab > b { grid-column: 2; grid-row: 1; }
+  html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] > .animation-family-trigger { grid-template-columns: 84px minmax(0, 1fr); gap: 10px; padding: 12px; }
+  html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] .family-title { font-size: 18px; }
+}

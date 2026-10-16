@@ -2042,7 +2042,7 @@
   }
   function animationChooserCategoryLabel(key){return t('v567Category:'+key);}
   function animationPickerSteps(choosingAnimation=false){
-    return `<ol class="animation-picker-steps" aria-label="${esc(t('animationNavigation'))}"><li ${choosingAnimation?'':'aria-current="step"'}><span>1</span>${esc(t('v567BrowseGroups'))}</li><li ${choosingAnimation?'aria-current="step"':''}><span>2</span>${esc(t('v567StartAnimation'))}</li></ol>`;
+    return `<ol class="animation-picker-steps" data-animation-steps="648" aria-label="${esc(t('animationNavigation'))}"><li ${choosingAnimation?'':'aria-current="step"'}><span class="animation-step-number">1</span><div class="animation-step-copy"><b>${esc(t('v567BrowseGroups'))}</b><small>${esc(t('v648GroupHint'))}</small></div></li><li ${choosingAnimation?'aria-current="step"':''}><span class="animation-step-number">2</span><div class="animation-step-copy"><b>${esc(t('v648StartStep'))}</b><small>${esc(t('v648StartHint'))}</small></div></li></ol>`;
   }
   function animationCategoryTabs(items,counts,tab){
     const keys=['catalogue',...Library.sections(items).map(section=>section.key),'presets'];
@@ -2060,9 +2060,9 @@
   function animationSettingsReturnMarkup(location){
     const current=activeEffect(),remembered=current?null:animationEditorBrowseChoice(),effect=current||remembered;
     if(!effect||!standControlOpen&&route.screen!=='controls')return '';
-    const name=Library.displayName(effect,t),label=t('v569Adjust');
+    const name=Library.displayName(effect,t),label=t('v648AdjustSettings');
     const attribute=location==='sticky'?'data-editor-return-sticky':'data-editor-return-inline';
-    return `<button type="button" class="animation-gallery-return animation-settings-return" data-current-shortcut-version="573" data-active-summary-version="569" ${attribute} ${remembered?'data-editor-intent-return="611"':''} data-action="${remembered?'animation-editor-return':'animation-current-edit'}" data-id="${esc(effect.id)}" aria-label="${esc(t('animationCurrentSettingsAccessible',{name}))}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('animation')}</span><span class="gallery-action-copy"><small class="animation-settings-return-kicker" ${remembered?'':'data-animation-choice-label'}>${esc(remembered?t('v592ChosenAnimation'):animationCurrentLabel())}</small><b class="animation-settings-return-name">${esc(name)}</b><small class="animation-settings-return-action">${esc(label)}</small></span></span><span class="gallery-action-next" aria-hidden="true">${icon('chevron')}</span></button>`;
+    return `<button type="button" class="animation-gallery-return animation-settings-return" data-current-shortcut-version="573" data-active-summary-version="569" data-animation-summary="648" ${attribute} ${remembered?'data-editor-intent-return="611"':''} data-action="${remembered?'animation-editor-return':'animation-current-edit'}" data-id="${esc(effect.id)}" aria-label="${esc(t('animationCurrentSettingsAccessible',{name}))}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('animation')}</span><span class="gallery-action-copy"><small class="animation-settings-return-title">${esc(t(remembered?'v648EditingAnimation':'v569CurrentAnimation'))}</small><b class="animation-settings-return-name">${esc(name)}</b><small class="animation-settings-return-kicker" ${remembered?'':'data-animation-choice-label'}>${esc(remembered?t('v592ChosenAnimation'):animationCurrentLabel())}</small><small class="animation-settings-return-action">${icon('advanced-settings')}${esc(label)}</small></span></span><span class="gallery-action-next" aria-hidden="true">${icon('chevron')}</span></button>`;
   }
   function animationCategoryIcon(key){
     return key==='tunnel'?arrangementIcon('stacked'):icon(({catalogue:'zones',whole:'sun',pixels:'animation',brand:'sparkle',presets:'scenes'})[key]||'zones');
@@ -6286,7 +6286,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate647',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate648',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;
