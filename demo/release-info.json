@@ -108,9 +108,9 @@
     "opticalAcceptance": false
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate657-spi-zone-directions-interface-android30",
+  "revision": "V50candidate661-horizontal-spi-tutorial-interface-android30",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo657 adds zone-wide SPI direction editing after all pixel steps. It remains a RAM-only demo with fictitious receivers; no firmware, hardware control, OTA or app installation is published.",
+  "interfaceBaseline": "Public demo661 projects the latest ledline setup and visual horizontal SPI tutorial. Fictional receivers and RAM-only state; no hardware, firmware, OTA or phone installation is published.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -260,8 +260,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "e57bd2622523322a3681591d32f6b801188190c2ffa718f08f21c840b0946d29",
-      "bytes": 636985
+      "sha256": "6c87508109ae5f394f4de9d7b2ba8b800261f66ff1d6fb935a1550a5d084e725",
+      "bytes": 648656
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -310,8 +310,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "d46711eb2921930b81ae6a1b848e7998f0f9d9fcf3d72e4d5e37cfb44652e483",
-      "bytes": 8810
+      "sha256": "b2cc8ea898c666b60a5bc77f04985c61afb695815536493363415a3c1567a8e2",
+      "bytes": 8881
     },
     {
       "path": "installation-libraries.js",
@@ -370,8 +370,8 @@
     },
     {
       "path": "live-control.js",
-      "sha256": "58be6e14bc1aa4140b83ec08d9d0898863913b9711a814831c8d21ed587fb403",
-      "bytes": 53897
+      "sha256": "f071f9a989a5195d981f6cc304e53a0a8e70c54fad2426f028856a19db5431ac",
+      "bytes": 54973
     },
     {
       "path": "migration.js",
@@ -385,8 +385,8 @@
     },
     {
       "path": "native-runtime.js",
-      "sha256": "89ff8e0dda4076b4f0a854d5f88b73a7c56176a2415e160f0994b614db38fed9",
-      "bytes": 151579
+      "sha256": "9b754cd29638fec3b2b351394578d61557a6f59fae5f36ba2e8c6d3649afa6fa",
+      "bytes": 152624
     },
     {
       "path": "onboarding-adapter.js",
@@ -405,8 +405,8 @@
     },
     {
       "path": "onboarding-draft.js",
-      "sha256": "b1975bea57f756214828a50763e62557b5fa2a5dcfa9ad07b3b8fdd7ce063eff",
-      "bytes": 37632
+      "sha256": "c373a95c4662d3eb901001f77b19a8324560fceaed815e40bdd7d9993ffd1b65",
+      "bytes": 38765
     },
     {
       "path": "onboarding-ui.css",
@@ -415,8 +415,8 @@
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "5efccbac15c099e8e89a67f4ff6d7fc11de6994fb1e581aaeaa8941dfd57bc16",
-      "bytes": 179011
+      "sha256": "21d60684ca94133d9cea6fdd2784a8c97f285ee2cd20377eae2ce58196e9d24d",
+      "bytes": 181714
     },
     {
       "path": "page-interaction.css",
@@ -429,19 +429,24 @@
       "bytes": 495
     },
     {
+      "path": "pair-first-setup.js",
+      "sha256": "b28eb3234eb5f56d881f4c6269bda7f1021ad1cf2a42debb329e2597e04b6598",
+      "bytes": 17170
+    },
+    {
       "path": "pixel-setup.css",
-      "sha256": "29c33143e1f1c76c302494dc20e1aa1e564b70efa48666642b3a95be11408584",
-      "bytes": 36908
+      "sha256": "38678527e1b40018cda330bcd276919898bc457bb12b407a471c34d78643a0cb",
+      "bytes": 38267
     },
     {
       "path": "pixel-setup.js",
-      "sha256": "c6a7744b5f79e68b534933fae3d66642d5527bda435931021b707c263e65178d",
-      "bytes": 49333
+      "sha256": "d784792ad0c2e9ceabb7901358569003c77b7a1d29c9bff9921fc8c4ad96327e",
+      "bytes": 52565
     },
     {
       "path": "pixel-translations.js",
-      "sha256": "1b7db65ec8c26c076a9ff0457f933b7c6c5735f9a24a6fe58b0cfdf1156bfb48",
-      "bytes": 17228
+      "sha256": "1d37e538c3c2d9d9f1858d25252e778eb787e677348a00d0c8e8b104209fd2f2",
+      "bytes": 18657
     },
     {
       "path": "preferences.js",
@@ -460,8 +465,8 @@
     },
     {
       "path": "preview.js",
-      "sha256": "4546527ff27b515770efd00d16233e12b3bebd6982fa954f9a33e82ec40a0915",
-      "bytes": 110044
+      "sha256": "ada7fe9c7b602d20ce8992041114d1a00e20b39378226be726224625783b9c7d",
+      "bytes": 112497
     },
     {
       "path": "receiver-playback.js",
@@ -485,8 +490,8 @@
     },
     {
       "path": "receiver-update-ui.js",
-      "sha256": "6325074d965cc77eb6a50aa68cffb0b724affc305876c9df75363340b3552284",
-      "bytes": 25129
+      "sha256": "0a0fc48f5e7ac12ca6ed3a882ae08cba952c9f41f402efeff640315789a14fea",
+      "bytes": 25159
     },
     {
       "path": "receiver-visual.css",
@@ -535,28 +540,28 @@
     },
     {
       "path": "spi-direction-tutorial.css",
-      "sha256": "91afb40cfdc71c6b893a93a93dc9079d8bedd1fdb813a8db45a5a96512b50a73",
-      "bytes": 8304
+      "sha256": "f82373ef5e74c67bb727a14a797ebf050e50432d7e243732bff4884636dfa1dc",
+      "bytes": 8720
     },
     {
       "path": "spi-direction-tutorial.js",
-      "sha256": "1205b85604f69110c36de4d0861e4e5611b62627f7e6de665bcc01776deb7b66",
-      "bytes": 14037
+      "sha256": "e9a64ba9ac4e49fbf370c5f48fd4309bb39e48284d8ea384a1ed6a89838cf5de",
+      "bytes": 14112
     },
     {
       "path": "spi-zone-direction.css",
-      "sha256": "87bb20f806d49a2cc9c104d0d5ca4172fed0559219ac777f6131db3f2c05e2d8",
-      "bytes": 8304
+      "sha256": "38e8015aa94845af2a6ec3a5baf06ba848b93829ed508d566210c77acb69b552",
+      "bytes": 8617
     },
     {
       "path": "spi-zone-direction.js",
-      "sha256": "0133030435ea807fc45df93066d5b10333d0393a407352aa76081b32777fa66c",
-      "bytes": 22808
+      "sha256": "d580da0344ea9d8ed71e41ba7c839359daff330d1dc727228b088112cf03fa12",
+      "bytes": 27191
     },
     {
       "path": "stand-animations.css",
-      "sha256": "c63a11852b215ba2c36b3c48442a231c5e0764a117de77771d17699bbfc0f0c2",
-      "bytes": 5721
+      "sha256": "3bc4833a409364ff4d5f11d80b7d57612c3176101faba2de96225521ed77ccf4",
+      "bytes": 10350
     },
     {
       "path": "stand-animations.js",
@@ -580,8 +585,8 @@
     },
     {
       "path": "stand-management-capabilities.js",
-      "sha256": "66eae1729a03bb198a271f65a068ef8926b5648368b5a8b84025175086b4c0d9",
-      "bytes": 1790
+      "sha256": "822438c0b944b62f11d6e05041bd35f12d50710386adb31f30366bf681b3c134",
+      "bytes": 1889
     },
     {
       "path": "stand-sharing-copy.js",
@@ -3153,6 +3158,49 @@
       "The public example changes no receiver, setting or real light; it is not hardware, OTA, speed or optical acceptance.",
       "Private firmware50 catalogue/images and native Swift changes are excluded from this public projection.",
       "Android30, its download overlay/landing/metadata and all16 historical APKs remain byte-exact656; no new Android build or phone install is claimed."
+    ]
+  },
+  "interfaceCandidate661": {
+    "sourceSnapshotOnly": true,
+    "sourceBoundaryVerified": true,
+    "sourceInputSHA256": {
+      "app.js": "a829ad5aa0b67dff435c8ce2682de47ba06069062097c9c09a0b0a37b7f41384",
+      "index.html": "62d5d79c5a435766b4e0b2707a26afc2dc8d103fe3c628dbdd9e09dd65bad36a",
+      "live-control.js": "f071f9a989a5195d981f6cc304e53a0a8e70c54fad2426f028856a19db5431ac",
+      "native-runtime.js": "9b754cd29638fec3b2b351394578d61557a6f59fae5f36ba2e8c6d3649afa6fa",
+      "onboarding-draft.js": "c373a95c4662d3eb901001f77b19a8324560fceaed815e40bdd7d9993ffd1b65",
+      "onboarding-ui.js": "21d60684ca94133d9cea6fdd2784a8c97f285ee2cd20377eae2ce58196e9d24d",
+      "pair-first-setup.js": "b28eb3234eb5f56d881f4c6269bda7f1021ad1cf2a42debb329e2597e04b6598",
+      "pixel-setup.css": "38678527e1b40018cda330bcd276919898bc457bb12b407a471c34d78643a0cb",
+      "pixel-setup.js": "d784792ad0c2e9ceabb7901358569003c77b7a1d29c9bff9921fc8c4ad96327e",
+      "pixel-translations.js": "1d37e538c3c2d9d9f1858d25252e778eb787e677348a00d0c8e8b104209fd2f2",
+      "preview.js": "ada7fe9c7b602d20ce8992041114d1a00e20b39378226be726224625783b9c7d",
+      "receiver-update-ui.js": "0a0fc48f5e7ac12ca6ed3a882ae08cba952c9f41f402efeff640315789a14fea",
+      "spi-direction-tutorial.css": "f82373ef5e74c67bb727a14a797ebf050e50432d7e243732bff4884636dfa1dc",
+      "spi-direction-tutorial.js": "e9a64ba9ac4e49fbf370c5f48fd4309bb39e48284d8ea384a1ed6a89838cf5de",
+      "spi-zone-direction.css": "38e8015aa94845af2a6ec3a5baf06ba848b93829ed508d566210c77acb69b552",
+      "spi-zone-direction.js": "d580da0344ea9d8ed71e41ba7c839359daff330d1dc727228b088112cf03fa12",
+      "stand-animations.css": "3bc4833a409364ff4d5f11d80b7d57612c3176101faba2de96225521ed77ccf4",
+      "stand-management-capabilities.js": "822438c0b944b62f11d6e05041bd35f12d50710386adb31f30366bf681b3c134"
+    },
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "opticalAcceptance": false,
+    "features": [
+      "Horizontal touching SPI profiles: left G-R remains fixed; only the right ends swap horizontally from R-G wrong to R-R matched, with a neutral turning stage and G-G valid legend.",
+      "Dismissible four-language explanation; port cards and Save remain usable, reduced-motion and visibility/timer cleanup retained.",
+      "Pair first, then all pixel counts, then zone-wide directions; separate pixels-only and direction settings preserve existing configuration in the demo.",
+      "Compact zone power control, explicit RGBW/SPI stand preview, clear saturated port colours and fresh-only animation defaults."
+    ],
+    "limits": [
+      "Source plus local browser demonstration only;661 has not been compiled into or installed as a native phone product.",
+      "Native Swift, private firmware51 catalogue/images, credentials and real receiver controls are excluded.",
+      "Public demo remains fictional, RAM-only and network-blocked; no receiver, OTA, speed, sync or optical acceptance.",
+      "Android30 overlay/landing/metadata and all16 historical APKs remain exact657; no new Android or phone installation claim."
     ]
   }
 }

@@ -18,12 +18,15 @@ html body .stand-controls-tabs.section-tabs{background:var(--glass-solid);backdr
 .stand-animation-zone-label{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;line-height:1.3}
 .stand-animation-zone-label b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .stand-animation-zone-label span{font-size:10px;color:#c9d5cf;flex:none}
+.stand-animation-zone-label .stand-animation-family-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 6px;border:1px solid #e4f4ec2b;border-radius:7px;color:#f2f8f4;font-size:11px;font-weight:750;letter-spacing:.3px}
+.stand-animation-family-badge i{display:block;width:19px;height:5px;border-radius:3px;background:currentColor;flex:none}
+[data-stand-preview-type="SPI"] .stand-animation-family-badge i{height:6px;border-radius:0;background:radial-gradient(circle at 3px 3px,currentColor 2.4px,transparent 2.6px) 0 0/6.5px 6px repeat-x}
 .stand-animation-role{display:inline-block;max-width:100%;font-size:11px;line-height:1.45;color:#dde9e2;margin-top:7px;padding:3px 7px;border-radius:7px;background:#e4f5e80d;overflow-wrap:anywhere}
 .stand-animation-zone canvas{display:block;width:100%;height:80px}
 .stand-animation-preview.is-compact{gap:4px;width:100%;padding:8px}
 .stand-animation-preview.is-compact .stand-animation-zone{padding:5px 7px;border-radius:11px}
 .stand-animation-preview.is-compact .stand-animation-zone-label{font-size:10px}
-.stand-animation-preview.is-compact .stand-animation-zone canvas{height:42px}
+.stand-animation-preview.is-compact .stand-animation-zone canvas{height:58px}
 [data-stand-control-mode=animations] .animation-family-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 [data-stand-control-mode=animations] .animation-library-inline{min-width:0}
 [data-stand-control-mode=animations] .animation-family-preview{min-height:146px}
@@ -46,9 +49,39 @@ html body .stand-controls-tabs.section-tabs{background:var(--glass-solid);backdr
 .stand-animation-explanation>summary{min-height:40px;display:list-item;cursor:pointer;padding:9px 4px;color:var(--ink);font-weight:700}
 .stand-animation-explanation p{margin:7px 4px}
 .stand-animation-live .stand-animation-preview.is-compact{padding:0}
+/* A mixed stand has TWO labelled family canvases. The older 70px clipped
+   family thumbnail could hide SPI completely. Size its content, not one strip. */
+html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] .animation-family-card[data-chooser-version="567"] .animation-family-preview:has(.stand-animation-preview){grid-template-rows:auto auto auto}
+html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] .animation-family-card[data-chooser-version="567"] .stand-animation-preview{max-height:none;overflow:visible;gap:6px}
+html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] .animation-family-card[data-chooser-version="567"] .stand-animation-zone canvas{height:40px!important}
+html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] .effect-card[data-chooser-version="567"] .stand-animation-zone canvas{height:48px!important}
 [data-stand-control-mode=animations] .animation-family-trigger{min-width:0}
 [data-stand-control-mode=animations] .family-copy{min-width:0}
 /* The dialog already reserves the measured title + tabs via scroll-padding. */
 [data-stand-control-mode=animations] :is(button,input){scroll-margin-block-start:12px}
 @media(max-width:350px){[data-stand-control-mode=animations] .animation-family-grid,[data-stand-control-mode=animations] .family-variant-grid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.stand-controls-tabs{scroll-behavior:auto}}
+
+/* One compact zone surface. The real open/power/options buttons are siblings,
+   so tapping the switch can never activate a nested open-zone control. */
+html.interface-polish body .stand-page .zone-entry-inline-power{display:grid;grid-template-columns:minmax(0,1fr) 76px;align-items:center;gap:0;overflow:hidden}
+html.interface-polish body .stand-page .zone-entry-inline-power>.zone-card{grid-column:1;grid-row:1;display:grid;grid-template-columns:clamp(64px,21vw,100px) minmax(0,1fr);gap:11px;min-height:118px;padding:12px 0 12px 12px;border-radius:20px;align-items:center}
+html.interface-polish body .stand-page .zone-entry-inline-power>.zone-card canvas{height:90px;min-width:0}
+html.interface-polish body .stand-page .zone-entry-inline-power .zone-copy{min-width:0;gap:5px;padding:0}
+html.interface-polish body .stand-page .zone-entry-inline-power .zone-card-heading>b{font-size:16px;line-height:1.24;overflow-wrap:anywhere}
+html.interface-polish body .stand-page .zone-entry-inline-power .zone-meta{line-height:1.5}
+html.interface-polish body .stand-page .zone-entry-inline-power .zone-card-actions{grid-column:2;grid-row:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;min-width:0;padding:5px 7px 5px 4px}
+html.interface-polish body .stand-page .zone-entry-inline-power .zone-options-button{position:static;display:grid;place-items:center;min-width:44px;min-height:44px;align-self:flex-end}
+html.interface-polish body .stand-page .zone-entry-inline-power .stand-zone-power{display:flex;align-items:center;justify-content:center;min-width:0;padding:0;border:0;border-radius:0;background:transparent}
+html.interface-polish body .stand-page .zone-entry-inline-power .stand-zone-power .switch{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:54px;min-height:48px;gap:4px;padding:2px;font-size:10px;line-height:1.15}
+html.interface-polish body .stand-page .zone-entry-inline-power>.stand-zone-power-status{grid-column:1/-1;margin:0;padding:0 14px 10px;font-size:12px;line-height:1.45;color:var(--red)}
+html.interface-polish body .stand-page .zone-entry-inline-power>.stand-zone-power-status[hidden]{display:none!important}
+
+/* The same port families as the physical SPI guide: readable labels, not a
+   faint pastel indicator. Firmware and geometry remain completely separate. */
+html body .receiver-port-row[data-port-row="1"]{--v659-port-colour:#0000ff;--v659-port-ink:#fff}
+html body .receiver-port-row[data-port-row="2"]{--v659-port-colour:#ff8000;--v659-port-ink:#161616}
+html body .receiver-port-row[data-port-row="3"]{--v659-port-colour:#8000ff;--v659-port-ink:#fff}
+html body .receiver-port-row[data-port-row="4"]{--v659-port-colour:#00ffff;--v659-port-ink:#161616}
+html body .receiver-port-row[data-port-row]{border-inline-start:3px solid var(--v659-port-colour)}
+html body .receiver-port-row[data-port-row] .receiver-port-select>b{display:grid;place-items:center;min-width:31px;min-height:29px;padding:3px 5px;border-radius:7px;background:var(--v659-port-colour);color:var(--v659-port-ink);font-weight:800;font-size:12px;box-shadow:0 0 0 1px #ffffff24}

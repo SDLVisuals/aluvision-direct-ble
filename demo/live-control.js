@@ -20,6 +20,21 @@
   const STATIC_TRANSITION_MS=120;
   const ANIMATION_CUE_TRANSITION_MS=180;
   const clone=value=>JSON.parse(JSON.stringify(value));
+  // Route hint only: native repeats closed parsing and exact physical-child
+  // admission. An explicit subset remains SPI_PORTS, never a PORT=0 scene.
+  function scopedMovingCandidate(request){
+    if(request?.kind!=='SPI_PORTS'||!Array.isArray(request.portScenes)||!request.portScenes.length||request.portScenes.length>4)return false;
+    let previous=0,common=null;
+    return request.portScenes.every(child=>{
+      const {port,...recipe}=child,scene=child.scene;
+      if(!Number.isInteger(port)||port<=previous||port>4||child.kind!=='SPI_SCENE'||child.brightness<=0||
+         !scene||!['CHASE','WAVE','BREATHE'].includes(scene.engine)||scene.backgroundOn!==false||
+         scene.v30!==undefined||scene.standAnimation!==undefined||
+         !Number.isInteger(scene.phaseMs)||!Number.isInteger(scene.phaseRateMicroHz)||scene.phaseRateMicroHz<=0)return false;
+      previous=port;const shape=JSON.stringify(recipe);
+      if(common!==null&&shape!==common)return false;common=shape;return true;
+    });
+  }
   function spiPhaseLineDelay(state,variant,lineCount,parallel) {
     if(!parallel||lineCount<=1)return 0;
     const shared=variant>=150&&SHARED_TUNNEL_VARIANTS.has(variant-150);
@@ -379,7 +394,7 @@
       if(held?.preludeOpen)return;
       if(held?.stream){considerStaticGestureUpdate(held);return;}
       if(held&&typeof held.operation?.retireEarlyAnimation==='function'&&[...held.items.values()].every(({request})=>
-         request.kind!=='SPI_PORTS'&&request.brightness>0&&request.scene&&
+         scopedMovingCandidate(request)||request.kind!=='SPI_PORTS'&&request.brightness>0&&request.scene&&
          (request.scene.engine!=='STATIC'||request.scene.v30))){considerAnimationRetirement(held);return;}
       if(!held||held.epoch!==epoch||held.supersessionCheck||held.supersessionRequested||
          typeof held.operation?.supersedePreparing!=='function')return;
@@ -612,7 +627,7 @@
             // speed waits for the previous background correction to finish.
             // Keep ordinary single-colour, OFF, scoped-port and prelude routes
             // unchanged; native still admits the complete original request.
-            const singleAnimation=initial.length===1&&initial.every(request=>
+            const singleAnimation=initial.length===1&&initial.every(request=>scopedMovingCandidate(request)||
               ['RGBW_SCENE','SPI_SCENE'].includes(request.kind)&&request.brightness>0&&
               request.scene&&(request.scene.engine!=='STATIC'||request.scene.v30)&&
               (request.scene.v30||Number.isInteger(request.scene.phaseMs)&&

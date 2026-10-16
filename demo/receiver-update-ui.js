@@ -105,7 +105,7 @@
       else if(!busy&&entry.status==='main-recovery-ready')action=`<button class="button full" data-update="repair-start" data-id="${escape(receiver.id)}">${escape(t('softwareMainRecoveryStart'))}</button>`;
       else if(!busy&&entry.status==='offline'&&entry.errorCode==='OTA_TOPOLOGY_UNCONFIRMED'&&receiver.role==='main'&&typeof services.otaMainRecoveryPlan==='function')action=`<button class="button secondary full" data-update="repair-check" data-id="${escape(receiver.id)}">${escape(t('softwareMainRecoveryCheck'))}</button>`;
       else if(!busy&&!entry.cancelling&&entry.status==='running'&&entry.job?.cancelAllowed&&!entry.job?.committed)action=`<button class="text-button" data-update="cancel" data-id="${escape(receiver.id)}">${escape(t('softwareCancel'))}</button>`;
-      return `<section class="card receiver-update-progress" data-update-row="${escape(receiver.id)}" data-state="${entry.status}"><div class="update-receiver-copy"><b>${name}</b><small>${escape(receiver.type)}</small>${status}</div>${action}</section>`;
+      return `<section class="card receiver-update-progress" data-update-row="${escape(receiver.id)}" data-state="${entry.status}"><div class="update-receiver-copy"><b>${name}</b><small>${escape(receiver.type)} · ID ${escape(receiver.rid)}</small>${status}</div>${action}</section>`;
     }
     function paint(){
       if(!dialog?.open)return;

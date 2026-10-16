@@ -10,7 +10,8 @@
   // the same customer-facing wording. Missing dictionary entries use Dutch.
   const TEXTS=Object.freeze({
     pixelPort:'Poort {port}',pixelOn:'Aan',pixelOff:'Uit',pixelNow:'Nu',pixelReady:'Klaar',pixelLater:'Straks',pixelPreserved:'Behouden',
-    pixelOutputs:'Uitgangen',pixelPixels:'Pixels',pixelStart:'Beginpunt',pixelReview:'Controleren',pixelSetupSteps:'LED Line instellen',
+    pixelOutputs:'Uitgangen',pixelPixels:'Pixels',pixelStart:'Kanten',pixelReview:'Controleren',pixelSetupSteps:'LED Line instellen',
+    pixelOnlySettings:'Pixels aanpassen',pixelOnlyHint:'Je past alleen het aantal pixels aan. De kanten blijven hetzelfde.',pixelDirectionsSettings:'Kanten aanpassen',pixelDirectionsHint:'Alle ledlines uit deze zone samen afstemmen.',pixelOnlySave:'Pixels opslaan',pixelNextDirections:'Verder · kanten instellen →',pixelAdded:'Receiver toegevoegd',pixelDirectionsSaved:'Kanten opgeslagen',pixelOnlySaved:'Pixels opgeslagen',
     pixelPortTask:'Poort {port} · {task}',pixelPortPosition:'{position} van {count} poorten',pixelPortProgress:'Voortgang per poort',
     pixelNextStart:'Verder · beginpunt →',pixelNextPort:'Verder naar poort {port} →',pixelNext:'Volgende →',pixelCheck:'Controleren →',
     pixelCount:'{count} pixels',pixelCountOne:'1 pixel',pixelSwipe:'Veeg rustig om aan te passen',pixelSwipeAria:'Aantal pixels op poort {port}; veeg links of rechts',
@@ -23,7 +24,7 @@
     pixelStopping:'Testlicht stoppen…',pixelStoppingChoices:'Testlicht stoppen… Je keuzes blijven staan.',pixelPreviewPending:'Testlicht aanpassen…',pixelPreviewUnsupported:'Werk deze receiver bij om het gekozen testlicht te tonen. Je keuze blijft staan.',pixelPreviewFailed:'Testlicht niet bereikbaar. Controleer de receiververbinding; je keuze blijft staan.',pixelPreviewLength:'Testlicht verstuurd naar poort {port}. De laatste pixel ({count}) hoort rood te branden; de andere pixels wit.',pixelPreviewPower:'Testlicht verstuurd naar poort {port}. Controleer het groene referentiepunt op de LED Line.',pixelPreviewDirection:'Richtingstest verstuurd naar poort {port}. Controleer de beweging op de LED Line: {direction}.',pixelPreviewPorts:'Herkenningskleuren verstuurd. Controleer elke LED Line; uitgeschakelde poorten horen uit te blijven.',pixelPreviewZero:'0 pixels · testlicht uit.'
   });
   function t(key,params={}){const language=globalThis.document?.documentElement?.lang||'nl';let text=globalThis.LightningPixelTranslations?.t?.(key,language,params)||globalThis.LightningPreferences?.t?.(key,language,params);if(!text||text===key)text=TEXTS[key]||key;return text.replace(/\{([^}]+)\}/g,(_,name)=>String(params[name]??`{${name}}`));}
-  const PORT_COLOURS=Object.freeze([{hex:'#2563eb',name:'pixelBlue'},{hex:'#ea580c',name:'pixelOrange'},{hex:'#9333ea',name:'pixelPurple'},{hex:'#0d9488',name:'pixelTurquoise'}]);
+  const PORT_COLOURS=Object.freeze([{hex:'#0000FF',name:'pixelBlue'},{hex:'#FF8000',name:'pixelOrange'},{hex:'#8000FF',name:'pixelPurple'},{hex:'#00FFFF',name:'pixelTurquoise'}]);
   function portColour(port){if(!Number.isInteger(port)||port<1||port>4)throw Error('PIXEL_PORT_INVALID');return Object.freeze({...PORT_COLOURS[port-1],label:t(PORT_COLOURS[port-1].name)});}
   let previewSerial=0;
   function previewId(){
@@ -66,7 +67,7 @@
   }
   function selectedPortSet(ports){if(ports==null)return null;if(!Array.isArray(ports)||!ports.length||ports.some(port=>!Number.isInteger(port)||port<1||port>4)||new Set(ports).size!==ports.length)throw Error('PIXEL_SELECTED_PORTS_INVALID');return new Set(ports);}
   function editableOutputs(outputs,ports){const selected=ports instanceof Set?ports:selectedPortSet(ports);return outputs.filter(output=>output.enabled&&(!selected||selected.has(output.port)));}
-  function sequence(outputs,{selectedPorts=null,jointDirections=false}={}){const ports=editableOutputs(outputs,selectedPorts).map(output=>output.port);return [{stage:'outputs',port:null},...ports.flatMap(port=>jointDirections?[{stage:'pixels',port}]:[{stage:'pixels',port},{stage:'connection',port}]),{stage:'review',port:null}];}
+  function sequence(outputs,{selectedPorts=null,jointDirections=false,pixelsOnly=false}={}){const ports=editableOutputs(outputs,selectedPorts).map(output=>output.port);return [...(pixelsOnly?[]:[{stage:'outputs',port:null}]),...ports.flatMap(port=>jointDirections||pixelsOnly?[{stage:'pixels',port}]:[{stage:'pixels',port},{stage:'connection',port}]),{stage:'review',port:null}];}
   function renderProgress(stage){const position={outputs:0,pixels:1,connection:2,review:3}[stage];return `<ol class="pixel-setup-steps" aria-label="${esc(t('pixelSetupSteps'))}">${['pixelOutputs','pixelPixels','pixelStart','pixelReview'].map((name,index)=>`<li ${index===position?'aria-current="step"':''}><span>${index<position?'✓':index+1}</span>${esc(t(name))}</li>`).join('')}</ol>`;}
   function renderPortContext(outputs,port,{stage='pixels',selectedPorts=null}={}){
     const selected=selectedPorts instanceof Set?selectedPorts:selectedPortSet(selectedPorts),active=editableOutputs(outputs,selected),position=active.findIndex(item=>item.port===port),task=t(stage==='connection'?'pixelStart':'pixelSetPixels'),colour=portColour(port);
@@ -286,14 +287,29 @@
     if(footer)footer.before(status);
     return ()=>{controls.forEach(({control,disabled})=>{control.disabled=disabled;});if(next)next.textContent=label;status.remove();if(wasBusy===null)region.removeAttribute('aria-busy');else region.setAttribute('aria-busy',wasBusy);};
   }
-  function create({onSave,onClose=()=>{},onPreview,mode='preview',previewCapabilities={},jointDirections=false}={}){
+  function setupResume(receiver,resumeStep){
+    const saved=outputsOf(receiver),fallback={outputs:saved,index:0};
+    if(!resumeStep||!['outputs','pixels','review'].includes(resumeStep.stage)||!Array.isArray(resumeStep.outputs)||resumeStep.outputs.length!==4)return fallback;
+    const draft=resumeStep.outputs;
+    if(draft.some((row,index)=>!row||row.port!==index+1||typeof row.enabled!=='boolean'||typeof row.reversed!=='boolean'||row.reversed!==saved[index].reversed||!Number.isInteger(row.pixels)||!(row.pixels>=0&&row.pixels<=MAX||!row.enabled&&!saved[index].enabled&&row.pixels===saved[index].pixels)))return fallback;
+    const outputs=draft.map(row=>({port:row.port,enabled:row.enabled,pixels:row.pixels,reversed:row.reversed})),steps=sequence(outputs,{jointDirections:true});
+    let index=steps.findIndex(step=>step.stage===resumeStep.stage&&step.port===(resumeStep.stage==='pixels'?resumeStep.port:null));
+    if(index<0)index=0;
+    if(steps[index].stage==='review'&&(!outputs.some(row=>row.enabled)||outputs.some(row=>row.enabled&&!configuredPixels(row.pixels))))index=Math.max(0,steps.findIndex(step=>step.stage==='pixels'));
+    return {outputs,index};
+  }
+  function create({onSave,onClose=()=>{},onPreview,onDraftChange=()=>{},mode='preview',previewCapabilities={},jointDirections=false}={}){
     if(typeof onSave!=='function')throw Error('PIXEL_SAVE_HANDLER_REQUIRED');
     const limits=pixelLimits();
-    let dialog=null,receiver=null,outputs=[],index=0,busy=false,error='',focusBefore=null,initialPort=null,selectedPort=null,selectedPorts=null,unbindScrub=null,unbindDirectionTutorial=null,recovering=false,directionRecovery=false,previewStopJob=null;
+    let dialog=null,receiver=null,outputs=[],index=0,busy=false,error='',focusBefore=null,initialPort=null,selectedPort=null,selectedPorts=null,unbindScrub=null,unbindDirectionTutorial=null,recovering=false,directionRecovery=false,directionOnlyMode=false,pairFirstFlow=false,pixelsOnly=false,previewStopJob=null;
     const plugMotion=globalThis.LightningReceiverVisual.createPlugMotion();
     let previewTransaction=null,previewState={kind:'idle'};
     const livePreview=createLivePreview({send:mode==='native'?onPreview:null,onState:state=>{previewState=state;showPreviewStatus(dialog,state);}});
-    const plan=()=>sequence(outputs,{selectedPorts,jointDirections}),current=()=>plan()[index],output=()=>outputs.find(item=>item.port===current().port),portsToEdit=()=>editableOutputs(outputs,selectedPorts);
+    const plan=()=>sequence(outputs,{selectedPorts,jointDirections,pixelsOnly}),current=()=>plan()[index],output=()=>outputs.find(item=>item.port===current().port),portsToEdit=()=>editableOutputs(outputs,selectedPorts);
+    function draftChanged(){
+      if(!dialog||recovering||directionOnlyMode||pixelsOnly||selectedPorts||!jointDirections||!['outputs','pixels','review'].includes(current().stage))return;
+      onDraftChange({receiverId:receiver.id,outputs:outputs.map(copy),stage:current().stage,port:current().port});
+    }
     function syncPreview({commit=false}={}){
       if(busy)return;
       if(!dialog||document.hidden){void livePreview.stop();return;}
@@ -324,12 +340,19 @@
         const next=dialog.querySelector('[data-pixel-action="next"]');if(next&&active)next.textContent=nextPortLabel(ports,active.port,{stage:'connection',last:t('pixelCheck')});
       }
       if(recovering){const back=dialog.querySelector('[data-pixel-action="back"]');if(back){back.dataset.pixelAction='close';back.textContent=t('pixelClose');}}
+      if(pixelsOnly){
+        dialog.querySelector('.pixel-setup-header h1').textContent=t('pixelOnlySettings');
+        dialog.querySelector('.pixel-setup-steps')?.remove();
+        const hint=document.createElement('p');hint.className='pixel-only-hint';hint.textContent=t('pixelOnlyHint');dialog.querySelector('.pixel-setup-body').prepend(hint);
+        const primary=dialog.querySelector('[data-pixel-action="save"]');if(primary&&!busy)primary.textContent=t('pixelOnlySave');
+      }
+      if(pairFirstFlow&&!busy){const primary=dialog.querySelector('[data-pixel-action="save"]');if(primary)primary.textContent=t('pixelNextDirections');}
       dialog.querySelector('.pixel-setup-body').scrollTop=top?0:previousScroll;
       if(!top&&focusedPort)dialog.querySelector(`[data-pixel-action="output"][data-port="${focusedPort}"]`)?.focus({preventScroll:true});
       paint(performance.now()/1000);
       syncPreview();
     }
-    function adjust(value,source,{commit=false,haptic=true}={}){if(!dialog||busy||current().stage!=='pixels')return;const previous=output().pixels,number=Number(value),legacyDecrease=previous>limits.max&&validPixels(number)&&number<=previous;if(!validateInput(dialog,value,limits)&&!legacyDecrease){dialog.querySelector('[data-pixel-action="next"]').disabled=true;return;}output().pixels=number;updatePixels(dialog,output(),{source});dialog.querySelector('[data-pixel-action="next"]').disabled=!configuredPixels(output().pixels,limits);if(haptic&&output().pixels!==previous)hapticStep();error='';syncPreview({commit});}
+    function adjust(value,source,{commit=false,haptic=true}={}){if(!dialog||busy||current().stage!=='pixels')return;const previous=output().pixels,number=Number(value),legacyDecrease=previous>limits.max&&validPixels(number)&&number<=previous;if(!validateInput(dialog,value,limits)&&!legacyDecrease){dialog.querySelector('[data-pixel-action="next"]').disabled=true;return;}output().pixels=number;updatePixels(dialog,output(),{source});dialog.querySelector('[data-pixel-action="next"]').disabled=!configuredPixels(output().pixels,limits);if(haptic&&output().pixels!==previous)hapticStep();error='';if(output().pixels!==previous)draftChanged();syncPreview({commit});}
     function input(event){if(busy)return;if(event.target.matches('[data-pixel-count],[data-pixel-range]'))adjust(event.target.value,event.target,{commit:event.type==='change'});}
     function commitKey(event){if(['Enter','ArrowUp','ArrowDown'].includes(event.key)&&event.target.matches('[data-pixel-count]'))adjust(event.target.value,event.target,{commit:event.key==='Enter'});}
     async function click(event){
@@ -346,21 +369,22 @@
         previewStopJob=null;
       }
       if(action==='close')return close();
-      if(action==='output'){const item=outputs.find(item=>item.port===Number(target.dataset.port));if(!item||selectedPorts&&!selectedPorts.has(item.port))return;item.enabled=!item.enabled;selectedPort=item.port;plugMotion.trigger(item.port,performance.now()/1000,item.enabled);error='';return render();}
+      if(action==='output'){const item=outputs.find(item=>item.port===Number(target.dataset.port));if(!item||selectedPorts&&!selectedPorts.has(item.port))return;item.enabled=!item.enabled;selectedPort=item.port;plugMotion.trigger(item.port,performance.now()/1000,item.enabled);error='';draftChanged();return render();}
       if(['pixel-less','pixel-more','pixel-step'].includes(action)){const delta=action==='pixel-step'?Number(target.dataset.pixelDelta):action==='pixel-less'?-1:1;if(![-30,-15,-1,1,15,30].includes(delta))return;return adjust(stepPixels(output().pixels,delta,limits),null,{commit:false});}
       if(action==='side'){if(!['forward','reverse','left','right'].includes(target.dataset.side))return;output().reversed=['reverse','right'].includes(target.dataset.side);error='';render();void livePreview.flush();return;}
-      if(action==='next'){if(!outputs.some(item=>item.enabled)||!portsToEdit().length)return render();if(step.stage==='pixels'&&(!validateInput(dialog,dialog.querySelector('[data-pixel-count]').value,limits)||!configuredPixels(output().pixels,limits)))return;index++;error='';return render(true);}
-      if(action==='back'){if(!index)return close();index--;error='';return render(true);}
-      if(action==='save'){if(!['preview','native'].includes(mode)||!portsToEdit().length||portsToEdit().some(item=>!configuredPixels(item.pixels,limits)))return;busy=true;error='';render();try{await onSave({receiverId:receiver.id,outputs:outputs.map(item=>!item.enabled&&item.pixels===0?{...item,pixels:receiver.outputs.find(original=>original.port===item.port)?.pixels||1}:copy(item)),...(directionRecovery?{directionsOnly:true}:{})});busy=false;close();}catch(failure){busy=false;error=typeof failure?.message==='string'?failure.message:t('pixelSaveFailed');render();}}
+      if(action==='next'){if(!outputs.some(item=>item.enabled)||!portsToEdit().length)return render();if(step.stage==='pixels'&&(!validateInput(dialog,dialog.querySelector('[data-pixel-count]').value,limits)||!configuredPixels(output().pixels,limits)))return;index++;error='';draftChanged();return render(true);}
+      if(action==='back'){if(!index)return close();index--;error='';draftChanged();return render(true);}
+      if(action==='save'){if(!['preview','native'].includes(mode)||!portsToEdit().length||portsToEdit().some(item=>!configuredPixels(item.pixels,limits)))return;busy=true;error='';render();try{await onSave({receiverId:receiver.id,outputs:outputs.map(item=>!item.enabled&&item.pixels===0?{...item,pixels:receiver.outputs.find(original=>original.port===item.port)?.pixels||1}:copy(item)),...(directionRecovery?{directionsOnly:true}:{}),pixelsOnly});busy=false;close();}catch(failure){busy=false;error=typeof failure?.message==='string'?failure.message:t('pixelSaveFailed');render();}}
     }
-    function open(value,{initialPort:port,resumePending=false,directionsOnly=false,selectedPorts:requestedPorts=null}={}){
-      if(dialog)throw Error('PIXEL_SETUP_ALREADY_OPEN');selectedPorts=selectedPortSet(resumePending?null:requestedPorts);outputs=outputsOf(value);receiver=copy(value);previewTransaction=previewId();previewState={kind:'idle'};document.addEventListener('visibilitychange',visibility);initialPort=Number.isInteger(port)&&port>=1&&port<=4?port:null;selectedPort=null;plugMotion.clear();index=0;error='';busy=false;focusBefore=document.activeElement;
-      recovering=resumePending===true;
+    function open(value,{initialPort:port,resumePending=false,directionsOnly=false,pixelsOnly:onlyPixels=false,selectedPorts:requestedPorts=null,resumeStep=null,pairFirst=false}={}){
+      if(dialog)throw Error('PIXEL_SETUP_ALREADY_OPEN');pixelsOnly=onlyPixels===true;selectedPorts=selectedPortSet(resumePending?null:requestedPorts);outputs=outputsOf(value);receiver=copy(value);previewTransaction=previewId();previewState={kind:'idle'};document.addEventListener('visibilitychange',visibility);initialPort=Number.isInteger(port)&&port>=1&&port<=4?port:null;selectedPort=null;plugMotion.clear();index=0;error='';busy=false;focusBefore=document.activeElement;
+      recovering=resumePending===true;directionOnlyMode=directionsOnly===true;pairFirstFlow=pairFirst===true&&jointDirections&&!directionOnlyMode&&!pixelsOnly&&!selectedPorts;
       directionRecovery=recovering&&directionsOnly===true;
       if(recovering){index=plan().length-1;error=t('pixelPendingConfig');}
-      dialog=document.createElement('dialog');dialog.className='pixel-setup-dialog';dialog.setAttribute('aria-label',t('pixelDialogAria'));dialog.addEventListener('click',click);dialog.addEventListener('input',input);dialog.addEventListener('change',input);dialog.addEventListener('keyup',commitKey);dialog.addEventListener('cancel',event=>{event.preventDefault();close();});unbindScrub=bindPixelScrub(dialog,{isEnabled:()=>!busy&&current().stage==='pixels',onChange:value=>adjust(value,null,{haptic:false}),onCommit:()=>void livePreview.flush()});document.body.append(dialog);render(true);dialog.showModal();paint(performance.now()/1000);
+      else if(jointDirections&&!directionsOnly&&!pixelsOnly&&!selectedPorts){const resumed=setupResume(receiver,resumeStep);outputs=resumed.outputs;index=resumed.index;}
+      dialog=document.createElement('dialog');dialog.className='pixel-setup-dialog';dialog.setAttribute('aria-label',t(pixelsOnly?'pixelOnlySettings':'pixelDialogAria'));dialog.addEventListener('click',click);dialog.addEventListener('input',input);dialog.addEventListener('change',input);dialog.addEventListener('keyup',commitKey);dialog.addEventListener('cancel',event=>{event.preventDefault();close();});unbindScrub=bindPixelScrub(dialog,{isEnabled:()=>!busy&&current().stage==='pixels',onChange:value=>adjust(value,null,{haptic:false}),onCommit:()=>void livePreview.flush()});document.body.append(dialog);render(true);dialog.showModal();paint(performance.now()/1000);
     }
     return Object.freeze({open,close,paint,isOpen:()=>!!dialog});
   }
-  return Object.freeze({TEXTS,PORT_COLOURS,portColour,guideRequest,create,createLivePreview,showPreviewStatus,showPreviewStopping,renderOutputs,paintOutputs,renderPixels,renderSide,renderPort,renderProgress,renderPortContext,nextPortLabel,bindPixelScrub,updatePixels,validateInput,outputsOf,sequence,validPixels,pixelLimits,editablePixels,configuredPixels,stepPixels,stepMeters,meterLabel,endpointLabel,hapticStep});
+  return Object.freeze({TEXTS,PORT_COLOURS,portColour,guideRequest,create,createLivePreview,showPreviewStatus,showPreviewStopping,renderOutputs,paintOutputs,renderPixels,renderSide,renderPort,renderProgress,renderPortContext,nextPortLabel,bindPixelScrub,updatePixels,validateInput,outputsOf,setupResume,sequence,validPixels,pixelLimits,editablePixels,configuredPixels,stepPixels,stepMeters,meterLabel,endpointLabel,hapticStep});
 }));

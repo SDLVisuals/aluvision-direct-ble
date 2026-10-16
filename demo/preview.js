@@ -271,6 +271,25 @@ function softChaseCoverage(distance,width,n,smooth){
   return crisp+(clamp(soft,0,1)-crisp)*blend;
 }
 
+// FW51's ordinary CHASE0 / Soft Chase8 use the factory-style raised-cosine
+// head AND tail. Integrating each pixel cell avoids stepping at subpixels;
+// periodic neighbours preserve WIDTHPX energy at the first/last pixel.
+// This changes shape only, never the existing shared clock or saved palette.
+function raisedCosineChaseCoverage(distance,width,n,smooth){
+  n=Math.max(1,n);width=clamp(width,1,n);if(width>=n)return 1;
+  const d=Math.abs(distance)*n,crisp=clamp(width*.5+.5-d,0,1)>=.999?1:0;
+  if(!smooth)return crisp;
+  const cell=delta=>{
+    const lo=Math.max(-width,delta-.5),hi=Math.min(width,delta+.5);
+    if(hi<=lo)return 0;
+    const span=hi-lo,mid=(hi+lo)*.5;
+    return clamp(.5*span+width/Math.PI*Math.cos(Math.PI*mid/width)*Math.sin(Math.PI*span/(2*width)),0,1);
+  };
+  let soft=cell(d);if(n-d<width+.5)soft+=cell(d-n);if(n+d<width+.5)soft+=cell(d+n);
+  const s=clamp(smooth,0,100,100)/100,blend=s<.5?4*s*s*s:1-4*Math.pow(1-s,3);
+  return crisp+(clamp(soft,0,1)-crisp)*blend;
+}
+
 // Reflect the same finite C2 band at a bounded scanner's two endpoints.
 // This conserves the selected width, with no far-end wrap or history delay.
 function softBoundedCoverage(samplePixel,position,width,n,smooth){
@@ -358,6 +377,7 @@ function softTrailCoverage(behind,trail,n,smooth){
         let p=sequenceSmooth||slowCorrection>=1?wrap(position):original;
         if(slowCorrection>0&&slowCorrection<1){let delta=wrap(position)-wrap(original);if(delta>.5)delta--;if(delta<-.5)delta++;p=wrap(original+delta*slowCorrection);}
         const coverage=target=>{const d=distance(u,target);
+          if(engine==='CHASE'&&(variant===0||variant===8))return q16(raisedCosineChaseCoverage(d,width,n,smooth));
           const prior=sequenceSmooth||slowCorrection>=1?0:q16(softChaseCoverage(d,width,n,smooth));
           if(!sequenceSmooth&&!slowCorrection)return prior;
           const overlap=q16(width>=n?1:clamp(width*.5+.5-d*n,0,1)),soft=q16(softChaseCoverage(d,width,n,100)),continuous=q16(overlap+(soft-overlap)*curve);
@@ -503,6 +523,22 @@ function softTrailCoverage(behind,trail,n,smooth){
     return {sample,catalog};
   })();
 
+  const FRESH_ANIMATION_COLOURS = Object.freeze(['#FF0000','#00FF00','#0000FF','#FF8000','#FFFF00','#00FFFF','#8000FF']);
+  function freshAnimationDefaults(effect) {
+    // Descriptor creation ONLY: never run this on a receiver, saved preset or
+    // restored scene. Explicit white/brand/reference recipes retain their
+    // intentional mix. Ordinary new choices use clear RGB, not an old pastel
+    // showcase palette or an invisible W-emitter slot inherited from V21.
+    if (effect.whiteMixPreset || effect.category === 'brand' || effect.state.engine === 'WARM' ||
+      effect.id.startsWith('v31-ref-') || effect.id.startsWith('v30-seven-')) return effect;
+    const state = effect.state, count = Math.max(1, state.colors?.length || state.colorCount || 1);
+    const colors = Array.from({length:count}, (_,index) => FRESH_ANIMATION_COLOURS[index % FRESH_ANIMATION_COLOURS.length]);
+    return {...effect,state:{...state,colors,whiteChannels:colors.map(()=>0),rgbEnabled:colors.map(()=>true),
+      whiteEnabled:colors.map(()=>false),backgroundWhite:0,backgroundWhiteEnabled:false,
+      // Existing mapping: 45% is about6.1s, close to the6s factory wave.
+      // Only a fresh SPI starter uses it; saved speed/smooth remain untouched.
+      ...(effect.id==='spi-chase-8'?{speed:45,smooth:100}:{})}};
+  }
   function catalog(type) {
     types(type);
     // Static color is its own page, not an animation. Include the real existing
@@ -511,7 +547,7 @@ function softTrailCoverage(behind,trail,n,smooth){
     const preserved = type === 'RGBW'
       ? canonical.rgbwEffects.filter(effect => effect.engine !== 'STATIC').map(effect => entry(effect, type))
       : legacySpi.catalog().concat(canonical.spiEffects.map(effect => entry(effect, type)), whole.map(effect => entry(effect, type, true)));
-    return preserved.concat(extension.catalog(type),references.catalog(type)).map(effect => {
+    return preserved.concat(extension.catalog(type),references.catalog(type)).map(freshAnimationDefaults).map(effect => {
       // New built-in choices start at the editor's requested width. This is a
       // descriptor default only: saved light states are never rewritten, and
       // recipes without an editable pixel width retain their original shape.

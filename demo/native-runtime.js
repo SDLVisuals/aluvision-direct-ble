@@ -783,7 +783,10 @@
     if(!request||typeof request!=='object'||Array.isArray(request)||Object.keys(request).some(key=>!['standId','receiverId','outputs','expectedRevision'].includes(key))||
       !validId(request.standId)||!validId(request.receiverId)||request.expectedRevision!==undefined&&(!Number.isSafeInteger(request.expectedRevision)||request.expectedRevision<0)||
       !Array.isArray(request.outputs)||request.outputs.length!==4||!request.outputs.every((port,index)=>port&&Object.keys(port).sort().join(',')==='enabled,pixels,port,reversed'&&port.port===index+1&&typeof port.enabled==='boolean'&&typeof port.reversed==='boolean'&&Number.isInteger(port.pixels)&&port.pixels>=1&&port.pixels<=(directionsOnly&&!port.enabled?1024:163))||!request.outputs.some(port=>port.enabled))return Promise.reject(fail('OUTPUT_CONFIGURATION_INVALID'));
-    const {standId,receiverId,expectedRevision}=request,outputs=request.outputs.map(port=>directionsOnly?{...port}:{...port,pixels:port.enabled?port.pixels:1,reversed:port.enabled&&port.reversed});
+    // Disabled rows are retained physical geometry, not an instruction to
+    // rewrite them. Native only configures active outputs and independently
+    // compares all four saved rows at its readback/CAS boundary.
+    const {standId,receiverId,expectedRevision}=request,outputs=request.outputs.map(port=>({...port}));
     const next=writeQueue.catch(()=>{}).then(async()=>{
       if(!viewLoaded)throw fail('VIEW_NOT_LOADED');
       const central=centralStamp&&{...centralStamp},epoch=standSharingEpoch;
@@ -1256,7 +1259,7 @@
       return JSON.parse(JSON.stringify(result));
     },
     async previewPixels(request){
-      const ports=request?.guide==='ports',colours=['#2563eb','#ea580c','#9333ea','#0d9488'];
+      const ports=request?.guide==='ports',colours=['#0000ff','#ff8000','#8000ff','#00ffff'];
       if(!request||!['start','update','stop'].includes(request.action)||request.receiver?.type!=='SPI'||
         !Number.isInteger(request.pixels)||request.pixels<0||request.pixels>163||request.guide!==undefined&&!['length','power','ports'].includes(request.guide)||
         (ports?request.port!==null||request.pixels!==0||request.reversed!==undefined||request.previewTTLMS!==12000||!Array.isArray(request.outputs)||request.outputs.length!==4||request.outputs.some((item,index)=>
@@ -1431,6 +1434,19 @@
            scene.v30!==undefined||scene.standAnimation!==undefined||scene.phaseMs!==undefined||scene.phaseRateMicroHz!==undefined)return null;
         const shape=copy(request);shape.brightness=1;shape.scene.palette=[];return JSON.stringify(shape);
       };
+      const scopedMoving=request=>{
+        if(request?.kind!=='SPI_PORTS'||!Array.isArray(request.portScenes)||!request.portScenes.length||request.portScenes.length>4)return false;
+        let previous=0,common=null;
+        return request.portScenes.every(child=>{
+          const {port,...recipe}=child,scene=child.scene;
+          if(!Number.isInteger(port)||port<=previous||port>4||child.kind!=='SPI_SCENE'||child.brightness<=0||
+             !scene||!['CHASE','WAVE','BREATHE'].includes(scene.engine)||scene.backgroundOn!==false||
+             scene.v30!==undefined||scene.standAnimation!==undefined||
+             !Number.isInteger(scene.phaseMs)||!Number.isInteger(scene.phaseRateMicroHz)||scene.phaseRateMicroHz<=0)return false;
+          previous=port;const shape=JSON.stringify(recipe);
+          if(common!==null&&shape!==common)return false;common=shape;return true;
+        });
+      };
       // Intent classification only. Native independently chooses/admit the
       // guarded mixed bank; no capability, mask, clock or authority is granted.
       const mixedFixedBank=values=>{
@@ -1516,7 +1532,7 @@
         retirementInFlight=true;
         return postedReady.then(()=>{
           if(settled||!requestId||!payload||preparing||centralStamp!==null||normalized.length!==payload.length||
-             payload.some(r=>!r.scene||r.brightness<=0||r.kind==='SPI_PORTS'||r.scene.engine==='STATIC'&&!r.scene.v30))return {status:'unavailable'};
+             payload.some(r=>!scopedMoving(r)&&(!r.scene||r.brightness<=0||r.kind==='SPI_PORTS'||r.scene.engine==='STATIC'&&!r.scene.v30)))return {status:'unavailable'};
           const expected=new Set(payload.map(r=>r.receiverId));
           // livePayload already closed-validates each SPI child and port list.
           // This is only a yield notice: native independently checks the fresh

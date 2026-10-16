@@ -9,6 +9,8 @@
   const required=Object.freeze({
     'order-identify':'standSessionIdentification',
     'receiver-pixel-setup':'standSessionOutputs',
+    'receiver-pixels-only':'standSessionOutputs',
+    'receiver-directions':'standSessionOutputs',
     'receiver-port-enabled':'standSessionOutputs',
     'receiver-update':'standSessionOTA',
     'receiver-update-all':'standSessionOTA',

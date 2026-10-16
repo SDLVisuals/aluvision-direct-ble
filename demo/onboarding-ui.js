@@ -149,11 +149,27 @@
     return {code,message:messages[code]||'Afronden is niet bevestigd. Controleer je standwifi en probeer opnieuw. Stel geen tweede stand in.'};
   }
 
-  function create({draftApi=window.LightningOnboardingDraft,visual=window.LightningReceiverVisual,pixelSetup=window.LightningPixelSetup,pixelsPerMeter,services={},getModel,onComplete=()=>{},onManage=null,onExit=()=>{},jointSPIDirections=false,allowPinLogin=false,automaticFirstReceiver=()=>false,firstStandAccessRequired=()=>false,onFirstStandAccess=null,allowLocalConcept=()=>false,onPreserveLocalConcept=null,onContinueLocalConcept=null}={}){
+  function create({draftApi=window.LightningOnboardingDraft,visual=window.LightningReceiverVisual,pixelSetup=window.LightningPixelSetup,pixelsPerMeter,services={},getModel,onComplete=()=>{},onManage=null,onExit=()=>{},jointSPIDirections=false,pairSPIFirst=false,onPairFirstBegin=null,allowPinLogin=false,automaticFirstReceiver=()=>false,firstStandAccessRequired=()=>false,onFirstStandAccess=null,allowLocalConcept=()=>false,onPreserveLocalConcept=null,onContinueLocalConcept=null}={}){
     if(!draftApi||!pixelSetup||typeof getModel!=='function')throw Error('Onboarding dependencies are required.');
     const pixelLimits=pixelSetup.pixelLimits({pixelsPerMeter});
     let draft=null,container=null,results=[],searchState='idle',receiverFilter='all',error='',notice='',busy=false,operation=0;
     let securityReceiptRef=null,finalReceiptRef=null,securityUncertain=false,finalizationStarted=false,completeModel=null,manualRejoinSSID=null;
+    const freshPairFirst=new Set(),pairFirstCheckpoints=new Set();
+    const pairFirstEnabled=()=>pairSPIFirst===true&&typeof onPairFirstBegin==='function';
+    const pairFirstCurrent=()=>pairFirstEnabled()&&draft?.receiver?.type==='SPI'&&(freshPairFirst.has(draft.transactionId)||pairFirstCheckpoints.has(draft.transactionId));
+    function advancePairFirst(){
+      if(!pairFirstEnabled()||!freshPairFirst.has(draft?.transactionId)||draft.receiver?.type!=='SPI'||!['receiver','placement','outputs'].includes(draft.stage))return;
+      const result=draftApi.transition(draft,{type:'PAIR_FIRST'});
+      // Existing choices and incompatible destinations retain the old route.
+      // No receipt, configuration or guard is bypassed by this shortcut.
+      if(!result.error){draft=result.draft;keepDraft();}
+    }
+    async function checkpointPairFirst(token){
+      if(!pairFirstEnabled()||draft.receiver?.type!=='SPI'||pairFirstCheckpoints.has(draft.transactionId))return;
+      await onPairFirstBegin(draftApi.snapshot(draft));
+      if(token!==operation)throw Error('SUSPENDED');
+      pairFirstCheckpoints.add(draft.transactionId);
+    }
     // Presentation hold only. No PIN, model archive or private receipt is in
     // this checkpoint. Native publication is not customer setup completion.
     let firstAccess=null,firstAccessErrorCode='',firstAccessReturnPending=false,firstAccessJob=null;
@@ -565,15 +581,15 @@
       }
       syncPixelPreview();
       if(document.hidden){if(pendingMain())returningFromWifi=true;stopAutomaticRejoin();}
-      else {resumeFirstAccessAfterWifiReturn();if(returningFromWifi)resumeAfterWifiReturn();}
+      else {resumeFirstAccessAfterWifiReturn();if(returningFromWifi)resumeAfterWifiReturn();queueJointDirections();}
     }
     function probeAfterWifiReturn(){
       const guide=window.LightningSetupWifiGuide;
       if(guide?.canProbe({mounted:!!container,hidden:document.hidden,manualWifi:manualWifi(),stage:draft?.stage,busy,
         saving:draftSaving,pending:!!pendingChoices,firstAccess:!!firstAccess,searching:searchState==='searching',identifying:!!(identifyPending.size||identifying.size)}))void search();
     }
-    function nativeActive(){resumeFirstAccessAfterWifiReturn();resumeAfterWifiReturn();probeAfterWifiReturn();}
-    function pageShown(event){if(event.persisted||returningFromWifi||firstAccessReturnPending){resumeFirstAccessAfterWifiReturn();resumeAfterWifiReturn();probeAfterWifiReturn();}}
+    function nativeActive(){resumeFirstAccessAfterWifiReturn();resumeAfterWifiReturn();probeAfterWifiReturn();queueJointDirections();}
+    function pageShown(event){if(event.persisted||returningFromWifi||firstAccessReturnPending){resumeFirstAccessAfterWifiReturn();resumeAfterWifiReturn();probeAfterWifiReturn();}queueJointDirections();}
     function mount(element,options){
       // A confirmed central publication may redraw this same page before
       // finish() returns. Keep its completion screen; only a genuine new
@@ -625,24 +641,24 @@
     function receiverSetupProgress(){
       if(firstStandSetup587()){
         if(['stand','zones'].includes(draft.stage))return '';
-        const spi=draft.receiver?.type==='SPI',steps=spi?[tx('Zoeken'),tx('Instellen'),tx('Verbinden')]:[tx('Zoeken'),tx('Verbinden')];
-        const current=draft.stage==='receiver'?0:spi&&['placement','outputs','pixels','connection','zone'].includes(draft.stage)?1:steps.length-1;
-        return `<ol class="onboarding-receiver-phases" data-receiver-phases="587" aria-label="${escape(tx('Receiver toevoegen in stappen'))}">${steps.map((label,i)=>`<li ${draft.stage!=='done'&&i===current?'aria-current="step"':''} data-completed="${draft.stage==='done'||i<current}"><span>${escape(label)}</span></li>`).join('')}</ol>`;
+        const spi=draft.receiver?.type==='SPI',pairFirst=pairFirstCurrent(),steps=spi?(pairFirst?[tx('Zoeken'),tx('Verbinden'),tx('Instellen')]:[tx('Zoeken'),tx('Instellen'),tx('Verbinden')]):[tx('Zoeken'),tx('Verbinden')];
+        const current=draft.stage==='receiver'?0:pairFirst?(draft.stage==='done'?2:1):spi&&['placement','outputs','pixels','connection','zone'].includes(draft.stage)?1:steps.length-1,done=draft.stage==='done'&&!pairFirst;
+        return `<ol class="onboarding-receiver-phases" data-receiver-phases="587" aria-label="${escape(tx('Receiver toevoegen in stappen'))}">${steps.map((label,i)=>`<li ${!done&&i===current?'aria-current="step"':''} data-completed="${done||i<current}"><span>${escape(label)}</span></li>`).join('')}</ol>`;
       }
       if(origin==='stand'&&automaticFirstReceiver()&&pinRequired()){
         return `<ol class="stand-simple-steps" data-onboarding-first-steps aria-label="${escape(tx("Stand instellen in drie stappen"))}"><li aria-current="step"><i>1</i><b>${escape(tx("Wifi verbinden"))}</b></li><li><i>2</i><b>${escape(tx("PIN kiezen"))}</b><small>${escape(tx("8–12 cijfers"))}</small></li><li><i>3</i><b>${escape(tx("Klaar"))}</b></li></ol>`;
       }
       if(['stand','zones'].includes(draft.stage)||receiverMove)return '';
-      const spi=draft.receiver?.type==='SPI',steps=spi?[tx('Zoeken'),tx('Instellen'),tx('Verbinden')]:[tx('Zoeken'),tx('Verbinden')];
-      const current=draft.stage==='receiver'?0:spi&&['placement','outputs','pixels','connection','zone'].includes(draft.stage)?1:steps.length-1;
-      const done=draft.stage==='done';
+      const spi=draft.receiver?.type==='SPI',pairFirst=pairFirstCurrent(),steps=spi?(pairFirst?[tx('Zoeken'),tx('Verbinden'),tx('Instellen')]:[tx('Zoeken'),tx('Instellen'),tx('Verbinden')]):[tx('Zoeken'),tx('Verbinden')];
+      const current=draft.stage==='receiver'?0:pairFirst?(draft.stage==='done'?2:1):spi&&['placement','outputs','pixels','connection','zone'].includes(draft.stage)?1:steps.length-1;
+      const done=draft.stage==='done'&&!pairFirst;
       return `<ol class="onboarding-setup-steps onboarding-receiver-steps" data-onboarding-receiver-steps data-step-count="${steps.length}" data-receiver-setup-type="${draft.receiver?.type||'any'}" aria-label="${escape(tx("Receiver toevoegen in stappen"))}">${steps.map((label,i)=>`<li class="${done||i<current?'completed':''}" ${!done&&i===current?'aria-current="step"':''}><span aria-hidden="true">${done||i<current?'✓':i+1}</span><b>${label}</b></li>`).join('')}</ol>`;
     }
     function heading(){
       const firstSetup=firstStandSetup587();
       const step=draft.stage==='stand'?1:draft.stage==='zones'?2:3;
       const connectionCardStage=draft.stage==='security'||draft.stage==='pin'&&!pinRequired()||draft.stage==='review'&&!pinRequired()&&automaticFinalizing&&busy;
-      const title=draft.stage==='stand'?tx('Hoe heet je stand?'):draft.stage==='zones'?(zoneRemoval?tx('Zones beheren'):zoneRename?tx('Zone hernoemen'):receiverMove?tx('Ledline verplaatsen'):tx('Je zones')):draft.stage==='receiver'?(receiverMove?tx('Ledline verplaatsen'):busy?tx('Receiver controleren'):searchState==='searching'?tx('Receiver zoeken…'):results.length===1?tx('Receiver gevonden'):results.length>1?tx('Kies je receiver'):tx('Receiver zoeken')):automaticMain()&&draft.stage==='security'?(busy||rejoinRunning?tx('Je receiver toevoegen'):tx('Verbind opnieuw met wifi')):automaticMain()&&automaticFinalizing&&draft.stage==='review'?tx('Je receiver toevoegen'):labels[draft.stage]||tx('Receiver toevoegen');
+      const title=draft.stage==='done'&&jointSPIDirections&&draft.receiver?.type==='SPI'&&draft.zoneId?window.LightningPixelTranslations.t('pixelDirectionsSettings',document.documentElement.lang):draft.stage==='stand'?tx('Hoe heet je stand?'):draft.stage==='zones'?(zoneRemoval?tx('Zones beheren'):zoneRename?tx('Zone hernoemen'):receiverMove?tx('Ledline verplaatsen'):tx('Je zones')):draft.stage==='receiver'?(receiverMove?tx('Ledline verplaatsen'):busy?tx('Receiver controleren'):searchState==='searching'?tx('Receiver zoeken…'):results.length===1?tx('Receiver gevonden'):results.length>1?tx('Kies je receiver'):tx('Receiver zoeken')):automaticMain()&&draft.stage==='security'?(busy||rejoinRunning?tx('Je receiver toevoegen'):tx('Verbind opnieuw met wifi')):automaticMain()&&automaticFinalizing&&draft.stage==='review'?tx('Je receiver toevoegen'):labels[draft.stage]||tx('Receiver toevoegen');
       const receiverContext=draft.receiver&&!connectionCardStage&&!['receiver','done'].includes(draft.stage)?`<p class="onboarding-receiver-context"><b>${escape(draft.receiver.name||tx('Receiver'))}</b><span>${escape(draft.receiver.type)}</span></p>`:'';
       const returnToStand=savedStand()&&draft.stage!=='done';
       const closeLabel=origin==='layout'?tx('Terug naar ledlines'):draft.stage==='receiver'&&draft.receiver===null?tx('Receivers later toevoegen'):tx('Naar mijn stand');
@@ -689,7 +705,7 @@
       const zone=draft.zones.find(item=>item.id===draft.activeZoneId);
       const compatible=zone&&(!zone.type||zone.type===receiver.type);
       const retryIdentity=!!error&&receiver.canConfigure===false&&receiver.canVerifyIdentity===true;
-      const label=retryIdentity?tx('Opnieuw controleren'):!pinRequired()&&receiver.type==='RGBW'?(compatible?escape(tx('Toevoegen aan {name}',{name:zone.name})):!zone?tx('Zonder zone toevoegen'):tx('Kies een passende zone')):escape(tx('Verder met {type}-receiver',{type:receiver.type}));
+      const label=retryIdentity?tx('Opnieuw controleren'):!pinRequired()&&(receiver.type==='RGBW'||pairFirstEnabled()&&receiver.type==='SPI')?(compatible?escape(tx('Toevoegen aan {name}',{name:zone.name})):!zone?tx('Zonder zone toevoegen'):tx('Kies een passende zone')):escape(tx('Verder met {type}-receiver',{type:receiver.type}));
       return `${zone&&!compatible?`<p class="onboarding-compatibility-note">${escape(tx('{type} past niet in deze zone. Kies een andere zone of voeg hem zonder zone toe.',{type:receiver.type}))}</p>`:''}${button('receiver',busy||identifyPending.size?tx('Even wachten…'):label,`data-id="${escape(receiver.id)}" ${busy||identifyPending.size||draft.zoneChoiceRequired||!(receiver.canConfigure||receiver.canVerifyIdentity)?'disabled':''}`)}`;
     }
     function foundReceiverID(receiver){
@@ -777,6 +793,9 @@
       return connectionCard({title:'Receiver toevoegen…',hint:'Je instellingen worden bewaard.',progress:false});
     }
     function completeCard(){
+      // Ownership publication is needed for the authenticated whole-zone test,
+      // but it is not the customer's final setup step. Never show Added here.
+      if(jointSPIDirections&&draft.receiver?.type==='SPI'&&draft.zoneId)return connectionCard({title:window.LightningPixelTranslations.t('pixelDirectionsSettings',document.documentElement.lang),hint:'',progress:false})+button('joint-directions',window.LightningPixelTranslations.t('pixelNextDirections',document.documentElement.lang));
       const zone=draft.zones.find(zone=>zone.id===draft.zoneId),count=getModel().receivers.filter(receiver=>receiver.standId===draft.stand.id&&receiver.zoneId===draft.zoneId&&receiver.lifecycle==='added').length;
       return `<section class="card onboarding-done">${product(draft.receiver,{compact:true})}<span class="onboarding-success-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="m8 16 5 5 11-11"/></svg></span><h2>${escape(tx("Receiver toegevoegd"))}</h2><p>${escape(zone?.name||tx('Niet in een zone'))} · ${count} ${tx(count===1?'receiver':'receivers')}</p></section><section class="onboarding-followup">${button('another',`＋ ${escape(t('setupAnotherReceiver','Nog een receiver toevoegen'))}`,'class="button full"')}${button('done',origin==='layout'?tx('Terug naar ledlines'):escape(t('setupMyStand','Naar mijn stand')),'class="button secondary full"')}${button('another-zone',zone?tx('Receiver in een andere zone'):tx('Receiver met een nieuwe zone'),'class="text-button"')}</section>`;
     }
@@ -955,16 +974,16 @@
       queueJointDirections();
     }
     function queueJointDirections(){
-      if(!jointSPIDirections||busy||!container)return;
+      if(!(jointSPIDirections||pairFirstEnabled())||busy||!container)return;
       const receiverId=firstAccess?.phase==='done'?firstAccess.identity.receiverId:draft?.stage==='done'?draft.receiver?.id:null;
       const receiver=receiverId&&getModel().receivers.find(item=>item.id===receiverId&&item.type==='SPI'&&item.lifecycle==='added');
-      if(!receiver?.zoneId)return;
+      if(!receiver||!receiver.zoneId&&!pairFirstEnabled())return;
       const token=operation,currentContainer=container;
       queueMicrotask(()=>{
         if(token!==operation||container!==currentContainer||busy||document.hidden)return;
         const current=getModel().receivers.find(item=>item.id===receiverId&&item.type==='SPI'&&item.lifecycle==='added'&&item.zoneId===receiver.zoneId);
         if(!current)return;
-        suspend();onExit({stand:true,spiDirectionZoneId:current.zoneId,newReceiverId:current.id});
+        suspend();onExit(pairFirstEnabled()?{stand:true,spiPairFirstReceiverId:current.id,spiPairFirstZoneId:current.zoneId||null}:{stand:true,spiDirectionZoneId:current.zoneId,newReceiverId:current.id});
       });
     }
     function validName(value){const name=String(value).trim();return name.length>0&&name.length<=64&&!/[<>\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/.test(name);}
@@ -1141,6 +1160,7 @@
       let attempted=false;
       try{
         await persist();if(token!==operation)throw Error('SUSPENDED');
+        await checkpointPairFirst(token);
         change({type:'SECURITY_PROGRESS',phase:method==='reconcileSecurity'?'resuming':'claiming'},{top:false});
         securityUncertain=true;
         let response;
@@ -1227,6 +1247,7 @@
       let finishPhase='save';
       try{
         await persist();if(token!==operation)throw Error('SUSPENDED');
+        await checkpointPairFirst(token);
         finishPhase='receiver';
         if(refreshProof){
           const retryModel=getModel(),retryConfiguration=canonical(config());
@@ -1665,7 +1686,7 @@
           return;
         }
         resumeSelection=null;
-        if(change({type:'SELECT_RECEIVER',receiver:candidate},{render:false})){plugMotion.clear();selectedOutput=null;change({type:'NEXT'});if(draft.stage==='security')return secure();}return;
+        if(change({type:'SELECT_RECEIVER',receiver:candidate},{render:false})){plugMotion.clear();selectedOutput=null;if(pairFirstEnabled()&&candidate.type==='SPI')freshPairFirst.add(draft.transactionId);change({type:'NEXT'},{render:false});advancePairFirst();paintPage();if(draft.stage==='security')return secure();}return;
       }
       if(action==='count')return change({type:'SET_OUTPUT_COUNT',count:Number(target.dataset.count)});
       if(action==='output'){
@@ -1687,7 +1708,7 @@
       if(action==='side'){if(change({type:'SET_SIDE',port:draft.port,side:target.dataset.side},{top:false}))void pixelPreview.flush();return;}
       if(action==='zone'){
         const zoneId=target.hasAttribute('data-without-zone')?null:target.dataset.id;
-        if(draft.stage==='placement')return saveChoices([{type:'SELECT_ZONE',zoneId},{type:'NEXT'}],()=>{if(draft.stage==='security')queueMicrotask(()=>secure());});
+        if(draft.stage==='placement')return saveChoices([{type:'SELECT_ZONE',zoneId},{type:'NEXT'}],()=>{advancePairFirst();if(draft.stage==='security')queueMicrotask(()=>secure());});
         if(pinRequired())return change({type:'SELECT_ZONE',zoneId});
         const selected=draftApi.transition(draft,{type:'SELECT_ZONE',zoneId});
         if(selected.error){error=selected.error.message;paintPage(false);return;}
@@ -1725,6 +1746,7 @@
       if(action==='secure')return secure(container.querySelector('#onboarding-pin').value,container.querySelector('#onboarding-pin-repeat').value);
       if(action==='security-retry')return automaticMain()?resumeAfterWifiReturn({force:true}):secure(undefined,undefined,{reconcile:true});
       if(action==='finish')return finish();
+      if(action==='joint-directions'){queueJointDirections();return;}
       if(action==='done'){suspend();onExit({stand:true});return;}
       if(action==='another'){const activeZoneId=draft.zoneId;draft=null;start({activeZoneId});paintPage();if(draft.stage==='receiver')queueMicrotask(()=>{if(container&&draft.stage==='receiver'&&searchState==='idle'&&!busy)void search();});return;}
       if(action==='another-zone'){

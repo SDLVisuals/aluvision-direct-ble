@@ -34,7 +34,7 @@
   const runtime=window.LightningNativeRuntime;
   const SimpleStand=window.LightningStandConnection;
   let standSharingController=null,standSharingMode=null,standSharingAvailable=false,standWifiOpenAvailable=false,standScanAvailable=false,standLinkAvailable=false,standShareSheetAvailable=false,standReceiverManagementAvailable=false,standLinkPending=false,standLinkJob=null;
-  const standReceiverActions=new Set(['receiver-add','layout-receiver-add','layout-new-receiver','assignment-add-receiver','receiver-remove','receiver-update-all','receiver-update','receiver-pixel-setup','receiver-port-enabled','visual-identify','port-identify']);
+  const standReceiverActions=new Set(['receiver-add','layout-receiver-add','layout-new-receiver','assignment-add-receiver','receiver-remove','receiver-update-all','receiver-update','receiver-pixel-setup','receiver-pixels-only','receiver-directions','receiver-port-enabled','visual-identify','port-identify','pair-first-resume']);
   let standReceiverCapabilities=Object.freeze({});
   let standReceiverNotice=window.LightningStandManagementCapabilities.notice(standReceiverCapabilities);
   function standReceiverManagementUnavailable(){return simpleStandMode&&!!(centralApplied||centralPending||standSession?.snapshot()||standSession?.canResume())&&!standReceiverManagementAvailable;}
@@ -114,6 +114,18 @@
   // Merely browsing must work even when a privacy policy denies local storage.
   // The demo shares an origin with the public root but never shares storage.
   const appStorage=webDemoContext?webDemo.storage:(()=>{try{return window.localStorage;}catch(_){return null;}})();
+  const PairFirst=window.LightningPairFirstSetup;
+  const pairFirstSetup=PairFirst?.create({storage:appStorage});
+  let pairFirstActiveReceiverId=null,pairFirstOpening=null,pairFirstAwaitingAssignmentId=null;
+  function pairFirstText(key){return PairFirst?.text(key,uiPreferences.preferences.language)||'';}
+  function pairFirstResumeMarkup(){
+    if(!pairFirstSetup||firstAccessCheckpoint)return '';
+    const rows=pairFirstSetup.entries().filter(row=>row.standId===stand()?.id&&PairFirst.receiverFor(model,row));
+    if(!rows.length)return '';
+    return `<section class="card" data-pair-first-resume><h2>${esc(pairFirstText('title'))}</h2><p>${esc(pairFirstText('hint'))}</p>${rows.map(row=>{
+      const receiver=model.receivers.find(item=>item.id===row.receiverId);return `<button type="button" class="button secondary full" data-action="pair-first-resume" data-id="${esc(row.receiverId)}">${esc(receiver.name||'SPI')} · ${esc(pairFirstText('resume'))}</button>`;
+    }).join('')}</section>`;
+  }
   const FIRST_ACCESS_KEY='aluvision.first-wifi-pin.v1';
   const LOCAL_STAND_KEY='aluvision.local-stand-concept.v1';
   const standPresentationCache=window.LightningStandCache?.create(appStorage);
@@ -1004,7 +1016,7 @@
       render({preserveScroll:true});
       return {results,zoneSignature:spiZoneDirectionSignature({standId,zoneId})};
     },
-    onClose:({standId,zoneId,sessionId,pendingChanges})=>{
+    onClose:({reason,standId,zoneId,sessionId,newReceiverId,pendingChanges})=>{
       spiDirectionRetired.add(sessionId);
       // Retire the exact native holder immediately even if a guide reply is
       // still in flight. The queued STOP below remains the confirmed cleanup;
@@ -1012,19 +1024,47 @@
       if(spiDirectionSessions.get(sessionId)?.attempted&&runtime?.native===true)void runtime.services.previewSPIZoneDirections({action:'stop',standId,zoneId,sessionId}).catch(()=>{});
       const key=standId+':'+zoneId;
       if(pendingChanges.length)spiDirectionPending.set(key,pendingChanges);else spiDirectionPending.delete(key);
+      const continuation=newReceiverId&&pairFirstSetup?.get(newReceiverId);
+      if(continuation&&PairFirst.receiverFor(model,continuation)){
+        try{
+          if(['saved','done'].includes(reason)&&!pendingChanges.length)pairFirstSetup.remove(newReceiverId);
+          else pairFirstSetup.rememberDirections(newReceiverId,model,pendingChanges);
+        }catch(_){toast(pairFirstText('storage'));}
+      }
+      if(['saved','done'].includes(reason)){
+        const joined=newReceiverId&&model.receivers.find(receiver=>receiver.id===newReceiverId&&receiver.standId===standId&&receiver.zoneId===zoneId&&receiver.lifecycle==='added');
+        if(joined)resumeConfiguredLighting(joined.id);
+        render({preserveScroll:true});toast(pixelText659(joined?'pixelAdded':'pixelDirectionsSaved'));
+      }
     }
   });
   async function openSPIZoneDirections({zoneId,newReceiverId}={}){
     if(spiZoneDirections.isOpen()||pixelSetup.isOpen()||document.hidden)return;
+    const openingRoute=route,openingModel=model;
     await orderIdentification?.close('spi-directions');
-    if(document.hidden||spiZoneDirections.isOpen()||pixelSetup.isOpen())return;
+    if(document.hidden||route!==openingRoute||model!==openingModel||spiZoneDirections.isOpen()||pixelSetup.isOpen())return;
     // Read the cohort AFTER asynchronous cleanup. A zone edit during STOP
     // must not pair old outputs with a freshly captured signature.
     const current=model.stands.flatMap(item=>item.zones.map(zone=>({stand:item,zone}))).find(item=>item.zone.id===zoneId);
     if(!current)return;
     const receivers=current.zone.receiverIds.map(id=>model.receivers.find(receiver=>receiver.id===id&&receiver.type==='SPI'&&receiver.lifecycle==='added'&&receiver.zoneId===zoneId&&receiver.standId===current.stand.id)).filter(Boolean);
     if(!receivers.length)return;
-    const key=current.stand.id+':'+zoneId,previousPending=spiDirectionPending.get(key)||[];
+    const key=current.stand.id+':'+zoneId,previousPending=(spiDirectionPending.get(key)||[]).map(change=>({...change,outputs:change.outputs.map(output=>({...output}))}));
+    if(nativeContext){
+      const signature=JSON.stringify(spiZoneDirectionSignature({standId:current.stand.id,zoneId}));
+      for(const receiver of receivers){
+        const pending=await runtime.services.outputConfigurationStatus({standId:current.stand.id,receiverId:receiver.id});
+        if(document.hidden||route!==openingRoute||model!==openingModel||spiZoneDirections.isOpen()||pixelSetup.isOpen()||JSON.stringify(spiZoneDirectionSignature({standId:current.stand.id,zoneId}))!==signature)throw Object.assign(Error(),{code:'SPI_DIRECTION_ZONE_CHANGED'});
+        if(pending.status==='pending'){
+          // A local UI bookmark cannot hide another cohort member's durable
+          // native intent. Same-geometry pending saves must be explicitly
+          // reconciled even if their desired directions already match model.
+          if(pending.outputs.some((output,index)=>{const before=receiver.outputs[index];return !before||output.port!==before.port||output.enabled!==before.enabled||output.pixels!==before.pixels||!before.enabled&&output.reversed!==before.reversed;}))throw Object.assign(Error(),{code:'OUTPUT_CONFIGURATION_PENDING'});
+          const item={receiverId:receiver.id,outputs:pending.outputs.map(output=>({...output})),requiresReconcile:true},index=previousPending.findIndex(change=>change.receiverId===receiver.id);
+          if(index<0)previousPending.push(item);else previousPending[index]=item;
+        }else if(pending.status!=='none')throw Object.assign(Error(),{code:'OUTPUT_CONFIGURATION_UNCONFIRMED'});
+      }
+    }
     const pendingChanges=previousPending.filter(change=>{
       const receiver=receivers.find(item=>item.id===change.receiverId);
       return receiver&&Array.isArray(change.outputs)&&change.outputs.length===4&&change.outputs.every((output,index)=>{
@@ -1033,32 +1073,106 @@
     });
     if(pendingChanges.length)spiDirectionPending.set(key,pendingChanges);else spiDirectionPending.delete(key);
     closeEffectDialog();
-    spiZoneDirections.open({standId:current.stand.id,zoneId,zoneName:current.zone.name,receivers:receivers.map(receiver=>({id:receiver.id,name:receiver.name,outputs:receiver.outputs.map(output=>({...output}))})),...(newReceiverId?{newReceiverId}:{}),previewOnly:previewContext,pendingChanges,pendingChanged:pendingChanges.length!==previousPending.length});
+    const continuation=newReceiverId&&pairFirstSetup?.get(newReceiverId),pairFirst=!!(continuation&&PairFirst.receiverFor(model,continuation));
+    spiZoneDirections.open({standId:current.stand.id,zoneId,zoneName:current.zone.name,receivers:receivers.map(receiver=>({id:receiver.id,name:receiver.name,outputs:receiver.outputs.map(output=>({...output}))})),...(newReceiverId?{newReceiverId}:{}),pairFirst,previewOnly:previewContext,pendingChanges,pendingChanged:pendingChanges.length!==previousPending.length});
+  }
+  async function openPairFirstSetup(receiverId){
+    if(!pairFirstSetup||pairFirstOpening||pixelSetup.isOpen()||spiZoneDirections.isOpen()||document.hidden||firstAccessCheckpoint)return;
+    requireStandPresentationConnection();
+    const token={},beforeRoute=route,beforeModel=model;pairFirstOpening=token;
+    const current=()=>pairFirstOpening===token&&route===beforeRoute&&model===beforeModel&&!document.hidden&&!firstAccessCheckpoint&&!pixelSetup.isOpen()&&!spiZoneDirections.isOpen();
+    try{
+      const view=nativeContext?await runtime.services.loadState():{model,draft:null};
+      if(!current())return;
+      if(view.draft?.receiver)throw Object.assign(Error(),{code:'V30_CHECKPOINT_CONFLICT'});
+      const actual=M.assertValid(view.model);
+      let saved=pairFirstSetup.get(receiverId);
+      // This is UI recovery from an ACTUAL published native model, not a way
+      // to synthesize membership or resume a claim from local storage.
+      if(!saved)saved=PairFirst.fromPublished(actual,receiverId);
+      const receiver=PairFirst.receiverFor(actual,saved);
+      if(!receiver)throw Object.assign(Error(),{code:'PAIR_FIRST_IDENTITY_CHANGED'});
+      if(view.draft&&(view.draft.stand?.id!==receiver.standId||view.draft.receiver!==null||view.draft.cancelled!==false||
+        view.draft.security?.status!=='not-started'||view.draft.security?.phase!=='idle'||!['zones','receiver'].includes(view.draft.stage)))throw Object.assign(Error(),{code:'V30_CHECKPOINT_CONFLICT'});
+      const pending=nativeContext?await runtime.services.outputConfigurationStatus({standId:receiver.standId,receiverId}):{status:'none'};
+      if(!current())return;
+      const resolved=PairFirst.resolve(saved,actual,pending);
+      if(resolved.status!=='ready')throw Object.assign(Error(),{code:'PAIR_FIRST_IDENTITY_CHANGED'});
+      pairFirstSetup.put(resolved.checkpoint);
+      refreshSuspendedSetup(view);model=keepLocalPreviewStates(actual);render({preserveScroll:true});
+      if(resolved.checkpoint.phase==='directions'&&!resolved.resumePending){
+        if(!receiver.zoneId){pairFirstAwaitingAssignmentId=receiver.id;toast(pairFirstText('unassigned'));showReceiverAssignment(receiver.id);return;}
+        const restored=PairFirst.restoredDirections(resolved.checkpoint,actual);
+        if(restored.length)spiDirectionPending.set(receiver.standId+':'+receiver.zoneId,restored);
+        await openSPIZoneDirections({zoneId:receiver.zoneId,newReceiverId:receiver.id});return;
+      }
+      pairFirstActiveReceiverId=receiverId;pixelSetupReceiverId=receiverId;
+      const desired=resolved.resumePending?resolved.pendingOutputs:receiver.outputs;
+      const directionsOnly=resolved.resumePending&&desired.every((output,index)=>{
+        const previous=receiver.outputs[index];return previous&&output.port===previous.port&&output.enabled===previous.enabled&&output.pixels===previous.pixels&&(previous.enabled||output.reversed===previous.reversed);
+      });
+      pixelSetup.open({...receiver,outputs:desired},{resumePending:resolved.resumePending,directionsOnly,pairFirst:true,...(resolved.resumeStep?{resumeStep:resolved.resumeStep}:{})});
+      if(resolved.changed)toast(pairFirstText('changed'));
+    }finally{if(pairFirstOpening===token)pairFirstOpening=null;}
   }
   const pixelSetup=window.LightningPixelSetup.create({jointDirections:true,mode:previewContext?'preview':nativeContext&&typeof runtime?.services?.configureOutputs==='function'?'native':'native-unavailable',
     previewCapabilities:{get identifyPorts(){return runtime?.native===true&&runtime.services?.previewCapabilities?.identifyPorts===true;},get power(){return runtime?.native===true&&runtime.services?.previewCapabilities?.power===true;}},
     onPreview:runtime?.native===true&&typeof runtime.services?.previewPixels==='function'?request=>{requireStandPresentationConnection();return runtime.services.previewPixels({...request,mainReceiverId:request.role==='node'?model.receivers.find(r=>r.standId===request.standId&&r.role==='main'&&r.lifecycle==='added')?.id:null});}:undefined,
-    onClose:()=>{document.querySelector(`[data-action="receiver-pixel-setup"][data-id="${CSS.escape(pixelSetupReceiverId||'')}"]`)?.focus({preventScroll:true});pixelSetupReceiverId=null;const next=pendingSPIDirectionOpen;pendingSPIDirectionOpen=null;if(next)void openSPIZoneDirections(next).catch(()=>toast(t('outputUnconfirmed')));},
+    onDraftChange:step=>{
+      if(pairFirstActiveReceiverId!==step.receiverId)return;
+      try{pairFirstSetup.edit(step.receiverId,step);}catch(_){toast(pairFirstText('storage'));}
+    },
+    onClose:()=>{
+      const paired=pairFirstActiveReceiverId;
+      document.querySelector(`[data-action="receiver-pixel-setup"][data-id="${CSS.escape(pixelSetupReceiverId||'')}"]`)?.focus({preventScroll:true});
+      pixelSetupReceiverId=null;pairFirstActiveReceiverId=null;const next=pendingSPIDirectionOpen;pendingSPIDirectionOpen=null;
+      if(next)void openSPIZoneDirections(next).catch(()=>toast(t('outputUnconfirmed')));
+      else{
+        render({preserveScroll:true});
+        if(paired&&!document.hidden&&pairFirstSetup.get(paired)?.phase==='directions'&&!model.receivers.find(item=>item.id===paired)?.zoneId){
+          pairFirstAwaitingAssignmentId=paired;showReceiverAssignment(paired);
+        }
+      }
+    },
     onSave:async({receiverId,outputs,directionsOnly=false})=>{
       requireStandPresentationConnection();
       const receiver=model.receivers.find(r=>r.id===receiverId&&r.lifecycle==='added'&&r.type==='SPI');
       if(!receiver||outputs.length!==4)throw Error(t("Deze receiver is niet beschikbaar."));
+      const paired=pairFirstActiveReceiverId===receiverId;
+      if(paired){
+        const checkpoint=pairFirstSetup.get(receiverId);
+        if(!checkpoint||!PairFirst.receiverFor(model,checkpoint))throw Error(t('outputUnconfirmed'));
+        // Persist exact UI intent before the existing native journal can start.
+        // A pending directions-only recovery retains its typed native route.
+        if(!directionsOnly)pairFirstSetup.edit(receiverId,{stage:'review',port:null,outputs});
+      }
       void orderIdentification?.supersede();
       if(nativeContext){
         if(typeof runtime?.services?.configureOutputs!=='function')throw Error(t("Verbind je telefoon met het ALUVISION-wifi van je installatie om de instellingen te bewaren."));
         try{const service=directionsOnly?runtime.services.configureOutputDirections:runtime.services.configureOutputs;const view=await service({standId:receiver.standId,receiverId,outputs});refreshSuspendedSetup(view);model=keepLocalPreviewStates(view.model);}
-        catch(error){throw Error(outputConfigurationErrorMessage(error));}
+        catch(error){
+          if(error.reconciledView?.model){refreshSuspendedSetup(error.reconciledView);model=keepLocalPreviewStates(error.reconciledView.model);}
+          throw Error(outputConfigurationErrorMessage(error));
+        }
       }else{
         if(!previewContext)throw Error(t("Verbind je telefoon met het ALUVISION-wifi van je installatie om de instellingen te bewaren."));
         let next=model;
         for(const {port,enabled,pixels,reversed} of outputs)next=M.configureSpiOutput(next,receiverId,port,{enabled,pixels,reversed});
         model=next;
       }
-      if(receiver.zoneId)pendingSPIDirectionOpen={zoneId:receiver.zoneId};else resumeConfiguredLighting(receiverId);
+      if(paired){
+        const checkpoint=pairFirstSetup.afterPixels(receiverId,model),restored=PairFirst.restoredDirections(checkpoint,model);
+        const configured=model.receivers.find(item=>item.id===receiverId);
+        if(configured?.zoneId){
+          if(restored.length)spiDirectionPending.set(configured.standId+':'+configured.zoneId,restored);
+          pendingSPIDirectionOpen={zoneId:configured.zoneId,newReceiverId:receiverId};
+        }
+        else toast(pairFirstText('unassigned'));
+      }else resumeConfiguredLighting(receiverId);
       expandedReceivers.add(receiverId);
       const blink=identifying.get(receiverId);
       if(blink){const active=model.receivers.find(r=>r.id===receiverId).outputs.filter(o=>o.enabled).map(o=>o.port);blink.ports=blink.scope==='all'?active:blink.ports.filter(p=>active.includes(p));if(!blink.ports.length)identifying.delete(receiverId);}
-      render({preserveScroll:true});toast(nativeContext?'Pixels en aansluiting bewaard op de receiver.':'Pixels en aansluitzijde aangepast in het voorbeeld.');
+      render({preserveScroll:true});if(!paired)toast(pixelText659('pixelOnlySaved'));
     }});
   function outputConfigurationErrorMessage(error){
     const key=error?.code==='OTA_PENDING'?'outputOtaPending':['OTA_BUSY','OUTPUT_CONFIGURATION_BUSY','LIVE_CONTROL_BUSY','NATIVE_BUSY','MAIN_BUSY','REMOVAL_BUSY'].includes(error?.code)?'outputActionBusy':'outputUnconfirmed';
@@ -1066,6 +1180,8 @@
   }
   const onboarding=window.LightningOnboardingUI.create({getModel:()=>localStandConcept()?localStandBase:model,
     jointSPIDirections:true,
+    pairSPIFirst:true,
+    onPairFirstBegin:draft=>{if(!pairFirstSetup)throw Object.assign(Error(),{code:'PAIR_FIRST_STORAGE_UNAVAILABLE'});pairFirstSetup.begin(draft);},
     allowLocalConcept:allowPendingLocalConcept,
     onPreserveLocalConcept:next=>storeLocalStandConcept(next,next.stands[0].id),
     onContinueLocalConcept:continueLocalStandLater590,
@@ -1081,10 +1197,14 @@
         const expected=firstAccessCheckpoint,receiver=nextModel.receivers.find(item=>item.id===expected.receiverId);
         if(central.standId!==expected.standId||receiver?.rid!==expected.rid||receiver?.deviceFingerprint!==expected.fingerprint)throw Object.assign(Error(),{code:'FIRST_ACCESS_IDENTITY'});
         model=M.assertValid(nextModel);appStorage?.removeItem(FIRST_ACCESS_KEY);firstAccessCheckpoint=null;
-      }else applyJoinedZonePlayback(nextModel,receiverId?[receiverId]:[]);
+      }else applyJoinedZonePlayback(nextModel,receiverId&&nextModel.receivers.find(receiver=>receiver.id===receiverId)?.type!=='SPI'?[receiverId]:[]);
       flushCentralProjection();if(central)firstFactorySetup=false;
     },
     onExit:result=>{
+      if(result?.spiPairFirstReceiverId){
+        navigate('stand',{setupReturnZoneId:null});
+        void openPairFirstSetup(result.spiPairFirstReceiverId).catch(error=>toast(error?.code?.startsWith('PAIR_FIRST_')?pairFirstText('storage'):t('outputUnconfirmed')));return;
+      }
       if(result?.spiDirectionZoneId){
         navigate('stand',{setupReturnZoneId:null});
         void openSPIZoneDirections({zoneId:result.spiDirectionZoneId,newReceiverId:result.newReceiverId}).catch(()=>toast(t('outputUnconfirmed')));return;
@@ -1120,6 +1240,7 @@
     edit:'m16 3 5 5-12 12-6 1 1-6ZM14 5l5 5',
     trash:'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7',
     sliders:'M5 3v5M5 13v8M12 3v10M12 18v3M19 3v2M19 10v11M2 8h6v5H2zM9 13h6v5H9zM16 5h6v5h-6z',
+    swap:'m17 3 4 4-4 4M3 7h18M7 21l-4-4 4-4m14 4H3',
     animation:'M3 9v6M7 5v14M12 2v20M17 6v12M21 9v6',
     power:'M12 2v10M6 5a9 9 0 1 0 12 0',
     update:'M20 7a9 9 0 0 0-15-2L2 8M2 3v5h5M4 17a9 9 0 0 0 15 2l3-3M22 21v-5h-5',
@@ -1583,7 +1704,13 @@
   function standZonePowerMarkup651(z){
     const power=zonePowerState651(model,stand()?.id,z.id),empty=!power||power.empty,value=power?.value||false;
     const label=t(empty?'v651ZoneEmpty':value==='mixed'?'v651ZonePowerMixed':'v651ZonePowerAccessible',{name:z.name});
-    return `<div class="stand-zone-power" data-zone-power-version="651"><span class="stand-zone-power-label">${icon('power')}<span>${esc(t('v651ZoneLighting'))}</span></span><button type="button" class="switch" role="switch" aria-label="${esc(label)}" aria-checked="${value===true}" data-mixed="${value==='mixed'}" data-action="zone-power" data-id="${esc(z.id)}" ${empty?'disabled':''}><span>${esc(t(value==='mixed'?'v50PartlyOn':value?'v50On':'v50Off'))}</span><i aria-hidden="true"></i></button><p class="stand-zone-power-status" data-live-status="zone-card" data-zone-power-zone="${esc(z.id)}" aria-live="off" hidden></p></div>`;
+    return `<div class="stand-zone-power" data-zone-power-version="651" data-zone-power-placement="659"><button type="button" class="switch" role="switch" aria-label="${esc(label)}" aria-checked="${value===true}" data-mixed="${value==='mixed'}" data-action="zone-power" data-id="${esc(z.id)}" ${empty?'disabled':''}><span>${esc(t(value==='mixed'?'v50PartlyOn':value?'v50On':'v50Off'))}</span><i aria-hidden="true"></i></button></div>`;
+  }
+  function standZoneCardMarkup659(z){
+    const members=M.zoneReceivers(model,z.id);
+    // The open-zone and power controls are siblings, never nested buttons.
+    // One shared card surface keeps the quick switch beside the zone details.
+    return `<article class="zone-entry zone-entry-inline-power" data-zone-card-version="659"><button type="button" class="zone-card" data-action="zone" data-id="${esc(z.id)}">${zonePreview(z,'',{label:t('Voorbeeld van {name}',{name:z.name})})}<div class="zone-copy"><div class="zone-card-heading"><b>${esc(z.name)}</b><span class="zone-meta"><span class="zone-family-badge">${zoneTypeLabel(z)}</span>${z.type?` · <span class="zone-line-count">${ledlineCount(physicalLineCount(members))}</span>`:''}</span></div><span class="open-label">${members.length?t("Bedienen"):t("Instellen")} ${icon('chevron')}</span></div></button><div class="zone-card-actions"><button type="button" class="zone-options-button" data-action="zone-options" data-id="${esc(z.id)}" aria-label="${esc(t('Opties voor zone {name}',{name:z.name}))}">•••</button>${standZonePowerMarkup651(z)}</div><p class="stand-zone-power-status" data-live-status="zone-card" data-zone-power-zone="${esc(z.id)}" aria-live="off" hidden></p></article>`;
   }
   function renderStand() {
     if(!stand()){
@@ -1595,7 +1722,7 @@
       return `<div class="page onboarding-welcome"><header class="page-heading"><div><div class="eyebrow">${esc(t('v50SetupPending'))}</div><h1>${esc(pending.stand.name)}</h1></div></header><section class="stand-setup-overview" aria-label="${esc(t('setupStand'))}">${[t('v50Name'),t('zones'),t('receivers')].map((label,i)=>`<div class="stand-setup-row ${i+1===step?'active':''}"><i>${i+1<step?'✓':i+1}</i><span><small>${esc(t('v50Step',{number:i+1}))}</small><b>${esc(label)}</b></span><small>${esc(t(i+1<step?'v50Ready':i+1===step?'v50Next':'v50Later'))}</small></div>`).join('')}</section><button class="button full onboarding-next-action" data-setup-resume data-action="receiver-add">${esc(t('v50ResumeSetup'))}</button>${languagePicker}</div>`;
     }
     const s = stand(), added = standReceivers();
-    return `<div class="page stand-page"><header class="page-heading overview-heading"><div><div class="eyebrow">${localStandConcept()?t("LOKAAL CONCEPT"):t("JOUW STAND")}</div><h1>${esc(standLabel())}</h1></div><button class="icon-button circle" data-action="help" aria-label="${esc(t("Uitleg over stand en zones"))}">${icon('info')}</button></header>${localStandConcept()?`<p class="local-stand-notice" role="status">${esc(t("Alleen op dit toestel. Er is nog geen receiver verbonden."))} `+(temporarySingleUser?t("Je voegt je eerste receiver toe zonder PIN."):t("Bij je eerste receiver kies je de wifi-PIN."))+'</p>':''}${advancedInterface()?`<div class="stand-summary overview-summary"><div>${icon('zones')}<span><b>${s.zones.length}</b><small>${esc(t("zones"))}</small></span></div><div>${icon('light')}<span><b>${physicalLineCount(added)}</b><small>${esc(t("Ledlines"))}</small></span></div></div>`:''}<section class="zone-section"><div class="section-heading"><h2>${esc(t('zones'))}</h2><button class="text-button" data-action="zone-new">＋ ${esc(t("Nieuwe zone"))}</button></div><div class="zone-grid">${s.zones.map(z=>`<article class="zone-entry"><button class="zone-card" data-action="zone" data-id="${esc(z.id)}">${zonePreview(z,'',{label:t('Voorbeeld van {name}',{name:z.name})})}<div class="zone-copy"><div class="zone-card-heading"><b>${esc(z.name)}</b><span class="zone-meta"><span class="zone-family-badge">${zoneTypeLabel(z)}</span>${z.type?` · <span class="zone-line-count">${ledlineCount(physicalLineCount(M.zoneReceivers(model,z.id)))}</span>`:''}</span></div><span class="open-label">${M.zoneReceivers(model,z.id).length?t("Bedienen"):t("Instellen")} ${icon('chevron')}</span></div></button><button class="zone-options-button" data-action="zone-options" data-id="${esc(z.id)}" aria-label="${esc(t('Opties voor zone {name}',{name:z.name}))}">•••</button>${standZonePowerMarkup651(z)}</article>`).join('')}</div></section>${standScenesMarkup(false)}</div>`;
+    return `<div class="page stand-page"><header class="page-heading overview-heading"><div><div class="eyebrow">${localStandConcept()?t("LOKAAL CONCEPT"):t("JOUW STAND")}</div><h1>${esc(standLabel())}</h1></div><button class="icon-button circle" data-action="help" aria-label="${esc(t("Uitleg over stand en zones"))}">${icon('info')}</button></header>${localStandConcept()?`<p class="local-stand-notice" role="status">${esc(t("Alleen op dit toestel. Er is nog geen receiver verbonden."))} `+(temporarySingleUser?t("Je voegt je eerste receiver toe zonder PIN."):t("Bij je eerste receiver kies je de wifi-PIN."))+'</p>':''}${advancedInterface()?`<div class="stand-summary overview-summary"><div>${icon('zones')}<span><b>${s.zones.length}</b><small>${esc(t("zones"))}</small></span></div><div>${icon('light')}<span><b>${physicalLineCount(added)}</b><small>${esc(t("Ledlines"))}</small></span></div></div>`:''}${pairFirstResumeMarkup()}<section class="zone-section"><div class="section-heading"><h2>${esc(t('zones'))}</h2><button class="text-button" data-action="zone-new">＋ ${esc(t("Nieuwe zone"))}</button></div><div class="zone-grid">${s.zones.map(standZoneCardMarkup659).join('')}</div></section>${standScenesMarkup(false)}</div>`;
   }
   function powerControl() {
     const states = powerTargets().map(r => r.state.on !== false && r.state.power !== false);
@@ -2900,7 +3027,7 @@
     const marker=orderMarker652(z,line.id),blocked=arrangementInteractionBusy()||arrangementNeedsStandOpen()||standPresentationOnly();
     const action=(name,label,glyph,extra='')=>`<button type="button" class="v568-order-setting-action" data-action="${name}" data-id="${esc(receiver.id)}" ${extra} ${blocked?'disabled':''}>${icon(glyph)}<span>${esc(t(label))}</span>${icon('chevron')}</button>`;
     const blinking=identifying.get(receiver.id)?.scope===(line.port?String(line.port):'all');
-    return `<section class="v568-order-settings" data-order-line-settings data-order-line-id="${esc(line.id)}" data-zone="${esc(z.id)}" data-signature="${esc(arrangementSignature(z))}"><div class="order-settings-identity652" style="--marker-colour:${marker?.hex||'transparent'}"><span class="order-marker652" aria-hidden="true"></span><div><b>${esc(orderMarkerName652(marker))}</b><span>${esc(receiver.name)}${line.port?' · P'+line.port:''}</span><small>${line.port?line.pixels+' px · SPI':'RGBW'}</small></div></div><div class="v568-order-setting-actions"><button type="button" class="v568-order-setting-action" data-action="${line.port?'port-identify':'visual-identify'}" data-receiver="${esc(receiver.id)}" data-port="${line.port}" aria-pressed="${blinking}">${icon('sun')}<span>${esc(t(blinking?'lineSetupBlinkStop':'lineSetupBlink'))}</span></button>${receiver.type==='SPI'?action('receiver-pixel-setup','v568PixelsDirection','sliders',`data-ports="${line.port}"`):''}<div class="v568-receiver-action-heading">${esc(t('v568ReceiverAllOutputs'))}</div>${action('receiver-rename','v568ReceiverName','edit')}${action('receiver-move','v568ChangeZone','zones')}</div><button type="button" class="button secondary full" data-action="effect-dialog-close">${esc(t('v568ReturnOrder'))}</button></section>`;
+    return `<section class="v568-order-settings" data-order-line-settings data-order-line-id="${esc(line.id)}" data-zone="${esc(z.id)}" data-signature="${esc(arrangementSignature(z))}"><div class="order-settings-identity652" style="--marker-colour:${marker?.hex||'transparent'}"><span class="order-marker652" aria-hidden="true"></span><div><b>${esc(orderMarkerName652(marker))}</b><span>${esc(receiver.name)}${line.port?' · P'+line.port:''}</span><small>${line.port?line.pixels+' px · SPI':'RGBW'}</small></div></div><div class="v568-order-setting-actions"><button type="button" class="v568-order-setting-action" data-action="${line.port?'port-identify':'visual-identify'}" data-receiver="${esc(receiver.id)}" data-port="${line.port}" aria-pressed="${blinking}">${icon('sun')}<span>${esc(t(blinking?'lineSetupBlinkStop':'lineSetupBlink'))}</span></button>${receiver.type==='SPI'?spiSettingsMarkup659(receiver,{ports:[line.port],blocked}):''}<div class="v568-receiver-action-heading">${esc(t('v568ReceiverAllOutputs'))}</div>${action('receiver-rename','v568ReceiverName','edit')}${action('receiver-move','v568ChangeZone','zones')}</div><button type="button" class="button secondary full" data-action="effect-dialog-close">${esc(t('v568ReturnOrder'))}</button></section>`;
   }
   function openOrderLineSettings(id){
     const z=zone();if(!z||!openLineSetup.has(z.id)||arrangementDraft?.zoneId!==z.id||arrangementDraft.signature!==arrangementSignature(z))return;
@@ -2971,10 +3098,15 @@
     if(state?.colour){node.style.setProperty('--order-drag-colour',state.colour);node.closest('[data-order-open]')?.style.setProperty('--order-drag-colour',state.colour);}
     syncOrderCardColours();
   }
+  function pixelText659(key){return window.LightningPixelTranslations.t(key,uiPreferences.preferences.language);}
+  function spiSettingsMarkup659(receiver,{ports=null,blocked=false}={}){
+    const chosen=ports||receiver.outputs.filter(output=>output.enabled).map(output=>output.port),ids=esc(receiver.id),disabled=blocked||!chosen.length;
+    return `<div class="spi-settings659"><button type="button" class="button secondary full" data-action="receiver-pixels-only" data-id="${ids}" data-ports="${chosen.join(',')}" ${disabled?'disabled':''}>${icon('sliders')}<span><b>${esc(pixelText659('pixelOnlySettings'))}</b><small>${chosen.map(port=>'P'+port).join(' · ')}</small></span>${icon('chevron')}</button><button type="button" class="button secondary full" data-action="receiver-directions" data-id="${ids}" ${blocked||!receiver.zoneId?'disabled':''}>${icon('swap')}<span><b>${esc(pixelText659('pixelDirectionsSettings'))}</b><small>${esc(pixelText659('pixelDirectionsHint'))}</small></span>${icon('chevron')}</button></div>`;
+  }
   function portEditMarkup(receiver,port){
     const selected=pixelEditSelections.get(receiver.id)||new Set([port]);
     const ports=receiver.outputs.filter(output=>output.enabled).map(output=>output.port),chosen=ports.filter(value=>selected.has(value));
-    return `<fieldset class="v50-edit-ports"><legend>${esc(t('v50EditPorts'))}</legend><div>${ports.map(value=>`<button type="button" role="checkbox" aria-checked="${selected.has(value)}" aria-label="${esc(t('v50EditPort',{port:value}))}" data-action="pixel-edit-port" data-receiver="${esc(receiver.id)}" data-port="${value}">P${value}${selected.has(value)?icon('check'):''}</button>`).join('')}</div></fieldset><button type="button" class="button secondary full" data-action="receiver-pixel-setup" data-id="${esc(receiver.id)}" data-ports="${chosen.join(',')}" ${chosen.length?'':'disabled'}>${icon('sliders')}${esc(t('v50PixelsDirection'))}${chosen.length?' · '+chosen.map(value=>'P'+value).join(' + '):''}</button>`;
+    return `<fieldset class="v50-edit-ports"><legend>${esc(t('v50EditPorts'))}</legend><div>${ports.map(value=>`<button type="button" role="checkbox" aria-checked="${selected.has(value)}" aria-label="${esc(t('v50EditPort',{port:value}))}" data-action="pixel-edit-port" data-receiver="${esc(receiver.id)}" data-port="${value}">P${value}${selected.has(value)?icon('check'):''}</button>`).join('')}</div></fieldset>${spiSettingsMarkup659(receiver,{ports:chosen})}`;
   }
   function layoutReceiverActions() {
     const z=zone();
@@ -2998,7 +3130,8 @@
   }
   function receiverDetailMarkup(r) {
     const z=M.getZone(model,r.zoneId),rid=esc(r.id),port=selectedVisualPort(r);
-    return `${receiverAssignmentActions(r)}${r.type==='SPI'?`<details class="receiver-connections" data-receiver-connections="${rid}" ${expandedConnections.has(r.id)?'open':''}><summary><span><b>${esc(t('v50Connections'))}</b><small>${esc(t('v50ActiveOutputs',{count:r.outputs.filter(o=>o.enabled).length}))} · ${esc(t(r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)===1?'v50PixelsOne':'v50PixelsMany',{count:r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)}))}</small></span>${icon('chevron')}</summary><div class="receiver-connections-content">${productVisual(r)}<div class="receiver-ports-heading"><h3>${esc(t('v50Outputs'))}</h3><small>${esc(t('v50EnabledOutputPreview'))}</small></div><div class="receiver-port-list" aria-label="${esc(t('v50ViewOutput'))}">${r.outputs.map(o=>`<div class="receiver-port-row ${o.port===port?'port-focused':''}" data-port-row="${o.port}"><button type="button" class="receiver-port-select" data-action="visual-port" data-receiver="${rid}" data-id="${o.port}" aria-pressed="${o.port===port}"><b>P${o.port}</b><span>${esc(t('v50OutputNumber',{port:o.port}))}</span></button><button type="button" class="switch receiver-port-switch" role="switch" data-action="receiver-port-enabled" data-receiver="${rid}" data-port="${o.port}" aria-checked="${o.enabled}" aria-label="${esc(t('v50UseOutput',{port:o.port}))}" ${nativeContext&&typeof runtime?.services?.configureOutputs!=='function'?`disabled title="${esc(t('v50OutputsWifiHint'))}"`:''}><span>${esc(t(o.enabled?'v50On':'v50Off'))}</span><i aria-hidden="true"></i></button><button type="button" class="receiver-blink" data-action="port-identify" data-receiver="${rid}" data-port="${o.port}" aria-pressed="${identifying.get(r.id)?.scope===String(o.port)}" aria-label="${esc(t('v50BlinkOutput',{name:r.name,port:o.port}))}" ${o.enabled?'':'disabled'}>${icon('sun')}<span>${esc(t(identifying.get(r.id)?.scope===String(o.port)?'lineSetupBlinkStop':'lineSetupBlink'))}</span></button></div>`).join('')}</div><button class="button full pixel-setup-shortcut" data-action="receiver-pixel-setup" data-id="${rid}">${icon('sliders')}${esc(t('v50PixelConnections'))} ${icon('chevron')}</button><p class="port-preview-note">${esc(t('v50PortPreviewHint'))}</p></div></details>`:productVisual(r)}${z&&route.screen==='receivers'?`<button class="text-button" data-action="zone" data-id="${esc(z.id)}">${esc(t('v50ControlZone',{name:z.name}))} →</button>`:''}<details class="receiver-manage-menu"><summary>${esc(t('v50MoreReceiverOptions'))} ${icon('chevron')}</summary><div class="receiver-manage-content"><button class="text-button" data-action="receiver-rename" data-id="${rid}">${esc(t('v50Rename'))}</button></div></details>`;
+    const publicIdentity=typeof r.rid==='string'&&/^[A-F0-9]{16}$/.test(r.rid)?`<p class="muted receiver-public-identity"><small>RID · ${esc(r.rid)}</small></p>`:'';
+    return `${publicIdentity}${receiverAssignmentActions(r)}${r.type==='SPI'?`<details class="receiver-connections" data-receiver-connections="${rid}" ${expandedConnections.has(r.id)?'open':''}><summary><span><b>${esc(t('v50Connections'))}</b><small>${esc(t('v50ActiveOutputs',{count:r.outputs.filter(o=>o.enabled).length}))} · ${esc(t(r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)===1?'v50PixelsOne':'v50PixelsMany',{count:r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)}))}</small></span>${icon('chevron')}</summary><div class="receiver-connections-content">${productVisual(r)}<div class="receiver-ports-heading"><h3>${esc(t('v50Outputs'))}</h3><small>${esc(t('v50EnabledOutputPreview'))}</small></div><div class="receiver-port-list" aria-label="${esc(t('v50ViewOutput'))}">${r.outputs.map(o=>`<div class="receiver-port-row ${o.port===port?'port-focused':''}" data-port-row="${o.port}"><button type="button" class="receiver-port-select" data-action="visual-port" data-receiver="${rid}" data-id="${o.port}" aria-pressed="${o.port===port}"><b>P${o.port}</b><span>${esc(t('v50OutputNumber',{port:o.port}))}</span></button><button type="button" class="switch receiver-port-switch" role="switch" data-action="receiver-port-enabled" data-receiver="${rid}" data-port="${o.port}" aria-checked="${o.enabled}" aria-label="${esc(t('v50UseOutput',{port:o.port}))}" ${nativeContext&&typeof runtime?.services?.configureOutputs!=='function'?`disabled title="${esc(t('v50OutputsWifiHint'))}"`:''}><span>${esc(t(o.enabled?'v50On':'v50Off'))}</span><i aria-hidden="true"></i></button><button type="button" class="receiver-blink" data-action="port-identify" data-receiver="${rid}" data-port="${o.port}" aria-pressed="${identifying.get(r.id)?.scope===String(o.port)}" aria-label="${esc(t('v50BlinkOutput',{name:r.name,port:o.port}))}" ${o.enabled?'':'disabled'}>${icon('sun')}<span>${esc(t(identifying.get(r.id)?.scope===String(o.port)?'lineSetupBlinkStop':'lineSetupBlink'))}</span></button></div>`).join('')}</div>${spiSettingsMarkup659(r)}<p class="port-preview-note">${esc(t('v50PortPreviewHint'))}</p></div></details>`:productVisual(r)}${z&&route.screen==='receivers'?`<button class="text-button" data-action="zone" data-id="${esc(z.id)}">${esc(t('v50ControlZone',{name:z.name}))} →</button>`:''}<details class="receiver-manage-menu"><summary>${esc(t('v50MoreReceiverOptions'))} ${icon('chevron')}</summary><div class="receiver-manage-content"><button class="text-button" data-action="receiver-rename" data-id="${rid}">${esc(t('v50Rename'))}</button></div></details>`;
   }
   function receiverAssignmentActions(r) {
     return `<div class="receiver-management"><button class="button secondary" data-action="receiver-move" data-id="${esc(r.id)}">${icon('zones')}${esc(t('v50ChangeZone'))}</button><small>${esc(t('v50AssignmentPreserved'))}</small></div>`;
@@ -4371,7 +4504,7 @@
     button.textContent=t("Opnieuw controleren");
   }
   function receiverWorkBusy(){
-    return managementBusy||arrangementApplying||pinProtectionBusy||pinLoginBusy||orderIdentificationState?.active===true||identifyPending.size>0||pixelSetup.isOpen()||spiZoneDirections.isOpen()||
+    return managementBusy||!!pairFirstOpening||arrangementApplying||pinProtectionBusy||pinLoginBusy||orderIdentificationState?.active===true||identifyPending.size>0||pixelSetup.isOpen()||spiZoneDirections.isOpen()||
       !!document.querySelector('.receiver-removal-sheet[open],.receiver-update-sheet[open]');
   }
   async function waitForReceiverContextWrite({standId,signal}){
@@ -4706,8 +4839,8 @@
       const slot=Number(root.dataset.slot);
       updatePalette(slot,changed==='white'?undefined:C.hex(rgb),changed==='rgb'?undefined:w);
       apply({rgbwLast});
-      if(changed!=='white'&&slot===0&&activeEffect()?.controls.includes('brandColor'))apply({brandColor:C.hex(rgb)});
-      const row=document.querySelector('.palette');if(row)row.innerHTML=paletteMarkup(selectedState());
+      // updatePalette already includes the accent in its one lighting intent
+      // and refreshes the matching palette row once. Memory is local-only.
       syncColour();
     } else staticColour(rgb,w,rgbwLast);
   }
@@ -5094,7 +5227,7 @@
     if(compact){const types=new Set();groups=groups.filter(group=>{if(types.has(group.type))return false;types.add(group.type);return true;});}
     return `<div class="stand-animation-preview${compact?' is-compact':''}" ${compact?'':'data-stand-animation-preview'} aria-label="${esc(t('v50StandPreview'))}">${groups.map(group=>{
       const types=[...new Set(group.receivers.map(receiver=>receiver.type))],type=types.length===1?types[0]:group.type;
-      return `<div class="stand-animation-zone" ${compact?'':`data-stand-animation-zone="${esc(group.zoneId||'unassigned')}"`}><div class="stand-animation-zone-label"><b>${esc(group.zoneName)}</b><span>${esc(type||'RGBW / SPI')}</span></div>${!compact?`<small class="stand-animation-role">${esc(window.LightningV50AnimationTexts?.standRole(effect,type,uiPreferences.preferences.language)??effect.standRoleLabels?.[type]??t('v50StandSameEffect'))}</small>`:''}${addPreview(group.receivers,group.layout,'',{main:!compact,standEffectId:effect.id,standZoneId:group.zoneId,standPlan:plan,decorative:compact,label:`${group.zoneName} · ${type||t("Ledlines")} · ${Library.displayName(effect,t)}`})}</div>`;
+      return `<div class="stand-animation-zone" data-stand-preview-type="${esc(type||'mixed')}" ${compact?'':`data-stand-animation-zone="${esc(group.zoneId||'unassigned')}"`}><div class="stand-animation-zone-label"><b>${esc(group.zoneName)}</b><span class="stand-animation-family-badge"><i aria-hidden="true"></i>${esc(type||'RGBW / SPI')}</span></div>${!compact?`<small class="stand-animation-role">${esc(window.LightningV50AnimationTexts?.standRole(effect,type,uiPreferences.preferences.language)??effect.standRoleLabels?.[type]??t('v50StandSameEffect'))}</small>`:''}${addPreview(group.receivers,group.layout,'',{main:!compact,standEffectId:effect.id,standZoneId:group.zoneId,standPlan:plan,decorative:compact,label:`${group.zoneName} · ${type||t("Ledlines")} · ${Library.displayName(effect,t)}`})}</div>`;
     }).join('')}</div>`;
   }
   function standAnimationGuidance(effect=activeEffect()){
@@ -5258,7 +5391,7 @@
     const s=selectedState(),count=Math.min(colours(s).length,s.colorCount||colours(s).length);
     if(removeIndex===null&&count>=range.max||removeIndex!==null&&(!Number.isInteger(removeIndex)||removeIndex<0||removeIndex>=count||count<=range.min))return;
     const palette=colours(s).slice(0,count),whites=palette.map((_,i)=>s.whiteChannels?.[i]??0),rgbFlags=palette.map((_,i)=>s.rgbEnabled?.[i]!==false),whiteFlags=palette.map((_,i)=>s.whiteEnabled?.[i]!==false);
-    if(removeIndex===null){palette.push(['#C94E46','#F0B95F','#669CC6','#72B894','#BB8CC8','#F5DCA8','#73C9CE'][count%7]);whites.push(0);rgbFlags.push(true);whiteFlags.push(true);}
+    if(removeIndex===null){palette.push(['#FF0000','#00FF00','#0000FF','#FF8000','#FFFF00','#00FFFF','#8000FF'][count%7]);whites.push(0);rgbFlags.push(true);whiteFlags.push(false);}
     else [palette,whites,rgbFlags,whiteFlags].forEach(values=>values.splice(removeIndex,1));
     apply({colors:palette,whiteChannels:whites,rgbEnabled:rgbFlags,whiteEnabled:whiteFlags,colorCount:palette.length});
     const host=standControlOpen?document.getElementById('effect-dialog'):main;
@@ -5534,7 +5667,12 @@
     }
     applyJoinedZonePlayback(next,movedIds);closeEffectDialog();receiverAssignment=null;nameDialog=null;renderArrangement();
     openIds.forEach(id=>{const detail=main.querySelector(`[data-receiver-detail="${CSS.escape(id)}"]`);if(detail)detail.open=true;});
-    toast(message);return true;
+    toast(message);
+    if(pairFirstAwaitingAssignmentId&&movedIds.includes(pairFirstAwaitingAssignmentId)&&model.receivers.find(item=>item.id===pairFirstAwaitingAssignmentId)?.zoneId){
+      const receiver=pairFirstAwaitingAssignmentId;pairFirstAwaitingAssignmentId=null;
+      void openPairFirstSetup(receiver).catch(()=>toast(t('outputUnconfirmed')));
+    }
+    return true;
   }
   async function moveReceiver(id,toIndex) {
     const receiver=receivers().find(r=>r.id===id);if(!receiver)return;
@@ -5949,9 +6087,21 @@
       if(action==='overview-zone-new'){closeEffectDialog();return showNameDialog('zone-create');}
       if(action==='receiver-update-all')return receiverUpdates.openAll(standReceivers());
       if(action==='receiver-update'){const receiver=model.receivers.find(r=>r.id===id&&r.lifecycle==='added');if(receiver)return receiverUpdates.open(receiver);return;}
+      if(action==='pair-first-resume'){
+        if(managementBusy||pairFirstOpening||pixelSetup.isOpen()||spiZoneDirections.isOpen())return;
+        managementBusy=true;button.disabled=true;
+        try{await openPairFirstSetup(id);}catch(error){toast(error?.code?.startsWith('PAIR_FIRST_')?pairFirstText('storage'):t('outputUnconfirmed'));}
+        finally{managementBusy=false;if(button.isConnected)button.disabled=false;}return;
+      }
       if(action==='receiver-remove'){const receiver=model.receivers.find(r=>r.id===id);if(receiver)return receiverRemoval.open(receiver);return;}
       if(action==='receiver-filter'){if(!['all','unassigned'].includes(id))return;receiverFilter=id;return render({preserveScroll:true});}
-      if(action==='receiver-pixel-setup'){
+      if(action==='receiver-directions'){
+        const receiver=model.receivers.find(r=>r.id===id&&r.type==='SPI'&&r.lifecycle==='added');if(!receiver?.zoneId||managementBusy||pixelSetup.isOpen())return;
+        managementBusy=true;button.disabled=true;
+        try{await openSPIZoneDirections({zoneId:receiver.zoneId});}catch(_){toast(t('outputUnconfirmed'));}
+        finally{managementBusy=false;button.disabled=false;}return;
+      }
+      if(action==='receiver-pixel-setup'||action==='receiver-pixels-only'){
         const receiver=model.receivers.find(r=>r.id===id&&r.type==='SPI'&&r.lifecycle==='added');if(!receiver||managementBusy||pixelSetup.isOpen())return;
         managementBusy=true;button.disabled=true;
         try{
@@ -5963,7 +6113,7 @@
           const directionsOnly=pending.status==='pending'&&pending.outputs.every((output,index)=>{
             const previous=receiver.outputs[index];return previous&&output.port===previous.port&&output.enabled===previous.enabled&&output.pixels===previous.pixels&&(previous.enabled||output.reversed===previous.reversed);
           });
-          pixelSetup.open(pending.status==='pending'?{...receiver,outputs:pending.outputs}:receiver,{initialPort:selectedVisualPort(receiver),...(selectedPorts?{selectedPorts}:{}),resumePending:pending.status==='pending',directionsOnly});
+          pixelSetup.open(pending.status==='pending'?{...receiver,outputs:pending.outputs}:receiver,{initialPort:selectedVisualPort(receiver),...(selectedPorts?{selectedPorts}:{}),pixelsOnly:action==='receiver-pixels-only',resumePending:pending.status==='pending',directionsOnly});
         }catch(_){toast(t("De vorige poortwijziging kon niet worden gelezen. Probeer opnieuw; er is niets gewist."));}
         finally{managementBusy=false;button.disabled=false;}return;
       }
@@ -6613,7 +6763,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate657',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate661',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

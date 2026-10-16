@@ -191,7 +191,7 @@
   function transition(value,event) {
     const original=snapshot(value), next=copy(original);
     try {
-      const fields={SET_STAND:['id','name'],ADD_ZONE:['id','name'],RENAME_ZONE:['zoneId','name'],REMOVE_ZONE:['zoneId'],SELECT_ACTIVE_ZONE:['zoneId'],SELECT_RECEIVER:['receiver'],SET_OUTPUT_COUNT:['count'],SET_OUTPUT_ENABLED:['port','enabled'],SET_PIXELS:['port','pixels'],SET_SIDE:['port','side'],SELECT_ZONE:['zoneId'],SECURITY_PROGRESS:['phase'],SKIP_ZONES:[],NEXT:[],BACK:[],CANCEL:[],RETRY:[]};
+      const fields={SET_STAND:['id','name'],ADD_ZONE:['id','name'],RENAME_ZONE:['zoneId','name'],REMOVE_ZONE:['zoneId'],SELECT_ACTIVE_ZONE:['zoneId'],SELECT_RECEIVER:['receiver'],SET_OUTPUT_COUNT:['count'],SET_OUTPUT_ENABLED:['port','enabled'],SET_PIXELS:['port','pixels'],SET_SIDE:['port','side'],SELECT_ZONE:['zoneId'],SECURITY_PROGRESS:['phase'],SKIP_ZONES:[],PAIR_FIRST:[],NEXT:[],BACK:[],CANCEL:[],RETRY:[]};
       if (!plain(event) || !own(fields,event.type)) fail('EVENT','Deze instelactie is niet beschikbaar.');
       shape(event,['type'].concat(fields[event.type]),'EVENT');
       if (next.stage === 'done') fail('ALREADY_ADDED','Deze receiver is al toegevoegd.');
@@ -278,6 +278,20 @@
           requireStage(next,['security']);
           if (!['configuring','claiming','reconnecting','verifying','resuming'].includes(event.phase) || next.security.status !== 'pending') fail('SECURITY_PHASE','Deze beveiligingsstap moet door de verbinding worden bevestigd.');
           next.security.phase=event.phase;break;
+        case 'PAIR_FIRST': {
+          // A presentation shortcut for a NEW untouched SPI selection only.
+          // The ordinary native claim still receives a complete, valid fixed
+          // geometry. Never mutate an existing/pending security transaction.
+          unlocked(next);requireStage(next,['receiver','placement','outputs']);
+          if(next.receiver?.type!=='SPI')fail('SPI_STAGE','Deze stap is alleen voor SPI.');
+          const pristine=next.outputs.every((output,index)=>output.port===index+1&&output.enabled===(index===0)&&
+            output.reversed===false&&(index===0?output.pixels===DEFAULT_SPI_PIXELS:[0,DEFAULT_SPI_PIXELS].includes(output.pixels)));
+          if(!pristine)fail('PAIR_FIRST_CHOICES_CHANGED','Je eerdere poortkeuzes blijven bewaard. Rond dezelfde toevoeging verder af.');
+          if(next.zoneChoiceRequired)fail('ZONE_REQUIRED','Kies een passende zone of voeg de receiver zonder zone toe.');
+          const destination=next.zones.find(zone=>zone.id===next.activeZoneId);
+          if(destination)compatible(next,destination);
+          toSecurity(next);break;
+        }
         case 'SKIP_ZONES':
           unlocked(next);requireStage(next,['zones']);delete next.zoneChoiceRequired;next.stage='receiver';break;
         case 'NEXT':
