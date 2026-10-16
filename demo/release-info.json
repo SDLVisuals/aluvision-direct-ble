@@ -108,9 +108,9 @@
     "opticalAcceptance": false
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate661-horizontal-spi-tutorial-interface-android30",
+  "revision": "V50candidate672-ledline-stability-interface-android30",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo661 projects the latest ledline setup and visual horizontal SPI tutorial. Fictional receivers and RAM-only state; no hardware, firmware, OTA or phone installation is published.",
+  "interfaceBaseline": "Public demo672 projects current scene, inline preset, direct ledline-order and SPI setup UI. Fictional receivers and RAM-only state; no native product, firmware, OTA or phone installation is published by this UI projection.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -229,6 +229,11 @@
       "bytes": 6107
     },
     {
+      "path": "animation-discovery.css",
+      "sha256": "776f64a236c4d1e9752c3a2812edc2b360f1a52c8213c030a2efb721c890d0c6",
+      "bytes": 13763
+    },
+    {
       "path": "animation-engine.js",
       "sha256": "346772e3d808018cc71012d0be43e9202781c27c1aabb06888df33b79002a043",
       "bytes": 22063
@@ -240,8 +245,8 @@
     },
     {
       "path": "animation-library.js",
-      "sha256": "628f3643ac3666172fa52ce64a20ea90c818776e0033646d14cc84873d66a8fa",
-      "bytes": 27179
+      "sha256": "f9fe90224a9bcd9333de6a42f6f3a80b97da6427088d4ee23164790596c6a900",
+      "bytes": 27317
     },
     {
       "path": "animation-mobile.css",
@@ -260,8 +265,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "6c87508109ae5f394f4de9d7b2ba8b800261f66ff1d6fb935a1550a5d084e725",
-      "bytes": 648656
+      "sha256": "00c481e73a986963579572955fd4a3af3f40e6ff57cdb7323fda8e326060748b",
+      "bytes": 671833
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -275,13 +280,23 @@
     },
     {
       "path": "colour-library-drag.js",
-      "sha256": "a397d1cb53cc3496340f9ca6230a1a69901d32eeb07d58e49e25024f077bca8c",
-      "bytes": 10206
+      "sha256": "963265a49e1b03fa1db0872ee226ea6df642ac59f4e7b263562ae6338d6a6122",
+      "bytes": 11309
     },
     {
       "path": "colour-picker-dialog.css",
       "sha256": "f6f64eab333496f3026a7e6a1a46170886ef7ece89f2b586310c2a80569d99a7",
       "bytes": 2170
+    },
+    {
+      "path": "colour-presets-ui.css",
+      "sha256": "5a6d0b814dc5a111ecf14300c389ef27f2c2fd16a6367d3a24fbf8b017e4b3a7",
+      "bytes": 12965
+    },
+    {
+      "path": "colour-presets-ui.js",
+      "sha256": "ab7eb21a4c045c35c65c1d0308d55a3e113fb3ac3caded8f1e9c2d7ce50ac61d",
+      "bytes": 12584
     },
     {
       "path": "colour-wheel.css",
@@ -295,8 +310,8 @@
     },
     {
       "path": "colours-library.js",
-      "sha256": "b77a7e4bb6349d03dbda01efb20bf8ec56e078aa94f5a94fae1f8d0cda2e8355",
-      "bytes": 13288
+      "sha256": "2b52745810c9b1b249e9b9d0caad1becf37bc4eb73a5a11109ffd19092d996be",
+      "bytes": 14936
     },
     {
       "path": "continuity.css",
@@ -310,8 +325,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "b2cc8ea898c666b60a5bc77f04985c61afb695815536493363415a3c1567a8e2",
-      "bytes": 8881
+      "sha256": "40397728f7aaec0b6acc0454edcb59d9278bb34da5db77d7e93cfe939f9d8866",
+      "bytes": 9486
     },
     {
       "path": "installation-libraries.js",
@@ -349,19 +364,44 @@
       "bytes": 21805
     },
     {
+      "path": "ledline-order-direct.css",
+      "sha256": "4b163f3966b6527cbaa0f7011b9f16225b31bce015f112a5526f2d4dd3d32688",
+      "bytes": 20514
+    },
+    {
       "path": "ledline-order-drag.js",
-      "sha256": "667d4a9df057d81b64b456402a87f8f7a9aadb463b37578ddca9ef09d7c3b0f2",
-      "bytes": 27443
+      "sha256": "128ecab773dc52a0e3750a328869bb1b48b8a83cab078e6890555834f4fdaadf",
+      "bytes": 28482
+    },
+    {
+      "path": "ledline-order-focus.css",
+      "sha256": "37be9bc1a6e741dcfa7bd1e0922b9ab23e4f07f0aba3d90082676fbb8397efe9",
+      "bytes": 8443
+    },
+    {
+      "path": "ledline-order-focus.js",
+      "sha256": "9711bd36b472f2e7ada78d6fae2a1af5bd7f73d6d3db3800689217b80f89b755",
+      "bytes": 11992
     },
     {
       "path": "ledline-order-guide.js",
-      "sha256": "585ce7f2cbeddb355b43196ab7509725d8dcb41169f7417fdb4e52d3aa5246d7",
-      "bytes": 27425
+      "sha256": "82bcf8edfc01f65eb0f5d3d7751a8f0af2712a648cf19e82d65ee49be776183f",
+      "bytes": 36183
     },
     {
       "path": "ledline-order-test.js",
       "sha256": "45da1c6aa08f07fb088a13b22363b70f8c543dd174aa9e35b42f502dca2f2012",
       "bytes": 15680
+    },
+    {
+      "path": "ledline-order-tutorial.css",
+      "sha256": "23689381ff877031a6fb872419fc4e222c5990f8192cc99056a78a4ad03bb8ad",
+      "bytes": 9153
+    },
+    {
+      "path": "ledline-order-tutorial.js",
+      "sha256": "9af1f13654b3bbf1a1a8b4fbf59cbabeab52bd24792ab7947a26a74228bb8565",
+      "bytes": 3566
     },
     {
       "path": "ledline-order.css",
@@ -385,8 +425,8 @@
     },
     {
       "path": "native-runtime.js",
-      "sha256": "9b754cd29638fec3b2b351394578d61557a6f59fae5f36ba2e8c6d3649afa6fa",
-      "bytes": 152624
+      "sha256": "54b51d55db85d059de1b36399d6a0fb0fc4d626e5f92899af438814b224f48fc",
+      "bytes": 154147
     },
     {
       "path": "onboarding-adapter.js",
@@ -440,8 +480,8 @@
     },
     {
       "path": "pixel-setup.js",
-      "sha256": "d784792ad0c2e9ceabb7901358569003c77b7a1d29c9bff9921fc8c4ad96327e",
-      "bytes": 52565
+      "sha256": "32edd7ea838233543eacd8326ec938fb7158283136f16b73635189ec870e63f3",
+      "bytes": 53566
     },
     {
       "path": "pixel-translations.js",
@@ -465,8 +505,8 @@
     },
     {
       "path": "preview.js",
-      "sha256": "ada7fe9c7b602d20ce8992041114d1a00e20b39378226be726224625783b9c7d",
-      "bytes": 112497
+      "sha256": "830d2a408476b1f5e570910bb0a7ef7192db793c07f9216423f778cdbad7b2eb",
+      "bytes": 114360
     },
     {
       "path": "receiver-playback.js",
@@ -550,13 +590,13 @@
     },
     {
       "path": "spi-zone-direction.css",
-      "sha256": "38e8015aa94845af2a6ec3a5baf06ba848b93829ed508d566210c77acb69b552",
-      "bytes": 8617
+      "sha256": "4eca586ecbe17d2f400702466a9bb7eae6a3bb146c95e361904e7dffdcc039b0",
+      "bytes": 9258
     },
     {
       "path": "spi-zone-direction.js",
-      "sha256": "d580da0344ea9d8ed71e41ba7c839359daff330d1dc727228b088112cf03fa12",
-      "bytes": 27191
+      "sha256": "0587f225f4b9779ccf8e62f47a01605be47852b4544e4be7a7dfe63a9633dd25",
+      "bytes": 31155
     },
     {
       "path": "stand-animations.css",
@@ -575,8 +615,8 @@
     },
     {
       "path": "stand-connection.js",
-      "sha256": "902e553828731e70fffc073cb1b0933f662c42d685c4ece0d74be3ce206d10e7",
-      "bytes": 34311
+      "sha256": "e46597d5169183b0edd58d1fe65205569eba8b8a18152fbdb834b60cb0476a75",
+      "bytes": 34884
     },
     {
       "path": "stand-live-checkpoint.js",
@@ -625,8 +665,8 @@
     },
     {
       "path": "ui606-controls.css",
-      "sha256": "066b60bcfb9225059f641d02199a4f38c19362da5cc4ab97c0a2b5548f617222",
-      "bytes": 11939
+      "sha256": "e9460a8bd2bfab6af8321e3a16afdf9df7248f96d699d5eb30f82388d82ae4e5",
+      "bytes": 12189
     },
     {
       "path": "ui606-gallery.css",
@@ -660,8 +700,8 @@
     },
     {
       "path": "v50-animation-texts.js",
-      "sha256": "07c44814383a3f88e58b27d592f9a82f743083fab8448440caa981fabee49b7c",
-      "bytes": 46229
+      "sha256": "2317d7fbbaeb5367567d387e011e3efacae66eed26070e94a847dc9dfc81b52e",
+      "bytes": 46266
     },
     {
       "path": "v50-error-texts.js",
@@ -695,8 +735,8 @@
     },
     {
       "path": "v50-order-texts.js",
-      "sha256": "c8868ca57c233678b25b2103ba269075ddc40a38912a5bb8a25825f2de34f7ba",
-      "bytes": 15468
+      "sha256": "78d462e84ec146801450e1796e856bf6ead2b4b5d72cd2c4aa8cba9f904a2b6c",
+      "bytes": 20078
     },
     {
       "path": "v50-order-tutorial.css",
@@ -3201,6 +3241,57 @@
       "Native Swift, private firmware51 catalogue/images, credentials and real receiver controls are excluded.",
       "Public demo remains fictional, RAM-only and network-blocked; no receiver, OTA, speed, sync or optical acceptance.",
       "Android30 overlay/landing/metadata and all16 historical APKs remain exact657; no new Android or phone installation claim."
+    ]
+  },
+  "interfaceCandidate672": {
+    "sourceSnapshotOnly": true,
+    "sourceBoundaryVerified": true,
+    "sourceInputSHA256": {
+      "animation-discovery.css": "776f64a236c4d1e9752c3a2812edc2b360f1a52c8213c030a2efb721c890d0c6",
+      "animation-library.js": "f9fe90224a9bcd9333de6a42f6f3a80b97da6427088d4ee23164790596c6a900",
+      "app.js": "d0963e0bb972898ea176fab91ebe61df8e23d671134c37d13252a026763a5934",
+      "colour-library-drag.js": "963265a49e1b03fa1db0872ee226ea6df642ac59f4e7b263562ae6338d6a6122",
+      "colour-presets-ui.css": "5a6d0b814dc5a111ecf14300c389ef27f2c2fd16a6367d3a24fbf8b017e4b3a7",
+      "colour-presets-ui.js": "ab7eb21a4c045c35c65c1d0308d55a3e113fb3ac3caded8f1e9c2d7ce50ac61d",
+      "colours-library.js": "2b52745810c9b1b249e9b9d0caad1becf37bc4eb73a5a11109ffd19092d996be",
+      "index.html": "151908dba59b8dd37ea8f3fd2d8e280599a0dd4ef53963ece48f8f6b25290a94",
+      "ledline-order-direct.css": "4b163f3966b6527cbaa0f7011b9f16225b31bce015f112a5526f2d4dd3d32688",
+      "ledline-order-drag.js": "128ecab773dc52a0e3750a328869bb1b48b8a83cab078e6890555834f4fdaadf",
+      "ledline-order-focus.css": "37be9bc1a6e741dcfa7bd1e0922b9ab23e4f07f0aba3d90082676fbb8397efe9",
+      "ledline-order-focus.js": "9711bd36b472f2e7ada78d6fae2a1af5bd7f73d6d3db3800689217b80f89b755",
+      "ledline-order-guide.js": "82bcf8edfc01f65eb0f5d3d7751a8f0af2712a648cf19e82d65ee49be776183f",
+      "ledline-order-tutorial.css": "23689381ff877031a6fb872419fc4e222c5990f8192cc99056a78a4ad03bb8ad",
+      "ledline-order-tutorial.js": "9af1f13654b3bbf1a1a8b4fbf59cbabeab52bd24792ab7947a26a74228bb8565",
+      "native-runtime.js": "54b51d55db85d059de1b36399d6a0fb0fc4d626e5f92899af438814b224f48fc",
+      "pixel-setup.js": "32edd7ea838233543eacd8326ec938fb7158283136f16b73635189ec870e63f3",
+      "preview.js": "830d2a408476b1f5e570910bb0a7ef7192db793c07f9216423f778cdbad7b2eb",
+      "spi-zone-direction.css": "4eca586ecbe17d2f400702466a9bb7eae6a3bb146c95e361904e7dffdcc039b0",
+      "spi-zone-direction.js": "0587f225f4b9779ccf8e62f47a01605be47852b4544e4be7a7dfe63a9633dd25",
+      "stand-connection.js": "e46597d5169183b0edd58d1fe65205569eba8b8a18152fbdb834b60cb0476a75",
+      "ui606-controls.css": "e9460a8bd2bfab6af8321e3a16afdf9df7248f96d699d5eb30f82388d82ae4e5",
+      "v50-animation-texts.js": "2317d7fbbaeb5367567d387e011e3efacae66eed26070e94a847dc9dfc81b52e",
+      "v50-order-texts.js": "78d462e84ec146801450e1796e856bf6ead2b4b5d72cd2c4aa8cba9f904a2b6c"
+    },
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "opticalAcceptance": false,
+    "features": [
+      "Direct inline exact-RGBW presets with editing, reordering and explicit save/delete/undo.",
+      "Direct ledline order swap handles with stable place numbers and a clearer physical-line selection tutorial.",
+      "Zone-wide SPI direction UI preserves exact per-port selection and reports the finite native guide lease honestly when a separate native host is used.",
+      "Pixel review, category/animation discovery and current shared UI are projected from the exact672 source."
+    ],
+    "limits": [
+      "Public672 is a fictional RAM-only UI projection, not a native SDK product or a receiver control route.",
+      "Separate native672 builds/installations and firmware54 products are not bundled or distributed here.",
+      "All private firmware catalogue/history/binary files and all Swift, SDK, helper, credential and device data are excluded.",
+      "Public browser smoke remains OPEN until Root actually inspects this isolated stage; this metadata does not manufacture it.",
+      "Existing Android30 overlay/landing/metadata and all16 historical APKs remain exact661; no new Android product or installation claim.",
+      "No OTA, first-photon speed, animation synchrony, optical or physical Android acceptance follows from this UI publication."
     ]
   }
 }

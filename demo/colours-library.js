@@ -157,6 +157,20 @@
       try { return write(validateColors(next),current.colors); }
       catch (error) { return storageError(error.code || 'ENTRY',error.message,current.colors); }
     }
+    function addMissing(entries) {
+      const current = load();
+      if (current.error) return current;
+      try {
+        // Validate the entire requested batch, including already-known IDs.
+        // Existing presets may have been edited: never replace their values.
+        const requested = validateColors(entries);
+        const existing = new Set(current.colors.map(entry=>entry.id));
+        const missing = requested.filter(entry=>!existing.has(entry.id));
+        if (!missing.length) return current;
+        // Both combined limits are checked before the single storage write.
+        return write(validateColors([...current.colors,...missing]),current.colors);
+      } catch (error) { return storageError(error.code || 'ENTRY',error.message,current.colors); }
+    }
     function setBrandColors(values) {
       const current = load();
       if (current.error) return current;
@@ -202,6 +216,23 @@
       if (!current.colors.some(color=>color.id===id)) return current;
       return write(current.colors.filter(color=>color.id!==id),current.colors);
     }
+    function restore(entry, toIndex) {
+      const current = load();
+      if (current.error) return current;
+      try {
+        const restored = validate(entry);
+        if (!Number.isInteger(toIndex) || toIndex < 0 || toIndex > current.colors.length) {
+          fail('MOVE_INDEX', 'Kies een bestaande positie in Kleurpresets.');
+        }
+        if (current.colors.some(color=>color.id===restored.id)) {
+          fail('ID_CONFLICT', 'Deze kleur bestaat opnieuw. De bestaande kleur is niet overschreven.');
+        }
+        const next = current.colors.slice();
+        next.splice(toIndex, 0, restored);
+        // Undo is one atomic insertion, never a save followed by a move.
+        return write(validateColors(next),current.colors);
+      } catch (error) { return storageError(error.code || 'ENTRY',error.message,current.colors); }
+    }
     function move(id, toIndex) {
       const current = load();
       if (current.error) return current;
@@ -217,7 +248,7 @@
       next.splice(toIndex, 0, entry);
       return write(next, current.colors);
     }
-    return Object.freeze({load,save,remove,move,setBrandColors});
+    return Object.freeze({load,save,addMissing,remove,restore,move,setBrandColors});
   }
   return Object.freeze({STORAGE_KEY,MAX_COLORS,MAX_BRAND_COLORS,capture,validate,validateColors,suggestName,restore,defaults,createStore});
 }));

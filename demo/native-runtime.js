@@ -1222,10 +1222,10 @@
     async configureOutputDirections(request){return configureOutputs(request,{directionsOnly:true}).then(view=>scheduleContext(view,request.standId));},
     get spiZoneDirectionPreview(){return spiZoneDirectionPreview===true;},
     async previewSPIZoneDirections(request){
-      const stop=request?.action==='stop';
-      if(!layoutKeys(request,stop?['action','standId','zoneId','sessionId']:['action','standId','zoneId','sessionId','lines','focus'])||
-         !['start','update','stop'].includes(request.action)||!['standId','zoneId','sessionId'].every(key=>layoutId(request[key]))||
-         !stop&&(!Array.isArray(request.lines)||!request.lines.length||request.lines.length>120||request.lines.some(line=>
+      const stop=request?.action==='stop',observe=request?.action==='status',scopeOnly=stop||observe;
+      if(!layoutKeys(request,scopeOnly?['action','standId','zoneId','sessionId']:['action','standId','zoneId','sessionId','lines','focus'])||
+         !['start','update','stop','status'].includes(request.action)||!['standId','zoneId','sessionId'].every(key=>layoutId(request[key]))||
+         !scopeOnly&&(!Array.isArray(request.lines)||!request.lines.length||request.lines.length>120||request.lines.some(line=>
            !layoutKeys(line,['receiverId','port','reversed'])||!layoutId(line.receiverId)||!Number.isInteger(line.port)||line.port<1||line.port>4||typeof line.reversed!=='boolean')||
            new Set(request.lines.map(line=>line.receiverId+':'+line.port)).size!==request.lines.length||request.focus!==null&&
            (!layoutKeys(request.focus,['receiverId','port'])||!request.lines.some(line=>line.receiverId===request.focus.receiverId&&line.port===request.focus.port))))throw fail('SPI_DIRECTION_INVALID');
@@ -1237,6 +1237,18 @@
       if(answer?.standId!==request.standId||answer.zoneId!==request.zoneId||answer.sessionId!==request.sessionId)throw fail('SPI_DIRECTION_UNCONFIRMED');
       if(stop){
         if(typeof answer.stopped!=='boolean'||answer.ttlFallbackMS!==(answer.stopped?0:15000))throw fail('SPI_DIRECTION_UNCONFIRMED');
+        return answer;
+      }
+      if(observe){
+        if(epoch!==standSharingEpoch||!contextVisible()||canonical(centralStamp)!==canonical(stamp)||!stamp&&!legacyContextAllowed())throw fail('SPI_DIRECTION_UNCONFIRMED');
+        if(answer.applied===false){
+          if(!layoutKeys(answer,['applied','standId','zoneId','sessionId','reason','previewTTLMS'])||!['inactive','expired','busy'].includes(answer.reason)||answer.previewTTLMS!==0)throw fail('SPI_DIRECTION_UNCONFIRMED');
+        }else if(answer.applied!==true||!layoutKeys(answer,['applied','standId','zoneId','sessionId','lines','focus','previewTTLMS','renewAfterMS'])||
+          !Array.isArray(answer.lines)||!answer.lines.length||answer.lines.length>120||answer.lines.some(line=>
+            !layoutKeys(line,['receiverId','port','reversed'])||!layoutId(line.receiverId)||!Number.isInteger(line.port)||line.port<1||line.port>4||typeof line.reversed!=='boolean')||
+          new Set(answer.lines.map(line=>line.receiverId+':'+line.port)).size!==answer.lines.length||answer.focus!==null&&
+            (!layoutKeys(answer.focus,['receiverId','port'])||!answer.lines.some(line=>line.receiverId===answer.focus.receiverId&&line.port===answer.focus.port))||
+          !Number.isInteger(answer.previewTTLMS)||answer.previewTTLMS<1||answer.previewTTLMS>15000||!Number.isInteger(answer.renewAfterMS)||answer.renewAfterMS<1||answer.renewAfterMS>7000)throw fail('SPI_DIRECTION_UNCONFIRMED');
         return answer;
       }
       if(epoch!==standSharingEpoch||!contextVisible()||canonical(centralStamp)!==canonical(stamp)||!stamp&&!legacyContextAllowed()||answer.applied!==true||

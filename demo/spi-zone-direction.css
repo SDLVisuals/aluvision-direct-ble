@@ -39,8 +39,12 @@ dialog.spi-zone-direction-dialog::backdrop{background:#1119;backdrop-filter:blur
 .spi-zone-direction-dialog .spi-zone-red{left:auto;right:3px;background:var(--red,#b53d38)}
 .spi-zone-direction-dialog [data-reversed=true] .spi-zone-green{left:auto;right:3px}
 .spi-zone-direction-dialog [data-reversed=true] .spi-zone-red{left:3px;right:auto}
-.spi-zone-direction-dialog [data-selected=true]:not([data-pixels="1"]):not([data-pixels="2"]) .spi-zone-strip-interior{animation:spi-zone657-white-focus 2s ease-in-out infinite}
-@keyframes spi-zone657-white-focus{0%,100%{background:rgb(80,80,80)}50%{background:rgb(185,185,185)}}
+.spi-zone-direction-dialog[data-preview-confirmed=true] [data-selected=true]:not([data-pixels="1"]):not([data-pixels="2"]) .spi-zone-strip-interior{animation:spi-zone669-white-focus .9s ease-in-out infinite}
+@keyframes spi-zone669-white-focus{0%,100%{background:rgb(185,185,185)}50%{background:rgb(24,24,24)}}
+.spi-zone-direction-dialog .spi-zone-port-card>header b{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.spi-zone-direction-dialog [data-spi-zone-focus-badge]{display:inline-flex;align-items:center;gap:4px;padding:3px 6px;border-radius:6px;background:var(--soft,#e4e9f0);color:var(--ink,#252c37);font-size:10px;font-weight:700;line-height:1.35}
+.spi-zone-direction-dialog [data-spi-zone-focus-badge][hidden]{display:none}
+.spi-zone-direction-dialog[data-preview-confirmed=true] [data-spi-zone-focus-badge]::before{content:'';display:block;width:5px;height:5px;border-radius:50%;background:currentColor}
 .spi-zone-direction-dialog .spi-zone-flip{display:flex;align-items:center;justify-content:center;gap:6px;min-width:108px;min-height:48px;padding:10px;border:1px solid var(--line,#d4dbe5);border-radius:12px;background:var(--soft,#e4e9f0);color:var(--ink,#252c37);font:inherit;font-size:13px;font-weight:700;line-height:1.35;text-align:center;cursor:pointer;touch-action:manipulation}
 .spi-zone-direction-dialog .spi-zone-flip>svg{flex:none;width:19px;height:19px}
 .spi-zone-direction-dialog .spi-zone-one{display:block;margin-top:5px;color:var(--muted,#5b6573);font-size:11px;line-height:1.4}

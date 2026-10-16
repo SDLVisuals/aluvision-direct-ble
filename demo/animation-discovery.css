@@ -1,0 +1,301 @@
+/* Discovery hierarchy only. No new animation engine, state or device work. */
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) {
+  --discovery-accent: var(--red);
+  gap: 20px;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-library-heading {
+  margin: 0;
+  padding: 0;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-library-heading h2 {
+  font-size: 23px;
+  line-height: 1.25;
+  letter-spacing: -.025em;
+}
+
+/* An unboxed illustrated path, deliberately distinct from tappable rows. */
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-picker-steps[data-discovery-progress="662"] {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+  margin: -4px 0 0;
+  padding: 0 0 18px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  list-style: none;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-picker-steps[data-discovery-progress="662"]::after {
+  content: '→';
+  position: absolute;
+  left: 50%;
+  top: 19px;
+  transform: translate(-50%, -50%);
+  color: var(--muted);
+  font-size: 18px;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-picker-steps[data-discovery-progress="662"] > li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  min-height: 38px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--muted);
+  cursor: default;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-picker-steps[data-discovery-progress="662"] > li[aria-current="step"] {
+  border: 0;
+  background: none;
+  color: var(--ink);
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-step-illustration {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--soft);
+  color: var(--muted);
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) [aria-current="step"] > .animation-step-illustration {
+  background: color-mix(in srgb, var(--discovery-accent) 11%, var(--panel));
+  color: var(--discovery-accent);
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-step-illustration > .icon {
+  width: 20px;
+  height: 20px;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-step-copy {
+  display: block;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-step-copy > .animation-step-number {
+  display: inline;
+  width: auto;
+  height: auto;
+  margin-right: 4px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-step-copy > b {
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: 650;
+  overflow-wrap: normal;
+}
+
+/* Category pictures are illustrative; only the complete row is a button. */
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-discovery-browser {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-tabs[data-discovery-categories="662"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-tabs[data-discovery-categories="662"] > .animation-category-tab {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  grid-column: auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 82px;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: none;
+  text-align: left;
+  white-space: normal;
+  touch-action: manipulation;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-tabs[data-discovery-categories="662"] > .animation-category-tab[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--discovery-accent) 45%, var(--line));
+  background: color-mix(in srgb, var(--discovery-accent) 4%, var(--panel));
+  color: var(--ink);
+  box-shadow: inset 3px 0 var(--discovery-accent);
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-tab > .animation-category-artwork {
+  display: block;
+  grid-column: 1;
+  grid-row: 1;
+  width: 72px;
+  height: 56px;
+  overflow: hidden;
+  border: 1px solid #ffffff12;
+  border-radius: 10px;
+  background: #19292e;
+  color: #fff;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-artwork > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-tab > .animation-category-row-copy {
+  display: grid;
+  grid-column: 2;
+  grid-row: 1;
+  gap: 4px;
+  justify-items: start;
+  align-items: start;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  color: var(--ink);
+  text-align: left;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-tabs[data-discovery-categories="662"] > .animation-category-tab[aria-pressed="true"] > .animation-category-row-copy {
+  color: var(--ink);
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-row-copy > b {
+  font-size: 16px;
+  line-height: 1.3;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-row-copy > small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 400;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-tab > .animation-category-row-meta {
+  display: grid;
+  grid-column: 3;
+  grid-row: 1;
+  justify-items: center;
+  align-content: center;
+  gap: 7px;
+  width: auto;
+  height: auto;
+  color: var(--muted);
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-row-meta > small {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-row-meta .icon {
+  width: 17px;
+  height: 17px;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-tab[aria-pressed="true"] .animation-category-row-meta > span {
+  color: var(--discovery-accent);
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-tab:is([data-id="catalogue"], [data-id="presets"]) {
+  min-height: 66px;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-tab:is([data-id="catalogue"], [data-id="presets"]) .animation-category-artwork {
+  height: 44px;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-tab:focus-visible {
+  outline: 3px solid var(--discovery-accent);
+  outline-offset: 3px;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-search {
+  position: relative;
+  display: block;
+  margin: 0;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-search > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-search input {
+  width: 100%;
+  min-height: 48px;
+  padding: 11px 12px 11px 40px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--soft);
+  color: var(--ink);
+  font-size: 16px;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-search > .icon {
+  display: block;
+  position: absolute;
+  top: 15px;
+  left: 13px;
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/* Actual groups have live examples; separate them from the category controls. */
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) #animation-results {
+  min-width: 0;
+  padding-top: 4px;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-family-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-family-heading {
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-family-heading .animation-category-eyebrow {
+  display: none;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-family-heading h2 {
+  font-size: 19px;
+  line-height: 1.3;
+}
+html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-family-heading p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+@media (max-width: 359px) {
+  html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-picker-steps[data-discovery-progress="662"] { gap: 24px; }
+  html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-step-illustration { width: 28px; height: 28px; }
+  html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-step-copy { font-size: 12px; }
+  html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-tabs[data-discovery-categories="662"] > .animation-category-tab { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 9px; padding: 9px; }
+  html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-tab > .animation-category-artwork { width: 56px; height: 50px; }
+  html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-row-copy > b { font-size: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.interface-polish body :is(#main, #effect-dialog) [data-discovery-progress="662"] .animation-step-illustration,
+  html.interface-polish body :is(#main, #effect-dialog) [data-discovery-categories="662"] .animation-category-artwork {
+    animation: none;
+    transition: none;
+  }
+}

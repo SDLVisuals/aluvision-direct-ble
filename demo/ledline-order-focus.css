@@ -1,0 +1,56 @@
+/* Place-bound recognition. Presentation never implies a physical receipt. */
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-focus-ui="664"]{
+  --focus-border:color-mix(in srgb,var(--ink,#252729) 15%,transparent);
+}
+.ledline-setup[data-order-focus-ui="664"] .ledline-setup-toggle{gap:10px;padding-bottom:14px}
+.ledline-setup[data-order-focus-ui="664"] .ledline-setup-close-label{width:44px;min-width:44px;min-height:44px;padding:0;border-radius:50%;justify-content:center}
+.ledline-setup[data-order-focus-ui="664"] .ledline-setup-close-label .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="652"][data-order-focus-ui="664"] .ledline-setup-close-label{flex:0 0 44px;width:44px;min-width:44px;padding:0;border-radius:50%;justify-content:center}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="652"][data-order-focus-ui="664"] .ledline-setup-copy{flex:1;min-width:0}
+.ledline-setup[data-order-focus-ui="664"] .order-assignment-intro652{padding:18px;margin-top:6px;border:0;background:var(--panel,#fff);box-shadow:none;gap:10px}
+.ledline-setup[data-order-focus-ui="664"] .order-visual-heading655{align-items:flex-start}
+.order-focus-eyebrow664{display:block;color:var(--muted,#626963);font-size:10px;font-weight:750;line-height:1.4;letter-spacing:.09em;margin-bottom:7px}
+.ledline-setup[data-order-focus-ui="664"] .order-visual-heading655 h3{font-size:23px;line-height:1.15;letter-spacing:-.035em}
+.ledline-setup[data-order-focus-ui="664"] .order-visual-hint655{font-size:13px;margin:0;line-height:1.5}
+.order-focus-guide664{display:flex;gap:8px 12px;flex-wrap:wrap;align-items:center;color:var(--muted,#626963);font-size:11px}
+.order-focus-guide664>span{display:inline-flex;gap:5px;align-items:center;min-width:0;line-height:1.4}
+.order-focus-guide664>.order-assignment-direction652{margin:0;padding:4px 7px;min-height:24px;font-size:11px;border:none}
+.order-focus-guide664 .icon{width:14px;height:14px;flex:none}
+.ledline-setup[data-order-focus-ui="664"] .order-focus-status664{border-top:1px solid var(--line,#dce0dc);padding-top:11px;margin:3px 0 0;min-height:32px;font-size:12px;font-weight:650;line-height:1.45;color:var(--muted,#626963)}
+.order-focus-status664[data-kind="failed"]{color:var(--danger,#b74542)!important}
+.ledline-setup[data-order-focus-ui="664"] .v593-order-status{border:0;border-radius:0;background:transparent;box-shadow:none;padding:0 2px;margin:0 0 10px;gap:8px;min-height:35px;align-items:center}
+.ledline-setup[data-order-focus-ui="664"] .v593-order-status-copy{gap:2px;font-size:11px}
+.ledline-setup[data-order-focus-ui="664"] .v593-order-status[data-order-status-kind="idle"] [data-order-compact-status]{display:none}
+.ledline-setup[data-order-focus-ui="664"] .v593-order-status :is([data-order-compact-recognition],summary){font-size:11px;line-height:1.4}
+.ledline-setup[data-order-focus-ui="664"] .v593-order-status-details>summary{padding:6px;min-height:32px}
+.ledline-setup[data-order-focus-ui="664"] .v593-order-status[data-order-status-kind="unconfirmed"]{padding:10px;border:1px solid var(--danger,#b74542);border-radius:12px}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="652"][data-order-focus-ui="664"] .v593-order-status{border:0;background:transparent;padding:0 2px;min-height:35px;margin:0 0 10px;box-shadow:none;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="652"][data-order-focus-ui="664"] .v593-order-status[data-order-status-kind="unconfirmed"]{border:1px solid var(--danger,#b74542);border-radius:12px;padding:10px}
+.ledline-setup[data-order-focus-ui="664"] .order-assignments652{gap:10px;margin:0 0 12px}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="652"][data-order-visual="655"][data-order-focus-ui="664"] .order-assignment652{display:grid;grid-template-columns:minmax(0,1fr) 48px;gap:6px;padding:7px;border-radius:20px;border:1px solid var(--focus-border);background:var(--panel,#fff);box-shadow:0 3px 12px #11182003;transition:border-color .18s ease,box-shadow .18s ease;min-width:0}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-focus-ui="664"] .order-assignment652[data-order-selected="true"]{border-color:var(--marker-colour);box-shadow:0 0 0 2px color-mix(in srgb,var(--marker-colour) 14%,transparent),0 5px 16px #11182006}
+.order-focus-select664{display:grid;grid-template-columns:42px minmax(0,1fr);align-items:center;gap:11px;min-width:0;min-height:93px;text-align:left;padding:10px 7px;border:0;border-radius:14px;background:transparent;color:var(--ink,#252729);font:inherit;cursor:pointer;touch-action:manipulation}
+.order-focus-number664{display:grid;place-items:center;align-self:center;width:42px;height:46px;background:var(--soft,#eef1f4);color:var(--ink,#252729);border-radius:13px;font-size:25px;line-height:1;font-weight:800;transition:background .18s ease}
+[data-order-selected="true"] .order-focus-number664{background:var(--ink,#252729);color:var(--panel,#fff)}
+.order-focus-line664{display:flex;flex-direction:column;gap:8px;min-width:0}
+.order-focus-line-title664{display:flex;justify-content:space-between;gap:6px;align-items:center;min-width:0;flex-wrap:wrap;line-height:1.25}
+.order-focus-line-title664>b{font-size:17px;overflow-wrap:anywhere}
+.order-focus-line-title664>small{font-size:9px;font-weight:700;color:var(--muted,#626963)}
+.order-focus-line-title664>small[hidden]{display:none}
+.order-focus-strip664{display:block;padding:4px;border:1px solid #ffffff15;background:#141b1a;box-shadow:inset 0 1px 3px #0004;border-radius:7px;overflow:hidden}
+.order-focus-strip664>i{display:block;height:11px;border-radius:3px;background:repeating-linear-gradient(90deg,transparent 0,transparent 7px,#141b1a80 7px,#141b1a80 9px),var(--marker-colour);box-shadow:0 0 8px var(--marker-colour);opacity:1}
+[data-order-pulsing="true"] .order-focus-strip664>i{animation:order-focus-pulse664 1.6s ease-in-out infinite}
+.order-focus-endpoint664{font-size:10px;line-height:1.3;color:var(--muted,#626963);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+.order-focus-actions664{display:grid;gap:3px;align-content:center;border-left:1px solid var(--line,#dce0dc);padding-left:4px;min-width:0}
+.ledline-setup[data-order-focus-ui="664"] .order-assignment-choice652{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:44px;min-height:46px;height:auto;padding:4px;border:0;background:var(--soft,#eef1f4);border-radius:11px;color:var(--ink,#252729);font-size:9px;line-height:1.2;font-weight:650}
+.ledline-setup[data-order-focus-ui="664"] .order-assignment-choice652>.icon{width:20px;height:20px}
+.ledline-setup[data-order-focus-ui="664"] .order-assignment-settings652{width:44px;min-width:44px;min-height:44px;height:44px;border:0;border-radius:11px;background:transparent;color:var(--muted,#626963)}
+.ledline-setup[data-order-focus-ui="664"] .order-assignment-settings652>.icon{width:19px;height:19px}
+.ledline-setup[data-order-focus-ui="664"] .order-assignment-footer652{padding-top:10px;margin-top:4px;border:0}
+.order-focus-select664:focus-visible{outline:3px solid var(--ink,#252729);outline-offset:2px}
+[data-order-focus-picker="664"] .order-colour-choice652{min-height:118px}
+[data-order-focus-picker="664"] .order-assignment-rule652{display:flex;gap:8px;align-items:center}
+[data-order-focus-picker="664"] .order-assignment-rule652 .icon{width:18px;height:18px;flex:none}
+@keyframes order-focus-pulse664{0%,100%{opacity:1}50%{opacity:.3}}
+@media(max-width:360px){.ledline-setup[data-order-focus-ui="664"] .order-assignment-intro652{padding:14px}.order-focus-select664{grid-template-columns:33px minmax(0,1fr);gap:8px;padding:8px 5px}.order-focus-number664{width:33px;height:42px;font-size:23px}.order-focus-line-title664>b{font-size:16px}.order-focus-line-title664>small{font-size:8px}.ledline-setup[data-order-focus-ui="664"] .order-visual-heading655 h3{font-size:21px}}
+@media(prefers-reduced-motion:reduce){[data-order-pulsing="true"] .order-focus-strip664>i{animation:none}.order-focus-select664,.order-focus-number664,.order-assignment652{transition:none!important}}

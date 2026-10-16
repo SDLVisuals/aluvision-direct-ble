@@ -32,6 +32,29 @@
   // physical lines to match an illustration. Keep legacy lookup keys and the
   // referencePlan export available, but never render their old swap animation.
   const observedOrder={
+    animatedLook665:['Kijk naar je echte ledlines','Look at your real LED lines','Regardez vos lignes LED réelles','Schau auf deine echten LED-Linien'],
+    animatedPlace665:['Tik op Kleur bij plaats 1','Tap Colour at position 1','Touchez Couleur à la position 1','Tippe bei Position 1 auf Farbe'],
+    animatedColour665:['Daar zie je rood. Kies rood.','You see red there. Choose red.','Vous y voyez du rouge. Choisissez rouge.','Dort siehst du Rot. Wähle Rot.'],
+    animatedSwap665:['Alleen plaats 1 en 3 wisselen','Only positions 1 and 3 swap','Seules les positions 1 et 3 s’échangent','Nur Position 1 und 3 tauschen'],
+    animatedDone665:['Nu klopt de volgorde','Now the order matches','L’ordre correspond maintenant','Jetzt stimmt die Reihenfolge'],
+    animatedLookHint665:['Neem de kleurvolgorde van je echte ledlines over in de app.','Copy the colour order of your real LED lines into the app.','Reproduisez dans l’app l’ordre des couleurs de vos lignes LED réelles.','Übernimm die Farbreihenfolge deiner echten LED-Linien in die App.'],
+    animatedPlaceHint665:['Kies de plaats die je wilt instellen.','Choose the position you want to set.','Choisissez la position à régler.','Wähle die Position, die du einstellen möchtest.'],
+    animatedColourHint665:['Kies in de app dezelfde kleur.','Choose the same colour in the app.','Choisissez la même couleur dans l’app.','Wähle in der App dieselbe Farbe.'],
+    animatedSwapHint665:['Plaats 2 blijft staan. De echte kleuren blijven gelijk.','Position 2 stays put. The real colours stay the same.','La position 2 reste en place. Les couleurs réelles restent identiques.','Position 2 bleibt stehen. Die echten Farben bleiben gleich.'],
+    animatedDoneHint665:['Herhaal voor de andere plaatsen. Sluit af met Klaar.','Repeat for the other positions. Finish with Done.','Répétez pour les autres positions. Terminez avec Terminé.','Wiederhole dies für die anderen Positionen. Schließe mit Fertig ab.'],
+    animatedPhysical665:['Kijk naar je echte ledlines','Look at your real LED lines','Regardez vos lignes LED réelles','Schau auf deine echten LED-Linien'],
+    animatedApp665:['Zet die volgorde in de app','Match that order in the app','Reproduisez cet ordre dans l’app','Übernimm diese Reihenfolge in die App'],
+    animatedColourButton665:['Kleur','Colour','Couleur','Farbe'],
+    animatedOnly665:['Uitlegvoorbeeld · verandert je verlichting niet','Illustration only · does not change your lighting','Exemple uniquement · ne modifie pas votre éclairage','Nur ein Beispiel · ändert deine Beleuchtung nicht'],
+    animatedFixed665:['Deze kleuren blijven gelijk','These colours stay the same','Ces couleurs restent identiques','Diese Farben bleiben gleich'],
+    animatedSelect665:['Kies de kleur','Choose the colour','Choisissez la couleur','Farbe wählen'],
+    animatedPause665:['Pauze','Pause','Pause','Pause'],
+    animatedPlay665:['Afspelen','Play','Lire','Abspielen'],
+    animatedReplay665:['Opnieuw','Replay','Revoir','Erneut'],
+    animatedStepLook665:['Kijken','Look','Regarder','Schauen'],
+    animatedStepChoose665:['Kiezen','Choose','Choisir','Wählen'],
+    animatedStepDone665:['Klaar','Done','Terminé','Fertig'],
+    animatedAccessible665:['Uitlegvoorbeeld met drie vaste echte ledlines: boven rood, midden groen, onder blauw. De app toont eerst blauw, groen, rood. Kies bij plaats 1 rood. Alleen de appkleuren van plaats 1 en 3 wisselen. Plaats 2 blijft groen. De echte ledlines veranderen niet van kleur.','Illustration with three fixed real LED lines: red at the top, green in the middle, blue at the bottom. The app initially shows blue, green, red. Choose red at position 1. Only the app colours at positions 1 and 3 swap. Position 2 stays green. The real LED lines do not change colour.','Exemple avec trois lignes LED réelles fixes : rouge en haut, vert au milieu, bleu en bas. L’app affiche d’abord bleu, vert, rouge. Choisissez rouge à la position 1. Seules les couleurs des positions 1 et 3 dans l’app s’échangent. La position 2 reste verte. Les lignes LED réelles ne changent pas de couleur.','Beispiel mit drei festen echten LED-Linien: oben Rot, mittig Grün, unten Blau. Die App zeigt zuerst Blau, Grün, Rot. Wähle Rot an Position 1. Nur die App-Farben an Position 1 und 3 tauschen. Position 2 bleibt grün. Die echten LED-Linien ändern ihre Farbe nicht.'],
     tutorialLookTitle655:['Kijk','Look','Regardez','Schauen'],
     tutorialLookText655:['Kijk naar de kleuren op je echte ledlines.','Look at the colours on your real LED lines.','Regardez les couleurs de vos lignes LED réelles.','Schau auf die Farben deiner echten LED-Linien.'],
     tutorialChooseTitle655:['Kies de kleur','Choose the colour','Choisissez la couleur','Farbe wählen'],
@@ -50,7 +73,7 @@
     mappingTitle:['Jouw volgorde','Your order','Votre ordre','Deine Reihenfolge'],
     physicalCaption:['De echte herkenningskleur blijft gelijk','The real identification colour stays the same','La couleur de repérage réelle reste identique','Die echte Erkennungsfarbe bleibt gleich'],
     exampleBadge:['Uitleg','Guide','Guide','Anleitung'],
-    tutorialTitle:['Koppel kleuren aan plaatsen','Match colours to positions','Associer les couleurs aux positions','Farben den Positionen zuordnen'],
+    tutorialTitle:['Zo neem je de volgorde over','Match your real LED-line order','Reproduire l’ordre réel','Die echte Reihenfolge übernehmen'],
     tutorialShortHint:['Kies bij elke plaats de kleur die je op je echte ledline ziet.','For each position, choose the colour you see on your real LED line.','Pour chaque position, choisissez la couleur vue sur votre ligne LED réelle.','Wähle für jede Position die Farbe, die du auf deiner echten LED-Linie siehst.'],
     tutorialExampleNote:['De herkenningskleuren blijven staan zolang het volgordemenu open is.','Identification colours stay on while the order menu is open.','Les couleurs de repérage restent allumées tant que le menu d’ordre est ouvert.','Die Erkennungsfarben bleiben an, solange das Reihenfolgemenü geöffnet ist.'],
     tutorialExampleBadge:['Je echte opstelling','Your real setup','Votre installation réelle','Deine echte Aufstellung'],
@@ -68,7 +91,16 @@
     single:['Eén ledline: haar herkenningskleur staat bij plaats 1.','One LED line: its identification colour is at position 1.','Une ligne LED : sa couleur de repérage est à la position 1.','Eine LED-Linie: Ihre Erkennungsfarbe steht an Position 1.'],
     empty:['Er zijn nog geen ledlines in deze zone. Voeg eerst een receiver toe.','There are no LED lines in this zone yet. Add a receiver first.','Cette zone ne contient pas encore de lignes LED. Ajoutez d’abord un récepteur.','In dieser Zone gibt es noch keine LED-Linien. Füge zuerst einen Receiver hinzu.']
   };
-  function t(key,language='nl',params={}){const current=observedOrder[key]?.[Math.max(0,['nl','en','fr','de'].indexOf(language))];return String(current||(tutorialSteps[language]||tutorialSteps.nl)[key]||(tutorial[language]||tutorial.nl)[key]||(clarity[language]||clarity.nl)[key]||(texts[language]||texts.nl)[key]||texts.nl[key]||key).replace(/\{(\w+)\}/g,(_,name)=>String(params[name]??''));}
+  const dragOrder668={
+    animatedPlace665:['Pak rood vast bij de puntjes','Pick up red by its grip','Saisissez le rouge par les points','Nimm Rot am Griff auf'],
+    animatedPlaceHint665:['Op je eerste echte ledline zie je rood. Zoek dat kaartje in de app.','Your first real LED line is red. Find that card in the app.','Votre première vraie ligne LED est rouge. Retrouvez cette carte dans l’app.','Deine erste echte LED-Linie ist rot. Suche diese Karte in der App.'],
+    animatedColour665:['Sleep rood naar plaats 1','Drag red to position 1','Glissez le rouge à la position 1','Ziehe Rot auf Position 1'],
+    animatedColourHint665:['Zet in de app dezelfde kleur op dezelfde plaats.','Put the same colour at the same position in the app.','Placez la même couleur à la même position dans l’app.','Setze in der App dieselbe Farbe an dieselbe Position.'],
+    animatedStepChoose665:['Slepen','Drag','Glisser','Ziehen'],
+    animatedDragHandle668:['Sleep','Drag','Glisser','Ziehen'],
+    animatedAccessible665:['Kijk naar je eigen ledlines en neem hun volgorde over in de app. In dit uitlegvoorbeeld blijven de echte kleuren rood, groen en blauw vast staan. Pak het rode kaartje bij de sleeppuntjes en sleep het naar plaats 1. Alleen rood en blauw wisselen in de app; groen blijft op plaats 2. Je echte verlichting verandert niet door het voorbeeld.','Look at your own LED lines and match their order in the app. In this illustration the real colours red, green and blue stay fixed. Pick up the red card by its grip and drag it to position 1. Only red and blue swap in the app; green stays at position 2. This illustration does not change your real lighting.','Regardez vos propres lignes LED et reproduisez leur ordre dans l’app. Dans cet exemple, les vraies couleurs rouge, vert et bleu restent fixes. Saisissez la carte rouge par les points et glissez-la à la position 1. Seuls le rouge et le bleu s’échangent dans l’app ; le vert reste à la position 2. Cet exemple ne modifie pas votre éclairage réel.','Schau auf deine eigenen LED-Linien und übernimm ihre Reihenfolge in die App. In diesem Beispiel bleiben die echten Farben Rot, Grün und Blau unverändert. Nimm die rote Karte am Griff auf und ziehe sie auf Position 1. Nur Rot und Blau tauschen in der App; Grün bleibt an Position 2. Das Beispiel ändert deine echte Beleuchtung nicht.']
+  };
+  function t(key,language='nl',params={}){const index=Math.max(0,['nl','en','fr','de'].indexOf(language)),current=dragOrder668[key]?.[index]||observedOrder[key]?.[index];return String(current||(tutorialSteps[language]||tutorialSteps.nl)[key]||(tutorial[language]||tutorial.nl)[key]||(clarity[language]||clarity.nl)[key]||(texts[language]||texts.nl)[key]||texts.nl[key]||key).replace(/\{(\w+)\}/g,(_,name)=>String(params[name]??''));}
   function esc(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
   function hex(rgb){return '#'+rgb.map(v=>v.toString(16).padStart(2,'0')).join('');}
   // CSS encodes display RGB; preview state and wire channels stay linear.
@@ -96,14 +128,28 @@
     if(!Number.isInteger(count)||count<0||count>Identification.MAX_LINES){const error=new Error('IDENTIFICATION_LINES');error.code='IDENTIFICATION_LINES';throw error;}
   }
   function tutorialMarkup({count,language='nl'}){
-    // Abstract eye/tap/check symbols explain the existing steps. There is no
-    // synthetic LED output, target colour pattern, swap animation or radio
-    // request: the customer follows the real setup in front of them.
+    // A local illustration only: physical colour identities never move or
+    // recolour. Only the two app assignments exchange positions.
     validateCount(count);
     if(count===0)return `<section class="v50-order-tutorial-content v652-order-tutorial-content" data-tutorial-version="652"><p class="v652-order-empty">${esc(t('empty',language))}</p></section>`;
-    const heading=(number,key)=>`<h3 class="v50-tutorial-step-heading"><span aria-hidden="true">${number}</span>${esc(t(key,language))}</h3>`;
-    const glyph=kind=>`<span class="order-guide-icon655" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">${kind==='eye'?'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>':kind==='tap'?'<path d="M10 12V5a2 2 0 0 1 4 0v5l1-.5a2 2 0 0 1 2 .3l3 2.4v4.4A4.4 4.4 0 0 1 15.6 21H13a4 4 0 0 1-3.2-1.6L6 14.3a1.8 1.8 0 0 1 2.6-2.4L10 13"/><path d="m5 6-2-1m3-2L5 1m13 5 2-1"/>':'<circle cx="12" cy="12" r="9"/><path d="m7.8 12 2.8 2.8 5.6-5.6"/>'}</svg></span>`;
-    return `<section class="v50-order-tutorial-content v652-order-tutorial-content" data-tutorial-version="652" data-order-visual="655" aria-label="${esc(t('tutorialAccessible',language))}"><ol class="v50-tutorial-steps"><li>${glyph('eye')}<div>${heading(1,'tutorialLookTitle655')}<p>${esc(t('tutorialLookText655',language))}</p></div></li><li>${glyph('tap')}<div>${heading(2,'tutorialChooseTitle655')}<p>${esc(t(count===1?'tutorialChooseSingleText655':'tutorialChooseText655',language))}</p>${count>1?`<p class="v652-order-tutorial-rule">${esc(t('tutorialSwapHint655',language))}</p>`:''}</div></li><li>${glyph('check')}<div>${heading(3,'tutorialResultTitle655')}<p>${esc(t('tutorialResultHint655',language))}</p></div></li></ol></section>`;
+    if(count===1)return `<section class="v50-order-tutorial-content" data-tutorial-version="665"><h3>${esc(t('tutorialLookTitle655',language))}</h3><p>${esc(t('tutorialChooseSingleText655',language))}</p></section>`;
+    const label=key=>esc(t(key,language));
+    const colourNames={red:label('tutorialRed'),green:label('tutorialGreen'),blue:label('tutorialBlue')};
+    const eye='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+    const physical=['red','green','blue'].map((colour,index)=>`<div class="order-story-real-line665" data-physical-colour="${colour}" style="--story-colour:var(--story-${colour})"><b>${index+1}</b><i></i><span>${colourNames[colour]}</span></div>`).join('');
+    const cards=['blue','green','red'].map(colour=>`<div class="order-story-colour665" data-app-colour="${colour}" style="--story-colour:var(--story-${colour})"><i></i><b>${colourNames[colour]}</b><span class="order-story-card-grip668">⠿ <small>${label('animatedDragHandle668')}</small></span></div>`).join('');
+    const phases=['Look','Place','Colour','Swap','Done'].map((name,index)=>`<div data-story-caption665="${index}" ${index?'hidden':''}><h3>${label('animated'+name+'665')}</h3><p>${label('animated'+name+'Hint665')}</p></div>`).join('');
+    return `<section class="v50-order-tutorial-content order-story665" data-tutorial-version="665" data-order-story-ui="668" data-order-tutorial665 data-phase="0" data-playing="false" aria-label="${label('animatedAccessible665')}">
+      <p class="order-story-note665">${label('animatedOnly665')}</p>
+      <nav class="order-story-steps665" aria-label="${label('tutorialBadge')}">${[['Look',0],['Choose',2],['Done',4]].map(([name,phase],index)=>`<button type="button" data-tutorial-action665="step" data-phase665="${phase}" ${index===0?'aria-current="step"':''}><b>${index+1}</b><span>${label('animatedStep'+name+'665')}</span></button>`).join('')}</nav>
+      <div class="order-story-stage665" aria-hidden="true">
+        <div class="order-story-physical665"><div class="order-story-panel-title665">${eye}<b>${label('animatedPhysical665')}</b></div>${physical}<small>${label('animatedFixed665')}</small></div>
+        <div class="order-story-link665">↓</div>
+        <div class="order-story-app665"><div class="order-story-panel-title665"><span class="order-story-phone665">▯</span><b>${label('animatedApp665')}</b><span class="order-story-match665">✓</span></div><div class="order-story-assignments665"><div class="order-story-numbers665"><b>1</b><b>2</b><b>3</b></div><div class="order-story-cards665">${cards}</div><span class="order-story-tap665"><svg viewBox="0 0 32 36" fill="white" stroke="#27323b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 19V6a3 3 0 0 1 6 0v11l3-1 9 5v7a6 6 0 0 1-6 6h-5a6 6 0 0 1-5-3L5 22a3 3 0 0 1 4-4l4 5"/></svg></span></div></div>
+      </div>
+      <div class="order-story-caption665">${phases}</div>
+      <div class="order-story-controls665"><button type="button" data-tutorial-action665="toggle" data-label-play="${label('animatedPlay665')}" data-label-pause="${label('animatedPause665')}"><span aria-hidden="true" data-play-symbol665>▶</span><span data-play-label665>${label('animatedPlay665')}</span></button><button type="button" data-tutorial-action665="replay"><span aria-hidden="true">↻</span>${label('animatedReplay665')}</button></div>
+    </section>`;
   }
   return Object.freeze({t,referencePlan,instructionMarkup,tutorialMarkup});
 }));

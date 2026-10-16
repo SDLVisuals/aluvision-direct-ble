@@ -524,6 +524,24 @@ function softTrailCoverage(behind,trail,n,smooth){
   })();
 
   const FRESH_ANIMATION_COLOURS = Object.freeze(['#FF0000','#00FF00','#0000FF','#FF8000','#FFFF00','#00FFFF','#8000FF']);
+  const LOCALIZED_SPI_MOTION = new Set(['CHASE','COMET','SCANNER','MIRROR','DUAL','MINIMAL','CASCADE','SEQUENCE','WAVE','SPARKLE','ALTERNATE']);
+  const localizedSpiMotion = effect => effect?.spatialResolution === 'pixel' && effect.category === 'pixels' && LOCALIZED_SPI_MOTION.has(effect.state?.engine);
+  function gallerySample(effect, { state = effect?.state, pixels = 32 } = {}) {
+    if (!effect || !state || typeof state !== 'object' || Array.isArray(state)) throw new Error('Invalid gallery sample');
+    const sampleState = copy(state), basePixels = Math.round(clamp(pixels, 1, 163, 32));
+    if (!localizedSpiMotion(effect)) return Object.freeze({ state: sampleState, pixels: basePixels });
+    // Disposable recipe illustration only. A 20-pixel object on the old
+    // 32-pixel sample filled most of the strip and obscured the actual motion.
+    // Keep its real width/formula, show enough surrounding pixels, and use a
+    // dark backdrop. Never run this helper on the live installation preview.
+    Object.assign(sampleState, { backgroundOn: false, background: '#000000', backgroundWhite: 0,
+      backgroundRgbEnabled: true, backgroundWhiteEnabled: false, bgBrightness: 0, backgroundBrightness: 0 });
+    const width = clamp(sampleState.widthPixels, 1, 163, 20), trail = clamp(sampleState.trailLength, 0, 100, 45);
+    // The retained COMET formula has a genuine width*(1.4+trail*.09) tail.
+    // Do not crop that tail into a full glowing strip on a tiny thumbnail.
+    const tailPixels = sampleState.engine === 'COMET' ? width * (1.4 + trail * .09) * 1.25 : 0;
+    return Object.freeze({ state: sampleState, pixels: Math.min(163, Math.max(96, basePixels, Math.ceil(width * 6), Math.ceil(tailPixels))) });
+  }
   function freshAnimationDefaults(effect) {
     // Descriptor creation ONLY: never run this on a receiver, saved preset or
     // restored scene. Explicit white/brand/reference recipes retain their
@@ -535,6 +553,7 @@ function softTrailCoverage(behind,trail,n,smooth){
     const colors = Array.from({length:count}, (_,index) => FRESH_ANIMATION_COLOURS[index % FRESH_ANIMATION_COLOURS.length]);
     return {...effect,state:{...state,colors,whiteChannels:colors.map(()=>0),rgbEnabled:colors.map(()=>true),
       whiteEnabled:colors.map(()=>false),backgroundWhite:0,backgroundWhiteEnabled:false,
+      ...(localizedSpiMotion(effect)?{backgroundOn:false,background:'#000000',bgBrightness:0,backgroundBrightness:0}:{}),
       // Existing mapping: 45% is about6.1s, close to the6s factory wave.
       // Only a fresh SPI starter uses it; saved speed/smooth remain untouched.
       ...(effect.id==='spi-chase-8'?{speed:45,smooth:100}:{})}};
@@ -1595,6 +1614,6 @@ function softTrailCoverage(behind,trail,n,smooth){
     }
     return rawFrame;
   }
-  return Object.freeze({ catalog, geometry, ledlineCount, sample, draw, rows, selected, normalizeState, defaultWidthPixels, retimeMotion, opticalWhite, tunnelProjection, wallProjection,
+  return Object.freeze({ catalog, gallerySample, geometry, ledlineCount, sample, draw, rows, selected, normalizeState, defaultWidthPixels, retimeMotion, opticalWhite, tunnelProjection, wallProjection,
     engineVersion: canonical.version, extensionVersion: extension.version, isLocalPreview: true });
 }));

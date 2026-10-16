@@ -141,7 +141,7 @@
       } catch (_) { /* Overlay geometry does not change interaction authority. */ }
       var top = Math.max(minimumTop, Math.min(y, maximumTop));
       state.ghost.style.transform = 'translate(' + left + 'px,' + top + 'px)';
-      state.ghostRoute.textContent = state.fromPosition + ' → ' + (state.toIndex + 1);
+      state.ghostRoute.textContent = state.fromPosition + (state.directUI668 ? ' ↔ ' : ' → ') + (state.toIndex + 1);
     }
     function createGhost(state) {
       if (!document.body || typeof document.createElement !== 'function' || typeof state.row.querySelector !== 'function') return;
@@ -149,21 +149,29 @@
         var ghost = document.createElement('div'), number = document.createElement('span');
         var copy = document.createElement('span'), title = document.createElement('b'), detail = document.createElement('small');
         var route = document.createElement('span'), originalCopy = state.row.querySelector('.scope-copy');
+        // The direct-place cards keep their fixed number outside the moving
+        // assignment. Read their own name/endpoint, never a neighbouring slot.
+        var focusCopy = state.row.querySelector('.order-focus-select664');
+        var assignedName = focusCopy && state.row.querySelector('[data-order-assigned-name]');
         ghost.className = 'v50-order-drag-ghost'; ghost.setAttribute('aria-hidden', 'true');
         // Essential overlay geometry is inline so a delayed/missing stylesheet
         // cannot turn presentation feedback into a layout/scroll mutation.
         ghost.style.position = 'fixed'; ghost.style.left = '0'; ghost.style.top = '0';
         ghost.style.pointerEvents = 'none'; ghost.style.zIndex = '1012';
         ghost.setAttribute('data-order-ghost-id', state.id); ghost.setAttribute('data-order-ghost-input', state.input);
+        if (state.directUI668) ghost.setAttribute('data-order-ghost-ui', '668');
         number.className = 'v50-order-ghost-number'; number.textContent = String(state.fromPosition);
         if (state.slots) ghost.setAttribute('data-order-ghost-slots', 'true');
         copy.className = 'v50-order-ghost-copy';
-        title.textContent = originalCopy?.querySelector('.scope-option-title')?.textContent || originalCopy?.querySelector('b')?.textContent || state.id;
-        detail.textContent = originalCopy?.querySelector('small')?.textContent || '';
+        title.textContent = originalCopy?.querySelector('.scope-option-title')?.textContent || originalCopy?.querySelector('b')?.textContent || assignedName?.textContent || state.id;
+        detail.textContent = originalCopy?.querySelector('small')?.textContent || (assignedName && state.row.querySelector('.order-focus-endpoint664')?.textContent) || '';
         copy.appendChild(title); copy.appendChild(detail);
         route.className = 'v50-order-ghost-route';
         var badge = state.row.querySelector('.order-number');
         state.colour = view?.getComputedStyle ? view.getComputedStyle(badge || state.row).getPropertyValue('--identify-colour').trim() : '';
+        if (assignedName && view?.getComputedStyle) {
+          state.colour = view.getComputedStyle(state.row).getPropertyValue('--marker-colour').trim() || state.colour;
+        }
         if (state.colour) ghost.style.setProperty('--order-drag-colour', state.colour);
         if (!state.slots) ghost.appendChild(number);
         ghost.appendChild(copy); ghost.appendChild(route);
@@ -265,6 +273,8 @@
         if (!contains(active.handle) || !contains(active.row) ||
             fresh.length !== active.ids.length || fresh.some(function (id, i) { return id !== active.ids[i]; }) ||
             rows(fresh).some(function (row, i) { return row !== active.rows[i]; })) throw new Error('ORDER_CHANGED');
+        if (active.directUI668 && (active.handle.disabled || active.handle.getAttribute('aria-disabled') === 'true' ||
+            active.handle.closest('[data-order-item]') !== active.row)) throw new Error('ORDER_HANDLE_CHANGED');
         if (active.slots && slots(fresh).some(function (slot, i) { return slot !== active.slots[i]; })) throw new Error('ORDER_SLOTS_CHANGED');
         return true;
       } catch (_) { finish(false); return false; }
@@ -279,7 +289,8 @@
         active = { handle: handle, row: row, rows: allRows, slots: allSlots, id: id, ids: ids,
           fromIndex: index, fromPosition: Number.isInteger(originalPosition) && originalPosition > 0 ? originalPosition : index + 1,
           toIndex: index, input: input, pointerId: pointerId, pointerY: pointerY,
-          pointerOriginY: pointerY, moved: false, pickupOffset: 0, pickupFraction: .5, trusted: trusted === true };
+          pointerOriginY: pointerY, moved: false, pickupOffset: 0, pickupFraction: .5, trusted: trusted === true,
+          directUI668: !!row.closest('[data-order-direct-ui="668"]') };
         allRows.forEach(function (item) { item.removeAttribute('data-order-settled'); });
         captureLayout(active);
         if (input === 'pointer') {

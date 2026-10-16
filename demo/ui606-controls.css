@@ -96,7 +96,9 @@ html.interface-polish body :is(#main,#effect-dialog) .ui609-colour-fine>.fine-co
 html.interface-polish body :is(#main,#effect-dialog) .palette-drag-handle{
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
 }
-.palette-drag-handle>span{font-size:18px;line-height:1}
+/* Grip dots are an icon, not a colour swatch. Do not inherit .palette span's
+   circular swatch frame; the existing full-size button remains the hit target. */
+.palette-drag-handle>span{display:grid;place-items:center;font-size:18px;line-height:1;border:0;border-radius:0;background:none;box-shadow:none}
 .palette-drag-handle>small{font-size:8px;line-height:1.2;font-weight:600}
 /* Reuse the compact saved-colour strip used by All zones. In reorder mode
    the existing grid and its pointer/keyboard drag targets stay unchanged. */

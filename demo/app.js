@@ -330,6 +330,7 @@
   const sameOrderEndpoints652=(left,right)=>left.length===right.length&&new Set(left.map(a=>a.id)).size===left.length&&
     new Set(right.map(a=>a.id)).size===right.length&&left.every(a=>right.some(b=>a.id===b.id&&a.receiverId===b.receiverId&&a.port===b.port));
   let orderIdentification=null,orderIdentificationState=null,orderCleanupResumedSession=null;
+  let orderFocus664=null,orderFocusState664=null,orderFocusContextKey664='',orderFocusProblem664=null;
   let orderTest=null,orderTestState={status:'idle',busy:false},orderTestPreparing=false,orderTestRequest=0,orderTestFingerprint=null,orderTestConfirmation=null;
   let orderRecognitionDirty=true;
   function beginOrderColours(){
@@ -347,7 +348,7 @@
     cancelOrderTest();
     openLineSetup.clear();openLineSettings.clear();openSpatialChoices.clear();expandedScopeZones.clear();
     expandedReceivers.clear();expandedConnections.clear();settingsOpen=false;advancedSettingsRevision++;
-    arrangementDraft=null;orderColours.clear();inlineOrderDrag?.cancel();void orderIdentification?.close();
+    arrangementDraft=null;orderColours.clear();inlineOrderDrag?.cancel();retireOrderFocus664();void orderIdentification?.close();
   }
   let receiverAssignment=null,nameDialog=null,zoneDeletion=null,managementBusy=false;
   let managementConnectionReturn=null;
@@ -416,6 +417,7 @@
       onState:(id,state)=>{liveStates.set(id,state);syncLiveStatus();syncArrangementControls();
         if(state.kind==='applied'&&centralLiveCheckpoint?.state().status==='unconfirmed'&&centralLiveCheckpoint.state().pending)void centralLiveCheckpoint.flush().catch(()=>{});}}):null;
   let colourOrderMode=false,colourLibraryNotice='',removedColour=null;
+  let presetEdit667=null,presetLibraryBusy667=false,presetLibraryEpoch667=0;
   let preferenceStore;try{preferenceStore=Preferences.createStore(appStorage);}catch(_){preferenceStore=Preferences.createStore(null);}
   let uiPreferences=preferenceStore.load();
   const interfaceModeStore=Preferences.createModeStore(appStorage);
@@ -497,6 +499,82 @@
       syncOrderRecognition();
     }
   });
+  // Ephemeral place selection only: never saved in the stand or sent as a
+  // colour change. The existing finite identification holder owns all radio IO.
+  orderFocus664=window.LightningLedlineOrderFocus?.create({
+    clock:()=>performance.now(),setTimer:(callback,ms)=>setTimeout(callback,ms),clearTimer:timer=>clearTimeout(timer),
+    sendBlink:request=>{
+      const state=orderIdentification?.getState();
+      if(!state?.active||!state.physicalConfirmed||previewContext||!orderForegroundVisible652()||
+         state.session!==request.session||state.standId!==request.standId||state.zoneId!==request.zoneId)
+        return Promise.reject(Error('ORDER_FOCUS_SCOPE'));
+      return orderIdentification.blink(request.lineId,request.enabled);
+    },
+    onState:state=>{orderFocusState664=state;syncOrderFocusPresentation664();for(const receiver of model.receivers)syncIdentifyControls(receiver.id);},
+    onUncertain:problem=>{
+      orderFocusProblem664=problem;
+      const state=orderIdentification?.getState();
+      // A lost blink receipt cannot authorize guessing a new endpoint/BLINKID.
+      // Release exactly this holder; its hardware lease remains finite.
+      if(state?.active&&state.session===problem.session&&state.standId===problem.standId&&state.zoneId===problem.zoneId)
+        void orderIdentification.close('focus-unconfirmed');
+      syncOrderFocusPresentation664();
+    }
+  });
+  function retireOrderFocus664(){
+    orderFocusContextKey664='';
+    void orderFocus664?.clear({releaseExternal:true});
+  }
+  function syncOrderFocusContext664(){
+    if(!orderFocus664)return;
+    const state=orderIdentificationState,z=zone();
+    if(!state?.active||!z||state.zoneId!==z.id||state.standId!==stand()?.id){
+      if(orderFocusContextKey664||orderFocusState664?.session){retireOrderFocus664();}
+      return;
+    }
+    const context={session:state.session,standId:state.standId,zoneId:state.zoneId,
+      // Resolve only committed order, never a pending optimistic draft.
+      lineIds:M.lineIds(model,z.id),visible:orderForegroundVisible652(),
+      ready:!arrangementInteractionBusy()&&!orderSaveQueue588&&!orderClose589&&!arrangementDraft?.error&&
+        !arrangementNeedsStandOpen()&&!standPresentationOnly()&&(previewContext||state.physicalConfirmed===true),
+      previewOnly:!!previewContext};
+    const key=JSON.stringify(context);
+    if(key===orderFocusContextKey664)return;
+    orderFocusContextKey664=key;
+    void orderFocus664.update(context);
+  }
+  function orderFocusCopy664(){
+    const state=orderFocusState664;
+    if(orderFocusProblem664?.zoneId===route.zoneId&&orderFocusProblem664.standId===stand()?.id)
+      return orderText652('orderFocusFailed664');
+    if(state?.selectedPosition===null||!state||state.zoneId!==route.zoneId)return orderText652('orderFocusHint664');
+    const params={position:state.selectedPosition+1};
+    return orderText652(state.previewOnly?'orderFocusDemo664':state.confirmed?'orderFocusRunning664':
+      ['pending','stopping'].includes(state.status)?'orderFocusPending664':'orderFocusPaused664',params);
+  }
+  function syncOrderFocusPresentation664(){
+    if(!main)return;
+    const state=orderFocusState664,scope=state?.zoneId===route.zoneId&&state?.standId===stand()?.id;
+    for(const row of main.querySelectorAll('[data-order-focus-ui="664"] [data-order-assignment-line]')){
+      const selected=!!scope&&state.selectedPosition===Number(row.dataset.orderPosition)-1;
+      const animated=selected&&(state.previewOnly||state.confirmed)&&!state.error;
+      row.dataset.orderSelected=String(selected);row.dataset.orderPulsing=String(animated);
+      row.querySelector('[data-action="order-select-place664"]')?.setAttribute('aria-pressed',String(selected));
+      const badge=row.querySelector('[data-order-focus-badge]');if(badge){badge.hidden=!selected;badge.textContent=orderText652('orderFocusSelected664');}
+    }
+    const label=main.querySelector('[data-order-focus-status]');
+    if(label){label.textContent=orderFocusCopy664();label.dataset.kind=orderFocusProblem664?.zoneId===route.zoneId&&orderFocusProblem664.standId===stand()?.id?'failed':!scope||state.selectedPosition===null?'idle':state.previewOnly?'preview':state.confirmed?'running':'idle';}
+  }
+  function selectOrderPlace664(position){
+    const z=zone(),draft=arrangementDraft;
+    if(!z||!openLineSetup.has(z.id)||document.hidden||!draft||draft.signature!==arrangementSignature(z)||
+       orderDragBusy588()||arrangementNeedsStandOpen()||standPresentationOnly()||
+       !Number.isInteger(position)||position<0||position>=M.lineIds(model,z.id).length)return;
+    syncOrderFocusContext664();
+    if(!orderIdentificationState?.active)return;
+    orderFocusProblem664=null;
+    void orderFocus664?.select(position);
+  }
   // Foreground presence is explicit. Receivers still own finite hardware
   // leases; only a genuine renewal reply can extend physical confirmation.
   function orderForegroundVisible652(){
@@ -512,7 +590,7 @@
   const orderGuide=window.LightningLedlineOrderGuide;
   function orderGuideText(key,params){return orderGuide.t(key,uiPreferences.preferences.language,params);}
   const ORDER_TUTORIAL_KEY='aluvision.ui.ledline-order-tutorial.v3-observed-colours';
-  let orderTutorialSeenMemory=false,orderTutorialContext=null,orderTutorialReturnFocus=null;
+  let orderTutorialSeenMemory=false,orderTutorialContext=null,orderTutorialReturnFocus=null,orderTutorialDispose=null;
   function hasSeenOrderTutorial(){
     if(orderTutorialSeenMemory)return true;
     try{orderTutorialSeenMemory=appStorage?.getItem(ORDER_TUTORIAL_KEY)==='1';}catch(_){/* Optional device-local preference. */}
@@ -527,9 +605,10 @@
     const count=M.zoneLedlines(model,z.id).length;if(count<2)return false;
     orderTutorialReturnFocus=document.activeElement;
     orderTutorialContext={standId:stand().id,zoneId:z.id};
-    dialog.dataset.tutorialVersion='652';
+    dialog.dataset.tutorialVersion='665';
     dialog.innerHTML=`<header><div><span class="v568-tutorial-badge">${icon('play')}${esc(orderGuideText('tutorialBadge'))}</span><h2 id="order-tutorial-title" tabindex="-1">${esc(orderGuideText('tutorialTitle'))}</h2></div><button type="button" data-action="order-tutorial-close" aria-label="${esc(orderGuideText('tutorialClose'))}">${icon('close')}<span>${esc(t('close'))}</span></button></header><div class="v50-order-tutorial-body">${orderGuide.tutorialMarkup({count,language:uiPreferences.preferences.language})}</div><footer class="v50-order-tutorial-footer"><button type="button" data-action="order-tutorial-close">${esc(orderGuideText('tutorialStart'))}${icon('chevron')}</button></footer>`;
     try{dialog.showModal();}catch(_){orderTutorialContext=null;orderTutorialReturnFocus=null;dialog.replaceChildren();return false;}
+    orderTutorialDispose=window.LightningLedlineOrderTutorial?.mount(dialog.querySelector('[data-order-tutorial665]'))||null;
     window.InterfaceMotion?.openDialog?.(dialog,false);
     dialog.querySelector('#order-tutorial-title')?.focus({preventScroll:true});return true;
   }
@@ -537,6 +616,7 @@
     const dialog=document.getElementById('order-tutorial');if(!orderTutorialContext&&!dialog?.open)return false;
     if(acknowledge){orderTutorialSeenMemory=true;try{appStorage?.setItem(ORDER_TUTORIAL_KEY,'1');}catch(_){/* Keep dismissal for this session. */}}
     const previous=orderTutorialReturnFocus;orderTutorialContext=null;orderTutorialReturnFocus=null;
+    orderTutorialDispose?.();orderTutorialDispose=null;
     window.InterfaceMotion?.cancelDialog?.(dialog);
     if(dialog?.open)dialog.close();dialog?.replaceChildren();
     if(restoreFocus&&!restoreControlFocus(previous))main.querySelector('[data-action="order-tutorial-open"]')?.focus({preventScroll:true});
@@ -663,6 +743,7 @@
     orderRecognitionDirty=false;
     syncOrderTestControls();
     syncOrderStatus593();
+    syncOrderFocusContext664();syncOrderFocusPresentation664();
   }
   const pendingDialogDismissals=new WeakMap();
   const pendingPanelDismissals=new WeakMap();
@@ -965,19 +1046,29 @@
       if(runtime?.native!==true||runtime.services?.spiZoneDirectionPreview!==true)return {status:'unsupported',sessionId:request.sessionId};
       const active=spiDirectionSessions.get(request.sessionId);
       const action=active?.applied?'update':'start';
-      if(action==='start')await liveController?.whenIdle({standId:request.standId});
+      if(action==='start'){await standSession?.settleMaintenance?.();await liveController?.whenIdle({standId:request.standId});}
       if(spiDirectionRetired.has(request.sessionId))throw Error('SPI_DIRECTION_CLOSED');
       spiDirectionSessions.set(request.sessionId,{...request,applied:false,attempted:true});
       try{
         const answer=await runtime.services.previewSPIZoneDirections({action,...request});
         if(spiDirectionRetired.has(request.sessionId))throw Error('SPI_DIRECTION_CLOSED');
         spiDirectionSessions.set(request.sessionId,{...request,applied:true,attempted:true});
-        return {status:'applied',sessionId:answer.sessionId,lines:answer.lines,focus:answer.focus};
+        return {status:'applied',sessionId:answer.sessionId,lines:answer.lines,focus:answer.focus,previewTTLMS:answer.previewTTLMS,renewAfterMS:answer.renewAfterMS};
       }catch(error){
         if(['SPI_DIRECTION_UNSUPPORTED','SPI_ZONE_DIRECTION_UPDATE_REQUIRED','PIXEL_GUIDE_UPDATE_REQUIRED'].includes(error?.code))return {status:'unsupported',sessionId:request.sessionId};
         throw error;
       }
     }),
+    onObserve:async request=>{
+      const active=spiDirectionSessions.get(request.sessionId);
+      if(!active?.applied||spiDirectionRetired.has(request.sessionId))return {status:'inactive',sessionId:request.sessionId,previewTTLMS:0};
+      const answer=await runtime.services.previewSPIZoneDirections({action:'status',...request});
+      // Observation cannot start a holder, renew a radio lease or turn a
+      // draft into physical confirmation. Only the exact last applied tuple.
+      if(spiDirectionSessions.get(request.sessionId)!==active||spiDirectionRetired.has(request.sessionId))return {status:'busy',sessionId:request.sessionId,previewTTLMS:0};
+      if(answer.applied!==true)return {status:answer.reason,sessionId:answer.sessionId,previewTTLMS:0};
+      return {status:'applied',sessionId:answer.sessionId,lines:answer.lines,focus:answer.focus,previewTTLMS:answer.previewTTLMS,renewAfterMS:answer.renewAfterMS};
+    },
     onStop:request=>queueSPIDirectionTransport(async()=>{
       if(!spiDirectionSessions.has(request.sessionId))return {status:'stopped',sessionId:request.sessionId};
       const answer=await runtime.services.previewSPIZoneDirections({action:'stop',...request});
@@ -1134,11 +1225,12 @@
         }
       }
     },
-    onSave:async({receiverId,outputs,directionsOnly=false})=>{
+    onSave:async({receiverId,outputs,directionsOnly=false,continueToDirections=false})=>{
       requireStandPresentationConnection();
       const receiver=model.receivers.find(r=>r.id===receiverId&&r.lifecycle==='added'&&r.type==='SPI');
       if(!receiver||outputs.length!==4)throw Error(t("Deze receiver is niet beschikbaar."));
       const paired=pairFirstActiveReceiverId===receiverId;
+      if(!paired&&continueToDirections&&!receiver.zoneId)throw Error(pairFirstText('unassigned'));
       if(paired){
         const checkpoint=pairFirstSetup.get(receiverId);
         if(!checkpoint||!PairFirst.receiverFor(model,checkpoint))throw Error(t('outputUnconfirmed'));
@@ -1168,11 +1260,17 @@
           pendingSPIDirectionOpen={zoneId:configured.zoneId,newReceiverId:receiverId};
         }
         else toast(pairFirstText('unassigned'));
+      }else if(continueToDirections){
+        const configured=model.receivers.find(item=>item.id===receiverId);
+        if(!configured?.zoneId)throw Error(t('outputUnconfirmed'));
+        // Full configuration has one final direction step. Do not dispatch
+        // the old scene between pixels and that whole-zone test overlay.
+        pendingSPIDirectionOpen={zoneId:configured.zoneId};
       }else resumeConfiguredLighting(receiverId);
       expandedReceivers.add(receiverId);
       const blink=identifying.get(receiverId);
       if(blink){const active=model.receivers.find(r=>r.id===receiverId).outputs.filter(o=>o.enabled).map(o=>o.port);blink.ports=blink.scope==='all'?active:blink.ports.filter(p=>active.includes(p));if(!blink.ports.length)identifying.delete(receiverId);}
-      render({preserveScroll:true});if(!paired)toast(pixelText659('pixelOnlySaved'));
+      render({preserveScroll:true});if(!paired&&!continueToDirections)toast(pixelText659('pixelOnlySaved'));
     }});
   function outputConfigurationErrorMessage(error){
     const key=error?.code==='OTA_PENDING'?'outputOtaPending':['OTA_BUSY','OUTPUT_CONFIGURATION_BUSY','LIVE_CONTROL_BUSY','NATIVE_BUSY','MAIN_BUSY','REMOVAL_BUSY'].includes(error?.code)?'outputActionBusy':'outputUnconfirmed';
@@ -1758,9 +1856,104 @@
     return `<div class="editor-grid editor-grid-colour">${context}<section class="editor-controls">${selector()}${colourPickerMarkup()}${lineTools}</section></div>`;
   }
   function myColoursMarkup() {
-    const entries=savedColours.colors;
-    if(!advancedInterface())return `<section class="my-colours basic-colours"><h3>${esc(t('myColours'))}</h3><div class="saved-colour-grid">${entries.map(entry=>`<div class="saved-colour-item"><button class="saved-colour" data-action="swatch" data-id="${esc(entry.id)}" data-rgb="${entry.color.r},${entry.color.g},${entry.color.b}" data-white="${entry.color.w}" style="--swatch:${C.screenHex([entry.color.r,entry.color.g,entry.color.b],entry.color.w)}" aria-label="${esc(entry.name)}"><i></i><span>${esc(entry.name)}</span></button></div>`).join('')}<button class="saved-colour add-colour" data-action="colour-new" aria-label="${esc(t('saveCurrentColour'))}"><i aria-hidden="true">＋</i><span>${esc(t('saveColour'))}</span></button></div><p class="colour-library-status" role="status">${esc(colourLibraryNotice)}</p>${savedColours.error?`<p role="alert">${esc(savedColours.error.message)}</p>`:''}</section>`;
-    return `<section class="my-colours"><div class="section-heading"><h3>${esc(t('myColours'))}</h3><div class="colour-library-actions"><button class="icon-button colour-manager-button" data-action="colours-manager" aria-label="${esc(t('colourManagerTitle'))}" title="${esc(t('colourManagerTitle'))}" ${entries.length?'':'disabled'}>${icon('settings')}</button><button class="text-button" data-action="colours-manage" aria-pressed="${colourOrderMode}" ${entries.length<2&&!colourOrderMode?'disabled':''}>${esc(t(colourOrderMode?'done':'colourOrder'))}</button></div></div>${colourOrderMode?`<p class="colour-library-hint">${esc(t('colourLibraryOrderHint'))}</p>`:''}<div class="saved-colour-grid ${colourOrderMode?'is-ordering':''}">${entries.map(entry=>`<div class="saved-colour-item${entry.group==='brand'?' is-brand':''}" data-colour-id="${esc(entry.id)}"><button class="saved-colour" data-action="swatch" data-id="${esc(entry.id)}" data-rgb="${entry.color.r},${entry.color.g},${entry.color.b}" data-white="${entry.color.w}" style="--swatch:${C.screenHex([entry.color.r,entry.color.g,entry.color.b],entry.color.w)}" aria-label="${esc(entry.name)}${entry.group==='brand'?` · ${esc(t('brandTag'))}`:''}"><i></i><span>${esc(entry.name)}</span>${entry.group==='brand'?`<small class="saved-colour-kind">${esc(t('brandTag'))}</small>`:''}</button>${colourOrderMode?`<button class="colour-drag-handle" data-colour-drag="${esc(entry.id)}" aria-label="${esc(t("{name} verslepen",{name:entry.name}))}" title="${esc(t("Versleep om de volgorde te wijzigen"))}"><span aria-hidden="true">⠿</span><small>${esc(t("Sleep"))}</small></button>`:''}</div>`).join('')}<button class="saved-colour add-colour" data-action="colour-new" aria-label="${esc(t('saveCurrentColour'))}"><i aria-hidden="true">＋</i><span>${esc(t('saveColour'))}</span></button></div><div class="colour-library-feedback"><p class="colour-library-status" role="status">${esc(colourLibraryNotice)}</p></div>${savedColours.error?`<p role="alert">${esc(savedColours.error.message)}</p>`:''}</section>`;
+    const builtinIds=new Set(presetBrandEntries667().map(entry=>entry.id));
+    return window.LightningColourPresetsUI.markup({
+      entries:savedColours.colors.map(entry=>({...entry,isBrandPresetUI:entry.group==='brand'||builtinIds.has(entry.id)})),
+      language:uiPreferences.preferences.language,draft:presetEdit667?.standId===stand()?.id?presetEdit667:null,
+      busy:presetLibraryBusy667||!!savedColours.error,notice:colourLibraryNotice,
+      error:(presetEdit667?.standId===stand()?.id?presetEdit667?.error:'')||savedColours.error?.message||'',
+      undo:!!removedColour&&(!removedColour.standId||removedColour.standId===stand()?.id),
+      missingBrands:[...builtinIds].some(id=>!savedColours.colors.some(entry=>entry.id===id)),
+      swatchHex:color=>C.screenHex([color.r,color.g,color.b],color.w)
+    });
+  }
+  function presetText667(key,params={}){return window.LightningColourPresetsUI.t(key,uiPreferences.preferences.language,params);}
+  function presetBrandEntries667(){
+    // The existing six suggestions become ordinary v1 library records only
+    // after the customer's explicit add action. Never re-seed a saved library
+    // on render/load: deletion and edited names/RGBW must survive reopening.
+    return BRAND_TONES.map(tone=>{
+      const [r,g,b]=rgbOf({colors:[tone.value]});
+      return Colours.capture(tone.name,{r,g,b,w:0,bri:100},{id:'colour-tone-'+tone.id});
+    });
+  }
+  function openPresetEditor667(source,id){
+    if(presetLibraryBusy667)return;
+    if(presetEdit667&&presetEdit667.standId!==stand()?.id)presetEdit667=null;
+    if(presetEdit667&&presetEdit667.id!==id)return refreshColourLibraries(source,presetText667('finishEdit'));
+    const current=colourStore.load();if(current.error)return refreshColourLibraries(source,current.error.message);
+    const entry=current.colors.find(item=>item.id===id);if(!entry)return refreshColourLibraries(source,presetText667('missingPreset'));
+    savedColours=current;
+    if(!presetEdit667)presetEdit667={id,standId:stand()?.id,name:entry.name,color:{...entry.color},base:JSON.stringify(entry),error:''};
+    const picker=source?.closest('[data-colour-picker]');
+    refreshColourLibraries(source);
+    picker?.querySelector('[data-colour-preset-name667]')?.focus();
+  }
+  async function commitPresetLibrary667(source,operation,success,{clearDraftId=null,focusId=null}={}){
+    if(presetLibraryBusy667)return false;
+    presetLibraryBusy667=true;const epoch=++presetLibraryEpoch667;
+    const scope=source?.closest('[data-colour-picker]'),action=source?.dataset.action,id=source?.dataset.id,
+      dragId=source?.dataset.colourDrag,ownerStandId=stand()?.id;
+    const anchor=()=>{
+      if(!scope?.isConnected)return source;
+      if(dragId)return [...scope.querySelectorAll('[data-colour-drag]')].find(node=>node.dataset.colourDrag===dragId)||source;
+      const buttons=[...scope.querySelectorAll('button[data-action]')];
+      return buttons.find(node=>node.dataset.action===action&&node.dataset.id===id)||
+        (clearDraftId||focusId?buttons.find(node=>node.dataset.action==='colour-preset-edit667'&&node.dataset.id===(clearDraftId||focusId)):null)||
+        (action==='colour-preset-remove667'?buttons.find(node=>node.dataset.action==='colour-undo'):null)||source;
+    };
+    let notice=presetText667('saving'),result;
+    try{
+      result=operation();
+      if(result.error){notice=result.error.message;return false;}
+      savedColours=result;
+      if(presetEdit667&&clearDraftId===presetEdit667.id){
+        const saved=result.colors.find(entry=>entry.id===clearDraftId);
+        if(saved)presetEdit667.base=JSON.stringify(saved);
+      }
+      refreshColourLibraries(anchor(),notice);
+      await confirmCentralLibrary(result);
+      if(epoch!==presetLibraryEpoch667)return false;
+      if(presetEdit667?.id===clearDraftId&&presetEdit667.standId===ownerStandId)presetEdit667=null;
+      notice=success;return true;
+    }catch(error){notice=error?.message||presetText667('saveFailed');return false;}
+    finally{
+      if(epoch===presetLibraryEpoch667){presetLibraryBusy667=false;refreshColourLibraries(anchor(),notice);}
+    }
+  }
+  function readPresetDraft667(source){
+    const editor=source.closest('[data-colour-preset-editor667]');
+    if(!editor||!presetEdit667||editor.dataset.id!==presetEdit667.id||presetEdit667.standId!==stand()?.id)return null;
+    const invalid=(input,key)=>{
+      const message=presetText667(key);presetEdit667.error=message;
+      let notice=editor.querySelector('[data-preset-draft-error667]');
+      if(!notice){notice=document.createElement('p');notice.dataset.presetDraftError667='';notice.className='colour-preset-error667';notice.setAttribute('role','alert');editor.append(notice);}
+      notice.textContent=message;input?.setAttribute('aria-invalid','true');input?.focus();return null;
+    };
+    const name=editor.querySelector('[data-colour-preset-name667]').value.trim(),color={};
+    if(!name||name.length>64||/[\u0000-\u001f\u007f]/.test(name)){
+      return invalid(editor.querySelector('[data-colour-preset-name667]'),'invalidName');
+    }
+    for(const channel of ['r','g','b','w']){
+      const input=editor.querySelector(`[data-colour-preset-channel667="${channel}"]`),raw=input.value;
+      if(!/^\d{1,3}$/.test(raw)||Number(raw)>255){
+        return invalid(input,'invalidChannels');
+      }
+      color[channel]=Number(raw);
+    }
+    color.bri=Number(editor.querySelector('[data-colour-preset-bri667]').value);
+    if(!Number.isFinite(color.bri)||color.bri<0||color.bri>100)return invalid(editor.querySelector('[data-colour-preset-bri667]'),'invalidChannels');
+    return {name,color};
+  }
+  async function savePresetDraft667(source){
+    if(presetLibraryBusy667)return;
+    const values=readPresetDraft667(source);if(!values)return;
+    const current=colourStore.load();if(current.error)return refreshColourLibraries(source,current.error.message);
+    const entry=current.colors.find(item=>item.id===presetEdit667.id);
+    if(!entry)return refreshColourLibraries(source,presetText667('missingPreset'));
+    if(JSON.stringify(entry)!==presetEdit667.base)return refreshColourLibraries(source,presetText667('editedElsewhere'));
+    const updated={...entry,name:values.name,color:values.color};
+    return commitPresetLibrary667(source,()=>colourStore.save(updated),presetText667('saved'),{clearDraftId:entry.id});
   }
   function showColourManager(notice=colourLibraryNotice) {
     if(!colourManagerReturn){
@@ -1795,33 +1988,40 @@
   }
   function refreshColourLibraries(source,notice='') {
     colourLibraryNotice=notice;
-    const root=source?.closest('[data-colour-picker]'),action=source?.dataset.action,id=source?.dataset.id;
+    const root=source?.closest('[data-colour-picker]'),action=source?.dataset.action,id=source?.dataset.id,dragId=source?.dataset.colourDrag;
     const scroll=window.scrollY,dialog=document.getElementById('effect-dialog'),dialogScroll=dialog.scrollTop;
     document.querySelectorAll('.my-colours').forEach(section=>section.outerHTML=myColoursMarkup());
-    const same=root&&Array.from(root.querySelectorAll('button[data-action]')).find(button=>button.dataset.action===action&&button.dataset.id===id&&!button.disabled);
+    const same=root&&(dragId
+      ?Array.from(root.querySelectorAll('[data-colour-drag]')).find(button=>button.dataset.colourDrag===dragId&&!button.disabled)
+      :Array.from(root.querySelectorAll('button[data-action]')).find(button=>button.dataset.action===action&&button.dataset.id===id&&!button.disabled));
     (same||root?.querySelector('[data-action="colour-new"]'))?.focus({preventScroll:true});
     window.scrollTo({top:scroll,left:0,behavior:'instant'});dialog.scrollTop=dialogScroll;
   }
   async function saveCurrentColour(button) {
+    if(presetLibraryBusy667)return;
     const root=button.closest('[data-colour-picker]');if(!root)return;
     const values=pickerChannels(root),color={r:values[0],g:values[1],b:values[2],w:values[3],bri:root.dataset.colourPicker==='brand'?100:root.dataset.colourPicker==='background'?(selectedState().bgBrightness??10):(selectedState().bri??100)};
     const current=colourStore.load();if(current.error)return refreshColourLibraries(button,current.error.message);
     const base=Colours.suggestName(color);let name=base,suffix=2;
     while(current.colors.some(entry=>entry.name===name))name=`${base} ${suffix++}`;
-    const result=colourStore.save(Colours.capture(name,color));
-    if(result.error)return refreshColourLibraries(button,result.error.message);
-    try{await confirmCentralLibrary(result);}catch(_){return refreshColourLibraries(button,t("Opslaan bij de hoofdreceiver is niet bevestigd."));}
-    savedColours=result;refreshColourLibraries(button,`${name} toegevoegd aan Kleurpresets.`);
+    return commitPresetLibrary667(button,()=>colourStore.save(Colours.capture(name,color)),presetText667('saved'));
   }
   window.LightningColourLibraryDrag?.install({document,onMove:async({id,toIndex,source})=>{
-    if(!advancedInterface())return;
-    // The one visible grid now represents the complete shared library.
-    const target=savedColours.colors[toIndex];
+    if(presetLibraryBusy667||presetEdit667?.standId===stand()?.id||managementBusy||pinProtectionBusy||pinLoginBusy||firstAccessCheckpoint||arrangementApplying||
+      !standPresentationActionAllowed('colour-preset-save667'))return;
+    // Read the target's stable identity from the exact visible library, not
+    // an index from a filtered brand subset or a freshly changed other view.
+    if(!source?.matches('.colour-drag-handle[data-colour-drag]')||source.disabled||source.dataset.colourDrag!==id||!Number.isInteger(toIndex))return;
+    const grid=source.closest('.saved-colour-grid'),item=source.closest('.saved-colour-item[data-colour-id]');
+    if(!grid?.isConnected||!grid.matches('[data-colour-presets-inline="667"]')||item?.dataset.colourId!==id||item.closest('.saved-colour-grid')!==grid)return;
+    const rows=[...grid.querySelectorAll('.saved-colour-item[data-colour-id]')].filter(row=>row.closest('.saved-colour-grid')===grid),targetId=rows[toIndex]?.dataset.colourId;
+    const current=colourStore.load();if(current.error)return refreshColourLibraries(source,current.error.message);
+    if(current.colors.map(entry=>entry.id).join('|')!==savedColours.colors.map(entry=>entry.id).join('|')){
+      savedColours=current;return refreshColourLibraries(source,presetText667('editedElsewhere'));
+    }
+    const target=current.colors.find(entry=>entry.id===targetId);
     if(!target)return;
-    const result=colourStore.move(id,savedColours.colors.findIndex(entry=>entry.id===target.id));if(result.error)return refreshColourLibraries(source,result.error.message);
-    savedColours=result;refreshColourLibraries(source,simpleStandMode?'Volgorde bewaren…':'Volgorde bewaard.');
-    try{await confirmCentralLibrary(result);refreshColourLibraries(source,'Volgorde bewaard.');}
-    catch(_){refreshColourLibraries(source,t("Opslaan bij de hoofdreceiver is niet bevestigd."));}
+    return commitPresetLibrary667(source,()=>colourStore.move(id,current.colors.findIndex(entry=>entry.id===target.id)),presetText667('orderSaved'));
   }});
   function colourPickerMarkup(slot=null,compact=false,{power=false}={}) {
     const s=selectedState(),brand=slot==='brand',background=slot==='background',values=brand?brandEditorChannels():background?backgroundChannels():effectiveColourChannels(slot??0),rgb=values.slice(0,3),white=values[3];
@@ -2292,12 +2492,12 @@
     // Accelerate only these disposable gallery samples; the selected effect,
     // its settings and the main installation preview keep their real speed.
     const reference=effect.id.startsWith('v31-ref-');
-    const previewState={...effectState(effect),speed:reference?effect.state.speed:Math.max(effect.category==='brand'?58:75,Number(effect.state.speed)||0)};
+    const gallery=P.gallerySample(effect,{state:{...effectState(effect),speed:reference?effect.state.speed:Math.max(effect.category==='brand'?58:75,Number(effect.state.speed)||0)},pixels:32}),previewState=gallery.state;
     const separateSelection=['receivers','lines'].includes(selection().kind),representativeOnly=!tunnel&&!separateSelection;
     const sampleType=zone().type||'RGBW';
     const physicalLines=tunnel&&tunnelLines==='all'?receivers():selected().map(receiver=>zone()?.type==='SPI'&&!continuousZone()?{...receiver,outputs:receiver.outputs.map(output=>({...output,enabled:output.enabled&&selectedLineIds().includes(receiver.id+':'+output.port)}))}:receiver);
     let list=representativeOnly?[{id:'library-sample-strip',type:sampleType,name:'LED-voorbeeld',
-      outputs:sampleType==='SPI'?[{port:1,enabled:true,pixels:32,reversed:false}]:[],state:previewState}]
+      outputs:sampleType==='SPI'?[{port:1,enabled:true,pixels:gallery.pixels,reversed:false}]:[],state:previewState}]
       :physicalLines.map(r=>({...r,state:previewState}));
     let galleryGeometry=receivers();
     // These canvases illustrate a recipe, not current receiver output. A
@@ -2426,7 +2626,7 @@
     const counts={catalogue:items.length,...Object.fromEntries(Library.sections(items).map(section=>[section.key,section.count])),presets:savedPresets.presets.length};
     const intro=tab==='brand'?brandTonePicker():tab==='tunnel'?(standControlOpen?`<p class="stand-animation-guidance">${esc(standAnimationGuidance())}</p>`:tunnelGuide({compact:true})):'';
     const inFamily=Boolean(active),results=inFamily?animationFamilyDetail(active,tab,{includePreview:false}):tab==='presets'?renderPresets():query.trim()?effectResults(query):tab==='catalogue'?animationCategorySections(items):animationCategoryFamilyList(items,tab);
-    return `<section class="animation-library-inline" data-library-ui-version="573" data-chooser-version="567" data-animation-category="${esc(tab)}" aria-label="${esc(t('animationSelector'))}">${animationLibraryHeading()}${inFamily?'':`${animationCategoryTabs(items,counts,tab)}${tab!=='presets'?`<label class="animation-search"><span>${esc(t('animationSearch'))}</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg><input type="search" id="animation-search" value="${esc(query)}" placeholder="${esc(t('v567SearchHint'))}" autocomplete="off"></label>`:''}${intro}` }<div id="animation-results">${results}</div></section>`;
+    return `<section class="animation-library-inline" data-library-ui-version="573" data-discovery-ui="662" data-chooser-version="567" data-animation-category="${esc(tab)}" aria-label="${esc(t('animationSelector'))}">${animationLibraryHeading()}${inFamily?'':`<div class="animation-discovery-browser">${animationCategoryTabs(items,counts,tab)}${tab!=='presets'?`<label class="animation-search"><span>${esc(t('animationSearch'))}</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg><input type="search" id="animation-search" value="${esc(query)}" placeholder="${esc(t('v567SearchHint'))}" autocomplete="off"></label>`:''}${intro}</div>`}<div id="animation-results">${results}</div></section>`;
   }
   function animationLibraryHeading(){
     const current=activeEffect(),canReturn=(current||animationEditorBrowseChoice())&&(standControlOpen||route.screen==='controls');
@@ -2436,11 +2636,27 @@
   }
   function animationChooserCategoryLabel(key){return t('v567Category:'+key);}
   function animationPickerSteps(choosingAnimation=false){
-    return `<ol class="animation-picker-steps" data-animation-steps="648" aria-label="${esc(t('animationNavigation'))}"><li ${choosingAnimation?'':'aria-current="step"'}><span class="animation-step-number">1</span><div class="animation-step-copy"><b>${esc(t('v567BrowseGroups'))}</b><small>${esc(t('v648GroupHint'))}</small></div></li><li ${choosingAnimation?'aria-current="step"':''}><span class="animation-step-number">2</span><div class="animation-step-copy"><b>${esc(t('v648StartStep'))}</b><small>${esc(t('v648StartHint'))}</small></div></li></ol>`;
+    return `<ol class="animation-picker-steps" data-animation-steps="648" data-discovery-progress="662" aria-label="${esc(t('animationNavigation'))}"><li ${choosingAnimation?'':'aria-current="step"'}><span class="animation-step-illustration" aria-hidden="true">${icon('zones')}</span><div class="animation-step-copy"><span class="animation-step-number">1</span><b>${esc(t('v567BrowseGroups'))}</b></div></li><li ${choosingAnimation?'aria-current="step"':''}><span class="animation-step-illustration" aria-hidden="true">${icon('play')}</span><div class="animation-step-copy"><span class="animation-step-number">2</span><b>${esc(t('v648StartStep'))}</b></div></li></ol>`;
+  }
+  function animationCategoryHint(key){
+    return t(({catalogue:'animationAllHint',presets:'animationOwnHint'})[key]||'v567CategoryHint:'+key);
+  }
+  function animationCategoryArtwork(key){
+    // Decorative, static light sketches, never effect previews or light commands.
+    const strips='<rect x="11" y="15" width="58" height="6" rx="3" fill="#f6aa60"/><rect x="11" y="26" width="58" height="6" rx="3" fill="#c886e5"/><rect x="11" y="37" width="58" height="6" rx="3" fill="#68c7db"/>';
+    const drawings={
+      catalogue:'<rect x="12" y="9" width="24" height="16" rx="4" fill="#f6aa60"/><rect x="43" y="9" width="24" height="16" rx="4" fill="#c886e5"/><rect x="12" y="31" width="24" height="16" rx="4" fill="#68c7db"/><rect x="43" y="31" width="24" height="16" rx="4" fill="#97cc9a"/>',
+      whole:strips,
+      pixels:'<path d="M10 16H70M10 28H70M10 40H70" stroke="#35454b" stroke-width="6" stroke-linecap="round"/><path d="M13 16h12m9 12h12m9 12h12" stroke="#6edcce" stroke-width="6" stroke-linecap="round"/><path d="M30 16h3m18 12h3m-24 12h3" stroke="#b89ee9" stroke-width="6" stroke-linecap="round"/>',
+      tunnel:'<path d="M11 47V24a29 29 0 0 1 58 0v23" fill="none" stroke="#62cbd7" stroke-width="4"/><path d="M22 47V25a18 18 0 0 1 36 0v22" fill="none" stroke="#b59ce8" stroke-width="4"/><path d="M33 47V26a7 7 0 0 1 14 0v21" fill="none" stroke="#f4ad66" stroke-width="4"/>',
+      brand:'<path d="M12 37V24m12 20V16m12 25V21m12 16V27" stroke="#e9ad7d" stroke-width="6" stroke-linecap="round"/><path d="m62 9 3 9 9 3-9 3-3 9-3-9-9-3 9-3Z" fill="#a797df"/>',
+      presets:'<rect x="17" y="10" width="35" height="31" rx="5" fill="#46565c"/><rect x="25" y="17" width="37" height="31" rx="5" fill="#99bdc8"/><path d="M34 27h19m-19 7h14m-14 7h19" stroke="#15262d" stroke-width="3" stroke-linecap="round"/>'
+    };
+    return `<svg viewBox="0 0 80 56" focusable="false" aria-hidden="true">${drawings[key]||strips}</svg>`;
   }
   function animationCategoryTabs(items,counts,tab){
     const keys=['catalogue',...Library.sections(items).map(section=>section.key),'presets'];
-    return `<nav class="animation-category-tabs" data-categories-ui-version="573" aria-label="${esc(t('animationFilter'))}">${keys.map(key=>`<button type="button" class="animation-category-tab" data-action="animation-category-tab" data-id="${esc(key)}" aria-pressed="${tab===key}" aria-label="${esc(animationChooserCategoryLabel(key))} · ${esc(t(counts[key]===1?'animationCountOne':'animationCountMany',{count:counts[key]||0}))}"><span aria-hidden="true">${animationCategoryIcon(key)}</span><b>${esc(animationChooserCategoryLabel(key))}</b><small>${counts[key]||0}</small></button>`).join('')}</nav>`;
+    return `<nav class="animation-category-tabs" data-categories-ui-version="573" data-discovery-categories="662" aria-label="${esc(t('animationFilter'))}">${keys.map(key=>`<button type="button" class="animation-category-tab" data-action="animation-category-tab" data-id="${esc(key)}" aria-pressed="${tab===key}" aria-label="${esc(animationChooserCategoryLabel(key))} · ${esc(t(counts[key]===1?'animationCountOne':'animationCountMany',{count:counts[key]||0}))}"><span class="animation-category-artwork" aria-hidden="true">${animationCategoryArtwork(key)}</span><span class="animation-category-row-copy"><b>${esc(animationChooserCategoryLabel(key))}</b><small>${esc(animationCategoryHint(key))}</small></span><span class="animation-category-row-meta"><small>${counts[key]||0}</small><span aria-hidden="true">${icon(tab===key?'check':'chevron')}</span></span></button>`).join('')}</nav>`;
   }
   function chooseAnimationCategoryTab(value){
     chooseAnimationCategory(value);
@@ -2636,7 +2852,7 @@
     const browsing=arrangementBrowsing();
     // Explicit UI cancellation is NOT a successful scene resume. No LIVE,
     // CAS/START retry or pending-queue clear occurs on this escape lane.
-    retireOrderSave588(deferredResume639);cancelOrderTest();openLineSetup.delete(close.zoneId);openLineSettings.clear();arrangementDraft=null;orderColours.clear();
+    retireOrderSave588(deferredResume639);cancelOrderTest();retireOrderFocus664();openLineSetup.delete(close.zoneId);openLineSettings.clear();arrangementDraft=null;orderColours.clear();
     inlineOrderDrag?.cancel();orderPreviewGesture=null;orderRenderDeferred=false;
     const epoch=orderSaveEpoch588,notice={standId:close.standId,zoneId:close.zoneId,code:cancelled?'orderResumeUnconfirmed':'orderRecognitionClosing'};
     if(deferredResume639){deferredResume639.epoch=epoch;arrangementApplying=true;}
@@ -2709,7 +2925,7 @@
     syncSpatialChoiceControls();
     const orderText=(key,params)=>window.LightningV50OrderTexts.t(key,uiPreferences.preferences.language,params);
     const busy=arrangementInteractionBusy()||!!orderSaveQueue588||!!orderClose589,needsStandOpen=arrangementNeedsStandOpen(),handles=[...main.querySelectorAll('[data-order-handle]')];
-    for(const handle of handles)handle.disabled=orderDragBusy588()||needsStandOpen||handles.length<2;
+    for(const handle of handles)handle.disabled=!orderDragAvailable668()||handles.length<2;
     if(busy)for(const control of main.querySelectorAll('.ledline-setup button[data-action]'))control.disabled=true;
     // A closed sheet may have been rendered while its original resume was
     // still pending. Restore only its two outer entry controls after cleanup;
@@ -2727,6 +2943,7 @@
     if(openStand)openStand.hidden=busy||!(needsStandOpen||arrangementDraft?.needsStandOpen&&arrangementDraft.error);
     syncOrderTestControls();
     syncOrderStatus593();
+    syncOrderFocusContext664();syncOrderFocusPresentation664();
   }
   // Compact presentation only. Original queue/draft/recognition authority and
   // full error sentences remain untouched; a short label is never an ACK.
@@ -2786,6 +3003,16 @@
     syncArrangementControls();
     let failure='',succeeded=false;
     try{
+      // Settle the exact old blink before entering CAS/LIVE. A place remains
+      // selected, but no optimistic swap may start another physical endpoint.
+      const beforeFocus=orderIdentificationState?.active?{session:orderIdentificationState.session,standId:orderIdentificationState.standId,zoneId:orderIdentificationState.zoneId}:null;
+      const focus=await orderFocus664?.pause();
+      // Full-holder cleanup can retire the focus controller's local fault.
+      // It cannot convert an unknown OFF into permission for a CAS/LIVE write.
+      if(focus?.status==='failed'||orderFocusProblem664?.zoneId===zoneId&&orderFocusProblem664.standId===stand()?.id||
+         beforeFocus&&(!orderIdentificationState?.active||orderIdentificationState.session!==beforeFocus.session||
+           orderIdentificationState.standId!==beforeFocus.standId||orderIdentificationState.zoneId!==beforeFocus.zoneId))
+        throw Error(orderText652('orderFocusFailed664'));
       const identification=orderIdentificationState?.active&&orderIdentificationState.zoneId===zoneId?orderIdentificationState.session:null;
       if(identification){
         let ready=await orderIdentification.settle();
@@ -2852,6 +3079,7 @@
       }else failure=draft.error||t('lineSetupSaveFailed');
     }catch(error){failure=error.message||t('lineSetupSaveFailed');}
     finally{
+      orderFocusContextKey664='';
       arrangementApplying=!!orderResumeClose639;
       // A bounded idle wait may expire before the native operation returns.
       // Its genuine pending states keep only the order interaction disabled;
@@ -3026,7 +3254,7 @@
   function orderLineSettingsMarkup(z,line,receiver){
     const marker=orderMarker652(z,line.id),blocked=arrangementInteractionBusy()||arrangementNeedsStandOpen()||standPresentationOnly();
     const action=(name,label,glyph,extra='')=>`<button type="button" class="v568-order-setting-action" data-action="${name}" data-id="${esc(receiver.id)}" ${extra} ${blocked?'disabled':''}>${icon(glyph)}<span>${esc(t(label))}</span>${icon('chevron')}</button>`;
-    const blinking=identifying.get(receiver.id)?.scope===(line.port?String(line.port):'all');
+    const blinking=orderFocusState664?.lineId===line.id&&(orderFocusState664.confirmed||orderFocusState664.previewOnly)||identifying.get(receiver.id)?.scope===(line.port?String(line.port):'all');
     return `<section class="v568-order-settings" data-order-line-settings data-order-line-id="${esc(line.id)}" data-zone="${esc(z.id)}" data-signature="${esc(arrangementSignature(z))}"><div class="order-settings-identity652" style="--marker-colour:${marker?.hex||'transparent'}"><span class="order-marker652" aria-hidden="true"></span><div><b>${esc(orderMarkerName652(marker))}</b><span>${esc(receiver.name)}${line.port?' · P'+line.port:''}</span><small>${line.port?line.pixels+' px · SPI':'RGBW'}</small></div></div><div class="v568-order-setting-actions"><button type="button" class="v568-order-setting-action" data-action="${line.port?'port-identify':'visual-identify'}" data-receiver="${esc(receiver.id)}" data-port="${line.port}" aria-pressed="${blinking}">${icon('sun')}<span>${esc(t(blinking?'lineSetupBlinkStop':'lineSetupBlink'))}</span></button>${receiver.type==='SPI'?spiSettingsMarkup659(receiver,{ports:[line.port],blocked}):''}<div class="v568-receiver-action-heading">${esc(t('v568ReceiverAllOutputs'))}</div>${action('receiver-rename','v568ReceiverName','edit')}${action('receiver-move','v568ChangeZone','zones')}</div><button type="button" class="button secondary full" data-action="effect-dialog-close">${esc(t('v568ReturnOrder'))}</button></section>`;
   }
   function openOrderLineSettings(id){
@@ -3049,6 +3277,7 @@
     const z=zone(),draft=arrangementDraft,state=orderIdentification?.getState();
     if(!z||!openLineSetup.has(z.id)||!draft||draft.zoneId!==z.id||draft.signature!==arrangementSignature(z)||
       !Number.isInteger(position)||position<0||position>=draft.lineOrder.length||orderDragBusy588()||arrangementNeedsStandOpen()||standPresentationOnly())return;
+    selectOrderPlace664(position);
     const context={standId:stand().id,zoneId:z.id,signature:arrangementSignature(z),geometry:orderGeometry588(z),session:state?.active?state.session:null,position};
     orderColourChoice652=context;
     const lines=M.zoneLedlines(model,z.id),blocked=arrangementInteractionBusy();
@@ -3057,7 +3286,7 @@
       const label=orderMarkerName652(marker)+' · '+(receiver?.name||'')+(line.port?' · P'+line.port:'')+' · '+orderText652('orderCurrentlyAt',{position:current+1});
       return `<button type="button" class="order-colour-choice652" data-action="order-assign-colour" data-id="${esc(line.id)}" data-position="${position}" aria-label="${esc(label)}" aria-pressed="${current===position}" style="--marker-colour:${marker?.hex||'transparent'}" ${blocked?'disabled':''}><span class="order-marker652" aria-hidden="true"></span><span><b>${esc(orderMarkerName652(marker))}</b><small class="order-colour-position655">${esc(orderText652('orderPositionShort655',{position:current+1}))}</small></span>${current===position?icon('check'):icon('chevron')}</button>`;
     }).join('');
-    showEffectDialog(orderText652('orderChooseForPosition',{position:position+1}),`<section class="order-colour-picker652" data-order-colour-choice="652" data-order-visual="655" data-zone="${esc(z.id)}" data-signature="${esc(context.signature)}"><div class="order-colour-choices652">${choices}</div><p class="order-assignment-rule652">${esc(orderText652('orderSwap655'))}</p><button type="button" class="button secondary full" data-action="effect-dialog-close">${esc(t('back'))}</button></section>`);
+    showEffectDialog(orderText652('orderChooseForPosition',{position:position+1}),`<section class="order-colour-picker652" data-order-colour-choice="652" data-order-visual="655" data-order-focus-picker="664" data-zone="${esc(z.id)}" data-signature="${esc(context.signature)}"><div class="order-colour-choices652">${choices}</div><p class="order-assignment-rule652">${icon('swap')}${esc(orderText652('orderSwap655'))}</p><button type="button" class="button secondary full" data-action="effect-dialog-close">${esc(t('back'))}</button></section>`);
   }
   function ledlineSetupMarkup(){
     if(!advancedInterface())return '';
@@ -3072,9 +3301,36 @@
     const direction=z.layout==='continuous'?'continuous':spatialMode(z.layout,z)==='tunnel'?'tunnel':spatialMode(z.layout,z)==='wall'?'wall':'stacked';
     const rows=ordered.map((line,index)=>{
       const r=model.receivers.find(item=>item.id===line.receiverId),marker=orderMarker652(z,line.id),name=orderMarkerName652(marker);
-      return `<li class="order-assignment652" data-order-assignment-line="${esc(line.id)}" data-order-position="${index+1}" style="--marker-colour:${marker?.hex||'transparent'}"><div class="order-assignment-place652" aria-hidden="true"><span>${index+1}</span></div><button type="button" class="order-assignment-choice652" data-action="order-colour-open" data-position="${index}" aria-label="${esc(orderText652('orderChooseForPosition',{position:index+1})+' · '+name)}" aria-haspopup="dialog" aria-controls="effect-dialog" ${blocked?'disabled':''}><span class="order-marker652" aria-hidden="true"></span><span><b data-order-assigned-name>${esc(name)}</b></span>${icon('chevron')}</button><button type="button" class="order-assignment-settings652" data-action="layout-receiver-settings" data-id="${esc(line.id)}" title="${esc(orderText652('orderLineSettings'))}" aria-label="${esc(orderText652('orderLineSettings')+' · '+name+' · '+r.name+(line.port?' · P'+line.port:''))}" aria-haspopup="dialog" ${arrangementInteractionBusy()?'disabled':''}>${icon('sliders')}</button></li>`;
+      return `<li class="order-place668" role="listitem" data-order-slot data-order-position="${index+1}">
+        <span class="order-place-number668"><b>${index+1}</b><small>${esc(orderText652('orderDirectPlace668'))}</small></span>
+        <div class="order-assignment652" data-order-item="${esc(line.id)}" data-order-assignment-line="${esc(line.id)}" data-order-position="${index+1}" style="--marker-colour:${marker?.hex||'transparent'};--identify-colour:${marker?.hex||'transparent'}">
+          <button type="button" class="order-focus-select664" data-action="order-select-place664" data-position="${index}" aria-pressed="false" aria-label="${esc(orderText652('orderFocusSelect664',{position:index+1})+' · '+name)}" ${blocked?'disabled':''}><span class="order-focus-line664"><span class="order-focus-line-title664"><b data-order-assigned-name>${esc(name)}</b><small data-order-focus-badge hidden>${esc(orderText652('orderFocusSelected664'))}</small></span><span class="order-focus-strip664" aria-hidden="true"><i></i></span><small class="order-focus-endpoint664">${esc(r.name)}${line.port?' · P'+line.port:''}</small></span></button>
+          <button type="button" class="order-drag-handle668 line-order-handle" data-order-handle aria-label="${esc(orderText652('orderDirectAccessible668',{name}))}" aria-describedby="order-drag-keyboard668" ${blocked||singleLine?'disabled':''}>${icon('grip')}<small>${esc(orderText652('orderDirectDrag668'))}</small></button>
+          <div class="order-focus-actions664"><button type="button" class="order-assignment-choice652" data-action="order-colour-open" data-position="${index}" aria-label="${esc(orderText652('orderChooseForPosition',{position:index+1})+' · '+name)}" aria-haspopup="dialog" aria-controls="effect-dialog" ${blocked?'disabled':''}>${icon('swap')}<span>${esc(orderText652('orderFocusColour664'))}</span></button><button type="button" class="order-assignment-settings652" data-action="layout-receiver-settings" data-id="${esc(line.id)}" title="${esc(orderText652('orderLineSettings'))}" aria-label="${esc(orderText652('orderLineSettings')+' · '+name+' · '+r.name+(line.port?' · P'+line.port:''))}" aria-haspopup="dialog" ${arrangementInteractionBusy()?'disabled':''}>${icon('sliders')}</button></div>
+        </div></li>`;
     }).join('');
-    return `<section class="ledline-setup card" data-order-ui="652" data-order-visual="655" data-order-open="true" role="dialog" aria-modal="true" aria-label="${esc(title)}"><button class="ledline-setup-toggle" data-action="layout" aria-label="${esc(orderText652('orderDone')+' · '+title)}" aria-expanded="true" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy"><b>${esc(title)}</b><small id="ledline-setup-context">${esc(context)}</small></span><span class="ledline-setup-close-label">${icon('check')}${esc(orderText652('orderDone'))}</span></button>${orderCancelNoticeMarkup590(z)}<div class="ledline-setup-body" id="ledline-setup-body" role="region" aria-labelledby="ledline-setup-heading" aria-describedby="ledline-setup-context"><section class="order-assignment-intro652 order-visual-intro655"><div class="order-visual-heading655"><h3 id="ledline-setup-heading">${esc(orderText652('orderAssignTitle'))}</h3>${count>1?`<button type="button" class="order-visual-help655" data-action="order-tutorial-open" aria-label="${esc(orderGuideText('tutorialView'))}">${icon('info')}<span>${esc(orderText652('orderHelp655'))}</span></button>`:''}</div><p class="order-visual-hint655">${esc(orderText652('orderIntro655'))}</p><p class="order-assignment-direction652">${icon('back')}<b>${esc(orderGuideText(direction))}</b></p>${previewContext?`<p class="order-assignment-rule652">${esc(orderText652('orderPreviewAssignment'))}</p>`:''}</section><section class="ledline-arrangement" aria-busy="${arrangementInteractionBusy()}"><p class="v593-order-original-status" data-order-recognition-status aria-hidden="true"></p><p class="v593-order-original-status" data-order-apply-status aria-hidden="true"></p>${orderStatusMarkup593()}<button type="button" class="button secondary full" data-order-stand-open data-action="management-stand-open" ${!arrangementInteractionBusy()&&(needsStandOpen||draft?.needsStandOpen&&draft.error)?'':'hidden'}>${esc(orderText652('orderOpenStand'))}</button><ol class="order-assignments652" aria-label="${esc(orderText652('orderCurrentOrder'))}">${rows}</ol>${count?'':`<p>${esc(orderText652('orderEmpty'))}</p>`}</section><footer class="order-assignment-footer652"><button type="button" class="button full order-assignment-done652" data-action="layout">${icon('check')}${esc(orderText652('orderDone'))}</button></footer>${reusable?`<button class="ledline-reuse-action" data-action="zone-assign" data-id="${esc(z.id)}">${icon('receiver')}<span>${esc(t('lineSetupReuse'))}</span>${icon('chevron')}</button>`:''}${layoutReceiverActions()}</div></section>`;
+    const eye='<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+    const phone='<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 5h4M11 19h2"/></svg>';
+    return `<section class="ledline-setup card" data-order-ui="652" data-order-visual="655" data-order-focus-ui="664" data-order-direct-ui="668" data-order-open="true" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+      <button class="ledline-setup-toggle" data-action="layout" aria-label="${esc(orderText652('orderDone')+' · '+title)}" aria-expanded="true" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy"><b>${esc(title)}</b><small id="ledline-setup-context">${esc(context)}</small></span><span class="ledline-setup-close-label">${icon('close')}<span class="sr-only">${esc(orderText652('orderDone'))}</span></span></button>${orderCancelNoticeMarkup590(z)}
+      <div class="ledline-setup-body" id="ledline-setup-body" role="region" aria-labelledby="ledline-setup-heading" aria-describedby="ledline-setup-context">
+        <section class="order-assignment-intro652 order-visual-intro655">
+          <div class="order-match-guide668"><span class="order-match-real668">${eye}<b>${esc(orderText652('orderDirectReal668'))}</b></span><span class="order-match-arrow668" aria-hidden="true">→</span><span class="order-match-app668">${phone}<b>${esc(orderText652('orderDirectApp668'))}</b></span></div>
+          <div class="order-visual-heading655"><h3 id="ledline-setup-heading">${esc(orderText652('orderDirectTitle668'))}</h3>${count>1?`<button type="button" class="order-visual-help655" data-action="order-tutorial-open" aria-label="${esc(orderGuideText('tutorialView'))}">${icon('info')}<span>${esc(orderText652('orderHelp655'))}</span></button>`:''}</div>
+          <p class="order-visual-hint655">${esc(orderText652(singleLine?'orderDirectSingle668':'orderDirectIntro668'))}</p>
+          <div class="order-focus-guide664"><span class="order-assignment-direction652"><b>${esc(orderGuideText(direction))}</b></span><span>${icon('swap')}${esc(orderText652('orderFocusSwap664'))}</span></div>
+          <p class="order-focus-status664" data-order-focus-status role="status" aria-live="polite">${esc(orderFocusCopy664())}</p>
+        </section>
+        <section class="ledline-arrangement" aria-busy="${arrangementInteractionBusy()}">
+          <p class="v593-order-original-status" data-order-recognition-status aria-hidden="true"></p><p class="v593-order-original-status" data-order-apply-status aria-hidden="true"></p>${orderStatusMarkup593()}
+          <button type="button" class="button secondary full" data-order-stand-open data-action="management-stand-open" ${!arrangementInteractionBusy()&&(needsStandOpen||draft?.needsStandOpen&&draft.error)?'':'hidden'}>${esc(orderText652('orderOpenStand'))}</button>
+          <span class="sr-only" id="order-drag-keyboard668">${esc(orderText652('orderDirectKeyboard668'))}</span>
+          <p class="sr-only order-drop-status" role="status" aria-live="polite"></p>
+          <ol class="order-assignments652" aria-label="${esc(orderText652('orderCurrentOrder'))}" aria-description="${esc(orderText652('orderDirectRule668'))}">${rows}</ol>${count?'':`<p>${esc(orderText652('orderEmpty'))}</p>`}
+        </section>
+        <footer class="order-assignment-footer652"><button type="button" class="button full order-assignment-done652" data-action="layout">${icon('check')}${esc(orderText652('orderDone'))}</button></footer>
+        ${reusable?`<button class="ledline-reuse-action" data-action="zone-assign" data-id="${esc(z.id)}">${icon('receiver')}<span>${esc(t('lineSetupReuse'))}</span>${icon('chevron')}</button>`:''}${layoutReceiverActions()}
+      </div></section>`;
   }
   function orderLiveChangeMarkup(state){
     const from=state?.colour,to=state?.positionColours?.[state.toIndex]?.hex;
@@ -3542,7 +3798,7 @@
     syncArrangementControls();
   }
   function centralEditing(){
-    return !!sceneEdit640||!!receiverSetupPreparation||route.screen==='stand-sharing'||route.screen==='receiver-add'&&!!onboarding.summary()||!!document.querySelector('.receiver-removal-sheet[open]')||!!centralLibraryPending||centralLibraryWriting||centralLiveCheckpoint?.editing()||!!activeControlPointer||inlineOrderDrag?.isActive()||managementBusy||arrangementApplying||
+    return !!sceneEdit640||!!receiverSetupPreparation||pixelSetup.isOpen()||spiZoneDirections.isOpen()||!!pairFirstOpening||route.screen==='stand-sharing'||route.screen==='receiver-add'&&!!onboarding.summary()||!!document.querySelector('.receiver-removal-sheet[open]')||!!centralLibraryPending||centralLibraryWriting||centralLiveCheckpoint?.editing()||!!activeControlPointer||inlineOrderDrag?.isActive()||managementBusy||arrangementApplying||
       !!document.querySelector('#effect-dialog[open] input:not([data-stand-code])');
   }
   function installCentralProjection(next,{redraw=true,readIntentGeneration,projectionCurrent}={}){
@@ -3574,7 +3830,7 @@
   function ensureStandSession(){
     if(standSession)return standSession;
     standSession=SimpleStand.create({services:runtime.services,captureProjectionFence:()=>centralLiveCheckpoint?.intentGeneration(),onProjection:(next,fence)=>installCentralProjection(next,fence),onUnchangedProjection:reconcileCentralUnchanged,
-      onState:state=>{standConnectionState=state;syncStandConnectionStatus();},visible:()=>!document.hidden});
+      onState:state=>{standConnectionState=state;syncStandConnectionStatus();},visible:()=>!document.hidden,maintenance:()=>pixelSetup.isOpen()||spiZoneDirections.isOpen()||!!receiverSetupPreparation||!!pairFirstOpening});
     centralLiveCheckpoint=window.LightningStandLiveCheckpoint.create({
       waitBeforeFlush:async({standId,receiverIds})=>{
         await liveController?.whenIdle({standId,waitForGesture:true});
@@ -3645,7 +3901,7 @@
   function wakeCentralStand(){
     // First access owns its pinned resume and completion screen until its
     // authenticated projection clears the checkpoint. Do not race its job.
-    if(firstAccessCheckpoint||!simpleStandMode||!standSession||standConnectionBusy)return;
+    if(firstAccessCheckpoint||!simpleStandMode||!standSession||standConnectionBusy||pixelSetup.isOpen()||spiZoneDirections.isOpen()||!!pairFirstOpening)return;
     if(['connecting','checking','changing-code'].includes(standConnectionState.status))return;
     if(standPresentationId&&standSession.canResume())resumeStandPresentation();
     else if(standSession.canResume())void resumeCentralStand();
@@ -4957,7 +5213,7 @@
         ...(savedZone&&!globalPlan?{lineOrder:proposedOrder||draft?.lineOrder||M.lineIds(model,savedZone.id)}:{}),
         ...(proposedOrder||draft?{lineNumbers:Object.fromEntries((proposedOrder||draft.lineOrder).map((id,index)=>[id,index+1]))}:{}),
         selectionFeedback:spec.main===true,identifying:spec.orderTarget?guidePulse:spec.main?identifying:undefined,identificationTime:time,reducedMotion:reduce,
-        identificationColours:spec.orderTarget?guideColours:spec.main&&openLineSetup.has(route.zoneId)?proposedOrder?new Map(proposedOrder.map((id,index)=>[id,orderPreviewGesture.positionColours[index]?.rgb]).filter(([,rgb])=>rgb)):new Map([...orderColours].map(([id,colour])=>[id,colour.rgb])):undefined,
+        identificationColours:spec.orderTarget?guideColours:spec.main&&openLineSetup.has(route.zoneId)?new Map([...orderColours].map(([id,colour])=>[id,colour.rgb])):undefined,
         time:reduce&&!spec.main?1.5:time});
       if(spec.selectionOverlay)syncPreviewTargets(canvas);
       if(spec.orderOverview)canvas.dataset.proposedOrder=JSON.stringify(proposedOrder||draft?.lineOrder||M.lineIds(model,savedZone.id));
@@ -4980,7 +5236,9 @@
   function syncIdentifyControls(receiverId){
     const receiver=model.receivers.find(r=>r.id===receiverId),blink=identifying.get(receiverId);if(!receiver)return;
     document.querySelectorAll(`[data-action="visual-identify"][data-receiver="${CSS.escape(receiverId)}"], [data-action="port-identify"][data-receiver="${CSS.escape(receiverId)}"]`).forEach(button=>{
-      const scope=button.dataset.action==='visual-identify'?'all':button.dataset.port,pressed=blink?.scope===scope;
+      const scope=button.dataset.action==='visual-identify'?'all':button.dataset.port;
+      const focusLine=receiverId+':'+(receiver.type==='RGBW'?0:Number(scope));
+      const pressed=blink?.scope===scope||orderFocusState664?.lineId===focusLine&&(orderFocusState664.confirmed||orderFocusState664.previewOnly);
       const waiting=identifyPending.has(receiverId);
       const enabled=receiver.type!=='SPI'||receiver.outputs.some(o=>o.enabled&&(scope==='all'||String(o.port)===scope));
       const inline=button.closest('.ledline-row-actions');
@@ -5002,6 +5260,14 @@
     const lineId=receiver.id+':'+(receiver.type==='RGBW'?0:Number(scope));
     if(layout?.active&&layout.standId===receiver.standId&&layout.zoneId===route.zoneId&&
        layout.lines.some(line=>line.id===lineId)){
+      if(orderFocus664){
+        // The settings shortcut and visible place rows share one controller.
+        // Never leave a second independent blink on a different receiver.
+        const selected=orderFocusState664?.lineId===lineId;
+        if(selected){orderFocusContextKey664='';await orderFocus664.clear();}
+        else selectOrderPlace664(M.lineIds(model,route.zoneId).indexOf(lineId));
+        syncIdentifyControls(receiver.id);return;
+      }
       const layoutStopping=stopping&&identifying.get(receiver.id)?.layoutSession===layout.session;
       if(previewContext){
         void orderIdentification?.interaction();
@@ -5777,6 +6043,40 @@
     dialogActionOpener=button;
     queueMicrotask(()=>{if(dialogActionOpener===button)dialogActionOpener=null;});
     try {
+      if(['colour-preset-edit667','colour-preset-save667','colour-preset-cancel667','colour-preset-remove667','colour-presets-brands667'].includes(action)||
+        action==='colour-undo'&&button.closest('[data-inline-presets="667"]')){
+        if(!button.closest('[data-inline-presets="667"]')||presetLibraryBusy667)return;
+        if(action==='colour-preset-edit667')return openPresetEditor667(button,id);
+        if(action==='colour-preset-save667')return savePresetDraft667(button);
+        if(action==='colour-preset-cancel667'){
+          const picker=button.closest('[data-colour-picker]');presetEdit667=null;refreshColourLibraries(button);
+          picker?.querySelector(`[data-action="colour-preset-edit667"][data-id="${CSS.escape(id)}"]`)?.focus({preventScroll:true});return;
+        }
+        if(action==='colour-presets-brands667'){
+          if(presetEdit667?.standId===stand()?.id)return refreshColourLibraries(button,presetText667('finishEdit'));
+          return commitPresetLibrary667(button,()=>colourStore.addMissing(presetBrandEntries667()),presetText667('brandsAdded'));
+        }
+        if(action==='colour-preset-remove667'){
+          const current=colourStore.load();if(current.error)return refreshColourLibraries(button,current.error.message);
+          const index=current.colors.findIndex(entry=>entry.id===id);if(index<0)return refreshColourLibraries(button,presetText667('missingPreset'));
+          const entry=current.colors[index];
+          return commitPresetLibrary667(button,()=>{
+            const result=colourStore.remove(id);
+            if(!result.error){removedColour={entry,index,standId:stand()?.id};if(presetEdit667?.id===id)presetEdit667=null;}
+            return result;
+          },presetText667('deleted',{name:entry.name}));
+        }
+        if(action==='colour-undo'){
+          if(!removedColour)return;
+          if(removedColour.standId&&removedColour.standId!==stand()?.id)return refreshColourLibraries(button,presetText667('editedElsewhere'));
+          const {entry,index}=removedColour,current=colourStore.load();
+          if(current.error)return refreshColourLibraries(button,current.error.message);
+          return commitPresetLibrary667(button,()=>{
+            const result=colourStore.restore(entry,Math.min(index,current.colors.length));
+            if(!result.error)removedColour=null;return result;
+          },presetText667('restored',{name:entry.name}),{focusId:entry.id});
+        }
+      }
       if(standControlOpen){
         if(action==='stand-control-mode'){
           if(!['colour','animations'].includes(id))return;
@@ -5861,6 +6161,7 @@
       if(action==='layout-receiver-settings'){
         return openOrderLineSettings(id);
       }
+      if(action==='order-select-place664')return selectOrderPlace664(Number(button.dataset.position));
       if(action==='order-colour-open')return openOrderColourChoice652(Number(button.dataset.position));
       if(action==='order-assign-colour'){
         const context=orderColourChoice652,z=zone(),draft=arrangementDraft,state=orderIdentification?.getState();
@@ -6054,7 +6355,7 @@
           if(nativeContext){window.location.reload();return;}
           onboarding.reset();model=M.assertValid(webDemoContext?{schemaVersion:30,demo:true,stands:[],receivers:[],scenes:[],presets:[]}:runtime?.emptyModel?.()||{schemaVersion:30,demo:false,stands:[],receivers:[],scenes:[],presets:[]});
           savedPresets=presetStore.load();savedColours=colourStore.load();savedScenes=sceneStore.load();uiPreferences=preferenceStore.load();interfaceModeState=interfaceModeStore.load();
-          selections.clear();brandEditor=null;visualPorts.clear();visualPlugMotions.clear();identifying.clear();expandedReceivers.clear();expandedConnections.clear();
+          selections.clear();brandEditor=null;presetEdit667=null;removedColour=null;colourLibraryNotice='';presetLibraryEpoch667++;presetLibraryBusy667=false;visualPorts.clear();visualPlugMotions.clear();identifying.clear();expandedReceivers.clear();expandedConnections.clear();
           sceneDraft=null;receiverFilter='all';route={screen:webDemoContext?'stand':'receiver-add',setupFrom:'stand',zoneId:null,family:null,library:'all'};
           closeEffectDialog();render({top:true});return;
         }catch(failure){
@@ -6596,6 +6897,32 @@
       if(input.dataset.setting){const key=input.dataset.setting;apply({[key]:Number(input.value)});document.querySelector(`[data-value-for="${key}"]`).textContent=animationSettingValue(key,input.value,input.dataset.unit||'');syncSettingResets();if(key==='objectCount')syncAnimationControlAvailability();}
     }catch(error){toast(error.message);}
   });
+  // Inline preset editing is a local draft. Input never calls apply(), sends
+  // light, or writes storage; only the explicit Save action commits the record.
+  document.addEventListener('input',event=>{
+    const input=event.target,editor=input.closest?.('[data-colour-preset-editor667]');
+    if(!editor||!presetEdit667||editor.dataset.id!==presetEdit667.id||presetEdit667.standId!==stand()?.id||presetLibraryBusy667||input.disabled)return;
+    if(input.hasAttribute('data-colour-preset-name667'))presetEdit667.name=input.value;
+    else if(input.hasAttribute('data-colour-preset-rgb667')){
+      if(!/^#[0-9a-f]{6}$/i.test(input.value))return;
+      ['r','g','b'].forEach((channel,index)=>{
+        presetEdit667.color[channel]=parseInt(input.value.slice(1+index*2,3+index*2),16);
+        editor.querySelector(`[data-colour-preset-channel667="${channel}"]`).value=presetEdit667.color[channel];
+      });
+    }else if(input.hasAttribute('data-colour-preset-channel667')){
+      const channel=input.dataset.colourPresetChannel667;
+      if(!['r','g','b','w'].includes(channel)||!/^\d{1,3}$/.test(input.value)||Number(input.value)>255)return;
+      presetEdit667.color[channel]=Number(input.value);
+    }else if(input.hasAttribute('data-colour-preset-bri667')){
+      const value=Number(input.value);if(!Number.isFinite(value)||value<0||value>100)return;
+      presetEdit667.color.bri=value;editor.querySelector('[data-colour-preset-bri-output667]').textContent=value+'%';
+    }else return;
+    const hex=C.hex([presetEdit667.color.r,presetEdit667.color.g,presetEdit667.color.b]);
+    editor.querySelector('[data-colour-preset-rgb667]').value=hex;
+    editor.querySelector('.colour-preset-editor-dot667')?.style.setProperty('--swatch',C.screenHex([presetEdit667.color.r,presetEdit667.color.g,presetEdit667.color.b],presetEdit667.color.w));
+    input.removeAttribute('aria-invalid');editor.querySelector('[data-preset-draft-error667]')?.remove();
+    presetEdit667.error='';
+  });
   document.addEventListener('change',event=>{
     if(!advancedInterface()&&event.target.matches?.('[data-brand-name],[data-channel-number]'))return;
     const brandName=event.target.closest?.('input[data-brand-name]');
@@ -6616,6 +6943,7 @@
   document.addEventListener('keydown',event=>{if(event.key==='Enter'&&event.target.matches?.('input[data-channel-number]'))event.target.blur();});
   document.addEventListener('pointerdown',event=>{
     const control=event.target.closest?.('input[type="range"],canvas.wheel');
+    if(control?.closest('[data-colour-preset-editor667]'))return;
     if(event.button===0&&control?.closest('[data-colour-picker="static"]')&&activeStaticGesturePointer===null){
       holdStaticFeedback(control);activeStaticGesturePointer=event.pointerId;liveController?.beginGesture();
     }
@@ -6669,12 +6997,18 @@
     open?expandedReceivers.add(details.dataset.receiverDetail):expandedReceivers.delete(details.dataset.receiverDetail);
     if(!open)visualPlugMotions.delete(details.dataset.receiverDetail);
   },true);
+  function orderDragAvailable668(){
+    const z=zone(),draft=arrangementDraft;
+    return !!z&&advancedInterface()&&!document.hidden&&!standPresentationOnly()&&
+      !document.querySelector('dialog[open]')&&openLineSetup.has(z.id)&&draft?.zoneId===z.id&&
+      draft.signature===arrangementSignature(z)&&!orderDragBusy588()&&!arrangementNeedsStandOpen();
+  }
   async function moveOrderLine({id,toIndex,trusted=false}){
     const draft=arrangementDraft;
-    if(!draft||!openLineSetup.has(route.zoneId)||draft.zoneId!==route.zoneId||orderDragBusy588()||arrangementNeedsStandOpen()){orderPreviewGesture=null;syncOrderFeedback();return syncArrangementControls();}
+    if(!draft||!orderDragAvailable668()){orderPreviewGesture=null;syncOrderFeedback();return syncArrangementControls();}
     if(draft.signature!==arrangementSignature()){orderPreviewGesture=null;return renderArrangement();}
     const from=draft.lineOrder.indexOf(id);
-    if(from<0||toIndex<0||toIndex>=draft.lineOrder.length||from===toIndex){orderPreviewGesture=null;syncOrderFeedback();paint(performance.now()/1000,{orderFeedback:true});return;}
+    if(from<0||!Number.isInteger(toIndex)||toIndex<0||toIndex>=draft.lineOrder.length||from===toIndex){orderPreviewGesture=null;syncOrderFeedback();paint(performance.now()/1000,{orderFeedback:true});return;}
     [draft.lineOrder[from],draft.lineOrder[toIndex]]=[draft.lineOrder[toIndex],draft.lineOrder[from]];
     const moving=orderPreviewGesture;orderPreviewGesture=null;draft.error='';
     let job=orderSaveQueue588;
@@ -6694,10 +7028,10 @@
   }
   inlineOrderDrag=window.LightningLedlineOrderDrag?.install({
     root:document,
-    getItems:()=>!orderDragBusy588()&&!arrangementNeedsStandOpen()&&openLineSetup.has(route.zoneId)&&arrangementDraft?.zoneId===route.zoneId?[...arrangementDraft.lineOrder]:[],
+    getItems:()=>orderDragAvailable668()?[...arrangementDraft.lineOrder]:[],
     getRowId:row=>row.dataset.orderItem,
     getSlotElements:()=>[...main.querySelectorAll('[data-order-slot]')],
-    getScrollBounds:()=>({top:openLineSetup.has(route.zoneId)?Math.max(0,main.querySelector('[data-order-dock]')?.getBoundingClientRect().bottom||80)+8:Math.max(0,main.querySelector('.control-dock-surface')?.getBoundingClientRect().bottom||0)+8,bottom:openLineSetup.has(route.zoneId)?innerHeight-16:Math.min(innerHeight,document.getElementById('navigation')?.getBoundingClientRect().top||innerHeight)-8}),
+    getScrollBounds:()=>({top:openLineSetup.has(route.zoneId)?Math.max(0,main.querySelector('.ledline-setup[data-order-open="true"] > .ledline-setup-toggle')?.getBoundingClientRect().bottom||80)+8:Math.max(0,main.querySelector('.control-dock-surface')?.getBoundingClientRect().bottom||0)+8,bottom:openLineSetup.has(route.zoneId)?Math.min(innerHeight-16,main.querySelector('.order-assignment-footer652')?.getBoundingClientRect().top||innerHeight)-8:Math.min(innerHeight,document.getElementById('navigation')?.getBoundingClientRect().top||innerHeight)-8}),
     getScrollTop:()=>main.querySelector('[data-order-open="true"]')?.scrollTop??window.scrollY,
     scrollBy:delta=>{const sheet=main.querySelector('[data-order-open="true"]');if(sheet)sheet.scrollTop+=delta;else window.scrollBy({top:delta,left:0,behavior:'instant'});},
     onActivity:()=>{if(!orderSaveQueue588&&!arrangementInteractionBusy()&&orderIdentificationState?.active)void orderIdentification?.interaction();},
@@ -6709,7 +7043,7 @@
       if(feedback.phase==='start'){
         if(orderMoveTimer!==null)clearTimeout(orderMoveTimer);orderMoveTimer=null;orderMoveResult=null;
         const physical=M.zoneLedlines(model,route.zoneId).find(line=>line.id===feedback.id),receiver=model.receivers.find(item=>item.id===physical?.receiverId);
-        orderPreviewGesture={...feedback,zoneId:route.zoneId,receiverName:receiver?.name||'',port:physical?.port||0,colour:orderPositionPalette(zone(),arrangementDraft.lineOrder.length)[feedback.fromIndex]?.hex,positionColours:orderPositionPalette(zone(),arrangementDraft.lineOrder.length)};
+        orderPreviewGesture={...feedback,zoneId:route.zoneId,receiverName:receiver?.name||'',port:physical?.port||0,colour:orderMarker652(zone(),feedback.id)?.hex,positionColours:arrangementDraft.lineOrder.map(id=>orderMarker652(zone(),id))};
       }else if(orderPreviewGesture?.id===feedback.id)orderPreviewGesture={...orderPreviewGesture,...feedback};
       syncOrderFeedback();paint(performance.now()/1000,{orderFeedback:true});
     },
@@ -6722,6 +7056,7 @@
   });
   document.addEventListener('pointerdown',event=>{
     const target=event.target.closest?.('input[type="range"],canvas.wheel');
+    if(target?.closest('[data-colour-preset-editor667]'))return;
     if(event.button===0&&target&&main.contains(target)&&!activeControlPointer)activeControlPointer={id:event.pointerId,target,context:motionContextKey()};
   });
   for(const name of ['pointerup','pointercancel','lostpointercapture'])document.addEventListener(name,event=>{
@@ -6750,7 +7085,7 @@
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')invalidatePinProtectionRead();});
   window.addEventListener('online',()=>{if(pinProtection?.status==='pending'||pinProtectionPendingCheckStandId||pinProtectionNeedsRefresh())resumePinConnection();});
   window.addEventListener('focus',resumePinConnection);document.addEventListener('visibilitychange',resumePinConnection);
-  window.addEventListener('offline',()=>{retireOrderSave588();cancelOrderTest();void orderIdentification?.offline();});
+  window.addEventListener('offline',()=>{retireOrderSave588();cancelOrderTest();retireOrderFocus664();void orderIdentification?.offline();});
   window.addEventListener('focus',wakeCentralStand);
   window.addEventListener('lightning:native-active',wakeCentralStand);
   window.addEventListener('online',wakeCentralStand);
@@ -6759,11 +7094,11 @@
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&standLinkPending)void consumeStandShareLink();});
   document.addEventListener('visibilitychange',()=>{if(!simpleStandMode||!standSession)return;if(document.hidden)standSession.pause();else wakeCentralStand();});
   window.addEventListener('pagehide',()=>standSession?.pause());
-  window.addEventListener('pagehide',()=>{retireOrderSave588();cancelOrderTest();void orderIdentification?.hide();});
+  window.addEventListener('pagehide',()=>{retireOrderSave588();cancelOrderTest();retireOrderFocus664();void orderIdentification?.hide();});
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate661',hardwareEnabled:false});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();retireOrderFocus664();void orderIdentification?.hide();}});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate672',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

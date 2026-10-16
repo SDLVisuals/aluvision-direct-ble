@@ -24,7 +24,7 @@
       descriptor('flow','Kleurverloop','Kleuren vloeien zacht over de pixels.','flow gradient verloop kleurverloop vloeien zacht overgang fade'),
       descriptor('pulse','Ademen','Het licht ademt of pulseert binnen de lijn.','pulse puls pulsen ademen ademhaling ademend breathe breathing'),
       descriptor('wave','Golven','Golven bewegen over de pixels.','wave golf golven golfbeweging ripple rimpel'),
-      descriptor('chase','Lopend licht','Lichtpunten volgen elkaar over de lijn.','chase looplicht lopen lopend achtervolgen jagen runner running'),
+      descriptor('chase','Chase','Lichtpunten volgen elkaar over de lijn.','chase looplicht lopen lopend achtervolgen jagen runner running'),
       descriptor('comet','Komeet','Een lichtpunt trekt een zachte staart achter zich aan.','comet komeet kometen meteoor meteor staart trail ribbon'),
       descriptor('scanner','Scanner','Een lichtbundel veegt over de lijn.','scannen veeg vegen sweep heen en weer'),
       descriptor('mirror','Spiegel','Licht beweegt symmetrisch naar binnen of buiten.','mirror spiegelen symmetrie symmetrisch midden center centre buiten'),
@@ -79,7 +79,7 @@
   const STARTERS = Object.freeze([
     {key:'Breathe',ids:['rgbw-breathe-1','spi-breathe-99'],title:'Zacht ademen',summary:'De ledlines worden rustig lichter en donkerder.'},
     {key:'Colour',ids:['v30-rgb-jumping'],title:'Kleurwissel',summary:'Je eigen kleuren wisselen elkaar direct af.'},
-    {key:'Chase',ids:['spi-chase-8'],title:'Lopend licht',summary:'Een lichtpunt loopt over de pixels.'},
+    {key:'Chase',ids:['spi-chase-8'],title:'Chase',summary:'Een zachte lichtkop loopt over de pixels.'},
     {key:'Wave',ids:['spi-wave-29'],title:'Lichtgolf',summary:'Een zachte golf beweegt over de pixels.'},
     {key:'Gradient',ids:['v30-rgb-gradient'],title:'Kleurverloop',summary:'Je eigen kleuren vloeien zacht in elkaar over.'},
     {key:'Warm',ids:['v30-brand-warm-white'],title:'Warm naar wit',summary:'Een warme witmix gaat rustig over in zacht wit.'}
@@ -92,10 +92,11 @@
     const hasPixels=items.some(effect=>effect.category==='pixels');
     return Object.freeze(STARTERS.filter(item=>!hasPixels||!['Kleurverloop','Warm naar wit'].includes(item.title)).flatMap(item=>{
       const effect=items.find(effect=>item.ids.includes(effect.id));
-      return effect?[Object.freeze({effect,key:item.key,title:text('animationStarter'+item.key,item.title,translate),summary:text('animationStarter'+item.key+'Hint',item.summary,translate)})]:[];
+      return effect?[Object.freeze({effect,key:item.key,title:text(item.key==='Chase'?'v50AnimationName:spi-chase-8':'animationStarter'+item.key,item.title,translate),summary:text('animationStarter'+item.key+'Hint',item.summary,translate)})]:[];
     }));
   }
   function displayName(effect,translate) {
+    if(effect.id==='spi-chase-8')return text('v50AnimationName:spi-chase-8','Chase',translate);
     if(effect.id==='v30-tunnel-pulse'&&effect.standMode==='coordinated'&&Array.isArray(effect.supportedTypes)&&effect.supportedTypes.includes('RGBW')&&effect.supportedTypes.includes('SPI'))return text('v50AnimationStandPulseName',effect.standName||effect.name,translate);
     const starter=STARTERS.find(item=>item.ids.includes(effect.id));
     return starter?text('animationStarter'+starter.key,starter.title,translate):BRAND_NAMES[effect.id]||effect.id.startsWith('v30-')||effect.id.startsWith('v31-ref-')?text('v50AnimationName:'+effect.id,BRAND_NAMES[effect.id]||effect.name,translate):effect.name;

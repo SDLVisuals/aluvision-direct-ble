@@ -160,7 +160,7 @@
     for(const [key,item] of previous)if(!current.has(key))operations.push({op:'delete',kind:item.kind,id:item.id,parent:item.parent});
     if(bytes(encodeOperations(operations))>MAX_BYTES)fail('STAND_STORAGE_LIMIT');return operations;
   }
-  function create({services,onProjection=()=>{},onUnchangedProjection=()=>{},onState=()=>{},captureProjectionFence=()=>undefined,setTimer=setTimeout,clearTimer=clearTimeout,visible=()=>true,idFactory=()=>crypto.randomUUID()}={}){
+  function create({services,onProjection=()=>{},onUnchangedProjection=()=>{},onState=()=>{},captureProjectionFence=()=>undefined,maintenance=()=>false,setTimer=setTimeout,clearTimer=clearTimeout,visible=()=>true,idFactory=()=>crypto.randomUUID()}={}){
     if(!services)fail('STAND_CONNECTION_UNAVAILABLE');
     // A durable ACK advances the write head, not the installed projection.
     // Otherwise an unchanged check at that revision would hide the data that
@@ -170,7 +170,7 @@
     let liveReadyJob=null,wakeCompletion=null,foregroundWake=null;
     const publish=patch=>{state={...state,...patch,pendingWrites};onState(copy(state));};
     function stopTimer(){if(timer!==null)clearTimer(timer);timer=null;}
-    function arm(){stopTimer();if(!disposed&&!paused&&current&&visible())timer=setTimer(()=>{timer=null;void refresh().catch(()=>{});},POLL_MS);}
+    function arm(){stopTimer();if(!disposed&&!paused&&current&&visible())timer=setTimer(()=>{timer=null;if(maintenance()){arm();return;}void refresh().catch(()=>{});},POLL_MS);}
     async function accept(result,expected,epoch=generation,projectionFence){
       const next=projection(result,expected,current&&current.standId===expected?current.ssid:undefined);
       // Apply local cache transaction before accepting the new revision. A
@@ -288,6 +288,9 @@
     function refresh(){
       if(disposed||!current)return Promise.reject(Object.assign(Error('Verbind eerst met je stand.'),{code:'STAND_NOT_CONNECTED'}));
       if(refreshJob)return refreshJob;
+      // A setup overlay owns the native lane. Deferral is not a connection
+      // failure or a fresh receiver receipt; retain the last observed state.
+      if(maintenance())return Promise.reject(Object.assign(Error('Onderhoud actief.'),{code:'STAND_CONNECTION_BUSY'}));
       const epoch=generation,before=copy(current),writeFence=writeQueue;stopTimer();
       const job=(async()=>{
         // Config writes and refresh cannot install two competing projections.
@@ -443,7 +446,10 @@
       if(typeof services.standDisconnect==='function')await services.standDisconnect({});
     }
     function dispose(){disposed=true;++generation;current=null;head=null;resumeStandId=null;inspected=null;stopTimer();}
-    return Object.freeze({connect,connectDetected:input=>connectDetected(input),inspect,changeCode,migrate:input=>connect(input,{migration:true}),migrateDetected:input=>connectDetected(input,{migration:true}),resume,openWifi,refresh,mutate,acceptMembership,prepareLive,pause,wake,disconnect,dispose,canResume:()=>!!resumeStandId,
+    async function settleMaintenance(){
+      while(true){const write=writeQueue,read=refreshJob;await write.catch(()=>{});if(read)await read.catch(()=>{});if(write===writeQueue&&(!refreshJob||refreshJob===read))return;}
+    }
+    return Object.freeze({connect,connectDetected:input=>connectDetected(input),inspect,changeCode,migrate:input=>connect(input,{migration:true}),migrateDetected:input=>connectDetected(input,{migration:true}),resume,openWifi,refresh,settleMaintenance,mutate,acceptMembership,prepareLive,pause,wake,disconnect,dispose,canResume:()=>!!resumeStandId,
       snapshot:()=>current?copy(current):null,state:()=>copy(state)});
   }
   return Object.freeze({connectionInput,resumeInput,resumeIntent,wifiInput,inspectionInput,inspectionResult,sessionStatus,codeChangeInput,newCode,suggestCode,projection,managementTransition,entities,changes,encodeOperations,create,readFence:result=>readFences.get(result),MAX_BYTES,MAX_ENTITIES,POLL_MS});

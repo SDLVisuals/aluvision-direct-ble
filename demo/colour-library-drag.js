@@ -8,7 +8,8 @@
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
   const ITEM = '.saved-colour-item[data-colour-id]';
-  const GRID = '.saved-colour-grid.is-ordering';
+  const INLINE_GRID = '.saved-colour-grid[data-colour-presets-inline="667"]';
+  const GRID = '.saved-colour-grid.is-ordering, ' + INLINE_GRID;
   const SOURCE = '.colour-drag-handle, [data-action="swatch"]';
 
   function center(rect) {
@@ -31,13 +32,25 @@
     let active = null, suppressClick = null;
     const listeners = [];
     const items = grid => Array.from(grid.querySelectorAll(ITEM)).filter(item => item.closest(GRID) === grid);
-    const valid = state => state.grid.isConnected && state.grid.matches(GRID) && state.item.isConnected && state.item.closest(GRID) === state.grid;
+    const valid = state => {
+      const found = sourceFor(state.source);
+      return state.grid.isConnected && state.item.isConnected && state.source.isConnected &&
+        found?.grid === state.grid && found.item === state.item && found.inline === state.inline;
+    };
     function sourceFor(target) {
       const source = target && typeof target.closest === 'function' ? target.closest(SOURCE) : null;
-      if (!source || source.disabled) return null;
+      if (!source || source.disabled || source.getAttribute('aria-disabled') === 'true') return null;
       const item = source.closest(ITEM), grid = source.closest(GRID);
       if (!item || !grid || item.closest(GRID) !== grid || !item.dataset.colourId) return null;
-      return {source,item,grid};
+      const inline = grid.matches(INLINE_GRID);
+      if (inline) {
+        // Direct presets always remain ordinary colour buttons. Only their
+        // dedicated grip owns drag; editing, inputs and scrolling stay native.
+        if (!source.matches('.colour-drag-handle')) return null;
+        const control = target.closest('button, input, textarea, select, a, [contenteditable], [data-action]');
+        if (control && control !== source) return null;
+      }
+      return {source,item,grid,inline};
     }
     function highlight(state) {
       const list = items(state.grid);
@@ -136,6 +149,9 @@
       if (event.key === 'Escape' && active) {
         event.preventDefault();event.stopPropagation();finish(true);return;
       }
+      // A rerender/busy state can detach or disable the previous grip before
+      // its next key event. Retire it even when it is no longer a valid source.
+      if (active && !valid(active)) { finish(true);return; }
       const found = sourceFor(event.target);
       if (!found || !found.source.matches('.colour-drag-handle')) return;
       const pick = event.key === ' ' || event.key === 'Enter';
@@ -169,7 +185,10 @@
     listen('keydown',keyDown,true);
     listen('click',click,true);
     listen('dragstart',event => { if (sourceFor(event.target)) event.preventDefault(); });
-    listen('focusin',event => { if (active?.kind === 'keyboard' && event.target !== active.source) finish(true); });
+    listen('focusin',event => {
+      if (active?.kind === 'keyboard' && event.target !== active.source ||
+          active?.inline && active.kind === 'pointer' && event.target !== active.source && !active.source.contains(event.target)) finish(true);
+    });
     return function cleanup() {
       finish(true);suppressClick = null;
       listeners.forEach(([type,handler,options]) => doc.removeEventListener(type,handler,options));
