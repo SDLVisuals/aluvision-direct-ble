@@ -10,15 +10,16 @@
   const UIContinuity=window.LightningUIContinuity;
   const Backup=window.LightningBackup;
   const LibrarySource=window.LightningAnimationLibrary;
+  const AnimationControlPolicy=window.LightningAnimationControlPolicy;
   // Presentation-only adapter: locale is sampled when rendering or searching,
   // while recipe IDs/state and customer-created names stay untouched.
   const Library=Object.freeze({...LibrarySource,
     get categories(){return LibrarySource.categoriesFor(t);},
-    groups:(items,category)=>LibrarySource.groups(items,category,t),
-    group:(items,key)=>LibrarySource.group(items,key,t),
-    sections:items=>LibrarySource.sections(items,t),
-    starters:items=>LibrarySource.starters(items,t),
-    search:(items,query)=>LibrarySource.search(items,query,t)});
+    groups:(items,category)=>LibrarySource.groups(LibrarySource.visibleCatalog(items),category,t),
+    group:(items,key)=>LibrarySource.group(LibrarySource.visibleCatalog(items),key,t),
+    sections:items=>LibrarySource.sections(LibrarySource.visibleCatalog(items),t),
+    starters:items=>LibrarySource.starters(LibrarySource.visibleCatalog(items),t),
+    search:(items,query)=>LibrarySource.search(LibrarySource.visibleCatalog(items),query,t)});
   const StandAnimations=window.LightningStandAnimations;
   const runtime=window.LightningNativeRuntime;
   const SimpleStand=window.LightningStandConnection;
@@ -1103,6 +1104,10 @@
   }
   function statusText(receiver) { return receiver.connection === 'offline' ? 'Offline' : ''; }
   function catalogue() { return standControlOpen?StandAnimations.catalogFor(standControlReceivers()):P.catalog(zone()?.type || 'RGBW'); }
+  // Browse a smaller library without erasing any saved recipe identity.
+  // Editors, scene restore and explicit current-animation shortcuts still use
+  // the full catalogue above, including older fixed-colour variants.
+  function visibleCatalogue(){return LibrarySource.visibleCatalog(catalogue());}
   function zoneAnimationEditorContext() {
     const z=zone();
     if(standControlOpen||!z||!(route.screen==='animations'||
@@ -1499,7 +1504,7 @@
     return [...rgb,s.backgroundWhiteEnabled===false?0:(s.backgroundWhite??background?.white??0)];
   }
   function backgroundControls(effect){
-    if(!effect.backgroundEditable)return '';
+    if(!AnimationControlPolicy.backgroundEditableFor(effect,selectedState(),animationControlContext(effect)))return '';
     const s=selectedState(),channels=backgroundChannels(),on=Boolean(s.backgroundOn);
     const description=t(standControlOpen||zone()?.type==='RGBW'||effect.category==='whole'?'animationBackgroundWhole':'animationBackgroundPixels');
     return `<section class="animation-background" aria-label="${esc(t('animationBackground'))}"><div class="background-control-heading"><span class="setting-label-icon">${icon('layers')}</span><span class="background-control-copy"><b>${esc(t('animationBackground'))}</b></span><button class="switch" data-action="background-toggle" aria-label="${esc(t('animationBackground'))}" aria-pressed="${on}" aria-checked="${on}" role="switch"><span>${esc(t(on?'v50On':'v50Off'))}</span><i aria-hidden="true"></i></button></div><div class="background-details" data-background-details ${on?'':'hidden'}><p class="background-explanation">${esc(description)}</p><button class="background-colour" data-action="background-edit"><span class="background-swatch" style="background:${C.screenHex(channels.slice(0,3),channels[3])}"></span><span>${esc(t('animationBackgroundChoose'))}</span>${icon('chevron')}</button>${animationSlider('bgBrightness',t('animationBackgroundBrightness'),0,100,s.bgBrightness??10,'%')}${resetMarkup('bgBrightness',t('animationBackgroundBrightness'))}</div></section>`;
@@ -1520,14 +1525,49 @@
     spread:{icon:'zones',description:'Bereik over de ledlines.'},
     randomness:{icon:'sparkle',description:'Variatie in de beweging.'}
   };
+  function animationControlContext(effect){
+    const lineCount=standControlOpen&&effect?.category==='tunnel'
+      ?StandAnimations.lineCountFor(model,stand().id,effect.id)
+      :!standControlOpen&&continuousZone()?1:selectedLineCount();
+    return {stand:standControlOpen,lineCount,layout:standControlOpen?'stacked':zone()?.layout,type:standControlOpen?undefined:zone()?.type};
+  }
+  function animationAvailableControls(effect,state=selectedState()){
+    return AnimationControlPolicy.controlsFor(effect,state,animationControlContext(effect));
+  }
+  function animationAdvancedHint(keys){
+    const names=[['smooth','Smooth'],['trailLength','Trail'],['widthPixels','Width'],['width','Width'],['objectCount','Points'],['spacing','Spacing'],['lineDelayMs','Timing'],['delayMs','Timing'],['fadeAmount','Fade'],['spread','Spread'],['randomness','Variation'],['bounce','Bounce'],['mirror','Mirror']];
+    const values=[...new Set(names.filter(([key])=>keys.includes(key)).map(([,label])=>'animationAdvanced'+label))];
+    return values.slice(0,3).map(key=>t(key)).join(' · ')+(values.length>3?' · '+t('animationAdvancedMore'):'');
+  }
+  function animationDirectionMarkup(effect){
+    const s=selectedState(),values=AnimationControlPolicy.directionValuesFor(effect,s,animationControlContext(effect));
+    if(!values.length)return '';
+    const forward=t(!standControlOpen&&zone()?.layout==='vertical'?'v650DirectionRight':effect.category==='tunnel'?'v650DirectionOrder':'v650DirectionForward');
+    const reverse=t(!standControlOpen&&zone()?.layout==='vertical'?'v650DirectionLeft':effect.category==='tunnel'?'v650DirectionReverseOrder':'v650DirectionReverse');
+    const labels={right:forward,left:reverse,forward,reverse,bounce:t('v650DirectionBounce'),'center-out':t('v650DirectionCenter'),'outside-in':t('v650DirectionOutside')};
+    return `<section class="card animation-direction-primary" data-direction-settings aria-label="${esc(t('v650Direction'))}"><div class="direction-setting-label"><span class="setting-label-icon">${icon('back')}</span><span><b>${esc(t('v650Direction'))}</b><small>${esc(t('v650DirectionHint'))}</small></span>${resetMarkup('direction',t('v650Direction'))}</div><div class="compact-direction" aria-label="${esc(t('v650Direction'))}">${values.map(value=>`<button type="button" data-action="direction" data-value="${value}" aria-pressed="${(s.direction||effect.state.direction)===value}">${esc(labels[value]||value)}</button>`).join('')}</div></section>`;
+  }
+  function syncAnimationControlAvailability(){
+    const effect=activeEffect();if(!effect)return;
+    const surface=standControlOpen?document.getElementById('effect-dialog'):main,region=surface?.querySelector('[data-animation-extra-controls]');
+    if(!region)return;
+    const available=animationAvailableControls(effect),rows=[...region.querySelectorAll('[data-animation-setting]')];
+    rows.forEach(row=>{row.hidden=!available.includes(row.dataset.animationSetting);});
+    const shown=rows.filter(row=>!row.hidden),button=region.querySelector('[data-action="settings-toggle"]'),panel=region.querySelector('#animation-settings');
+    if(button)button.hidden=!shown.length;
+    if(panel)panel.hidden=!settingsOpen||!shown.length;
+    const hint=region.querySelector('#animation-advanced-hint');if(hint)hint.textContent=animationAdvancedHint(available);
+  }
   function animationControls(effect) {
     if (!effect) return '';
-    const s = selectedState(), available = effect.controls;
+    const s = selectedState(),available=animationAvailableControls(effect),potential=animationAvailableControls(effect,{...s,objectCount:AnimationControlPolicy.maximumObjectCount});
+    const purpose=AnimationControlPolicy.spacingPurposeFor(effect),spacingLabel=t(({hold:'v650ColourHold',echo:'v650EchoStrength',pattern:'v650Pattern'})[purpose]||'v650PointSpacing');
+    const spacingHint=t(({hold:'v650ColourHoldHint',echo:'v650EchoStrengthHint',pattern:'v650PatternHint'})[purpose]||'v650PointSpacingHint');
     const specs = [
       ['widthPixels','Breedte',1,60,s.widthPixels??M.DEFAULT_ANIMATION_WIDTH,' px',''],
       ['objectCount','Aantal lichtpunten',1,8,s.objectCount??1,'',''],
       ['trailLength','Staart',0,100,s.trailLength??12,'%',''],
-      ['spacing','Afstand',0,100,s.spacing??30,'%',''],
+      ['spacing',spacingLabel,0,100,s.spacing??30,'%',''],
       ['lineDelayMs','Startverschil tussen ledlines',0,5000,s.lineDelayMs??160,' ms','Bepaalt hoeveel later elke volgende ledline begint.'],
       ['delayMs','Minimale tijd tussen ledlines',0,10000,s.delayMs??300,' ms','Bepaalt hoe lang het licht minimaal wacht voor de volgende ledline.'],
       ['fadeAmount','Zacht aan en uit',0,100,s.fadeAmount??90,'%',''],
@@ -1535,17 +1575,16 @@
       ['spread','Spreiding',0,100,s.spread??30,'%',''],
       ['randomness','Variatie',0,100,s.randomness??20,'%','']
     ];
-    const directionLabels=!standControlOpen&&zone()?.layout==='vertical'?['→ Naar rechts','← Naar links']:effect.category==='tunnel'?['↓ Volgorde 1 → 2','↑ Volgorde 2 → 1']:['→ Vooruit','← Achteruit'];
-    const directionMap={right:directionLabels[0],left:directionLabels[1],forward:directionLabels[0],reverse:directionLabels[1],bounce:'↔ Heen en weer','center-out':'← · → Vanuit het midden','outside-in':'→ · ← Naar het midden'};
-    // A line-to-line delay cannot change a single selected line. Keep the
-    // saved setting intact, but don't offer an inactive control in that scope.
-    const controls=specs.filter(spec=>available.includes(spec[0])&&!(spec[0]==='lineDelayMs'&&selectedLineCount()<2));
-    const smoothness=available.includes('smooth')?`<div class="animation-setting">${animationSlider('smooth','Vloeiendheid',0,100,s.smooth??100,'%',animationSettingGuides.smooth.description)}${resetMarkup('smooth','Vloeiendheid')}</div>`:'';
-    if(!controls.length&&!smoothness&&!['direction','bounce','mirror'].some(key=>available.includes(key)))return '';
-    const advancedKeys=new Set([...controls.map(spec=>spec[0]),...['smooth','direction','bounce','mirror'].filter(key=>available.includes(key))]);
-    const hintKeys=[['smooth','Smooth'],['direction','Direction'],['trailLength','Trail'],['widthPixels','Width'],['width','Width'],['objectCount','Points'],['spacing','Spacing'],['lineDelayMs','Timing'],['delayMs','Timing'],['fadeAmount','Fade'],['spread','Spread'],['randomness','Variation'],['bounce','Bounce'],['mirror','Mirror']].filter(([key])=>advancedKeys.has(key)).map(([,label])=>'animationAdvanced'+label);
-    const hintOptions=[...new Set(hintKeys)],hint=hintOptions.slice(0,3).map(key=>t(key)).join(' · ')+(hintOptions.length>3?' · '+t('animationAdvancedMore'):'');
-    return `<button type="button" class="settings-toggle advanced-settings-toggle" data-action="settings-toggle" aria-expanded="${settingsOpen}" aria-controls="animation-settings" aria-label="${esc(t(settingsOpen?'animationAdvancedClose':'animationAdvancedOpen'))}" aria-describedby="animation-advanced-hint"><span class="advanced-settings-icon" aria-hidden="true">${icon('advanced-settings')}</span><span class="advanced-settings-copy"><b id="animation-advanced-title">${esc(t('animationMoreSettings'))}</b><small id="animation-advanced-hint">${esc(hint)}</small></span><span class="advanced-settings-next" aria-hidden="true">${icon('chevron')}</span></button><section id="animation-settings" class="card settings-panel" role="region" aria-labelledby="animation-advanced-title" ${settingsOpen?'':'hidden'}><p class="animation-preview-feedback"><span class="preview-feedback-icon">${icon('animation')}</span><span>${esc(t('v50PreviewFollows'))}</span></p>${controls.map(spec=>`<div class="animation-setting">${animationSlider(...spec)}${resetMarkup(spec[0],spec[1])}</div>`).join('')}${smoothness}${available.includes('direction') ? `<div class="direction-setting"><p class="direction-setting-label"><span class="setting-label-icon">${icon('back')}</span><span><b>Richting</b><small>Kies welke kant het licht op beweegt.</small></span></p><div class="compact-direction" aria-label="Bewegingsrichting">${(effect.directions||['right','left']).map(value=>`<button data-action="direction" data-value="${value}" aria-pressed="${(s.direction||effect.state.direction)===value}">${esc(directionMap[value]||value)}</button>`).join('')}</div></div>`:''}</section>`;
+    // Keep possible dynamic rows mounted so point-count input can reveal an
+    // applicable spacing control without replacing the slider under a finger.
+    const controls=specs.filter(spec=>potential.includes(spec[0]));
+    const row=spec=>`<div class="animation-setting" data-animation-setting="${spec[0]}" ${available.includes(spec[0])?'':'hidden'}>${spec[0]==='spacing'?slider(...spec,{...animationSettingGuides.spacing,description:spacingHint}):animationSlider(...spec)}${resetMarkup(spec[0],spec[1])}</div>`;
+    const smoothness=potential.includes('smooth')?row(['smooth','Vloeiendheid',0,100,s.smooth??100,'%',animationSettingGuides.smooth.description]):'';
+    const toggles=['bounce','mirror'].filter(key=>potential.includes(key));
+    const booleanMarkup=toggles.map(key=>{const label=t(key==='bounce'?'v650DirectionBounce':'v650Mirror');return `<div class="animation-setting boolean-setting" data-animation-setting="${key}" ${available.includes(key)?'':'hidden'}><button type="button" class="option-toggle" data-action="effect-boolean" data-id="${key}" aria-pressed="${s[key]===true}"><span>${esc(label)}</span><b>${esc(t(s[key]===true?'v50On':'v50Off'))}</b></button>${resetMarkup(key,label)}</div>`;}).join('');
+    if(!controls.length&&!smoothness&&!toggles.length)return '';
+    const visible=controls.some(spec=>available.includes(spec[0]))||available.includes('smooth')||toggles.some(key=>available.includes(key)),hint=animationAdvancedHint(available);
+    return `<div data-animation-extra-controls><button type="button" class="settings-toggle advanced-settings-toggle" data-action="settings-toggle" aria-expanded="${settingsOpen}" aria-controls="animation-settings" aria-label="${esc(t(settingsOpen?'animationAdvancedClose':'animationAdvancedOpen'))}" aria-describedby="animation-advanced-hint" ${visible?'':'hidden'}><span class="advanced-settings-icon" aria-hidden="true">${icon('advanced-settings')}</span><span class="advanced-settings-copy"><b id="animation-advanced-title">${esc(t('animationMoreSettings'))}</b><small id="animation-advanced-hint">${esc(hint)}</small></span><span class="advanced-settings-next" aria-hidden="true">${icon('chevron')}</span></button><section id="animation-settings" class="card settings-panel" role="region" aria-labelledby="animation-advanced-title" ${settingsOpen&&visible?'':'hidden'}><p class="animation-preview-feedback"><span class="preview-feedback-icon">${icon('animation')}</span><span>${esc(t('v50PreviewFollows'))}</span></p>${controls.map(row).join('')}${smoothness}${booleanMarkup}</section></div>`;
   }
   function animationSettingValue(key,value,unit='') { return ['delayMs','lineDelayMs'].includes(key)?`${Number((Number(value)/1000).toFixed(3)).toLocaleString('nl-BE',{maximumFractionDigits:3})} s`:Math.round(value)+unit; }
   function animationSlider(key,label,min,max,value,unit='',hint='') {
@@ -1576,7 +1615,7 @@
     const galleryAction=standControlOpen?'stand-animation-gallery':route.screen==='controls'?'animation-gallery':'animations-gallery';
     const paletteTitle=effect.whiteMixPreset?'Witmix · tik om aan te passen':effect.category==='brand'?(effect.id==='v30-brand-focus'||effect.id.startsWith('v31-ref-'))?'Merkkleuren · tik om te wijzigen':'Accentkleur · tik om te wijzigen':effect.paletteEditable===false?'Kleurenreeks':'Animatiekleuren · tik om te wijzigen';
     const paletteHelp=effect.whiteMixPreset?'<p class="palette-guidance">W geeft wit licht; rood en een beetje groen maken de mix warmer. Pas de mengkleur aan terwijl je naar je ledline kijkt.</p>':effect.id==='v30-brand-focus'?'<p class="palette-guidance">Voeg kleuren toe voor je merkaccent. De gloed laat ze na elkaar zien langs de ledlines.</p>':'';
-    const content = `<div class="current-effect v569-animation-header"><div class="current-effect-gallery-slot" data-editor-gallery-slot><button type="button" class="current-effect-gallery animation-gallery-return animation-chooser-action" data-animation-back-version="569" data-action="${galleryAction}" aria-label="${esc(t('v569BackPicker'))}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('back')}</span><span class="gallery-action-copy"><b>${esc(t('v569BackPicker'))}</b></span></span></button></div><div class="current-effect-heading"><small class="active-animation-kicker" data-animation-choice-label><span aria-hidden="true">${icon('animation')}</span>${esc(animationCurrentLabel())}</small><b id="active-animation-title" tabindex="-1" role="heading" aria-level="2">${esc(Library.displayName(effect,t))}</b></div>${standControlOpen?'':`<div class="v569-animation-power animation-context">${powerControl()}</div>`}</div>${preview}<section class="card palette-section animation-daily-controls v569-colour-panel"><h2>${effect.whiteMixPreset||effect.paletteEditable===false?paletteTitle:esc(t('animationColours'))}</h2>${effect.paletteEditable===false?'':`<p class="v569-palette-hint">${esc(t('v569PaletteHint'))}</p>`}${paletteHelp}<div class="palette" aria-label="${esc(t('animationColours'))}">${paletteMarkup(s)}</div>${backgroundControls(effect)}</section><section class="card v569-playback-panel" aria-label="${esc(t('v569Playback'))}">${effect.controls.includes('speed')?`<div class="v569-primary-setting">${animationSlider('speed',t('animationSpeed'),0,100,s.speed??30,'%')}${resetMarkup('speed',t('animationSpeed'))}</div>`:''}<div class="v569-primary-setting">${animationSlider('bri',t('animationBrightness'),0,100,s.bri??100,'%')}${resetMarkup('bri',t('animationBrightness'))}</div></section>${animationControls(effect)}<button class="button secondary full animation-save-recipe" data-action="preset-save">＋ ${esc(t('animationSaveOwn'))}</button>`;
+    const content = `<div class="current-effect v569-animation-header"><div class="current-effect-gallery-slot" data-editor-gallery-slot><button type="button" class="current-effect-gallery animation-gallery-return animation-chooser-action" data-animation-back-version="569" data-action="${galleryAction}" aria-label="${esc(t('v569BackPicker'))}"><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('back')}</span><span class="gallery-action-copy"><b>${esc(t('v569BackPicker'))}</b></span></span></button></div><div class="current-effect-heading"><small class="active-animation-kicker" data-animation-choice-label><span aria-hidden="true">${icon('animation')}</span>${esc(animationCurrentLabel())}</small><b id="active-animation-title" tabindex="-1" role="heading" aria-level="2">${esc(Library.displayName(effect,t))}</b></div>${standControlOpen?'':`<div class="v569-animation-power animation-context">${powerControl()}</div>`}</div>${preview}<section class="card palette-section animation-daily-controls v569-colour-panel"><h2>${effect.whiteMixPreset||effect.paletteEditable===false?paletteTitle:esc(t('animationColours'))}</h2>${effect.paletteEditable===false?'':`<p class="v569-palette-hint">${esc(t('v569PaletteHint'))}</p><p class="palette-swap-guidance" data-palette-swap-guidance ${(s.colorCount||colours(s).length)>1?'':'hidden'}>${esc(t('v650PaletteSwapHint'))}</p>`}${paletteHelp}<div class="palette" aria-label="${esc(t('animationColours'))}">${paletteMarkup(s)}</div>${backgroundControls(effect)}</section><section class="card v569-playback-panel" aria-label="${esc(t('v569Playback'))}">${effect.controls.includes('speed')?`<div class="v569-primary-setting">${animationSlider('speed',t('animationSpeed'),0,100,s.speed??30,'%')}${resetMarkup('speed',t('animationSpeed'))}</div>`:''}<div class="v569-primary-setting">${animationSlider('bri',t('animationBrightness'),0,100,s.bri??100,'%')}${resetMarkup('bri',t('animationBrightness'))}</div></section>${animationDirectionMarkup(effect)}${animationControls(effect)}<button class="button secondary full animation-save-recipe" data-action="preset-save">＋ ${esc(t('animationSaveOwn'))}</button>`;
     return `<section class="active-animation-workspace" data-animation-editor-version="569" aria-label="${esc(t('v569Adjust'))}">${spatialSetup}${content}</section>`;
   }
   function animationCurrentLabel() {
@@ -2010,7 +2049,7 @@
     const section=Library.sections(items).find(item=>item.key===categoryKey);
     return section?animationCategorySection(section):'';
   }
-  function animationSearchItems(tab=libraryTab(),items=catalogue()){
+  function animationSearchItems(tab=libraryTab(),items=visibleCatalogue()){
     if(tab==='catalogue')return items;
     // Saved animations own their separate list; never search built-ins there.
     return ['whole','pixels','tunnel','brand'].includes(tab)?items.filter(effect=>effect.category===tab):[];
@@ -2027,7 +2066,7 @@
   }
   function animationLibraryContent(){
     savedPresets=presetStore.load();
-    const items=catalogue(),tab=libraryTab(),family=animationFamilyKey(),active=family?Library.group(items,family,t):null;
+    const items=visibleCatalogue(),tab=libraryTab(),family=animationFamilyKey(),active=family?Library.group(items,family,t):null;
     const query=animationQueryStore().get(animationQueryKey())||'';
     const counts={catalogue:items.length,...Object.fromEntries(Library.sections(items).map(section=>[section.key,section.count])),presets:savedPresets.presets.length};
     const intro=tab==='brand'?brandTonePicker():tab==='tunnel'?(standControlOpen?`<p class="stand-animation-guidance">${esc(standAnimationGuidance())}</p>`:tunnelGuide({compact:true})):'';
@@ -2070,7 +2109,7 @@
   function showAnimationCategories(){
     const tab=libraryTab(),keys=['catalogue','whole',...((standControlOpen?catalogue().some(effect=>effect.category==='pixels'):zone().type==='SPI')?['pixels']:[]),'tunnel','brand','presets'];
     savedPresets=presetStore.load();
-    const items=catalogue(),counts={catalogue:items.length,...Object.fromEntries(Library.sections(items).map(section=>[section.key,section.count])),presets:savedPresets.presets.length};
+    const items=visibleCatalogue(),counts={catalogue:items.length,...Object.fromEntries(Library.sections(items).map(section=>[section.key,section.count])),presets:savedPresets.presets.length};
     const titleKey={catalogue:'animationAllHint',whole:'animationWholeHint',pixels:'animationMovingHint',tunnel:'animationAcrossHint',brand:'animationBrandHint',presets:'animationOwnHint'};
     showEffectDialog(t('animationFilter'),`<div class="animation-category-options" data-animation-categories>${keys.map(key=>`<button type="button" class="animation-category-choice" data-action="animation-category-choice" data-id="${key}" aria-pressed="${tab===key}"><span class="animation-category-art">${animationCategoryIcon(key)}</span><span class="animation-category-copy"><b>${esc(libraryTabLabel(key))}</b><small>${esc(t(titleKey[key]))}</small></span><span class="animation-category-meta"><span>${counts[key]||0}</span>${tab===key?icon('check'):icon('chevron')}</span></button>`).join('')}</div>`);
     // Touch Safari does not focus the invoking button automatically.
@@ -3824,13 +3863,6 @@
     // Replace the old fixed shortcuts and read-only order list with their
     // interactive counterparts, without rebuilding the established editors.
 
-    if(route.screen==='animations'||(route.screen==='controls'&&controlMode==='animations'&&activeEffect()&&!showControlAnimationGallery)){
-      const effect=activeEffect(),state=selectedState(),panel=main.querySelector('#animation-settings');
-      if(panel){
-        panel.insertAdjacentHTML('beforeend',['bounce','mirror'].filter(key=>effect?.controls.includes(key)).map(key=>`<div class="boolean-setting"><button class="option-toggle" data-action="effect-boolean" data-id="${key}" aria-pressed="${state[key]===true}"><span>${key==='bounce'?'↔ Heen en weer':'← · → Spiegelen'}</span><b>${state[key]===true?'Aan':'Uit'}</b></button>${resetMarkup(key,key==='bounce'?'Heen en weer':'Spiegelen')}</div>`).join(''));
-        panel.querySelector('.compact-direction')?.insertAdjacentHTML('afterend',resetMarkup('direction','Bewegingsrichting'));
-      }
-    }
     const current = route.screen.startsWith('scene')?'scenes':route.screen==='receiver-add'?route.setupFrom||'stand':['pin-login','stand-connect','stand-sharing','stand-code-change','demo-wifi'].includes(route.screen)?'settings':['receivers','settings'].includes(route.screen)?route.screen:'stand';
     document.getElementById('navigation').toggleAttribute('data-first-entry',!stand()&&!onboarding.summary()?.stand&&['stand','stand-connect','stand-sharing'].includes(route.screen));
     const connectionEntry=route.screen==='stand-connect'&&standConnectionState.status!=='connected';
@@ -4979,6 +5011,7 @@
     const host=standControlOpen?document.getElementById('effect-dialog'):main;
     const row=host.querySelector('.palette'),focused=document.activeElement,restoreFocus=row?.contains(focused);
     if(row)row.innerHTML=paletteMarkup(selectedState());
+    const guidance=host.querySelector('[data-palette-swap-guidance]');if(guidance)guidance.hidden=palette.length<2;
     if(restoreFocus&&!restoreControlFocus(focused,host)){
       const index=removeIndex===null?palette.length-1:Math.min(removeIndex,palette.length-1);
       row.querySelector(`[data-action="palette-edit"][data-id="${index}"]`)?.focus({preventScroll:true});
@@ -6054,7 +6087,7 @@
         setPanelHidden(panel,!settingsOpen,()=>keepAdvancedSettingsActionVisible(button,panel,revision));
         if(settingsOpen)keepAdvancedSettingsActionVisible(button,panel,revision,true);return;
       }
-      if(action==='direction'){apply({direction:button.dataset.value});document.querySelectorAll('[data-action="direction"]').forEach(el=>el.setAttribute('aria-pressed',el===button));syncSettingResets();return;}
+      if(action==='direction'){if(!AnimationControlPolicy.directionValuesFor(activeEffect(),selectedState(),animationControlContext(activeEffect())).includes(button.dataset.value))return;apply({direction:button.dataset.value});document.querySelectorAll('[data-action="direction"]').forEach(el=>el.setAttribute('aria-pressed',el===button));syncSettingResets();return;}
       if(action==='effect-boolean'){if(!['bounce','mirror'].includes(id)||!activeEffect()?.controls.includes(id))return;const value=!selectedState()[id];apply({[id]:value});button.setAttribute('aria-pressed',value);button.querySelector('b').textContent=value?'Aan':'Uit';syncSettingResets();return;}
       if(action==='set-layout'){
         // A different explicit control interrupts an unfinished reorder even
@@ -6117,7 +6150,7 @@
         const root=input.closest('[data-colour-picker]');if(input.disabled||!root)return;
         const values=C.warmWhite(Number(input.value));return writePicker(root,values.slice(0,3),values[3]);
       }
-      if(input.dataset.setting){const key=input.dataset.setting;apply({[key]:Number(input.value)});document.querySelector(`[data-value-for="${key}"]`).textContent=animationSettingValue(key,input.value,input.dataset.unit||'');syncSettingResets();}
+      if(input.dataset.setting){const key=input.dataset.setting;apply({[key]:Number(input.value)});document.querySelector(`[data-value-for="${key}"]`).textContent=animationSettingValue(key,input.value,input.dataset.unit||'');syncSettingResets();if(key==='objectCount')syncAnimationControlAvailability();}
     }catch(error){toast(error.message);}
   });
   document.addEventListener('change',event=>{
@@ -6286,7 +6319,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate649',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate650',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

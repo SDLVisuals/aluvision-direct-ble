@@ -64,12 +64,12 @@
     return entry;
   }
   const DEFINITIONS = [
-    descriptor('rgb-jumping', 'RGB Jumping', 'whole', 'Rood, groen en blauw wisselen helder en gelijktijdig op alle gekozen receivers.',
-      { colors: RGB, whiteChannels: [0, 0, 0], colorCount: 3 }, { controls: ['speed'], paletteEditable: false }),
+    descriptor('rgb-jumping', 'Kleurwissel', 'whole', 'Je gekozen kleuren wisselen direct en gelijktijdig op alle gekozen ledlines. Voeg twee tot zeven kleuren toe.',
+      { colors: RGB, whiteChannels: [0, 0, 0], colorCount: 3 }, { controls: ['speed'], paletteEditable: true, colorCountRange: { min: 1, max: 7 }, minimumFirmware: '41.0.48' }),
     descriptor('seven-jumping', '7 Colors Jumping', 'whole', 'Zeven vaste kleuren volgen elkaar zonder tussenkleuren op.',
       { colors: SEVEN, whiteChannels: SEVEN.map(() => 0), colorCount: 7 }, { controls: ['speed'], paletteEditable: false }),
-    descriptor('rgb-gradient', 'RGB Gradient', 'whole', 'Een zachte, doorlopende overgang tussen rood, groen en blauw.',
-      { colors: RGB, whiteChannels: [0, 0, 0], colorCount: 3 }),
+    descriptor('rgb-gradient', 'Kleurverloop', 'whole', 'Een zachte, doorlopende overgang tussen je eigen kleuren. Voeg twee tot zeven kleuren toe.',
+      { colors: RGB, whiteChannels: [0, 0, 0], colorCount: 3 }, { colorCountRange: { min: 1, max: 7 } }),
     descriptor('seven-gradient', '7 Colors Gradient', 'whole', 'Alle zeven kleuren vloeien rustig in elkaar over; alle gekozen receivers lopen gelijk.',
       { colors: SEVEN, whiteChannels: SEVEN.map(() => 0), colorCount: 7 }),
     descriptor('tunnel-travel', 'Lichtgolf', 'tunnel', 'Een brede lichtgolf reist soepel van de eerste naar de laatste receiver.', {},
@@ -144,7 +144,9 @@
   }
   function wholeSample(id, state, clock) {
     const fixed = id.includes('seven') ? SEVEN : RGB;
-    const colors = id.endsWith('jumping') ? fixed.map(color => physical(color)) : palette(state, fixed);
+    // ID 1 is the editable palette recipe from receiver 41.0.48 onward.
+    // ID 2 remains the fixed seven-colour recipe for existing saved scenes.
+    const colors = id === 'v30-seven-jumping' ? fixed.map(color => physical(color)) : palette(state, fixed);
     const step = clock.phase * colors.length;
     const index = Math.floor(step) % colors.length;
     return id.endsWith('jumping') ? colors[index] : mix(colors[index], colors[(index + 1) % colors.length], shaped(step - index, state));

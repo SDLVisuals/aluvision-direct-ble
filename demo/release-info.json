@@ -146,9 +146,9 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate649-stand-preview-logical-spi-interface-android27",
+  "revision": "V50candidate650-editable-animation-refinement-interface-android27",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo649 restores unclipped mixed-Stand animation thumbnails and counts a continuous SPI zone as one logical line for specifically supported shared tunnel effects. Separate SPI outputs and ordinary whole/brand geometry keep their semantics. Clarity648, home647, wheel646, Done644, bottomtools645, scenes640, default163 and Android27 remain. This RAM-only Web demo is not a native or receiver update.",
+  "interfaceBaseline": "Public demo650 offers a smaller editable animation chooser with full-width variant rows, contextual controls, direction outside advanced settings, clear return navigation and presentation-only palette pair swaps. Existing saved animation identities and UI649 continuous SPI tunnel semantics remain. RAM-only demo: no native app, receiver firmware or OTA is installed or published.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -257,9 +257,14 @@
       "bytes": 10306
     },
     {
+      "path": "animation-control-policy.js",
+      "sha256": "ca33c0444a85040f90b6e4bea8a258701c673ff2e638c810e6861ecf5f19b0e7",
+      "bytes": 6107
+    },
+    {
       "path": "animation-engine.js",
-      "sha256": "c59ff08862a8ce5d1fb450d2992180b28f6561e85f1753d1c0f9a1bc40a2cf43",
-      "bytes": 21745
+      "sha256": "346772e3d808018cc71012d0be43e9202781c27c1aabb06888df33b79002a043",
+      "bytes": 22063
     },
     {
       "path": "animation-library.css",
@@ -268,13 +273,18 @@
     },
     {
       "path": "animation-library.js",
-      "sha256": "0ca66e8c63820ceb17180918b77ae106ba7781d1a3b346d9083d670277fd9d9e",
-      "bytes": 19896
+      "sha256": "628f3643ac3666172fa52ce64a20ea90c818776e0033646d14cc84873d66a8fa",
+      "bytes": 27179
     },
     {
       "path": "animation-mobile.css",
       "sha256": "c836b5c996f15262f435f05c3eccb6e5bcba1e169d6bebe1c21dd43178ea96a6",
       "bytes": 32878
+    },
+    {
+      "path": "animation-refinement.css",
+      "sha256": "3934d4ceac4433a1f19e0d8e4b32d95c52039cb90743ac9755471dfab47c4c02",
+      "bytes": 8438
     },
     {
       "path": "animations.css",
@@ -283,8 +293,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "6c2147ed71edeb819d552e90a5efa3f56a9366a71db7d9599582ffa819124119",
-      "bytes": 602303
+      "sha256": "7aa157a2514c9f490c2044ceb6084c9cc08465d38a8f9db6ffc579bf5d5149a2",
+      "bytes": 605468
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -333,8 +343,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "697423140d124e13d8c20048643965bd5def4f5ec8206c0320e0cc6b51f3276e",
-      "bytes": 8013
+      "sha256": "e41ce6fb5b8d9a86a66d403fef8d893ab478f5fc140256a18c196730039539e6",
+      "bytes": 8169
     },
     {
       "path": "installation-libraries.js",
@@ -633,8 +643,8 @@
     },
     {
       "path": "v50-animation-texts.js",
-      "sha256": "4b83d17b46440b619ea9045c73792849a014360ec9d17b7e6e55ff06d6d099c0",
-      "bytes": 46114
+      "sha256": "07c44814383a3f88e58b27d592f9a82f743083fab8448440caa981fabee49b7c",
+      "bytes": 46229
     },
     {
       "path": "v50-error-texts.js",
@@ -643,8 +653,8 @@
     },
     {
       "path": "v50-interactions.js",
-      "sha256": "226f8ddd22fb74eea80c8ac464aee2433ceb536359758f88dae22ab6ce7de7fd",
-      "bytes": 4008
+      "sha256": "81a097f387efca0c650c4a935102d291f9b6336ad9e34eb99fdd0b9d113e68e3",
+      "bytes": 7025
     },
     {
       "path": "v50-interface.css",
@@ -683,8 +693,8 @@
     },
     {
       "path": "v50-texts.js",
-      "sha256": "9b8c73cf2584afb7f6e4b49ecbc17b189aaf7b4a63dd0b598beaf35f310dd129",
-      "bytes": 35999
+      "sha256": "b41e43ba879db1c4ce540ced36e0c62fed585fd9fd229bac6808b6e50710ce91",
+      "bytes": 39064
     },
     {
       "path": "vendor/v21_animation_catalog.js",
@@ -2784,6 +2794,38 @@
       "RAM-only fictitious devices; no receiver, radio, OTA or timing acceptance.",
       "Android27 and existing APK bytes are retained, not rebuilt.",
       "Public Web publication does not install an iPhone app or receiver firmware."
+    ]
+  },
+  "interfaceCandidate650": {
+    "sourceSnapshotOnly": true,
+    "sourceBoundaryVerified": true,
+    "sourceInputSHA256": {
+      "animation-control-policy.js": "ca33c0444a85040f90b6e4bea8a258701c673ff2e638c810e6861ecf5f19b0e7",
+      "animation-engine.js": "346772e3d808018cc71012d0be43e9202781c27c1aabb06888df33b79002a043",
+      "animation-library.js": "628f3643ac3666172fa52ce64a20ea90c818776e0033646d14cc84873d66a8fa",
+      "animation-refinement.css": "3934d4ceac4433a1f19e0d8e4b32d95c52039cb90743ac9755471dfab47c4c02",
+      "app.js": "77428f74ab205206f27c08c0ba3d428d032c8b7b14aa166eff0c605f430d6b00",
+      "index.html": "9bafad1d584b97ff6b0fcf323e46a9cac0f8ed7cda246437c2456f1b63ef203f",
+      "v50-animation-texts.js": "07c44814383a3f88e58b27d592f9a82f743083fab8448440caa981fabee49b7c",
+      "v50-interactions.js": "81a097f387efca0c650c4a935102d291f9b6336ad9e34eb99fdd0b9d113e68e3",
+      "v50-texts.js": "b41e43ba879db1c4ce540ced36e0c62fed585fd9fd229bac6808b6e50710ce91"
+    },
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "opticalAcceptance": false,
+    "features": [
+      "A smaller chooser emphasises customisable animation recipes instead of near-duplicate fixed-colour variants; saved legacy identifiers remain supported.",
+      "Full-width animation rows, contextual useful controls and directly visible direction settings.",
+      "A gentle reduced-motion-aware return glow and direct two-colour swap feedback; dragging alone never identifies physical lights."
+    ],
+    "limits": [
+      "This RAM-only demo uses fictitious devices: no receiver, OTA, radio, speed or optical acceptance.",
+      "Custom reference1 palettes need native authenticated firmware48 support on real hardware; no firmware is distributed by this demo.",
+      "Android27 APKs/history are retained unchanged, not rebuilt; Web publication does not update iPhone."
     ]
   }
 }

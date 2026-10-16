@@ -95,9 +95,9 @@
     whole:[['spi-breathe-98','spi-breathe-99','spi-gradient-100','spi-flow-101','spi-sparkle-102'],['De volledige SPI LED Line neemt samen dezelfde kleur of fade aan.','The entire SPI LED line shows the same colour or fade together.','Toute la ligne LED SPI affiche la même couleur ou le même fondu.','Die gesamte SPI-LED-Linie zeigt gemeinsam dieselbe Farbe oder Überblendung.']]
   };
   const extra={
-    'v30-rgb-jumping':['Rood, groen en blauw wisselen helder en gelijktijdig op alle gekozen receivers.','Red, green and blue switch brightly and simultaneously on all selected receivers.','Le rouge, le vert et le bleu alternent vivement et simultanément sur tous les récepteurs choisis.','Rot, Grün und Blau wechseln hell und gleichzeitig auf allen gewählten Receivern.'],
+    'v30-rgb-jumping':['Jouw kleuren wisselen direct. Kies zelf maximaal zeven kleuren en pas hun volgorde aan.','Your colours switch directly. Choose up to seven colours and arrange their order.','Vos couleurs alternent directement. Choisissez jusqu’à sept couleurs et leur ordre.','Deine Farben wechseln direkt. Wähle bis zu sieben Farben und ihre Reihenfolge.'],
     'v30-seven-jumping':['Zeven vaste kleuren volgen elkaar zonder tussenkleuren op.','Seven solid colours follow one another without intermediate colours.','Sept couleurs unies se succèdent sans couleurs intermédiaires.','Sieben feste Farben folgen ohne Zwischenfarben aufeinander.'],
-    'v30-rgb-gradient':['Een zachte, doorlopende overgang tussen rood, groen en blauw.','A gentle, continuous transition between red, green and blue.','Une transition douce et continue entre le rouge, le vert et le bleu.','Ein sanfter, durchgehender Übergang zwischen Rot, Grün und Blau.'],
+    'v30-rgb-gradient':['Jouw kleuren vloeien zacht in elkaar over. Voeg maximaal zeven kleuren toe en kies de volgorde.','Your colours blend gently. Add up to seven colours and choose their order.','Vos couleurs se fondent doucement. Ajoutez jusqu’à sept couleurs et choisissez leur ordre.','Deine Farben gehen sanft ineinander über. Füge bis zu sieben Farben hinzu und wähle ihre Reihenfolge.'],
     'v30-seven-gradient':['Alle zeven kleuren vloeien rustig in elkaar over; alle gekozen receivers lopen gelijk.','All seven colours blend calmly into one another; all selected receivers stay in sync.','Les sept couleurs se fondent calmement ; tous les récepteurs choisis restent synchronisés.','Alle sieben Farben gehen ruhig ineinander über; alle gewählten Receiver laufen synchron.'],
     'v30-tunnel-travel':['Een brede lichtgolf reist soepel van de eerste naar de laatste receiver.','A broad wave of light travels smoothly from the first receiver to the last.','Une large vague lumineuse passe doucement du premier au dernier récepteur.','Eine breite Lichtwelle wandert sanft vom ersten zum letzten Receiver.'],
     'v30-tunnel-bounce':['De lichtgolf vertraagt bij de uiteinden en keert vloeiend terug.','The wave of light slows at the ends and smoothly returns.','La vague lumineuse ralentit aux extrémités et revient doucement.','Die Lichtwelle wird an den Enden langsamer und kehrt sanft zurück.'],
@@ -150,9 +150,9 @@
     v50AnimationStandGuidanceFocus:['Een zachte focus beweegt langs de hele RGBW- en SPI-ledlines, in de ingestelde volgorde van zones en ledlines.','A gentle focus moves along whole RGBW and SPI LED lines in the configured zone and LED line order.','Un focus doux passe le long des lignes RGBW et SPI entières dans l’ordre configuré des zones et lignes LED.','Ein sanfter Fokus wandert entlang ganzer RGBW- und SPI-LED-Linien in der eingestellten Zonen- und LED-Linienreihenfolge.']
   });
   const names={
-    'v30-rgb-jumping':['RGB Jumping','RGB Jumping','Alternance RGB','RGB-Wechsel'],
+    'v30-rgb-jumping':['Kleurwissel','Colour change','Changement de couleur','Farbwechsel'],
     'v30-seven-jumping':['7 Colors Jumping','7 Colours Jumping','Alternance de 7 couleurs','7-Farben-Wechsel'],
-    'v30-rgb-gradient':['RGB Gradient','RGB Gradient','Dégradé RGB','RGB-Verlauf'],
+    'v30-rgb-gradient':['Kleurverloop','Colour fade','Fondu de couleurs','Farbverlauf'],
     'v30-seven-gradient':['7 Colors Gradient','7 Colours Gradient','Dégradé de 7 couleurs','7-Farben-Verlauf'],
     'v30-tunnel-travel':['Lichtgolf','Light wave','Vague lumineuse','Lichtwelle'],
     'v30-tunnel-bounce':['Heen en terug','Back and forth','Aller-retour','Hin und zurück'],

@@ -15,7 +15,7 @@
   const descriptor = (key, title, summary, aliases = '') => Object.freeze({key,title,summary,aliases});
   const DEFINITIONS = Object.freeze({
     whole:Object.freeze([
-      descriptor('colour','Kleurwissel','Vaste kleuren wisselen of vloeien in elkaar over.','kleur kleuren wisselen regenboog rainbow rgb gradient jumping'),
+      descriptor('colour','Kleurwissel','Kies zelf de kleuren die wisselen of in elkaar overvloeien.','kleur kleuren wisselen regenboog rainbow rgb gradient jumping'),
       descriptor('pulse','Ademen & pulsen','Alle ledlines worden rustig lichter en donkerder.','pulse puls pulsen ademen ademend ademhaling breathe breathing fade'),
       descriptor('flow','Zachte overgangen','Kleuren mengen geleidelijk, zonder harde sprongen.','flow gradient verloop kleurverloop vloeien zacht overgang fade'),
       descriptor('flash','Flitsen','Korte lichtflitsen; kan ook snel knipperen.','sparkle flash strobe flits flitsen knipperen theater')
@@ -78,10 +78,10 @@
   // recipes, never a second catalogue or a change to stored effect identities.
   const STARTERS = Object.freeze([
     {key:'Breathe',ids:['rgbw-breathe-1','spi-breathe-99'],title:'Zacht ademen',summary:'De ledlines worden rustig lichter en donkerder.'},
-    {key:'Colour',ids:['v30-rgb-jumping'],title:'Kleurwissel',summary:'Rood, groen en blauw wisselen elkaar direct af.'},
+    {key:'Colour',ids:['v30-rgb-jumping'],title:'Kleurwissel',summary:'Je eigen kleuren wisselen elkaar direct af.'},
     {key:'Chase',ids:['spi-chase-8'],title:'Lopend licht',summary:'Een lichtpunt loopt over de pixels.'},
     {key:'Wave',ids:['spi-wave-29'],title:'Lichtgolf',summary:'Een zachte golf beweegt over de pixels.'},
-    {key:'Gradient',ids:['rgbw-gradient-2'],title:'Kleurverloop',summary:'De ledlines veranderen zacht van kleur.'},
+    {key:'Gradient',ids:['v30-rgb-gradient'],title:'Kleurverloop',summary:'Je eigen kleuren vloeien zacht in elkaar over.'},
     {key:'Warm',ids:['v30-brand-warm-white'],title:'Warm naar wit',summary:'Een warme witmix gaat rustig over in zacht wit.'}
   ]);
   function text(key,fallback,translate,params={}) {
@@ -163,6 +163,112 @@
     'brand:white':[['v30-brand-white-breathe'],['v30-brand-warm-white'],['spi-flow-48'],['spi-breathe-79'],['spi-warm-49']],
     'brand:colour':[['v30-brand-accent'],['v30-brand-soft-gradient'],['spi-flow-73'],['spi-flow-76'],['spi-flow-82']]
   });
+  // Presentation-only merges, closed to the formulas actually implemented by
+  // the receiver. Never rewrite a saved ID, state, scene, preview descriptor or
+  // wire variant. Each listed SPI alias differs only in editable defaults;
+  // specialised variants 90+ and the reference/tunnel engines stay distinct.
+  // Fixed seven-colour V30 recipes are recreated with the editable palette
+  // choices. ID 1's custom-palette playback requires receiver 41.0.48.
+  const MERGED_CHOICES = Object.freeze({
+    'v30-seven-jumping':'v30-rgb-jumping',
+    'v30-seven-gradient':'v30-rgb-gradient',
+    'spi-chase-7':'spi-chase-8', 'spi-chase-9':'spi-chase-8',
+    'spi-chase-10':'spi-chase-8', 'spi-chase-12':'spi-chase-8',
+    'spi-chase-15':'spi-chase-8', 'spi-chase-27':'spi-chase-8',
+    'spi-chase-59':'spi-chase-8', 'spi-chase-65':'spi-chase-8',
+    'spi-chase-66':'spi-chase-8', 'spi-chase-67':'spi-chase-8',
+    'spi-chase-68':'spi-chase-8', 'spi-chase-71':'spi-chase-8',
+    'spi-comet-13':'spi-comet-14', 'spi-comet-62':'spi-comet-14',
+    'spi-comet-63':'spi-comet-14', 'spi-comet-64':'spi-comet-14',
+    'spi-scanner-33':'spi-scanner-32', 'spi-scanner-34':'spi-scanner-32',
+    'spi-scanner-54':'spi-scanner-32', 'spi-scanner-72':'spi-scanner-32',
+    'spi-flow-5':'spi-flow-21', 'spi-flow-6':'spi-flow-21',
+    'spi-flow-42':'spi-flow-21', 'spi-flow-43':'spi-flow-21',
+    'spi-flow-44':'spi-flow-21', 'spi-flow-51':'spi-flow-21',
+    'spi-flow-52':'spi-flow-21', 'spi-flow-53':'spi-flow-21',
+    'spi-breathe-20':'spi-breathe-22', 'spi-breathe-23':'spi-breathe-22',
+    'spi-breathe-24':'spi-breathe-22', 'spi-breathe-25':'spi-breathe-22',
+    'spi-breathe-26':'spi-breathe-22', 'spi-breathe-39':'spi-breathe-22',
+    'spi-breathe-40':'spi-breathe-22', 'spi-breathe-41':'spi-breathe-22',
+    'spi-breathe-69':'spi-breathe-22',
+    'spi-wave-28':'spi-wave-29', 'spi-wave-30':'spi-wave-29',
+    'spi-wave-31':'spi-wave-29', 'spi-wave-70':'spi-wave-29',
+    'spi-dual-16':'spi-dual-11', 'spi-dual-58':'spi-dual-11',
+    'spi-mirror-35':'spi-dual-11', 'spi-mirror-36':'spi-dual-11',
+    'spi-mirror-37':'spi-dual-11', 'spi-mirror-57':'spi-dual-11',
+    'spi-minimal-46':'spi-minimal-45', 'spi-sequence-89':'spi-sequence-88',
+    'spi-gradient-2':'spi-gradient-4', 'spi-gradient-3':'spi-gradient-4',
+    'spi-gradient-38':'spi-gradient-4', 'spi-gradient-61':'spi-gradient-4',
+    'spi-flow-47':'spi-flow-73', 'spi-flow-76':'spi-flow-73',
+    'spi-flow-77':'spi-flow-73', 'spi-flow-82':'spi-flow-73',
+    'spi-breathe-78':'spi-breathe-74',
+    'spi-breathe-84':'spi-breathe-79'
+  });
+  // A short presentation selection is not an assertion of formula equality.
+  // These choices deliberately show contrasting motions; every omitted recipe
+  // remains in the full catalog for current playback, saved scenes and presets.
+  const PRESENTATION_CHOICES = Object.freeze({
+    'whole:colour':['v30-rgb-jumping','v30-rgb-gradient'],
+    'whole:pulse':['rgbw-breathe-1','spi-breathe-99','rgbw-breathe-18','spi-line-breathe-18','rgbw-breathe-25','spi-line-breathe-25'],
+    'whole:flow':['rgbw-flow-3','spi-line-flow-3','rgbw-gradient-19','spi-line-gradient-19'],
+    'whole:flash':['rgbw-sparkle-4','spi-sparkle-102','rgbw-sparkle-20','spi-line-sparkle-20'],
+    'pixels:flow':['spi-gradient-4','spi-flow-121','spi-gradient-123'],
+    'pixels:pulse':['spi-breathe-22','spi-breathe-127'],
+    'pixels:wave':['spi-wave-29','spi-wave-122','spi-wave-130'],
+    'pixels:chase':['spi-chase-8','spi-chase-124','spi-chase-129'],
+    'pixels:comet':['spi-comet-14','spi-comet-103','spi-comet-131'],
+    'pixels:scanner':['spi-scanner-32'],
+    'pixels:sparkle':['spi-sparkle-18','spi-sparkle-118','spi-sparkle-125'],
+    'pixels:sequence':['spi-cascade-56','spi-sequence-88'],
+    'pixels:alternate':['spi-alternate-55'],
+    'pixels:accent':['spi-minimal-45'],
+    'tunnel:reference':['v31-ref-sheet','v31-ref-stagger','v31-ref-ribbons','v31-ref-packets','v31-ref-outline'],
+    'tunnel:waves':['v30-tunnel-travel','v30-tunnel-bounce','v30-tunnel-pulse','v30-tunnel-echo'],
+    'tunnel:travel':['rgbw-chase-8','rgbw-comet-28','spi-scanner-105','spi-chase-109','spi-comet-111'],
+    'tunnel:symmetry':['v30-tunnel-center','v30-tunnel-outside','rgbw-mirror-29','spi-mirror-179'],
+    'tunnel:build':['v30-tunnel-cascade','v30-tunnel-handoff','rgbw-sequence-30','spi-sequence-180'],
+    'tunnel:colour':['rgbw-flow-10','rgbw-gradient-23','spi-flow-160','spi-gradient-173'],
+    'tunnel:alternate':['rgbw-sparkle-11','rgbw-alternate-15','spi-sparkle-161','spi-alternate-165'],
+    'tunnel:pixels':['v30-tunnel-pixel-curtain','v30-tunnel-pixel-cross'],
+    'brand:reference':['v31-ref-warm-contour','v31-ref-silk','v31-ref-brand-ribbons','v31-ref-brand-trail','v31-ref-brand-outline'],
+    'brand:white':['v30-brand-white-breathe','v30-brand-warm-white','spi-flow-48'],
+    'brand:colour':['v30-brand-accent','v30-brand-soft-gradient','spi-flow-73'],
+    'brand:pulse':['spi-breathe-74'],
+    'brand:focus':['v30-brand-sweep','v30-brand-focus','spi-chase-75'],
+    'brand:sparkle':['spi-sparkle-81']
+  });
+  Object.values(PRESENTATION_CHOICES).forEach(Object.freeze);
+  const SHORTLISTED_OMISSIONS = Object.freeze([
+    'rgbw-breathe-0','rgbw-breathe-17','rgbw-breathe-21','rgbw-cascade-22',
+    'rgbw-cascade-6','rgbw-gradient-2','rgbw-gradient-9','rgbw-mirror-13',
+    'rgbw-mirror-14','rgbw-sequence-27','rgbw-sequence-5','rgbw-wave-12',
+    'rgbw-wave-16','rgbw-wave-24','rgbw-wave-26','rgbw-wave-31','rgbw-wave-7',
+    'spi-breathe-104','spi-breathe-171','spi-breathe-79','spi-breathe-98',
+    'spi-cascade-108','spi-cascade-156','spi-cascade-172','spi-cascade-90',
+    'spi-cascade-91','spi-chase-112','spi-chase-113','spi-chase-126',
+    'spi-chase-158','spi-chase-80','spi-chase-94','spi-comet-115',
+    'spi-comet-117','spi-comet-120','spi-comet-178','spi-dual-11','spi-dual-96',
+    'spi-flow-101','spi-flow-21','spi-flow-97','spi-gradient-100',
+    'spi-gradient-107','spi-gradient-159','spi-gradient-60','spi-line-breathe-0',
+    'spi-line-breathe-1','spi-line-breathe-17','spi-line-gradient-2',
+    'spi-line-sparkle-4','spi-mirror-110','spi-mirror-163','spi-mirror-164',
+    'spi-mirror-95','spi-sequence-155','spi-sequence-177','spi-sequence-92',
+    'spi-sparkle-17','spi-sparkle-19','spi-sparkle-86','spi-sparkle-87',
+    'spi-warm-49','spi-warm-85','spi-wave-106','spi-wave-114','spi-wave-116',
+    'spi-wave-119','spi-wave-128','spi-wave-157','spi-wave-162','spi-wave-166',
+    'spi-wave-174','spi-wave-176','spi-wave-181','spi-wave-93',
+    'v31-ref-amber','v31-ref-curtain','v31-ref-fill'
+  ]);
+  function visibleCatalog(items) {
+    if (!Array.isArray(items)) throw new TypeError('An animation catalog is required');
+    const available = new Set(items.map(effect => effect.id));
+    return Object.freeze(items.filter(effect => {
+      if(MERGED_CHOICES[effect.id]&&available.has(MERGED_CHOICES[effect.id]))return false;
+      if(!SHORTLISTED_OMISSIONS.includes(effect.id))return true;
+      const key=effect.category+':'+classification(effect)?.key;
+      return !(PRESENTATION_CHOICES[key]||[]).some(id=>available.has(id));
+    }));
+  }
   function curate(family,currentId=null) {
     if(!family||!Array.isArray(family.effects))throw new TypeError('An animation family is required');
     const effects=family.effects,featured=[];
@@ -205,5 +311,5 @@
       return {effect,index,rank};
     }).filter(Boolean).sort((a,b) => b.rank - a.rank || a.index - b.index).map(item => item.effect);
   }
-  return Object.freeze({categories:CATEGORIES,categoriesFor,categoryInfo,groups,group,sections,curate,search,normalize,starters,displayName});
+  return Object.freeze({categories:CATEGORIES,categoriesFor,categoryInfo,groups,group,sections,curate,search,normalize,starters,displayName,visibleCatalog,mergedChoices:MERGED_CHOICES,presentationChoices:PRESENTATION_CHOICES,shortlistedOmissions:SHORTLISTED_OMISSIONS});
 }));

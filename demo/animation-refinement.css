@@ -1,0 +1,153 @@
+/* Direction is a daily control, separate from optional detail settings. */
+html.interface-polish body :is(#main, #effect-dialog) .animation-direction-primary { padding: 18px; }
+html.interface-polish body :is(#main, #effect-dialog) .direction-setting-label { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+html.interface-polish body :is(#main, #effect-dialog) .direction-setting-label > span:nth-child(2) { display: grid; gap: 3px; flex: 1; min-width: 0; }
+html.interface-polish body :is(#main, #effect-dialog) .direction-setting-label b { font-size: 17px; }
+html.interface-polish body :is(#main, #effect-dialog) .direction-setting-label small { font-size: 12px; line-height: 1.45; color: var(--muted); }
+html.interface-polish body :is(#main, #effect-dialog) .animation-direction-primary .compact-direction { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+html.interface-polish body :is(#main, #effect-dialog) .animation-direction-primary .compact-direction button { min-height: 48px; white-space: normal; line-height: 1.35; padding: 10px; }
+html.interface-polish body :is(#main, #effect-dialog) .palette-swap-guidance { margin: 6px 0 14px; font-size: 12px; line-height: 1.5; color: var(--muted); }
+html.interface-polish body :is(#main, #effect-dialog) [data-animation-setting][hidden],
+html.interface-polish body :is(#main, #effect-dialog) [data-palette-swap-guidance][hidden] { display: none !important; }
+
+/* One animation per readable row. The whole existing card remains the start
+   action; previews, capability locks and chosen-status qualifiers are intact. */
+html.interface-polish body :is(#main, #effect-dialog) [data-chooser-version="567"] :is(.family-variant-grid, .effect-grid) {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+html.interface-polish body :is(#main, #effect-dialog) .effect-card[data-chooser-version="567"] {
+  display: grid;
+  grid-template-columns: minmax(104px, 28%) minmax(0, 1fr);
+  grid-template-rows: auto auto auto 1fr;
+  align-items: start;
+  gap: 5px 13px;
+  min-height: 144px;
+  padding: 12px;
+  border-radius: 18px;
+}
+html.interface-polish body :is(#main, #effect-dialog) .effect-card[data-chooser-version="567"] > .animation-effect-preview {
+  grid-column: 1;
+  grid-row: 1 / -1;
+  align-self: stretch;
+  min-width: 0;
+  margin: 0;
+}
+html.interface-polish body :is(#main, #effect-dialog) .effect-card[data-chooser-version="567"] > :is(b, .animation-variant-position, .animation-variant-description, .animation-start-action, .animation-start-unavailable) {
+  grid-column: 2;
+  grid-row: auto;
+  min-width: 0;
+  margin: 0;
+}
+html.interface-polish body :is(#main, #effect-dialog) .effect-card[data-chooser-version="567"] > b {
+  padding: 0;
+  font-size: 17px;
+  line-height: 1.3;
+  text-wrap: initial;
+  overflow-wrap: anywhere;
+}
+html.interface-polish body :is(#main, #effect-dialog) .effect-card[data-chooser-version="567"] > .animation-variant-description {
+  padding: 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+html.interface-polish body :is(#main, #effect-dialog) .effect-card[data-chooser-version="567"] > .animation-start-action {
+  align-self: end;
+  min-height: 44px;
+  margin-top: 5px;
+  padding: 9px 10px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+/* The exact same return button moves into the persistent dock. Strong shape
+   and a gentle glow identify navigation, never a receiver confirmation. */
+html.interface-polish body :is(#main, #effect-dialog) .animation-gallery-return.animation-chooser-action[data-animation-back-version="569"] {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 64px;
+  padding: 12px 14px;
+  border: 2px solid color-mix(in srgb, var(--red) 45%, var(--line));
+  border-radius: 17px;
+  background: color-mix(in srgb, var(--red) 5%, var(--panel));
+  color: var(--ink);
+  box-shadow: 0 3px 14px color-mix(in srgb, var(--red) 10%, transparent);
+}
+html.interface-polish body :is(#main, #effect-dialog) .animation-gallery-return.animation-chooser-action[data-animation-back-version="569"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 16px color-mix(in srgb, var(--red) 22%, transparent);
+  opacity: .25;
+  pointer-events: none;
+}
+html.interface-polish body :is(#main, #effect-dialog) .animation-gallery-return.animation-chooser-action[data-animation-back-version="569"] .gallery-action-copy > b {
+  font-size: 16px;
+  line-height: 1.35;
+  font-weight: 800;
+}
+html.interface-polish body :is(#main, #effect-dialog) .animation-gallery-return.animation-chooser-action[data-animation-back-version="569"] .gallery-action-icon {
+  width: 38px;
+  height: 38px;
+  background: color-mix(in srgb, var(--red) 11%, var(--panel));
+  color: var(--red);
+}
+
+/* Stable palette slots, with a presentation-only pair exchange during drag.
+   None of these transforms changes the palette or sends a lighting command. */
+html.interface-polish body :is(#main, #effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel > .palette {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 9px;
+}
+html.interface-polish body :is(#main, #effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel .palette-item {
+  position: relative;
+  min-height: 54px;
+  overflow: visible;
+  border-radius: 13px;
+  transform: translate(var(--palette-swap-x, 0px), var(--palette-swap-y, 0px));
+}
+html.interface-polish body :is(#main, #effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel .palette-item:has(.palette-remove) .palette-colour,
+html.interface-polish body :is(#main, #effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel .palette-colour {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  justify-items: start;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 12px;
+  text-align: left;
+}
+html.interface-polish body :is(#main, #effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel .palette-colour > span,
+html.interface-polish body :is(#main, #effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel .palette-item:has(.palette-remove) .palette-colour > span {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+}
+html.interface-polish body :is(#main, #effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel .palette-colour > small { font-size: 12px; }
+html.interface-polish body :is(#main, #effect-dialog) [data-animation-editor-version="569"] .palette[data-palette-swap-active] > .palette-item { will-change: transform; }
+html.interface-polish body :is(#main, #effect-dialog) [data-animation-editor-version="569"] .palette-item[data-palette-swap-source] {
+  z-index: 2;
+  border-color: var(--red);
+  box-shadow: 0 5px 18px #10182724;
+}
+html.interface-polish body :is(#main, #effect-dialog) [data-animation-editor-version="569"] .palette-item[data-palette-swap-target] { z-index: 1; }
+html.interface-polish body :is(#main, #effect-dialog) [data-animation-editor-version="569"] .palette-item[data-palette-drop] { outline-offset: 1px; }
+@media (max-width: 359px) {
+  html.interface-polish body :is(#main, #effect-dialog) .effect-card[data-chooser-version="567"] {
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 5px 9px;
+    padding: 10px;
+  }
+  html.interface-polish body :is(#main, #effect-dialog) .effect-card[data-chooser-version="567"] > b { font-size: 16px; }
+  html.interface-polish body :is(#main, #effect-dialog) .effect-card[data-chooser-version="567"] > .animation-start-action { padding-inline: 6px; font-size: 12px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  html.interface-polish body :is(#main, #effect-dialog) .animation-gallery-return.animation-chooser-action[data-animation-back-version="569"]::after { animation: animation650-return-glow 3.2s ease-in-out infinite; }
+  html.interface-polish body :is(#main, #effect-dialog) [data-animation-editor-version="569"] .palette-item { transition: transform .2s ease, box-shadow .2s ease; }
+  @keyframes animation650-return-glow { 0%, 100% { opacity: .15; } 50% { opacity: .8; } }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.interface-polish body :is(#main, #effect-dialog) .animation-gallery-return.animation-chooser-action[data-animation-back-version="569"]::after { animation: none; opacity: .35; }
+  html.interface-polish body :is(#main, #effect-dialog) [data-animation-editor-version="569"] .palette-item { transition: none; }
+}
