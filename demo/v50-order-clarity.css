@@ -352,3 +352,45 @@ html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[d
   html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="568"] .ledline-row-actions button{font-size:10px;gap:4px;padding-inline:3px}
 }
 
+/* 652: map colours observed on the real installation to numbered places.
+   Swatches identify colours; no simulated LED line or target pattern. */
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="652"][data-order-open="true"]{scroll-padding-top:110px;scroll-padding-bottom:24px}
+.order-assignment-intro652{margin:16px 0;padding:16px;border:1px solid var(--line,#dce0dc);border-radius:22px;background:var(--panel,#fff);display:grid;gap:10px}
+.order-assignment-intro652>.button{margin:0!important;min-height:44px;padding:10px!important;font-size:13px}
+.order-assignment-intro652 h3{margin:0 0 8px;font-size:21px;line-height:1.25}
+.order-assignment-intro652 p{margin:0;font-size:14px;line-height:1.55;color:var(--muted,#626963)}
+.order-assignment-intro652 .order-assignment-direction652{display:flex;align-items:center;gap:8px;padding-top:14px;border-top:1px solid var(--line,#dce0dc);color:var(--ink,#252729)}
+.order-assignment-direction652 .icon{width:18px;height:18px;transform:rotate(180deg)}
+.order-assignment-rule652{font-size:13px;line-height:1.5;color:var(--muted,#626963)}
+.order-assignments652{display:grid;gap:12px;margin:16px 0;padding:0;list-style:none}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-ui="652"] .order-assignment652{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:16px;border:1px solid var(--line,#dce0dc);border-radius:22px;background:var(--panel,#fff);min-width:0}
+.order-assignment-place652{display:flex;align-items:center;gap:10px;font-size:16px}
+.order-assignment-place652>span{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:var(--soft,#eef1f4);font-size:15px;font-weight:750;color:var(--ink,#252729)}
+.order-assignment-choice652,.order-colour-choice652{box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;min-width:0;min-height:68px;margin:0;padding:12px;border:1px solid var(--line,#dce0dc);border-radius:16px;background:var(--glass-solid,#f6f8fa);color:var(--ink,#252729);text-align:left;font:inherit;cursor:pointer;touch-action:manipulation}
+.order-assignment-choice652>span:not(.order-marker652),.order-colour-choice652>span:not(.order-marker652){flex:1;min-width:0;display:grid;gap:4px;overflow-wrap:anywhere}
+.order-assignment-choice652 b,.order-colour-choice652 b{font-size:17px;line-height:1.3}
+.order-assignment-choice652 small,.order-colour-choice652 small{font-size:12px;line-height:1.4;color:var(--muted,#626963)}
+.order-assignment-choice652>.icon,.order-colour-choice652>.icon{width:20px;height:20px;flex:none}
+.order-marker652{display:block;box-sizing:border-box;flex:none;width:34px;height:34px;border-radius:50%;background:var(--marker-colour,transparent);border:1px solid #0002;box-shadow:inset 0 0 0 3px #ffffff70}
+.order-assignment-settings652{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:8px 12px;border:0;border-radius:12px;background:transparent;color:var(--muted,#626963);font:inherit;font-size:12px;cursor:pointer}
+.order-assignment-settings652>.icon{width:18px;height:18px}
+.order-assignment-choice652:focus-visible,.order-assignment-settings652:focus-visible,.order-colour-choice652:focus-visible{outline:2px solid var(--red,#ba433d);outline-offset:3px}
+.order-colour-choices652{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin:18px 0}
+.order-colour-choice652{flex-wrap:nowrap;gap:12px;min-height:80px;align-content:center}
+.order-colour-choice652>.icon{margin-left:auto}
+.order-colour-choice652[aria-pressed="true"]{border:2px solid var(--ink,#252729);background:var(--panel,#fff)}
+.order-colour-picker652>p{line-height:1.55}
+.order-settings-identity652{display:flex;align-items:center;gap:12px;padding:12px 0 18px}
+.order-settings-identity652>div{display:grid;gap:4px;min-width:0;overflow-wrap:anywhere}
+.order-settings-identity652 span:not(.order-marker652),.order-settings-identity652 small{font-size:13px;color:var(--muted,#626963)}
+.order-assignment-footer652{margin:18px 0 24px;display:grid;gap:10px}
+.order-assignment-footer652 p{margin:0 3px;color:var(--muted,#626963);font-size:13px;line-height:1.5}
+.order-assignment-done652{min-height:54px!important}
+dialog.v50-order-tutorial-modal .v652-order-tutorial-content .v50-tutorial-steps{display:grid;gap:16px;margin:0;padding:0;list-style:none;counter-reset:none}
+dialog.v50-order-tutorial-modal .v652-order-tutorial-content .v50-tutorial-steps>li{display:block;min-width:0;margin:0;padding:20px;border:1px solid var(--line,#dce0dc);border-radius:22px;background:var(--panel,#fff)}
+dialog.v50-order-tutorial-modal .v652-order-tutorial-content .v50-tutorial-step-heading{display:flex;align-items:center;gap:12px;font-size:18px;line-height:1.3;margin:0 0 14px}
+dialog.v50-order-tutorial-modal .v652-order-tutorial-content .v50-tutorial-step-heading>span{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--ink,#252729);color:var(--panel,#fff);font-size:16px}
+dialog.v50-order-tutorial-modal .v652-order-tutorial-content p{margin:0;font-size:15px;line-height:1.6;color:var(--muted,#626963)}
+dialog.v50-order-tutorial-modal .v652-order-tutorial-content .v652-order-tutorial-rule{margin:18px 4px}
+@media(max-width:360px){.order-colour-choices652{grid-template-columns:minmax(0,1fr)}.order-colour-choice652{min-height:76px;flex-wrap:nowrap}.order-assignment-intro652{padding:16px}.order-assignment652{padding:12px}}
+@media(min-width:700px){.order-assignments652{grid-template-columns:repeat(2,minmax(0,1fr))}.order-colour-choices652{grid-template-columns:repeat(2,minmax(0,1fr))}}

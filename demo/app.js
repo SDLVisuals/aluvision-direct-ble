@@ -296,22 +296,27 @@
   let orderPreviewGesture=null,orderMoveResult=null,orderMoveTimer=null,orderSlotObserver=null;
   let activeControlPointer=null,controlRenderDeferred=false;
   let activeStaticGesturePointer=null;
-  // Recognition follows the ordered position, never the saved playback state.
+  // Recognition stays with its physical endpoint for this complete session.
   // This map is deliberately presentation-only; it never enters the model,
   // colour library, a scene or an animation preset.
   const orderColours=new Map();
   const orderPositionColours=new Map();
+  let orderColourChoice652=null;
+  const sameOrderEndpoints652=(left,right)=>left.length===right.length&&new Set(left.map(a=>a.id)).size===left.length&&
+    new Set(right.map(a=>a.id)).size===right.length&&left.every(a=>right.some(b=>a.id===b.id&&a.receiverId===b.receiverId&&a.port===b.port));
   let orderIdentification=null,orderIdentificationState=null,orderCleanupResumedSession=null;
   let orderTest=null,orderTestState={status:'idle',busy:false},orderTestPreparing=false,orderTestRequest=0,orderTestFingerprint=null,orderTestConfirmation=null;
   let orderRecognitionDirty=true;
   function beginOrderColours(){
     if(standPresentationOnly()||!zone()||!orderIdentification)return;
     const input={standId:stand().id,zoneId:zone().id,lines:M.zoneLedlines(model,zone().id).map(({id,receiverId,port})=>({id,receiverId,port}))},active=orderIdentification.getState();
+    if(!input.lines.length)return;
     if(active.active&&active.standId===input.standId&&active.zoneId===input.zoneId&&
-      JSON.stringify(active.lines.map(({id,receiverId,port})=>({id,receiverId,port})))===JSON.stringify(input.lines))return void orderIdentification.interaction();
+      sameOrderEndpoints652(active.lines,input.lines))return void orderIdentification.interaction();
     void orderIdentification.open(input);
   }
   function closeZoneMenus(){
+    orderColourChoice652=null;
     retireOrderSave588();
     closeOrderTutorial({acknowledge:false,restoreFocus:false});
     cancelOrderTest();
@@ -431,9 +436,21 @@
       syncOrderRecognition();
     }
   });
+  // Foreground presence is explicit. Receivers still own finite hardware
+  // leases; only a genuine renewal reply can extend physical confirmation.
+  function orderForegroundVisible652(){
+    const state=orderIdentificationState;
+    return !document.hidden&&navigator.onLine!==false&&!!state?.active&&
+      state.standId===stand()?.id&&state.zoneId===route.zoneId&&openLineSetup.has(route.zoneId)&&
+      !!main?.querySelector('.ledline-setup[data-order-ui="652"][data-order-open="true"]');
+  }
+  setInterval(()=>{
+    if(orderForegroundVisible652()&&!arrangementInteractionBusy()&&!orderClose589&&!orderSaveQueue588)
+      void orderIdentification.renewForeground().catch(()=>{});
+  },5000);
   const orderGuide=window.LightningLedlineOrderGuide;
   function orderGuideText(key,params){return orderGuide.t(key,uiPreferences.preferences.language,params);}
-  const ORDER_TUTORIAL_KEY='aluvision.ui.ledline-order-tutorial.v2';
+  const ORDER_TUTORIAL_KEY='aluvision.ui.ledline-order-tutorial.v3-observed-colours';
   let orderTutorialSeenMemory=false,orderTutorialContext=null,orderTutorialReturnFocus=null;
   function hasSeenOrderTutorial(){
     if(orderTutorialSeenMemory)return true;
@@ -449,7 +466,7 @@
     const count=M.zoneLedlines(model,z.id).length;if(count<2)return false;
     orderTutorialReturnFocus=document.activeElement;
     orderTutorialContext={standId:stand().id,zoneId:z.id};
-    dialog.dataset.tutorialVersion='568';
+    dialog.dataset.tutorialVersion='652';
     dialog.innerHTML=`<header><div><span class="v568-tutorial-badge">${icon('play')}${esc(orderGuideText('tutorialBadge'))}</span><h2 id="order-tutorial-title" tabindex="-1">${esc(orderGuideText('tutorialTitle'))}</h2></div><button type="button" data-action="order-tutorial-close" aria-label="${esc(orderGuideText('tutorialClose'))}">${icon('close')}<span>${esc(t('close'))}</span></button></header><div class="v50-order-tutorial-body">${orderGuide.tutorialMarkup({count,language:uiPreferences.preferences.language})}</div><footer class="v50-order-tutorial-footer"><button type="button" data-action="order-tutorial-close">${esc(orderGuideText('tutorialStart'))}${icon('chevron')}</button></footer>`;
     try{dialog.showModal();}catch(_){orderTutorialContext=null;orderTutorialReturnFocus=null;dialog.replaceChildren();return false;}
     window.InterfaceMotion?.openDialog?.(dialog,false);
@@ -560,10 +577,12 @@
     if(!main)return;
     const orderText=(key,params)=>window.LightningV50OrderTexts.t(key,uiPreferences.preferences.language,params);
     const colourLabel=colour=>window.LightningV50OrderTexts.paletteLabel(colour?.name,uiPreferences.preferences.language);
-    for(const row of main.querySelectorAll('[data-order-item]')){
-      const colour=orderColours.get(row.dataset.orderItem);
+    for(const row of main.querySelectorAll('[data-order-item],[data-order-assignment-line]')){
+      const colour=orderColours.get(row.dataset.orderAssignmentLine||row.dataset.orderItem);
       row.style.setProperty('--identify-colour',colour?.hex||'transparent');
+      row.style.setProperty('--marker-colour',colour?.hex||'transparent');
       const name=row.querySelector('[data-order-colour-name]');if(name)name.textContent=colour?' · '+colourLabel(colour):'';
+      const assigned=row.querySelector('[data-order-assigned-name]');if(assigned&&colour)assigned.textContent=colourLabel(colour);
     }
     const positionColours=orderPositionColours.get(route.zoneId)||[];
     for(const slot of main.querySelectorAll('[data-order-slot]')){
@@ -2194,8 +2213,8 @@
   function orderPanelCloseRequest589(button){
     // Leaving this presentation never requires a receiver, save or STOP ACK.
     // The original native operation retains its own writer/cleanup fences.
-    return !!button?.matches?.('.ledline-setup-toggle[data-action="layout"]')&&
-      openLineSetup.has(route.zoneId);
+    return !!button?.matches?.('[data-action="layout"]')&&
+      !!button.closest('.ledline-setup[data-order-open="true"]')&&openLineSetup.has(route.zoneId);
   }
   function orderDragBusy588(){
     // This exemption grants local editing only, never another native writer.
@@ -2391,8 +2410,8 @@
     // still pending. Restore only its two outer entry controls after cleanup;
     // inner choices retain their own setup, connection and capability guards.
     for(const control of main.querySelectorAll('.ledline-setup[data-order-open="false"] > .ledline-setup-toggle[data-action="layout"],.ledline-setup[data-order-open="false"] > .spatial-preview-choice > .spatial-choice-toggle[data-action="spatial-toggle"]'))control.disabled=busy;
-    const closeButton=main.querySelector('.ledline-setup-toggle[data-action="layout"]');
-    if(orderPanelCloseRequest589(closeButton))closeButton.disabled=false;
+    for(const closeButton of main.querySelectorAll('.ledline-setup [data-action="layout"]'))
+      if(orderPanelCloseRequest589(closeButton))closeButton.disabled=false;
     main.querySelector('.ledline-arrangement')?.setAttribute('aria-busy',String(busy));
     const status=main.querySelector('[data-order-apply-status]');
     if(status){
@@ -2464,7 +2483,11 @@
     try{
       const identification=orderIdentificationState?.active&&orderIdentificationState.zoneId===zoneId?orderIdentificationState.session:null;
       if(identification){
-        const ready=await orderIdentification.settle();
+        let ready=await orderIdentification.settle();
+        // Acquire a fresh finite runway before entering the native CAS/LIVE
+        // lane. The foreground timer stays quiet while that writer is busy.
+        if(nativeContext&&ready.physicalConfirmed&&orderForegroundVisible652())
+          ready=await orderIdentification.renewForeground({force:true});
         if(!ready.active||ready.session!==identification||nativeContext&&!ready.physicalConfirmed)throw Error(t('orderIdentificationRetry'));
       }
       // The radio wait does not grant permission to save an obsolete draft.
@@ -2503,7 +2526,7 @@
         if(orderJob&&!currentOrderSave588(orderJob))throw Error(t('lineSetupChanged'));
         if(continuousZone())selections.set(zoneId,{kind:'all'});
         if(nativeContext&&canResume&&orderJob&&identification){
-          // Mint this DATA marker only after genuine CAS + new colour lease ACK.
+          // Mint this DATA marker only after genuine CAS + exact colour lease.
           // It cannot mint/extend the actual native arrangement lease.
           orderJob.resumePending589={version:orderJob.dispatchedVersion589,signature:arrangementSignature(),geometry:orderGeometry588(),session:identification};
           if(orderJob.version===orderJob.dispatchedVersion589)await resumeOrderPlayback589(orderJob);
@@ -2696,52 +2719,55 @@
     return `<fieldset class="v568-order-place-choices"><legend>${esc(t(lines.length===1?'v568PlaceColumn':'v568ChoosePlace'))}</legend><div>${lines.map((_,index)=>`<button type="button" data-action="order-place-choice" data-id="${esc(line.id)}" data-zone="${esc(z.id)}" data-position="${index}" aria-pressed="${index===current}" aria-label="${esc(t('v568PlaceNamed',{number:index+1,colour:window.LightningV50OrderTexts.paletteLabel(palette[index].name,uiPreferences.preferences.language)}))}" style="--place-colour:${palette[index].hex}" ${blocked||index===current?'disabled':''}><b>${index+1}</b><span>${esc(window.LightningV50OrderTexts.paletteLabel(palette[index].name,uiPreferences.preferences.language))}</span>${index===current?icon('check'):''}</button>`).join('')}</div></fieldset>`;
   }
   function orderLineSettingsMarkup(z,line,receiver){
-    const index=(arrangementDraft?.lineOrder||[]).indexOf(line.id),palette=orderPositionPalette(z,physicalLineCount());
-    const blocked=arrangementInteractionBusy()||arrangementNeedsStandOpen()||standPresentationOnly();
+    const marker=orderMarker652(z,line.id),blocked=arrangementInteractionBusy()||arrangementNeedsStandOpen()||standPresentationOnly();
     const action=(name,label,glyph,extra='')=>`<button type="button" class="v568-order-setting-action" data-action="${name}" data-id="${esc(receiver.id)}" ${extra} ${blocked?'disabled':''}>${icon(glyph)}<span>${esc(t(label))}</span>${icon('chevron')}</button>`;
-    return `<section class="v568-order-settings" data-order-line-settings data-order-line-id="${esc(line.id)}" data-zone="${esc(z.id)}" data-signature="${esc(arrangementSignature(z))}"><div class="v568-order-settings-identity"><span>${esc(receiver.name)}${line.port?' · P'+line.port:''}</span><small>${line.port?line.pixels+' px · SPI':'RGBW'}</small>${orderCardPreviewMarkup(palette[Math.max(0,index)])}</div>${orderPlaceChoicesMarkup(z,line)}<details class="ui606-order-more" ${physicalLineCount()===1?'open':''}><summary>${icon('sliders')}<span>${esc(t('v606LineOptions'))}</span>${icon('chevron')}</summary><div class="v568-order-setting-actions">${receiver.type==='SPI'?action('receiver-pixel-setup','v568PixelsDirection','sliders',`data-ports="${line.port}"`):''}<div class="v568-receiver-action-heading">${esc(t('v568ReceiverAllOutputs'))}</div>${action('receiver-rename','v568ReceiverName','edit')}${action('receiver-move','v568ChangeZone','zones')}</div></details><button type="button" class="button secondary full" data-action="effect-dialog-close">${esc(t(physicalLineCount()===1?'v594SingleReturn':'v568ReturnOrder'))}</button></section>`;
+    const blinking=identifying.get(receiver.id)?.scope===(line.port?String(line.port):'all');
+    return `<section class="v568-order-settings" data-order-line-settings data-order-line-id="${esc(line.id)}" data-zone="${esc(z.id)}" data-signature="${esc(arrangementSignature(z))}"><div class="order-settings-identity652" style="--marker-colour:${marker?.hex||'transparent'}"><span class="order-marker652" aria-hidden="true"></span><div><b>${esc(orderMarkerName652(marker))}</b><span>${esc(receiver.name)}${line.port?' · P'+line.port:''}</span><small>${line.port?line.pixels+' px · SPI':'RGBW'}</small></div></div><div class="v568-order-setting-actions"><button type="button" class="v568-order-setting-action" data-action="${line.port?'port-identify':'visual-identify'}" data-receiver="${esc(receiver.id)}" data-port="${line.port}" aria-pressed="${blinking}">${icon('sun')}<span>${esc(t(blinking?'lineSetupBlinkStop':'lineSetupBlink'))}</span></button>${receiver.type==='SPI'?action('receiver-pixel-setup','v568PixelsDirection','sliders',`data-ports="${line.port}"`):''}<div class="v568-receiver-action-heading">${esc(t('v568ReceiverAllOutputs'))}</div>${action('receiver-rename','v568ReceiverName','edit')}${action('receiver-move','v568ChangeZone','zones')}</div><button type="button" class="button secondary full" data-action="effect-dialog-close">${esc(t('v568ReturnOrder'))}</button></section>`;
   }
   function openOrderLineSettings(id){
     const z=zone();if(!z||!openLineSetup.has(z.id)||arrangementDraft?.zoneId!==z.id||arrangementDraft.signature!==arrangementSignature(z))return;
     const line=M.zoneLedlines(model,z.id).find(item=>item.id===id),receiver=model.receivers.find(item=>item.id===line?.receiverId);
     if(!line||!receiver)return;
     if(receiver.type==='SPI')visualPorts.set(receiver.id,line.port);
-    return showEffectDialog(physicalLineCount()>1?t('v606ChoosePlace'):t('v568AdjustLine',{name:receiver.name+(line.port?' · P'+line.port:'')}),orderLineSettingsMarkup(z,line,receiver));
+    return showEffectDialog(orderText652('orderLineSettings'),orderLineSettingsMarkup(z,line,receiver));
+  }
+  function orderMarker652(z,lineId){
+    const marker=orderColours.get(lineId);if(marker)return marker;
+    const lines=M.zoneLedlines(model,z.id),index=lines.findIndex(line=>line.id===lineId);
+    if(index<0)return null;
+    const colour=window.LightningLedlineIdentificationSession.positionColours(lines.length)[index];
+    return {name:colour.colorName,hex:C.screenHex(colour.rgb),rgb:[...colour.rgb]};
+  }
+  function orderText652(key,params){return window.LightningV50OrderTexts.t(key,uiPreferences.preferences.language,params);}
+  function orderMarkerName652(marker){return window.LightningV50OrderTexts.paletteLabel(marker?.name,uiPreferences.preferences.language);}
+  function openOrderColourChoice652(position){
+    const z=zone(),draft=arrangementDraft,state=orderIdentification?.getState();
+    if(!z||!openLineSetup.has(z.id)||!draft||draft.zoneId!==z.id||draft.signature!==arrangementSignature(z)||
+      !Number.isInteger(position)||position<0||position>=draft.lineOrder.length||orderDragBusy588()||arrangementNeedsStandOpen()||standPresentationOnly())return;
+    const context={standId:stand().id,zoneId:z.id,signature:arrangementSignature(z),geometry:orderGeometry588(z),session:state?.active?state.session:null,position};
+    orderColourChoice652=context;
+    const lines=M.zoneLedlines(model,z.id),blocked=arrangementInteractionBusy();
+    const choices=lines.map(line=>{
+      const marker=orderMarker652(z,line.id),receiver=model.receivers.find(item=>item.id===line.receiverId),current=draft.lineOrder.indexOf(line.id);
+      return `<button type="button" class="order-colour-choice652" data-action="order-assign-colour" data-id="${esc(line.id)}" data-position="${position}" aria-pressed="${current===position}" style="--marker-colour:${marker?.hex||'transparent'}" ${blocked?'disabled':''}><span class="order-marker652" aria-hidden="true"></span><span><b>${esc(orderMarkerName652(marker))}</b><small>${esc(receiver?.name||'')}${line.port?' · P'+line.port:''}</small><small>${esc(orderText652('orderCurrentlyAt',{position:current+1}))}</small></span>${current===position?icon('check'):icon('chevron')}</button>`;
+    }).join('');
+    showEffectDialog(orderText652('orderChooseForPosition',{position:position+1}),`<section class="order-colour-picker652" data-order-colour-choice="652" data-zone="${esc(z.id)}" data-signature="${esc(context.signature)}"><p>${esc(orderText652('orderAssignIntro'))}</p><div class="order-colour-choices652">${choices}</div><p class="order-assignment-rule652">${esc(orderText652('orderAssignmentChanged'))}</p><button type="button" class="button secondary full" data-action="effect-dialog-close">${esc(t('back'))}</button></section>`);
   }
   function ledlineSetupMarkup(){
-    const orderText=(key,params)=>window.LightningV50OrderTexts.t(key,uiPreferences.preferences.language,params);
-    const colourLabel=colour=>window.LightningV50OrderTexts.paletteLabel(colour?.name,uiPreferences.preferences.language);
     const z=zone(),open=openLineSetup.has(z.id);
     if(open&&(!arrangementDraft||arrangementDraft.zoneId!==z.id||(!arrangementApplying&&arrangementDraft.signature!==arrangementSignature(z))))beginArrangement();
-    const draft=open?arrangementDraft:null,needsStandOpen=arrangementNeedsStandOpen();
-    const count=physicalLineCount(),singleLine=count===1,title=t(open?singleLine?'lineSetupSingle':'v50OrderTitle':singleLine?'lineSetupSingle':'lineSetupOrient'),hint=t(singleLine?'lineSetupSingleHint':'lineSetupOrientHint');
-    const summary=t('lineSetup'+arrangementModeKey(z.layout,z))+' · '+t(count===1?'scopeCountOne':'scopeCountMany',{count});
-    const lineCount=t(count===1?'scopeCountOne':'scopeCountMany',{count});
+    const draft=open?arrangementDraft:null,needsStandOpen=arrangementNeedsStandOpen(),count=physicalLineCount(),singleLine=count===1;
+    const title=t(singleLine?'lineSetupSingle':'v50OrderTitle'),lineCount=t(count===1?'scopeCountOne':'scopeCountMany',{count});
     const context=t('lineSetupOpenContext',{zone:z.name,count:lineCount});
-    const toggleLabel=open?t('lineSetupCloseAccessible',{title,zone:z.name}):`${title} · ${summary}`;
-    if(!open)return `<section class="ledline-setup card ui606-line-tools" data-order-ui="606" data-order-open="false" aria-label="${esc(t('lineSetupTitle'))}">${spatialPreviewChoice()}<button class="ledline-setup-toggle" data-action="layout" aria-label="${esc(toggleLabel)}" aria-expanded="false" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy"><b>${esc(t(singleLine?'v568Adjust':'v606OrderShort'))}</b><small>${esc(lineCount)}</small></span>${icon('chevron')}</button>${orderCancelNoticeMarkup590(z)}<div class="ledline-setup-body" id="ledline-setup-body" hidden></div></section>`;
-    const horizontalOrder=['vertical','continuous'].includes(z.layout);
+    if(!open)return `<section class="ledline-setup card ui606-line-tools" data-order-ui="606" data-order-open="false" aria-label="${esc(t('lineSetupTitle'))}">${spatialPreviewChoice()}<button class="ledline-setup-toggle" data-action="layout" aria-label="${esc(title+' · '+lineCount)}" aria-expanded="false" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy"><b>${esc(t(singleLine?'v568Adjust':'v606OrderShort'))}</b><small>${esc(lineCount)}</small></span>${icon('chevron')}</button>${orderCancelNoticeMarkup590(z)}<div class="ledline-setup-body" id="ledline-setup-body" hidden></div></section>`;
     const family=z.type||receivers()[0]?.type,reusable=standReceivers().some(r=>r.zoneId!==z.id&&r.type===family);
-    const ordered=open?M.ledlines(receivers(),draft.lineOrder):[],palette=open?orderPositionPalette(z,count):[];
+    const ordered=M.ledlines(receivers(),draft.lineOrder),blocked=orderDragBusy588()||needsStandOpen||standPresentationOnly();
+    const direction=z.layout==='continuous'?'continuous':spatialMode(z.layout,z)==='tunnel'?'tunnel':spatialMode(z.layout,z)==='wall'?'wall':'stacked';
     const rows=ordered.map((line,index)=>{
-      const r=model.receivers.find(item=>item.id===line.receiverId),name=t('scopeLine',{number:index+1});
-      const blinking=identifying.get(r.id)?.scope===(line.port?String(line.port):'all');
-      const colour=orderColours.get(line.id);
-      return `<li data-draft-receiver="${esc(r.id)}" data-order-item="${esc(line.id)}" data-order-position="${index+1}" data-settings-open="false" style="--identify-colour:${colour?.hex||'transparent'}" aria-label="${esc(orderText('orderPosition',{position:index+1}))} · ${esc(r.name)}${line.port?' · P'+line.port:''}">
-        <span class="scope-copy"><span class="scope-option-title"><b title="${esc(r.name)}">${esc(r.name)}</b><span class="v50-order-separator" aria-hidden="true"> · </span><span class="v50-order-port">${line.port?'P'+line.port:'RGBW'}</span></span>${line.port?`<small>${line.pixels} px · SPI</small>`:''}</span>
-        <button type="button" class="line-order-handle" data-order-handle aria-label="${esc(ordered.length===1?t('lineSetupSingle'):orderText('orderDragAccessible',{name,receiver:r.name,port:line.port?' · P'+line.port:''}))}" title="${esc(ordered.length===1?t('lineSetupSingleHint'):orderText('orderDragHint'))}" aria-describedby="ledline-order-help" ${ordered.length<2||orderDragBusy588()||needsStandOpen?'disabled':''}>${icon('grip')}<span>${esc(t('v606Drag'))}</span></button>
-        ${orderCardPreviewMarkup(palette[index])}
-        <div class="ledline-order-tools"><div class="ledline-row-actions">
-          <button class="receiver-blink order-blink-subtle" data-action="${line.port?'port-identify':'visual-identify'}" data-receiver="${esc(r.id)}" data-port="${line.port}" aria-pressed="${blinking}" aria-label="${esc(name)} · ${esc(t(blinking?'lineSetupBlinkStopAccessible':'lineSetupBlinkAccessible'))}">${icon('sun')}<span>${esc(t(blinking?'lineSetupBlinkStop':'lineSetupBlink'))}</span></button>
-          <button type="button" class="ledline-settings-toggle" data-action="layout-receiver-settings" data-id="${esc(line.id)}" data-receiver="${esc(r.id)}" data-port="${line.port}" aria-label="${esc(t('v606ChoosePlace'))} · ${esc(name)}" aria-haspopup="dialog" aria-controls="effect-dialog">${icon('sliders')}<span>${esc(t(singleLine?'v568Adjust':'v606ChoosePlace'))}</span></button>
-        </div></div>
-      </li>`;
+      const r=model.receivers.find(item=>item.id===line.receiverId),marker=orderMarker652(z,line.id),name=orderMarkerName652(marker);
+      return `<li class="order-assignment652" data-order-assignment-line="${esc(line.id)}" data-order-position="${index+1}" style="--marker-colour:${marker?.hex||'transparent'}"><div class="order-assignment-place652"><span>${index+1}</span><b>${esc(orderText652('orderPosition',{position:index+1}))}</b></div><button type="button" class="order-assignment-choice652" data-action="order-colour-open" data-position="${index}" aria-label="${esc(orderText652('orderChooseForPosition',{position:index+1})+' · '+name)}" aria-haspopup="dialog" aria-controls="effect-dialog" ${blocked?'disabled':''}><span class="order-marker652" aria-hidden="true"></span><span><b data-order-assigned-name>${esc(name)}</b><small>${esc(orderText652('orderChooseColour'))}</small></span>${icon('chevron')}</button><button type="button" class="order-assignment-settings652" data-action="layout-receiver-settings" data-id="${esc(line.id)}" aria-label="${esc(orderText652('orderLineSettings')+' · '+name+' · '+r.name+(line.port?' · P'+line.port:''))}" aria-haspopup="dialog" ${arrangementInteractionBusy()?'disabled':''}>${icon('sliders')}<span>${esc(orderText652('orderLineSettings'))}</span></button></li>`;
     }).join('');
-    return `<section class="ledline-setup card" data-order-ui="568" data-order-open="${open}" ${open?'role="dialog" aria-modal="true"':''} aria-label="${esc(t('lineSetupTitle'))}">${open?'':spatialPreviewChoice()}<button class="ledline-setup-toggle" data-action="layout" aria-label="${esc(toggleLabel)}" aria-expanded="${open}" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy">${open?`<span class="ledline-menu-label">${esc(t('lineSetupMenu'))}</span>`:''}<b>${esc(title)}</b><small id="ledline-setup-context">${esc(open?context:hint)}</small></span><span class="ledline-setup-disclosure-action">${open?`<span class="ledline-setup-close-label">${icon('close')}${esc(t('close'))}</span>`:icon('chevron')}</span></button>${orderCancelNoticeMarkup590(z)}<div class="ledline-setup-body" id="ledline-setup-body" role="region" ${open?'aria-labelledby="ledline-setup-heading" aria-describedby="ledline-setup-context"':'hidden'}>${open?`
-      <div class="v50-order-dock" data-order-dock>${orderReferenceMarkup(z,count)}<div class="v50-order-feedback" data-order-feedback data-order-feedback-phase="${orderPreviewGesture?.zoneId===z.id?'proposal':orderMoveResult?.zoneId===z.id?'saved':'idle'}" role="status" aria-live="polite">${orderFeedbackMarkup()}</div></div>
-      <section class="ledline-arrangement" aria-label="${esc(singleLine?title:t('lineSetupOrder'))}" aria-busy="${arrangementInteractionBusy()}"><div class="ledline-order-heading"><h3 id="ledline-setup-heading">${esc(t('v568LineColumn'))}</h3><small class="ledline-family-label">${esc(family||'')}</small></div><p class="ledline-setup-hint" id="ledline-order-help">${esc(t(singleLine?'lineSetupSingleHint':'v568OrderDragHint'))}</p><p class="order-recognition-status v593-order-original-status" data-order-recognition-status aria-hidden="true"></p><p class="order-drop-status" role="status" aria-live="polite"></p><p class="v593-order-original-status" data-order-apply-status aria-hidden="true" ${arrangementApplying||arrangementPlaybackPending()||draft?.error||needsStandOpen?'':'hidden'}>${arrangementApplying||arrangementPlaybackPending()?esc(orderText('orderApplying')):esc(draft?.error||(needsStandOpen?orderText('orderOpenStandHint'):''))}</p>${orderStatusMarkup593()}<button type="button" class="button secondary full" data-order-stand-open data-action="management-stand-open" ${!arrangementInteractionBusy()&&(needsStandOpen||draft?.needsStandOpen&&draft.error)?'':'hidden'}>${esc(orderText('orderOpenStand'))}</button>
-      <div class="v568-order-column-labels" aria-hidden="true"><span>${esc(t('v568PlaceColumn'))}</span><span>${esc(t('v568LineColumn'))}</span></div><div class="v50-order-lanes"><ol class="v50-order-slots" aria-hidden="true">${ordered.map((line,index)=>{const colour=palette[index];return `<li data-order-slot data-order-position="${index+1}" style="--identify-colour:${colour?.hex||'transparent'}"><span class="v50-order-slot-number">${index+1}</span><small data-slot-colour-name>${colour?esc(colourLabel(colour)):''}</small></li>`;}).join('')}</ol><ol class="ledline-draft-order">${rows}</ol></div>
-      </section>${orderTestMarkup()}${reusable?`<button class="ledline-reuse-action" data-action="zone-assign" data-id="${esc(z.id)}">${icon('receiver')}<span>${esc(t('lineSetupReuse'))}</span>${icon('chevron')}</button>`:''}${layoutReceiverActions()}`:''}</div></section>`;
+    return `<section class="ledline-setup card" data-order-ui="652" data-order-open="true" role="dialog" aria-modal="true" aria-label="${esc(title)}"><button class="ledline-setup-toggle" data-action="layout" aria-label="${esc(orderText652('orderDone')+' · '+title)}" aria-expanded="true" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy"><b>${esc(title)}</b><small id="ledline-setup-context">${esc(context)}</small></span><span class="ledline-setup-close-label">${icon('check')}${esc(orderText652('orderDone'))}</span></button>${orderCancelNoticeMarkup590(z)}<div class="ledline-setup-body" id="ledline-setup-body" role="region" aria-labelledby="ledline-setup-heading" aria-describedby="ledline-setup-context"><section class="order-assignment-intro652"><div><h3 id="ledline-setup-heading">${esc(orderText652('orderAssignTitle'))}</h3><p>${esc(orderText652('orderAssignIntro'))}</p></div>${count>1?`<button type="button" class="button secondary full" data-action="order-tutorial-open">${icon('info')}${esc(orderGuideText('tutorialView'))}</button>`:''}<p class="order-assignment-direction652">${icon('back')}<b>${esc(orderGuideText(direction))}</b></p><p class="order-assignment-rule652">${esc(orderText652(previewContext?'orderPreviewAssignment':'orderFixedColours'))}</p></section><section class="ledline-arrangement" aria-busy="${arrangementInteractionBusy()}"><p class="v593-order-original-status" data-order-recognition-status aria-hidden="true"></p><p class="v593-order-original-status" data-order-apply-status aria-hidden="true"></p>${orderStatusMarkup593()}<button type="button" class="button secondary full" data-order-stand-open data-action="management-stand-open" ${!arrangementInteractionBusy()&&(needsStandOpen||draft?.needsStandOpen&&draft.error)?'':'hidden'}>${esc(orderText652('orderOpenStand'))}</button><ol class="order-assignments652" aria-label="${esc(orderText652('orderCurrentOrder'))}">${rows}</ol>${count?'':`<p>${esc(orderText652('orderEmpty'))}</p>`}</section><footer class="order-assignment-footer652"><p>${esc(orderText652('orderAssignRule'))}</p><button type="button" class="button full order-assignment-done652" data-action="layout">${icon('check')}${esc(orderText652('orderDone'))}</button></footer>${reusable?`<button class="ledline-reuse-action" data-action="zone-assign" data-id="${esc(z.id)}">${icon('receiver')}<span>${esc(t('lineSetupReuse'))}</span>${icon('chevron')}</button>`:''}${layoutReceiverActions()}</div></section>`;
   }
   function orderLiveChangeMarkup(state){
     const from=state?.colour,to=state?.positionColours?.[state.toIndex]?.hex;
@@ -4814,6 +4840,7 @@
   }
   function closeEffectDialog() {
     if(pinProtectionBusy)return;
+    orderColourChoice652=null;
     spatialAnimationStart620=null;
     document.getElementById('effect-dialog').classList.remove('v50-fullscreen-preview','colour-picker-dialog');
     cancelDialogDismissal(document.getElementById('effect-dialog'));
@@ -5500,6 +5527,22 @@
       }
       if(action==='layout-receiver-settings'){
         return openOrderLineSettings(id);
+      }
+      if(action==='order-colour-open')return openOrderColourChoice652(Number(button.dataset.position));
+      if(action==='order-assign-colour'){
+        const context=orderColourChoice652,z=zone(),draft=arrangementDraft,state=orderIdentification?.getState();
+        const panel=button.closest('[data-order-colour-choice="652"]'),position=Number(button.dataset.position);
+        // An old sheet cannot reassign another stand, zone, endpoint set or session.
+        if(!context||!panel||!z||context.standId!==stand()?.id||context.zoneId!==z.id||panel.dataset.zone!==z.id||
+          context.signature!==arrangementSignature(z)||panel.dataset.signature!==context.signature||context.geometry!==orderGeometry588(z)||
+          !draft||draft.zoneId!==z.id||draft.signature!==context.signature||!openLineSetup.has(z.id)||document.hidden||
+          context.session!==(state?.active?state.session:null)||position!==context.position||
+          !Number.isInteger(position)||position<0||position>=draft.lineOrder.length||!draft.lineOrder.includes(id)||
+          orderDragBusy588()||arrangementNeedsStandOpen()||standPresentationOnly())return;
+        closeEffectDialog();
+        await moveOrderLine({id,toIndex:position,trusted:event.isTrusted===true});
+        const target=main.querySelector(`[data-action="order-colour-open"][data-position="${position}"]`);
+        target?.focus({preventScroll:true});return;
       }
       if(action==='order-place-choice'){
         const z=zone(),draft=arrangementDraft,panel=button.closest('[data-order-line-settings]'),toIndex=Number(button.dataset.position);
@@ -6357,7 +6400,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate651',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate652',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

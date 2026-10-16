@@ -178,8 +178,13 @@
           sentAt + reply.ttlMs <= at) return false;
       return true;
     }
-    function request(ctx,refresh=true) {
-      if(refresh)ctx.queued = true;
+    function request(ctx,refresh=true,renewMarginMs=5000) {
+      if(refresh){
+        ctx.queued = true;
+        // Coalesce foreground presence and clicks into the same radio pump.
+        // A new ACK may already cover activity queued during that flight.
+        ctx.renewMarginMs=Math.max(ctx.renewMarginMs,renewMarginMs);
+      }
       if (ctx.flight) return ctx.flight.then(() => getState());
       const completedBlinks=[];
       // This microtask allows flight to be installed before an injected adapter is called.
@@ -218,15 +223,16 @@
             continue;
           }
           ctx.queued = false;
+          const renewMarginMs=ctx.renewMarginMs;ctx.renewMarginMs=5000;
           const sentAt = read(ctx);
           if (sentAt === null) break;
           const ttlMs = Math.min(idleMs, Math.floor(ctx.deadline - sentAt));
           if (ttlMs <= 0) { void end(ctx, 'idle'); break; }
           // Only real payload changes retire a receipt. Activity queued while
           // this same payload was in flight may already be covered by its ACK.
-          // Reuse its original finite expiry, never extend it locally; a reorder
-          // clears confirmation and therefore can never enter this reuse lane.
-          if (ctx.confirmation && ctx.confirmation.validUntilMs - sentAt > 5000) continue;
+          // Reuse its original finite expiry, never extend it locally. An order
+          // assignment changes numbering only, not these physical RGB markers.
+          if (ctx.confirmation && ctx.confirmation.validUntilMs - sentAt > renewMarginMs) continue;
           const revision = ctx.revision;
           const payload = { session: ctx.session, standId: ctx.standId, zoneId: ctx.zoneId, lines: copy(ctx.lines), ttlMs };
           emit(sentAt);
@@ -284,12 +290,12 @@
       if (active) void end(active, 'reopened');
       const used = new Set();
       const ctx = { ...parsed, session, lines: parsed.lines.map((line, i) => ({ ...line, ...colour(i, used) })),
-        deadline: time + idleMs, confirmation: null, revision: 1, queued: false, blinks: [], flight: null, closed: false, error: null };
+        deadline: time + idleMs, confirmation: null, revision: 1, queued: false, renewMarginMs:5000, blinks: [], flight: null, closed: false, error: null };
       active = ctx; cleanup = null; emit(time); arm(ctx, time);
       if (active !== ctx) return Promise.resolve(getState());
       return request(ctx);
     }
-    function interaction() {
+    function activity(renewMarginMs) {
       const ctx = active;
       if (!ctx) return Promise.resolve(getState());
       const time = read(ctx);
@@ -300,8 +306,23 @@
       if (active !== ctx) return Promise.resolve(getState());
       // Local activity is not a new physical receipt. Reuse only a still-valid
       // exact lease, with a renewal margin; never extend validUntilMs locally.
-      if(!ctx.flight&&!ctx.queued&&ctx.confirmation&&ctx.confirmation.validUntilMs-time>5000)return Promise.resolve(getState());
-      return request(ctx);
+      if(!ctx.flight&&!ctx.queued&&ctx.confirmation&&ctx.confirmation.validUntilMs-time>renewMarginMs)return Promise.resolve(getState());
+      return request(ctx,true,renewMarginMs);
+    }
+    function interaction() { return activity(5000); }
+    function renewForeground(options={}) {
+      if(!keys(options,['force']) || Object.prototype.hasOwnProperty.call(options,'force') && typeof options.force!=='boolean')
+        throw fail('IDENTIFICATION_FOREGROUND_INPUT');
+      // The caller must invoke this only while this exact ordering panel is
+      // visible, in the foreground and permitted to use the native radio.
+      // Presence is explicit ongoing UI consent, not a fabricated receiver ACK.
+      // With the normal 30s lease and a 5s UI heartbeat, renew around every 10s:
+      // enough margin for multiple sequential targets, still one finite lease.
+      // No internal interval survives close/hide/offline or reopens a session.
+      // A caller may explicitly renew once before its serialized metadata
+      // commit, after settle(), to obtain a fresh finite lease runway. This is
+      // not a configurable TTL and still cannot bypass the single-flight pump.
+      return activity(options.force===true?Infinity:Math.min(idleMs,20000));
     }
     function reorder(lineIds) {
       const ctx = active;
@@ -311,14 +332,12 @@
       if (time === null) return Promise.resolve(snapshot(lastNow));
       if (time >= ctx.deadline) { void end(ctx, 'idle'); return Promise.resolve(snapshot(time)); }
       const byId = new Map(ctx.lines.map(line => [line.id, line]));
-      // Recognition follows the ordered position, not the physical endpoint.
-      // This is a temporary lease update; no normal light state is persisted.
-      const used = new Set();
-      ctx.lines = lineIds.map((lineId,index) => ({ ...byId.get(lineId), ...colour(index,used) }));
-      // The old receipt confirmed the old position colors only. New colors
-      // become physically confirmed solely after this new lease update ACK.
-      ctx.revision++;
-      ctx.confirmation = null;
+      // The customer assigns the colours seen on the real installation to
+      // numbered places. A physical endpoint therefore keeps its exact colour
+      // for this entire session, regardless of its newly assigned position.
+      ctx.lines = lineIds.map(lineId => byId.get(lineId));
+      // The same receipt still confirms the same endpoints and RGB values.
+      // Do not recolour, retire a valid ACK or restart an in-flight overlay.
       return interaction();
     }
     function settle() {
@@ -347,12 +366,13 @@
     }
     // No saved model/state is accepted by this API. A newer valid writer owns the
     // normal light state; cleanup only releases the matching temporary overlay.
-    return Object.freeze({ open, interaction, reorder, settle, blink, getState, close,
+    return Object.freeze({ open, interaction, renewForeground, reorder, settle, blink, getState, close,
       hide: () => close('hidden'), offline: () => close('offline'),
       supersede: () => close('superseded') });
   }
-  // Pure presentation helper. It uses the same fixed position colours as a
-  // lease, but never opens a session or sends anything to a receiver.
+  // Pure palette helper for initial marker assignment. Once a lease opens,
+  // those markers belong to physical line IDs, never to numbered positions.
+  // This helper never opens a session or sends anything to a receiver.
   function positionColours(count) {
     if (!Number.isInteger(count) || count < 1 || count > MAX_LINES) throw fail('IDENTIFICATION_LINES');
     const used = new Set();

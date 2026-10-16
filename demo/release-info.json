@@ -146,9 +146,9 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate651-zone-power-interface-android27",
+  "revision": "V50candidate652-observed-order-interface-android27",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo651 adds directly accessible zone on/off control while preserving the prior650 interface and animation refinements. RAM-only demo: no native app, receiver firmware or OTA is installed or published.",
+  "interfaceBaseline": "Public demo652 lets customers assign the real observed LED-line identification colour to each place while preserving the prior651 interface. RAM-only demo: no native app, receiver firmware or OTA is installed or published.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -293,8 +293,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "fdbd184c86de3de6e4e21285377d23c811c7f4e1ef490d6e1c9299a65c231aff",
-      "bytes": 608904
+      "sha256": "a2a62af5e640ef67f6dbcf4d9722faffaf9d5ac9c732ec70ea1c71bf8e1fd426",
+      "bytes": 612363
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -343,7 +343,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "30d405b9bd671483e0bc0d941a316ed4b5e68d25150b0af06c91a3ec90b1a06e",
+      "sha256": "c602466de520cc17267ccc4e50176cdda5f70c1a4ff8b7db21208aff4e5b43e5",
       "bytes": 8169
     },
     {
@@ -368,8 +368,8 @@
     },
     {
       "path": "ledline-identification-session.js",
-      "sha256": "0fba2470ce8b513c0ec7f1bb6090203961640c4d448b93c5daa1c0ace677c5c5",
-      "bytes": 20289
+      "sha256": "1e813c518f26f3d8b4c6228a9980a4b3991e6835c757e57c3ee057b3ada746ee",
+      "bytes": 21805
     },
     {
       "path": "ledline-order-drag.js",
@@ -378,8 +378,8 @@
     },
     {
       "path": "ledline-order-guide.js",
-      "sha256": "c50bbe4cd975971de1ec4a668eb87421efb67eba418e2882d3b343b98ae716ed",
-      "bytes": 19586
+      "sha256": "766661e4dc964421602083e4243990c012b4f777afd50c291ee3979a7d905120",
+      "bytes": 25253
     },
     {
       "path": "ledline-order-test.js",
@@ -663,8 +663,8 @@
     },
     {
       "path": "v50-order-clarity.css",
-      "sha256": "cdcbd1708ef044a6b46a19fbc437aad101aab512bc067d5d5e3a702a3bee70fc",
-      "bytes": 20207
+      "sha256": "3acee77018a4a1b884636ae0e05ef1c77c342847f0699d444bd0f6c8f5e9e731",
+      "bytes": 25869
     },
     {
       "path": "v50-order-drag.css",
@@ -678,8 +678,8 @@
     },
     {
       "path": "v50-order-texts.js",
-      "sha256": "d0b3cb4cd689f7175a0ccde75dcd2de049a5f877f802fb8fd6ce593b400f7085",
-      "bytes": 11657
+      "sha256": "ad7bd4d8ebb64ca223049b00830010ca2a8cced68f64786205870fc4031dc5da",
+      "bytes": 14739
     },
     {
       "path": "v50-order-tutorial.css",
@@ -2850,6 +2850,33 @@
     "limits": [
       "This RAM-only demo uses fictitious devices: no receiver, OTA, radio, speed or optical acceptance.",
       "All private native sources, firmware48 catalogue and bundled images remain exact650; no firmware is distributed by this demo.",
+      "Android27 APKs/history are retained unchanged, not rebuilt; Web publication does not update iPhone."
+    ]
+  },
+  "interfaceCandidate652": {
+    "sourceSnapshotOnly": true,
+    "sourceBoundaryVerified": true,
+    "sourceInputSHA256": {
+      "app.js": "f0f35bc43a076a537c9416d89000098fe0efc48e7bdd05a7048068e0f628092c",
+      "index.html": "35801937ce4677bbbdb92f63c71d95ee80297f8bc5f503013d08a182ad5811fc",
+      "ledline-identification-session.js": "1e813c518f26f3d8b4c6228a9980a4b3991e6835c757e57c3ee057b3ada746ee",
+      "ledline-order-guide.js": "766661e4dc964421602083e4243990c012b4f777afd50c291ee3979a7d905120",
+      "v50-order-clarity.css": "3acee77018a4a1b884636ae0e05ef1c77c342847f0699d444bd0f6c8f5e9e731",
+      "v50-order-texts.js": "ad7bd4d8ebb64ca223049b00830010ca2a8cced68f64786205870fc4031dc5da"
+    },
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "opticalAcceptance": false,
+    "features": [
+      "Assign each observed identification colour to a numbered position; the real LED-line colours stay fixed while the order menu is open. Existing scene, animation and zone power features remain retained."
+    ],
+    "limits": [
+      "This RAM-only demo uses fictitious devices: no receiver, OTA, radio, speed or optical acceptance.",
+      "All private native sources, firmware48 catalogue and bundled images remain exact651; no firmware is distributed by this demo.",
       "Android27 APKs/history are retained unchanged, not rebuilt; Web publication does not update iPhone."
     ]
   }
