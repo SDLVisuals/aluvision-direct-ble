@@ -149,7 +149,7 @@
     return {code,message:messages[code]||'Afronden is niet bevestigd. Controleer je standwifi en probeer opnieuw. Stel geen tweede stand in.'};
   }
 
-  function create({draftApi=window.LightningOnboardingDraft,visual=window.LightningReceiverVisual,pixelSetup=window.LightningPixelSetup,pixelsPerMeter,services={},getModel,onComplete=()=>{},onManage=null,onExit=()=>{},allowPinLogin=false,automaticFirstReceiver=()=>false,firstStandAccessRequired=()=>false,onFirstStandAccess=null,allowLocalConcept=()=>false,onPreserveLocalConcept=null,onContinueLocalConcept=null}={}){
+  function create({draftApi=window.LightningOnboardingDraft,visual=window.LightningReceiverVisual,pixelSetup=window.LightningPixelSetup,pixelsPerMeter,services={},getModel,onComplete=()=>{},onManage=null,onExit=()=>{},jointSPIDirections=false,allowPinLogin=false,automaticFirstReceiver=()=>false,firstStandAccessRequired=()=>false,onFirstStandAccess=null,allowLocalConcept=()=>false,onPreserveLocalConcept=null,onContinueLocalConcept=null}={}){
     if(!draftApi||!pixelSetup||typeof getModel!=='function')throw Error('Onboarding dependencies are required.');
     const pixelLimits=pixelSetup.pixelLimits({pixelsPerMeter});
     let draft=null,container=null,results=[],searchState='idle',receiverFilter='all',error='',notice='',busy=false,operation=0;
@@ -489,7 +489,12 @@
       if(searchState==='searching')searchState='idle';
     }
     function change(event,{render=true,top=true}={}){
-      const result=draftApi.transition(draft,event);
+      let result=draftApi.transition(draft,event);
+      // Keep the existing strict draft/security transitions. Only suppress the
+      // old one-port direction page; directions follow normal add publication
+      // in a separate, zone-wide editor. No extra claim or final receipt.
+      if(jointSPIDirections&&!result.error&&result.draft.stage==='connection'&&
+         (event.type==='NEXT'&&draft.stage==='pixels'||event.type==='BACK'&&['pixels','pin'].includes(draft.stage)))result=draftApi.transition(result.draft,event);
       if(result.error){error=result.error.message||'Controleer je keuze.';if(render)paintPage(false);return false;}
       draft=result.draft;error='';if(event.type!=='SECURITY_PROGRESS')keepDraft();if(render)paintPage(top);return true;
     }
@@ -837,7 +842,7 @@
         case 'outputs':return `${pixelSetup.renderOutputs(draft.outputs,{onboarding:true,live:services.previewCapabilities?.identifyPorts===true&&typeof services.previewPixels==='function'})}${active().length?`<p class="onboarding-hint">${escape(t('setupExtraOutputsLater','Extra uitgangen inschakelen kan later.'))}</p>`:''}${footer(tx('Volgende'),active().length===0)}`;
         case 'pixels':{
           const output=draft.outputs.find(output=>output.port===draft.port);
-          return `${pixelSetup.renderPortContext(draft.outputs,draft.port)}${pixelSetup.renderPixels(output,{inputId:'onboarding-pixels',onboarding:true,pixelsPerMeter:pixelLimits.pixelsPerMeter})}${footer(pixelSetup.nextPortLabel(draft.outputs,draft.port))}`;
+          return `${pixelSetup.renderPortContext(draft.outputs,draft.port)}${pixelSetup.renderPixels(output,{inputId:'onboarding-pixels',onboarding:true,pixelsPerMeter:pixelLimits.pixelsPerMeter})}${footer(pixelSetup.nextPortLabel(draft.outputs,draft.port,jointSPIDirections?{stage:'connection'}:{}))}`;
         }
         case 'connection':{
           const output=draft.outputs.find(output=>output.port===draft.port);
@@ -855,7 +860,7 @@
     function paintPage(top=true,capture=true){
       if(!container)return;
       unbindDirectionTutorial?.();unbindDirectionTutorial=null;
-      if(firstAccess){container.innerHTML=firstAccessPage();document.title=`${container.querySelector('h1').textContent} · Aluvision Lighting`;return;}
+      if(firstAccess){container.innerHTML=firstAccessPage();document.title=`${container.querySelector('h1').textContent} · Aluvision Lighting`;queueJointDirections();return;}
       if(capture)captureNames();
       const stageKey=[draft.transactionId,draft.stage,draft.receiver?.id||''].join(':'),entering=!presentedStages.has(stageKey);
       const focusedPort=container.contains(document.activeElement)&&document.activeElement.dataset.onboardingAction==='output'?document.activeElement.dataset.port:null;
@@ -947,6 +952,20 @@
       }
       paint(performance.now()/1000);
       syncPixelPreview();
+      queueJointDirections();
+    }
+    function queueJointDirections(){
+      if(!jointSPIDirections||busy||!container)return;
+      const receiverId=firstAccess?.phase==='done'?firstAccess.identity.receiverId:draft?.stage==='done'?draft.receiver?.id:null;
+      const receiver=receiverId&&getModel().receivers.find(item=>item.id===receiverId&&item.type==='SPI'&&item.lifecycle==='added');
+      if(!receiver?.zoneId)return;
+      const token=operation,currentContainer=container;
+      queueMicrotask(()=>{
+        if(token!==operation||container!==currentContainer||busy||document.hidden)return;
+        const current=getModel().receivers.find(item=>item.id===receiverId&&item.type==='SPI'&&item.lifecycle==='added'&&item.zoneId===receiver.zoneId);
+        if(!current)return;
+        suspend();onExit({stand:true,spiDirectionZoneId:current.zoneId,newReceiverId:current.id});
+      });
     }
     function validName(value){const name=String(value).trim();return name.length>0&&name.length<=64&&!/[<>\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/.test(name);}
     function updateGuidance(){
@@ -1431,7 +1450,8 @@
       if(action==='save-retry')return saveChoices();
       if(action==='receivers-later')return continueReceiversLater590();
       if(action==='receivers-list')return browseReceivers();
-      const leavesPixelGuide=action==='exit'||action==='back'&&draft.stage==='outputs'||action==='next'&&draft.stage==='connection'&&!active().some(output=>output.port>draft.port);
+      const leavesPixelGuide=action==='exit'||action==='back'&&draft.stage==='outputs'||action==='next'&&
+        (draft.stage==='connection'||jointSPIDirections&&draft.stage==='pixels')&&!active().some(output=>output.port>draft.port);
       if(leavesPixelGuide&&['outputs','pixels','connection'].includes(draft.stage)){
         const stoppingContainer=container,stoppingDraft=draft,token=operation;
         const job={container:stoppingContainer,draft:stoppingDraft,mainFingerprint:mainFingerprint579(stoppingDraft),token,restore:pixelSetup.showPreviewStopping(stoppingContainer),exitPending:false,stopSettled:false,failed:false};

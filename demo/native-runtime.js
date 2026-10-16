@@ -34,6 +34,8 @@
   const actions=new Set(['capabilities','securityPreference','securityStatus','setPinProtection','discover','discoverMesh','select','secure','reconcileSecurity','finalize','verifyFinalReceipt','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones','configureOutputs','previewPixels','eraseAppData','applyLive','applyLiveBatch','otaPlan','otaStart','otaStatus','otaResume','otaCancel','otaMainRecoveryPlan','otaMainRecoveryStart','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain']);
   actions.add('checkpointPreviewExit');
   actions.add('outputConfigurationStatus');
+  actions.add('previewSPIZoneDirections');
+  actions.add('configureOutputDirections');
   actions.add('prepareReceiverManagement');
   ['exportBackup','chooseBackup','importInstallationView','recoverInstallation'].forEach(action=>actions.add(action));
   ['receiverContextStatus','syncInstallationContext','interruptAutomaticContext'].forEach(action=>actions.add(action));
@@ -45,7 +47,7 @@
   actions.add('standFirstAccessDiagnosticFailure');
   const firstAccessDiagnosticCodes=new Set(['OTHER','FIRST_ACCESS_IDENTITY','FIRST_ACCESS_STORAGE','FIRST_ACCESS_UNCONFIRMED','ACTION_UNSUPPORTED','NATIVE_UNAVAILABLE','NATIVE_DOCUMENT_UNAVAILABLE','NATIVE_BUSY','NATIVE_TIMEOUT','CANCELLED','TIMEOUT','LOCAL_NETWORK_DENIED','STAND_CONNECTION_CLOSED','STAND_CONNECTION_BUSY','STAND_CONNECTION_UNAVAILABLE','STAND_CONNECTION_INVALID','STAND_CONNECTION_CANCELLED','STAND_DATA_INVALID','STAND_DATA_UNCONFIRMED','STAND_INVALID_REQUEST','STAND_STORAGE_LIMIT','STAND_MIGRATION_INVALID','STAND_PREFLIGHT_INVALID','STAND_PREFLIGHT_UNCONFIRMED','STAND_PREFLIGHT_NOT_REQUIRED','STAND_MIGRATION_NOT_READY','STAND_RECEIVER_SAVED_ELSEWHERE','STAND_CURRENT_ACCESS_CONFLICT','STAND_UNAVAILABLE','STAND_WIFI_UNREACHABLE','STAND_WRONG_WIFI','STAND_BUSY','STAND_CANCELLED','STAND_IDENTITY_MISMATCH','STAND_AUTH_FAILED','STAND_UNCONFIRMED','STAND_CREDENTIAL_UNCONFIRMED']);
   ['scanStandShare','takeStandShareLink','shareStandLink'].forEach(action=>actions.add(action));
-  let selectionHaptics=false,selectionFeedbackPending=false,interfaceHaptics=false,interfaceFeedbackPending=false,pixelPreviewV50=false;
+  let selectionHaptics=false,selectionFeedbackPending=false,interfaceHaptics=false,interfaceFeedbackPending=false,pixelPreviewV50=false,spiZoneDirectionPreview=false;
   actions.add('supersedeLivePreparing');
   actions.add('yieldEarlyAnimation');
   actions.add('replacePreparingStatic');
@@ -102,6 +104,10 @@
     return new Promise((resolve,reject)=>{
       const id='v30-'+documentId+'-'+(++serial),cancelNative=()=>{
         if(automatic){automatic.interrupt();return;}
+        if(action==='previewSPIZoneDirections'){
+          if(payload.action!=='stop')try{handler.postMessage({version:1,id:'v30-'+documentId+'-'+(++serial),action:'previewSPIZoneDirections',payload:{action:'stop',standId:payload.standId,zoneId:payload.zoneId,sessionId:payload.sessionId}});}catch(_){}
+          return;
+        }
         if(pending.has(id)&&!['interruptAutomaticContext','setAppearance','selectionFeedback','interfaceFeedback','capabilities','loadView','saveDraft','parkDraft','checkpointPreviewExit','resumeDraft','publishModel','editZones','exportBackup','chooseBackup','importInstallationView'].includes(action))try{handler.postMessage({version:1,id:'v30-'+documentId+'-'+(++serial),action:action==='discover'?'cancelDiscover':'cancelOnboarding',payload:{requestId:id}});}catch(_){}
       },abort=()=>{
         cancelNative();
@@ -117,7 +123,7 @@
       const timeout=['exportBackup','chooseBackup','recoverInstallation'].includes(action)?300000:['scanStandShare','shareStandLink','shareStandWifi','standOpenWifi','standConnect','standMigrate','standResume','standRefresh','standMutation','standCodeChange','prepareReceiverManagement'].includes(action)||action==='publishModel'&&centralStamp!==null?90000:action==='checkpointPreviewExit'?30000:action==='previewPixels'?45000:action==='syncInstallationContext'?180000:['otaPlan','otaMainRecoveryPlan'].includes(action)?120000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
         ['secure','reconcileSecurity'].includes(action)&&payload.configuration?.role==='node'?120000:
         action==='identifyLayout'?35000:['select','secure','reconcileSecurity','finalize','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain'].includes(action)?45000:12000;
-      const deadline=['applyStaticGesture','standFirstAccessPreflight'].includes(action)?45000:timeout;
+      const deadline=action==='previewSPIZoneDirections'?(payload.action==='stop'?20000:90000):action==='configureOutputDirections'?90000:['applyStaticGesture','standFirstAccessPreflight'].includes(action)?45000:timeout;
       const timer=root.setTimeout(()=>{cancelNative();if(!automatic)receive({id,ok:false,code:'NATIVE_TIMEOUT'});},deadline);
       pending.set(id,{resolve,reject,timer,automatic,removeAbort:()=>signal?.removeEventListener('abort',abort)});
       posted?.(id);
@@ -772,12 +778,12 @@
       }
     });return trackWrite(next);
   }
-  function configureOutputs(request){
+  function configureOutputs(request,{directionsOnly=false}={}){
     const validId=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(value);
     if(!request||typeof request!=='object'||Array.isArray(request)||Object.keys(request).some(key=>!['standId','receiverId','outputs','expectedRevision'].includes(key))||
       !validId(request.standId)||!validId(request.receiverId)||request.expectedRevision!==undefined&&(!Number.isSafeInteger(request.expectedRevision)||request.expectedRevision<0)||
-      !Array.isArray(request.outputs)||request.outputs.length!==4||!request.outputs.every((port,index)=>port&&Object.keys(port).sort().join(',')==='enabled,pixels,port,reversed'&&port.port===index+1&&typeof port.enabled==='boolean'&&typeof port.reversed==='boolean'&&Number.isInteger(port.pixels)&&port.pixels>=1&&port.pixels<=163)||!request.outputs.some(port=>port.enabled))return Promise.reject(fail('OUTPUT_CONFIGURATION_INVALID'));
-    const {standId,receiverId,expectedRevision}=request,outputs=request.outputs.map(port=>({...port,pixels:port.enabled?port.pixels:1,reversed:port.enabled&&port.reversed}));
+      !Array.isArray(request.outputs)||request.outputs.length!==4||!request.outputs.every((port,index)=>port&&Object.keys(port).sort().join(',')==='enabled,pixels,port,reversed'&&port.port===index+1&&typeof port.enabled==='boolean'&&typeof port.reversed==='boolean'&&Number.isInteger(port.pixels)&&port.pixels>=1&&port.pixels<=(directionsOnly&&!port.enabled?1024:163))||!request.outputs.some(port=>port.enabled))return Promise.reject(fail('OUTPUT_CONFIGURATION_INVALID'));
+    const {standId,receiverId,expectedRevision}=request,outputs=request.outputs.map(port=>directionsOnly?{...port}:{...port,pixels:port.enabled?port.pixels:1,reversed:port.enabled&&port.reversed});
     const next=writeQueue.catch(()=>{}).then(async()=>{
       if(!viewLoaded)throw fail('VIEW_NOT_LOADED');
       const central=centralStamp&&{...centralStamp},epoch=standSharingEpoch;
@@ -792,6 +798,11 @@
       }
       const revision=viewRevision,expected=JSON.parse(viewModelKey),receiver=expected.receivers?.find(item=>item.id===receiverId&&item.standId===standId&&item.type==='SPI'&&item.lifecycle==='added');
       if(!receiver)throw fail('OUTPUT_CONFIGURATION_PROFILE');
+      // Direction-only saves may never silently enable, resize or normalise a
+      // different port. Native repeats this comparison against its fresh view.
+      if(directionsOnly&&(!spiZoneDirectionPreview||!central&&!legacyContextAllowed()||outputs.some((output,index)=>{
+        const before=receiver.outputs[index];return !before||before.port!==output.port||before.enabled!==output.enabled||before.pixels!==output.pixels||!before.enabled&&before.reversed!==output.reversed;
+      })))throw fail('OUTPUT_CONFIGURATION_PROFILE');
       const zone=expected.stands?.find(stand=>stand.id===standId)?.zones?.find(zone=>zone.id===receiver.zoneId);
       if(zone&&Object.prototype.hasOwnProperty.call(zone,'lineOrder')){
         const Model=root.LightningModel;
@@ -815,7 +826,7 @@
       const unchanged=canonical(expected)===viewModelKey&&canonical(expectedDraft)===viewDraftKey;
       const matches=view=>canonical(view?.draft)===canonical(expectedDraft)&&(view?.revision===revision+1||unchanged&&view?.revision===revision)&&canonical(view.model)===canonical(expected);
       try{
-        const answer=await call('configureOutputs',{standId,receiverId,outputs,expectedRevision:revision});
+        const answer=await call(directionsOnly?'configureOutputDirections':'configureOutputs',{standId,receiverId,outputs,expectedRevision:revision});
         if(central){
           const configOnly=model=>{const next=JSON.parse(JSON.stringify(model));for(const r of next.receivers||[]){delete r.state;delete r.connection;}return canonical(next);};
           if(epoch!==standSharingEpoch||!contextVisible()||!centralStamp||canonical(centralStamp)!==canonical(central)||
@@ -826,13 +837,17 @@
           return acceptCentral(answer,standId).view;
         }
         const view=answer;
+        if(directionsOnly&&(epoch!==standSharingEpoch||!contextVisible()||!legacyContextAllowed()))throw fail('STAND_CONNECTION_CANCELLED');
         if(!matches(view))throw fail('VIEW_INVALID');
         return acceptView(view);
       }catch(error){
         // The public geometry may have committed while journal cleanup failed.
         // A local view cannot prove that the native pending intent was closed;
         // retain the error and let an explicit same-configuration retry finish it.
-        if(!central)try{error.reconciledView=acceptView(await call('loadView'));}catch(_){}
+        if(!central&&(!directionsOnly||epoch===standSharingEpoch&&contextVisible()&&legacyContextAllowed()))try{
+          const reconciled=await call('loadView');
+          if(!directionsOnly||epoch===standSharingEpoch&&contextVisible()&&legacyContextAllowed())error.reconciledView=acceptView(reconciled);
+        }catch(_){}
         throw error;
       }
     });return trackWrite(next);
@@ -1201,6 +1216,31 @@
     },
     async editZones(request){return editZones(request).then(view=>scheduleContext(view,request.standId));},
     async configureOutputs(request){return configureOutputs(request).then(view=>scheduleContext(view,request.standId));},
+    async configureOutputDirections(request){return configureOutputs(request,{directionsOnly:true}).then(view=>scheduleContext(view,request.standId));},
+    get spiZoneDirectionPreview(){return spiZoneDirectionPreview===true;},
+    async previewSPIZoneDirections(request){
+      const stop=request?.action==='stop';
+      if(!layoutKeys(request,stop?['action','standId','zoneId','sessionId']:['action','standId','zoneId','sessionId','lines','focus'])||
+         !['start','update','stop'].includes(request.action)||!['standId','zoneId','sessionId'].every(key=>layoutId(request[key]))||
+         !stop&&(!Array.isArray(request.lines)||!request.lines.length||request.lines.length>120||request.lines.some(line=>
+           !layoutKeys(line,['receiverId','port','reversed'])||!layoutId(line.receiverId)||!Number.isInteger(line.port)||line.port<1||line.port>4||typeof line.reversed!=='boolean')||
+           new Set(request.lines.map(line=>line.receiverId+':'+line.port)).size!==request.lines.length||request.focus!==null&&
+           (!layoutKeys(request.focus,['receiverId','port'])||!request.lines.some(line=>line.receiverId===request.focus.receiverId&&line.port===request.focus.port))))throw fail('SPI_DIRECTION_INVALID');
+      if(!spiZoneDirectionPreview)throw fail('SPI_ZONE_DIRECTION_UPDATE_REQUIRED');
+      if(!viewLoaded||(centralStamp?(centralStamp.standId!==request.standId||!standSessionOutputsAvailable):!legacyContextAllowed()))throw fail('STAND_NOT_CONNECTED');
+      if(!contextVisible()&&!stop)throw fail('STAND_NOT_CONNECTED');
+      const stamp=centralStamp&&{...centralStamp},epoch=standSharingEpoch;
+      const answer=await call('previewSPIZoneDirections',JSON.parse(JSON.stringify(request)));
+      if(answer?.standId!==request.standId||answer.zoneId!==request.zoneId||answer.sessionId!==request.sessionId)throw fail('SPI_DIRECTION_UNCONFIRMED');
+      if(stop){
+        if(typeof answer.stopped!=='boolean'||answer.ttlFallbackMS!==(answer.stopped?0:15000))throw fail('SPI_DIRECTION_UNCONFIRMED');
+        return answer;
+      }
+      if(epoch!==standSharingEpoch||!contextVisible()||canonical(centralStamp)!==canonical(stamp)||!stamp&&!legacyContextAllowed()||answer.applied!==true||
+         canonical(answer.lines)!==canonical(request.lines)||canonical(answer.focus)!==canonical(request.focus)||
+         !Number.isInteger(answer.previewTTLMS)||answer.previewTTLMS<=7000||answer.previewTTLMS>15000||!Number.isInteger(answer.renewAfterMS)||answer.renewAfterMS<1||answer.renewAfterMS>7000||answer.renewAfterMS>=answer.previewTTLMS)throw fail('SPI_DIRECTION_UNCONFIRMED');
+      return answer;
+    },
     async outputConfigurationStatus({standId,receiverId}){
       if(!centralStamp&&root.__lightningV31OutputRecovery!==true)return {status:'none'};
       const id=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(value);
@@ -1212,7 +1252,7 @@
       if(central&&(epoch!==standSharingEpoch||!contextVisible()||canonical(centralStamp)!==canonical(central)))throw fail('STAND_CONNECTION_CANCELLED');
       if(result?.status==='none'&&Object.keys(result).length===1)return {status:'none'};
       if(result?.status!=='pending'||Object.keys(result).sort().join(',')!=='outputs,status'||!Array.isArray(result.outputs)||result.outputs.length!==4||
-        !result.outputs.every((port,index)=>port&&Object.keys(port).sort().join(',')==='enabled,pixels,port,reversed'&&port.port===index+1&&typeof port.enabled==='boolean'&&typeof port.reversed==='boolean'&&Number.isInteger(port.pixels)&&port.pixels>=1&&port.pixels<=163)||!result.outputs.some(port=>port.enabled))throw fail('OUTPUT_CONFIGURATION_UNCONFIRMED');
+        !result.outputs.every((port,index)=>port&&Object.keys(port).sort().join(',')==='enabled,pixels,port,reversed'&&port.port===index+1&&typeof port.enabled==='boolean'&&typeof port.reversed==='boolean'&&Number.isInteger(port.pixels)&&port.pixels>=1&&port.pixels<=(port.enabled?163:1024))||!result.outputs.some(port=>port.enabled))throw fail('OUTPUT_CONFIGURATION_UNCONFIRMED');
       return JSON.parse(JSON.stringify(result));
     },
     async previewPixels(request){
@@ -1663,7 +1703,7 @@
     }
   }:{};
   const services=Object.freeze(serviceSet);
-  async function runtimeCapabilities(){const value=await call('capabilities');selectionHaptics=value?.selectionHaptics===true;interfaceHaptics=value?.interfaceHaptics===true;simpleStandAvailable=value?.simpleStand===true;pixelPreviewV50=value?.pixelPreviewV50===true;atomicPreviewExitAvailable=value?.atomicPreviewExit579===true;
+  async function runtimeCapabilities(){const value=await call('capabilities');selectionHaptics=value?.selectionHaptics===true;interfaceHaptics=value?.interfaceHaptics===true;simpleStandAvailable=value?.simpleStand===true;pixelPreviewV50=value?.pixelPreviewV50===true;spiZoneDirectionPreview=value?.spiZoneDirectionPreview===true;atomicPreviewExitAvailable=value?.atomicPreviewExit579===true;
     spiPortScenesAvailable=value?.spiPortScenes===true;
     standSessionReceiverManagementAvailable=simpleStandAvailable&&value?.standSessionReceiverManagement===true;
     standSessionOutputsAvailable=simpleStandAvailable&&value?.standSessionOutputs===true;

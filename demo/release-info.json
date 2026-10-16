@@ -108,9 +108,9 @@
     "opticalAcceptance": false
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate656-spi-direction-guide-interface-android30",
+  "revision": "V50candidate657-spi-zone-directions-interface-android30",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo656 adds a visual interactive SPI direction explanation. It remains a RAM-only demo with fictitious receivers; no firmware, hardware control, OTA or app installation is published.",
+  "interfaceBaseline": "Public demo657 adds zone-wide SPI direction editing after all pixel steps. It remains a RAM-only demo with fictitious receivers; no firmware, hardware control, OTA or app installation is published.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -260,8 +260,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "bdcf41a18af6ef376542f3b05c91311d423ebd8cc94d6360b805251ab3bfd447",
-      "bytes": 628542
+      "sha256": "e57bd2622523322a3681591d32f6b801188190c2ffa718f08f21c840b0946d29",
+      "bytes": 636985
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -310,8 +310,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "d0ac9102d9a14a13519691b250f60008df66efbc3403ef5cb748cf4518a39416",
-      "bytes": 8662
+      "sha256": "d46711eb2921930b81ae6a1b848e7998f0f9d9fcf3d72e4d5e37cfb44652e483",
+      "bytes": 8810
     },
     {
       "path": "installation-libraries.js",
@@ -370,8 +370,8 @@
     },
     {
       "path": "live-control.js",
-      "sha256": "fab6d3f38065732832abe35e18beeaf89e6319d541e97e41468fcaa4a5d33dfa",
-      "bytes": 53058
+      "sha256": "58be6e14bc1aa4140b83ec08d9d0898863913b9711a814831c8d21ed587fb403",
+      "bytes": 53897
     },
     {
       "path": "migration.js",
@@ -385,8 +385,8 @@
     },
     {
       "path": "native-runtime.js",
-      "sha256": "38a5499475d2ad55260114308a97147abc16f7ee3222dddf9e07505f2aac9f6c",
-      "bytes": 147271
+      "sha256": "89ff8e0dda4076b4f0a854d5f88b73a7c56176a2415e160f0994b614db38fed9",
+      "bytes": 151579
     },
     {
       "path": "onboarding-adapter.js",
@@ -415,8 +415,8 @@
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "6dfa1fba8470632c35342befdbd3505a47a4e2f378f89b5c1ef7beed32f36452",
-      "bytes": 177500
+      "sha256": "5efccbac15c099e8e89a67f4ff6d7fc11de6994fb1e581aaeaa8941dfd57bc16",
+      "bytes": 179011
     },
     {
       "path": "page-interaction.css",
@@ -435,8 +435,8 @@
     },
     {
       "path": "pixel-setup.js",
-      "sha256": "7fc9968b74d4ac6bae3ab90a415908d77c9a4ea596f906741d51b116bcb7bd75",
-      "bytes": 48322
+      "sha256": "c6a7744b5f79e68b534933fae3d66642d5527bda435931021b707c263e65178d",
+      "bytes": 49333
     },
     {
       "path": "pixel-translations.js",
@@ -542,6 +542,16 @@
       "path": "spi-direction-tutorial.js",
       "sha256": "1205b85604f69110c36de4d0861e4e5611b62627f7e6de665bcc01776deb7b66",
       "bytes": 14037
+    },
+    {
+      "path": "spi-zone-direction.css",
+      "sha256": "87bb20f806d49a2cc9c104d0d5ca4172fed0559219ac777f6131db3f2c05e2d8",
+      "bytes": 8304
+    },
+    {
+      "path": "spi-zone-direction.js",
+      "sha256": "0133030435ea807fc45df93066d5b10333d0393a407352aa76081b32777fa66c",
+      "bytes": 22808
     },
     {
       "path": "stand-animations.css",
@@ -3112,6 +3122,37 @@
       "The public example changes no receiver, setting or light; it is not hardware, OTA, speed or optical acceptance.",
       "Private firmware49 catalogue/images and six native compatibility changes are excluded from this public projection.",
       "Android30, its existing download overlay, landing, metadata and all16 historical APKs remain byte-exact655; no new Android build or phone install is claimed."
+    ]
+  },
+  "interfaceCandidate657": {
+    "sourceSnapshotOnly": true,
+    "sourceBoundaryVerified": true,
+    "sourceInputSHA256": {
+      "app.js": "0eb9439bc09ade78d4397738200c04c862816f7c7a2837d28165fad5e3d5f829",
+      "index.html": "86f479a01cffcce33d47398bc81c2a072ead6a65e883dbd63dae73f129cd8f90",
+      "live-control.js": "58be6e14bc1aa4140b83ec08d9d0898863913b9711a814831c8d21ed587fb403",
+      "native-runtime.js": "89ff8e0dda4076b4f0a854d5f88b73a7c56176a2415e160f0994b614db38fed9",
+      "onboarding-ui.js": "5efccbac15c099e8e89a67f4ff6d7fc11de6994fb1e581aaeaa8941dfd57bc16",
+      "pixel-setup.js": "c6a7744b5f79e68b534933fae3d66642d5527bda435931021b707c263e65178d",
+      "spi-zone-direction.css": "87bb20f806d49a2cc9c104d0d5ca4172fed0559219ac777f6131db3f2c05e2d8",
+      "spi-zone-direction.js": "0133030435ea807fc45df93066d5b10333d0393a407352aa76081b32777fa66c"
+    },
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "opticalAcceptance": false,
+    "features": [
+      "All selected SPI pixel counts precede a single zone direction sheet; existing and newly added SPI receivers appear together.",
+      "Large per-port flip cards, static green/red ends and a selected white-interior pulse in the app example; one/two-pixel lines have no white interior.",
+      "Direction-only choices preserve pixel counts, disabled-port geometry and LED-line ordering; closing retains pending choices."
+    ],
+    "limits": [
+      "The public example changes no receiver, setting or real light; it is not hardware, OTA, speed or optical acceptance.",
+      "Private firmware50 catalogue/images and native Swift changes are excluded from this public projection.",
+      "Android30, its download overlay/landing/metadata and all16 historical APKs remain byte-exact656; no new Android build or phone install is claimed."
     ]
   }
 }

@@ -106,6 +106,9 @@
   let receiverFilter='all';
   const expandedConnections=new Set();
   let pixelSetupReceiverId=null;
+  let pendingSPIDirectionOpen=null;
+  const spiDirectionPending=new Map(),spiDirectionSessions=new Map(),spiDirectionRetired=new Set();
+  let spiDirectionTransport=Promise.resolve();
   const pixelEditSelections=new Map();
   let presetStore, colourStore, sceneStore;
   // Merely browsing must work even when a privacy policy denies local storage.
@@ -935,18 +938,115 @@
       if(status==='removed'&&removedIds.length)applyJoinedZonePlayback(next,[],{confirmedRemovedIds:removedIds});
       else model=M.assertValid(next);
       selections.clear();visualPorts.clear();visualPlugMotions.clear();identifying.clear();navigate('receivers');}});
-  const pixelSetup=window.LightningPixelSetup.create({mode:previewContext?'preview':nativeContext&&typeof runtime?.services?.configureOutputs==='function'?'native':'native-unavailable',
+  function spiZoneDirectionSignature({standId,zoneId}){
+    const current=model.stands.find(item=>item.id===standId)?.zones.find(item=>item.id===zoneId);
+    if(!current)throw Error('SPI_DIRECTION_ZONE_CHANGED');
+    return {standId,zoneId,receivers:current.receiverIds.map(id=>model.receivers.find(item=>item.id===id&&item.type==='SPI'&&item.lifecycle==='added'&&item.standId===standId&&item.zoneId===zoneId)).filter(Boolean).map(receiver=>({id:receiver.id,rid:receiver.rid,fingerprint:receiver.deviceFingerprint,outputs:receiver.outputs.map(output=>({...output}))}))};
+  }
+  function queueSPIDirectionTransport(job){
+    const result=spiDirectionTransport.catch(()=>{}).then(job);spiDirectionTransport=result.catch(()=>{});return result;
+  }
+  const spiZoneDirections=window.LightningSPIZoneDirection.create({
+    getCurrentZoneSignature:spiZoneDirectionSignature,
+    onPreview:request=>queueSPIDirectionTransport(async()=>{
+      requireStandPresentationConnection();
+      if(runtime?.native!==true||runtime.services?.spiZoneDirectionPreview!==true)return {status:'unsupported',sessionId:request.sessionId};
+      const active=spiDirectionSessions.get(request.sessionId);
+      const action=active?.applied?'update':'start';
+      if(action==='start')await liveController?.whenIdle({standId:request.standId});
+      if(spiDirectionRetired.has(request.sessionId))throw Error('SPI_DIRECTION_CLOSED');
+      spiDirectionSessions.set(request.sessionId,{...request,applied:false,attempted:true});
+      try{
+        const answer=await runtime.services.previewSPIZoneDirections({action,...request});
+        if(spiDirectionRetired.has(request.sessionId))throw Error('SPI_DIRECTION_CLOSED');
+        spiDirectionSessions.set(request.sessionId,{...request,applied:true,attempted:true});
+        return {status:'applied',sessionId:answer.sessionId,lines:answer.lines,focus:answer.focus};
+      }catch(error){
+        if(['SPI_DIRECTION_UNSUPPORTED','SPI_ZONE_DIRECTION_UPDATE_REQUIRED','PIXEL_GUIDE_UPDATE_REQUIRED'].includes(error?.code))return {status:'unsupported',sessionId:request.sessionId};
+        throw error;
+      }
+    }),
+    onStop:request=>queueSPIDirectionTransport(async()=>{
+      if(!spiDirectionSessions.has(request.sessionId))return {status:'stopped',sessionId:request.sessionId};
+      const answer=await runtime.services.previewSPIZoneDirections({action:'stop',...request});
+      if(answer.stopped!==true)throw Error('SPI_DIRECTION_STOP_UNCONFIRMED');
+      spiDirectionSessions.delete(request.sessionId);
+      return {status:'stopped',sessionId:answer.sessionId};
+    }),
+    onSave:async({standId,zoneId,changes})=>{
+      requireStandPresentationConnection();
+      const results=[];
+      // Each receiver keeps the existing durable configuration/readback path.
+      // A multi-receiver save is deliberately not claimed as one atomic write.
+      for(const change of changes){
+        const receiver=model.receivers.find(item=>item.id===change.receiverId&&item.standId===standId&&item.zoneId===zoneId&&item.type==='SPI'&&item.lifecycle==='added');
+        if(!receiver||change.outputs.some((output,index)=>{const previous=receiver.outputs[index];return !previous||output.port!==previous.port||output.enabled!==previous.enabled||output.pixels!==previous.pixels||!previous.enabled&&output.reversed!==previous.reversed;})){
+          results.push({receiverId:change.receiverId,status:'failed'});continue;
+        }
+        try{
+          if(nativeContext){
+            const view=await runtime.services.configureOutputDirections({standId,receiverId:receiver.id,outputs:change.outputs});
+            refreshSuspendedSetup(view);model=keepLocalPreviewStates(view.model);
+          }else if(previewContext){
+            let next=model;
+            for(const output of change.outputs.filter(item=>item.enabled))next=M.configureSpiOutput(next,receiver.id,output.port,{reversed:output.reversed});
+            model=next;
+          }else throw Error('SPI_DIRECTION_UNSUPPORTED');
+          results.push({receiverId:change.receiverId,status:'saved'});
+        }catch(error){
+          // A lost reply is not a successful save and is never blind-replayed.
+          if(error.reconciledView?.model){refreshSuspendedSetup(error.reconciledView);model=keepLocalPreviewStates(error.reconciledView.model);}
+          results.push({receiverId:change.receiverId,status:'pending'});
+          for(const remaining of changes.slice(results.length))results.push({receiverId:remaining.receiverId,status:'pending'});
+          break;
+        }
+      }
+      render({preserveScroll:true});
+      return {results,zoneSignature:spiZoneDirectionSignature({standId,zoneId})};
+    },
+    onClose:({standId,zoneId,sessionId,pendingChanges})=>{
+      spiDirectionRetired.add(sessionId);
+      // Retire the exact native holder immediately even if a guide reply is
+      // still in flight. The queued STOP below remains the confirmed cleanup;
+      // this busy-safe signal must never be reported as restored lighting.
+      if(spiDirectionSessions.get(sessionId)?.attempted&&runtime?.native===true)void runtime.services.previewSPIZoneDirections({action:'stop',standId,zoneId,sessionId}).catch(()=>{});
+      const key=standId+':'+zoneId;
+      if(pendingChanges.length)spiDirectionPending.set(key,pendingChanges);else spiDirectionPending.delete(key);
+    }
+  });
+  async function openSPIZoneDirections({zoneId,newReceiverId}={}){
+    if(spiZoneDirections.isOpen()||pixelSetup.isOpen()||document.hidden)return;
+    await orderIdentification?.close('spi-directions');
+    if(document.hidden||spiZoneDirections.isOpen()||pixelSetup.isOpen())return;
+    // Read the cohort AFTER asynchronous cleanup. A zone edit during STOP
+    // must not pair old outputs with a freshly captured signature.
+    const current=model.stands.flatMap(item=>item.zones.map(zone=>({stand:item,zone}))).find(item=>item.zone.id===zoneId);
+    if(!current)return;
+    const receivers=current.zone.receiverIds.map(id=>model.receivers.find(receiver=>receiver.id===id&&receiver.type==='SPI'&&receiver.lifecycle==='added'&&receiver.zoneId===zoneId&&receiver.standId===current.stand.id)).filter(Boolean);
+    if(!receivers.length)return;
+    const key=current.stand.id+':'+zoneId,previousPending=spiDirectionPending.get(key)||[];
+    const pendingChanges=previousPending.filter(change=>{
+      const receiver=receivers.find(item=>item.id===change.receiverId);
+      return receiver&&Array.isArray(change.outputs)&&change.outputs.length===4&&change.outputs.every((output,index)=>{
+        const before=receiver.outputs[index];return before&&output.port===before.port&&output.enabled===before.enabled&&output.pixels===before.pixels&&(before.enabled||output.reversed===before.reversed);
+      });
+    });
+    if(pendingChanges.length)spiDirectionPending.set(key,pendingChanges);else spiDirectionPending.delete(key);
+    closeEffectDialog();
+    spiZoneDirections.open({standId:current.stand.id,zoneId,zoneName:current.zone.name,receivers:receivers.map(receiver=>({id:receiver.id,name:receiver.name,outputs:receiver.outputs.map(output=>({...output}))})),...(newReceiverId?{newReceiverId}:{}),previewOnly:previewContext,pendingChanges,pendingChanged:pendingChanges.length!==previousPending.length});
+  }
+  const pixelSetup=window.LightningPixelSetup.create({jointDirections:true,mode:previewContext?'preview':nativeContext&&typeof runtime?.services?.configureOutputs==='function'?'native':'native-unavailable',
     previewCapabilities:{get identifyPorts(){return runtime?.native===true&&runtime.services?.previewCapabilities?.identifyPorts===true;},get power(){return runtime?.native===true&&runtime.services?.previewCapabilities?.power===true;}},
     onPreview:runtime?.native===true&&typeof runtime.services?.previewPixels==='function'?request=>{requireStandPresentationConnection();return runtime.services.previewPixels({...request,mainReceiverId:request.role==='node'?model.receivers.find(r=>r.standId===request.standId&&r.role==='main'&&r.lifecycle==='added')?.id:null});}:undefined,
-    onClose:()=>{document.querySelector(`[data-action="receiver-pixel-setup"][data-id="${CSS.escape(pixelSetupReceiverId||'')}"]`)?.focus({preventScroll:true});pixelSetupReceiverId=null;},
-    onSave:async({receiverId,outputs})=>{
+    onClose:()=>{document.querySelector(`[data-action="receiver-pixel-setup"][data-id="${CSS.escape(pixelSetupReceiverId||'')}"]`)?.focus({preventScroll:true});pixelSetupReceiverId=null;const next=pendingSPIDirectionOpen;pendingSPIDirectionOpen=null;if(next)void openSPIZoneDirections(next).catch(()=>toast(t('outputUnconfirmed')));},
+    onSave:async({receiverId,outputs,directionsOnly=false})=>{
       requireStandPresentationConnection();
       const receiver=model.receivers.find(r=>r.id===receiverId&&r.lifecycle==='added'&&r.type==='SPI');
       if(!receiver||outputs.length!==4)throw Error(t("Deze receiver is niet beschikbaar."));
       void orderIdentification?.supersede();
       if(nativeContext){
         if(typeof runtime?.services?.configureOutputs!=='function')throw Error(t("Verbind je telefoon met het ALUVISION-wifi van je installatie om de instellingen te bewaren."));
-        try{const view=await runtime.services.configureOutputs({standId:receiver.standId,receiverId,outputs});refreshSuspendedSetup(view);model=keepLocalPreviewStates(view.model);}
+        try{const service=directionsOnly?runtime.services.configureOutputDirections:runtime.services.configureOutputs;const view=await service({standId:receiver.standId,receiverId,outputs});refreshSuspendedSetup(view);model=keepLocalPreviewStates(view.model);}
         catch(error){throw Error(outputConfigurationErrorMessage(error));}
       }else{
         if(!previewContext)throw Error(t("Verbind je telefoon met het ALUVISION-wifi van je installatie om de instellingen te bewaren."));
@@ -954,7 +1054,7 @@
         for(const {port,enabled,pixels,reversed} of outputs)next=M.configureSpiOutput(next,receiverId,port,{enabled,pixels,reversed});
         model=next;
       }
-      resumeConfiguredLighting(receiverId);
+      if(receiver.zoneId)pendingSPIDirectionOpen={zoneId:receiver.zoneId};else resumeConfiguredLighting(receiverId);
       expandedReceivers.add(receiverId);
       const blink=identifying.get(receiverId);
       if(blink){const active=model.receivers.find(r=>r.id===receiverId).outputs.filter(o=>o.enabled).map(o=>o.port);blink.ports=blink.scope==='all'?active:blink.ports.filter(p=>active.includes(p));if(!blink.ports.length)identifying.delete(receiverId);}
@@ -965,6 +1065,7 @@
     return window.LightningV50ErrorTexts.t(key,uiPreferences.preferences.language);
   }
   const onboarding=window.LightningOnboardingUI.create({getModel:()=>localStandConcept()?localStandBase:model,
+    jointSPIDirections:true,
     allowLocalConcept:allowPendingLocalConcept,
     onPreserveLocalConcept:next=>storeLocalStandConcept(next,next.stands[0].id),
     onContinueLocalConcept:continueLocalStandLater590,
@@ -984,6 +1085,10 @@
       flushCentralProjection();if(central)firstFactorySetup=false;
     },
     onExit:result=>{
+      if(result?.spiDirectionZoneId){
+        navigate('stand',{setupReturnZoneId:null});
+        void openSPIZoneDirections({zoneId:result.spiDirectionZoneId,newReceiverId:result.newReceiverId}).catch(()=>toast(t('outputUnconfirmed')));return;
+      }
       const returnZone=stand()?.zones.find(z=>z.id===route.setupReturnZoneId);
       if(returnZone){
         const context=setupReturnContext;setupReturnContext=null;
@@ -4266,7 +4371,7 @@
     button.textContent=t("Opnieuw controleren");
   }
   function receiverWorkBusy(){
-    return managementBusy||arrangementApplying||pinProtectionBusy||pinLoginBusy||orderIdentificationState?.active===true||identifyPending.size>0||pixelSetup.isOpen()||
+    return managementBusy||arrangementApplying||pinProtectionBusy||pinLoginBusy||orderIdentificationState?.active===true||identifyPending.size>0||pixelSetup.isOpen()||spiZoneDirections.isOpen()||
       !!document.querySelector('.receiver-removal-sheet[open],.receiver-update-sheet[open]');
   }
   async function waitForReceiverContextWrite({standId,signal}){
@@ -5855,7 +5960,10 @@
           pixelSetupReceiverId=id;
           const selectedPorts=button.dataset.ports?.split(',').map(Number);
           if(button.closest('[data-order-line-settings]'))closeEffectDialog();
-          pixelSetup.open(pending.status==='pending'?{...receiver,outputs:pending.outputs}:receiver,{initialPort:selectedVisualPort(receiver),...(selectedPorts?{selectedPorts}:{}),resumePending:pending.status==='pending'});
+          const directionsOnly=pending.status==='pending'&&pending.outputs.every((output,index)=>{
+            const previous=receiver.outputs[index];return previous&&output.port===previous.port&&output.enabled===previous.enabled&&output.pixels===previous.pixels&&(previous.enabled||output.reversed===previous.reversed);
+          });
+          pixelSetup.open(pending.status==='pending'?{...receiver,outputs:pending.outputs}:receiver,{initialPort:selectedVisualPort(receiver),...(selectedPorts?{selectedPorts}:{}),resumePending:pending.status==='pending',directionsOnly});
         }catch(_){toast(t("De vorige poortwijziging kon niet worden gelezen. Probeer opnieuw; er is niets gewist."));}
         finally{managementBusy=false;button.disabled=false;}return;
       }
@@ -6505,7 +6613,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate656',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate657',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

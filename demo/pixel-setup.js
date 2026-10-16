@@ -66,7 +66,7 @@
   }
   function selectedPortSet(ports){if(ports==null)return null;if(!Array.isArray(ports)||!ports.length||ports.some(port=>!Number.isInteger(port)||port<1||port>4)||new Set(ports).size!==ports.length)throw Error('PIXEL_SELECTED_PORTS_INVALID');return new Set(ports);}
   function editableOutputs(outputs,ports){const selected=ports instanceof Set?ports:selectedPortSet(ports);return outputs.filter(output=>output.enabled&&(!selected||selected.has(output.port)));}
-  function sequence(outputs,{selectedPorts=null}={}){const ports=editableOutputs(outputs,selectedPorts).map(output=>output.port);return [{stage:'outputs',port:null},...ports.flatMap(port=>[{stage:'pixels',port},{stage:'connection',port}]),{stage:'review',port:null}];}
+  function sequence(outputs,{selectedPorts=null,jointDirections=false}={}){const ports=editableOutputs(outputs,selectedPorts).map(output=>output.port);return [{stage:'outputs',port:null},...ports.flatMap(port=>jointDirections?[{stage:'pixels',port}]:[{stage:'pixels',port},{stage:'connection',port}]),{stage:'review',port:null}];}
   function renderProgress(stage){const position={outputs:0,pixels:1,connection:2,review:3}[stage];return `<ol class="pixel-setup-steps" aria-label="${esc(t('pixelSetupSteps'))}">${['pixelOutputs','pixelPixels','pixelStart','pixelReview'].map((name,index)=>`<li ${index===position?'aria-current="step"':''}><span>${index<position?'✓':index+1}</span>${esc(t(name))}</li>`).join('')}</ol>`;}
   function renderPortContext(outputs,port,{stage='pixels',selectedPorts=null}={}){
     const selected=selectedPorts instanceof Set?selectedPorts:selectedPortSet(selectedPorts),active=editableOutputs(outputs,selected),position=active.findIndex(item=>item.port===port),task=t(stage==='connection'?'pixelStart':'pixelSetPixels'),colour=portColour(port);
@@ -286,14 +286,14 @@
     if(footer)footer.before(status);
     return ()=>{controls.forEach(({control,disabled})=>{control.disabled=disabled;});if(next)next.textContent=label;status.remove();if(wasBusy===null)region.removeAttribute('aria-busy');else region.setAttribute('aria-busy',wasBusy);};
   }
-  function create({onSave,onClose=()=>{},onPreview,mode='preview',previewCapabilities={}}={}){
+  function create({onSave,onClose=()=>{},onPreview,mode='preview',previewCapabilities={},jointDirections=false}={}){
     if(typeof onSave!=='function')throw Error('PIXEL_SAVE_HANDLER_REQUIRED');
     const limits=pixelLimits();
-    let dialog=null,receiver=null,outputs=[],index=0,busy=false,error='',focusBefore=null,initialPort=null,selectedPort=null,selectedPorts=null,unbindScrub=null,unbindDirectionTutorial=null,recovering=false,previewStopJob=null;
+    let dialog=null,receiver=null,outputs=[],index=0,busy=false,error='',focusBefore=null,initialPort=null,selectedPort=null,selectedPorts=null,unbindScrub=null,unbindDirectionTutorial=null,recovering=false,directionRecovery=false,previewStopJob=null;
     const plugMotion=globalThis.LightningReceiverVisual.createPlugMotion();
     let previewTransaction=null,previewState={kind:'idle'};
     const livePreview=createLivePreview({send:mode==='native'?onPreview:null,onState:state=>{previewState=state;showPreviewStatus(dialog,state);}});
-    const plan=()=>sequence(outputs,{selectedPorts}),current=()=>plan()[index],output=()=>outputs.find(item=>item.port===current().port),portsToEdit=()=>editableOutputs(outputs,selectedPorts);
+    const plan=()=>sequence(outputs,{selectedPorts,jointDirections}),current=()=>plan()[index],output=()=>outputs.find(item=>item.port===current().port),portsToEdit=()=>editableOutputs(outputs,selectedPorts);
     function syncPreview({commit=false}={}){
       if(busy)return;
       if(!dialog||document.hidden){void livePreview.stop();return;}
@@ -312,9 +312,17 @@
       let content='';
       if(step.stage==='outputs')content=`<p>${esc(t('pixelChooseOutputs'))}</p>${selectedPorts?`<p>${esc(t('pixelSelectSummary',{ports:[...selectedPorts].sort().map(port=>`P${port}`).join(' + ')}))}</p>`:''}${renderOutputs(outputs,{initialPort,selectedPorts,live:mode==='native'&&previewCapabilities.identifyPorts===true})}${!allOff&&!ports.length?`<p class="pixel-setup-error" role="alert">${esc(t('pixelSelectedRequired'))}</p>`:''}`;
       if(active)content=`${renderPortContext(outputs,active.port,{stage:step.stage,selectedPorts})}${step.stage==='connection'?renderSide(active,{live:mode==='native'&&typeof onPreview==='function'&&previewCapabilities.power===true}):renderPixels(active,limits)}`;
-      if(step.stage==='review')content=`<p>${esc(t('pixelCheckOutputs'))} ${esc(t('pixelSameZone'))}</p><div class="pixel-setup-review">${outputs.map(item=>`<div style="--port-colour:${portColour(item.port).hex}" ${selectedPorts&&!selectedPorts.has(item.port)?'data-preserved="true"':''}><b>P${item.port}</b><span>${esc(t('pixelCount',{count:item.pixels}))} · ${esc(t(item.enabled?'pixelOn':'pixelOff'))}<small>${esc(endpointLabel(item))}${selectedPorts&&!selectedPorts.has(item.port)?' · '+esc(t('pixelPreserved')):''}</small></span></div>`).join('')}</div>`;
+      if(step.stage==='review')content=`<p>${esc(t('pixelCheckOutputs'))} ${esc(t('pixelSameZone'))}</p><div class="pixel-setup-review">${outputs.map(item=>`<div style="--port-colour:${portColour(item.port).hex}" ${selectedPorts&&!selectedPorts.has(item.port)?'data-preserved="true"':''}><b>P${item.port}</b><span>${esc(t('pixelCount',{count:item.pixels}))} · ${esc(t(item.enabled?'pixelOn':'pixelOff'))}<small>${jointDirections?'':esc(endpointLabel(item))}${selectedPorts&&!selectedPorts.has(item.port)?' · '+esc(t('pixelPreserved')):''}</small></span></div>`).join('')}</div>`;
       dialog.innerHTML=`<div class="pixel-setup-shell"><header class="pixel-setup-header"><div><small>${esc(receiver.name||t('pixelReceiver'))}</small><h1>${esc(t(step.stage==='connection'?'pixelChooseStart':'pixelSettings'))}</h1></div><button type="button" data-pixel-action="close" aria-label="${esc(t('pixelCloseSettings'))}" ${busy?'disabled':''}>×</button></header>${renderProgress(step.stage)}<div class="pixel-setup-body" data-stage="${step.stage}" data-port="${step.port||''}">${content}<p class="pixel-setup-mode" id="pixel-setup-mode" ${mode==='preview'&&step.stage!=='review'?'hidden':''}>${esc(t(mode==='preview'?'pixelPreviewMode':mode==='native'?'pixelNativeMode':'pixelUnavailableMode'))}</p><p class="pixel-setup-error" role="alert" ${error?'':'hidden'}>${esc(error)}</p></div><footer class="pixel-setup-footer"><button type="button" data-pixel-action="back" ${busy?'disabled':''}>${esc(t('pixelBack'))}</button><button type="button" data-pixel-action="${step.stage==='review'?'save':'next'}" ${busy||!ports.length||step.stage==='pixels'&&!configuredPixels(active.pixels,limits)||step.stage==='review'&&(!['preview','native'].includes(mode)||ports.some(item=>!configuredPixels(item.pixels,limits)))?'disabled aria-describedby="pixel-setup-mode"':''}>${esc(busy?t('pixelSaving'):step.stage==='review'?t('pixelSave'):active?nextPortLabel(ports,active.port,{stage:step.stage,last:t('pixelCheck')}):t('pixelNext'))}</button></footer></div>`;
       unbindDirectionTutorial=globalThis.LightningSPIDirectionTutorial?.bind(dialog)||null;
+      if(jointDirections){
+        // Counts are saved first. All directions are then edited together in
+        // the zone sheet; never alternate count/side for each separate port.
+        const obsolete=dialog.querySelector('.pixel-setup-steps li:nth-child(3)');obsolete?.remove();
+        const steps=dialog.querySelector('.pixel-setup-steps');if(steps)steps.style.gridTemplateColumns='repeat(3,minmax(0,1fr))';
+        const last=dialog.querySelector('.pixel-setup-steps li:last-child span');if(last&&last.textContent!=='✓')last.textContent='3';
+        const next=dialog.querySelector('[data-pixel-action="next"]');if(next&&active)next.textContent=nextPortLabel(ports,active.port,{stage:'connection',last:t('pixelCheck')});
+      }
       if(recovering){const back=dialog.querySelector('[data-pixel-action="back"]');if(back){back.dataset.pixelAction='close';back.textContent=t('pixelClose');}}
       dialog.querySelector('.pixel-setup-body').scrollTop=top?0:previousScroll;
       if(!top&&focusedPort)dialog.querySelector(`[data-pixel-action="output"][data-port="${focusedPort}"]`)?.focus({preventScroll:true});
@@ -343,11 +351,12 @@
       if(action==='side'){if(!['forward','reverse','left','right'].includes(target.dataset.side))return;output().reversed=['reverse','right'].includes(target.dataset.side);error='';render();void livePreview.flush();return;}
       if(action==='next'){if(!outputs.some(item=>item.enabled)||!portsToEdit().length)return render();if(step.stage==='pixels'&&(!validateInput(dialog,dialog.querySelector('[data-pixel-count]').value,limits)||!configuredPixels(output().pixels,limits)))return;index++;error='';return render(true);}
       if(action==='back'){if(!index)return close();index--;error='';return render(true);}
-      if(action==='save'){if(!['preview','native'].includes(mode)||!portsToEdit().length||portsToEdit().some(item=>!configuredPixels(item.pixels,limits)))return;busy=true;error='';render();try{await onSave({receiverId:receiver.id,outputs:outputs.map(item=>!item.enabled&&item.pixels===0?{...item,pixels:receiver.outputs.find(original=>original.port===item.port)?.pixels||1}:copy(item))});busy=false;close();}catch(failure){busy=false;error=typeof failure?.message==='string'?failure.message:t('pixelSaveFailed');render();}}
+      if(action==='save'){if(!['preview','native'].includes(mode)||!portsToEdit().length||portsToEdit().some(item=>!configuredPixels(item.pixels,limits)))return;busy=true;error='';render();try{await onSave({receiverId:receiver.id,outputs:outputs.map(item=>!item.enabled&&item.pixels===0?{...item,pixels:receiver.outputs.find(original=>original.port===item.port)?.pixels||1}:copy(item)),...(directionRecovery?{directionsOnly:true}:{})});busy=false;close();}catch(failure){busy=false;error=typeof failure?.message==='string'?failure.message:t('pixelSaveFailed');render();}}
     }
-    function open(value,{initialPort:port,resumePending=false,selectedPorts:requestedPorts=null}={}){
+    function open(value,{initialPort:port,resumePending=false,directionsOnly=false,selectedPorts:requestedPorts=null}={}){
       if(dialog)throw Error('PIXEL_SETUP_ALREADY_OPEN');selectedPorts=selectedPortSet(resumePending?null:requestedPorts);outputs=outputsOf(value);receiver=copy(value);previewTransaction=previewId();previewState={kind:'idle'};document.addEventListener('visibilitychange',visibility);initialPort=Number.isInteger(port)&&port>=1&&port<=4?port:null;selectedPort=null;plugMotion.clear();index=0;error='';busy=false;focusBefore=document.activeElement;
       recovering=resumePending===true;
+      directionRecovery=recovering&&directionsOnly===true;
       if(recovering){index=plan().length-1;error=t('pixelPendingConfig');}
       dialog=document.createElement('dialog');dialog.className='pixel-setup-dialog';dialog.setAttribute('aria-label',t('pixelDialogAria'));dialog.addEventListener('click',click);dialog.addEventListener('input',input);dialog.addEventListener('change',input);dialog.addEventListener('keyup',commitKey);dialog.addEventListener('cancel',event=>{event.preventDefault();close();});unbindScrub=bindPixelScrub(dialog,{isEnabled:()=>!busy&&current().stage==='pixels',onChange:value=>adjust(value,null,{haptic:false}),onCommit:()=>void livePreview.flush()});document.body.append(dialog);render(true);dialog.showModal();paint(performance.now()/1000);
     }

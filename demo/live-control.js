@@ -607,7 +607,17 @@
                 results=new Map([...chosen].map(([id])=>[id,{receiverId:id,status:'applied-in-firmware'}]));
               }
             }
-            if(!streamComplete&&sendBatch && items.size>1){
+            // One selected moving receiver needs the same bounded retirement
+            // hook as a multi-receiver animation. Otherwise a newer palette or
+            // speed waits for the previous background correction to finish.
+            // Keep ordinary single-colour, OFF, scoped-port and prelude routes
+            // unchanged; native still admits the complete original request.
+            const singleAnimation=initial.length===1&&initial.every(request=>
+              ['RGBW_SCENE','SPI_SCENE'].includes(request.kind)&&request.brightness>0&&
+              request.scene&&(request.scene.engine!=='STATIC'||request.scene.v30)&&
+              (request.scene.v30||Number.isInteger(request.scene.phaseMs)&&
+                Number.isInteger(request.scene.phaseRateMicroHz)&&request.scene.phaseRateMicroHz>0));
+            if(!streamComplete&&sendBatch && (items.size>1||singleAnimation)){
               active.operation=sendBatch([...items.values()].map(item=>item.request));
               const reply=await active.operation;
               if(reply?.status==='early-animation-retired'){
