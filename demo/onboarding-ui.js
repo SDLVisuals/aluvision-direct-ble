@@ -232,7 +232,7 @@
     let standNameInput=null,zoneNameInput='',draftSaving=false,pendingChoices=null,saveFailed=false,origin='stand';
     let zoneExtraNames=[],zoneRemoval=null,zoneRename=null,receiverMove=null,managementBusy=false,zoneListReturn=null;
     const visualEntrances=new Map(),presentedStages=new Set(),plugMotion=visual.createPlugMotion();
-    let selectedOutput=null,unbindPixelScrub=null,openZonePickerOnNextPaint=false,receiverZoneSelection;
+    let selectedOutput=null,unbindPixelScrub=null,unbindDirectionTutorial=null,openZonePickerOnNextPaint=false,receiverZoneSelection;
     let parkedChoices=new Map(),parkedTransactions=new Set(),parking=null,parkPending=null,actionAbort=null,searchOnMount=false,exiting=false;
     let localConceptPending=false;
     function localConceptEligible(){
@@ -576,6 +576,7 @@
       if(options?.preservePresentation===true&&draft?.stage==='receiver'&&container?.querySelector('[data-onboarding-zone-dialog]')?.open===true)openZonePickerOnNextPaint=true;
       if(!firstAccess&&(!container||draft?.stage!=='done'))start({...options,retargetZone:options?.origin==='layout'&&!container});
       unbindPixelScrub?.();unbindPixelScrub=null;
+      unbindDirectionTutorial?.();unbindDirectionTutorial=null;
       if(container){container.removeEventListener('click',click);container.removeEventListener('input',input);container.removeEventListener('change',input);container.removeEventListener('keydown',keydown);container.removeEventListener('keyup',commitPixelKey);}
       // The saved stand, not the presence of a MAIN receiver, determines
       // whether this is a new setup. Single-user/legacy stands may not have a
@@ -602,6 +603,7 @@
       if(zoneDialog?.open){zoneDialog.close();const picker=zoneDialog.closest('[data-receiver-destination]');if(picker)picker.open=false;zoneNameOpen=false;}
       receiverZoneSelection=undefined;openZonePickerOnNextPaint=false;
       unbindPixelScrub?.();unbindPixelScrub=null;
+      unbindDirectionTutorial?.();unbindDirectionTutorial=null;
       if(container){container.removeEventListener('click',click);container.removeEventListener('input',input);container.removeEventListener('change',input);container.removeEventListener('keydown',keydown);container.removeEventListener('keyup',commitPixelKey);}
       document.removeEventListener('visibilitychange',visibilityChanged);window.removeEventListener('lightning:native-active',nativeActive);window.removeEventListener('pageshow',pageShown);stopAutomaticRejoin();returningFromWifi=false;
       container=null;firstAccessReturnPending=false;cancelSearch();plugMotion.clear();selectedOutput=null;zoneListReturn=null;
@@ -852,6 +854,7 @@
     function footerPin(){return `<div class="onboarding-actions onboarding-footer">${button('back',tx('← Terug'))}${button('secure',tx('Beveiligen en verbinden'),'disabled')}</div>`;}
     function paintPage(top=true,capture=true){
       if(!container)return;
+      unbindDirectionTutorial?.();unbindDirectionTutorial=null;
       if(firstAccess){container.innerHTML=firstAccessPage();document.title=`${container.querySelector('h1').textContent} · Aluvision Lighting`;return;}
       if(capture)captureNames();
       const stageKey=[draft.transactionId,draft.stage,draft.receiver?.id||''].join(':'),entering=!presentedStages.has(stageKey);
@@ -868,6 +871,7 @@
       const zonePickerOpen=container.querySelector('.onboarding-destination')?.open===true||openZonePickerOnNextPaint;openZonePickerOnNextPaint=false;
       presentedStages.add(stageKey);
       container.innerHTML=`<div class="page onboarding-page onboarding-layout587${entering?' onboarding-stage-enter':''}" data-setup-origin="${origin}" data-onboarding-stage="${draft.stage}" aria-busy="${draftSaving||busy}">${heading()}${body()}${errorBox()}</div>`;
+      unbindDirectionTutorial=globalThis.LightningSPIDirectionTutorial?.bind(container)||null;
       document.title=`${container.querySelector('h1').textContent} · Aluvision Lighting`;
       if(draft.stage==='receiver'){
         const heading=container.querySelector('.onboarding-heading');

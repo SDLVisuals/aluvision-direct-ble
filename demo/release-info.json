@@ -108,9 +108,9 @@
     "opticalAcceptance": false
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate655-visual-ledline-order-interface-android30",
+  "revision": "V50candidate656-spi-direction-guide-interface-android30",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo655 makes LED-line ordering more visual with less copy, while preserving direct colour-to-place assignment, saved choices and all current controls. RAM-only demo: no receiver firmware or OTA is installed or published.",
+  "interfaceBaseline": "Public demo656 adds a visual interactive SPI direction explanation. It remains a RAM-only demo with fictitious receivers; no firmware, hardware control, OTA or app installation is published.",
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -260,7 +260,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "aaac66b2caf2b4271bfb6698ea2ff5014c2bcf84945ed7094887f4b91ff057df",
+      "sha256": "bdcf41a18af6ef376542f3b05c91311d423ebd8cc94d6360b805251ab3bfd447",
       "bytes": 628542
     },
     {
@@ -310,8 +310,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "0c08c90eb72ea079dc365fbb3c7f384364cdb3b4c51e0acbedd524d8ea9b0653",
-      "bytes": 8506
+      "sha256": "d0ac9102d9a14a13519691b250f60008df66efbc3403ef5cb748cf4518a39416",
+      "bytes": 8662
     },
     {
       "path": "installation-libraries.js",
@@ -415,8 +415,8 @@
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "11bf005ce3dc7bdb23295704be5b658981b5734dbd95c887454bcf2ab975a279",
-      "bytes": 177184
+      "sha256": "6dfa1fba8470632c35342befdbd3505a47a4e2f378f89b5c1ef7beed32f36452",
+      "bytes": 177500
     },
     {
       "path": "page-interaction.css",
@@ -430,18 +430,18 @@
     },
     {
       "path": "pixel-setup.css",
-      "sha256": "81fec7bab4c9b4d6b84646e3ffecd1fac8b5c4cb84e14311e0aa8dcb4749d052",
-      "bytes": 36423
+      "sha256": "29c33143e1f1c76c302494dc20e1aa1e564b70efa48666642b3a95be11408584",
+      "bytes": 36908
     },
     {
       "path": "pixel-setup.js",
-      "sha256": "513f6448bc349cea3952f2d742a07a30488a0656579c0eab635ee514d860f11a",
-      "bytes": 47660
+      "sha256": "7fc9968b74d4ac6bae3ab90a415908d77c9a4ea596f906741d51b116bcb7bd75",
+      "bytes": 48322
     },
     {
       "path": "pixel-translations.js",
-      "sha256": "0459adbb1d3f371b03b61f9af6f8e48bea1a1f68ad560eb814ce8c77b25a57f1",
-      "bytes": 15863
+      "sha256": "1b7db65ec8c26c076a9ff0457f933b7c6c5735f9a24a6fe58b0cfdf1156bfb48",
+      "bytes": 17228
     },
     {
       "path": "preferences.js",
@@ -532,6 +532,16 @@
       "path": "setup-wifi-guide.js",
       "sha256": "22f2ee084dadc37db98a41d48323f768e3954179cf27dca499daa926d6b039a2",
       "bytes": 3506
+    },
+    {
+      "path": "spi-direction-tutorial.css",
+      "sha256": "91afb40cfdc71c6b893a93a93dc9079d8bedd1fdb813a8db45a5a96512b50a73",
+      "bytes": 8304
+    },
+    {
+      "path": "spi-direction-tutorial.js",
+      "sha256": "1205b85604f69110c36de4d0861e4e5611b62627f7e6de665bcc01776deb7b66",
+      "bytes": 14037
     },
     {
       "path": "stand-animations.css",
@@ -3072,6 +3082,36 @@
       "RAM-only demo with fictitious devices: not receiver, OTA, radio, speed or optical acceptance.",
       "All private native/Mac sources, firmware48 catalogue and248 retained inputs remain exact654; this demo distributes no firmware.",
       "The existing Android30 downloads, metadata, overlay, landing and16historical APKs are unchanged; no Android31 build or phone installation is claimed."
+    ]
+  },
+  "interfaceCandidate656": {
+    "sourceSnapshotOnly": true,
+    "sourceBoundaryVerified": true,
+    "sourceInputSHA256": {
+      "index.html": "48a0d698936ace5c03adad020b80b82499eb0f618f725e6df038c51926ab72eb",
+      "onboarding-ui.js": "6dfa1fba8470632c35342befdbd3505a47a4e2f378f89b5c1ef7beed32f36452",
+      "pixel-setup.css": "29c33143e1f1c76c302494dc20e1aa1e564b70efa48666642b3a95be11408584",
+      "pixel-setup.js": "7fc9968b74d4ac6bae3ab90a415908d77c9a4ea596f906741d51b116bcb7bd75",
+      "pixel-translations.js": "1b7db65ec8c26c076a9ff0457f933b7c6c5735f9a24a6fe58b0cfdf1156bfb48",
+      "spi-direction-tutorial.css": "91afb40cfdc71c6b893a93a93dc9079d8bedd1fdb813a8db45a5a96512b50a73",
+      "spi-direction-tutorial.js": "1205b85604f69110c36de4d0861e4e5611b62627f7e6de665bcc01776deb7b66"
+    },
+    "browserSmokeValidated": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "opticalAcceptance": false,
+    "features": [
+      "Visible SPI direction guidance with two horizontal end-to-end example lines; only the second example line endpoints animate.",
+      "Four translated languages, a large look-at-your-real-lines heading, explicit example-only control, keyboard/reduced-motion support and scoped dark/light styling.",
+      "All existing real setup controls remain separate and unchanged by the example button."
+    ],
+    "limits": [
+      "The public example changes no receiver, setting or light; it is not hardware, OTA, speed or optical acceptance.",
+      "Private firmware49 catalogue/images and six native compatibility changes are excluded from this public projection.",
+      "Android30, its existing download overlay, landing, metadata and all16 historical APKs remain byte-exact655; no new Android build or phone install is claimed."
     ]
   }
 }

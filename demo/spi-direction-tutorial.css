@@ -1,0 +1,58 @@
+/* 656: presentation-only SPI direction guide. All geometry and state are
+   private to the tutorial; actual direction controls are separate. */
+.spi-direction-tutorial{--sdt-green:#127b44;--sdt-red:var(--red,#b53d38);--sdt-cap:40px;display:block;box-sizing:border-box;width:100%;min-width:0;margin:16px 0 20px;padding:18px 14px 12px;border:1px solid var(--line,#d4dbe5);border-radius:22px;background:var(--soft,#eef1f5);color:var(--ink,#252c37);font:inherit;font-size:14px;line-height:1.45}
+.spi-direction-tutorial *{box-sizing:border-box}
+.spi-direction-tutorial svg{margin:0;color:inherit}
+.spi-direction-tutorial .spi-tutorial-heading{display:flex;align-items:center;gap:12px;min-width:0;margin:0}
+.spi-direction-tutorial .spi-tutorial-heading>div{min-width:0}
+.spi-direction-tutorial .spi-tutorial-eye{display:grid;place-items:center;flex:none;width:48px;height:48px;border-radius:16px;background:var(--panel,#fcfdff);color:var(--action-ink,var(--ink,#252c37))}
+.spi-direction-tutorial .spi-tutorial-eye>svg{width:30px;height:30px}
+.spi-direction-tutorial .spi-tutorial-eyebrow{font-size:10px;letter-spacing:.8px;color:var(--muted,#5b6573);font-weight:700}
+.spi-direction-tutorial .spi-tutorial-heading h3{margin:4px 0 0;font-size:23px;font-weight:750;line-height:1.16;letter-spacing:-.5px;overflow-wrap:anywhere}
+.spi-direction-tutorial .spi-tutorial-intro{margin:14px 0 16px;color:var(--muted,#5b6573);font-size:13px;line-height:1.45}
+.spi-direction-tutorial .spi-tutorial-example{margin:0;padding:14px 12px 12px;border-radius:18px;background:var(--panel,#fcfdff)}
+.spi-direction-tutorial .spi-tutorial-example figcaption{display:flex;align-items:center;justify-content:space-between;gap:9px;color:var(--muted,#5b6573);font-size:11px;line-height:1.4}
+.spi-direction-tutorial .spi-tutorial-example figcaption>span:first-child{min-width:0;overflow-wrap:anywhere}
+.spi-direction-tutorial .spi-tutorial-verdict{display:flex;align-items:center;gap:5px;flex:none;max-width:55%;font-size:11px;font-weight:700;color:var(--ink,#252c37)}
+.spi-direction-tutorial .spi-tutorial-verdict>svg{flex:none;width:19px;height:19px}
+.spi-direction-tutorial .spi-tutorial-assembly{position:relative;height:220px;margin-top:10px;isolation:isolate}
+.spi-direction-tutorial .spi-tutorial-line{position:absolute;top:80px;left:0;width:50%;height:116px;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:44px 24px;gap:48px;justify-items:center}
+.spi-direction-tutorial .spi-tutorial-line-two{left:50%}
+.spi-direction-tutorial .spi-tutorial-number{grid-row:2;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--soft,#e4e9f0);color:var(--ink,#252c37);font-size:12px;font-weight:750}
+.spi-direction-tutorial .spi-tutorial-strip{grid-row:1;position:relative;width:100%;height:44px;border-radius:9px;background:var(--soft,#e4e9f0);box-shadow:0 4px 8px color-mix(in srgb,var(--ink,#252c37) 9%,transparent)}
+.spi-direction-tutorial .spi-tutorial-core{position:absolute;inset:14px 9px;height:16px;border-radius:3px;background:repeating-linear-gradient(90deg,#f4f7fb 0 8px,#aebaca 8px 11px);box-shadow:0 0 5px #f4f7fb}
+.spi-direction-tutorial .spi-tutorial-cap{position:absolute;z-index:3;top:calc((44px - var(--sdt-cap))/2);left:2px;display:grid;place-items:center;width:var(--sdt-cap);height:var(--sdt-cap);border-radius:8px;color:#fff;font-size:15px;font-weight:750}
+.spi-direction-tutorial .spi-tutorial-green{background:var(--sdt-green);box-shadow:0 0 10px color-mix(in srgb,var(--sdt-green) 25%,transparent)}
+.spi-direction-tutorial .spi-tutorial-red{left:calc(100% - var(--sdt-cap) - 2px);background:var(--sdt-red);box-shadow:0 0 10px color-mix(in srgb,var(--sdt-red) 25%,transparent)}
+.spi-direction-tutorial [data-reversed="true"]>.spi-tutorial-green{left:calc(100% - var(--sdt-cap) - 2px)}
+.spi-direction-tutorial [data-reversed="true"]>.spi-tutorial-red{left:2px}
+.spi-direction-tutorial .spi-tutorial-coupling{position:absolute;left:calc(50% - 1.5px);top:56px;height:24px;border-left:3px dashed var(--action-ink,var(--ink,#252c37));opacity:.65}
+.spi-direction-tutorial .spi-tutorial-join{position:absolute;left:calc(50% - 18px);top:20px;display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--panel,#fcfdff);color:var(--action-ink,var(--ink,#252c37))}
+.spi-direction-tutorial .spi-tutorial-join>svg{width:28px;height:28px;stroke-width:2.5}
+.spi-direction-tutorial .spi-tutorial-curves{position:absolute;z-index:2;inset:0;width:100%;height:220px;overflow:visible;pointer-events:none;opacity:.75}
+.spi-direction-tutorial .spi-tutorial-curves>path{fill:none;stroke-width:2;stroke-dasharray:5 5}
+.spi-direction-tutorial .spi-tutorial-red-curve{stroke:var(--sdt-red)}
+.spi-direction-tutorial .spi-tutorial-green-curve{stroke:var(--sdt-green)}
+.spi-direction-tutorial .spi-tutorial-red-fill{fill:var(--sdt-red)}
+.spi-direction-tutorial .spi-tutorial-green-fill{fill:var(--sdt-green)}
+.spi-direction-tutorial .spi-tutorial-result{display:grid;align-content:center;min-height:40px;margin:0;color:var(--ink,#252c37);font-size:13px;font-weight:650;line-height:1.4;text-align:center}
+.spi-direction-tutorial [data-state="correct"] .spi-tutorial-coupling{border-left-style:solid;opacity:1}
+.spi-direction-tutorial [data-state="wrong"] .spi-tutorial-join,.spi-direction-tutorial [data-state="wrong"] .spi-tutorial-verdict{color:var(--sdt-red)}
+.spi-direction-tutorial [data-state="correct"] .spi-tutorial-join,.spi-direction-tutorial [data-state="correct"] .spi-tutorial-verdict{color:var(--sdt-green)}
+.spi-direction-tutorial [data-state="correct"] .spi-tutorial-coupling{border-color:var(--sdt-green)}
+.spi-direction-tutorial [data-state="correct"] .spi-tutorial-curves{visibility:hidden}
+.spi-direction-tutorial [data-state="moving"] .spi-tutorial-coupling,.spi-direction-tutorial [data-state="moving"] .spi-tutorial-join{opacity:.25}
+.spi-direction-tutorial [data-state="moving"] .spi-tutorial-line-two .spi-tutorial-cap{transition:left 1.35s ease-in-out}
+.spi-direction-tutorial [data-state="moving"] .spi-tutorial-line-two .spi-tutorial-green{animation:spi-tutorial656-green-swap 1.35s ease-in-out}
+.spi-direction-tutorial [data-state="moving"] .spi-tutorial-line-two .spi-tutorial-red{animation:spi-tutorial656-red-swap 1.35s ease-in-out}
+@keyframes spi-tutorial656-green-swap{0%,100%{transform:translateY(0)}50%{transform:translateY(36px)}}
+@keyframes spi-tutorial656-red-swap{0%,100%{transform:translateY(0)}50%{transform:translateY(-36px)}}
+.spi-direction-tutorial .spi-tutorial-action{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:54px;margin:14px 0 0;padding:12px 10px;border:0;border-radius:15px;background:var(--ink,#303949);color:var(--panel,#fff);font:inherit;font-size:14px;font-weight:750;line-height:1.4;text-align:center;cursor:pointer;touch-action:manipulation}
+.spi-direction-tutorial .spi-tutorial-action>svg{flex:none;width:23px;height:23px}
+.spi-direction-tutorial .spi-tutorial-action[aria-disabled="true"],.spi-direction-tutorial .spi-tutorial-action:disabled{opacity:.65;cursor:default}
+.spi-direction-tutorial .spi-tutorial-action:focus-visible{outline:3px solid var(--action-ink,var(--ink,#252c37));outline-offset:3px}
+.spi-direction-tutorial .spi-tutorial-concept{margin:9px 0 0;color:var(--muted,#5b6573);font-size:11px;line-height:1.45;text-align:center}
+.spi-direction-tutorial .spi-tutorial-app-label{display:flex;align-items:center;justify-content:center;gap:7px;margin:16px 0 0;padding-top:13px;border-top:1px solid var(--line,#d4dbe5);color:var(--muted,#5b6573);font-size:10px;font-weight:750;letter-spacing:.7px;line-height:1.4;text-align:center}
+.spi-direction-tutorial .spi-tutorial-app-label>svg{flex:none;width:17px;height:17px}
+@media(max-width:360px){.spi-direction-tutorial{--sdt-cap:32px;padding:16px 10px 12px}.spi-direction-tutorial .spi-tutorial-heading{gap:9px}.spi-direction-tutorial .spi-tutorial-heading h3{font-size:21px}.spi-direction-tutorial .spi-tutorial-eye{width:42px;height:42px}.spi-direction-tutorial .spi-tutorial-example{padding-inline:9px}.spi-direction-tutorial .spi-tutorial-example figcaption{gap:6px}}
+@media(prefers-reduced-motion:reduce){.spi-direction-tutorial .spi-tutorial-cap{transition:none!important;animation:none!important}}
