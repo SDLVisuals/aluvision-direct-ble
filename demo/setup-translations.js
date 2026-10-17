@@ -552,10 +552,20 @@
   ];
   failureGroups.forEach(([sources,en,fr,de])=>sources.forEach(source=>rows.push([source,en,fr,de])));
   const aliases={setupNameHint:rows[0][0],setupStandName:'Standnaam',setupStandExample:'Bijvoorbeeld: Aluvision beursstand',setupContinueZones:'Verder · zones maken',setupZonesHint:'Maak zones voor de plekken in je stand. Daarna voeg je receivers toe.',setupZonesLater:'Zones later toevoegen',setupZoneDestination:'Zone voor deze receiver',setupZoneChange:'Zone wijzigen',setupZoneChoose:'Zone kiezen',setupZoneNoZone:'Nog geen zone',setupAnotherReceiver:'Nog een receiver toevoegen',setupMyStand:'Naar mijn stand',setupOutputsRequired:'Minstens één poort moet actief zijn.',setupExtraOutputsLater:'Extra uitgangen inschakelen kan later.',wifiFirstReceiver:'Verbinden met je eerste receiver',wifiTurnOn:'Zet de receiver aan',wifiReceiverTypes:'RGBW of SPI',wifiOpenSettings:'Instellingen → Wifi',wifiSelectFactory:'Kies het ALUVISION-netwerk van je eerste receiver.',wifiReturnApp:'Terug naar de app',wifiCheckReceiver:'De app controleert je receiver.',wifiNewReceiver:'Wifi van een nieuwe receiver',wifiPassword:'Wifiwachtwoord',wifiFactoryPassword:'Fabriekswachtwoord',wifiCopyFactory:'Fabriekswachtwoord kopiëren',wifiCopyFallback:'Houd de selectie ingedrukt en kies Kopieer.',copy:'Kopieer',copied:'Gekopieerd'};
+  const wifiVisual674={
+    wifi674FlowLabel:['Zo verbind je een receiver','How to connect a receiver','Comment connecter un récepteur','So verbindest du einen Receiver'],
+    wifi674PowerTitle:['Zet de receiver aan','Turn on the receiver','Allumez le récepteur','Receiver einschalten'],
+    wifi674PowerHint:['Laat hem aan tijdens het instellen.','Leave it on during setup.','Laissez-le allumé pendant la configuration.','Lass ihn während der Einrichtung eingeschaltet.'],
+    wifi674NetworkTitle:['Open Instellingen → Wifi','Open Settings → Wi-Fi','Ouvrez Réglages → Wi-Fi','Öffne Einstellungen → WLAN'],
+    wifi674NetworkHint:['Kies het ALUVISION-netwerk van je receiver.','Choose your receiver’s ALUVISION network.','Choisissez le réseau ALUVISION de votre récepteur.','Wähle das ALUVISION-Netzwerk deines Receivers.'],
+    wifi674ReturnTitle:['Ga terug naar de app','Return to the app','Revenez dans l’application','Kehre zur App zurück'],
+    wifi674ReturnHint:['Controleer hier de verbinding.','Check the connection here.','Vérifiez la connexion ici.','Prüfe hier die Verbindung.']
+  };
   const dictionaries={nl:{},en:{},fr:{},de:{}};
   Object.keys(dictionaries).forEach((language,index)=>{
     rows.forEach(row=>{dictionaries[language][row[0]]=row[index];});
     Object.entries(aliases).forEach(([key,source])=>{dictionaries[language][key]=dictionaries[language][source];});
+    Object.entries(wifiVisual674).forEach(([key,values])=>{dictionaries[language][key]=values[index];});
     Object.freeze(dictionaries[language]);
   });
   if(typeof module==='object'&&module.exports)module.exports=Object.freeze(dictionaries);

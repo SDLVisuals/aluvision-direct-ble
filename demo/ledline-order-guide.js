@@ -100,7 +100,27 @@
     animatedDragHandle668:['Sleep','Drag','Glisser','Ziehen'],
     animatedAccessible665:['Kijk naar je eigen ledlines en neem hun volgorde over in de app. In dit uitlegvoorbeeld blijven de echte kleuren rood, groen en blauw vast staan. Pak het rode kaartje bij de sleeppuntjes en sleep het naar plaats 1. Alleen rood en blauw wisselen in de app; groen blijft op plaats 2. Je echte verlichting verandert niet door het voorbeeld.','Look at your own LED lines and match their order in the app. In this illustration the real colours red, green and blue stay fixed. Pick up the red card by its grip and drag it to position 1. Only red and blue swap in the app; green stays at position 2. This illustration does not change your real lighting.','Regardez vos propres lignes LED et reproduisez leur ordre dans l’app. Dans cet exemple, les vraies couleurs rouge, vert et bleu restent fixes. Saisissez la carte rouge par les points et glissez-la à la position 1. Seuls le rouge et le bleu s’échangent dans l’app ; le vert reste à la position 2. Cet exemple ne modifie pas votre éclairage réel.','Schau auf deine eigenen LED-Linien und übernimm ihre Reihenfolge in die App. In diesem Beispiel bleiben die echten Farben Rot, Grün und Blau unverändert. Nimm die rote Karte am Griff auf und ziehe sie auf Position 1. Nur Rot und Blau tauschen in der App; Grün bleibt an Position 2. Das Beispiel ändert deine echte Beleuchtung nicht.']
   };
-  function t(key,language='nl',params={}){const index=Math.max(0,['nl','en','fr','de'].indexOf(language)),current=dragOrder668[key]?.[index]||observedOrder[key]?.[index];return String(current||(tutorialSteps[language]||tutorialSteps.nl)[key]||(tutorial[language]||tutorial.nl)[key]||(clarity[language]||clarity.nl)[key]||(texts[language]||texts.nl)[key]||texts.nl[key]||key).replace(/\{(\w+)\}/g,(_,name)=>String(params[name]??''));}
+  const visualOrder674={
+    tutorialTitle:['Zo stel je de volgorde in','Set your LED-line order','Régler l’ordre des lignes LED','Die LED-Reihenfolge einstellen'],
+    animatedLook665:['Kijk naar je echte ledlines','Look at your real LED lines','Regardez vos vraies lignes LED','Schau auf deine echten LED-Linien'],
+    animatedLookHint665:['Welke kleur zie je op de eerste plaats?','Which colour do you see at the first position?','Quelle couleur voyez-vous à la première position ?','Welche Farbe siehst du an der ersten Position?'],
+    animatedPlace665:['Zoek die kleur in de app','Find that colour in the app','Retrouvez cette couleur dans l’app','Suche diese Farbe in der App'],
+    animatedPlaceHint665:['In dit voorbeeld staat rood op de eerste plaats.','In this example, red is at the first position.','Dans cet exemple, le rouge est à la première position.','In diesem Beispiel steht Rot an der ersten Position.'],
+    animatedColour665:['Sleep rood naar plaats 1','Drag red to position 1','Glissez le rouge à la position 1','Ziehe Rot auf Position 1'],
+    animatedColourHint665:['Pak de sleeppuntjes en laat los op plaats 1.','Use the grip and release at position 1.','Utilisez les points et relâchez à la position 1.','Nimm den Griff und lasse an Position 1 los.'],
+    animatedSwap665:['Alleen rood en blauw wisselen','Only red and blue swap','Seuls le rouge et le bleu s’échangent','Nur Rot und Blau tauschen'],
+    animatedSwapHint665:['Groen blijft staan. De echte kleuren veranderen niet.','Green stays put. The real colours do not change.','Le vert reste en place. Les vraies couleurs ne changent pas.','Grün bleibt stehen. Die echten Farben ändern sich nicht.'],
+    animatedDone665:['Nu komt de volgorde overeen','Now the order matches','L’ordre correspond maintenant','Jetzt stimmt die Reihenfolge überein'],
+    animatedDoneHint665:['Neem zo jouw opstelling over en sluit af met Klaar.','Match your own setup this way, then finish with Done.','Reproduisez ainsi votre installation, puis touchez Terminé.','Übernimm so deine Aufstellung und schließe mit Fertig ab.'],
+    animatedOnly665:['Uitlegvoorbeeld · stuurt geen licht aan','Illustration only · does not control your lights','Exemple uniquement · ne commande pas vos lumières','Nur ein Beispiel · steuert deine Beleuchtung nicht'],
+    animatedStepLook665:['Kijken','Look','Regarder','Schauen'],
+    animatedStepChoose665:['Slepen','Drag','Glisser','Ziehen'],
+    animatedStepDone665:['Vergelijken','Compare','Comparer','Vergleichen'],
+    visualReal674:['Je echte ledlines','Your real LED lines','Vos vraies lignes LED','Deine echten LED-Linien'],
+    visualApp674:['In de app','In the app','Dans l’app','In der App'],
+    visualFixed674:['Blijft gelijk','Stays the same','Reste identique','Bleibt gleich']
+  };
+  function t(key,language='nl',params={}){const index=Math.max(0,['nl','en','fr','de'].indexOf(language)),current=visualOrder674[key]?.[index]||dragOrder668[key]?.[index]||observedOrder[key]?.[index];return String(current||(tutorialSteps[language]||tutorialSteps.nl)[key]||(tutorial[language]||tutorial.nl)[key]||(clarity[language]||clarity.nl)[key]||(texts[language]||texts.nl)[key]||texts.nl[key]||key).replace(/\{(\w+)\}/g,(_,name)=>String(params[name]??''));}
   function esc(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
   function hex(rgb){return '#'+rgb.map(v=>v.toString(16).padStart(2,'0')).join('');}
   // CSS encodes display RGB; preview state and wire channels stay linear.
@@ -136,18 +156,20 @@
     const label=key=>esc(t(key,language));
     const colourNames={red:label('tutorialRed'),green:label('tutorialGreen'),blue:label('tutorialBlue')};
     const eye='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
-    const physical=['red','green','blue'].map((colour,index)=>`<div class="order-story-real-line665" data-physical-colour="${colour}" style="--story-colour:var(--story-${colour})"><b>${index+1}</b><i></i><span>${colourNames[colour]}</span></div>`).join('');
-    const cards=['blue','green','red'].map(colour=>`<div class="order-story-colour665" data-app-colour="${colour}" style="--story-colour:var(--story-${colour})"><i></i><b>${colourNames[colour]}</b><span class="order-story-card-grip668">⠿ <small>${label('animatedDragHandle668')}</small></span></div>`).join('');
+    const grip='<svg viewBox="0 0 16 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="5" r="1.6"/><circle cx="11" cy="5" r="1.6"/><circle cx="5" cy="12" r="1.6"/><circle cx="11" cy="12" r="1.6"/><circle cx="5" cy="19" r="1.6"/><circle cx="11" cy="19" r="1.6"/></svg>';
+    const phone='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5.5" y="2.5" width="13" height="19" rx="3"/><path d="M10 18.5h4"/></svg>';
+    const physical=['red','green','blue'].map((colour,index)=>`<div class="order-story-real-line665" data-physical-colour="${colour}" style="--story-colour:var(--story-${colour})"><b>${index+1}</b><span class="order-story-strip674"><i></i><span>${colourNames[colour]}</span></span></div>`).join('');
+    const cards=['blue','green','red'].map(colour=>`<div class="order-story-colour665" data-app-colour="${colour}" style="--story-colour:var(--story-${colour})"><span class="order-story-strip674"><i></i><b>${colourNames[colour]}</b></span><span class="order-story-card-grip668" title="${label('animatedDragHandle668')}">${grip}</span></div>`).join('');
     const phases=['Look','Place','Colour','Swap','Done'].map((name,index)=>`<div data-story-caption665="${index}" ${index?'hidden':''}><h3>${label('animated'+name+'665')}</h3><p>${label('animated'+name+'Hint665')}</p></div>`).join('');
-    return `<section class="v50-order-tutorial-content order-story665" data-tutorial-version="665" data-order-story-ui="668" data-order-tutorial665 data-phase="0" data-playing="false" aria-label="${label('animatedAccessible665')}">
-      <p class="order-story-note665">${label('animatedOnly665')}</p>
-      <nav class="order-story-steps665" aria-label="${label('tutorialBadge')}">${[['Look',0],['Choose',2],['Done',4]].map(([name,phase],index)=>`<button type="button" data-tutorial-action665="step" data-phase665="${phase}" ${index===0?'aria-current="step"':''}><b>${index+1}</b><span>${label('animatedStep'+name+'665')}</span></button>`).join('')}</nav>
-      <div class="order-story-stage665" aria-hidden="true">
-        <div class="order-story-physical665"><div class="order-story-panel-title665">${eye}<b>${label('animatedPhysical665')}</b></div>${physical}<small>${label('animatedFixed665')}</small></div>
-        <div class="order-story-link665">↓</div>
-        <div class="order-story-app665"><div class="order-story-panel-title665"><span class="order-story-phone665">▯</span><b>${label('animatedApp665')}</b><span class="order-story-match665">✓</span></div><div class="order-story-assignments665"><div class="order-story-numbers665"><b>1</b><b>2</b><b>3</b></div><div class="order-story-cards665">${cards}</div><span class="order-story-tap665"><svg viewBox="0 0 32 36" fill="white" stroke="#27323b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 19V6a3 3 0 0 1 6 0v11l3-1 9 5v7a6 6 0 0 1-6 6h-5a6 6 0 0 1-5-3L5 22a3 3 0 0 1 4-4l4 5"/></svg></span></div></div>
-      </div>
+    return `<section class="v50-order-tutorial-content order-story665" data-tutorial-version="665" data-order-story-ui="674" data-order-tutorial665 data-phase="0" data-playing="false" aria-label="${label('animatedAccessible665')}">
       <div class="order-story-caption665">${phases}</div>
+      <div class="order-story-stage665" aria-hidden="true">
+        <div class="order-story-physical665"><div class="order-story-panel-title665">${eye}<b>${label('visualReal674')}</b></div><div class="order-story-lights674">${physical}</div><small>${label('visualFixed674')}</small></div>
+        <div class="order-story-link665">→</div>
+        <div class="order-story-app665"><div class="order-story-panel-title665">${phone}<b>${label('visualApp674')}</b><span class="order-story-match665">✓</span></div><div class="order-story-assignments665"><div class="order-story-numbers665"><b>1</b><b>2</b><b>3</b></div><div class="order-story-cards665">${cards}</div><span class="order-story-tap665"><svg viewBox="0 0 32 36" fill="currentColor" stroke="var(--story-ink)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 19V6a3 3 0 0 1 6 0v11l3-1 9 5v7a6 6 0 0 1-6 6h-5a6 6 0 0 1-5-3L5 22a3 3 0 0 1 4-4l4 5"/></svg></span></div></div>
+      </div>
+      <nav class="order-story-steps665" aria-label="${label('tutorialBadge')}">${[['Look',0],['Choose',2],['Done',4]].map(([name,phase],index)=>`<button type="button" data-tutorial-action665="step" data-phase665="${phase}" ${index===0?'aria-current="step"':''}><span>${label('animatedStep'+name+'665')}</span></button>`).join('')}</nav>
+      <p class="order-story-note665">${label('animatedOnly665')}</p>
       <div class="order-story-controls665"><button type="button" data-tutorial-action665="toggle" data-label-play="${label('animatedPlay665')}" data-label-pause="${label('animatedPause665')}"><span aria-hidden="true" data-play-symbol665>▶</span><span data-play-label665>${label('animatedPlay665')}</span></button><button type="button" data-tutorial-action665="replay"><span aria-hidden="true">↻</span>${label('animatedReplay665')}</button></div>
     </section>`;
   }

@@ -108,9 +108,9 @@
     "opticalAcceptance": false
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate673-interface-parity-android30",
+  "revision": "V50candidate674-visual-order-and-wifi-guide-android30",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo673 matches the interface bundled in app673. Its Web interface is unchanged from public672 apart from the demo version and cache reference. Fictional receivers and RAM-only state; native-only corrections, firmware, OTA and phone installations are not simulated or published here.",
+  "interfaceBaseline": "Public demo674 projects the calmer visual LED-order tutorial and receiver Wi-Fi instructions. The public factory-password card is omitted from these screens only; no network authentication, receiver protocol, native product or firmware is changed by this interface update.",
   "interfaceCandidate673": {
     "sourceSnapshotOnly": true,
     "sameInterfaceAsCandidate672": true,
@@ -278,7 +278,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "6ccf9d94171f3d58f8e46169ecc516f49016b5c7b600a9ed0084834fa339c8f9",
+      "sha256": "f6853088368a417ce992639618ab4e80e736016a0256f7cb5b103e8c502425db",
       "bytes": 671833
     },
     {
@@ -338,7 +338,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "b5ae69e196d9e74c2047137057500c722e23b6002ab0300e463809c263d22fb5",
+      "sha256": "284a07330575f3b1e2c261bfc087a9aa13b74a63c1fb17c3b91a086d5f313e4f",
       "bytes": 9486
     },
     {
@@ -398,8 +398,8 @@
     },
     {
       "path": "ledline-order-guide.js",
-      "sha256": "82bcf8edfc01f65eb0f5d3d7751a8f0af2712a648cf19e82d65ee49be776183f",
-      "bytes": 36183
+      "sha256": "a2d0f7493629cc7348feaea56a46a8cde02087d996bcd17c8c09f507e6db160e",
+      "bytes": 39590
     },
     {
       "path": "ledline-order-test.js",
@@ -408,8 +408,8 @@
     },
     {
       "path": "ledline-order-tutorial.css",
-      "sha256": "23689381ff877031a6fb872419fc4e222c5990f8192cc99056a78a4ad03bb8ad",
-      "bytes": 9153
+      "sha256": "28d7696b54d2d5c01c40871f69df07c360c6105f6c6050a2c6d9aafe85344218",
+      "bytes": 11397
     },
     {
       "path": "ledline-order-tutorial.js",
@@ -463,8 +463,8 @@
     },
     {
       "path": "onboarding-ui.css",
-      "sha256": "89828c23b73da8efaae3682970182857b4fe6b721f4cdc6bddfc36b571ca9e51",
-      "bytes": 75726
+      "sha256": "e2eaba913c6e179d57262e42821d95bea75868a8d30e10ed7e0e9a1aef111f2f",
+      "bytes": 80802
     },
     {
       "path": "onboarding-ui.js",
@@ -583,13 +583,13 @@
     },
     {
       "path": "setup-translations.js",
-      "sha256": "4cb6883b9021c4333e8b9b38f1ae7bec85fcc75780ed6b0aa00302b6dc24e691",
-      "bytes": 84175
+      "sha256": "7c4f9f7ab5fd43c5d1e3ab5449ab682ed425ebc5a20f0a9071cb5bc1d4de9c28",
+      "bytes": 85399
     },
     {
       "path": "setup-wifi-guide.js",
-      "sha256": "22f2ee084dadc37db98a41d48323f768e3954179cf27dca499daa926d6b039a2",
-      "bytes": 3506
+      "sha256": "7928b920058879281ed826974f141f72cd687a62965f2acab05715b01c8ebd95",
+      "bytes": 4183
     },
     {
       "path": "spi-direction-tutorial.css",
@@ -3306,5 +3306,20 @@
       "Existing Android30 overlay/landing/metadata and all16 historical APKs remain exact661; no new Android product or installation claim.",
       "No OTA, first-photon speed, animation synchrony, optical or physical Android acceptance follows from this UI publication."
     ]
+  },
+  "interfaceCandidate674": {
+    "sourceSnapshotOnly": true,
+    "features": [
+      "Fixed real LED colours and a clearer app-only two-place swap illustration.",
+      "Compact visual receiver Wi-Fi steps without the factory-password block."
+    ],
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "androidUnchanged": true,
+    "androidVersionCode": 30,
+    "opticalAcceptance": false
   }
 }

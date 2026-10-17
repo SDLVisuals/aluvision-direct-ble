@@ -671,3 +671,47 @@ html.interface-polish body #main .onboarding-layout587 .onboarding-later-action{
 @media(prefers-reduced-motion:reduce){
   .onboarding-result-enter,.onboarding-connecting[data-security-busy=true]>.onboarding-security-icon::after{animation:none}
 }
+
+/*674: an instructional route, not a connection-status card. Only the initial
+  manual-Wi-Fi guide is restyled; PIN rejoining and found receivers stay intact.*/
+.onboarding-manual-wifi:has(>.wifi-guide674){padding:6px 0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+.onboarding-manual-wifi ol.wifi-guide674{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin:0;padding:0;list-style:none}
+.onboarding-manual-wifi ol.wifi-guide674>li{display:grid;grid-template-columns:72px minmax(0,1fr);align-items:center;gap:14px;min-width:0;padding:12px 0;text-align:left;background:transparent;border:0;border-radius:0}
+.onboarding-manual-wifi ol.wifi-guide674>li+li{border-top:1px solid var(--line)}
+.onboarding-manual-wifi ol.wifi-guide674>li:nth-child(2){background:transparent}
+.onboarding-manual-wifi ol.wifi-guide674>li::before{display:none;content:none}
+.wifi-guide674 .wifi-guide-art674{position:relative;display:grid;place-items:center;width:72px;height:76px;min-width:0;border:1px solid var(--line);border-radius:20px;background:var(--panel);color:var(--ink)}
+.wifi-guide674 .wifi-guide-art674>svg{display:block;width:68px;height:64px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.wifi-guide674 .wifi-guide-body674{fill:var(--soft)}
+.wifi-guide674 .wifi-guide-accent674{stroke:var(--red);stroke-width:2}
+.wifi-guide674 .wifi-guide-cable674,.wifi-guide674 .wifi-guide-return674{stroke:var(--red);stroke-width:2}
+.wifi-guide674 .wifi-guide-art674 svg path{animation:none}
+.wifi-guide674 .wifi-guide-network674{position:absolute;bottom:8px;left:3px;right:3px;display:block;text-align:center;font-size:8px;font-weight:800;letter-spacing:.05em;color:var(--ink);background:var(--panel);line-height:1.4}
+.wifi-guide674 .wifi-guide-copy674{display:block;min-width:0;overflow-wrap:anywhere}
+.wifi-guide674 .wifi-guide-copy674>b{display:flex;align-items:center;gap:8px;font-size:15px;line-height:1.35;color:var(--ink);font-weight:750}
+.wifi-guide674 .wifi-guide-step674{display:grid;place-items:center;flex:none;width:23px;height:23px;border-radius:8px;background:var(--soft);color:var(--muted);font-size:11px;font-style:normal;font-weight:700}
+.onboarding-manual-wifi ol.wifi-guide674 .wifi-guide-copy674>small{display:block;font-size:12px;line-height:1.5;margin-top:6px;color:var(--muted)}
+html.interface-polish body #main .onboarding-layout587[data-onboarding-stage=receiver]:has(.wifi-guide674){padding-top:14px;gap:12px}
+html.interface-polish body #main .onboarding-layout587[data-onboarding-stage=receiver]:has(.wifi-guide674)>.onboarding-heading{text-align:left}
+html.interface-polish body #main .onboarding-layout587[data-onboarding-stage=receiver]:has(.wifi-guide674)>.onboarding-heading h1{font-size:clamp(26px,7vw,31px);line-height:1.18}
+html.interface-polish body #main .onboarding-layout587[data-onboarding-stage=receiver]:has(.wifi-guide674)>.onboarding-stand-steps{gap:7px;margin:0;padding:4px 0}
+html.interface-polish body #main .onboarding-layout587[data-onboarding-stage=receiver]:has(.wifi-guide674)>.onboarding-stand-steps>li{grid-template-rows:28px auto;gap:5px;font-size:11px}
+html.interface-polish body #main .onboarding-layout587[data-onboarding-stage=receiver]:has(.wifi-guide674)>.onboarding-stand-steps>li>b{width:28px;height:28px;font-size:12px}
+html.interface-polish body #main .onboarding-layout587[data-onboarding-stage=receiver]:has(.wifi-guide674)>.onboarding-receiver-phases{font-size:11px;gap:6px}
+html.interface-polish body #main .onboarding-layout587[data-onboarding-stage=receiver]:has(.wifi-guide674)>.onboarding-search-actions{display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
+html.interface-polish body #main .onboarding-layout587[data-onboarding-stage=receiver]:has(.wifi-guide674)>.onboarding-search-actions>[data-onboarding-action=search]{grid-row:1;min-height:50px;background:var(--ink);color:var(--panel);font-size:15px}
+html.interface-polish body #main .onboarding-layout587[data-onboarding-stage=receiver]:has(.wifi-guide674)>.onboarding-search-actions>[data-onboarding-action=back]{grid-row:2;min-height:44px;border:1px solid var(--line);background:var(--panel);color:var(--muted);font-size:13px}
+html.interface-polish body[data-theme=dark] .onboarding-manual-wifi ol.wifi-guide674>li:nth-child(2){background:transparent}
+@media(max-width:350px){
+  .onboarding-manual-wifi ol.wifi-guide674{gap:7px}
+  .onboarding-manual-wifi ol.wifi-guide674>li{grid-template-columns:62px minmax(0,1fr);gap:11px;padding:10px 0}
+  .wifi-guide674 .wifi-guide-art674{width:62px;height:68px;border-radius:17px}
+  .wifi-guide674 .wifi-guide-art674>svg{width:59px;height:59px}
+  .wifi-guide674 .wifi-guide-copy674>b{font-size:13px;gap:6px}
+  .onboarding-manual-wifi ol.wifi-guide674 .wifi-guide-copy674>small{font-size:11px;margin-top:5px}
+  .wifi-guide674 .wifi-guide-network674{font-size:7px;bottom:7px}
+}
+@media(max-height:650px){
+  .onboarding-manual-wifi ol.wifi-guide674{gap:6px}
+  .onboarding-manual-wifi ol.wifi-guide674>li{padding-block:8px}
+}
