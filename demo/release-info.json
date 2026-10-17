@@ -108,9 +108,22 @@
     "opticalAcceptance": false
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate672-ledline-stability-interface-android30",
+  "revision": "V50candidate673-interface-parity-android30",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo672 projects current scene, inline preset, direct ledline-order and SPI setup UI. Fictional receivers and RAM-only state; no native product, firmware, OTA or phone installation is published by this UI projection.",
+  "interfaceBaseline": "Public demo673 matches the interface bundled in app673. Its Web interface is unchanged from public672 apart from the demo version and cache reference. Fictional receivers and RAM-only state; native-only corrections, firmware, OTA and phone installations are not simulated or published here.",
+  "interfaceCandidate673": {
+    "sourceSnapshotOnly": true,
+    "sameInterfaceAsCandidate672": true,
+    "demoVersionAndCacheRefreshed": true,
+    "nativeOnlyFixSimulated": false,
+    "nativeProductBundled": false,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "opticalAcceptance": false,
+    "androidUnchanged": true,
+    "androidVersionCode": 30
+  },
   "fakeReceivers": {
     "RGBW": 10,
     "SPI": 10,
@@ -265,7 +278,7 @@
     },
     {
       "path": "app.js",
-      "sha256": "00c481e73a986963579572955fd4a3af3f40e6ff57cdb7323fda8e326060748b",
+      "sha256": "6ccf9d94171f3d58f8e46169ecc516f49016b5c7b600a9ed0084834fa339c8f9",
       "bytes": 671833
     },
     {
@@ -325,7 +338,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "40397728f7aaec0b6acc0454edcb59d9278bb34da5db77d7e93cfe939f9d8866",
+      "sha256": "b5ae69e196d9e74c2047137057500c722e23b6002ab0300e463809c263d22fb5",
       "bytes": 9486
     },
     {
