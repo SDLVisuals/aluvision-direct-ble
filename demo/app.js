@@ -139,6 +139,7 @@
   const standPresentationBrowsingActions=new Set(['nav','stand','zone','overview-zone','overview-receivers','controls','colour','animations','effects','effects-root','animations-gallery','animation-gallery','animation-current-edit','animation-search-clear','animation-categories','animation-category-choice','family','family-back','library','layout','line-setup-open','layout-receiver-settings','receivers','receiver-filter','settings','stand-controls','stand-control-mode','stand-animation-gallery','stand-scenes','scene-open','visual-port','preview-size','help','close-help','effect-dialog-close','stand-connect','stand-inspect','stand-resume','stand-refresh','stand-open-wifi','management-stand-open','native-load-retry','stand-forget','stand-forget-confirm','app-erase','app-erase-confirm','backup-export','language','theme','preferences-reset','preferences-reset-confirm']);
   // Leaving an editor is local navigation, even after the stand goes offline.
   for(const action of ['scenes','scene-edit-stop','scene-edit-stand'])standPresentationBrowsingActions.add(action);
+  standPresentationBrowsingActions.add('order-cancel686');
   function standPresentationActionAllowed(action){return !standPresentationOnly()||standPresentationBrowsingActions.has(action);}
   // This retries an existing read service only. The cached stand never gains
   // a save, replay or receiver-management permission from this UI action.
@@ -227,6 +228,12 @@
     onboarding.restore(draft);
   }
   let firstAccessCheckpoint=null;
+  const firstPinReady686=new Map();
+  function matchesFirstPinReady686(ready,current){
+    if(ready?.ready!==true||!current?.stands.some(item=>item.id===ready.standId))return false;
+    const rows=current.receivers.filter(item=>item.standId===ready.standId&&item.role==='main'&&item.lifecycle==='added');
+    return rows.length===1&&rows[0].id===ready.receiverId&&rows[0].rid===ready.rid&&rows[0].deviceFingerprint===ready.deviceFingerprint&&rows[0].onboardingTransactionId===ready.transactionId&&window.LightningFirstPinV2.validSSID(ready.ssid,rows[0].type);
+  }
   function firstAccessMarker(next,receiverId){
     const receiver=next.receivers.find(item=>item.id===receiverId);
     if(next.stands.length!==1||!receiver||receiver.role!=='main'||receiver.lifecycle!=='added'||!receiver.onboardingTransactionId)throw Object.assign(Error(),{code:'FIRST_ACCESS_IDENTITY'});
@@ -538,8 +545,9 @@
       return;
     }
     const context={session:state.session,standId:state.standId,zoneId:state.zoneId,
-      // Resolve only committed order, never a pending optimistic draft.
-      lineIds:M.lineIds(model,z.id),visible:orderForegroundVisible652(),
+      // A local place assignment may move an existing physical endpoint.
+      // It never changes that endpoint's identity, colour or native lease.
+      lineIds:orderFocusLineIds686(z),visible:orderForegroundVisible652(),
       ready:!arrangementInteractionBusy()&&!orderSaveQueue588&&!orderClose589&&!arrangementDraft?.error&&
         !arrangementNeedsStandOpen()&&!standPresentationOnly()&&(previewContext||state.physicalConfirmed===true),
       previewOnly:!!previewContext};
@@ -574,7 +582,7 @@
     const z=zone(),draft=arrangementDraft;
     if(!z||!openLineSetup.has(z.id)||document.hidden||!draft||draft.signature!==arrangementSignature(z)||
        orderDragBusy588()||arrangementNeedsStandOpen()||standPresentationOnly()||
-       !Number.isInteger(position)||position<0||position>=M.lineIds(model,z.id).length)return;
+       !Number.isInteger(position)||position<0||position>=orderFocusLineIds686(z).length)return;
     syncOrderFocusContext664();
     if(!orderIdentificationState?.active)return;
     orderFocusProblem664=null;
@@ -1023,7 +1031,7 @@
     document.body.dataset.webDemo='true';
   }
   const receiverUpdates=window.LightningReceiverUpdateUI.create({services:runtime?.native===true?runtime.services||{}:{},translate:(key,params)=>t(key,params)});
-  const receiverRemoval=window.LightningReceiverRemovalUI.create({services:runtime?.native===true?runtime.services||{}:{},translate:(key,params)=>t(key,params),getModel:()=>model,standCodeAccess:()=>simpleStandMode&&!!centralApplied,
+  const receiverRemoval=window.LightningReceiverRemovalUI.create({services:runtime?.native===true?runtime.services||{}:{},translate:(key,params)=>t(key,params),getModel:()=>model,standCodeAccess:()=>simpleStandMode&&!!centralApplied,usesDedicatedFirstPin:receiver=>matchesFirstPinReady686(firstPinReady686.get(receiver.standId),model),
     onRemoved:async(nextModel,{status,central,centralClosed}={})=>{
       if(simpleStandMode&&(central||centralClosed)){
         if(central)await ensureStandSession().acceptMembership(central);
@@ -1039,7 +1047,7 @@
   function spiZoneDirectionSignature({standId,zoneId}){
     const current=model.stands.find(item=>item.id===standId)?.zones.find(item=>item.id===zoneId);
     if(!current)throw Error('SPI_DIRECTION_ZONE_CHANGED');
-    return {standId,zoneId,receivers:current.receiverIds.map(id=>model.receivers.find(item=>item.id===id&&item.type==='SPI'&&item.lifecycle==='added'&&item.standId===standId&&item.zoneId===zoneId)).filter(Boolean).map(receiver=>({id:receiver.id,rid:receiver.rid,fingerprint:receiver.deviceFingerprint,outputs:receiver.outputs.map(output=>({...output}))}))};
+    return {standId,zoneId,layout:current.layout,lineOrder:M.lineIds(model,zoneId),receivers:current.receiverIds.map(id=>model.receivers.find(item=>item.id===id&&item.type==='SPI'&&item.lifecycle==='added'&&item.standId===standId&&item.zoneId===zoneId)).filter(Boolean).map(receiver=>({id:receiver.id,rid:receiver.rid,fingerprint:receiver.deviceFingerprint,outputs:receiver.outputs.map(output=>({...output}))}))};
   }
   function queueSPIDirectionTransport(job){
     const result=spiDirectionTransport.catch(()=>{}).then(job);spiDirectionTransport=result.catch(()=>{});return result;
@@ -1069,9 +1077,25 @@
         const answer=await runtime.services.previewSPIZoneDirections({action,...request});
         if(spiDirectionRetired.has(request.sessionId))throw Error('SPI_DIRECTION_CLOSED');
         spiDirectionSessions.set(request.sessionId,{...request,applied:true,attempted:true});
-        return {status:'applied',sessionId:answer.sessionId,lines:answer.lines,focus:answer.focus,previewTTLMS:answer.previewTTLMS,renewAfterMS:answer.renewAfterMS};
+        return {status:'applied',sessionId:answer.sessionId,lineOrder:answer.lineOrder,lines:answer.lines,focus:answer.focus,previewTTLMS:answer.previewTTLMS,renewAfterMS:answer.renewAfterMS};
       }catch(error){
         if(['SPI_DIRECTION_UNSUPPORTED','SPI_ZONE_DIRECTION_UPDATE_REQUIRED','PIXEL_GUIDE_UPDATE_REQUIRED'].includes(error?.code))return {status:'unsupported',sessionId:request.sessionId};
+        throw error;
+      }
+    }),
+    onTest:request=>queueSPIDirectionTransport(async()=>{
+      if(runtime?.native!==true||runtime.services?.spiZoneDirectionPreview!==true)return {status:'updateRequired',sessionId:request.sessionId};
+      const active=spiDirectionSessions.get(request.sessionId);
+      if(!active?.applied||spiDirectionRetired.has(request.sessionId))throw Error('SPI_DIRECTION_CLOSED');
+      requireStandPresentationConnection();
+      spiDirectionSessions.set(request.sessionId,{...request,applied:false,attempted:true});
+      try{
+        const answer=await runtime.services.previewSPIZoneDirections({action:'test',...request,focus:null});
+        if(spiDirectionRetired.has(request.sessionId))throw Error('SPI_DIRECTION_CLOSED');
+        spiDirectionSessions.set(request.sessionId,{...request,applied:true,attempted:true});
+        return {status:'applied',sessionId:answer.sessionId,lineOrder:answer.lineOrder,lines:answer.lines,focus:answer.focus,previewTTLMS:answer.previewTTLMS,renewAfterMS:answer.renewAfterMS,pathTestMS:answer.pathTestMS};
+      }catch(error){
+        if(['SPI_DIRECTION_UNSUPPORTED','SPI_ZONE_DIRECTION_UPDATE_REQUIRED','PIXEL_GUIDE_UPDATE_REQUIRED'].includes(error?.code))return {status:'updateRequired',sessionId:request.sessionId};
         throw error;
       }
     }),
@@ -1083,7 +1107,7 @@
       // draft into physical confirmation. Only the exact last applied tuple.
       if(spiDirectionSessions.get(request.sessionId)!==active||spiDirectionRetired.has(request.sessionId))return {status:'busy',sessionId:request.sessionId,previewTTLMS:0};
       if(answer.applied!==true)return {status:answer.reason,sessionId:answer.sessionId,previewTTLMS:0};
-      return {status:'applied',sessionId:answer.sessionId,lines:answer.lines,focus:answer.focus,previewTTLMS:answer.previewTTLMS,renewAfterMS:answer.renewAfterMS};
+      return {status:'applied',sessionId:answer.sessionId,lineOrder:answer.lineOrder,lines:answer.lines,focus:answer.focus,previewTTLMS:answer.previewTTLMS,renewAfterMS:answer.renewAfterMS,...(Number.isInteger(answer.pathTestRemainingMS)?{pathTestRemainingMS:answer.pathTestRemainingMS}:{})};
     },
     onStop:request=>queueSPIDirectionTransport(async()=>{
       if(!spiDirectionSessions.has(request.sessionId))return {status:'stopped',sessionId:request.sessionId};
@@ -1181,7 +1205,7 @@
     if(pendingChanges.length)spiDirectionPending.set(key,pendingChanges);else spiDirectionPending.delete(key);
     closeEffectDialog();
     const continuation=newReceiverId&&pairFirstSetup?.get(newReceiverId),pairFirst=!!(continuation&&PairFirst.receiverFor(model,continuation));
-    spiZoneDirections.open({standId:current.stand.id,zoneId,zoneName:current.zone.name,receivers:receivers.map(receiver=>({id:receiver.id,name:receiver.name,outputs:receiver.outputs.map(output=>({...output}))})),...(newReceiverId?{newReceiverId}:{}),pairFirst,previewOnly:previewContext,pendingChanges,pendingChanged:pendingChanges.length!==previousPending.length});
+    spiZoneDirections.open({standId:current.stand.id,zoneId,zoneName:current.zone.name,lineOrder:M.lineIds(model,zoneId),receivers:receivers.map(receiver=>({id:receiver.id,name:receiver.name,outputs:receiver.outputs.map(output=>({...output}))})),...(newReceiverId?{newReceiverId}:{}),pairFirst,previewOnly:previewContext,pendingChanges,pendingChanged:pendingChanges.length!==previousPending.length});
   }
   async function openPairFirstSetup(receiverId){
     if(!pairFirstSetup||pairFirstOpening||pixelSetup.isOpen()||spiZoneDirections.isOpen()||document.hidden||firstAccessCheckpoint)return;
@@ -1222,8 +1246,11 @@
       if(resolved.changed)toast(pairFirstText('changed'));
     }finally{if(pairFirstOpening===token)pairFirstOpening=null;}
   }
-  const pixelSetup=window.LightningPixelSetup.create({jointDirections:true,mode:previewContext?'preview':nativeContext&&typeof runtime?.services?.configureOutputs==='function'?'native':'native-unavailable',
-    previewCapabilities:{get identifyPorts(){return runtime?.native===true&&runtime.services?.previewCapabilities?.identifyPorts===true;},get power(){return runtime?.native===true&&runtime.services?.previewCapabilities?.power===true;}},
+  function publishedPixelReceiver686(receiver){
+    return receiver?.type==='SPI'&&receiver.lifecycle==='added'&&typeof receiver.onboardingTransactionId==='string'&&!!receiver.onboardingTransactionId&&model.receivers.some(current=>current.lifecycle==='added'&&['id','rid','deviceFingerprint','type','standId','role','onboardingTransactionId'].every(key=>current[key]===receiver[key]));
+  }
+  const pixelSetup=window.LightningPixelSetup.create({jointDirections:true,mode:previewContext?'preview':nativeContext&&typeof runtime?.services?.configureOutputs==='function'?'native':'native-unavailable',isPublishedReceiver:publishedPixelReceiver686,
+    previewCapabilities:{get identifyPorts(){return runtime?.native===true&&runtime.services?.previewCapabilities?.identifyPorts===true;},get power(){return runtime?.native===true&&runtime.services?.previewCapabilities?.power===true;},get editorIsolation(){return runtime?.native===true&&runtime.services?.previewCapabilities?.editorIsolation===true;}},
     onPreview:runtime?.native===true&&typeof runtime.services?.previewPixels==='function'?request=>{requireStandPresentationConnection();return runtime.services.previewPixels({...request,mainReceiverId:request.role==='node'?model.receivers.find(r=>r.standId===request.standId&&r.role==='main'&&r.lifecycle==='added')?.id:null});}:undefined,
     onDraftChange:step=>{
       if(pairFirstActiveReceiverId!==step.receiverId)return;
@@ -1295,6 +1322,7 @@
   const onboarding=window.LightningOnboardingUI.create({getModel:()=>localStandConcept()?localStandBase:model,
     jointSPIDirections:true,
     pairSPIFirst:true,
+    firstPinV2:runtime?.native===true,
     onPairFirstBegin:draft=>{if(!pairFirstSetup)throw Object.assign(Error(),{code:'PAIR_FIRST_STORAGE_UNAVAILABLE'});pairFirstSetup.begin(draft);},
     allowLocalConcept:allowPendingLocalConcept,
     onPreserveLocalConcept:next=>storeLocalStandConcept(next,next.stands[0].id),
@@ -1305,14 +1333,15 @@
     onFirstStandAccess:firstStandAccess,
     services:webDemo||(runtime?.native===true?runtime.services||{}:{}),
     onManage:request=>manageSetupZones(request),
-    onComplete:async(nextModel,{receiverId,central}={})=>{
+    onComplete:async(nextModel,{receiverId,central,firstPinV2Ready}={})=>{
       if(simpleStandMode&&central)await ensureStandSession().acceptMembership(central);
       if(firstAccessCheckpoint&&central){
         const expected=firstAccessCheckpoint,receiver=nextModel.receivers.find(item=>item.id===expected.receiverId);
         if(central.standId!==expected.standId||receiver?.rid!==expected.rid||receiver?.deviceFingerprint!==expected.fingerprint)throw Object.assign(Error(),{code:'FIRST_ACCESS_IDENTITY'});
         model=M.assertValid(nextModel);appStorage?.removeItem(FIRST_ACCESS_KEY);firstAccessCheckpoint=null;
       }else applyJoinedZonePlayback(nextModel,receiverId&&nextModel.receivers.find(receiver=>receiver.id===receiverId)?.type!=='SPI'?[receiverId]:[]);
-      flushCentralProjection();if(central)firstFactorySetup=false;
+      if(firstPinV2Ready){if(!matchesFirstPinReady686(firstPinV2Ready,nextModel))throw Object.assign(Error(),{code:'FIRST_PIN_V2_UNCONFIRMED'});firstPinReady686.set(firstPinV2Ready.standId,copy(firstPinV2Ready));}
+      flushCentralProjection();if(central||firstPinV2Ready?.ready===true)firstFactorySetup=false;
     },
     onExit:result=>{
       if(result?.spiPairFirstReceiverId){
@@ -1348,7 +1377,7 @@
     wall:'M5 4v16M12 4v16M19 4v16',
     unassigned:'M12 22s7-4.35 7-12a7 7 0 1 0-14 0c0 7.65 7 12 7 12ZM9 10h6',
     light:'M3 9h18v6H3zM6 11v2M10 11v2M14 11v2M18 11v2M1 12h2M21 12h2',
-    receiver:'M4 5h16v15H4zM8 2v3M16 2v3M7 9h10M7 13h2M11 13h2M15 13h2M7 17h10',
+    receiver:'M5 5h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2ZM7 9h6M17 9h.01M6 18v3M10 18v3M14 18v3M18 18v3',
     back:'m14 6-6 6 6 6M8 12h13', chevron:'m9 5 7 7-7 7', close:'m6 6 12 12M6 18 18 6',
     expand:'M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5',
     edit:'m16 3 5 5-12 12-6 1 1-6ZM14 5l5 5',
@@ -1364,6 +1393,7 @@
     lock:'M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5zM12 14v3',
     qr:'M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3zM15 15h2v2h-2zM19 15h2v6h-6v-2M11 3v3M11 10v3H3M3 11v2M15 11h6M11 15v6',
     scenes:'M7 3h14v14H7zM3 7v14h14M11 7h6M11 11h6',
+    duplicate:'M9 3h12v12H9zM3 8v13h13M12 9h6M15 6v6',
     check:'m5 12 4 4L19 6', sun:'M12 2v2M12 20v2M2 12h2M20 12h2M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
     moon:'M20.2 15.4A8.7 8.7 0 0 1 8.6 3.8a8.8 8.8 0 1 0 11.6 11.6Z',
     clock:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 7v5l3 2',
@@ -1377,7 +1407,6 @@
     // Three diffuser profiles on one connection: lighting selected together,
     // not a menu, receiver or reorder symbol. The check follows aria-pressed.
     if(name==='together')return `<svg class="icon icon-together" viewBox="0 0 40 32" aria-hidden="true" focusable="false"><path class="together-link" d="M5 5.5H2v18h3M2 14.5h3"/>${[3,12,21].map(y=>`<rect class="together-line" x="7" y="${y}" width="21" height="5" rx="2.5"/>`).join('')}<path class="together-check" d="m30 24 3 3 5-7"/></svg>`;
-    if(name==='receiver')name='light';
     if(name==='folder')return '<svg class="icon icon-folder" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 7V5h7l2 2h9v13H3Z"/></svg>';
     if(name==='play')return '<svg class="icon icon-play" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m8 5 11 7-11 7Z"/></svg>';
     if(name==='grip')return '<svg class="icon icon-grip" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'+[7,12,17].map(y=>`<circle cx="9" cy="${y}" r="1.1"/><circle cx="15" cy="${y}" r="1.1"/>`).join('')+'</svg>';
@@ -2641,8 +2670,16 @@
     const query=animationQueryStore().get(animationQueryKey())||'';
     const counts={catalogue:items.length,...Object.fromEntries(Library.sections(items).map(section=>[section.key,section.count])),presets:savedPresets.presets.length};
     const intro=tab==='brand'?brandTonePicker():tab==='tunnel'?(standControlOpen?`<p class="stand-animation-guidance">${esc(standAnimationGuidance())}</p>`:tunnelGuide({compact:true})):'';
-    const inFamily=Boolean(active),results=inFamily?animationFamilyDetail(active,tab,{includePreview:false}):tab==='presets'?renderPresets():query.trim()?effectResults(query):tab==='catalogue'?animationCategorySections(items):animationCategoryFamilyList(items,tab);
-    return `<section class="animation-library-inline" data-library-ui-version="573" data-discovery-ui="662" data-chooser-version="567" data-animation-category="${esc(tab)}" aria-label="${esc(t('animationSelector'))}">${animationLibraryHeading()}${inFamily?'':`<div class="animation-discovery-browser">${animationCategoryTabs(items,counts,tab)}${tab!=='presets'?`<label class="animation-search"><span>${esc(t('animationSearch'))}</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg><input type="search" id="animation-search" value="${esc(query)}" placeholder="${esc(t('v567SearchHint'))}" autocomplete="off"></label>`:''}${intro}</div>`}<div id="animation-results">${results}</div></section>`;
+    const inFamily=Boolean(active),results=inFamily?animationFamilyDetail(active,tab,{includePreview:false}):animationLibraryResults687(items,tab,query);
+    return `<section class="animation-library-inline" data-library-ui-version="573" data-discovery-ui="662" data-chooser-version="567" data-animation-category="${esc(tab)}"${query.trim()?' data-discovery-search-open="true"':''} aria-label="${esc(t('animationSelector'))}">${animationLibraryHeading()}${inFamily?'':`<div class="animation-discovery-browser">${animationCategoryTabs(items,counts,tab)}${tab!=='presets'?`<label class="animation-search"><span>${esc(t('animationSearch'))}</span><svg class="icon" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg><input type="search" id="animation-search" value="${esc(query)}" placeholder="${esc(t('v567SearchHint'))}" aria-controls="animation-results" autocomplete="off" spellcheck="false"></label>`:''}${intro?`<div class="animation-discovery-intro">${intro}</div>`:''}</div>`}<div id="animation-results">${results}</div></section>`;
+  }
+  function animationLibraryResults687(items,tab,query=''){
+    const results=tab==='presets'?renderPresets():query.trim()?effectResults(query):tab==='catalogue'?animationCategorySections(items):animationCategoryFamilyList(items,tab);
+    // The visible group heading stays in its existing card. This additional
+    // heading gives a category jump an accessible focus target without making
+    // another animation choice or repeating a large visual title above it.
+    const title=query.trim()?t('animationSearch'):animationChooserCategoryLabel(tab);
+    return `<header class="animation-results-navigation"><button type="button" class="animation-discovery-back" data-action="animation-categories" data-discovery-return aria-label="${esc(t('animationFamilyBackAll'))}">${icon('back')}<span>${esc(t('v567BrowseGroups'))}</span></button><h2 id="animation-results-heading" class="animation-results-focus-heading" tabindex="-1">${esc(title)}</h2></header>${results}`;
   }
   function animationLibraryHeading(){
     const current=activeEffect(),canReturn=(current||animationEditorBrowseChoice())&&(standControlOpen||route.screen==='controls');
@@ -2659,16 +2696,16 @@
   }
   function animationCategoryArtwork(key){
     // Decorative, static light sketches, never effect previews or light commands.
-    const strips='<rect x="11" y="15" width="58" height="6" rx="3" fill="#f6aa60"/><rect x="11" y="26" width="58" height="6" rx="3" fill="#c886e5"/><rect x="11" y="37" width="58" height="6" rx="3" fill="#68c7db"/>';
+    const strips='<path d="M12 17h48M12 28h48M12 39h48" stroke="#344b50" stroke-width="9" stroke-linecap="round"/><path d="M12 16h48" stroke="#f6aa60" stroke-width="6" stroke-linecap="round"/><path d="M12 27h48" stroke="#c886e5" stroke-width="6" stroke-linecap="round"/><path d="M12 38h48" stroke="#68c7db" stroke-width="6" stroke-linecap="round"/><path d="M14 14.5h44M14 25.5h44M14 36.5h44" stroke="#fff" stroke-opacity=".24" stroke-width="1" stroke-linecap="round"/>';
     const drawings={
-      catalogue:'<rect x="12" y="9" width="24" height="16" rx="4" fill="#f6aa60"/><rect x="43" y="9" width="24" height="16" rx="4" fill="#c886e5"/><rect x="12" y="31" width="24" height="16" rx="4" fill="#68c7db"/><rect x="43" y="31" width="24" height="16" rx="4" fill="#97cc9a"/>',
+      catalogue:'<path d="M12 26h18M42 26h18M12 48h18M42 48h18" stroke="#0e2429" stroke-width="5" stroke-linecap="round"/><rect x="10" y="9" width="22" height="16" rx="4" fill="#f6aa60"/><rect x="40" y="9" width="22" height="16" rx="4" fill="#c886e5"/><rect x="10" y="31" width="22" height="16" rx="4" fill="#68c7db"/><rect x="40" y="31" width="22" height="16" rx="4" fill="#97cc9a"/><path d="M14 11h14M44 11h14M14 33h14M44 33h14" stroke="#fff" stroke-opacity=".24" stroke-width="1.5" stroke-linecap="round"/>',
       whole:strips,
-      pixels:'<path d="M10 16H70M10 28H70M10 40H70" stroke="#35454b" stroke-width="6" stroke-linecap="round"/><path d="M13 16h12m9 12h12m9 12h12" stroke="#6edcce" stroke-width="6" stroke-linecap="round"/><path d="M30 16h3m18 12h3m-24 12h3" stroke="#b89ee9" stroke-width="6" stroke-linecap="round"/>',
-      tunnel:'<path d="M11 47V24a29 29 0 0 1 58 0v23" fill="none" stroke="#62cbd7" stroke-width="4"/><path d="M22 47V25a18 18 0 0 1 36 0v22" fill="none" stroke="#b59ce8" stroke-width="4"/><path d="M33 47V26a7 7 0 0 1 14 0v21" fill="none" stroke="#f4ad66" stroke-width="4"/>',
-      brand:'<path d="M12 37V24m12 20V16m12 25V21m12 16V27" stroke="#e9ad7d" stroke-width="6" stroke-linecap="round"/><path d="m62 9 3 9 9 3-9 3-3 9-3-9-9-3 9-3Z" fill="#a797df"/>',
-      presets:'<rect x="17" y="10" width="35" height="31" rx="5" fill="#46565c"/><rect x="25" y="17" width="37" height="31" rx="5" fill="#99bdc8"/><path d="M34 27h19m-19 7h14m-14 7h19" stroke="#15262d" stroke-width="3" stroke-linecap="round"/>'
+      pixels:'<path d="M11 16h50M11 28h50M11 40h50" stroke="#344b50" stroke-width="7" stroke-linecap="round"/><path d="M13 16h13m5 12h13m5 12h10" stroke="#6edcce" stroke-width="6" stroke-linecap="round"/><path d="M31 16h3m15 12h3m-26 12h3" stroke="#b89ee9" stroke-width="6" stroke-linecap="round"/><path d="M13 16h2m16 12h2m16 12h2" stroke="#d2f8ee" stroke-width="6" stroke-linecap="round"/>',
+      tunnel:'<ellipse cx="36" cy="49" rx="27" ry="2.5" fill="#0b1d22" opacity=".65"/><path d="m10 47 21-13h14l17 13Z" fill="#28474c"/><path d="m10 9 21 15m31-15L45 24M10 47l21-13m31 13L45 34" fill="none" stroke="#426167" stroke-width="1.3"/><rect x="31" y="24" width="14" height="10" rx="1" fill="#102b30" stroke="#4c9295" stroke-width="1.5"/><rect x="25" y="20" width="25" height="18" rx="1.5" fill="none" stroke="#61acae" stroke-width="2"/><rect x="18" y="15" width="38" height="27" rx="2" fill="none" stroke="#74c8c7" stroke-width="2.5"/><rect x="10" y="9" width="52" height="38" rx="2.5" fill="none" stroke="#6edcce" stroke-opacity=".13" stroke-width="7"/><rect x="10" y="9" width="52" height="38" rx="2.5" fill="none" stroke="#91e9dc" stroke-width="3.5"/><path d="M13 10h46" stroke="#d1fff0" stroke-opacity=".65" stroke-width="1" stroke-linecap="round"/>',
+      brand:'<path d="M12 39V26m11 20V18m11 24V23m11 15V29" stroke="#0e2429" stroke-width="7" stroke-linecap="round"/><path d="M12 37V24m11 20V16m11 24V21m11 15V27" stroke="#e9ad7d" stroke-width="6" stroke-linecap="round"/><path d="m57 9 2.3 6.7L66 18l-6.7 2.3L57 27l-2.3-6.7L48 18l6.7-2.3Z" fill="#b59ce8"/><path d="m57 12 1.5 4.5L63 18l-4.5 1.5L57 24Z" fill="#e0d6f5" opacity=".45"/>',
+      presets:'<rect x="15" y="9" width="34" height="31" rx="5" fill="#40595e"/><rect x="23" y="16" width="35" height="31" rx="5" fill="#0e2429"/><rect x="23" y="14" width="35" height="31" rx="5" fill="#99bdc8"/><path d="M28 16h25" stroke="#d6edf0" stroke-opacity=".65" stroke-width="1.5" stroke-linecap="round"/><path d="M31 24h18m-18 7h13m-13 7h18" stroke="#18353c" stroke-width="3" stroke-linecap="round"/>'
     };
-    return `<svg viewBox="0 0 80 56" focusable="false" aria-hidden="true">${drawings[key]||strips}</svg>`;
+    return `<svg viewBox="0 0 72 56" focusable="false" aria-hidden="true">${drawings[key]||strips}</svg>`;
   }
   function animationCategoryTabs(items,counts,tab){
     const keys=['catalogue',...Library.sections(items).map(section=>section.key),'presets'];
@@ -2676,12 +2713,63 @@
   }
   function chooseAnimationCategoryTab(value){
     chooseAnimationCategory(value);
-    // Keep the chosen type visible in the horizontal strip after rendering;
-    // this is focus/scroll only, never a lighting command or saved setting.
+    // A category is a browse destination, not a light command. Reveal its
+    // actual results instead of scrolling back to the category just tapped.
     const surface=standControlOpen?document.getElementById('effect-dialog'):main;
-    const button=surface?.querySelector(`.animation-category-tabs [data-id="${CSS.escape(value)}"]`);
-    button?.focus({preventScroll:true});
-    button?.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});
+    const heading=surface?.querySelector('#animation-results-heading');
+    if(!heading)return;
+    revealAnimationLibraryTarget687(heading.closest('#animation-results'));
+    heading.focus({preventScroll:true});
+  }
+  function revealAnimationLibraryTarget687(target,{search=false}={}){
+    if(!target?.isConnected)return;
+    const dialog=target.closest('#effect-dialog');
+    if(dialog){
+      if(!dialog.open)return;
+      const header=dialog.querySelector('#effect-dialog-content > header');
+      const inset=Math.max(0,Number.parseFloat(header?getComputedStyle(header).top:'0')||0);
+      const top=dialog.getBoundingClientRect().top+dialog.clientTop+inset+(header?.getBoundingClientRect().height||0)+10;
+      const delta=target.getBoundingClientRect().top-top;
+      if(Math.abs(delta)>1)dialog.scrollBy({top:delta,behavior:search||window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+      return;
+    }
+    if(main.contains(target))revealBelowControlPreview(target,10);
+  }
+  function revealAnimationCategoryChoices687(button){
+    const library=button.closest('.animation-library-inline[data-discovery-ui="662"]');
+    const categories=library?.querySelector('.animation-category-tabs');
+    if(!categories)return;
+    delete library.dataset.discoverySearchOpen;
+    revealAnimationLibraryTarget687(categories);
+    categories.querySelector('[aria-pressed="true"]')?.focus({preventScroll:true});
+  }
+  function revealAnimationSearch687(input){
+    if(!advancedInterface()||arrangementApplying||input?.id!=='animation-search'||!input.isConnected)return;
+    const library=input.closest('.animation-library-inline[data-discovery-ui="662"]');
+    if(!library)return;
+    // Keep the exact input and its native keyboard/caret. Only presentation
+    // scroll and introductory teaching content change while searching.
+    library.dataset.discoverySearchOpen='true';
+    revealAnimationLibraryTarget687(input.closest('.animation-search'),{search:true});
+  }
+  document.addEventListener('focusin',event=>{
+    if(event.target?.id==='animation-search')revealAnimationSearch687(event.target);
+  });
+  document.addEventListener('click',event=>{
+    if(event.target?.id==='animation-search')revealAnimationSearch687(event.target);
+  });
+  function updateAnimationSearch687(input){
+    const value=input.value;animationQueryStore().set(animationQueryKey(),value);
+    const library=input.closest('.animation-library-inline'),heading=library?.querySelector('#animation-selector-heading');
+    if(!library)return;
+    if(heading)heading.textContent=value.trim()?t('chooseAnimation'):t('v567ChooserTitle');
+    const steps=library.querySelectorAll('.animation-picker-steps li');
+    steps.forEach((step,index)=>{if(index===(value.trim()?1:0))step.setAttribute('aria-current','step');else step.removeAttribute('aria-current');});
+    const results=library.querySelector('#animation-results');
+    if(!results)return;
+    results.querySelectorAll('canvas[data-preview]').forEach(canvas=>previews.delete(canvas.dataset.preview));
+    results.innerHTML=animationLibraryResults687(visibleCatalogue(),libraryTab(),value);
+    paint(performance.now()/1000);
   }
   function animationSettingsReturnMarkup(location){
     const current=activeEffect(),remembered=current?null:animationEditorBrowseChoice(),effect=current||remembered;
@@ -2750,7 +2838,7 @@
   function orderPanelCloseRequest589(button){
     // Leaving this presentation never requires a receiver, save or STOP ACK.
     // The original native operation retains its own writer/cleanup fences.
-    return !!button?.matches?.('[data-action="layout"]')&&
+    return !!button?.matches?.('[data-action="layout"],[data-action="order-cancel686"]')&&
       !!button.closest('.ledline-setup[data-order-open="true"]')&&openLineSetup.has(route.zoneId);
   }
   function orderDragBusy588(){
@@ -2907,12 +2995,28 @@
     if(label){label.hidden=!orderCancelNotice590;label.textContent=orderCancelNotice590?t(previewContext?'orderPreviewStopped':orderCancelNotice590.code):'';}
     return {closed:true,playbackConfirmed:!cancelled&&playbackConfirmed,cleanupConfirmed,alreadyReleased,cancelled,presentationEpoch:epoch};
   }
-  async function closeOrderPanel589(){
+  async function closeOrderPanel589({discard=false}={}){
     if(orderClose589){
       // A second explicit click can escape a genuinely pending original LIVE;
       // it never cancels another session or resets that operation's busy flag.
-      if(arrangementPlaybackPending())return stopOrderPresentation590(orderClose589,{cancelled:true});
+      if(orderClose589.saving686||arrangementPlaybackPending())return stopOrderPresentation590(orderClose589,{cancelled:true});
       return orderClose589.flight;
+    }
+    // Drops edit one local draft. Only this explicit Done action starts the
+    // existing single CAS/resume pipeline; no drag queues a metadata write.
+    if(!discard&&arrangementDirty()&&!orderSaveQueue588&&!arrangementInteractionBusy()){
+      const draft=arrangementDraft,zoneId=route.zoneId;
+      if(!openLineSetup.has(zoneId)||!zone()||draft.signature!==arrangementSignature())return {closed:false};
+      const job={epoch:orderSaveEpoch588,standId:stand().id,zoneId,layout:zone().layout,geometry:orderGeometry588(),session:orderIdentificationState?.active?orderIdentificationState.session:null,draft,version:1,confirmedVersion:0,invalid:false,error:'',flight:null,latest:orderMoveResult,trusted:false};
+      const close={epoch:orderSaveEpoch588,zoneId,standId:stand().id,draft,geometry:job.geometry,session:job.session,saving686:true,flight:null};
+      orderSaveQueue588=job;orderClose589=close;syncArrangementControls();
+      job.flight=Promise.resolve().then(()=>drainOrderSave588(job));
+      close.flight=job.flight.then(saved=>{
+        if(!currentOrderClose589(close)||!saved||draft.error)return {closed:false,playbackConfirmed:false,cleanupConfirmed:false};
+        // Re-enter only the existing settled-close lane, never save again.
+        orderClose589=null;return closeOrderPanel589();
+      }).finally(()=>{if(orderClose589===close)orderClose589=null;syncArrangementControls();syncOrderRecognition();});
+      return close.flight;
     }
     const job=orderSaveQueue588,draft=arrangementDraft,zoneId=route.zoneId;
     if(!openLineSetup.has(zoneId)||!zone())return {closed:false,playbackConfirmed:false,cleanupConfirmed:false};
@@ -2947,7 +3051,7 @@
     // still pending. Restore only its two outer entry controls after cleanup;
     // inner choices retain their own setup, connection and capability guards.
     for(const control of main.querySelectorAll('.ledline-setup[data-order-open="false"] > .ledline-setup-toggle[data-action="layout"],.ledline-setup[data-order-open="false"] > .spatial-preview-choice > .spatial-choice-toggle[data-action="spatial-toggle"]'))control.disabled=busy;
-    for(const closeButton of main.querySelectorAll('.ledline-setup [data-action="layout"]'))
+    for(const closeButton of main.querySelectorAll('.ledline-setup [data-action="layout"],.ledline-setup [data-action="order-cancel686"]'))
       if(orderPanelCloseRequest589(closeButton))closeButton.disabled=false;
     main.querySelector('.ledline-arrangement')?.setAttribute('aria-busy',String(busy));
     const status=main.querySelector('[data-order-apply-status]');
@@ -2969,9 +3073,9 @@
     const error=arrangementDraft?.error||(matchingNotice?t(notice.code):''),needsStandOpen=arrangementNeedsStandOpen();
     const orderPending=!!orderSaveQueue588&&orderSaveQueue588.zoneId===route.zoneId&&orderSaveQueue588.version>orderSaveQueue588.confirmedVersion;
     const recognition=orderPending?'orderColoursPending':!orderIdentificationState?.active?previewContext?'orderPreviewStopped':orderIdentificationState?.cleanup?.status==='pending'?'orderRecognitionClosing':orderIdentificationState?.cleanup?.status==='unconfirmed'?'orderStopUnconfirmed':orderIdentificationState?.cleanup?.status==='confirmed'&&orderIdentificationState.reason==='idle'?'orderRecognitionIdleStopped':'orderRecognitionStopped':previewContext?'orderPreviewColours':orderIdentificationState.physicalConfirmed?'orderColoursConfirmed':orderIdentificationState.status==='pending'?'orderColoursPending':orderIdentificationState.status==='expired'?'orderColoursExpired':orderIdentificationState.error==='IDENTIFY_UNSUPPORTED'?'orderColoursUnsupported':'orderColoursUnconfirmed';
-    const kind=pending?'pending':error?'unconfirmed':needsStandOpen?'stand-required':orderMoveResult?.zoneId===route.zoneId&&orderMoveResult.saved?'saved':'idle';
-    const title=pending?'v593OrderPending':error?'v593OrderUnconfirmed':needsStandOpen?'v593OrderStandRequired':kind==='saved'?'v593OrderSaved':'v593OrderReady';
-    const full=pending?t('orderApplying'):error||(needsStandOpen?t('orderOpenStandHint'):kind==='saved'?t('v593OrderSaved'):t('v593OrderReady'));
+    const kind=pending?'pending':error?'unconfirmed':needsStandOpen?'stand-required':arrangementDirty()?'draft':orderMoveResult?.zoneId===route.zoneId&&orderMoveResult.saved?'saved':'idle';
+    const title=pending?'v593OrderPending':error?'v593OrderUnconfirmed':needsStandOpen?'v593OrderStandRequired':kind==='draft'?'v686OrderDraft':kind==='saved'?'v593OrderSaved':'v593OrderReady';
+    const full=pending?t('orderApplying'):error||(needsStandOpen?t('orderOpenStandHint'):kind==='draft'?orderText652('orderDraftHint686'):kind==='saved'?t('v593OrderSaved'):t('v593OrderReady'));
     return {kind,title,recognition,full,recognitionFull:t(recognition)};
   }
   function orderStatusMarkup593(){
@@ -2988,6 +3092,10 @@
   function previewArrangement(z){
     return z&&openLineSetup.has(z.id)&&arrangementDraft?.zoneId===z.id&&
       arrangementDraft.signature===arrangementSignature(z)?arrangementDraft:null;
+  }
+  function orderFocusLineIds686(z=zone()){
+    const draft=previewArrangement(z);
+    return draft?[...draft.lineOrder]:M.lineIds(model,z.id);
   }
   // Single-line copy is presentation only. Original pending/failure/saved
   // authority remains exact; only a neutral idle hint is replaced.
@@ -3049,7 +3157,7 @@
           succeeded=true;return true;
         }
       }
-      const next=M.arrangeLines(model,zoneId,{layout:draft.layout,lineOrder:draft.lineOrder});
+      const sceneBefore684=model,next=M.arrangeLines(model,zoneId,{layout:draft.layout,lineOrder:draft.lineOrder});
       draft.error='';
       if(!orderJob)renderArrangement({...browsing,focus:null});
       else if(inlineOrderDrag?.isActive())orderRenderDeferred=true;
@@ -3061,6 +3169,7 @@
         // replay old light on behalf of retired consent.
         const continuationAllowed=!currentStart||currentStart();
         model=saved;
+        recordScenePresentation684(sceneBefore684,zoneId);
         succeeded=true;
         // Preserve the genuinely committed authoritative model even when
         // consent was retired. That save is not permission to replay/start.
@@ -3125,7 +3234,7 @@
     const previousView=spatialMode(z.layout,z),browsing=arrangementBrowsing();
     if(keepOpen)openSpatialChoices.add(z.id);else openSpatialChoices.delete(z.id);
     spatialViews.set(z.id,view);
-    if(layout===z.layout){renderArrangement(browsing);return true;}
+    if(layout===z.layout){recordScenePresentation684(model,z.id);renderArrangement(browsing);return true;}
     if(!arrangementDraft||arrangementDraft.zoneId!==z.id||arrangementDraft.signature!==arrangementSignature(z))beginArrangement();
     arrangementDraft.layout=layout;
     const saved=await applyArrangement(null,null,{strictPlayback,currentStart});
@@ -3147,11 +3256,14 @@
     // A previous uncertain edit can leave only the local camera stale.
     // The stored layout already matches: repair the view without replaying it.
     if(layout===previousLayout){
-      spatialViews.set(z.id,view);beginArrangement();renderArrangement(browsing);return true;
+      spatialViews.set(z.id,view);recordScenePresentation684(model,z.id);beginArrangement();renderArrangement(browsing);return true;
     }
     // Keep every group example on the confirmed camera while the atomic
     // layout edit is pending. Choosing a camera never applies group.preview.
     familySpatialSwitch={zoneId:z.id,previousView};
+    // Keep the intended camera separate from the still-visible previous
+    // camera, so a confirmed scene metadata edit records the chosen view.
+    spatialViews.set(z.id,view);
     beginArrangement();arrangementDraft.layout=layout;
     let saved=false;
     try{saved=await applyArrangement();}
@@ -3162,6 +3274,7 @@
         // An uncertain ACK may still return a reconciled, committed model.
         // Follow that authoritative layout, not a stale previous RAM camera.
         spatialViews.set(z.id,saved||current.layout!==previousLayout?(current.layout==='vertical'?'wall':'tunnel'):previousView);
+        if(saved)recordScenePresentation684(model,z.id);
         if(route.screen==='animation-family'&&route.family===browsing.route.family)renderArrangement(browsing);
       }
     }
@@ -3170,7 +3283,7 @@
   function arrangementBrowsing(){const active=document.activeElement;return {route:{...route},controlMode,showGallery:showControlAnimationGallery,query:main.querySelector('#animation-search')?.value||'',scroll:window.scrollY,sheetScroll:main.querySelector('[data-order-open="true"]')?.scrollTop||0,spatial:spatialChoiceBrowsing(),focus:active?.dataset?.action?{action:active.dataset.action,id:active.dataset.id||'',receiver:active.dataset.receiver||'',delta:active.dataset.delta||''}:null};}
   function restoreArrangementBrowsing(context){
     const search=main.querySelector('#animation-search');
-    if(search&&context.query){search.value=context.query;const results=main.querySelector('#animation-results');if(results)results.innerHTML=effectResults(context.query);paint(performance.now()/1000);}
+    if(search&&context.query){search.value=context.query;const results=main.querySelector('#animation-results');if(results)results.innerHTML=animationLibraryResults687(visibleCatalogue(),libraryTab(),context.query);paint(performance.now()/1000);}
     window.scrollTo({top:context.scroll,left:0,behavior:'instant'});updateControlPreviewDensity();
     const sheet=main.querySelector('[data-order-open="true"]');if(sheet)sheet.scrollTop=context.sheetScroll||0;
     const spatialDialog=main.querySelector('[data-spatial-choice-dialog]');
@@ -3328,7 +3441,7 @@
     const eye='<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
     const phone='<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 5h4M11 19h2"/></svg>';
     return `<section class="ledline-setup card" data-order-ui="652" data-order-visual="655" data-order-focus-ui="664" data-order-direct-ui="668" data-order-open="true" role="dialog" aria-modal="true" aria-label="${esc(title)}">
-      <button class="ledline-setup-toggle" data-action="layout" aria-label="${esc(orderText652('orderDone')+' · '+title)}" aria-expanded="true" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy"><b>${esc(title)}</b><small id="ledline-setup-context">${esc(context)}</small></span><span class="ledline-setup-close-label">${icon('close')}<span class="sr-only">${esc(orderText652('orderDone'))}</span></span></button>${orderCancelNoticeMarkup590(z)}
+      <button class="ledline-setup-toggle" data-action="order-cancel686" aria-label="${esc(t('close')+' · '+title)}" aria-expanded="true" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy"><b>${esc(title)}</b><small id="ledline-setup-context">${esc(context)}</small></span><span class="ledline-setup-close-label">${icon('close')}<span class="sr-only">${esc(t('close'))}</span></span></button>${orderCancelNoticeMarkup590(z)}
       <div class="ledline-setup-body" id="ledline-setup-body" role="region" aria-labelledby="ledline-setup-heading" aria-describedby="ledline-setup-context">
         <section class="order-assignment-intro652 order-visual-intro655">
           <div class="order-match-guide668"><span class="order-match-real668">${eye}<b>${esc(orderText652('orderDirectReal668'))}</b></span><span class="order-match-arrow668" aria-hidden="true">→</span><span class="order-match-app668">${phone}<b>${esc(orderText652('orderDirectApp668'))}</b></span></div>
@@ -3344,7 +3457,7 @@
           <p class="sr-only order-drop-status" role="status" aria-live="polite"></p>
           <ol class="order-assignments652" aria-label="${esc(orderText652('orderCurrentOrder'))}" aria-description="${esc(orderText652('orderDirectRule668'))}">${rows}</ol>${count?'':`<p>${esc(orderText652('orderEmpty'))}</p>`}
         </section>
-        <footer class="order-assignment-footer652"><button type="button" class="button full order-assignment-done652" data-action="layout">${icon('check')}${esc(orderText652('orderDone'))}</button></footer>
+        <footer class="order-assignment-footer652"><small>${esc(orderText652('orderDraftHint686'))}</small><button type="button" class="button full order-assignment-done652" data-action="layout">${icon('check')}${esc(orderText652('orderDone'))}</button></footer>
         ${reusable?`<button class="ledline-reuse-action" data-action="zone-assign" data-id="${esc(z.id)}">${icon('receiver')}<span>${esc(t('lineSetupReuse'))}</span>${icon('chevron')}</button>`:''}${layoutReceiverActions()}
       </div></section>`;
   }
@@ -3448,11 +3561,15 @@
     if(!saved.available)return `<span class="scene-preview scene-preview-unavailable ${css}" role="img" aria-label="${esc(t('v50PreviewUnavailable',{name:saved.name}))}">${icon('info')}<small>${esc(t('v50LayoutChanged'))}</small></span>`;
     if(saved.receivers.some(receiver=>receiver.state?.standAnimation)){
       if(!standPlan)return `<span class="scene-preview scene-preview-unavailable ${css}" role="img" aria-label="${esc(t('v50SharedPreviewUnavailable',{name:saved.name}))}">${icon('info')}<small>${esc(t('v50InstallationChanged'))}</small></span>`;
-      return addPreview(saved.receivers,'stacked',`scene-preview ${css}`,{capturedStandPlan:standPlan,capturedStandZoneId:saved.id,label:t('v50SavedLightPreview',{name:saved.name,type:saved.type})});
+      return addPreview(saved.receivers,saved.layout,`scene-preview ${css}`,{...savedScenePreviewOptions684(saved),capturedStandPlan:standPlan,capturedStandZoneId:saved.id,label:t('v50SavedLightPreview',{name:saved.name,type:saved.type})});
     }
     // No zoneId here: paint must retain the captured scene state instead of
     // substituting the currently edited zone's live light settings.
-    return addPreview(saved.receivers,saved.layout,`scene-preview ${css}`,{label:t('v50SavedLightPreview',{name:saved.name,type:saved.type})});
+    return addPreview(saved.receivers,saved.layout,`scene-preview ${css}`,{...savedScenePreviewOptions684(saved),label:t('v50SavedLightPreview',{name:saved.name,type:saved.type})});
+  }
+  function savedScenePreviewOptions684(saved){
+    return saved.presentation?{lineOrder:[...saved.lineOrder],presentation:saved.layout==='continuous'?'combined':'receivers',
+      ...(['tunnel','wall'].includes(saved.presentation)?{spatialShape:saved.presentation}:{})}:{};
   }
   function scenePreview(scene) {
     const zones=Scenes.previewZones(model,scene),shown=zones.slice(0,4),extra=zones.length-shown.length,standPlan=savedSceneStandPlan(scene);
@@ -3490,7 +3607,15 @@
       const label=(zone?.name||t("Zone niet beschikbaar"))+(modified?' · '+t('gewijzigd'):'');
       return `<button type="button" class="scene-edit-zone-chip${modified?' is-modified':''}" data-action="scene-edit-zone" data-zone="${esc(id)}" aria-label="${esc(label)}" title="${esc(label)}" aria-pressed="${!atStand&&route.zoneId===id&&['controls','colour','animations','effects','animation-family'].includes(route.screen)}" ${!zone||edit.saving?'disabled':''}><span>${esc(zone?.name||t("Zone niet beschikbaar"))}</span><i aria-hidden="true" ${modified?'':'hidden'}></i></button>`;
     }).join('');
-    return `<aside class="scene-edit-workbench" data-scene-ui="640" aria-label="${esc(t("Scène bewerken"))}"><div class="scene-edit-workbench-copy"><small>${esc(t("Scène bewerken"))}</small><b title="${esc(edit.name||edit.session.original.name)}">${esc(edit.name||edit.session.original.name)}</b></div><div class="scene-edit-workbench-actions"><button class="button" data-action="scene-edit-save" ${edit.saving?'disabled':''}>${edit.saving?t("Opslaan…"):t("Scène opslaan")}</button><button class="icon-button" data-action="scene-edit-stop" aria-label="${esc(t("Stoppen met bewerken"))}" title="${esc(t("Stoppen zonder verder op te slaan"))}" ${edit.saving?'disabled':''}>${icon('close')}</button></div><button class="text-button scene-edit-variation675" data-action="scene-edit-variation" ${edit.saving?'disabled':''}>${icon('plus')} ${esc(t("Opslaan als nieuwe scène"))}</button><div class="scene-edit-zones" role="group" aria-label="${esc(t("Zones van deze scène"))}"><button class="scene-edit-overview" data-action="scene-edit-stand" aria-pressed="${atStand}" ${edit.saving?'disabled':''}>${esc(t('Alle {count}',{count:zoneCount(edit.zoneIds.length)}))}</button>${chips}</div>${edit.error||edit.notice?`<p class="scene-edit-workbench-message" role="status">${esc(edit.error||edit.notice)}</p>`:''}</aside>`;
+    return `<aside class="scene-edit-workbench scene-edit-workbench687" data-scene-ui="640" aria-label="${esc(t("Scène bewerken"))}">
+      <header class="scene-edit-workbench-header"><div class="scene-edit-workbench-copy"><small>${esc(t("Scène bewerken"))}</small><b title="${esc(edit.name||edit.session.original.name)}">${esc(edit.name||edit.session.original.name)}</b></div><button type="button" class="icon-button" data-action="scene-edit-stop" aria-label="${esc(t("Stoppen met bewerken"))}" title="${esc(t("Stoppen zonder verder op te slaan"))}" ${edit.saving?'disabled':''}>${icon('close')}</button></header>
+      <div class="scene-edit-workbench-actions" role="group" aria-label="${esc(t("Scène opslaan"))}">
+        <button type="button" class="button scene-edit-save687" data-action="scene-edit-save" ${edit.saving?'disabled':''}>${icon('check')}<span><b>${esc(t(edit.saving?"Opslaan…":"Wijzigingen opslaan"))}</b><small>${esc(t("Deze scène bijwerken"))}</small></span></button>
+        <button type="button" class="button secondary scene-edit-variation675" data-action="scene-edit-variation" ${edit.saving?'disabled':''}>${icon('duplicate')}<span><b>${esc(t("Opslaan als nieuwe scène"))}</b><small>${esc(t("Origineel blijft bewaard"))}</small></span></button>
+      </div>
+      <section class="scene-edit-scope687" aria-label="${esc(t("Verlichting aanpassen"))}"><small class="scene-edit-scope-label687">${esc(t("Verlichting aanpassen"))}</small><div class="scene-edit-zones" role="group" aria-label="${esc(t("Zones van deze scène"))}"><button type="button" class="scene-edit-overview" data-action="scene-edit-stand" aria-pressed="${atStand}" ${edit.saving?'disabled':''}>${icon('layers')}<span>${esc(t("Hele scène"))}</span></button>${chips}</div></section>
+      ${edit.error||edit.notice?`<p class="scene-edit-workbench-message" role="status">${esc(edit.error||edit.notice)}</p>`:''}
+    </aside>`;
   }
   function syncSceneWorkbench640(){
     if(!sceneEdit640||typeof document==='undefined')return;
@@ -3508,14 +3633,115 @@
     }
   }
   function sceneEditBusy640(sceneId=null){
+    if(scenePresentationJob684||sceneActivationJob684||sceneOpenJob684){toast(t('De scène wordt nog geladen.'));return true;}
     if(!sceneEdit640)return false;
     if(!sceneEdit640.saving&&sceneId===sceneEdit640.session.original.id)return false;
     toast(sceneEdit640.saving?'Je scène wordt nog bewaard.':'Sla je scène eerst op of kies ‘Stoppen met bewerken’.');return true;
   }
-  function openSceneEditing640(scene,{zoneId=null}={}){
+  let scenePresentationJob684=null,sceneActivationJob684=null,sceneOpenJob684=null;
+  function recordScenePresentation684(before,zoneId){
+    if(!sceneEdit640||!sceneEdit640.session.zoneIds.includes(zoneId))return;
+    const z=M.getZone(model,zoneId),presentation=scenePresentations684()[zoneId]||(z.layout==='vertical'?'wall':'normal');
+    sceneEdit640.session=SceneEditing.recordPresentation(sceneEdit640.session,before,model,zoneId,presentation);
+  }
+  function scenePresentations684(current=model,standId=stand()?.id){
+    const source=current.stands.find(stand=>stand.id===standId);if(!source)return {};
+    // A fresh capture must also work from Stand after an app reload. Derive
+    // a missing camera from this zone's actual saved light, never a gallery
+    // being browsed in this or another zone. Explicit choices still win.
+    const marker=StandAnimations.active(current,standId),sharedTunnel=marker?.state.category==='tunnel';
+    return Object.fromEntries(source.zones.map(z=>{
+      if(z.layout==='vertical')return [z.id,'wall'];
+      if(z.layout==='continuous')return [z.id,'normal'];
+      if(spatialViews.has(z.id))return [z.id,spatialViews.get(z.id)];
+      const tunnel=sharedTunnel||M.zoneLedlines(current,z.id).some(line=>{
+        const receiver=current.receivers.find(receiver=>receiver.id===line.receiverId),state=M.lightStateFor(receiver,line.port);
+        if(!state.engine||String(state.engine).toUpperCase()==='STATIC')return false;
+        if(state.category)return state.category==='tunnel';
+        const effect=P.catalog(z.type).find(effect=>state.v30Effect?effect.state.v30Effect===state.v30Effect:
+          !effect.state.v30Effect&&effect.state.engine===state.engine&&effect.state.variant===state.variant&&
+          (effect.state.previewFamily||null)===(state.previewFamily||null));
+        return effect?.category==='tunnel';
+      });
+      return [z.id,tunnel?'tunnel':'normal'];
+    }));
+  }
+  function captureScene684(current,standId,zoneIds,name,options={}){
+    return Scenes.capture(current,standId,zoneIds,name,{...options,presentations:scenePresentations684(current,standId)});
+  }
+  function currentPresentationScene684(input){
+    const original=Scenes.validate(input);if(original.version===2)return original;
+    // Only explicit Save upgrades an old light-only scene. Renaming and
+    // making a variation cannot invent a historical arrangement.
+    const fresh=captureScene684(model,original.standId,original.zones.map(z=>z.id),original.name,{id:original.id});
+    return Scenes.validate({...fresh,zones:fresh.zones.map(zone=>({...zone,receivers:zone.receivers.map(receiver=>
+      ({...receiver,state:copy(original.zones.find(saved=>saved.id===zone.id).receivers.find(saved=>saved.id===receiver.id).state)}))}))});
+  }
+  function sceneSubset684(scene,zoneId){
+    return zoneId&&!scene.zones.some(zone=>zone.receivers.some(receiver=>receiver.state.standAnimation))
+      ?{...scene,zones:scene.zones.filter(zone=>zone.id===zoneId)}:scene;
+  }
+  async function prepareScenePresentation684(input){
+    const scene=Scenes.validate(input);if(scene.version!==2)return;
+    if(scenePresentationJob684)throw Error(t('De scène wordt nog geladen.'));
+    const before=model,signature=JSON.stringify(model),sceneRoute=route,routeSignature=JSON.stringify(route),standId=stand()?.id,centralBefore=simpleStandMode&&centralApplied?copy(centralApplied):null,job={};scenePresentationJob684=job;
+    const current=()=>scenePresentationJob684===job&&route===sceneRoute&&JSON.stringify(route)===routeSignature&&stand()?.id===standId&&!document.hidden&&model===before&&JSON.stringify(model)===signature;
+    try{
+      const next=Scenes.presentationModel(before,scene);
+      await liveController?.whenIdle({standId:scene.standId,waitForGesture:true});
+      if(!current())throw Error(t('De stand is intussen gewijzigd. Open de scène opnieuw.'));
+      let confirmed=next;
+      if(nativeContext){
+        if(!nativeLoaded||standId!==scene.standId)throw Error(t('Open eerst je stand.'));
+        if(simpleStandMode){
+          // Build only logical zone PUTs against this exact authenticated
+          // snapshot, never an old whole-model diff or a replayed binding.
+          const head=standSession?.snapshot();
+          if(!centralBefore||!head||['standId','bootId','configRevision'].some(key=>head[key]!==centralBefore[key]))
+            throw Error(t('De stand is intussen gewijzigd. Open de scène opnieuw.'));
+          const target=Scenes.presentationModel(centralBefore.view.model,scene);
+          const operations=SimpleStand.changes(centralBefore,{model:target,libraries:centralBefore.libraries},scene.standId);
+          if(operations.some(op=>{
+            const old=centralBefore.view.model.stands[0].zones.find(zone=>zone.id===op.id),saved=scene.zones.find(zone=>zone.id===op.id);
+            if(op.op!=='put'||op.kind!=='zone'||op.parent!==scene.standId||!old||!saved)return true;
+            const unchanged=value=>{const data=copy(value);delete data.layout;delete data.lineOrder;return JSON.stringify(data);};
+            return unchanged(old)!==unchanged(op.value)||op.value.layout!==saved.arrangement.layout||
+              JSON.stringify(op.value.lineOrder)!==JSON.stringify(saved.arrangement.lineOrder);
+          }))throw Error(t('De opgeslagen opstelling is niet bevestigd.'));
+          if(operations.length){
+            await standSession.mutate({op:'config',expectedRevision:centralBefore.configRevision,payload:{operations},transactionId:crypto.randomUUID()});
+            await standSession.refresh();
+            confirmed=keepLocalPreviewStates(standSession.snapshot().view.model);
+          }else confirmed=keepLocalPreviewStates(centralBefore.view.model);
+        }
+        else{
+          const view=await runtime.services.editZones({standId:scene.standId,operation:{kind:'scenePresentation',zones:scene.zones.map(zone=>
+            ({zoneId:zone.id,type:zone.type,arrangement:copy(zone.arrangement),
+              identities:zone.receivers.map(receiver=>({id:receiver.id,...receiver.identity}))}))}});
+          confirmed=keepLocalPreviewStates(view.model);
+        }
+      }
+      if(!current())throw Error(t('De stand is intussen gewijzigd. Er is geen licht gestart.'));
+      const check=Scenes.compatibility(confirmed,scene);if(!check.ok)throw Error(check.reason);
+      for(const saved of scene.zones){const zone=M.getZone(confirmed,saved.id);
+        if(zone.layout!==saved.arrangement.layout||JSON.stringify(M.lineIds(confirmed,saved.id))!==JSON.stringify(saved.arrangement.lineOrder))
+          throw Error(t('De opgeslagen opstelling is niet bevestigd.'));
+      }
+      model=confirmed;
+      for(const saved of scene.zones)spatialViews.set(saved.id,saved.arrangement.presentation);
+      retainSetupSelections();
+    }finally{if(scenePresentationJob684===job)scenePresentationJob684=null;}
+  }
+  async function openSceneEditing640(scene,{zoneId=null}={}){
     if(sceneEditBusy640(scene.id))return;
+    const job={},sceneRoute=route;sceneOpenJob684=job;
+    try{
     const previous=sceneEdit640,draft=route.screen==='scene-draft'&&!zoneId&&sceneDraft?.sceneId===scene.id?sceneDraft:null;
     const metadata=draft?{zoneIds:draft.zoneIds,name:draft.name}:previous?{zoneIds:previous.zoneIds,name:previous.name}:{};
+    const oldModel=model,prepared=sceneEdit640?SceneEditing.build(sceneEdit640.session,model,{...metadata,presentations:scenePresentations684()}):scene;
+    await prepareScenePresentation684(sceneSubset684(prepared,zoneId));
+    if(route!==sceneRoute||stand()?.id!==scene.standId||document.hidden)throw Error(t('De stand is intussen gewijzigd. Er is geen licht gestart.'));
+    if(sceneEdit640)sceneEdit640.session=SceneEditing.acceptPresentation(sceneEdit640.session,oldModel,model,sceneSubset684(prepared,zoneId));
     const loaded=sceneEdit640
       ?(zoneId?SceneEditing.loadZone(sceneEdit640.session,model,zoneId):SceneEditing.loadAll(sceneEdit640.session,model,metadata))
       :draft&&!zoneId?SceneEditing.loadAll(SceneEditing.begin(model,scene).session,model,metadata):SceneEditing.begin(model,scene,{zoneId});
@@ -3525,14 +3751,15 @@
     sceneDraft=null;
     if(zoneId){selections.set(zoneId,{kind:'all'});navigate('controls',{zoneId,standId:scene.standId},{zoneEntry:true,scenePrepared640:true});}
     else navigate('stand',{standId:scene.standId,zoneId:null});
+    }finally{if(sceneOpenJob684===job)sceneOpenJob684=null;}
   }
   function buildSceneDraft640(){
     if(sceneEdit640&&sceneDraft.sceneId===sceneEdit640.session.original.id)
-      return SceneEditing.build(sceneEdit640.session,model,{zoneIds:sceneDraft.zoneIds,name:sceneDraft.name});
-    if(!sceneDraft.original)return Scenes.capture(model,stand().id,sceneDraft.zoneIds,sceneDraft.name);
+      return SceneEditing.build(sceneEdit640.session,model,{zoneIds:sceneDraft.zoneIds,name:sceneDraft.name,presentations:scenePresentations684()});
+    if(!sceneDraft.original)return captureScene684(model,stand().id,sceneDraft.zoneIds,sceneDraft.name);
     const original=sceneDraft.original,saved=new Map(original.zones.map(zone=>[zone.id,zone]));
     const missing=sceneDraft.zoneIds.filter(id=>!saved.has(id));
-    const fresh=missing.length?Scenes.capture(model,stand().id,sceneDraft.zoneIds,sceneDraft.name,{id:original.id}):null;
+    const fresh=missing.length?captureScene684(model,stand().id,sceneDraft.zoneIds,sceneDraft.name,{id:original.id}):null;
     const zones=sceneDraft.zoneIds.map(id=>copy(saved.get(id)||fresh.zones.find(zone=>zone.id===id)));
     const scene=Scenes.validate({...original,name:sceneDraft.name,zones});
     SceneEditing.begin(model,scene); // Validate exact membership/shared scope without applying or sending.
@@ -3545,9 +3772,14 @@
     navigate('scene-draft',{standId:variant.standId});
   }
   async function activateSavedScene675(scene){
+    if(sceneActivationJob684)throw Error(t('De scène wordt nog geladen.'));
+    const job={},sceneRoute=route;sceneActivationJob684=job;
+    try{
     // Storage ACK is not a physical light ACK. Reapply the complete saved
     // selection through the ordinary queue; never cancel/clear its Owner.
-    if(stand()?.id!==scene.standId||document.hidden)throw Object.assign(Error(),{code:'SCENE_ACTIVATION_CONTEXT_CHANGED'});
+    if(route!==sceneRoute||stand()?.id!==scene.standId||document.hidden)throw Object.assign(Error(),{code:'SCENE_ACTIVATION_CONTEXT_CHANGED'});
+    await prepareScenePresentation684(scene);
+    if(route!==sceneRoute||stand()?.id!==scene.standId||document.hidden)throw Object.assign(Error(),{code:'SCENE_ACTIVATION_CONTEXT_CHANGED'});
     const activated=SceneEditing.activation(model,scene);
     if(nativeLoaded&&!spiPortScenesAvailable&&activated.receiverIds.some(id=>activated.model.receivers.find(receiver=>receiver.id===id)?.state.portStates))throw Object.assign(Error(),{code:'SPI_PORT_SCENES_UNSUPPORTED'});
     model=activated.model;
@@ -3567,8 +3799,10 @@
     // final existing LIVE checkpoint before releasing the deferred view.
     if(simpleStandMode&&centralLiveCheckpoint)await centralLiveCheckpoint.flush();
     if(stand()?.id!==scene.standId||document.hidden||stateKey()!==intended||simpleStandMode&&centralLiveCheckpoint?.state().status==='unconfirmed')throw Object.assign(Error(),{code:'SCENE_ACTIVATION_CONTEXT_CHANGED'});
+    }finally{if(sceneActivationJob684===job)sceneActivationJob684=null;}
   }
   async function saveScene640(scene,{event=null,fromWorkbench=false,asNew=false}={}){
+    if(scenePresentationJob684||sceneActivationJob684||sceneOpenJob684){toast(t('De scène wordt nog geladen.'));return;}
     if(sceneEdit640?.saving||sceneDraft?.saving)return;
     const edit=sceneEdit640,draft=sceneDraft;
     const editSession=edit?.session,editMetadata=edit?JSON.stringify({name:edit.name,zoneIds:edit.zoneIds}):null;
@@ -3578,6 +3812,7 @@
     render({preserveScroll:true});
     let libraryConfirmed=false;
     try{
+      if(!asNew)scene=currentPresentationScene684(scene);
       const result=sceneStore.save(scene,{insertOnly:asNew&&!draft?.savedLocally675});if(result.error)throw Error(t(result.error.message));
       // Local persistence precedes the central commit in the existing store.
       // Keep the editor and retry context until that commit is confirmed.
@@ -3658,12 +3893,16 @@
     if(!stand())return renderScenes();
     const scene=savedScenes.scenes.find(s=>s.id===route.sceneId&&s.standId===stand().id);if(!scene)return renderScenes();
     const check=Scenes.compatibility(model,scene),zones=Scenes.previewZones(model,scene),count=zones.reduce((n,z)=>n+z.receiverCount,0),standPlan=savedSceneStandPlan(scene);
-    return `<div class="page scene-detail-page ui606-pages" data-scene-ui="640">
+    // Activation and per-zone editing have different compatibility contracts.
+    // Keep those decisions intact; only the explanation and action hierarchy change.
+    const editable=check.ok&&zones.every(zone=>zone.available),reason=check.ok?zones.find(zone=>!zone.available)?.reason:check.reason;
+    return `<div class="page scene-detail-page scene-detail-page687 ui606-pages" data-scene-ui="640">
       <div class="topline"><button class="back" data-action="scenes" aria-label="${esc(t("Terug naar Scènes"))}">${icon('back')}<span>${esc(t("Scènes"))}</span></button><span class="context-name">${esc(standLabel())}</span></div>
-      <div class="scene-detail-header"><div class="scene-detail-heading"><header class="page-heading"><div><h1>${esc(scene.name)}</h1><p>${esc(t("Tik op een zone om het opgeslagen licht te laden en aan te passen."))}</p></div></header><div class="scene-scope-summary"><span>${icon('zones')}<b>${zoneCount(zones.length)}</b></span><span>${icon('receiver')}<b>${receiverCount(count)}</b></span></div></div><div class="scene-detail-activate scene-activate-bar">${sceneActivateButtonMarkup(scene)}</div></div>
-      <div class="ui606-scene-detail-tools"><button class="button secondary scene-edit-button" data-action="scene-edit" data-id="${esc(scene.id)}">${icon('edit')} ${esc(t("Naam en zones"))}</button></div>
-      <section class="scene-detail"><div class="section-heading"><h2>${esc(t("Zones in deze scène"))}</h2><small>${esc(t("Tik om te bewerken"))}</small></div>${check.ok?'':`<p class="card scene-zone-warning" role="alert">${esc(ownedCompatibilityReason654(check.reason))} ${esc(t("Er wordt niets gedeeltelijk geactiveerd."))}</p>`}${sceneSearch('detail',zones.length)}<div class="scene-saved-zones">${zones.map((z,i)=>`<button type="button" class="scene-saved-zone" data-action="scene-zone-edit" data-id="${esc(scene.id)}" data-zone="${esc(z.id)}" data-scene-zone="${esc(z.id)}" data-scene-zone-type="${z.type}" data-scene-filter-name="${esc(z.name+' '+z.type)}" ${check.ok&&zones.every(zone=>zone.available)?'':'disabled'} aria-label="${esc(t('{name}: opgeslagen licht laden en bewerken',{name:z.name}))}"><span class="scene-saved-zone-heading"><span class="scene-zone-number">${i+1}</span><span><b>${esc(z.name)}</b><small>${z.type} · ${receiverCount(z.receiverCount)}</small></span><span class="scene-zone-edit-label">${esc(t("Bewerken"))} ${icon('chevron')}</span></span>${savedZonePreview(z,'',standPlan)}${z.available?'':`<span class="scene-zone-warning">${esc(ownedCompatibilityReason654(z.reason))}</span>`}</button>`).join('')}</div><p class="scene-search-empty card" hidden>${esc(t("Geen zones gevonden. Pas je zoekopdracht aan om je opgeslagen zones te zien."))}</p></section>
-      <button class="button full scene-detail-edit" data-action="scene-start-edit" data-id="${esc(scene.id)}" ${check.ok&&zones.every(zone=>zone.available)?'':'disabled'}>${icon('edit')} ${esc(t("Deze scène bewerken"))} ${icon('chevron')}</button><p class="scene-edit-hint">${esc(t("Laadt de scène en opent je stand. Stel je zones daar opnieuw in en kies ‘Scène opslaan’."))}</p><button class="text-button ui606-scene-delete" data-action="scene-delete" data-id="${esc(scene.id)}">${icon('trash')}<span>${esc(t("Scène verwijderen"))}</span></button></div>`;
+      <div class="scene-detail-header"><div class="scene-detail-heading"><header class="page-heading"><div><h1>${esc(scene.name)}</h1><p>${esc(t(editable?"Tik op een zone om het opgeslagen licht te laden en aan te passen.":"Bekijk de opgeslagen zones of werk de naam en zones bij."))}</p></div></header><div class="scene-scope-summary"><span>${icon('zones')}<b>${zoneCount(zones.length)}</b></span><span>${icon('receiver')}<b>${receiverCount(count)}</b></span></div>${check.ok?`<p class="scene-detail-storage687">${icon('scenes')}<span>${esc(t(scene.version===1?'Alleen licht opgeslagen.':'Licht en opstelling opgeslagen.'))}</span></p>`:''}</div></div>
+      ${editable?'':`<section class="scene-detail-status687" role="status"><span class="scene-detail-status-icon687" aria-hidden="true">${icon('info')}</span><div><h2>${esc(t(check.ok?'Bewerken per zone niet beschikbaar':'Scène niet beschikbaar'))}</h2><p>${esc(ownedCompatibilityReason654(reason))}</p></div></section>`}
+      <div class="scene-detail-actions687">${check.ok?`<div class="scene-detail-activate scene-activate-bar">${sceneActivateButtonMarkup(scene)}</div>`:''}<button class="button secondary scene-edit-button" data-action="scene-edit" data-id="${esc(scene.id)}">${icon('edit')}<span>${esc(t("Naam en zones bijwerken"))}</span>${icon('chevron')}</button></div>
+      <section class="scene-detail"><div class="section-heading"><h2>${esc(t("Zones in deze scène"))}</h2>${editable?`<small>${esc(t("Tik om te bewerken"))}</small>`:''}</div>${sceneSearch('detail',zones.length)}<div class="scene-saved-zones">${zones.map((z,i)=>`${editable?`<button type="button" class="scene-saved-zone" data-action="scene-zone-edit" data-id="${esc(scene.id)}" data-zone="${esc(z.id)}" aria-label="${esc(t('{name}: opgeslagen licht laden en bewerken',{name:z.name}))}"`:'<article class="scene-saved-zone scene-saved-zone-readonly687"'} data-scene-zone="${esc(z.id)}" data-scene-zone-type="${z.type}" data-scene-filter-name="${esc(z.name+' '+z.type)}"><span class="scene-saved-zone-heading"><span class="scene-zone-number">${i+1}</span><span><b>${esc(z.name)}</b><small>${z.type} · ${receiverCount(z.receiverCount)}</small></span>${editable?`<span class="scene-zone-edit-label">${esc(t("Bewerken"))} ${icon('chevron')}</span>`:''}</span>${savedZonePreview(z,'',standPlan)}${z.available?'':`<span class="scene-zone-unavailable687">${esc(t('Voorbeeld niet beschikbaar'))}</span>`}</${editable?'button':'article'}>`).join('')}</div><p class="scene-search-empty card" hidden>${esc(t("Geen zones gevonden. Pas je zoekopdracht aan om je opgeslagen zones te zien."))}</p></section>
+      ${editable?`<button class="button secondary full scene-detail-edit" data-action="scene-start-edit" data-id="${esc(scene.id)}">${icon('edit')} ${esc(t("Licht van alle zones bewerken"))} ${icon('chevron')}</button>`:''}<button class="text-button ui606-scene-delete" data-action="scene-delete" data-id="${esc(scene.id)}">${icon('trash')}<span>${esc(t("Scène verwijderen"))}</span></button></div>`;
   }
   function standConnectionMessage(){
     const errorText=key=>window.LightningV50ErrorTexts.t(key,uiPreferences.preferences.language);
@@ -3880,7 +4119,7 @@
     syncArrangementControls();
   }
   function centralEditing(){
-    return !!sceneEdit640||!!receiverSetupPreparation||pixelSetup.isOpen()||spiZoneDirections.isOpen()||!!pairFirstOpening||route.screen==='stand-sharing'||route.screen==='receiver-add'&&!!onboarding.summary()||!!document.querySelector('.receiver-removal-sheet[open]')||!!centralLibraryPending||centralLibraryWriting||centralLiveCheckpoint?.editing()||!!activeControlPointer||inlineOrderDrag?.isActive()||managementBusy||arrangementApplying||
+    return !!scenePresentationJob684||!!sceneActivationJob684||!!sceneOpenJob684||!!sceneEdit640||!!receiverSetupPreparation||pixelSetup.isOpen()||spiZoneDirections.isOpen()||!!pairFirstOpening||route.screen==='stand-sharing'||route.screen==='receiver-add'&&!!onboarding.summary()||!!document.querySelector('.receiver-removal-sheet[open]')||!!centralLibraryPending||centralLibraryWriting||centralLiveCheckpoint?.editing()||!!activeControlPointer||inlineOrderDrag?.isActive()||managementBusy||arrangementApplying||
       !!document.querySelector('#effect-dialog[open] input:not([data-stand-code])');
   }
   function installCentralProjection(next,{redraw=true,readIntentGeneration,projectionCurrent}={}){
@@ -4599,11 +4838,7 @@
     if(previewDock){contextObserver=new ResizeObserver(measureControlPreviewDock);contextObserver.observe(previewDock,{box:'border-box'});}
     if(route.screen==='stand'&&stand())main.querySelector('.page').classList.add('stand-page');
     if(route.screen==='scene-draft'){syncSceneDraft();filterSceneZones('draft');}
-    if(route.screen==='scene-detail'){
-      filterSceneZones('detail');
-      if(savedScenes.scenes.some(scene=>scene.id===route.sceneId&&scene.standId===stand()?.id))
-        main.querySelector('.page-heading')?.insertAdjacentHTML('afterend',`<button class="text-button scene-rename" data-action="scene-rename" data-id="${esc(route.sceneId)}">${icon('edit')} Naam wijzigen</button>`);
-    }
+    if(route.screen==='scene-detail')filterSceneZones('detail');
     document.title = `${main.querySelector('h1')?.textContent || 'Aluvision'} · Aluvision Lighting`;
     // The colour picker now also lives inline on the zone-control screen.
     // Initialise whichever picker is actually present instead of tying its
@@ -4680,12 +4915,9 @@
     if(!scenePrepared640&&sceneEdit640&&!sceneEdit640.saving&&screen==='controls'&&
        (zoneEntry||editZone!==route.zoneId||route.screen==='stand')&&
        sceneEdit640.session.standId===(extra.standId||stand()?.id)&&sceneEdit640.session.zoneIds.includes(editZone)){
-      try{
-        const loaded=SceneEditing.loadZone(sceneEdit640.session,model,editZone);
-        if(nativeLoaded&&!spiPortScenesAvailable&&loaded.receiverIds.some(id=>loaded.model.receivers.find(receiver=>receiver.id===id)?.state.portStates))throw Error(t("Werk de receiversoftware bij om deze opgeslagen SPI-poortinstellingen te gebruiken."));
-        model=loaded.model;
-        sendReceiverStates(loaded.receiverIds,{sceneRestore640:true});selections.set(editZone,{kind:'all'});
-      }catch(error){sceneEdit640.error=error.message;toast(error.message);return;}
+      void openSceneEditing640(sceneEdit640.session.original,{zoneId:editZone}).catch(error=>{
+        if(sceneEdit640)sceneEdit640.error=error.message;toast(error.message);render({preserveScroll:true});
+      });return;
     }
     if(screen!==route.screen||extra.zoneId&&extra.zoneId!==route.zoneId||extra.standId&&extra.standId!==route.standId)spatialAnimationStart620=null;
     if(route.screen==='stand-connect'&&screen!=='stand-connect')standMigrationPreflightError=null;
@@ -6107,10 +6339,10 @@
       instruction.dataset.guidePlaying='false';requestAnimationFrame(()=>{if(instruction.isConnected)requestAnimationFrame(()=>{if(instruction.isConnected)instruction.dataset.guidePlaying='true';});});return;
     }
     if(orderPanelCloseRequest589(button)){
-      // Local dismissal precedes connection/management guards. It starts no
-      // second writer and never clears a native task's busy or pending state.
+      // Close discards only the local draft. Done may start its one save;
+      // either action can escape without clearing a native task's busy state.
       window.LightningInterfaceHaptics?.activate?.(event,button.dataset.action);
-      void closeOrderPanel589().catch(()=>{});return;
+      void closeOrderPanel589({discard:button.dataset.action==='order-cancel686'}).catch(()=>{});return;
     }
     if(button.dataset.action==='pin-login-cancel'&&pinLoginBusy){pinRecoveryAbort?.abort();return;}
     if(pinProtectionBusy||pinLoginBusy||(managementBusy||arrangementApplying)&&!orderPanelCloseRequest589(button))return;
@@ -6130,6 +6362,7 @@
     dialogActionOpener=button;
     queueMicrotask(()=>{if(dialogActionOpener===button)dialogActionOpener=null;});
     try {
+      if(action==='animation-categories'&&button.hasAttribute('data-discovery-return')&&button.closest('.animation-library-inline[data-discovery-ui="662"]'))return revealAnimationCategoryChoices687(button);
       if(['colour-preset-edit667','colour-preset-save667','colour-preset-cancel667','colour-preset-remove667','colour-presets-brands667'].includes(action)||
         action==='colour-undo'&&button.closest('[data-inline-presets="667"]')){
         if(!button.closest('[data-inline-presets="667"]')||presetLibraryBusy667)return;
@@ -6231,13 +6464,13 @@
         syncOrderTestControls();return;
       }
       if(orderTestBusy()&&button.closest('.ledline-row-actions'))return;
-      if(openLineSetup.has(route.zoneId)&&button.closest('.ledline-setup')&&action!=='layout'&&!['visual-identify','port-identify'].includes(action)){
+      if(openLineSetup.has(route.zoneId)&&button.closest('.ledline-setup')&&!['layout','order-cancel686','visual-identify','port-identify'].includes(action)){
         if(orderIdentificationState?.active)void orderIdentification?.interaction();else beginOrderColours();
       }
-      if(action==='layout'||action==='line-setup-open'){
+      if(action==='layout'||action==='line-setup-open'||action==='order-cancel686'){
         if(!zone()||!receivers().length)return;
-        const closing=action==='layout'&&openLineSetup.has(route.zoneId);
-        if(closing){const closingZone=route.zoneId,closed=await closeOrderPanel589();if(closed?.closed!==true||closed.presentationEpoch!==orderSaveEpoch588||openLineSetup.has(closingZone)||route.zoneId!==closingZone||document.hidden)return;}
+        const closing=['layout','order-cancel686'].includes(action)&&openLineSetup.has(route.zoneId);
+        if(closing){const closingZone=route.zoneId,closed=await closeOrderPanel589({discard:action==='order-cancel686'});if(closed?.closed!==true||closed.presentationEpoch!==orderSaveEpoch588||openLineSetup.has(closingZone)||route.zoneId!==closingZone||document.hidden)return;}
         else {openLineSetup.add(route.zoneId);beginArrangement();beginOrderColours();}
         renderArrangement(undefined,{orderExit595:closing});
         // Safari can anchor the collapsed summary behind the sticky preview
@@ -6725,11 +6958,11 @@
       }
       if(action==='scene-edit-save'){
         if(!sceneEdit640||sceneEdit640.saving)return;
-        return await saveScene640(SceneEditing.build(sceneEdit640.session,model,{name:sceneEdit640.name,zoneIds:sceneEdit640.zoneIds}),{event,fromWorkbench:true});
+        return await saveScene640(SceneEditing.build(sceneEdit640.session,model,{name:sceneEdit640.name,zoneIds:sceneEdit640.zoneIds,presentations:scenePresentations684()}),{event,fromWorkbench:true});
       }
       if(action==='scene-edit-variation'){
         if(!sceneEdit640||sceneEdit640.saving)return;
-        return openSceneVariation675(SceneEditing.build(sceneEdit640.session,model,{name:sceneEdit640.name,zoneIds:sceneEdit640.zoneIds}));
+        return openSceneVariation675(SceneEditing.build(sceneEdit640.session,model,{name:sceneEdit640.name,zoneIds:sceneEdit640.zoneIds,presentations:scenePresentations684()}));
       }
       if(action==='scene-save-new'){
         if(!sceneDraft||sceneDraft.saving||!sceneDraft.sceneId)return;
@@ -6769,8 +7002,10 @@
         if(sceneEditBusy640())return;
         const scene=savedScenes.scenes.find(item=>item.id===id&&item.standId===stand()?.id);if(!scene)return;
         const check=Scenes.compatibility(model,scene);if(!check.ok){toast(`${ownedCompatibilityReason654(check.reason)} ${t("Er is niets gewijzigd.")}`);return;}
-        try{model=Scenes.apply(model,scene);}catch(error){toast(`${ownedCompatibilityReason654(error.message)} ${t("Er is niets gewijzigd.")}`);return;}
-        sendReceiverStates(scene.zones.flatMap(item=>item.receivers.map(receiver=>receiver.id)));render();if(!nativeContext)toast(t("Scène direct geactiveerd in het voorbeeld."));return;
+        try{await activateSavedScene675(scene);}catch(error){
+          toast(ownedCompatibilityReason654(error.message||t('De opgeslagen opstelling is niet bevestigd.')));render();return;
+        }
+        render();if(!nativeContext)toast(t("Scène direct geactiveerd in het voorbeeld."));return;
       }
       if(action==='scene-delete'){if(sceneEditBusy640())return;const scene=savedScenes.scenes.find(s=>s.id===id&&s.standId===stand().id);if(!scene)return;showEffectDialog(t("Scène verwijderen?"),`<p>${esc(t('“{name}” wordt uit je opgeslagen scènes verwijderd. Je verlichting verandert niet.',{name:scene.name}))}</p><button class="button full" data-action="scene-delete-confirm" data-id="${esc(id)}">${esc(t("Scène verwijderen"))}</button><button class="button secondary full" data-action="effect-dialog-close">${esc(t("Behouden"))}</button>`);return;}
       if(action==='scene-delete-confirm'){const result=sceneStore.remove(id);if(result.error)return toast(result.error.message);await confirmCentralLibrary(result);savedScenes=result;closeEffectDialog();return navigate('scenes');}
@@ -6783,7 +7018,7 @@
         const returnScreen=route.screen==='controls'||route.effectsReturn==='controls'?'controls':'animations';
         return navigate('effects',{family:null,library:initialAnimationLibrary(),effectsReturn:returnScreen});
       }
-      if(action==='animation-search-clear'){const search=document.getElementById('animation-search');if(search){search.value='';search.dispatchEvent(new Event('input',{bubbles:true}));}return;}
+      if(action==='animation-search-clear'){const search=button.closest('.animation-library-inline')?.querySelector('#animation-search');if(search){search.value='';search.dispatchEvent(new Event('input',{bubbles:true}));search.focus({preventScroll:true});revealAnimationSearch687(search);}return;}
       if(action==='family'){
         closeZoneMenus();
         const group=Library.group(catalogue(),id);if(!group)return;
@@ -6954,14 +7189,9 @@
       if(input.id==='management-name'){document.querySelector('[data-action="management-name-save"]').disabled=!input.value.trim();return;}
       if(input.id==='preset-name'){document.querySelector('[data-action="preset-confirm"]').disabled=!input.value.trim();return;}
       if(input.id==='animation-search'){
-        const value=input.value;animationQueryStore().set(animationQueryKey(),value);
-        // Preserve the input focus, caret and scroll while filtering.
-        const library=input.closest('.animation-library-inline'),heading=library?.querySelector('#animation-selector-heading');
-        if(heading)heading.textContent=value.trim()?t('chooseAnimation'):t('v567ChooserTitle');
-        const steps=library?.querySelectorAll('.animation-picker-steps li');
-        steps?.forEach((step,index)=>{if(index===(value.trim()?1:0))step.setAttribute('aria-current','step');else step.removeAttribute('aria-current');});
-        if(!value.trim()){standControlOpen?renderStandControls({preserveScroll:true}):render();document.getElementById('animation-search')?.focus({preventScroll:true});return;}
-        const results=document.getElementById('animation-results');results.querySelectorAll('canvas[data-preview]').forEach(c=>previews.delete(c.dataset.preview));results.innerHTML=effectResults(value);paint(performance.now()/1000);return;
+        // Updating only this result list also preserves the same input when
+        // clearing the query: no full render, refocus or keyboard dismissal.
+        return updateAnimationSearch687(input);
       }
       if(input.id==='animation-category')return chooseAnimationCategory(input.value);
       if(input.id==='scene-name'){if(sceneDraft){sceneDraft.name=input.value;syncSceneDraft();}return;}
@@ -7106,20 +7336,14 @@
     if(from<0||!Number.isInteger(toIndex)||toIndex<0||toIndex>=draft.lineOrder.length||from===toIndex){orderPreviewGesture=null;syncOrderFeedback();paint(performance.now()/1000,{orderFeedback:true});return;}
     [draft.lineOrder[from],draft.lineOrder[toIndex]]=[draft.lineOrder[toIndex],draft.lineOrder[from]];
     const moving=orderPreviewGesture;orderPreviewGesture=null;draft.error='';
-    let job=orderSaveQueue588;
-    if(!currentOrderSave588(job)){
-      job={epoch:orderSaveEpoch588,standId:stand().id,zoneId:route.zoneId,layout:zone().layout,geometry:orderGeometry588(),session:orderIdentificationState?.active?orderIdentificationState.session:null,draft,version:0,confirmedVersion:0,invalid:false,error:'',flight:null};
-      orderSaveQueue588=job;
-    }
-    job.version++;job.trusted=trusted;job.latest=moving&&moving.id===id?{...moving,toIndex,previewOrder:[...draft.lineOrder]}:null;
-    orderMoveResult=job.latest?{...job.latest,saved:false}:null;
-    // Update both exchanged cards now, independently of radio/CAS latency.
-    // The authoritative model is untouched until the original pipeline ACK.
+    orderMoveResult=moving&&moving.id===id?{...moving,toIndex,previewOrder:[...draft.lineOrder],saved:false}:null;
+    // This is only a local assignment. Physical markers keep their colours;
+    // picking up another colour never waits for CONFIG, CAS or normal LIVE.
     renderArrangement({...arrangementBrowsing(),focus:null});syncOrderFeedback();syncArrangementControls();
+    selectOrderPlace664(toIndex);
     const handle=main.querySelector(`[data-order-item="${CSS.escape(id)}"] [data-order-handle]`);
     handle?.focus({preventScroll:true});
-    if(!job.flight)job.flight=Promise.resolve().then(()=>drainOrderSave588(job));
-    return job.flight;
+    return true;
   }
   inlineOrderDrag=window.LightningLedlineOrderDrag?.install({
     root:document,
@@ -7138,10 +7362,10 @@
       if(feedback.phase==='start'){
         if(orderMoveTimer!==null)clearTimeout(orderMoveTimer);orderMoveTimer=null;orderMoveResult=null;
         const physical=M.zoneLedlines(model,route.zoneId).find(line=>line.id===feedback.id),receiver=model.receivers.find(item=>item.id===physical?.receiverId);
-        // Recognise the picked-up physical colour immediately. Resolve its
-        // committed position, never a proposed drag destination or a DOM index.
+        // Recognise this physical colour immediately, including after earlier
+        // unsaved swaps. The draft changes places, never the endpoint itself.
         // The existing focus controller still owns finite ON/STOP receipts.
-        selectOrderPlace664(M.lineIds(model,route.zoneId).indexOf(feedback.id));
+        selectOrderPlace664(arrangementDraft.lineOrder.indexOf(feedback.id));
         orderPreviewGesture={...feedback,zoneId:route.zoneId,receiverName:receiver?.name||'',port:physical?.port||0,colour:orderMarker652(zone(),feedback.id)?.hex,positionColours:arrangementDraft.lineOrder.map(id=>orderMarker652(zone(),id))};
       }else if(orderPreviewGesture?.id===feedback.id)orderPreviewGesture={...orderPreviewGesture,...feedback};
       syncOrderFeedback();paint(performance.now()/1000,{orderFeedback:true});
@@ -7199,10 +7423,10 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();retireOrderFocus664();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate676',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate698',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
-    legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;
+    legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;firstPinReady686.clear();
     try{
       if(typeof runtime?.services?.loadState!=='function')throw Error('NATIVE_UNAVAILABLE');
       const startupCapabilities=await refreshStandCapabilities();simpleStandMode=simpleStandSupported;
@@ -7211,8 +7435,13 @@
       if(state.model?.demo!==false)throw Error('NATIVE_MODEL_INVALID');
       const restored=M.assertValid(state.model);
       const standId=restored.stands[0]?.id||state.draft?.stand?.id;
+      let protectedFirstReady=null;
+      if(startupCapabilities?.firstPinV2===true&&standId&&restored.receivers.some(item=>item.standId===standId&&item.role==='main'&&item.lifecycle==='added')){
+        try{const ready=await runtime.services.FirstPinV2.ready({standId});if(matchesFirstPinReady686(ready,restored)){protectedFirstReady=ready;firstPinReady686.set(standId,copy(ready));simpleStandMode=false;legacyStandLandingId=standId;firstFactorySetup=false;const marker=readFirstAccessMarker(restored);if(marker?.standId===standId&&marker.receiverId===ready.receiverId)appStorage?.removeItem(FIRST_ACCESS_KEY);}}
+        catch(_){/* Unavailable/false is not proof of a completed first setup. */}
+      }
       let startupSession=null,startupError=null;
-      if(simpleStandSupported&&!standMigrationReady){
+      if(!protectedFirstReady&&simpleStandSupported&&!standMigrationReady){
         try{startupSession=await runtime.services.standSessionStatus();}
         catch(error){startupError=error?.code||'STAND_CONNECTION_UNAVAILABLE';}
         // Until migration is available, an explicitly disconnected native
@@ -7220,7 +7449,7 @@
         // This cache is still never authority for a new StandSession write.
         if(startupSession?.status==='disconnected'&&restored.stands.length&&standKnownResumeIntent.status==='none'){simpleStandMode=false;legacyStandLandingId=standId;}
       }
-      if(!simpleStandSupported&&standId&&typeof runtime.services.securityPreference==='function'){
+      if(!protectedFirstReady&&!simpleStandSupported&&standId&&typeof runtime.services.securityPreference==='function'){
         const preference=await runtime.services.securityPreference({standId});
         if(typeof preference?.pinRequired!=='boolean')throw Error('SECURITY_PREFERENCE_UNCONFIRMED');
         window.AluvisionSecurityMode?.updateFromNative?.({pinRequired:preference.pinRequired});
@@ -7230,7 +7459,7 @@
       // Actual pending setup still takes precedence over its presentation.
       if(state.draft||!standPresentationId)model=restored;
       if(state.draft)standPresentationId=null;
-      if(simpleStandSupported&&(standMigrationReady||startupCapabilities?.firstStandAccessDiagnostics===true||standKnownResumeIntent.status!=='none')){
+      if(!protectedFirstReady&&simpleStandSupported&&(standMigrationReady||startupCapabilities?.firstStandAccessDiagnostics===true||standKnownResumeIntent.status!=='none')){
         let marker=readFirstAccessMarker(restored),inspection=null;
         const singleMain=restored.receivers.length===1&&restored.receivers[0].role==='main'&&restored.receivers[0].lifecycle==='added'&&restored.receivers[0].onboardingTransactionId;
         // Recover the crash gap after native publication but before the
@@ -7321,7 +7550,7 @@
   document.addEventListener('keydown',event=>{
     const sheet=main.querySelector('[data-order-open="true"]');
     if(event.defaultPrevented||!sheet||document.querySelector('dialog[open]'))return;
-    if(event.key==='Escape'){event.preventDefault();sheet.querySelector('[data-action="layout"]')?.click();return;}
+    if(event.key==='Escape'){event.preventDefault();sheet.querySelector('[data-action="order-cancel686"]')?.click();return;}
     if(event.key!=='Tab')return;
     const controls=[...sheet.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),[tabindex="0"]')].filter(node=>node.getClientRects().length&&!node.closest('[hidden]'));
     const first=controls[0],last=controls.at(-1);if(!first)return;

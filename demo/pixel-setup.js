@@ -10,27 +10,38 @@
   // the same customer-facing wording. Missing dictionary entries use Dutch.
   const TEXTS=Object.freeze({
     pixelPort:'Poort {port}',pixelOn:'Aan',pixelOff:'Uit',pixelNow:'Nu',pixelReady:'Klaar',pixelLater:'Straks',pixelPreserved:'Behouden',
-    pixelOutputs:'Uitgangen',pixelPixels:'Pixels',pixelStart:'Kanten',pixelReview:'Controleren',pixelSetupSteps:'LED Line instellen',
+    pixelOutputs:'Uitgangen',pixelPixels:'Pixels',pixelStart:'Kanten',pixelReview:'Controleren',pixelSetupSteps:'LED Line instellen',pixelEditorExpired:'Sluit dit menu en open het opnieuw. Je keuzes blijven bewaard.',
     pixelOnlySettings:'Pixels aanpassen',pixelOnlyHint:'Je past alleen het aantal pixels aan. De kanten blijven hetzelfde.',pixelDirectionsSettings:'Kanten aanpassen',pixelDirectionsHint:'Alle ledlines uit deze zone samen afstemmen.',pixelOnlySave:'Pixels opslaan',pixelNextDirections:'Verder · kanten instellen →',pixelAdded:'Receiver toegevoegd',pixelDirectionsSaved:'Kanten opgeslagen',pixelOnlySaved:'Pixels opgeslagen',
     pixelPortTask:'Poort {port} · {task}',pixelPortPosition:'{position} van {count} poorten',pixelPortProgress:'Voortgang per poort',
     pixelNextStart:'Verder · beginpunt →',pixelNextPort:'Verder naar poort {port} →',pixelNext:'Volgende →',pixelCheck:'Controleren →',
     pixelCount:'{count} pixels',pixelCountOne:'1 pixel',pixelSwipe:'Veeg rustig om aan te passen',pixelSwipeAria:'Aantal pixels op poort {port}; veeg links of rechts',
     pixelLastRed:'Laatste pixel {count} hoort rood te branden',pixelFirstCount:'Stel eerst het aantal pixels in',pixelCountAria:'Ingesteld: {count} pixels. Laatste pixel {count} hoort rood te branden.',pixelCountEmptyAria:'Geen pixels ingesteld; er is geen rode eindpixel.',pixelSchematic:'Schematisch voorbeeld.',
     pixelIllustration:'Voorbeeld · geen testlicht',pixelNoTest:'Testvoorbeeld · geen testlicht',pixelChooseOutputs:'Kies de aangesloten uitgangen.',pixelOutputSwitches:'Uitgangen aan of uit',pixelAllOff:'Alle uitgangen uit',pixelActiveSummary:'{ports} aan · {count} van 4 uitgangen',pixelAtLeastOne:'Minstens één poort moet actief zijn.',pixelSelectedRequired:'Zet minstens één gekozen poort aan om die aan te passen.',
-    pixelBlue:'Blauw',pixelOrange:'Oranje',pixelPurple:'Paars',pixelTurquoise:'Turquoise',pixelPortColour:'Poort {port} · {colour}',pixelColourGuide:'Elke poort heeft een eigen herkenningskleur.',pixelPortPreviewUnavailable:'Herkenningskleuren zijn hier een voorbeeld. Testlicht op de LED Lines is nog niet beschikbaar.',
+    pixelRed:'Rood',pixelYellow:'Geel',pixelDarkPurple:'Donkerpaars',pixelBlue:'Blauw',pixelOrange:'Oranje',pixelGreen:'Groen',pixelMagenta:'Magenta',pixelPurple:'Paars',pixelTurquoise:'Turquoise',pixelPortColour:'Poort {port} · {colour}',pixelColourGuide:'Elke poort heeft een eigen herkenningskleur.',pixelPortPreviewUnavailable:'Herkenningskleuren zijn hier een voorbeeld. Testlicht op de LED Lines is nog niet beschikbaar.',
     pixelSetPixels:'Pixels instellen',pixelLessOne:'Eén pixel minder',pixelMoreOne:'Eén pixel meer',pixelExact:'pixels · exact',pixelLessStep:'{count} pixels minder',pixelMoreStep:'{count} pixels meer',pixelCountLabel:'Aantal pixels op poort {port}',pixelCountValue:'{count} pixels, handmatig ingesteld',pixelRangeError:'Kies een heel aantal van 0 tot 163 pixels.',pixelZero:'Stel het aantal pixels in om verder te gaan.',pixelSingleHint:'− / + wijzigt één pixel. Maximaal 163 pixels.',
     pixelChooseStart:'Beginpunt kiezen',pixelDirectionExplanation:'Groen markeert het begin, rood het andere uiteinde. Kies hieronder waar groen moet staan.',pixelSingleDirection:'Bij één pixel is alleen het groene beginpunt zichtbaar.',pixelCableEnd:'Aansluiting',pixelFarEnd:'Einde',pixelFromFirst:'Vanaf pixel 1',pixelToFirst:'Naar pixel 1',pixelDirectionAria:'Beginpunt op deze LED Line',pixelDirectionForward:'Groen bij de aansluiting',pixelDirectionReverse:'Groen aan het andere einde',pixelKeepDirection:'Bij de aansluiting',pixelReverseDirection:'Aan het andere einde',pixelWhyStart:'Hoe kies ik het beginpunt?',pixelWhyExplanation:'Kijk naar je echte ledlines en vergelijk de uiteinden die bij elkaar aansluiten. Met de knoppen wissel je groen en rood; de aansluiting zelf verplaatst niet.',pixelDirectionUnavailable:'Voorbeeld in de app · geen testlicht',pixelDirectionLive:'Controleer de uiteinden op je echte LED Line.',
     pixelSelectSummary:'Je past {ports} aan. De andere poorten blijven behouden.',pixelCheckOutputs:'Controleer de gekozen uitgangen.',pixelSameZone:'De receiver blijft in dezelfde zone.',pixelReceiver:'SPI-receiver',pixelSettings:'Uitgangen en pixels',pixelCloseSettings:'Instellingen sluiten',pixelPreviewMode:'Voorbeeld · geen leds aangestuurd.',pixelNativeMode:'Wordt op de receiver opgeslagen.',pixelUnavailableMode:'Voorbeeld bekijken; opslaan en testlicht zijn niet beschikbaar.',pixelSave:'Opslaan',pixelSaving:'Bewaren…',pixelBack:'← Terug',pixelClose:'Sluiten',pixelSaveFailed:'Bewaren is nog niet gelukt. Je keuzes blijven staan.',pixelPendingConfig:'Je vorige wijziging wacht nog op bevestiging. Kies Opslaan om diezelfde wijziging af te ronden.',pixelDialogAria:'Pixels en beginpunt instellen',
     pixelStopping:'Testlicht stoppen…',pixelStoppingChoices:'Testlicht stoppen… Je keuzes blijven staan.',pixelPreviewPending:'Testlicht aanpassen…',pixelPreviewUnsupported:'Werk deze receiver bij om het gekozen testlicht te tonen. Je keuze blijft staan.',pixelPreviewFailed:'Testlicht niet bereikbaar. Controleer de receiververbinding; je keuze blijft staan.',pixelPreviewLength:'Testlicht verstuurd naar poort {port}. De laatste pixel ({count}) hoort rood te branden; de andere pixels wit.',pixelPreviewPower:'Testlicht verstuurd naar poort {port}. Controleer het groene referentiepunt op de LED Line.',pixelPreviewDirection:'Richtingstest verstuurd naar poort {port}. Controleer de beweging op de LED Line: {direction}.',pixelPreviewPorts:'Herkenningskleuren verstuurd. Controleer elke LED Line; uitgeschakelde poorten horen uit te blijven.',pixelPreviewZero:'0 pixels · testlicht uit.'
   });
   function t(key,params={}){const language=globalThis.document?.documentElement?.lang||'nl';let text=globalThis.LightningPixelTranslations?.t?.(key,language,params)||globalThis.LightningPreferences?.t?.(key,language,params);if(!text||text===key)text=TEXTS[key]||key;return text.replace(/\{([^}]+)\}/g,(_,name)=>String(params[name]??`{${name}}`));}
-  const PORT_COLOURS=Object.freeze([{hex:'#0000ff',name:'pixelBlue'},{hex:'#ff8000',name:'pixelOrange'},{hex:'#8000ff',name:'pixelPurple'},{hex:'#00ffff',name:'pixelTurquoise'}]);
-  function portColour(port){if(!Number.isInteger(port)||port<1||port>4)throw Error('PIXEL_PORT_INVALID');return Object.freeze({...PORT_COLOURS[port-1],label:t(PORT_COLOURS[port-1].name)});}
+  const PORT_COLOURS=Object.freeze([{hex:'#0000ff',name:'pixelBlue'},{hex:'#ff6000',name:'pixelOrange'},{hex:'#00ff00',name:'pixelGreen'},{hex:'#ff00ff',name:'pixelMagenta'}].map(Object.freeze));
+  const PORT_COLOURS_V3=Object.freeze([{hex:'#0000ff',name:'pixelBlue'},{hex:'#ffa000',name:'pixelOrange'},{hex:'#00ff00',name:'pixelGreen'},{hex:'#ff00ff',name:'pixelMagenta'}].map(Object.freeze));
+  const PORT_COLOURS_V5=Object.freeze([{hex:'#ff0000',name:'pixelRed'},{hex:'#0000ff',name:'pixelBlue'},{hex:'#ffff00',name:'pixelYellow'},{hex:'#ff1700',name:'pixelOrange'}].map(Object.freeze));
+  const PORT_COLOURS_V4=Object.freeze([{hex:'#ff0000',name:'pixelRed'},{hex:'#7800c0',name:'pixelDarkPurple'},{hex:'#0000ff',name:'pixelBlue'},{hex:'#ff5000',name:'pixelOrange'}].map(Object.freeze));
+  const LEGACY_PORT_COLOURS=Object.freeze([{hex:'#0000ff',name:'pixelBlue'},{hex:'#ff8000',name:'pixelOrange'},{hex:'#8000ff',name:'pixelPurple'},{hex:'#00ffff',name:'pixelTurquoise'}].map(Object.freeze));
+  function portColour(port,paletteVersion=3){if(!Number.isInteger(port)||port<1||port>4||![1,2,3,4,5].includes(paletteVersion))throw Error('PIXEL_PORT_INVALID');const palette=paletteVersion===1?LEGACY_PORT_COLOURS:paletteVersion===2?PORT_COLOURS:paletteVersion===5?PORT_COLOURS_V5:paletteVersion===4?PORT_COLOURS_V4:PORT_COLOURS_V3;return Object.freeze({...palette[port-1],label:t(palette[port-1].name),ink:['#ff6000','#ffa000','#00ff00','#ff8000','#00ffff','#ff0000','#ff5000','#ffff00','#ff1700'].includes(palette[port-1].hex)?'#161616':'#fff'});}
+  function portPalette(outputs){return [1,2,3,4,5].find(version=>Array.isArray(outputs)&&outputs.length===4&&Array.from(outputs).every((row,index)=>row?.colour===portColour(index+1,version).hex))||null;}
   let previewSerial=0;
   function previewId(){
     // A non-secret operation ID, also usable in non-secure local UI previews.
     const bytes=globalThis.crypto?.getRandomValues?.(new Uint8Array(16));
     return 'pixels-'+(bytes?Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join(''):Date.now().toString(36)+'-'+(++previewSerial));
+  }
+  function editorId686(){
+    if(typeof globalThis.crypto?.randomUUID==='function')return globalThis.crypto.randomUUID().toLowerCase();
+    const bytes=globalThis.crypto?.getRandomValues?.(new Uint8Array(16));if(!bytes)throw Error('PIXEL_EDITOR_ID_UNAVAILABLE');
+    bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;const hex=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+    return hex.slice(0,8)+'-'+hex.slice(8,12)+'-'+hex.slice(12,16)+'-'+hex.slice(16,20)+'-'+hex.slice(20);
   }
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const validPixels=value=>Number.isInteger(value)&&value>=1&&value<=STORAGE_MAX;
@@ -69,9 +80,9 @@
   function editableOutputs(outputs,ports){const selected=ports instanceof Set?ports:selectedPortSet(ports);return outputs.filter(output=>output.enabled&&(!selected||selected.has(output.port)));}
   function sequence(outputs,{selectedPorts=null,jointDirections=false,pixelsOnly=false,review=true}={}){const ports=editableOutputs(outputs,selectedPorts).map(output=>output.port);return [...(pixelsOnly?[]:[{stage:'outputs',port:null}]),...ports.flatMap(port=>jointDirections||pixelsOnly?[{stage:'pixels',port}]:[{stage:'pixels',port},{stage:'connection',port}]),...(review?[{stage:'review',port:null}]:[])];}
   function renderProgress(stage,{directDirections=false}={}){const names=directDirections?['pixelOutputs','pixelPixels','pixelStart']:['pixelOutputs','pixelPixels','pixelStart','pixelReview'],position={outputs:0,pixels:1,connection:2,review:3}[stage];return `<ol class="pixel-setup-steps" aria-label="${esc(t('pixelSetupSteps'))}">${names.map((name,index)=>`<li ${index===position?'aria-current="step"':''}><span>${index<position?'✓':index+1}</span>${esc(t(name))}</li>`).join('')}</ol>`;}
-  function renderPortContext(outputs,port,{stage='pixels',selectedPorts=null}={}){
-    const selected=selectedPorts instanceof Set?selectedPorts:selectedPortSet(selectedPorts),active=editableOutputs(outputs,selected),position=active.findIndex(item=>item.port===port),task=t(stage==='connection'?'pixelStart':'pixelSetPixels'),colour=portColour(port);
-    return `<section class="pixel-port-context" data-current-port="${port}" style="--port-colour:${colour.hex}" aria-label="${esc(t('pixelPortTask',{port,task}))}"><canvas data-pixel-port-visual role="img" aria-label="${esc(t('pixelPort',{port}))}" width="180" height="200"></canvas><div class="pixel-port-context-info"><h2>${esc(t('pixelPortTask',{port,task}))}</h2><p>${esc(t('pixelPortPosition',{position:position+1,count:active.length}))} · <span class="pixel-port-colour">${esc(colour.label)}</span></p><ol aria-label="${esc(t('pixelPortProgress'))}">${outputs.map(item=>{const state=selected&&!selected.has(item.port)?'preserved':!item.enabled?'off':item.port===port?'current':item.port<port?'complete':'pending',label=t({off:'pixelOff',current:'pixelNow',complete:'pixelReady',pending:'pixelLater',preserved:'pixelPreserved'}[state]);return `<li class="pixel-port-step" style="--port-colour:${portColour(item.port).hex}" data-port="${item.port}" data-state="${state}" ${state==='current'?'aria-current="step"':''} aria-label="${esc(t('pixelPort',{port:item.port}))}: ${esc(label)}"><b>${item.port}</b><span>${esc(label)}</span></li>`;}).join('')}</ol></div></section>`;
+  function renderPortContext(outputs,port,{stage='pixels',selectedPorts=null,paletteVersion=3}={}){
+    const selected=selectedPorts instanceof Set?selectedPorts:selectedPortSet(selectedPorts),active=editableOutputs(outputs,selected),position=active.findIndex(item=>item.port===port),task=t(stage==='connection'?'pixelStart':'pixelSetPixels'),colour=portColour(port,paletteVersion);
+    return `<section class="pixel-port-context" data-current-port="${port}" style="--port-colour:${colour.hex};--port-ink:${colour.ink}" aria-label="${esc(t('pixelPortTask',{port,task}))}"><canvas data-pixel-port-visual role="img" aria-label="${esc(t('pixelPort',{port}))}" width="180" height="200"></canvas><div class="pixel-port-context-info"><h2>${esc(t('pixelPortTask',{port,task}))}</h2><p>${esc(t('pixelPortPosition',{position:position+1,count:active.length}))} · <span class="pixel-port-colour">${esc(colour.label)}</span></p><ol aria-label="${esc(t('pixelPortProgress'))}">${outputs.map(item=>{const state=selected&&!selected.has(item.port)?'preserved':!item.enabled?'off':item.port===port?'current':item.port<port?'complete':'pending',label=t({off:'pixelOff',current:'pixelNow',complete:'pixelReady',pending:'pixelLater',preserved:'pixelPreserved'}[state]);return `<li class="pixel-port-step" style="--port-colour:${portColour(item.port,paletteVersion).hex}" data-port="${item.port}" data-state="${state}" ${state==='current'?'aria-current="step"':''} aria-label="${esc(t('pixelPort',{port:item.port}))}: ${esc(label)}"><b>${item.port}</b><span>${esc(label)}</span></li>`;}).join('')}</ol></div></section>`;
   }
   function nextPortLabel(outputs,port,{stage='pixels',last=null}={}){
     if(stage==='pixels')return t('pixelNextStart');
@@ -93,10 +104,10 @@
     // its position in this schematic does not assume a customer's left/right.
     return `<div class="pixel-setup-visual pixel-connection-preview pixel-direction-preview" data-pixel-visual="connection" data-direction="${reversed?'reverse':'forward'}" data-preview-pixels="${output.pixels}" role="img" aria-label="${esc(endpointLabel(output))}. ${esc(t('pixelSchematic'))}"><div class="pixel-setup-reference" aria-hidden="true"><span>${esc(t('pixelCableEnd'))}</span><span>${esc(t('pixelFarEnd'))}</span></div><div class="pixel-cable-line"><span class="pixel-cable-source" data-cable-end="connection" aria-hidden="true">${cableIcon}</span><span class="pixel-setup-track"><span class="pixel-setup-strip pixel-ledline-profile"><i class="start pixel-selected-start-marker" data-start-pixel="${reversed?output.pixels:1}" aria-hidden="true"></i>${output.pixels>1?`<i class="pixel-selected-end-marker" data-end-pixel="${reversed?1:output.pixels}" aria-hidden="true"></i>`:''}</span></span></div><small class="pixel-green-start-label"><i aria-hidden="true"></i>${esc(output.pixels===1?t('pixelSingleDirection'):endpointLabel(output))}</small></div>`;
   }
-  function renderOutputs(outputs,{onboarding=false,initialPort=null,selectedPorts=null,live=false}={}){
+  function renderOutputs(outputs,{onboarding=false,initialPort=null,selectedPorts=null,live=false,paletteVersion=3}={}){
     const attr=onboarding?'data-onboarding-action':'data-pixel-action';
     const selected=selectedPorts instanceof Set?selectedPorts:selectedPortSet(selectedPorts),active=outputs.filter(item=>item.enabled).map(item=>`P${item.port}`),summary=active.length?t('pixelActiveSummary',{ports:active.join(' + '),count:active.length}):t('pixelAllOff');
-    return `<div class="pixel-output-picker"><canvas data-pixel-outputs-visual role="img" aria-label="${esc(t('pixelReceiver'))} · ${esc(summary)}" width="400" height="200"></canvas><p class="pixel-output-colour-guide">${esc(t('pixelColourGuide'))}</p><div class="pixel-setup-outputs" role="group" aria-label="${esc(t('pixelOutputSwitches'))}">${outputs.map(item=>{const colour=portColour(item.port),preserved=selected&&!selected.has(item.port);return `<button type="button" ${attr}="output" style="--port-colour:${colour.hex}" data-port="${item.port}" data-port-colour="${colour.hex}" role="switch" aria-checked="${item.enabled}" aria-label="${esc(t('pixelPortColour',{port:item.port,colour:colour.label}))}" ${item.port===initialPort?'data-requested-port="true"':''} ${preserved?'disabled data-preserved="true"':''}><b>P${item.port}</b><span class="pixel-port-colour">${esc(colour.label)}</span><span>${esc(t(preserved?'pixelPreserved':item.enabled?'pixelOn':'pixelOff'))}</span><i class="pixel-setup-switch" aria-hidden="true"><i></i></i></button>`;}).join('')}</div><p class="pixel-output-summary">${esc(summary)}</p><p class="pixel-setup-error" data-pixel-all-off role="alert" ${active.length?'hidden':''}>${esc(t('pixelAtLeastOne'))}</p><small class="pixel-preview-notice" data-ports-preview-status data-test-light="idle" role="status">${esc(t(live?'pixelIllustration':'pixelPortPreviewUnavailable'))}</small></div>`;
+    return `<div class="pixel-output-picker"><canvas data-pixel-outputs-visual role="img" aria-label="${esc(t('pixelReceiver'))} · ${esc(summary)}" width="400" height="200"></canvas><p class="pixel-output-colour-guide">${esc(t('pixelColourGuide'))}</p><div class="pixel-setup-outputs" role="group" aria-label="${esc(t('pixelOutputSwitches'))}">${outputs.map(item=>{const colour=portColour(item.port,paletteVersion),preserved=selected&&!selected.has(item.port);return `<button type="button" ${attr}="output" style="--port-colour:${colour.hex};--port-ink:${colour.ink}" data-port="${item.port}" data-port-colour="${colour.hex}" role="switch" aria-checked="${item.enabled}" aria-label="${esc(t('pixelPortColour',{port:item.port,colour:colour.label}))}" ${item.port===initialPort?'data-requested-port="true"':''} ${preserved?'disabled data-preserved="true"':''}><b>P${item.port}</b><span class="pixel-port-colour">${esc(colour.label)}</span><span>${esc(t(preserved?'pixelPreserved':item.enabled?'pixelOn':'pixelOff'))}</span><i class="pixel-setup-switch" aria-hidden="true"><i></i></i></button>`;}).join('')}</div><p class="pixel-output-summary">${esc(summary)}</p><p class="pixel-setup-error" data-pixel-all-off role="alert" ${active.length?'hidden':''}>${esc(t('pixelAtLeastOne'))}</p><small class="pixel-preview-notice" data-ports-preview-status data-test-light="idle" role="status">${esc(t(live?'pixelIllustration':'pixelPortPreviewUnavailable'))}</small></div>`;
   }
   function paintOutputs(container,outputs,{time=0,reducedMotion=false,entranceProgress=1,selectedPort=null,plugProgress={},visual=globalThis.LightningReceiverVisual}={}){
     if(!container||container.ownerDocument?.hidden||typeof visual?.draw!=='function')return;
@@ -198,6 +209,8 @@
       if(capabilities.identifyPorts!==true)return null;
       // One complete output mask, including disabled ports, is required. This
       // seam deliberately cannot be mistaken for the old one-port preview.
+      // Keep palette 3 as the request hint. Only native's authenticated exact
+      // capability negotiation and matching ACK may select palette 4.
       return {...copy(context),guide:'ports',port:null,pixels:0,previewTTLMS:12000,outputs:outputs.map(item=>({port:item.port,enabled:item.enabled,pixels:item.enabled?Math.min(MAX,item.pixels):0,reversed:item.reversed,colour:portColour(item.port).hex}))};
     }
     if(!output||!editablePixels(output.pixels))return null;
@@ -206,7 +219,7 @@
     return null;
   }
   function validPreview(request){
-    if(request?.guide==='ports')return request.port===null&&request.pixels===0&&request.previewTTLMS===12000&&Array.isArray(request.outputs)&&request.outputs.length===4&&request.outputs.every((item,index)=>item.port===index+1&&typeof item.enabled==='boolean'&&typeof item.reversed==='boolean'&&editablePixels(item.pixels)&&item.colour===PORT_COLOURS[index].hex);
+    if(request?.guide==='ports')return request.port===null&&request.pixels===0&&request.previewTTLMS===12000&&portPalette(request.outputs)!==null&&request.outputs.every((item,index)=>Object.keys(item).sort().join(',')==='colour,enabled,pixels,port,reversed'&&item.port===index+1&&typeof item.enabled==='boolean'&&typeof item.reversed==='boolean'&&editablePixels(item.pixels));
     return Number.isInteger(request?.port)&&request.port>=1&&request.port<=4&&editablePixels(request.pixels)&&['length','power','direction',undefined].includes(request.guide)&&(request.guide==='power'||request.guide==='direction'?request.pixels>0&&typeof request.reversed==='boolean':request.reversed===undefined)&&(request.guide!=='direction'||request.previewTTLMS===12000);
   }
   function previewConfirmed(answer,request){
@@ -214,24 +227,45 @@
     if(answer?.applied!==true||answer.port!==request.port||answer.pixels!==request.pixels||!Number.isInteger(answer.previewTTLMS)||answer.previewTTLMS<(lit?1:0)||answer.previewTTLMS>15000)return false;
     if(request.guide==='power'||request.guide==='direction')return answer.guide===request.guide&&answer.reversed===request.reversed;
     if(!lit&&answer.previewTTLMS!==0)return false;
-    if(request.guide==='ports')return answer.guide==='ports'&&Array.isArray(answer.outputs)&&answer.outputs.length===4&&answer.outputs.every((item,index)=>['port','enabled','pixels','reversed','colour'].every(key=>item[key]===request.outputs[index][key]));
+    if(request.guide==='ports')return answer.guide==='ports'&&[1,2,3,4,5].includes(answer.paletteVersion)&&portPalette(answer.outputs)===answer.paletteVersion&&answer.outputs.every((item,index)=>Object.keys(item).sort().join(',')==='colour,enabled,pixels,port,reversed'&&['port','enabled','pixels','reversed'].every(key=>item[key]===request.outputs[index][key]));
     return true;
   }
   // One bounded latest-wins test-light queue. There is never a CONFIG/SAVE
   // command here. A lost reply remains an error, not a physical-light claim.
-  function createLivePreview({send,onState=()=>{},delay=170,setTimer=setTimeout,clearTimer=clearTimeout}={}){
-    let queued=null,active=null,desired=null,running=null,timer=null,renew=null,version=0;
+  function createLivePreview({send,onState=()=>{},delay=170,setTimer=setTimeout,clearTimer=clearTimeout,editorIsolation=()=>false,idFactory=editorId686}={}){
+    let queued=null,active=null,desired=null,running=null,timer=null,renew=null,version=0,editor=null,editorIntent=null,expiredEditor=null;const provenPalettes=new Map();
     // A guide/port switch belongs to the same exact editing transaction. The
     // native lease validates and switches its temporary mask without stopping
     // the whole receiver, restoring playback and performing a new handshake.
-    const key=r=>JSON.stringify([r.standId,r.transactionId,r.receiver,r.role,r.mainReceiverId]);
-    const report=(kind,request)=>onState({kind,port:request?.port,pixels:request?.pixels,guide:request?.guide||'length',reversed:request?.reversed});
+    const baseKey=r=>JSON.stringify([r.standId,r.transactionId,r.receiver,r.role,r.mainReceiverId]);
+    const key=r=>JSON.stringify([baseKey(r),r.editorSession||null]);
+    const receiverKey=r=>[r?.standId,r?.receiver?.id,r?.receiver?.rid,r?.receiver?.deviceFingerprint].every(value=>typeof value==='string'&&value.length>0)&&r.receiver.type==='SPI'?JSON.stringify([r.standId,r.receiver.id,r.receiver.rid,r.receiver.type,r.receiver.deviceFingerprint,r.role,r.mainReceiverId]):null;
+    const report=(kind,request,confirmedPalette)=>{const identity=receiverKey(request),paletteVersion=confirmedPalette||(identity&&provenPalettes.get(identity));onState({kind,port:request?.port,pixels:request?.pixels,guide:request?.guide||'length',reversed:request?.reversed,...(paletteVersion?{paletteVersion}:{})});};
     function cancelTimers(){clearTimer(timer);clearTimer(renew);timer=renew=null;}
-    async function stopActive(){
-      if(!active)return;const previous=active;
-      const answer=await send({...previous,action:'stop'});
-      if(answer?.applied!==true||answer.port!==previous.port||answer.previewTTLMS!==0)throw Error('PIXEL_STOP_UNCONFIRMED');
-      active=null;
+    function markEditorExpired(request){
+      if(!request?.editorSession||!(active&&key(active)===key(request)||editor?.request&&key(editor.request)===key(request)))return false;
+      expiredEditor=copy(request);active=null;editor=null;editorIntent=null;desired=null;cancelTimers();
+      if(queued?.stop)queued.complete({stopped:false});queued=null;return true;
+    }
+    function retireExpiredEditor(){
+      // Explicit close/open escape only. This is NOT a STOP receipt, physical
+      // restore acknowledgement, radio operation or permission to auto-replay.
+      if(!expiredEditor)return false;expiredEditor=null;editorIntent=null;version++;cancelTimers();return true;
+    }
+    const isolationTTL=(answer,request,end=false)=>!request.editorSession?0:
+      Number.isInteger(answer?.isolationTTLMS)&&answer.isolationTTLMS>=0&&answer.isolationTTLMS<=30000&&(!end||answer.isolationTTLMS===0)?answer.isolationTTLMS:null;
+    function scheduleRenew(ms,itemVersion){
+      clearTimer(renew);renew=null;if(ms<=0)return;
+      renew=setTimer(()=>{renew=null;if(itemVersion!==version)return;if(desired)queued={request:desired,version};else if(editor?.confirmed)queued={hold:true,request:editor.request,version};else return;void drain();},Math.min(10000,Math.max(500,ms-3000)));
+    }
+    async function stopActive(keepSession=false){
+      const previous=active||editor?.request;if(!previous)return{isolationTTLMS:0};
+      const keep=keepSession&&!!previous.editorSession;
+      let answer;try{answer=await send({...previous,action:'stop',...(keep?{keepSession:true}:{})});}
+      catch(error){if(error?.code==='PIXEL_EDITOR_EXPIRED')markEditorExpired(previous);throw error;}
+      const ttl=isolationTTL(answer,previous,!keep);
+      if(answer?.applied!==true||answer.port!==previous.port||answer.previewTTLMS!==0||ttl===null){globalThis.LightningNativeRuntime?.services?.pixelReceiptDiagnostic692?.({phase:'STOP_RECEIPT',bits:(answer?.applied===true?1:0)|(answer?.port===previous.port?2:0)|(answer?.previewTTLMS===0?4:0)|(ttl!==null?8:0)});throw Error('PIXEL_STOP_UNCONFIRMED');}
+      active=null;editor=keep?{request:previous,confirmed:true}:null;return{isolationTTLMS:ttl};
     }
     function drain(){
       if(running)return running;
@@ -240,15 +274,28 @@
         while(queued){
           const item=queued;queued=null;
           try{
-            if(item.stop){const stopped=active;await stopActive();if(!desired)report('idle',stopped);continue;}
+            if(item.stop){const stopped=active||editor?.request,answer=await stopActive(item.keepSession);const confirmed=item.version===version&&!desired;if(!confirmed&&stopped)globalThis.LightningNativeRuntime?.services?.pixelReceiptDiagnostic692?.({phase:'STOP_SUPERSEDED',bits:(item.version===version?1:0)|(!desired?2:0)});item.complete({stopped:confirmed});if(confirmed){report('idle',stopped);if(item.keepSession)scheduleRenew(answer.isolationTTLMS,item.version);}continue;}
             const request=item.request;
-            if(active&&key(active)!==key(request))await stopActive();
+            if(item.hold){
+              if(!editor?.confirmed||key(editor.request)!==key(request))throw Error('PIXEL_EDITOR_UNCONFIRMED');
+              const answer=await send({action:'hold',standId:request.standId,transactionId:request.transactionId,receiver:copy(request.receiver),role:request.role,mainReceiverId:request.mainReceiverId,editorSession:request.editorSession});
+              if(answer?.held!==true||answer.editorSession!==request.editorSession||isolationTTL(answer,request)===null)throw Error('PIXEL_EDITOR_UNCONFIRMED');
+              if(item.version===version&&!desired)scheduleRenew(answer.isolationTTLMS,item.version);continue;
+            }
+            const previous=active||editor?.request;if(previous&&key(previous)!==key(request))await stopActive();
             const action=active?'update':'start';active=request;
+            if(request.editorSession)editor={request,confirmed:false};
             const answer=await send({...request,action});
-            if(!previewConfirmed(answer,request))throw Error('PIXEL_PREVIEW_UNCONFIRMED');
-            if(item.version===version&&desired){report('applied',request);clearTimer(renew);if(answer.previewTTLMS>0)renew=setTimer(()=>{renew=null;if(desired){queued={request:desired,version};void drain();}},Math.min(10000,Math.max(500,answer.previewTTLMS-3000)));}
+            const ttl=isolationTTL(answer,request);
+            if(!previewConfirmed(answer,request)||ttl===null)throw Error('PIXEL_PREVIEW_UNCONFIRMED');
+            if(request.editorSession)editor={request,confirmed:true};
+            if(request.guide==='ports'&&receiverKey(request)){provenPalettes.set(receiverKey(request),answer.paletteVersion);if(provenPalettes.size>128)provenPalettes.delete(provenPalettes.keys().next().value);}
+            if(item.version===version&&desired){report('applied',request,request.guide==='ports'?answer.paletteVersion:undefined);const leases=[answer.previewTTLMS,ttl].filter(value=>value>0);scheduleRenew(leases.length?Math.min(...leases):0,item.version);}
           }catch(error){
-            if(item.version===version){desired=null;clearTimer(renew);renew=null;report(error?.code==='PIXEL_GUIDE_UPDATE_REQUIRED'?'unsupported':'failed',active);}
+            if(item.stop)item.complete({stopped:false});
+            if(error?.code==='PIXEL_EDITOR_EXPIRED'&&!expiredEditor)markEditorExpired(item.request);
+            if(expiredEditor){report('expired',expiredEditor);continue;}
+            if(item.version===version){desired=null;clearTimer(renew);renew=null;report(error?.code==='PIXEL_GUIDE_UPDATE_REQUIRED'?'unsupported':'failed',active||editor?.request);}
           }
         }
       })().finally(()=>{running=null;if(queued)void drain();});
@@ -256,23 +303,47 @@
     }
     function update(request){
       if(typeof send!=='function')return;
+      if(expiredEditor){report('expired',expiredEditor);return;}
       if(!validPreview(request))throw Error('PIXEL_PREVIEW_INVALID');
-      const next=copy(request);if(desired&&JSON.stringify(desired)===JSON.stringify(next))return;
+      const next=copy(request);
+      if(editorIsolation()===true){const scope=baseKey(next);if(!editorIntent||editorIntent.scope!==scope)editorIntent={scope,session:idFactory()};next.editorSession=editorIntent.session;}
+      if(desired&&JSON.stringify(desired)===JSON.stringify(next))return;
+      if(queued?.stop)queued.complete({stopped:false});
       desired=next;version++;clearTimer(renew);renew=null;queued={request:next,version};report('pending',next);
       if(timer===null&&!running)timer=setTimer(()=>void drain(),delay);
     }
-    function stop(){
-      if(typeof send!=='function')return Promise.resolve();
-      desired=null;version++;cancelTimers();queued={stop:true,version};return drain();
+    function stop({keepSession=false}={}){
+      if(typeof send!=='function')return Promise.resolve({stopped:true});
+      if(expiredEditor)return Promise.resolve({stopped:false});
+      // Cleanup remains non-rejecting for close/hide callers. Navigation must
+      // inspect this exact barrier instead of treating a drained queue as ACK.
+      if(keepSession&&!active&&editor?.confirmed&&!desired&&!queued)return Promise.resolve({stopped:true});
+      if(queued?.stop&&queued.keepSession===keepSession)return queued.completion;
+      if(queued?.stop)queued.complete({stopped:false});
+      if(!keepSession)editorIntent=null;
+      desired=null;version++;cancelTimers();let complete;
+      const completion=new Promise(resolve=>{complete=resolve;});
+      queued={stop:true,keepSession,version,complete,completion};void drain();return completion;
     }
     function flush(){
       if(typeof send!=='function')return Promise.resolve();
       clearTimer(timer);timer=null;return drain();
     }
-    return Object.freeze({update,flush,stop});
+    return Object.freeze({update,flush,stop,retireExpiredEditor});
   }
-  function previewMessage(state){return t(state.kind==='unsupported'?'pixelPreviewUnsupported':state.kind==='failed'?'pixelPreviewFailed':state.kind==='pending'?'pixelPreviewPending':state.kind==='applied'?(state.guide==='ports'?'pixelPreviewPorts':state.guide==='direction'?'pixelPreviewDirection':state.guide==='power'?'pixelPreviewPower':state.pixels?'pixelPreviewLength':'pixelPreviewZero'):'pixelNoTest',{port:state.port,count:state.pixels,direction:t(state.reversed?'pixelDirectionReverse':'pixelDirectionForward')});}
-  function showPreviewStatus(container,state){const label=container?.querySelector(state.guide==='ports'?'[data-ports-preview-status]':['power','direction'].includes(state.guide)?'[data-power-preview-status]':'[data-pixel-preview] .pixel-preview-notice');if(label){label.textContent=previewMessage(state);label.dataset.testLight=state.kind;}}
+  function previewMessage(state){if(globalThis.LightningWebDemo?.available===true)return t('pixelIllustration');return t(state.kind==='expired'?'pixelEditorExpired':state.kind==='unsupported'?'pixelPreviewUnsupported':state.kind==='failed'?'pixelPreviewFailed':state.kind==='pending'?'pixelPreviewPending':state.kind==='applied'?(state.guide==='ports'?'pixelPreviewPorts':state.guide==='direction'?'pixelPreviewDirection':state.guide==='power'?'pixelPreviewPower':state.pixels?'pixelPreviewLength':'pixelPreviewZero'):'pixelNoTest',{port:state.port,count:state.pixels,direction:t(state.reversed?'pixelDirectionReverse':'pixelDirectionForward')});}
+  function showPreviewStatus(container,state){
+    if(!container)return;const known=[1,2,3,4,5].includes(state.paletteVersion),version=known?state.paletteVersion:3;
+    for(const region of container.querySelectorAll('.pixel-output-picker,.pixel-port-context,.pixel-setup-review')){region.dataset.paletteVersion=String(version);region.dataset.paletteConfirmed=String(known);}
+    for(const row of container.querySelectorAll('.pixel-setup-outputs button[data-port],.pixel-port-step[data-port],[data-pixel-palette-port]')){
+      const port=Number(row.dataset.port||row.dataset.pixelPalettePort);if(!Number.isInteger(port)||port<1||port>4)continue;
+      const colour=portColour(port,version);row.style.setProperty('--port-colour',colour.hex);row.style.setProperty('--port-ink',colour.ink);row.dataset.portColour=colour.hex;
+      const label=row.querySelector('.pixel-port-colour');if(label)label.textContent=colour.label;
+      if(row.getAttribute('role')==='switch')row.setAttribute('aria-label',t('pixelPortColour',{port,colour:colour.label}));
+    }
+    for(const region of container.querySelectorAll('.pixel-port-context[data-current-port]')){const port=Number(region.dataset.currentPort),colour=portColour(port,version);region.style.setProperty('--port-colour',colour.hex);region.style.setProperty('--port-ink',colour.ink);const label=region.querySelector('.pixel-port-colour');if(label)label.textContent=colour.label;}
+    const label=container.querySelector(state.guide==='ports'?'[data-ports-preview-status]':['power','direction'].includes(state.guide)?'[data-power-preview-status]':'[data-pixel-preview] .pixel-preview-notice');if(label){label.textContent=previewMessage(state);label.dataset.testLight=state.kind;}
+  }
   // Show bounded cleanup without repainting: repaint would enqueue the same
   // test light again. Restore only these captured DOM nodes, never a new page.
   function showPreviewStopping(container){
@@ -298,13 +369,16 @@
     if(steps[index].stage==='review'&&(!outputs.some(row=>row.enabled)||outputs.some(row=>row.enabled&&!configuredPixels(row.pixels))))index=Math.max(0,steps.findIndex(step=>step.stage==='pixels'));
     return {outputs,index};
   }
-  function create({onSave,onClose=()=>{},onPreview,onDraftChange=()=>{},mode='preview',previewCapabilities={},jointDirections=false}={}){
+  function create({onSave,onClose=()=>{},onPreview,onDraftChange=()=>{},mode='preview',previewCapabilities={},jointDirections=false,isPublishedReceiver=()=>false}={}){
     if(typeof onSave!=='function')throw Error('PIXEL_SAVE_HANDLER_REQUIRED');
     const limits=pixelLimits();
+    const demoPreview=globalThis.LightningWebDemo?.available===true?globalThis.LightningWebDemo.create():null;
+    if(demoPreview?.factoryGuidePreview===true)previewCapabilities=demoPreview.previewCapabilities;
     let dialog=null,receiver=null,outputs=[],index=0,busy=false,error='',focusBefore=null,initialPort=null,selectedPort=null,selectedPorts=null,unbindScrub=null,unbindDirectionTutorial=null,recovering=false,directionRecovery=false,directionOnlyMode=false,pairFirstFlow=false,pixelsOnly=false,previewStopJob=null;
     const plugMotion=globalThis.LightningReceiverVisual.createPlugMotion();
     let previewTransaction=null,previewState={kind:'idle'},previewRetiredForSave=false;
-    const livePreview=createLivePreview({send:mode==='native'?onPreview:null,onState:state=>{previewState=state;showPreviewStatus(dialog,state);}});
+    const editorEnabled686=()=>previewCapabilities.editorIsolation===true&&isPublishedReceiver(receiver)===true;
+    const livePreview=createLivePreview({send:demoPreview?.factoryGuidePreview===true?demoPreview.previewPixels:mode==='native'?onPreview:null,editorIsolation:editorEnabled686,onState:state=>{previewState=state;showPreviewStatus(dialog,state);}});
     const directDirections=()=>jointDirections&&!pixelsOnly&&!selectedPorts&&!recovering&&!directionOnlyMode;
     const plan=()=>sequence(outputs,{selectedPorts,jointDirections,pixelsOnly,review:!directDirections()}),current=()=>plan()[index],output=()=>outputs.find(item=>item.port===current().port),portsToEdit=()=>editableOutputs(outputs,selectedPorts);
     function draftChanged(){
@@ -317,19 +391,19 @@
       const request=guideRequest({context:{standId:receiver.standId,transactionId:previewTransaction,
         receiver:{id:receiver.id,rid:receiver.rid,type:'SPI',deviceFingerprint:receiver.deviceFingerprint},role:receiver.role,
         mainReceiverId:receiver.mainReceiverId||null},outputs,output:output(),stage:current().stage,capabilities:previewCapabilities});
-      if(!request){void livePreview.stop();return;}
+      if(!request){void livePreview.stop({keepSession:true});return;}
       livePreview.update(request);if(commit)void livePreview.flush();showPreviewStatus(dialog,previewState);
     }
     function visibility(){syncPreview();}
     function paint(time){if(dialog?.open&&['outputs','pixels','connection'].includes(current().stage)){const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;paintOutputs(dialog,outputs,{time,reducedMotion,selectedPort:current().port||selectedPort,plugProgress:current().stage==='outputs'?plugMotion.sample(time,reducedMotion):{}});}}
-    function close(){if(!dialog||busy&&!previewStopJob)return;previewStopJob=null;busy=false;void livePreview.stop();document.removeEventListener('visibilitychange',visibility);unbindScrub?.();unbindScrub=null;unbindDirectionTutorial?.();unbindDirectionTutorial=null;dialog.close();dialog.remove();dialog=null;plugMotion.clear();focusBefore?.focus?.({preventScroll:true});onClose();}
+    function close(){if(!dialog||busy&&!previewStopJob)return;previewStopJob=null;busy=false;void livePreview.stop();livePreview.retireExpiredEditor();document.removeEventListener('visibilitychange',visibility);unbindScrub?.();unbindScrub=null;unbindDirectionTutorial?.();unbindDirectionTutorial=null;dialog.close();dialog.remove();dialog=null;plugMotion.clear();focusBefore?.focus?.({preventScroll:true});onClose();}
     function render(top=false){
-      if(!dialog)return;unbindDirectionTutorial?.();unbindDirectionTutorial=null;const previousScroll=dialog.querySelector('.pixel-setup-body')?.scrollTop||0,step=current(),ports=portsToEdit(),active=output(),allOff=!outputs.some(item=>item.enabled),direct=directDirections(),finalPixel=direct&&step.stage==='pixels'&&index===plan().length-1,saveStep=step.stage==='review'||finalPixel;
+      if(!dialog)return;unbindDirectionTutorial?.();unbindDirectionTutorial=null;const previousScroll=dialog.querySelector('.pixel-setup-body')?.scrollTop||0,step=current(),ports=portsToEdit(),active=output(),allOff=!outputs.some(item=>item.enabled),direct=directDirections(),finalPixel=direct&&step.stage==='pixels'&&index===plan().length-1,saveStep=step.stage==='review'||finalPixel,paletteVersion=[1,2,3,4,5].includes(previewState.paletteVersion)?previewState.paletteVersion:3;
       const focusedPort=dialog.contains(document.activeElement)&&document.activeElement.dataset.pixelAction==='output'?document.activeElement.dataset.port:null;
       let content='';
-      if(step.stage==='outputs')content=`<p>${esc(t('pixelChooseOutputs'))}</p>${selectedPorts?`<p>${esc(t('pixelSelectSummary',{ports:[...selectedPorts].sort().map(port=>`P${port}`).join(' + ')}))}</p>`:''}${renderOutputs(outputs,{initialPort,selectedPorts,live:mode==='native'&&previewCapabilities.identifyPorts===true})}${!allOff&&!ports.length?`<p class="pixel-setup-error" role="alert">${esc(t('pixelSelectedRequired'))}</p>`:''}`;
-      if(active)content=`${renderPortContext(outputs,active.port,{stage:step.stage,selectedPorts})}${step.stage==='connection'?renderSide(active,{live:mode==='native'&&typeof onPreview==='function'&&previewCapabilities.power===true}):renderPixels(active,limits)}`;
-      if(step.stage==='review')content=`<p>${esc(t('pixelCheckOutputs'))} ${esc(t('pixelSameZone'))}</p><div class="pixel-setup-review">${outputs.map(item=>`<div style="--port-colour:${portColour(item.port).hex}" ${selectedPorts&&!selectedPorts.has(item.port)?'data-preserved="true"':''}><b>P${item.port}</b><span>${esc(t('pixelCount',{count:item.pixels}))} · ${esc(t(item.enabled?'pixelOn':'pixelOff'))}<small>${jointDirections?'':esc(endpointLabel(item))}${selectedPorts&&!selectedPorts.has(item.port)?' · '+esc(t('pixelPreserved')):''}</small></span></div>`).join('')}</div>`;
+      if(step.stage==='outputs')content=`<p>${esc(t('pixelChooseOutputs'))}</p>${selectedPorts?`<p>${esc(t('pixelSelectSummary',{ports:[...selectedPorts].sort().map(port=>`P${port}`).join(' + ')}))}</p>`:''}${renderOutputs(outputs,{initialPort,selectedPorts,paletteVersion,live:mode==='native'&&previewCapabilities.identifyPorts===true})}${!allOff&&!ports.length?`<p class="pixel-setup-error" role="alert">${esc(t('pixelSelectedRequired'))}</p>`:''}`;
+      if(active)content=`${renderPortContext(outputs,active.port,{stage:step.stage,selectedPorts,paletteVersion})}${step.stage==='connection'?renderSide(active,{live:mode==='native'&&typeof onPreview==='function'&&previewCapabilities.power===true}):renderPixels(active,limits)}`;
+      if(step.stage==='review')content=`<p>${esc(t('pixelCheckOutputs'))} ${esc(t('pixelSameZone'))}</p><div class="pixel-setup-review">${outputs.map(item=>`<div data-pixel-palette-port="${item.port}" style="--port-colour:${portColour(item.port,paletteVersion).hex};--port-ink:${portColour(item.port,paletteVersion).ink}" ${selectedPorts&&!selectedPorts.has(item.port)?'data-preserved="true"':''}><b>P${item.port}</b><span>${esc(t('pixelCount',{count:item.pixels}))} · ${esc(t(item.enabled?'pixelOn':'pixelOff'))}<small>${jointDirections?'':esc(endpointLabel(item))}${selectedPorts&&!selectedPorts.has(item.port)?' · '+esc(t('pixelPreserved')):''}</small></span></div>`).join('')}</div>`;
       dialog.innerHTML=`<div class="pixel-setup-shell"><header class="pixel-setup-header"><div><small>${esc(receiver.name||t('pixelReceiver'))}</small><h1>${esc(t(step.stage==='connection'?'pixelChooseStart':'pixelSettings'))}</h1></div><button type="button" data-pixel-action="close" aria-label="${esc(t('pixelCloseSettings'))}" ${busy?'disabled':''}>×</button></header>${renderProgress(step.stage,{directDirections:direct})}<div class="pixel-setup-body" data-stage="${step.stage}" data-port="${step.port||''}">${content}<p class="pixel-setup-mode" id="pixel-setup-mode" ${mode==='preview'&&step.stage!=='review'?'hidden':''}>${esc(t(mode==='preview'?'pixelPreviewMode':mode==='native'?'pixelNativeMode':'pixelUnavailableMode'))}</p><p class="pixel-setup-error" role="alert" ${error?'':'hidden'}>${esc(error)}</p></div><footer class="pixel-setup-footer"><button type="button" data-pixel-action="back" ${busy?'disabled':''}>${esc(t('pixelBack'))}</button><button type="button" data-pixel-action="${saveStep?'save':'next'}" ${busy||!ports.length||step.stage==='pixels'&&!configuredPixels(active.pixels,limits)||saveStep&&(!['preview','native'].includes(mode)||ports.some(item=>!configuredPixels(item.pixels,limits)))?'disabled aria-describedby="pixel-setup-mode"':''}>${esc(busy?t('pixelSaving'):finalPixel?t('pixelNextDirections'):step.stage==='review'?t('pixelSave'):active?nextPortLabel(ports,active.port,{stage:step.stage,last:t('pixelCheck')}):t('pixelNext'))}</button></footer></div>`;
       unbindDirectionTutorial=globalThis.LightningSPIDirectionTutorial?.bind(dialog)||null;
       if(jointDirections){
@@ -360,14 +434,16 @@
       const target=event.target.closest('[data-pixel-action]');if(!target||target.disabled||busy&&!(previewStopJob&&target.dataset.pixelAction==='close'))return;
       const action=target.dataset.pixelAction,step=current();
       const leavesGuide=action==='save'||action==='next'&&plan()[index+1]?.stage==='review'||action==='back'&&index===0;
-      if(leavesGuide&&['outputs','pixels','connection'].includes(step.stage)){
+      if(leavesGuide&&(['outputs','pixels','connection'].includes(step.stage)||action==='save'&&editorEnabled686())){
         const stoppingDialog=dialog,job={dialog:stoppingDialog};previewStopJob=job;busy=true;const restore=showPreviewStopping(stoppingDialog);
         // Leaving the editor never waits for transport cleanup. Navigation
         // within it still waits; a late STOP cannot advance a newer dialog.
         stoppingDialog.querySelector('[data-pixel-action="close"]')?.removeAttribute('disabled');
-        try{await livePreview.stop();}finally{restore();if(previewStopJob===job&&dialog===stoppingDialog)busy=false;}
+        let stopped=false;
+        try{stopped=(await livePreview.stop({keepSession:action==='next'}))?.stopped===true;}finally{restore();if(previewStopJob===job&&dialog===stoppingDialog)busy=false;}
         if(previewStopJob!==job||dialog!==stoppingDialog)return;
         previewStopJob=null;
+        if(!stopped){error=t(previewState.kind==='expired'?'pixelEditorExpired':'pixelPreviewFailed');const alert=dialog.querySelector('.pixel-setup-body > .pixel-setup-error');if(alert){alert.textContent=error;alert.hidden=false;}return;}
       }
       if(action==='close')return close();
       if(action==='output'){const item=outputs.find(item=>item.port===Number(target.dataset.port));if(!item||selectedPorts&&!selectedPorts.has(item.port))return;item.enabled=!item.enabled;selectedPort=item.port;plugMotion.trigger(item.port,performance.now()/1000,item.enabled);error='';draftChanged();return render();}
@@ -378,14 +454,14 @@
       if(action==='save'){if(!['preview','native'].includes(mode)||!portsToEdit().length||portsToEdit().some(item=>!configuredPixels(item.pixels,limits))||step.stage==='pixels'&&!validateInput(dialog,dialog.querySelector('[data-pixel-count]').value,limits))return;busy=true;previewRetiredForSave=true;error='';render();try{await onSave({receiverId:receiver.id,outputs:outputs.map(item=>!item.enabled&&item.pixels===0?{...item,pixels:receiver.outputs.find(original=>original.port===item.port)?.pixels||1}:copy(item)),...(directionRecovery?{directionsOnly:true}:{}),...(directDirections()?{continueToDirections:true}:{}),pixelsOnly});busy=false;close();}catch(failure){busy=false;error=typeof failure?.message==='string'?failure.message:t('pixelSaveFailed');render();}}
     }
     function open(value,{initialPort:port,resumePending=false,directionsOnly=false,pixelsOnly:onlyPixels=false,selectedPorts:requestedPorts=null,resumeStep=null,pairFirst=false}={}){
-      if(dialog)throw Error('PIXEL_SETUP_ALREADY_OPEN');pixelsOnly=onlyPixels===true;selectedPorts=selectedPortSet(resumePending?null:requestedPorts);outputs=outputsOf(value);receiver=copy(value);previewTransaction=previewId();previewState={kind:'idle'};previewRetiredForSave=false;document.addEventListener('visibilitychange',visibility);initialPort=Number.isInteger(port)&&port>=1&&port<=4?port:null;selectedPort=null;plugMotion.clear();index=0;error='';busy=false;focusBefore=document.activeElement;
+      if(dialog)throw Error('PIXEL_SETUP_ALREADY_OPEN');livePreview.retireExpiredEditor();pixelsOnly=onlyPixels===true;selectedPorts=selectedPortSet(resumePending?null:requestedPorts);outputs=outputsOf(value);receiver=copy(value);previewTransaction=previewId();previewState={kind:'idle'};previewRetiredForSave=false;document.addEventListener('visibilitychange',visibility);initialPort=Number.isInteger(port)&&port>=1&&port<=4?port:null;selectedPort=null;plugMotion.clear();index=0;error='';busy=false;focusBefore=document.activeElement;
       recovering=resumePending===true;directionOnlyMode=directionsOnly===true;pairFirstFlow=pairFirst===true&&jointDirections&&!directionOnlyMode&&!pixelsOnly&&!selectedPorts;
       directionRecovery=recovering&&directionsOnly===true;
       if(recovering){index=plan().length-1;error=t('pixelPendingConfig');}
       else if(jointDirections&&!directionsOnly&&!pixelsOnly&&!selectedPorts){const resumed=setupResume(receiver,resumeStep,{directDirections:directDirections()});outputs=resumed.outputs;index=resumed.index;}
-      dialog=document.createElement('dialog');dialog.className='pixel-setup-dialog';dialog.setAttribute('aria-label',t(pixelsOnly?'pixelOnlySettings':'pixelDialogAria'));dialog.addEventListener('click',click);dialog.addEventListener('input',input);dialog.addEventListener('change',input);dialog.addEventListener('keyup',commitKey);dialog.addEventListener('cancel',event=>{event.preventDefault();close();});unbindScrub=bindPixelScrub(dialog,{isEnabled:()=>!busy&&current().stage==='pixels',onChange:value=>adjust(value,null,{haptic:false}),onCommit:()=>void livePreview.flush()});document.body.append(dialog);render(true);dialog.showModal();paint(performance.now()/1000);
+      dialog=document.createElement('dialog');dialog.className='pixel-setup-dialog';dialog.setAttribute('aria-label',t(pixelsOnly?'pixelOnlySettings':'pixelDialogAria'));dialog.addEventListener('click',click);dialog.addEventListener('input',input);dialog.addEventListener('change',input);dialog.addEventListener('keyup',commitKey);dialog.addEventListener('cancel',event=>{event.preventDefault();close();});unbindScrub=bindPixelScrub(dialog,{isEnabled:()=>!busy&&current().stage==='pixels',onChange:value=>adjust(value,null,{haptic:false}),onCommit:()=>void livePreview.flush()});document.body.append(dialog);render(true);dialog.showModal();paint(performance.now()/1000);if(editorEnabled686())void livePreview.flush();
     }
     return Object.freeze({open,close,paint,isOpen:()=>!!dialog});
   }
-  return Object.freeze({TEXTS,PORT_COLOURS,portColour,guideRequest,create,createLivePreview,showPreviewStatus,showPreviewStopping,renderOutputs,paintOutputs,renderPixels,renderSide,renderPort,renderProgress,renderPortContext,nextPortLabel,bindPixelScrub,updatePixels,validateInput,outputsOf,setupResume,sequence,validPixels,pixelLimits,editablePixels,configuredPixels,stepPixels,stepMeters,meterLabel,endpointLabel,hapticStep});
+  return Object.freeze({TEXTS,PORT_COLOURS,PORT_COLOURS_V3,PORT_COLOURS_V4,PORT_COLOURS_V5,LEGACY_PORT_COLOURS,portColour,portPalette,guideRequest,create,createLivePreview,showPreviewStatus,showPreviewStopping,renderOutputs,paintOutputs,renderPixels,renderSide,renderPort,renderProgress,renderPortContext,nextPortLabel,bindPixelScrub,updatePixels,validateInput,outputsOf,setupResume,sequence,validPixels,pixelLimits,editablePixels,configuredPixels,stepPixels,stepMeters,meterLabel,endpointLabel,hapticStep});
 }));

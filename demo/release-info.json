@@ -108,9 +108,9 @@
     "opticalAcceptance": false
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate676-pinless-stability-interface-android30",
+  "revision": "V50candidate698-browser-stability-android30",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo676 projects the reviewed PIN-less676 interface: scene edit/variation feedback, selected LED-order feedback and SPI direction draft handling. All public receiver controls remain simulated. No native, receiver firmware or PINv2 system is published.",
+  "interfaceBaseline": "Public demo698 projects reviewed browser UI assets into the existing fictional RAM-only demo. Native PIN polish and the real PINv2 flow are deliberately omitted. No native product, receiver firmware or hardware access is published; Android downloads are unchanged, not Android698.",
   "interfaceCandidate673": {
     "sourceSnapshotOnly": true,
     "sameInterfaceAsCandidate672": true,
@@ -243,8 +243,8 @@
     },
     {
       "path": "animation-discovery.css",
-      "sha256": "776f64a236c4d1e9752c3a2812edc2b360f1a52c8213c030a2efb721c890d0c6",
-      "bytes": 13763
+      "sha256": "cf2398ca4ab71c34140f6e7042018d30948843473a05fe4aabf381cab4d3e7cf",
+      "bytes": 17910
     },
     {
       "path": "animation-engine.js",
@@ -278,8 +278,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "5e9b38189901695bc49e610796df641e91be99b69755ff3b4ba0a25be80c3701",
-      "bytes": 679419
+      "sha256": "832db51b1594e9d9abab0ade81e6ddafbad969780e56371c3ba6ca7f8b34377e",
+      "bytes": 699849
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -338,7 +338,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "c8fe7edfb122c2ad109c062276feb8cd814b18e8eccdb5ea0c969639e1fa0c13",
+      "sha256": "bb807f6cc79b5b08dee66da071b24a3d13291c5911971fb6b629679b8dd83e2d",
       "bytes": 9789
     },
     {
@@ -378,8 +378,8 @@
     },
     {
       "path": "ledline-order-direct.css",
-      "sha256": "4b163f3966b6527cbaa0f7011b9f16225b31bce015f112a5526f2d4dd3d32688",
-      "bytes": 20514
+      "sha256": "f021fd50f420c012c395cd2b522c16b210afaf3d1e52ce429ab9eda2b8363bf1",
+      "bytes": 20786
     },
     {
       "path": "ledline-order-drag.js",
@@ -423,8 +423,8 @@
     },
     {
       "path": "live-control.js",
-      "sha256": "f071f9a989a5195d981f6cc304e53a0a8e70c54fad2426f028856a19db5431ac",
-      "bytes": 54973
+      "sha256": "65a68f69056139fde821231bdc12079d0ef43ee07c53e5acc08efa0e553ba9fb",
+      "bytes": 55104
     },
     {
       "path": "main-connection-indicator.css",
@@ -448,8 +448,8 @@
     },
     {
       "path": "native-runtime.js",
-      "sha256": "54b51d55db85d059de1b36399d6a0fb0fc4d626e5f92899af438814b224f48fc",
-      "bytes": 154147
+      "sha256": "ec94dc6f0fd9db19349843b5d97215d60abc394438073a7c54e3469c97a8b939",
+      "bytes": 170011
     },
     {
       "path": "onboarding-adapter.js",
@@ -478,8 +478,8 @@
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "21d60684ca94133d9cea6fdd2784a8c97f285ee2cd20377eae2ce58196e9d24d",
-      "bytes": 181714
+      "sha256": "c62922e7a8b0966393bdcde0036678b04b2af53eb91292ff1835f7220487067b",
+      "bytes": 188963
     },
     {
       "path": "page-interaction.css",
@@ -498,18 +498,18 @@
     },
     {
       "path": "pixel-setup.css",
-      "sha256": "38678527e1b40018cda330bcd276919898bc457bb12b407a471c34d78643a0cb",
-      "bytes": 38267
+      "sha256": "3a4fc9502ded92e388eafa075eeeb128090b92c8c0034a01a65dac43ac480560",
+      "bytes": 38326
     },
     {
       "path": "pixel-setup.js",
-      "sha256": "32edd7ea838233543eacd8326ec938fb7158283136f16b73635189ec870e63f3",
-      "bytes": 53566
+      "sha256": "83a8f16b8e32b1ecaff0bc643d602e5ea85852912b84a41271c5768d5f73e64e",
+      "bytes": 64140
     },
     {
       "path": "pixel-translations.js",
-      "sha256": "1d37e538c3c2d9d9f1858d25252e778eb787e677348a00d0c8e8b104209fd2f2",
-      "bytes": 18657
+      "sha256": "af20ff6872da41974af99badf11759bc55a249ddbcb6d9358a88c7811935d74f",
+      "bytes": 19273
     },
     {
       "path": "preferences.js",
@@ -543,8 +543,8 @@
     },
     {
       "path": "receiver-removal-ui.js",
-      "sha256": "d49fd3e0eed07accce784fc6eed3ef669d07431c6f73254003421f667f45092e",
-      "bytes": 22579
+      "sha256": "7a5a9008d29bef79a5f45d6c76ec06d7753e7d99463fc15667b93564a2cf76de",
+      "bytes": 22645
     },
     {
       "path": "receiver-update-ui.css",
@@ -573,18 +573,18 @@
     },
     {
       "path": "scene-editing.js",
-      "sha256": "fff0b784961012e9ef54407d77f883ee33e6a0e40c66b3c350607b0cb562cb74",
-      "bytes": 9593
+      "sha256": "ff07b0b733ecd878e42be809ff68ee6c251df702d041b6d8dbca98f2ac97451c",
+      "bytes": 11385
     },
     {
       "path": "scenes.css",
-      "sha256": "71fe2530a82c102f27329a318d09c34be994eb4f860a0f2b25ed9b91dbd7d7b3",
-      "bytes": 21715
+      "sha256": "80cf6b83327d0af40fc88a1acff82d080f3178439f4030ce1aced4fa3199ae74",
+      "bytes": 28283
     },
     {
       "path": "scenes.js",
-      "sha256": "d60a6031eee6ae1418a942d1fc027dccb1f1ebcbaf2515ff4427f1234f9cbd0c",
-      "bytes": 12726
+      "sha256": "8236d3cce63678d23ee2d71ba8c27107508faad3d1d756a243201d8c12ccf558",
+      "bytes": 18180
     },
     {
       "path": "security-mode.js",
@@ -613,17 +613,17 @@
     },
     {
       "path": "spi-zone-direction.css",
-      "sha256": "4eca586ecbe17d2f400702466a9bb7eae6a3bb146c95e361904e7dffdcc039b0",
-      "bytes": 9258
+      "sha256": "427bea752e0b16cc1f65a8d79654d5ebddf288a483cad0a0a608e74424f45f4c",
+      "bytes": 9921
     },
     {
       "path": "spi-zone-direction.js",
-      "sha256": "c572617b54b363e20d1625a9a85fc5b3289bfed26f61527d851d1194a20a7988",
-      "bytes": 33181
+      "sha256": "18d18fda270cbf73d24616a09a10d00b4b40d60879124bb76ccede295508c4fc",
+      "bytes": 39390
     },
     {
       "path": "stand-animations.css",
-      "sha256": "3bc4833a409364ff4d5f11d80b7d57612c3176101faba2de96225521ed77ccf4",
+      "sha256": "3b5ebb89fda4d810399e6b5891ae9a6a2317d47675f2d1cb4ce020f157079021",
       "bytes": 10350
     },
     {
@@ -653,18 +653,18 @@
     },
     {
       "path": "stand-sharing-copy.js",
-      "sha256": "55bf5aca18c32d0ffdc4a0a1f66cc2758618946d09c56763253bc391e7f22534",
-      "bytes": 12571
+      "sha256": "f00407d6d55dc1401cbe1659951ea95f80b0978728ba3f215ecc83a53a27fa77",
+      "bytes": 12986
     },
     {
       "path": "stand-sharing.css",
-      "sha256": "20a37d117fa6b87a4e4464085ec9217d5c7552d1ae5ec7317b2650b4034a498f",
-      "bytes": 2819
+      "sha256": "6cf17f71d2a6e37964972c0e3cae7dfe7505eb790279a28a946ed8220369c2eb",
+      "bytes": 6087
     },
     {
       "path": "stand-sharing.js",
-      "sha256": "fdbdc72f95251f5661ca2166379f9f99353d3b0e8244e23a04088285c50ca6f2",
-      "bytes": 23540
+      "sha256": "3c76aeb9ceca066831fa5803e166624452293e2e74bbfda624d84caa80b6a36a",
+      "bytes": 25342
     },
     {
       "path": "styles.css",
@@ -683,8 +683,8 @@
     },
     {
       "path": "ui-copy.js",
-      "sha256": "930eaed9c53d7e69c643c730b2e718a7c26dbb3ba0c826d3a9c664d9c4faa8b3",
-      "bytes": 125279
+      "sha256": "3de623037c3f4e1597f12d1706d5a02d0cbcedc3648c53a2fd28f81bb071fb57",
+      "bytes": 131035
     },
     {
       "path": "ui606-controls.css",
@@ -758,8 +758,8 @@
     },
     {
       "path": "v50-order-texts.js",
-      "sha256": "78d462e84ec146801450e1796e856bf6ead2b4b5d72cd2c4aa8cba9f904a2b6c",
-      "bytes": 20078
+      "sha256": "9d4cf1c597d058a5f318c74e4542447f4eb3ceefa80ee7e27ce9a7c6b4a0a50a",
+      "bytes": 20509
     },
     {
       "path": "v50-order-tutorial.css",
@@ -788,8 +788,8 @@
     },
     {
       "path": "web-demo-service.js",
-      "sha256": "6cd73173e7752b20f955e69af2b8a9d9dcf7797751291b409c356954ac2d1fc5",
-      "bytes": 3012
+      "sha256": "cc86e5903226bc56f039a73085b61953580a5c886ba75b84abc9c94de776ab3b",
+      "bytes": 5388
     }
   ],
   "interfaceReviewScope": "Exact source UI hunks and isolated asset/cache verification. Browser visual review and public deployment remain separate; this candidate attests no iPhone606 install, receiver output, radio performance or physical acceptance.",
@@ -3349,5 +3349,27 @@
     "PINv2Included": false,
     "receiverTimingProvenByDemo": false,
     "opticalAcceptance": false
+  },
+  "interfaceCandidate698": {
+    "sourceSnapshotOnly": true,
+    "sourceBuild": "698",
+    "scope": "Browser-only simulated interface. Native PIN polish, receiver firmware, actual PIN, hardware timing and Android698 are not included or proven. Existing Android download remains code30/interface654 with its existing capability limits.",
+    "features": [
+      "Reviewed browser interface, setup, sharing, scenes and direction presentation assets.",
+      "Fictional PAL5 port-colour receipts only; translated preview notice explicitly says no test light."
+    ],
+    "androidUnchanged": true,
+    "androidVersionCode": 30,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "PINv2Included": false,
+    "PINPreviewIncluded": false,
+    "nativePINPolishVisible": false,
+    "receiverTimingProvenByDemo": false,
+    "opticalAcceptance": false,
+    "physicalAndroidVerified": false
   }
 }

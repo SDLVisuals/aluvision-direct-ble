@@ -40,6 +40,8 @@
     orderAssigned:['{name} toegewezen aan plaats {position}.','{name} assigned to position {position}.','{name} attribué à la position {position}.','{name} der Position {position} zugeordnet.'],
     orderLineSettings:['Ledline-instellingen','LED-line settings','Réglages de la ligne LED','LED-Linien-Einstellungen'],
     orderDone:['Klaar','Done','Terminé','Fertig'],
+    orderDraftHint686:['Tevreden met de volgorde? Klaar bewaart je keuze.','Happy with the order? Done saves your choice.','L’ordre vous convient ? Terminé enregistre votre choix.','Reihenfolge richtig? Fertig speichert deine Auswahl.'],
+    v686OrderDraft:['Volgorde aangepast · nog niet bewaard','Order adjusted · not saved yet','Ordre modifié · pas encore enregistré','Reihenfolge angepasst · noch nicht gespeichert'],
     orderEmpty:['Er zijn nog geen ledlines in deze zone. Voeg eerst een receiver toe.','There are no LED lines in this zone yet. Add a receiver first.','Cette zone ne contient pas encore de lignes LED. Ajoutez d’abord un récepteur.','In dieser Zone gibt es noch keine LED-Linien. Füge zuerst einen Receiver hinzu.'],
     orderCurrentOrder:['Huidige volgorde','Current order','Ordre actuel','Aktuelle Reihenfolge'],
     orderFixedColours:['De herkenningskleuren blijven staan zolang dit menu open is.','Identification colours stay on while this menu is open.','Les couleurs de repérage restent allumées tant que ce menu est ouvert.','Die Erkennungsfarben bleiben an, solange dieses Menü geöffnet ist.'],

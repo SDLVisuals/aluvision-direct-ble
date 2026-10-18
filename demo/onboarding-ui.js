@@ -149,11 +149,48 @@
     return {code,message:messages[code]||'Afronden is niet bevestigd. Controleer je standwifi en probeer opnieuw. Stel geen tweede stand in.'};
   }
 
-  function create({draftApi=window.LightningOnboardingDraft,visual=window.LightningReceiverVisual,pixelSetup=window.LightningPixelSetup,pixelsPerMeter,services={},getModel,onComplete=()=>{},onManage=null,onExit=()=>{},jointSPIDirections=false,pairSPIFirst=false,onPairFirstBegin=null,allowPinLogin=false,automaticFirstReceiver=()=>false,firstStandAccessRequired=()=>false,onFirstStandAccess=null,allowLocalConcept=()=>false,onPreserveLocalConcept=null,onContinueLocalConcept=null}={}){
+  function create({draftApi=window.LightningOnboardingDraft,visual=window.LightningReceiverVisual,pixelSetup=window.LightningPixelSetup,pixelsPerMeter,services={},getModel,onComplete=()=>{},onManage=null,onExit=()=>{},jointSPIDirections=false,pairSPIFirst=false,onPairFirstBegin=null,firstPinV2=false,allowPinLogin=false,automaticFirstReceiver=()=>false,firstStandAccessRequired=()=>false,onFirstStandAccess=null,allowLocalConcept=()=>false,onPreserveLocalConcept=null,onContinueLocalConcept=null}={}){
     if(!draftApi||!pixelSetup||typeof getModel!=='function')throw Error('Onboarding dependencies are required.');
     const pixelLimits=pixelSetup.pixelLimits({pixelsPerMeter});
     let draft=null,container=null,results=[],searchState='idle',receiverFilter='all',error='',notice='',busy=false,operation=0;
     let securityReceiptRef=null,finalReceiptRef=null,securityUncertain=false,finalizationStarted=false,completeModel=null,manualRejoinSSID=null;
+    const firstPinAPI=window.LightningFirstPinV2;
+    let firstPinState686=null,firstPinReturn686=false;
+    const firstPinCandidate686=()=>firstPinV2===true&&!!services.FirstPinV2&&firstPinAPI?.candidate(draft,getModel())===true;
+    const firstPinCurrent686=()=>!!firstPinState686&&!!draft?.receiver&&firstPinState686.transactionId===draft.transactionId&&firstPinState686.receiverId===draft.receiver.id&&firstPinState686.rid===draft.receiver.rid&&firstPinState686.fingerprint===draft.receiver.deviceFingerprint;
+    function rememberFirstPin686(answer,phase){
+      if(!firstPinAPI?.validSSID(answer?.ssid,draft.receiver.type)||firstPinCurrent686()&&answer.ssid!==firstPinState686.ssid)throw Object.assign(Error(),{code:'FIRST_PIN_V2_UNCONFIRMED'});
+      firstPinState686={transactionId:draft.transactionId,receiverId:draft.receiver.id,rid:draft.receiver.rid,fingerprint:draft.receiver.deviceFingerprint,ssid:answer.ssid,phase};
+      manualRejoinSSID=phase==='rejoin'?answer.ssid:null;
+    }
+    function firstPinError686(failure){return firstPinAPI.failure(failure?.code,{rejoin:firstPinCurrent686()&&firstPinState686.phase==='rejoin'});}
+    function resumeFirstPin686(){
+      if(!firstPinReturn686||!firstPinCurrent686()||firstPinState686.phase!=='rejoin'||!container||document.hidden||busy)return;
+      firstPinReturn686=false;void secure(undefined,undefined,{reconcile:true});
+    }
+    async function claimFirstPin686(){
+      if(busy||!container||document.hidden||!firstPinCandidate686()||!firstPinCurrent686()||firstPinState686.phase!=='pin')return;
+      const token=++operation,owner=container,controller=new AbortController();actionAbort=controller;busy=true;error='';
+      try{
+        await persist();if(token!==operation||container!==owner||document.hidden)return;
+        await checkpointPairFirst(token);
+        // An uncertain native prompt/claim is reconciled, never re-submitted.
+        firstPinState686.phase='rejoin';securityUncertain=true;manualRejoinSSID=firstPinState686.ssid;paintPage(false);
+        const answer=await services.FirstPinV2.claim({configuration:config(),signal:controller.signal});
+        if(token!==operation||container!==owner)return;
+        if(answer?.status==='cancelled'){firstPinState686.phase='pin';securityUncertain=false;manualRejoinSSID=null;return;}
+        if(answer?.status!=='manual-rejoin')throw Object.assign(Error(),{code:'FIRST_PIN_V2_UNCONFIRMED'});
+        rememberFirstPin686(answer,'rejoin');
+      }catch(failure){if(token===operation&&container===owner)error=firstPinError686(failure);}
+      finally{if(actionAbort===controller)actionAbort=null;if(token===operation){busy=false;keepDraft();paintPage(false);resumeFirstPin686();}}
+    }
+    async function showFirstPin686(){
+      if(busy||!container||document.hidden||!firstPinCurrent686()||firstPinState686.phase!=='rejoin')return;
+      const token=++operation,owner=container,controller=new AbortController();actionAbort=controller;busy=true;error='';paintPage(false);
+      try{await services.FirstPinV2.show({configuration:config(),signal:controller.signal});}
+      catch(failure){if(token===operation&&container===owner)error=firstPinError686(failure);}
+      finally{if(actionAbort===controller)actionAbort=null;if(token===operation){busy=false;paintPage(false);resumeFirstPin686();}}
+    }
     const freshPairFirst=new Set(),pairFirstCheckpoints=new Set();
     const pairFirstEnabled=()=>pairSPIFirst===true&&typeof onPairFirstBegin==='function';
     const pairFirstCurrent=()=>pairFirstEnabled()&&draft?.receiver?.type==='SPI'&&(freshPairFirst.has(draft.transactionId)||pairFirstCheckpoints.has(draft.transactionId));
@@ -318,7 +355,7 @@
       return draftApi.snapshot({...clone(value),transactionId:'onboarding-'+uniqueId(),stage:'receiver',
         receiver:null,outputs:[],port:null,zoneId:null,security:{status:'not-started',phase:'idle'},cancelled:false,membership:'pending'});
     }
-    async function parkForSearch({persistSearch=true}={}){
+    async function parkForSearch({persistSearch=true,expiredEditorExit=false}={}){
       if(parking)return parking;
       const saved=parkPending||(draft?.receiver&&draft.stage!=='done'?draft:null);
       if(!saved)return true;
@@ -328,7 +365,7 @@
       securityReceiptRef=null;finalReceiptRef=null;securityUncertain=false;finalizationStarted=false;resumeSelection=null;manualRejoinSSID=null;
       parking=(async()=>{
         try{
-          await pixelPreview.stop();
+          if(!expiredEditorExit&&(await pixelPreview.stop())?.stopped!==true)throw Error('PIXEL_STOP_UNCONFIRMED');
           if(!parkedTransactions.has(saved.transactionId)){
             if(typeof services.parkDraft==='function')await services.parkDraft({transactionId:saved.transactionId});
             else parkedChoices.set(saved.receiver.id,clone(saved));
@@ -341,11 +378,11 @@
       })();
       return parking;
     }
-    async function parkForExit(){
+    async function parkForExit({expiredEditorExit=false}={}){
       if(parking&&!(await parking))return false;
       // A selected receiver is kept privately with its exact transaction.
       // Unlike browsing another receiver, leaving needs no new active search.
-      if(parkPending||draft?.receiver&&draft.stage!=='done')return parkForSearch({persistSearch:false});
+      if(parkPending||draft?.receiver&&draft.stage!=='done')return parkForSearch({persistSearch:false,expiredEditorExit});
       if(savedStand()&&draft.stage==='receiver'&&draft.receiver===null&&
           draft.security.status==='not-started'&&draft.security.phase==='idle'&&
           draft.outputs.length===0&&draft.port===null&&typeof services.parkDraft==='function'){
@@ -379,7 +416,8 @@
       status.timer=setTimeout(()=>{if(localCleanup579===status&&status.kind==='pending'){status.kind='unconfirmed';renderCleanup579(status);}},45000);return status;
     }
     function mountCleanup579(status){if(localCleanup579!==status)return;const node=document.createElement('p');node.setAttribute('role','status');node.dataset.previewCleanup579='';node.style.cssText='margin:8px 12px;padding:10px 12px;border-radius:12px;background:#eef1f5;color:#39424e;font-size:14px';if(status.job.container?.isConnected){status.job.container.appendChild(node);status.node=node;renderCleanup579(status);}}
-    const pixelPreview=pixelSetup.createLivePreview({send:typeof services.previewPixels==='function'?async request=>{const job=previewStopJob||localCleanup579?.job,owned=job&&previewScope579(request,job);try{const answer=await services.previewPixels(request);if(owned&&previewScope579(request,job))job.stopConfirmed=answer?.applied===true&&answer.previewTTLMS===0;return answer;}catch(error){if(owned)job.failed=true;throw error;}}:undefined,onState:state=>{previewState=state;pixelSetup.showPreviewStatus(container,state);}});
+    function publishedPixelDraft686(){return !!draft?.receiver&&getModel().receivers.some(receiver=>receiver.lifecycle==='added'&&receiver.type==='SPI'&&receiver.standId===draft.stand.id&&receiver.role===draft.role&&receiver.onboardingTransactionId===draft.transactionId&&['id','rid','deviceFingerprint'].every(key=>receiver[key]===draft.receiver[key]));}
+    const pixelPreview=pixelSetup.createLivePreview({send:typeof services.previewPixels==='function'?async request=>{const job=previewStopJob||localCleanup579?.job,owned=job&&previewScope579(request,job);try{const answer=await services.previewPixels(request);if(owned&&previewScope579(request,job))job.stopConfirmed=answer?.applied===true&&answer.previewTTLMS===0;return answer;}catch(error){if(owned)job.failed=true;throw error;}}:undefined,editorIsolation:()=>services.previewCapabilities?.editorIsolation===true&&publishedPixelDraft686(),onState:state=>{previewState=state;pixelSetup.showPreviewStatus(container,state);}});
     function syncPixelPreview({commit=false}={}){
       if(busy&&['outputs','pixels','connection'].includes(draft?.stage))return;
       if(!container||document.hidden||!['outputs','pixels','connection'].includes(draft?.stage)){if(!localExitPreviewCleanup)void pixelPreview.stop();return;}
@@ -574,6 +612,7 @@
       paintPage(false);
     }
     function visibilityChanged(){
+      if(document.hidden&&firstPinCurrent686()&&firstPinState686.phase==='rejoin')firstPinReturn686=true;
       if(document.hidden&&firstAccess){
         container?.querySelectorAll('[data-first-stand-code],[data-first-stand-code-confirm]').forEach(field=>{field.value='';});
         if(firstAccess.phase==='reconnect'||firstAccessJob?.kind==='set-code')firstAccessReturnPending=true;
@@ -581,16 +620,17 @@
       }
       syncPixelPreview();
       if(document.hidden){if(pendingMain())returningFromWifi=true;stopAutomaticRejoin();}
-      else {resumeFirstAccessAfterWifiReturn();if(returningFromWifi)resumeAfterWifiReturn();queueJointDirections();}
+      else {resumeFirstPin686();resumeFirstAccessAfterWifiReturn();if(returningFromWifi)resumeAfterWifiReturn();queueJointDirections();}
     }
     function probeAfterWifiReturn(){
       const guide=window.LightningSetupWifiGuide;
       if(guide?.canProbe({mounted:!!container,hidden:document.hidden,manualWifi:manualWifi(),stage:draft?.stage,busy,
         saving:draftSaving,pending:!!pendingChoices,firstAccess:!!firstAccess,searching:searchState==='searching',identifying:!!(identifyPending.size||identifying.size)}))void search();
     }
-    function nativeActive(){resumeFirstAccessAfterWifiReturn();resumeAfterWifiReturn();probeAfterWifiReturn();queueJointDirections();}
-    function pageShown(event){if(event.persisted||returningFromWifi||firstAccessReturnPending){resumeFirstAccessAfterWifiReturn();resumeAfterWifiReturn();probeAfterWifiReturn();}queueJointDirections();}
+    function nativeActive(){resumeFirstPin686();resumeFirstAccessAfterWifiReturn();resumeAfterWifiReturn();probeAfterWifiReturn();queueJointDirections();}
+    function pageShown(event){resumeFirstPin686();if(event.persisted||returningFromWifi||firstAccessReturnPending){resumeFirstAccessAfterWifiReturn();resumeAfterWifiReturn();probeAfterWifiReturn();}queueJointDirections();}
     function mount(element,options){
+      if(!container)pixelPreview.retireExpiredEditor();
       // A confirmed central publication may redraw this same page before
       // finish() returns. Keep its completion screen; only a genuine new
       // entry (after suspend) or the explicit Another action starts again.
@@ -614,6 +654,7 @@
     function suspend({discard=false}={}){
       if(previewStopJob){const job=previewStopJob;previewStopJob=null;job.restore();busy=false;}
       if(!localExitPreviewCleanup)void pixelPreview.stop();
+      pixelPreview.retireExpiredEditor();
       // Release only this presentation's job. Its late native result cannot
       // repaint, complete setup, or release a newer job after remount.
       if(firstAccessJob){firstAccessJob=null;busy=false;}
@@ -636,7 +677,7 @@
       suspend({discard:true});draft=null;firstAccess=null;results=[];receiverFilter='all';securityReceiptRef=null;finalReceiptRef=null;
       parkPending=null;searchOnMount=false;parkedChoices.clear();parkedTransactions.clear();
       securityUncertain=false;finalizationStarted=false;completeModel=null;pendingChoices=null;
-      resumeSelection=null;manualRejoinSSID=null;error='';notice='';busy=false;
+      resumeSelection=null;manualRejoinSSID=null;firstPinState686=null;firstPinReturn686=false;error='';notice='';busy=false;
     }
     function receiverSetupProgress(){
       if(firstStandSetup587()){
@@ -809,6 +850,7 @@
       return `<section class="card onboarding-manual-wifi" aria-label="${escape(tx("Wifi met de hand verbinden"))}">${instructions}</section>`;
     }
     function securityPanel(){
+      if(firstPinCurrent686())return firstPinAPI.markup({phase:firstPinState686.phase,ssid:firstPinState686.ssid,type:draft.receiver.type,busy});
       if(!pinRequired())return `${connectionCard({title:busy?(phaseLabels[draft.security.phase]||tx('Receiver verbinden')):tx('Verbinding controleren'),hint:busy?tx('Laat de receiver aan.'):tx('Verbinding nog niet bevestigd.')})}${busy?'':button('security-retry',tx('Opnieuw controleren'))}`;
       if(automaticMain())return mainWifiReturn();
       if(manualRejoinSSID&&!registrationPending)return `<section class="card onboarding-manual-wifi" aria-label="${escape(tx("Met beveiligde wifi verbinden"))}"><h2>${busy?tx('Verbinding controleren…'):tx('Verbind met je wifi')}</h2><ol class="onboarding-wifi-tiles" data-setup-visual="wifi-rejoin"><li>${setupIcon('wifi')}<span><b>${escape(tx("Instellingen → Wifi"))}</b><small>${escape(tx('Kies {network}',{network:manualRejoinSSID}))}</small></span></li><li>${setupIcon('phone')}<span><b>${escape(tx("Standcode invoeren"))}</b><small>${escape(tx("Dit is je wifiwachtwoord."))}</small></span></li><li>${setupIcon('return')}<span><b>${escape(tx("Terug naar de app"))}</b><small>${escape(tx("We controleren automatisch."))}</small></span></li></ol></section>${button('security-retry',busy?tx('Verbinding controleren…'):tx('Ik ben verbonden · controleren'),busy?'disabled':'')}`;
@@ -848,7 +890,7 @@
     }).join('');}
     function body(){
       switch(draft.stage){
-        case 'stand':return `<p class="onboarding-task-hint">${escape(t('setupNameHint','Geef je stand een herkenbare naam. Daarna maak je zones en voeg je verlichting toe.'))}</p><section class="card onboarding-name-card">${nameField('onboarding-stand-name',t('setupStandName','Standnaam'),t('setupStandExample','Bijvoorbeeld: Aluvision beursstand'),standNameInput??draft.stand?.name??'')}</section><div class="onboarding-actions onboarding-footer">${button('exit','← '+escape(t('back','Terug')),'class="button secondary"')}${button('stand-save',escape(t('setupContinueZones','Verder · zones maken')),'disabled')}</div>${allowPinLogin&&!getModel().stands.length?`<button type="button" class="button secondary full" data-action="pin-login">${escape(tx("Al een stand? Open met PIN"))}</button>`:''}`;
+        case 'stand':return `<p class="onboarding-task-hint">${escape(t('setupNameHint','Geef je stand een herkenbare naam. Daarna maak je zones en voeg je verlichting toe.'))}</p><section class="card onboarding-name-card">${nameField('onboarding-stand-name',t('setupStandName','Standnaam'),t('setupStandExample','Bijvoorbeeld: Aluvision beursstand'),standNameInput??draft.stand?.name??'')}${firstPinV2===true?`<p class="first-pin-v2-name-hint"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8a14 14 0 0 1 18 0M6 12a9 9 0 0 1 12 0M9 16a4 4 0 0 1 6 0"/><circle cx="12" cy="20" r="1"/></svg><span>${escape(firstPinAPI.text('nameHint'))}</span></p>`:''}</section><div class="onboarding-actions onboarding-footer">${button('exit','← '+escape(t('back','Terug')),'class="button secondary"')}${button('stand-save',escape(t('setupContinueZones','Verder · zones maken')),'disabled')}</div>${allowPinLogin&&!getModel().stands.length?`<button type="button" class="button secondary full" data-action="pin-login">${escape(tx("Al een stand? Open met PIN"))}</button>`:''}`;
         case 'zones':{
           if(zoneRemoval)return zoneRemovalPanel();
           if(zoneRename)return zoneRenamePanel();
@@ -1147,9 +1189,12 @@
     }
     async function secure(pin,repeat,{reconcile=false,automatic=false,resumeFinalization=false}={}){
       if(busy)return 'stop';
+      const usingFirstPin=firstPinCandidate686();
       registrationPending=false;
       if(!canSecure()){pin='';repeat='';error=unavailable;paintPage(false);return;}
-      if(draft.stage==='pin'){
+      if(draft.stage==='pin'&&usingFirstPin){
+        draft=draftApi.snapshot({...clone(draft),stage:'security',security:{status:'pending',phase:'configuring'}});
+      }else if(draft.stage==='pin'){
         const result=draftApi.providePin(draft,pin,repeat);if(result.error){error=result.error.message;paintPage(false);return;}draft=result.draft;
       }
       // Erase both visible PIN inputs before the first await. Only this call's
@@ -1167,7 +1212,7 @@
         if(method==='reconcileSecurity'&&securityReceiptRef)response={receiptRef:securityReceiptRef};
         else {
           if(typeof services[method]!=='function')throw Error('UNAVAILABLE');
-          attempted=true;const request=services[method]({configuration:config(),signal:controller.signal,...(pinRequired()&&method==='secure'&&draft.role==='main'?{pin}:{}),onProgress:phase=>{
+          attempted=true;const request=usingFirstPin?(method==='reconcileSecurity'?services.FirstPinV2.reconcile({configuration:config(),signal:controller.signal}):services.FirstPinV2.prepare({configuration:config(),standName:draft.stand.name,signal:controller.signal})):services[method]({configuration:config(),signal:controller.signal,...(pinRequired()&&method==='secure'&&draft.role==='main'?{pin}:{}),onProgress:phase=>{
             if(token===operation&&busy&&draft.stage==='security'&&Object.hasOwn(phaseLabels,phase))change({type:'SECURITY_PROGRESS',phase},{top:false});
           }});
           pin='';repeat='';response=await bounded(request,draft.role==='node'?125000:50000);
@@ -1184,21 +1229,25 @@
           verifyAgain(draft);notice='Controleer dezelfde receiver opnieuw. Je stand en zonekeuzes blijven bewaard.';return;
         }
         if(response?.status==='pin-required'){
+          if(usingFirstPin){rememberFirstPin686(response,'pin');securityUncertain=false;return 'stop';}
           if(!pinRequired())throw Object.assign(Error('PIN_DISABLED'),{code:'PIN_DISABLED'});
           if(method!=='reconcileSecurity'||draft.role!=='main')throw Error('INVALID_RESUME');
           draft=draftApi.snapshot({...clone(draft),stage:'pin',security:{status:'not-started',phase:'idle'}});
           securityUncertain=false;manualRejoinSSID=null;notice='De receiver is nog niet beveiligd. Vul je gekozen PIN opnieuw in om verder te gaan.';return;
         }
         if(response?.status==='manual-rejoin'){
+          if(usingFirstPin){rememberFirstPin686(response,'rejoin');return 'retry';}
           if(!pinRequired())throw Object.assign(Error('UNEXPECTED_REJOIN'),{code:'UNEXPECTED_REJOIN'});
           if(!manualWifi()||draft.role!=='main'||typeof response.ssid!=='string'||!/^ALUVISION-(RGBW|SPI)-[A-F0-9]{12}$/.test(response.ssid)||!response.ssid.startsWith('ALUVISION-'+draft.receiver.type+'-'))throw Error('INVALID_REJOIN');
           manualRejoinSSID=response.ssid;return 'retry';
         }
         if(response?.status==='registration-pending'){
           if(draft.role!=='main'||method!=='reconcileSecurity')throw Error('INVALID_RESUME');
+          if(usingFirstPin)rememberFirstPin686(response,'rejoin');
           registrationPending=true;return 'retry';
         }
         if(!response?.receiptRef)throw Error('NO_RECEIPT');
+        if(usingFirstPin&&response.ssid)rememberFirstPin686(response,'rejoin');
         securityReceiptRef=response.receiptRef;
         if(token!==operation)throw Error('SUSPENDED');
         change({type:'SECURITY_PROGRESS',phase:'verifying'},{top:false});
@@ -1206,6 +1255,7 @@
         if(confirmed.error){securityReceiptRef=null;throw Error('UNCONFIRMED');}
         if(token!==operation)throw Error('SUSPENDED');
         draft=confirmed.draft;securityReceiptRef=response.receiptRef;securityUncertain=false;manualRejoinSSID=null;
+        if(usingFirstPin){if(!firstPinCurrent686())throw Object.assign(Error(),{code:'FIRST_PIN_V2_UNCONFIRMED'});firstPinState686.confirmed=true;firstPinReturn686=false;}
         // The customer already picked a destination while naming zones. The
         // trusted security receipt may choose it only when it is compatible;
         // the final receiver receipt still gates actual app membership.
@@ -1217,9 +1267,10 @@
         return 'confirmed';
       }catch(failure){
         if(token!==operation)return 'stop';
+        if(usingFirstPin&&method==='secure')securityUncertain=false; // prepare is read-only, never a claim attempt.
         if(pinRequired()&&!attempted&&!securityUncertain&&draft.role==='main')draft=draftApi.snapshot({...clone(draft),stage:'pin',security:{status:'not-started',phase:'idle'}});
         if(automaticMain()&&transientRejoin(failure))return 'retry';
-        error=typeof failure?.code==='string'?connectionFailure(failure,{viaMain:draft.role==='node'}).message:tx(pinRequired()?'We konden deze receiver nog niet toevoegen. Je PIN en keuzes blijven bewaard; er is niets opnieuw ingesteld.':'We konden deze receiver nog niet toevoegen. Je keuzes blijven bewaard; er is niets opnieuw ingesteld.');
+        error=usingFirstPin?firstPinError686(failure):typeof failure?.code==='string'?connectionFailure(failure,{viaMain:draft.role==='node'}).message:tx(pinRequired()?'We konden deze receiver nog niet toevoegen. Je PIN en keuzes blijven bewaard; er is niets opnieuw ingesteld.':'We konden deze receiver nog niet toevoegen. Je keuzes blijven bewaard; er is niets opnieuw ingesteld.');
         if(automaticMain())rejoinBlocked=true;
         return 'stop';
       }
@@ -1227,7 +1278,7 @@
         pin='';repeat='';if(actionAbort===controller)actionAbort=null;if(token===operation)busy=false;
         if(token===operation){
           if(finishSelectedZone&&container)void finish({automatic:true});
-          else {keepDraft();paintPage(!automatic);if((returningFromWifi&&!rejoinRunning)||(!automatic&&draft.security.status==='confirmed'))resumeAfterWifiReturn();}
+          else {keepDraft();paintPage(!automatic);resumeFirstPin686();if((returningFromWifi&&!rejoinRunning)||(!automatic&&draft.security.status==='confirmed'))resumeAfterWifiReturn();}
         }
       }
     }
@@ -1254,7 +1305,8 @@
           const securityDraft=draftApi.snapshot({...clone(draft),stage:'security',security:{status:'pending',phase:'resuming'}});
           securityReceiptRef=null;finalReceiptRef=null;
           if(!container||document.hidden||typeof services.reconcileSecurity!=='function')throw Error('SUSPENDED');
-          const refreshed=await bounded(services.reconcileSecurity({configuration:draftApi.configuration(securityDraft),signal:controller.signal}),draft.role==='node'?125000:50000);
+          const refreshService=firstPinCurrent686()&&firstPinState686.confirmed?services.FirstPinV2.reconcile:services.reconcileSecurity;
+          const refreshed=await bounded(refreshService({configuration:draftApi.configuration(securityDraft),signal:controller.signal}),draft.role==='node'?125000:50000);
           if(token!==operation||!container||document.hidden||getModel()!==retryModel||canonical(config())!==retryConfiguration)throw Error('SUSPENDED');
           if(!refreshed?.receiptRef)throw Object.assign(Error('UNCONFIRMED'),{code:'MAIN_RECEIPT_INVALID'});
           const verified=await bounded(committer.confirmSecurity(securityDraft,refreshed.receiptRef));
@@ -1287,7 +1339,13 @@
           central=saved.central;
           if(central||nativeMain)committedModel=saved.model;
         }
-        if(!central&&completed.draft.role==='main'&&firstStandAccessRequired()){
+        let firstPinReady=null;
+        if(firstPinCurrent686()&&firstPinState686.confirmed){
+          const ready=await services.FirstPinV2.ready({standId:completed.draft.stand.id}),receiver=committedModel.receivers.find(item=>item.id===completed.draft.receiver.id);
+          if(token!==operation||getModel()!==currentModel||!receiver||ready?.ready!==true||ready.standId!==receiver.standId||ready.receiverId!==receiver.id||ready.rid!==receiver.rid||ready.deviceFingerprint!==receiver.deviceFingerprint||ready.transactionId!==completed.draft.transactionId||ready.ssid!==firstPinState686.ssid)throw Object.assign(Error(),{code:'FIRST_PIN_V2_UNCONFIRMED'});
+          firstPinReady=ready;
+        }
+        if(!central&&!firstPinReady&&completed.draft.role==='main'&&firstStandAccessRequired()){
           const receiver=committedModel.receivers.find(item=>item.id===completed.draft.receiver.id);
           firstAccess={identity:{schema:1,stage:'wifi-pin',standId:completed.draft.stand.id,receiverId:receiver.id,rid:receiver.rid,fingerprint:receiver.deviceFingerprint,transactionId:completed.draft.transactionId},phase:'checking',ssid:''};
           draft=completed.draft;completeModel=committedModel;
@@ -1296,7 +1354,7 @@
           firstAccess.phase=prepared.phase;firstAccess.ssid=prepared.ssid||'';
           return 'stand-access';
         }
-        draft=completed.draft;completeModel=committedModel;await onComplete(completeModel,{zoneId:draft.zoneId,receiverId:draft.receiver.id,central});
+        draft=completed.draft;completeModel=committedModel;await onComplete(completeModel,{zoneId:draft.zoneId,receiverId:draft.receiver.id,central,firstPinV2Ready:firstPinReady});
         return 'done';
       }catch(failure){
         if(token!==operation)return 'stop';
@@ -1357,7 +1415,7 @@
       let job=previewStopJob;
       if(!job){job={container,draft,mainFingerprint:mainFingerprint579(draft),token:operation,restore:pixelSetup.showPreviewStopping(container),exitPending:false,stopSettled:false,failed:false,stopConfirmed:false};previewStopJob=job;busy=true;
         container.querySelector('[data-onboarding-action="exit"]')?.removeAttribute('disabled');
-        void pixelPreview.stop().catch(()=>{job.failed=true;}).finally(()=>{job.stopSettled=true;if(job.atomic)settleCleanup579(job);if(previewStopJob===job&&!job.exitPending){previewStopJob=null;job.restore();if(container===job.container&&operation===job.token)busy=false;}});}
+        void pixelPreview.stop().then(answer=>{job.stopConfirmed=answer?.stopped===true;if(!job.stopConfirmed)job.failed=true;},()=>{job.failed=true;}).finally(()=>{job.stopSettled=true;if(job.atomic)settleCleanup579(job);if(previewStopJob===job&&!job.exitPending){previewStopJob=null;job.restore();if(container===job.container&&operation===job.token)busy=false;}});}
       if(job.exitPending||container!==job.container||draft!==job.draft||operation!==job.token)return;
       job.atomic=true;job.exitPending=true;const retained=clone(job.draft),model=canonical(getModel());
       const current=()=>previewStopJob===job&&container===job.container&&draft===job.draft&&operation===job.token&&canonical(draft)===canonical(retained)&&canonical(getModel())===model;
@@ -1422,6 +1480,7 @@
       // Security/select cancellation retains its existing separate handling.
       const action=target.dataset.onboardingAction;
       const returnToStand=target.dataset.returnStand==='true';
+      const expiredPixelExit686=action==='exit'&&previewState.kind==='expired';
       if(action==='preview-reopen'){
         if(!previewReconcileCurrent579())return;
         // Explicit normal document reload, not another save, STOP, resume or
@@ -1429,7 +1488,7 @@
         localExitPreviewCleanup=true;window.location.reload();return;
       }
       if(action==='exit'&&previewReconcileCurrent579()){refreshNotice();return;}
-      if(action==='exit'&&atomicExitEligible579())return exitAtomicPreview579();
+      if(action==='exit'&&!expiredPixelExit686&&atomicExitEligible579())return exitAtomicPreview579();
       if(busy&&['outputs','pixels','connection'].includes(draft?.stage)){
         if(action==='exit'&&previewStopJob)return exitDuringPreviewStop();
         return;
@@ -1471,14 +1530,14 @@
       if(action==='save-retry')return saveChoices();
       if(action==='receivers-later')return continueReceiversLater590();
       if(action==='receivers-list')return browseReceivers();
-      const leavesPixelGuide=action==='exit'||action==='back'&&draft.stage==='outputs'||action==='next'&&
-        (draft.stage==='connection'||jointSPIDirections&&draft.stage==='pixels')&&!active().some(output=>output.port>draft.port);
+      const leavesPixelGuide=!expiredPixelExit686&&(action==='exit'||action==='back'&&draft.stage==='outputs'||action==='next'&&
+        (draft.stage==='connection'||jointSPIDirections&&draft.stage==='pixels')&&!active().some(output=>output.port>draft.port));
       if(leavesPixelGuide&&['outputs','pixels','connection'].includes(draft.stage)){
         const stoppingContainer=container,stoppingDraft=draft,token=operation;
         const job={container:stoppingContainer,draft:stoppingDraft,mainFingerprint:mainFingerprint579(stoppingDraft),token,restore:pixelSetup.showPreviewStopping(stoppingContainer),exitPending:false,stopSettled:false,failed:false};
         previewStopJob=job;busy=true;
         stoppingContainer.querySelector('[data-onboarding-action="exit"]')?.removeAttribute('disabled');
-        try{await pixelPreview.stop();}catch(_){job.failed=true;}
+        try{job.failed=(await pixelPreview.stop())?.stopped!==true;}catch(_){job.failed=true;}
         finally{job.stopSettled=true;if(job.atomic)settleCleanup579(job);if(previewStopJob===job&&!job.exitPending){job.restore();if(token===operation&&container===stoppingContainer)busy=false;}}
         if(previewStopJob!==job||token!==operation||container!==stoppingContainer||draft!==stoppingDraft)return;
         if(job.exitPending)return;
@@ -1494,7 +1553,7 @@
         if(beforeSave!==operation||!container)return;
         const exitContainer=container;exiting=true;let left=false;
         try{
-          if(!(await parkForExit())||container!==exitContainer)return;
+          if(!(await parkForExit({expiredEditorExit:expiredPixelExit686}))||container!==exitContainer)return;
           const closedSearch=savedStand()&&draft.stage==='receiver'&&draft.receiver===null;
           suspend({discard:true});
           // A closed search has no remaining active native checkpoint. Reopen
@@ -1507,6 +1566,9 @@
         return;
       }
       if(pendingChoices)return;
+      if(action==='first-pin-claim')return claimFirstPin686();
+      if(action==='first-pin-show')return showFirstPin686();
+      if(action==='first-pin-check')return secure(undefined,undefined,{reconcile:true});
       if(action==='search')return search();
       if(action==='identify')return identify(target.dataset.id);
       if(busy)return;
@@ -1744,7 +1806,7 @@
         if(change({type:'NEXT'})&&draft.stage==='security')return secure();return;
       }
       if(action==='secure')return secure(container.querySelector('#onboarding-pin').value,container.querySelector('#onboarding-pin-repeat').value);
-      if(action==='security-retry')return automaticMain()?resumeAfterWifiReturn({force:true}):secure(undefined,undefined,{reconcile:true});
+      if(action==='security-retry')return firstPinCandidate686()&&!firstPinCurrent686()&&!securityUncertain?secure():automaticMain()?resumeAfterWifiReturn({force:true}):secure(undefined,undefined,{reconcile:true});
       if(action==='finish')return finish();
       if(action==='joint-directions'){queueJointDirections();return;}
       if(action==='done'){suspend();onExit({stand:true});return;}

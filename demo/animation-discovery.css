@@ -1,7 +1,38 @@
 /* Discovery hierarchy only. No new animation engine, state or device work. */
 html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) {
-  --discovery-accent: var(--red);
+  --discovery-accent: var(--action-ink, var(--red));
   gap: 20px;
+}
+/* A dialog's generic section rule is a horizontal flex row. The stand
+   gallery is instead one vertical browsing surface, just like the zone
+   gallery. Bound its own grid tracks: clipping the fixed dialog overflow
+   would hide, rather than fix, a shrunken search field and offscreen cards. */
+html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] .animation-library-inline[data-discovery-ui="662"],
+html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] [data-discovery-ui="662"] :is(.animation-family-section, .animation-family-detail, .family-variants-panel) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-flow: row;
+  align-items: stretch;
+  justify-items: stretch;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] .animation-library-inline[data-discovery-ui="662"] > :is(.animation-library-heading, .animation-picker-steps, .animation-settings-return-slot, .animation-discovery-browser, #animation-results) {
+  grid-column: 1;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] [data-discovery-ui="662"] .animation-discovery-browser {
+  grid-template-columns: minmax(0, 1fr);
+}
+html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] [data-discovery-ui="662"] .stand-animation-preview {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-library-heading {
   margin: 0;
@@ -226,6 +257,7 @@ html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="66
 }
 html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-search {
   position: relative;
+  isolation: isolate;
   display: block;
   margin: 0;
 }
@@ -237,9 +269,13 @@ html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="66
   clip-path: inset(50%);
 }
 html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-search input {
+  position: relative;
+  z-index: 0;
+  box-sizing: border-box;
   width: 100%;
   min-height: 48px;
-  padding: 11px 12px 11px 40px;
+  height: 48px;
+  padding: 11px 36px 11px 43px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--soft);
@@ -249,18 +285,83 @@ html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="66
 html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-search > .icon {
   display: block;
   position: absolute;
-  top: 15px;
-  left: 13px;
-  width: 18px;
-  height: 18px;
+  z-index: 1;
+  top: 50%;
+  left: 15px;
+  width: 19px;
+  height: 19px;
+  transform: translateY(-50%);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
   color: var(--muted);
   pointer-events: none;
+}
+html.interface-polish body :is(#main, #effect-dialog) [data-discovery-ui="662"] .animation-search:focus-within input {
+  border-color: var(--discovery-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--discovery-accent) 10%, transparent);
+}
+html.interface-polish body :is(#main, #effect-dialog) [data-discovery-ui="662"] .animation-search:focus-within > .icon {
+  color: var(--discovery-accent);
+}
+html.interface-polish body :is(#main, #effect-dialog) [data-discovery-ui="662"][data-discovery-search-open="true"] .animation-discovery-intro {
+  display: none;
 }
 
 /* Actual groups have live examples; separate them from the category controls. */
 html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) #animation-results {
   min-width: 0;
   padding-top: 4px;
+}
+html.interface-polish body :is(#main, #effect-dialog) [data-discovery-ui="662"] .animation-results-navigation {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin: 0 0 6px;
+}
+html.interface-polish body :is(#main, #effect-dialog) [data-discovery-ui="662"] .animation-discovery-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 2px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  box-shadow: none;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+  touch-action: manipulation;
+}
+html.interface-polish body :is(#main, #effect-dialog) [data-discovery-ui="662"] .animation-discovery-back > .icon {
+  flex: none;
+  width: 17px;
+  height: 17px;
+}
+html.interface-polish body :is(#main, #effect-dialog) [data-discovery-ui="662"] .animation-discovery-back:is(:hover, :focus-visible) {
+  color: var(--discovery-accent);
+}
+html.interface-polish body :is(#main, #effect-dialog) [data-discovery-ui="662"] .animation-discovery-back:focus-visible {
+  outline: 2px solid var(--discovery-accent);
+  outline-offset: 3px;
+}
+html.interface-polish body :is(#main, #effect-dialog) [data-discovery-ui="662"] .animation-results-focus-heading {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  outline: 0;
 }
 html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-family-section {
   margin-top: 20px;
@@ -283,6 +384,13 @@ html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="66
   margin-top: 4px;
   color: var(--muted);
   font-size: 12px;
+}
+@media (max-width: 599px) {
+  html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] [data-discovery-ui="662"] :is(.animation-family-grid, .effect-grid, .family-variant-grid) {
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
+    max-width: 100%;
+  }
 }
 @media (max-width: 359px) {
   html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-picker-steps[data-discovery-progress="662"] { gap: 24px; }

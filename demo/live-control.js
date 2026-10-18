@@ -15,10 +15,12 @@
   const SHARED_TUNNEL_VARIANTS=new Set([5,6,7,8,9,10,11,12,13,14,15,16,21,22,23,24,26,27,28,29,30,31]);
   // Use a 120 ms receiver ramp for static wheel/dimmer targets, without delaying
   // dispatch or storing a history of pointer movements. A new powered
-  // animation cue blends briefly; OFF and explicit zero remain immediate.
+  // animation cue blends briefly; an explicit power-OFF fades to black.
+  // Zero-brightness intents keep their existing separate safe semantics.
   // Receiver cue classification prevents duplicates restarting that blend.
   const STATIC_TRANSITION_MS=120;
   const ANIMATION_CUE_TRANSITION_MS=180;
+  const POWER_OFF_TRANSITION_MS=350;
   const clone=value=>JSON.parse(JSON.stringify(value));
   // Route hint only: native repeats closed parsing and exact physical-child
   // admission. An explicit subset remains SPI_PORTS, never a PORT=0 scene.
@@ -154,7 +156,7 @@
     }
     return {standId:receiver.standId,receiverId:receiver.id,kind:spi?'SPI_SCENE':'RGBW_SCENE',
       brightness:powered?brightness:0,
-      transitionMs:!powered?0:transitionMs??(scene.engine==='STATIC'&&!extension?STATIC_TRANSITION_MS:
+      transitionMs:!powered?POWER_OFF_TRANSITION_MS:transitionMs??(scene.engine==='STATIC'&&!extension?STATIC_TRANSITION_MS:
         brightness>0?ANIMATION_CUE_TRANSITION_MS:0),channels:[],scene};
   }
   // Membership has already been confirmed by native storage. A new line can

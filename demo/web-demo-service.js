@@ -40,6 +40,27 @@
     };
     return Object.freeze({
       factoryGuidePreview:true,
+      // Fictional browser receipts: never LED, firmware, identity or ownership proof.
+      previewCapabilities:Object.freeze({identifyPorts:true,power:false,editorIsolation:false}),
+      previewPixels:async request=>{
+        const r=request?.receiver,unit=units.find(u=>u.type==='SPI'&&u.id===r?.id&&u.rid===r?.rid&&u.deviceFingerprint===r?.deviceFingerprint);
+        if(!unit||r.type!=='SPI'||!['start','update','stop'].includes(request.action)||
+          !['standId','transactionId'].every(k=>typeof request[k]==='string'&&request[k].length>0&&request[k].length<=128)||
+          !['main','node'].includes(request.role)||request.role==='main'&&request.mainReceiverId!==null||
+          request.role==='node'&&request.mainReceiverId!==null&&!units.some(u=>u.id===request.mainReceiverId)||
+          Object.keys(request).some(k=>!['action','standId','transactionId','receiver','role','mainReceiverId','guide','port','pixels','previewTTLMS','outputs'].includes(k)))throw Error('WEB_DEMO_PREVIEW_INVALID');
+        const count=n=>Number.isInteger(n)&&n>=0&&n<=163,stopped=request.action==='stop';
+        if(request.guide==='ports'){
+          if(request.port!==null||request.pixels!==0||request.previewTTLMS!==12000||
+            !Array.isArray(request.outputs)||request.outputs.length!==4||!root.LightningPixelSetup?.portPalette(request.outputs)||
+            request.outputs.some((o,i)=>Object.keys(o).sort().join(',')!=='colour,enabled,pixels,port,reversed'||o.port!==i+1||typeof o.enabled!=='boolean'||typeof o.reversed!=='boolean'||!count(o.pixels)))throw Error('WEB_DEMO_PREVIEW_INVALID');
+          const colours=['#ff0000','#0000ff','#ffff00','#ff1700'];
+          return {applied:true,port:null,pixels:0,guide:'ports',previewTTLMS:stopped||!request.outputs.some(o=>o.enabled&&o.pixels>0)?0:12000,
+            paletteVersion:5,outputs:request.outputs.map((o,i)=>({...o,colour:colours[i]})),demoOnly:true,hardwareAccess:false};
+        }
+        if(![undefined,'length'].includes(request.guide)||!Number.isInteger(request.port)||request.port<1||request.port>4||!count(request.pixels)||request.outputs!==undefined||request.previewTTLMS!==undefined)throw Error('WEB_DEMO_PREVIEW_INVALID');
+        return {applied:true,port:request.port,pixels:request.pixels,guide:'length',previewTTLMS:stopped||!request.pixels?0:12000,demoOnly:true,hardwareAccess:false};
+      },
       storage,
       search:async()=>({receivers:copy(units.map(unit=>({...unit,canConfigure:true,canVerifyIdentity:true})))}),
       select:async({receiver})=>copy(receiver),

@@ -52,11 +52,11 @@
     if(shared(scene)&&!StandAnimations.active(Scenes.apply(model,scene),scene.standId))
       fail('Deze gezamenlijke animatie gebruikt de hele stand. Kies alle zones of open de scène opnieuw.');
   }
-  function captureCurrent(model,session){
+  function captureCurrent(model,session,presentations){
     const stand=model.stands.find(item=>item.id===session.standId);
     const zoneIds=stand.zones.filter(zone=>M.zoneReceivers(model,zone.id).length).map(zone=>zone.id);
     if(!zoneIds.length)fail('Deze stand heeft geen verlichting om te bewaren.');
-    try{return Scenes.capture(model,session.standId,zoneIds,session.original.name,{id:session.original.id});}
+    try{return Scenes.capture(model,session.standId,zoneIds,session.original.name,{id:session.original.id,presentations});}
     catch(error){fail(error.message);}
   }
   function begin(model,input,{zoneId=null}={}){
@@ -66,8 +66,8 @@
     const selected=wholeStandLoaded?original:{...original,zones:original.zones.filter(zone=>zone.id===zoneId)};
     const loaded=Scenes.apply(model,selected);
     const session=freeze({version:1,standId:original.standId,original:copy(original),
-      zoneIds:original.zones.map(zone=>zone.id),scopeSignature:scopeSignature(model,original.standId),
-      shared:shared(original),dirtyByReceiverId:{}});
+      zoneIds:original.zones.map(zone=>zone.id),scopeSignature:scopeSignature(loaded,original.standId),
+      shared:shared(original),dirtyByReceiverId:{},presentationByZoneId:{}});
     return {session,model:loaded,receiverIds:selected.zones.flatMap(zone=>zone.receivers.map(receiver=>receiver.id)),wholeStandLoaded};
   }
   function record(session,model,receiverIds){
@@ -94,30 +94,53 @@
     }
     return freeze({...session,dirtyByReceiverId:dirty});
   }
-  function build(session,model,{zoneIds=session.zoneIds,name=session.original.name}={}){
+  function build(session,model,{zoneIds=session.zoneIds,name=session.original.name,presentations}={}){
     const original=current(session,model);
     if(!Array.isArray(zoneIds)||!zoneIds.length||zoneIds.some(id=>typeof id!=='string')||new Set(zoneIds).size!==zoneIds.length)
       fail('Kies minstens één zone om in deze scène te bewaren.');
     const savedZones=new Map(original.zones.map(zone=>[zone.id,zone]));
     const materializeShared=session.shared&&Object.keys(session.dirtyByReceiverId).length>0;
     const needsCurrent=materializeShared||zoneIds.some(id=>!savedZones.has(id));
-    const captured=needsCurrent?captureCurrent(model,session):null;
+    const captured=needsCurrent?captureCurrent(model,session,presentations):null;
     const currentZones=new Map((captured?.zones||[]).map(zone=>[zone.id,zone]));
     const currentStates=new Map((captured?.zones||[]).flatMap(zone=>zone.receivers.map(receiver=>[receiver.id,receiver.state])));
     const zones=zoneIds.map(id=>{
       const saved=savedZones.get(id);
       if(!saved){const added=currentZones.get(id);if(!added)fail('Deze zone is leeg, verwijderd of hoort bij een andere stand.');return copy(added);}
       const zone=copy(saved);
+      if(session.presentationByZoneId?.[id])zone.arrangement=copy(session.presentationByZoneId[id]);
       for(const receiver of zone.receivers){
         const state=materializeShared?currentStates.get(receiver.id):Object.hasOwn(session.dirtyByReceiverId,receiver.id)?session.dirtyByReceiverId[receiver.id]:null;
         if(materializeShared&&!state)fail('De gezamenlijke animatie kan niet gedeeltelijk worden bijgewerkt. Kies alle zones.');
         if(state)receiver.state=copy(state);
+        // Whole-line playback already ignores sparse port overrides. Keep
+        // exactly that visible base when an explicit edit joins the lines.
+        if(session.presentationByZoneId?.[id]?.layout==='continuous')receiver.state=M.lightStateFor({type:'SPI',state:receiver.state},0);
       }
       return zone;
     });
     const result=Scenes.validate({...original,name,zones});
     requireCompatible(model,result,true);validateShared(model,result);
     return result;
+  }
+  // Only a caller that completed this exact explicit metadata operation may
+  // rebase an editor. Global projection changes never call this function.
+  function recordPresentation(session,before,after,zoneId,presentation){
+    current(session,before);
+    const zone=M.getZone(after,zoneId);if(!zone||!session.zoneIds.includes(zoneId))return session;
+    const value=Scenes.arrangement({layout:zone.layout,lineOrder:M.lineIds(after,zoneId),presentation},zone.type);
+    const expected=M.arrangeLines(before,zoneId,{layout:value.layout,lineOrder:value.lineOrder});
+    if(scopeSignature(expected,session.standId)!==scopeSignature(after,session.standId))
+      fail('De opstelling is intussen gewijzigd. Open de scène opnieuw.');
+    return freeze({...session,scopeSignature:scopeSignature(after,session.standId),
+      presentationByZoneId:{...(session.presentationByZoneId||{}),[zoneId]:copy(value)}});
+  }
+  function acceptPresentation(session,before,after,scene){
+    current(session,before);
+    const expected=Scenes.apply(before,scene);
+    if(scopeSignature(expected,session.standId)!==scopeSignature(after,session.standId))
+      fail('De opgeslagen opstelling is niet bevestigd.');
+    return freeze({...session,scopeSignature:scopeSignature(after,session.standId)});
   }
   function loadZone(session,model,zoneId){
     const draft=build(session,model);
@@ -141,5 +164,5 @@
     const scene=Scenes.validate(input);requireCompatible(model,scene,true);validateShared(model,scene);
     return {model:Scenes.apply(model,scene),receiverIds:scene.zones.flatMap(zone=>zone.receivers.map(receiver=>receiver.id))};
   }
-  return Object.freeze({begin,record,build,loadZone,loadAll,variation,activation});
+  return Object.freeze({begin,record,build,recordPresentation,acceptPresentation,loadZone,loadAll,variation,activation});
 }));

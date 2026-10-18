@@ -31,7 +31,7 @@
     };
     return root.LightningV50ErrorTexts?.t(messageKey,root.document?.documentElement?.lang||'nl')||fallback[messageKey];
   }
-  function create({services={},translate,getModel,onRemoved=()=>{},standCodeAccess=()=>false}={}){
+  function create({services={},translate,getModel,onRemoved=()=>{},standCodeAccess=()=>false,usesDedicatedFirstPin=()=>false}={}){
     // Closed authored UI keys only; no receiver/customer/native message lookup.
     // Without an injected translator the original Dutch copy remains valid.
     const t=(copy,params={})=>{
@@ -173,7 +173,7 @@
         if(typeof services[method]!=='function')throw Error('UNAVAILABLE');
         const next=await services[method](request);delete request.pin;if(token!==generation)return;
         validate(next,action,previous);await acceptModel(next);targets=clone(next.targets);result=next;
-        if(!standCodeAccess()&&installation()&&action==='check'&&next.status!=='checking'&&next.status!=='blocked')root.AluvisionSecurityMode?.updateFromNative?.({pinRequired:next.requiresPin});
+        if(!standCodeAccess()&&!usesDedicatedFirstPin(receiver)&&installation()&&action==='check'&&next.status!=='checking'&&next.status!=='blocked')root.AluvisionSecurityMode?.updateFromNative?.({pinRequired:next.requiresPin});
         if(['verification-required','pin-required','blocked','removed'].includes(next.status))autoContinue=false;
       }catch(failure){
         delete request.pin;if(token!==generation)return;autoContinue=false;

@@ -80,8 +80,8 @@ html.interface-polish body .stand-page .zone-entry-inline-power>.stand-zone-powe
 /* The same port families as the physical SPI guide: readable labels, not a
    faint pastel indicator. Firmware and geometry remain completely separate. */
 html body .receiver-port-row[data-port-row="1"]{--v659-port-colour:#0000ff;--v659-port-ink:#fff}
-html body .receiver-port-row[data-port-row="2"]{--v659-port-colour:#ff8000;--v659-port-ink:#161616}
-html body .receiver-port-row[data-port-row="3"]{--v659-port-colour:#8000ff;--v659-port-ink:#fff}
-html body .receiver-port-row[data-port-row="4"]{--v659-port-colour:#00ffff;--v659-port-ink:#161616}
+html body .receiver-port-row[data-port-row="2"]{--v659-port-colour:#ffa000;--v659-port-ink:#161616}
+html body .receiver-port-row[data-port-row="3"]{--v659-port-colour:#00ff00;--v659-port-ink:#161616}
+html body .receiver-port-row[data-port-row="4"]{--v659-port-colour:#ff00ff;--v659-port-ink:#fff}
 html body .receiver-port-row[data-port-row]{border-inline-start:3px solid var(--v659-port-colour)}
 html body .receiver-port-row[data-port-row] .receiver-port-select>b{display:grid;place-items:center;min-width:31px;min-height:29px;padding:3px 5px;border-radius:7px;background:var(--v659-port-colour);color:var(--v659-port-ink);font-weight:800;font-size:12px;box-shadow:0 0 0 1px #ffffff24}

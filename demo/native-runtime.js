@@ -45,9 +45,18 @@
   ['standSessionStatus','standSessionShare','standInspect','standOpenWifi','standConnect','standMigrate','standResume','standRefresh','standMutation','standDisconnect','standForget','standCodeChange','shareStandWifi'].forEach(action=>actions.add(action));
   actions.add('standFirstAccessPreflight');
   actions.add('standFirstAccessDiagnosticFailure');
+  actions.add('pixelReceiptDiagnostic692');
+  ['prepareFirstPinV2','claimFirstPinV2','reconcileFirstPinV2','showFirstPinV2','firstPinV2Ready'].forEach(action=>actions.add(action));
   const firstAccessDiagnosticCodes=new Set(['OTHER','FIRST_ACCESS_IDENTITY','FIRST_ACCESS_STORAGE','FIRST_ACCESS_UNCONFIRMED','ACTION_UNSUPPORTED','NATIVE_UNAVAILABLE','NATIVE_DOCUMENT_UNAVAILABLE','NATIVE_BUSY','NATIVE_TIMEOUT','CANCELLED','TIMEOUT','LOCAL_NETWORK_DENIED','STAND_CONNECTION_CLOSED','STAND_CONNECTION_BUSY','STAND_CONNECTION_UNAVAILABLE','STAND_CONNECTION_INVALID','STAND_CONNECTION_CANCELLED','STAND_DATA_INVALID','STAND_DATA_UNCONFIRMED','STAND_INVALID_REQUEST','STAND_STORAGE_LIMIT','STAND_MIGRATION_INVALID','STAND_PREFLIGHT_INVALID','STAND_PREFLIGHT_UNCONFIRMED','STAND_PREFLIGHT_NOT_REQUIRED','STAND_MIGRATION_NOT_READY','STAND_RECEIVER_SAVED_ELSEWHERE','STAND_CURRENT_ACCESS_CONFLICT','STAND_UNAVAILABLE','STAND_WIFI_UNREACHABLE','STAND_WRONG_WIFI','STAND_BUSY','STAND_CANCELLED','STAND_IDENTITY_MISMATCH','STAND_AUTH_FAILED','STAND_UNCONFIRMED','STAND_CREDENTIAL_UNCONFIRMED']);
   ['scanStandShare','takeStandShareLink','shareStandLink'].forEach(action=>actions.add(action));
-  let selectionHaptics=false,selectionFeedbackPending=false,interfaceHaptics=false,interfaceFeedbackPending=false,pixelPreviewV50=false,spiZoneDirectionPreview=false;
+  let selectionHaptics=false,selectionFeedbackPending=false,interfaceHaptics=false,interfaceFeedbackPending=false,pixelPreviewV50=false,spiZoneDirectionPreview=false,pixelEditorIsolationAvailable=false,setupZoneIsolationAvailable=false;
+  let pixelReceiptDiagnostics692=false;
+  function pixelDiagnostic692(phase,bits){
+    if(!pixelReceiptDiagnostics692||!['RUNTIME_EDITOR_RECEIPT','RUNTIME_PREVIEW_RECEIPT','STOP_RECEIPT','STOP_SUPERSEDED'].includes(phase)||!Number.isInteger(bits)||bits<0||bits>31)return;
+    // Failure-only, local DEBUG Mac observation. Never awaited by control or
+    // STOP, and never sends a request/reply object, target, ID or credential.
+    void call('pixelReceiptDiagnostic692',{phase,bits}).catch(()=>{});
+  }
   actions.add('supersedeLivePreparing');
   actions.add('yieldEarlyAnimation');
   actions.add('replacePreparingStatic');
@@ -60,6 +69,30 @@
   const layoutUUID=value=>typeof value==='string'&&/^[A-Fa-f0-9]{8}(-[A-Fa-f0-9]{4}){3}-[A-Fa-f0-9]{12}$/.test(value)&&!/^0{8}(-0{4}){3}-0{12}$/.test(value);
   const layoutTextBytes=value=>Array.from(value).reduce((bytes,c)=>{const n=c.codePointAt(0);return bytes+(n<=0x7f?1:n<=0x7ff?2:n<=0xffff?3:4);},0);
   const layoutKeys=(value,names)=>value&&Object.getPrototypeOf(value)===Object.prototype&&Object.keys(value).sort().join(',')===names.slice().sort().join(',');
+  // Optional DEBUG observation, never an acknowledgement or authority field.
+  const spiDiagnosticPhases679=new Set(['BRIDGE_ADMISSION','PIXEL_STOP','SERVICE_ADMISSION','WITNESS','OWNER_OPEN','MAIN_IDENTITY','TARGET_IDENTITY','OUTPUT_STATUS','MAIN_BOOT','ROUND_BUDGET','SETUP_BEGIN','TEST','CONFIRMATION','APPLICATION_INACTIVE']);
+  const spiDiagnosticCodes679=new Set(('NATIVE_UNCONFIRMED TASK_CANCELLED APPLICATION_INACTIVE '+
+    'SPI_ZONE_DIRECTION_INVALID SPI_ZONE_DIRECTION_PROFILE SPI_ZONE_DIRECTION_UPDATE_REQUIRED SPI_ZONE_DIRECTION_UNCONFIRMED SPI_ZONE_DIRECTION_CANCELLED SPI_ZONE_DIRECTION_BUSY '+
+    'OWNER_SESSION_UNAVAILABLE OWNER_SESSION_BUSY OWNER_REQUEST_INVALID OWNER_REPLY_INVALID OWNER_SESSION_CANCELLED OWNER_SESSION_DEADLINE OWNER_EXCHANGE_UNCERTAIN '+
+    'TRUST_INVALID_TARGET TRUST_INVALID_KEY TRUST_BUSY TRUST_CANCELLED TRUST_DEADLINE TRUST_UNAVAILABLE TRUST_LOCAL_NETWORK_DENIED TRUST_TRANSPORT TRUST_REPLY TRUST_IDENTITY TRUST_WRONG_RECEIVER_NETWORK TRUST_SIGNATURE TRUST_SERVER_FINISH '+
+    'TRUST_TRANSPORT_REQUEST TRUST_TRANSPORT_REPLY TRUST_TRANSPORT_IDENTITY TRUST_TRANSPORT_WRONG_RECEIVER_NETWORK TRUST_TRANSPORT_BUSY TRUST_TRANSPORT_DEADLINE TRUST_TRANSPORT_CANCELLED TRUST_TRANSPORT_UNAVAILABLE TRUST_TRANSPORT_LOCAL_NETWORK_DENIED '+
+    'MAIN_CONFIGURATION_INVALID MAIN_PROTOCOL_UNSUPPORTED MAIN_BUSY MAIN_CANCELLED MAIN_IDENTITY_UNCONFIRMED MAIN_CONNECTION_UNAVAILABLE MAIN_MANAGEMENT_REFUSED MAIN_WRONG_RECEIVER_NETWORK MAIN_STORAGE_UNCONFIRMED MAIN_ACTION_UNCERTAIN MAIN_CONFIGURATION_UNCONFIRMED MAIN_CLAIM_UNCONFIRMED MAIN_MANUAL_WIFI_REQUIRED MAIN_REGISTRATION_UNCONFIRMED MAIN_RECEIPT_INVALID MAIN_EXPLICIT_RETRY_REQUIRED DISCOVERY_EXPIRED MAIN_RECOVERY_UNAVAILABLE MAIN_RECOVERY_CONFLICT PIXEL_GUIDE_UPDATE_REQUIRED '+
+    'OUTPUT_CONFIGURATION_INVALID OUTPUT_CONFIGURATION_PROFILE OUTPUT_CONFIGURATION_BUSY OUTPUT_CONFIGURATION_PENDING OUTPUT_CONFIGURATION_UNCONFIRMED OUTPUT_CONFIGURATION_CANCELLED OUTPUT_CONFIGURATION_CONFLICT '+
+    'V30_BINDING_INVALID V30_CHECKPOINT_INVALID V30_CHECKPOINT_CONFLICT V30_CHECKPOINT_ROLLBACK V30_STORAGE_UNAVAILABLE V30_STORAGE_CORRUPT V30_STORAGE_UNCONFIRMED V30_STORAGE_FULL V30_CREDENTIAL_INVALID V30_CREDENTIAL_IMMUTABLE V30_PIN_FORMAT V30_RECEIPT_UNVERIFIED').split(' '));
+  function spiDiagnosticValid679(value){return layoutKeys(value,['version','operation','phase','code','targetOrdinal','elapsedMS','phaseElapsedMS','preflightMS','applyMS'])&&value.version===1&&
+    ['start','update','test','renew'].includes(value.operation)&&spiDiagnosticPhases679.has(value.phase)&&spiDiagnosticCodes679.has(value.code)&&Number.isInteger(value.targetOrdinal)&&value.targetOrdinal>=0&&value.targetOrdinal<=30&&
+    ['elapsedMS','phaseElapsedMS','preflightMS','applyMS'].every(key=>Number.isInteger(value[key])&&value[key]>=0&&value[key]<=180000);}
+  function spiDiagnosticReplyKeys679(value,keys){return Object.prototype.hasOwnProperty.call(value||{},'diagnostic')?
+    layoutKeys(value,[...keys,'diagnostic'])&&spiDiagnosticValid679(value.diagnostic):layoutKeys(value,keys);}
+  // The full physical path is part of the native contract, not an optional UI
+  // hint. Admit a dense bijection only; Swift still fences its canonical order.
+  function spiDirectionPathValid682(lines,order){
+    if(!Array.isArray(lines)||!lines.length||lines.length>120||Array.from(lines).some(line=>
+      !layoutKeys(line,['receiverId','port','reversed'])||!layoutId(line.receiverId)||!Number.isInteger(line.port)||line.port<1||line.port>4||typeof line.reversed!=='boolean'))return false;
+    const keys=new Set(lines.map(line=>line.receiverId+':'+line.port));
+    return keys.size===lines.length&&Array.isArray(order)&&order.length===lines.length&&
+      new Set(order).size===order.length&&Array.from(order).every(key=>typeof key==='string'&&keys.has(key));
+  }
   let appearanceTheme=null,appearanceRequest=null,appearanceSerial=0;
   const contextTimers=new Map(),contextEpochs=new Map(),contextJobs=new Map(),contextControls=new Map();let contextQueue=Promise.resolve(),contextResetEpoch=0;
   const contextDiscoveries=new Map(),incompleteLibraryRecovery=new Set();let contextDiscoveryTimer=null,incompleteLibraryRecoveryStorageBlocked=false;
@@ -123,7 +156,7 @@
       const timeout=['exportBackup','chooseBackup','recoverInstallation'].includes(action)?300000:['scanStandShare','shareStandLink','shareStandWifi','standOpenWifi','standConnect','standMigrate','standResume','standRefresh','standMutation','standCodeChange','prepareReceiverManagement'].includes(action)||action==='publishModel'&&centralStamp!==null?90000:action==='checkpointPreviewExit'?30000:action==='previewPixels'?45000:action==='syncInstallationContext'?180000:['otaPlan','otaMainRecoveryPlan'].includes(action)?120000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
         ['secure','reconcileSecurity'].includes(action)&&payload.configuration?.role==='node'?120000:
         action==='identifyLayout'?35000:['select','secure','reconcileSecurity','finalize','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain'].includes(action)?45000:12000;
-      const deadline=action==='previewSPIZoneDirections'?(payload.action==='stop'?20000:90000):action==='configureOutputDirections'?90000:['applyStaticGesture','standFirstAccessPreflight'].includes(action)?45000:timeout;
+      const deadline=['claimFirstPinV2','showFirstPinV2'].includes(action)?300000:['prepareFirstPinV2','reconcileFirstPinV2'].includes(action)?50000:action==='previewSPIZoneDirections'?(payload.action==='stop'?20000:90000):action==='configureOutputDirections'?90000:['applyStaticGesture','standFirstAccessPreflight'].includes(action)?45000:timeout;
       const timer=root.setTimeout(()=>{cancelNative();if(!automatic)receive({id,ok:false,code:'NATIVE_TIMEOUT'});},deadline);
       pending.set(id,{resolve,reject,timer,automatic,removeAbort:()=>signal?.removeEventListener('abort',abort)});
       posted?.(id);
@@ -678,10 +711,18 @@
     // uses the most recent accepted view. Callers may bind an explicit earlier
     // revision when their UI decision depends on that exact snapshot.
     const kinds={create:operation&&Object.prototype.hasOwnProperty.call(operation,'receiverId')?['kind','zoneId','name','receiverId']:['kind','zoneId','name'],rename:['kind','zoneId','name'],renameReceiver:['kind','receiverId','name'],delete:['kind','zoneId'],
-      assign:['kind','receiverId','zoneId'],assignMany:['kind','receiverIds','zoneId'],reorder:['kind','zoneId','receiverIds'],layout:['kind','zoneId','layout'],arrange:['kind','zoneId','layout','receiverIds'],arrangeLines:['kind','zoneId','layout','lineOrder']};
+      assign:['kind','receiverId','zoneId'],assignMany:['kind','receiverIds','zoneId'],reorder:['kind','zoneId','receiverIds'],layout:['kind','zoneId','layout'],arrange:['kind','zoneId','layout','receiverIds'],arrangeLines:['kind','zoneId','layout','lineOrder'],scenePresentation:['kind','zones']};
     const fields=typeof operation?.kind==='string'&&Object.prototype.hasOwnProperty.call(kinds,operation.kind)?kinds[operation.kind]:null;
     const boundedId=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(value);
     const denseArray=value=>Array.isArray(value)&&value.length<=240&&Array.from({length:value.length},(_,index)=>Object.prototype.hasOwnProperty.call(value,index)).every(Boolean);
+    const validScenePresentation=op=>{
+      if(!denseArray(op.zones)||!op.zones.length||op.zones.length>100||new Set(op.zones.map(zone=>zone?.zoneId)).size!==op.zones.length)return false;
+      try{return op.zones.every(zone=>zone&&Object.keys(zone).sort().join(',')==='arrangement,identities,type,zoneId'&&boundedId(zone.zoneId)&&['RGBW','SPI'].includes(zone.type)&&
+        root.LightningScenes?.arrangement(zone.arrangement,zone.type)&&denseArray(zone.identities)&&zone.identities.length>0&&zone.identities.length<=30&&
+        new Set(zone.identities.map(identity=>identity?.id)).size===zone.identities.length&&zone.identities.every(identity=>
+          identity&&Object.keys(identity).sort().join(',')==='deviceFingerprint,id,rid'&&boundedId(identity.id)&&
+          root.LightningScenes.identity({rid:identity.rid,deviceFingerprint:identity.deviceFingerprint})));}catch(_){return false;}
+    };
     if(typeof standId!=='string'||expectedRevision!==undefined&&(!Number.isSafeInteger(expectedRevision)||expectedRevision<0)||!fields||
       !operation||typeof operation!=='object'||Array.isArray(operation)||
       operation.kind==='assignMany'&&(!Array.isArray(operation.receiverIds)||!operation.receiverIds.length||operation.receiverIds.length>128||
@@ -693,6 +734,7 @@
       operation.kind==='arrangeLines'&&(typeof root.LightningModel?.lineIds!=='function'||typeof expectedZoneSignature!=='string'||!boundedId(operation.zoneId)||
         !['stacked','vertical','continuous'].includes(operation.layout)||!denseArray(operation.lineOrder)||operation.lineOrder.length>240||
         Array.from(operation.lineOrder).some(id=>typeof id!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}:[0-4]$/.test(id))||new Set(operation.lineOrder).size!==operation.lineOrder.length)||
+      operation.kind==='scenePresentation'&&!validScenePresentation(operation)||
       expectedZoneSignature!==undefined&&(!['delete','rename','arrange','arrangeLines'].includes(operation.kind)||typeof expectedZoneSignature!=='string'||expectedZoneSignature.length>16384)||
       Object.keys(operation).length!==fields.length||!fields.every(key=>Object.prototype.hasOwnProperty.call(operation,key)))return Promise.reject(fail('ZONE_EDIT_INVALID'));
     let payload;
@@ -726,6 +768,23 @@
           const op=payload.operation,Model=root.LightningModel,cached=JSON.parse(viewModelKey),stand=cached.stands?.find(item=>item.id===standId);
           if(!Model||!stand?.zones.some(zone=>zone.id===op.zoneId))throw fail('V30_CHECKPOINT_CONFLICT');
           try{expectedArrangementModel=op.kind==='arrangeLines'?Model.arrangeLines(cached,op.zoneId,{layout:op.layout,lineOrder:op.lineOrder}):Model.arrangeZone(cached,op.zoneId,{layout:op.layout,receiverIds:op.receiverIds});}catch(_){throw fail('ZONE_EDIT_INVALID');}
+        }
+        if(payload.operation.kind==='scenePresentation'){
+          if(previousDraft!==null||!root.LightningModel)throw fail('V30_CHECKPOINT_CONFLICT');
+          let expected=JSON.parse(viewModelKey);const Model=root.LightningModel,stand=expected.stands?.find(item=>item.id===standId);
+          for(const saved of payload.operation.zones){
+            const zone=stand?.zones.find(zone=>zone.id===saved.zoneId&&zone.type===saved.type);
+            if(!zone||zone.receiverIds.length!==saved.identities.length||saved.identities.some(identity=>{
+              const receiver=expected.receivers.find(receiver=>receiver.id===identity.id);
+              return !zone.receiverIds.includes(identity.id)||!receiver||receiver.lifecycle!=='added'||receiver.standId!==standId||receiver.zoneId!==zone.id||
+                (receiver.rid||null)!==identity.rid||(receiver.deviceFingerprint||null)!==identity.deviceFingerprint;
+            }))throw fail('V30_CHECKPOINT_CONFLICT');
+            // Match native's semantic no-op: absent explicit order already
+            // means this canonical path. Do not manufacture a CONFIG change.
+            if(zone.layout!==saved.arrangement.layout||JSON.stringify(Model.lineIds(expected,zone.id))!==JSON.stringify(saved.arrangement.lineOrder))
+              try{expected=Model.arrangeLines(expected,saved.zoneId,{layout:saved.arrangement.layout,lineOrder:saved.arrangement.lineOrder});}catch(_){throw fail('ZONE_EDIT_INVALID');}
+          }
+          expectedArrangementModel=expected;
         }
         if(previousDraft!==null){
           const kind=payload.operation.kind;
@@ -913,12 +972,69 @@
     }
     return {standId,receiverId,kind,brightness,transitionMs,channels:[...channels],...(full?{scene:JSON.parse(JSON.stringify(scene))}:{})};
   }
+  function firstPinSSID686(value,type){
+    const prefix=type==='SPI'?'SPI HQ ':type==='RGBW'?'RGBW HQ ':'';
+    if(!prefix||typeof value!=='string'||value.length>32||!value.startsWith(prefix))return false;
+    const suffix=value.slice(prefix.length);return /^[A-Za-z0-9 ._-]+$/.test(suffix)&&suffix.trim()===suffix&&!suffix.includes('  ');
+  }
+  function pixelEditorScope686(value){
+    return layoutId(value?.standId)&&layoutId(value.transactionId)&&layoutKeys(value.receiver,['id','rid','type','deviceFingerprint'])&&layoutId(value.receiver.id)&&value.receiver.type==='SPI'&&
+      /^[A-F0-9]{16}$/.test(value.receiver.rid)&&!/^0+$/.test(value.receiver.rid)&&/^[A-F0-9]{64}$/.test(value.receiver.deviceFingerprint)&&!/^0+$/.test(value.receiver.deviceFingerprint)&&
+      ['main','node'].includes(value.role)&&(value.role==='main'?value.mainReceiverId===null:layoutId(value.mainReceiverId)&&value.mainReceiverId!==value.receiver.id)&&
+      layoutUUID(value.editorSession)&&value.editorSession===value.editorSession.toLowerCase();
+  }
+  function firstPinConfiguration686(value){
+    return layoutKeys(value,['version','transactionId','standId','receiverId','rid','deviceFingerprint','type','role','mainReceiverId','outputs','zoneId'])&&value.version===1&&
+      ['transactionId','standId','receiverId'].every(key=>layoutId(value[key]))&&/^[A-F0-9]{16}$/.test(value.rid)&&!/^0+$/.test(value.rid)&&/^[A-F0-9]{64}$/.test(value.deviceFingerprint)&&!/^0+$/.test(value.deviceFingerprint)&&
+      ['SPI','RGBW'].includes(value.type)&&value.role==='main'&&value.mainReceiverId===null&&(value.zoneId===null||layoutId(value.zoneId))&&
+      Array.isArray(value.outputs)&&(value.type==='RGBW'?value.outputs.length===0:value.outputs.length===4&&Array.from(value.outputs).every((output,index)=>
+        layoutKeys(output,['port','enabled','pixels','reversed'])&&output.port===index+1&&output.enabled===(index===0)&&output.pixels===163&&output.reversed===false));
+  }
+  function firstPinReply686(value,type,action){
+    if(!value||Object.getPrototypeOf(value)!==Object.prototype)return false;
+    if(value.status==='pin-required')return action!=='claim'&&layoutKeys(value,['status','ssid','standName'])&&firstPinSSID686(value.ssid,type)&&typeof value.standName==='string'&&!!value.standName.trim()&&value.standName.length<=64;
+    if(value.status==='manual-rejoin'||value.status==='registration-pending')return action!=='prepare'&&(action==='reconcile'||value.status==='manual-rejoin')&&layoutKeys(value,['status','ssid'])&&firstPinSSID686(value.ssid,type);
+    if(value.status==='cancelled')return action==='claim'&&layoutKeys(value,['status']);
+    if(value.status==='verification-required')return action==='reconcile'&&layoutKeys(value,['status']);
+    return action==='reconcile'&&layoutKeys(value,['receiptRef','ssid'])&&typeof value.receiptRef==='string'&&/^receipt:[A-F0-9]{64}$/.test(value.receiptRef)&&firstPinSSID686(value.ssid,type);
+  }
   const serviceSet=native?{
     connectionMode:'manual-wifi',
+    // Dedicated first protected MAIN only. These actions never accept or
+    // return a PIN in JavaScript; old owned stands retain their normal route.
+    FirstPinV2:Object.freeze({
+      async ready({standId}){
+        if(!layoutId(standId))throw fail('FIRST_PIN_V2_INVALID');
+        const answer=await call('firstPinV2Ready',{standId});
+        if(layoutKeys(answer,['ready'])&&answer.ready===false)return answer;
+        if(!layoutKeys(answer,['ready','standId','receiverId','rid','deviceFingerprint','transactionId','ssid'])||answer.ready!==true||answer.standId!==standId||!['receiverId','transactionId'].every(key=>layoutId(answer[key]))||!/^[A-F0-9]{16}$/.test(answer.rid)||/^0+$/.test(answer.rid)||!/^[A-F0-9]{64}$/.test(answer.deviceFingerprint)||/^0+$/.test(answer.deviceFingerprint)||!['SPI','RGBW'].some(type=>firstPinSSID686(answer.ssid,type)))throw fail('FIRST_PIN_V2_UNCONFIRMED');
+        return answer;
+      },
+      async prepare({configuration,standName,signal}){
+        if(!firstPinConfiguration686(configuration)||typeof standName!=='string'||!standName.trim()||standName.length>64||/[<>\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/.test(standName))throw fail('FIRST_PIN_V2_INVALID');
+        const answer=await call('prepareFirstPinV2',{configuration:JSON.parse(JSON.stringify(configuration)),standName},signal);
+        if(!firstPinReply686(answer,configuration.type,'prepare'))throw fail('FIRST_PIN_V2_UNCONFIRMED');return answer;
+      },
+      async claim({configuration,signal}){
+        if(!firstPinConfiguration686(configuration))throw fail('FIRST_PIN_V2_INVALID');
+        const answer=await call('claimFirstPinV2',{configuration:JSON.parse(JSON.stringify(configuration))},signal);
+        if(!firstPinReply686(answer,configuration.type,'claim'))throw fail('FIRST_PIN_V2_UNCONFIRMED');return answer;
+      },
+      async reconcile({configuration,signal}){
+        if(!firstPinConfiguration686(configuration))throw fail('FIRST_PIN_V2_INVALID');
+        const answer=await call('reconcileFirstPinV2',{configuration:JSON.parse(JSON.stringify(configuration))},signal);
+        if(!firstPinReply686(answer,configuration.type,'reconcile'))throw fail('FIRST_PIN_V2_UNCONFIRMED');return answer;
+      },
+      async show({configuration,signal}){
+        if(!firstPinConfiguration686(configuration))throw fail('FIRST_PIN_V2_INVALID');
+        const answer=await call('showFirstPinV2',{configuration:JSON.parse(JSON.stringify(configuration))},signal);
+        if(!layoutKeys(answer,['status'])||answer.status!=='shown')throw fail('FIRST_PIN_V2_UNCONFIRMED');return answer;
+      }
+    }),
     // Native contract availability, never evidence of receiver support. The
     // actual request requires that receiver's authenticated guide capability.
     get atomicPreviewExit579(){return atomicPreviewExitAvailable===true&&legacyContextAllowed()&&contextVisible();},
-    get previewCapabilities(){return Object.freeze({identifyPorts:pixelPreviewV50,power:pixelPreviewV50});},
+    get previewCapabilities(){return Object.freeze({identifyPorts:pixelPreviewV50,power:pixelPreviewV50,editorIsolation:pixelEditorIsolationAvailable&&legacyContextAllowed()});},
     async prepareReceiverManagement({standId}){
       await writeQueue.catch(()=>{});
       const before=centralStamp&&{...centralStamp},epoch=standSharingEpoch;
@@ -1222,12 +1338,10 @@
     async configureOutputDirections(request){return configureOutputs(request,{directionsOnly:true}).then(view=>scheduleContext(view,request.standId));},
     get spiZoneDirectionPreview(){return spiZoneDirectionPreview===true;},
     async previewSPIZoneDirections(request){
-      const stop=request?.action==='stop',observe=request?.action==='status',scopeOnly=stop||observe;
-      if(!layoutKeys(request,scopeOnly?['action','standId','zoneId','sessionId']:['action','standId','zoneId','sessionId','lines','focus'])||
-         !['start','update','stop','status'].includes(request.action)||!['standId','zoneId','sessionId'].every(key=>layoutId(request[key]))||
-         !scopeOnly&&(!Array.isArray(request.lines)||!request.lines.length||request.lines.length>120||request.lines.some(line=>
-           !layoutKeys(line,['receiverId','port','reversed'])||!layoutId(line.receiverId)||!Number.isInteger(line.port)||line.port<1||line.port>4||typeof line.reversed!=='boolean')||
-           new Set(request.lines.map(line=>line.receiverId+':'+line.port)).size!==request.lines.length||request.focus!==null&&
+      const stop=request?.action==='stop',observe=request?.action==='status',test=request?.action==='test',scopeOnly=stop||observe;
+      if(!layoutKeys(request,scopeOnly?['action','standId','zoneId','sessionId']:['action','standId','zoneId','sessionId','lines','focus','lineOrder'])||
+         !['start','update','test','stop','status'].includes(request.action)||!['standId','zoneId','sessionId'].every(key=>layoutId(request[key]))||test&&request.focus!==null||
+         !scopeOnly&&(!spiDirectionPathValid682(request.lines,request.lineOrder)||request.focus!==null&&
            (!layoutKeys(request.focus,['receiverId','port'])||!request.lines.some(line=>line.receiverId===request.focus.receiverId&&line.port===request.focus.port))))throw fail('SPI_DIRECTION_INVALID');
       if(!spiZoneDirectionPreview)throw fail('SPI_ZONE_DIRECTION_UPDATE_REQUIRED');
       if(!viewLoaded||(centralStamp?(centralStamp.standId!==request.standId||!standSessionOutputsAvailable):!legacyContextAllowed()))throw fail('STAND_NOT_CONNECTED');
@@ -1236,23 +1350,23 @@
       const answer=await call('previewSPIZoneDirections',JSON.parse(JSON.stringify(request)));
       if(answer?.standId!==request.standId||answer.zoneId!==request.zoneId||answer.sessionId!==request.sessionId)throw fail('SPI_DIRECTION_UNCONFIRMED');
       if(stop){
-        if(typeof answer.stopped!=='boolean'||answer.ttlFallbackMS!==(answer.stopped?0:15000))throw fail('SPI_DIRECTION_UNCONFIRMED');
+        if(typeof answer.stopped!=='boolean'||(answer.stopped?answer.ttlFallbackMS!==0:answer.ttlFallbackMS!==15000&&!(setupZoneIsolationAvailable&&answer.ttlFallbackMS===38000)))throw fail('SPI_DIRECTION_UNCONFIRMED');
         return answer;
       }
       if(observe){
         if(epoch!==standSharingEpoch||!contextVisible()||canonical(centralStamp)!==canonical(stamp)||!stamp&&!legacyContextAllowed())throw fail('SPI_DIRECTION_UNCONFIRMED');
         if(answer.applied===false){
-          if(!layoutKeys(answer,['applied','standId','zoneId','sessionId','reason','previewTTLMS'])||!['inactive','expired','busy'].includes(answer.reason)||answer.previewTTLMS!==0)throw fail('SPI_DIRECTION_UNCONFIRMED');
-        }else if(answer.applied!==true||!layoutKeys(answer,['applied','standId','zoneId','sessionId','lines','focus','previewTTLMS','renewAfterMS'])||
-          !Array.isArray(answer.lines)||!answer.lines.length||answer.lines.length>120||answer.lines.some(line=>
-            !layoutKeys(line,['receiverId','port','reversed'])||!layoutId(line.receiverId)||!Number.isInteger(line.port)||line.port<1||line.port>4||typeof line.reversed!=='boolean')||
-          new Set(answer.lines.map(line=>line.receiverId+':'+line.port)).size!==answer.lines.length||answer.focus!==null&&
+          if(!spiDiagnosticReplyKeys679(answer,['applied','standId','zoneId','sessionId','reason','previewTTLMS'])||!['inactive','expired','busy'].includes(answer.reason)||answer.previewTTLMS!==0)throw fail('SPI_DIRECTION_UNCONFIRMED');
+        }else if(answer.applied!==true||!spiDiagnosticReplyKeys679(answer,['applied','standId','zoneId','sessionId','lines','focus','lineOrder','previewTTLMS','renewAfterMS',...(Object.prototype.hasOwnProperty.call(answer,'pathTestRemainingMS')?['pathTestRemainingMS']:[])])||
+          !spiDirectionPathValid682(answer.lines,answer.lineOrder)||answer.focus!==null&&
             (!layoutKeys(answer.focus,['receiverId','port'])||!answer.lines.some(line=>line.receiverId===answer.focus.receiverId&&line.port===answer.focus.port))||
+          Object.prototype.hasOwnProperty.call(answer,'pathTestRemainingMS')&&(!Number.isInteger(answer.pathTestRemainingMS)||answer.pathTestRemainingMS<0||answer.pathTestRemainingMS>6000||answer.pathTestRemainingMS>0&&answer.focus!==null)||
           !Number.isInteger(answer.previewTTLMS)||answer.previewTTLMS<1||answer.previewTTLMS>15000||!Number.isInteger(answer.renewAfterMS)||answer.renewAfterMS<1||answer.renewAfterMS>7000)throw fail('SPI_DIRECTION_UNCONFIRMED');
         return answer;
       }
       if(epoch!==standSharingEpoch||!contextVisible()||canonical(centralStamp)!==canonical(stamp)||!stamp&&!legacyContextAllowed()||answer.applied!==true||
-         canonical(answer.lines)!==canonical(request.lines)||canonical(answer.focus)!==canonical(request.focus)||
+         !spiDiagnosticReplyKeys679(answer,['applied','standId','zoneId','sessionId','lines','focus','lineOrder','previewTTLMS','renewAfterMS',...(test?['pathTestMS']:[])])||test&&answer.pathTestMS!==6000||
+         canonical(answer.lineOrder)!==canonical(request.lineOrder)||canonical(answer.lines)!==canonical(request.lines)||canonical(answer.focus)!==canonical(request.focus)||
          !Number.isInteger(answer.previewTTLMS)||answer.previewTTLMS<=7000||answer.previewTTLMS>15000||!Number.isInteger(answer.renewAfterMS)||answer.renewAfterMS<1||answer.renewAfterMS>7000||answer.renewAfterMS>=answer.previewTTLMS)throw fail('SPI_DIRECTION_UNCONFIRMED');
       return answer;
     },
@@ -1270,12 +1384,22 @@
         !result.outputs.every((port,index)=>port&&Object.keys(port).sort().join(',')==='enabled,pixels,port,reversed'&&port.port===index+1&&typeof port.enabled==='boolean'&&typeof port.reversed==='boolean'&&Number.isInteger(port.pixels)&&port.pixels>=1&&port.pixels<=(port.enabled?163:1024))||!result.outputs.some(port=>port.enabled))throw fail('OUTPUT_CONFIGURATION_UNCONFIRMED');
       return JSON.parse(JSON.stringify(result));
     },
+    pixelReceiptDiagnostic692({phase,bits}={}){pixelDiagnostic692(phase,bits);},
     async previewPixels(request){
-      const ports=request?.guide==='ports',colours=['#0000ff','#ff8000','#8000ff','#00ffff'];
+      const editor=request?.editorSession!==undefined;
+      if(request?.action==='hold'){
+        if(!pixelEditorIsolationAvailable||!legacyContextAllowed()||!layoutKeys(request,['action','standId','transactionId','receiver','role','mainReceiverId','editorSession'])||!pixelEditorScope686(request))throw fail('PIXEL_PREVIEW_INVALID');
+        if(centralStamp&&(centralStamp.standId!==request.standId||!standSessionOutputsAvailable||!contextVisible()))throw fail('STAND_NOT_CONNECTED');
+        const answer=await call('previewPixels',JSON.parse(JSON.stringify(request)));
+        if(!layoutKeys(answer,['held','editorSession','isolationTTLMS'])||answer.held!==true||answer.editorSession!==request.editorSession||!Number.isInteger(answer.isolationTTLMS)||answer.isolationTTLMS<0||answer.isolationTTLMS>30000)throw fail('PIXEL_PREVIEW_UNCONFIRMED');
+        return answer;
+      }
+      if(editor&&(!pixelEditorIsolationAvailable||!legacyContextAllowed()||!pixelEditorScope686(request))||request?.keepSession!==undefined&&(!editor||request.keepSession!==true||request.action!=='stop'))throw fail('PIXEL_PREVIEW_INVALID');
+      const ports=request?.guide==='ports',palettes=[['#0000ff','#ff8000','#8000ff','#00ffff'],['#0000ff','#ff6000','#00ff00','#ff00ff'],['#0000ff','#ffa000','#00ff00','#ff00ff'],['#ff0000','#7800c0','#0000ff','#ff5000'],['#ff0000','#0000ff','#ffff00','#ff1700']],palette=outputs=>[1,2,3,4,5].find(version=>Array.isArray(outputs)&&outputs.length===4&&Array.from(outputs).every((item,index)=>item?.colour===palettes[version-1][index]))||null;
       if(!request||!['start','update','stop'].includes(request.action)||request.receiver?.type!=='SPI'||
         !Number.isInteger(request.pixels)||request.pixels<0||request.pixels>163||request.guide!==undefined&&!['length','power','ports'].includes(request.guide)||
-        (ports?request.port!==null||request.pixels!==0||request.reversed!==undefined||request.previewTTLMS!==12000||!Array.isArray(request.outputs)||request.outputs.length!==4||request.outputs.some((item,index)=>
-          !layoutKeys(item,['port','enabled','pixels','reversed','colour'])||item.port!==index+1||typeof item.enabled!=='boolean'||typeof item.reversed!=='boolean'||!Number.isInteger(item.pixels)||item.pixels<0||item.pixels>163||item.colour!==colours[index])
+        (ports?request.port!==null||request.pixels!==0||request.reversed!==undefined||request.previewTTLMS!==12000||palette(request.outputs)===null||request.outputs.some((item,index)=>
+          !layoutKeys(item,['port','enabled','pixels','reversed','colour'])||item.port!==index+1||typeof item.enabled!=='boolean'||typeof item.reversed!=='boolean'||!Number.isInteger(item.pixels)||item.pixels<0||item.pixels>163)
         :!Number.isInteger(request.port)||request.port<1||request.port>4||request.outputs!==undefined||
           (request.guide==='power'?(request.pixels===0||typeof request.reversed!=='boolean'):request.reversed!==undefined))||
         request.previewTTLMS!==undefined&&(request.guide==='length'||request.guide===undefined||request.previewTTLMS!==12000))throw fail('PIXEL_PREVIEW_INVALID');
@@ -1283,11 +1407,13 @@
       const payload=JSON.parse(JSON.stringify(request));
       if(centralStamp&&(centralStamp.standId!==request.standId||!standSessionOutputsAvailable||!contextVisible()))throw fail('STAND_NOT_CONNECTED');
       const answer=await call('previewPixels',payload);
+      if(editor&&(!layoutKeys(answer,['applied','previewTTLMS','port','pixels','guide','isolationTTLMS',...(ports?['paletteVersion','outputs']:request.guide==='power'?['reversed']:[])])||answer.guide!==(request.guide||'length')||!Number.isInteger(answer.isolationTTLMS)||answer.isolationTTLMS<0||answer.isolationTTLMS>30000||request.action==='stop'&&request.keepSession!==true&&answer.isolationTTLMS!==0)){pixelDiagnostic692('RUNTIME_EDITOR_RECEIPT',(answer?.guide===(request.guide||'length')?1:0)|(Number.isInteger(answer?.isolationTTLMS)&&answer.isolationTTLMS>=0&&answer.isolationTTLMS<=30000?2:0)|(answer?.isolationTTLMS===0?4:0));throw fail('PIXEL_PREVIEW_UNCONFIRMED');}
       if(answer?.applied!==true||answer.port!==request.port||answer.pixels!==request.pixels||
         (request.action==='stop'?answer.previewTTLMS!==0:!Number.isInteger(answer.previewTTLMS)||answer.previewTTLMS<((ports?request.outputs.some(item=>item.enabled&&item.pixels>0):request.pixels>0)?1:0)||answer.previewTTLMS>15000)||
         !(ports?request.outputs.some(item=>item.enabled&&item.pixels>0):request.pixels>0)&&answer.previewTTLMS!==0||
         request.guide==='power'&&(answer.guide!=='power'||answer.reversed!==request.reversed)||
-        ports&&(answer.guide!=='ports'||canonical(answer.outputs)!==canonical(request.outputs)))throw fail('PIXEL_PREVIEW_UNCONFIRMED');
+        ports&&(answer.guide!=='ports'||![1,2,3,4,5].includes(answer.paletteVersion)||palette(answer.outputs)!==answer.paletteVersion||answer.outputs.some((item,index)=>
+          !layoutKeys(item,['port','enabled','pixels','reversed','colour'])||['port','enabled','pixels','reversed'].some(key=>item[key]!==request.outputs[index][key])))){pixelDiagnostic692('RUNTIME_PREVIEW_RECEIPT',(answer?.applied===true?1:0)|(answer?.port===request.port?2:0)|(answer?.pixels===request.pixels?4:0)|(answer?.previewTTLMS===0?8:0)|(answer?.guide===(request.guide||'length')?16:0));throw fail('PIXEL_PREVIEW_UNCONFIRMED');}
       return answer;
     },
     async select({standId,transactionId,receiver}){return call('select',{standId,transactionId,receiver:{id:receiver.id,rid:receiver.rid,type:receiver.type}});},
@@ -1731,7 +1857,8 @@
     }
   }:{};
   const services=Object.freeze(serviceSet);
-  async function runtimeCapabilities(){const value=await call('capabilities');selectionHaptics=value?.selectionHaptics===true;interfaceHaptics=value?.interfaceHaptics===true;simpleStandAvailable=value?.simpleStand===true;pixelPreviewV50=value?.pixelPreviewV50===true;spiZoneDirectionPreview=value?.spiZoneDirectionPreview===true;atomicPreviewExitAvailable=value?.atomicPreviewExit579===true;
+  async function runtimeCapabilities(){const value=await call('capabilities');selectionHaptics=value?.selectionHaptics===true;interfaceHaptics=value?.interfaceHaptics===true;simpleStandAvailable=value?.simpleStand===true;pixelPreviewV50=value?.pixelPreviewV50===true;spiZoneDirectionPreview=value?.spiZoneDirectionPreview===true;atomicPreviewExitAvailable=value?.atomicPreviewExit579===true;pixelEditorIsolationAvailable=value?.pixelEditorIsolation===true;setupZoneIsolationAvailable=value?.setupZoneIsolation===true;
+    pixelReceiptDiagnostics692=value?.pixelReceiptDiagnostics692===true;
     spiPortScenesAvailable=value?.spiPortScenes===true;
     standSessionReceiverManagementAvailable=simpleStandAvailable&&value?.standSessionReceiverManagement===true;
     standSessionOutputsAvailable=simpleStandAvailable&&value?.standSessionOutputs===true;

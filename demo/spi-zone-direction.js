@@ -9,11 +9,11 @@
     preview:['Voorbeeld · geen echte verlichting verbonden','Preview · no real lighting connected','Aperçu · aucun éclairage réel connecté','Vorschau · keine echte Beleuchtung verbunden'],
     pendingChanged:['Je aansluitingen zijn gewijzigd. Controleer de richtingen opnieuw.','Your connections have changed. Check the directions again.','Vos branchements ont changé. Vérifiez à nouveau les sens.','Deine Anschlüsse wurden geändert. Prüfe die Richtungen erneut.'],
     new:['Nieuw','New','Nouveau','Neu'],existing:['In deze zone','In this zone','Dans cette zone','In dieser Zone'],
-    port:['Poort {port}','Port {port}','Port {port}','Port {port}'],pixels:['{count} pixels','{count} pixels','{count} pixels','{count} Pixel'],
+    port:['Poort {port}','Port {port}','Port {port}','Port {port}'],line:['Ledline {number}','LED line {number}','Ligne LED {number}','LED-Linie {number}'],pixels:['{count} pixels','{count} pixels','{count} pixels','{count} Pixel'],
     flip:['Omkeren','Flip','Inverser','Umkehren'],focus:['{receiver}, poort {port}: deze ledline herkennen','{receiver}, port {port}: identify this LED line','{receiver}, port {port} : repérer cette ligne LED','{receiver}, Port {port}: diese LED-Linie erkennen'],
     flipAria:['{receiver}, poort {port}: richting omkeren. Groen staat {end}.','{receiver}, port {port}: flip direction. Green is {end}.','{receiver}, port {port} : inverser le sens. Le vert est {end}.','{receiver}, Port {port}: Richtung umkehren. Grün ist {end}.'],
     left:['links','on the left','à gauche','links'],right:['rechts','on the right','à droite','rechts'],
-    one:['1 pixel · alleen groen zichtbaar','1 pixel · only green is visible','1 pixel · seul le vert est visible','1 Pixel · nur Grün sichtbar'],
+    one:['1 pixel · geen richting','1 pixel · no direction','1 pixel · aucun sens','1 Pixel · keine Richtung'],
     selectHint:['Tik op een ledline: alleen haar witte midden pulseert.','Tap an LED line: only its white centre pulses.','Touchez une ligne LED : seul son milieu blanc pulse.','Tippe auf eine LED-Linie: Nur ihre weiße Mitte pulsiert.'],
     selected:['Geselecteerd','Selected','Sélectionnée','Ausgewählt'],
     pulsing:['Midden pulseert','Centre pulsing','Milieu pulsant','Mitte pulsiert'],
@@ -21,7 +21,15 @@
     applied:['Controleer de eindkleuren op je echte ledlines.','Check the end colours on your real LED lines.','Vérifiez les couleurs aux extrémités de vos lignes LED réelles.','Prüfe die Endfarben deiner echten LED-Linien.'],
     unsupported:['Voorbeeld in de app · testlicht hier niet beschikbaar.','App preview · test light is unavailable here.','Aperçu dans l’app · lumière de test indisponible ici.','App-Vorschau · Testlicht hier nicht verfügbar.'],
     failed:['Testlicht niet bevestigd. Controleer de verbinding; je keuzes blijven staan.','Test light is not confirmed. Check the connection; your choices are kept.','Lumière de test non confirmée. Vérifiez la connexion ; vos choix sont conservés.','Testlicht nicht bestätigt. Prüfe die Verbindung; deine Auswahl bleibt erhalten.'],
-    retry:['Testlicht opnieuw starten','Restart test light','Relancer la lumière de test','Testlicht neu starten'],
+    test:['Verbinding testen','Test connection','Tester la connexion','Verbindung testen'],
+    testHint:['Een lichtgolf volgt je ledlines.','A light wave follows your LED lines.','Une vague lumineuse suit vos lignes LED.','Eine Lichtwelle folgt deinen LED-Linien.'],
+    testActiveShort:['Lichtgolf bezig · 6 seconden','Light wave running · 6 seconds','Vague en cours · 6 secondes','Lichtwelle läuft · 6 Sekunden'],
+    testEndedShort:['Test afgelopen · controleer de aansluiting','Test ended · check the connection','Test terminé · vérifiez la jonction','Test beendet · Verbindung prüfen'],
+    testUpdateShort:['Receiverupdate nodig','Receiver update needed','Mise à jour du récepteur nécessaire','Receiver-Update erforderlich'],
+    testing:['Kijk naar je ledlines: volgt de lichtgolf de juiste volgorde?','Watch your LED lines: does the light wave follow the correct order?','Regardez vos lignes LED : la vague suit-elle le bon ordre ?','Schau auf deine LED-Linien: Folgt die Lichtwelle der richtigen Reihenfolge?'],
+    testEnded:['Test afgelopen. Controleer waar je ledlines aansluiten.','Test ended. Check where your LED lines meet.','Test terminé. Vérifiez les jonctions de vos lignes LED.','Test beendet. Prüfe, wo deine LED-Linien zusammentreffen.'],
+    testUpdate:['Werk de receiver bij om de verbinding te testen.','Update the receiver to test the connection.','Mettez le récepteur à jour pour tester la connexion.','Aktualisiere den Receiver, um die Verbindung zu testen.'],
+    testExample:['Voorbeeld · een lichtgolf volgt de volgorde. Er is geen echte verlichting verbonden.','Preview · a light wave follows the order. No real lighting is connected.','Aperçu · une vague suit l’ordre. Aucun éclairage réel n’est connecté.','Vorschau · eine Lichtwelle folgt der Reihenfolge. Keine echte Beleuchtung verbunden.'],
     stale:['De zone is gewijzigd. Sluit dit scherm en open het opnieuw; je wijzigingen blijven beschikbaar.','The zone has changed. Close this screen and reopen it; your changes remain available.','La zone a changé. Fermez puis rouvrez cet écran ; vos modifications restent disponibles.','Die Zone wurde geändert. Schließe und öffne diesen Bildschirm erneut; deine Änderungen bleiben verfügbar.'],
     stopping:['Testlicht stoppen…','Stopping the test light…','Arrêt de la lumière de test…','Testlicht stoppen…'],
     stopFailed:['Stoppen niet bevestigd. Je keuzes blijven staan; probeer opslaan opnieuw.','Stopping is not confirmed. Your choices are kept; try saving again.','Arrêt non confirmé. Vos choix sont conservés ; réessayez d’enregistrer.','Stopp nicht bestätigt. Deine Auswahl bleibt erhalten; versuche erneut zu speichern.'],
@@ -39,6 +47,12 @@
   function validate(value){
     if(!value||!['standId','zoneId','zoneName'].every(key=>typeof value[key]==='string'&&value[key].length>0&&value[key].length<=240)||!Array.isArray(value.receivers)||value.receivers.length>128)throw Error('SPI_ZONE_CONTEXT_INVALID');
     const ids=new Set();for(const receiver of value.receivers){if(!receiver||typeof receiver.id!=='string'||!receiver.id||ids.has(receiver.id)||typeof receiver.name!=='string'||!Array.isArray(receiver.outputs)||receiver.outputs.length!==4)throw Error('SPI_ZONE_RECEIVER_INVALID');ids.add(receiver.id);for(const [index,output] of receiver.outputs.entries())if(!output||output.port!==index+1||typeof output.enabled!=='boolean'||typeof output.reversed!=='boolean'||!Number.isInteger(output.pixels)||output.pixels<(output.enabled?1:0)||output.pixels>1024)throw Error('SPI_ZONE_OUTPUTS_INVALID');}
+    // Physical joins follow the complete saved zone path, including when a
+    // zone appears as one continuous LED line. Never restart parity per box
+    // or infer it from a port number: either would break a receiver boundary.
+    const expected=new Set(value.receivers.flatMap(receiver=>receiver.outputs.filter(output=>output.enabled).map(output=>receiver.id+':'+output.port)));
+    if(!Array.isArray(value.lineOrder)||value.lineOrder.length!==expected.size||value.lineOrder.length<1||value.lineOrder.length>120)throw Error('SPI_ZONE_LINE_ORDER_INVALID');
+    const seen=new Set();for(const key of value.lineOrder){if(typeof key!=='string'||!expected.has(key)||seen.has(key))throw Error('SPI_ZONE_LINE_ORDER_INVALID');seen.add(key);}
     if(value.newReceiverId!==undefined&&!ids.has(value.newReceiverId))throw Error('SPI_ZONE_NEW_RECEIVER_INVALID');if(value.previewOnly!==undefined&&typeof value.previewOnly!=='boolean'||value.pendingChanged!==undefined&&typeof value.pendingChanged!=='boolean'||value.pairFirst!==undefined&&typeof value.pairFirst!=='boolean')throw Error('SPI_ZONE_MODE_INVALID');
   }
   function applyPending(data){
@@ -49,20 +63,26 @@
     }
     for(const change of data.pendingChanges){const receiver=data.receivers.find(item=>item.id===change.receiverId);for(const [index,output] of change.outputs.entries())if(receiver.outputs[index].enabled)receiver.outputs[index].reversed=output.reversed;}
   }
-  function create({onPreview=null,onObserve=null,onStop=null,onResumeConnection=null,onSave,onClose=()=>{},getCurrentZoneSignature}={}){
-    if(typeof onSave!=='function'||typeof onClose!=='function'||typeof getCurrentZoneSignature!=='function'||onPreview!==null&&typeof onPreview!=='function'||onObserve!==null&&typeof onObserve!=='function'||onResumeConnection!==null&&typeof onResumeConnection!=='function'||onPreview&&typeof onStop!=='function')throw Error('SPI_ZONE_CALLBACKS_REQUIRED');
+  function create({onPreview=null,onTest=null,onObserve=null,onStop=null,onResumeConnection=null,onSave,onClose=()=>{},getCurrentZoneSignature}={}){
+    if(typeof onSave!=='function'||typeof onClose!=='function'||typeof getCurrentZoneSignature!=='function'||onPreview!==null&&typeof onPreview!=='function'||onTest!==null&&(typeof onTest!=='function'||!onPreview||!onObserve)||onObserve!==null&&typeof onObserve!=='function'||onResumeConnection!==null&&typeof onResumeConnection!=='function'||onPreview&&typeof onStop!=='function')throw Error('SPI_ZONE_CALLBACKS_REQUIRED');
     const doc=host.document,win=doc?.defaultView||host;let active=null,generation=0;
     const current=state=>active===state&&!state.closed&&state.generation===generation&&state.dialog.isConnected;
     function t(state,key,params={}){return texts[key][state.language].replace(/\{([a-z]+)\}/gi,(all,key)=>String(params[key]??all));}
     const context=state=>({standId:state.data.standId,zoneId:state.data.zoneId,sessionId:state.sessionId});
     function signature(state){return canonical(getCurrentZoneSignature({standId:state.data.standId,zoneId:state.data.zoneId}));}
-    function status(state,key){if(!current(state))return;state.status=key;state.dialog.dataset.previewConfirmed=String(key==='applied');const node=state.dialog.querySelector('[data-spi-zone-status]');node.textContent=t(state,key);node.dataset.kind=['failed','stale','stopFailed','partial','saveFailed'].includes(key)?'error':key;const retry=state.dialog.querySelector('[data-spi-zone-action="retry"]');if(retry)retry.hidden=!['failed','stopFailed'].includes(key);for(const badge of state.dialog.querySelectorAll('[data-spi-zone-focus-badge]'))badge.textContent=t(state,key==='applied'&&Number(badge.closest('[data-spi-zone-line]').dataset.pixels)>2?'pulsing':'selected');}
+    function status(state,key){if(!current(state))return;state.status=key;state.dialog.dataset.previewConfirmed=String(['applied','testing','testEnded'].includes(key));const node=state.dialog.querySelector('[data-spi-zone-status]');node.textContent=t(state,key);node.dataset.kind=['failed','stale','stopFailed','partial','saveFailed'].includes(key)?'error':key;const hint=state.dialog.querySelector('[data-spi-zone-test-hint]');if(hint)hint.textContent=t(state,{testing:'testActiveShort',testEnded:'testEndedShort',testUpdate:'testUpdateShort'}[key]||'testHint');for(const badge of state.dialog.querySelectorAll('[data-spi-zone-focus-badge]'))badge.textContent=t(state,key==='applied'&&Number(badge.closest('[data-spi-zone-line]').dataset.pixels)>2?'pulsing':'selected');}
     function validContext(state){if(!current(state))return false;try{if(signature(state)===state.signature)return true;}catch(_){}status(state,'stale');state.stale=true;controls(state);return false;}
     function lines(state){return state.data.receivers.flatMap(receiver=>receiver.outputs.filter(output=>output.enabled).map(output=>({receiverId:receiver.id,port:output.port,reversed:output.reversed})));}
     function changes(state){return state.data.receivers.filter(receiver=>state.pendingSaveReceivers.has(receiver.id)||canonical(receiver.outputs)!==canonical(state.baseline.get(receiver.id))).map(receiver=>({receiverId:receiver.id,outputs:copy(receiver.outputs),...(state.pendingSaveReceivers.has(receiver.id)?{requiresReconcile:true}:{})}));}
-    function request(state){return{...context(state),lines:lines(state),focus:state.focus?copy(state.focus):null};}
-    function confirmed(answer,wanted){return answer?.status==='applied'&&answer.sessionId===wanted.sessionId&&canonical(answer.lines)===canonical(wanted.lines)&&canonical(answer.focus??null)===canonical(wanted.focus);}
+    function request(state){return{...context(state),lineOrder:state.data.lineOrder.slice(),lines:lines(state),focus:state.focus?copy(state.focus):null};}
+    function confirmed(answer,wanted){return answer?.status==='applied'&&answer.sessionId===wanted.sessionId&&canonical(answer.lineOrder)===canonical(wanted.lineOrder)&&canonical(answer.lines)===canonical(wanted.lines)&&canonical(answer.focus??null)===canonical(wanted.focus);}
     const now=()=>win.performance?.now?.()??Date.now();
+    function appliedStatus(state,answer,sentAt,testing=false){
+      if(testing){state.pathUntil=sentAt+answer.pathTestMS;state.pathActive=true;state.pathEnded=false;}
+      if(Number.isInteger(answer.pathTestRemainingMS)&&(state.pathActive||state.pathEnded)){state.pathUntil=sentAt+answer.pathTestRemainingMS;state.pathActive=answer.pathTestRemainingMS>0;state.pathEnded=!state.pathActive;}
+      if(state.pathActive&&now()>=state.pathUntil){state.pathActive=false;state.pathEnded=true;}
+      status(state,state.pathActive?'testing':state.pathEnded?'testEnded':'applied');
+    }
     function clearObservation(state){win.clearTimeout(state.observeTimer);state.observeTimer=null;state.observeEpoch=(state.observeEpoch||0)+1;}
     function lease(answer){return Number.isInteger(answer?.previewTTLMS)&&answer.previewTTLMS>0&&answer.previewTTLMS<=15000;}
     function recordLease(state,wanted,answer,sentAt){
@@ -83,7 +103,7 @@
       if(confirmed(answer,wanted)&&lease(answer)){
         // Native reports its existing finite lease. This read has no radio
         // writes and cannot itself renew it. Request time is conservative.
-        if(sentAt+answer.previewTTLMS>now()){recordLease(state,wanted,answer,sentAt);status(state,'applied');observeLater(state);return;}
+        if(sentAt+answer.previewTTLMS>now()){recordLease(state,wanted,answer,sentAt);appliedStatus(state,answer,sentAt);observeLater(state);return;}
         state.previewFailed=true;state.pending=null;status(state,'failed');return;
       }else if(answer&&answer.status!=='busy'){
         state.previewFailed=true;state.pending=null;status(state,'failed');return;
@@ -92,19 +112,21 @@
       observeLater(state);
     }
     function enabled(state){return current(state)&&!state.saving&&!state.resuming&&!state.paused&&!state.stopJob&&!state.stale&&!doc.hidden&&state.dialog.open&&validContext(state);}
-    function controls(state){if(!current(state))return;for(const button of state.dialog.querySelectorAll('[data-spi-zone-action="flip"],[data-spi-zone-action="select"],[data-spi-zone-action="save"],[data-spi-zone-action="retry"]'))button.disabled=state.saving||state.resuming||state.stale||!!state.stopJob||button.dataset.spiZoneAction==='flip'&&state.pendingSaveReceivers.has(button.closest('[data-spi-zone-line]')?.dataset.receiverId);}
+    function controls(state){if(!current(state))return;for(const button of state.dialog.querySelectorAll('[data-spi-zone-action="flip"],[data-spi-zone-action="select"],[data-spi-zone-action="save"],[data-spi-zone-action="test"]'))button.disabled=state.saving||state.resuming||state.recoveringTest||state.stale||!!state.stopJob||button.dataset.spiZoneAction==='test'&&state.inFlight||button.dataset.spiZoneAction==='flip'&&(button.closest('[data-spi-zone-line]')?.dataset.pixels==='1'||state.pendingSaveReceivers.has(button.closest('[data-spi-zone-line]')?.dataset.receiverId));}
     async function drain(state){
-      if(state.inFlight||state.previewFailed||!state.pending||!enabled(state))return;const wanted=state.pending,version=state.version,sentAt=now();state.pending=null;state.inFlight=true;status(state,'pending');clearObservation(state);
-      const job=Promise.resolve().then(()=>onPreview(copy(wanted)));state.previewJob=job;
-      try{const answer=await job;if(current(state)&&!state.paused){if(!confirmed(answer,wanted)||onObserve&&(!lease(answer)||sentAt+answer.previewTTLMS<=now())){state.previewFailed=true;state.pending=null;status(state,answer?.status==='unsupported'?'unsupported':'failed');}else if(version===state.version&&enabled(state)){if(onObserve)recordLease(state,wanted,answer,sentAt);status(state,'applied');}}}
+      if(state.inFlight||state.previewFailed||!state.pending||!enabled(state))return false;const wanted=state.pending,testing=state.pendingTest===true,version=state.version,sentAt=now();state.pending=null;state.pendingTest=false;state.inFlight=true;let applied=false;status(state,'pending');clearObservation(state);controls(state);
+      const job=Promise.resolve().then(()=>(testing?onTest:onPreview)(copy(wanted)));state.previewJob=job;
+      try{const answer=await job;if(current(state)&&!state.paused){if(!confirmed(answer,wanted)||testing&&answer.pathTestMS!==6000||onObserve&&(!lease(answer)||sentAt+answer.previewTTLMS<=now())){state.previewFailed=true;state.pending=null;status(state,answer?.status==='updateRequired'?'testUpdate':answer?.status==='unsupported'?'unsupported':'failed');}else if(version===state.version&&enabled(state)){if(onObserve)recordLease(state,wanted,answer,sentAt);appliedStatus(state,answer,sentAt,testing);applied=true;}}}
       catch(_){if(current(state)&&!state.paused){state.previewFailed=true;state.pending=null;status(state,'failed');}}
-      finally{if(state.previewJob===job)state.previewJob=null;state.inFlight=false;if(current(state)){if(state.pending)void drain(state);else observeLater(state);}}
+      finally{if(state.previewJob===job)state.previewJob=null;state.inFlight=false;if(current(state)){controls(state);if(state.pending)void drain(state);else observeLater(state);}}
+      return applied;
     }
-    function queue(state){if(!enabled(state)||state.previewRetired)return;if(state.data.previewOnly||!onPreview){status(state,'unsupported');return;}state.version++;if(state.previewFailed)return;state.pending=request(state);void drain(state);}
-    function setFocus(state,receiverId,port){state.focus={receiverId,port};for(const card of state.dialog.querySelectorAll('[data-spi-zone-line]')){const selected=card.dataset.receiverId===receiverId&&Number(card.dataset.port)===port;card.dataset.selected=String(selected);card.querySelector('[data-spi-zone-action="select"]').setAttribute('aria-pressed',String(selected));const badge=card.querySelector('[data-spi-zone-focus-badge]');if(badge){badge.hidden=!selected;badge.textContent=t(state,'selected');}}}
-    function updateCard(state,receiver,output){const card=[...state.dialog.querySelectorAll('[data-spi-zone-line]')].find(node=>node.dataset.receiverId===receiver.id&&Number(node.dataset.port)===output.port);if(!card)return;card.dataset.reversed=String(output.reversed);const button=card.querySelector('[data-spi-zone-action="flip"]');button.setAttribute('aria-pressed',String(output.reversed));button.setAttribute('aria-label',t(state,'flipAria',{receiver:receiver.name,port:output.port,end:t(state,output.reversed?'right':'left')}));}
+    function queue(state,testing=false){if(!enabled(state)||state.previewRetired)return Promise.resolve(false);if(state.data.previewOnly||!onPreview){status(state,'unsupported');return Promise.resolve(false);}state.version++;if(state.previewFailed)return Promise.resolve(false);if(!testing){state.pathActive=false;state.pathEnded=false;}state.pending=request(state);state.pendingTest=testing;return drain(state);}
+    function setFocus(state,receiverId,port){state.focus=receiverId?{receiverId,port}:null;for(const card of state.dialog.querySelectorAll('[data-spi-zone-line]')){const selected=card.dataset.receiverId===receiverId&&Number(card.dataset.port)===port;card.dataset.selected=String(selected);card.querySelector('[data-spi-zone-action="select"]').setAttribute('aria-pressed',String(selected));const badge=card.querySelector('[data-spi-zone-focus-badge]');if(badge){badge.hidden=!selected;badge.textContent=t(state,'selected');}}}
+    function guideReversed(state,receiver,output){return output.reversed!==(state.data.lineOrder.indexOf(receiver.id+':'+output.port)%2===1);}
+    function updateCard(state,receiver,output){const card=[...state.dialog.querySelectorAll('[data-spi-zone-line]')].find(node=>node.dataset.receiverId===receiver.id&&Number(node.dataset.port)===output.port);if(!card)return;const reversed=guideReversed(state,receiver,output);card.dataset.reversed=String(reversed);const button=card.querySelector('[data-spi-zone-action="flip"]');button.setAttribute('aria-pressed',String(output.reversed));button.setAttribute('aria-label',output.pixels===1?t(state,'one'):t(state,'flipAria',{receiver:receiver.name,port:output.port,end:t(state,reversed?'right':'left')}));}
     function stop(state){
-      state.paused=true;state.previewRetired=true;state.pending=null;state.version++;clearObservation(state);win.clearTimeout(state.leaseTimer);state.leaseTimer=null;state.confirmedRequest=null;state.leaseUntil=0;if(current(state))state.dialog.dataset.previewConfirmed='false';
+      state.paused=true;state.previewRetired=true;state.pending=null;state.pendingTest=false;state.pathActive=false;state.pathEnded=false;state.version++;clearObservation(state);win.clearTimeout(state.leaseTimer);state.leaseTimer=null;state.confirmedRequest=null;state.leaseUntil=0;if(current(state))state.dialog.dataset.previewConfirmed='false';
       if(state.stopJob)return state.stopJob;
       if(state.data.previewOnly||!onPreview)return Promise.resolve({status:'stopped',sessionId:state.sessionId});
       const running=state.previewJob;
@@ -122,9 +144,22 @@
         // a confirmed/no-write STOP. Never replay a tombstoned START or erase
         // the customer's draft to recover a transport failure.
         state.sessionId='spi-zone-'+Date.now().toString(36)+'-'+(++serial);
-        state.previewRetired=false;state.previewFailed=false;state.saving=false;state.paused=false;controls(state);queue(state);
+        state.previewRetired=false;state.previewFailed=false;state.saving=false;state.paused=false;controls(state);return await queue(state);
       }catch(_){if(current(state))status(state,'stopFailed');}
       finally{if(current(state)){state.saving=false;state.paused=!!state.stopJob;controls(state);}}
+    }
+    async function test(state){
+      if(!enabled(state)||state.inFlight||state.recoveringTest)return;
+      if(state.data.previewOnly){status(state,'testExample');return;}
+      if(!onTest){status(state,'testUpdate');return;}
+      state.recoveringTest=state.previewFailed||state.previewRetired;controls(state);
+      try{
+        setFocus(state,null);state.pathActive=false;state.pathEnded=false;
+        if(state.previewFailed||state.previewRetired){if(await retry(state)!==true||!enabled(state))return;}
+        if(!current(state)||!enabled(state)||!state.confirmedRequest||now()>=state.leaseUntil)return;
+        state.recoveringTest=false;controls(state);
+        await queue(state,true);
+      }finally{if(current(state)){state.recoveringTest=false;controls(state);}}
     }
     function resumeForeground(state){
       if(!current(state)||doc.hidden||state.saving||state.stale||state.data.previewOnly||!onPreview)return;
@@ -180,10 +215,11 @@
     }
     function click(state,event){
       const button=event.target?.closest?.('[data-spi-zone-action]');
-      if(!button){const card=event.target?.closest?.('[data-spi-zone-line]');if(card&&state.dialog.contains(card)&&enabled(state)){const receiver=state.data.receivers.find(item=>item.id===card.dataset.receiverId),output=receiver?.outputs.find(item=>item.port===Number(card.dataset.port)&&item.enabled);if(output){setFocus(state,receiver.id,output.port);queue(state);}}return;}
+      if(!button){const card=event.target?.closest?.('[data-spi-zone-line]');if(card&&state.dialog.contains(card)&&!state.recoveringTest&&enabled(state)){const receiver=state.data.receivers.find(item=>item.id===card.dataset.receiverId),output=receiver?.outputs.find(item=>item.port===Number(card.dataset.port)&&item.enabled);if(output){setFocus(state,receiver.id,output.port);queue(state);}}return;}
       if(!state.dialog.contains(button)||button.disabled)return;const action=button.dataset.spiZoneAction;
-      if(action==='close'||action==='back'){event.preventDefault();close(action);return;}if(action==='save'){void save(state);return;}if(action==='retry'){void retry(state);return;}if(!['select','flip'].includes(action)||!enabled(state))return;
+      if(action==='close'||action==='back'){event.preventDefault();close(action);return;}if(action==='save'){void save(state);return;}if(action==='test'){void test(state);return;}if(!['select','flip'].includes(action)||!enabled(state))return;
       const card=button.closest('[data-spi-zone-line]'),receiver=state.data.receivers.find(item=>item.id===card?.dataset.receiverId),output=receiver?.outputs.find(item=>item.port===Number(card?.dataset.port)&&item.enabled);if(!receiver||!output)return;
+      if(action==='flip'&&output.pixels===1)return;
       setFocus(state,receiver.id,output.port);if(action==='flip'){output.reversed=!output.reversed;updateCard(state,receiver,output);}queue(state);
     }
     function close(reason='close'){
@@ -197,11 +233,13 @@
       state.pendingSaveReceivers=new Set();applyPending(data);for(const pending of data.pendingChanges||[])if(pending.requiresReconcile===true)state.pendingSaveReceivers.add(pending.receiverId);
       state.signature=signature(state);active=state;const headingId='spi-zone-direction-title-'+serial;dialog.className='spi-zone-direction-dialog';dialog.setAttribute('aria-labelledby',headingId);
       const tutorial=host.LightningSPIDirectionTutorial?.markup({language:languages[state.language]})||'';
-      const groups=data.receivers.map(receiver=>{const outputs=receiver.outputs.filter(output=>output.enabled);if(!outputs.length)return '';return `<section class="spi-zone-receiver"><header><h3>${esc(receiver.name)}</h3><span>${esc(t(state,receiver.id===data.newReceiverId?'new':'existing'))}</span></header><div class="spi-zone-cards">${outputs.map(output=>`<article class="spi-zone-port-card" data-spi-zone-line data-receiver-id="${esc(receiver.id)}" data-port="${output.port}" data-pixels="${output.pixels}" data-reversed="${output.reversed}" data-selected="false"><header><b>${esc(t(state,'port',{port:output.port}))}</b><span>${esc(t(state,'pixels',{count:output.pixels}))}</span></header><div class="spi-zone-port-actions"><button type="button" class="spi-zone-select" data-spi-zone-action="select" aria-pressed="false" aria-label="${esc(t(state,'focus',{receiver:receiver.name,port:output.port}))}"><span class="spi-zone-strip" aria-hidden="true">${output.pixels>2?'<i class="spi-zone-strip-interior"></i>':''}<i class="spi-zone-cap spi-zone-green">G</i>${output.pixels===1?'':'<i class="spi-zone-cap spi-zone-red">R</i>'}</span></button><button type="button" class="spi-zone-flip" data-spi-zone-action="flip" aria-pressed="${output.reversed}" aria-label="${esc(t(state,'flipAria',{receiver:receiver.name,port:output.port,end:t(state,output.reversed?'right':'left')}))}">${icon('flip')}<span>${esc(t(state,'flip'))}</span></button></div>${output.pixels===1?`<small class="spi-zone-one">${esc(t(state,'one'))}</small>`:''}</article>`).join('')}</div></section>`;}).join('');
+      const byKey=new Map(data.receivers.flatMap(receiver=>receiver.outputs.filter(output=>output.enabled).map(output=>[receiver.id+':'+output.port,{receiver,output}]))),orderedGroups=[];
+      for(const [index,key] of data.lineOrder.entries()){const line=byKey.get(key),last=orderedGroups[orderedGroups.length-1];if(last?.receiver===line.receiver)last.lines.push({...line,index});else orderedGroups.push({receiver:line.receiver,lines:[{...line,index}]});}
+      const groups=orderedGroups.map(({receiver,lines})=>`<section class="spi-zone-receiver"><header><h3>${esc(receiver.name)}</h3><span>${esc(t(state,receiver.id===data.newReceiverId?'new':'existing'))}</span></header><div class="spi-zone-cards">${lines.map(({output,index})=>{const reversed=guideReversed(state,receiver,output);return `<article class="spi-zone-port-card" data-spi-zone-line data-receiver-id="${esc(receiver.id)}" data-port="${output.port}" data-line-index="${index}" data-pixels="${output.pixels}" data-reversed="${reversed}" data-selected="false"><header><b>${esc(t(state,'line',{number:index+1}))}<small class="spi-zone-port-label">${esc(t(state,'port',{port:output.port}))}</small></b><span>${esc(t(state,'pixels',{count:output.pixels}))}</span></header><div class="spi-zone-port-actions"><button type="button" class="spi-zone-select" data-spi-zone-action="select" aria-pressed="false" aria-label="${esc(t(state,'focus',{receiver:receiver.name,port:output.port}))}"><span class="spi-zone-strip" aria-hidden="true">${output.pixels>2?'<i class="spi-zone-strip-interior"></i>':''}<i class="spi-zone-cap spi-zone-green">G</i>${output.pixels===1?'':'<i class="spi-zone-cap spi-zone-red">R</i>'}</span></button><button type="button" class="spi-zone-flip" data-spi-zone-action="flip" aria-pressed="${output.reversed}" aria-label="${esc(t(state,'flipAria',{receiver:receiver.name,port:output.port,end:t(state,reversed?'right':'left')}))}">${icon('flip')}<span>${esc(t(state,'flip'))}</span></button></div>${output.pixels===1?`<small class="spi-zone-one">${esc(t(state,'one'))}</small>`:''}</article>`;}).join('')}</div></section>`).join('');
       dialog.innerHTML=`<div class="spi-zone-direction-shell"><header class="spi-zone-direction-header"><div><small>${esc(data.zoneName)}</small><h2 id="${headingId}">${esc(t(state,data.newReceiverId?'added':'title'))}</h2></div><button type="button" data-spi-zone-action="close" aria-label="${esc(t(state,'closeAria'))}">${icon('close')}</button></header><div class="spi-zone-direction-body">${data.previewOnly?`<p class="spi-zone-preview">${esc(t(state,'preview'))}</p>`:''}${data.pendingChanged?`<p class="spi-zone-change-notice" role="note">${esc(t(state,'pendingChanged'))}</p>`:''}${tutorial||`<h3 class="spi-zone-look">${esc(t(state,'look'))}</h3>`}<p class="spi-zone-select-hint">${esc(t(state,'selectHint'))}</p><p class="spi-zone-status" data-spi-zone-status role="status" aria-live="polite">${esc(t(state,'pending'))}</p>${groups||`<p>${esc(t(state,'empty'))}</p>`}</div><footer class="spi-zone-direction-footer"><button type="button" data-spi-zone-action="back">${icon('back')}<span>${esc(t(state,'back'))}</span></button><button type="button" data-spi-zone-action="save">${icon('check')}<span>${esc(t(state,'save'))}</span></button></footer></div>`;
       dialog.querySelector('[data-spi-zone-action="save"]').querySelector('span').textContent=t(state,data.newReceiverId?(data.pairFirst?'finish':'add'):'save');
-      for(const card of dialog.querySelectorAll('[data-spi-zone-line]')){const badge=doc.createElement('span');badge.dataset.spiZoneFocusBadge='';badge.hidden=true;badge.textContent=t(state,'selected');card.querySelector('header').querySelector('b').append(badge);}
-      const retryButton=doc.createElement('button');retryButton.type='button';retryButton.className='spi-zone-retry';retryButton.dataset.spiZoneAction='retry';retryButton.textContent=t(state,'retry');retryButton.hidden=true;dialog.querySelector('[data-spi-zone-status]').after(retryButton);
+      for(const card of dialog.querySelectorAll('[data-spi-zone-line]')){const badge=doc.createElement('span');badge.dataset.spiZoneFocusBadge='';badge.hidden=true;badge.textContent=t(state,'selected');card.querySelector('header').querySelector('b').append(badge);const receiver=data.receivers.find(item=>item.id===card.dataset.receiverId);updateCard(state,receiver,receiver.outputs.find(output=>output.port===Number(card.dataset.port)));}
+      const testButton=doc.createElement('button');testButton.type='button';testButton.className='spi-zone-test';testButton.dataset.spiZoneAction='test';testButton.innerHTML=`<svg viewBox="0 0 44 24" fill="none" aria-hidden="true"><path d="M3 12h38m-8-7 8 7-8 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 6v12M14 6v12M20 6v12" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".35"/></svg><span><b>${esc(t(state,'test'))}</b><small data-spi-zone-test-hint>${esc(t(state,'testHint'))}</small></span>`;dialog.querySelector('[data-spi-zone-status]').before(testButton);
       if(state.pendingSaveReceivers.size){const hint=doc.createElement('p');hint.className='spi-zone-change-notice';hint.textContent=t(state,'pendingSave');dialog.querySelector('[data-spi-zone-status]').after(hint);}
       state.visibilityEpoch=0;state.visibilityStop=null;state.previewRetired=false;state.previewFailed=false;state.resuming=false;state.resumeJob=null;state.resumeRequested=false;
       state.click=event=>click(state,event);state.cancel=event=>{event.preventDefault();close('escape');};state.visibility=()=>visibility(state);state.nativeActive=()=>resumeForeground(state);dialog.addEventListener('click',state.click);dialog.addEventListener('cancel',state.cancel);doc.addEventListener('visibilitychange',state.visibility);win.addEventListener?.('lightning:native-active',state.nativeActive);doc.body.append(dialog);
