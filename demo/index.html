@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="spi-zone-direction.css?v=4eca586ecbe17d2f">
   <link rel="stylesheet" href="receiver-update-ui.css?v=cbbc15b9e2f72202">
   <link rel="stylesheet" href="receiver-removal-ui.css?v=751fb97357432256">
-  <link rel="stylesheet" href="scenes.css?v=bdffe7a7430de2b0">
+  <link rel="stylesheet" href="scenes.css?v=71fe2530a82c102f">
   <link rel="stylesheet" href="premium-surfaces.css?v=af472ccec57b51ff">
   <link rel="stylesheet" href="animation-mobile.css?v=c836b5c996f15262">
   <link rel="stylesheet" href="page-interaction.css?v=9f55bcf272b84215">
@@ -39,15 +39,15 @@
   <script defer src="presets.js?v=31146d0b765bd2b6"></script>
   <script defer src="colours-library.js?v=2b52745810c9b1b2"></script>
   <script defer src="colour-library-drag.js?v=963265a49e1b03fa"></script>
-  <script defer src="scenes.js?v=17cd2a68405b15ac"></script>
+  <script defer src="scenes.js?v=d60a6031eee6ae14"></script>
   <script defer src="installation-libraries.js?v=f6f3178ddcc768b5"></script>
-  <script defer src="stand-connection.js?v=e46597d5169183b0"></script>
+  <script defer src="stand-connection.js?v=3956950b20e82a40"></script>
   <script defer src="stand-sharing-copy.js?v=55bf5aca18c32d0f"></script>
   <script defer src="stand-sharing.js?v=fdbdc72f95251f56"></script>
   <script defer src="stand-management-capabilities.js?v=822438c0b944b62f"></script>
   <script defer src="stand-live-checkpoint.js?v=74d06af5d71342be"></script>
   <script defer src="preferences.js?v=43f46ef56eb3a2da"></script>
-  <script defer src="ui-copy.js?v=b3cd04d0526bef5b"></script>
+  <script defer src="ui-copy.js?v=930eaed9c53d7e69"></script>
   <script defer src="interface-mode.js?v=94419015d1addd7a"></script>
   <script defer src="v50-texts.js?v=6521079cdcfcad57"></script>
   <script defer src="v50-order-texts.js?v=78d462e84ec14680"></script>
@@ -61,7 +61,7 @@
   <script defer src="onboarding-contract.js?v=47b7a0cc1e7a3cc2"></script>
   <script defer src="onboarding-draft.js?v=c373a95c4662d3eb"></script>
   <script defer src="spi-direction-tutorial.js?v=e9a64ba9ac4e49fb"></script>
-  <script defer src="spi-zone-direction.js?v=0587f225f4b9779c"></script>
+  <script defer src="spi-zone-direction.js?v=c572617b54b363e2"></script>
   <script defer src="pixel-setup.js?v=32edd7ea83823354"></script>
   <script defer src="pixel-translations.js?v=1d37e538c3c2d9d9"></script>
   <script defer src="setup-translations.js?v=7c4f9f7ab5fd43c5"></script>
@@ -91,7 +91,7 @@
   <link rel="stylesheet" href="v50-preview-selection.css?v=a30121a1f615f1d0">
   <link rel="stylesheet" href="v50-order-tutorial.css?v=51dfb7614a492adc">
   <script defer src="stand-animations.js?v=adda30f999fea06e"></script>
-  <script defer src="scene-editing.js?v=71ac434a443b510b"></script>
+  <script defer src="scene-editing.js?v=fff0b784961012e9"></script>
   <script defer src="ui-continuity.js?v=ae28fd0b92d3100c"></script>
   <script defer src="v50-interactions.js?v=81a097f387efca0c"></script>
   <link rel="stylesheet" href="ui606-controls.css?v=e9460a8bd2bfab6a">
@@ -104,7 +104,8 @@
   <script defer src="ui606-navigation.js?v=ff933c09736f23fb"></script>
   <script defer src="pair-first-setup.js?v=b28eb3234eb5f56d"></script>
   <script defer src="colour-presets-ui.js?v=ab7eb21a4c045c35"></script>
-  <script defer src="app.js?v=f6853088368a417c"></script>
+  <script defer src="main-connection-indicator.js?v=b787b25e4799bdd2"></script>
+  <script defer src="app.js?v=5e9b38189901695b"></script>
   <link rel="stylesheet" href="interface-mode.css?v=1f33b657b627afdd">
   <link rel="stylesheet" href="theme-audit.css?v=45d7dd15cd3814ba">
   <link rel="stylesheet" href="animation-discovery.css?v=776f64a236c4d1e9">
@@ -112,12 +113,13 @@
   <link rel="stylesheet" href="ledline-order-tutorial.css?v=28d7696b54d2d5c0">
   <link rel="stylesheet" href="colour-presets-ui.css?v=5a6d0b814dc5a111">
   <link rel="stylesheet" href="ledline-order-direct.css?v=4b163f3966b6527c">
+  <link rel="stylesheet" href="main-connection-indicator.css?v=e1fd9430d1e8f94c">
   <link rel="stylesheet" href="android-download/android-download.css?v=f459f0a297a7076b">
   <script defer src="android-download/android-download.js?v=ab0736ee268cf12c" data-android-apk="android/aluvision-android-test-50.0.0-30-939f8a250774.apk" data-android-version="50.0.0" data-android-version-code="30" data-android-size="2867558" data-android-sha256="939f8a250774f1864f506b7df0dcf0a0a5178ceaec643d07feaf1fada32f846f" data-android-mode="receiver" data-android-min-sdk="26"></script>
 </head>
 <body>
   <a class="skip" href="#main">Naar de bediening</a>
-  <header class="brand-bar"><img src="assets/aluvision-logo.png?v=834524590fdae6c1" alt="Aluvision"><span>LIGHTING <b>V50</b></span></header>
+  <header class="brand-bar"><img src="assets/aluvision-logo.png?v=834524590fdae6c1" alt="Aluvision"><div id="main-connection-indicator675" class="main-connection-indicator675" role="status" aria-live="polite" aria-atomic="true" hidden></div><span>LIGHTING <b>V50</b></span></header>
   <div id="web-demo-banner" class="web-demo-banner" role="status" hidden><b>DEMO</b><span>Fictieve receivers · geen verbinding met echte verlichting</span></div>
   <main id="main" tabindex="-1"></main>
   <nav id="navigation" class="navigation" aria-label="Hoofdnavigatie"></nav>

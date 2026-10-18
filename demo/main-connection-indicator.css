@@ -1,0 +1,23 @@
+/* A quiet native-only network receipt, not a button or optical-light claim. */
+html body .brand-bar .main-connection-indicator675[hidden]{display:none}
+html body .brand-bar .main-connection-indicator675{
+  display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%;
+  padding:0;margin:0;color:var(--muted,#646d78);font-size:11px;line-height:1.35;
+  font-weight:550;letter-spacing:0;white-space:normal;text-align:end;
+}
+html body .brand-bar .main-connection-indicator675>svg{width:17px;height:17px;flex:none}
+html body .brand-bar .main-connection-indicator675>span{min-width:0;font:inherit;letter-spacing:0;color:inherit}
+html body .brand-bar .main-connection-indicator675[data-connection-state="connected"]{color:#237653}
+html body[data-theme="dark"] .brand-bar .main-connection-indicator675[data-connection-state="connected"]{color:#7bdbb1}
+html body .brand-bar:has(.main-connection-indicator675:not([hidden])){
+  height:auto;min-height:66px;display:grid;grid-template-columns:minmax(0,1fr) auto;
+  gap:5px 10px;padding-block:11px;
+}
+html body .brand-bar:has(.main-connection-indicator675:not([hidden]))>img{grid-area:1/1;max-width:100%}
+html body .brand-bar:has(.main-connection-indicator675:not([hidden]))>span{grid-area:1/2}
+html body .brand-bar:has(.main-connection-indicator675:not([hidden]))>.main-connection-indicator675{grid-area:2/1/3/3;justify-self:end}
+@media(min-width:600px){
+  html body .brand-bar:has(.main-connection-indicator675:not([hidden])){grid-template-columns:minmax(109px,1fr) auto auto;gap:18px;min-height:66px}
+  html body .brand-bar:has(.main-connection-indicator675:not([hidden]))>.main-connection-indicator675{grid-area:1/2}
+  html body .brand-bar:has(.main-connection-indicator675:not([hidden]))>span{grid-area:1/3}
+}

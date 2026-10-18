@@ -62,6 +62,8 @@
   // Keep its fixed, non-secret explanation across automatic public probes.
   let standMigrationPreflightError=null;
   let centralLibraryPending=null,centralLibraryTimer=null,centralLibraryWriting=false,centralLibraryStatusTicket=0;
+  let mainConnectionIndicator675=null;
+  const mainAckContexts675=new Map();
   function pinRequired(){return window.AluvisionSecurityMode?.pinRequired!==false;}
   // An absent/failed native script must never turn the real app into a demo.
   const nativeContext=window.__lightningV30NativeHost===true||window.location.protocol==='file:'||runtime?.native===true;
@@ -415,11 +417,14 @@
       waitBeforeSend:typeof runtime.services.whenLiveReady==='function'?async()=>{await runtime.services.whenLiveReady();if(standPresentationOnly())throw Object.assign(Error(),{code:'STAND_CONNECTION_BUSY'});if(standSession?.snapshot()||standSession?.canResume())await standSession.prepareLive();}:undefined,
       onRoute:observeStaticRoute,
       onState:(id,state)=>{liveStates.set(id,state);syncLiveStatus();syncArrangementControls();
+        if(state.kind==='applied')confirmMainFirmwareAck675(id);
+        else if(['failed','preview','idle'].includes(state.kind))mainAckContexts675.delete(id);
         if(state.kind==='applied'&&centralLiveCheckpoint?.state().status==='unconfirmed'&&centralLiveCheckpoint.state().pending)void centralLiveCheckpoint.flush().catch(()=>{});}}):null;
   let colourOrderMode=false,colourLibraryNotice='',removedColour=null;
   let presetEdit667=null,presetLibraryBusy667=false,presetLibraryEpoch667=0;
   let preferenceStore;try{preferenceStore=Preferences.createStore(appStorage);}catch(_){preferenceStore=Preferences.createStore(null);}
   let uiPreferences=preferenceStore.load();
+  if(nativeContext&&runtime?.native===true)mainConnectionIndicator675=window.LightningMainConnectionIndicator?.create({host:document.getElementById('main-connection-indicator675'),language:()=>uiPreferences.preferences.language});
   const interfaceModeStore=Preferences.createModeStore(appStorage);
   let interfaceModeState=interfaceModeStore.load();
   const advancedInterface=()=>interfaceModeState.advancedEnabled!==false;
@@ -1039,14 +1044,25 @@
   function queueSPIDirectionTransport(job){
     const result=spiDirectionTransport.catch(()=>{}).then(job);spiDirectionTransport=result.catch(()=>{});return result;
   }
+  async function resumeSPIDirectionConnection675(scope){
+    if(!simpleStandMode)return;
+    if(stand()?.id!==scope.standId)throw Error('SPI_DIRECTION_ZONE_CHANGED');
+    // The overlay may recover only this pinned stand's transient access.
+    // A connected lane is checked locally, not refreshed beneath test light.
+    await ensureStandSession().prepareMaintenance({standId:scope.standId});
+  }
   const spiZoneDirections=window.LightningSPIZoneDirection.create({
     getCurrentZoneSignature:spiZoneDirectionSignature,
+    onResumeConnection:resumeSPIDirectionConnection675,
     onPreview:request=>queueSPIDirectionTransport(async()=>{
-      requireStandPresentationConnection();
       if(runtime?.native!==true||runtime.services?.spiZoneDirectionPreview!==true)return {status:'unsupported',sessionId:request.sessionId};
       const active=spiDirectionSessions.get(request.sessionId);
       const action=active?.applied?'update':'start';
-      if(action==='start'){await standSession?.settleMaintenance?.();await liveController?.whenIdle({standId:request.standId});}
+      if(action==='start'){
+        await standSession?.settleMaintenance?.();await liveController?.whenIdle({standId:request.standId});
+        await resumeSPIDirectionConnection675(request);
+      }
+      requireStandPresentationConnection();
       if(spiDirectionRetired.has(request.sessionId))throw Error('SPI_DIRECTION_CLOSED');
       spiDirectionSessions.set(request.sessionId,{...request,applied:false,attempted:true});
       try{
@@ -3466,7 +3482,7 @@
     return `<div class="scene-capture-panel" data-scene-ui="640"><button class="button secondary full scene-capture-current" data-action="scene-new-current" ${ready?'':'disabled'}>${icon('scenes')}<span><b>${esc(t("Sla je stand op als scène"))}</b><small>${esc(t("Bewaar het huidige licht van je zones."))}</small></span>${icon('chevron')}</button></div>`;
   }
   function sceneWorkbenchMarkup640(){
-    if(!sceneEdit640)return '';
+    if(!sceneEdit640||route.screen==='scene-draft')return '';
     const edit=sceneEdit640,atStand=route.screen==='stand'&&sceneEdit640.session.standId===stand()?.id;
     const zones=model.stands.find(stand=>stand.id===edit.session.standId)?.zones||[];
     const chips=edit.zoneIds.map(id=>{
@@ -3474,7 +3490,7 @@
       const label=(zone?.name||t("Zone niet beschikbaar"))+(modified?' · '+t('gewijzigd'):'');
       return `<button type="button" class="scene-edit-zone-chip${modified?' is-modified':''}" data-action="scene-edit-zone" data-zone="${esc(id)}" aria-label="${esc(label)}" title="${esc(label)}" aria-pressed="${!atStand&&route.zoneId===id&&['controls','colour','animations','effects','animation-family'].includes(route.screen)}" ${!zone||edit.saving?'disabled':''}><span>${esc(zone?.name||t("Zone niet beschikbaar"))}</span><i aria-hidden="true" ${modified?'':'hidden'}></i></button>`;
     }).join('');
-    return `<aside class="scene-edit-workbench" data-scene-ui="640" aria-label="${esc(t("Scène bewerken"))}"><div class="scene-edit-workbench-copy"><small>${esc(t("Scène bewerken"))}</small><b title="${esc(edit.name||edit.session.original.name)}">${esc(edit.name||edit.session.original.name)}</b></div><div class="scene-edit-workbench-actions"><button class="button" data-action="scene-edit-save" ${edit.saving?'disabled':''}>${edit.saving?t("Opslaan…"):t("Scène opslaan")}</button><button class="icon-button" data-action="scene-edit-stop" aria-label="${esc(t("Stoppen met bewerken"))}" title="${esc(t("Stoppen zonder verder op te slaan"))}" ${edit.saving?'disabled':''}>${icon('close')}</button></div><div class="scene-edit-zones" role="group" aria-label="${esc(t("Zones van deze scène"))}"><button class="scene-edit-overview" data-action="scene-edit-stand" aria-pressed="${atStand}" ${edit.saving?'disabled':''}>${esc(t('Alle {count}',{count:zoneCount(edit.zoneIds.length)}))}</button>${chips}</div>${edit.error||edit.notice?`<p class="scene-edit-workbench-message" role="status">${esc(edit.error||edit.notice)}</p>`:''}</aside>`;
+    return `<aside class="scene-edit-workbench" data-scene-ui="640" aria-label="${esc(t("Scène bewerken"))}"><div class="scene-edit-workbench-copy"><small>${esc(t("Scène bewerken"))}</small><b title="${esc(edit.name||edit.session.original.name)}">${esc(edit.name||edit.session.original.name)}</b></div><div class="scene-edit-workbench-actions"><button class="button" data-action="scene-edit-save" ${edit.saving?'disabled':''}>${edit.saving?t("Opslaan…"):t("Scène opslaan")}</button><button class="icon-button" data-action="scene-edit-stop" aria-label="${esc(t("Stoppen met bewerken"))}" title="${esc(t("Stoppen zonder verder op te slaan"))}" ${edit.saving?'disabled':''}>${icon('close')}</button></div><button class="text-button scene-edit-variation675" data-action="scene-edit-variation" ${edit.saving?'disabled':''}>${icon('plus')} ${esc(t("Opslaan als nieuwe scène"))}</button><div class="scene-edit-zones" role="group" aria-label="${esc(t("Zones van deze scène"))}"><button class="scene-edit-overview" data-action="scene-edit-stand" aria-pressed="${atStand}" ${edit.saving?'disabled':''}>${esc(t('Alle {count}',{count:zoneCount(edit.zoneIds.length)}))}</button>${chips}</div>${edit.error||edit.notice?`<p class="scene-edit-workbench-message" role="status">${esc(edit.error||edit.notice)}</p>`:''}</aside>`;
   }
   function syncSceneWorkbench640(){
     if(!sceneEdit640||typeof document==='undefined')return;
@@ -3522,7 +3538,37 @@
     SceneEditing.begin(model,scene); // Validate exact membership/shared scope without applying or sending.
     return scene;
   }
-  async function saveScene640(scene,{event=null,fromWorkbench=false}={}){
+  function openSceneVariation675(scene){
+    const name=t('Variatie van {name}',{name:scene.name}).slice(0,64),id='scene-'+crypto.randomUUID();
+    const variant=SceneEditing.variation(scene,id,name);
+    sceneDraft={zoneIds:variant.zones.map(zone=>zone.id),name:variant.name,original:variant,search:'',error:'',asNew675:true,activateAfterSave675:true};
+    navigate('scene-draft',{standId:variant.standId});
+  }
+  async function activateSavedScene675(scene){
+    // Storage ACK is not a physical light ACK. Reapply the complete saved
+    // selection through the ordinary queue; never cancel/clear its Owner.
+    if(stand()?.id!==scene.standId||document.hidden)throw Object.assign(Error(),{code:'SCENE_ACTIVATION_CONTEXT_CHANGED'});
+    const activated=SceneEditing.activation(model,scene);
+    if(nativeLoaded&&!spiPortScenesAvailable&&activated.receiverIds.some(id=>activated.model.receivers.find(receiver=>receiver.id===id)?.state.portStates))throw Object.assign(Error(),{code:'SPI_PORT_SCENES_UNSUPPORTED'});
+    model=activated.model;
+    const queued=sendReceiverStates(activated.receiverIds,{sceneRestore640:true});
+    if(!Array.isArray(queued)||queued.length!==activated.receiverIds.length||new Set(queued).size!==queued.length||queued.some(id=>!activated.receiverIds.includes(id)))throw Object.assign(Error(),{code:'SCENE_PHYSICAL_UNCONFIRMED'});
+    // The ordinary observer reports recoverable errors to the status UI.
+    // Saving needs the same pure validation to fail explicitly instead of
+    // treating an empty flush after rejected observation as a durable ACK.
+    if(simpleStandMode&&centralLiveCheckpoint)centralLiveCheckpoint.observe(model,activated.receiverIds);
+    const stateKey=()=>JSON.stringify(activated.receiverIds.map(id=>model.receivers.find(receiver=>receiver.id===id)?.state));
+    const intended=stateKey();
+    if(liveController){
+      await liveController.whenIdle({standId:scene.standId,waitForGesture:true});
+      if(stand()?.id!==scene.standId||document.hidden||stateKey()!==intended||activated.receiverIds.some(id=>liveController.state(id).kind!=='applied'))throw Object.assign(Error(),{code:'SCENE_PHYSICAL_UNCONFIRMED'});
+    }
+    // The CONFIG projection may still contain pre-edit LIVE. Confirm the
+    // final existing LIVE checkpoint before releasing the deferred view.
+    if(simpleStandMode&&centralLiveCheckpoint)await centralLiveCheckpoint.flush();
+    if(stand()?.id!==scene.standId||document.hidden||stateKey()!==intended||simpleStandMode&&centralLiveCheckpoint?.state().status==='unconfirmed')throw Object.assign(Error(),{code:'SCENE_ACTIVATION_CONTEXT_CHANGED'});
+  }
+  async function saveScene640(scene,{event=null,fromWorkbench=false,asNew=false}={}){
     if(sceneEdit640?.saving||sceneDraft?.saving)return;
     const edit=sceneEdit640,draft=sceneDraft;
     const editSession=edit?.session,editMetadata=edit?JSON.stringify({name:edit.name,zoneIds:edit.zoneIds}):null;
@@ -3530,32 +3576,42 @@
     if(edit){edit.saving=true;edit.error='';}
     if(draft){draft.saving=true;draft.error='';}
     render({preserveScroll:true});
+    let libraryConfirmed=false;
     try{
-      const result=sceneStore.save(scene);if(result.error)throw Error(result.error.message);
+      const result=sceneStore.save(scene,{insertOnly:asNew&&!draft?.savedLocally675});if(result.error)throw Error(t(result.error.message));
       // Local persistence precedes the central commit in the existing store.
       // Keep the editor and retry context until that commit is confirmed.
       savedScenes=result;
       if(edit){edit.savedLocally=true;edit.centralUnconfirmed=true;}
+      if(draft)draft.savedLocally675=true;
       await confirmCentralLibrary(result);
-      window.LightningInterfaceHaptics?.emit?.('success','scene-save',{confirmed:true,event});
+      libraryConfirmed=true;
       if(edit)edit.centralUnconfirmed=false;
       // An in-flight gesture/intent can finish while storage is waiting.
       // Acknowledging the older snapshot must not discard that newer edit.
-      const newerEdit=edit&&(sceneEdit640!==edit||edit.session!==editSession||JSON.stringify({name:edit.name,zoneIds:edit.zoneIds})!==editMetadata);
-      const newerDraft=draft&&(sceneDraft!==draft||JSON.stringify({name:draft.name,zoneIds:draft.zoneIds})!==draftMetadata);
-      if(newerEdit||newerDraft){
+      const retainNewer=()=>{
+        const newerEdit=edit&&(sceneEdit640!==edit||edit.session!==editSession||JSON.stringify({name:edit.name,zoneIds:edit.zoneIds})!==editMetadata);
+        const newerDraft=draft&&(sceneDraft!==draft||JSON.stringify({name:draft.name,zoneIds:draft.zoneIds})!==draftMetadata);
+        if(!newerEdit&&!newerDraft)return false;
         if(sceneEdit640===edit){edit.saving=false;edit.notice=t("Scène opgeslagen. Je nieuwere wijzigingen zijn nog niet opgeslagen.");}
         if(sceneDraft===draft&&draft){draft.saving=false;draft.error=t("De vorige versie is opgeslagen. Sla je nieuwere wijzigingen ook op.");}
-        render({preserveScroll:true});return;
-      }
+        render({preserveScroll:true});return true;
+      };
+      if(retainNewer())return;
+      await activateSavedScene675(scene);
+      if(retainNewer())return;
       sceneEdit640=null;sceneDraft=null;flushCentralProjection();
+      window.LightningInterfaceHaptics?.emit?.('success','scene-save',{confirmed:true,event});
       navigate(fromWorkbench?'stand':'scene-detail',{sceneId:scene.id,standId:scene.standId,zoneId:null});
-      toast(t("Scène opgeslagen. Je verlichting blijft zoals je die hebt ingesteld."));
+      toast(t(liveController?"Scène opgeslagen en actief.":"Scène opgeslagen en actief in het voorbeeld."));
     }catch(error){
-      const message=error?.message||t("Opslaan is niet gelukt. Probeer opnieuw.");
+      const message=libraryConfirmed?t("Scène opgeslagen. Activeren is nog niet bevestigd. Je opgeslagen scène blijft bewaard; probeer opnieuw."):(error?.message||t("Opslaan is niet gelukt. Probeer opnieuw."));
       if(edit&&sceneEdit640===edit){edit.saving=false;edit.error=message;}
       if(draft&&sceneDraft===draft){draft.saving=false;draft.error=message;}
       render({preserveScroll:true});toast(message);
+    }finally{
+      if(edit)edit.saving=false;
+      if(draft)draft.saving=false;
     }
   }
   function sceneSearch(mode,count) {
@@ -3581,7 +3637,7 @@
       const selected=sceneDraft.zoneIds.includes(row.dataset.id);row.setAttribute('aria-pressed',String(selected));row.querySelector('i').textContent=selected?'✓':'+';
     });
     const summary=main.querySelector('[data-scene-selection-summary]');if(summary)summary.textContent=t('{count} gekozen · {receivers}',{count:zoneCount(chosen.length),receivers:receiverCount(total)});
-    const save=main.querySelector('[data-action="scene-save"]');if(save)save.disabled=!!sceneDraft.saving||!chosen.length||!sceneDraft.name.trim();
+    for(const save of main.querySelectorAll('[data-action="scene-save"],[data-action="scene-save-new"]'))save.disabled=!!sceneDraft.saving||!chosen.length||!sceneDraft.name.trim();
     const all=main.querySelector('[data-action="scene-select-all"]');if(all)all.disabled=!!sceneDraft.saving||!available.length||chosen.length===available.length;
     const clear=main.querySelector('[data-action="scene-clear-selection"]');if(clear)clear.disabled=!!sceneDraft.saving||!chosen.length;
     const error=main.querySelector('[data-scene-save-error]');if(error){error.hidden=!sceneDraft.error;error.textContent=sceneDraft.error||'';}
@@ -3589,13 +3645,14 @@
   function renderSceneDraft() {
     if(!stand())return renderScenes();
     if(!sceneDraft)sceneDraft={zoneIds:[],name:'',search:''};
-    const editing=Boolean(sceneDraft.sceneId),subtitle=editing?t("Pas de naam of zones aan. Wil je het licht wijzigen? Kies onderaan ‘Deze scène bewerken’."):t("Je huidige licht staat klaar. Geef het een naam en sla het op.");
+    const editing=Boolean(sceneDraft.sceneId),subtitle=editing?t("Pas de naam of zones aan. Wil je het licht wijzigen? Kies onderaan ‘Deze scène bewerken’."):sceneDraft.asNew675?t("Geef deze variatie een naam. De oorspronkelijke scène blijft bewaard."):t("Je huidige licht staat klaar. Geef het een naam en sla het op.");
+    const saveHint=t("Na opslaan wordt deze scène actief.");
     const omitted=sceneDraft.omittedZoneCount?`<p class="card scene-edit-warning" role="status">${esc(t(sceneDraft.omittedZoneCount===1?'{count} niet-beschikbare zone wordt niet in de bijgewerkte scène opgenomen.':'{count} niet-beschikbare zones worden niet in de bijgewerkte scène opgenomen.',{count:sceneDraft.omittedZoneCount}))}</p>`:'';
     return `<div class="page scene-draft-page ui606-pages" data-scene-ui="640">${contextTitle(editing?t("Scène aanpassen"):t("Sfeer bewaren"),subtitle,t("Scènes"),'scenes')}${omitted}<label class="dialog-field scene-name-field ui606-scene-name"><span class="ui606-step-heading"><span class="ui606-step-number" aria-hidden="true">1</span><span>${esc(t("Geef je scène een naam"))}</span></span><input id="scene-name" maxlength="64" value="${esc(sceneDraft.name)}" placeholder="${esc(t("Bijvoorbeeld: warm welkom"))}" ${sceneDraft.saving?'disabled':''}></label><section class="scene-zone-picker" aria-labelledby="scene-zone-picker-title"><div class="section-heading ui606-step-heading"><span class="ui606-step-number" aria-hidden="true">2</span><h2 id="scene-zone-picker-title">${esc(t("Welke zones wil je bewaren?"))}</h2></div><div class="scene-bulk-actions"><button class="text-button" data-action="scene-select-all" ${sceneDraft.saving?'disabled':''}>${esc(t("Alle zones kiezen"))}</button><button class="text-button" data-action="scene-clear-selection" ${sceneDraft.saving?'disabled':''}>${esc(t("Selectie wissen"))}</button></div>${sceneSearch('draft',stand().zones.length)}<div class="scene-zone-list">${stand().zones.map(z=>{
       const count=M.zoneReceivers(model,z.id).length;
       const saved=sceneDraft.original&&Scenes.previewZones(model,sceneDraft.original).find(saved=>saved.id===z.id);
       return `<button class="scene-zone" data-action="scene-zone" data-id="${esc(z.id)}" data-scene-filter-name="${esc(z.name+' '+(z.type||''))}" aria-pressed="${sceneDraft.zoneIds.includes(z.id)}" ${count&&!sceneDraft.saving?'':'disabled'}>${saved?savedZonePreview(saved,'',savedSceneStandPlan(sceneDraft.original)):count?zonePreview(z,'scene-preview',{label:t('Huidig licht · {name} · {type}',{name:z.name,type:z.type})}):`<span class="scene-preview scene-preview-unavailable">${icon('zones')}</span>`}<span><b>${esc(z.name)}</b><small>${count?`${receiverCount(count)} · ${z.type}${saved?' · '+t('opgeslagen licht'):''}`:t("Nog geen verlichting")}</small></span><i aria-hidden="true">${sceneDraft.zoneIds.includes(z.id)?'✓':'+'}</i></button>`;
-    }).join('')}</div><p class="scene-search-empty card" hidden>${esc(t("Geen zones gevonden. Pas je zoekopdracht aan; je selectie blijft bewaard."))}</p></section><div class="scene-save-bar"><p data-scene-selection-summary role="status" aria-live="polite"></p><p class="scene-save-error" data-scene-save-error role="alert" hidden></p><button class="button red full" data-action="scene-save" disabled>${sceneDraft.saving?t("Opslaan…"):editing?t("Scène bijwerken"):t("Scène opslaan")}</button><small>${editing?t("Niet-bewerkte zones houden hun opgeslagen licht. Nieuwe zones gebruiken het huidige licht."):t("Opslaan verandert je verlichting niet.")}</small></div>${editing?`<button class="button full scene-detail-edit" data-action="scene-start-edit" data-id="${esc(sceneDraft.sceneId)}" ${sceneDraft.saving?'disabled':''}>${icon('edit')} ${esc(t("Deze scène bewerken"))} ${icon('chevron')}</button><p class="scene-edit-hint">${esc(t("Laadt het opgeslagen licht en brengt je naar de stand. Pas daar je zones aan en sla de scène opnieuw op."))}</p>`:''}<button class="button secondary full" data-action="scenes" ${sceneDraft.saving?'disabled':''}>${esc(t("Annuleren"))}</button></div>`;
+    }).join('')}</div><p class="scene-search-empty card" hidden>${esc(t("Geen zones gevonden. Pas je zoekopdracht aan; je selectie blijft bewaard."))}</p></section><div class="scene-save-bar"><p data-scene-selection-summary role="status" aria-live="polite"></p><p class="scene-save-error" data-scene-save-error role="alert" hidden></p><button class="button red full" data-action="scene-save" disabled>${sceneDraft.saving?t("Opslaan…"):editing?t("Scène bijwerken"):t("Scène opslaan")}</button>${editing?`<button class="button secondary full" data-action="scene-save-new" ${sceneDraft.saving?'disabled':''}>${esc(t("Opslaan als nieuwe scène"))}</button>`:''}<small>${esc(saveHint)}</small></div>${editing?`<button class="button full scene-detail-edit" data-action="scene-start-edit" data-id="${esc(sceneDraft.sceneId)}" ${sceneDraft.saving?'disabled':''}>${icon('edit')} ${esc(t("Deze scène bewerken"))} ${icon('chevron')}</button><p class="scene-edit-hint">${esc(t("Laadt het opgeslagen licht en brengt je naar de stand. Pas daar je zones aan en sla de scène opnieuw op."))}</p>`:''}<button class="button secondary full" data-action="scenes" ${sceneDraft.saving?'disabled':''}>${esc(t("Annuleren"))}</button></div>`;
   }
   function renderSceneDetail() {
     if(!stand())return renderScenes();
@@ -3792,7 +3849,32 @@
     finally{standConnectionBusy=false;render({preserveScroll:true});}
     if(openedStandId)restoreManagementAssignment(openedStandId);
   }
+  function mainConnectionContext675(source=model,standId=stand()?.id){
+    if(!nativeContext||runtime?.native!==true||source?.demo!==false||!Array.isArray(source.receivers)||!standId)return null;
+    const mains=source.receivers.filter(receiver=>receiver.standId===standId&&receiver.lifecycle==='added'&&receiver.role==='main');
+    return mains.length===1?{standId,mainId:mains[0].rid||mains[0].id}:null;
+  }
+  function syncMainConnectionIndicator675(){
+    mainConnectionIndicator675?.setContext(mainConnectionContext675());
+    mainConnectionIndicator675?.setVisible(!document.hidden);
+    mainConnectionIndicator675?.refresh();
+  }
+  function confirmMainProjection675(next,kind,fence){
+    if(document.hidden||fence?.projectionCurrent&&!fence.projectionCurrent())return;
+    const context=mainConnectionContext675(next?.view?.model,next?.standId);if(!context)return;
+    mainConnectionIndicator675?.setContext(context);
+    mainConnectionIndicator675?.setVisible(true);
+    mainConnectionIndicator675?.confirm({...context,kind});
+  }
+  function confirmMainFirmwareAck675(id){
+    const captured=mainAckContexts675.get(id);mainAckContexts675.delete(id);
+    const context=mainConnectionContext675(),receiver=model.receivers.find(receiver=>receiver.id===id);
+    if(document.hidden||!captured||!context||captured.standId!==context.standId||captured.mainId!==context.mainId||receiver?.standId!==context.standId||receiver.lifecycle!=='added')return;
+    mainConnectionIndicator675?.setContext(context);
+    mainConnectionIndicator675?.confirm({...context,kind:'firmware-ack'});
+  }
   function syncStandConnectionStatus(){
+    syncMainConnectionIndicator675();
     for(const node of document.querySelectorAll('[data-stand-connection-status]'))node.textContent=standConnectionMessage();
     for(const node of document.querySelectorAll('[data-stand-presentation-status]'))node.textContent=standPresentationMessage();
     syncArrangementControls();
@@ -3823,14 +3905,15 @@
     if(centralPending&&!centralEditing())installCentralProjection(centralPending,{redraw:false,...centralPendingReadFence});
   }
   function reconcileCentralUnchanged(next,fence){
+    confirmMainProjection675(next,'unchanged',fence);
     // A normal unchanged poll is a no-op. Reconcile only a retained preview
     // or deferred projection, using this actual fresh read's local fence.
     if(centralLiveCheckpoint?.reconciliationPending()||centralPending)installCentralProjection(next,fence);
   }
   function ensureStandSession(){
     if(standSession)return standSession;
-    standSession=SimpleStand.create({services:runtime.services,captureProjectionFence:()=>centralLiveCheckpoint?.intentGeneration(),onProjection:(next,fence)=>installCentralProjection(next,fence),onUnchangedProjection:reconcileCentralUnchanged,
-      onState:state=>{standConnectionState=state;syncStandConnectionStatus();},visible:()=>!document.hidden,maintenance:()=>pixelSetup.isOpen()||spiZoneDirections.isOpen()||!!receiverSetupPreparation||!!pairFirstOpening});
+    standSession=SimpleStand.create({services:runtime.services,captureProjectionFence:()=>centralLiveCheckpoint?.intentGeneration(),onProjection:(next,fence)=>{installCentralProjection(next,fence);confirmMainProjection675(next,'projection',fence);},onUnchangedProjection:reconcileCentralUnchanged,
+      onState:state=>{standConnectionState=state;mainConnectionIndicator675?.connectionState(state.status);syncStandConnectionStatus();},visible:()=>!document.hidden,maintenance:()=>pixelSetup.isOpen()||spiZoneDirections.isOpen()||!!receiverSetupPreparation||!!pairFirstOpening});
     centralLiveCheckpoint=window.LightningStandLiveCheckpoint.create({
       waitBeforeFlush:async({standId,receiverIds})=>{
         await liveController?.whenIdle({standId,waitForGesture:true});
@@ -4339,6 +4422,7 @@
     document.documentElement.lang=uiPreferences.preferences.language;
     document.body.dataset.theme=uiPreferences.preferences.theme;
     document.body.dataset.interfaceMode=advancedInterface()?'advanced':'basic';
+    syncMainConnectionIndicator675();
     document.querySelector('meta[name="theme-color"]').content=uiPreferences.preferences.theme==='dark'?'#171717':'#eef2f6';
     if(activeControlPointer){
       if(!top&&activeControlPointer.context===motionContextKey()&&activeControlPointer.target.isConnected){controlRenderDeferred=true;return;}
@@ -4710,7 +4794,10 @@
       const outputPorts=scope&&['line','lines'].includes(scope.kind)?M.selectionLines(model,receiver.zoneId,scope).filter(line=>line.receiverId===id).map(line=>line.port).sort((a,b)=>a-b):undefined;
       const request=liveRequest(receiver,time,outputPorts);
       if(nativeLoaded&&liveController&&request&&request.kind==='SPI_PORTS'&&!spiPortScenesAvailable){liveController.reject?.(id,'SPI_PORT_SCENES_UNSUPPORTED');}
-      else if(nativeLoaded&&liveController&&request)liveController.request(request);
+      else if(nativeLoaded&&liveController&&request){
+        const context=mainConnectionContext675();if(context&&receiver.standId===context.standId)mainAckContexts675.set(id,context);else mainAckContexts675.delete(id);
+        liveController.request(request);
+      }
       else if(liveController)liveController.preview(id);
       else liveStates.set(id,{kind:'preview'});
     }
@@ -6640,6 +6727,14 @@
         if(!sceneEdit640||sceneEdit640.saving)return;
         return await saveScene640(SceneEditing.build(sceneEdit640.session,model,{name:sceneEdit640.name,zoneIds:sceneEdit640.zoneIds}),{event,fromWorkbench:true});
       }
+      if(action==='scene-edit-variation'){
+        if(!sceneEdit640||sceneEdit640.saving)return;
+        return openSceneVariation675(SceneEditing.build(sceneEdit640.session,model,{name:sceneEdit640.name,zoneIds:sceneEdit640.zoneIds}));
+      }
+      if(action==='scene-save-new'){
+        if(!sceneDraft||sceneDraft.saving||!sceneDraft.sceneId)return;
+        return openSceneVariation675(buildSceneDraft640());
+      }
       if(action==='scene-edit-stop'){
         if(!sceneEdit640||sceneEdit640.saving)return;
         const unconfirmed=sceneEdit640.centralUnconfirmed;
@@ -6656,7 +6751,7 @@
       if(action==='scene-save'){
         if(!sceneDraft||sceneDraft.saving||!stand())return;
         if(sceneEdit640){sceneEdit640.name=sceneDraft.name;sceneEdit640.zoneIds=[...sceneDraft.zoneIds];}
-        try{return await saveScene640(buildSceneDraft640(),{event});}
+        try{return await saveScene640(buildSceneDraft640(),{event,asNew:!!sceneDraft.asNew675});}
         catch(error){sceneDraft.error=error.message;syncSceneDraft();return toast(error.message);}
       }
       if(action==='scene-open'){sceneDetailSearch='';if(button.closest('#effect-dialog'))closeEffectDialog();return navigate('scene-detail',{sceneId:id});}
@@ -7043,6 +7138,10 @@
       if(feedback.phase==='start'){
         if(orderMoveTimer!==null)clearTimeout(orderMoveTimer);orderMoveTimer=null;orderMoveResult=null;
         const physical=M.zoneLedlines(model,route.zoneId).find(line=>line.id===feedback.id),receiver=model.receivers.find(item=>item.id===physical?.receiverId);
+        // Recognise the picked-up physical colour immediately. Resolve its
+        // committed position, never a proposed drag destination or a DOM index.
+        // The existing focus controller still owns finite ON/STOP receipts.
+        selectOrderPlace664(M.lineIds(model,route.zoneId).indexOf(feedback.id));
         orderPreviewGesture={...feedback,zoneId:route.zoneId,receiverName:receiver?.name||'',port:physical?.port||0,colour:orderMarker652(zone(),feedback.id)?.hex,positionColours:arrangementDraft.lineOrder.map(id=>orderMarker652(zone(),id))};
       }else if(orderPreviewGesture?.id===feedback.id)orderPreviewGesture={...orderPreviewGesture,...feedback};
       syncOrderFeedback();paint(performance.now()/1000,{orderFeedback:true});
@@ -7094,11 +7193,13 @@
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&standLinkPending)void consumeStandShareLink();});
   document.addEventListener('visibilitychange',()=>{if(!simpleStandMode||!standSession)return;if(document.hidden)standSession.pause();else wakeCentralStand();});
   window.addEventListener('pagehide',()=>standSession?.pause());
+  window.addEventListener('pagehide',()=>mainConnectionIndicator675?.setVisible(false));
+  document.addEventListener('visibilitychange',()=>mainConnectionIndicator675?.setVisible(!document.hidden));
   window.addEventListener('pagehide',()=>{retireOrderSave588();cancelOrderTest();retireOrderFocus664();void orderIdentification?.hide();});
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();retireOrderFocus664();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate674',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate676',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;

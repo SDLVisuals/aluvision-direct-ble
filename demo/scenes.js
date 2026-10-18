@@ -152,8 +152,10 @@
       return {scenes,error:null};
     }catch(error){return {scenes:[],error:{message:error.message}};}}
     function write(scenes,previous){try{const raw=JSON.stringify({version:1,scenes});if(raw.length>2000000)fail('De scèneopslag is vol.');storage.setItem(STORAGE_KEY,raw);return {scenes,error:null};}catch(error){return {scenes:previous,error:{message:'Scènes konden niet worden bewaard. '+error.message}};}}
-    function save(scene){const current=load();if(current.error)return current;try{
+    function save(scene,{insertOnly=false}={}){const current=load();if(current.error)return current;try{
+      if(typeof insertOnly!=='boolean')fail('Deze scène kon niet als nieuwe scène worden bewaard.');
       const entry=validate(scene),list=current.scenes.slice(),index=list.findIndex(s=>s.id===entry.id);
+      if(insertOnly&&index>=0)fail('Deze scène-identiteit bestaat al. Het origineel is niet gewijzigd.');
       if(index<0){if(list.length>=MAX_SCENES)fail('Je hebt al 100 scènes.');list.push(entry);}else list[index]=entry;
       return write(list,current.scenes);
     }catch(error){return {...current,error:{message:error.message}};}}

@@ -49,8 +49,8 @@
     }
     for(const change of data.pendingChanges){const receiver=data.receivers.find(item=>item.id===change.receiverId);for(const [index,output] of change.outputs.entries())if(receiver.outputs[index].enabled)receiver.outputs[index].reversed=output.reversed;}
   }
-  function create({onPreview=null,onObserve=null,onStop=null,onSave,onClose=()=>{},getCurrentZoneSignature}={}){
-    if(typeof onSave!=='function'||typeof onClose!=='function'||typeof getCurrentZoneSignature!=='function'||onPreview!==null&&typeof onPreview!=='function'||onObserve!==null&&typeof onObserve!=='function'||onPreview&&typeof onStop!=='function')throw Error('SPI_ZONE_CALLBACKS_REQUIRED');
+  function create({onPreview=null,onObserve=null,onStop=null,onResumeConnection=null,onSave,onClose=()=>{},getCurrentZoneSignature}={}){
+    if(typeof onSave!=='function'||typeof onClose!=='function'||typeof getCurrentZoneSignature!=='function'||onPreview!==null&&typeof onPreview!=='function'||onObserve!==null&&typeof onObserve!=='function'||onResumeConnection!==null&&typeof onResumeConnection!=='function'||onPreview&&typeof onStop!=='function')throw Error('SPI_ZONE_CALLBACKS_REQUIRED');
     const doc=host.document,win=doc?.defaultView||host;let active=null,generation=0;
     const current=state=>active===state&&!state.closed&&state.generation===generation&&state.dialog.isConnected;
     function t(state,key,params={}){return texts[key][state.language].replace(/\{([a-z]+)\}/gi,(all,key)=>String(params[key]??all));}
@@ -91,8 +91,8 @@
       if(now()>=state.leaseUntil){state.previewFailed=true;state.pending=null;status(state,'failed');return;}
       observeLater(state);
     }
-    function enabled(state){return current(state)&&!state.saving&&!state.paused&&!state.stopJob&&!state.stale&&!doc.hidden&&state.dialog.open&&validContext(state);}
-    function controls(state){if(!current(state))return;for(const button of state.dialog.querySelectorAll('[data-spi-zone-action="flip"],[data-spi-zone-action="select"],[data-spi-zone-action="save"],[data-spi-zone-action="retry"]'))button.disabled=state.saving||state.stale||!!state.stopJob||button.dataset.spiZoneAction==='flip'&&state.pendingSaveReceivers.has(button.closest('[data-spi-zone-line]')?.dataset.receiverId);}
+    function enabled(state){return current(state)&&!state.saving&&!state.resuming&&!state.paused&&!state.stopJob&&!state.stale&&!doc.hidden&&state.dialog.open&&validContext(state);}
+    function controls(state){if(!current(state))return;for(const button of state.dialog.querySelectorAll('[data-spi-zone-action="flip"],[data-spi-zone-action="select"],[data-spi-zone-action="save"],[data-spi-zone-action="retry"]'))button.disabled=state.saving||state.resuming||state.stale||!!state.stopJob||button.dataset.spiZoneAction==='flip'&&state.pendingSaveReceivers.has(button.closest('[data-spi-zone-line]')?.dataset.receiverId);}
     async function drain(state){
       if(state.inFlight||state.previewFailed||!state.pending||!enabled(state))return;const wanted=state.pending,version=state.version,sentAt=now();state.pending=null;state.inFlight=true;status(state,'pending');clearObservation(state);
       const job=Promise.resolve().then(()=>onPreview(copy(wanted)));state.previewJob=job;
@@ -114,6 +114,7 @@
     async function retry(state){
       if(!enabled(state))return;state.saving=true;controls(state);status(state,'stopping');
       try{
+        if(onResumeConnection&&!state.data.previewOnly){await bounded(state,Promise.resolve().then(()=>onResumeConnection(copy(context(state)))),18000);if(!current(state)||doc.hidden||!validContext(state))return;}
         const answer=await bounded(state,stop(state),18000);if(!current(state))return;
         if(answer?.status!=='stopped'||answer.sessionId!==state.sessionId){status(state,'stopFailed');return;}
         if(!validContext(state))return;
@@ -125,25 +126,45 @@
       }catch(_){if(current(state))status(state,'stopFailed');}
       finally{if(current(state)){state.saving=false;state.paused=!!state.stopJob;controls(state);}}
     }
+    function resumeForeground(state){
+      if(!current(state)||doc.hidden||state.saving||state.stale||state.data.previewOnly||!onPreview)return;
+      if(state.resumeJob){if(state.resumeEpoch!==state.visibilityEpoch)state.resumeRequested=true;return;}
+      const epoch=++state.visibilityEpoch,oldSession=state.sessionId;
+      state.resumeEpoch=epoch;
+      state.resuming=true;controls(state);status(state,'stopping');
+      const valid=()=>current(state)&&!doc.hidden&&state.visibilityEpoch===epoch&&!state.saving&&state.sessionId===oldSession;
+      const stopped=state.visibilityStop||stop(state);
+      const job=(async()=>{
+        let answer;try{answer=await bounded(state,stopped,18000);}catch(_){}
+        if(!valid())return;
+        // Native inactivity may retire access without a DOM hidden event
+        // (for example Control Centre). Recover only the original pinned
+        // stand; a connected overlay must not trigger a stand refresh.
+        if(onResumeConnection)await bounded(state,Promise.resolve().then(()=>onResumeConnection(copy(context(state)))),18000);
+        if(!valid()||!validContext(state))return;
+        if(answer?.status!=='stopped'||answer.sessionId!==oldSession){
+          // An uncertain background STOP is not success. After pinned access
+          // returns, ask for the exact old session's real restoration proof.
+          answer=await bounded(state,stop(state),18000);
+        }
+        if(!valid())return;
+        if(answer?.status!=='stopped'||answer.sessionId!==oldSession){status(state,'stopFailed');return;}
+        if(!validContext(state))return;
+        state.visibilityStop=null;state.sessionId='spi-zone-'+Date.now().toString(36)+'-'+(++serial);
+        state.previewRetired=false;state.previewFailed=false;state.paused=false;
+        state.resuming=false;controls(state);queue(state);
+      })();state.resumeJob=job;
+      void job.catch(()=>{if(valid())status(state,'stopFailed');}).finally(()=>{
+        if(state.resumeJob===job)state.resumeJob=null;
+        if(!current(state))return;
+        state.resuming=false;state.paused=!!state.stopJob;controls(state);
+        if(state.resumeRequested&&!doc.hidden){state.resumeRequested=false;resumeForeground(state);}
+      });
+    }
     function visibility(state){
       if(!current(state))return;
-      const epoch=++state.visibilityEpoch;
-      if(doc.hidden){state.visibilityStop=stop(state);void state.visibilityStop.catch(()=>{});return;}
-      // STOP retires an exact native session even when it succeeds. Never
-      // restart/update that retired ID after returning to the foreground.
-      const stopped=state.visibilityStop;
-      if(!stopped)return;
-      void stopped.then(answer=>{
-        if(!current(state)||doc.hidden||state.visibilityEpoch!==epoch||state.saving)return;
-        state.visibilityStop=null;state.paused=false;
-        if(answer?.status!=='stopped'||answer.sessionId!==state.sessionId){status(state,'stopFailed');controls(state);return;}
-        if(!validContext(state))return;
-        state.sessionId='spi-zone-'+Date.now().toString(36)+'-'+(++serial);
-        state.previewRetired=false;state.previewFailed=false;controls(state);queue(state);
-      },()=>{
-        if(!current(state)||doc.hidden||state.visibilityEpoch!==epoch||state.saving)return;
-        state.visibilityStop=null;state.paused=false;status(state,'stopFailed');controls(state);
-      });
+      if(doc.hidden){++state.visibilityEpoch;state.resumeRequested=false;state.visibilityStop=stop(state);void state.visibilityStop.catch(()=>{});return;}
+      if(state.visibilityStop)resumeForeground(state);
     }
     async function save(state){
       if(!enabled(state))return;const wanted=changes(state);state.saving=true;controls(state);status(state,'stopping');
@@ -166,7 +187,7 @@
       setFocus(state,receiver.id,output.port);if(action==='flip'){output.reversed=!output.reversed;updateCard(state,receiver,output);}queue(state);
     }
     function close(reason='close'){
-      const state=active;if(!state)return;const pendingChanges=changes(state),focused=state.dialog.contains(doc.activeElement)||doc.activeElement===doc.body;active=null;generation++;state.closed=true;state.pending=null;state.unbindTutorial?.();state.dialog.removeEventListener('click',state.click);state.dialog.removeEventListener('cancel',state.cancel);doc.removeEventListener('visibilitychange',state.visibility);for(const [timer,reject] of state.waitTimers){win.clearTimeout(timer);reject(Error('SPI_ZONE_CLOSED'));}state.waitTimers.clear();if(state.dialog.open)state.dialog.close();state.dialog.remove();
+      const state=active;if(!state)return;const pendingChanges=changes(state),focused=state.dialog.contains(doc.activeElement)||doc.activeElement===doc.body;active=null;generation++;state.closed=true;state.pending=null;state.unbindTutorial?.();state.dialog.removeEventListener('click',state.click);state.dialog.removeEventListener('cancel',state.cancel);doc.removeEventListener('visibilitychange',state.visibility);win.removeEventListener?.('lightning:native-active',state.nativeActive);for(const [timer,reject] of state.waitTimers){win.clearTimeout(timer);reject(Error('SPI_ZONE_CLOSED'));}state.waitTimers.clear();if(state.dialog.open)state.dialog.close();state.dialog.remove();
       void stop(state).catch(()=>{});try{onClose({reason,...context(state),...(state.data.newReceiverId?{newReceiverId:state.data.newReceiverId}:{}),pendingChanges:copy(pendingChanges)});}catch(_){}
       if(focused&&!doc.hidden&&state.focusBefore?.isConnected&&(!doc.hasFocus||doc.hasFocus()))state.focusBefore.focus?.({preventScroll:true});
     }
@@ -182,9 +203,9 @@
       for(const card of dialog.querySelectorAll('[data-spi-zone-line]')){const badge=doc.createElement('span');badge.dataset.spiZoneFocusBadge='';badge.hidden=true;badge.textContent=t(state,'selected');card.querySelector('header').querySelector('b').append(badge);}
       const retryButton=doc.createElement('button');retryButton.type='button';retryButton.className='spi-zone-retry';retryButton.dataset.spiZoneAction='retry';retryButton.textContent=t(state,'retry');retryButton.hidden=true;dialog.querySelector('[data-spi-zone-status]').after(retryButton);
       if(state.pendingSaveReceivers.size){const hint=doc.createElement('p');hint.className='spi-zone-change-notice';hint.textContent=t(state,'pendingSave');dialog.querySelector('[data-spi-zone-status]').after(hint);}
-      state.visibilityEpoch=0;state.visibilityStop=null;state.previewRetired=false;state.previewFailed=false;
-      state.click=event=>click(state,event);state.cancel=event=>{event.preventDefault();close('escape');};state.visibility=()=>visibility(state);dialog.addEventListener('click',state.click);dialog.addEventListener('cancel',state.cancel);doc.addEventListener('visibilitychange',state.visibility);doc.body.append(dialog);
-      try{dialog.showModal();}catch(error){active=null;dialog.removeEventListener('click',state.click);dialog.removeEventListener('cancel',state.cancel);doc.removeEventListener('visibilitychange',state.visibility);dialog.remove();throw error;}
+      state.visibilityEpoch=0;state.visibilityStop=null;state.previewRetired=false;state.previewFailed=false;state.resuming=false;state.resumeJob=null;state.resumeRequested=false;
+      state.click=event=>click(state,event);state.cancel=event=>{event.preventDefault();close('escape');};state.visibility=()=>visibility(state);state.nativeActive=()=>resumeForeground(state);dialog.addEventListener('click',state.click);dialog.addEventListener('cancel',state.cancel);doc.addEventListener('visibilitychange',state.visibility);win.addEventListener?.('lightning:native-active',state.nativeActive);doc.body.append(dialog);
+      try{dialog.showModal();}catch(error){active=null;dialog.removeEventListener('click',state.click);dialog.removeEventListener('cancel',state.cancel);doc.removeEventListener('visibilitychange',state.visibility);win.removeEventListener?.('lightning:native-active',state.nativeActive);dialog.remove();throw error;}
       state.unbindTutorial=host.LightningSPIDirectionTutorial?.bind(dialog)||null;controls(state);queue(state);return context(state);
     }
     return Object.freeze({open,close,isOpen:()=>!!active});

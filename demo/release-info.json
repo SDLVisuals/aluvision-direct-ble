@@ -108,9 +108,9 @@
     "opticalAcceptance": false
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate674-visual-order-and-wifi-guide-android30",
+  "revision": "V50candidate676-pinless-stability-interface-android30",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo674 projects the calmer visual LED-order tutorial and receiver Wi-Fi instructions. The public factory-password card is omitted from these screens only; no network authentication, receiver protocol, native product or firmware is changed by this interface update.",
+  "interfaceBaseline": "Public demo676 projects the reviewed PIN-less676 interface: scene edit/variation feedback, selected LED-order feedback and SPI direction draft handling. All public receiver controls remain simulated. No native, receiver firmware or PINv2 system is published.",
   "interfaceCandidate673": {
     "sourceSnapshotOnly": true,
     "sameInterfaceAsCandidate672": true,
@@ -278,8 +278,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "f6853088368a417ce992639618ab4e80e736016a0256f7cb5b103e8c502425db",
-      "bytes": 671833
+      "sha256": "5e9b38189901695bc49e610796df641e91be99b69755ff3b4ba0a25be80c3701",
+      "bytes": 679419
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -338,8 +338,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "284a07330575f3b1e2c261bfc087a9aa13b74a63c1fb17c3b91a086d5f313e4f",
-      "bytes": 9486
+      "sha256": "c8fe7edfb122c2ad109c062276feb8cd814b18e8eccdb5ea0c969639e1fa0c13",
+      "bytes": 9789
     },
     {
       "path": "installation-libraries.js",
@@ -425,6 +425,16 @@
       "path": "live-control.js",
       "sha256": "f071f9a989a5195d981f6cc304e53a0a8e70c54fad2426f028856a19db5431ac",
       "bytes": 54973
+    },
+    {
+      "path": "main-connection-indicator.css",
+      "sha256": "e1fd9430d1e8f94ceaffa1f4813f737181ace3d73c64007f37983a2aa2e84bbd",
+      "bytes": 1765
+    },
+    {
+      "path": "main-connection-indicator.js",
+      "sha256": "b787b25e4799bdd23d7a3ded10485374c0bd2b3573f48fe0ad9d6744309626e5",
+      "bytes": 4563
     },
     {
       "path": "migration.js",
@@ -563,18 +573,18 @@
     },
     {
       "path": "scene-editing.js",
-      "sha256": "71ac434a443b510bc7e22d9f33ffac6111a2e0e019dd47d5677bde2deb809ba7",
-      "bytes": 9015
+      "sha256": "fff0b784961012e9ef54407d77f883ee33e6a0e40c66b3c350607b0cb562cb74",
+      "bytes": 9593
     },
     {
       "path": "scenes.css",
-      "sha256": "bdffe7a7430de2b085ee7274241491631a3c2075dddddd9424cdf33d94888308",
-      "bytes": 21379
+      "sha256": "71fe2530a82c102f27329a318d09c34be994eb4f860a0f2b25ed9b91dbd7d7b3",
+      "bytes": 21715
     },
     {
       "path": "scenes.js",
-      "sha256": "17cd2a68405b15aca72008214fbcb585962d0b973d99962db002374ee4669fdf",
-      "bytes": 12494
+      "sha256": "d60a6031eee6ae1418a942d1fc027dccb1f1ebcbaf2515ff4427f1234f9cbd0c",
+      "bytes": 12726
     },
     {
       "path": "security-mode.js",
@@ -608,8 +618,8 @@
     },
     {
       "path": "spi-zone-direction.js",
-      "sha256": "0587f225f4b9779ccf8e62f47a01605be47852b4544e4be7a7dfe63a9633dd25",
-      "bytes": 31155
+      "sha256": "c572617b54b363e20d1625a9a85fc5b3289bfed26f61527d851d1194a20a7988",
+      "bytes": 33181
     },
     {
       "path": "stand-animations.css",
@@ -628,8 +638,8 @@
     },
     {
       "path": "stand-connection.js",
-      "sha256": "e46597d5169183b0edd58d1fe65205569eba8b8a18152fbdb834b60cb0476a75",
-      "bytes": 34884
+      "sha256": "3956950b20e82a40dc0e358b2ab061d04594dcb7bf01d4af4e51a446fb2bb9ab",
+      "bytes": 36689
     },
     {
       "path": "stand-live-checkpoint.js",
@@ -673,8 +683,8 @@
     },
     {
       "path": "ui-copy.js",
-      "sha256": "b3cd04d0526bef5b9dd28d8f4eb7a591e36a53e85d169f4c9782a80d0fe66a92",
-      "bytes": 123290
+      "sha256": "930eaed9c53d7e69c643c730b2e718a7c26dbb3ba0c826d3a9c664d9c4faa8b3",
+      "bytes": 125279
     },
     {
       "path": "ui606-controls.css",
@@ -3320,6 +3330,24 @@
     "phoneInstalled": false,
     "androidUnchanged": true,
     "androidVersionCode": 30,
+    "opticalAcceptance": false
+  },
+  "interfaceCandidate676": {
+    "sourceSnapshotOnly": true,
+    "sourceBuild": "676",
+    "features": [
+      "Scene edit and save-as-variation controls with separate saved-versus-applied feedback.",
+      "Selected LED-order drag feedback and preserved SPI direction setup drafts."
+    ],
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "androidUnchanged": true,
+    "androidVersionCode": 30,
+    "PINv2Included": false,
+    "receiverTimingProvenByDemo": false,
     "opticalAcceptance": false
   }
 }

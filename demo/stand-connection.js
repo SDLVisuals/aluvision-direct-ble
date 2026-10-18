@@ -167,7 +167,7 @@
     // has just been saved, leaving this phone on its old local contents.
     let current=null,head=null,resumeStandId=null,inspected=null,generation=0,refreshJob=null,connectJob=null,wakeJob=null,timer=null,disposed=false,paused=false,writeQueue=Promise.resolve(),pendingWrites=0;
     let state={status:'disconnected',phase:null,standId:null,error:null,pendingWrites:0};
-    let liveReadyJob=null,wakeCompletion=null,foregroundWake=null;
+    let liveReadyJob=null,wakeCompletion=null,foregroundWake=null,maintenanceReadyJob=null;
     const publish=patch=>{state={...state,...patch,pendingWrites};onState(copy(state));};
     function stopTimer(){if(timer!==null)clearTimer(timer);timer=null;}
     function arm(){stopTimer();if(!disposed&&!paused&&current&&visible())timer=setTimer(()=>{timer=null;if(maintenance()){arm();return;}void refresh().catch(()=>{});},POLL_MS);}
@@ -415,7 +415,30 @@
       }
       return startWake();
     }
-    function startWake(){
+    // A visible setup screen must be able to recover its pinned native access
+    // after iOS retired the channel. This is not a refresh bypass: a connected
+    // overlay receives only a local availability check, never a competing
+    // snapshot read. A disconnected channel still uses full native resume.
+    function prepareMaintenance(input){
+      if(!plain(input)||Object.keys(input).join(',')!=='standId'||!id(input.standId))fail('STAND_CONNECTION_INVALID');
+      const expected=current?.standId||resumeStandId;
+      if(disposed||!visible()||!expected)fail('STAND_NOT_CONNECTED');
+      if(input.standId!==expected)fail('STAND_IDENTITY_UNCONFIRMED');
+      if(maintenanceReadyJob){if(maintenanceReadyJob.standId!==expected)fail('STAND_IDENTITY_UNCONFIRMED');return maintenanceReadyJob.promise;}
+      const epoch=generation,pinned=current,writes=writeQueue,read=refreshJob,connecting=connectJob,waking=wakeCompletion;
+      const token={standId:expected,promise:null};maintenanceReadyJob=token;
+      token.promise=(async()=>{
+        await writes.catch(()=>{});if(read)await read.catch(()=>{});if(connecting)await connecting.catch(()=>{});if(waking)await waking.catch(()=>{});
+        if(disposed||!visible()||generation!==epoch||current!==pinned||writeQueue!==writes||pendingWrites||connectJob||wakeJob||
+           (current?.standId||resumeStandId)!==expected)fail('STAND_CONNECTION_CANCELLED');
+        return startWake(true);
+      })().then(result=>{
+        if(disposed||!visible()||!result||result.standId!==expected)fail('STAND_CONNECTION_CANCELLED');
+        return result;
+      }).finally(()=>{if(maintenanceReadyJob===token)maintenanceReadyJob=null;});
+      return token.promise;
+    }
+    function startWake(forMaintenance=false){
       if(connectJob)return connectJob;if(wakeJob)return wakeJob;
       paused=false;
       if(!current)return resumeStandId?resume():Promise.resolve(null);
@@ -431,7 +454,7 @@
         if(disposed||paused||epoch!==generation||!visible())fail('STAND_CONNECTION_CANCELLED');
         if(native.status==='connected'){
           if(native.standId!==pinned.standId||native.ssid!==pinned.ssid)fail('STAND_IDENTITY_UNCONFIRMED');
-          return refresh();
+          return forMaintenance?copy(current):refresh();
         }
         ++generation;resumeStandId=pinned.standId;current=null;head=null;inspected=null;stopTimer();
         publish({status:'reconnect-required',phase:null,error:null,standId:resumeStandId});
@@ -449,7 +472,7 @@
     async function settleMaintenance(){
       while(true){const write=writeQueue,read=refreshJob;await write.catch(()=>{});if(read)await read.catch(()=>{});if(write===writeQueue&&(!refreshJob||refreshJob===read))return;}
     }
-    return Object.freeze({connect,connectDetected:input=>connectDetected(input),inspect,changeCode,migrate:input=>connect(input,{migration:true}),migrateDetected:input=>connectDetected(input,{migration:true}),resume,openWifi,refresh,settleMaintenance,mutate,acceptMembership,prepareLive,pause,wake,disconnect,dispose,canResume:()=>!!resumeStandId,
+    return Object.freeze({connect,connectDetected:input=>connectDetected(input),inspect,changeCode,migrate:input=>connect(input,{migration:true}),migrateDetected:input=>connectDetected(input,{migration:true}),resume,openWifi,refresh,settleMaintenance,prepareMaintenance,mutate,acceptMembership,prepareLive,pause,wake,disconnect,dispose,canResume:()=>!!resumeStandId,
       snapshot:()=>current?copy(current):null,state:()=>copy(state)});
   }
   return Object.freeze({connectionInput,resumeInput,resumeIntent,wifiInput,inspectionInput,inspectionResult,sessionStatus,codeChangeInput,newCode,suggestCode,projection,managementTransition,entities,changes,encodeOperations,create,readFence:result=>readFences.get(result),MAX_BYTES,MAX_ENTITIES,POLL_MS});

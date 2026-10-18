@@ -132,5 +132,14 @@
     return {session,model:Scenes.apply(model,draft),
       receiverIds:draft.zones.flatMap(zone=>zone.receivers.map(receiver=>receiver.id)),wholeStandLoaded:true};
   }
-  return Object.freeze({begin,record,build,loadZone,loadAll});
+  function variation(input,id,name){
+    const original=Scenes.validate(input);
+    if(typeof id!=='string'||!id||id===original.id)fail('Deze scène kon niet als nieuwe scène worden bewaard.');
+    return Scenes.validate({...original,id,name:name===undefined?original.name:name});
+  }
+  function activation(model,input){
+    const scene=Scenes.validate(input);requireCompatible(model,scene,true);validateShared(model,scene);
+    return {model:Scenes.apply(model,scene),receiverIds:scene.zones.flatMap(zone=>zone.receivers.map(receiver=>receiver.id))};
+  }
+  return Object.freeze({begin,record,build,loadZone,loadAll,variation,activation});
 }));
