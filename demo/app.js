@@ -3441,10 +3441,10 @@
       <button class="ledline-setup-toggle" data-action="order-cancel686" aria-label="${esc(t('close')+' · '+title)}" aria-expanded="true" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy"><b>${esc(title)}</b><small id="ledline-setup-context">${esc(context)}</small></span><span class="ledline-setup-close-label">${icon('close')}<span class="sr-only">${esc(t('close'))}</span></span></button>${orderCancelNoticeMarkup590(z)}
       <div class="ledline-setup-body" id="ledline-setup-body" role="region" aria-labelledby="ledline-setup-heading" aria-describedby="ledline-setup-context">
         <section class="order-assignment-intro652 order-visual-intro655">
-          <div class="order-match-guide668"><span class="order-match-real668">${eye}<b>${esc(orderText652('orderDirectReal668'))}</b></span><span class="order-match-arrow668" aria-hidden="true">→</span><span class="order-match-app668">${phone}<b>${esc(orderText652('orderDirectApp668'))}</b></span></div>
           <div class="order-visual-heading655"><h3 id="ledline-setup-heading">${esc(orderText652('orderDirectTitle668'))}</h3>${count>1?`<button type="button" class="order-visual-help655" data-action="order-tutorial-open" aria-label="${esc(orderGuideText('tutorialView'))}">${icon('info')}<span>${esc(orderText652('orderHelp655'))}</span></button>`:''}</div>
           <p class="order-visual-hint655">${esc(orderText652(singleLine?'orderDirectSingle668':'orderDirectIntro668'))}</p>
-          <div class="order-focus-guide664"><span class="order-assignment-direction652"><b>${esc(orderGuideText(direction))}</b></span><span>${icon('swap')}${esc(orderText652('orderFocusSwap664'))}</span></div>
+          ${count>1?`<div class="order-copy-example716" role="img" aria-label="${esc(orderText652('orderExample716',{position:Math.min(3,count)}))}"><div><small>${eye}${esc(orderText652('orderDirectReal668'))}</small><span class="order-copy-real716"><b>${Math.min(3,count)}</b><i></i></span></div><span class="order-copy-arrow716" aria-hidden="true">→</span><div><small>${phone}${esc(orderText652('orderDirectApp668'))}</small><span class="order-copy-app716"><b>${Math.min(3,count)}</b><i></i>${icon('grip')}</span></div></div><p class="order-copy-caption716">${esc(orderText652('orderExample716',{position:Math.min(3,count)}))}</p>`:''}
+          <div class="order-focus-guide664"><span class="order-assignment-direction652"><b>${esc(orderGuideText(direction))}</b></span><span class="sr-only">${esc(orderText652('orderFocusSwap664'))}</span></div>
           <p class="order-focus-status664" data-order-focus-status role="status" aria-live="polite">${esc(orderFocusCopy664())}</p>
         </section>
         <section class="ledline-arrangement" aria-busy="${arrangementInteractionBusy()}">
@@ -7420,7 +7420,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();retireOrderFocus664();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate715',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate716',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;firstPinReady686.clear();

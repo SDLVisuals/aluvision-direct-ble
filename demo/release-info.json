@@ -108,9 +108,9 @@
     "opticalAcceptance": false
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate715-refined-port-cards-android30",
+  "revision": "V50candidate716-visual-order-guide-android30",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Reviewed browser UI through source715: quieter port cards with distinct muted red, blue, gold and orange screen accents. Redundant colour dots removed. Physical identification palettes, commands, native firmware and timing unchanged. All previous714 UI improvements remain. Native PIN/Wi-Fi and keyboard policy are excluded. Android downloads unchanged.",
+  "interfaceBaseline": "Reviewed browser UI through source716: less prose and visual real-position to app-position example in ordering. Tutorial uses fixed physical LED profiles and shows blue1 to3 while red swaps back and green stays2. Core drag, draft/save, transport and native lifecycle unchanged. All previous715 UI improvements remain. Native PIN/Wi-Fi, keyboard policy and firmware excluded; Android unchanged.",
   "interfaceCandidate673": {
     "sourceSnapshotOnly": true,
     "sameInterfaceAsCandidate672": true,
@@ -278,8 +278,8 @@
     },
     {
       "path": "app.js",
-      "bytes": 700023,
-      "sha256": "a9a1460bc354e3fcd957d88ff61103a20cc1a3e95a97d9baec95f569ad5e70da"
+      "bytes": 700357,
+      "sha256": "7dc3f21cc4a797ba91adf21743b91e262274213721f011880ed027db22ff3257"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -339,7 +339,7 @@
     {
       "path": "index.html",
       "bytes": 9789,
-      "sha256": "e86aac6e6d7415a7ebe415c272795754fd306f9ba2384a15fc5bdbf9a5ab6f12"
+      "sha256": "14e2e3e97fc653cf90a84c31bcfb8bb71bb3a02d0f58836a9b39e91f496ee178"
     },
     {
       "path": "installation-libraries.js",
@@ -378,8 +378,8 @@
     },
     {
       "path": "ledline-order-direct.css",
-      "bytes": 20786,
-      "sha256": "f021fd50f420c012c395cd2b522c16b210afaf3d1e52ce429ab9eda2b8363bf1"
+      "bytes": 22916,
+      "sha256": "b80d6f618d60ab922757da16cbd0cd4f43f013e6e828fb94360d2a7be3cd8151"
     },
     {
       "path": "ledline-order-drag.js",
@@ -398,8 +398,8 @@
     },
     {
       "path": "ledline-order-guide.js",
-      "bytes": 39590,
-      "sha256": "a2d0f7493629cc7348feaea56a46a8cde02087d996bcd17c8c09f507e6db160e"
+      "bytes": 41057,
+      "sha256": "e8ade6cb87ec1fb35ee47699ab4dd93d52a2ebb3013d968e71e1d533a6b10ac2"
     },
     {
       "path": "ledline-order-test.js",
@@ -408,8 +408,8 @@
     },
     {
       "path": "ledline-order-tutorial.css",
-      "bytes": 11397,
-      "sha256": "28d7696b54d2d5c01c40871f69df07c360c6105f6c6050a2c6d9aafe85344218"
+      "bytes": 13141,
+      "sha256": "0087fd255aa0e3b557f2b7ffc30b6c4e1fe25bc2da488b744ee5c0f6f0b938d4"
     },
     {
       "path": "ledline-order-tutorial.js",
@@ -758,8 +758,8 @@
     },
     {
       "path": "v50-order-texts.js",
-      "bytes": 20509,
-      "sha256": "9d4cf1c597d058a5f318c74e4542447f4eb3ceefa80ee7e27ce9a7c6b4a0a50a"
+      "bytes": 20634,
+      "sha256": "c5a7eeca791a3777068e183557e5c8bc5472dc46dcc6ec9d9d497f49022a17cb"
     },
     {
       "path": "v50-order-tutorial.css",
@@ -3475,6 +3475,29 @@
       "Quieter tinted port badges and slim colour accents without fluorescent fills.",
       "Clearly distinct muted red and warm orange screen accents, with consistent legacy palette labels.",
       "Remove redundant colour dots; preserve P1-P4, colour names, on/off state and accessible focus."
+    ],
+    "androidUnchanged": true,
+    "androidVersionCode": 30,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "PINv2Included": false,
+    "PINPreviewIncluded": false,
+    "nativeKeyboardFixIncluded": false,
+    "receiverTimingProvenByDemo": false,
+    "opticalAcceptance": false,
+    "physicalAndroidVerified": false
+  },
+  "interfaceCandidate716": {
+    "sourceSnapshotOnly": true,
+    "sourceBuild": "716",
+    "scope": "Fictional RAM-only browser UI; visual order explanation and tutorial only.",
+    "features": [
+      "Shorter ordering introduction with labelled real-position to app-position blue example; adapts to two lines and is omitted for one.",
+      "Beveled segmented real LED illustration stays fixed while blue drags from app1 to3, red swaps to1 and green stays2.",
+      "Four-language captions, pause/replay/step controls and reduced-motion support retained."
     ],
     "androidUnchanged": true,
     "androidVersionCode": 30,

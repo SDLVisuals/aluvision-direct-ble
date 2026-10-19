@@ -3,8 +3,9 @@
   // Explicit order-interface copy only. Customer names, physical IDs, layout
   // values, pixel counts and colour/RGB protocol values are never translated.
   const rows={
-    orderDirectTitle668:['Zet hier wat je ziet','Match what you see','Reproduisez ce que vous voyez','Übernimm, was du siehst'],
-    orderDirectIntro668:['Kijk naar je echte ledlines. Sleep de kleuren hieronder in dezelfde volgorde.','Look at your real LED lines. Drag the colours below into the same order.','Regardez vos vraies lignes LED. Glissez les couleurs ci-dessous dans le même ordre.','Schau auf deine echten LED-Linien. Ziehe die Farben unten in dieselbe Reihenfolge.'],
+    orderDirectTitle668:['Neem je volgorde over','Match your real order','Reproduisez votre ordre','Übernimm deine Reihenfolge'],
+    orderDirectIntro668:['Sleep elke kleur naar haar echte plaats.','Drag each colour to its real position.','Glissez chaque couleur à sa position réelle.','Ziehe jede Farbe an ihre echte Position.'],
+    orderExample716:['Voorbeeld · blauw op {position}? Sleep blauw naar {position}.','Example · blue at {position}? Drag blue to {position}.','Exemple · le bleu est en {position} ? Glissez-le en {position}.','Beispiel · Blau auf {position}? Ziehe Blau auf {position}.'],
     orderDirectReal668:['Jouw ledlines','Your LED lines','Vos lignes LED','Deine LED-Linien'],
     orderDirectApp668:['In de app','In the app','Dans l’app','In der App'],
     orderDirectRule668:['Je verplaatst alleen de kleuren in de app. Je echte ledlines houden hun kleur.','You only move the colours in the app. Your real LED lines keep their colours.','Vous déplacez uniquement les couleurs dans l’app. Vos vraies lignes LED gardent leur couleur.','Du verschiebst nur die Farben in der App. Deine echten LED-Linien behalten ihre Farbe.'],

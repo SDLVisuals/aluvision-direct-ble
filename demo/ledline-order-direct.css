@@ -75,6 +75,21 @@ html :is(#main,#effect-dialog,body):is(#main,#effect-dialog,body) [data-order-st
 html :is(#main,#effect-dialog,body):is(#main,#effect-dialog,body) [data-order-story-ui="668"][data-phase="4"] .order-story-tap665{opacity:0;animation:none;transform:translateY(-124px)}
 @keyframes order-direct-hand-drag668{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-124px);opacity:1}}
 @keyframes order-direct-hand-finish668{0%,55%{opacity:1}100%{opacity:0}}
+/* 716: a compact real position → matching app position, not another rule list.
+   This is a labelled example only; the actual numbered/drag rows stay intact. */
+.order-copy-example716{display:grid;grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr);gap:9px;align-items:center;padding:10px;border:1px solid var(--line,#d9dde4);border-radius:15px;background:var(--panel,#fff)}
+.order-copy-example716>div{display:grid;gap:7px;min-width:0}
+.order-copy-example716 small{display:flex;gap:5px;align-items:center;color:var(--muted,#68707f);font-size:10px;font-weight:650;line-height:1.3}
+.order-copy-example716 small .icon{width:15px;height:15px;flex:none}
+.order-copy-example716 :is(.order-copy-real716,.order-copy-app716){display:flex;align-items:center;gap:7px;height:36px;min-width:0;border:1px solid var(--line,#d9dde4);border-radius:9px;padding:5px 7px}
+.order-copy-example716 .order-copy-real716{background:radial-gradient(ellipse at 50% 40%,#2a3b36,#16221c);border-color:#30443b}
+.order-copy-example716 b{display:grid;place-items:center;flex:none;width:21px;height:23px;border-radius:6px;background:var(--soft,#edf1f5);font-size:12px;font-weight:750;color:var(--ink,#252c37)}
+.order-copy-example716 .order-copy-real716 b{background:#ffffff14;color:#e5eee9}
+.order-copy-example716 i{display:block;flex:1;min-width:8px;height:12px;border:1px solid #a5bce0;border-radius:4px;background:repeating-linear-gradient(90deg,#4d83ca 0 7px,#3f70b3 7px 8px);box-shadow:inset 0 1px #d2e2f977,0 0 6px #5087cc44}
+.order-copy-example716 .order-copy-app716 .icon{flex:none;width:14px;height:18px;color:var(--muted,#68707f)}
+.order-copy-arrow716{font-size:22px;color:var(--muted,#68707f);text-align:center;padding-top:18px}
+.order-focus-guide664>.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip-path:inset(50%)!important;white-space:nowrap!important}
+html :is(#main,#effect-dialog,body):is(#main,#effect-dialog,body) .ledline-setup[data-order-direct-ui="668"] .order-copy-caption716{font-size:11px;line-height:1.4;color:var(--ink,#252c37)}
 @media(max-width:360px){
   html :is(#main,#effect-dialog,body):is(#main,#effect-dialog,body) .ledline-setup[data-order-direct-ui="668"] .order-place668{grid-template-columns:36px minmax(0,1fr);gap:8px}
   html :is(#main,#effect-dialog,body):is(#main,#effect-dialog,body) .ledline-setup[data-order-direct-ui="668"] .order-place-number668{width:36px}
