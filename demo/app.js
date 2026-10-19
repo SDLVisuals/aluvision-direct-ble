@@ -915,14 +915,13 @@
   window.addEventListener('scroll',updateControlPreviewDensity,{passive:true});
   window.addEventListener('resize',()=>{measureControlPreviewDock();updateControlPreviewDensity();if(openLineSetup.has(route.zoneId)){if(inlineOrderDrag?.isActive())inlineOrderDrag.cancel();syncOrderSlots();}},{passive:true});
   function revealAnimationStart(){
-    // Do not carry a deep gallery scroll position into the settings. Align
-    // their heading below the visible dock, including its compacted height.
+    // Enter settings at the page start: zone tabs and preview stay visible.
+    // Only explicit editor entry calls this; live edits and nested pickers
+    // keep their own scroll position rather than jumping back to the top.
     const workspace=main.querySelector('.active-animation-workspace');if(!workspace)return;
-    // Keep the view/order tools in sight when leaving a deeply scrolled
-    // gallery. They now belong above the settings, directly under the preview.
-    const target=main.querySelector('.ui606-line-tools')||workspace;
-    revealBelowControlPreview(target,12);
-    requestAnimationFrame(()=>workspace.querySelector('#active-animation-title')?.focus({preventScroll:true}));
+    window.scrollTo({top:0,left:0,behavior:'instant'});
+    updateControlPreviewDensity();
+    workspace.querySelector('#active-animation-title')?.focus({preventScroll:true});
   }
   function revealColourControls(){
     const picker=main.querySelector('[data-control-mode="colour"] .shared-colour-picker');if(!picker)return;
@@ -7421,7 +7420,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();retireOrderFocus664();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate713',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate714',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;firstPinReady686.clear();

@@ -108,9 +108,9 @@
     "opticalAcceptance": false
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate713-matching-navigation-android30",
+  "revision": "V50candidate714-animation-editor-top-android30",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Reviewed browser UI through source713: picker-return and animation-groups navigation share the same quiet light-card styling, dimensions and icon sizes. All previously published712 interface changes remain included. Native iPhone keyboard policy, native PIN and protected Wi-Fi naming, receiver firmware and hardware behavior are not included. Android downloads remain unchanged.",
+  "interfaceBaseline": "Reviewed browser UI through source714: entering animation settings starts at the top with the zone tabs and preview visible. Edits, sliders, nested-picker return and gallery return keep their own scroll behavior. All previous713 UI improvements remain. Native PIN/Wi-Fi, keyboard policy and receiver firmware are not part of this browser artifact. Android downloads unchanged.",
   "interfaceCandidate673": {
     "sourceSnapshotOnly": true,
     "sameInterfaceAsCandidate672": true,
@@ -278,8 +278,8 @@
     },
     {
       "path": "app.js",
-      "bytes": 700148,
-      "sha256": "093716de6dcf8b5aceec01ed3ae081c93592e9689f10e8016ce4afd93a2104f8"
+      "bytes": 700023,
+      "sha256": "8882ba5f41aa05055a6baec0bb5c333a2027f2c4271fc9afb86cb59cd5d2642d"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -339,7 +339,7 @@
     {
       "path": "index.html",
       "bytes": 9789,
-      "sha256": "db6c58301ba268f4bbe7f4cbb974f7b9a8a2d4b6406a6ae8d5ef9792e18a4f66"
+      "sha256": "95bac24429352775eb6d0664ee71323d98ede64a827f7e45df45c2ffd65323c2"
     },
     {
       "path": "installation-libraries.js",
@@ -3429,6 +3429,29 @@
       "Picker-return card matches animation-groups card: light panel,62px minimum height,16px corners,10x12px padding and38px icon badge.",
       "Matching14px titles and22px glyphs in basic and advanced modes.",
       "No red glow or navigation pulse; existing back action and focus feedback preserved."
+    ],
+    "androidUnchanged": true,
+    "androidVersionCode": 30,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "PINv2Included": false,
+    "PINPreviewIncluded": false,
+    "nativeKeyboardFixIncluded": false,
+    "receiverTimingProvenByDemo": false,
+    "opticalAcceptance": false,
+    "physicalAndroidVerified": false
+  },
+  "interfaceCandidate714": {
+    "sourceSnapshotOnly": true,
+    "sourceBuild": "714",
+    "scope": "Fictional RAM-only browser UI. Explicit editor entry scroll only; no device or timing changes.",
+    "features": [
+      "Open animation settings at document top, not below the sticky preview.",
+      "Keep slider, palette, nested picker and gallery-return scroll behavior unchanged.",
+      "Existing whole-stand dialog already opens settings at its own top."
     ],
     "androidUnchanged": true,
     "androidVersionCode": 30,
