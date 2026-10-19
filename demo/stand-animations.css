@@ -1,6 +1,13 @@
 /* Whole-stand scope uses the same library/editor, in its existing fullscreen sheet. */
 .stand-controls-tabs{grid-column:1/-1;position:static;margin:0;padding:5px;background:var(--glass);border-radius:20px;box-shadow:0 5px 20px #0000000b;min-width:0}
-html body #effect-dialog:has([data-stand-control-sheet]) #effect-dialog-content>header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none}
+/* Both stand modes share one viewport and the same title/tab geometry. Only
+   the colour mode lacks a header exit; its inert spacer is not a new action. */
+html body #effect-dialog:has([data-stand-control-sheet]){position:fixed;inset:0;margin:0;width:100%;max-width:none;height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;box-sizing:border-box;padding:0;border:0;border-radius:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scroll-padding-top:calc(var(--dialog-header-height,64px) + 12px)}
+html body #effect-dialog:has([data-stand-control-sheet]) #effect-dialog-content>header{display:grid;grid-template-columns:minmax(0,1fr) 44px;grid-template-rows:minmax(44px,auto) auto;align-items:center;gap:10px;position:sticky;top:0;z-index:8;margin:0;padding:calc(10px + env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 10px max(14px,env(safe-area-inset-left));border-radius:0;border-bottom:1px solid var(--line);background:var(--bg);background-image:none;box-shadow:0 3px 12px #00000008;backdrop-filter:none;-webkit-backdrop-filter:none}
+html body #effect-dialog:has([data-stand-control-sheet]) #effect-dialog-content>header>h2{grid-column:1;grid-row:1;display:flex;align-items:center;min-width:0;min-height:44px;margin:0;font-size:20px;line-height:1.2;overflow-wrap:anywhere}
+html body #effect-dialog:has([data-stand-control-sheet]) #effect-dialog-content>header>[data-action="effect-dialog-close"]{grid-column:2;grid-row:1;align-self:center;width:44px;min-width:44px;height:44px;min-height:44px;margin:0;padding:0}
+html body #effect-dialog.colour-picker-dialog:has([data-stand-control-sheet]) #effect-dialog-content>header::after{content:"";grid-column:2;grid-row:1;display:block;width:44px;height:44px;pointer-events:none}
+html body #effect-dialog:has([data-stand-control-sheet]) #effect-dialog-content>header>.stand-controls-tabs{grid-column:1/-1;grid-row:2;box-sizing:border-box;min-height:60px;margin:0}
 /* Keep scrolling labels out of the sticky controls, including WKWebView's
    nested glass surfaces. The raised buttons retain the existing glass style. */
 html body .stand-controls-tabs.section-tabs{background:var(--glass-solid);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}

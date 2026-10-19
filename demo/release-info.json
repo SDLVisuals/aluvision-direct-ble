@@ -108,9 +108,9 @@
     "opticalAcceptance": false
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate717-direct-port-pixels-android30",
+  "revision": "V50candidate718-consistent-fullscreen-colour-android30",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Reviewed browser interface through source717: Pixels aanpassen follows the selected receiver port and saves from that pixel page without the normal review screen. Explicit multi-port edits remain supported; unresolved transaction recovery keeps its safety review. Other outputs, direction and transport guards unchanged. Previous716 UI retained. Native PIN/Wi-Fi, firmware and keyboard policy excluded; Android downloads unchanged.",
+  "interfaceBaseline": "Reviewed browser interface through source718: equal whole-stand Kleur/Animaties title and tab geometry; fullscreen shared colour editors and app-styled local-draft preset RGB editor. Previous717 UI retained. Native PIN/Wi-Fi, firmware and keyboard policy excluded; Android downloads unchanged.",
   "interfaceCandidate673": {
     "sourceSnapshotOnly": true,
     "sameInterfaceAsCandidate672": true,
@@ -278,8 +278,8 @@
     },
     {
       "path": "app.js",
-      "bytes": 700811,
-      "sha256": "7d0f725bdeea515a2245061877fc30935e8c81b0a48886b24e69fac3166e64cb"
+      "bytes": 701185,
+      "sha256": "59564a59f5bbddb7d08ca74517e9cf7b208b3e1c4b49a35725a9a41dd7dba63a"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -298,18 +298,18 @@
     },
     {
       "path": "colour-picker-dialog.css",
-      "bytes": 1909,
-      "sha256": "98900e899e0b71758c9c153dcd6e68d7339586197ec1511e5312550038f1a9e1"
+      "bytes": 3821,
+      "sha256": "086e67395c8351e653c1a877c5b4e2a06e7ddb1e7937fa4d1e43c32b2a806f22"
     },
     {
       "path": "colour-presets-ui.css",
-      "bytes": 12965,
-      "sha256": "5a6d0b814dc5a111ecf14300c389ef27f2c2fd16a6367d3a24fbf8b017e4b3a7"
+      "bytes": 17451,
+      "sha256": "2e363a9ba9a7a001848f47b488b58067a46d1566491733da5cf8c743a848e6f6"
     },
     {
       "path": "colour-presets-ui.js",
-      "bytes": 12584,
-      "sha256": "ab7eb21a4c045c35c65c1d0308d55a3e113fb3ac3caded8f1e9c2d7ce50ac61d"
+      "bytes": 19999,
+      "sha256": "4a3019f237482339e300a27a3771e30becf908b8d63222d2462d1c7181602268"
     },
     {
       "path": "colour-wheel.css",
@@ -339,7 +339,7 @@
     {
       "path": "index.html",
       "bytes": 9789,
-      "sha256": "2a07edc6532d23b6ecdb01fa6189a6e14e61941a36d76f3d1c9a4ace5ff69ec2"
+      "sha256": "740b176c2a55d94a9fbdc717d201e07197ca0c6da314b8f1ad72f85d20aa9bbe"
     },
     {
       "path": "installation-libraries.js",
@@ -623,8 +623,8 @@
     },
     {
       "path": "stand-animations.css",
-      "bytes": 10350,
-      "sha256": "3b5ebb89fda4d810399e6b5891ae9a6a2317d47675f2d1cb4ce020f157079021"
+      "bytes": 12074,
+      "sha256": "88d377c3c30b2aba9b13fbbeae9c22a939b024daae55becf205315dea99badd3"
     },
     {
       "path": "stand-animations.js",
@@ -3521,6 +3521,29 @@
       "Receiver pixel shortcut follows selected P1-P4 instead of selecting all enabled ports.",
       "Save directly from last selected pixel page; omit normal pixels-only review.",
       "Retain explicit multiple-port edits, pending transaction recovery review, STOP/ACK and save guards."
+    ],
+    "androidUnchanged": true,
+    "androidVersionCode": 30,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "PINv2Included": false,
+    "PINPreviewIncluded": false,
+    "nativeKeyboardFixIncluded": false,
+    "receiverTimingProvenByDemo": false,
+    "opticalAcceptance": false,
+    "physicalAndroidVerified": false
+  },
+  "interfaceCandidate718": {
+    "sourceSnapshotOnly": true,
+    "sourceBuild": "718",
+    "scope": "Fictional RAM-only browser interface; shared control geometry and fullscreen colour presentation.",
+    "features": [
+      "Match title/tab geometry in both whole-stand modes on phone and desktop.",
+      "Fullscreen animation, background, brand and whole-stand shared colour pickers with one bottom Done.",
+      "Replace browser-native preset RGB popup with a fullscreen local-draft picker; explicit preset Save still required."
     ],
     "androidUnchanged": true,
     "androidVersionCode": 30,

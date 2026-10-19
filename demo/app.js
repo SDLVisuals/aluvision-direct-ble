@@ -6362,9 +6362,10 @@
     queueMicrotask(()=>{if(dialogActionOpener===button)dialogActionOpener=null;});
     try {
       if(action==='animation-categories'&&button.hasAttribute('data-discovery-return')&&button.closest('.animation-library-inline[data-discovery-ui="662"]'))return revealAnimationCategoryChoices687(button);
-      if(['colour-preset-edit667','colour-preset-save667','colour-preset-cancel667','colour-preset-remove667','colour-presets-brands667'].includes(action)||
+      if(['colour-preset-edit667','colour-preset-save667','colour-preset-cancel667','colour-preset-remove667','colour-presets-brands667','colour-preset-rgb-open718'].includes(action)||
         action==='colour-undo'&&button.closest('[data-inline-presets="667"]')){
         if(!button.closest('[data-inline-presets="667"]')||presetLibraryBusy667)return;
+        if(action==='colour-preset-rgb-open718')return window.LightningColourPresetsUI.openRGBPicker({source:button,colourMath:C,language:uiPreferences.preferences.language});
         if(action==='colour-preset-edit667')return openPresetEditor667(button,id);
         if(action==='colour-preset-save667')return savePresetDraft667(button);
         if(action==='colour-preset-cancel667'){
@@ -7247,6 +7248,7 @@
     const hex=C.hex([presetEdit667.color.r,presetEdit667.color.g,presetEdit667.color.b]);
     editor.querySelector('[data-colour-preset-rgb667]').value=hex;
     editor.querySelector('.colour-preset-editor-dot667')?.style.setProperty('--swatch',C.screenHex([presetEdit667.color.r,presetEdit667.color.g,presetEdit667.color.b],presetEdit667.color.w));
+    editor.querySelector('.colour-preset-rgb-open718>i')?.style.setProperty('--swatch',C.screenHex([presetEdit667.color.r,presetEdit667.color.g,presetEdit667.color.b]));
     input.removeAttribute('aria-invalid');editor.querySelector('[data-preset-draft-error667]')?.remove();
     presetEdit667.error='';
   });
@@ -7425,7 +7427,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();retireOrderFocus664();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate717',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate718',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;firstPinReady686.clear();

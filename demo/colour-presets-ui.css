@@ -59,3 +59,29 @@ html :is(#main,#effect-dialog,body):is(#main,#effect-dialog,body) .my-colours[da
   html :is(#main,#effect-dialog,body):is(#main,#effect-dialog,body) .my-colours[data-inline-presets="667"][data-inline-presets="667"][data-inline-presets="667"] .saved-colour>i{flex-basis:28px;width:28px;height:28px}
   html :is(#main,#effect-dialog,body):is(#main,#effect-dialog,body) .my-colours[data-inline-presets="667"][data-inline-presets="667"][data-inline-presets="667"] .saved-colour>.colour-preset-name667{font-size:12px}
 }
+/* Preset RGB is an isolated local draft: app-styled modal, never an OS picker. */
+html body .colour-preset-rgb-open718{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:48px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+html body .colour-preset-rgb-field667:has(.colour-preset-rgb-open718){grid-template-columns:minmax(0,1fr)}
+html body .colour-preset-rgb-open718>i{display:block;flex:none;width:30px;height:28px;border:1px solid var(--line);border-radius:8px;background:var(--swatch)}
+html body dialog.colour-preset-rgb-dialog718{position:fixed;inset:0;box-sizing:border-box;width:100%;max-width:none;height:100%;height:100dvh;max-height:none;margin:0;padding:0;border:0;border-radius:0;background:var(--bg,#f5f7fa);color:var(--ink,#252c37);overflow:auto;overscroll-behavior:contain;font-family:inherit;scroll-padding-block:100px}
+html body dialog.colour-preset-rgb-dialog718::backdrop{background:#0006}
+html body dialog.colour-preset-rgb-dialog718[open]{display:flex;flex-direction:column}
+html body dialog.colour-preset-rgb-dialog718>header{display:flex;flex:none;align-items:center;gap:12px;position:sticky;top:0;z-index:2;margin:0;padding:calc(10px + env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 10px max(14px,env(safe-area-inset-left));border-bottom:1px solid var(--line);background:var(--bg)}
+html body dialog.colour-preset-rgb-dialog718 h2{flex:1;min-width:0;margin:0;font-size:20px;line-height:1.25;overflow-wrap:anywhere}
+html body dialog.colour-preset-rgb-dialog718>header button{flex:none;display:grid;place-items:center;min-width:44px;min-height:44px;border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink);font-size:28px}
+html body dialog.colour-preset-rgb-dialog718 .preset-rgb-body718{display:grid;flex:1;align-content:start;box-sizing:border-box;gap:16px;width:100%;max-width:620px;margin:0 auto;padding:16px max(14px,env(safe-area-inset-right)) 24px max(14px,env(safe-area-inset-left))}
+html body dialog.colour-preset-rgb-dialog718 p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+html body dialog.colour-preset-rgb-dialog718 .preset-rgb-wheel718{position:relative;width:min(100%,340px);aspect-ratio:1;justify-self:center;margin:8px 0}
+html body dialog.colour-preset-rgb-dialog718 canvas{display:block;width:100%;height:100%;touch-action:none;border-radius:50%}
+html body dialog.colour-preset-rgb-dialog718 .preset-rgb-wheel718>i{position:absolute;width:18px;height:18px;box-sizing:border-box;border:3px solid #fff;border-radius:50%;box-shadow:0 1px 5px #0008;transform:translate(-50%,-50%);pointer-events:none}
+html body dialog.colour-preset-rgb-dialog718 fieldset{display:grid;gap:12px;min-width:0;margin:0;padding:16px;border:1px solid var(--line);border-radius:18px;background:var(--panel)}
+html body dialog.colour-preset-rgb-dialog718 legend{padding:0 5px;font-weight:700;font-size:15px}
+html body dialog.colour-preset-rgb-dialog718 label{display:grid;grid-template-columns:24px minmax(0,1fr) 72px;align-items:center;gap:10px;min-width:0}
+html body dialog.colour-preset-rgb-dialog718 input{box-sizing:border-box;min-width:0;width:100%;min-height:48px;accent-color:var(--red);font:inherit;font-size:16px}
+html body dialog.colour-preset-rgb-dialog718 input[type=number]{padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);text-align:center}
+html body dialog.colour-preset-rgb-dialog718>footer{position:sticky;flex:none;bottom:0;z-index:2;padding:12px max(14px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));border-top:1px solid var(--line);background:var(--bg)}
+html body dialog.colour-preset-rgb-dialog718>footer button{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;border:1px solid var(--ink);border-radius:16px;background:var(--ink);color:var(--bg);font:inherit;font-weight:700}
+html body dialog.colour-preset-rgb-dialog718>footer svg{width:20px;height:20px}
+html body dialog.colour-preset-rgb-dialog718 :is(button,input,canvas):focus-visible{outline:3px solid var(--red);outline-offset:3px}
+html body dialog.colour-preset-rgb-dialog718 button:disabled{opacity:.45;cursor:default}
+html body dialog.colour-preset-rgb-dialog718 [aria-invalid=true]{border-color:var(--red);outline:2px solid var(--red)}
