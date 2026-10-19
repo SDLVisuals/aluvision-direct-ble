@@ -108,9 +108,9 @@
     "opticalAcceptance": false
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate719-clear-port-colours-android30",
+  "revision": "V50candidate722-interface-bugfixes-android30",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Reviewed browser interface through source719: solid, larger, non-fluorescent colour badges for port identification; red, blue, yellow and orange with contrasting labels. Physical test-light palette, switching, transport and every previous718 improvement retained. Native PIN/Wi-Fi, firmware and keyboard policy excluded; Android downloads unchanged.",
+  "interfaceBaseline": "Reviewed browser interface through source722: a confirmed PIN-action button cleanup fix over the published719 interface. Native PIN/Wi-Fi, firmware, SDK and native keyboard policy excluded; Android downloads unchanged.",
   "interfaceCandidate673": {
     "sourceSnapshotOnly": true,
     "sameInterfaceAsCandidate672": true,
@@ -278,8 +278,8 @@
     },
     {
       "path": "app.js",
-      "bytes": 701185,
-      "sha256": "8224286ff971868bef192eebd1c41827994f21a39aee5a68743f43f4a0e5df9e"
+      "bytes": 703720,
+      "sha256": "9bf998d61bb83103db11759170e77f464735bd4b75e4dcc7e0f8b29f65f469e3"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -339,7 +339,7 @@
     {
       "path": "index.html",
       "bytes": 9789,
-      "sha256": "4570a863058cef866f1a00420a00f0aaab41502580acad875d00bdd1b48d59dc"
+      "sha256": "1fb844f91fb89a69dc4c80267a17037e9ac16dea756a541074c6109be7bf63cd"
     },
     {
       "path": "installation-libraries.js",
@@ -3567,6 +3567,27 @@
       "Solid 36px colour badges instead of pale tinted port numbers.",
       "Distinct non-fluorescent red, blue, yellow and orange; contrasting badge labels.",
       "Physical palette, output switch state and module behaviour unchanged."
+    ],
+    "androidUnchanged": true,
+    "androidVersionCode": 30,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "PINv2Included": false,
+    "PINPreviewIncluded": false,
+    "nativeKeyboardFixIncluded": false,
+    "receiverTimingProvenByDemo": false,
+    "opticalAcceptance": false,
+    "physicalAndroidVerified": false
+  },
+  "interfaceCandidate722": {
+    "sourceSnapshotOnly": true,
+    "sourceBuild": "722",
+    "scope": "Fictional RAM-only browser interface; confirmed-action button cleanup. Native PIN/Wi-Fi/firmware are not part of this browser artifact.",
+    "features": [
+      "Confirmed-action button cleanup avoids stale detached DOM access; native PIN and Wi-Fi functionality are not enabled by this demo."
     ],
     "androidUnchanged": true,
     "androidVersionCode": 30,

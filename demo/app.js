@@ -146,6 +146,8 @@
   standPresentationBrowsingActions.add('receiver-context-status-retry');
   // This only reopens a local editor; it cannot apply its remembered recipe.
   standPresentationBrowsingActions.add('animation-editor-return');
+  // Opens only this device's native credential view; never a network write.
+  standPresentationBrowsingActions.add('first-pin-stored-show721');
   function standPresentationMessage(){
     if(standConnectionState.status==='connected'&&centralApplied)return t("Verbonden · actuele stand");
     return ['connecting','checking'].includes(standConnectionState.status)?t("Bewaarde stand · verbinden…"):t("Bewaarde stand · niet verbonden");
@@ -4548,6 +4550,36 @@
     const active=uiPreferences.preferences.theme===theme;
     return `<button class="theme-choice" data-action="theme" data-id="${theme}" aria-pressed="${active}"><span class="theme-choice-preview" aria-hidden="true"><i class="theme-preview-header"></i><i class="theme-preview-card"></i><i class="theme-preview-nav"></i></span><span class="theme-choice-label">${icon(theme==='dark'?'moon':'sun')}${esc(t(theme))}</span><span class="theme-choice-check" aria-hidden="true">${icon('check')}</span></button>`;
   }
+  let storedFirstPinBusy721=false;
+  const firstPinUiText721=key=>window.LightningFirstPinV2.text(key,uiPreferences.preferences.language);
+  function canShowStoredFirstPin721(){
+    const standId=stand()?.id;
+    return nativeContext&&runtime?.native===true&&!temporarySingleUser&&!!standId&&
+      matchesFirstPinReady686(firstPinReady686.get(standId),model)&&
+      typeof runtime.services?.FirstPinV2?.showStored==='function';
+  }
+  function storedFirstPinCard721(){
+    if(!canShowStoredFirstPin721())return '';
+    return `<button type="button" class="menu-card first-pin-stored-entry721" data-first-pin-stored721 data-action="first-pin-stored-show721" ${storedFirstPinBusy721?'disabled aria-busy="true"':''}><span class="menu-icon" aria-hidden="true">${icon('lock')}</span><span class="first-pin-stored-copy721"><b>${esc(firstPinUiText721('storedTitle'))}</b><small>${esc(firstPinUiText721('storedHint'))}</small></span><span aria-hidden="true">${icon('chevron')}</span></button>`;
+  }
+  async function showStoredFirstPin721(button){
+    if(storedFirstPinBusy721||!canShowStoredFirstPin721())return;
+    const standId=stand().id,current=()=>stand()?.id===standId&&canShowStoredFirstPin721();
+    storedFirstPinBusy721=true;button.disabled=true;button.setAttribute('aria-busy','true');
+    try{
+      // PIN, network credentials and sharing remain entirely inside native UI.
+      const result=await runtime.services.FirstPinV2.showStored({standId});
+      if(!result||Object.keys(result).sort().join(',')!=='status'||result.status!=='shown')throw Error('FIRST_PIN_VIEW_UNCONFIRMED');
+    }catch(error){
+      if(current()&&!['CANCELLED','MAIN_CANCELLED'].includes(error?.code))toast(firstPinUiText721(['BUSY','MAIN_BUSY','FIRST_PIN_V2_BUSY'].includes(error?.code)?'storedBusy':'storedUnavailable'));
+    }finally{
+      storedFirstPinBusy721=false;
+      // Returning from native UI may already have rebuilt Settings. Restore
+      // the current control too, without rerendering or reopening the vault.
+      const controls=new Set([button,main.querySelector('[data-first-pin-stored721]')]);
+      for(const control of controls)if(control?.isConnected){control.disabled=!canShowStoredFirstPin721();control.removeAttribute('aria-busy');}
+    }
+  }
   function renderSettings() {
     return `<div class="page settings-page"><header class="page-heading overview-heading settings-overview-heading"><div><h1>${esc(t('settings'))}</h1></div></header>${interfaceModeMarkup()}<section class="card settings-appearance"><h2 class="settings-appearance-heading">${icon('settings')}<span>${esc(t('appearance'))}</span></h2><h3 class="preference-label">${esc(t('language'))}</h3><div class="preference-grid">${Preferences.languages.map(language=>`<button data-action="language" data-id="${language.code}" lang="${language.code}" aria-pressed="${uiPreferences.preferences.language===language.code}">${language.name}</button>`).join('')}</div>${uiPreferences.preferences.language==='nl'?'':`<p class="preference-note">${esc(t('wipNotice'))}</p>`}<h3 class="preference-label">${esc(t('theme'))}</h3><div class="preference-grid theme-choice-grid">${['light','dark'].map(themeChoiceMarkup).join('')}</div>${uiPreferences.error?`<p role="alert">${esc(uiPreferences.error.message)}</p>`:''}</section><button class="menu-card settings-help-entry" data-action="help"><span class="menu-icon">${icon('info')}</span><div><b>${esc(t("Stand en zones uitgelegd"))}</b><small>${esc(t("Zo organiseer je je verlichting"))}</small></div>${icon('chevron')}</button></div>`;
   }
@@ -4566,7 +4598,7 @@
     };
     // Move the existing controls rather than duplicating them. Their native
     // status/disabled guards and async save lifecycle stay authoritative.
-    group('settings-installation','settingsInstallation',['[data-stand-connection]','[data-pin-protection]','.pin-login-entry','[data-backup-panel]','[data-action="help"]']);
+    group('settings-installation','settingsInstallation',['[data-stand-connection]','[data-first-pin-stored721]','[data-pin-protection]','.pin-login-entry','[data-backup-panel]','[data-action="help"]']);
     group('settings-app-tools','settingsThisApp',['.settings-appearance','[data-action="preferences-reset"]']);
     const erase=page.querySelector('.app-erase-section');if(erase)page.append(erase);
   }
@@ -4752,7 +4784,7 @@
     if(previewDock){const spatial=previewDock.querySelector('.spatial-preview-wrap')!==null;previewDock.dataset.previewSize=controlPreviewSize;previewDock.dataset.spatialPreview=spatial?'true':'false';if(keepCompactPreview)previewDock.dataset.scrolled='true';}
     main.classList.toggle('gallery-scroll-stable',Boolean(main.querySelector('#animation-results')));
     if(route.screen==='scene-detail')main.querySelector('.scene-activate-bar')?.insertAdjacentHTML('afterbegin','<p class="live-confirmation" data-live-status="scene" role="status" aria-live="polite"></p>');
-    if(route.screen==='settings')main.querySelector('.page-heading')?.insertAdjacentHTML('afterend',pinProtectionCard());
+    if(route.screen==='settings')main.querySelector('.page-heading')?.insertAdjacentHTML('afterend',pinProtectionCard()+storedFirstPinCard721());
     if(route.screen==='settings'&&Backup)main.querySelector('[data-action="help"]')?.insertAdjacentHTML('afterend',backupPanel());
     if(route.screen==='stand'&&model.stands.length>1)main.querySelector('.page-heading')?.insertAdjacentHTML('afterend',`<button class="text-button" data-action="stand-switch-open">${esc(t("Andere stand openen"))}</button>`);
     if(!simpleStandMode&&route.screen==='settings'&&nativeContext&&window.__lightningV32ReceiverContext===true&&standReceivers().length){
@@ -6636,6 +6668,7 @@
       if(action==='receiver-context-status-retry')return await readReceiverContextStatus({retry:true});
       if(action==='backup-confirm')return await restoreBackup(button);
       if(action==='demo-settings-tab'&&webDemoContext)return navigate(id==='wifi'?'demo-wifi':'settings');
+      if(action==='first-pin-stored-show721')return showStoredFirstPin721(button);
       if(action==='pin-protection-toggle')return openPinProtection();
       if(action==='pin-protection-refresh')return refreshPinProtection();
       if(action==='pin-protection-reconnect'&&pinProtectionReconnect)return showPinReconnect(pinProtectionReconnect);
@@ -7427,7 +7460,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();retireOrderFocus664();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate719',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate722',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;firstPinReady686.clear();
