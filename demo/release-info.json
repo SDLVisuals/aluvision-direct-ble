@@ -108,9 +108,9 @@
     "opticalAcceptance": false
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate714-animation-editor-top-android30",
+  "revision": "V50candidate715-refined-port-cards-android30",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Reviewed browser UI through source714: entering animation settings starts at the top with the zone tabs and preview visible. Edits, sliders, nested-picker return and gallery return keep their own scroll behavior. All previous713 UI improvements remain. Native PIN/Wi-Fi, keyboard policy and receiver firmware are not part of this browser artifact. Android downloads unchanged.",
+  "interfaceBaseline": "Reviewed browser UI through source715: quieter port cards with distinct muted red, blue, gold and orange screen accents. Redundant colour dots removed. Physical identification palettes, commands, native firmware and timing unchanged. All previous714 UI improvements remain. Native PIN/Wi-Fi and keyboard policy are excluded. Android downloads unchanged.",
   "interfaceCandidate673": {
     "sourceSnapshotOnly": true,
     "sameInterfaceAsCandidate672": true,
@@ -279,7 +279,7 @@
     {
       "path": "app.js",
       "bytes": 700023,
-      "sha256": "8882ba5f41aa05055a6baec0bb5c333a2027f2c4271fc9afb86cb59cd5d2642d"
+      "sha256": "a9a1460bc354e3fcd957d88ff61103a20cc1a3e95a97d9baec95f569ad5e70da"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -339,7 +339,7 @@
     {
       "path": "index.html",
       "bytes": 9789,
-      "sha256": "95bac24429352775eb6d0664ee71323d98ede64a827f7e45df45c2ffd65323c2"
+      "sha256": "e86aac6e6d7415a7ebe415c272795754fd306f9ba2384a15fc5bdbf9a5ab6f12"
     },
     {
       "path": "installation-libraries.js",
@@ -498,8 +498,8 @@
     },
     {
       "path": "pixel-setup.css",
-      "bytes": 38326,
-      "sha256": "3a4fc9502ded92e388eafa075eeeb128090b92c8c0034a01a65dac43ac480560"
+      "bytes": 41203,
+      "sha256": "5cf52f3ea0ee53a6a27009763af49a2bc12c51bdadfc18e12caf3c4bda61e407"
     },
     {
       "path": "pixel-setup.js",
@@ -3452,6 +3452,29 @@
       "Open animation settings at document top, not below the sticky preview.",
       "Keep slider, palette, nested picker and gallery-return scroll behavior unchanged.",
       "Existing whole-stand dialog already opens settings at its own top."
+    ],
+    "androidUnchanged": true,
+    "androidVersionCode": 30,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "PINv2Included": false,
+    "PINPreviewIncluded": false,
+    "nativeKeyboardFixIncluded": false,
+    "receiverTimingProvenByDemo": false,
+    "opticalAcceptance": false,
+    "physicalAndroidVerified": false
+  },
+  "interfaceCandidate715": {
+    "sourceSnapshotOnly": true,
+    "sourceBuild": "715",
+    "scope": "Fictional RAM-only browser UI; CSS-only output-card refinement.",
+    "features": [
+      "Quieter tinted port badges and slim colour accents without fluorescent fills.",
+      "Clearly distinct muted red and warm orange screen accents, with consistent legacy palette labels.",
+      "Remove redundant colour dots; preserve P1-P4, colour names, on/off state and accessible focus."
     ],
     "androidUnchanged": true,
     "androidVersionCode": 30,
