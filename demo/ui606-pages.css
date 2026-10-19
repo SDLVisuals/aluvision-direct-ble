@@ -590,3 +590,88 @@ html body .ui606-pages .ui606-scene-delete .icon { width: 17px; height: 17px; }
 @media (prefers-reduced-motion: reduce) {
   html body .ui606-pages :is(button, summary, .icon) { transition: none; }
 }
+
+/* 707: the same receiver actions, with a consistent settings-row hierarchy. */
+html body .receiver-details .receiver-management707 {
+  margin: 12px 0 0;
+  padding: 0;
+  border: 0;
+  gap: 7px;
+}
+html body .receiver-details .receiver-setting-row707 {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  min-width: 0;
+  min-height: 74px;
+  width: 100%;
+  padding: 13px;
+  text-align: left;
+  color: var(--ink);
+  font-weight: 650;
+  line-height: 1.4;
+}
+html body .receiver-details .receiver-management707 > .receiver-setting-row707,
+html body .receiver-details .receiver-options707 {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: none;
+}
+html body .receiver-details .receiver-options707 { margin-top: 12px; }
+html body .receiver-details .receiver-setting-row707 > .receiver-setting-icon707 {
+  display: grid;
+  place-items: center;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 11px;
+  background: var(--soft);
+  color: var(--muted);
+}
+html body .receiver-details .receiver-setting-icon707 > .icon { width: 21px; height: 21px; }
+html body .receiver-details .receiver-setting-row707 > .receiver-setting-copy707 {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 3px;
+  overflow-wrap: anywhere;
+}
+html body .receiver-details .receiver-setting-copy707 > b {
+  display: block;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.35;
+}
+html body .receiver-details .receiver-setting-copy707 > small {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--muted);
+}
+html body .receiver-details .receiver-setting-row707 > .icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  margin: 0 0 0 auto;
+  color: var(--muted);
+}
+html body .receiver-details .receiver-options707[open] > summary > .icon { transform: rotate(90deg); }
+html body .receiver-details .receiver-management707 > .receiver-preserved707 {
+  padding: 0 4px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+html body .receiver-details .receiver-options707 .receiver-public-identity {
+  margin: 4px 0 10px;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+html body .receiver-details .receiver-setting-row707:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: -3px;
+}

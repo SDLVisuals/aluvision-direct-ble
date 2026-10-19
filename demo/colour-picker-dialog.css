@@ -1,5 +1,5 @@
-/* Colour is already applied live: these are clear, reachable exits, not a
-   second save/apply operation. Keep both controls on the existing close path. */
+/* Colour is already applied live. One sticky footer exit uses the existing
+   guarded close path; it is not a second save/apply operation. */
 html body #effect-dialog.colour-picker-dialog {
   scroll-padding-bottom:calc(104px + env(safe-area-inset-bottom));
 }
@@ -10,9 +10,6 @@ html body #effect-dialog.colour-picker-dialog [data-colour-picker-done] {
   border-radius:14px;background:var(--ink);color:var(--bg);
   font-family:inherit;font-size:16px;font-weight:700;line-height:1.25;cursor:pointer;
   -webkit-tap-highlight-color:transparent;touch-action:manipulation;
-}
-html body #effect-dialog.colour-picker-dialog .colour-picker-done-header {
-  align-self:center;
 }
 html body #effect-dialog.colour-picker-dialog .colour-picker-actions {
   position:sticky;bottom:-22px;z-index:7;display:flex;align-items:center;
@@ -37,9 +34,4 @@ html body #effect-dialog.colour-picker-dialog :is(button,input) {
 }
 html body #effect-dialog.colour-picker-dialog:has([data-stand-control-sheet]) .colour-picker-actions {
   bottom:0;margin:8px 0 0;
-}
-@media(max-width:360px) {
-  html body #effect-dialog.colour-picker-dialog .colour-picker-done-header {
-    min-width:76px;padding-inline:13px;
-  }
 }

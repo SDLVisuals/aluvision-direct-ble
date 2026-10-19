@@ -407,3 +407,27 @@ html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="66
     transition: none;
   }
 }
+
+/* The same back button moves between its inline slot and the fixed dock.
+   Style the control itself so both locations retain the same clear hierarchy. */
+html.interface-polish body :is(#main,#effect-dialog) .animation-gallery-return.family-back-action.family-detail-back[data-action="family-back"][data-family-back-version="706"]{
+  display:grid;grid-template-columns:18px minmax(0,1fr);align-items:center;
+  gap:10px;width:100%;min-height:62px;margin:0;padding:10px 12px;
+  border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--ink);
+  text-align:left;box-shadow:0 3px 12px #17201908;
+}
+html.interface-polish body :is(#main,#effect-dialog) .family-back-action.family-detail-back[data-family-back-version="706"]>.family-back-arrow{
+  display:grid;place-items:center;color:var(--action-ink,var(--red));
+}
+html.interface-polish body :is(#main,#effect-dialog) .family-back-action.family-detail-back[data-family-back-version="706"]>.family-back-arrow>.icon{width:18px;height:18px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-gallery-return.family-back-action.family-detail-back[data-action="family-back"][data-family-back-version="706"]>.gallery-action-label{
+  display:flex;align-items:center;gap:10px;min-width:0;
+}
+html.interface-polish body :is(#main,#effect-dialog) .animation-gallery-return.family-back-action.family-detail-back[data-action="family-back"][data-family-back-version="706"] .gallery-action-icon{
+  display:grid;place-items:center;flex:none;width:38px;height:38px;border:0;border-radius:12px;
+  background:color-mix(in srgb,var(--red) 8%,var(--panel));color:var(--action-ink,var(--red));
+}
+html.interface-polish body :is(#main,#effect-dialog) .animation-gallery-return.family-back-action.family-detail-back[data-action="family-back"][data-family-back-version="706"] .gallery-action-icon>.icon{width:22px;height:22px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-gallery-return.family-back-action.family-detail-back[data-action="family-back"][data-family-back-version="706"] .gallery-action-copy{display:grid;gap:3px;min-width:0}
+html.interface-polish body :is(#main,#effect-dialog) .animation-gallery-return.family-back-action.family-detail-back[data-action="family-back"][data-family-back-version="706"] .gallery-action-copy>b{font-size:14px;font-weight:750;line-height:1.3;letter-spacing:-.01em;overflow-wrap:anywhere}
+html.interface-polish body :is(#main,#effect-dialog) .animation-gallery-return.family-back-action.family-detail-back[data-action="family-back"][data-family-back-version="706"] .gallery-action-copy>small{font-size:12px;font-weight:500;line-height:1.3;color:var(--muted);overflow-wrap:anywhere}

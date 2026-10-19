@@ -438,3 +438,16 @@ html body .scene-edit-workbench687 :is(.scene-edit-zones>button,.scene-edit-work
 @media(prefers-reduced-motion:reduce){
   html body [data-scene-ui="640"] .scene-saved-zone[data-action="scene-zone-edit"]{transition:none}
 }
+
+/* A keyboard-resized app frame (or short landscape view) must not reserve
+   space for a floating two-action save card over the name/zone fields.
+   Let the existing page scroll naturally; native code owns keyboard insets. */
+@media(max-height:600px){
+  html body .ui606-pages.scene-draft-page[data-has-selection="true"] .scene-save-bar{
+    position:static;
+    bottom:auto;
+  }
+  html body .ui606-pages.scene-draft-page :is(button,input){
+    scroll-margin-block:16px calc(var(--nav) + env(safe-area-inset-bottom) + 16px);
+  }
+}

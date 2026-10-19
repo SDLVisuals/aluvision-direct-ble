@@ -108,9 +108,9 @@
     "opticalAcceptance": false
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate705-interface-polish-android30",
+  "revision": "V50candidate712-interface-polish-android30",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Reviewed browser UI through source705, with one bottom Done button, basic RGBW fine controls, polished scene details and automatic separate-ledline topology. Native iPhone keyboard policy, native PIN, receiver firmware and hardware behavior are not included. Android downloads remain unchanged.",
+  "interfaceBaseline": "Reviewed browser UI through source712: clearer animation navigation with arrow and animation icon in both modes, polished animation-group return and receiver cards, all colour pickers with one bottom Done, and scrolling scene-save controls on short viewports. Earlier705 controls and scene changes remain included. Native iPhone keyboard policy, native PIN and new Wi-Fi naming, receiver firmware and hardware behavior are not included. Android downloads remain unchanged.",
   "interfaceCandidate673": {
     "sourceSnapshotOnly": true,
     "sameInterfaceAsCandidate672": true,
@@ -243,8 +243,8 @@
     },
     {
       "path": "animation-discovery.css",
-      "bytes": 17910,
-      "sha256": "cf2398ca4ab71c34140f6e7042018d30948843473a05fe4aabf381cab4d3e7cf"
+      "bytes": 20611,
+      "sha256": "ca53d934944801192370736647f9b3d2d8a8d52aeebe3294df8044f69aa4f633"
     },
     {
       "path": "animation-engine.js",
@@ -268,8 +268,8 @@
     },
     {
       "path": "animation-refinement.css",
-      "bytes": 8438,
-      "sha256": "3934d4ceac4433a1f19e0d8e4b32d95c52039cb90743ac9755471dfab47c4c02"
+      "bytes": 9813,
+      "sha256": "159b50b7b5eaea73b609f487acefc9860ccdc790397108dc2b584c5e8eba18b5"
     },
     {
       "path": "animations.css",
@@ -278,8 +278,8 @@
     },
     {
       "path": "app.js",
-      "bytes": 699237,
-      "sha256": "fb8b8df1a0a72378a2e13537b76541f762be8996d8441b466b3c92120931919b"
+      "bytes": 700148,
+      "sha256": "c8c309c7acb3fe2d8648eff124b3707274bf95714a5c54181a9eb9eee8243bda"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -298,8 +298,8 @@
     },
     {
       "path": "colour-picker-dialog.css",
-      "bytes": 2170,
-      "sha256": "f6f64eab333496f3026a7e6a1a46170886ef7ece89f2b586310c2a80569d99a7"
+      "bytes": 1909,
+      "sha256": "98900e899e0b71758c9c153dcd6e68d7339586197ec1511e5312550038f1a9e1"
     },
     {
       "path": "colour-presets-ui.css",
@@ -339,7 +339,7 @@
     {
       "path": "index.html",
       "bytes": 9789,
-      "sha256": "a47f0a62694b29464db77ea0b8818d801c1a5a7edb961e295d19731e67ecac0d"
+      "sha256": "59b45fcc97aaaf7d947dfd7f7e11ef8440e39a316d980786a96babb5bdb62b16"
     },
     {
       "path": "installation-libraries.js",
@@ -578,8 +578,8 @@
     },
     {
       "path": "scenes.css",
-      "bytes": 30618,
-      "sha256": "64c59dcadb5ad87c45ae8c78621cda83e286f66495c1116780e425f14e583c50"
+      "bytes": 31151,
+      "sha256": "c9e3987c9f0cf456114618be67d3dcaa59647474c050edd4854b9902c5d44ba4"
     },
     {
       "path": "scenes.js",
@@ -703,8 +703,8 @@
     },
     {
       "path": "ui606-pages.css",
-      "bytes": 19191,
-      "sha256": "6220bee1528d52c888eabc9a49993f00eaab9c02d34c500061b4f7fb143cfb7c"
+      "bytes": 21504,
+      "sha256": "c499b06e06ef90191fd14af5af973f9ad61c7fab8cd938d1a23ce3c080d4673d"
     },
     {
       "path": "v40-design.css",
@@ -723,8 +723,8 @@
     },
     {
       "path": "v50-animation-texts.js",
-      "bytes": 46266,
-      "sha256": "2317d7fbbaeb5367567d387e011e3efacae66eed26070e94a847dc9dfc81b52e"
+      "bytes": 46375,
+      "sha256": "c2b9fb6e6fc1252e93d5e049154343431855a5daf6497568d0a4fb124dddde7d"
     },
     {
       "path": "v50-error-texts.js",
@@ -773,8 +773,8 @@
     },
     {
       "path": "v50-texts.js",
-      "bytes": 39759,
-      "sha256": "6521079cdcfcad571fba336ba33baca3542c9f597c24ab5036d4934063cccde2"
+      "bytes": 40135,
+      "sha256": "a8c202205ba4ba013b9d6ee921c7d0923f9735a7d4b4e61f70006cd81d6309b6"
     },
     {
       "path": "vendor/v21_animation_catalog.js",
@@ -3381,6 +3381,31 @@
       "Fine RGBW controls in basic mode.",
       "Polished scene details and clearer primary and secondary actions.",
       "Automatically choose separate SPI ledlines for a tunnel animation without a confirmation popup; preserve scene-local snapshots."
+    ],
+    "androidUnchanged": true,
+    "androidVersionCode": 30,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "PINv2Included": false,
+    "PINPreviewIncluded": false,
+    "nativeKeyboardFixIncluded": false,
+    "receiverTimingProvenByDemo": false,
+    "opticalAcceptance": false,
+    "physicalAndroidVerified": false
+  },
+  "interfaceCandidate712": {
+    "sourceSnapshotOnly": true,
+    "sourceBuild": "712",
+    "scope": "Fictional RAM-only browser interface. Native keyboard safe-area and PIN/Wi-Fi changes are not part of this browser artifact.",
+    "features": [
+      "Separate back arrow and animation icon on the picker-return button in basic and advanced modes.",
+      "Clear animation-groups return with category subtitle.",
+      "Clear receiver option rows; redundant zone-control shortcut removed.",
+      "Only one bottom Done button in static, animation, background and brand colour pickers.",
+      "Scene save controls scroll with the form on short viewports; no claim of real iPhone keyboard acceptance."
     ],
     "androidUnchanged": true,
     "androidVersionCode": 30,
