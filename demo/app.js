@@ -2083,7 +2083,7 @@
       <div class="colour-tools"><div class="wheel-wrap"><canvas class="wheel" id="colour-wheel" tabindex="0" role="img" aria-label="${esc(advancedInterface()?t('v50WheelAccessible'):modeText('basicWheelAccessible'))}" width="260" height="260"></canvas><span class="wheel-cursor"></span></div><div class="colour-values"><p class="setting-hint">${esc(t('colourWheelHint'))}</p>${brand?`<small class="brand-picker-note">${esc(t(brandEditor.isNew?'brandPickerNewHint':'brandPickerHint'))}</small>`:slot===null?'':`<small>${esc(t('v50AnimationStaysActive'))}</small>`}</div></div>
       ${brand?`<label class="dialog-field brand-name-field">${esc(t('brandNameLabel'))}<input type="text" data-brand-name maxlength="64" autocomplete="off" value="${esc(brandEditor.name)}"></label><p class="brand-picker-status" role="status" aria-live="polite"></p>`:''}
       ${slot===null?slider('bri',t('animationBrightness'),0,100,s.bri??100,'%'):''}
-      ${advancedInterface()?fineControls:warmControls}
+      ${fineControls}
       ${myColoursMarkup()}
     </section>`;
   }
@@ -2452,36 +2452,34 @@
     if(standPresentationOnly()||arrangementInteractionBusy())return true;
     if(physicalLineCount()<(effect.minimumReceivers||2)){toast(t('animationAcrossMinimum'));return true;}
     const job={effectId:effect.id,standId:stand()?.id,zoneId:zone().id,
-      route:spatialAnimationRoute620(),scope:JSON.stringify(selection()),geometry:spatialAnimationGeometry620(),inline,repair,phase:'consent'};
-    showEffectDialog(t('v620TunnelSetupTitle'),`<section data-tunnel-start-consent><p>${esc(t('v620TunnelSetupBody'))}</p><p class="dialog-error" role="alert" hidden></p><button type="button" class="button full" data-action="tunnel-animation-start-confirm">${esc(t('v620TunnelSetupStart'))}</button><button type="button" class="button secondary full" data-action="tunnel-animation-start-cancel">${esc(t('v620TunnelSetupCancel'))}</button></section>`);
+      route:spatialAnimationRoute620(),scope:JSON.stringify(selection()),geometry:spatialAnimationGeometry620(),inline,repair,phase:'ready'};
     spatialAnimationStart620=job;
+    // Selecting the animation also chooses its required topology. Keep this
+    // synchronous handled/not-handled contract for ordinary animation clicks.
+    void completeSpatialAnimationStart620(job).catch(()=>{
+      if(spatialAnimationStart620!==job)return;
+      retireSpatialAnimationStart620();toast(t('v620TunnelSetupFailed'));
+    });
     return true;
   }
-  async function confirmSpatialAnimationStart620(){
-    const job=spatialAnimationStart620;
-    if(!job||job.phase!=='consent'||!currentSpatialAnimationStart620(job,'continuous')||arrangementInteractionBusy())return false;
+  async function completeSpatialAnimationStart620(job){
+    if(!job||job.phase!=='ready'||!currentSpatialAnimationStart620(job,'continuous')||arrangementInteractionBusy())return false;
     job.phase='saving';
-    const button=document.querySelector('[data-tunnel-start-consent] [data-action="tunnel-animation-start-confirm"]');
-    if(button){button.disabled=true;button.textContent=t('v620TunnelSetupSaving');}
     let saved=false;
     try{saved=await chooseSpatialLayout('tunnel','stacked',{strictPlayback:true,
       currentStart:()=>currentSpatialAnimationStart620(job,'continuous')});}catch(_){}
-    // A close/cancel, changed stand/zone/selection, or changed physical input
-    // retires this consent. A late save must never resurrect its old route.
+    // Leaving this context or changing its physical input retires the start.
+    // A late save must never resurrect an old route or close another dialog.
     if(spatialAnimationStart620!==job)return false;
     if(!currentSpatialAnimationStart620(job)){
-      spatialAnimationStart620=null;closeEffectDialog();toast(t('v620TunnelSetupChanged'));return false;
+      retireSpatialAnimationStart620();toast(t('v620TunnelSetupChanged'));return false;
     }
     if(!saved||zone().layout!=='stacked'||arrangementInteractionBusy()){
-      job.phase='failed';
-      const notice=document.querySelector('[data-tunnel-start-consent] .dialog-error');
-      if(notice){notice.hidden=false;notice.textContent=t('v620TunnelSetupFailed');}
-      if(button?.isConnected)button.textContent=t('v620TunnelSetupStart');
-      return false;
+      retireSpatialAnimationStart620();toast(t('v620TunnelSetupFailed'));return false;
     }
     const effect=catalogue().find(effect=>effect.id===job.effectId);
+    retireSpatialAnimationStart620();
     if(!effect)return false;
-    spatialAnimationStart620=null;closeEffectDialog();
     if(job.repair){
       // The existing arrangement transaction already resumed each line's
       // own settings. Repairing topology must not reset the user's palette,
@@ -3166,13 +3164,13 @@
       if(saved){
         // Only this explicit start flow supplies the additional scope/board
         // gate. A late metadata result cannot overwrite changed input and
-        // replay old light on behalf of retired consent.
+        // replay old light on behalf of a retired animation start.
         const continuationAllowed=!currentStart||currentStart();
         model=saved;
         recordScenePresentation684(sceneBefore684,zoneId);
         succeeded=true;
         // Preserve the genuinely committed authoritative model even when
-        // consent was retired. That save is not permission to replay/start.
+        // the start was retired. That save is not permission to replay/start.
         if(!continuationAllowed)throw Error(t('lineSetupChanged'));
         if(orderJob&&(!rebaseOrderSave588(orderJob)||!currentOrderSave588(orderJob)))throw Error(t('lineSetupChanged'));
         let canResume=!identification;
@@ -3224,7 +3222,7 @@
       }
       if(!orderJob)renderArrangement(browsing);
     }
-    // The new spatial-start consent must not launch its animation after a
+    // The automatic spatial start must not launch its animation after a
     // metadata-only success with uncertain restoration. Existing layout
     // callers retain their original metadata-result contract.
     return succeeded&&(!(orderJob||strictPlayback)||!failure);
@@ -3240,8 +3238,8 @@
     const saved=await applyArrangement(null,null,{strictPlayback,currentStart});
     if(!saved){
       spatialViews.set(z.id,previousView);
-      // The explicit animation-start dialog owns this failure. Do not put
-      // another modal above its explanation or cancel action.
+      // The animation-start flow reports its own failure. Do not open a
+      // layout chooser over that automatic operation.
       if(!currentStart)openSpatialChoices.add(z.id);
       renderArrangement(browsing);
     }
@@ -5699,7 +5697,10 @@
     // guarded/nested return path; it does not save a preset or send light again.
     const colourDialog=/<section\b[^>]*\sdata-colour-picker="(?:static|animation|background|brand)"/.test(content);
     dialog.classList.toggle('colour-picker-dialog',colourDialog);
-    const closeButton=colourDialog
+    // Whole-stand colour control has one reachable Done action in its footer.
+    // Nested pickers and other dialogs retain their existing header exit.
+    const standColourDialog=colourDialog&&/<div\b[^>]*\sdata-stand-control-sheet(?:\s|>)/.test(content);
+    const closeButton=standColourDialog?'':colourDialog
       ?`<button type="button" class="colour-picker-done colour-picker-done-header" data-colour-picker-done data-action="effect-dialog-close">${esc(t('done'))}</button>`
       :`<button class="icon-button" data-action="effect-dialog-close" aria-label="${esc(t("Venster sluiten"))}">${icon('close')}</button>`;
     const colourActions=colourDialog?`<footer class="colour-picker-actions" data-colour-picker-actions><button type="button" class="colour-picker-done colour-picker-done-footer" data-colour-picker-done data-action="effect-dialog-close">${icon('check')}<span>${esc(t('done'))}</span></button></footer>`:'';
@@ -6838,8 +6839,6 @@
         if(!showControlAnimationGallery)return revealAnimationStart();
         return;
       }
-      if(action==='tunnel-animation-start-cancel'){spatialAnimationStart620=null;return closeEffectDialog();}
-      if(action==='tunnel-animation-start-confirm')return await confirmSpatialAnimationStart620();
       if(action==='tunnel-animation-setup'){
         const effect=catalogue().find(effect=>effect.id===id);
         if(effect)return offerSpatialAnimationStart620(effect,{inline:route.screen==='controls',repair:true});
@@ -7176,7 +7175,7 @@
   document.addEventListener('input',event=>{
     if(arrangementApplying)return;
     const input=event.target;
-    if(!advancedInterface()&&(input.matches('[data-channel],[data-channel-number],#animation-search,#animation-category')||
+    if(!advancedInterface()&&(input.matches('#animation-search,#animation-category')||
        input.matches('[data-setting]')&&!['bri','speed'].includes(input.dataset.setting)||
        input.dataset.setting==='speed'&&!interfaceEffectAllowed(activeEffect())||
        (input.dataset.effectColour!==undefined||input.dataset.effectWhite!==undefined)&&!interfaceEffectAllowed(activeEffect())))return;
@@ -7249,7 +7248,7 @@
     presetEdit667.error='';
   });
   document.addEventListener('change',event=>{
-    if(!advancedInterface()&&event.target.matches?.('[data-brand-name],[data-channel-number]'))return;
+    if(!advancedInterface()&&event.target.matches?.('[data-brand-name]'))return;
     const brandName=event.target.closest?.('input[data-brand-name]');
     if(brandName){
       if(!brandEditor)return;
@@ -7423,7 +7422,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();retireOrderFocus664();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate698',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate705',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;firstPinReady686.clear();

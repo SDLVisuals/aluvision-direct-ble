@@ -10,14 +10,16 @@ html body .brand-bar .main-connection-indicator675>span{min-width:0;font:inherit
 html body .brand-bar .main-connection-indicator675[data-connection-state="connected"]{color:#237653}
 html body[data-theme="dark"] .brand-bar .main-connection-indicator675[data-connection-state="connected"]{color:#7bdbb1}
 html body .brand-bar:has(.main-connection-indicator675:not([hidden])){
-  height:auto;min-height:66px;display:grid;grid-template-columns:minmax(0,1fr) auto;
-  gap:5px 10px;padding-block:11px;
+  /* This higher-specificity layout replaces continuity.css's header sizing.
+     Retain its safe top inset so the wordmark stays below the iPhone island. */
+  height:auto;min-height:calc(66px + var(--app-safe-top,0px));display:grid;grid-template-columns:minmax(0,1fr) auto;
+  gap:5px 10px;padding-block:calc(11px + var(--app-safe-top,0px)) 11px;
 }
 html body .brand-bar:has(.main-connection-indicator675:not([hidden]))>img{grid-area:1/1;max-width:100%}
 html body .brand-bar:has(.main-connection-indicator675:not([hidden]))>span{grid-area:1/2}
 html body .brand-bar:has(.main-connection-indicator675:not([hidden]))>.main-connection-indicator675{grid-area:2/1/3/3;justify-self:end}
 @media(min-width:600px){
-  html body .brand-bar:has(.main-connection-indicator675:not([hidden])){grid-template-columns:minmax(109px,1fr) auto auto;gap:18px;min-height:66px}
+  html body .brand-bar:has(.main-connection-indicator675:not([hidden])){grid-template-columns:minmax(109px,1fr) auto auto;gap:18px;min-height:calc(66px + var(--app-safe-top,0px))}
   html body .brand-bar:has(.main-connection-indicator675:not([hidden]))>.main-connection-indicator675{grid-area:1/2}
   html body .brand-bar:has(.main-connection-indicator675:not([hidden]))>span{grid-area:1/3}
 }

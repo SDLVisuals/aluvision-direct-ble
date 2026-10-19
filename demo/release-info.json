@@ -108,9 +108,9 @@
     "opticalAcceptance": false
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate698-browser-stability-android30",
+  "revision": "V50candidate705-interface-polish-android30",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Public demo698 projects reviewed browser UI assets into the existing fictional RAM-only demo. Native PIN polish and the real PINv2 flow are deliberately omitted. No native product, receiver firmware or hardware access is published; Android downloads are unchanged, not Android698.",
+  "interfaceBaseline": "Reviewed browser UI through source705, with one bottom Done button, basic RGBW fine controls, polished scene details and automatic separate-ledline topology. Native iPhone keyboard policy, native PIN, receiver firmware and hardware behavior are not included. Android downloads remain unchanged.",
   "interfaceCandidate673": {
     "sourceSnapshotOnly": true,
     "sameInterfaceAsCandidate672": true,
@@ -138,658 +138,658 @@
   "assets": [
     {
       "path": "RELEASE_NOTES.md",
-      "sha256": "b89e2a2f9be028602e969fbf31c75ad32bec1299a2f329006bc8b568a7052b41",
-      "bytes": 39328
+      "bytes": 39328,
+      "sha256": "b89e2a2f9be028602e969fbf31c75ad32bec1299a2f329006bc8b568a7052b41"
     },
     {
       "path": "android-download/android-download.css",
-      "sha256": "f459f0a297a7076b87b5d421550a8a8d5fb6d5118c4dee5f9033c5644eb80a93",
-      "bytes": 1506
+      "bytes": 1506,
+      "sha256": "f459f0a297a7076b87b5d421550a8a8d5fb6d5118c4dee5f9033c5644eb80a93"
     },
     {
       "path": "android-download/android-download.js",
-      "sha256": "ab0736ee268cf12cbab148434e533c11f9385b489807728d89bdfea6101160c4",
-      "bytes": 10918
+      "bytes": 10918,
+      "sha256": "ab0736ee268cf12cbab148434e533c11f9385b489807728d89bdfea6101160c4"
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
-      "sha256": "cf1a36ef7a96cb1fd3ef84e9f12db014932e82896dda4217867ed563ba4cf214",
-      "bytes": 2323222
+      "bytes": 2323222,
+      "sha256": "cf1a36ef7a96cb1fd3ef84e9f12db014932e82896dda4217867ed563ba4cf214"
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.2-2-50c034940069.apk",
-      "sha256": "50c034940069e525333392643b6c9f1569c255bcdc87662f7e048cd6e44abc9a",
-      "bytes": 2388844
+      "bytes": 2388844,
+      "sha256": "50c034940069e525333392643b6c9f1569c255bcdc87662f7e048cd6e44abc9a"
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.3-3-5c8921aa383c.apk",
-      "sha256": "5c8921aa383cbfb8180e483ef8cb0fdc6f1b5d0bb7011a894de9e3032af7fed5",
-      "bytes": 2388844
+      "bytes": 2388844,
+      "sha256": "5c8921aa383cbfb8180e483ef8cb0fdc6f1b5d0bb7011a894de9e3032af7fed5"
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.5-5-bcb8b39b3543.apk",
-      "sha256": "bcb8b39b354387c14b17e9e86ddb740095c888bb012c9ade1c22d43b3118985d",
-      "bytes": 2393011
+      "bytes": 2393011,
+      "sha256": "bcb8b39b354387c14b17e9e86ddb740095c888bb012c9ade1c22d43b3118985d"
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.6-6-71d93291aea9.apk",
-      "sha256": "71d93291aea9b814ff56f5b941592c5444b66742f07e45b48f3902c599dd22c3",
-      "bytes": 2393011
+      "bytes": 2393011,
+      "sha256": "71d93291aea9b814ff56f5b941592c5444b66742f07e45b48f3902c599dd22c3"
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.7-7-c8d2b91b1880.apk",
-      "sha256": "c8d2b91b188015afd45260c780643ab772ebadfe0e36800d3c96845f9260563f",
-      "bytes": 2397107
+      "bytes": 2397107,
+      "sha256": "c8d2b91b188015afd45260c780643ab772ebadfe0e36800d3c96845f9260563f"
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.8-8-2b9267c34bb6.apk",
-      "sha256": "2b9267c34bb6bde97708f98eef0d83a5c7678c958b24a150deffb5a7a58319bc",
-      "bytes": 2397107
+      "bytes": 2397107,
+      "sha256": "2b9267c34bb6bde97708f98eef0d83a5c7678c958b24a150deffb5a7a58319bc"
     },
     {
       "path": "android/aluvision-android-test-41.0.13-19-8de577778854.apk",
-      "sha256": "8de5777788549c3be531634ccee283d876c8d0c4f320bc51a58c75a8d1fac290",
-      "bytes": 2566110
+      "bytes": 2566110,
+      "sha256": "8de5777788549c3be531634ccee283d876c8d0c4f320bc51a58c75a8d1fac290"
     },
     {
       "path": "android/aluvision-android-test-41.0.14-20-c2f304b6ed84.apk",
-      "sha256": "c2f304b6ed842bcf202057038abb4cb2a67a4838143b4462484fda32e702e726",
-      "bytes": 2570285
+      "bytes": 2570285,
+      "sha256": "c2f304b6ed842bcf202057038abb4cb2a67a4838143b4462484fda32e702e726"
     },
     {
       "path": "android/aluvision-android-test-41.0.2-14-84d1e566b90c.apk",
-      "sha256": "84d1e566b90c46116445e16413525bce0082c1e25f480c1098017eaf6565b424",
-      "bytes": 16845968
+      "bytes": 16845968,
+      "sha256": "84d1e566b90c46116445e16413525bce0082c1e25f480c1098017eaf6565b424"
     },
     {
       "path": "android/aluvision-android-test-41.0.3-16-4382140173e3.apk",
-      "sha256": "4382140173e373718eab19fc8faaf5b9c182d6763ba9514140b91105812f5aa9",
-      "bytes": 17009808
+      "bytes": 17009808,
+      "sha256": "4382140173e373718eab19fc8faaf5b9c182d6763ba9514140b91105812f5aa9"
     },
     {
       "path": "android/aluvision-android-test-50.0.0-23-3bdeebf90ac3.apk",
-      "sha256": "3bdeebf90ac312aeee3f005ad438c7a5b9e48fdc7a5716a99edd3820876a67e0",
-      "bytes": 2735353
+      "bytes": 2735353,
+      "sha256": "3bdeebf90ac312aeee3f005ad438c7a5b9e48fdc7a5716a99edd3820876a67e0"
     },
     {
       "path": "android/aluvision-android-test-50.0.0-24-c1f06e41d6d7.apk",
-      "sha256": "c1f06e41d6d792f32f0f3794d56a6df5e3eb02ee1a970b49091f07aac7ab0cf7",
-      "bytes": 2735353
+      "bytes": 2735353,
+      "sha256": "c1f06e41d6d792f32f0f3794d56a6df5e3eb02ee1a970b49091f07aac7ab0cf7"
     },
     {
       "path": "android/aluvision-android-test-50.0.0-26-1f58de3c5649.apk",
-      "sha256": "1f58de3c56494cbb3a37282ece253e48545c0ea38aabed653f77b393a24a714c",
-      "bytes": 2735353
+      "bytes": 2735353,
+      "sha256": "1f58de3c56494cbb3a37282ece253e48545c0ea38aabed653f77b393a24a714c"
     },
     {
       "path": "android/aluvision-android-test-50.0.0-27-27-f7df9f29d295.apk",
-      "sha256": "f7df9f29d2951e97819ecfd753c63de68b83d27e699d80b280d2f441472a2a9b",
-      "bytes": 2735353
+      "bytes": 2735353,
+      "sha256": "f7df9f29d2951e97819ecfd753c63de68b83d27e699d80b280d2f441472a2a9b"
     },
     {
       "path": "android/aluvision-android-test-50.0.0-30-939f8a250774.apk",
-      "sha256": "939f8a250774f1864f506b7df0dcf0a0a5178ceaec643d07feaf1fada32f846f",
-      "bytes": 2867558
+      "bytes": 2867558,
+      "sha256": "939f8a250774f1864f506b7df0dcf0a0a5178ceaec643d07feaf1fada32f846f"
     },
     {
       "path": "animation-chooser.css",
-      "sha256": "cca48352835554a319129df6964fff7fb5876cd3d7b96aa8d0a22f7929e34eef",
-      "bytes": 10306
+      "bytes": 10306,
+      "sha256": "cca48352835554a319129df6964fff7fb5876cd3d7b96aa8d0a22f7929e34eef"
     },
     {
       "path": "animation-control-policy.js",
-      "sha256": "ca33c0444a85040f90b6e4bea8a258701c673ff2e638c810e6861ecf5f19b0e7",
-      "bytes": 6107
+      "bytes": 6107,
+      "sha256": "ca33c0444a85040f90b6e4bea8a258701c673ff2e638c810e6861ecf5f19b0e7"
     },
     {
       "path": "animation-discovery.css",
-      "sha256": "cf2398ca4ab71c34140f6e7042018d30948843473a05fe4aabf381cab4d3e7cf",
-      "bytes": 17910
+      "bytes": 17910,
+      "sha256": "cf2398ca4ab71c34140f6e7042018d30948843473a05fe4aabf381cab4d3e7cf"
     },
     {
       "path": "animation-engine.js",
-      "sha256": "346772e3d808018cc71012d0be43e9202781c27c1aabb06888df33b79002a043",
-      "bytes": 22063
+      "bytes": 22063,
+      "sha256": "346772e3d808018cc71012d0be43e9202781c27c1aabb06888df33b79002a043"
     },
     {
       "path": "animation-library.css",
-      "sha256": "24bdf59a36284448e10ba1659f8515b55c464cc6e379277dfa9f6839abf178f6",
-      "bytes": 31819
+      "bytes": 31819,
+      "sha256": "24bdf59a36284448e10ba1659f8515b55c464cc6e379277dfa9f6839abf178f6"
     },
     {
       "path": "animation-library.js",
-      "sha256": "f9fe90224a9bcd9333de6a42f6f3a80b97da6427088d4ee23164790596c6a900",
-      "bytes": 27317
+      "bytes": 27317,
+      "sha256": "f9fe90224a9bcd9333de6a42f6f3a80b97da6427088d4ee23164790596c6a900"
     },
     {
       "path": "animation-mobile.css",
-      "sha256": "c836b5c996f15262f435f05c3eccb6e5bcba1e169d6bebe1c21dd43178ea96a6",
-      "bytes": 32878
+      "bytes": 32878,
+      "sha256": "c836b5c996f15262f435f05c3eccb6e5bcba1e169d6bebe1c21dd43178ea96a6"
     },
     {
       "path": "animation-refinement.css",
-      "sha256": "3934d4ceac4433a1f19e0d8e4b32d95c52039cb90743ac9755471dfab47c4c02",
-      "bytes": 8438
+      "bytes": 8438,
+      "sha256": "3934d4ceac4433a1f19e0d8e4b32d95c52039cb90743ac9755471dfab47c4c02"
     },
     {
       "path": "animations.css",
-      "sha256": "325bb013fd007bc11325cbc1a6857164b6ca7142ac858ba75456744491d42692",
-      "bytes": 12542
+      "bytes": 12542,
+      "sha256": "325bb013fd007bc11325cbc1a6857164b6ca7142ac858ba75456744491d42692"
     },
     {
       "path": "app.js",
-      "sha256": "832db51b1594e9d9abab0ade81e6ddafbad969780e56371c3ba6ca7f8b34377e",
-      "bytes": 699849
+      "bytes": 699237,
+      "sha256": "fb8b8df1a0a72378a2e13537b76541f762be8996d8441b466b3c92120931919b"
     },
     {
       "path": "assets/aluvision-logo.png",
-      "sha256": "834524590fdae6c13804869c8c04cb3452ef68e80c189a3ea27e02a43d08f018",
-      "bytes": 12522
+      "bytes": 12522,
+      "sha256": "834524590fdae6c13804869c8c04cb3452ef68e80c189a3ea27e02a43d08f018"
     },
     {
       "path": "backup.js",
-      "sha256": "a1f66923a08db98c68333d04dbe782b98bf9d1d2da1072885b5e139c775e88af",
-      "bytes": 14521
+      "bytes": 14521,
+      "sha256": "a1f66923a08db98c68333d04dbe782b98bf9d1d2da1072885b5e139c775e88af"
     },
     {
       "path": "colour-library-drag.js",
-      "sha256": "963265a49e1b03fa1db0872ee226ea6df642ac59f4e7b263562ae6338d6a6122",
-      "bytes": 11309
+      "bytes": 11309,
+      "sha256": "963265a49e1b03fa1db0872ee226ea6df642ac59f4e7b263562ae6338d6a6122"
     },
     {
       "path": "colour-picker-dialog.css",
-      "sha256": "f6f64eab333496f3026a7e6a1a46170886ef7ece89f2b586310c2a80569d99a7",
-      "bytes": 2170
+      "bytes": 2170,
+      "sha256": "f6f64eab333496f3026a7e6a1a46170886ef7ece89f2b586310c2a80569d99a7"
     },
     {
       "path": "colour-presets-ui.css",
-      "sha256": "5a6d0b814dc5a111ecf14300c389ef27f2c2fd16a6367d3a24fbf8b017e4b3a7",
-      "bytes": 12965
+      "bytes": 12965,
+      "sha256": "5a6d0b814dc5a111ecf14300c389ef27f2c2fd16a6367d3a24fbf8b017e4b3a7"
     },
     {
       "path": "colour-presets-ui.js",
-      "sha256": "ab7eb21a4c045c35c65c1d0308d55a3e113fb3ac3caded8f1e9c2d7ce50ac61d",
-      "bytes": 12584
+      "bytes": 12584,
+      "sha256": "ab7eb21a4c045c35c65c1d0308d55a3e113fb3ac3caded8f1e9c2d7ce50ac61d"
     },
     {
       "path": "colour-wheel.css",
-      "sha256": "58780a9bdf7453dfa5d6e92c47990e71ac587cede072d7436af9ea7de31e2f42",
-      "bytes": 771
+      "bytes": 771,
+      "sha256": "58780a9bdf7453dfa5d6e92c47990e71ac587cede072d7436af9ea7de31e2f42"
     },
     {
       "path": "colour.js",
-      "sha256": "0624b2a75d0fbbbde342f061a7d8702bfea6a2283249217cdeb9011a0b15a32f",
-      "bytes": 4029
+      "bytes": 4029,
+      "sha256": "0624b2a75d0fbbbde342f061a7d8702bfea6a2283249217cdeb9011a0b15a32f"
     },
     {
       "path": "colours-library.js",
-      "sha256": "2b52745810c9b1b249e9b9d0caad1becf37bc4eb73a5a11109ffd19092d996be",
-      "bytes": 14936
+      "bytes": 14936,
+      "sha256": "2b52745810c9b1b249e9b9d0caad1becf37bc4eb73a5a11109ffd19092d996be"
     },
     {
       "path": "continuity.css",
-      "sha256": "3ba94e0f22b9382ed8f5226551bf3aa0a7733648b711afb688edfe405dae2f8a",
-      "bytes": 82318
+      "bytes": 82318,
+      "sha256": "3ba94e0f22b9382ed8f5226551bf3aa0a7733648b711afb688edfe405dae2f8a"
     },
     {
       "path": "fixtures.js",
-      "sha256": "7ccc08ac36a6ab22e65c79d796f4dd3e60d42232ff6209ae866b616bc9d0beb8",
-      "bytes": 1566
+      "bytes": 1566,
+      "sha256": "7ccc08ac36a6ab22e65c79d796f4dd3e60d42232ff6209ae866b616bc9d0beb8"
     },
     {
       "path": "index.html",
-      "sha256": "bb807f6cc79b5b08dee66da071b24a3d13291c5911971fb6b629679b8dd83e2d",
-      "bytes": 9789
+      "bytes": 9789,
+      "sha256": "a47f0a62694b29464db77ea0b8818d801c1a5a7edb961e295d19731e67ecac0d"
     },
     {
       "path": "installation-libraries.js",
-      "sha256": "f6f3178ddcc768b5a88c878da31e39f3d3a3909457ff016e6b3e8c92623b2f96",
-      "bytes": 12085
+      "bytes": 12085,
+      "sha256": "f6f3178ddcc768b5a88c878da31e39f3d3a3909457ff016e6b3e8c92623b2f96"
     },
     {
       "path": "interface-haptics.js",
-      "sha256": "8464a40b23581b167473c10e5a89dd8fa912d230837b55427292098817897315",
-      "bytes": 4830
+      "bytes": 4830,
+      "sha256": "8464a40b23581b167473c10e5a89dd8fa912d230837b55427292098817897315"
     },
     {
       "path": "interface-mode.css",
-      "sha256": "1f33b657b627afdd61b37a5d5f240cfa0b0f418aec8ab1e2091bd61cdf70b5de",
-      "bytes": 5087
+      "bytes": 5087,
+      "sha256": "1f33b657b627afdd61b37a5d5f240cfa0b0f418aec8ab1e2091bd61cdf70b5de"
     },
     {
       "path": "interface-mode.js",
-      "sha256": "94419015d1addd7af0fe750800c6872a346855018039896fb971fd6c4ed934a1",
-      "bytes": 8931
+      "bytes": 8897,
+      "sha256": "2915819a63687b4954462c19b82965eec68cc204f81c3af600d213e031defe53"
     },
     {
       "path": "interface-motion.js",
-      "sha256": "96f3041f1bcee0146db0f54964b8994b6f4a682276b985a4a4092778cb449992",
-      "bytes": 9401
+      "bytes": 9401,
+      "sha256": "96f3041f1bcee0146db0f54964b8994b6f4a682276b985a4a4092778cb449992"
     },
     {
       "path": "interface-polish.css",
-      "sha256": "3bd0aae65b988dfb0ff0080d3b7ce1a0d962b326f36d63f095de9b10ab213322",
-      "bytes": 16982
+      "bytes": 16982,
+      "sha256": "3bd0aae65b988dfb0ff0080d3b7ce1a0d962b326f36d63f095de9b10ab213322"
     },
     {
       "path": "ledline-identification-session.js",
-      "sha256": "1e813c518f26f3d8b4c6228a9980a4b3991e6835c757e57c3ee057b3ada746ee",
-      "bytes": 21805
+      "bytes": 21805,
+      "sha256": "1e813c518f26f3d8b4c6228a9980a4b3991e6835c757e57c3ee057b3ada746ee"
     },
     {
       "path": "ledline-order-direct.css",
-      "sha256": "f021fd50f420c012c395cd2b522c16b210afaf3d1e52ce429ab9eda2b8363bf1",
-      "bytes": 20786
+      "bytes": 20786,
+      "sha256": "f021fd50f420c012c395cd2b522c16b210afaf3d1e52ce429ab9eda2b8363bf1"
     },
     {
       "path": "ledline-order-drag.js",
-      "sha256": "128ecab773dc52a0e3750a328869bb1b48b8a83cab078e6890555834f4fdaadf",
-      "bytes": 28482
+      "bytes": 28482,
+      "sha256": "128ecab773dc52a0e3750a328869bb1b48b8a83cab078e6890555834f4fdaadf"
     },
     {
       "path": "ledline-order-focus.css",
-      "sha256": "37be9bc1a6e741dcfa7bd1e0922b9ab23e4f07f0aba3d90082676fbb8397efe9",
-      "bytes": 8443
+      "bytes": 8443,
+      "sha256": "37be9bc1a6e741dcfa7bd1e0922b9ab23e4f07f0aba3d90082676fbb8397efe9"
     },
     {
       "path": "ledline-order-focus.js",
-      "sha256": "9711bd36b472f2e7ada78d6fae2a1af5bd7f73d6d3db3800689217b80f89b755",
-      "bytes": 11992
+      "bytes": 11992,
+      "sha256": "9711bd36b472f2e7ada78d6fae2a1af5bd7f73d6d3db3800689217b80f89b755"
     },
     {
       "path": "ledline-order-guide.js",
-      "sha256": "a2d0f7493629cc7348feaea56a46a8cde02087d996bcd17c8c09f507e6db160e",
-      "bytes": 39590
+      "bytes": 39590,
+      "sha256": "a2d0f7493629cc7348feaea56a46a8cde02087d996bcd17c8c09f507e6db160e"
     },
     {
       "path": "ledline-order-test.js",
-      "sha256": "45da1c6aa08f07fb088a13b22363b70f8c543dd174aa9e35b42f502dca2f2012",
-      "bytes": 15680
+      "bytes": 15680,
+      "sha256": "45da1c6aa08f07fb088a13b22363b70f8c543dd174aa9e35b42f502dca2f2012"
     },
     {
       "path": "ledline-order-tutorial.css",
-      "sha256": "28d7696b54d2d5c01c40871f69df07c360c6105f6c6050a2c6d9aafe85344218",
-      "bytes": 11397
+      "bytes": 11397,
+      "sha256": "28d7696b54d2d5c01c40871f69df07c360c6105f6c6050a2c6d9aafe85344218"
     },
     {
       "path": "ledline-order-tutorial.js",
-      "sha256": "9af1f13654b3bbf1a1a8b4fbf59cbabeab52bd24792ab7947a26a74228bb8565",
-      "bytes": 3566
+      "bytes": 3566,
+      "sha256": "9af1f13654b3bbf1a1a8b4fbf59cbabeab52bd24792ab7947a26a74228bb8565"
     },
     {
       "path": "ledline-order.css",
-      "sha256": "4943cfa255e91caeb841644e4d8eef709501c5d462500999bf78beeefcec3c3f",
-      "bytes": 2797
+      "bytes": 2797,
+      "sha256": "4943cfa255e91caeb841644e4d8eef709501c5d462500999bf78beeefcec3c3f"
     },
     {
       "path": "live-control.js",
-      "sha256": "65a68f69056139fde821231bdc12079d0ef43ee07c53e5acc08efa0e553ba9fb",
-      "bytes": 55104
+      "bytes": 55104,
+      "sha256": "65a68f69056139fde821231bdc12079d0ef43ee07c53e5acc08efa0e553ba9fb"
     },
     {
       "path": "main-connection-indicator.css",
-      "sha256": "e1fd9430d1e8f94ceaffa1f4813f737181ace3d73c64007f37983a2aa2e84bbd",
-      "bytes": 1765
+      "bytes": 2024,
+      "sha256": "c4e42ec8732769420da55a3ccdc51fefe94eb74db45e158e083e1dcaa7284230"
     },
     {
       "path": "main-connection-indicator.js",
-      "sha256": "b787b25e4799bdd23d7a3ded10485374c0bd2b3573f48fe0ad9d6744309626e5",
-      "bytes": 4563
+      "bytes": 4563,
+      "sha256": "b787b25e4799bdd23d7a3ded10485374c0bd2b3573f48fe0ad9d6744309626e5"
     },
     {
       "path": "migration.js",
-      "sha256": "596a7f5b5a686183376de70a77229ebacd02bc785f0e88cf005ec2120a388537",
-      "bytes": 14866
+      "bytes": 14866,
+      "sha256": "596a7f5b5a686183376de70a77229ebacd02bc785f0e88cf005ec2120a388537"
     },
     {
       "path": "model.js",
-      "sha256": "60c26a506d50ce3bd5a2ccef4dec605cf8e2988f5214cd7828758bd1fcd2dcee",
-      "bytes": 47067
+      "bytes": 47067,
+      "sha256": "60c26a506d50ce3bd5a2ccef4dec605cf8e2988f5214cd7828758bd1fcd2dcee"
     },
     {
       "path": "native-runtime.js",
-      "sha256": "ec94dc6f0fd9db19349843b5d97215d60abc394438073a7c54e3469c97a8b939",
-      "bytes": 170011
+      "bytes": 170011,
+      "sha256": "ec94dc6f0fd9db19349843b5d97215d60abc394438073a7c54e3469c97a8b939"
     },
     {
       "path": "onboarding-adapter.js",
-      "sha256": "495155567af18f5f234a30662a0f472610f3602b6b1dbd3bb5c46371614e08e0",
-      "bytes": 11388
+      "bytes": 11388,
+      "sha256": "495155567af18f5f234a30662a0f472610f3602b6b1dbd3bb5c46371614e08e0"
     },
     {
       "path": "onboarding-connect.css",
-      "sha256": "56b0c6de04df9c588b9a723b5cbc619d3dd4841b5c574c7702cc87e9ab4903c4",
-      "bytes": 5261
+      "bytes": 5261,
+      "sha256": "56b0c6de04df9c588b9a723b5cbc619d3dd4841b5c574c7702cc87e9ab4903c4"
     },
     {
       "path": "onboarding-contract.js",
-      "sha256": "47b7a0cc1e7a3cc21d57e1b701c61011b4519e96f93cccdec59fd91051274403",
-      "bytes": 22011
+      "bytes": 22011,
+      "sha256": "47b7a0cc1e7a3cc21d57e1b701c61011b4519e96f93cccdec59fd91051274403"
     },
     {
       "path": "onboarding-draft.js",
-      "sha256": "c373a95c4662d3eb901001f77b19a8324560fceaed815e40bdd7d9993ffd1b65",
-      "bytes": 38765
+      "bytes": 38765,
+      "sha256": "c373a95c4662d3eb901001f77b19a8324560fceaed815e40bdd7d9993ffd1b65"
     },
     {
       "path": "onboarding-ui.css",
-      "sha256": "e2eaba913c6e179d57262e42821d95bea75868a8d30e10ed7e0e9a1aef111f2f",
-      "bytes": 80802
+      "bytes": 80802,
+      "sha256": "e2eaba913c6e179d57262e42821d95bea75868a8d30e10ed7e0e9a1aef111f2f"
     },
     {
       "path": "onboarding-ui.js",
-      "sha256": "c62922e7a8b0966393bdcde0036678b04b2af53eb91292ff1835f7220487067b",
-      "bytes": 188963
+      "bytes": 188963,
+      "sha256": "c62922e7a8b0966393bdcde0036678b04b2af53eb91292ff1835f7220487067b"
     },
     {
       "path": "page-interaction.css",
-      "sha256": "9f55bcf272b842157322b9562739cc6fbafe697427d9690e980e735c09848b5b",
-      "bytes": 588
+      "bytes": 588,
+      "sha256": "9f55bcf272b842157322b9562739cc6fbafe697427d9690e980e735c09848b5b"
     },
     {
       "path": "page-interaction.js",
-      "sha256": "e6d7b3ef5b03295c11fb801a64941e89dd28b982e9b1699f5bee4b66b75407d4",
-      "bytes": 495
+      "bytes": 495,
+      "sha256": "e6d7b3ef5b03295c11fb801a64941e89dd28b982e9b1699f5bee4b66b75407d4"
     },
     {
       "path": "pair-first-setup.js",
-      "sha256": "b28eb3234eb5f56d881f4c6269bda7f1021ad1cf2a42debb329e2597e04b6598",
-      "bytes": 17170
+      "bytes": 17170,
+      "sha256": "b28eb3234eb5f56d881f4c6269bda7f1021ad1cf2a42debb329e2597e04b6598"
     },
     {
       "path": "pixel-setup.css",
-      "sha256": "3a4fc9502ded92e388eafa075eeeb128090b92c8c0034a01a65dac43ac480560",
-      "bytes": 38326
+      "bytes": 38326,
+      "sha256": "3a4fc9502ded92e388eafa075eeeb128090b92c8c0034a01a65dac43ac480560"
     },
     {
       "path": "pixel-setup.js",
-      "sha256": "83a8f16b8e32b1ecaff0bc643d602e5ea85852912b84a41271c5768d5f73e64e",
-      "bytes": 64140
+      "bytes": 64140,
+      "sha256": "83a8f16b8e32b1ecaff0bc643d602e5ea85852912b84a41271c5768d5f73e64e"
     },
     {
       "path": "pixel-translations.js",
-      "sha256": "af20ff6872da41974af99badf11759bc55a249ddbcb6d9358a88c7811935d74f",
-      "bytes": 19273
+      "bytes": 19273,
+      "sha256": "af20ff6872da41974af99badf11759bc55a249ddbcb6d9358a88c7811935d74f"
     },
     {
       "path": "preferences.js",
-      "sha256": "43f46ef56eb3a2da1851ce8c1736442b5bb0c4192dcfa7c62673cf4c7e3a9cf4",
-      "bytes": 102687
+      "bytes": 102687,
+      "sha256": "43f46ef56eb3a2da1851ce8c1736442b5bb0c4192dcfa7c62673cf4c7e3a9cf4"
     },
     {
       "path": "premium-surfaces.css",
-      "sha256": "af472ccec57b51ffea62dec35345a7f0ea8faecf4c59ab5871ee1fa783ce3d61",
-      "bytes": 62166
+      "bytes": 62166,
+      "sha256": "af472ccec57b51ffea62dec35345a7f0ea8faecf4c59ab5871ee1fa783ce3d61"
     },
     {
       "path": "presets.js",
-      "sha256": "31146d0b765bd2b654c6739261549d1facd2031eb5aeaa6bcbac4f4dca6b9990",
-      "bytes": 17495
+      "bytes": 17495,
+      "sha256": "31146d0b765bd2b654c6739261549d1facd2031eb5aeaa6bcbac4f4dca6b9990"
     },
     {
       "path": "preview.js",
-      "sha256": "830d2a408476b1f5e570910bb0a7ef7192db793c07f9216423f778cdbad7b2eb",
-      "bytes": 114360
+      "bytes": 114360,
+      "sha256": "830d2a408476b1f5e570910bb0a7ef7192db793c07f9216423f778cdbad7b2eb"
     },
     {
       "path": "receiver-playback.js",
-      "sha256": "0a70b4023243e50a0950dadf00d32f9bc29c0641c6273331b9f6be33cf725374",
-      "bytes": 8547
+      "bytes": 8547,
+      "sha256": "0a70b4023243e50a0950dadf00d32f9bc29c0641c6273331b9f6be33cf725374"
     },
     {
       "path": "receiver-removal-ui.css",
-      "sha256": "751fb973574322565b51fbad6e4b42029d5b057c1a16faba0cf3adb53fca7bc4",
-      "bytes": 2572
+      "bytes": 2572,
+      "sha256": "751fb973574322565b51fbad6e4b42029d5b057c1a16faba0cf3adb53fca7bc4"
     },
     {
       "path": "receiver-removal-ui.js",
-      "sha256": "7a5a9008d29bef79a5f45d6c76ec06d7753e7d99463fc15667b93564a2cf76de",
-      "bytes": 22645
+      "bytes": 22645,
+      "sha256": "7a5a9008d29bef79a5f45d6c76ec06d7753e7d99463fc15667b93564a2cf76de"
     },
     {
       "path": "receiver-update-ui.css",
-      "sha256": "cbbc15b9e2f722027ec32a7dfd3be230f19d306ff2b30665681911b13213cb4a",
-      "bytes": 4536
+      "bytes": 4536,
+      "sha256": "cbbc15b9e2f722027ec32a7dfd3be230f19d306ff2b30665681911b13213cb4a"
     },
     {
       "path": "receiver-update-ui.js",
-      "sha256": "0a0fc48f5e7ac12ca6ed3a882ae08cba952c9f41f402efeff640315789a14fea",
-      "bytes": 25159
+      "bytes": 25159,
+      "sha256": "0a0fc48f5e7ac12ca6ed3a882ae08cba952c9f41f402efeff640315789a14fea"
     },
     {
       "path": "receiver-visual.css",
-      "sha256": "76b6f07b2fa02534534e951ee9689033aa4665eab9db7d7f5d0b9cef81252c09",
-      "bytes": 4375
+      "bytes": 4375,
+      "sha256": "76b6f07b2fa02534534e951ee9689033aa4665eab9db7d7f5d0b9cef81252c09"
     },
     {
       "path": "receiver-visual.js",
-      "sha256": "8c3196efcf8c93f8b514cc14a8f29a131de057bef91a21d37f81f2d7c9e303ef",
-      "bytes": 29209
+      "bytes": 29209,
+      "sha256": "8c3196efcf8c93f8b514cc14a8f29a131de057bef91a21d37f81f2d7c9e303ef"
     },
     {
       "path": "reference-animations.js",
-      "sha256": "e7bd755a36d86964fb711686eb4f451e94c39fbb635ae9c491ceef2491bd0dcc",
-      "bytes": 8637
+      "bytes": 8637,
+      "sha256": "e7bd755a36d86964fb711686eb4f451e94c39fbb635ae9c491ceef2491bd0dcc"
     },
     {
       "path": "scene-editing.js",
-      "sha256": "ff07b0b733ecd878e42be809ff68ee6c251df702d041b6d8dbca98f2ac97451c",
-      "bytes": 11385
+      "bytes": 11385,
+      "sha256": "ff07b0b733ecd878e42be809ff68ee6c251df702d041b6d8dbca98f2ac97451c"
     },
     {
       "path": "scenes.css",
-      "sha256": "80cf6b83327d0af40fc88a1acff82d080f3178439f4030ce1aced4fa3199ae74",
-      "bytes": 28283
+      "bytes": 30618,
+      "sha256": "64c59dcadb5ad87c45ae8c78621cda83e286f66495c1116780e425f14e583c50"
     },
     {
       "path": "scenes.js",
-      "sha256": "8236d3cce63678d23ee2d71ba8c27107508faad3d1d756a243201d8c12ccf558",
-      "bytes": 18180
+      "bytes": 18180,
+      "sha256": "8236d3cce63678d23ee2d71ba8c27107508faad3d1d756a243201d8c12ccf558"
     },
     {
       "path": "security-mode.js",
-      "sha256": "e4da258988fc8791d0d923d517f86ed3003792fe9d8a89b034bfdd05c8518ef2",
-      "bytes": 527
+      "bytes": 527,
+      "sha256": "e4da258988fc8791d0d923d517f86ed3003792fe9d8a89b034bfdd05c8518ef2"
     },
     {
       "path": "setup-translations.js",
-      "sha256": "7c4f9f7ab5fd43c5d1e3ab5449ab682ed425ebc5a20f0a9071cb5bc1d4de9c28",
-      "bytes": 85399
+      "bytes": 85399,
+      "sha256": "7c4f9f7ab5fd43c5d1e3ab5449ab682ed425ebc5a20f0a9071cb5bc1d4de9c28"
     },
     {
       "path": "setup-wifi-guide.js",
-      "sha256": "7928b920058879281ed826974f141f72cd687a62965f2acab05715b01c8ebd95",
-      "bytes": 4183
+      "bytes": 4183,
+      "sha256": "7928b920058879281ed826974f141f72cd687a62965f2acab05715b01c8ebd95"
     },
     {
       "path": "spi-direction-tutorial.css",
-      "sha256": "f82373ef5e74c67bb727a14a797ebf050e50432d7e243732bff4884636dfa1dc",
-      "bytes": 8720
+      "bytes": 8720,
+      "sha256": "f82373ef5e74c67bb727a14a797ebf050e50432d7e243732bff4884636dfa1dc"
     },
     {
       "path": "spi-direction-tutorial.js",
-      "sha256": "e9a64ba9ac4e49fbf370c5f48fd4309bb39e48284d8ea384a1ed6a89838cf5de",
-      "bytes": 14112
+      "bytes": 14112,
+      "sha256": "e9a64ba9ac4e49fbf370c5f48fd4309bb39e48284d8ea384a1ed6a89838cf5de"
     },
     {
       "path": "spi-zone-direction.css",
-      "sha256": "427bea752e0b16cc1f65a8d79654d5ebddf288a483cad0a0a608e74424f45f4c",
-      "bytes": 9921
+      "bytes": 9921,
+      "sha256": "427bea752e0b16cc1f65a8d79654d5ebddf288a483cad0a0a608e74424f45f4c"
     },
     {
       "path": "spi-zone-direction.js",
-      "sha256": "18d18fda270cbf73d24616a09a10d00b4b40d60879124bb76ccede295508c4fc",
-      "bytes": 39390
+      "bytes": 39390,
+      "sha256": "18d18fda270cbf73d24616a09a10d00b4b40d60879124bb76ccede295508c4fc"
     },
     {
       "path": "stand-animations.css",
-      "sha256": "3b5ebb89fda4d810399e6b5891ae9a6a2317d47675f2d1cb4ce020f157079021",
-      "bytes": 10350
+      "bytes": 10350,
+      "sha256": "3b5ebb89fda4d810399e6b5891ae9a6a2317d47675f2d1cb4ce020f157079021"
     },
     {
       "path": "stand-animations.js",
-      "sha256": "adda30f999fea06e7a9bfd01ab5ba607cbac3d50a886d954f0794efab73928e2",
-      "bytes": 20004
+      "bytes": 20004,
+      "sha256": "adda30f999fea06e7a9bfd01ab5ba607cbac3d50a886d954f0794efab73928e2"
     },
     {
       "path": "stand-cache.js",
-      "sha256": "fa2732da4929a14d8e40affaf9b0259019e56a1d9a812b7d8be661c368770c93",
-      "bytes": 3196
+      "bytes": 3196,
+      "sha256": "fa2732da4929a14d8e40affaf9b0259019e56a1d9a812b7d8be661c368770c93"
     },
     {
       "path": "stand-connection.js",
-      "sha256": "3956950b20e82a40dc0e358b2ab061d04594dcb7bf01d4af4e51a446fb2bb9ab",
-      "bytes": 36689
+      "bytes": 36689,
+      "sha256": "3956950b20e82a40dc0e358b2ab061d04594dcb7bf01d4af4e51a446fb2bb9ab"
     },
     {
       "path": "stand-live-checkpoint.js",
-      "sha256": "74d06af5d71342be794240061655cb4426f3b0aa2267f427c60bea7284d68e57",
-      "bytes": 11235
+      "bytes": 11235,
+      "sha256": "74d06af5d71342be794240061655cb4426f3b0aa2267f427c60bea7284d68e57"
     },
     {
       "path": "stand-management-capabilities.js",
-      "sha256": "822438c0b944b62f11d6e05041bd35f12d50710386adb31f30366bf681b3c134",
-      "bytes": 1889
+      "bytes": 1889,
+      "sha256": "822438c0b944b62f11d6e05041bd35f12d50710386adb31f30366bf681b3c134"
     },
     {
       "path": "stand-sharing-copy.js",
-      "sha256": "f00407d6d55dc1401cbe1659951ea95f80b0978728ba3f215ecc83a53a27fa77",
-      "bytes": 12986
+      "bytes": 12986,
+      "sha256": "f00407d6d55dc1401cbe1659951ea95f80b0978728ba3f215ecc83a53a27fa77"
     },
     {
       "path": "stand-sharing.css",
-      "sha256": "6cf17f71d2a6e37964972c0e3cae7dfe7505eb790279a28a946ed8220369c2eb",
-      "bytes": 6087
+      "bytes": 6087,
+      "sha256": "6cf17f71d2a6e37964972c0e3cae7dfe7505eb790279a28a946ed8220369c2eb"
     },
     {
       "path": "stand-sharing.js",
-      "sha256": "3c76aeb9ceca066831fa5803e166624452293e2e74bbfda624d84caa80b6a36a",
-      "bytes": 25342
+      "bytes": 25342,
+      "sha256": "3c76aeb9ceca066831fa5803e166624452293e2e74bbfda624d84caa80b6a36a"
     },
     {
       "path": "styles.css",
-      "sha256": "c74b344259e889330e1cc7973dcfdcb38cfa60f19b1983c137cc9e5fa90d1929",
-      "bytes": 28613
+      "bytes": 28613,
+      "sha256": "c74b344259e889330e1cc7973dcfdcb38cfa60f19b1983c137cc9e5fa90d1929"
     },
     {
       "path": "theme-audit.css",
-      "sha256": "45d7dd15cd3814bac17dfc8e3f6e1f466b9b974de2866c9ed244e64d6ea0d81c",
-      "bytes": 4014
+      "bytes": 4014,
+      "sha256": "45d7dd15cd3814bac17dfc8e3f6e1f466b9b974de2866c9ed244e64d6ea0d81c"
     },
     {
       "path": "ui-continuity.js",
-      "sha256": "ae28fd0b92d3100c27eef1c94ecea46bf30d6d4aa93d43b662ab2cc0eb9acb34",
-      "bytes": 5114
+      "bytes": 5114,
+      "sha256": "ae28fd0b92d3100c27eef1c94ecea46bf30d6d4aa93d43b662ab2cc0eb9acb34"
     },
     {
       "path": "ui-copy.js",
-      "sha256": "3de623037c3f4e1597f12d1706d5a02d0cbcedc3648c53a2fd28f81bb071fb57",
-      "bytes": 131035
+      "bytes": 131035,
+      "sha256": "3de623037c3f4e1597f12d1706d5a02d0cbcedc3648c53a2fd28f81bb071fb57"
     },
     {
       "path": "ui606-controls.css",
-      "sha256": "e9460a8bd2bfab6af8321e3a16afdf9df7248f96d699d5eb30f82388d82ae4e5",
-      "bytes": 12189
+      "bytes": 12189,
+      "sha256": "e9460a8bd2bfab6af8321e3a16afdf9df7248f96d699d5eb30f82388d82ae4e5"
     },
     {
       "path": "ui606-gallery.css",
-      "sha256": "1bbc48cf7cc623dd93d68b232ffef30fc478aa87b645aabe6c7ccc613d89a03b",
-      "bytes": 2484
+      "bytes": 2484,
+      "sha256": "1bbc48cf7cc623dd93d68b232ffef30fc478aa87b645aabe6c7ccc613d89a03b"
     },
     {
       "path": "ui606-navigation.js",
-      "sha256": "ff933c09736f23fbcd27ace6c873b0061d4bfa7dc31291063eb604d4e609debc",
-      "bytes": 7255
+      "bytes": 7255,
+      "sha256": "ff933c09736f23fbcd27ace6c873b0061d4bfa7dc31291063eb604d4e609debc"
     },
     {
       "path": "ui606-pages.css",
-      "sha256": "6220bee1528d52c888eabc9a49993f00eaab9c02d34c500061b4f7fb143cfb7c",
-      "bytes": 19191
+      "bytes": 19191,
+      "sha256": "6220bee1528d52c888eabc9a49993f00eaab9c02d34c500061b4f7fb143cfb7c"
     },
     {
       "path": "v40-design.css",
-      "sha256": "15e28696be4862733ba2fbb6a7d089dc7ce720d1ba8aea30ba523641abf62958",
-      "bytes": 34730
+      "bytes": 34730,
+      "sha256": "15e28696be4862733ba2fbb6a7d089dc7ce720d1ba8aea30ba523641abf62958"
     },
     {
       "path": "v41-materials.css",
-      "sha256": "1fd1f545a946a333d866c7aadf4aac1a861d454aed8efd99a080d04b50451ad0",
-      "bytes": 28163
+      "bytes": 28163,
+      "sha256": "1fd1f545a946a333d866c7aadf4aac1a861d454aed8efd99a080d04b50451ad0"
     },
     {
       "path": "v41-visual.css",
-      "sha256": "938f6d81e36e2758fd828eb1c6d3f541668c74595504092a03b17f2681e60f6b",
-      "bytes": 7060
+      "bytes": 7060,
+      "sha256": "938f6d81e36e2758fd828eb1c6d3f541668c74595504092a03b17f2681e60f6b"
     },
     {
       "path": "v50-animation-texts.js",
-      "sha256": "2317d7fbbaeb5367567d387e011e3efacae66eed26070e94a847dc9dfc81b52e",
-      "bytes": 46266
+      "bytes": 46266,
+      "sha256": "2317d7fbbaeb5367567d387e011e3efacae66eed26070e94a847dc9dfc81b52e"
     },
     {
       "path": "v50-error-texts.js",
-      "sha256": "714403ec38267b5f8e308f79ce0b4e4d0a41b8ac3b444e67dcd8801be8f8d8b4",
-      "bytes": 22014
+      "bytes": 22014,
+      "sha256": "714403ec38267b5f8e308f79ce0b4e4d0a41b8ac3b444e67dcd8801be8f8d8b4"
     },
     {
       "path": "v50-interactions.js",
-      "sha256": "81a097f387efca0c650c4a935102d291f9b6336ad9e34eb99fdd0b9d113e68e3",
-      "bytes": 7025
+      "bytes": 7025,
+      "sha256": "81a097f387efca0c650c4a935102d291f9b6336ad9e34eb99fdd0b9d113e68e3"
     },
     {
       "path": "v50-interface.css",
-      "sha256": "31ca7185c381309624e0e796a8a2842f4d13c32224af0335c8ce0bd1c96e00be",
-      "bytes": 114319
+      "bytes": 114319,
+      "sha256": "31ca7185c381309624e0e796a8a2842f4d13c32224af0335c8ce0bd1c96e00be"
     },
     {
       "path": "v50-order-clarity.css",
-      "sha256": "802a85b5c0d762c50a3befa51e6aa85dec7ae9894a598a1543c79e9884ffcd04",
-      "bytes": 34014
+      "bytes": 34014,
+      "sha256": "802a85b5c0d762c50a3befa51e6aa85dec7ae9894a598a1543c79e9884ffcd04"
     },
     {
       "path": "v50-order-drag.css",
-      "sha256": "c5db0a5cc3e4bb2254e648ed80062284c6f1ea08c0bbc71220f8877f3718d184",
-      "bytes": 6067
+      "bytes": 6067,
+      "sha256": "c5db0a5cc3e4bb2254e648ed80062284c6f1ea08c0bbc71220f8877f3718d184"
     },
     {
       "path": "v50-order-guide.css",
-      "sha256": "8d364ca3c96f178969ad560e0d8ff9c39a57e416cd8e7424bc000439b82d672a",
-      "bytes": 15419
+      "bytes": 15419,
+      "sha256": "8d364ca3c96f178969ad560e0d8ff9c39a57e416cd8e7424bc000439b82d672a"
     },
     {
       "path": "v50-order-texts.js",
-      "sha256": "9d4cf1c597d058a5f318c74e4542447f4eb3ceefa80ee7e27ce9a7c6b4a0a50a",
-      "bytes": 20509
+      "bytes": 20509,
+      "sha256": "9d4cf1c597d058a5f318c74e4542447f4eb3ceefa80ee7e27ce9a7c6b4a0a50a"
     },
     {
       "path": "v50-order-tutorial.css",
-      "sha256": "51dfb7614a492adc22ffa8366facf23b669421b5fdfbaec647e2d98a6eafed73",
-      "bytes": 26061
+      "bytes": 26061,
+      "sha256": "51dfb7614a492adc22ffa8366facf23b669421b5fdfbaec647e2d98a6eafed73"
     },
     {
       "path": "v50-preview-selection.css",
-      "sha256": "a30121a1f615f1d05f7a095eeb4ba16dc2999f74f9dd1cd43cebd1f8097411b8",
-      "bytes": 16298
+      "bytes": 16298,
+      "sha256": "a30121a1f615f1d05f7a095eeb4ba16dc2999f74f9dd1cd43cebd1f8097411b8"
     },
     {
       "path": "v50-texts.js",
-      "sha256": "6521079cdcfcad571fba336ba33baca3542c9f597c24ab5036d4934063cccde2",
-      "bytes": 39759
+      "bytes": 39759,
+      "sha256": "6521079cdcfcad571fba336ba33baca3542c9f597c24ab5036d4934063cccde2"
     },
     {
       "path": "vendor/v21_animation_catalog.js",
-      "sha256": "37a90c048d22a1d5efd25cf91336175aaa2f770f11d3aea9c3dc7d6a859f4014",
-      "bytes": 90530
+      "bytes": 90530,
+      "sha256": "37a90c048d22a1d5efd25cf91336175aaa2f770f11d3aea9c3dc7d6a859f4014"
     },
     {
       "path": "vendor/v21_tunnel_engine.js",
-      "sha256": "5e8f4170084d5a6a3597fe014a117597b6a2b2eee4869437ee3ff9a6cc288c3e",
-      "bytes": 8498
+      "bytes": 8498,
+      "sha256": "5e8f4170084d5a6a3597fe014a117597b6a2b2eee4869437ee3ff9a6cc288c3e"
     },
     {
       "path": "web-demo-service.js",
-      "sha256": "cc86e5903226bc56f039a73085b61953580a5c886ba75b84abc9c94de776ab3b",
-      "bytes": 5388
+      "bytes": 5388,
+      "sha256": "cc86e5903226bc56f039a73085b61953580a5c886ba75b84abc9c94de776ab3b"
     }
   ],
   "interfaceReviewScope": "Exact source UI hunks and isolated asset/cache verification. Browser visual review and public deployment remain separate; this candidate attests no iPhone606 install, receiver output, radio performance or physical acceptance.",
@@ -3368,6 +3368,30 @@
     "PINv2Included": false,
     "PINPreviewIncluded": false,
     "nativePINPolishVisible": false,
+    "receiverTimingProvenByDemo": false,
+    "opticalAcceptance": false,
+    "physicalAndroidVerified": false
+  },
+  "interfaceCandidate705": {
+    "sourceSnapshotOnly": true,
+    "sourceBuild": "705",
+    "scope": "Fictional RAM-only browser interface. The native705 keyboard-safe-area change is not part of this browser artifact.",
+    "features": [
+      "One bottom Done button for whole-stand colour control.",
+      "Fine RGBW controls in basic mode.",
+      "Polished scene details and clearer primary and secondary actions.",
+      "Automatically choose separate SPI ledlines for a tunnel animation without a confirmation popup; preserve scene-local snapshots."
+    ],
+    "androidUnchanged": true,
+    "androidVersionCode": 30,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "PINv2Included": false,
+    "PINPreviewIncluded": false,
+    "nativeKeyboardFixIncluded": false,
     "receiverTimingProvenByDemo": false,
     "opticalAcceptance": false,
     "physicalAndroidVerified": false

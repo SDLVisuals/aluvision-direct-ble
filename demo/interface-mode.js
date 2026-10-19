@@ -24,7 +24,7 @@
     'animation-category-tab', 'library',
     'tunnel-animation-setup', 'tunnel-animation-start-confirm',
     'settings-toggle', 'direction', 'effect-boolean',
-    'background-toggle', 'background-edit', 'channel-toggle', 'channel-step',
+    'background-toggle', 'background-edit',
     'brand-tone', 'brand-colour-edit', 'brand-colour-add', 'brand-colour-remove',
     'colours-manage', 'colours-manager',
     'preset-save', 'preset-confirm', 'preset-apply',
