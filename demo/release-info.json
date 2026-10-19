@@ -108,9 +108,9 @@
     "opticalAcceptance": false
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate716-visual-order-guide-android30",
+  "revision": "V50candidate717-direct-port-pixels-android30",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Reviewed browser UI through source716: less prose and visual real-position to app-position example in ordering. Tutorial uses fixed physical LED profiles and shows blue1 to3 while red swaps back and green stays2. Core drag, draft/save, transport and native lifecycle unchanged. All previous715 UI improvements remain. Native PIN/Wi-Fi, keyboard policy and firmware excluded; Android unchanged.",
+  "interfaceBaseline": "Reviewed browser interface through source717: Pixels aanpassen follows the selected receiver port and saves from that pixel page without the normal review screen. Explicit multi-port edits remain supported; unresolved transaction recovery keeps its safety review. Other outputs, direction and transport guards unchanged. Previous716 UI retained. Native PIN/Wi-Fi, firmware and keyboard policy excluded; Android downloads unchanged.",
   "interfaceCandidate673": {
     "sourceSnapshotOnly": true,
     "sameInterfaceAsCandidate672": true,
@@ -278,8 +278,8 @@
     },
     {
       "path": "app.js",
-      "bytes": 700357,
-      "sha256": "7dc3f21cc4a797ba91adf21743b91e262274213721f011880ed027db22ff3257"
+      "bytes": 700811,
+      "sha256": "7d0f725bdeea515a2245061877fc30935e8c81b0a48886b24e69fac3166e64cb"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -339,7 +339,7 @@
     {
       "path": "index.html",
       "bytes": 9789,
-      "sha256": "14e2e3e97fc653cf90a84c31bcfb8bb71bb3a02d0f58836a9b39e91f496ee178"
+      "sha256": "2a07edc6532d23b6ecdb01fa6189a6e14e61941a36d76f3d1c9a4ace5ff69ec2"
     },
     {
       "path": "installation-libraries.js",
@@ -503,8 +503,8 @@
     },
     {
       "path": "pixel-setup.js",
-      "bytes": 64140,
-      "sha256": "83a8f16b8e32b1ecaff0bc643d602e5ea85852912b84a41271c5768d5f73e64e"
+      "bytes": 64422,
+      "sha256": "a953b6078c00e055ea427a9f67a968693720be0d0bee8d7e79ba1325248323f6"
     },
     {
       "path": "pixel-translations.js",
@@ -3498,6 +3498,29 @@
       "Shorter ordering introduction with labelled real-position to app-position blue example; adapts to two lines and is omitted for one.",
       "Beveled segmented real LED illustration stays fixed while blue drags from app1 to3, red swaps to1 and green stays2.",
       "Four-language captions, pause/replay/step controls and reduced-motion support retained."
+    ],
+    "androidUnchanged": true,
+    "androidVersionCode": 30,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "PINv2Included": false,
+    "PINPreviewIncluded": false,
+    "nativeKeyboardFixIncluded": false,
+    "receiverTimingProvenByDemo": false,
+    "opticalAcceptance": false,
+    "physicalAndroidVerified": false
+  },
+  "interfaceCandidate717": {
+    "sourceSnapshotOnly": true,
+    "sourceBuild": "717",
+    "scope": "Fictional RAM-only browser interface; selected-port pixel workflow.",
+    "features": [
+      "Receiver pixel shortcut follows selected P1-P4 instead of selecting all enabled ports.",
+      "Save directly from last selected pixel page; omit normal pixels-only review.",
+      "Retain explicit multiple-port edits, pending transaction recovery review, STOP/ACK and save guards."
     ],
     "androidUnchanged": true,
     "androidVersionCode": 30,

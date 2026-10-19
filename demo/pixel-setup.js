@@ -380,7 +380,10 @@
     const editorEnabled686=()=>previewCapabilities.editorIsolation===true&&isPublishedReceiver(receiver)===true;
     const livePreview=createLivePreview({send:demoPreview?.factoryGuidePreview===true?demoPreview.previewPixels:mode==='native'?onPreview:null,editorIsolation:editorEnabled686,onState:state=>{previewState=state;showPreviewStatus(dialog,state);}});
     const directDirections=()=>jointDirections&&!pixelsOnly&&!selectedPorts&&!recovering&&!directionOnlyMode;
-    const plan=()=>sequence(outputs,{selectedPorts,jointDirections,pixelsOnly,review:!directDirections()}),current=()=>plan()[index],output=()=>outputs.find(item=>item.port===current().port),portsToEdit=()=>editableOutputs(outputs,selectedPorts);
+    // A normal pixel-only edit saves from its last selected port. Pending
+    // transaction recovery retains its immutable review/retry screen.
+    const directPixels=()=>pixelsOnly&&!recovering&&editableOutputs(outputs,selectedPorts).length>0;
+    const plan=()=>sequence(outputs,{selectedPorts,jointDirections,pixelsOnly,review:!directDirections()&&!directPixels()}),current=()=>plan()[index],output=()=>outputs.find(item=>item.port===current().port),portsToEdit=()=>editableOutputs(outputs,selectedPorts);
     function draftChanged(){
       if(!dialog||recovering||directionOnlyMode||pixelsOnly||selectedPorts||!jointDirections||!['outputs','pixels','review'].includes(current().stage))return;
       onDraftChange({receiverId:receiver.id,outputs:outputs.map(copy),stage:current().stage,port:current().port});
@@ -398,7 +401,7 @@
     function paint(time){if(dialog?.open&&['outputs','pixels','connection'].includes(current().stage)){const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;paintOutputs(dialog,outputs,{time,reducedMotion,selectedPort:current().port||selectedPort,plugProgress:current().stage==='outputs'?plugMotion.sample(time,reducedMotion):{}});}}
     function close(){if(!dialog||busy&&!previewStopJob)return;previewStopJob=null;busy=false;void livePreview.stop();livePreview.retireExpiredEditor();document.removeEventListener('visibilitychange',visibility);unbindScrub?.();unbindScrub=null;unbindDirectionTutorial?.();unbindDirectionTutorial=null;dialog.close();dialog.remove();dialog=null;plugMotion.clear();focusBefore?.focus?.({preventScroll:true});onClose();}
     function render(top=false){
-      if(!dialog)return;unbindDirectionTutorial?.();unbindDirectionTutorial=null;const previousScroll=dialog.querySelector('.pixel-setup-body')?.scrollTop||0,step=current(),ports=portsToEdit(),active=output(),allOff=!outputs.some(item=>item.enabled),direct=directDirections(),finalPixel=direct&&step.stage==='pixels'&&index===plan().length-1,saveStep=step.stage==='review'||finalPixel,paletteVersion=[1,2,3,4,5].includes(previewState.paletteVersion)?previewState.paletteVersion:3;
+      if(!dialog)return;unbindDirectionTutorial?.();unbindDirectionTutorial=null;const previousScroll=dialog.querySelector('.pixel-setup-body')?.scrollTop||0,step=current(),ports=portsToEdit(),active=output(),allOff=!outputs.some(item=>item.enabled),direct=directDirections(),finalPixel=(direct||directPixels())&&step.stage==='pixels'&&index===plan().length-1,saveStep=step.stage==='review'||finalPixel,paletteVersion=[1,2,3,4,5].includes(previewState.paletteVersion)?previewState.paletteVersion:3;
       const focusedPort=dialog.contains(document.activeElement)&&document.activeElement.dataset.pixelAction==='output'?document.activeElement.dataset.port:null;
       let content='';
       if(step.stage==='outputs')content=`<p>${esc(t('pixelChooseOutputs'))}</p>${selectedPorts?`<p>${esc(t('pixelSelectSummary',{ports:[...selectedPorts].sort().map(port=>`P${port}`).join(' + ')}))}</p>`:''}${renderOutputs(outputs,{initialPort,selectedPorts,paletteVersion,live:mode==='native'&&previewCapabilities.identifyPorts===true})}${!allOff&&!ports.length?`<p class="pixel-setup-error" role="alert">${esc(t('pixelSelectedRequired'))}</p>`:''}`;

@@ -3482,8 +3482,8 @@
   }
   function pixelText659(key){return window.LightningPixelTranslations.t(key,uiPreferences.preferences.language);}
   function spiSettingsMarkup659(receiver,{ports=null,blocked=false}={}){
-    const chosen=ports||receiver.outputs.filter(output=>output.enabled).map(output=>output.port),ids=esc(receiver.id),disabled=blocked||!chosen.length;
-    return `<div class="spi-settings659"><button type="button" class="button secondary full" data-action="receiver-pixels-only" data-id="${ids}" data-ports="${chosen.join(',')}" ${disabled?'disabled':''}>${icon('sliders')}<span><b>${esc(pixelText659('pixelOnlySettings'))}</b><small>${chosen.map(port=>'P'+port).join(' · ')}</small></span>${icon('chevron')}</button><button type="button" class="button secondary full" data-action="receiver-directions" data-id="${ids}" ${blocked||!receiver.zoneId?'disabled':''}>${icon('swap')}<span><b>${esc(pixelText659('pixelDirectionsSettings'))}</b><small>${esc(pixelText659('pixelDirectionsHint'))}</small></span>${icon('chevron')}</button></div>`;
+    const chosen=ports||[selectedVisualPort(receiver)],ids=esc(receiver.id),disabled=blocked||!chosen.length||chosen.some(port=>!receiver.outputs.some(output=>output.port===port&&output.enabled));
+    return `<div class="spi-settings659"><button type="button" class="button secondary full" data-action="receiver-pixels-only" data-id="${ids}" data-ports="${chosen.join(',')}" ${ports===null?'data-visual-pixels717':''} ${disabled?'disabled':''}>${icon('sliders')}<span><b>${esc(pixelText659('pixelOnlySettings'))}</b><small>${chosen.map(port=>'P'+port).join(' · ')}</small></span>${icon('chevron')}</button><button type="button" class="button secondary full" data-action="receiver-directions" data-id="${ids}" ${blocked||!receiver.zoneId?'disabled':''}>${icon('swap')}<span><b>${esc(pixelText659('pixelDirectionsSettings'))}</b><small>${esc(pixelText659('pixelDirectionsHint'))}</small></span>${icon('chevron')}</button></div>`;
   }
   function portEditMarkup(receiver,port){
     const selected=pixelEditSelections.get(receiver.id)||new Set([port]);
@@ -7087,6 +7087,11 @@
         const details=button.closest('details');details.querySelectorAll('[data-action="visual-port"]').forEach(el=>el.setAttribute('aria-pressed',el===button));
         details.querySelectorAll('[data-port-row]').forEach(el=>el.classList.toggle('port-focused',Number(el.dataset.portRow)===Number(id)));
         details.querySelector('.receiver-product-caption strong').textContent=`Uitgang ${id} geselecteerd`;
+        const pixelsShortcut=details.querySelector('[data-visual-pixels717]');
+        if(pixelsShortcut){
+          pixelsShortcut.dataset.ports=String(id);pixelsShortcut.querySelector('small').textContent=`P${id}`;
+          pixelsShortcut.disabled=!r.outputs.some(output=>output.port===Number(id)&&output.enabled)||standReceiverManagementUnavailable();
+        }
         paint(performance.now()/1000);button.focus({preventScroll:true});if(window.scrollY!==scroll)window.scrollTo({top:scroll,behavior:'instant'});return;
       }
       if(action==='receiver-port-enabled'){
@@ -7420,7 +7425,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();retireOrderFocus664();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate716',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate717',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;firstPinReady686.clear();
