@@ -108,9 +108,9 @@
     "opticalAcceptance": false
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate712-interface-polish-android30",
+  "revision": "V50candidate713-matching-navigation-android30",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Reviewed browser UI through source712: clearer animation navigation with arrow and animation icon in both modes, polished animation-group return and receiver cards, all colour pickers with one bottom Done, and scrolling scene-save controls on short viewports. Earlier705 controls and scene changes remain included. Native iPhone keyboard policy, native PIN and new Wi-Fi naming, receiver firmware and hardware behavior are not included. Android downloads remain unchanged.",
+  "interfaceBaseline": "Reviewed browser UI through source713: picker-return and animation-groups navigation share the same quiet light-card styling, dimensions and icon sizes. All previously published712 interface changes remain included. Native iPhone keyboard policy, native PIN and protected Wi-Fi naming, receiver firmware and hardware behavior are not included. Android downloads remain unchanged.",
   "interfaceCandidate673": {
     "sourceSnapshotOnly": true,
     "sameInterfaceAsCandidate672": true,
@@ -268,8 +268,8 @@
     },
     {
       "path": "animation-refinement.css",
-      "bytes": 9813,
-      "sha256": "159b50b7b5eaea73b609f487acefc9860ccdc790397108dc2b584c5e8eba18b5"
+      "bytes": 10036,
+      "sha256": "a50e8c302ab786bd4b0cc662ee7d81d0b82793eba6250cff948a6c4a4eb04a6f"
     },
     {
       "path": "animations.css",
@@ -279,7 +279,7 @@
     {
       "path": "app.js",
       "bytes": 700148,
-      "sha256": "c8c309c7acb3fe2d8648eff124b3707274bf95714a5c54181a9eb9eee8243bda"
+      "sha256": "093716de6dcf8b5aceec01ed3ae081c93592e9689f10e8016ce4afd93a2104f8"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -339,7 +339,7 @@
     {
       "path": "index.html",
       "bytes": 9789,
-      "sha256": "59b45fcc97aaaf7d947dfd7f7e11ef8440e39a316d980786a96babb5bdb62b16"
+      "sha256": "db6c58301ba268f4bbe7f4cbb974f7b9a8a2d4b6406a6ae8d5ef9792e18a4f66"
     },
     {
       "path": "installation-libraries.js",
@@ -3406,6 +3406,29 @@
       "Clear receiver option rows; redundant zone-control shortcut removed.",
       "Only one bottom Done button in static, animation, background and brand colour pickers.",
       "Scene save controls scroll with the form on short viewports; no claim of real iPhone keyboard acceptance."
+    ],
+    "androidUnchanged": true,
+    "androidVersionCode": 30,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "PINv2Included": false,
+    "PINPreviewIncluded": false,
+    "nativeKeyboardFixIncluded": false,
+    "receiverTimingProvenByDemo": false,
+    "opticalAcceptance": false,
+    "physicalAndroidVerified": false
+  },
+  "interfaceCandidate713": {
+    "sourceSnapshotOnly": true,
+    "sourceBuild": "713",
+    "scope": "Fictional RAM-only browser interface. CSS-only product change; native keyboard safe-area and PIN/Wi-Fi changes are not part of this browser artifact.",
+    "features": [
+      "Picker-return card matches animation-groups card: light panel,62px minimum height,16px corners,10x12px padding and38px icon badge.",
+      "Matching14px titles and22px glyphs in basic and advanced modes.",
+      "No red glow or navigation pulse; existing back action and focus feedback preserved."
     ],
     "androidUnchanged": true,
     "androidVersionCode": 30,
