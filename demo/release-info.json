@@ -108,9 +108,9 @@
     "opticalAcceptance": false
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate718-consistent-fullscreen-colour-android30",
+  "revision": "V50candidate719-clear-port-colours-android30",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Reviewed browser interface through source718: equal whole-stand Kleur/Animaties title and tab geometry; fullscreen shared colour editors and app-styled local-draft preset RGB editor. Previous717 UI retained. Native PIN/Wi-Fi, firmware and keyboard policy excluded; Android downloads unchanged.",
+  "interfaceBaseline": "Reviewed browser interface through source719: solid, larger, non-fluorescent colour badges for port identification; red, blue, yellow and orange with contrasting labels. Physical test-light palette, switching, transport and every previous718 improvement retained. Native PIN/Wi-Fi, firmware and keyboard policy excluded; Android downloads unchanged.",
   "interfaceCandidate673": {
     "sourceSnapshotOnly": true,
     "sameInterfaceAsCandidate672": true,
@@ -279,7 +279,7 @@
     {
       "path": "app.js",
       "bytes": 701185,
-      "sha256": "59564a59f5bbddb7d08ca74517e9cf7b208b3e1c4b49a35725a9a41dd7dba63a"
+      "sha256": "8224286ff971868bef192eebd1c41827994f21a39aee5a68743f43f4a0e5df9e"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -339,7 +339,7 @@
     {
       "path": "index.html",
       "bytes": 9789,
-      "sha256": "740b176c2a55d94a9fbdc717d201e07197ca0c6da314b8f1ad72f85d20aa9bbe"
+      "sha256": "4570a863058cef866f1a00420a00f0aaab41502580acad875d00bdd1b48d59dc"
     },
     {
       "path": "installation-libraries.js",
@@ -498,8 +498,8 @@
     },
     {
       "path": "pixel-setup.css",
-      "bytes": 41203,
-      "sha256": "5cf52f3ea0ee53a6a27009763af49a2bc12c51bdadfc18e12caf3c4bda61e407"
+      "bytes": 41216,
+      "sha256": "7de9c365e59f975fba4808ef8dbdff7d2e8ef3f76a15e6cb6ac3f820e1297b18"
     },
     {
       "path": "pixel-setup.js",
@@ -3544,6 +3544,29 @@
       "Match title/tab geometry in both whole-stand modes on phone and desktop.",
       "Fullscreen animation, background, brand and whole-stand shared colour pickers with one bottom Done.",
       "Replace browser-native preset RGB popup with a fullscreen local-draft picker; explicit preset Save still required."
+    ],
+    "androidUnchanged": true,
+    "androidVersionCode": 30,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "PINv2Included": false,
+    "PINPreviewIncluded": false,
+    "nativeKeyboardFixIncluded": false,
+    "receiverTimingProvenByDemo": false,
+    "opticalAcceptance": false,
+    "physicalAndroidVerified": false
+  },
+  "interfaceCandidate719": {
+    "sourceSnapshotOnly": true,
+    "sourceBuild": "719",
+    "scope": "Fictional RAM-only browser interface; stronger screen-only port colour badges.",
+    "features": [
+      "Solid 36px colour badges instead of pale tinted port numbers.",
+      "Distinct non-fluorescent red, blue, yellow and orange; contrasting badge labels.",
+      "Physical palette, output switch state and module behaviour unchanged."
     ],
     "androidUnchanged": true,
     "androidVersionCode": 30,

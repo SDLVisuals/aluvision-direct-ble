@@ -264,16 +264,16 @@
 .receiver-port-select>b,.v50-edit-ports button[data-port]{border-inline-start:6px solid var(--port-colour);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--port-colour) 60%,transparent)}
 /* Screen accents are deliberately quieter than the physical identification
    colours. Keep --port-colour and data-port-colour untouched for test light. */
-.pixel-output-picker .pixel-setup-outputs>button[data-port]{--port-ui-accent:#65748b;border-top:3px solid var(--port-ui-accent);min-height:112px;padding:11px 4px 10px;gap:7px;border-radius:13px;box-shadow:0 1px 2px #18213304}
-.pixel-output-picker .pixel-setup-outputs>button[data-port-colour="#ff0000" i]{--port-ui-accent:#b74e51}
-.pixel-output-picker .pixel-setup-outputs>button[data-port-colour="#0000ff" i]{--port-ui-accent:#4e70ad}
-.pixel-output-picker .pixel-setup-outputs>button[data-port-colour="#ffff00" i]{--port-ui-accent:#bd982d}
-.pixel-output-picker .pixel-setup-outputs>button:is([data-port-colour="#ff1700" i],[data-port-colour="#ff5000" i],[data-port-colour="#ff6000" i],[data-port-colour="#ff8000" i],[data-port-colour="#ffa000" i]){--port-ui-accent:#d18736}
-.pixel-output-picker .pixel-setup-outputs>button[data-port-colour="#00ff00" i]{--port-ui-accent:#44846b}
+.pixel-output-picker .pixel-setup-outputs>button[data-port]{--port-ui-accent:#65748b;--port-ui-ink:#fff;border-top:3px solid var(--port-ui-accent);min-height:112px;padding:11px 4px 10px;gap:7px;border-radius:13px;box-shadow:0 1px 2px #18213304}
+.pixel-output-picker .pixel-setup-outputs>button[data-port-colour="#ff0000" i]{--port-ui-accent:#bb3f48}
+.pixel-output-picker .pixel-setup-outputs>button[data-port-colour="#0000ff" i]{--port-ui-accent:#3869b4}
+.pixel-output-picker .pixel-setup-outputs>button[data-port-colour="#ffff00" i]{--port-ui-accent:#e1bc35;--port-ui-ink:#252a34}
+.pixel-output-picker .pixel-setup-outputs>button:is([data-port-colour="#ff1700" i],[data-port-colour="#ff5000" i],[data-port-colour="#ff6000" i],[data-port-colour="#ff8000" i],[data-port-colour="#ffa000" i]){--port-ui-accent:#df852e;--port-ui-ink:#252a34}
+.pixel-output-picker .pixel-setup-outputs>button[data-port-colour="#00ff00" i]{--port-ui-accent:#448168}
 .pixel-output-picker .pixel-setup-outputs>button[data-port-colour="#ff00ff" i]{--port-ui-accent:#a35d92}
 .pixel-output-picker .pixel-setup-outputs>button:is([data-port-colour="#7800c0" i],[data-port-colour="#8000ff" i]){--port-ui-accent:#785b9a}
-.pixel-output-picker .pixel-setup-outputs>button[data-port-colour="#00ffff" i]{--port-ui-accent:#448b91}
-.pixel-output-picker .pixel-setup-outputs>button[data-port]>b{width:32px;height:32px;border-radius:10px;background:color-mix(in srgb,var(--port-ui-accent) 14%,var(--panel,#fff));border:1px solid color-mix(in srgb,var(--port-ui-accent) 24%,var(--line,#ddd));color:var(--ink,#252a34);font-size:12px;font-weight:750}
+.pixel-output-picker .pixel-setup-outputs>button[data-port-colour="#00ffff" i]{--port-ui-accent:#3f7f85}
+.pixel-output-picker .pixel-setup-outputs>button[data-port]>b{width:36px;height:36px;border-radius:10px;background:var(--port-ui-accent);border:1px solid color-mix(in srgb,var(--port-ui-accent) 80%,#252a34);color:var(--port-ui-ink);font-size:13px;font-weight:750}
 .pixel-output-picker .pixel-setup-outputs>button[data-port]>.pixel-port-colour{font-size:11px;font-weight:650;line-height:1.2;letter-spacing:0;color:var(--ink,#252a34)}
 .pixel-output-picker .pixel-setup-outputs>button[data-port]>.pixel-port-colour::before{content:none;display:none}
 .pixel-output-picker .pixel-setup-outputs>button[data-port]>.pixel-port-colour+span{font-size:10px;font-weight:500;color:var(--muted,#657080)}
