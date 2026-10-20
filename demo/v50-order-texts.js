@@ -3,7 +3,9 @@
   // Explicit order-interface copy only. Customer names, physical IDs, layout
   // values, pixel counts and colour/RGB protocol values are never translated.
   const rows={
-    orderDirectTitle668:['Neem je volgorde over','Match your real order','Reproduisez votre ordre','Übernimm deine Reihenfolge'],
+    orderDirectTitle668:['Zet zoals je het ziet','Match what you see','Reproduisez ce que vous voyez','Ordne wie in echt'],
+    orderVisualBadge730:['Voorbeeld','Example','Exemple','Beispiel'],
+    orderVisualExample730:['Voorbeeld: neem de volgorde van je echte ledlines over in de app. Elke kleur staat links en rechts op dezelfde plaats. Blauw op plaats {position} in het echt betekent blauw op plaats {position} in de app. Dit is geen weergave of test van je eigen verlichting.','Example: copy the order of your real LED lines into the app. Each colour is in the same position on both sides. Blue at position {position} in real life means blue at position {position} in the app. This does not show or test your own lights.','Exemple : reproduisez l’ordre de vos vraies lignes LED dans l’app. Chaque couleur occupe la même position des deux côtés. Bleu en position {position} en vrai signifie bleu en position {position} dans l’app. Ceci ne représente ni ne teste votre propre éclairage.','Beispiel: Übernimm die Reihenfolge deiner echten LED-Linien in die App. Jede Farbe steht links und rechts an derselben Position. Blau auf Position {position} in echt bedeutet Blau auf Position {position} in der App. Das zeigt oder testet nicht deine eigene Beleuchtung.'],
     orderDirectIntro668:['Sleep elke kleur naar haar echte plaats.','Drag each colour to its real position.','Glissez chaque couleur à sa position réelle.','Ziehe jede Farbe an ihre echte Position.'],
     orderExample716:['Voorbeeld · blauw op {position}? Sleep blauw naar {position}.','Example · blue at {position}? Drag blue to {position}.','Exemple · le bleu est en {position} ? Glissez-le en {position}.','Beispiel · Blau auf {position}? Ziehe Blau auf {position}.'],
     orderDirectReal668:['Jouw ledlines','Your LED lines','Vos lignes LED','Deine LED-Linien'],

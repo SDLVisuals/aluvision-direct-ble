@@ -108,9 +108,9 @@
     "opticalAcceptance": false
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate722-interface-bugfixes-android30",
+  "revision": "V50candidate731-interface-bugfixes-android30",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Reviewed browser interface through source722: a confirmed PIN-action button cleanup fix over the published719 interface. Native PIN/Wi-Fi, firmware, SDK and native keyboard policy excluded; Android downloads unchanged.",
+  "interfaceBaseline": "Reviewed browser interface snapshot through source731. Native PIN/Wi-Fi, firmware, SDK and native keyboard policy excluded; existing Android downloads unchanged.",
   "interfaceCandidate673": {
     "sourceSnapshotOnly": true,
     "sameInterfaceAsCandidate672": true,
@@ -278,8 +278,8 @@
     },
     {
       "path": "app.js",
-      "bytes": 703720,
-      "sha256": "9bf998d61bb83103db11759170e77f464735bd4b75e4dcc7e0f8b29f65f469e3"
+      "bytes": 707864,
+      "sha256": "69ae4a6f0e000351e782015ebed3c1e4afc9c12f0515f687b04823d88352e5c6"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -339,7 +339,7 @@
     {
       "path": "index.html",
       "bytes": 9789,
-      "sha256": "1fb844f91fb89a69dc4c80267a17037e9ac16dea756a541074c6109be7bf63cd"
+      "sha256": "5777928cd359b7e1257ecb6ae4f564915a49b84f32c9bc66457af99e0acb4d4a"
     },
     {
       "path": "installation-libraries.js",
@@ -378,8 +378,8 @@
     },
     {
       "path": "ledline-order-direct.css",
-      "bytes": 22916,
-      "sha256": "b80d6f618d60ab922757da16cbd0cd4f43f013e6e828fb94360d2a7be3cd8151"
+      "bytes": 25027,
+      "sha256": "37453e1d2a6c45945b4b3b42202b259fe0e9981b53d86510f80a2db0e9c4cadb"
     },
     {
       "path": "ledline-order-drag.js",
@@ -398,8 +398,8 @@
     },
     {
       "path": "ledline-order-guide.js",
-      "bytes": 41057,
-      "sha256": "e8ade6cb87ec1fb35ee47699ab4dd93d52a2ebb3013d968e71e1d533a6b10ac2"
+      "bytes": 42614,
+      "sha256": "651c3becee9ea0655e8a653a2c523c2fa0154135c58b680dc67b4f5d79f992eb"
     },
     {
       "path": "ledline-order-test.js",
@@ -408,8 +408,8 @@
     },
     {
       "path": "ledline-order-tutorial.css",
-      "bytes": 13141,
-      "sha256": "0087fd255aa0e3b557f2b7ffc30b6c4e1fe25bc2da488b744ee5c0f6f0b938d4"
+      "bytes": 15074,
+      "sha256": "e2f6e08b1c46b220ab2194f1dd74d8d643c9416b99efc3d01c31cedd64ad11e7"
     },
     {
       "path": "ledline-order-tutorial.js",
@@ -473,13 +473,13 @@
     },
     {
       "path": "onboarding-ui.css",
-      "bytes": 80802,
-      "sha256": "e2eaba913c6e179d57262e42821d95bea75868a8d30e10ed7e0e9a1aef111f2f"
+      "bytes": 82354,
+      "sha256": "c75c19a8ad682ccf3e2d351a653c584b89fa9c53c8430a71eba964f380c301ec"
     },
     {
       "path": "onboarding-ui.js",
-      "bytes": 188963,
-      "sha256": "c62922e7a8b0966393bdcde0036678b04b2af53eb91292ff1835f7220487067b"
+      "bytes": 190387,
+      "sha256": "8b974192909904067345482463c9ab4532d16a802946dd5e84fef4a846d09356"
     },
     {
       "path": "page-interaction.css",
@@ -503,8 +503,8 @@
     },
     {
       "path": "pixel-setup.js",
-      "bytes": 64422,
-      "sha256": "a953b6078c00e055ea427a9f67a968693720be0d0bee8d7e79ba1325248323f6"
+      "bytes": 65010,
+      "sha256": "38bdb143ed16fcc3a5d336e7c30dec30fc8b2c37fac588c9a7d8f1b7c0bac7c4"
     },
     {
       "path": "pixel-translations.js",
@@ -528,8 +528,8 @@
     },
     {
       "path": "preview.js",
-      "bytes": 114360,
-      "sha256": "830d2a408476b1f5e570910bb0a7ef7192db793c07f9216423f778cdbad7b2eb"
+      "bytes": 115234,
+      "sha256": "fc1a55a7cd15a2edc16f98735b5546feb05e5434df35c5891971d46c952e1f08"
     },
     {
       "path": "receiver-playback.js",
@@ -598,8 +598,8 @@
     },
     {
       "path": "setup-wifi-guide.js",
-      "bytes": 4183,
-      "sha256": "7928b920058879281ed826974f141f72cd687a62965f2acab05715b01c8ebd95"
+      "bytes": 5829,
+      "sha256": "c7604951b56f119f551243152fa56a28507cf02206df07712bae4e7153389cdb"
     },
     {
       "path": "spi-direction-tutorial.css",
@@ -618,13 +618,13 @@
     },
     {
       "path": "spi-zone-direction.js",
-      "bytes": 39390,
-      "sha256": "18d18fda270cbf73d24616a09a10d00b4b40d60879124bb76ccede295508c4fc"
+      "bytes": 40724,
+      "sha256": "c02cad7e5dfc497cee90c1d5dd854f8d532cf561501c895f3d242bf0cd7cf522"
     },
     {
       "path": "stand-animations.css",
-      "bytes": 12074,
-      "sha256": "88d377c3c30b2aba9b13fbbeae9c22a939b024daae55becf205315dea99badd3"
+      "bytes": 12073,
+      "sha256": "599010dde448f1c83dc00bd6b3f084ad17ca40c272955622c1864440a02e0eb8"
     },
     {
       "path": "stand-animations.js",
@@ -663,8 +663,8 @@
     },
     {
       "path": "stand-sharing.js",
-      "bytes": 25342,
-      "sha256": "3c76aeb9ceca066831fa5803e166624452293e2e74bbfda624d84caa80b6a36a"
+      "bytes": 26373,
+      "sha256": "3a0bd6c0a4cddd921c5e1d6347fa77ccb747504f28c3b1eef4daf8d330f91459"
     },
     {
       "path": "styles.css",
@@ -758,8 +758,8 @@
     },
     {
       "path": "v50-order-texts.js",
-      "bytes": 20634,
-      "sha256": "c5a7eeca791a3777068e183557e5c8bc5472dc46dcc6ec9d9d497f49022a17cb"
+      "bytes": 21781,
+      "sha256": "fdbdb8ea3aded061a70c82c82945b773ff5ca41ca8ec45eded1a21d94b48fb38"
     },
     {
       "path": "v50-order-tutorial.css",
@@ -3588,6 +3588,34 @@
     "scope": "Fictional RAM-only browser interface; confirmed-action button cleanup. Native PIN/Wi-Fi/firmware are not part of this browser artifact.",
     "features": [
       "Confirmed-action button cleanup avoids stale detached DOM access; native PIN and Wi-Fi functionality are not enabled by this demo."
+    ],
+    "androidUnchanged": true,
+    "androidVersionCode": 30,
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "firmwareDownloadsIncluded": false,
+    "nativeProductBundled": false,
+    "phoneInstalled": false,
+    "PINv2Included": false,
+    "PINPreviewIncluded": false,
+    "nativeKeyboardFixIncluded": false,
+    "receiverTimingProvenByDemo": false,
+    "opticalAcceptance": false,
+    "physicalAndroidVerified": false
+  },
+  "interfaceCandidate731": {
+    "sourceSnapshotOnly": true,
+    "sourceBuild": "731",
+    "scope": "Fictional RAM-only browser interface. Native PIN/Wi-Fi/firmware are not part of this browser artifact.",
+    "features": [
+      "Consistent receiver setup illustrations and clearer visual LED-line order guidance.",
+      "Preserve the animation editor when its active tab is selected again; translate selected-port and background headings.",
+      "Compute saved-scene projections once per render while retaining identical saved-scene previews.",
+      "Keep keyboard focus inside replaced sheets and sharing cards; reveal advanced controls within their own sheet.",
+      "Focus the visible pixel-step heading and retain a chosen move-zone control after repainting.",
+      "Show consistent red, blue, yellow and orange demo port labels while the fictional preview is starting.",
+      "Avoid Enter submission during text composition; expose the existing retry after failed zone saving.",
+      "Browser interface only: no receiver firmware, native PIN flow, iPhone install or Android download update."
     ],
     "androidUnchanged": true,
     "androidVersionCode": 30,

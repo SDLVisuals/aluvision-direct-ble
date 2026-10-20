@@ -14,7 +14,7 @@ html body .stand-controls-tabs.section-tabs{background:var(--glass-solid);backdr
 .stand-controls-tabs button{flex:1;min-height:48px;gap:8px}
 .stand-controls-tabs button[aria-selected=true]{background:var(--ink);color:var(--bg);box-shadow:0 2px 8px #00000016}
 #stand-controls-panel{display:grid;gap:12px;min-width:0}
-.stand-controls-description{display:block;font-size:12px;line-height:1.5;color:var(--muted);margin:4px 0 12px;max-width:66ch}
+.stand-control-description{display:block;font-size:12px;line-height:1.5;color:var(--muted);margin:4px 0 12px;max-width:66ch}
 .stand-control-description>small{display:block;margin-top:4px;color:var(--muted);font-size:11px;line-height:1.45}
 .stand-animation-live{border-radius:24px;padding:16px;background:var(--glass);border:1px solid var(--line);overflow:hidden}
 .stand-animation-live-title{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}

@@ -1078,7 +1078,7 @@
         const answer=await runtime.services.previewSPIZoneDirections({action,...request});
         if(spiDirectionRetired.has(request.sessionId))throw Error('SPI_DIRECTION_CLOSED');
         spiDirectionSessions.set(request.sessionId,{...request,applied:true,attempted:true});
-        return {status:'applied',sessionId:answer.sessionId,lineOrder:answer.lineOrder,lines:answer.lines,focus:answer.focus,previewTTLMS:answer.previewTTLMS,renewAfterMS:answer.renewAfterMS};
+        return {status:'applied',sessionId:answer.sessionId,lineOrder:answer.lineOrder,lines:answer.lines,focus:answer.focus,previewTTLMS:answer.previewTTLMS,renewAfterMS:answer.renewAfterMS,...(Number.isInteger(answer.pathTestRemainingMS)?{pathTestRemainingMS:answer.pathTestRemainingMS}:{})};
       }catch(error){
         if(['SPI_DIRECTION_UNSUPPORTED','SPI_ZONE_DIRECTION_UPDATE_REQUIRED','PIXEL_GUIDE_UPDATE_REQUIRED'].includes(error?.code))return {status:'unsupported',sessionId:request.sessionId};
         throw error;
@@ -1094,7 +1094,7 @@
         const answer=await runtime.services.previewSPIZoneDirections({action:'test',...request,focus:null});
         if(spiDirectionRetired.has(request.sessionId))throw Error('SPI_DIRECTION_CLOSED');
         spiDirectionSessions.set(request.sessionId,{...request,applied:true,attempted:true});
-        return {status:'applied',sessionId:answer.sessionId,lineOrder:answer.lineOrder,lines:answer.lines,focus:answer.focus,previewTTLMS:answer.previewTTLMS,renewAfterMS:answer.renewAfterMS,pathTestMS:answer.pathTestMS};
+        return {status:'applied',sessionId:answer.sessionId,lineOrder:answer.lineOrder,lines:answer.lines,focus:answer.focus,previewTTLMS:answer.previewTTLMS,renewAfterMS:answer.renewAfterMS,pathTestMS:answer.pathTestMS,pathTestRemainingMS:answer.pathTestRemainingMS};
       }catch(error){
         if(['SPI_DIRECTION_UNSUPPORTED','SPI_ZONE_DIRECTION_UPDATE_REQUIRED','PIXEL_GUIDE_UPDATE_REQUIRED'].includes(error?.code))return {status:'updateRequired',sessionId:request.sessionId};
         throw error;
@@ -1538,7 +1538,7 @@
     return index<0?t('v50NoLine'):ledlineName(receivers()[index],index);
   }
   function statusText(receiver) { return receiver.connection === 'offline' ? 'Offline' : ''; }
-  function catalogue() { return standControlOpen?StandAnimations.catalogFor(standControlReceivers()):P.catalog(zone()?.type || 'RGBW'); }
+  function catalogue() { return standControlOpen?StandAnimations.catalogFor(standControlReceivers()):P.catalogSnapshot(zone()?.type || 'RGBW'); }
   // Browse a smaller library without erasing any saved recipe identity.
   // Editors, scene restore and explicit current-animation shortcuts still use
   // the full catalogue above, including older fixed-colour variants.
@@ -1605,14 +1605,15 @@
     return [0,2,4].map(i => parseInt(hex.slice(i,i+2),16) || 0);
   }
   function paletteMarkup(state) {
-    const palette=state.brandColor && activeEffect()?.controls.includes('brandColor')?[state.brandColor]:colours(state),count=Math.max(1,Math.min(8,state.colorCount||palette.length));
+    const effect=activeEffect();
+    const palette=state.brandColor && effect?.controls.includes('brandColor')?[state.brandColor]:colours(state),count=Math.max(1,Math.min(8,state.colorCount||palette.length));
     return Array.from({length:count},(_,i)=>{
       const rgb=state.rgbEnabled?.[i]===false?[0,0,0]:rgbOf({colors:[palette[i%palette.length]]});
       const white=state.whiteEnabled?.[i]===false?0:(state.whiteChannels?.[i]||0);
-      const name=activeEffect()?.whiteMixPreset?(count===1?t('v50WhiteMix'):t('v50WhiteMixNumber',{number:i+1})):white>0 && rgb.every(v=>v===0)?t('v50White'):t('v50ColourNumber',{number:i+1});
+      const name=effect?.whiteMixPreset?(count===1?t('v50WhiteMix'):t('v50WhiteMixNumber',{number:i+1})):white>0 && rgb.every(v=>v===0)?t('v50White'):t('v50ColourNumber',{number:i+1});
       const swatch=`<span role="img" aria-label="${esc(name)}" title="${esc(name)}" style="--swatch:${C.screenHex(rgb,white)}"></span>`;
-      return activeEffect()?.paletteEditable === false ? swatch : `<div class="palette-item" data-palette-item="${i}"><button class="palette-colour" data-action="palette-edit" data-id="${i}" aria-label="${esc(t('v50EditColour',{name}))}">${swatch}<small>${esc(name)}</small></button>${advancedInterface()&&count>1?`<button type="button" class="palette-drag-handle" data-palette-handle aria-label="${esc(t('v50MoveColour',{number:i+1}))}" title="${esc(t('v50DragColours'))}"><span aria-hidden="true">⠿</span><small>${esc(t('v606Drag'))}</small></button>`:''}${activeEffect()?.colorCountRange&&count>activeEffect().colorCountRange.min?`<button class="palette-remove" data-action="palette-remove" data-id="${i}" aria-label="${esc(t('v50RemoveColour',{number:i+1}))}">−</button>`:''}</div>`;
-    }).join('')+(activeEffect()?.colorCountRange&&count<activeEffect().colorCountRange.max?`<button class="palette-add" data-action="palette-add" aria-label="${esc(t('v50AddAnimationColour'))}">${esc(t('v50AddColour'))}</button>`:'');
+      return effect?.paletteEditable === false ? swatch : `<div class="palette-item" data-palette-item="${i}"><button class="palette-colour" data-action="palette-edit" data-id="${i}" aria-label="${esc(t('v50EditColour',{name}))}">${swatch}<small>${esc(name)}</small></button>${advancedInterface()&&count>1?`<button type="button" class="palette-drag-handle" data-palette-handle aria-label="${esc(t('v50MoveColour',{number:i+1}))}" title="${esc(t('v50DragColours'))}"><span aria-hidden="true">⠿</span><small>${esc(t('v606Drag'))}</small></button>`:''}${effect?.colorCountRange&&count>effect.colorCountRange.min?`<button class="palette-remove" data-action="palette-remove" data-id="${i}" aria-label="${esc(t('v50RemoveColour',{number:i+1}))}">−</button>`:''}</div>`;
+    }).join('')+(effect?.colorCountRange&&count<effect.colorCountRange.max?`<button class="palette-add" data-action="palette-add" aria-label="${esc(t('v50AddAnimationColour'))}">${esc(t('v50AddColour'))}</button>`:'');
   }
   function basicAnimationLibraryMarkup(){
     const current=activeEffect(),supported=interfaceEffectAllowed(current);
@@ -2495,7 +2496,11 @@
     if(available<(effect.minimumReceivers||1))return;
     if(requiresWholeZone&&selection().kind!=='all')storeLineSelection(receivers().map(receiver=>receiver.id));
     setSpatialPreviewCategory(effect.category==='tunnel'?'tunnel':'');
-    rememberAnimationGallery();apply(effectState(effect),selection(),{freshRecipe:true});settingsOpen=false;
+    // These two branches rebuild and paint the editor synchronously below.
+    // Do not sample the gallery that is about to be replaced first. Navigation
+    // branches keep their ordinary paint because navigate() may return early.
+    const deferPreviewPaint=route.screen==='animation-family'||route.screen==='controls'&&inline;
+    rememberAnimationGallery();apply(effectState(effect),selection(),{freshRecipe:true,deferPreviewPaint});settingsOpen=false;
     if(route.screen==='animation-family'){
       controlMode='animations';showControlAnimationGallery=false;
       route={...route,screen:'controls',familyReturnScreen:null,effectsReturn:'controls'};
@@ -2531,12 +2536,10 @@
     // physical ledlines separately so the preview matches the chosen target.
     // Tunnel previews show the selected scope in the same camera as the main
     // example. Geometry retains setup order; browsing never selects extra lines.
-    // Older stored effects default to very slow cycles (up to ~100 seconds),
-    // which makes distinct animations look frozen and alike while browsing.
-    // Accelerate only these disposable gallery samples; the selected effect,
-    // its settings and the main installation preview keep their real speed.
+    // Browsing and starting use the same recipe speed. A fast gallery-only
+    // override falsely suggested that the physical receiver played slower.
     const reference=effect.id.startsWith('v31-ref-');
-    const gallery=P.gallerySample(effect,{state:{...effectState(effect),speed:reference?effect.state.speed:Math.max(effect.category==='brand'?58:75,Number(effect.state.speed)||0)},pixels:32}),previewState=gallery.state;
+    const gallery=P.gallerySample(effect,{state:effectState(effect),pixels:32}),previewState=gallery.state;
     const separateSelection=['receivers','lines'].includes(selection().kind),representativeOnly=!tunnel&&!separateSelection;
     const sampleType=zone().type||'RGBW';
     const physicalLines=tunnel&&tunnelLines==='all'?receivers():selected().map(receiver=>zone()?.type==='SPI'&&!continuousZone()?{...receiver,outputs:receiver.outputs.map(output=>({...output,enabled:output.enabled&&selectedLineIds().includes(receiver.id+':'+output.port)}))}:receiver);
@@ -2562,7 +2565,7 @@
   function tunnelGalleryPreviewMarkup(group=null,css='tunnel-live-preview',{illustrative=!group,main=true}={}) {
     const connected=receivers(),example=group?.preview||catalogue().find(effect=>effect.category==='tunnel'&&Number(effect.state.variant)===93)||catalogue().find(effect=>effect.category==='tunnel');
     if(!example)return '';
-    const state={...effectState(example),speed:Math.max(75,Number(example.state.speed)||0)},sampleType=zone()?.type||'RGBW';
+    const state=effectState(example),sampleType=zone()?.type||'RGBW';
     const base=connected[0]||model.receivers.find(receiver=>receiver.type===sampleType);
     const list=illustrative?Array.from({length:4},(_,index)=>({
       ...(base?copy(base):{}),id:`tunnel-gallery-example-${index+1}`,name:`Ledline ${index+1}`,type:sampleType,order:index,
@@ -2801,7 +2804,7 @@
     // must move even when the real lights are static/off, without replacing
     // the main preview, writing a state or sending an animation to a receiver.
     const continuous=layout==='continuous';
-    const effect=P.catalog('SPI').find(item=>item.id===(continuous?'spi-chase-8':'v30-tunnel-handoff'));
+    const effect=P.catalogSnapshot('SPI').find(item=>item.id===(continuous?'spi-chase-8':'v30-tunnel-handoff'));
     const state={...copy(effect.state),colors:['#F4D5B3'],colorCount:1,whiteChannels:[0],
       rgbEnabled:[true],whiteEnabled:[false],on:true,power:true,bri:100,brightness:100,
       speed:continuous?48:65,smooth:100,fadeAmount:100,widthPixels:9,objectCount:1,
@@ -3052,6 +3055,10 @@
     for(const control of main.querySelectorAll('.ledline-setup[data-order-open="false"] > .ledline-setup-toggle[data-action="layout"],.ledline-setup[data-order-open="false"] > .spatial-preview-choice > .spatial-choice-toggle[data-action="spatial-toggle"]'))control.disabled=busy;
     for(const closeButton of main.querySelectorAll('.ledline-setup [data-action="layout"],.ledline-setup [data-action="order-cancel686"]'))
       if(orderPanelCloseRequest589(closeButton))closeButton.disabled=false;
+    const receiverToolsBlocked=busy||needsStandOpen||standPresentationOnly()||arrangementDirty();
+    for(const control of main.querySelectorAll('[data-order-receiver-action723]'))control.disabled=receiverToolsBlocked;
+    const receiverToolsHint=main.querySelector('[data-order-receiver-hint723]');
+    if(receiverToolsHint)receiverToolsHint.hidden=!arrangementDirty();
     main.querySelector('.ledline-arrangement')?.setAttribute('aria-busy',String(busy));
     const status=main.querySelector('[data-order-apply-status]');
     if(status){
@@ -3442,10 +3449,11 @@
     return `<section class="ledline-setup card" data-order-ui="652" data-order-visual="655" data-order-focus-ui="664" data-order-direct-ui="668" data-order-open="true" role="dialog" aria-modal="true" aria-label="${esc(title)}">
       <button class="ledline-setup-toggle" data-action="order-cancel686" aria-label="${esc(t('close')+' · '+title)}" aria-expanded="true" aria-controls="ledline-setup-body">${lineOrderIcon()}<span class="ledline-setup-copy"><b>${esc(title)}</b><small id="ledline-setup-context">${esc(context)}</small></span><span class="ledline-setup-close-label">${icon('close')}<span class="sr-only">${esc(t('close'))}</span></span></button>${orderCancelNoticeMarkup590(z)}
       <div class="ledline-setup-body" id="ledline-setup-body" role="region" aria-labelledby="ledline-setup-heading" aria-describedby="ledline-setup-context">
-        <section class="order-assignment-intro652 order-visual-intro655">
-          <div class="order-visual-heading655"><h3 id="ledline-setup-heading">${esc(orderText652('orderDirectTitle668'))}</h3>${count>1?`<button type="button" class="order-visual-help655" data-action="order-tutorial-open" aria-label="${esc(orderGuideText('tutorialView'))}">${icon('info')}<span>${esc(orderText652('orderHelp655'))}</span></button>`:''}</div>
-          <p class="order-visual-hint655">${esc(orderText652(singleLine?'orderDirectSingle668':'orderDirectIntro668'))}</p>
-          ${count>1?`<div class="order-copy-example716" role="img" aria-label="${esc(orderText652('orderExample716',{position:Math.min(3,count)}))}"><div><small>${eye}${esc(orderText652('orderDirectReal668'))}</small><span class="order-copy-real716"><b>${Math.min(3,count)}</b><i></i></span></div><span class="order-copy-arrow716" aria-hidden="true">→</span><div><small>${phone}${esc(orderText652('orderDirectApp668'))}</small><span class="order-copy-app716"><b>${Math.min(3,count)}</b><i></i>${icon('grip')}</span></div></div><p class="order-copy-caption716">${esc(orderText652('orderExample716',{position:Math.min(3,count)}))}</p>`:''}
+        ${layoutReceiverActions({reuse:reusable,orderTools:true})}
+        <section class="order-assignment-intro652 order-visual-intro655" data-order-intro-ui="730">
+          <div class="order-visual-heading655"><h3 id="ledline-setup-heading">${esc(orderText652('orderDirectTitle668'))}</h3>${count>1?`<button type="button" class="order-visual-help655" data-action="order-tutorial-open" aria-label="${esc(orderGuideText('tutorialView'))}">${icon('play')}<span>${esc(orderText652('orderHelp655'))}</span></button>`:''}</div>
+          ${singleLine?`<p class="order-visual-hint655">${esc(orderText652('orderDirectSingle668'))}</p>`:''}
+          ${count>1?`<div class="order-copy-example730" role="img" aria-label="${esc(orderText652('orderVisualExample730',{position:Math.min(3,count)}))}"><div class="order-copy-column730" aria-hidden="true"><small>${eye}${esc(orderText652('orderDirectReal668'))}</small><div class="order-copy-real730">${(count===2?['green','blue']:['red','green','blue']).map((colour,index)=>`<span class="order-copy-row730" data-example-colour730="${colour}"><b>${index+1}</b><i></i></span>`).join('')}</div></div><div class="order-copy-arrows730" aria-hidden="true">${Array.from({length:Math.min(3,count)},()=>'<span>→</span>').join('')}</div><div class="order-copy-column730" aria-hidden="true"><small>${phone}${esc(orderText652('orderDirectApp668'))}</small><div class="order-copy-app730">${(count===2?['green','blue']:['red','green','blue']).map((colour,index)=>`<span class="order-copy-row730" data-example-colour730="${colour}"><b>${index+1}</b><i></i>${icon('grip')}</span>`).join('')}</div></div><span class="order-copy-badge730" aria-hidden="true">${esc(orderText652('orderVisualBadge730'))}</span></div>`:''}
           <div class="order-focus-guide664"><span class="order-assignment-direction652"><b>${esc(orderGuideText(direction))}</b></span><span class="sr-only">${esc(orderText652('orderFocusSwap664'))}</span></div>
           <p class="order-focus-status664" data-order-focus-status role="status" aria-live="polite">${esc(orderFocusCopy664())}</p>
         </section>
@@ -3457,7 +3465,6 @@
           <ol class="order-assignments652" aria-label="${esc(orderText652('orderCurrentOrder'))}" aria-description="${esc(orderText652('orderDirectRule668'))}">${rows}</ol>${count?'':`<p>${esc(orderText652('orderEmpty'))}</p>`}
         </section>
         <footer class="order-assignment-footer652"><small>${esc(orderText652('orderDraftHint686'))}</small><button type="button" class="button full order-assignment-done652" data-action="layout">${icon('check')}${esc(orderText652('orderDone'))}</button></footer>
-        ${reusable?`<button class="ledline-reuse-action" data-action="zone-assign" data-id="${esc(z.id)}">${icon('receiver')}<span>${esc(t('lineSetupReuse'))}</span>${icon('chevron')}</button>`:''}${layoutReceiverActions()}
       </div></section>`;
   }
   function orderLiveChangeMarkup(state){
@@ -3492,9 +3499,11 @@
     const ports=receiver.outputs.filter(output=>output.enabled).map(output=>output.port),chosen=ports.filter(value=>selected.has(value));
     return `<fieldset class="v50-edit-ports"><legend>${esc(t('v50EditPorts'))}</legend><div>${ports.map(value=>`<button type="button" role="checkbox" aria-checked="${selected.has(value)}" aria-label="${esc(t('v50EditPort',{port:value}))}" data-action="pixel-edit-port" data-receiver="${esc(receiver.id)}" data-port="${value}">P${value}${selected.has(value)?icon('check'):''}</button>`).join('')}</div></fieldset>${spiSettingsMarkup659(receiver,{ports:chosen})}`;
   }
-  function layoutReceiverActions() {
+  function layoutReceiverActions({reuse=false,orderTools=false}={}) {
     const z=zone();
-    return `<section class="layout-receiver-actions" aria-label="${esc(t('lineSetupAddContext',{zone:z.name}))}"><button class="ledline-add-action" data-action="layout-receiver-add" data-zone="${esc(z.id)}"><span class="ledline-add-icon" aria-hidden="true">＋</span><span class="ledline-add-copy"><b>${esc(t('addReceiver'))}</b><small>${esc(t('lineSetupAddContext',{zone:z.name}))}</small></span>${icon('chevron')}</button></section>`;
+    const dirty=orderTools&&arrangementDirty(),blocked=orderTools&&(dirty||arrangementInteractionBusy()||!!orderSaveQueue588||!!orderClose589||arrangementNeedsStandOpen()||standPresentationOnly());
+    const guard=orderTools?`data-order-receiver-action723 ${blocked?'disabled':''} aria-describedby="order-receiver-hint723"`:'';
+    return `<section class="layout-receiver-actions" data-order-management723 aria-label="${esc(t('lineSetupAddContext',{zone:z.name}))}"><button type="button" class="ledline-add-action" data-action="layout-receiver-add" data-zone="${esc(z.id)}" ${guard}><span class="ledline-add-icon" aria-hidden="true">＋</span><span class="ledline-add-copy"><b>${esc(t('addReceiver'))}</b><small>${esc(t('lineSetupAddContext',{zone:z.name}))}</small></span>${icon('chevron')}</button>${reuse?`<button type="button" class="ledline-add-action" data-action="zone-assign" data-id="${esc(z.id)}" ${guard}><span class="ledline-add-icon" aria-hidden="true">${icon('receiver')}</span><span class="ledline-add-copy"><b>${esc(t('lineSetupReuse'))}</b><small>${esc(t('lineSetupAddContext',{zone:z.name}))}</small></span>${icon('chevron')}</button>`:''}${orderTools?`<small id="order-receiver-hint723" data-order-receiver-hint723 ${dirty?'':'hidden'}>${esc(orderText652('orderDraftHint686'))}</small>`:''}</section>`;
   }
   function receiverOrderMarkup() {
     const list=receivers();
@@ -3658,7 +3667,7 @@
         const receiver=current.receivers.find(receiver=>receiver.id===line.receiverId),state=M.lightStateFor(receiver,line.port);
         if(!state.engine||String(state.engine).toUpperCase()==='STATIC')return false;
         if(state.category)return state.category==='tunnel';
-        const effect=P.catalog(z.type).find(effect=>state.v30Effect?effect.state.v30Effect===state.v30Effect:
+        const effect=P.catalogSnapshot(z.type).find(effect=>state.v30Effect?effect.state.v30Effect===state.v30Effect:
           !effect.state.v30Effect&&effect.state.engine===state.engine&&effect.state.variant===state.variant&&
           (effect.state.previewFamily||null)===(state.previewFamily||null));
         return effect?.category==='tunnel';
@@ -3882,11 +3891,15 @@
     if(!sceneDraft)sceneDraft={zoneIds:[],name:'',search:''};
     const editing=Boolean(sceneDraft.sceneId),subtitle=editing?t("Pas de naam of zones aan. Wil je het licht wijzigen? Kies onderaan ‘Deze scène bewerken’."):sceneDraft.asNew675?t("Geef deze variatie een naam. De oorspronkelijke scène blijft bewaard."):t("Je huidige licht staat klaar. Geef het een naam en sla het op.");
     const saveHint=t("Na opslaan wordt deze scène actief.");
+    // A saved scene projection includes every zone. Build it once per render,
+    // not once again for every card in a larger installation.
+    const savedZones=sceneDraft.original?Scenes.previewZones(model,sceneDraft.original):[];
+    const savedPlan=sceneDraft.original?savedSceneStandPlan(sceneDraft.original):null;
     const omitted=sceneDraft.omittedZoneCount?`<p class="card scene-edit-warning" role="status">${esc(t(sceneDraft.omittedZoneCount===1?'{count} niet-beschikbare zone wordt niet in de bijgewerkte scène opgenomen.':'{count} niet-beschikbare zones worden niet in de bijgewerkte scène opgenomen.',{count:sceneDraft.omittedZoneCount}))}</p>`:'';
     return `<div class="page scene-draft-page ui606-pages" data-scene-ui="640">${contextTitle(editing?t("Scène aanpassen"):t("Sfeer bewaren"),subtitle,t("Scènes"),'scenes')}${omitted}<label class="dialog-field scene-name-field ui606-scene-name"><span class="ui606-step-heading"><span class="ui606-step-number" aria-hidden="true">1</span><span>${esc(t("Geef je scène een naam"))}</span></span><input id="scene-name" maxlength="64" value="${esc(sceneDraft.name)}" placeholder="${esc(t("Bijvoorbeeld: warm welkom"))}" ${sceneDraft.saving?'disabled':''}></label><section class="scene-zone-picker" aria-labelledby="scene-zone-picker-title"><div class="section-heading ui606-step-heading"><span class="ui606-step-number" aria-hidden="true">2</span><h2 id="scene-zone-picker-title">${esc(t("Welke zones wil je bewaren?"))}</h2></div><div class="scene-bulk-actions"><button class="text-button" data-action="scene-select-all" ${sceneDraft.saving?'disabled':''}>${esc(t("Alle zones kiezen"))}</button><button class="text-button" data-action="scene-clear-selection" ${sceneDraft.saving?'disabled':''}>${esc(t("Selectie wissen"))}</button></div>${sceneSearch('draft',stand().zones.length)}<div class="scene-zone-list">${stand().zones.map(z=>{
       const count=M.zoneReceivers(model,z.id).length;
-      const saved=sceneDraft.original&&Scenes.previewZones(model,sceneDraft.original).find(saved=>saved.id===z.id);
-      return `<button class="scene-zone" data-action="scene-zone" data-id="${esc(z.id)}" data-scene-filter-name="${esc(z.name+' '+(z.type||''))}" aria-pressed="${sceneDraft.zoneIds.includes(z.id)}" ${count&&!sceneDraft.saving?'':'disabled'}>${saved?savedZonePreview(saved,'',savedSceneStandPlan(sceneDraft.original)):count?zonePreview(z,'scene-preview',{label:t('Huidig licht · {name} · {type}',{name:z.name,type:z.type})}):`<span class="scene-preview scene-preview-unavailable">${icon('zones')}</span>`}<span><b>${esc(z.name)}</b><small>${count?`${receiverCount(count)} · ${z.type}${saved?' · '+t('opgeslagen licht'):''}`:t("Nog geen verlichting")}</small></span><i aria-hidden="true">${sceneDraft.zoneIds.includes(z.id)?'✓':'+'}</i></button>`;
+      const saved=savedZones.find(saved=>saved.id===z.id);
+      return `<button class="scene-zone" data-action="scene-zone" data-id="${esc(z.id)}" data-scene-filter-name="${esc(z.name+' '+(z.type||''))}" aria-pressed="${sceneDraft.zoneIds.includes(z.id)}" ${count&&!sceneDraft.saving?'':'disabled'}>${saved?savedZonePreview(saved,'',savedPlan):count?zonePreview(z,'scene-preview',{label:t('Huidig licht · {name} · {type}',{name:z.name,type:z.type})}):`<span class="scene-preview scene-preview-unavailable">${icon('zones')}</span>`}<span><b>${esc(z.name)}</b><small>${count?`${receiverCount(count)} · ${z.type}${saved?' · '+t('opgeslagen licht'):''}`:t("Nog geen verlichting")}</small></span><i aria-hidden="true">${sceneDraft.zoneIds.includes(z.id)?'✓':'+'}</i></button>`;
     }).join('')}</div><p class="scene-search-empty card" hidden>${esc(t("Geen zones gevonden. Pas je zoekopdracht aan; je selectie blijft bewaard."))}</p></section><div class="scene-save-bar"><p data-scene-selection-summary role="status" aria-live="polite"></p><p class="scene-save-error" data-scene-save-error role="alert" hidden></p><button class="button red full" data-action="scene-save" disabled>${sceneDraft.saving?t("Opslaan…"):editing?t("Scène bijwerken"):t("Scène opslaan")}</button>${editing?`<button class="button secondary full" data-action="scene-save-new" ${sceneDraft.saving?'disabled':''}>${esc(t("Opslaan als nieuwe scène"))}</button>`:''}<small>${esc(saveHint)}</small></div>${editing?`<button class="button full scene-detail-edit" data-action="scene-start-edit" data-id="${esc(sceneDraft.sceneId)}" ${sceneDraft.saving?'disabled':''}>${icon('edit')} ${esc(t("Deze scène bewerken"))} ${icon('chevron')}</button><p class="scene-edit-hint">${esc(t("Laadt het opgeslagen licht en brengt je naar de stand. Pas daar je zones aan en sla de scène opnieuw op."))}</p>`:''}<button class="button secondary full" data-action="scenes" ${sceneDraft.saving?'disabled':''}>${esc(t("Annuleren"))}</button></div>`;
   }
   function renderSceneDetail() {
@@ -5321,7 +5334,7 @@
     // selected animation stays labelled as a choice, not an ACK or success.
     return '';
   }
-  function apply(patch,scope=selection(),{freshRecipe=false}={}) {
+  function apply(patch,scope=selection(),{freshRecipe=false,deferPreviewPaint=false}={}) {
     if(standPresentationOnly())return toast(t("Je stand is nog niet verbonden. Je bewaarde stand blijft zichtbaar."));
     if(orderIdentificationState?.active)void orderIdentification?.supersede();
     if(managementBusy)return;
@@ -5381,7 +5394,7 @@
     syncLiveStatus();
     syncPresetAvailability();
     syncControlLocation();
-    paint(performance.now()/1000);
+    if(!deferPreviewPaint)paint(performance.now()/1000);
   }
   function toast(text) { const el=document.getElementById('toast');el.textContent=text;el.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.hidden=true;},3500); }
   function staticColour(rgb,w=0,memory=null) { apply({...C.state(rgb,w),...(memory?{rgbwLast:memory}:{}),engine:'STATIC',variant:0,backgroundOn:false,v30Effect:null,category:null,animation:'Vaste kleur',previewFamily:null,legacySpi:false,bounce:false,mirror:false,on:true,power:true});syncColour(); }
@@ -5514,7 +5527,14 @@
     if(orderBlinkExpired)syncOrderTestControls();
     if(route.screen==='receiver-add')onboarding.paint(time);
     const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const standPlayback=standControlOpen?StandAnimations.current(model,stand().id):null;
+    let standPlayback=null,standPlaybackRead=false;
+    const currentStandPlayback=()=>{
+      if(!standPlaybackRead){
+        standPlaybackRead=true;
+        standPlayback=standControlOpen?StandAnimations.current(model,stand().id):null;
+      }
+      return standPlayback;
+    };
     const zoneStandPlans=new Map();
     const liveZoneStandPlan=zoneId=>{
       const owner=model.stands.find(item=>item.zones.some(zone=>zone.id===zoneId));
@@ -5537,7 +5557,8 @@
         return;
       }
       if(spec.standEffectId){
-        const plan=spec.main&&standPlayback?.effectId===spec.standEffectId?standPlayback:spec.standPlan;
+        const current=spec.main?currentStandPlayback():null;
+        const plan=current?.effectId===spec.standEffectId?current:spec.standPlan;
         if(!plan)return;
         StandAnimations.draw(canvas,plan,{zoneId:spec.standZoneId,labels:false,time:reduce&&!spec.main?1.5:time,reducedMotion:reduce});
         return;
@@ -5734,9 +5755,14 @@
     // Other dialogs without that footer retain their existing header exit.
     const closeButton=colourDialog?'':`<button class="icon-button" data-action="effect-dialog-close" aria-label="${esc(t("Venster sluiten"))}">${icon('close')}</button>`;
     const colourActions=colourDialog?`<footer class="colour-picker-actions" data-colour-picker-actions><button type="button" class="colour-picker-done colour-picker-done-footer" data-colour-picker-done data-action="effect-dialog-close">${icon('check')}<span>${esc(t('done'))}</span></button></footer>`:'';
-    document.getElementById('effect-dialog-content').innerHTML=`<header><h2 id="effect-dialog-title">${esc(title)}</h2>${closeButton}${headerContent}</header>${content}${colourActions}`;
     const wasOpen=dialog.open;
+    const replacingOwnFocus=wasOpen&&dialog.contains(document.activeElement);
+    document.getElementById('effect-dialog-content').innerHTML=`<header><h2 id="effect-dialog-title" tabindex="-1">${esc(title)}</h2>${closeButton}${headerContent}</header>${content}${colourActions}`;
     if(!dialog.open)dialog.showModal();
+    // Replacing an already open sheet does not run the browser's modal focus
+    // steps again. Keep focus inside; a caller's explicit field/action focus
+    // still runs afterwards and takes precedence.
+    if(replacingOwnFocus&&!document.hidden&&!dialog.contains(document.activeElement))dialog.querySelector('#effect-dialog-title')?.focus({preventScroll:true});
     window.InterfaceMotion?.openDialog?.(dialog,wasOpen);dialog.scrollTop=0;
     // Keep a way out visible even while the shared colour picker is scrolled.
     // Measure instead of guessing: translated/long titles can wrap to 2 lines.
@@ -5837,7 +5863,7 @@
   }
   function standAnimationPreview(effect,{compact=false}={}){
     const sample=copy(model);sample.receivers.forEach(receiver=>{delete receiver.state.standAnimation;});
-    let plan;try{plan=StandAnimations.plan(sample,stand().id,effect.id,{state:{...effectState(effect),...(compact?{speed:Math.max(58,effect.state.speed||0)}:{})},time:0});}
+    let plan;try{plan=StandAnimations.plan(sample,stand().id,effect.id,{state:effectState(effect),time:0});}
     catch(error){if(error.code==='STAND_EFFECT_MINIMUM')return `<p class="stand-animation-guidance">${esc(t('v50StandMinimum'))}</p>`;throw error;}
     let groups=plan.zones.filter(group=>group.receivers.length);
     if(compact){const types=new Set();groups=groups.filter(group=>{if(types.has(group.type))return false;types.add(group.type);return true;});}
@@ -5931,6 +5957,15 @@
   }
   function keepAdvancedSettingsActionVisible(button,panel,revision,expanded=false){
     requestAnimationFrame(()=>{
+      const dialog=button?.closest('#effect-dialog[open]');
+      if(dialog){
+        if(revision!==advancedSettingsRevision||settingsOpen!==expanded||!panel||panel.hidden!==!expanded||!button.isConnected||dialog.querySelector('#animation-settings')!==panel||dialog.querySelector('[data-action="settings-toggle"]')!==button)return;
+        const bounds=dialog.getBoundingClientRect(),header=dialog.querySelector('#effect-dialog-content > header'),footer=dialog.querySelector('[data-colour-picker-actions]');
+        const top=Math.max(bounds.top,header?.getBoundingClientRect().bottom||bounds.top)+8,bottom=Math.min(bounds.bottom,innerHeight,footer?.getBoundingClientRect().top??innerHeight)-8,box=button.getBoundingClientRect();
+        const shift=box.top<top?box.top-top:box.bottom>bottom?box.bottom-bottom:0;
+        if(Math.abs(shift)>1)dialog.scrollBy({top:shift,behavior:'instant'});
+        return;
+      }
       if(revision!==advancedSettingsRevision||settingsOpen!==expanded||!panel||panel.hidden!==!expanded||!button.isConnected||main.querySelector('#animation-settings')!==panel||main.querySelector('[data-action="settings-toggle"]')!==button)return;
       updateControlPreviewDensity();
       const dock=main.querySelector('.control-preview-dock'),surface=dock?.querySelector('.control-dock-surface');
@@ -6432,6 +6467,7 @@
       if(standControlOpen){
         if(action==='stand-control-mode'){
           if(!['colour','animations'].includes(id))return;
+          if(id===standControlMode)return;
           standControlEpoch++;
           standControlMode=id;standAnimationFamily=null;standAnimationFamilyReturn=null;standDialogNested=null;
           if(id==='animations'){standAnimationGallery=true;standAnimationTab='catalogue';standAnimationQueries.delete(stand()?.id);settingsOpen=false;}
@@ -6496,6 +6532,13 @@
         syncOrderTestControls();return;
       }
       if(orderTestBusy()&&button.closest('.ledline-row-actions'))return;
+      // Existing assignment/search workflows commit membership, not this
+      // unfinished order. Only Klaar may save the draft; do not silently drop
+      // it when a management button is activated by keyboard or stale DOM.
+      if(openLineSetup.has(route.zoneId)&&button.closest('.ledline-setup')&&
+         ['zone-assign','layout-receiver-add','layout-new-receiver'].includes(action)&&arrangementDirty()){
+        toast(orderText652('orderDraftHint686'));return;
+      }
       if(openLineSetup.has(route.zoneId)&&button.closest('.ledline-setup')&&!['layout','order-cancel686','visual-identify','port-identify'].includes(action)){
         if(orderIdentificationState?.active)void orderIdentification?.interaction();else beginOrderColours();
       }
@@ -7110,7 +7153,7 @@
       if(action==='background-toggle'){if(!activeEffect()?.backgroundEditable)return;apply({backgroundOn:!selectedState().backgroundOn});syncBackground();return;}
       if(action==='background-edit'){
         if(!activeEffect()?.backgroundEditable)return;
-        showEffectDialog('Achtergrondkleur',`${dialogAnimationPreview()}${colourPickerMarkup('background')}`);
+        showEffectDialog(t('animationBackground'),`${dialogAnimationPreview()}${colourPickerMarkup('background')}`);
         paintWheel();syncColour();return;
       }
       if(action==='visual-port'){
@@ -7120,7 +7163,7 @@
         const motion=receiverPlugMotion(rid);motion.clear();motion.trigger(Number(id),performance.now()/1000,true);
         const details=button.closest('details');details.querySelectorAll('[data-action="visual-port"]').forEach(el=>el.setAttribute('aria-pressed',el===button));
         details.querySelectorAll('[data-port-row]').forEach(el=>el.classList.toggle('port-focused',Number(el.dataset.portRow)===Number(id)));
-        details.querySelector('.receiver-product-caption strong').textContent=`Uitgang ${id} geselecteerd`;
+        details.querySelector('.receiver-product-caption strong').textContent=t('v50OutputChosen',{port:Number(id)});
         const pixelsShortcut=details.querySelector('[data-visual-pixels717]');
         if(pixelsShortcut){
           pixelsShortcut.dataset.ports=String(id);pixelsShortcut.querySelector('small').textContent=`P${id}`;
@@ -7460,7 +7503,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();retireOrderFocus664();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate722',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate731',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;firstPinReady686.clear();

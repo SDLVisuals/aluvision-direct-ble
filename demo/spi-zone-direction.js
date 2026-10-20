@@ -77,9 +77,11 @@
     function request(state){return{...context(state),lineOrder:state.data.lineOrder.slice(),lines:lines(state),focus:state.focus?copy(state.focus):null};}
     function confirmed(answer,wanted){return answer?.status==='applied'&&answer.sessionId===wanted.sessionId&&canonical(answer.lineOrder)===canonical(wanted.lineOrder)&&canonical(answer.lines)===canonical(wanted.lines)&&canonical(answer.focus??null)===canonical(wanted.focus);}
     const now=()=>win.performance?.now?.()??Date.now();
+    function pathRemaining(answer){return Number.isInteger(answer?.pathTestRemainingMS)&&answer.pathTestRemainingMS>=0&&answer.pathTestRemainingMS<=15000&&answer.pathTestRemainingMS<=answer.previewTTLMS;}
     function appliedStatus(state,answer,sentAt,testing=false){
-      if(testing){state.pathUntil=sentAt+answer.pathTestMS;state.pathActive=true;state.pathEnded=false;}
-      if(Number.isInteger(answer.pathTestRemainingMS)&&(state.pathActive||state.pathEnded)){state.pathUntil=sentAt+answer.pathTestRemainingMS;state.pathActive=answer.pathTestRemainingMS>0;state.pathEnded=!state.pathActive;}
+      // The native remaining interval includes the quoted future start. Anchor
+      // it before the bridge call: a delayed reply never extends physical proof.
+      if(pathRemaining(answer)&&(testing||state.pathActive||state.pathEnded)){state.pathUntil=sentAt+answer.pathTestRemainingMS;state.pathActive=answer.pathTestRemainingMS>0;state.pathEnded=!state.pathActive;}
       if(state.pathActive&&now()>=state.pathUntil){state.pathActive=false;state.pathEnded=true;}
       status(state,state.pathActive?'testing':state.pathEnded?'testEnded':'applied');
     }
@@ -115,8 +117,19 @@
     function controls(state){if(!current(state))return;for(const button of state.dialog.querySelectorAll('[data-spi-zone-action="flip"],[data-spi-zone-action="select"],[data-spi-zone-action="save"],[data-spi-zone-action="test"]'))button.disabled=state.saving||state.resuming||state.recoveringTest||state.stale||!!state.stopJob||button.dataset.spiZoneAction==='test'&&state.inFlight||button.dataset.spiZoneAction==='flip'&&(button.closest('[data-spi-zone-line]')?.dataset.pixels==='1'||state.pendingSaveReceivers.has(button.closest('[data-spi-zone-line]')?.dataset.receiverId));}
     async function drain(state){
       if(state.inFlight||state.previewFailed||!state.pending||!enabled(state))return false;const wanted=state.pending,testing=state.pendingTest===true,version=state.version,sentAt=now();state.pending=null;state.pendingTest=false;state.inFlight=true;let applied=false;status(state,'pending');clearObservation(state);controls(state);
+      const firstPreview=state.previewStarted!==true;state.previewStarted=true;
       const job=Promise.resolve().then(()=>(testing?onTest:onPreview)(copy(wanted)));state.previewJob=job;
-      try{const answer=await job;if(current(state)&&!state.paused){if(!confirmed(answer,wanted)||testing&&answer.pathTestMS!==6000||onObserve&&(!lease(answer)||sentAt+answer.previewTTLMS<=now())){state.previewFailed=true;state.pending=null;status(state,answer?.status==='updateRequired'?'testUpdate':answer?.status==='unsupported'?'unsupported':'failed');}else if(version===state.version&&enabled(state)){if(onObserve)recordLease(state,wanted,answer,sentAt);appliedStatus(state,answer,sentAt,testing);applied=true;}}}
+      try{let answer=await job,receiptSentAt=sentAt;
+        if(firstPreview&&!testing&&onObserve&&current(state)&&!state.paused&&!state.previewRetired&&version===state.version&&enabled(state)&&confirmed(answer,wanted)&&lease(answer)&&sentAt+answer.previewTTLMS<=now()){
+          // A cold START may spend its read-only preflight before any physical
+          // guide exists. Never rebase that old reply at arrival: read the exact
+          // existing native holder once, anchored BEFORE this new STATUS call.
+          const observeEpoch=state.observeEpoch,sampledAt=now();let observed;
+          try{observed=await bounded(state,Promise.resolve().then(()=>onObserve(copy(context(state)))),15000);}catch(_){}
+          if(!current(state)||state.paused||state.previewRetired||state.observeEpoch!==observeEpoch||version!==state.version||!enabled(state))return false;
+          answer=observed;receiptSentAt=sampledAt;
+        }
+        if(current(state)&&!state.paused){if(!confirmed(answer,wanted)||testing&&(answer.pathTestMS!==6000||!pathRemaining(answer))||onObserve&&(!lease(answer)||receiptSentAt+answer.previewTTLMS<=now())){state.previewFailed=true;state.pending=null;status(state,answer?.status==='updateRequired'?'testUpdate':answer?.status==='unsupported'?'unsupported':'failed');}else if(version===state.version&&enabled(state)){if(onObserve)recordLease(state,wanted,answer,receiptSentAt);appliedStatus(state,answer,receiptSentAt,testing);applied=true;}}}
       catch(_){if(current(state)&&!state.paused){state.previewFailed=true;state.pending=null;status(state,'failed');}}
       finally{if(state.previewJob===job)state.previewJob=null;state.inFlight=false;if(current(state)){controls(state);if(state.pending)void drain(state);else observeLater(state);}}
       return applied;
@@ -144,7 +157,7 @@
         // a confirmed/no-write STOP. Never replay a tombstoned START or erase
         // the customer's draft to recover a transport failure.
         state.sessionId='spi-zone-'+Date.now().toString(36)+'-'+(++serial);
-        state.previewRetired=false;state.previewFailed=false;state.saving=false;state.paused=false;controls(state);return await queue(state);
+        state.previewStarted=false;state.previewRetired=false;state.previewFailed=false;state.saving=false;state.paused=false;controls(state);return await queue(state);
       }catch(_){if(current(state))status(state,'stopFailed');}
       finally{if(current(state)){state.saving=false;state.paused=!!state.stopJob;controls(state);}}
     }
@@ -185,7 +198,7 @@
         if(!valid())return;
         if(answer?.status!=='stopped'||answer.sessionId!==oldSession){status(state,'stopFailed');return;}
         if(!validContext(state))return;
-        state.visibilityStop=null;state.sessionId='spi-zone-'+Date.now().toString(36)+'-'+(++serial);
+        state.visibilityStop=null;state.sessionId='spi-zone-'+Date.now().toString(36)+'-'+(++serial);state.previewStarted=false;
         state.previewRetired=false;state.previewFailed=false;state.paused=false;
         state.resuming=false;controls(state);queue(state);
       })();state.resumeJob=job;

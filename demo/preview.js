@@ -558,7 +558,7 @@ function softTrailCoverage(behind,trail,n,smooth){
       // Only a fresh SPI starter uses it; saved speed/smooth remain untouched.
       ...(effect.id==='spi-chase-8'?{speed:45,smooth:100}:{})}};
   }
-  function catalog(type) {
+  function buildCatalog(type) {
     types(type);
     // Static color is its own page, not an animation. Include the real existing
     // whole-line formulas on SPI as well, without remapping their wire variant.
@@ -574,7 +574,24 @@ function softTrailCoverage(behind,trail,n,smooth){
       return { ...effect, state: { ...effect.state, widthPixels: model.DEFAULT_ANIMATION_WIDTH } };
     });
   }
-  const descriptors = new Map(['RGBW', 'SPI'].flatMap(type => catalog(type).map(effect =>
+  const catalogSnapshots = new Map();
+  function freezeCatalog(value) {
+    if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+      Object.values(value).forEach(freezeCatalog);
+      Object.freeze(value);
+    }
+    return value;
+  }
+  // Read-only descriptors are installation-independent. Reusing them avoids
+  // rebuilding every recipe for each activeEffect/palette/scene lookup.
+  // Keep catalog()'s original fresh/mutable return contract for other callers.
+  function catalogSnapshot(type) {
+    types(type);
+    if (!catalogSnapshots.has(type)) catalogSnapshots.set(type, freezeCatalog(buildCatalog(type)));
+    return catalogSnapshots.get(type);
+  }
+  function catalog(type) { return copy(catalogSnapshot(type)); }
+  const descriptors = new Map(['RGBW', 'SPI'].flatMap(type => catalogSnapshot(type).map(effect =>
     [effect.state.v30Effect || [type, effect.state.engine, effect.state.variant, effect.state.previewFamily || ''].join(':'), effect])));
   function descriptorFor(receiver) {
     const state = receiver.state || {};
@@ -751,10 +768,8 @@ function softTrailCoverage(behind,trail,n,smooth){
     }
     // Physical placement is calculated from ALL zone members, including
     // offline receivers; selecting one receiver must never close a gap.
-    return geo.outputs.flatMap(output => Array.from({ length: output.pixels }, (_, pixel) => {
+    return geo.outputs.flatMap(output => {
       const total = continuous ? group.totalPixels : output.pixels;
-      const oriented = output.reversed ? output.pixels - 1 - pixel : pixel;
-      const position = (continuous ? output.offset : 0) + oriented;
       const sampleState = Object.assign({}, state, {
         // Continuous is one logical strip. Keep the actual output geometry
         // for electrical placement only, never as a new animation boundary.
@@ -762,14 +777,19 @@ function softTrailCoverage(behind,trail,n,smooth){
         receiverOffset: 0,
         lineIndex: continuous ? 0 : output.lineIndex, lineCount: continuous ? 1 : output.lineCount
       });
-      if (state.legacySpi) return legacySpi.sample({ ...sampleState, backgroundOn: Boolean(background) }, (position + 0.5) / total, time, position, total);
-      const value = canonical.sampleSpiPixel(sampleState,
-        (position + 0.5) / total, time, total, continuous ? 0 : output.lineIndex, continuous ? 1 : output.lineCount);
-      // The preserved engine supplies the true coverage envelope. V30 exposes
-      // that existing foreground/background split without changing its recipe.
-      value.background = background;
-      return opticalWhite(value);
-    }));
+      const legacyState = state.legacySpi ? { ...sampleState, backgroundOn: Boolean(background) } : null;
+      return Array.from({ length: output.pixels }, (_, pixel) => {
+        const oriented = output.reversed ? output.pixels - 1 - pixel : pixel;
+        const position = (continuous ? output.offset : 0) + oriented;
+        if (legacyState) return legacySpi.sample(legacyState, (position + 0.5) / total, time, position, total);
+        const value = canonical.sampleSpiPixel(sampleState,
+          (position + 0.5) / total, time, total, continuous ? 0 : output.lineIndex, continuous ? 1 : output.lineCount);
+        // The preserved engine supplies the true coverage envelope. V30 exposes
+        // that existing foreground/background split without changing its recipe.
+        value.background = background;
+        return opticalWhite(value);
+      });
+    });
   }
   function checkedSamplingGeometry(candidate,physical) {
     const invalid=()=>{throw new Error('Invalid internal sampling geometry');};
@@ -1614,6 +1634,6 @@ function softTrailCoverage(behind,trail,n,smooth){
     }
     return rawFrame;
   }
-  return Object.freeze({ catalog, gallerySample, geometry, ledlineCount, sample, draw, rows, selected, normalizeState, defaultWidthPixels, retimeMotion, opticalWhite, tunnelProjection, wallProjection,
+  return Object.freeze({ catalog, catalogSnapshot, gallerySample, geometry, ledlineCount, sample, draw, rows, selected, normalizeState, defaultWidthPixels, retimeMotion, opticalWhite, tunnelProjection, wallProjection,
     engineVersion: canonical.version, extensionVersion: extension.version, isLocalPreview: true });
 }));

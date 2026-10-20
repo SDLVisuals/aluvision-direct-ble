@@ -158,9 +158,9 @@
     let firstPinState686=null,firstPinReturn686=false;
     const firstPinCandidate686=()=>firstPinV2===true&&!!services.FirstPinV2&&firstPinAPI?.candidate(draft,getModel())===true;
     const firstPinCurrent686=()=>!!firstPinState686&&!!draft?.receiver&&firstPinState686.transactionId===draft.transactionId&&firstPinState686.receiverId===draft.receiver.id&&firstPinState686.rid===draft.receiver.rid&&firstPinState686.fingerprint===draft.receiver.deviceFingerprint;
-    function rememberFirstPin686(answer,phase){
+    function rememberFirstPin686(answer,phase,handoff='manual'){
       if(!firstPinAPI?.validSSID(answer?.ssid,draft.receiver.type)||firstPinCurrent686()&&answer.ssid!==firstPinState686.ssid)throw Object.assign(Error(),{code:'FIRST_PIN_V2_UNCONFIRMED'});
-      firstPinState686={transactionId:draft.transactionId,receiverId:draft.receiver.id,rid:draft.receiver.rid,fingerprint:draft.receiver.deviceFingerprint,ssid:answer.ssid,phase};
+      firstPinState686={transactionId:draft.transactionId,receiverId:draft.receiver.id,rid:draft.receiver.rid,fingerprint:draft.receiver.deviceFingerprint,ssid:answer.ssid,phase,handoff:phase==='rejoin'&&handoff==='switching'?'switching':'manual'};
       manualRejoinSSID=phase==='rejoin'?answer.ssid:null;
     }
     function firstPinError686(failure){return firstPinAPI.failure(failure?.code,{rejoin:firstPinCurrent686()&&firstPinState686.phase==='rejoin'});}
@@ -175,13 +175,16 @@
         await persist();if(token!==operation||container!==owner||document.hidden)return;
         await checkpointPairFirst(token);
         // An uncertain native prompt/claim is reconciled, never re-submitted.
-        firstPinState686.phase='rejoin';securityUncertain=true;manualRejoinSSID=firstPinState686.ssid;paintPage(false);
+        firstPinState686.phase='rejoin';firstPinState686.handoff='preparing';securityUncertain=true;manualRejoinSSID=firstPinState686.ssid;paintPage(false);
         const answer=await services.FirstPinV2.claim({configuration:config(),signal:controller.signal});
         if(token!==operation||container!==owner)return;
         if(answer?.status==='cancelled'){firstPinState686.phase='pin';securityUncertain=false;manualRejoinSSID=null;return;}
         if(answer?.status!=='manual-rejoin')throw Object.assign(Error(),{code:'FIRST_PIN_V2_UNCONFIRMED'});
-        rememberFirstPin686(answer,'rejoin');
-      }catch(failure){if(token===operation&&container===owner)error=firstPinError686(failure);}
+        // This native result requests an OS wifi handoff, not proof that the
+        // new AP is visible. Keep checking explicit and never infer readiness
+        // from elapsed time, the SSID label or the handoff illustration.
+        rememberFirstPin686(answer,'rejoin','switching');
+      }catch(failure){if(token===operation&&container===owner){if(firstPinCurrent686())firstPinState686.handoff='manual';error=firstPinError686(failure);}}
       finally{if(actionAbort===controller)actionAbort=null;if(token===operation){busy=false;keepDraft();paintPage(false);resumeFirstPin686();}}
     }
     async function showFirstPin686(){
@@ -511,7 +514,7 @@
       }catch(_){saveFailed=true;notice=saveNotice;return false;}
       finally{
         draftSaving=false;
-        if(pendingChoices&&saveFailed&&draft.stage==='receiver'){
+        if(pendingChoices&&saveFailed&&['receiver','outputs'].includes(draft.stage)){
           const picker=container?.querySelector('[data-receiver-destination]');if(picker)picker.open=false;
           const dialog=picker?.querySelector('[data-onboarding-zone-dialog]');if(dialog?.open)dialog.close();openZonePickerOnNextPaint=false;
         }
@@ -850,7 +853,7 @@
       return `<section class="card onboarding-manual-wifi" aria-label="${escape(tx("Wifi met de hand verbinden"))}">${instructions}</section>`;
     }
     function securityPanel(){
-      if(firstPinCurrent686())return firstPinAPI.markup({phase:firstPinState686.phase,ssid:firstPinState686.ssid,type:draft.receiver.type,busy});
+      if(firstPinCurrent686())return firstPinAPI.markup({phase:firstPinState686.phase,handoff:firstPinState686.handoff,ssid:firstPinState686.ssid,type:draft.receiver.type,busy});
       if(!pinRequired())return `${connectionCard({title:busy?(phaseLabels[draft.security.phase]||tx('Receiver verbinden')):tx('Verbinding controleren'),hint:busy?tx('Laat de receiver aan.'):tx('Verbinding nog niet bevestigd.')})}${busy?'':button('security-retry',tx('Opnieuw controleren'))}`;
       if(automaticMain())return mainWifiReturn();
       if(manualRejoinSSID&&!registrationPending)return `<section class="card onboarding-manual-wifi" aria-label="${escape(tx("Met beveiligde wifi verbinden"))}"><h2>${busy?tx('Verbinding controleren…'):tx('Verbind met je wifi')}</h2><ol class="onboarding-wifi-tiles" data-setup-visual="wifi-rejoin"><li>${setupIcon('wifi')}<span><b>${escape(tx("Instellingen → Wifi"))}</b><small>${escape(tx('Kies {network}',{network:manualRejoinSSID}))}</small></span></li><li>${setupIcon('phone')}<span><b>${escape(tx("Standcode invoeren"))}</b><small>${escape(tx("Dit is je wifiwachtwoord."))}</small></span></li><li>${setupIcon('return')}<span><b>${escape(tx("Terug naar de app"))}</b><small>${escape(tx("We controleren automatisch."))}</small></span></li></ol></section>${button('security-retry',busy?tx('Verbinding controleren…'):tx('Ik ben verbonden · controleren'),busy?'disabled':'')}`;
@@ -926,6 +929,7 @@
       const stageKey=[draft.transactionId,draft.stage,draft.receiver?.id||''].join(':'),entering=!presentedStages.has(stageKey);
       const focusedPort=container.contains(document.activeElement)&&document.activeElement.dataset.onboardingAction==='output'?document.activeElement.dataset.port:null;
       const focusedZone=container.contains(document.activeElement)&&document.activeElement.dataset.onboardingAction==='active-zone'?document.activeElement.dataset.id:null;
+      const focusedMoveZone=container.contains(document.activeElement)&&document.activeElement.dataset.onboardingAction==='move-zone'?document.activeElement.dataset.id:null;
       const focusedSide=container.contains(document.activeElement)&&document.activeElement.dataset.onboardingAction==='side'?document.activeElement.dataset.side:null;
       // A local choice repaints this step, not its open help panels. Closing a
       // disclosure during that repaint also shrinks the page under the user's
@@ -1002,10 +1006,18 @@
       if(disclosures)container.querySelectorAll('details').forEach(element=>{if(disclosures.has(disclosureKey(element)))element.open=disclosures.get(disclosureKey(element));});
       updateGuidance();
       if(!top){const list=container.querySelector('.onboarding-destination .onboarding-zone-list');if(list)list.scrollTop=zoneScroll;}
-      if(top){window.scrollTo({top:0,left:0,behavior:'instant'});container.querySelector('h1').setAttribute('tabindex','-1');container.querySelector('h1').focus({preventScroll:true});}
+      if(top){
+        window.scrollTo({top:0,left:0,behavior:'instant'});
+        const heading=container.querySelector(draft.stage==='pixels'?'[data-pixel-panel="pixels"] > h2':'h1');
+        heading?.setAttribute('tabindex','-1');heading?.focus({preventScroll:true});
+      }
       else if(focusedPort)container.querySelector(`[data-onboarding-action="output"][data-port="${focusedPort}"]`)?.focus({preventScroll:true});
       else if(focusedZone&&['receiver','outputs'].includes(draft.stage)&&!zonePickerOpen)container.querySelector('.onboarding-destination>summary')?.focus({preventScroll:true});
       else if(focusedZone)container.querySelector(`[data-onboarding-action="active-zone"][data-id="${CSS.escape(focusedZone)}"]`)?.focus({preventScroll:true});
+      else if(focusedMoveZone&&!document.hidden&&document.activeElement===document.body){
+        const targets=Array.from(container.querySelectorAll('button[data-onboarding-action="move-zone"]')).filter(button=>button.dataset.id===focusedMoveZone&&button.isConnected&&!button.disabled);
+        if(targets.length===1)targets[0].focus({preventScroll:true});
+      }
       else if(focusedSide)container.querySelector(`[data-onboarding-action="side"][data-side="${CSS.escape(focusedSide)}"]`)?.focus({preventScroll:true});
       restoreZoneList();
       if(!busy&&['security','review'].includes(draft.stage)){
@@ -1110,7 +1122,7 @@
       updateGuidance();
     }
     function commitPixelKey(event){if(['Enter','ArrowUp','ArrowDown'].includes(event.key)&&event.target.matches('[data-pixel-count]'))updatePixelCount(event.target.value,event.target,{commit:event.key==='Enter'});}
-    function keydown(event){if(event.key==='Enter'&&event.target.matches('input:not([data-onboarding-pin])')){const button=container.querySelector('[data-onboarding-action="stand-save"], [data-onboarding-action="zone-create"], [data-onboarding-action="zone-rename-confirm"]')||(draft.stage==='zones'?container.querySelector('[data-onboarding-action="next"]'):null);if(button&&!button.disabled){event.preventDefault();button.click();}}}
+    function keydown(event){if(event.defaultPrevented||event.isComposing||event.keyCode===229)return;if(event.key==='Enter'&&event.target.matches('input:not([data-onboarding-pin])')){const button=container.querySelector('[data-onboarding-action="stand-save"], [data-onboarding-action="zone-create"], [data-onboarding-action="zone-rename-confirm"]')||(draft.stage==='zones'?container.querySelector('[data-onboarding-action="next"]'):null);if(button&&!button.disabled){event.preventDefault();button.click();}}}
     async function search(){
       if(parkPending||parking){if(!(await parkForSearch()))return;}
       if(searchState==='searching'||busy||identifyPending.size)return;
@@ -1200,7 +1212,9 @@
       // Erase both visible PIN inputs before the first await. Only this call's
       // short-lived closure passes the credential to the trusted service.
       container?.querySelectorAll('[data-onboarding-pin]').forEach(element=>{element.value='';});
-      repeat='';busy=true;error='';const token=++operation;const controller=new AbortController();actionAbort=controller;let finishSelectedZone=false;paintPage();
+      repeat='';busy=true;error='';const token=++operation;const controller=new AbortController();actionAbort=controller;let finishSelectedZone=false;
+      if(usingFirstPin&&firstPinCurrent686()&&firstPinState686.phase==='rejoin')firstPinState686.handoff='checking';
+      paintPage();
       const method=reconcile||securityUncertain?'reconcileSecurity':'secure';
       let attempted=false;
       try{
@@ -1275,7 +1289,7 @@
         return 'stop';
       }
       finally{
-        pin='';repeat='';if(actionAbort===controller)actionAbort=null;if(token===operation)busy=false;
+        pin='';repeat='';if(actionAbort===controller)actionAbort=null;if(token===operation){busy=false;if(usingFirstPin&&firstPinCurrent686()&&firstPinState686.handoff==='checking')firstPinState686.handoff='manual';}
         if(token===operation){
           if(finishSelectedZone&&container)void finish({automatic:true});
           else {keepDraft();paintPage(!automatic);resumeFirstPin686();if((returningFromWifi&&!rejoinRunning)||(!automatic&&draft.security.status==='confirmed'))resumeAfterWifiReturn();}
