@@ -1,0 +1,37 @@
+/* Touch focus should not leave a red rectangle around ordinary cards/text.
+   Keep selection borders, pressed states and hardware-keyboard focus intact. */
+html[data-input-modality756="pointer"] body :is(button,a,summary,input,select,textarea,[tabindex]):focus {
+  outline:none!important;
+}
+html body :is(input,textarea,select) {
+  scroll-margin-block:72px 24px;
+}
+/* Dialogs use the actual visible viewport during text entry. The page keeps
+   its normal appearance when the keyboard closes, including full-screen
+   colour pickers and their one existing Done action. */
+html.keyboard756 body dialog[open] {
+  position:fixed;
+  top:calc(var(--keyboard-visible-top756,0px) + 12px);
+  bottom:auto;
+  margin-block:0;
+  max-height:calc(var(--keyboard-visible-height756,100dvh) - 24px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scroll-padding-block:16px 24px;
+}
+html.keyboard756 body dialog.pixel-setup-dialog .pixel-setup-shell {
+  max-height:calc(var(--keyboard-visible-height756,100dvh) - 26px);
+}
+html.keyboard756 body #effect-dialog.colour-picker-dialog {
+  top:var(--keyboard-visible-top756,0px);
+  height:var(--keyboard-visible-height756,100dvh);
+  max-height:var(--keyboard-visible-height756,100dvh);
+}
+html.keyboard756 body .navigation { visibility:hidden;pointer-events:none; }
+html.keyboard756 body .ui606-pages.scene-draft-page[data-has-selection="true"] .scene-save-bar {
+  position:static;
+  bottom:auto;
+}
+html.keyboard756 body :is(.onboarding-page,.scene-draft-page,.settings-page) {
+  padding-bottom:24px;
+}

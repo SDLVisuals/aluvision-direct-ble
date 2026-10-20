@@ -23,6 +23,7 @@
     ['De opgeslagen ledlinevolgorde mist een receiver.','The saved LED-line order is missing a receiver.','Il manque un récepteur dans l’ordre des lignes LED enregistré.','In der gespeicherten LED-Linien-Reihenfolge fehlt ein Receiver.'],
     ['Oudere scène · alleen licht bewaard. Bewaar opnieuw om ook de opstelling vast te leggen.','Older scene · lighting only. Save again to include its layout.','Ancienne scène · éclairage uniquement. Enregistrez à nouveau pour conserver sa disposition.','Ältere Szene · nur Licht gespeichert. Erneut speichern, um auch die Anordnung festzuhalten.'],
     ['De scène wordt nog geladen.','The scene is still loading.','La scène est en cours de chargement.','Die Szene wird noch geladen.'],
+    ['Scène laden…','Loading scene…','Chargement…','Szene laden…'],
     ['De stand is intussen gewijzigd. Open de scène opnieuw.','The booth has changed. Open the scene again.','Le stand a changé. Rouvrez la scène.','Der Stand wurde inzwischen geändert. Öffne die Szene erneut.'],
     ['De stand is intussen gewijzigd. Er is geen licht gestart.','The booth has changed. No lighting was started.','Le stand a changé. Aucun éclairage n’a été lancé.','Der Stand wurde inzwischen geändert. Es wurde kein Licht gestartet.'],
     ['De opgeslagen opstelling is niet bevestigd.','The saved layout is not confirmed.','La disposition enregistrée n’est pas confirmée.','Die gespeicherte Anordnung ist nicht bestätigt.'],

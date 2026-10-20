@@ -26,20 +26,23 @@
     "nativeAppMetadataScope": "Historical native build243 record; the earlier Pages release did not update or attest an iPhone installation."
   },
   "androidTestApp": {
-    "path": "android/aluvision-android-test-50.0.0-30-939f8a250774.apk",
-    "size": 2867558,
-    "sha256": "939f8a250774f1864f506b7df0dcf0a0a5178ceaec643d07feaf1fada32f846f",
+    "path": "android/aluvision-android-test-50.0.0-ui756-beta-32-fe389af7347b.apk",
+    "size": 3012488,
+    "sha256": "fe389af7347b48ecca3820b621bdb751fc41ad319a206c2490da9fe06d3a3d37",
     "packageName": "com.aluvision.lighting.android.test",
-    "versionName": "50.0.0",
-    "versionCode": 30,
+    "versionName": "50.0.0-ui756-beta",
+    "versionCode": 32,
     "minSdk": 26,
     "targetSdk": 36,
     "mode": "receiver",
     "signerCertificateSha256": "b598fc6fa30b423517d6ca68e3bb1191248a32723174d4703baaede9125936ac",
     "signatureVerified": true,
     "packageVerified": true,
-    "installedVerified": true,
-    "installationEnvironment": "isolated Android API36 emulator only; no physical phone",
+    "installedVerified": false,
+    "physicalAndroidVerified": false,
+    "physicalReceiverVerified": false,
+    "firmwareIncluded": false,
+    "interfaceBuild": 756,
     "features": {
       "schemaVersion": 1,
       "mode": "receiver",
@@ -70,6 +73,7 @@
         "editZones"
       ],
       "appearance": false,
+      "firstPinV2": false,
       "outputRecovery": true,
       "mainOnboarding": true,
       "meshOnboarding": true,
@@ -96,21 +100,17 @@
       "factoryReset": false,
       "androidBeta": true
     },
-    "interfaceBuild": 654,
-    "sourceFreezeSha256": "04cd8ce404e3e697b814132baa885755ba3afcf4681b10e90df0eeadbd9a991f",
-    "sourceBoundary": "97 byte-exact non-firmware shared654 Web inputs plus three retained Android adapters; no receiver binaries/catalogue",
-    "sdkReceiptSha256": "9775be210750b5c794e0b655642ee652a04d92d4eb34d922a82f4f02fe68ec93",
-    "independentProductReviewSha256": "4ef099d2e538f31fd5232f20e5d17320cb6438630b00a0ab5753090947d2f4d9",
-    "emulatorReviewSha256": "47569adc04aef02b9495bb8489f282259753482642148f6f0da75560f22f21b3",
-    "physicalAndroidVerified": false,
-    "physicalReceiverVerified": false,
-    "firmwareIncluded": false,
-    "opticalAcceptance": false
+    "uiBetaOnly": true,
+    "limitations": [
+      "Native PINv2 coordinator/rejoin is not implemented",
+      "OTA and receiver removal remain disabled",
+      "Current firmware77 control parity and physical S24 behavior are not validated"
+    ]
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate731-interface-bugfixes-android30",
+  "revision": "V50candidate756-interface-polish-android32-beta",
   "interfaceVersion": 50,
-  "interfaceBaseline": "Reviewed browser interface snapshot through source731. Native PIN/Wi-Fi, firmware, SDK and native keyboard policy excluded; existing Android downloads unchanged.",
+  "interfaceBaseline": "Interface756: keyboard-aware forms and dialogs, touch focus polish, visual receiver Wi-Fi guide, automatic active SPI-port tunnel layout and direct Tunnel/Wall preview switch.",
   "interfaceCandidate673": {
     "sourceSnapshotOnly": true,
     "sameInterfaceAsCandidate672": true,
@@ -148,8 +148,8 @@
     },
     {
       "path": "android-download/android-download.js",
-      "bytes": 10918,
-      "sha256": "ab0736ee268cf12cbab148434e533c11f9385b489807728d89bdfea6101160c4"
+      "bytes": 10697,
+      "sha256": "1b517b0d36373a29eb0d72523c4ff66fbb484bf86677fdf3258dcbc0da253745"
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
@@ -232,6 +232,11 @@
       "sha256": "939f8a250774f1864f506b7df0dcf0a0a5178ceaec643d07feaf1fada32f846f"
     },
     {
+      "path": "android/aluvision-android-test-50.0.0-ui756-beta-32-fe389af7347b.apk",
+      "bytes": 3012488,
+      "sha256": "fe389af7347b48ecca3820b621bdb751fc41ad319a206c2490da9fe06d3a3d37"
+    },
+    {
       "path": "animation-chooser.css",
       "bytes": 10306,
       "sha256": "cca48352835554a319129df6964fff7fb5876cd3d7b96aa8d0a22f7929e34eef"
@@ -278,8 +283,8 @@
     },
     {
       "path": "app.js",
-      "bytes": 707864,
-      "sha256": "69ae4a6f0e000351e782015ebed3c1e4afc9c12f0515f687b04823d88352e5c6"
+      "bytes": 725323,
+      "sha256": "680c3039c7195640cf9cfa6040aa4ef64a554b4ee6cb24ca4d18100decdcaccb"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -338,8 +343,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 9789,
-      "sha256": "5777928cd359b7e1257ecb6ae4f564915a49b84f32c9bc66457af99e0acb4d4a"
+      "bytes": 10003,
+      "sha256": "9734470b6a7a3480f665b1b4e2ff8490132165a679f3aeceaa4567755c4e567c"
     },
     {
       "path": "installation-libraries.js",
@@ -372,9 +377,14 @@
       "sha256": "3bd0aae65b988dfb0ff0080d3b7ce1a0d962b326f36d63f095de9b10ab213322"
     },
     {
+      "path": "keyboard756.css",
+      "bytes": 1533,
+      "sha256": "d2108f9ce3fbdd797b5040cb49e1cee1581959d942b31acf150b82c11969a40e"
+    },
+    {
       "path": "ledline-identification-session.js",
-      "bytes": 21805,
-      "sha256": "1e813c518f26f3d8b4c6228a9980a4b3991e6835c757e57c3ee057b3ada746ee"
+      "bytes": 29645,
+      "sha256": "438f61d0f544fc2d614d4f5f40cc56d33d147f8ae1aa8ca540c858f0c42e1041"
     },
     {
       "path": "ledline-order-direct.css",
@@ -478,8 +488,13 @@
     },
     {
       "path": "onboarding-ui.js",
-      "bytes": 190387,
-      "sha256": "8b974192909904067345482463c9ab4532d16a802946dd5e84fef4a846d09356"
+      "bytes": 190766,
+      "sha256": "ab41d63f57e46963c44eb7641d805841963d09ebca1419962eb5bb1dab4f21b5"
+    },
+    {
+      "path": "onboarding756.css",
+      "bytes": 4017,
+      "sha256": "33f9f911dcf907ae1cef7dbeaf77a89791be44afe1a0aa49d81daf0e6a7d5b13"
     },
     {
       "path": "page-interaction.css",
@@ -488,8 +503,8 @@
     },
     {
       "path": "page-interaction.js",
-      "bytes": 495,
-      "sha256": "e6d7b3ef5b03295c11fb801a64941e89dd28b982e9b1699f5bee4b66b75407d4"
+      "bytes": 5392,
+      "sha256": "aa3a73eb9e9d8a3397b2a8e0686219a6bc080fa214dd68ad53f15a1ddbd3c651"
     },
     {
       "path": "pair-first-setup.js",
@@ -503,8 +518,8 @@
     },
     {
       "path": "pixel-setup.js",
-      "bytes": 65010,
-      "sha256": "38bdb143ed16fcc3a5d336e7c30dec30fc8b2c37fac588c9a7d8f1b7c0bac7c4"
+      "bytes": 69162,
+      "sha256": "2385b62c1a4231a4e98e77516e7a91a18ad1b41ef129c0a8ea4e68fe8415f0d0"
     },
     {
       "path": "pixel-translations.js",
@@ -598,8 +613,8 @@
     },
     {
       "path": "setup-wifi-guide.js",
-      "bytes": 5829,
-      "sha256": "c7604951b56f119f551243152fa56a28507cf02206df07712bae4e7153389cdb"
+      "bytes": 5653,
+      "sha256": "ecc9154a298ab01e2b1380844d98b932e739c538cde2d5d952eca58b84a8c674"
     },
     {
       "path": "spi-direction-tutorial.css",
@@ -618,8 +633,8 @@
     },
     {
       "path": "spi-zone-direction.js",
-      "bytes": 40724,
-      "sha256": "c02cad7e5dfc497cee90c1d5dd854f8d532cf561501c895f3d242bf0cd7cf522"
+      "bytes": 46520,
+      "sha256": "0a8f4602dc3ff81ab76ccd576013e70e0776985eb05442e09a66308dc43f4d5d"
     },
     {
       "path": "stand-animations.css",
@@ -677,14 +692,19 @@
       "sha256": "45d7dd15cd3814bac17dfc8e3f6e1f466b9b974de2866c9ed244e64d6ea0d81c"
     },
     {
+      "path": "tunnel756.css",
+      "bytes": 655,
+      "sha256": "513502b53b7fd6b82bf1593818d94ec7c4710295e6aa542653b6a318c821eafa"
+    },
+    {
       "path": "ui-continuity.js",
       "bytes": 5114,
       "sha256": "ae28fd0b92d3100c27eef1c94ecea46bf30d6d4aa93d43b662ab2cc0eb9acb34"
     },
     {
       "path": "ui-copy.js",
-      "bytes": 131035,
-      "sha256": "3de623037c3f4e1597f12d1706d5a02d0cbcedc3648c53a2fd28f81bb071fb57"
+      "bytes": 131112,
+      "sha256": "a6091d1755116b8e1c0fce26d151dd2350f61843ca08836d2319022be99545ca"
     },
     {
       "path": "ui606-controls.css",
@@ -3630,5 +3650,102 @@
     "receiverTimingProvenByDemo": false,
     "opticalAcceptance": false,
     "physicalAndroidVerified": false
+  },
+  "previousAndroidTestApp": {
+    "path": "android/aluvision-android-test-50.0.0-30-939f8a250774.apk",
+    "size": 2867558,
+    "sha256": "939f8a250774f1864f506b7df0dcf0a0a5178ceaec643d07feaf1fada32f846f",
+    "packageName": "com.aluvision.lighting.android.test",
+    "versionName": "50.0.0",
+    "versionCode": 30,
+    "minSdk": 26,
+    "targetSdk": 36,
+    "mode": "receiver",
+    "signerCertificateSha256": "b598fc6fa30b423517d6ca68e3bb1191248a32723174d4703baaede9125936ac",
+    "signatureVerified": true,
+    "packageVerified": true,
+    "installedVerified": true,
+    "installationEnvironment": "isolated Android API36 emulator only; no physical phone",
+    "features": {
+      "schemaVersion": 1,
+      "mode": "receiver",
+      "backendImplemented": true,
+      "services": [
+        "loadState",
+        "persistDraft",
+        "parkDraft",
+        "checkpointPreviewExit",
+        "resumeDraft",
+        "search",
+        "select",
+        "secure",
+        "reconcileSecurity",
+        "finalize",
+        "verifyFinalReceipt",
+        "publishModel",
+        "previewPixels",
+        "applyLive",
+        "applyLiveBatch",
+        "identify",
+        "identifyLayout",
+        "stopLayoutIdentification",
+        "blinkLayoutIdentification",
+        "identifyFactoryMain",
+        "configureOutputs",
+        "outputConfigurationStatus",
+        "editZones"
+      ],
+      "appearance": false,
+      "outputRecovery": true,
+      "mainOnboarding": true,
+      "meshOnboarding": true,
+      "liveControl": true,
+      "standAnimations": true,
+      "temporarySingleUser": true,
+      "simpleStand": false,
+      "standWifiOpen": false,
+      "standSessionAnimations": false,
+      "pinModeToggle": false,
+      "pinLogin": false,
+      "installationRestore": false,
+      "backupFiles": false,
+      "localBackupRestore": false,
+      "receiverContext": false,
+      "localZoneEditing": true,
+      "spiPortScenes": true,
+      "pixelPreviewV50": true,
+      "zoneHardwareSync": false,
+      "mainOTA": false,
+      "networkOTA": false,
+      "mainRemoval": false,
+      "nodeRemoval": false,
+      "factoryReset": false,
+      "androidBeta": true
+    },
+    "interfaceBuild": 654,
+    "sourceFreezeSha256": "04cd8ce404e3e697b814132baa885755ba3afcf4681b10e90df0eeadbd9a991f",
+    "sourceBoundary": "97 byte-exact non-firmware shared654 Web inputs plus three retained Android adapters; no receiver binaries/catalogue",
+    "sdkReceiptSha256": "9775be210750b5c794e0b655642ee652a04d92d4eb34d922a82f4f02fe68ec93",
+    "independentProductReviewSha256": "4ef099d2e538f31fd5232f20e5d17320cb6438630b00a0ab5753090947d2f4d9",
+    "emulatorReviewSha256": "47569adc04aef02b9495bb8489f282259753482642148f6f0da75560f22f21b3",
+    "physicalAndroidVerified": false,
+    "physicalReceiverVerified": false,
+    "firmwareIncluded": false,
+    "opticalAcceptance": false
+  },
+  "interfaceCandidate756": {
+    "sourceBuild": 756,
+    "scope": "Browser interface with fictional RAM-only receivers",
+    "hardwareAccess": false,
+    "firmwarePublished": false,
+    "phoneInstallationAttestedByWebsite": false,
+    "physicalAndroidVerified": false,
+    "features": [
+      "Keyboard-aware visible viewport and focus scrolling",
+      "Touch focus without persistent outlines; hardware-keyboard focus retained",
+      "Clearer first-receiver visual Wi-Fi steps",
+      "Two active SPI ports count as two lines for tunnel effects",
+      "Tunnel/Wall preview switch inside animation menus"
+    ]
   }
 }

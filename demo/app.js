@@ -111,6 +111,7 @@
   let pendingSPIDirectionOpen=null;
   const spiDirectionPending=new Map(),spiDirectionSessions=new Map(),spiDirectionRetired=new Set();
   let spiDirectionTransport=Promise.resolve();
+  let spiDirectionOpening744=null;
   const pixelEditSelections=new Map();
   let presetStore, colourStore, sceneStore;
   // Merely browsing must work even when a privacy policy denies local storage.
@@ -344,15 +345,28 @@
   let orderFocus664=null,orderFocusState664=null,orderFocusContextKey664='',orderFocusProblem664=null;
   let orderTest=null,orderTestState={status:'idle',busy:false},orderTestPreparing=false,orderTestRequest=0,orderTestFingerprint=null,orderTestConfirmation=null;
   let orderRecognitionDirty=true;
+  let spiOrderReturn744=null;
+  const spiDirectionStopProofs744=new Map();
+  function orderRecoveryPending744(){return orderIdentificationState?.recovering===true||spiOrderReturn744?.closed===true;}
+  function resumeOrderContextAfterCleanup744(state=orderIdentificationState){
+    if(state&&!state.active&&!state.recovering&&!spiOrderReturn744&&!spiZoneDirections.isOpen()&&!spiDirectionSessions.size&&
+       state.cleanup?.status==='confirmed'&&state.cleanup.session!==orderCleanupResumedSession&&nativeContext&&contextWriteBarrierInstalled&&
+       typeof runtime?.services?.resumeInstallationContext==='function'){
+      orderCleanupResumedSession=state.cleanup.session;
+      try{Promise.resolve(runtime.services.resumeInstallationContext({standId:state.cleanup.standId})).catch(()=>{});}catch(_){}
+    }
+  }
   function beginOrderColours(){
+    if(spiOrderReturn744){scheduleSPIOrderReturn744();return;}
     if(standPresentationOnly()||!zone()||!orderIdentification)return;
     const input={standId:stand().id,zoneId:zone().id,lines:M.zoneLedlines(model,zone().id).map(({id,receiverId,port})=>({id,receiverId,port}))},active=orderIdentification.getState();
     if(!input.lines.length)return;
-    if(active.active&&active.standId===input.standId&&active.zoneId===input.zoneId&&
+    if((active.active||active.recovering)&&active.standId===input.standId&&active.zoneId===input.zoneId&&
       sameOrderEndpoints652(active.lines,input.lines))return void orderIdentification.interaction();
     void orderIdentification.open(input);
   }
   function closeZoneMenus(){
+    retireSPIOrderReturn744();
     orderColourChoice652=null;
     retireOrderSave588();
     closeOrderTutorial({acknowledge:false,restoreFocus:false});
@@ -371,7 +385,6 @@
   let orderClose589=null;
   let orderResumeClose639=null;
   let orderCancelNotice590=null;
-  let familySpatialSwitch=null;
   const openLineSetup=new Set(),openLineSettings=new Set();
   const openSpatialChoices=new Set(),spatialViews=new Map();
   let standControlOpen=false;
@@ -477,6 +490,13 @@
   orderIdentification=window.LightningLedlineIdentificationSession?.create({
     clock:()=>performance.now(),setTimer:(callback,ms)=>setTimeout(callback,ms),clearTimer:timer=>clearTimeout(timer),
     idFactory:()=>crypto.randomUUID(),
+    canRecover:scope=>orderRecoveryEligible738(scope),
+    recoverySignature:scope=>orderRecoverySignature738(scope),
+    onResumeConnection:async scope=>{
+      if(!orderRecoveryEligible738(scope))throw Error('IDENTIFICATION_CONTEXT_CHANGED');
+      // Existing pinned stand maintenance only: no PIN, claim or stored intent.
+      if(simpleStandMode)await ensureStandSession().prepareMaintenance({standId:scope.standId});
+    },
     sendLease:request=>{
       // A browser illustration is NEVER an acknowledgement from a receiver.
       // Fixed-colour leases have their own capability, not the white blink API.
@@ -495,10 +515,7 @@
       orderIdentificationState=state;orderColours.clear();
       // Only the current exact-token STOP receipt may resume existing context
       // work. Old, pending or unknown cleanup never opens another radio writer.
-      if(!state.active&&state.cleanup?.status==='confirmed'&&state.cleanup.session!==orderCleanupResumedSession&&nativeContext&&contextWriteBarrierInstalled&&typeof runtime?.services?.resumeInstallationContext==='function'){
-        orderCleanupResumedSession=state.cleanup.session;
-        try{Promise.resolve(runtime.services.resumeInstallationContext({standId:state.cleanup.standId})).catch(()=>{});}catch(_){}
-      }
+      resumeOrderContextAfterCleanup744(state);
       for(const line of state.lines)orderColours.set(line.id,{name:line.colorName,hex:C.screenHex(line.rgb),rgb:line.rgb});
       if(state.active&&state.zoneId&&state.lines.length)orderPositionColours.set(state.zoneId,state.lines.map(line=>({name:line.colorName,hex:C.screenHex(line.rgb),rgb:[...line.rgb]})));
       for(const [receiverId,blink] of identifying){
@@ -511,6 +528,7 @@
       // disables it again; unrelated legacy blink buttons stay unavailable.
       for(const receiver of model.receivers)syncIdentifyControls(receiver.id);
       syncOrderRecognition();
+      syncArrangementControls();
     }
   });
   // Ephemeral place selection only: never saved in the stand or sent as a
@@ -594,12 +612,41 @@
   // leases; only a genuine renewal reply can extend physical confirmation.
   function orderForegroundVisible652(){
     const state=orderIdentificationState;
-    return !document.hidden&&navigator.onLine!==false&&!!state?.active&&
+    return !document.hidden&&navigator.onLine!==false&&!!(state?.active||state?.recovering)&&
       state.standId===stand()?.id&&state.zoneId===route.zoneId&&openLineSetup.has(route.zoneId)&&
       !!main?.querySelector('.ledline-setup[data-order-ui="652"][data-order-open="true"]');
   }
+  function orderRecoveryEligible738(scope){
+    return !document.hidden&&navigator.onLine!==false&&!previewContext&&!standPresentationOnly()&&
+      scope.standId===stand()?.id&&scope.zoneId===route.zoneId&&openLineSetup.has(scope.zoneId)&&
+      !spiOrderReturn744&&!spiZoneDirections.isOpen()&&!pixelSetup.isOpen()&&!receiverSetupPreparation&&!pairFirstOpening&&
+      !orderClose589&&!orderSaveQueue588&&!arrangementApplying&&!managementBusy&&!arrangementPlaybackPending()&&!orderTestBusy()&&
+      !standReceiverActionUnavailable('order-identify')&&
+      !!main?.querySelector('.ledline-setup[data-order-ui="652"][data-order-open="true"]');
+  }
+  function orderRecoverySignature738(scope){
+    return JSON.stringify(orderRecoverySource744(scope));
+  }
+  function orderRecoverySource744(scope){
+    if(scope.standId!==stand()?.id||scope.zoneId!==route.zoneId)throw Error('ORDER_RETURN_CONTEXT');
+    M.assertValid(model);
+    const current=model.stands.filter(s=>s.id===scope.standId);
+    if(current.length!==1||current[0].zones.filter(z=>z.id===scope.zoneId).length!==1)throw Error('ORDER_RETURN_CONTEXT');
+    // Public native-model source only. Presentation order/current light state
+    // are excluded; identity, membership and physical geometry are not.
+    const receivers=model.receivers.filter(r=>r.standId===scope.standId).map(r=>({id:r.id,rid:r.rid,
+      physicalId:r.physicalId,deviceFingerprint:r.deviceFingerprint,type:r.type,role:r.role,lifecycle:r.lifecycle,
+      zoneId:r.zoneId,outputs:r.outputs?.map(o=>({port:o.port,enabled:o.enabled,pixels:o.pixels,reversed:o.reversed}))})).sort((a,b)=>a.id.localeCompare(b.id));
+    const zones=current[0].zones.map(z=>({id:z.id,type:z.type,layout:z.layout,receiverIds:[...z.receiverIds].sort()})).sort((a,b)=>a.id.localeCompare(b.id));
+    return {standId:scope.standId,zoneId:scope.zoneId,receivers,zones};
+  }
+  function orderRecoveryCopy738(){
+    return ({nl:'Testlicht wordt automatisch hersteld…',en:'Restoring test light automatically…',
+      fr:'Rétablissement automatique du test lumineux…',de:'Testlicht wird automatisch wiederhergestellt…'})[uiPreferences.preferences.language]||'Restoring test light automatically…';
+  }
   setInterval(()=>{
-    if(orderForegroundVisible652()&&!arrangementInteractionBusy()&&!orderClose589&&!orderSaveQueue588)
+    scheduleSPIOrderReturn744();
+    if(orderForegroundVisible652()&&(!arrangementInteractionBusy()||orderIdentificationState?.recovering)&&!orderClose589&&!orderSaveQueue588)
       void orderIdentification.renewForeground().catch(()=>{});
   },5000);
   const orderGuide=window.LightningLedlineOrderGuide;
@@ -752,7 +799,7 @@
     const status=main.querySelector('[data-order-recognition-status]');
     if(status){
       const orderPending=!!orderSaveQueue588&&orderSaveQueue588.zoneId===route.zoneId&&orderSaveQueue588.version>orderSaveQueue588.confirmedVersion;
-      status.textContent=orderText(orderPending?'orderColoursPending':!orderIdentificationState?.active?previewContext?'orderPreviewStopped':orderIdentificationState?.cleanup?.status==='pending'?'orderRecognitionClosing':orderIdentificationState?.cleanup?.status==='unconfirmed'?'orderStopUnconfirmed':orderIdentificationState?.cleanup?.status==='confirmed'&&orderIdentificationState.reason==='idle'?'orderRecognitionIdleStopped':'orderRecognitionStopped':previewContext?'orderPreviewColours':orderIdentificationState.physicalConfirmed?'orderColoursConfirmed':orderIdentificationState.status==='pending'?'orderColoursPending':orderIdentificationState.status==='expired'?'orderColoursExpired':orderIdentificationState.error==='IDENTIFY_UNSUPPORTED'?'orderColoursUnsupported':'orderColoursUnconfirmed');
+      status.textContent=orderRecoveryPending744()?orderRecoveryCopy738():orderText(orderPending?'orderColoursPending':!orderIdentificationState?.active?previewContext?'orderPreviewStopped':orderIdentificationState?.cleanup?.status==='pending'?'orderRecognitionClosing':orderIdentificationState?.cleanup?.status==='unconfirmed'?'orderStopUnconfirmed':orderIdentificationState?.cleanup?.status==='confirmed'&&orderIdentificationState.reason==='idle'?'orderRecognitionIdleStopped':'orderRecognitionStopped':previewContext?'orderPreviewColours':orderIdentificationState.physicalConfirmed?'orderColoursConfirmed':orderIdentificationState.status==='pending'?'orderColoursPending':orderIdentificationState.status==='expired'?'orderColoursExpired':orderIdentificationState.error==='IDENTIFY_UNSUPPORTED'?'orderColoursUnsupported':'orderColoursUnconfirmed');
       status.dataset.confirmed=String(!orderPending&&orderIdentificationState?.physicalConfirmed===true);
     }
     orderRecognitionDirty=false;
@@ -1053,6 +1100,99 @@
   function queueSPIDirectionTransport(job){
     const result=spiDirectionTransport.catch(()=>{}).then(job);spiDirectionTransport=result.catch(()=>{});return result;
   }
+  function retireSPIOrderReturn744(){
+    const ticket=spiOrderReturn744;spiOrderReturn744=null;
+    if(ticket?.timer!==null&&ticket?.timer!==undefined)clearTimeout(ticket.timer);
+    if(ticket)resumeOrderContextAfterCleanup744();
+  }
+  function currentSPIOrderReturn744(ticket){
+    if(spiOrderReturn744!==ticket||!ticket||orderSaveEpoch588!==ticket.epoch||route.screen!==ticket.screen||
+       stand()?.id!==ticket.standId||route.zoneId!==ticket.zoneId||!openLineSetup.has(ticket.zoneId)||
+       arrangementDraft!==ticket.draft||!main?.querySelector('.ledline-setup[data-order-open="true"]'))return false;
+    try{return JSON.stringify(orderRecoverySource744(ticket))===JSON.stringify(ticket.source);}catch(_){return false;}
+  }
+  function captureSPIOrderReturn744(zoneId){
+    retireSPIOrderReturn744();
+    const state=orderIdentification?.getState();
+    if(!state?.active||state.zoneId!==zoneId||state.standId!==stand()?.id||route.zoneId!==zoneId||
+       !openLineSetup.has(zoneId)||document.hidden||!main?.querySelector('.ledline-setup[data-order-open="true"]'))return null;
+    const ticket={standId:state.standId,zoneId,orderSession:state.session,lineIds:state.lines.map(l=>l.id),
+      screen:route.screen,epoch:orderSaveEpoch588,draft:arrangementDraft,source:null,closed:false,scope:null,timer:null,flight:null,attempts:0};
+    try{ticket.source=orderRecoverySource744(ticket);}catch(_){return null;}
+    spiOrderReturn744=ticket;return ticket;
+  }
+  function rebaseSPIOrderReturn744(changes,results){
+    const ticket=spiOrderReturn744;if(!ticket)return;
+    try{
+      if(results.length!==changes.length||results.some((r,i)=>r.receiverId!==changes[i].receiverId||r.status!=='saved'))throw Error();
+      const expected=copy(ticket.source);
+      for(const change of changes){
+        const receiver=expected.receivers.find(r=>r.id===change.receiverId&&r.zoneId===ticket.zoneId&&r.type==='SPI');
+        if(!receiver||change.outputs.length!==receiver.outputs.length)throw Error();
+        for(const [index,output] of change.outputs.entries()){
+          const old=receiver.outputs[index];
+          if(old.port!==output.port||old.enabled!==output.enabled||old.pixels!==output.pixels||!old.enabled&&old.reversed!==output.reversed)throw Error();
+          old.reversed=output.reversed;
+        }
+      }
+      const actual=orderRecoverySource744(ticket);
+      if(JSON.stringify(actual)!==JSON.stringify(expected))throw Error();
+      ticket.source=actual;
+    }catch(_){retireSPIOrderReturn744();}
+  }
+  function stopSPIDirectionTransport744(request,requireReceipt=false){
+    return queueSPIDirectionTransport(async()=>{
+      const proof=spiDirectionStopProofs744.get(request.sessionId);
+      if(proof&&proof.standId===request.standId&&proof.zoneId===request.zoneId)return {status:'stopped',sessionId:request.sessionId};
+      if(!requireReceipt&&!spiDirectionSessions.has(request.sessionId))return {status:'stopped',sessionId:request.sessionId};
+      const answer=await runtime.services.previewSPIZoneDirections({action:'stop',...request});
+      if(answer.stopped!==true||answer.sessionId!==request.sessionId)throw Error('SPI_DIRECTION_STOP_UNCONFIRMED');
+      spiDirectionSessions.delete(request.sessionId);
+      spiDirectionStopProofs744.set(request.sessionId,{standId:request.standId,zoneId:request.zoneId});
+      while(spiDirectionStopProofs744.size>32)spiDirectionStopProofs744.delete(spiDirectionStopProofs744.keys().next().value);
+      resumeOrderContextAfterCleanup744();
+      return {status:'stopped',sessionId:answer.sessionId};
+    });
+  }
+  function scheduleSPIOrderReturn744(){
+    const ticket=spiOrderReturn744;if(!ticket?.closed)return;
+    if(!currentSPIOrderReturn744(ticket)){retireSPIOrderReturn744();return;}
+    if(document.hidden||navigator.onLine===false){if(ticket.timer!==null)clearTimeout(ticket.timer);ticket.timer=null;return;}
+    if(ticket.timer!==null||ticket.flight||spiZoneDirections.isOpen()||pixelSetup.isOpen()||orderClose589||orderSaveQueue588||
+       arrangementApplying||managementBusy||arrangementPlaybackPending()||orderTestBusy()||standPresentationOnly())return;
+    // A healthy nested-menu return needs no artificial retry wait. Only a
+    // failed cleanup/continuation enters the existing capped backoff.
+    const delay=ticket.attempts===0?0:([750,2000,5000][ticket.attempts-1]??30000);
+    ticket.timer=setTimeout(()=>{
+      ticket.timer=null;
+      const valid=()=>currentSPIOrderReturn744(ticket)&&!document.hidden&&navigator.onLine!==false&&!spiZoneDirections.isOpen()&&
+        !pixelSetup.isOpen()&&!orderClose589&&!orderSaveQueue588&&!arrangementApplying&&!managementBusy&&!arrangementPlaybackPending()&&!orderTestBusy()&&!standPresentationOnly();
+      if(!valid())return;
+      ticket.attempts=Math.min(ticket.attempts+1,4);
+      const job=(async()=>{
+        // Only the exact queued native STOP (or its retained terminal receipt)
+        // opens this continuation; the busy-safe immediate retire is no ACK.
+        if(!ticket.edgeNoWrite){
+          const answer=await stopSPIDirectionTransport744(ticket.scope,true);
+          if(!valid()||answer?.status!=='stopped'||answer.sessionId!==ticket.scope.sessionId)return;
+          const proof=spiDirectionStopProofs744.get(ticket.scope.sessionId);
+          if(!proof||proof.standId!==ticket.standId||proof.zoneId!==ticket.zoneId)return;
+        }
+        spiOrderReturn744=null;
+        const result=await orderIdentification.resumeAfterMenu({standId:ticket.standId,zoneId:ticket.zoneId,lineIds:[...ticket.lineIds]});
+        // The session module owns exact old-order cleanup, a fresh UUID and
+        // ordinary native admission. Neither STOP is an applied-light claim.
+        if(!result.active&&!result.recovering&&!spiOrderReturn744){
+          // A deliberate close/source change has no continuation. A local
+          // rejection while the same panel remains may retry on its next beat.
+          try{if(orderSaveEpoch588===ticket.epoch&&route.screen===ticket.screen&&route.zoneId===ticket.zoneId&&
+             openLineSetup.has(ticket.zoneId)&&arrangementDraft===ticket.draft&&
+             JSON.stringify(orderRecoverySource744(ticket))===JSON.stringify(ticket.source))spiOrderReturn744=ticket;}catch(_){}
+        }
+      })();ticket.flight=job;
+      void job.catch(()=>{}).finally(()=>{if(ticket.flight===job)ticket.flight=null;if(spiOrderReturn744===ticket){scheduleSPIOrderReturn744();syncOrderRecognition();}});
+    },delay);
+  }
   async function resumeSPIDirectionConnection675(scope){
     if(!simpleStandMode)return;
     if(stand()?.id!==scope.standId)throw Error('SPI_DIRECTION_ZONE_CHANGED');
@@ -1110,13 +1250,7 @@
       if(answer.applied!==true)return {status:answer.reason,sessionId:answer.sessionId,previewTTLMS:0};
       return {status:'applied',sessionId:answer.sessionId,lineOrder:answer.lineOrder,lines:answer.lines,focus:answer.focus,previewTTLMS:answer.previewTTLMS,renewAfterMS:answer.renewAfterMS,...(Number.isInteger(answer.pathTestRemainingMS)?{pathTestRemainingMS:answer.pathTestRemainingMS}:{})};
     },
-    onStop:request=>queueSPIDirectionTransport(async()=>{
-      if(!spiDirectionSessions.has(request.sessionId))return {status:'stopped',sessionId:request.sessionId};
-      const answer=await runtime.services.previewSPIZoneDirections({action:'stop',...request});
-      if(answer.stopped!==true)throw Error('SPI_DIRECTION_STOP_UNCONFIRMED');
-      spiDirectionSessions.delete(request.sessionId);
-      return {status:'stopped',sessionId:answer.sessionId};
-    }),
+    onStop:request=>stopSPIDirectionTransport744(request),
     onSave:async({standId,zoneId,changes})=>{
       requireStandPresentationConnection();
       const results=[];
@@ -1145,6 +1279,7 @@
           break;
         }
       }
+      rebaseSPIOrderReturn744(changes,results);
       render({preserveScroll:true});
       return {results,zoneSignature:spiZoneDirectionSignature({standId,zoneId})};
     },
@@ -1168,12 +1303,23 @@
         if(joined)resumeConfiguredLighting(joined.id);
         render({preserveScroll:true});toast(pixelText659(joined?'pixelAdded':'pixelDirectionsSaved'));
       }
+      const ticket=spiOrderReturn744;
+      if(ticket&&ticket.standId===standId&&ticket.zoneId===zoneId){
+        ticket.closed=true;ticket.scope={standId,zoneId,sessionId};scheduleSPIOrderReturn744();syncOrderRecognition();
+      }
     }
   });
-  async function openSPIZoneDirections({zoneId,newReceiverId}={}){
-    if(spiZoneDirections.isOpen()||pixelSetup.isOpen()||document.hidden)return;
+  async function openSPIZoneDirections({zoneId,newReceiverId,handoff=null}={}){
+    if(spiDirectionOpening744||spiZoneDirections.isOpen()||pixelSetup.isOpen()||document.hidden){
+      if(handoff?.receipt)try{await stopSPIDirectionTransport744({standId:handoff.receipt.standId,zoneId:handoff.receipt.zoneId,sessionId:handoff.receipt.sessionId},true);}catch(_){}
+      return;
+    }
+    const opening={};spiDirectionOpening744=opening;
     const openingRoute=route,openingModel=model;
-    await orderIdentification?.close('spi-directions');
+    const orderReturn=captureSPIOrderReturn744(zoneId);let edgeAttempted=false,edgeOpened=false;
+    try{
+    if(handoff){if(orderIdentification?.getState()?.active)throw Error('SPI_DIRECTION_ZONE_CHANGED');}
+    else await orderIdentification?.close('spi-directions');
     if(document.hidden||route!==openingRoute||model!==openingModel||spiZoneDirections.isOpen()||pixelSetup.isOpen())return;
     // Read the cohort AFTER asynchronous cleanup. A zone edit during STOP
     // must not pair old outputs with a freshly captured signature.
@@ -1182,7 +1328,7 @@
     const receivers=current.zone.receiverIds.map(id=>model.receivers.find(receiver=>receiver.id===id&&receiver.type==='SPI'&&receiver.lifecycle==='added'&&receiver.zoneId===zoneId&&receiver.standId===current.stand.id)).filter(Boolean);
     if(!receivers.length)return;
     const key=current.stand.id+':'+zoneId,previousPending=(spiDirectionPending.get(key)||[]).map(change=>({...change,outputs:change.outputs.map(output=>({...output}))}));
-    if(nativeContext){
+    if(nativeContext&&!handoff){
       const signature=JSON.stringify(spiZoneDirectionSignature({standId:current.stand.id,zoneId}));
       for(const receiver of receivers){
         const pending=await runtime.services.outputConfigurationStatus({standId:current.stand.id,receiverId:receiver.id});
@@ -1206,7 +1352,21 @@
     if(pendingChanges.length)spiDirectionPending.set(key,pendingChanges);else spiDirectionPending.delete(key);
     closeEffectDialog();
     const continuation=newReceiverId&&pairFirstSetup?.get(newReceiverId),pairFirst=!!(continuation&&PairFirst.receiverFor(model,continuation));
-    spiZoneDirections.open({standId:current.stand.id,zoneId,zoneName:current.zone.name,lineOrder:M.lineIds(model,zoneId),receivers:receivers.map(receiver=>({id:receiver.id,name:receiver.name,outputs:receiver.outputs.map(output=>({...output}))})),...(newReceiverId?{newReceiverId}:{}),pairFirst,previewOnly:previewContext,pendingChanges,pendingChanged:pendingChanges.length!==previousPending.length});
+    edgeAttempted=true;
+    if(handoff){
+      if(pendingChanges.length||handoff.receipt?.standId!==current.stand.id||handoff.receipt.zoneId!==zoneId||document.hidden)throw Error('SPI_DIRECTION_ZONE_CHANGED');
+      const receipt=handoff.receipt;
+      spiDirectionSessions.set(receipt.sessionId,{standId:receipt.standId,zoneId:receipt.zoneId,sessionId:receipt.sessionId,lineOrder:receipt.lineOrder,lines:receipt.lines,focus:receipt.focus,applied:true,attempted:true});
+    }
+    spiZoneDirections.open({standId:current.stand.id,zoneId,zoneName:current.zone.name,lineOrder:M.lineIds(model,zoneId),receivers:receivers.map(receiver=>({id:receiver.id,name:receiver.name,outputs:receiver.outputs.map(output=>({...output}))})),...(newReceiverId?{newReceiverId}:{}),pairFirst,previewOnly:previewContext,pendingChanges,pendingChanged:pendingChanges.length!==previousPending.length},handoff?{initialPreview:{status:'applied',sessionId:handoff.receipt.sessionId,lineOrder:handoff.receipt.lineOrder,lines:handoff.receipt.lines,focus:handoff.receipt.focus,previewTTLMS:handoff.receipt.previewTTLMS,renewAfterMS:handoff.receipt.renewAfterMS},sentAt:handoff.sentAt}:{});edgeOpened=true;
+    }finally{
+      if(handoff?.receipt&&!edgeOpened)try{await stopSPIDirectionTransport744({standId:handoff.receipt.standId,zoneId:handoff.receipt.zoneId,sessionId:handoff.receipt.sessionId},true);}catch(_){}
+      if(spiDirectionOpening744===opening)spiDirectionOpening744=null;
+      if(orderReturn&&spiOrderReturn744===orderReturn&&!edgeOpened){
+        if(!edgeAttempted&&currentSPIOrderReturn744(orderReturn)){orderReturn.closed=true;orderReturn.edgeNoWrite=true;scheduleSPIOrderReturn744();}
+        else retireSPIOrderReturn744();
+      }
+    }
   }
   async function openPairFirstSetup(receiverId){
     if(!pairFirstSetup||pairFirstOpening||pixelSetup.isOpen()||spiZoneDirections.isOpen()||document.hidden||firstAccessCheckpoint)return;
@@ -1251,7 +1411,8 @@
     return receiver?.type==='SPI'&&receiver.lifecycle==='added'&&typeof receiver.onboardingTransactionId==='string'&&!!receiver.onboardingTransactionId&&model.receivers.some(current=>current.lifecycle==='added'&&['id','rid','deviceFingerprint','type','standId','role','onboardingTransactionId'].every(key=>current[key]===receiver[key]));
   }
   const pixelSetup=window.LightningPixelSetup.create({jointDirections:true,mode:previewContext?'preview':nativeContext&&typeof runtime?.services?.configureOutputs==='function'?'native':'native-unavailable',isPublishedReceiver:publishedPixelReceiver686,
-    previewCapabilities:{get identifyPorts(){return runtime?.native===true&&runtime.services?.previewCapabilities?.identifyPorts===true;},get power(){return runtime?.native===true&&runtime.services?.previewCapabilities?.power===true;},get editorIsolation(){return runtime?.native===true&&runtime.services?.previewCapabilities?.editorIsolation===true;}},
+    canHandoff:receiver=>!!receiver?.zoneId&&!spiDirectionPending.get(receiver.standId+':'+receiver.zoneId)?.length,
+    previewCapabilities:{get identifyPorts(){return runtime?.native===true&&runtime.services?.previewCapabilities?.identifyPorts===true;},get power(){return runtime?.native===true&&runtime.services?.previewCapabilities?.power===true;},get editorIsolation(){return runtime?.native===true&&runtime.services?.previewCapabilities?.editorIsolation===true;},get pixelEndsHandoff(){return runtime?.native===true&&runtime.services?.previewCapabilities?.pixelEndsHandoff===true;}},
     onPreview:runtime?.native===true&&typeof runtime.services?.previewPixels==='function'?request=>{requireStandPresentationConnection();return runtime.services.previewPixels({...request,mainReceiverId:request.role==='node'?model.receivers.find(r=>r.standId===request.standId&&r.role==='main'&&r.lifecycle==='added')?.id:null});}:undefined,
     onDraftChange:step=>{
       if(pairFirstActiveReceiverId!==step.receiverId)return;
@@ -1269,10 +1430,12 @@
         }
       }
     },
-    onSave:async({receiverId,outputs,directionsOnly=false,continueToDirections=false})=>{
+    onSave:async({receiverId,outputs,directionsOnly=false,continueToDirections=false,handoffPreview=null})=>{
       requireStandPresentationConnection();
       const receiver=model.receivers.find(r=>r.id===receiverId&&r.lifecycle==='added'&&r.type==='SPI');
       if(!receiver||outputs.length!==4)throw Error(t("Deze receiver is niet beschikbaar."));
+      if(handoffPreview&&(!nativeContext||!continueToDirections||directionsOnly||!receiver.zoneId||spiDirectionPending.get(receiver.standId+':'+receiver.zoneId)?.length))throw Error(t('outputUnconfirmed'));
+      let handoff=null;
       const paired=pairFirstActiveReceiverId===receiverId;
       if(!paired&&continueToDirections&&!receiver.zoneId)throw Error(pairFirstText('unassigned'));
       if(paired){
@@ -1285,8 +1448,14 @@
       void orderIdentification?.supersede();
       if(nativeContext){
         if(typeof runtime?.services?.configureOutputs!=='function')throw Error(t("Verbind je telefoon met het ALUVISION-wifi van je installatie om de instellingen te bewaren."));
-        try{const service=directionsOnly?runtime.services.configureOutputDirections:runtime.services.configureOutputs;const view=await service({standId:receiver.standId,receiverId,outputs});refreshSuspendedSetup(view);model=keepLocalPreviewStates(view.model);}
+        try{
+          const result=handoffPreview?await runtime.services.commitPixelsToDirections({preview:handoffPreview,configuration:{standId:receiver.standId,receiverId,outputs}}):null;
+          if(result)handoff={receipt:result.directionReceipt,sentAt:result.sentAt};
+          const service=directionsOnly?runtime.services.configureOutputDirections:runtime.services.configureOutputs,view=handoffPreview?result.view:await service({standId:receiver.standId,receiverId,outputs});
+          refreshSuspendedSetup(view);model=keepLocalPreviewStates(view.model);
+        }
         catch(error){
+          if(handoff?.receipt)try{await runtime.services.previewSPIZoneDirections({action:'stop',standId:handoff.receipt.standId,zoneId:handoff.receipt.zoneId,sessionId:handoff.receipt.sessionId});}catch(_){}
           if(error.reconciledView?.model){refreshSuspendedSetup(error.reconciledView);model=keepLocalPreviewStates(error.reconciledView.model);}
           throw Error(outputConfigurationErrorMessage(error));
         }
@@ -1301,7 +1470,7 @@
         const configured=model.receivers.find(item=>item.id===receiverId);
         if(configured?.zoneId){
           if(restored.length)spiDirectionPending.set(configured.standId+':'+configured.zoneId,restored);
-          pendingSPIDirectionOpen={zoneId:configured.zoneId,newReceiverId:receiverId};
+          pendingSPIDirectionOpen={zoneId:configured.zoneId,newReceiverId:receiverId,...(handoff?{handoff}:{})};
         }
         else toast(pairFirstText('unassigned'));
       }else if(continueToDirections){
@@ -1309,12 +1478,13 @@
         if(!configured?.zoneId)throw Error(t('outputUnconfirmed'));
         // Full configuration has one final direction step. Do not dispatch
         // the old scene between pixels and that whole-zone test overlay.
-        pendingSPIDirectionOpen={zoneId:configured.zoneId};
+        pendingSPIDirectionOpen={zoneId:configured.zoneId,...(handoff?{handoff}:{})};
       }else resumeConfiguredLighting(receiverId);
       expandedReceivers.add(receiverId);
       const blink=identifying.get(receiverId);
       if(blink){const active=model.receivers.find(r=>r.id===receiverId).outputs.filter(o=>o.enabled).map(o=>o.port);blink.ports=blink.scope==='all'?active:blink.ports.filter(p=>active.includes(p));if(!blink.ports.length)identifying.delete(receiverId);}
       render({preserveScroll:true});if(!paired&&!continueToDirections)toast(pixelText659('pixelOnlySaved'));
+      if(handoff)return {handedOff:true};
     }});
   function outputConfigurationErrorMessage(error){
     const key=error?.code==='OTA_PENDING'?'outputOtaPending':['OTA_BUSY','OUTPUT_CONFIGURATION_BUSY','LIVE_CONTROL_BUSY','NATIVE_BUSY','MAIN_BUSY','REMOVAL_BUSY'].includes(error?.code)?'outputActionBusy':'outputUnconfirmed';
@@ -2200,15 +2370,13 @@
   function animationEditorMarkup(effect,{preview=''}={}) {
     if(!advancedInterface())return basicAnimationEditorMarkup(effect);
     const s = selectedState();
-    const spatialSetup=!standControlOpen&&continuousZone()&&effect.category==='tunnel'
-      ?`<section class="card" data-tunnel-setup-notice><h3>${esc(t('v620TunnelSetupTitle'))}</h3><p>${esc(t('v620TunnelSetupBody'))}</p><button type="button" class="button full" data-action="tunnel-animation-setup" data-id="${esc(effect.id)}">${esc(t('v620TunnelSetupFix'))}</button></section>`:'';
     // This single back action also moves into the persistent dock while
     // scrolling. Browsing the picker must never reapply the current recipe.
     const galleryAction=standControlOpen?'stand-animation-gallery':route.screen==='controls'?'animation-gallery':'animations-gallery';
     const paletteTitle=effect.whiteMixPreset?t("Witmix · tik om aan te passen"):effect.category==='brand'?(effect.id==='v30-brand-focus'||effect.id.startsWith('v31-ref-'))?t("Merkkleuren · tik om te wijzigen"):t("Accentkleur · tik om te wijzigen"):effect.paletteEditable===false?t("Kleurenreeks"):t("Animatiekleuren · tik om te wijzigen");
     const paletteHelp=effect.whiteMixPreset?`<p class="palette-guidance">${esc(t("W geeft wit licht; rood en een beetje groen maken de mix warmer. Pas de mengkleur aan terwijl je naar je ledline kijkt."))}</p>`:effect.id==='v30-brand-focus'?`<p class="palette-guidance">${esc(t("Voeg kleuren toe voor je merkaccent. De gloed laat ze na elkaar zien langs de ledlines."))}</p>`:'';
     const content = `<div class="current-effect v569-animation-header"><div class="current-effect-gallery-slot" data-editor-gallery-slot><button type="button" class="current-effect-gallery animation-gallery-return animation-chooser-action" data-animation-back-version="569" data-picker-back-icons="712" data-action="${galleryAction}" aria-label="${esc(t('v569BackPicker'))}"><span class="animation-chooser-back-arrow" aria-hidden="true">${icon('back')}</span><span class="gallery-action-label"><span class="gallery-action-icon" aria-hidden="true">${icon('animation')}</span><span class="gallery-action-copy"><b>${esc(t('v569BackPicker'))}</b></span></span></button></div><div class="current-effect-heading"><small class="active-animation-kicker" data-animation-choice-label><span aria-hidden="true">${icon('animation')}</span>${esc(animationCurrentLabel())}</small><b id="active-animation-title" tabindex="-1" role="heading" aria-level="2">${esc(Library.displayName(effect,t))}</b></div>${standControlOpen?'':`<div class="v569-animation-power animation-context">${powerControl()}</div>`}</div>${preview}<section class="card palette-section animation-daily-controls v569-colour-panel"><h2>${effect.whiteMixPreset||effect.paletteEditable===false?paletteTitle:esc(t('animationColours'))}</h2>${effect.paletteEditable===false?'':`<p class="v569-palette-hint">${esc(t('v569PaletteHint'))}</p><p class="palette-swap-guidance" data-palette-swap-guidance ${(s.colorCount||colours(s).length)>1?'':'hidden'}>${esc(t('v650PaletteSwapHint'))}</p>`}${paletteHelp}<div class="palette" aria-label="${esc(t('animationColours'))}">${paletteMarkup(s)}</div>${backgroundControls(effect)}</section><section class="card v569-playback-panel" aria-label="${esc(t('v569Playback'))}">${effect.controls.includes('speed')?`<div class="v569-primary-setting">${animationSlider('speed',t('animationSpeed'),0,100,s.speed??30,'%')}${resetMarkup('speed',t('animationSpeed'))}</div>`:''}<div class="v569-primary-setting">${animationSlider('bri',t('animationBrightness'),0,100,s.bri??100,'%')}${resetMarkup('bri',t('animationBrightness'))}</div></section>${animationDirectionMarkup(effect)}${animationControls(effect)}<button class="button secondary full animation-save-recipe" data-action="preset-save">＋ ${esc(t('animationSaveOwn'))}</button>`;
-    return `<section class="active-animation-workspace" data-animation-editor-version="569" aria-label="${esc(t('v569Adjust'))}">${spatialSetup}${content}</section>`;
+    return `<section class="active-animation-workspace" data-animation-editor-version="569" aria-label="${esc(t('v569Adjust'))}">${effect.category==='tunnel'?familySpatialChoice():''}${content}</section>`;
   }
   function animationCurrentLabel() {
     const s=selectedState(),targets=standControlOpen?standControlReceivers():selected();
@@ -2243,6 +2411,10 @@
       return renderStandControls({preserveScroll:false});
     }
     if(!['controls','animation-family','effects','animations'].includes(route.screen))return;
+    // Older saved recipes can still use one continuous SPI target. Opening
+    // that tunnel is an explicit request to use its physical output lines,
+    // through the same confirmed arrangement transaction as a fresh start.
+    if(offerSpatialAnimationStart620(current,{inline:true,repair:true}))return;
     clearAnimationEditorBrowseReturn();
     rememberAnimationGallery();closeZoneMenus();controlMode='animations';showControlAnimationGallery=false;
     route={...route,screen:'controls',familyReturnScreen:null,effectsReturn:'controls'};
@@ -2317,13 +2489,13 @@
     else spatialViews.delete(route.zoneId);
   }
   function spatialEffectView(z=zone()){
-    if(z&&familySpatialSwitch?.zoneId===z.id)return familySpatialSwitch.previousView;
-    return z?.layout==='vertical'||spatialViews.get(z?.id)==='wall'?'wall':'tunnel';
+    const preview=spatialViews.get(z?.id);
+    return ['tunnel','wall'].includes(preview)?preview:z?.layout==='vertical'?'wall':'tunnel';
   }
   function familySpatialChoice(){
-    const z=zone(),view=spatialEffectView(z),busy=Boolean(familySpatialSwitch?.zoneId===z.id||arrangementApplying||managementBusy);
-    const error=arrangementDraft?.zoneId===z.id?arrangementDraft.error:'';
-    return `<section class="family-spatial-choice" aria-label="${esc(t('lineSetupTitle'))}" aria-busy="${busy}"><div class="family-spatial-options" role="group" aria-label="${esc(t('lineSetupChoose'))}">${['tunnel','wall'].map(mode=>`<button type="button" data-action="family-spatial-layout" data-id="${mode}" aria-pressed="${view===mode}" title="${esc(t('spatialPreviewApplied'))}" ${busy?'disabled':''}><span aria-hidden="true">${arrangementIcon(mode==='wall'?'vertical':'stacked')}</span><b>${esc(t(mode==='wall'?'spatialWall':'spatialTunnel'))}</b><span class="family-spatial-selected" aria-hidden="true">${icon('check')}</span></button>`).join('')}</div><p class="family-spatial-status" role="status" aria-live="polite" ${busy?'':'hidden'}>${busy?esc(t('spatialLayoutSaving')):''}</p><p class="family-spatial-error" role="alert" ${error&&!busy?'':'hidden'}>${esc(error||'')}</p></section>`;
+    if(standControlOpen||!zone())return '';
+    const view=spatialEffectView();
+    return `<section class="family-spatial-choice tunnel-preview-choice756" data-tunnel-preview-choice="756" aria-label="${esc(t('v567AnimationExample'))}"><div class="tunnel-preview-heading756"><b>${esc(t('v567AnimationExample'))}</b><span>${esc(ledlineCount(physicalLineCount()))}</span></div><div class="family-spatial-options" role="group" aria-label="${esc(t('v567AnimationExample'))}">${['tunnel','wall'].map(mode=>`<button type="button" data-action="tunnel-preview756" data-id="${mode}" aria-pressed="${view===mode}" title="${esc(t('spatialPreviewOnly'))}"><span aria-hidden="true">${arrangementIcon(mode==='wall'?'vertical':'stacked')}</span><b>${esc(t(mode==='wall'?'spatialWall':'spatialTunnel'))}</b><span class="family-spatial-selected" aria-hidden="true">${icon('check')}</span></button>`).join('')}</div></section>`;
   }
   function spatialMode(layout=zone()?.layout,z=zone()){
     if(z&&spatialViews.has(z.id))return spatialViews.get(z.id);
@@ -2454,7 +2626,7 @@
     if(standPresentationOnly()||arrangementInteractionBusy())return true;
     if(physicalLineCount()<(effect.minimumReceivers||2)){toast(t('animationAcrossMinimum'));return true;}
     const job={effectId:effect.id,standId:stand()?.id,zoneId:zone().id,
-      route:spatialAnimationRoute620(),scope:JSON.stringify(selection()),geometry:spatialAnimationGeometry620(),inline,repair,phase:'ready'};
+      route:spatialAnimationRoute620(),scope:JSON.stringify(selection()),geometry:spatialAnimationGeometry620(),view:spatialEffectView(),inline,repair,phase:'ready'};
     spatialAnimationStart620=job;
     // Selecting the animation also chooses its required topology. Keep this
     // synchronous handled/not-handled contract for ordinary animation clicks.
@@ -2468,7 +2640,7 @@
     if(!job||job.phase!=='ready'||!currentSpatialAnimationStart620(job,'continuous')||arrangementInteractionBusy())return false;
     job.phase='saving';
     let saved=false;
-    try{saved=await chooseSpatialLayout('tunnel','stacked',{strictPlayback:true,
+    try{saved=await chooseSpatialLayout(job.view,'stacked',{strictPlayback:true,
       currentStart:()=>currentSpatialAnimationStart620(job,'continuous')});}catch(_){}
     // Leaving this context or changing its physical input retires the start.
     // A late save must never resurrect an old route or close another dialog.
@@ -2486,7 +2658,7 @@
       // The existing arrangement transaction already resumed each line's
       // own settings. Repairing topology must not reset the user's palette,
       // speed or background to this descriptor's fresh defaults.
-      render({preserveScroll:true});revealAnimationStart();return true;
+      openCurrentAnimationSettings(effect.id);return true;
     }
     startZoneAnimationEffect620(effect,{inline:job.inline});return true;
   }
@@ -2567,12 +2739,15 @@
     if(!example)return '';
     const state=effectState(example),sampleType=zone()?.type||'RGBW';
     const base=connected[0]||model.receivers.find(receiver=>receiver.type===sampleType);
-    const list=illustrative?Array.from({length:4},(_,index)=>({
+    // Small installations keep their genuine line count in gallery samples.
+    // Larger groups use a bounded illustration so browsing stays lightweight.
+    const exampleCount=Math.max(2,Math.min(4,physicalLineCount(connected)));
+    const list=illustrative?Array.from({length:exampleCount},(_,index)=>({
       ...(base?copy(base):{}),id:`tunnel-gallery-example-${index+1}`,name:`Ledline ${index+1}`,type:sampleType,order:index,
       outputs:sampleType==='SPI'?[{port:1,enabled:true,pixels:48,reversed:false}]:[],state:copy(state)
     })):connected.map(receiver=>({...receiver,state:copy(state)}));
     const view=spatialEffectView();
-    const label=illustrative?`${group?group.title+' · ':''}${t(view==='wall'?'animationWallSampleAccessible':'animationTunnelSampleAccessible')}`:`${spatialPreviewText('Preview',view)} · ${t('animationTunnelGroupAccessible',{name:group.title,count:physicalLineCount(list)})}`;
+    const label=illustrative?`${group?group.title+' · ':''}${spatialPreviewText('Preview',view)} · ${ledlineCount(physicalLineCount(list))}`:`${spatialPreviewText('Preview',view)} · ${t('animationTunnelGroupAccessible',{name:group.title,count:physicalLineCount(list)})}`;
     const lineNumbers=Object.fromEntries(list.map((receiver,index)=>[receiver.id,index+1]));
     return addPreview(list,view==='wall'?'vertical':'stacked',`${css} tunnel-effect-preview`,{
       main,effectId:example.id,selection:{kind:'all'},selectionFeedback:false,geometryReceivers:list,presentation:'receivers',lineNumbers,
@@ -2616,7 +2791,7 @@
   function animationFamilyChoices(group) {
     const choices=Library.curate(group,activeEffect()?.id),hasMore=choices.more.length>0;
     const title=hasMore?t('v606FeaturedAnimations'):t('animationFamilyChoose');
-    return `<section class="family-variants-panel" aria-labelledby="animation-family-choices"><header class="family-variants-heading"><div><b id="animation-family-choices">${esc(title)}</b></div></header><div class="family-variant-grid family-featured-grid">${effectCards(choices.featured,'family-variant-card')}</div>${hasMore?`<details class="family-more-variants" data-continuity-id="family-more-${esc(group.key)}"><summary><span class="family-more-label"><b class="family-more-closed">${esc(t('v606MoreVariants'))}</b><b class="family-more-open">${esc(t('v606FewerVariants'))}</b><span class="family-more-count">${choices.more.length}</span></span><span class="family-more-chevron" aria-hidden="true">${icon('chevron')}</span></summary><div class="family-variant-grid family-more-grid">${effectCards(choices.more,'family-variant-card')}</div></details>`:''}</section>`;
+    return `${group.preview.category==='tunnel'?familySpatialChoice():''}<section class="family-variants-panel" aria-labelledby="animation-family-choices"><header class="family-variants-heading"><div><b id="animation-family-choices">${esc(title)}</b></div></header><div class="family-variant-grid family-featured-grid">${effectCards(choices.featured,'family-variant-card')}</div>${hasMore?`<details class="family-more-variants" data-continuity-id="family-more-${esc(group.key)}"><summary><span class="family-more-label"><b class="family-more-closed">${esc(t('v606MoreVariants'))}</b><b class="family-more-open">${esc(t('v606FewerVariants'))}</b><span class="family-more-count">${choices.more.length}</span></span><span class="family-more-chevron" aria-hidden="true">${icon('chevron')}</span></summary><div class="family-variant-grid family-more-grid">${effectCards(choices.more,'family-variant-card')}</div></details>`:''}</section>`;
   }
   function animationFamilyDetail(group,tab,{includePreview=true}={}) {
     const countLabel=t(group.count===1?'animationCountOne':'animationCountMany',{count:group.count});
@@ -2671,7 +2846,7 @@
     const items=visibleCatalogue(),tab=libraryTab(),family=animationFamilyKey(),active=family?Library.group(items,family,t):null;
     const query=animationQueryStore().get(animationQueryKey())||'';
     const counts={catalogue:items.length,...Object.fromEntries(Library.sections(items).map(section=>[section.key,section.count])),presets:savedPresets.presets.length};
-    const intro=tab==='brand'?brandTonePicker():tab==='tunnel'?(standControlOpen?`<p class="stand-animation-guidance">${esc(standAnimationGuidance())}</p>`:tunnelGuide({compact:true})):'';
+    const intro=tab==='brand'?brandTonePicker():tab==='tunnel'?(standControlOpen?`<p class="stand-animation-guidance">${esc(standAnimationGuidance())}</p>`:familySpatialChoice()+tunnelGuide({compact:true})):'';
     const inFamily=Boolean(active),results=inFamily?animationFamilyDetail(active,tab,{includePreview:false}):animationLibraryResults687(items,tab,query);
     return `<section class="animation-library-inline" data-library-ui-version="573" data-discovery-ui="662" data-chooser-version="567" data-animation-category="${esc(tab)}"${query.trim()?' data-discovery-search-open="true"':''} aria-label="${esc(t('animationSelector'))}">${animationLibraryHeading()}${inFamily?'':`<div class="animation-discovery-browser">${animationCategoryTabs(items,counts,tab)}${tab!=='presets'?`<label class="animation-search"><span>${esc(t('animationSearch'))}</span><svg class="icon" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg><input type="search" id="animation-search" value="${esc(query)}" placeholder="${esc(t('v567SearchHint'))}" aria-controls="animation-results" autocomplete="off" spellcheck="false"></label>`:''}${intro?`<div class="animation-discovery-intro">${intro}</div>`:''}</div>`}<div id="animation-results">${results}</div></section>`;
   }
@@ -2824,7 +2999,7 @@
   function arrangementSignature(z=zone()) {return JSON.stringify([z.id,z.name,z.type,z.receiverIds,z.layout,M.lineIds(model,z.id)]);}
   function arrangementDirty(){return Boolean(arrangementDraft&&JSON.stringify([arrangementDraft.layout,arrangementDraft.lineOrder])!==arrangementDraft.initial);}
   function arrangementPlaybackPending(){return arrangementReapplyIds.some(id=>['pending','staged'].includes(liveStates.get(id)?.kind));}
-  function arrangementInteractionBusy(){return arrangementApplying||managementBusy||arrangementPlaybackPending()||orderTestBusy();}
+  function arrangementInteractionBusy(){return arrangementApplying||managementBusy||arrangementPlaybackPending()||orderTestBusy()||orderRecoveryPending744();}
   function orderGeometry588(z=zone()){
     return z&&JSON.stringify(M.zoneLedlines(model,z.id).map(line=>{const r=model.receivers.find(item=>item.id===line.receiverId);return [line.id,line.receiverId,line.port,line.pixels,line.reversed,r?.rid,r?.deviceFingerprint,r?.type];}).sort((a,b)=>a[0].localeCompare(b[0])));
   }
@@ -2847,7 +3022,7 @@
     // This exemption grants local editing only, never another native writer.
     // Every non-order control keeps the original transport/management locks.
     const own=currentOrderSave588(orderSaveQueue588);
-    return !!orderClose589||orderTestBusy()||arrangementPlaybackPending()&&!own||
+    return !!orderClose589||orderRecoveryPending744()||orderTestBusy()||arrangementPlaybackPending()&&!own||
       (arrangementApplying||managementBusy)&&!own;
   }
   function retireOrderSave588(retainedClose639=null){
@@ -2955,6 +3130,7 @@
   }
   async function stopOrderPresentation590(close,{cancelled=false,playbackConfirmed=false,deferredResume639=null}={}){
     if(!currentOrderClose589(close))return {closed:false,playbackConfirmed:false,cleanupConfirmed:false};
+    retireSPIOrderReturn744();
     const browsing=arrangementBrowsing();
     // Explicit UI cancellation is NOT a successful scene resume. No LIVE,
     // CAS/START retry or pending-queue clear occurs on this escape lane.
@@ -3078,11 +3254,11 @@
     const notice=orderCancelNotice590,matchingNotice=notice?.zoneId===route.zoneId&&notice.standId===stand()?.id;
     const error=arrangementDraft?.error||(matchingNotice?t(notice.code):''),needsStandOpen=arrangementNeedsStandOpen();
     const orderPending=!!orderSaveQueue588&&orderSaveQueue588.zoneId===route.zoneId&&orderSaveQueue588.version>orderSaveQueue588.confirmedVersion;
-    const recognition=orderPending?'orderColoursPending':!orderIdentificationState?.active?previewContext?'orderPreviewStopped':orderIdentificationState?.cleanup?.status==='pending'?'orderRecognitionClosing':orderIdentificationState?.cleanup?.status==='unconfirmed'?'orderStopUnconfirmed':orderIdentificationState?.cleanup?.status==='confirmed'&&orderIdentificationState.reason==='idle'?'orderRecognitionIdleStopped':'orderRecognitionStopped':previewContext?'orderPreviewColours':orderIdentificationState.physicalConfirmed?'orderColoursConfirmed':orderIdentificationState.status==='pending'?'orderColoursPending':orderIdentificationState.status==='expired'?'orderColoursExpired':orderIdentificationState.error==='IDENTIFY_UNSUPPORTED'?'orderColoursUnsupported':'orderColoursUnconfirmed';
+    const recognition=orderRecoveryPending744()?'orderColoursPending':orderPending?'orderColoursPending':!orderIdentificationState?.active?previewContext?'orderPreviewStopped':orderIdentificationState?.cleanup?.status==='pending'?'orderRecognitionClosing':orderIdentificationState?.cleanup?.status==='unconfirmed'?'orderStopUnconfirmed':orderIdentificationState?.cleanup?.status==='confirmed'&&orderIdentificationState.reason==='idle'?'orderRecognitionIdleStopped':'orderRecognitionStopped':previewContext?'orderPreviewColours':orderIdentificationState.physicalConfirmed?'orderColoursConfirmed':orderIdentificationState.status==='pending'?'orderColoursPending':orderIdentificationState.status==='expired'?'orderColoursExpired':orderIdentificationState.error==='IDENTIFY_UNSUPPORTED'?'orderColoursUnsupported':'orderColoursUnconfirmed';
     const kind=pending?'pending':error?'unconfirmed':needsStandOpen?'stand-required':arrangementDirty()?'draft':orderMoveResult?.zoneId===route.zoneId&&orderMoveResult.saved?'saved':'idle';
     const title=pending?'v593OrderPending':error?'v593OrderUnconfirmed':needsStandOpen?'v593OrderStandRequired':kind==='draft'?'v686OrderDraft':kind==='saved'?'v593OrderSaved':'v593OrderReady';
     const full=pending?t('orderApplying'):error||(needsStandOpen?t('orderOpenStandHint'):kind==='draft'?orderText652('orderDraftHint686'):kind==='saved'?t('v593OrderSaved'):t('v593OrderReady'));
-    return {kind,title,recognition,full,recognitionFull:t(recognition)};
+    return {kind,title,recognition,full,recognitionFull:orderRecoveryPending744()?orderRecoveryCopy738():t(recognition)};
   }
   function orderStatusMarkup593(){
     const status=singleLineOrderStatus594(orderStatusPresentation593());
@@ -3253,38 +3429,14 @@
     }
     return saved;
   }
-  async function chooseFamilySpatialLayout(view){
-    const z=zone(),group=route.screen==='animation-family'&&Library.group(catalogue(),route.family);
-    if(!z||group?.preview?.category!=='tunnel'||!['tunnel','wall'].includes(view)||familySpatialSwitch)return false;
-    const previousView=spatialEffectView(z);
-    if(view===previousView)return true;
-    const previousLayout=z.layout,layout=view==='wall'?'vertical':'stacked',browsing={...arrangementBrowsing(),focus:{action:'family-spatial-layout',id:view,receiver:'',delta:''}};
-    // A previous uncertain edit can leave only the local camera stale.
-    // The stored layout already matches: repair the view without replaying it.
-    if(layout===previousLayout){
-      spatialViews.set(z.id,view);recordScenePresentation684(model,z.id);beginArrangement();renderArrangement(browsing);return true;
-    }
-    // Keep every group example on the confirmed camera while the atomic
-    // layout edit is pending. Choosing a camera never applies group.preview.
-    familySpatialSwitch={zoneId:z.id,previousView};
-    // Keep the intended camera separate from the still-visible previous
-    // camera, so a confirmed scene metadata edit records the chosen view.
-    spatialViews.set(z.id,view);
-    beginArrangement();arrangementDraft.layout=layout;
-    let saved=false;
-    try{saved=await applyArrangement();}
-    finally{
-      familySpatialSwitch=null;
-      const current=zone();
-      if(current?.id===z.id){
-        // An uncertain ACK may still return a reconciled, committed model.
-        // Follow that authoritative layout, not a stale previous RAM camera.
-        spatialViews.set(z.id,saved||current.layout!==previousLayout?(current.layout==='vertical'?'wall':'tunnel'):previousView);
-        if(saved)recordScenePresentation684(model,z.id);
-        if(route.screen==='animation-family'&&route.family===browsing.route.family)renderArrangement(browsing);
-      }
-    }
-    return saved;
+  function chooseTunnelPreview756(view){
+    const z=zone();
+    if(!z||standControlOpen||!tunnelSpatialContext()||!['tunnel','wall'].includes(view)||arrangementInteractionBusy())return false;
+    if(spatialEffectView(z)===view)return true;
+    const browsing={...arrangementBrowsing(),focus:{action:'tunnel-preview756',id:view,receiver:'',delta:''}};
+    // This nearby switch changes the camera only. Browsing an example must
+    // not write a layout, restart the effect or alter a saved scene snapshot.
+    spatialViews.set(z.id,view);renderArrangement(browsing);return true;
   }
   function arrangementBrowsing(){const active=document.activeElement;return {route:{...route},controlMode,showGallery:showControlAnimationGallery,query:main.querySelector('#animation-search')?.value||'',scroll:window.scrollY,sheetScroll:main.querySelector('[data-order-open="true"]')?.scrollTop||0,spatial:spatialChoiceBrowsing(),focus:active?.dataset?.action?{action:active.dataset.action,id:active.dataset.id||'',receiver:active.dataset.receiver||'',delta:active.dataset.delta||''}:null};}
   function restoreArrangementBrowsing(context){
@@ -3648,6 +3800,55 @@
     toast(sceneEdit640.saving?'Je scène wordt nog bewaard.':'Sla je scène eerst op of kies ‘Stoppen met bewerken’.');return true;
   }
   let scenePresentationJob684=null,sceneActivationJob684=null,sceneOpenJob684=null;
+  const sceneLoadingOwners749=new WeakMap();
+  function sceneLoadingButtons749(scene,{editing=false,zoneId=null,current}={}){
+    const records=[];let loading='';
+    const sameButton=record=>record.button.isConnected&&main.contains(record.button)&&
+      ['action','id','zone'].every(key=>(record.button.dataset[key]||'')===record.scope[key]);
+    const release=()=>{
+      // A late job cannot restore a replacement button or another job's UI.
+      if(typeof current!=='function'||!current())return;
+      for(const record of records)try{
+        if(sceneLoadingOwners749.get(record.button)!==record)continue;
+        sceneLoadingOwners749.delete(record.button);
+        if(!sameButton(record))continue;
+        const ownsBusy=record.button.getAttribute('aria-busy')==='true'&&record.button.getAttribute('aria-label')===record.loadingLabel;
+        if(record.button.contains(record.status))record.status.remove();
+        for(const [node,value]of record.text)if(node.parentNode===record.button&&node.nodeValue==='')node.nodeValue=value;
+        if(record.label?.parentNode===record.labelParent&&record.button.contains(record.label)&&record.label.getAttribute('hidden')===''){if(record.hidden===null)record.label.removeAttribute('hidden');else record.label.setAttribute('hidden',record.hidden);}
+        if(record.button.getAttribute('aria-busy')==='true'){if(record.busy===null)record.button.removeAttribute('aria-busy');else record.button.setAttribute('aria-busy',record.busy);}
+        if(record.button.getAttribute('aria-label')===record.loadingLabel){if(record.ariaLabel===null)record.button.removeAttribute('aria-label');else record.button.setAttribute('aria-label',record.ariaLabel);}
+        if(ownsBusy)record.button.disabled=record.disabled;
+      }catch(_){/* Presentation cleanup cannot replace the real job outcome. */}
+    };
+    try{
+      loading=t('Scène laden…');
+      if(document.hidden||typeof current!=='function'||!current()||stand()?.id!==scene.standId)return release;
+      for(const button of main.querySelectorAll('button[data-action]')){
+        const action=button.dataset.action;
+        const matches=editing?(zoneId?
+          action==='scene-zone-edit'&&button.dataset.id===scene.id&&button.dataset.zone===zoneId||
+          action==='scene-edit-zone'&&sceneEdit640?.session.original.id===scene.id&&button.dataset.zone===zoneId:
+          action==='scene-start-edit'&&button.dataset.id===scene.id):
+          action==='scene-apply'&&button.dataset.id===scene.id;
+        if(!matches||button.disabled||button.getAttribute('aria-busy')==='true'||sceneLoadingOwners749.has(button))continue;
+        const label=action==='scene-zone-edit'?button.querySelector('.scene-zone-edit-label'):
+          action==='scene-apply'?button.querySelector(':scope > span'):null;
+        const status=document.createElement('span');status.dataset.sceneLoading749='';status.textContent=loading;
+        status.setAttribute('role','status');status.setAttribute('aria-live','polite');status.setAttribute('aria-atomic','true');
+        if(action==='scene-zone-edit')status.className='scene-zone-edit-label';
+        const record={button,label,labelParent:label?.parentNode,status,hidden:label?.getAttribute('hidden')??null,
+          text:action==='scene-start-edit'?Array.from(button.childNodes).filter(node=>node.nodeType===3).map(node=>[node,node.nodeValue]):[],
+          scope:Object.fromEntries(['action','id','zone'].map(key=>[key,button.dataset[key]||''])),
+          disabled:button.disabled,busy:button.getAttribute('aria-busy'),ariaLabel:button.getAttribute('aria-label'),loadingLabel:loading+' '+scene.name};
+        records.push(record);sceneLoadingOwners749.set(button,record);
+        if(label)label.hidden=true;for(const [node]of record.text)node.nodeValue='';
+        (label?.parentNode||button).append(status);button.disabled=true;
+        button.setAttribute('aria-busy','true');button.setAttribute('aria-label',record.loadingLabel);
+      }
+    }catch(_){/* No DOM failure can change admission, waits or dispatch. */}
+    return release;
+  }
   function recordScenePresentation684(before,zoneId){
     if(!sceneEdit640||!sceneEdit640.session.zoneIds.includes(zoneId))return;
     const z=M.getZone(model,zoneId),presentation=scenePresentations684()[zoneId]||(z.layout==='vertical'?'wall':'normal');
@@ -3744,6 +3945,7 @@
   async function openSceneEditing640(scene,{zoneId=null}={}){
     if(sceneEditBusy640(scene.id))return;
     const job={},sceneRoute=route;sceneOpenJob684=job;
+    const releaseLoading=sceneLoadingButtons749(scene,{editing:true,zoneId,current:()=>sceneOpenJob684===job});
     try{
     const previous=sceneEdit640,draft=route.screen==='scene-draft'&&!zoneId&&sceneDraft?.sceneId===scene.id?sceneDraft:null;
     const metadata=draft?{zoneIds:draft.zoneIds,name:draft.name}:previous?{zoneIds:previous.zoneIds,name:previous.name}:{};
@@ -3760,7 +3962,7 @@
     sceneDraft=null;
     if(zoneId){selections.set(zoneId,{kind:'all'});navigate('controls',{zoneId,standId:scene.standId},{zoneEntry:true,scenePrepared640:true});}
     else navigate('stand',{standId:scene.standId,zoneId:null});
-    }finally{if(sceneOpenJob684===job)sceneOpenJob684=null;}
+    }finally{releaseLoading();if(sceneOpenJob684===job)sceneOpenJob684=null;}
   }
   function buildSceneDraft640(){
     if(sceneEdit640&&sceneDraft.sceneId===sceneEdit640.session.original.id)
@@ -3783,6 +3985,7 @@
   async function activateSavedScene675(scene){
     if(sceneActivationJob684)throw Error(t('De scène wordt nog geladen.'));
     const job={},sceneRoute=route;sceneActivationJob684=job;
+    const releaseLoading=sceneLoadingButtons749(scene,{current:()=>sceneActivationJob684===job});
     try{
     // Storage ACK is not a physical light ACK. Reapply the complete saved
     // selection through the ordinary queue; never cancel/clear its Owner.
@@ -3808,7 +4011,7 @@
     // final existing LIVE checkpoint before releasing the deferred view.
     if(simpleStandMode&&centralLiveCheckpoint)await centralLiveCheckpoint.flush();
     if(stand()?.id!==scene.standId||document.hidden||stateKey()!==intended||simpleStandMode&&centralLiveCheckpoint?.state().status==='unconfirmed')throw Object.assign(Error(),{code:'SCENE_ACTIVATION_CONTEXT_CHANGED'});
-    }finally{if(sceneActivationJob684===job)sceneActivationJob684=null;}
+    }finally{releaseLoading();if(sceneActivationJob684===job)sceneActivationJob684=null;}
   }
   async function saveScene640(scene,{event=null,fromWorkbench=false,asNew=false}={}){
     if(scenePresentationJob684||sceneActivationJob684||sceneOpenJob684){toast(t('De scène wordt nog geladen.'));return;}
@@ -4132,9 +4335,25 @@
     syncArrangementControls();
   }
   function centralEditing(){
-    return !!scenePresentationJob684||!!sceneActivationJob684||!!sceneOpenJob684||!!sceneEdit640||!!receiverSetupPreparation||pixelSetup.isOpen()||spiZoneDirections.isOpen()||!!pairFirstOpening||route.screen==='stand-sharing'||route.screen==='receiver-add'&&!!onboarding.summary()||!!document.querySelector('.receiver-removal-sheet[open]')||!!centralLibraryPending||centralLibraryWriting||centralLiveCheckpoint?.editing()||!!activeControlPointer||inlineOrderDrag?.isActive()||managementBusy||arrangementApplying||
+    const field=document.activeElement;
+    const editingField=!!field&&main.contains(field)&&!field.disabled&&!field.readOnly&&field.matches('textarea,[contenteditable="true"],input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"])');
+    return editingField||!!sceneDraft?.saving||!!scenePresentationJob684||!!sceneActivationJob684||!!sceneOpenJob684||!!sceneEdit640||!!receiverSetupPreparation||pixelSetup.isOpen()||spiZoneDirections.isOpen()||!!pairFirstOpening||route.screen==='stand-sharing'||route.screen==='receiver-add'&&!!onboarding.summary()||!!document.querySelector('.receiver-removal-sheet[open]')||!!centralLibraryPending||centralLibraryWriting||centralLiveCheckpoint?.editing()||!!activeControlPointer||inlineOrderDrag?.isActive()||managementBusy||arrangementApplying||
       !!document.querySelector('#effect-dialog[open] input:not([data-stand-code])');
   }
+  function finishCentralTextEditing756(){
+    if(!simpleStandMode||!centralPending||centralEditing())return;
+    flushCentralProjection();render({preserveScroll:true});
+  }
+  document.addEventListener('focusout',event=>{
+    if(!main.contains(event.target))return;
+    setTimeout(()=>{
+      // A pointer-down can blur the field before its Save click arrives.
+      // Keep that button alive; the click hook drains after its own handler.
+      if(document.activeElement?.matches?.('button,a,summary'))return;
+      finishCentralTextEditing756();
+    },0);
+  });
+  document.addEventListener('click',()=>{queueMicrotask(finishCentralTextEditing756);});
   function installCentralProjection(next,{redraw=true,readIntentGeneration,projectionCurrent}={}){
     if(projectionCurrent&&!projectionCurrent())return;
     // Authenticated contents retire the former landing permanently, even if
@@ -5122,7 +5341,7 @@
     button.textContent=t("Opnieuw controleren");
   }
   function receiverWorkBusy(){
-    return managementBusy||!!pairFirstOpening||arrangementApplying||pinProtectionBusy||pinLoginBusy||orderIdentificationState?.active===true||identifyPending.size>0||pixelSetup.isOpen()||spiZoneDirections.isOpen()||
+    return managementBusy||!!pairFirstOpening||arrangementApplying||pinProtectionBusy||pinLoginBusy||orderIdentificationState?.active===true||orderRecoveryPending744()||identifyPending.size>0||pixelSetup.isOpen()||spiZoneDirections.isOpen()||
       !!document.querySelector('.receiver-removal-sheet[open],.receiver-update-sheet[open]');
   }
   async function waitForReceiverContextWrite({standId,signal}){
@@ -5336,7 +5555,7 @@
   }
   function apply(patch,scope=selection(),{freshRecipe=false,deferPreviewPaint=false}={}) {
     if(standPresentationOnly())return toast(t("Je stand is nog niet verbonden. Je bewaarde stand blijft zichtbaar."));
-    if(orderIdentificationState?.active)void orderIdentification?.supersede();
+    if(orderIdentificationState?.active||orderIdentificationState?.recovering)void orderIdentification?.supersede();
     if(managementBusy)return;
     const portScope=!standControlOpen&&['line','lines'].includes(scope.kind);
     if(portScope&&nativeContext&&!spiPortScenesAvailable)return toast(t("Werk de app bij om SPI-ledlines apart te bedienen."));
@@ -5861,10 +6080,15 @@
     if(!UIContinuity.restoreCapturedAction(dialog,saved.actionKey)&&saved.action)
       dialog.querySelector(`[data-action="${CSS.escape(saved.action)}"]${saved.id?`[data-id="${CSS.escape(saved.id)}"]`:''}`)?.focus({preventScroll:true});
   }
-  function standAnimationPreview(effect,{compact=false}={}){
-    const sample=copy(model);sample.receivers.forEach(receiver=>{delete receiver.state.standAnimation;});
-    let plan;try{plan=StandAnimations.plan(sample,stand().id,effect.id,{state:effectState(effect),time:0});}
-    catch(error){if(error.code==='STAND_EFFECT_MINIMUM')return `<p class="stand-animation-guidance">${esc(t('v50StandMinimum'))}</p>`;throw error;}
+  function standAnimationPreview(effect,{compact=false,planScope=null}={}){
+    let plan=planScope?.effect===effect?planScope.plan:null;
+    if(!plan){
+      const sample=copy(model);sample.receivers.forEach(receiver=>{delete receiver.state.standAnimation;});
+      try{plan=StandAnimations.plan(sample,stand().id,effect.id,{state:effectState(effect),time:0});}
+      catch(error){if(error.code==='STAND_EFFECT_MINIMUM')return `<p class="stand-animation-guidance">${esc(t('v50StandMinimum'))}</p>`;throw error;}
+      // Only this render's two views share one successful, synchronous plan.
+      if(planScope){planScope.effect=effect;planScope.plan=plan;}
+    }
     let groups=plan.zones.filter(group=>group.receivers.length);
     if(compact){const types=new Set();groups=groups.filter(group=>{if(types.has(group.type))return false;types.add(group.type);return true;});}
     return `<div class="stand-animation-preview${compact?' is-compact':''}" ${compact?'':'data-stand-animation-preview'} aria-label="${esc(t('v50StandPreview'))}">${groups.map(group=>{
@@ -5892,7 +6116,8 @@
     dialog.querySelectorAll('canvas[data-preview]').forEach(canvas=>previews.delete(canvas.dataset.preview));
     const effect=activeEffect(),family=standAnimationFamily?Library.group(catalogue(),standAnimationFamily):null;
     const shown=family?.preview||(!standAnimationGallery&&effect?effect:null)||catalogue().find(effect=>(effect.minimumReceivers||1)<=physicalLineCount(standControlReceivers()));
-    const editorPreview=advancedInterface()&&shown&&!standAnimationGallery?`<section class="stand-animation-live"><div class="stand-animation-live-title"><b>${esc(Library.displayName(shown,t))}</b><small>${esc(standAnimationModeLabel(shown))}</small></div>${standAnimationPreview(shown,{compact:true})}<details class="stand-animation-explanation" data-continuity-id="stand-zone-previews"><summary>${esc(t('v50StandViewZones'))}</summary>${standAnimationPreview(shown)}</details></section>`:'';
+    const previewPlanScope={};
+    const editorPreview=standControlMode==='animations'&&advancedInterface()&&shown&&!standAnimationGallery?`<section class="stand-animation-live"><div class="stand-animation-live-title"><b>${esc(Library.displayName(shown,t))}</b><small>${esc(standAnimationModeLabel(shown))}</small></div>${standAnimationPreview(shown,{compact:true,planScope:previewPlanScope})}<details class="stand-animation-explanation" data-continuity-id="stand-zone-previews"><summary>${esc(t('v50StandViewZones'))}</summary>${standAnimationPreview(shown,{planScope:previewPlanScope})}</details></section>`:'';
     const animationContent=standControlMode==='animations'?(!standAnimationGallery&&effect?animationEditorMarkup(effect,{preview:editorPreview}):animationLibraryContent()):'';
     const zoneCount=standControlZoneCount();
     // Title and mode tabs share one opaque sticky surface, including the
@@ -6599,7 +6824,7 @@
         const browsing=arrangementBrowsing();
         openSpatialChoices.add(z.id);renderArrangement(browsing);return;
       }
-      if(action==='family-spatial-layout')return await chooseFamilySpatialLayout(id);
+      if(action==='tunnel-preview756')return chooseTunnelPreview756(id);
       if(action==='spatial-mode'){
         const z=zone();if(!z||id!=='normal')return;
         const layout=z.type==='SPI'&&z.layout==='continuous'?'continuous':'stacked';
@@ -7283,7 +7508,7 @@
       if(input.id==='scene-zone-search'){if(sceneDraft){sceneDraft.search=input.value;filterSceneZones('draft');}return;}
       if(input.id==='scene-detail-search'){sceneDetailSearch=input.value;filterSceneZones('detail');return;}
       if(input.dataset.effectColour!==undefined)return updatePalette(Number(input.dataset.effectColour),input.value);
-      if(input.dataset.effectWhite!==undefined){document.getElementById('palette-white-value').textContent=input.value;return updatePalette(Number(input.dataset.effectWhite),undefined,Number(input.value));}
+      if(input.dataset.effectWhite!==undefined){const output=input.closest('[data-colour-picker]')?.querySelector('#palette-white-value');if(output)output.textContent=input.value;return updatePalette(Number(input.dataset.effectWhite),undefined,Number(input.value));}
       if(input.matches('input[data-channel-number]')){
         if(!/^\d{1,3}$/.test(input.value)||Number(input.value)>255)return;
         const range=input.closest('[data-colour-picker]')?.querySelector(`input[data-channel="${input.dataset.channelNumber}"]`);
@@ -7298,7 +7523,7 @@
         const root=input.closest('[data-colour-picker]');if(input.disabled||!root)return;
         const values=C.warmWhite(Number(input.value));return writePicker(root,values.slice(0,3),values[3]);
       }
-      if(input.dataset.setting){const key=input.dataset.setting;apply({[key]:Number(input.value)});document.querySelector(`[data-value-for="${key}"]`).textContent=animationSettingValue(key,input.value,input.dataset.unit||'');syncSettingResets();if(key==='objectCount')syncAnimationControlAvailability();}
+      if(input.dataset.setting){const key=input.dataset.setting;apply({[key]:Number(input.value)});const output=input.closest('.slider-row')?.querySelector(`[data-value-for="${key}"]`);if(output)output.textContent=animationSettingValue(key,input.value,input.dataset.unit||'');syncSettingResets();if(key==='objectCount')syncAnimationControlAvailability();}
     }catch(error){toast(error.message);}
   });
   // Inline preset editing is a local draft. Input never calls apply(), sends
@@ -7503,7 +7728,7 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();retireOrderFocus664();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate731',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate756',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;firstPinReady686.clear();

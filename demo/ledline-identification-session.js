@@ -81,12 +81,17 @@
   // asynchronous timeout scheduling. sendLease is a temporary full-line overlay,
   // not normal playback or persistence. Its adapter must clamp queued TTL again
   // at physical dispatch; hardware must expire the lease without this app running.
-  function create({ clock, setTimer, clearTimer, sendLease, sendStop, sendBlink, onState, idFactory, idleMs = 30000 } = {}) {
+  function create({ clock, setTimer, clearTimer, sendLease, sendStop, sendBlink, onState, idFactory, idleMs = 30000,
+    canRecover, recoverySignature, onResumeConnection } = {}) {
     if ([clock, setTimer, clearTimer, sendLease, sendStop, onState, idFactory].some(fn => typeof fn !== 'function') ||
         sendBlink !== undefined && typeof sendBlink !== 'function' ||
         !Number.isInteger(idleMs) || idleMs < 1 || idleMs > 300000) throw fail('IDENTIFICATION_DEPENDENCIES');
+    const automatic=[canRecover,recoverySignature,onResumeConnection];
+    if(automatic.some(fn=>fn!==undefined)&&automatic.some(fn=>typeof fn!=='function'))throw fail('IDENTIFICATION_DEPENDENCIES');
 
     let active = null, timer = null, lastNow = -Infinity, closedReason = 'not-opened', cleanup = null;
+    let recovery=null,recoveryTimer=null,recoveryAttempts=0,recoveryEpoch=0,recoveryJob=null;
+    let menuResumeAllowed=false;
     const issued = new Set();
     function now() {
       const value = clock();
@@ -96,9 +101,11 @@
     }
     function snapshot(at = lastNow) {
       if (!active) return {
-        active: false, session: null, standId: null, zoneId: null, lines: [],
-        status: 'closed', reason: closedReason, previewOnly: false, physicalConfirmed: false,
+        active: false, session: recovery?.ctx.session||null, standId: recovery?.ctx.standId||null, zoneId: recovery?.ctx.zoneId||null,
+        lines: recovery ? recovery.ctx.lines.map((line,index)=>({...copy(line),number:index+1})) : [],
+        status: recovery?'recovering':'closed', reason: closedReason, previewOnly: !!recovery, physicalConfirmed: false,
         remainingMs: 0, expiresAtMs: null, confirmation: null, error: null,
+        ...(recovery?{recovering:true}:{}),
         cleanup: cleanup ? { session: cleanup.ctx.session, standId: cleanup.ctx.standId, zoneId: cleanup.ctx.zoneId, status: cleanup.status } : null
       };
       const c = active.confirmation;
@@ -110,6 +117,7 @@
         lines: active.lines.map((line, index) => ({ ...copy(line), number: index + 1 })),
         status: physicalConfirmed ? 'confirmed' : active.flight ? 'pending' : expired ? 'expired' : active.error ? 'failed' : 'preview',
         reason: null, previewOnly: !physicalConfirmed, physicalConfirmed,
+        ...(active.recoveryStarting?{recovering:true}:{}),
         remainingMs: Math.max(0, Math.floor(active.deadline - at)), expiresAtMs: active.deadline,
         confirmation: physicalConfirmed ? copy(c) : null, error: active.error, cleanup: null
       };
@@ -122,7 +130,62 @@
       const old = timer; timer = null;
       if (old !== null) try { clearTimer(old); } catch (_) {}
     }
+    function scope(ctx){return {session:ctx.session,standId:ctx.standId,zoneId:ctx.zoneId,lineIds:ctx.lines.map(line=>line.id)};}
+    function recoveryAllowed(ctx){try{return typeof canRecover==='function'&&canRecover(copy(scope(ctx)))===true;}catch(_){return false;}}
+    function sameRecoverySource(ctx){try{return typeof ctx.sourceKey==='string'&&ctx.sourceKey.length>0&&recoverySignature(copy(scope(ctx)))===ctx.sourceKey;}catch(_){return false;}}
+    function clearRecovery(){
+      if(recoveryTimer!==null)try{clearTimer(recoveryTimer);}catch(_){}
+      recoveryTimer=null;recovery=null;recoveryEpoch++;
+    }
+    function recoverable(ctx){return ctx.error&&ctx.error!=='IDENTIFY_UNSUPPORTED'&&ctx.error!=='IDENTIFICATION_CLOCK';}
+    function beginRecovery(ctx){
+      if(recovery||active!==ctx||ctx.closed||!recoverable(ctx)||!recoveryAllowed(ctx)||!sameRecoverySource(ctx))return;
+      recovery={ctx,epoch:++recoveryEpoch};
+      void end(ctx,'recovering');scheduleRecovery();
+    }
+    function scheduleRecovery(){
+      const wanted=recovery;
+      if(!wanted||recoveryTimer!==null||recoveryJob||!recoveryAllowed(wanted.ctx))return;
+      if(!sameRecoverySource(wanted.ctx)){clearRecovery();emit(lastNow);return;}
+      const delays=[750,2000,5000],immediate=wanted.menuReturn===true,
+        delay=immediate?0:(recoveryAttempts<delays.length?delays[recoveryAttempts]:30000);
+      try{recoveryTimer=setTimer(()=>{
+        recoveryTimer=null;
+        if(recovery!==wanted||wanted.epoch!==recoveryEpoch||!recoveryAllowed(wanted.ctx))return;
+        if(!sameRecoverySource(wanted.ctx)){clearRecovery();emit(lastNow);return;}
+        wanted.menuReturn=false;
+        if(!immediate)recoveryAttempts=Math.min(recoveryAttempts+1,delays.length);
+        // Retain this actual promise through every await. A timeout/hide must
+        // never create a second pinned resume, STOP or START underneath it.
+        const job=Promise.resolve().then(()=>recover(wanted));recoveryJob=job;
+        void job.catch(()=>{}).finally(()=>{if(recoveryJob===job)recoveryJob=null;scheduleRecovery();});
+      },delay);}catch(_){clearRecovery();emit(lastNow);}
+    }
+    async function recover(wanted){
+      const ctx=wanted.ctx,epoch=wanted.epoch,valid=()=>recovery===wanted&&epoch===recoveryEpoch&&!active&&recoveryAllowed(ctx)&&sameRecoverySource(ctx);
+      if(!valid())return;
+      try{
+        // Finish a possible old write and its first STOP before retrying exact
+        // cleanup. No local TTL or transport exception is a positive receipt.
+        await Promise.resolve(ctx.flight).catch(()=>{});if(!valid())return;
+        await Promise.resolve(ctx.stopFlight).catch(()=>{});if(!valid())return;
+        await onResumeConnection(copy(scope(ctx)));if(!valid())return;
+        if(cleanup?.ctx!==ctx)return;
+        if(cleanup.status!=='confirmed')await stop(ctx);
+        if(!valid()||cleanup?.ctx!==ctx||cleanup.status!=='confirmed')return;
+        const time=read(null);if(time===null)return;
+        const session=idFactory();if(!id(session)||issued.has(session))return;
+        issued.add(session);
+        const next={...ctx,session,lines:copy(ctx.lines),deadline:time+idleMs,confirmation:null,revision:1,recoveryStarting:true,
+          queued:false,renewMarginMs:5000,blinks:[],flight:null,stopFlight:null,closed:false,error:null};
+        // New UUID, ordinary START and exact old physical RGB-per-line-ID.
+        // Cleanup is not a preview acknowledgement or a configuration save.
+        recovery=null;active=next;cleanup=null;emit(time);arm(next,time);
+        if(active===next)await request(next);
+      }catch(_){/* Remain visibly paused; the capped foreground lane retries. */}
+    }
     function stop(ctx) {
+      if(ctx.stopFlight)return ctx.stopFlight;
       // The adapter/hardware must apply STOP only to this exact active token.
       // A STOP reply is deliberately not proof that the previous animation resumed.
       const payload = { session: ctx.session, standId: ctx.standId, zoneId: ctx.zoneId, lineIds: ctx.lines.map(line => line.id) };
@@ -135,7 +198,14 @@
         record.status = keys(reply, ['stopped']) && Object.getPrototypeOf(reply) === Object.prototype && Object.keys(reply).length === 1 && reply.stopped === true ? 'confirmed' : 'unconfirmed';
         emit(lastNow);
       }
-      try { return Promise.resolve(sendStop(copy(payload))).then(completed, () => completed(null)); }
+      try {
+        // Keep the UI close immediate, but do not retire the native holder
+        // underneath its own in-flight TOUCH. The pump's late STOP shares this
+        // job and never awaits it, so this cannot wait on itself.
+        const flight=ctx.flight;
+        const job=Promise.resolve(flight).catch(()=>{}).then(()=>sendStop(copy(payload))).then(completed,()=>completed(null));ctx.stopFlight=job;
+        void job.finally(()=>{if(ctx.stopFlight===job)ctx.stopFlight=null;});return job;
+      }
       catch (_) { completed(null); return Promise.resolve(); }
     }
     function end(ctx, reason) {
@@ -143,13 +213,21 @@
       ctx.closed = true; ctx.queued = false; ctx.confirmation = null;
       for (const blink of ctx.blinks.splice(0)) blink.reject(fail('IDENTIFICATION_BLINK_CANCELLED'));
       clear(); active = null; closedReason = reason;
+      menuResumeAllowed=reason==='spi-directions';
       cleanup = { ctx, status: 'pending', attempt: 0 };
       emit(lastNow);
       return stop(ctx);
     }
     function read(ctx) {
       try { return now(); }
-      catch (_) { if (ctx && active === ctx) void end(ctx, 'clock-invalid'); return null; }
+      catch (_) { clearRecovery();if (ctx && active === ctx) void end(ctx, 'clock-invalid'); return null; }
+    }
+    function idle(ctx){
+      if(recoveryAllowed(ctx)&&sameRecoverySource(ctx)){
+        ctx.error='IDENTIFICATION_LEASE_EXPIRED';beginRecovery(ctx);
+        if(recovery?.ctx===ctx)return;
+      }
+      void end(ctx,'idle');
     }
     function arm(ctx, at) {
       if (active !== ctx || ctx.closed) return;
@@ -161,9 +239,10 @@
           timer = null;
           const time = read(ctx);
           if (time === null) return;
-          if (time >= ctx.deadline) { void end(ctx, 'idle'); return; }
+          if (time >= ctx.deadline) { idle(ctx); return; }
           if (ctx.confirmation && time >= ctx.confirmation.validUntilMs) {
             ctx.confirmation = null; ctx.error = 'IDENTIFICATION_LEASE_EXPIRED'; emit(time);
+            beginRecovery(ctx);
           }
           arm(ctx, time);
         }, Math.max(1, Math.ceil(until - at)));
@@ -197,7 +276,7 @@
             const sentAt=read(ctx);
             if(sentAt===null || active!==ctx || ctx.closed || sentAt>=ctx.deadline){
               blink.reject(fail('IDENTIFICATION_BLINK_CANCELLED'));
-              if(active===ctx&&!ctx.closed)void end(ctx,'idle');
+              if(active===ctx&&!ctx.closed)idle(ctx);
               break;
             }
             const payload={session:ctx.session,standId:ctx.standId,zoneId:ctx.zoneId,lineId:blink.lineId,enabled:blink.enabled};
@@ -207,7 +286,7 @@
               if(active!==ctx || ctx.closed){void stop(ctx);throw fail('IDENTIFICATION_BLINK_CANCELLED');}
               const time=read(ctx);
               if(time===null || active!==ctx || ctx.closed || time>=ctx.deadline){
-                if(active===ctx&&!ctx.closed)void end(ctx,'idle');
+                if(active===ctx&&!ctx.closed)idle(ctx);
                 throw fail('IDENTIFICATION_BLINK_CANCELLED');
               }
               if(!keys(reply,['confirmed','session','lineId','enabled','ttlMs']) || reply.confirmed!==true ||
@@ -227,7 +306,7 @@
           const sentAt = read(ctx);
           if (sentAt === null) break;
           const ttlMs = Math.min(idleMs, Math.floor(ctx.deadline - sentAt));
-          if (ttlMs <= 0) { void end(ctx, 'idle'); break; }
+          if (ttlMs <= 0) { idle(ctx); break; }
           // Only real payload changes retire a receipt. Activity queued while
           // this same payload was in flight may already be covered by its ACK.
           // Reuse its original finite expiry, never extend it locally. An order
@@ -251,7 +330,7 @@
           }
           const time = read(ctx);
           if (time === null) { void stop(ctx); break; }
-          if (time >= ctx.deadline) { void end(ctx, 'idle'); break; }
+          if (time >= ctx.deadline) { idle(ctx); break; }
           if (revision !== ctx.revision) continue;
           if (!rejected && validReceipt(reply, payload, time, sentAt)) {
             ctx.confirmation = {
@@ -259,6 +338,8 @@
               validUntilMs: Math.min(ctx.deadline, sentAt + reply.ttlMs)
             };
             ctx.error = null;
+            ctx.recoveryStarting=false;
+            recoveryAttempts=0;
           } else {
             ctx.confirmation = null;
             ctx.error = rejected ? rejectionCode : 'IDENTIFICATION_UNCONFIRMED';
@@ -271,36 +352,41 @@
         // A consumer may immediately click again after its result. Publish
         // only after releasing the pump, never into a finishing old flight.
         for(const complete of completedBlinks)complete();
+        if(active===ctx&&!ctx.closed)beginRecovery(ctx);
       });
       return ctx.flight.then(() => getState());
     }
     function getState() {
       const ctx = active, time = read(ctx);
       if (time === null) return snapshot(lastNow);
-      if (ctx && time >= ctx.deadline) void end(ctx, 'idle');
+      if (ctx && time >= ctx.deadline) idle(ctx);
       return snapshot(time);
     }
     function open(input) {
+      menuResumeAllowed=false;
       const parsed = validateOpen(input);
       const time = read(active);
       if (time === null) throw fail('IDENTIFICATION_CLOCK');
       const session = idFactory();
       if (!id(session) || issued.has(session)) throw fail('IDENTIFICATION_SESSION');
       issued.add(session);
+      clearRecovery();recoveryAttempts=0;
       if (active) void end(active, 'reopened');
       const used = new Set();
       const ctx = { ...parsed, session, lines: parsed.lines.map((line, i) => ({ ...line, ...colour(i, used) })),
         deadline: time + idleMs, confirmation: null, revision: 1, queued: false, renewMarginMs:5000, blinks: [], flight: null, closed: false, error: null };
+      if(typeof recoverySignature==='function')try{ctx.sourceKey=recoverySignature(copy(scope(ctx)));}catch(_){}
       active = ctx; cleanup = null; emit(time); arm(ctx, time);
       if (active !== ctx) return Promise.resolve(getState());
       return request(ctx);
     }
     function activity(renewMarginMs) {
+      if(recovery){scheduleRecovery();return Promise.resolve(getState());}
       const ctx = active;
       if (!ctx) return Promise.resolve(getState());
       const time = read(ctx);
       if (time === null) return Promise.resolve(snapshot(lastNow));
-      if (time >= ctx.deadline) { void end(ctx, 'idle'); return Promise.resolve(snapshot(time)); }
+      if (time >= ctx.deadline) { idle(ctx); return Promise.resolve(snapshot(time)); }
       ctx.deadline = time + idleMs; ctx.error = null;
       emit(time); arm(ctx, time);
       if (active !== ctx) return Promise.resolve(getState());
@@ -330,7 +416,7 @@
           new Set(lineIds).size !== lineIds.length || !lineIds.every(lineId => ctx.lines.some(line => line.id === lineId))) throw fail('IDENTIFICATION_ORDER');
       const time = read(ctx);
       if (time === null) return Promise.resolve(snapshot(lastNow));
-      if (time >= ctx.deadline) { void end(ctx, 'idle'); return Promise.resolve(snapshot(time)); }
+      if (time >= ctx.deadline) { idle(ctx); return Promise.resolve(snapshot(time)); }
       const byId = new Map(ctx.lines.map(line => [line.id, line]));
       // The customer assigns the colours seen on the real installation to
       // numbered places. A physical endpoint therefore keeps its exact colour
@@ -360,14 +446,47 @@
     }
     function close(reason = 'closed') {
       if (typeof reason !== 'string' || reason.length > 96) throw fail('IDENTIFICATION_REASON');
+      if(reason!=='spi-directions')menuResumeAllowed=false;
+      if(active&&['focus-unconfirmed','order-test-unconfirmed'].includes(reason)&&recoveryAllowed(active)&&sameRecoverySource(active)){
+        active.error='IDENTIFICATION_LEASE_FAILED';beginRecovery(active);return Promise.resolve(getState());
+      }
+      const recovering=recovery?.ctx;clearRecovery();recoveryAttempts=0;
       const ctx = active;
-      if (!ctx) return Promise.resolve(getState());
+      if (!ctx) return recovering?stop(recovering).then(()=>getState()):Promise.resolve(getState());
       return end(ctx, reason).then(() => getState());
+    }
+    function resumeAfterMenu(input){
+      if(!keys(input,['standId','zoneId','lineIds'])||!id(input.standId)||!id(input.zoneId)||
+         !Array.isArray(input.lineIds)||new Set(input.lineIds).size!==input.lineIds.length||input.lineIds.some(lineId=>!id(lineId)))
+        throw fail('IDENTIFICATION_MENU_INPUT');
+      const record=cleanup,ctx=record?.ctx;
+      if(!menuResumeAllowed||active||recovery||closedReason!=='spi-directions'||!ctx||input.standId!==ctx.standId||input.zoneId!==ctx.zoneId||
+         input.lineIds.length!==ctx.lines.length||!input.lineIds.every(lineId=>ctx.lines.some(line=>line.id===lineId))||!recoveryAllowed(ctx))
+        return Promise.resolve(getState());
+      // Only the app's separately fenced, confirmed edge-cleanup continuation
+      // calls this. Retain physical endpoint colours and unsaved order, not a
+      // new palette. recover() still requires exact old-order STOP confirmation
+      // before a fresh UUID and the ordinary native START/admission.
+      let sourceKey;try{sourceKey=recoverySignature(copy(scope(ctx)));}catch(_){}
+      if(typeof sourceKey!=='string'||!sourceKey.length)return Promise.resolve(getState());
+      menuResumeAllowed=false;ctx.sourceKey=sourceKey;clearRecovery();recoveryAttempts=0;
+      recovery={ctx,epoch:++recoveryEpoch,menuReturn:true};closedReason='recovering';emit(lastNow);scheduleRecovery();
+      return Promise.resolve(getState());
+    }
+    function pause(reason){
+      if(typeof canRecover!=='function')return close(reason);
+      const ctx=active||recovery?.ctx;
+      if(!ctx)return Promise.resolve(getState());
+      if(ctx.error==='IDENTIFY_UNSUPPORTED')return close(reason);
+      if(recoveryTimer!==null)try{clearTimer(recoveryTimer);}catch(_){}
+      recoveryTimer=null;recovery={ctx,epoch:++recoveryEpoch};
+      if(active===ctx)return end(ctx,reason).then(()=>getState());
+      emit(lastNow);return Promise.resolve(getState());
     }
     // No saved model/state is accepted by this API. A newer valid writer owns the
     // normal light state; cleanup only releases the matching temporary overlay.
-    return Object.freeze({ open, interaction, renewForeground, reorder, settle, blink, getState, close,
-      hide: () => close('hidden'), offline: () => close('offline'),
+    return Object.freeze({ open, interaction, renewForeground, reorder, settle, blink, getState, close, resumeAfterMenu,
+      hide: () => pause('hidden'), offline: () => pause('offline'),
       supersede: () => close('superseded') });
   }
   // Pure palette helper for initial marker assignment. Once a lease opens,

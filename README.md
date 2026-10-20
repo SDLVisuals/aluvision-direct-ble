@@ -12,9 +12,9 @@ De demo gebruikt de huidige gedeelde interface. Native functies blijven afhankel
 
 ## Android-testapp
 
-De actuele download is **50.0.0-27, code 27**. Het pakket gebruikt dezelfde bestaande ondertekening en pakketnaam. De daadwerkelijk geïnstalleerde code 27 is byte-voor-byte gecontroleerd in de Android 36-testemulator; de bestaande pakketidentiteit en eerste installatiedatum bleven behouden. Startscherm, teruggaan en het opnieuw openen van een leeg standnaamformulier zijn getest. Afzonderlijke native softwaretests gebruiken versleutelde, nagebootste receivers; die testcode zit niet in de download. Bediening van fysieke receivers vanaf een echt Android-toestel is nog niet bevestigd.
+De actuele download is **50.0.0-ui756-beta, code 32**. Deze interfacebèta bevat de gedeelde interface756 met toetsenbordaanpassingen, de vernieuwde receiverinstructies en de Tunnel/Wand-keuze. Het pakket behoudt de bestaande pakketnaam en ondertekening. Build, lint, alle gebundelde bestanden en de handtekening zijn gecontroleerd.
 
-De app controleert de ondersteunde receiversoftware vóór lichtopdrachten. Het instellen van SPI-poorten heeft een native uitvoeringsbudget van 75 seconden; wachttijd vóór uitvoering en Android-systeemvertragingen zijn daarmee niet gegarandeerd begrensd. Bij een ontbrekende bevestiging blijft het exacte instelverzoek bewaard voor expliciete controle, zonder een tweede afrondingsopdracht als de receiver al heeft opgeslagen. Een onbevestigd resultaat betekent niet dat de receiver niets heeft gewijzigd. Receiverupdates, verwijderen, PIN, gedeelde standtoegang en gezamenlijke standanimaties blijven niet beschikbaar op Android.
+De Android-native basis is nog niet volledig: PIN instellen, OTA, receivers verwijderen en gedeelde standtoegang ontbreken. Werking met receiverfirmware77 en op een fysieke Galaxy S24 is nog niet bevestigd. Code32 is een interfacebèta en is nog niet op een Android-toestel geïnstalleerd of fysiek getest. Eerdere APK's blijven beschikbaar voor bestaande verwijzingen.
 
 ## Website en geïnstalleerde app
 

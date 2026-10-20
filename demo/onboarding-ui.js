@@ -70,7 +70,9 @@
     if(code==='MAIN_RECOVERY_CONFLICT')return {message:'Toegang komt niet overeen. Er is niets overschreven. Controleer je standcode.'};
     if(code==='MAIN_REGISTRATION_UNCONFIRMED')return {message:'Toegang wordt nog bewaard. Laat de receiver aan en controleer opnieuw.'};
     if(['NATIVE_UNAVAILABLE','NATIVE_DOCUMENT_UNAVAILABLE'].includes(code))return {message:'Receiververbinding niet beschikbaar. Herstart de app en probeer opnieuw.'};
-    return {message:'Receiver niet gecontroleerd. Tik op Verbinding controleren. Reset de receiver niet.'};
+    const diagnostic=viaMain&&code==='MAIN_CONFIGURATION_UNCONFIRMED'&&typeof failure?.diagnosticCode==='string'&&
+      /^NODE_DIAG_(BEGIN|SETUP_BEGIN|CONFIG|SETUP_END|COMMIT|MESH_STAGE)_(MAIN|NODE)_(SCOPE|BUSY|EXPIRED|PREPARE|GEOMETRY|INVALID|SAVE|SECURITY|INCOMPLETE|SHAPE|OTHER)$/.test(failure.diagnosticCode)?failure.diagnosticCode:null;
+    return {message:'Receiver niet gecontroleerd. Tik op Verbinding controleren. Reset de receiver niet.'+(diagnostic?' ['+diagnostic+']':'')};
   }
   function finalizationFailure(failure,{viaMain=false,phase='receiver'}={}){
     // Only fixed codes and our own phase choose copy. Never show native error

@@ -225,16 +225,22 @@
   }
   function previewConfirmed(answer,request){
     const lit=request.guide==='ports'?request.outputs.some(item=>item.enabled&&item.pixels>0):request.pixels>0;
+    const hasMode=!!answer&&Object.hasOwn(answer,'previewMode'),black=hasMode&&answer.previewMode==='black'&&
+      (request.guide==='ports'?request.outputs.every(item=>!item.enabled):[undefined,'length'].includes(request.guide)&&request.pixels===0)&&
+      answer.guide===(request.guide||'length')&&Number.isInteger(answer.previewTTLMS)&&answer.previewTTLMS>0&&answer.previewTTLMS<=15000;
+    if(hasMode&&!black)return false;
     if(answer?.applied!==true||answer.port!==request.port||answer.pixels!==request.pixels||!Number.isInteger(answer.previewTTLMS)||answer.previewTTLMS<(lit?1:0)||answer.previewTTLMS>15000)return false;
     if(request.guide==='power'||request.guide==='direction')return answer.guide===request.guide&&answer.reversed===request.reversed;
-    if(!lit&&answer.previewTTLMS!==0)return false;
+    // A positive black lease is an explicit native PORTS0 ACK, never a local
+    // interpretation of a zero-length draft or an isolation-only HOLD.
+    if(!lit&&!black&&answer.previewTTLMS!==0)return false;
     if(request.guide==='ports')return answer.guide==='ports'&&[1,2,3,4,5].includes(answer.paletteVersion)&&portPalette(answer.outputs)===answer.paletteVersion&&answer.outputs.every((item,index)=>Object.keys(item).sort().join(',')==='colour,enabled,pixels,port,reversed'&&['port','enabled','pixels','reversed'].every(key=>item[key]===request.outputs[index][key]));
     return true;
   }
   // One bounded latest-wins test-light queue. There is never a CONFIG/SAVE
   // command here. A lost reply remains an error, not a physical-light claim.
   function createLivePreview({send,onState=()=>{},delay=170,setTimer=setTimeout,clearTimer=clearTimeout,editorIsolation=()=>false,idFactory=editorId686}={}){
-    let queued=null,active=null,desired=null,running=null,timer=null,renew=null,version=0,editor=null,editorIntent=null,expiredEditor=null;const provenPalettes=new Map();
+    let queued=null,active=null,desired=null,running=null,timer=null,renew=null,version=0,editor=null,editorIntent=null,expiredEditor=null,handoffJob=null,acceptedHandoff=null,handoffTransferred=false;const provenPalettes=new Map();
     // A guide/port switch belongs to the same exact editing transaction. The
     // native lease validates and switches its temporary mask without stopping
     // the whole receiver, restoring playback and performing a new handshake.
@@ -253,6 +259,13 @@
       // restore acknowledgement, radio operation or permission to auto-replay.
       if(!expiredEditor)return false;expiredEditor=null;editorIntent=null;version++;cancelTimers();return true;
     }
+    function retireTransferredEditor(){
+      // A new dialog owns no part of the previous adopted direction guide.
+      // Forget only an already empty local queue; never send its old STOP or
+      // treat a live/uncertain source as acknowledged cleanup.
+      if(!handoffTransferred||active||editor||handoffJob||running||queued)return false;
+      handoffTransferred=false;return true;
+    }
     const isolationTTL=(answer,request,end=false)=>!request.editorSession?0:
       Number.isInteger(answer?.isolationTTLMS)&&answer.isolationTTLMS>=0&&answer.isolationTTLMS<=30000&&(!end||answer.isolationTTLMS===0)?answer.isolationTTLMS:null;
     function scheduleRenew(ms,itemVersion){
@@ -265,8 +278,8 @@
       let answer;try{answer=await send({...previous,action:'stop',...(keep?{keepSession:true}:{})});}
       catch(error){if(error?.code==='PIXEL_EDITOR_EXPIRED')markEditorExpired(previous);throw error;}
       const ttl=isolationTTL(answer,previous,!keep);
-      if(answer?.applied!==true||answer.port!==previous.port||answer.previewTTLMS!==0||ttl===null){globalThis.LightningNativeRuntime?.services?.pixelReceiptDiagnostic692?.({phase:'STOP_RECEIPT',bits:(answer?.applied===true?1:0)|(answer?.port===previous.port?2:0)|(answer?.previewTTLMS===0?4:0)|(ttl!==null?8:0)});throw Error('PIXEL_STOP_UNCONFIRMED');}
-      active=null;editor=keep?{request:previous,confirmed:true}:null;return{isolationTTLMS:ttl};
+      if(answer?.applied!==true||answer.port!==previous.port||answer.previewTTLMS!==0||ttl===null||Object.hasOwn(answer,'previewMode')){globalThis.LightningNativeRuntime?.services?.pixelReceiptDiagnostic692?.({phase:'STOP_RECEIPT',bits:(answer?.applied===true?1:0)|(answer?.port===previous.port?2:0)|(answer?.previewTTLMS===0?4:0)|(ttl!==null?8:0)});throw Error('PIXEL_STOP_UNCONFIRMED');}
+      active=null;acceptedHandoff=null;editor=keep?{request:previous,confirmed:true}:null;return{isolationTTLMS:ttl};
     }
     function drain(){
       if(running)return running;
@@ -280,7 +293,7 @@
             if(item.hold){
               if(!editor?.confirmed||key(editor.request)!==key(request))throw Error('PIXEL_EDITOR_UNCONFIRMED');
               const answer=await send({action:'hold',standId:request.standId,transactionId:request.transactionId,receiver:copy(request.receiver),role:request.role,mainReceiverId:request.mainReceiverId,editorSession:request.editorSession});
-              if(answer?.held!==true||answer.editorSession!==request.editorSession||isolationTTL(answer,request)===null)throw Error('PIXEL_EDITOR_UNCONFIRMED');
+              if(answer?.held!==true||answer.editorSession!==request.editorSession||isolationTTL(answer,request)===null||Object.hasOwn(answer,'previewMode')||Object.hasOwn(answer,'previewTTLMS'))throw Error('PIXEL_EDITOR_UNCONFIRMED');
               if(item.version===version&&!desired)scheduleRenew(answer.isolationTTLMS,item.version);continue;
             }
             const previous=active||editor?.request;if(previous&&key(previous)!==key(request))await stopActive();
@@ -289,6 +302,7 @@
             const answer=await send({...request,action});
             const ttl=isolationTTL(answer,request);
             if(!previewConfirmed(answer,request)||ttl===null)throw Error('PIXEL_PREVIEW_UNCONFIRMED');
+            acceptedHandoff=answer.handoffReady===true&&request.editorSession&&answer.handoffRequest?{request:copy(answer.handoffRequest),version:item.version}:null;
             if(request.editorSession)editor={request,confirmed:true};
             if(request.guide==='ports'&&receiverKey(request)){provenPalettes.set(receiverKey(request),answer.paletteVersion);if(provenPalettes.size>128)provenPalettes.delete(provenPalettes.keys().next().value);}
             if(item.version===version&&desired){report('applied',request,request.guide==='ports'?answer.paletteVersion:undefined);const leases=[answer.previewTTLMS,ttl].filter(value=>value>0);scheduleRenew(leases.length?Math.min(...leases):0,item.version);}
@@ -303,9 +317,10 @@
       return running;
     }
     function update(request){
-      if(typeof send!=='function')return;
+      if(typeof send!=='function'||handoffJob)return;
       if(expiredEditor){report('expired',expiredEditor);return;}
       if(!validPreview(request))throw Error('PIXEL_PREVIEW_INVALID');
+      handoffTransferred=false;
       const next=copy(request);
       if(editorIsolation()===true){const scope=baseKey(next);if(!editorIntent||editorIntent.scope!==scope)editorIntent={scope,session:idFactory()};next.editorSession=editorIntent.session;}
       if(desired&&JSON.stringify(desired)===JSON.stringify(next))return;
@@ -314,6 +329,8 @@
       if(timer===null&&!running)timer=setTimer(()=>void drain(),delay);
     }
     function stop({keepSession=false}={}){
+      if(handoffJob){const job=handoffJob;job.cancelled=true;return job.promise.catch(()=>{}).then(()=>stop({keepSession}));}
+      if(handoffTransferred&&!active&&!editor)return Promise.resolve({stopped:false});
       if(typeof send!=='function')return Promise.resolve({stopped:true});
       if(expiredEditor)return Promise.resolve({stopped:false});
       // Cleanup remains non-rejecting for close/hide callers. Navigation must
@@ -330,9 +347,34 @@
       if(typeof send!=='function')return Promise.resolve();
       clearTimer(timer);timer=null;return drain();
     }
-    return Object.freeze({update,flush,stop,retireExpiredEditor});
+    function handoff(commit){
+      if(handoffJob)return handoffJob.promise;
+      if(typeof commit!=='function')return Promise.reject(Error('PIXEL_HANDOFF_INVALID'));
+      const job={cancelled:false,promise:null},wanted=desired&&copy(desired),itemVersion=version,acceptedBefore=acceptedHandoff;handoffJob=job;cancelTimers();
+      job.promise=(async()=>{
+        await flush();cancelTimers();
+        const ready=()=>!job.cancelled&&!expiredEditor&&itemVersion===version&&wanted&&active&&editor?.confirmed&&
+          acceptedHandoff&&acceptedHandoff.version===version&&JSON.stringify(desired)===JSON.stringify(wanted)&&key(active)===key(wanted);
+        if(!ready())return {handedOff:false};
+        if(acceptedHandoff===acceptedBefore){
+          // A previously confirmed preview may be near its source deadline.
+          // Refresh it once using the existing same-editor UPDATE, never STOP
+          // or HANDOFF replay. An ACK obtained by flush already is fresh.
+          queued={request:copy(wanted),version:itemVersion};await drain();cancelTimers();
+          if(!ready())return {handedOff:false};
+        }
+        const answer=await commit(copy(acceptedHandoff.request));
+        if(answer?.handedOff!==true)throw Error('PIXEL_HANDOFF_UNCONFIRMED');
+        // A confirmed native successor owns the overlay now. Retire only the
+        // obsolete local queue; sending its old STOP would restore playback.
+        active=null;editor=null;editorIntent=null;desired=null;queued=null;acceptedHandoff=null;handoffTransferred=true;version++;cancelTimers();
+        return {handedOff:true};
+      })().finally(()=>{if(handoffJob===job)handoffJob=null;});
+      return job.promise;
+    }
+    return Object.freeze({update,flush,stop,handoff,retireExpiredEditor,retireTransferredEditor});
   }
-  function previewMessage(state){if(globalThis.LightningWebDemo?.available===true)return t('pixelIllustration');return t(state.kind==='expired'?'pixelEditorExpired':state.kind==='unsupported'?'pixelPreviewUnsupported':state.kind==='failed'?'pixelPreviewFailed':state.kind==='pending'?'pixelPreviewPending':state.kind==='applied'?(state.guide==='ports'?'pixelPreviewPorts':state.guide==='direction'?'pixelPreviewDirection':state.guide==='power'?'pixelPreviewPower':state.pixels?'pixelPreviewLength':'pixelPreviewZero'):'pixelNoTest',{port:state.port,count:state.pixels,direction:t(state.reversed?'pixelDirectionReverse':'pixelDirectionForward')});}
+  function previewMessage(state){return t(state.kind==='expired'?'pixelEditorExpired':state.kind==='unsupported'?'pixelPreviewUnsupported':state.kind==='failed'?'pixelPreviewFailed':state.kind==='pending'?'pixelPreviewPending':state.kind==='applied'?(state.guide==='ports'?'pixelPreviewPorts':state.guide==='direction'?'pixelPreviewDirection':state.guide==='power'?'pixelPreviewPower':state.pixels?'pixelPreviewLength':'pixelPreviewZero'):'pixelNoTest',{port:state.port,count:state.pixels,direction:t(state.reversed?'pixelDirectionReverse':'pixelDirectionForward')});}
   function showPreviewStatus(container,state){
     if(!container)return;const known=[1,2,3,4,5].includes(state.paletteVersion),version=known?state.paletteVersion:displayFallback();
     for(const region of container.querySelectorAll('.pixel-output-picker,.pixel-port-context,.pixel-setup-review')){region.dataset.paletteVersion=String(version);region.dataset.paletteConfirmed=String(known);}
@@ -370,16 +412,14 @@
     if(steps[index].stage==='review'&&(!outputs.some(row=>row.enabled)||outputs.some(row=>row.enabled&&!configuredPixels(row.pixels))))index=Math.max(0,steps.findIndex(step=>step.stage==='pixels'));
     return {outputs,index};
   }
-  function create({onSave,onClose=()=>{},onPreview,onDraftChange=()=>{},mode='preview',previewCapabilities={},jointDirections=false,isPublishedReceiver=()=>false}={}){
+  function create({onSave,onClose=()=>{},onPreview,onDraftChange=()=>{},mode='preview',previewCapabilities={},jointDirections=false,isPublishedReceiver=()=>false,canHandoff=()=>false}={}){
     if(typeof onSave!=='function')throw Error('PIXEL_SAVE_HANDLER_REQUIRED');
     const limits=pixelLimits();
-    const demoPreview=globalThis.LightningWebDemo?.available===true?globalThis.LightningWebDemo.create():null;
-    if(demoPreview?.factoryGuidePreview===true)previewCapabilities=demoPreview.previewCapabilities;
     let dialog=null,receiver=null,outputs=[],index=0,busy=false,error='',focusBefore=null,initialPort=null,selectedPort=null,selectedPorts=null,unbindScrub=null,unbindDirectionTutorial=null,recovering=false,directionRecovery=false,directionOnlyMode=false,pairFirstFlow=false,pixelsOnly=false,previewStopJob=null;
     const plugMotion=globalThis.LightningReceiverVisual.createPlugMotion();
     let previewTransaction=null,previewState={kind:'idle'},previewRetiredForSave=false;
     const editorEnabled686=()=>previewCapabilities.editorIsolation===true&&isPublishedReceiver(receiver)===true;
-    const livePreview=createLivePreview({send:demoPreview?.factoryGuidePreview===true?demoPreview.previewPixels:mode==='native'?onPreview:null,editorIsolation:editorEnabled686,onState:state=>{previewState=state;showPreviewStatus(dialog,state);}});
+    const livePreview=createLivePreview({send:mode==='native'?onPreview:null,editorIsolation:editorEnabled686,onState:state=>{previewState=state;showPreviewStatus(dialog,state);}});
     const directDirections=()=>jointDirections&&!pixelsOnly&&!selectedPorts&&!recovering&&!directionOnlyMode;
     // A normal pixel-only edit saves from its last selected port. Pending
     // transaction recovery retains its immutable review/retry screen.
@@ -442,6 +482,19 @@
     async function click(event){
       const target=event.target.closest('[data-pixel-action]');if(!target||target.disabled||busy&&!(previewStopJob&&target.dataset.pixelAction==='close'))return;
       const action=target.dataset.pixelAction,step=current();
+      if(action==='save'&&!previewRetiredForSave&&directDirections()&&editorEnabled686()&&previewCapabilities.pixelEndsHandoff===true&&canHandoff(receiver)===true){
+        if(!portsToEdit().length||portsToEdit().some(item=>!configuredPixels(item.pixels,limits))||step.stage==='pixels'&&!validateInput(dialog,dialog.querySelector('[data-pixel-count]').value,limits))return;
+        const owner=dialog;busy=true;error='';render();
+        try{
+          const result=await livePreview.handoff(preview=>onSave({receiverId:receiver.id,outputs:outputs.map(item=>!item.enabled&&item.pixels===0?{...item,pixels:receiver.outputs.find(original=>original.port===item.port)?.pixels||1}:copy(item)),continueToDirections:true,pixelsOnly,handoffPreview:preview}));
+          if(dialog!==owner)return;
+          if(result.handedOff===true){busy=false;previewRetiredForSave=true;close();return;}
+        }catch(failure){
+          if(dialog!==owner)return;
+          busy=false;previewRetiredForSave=true;error=typeof failure?.message==='string'?failure.message:t('pixelSaveFailed');render();return;
+        }
+        busy=false;
+      }
       const leavesGuide=action==='save'||action==='next'&&plan()[index+1]?.stage==='review'||action==='back'&&index===0;
       if(leavesGuide&&(['outputs','pixels','connection'].includes(step.stage)||action==='save'&&editorEnabled686())){
         const stoppingDialog=dialog,job={dialog:stoppingDialog};previewStopJob=job;busy=true;const restore=showPreviewStopping(stoppingDialog);
@@ -463,7 +516,7 @@
       if(action==='save'){if(!['preview','native'].includes(mode)||!portsToEdit().length||portsToEdit().some(item=>!configuredPixels(item.pixels,limits))||step.stage==='pixels'&&!validateInput(dialog,dialog.querySelector('[data-pixel-count]').value,limits))return;busy=true;previewRetiredForSave=true;error='';render();try{await onSave({receiverId:receiver.id,outputs:outputs.map(item=>!item.enabled&&item.pixels===0?{...item,pixels:receiver.outputs.find(original=>original.port===item.port)?.pixels||1}:copy(item)),...(directionRecovery?{directionsOnly:true}:{}),...(directDirections()?{continueToDirections:true}:{}),pixelsOnly});busy=false;close();}catch(failure){busy=false;error=typeof failure?.message==='string'?failure.message:t('pixelSaveFailed');render();}}
     }
     function open(value,{initialPort:port,resumePending=false,directionsOnly=false,pixelsOnly:onlyPixels=false,selectedPorts:requestedPorts=null,resumeStep=null,pairFirst=false}={}){
-      if(dialog)throw Error('PIXEL_SETUP_ALREADY_OPEN');livePreview.retireExpiredEditor();pixelsOnly=onlyPixels===true;selectedPorts=selectedPortSet(resumePending?null:requestedPorts);outputs=outputsOf(value);receiver=copy(value);previewTransaction=previewId();previewState={kind:'idle'};previewRetiredForSave=false;document.addEventListener('visibilitychange',visibility);initialPort=Number.isInteger(port)&&port>=1&&port<=4?port:null;selectedPort=null;plugMotion.clear();index=0;error='';busy=false;focusBefore=document.activeElement;
+      if(dialog)throw Error('PIXEL_SETUP_ALREADY_OPEN');livePreview.retireExpiredEditor();livePreview.retireTransferredEditor();pixelsOnly=onlyPixels===true;selectedPorts=selectedPortSet(resumePending?null:requestedPorts);outputs=outputsOf(value);receiver=copy(value);previewTransaction=previewId();previewState={kind:'idle'};previewRetiredForSave=false;document.addEventListener('visibilitychange',visibility);initialPort=Number.isInteger(port)&&port>=1&&port<=4?port:null;selectedPort=null;plugMotion.clear();index=0;error='';busy=false;focusBefore=document.activeElement;
       recovering=resumePending===true;directionOnlyMode=directionsOnly===true;pairFirstFlow=pairFirst===true&&jointDirections&&!directionOnlyMode&&!pixelsOnly&&!selectedPorts;
       directionRecovery=recovering&&directionsOnly===true;
       if(recovering){index=plan().length-1;error=t('pixelPendingConfig');}

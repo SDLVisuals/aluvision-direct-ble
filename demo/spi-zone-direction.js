@@ -21,6 +21,7 @@
     applied:['Controleer de eindkleuren op je echte ledlines.','Check the end colours on your real LED lines.','Vérifiez les couleurs aux extrémités de vos lignes LED réelles.','Prüfe die Endfarben deiner echten LED-Linien.'],
     unsupported:['Voorbeeld in de app · testlicht hier niet beschikbaar.','App preview · test light is unavailable here.','Aperçu dans l’app · lumière de test indisponible ici.','App-Vorschau · Testlicht hier nicht verfügbar.'],
     failed:['Testlicht niet bevestigd. Controleer de verbinding; je keuzes blijven staan.','Test light is not confirmed. Check the connection; your choices are kept.','Lumière de test non confirmée. Vérifiez la connexion ; vos choix sont conservés.','Testlicht nicht bestätigt. Prüfe die Verbindung; deine Auswahl bleibt erhalten.'],
+    recovering:['Verbinding herstellen… Je keuzes blijven staan.','Restoring the connection… Your choices are kept.','Rétablissement de la connexion… Vos choix sont conservés.','Verbindung wird wiederhergestellt… Deine Auswahl bleibt erhalten.'],
     test:['Verbinding testen','Test connection','Tester la connexion','Verbindung testen'],
     testHint:['Een lichtgolf volgt je ledlines.','A light wave follows your LED lines.','Une vague lumineuse suit vos lignes LED.','Eine Lichtwelle folgt deinen LED-Linien.'],
     testActiveShort:['Lichtgolf bezig · 6 seconden','Light wave running · 6 seconds','Vague en cours · 6 secondes','Lichtwelle läuft · 6 Sekunden'],
@@ -70,7 +71,7 @@
     function t(state,key,params={}){return texts[key][state.language].replace(/\{([a-z]+)\}/gi,(all,key)=>String(params[key]??all));}
     const context=state=>({standId:state.data.standId,zoneId:state.data.zoneId,sessionId:state.sessionId});
     function signature(state){return canonical(getCurrentZoneSignature({standId:state.data.standId,zoneId:state.data.zoneId}));}
-    function status(state,key){if(!current(state))return;state.status=key;state.dialog.dataset.previewConfirmed=String(['applied','testing','testEnded'].includes(key));const node=state.dialog.querySelector('[data-spi-zone-status]');node.textContent=t(state,key);node.dataset.kind=['failed','stale','stopFailed','partial','saveFailed'].includes(key)?'error':key;const hint=state.dialog.querySelector('[data-spi-zone-test-hint]');if(hint)hint.textContent=t(state,{testing:'testActiveShort',testEnded:'testEndedShort',testUpdate:'testUpdateShort'}[key]||'testHint');for(const badge of state.dialog.querySelectorAll('[data-spi-zone-focus-badge]'))badge.textContent=t(state,key==='applied'&&Number(badge.closest('[data-spi-zone-line]').dataset.pixels)>2?'pulsing':'selected');}
+    function status(state,key){if(!current(state))return;state.status=key;state.dialog.dataset.previewConfirmed=String(['applied','testing','testEnded'].includes(key));const node=state.dialog.querySelector('[data-spi-zone-status]');node.textContent=t(state,key);node.dataset.kind=['failed','stale','stopFailed','partial','saveFailed'].includes(key)?'error':key;const hint=state.dialog.querySelector('[data-spi-zone-test-hint]');if(hint)hint.textContent=t(state,{testing:'testActiveShort',testEnded:'testEndedShort',testUpdate:'testUpdateShort'}[key]||'testHint');for(const badge of state.dialog.querySelectorAll('[data-spi-zone-focus-badge]'))badge.textContent=t(state,key==='applied'&&Number(badge.closest('[data-spi-zone-line]').dataset.pixels)>2?'pulsing':'selected');controls(state);}
     function validContext(state){if(!current(state))return false;try{if(signature(state)===state.signature)return true;}catch(_){}status(state,'stale');state.stale=true;controls(state);return false;}
     function lines(state){return state.data.receivers.flatMap(receiver=>receiver.outputs.filter(output=>output.enabled).map(output=>({receiverId:receiver.id,port:output.port,reversed:output.reversed})));}
     function changes(state){return state.data.receivers.filter(receiver=>state.pendingSaveReceivers.has(receiver.id)||canonical(receiver.outputs)!==canonical(state.baseline.get(receiver.id))).map(receiver=>({receiverId:receiver.id,outputs:copy(receiver.outputs),...(state.pendingSaveReceivers.has(receiver.id)?{requiresReconcile:true}:{})}));}
@@ -95,10 +96,13 @@
     }
     function observeLater(state){
       if(!onObserve||!enabled(state)||state.previewFailed||state.previewRetired||!state.confirmedRequest||state.inFlight)return;
-      win.clearTimeout(state.observeTimer);state.observeTimer=win.setTimeout(()=>{state.observeTimer=null;void observe(state);},Math.max(1,Math.min(1000,state.leaseUntil-now())));
+      win.clearTimeout(state.observeTimer);state.observeTimer=win.setTimeout(()=>{state.observeTimer=null;void observe(state);},Math.max(1,Math.min(1000,state.leaseUntil-now(),state.handoffRenewAt==null?Infinity:state.handoffRenewAt-now())));
     }
     async function observe(state){
       if(!enabled(state)||state.previewFailed||state.previewRetired||state.inFlight||!state.confirmedRequest)return;
+      // A transferred holder is finite until this UI proves receipt delivery
+      // with its first ordinary UPDATE; STATUS alone never grants renewal.
+      if(state.handoffRenewAt!=null&&now()>=state.handoffRenewAt){void queue(state);return;}
       const epoch=state.observeEpoch,version=state.version,wanted=copy(state.confirmedRequest),sentAt=now();
       let answer;try{answer=await onObserve(copy(context(state)));}catch(_){}
       if(!current(state)||state.observeEpoch!==epoch||state.version!==version||!enabled(state)||state.inFlight||state.previewFailed)return;
@@ -114,7 +118,26 @@
       observeLater(state);
     }
     function enabled(state){return current(state)&&!state.saving&&!state.resuming&&!state.paused&&!state.stopJob&&!state.stale&&!doc.hidden&&state.dialog.open&&validContext(state);}
-    function controls(state){if(!current(state))return;for(const button of state.dialog.querySelectorAll('[data-spi-zone-action="flip"],[data-spi-zone-action="select"],[data-spi-zone-action="save"],[data-spi-zone-action="test"]'))button.disabled=state.saving||state.resuming||state.recoveringTest||state.stale||!!state.stopJob||button.dataset.spiZoneAction==='test'&&state.inFlight||button.dataset.spiZoneAction==='flip'&&(button.closest('[data-spi-zone-line]')?.dataset.pixels==='1'||state.pendingSaveReceivers.has(button.closest('[data-spi-zone-line]')?.dataset.receiverId));}
+    function clearRecovery(state,reset=false){win.clearTimeout(state.recoveryTimer);state.recoveryTimer=null;state.recoveryEpoch=(state.recoveryEpoch||0)+1;if(reset)state.recoveryAttempts=0;}
+    function recoveryReady(state){return (state.previewFailed===true||state.previewRetired===true)&&!state.data.previewOnly&&!!onPreview&&!state.recoveringPreview&&!state.recoveringTest&&!state.retryResumeJob&&!state.inFlight&&['failed','stopFailed','recovering'].includes(state.status)&&enabled(state);}
+    function scheduleRecovery(state){
+      if(state.recoveryTimer!=null||state.recoveryJob||!recoveryReady(state))return;
+      const delays=[750,2000,5000],attempt=state.recoveryAttempts||0,delay=attempt<delays.length?delays[attempt]:30000;
+      const epoch=state.recoveryEpoch||0;
+      state.recoveryTimer=win.setTimeout(()=>{
+        state.recoveryTimer=null;if(epoch!==(state.recoveryEpoch||0)||!recoveryReady(state))return;
+        state.recoveryAttempts=Math.min(attempt+1,delays.length);state.recoveringPreview=true;controls(state);
+        // Three bounded foreground attempts, then one idle recovery per30s.
+        // Hung native work blocks this lane; every new START still requires
+        // the exact failed holder's real STOP. No background/global polling.
+        const job=Promise.resolve().then(()=>retry(state));state.recoveryJob=job;
+        void job.then(applied=>{if(applied===true&&current(state)&&epoch===state.recoveryEpoch)state.recoveryAttempts=0;}).catch(()=>{}).finally(()=>{
+          if(state.recoveryJob===job)state.recoveryJob=null;state.recoveringPreview=false;if(current(state))controls(state);
+        });
+      },delay);
+      status(state,'recovering');
+    }
+    function controls(state){if(!current(state))return;const failed=state.previewFailed||state.previewRetired,recovering=state.recoveringPreview||state.recoveryTimer!=null||!!state.recoveryJob||!!state.retryResumeJob;for(const button of state.dialog.querySelectorAll('[data-spi-zone-action="flip"],[data-spi-zone-action="select"],[data-spi-zone-action="save"],[data-spi-zone-action="test"]'))button.disabled=state.saving||state.resuming||state.recoveringTest||recovering||state.stale||!!state.stopJob||button.dataset.spiZoneAction==='test'&&state.inFlight||['flip','select'].includes(button.dataset.spiZoneAction)&&failed||button.dataset.spiZoneAction==='flip'&&(button.closest('[data-spi-zone-line]')?.dataset.pixels==='1'||state.pendingSaveReceivers.has(button.closest('[data-spi-zone-line]')?.dataset.receiverId));scheduleRecovery(state);}
     async function drain(state){
       if(state.inFlight||state.previewFailed||!state.pending||!enabled(state))return false;const wanted=state.pending,testing=state.pendingTest===true,version=state.version,sentAt=now();state.pending=null;state.pendingTest=false;state.inFlight=true;let applied=false;status(state,'pending');clearObservation(state);controls(state);
       const firstPreview=state.previewStarted!==true;state.previewStarted=true;
@@ -129,7 +152,7 @@
           if(!current(state)||state.paused||state.previewRetired||state.observeEpoch!==observeEpoch||version!==state.version||!enabled(state))return false;
           answer=observed;receiptSentAt=sampledAt;
         }
-        if(current(state)&&!state.paused){if(!confirmed(answer,wanted)||testing&&(answer.pathTestMS!==6000||!pathRemaining(answer))||onObserve&&(!lease(answer)||receiptSentAt+answer.previewTTLMS<=now())){state.previewFailed=true;state.pending=null;status(state,answer?.status==='updateRequired'?'testUpdate':answer?.status==='unsupported'?'unsupported':'failed');}else if(version===state.version&&enabled(state)){if(onObserve)recordLease(state,wanted,answer,receiptSentAt);appliedStatus(state,answer,receiptSentAt,testing);applied=true;}}}
+        if(current(state)&&!state.paused){if(!confirmed(answer,wanted)||testing&&(answer.pathTestMS!==6000||!pathRemaining(answer))||onObserve&&(!lease(answer)||receiptSentAt+answer.previewTTLMS<=now())){state.previewFailed=true;state.pending=null;status(state,answer?.status==='updateRequired'?'testUpdate':answer?.status==='unsupported'?'unsupported':'failed');}else if(version===state.version&&enabled(state)){state.handoffRenewAt=null;if(onObserve)recordLease(state,wanted,answer,receiptSentAt);appliedStatus(state,answer,receiptSentAt,testing);applied=true;}}}
       catch(_){if(current(state)&&!state.paused){state.previewFailed=true;state.pending=null;status(state,'failed');}}
       finally{if(state.previewJob===job)state.previewJob=null;state.inFlight=false;if(current(state)){controls(state);if(state.pending)void drain(state);else observeLater(state);}}
       return applied;
@@ -146,20 +169,26 @@
       state.stopJob=Promise.resolve(running).catch(()=>{}).then(()=>onStop(copy(context(state)))).finally(()=>{state.stopJob=null;if(current(state)&&!state.saving){state.paused=false;controls(state);}});controls(state);return state.stopJob;
     }
     function bounded(state,promise,ms){return new Promise((resolve,reject)=>{const timer=win.setTimeout(()=>{state.waitTimers.delete(timer);reject(Error('SPI_ZONE_STOP_TIMEOUT'));},ms);state.waitTimers.set(timer,reject);promise.then(value=>{win.clearTimeout(timer);state.waitTimers.delete(timer);resolve(value);},error=>{win.clearTimeout(timer);state.waitTimers.delete(timer);reject(error);});});}
+    function resumeConnection(state){
+      if(state.retryResumeJob)return state.retryResumeJob;
+      const wanted=copy(context(state)),job=Promise.resolve().then(()=>onResumeConnection(wanted));state.retryResumeJob=job;
+      void job.catch(()=>{}).finally(()=>{if(state.retryResumeJob===job)state.retryResumeJob=null;if(current(state)){controls(state);if(state.resumeRequested&&!doc.hidden&&!state.saving&&!state.resuming){state.resumeRequested=false;resumeForeground(state);}}});
+      return job;
+    }
     async function retry(state){
-      if(!enabled(state))return;state.saving=true;controls(state);status(state,'stopping');
+      if(!enabled(state))return;const epoch=state.recoveryEpoch||0,oldSession=state.sessionId;
+      const valid=()=>current(state)&&!doc.hidden&&(state.recoveryEpoch||0)===epoch&&state.sessionId===oldSession&&validContext(state);
+      state.saving=true;controls(state);status(state,'stopping');
       try{
-        if(onResumeConnection&&!state.data.previewOnly){await bounded(state,Promise.resolve().then(()=>onResumeConnection(copy(context(state)))),18000);if(!current(state)||doc.hidden||!validContext(state))return;}
-        const answer=await bounded(state,stop(state),18000);if(!current(state))return;
-        if(answer?.status!=='stopped'||answer.sessionId!==state.sessionId){status(state,'stopFailed');return;}
-        if(!validContext(state))return;
-        // A new session is allowed only AFTER the previous exact session has
-        // a confirmed/no-write STOP. Never replay a tombstoned START or erase
-        // the customer's draft to recover a transport failure.
+        if(onResumeConnection&&!state.data.previewOnly){await bounded(state,resumeConnection(state),18000);if(!valid())return;}
+        const answer=await bounded(state,stop(state),18000);if(!valid())return;
+        if(answer?.status!=='stopped'||answer.sessionId!==oldSession){status(state,'stopFailed');return;}
+        // Only exact confirmed/no-write cleanup admits a new scope. A timeout,
+        // old reply or public inactive status alone never authorises START.
         state.sessionId='spi-zone-'+Date.now().toString(36)+'-'+(++serial);
         state.previewStarted=false;state.previewRetired=false;state.previewFailed=false;state.saving=false;state.paused=false;controls(state);return await queue(state);
-      }catch(_){if(current(state))status(state,'stopFailed');}
-      finally{if(current(state)){state.saving=false;state.paused=!!state.stopJob;controls(state);}}
+      }catch(_){if(valid())status(state,'stopFailed');}
+      finally{if(current(state)){state.saving=false;state.paused=!!state.stopJob;controls(state);if(state.visibilityStop&&!doc.hidden)resumeForeground(state);}}
     }
     async function test(state){
       if(!enabled(state)||state.inFlight||state.recoveringTest)return;
@@ -177,6 +206,8 @@
     function resumeForeground(state){
       if(!current(state)||doc.hidden||state.saving||state.stale||state.data.previewOnly||!onPreview)return;
       if(state.resumeJob){if(state.resumeEpoch!==state.visibilityEpoch)state.resumeRequested=true;return;}
+      if(state.retryResumeJob){state.resumeRequested=true;return;}
+      clearRecovery(state,true);
       const epoch=++state.visibilityEpoch,oldSession=state.sessionId;
       state.resumeEpoch=epoch;
       state.resuming=true;controls(state);status(state,'stopping');
@@ -188,7 +219,7 @@
         // Native inactivity may retire access without a DOM hidden event
         // (for example Control Centre). Recover only the original pinned
         // stand; a connected overlay must not trigger a stand refresh.
-        if(onResumeConnection)await bounded(state,Promise.resolve().then(()=>onResumeConnection(copy(context(state)))),18000);
+        if(onResumeConnection)await bounded(state,resumeConnection(state),18000);
         if(!valid()||!validContext(state))return;
         if(answer?.status!=='stopped'||answer.sessionId!==oldSession){
           // An uncertain background STOP is not success. After pinned access
@@ -196,13 +227,13 @@
           answer=await bounded(state,stop(state),18000);
         }
         if(!valid())return;
-        if(answer?.status!=='stopped'||answer.sessionId!==oldSession){status(state,'stopFailed');return;}
+        if(answer?.status!=='stopped'||answer.sessionId!==oldSession){state.previewFailed=true;status(state,'stopFailed');return;}
         if(!validContext(state))return;
         state.visibilityStop=null;state.sessionId='spi-zone-'+Date.now().toString(36)+'-'+(++serial);state.previewStarted=false;
         state.previewRetired=false;state.previewFailed=false;state.paused=false;
         state.resuming=false;controls(state);queue(state);
       })();state.resumeJob=job;
-      void job.catch(()=>{if(valid())status(state,'stopFailed');}).finally(()=>{
+      void job.catch(()=>{if(valid()){state.previewFailed=true;status(state,'stopFailed');}}).finally(()=>{
         if(state.resumeJob===job)state.resumeJob=null;
         if(!current(state))return;
         state.resuming=false;state.paused=!!state.stopJob;controls(state);
@@ -211,7 +242,7 @@
     }
     function visibility(state){
       if(!current(state))return;
-      if(doc.hidden){++state.visibilityEpoch;state.resumeRequested=false;state.visibilityStop=stop(state);void state.visibilityStop.catch(()=>{});return;}
+      if(doc.hidden){clearRecovery(state,true);++state.visibilityEpoch;state.resumeRequested=false;state.visibilityStop=stop(state);void state.visibilityStop.catch(()=>{});return;}
       if(state.visibilityStop)resumeForeground(state);
     }
     async function save(state){
@@ -228,22 +259,28 @@
     }
     function click(state,event){
       const button=event.target?.closest?.('[data-spi-zone-action]');
-      if(!button){const card=event.target?.closest?.('[data-spi-zone-line]');if(card&&state.dialog.contains(card)&&!state.recoveringTest&&enabled(state)){const receiver=state.data.receivers.find(item=>item.id===card.dataset.receiverId),output=receiver?.outputs.find(item=>item.port===Number(card.dataset.port)&&item.enabled);if(output){setFocus(state,receiver.id,output.port);queue(state);}}return;}
+      if(!button){const card=event.target?.closest?.('[data-spi-zone-line]');if(card&&state.dialog.contains(card)&&!state.recoveringTest&&!state.recoveringPreview&&!state.recoveryJob&&!state.retryResumeJob&&state.recoveryTimer==null&&!state.previewFailed&&!state.previewRetired&&enabled(state)){const receiver=state.data.receivers.find(item=>item.id===card.dataset.receiverId),output=receiver?.outputs.find(item=>item.port===Number(card.dataset.port)&&item.enabled);if(output){setFocus(state,receiver.id,output.port);queue(state);}}return;}
       if(!state.dialog.contains(button)||button.disabled)return;const action=button.dataset.spiZoneAction;
-      if(action==='close'||action==='back'){event.preventDefault();close(action);return;}if(action==='save'){void save(state);return;}if(action==='test'){void test(state);return;}if(!['select','flip'].includes(action)||!enabled(state))return;
+      if(action==='close'||action==='back'){event.preventDefault();close(action);return;}if(action==='save'){void save(state);return;}if(action==='test'){void test(state);return;}if(!['select','flip'].includes(action)||state.previewFailed||state.previewRetired||!enabled(state))return;
       const card=button.closest('[data-spi-zone-line]'),receiver=state.data.receivers.find(item=>item.id===card?.dataset.receiverId),output=receiver?.outputs.find(item=>item.port===Number(card?.dataset.port)&&item.enabled);if(!receiver||!output)return;
       if(action==='flip'&&output.pixels===1)return;
       setFocus(state,receiver.id,output.port);if(action==='flip'){output.reversed=!output.reversed;updateCard(state,receiver,output);}queue(state);
     }
     function close(reason='close'){
-      const state=active;if(!state)return;const pendingChanges=changes(state),focused=state.dialog.contains(doc.activeElement)||doc.activeElement===doc.body;active=null;generation++;state.closed=true;state.pending=null;state.unbindTutorial?.();state.dialog.removeEventListener('click',state.click);state.dialog.removeEventListener('cancel',state.cancel);doc.removeEventListener('visibilitychange',state.visibility);win.removeEventListener?.('lightning:native-active',state.nativeActive);for(const [timer,reject] of state.waitTimers){win.clearTimeout(timer);reject(Error('SPI_ZONE_CLOSED'));}state.waitTimers.clear();if(state.dialog.open)state.dialog.close();state.dialog.remove();
+      const state=active;if(!state)return;clearRecovery(state);const pendingChanges=changes(state),focused=state.dialog.contains(doc.activeElement)||doc.activeElement===doc.body;active=null;generation++;state.closed=true;state.pending=null;state.unbindTutorial?.();state.dialog.removeEventListener('click',state.click);state.dialog.removeEventListener('cancel',state.cancel);doc.removeEventListener('visibilitychange',state.visibility);win.removeEventListener?.('lightning:native-active',state.nativeActive);for(const [timer,reject] of state.waitTimers){win.clearTimeout(timer);reject(Error('SPI_ZONE_CLOSED'));}state.waitTimers.clear();if(state.dialog.open)state.dialog.close();state.dialog.remove();
       void stop(state).catch(()=>{});try{onClose({reason,...context(state),...(state.data.newReceiverId?{newReceiverId:state.data.newReceiverId}:{}),pendingChanges:copy(pendingChanges)});}catch(_){}
       if(focused&&!doc.hidden&&state.focusBefore?.isConnected&&(!doc.hasFocus||doc.hasFocus()))state.focusBefore.focus?.({preventScroll:true});
     }
-    function open(value){
+    function open(value,{initialPreview=null,sentAt=null}={}){
       if(active)throw Error('SPI_ZONE_DIRECTION_ALREADY_OPEN');if(!doc?.createElement)throw Error('SPI_ZONE_DOM_REQUIRED');validate(value);
       const language=languages.indexOf(String(doc.documentElement.lang||'nl').toLowerCase().split('-')[0]),dialog=doc.createElement('dialog'),data=copy(value),state={generation:++generation,data,dialog,language:Math.max(0,language),sessionId:'spi-zone-'+Date.now().toString(36)+'-'+(++serial),baseline:new Map(data.receivers.map(receiver=>[receiver.id,copy(receiver.outputs)])),focus:null,focusBefore:doc.activeElement,pending:null,inFlight:false,previewJob:null,version:0,paused:false,saving:false,stale:false,closed:false,stopJob:null,waitTimers:new Map(),status:'pending'};
       state.pendingSaveReceivers=new Set();applyPending(data);for(const pending of data.pendingChanges||[])if(pending.requiresReconcile===true)state.pendingSaveReceivers.add(pending.receiverId);
+      if(initialPreview){
+        state.sessionId=initialPreview.sessionId;
+        const wanted=request(state);
+        if(data.previewOnly||state.pendingSaveReceivers.size||!onObserve||!onPreview||typeof initialPreview.sessionId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(initialPreview.sessionId)||!confirmed(initialPreview,wanted)||!lease(initialPreview)||!Number.isInteger(initialPreview.renewAfterMS)||initialPreview.renewAfterMS<1||initialPreview.renewAfterMS>7000||initialPreview.renewAfterMS>=initialPreview.previewTTLMS||
+           !Number.isFinite(sentAt)||sentAt<0||sentAt>now())throw Error('SPI_ZONE_HANDOFF_UNCONFIRMED');
+      }
       state.signature=signature(state);active=state;const headingId='spi-zone-direction-title-'+serial;dialog.className='spi-zone-direction-dialog';dialog.setAttribute('aria-labelledby',headingId);
       const tutorial=host.LightningSPIDirectionTutorial?.markup({language:languages[state.language]})||'';
       const byKey=new Map(data.receivers.flatMap(receiver=>receiver.outputs.filter(output=>output.enabled).map(output=>[receiver.id+':'+output.port,{receiver,output}]))),orderedGroups=[];
@@ -254,10 +291,30 @@
       for(const card of dialog.querySelectorAll('[data-spi-zone-line]')){const badge=doc.createElement('span');badge.dataset.spiZoneFocusBadge='';badge.hidden=true;badge.textContent=t(state,'selected');card.querySelector('header').querySelector('b').append(badge);const receiver=data.receivers.find(item=>item.id===card.dataset.receiverId);updateCard(state,receiver,receiver.outputs.find(output=>output.port===Number(card.dataset.port)));}
       const testButton=doc.createElement('button');testButton.type='button';testButton.className='spi-zone-test';testButton.dataset.spiZoneAction='test';testButton.innerHTML=`<svg viewBox="0 0 44 24" fill="none" aria-hidden="true"><path d="M3 12h38m-8-7 8 7-8 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 6v12M14 6v12M20 6v12" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".35"/></svg><span><b>${esc(t(state,'test'))}</b><small data-spi-zone-test-hint>${esc(t(state,'testHint'))}</small></span>`;dialog.querySelector('[data-spi-zone-status]').before(testButton);
       if(state.pendingSaveReceivers.size){const hint=doc.createElement('p');hint.className='spi-zone-change-notice';hint.textContent=t(state,'pendingSave');dialog.querySelector('[data-spi-zone-status]').after(hint);}
+      state.recoveryEpoch=0;state.recoveryAttempts=0;state.recoveryTimer=null;state.recoveryJob=null;state.retryResumeJob=null;state.recoveringPreview=false;
       state.visibilityEpoch=0;state.visibilityStop=null;state.previewRetired=false;state.previewFailed=false;state.resuming=false;state.resumeJob=null;state.resumeRequested=false;
       state.click=event=>click(state,event);state.cancel=event=>{event.preventDefault();close('escape');};state.visibility=()=>visibility(state);state.nativeActive=()=>resumeForeground(state);dialog.addEventListener('click',state.click);dialog.addEventListener('cancel',state.cancel);doc.addEventListener('visibilitychange',state.visibility);win.addEventListener?.('lightning:native-active',state.nativeActive);doc.body.append(dialog);
       try{dialog.showModal();}catch(error){active=null;dialog.removeEventListener('click',state.click);dialog.removeEventListener('cancel',state.cancel);doc.removeEventListener('visibilitychange',state.visibility);win.removeEventListener?.('lightning:native-active',state.nativeActive);dialog.remove();throw error;}
-      state.unbindTutorial=host.LightningSPIDirectionTutorial?.bind(dialog)||null;controls(state);queue(state);return context(state);
+      state.unbindTutorial=host.LightningSPIDirectionTutorial?.bind(dialog)||null;controls(state);
+      if(initialPreview){
+        state.previewStarted=true;state.handoffRenewAt=sentAt+initialPreview.renewAfterMS;const wanted=request(state);
+        if(sentAt+initialPreview.previewTTLMS>now()){
+          recordLease(state,wanted,initialPreview,sentAt);appliedStatus(state,initialPreview,sentAt);observeLater(state);
+        }else{
+          // Delayed handoff arrival is never rebased into a fresh lease.
+          // Observe the already adopted holder once; do not send START.
+          state.inFlight=true;const epoch=state.observeEpoch,version=state.version,sampledAt=now();
+          const job=Promise.resolve().then(()=>onObserve(copy(context(state))));state.previewJob=job;
+          void bounded(state,job,15000).then(answer=>{
+            if(!current(state)||state.paused||state.previewRetired||state.observeEpoch!==epoch||state.version!==version||!validContext(state))return;
+            if(!confirmed(answer,wanted)||!lease(answer)||sampledAt+answer.previewTTLMS<=now())throw Error('SPI_ZONE_HANDOFF_UNCONFIRMED');
+            recordLease(state,wanted,answer,sampledAt);appliedStatus(state,answer,sampledAt);
+          }).catch(()=>{if(current(state)&&!state.paused){state.previewFailed=true;status(state,'failed');}}).finally(()=>{
+            if(state.previewJob===job)state.previewJob=null;state.inFlight=false;if(current(state)){controls(state);if(state.pending)void drain(state);else observeLater(state);}
+          });
+        }
+      }else queue(state);
+      return context(state);
     }
     return Object.freeze({open,close,isOpen:()=>!!active});
   }

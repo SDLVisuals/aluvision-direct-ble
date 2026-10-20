@@ -1,0 +1,105 @@
+/* The initial Wi-Fi instructions use the app's existing product illustration
+   and card language. These are instructions, never connection evidence. */
+.onboarding-page:has(.wifi-guide756) .onboarding-manual-wifi {
+  padding: 0 !important;
+}
+.onboarding-manual-wifi ol.wifi-guide756 {
+  gap: 10px;
+  counter-reset: none;
+}
+.onboarding-manual-wifi ol.wifi-guide756 > li {
+  grid-template-columns: 98px minmax(0, 1fr);
+  gap: 13px;
+  min-height: 105px;
+  padding: 13px 15px 13px 10px;
+  border-radius: 22px;
+  background: var(--panel);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--ink) 3%, transparent);
+}
+.onboarding-manual-wifi ol.wifi-guide756 > li:nth-child(2) {
+  border-color: color-mix(in srgb, var(--red) 26%, var(--line));
+  background: color-mix(in srgb, var(--red) 3%, var(--panel));
+}
+.wifi-guide756 .wifi-guide-art674 {
+  width: 98px;
+  height: 80px;
+  border: 0;
+  border-radius: 18px;
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--ink) 3%, transparent), transparent 74%);
+}
+.wifi-guide756 .wifi-guide-art674 > svg {
+  width: 104px;
+  height: 82px;
+}
+.wifi-guide756 > li:first-child .wifi-guide-art674 > svg {
+  width: 112px;
+  height: 88px;
+}
+.wifi-guide756 .wifi-guide-enclosure728 { fill: #e6e9e2; stroke: #9da69a; stroke-width: 1.25; }
+.wifi-guide756 .wifi-guide-enclosure-side728 { fill: #b9c1b4; stroke: #879581; stroke-width: 1.25; }
+.wifi-guide756 .wifi-guide-cover728 { fill: #f7f7f1; stroke: #d2d7cc; stroke-width: 1; }
+.wifi-guide756 .wifi-guide-seam728 { stroke: #c0c8b9; stroke-width: 1.2; }
+.wifi-guide756 .wifi-guide-highlight756 { stroke: #ffffffb3; stroke-width: 1.2; }
+.wifi-guide756 .wifi-guide-brand728 { font-size: 7px; fill: #586350; letter-spacing: .55px; }
+.wifi-guide756 .wifi-guide-label756 { stroke: #bec5b8; stroke-width: 1.3; }
+.wifi-guide756 .wifi-guide-gland756 { fill: #bbc4b4; stroke: #8f9a87; stroke-width: 1; }
+.wifi-guide756 .wifi-guide-copy674 > b {
+  align-items: center;
+  grid-template-columns: 23px minmax(0, 1fr);
+  gap: 8px;
+  font-size: 15px;
+  line-height: 1.35;
+  letter-spacing: -.15px;
+}
+.wifi-guide756 .wifi-guide-step674 {
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: 11px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 70%, transparent);
+}
+.wifi-guide756 > li:nth-child(2) .wifi-guide-step674 {
+  background: var(--red);
+  color: #fff;
+  box-shadow: none;
+}
+.onboarding-manual-wifi ol.wifi-guide756 .wifi-guide-copy674 > small {
+  margin: 6px 0 0 31px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.onboarding-page:has(.wifi-guide756) > .onboarding-searching {
+  justify-content: center;
+  min-height: 38px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+.onboarding-page:has(.wifi-guide756) .onboarding-search-actions > [data-onboarding-action=search]:disabled {
+  background: var(--soft);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  opacity: 1;
+  box-shadow: none;
+}
+@media (max-width: 350px) {
+  .onboarding-manual-wifi ol.wifi-guide756 > li { grid-template-columns: 78px minmax(0, 1fr); gap: 9px; padding: 11px 12px 11px 6px; min-height: 99px; }
+  .wifi-guide756 .wifi-guide-art674 { width: 78px; height: 74px; }
+  .wifi-guide756 .wifi-guide-art674 > svg { width: 84px; height: 74px; }
+  .wifi-guide756 > li:first-child .wifi-guide-art674 > svg { width: 90px; height: 80px; }
+  .wifi-guide756 .wifi-guide-copy674 > b { font-size: 13px; gap: 7px; }
+  .onboarding-manual-wifi ol.wifi-guide756 .wifi-guide-copy674 > small { margin-left: 30px; font-size: 11px; }
+}
+@media (max-height: 700px) {
+  .onboarding-manual-wifi ol.wifi-guide756 { gap: 7px; }
+  .onboarding-manual-wifi ol.wifi-guide756 > li { min-height: 90px; padding-block: 8px; }
+  .wifi-guide756 .wifi-guide-art674 { height: 70px; }
+  .wifi-guide756 .wifi-guide-art674 > svg { height: 70px; }
+  .wifi-guide756 > li:first-child .wifi-guide-art674 > svg { height: 76px; }
+}
