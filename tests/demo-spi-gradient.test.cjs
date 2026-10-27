@@ -37,9 +37,9 @@ test('full picker white, point brightness and on/off are retained and mixed befo
   const mixed = [{ color: '#102030', position: 0, white: 32, brightness: 50, on: true },
     { color: '#FFFFFF', position: 1, white: 255, brightness: 80, on: false }];
   assert.equal(G.validateStops(mixed), true);
-  assert.deepEqual(G.stopRGB(mixed[0]), [24, 32, 40]);
-  assert.deepEqual(G.samplePixels(mixed, 3), [[24, 32, 40], [12, 16, 20], [0, 0, 0]]);
-  assert.deepEqual(G.stopRGB({ color: '#F01000', position: 0, white: 64 }), [255, 80, 64]);
+  assert.deepEqual(G.stopRGB(mixed[0]), [23, 30, 37]);
+  assert.deepEqual(G.samplePixels(mixed, 3), [[23, 30, 37], [12, 15, 19], [0, 0, 0]]);
+  assert.deepEqual(G.stopRGB({ color: '#F01000', position: 0, white: 64 }), [244, 76, 64]);
   for (const extra of [{ white: -1 }, { white: 1.5 }, { white: 256 }, { white: undefined },
     { brightness: -1 }, { brightness: 101 }, { brightness: NaN }, { on: 1 }, { on: null }]) {
     const stop = { ...mixed[0], ...extra };
@@ -49,6 +49,13 @@ test('full picker white, point brightness and on/off are retained and mixed befo
   const store = G.createStore(memory()), saved = store.save({ name: 'Volledige kleur', stops: mixed });
   assert.equal(saved.error, null); assert.deepEqual(store.load().presets[0].stops, mixed);
   assert.deepEqual(G.samplePixels(stops, 400), G.samplePixels(stops.map(stop => ({ ...stop, white: 0, brightness: 100, on: true })), 400));
+});
+test('point white and dimming match the ordinary shared colour preview math',()=>{
+  for(const color of ['#000000','#FFFFFF','#102030','#C94E46','#F01000'])
+    for(const white of [0,1,32,64,127,128,254,255])for(const brightness of [0,1,37,62,100]){
+      const rgb=[1,3,5].map(i=>parseInt(color.slice(i,i+2),16));
+      assert.deepEqual(G.stopRGB({color,position:0,white,brightness}),C.mixWhite(rgb,white).map(channel=>Math.round(channel*brightness/100)));
+    }
 });
 test('stop positions change proportions; endpoint colour holds outside stop range', () => {
   const shifted = [{ color: '#FF0000', position: .4 }, { color: '#0000FF', position: .8 }];

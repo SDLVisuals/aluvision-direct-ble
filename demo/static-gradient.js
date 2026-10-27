@@ -27,8 +27,11 @@
   }
   const copyStops = stops => stops.map(stop => ({ ...stop, color: stop.color.toUpperCase() }));
   const rgb = hex => [1, 3, 5].map(at => parseInt(hex.slice(at, at + 2), 16));
+  // Same rounded white mix as LightningColour.mixWhite, before dimming.
+  // Keep DATA independent from canvas/screen transfer and native transport.
   const rgbOfStop = stop => stop.on === false ? [0, 0, 0] : rgb(stop.color)
-    .map(channel => Math.round(Math.min(255, channel + (stop.white ?? 0)) * (stop.brightness ?? 100) / 100));
+    .map(channel => Math.round(255 - (255 - channel) * (1 - (stop.white ?? 0) / 255)))
+    .map(channel => Math.round(channel * (stop.brightness ?? 100) / 100));
   function stopRGB(stop) {
     if (!validStop(stop)) throw Error('GRADIENT_INVALID');
     return rgbOfStop(stop);
