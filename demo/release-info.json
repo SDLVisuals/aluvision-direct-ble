@@ -108,7 +108,19 @@
     ]
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50candidate756-interface-polish-android32-beta",
+  "revision": "V50-demo-static-gradient-full-colour-picker-20261027",
+  "staticGradientDemo": {
+    "browserDemoOnly": true,
+    "scope": "SPI zone colour tab, static gradient editor and saved demo presets",
+    "colourPicker": "shared full app wheel, brightness, RGBW channels and warm-white controls",
+    "addFlow": "Choose first; Done adds the point; Cancel leaves the gradient unchanged",
+    "stops": { "min": 2, "max": 8, "white": true, "brightness": true, "on": true },
+    "examplePixels": 400,
+    "storage": "demo session memory; cleared on reload",
+    "nativeAppUpdated": false,
+    "receiverFirmwareUpdated": false,
+    "physicalGradientOutputVerified": false
+  },
   "interfaceVersion": 50,
   "interfaceBaseline": "Interface756: keyboard-aware forms and dialogs, touch focus polish, visual receiver Wi-Fi guide, automatic active SPI-port tunnel layout and direct Tunnel/Wall preview switch.",
   "interfaceCandidate673": {
@@ -283,8 +295,8 @@
     },
     {
       "path": "app.js",
-      "bytes": 725323,
-      "sha256": "680c3039c7195640cf9cfa6040aa4ef64a554b4ee6cb24ca4d18100decdcaccb"
+      "bytes": 732824,
+      "sha256": "93ad86663d090be9ba6edf8efef4811f8947a665fca39c6e95752e9e5a8a2247"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -343,8 +355,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 10003,
-      "sha256": "9734470b6a7a3480f665b1b4e2ff8490132165a679f3aeceaa4567755c4e567c"
+      "bytes": 10218,
+      "sha256": "b2a65c6d4c53260fdb646e6a14090ef674331daa41f2f3a52b18cc4ee0f7294d"
     },
     {
       "path": "installation-libraries.js",
@@ -680,6 +692,21 @@
       "path": "stand-sharing.js",
       "bytes": 26373,
       "sha256": "3a0bd6c0a4cddd921c5e1d6347fa77ccb747504f28c3b1eef4daf8d330f91459"
+    },
+    {
+      "path": "static-gradient.js",
+      "bytes": 7436,
+      "sha256": "9325efa914108cbff3642153a372bf8a85a230bbeb4c35fa517e863f58745d52"
+    },
+    {
+      "path": "static-gradient-ui.js",
+      "bytes": 18912,
+      "sha256": "002c310854657ecfb0f1910aad22adb50e140fb4bff0923171916dbba9e807cb"
+    },
+    {
+      "path": "static-gradient.css",
+      "bytes": 7283,
+      "sha256": "7b266f41f40e45ddc65cb094e680d37296fdfe84f6d81585ccc7d1166bf74599"
     },
     {
       "path": "styles.css",

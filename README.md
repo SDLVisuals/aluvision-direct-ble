@@ -10,6 +10,8 @@ De demo gebruikt uitsluitend fictieve receivers. Ze begint leeg en bewaart haar 
 
 De demo gebruikt de huidige gedeelde interface. Native functies blijven afhankelijk van expliciete appmogelijkheden; de browser krijgt geen receiver-, beveiligings- of firmwaretoegang.
 
+In een SPI-zone kun je onder **Kleur → Verloop SPI** een stilstaand kleurverloop maken met twee tot acht kleuren. Verplaats de kleurpunten om de verdeling aan te passen en bewaar je eigen verloopideeën tijdens de demosessie. ‘Kleur toevoegen’ opent meteen hetzelfde kleurenwiel, de helderheid en de fijne RGBW-regelaars als de gewone kleurkeuze. Dit is alleen een browservoorbeeld; deze publicatie wijzigt geen receiverfirmware of geïnstalleerde telefoonapp.
+
 ## Android-testapp
 
 De actuele download is **50.0.0-ui756-beta, code 32**. Deze interfacebèta bevat de gedeelde interface756 met toetsenbordaanpassingen, de vernieuwde receiverinstructies en de Tunnel/Wand-keuze. Het pakket behoudt de bestaande pakketnaam en ondertekening. Build, lint, alle gebundelde bestanden en de handtekening zijn gecontroleerd.

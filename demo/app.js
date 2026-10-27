@@ -71,6 +71,58 @@
   // query flags and native iPhone bundle keep their non-demo paths.
   const webDemoContext=!nativeContext&&window.LightningWebDemo?.available===true;
   const webDemo=webDemoContext?window.LightningWebDemo.create():null;
+  // Demo-only colour workspace. Separate DATA/presets never enter receiver
+  // state, apply(), a saved scene, the native bridge or STATIC wire commands.
+  const gradientEditors = new Map();
+  let unmountGradient = null;
+  let gradientColourDraft = null;
+  function gradientPickerCurrent(root=null) {
+    const draft=gradientColourDraft,dialog=document.getElementById('effect-dialog');
+    return !!draft&&webDemoContext&&!nativeContext&&!standControlOpen&&draft.current()&&
+      draft.source.isConnected&&zone()?.id===draft.zoneId&&motionContextKey()===draft.context&&dialog.open&&
+      draft.root?.isConnected&&draft.root===dialog.querySelector('[data-colour-picker="gradient"]')&&(!root||root===draft.root);
+  }
+  function openGradientColourPicker({source,color,white=0,brightness=100,on=true,current,commit}) {
+    const dialog=document.getElementById('effect-dialog');
+    if(!webDemoContext||nativeContext||standControlOpen||zone()?.type!=='SPI'||!source?.isConnected||dialog.open||!current()||
+      !/^#[0-9a-f]{6}$/i.test(color)||!Number.isInteger(white)||white<0||white>255||!Number.isFinite(brightness)||brightness<0||brightness>100||typeof on!=='boolean')return false;
+    gradientColourDraft={source,current,commit,zoneId:zone().id,context:motionContextKey(),
+      values:[...rgbOf({colors:[color]}),white],brightness,on,memory:Object.fromEntries([...rgbOf({colors:[color]}),white].map((value,i)=>['rgbw'[i],value||255])),root:null};
+    showEffectDialog(t('v50ChooseColour'),colourPickerMarkup('gradient',false,{kind:'gradient',values:gradientColourDraft.values,brightness,on,power:true}));
+    gradientColourDraft.root=dialog.querySelector('[data-colour-picker="gradient"]');
+    paintWheel();syncColour();return true;
+  }
+  function finishGradientColourPicker() {
+    const draft=gradientColourDraft,allowed=gradientPickerCurrent();
+    gradientColourDraft=null;
+    closeEffectDialog();
+    if(allowed)draft.commit({color:C.hex(draft.values.slice(0,3)),white:draft.values[3],brightness:draft.brightness,on:draft.on});
+  }
+  function syncGradientPickerControls(root=gradientColourDraft?.root) {
+    if(!gradientPickerCurrent(root))return;
+    syncColour();
+    const draft=gradientColourDraft,range=root.querySelector('[data-setting="bri"]'),output=root.querySelector('[data-value-for="bri"]'),power=root.querySelector('.power-card [data-action="power"]');
+    if(range)range.value=draft.brightness;if(output)output.textContent=Math.round(draft.brightness)+'%';
+    if(power){power.setAttribute('aria-checked',String(draft.on));power.setAttribute('aria-label',t(draft.on?'Kleurpunt uitschakelen':'Kleurpunt inschakelen'));power.querySelector('span').textContent=t(draft.on?'v50On':'v50Off');}
+  }
+  function demoGradientEditor() {
+    const z = zone();
+    if (!window.LightningStaticGradient?.supportsDemo({demoOnly:webDemoContext,native:nativeContext,family:z?.type}) || standControlOpen) return null;
+    if (!gradientEditors.has(z.id)) gradientEditors.set(z.id, window.LightningStaticGradientUI.create({
+      storage:webDemo.storage,
+      allowed:()=>webDemoContext&&!nativeContext&&zone()?.id===z.id&&zone()?.type==='SPI'&&!standControlOpen,
+      palette:()=>savedColours.colors.map(entry=>C.hex([entry.color.r,entry.color.g,entry.color.b])),
+      chooseColor:openGradientColourPicker,
+      // The gradient has its own clearly labelled full-line sample. Do not
+      // leave the old uniform-light canvas beside it as conflicting feedback.
+      onMode:mode=>main.querySelector('.editor-grid')?.toggleAttribute('data-demo-gradient-active',mode==='gradient')
+    }));
+    return gradientEditors.get(z.id);
+  }
+  function staticColourWorkspace({power=false}={}) {
+    const solid = colourPickerMarkup(null,false,{power});
+    return demoGradientEditor()?.markup(solid) || solid;
+  }
   if(webDemoContext)temporarySingleUser=true;
   const localPreviewContext=!nativeContext&&['localhost','127.0.0.1','[::1]','::1'].includes(window.location.hostname)&&!webDemoContext;
   const previewContext=localPreviewContext||webDemoContext;
@@ -2039,18 +2091,18 @@
     const s = stand(), added = standReceivers();
     return `<div class="page stand-page"><header class="page-heading overview-heading"><div><div class="eyebrow">${localStandConcept()?t("LOKAAL CONCEPT"):t("JOUW STAND")}</div><h1>${esc(standLabel())}</h1></div><button class="icon-button circle" data-action="help" aria-label="${esc(t("Uitleg over stand en zones"))}">${icon('info')}</button></header>${localStandConcept()?`<p class="local-stand-notice" role="status">${esc(t("Alleen op dit toestel. Er is nog geen receiver verbonden."))} `+(temporarySingleUser?t("Je voegt je eerste receiver toe zonder PIN."):t("Bij je eerste receiver kies je de wifi-PIN."))+'</p>':''}${advancedInterface()?`<div class="stand-summary overview-summary"><div>${icon('zones')}<span><b>${s.zones.length}</b><small>${esc(t("zones"))}</small></span></div><div>${icon('light')}<span><b>${physicalLineCount(added)}</b><small>${esc(t("Ledlines"))}</small></span></div></div>`:''}${pairFirstResumeMarkup()}<section class="zone-section"><div class="section-heading"><h2>${esc(t('zones'))}</h2><button class="text-button" data-action="zone-new">＋ ${esc(t("Nieuwe zone"))}</button></div><div class="zone-grid">${s.zones.map(standZoneCardMarkup659).join('')}</div></section>${standScenesMarkup(false)}</div>`;
   }
-  function powerControl() {
-    const states = powerTargets().map(r => r.state.on !== false && r.state.power !== false);
+  function powerControl(draft=null) {
+    const states = draft?[draft.on]:powerTargets().map(r => r.state.on !== false && r.state.power !== false);
     const value = states.length&&states.every(Boolean) ? true : states.some(Boolean) ? 'mixed' : false;
     const scope=standControlOpen?'stand':'zone';
-    return `<div class="power-card power-card-${scope}"><div><strong>${icon('power')}${esc(t(scope==='stand'?'v50PowerStand':'v50PowerZone'))}</strong></div><button class="switch" role="switch" aria-label="${esc(t(value==='mixed'?(scope==='stand'?'v50PowerStandMixed':'v50PowerZoneMixed'):(scope==='stand'?'v50PowerStandAccessible':'v50PowerZoneAccessible')))}" aria-checked="${value===true}" data-mixed="${value==='mixed'}" data-action="power" ${states.length?'':'disabled'}><span>${esc(t(value==='mixed'?'v50PartlyOn':value?'v50On':'v50Off'))}</span><i aria-hidden="true"></i></button></div>`;
+    return `<div class="power-card power-card-${scope}"><div><strong>${icon('power')}${esc(t(draft?'Kleurpunt':scope==='stand'?'v50PowerStand':'v50PowerZone'))}</strong></div><button class="switch" role="switch" aria-label="${esc(t(draft?(value?'Kleurpunt uitschakelen':'Kleurpunt inschakelen'):value==='mixed'?(scope==='stand'?'v50PowerStandMixed':'v50PowerZoneMixed'):(scope==='stand'?'v50PowerStandAccessible':'v50PowerZoneAccessible')))}" aria-checked="${value===true}" data-mixed="${value==='mixed'}" data-action="power" ${states.length?'':'disabled'}><span>${esc(t(value==='mixed'?'v50PartlyOn':value?'v50On':'v50Off'))}</span><i aria-hidden="true"></i></button></div>`;
   }
   function renderControls() {
     const colour=controlMode==='colour';
     const activeAnimationEditor=!colour&&Boolean(activeEffect())&&!showControlAnimationGallery;
     const workspaceHeadingId=colour?'bediening-colour-title':activeAnimationEditor?'active-animation-title':'animation-selector-heading';
     const modeContent=colour
-      ?`<section class="bediening-workspace" aria-labelledby="${workspaceHeadingId}">${colourPickerMarkup(null,false,{power:true})}</section>`
+      ?`<section class="bediening-workspace" aria-labelledby="${workspaceHeadingId}">${staticColourWorkspace({power:true})}</section>`
       :`<section class="bediening-workspace animation-simple-workspace${activeAnimationEditor?' has-active-animation':''}" aria-labelledby="${workspaceHeadingId}">${controlAnimationPanel()}</section>`;
     const context=controlContext('controls'),lineTools=colour||activeAnimationEditor?ledlineSetupMarkup():'';
     // Colour/animation controls come first; occasional view/order tools stay
@@ -2063,16 +2115,20 @@
     if(effect&&!showControlAnimationGallery)return animationEditorMarkup(effect);
     return `<div class="control-animation-choices">${animationLibraryContent()}</div>`;
   }
-  function slider(key,label,min,max,value,unit='',hint='',guide=null) {
+  function slider(key,label,min,max,value,unit='',hint='',guide=null,idPrefix='setting') {
     const title=guide?.icon?`<span class="setting-label-icon">${icon(guide.icon)}</span><span class="setting-label-copy">${esc(label)}</span>`:esc(label);
     const description=t(guide?.description||hint);
-    return `<div class="slider-row${guide?.icon?' has-setting-icon':''}"><label for="setting-${key}">${title}<output data-value-for="${key}">${Math.round(value)}${unit}</output></label><input id="setting-${key}" type="range" min="${min}" max="${max}" step="1" value="${value}" data-setting="${key}" data-unit="${unit}">${description ? `<small>${esc(description)}</small>` : ''}</div>`;
+    return `<div class="slider-row${guide?.icon?' has-setting-icon':''}"><label for="${idPrefix}-${key}">${title}<output data-value-for="${key}">${Math.round(value)}${unit}</output></label><input id="${idPrefix}-${key}" type="range" min="${min}" max="${max}" step="1" value="${value}" data-setting="${key}" data-unit="${unit}">${description ? `<small>${esc(description)}</small>` : ''}</div>`;
   }
   function renderColour() {
     const context=controlContext('colour'),lineTools=ledlineSetupMarkup();
-    return `<div class="editor-grid editor-grid-colour">${context}<section class="editor-controls">${selector()}${colourPickerMarkup()}${lineTools}</section></div>`;
+    return `<div class="editor-grid editor-grid-colour">${context}<section class="editor-controls">${selector()}${staticColourWorkspace()}${lineTools}</section></div>`;
   }
-  function myColoursMarkup() {
+  function myColoursMarkup({draftOnly=false}={}) {
+    if(draftOnly){
+      const entries=savedColours.colors;
+      return `<section class="my-colours"><div class="colour-presets-heading667"><h3>${esc(presetText667('title'))}</h3><p class="colour-library-hint">${esc(t('Kies een bewaarde kleur voor dit kleurpunt.'))}</p></div><div class="saved-colour-grid">${entries.map(entry=>`<button type="button" class="saved-colour" data-action="swatch" data-id="${esc(entry.id)}" style="--swatch:${C.screenHex([entry.color.r,entry.color.g,entry.color.b],entry.color.w)}" aria-label="${esc(presetText667('apply',{name:entry.name}))}"><i aria-hidden="true"></i><span>${esc(entry.name)}</span></button>`).join('')}</div>${entries.length?'':`<p class="colour-presets-empty667">${esc(t('Er zijn nog geen bewaarde kleuren.'))}</p>`}</section>`;
+    }
     const builtinIds=new Set(presetBrandEntries667().map(entry=>entry.id));
     return window.LightningColourPresetsUI.markup({
       entries:savedColours.colors.map(entry=>({...entry,isBrandPresetUI:entry.group==='brand'||builtinIds.has(entry.id)})),
@@ -2240,23 +2296,23 @@
     if(!target)return;
     return commitPresetLibrary667(source,()=>colourStore.move(id,current.colors.findIndex(entry=>entry.id===target.id)),presetText667('orderSaved'));
   }});
-  function colourPickerMarkup(slot=null,compact=false,{power=false}={}) {
-    const s=selectedState(),brand=slot==='brand',background=slot==='background',values=brand?brandEditorChannels():background?backgroundChannels():effectiveColourChannels(slot??0),rgb=values.slice(0,3),white=values[3];
+  function colourPickerMarkup(slot=null,compact=false,{power=false,kind=null,values:providedValues=null,brightness=100,on=true}={}) {
+    const gradient=kind==='gradient',s=gradient?{bri:brightness,on}:selectedState(),brand=slot==='brand',background=slot==='background',values=gradient?providedValues:brand?brandEditorChannels():background?backgroundChannels():effectiveColourChannels(slot??0),rgb=values.slice(0,3),white=values[3];
     const prefix=slot===null?'static':'palette-'+slot;
     const channels=['r','g','b','w'].map((channel,i)=>{const value=i===3?white:rgb[i];return `<div class="channel-row" style="--channel:${['#c4473f','#258461','#3f69c7','#747670'][i]}"><button class="channel-toggle" data-action="channel-toggle" data-channel="${channel}" aria-label="${esc(t(value>0?'v50ChannelDisable':'v50ChannelEnable',{channel:channel.toUpperCase()}))}" aria-pressed="${value>0}">${channel.toUpperCase()}</button><button data-action="channel-step" data-channel="${channel}" data-step="-1" aria-label="${esc(t('v50ChannelDecrease',{channel:channel.toUpperCase()}))}">−</button><input id="${prefix}-${channel}" type="range" min="0" max="255" value="${value}" data-channel="${channel}" aria-label="${esc(t('v50ChannelValue',{channel:channel.toUpperCase()}))}"><button data-action="channel-step" data-channel="${channel}" data-step="1" aria-label="${esc(t('v50ChannelIncrease',{channel:channel.toUpperCase()}))}">+</button><input class="channel-number" type="number" inputmode="numeric" min="0" max="255" step="1" value="${value}" data-channel-number="${channel}" aria-label="${esc(t('v50ChannelExact',{channel:channel.toUpperCase()}))}"></div>`;}).join('');
     const warmth=C.artificialWarmthOf(values);
     const warmControls=`<section class="v50-white-mix" aria-label="${esc(t('v50ArtificialWhite'))}"><div class="warm-white-controls"><button type="button" class="warm-white-choice" data-action="warm-white" aria-pressed="${warmth!==null}"><span class="warm-white-swatch" aria-hidden="true"></span><span><b>${esc(t('v50ArtificialWhite'))}</b><small>RGB + W</small></span>${icon('sun')}</button><p class="v50-white-mix-hint">${esc(t('v50WhiteMixShort'))}</p><div class="slider-row warmth-row"><label for="${prefix}-warmth">${esc(t('v50Warmth'))} <output data-warmth-value>${warmth===null?esc(t('v50ChooseMix')):warmth+'%'}</output></label><input id="${prefix}-warmth" type="range" min="0" max="100" step="1" value="${warmth??50}" data-warmth aria-label="${esc(t('v50Warmth'))}" ${warmth===null?'disabled':''}><div class="warmth-scale"><span>${esc(t('v50Neutral'))}</span><span>${esc(t('v50Warmer'))}</span></div><small class="warmth-help">${esc(t(warmth===null?'v50ChooseMixHint':'v50MixBrightnessHint'))}</small></div></div></section>`;
     // Exact RGBW controls remain directly visible below colour and brightness.
     // Saved colour presets follow underneath, never inside a disclosure.
-    const fineBody=`<div class="fine-controls-body"><p class="channel-help">${esc(t('channelHelp'))}</p>${channels}${warmControls}</div>`;
+    const fineBody=`<div class="fine-controls-body"><p class="channel-help">${esc(t(gradient?'Je wijzigt alleen dit kleurpunt in het verloop. Er wordt geen licht verstuurd.':'channelHelp'))}</p>${channels}${warmControls}</div>`;
     const fineControls=`<div class="fine-controls${compact?' stand-fine-controls':''}" data-colour-fine><h3>${esc(t('v50FineTune'))}</h3>${fineBody}</div>`;
-    return `<section class="card colour-card shared-colour-picker" data-colour-picker="${brand?'brand':background?'background':slot===null?'static':'animation'}" data-slot="${brand?brandEditor.index:slot??''}">
-      <div class="section-heading"><h2 ${slot===null?'id="bediening-colour-title" ':''}tabindex="-1">${esc(t(background?'animationBackground':'v50ChooseColour'))}</h2>${power&&slot===null?powerControl():''}</div>
-      <div class="colour-tools"><div class="wheel-wrap"><canvas class="wheel" id="colour-wheel" tabindex="0" role="img" aria-label="${esc(advancedInterface()?t('v50WheelAccessible'):modeText('basicWheelAccessible'))}" width="260" height="260"></canvas><span class="wheel-cursor"></span></div><div class="colour-values"><p class="setting-hint">${esc(t('colourWheelHint'))}</p>${brand?`<small class="brand-picker-note">${esc(t(brandEditor.isNew?'brandPickerNewHint':'brandPickerHint'))}</small>`:slot===null?'':`<small>${esc(t('v50AnimationStaysActive'))}</small>`}</div></div>
+    return `<section class="card colour-card shared-colour-picker" data-colour-picker="${gradient?'gradient':brand?'brand':background?'background':slot===null?'static':'animation'}" data-slot="${brand?brandEditor.index:slot??''}">
+      <div class="section-heading"><h2 ${slot===null?'id="bediening-colour-title" ':''}tabindex="-1">${esc(t(background?'animationBackground':'v50ChooseColour'))}</h2>${gradient?powerControl({on}):power&&slot===null?powerControl():''}</div>
+      <div class="colour-tools"><div class="wheel-wrap"><canvas class="wheel" id="colour-wheel" tabindex="0" role="img" aria-label="${esc(advancedInterface()?t('v50WheelAccessible'):modeText('basicWheelAccessible'))}" width="260" height="260"></canvas><span class="wheel-cursor"></span></div><div class="colour-values"><p class="setting-hint">${esc(t('colourWheelHint'))}</p>${gradient?`<small>${esc(t('Kies Klaar om de kleur van dit punt te gebruiken.'))}</small>`:brand?`<small class="brand-picker-note">${esc(t(brandEditor.isNew?'brandPickerNewHint':'brandPickerHint'))}</small>`:slot===null?'':`<small>${esc(t('v50AnimationStaysActive'))}</small>`}</div></div>
       ${brand?`<label class="dialog-field brand-name-field">${esc(t('brandNameLabel'))}<input type="text" data-brand-name maxlength="64" autocomplete="off" value="${esc(brandEditor.name)}"></label><p class="brand-picker-status" role="status" aria-live="polite"></p>`:''}
-      ${slot===null?slider('bri',t('animationBrightness'),0,100,s.bri??100,'%'):''}
+      ${gradient?slider('bri',t('animationBrightness'),0,100,s.bri??100,'%', '',null,'gradient-setting'):slot===null?slider('bri',t('animationBrightness'),0,100,s.bri??100,'%'):''}
       ${fineControls}
-      ${myColoursMarkup()}
+      ${myColoursMarkup({draftOnly:gradient})}
     </section>`;
   }
   function backgroundChannels(){
@@ -4939,6 +4995,8 @@
       inlineOrderDrag.cancel();
     }
     if(dragOrder)finishOrder({pointerId:dragOrder.pointerId},true);
+    if(gradientColourDraft){gradientColourDraft=null;closeEffectDialog();}
+    unmountGradient?.();unmountGradient=null;
     // A real navigation/rebuild ends only this explicit STATIC gesture. A
     // status repaint above still defers while its captured wheel is active.
     if(activeStaticGesturePointer!==null){activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.endGesture();}
@@ -5106,6 +5164,8 @@
     // Initialise whichever picker is actually present instead of tying its
     // canvas drawing to the old, standalone colour route.
     if(main.querySelector('[data-colour-picker] canvas.wheel')){paintWheel();syncColour();}
+    const gradientHost=main.querySelector('[data-gradient-workspace]');
+    if(gradientHost)unmountGradient=demoGradientEditor()?.mount(gradientHost)||null;
     syncPresetAvailability();
     for(const id of identifyPending.keys())syncIdentifyControls(id);
     syncLiveStatus();
@@ -5623,7 +5683,10 @@
     const white=state.whiteEnabled?.[slot]===false?0:(state.whiteChannels?.[slot]??state.w??0);
     return [...rgb,white];
   }
-  function pickerChannels(root) { return root?.dataset.colourPicker==='brand'?brandEditorChannels():root?.dataset.colourPicker==='background'?backgroundChannels():effectiveColourChannels(root?.dataset.colourPicker==='animation'?Number(root.dataset.slot):0); }
+  function pickerChannels(root) {
+    if(root?.dataset.colourPicker==='gradient')return gradientPickerCurrent(root)?[...gradientColourDraft.values]:[0,0,0,0];
+    return root?.dataset.colourPicker==='brand'?brandEditorChannels():root?.dataset.colourPicker==='background'?backgroundChannels():effectiveColourChannels(root?.dataset.colourPicker==='animation'?Number(root.dataset.slot):0);
+  }
   function pickerMemoryKey(root){return root?.dataset.colourPicker==='animation'?`palette${Number(root.dataset.slot)}`:root?.dataset.colourPicker||'static';}
   function rememberedChannels(root,rgb,w){
     const previous=selectedState().rgbwLast||{},key=pickerMemoryKey(root),last={...(previous[key]||{})};
@@ -5634,6 +5697,7 @@
     return {...previous,[key]:last};
   }
   function restoreChannelValue(root,channel){
+    if(root?.dataset.colourPicker==='gradient')return gradientPickerCurrent(root)?gradientColourDraft.memory[channel]||255:0;
     if(root?.dataset.colourPicker==='brand')return brandEditor?.memory[channel]||255;
     const remembered=selectedState().rgbwLast?.[pickerMemoryKey(root)]?.[channel];
     if(Number.isInteger(remembered)&&remembered>0&&remembered<=255)return remembered;
@@ -5646,6 +5710,12 @@
     const value=raw['rgbw'.indexOf(channel)];return Number.isInteger(value)&&value>0?value:255;
   }
   function writePicker(root,rgb,w,changed='both') {
+    if(root?.dataset.colourPicker==='gradient'){
+      if(!gradientPickerCurrent(root)||managementBusy||!Number.isInteger(w)||w<0||w>255||!Array.isArray(rgb)||rgb.length!==3||!rgb.every(value=>Number.isInteger(value)&&value>=0&&value<=255))return;
+      gradientColourDraft.values=[...rgb,w];
+      [...rgb,w].forEach((value,i)=>{if(value>0)gradientColourDraft.memory['rgbw'[i]]=value;});
+      syncGradientPickerControls(root);return;
+    }
     if(managementBusy)return;
     if(root?.dataset.colourPicker==='brand'){
       if(!brandEditor||Number(root.dataset.slot)!==brandEditor.index)return;
@@ -5965,15 +6035,16 @@
     if(!document.getElementById('effect-dialog').open)dialogReturnFocus=dialogActionOpener||document.activeElement;
     const dialog=document.getElementById('effect-dialog');
     cancelDialogDismissal(dialog);
-    // Colour edits are already live. "Done" closes through the existing
-    // guarded/nested return path; it does not save a preset or send light again.
-    const colourDialog=/<section\b[^>]*\sdata-colour-picker="(?:static|animation|background|brand)"/.test(content);
+    // Ordinary colour edits are already live. Gradient is the explicit
+    // demo-only draft exception: its Done commits only the retained colourpoint.
+    const gradientDialog=/<section\b[^>]*\sdata-colour-picker="gradient"/.test(content);
+    const colourDialog=gradientDialog||/<section\b[^>]*\sdata-colour-picker="(?:static|animation|background|brand)"/.test(content);
     dialog.classList.toggle('colour-picker-dialog',colourDialog);
     // Every colour picker already has its sticky footer exit, including
     // nested animation/background/brand pickers. Never duplicate Done above.
     // Other dialogs without that footer retain their existing header exit.
-    const closeButton=colourDialog?'':`<button class="icon-button" data-action="effect-dialog-close" aria-label="${esc(t("Venster sluiten"))}">${icon('close')}</button>`;
-    const colourActions=colourDialog?`<footer class="colour-picker-actions" data-colour-picker-actions><button type="button" class="colour-picker-done colour-picker-done-footer" data-colour-picker-done data-action="effect-dialog-close">${icon('check')}<span>${esc(t('done'))}</span></button></footer>`:'';
+    const closeButton=gradientDialog?`<button type="button" class="text-button" data-action="effect-dialog-close">${esc(t('Annuleren'))}</button>`:colourDialog?'':`<button class="icon-button" data-action="effect-dialog-close" aria-label="${esc(t("Venster sluiten"))}">${icon('close')}</button>`;
+    const colourActions=colourDialog?`<footer class="colour-picker-actions" data-colour-picker-actions><button type="button" class="colour-picker-done colour-picker-done-footer" data-colour-picker-done data-action="${gradientDialog?'gradient-picker-done':'effect-dialog-close'}">${icon('check')}<span>${esc(t('done'))}</span></button></footer>`:'';
     const wasOpen=dialog.open;
     const replacingOwnFocus=wasOpen&&dialog.contains(document.activeElement);
     document.getElementById('effect-dialog-content').innerHTML=`<header><h2 id="effect-dialog-title" tabindex="-1">${esc(title)}</h2>${closeButton}${headerContent}</header>${content}${colourActions}`;
@@ -6016,6 +6087,7 @@
   }
   function dismissEffectDialog(){
     if(managementBusy||pinProtectionBusy)return;
+    gradientColourDraft=null;
     // Dismissal revokes consent immediately, not after the exit animation.
     retireSpatialAnimationStart620();
     if(colourManagerReturn){
@@ -6027,6 +6099,7 @@
   }
   function closeEffectDialog() {
     if(pinProtectionBusy)return;
+    gradientColourDraft=null;
     orderColourChoice652=null;
     spatialAnimationStart620=null;
     document.getElementById('effect-dialog').classList.remove('v50-fullscreen-preview','colour-picker-dialog');
@@ -6638,6 +6711,7 @@
     if(button.dataset.action==='pin-login-cancel'&&pinLoginBusy){pinRecoveryAbort?.abort();return;}
     if(pinProtectionBusy||pinLoginBusy||(managementBusy||arrangementApplying)&&!orderPanelCloseRequest589(button))return;
     const action=button.dataset.action,id=button.dataset.id;
+    if(action==='gradient-picker-done')return finishGradientColourPicker();
     // Closing a presentation-only chooser needs no receiver connection.
     // Keep it available if a saved stand goes offline while this sheet is open.
     if(action==='spatial-close'){window.LightningInterfaceHaptics?.activate?.(event,action);return dismissDialog(main.querySelector('[data-spatial-choice-dialog]'),closeSpatialChoice);}
@@ -7184,6 +7258,10 @@
         model=plan.model;sendReceiverStates(plan.receiverIds);render();
         main.querySelector(`[data-action="zone-power"][data-id="${CSS.escape(id)}"]`)?.focus({preventScroll:true});return;
       }
+      if(action==='power'&&button.closest('[data-colour-picker="gradient"]')){
+        const root=button.closest('[data-colour-picker="gradient"]');
+        if(gradientPickerCurrent(root)){gradientColourDraft.on=!gradientColourDraft.on;syncGradientPickerControls(root);}return;
+      }
       if(action==='power'){const on=!powerTargets().every(r=>r.state.on!==false && r.state.power!==false);apply({on,power:on},{kind:'all'});if(standControlOpen)return;return render();}
       if(action==='warm-white'){
         const root=button.closest('[data-colour-picker]');if(!root)return;
@@ -7198,6 +7276,9 @@
           ?Colours.capture(t('brandColour',{number:brandIndex+1}),currentBrandColors()[brandIndex])
           :action==='swatch'?savedColours.colors.find(c=>c.id===id):null;
         if(!entry)return;
+        if(root?.dataset.colourPicker==='gradient'){
+          if(gradientPickerCurrent(root)){gradientColourDraft.brightness=entry.color.bri;writePicker(root,[entry.color.r,entry.color.g,entry.color.b],entry.color.w);}return;
+        }
         if(['animation','background','brand'].includes(root?.dataset.colourPicker))writePicker(root,[entry.color.r,entry.color.g,entry.color.b],entry.color.w);
         else {apply({...Colours.restore(entry),rgbwLast:rememberedChannels(root,[entry.color.r,entry.color.g,entry.color.b],entry.color.w)});syncColour();const slider=document.querySelector('[data-setting="bri"]'),out=document.querySelector('[data-value-for="bri"]');if(slider)slider.value=entry.color.bri;if(out)out.textContent=entry.color.bri+'%';}return;
       }
@@ -7485,6 +7566,11 @@
        input.dataset.setting==='speed'&&!interfaceEffectAllowed(activeEffect())||
        (input.dataset.effectColour!==undefined||input.dataset.effectWhite!==undefined)&&!interfaceEffectAllowed(activeEffect())))return;
     try {
+      const gradientRoot=input.closest?.('[data-colour-picker="gradient"]');
+      if(gradientRoot&&input.dataset.setting==='bri'){
+        const value=Number(input.value);
+        if(gradientPickerCurrent(gradientRoot)&&Number.isFinite(value)&&value>=0&&value<=100){gradientColourDraft.brightness=value;syncGradientPickerControls(gradientRoot);}return;
+      }
       if(input.matches('[data-security-pin],[data-security-pin-repeat]')){
         const panel=input.closest('[data-pin-protection-dialog]'),first=panel?.querySelector('[data-security-pin]'),repeat=panel?.querySelector('[data-security-pin-repeat]');
         if(panel)panel.querySelector('[data-action="pin-protection-save"]').disabled=!/^\d{8,12}$/.test(first.value)||first.value!==repeat.value;
