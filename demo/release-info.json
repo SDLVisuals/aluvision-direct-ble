@@ -356,7 +356,7 @@
     {
       "path": "index.html",
       "bytes": 10218,
-      "sha256": "c283983c5bd0eb99d803540fd48d7e85dd6963a219547f0d19b24571bbcecce8"
+      "sha256": "1faa47fc34fbcb1aaac97eaf8f2d1719f2d69930b3d4362d12dfec6bd5506888"
     },
     {
       "path": "installation-libraries.js",
@@ -700,8 +700,8 @@
     },
     {
       "path": "static-gradient-ui.js",
-      "bytes": 18912,
-      "sha256": "002c310854657ecfb0f1910aad22adb50e140fb4bff0923171916dbba9e807cb"
+      "bytes": 19172,
+      "sha256": "684918053c381048e7cf5f884e6c53bec7c88113d192b2db50ed2bd45f291b15"
     },
     {
       "path": "static-gradient.css",

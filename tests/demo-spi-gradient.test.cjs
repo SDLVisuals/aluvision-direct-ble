@@ -177,3 +177,80 @@ test('actual add/edit callback keeps original stops until Done and is current/on
     if (change !== 'unmount') unmount();
   }
 });
+test('actual even-distribution handlers keep boundary moves and new points valid', () => {
+  // The actual complete module/handlers run with bounded local node providers;
+  // this checks DATA transitions, not browser pointer-capture acceptance.
+  function fixture(initialStops = null) {
+    const window = { LightningColour: C }, storage = memory();
+    if (initialStops) storage.setItem(G.STORAGE_KEY, JSON.stringify({ version: 1,
+      presets: [{ id: 'gradient-tight', name: 'Dicht bij elkaar', stops: initialStops }] }));
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../demo/static-gradient.js'), 'utf8') +
+      '\nwindow.LightningStaticGradient=LightningStaticGradient;\n' +
+      fs.readFileSync(path.join(__dirname, '../demo/static-gradient-ui.js'), 'utf8'), { window });
+    const element = () => ({ isConnected: true, dataset: {}, disabled: false, style: { setProperty() {} },
+      classList: { toggle() {} }, setAttribute() {}, focus() {}, matches: () => false,
+      hasAttribute: () => false, setPointerCapture() {} });
+    const button = (attribute, dataset = {}) => {
+      const node = Object.assign(element(), { dataset, hasAttribute: name => name === attribute });
+      node.closest = () => node; return node;
+    };
+    const entries = new Map(), panel = element(), rail = element(), listeners = new Map();
+    const lookup = selector => { if (!entries.has(selector)) entries.set(selector, element()); return entries.get(selector); };
+    entries.set('[data-gradient-panel]', panel); entries.set('[data-gradient-rail]', rail);
+    entries.set('[data-gradient-preview]', { getContext: () => ({ fillRect() {} }) });
+    const add = button('data-gradient-add'); entries.set('[data-gradient-add]', add);
+    panel.querySelector = lookup;
+    rail.querySelectorAll = () => Array.from(panel.innerHTML.matchAll(/data-gradient-stop="(\d+)"/g),
+      match => button('data-gradient-stop', { gradientStop: match[1] }));
+    rail.getBoundingClientRect = () => ({ left: 0, width: 100 });
+    const host = { isConnected: true, dataset: {}, querySelector: lookup, querySelectorAll: () => [],
+      addEventListener: (type, fn) => listeners.set(type, fn), removeEventListener: type => listeners.delete(type) };
+    let request;
+    const editor = window.LightningStaticGradientUI.create({ storage, allowed: () => true, chooseColor: value => { request = value; } });
+    editor.mount(host);
+    const click = node => listeners.get('click')({ target: node });
+    click(button('', { gradientModeChoice: 'gradient' }));
+    if (initialStops) click(button('', { gradientLoad: 'gradient-tight' }));
+    return { click, button, listeners, lookup, add,
+      addPoint() { click(add); assert.ok(request.current()); request.commit({ color: '#123456', white: 0, brightness: 100, on: true }); },
+      saved() { click(button('data-gradient-save')); const value = JSON.parse(storage.getItem(G.STORAGE_KEY));
+        assert.ok(value?.presets?.length); const result = value.presets[0].stops; assert.ok(G.validateStops(result)); return result; } };
+  }
+  for (const count of [4, 7, 8]) {
+    const f = fixture();
+    for (let length = 3; length < count; length++) { f.addPoint(); assert.equal(f.saved().length, length + 1); }
+    for (let index = 0; index < count; index++) {
+      f.click(f.button('data-gradient-even'));
+      const target = f.button('data-gradient-stop', { gradientStop: String(index) }); f.click(target);
+      const initial = f.saved(), tolerance = 1e-7;
+      const min = index ? Math.ceil(initial[index - 1].position * 100 + 1 - tolerance) : 0;
+      const max = index < count - 1 ? Math.floor(initial[index + 1].position * 100 - 1 + tolerance) : 100;
+      const key = name => f.listeners.get('keydown')({ target, key: name, preventDefault() {} });
+      key('End'); assert.equal(f.saved()[index].position, max / 100);
+      key('Home'); assert.equal(f.saved()[index].position, min / 100);
+      const range = f.lookup('[data-gradient-position]'); range.matches = selector => selector === '[data-gradient-position]';
+      for (const value of [range.max, range.min]) {
+        range.value = value; f.listeners.get('input')({ target: range });
+        assert.equal(f.saved()[index].position, Number(value) / 100);
+      }
+      f.listeners.get('pointerdown')({ target, button: 0, pointerId: 1, preventDefault() {} });
+      for (const clientX of [200, -100]) {
+        f.listeners.get('pointermove')({ pointerId: 1, clientX }); assert.ok(G.validateStops(f.saved()));
+      }
+      f.listeners.get('pointerup')({ pointerId: 1 });
+    }
+    // Add after the fractional even positions, without hand-correcting Layout/DATA.
+    f.click(f.button('data-gradient-even'));
+    if (count < 8) { f.addPoint(); assert.equal(f.saved().length, count + 1); }
+    else { f.click(f.add); assert.equal(f.saved().length, 8); }
+  }
+  // The strict DATA schema permits fractional clusters that have no valid
+  // whole-percent destination: leave such a loaded point unchanged.
+  const f = fixture([1 / 3, 1 / 3 + .01, 1 / 3 + .02].map(position => ({ color: '#123456', position })));
+  const target = f.button('data-gradient-stop', { gradientStop: '1' }); f.click(target);
+  const original = f.saved(), range = f.lookup('[data-gradient-position]');
+  assert.ok(Number(range.min) > Number(range.max));
+  for (const key of ['Home', 'End']) f.listeners.get('keydown')({ target, key, preventDefault() {} });
+  range.matches = selector => selector === '[data-gradient-position]'; range.value = range.min;
+  f.listeners.get('input')({ target: range }); assert.deepEqual(f.saved(), original);
+});

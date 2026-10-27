@@ -22,8 +22,10 @@
     const store = G.createStore(storage);
     let mode = 'solid', draft = clone(G.builtinPresets[0]), selected = 1, brightness = 100, notice = '', host = null, unmount = () => {};
     draft.id = null;
-    const bounds = () => ({ min: selected ? Math.round(draft.stops[selected - 1].position * 100) + 1 : 0,
-      max: selected < draft.stops.length - 1 ? Math.round(draft.stops[selected + 1].position * 100) - 1 : 100 });
+    // Match the core's 1% minimum gap / 1e-9 normalised tolerance before
+    // quantising to whole percent; even distribution has fractional anchors.
+    const bounds = () => ({ min: selected ? Math.ceil(draft.stops[selected - 1].position * 100 + 1 - 1e-7) : 0,
+      max: selected < draft.stops.length - 1 ? Math.floor(draft.stops[selected + 1].position * 100 - 1 + 1e-7) : 100 });
     const current = () => !!host?.isConnected && allowed();
     function markup(solid) {
       if (!allowed()) return solid;
@@ -68,7 +70,9 @@
       if (focus) host.querySelector(focus)?.focus({ preventScroll: true });
     }
     function setPosition(percent) {
-      const { min, max } = bounds(); draft.stops[selected].position = Math.max(min, Math.min(max, Math.round(percent))) / 100; paint();
+      const { min, max } = bounds();
+      if (min > max) return; // A valid loaded preset need not fit a whole-percent move.
+      draft.stops[selected].position = Math.max(min, Math.min(max, Math.round(percent))) / 100; paint();
     }
     function mount(element) {
       unmount(); host = element;
