@@ -176,8 +176,8 @@
   "assets": [
     {
       "path": "RELEASE_NOTES.md",
-      "bytes": 39328,
-      "sha256": "b89e2a2f9be028602e969fbf31c75ad32bec1299a2f329006bc8b568a7052b41"
+      "bytes": 40148,
+      "sha256": "d2fe5b3d717abf04caf183b354f8713b3aae4202005a569580dc8a45f08e443c"
     },
     {
       "path": "android-download/android-download.css",
@@ -186,8 +186,8 @@
     },
     {
       "path": "android-download/android-download.js",
-      "bytes": 10697,
-      "sha256": "1b517b0d36373a29eb0d72523c4ff66fbb484bf86677fdf3258dcbc0da253745"
+      "bytes": 10539,
+      "sha256": "36e647731b639ff7517402a50d9e72518c507078303d9a3ffd8e82435bdb1d9e"
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
@@ -301,8 +301,8 @@
     },
     {
       "path": "animation-library.js",
-      "bytes": 27317,
-      "sha256": "f9fe90224a9bcd9333de6a42f6f3a80b97da6427088d4ee23164790596c6a900"
+      "bytes": 27464,
+      "sha256": "761982deb95c300fc4294debab05501a786604529b65fe391c07c5fc4d317a7c"
     },
     {
       "path": "animation-mobile.css",
@@ -321,8 +321,8 @@
     },
     {
       "path": "app.js",
-      "bytes": 732824,
-      "sha256": "93ad86663d090be9ba6edf8efef4811f8947a665fca39c6e95752e9e5a8a2247"
+      "bytes": 803276,
+      "sha256": "3deaeeb3aae627b2d1248bf5d53a973e9f425dd1e3bf11472c3d2d03f938d65f"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -331,8 +331,8 @@
     },
     {
       "path": "backup.js",
-      "bytes": 14521,
-      "sha256": "a1f66923a08db98c68333d04dbe782b98bf9d1d2da1072885b5e139c775e88af"
+      "bytes": 14762,
+      "sha256": "f6b6791da14ba7e59fa0541bfffb6b5fbb1f2da380d0965c6589186ac27ae071"
     },
     {
       "path": "colour-library-drag.js",
@@ -366,8 +366,8 @@
     },
     {
       "path": "colours-library.js",
-      "bytes": 14936,
-      "sha256": "2b52745810c9b1b249e9b9d0caad1becf37bc4eb73a5a11109ffd19092d996be"
+      "bytes": 14955,
+      "sha256": "c0bcf12334710e82214d9995d5d3dd7e98fa8edde1cbaf76b2d00ed01bb5a5ca"
     },
     {
       "path": "continuity.css",
@@ -381,8 +381,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 10218,
-      "sha256": "1faa47fc34fbcb1aaac97eaf8f2d1719f2d69930b3d4362d12dfec6bd5506888"
+      "bytes": 10778,
+      "sha256": "f2d24f5dd537ce9eb07343464fdb278c265ec637a1f7088039654e9d4bb02f06"
     },
     {
       "path": "installation-libraries.js",
@@ -471,8 +471,8 @@
     },
     {
       "path": "live-control.js",
-      "bytes": 55104,
-      "sha256": "65a68f69056139fde821231bdc12079d0ef43ee07c53e5acc08efa0e553ba9fb"
+      "bytes": 65796,
+      "sha256": "e272e114b3734ce49780b95923218b547f71d0081893d88ef39abbc8c3f3f275"
     },
     {
       "path": "main-connection-indicator.css",
@@ -491,13 +491,13 @@
     },
     {
       "path": "model.js",
-      "bytes": 47067,
-      "sha256": "60c26a506d50ce3bd5a2ccef4dec605cf8e2988f5214cd7828758bd1fcd2dcee"
+      "bytes": 50014,
+      "sha256": "535fc66cd2613e142848551b2e76d02fa29811c397a133d7ea10336ece67f71d"
     },
     {
       "path": "native-runtime.js",
-      "bytes": 170011,
-      "sha256": "ec94dc6f0fd9db19349843b5d97215d60abc394438073a7c54e3469c97a8b939"
+      "bytes": 212957,
+      "sha256": "877a2b0eff0b031f00abaa8a06a6450105a43916fc9e85680109efef62deee90"
     },
     {
       "path": "onboarding-adapter.js",
@@ -516,8 +516,8 @@
     },
     {
       "path": "onboarding-draft.js",
-      "bytes": 38765,
-      "sha256": "c373a95c4662d3eb901001f77b19a8324560fceaed815e40bdd7d9993ffd1b65"
+      "bytes": 38793,
+      "sha256": "36c09671eecb607a2f66377fc1940cb28a6c88c9ff9348ac9a195f3160bff3ff"
     },
     {
       "path": "onboarding-ui.css",
@@ -526,8 +526,8 @@
     },
     {
       "path": "onboarding-ui.js",
-      "bytes": 190766,
-      "sha256": "ab41d63f57e46963c44eb7641d805841963d09ebca1419962eb5bb1dab4f21b5"
+      "bytes": 190865,
+      "sha256": "2e68c6e9bb0c48b9fa4c349d9b680a2400000f7d8ae32ae755638fdcd0c1ced0"
     },
     {
       "path": "onboarding756.css",
@@ -546,28 +546,28 @@
     },
     {
       "path": "pair-first-setup.js",
-      "bytes": 17170,
-      "sha256": "b28eb3234eb5f56d881f4c6269bda7f1021ad1cf2a42debb329e2597e04b6598"
+      "bytes": 18014,
+      "sha256": "a1622230ba9e1a0bde835125145b00b5de584c82f74be69440682c5de1ff0f94"
     },
     {
       "path": "pixel-setup.css",
-      "bytes": 41216,
-      "sha256": "7de9c365e59f975fba4808ef8dbdff7d2e8ef3f76a15e6cb6ac3f820e1297b18"
+      "bytes": 41695,
+      "sha256": "5d2a045265ae81c465e5097d4a31761eba591d27f991f7d71a5ee34c32ca96ed"
     },
     {
       "path": "pixel-setup.js",
-      "bytes": 69162,
-      "sha256": "2385b62c1a4231a4e98e77516e7a91a18ad1b41ef129c0a8ea4e68fe8415f0d0"
+      "bytes": 68130,
+      "sha256": "6f4a649366d03e95d86bb0bfe1f9408dc72caf65e85a16fa94356af28a23d8dd"
     },
     {
       "path": "pixel-translations.js",
-      "bytes": 19273,
-      "sha256": "af20ff6872da41974af99badf11759bc55a249ddbcb6d9358a88c7811935d74f"
+      "bytes": 17766,
+      "sha256": "0f171b8bf6c5c1a7bbd517a731f488afc47096e382204bbcbca0e77c7f4b82c9"
     },
     {
       "path": "preferences.js",
-      "bytes": 102687,
-      "sha256": "43f46ef56eb3a2da1851ce8c1736442b5bb0c4192dcfa7c62673cf4c7e3a9cf4"
+      "bytes": 104935,
+      "sha256": "1ff4cc70dbfa6d8d405b062d6660aa5cb6186ca6feaee404a2b8764d2f9344e2"
     },
     {
       "path": "premium-surfaces.css",
@@ -576,18 +576,18 @@
     },
     {
       "path": "presets.js",
-      "bytes": 17495,
-      "sha256": "31146d0b765bd2b654c6739261549d1facd2031eb5aeaa6bcbac4f4dca6b9990"
+      "bytes": 18202,
+      "sha256": "d2d109eaa39526995ca830135afa270633078ed35c22c6d6502e97cf2304f188"
     },
     {
       "path": "preview.js",
-      "bytes": 115234,
-      "sha256": "fc1a55a7cd15a2edc16f98735b5546feb05e5434df35c5891971d46c952e1f08"
+      "bytes": 116235,
+      "sha256": "5dddb85a8748edc52df7c326c544755d67579f3970de86249a0a2556f2764444"
     },
     {
       "path": "receiver-playback.js",
-      "bytes": 8547,
-      "sha256": "0a70b4023243e50a0950dadf00d32f9bc29c0641c6273331b9f6be33cf725374"
+      "bytes": 10643,
+      "sha256": "9bd54e53a2752ff8bd871519acb1bcaf263c1f3fc933f7eb99acb7d85f1d1b3a"
     },
     {
       "path": "receiver-removal-ui.css",
@@ -596,8 +596,8 @@
     },
     {
       "path": "receiver-removal-ui.js",
-      "bytes": 22645,
-      "sha256": "7a5a9008d29bef79a5f45d6c76ec06d7753e7d99463fc15667b93564a2cf76de"
+      "bytes": 24429,
+      "sha256": "bfa79968da2e5de86e734c015641a1241d357811d94a760795475d81cce15f27"
     },
     {
       "path": "receiver-update-ui.css",
@@ -671,8 +671,8 @@
     },
     {
       "path": "spi-zone-direction.js",
-      "bytes": 46520,
-      "sha256": "0a8f4602dc3ff81ab76ccd576013e70e0776985eb05442e09a66308dc43f4d5d"
+      "bytes": 46442,
+      "sha256": "6ee0848d220ba5baa33826eb0e5956bb92538c814cd2dba46fac5ab8ce279833"
     },
     {
       "path": "stand-animations.css",
@@ -691,8 +691,8 @@
     },
     {
       "path": "stand-connection.js",
-      "bytes": 36689,
-      "sha256": "3956950b20e82a40dc0e358b2ab061d04594dcb7bf01d4af4e51a446fb2bb9ab"
+      "bytes": 37812,
+      "sha256": "9082b14a41b0ad60ffe0cf446f4ea916357ccd25a3d4ccd87224dc7be88d2673"
     },
     {
       "path": "stand-live-checkpoint.js",
@@ -721,18 +721,18 @@
     },
     {
       "path": "static-gradient.js",
-      "bytes": 7638,
-      "sha256": "8337ba064247b1f97762d1658fb258591f395db2a85ea71f4fd15dd48e2848ac"
+      "bytes": 13801,
+      "sha256": "83e139c371ec138355b88518fa60f39e6080126f2bdaa828e7121defd977937f"
     },
     {
       "path": "static-gradient-ui.js",
-      "bytes": 19172,
-      "sha256": "684918053c381048e7cf5f884e6c53bec7c88113d192b2db50ed2bd45f291b15"
+      "bytes": 25850,
+      "sha256": "666151eb6d9659a3db68941e44102006fee77725cf1f18fc3db24f391b50c609"
     },
     {
       "path": "static-gradient.css",
-      "bytes": 7283,
-      "sha256": "7b266f41f40e45ddc65cb094e680d37296fdfe84f6d81585ccc7d1166bf74599"
+      "bytes": 13617,
+      "sha256": "df8230c2b93af5fa974fd79d78918c1ad83bf9ad7cf6102ae447773c30ce00c7"
     },
     {
       "path": "styles.css",
@@ -756,8 +756,8 @@
     },
     {
       "path": "ui-copy.js",
-      "bytes": 131112,
-      "sha256": "a6091d1755116b8e1c0fce26d151dd2350f61843ca08836d2319022be99545ca"
+      "bytes": 131333,
+      "sha256": "9d25c7ff9e8b5b0020634d1863479d9cd0e58a6029c4b6e673db2e4e7d6f2709"
     },
     {
       "path": "ui606-controls.css",
@@ -796,8 +796,8 @@
     },
     {
       "path": "v50-animation-texts.js",
-      "bytes": 46375,
-      "sha256": "c2b9fb6e6fc1252e93d5e049154343431855a5daf6497568d0a4fb124dddde7d"
+      "bytes": 46919,
+      "sha256": "0261f407e98c82fb3fc849fdbc69c6df00e749c7def7fde4fa12d96d857074fc"
     },
     {
       "path": "v50-error-texts.js",
@@ -861,8 +861,58 @@
     },
     {
       "path": "web-demo-service.js",
-      "bytes": 5388,
-      "sha256": "cc86e5903226bc56f039a73085b61953580a5c886ba75b84abc9c94de776ab3b"
+      "bytes": 5876,
+      "sha256": "f05d6a7665341abd4ed62b5c33e0e362ed4b30bdec740c554e0d8c6dac32a3d3"
+    },
+    {
+      "path": "android/aluvision-android-test-50.0.0-c99-beta-35-4c1964cff799.apk",
+      "bytes": 3308132,
+      "sha256": "4c1964cff799b9c83afcfe49cb4303d5654ac611a29a3f9c64fbe1617013caa0"
+    },
+    {
+      "path": "app-erase.css",
+      "bytes": 2642,
+      "sha256": "015636d5c43fc7af3cc5f5d71430893ef8cf66d2855e3c0772bde7972b5ae889"
+    },
+    {
+      "path": "app-erase.js",
+      "bytes": 23693,
+      "sha256": "3bcd42cfd77285af5cc570d40d26488a0c06d1d3ddf5111948da502a685dd3af"
+    },
+    {
+      "path": "c97-polish.css",
+      "bytes": 1645,
+      "sha256": "1e75bf061cf85048c38cbd92533be9b2bd66d99b5676bc507ae7c899d1c0d528"
+    },
+    {
+      "path": "c98-debug.js",
+      "bytes": 1944,
+      "sha256": "2766207bad78a2d475b28970affa11d909cf1ae5b8bb04d425d7fa41c6f66901"
+    },
+    {
+      "path": "c98-glass.css",
+      "bytes": 9579,
+      "sha256": "c7ebc21e243514292c90e6ccf0b99e85c93ba2f29b87558ba35992ed19f24fd4"
+    },
+    {
+      "path": "c99-responsive.css",
+      "bytes": 7137,
+      "sha256": "1664d76bcfa6d90726a1ecc858ff0d56593eece0c39bbf5b1786cf5c5132a1c2"
+    },
+    {
+      "path": "first-pin-v2.css",
+      "bytes": 6066,
+      "sha256": "fa101ce217b26b1f8758625ba4e3d167f86851879a517354c43ea452305baccb"
+    },
+    {
+      "path": "first-pin-v2.js",
+      "bytes": 17070,
+      "sha256": "eb8c941305ce565ebd10fa0a92cb604b3be761e8f8e49217a5a6272b633cb0dd"
+    },
+    {
+      "path": "shared-installation.js",
+      "bytes": 8923,
+      "sha256": "21e368ed87cdd23691291f075c813e1797063e8c674b4db901ff57cc2683fec6"
     }
   ],
   "interfaceReviewScope": "Exact source UI hunks and isolated asset/cache verification. Browser visual review and public deployment remain separate; this candidate attests no iPhone606 install, receiver output, radio performance or physical acceptance.",
