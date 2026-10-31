@@ -184,6 +184,13 @@
     fr:Object.freeze({title:'Terminer la configuration SPI',hint:'Votre récepteur est associé. Continuez avec les ports, pixels et sens.',resume:'Continuer la configuration',next:'Suivant · régler les sens',unassigned:'Votre récepteur est associé. Choisissez une zone SPI pour régler tous les sens ensemble.',storage:'Cette étape n’a pas pu être enregistrée sur cet appareil. Réessayez.',changed:'Vos connexions ont changé. Vérifiez à nouveau les ports et les pixels.'}),
     de:Object.freeze({title:'SPI-Einrichtung abschließen',hint:'Dein Receiver ist gekoppelt. Richte die Anschlüsse, Pixel und Richtungen weiter ein.',resume:'Einrichtung fortsetzen',next:'Weiter · Richtungen einstellen',unassigned:'Dein Receiver ist gekoppelt. Wähle eine SPI-Zone, um alle Richtungen gemeinsam einzustellen.',storage:'Dieser Schritt konnte auf diesem Gerät nicht gespeichert werden. Bitte erneut versuchen.',changed:'Deine Anschlüsse haben sich geändert. Prüfe die Anschlüsse und Pixel erneut.'})
   });
-  function text(key,language='nl'){return (COPY[String(language).split('-')[0]]||COPY.nl)[key]||'';}
+  const continuationCopy={
+    laterHint:['Je kunt later verdergaan of de gekoppelde receiver verwijderen.','Continue later, or remove the paired receiver.','Continuez plus tard ou retirez le récepteur associé.','Setze die Einrichtung später fort oder entferne den gekoppelten Receiver.'],
+    later:['Later instellen','Set up later','Configurer plus tard','Später einrichten'],
+    check:['Instellingen controleren','Check settings','Vérifier les réglages','Einstellungen prüfen'],
+    remove:['Receiver verwijderen','Remove receiver','Retirer le récepteur','Receiver entfernen'],
+    removeNetwork:['Receivernetwerk verwijderen','Remove receiver network','Retirer le réseau de récepteurs','Receivernetzwerk entfernen']
+  };
+  function text(key,language='nl'){const locale=String(language).split('-')[0],index=Math.max(0,['nl','en','fr','de'].indexOf(locale));return continuationCopy[key]?.[index]||(COPY[locale]||COPY.nl)[key]||'';}
   return Object.freeze({KEY,MAX_ENTRIES,checkpoint,fromDraft,fromPublished,sameOutputs,receiverFor,resolve,restoredDirections,create,text});
 });

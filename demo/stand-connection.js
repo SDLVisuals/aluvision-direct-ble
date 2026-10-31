@@ -309,7 +309,17 @@
         if(next.bootId===current.bootId&&(next.configRevision<current.configRevision||next.stateRevision<current.stateRevision))fail('STAND_REVISION_STALE');
         return fencedRead(await accept(result,before.standId,epoch,projectionFence),readMetadata);
       })();refreshJob=job;
-      return job.catch(error=>{if(epoch===generation&&!disposed)publish({status:'offline',phase:null,error:error?.code||'STAND_REFRESH_FAILED'});throw error;}).finally(()=>{if(refreshJob===job)refreshJob=null;arm();});
+      return job.catch(error=>{
+        if(epoch===generation&&!disposed){
+          // A bounded local lane refusal is not evidence that the same MAIN
+          // went offline. Keep only an ALREADY connected, visible, identical
+          // projection; do not renew its heartbeat or revive an older error.
+          const busy=['STAND_BUSY','STAND_CONNECTION_BUSY','NATIVE_BUSY','OTA_BUSY','LIVE_CONTROL_BUSY'].includes(error?.code),
+            same=busy&&!paused&&visible()&&state.status==='connected'&&current&&current.standId===before.standId&&current.ssid===before.ssid&&current.bootId===before.bootId&&canonical(stamp(current))===canonical(stamp(before));
+          if(same)publish({error:error.code});
+          else publish({status:'offline',phase:null,error:error?.code||'STAND_REFRESH_FAILED'});
+        }throw error;
+      }).finally(()=>{if(refreshJob===job)refreshJob=null;arm();});
     }
     function mutate({op,payload,transactionId,expectedRevision}={}){
       if(!current||disposed)return Promise.reject(Object.assign(Error('Verbind eerst met je stand.'),{code:'STAND_NOT_CONNECTED'}));
@@ -375,6 +385,11 @@
           if(disposed||paused||epoch!==generation||!visible())fail('STAND_CONNECTION_CANCELLED');
           if(native.status==='connected'){
             if(native.standId!==pinned.standId||native.ssid!==pinned.ssid)fail('STAND_IDENTITY_UNCONFIRMED');
+            // Availability only. The MAIN indicator deliberately does not
+            // renew its physical proof from a cached native channel status.
+            if(state.status==='connected'&&current&&current.standId===pinned.standId&&current.ssid===pinned.ssid&&
+               canonical(stamp(current))===canonical(stamp(pinned))&&canonical(stamp(native))===canonical(stamp(pinned)))
+              publish({phase:'connected',error:null});
             return copy(current);
           }
         }

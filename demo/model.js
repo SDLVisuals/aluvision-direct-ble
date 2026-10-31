@@ -1,11 +1,14 @@
 (function (root, factory) {
   'use strict';
-  var api = factory();
+  var api = factory(typeof module === 'object' && module.exports ? require('./static-gradient.js') : root.LightningStaticGradient);
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.LightningModel = api;
-}(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+}(typeof globalThis !== 'undefined' ? globalThis : this, function (G) {
   'use strict';
-  var LIMITS = Object.freeze({ spiPorts: 4, pixelsPerPort: 1024, continuousPixels: 8192 });
+  // Public geometry DATA, aligned with native validateModel (64×4×1024).
+  // Actual output still negotiates the genuine native/receiver wire profile;
+  // legacy codecs retain 8192 and must refuse BEFORE any write, never truncate.
+  var LIMITS = Object.freeze({ spiPorts: 4, pixelsPerPort: 1024, continuousPixels: 64 * 4 * 1024 });
   var DEFAULT_SPI_PIXELS = 163;
   // The editor's light-point width is not physical strip length. Keep the
   // STATIC membership baseline below unchanged for existing native journals.
@@ -15,6 +18,11 @@
   // No geometry, credentials, shared marker or nested port map belongs here.
   var PORT_LIGHT_FIELDS = new Set(('engine animation effectId category variant r g b w bri brightness speed smooth on power colors whiteChannels rgbEnabled whiteEnabled direction widthPixels transitionMs background backgroundOn bgBrightness fadeAmount width delayMs brandColor motionReverse spacing objectCount trailLength spread randomness bounce mirror phaseMs phaseRateMicroHz previewStartedAt rgbwLast previewFamily backgroundBrightness backgroundRgbEnabled backgroundWhite backgroundWhiteEnabled colorCount legacySpi lineDelayMs v30Effect').split(' '));
   var PORT_NULLABLE_FIELDS = new Set(('effectId category v30Effect previewFamily rgbwLast brandColor speed smooth colorCount widthPixels objectCount trailLength spacing direction lineDelayMs spread randomness fadeAmount delayMs width').split(' '));
+  PORT_LIGHT_FIELDS.add('staticGradientRecipe');
+  PORT_NULLABLE_FIELDS.add('staticGradientRecipe');
+  PORT_LIGHT_FIELDS.add('gradientLastBrightness');
+  PORT_NULLABLE_FIELDS.add('gradientLastBrightness');
+  function validStaticGradient(value) { try { G.decodeRecipe(value); return true; } catch (_) { return false; } }
   var LAYOUTS = Object.freeze({ RGBW: Object.freeze(['stacked', 'vertical']), SPI: Object.freeze(['continuous', 'stacked', 'vertical']) });
   function allowedLayouts(type) {
     if (type === null || type === 'SPI') return LAYOUTS.SPI;
@@ -45,6 +53,8 @@
     return Object.keys(state).every(function (key) {
       var value=state[key];if(!PORT_LIGHT_FIELDS.has(key))return false;
       if(value===null)return PORT_NULLABLE_FIELDS.has(key);
+      if(key==='staticGradientRecipe')return validStaticGradient(value);
+      if(key==='gradientLastBrightness')return integer(value,1,100);
       if(Object.prototype.hasOwnProperty.call(ranges,key))return typeof value==='number'&&Number.isFinite(value)&&value>=ranges[key][0]&&value<=ranges[key][1]&&(!['objectCount','variant','colorCount'].includes(key)||Number.isInteger(value));
       if(booleans.has(key))return typeof value==='boolean';
       if(['colors','whiteChannels','rgbEnabled','whiteEnabled'].includes(key))return Array.isArray(value)&&value.length>=1&&value.length<=16&&Array.from(value).every(function (item) { return key==='colors'?typeof item==='string'&&/^#[0-9a-f]{6}$/i.test(item):key==='whiteChannels'?typeof item==='number'&&Number.isFinite(item)&&item>=0&&item<=255:typeof item==='boolean'; });
@@ -148,6 +158,8 @@
       }
       if (!object(receiver.state)) add('LIGHT_STATE', rp + '.state', 'Een receiver moet één lichttoestand hebben.');
       else {
+        if (Object.prototype.hasOwnProperty.call(receiver.state,'staticGradientRecipe') && (receiver.type!=='SPI' || receiver.state.engine!=='STATIC_GRADIENT' || !validStaticGradient(receiver.state.staticGradientRecipe)) || receiver.state.engine==='STATIC_GRADIENT' && !validStaticGradient(receiver.state.staticGradientRecipe)) add('STATIC_GRADIENT',rp+'.state','Het statische verloop is niet volledig uitgelezen.');
+        if(Object.prototype.hasOwnProperty.call(receiver.state,'gradientLastBrightness')&&(receiver.state.engine!=='STATIC_GRADIENT'||!integer(receiver.state.gradientLastBrightness,1,100)))add('STATIC_GRADIENT',rp+'.state','Het helderheidsgeheugen van dit verloop is ongeldig.');
         var ranges = { r: [0,255], g: [0,255], b: [0,255], w: [0,255], bri: [0,100], brightness: [0,100], speed: [0,100], smooth: [0,100], transitionMs: [0,60000], widthPixels: [1,8192] };
         Object.keys(ranges).forEach(function (key) {
           var value = receiver.state[key];
@@ -171,6 +183,10 @@
                 return !/^[1-4]$/.test(port) || !receiver.outputs.some(function (output) { return output.port === Number(port) && output.enabled; }) ||
                   !validPortLightState(state);
               })) add('PORT_LIGHT_STATE', rp + '.state.portStates', 'Kies alleen lichtinstellingen van actieve SPI-ledlines.');
+          else Object.keys(overrides).forEach(function (port) {
+            var effective=lightStateFor(receiver,Number(port));
+            if((effective.engine==='STATIC_GRADIENT' ? !validStaticGradient(effective.staticGradientRecipe) : Object.prototype.hasOwnProperty.call(effective,'staticGradientRecipe'))||Object.prototype.hasOwnProperty.call(effective,'gradientLastBrightness')&&(effective.engine!=='STATIC_GRADIENT'||!integer(effective.gradientLastBrightness,1,100))) add('STATIC_GRADIENT',rp+'.state.portStates.'+port,'Het statische verloop is niet volledig uitgelezen.');
+          });
         }
       }
     });
@@ -195,7 +211,7 @@
         var receiver = receivers.get(rid);
         return sum + (receiver && Array.isArray(receiver.outputs) ? receiver.outputs.reduce(function (n, p) { return n + (p && p.enabled && Number.isFinite(p.pixels) ? p.pixels : 0); }, 0) : 0);
       }, 0);
-      if (total > LIMITS.continuousPixels) add('ZONE_PIXEL_LIMIT', ref.path, 'De huidige doorlopende aansturing ondersteunt maximaal 8192 pixels.');
+      if (total > LIMITS.continuousPixels) add('ZONE_PIXEL_LIMIT', ref.path, 'Een doorlopende zone bevat maximaal '+LIMITS.continuousPixels+' fysieke pixels.');
     });
     return { valid: errors.length === 0, errors: errors };
   }
@@ -366,7 +382,7 @@
     if (target.type === null) { target.type = receiver.type; target.layout = receiver.type === 'SPI' ? 'continuous' : 'stacked'; }
     target.receiverIds.push(receiverId); updated.zoneId = zoneId;
     reconcileLineOrders(next);
-    // Includes all enabled SPI outputs/offline slots and the 8192-pixel limit
+    // Includes all enabled SPI outputs/offline slots and the public model bound
     // in a continuous destination. Rejection cannot mutate the caller's model.
     return assertValid(next);
   }
@@ -475,6 +491,8 @@
         // not change light, and are not part of the central sparse contract.
         delete normalized.receiverType;delete normalized.speedMode;
         var state=Object.assign(lightStateFor(receiver,line.port),normalized);
+        if(Object.prototype.hasOwnProperty.call(normalized,'staticGradientRecipe')&&!Object.prototype.hasOwnProperty.call(normalized,'gradientLastBrightness'))delete state.gradientLastBrightness;
+        if(state.engine!=='STATIC_GRADIENT'){delete state.staticGradientRecipe;delete state.gradientLastBrightness;}
         delete state.standAnimation;
         var base=lightStateFor(receiver,0), override={};
         Object.keys(state).forEach(function (key) { if (JSON.stringify(state[key]) !== JSON.stringify(base[key])) override[key]=clone(state[key]); });
@@ -488,6 +506,8 @@
     } else next.receivers.forEach(function (receiver) {
       if (selected.indexOf(receiver.id) < 0) return;
       receiver.state = Object.assign({}, receiver.state, clone(patch));delete receiver.state.portStates;
+      if(Object.prototype.hasOwnProperty.call(patch,'staticGradientRecipe')&&!Object.prototype.hasOwnProperty.call(patch,'gradientLastBrightness'))delete receiver.state.gradientLastBrightness;
+      if(receiver.state.engine!=='STATIC_GRADIENT'){delete receiver.state.staticGradientRecipe;delete receiver.state.gradientLastBrightness;}
     });
     return assertValid(next);
   }
@@ -510,7 +530,7 @@
     var selected = new Set(standZoneReceivers(model, standId).map(function (receiver) { return receiver.id; }));
     var next = clone(model);
     next.receivers.forEach(function (receiver) {
-      if (selected.has(receiver.id)) { receiver.state = Object.assign({}, receiver.state, clone(patch));delete receiver.state.portStates; }
+      if (selected.has(receiver.id)) { receiver.state = Object.assign({}, receiver.state, clone(patch));delete receiver.state.portStates;if(receiver.state.engine!=='STATIC_GRADIENT'){delete receiver.state.staticGradientRecipe;delete receiver.state.gradientLastBrightness;} }
     });
     return assertValid(next);
   }
@@ -607,7 +627,7 @@
     return assertValid({schemaVersion:30,demo:false,stands:[{id:id,name:name,zones:[]}],receivers:[],scenes:[],presets:[]});
   }
   return Object.freeze({ LIMITS: LIMITS, DEFAULT_SPI_PIXELS: DEFAULT_SPI_PIXELS, DEFAULT_ANIMATION_WIDTH: DEFAULT_ANIMATION_WIDTH, localStand: localStand, clone: clone, defaultState: defaultState, validate: validate, assertValid: assertValid, membershipStructure: membershipStructure, getZone: getZone,
-    zoneReceivers: zoneReceivers, standZoneReceivers: standZoneReceivers, lightStateFor: lightStateFor, validPortLightState: validPortLightState, selectionLines: selectionLines, resolveTargets: resolveTargets, applyState: applyState, applyStandState: applyStandState, setLayout: setLayout,
+    zoneReceivers: zoneReceivers, standZoneReceivers: standZoneReceivers, lightStateFor: lightStateFor, validPortLightState: validPortLightState, validStaticGradient: validStaticGradient, selectionLines: selectionLines, resolveTargets: resolveTargets, applyState: applyState, applyStandState: applyStandState, setLayout: setLayout,
     createZone: createZone, renameZone: renameZone, deleteZone: deleteZone, renameReceiver: renameReceiver,
     assignReceiverToZone: assignReceiverToZone, unassignReceiver: unassignReceiver, moveReceivers: moveReceivers,
     reorderReceivers: reorderReceivers, arrangeZone: arrangeZone, arrangeLines: arrangeLines, lineIds: lineIds, ledlines: ledlines, zoneLedlines: zoneLedlines,

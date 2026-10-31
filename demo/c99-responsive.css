@@ -1,0 +1,97 @@
+/* C99 responsive: iPad, tablets and phones in landscape. Layout only; the
+ * phone portrait layout (< 700px wide, or taller than 500px) is unchanged.
+ * Everything hangs off --app-width (continuity.css), which caps body, main,
+ * header and dialogs. */
+
+/* Tablet portrait and larger: use the width instead of a 440px column. */
+@media (min-width:700px){
+  :root,html body{--app-width:780px}
+  html body #main{padding-inline:max(24px,env(safe-area-inset-left)) max(24px,env(safe-area-inset-right))}
+
+  /* The tab bar stays thumb-sized instead of stretching across the screen. */
+  html body #navigation{width:min(520px,calc(100% - 24px))}
+
+  /* Lists become two columns; cards keep their own height when one opens. */
+  html body #main :is(.zone-grid,.receiver-list){grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+  html body #main .scene-list:has(>:nth-child(2)){grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+  html body #main .scene-workflow ol{grid-template-columns:repeat(3,minmax(0,1fr))}
+
+  /* Stand overview: shortcuts side by side. */
+  html body #main .stand-page{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:14px}
+  html body #main .stand-page>*{grid-column:1/-1;min-width:0}
+  html body #main .stand-page>:is(.stand-control-shortcut,.scene-capture-panel){grid-column:auto;margin:0}
+  html body #main .stand-page>.scene-capture-panel>.button{height:100%}
+
+  /* Full-screen sheets (Alles bedienen, colour picker): keep the content in a
+   * readable centred column; backgrounds still run edge to edge. */
+  html body #effect-dialog:is(.colour-picker-dialog,:has([data-stand-control-sheet]))>div>:is(header,div,footer){padding-inline:max(16px,calc((100% - 780px)/2))!important;box-sizing:border-box}
+
+  /* The colour wheel may use the extra room. */
+  html.interface-polish body :is(#main,#effect-dialog) .shared-colour-picker .wheel-wrap{width:min(100%,300px);max-width:300px}
+}
+
+/* Wide screens (iPad landscape, large tablets): preview on the left stays in
+ * view, controls on the right. */
+@media (min-width:1000px){
+  :root,html body{--app-width:1120px}
+  html body #main .editor-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(360px,1fr);column-gap:24px;align-items:start}
+  html body #main .editor-grid>.control-preview-dock{grid-column:1;grid-row:1;margin:0;box-shadow:none;background:transparent}
+  html body #main .editor-grid>.editor-controls{grid-column:2;grid-row:1;padding-top:8px;min-width:0}
+  html body #main .settings-page{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:20px;align-items:start}
+  html body #main .settings-page>*{grid-column:1/-1;min-width:0}
+  html body #main .settings-page>:is(.settings-installation,.settings-app-tools){grid-column:auto}
+  html body #main .receiver-list{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+
+/* Phones in landscape: little height, notch on the side. Keep the header and
+ * tab bar slim and put the ledline preview next to the controls. */
+@media (orientation:landscape) and (max-height:500px){
+  :root,html body{--app-width:100%}
+  html body #main{padding-top:10px;padding-inline:max(18px,env(safe-area-inset-left)) max(18px,env(safe-area-inset-right))}
+  html body .brand-bar{height:42px;padding-block:2px;padding-inline:max(17px,env(safe-area-inset-left)) max(17px,env(safe-area-inset-right))}
+  html body .brand-bar>img{max-height:24px;width:auto}
+  /* Tab bar: icon and label on one line, so it takes ~48px instead of ~60px. */
+  /* It sits under the right-hand column so it never covers the ledline preview. */
+  html body #navigation{left:auto;right:max(12px,env(safe-area-inset-right));transform:none;width:min(440px,calc(50% - 21px));height:50px;padding:3px}
+  html body #navigation [data-action="nav"]{flex-direction:row;gap:6px;min-height:42px;height:42px;padding:0 8px}
+  html body #navigation [data-action="nav"] svg{width:18px;height:18px;flex:none}
+
+  html body #main .editor-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:18px;align-items:start}
+  html body #main .editor-grid>.control-preview-dock{grid-column:1;grid-row:1;margin:0;box-shadow:none;background:transparent}
+  html body #main .editor-grid>.editor-controls{grid-column:2;grid-row:1;padding-top:6px;min-width:0}
+
+  html body #main :is(.zone-grid,.receiver-list){grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+  html body #main .scene-workflow ol{grid-template-columns:repeat(3,minmax(0,1fr))}
+
+  /* Onboarding and the welcome screen are centred columns; less top air. */
+  html body #main :is(.v50-welcome,.onboarding-layout587){padding-top:8px}
+  /* Setup steps: less air above the field, and the Terug/Verder bar scrolls
+   * with the page instead of covering the field (the keyboard takes the rest). */
+  html.interface-polish body #main .onboarding-layout587{max-width:720px;gap:10px}
+  html.interface-polish body #main .onboarding-layout587>.onboarding-stand-steps{margin:0}
+  html.interface-polish body #main .onboarding-layout587>.onboarding-task-hint{max-width:none}
+  html.interface-polish body #main .onboarding-layout587 .onboarding-heading :is(h1,h2){font-size:24px;line-height:1.2}
+  html.interface-polish body #main .onboarding-layout587>.onboarding-footer{position:static}
+  html.interface-polish body :is(#main,#effect-dialog) .shared-colour-picker .wheel-wrap{width:min(100%,220px);max-width:220px}
+}
+
+/* Theme choice "Automatisch" (follows the phone): three choices in a row,
+ * its preview half light, half dark. */
+html.interface-polish body .preference-grid.theme-choice-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+html.interface-polish body .theme-choice[data-id="system"] .theme-choice-preview{background:linear-gradient(115deg,#f4f6f9 0 50%,#1f1e1d 50% 100%)}
+html.interface-polish body .theme-choice[data-id="system"] .theme-preview-header{background:linear-gradient(90deg,#2d3440 0 50%,#dedad4 50% 100%)}
+html.interface-polish body .theme-choice[data-id="system"] .theme-preview-card{background:linear-gradient(90deg,#fff 0 50%,#3b3936 50% 100%)}
+/* Three cards are narrower: the check sits on the preview so the name gets
+ * the full width ("Automatisch" no longer breaks mid-word). */
+html.interface-polish body .theme-choice-grid>.theme-choice>.theme-choice-preview{grid-area:1/1/2/-1}
+html.interface-polish body .theme-choice-grid>.theme-choice>.theme-choice-label{grid-area:2/1/3/-1}
+html.interface-polish body .theme-choice-grid>.theme-choice>.theme-choice-check{grid-area:1/1/2/-1;justify-self:end;align-self:start;margin:6px;box-shadow:0 0 0 2px var(--panel,#fff)}
+@media (max-width:430px){
+  html.interface-polish body .theme-choice-grid>.theme-choice{padding:10px}
+  html.interface-polish body .theme-choice-grid .theme-choice-label{font-size:12px;gap:5px}
+}
+@media (max-width:360px){
+  /* Smallest phones: icon above the name so "Automatisch" fits its card. */
+  html.interface-polish body .theme-choice-grid>.theme-choice{padding:8px 4px}
+  html.interface-polish body .theme-choice-grid .theme-choice-label{flex-direction:column;align-items:center;justify-self:center;gap:3px;font-size:11px;text-align:center}
+}

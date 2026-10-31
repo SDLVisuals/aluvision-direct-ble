@@ -82,6 +82,10 @@
   const catalogues=new Map();
   function validateAnimation(type,state){
     if(state.engine==='STATIC')return;
+    if(state.engine==='STATIC_GRADIENT'){
+      if(type!=='SPI'||!M.validStaticGradient(state.staticGradientRecipe))fail('BACKUP_ANIMATION','Dit verloop kan alleen met de bijgewerkte SPI-verloopfunctie worden geopend.');
+      return;
+    }
     if(!['SPI','RGBW'].includes(type))fail('BACKUP_MODEL','Onbekend receivertype.');
     if(!catalogues.has(type))catalogues.set(type,Preview.catalog(type));
     const found=catalogues.get(type).some(effect=>state.v30Effect

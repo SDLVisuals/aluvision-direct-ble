@@ -24,6 +24,81 @@
   let centralFlowEntered=false,standSessionObserved=false;
   let staticPreparingAvailable=null;
   let staticGestureAvailable=null;
+  let integratedStatic8Available=false,staticGradientCatalogueAvailable=false;
+  let authorityJointAvailable=null;
+  const authorityStandModes=new Map();
+  let stableStandPreparation=null;
+  // One temporary chain only when gradient work is involved. Ordinary-only
+  // calls without such a chain retain their existing path and timing.
+  let gradientLightHeld=null;
+  function gradientLightTicket(managed,cancel) {
+    if(!managed&&!gradientLightHeld)return null;
+    const previous=gradientLightHeld;let release;
+    const ticket={cancel,settled:new Promise(resolve=>{release=resolve;})};
+    gradientLightHeld=ticket;previous?.cancel();
+    return {async enter(){await previous?.settled;if(gradientLightHeld!==ticket)throw fail('LIVE_CONTROL_CANCELLED');},
+      finish(){if(gradientLightHeld===ticket)gradientLightHeld=null;release();}};
+  }
+  function stableStandPreparationKey(standId){
+    let model;try{model=JSON.parse(viewModelKey);}catch(_){throw fail('VIEW_NOT_LOADED');}
+    const stand=model.stands?.find(s=>s.id===standId);
+    if(!stand||!Array.isArray(model.receivers))throw fail('LIVE_CONTROL_PROFILE');
+    const rows=model.receivers.filter(r=>r.standId===standId).map(r=>({id:r.id,rid:r.rid,type:r.type,role:r.role,lifecycle:r.lifecycle,deviceFingerprint:r.deviceFingerprint,outputs:r.outputs}));
+    return canonical({stand,rows});
+  }
+  async function prepareStableStandNative(standId,{gradient=false}={}){
+    if(staticGestureAvailable===null)await runtimeCapabilities();
+    // C98: colours use the fast lane; the gradient catalogue still warms the
+    // stable route (no light intent) so its first apply is not a cold one.
+    if(!(integratedStatic8Available||gradient&&staticGradientCatalogueAvailable)||centralStamp)return {status:'stable-stand-unavailable'};
+    await writeQueue.catch(()=>{});
+    if(!viewLoaded||!contextVisible()||!legacyContextAllowed())throw fail('VIEW_NOT_LOADED');
+    const key=stableStandPreparationKey(standId),now=root.performance?.now?.()??Date.now();
+    if(stableStandPreparation){
+      const held=stableStandPreparation;
+      if(held.key===key&&held.pending){
+        const answer=await held.promise,after=root.performance?.now?.()??Date.now();
+        if(stableStandPreparation!==held||!contextVisible()||!legacyContextAllowed()||stableStandPreparationKey(standId)!==key||
+           !Number.isFinite(after)||after<held.began||held.until<=after)throw fail('LIVE_CONTROL_CANCELLED');
+        const remaining=Math.floor(held.until-after);
+        return {...answer,validForMs:remaining,sampledAtMs:after,validUntilMs:held.until};
+      }
+      if(held.key===key&&!held.failed&&Number.isFinite(now)&&now>=held.began&&held.until-now>30000){
+        const answer=await held.promise;
+        const after=root.performance?.now?.()??Date.now();
+        if(stableStandPreparation!==held||!contextVisible()||!legacyContextAllowed()||stableStandPreparationKey(standId)!==key||
+           !Number.isFinite(after)||after<now||held.until-after<=30000)throw fail('LIVE_CONTROL_BUSY');
+        const remaining=Math.floor(held.until-after);
+        return {...answer,validForMs:remaining,sampledAtMs:after,validUntilMs:held.until};
+      }
+      if(held.pending)throw fail('LIVE_CONTROL_BUSY');
+    }
+    if(!Number.isFinite(now))throw fail('LIVE_CONTROL_CANCELLED');
+    const controller=new AbortController(),held={key,standId,controller,began:now,until:now,pending:true,failed:false,promise:null};
+    stableStandPreparation=held;
+    held.promise=(async()=>{
+      try{
+        const answer=await call('prepareStableStand',{standId},controller.signal);
+        if(answer?.status!=='stable-stand-prepared'||Object.keys(answer).sort().join(',')!=='applied,standId,status,validForMs'||answer.standId!==standId||answer.applied!==false||
+           !Number.isInteger(answer.validForMs)||answer.validForMs<1||answer.validForMs>90000||
+           stableStandPreparation!==held||!contextVisible()||!legacyContextAllowed()||stableStandPreparationKey(standId)!==key)throw fail('LIVE_UNCONFIRMED');
+        // Anchor to CALL START, not receipt time. A cached DATA receipt can
+        // only lose validity; it never restarts/extends a native owner lease.
+        held.until=held.began+answer.validForMs;
+        const after=root.performance?.now?.()??Date.now();
+        if(!Number.isFinite(after)||after<held.began||held.until<=after)throw fail('LIVE_CONTROL_CANCELLED');
+        // Same-document DATA timestamps only. The existing conservative
+        // call-start expiry stays fixed; UI delivery cannot restart it.
+        const remaining=Math.floor(held.until-after);
+        // Maintenance scheduling DATA only, frozen at the FIRST native return.
+        // Never use this later anchor as readiness or an owner/output lease.
+        // Crossing the native >=30s reuse edge needs +1ms, not a new threshold.
+        const refreshAtMs=Math.min(held.until-2000,after+Math.max(0,answer.validForMs-30000)+1);
+        return {...answer,validForMs:remaining,sampledAtMs:after,validUntilMs:held.until,refreshAtMs};
+      }catch(error){held.failed=true;throw error;}finally{held.pending=false;}
+    })();
+    return held.promise;
+  }
   let standSessionStaticGestureAvailable=null;
   let spiPortScenesAvailable=null;
   let simpleStandAvailable=null,standMigrationReady=false,standMigrationBlockedReason='NONE',firstStandAccessDiagnosticsAvailable=false,standWifiOpenAvailable=false,standSharingAvailable=false,standScanAvailable=false,standLinkAvailable=false,standShareSheetAvailable=false,centralStamp=null;
@@ -36,8 +111,16 @@
   actions.add('outputConfigurationStatus');
   actions.add('previewSPIZoneDirections');
   actions.add('configureOutputDirections');
+  actions.add('commitPixelsToDirections');
+  ['planAppErase','beginAppReset','continueAppReset'].forEach(action=>actions.add(action));
   actions.add('prepareReceiverManagement');
+  actions.add('prepareStableStand');
+  actions.add('applyStableBreathe');
+  actions.add('applyStableCatalogue');
+  actions.add('applyStaticGradient');
+  actions.add('observeStableCue');
   ['exportBackup','chooseBackup','importInstallationView','recoverInstallation'].forEach(action=>actions.add(action));
+  ['sharedDocument','sharedLayout','reserveMain'].forEach(action=>actions.add(action));
   ['receiverContextStatus','syncInstallationContext','interruptAutomaticContext'].forEach(action=>actions.add(action));
   actions.add('setAppearance');
   actions.add('selectionFeedback');
@@ -46,10 +129,11 @@
   actions.add('standFirstAccessPreflight');
   actions.add('standFirstAccessDiagnosticFailure');
   actions.add('pixelReceiptDiagnostic692');
-  ['prepareFirstPinV2','claimFirstPinV2','reconcileFirstPinV2','showFirstPinV2','firstPinV2Ready'].forEach(action=>actions.add(action));
+  ['prepareFirstPinV2','claimFirstPinV2','reconcileFirstPinV2','showFirstPinV2','showStoredFirstPinV2','firstPinV2Ready'].forEach(action=>actions.add(action));
+  ['prepareAuthorityCandidate','authorityCandidateMode','authorityCandidateProgress','discoverAuthorityCandidate','selectAuthorityCandidate','admitAuthorityCandidate','completeAuthorityCandidate','secureAuthorityCandidate','finalizeAuthorityCandidate'].forEach(action=>actions.add(action));
   const firstAccessDiagnosticCodes=new Set(['OTHER','FIRST_ACCESS_IDENTITY','FIRST_ACCESS_STORAGE','FIRST_ACCESS_UNCONFIRMED','ACTION_UNSUPPORTED','NATIVE_UNAVAILABLE','NATIVE_DOCUMENT_UNAVAILABLE','NATIVE_BUSY','NATIVE_TIMEOUT','CANCELLED','TIMEOUT','LOCAL_NETWORK_DENIED','STAND_CONNECTION_CLOSED','STAND_CONNECTION_BUSY','STAND_CONNECTION_UNAVAILABLE','STAND_CONNECTION_INVALID','STAND_CONNECTION_CANCELLED','STAND_DATA_INVALID','STAND_DATA_UNCONFIRMED','STAND_INVALID_REQUEST','STAND_STORAGE_LIMIT','STAND_MIGRATION_INVALID','STAND_PREFLIGHT_INVALID','STAND_PREFLIGHT_UNCONFIRMED','STAND_PREFLIGHT_NOT_REQUIRED','STAND_MIGRATION_NOT_READY','STAND_RECEIVER_SAVED_ELSEWHERE','STAND_CURRENT_ACCESS_CONFLICT','STAND_UNAVAILABLE','STAND_WIFI_UNREACHABLE','STAND_WRONG_WIFI','STAND_BUSY','STAND_CANCELLED','STAND_IDENTITY_MISMATCH','STAND_AUTH_FAILED','STAND_UNCONFIRMED','STAND_CREDENTIAL_UNCONFIRMED']);
   ['scanStandShare','takeStandShareLink','shareStandLink'].forEach(action=>actions.add(action));
-  let selectionHaptics=false,selectionFeedbackPending=false,interfaceHaptics=false,interfaceFeedbackPending=false,pixelPreviewV50=false,spiZoneDirectionPreview=false,pixelEditorIsolationAvailable=false,setupZoneIsolationAvailable=false;
+  let selectionHaptics=false,selectionFeedbackPending=false,interfaceHaptics=false,interfaceFeedbackPending=false,pixelPreviewV50=false,spiZoneDirectionPreview=false,pixelEditorIsolationAvailable=false,setupZoneIsolationAvailable=false,pixelEndsHandoffAvailable=false;
   let pixelReceiptDiagnostics692=false;
   function pixelDiagnostic692(phase,bits){
     if(!pixelReceiptDiagnostics692||!['RUNTIME_EDITOR_RECEIPT','RUNTIME_PREVIEW_RECEIPT','STOP_RECEIPT','STOP_SUPERSEDED'].includes(phase)||!Number.isInteger(bits)||bits<0||bits>31)return;
@@ -69,6 +153,20 @@
   const layoutUUID=value=>typeof value==='string'&&/^[A-Fa-f0-9]{8}(-[A-Fa-f0-9]{4}){3}-[A-Fa-f0-9]{12}$/.test(value)&&!/^0{8}(-0{4}){3}-0{12}$/.test(value);
   const layoutTextBytes=value=>Array.from(value).reduce((bytes,c)=>{const n=c.codePointAt(0);return bytes+(n<=0x7f?1:n<=0x7ff?2:n<=0xffff?3:4);},0);
   const layoutKeys=(value,names)=>value&&Object.getPrototypeOf(value)===Object.prototype&&Object.keys(value).sort().join(',')===names.slice().sort().join(',');
+  async function authorityMode(standId,signal){
+    if(authorityJointAvailable===null)await runtimeCapabilities();
+    if(!authorityJointAvailable)return false;
+    const answer=await call('authorityCandidateMode',{standId},signal);
+    if(!layoutKeys(answer,['mode'])||!['authority','legacy'].includes(answer.mode))throw fail('AUTHORITY_CANDIDATE_UNCONFIRMED');
+    authorityStandModes.set(standId,answer.mode);return answer.mode==='authority';
+  }
+  async function authoritySecure(configuration,signal){
+    const state=await call('authorityCandidateProgress',{configuration},signal);
+    if(!layoutKeys(state,['phase'])||!['selected','metadata-imported','joint-pending','terminal-recorded'].includes(state.phase))throw fail('AUTHORITY_CANDIDATE_UNCONFIRMED');
+    if(state.phase==='selected')await serviceSet.AuthorityCandidate.admit({configuration,signal});
+    if(state.phase!=='terminal-recorded')await serviceSet.AuthorityCandidate.complete({configuration,signal});
+    return call('secureAuthorityCandidate',{configuration},signal);
+  }
   // Optional DEBUG observation, never an acknowledgement or authority field.
   const spiDiagnosticPhases679=new Set(['BRIDGE_ADMISSION','PIXEL_STOP','SERVICE_ADMISSION','WITNESS','OWNER_OPEN','MAIN_IDENTITY','TARGET_IDENTITY','OUTPUT_STATUS','MAIN_BOOT','ROUND_BUDGET','SETUP_BEGIN','TEST','CONFIRMATION','APPLICATION_INACTIVE']);
   const spiDiagnosticCodes679=new Set(('NATIVE_UNCONFIRMED TASK_CANCELLED APPLICATION_INACTIVE '+
@@ -107,12 +205,16 @@
     if(flag?.value!==true||flag.writable!==false||flag.configurable!==false||
        !['STATIC_PROFILE','LEGACY_CAP_OFF','LEGACY_CONTEXT_SELECTED','CENTRAL_CAP_OFF','CENTRAL_BINDING','CENTRAL_RECHECK',
          'RECHECK_CAP_OFF','RECHECK_CONTEXT','NATIVE_ENTRY','NATIVE_RETURNED_UNAVAILABLE'].includes(reason)||
-       !Number.isInteger(count)||count<1||count>30)return;
+       !Number.isInteger(count)||count<1||count>64)return;
     root.dispatchEvent?.(new root.CustomEvent('lightning:static-route',{detail:Object.freeze({stage:'facade',reason,count})}));
   }catch(_){/* Bench observation is not delivery or receiver authority. */}}
   let contextWriteBarrier=null;
   let viewRevision=0,viewLoaded=false,viewModelKey=null,viewDraftKey='null',writeQueue=Promise.resolve(),settledWriteQueue=writeQueue;
   const fail=code=>Object.assign(new Error('De verbinding is nog niet beschikbaar.'),{code});
+  // Closed presentation-only NODE failure context. The original error code
+  // remains the sole input to existing retry/admission policies.
+  function nodeConfigurationDiagnostic746(value){return typeof value==='string'&&
+    /^NODE_DIAG_(BEGIN|SETUP_BEGIN|CONFIG|SETUP_END|COMMIT|MESH_STAGE)_(MAIN|NODE)_(SCOPE|BUSY|EXPIRED|PREPARE|GEOMETRY|INVALID|SAVE|SECURITY|INCOMPLETE|SHAPE|OTHER)$/.test(value)?value:null;}
   function receive(message,fromNative=false){
     if(!message||typeof message.id!=='string')return;
     if(!pending.has(message.id)){
@@ -125,10 +227,20 @@
     const request=pending.get(message.id);pending.delete(message.id);
     if(fromNative)request.automatic?.nativeFinished(message);
     root.clearTimeout(request.timer);request.removeAbort();
+    // C98 field diagnosis (debug builds forward it to the device log).
+    if(root.__c98log&&request.action&&!['sharedDocument','capabilities','loadView','lightQuiet','interfaceFeedback','selectionFeedback'].includes(request.action))
+      root.__c98log((message.ok===true?'NATIVE_OK ':'NATIVE_FAIL ')+request.action+' '+(message.ok===true?JSON.stringify(message.result).slice(0,420):String(message.code)));
     if(message.ok===true&&message.result&&typeof message.result==='object')request.resolve(message.result);
-    else request.reject(fail(typeof message.code==='string'&&/^[A-Z][A-Z0-9_]{0,63}$/.test(message.code)?message.code:'NATIVE_FAILED'));
+    else {
+      const error=fail(typeof message.code==='string'&&/^[A-Z][A-Z0-9_]{0,63}$/.test(message.code)?message.code:'NATIVE_FAILED'),
+        diagnosticCode=fromNative&&request.nodeConfigurationDiagnosticEligible&&error.code==='MAIN_CONFIGURATION_UNCONFIRMED'?nodeConfigurationDiagnostic746(message.diagnosticCode):null;
+      if(diagnosticCode)error.diagnosticCode=diagnosticCode;
+      request.reject(error);
+    }
   }
+  let lastLightAtC97=0;
   function call(action,payload={},signal,automatic,posted){
+    if(['applyLive','applyLiveBatch','applyStableCatalogue','applyStableBreathe','applyStaticGradient','identify','identifyLayout','previewPixels'].includes(action))lastLightAtC97=Date.now();
     if(!native||!transportReady)return Promise.reject(fail('NATIVE_UNAVAILABLE'));
     if(!documentId||!/^[A-F0-9]{32}$/.test(documentId))return Promise.reject(fail('NATIVE_DOCUMENT_UNAVAILABLE'));
     if(!actions.has(action))return Promise.reject(fail('ACTION_UNSUPPORTED'));
@@ -138,10 +250,11 @@
       const id='v30-'+documentId+'-'+(++serial),cancelNative=()=>{
         if(automatic){automatic.interrupt();return;}
         if(action==='previewSPIZoneDirections'){
-          if(payload.action!=='stop')try{handler.postMessage({version:1,id:'v30-'+documentId+'-'+(++serial),action:'previewSPIZoneDirections',payload:{action:'stop',standId:payload.standId,zoneId:payload.zoneId,sessionId:payload.sessionId}});}catch(_){}
+          // Read-only STATUS has no authority to stop an existing guide.
+          if(['start','update','test'].includes(payload.action))try{handler.postMessage({version:1,id:'v30-'+documentId+'-'+(++serial),action:'previewSPIZoneDirections',payload:{action:'stop',standId:payload.standId,zoneId:payload.zoneId,sessionId:payload.sessionId}});}catch(_){}
           return;
         }
-        if(pending.has(id)&&!['interruptAutomaticContext','setAppearance','selectionFeedback','interfaceFeedback','capabilities','loadView','saveDraft','parkDraft','checkpointPreviewExit','resumeDraft','publishModel','editZones','exportBackup','chooseBackup','importInstallationView'].includes(action))try{handler.postMessage({version:1,id:'v30-'+documentId+'-'+(++serial),action:action==='discover'?'cancelDiscover':'cancelOnboarding',payload:{requestId:id}});}catch(_){}
+        if(pending.has(id)&&!['interruptAutomaticContext','setAppearance','selectionFeedback','interfaceFeedback','capabilities','loadView','saveDraft','parkDraft','checkpointPreviewExit','resumeDraft','publishModel','editZones','exportBackup','chooseBackup','importInstallationView','planAppErase','eraseAppData','beginAppReset','continueAppReset'].includes(action))try{handler.postMessage({version:1,id:'v30-'+documentId+'-'+(++serial),action:action==='discover'?'cancelDiscover':'cancelOnboarding',payload:{requestId:id}});}catch(_){}
       },abort=()=>{
         cancelNative();
         if(!automatic)receive({id,ok:false,code:'CANCELLED'});
@@ -153,12 +266,12 @@
       // A cold SPI guide performs pinned MAIN/NODE proofs and may encounter a
       // retained proxy reply before its guide packet. This bounded allowance
       // cancels an uncertain operation once; it never retries that mutation.
-      const timeout=['exportBackup','chooseBackup','recoverInstallation'].includes(action)?300000:['scanStandShare','shareStandLink','shareStandWifi','standOpenWifi','standConnect','standMigrate','standResume','standRefresh','standMutation','standCodeChange','prepareReceiverManagement'].includes(action)||action==='publishModel'&&centralStamp!==null?90000:action==='checkpointPreviewExit'?30000:action==='previewPixels'?45000:action==='syncInstallationContext'?180000:['otaPlan','otaMainRecoveryPlan'].includes(action)?120000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:action==='configureOutputs'?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
+      const timeout=['exportBackup','chooseBackup','recoverInstallation'].includes(action)?300000:action==='sharedDocument'?90000:['scanStandShare','shareStandLink','shareStandWifi','standOpenWifi','standConnect','standMigrate','standResume','standRefresh','standMutation','standCodeChange','prepareReceiverManagement'].includes(action)||action==='publishModel'&&centralStamp!==null?90000:action==='checkpointPreviewExit'?30000:action==='previewPixels'?45000:action==='syncInstallationContext'?180000:['otaPlan','otaMainRecoveryPlan'].includes(action)?120000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:['configureOutputs','commitPixelsToDirections'].includes(action)?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
         ['secure','reconcileSecurity'].includes(action)&&payload.configuration?.role==='node'?120000:
-        action==='identifyLayout'?35000:['select','secure','reconcileSecurity','finalize','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain'].includes(action)?45000:12000;
-      const deadline=['claimFirstPinV2','showFirstPinV2'].includes(action)?300000:['prepareFirstPinV2','reconcileFirstPinV2'].includes(action)?50000:action==='previewSPIZoneDirections'?(payload.action==='stop'?20000:90000):action==='configureOutputDirections'?90000:['applyStaticGesture','standFirstAccessPreflight'].includes(action)?45000:timeout;
+        action==='identifyLayout'?35000:['removalPlan','removalStart','removalResume'].includes(action)?210000:['select','secure','reconcileSecurity','finalize','identify','identifyCandidate','identifyFactoryMain'].includes(action)?45000:12000;
+      const deadline=['claimFirstPinV2','showFirstPinV2','showStoredFirstPinV2','eraseAppData','beginAppReset','continueAppReset'].includes(action)?300000:['prepareAuthorityCandidate','authorityCandidateMode','authorityCandidateProgress','discoverAuthorityCandidate','selectAuthorityCandidate','admitAuthorityCandidate','completeAuthorityCandidate','secureAuthorityCandidate','finalizeAuthorityCandidate'].includes(action)?120000:['prepareFirstPinV2','reconcileFirstPinV2'].includes(action)?50000:action==='previewSPIZoneDirections'?(payload.action==='stop'?20000:90000):action==='configureOutputDirections'?90000:['applyStaticGesture','standFirstAccessPreflight','prepareStableStand','applyStableBreathe','applyStableCatalogue','applyStaticGradient'].includes(action)?45000:timeout;
       const timer=root.setTimeout(()=>{cancelNative();if(!automatic)receive({id,ok:false,code:'NATIVE_TIMEOUT'});},deadline);
-      pending.set(id,{resolve,reject,timer,automatic,removeAbort:()=>signal?.removeEventListener('abort',abort)});
+      pending.set(id,{action,resolve,reject,timer,automatic,nodeConfigurationDiagnosticEligible:['secure','reconcileSecurity'].includes(action)&&payload.configuration?.role==='node',removeAbort:()=>signal?.removeEventListener('abort',abort)});
       posted?.(id);
       automatic?.start(id,code=>receive({id,ok:false,code}));
       signal?.addEventListener('abort',abort,{once:true});
@@ -704,6 +817,24 @@
       }
     });return trackWrite(next);
   }
+  // C97 shared installation: the MAIN document (read/write through the
+  // native owner channel) and the local adoption of another phone's layout.
+  function sharedDocument(request){
+    const ops={status:['op','standId'],read:['op','standId'],write:['op','standId','base','json']};
+    const fields=request&&typeof request==='object'&&ops[request.op];
+    if(!fields||Object.keys(request).length!==fields.length||!fields.every(key=>Object.prototype.hasOwnProperty.call(request,key))||
+       typeof request.standId!=='string'||request.op==='write'&&(!Number.isSafeInteger(request.base)||request.base<0||typeof request.json!=='string'))
+      return Promise.reject(fail('SHARED_INVALID'));
+    return call('sharedDocument',JSON.parse(JSON.stringify(request)));
+  }
+  function sharedLayout({standId,stand,receivers}){
+    const next=writeQueue.catch(()=>{}).then(async()=>{
+      if(!viewLoaded)throw fail('VIEW_NOT_LOADED');
+      const revision=viewRevision;
+      try{return acceptView(await call('sharedLayout',JSON.parse(JSON.stringify({standId,expectedRevision:revision,stand,receivers}))));}
+      catch(error){try{const view=acceptView(await call('loadView'));if(view.revision===revision+1)return view;}catch(_){}throw error;}
+    });return trackWrite(next);
+  }
   function editZones(request){
     if(!request||typeof request!=='object'||Array.isArray(request))return Promise.reject(fail('ZONE_EDIT_INVALID'));
     const {standId,expectedRevision,operation,expectedZoneSignature}=request;
@@ -837,17 +968,19 @@
       }
     });return trackWrite(next);
   }
-  function configureOutputs(request,{directionsOnly=false}={}){
+  function configureOutputs(request,{directionsOnly=false,handoffPreview=null}={}){
     const validId=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(value);
     if(!request||typeof request!=='object'||Array.isArray(request)||Object.keys(request).some(key=>!['standId','receiverId','outputs','expectedRevision'].includes(key))||
       !validId(request.standId)||!validId(request.receiverId)||request.expectedRevision!==undefined&&(!Number.isSafeInteger(request.expectedRevision)||request.expectedRevision<0)||
-      !Array.isArray(request.outputs)||request.outputs.length!==4||!request.outputs.every((port,index)=>port&&Object.keys(port).sort().join(',')==='enabled,pixels,port,reversed'&&port.port===index+1&&typeof port.enabled==='boolean'&&typeof port.reversed==='boolean'&&Number.isInteger(port.pixels)&&port.pixels>=1&&port.pixels<=(directionsOnly&&!port.enabled?1024:163))||!request.outputs.some(port=>port.enabled))return Promise.reject(fail('OUTPUT_CONFIGURATION_INVALID'));
+      !Array.isArray(request.outputs)||request.outputs.length!==4||!request.outputs.every((port,index)=>port&&Object.keys(port).sort().join(',')==='enabled,pixels,port,reversed'&&port.port===index+1&&typeof port.enabled==='boolean'&&typeof port.reversed==='boolean'&&Number.isInteger(port.pixels)&&port.pixels>=1&&port.pixels<=((directionsOnly||handoffPreview)&&!port.enabled?1024:163))||!request.outputs.some(port=>port.enabled))return Promise.reject(fail('OUTPUT_CONFIGURATION_INVALID'));
     // Disabled rows are retained physical geometry, not an instruction to
     // rewrite them. Native only configures active outputs and independently
     // compares all four saved rows at its readback/CAS boundary.
     const {standId,receiverId,expectedRevision}=request,outputs=request.outputs.map(port=>({...port}));
     const next=writeQueue.catch(()=>{}).then(async()=>{
       if(!viewLoaded)throw fail('VIEW_NOT_LOADED');
+      if(handoffPreview&&(!pixelEndsHandoffAvailable||directionsOnly||centralStamp||!legacyContextAllowed()||!contextVisible()||
+         !pixelHandoffPreview751(handoffPreview)||handoffPreview.standId!==standId||handoffPreview.receiver.id!==receiverId))throw fail('PIXEL_HANDOFF_INVALID');
       const central=centralStamp&&{...centralStamp},epoch=standSharingEpoch;
       if(central&&(central.standId!==standId||!contextVisible()||standSessionOutputsAvailable!==true))throw fail('STAND_NOT_CONNECTED');
       const previousDraft=JSON.parse(viewDraftKey);
@@ -887,8 +1020,45 @@
       const expectedDraft=refreshed?.draft||null;
       const unchanged=canonical(expected)===viewModelKey&&canonical(expectedDraft)===viewDraftKey;
       const matches=view=>canonical(view?.draft)===canonical(expectedDraft)&&(view?.revision===revision+1||unchanged&&view?.revision===revision)&&canonical(view.model)===canonical(expected);
+      const matchesHandoff=view=>{
+        const checked=JSON.parse(JSON.stringify(expected)),saved=checked.receivers.find(item=>item.id===receiverId),actual=view?.model?.receivers?.find(item=>item.id===receiverId);
+        if(!Array.isArray(actual?.outputs)||actual.outputs.length!==4)return false;
+        // Only this typed action may refresh disabled geometry from native's
+        // authenticated durable baseline. Active ports and every other field
+        // retain the ordinary exact model/CAS comparison.
+        for(const [index,output]of saved.outputs.entries())if(!output.enabled){
+          const row=actual.outputs[index];
+          if(!layoutKeys(row,['port','enabled','pixels','reversed'])||row.port!==output.port||row.enabled!==false||!Number.isInteger(row.pixels)||row.pixels<1||row.pixels>1024||typeof row.reversed!=='boolean')return false;
+          saved.outputs[index]={...row};
+        }
+        const same=canonical(checked)===viewModelKey&&canonical(expectedDraft)===viewDraftKey;
+        return canonical(view?.draft)===canonical(expectedDraft)&&(view?.revision===revision+1||same&&view?.revision===revision)&&canonical(view.model)===canonical(checked);
+      };
       try{
-        const answer=await call(directionsOnly?'configureOutputDirections':'configureOutputs',{standId,receiverId,outputs,expectedRevision:revision});
+        const sentAt=handoffPreview?(root.performance?.now?.()??Date.now()):null;
+        const rawAnswer=await call(handoffPreview?'commitPixelsToDirections':directionsOnly?'configureOutputDirections':'configureOutputs',handoffPreview?
+          {preview:JSON.parse(JSON.stringify(handoffPreview)),configuration:{standId,receiverId,outputs,expectedRevision:revision}}:{standId,receiverId,outputs,expectedRevision:revision});
+        let answer=rawAnswer,gradientRestore=null;
+        if(!handoffPreview&&!central&&layoutKeys(rawAnswer,['view','gradientRestore'])){
+          const r=rawAnswer.gradientRestore;
+          if(!layoutKeys(r,['status','receiverIds'])||!['requires-apply','retained-unconfirmed'].includes(r.status)||
+             !Array.isArray(r.receiverIds)||r.receiverIds.length<1||r.receiverIds.length>64||
+             new Set(r.receiverIds).size!==r.receiverIds.length||!r.receiverIds.every(id=>validId(id)&&
+               rawAnswer.view?.model?.receivers?.some(item=>item.id===id&&item.standId===standId&&item.type==='SPI')))
+            throw fail('OUTPUT_CONFIGURATION_UNCONFIRMED');
+          answer=rawAnswer.view;gradientRestore={status:r.status,receiverIds:[...r.receiverIds]};
+        }
+        if(handoffPreview){
+          if(!layoutKeys(answer,['view','directionReceipt'])||!matchesHandoff(answer.view)||!pixelHandoffDirection751(answer.directionReceipt,expected,receiverId))throw fail('PIXEL_HANDOFF_UNCONFIRMED');
+          const view=acceptView(answer.view),receipt=JSON.parse(JSON.stringify(answer.directionReceipt));
+          if(epoch!==standSharingEpoch||!contextVisible()||!legacyContextAllowed()){
+            // A successful durable handoff can outlive foreground consent.
+            // Clean only its exact successor, never replay configuration.
+            try{await call('previewSPIZoneDirections',{action:'stop',standId:receipt.standId,zoneId:receipt.zoneId,sessionId:receipt.sessionId});}catch(_){}
+            const error=fail('PIXEL_HANDOFF_CANCELLED');error.reconciledView=view;throw error;
+          }
+          return {view,directionReceipt:receipt,sentAt};
+        }
         if(central){
           const configOnly=model=>{const next=JSON.parse(JSON.stringify(model));for(const r of next.receivers||[]){delete r.state;delete r.connection;}return canonical(next);};
           if(epoch!==standSharingEpoch||!contextVisible()||!centralStamp||canonical(centralStamp)!==canonical(central)||
@@ -901,7 +1071,9 @@
         const view=answer;
         if(directionsOnly&&(epoch!==standSharingEpoch||!contextVisible()||!legacyContextAllowed()))throw fail('STAND_CONNECTION_CANCELLED');
         if(!matches(view))throw fail('VIEW_INVALID');
-        return acceptView(view);
+        const accepted=acceptView(view);
+        if(gradientRestore)root.dispatchEvent?.(new CustomEvent('lightning:gradient-restore',{detail:gradientRestore}));
+        return accepted;
       }catch(error){
         // The public geometry may have committed while journal cleanup failed.
         // A local view cannot prove that the native pending intent was closed;
@@ -983,6 +1155,26 @@
       ['main','node'].includes(value.role)&&(value.role==='main'?value.mainReceiverId===null:layoutId(value.mainReceiverId)&&value.mainReceiverId!==value.receiver.id)&&
       layoutUUID(value.editorSession)&&value.editorSession===value.editorSession.toLowerCase();
   }
+  function pixelHandoffPreview751(value){
+    const ports=value?.guide==='ports',keys=['action','standId','transactionId','receiver','role','mainReceiverId','editorSession','port','pixels',...(ports?['guide','previewTTLMS','outputs']:Object.hasOwn(value||{},'guide')?['guide']:[])];
+    if(!layoutKeys(value,keys)||!pixelEditorScope686(value)||!['start','update'].includes(value.action)||
+       ![undefined,'length','ports'].includes(value.guide))return false;
+    if(!ports)return Number.isInteger(value.port)&&value.port>=1&&value.port<=4&&Number.isInteger(value.pixels)&&value.pixels>=0&&value.pixels<=163;
+    const palettes=[['#0000ff','#ff8000','#8000ff','#00ffff'],['#0000ff','#ff6000','#00ff00','#ff00ff'],['#0000ff','#ffa000','#00ff00','#ff00ff'],['#ff0000','#7800c0','#0000ff','#ff5000'],['#ff0000','#0000ff','#ffff00','#ff1700']];
+    return value.port===null&&value.pixels===0&&value.previewTTLMS===12000&&Array.isArray(value.outputs)&&value.outputs.length===4&&
+      palettes.some(palette=>value.outputs.every((item,index)=>layoutKeys(item,['port','enabled','pixels','reversed','colour'])&&item.port===index+1&&typeof item.enabled==='boolean'&&typeof item.reversed==='boolean'&&Number.isInteger(item.pixels)&&item.pixels>=0&&item.pixels<=163&&item.colour===palette[index]));
+  }
+  function pixelHandoffDirection751(value,model,receiverId){
+    const receiver=model.receivers?.find(item=>item.id===receiverId),zone=model.stands?.find(item=>item.id===receiver?.standId)?.zones.find(item=>item.id===receiver?.zoneId);
+    if(!zone||zone.type!=='SPI')return false;
+    const receivers=zone.receiverIds.map(id=>model.receivers.find(item=>item.id===id&&item.standId===receiver.standId&&item.zoneId===zone.id&&item.type==='SPI'&&item.lifecycle==='added'));
+    if(receivers.some(item=>!item))return false;
+    const lines=receivers.flatMap(item=>item.outputs.filter(output=>output.enabled).map(output=>({receiverId:item.id,port:output.port,reversed:output.reversed}))),order=root.LightningModel.lineIds(model,zone.id);
+    return spiDiagnosticReplyKeys679(value,['applied','standId','zoneId','sessionId','lines','focus','lineOrder','previewTTLMS','renewAfterMS'])&&value.applied===true&&
+      value.standId===receiver.standId&&value.zoneId===zone.id&&layoutId(value.sessionId)&&value.focus===null&&spiDirectionPathValid682(value.lines,value.lineOrder)&&
+      canonical(value.lines)===canonical(lines)&&canonical(value.lineOrder)===canonical(order)&&Number.isInteger(value.previewTTLMS)&&value.previewTTLMS>7000&&value.previewTTLMS<=15000&&
+      Number.isInteger(value.renewAfterMS)&&value.renewAfterMS>=1&&value.renewAfterMS<=7000&&value.renewAfterMS<value.previewTTLMS;
+  }
   function firstPinConfiguration686(value){
     return layoutKeys(value,['version','transactionId','standId','receiverId','rid','deviceFingerprint','type','role','mainReceiverId','outputs','zoneId'])&&value.version===1&&
       ['transactionId','standId','receiverId'].every(key=>layoutId(value[key]))&&/^[A-F0-9]{16}$/.test(value.rid)&&!/^0+$/.test(value.rid)&&/^[A-F0-9]{64}$/.test(value.deviceFingerprint)&&!/^0+$/.test(value.deviceFingerprint)&&
@@ -997,6 +1189,13 @@
     if(value.status==='cancelled')return action==='claim'&&layoutKeys(value,['status']);
     if(value.status==='verification-required')return action==='reconcile'&&layoutKeys(value,['status']);
     return action==='reconcile'&&layoutKeys(value,['receiptRef','ssid'])&&typeof value.receiptRef==='string'&&/^receipt:[A-F0-9]{64}$/.test(value.receiptRef)&&firstPinSSID686(value.ssid,type);
+  }
+  function resetErasedAppView760(){
+    // Cancel local continuations only AFTER an exact final native receipt.
+    // Wrong PIN, Cancel, offline and partially confirmed resets retain them.
+    contextTimers.forEach(timer=>root.clearTimeout(timer));contextTimers.clear();contextEpochs.clear();contextJobs.clear();contextResetEpoch++;
+    root.clearTimeout(contextDiscoveryTimer);contextDiscoveryTimer=null;
+    viewRevision=0;viewLoaded=false;viewModelKey=null;viewDraftKey='null';
   }
   const serviceSet=native?{
     connectionMode:'manual-wifi',
@@ -1029,12 +1228,17 @@
         if(!firstPinConfiguration686(configuration))throw fail('FIRST_PIN_V2_INVALID');
         const answer=await call('showFirstPinV2',{configuration:JSON.parse(JSON.stringify(configuration))},signal);
         if(!layoutKeys(answer,['status'])||answer.status!=='shown')throw fail('FIRST_PIN_V2_UNCONFIRMED');return answer;
+      },
+      async showStored(input){
+        if(!layoutKeys(input,['standId'])||!layoutId(input.standId))throw fail('FIRST_PIN_V2_INVALID');
+        const answer=await call('showStoredFirstPinV2',{standId:input.standId});
+        if(!layoutKeys(answer,['status'])||answer.status!=='shown')throw fail('FIRST_PIN_V2_UNCONFIRMED');return answer;
       }
     }),
     // Native contract availability, never evidence of receiver support. The
     // actual request requires that receiver's authenticated guide capability.
     get atomicPreviewExit579(){return atomicPreviewExitAvailable===true&&legacyContextAllowed()&&contextVisible();},
-    get previewCapabilities(){return Object.freeze({identifyPorts:pixelPreviewV50,power:pixelPreviewV50,editorIsolation:pixelEditorIsolationAvailable&&legacyContextAllowed()});},
+    get previewCapabilities(){return Object.freeze({identifyPorts:pixelPreviewV50,power:pixelPreviewV50,editorIsolation:pixelEditorIsolationAvailable&&legacyContextAllowed(),pixelEndsHandoff:pixelEndsHandoffAvailable&&pixelEditorIsolationAvailable&&legacyContextAllowed()});},
     async prepareReceiverManagement({standId}){
       await writeQueue.catch(()=>{});
       const before=centralStamp&&{...centralStamp},epoch=standSharingEpoch;
@@ -1194,7 +1398,7 @@
     },
     async setAppearance(request){
       if(root.__lightningV32Appearance!==true)throw fail('APPEARANCE_UNAVAILABLE');
-      if(!request||Object.keys(request).length!==1||!['light','dark'].includes(request.theme))throw fail('APPEARANCE_INVALID');
+      if(!request||Object.keys(request).length!==1||!['system','light','dark'].includes(request.theme))throw fail('APPEARANCE_INVALID');
       const {theme}=request;
       if(appearanceRequest?.theme===theme)return appearanceRequest.promise;
       if(!appearanceRequest&&appearanceTheme===theme)return {status:'applied-local',theme};
@@ -1232,12 +1436,14 @@
       });contextQueue=result;
       return result;
     },
-    async recoverInstallation({pin,signal}){
+    async recoverInstallation({pin,wifi,signal}){
       if(simpleStandAvailable===null)await runtimeCapabilities();
       if(simpleStandAvailable===true)throw fail('STAND_LEGACY_ACCESS_RETIRED');
-      if(typeof pin!=='string'||!/^\d{8,12}$/.test(pin))throw fail('PIN_RECOVERY_INVALID');
+      // C98: wifi:true = the phone is on the stand's PIN-protected Wi-Fi; no PIN.
+      const viaWifi=wifi===true;
+      if(!viaWifi&&(typeof pin!=='string'||!/^\d{8,12}$/.test(pin)))throw fail('PIN_RECOVERY_INVALID');
       const next=writeQueue.catch(()=>{}).then(async()=>{
-        const result=await call('recoverInstallation',{pin},signal);
+        const result=await call('recoverInstallation',viaWifi?{wifi:true}:{pin},signal);
         if(result?.status!=='restored'||typeof result.standId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(result.standId)||result.view?.model?.demo!==false||result.view?.draft!==null)throw fail('PIN_RECOVERY_UNCONFIRMED');
         setLibraryRecoveryBlock(result.standId,true);
         if(result.lightStateComplete!==true||typeof root.LightningReceiverPlayback?.restore!=='function')throw fail('PLAYBACK_UNCONFIRMED');
@@ -1334,8 +1540,24 @@
       return writeView('publishModel',{model,configuration,receiptRef}).then(view=>reset===contextResetEpoch?scheduleContext(view,configuration.standId,{immediate:true}):view);
     },
     async editZones(request){return editZones(request).then(view=>scheduleContext(view,request.standId));},
+    sharedDocument,
+    // C97 reserve MAIN: start/observe the MAIN firmware's automatic arming.
+    reserveMain(request){
+      if(!request||!['enable','status'].includes(request.op)||typeof request.standId!=='string'||!/^[0-9A-F]{16}$/.test(request.txn||'')||
+         Object.keys(request).length!==3)return Promise.reject(fail('RESERVE_INVALID'));
+      return call('reserveMain',{op:request.op,standId:request.standId,txn:request.txn});
+    },
+    // True when no light command was sent in the last 3 s: background sync
+    // must never share the MAIN with a colour or animation choice.
+    lightQuiet(){return Date.now()-lastLightAtC97>3000;},
+    async sharedLayout(request){return sharedLayout(request);},
     async configureOutputs(request){return configureOutputs(request).then(view=>scheduleContext(view,request.standId));},
     async configureOutputDirections(request){return configureOutputs(request,{directionsOnly:true}).then(view=>scheduleContext(view,request.standId));},
+    async commitPixelsToDirections(request){
+      if(!layoutKeys(request,['preview','configuration']))throw fail('PIXEL_HANDOFF_INVALID');
+      // No automatic context archive may replace the adopted Owner/lease.
+      return configureOutputs(request.configuration,{handoffPreview:request.preview});
+    },
     get spiZoneDirectionPreview(){return spiZoneDirectionPreview===true;},
     async previewSPIZoneDirections(request){
       const stop=request?.action==='stop',observe=request?.action==='status',test=request?.action==='test',scopeOnly=stop||observe;
@@ -1360,12 +1582,13 @@
         }else if(answer.applied!==true||!spiDiagnosticReplyKeys679(answer,['applied','standId','zoneId','sessionId','lines','focus','lineOrder','previewTTLMS','renewAfterMS',...(Object.prototype.hasOwnProperty.call(answer,'pathTestRemainingMS')?['pathTestRemainingMS']:[])])||
           !spiDirectionPathValid682(answer.lines,answer.lineOrder)||answer.focus!==null&&
             (!layoutKeys(answer.focus,['receiverId','port'])||!answer.lines.some(line=>line.receiverId===answer.focus.receiverId&&line.port===answer.focus.port))||
-          Object.prototype.hasOwnProperty.call(answer,'pathTestRemainingMS')&&(!Number.isInteger(answer.pathTestRemainingMS)||answer.pathTestRemainingMS<0||answer.pathTestRemainingMS>6000||answer.pathTestRemainingMS>0&&answer.focus!==null)||
+          Object.prototype.hasOwnProperty.call(answer,'pathTestRemainingMS')&&(!Number.isInteger(answer.pathTestRemainingMS)||answer.pathTestRemainingMS<0||answer.pathTestRemainingMS>answer.previewTTLMS||answer.pathTestRemainingMS>15000||answer.pathTestRemainingMS>0&&answer.focus!==null)||
           !Number.isInteger(answer.previewTTLMS)||answer.previewTTLMS<1||answer.previewTTLMS>15000||!Number.isInteger(answer.renewAfterMS)||answer.renewAfterMS<1||answer.renewAfterMS>7000)throw fail('SPI_DIRECTION_UNCONFIRMED');
         return answer;
       }
       if(epoch!==standSharingEpoch||!contextVisible()||canonical(centralStamp)!==canonical(stamp)||!stamp&&!legacyContextAllowed()||answer.applied!==true||
-         !spiDiagnosticReplyKeys679(answer,['applied','standId','zoneId','sessionId','lines','focus','lineOrder','previewTTLMS','renewAfterMS',...(test?['pathTestMS']:[])])||test&&answer.pathTestMS!==6000||
+         !spiDiagnosticReplyKeys679(answer,['applied','standId','zoneId','sessionId','lines','focus','lineOrder','previewTTLMS','renewAfterMS',...(test?['pathTestMS']:[]),...(Object.prototype.hasOwnProperty.call(answer,'pathTestRemainingMS')?['pathTestRemainingMS']:[])])||test&&(answer.pathTestMS!==6000||!Object.prototype.hasOwnProperty.call(answer,'pathTestRemainingMS'))||
+         Object.prototype.hasOwnProperty.call(answer,'pathTestRemainingMS')&&(!Number.isInteger(answer.pathTestRemainingMS)||answer.pathTestRemainingMS<0||answer.pathTestRemainingMS>answer.previewTTLMS||answer.pathTestRemainingMS>15000||answer.pathTestRemainingMS>0&&answer.focus!==null)||
          canonical(answer.lineOrder)!==canonical(request.lineOrder)||canonical(answer.lines)!==canonical(request.lines)||canonical(answer.focus)!==canonical(request.focus)||
          !Number.isInteger(answer.previewTTLMS)||answer.previewTTLMS<=7000||answer.previewTTLMS>15000||!Number.isInteger(answer.renewAfterMS)||answer.renewAfterMS<1||answer.renewAfterMS>7000||answer.renewAfterMS>=answer.previewTTLMS)throw fail('SPI_DIRECTION_UNCONFIRMED');
       return answer;
@@ -1407,26 +1630,95 @@
       const payload=JSON.parse(JSON.stringify(request));
       if(centralStamp&&(centralStamp.standId!==request.standId||!standSessionOutputsAvailable||!contextVisible()))throw fail('STAND_NOT_CONNECTED');
       const answer=await call('previewPixels',payload);
-      if(editor&&(!layoutKeys(answer,['applied','previewTTLMS','port','pixels','guide','isolationTTLMS',...(ports?['paletteVersion','outputs']:request.guide==='power'?['reversed']:[])])||answer.guide!==(request.guide||'length')||!Number.isInteger(answer.isolationTTLMS)||answer.isolationTTLMS<0||answer.isolationTTLMS>30000||request.action==='stop'&&request.keepSession!==true&&answer.isolationTTLMS!==0)){pixelDiagnostic692('RUNTIME_EDITOR_RECEIPT',(answer?.guide===(request.guide||'length')?1:0)|(Number.isInteger(answer?.isolationTTLMS)&&answer.isolationTTLMS>=0&&answer.isolationTTLMS<=30000?2:0)|(answer?.isolationTTLMS===0?4:0));throw fail('PIXEL_PREVIEW_UNCONFIRMED');}
+      const lit=ports?request.outputs.some(item=>item.enabled&&item.pixels>0):request.pixels>0;
+      const hasMode=!!answer&&Object.hasOwn(answer,'previewMode'),black=hasMode&&answer.previewMode==='black'&&pixelPreviewV50===true&&request.action!=='stop'&&
+        (ports?request.outputs.every(item=>!item.enabled):[undefined,'length'].includes(request.guide)&&request.pixels===0)&&
+        answer.guide===(request.guide||'length')&&Number.isInteger(answer.previewTTLMS)&&answer.previewTTLMS>0&&answer.previewTTLMS<=15000;
+      if(hasMode&&!black)throw fail('PIXEL_PREVIEW_UNCONFIRMED');
+      const hasHandoff=!!answer&&Object.hasOwn(answer,'handoffReady');
+      if(hasHandoff&&(!pixelEndsHandoffAvailable||answer.handoffReady!==true||!editor||!pixelHandoffPreview751(request)))throw fail('PIXEL_PREVIEW_UNCONFIRMED');
+      if(editor&&(!layoutKeys(answer,['applied','previewTTLMS','port','pixels','guide','isolationTTLMS',...(black?['previewMode']:[]),...(hasHandoff?['handoffReady']:[]),...(ports?['paletteVersion','outputs']:request.guide==='power'?['reversed']:[])])||answer.guide!==(request.guide||'length')||!Number.isInteger(answer.isolationTTLMS)||answer.isolationTTLMS<0||answer.isolationTTLMS>30000||request.action==='stop'&&request.keepSession!==true&&answer.isolationTTLMS!==0)){pixelDiagnostic692('RUNTIME_EDITOR_RECEIPT',(answer?.guide===(request.guide||'length')?1:0)|(Number.isInteger(answer?.isolationTTLMS)&&answer.isolationTTLMS>=0&&answer.isolationTTLMS<=30000?2:0)|(answer?.isolationTTLMS===0?4:0));throw fail('PIXEL_PREVIEW_UNCONFIRMED');}
       if(answer?.applied!==true||answer.port!==request.port||answer.pixels!==request.pixels||
-        (request.action==='stop'?answer.previewTTLMS!==0:!Number.isInteger(answer.previewTTLMS)||answer.previewTTLMS<((ports?request.outputs.some(item=>item.enabled&&item.pixels>0):request.pixels>0)?1:0)||answer.previewTTLMS>15000)||
-        !(ports?request.outputs.some(item=>item.enabled&&item.pixels>0):request.pixels>0)&&answer.previewTTLMS!==0||
+        (request.action==='stop'?answer.previewTTLMS!==0:!Number.isInteger(answer.previewTTLMS)||answer.previewTTLMS<((lit||black)?1:0)||answer.previewTTLMS>15000)||
+        !lit&&!black&&answer.previewTTLMS!==0||
         request.guide==='power'&&(answer.guide!=='power'||answer.reversed!==request.reversed)||
         ports&&(answer.guide!=='ports'||![1,2,3,4,5].includes(answer.paletteVersion)||palette(answer.outputs)!==answer.paletteVersion||answer.outputs.some((item,index)=>
           !layoutKeys(item,['port','enabled','pixels','reversed','colour'])||['port','enabled','pixels','reversed'].some(key=>item[key]!==request.outputs[index][key])))){pixelDiagnostic692('RUNTIME_PREVIEW_RECEIPT',(answer?.applied===true?1:0)|(answer?.port===request.port?2:0)|(answer?.pixels===request.pixels?4:0)|(answer?.previewTTLMS===0?8:0)|(answer?.guide===(request.guide||'length')?16:0));throw fail('PIXEL_PREVIEW_UNCONFIRMED');}
+      // Local echo of the already validated request, not a new native grant.
+      return hasHandoff?{...answer,handoffRequest:JSON.parse(JSON.stringify(payload))}:answer;
+    },
+    // Separate pending metadata API. The existing onboarding wizard must not
+    // consume this as secure/finalize: genuine joint+GEO are still required.
+    AuthorityCandidate:Object.freeze({
+      async discover({standId,signal}){
+        if(!layoutId(standId))throw fail('AUTHORITY_CANDIDATE_INVALID');
+        const answer=await call('discoverAuthorityCandidate',{standId},signal);
+        if(!layoutKeys(answer,['receivers','scope'])||answer.scope!=='pending-authority-candidates'||!Array.isArray(answer.receivers)||answer.receivers.length>63)throw fail('AUTHORITY_CANDIDATE_UNCONFIRMED');
+        for(const r of answer.receivers)if(!layoutKeys(r,['id','rid','type','name'])||!['SPI','RGBW'].includes(r.type)||!/^([0-9A-F]{16})$/.test(r.rid)||r.id!=='receiver-'+r.rid||r.name!==r.type+'-receiver')throw fail('AUTHORITY_CANDIDATE_UNCONFIRMED');
+        return JSON.parse(JSON.stringify(answer));
+      },
+      async select({standId,transactionId,receiver,signal}){
+        if(!layoutId(standId)||!layoutId(transactionId)||!receiver||receiver.id!=='receiver-'+receiver.rid||!['SPI','RGBW'].includes(receiver.type))throw fail('AUTHORITY_CANDIDATE_INVALID');
+        const answer=await call('selectAuthorityCandidate',{standId,transactionId,receiverId:receiver.id,rid:receiver.rid,type:receiver.type},signal);
+        if(!layoutKeys(answer,['id','rid','type','name','deviceFingerprint','configuration'])||answer.id!==receiver.id||answer.rid!==receiver.rid||answer.type!==receiver.type||answer.name!==receiver.type+'-receiver'||!/^[0-9A-F]{64}$/.test(answer.deviceFingerprint))throw fail('AUTHORITY_CANDIDATE_UNCONFIRMED');
+        const configuration=answer.configuration;
+        if(!layoutKeys(configuration,['version','transactionId','standId','receiverId','rid','deviceFingerprint','type','role','mainReceiverId','outputs','zoneId'])||configuration.version!==1||configuration.transactionId!==transactionId||configuration.standId!==standId||configuration.receiverId!==receiver.id||configuration.rid!==receiver.rid||configuration.type!==receiver.type||configuration.deviceFingerprint!==answer.deviceFingerprint||configuration.role!=='node'||!layoutId(configuration.mainReceiverId)||configuration.zoneId!==null||!Array.isArray(configuration.outputs)||
+          (receiver.type==='RGBW'?configuration.outputs.length!==0:configuration.outputs.length!==4||configuration.outputs.some((p,i)=>!layoutKeys(p,['port','enabled','pixels','reversed'])||p.port!==i+1||p.enabled!==true||p.pixels!==163||p.reversed!==false)))throw fail('AUTHORITY_CANDIDATE_UNCONFIRMED');
+        const progress=await call('authorityCandidateProgress',{configuration},signal);
+        if(!layoutKeys(progress,['phase'])||!['selected','metadata-imported','joint-pending','terminal-recorded'].includes(progress.phase))throw fail('AUTHORITY_CANDIDATE_UNCONFIRMED');
+        if(progress.phase==='selected')await serviceSet.AuthorityCandidate.admit({configuration,signal});
+        if(progress.phase!=='terminal-recorded')await serviceSet.AuthorityCandidate.complete({configuration,signal});
+        const pending=await call('prepareAuthorityCandidate',{configuration},signal);
+        if(!layoutKeys(pending,['status','geometryConfirmed','appPublished'])||pending.status!=='pending-geometry'||pending.geometryConfirmed!==false||pending.appPublished!==false)throw fail('AUTHORITY_CANDIDATE_UNCONFIRMED');
+        // True private adopted membership precedes the first physical guide.
+        // These false fields never become security/final/model receipts.
+        const {configuration:unused,...selected}=answer;return JSON.parse(JSON.stringify(selected));
+      },
+      async admit({configuration,signal}){
+        const answer=await call('admitAuthorityCandidate',{configuration:JSON.parse(JSON.stringify(configuration))},signal);
+        if(!layoutKeys(answer,['status','member','applied','geometryConfirmed','historyGeneration'])||answer.status!=='pending-membership'||answer.member!==false||answer.applied!==false||answer.geometryConfirmed!==false||!Number.isInteger(answer.historyGeneration)||answer.historyGeneration<0||answer.historyGeneration>4096)throw fail('AUTHORITY_CANDIDATE_UNCONFIRMED');
+        return JSON.parse(JSON.stringify(answer));
+      },
+      async complete({configuration,signal}){
+        const answer=await call('completeAuthorityCandidate',{configuration:JSON.parse(JSON.stringify(configuration))},signal);
+        if(!layoutKeys(answer,['status','member','applied','geometryConfirmed','generation'])||answer.status!=='joint-terminal-recorded'||answer.member!==false||answer.applied!==false||answer.geometryConfirmed!==false||!Number.isInteger(answer.generation)||answer.generation<1||answer.generation>4096)throw fail('AUTHORITY_CANDIDATE_UNCONFIRMED');
+        return JSON.parse(JSON.stringify(answer));
+      }
+    }),
+    selectionDeadlineMS(standId){return authorityStandModes.get(standId)==='authority'?210000:50000;},
+    async select({standId,transactionId,receiver}){if(authorityStandModes.get(standId)==='authority')return serviceSet.AuthorityCandidate.select({standId,transactionId,receiver});return call('select',{standId,transactionId,receiver:{id:receiver.id,rid:receiver.rid,type:receiver.type}});},
+    async secure({configuration,pin,signal}){if(configuration?.role==='node'&&await authorityMode(configuration.standId,signal))return authoritySecure(configuration,signal);return call('secure',{configuration,...(root.AluvisionSecurityMode?.pinRequired===false||configuration?.role==='node'?{}:{pin})},signal);},
+    async reconcileSecurity({configuration,signal}){if(configuration?.role==='node'&&await authorityMode(configuration.standId,signal))return authoritySecure(configuration,signal);return call('reconcileSecurity',{configuration},signal);},
+    async planAppErase(request){
+      if(!layoutKeys(request,[]))throw fail('APP_ERASE_INVALID');
+      if(typeof root.LightningAppErase?.validatePlan!=='function')throw fail('APP_ERASE_UNAVAILABLE');
+      const next=writeQueue.catch(()=>{}).then(()=>call('planAppErase',{}));trackWrite(next);
+      return root.LightningAppErase.validatePlan(await next);
+    },
+    async eraseAppData(request){
+      if(!layoutKeys(request,['confirmation','scope','planId'])||request.confirmation!=='Alles verwijderen'||request.scope!=='local-only'||!layoutId(request.planId))throw fail('APP_ERASE_INVALID');
+      if(typeof root.LightningAppErase?.validateLocal!=='function')throw fail('APP_ERASE_UNAVAILABLE');
+      // The literal is a protocol value, not translated button copy. Native
+      // asks for the PIN; neither a token nor a Web field grants authority.
+      const next=writeQueue.catch(()=>{}).then(()=>call('eraseAppData',{...request}));trackWrite(next);
+      const answer=root.LightningAppErase.validateLocal(await next);
+      if(answer.status==='erased-local-only')resetErasedAppView760();
       return answer;
     },
-    async select({standId,transactionId,receiver}){return call('select',{standId,transactionId,receiver:{id:receiver.id,rid:receiver.rid,type:receiver.type}});},
-    async secure({configuration,pin,signal}){return call('secure',{configuration,...(root.AluvisionSecurityMode?.pinRequired===false||configuration?.role==='node'?{}:{pin})},signal);},
-    async reconcileSecurity({configuration,signal}){return call('reconcileSecurity',{configuration},signal);},
-    async eraseAppData({confirmation}){
-      if(confirmation!=='Alles verwijderen')throw fail('CONFIRMATION_REQUIRED');
-      contextTimers.forEach(timer=>root.clearTimeout(timer));contextTimers.clear();contextEpochs.clear();contextJobs.clear();contextResetEpoch++;
-      root.clearTimeout(contextDiscoveryTimer);contextDiscoveryTimer=null;
-      const next=writeQueue.catch(()=>{}).then(()=>call('eraseAppData',{confirmation}));trackWrite(next);
-      const answer=await next;
-      if(answer?.status!=='erased-local-only')throw fail('ERASE_UNCONFIRMED');
-      viewRevision=0;viewLoaded=false;viewModelKey=null;viewDraftKey='null';
+    async beginAppReset(request){
+      if(!layoutKeys(request,['confirmation','planId'])||request.confirmation!=='Reset receivers en verwijder alles'||!layoutId(request.planId))throw fail('APP_ERASE_INVALID');
+      if(typeof root.LightningAppErase?.validateReset!=='function')throw fail('APP_ERASE_UNAVAILABLE');
+      const next=writeQueue.catch(()=>{}).then(()=>call('beginAppReset',{...request}));trackWrite(next);
+      const answer=root.LightningAppErase.validateReset(await next);
+      if(answer.status==='completed-local-erased')resetErasedAppView760();
+      return answer;
+    },
+    async continueAppReset(request){
+      if(!layoutKeys(request,['jobId'])||!layoutId(request.jobId))throw fail('APP_ERASE_INVALID');
+      if(typeof root.LightningAppErase?.validateReset!=='function')throw fail('APP_ERASE_UNAVAILABLE');
+      const next=writeQueue.catch(()=>{}).then(()=>call('continueAppReset',{...request}));trackWrite(next);
+      const answer=root.LightningAppErase.validateReset(await next);
+      if(answer.status==='completed-local-erased')resetErasedAppView760();
       return answer;
     },
     async whenLiveReady(){
@@ -1440,8 +1732,32 @@
         return;
       }
     },
+    get integratedStatic8Available(){return integratedStatic8Available;},
+    get liveBatchLimit(){return integratedStatic8Available&&centralStamp===null?64:30;},
+    // Presentation choice only, never an output/Owner/capability grant. The
+    // modern publisher cannot borrow the old LIVE-under-identification lane.
+    get deferOrderPlaybackUntilClose(){return integratedStatic8Available&&centralStamp===null;},
+    prepareStableStand({standId}={}){
+      if(typeof standId!=='string'||!standId)return Promise.reject(fail('LIVE_CONTROL_INVALID'));
+      return prepareStableStandNative(standId);
+    },
+    prewarmGradient({standId}={}){
+      if(typeof standId!=='string'||!standId)return Promise.reject(fail('LIVE_CONTROL_INVALID'));
+      // Fast-lane colours open their own owner session, which retires the
+      // native warm route; never trust a cached preparation for the gradient.
+      if(stableStandPreparation&&!stableStandPreparation.pending)stableStandPreparation=null;
+      return prepareStableStandNative(standId,{gradient:true});
+    },
+    cancelStableStandPreparation({standId}={}){
+      const held=stableStandPreparation;
+      if(held&&(!standId||held.standId===standId)){
+        stableStandPreparation=null;
+        if(held.pending)held.controller.abort();
+      }
+    },
     applyStaticGesture({requests,held=false}={}){
       let requestId=null,settled=false,closed=false,inFlight=false,endRequested=!held,postedHeld=false,sequence=1,payload,stagedSequence=1,expectedPorts,geometry,centralBinding=null;
+      let retainedOrigin=null,nativeObservationController=null;
       const ledger=new Map(),controller=new AbortController(),copy=value=>JSON.parse(JSON.stringify(value));
       let openingTimer=null,resolveOpening;
       const openingReady=new Promise(resolve=>{resolveOpening=resolve;});
@@ -1465,7 +1781,7 @@
           const row=matches[0];return {id:row.id,rid:row.rid,standId:row.standId,type:row.type,role:row.role,lifecycle:row.lifecycle,deviceFingerprint:row.deviceFingerprint,outputs:row.outputs};
         });
         const ports=rows.reduce((n,row)=>n+(row.type==='RGBW'?1:Array.isArray(row.outputs)?row.outputs.filter(output=>output.enabled===true).length:0),0);
-        if(ports<rows.length||ports>24)throw fail('LIVE_INVALID');
+        if(ports<rows.length||ports>(integratedStatic8Available&&!centralBinding?256:24))throw fail('LIVE_INVALID');
         const zones=model.stands.find(stand=>stand.id===payload[0].standId)?.zones?.map(zone=>({id:zone.id,receiverIds:zone.receiverIds,layout:zone.layout,lineOrder:zone.lineOrder}));
         return {ports,geometry:canonical({rows,zones})};
       };
@@ -1481,12 +1797,18 @@
         }).catch(()=>{closed=true;controller.abort();return {status:'unknown',submitted:true};});
       };
       const operation=(async()=>{
-        if(typeof held!=='boolean'||!Array.isArray(requests)||requests.length<1||requests.length>6)throw fail('LIVE_INVALID');
+        if(typeof held!=='boolean'||!Array.isArray(requests)||requests.length<1||requests.length>64)throw fail('LIVE_INVALID');
         payload=requests.map(livePayload);
         if(new Set(payload.map(item=>item.receiverId)).size!==payload.length||payload.some(item=>item.standId!==payload[0].standId)||!uniform(payload)){
           observeStaticRoute('STATIC_PROFILE',payload.length);return {status:'static-gesture-unavailable-before-open'};
         }
         if(staticGestureAvailable===null||standSessionStaticGestureAvailable===null)await runtimeCapabilities();
+        if(payload.length>30&&(!integratedStatic8Available||centralStamp!==null))throw fail('LIVE_INVALID');
+        if(payload.length>6&&!integratedStatic8Available)return {status:'static-gesture-unavailable-before-open'};
+        // UI should be inert while menu-open preparation runs. If an explicit
+        // gesture races it, reject BEFORE native admission; never queue an old
+        // colour behind a cold pass and then relabel its capture time as fresh.
+        if(integratedStatic8Available&&stableStandPreparation?.pending&&stableStandPreparation.standId===payload[0].standId)throw fail('LIVE_STABLE_PREPARATION_PENDING');
         if(centralStamp){
           if(standSessionStaticGestureAvailable!==true){observeStaticRoute('CENTRAL_CAP_OFF',payload.length);return {status:'static-gesture-unavailable-before-open'};}
           if(payload[0].standId!==centralStamp.standId||centralStamp.configRevision>4294967295||
@@ -1509,6 +1831,14 @@
           observeStaticRoute('NATIVE_ENTRY',payload.length);
           const answer=await call('applyStaticGesture',{requests:payload,held:postedHeld},controller.signal,undefined,id=>{requestId=id;Promise.resolve().then(finishOpening);});
           if(answer?.status==='static-gesture-unavailable-before-open'&&Object.keys(answer).length===1){observeStaticRoute('NATIVE_RETURNED_UNAVAILABLE',payload.length);return answer;}
+          if(answer?.status==='static-gesture-retained-deferred'){
+            if(!integratedStatic8Available||centralBinding||Object.keys(answer).sort().join(',')!=='applied,ready,receiverIds,sequence,status'||
+               answer.applied!==false||answer.ready!==false||!Number.isInteger(answer.sequence)||!ledger.has(answer.sequence)||answer.sequence<stagedSequence||
+               !Array.isArray(answer.receiverIds)||answer.receiverIds.length!==payload.length||answer.receiverIds.some((id,index)=>id!==payload[index].receiverId)||
+               selection().geometry!==geometry||!contextVisible()||!legacyContextAllowed())throw fail('LIVE_UNCONFIRMED');
+            retainedOrigin=requestId;
+            return {...answer,requests:copy(ledger.get(answer.sequence))};
+          }
           if(!answer||Object.keys(answer).length!==(centralBinding?8:5)||answer.status!=='static-gesture-complete'||
              !Number.isInteger(answer.sequence)||!ledger.has(answer.sequence)||answer.sequence<stagedSequence||
              !Array.isArray(answer.receiverIds)||answer.receiverIds.length!==payload.length||
@@ -1546,11 +1876,29 @@
         })().finally(()=>{inFlight=false;if(endRequested&&!closed)void end();});
       }});
       Object.defineProperty(operation,'endStaticGesture',{value:end});
-      Object.defineProperty(operation,'stopStaticGesture',{value:()=>{closed=true;controller.abort();finishOpening();}});
+      Object.defineProperty(operation,'cancelNativeObservation',{value:()=>nativeObservationController?.abort()});
+      Object.defineProperty(operation,'observeNativeCompletion',{value:async()=>{
+        if(!settled||closed||!retainedOrigin||nativeObservationController)throw fail('LIVE_UNCONFIRMED');
+        nativeObservationController=new AbortController();
+        const answer=await call('observeStableCue',{standId:payload[0].standId,originRequestId:retainedOrigin},nativeObservationController.signal);
+        if(answer?.status!=='stable-cue-native-result'||answer.applied!==false||
+           Object.keys(answer).sort().join(',')!=='applied,completed,receiverIds,state,status,targets'||
+           !['PENDING','OBSERVED','UNKNOWN','SUPERSEDED'].includes(answer.state)||
+           !Number.isInteger(answer.targets)||!(answer.targets===payload.length||(answer.state==='UNKNOWN'&&answer.targets===0&&answer.completed===0))||
+           !Number.isInteger(answer.completed)||answer.completed<0||answer.completed>answer.targets||
+           (answer.state==='OBSERVED'&&answer.completed!==answer.targets)||
+           !Array.isArray(answer.receiverIds)||answer.receiverIds.length!==payload.length||new Set(answer.receiverIds).size!==payload.length||
+           answer.receiverIds.some(id=>!payload.some(r=>r.receiverId===id)))throw fail('LIVE_UNCONFIRMED');
+        return {status:'stable-cue-native-result',state:answer.state,targets:answer.targets,completed:answer.completed,receiverIds:[...answer.receiverIds],applied:false};
+      }});
+      Object.defineProperty(operation,'stopStaticGesture',{value:()=>{closed=true;controller.abort();nativeObservationController?.abort();finishOpening();}});
       return operation;
     },
     async applyLive(request){
       const payload=livePayload(request),{receiverId}=payload;
+      const ticket=gradientLightTicket(false,()=>{});
+      try{
+      if(ticket)await ticket.enter();
       if(payload.kind==='SPI_PORTS'){if(spiPortScenesAvailable===null)await runtimeCapabilities();if(spiPortScenesAvailable!==true)throw fail('SPI_PORT_SCENES_UNSUPPORTED');}
       if(payload.scene?.standAnimation){if(standAnimationCapability()===null)await runtimeCapabilities();if(standAnimationCapability()!==true)throw fail('LIVE_CONTROL_STAND_UNAVAILABLE');}
       await writeQueue.catch(()=>{});
@@ -1558,9 +1906,14 @@
       const result=await call('applyLive',payload);
       if(result?.status!=='applied-in-firmware'||result.receiverId!==receiverId||!Number.isSafeInteger(result.generation)||result.generation<1)throw fail('LIVE_UNCONFIRMED');
       return {status:'applied-in-firmware',receiverId,generation:result.generation};
+      }finally{ticket?.finish();}
     },
-    applyLiveBatch({requests}={}){
-      let requestId=null,settled=false,payload,ids,preparing=false,sequence=0,replacementClosed=false,replacementInFlight=false,acceptedSequence=0;
+    applyStaticGradient({requests,gradient}={}){return services.applyLiveBatch({requests,staticGradient:gradient});},
+    applyMixedPower({requests,gradientSelections}={}){return services.applyLiveBatch({requests,gradientSelections});},
+    applyLiveBatch({requests,staticGradient,gradientSelections}={}){
+      let requestId=null,settled=false,payload,ids,preparing=false,nativeBreathe=false,nativeCatalogue=false,sequence=0,replacementClosed=false,replacementInFlight=false,acceptedSequence=0;
+      const nativeBreatheController=new AbortController();let nativeObservationController=null,retainedOrigin=null;
+      let lightTicket=null;
       let retirementSequence=0,retirementInFlight=false,retirementNoticeId=null,posted;
       const retirementLedger=new Set(),postedReady=new Promise(resolve=>{posted=resolve;});
       const ledger=new Map();
@@ -1618,18 +1971,89 @@
         });
       };
       const operation=(async()=>{
-        if(!Array.isArray(requests)||requests.length<1||requests.length>30||requests.some(request=>!request||typeof request!=='object'||Array.isArray(request)))throw fail('LIVE_INVALID');
+        if(!Array.isArray(requests)||requests.length<1||requests.length>64||requests.some(request=>!request||typeof request!=='object'||Array.isArray(request)))throw fail('LIVE_INVALID');
         payload=requests.map(livePayload);ids=new Set(payload.map(request=>request.receiverId));
-        if(payload.some(request=>request.kind==='SPI_PORTS')){if(spiPortScenesAvailable===null)await runtimeCapabilities();if(spiPortScenesAvailable!==true)throw fail('SPI_PORT_SCENES_UNSUPPORTED');}
-        if(payload.some(request=>request.scene?.standAnimation)){if(standAnimationCapability()===null)await runtimeCapabilities();if(standAnimationCapability()!==true)throw fail('LIVE_CONTROL_STAND_UNAVAILABLE');}
+        if(gradientSelections!==undefined){
+          if(staticGradient!==undefined||centralStamp!==null||!root.LightningStaticGradient||!Array.isArray(gradientSelections)||
+             !gradientSelections.length||gradientSelections.length>256)throw fail('GRADIENT_INVALID');
+          const keys=new Set();
+          gradientSelections=gradientSelections.map(row=>{
+            if(!layoutKeys(row,['receiverId','port','gradient'])||!Number.isInteger(row.port)||row.port<0||row.port>4)throw fail('GRADIENT_INVALID');
+            const request=payload.find(r=>r.receiverId===row.receiverId),children=request?.kind==='SPI_PORTS'?request.portScenes:[request];
+            if(!request||!children.some(child=>child?.kind==='SPI_SCENE'&&(child.port??0)===row.port))throw fail('GRADIENT_SCOPE');
+            const key=row.receiverId+':'+row.port;
+            if(keys.has(key)||keys.has(row.receiverId+':0')||row.port===0&&[...keys].some(k=>k.startsWith(row.receiverId+':')))throw fail('GRADIENT_SCOPE');
+            keys.add(key);
+            if(!layoutKeys(row.gradient,['stops','brightness','reverse','transitionMs']))throw fail('GRADIENT_INVALID');
+            return {receiverId:row.receiverId,port:row.port,gradient:root.LightningStaticGradient.definition(row.gradient.stops,row.gradient)};
+          });
+        }
+        if(staticGradient!==undefined){
+          if(centralStamp!==null||!root.LightningStaticGradient||Object.keys(staticGradient||{}).sort().join(',')!=='brightness,reverse,stops,transitionMs')throw fail('GRADIENT_INVALID');
+          staticGradient=root.LightningStaticGradient.definition(staticGradient.stops,staticGradient);
+          if(payload.some(r=>!['SPI_SCENE','SPI_PORTS'].includes(r.kind))){root.__c98log?.('GRADIENT_KIND '+payload.map(r=>r.kind).join(','));throw fail('GRADIENT_UNSUPPORTED');}
+        }
+        // Pure DATA must be closed before it may retire another local intent.
+        lightTicket=gradientLightTicket(staticGradient!==undefined||gradientSelections!==undefined,()=>nativeBreatheController.abort());
+        if(lightTicket)await lightTicket.enter();
+        if(staticGradient!==undefined||gradientSelections!==undefined){await runtimeCapabilities();if(staticGradientCatalogueAvailable!==true){root.__c98log?.('GRADIENT_CAPABILITY off');throw fail('GRADIENT_UNSUPPORTED');}}
+        if(staticPreparingAvailable===null)await runtimeCapabilities();
+        // Intent-only route hint. Native rechecks exact full-stand membership,
+        // original context/owner and the authenticated BREATHE route grammar.
+        // No version number, JS phase, port address or readiness bool is sent.
+        let wholeStandIDs=[];
+        try{wholeStandIDs=JSON.parse(viewModelKey).stands.find(s=>s.id===payload[0].standId)?.zones.flatMap(z=>z.receiverIds)||[];}catch(_){}
+        nativeBreathe=staticGradient===undefined&&gradientSelections===undefined&&integratedStatic8Available&&centralStamp===null&&wholeStandIDs.length===payload.length&&
+          new Set(wholeStandIDs).size===payload.length&&payload.every(r=>wholeStandIDs.includes(r.receiverId))&&payload.every(request=>{
+          const s=request.scene,m=s?.standAnimation;
+          return ['RGBW_SCENE','SPI_SCENE'].includes(request.kind)&&request.brightness>0&&
+            !request.outputPort&&s?.engine==='BREATHE'&&s.variant===0&&s.palette.length===1&&
+            !s.backgroundOn&&!s.motionReverse&&!s.bounce&&!s.mirror&&s.lineDelayMs===0&&
+            m?.effectId==='rgbw-breathe-0'&&m.kind==='whole'&&m.variant===0&&
+            (request.kind==='RGBW_SCENE'?s.v30===undefined:s.v30?.effect===21);
+        });
+        // Intent-only choice under the native three-flag test profile. No
+        // browser geometry/peer/clock/proof or version-based capability is sent.
+        // C98: ordinary colours use the fast lane; a gradient only exists on
+        // the native catalogue route, so it keeps that route when available.
+        const gradientIntent=staticGradient!==undefined||gradientSelections!==undefined;
+        nativeCatalogue=(integratedStatic8Available||gradientIntent&&staticGradientCatalogueAvailable)&&centralStamp===null&&!nativeBreathe&&payload.every(request=>
+          request.kind==='SPI_PORTS'?request.portScenes?.length>0&&request.portScenes.every(child=>child.kind==='SPI_SCENE'&&child.scene):
+          ['RGBW_SCENE','SPI_SCENE'].includes(request.kind)&&request.scene);
+        if((staticGradient!==undefined||gradientSelections!==undefined)&&!nativeCatalogue)throw fail('GRADIENT_UNSUPPORTED');
+        // Larger fleets enter only the native modern codecs. Never widen an
+        // old LIVE/central route or truncate a request to fit that old route.
+        if(payload.length>30&&!nativeBreathe&&!nativeCatalogue)throw fail('LIVE_INVALID');
+        if(!nativeCatalogue&&payload.some(request=>request.kind==='SPI_PORTS')){if(spiPortScenesAvailable===null)await runtimeCapabilities();if(spiPortScenesAvailable!==true)throw fail('SPI_PORT_SCENES_UNSUPPORTED');}
+        if(!nativeBreathe&&!nativeCatalogue&&payload.some(request=>request.scene?.standAnimation)){if(standAnimationCapability()===null)await runtimeCapabilities();if(standAnimationCapability()!==true)throw fail('LIVE_CONTROL_STAND_UNAVAILABLE');}
         if(ids.size!==payload.length||payload.some(request=>request.standId!==payload[0].standId))throw fail('LIVE_INVALID');
         if(staticPreparingAvailable===null)await runtimeCapabilities();
-        preparing=staticPreparingAvailable===true&&centralStamp===null&&payload.length>1&&
+        preparing=!nativeCatalogue&&staticPreparingAvailable===true&&centralStamp===null&&payload.length>1&&
           !mixedFixedBank(payload)&&payload.every(request=>staticShape(request)!==null);
         if(preparing)ledger.set(0,copy(payload));
         await writeQueue.catch(()=>{});
         if(!viewLoaded)throw fail('VIEW_NOT_LOADED');
         try{
+          if(nativeBreathe||nativeCatalogue){
+            if(stableStandPreparation?.pending&&stableStandPreparation.standId===payload[0].standId)throw fail('LIVE_STABLE_PREPARATION_PENDING');
+            const retainedStatus=nativeCatalogue?'catalogue-retained-deferred':'breathe-retained-deferred';
+            const answer=await call(staticGradient!==undefined?'applyStaticGradient':nativeCatalogue?'applyStableCatalogue':'applyStableBreathe',{requests:payload,...(staticGradient!==undefined?{gradient:staticGradient}:{}),...(gradientSelections!==undefined?{gradientSelections}:{})},nativeBreatheController.signal,undefined,id=>{requestId=id;posted();});
+            const dataKeys=['dataPreparationState','dataTargets','dataPrepared','dataUnavailable'];
+            const hasData=dataKeys.some(key=>Object.prototype.hasOwnProperty.call(answer||{},key));
+            const expectedKeys=['applied','ready','receiverIds','status',...(hasData?dataKeys:[])].sort().join(',');
+            if(hasData&&(!nativeCatalogue||!['PREPARED','PARTIAL'].includes(answer.dataPreparationState)||
+               !['dataTargets','dataPrepared','dataUnavailable'].every(key=>Number.isInteger(answer[key])&&answer[key]>=0&&answer[key]<=64)||
+               answer.dataTargets<1||answer.dataPrepared>answer.dataTargets||
+               (answer.dataPreparationState==='PREPARED'?(answer.dataPrepared!==answer.dataTargets||answer.dataUnavailable!==0):
+                 (answer.dataUnavailable<1||answer.dataPrepared+answer.dataUnavailable!==answer.dataTargets))))throw fail('LIVE_UNCONFIRMED');
+            if(answer?.status!==retainedStatus||answer.applied!==false||answer.ready!==false||
+               Object.keys(answer).sort().join(',')!==expectedKeys||
+               !Array.isArray(answer.receiverIds)||answer.receiverIds.length!==ids.size||
+               new Set(answer.receiverIds).size!==ids.size||answer.receiverIds.some(id=>!ids.has(id)))throw fail('LIVE_UNCONFIRMED');
+            if(gradientSelections!==undefined&&(!hasData||answer.dataPreparationState!=='PREPARED'||answer.dataTargets!==ids.size||answer.dataPrepared!==ids.size||answer.dataUnavailable!==0))throw fail('LIVE_UNCONFIRMED');
+            retainedOrigin=requestId;
+            return {status:retainedStatus,receiverIds:[...ids],applied:false,ready:false};
+          }
           const answer=await call('applyLiveBatch',{requests:payload,...(preparing?{preparingStatic:true}:{})},undefined,undefined,id=>{requestId=id;posted();});
           if(answer?.status==='early-animation-retired'){
             if(Object.keys(answer).sort().join(',')!=='receiverIds,requestId,sequence,status'||
@@ -1662,14 +2086,41 @@
           if(retirementNoticeId!==null){const id=retirementNoticeId;retirementNoticeId=null;receive({id,ok:false,code:'CANCELLED'});}
         }
       })();
+      operation.then(()=>lightTicket?.finish(),()=>lightTicket?.finish());
       operation.then(()=>posted(),()=>posted());
+      // Local cleanup only. This signal is used exclusively by the new moving
+      // native action; an ordinary legacy operation never consumes it.
+      Object.defineProperty(operation,'cancelNativeIntent',{value:()=>{nativeBreatheController.abort();nativeObservationController?.abort();}});
+      Object.defineProperty(operation,'cancelNativeObservation',{value:()=>nativeObservationController?.abort()});
+      Object.defineProperty(operation,'observeNativeCompletion',{value:async()=>{
+        if((!nativeBreathe&&!nativeCatalogue)||!settled||!retainedOrigin||nativeObservationController)throw fail('LIVE_UNCONFIRMED');
+        nativeObservationController=new AbortController();
+        const answer=await call('observeStableCue',{standId:payload[0].standId,originRequestId:retainedOrigin},nativeObservationController.signal);
+        if(answer?.status!=='stable-cue-native-result'||answer.applied!==false||
+           Object.keys(answer).sort().join(',')!=='applied,completed,receiverIds,state,status,targets'||
+           !['PENDING','OBSERVED','UNKNOWN','SUPERSEDED'].includes(answer.state)||
+           !Number.isInteger(answer.targets)||!(answer.targets===payload.length||(answer.state==='UNKNOWN'&&answer.targets===0&&answer.completed===0))||!Number.isInteger(answer.completed)||
+           answer.completed<0||answer.completed>answer.targets||(answer.state==='OBSERVED'&&answer.completed!==answer.targets)||
+           !Array.isArray(answer.receiverIds)||answer.receiverIds.length!==payload.length||new Set(answer.receiverIds).size!==payload.length||
+           answer.receiverIds.some(id=>!payload.some(r=>r.receiverId===id)))throw fail('LIVE_UNCONFIRMED');
+        return {status:'stable-cue-native-result',state:answer.state,targets:answer.targets,completed:answer.completed,receiverIds:[...answer.receiverIds],applied:false};
+      }});
       Object.defineProperty(operation,'retireEarlyAnimation',{value:replacement=>{
         if(settled||retirementInFlight||retirementSequence>=65535)return Promise.resolve({status:'unavailable'});
         let normalized;
         try{normalized=replacement.map(livePayload);}catch(_){return Promise.resolve({status:'unavailable'});}
         retirementInFlight=true;
         return postedReady.then(()=>{
-          if(settled||!requestId||!payload||preparing||centralStamp!==null||normalized.length!==payload.length||
+          if((nativeBreathe||nativeCatalogue)&&!settled&&requestId&&payload&&normalized.length===payload.length){
+            const expected=new Set(payload.map(r=>r.receiverId));
+            if(normalized.some(r=>r.standId!==payload[0].standId||!expected.delete(r.receiverId))||expected.size)return {status:'unavailable'};
+            // Negative-only retirement of the exact original native task.
+            // An already-issued cue is not undone or called unapplied. The
+            // new explicit intent stays queued until that original settles;
+            // the old pending Pulse is never replayed after a cold prepare.
+            nativeBreatheController.abort();return {status:'requested',sequence:++retirementSequence};
+          }
+          if(settled||!requestId||!payload||preparing||nativeBreathe||nativeCatalogue||centralStamp!==null||normalized.length!==payload.length||
              payload.some(r=>!scopedMoving(r)&&(!r.scene||r.brightness<=0||r.kind==='SPI_PORTS'||r.scene.engine==='STATIC'&&!r.scene.v30)))return {status:'unavailable'};
           const expected=new Set(payload.map(r=>r.receiverId));
           // livePayload already closed-validates each SPI child and port list.
@@ -1720,7 +2171,7 @@
       }});
       return operation;
     },
-    async finalize({configuration,securityReceiptRef,signal}){return call('finalize',{configuration,securityReceiptRef},signal);},
+    async finalize({configuration,securityReceiptRef,signal}){if(configuration?.role==='node'&&await authorityMode(configuration.standId,signal))return call('finalizeAuthorityCandidate',{configuration},signal);return call('finalize',{configuration,securityReceiptRef},signal);},
     async verifyFinalReceipt({receiptRef,purpose,expected}){return call('verifyFinalReceipt',{receiptRef,purpose,expected});},
     async otaPlan({standId,receiverId}){return call('otaPlan',{standId,receiverId});},
     async otaMainRecoveryPlan({standId,receiverId}){return call('otaMainRecoveryPlan',{standId,receiverId});},
@@ -1743,7 +2194,9 @@
     async identifyLayout(payload){
       if(!layoutKeys(payload,['session','standId','zoneId','lines','ttlMs'])||!layoutUUID(payload.session)||
           !layoutId(payload.standId)||!layoutId(payload.zoneId)||!Number.isInteger(payload.ttlMs)||payload.ttlMs<1||payload.ttlMs>30000||
-          !Array.isArray(payload.lines)||payload.lines.length<1||payload.lines.length>120)throw fail('IDENTIFY_INVALID');
+          !Array.isArray(payload.lines)||payload.lines.length<1||payload.lines.length>256)throw fail('IDENTIFY_INVALID');
+      if(payload.lines.length>120&&staticGestureAvailable===null)await runtimeCapabilities();
+      if(payload.lines.length>(integratedStatic8Available&&centralStamp===null?256:120))throw fail('IDENTIFY_INVALID');
       const ids=new Set();
       for(let i=0;i<payload.lines.length;i++){
         if(!Object.prototype.hasOwnProperty.call(payload.lines,i))throw fail('IDENTIFY_INVALID');
@@ -1772,8 +2225,10 @@
     },
     async stopLayoutIdentification(payload){
       if(!layoutKeys(payload,['session','standId','zoneId','lineIds'])||!layoutUUID(payload.session)||!layoutId(payload.standId)||!layoutId(payload.zoneId)||
-          !Array.isArray(payload.lineIds)||payload.lineIds.length<1||payload.lineIds.length>120||new Set(payload.lineIds).size!==payload.lineIds.length||
+          !Array.isArray(payload.lineIds)||payload.lineIds.length<1||payload.lineIds.length>256||new Set(payload.lineIds).size!==payload.lineIds.length||
           ![...payload.lineIds].every(layoutId))throw fail('IDENTIFY_INVALID');
+      if(payload.lineIds.length>120&&staticGestureAvailable===null)await runtimeCapabilities();
+      if(payload.lineIds.length>(integratedStatic8Available&&centralStamp===null?256:120))throw fail('IDENTIFY_INVALID');
       const session=layoutSessions.get(payload.session);
       if(session){
         if(session.standId!==payload.standId||session.zoneId!==payload.zoneId||session.ids!==[...payload.lineIds].sort().join('|'))throw fail('IDENTIFY_INVALID');
@@ -1829,7 +2284,7 @@
         // credentials cross into the page. Never fall back to factory Wi-Fi.
         const validID=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(value);
         if(!validID(standId)||!validID(mainReceiverId))throw fail('DISCOVERY_INVALID');
-        const response=await call('discoverMesh',{standId,mainReceiverId},signal);
+        const response=await authorityMode(standId,signal)?await serviceSet.AuthorityCandidate.discover({standId,signal}):await call('discoverMesh',{standId,mainReceiverId},signal);
         if(!Array.isArray(response.receivers)||response.receivers.length>64)throw fail('DISCOVERY_INVALID');
         const identities=new Set();
         const receivers=response.receivers.map(observation=>{
@@ -1858,6 +2313,7 @@
   }:{};
   const services=Object.freeze(serviceSet);
   async function runtimeCapabilities(){const value=await call('capabilities');selectionHaptics=value?.selectionHaptics===true;interfaceHaptics=value?.interfaceHaptics===true;simpleStandAvailable=value?.simpleStand===true;pixelPreviewV50=value?.pixelPreviewV50===true;spiZoneDirectionPreview=value?.spiZoneDirectionPreview===true;atomicPreviewExitAvailable=value?.atomicPreviewExit579===true;pixelEditorIsolationAvailable=value?.pixelEditorIsolation===true;setupZoneIsolationAvailable=value?.setupZoneIsolation===true;
+    pixelEndsHandoffAvailable=value?.pixelEndsHandoff===true;
     pixelReceiptDiagnostics692=value?.pixelReceiptDiagnostics692===true;
     spiPortScenesAvailable=value?.spiPortScenes===true;
     standSessionReceiverManagementAvailable=simpleStandAvailable&&value?.standSessionReceiverManagement===true;
@@ -1872,7 +2328,7 @@
     standShareSheetAvailable=simpleStandAvailable&&value?.simpleStandShareSheet===true;
     legacyStandAnimationsAvailable=simpleStandAvailable?value?.legacyStandAnimations===true:value?.standAnimations===true;
     standSessionAnimationsAvailable=value?.standSessionAnimations===true;
-    staticPreparingAvailable=value?.staticPreparingReplacement===true;staticGestureAvailable=value?.nativeStaticGesture===true;standSessionStaticGestureAvailable=value?.standSessionStaticGesture===true;return value;}
+    staticPreparingAvailable=value?.staticPreparingReplacement===true;staticGestureAvailable=value?.nativeStaticGesture===true;integratedStatic8Available=value?.integratedStatic8===true;staticGradientCatalogueAvailable=value?.staticGradientCatalogue===true;authorityJointAvailable=value?.authorityJointAdmission===true;standSessionStaticGestureAvailable=value?.standSessionStaticGesture===true;return value;}
   function standAnimationCapability(){
     if(centralStamp)return standSessionAnimationsAvailable;
     // Merely implementing the new connection service does not select it. But

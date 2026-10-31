@@ -15,17 +15,37 @@
  function decode(receiver,status){
   if(!status||Object.keys(status).sort().join(',')!=='fields,port,receiverId,rid,type'||status.receiverId!==receiver.id||status.rid!==receiver.rid||status.type!==receiver.type||!Number.isInteger(status.port)||status.port<1||status.port>4)fail();
   const f=status.fields;if(!f||typeof f!=='object'||Array.isArray(f))fail();
-  const isSPI=receiver.type==='SPI';
+  const isSPI=receiver.type==='SPI',gradient=isSPI&&f.FX==='17'&&f.V30ID==='0';
   const allowed=new Set((basic+' '+(isSPI?spi:'LINEDELAY SPACING')+' '+modern).split(' '));
-  for(const[key,value]of Object.entries(f))if(!allowed.has(key)||typeof value!=='string'||value.length>96)fail();
+  if(gradient)allowed.add('GRADIENTRECIPE');
+  for(const[key,value]of Object.entries(f))if(!allowed.has(key)||typeof value!=='string'||value.length>(gradient&&key==='GRADIENTRECIPE'?160:96))fail();
   const n=(key,min,max)=>{if(!/^(0|[1-9]\d*)$/.test(f[key]||''))fail();const value=Number(f[key]);if(!Number.isSafeInteger(value)||value<min||value>max)fail();return value;};
   const bool=key=>n(key,0,1)===1;
   const colour=key=>{if(typeof f[key]!=='string'||!/^(0|[1-9]\d*),(0|[1-9]\d*),(0|[1-9]\d*),(0|[1-9]\d*)$/.test(f[key]))fail();const channels=f[key].split(',').map(Number);if(channels.some(v=>v>255))fail();return channels;};
   if(f.STATUS!=='OK'||f.DETAIL!=='PLAYBACK_STATUS'||f.SCHEMA!=='1'||f.RID!==receiver.rid||f.DEVTYPE!==receiver.type||!/^([A-F0-9]{8})$/.test(f.INSTALLATION)||/^0+$/.test(f.INSTALLATION)||n('PORT',1,4)!==status.port||!['NONE','PENDING','SAVED','RESTORED','STORAGE_ERROR'].includes(f.PLAYBACKRESUME))fail();
   const mask=n('PORTMASK',1,isSPI?15:3);if(!(mask&(1<<(status.port-1))))fail();
-  n('GEN',0,4294967295);const id=n('V30ID',0,isSPI?43:20),variant=n('VAR',0,255),fx=n('FX',0,isSPI?16:6),catalog=P.catalog(receiver.type);
+  n('GEN',0,4294967295);const id=n('V30ID',0,isSPI?43:20),variant=n('VAR',0,255),fx=n('FX',0,gradient?17:isSPI?16:6),catalog=P.catalog(receiver.type);
+  if(gradient){
+   const G=typeof module==='object'&&module.exports?require('./static-gradient.js'):globalThis.LightningStaticGradient;
+   let decoded;try{decoded=G.decodeRecipe(f.GRADIENTRECIPE);}catch(_){fail();}
+   const expected=(basic+' '+spi+' GRADIENTRECIPE').split(' ').sort().join(',');
+   if(Object.keys(f).sort().join(',')!==expected||variant!==0||f.BRIGHT!=='100'||f.REVERSE!=='0'||f.COLORS!=='1'||f.BGON!=='0'||f.BGBRIGHT!=='0'||['FG1','FG2','FG3','FG4','BG'].some(key=>f[key]!=='0,0,0,0'))fail();
+   const output=receiver.outputs.find(o=>o.port===status.port&&o.enabled);
+   if(!output||n('PIXELS',1,1024)!==output.pixels||bool('PHYSREVERSE')!==output.reversed)fail();
+   n('GROUP',1,8192);n('OFFSET',0,8191);n('WIDTH',1,8192);n('OBJECTS',1,8);n('RANDOM',0,255);n('PHASEMS',0,999);
+   for(const key of ['SPEED','SMOOTH','SPACING','TRAIL','SPREAD','POWERLIMIT','WHITEMIX'])n(key,0,100);
+   for(const key of ['BOUNCE','MIRROR','PARALLEL'])bool(key);const lines=n('LINECOUNT',1,120);n('LINEINDEX',0,lines-1);
+   const state={...M.defaultState(),engine:'STATIC_GRADIENT',animation:'Statisch verloop',variant:0,v30Effect:null,previewFamily:null,category:null,legacySpi:false,
+    staticGradientRecipe:f.GRADIENTRECIPE,colors:decoded.stops.map(s=>s.color),whiteChannels:decoded.stops.map(s=>s.white),colorCount:decoded.stops.length,
+    rgbEnabled:decoded.stops.map(()=>true),whiteEnabled:decoded.stops.map(()=>true),bri:decoded.brightness,brightness:decoded.brightness,transitionMs:decoded.transitionMs,
+    r:0,g:0,b:0,w:0,direction:decoded.reverse?'left':'right',on:decoded.brightness>0,power:decoded.brightness>0};
+   return {state,mask,installation:f.INSTALLATION};
+  }
   let entry=null;
-  if(id)entry=id<=20?catalog.find(e=>e.state.v30Effect===V30[id-1]):id<=30?catalog.find(e=>e.state.previewFamily==='RGBW'&&e.state.variant===whole[id-21]):catalog.find(e=>R.wireId(e.state.v30Effect)===id);
+  // The internal factory connection chase is recoverable without exposing a
+  // new animation choice. Keep its actual recipe; unknown pairs still fail.
+  if(isSPI&&id===0&&fx===3&&variant===132)entry={state:{engine:'CHASE',variant:132,animation:'Verbindingslicht'}};
+  else if(id)entry=id<=20?catalog.find(e=>e.state.v30Effect===V30[id-1]):id<=30?catalog.find(e=>e.state.previewFamily==='RGBW'&&e.state.variant===whole[id-21]):catalog.find(e=>R.wireId(e.state.v30Effect)===id);
   else if(fx)entry=catalog.find(e=>!e.state.v30Effect&&e.state.previewFamily!=='RGBW'&&e.state.variant===variant&&(isSPI?e.state.engine===SPI[fx]:rgbwEffect(e.state.engine)===fx));
   if((id||fx)&&!entry)fail();
   const state={...M.defaultState(),...(entry?copy(entry.state):{engine:'STATIC',variant:0,animation:'Vaste kleur'}),v30Effect:entry?.state.v30Effect||null,previewFamily:entry?.state.previewFamily||null,category:entry?.category||null,legacySpi:entry?.state.legacySpi===true};

@@ -113,7 +113,7 @@
     const { color } = validate(entry), { r,g,b,w,bri } = color;
     const hex = '#' + [r,g,b].map(value=>value.toString(16).padStart(2,'0')).join('').toUpperCase();
     return { r,g,b,w,bri,brightness:bri,colors:[hex],whiteChannels:[w],colorCount:1,
-      rgbEnabled:[true],whiteEnabled:[true],engine:'STATIC',variant:0,animation:'Static Color',
+      rgbEnabled:[true],whiteEnabled:[true],engine:'STATIC',variant:0,backgroundOn:false,animation:'Static Color',
       category:null,v30Effect:null,previewFamily:null,legacySpi:false,bounce:false,mirror:false,on:true,power:true };
   }
   const storageError = (code,message,colors=[]) => ({colors:clone(colors),error:{code,message}});

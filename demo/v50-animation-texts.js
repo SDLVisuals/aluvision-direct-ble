@@ -96,7 +96,11 @@
     tunnel:[['spi-cascade-90','spi-cascade-91','spi-sequence-92','spi-wave-93','spi-chase-94','spi-mirror-95','spi-dual-96','spi-flow-97'],['Een bestaande beweging verdeeld over meerdere LED Lines.','An existing movement distributed across several LED lines.','Un mouvement existant réparti sur plusieurs lignes LED.','Eine bestehende Bewegung, verteilt auf mehrere LED-Linien.']],
     whole:[['spi-breathe-98','spi-breathe-99','spi-gradient-100','spi-flow-101','spi-sparkle-102'],['De volledige SPI LED Line neemt samen dezelfde kleur of fade aan.','The entire SPI LED line shows the same colour or fade together.','Toute la ligne LED SPI affiche la même couleur ou le même fondu.','Die gesamte SPI-LED-Linie zeigt gemeinsam dieselbe Farbe oder Überblendung.']]
   };
+  rows.v50AnimationSoftPulseName=['Pulse · blijft zacht branden','Pulse · keeps a soft glow','Pulsation · reste doucement allumée','Puls · bleibt sanft an'];
+  const softPulseDescription=['De helderheid pulseert, maar het licht dooft niet helemaal.','The brightness pulses, but the light never fades fully out.','La luminosité pulse, mais la lumière ne s’éteint jamais complètement.','Die Helligkeit pulsiert, aber das Licht erlischt nie ganz.'];
   const extra={
+    'rgbw-breathe-0':softPulseDescription,
+    'spi-breathe-98':softPulseDescription,
     'v30-rgb-jumping':['Jouw kleuren wisselen direct. Kies zelf maximaal zeven kleuren en pas hun volgorde aan.','Your colours switch directly. Choose up to seven colours and arrange their order.','Vos couleurs alternent directement. Choisissez jusqu’à sept couleurs et leur ordre.','Deine Farben wechseln direkt. Wähle bis zu sieben Farben und ihre Reihenfolge.'],
     'v30-seven-jumping':['Zeven vaste kleuren volgen elkaar zonder tussenkleuren op.','Seven solid colours follow one another without intermediate colours.','Sept couleurs unies se succèdent sans couleurs intermédiaires.','Sieben feste Farben folgen ohne Zwischenfarben aufeinander.'],
     'v30-rgb-gradient':['Jouw kleuren vloeien zacht in elkaar over. Voeg maximaal zeven kleuren toe en kies de volgorde.','Your colours blend gently. Add up to seven colours and choose their order.','Vos couleurs se fondent doucement. Ajoutez jusqu’à sept couleurs et choisissez leur ordre.','Deine Farben gehen sanft ineinander über. Füge bis zu sieben Farben hinzu und wähle ihre Reihenfolge.'],

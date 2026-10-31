@@ -129,8 +129,7 @@
 [data-pixel-scrub]>*{pointer-events:none}
 [data-pixel-scrub]:focus-visible,[data-pixel-scrub][data-scrubbing=true]{outline:2px solid var(--red,#bd4842);outline-offset:3px}
 [data-pixel-scrub][data-scrubbing=true] .pixel-count-preview-label b{color:#fff}
-/* Legacy cable presentation. The direction schematic below keeps the physical
-   connection fixed and changes only the logical travel arrow. */
+/* Shared LED-line profile; direction views use plain green/red end blocks. */
 .pixel-setup-visual.pixel-connection-preview{height:auto;min-height:122px;display:grid;gap:12px;padding:12px;flex-direction:column}
 .pixel-connection-preview .pixel-setup-reference{padding:0;color:#f0f3ed;font-size:11px;gap:5px}
 .pixel-connection-preview .pixel-setup-reference>span{min-width:49px}.pixel-connection-preview .pixel-setup-reference>span:last-child{justify-content:flex-end}
@@ -223,15 +222,19 @@
 .pixel-setup-review b{display:grid;place-items:center;background:var(--port-colour);color:var(--port-ink,#fff);width:34px;height:34px;border-radius:10px;flex:none}
 .pixel-setup-review [data-preserved=true]{border-style:dashed;opacity:.75}
 .pixel-direction-preview .pixel-cable-line{transform:none!important}
+.pixel-direction-preview[data-direction=reverse] .pixel-cable-line{flex-direction:row-reverse}
 .pixel-direction-preview .pixel-setup-track .pixel-setup-strip{flex-direction:row!important}
 .pixel-direction-preview .pixel-setup-reference>span{font-weight:750;overflow-wrap:anywhere}
 .pixel-direction-preview .pixel-cable-source{flex:0 0 54px;width:54px;transform:none!important}
 .pixel-direction-preview .pixel-cable-source svg{width:54px;transform:none!important}
+.pixel-direction-preview[data-direction=reverse] .pixel-cable-source svg{transform:scaleX(-1)!important}
 .pixel-direction-preview .pixel-direction-arrow{position:absolute;left:10px;right:10px;top:-1px;color:#26704e;font-size:29px;text-align:center;line-height:30px}
 .pixel-direction-preview .pixel-setup-strip .pixel-fixed-cable-marker{width:4px;height:18px;background:#e1e8dc;box-shadow:none}
 .pixel-direction-choice{display:block;font-size:25px;line-height:1.1;color:var(--muted,#666)}
 .pixel-setup-sides [aria-pressed=true] .pixel-direction-choice{color:var(--red,#bd4842)}
 .pixel-direction-preview .pixel-setup-strip .pixel-selected-start-marker{left:0;right:auto;transition:left .18s ease,right .18s ease}
+.pixel-direction-preview .pixel-selected-start-marker,.pixel-direction-preview .pixel-selected-end-marker{display:grid;place-items:center;color:#fff;font-size:12px;font-weight:750;font-style:normal}
+.pixel-direction-preview[data-preview-pixels="1"] .pixel-setup-strip .pixel-selected-start-marker{left:50%;right:auto;transform:translateX(-50%)}
 .pixel-direction-preview[data-direction=reverse] .pixel-setup-strip .pixel-selected-start-marker{left:auto;right:0}
 .pixel-green-start-label{display:flex;align-items:center;justify-content:center;gap:7px;color:#c7e6d0;font-size:12px}
 .pixel-green-start-label i{width:9px;height:9px;border-radius:50%;background:#30df7d;box-shadow:0 0 7px #30df7d80}

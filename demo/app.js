@@ -47,7 +47,7 @@
     return simpleStandMode&&!!(centralApplied||centralPending||standSession?.snapshot()||standSession?.canResume())&&window.LightningStandManagementCapabilities.blocked(action,standReceiverCapabilities);
   }
   let simpleStandMode=false,simpleStandSupported=false,standMigrationReady=false,standSession=null,centralApplied=null,centralPending=null;
-  let temporarySingleUser=false;
+  let temporarySingleUser=false,pinLoginC97=false; // C97: PIN login of another phone stays available in single-user mode
   const temporaryAccessActions=new Set(['pin-login','pin-login-submit','pin-login-cancel','pin-protection-toggle','pin-protection-refresh','pin-protection-reconnect','pin-protection-recheck','pin-protection-save','stand-connect','stand-open-options','stand-connect-submit','stand-wifi-open','stand-join-open','stand-share-open','stand-code-suggest','stand-code-change','stand-code-change-submit','stand-setup-start','stand-migrate-submit','stand-inspect-submit','stand-find-submit','stand-copy-factory-wifi','stand-show-loaded','stand-resume-submit','stand-refresh','stand-forget','stand-forget-confirm']);
   let centralPendingReadFence=null,standConnectionIntent='open',standManualEntry=false,firstFactorySetup=false;
   // Presentation intent only: a cold cache/empty phone cannot silently choose
@@ -71,20 +71,22 @@
   // query flags and native iPhone bundle keep their non-demo paths.
   const webDemoContext=!nativeContext&&window.LightningWebDemo?.available===true;
   const webDemo=webDemoContext?window.LightningWebDemo.create():null;
-  // Demo-only colour workspace. Separate DATA/presets never enter receiver
-  // state, apply(), a saved scene, the native bridge or STATIC wire commands.
+  // Gradient editing is local DATA. Only explicit Apply enters the closed
+  // authenticated catalogue action; never an ordinary STATIC fallback.
   const gradientEditors = new Map();
+  let gradientStorage=null;try{gradientStorage=window.localStorage;}catch(_){}
+  const gradientWorkspaceAllowed=id=>zone()?.id===id&&zone()?.type==='SPI'&&!standControlOpen;
   let unmountGradient = null;
   let gradientColourDraft = null;
   function gradientPickerCurrent(root=null) {
     const draft=gradientColourDraft,dialog=document.getElementById('effect-dialog');
-    return !!draft&&webDemoContext&&!nativeContext&&!standControlOpen&&draft.current()&&
+    return !!draft&&gradientWorkspaceAllowed(draft.zoneId)&&draft.current()&&
       draft.source.isConnected&&zone()?.id===draft.zoneId&&motionContextKey()===draft.context&&dialog.open&&
       draft.root?.isConnected&&draft.root===dialog.querySelector('[data-colour-picker="gradient"]')&&(!root||root===draft.root);
   }
   function openGradientColourPicker({source,color,white=0,brightness=100,on=true,current,commit}) {
     const dialog=document.getElementById('effect-dialog');
-    if(!webDemoContext||nativeContext||standControlOpen||zone()?.type!=='SPI'||!source?.isConnected||dialog.open||!current()||
+    if(standControlOpen||zone()?.type!=='SPI'||!source?.isConnected||dialog.open||!current()||
       !/^#[0-9a-f]{6}$/i.test(color)||!Number.isInteger(white)||white<0||white>255||!Number.isFinite(brightness)||brightness<0||brightness>100||typeof on!=='boolean')return false;
     gradientColourDraft={source,current,commit,zoneId:zone().id,context:motionContextKey(),
       values:[...rgbOf({colors:[color]}),white],brightness,on,memory:Object.fromEntries([...rgbOf({colors:[color]}),white].map((value,i)=>['rgbw'[i],value||255])),root:null};
@@ -107,29 +109,205 @@
   }
   function demoGradientEditor() {
     const z = zone();
-    if (!window.LightningStaticGradient?.supportsDemo({demoOnly:webDemoContext,native:nativeContext,family:z?.type}) || standControlOpen) return null;
+    if (!window.LightningStaticGradient || z?.type!=='SPI' || standControlOpen) return null;
     if (!gradientEditors.has(z.id)) gradientEditors.set(z.id, window.LightningStaticGradientUI.create({
-      storage:webDemo.storage,
-      allowed:()=>webDemoContext&&!nativeContext&&zone()?.id===z.id&&zone()?.type==='SPI'&&!standControlOpen,
+      storage:gradientStorage,scope:z.id,
+      initialRecipe:()=>selectedState().staticGradientRecipe,
+      allowed:()=>gradientWorkspaceAllowed(z.id),
       palette:()=>savedColours.colors.map(entry=>C.hex([entry.color.r,entry.color.g,entry.color.b])),
       chooseColor:openGradientColourPicker,
-      // The gradient has its own clearly labelled full-line sample. Do not
-      // leave the old uniform-light canvas beside it as conflicting feedback.
-      onMode:mode=>main.querySelector('.editor-grid')?.toggleAttribute('data-demo-gradient-active',mode==='gradient')
+      onApply:applyStaticGradientUI,
+      // The shared ledline preview shows the draft gradient; only the
+      // "chosen light" summary is hidden while editing it.
+      onMode:mode=>{main.querySelector('.editor-grid')?.toggleAttribute('data-demo-gradient-active',mode==='gradient');if(mode==='gradient')prewarmGradientC98();else cancelGradientPrewarmC98();}
     }));
     return gradientEditors.get(z.id);
   }
+  // The "Verloop" tab must open even when the render-time mount was skipped
+  // or its host was replaced (seen on the iPhone WebView, not in desktop
+  // browsers). Mount on first contact, before the host's own click listener
+  // runs; opening the editor itself never sends a receiver command.
+  // "Automatisch" theme: follow the system setting live, without re-rendering.
+  window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{if(uiPreferences.preferences.theme==='system')applyShownTheme();});
+  for(const name of ['pointerdown','click'])document.addEventListener(name,event=>{
+    const workspace=event.target?.closest?.('[data-gradient-workspace]');if(!workspace||!main.contains(workspace))return;
+    const editor=demoGradientEditor();if(!editor||editor.mountedOn(workspace))return;
+    unmountGradient?.();unmountGradient=editor.mount(workspace)||null;
+  },true);
+  // C98: warm the stable catalogue route when the Verloop tab opens, so the
+  // first gradient apply takes seconds instead of a cold ~12 s preparation.
+  let gradientPrewarmC98=null,gradientPrewarmAtC98=0;
+  function prewarmGradientC98(){
+    const standId=stand()?.id;
+    if(!nativeContext||!standId||typeof runtime?.services?.prewarmGradient!=='function'||gradientPrewarmC98||Date.now()-gradientPrewarmAtC98<5000||
+       managementBusy||document.hidden)return;
+    gradientPrewarmAtC98=Date.now();
+    gradientPrewarmC98=runtime.services.prewarmGradient({standId}).then(
+      answer=>{window.__c98log?.('GRADIENT_PREWARM '+(answer?.status||'-'));},
+      error=>{window.__c98log?.('GRADIENT_PREWARM fail '+(error?.code||''));gradientPrewarmAtC98=0;}).finally(()=>{gradientPrewarmC98=null;});
+  }
+  // A colour always wins over the warm-up: it holds the radio for seconds.
+  function cancelGradientPrewarmC98(){
+    if(!gradientPrewarmC98)return;
+    window.__c98log?.('GRADIENT_PREWARM cancel');
+    try{runtime.services.cancelStableStandPreparation?.({});}catch(_){}
+    gradientPrewarmC98=null;gradientPrewarmAtC98=0;
+  }
+  async function applyStaticGradientUI(gradient) {
+    if(!nativeContext||runtime?.native!==true||typeof runtime.services?.applyStaticGradient!=='function'){window.__c98log?.('GRADIENT_SERVICE missing');throw Object.assign(Error(),{code:'GRADIENT_UNSUPPORTED'});}
+    if(managementBusy||standPresentationOnly()||document.hidden||standControlOpen||zone()?.type!=='SPI')throw Object.assign(Error(),{code:'GRADIENT_CHANGED'});
+    const retiredPower=retireGradientPower(),editorSerial=gradientPowerSerial;
+    const editorModel=model,zoneId=zone().id,context=motionContextKey(),scope=selection(),ids=selectedReceiverIds(scope),time=performance.now()/1000;
+    if(editorSerial>=Number.MAX_SAFE_INTEGER)throw Object.assign(Error(),{code:'GRADIENT_CHANGED'});
+    if(!ids.length)throw Object.assign(Error(),{code:'GRADIENT_INVALID'});
+    const definition=window.LightningStaticGradient.definition(gradient.stops,gradient),
+      capsule=Array.from(window.LightningStaticGradient.recipe(definition.stops,definition),b=>b.toString(16).padStart(2,'0')).join('').toUpperCase();
+    const scene=()=>({engine:'STATIC',variant:0,palette:[[0,0,0,0]],background:[0,0,0,0],speed:50,smooth:0,backgroundBrightness:0,backgroundOn:false,motionReverse:false,widthPixels:1,spacing:0,objectCount:1,trailLength:0,spread:0,randomness:0,bounce:false,mirror:false,lineDelayMs:0});
+    const requests=ids.map(id=>{
+      const receiver=model.receivers.find(r=>r.id===id);if(receiver?.type!=='SPI')throw Object.assign(Error(),{code:'GRADIENT_UNSUPPORTED'});
+      const ports=['line','lines'].includes(scope.kind)?M.selectionLines(model,zoneId,scope).filter(l=>l.receiverId===id).map(l=>l.port).sort((a,b)=>a-b):undefined;
+      // Only the saved logical selection is needed here. A neutral typed
+      // placeholder must not decode/replay the previous effect (including17).
+      const value=liveRequest({...receiver,state:M.defaultState()},time,ports);if(!value)throw Object.assign(Error(),{code:'GRADIENT_INVALID'});
+      const intent=child=>({...child,brightness:definition.brightness,transitionMs:definition.transitionMs,channels:[],scene:scene()});
+      return value.kind==='SPI_PORTS'?{...value,portScenes:value.portScenes.map(intent)}:intent(value);
+    });
+    await retiredPower?.catch(()=>{});
+    await liveController?.whenIdle({standId:requests[0].standId});
+    if(gradientPowerSerial!==editorSerial||model!==editorModel||JSON.stringify(selection())!==JSON.stringify(scope))throw Object.assign(Error(),{code:'GRADIENT_CHANGED'});
+    if(!gradientWorkspaceAllowed(zoneId)||motionContextKey()!==context||document.hidden)throw Object.assign(Error(),{code:'GRADIENT_CHANGED'});
+    const inputModel=model,selectionKey=JSON.stringify(scope);
+    await gradientPrewarmC98?.catch(()=>{});
+    const operation=runtime.services.applyStaticGradient({requests,gradient:definition});
+    gradientSetupNotice=null;
+    let retained;
+    try{retained=await operation;}
+    catch(error){
+      // C98: a cold first apply warms the stand first; its intent then counts
+      // as expired. Send the same gradient once more, now on a warm route.
+      if(error?.code!=='LIVE_STABLE_PREPARED_NEW_INTENT_REQUIRED'||gradientPowerSerial!==editorSerial||model!==inputModel||document.hidden||
+         JSON.stringify(selection())!==selectionKey)throw error;
+      retained=await runtime.services.applyStaticGradient({requests,gradient:definition});
+    }
+    if(retained?.status!=='catalogue-retained-deferred'||retained.applied!==false||retained.ready!==false||
+       !Array.isArray(retained.receiverIds)||retained.receiverIds.length!==ids.length||new Set(retained.receiverIds).size!==ids.length||retained.receiverIds.some(id=>!ids.includes(id)))throw Object.assign(Error(),{code:'GRADIENT_UNCONFIRMED'});
+    if(gradientPowerSerial!==editorSerial||model!==inputModel||!gradientWorkspaceAllowed(zoneId)||motionContextKey()!==context||JSON.stringify(selection())!==selectionKey||document.hidden)throw Object.assign(Error(),{code:'GRADIENT_CHANGED'});
+    // Checkpoint only this exact retained intent, never physical APPLIED.
+    // No generic Web replay may later substitute the previous solid colour.
+    const desired=copy(model),stands=new Set(ids.map(id=>desired.receivers.find(r=>r.id===id).standId));
+    desired.receivers.filter(r=>stands.has(r.standId)&&r.zoneId!==null).forEach(r=>{delete r.state.standAnimation;});
+    model=M.applyState(desired,zoneId,scope,window.LightningStaticGradient.desiredState(capsule));
+    ids.forEach(id=>liveStates.set(id,{kind:'unconfirmed',code:'GRADIENT_RETAINED_UNCONFIRMED'}));
+    scheduleLightIntentSave();syncLiveStatus();
+    // Do not add a foreground READ/ack round after dispatch. The existing
+    // operation exposes optional read-only observation to its caller; this UI
+    // reports retained/unconfirmed and never delays another light command.
+    return retained;
+  }
+  // One latest-only DATA slot, not another radio executor or an ACK gate.
+  let gradientPowerSerial=0,gradientPowerPending=null,gradientPowerActive=null,gradientPowerDraining=false;
+  function retireGradientPower() {
+    const previous=gradientPowerActive?.operation;
+    if(gradientPowerSerial<Number.MAX_SAFE_INTEGER)gradientPowerSerial++;
+    gradientPowerPending=null;gradientPowerActive?.operation?.cancelNativeIntent?.();
+    return previous;
+  }
+  function gradientPowerCurrent(item) {
+    return item.serial===gradientPowerSerial&&item.model===model&&!document.hidden&&!managementBusy&&
+      !standPresentationOnly()&&standControlOpen===item.standScope&&motionContextKey()===item.context&&
+      JSON.stringify(route)===item.routeKey&&(item.cardZone||item.standScope||JSON.stringify(selection())===item.selectionKey);
+  }
+  function tryGradientPower(patch,scope,cardZone=null) {
+    if(!Object.keys(patch).length||Object.keys(patch).some(k=>!['on','power','bri','brightness'].includes(k)))return false;
+    const targets=cardZone?M.zoneReceivers(model,cardZone):standControlOpen?standControlReceivers():receivers();
+    if(!targets.some(r=>r.state.engine==='STATIC_GRADIENT'||Object.hasOwn(r.state,'staticGradientRecipe')||Object.values(r.state.portStates||{}).some(s=>s.engine==='STATIC_GRADIENT'||Object.hasOwn(s,'staticGradientRecipe'))))return false;
+    try {
+      if(!nativeContext||runtime?.native!==true||typeof runtime.services?.applyMixedPower!=='function'||document.hidden)throw Error('GRADIENT_SCOPE');
+      const selected=standControlOpen||cardZone?targets.flatMap(r=>M.ledlines([r])):M.selectionLines(model,zone().id,scope),units=[],seen=new Set();
+      for(const line of selected){
+        const receiver=model.receivers.find(r=>r.id===line.receiverId),z=M.getZone(model,receiver.zoneId),port=receiver.type==='SPI'&&z.layout!=='continuous'?line.port:0,key=receiver.id+':'+port;
+        if(seen.has(key))continue;seen.add(key);
+        const state=M.lightStateFor(receiver,port),gradient=state.engine==='STATIC_GRADIENT'||Object.hasOwn(state,'staticGradientRecipe');
+        if(gradient&&receiver.type!=='SPI')throw Error('GRADIENT_SCOPE');
+        const plan=gradient?window.LightningStaticGradient.powerDim(state,patch):{state:{...state,...patch}};
+        units.push({receiverId:receiver.id,zoneId:z.id,port,scope:port?{kind:'line',lineId:receiver.id+':'+port}:{kind:'receiver',receiverId:receiver.id},...plan,gradient});
+      }
+      if(!units.length||!units.some(u=>u.gradient))return false;
+      const ids=[...new Set(units.map(u=>u.receiverId))];
+      if(ids.length>64||units.length>256||gradientPowerSerial>=Number.MAX_SAFE_INTEGER)throw Error('GRADIENT_SCOPE');
+      // Continuous gradients require their exact whole known logical cohort;
+      // never infer Wide from a neutral recovered Scene or a subset of ports.
+      for(const zoneId of new Set(units.filter(u=>u.gradient&&!u.port).map(u=>u.zoneId))){
+        const z=M.getZone(model,zoneId);if(z.layout!=='continuous')continue;
+        const rows=units.filter(u=>u.zoneId===zoneId),members=M.zoneReceivers(model,zoneId);
+        if(rows.length!==members.length||rows.some(u=>!u.gradient)||new Set(rows.map(u=>u.state.staticGradientRecipe)).size!==1)throw Error('GRADIENT_SCOPE');
+      }
+      let desired=model;
+      for(const unit of units)desired=M.applyState(desired,unit.zoneId,unit.scope,unit.state);
+      const previous=gradientPowerSerial;
+      retireGradientPower();if(gradientPowerSerial===previous)gradientPowerSerial++;
+      model=desired;gradientSetupNotice=null;
+      const item={serial:gradientPowerSerial,model,units,ids,cardZone,standScope:standControlOpen,routeKey:JSON.stringify(route),selectionKey:cardZone||standControlOpen?null:JSON.stringify(selection()),context:motionContextKey()};
+      gradientPowerPending=item;ids.forEach(id=>liveStates.set(id,{kind:'unconfirmed',code:'GRADIENT_POWER_UNCONFIRMED'}));
+      scheduleLightIntentSave();syncLiveStatus();void drainGradientPower();return true;
+    }catch(_){
+      retireGradientPower();toast(t('Deze lichtkeuze kan zo niet veilig worden hervat. Pas ontbrekende verlopen opnieuw toe.'));return true;
+    }
+  }
+  async function drainGradientPower() {
+    if(gradientPowerDraining)return;gradientPowerDraining=true;
+    try {
+      while(gradientPowerPending){
+        const item=gradientPowerPending;gradientPowerPending=null;gradientPowerActive=item;
+        try {
+          await liveController?.whenIdle({standId:item.model.receivers.find(r=>r.id===item.ids[0]).standId});
+          if(!gradientPowerCurrent(item))continue;
+          let carrier=model;
+          const gradientSelections=item.units.filter(u=>u.gradient).map(u=>({receiverId:u.receiverId,port:u.port,gradient:u.definition}));
+          for(const u of item.units.filter(u=>u.gradient))carrier=M.applyState(carrier,u.zoneId,u.scope,{...M.defaultState(),engine:'STATIC',colors:['#000000'],whiteChannels:[0],rgbEnabled:[true],whiteEnabled:[true],colorCount:1,bri:u.definition.brightness,brightness:u.definition.brightness,on:true,power:true,transitionMs:u.definition.transitionMs,direction:'right'});
+          const requests=item.ids.map(id=>{
+            const receiver=carrier.receivers.find(r=>r.id===id),z=M.getZone(carrier,receiver.zoneId),ports=receiver.type==='SPI'&&z.layout!=='continuous'?item.units.filter(u=>u.receiverId===id).map(u=>u.port).sort((a,b)=>a-b):undefined;
+            const value=window.LightningLiveControl.requestFor(receiver,{zone:z,receivers:M.zoneReceivers(carrier,z.id),time:performance.now()/1000,...(ports?{outputPorts:ports}:{})});
+            if(!value)throw Error('GRADIENT_SCOPE');return value;
+          });
+          if(!gradientPowerCurrent(item))continue;
+          item.operation=runtime.services.applyMixedPower({requests,gradientSelections});
+          const result=await item.operation;
+          if(!gradientPowerCurrent(item))continue;
+          if(result?.status!=='catalogue-retained-deferred'||result.applied!==false||result.ready!==false||!Array.isArray(result.receiverIds)||result.receiverIds.length!==item.ids.length||new Set(result.receiverIds).size!==item.ids.length||result.receiverIds.some(id=>!item.ids.includes(id)))throw Error('GRADIENT_UNCONFIRMED');
+          item.ids.forEach(id=>liveStates.set(id,{kind:'unconfirmed',code:'GRADIENT_RETAINED_UNCONFIRMED'}));syncLiveStatus();
+        }catch(_){if(gradientPowerCurrent(item)){item.ids.forEach(id=>liveStates.set(id,{kind:'unconfirmed',code:'GRADIENT_REAPPLY_REQUIRED'}));syncLiveStatus();}}
+        finally{if(gradientPowerActive===item)gradientPowerActive=null;}
+      }
+    }finally{gradientPowerDraining=false;}
+  }
+  let gradientSetupNotice=null;
+  window.addEventListener('lightning:gradient-restore',event=>{
+    const value=event.detail;
+    if(!value||Object.keys(value).sort().join(',')!=='receiverIds,status'||!['requires-apply','retained-unconfirmed'].includes(value.status)||
+       !Array.isArray(value.receiverIds)||value.receiverIds.length<1||value.receiverIds.length>64||
+       new Set(value.receiverIds).size!==value.receiverIds.length||!value.receiverIds.every(id=>typeof id==='string'&&
+         model.receivers.some(receiver=>receiver.id===id&&receiver.type==='SPI')))return;
+    gradientSetupNotice={status:value.status,receiverIds:[...value.receiverIds]};
+    for(const id of value.receiverIds)liveStates.set(id,{kind:'unconfirmed',code:value.status==='requires-apply'?'GRADIENT_REAPPLY_REQUIRED':'GRADIENT_REAPPLY_UNCONFIRMED'});
+    syncLiveStatus();
+    const notice=document.querySelector('[data-gradient-setup-notice]');
+    if(notice&&value.receiverIds.some(id=>receivers().some(receiver=>receiver.id===id))){
+      notice.hidden=false;notice.textContent=t(value.status==='requires-apply'?'Instelling opgeslagen. Het verloop is niet hersteld; pas het opnieuw toe.':'Instelling opgeslagen. Het verloop is opnieuw ingediend, nog niet bevestigd.');
+    }
+  });
   function staticColourWorkspace({power=false}={}) {
     const solid = colourPickerMarkup(null,false,{power});
-    return demoGradientEditor()?.markup(solid) || solid;
+    const relevant=gradientSetupNotice?.receiverIds.some(id=>receivers().some(receiver=>receiver.id===id));
+    const notice=`<p data-gradient-setup-notice class="muted" role="status" ${relevant?'':'hidden'}>${relevant?esc(gradientSetupNotice.status==='requires-apply'?t('Instelling opgeslagen. Het verloop is niet hersteld; pas het opnieuw toe.'):t('Instelling opgeslagen. Het verloop is opnieuw ingediend, nog niet bevestigd.')):''}</p>`;
+    return notice+(demoGradientEditor()?.markup(solid) || solid);
   }
-  if(webDemoContext)temporarySingleUser=true;
   const localPreviewContext=!nativeContext&&['localhost','127.0.0.1','[::1]','::1'].includes(window.location.hostname)&&!webDemoContext;
   const previewContext=localPreviewContext||webDemoContext;
   let model = localPreviewContext ? window.LightningFixtures.create() : M.assertValid({schemaVersion:30,demo:webDemoContext,stands:[],receivers:[],scenes:[],presets:[]});
-  let nativeLoaded=!nativeContext,nativeLoadError=false,nativeLoading=false;
+  let nativeLoaded=!nativeContext,nativeLoadError=false,nativeLoading=false,appEraseRecovery760=false;
   let route = {screen:'stand', zoneId:'zone-rgbw', family:null, library:'catalogue'};
-  if(!nativeContext&&!previewContext)route={...route,screen:'receiver-add',setupFrom:'stand'};
+  if(!nativeContext&&(!previewContext||webDemoContext))route={...route,screen:'receiver-add',setupFrom:'stand'};
   const selections = new Map();
   let spiPortScenesAvailable=!nativeContext;
   const expandedScopeZones = new Set();
@@ -173,12 +351,18 @@
   const pairFirstSetup=PairFirst?.create({storage:appStorage});
   let pairFirstActiveReceiverId=null,pairFirstOpening=null,pairFirstAwaitingAssignmentId=null;
   function pairFirstText(key){return PairFirst?.text(key,uiPreferences.preferences.language)||'';}
+  function pairFirstPendingRows(){
+    if(!pairFirstSetup)return [];
+    // A stale UI bookmark cannot grant authority or hide a genuinely added
+    // receiver. Removal always receives the current native model identity.
+    return pairFirstSetup.entries().filter(row=>row.standId===stand()?.id).map(row=>({row,receiver:model.receivers.find(receiver=>receiver.id===row.receiverId&&receiver.rid===row.rid&&receiver.deviceFingerprint===row.fingerprint&&receiver.standId===row.standId&&receiver.type==='SPI'&&receiver.lifecycle==='added')})).filter(item=>item.receiver);
+  }
   function pairFirstResumeMarkup(){
     if(!pairFirstSetup||firstAccessCheckpoint)return '';
-    const rows=pairFirstSetup.entries().filter(row=>row.standId===stand()?.id&&PairFirst.receiverFor(model,row));
+    const rows=pairFirstPendingRows();
     if(!rows.length)return '';
-    return `<section class="card" data-pair-first-resume><h2>${esc(pairFirstText('title'))}</h2><p>${esc(pairFirstText('hint'))}</p>${rows.map(row=>{
-      const receiver=model.receivers.find(item=>item.id===row.receiverId);return `<button type="button" class="button secondary full" data-action="pair-first-resume" data-id="${esc(row.receiverId)}">${esc(receiver.name||'SPI')} · ${esc(pairFirstText('resume'))}</button>`;
+    return `<section class="card" data-pair-first-resume><h2>${esc(pairFirstText('title'))}</h2><p>${esc(pairFirstText('laterHint'))}</p>${rows.map(({row,receiver})=>{
+      const resumable=!!PairFirst.receiverFor(model,row);return `<div class="pair-first-pending"><b>${esc(receiver.name||'SPI')}</b><div class="pair-first-pending-actions"><button type="button" class="button secondary" data-action="${resumable?'pair-first-resume':'receiver-pixel-setup'}" data-id="${esc(receiver.id)}">${esc(pairFirstText(resumable?'resume':'check'))}</button><button type="button" class="text-button" data-action="receiver-remove" data-id="${esc(receiver.id)}">${esc(pairFirstText(receiver.role==='main'?'removeNetwork':'remove'))}</button></div></div>`;
     }).join('')}</section>`;
   }
   const FIRST_ACCESS_KEY='aluvision.first-wifi-pin.v1';
@@ -359,7 +543,9 @@
     savedPresets=presetStore.load();savedColours=colourStore.load();savedScenes=sceneStore.load();
   }});
   if(installationLibraries)window.LightningInstallationLibraries=installationLibraries;
+  let sharedSync97=null; // assigned once the shared installation sync exists
   function scheduleLibraryContext(field,result){
+    if(!result?.error)sharedSync97?.changed();
     if(simpleStandMode){
       if(result?.error)return;
       const promise=queueCentralLibraryChange();
@@ -433,6 +619,7 @@
   // Only unsent public order choices are coalesced. The original CAS/radio
   // pipeline remains single-flight and retains all native admission guards.
   let orderSaveQueue588=null,orderSaveEpoch588=0;
+  let orderDeferredPlayback789=null;
   // Presentation-only: no native lease, receipt or wire capability is stored.
   let orderClose589=null;
   let orderResumeClose639=null;
@@ -440,6 +627,9 @@
   const openLineSetup=new Set(),openLineSettings=new Set();
   const openSpatialChoices=new Set(),spatialViews=new Map();
   let standControlOpen=false;
+  let stableStandPreparationUI=null;
+  let stableZonePreparationUI=null;
+  let pendingStableStaticPreset=null;
   let standControlEpoch=0,lastStandControlContext=null;
   function standControlIntent(){return {epoch:++standControlEpoch,standId:stand()?.id};}
   function currentStandControlIntent(intent){return standControlOpen&&standControlMode==='animations'&&intent.epoch===standControlEpoch&&intent.standId===stand()?.id;}
@@ -465,6 +655,9 @@
   let pinProtectionDeferredStandId=null;
   let pinProtectionGeneration=0,pinProtectionPendingCheckStandId=null,pinProtectionRefreshNeeded=null,pinProtectionWrite=null;
   let pinLoginAvailable=false,pinLoginChecking=false,pinLoginBusy=false,pinLoginError='',pinRecoveryAbort=null;
+  // C98: the native host can open an existing stand through its Wi-Fi (no PIN).
+  let wifiLoginC98=false;
+  const wifiOpenC98={running:false,abort:null,timer:0,status:'',fallback:false,paused:false};
   const liveStates=new Map();
   const staticRouteLabels=Object.freeze({queue:Object.freeze({QUEUE_NO_PROVIDER:'geen streamprovider',QUEUE_INELIGIBLE:'gewone bedieningsroute',QUEUE_ELIGIBLE:'kleurprofiel geschikt'}),
     facade:Object.freeze({STATIC_PROFILE:'verzoekprofiel niet geschikt',LEGACY_CAP_OFF:'legacy-capability uit',LEGACY_CONTEXT_SELECTED:'centrale verbinding geselecteerd',
@@ -476,7 +669,7 @@
     if(!staticRouteBenchEnabled()||!value||Object.getPrototypeOf(value)!==Object.prototype||Object.keys(value).sort().join(',')!=='count,reason,stage')return;
     const {stage,reason,count}=value;
     if(typeof stage!=='string'||typeof reason!=='string'||!Object.hasOwn(staticRouteLabels,stage)||!Object.hasOwn(staticRouteLabels[stage],reason)||
-       !Number.isInteger(count)||count<1||count>30)return;
+       !Number.isInteger(count)||count<1||count>64)return;
     staticRouteDiagnostic={stage,reason,count};syncStaticRouteStatus();
   }catch(_){/* A failed bench observer must not affect lighting. */}}
   function syncStaticRouteStatus(){try{
@@ -487,12 +680,15 @@
   const liveController=nativeContext&&runtime?.native===true&&typeof runtime.services?.applyLive==='function'
     ?window.LightningLiveControl?.create({send:request=>runtime.services.applyLive(request),
       sendBatch:typeof runtime.services.applyLiveBatch==='function'?requests=>runtime.services.applyLiveBatch({requests}):undefined,
+      maxBatchSize:()=>runtime.services.liveBatchLimit===64?64:30,
+      compiledModern:()=>runtime.services.integratedStatic8Available===true,
       sendGesture:typeof runtime.services.applyStaticGesture==='function'?(requests,options)=>runtime.services.applyStaticGesture({requests,...options}):undefined,
-      waitBeforeSend:typeof runtime.services.whenLiveReady==='function'?async()=>{await runtime.services.whenLiveReady();if(standPresentationOnly())throw Object.assign(Error(),{code:'STAND_CONNECTION_BUSY'});if(standSession?.snapshot()||standSession?.canResume())await standSession.prepareLive();}:undefined,
+      waitBeforeSend:typeof runtime.services.whenLiveReady==='function'?async()=>{cancelGradientPrewarmC98();await runtime.services.whenLiveReady();if(standPresentationOnly())throw Object.assign(Error(),{code:'STAND_CONNECTION_BUSY'});if(standSession?.snapshot()||standSession?.canResume())await standSession.prepareLive();}:undefined,
       onRoute:observeStaticRoute,
       onState:(id,state)=>{liveStates.set(id,state);syncLiveStatus();syncArrangementControls();
+        if(state.kind==='failed'&&state.code==='LIVE_STABLE_PREPARED_NEW_INTENT_REQUIRED')reprepareStableControlData();
         if(state.kind==='applied')confirmMainFirmwareAck675(id);
-        else if(['failed','preview','idle'].includes(state.kind))mainAckContexts675.delete(id);
+        else if(['failed','unconfirmed','preview','idle'].includes(state.kind))mainAckContexts675.delete(id);
         if(state.kind==='applied'&&centralLiveCheckpoint?.state().status==='unconfirmed'&&centralLiveCheckpoint.state().pending)void centralLiveCheckpoint.flush().catch(()=>{});}}):null;
   let colourOrderMode=false,colourLibraryNotice='',removedColour=null;
   let presetEdit667=null,presetLibraryBusy667=false,presetLibraryEpoch667=0;
@@ -1133,6 +1329,10 @@
   const receiverUpdates=window.LightningReceiverUpdateUI.create({services:runtime?.native===true?runtime.services||{}:{},translate:(key,params)=>t(key,params)});
   const receiverRemoval=window.LightningReceiverRemovalUI.create({services:runtime?.native===true?runtime.services||{}:{},translate:(key,params)=>t(key,params),getModel:()=>model,standCodeAccess:()=>simpleStandMode&&!!centralApplied,usesDedicatedFirstPin:receiver=>matchesFirstPinReady686(firstPinReady686.get(receiver.standId),model),
     onRemoved:async(nextModel,{status,central,centralClosed}={})=>{
+      if(status==='removed'){
+        const retained=new Set(nextModel.receivers.map(receiver=>receiver.id));
+        for(const receiver of model.receivers)if(!retained.has(receiver.id)){try{pairFirstSetup?.remove(receiver.id);}catch(_){/* A stale UI bookmark never reverses a confirmed removal. */}}
+      }
       if(simpleStandMode&&(central||centralClosed)){
         if(central)await ensureStandSession().acceptMembership(central);
         else{await standSession?.disconnect();centralApplied=null;centralPending=null;centralLiveCheckpoint?.reset();}
@@ -1144,6 +1344,23 @@
       if(status==='removed'&&removedIds.length)applyJoinedZonePlayback(next,[],{confirmedRemovedIds:removedIds});
       else model=M.assertValid(next);
       selections.clear();visualPorts.clear();visualPlugMotions.clear();identifying.clear();navigate('receivers');}});
+  const appErase=window.LightningAppErase.create({
+    services:nativeContext?runtime?.services||{}:webDemoContext?webDemo.eraseServices(()=>model):{},
+    language:()=>uiPreferences.preferences.language,demo:webDemoContext,
+    onRecovery:pending=>{appEraseRecovery760=pending===true;if(appEraseRecovery760)standPresentationId=null;render({preserveScroll:true});},
+    onErased:async receipt=>{
+      if(!['erased-local-only','completed-local-erased'].includes(receipt?.status))throw Error('ERASE_UNCONFIRMED');
+      // No fallback to clearing local storage on an unavailable bridge,
+      // cancelled PIN, failed request or partially confirmed receiver reset.
+      if(webDemoContext)webDemo.storage.clear();
+      else if(nativeContext){try{window.localStorage.clear();window.sessionStorage.clear();}catch(_){/* Native owns the terminal WebKit wipe too. */}window.location.reload();return;}
+      else throw Error('NATIVE_UNAVAILABLE');
+      onboarding.reset();model=M.assertValid({schemaVersion:30,demo:true,stands:[],receivers:[],scenes:[],presets:[]});
+      savedPresets=presetStore.load();savedColours=colourStore.load();savedScenes=sceneStore.load();uiPreferences=preferenceStore.load();interfaceModeState=interfaceModeStore.load();
+      selections.clear();brandEditor=null;presetEdit667=null;removedColour=null;colourLibraryNotice='';presetLibraryEpoch667++;presetLibraryBusy667=false;visualPorts.clear();visualPlugMotions.clear();identifying.clear();expandedReceivers.clear();expandedConnections.clear();
+      sceneDraft=null;receiverFilter='all';route={screen:'receiver-add',setupFrom:'stand',zoneId:null,family:null,library:'all'};render({top:true});
+    }
+  });
   function spiZoneDirectionSignature({standId,zoneId}){
     const current=model.stands.find(item=>item.id===standId)?.zones.find(item=>item.id===zoneId);
     if(!current)throw Error('SPI_DIRECTION_ZONE_CHANGED');
@@ -1600,7 +1817,7 @@
     wall:'M5 4v16M12 4v16M19 4v16',
     unassigned:'M12 22s7-4.35 7-12a7 7 0 1 0-14 0c0 7.65 7 12 7 12ZM9 10h6',
     light:'M3 9h18v6H3zM6 11v2M10 11v2M14 11v2M18 11v2M1 12h2M21 12h2',
-    receiver:'M5 5h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2ZM7 9h6M17 9h.01M6 18v3M10 18v3M14 18v3M18 18v3',
+    receiver:'M5 9h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2ZM17 9V5.5M14.3 4.1a3.6 3.6 0 0 1 5.4 0M7 13h.01M10 13h4M7 17v3M10.3 17v3M13.7 17v3M17 17v3',
     back:'m14 6-6 6 6 6M8 12h13', chevron:'m9 5 7 7-7 7', close:'m6 6 12 12M6 18 18 6',
     expand:'M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5',
     edit:'m16 3 5 5-12 12-6 1 1-6ZM14 5l5 5',
@@ -1619,6 +1836,7 @@
     duplicate:'M9 3h12v12H9zM3 8v13h13M12 9h6M15 6v6',
     check:'m5 12 4 4L19 6', sun:'M12 2v2M12 20v2M2 12h2M20 12h2M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
     moon:'M20.2 15.4A8.7 8.7 0 0 1 8.6 3.8a8.8 8.8 0 1 0 11.6 11.6Z',
+    autoTheme:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 3v18M12 8l4.5-3M12 13l7-5M12 18l7.5-5.5',
     clock:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 7v5l3 2',
     layers:'M12 3 2 8l10 5 10-5-10-5ZM2 12l10 5 10-5M2 16l10 5 10-5',
     tap:'M10 12V5a2 2 0 0 1 4 0v6l2-1 4 2v5l-4 5h-6l-6-7a2 2 0 0 1 3-2l3 3M6 3 4 1M3 8H1M18 3l2-2',
@@ -2107,7 +2325,9 @@
     const context=controlContext('controls'),lineTools=colour||activeAnimationEditor?ledlineSetupMarkup():'';
     // Colour/animation controls come first; occasional view/order tools stay
     // available at the end. Keep their existing rendering and lifecycle order.
-    return `<div class="editor-grid${colour?' editor-grid-colour':' animation-simple-page'}">${context}<section class="editor-controls editor-controls-zone"><section class="control-workspace"><div class="control-mode-panel" role="region" aria-label="${esc(t(colour?'staticColour':'animations'))}" data-control-mode="${controlMode}">${modeContent}</div></section>${lineTools}</section></div>`;
+    const preparation=stableZonePreparationUI&&currentStableZonePreparation(stableZonePreparationUI)?stableZonePreparationUI:null;
+    const notice=`<p class="live-confirmation" data-stable-zone-preparation role="status" aria-live="polite" ${preparation?.pending||preparation?.error?'':'hidden'}>${preparation?.pending||preparation?.error?esc(t(preparation.pending?'stableStandPreparing':'stableStandPreparationFailed')):''}</p><button class="text-button" data-stable-preparation-retry data-action="stable-preparation-retry" ${preparation?.error&&!preparation.pending?'':'hidden'}>${esc(t("Opnieuw proberen"))}</button>`;
+    return `<div class="editor-grid${colour?' editor-grid-colour':' animation-simple-page'}">${context}<section class="editor-controls editor-controls-zone">${notice}<section class="control-workspace" ${stablePreparationBlocked(preparation)?'inert aria-busy="true"':''}><div class="control-mode-panel" role="region" aria-label="${esc(t(colour?'staticColour':'animations'))}" data-control-mode="${controlMode}">${modeContent}</div></section>${lineTools}</section></div>`;
   }
 
   function controlAnimationPanel(){
@@ -2130,6 +2350,8 @@
       return `<section class="my-colours"><div class="colour-presets-heading667"><h3>${esc(presetText667('title'))}</h3><p class="colour-library-hint">${esc(t('Kies een bewaarde kleur voor dit kleurpunt.'))}</p></div><div class="saved-colour-grid">${entries.map(entry=>`<button type="button" class="saved-colour" data-action="swatch" data-id="${esc(entry.id)}" style="--swatch:${C.screenHex([entry.color.r,entry.color.g,entry.color.b],entry.color.w)}" aria-label="${esc(presetText667('apply',{name:entry.name}))}"><i aria-hidden="true"></i><span>${esc(entry.name)}</span></button>`).join('')}</div>${entries.length?'':`<p class="colour-presets-empty667">${esc(t('Er zijn nog geen bewaarde kleuren.'))}</p>`}</section>`;
     }
     const builtinIds=new Set(presetBrandEntries667().map(entry=>entry.id));
+    // A late or failed script load must not take the whole colour page down.
+    if(typeof window.LightningColourPresetsUI?.markup!=='function')return '';
     return window.LightningColourPresetsUI.markup({
       entries:savedColours.colors.map(entry=>({...entry,isBrandPresetUI:entry.group==='brand'||builtinIds.has(entry.id)})),
       language:uiPreferences.preferences.language,draft:presetEdit667?.standId===stand()?.id?presetEdit667:null,
@@ -2697,7 +2919,8 @@
     job.phase='saving';
     let saved=false;
     try{saved=await chooseSpatialLayout(job.view,'stacked',{strictPlayback:true,
-      currentStart:()=>currentSpatialAnimationStart620(job,'continuous')});}catch(_){}
+      currentStart:()=>currentSpatialAnimationStart620(job,'continuous'),
+      ...(job.repair?{}:{freshAnimationStart:job})});}catch(_){}
     // Leaving this context or changing its physical input retires the start.
     // A late save must never resurrect an old route or close another dialog.
     if(spatialAnimationStart620!==job)return false;
@@ -3083,7 +3306,13 @@
   }
   function retireOrderSave588(retainedClose639=null){
     if(orderResumeClose639&&orderResumeClose639!==retainedClose639){orderResumeClose639.cancelled=true;orderResumeClose639=null;}
+    orderDeferredPlayback789=null;
     orderSaveEpoch588++;orderClose589=null;if(orderSaveQueue588)orderSaveQueue588.invalid=true;
+  }
+  function currentDeferredOrderPlayback789(value){
+    return !!value&&nativeContext&&runtime.services?.deferOrderPlaybackUntilClose===true&&!document.hidden&&
+      value.standId===stand()?.id&&value.zoneId===route.zoneId&&value.epoch===orderSaveEpoch588&&
+      value.signature===arrangementSignature()&&value.geometry===orderGeometry588()&&value.model===JSON.stringify(model);
   }
   function rebaseOrderSave588(job){
     if(!sameOrderDraft588(job))return false;
@@ -3195,6 +3424,7 @@
     const epoch=orderSaveEpoch588,notice={standId:close.standId,zoneId:close.zoneId,code:cancelled?'orderResumeUnconfirmed':'orderRecognitionClosing'};
     if(deferredResume639){deferredResume639.epoch=epoch;arrangementApplying=true;}
     orderCancelNotice590=notice;
+    prepareStableZoneAfterLayout(close.standId,close.zoneId);
     // Restore the normal page and its inert/focus ledger BEFORE waiting for
     // the exact-token STOP. A slow/lost reply must never trap this full screen.
     renderArrangement(browsing,{orderExit595:true});revealLineSetup();
@@ -3261,11 +3491,35 @@
     const close={epoch:orderSaveEpoch588,zoneId,standId:stand().id,draft,geometry:orderGeometry588(),session:orderIdentificationState?.active?orderIdentificationState.session:null,priorConfirmedCleanup,flight:null};
     orderClose589=close;syncArrangementControls();
     const deferredResume639=captureOrderResumeClose639(job,close);
+    const modernReturn=!discard&&!job&&!arrangementApplying&&!managementBusy&&!arrangementPlaybackPending()&&
+      !orderTestBusy()&&!draft?.error&&currentDeferredOrderPlayback789(orderDeferredPlayback789)&&
+      orderDeferredPlayback789.session===close.session?orderDeferredPlayback789:null;
     // Closing once follows the existing explicit escape lane even while a
     // metadata save/LIVE is pending. Retire only unsent UI continuation; an
     // already-dispatched CAS still reconciles its authoritative saved model.
     const uncertain=!!job||arrangementApplying||managementBusy||arrangementPlaybackPending()||orderTestBusy()||!!draft?.error;
-    close.flight=stopOrderPresentation590(close,{cancelled:uncertain&&!deferredResume639,deferredResume639}).finally(()=>{
+    close.flight=(async()=>{
+      const result=await stopOrderPresentation590(close,{cancelled:discard||uncertain&&!deferredResume639,deferredResume639});
+      if(!modernReturn||result.closed!==true||result.cleanupConfirmed!==true||result.cancelled||
+         document.hidden||result.presentationEpoch!==orderSaveEpoch588||openLineSetup.has(close.zoneId)||
+         arrangementDraft||stand()?.id!==modernReturn.standId||route.zoneId!==modernReturn.zoneId||
+         orderGeometry588()!==modernReturn.geometry||arrangementSignature()!==modernReturn.signature||
+         JSON.stringify(model)!==modernReturn.model)return result;
+      // This is a NEW foreground intent after genuine STOP, never a retry of
+      // an old LIVE, a reconstructed native lease or a saved scene restore.
+      const ids=sendReceiverStates(M.zoneReceivers(model,close.zoneId).map(r=>r.id),{remember:false});
+      let confirmed=false;
+      try{
+        if(!ids.length||!liveController?.whenIdle)throw Error(t('orderResumeUnconfirmed'));
+        await liveController.whenIdle({standId:close.standId});
+        confirmed=!document.hidden&&result.presentationEpoch===orderSaveEpoch588&&
+          route.zoneId===close.zoneId&&stand()?.id===close.standId&&!openLineSetup.has(close.zoneId)&&
+          JSON.stringify(model)===modernReturn.model&&ids.every(id=>liveStates.get(id)?.kind==='applied');
+      }catch(_){}
+      if(!confirmed&&result.presentationEpoch===orderSaveEpoch588)
+        orderCancelNotice590={standId:close.standId,zoneId:close.zoneId,code:'orderResumeUnconfirmed'};
+      return {...result,playbackConfirmed:confirmed};
+    })().finally(()=>{
       if(orderResumeClose639===deferredResume639&&deferredResume639){orderResumeClose639=null;if(!orderSaveQueue588||orderSaveQueue588===job)arrangementApplying=false;}
       if(orderClose589===close)orderClose589=null;syncArrangementControls();syncOrderRecognition();
     });
@@ -3347,10 +3601,14 @@
     const lineOrder=M.lineIds(model,z.id);
     arrangementDraft={zoneId:z.id,layout:z.layout,lineOrder,signature:arrangementSignature(z),initial:JSON.stringify([z.layout,lineOrder]),error:'',needsStandOpen:false};
   }
-  async function applyArrangement(orderJob=null,orderSnapshot=null,{strictPlayback=false,currentStart=null}={}){
+  async function applyArrangement(orderJob=null,orderSnapshot=null,{strictPlayback=false,currentStart=null,freshAnimationStart=null}={}){
     let draft=orderJob?orderSnapshot:arrangementDraft;
     const dirty=draft&&JSON.stringify([draft.layout,draft.lineOrder])!==draft.initial;
     if(!draft||arrangementInteractionBusy()||orderJob&&!currentOrderSave588(orderJob)||(!dirty&&!draft.error))return false;
+    // Only the currently selected fresh tunnel may replace old playback after
+    // this exact continuous→stacked CAS. Ordinary layout/order/scene repair
+    // still restores its existing lighting and waits for the original receipt.
+    if(freshAnimationStart&&(orderJob||!strictPlayback||typeof currentStart!=='function'||freshAnimationStart!==spatialAnimationStart620||freshAnimationStart.repair||freshAnimationStart.phase!=='saving'||draft.layout!=='stacked'||zone()?.layout!=='continuous'||!currentStart()))return false;
     orderTestConfirmation=null;
     if(arrangementNeedsStandOpen()){beginArrangement();syncArrangementControls();return false;}
     const zoneId=draft.zoneId;
@@ -3420,11 +3678,28 @@
         }
         if(orderJob&&!currentOrderSave588(orderJob))throw Error(t('lineSetupChanged'));
         if(continuousZone())selections.set(zoneId,{kind:'all'});
-        if(nativeContext&&canResume&&orderJob&&identification){
+        if(nativeContext&&canResume&&identification&&runtime.services?.deferOrderPlaybackUntilClose===true){
+          // Keep real identification colours while this editor is open.
+          // Saved order is DATA, not applied playback. Explicit Done first
+          // stops the exact colour lease, then submits a fresh modern intent.
+          orderDeferredPlayback789={standId:stand().id,zoneId,epoch:orderSaveEpoch588,
+            signature:arrangementSignature(),geometry:orderGeometry588(),model:JSON.stringify(model),session:identification};
+          if(orderJob)orderJob.resumePending589=null;
+          arrangementReapplyIds=[];
+        }
+        else if(nativeContext&&canResume&&orderJob&&identification){
           // Mint this DATA marker only after genuine CAS + exact colour lease.
           // It cannot mint/extend the actual native arrangement lease.
           orderJob.resumePending589={version:orderJob.dispatchedVersion589,signature:arrangementSignature(),geometry:orderGeometry588(),session:identification};
           if(orderJob.version===orderJob.dispatchedVersion589)await resumeOrderPlayback589(orderJob);
+        }
+        else if(nativeContext&&canResume&&freshAnimationStart&&!identification){
+          if(!currentSpatialAnimationStart620(freshAnimationStart,'stacked'))throw Error(t('lineSetupChanged'));
+          // No old-colour/animation LIVE round-trip before the customer's
+          // chosen recipe. The caller rechecks the same job and dispatches
+          // that recipe through the unchanged guarded queue immediately next.
+          // This is a topology receipt, never an applied-light claim.
+          arrangementReapplyIds=[];
         }
         else if(nativeContext&&canResume){
           // Keep the order interaction locked until the original queue has
@@ -3467,7 +3742,7 @@
     // callers retain their original metadata-result contract.
     return succeeded&&(!(orderJob||strictPlayback)||!failure);
   }
-  async function chooseSpatialLayout(view,layout,{keepOpen=false,strictPlayback=false,currentStart=null}={}){
+  async function chooseSpatialLayout(view,layout,{keepOpen=false,strictPlayback=false,currentStart=null,freshAnimationStart=null}={}){
     const z=zone();if(!z||arrangementInteractionBusy())return false;
     const previousView=spatialMode(z.layout,z),browsing=arrangementBrowsing();
     if(keepOpen)openSpatialChoices.add(z.id);else openSpatialChoices.delete(z.id);
@@ -3475,7 +3750,7 @@
     if(layout===z.layout){recordScenePresentation684(model,z.id);renderArrangement(browsing);return true;}
     if(!arrangementDraft||arrangementDraft.zoneId!==z.id||arrangementDraft.signature!==arrangementSignature(z))beginArrangement();
     arrangementDraft.layout=layout;
-    const saved=await applyArrangement(null,null,{strictPlayback,currentStart});
+    const saved=await applyArrangement(null,null,{strictPlayback,currentStart,freshAnimationStart});
     if(!saved){
       spatialViews.set(z.id,previousView);
       // The animation-start flow reports its own failure. Do not open a
@@ -4038,16 +4313,67 @@
     sceneDraft={zoneIds:variant.zones.map(zone=>zone.id),name:variant.name,original:variant,search:'',error:'',asNew675:true,activateAfterSave675:true};
     navigate('scene-draft',{standId:variant.standId});
   }
+  async function prepareSceneActuation684(scene,isCurrent){
+    // Scene/library persistence and arrangement restoration may replace the
+    // native Owner. Prepare DATA only after those awaits, before the queue
+    // captures any new light request. A saved recipe is not an old gesture.
+    if(!nativeContext||!nativeLoaded||simpleStandMode)return;
+    const before=model,signature=JSON.stringify(model),controller=new AbortController();
+    let idle=null,invoked=false,prepared=false;
+    const current=()=>{
+      if(controller.signal.aborted||!isCurrent()||model!==before||JSON.stringify(model)!==signature)
+        throw Object.assign(Error(),{code:'SCENE_ACTIVATION_CONTEXT_CHANGED'});
+    };
+    const cancel=()=>{
+      controller.abort();
+      if(invoked)runtime.services.cancelStableStandPreparation?.({standId:scene.standId});
+    };
+    const hidden=()=>{if(document.hidden)cancel();};
+    document.addEventListener?.('visibilitychange',hidden);window.addEventListener?.('pagehide',cancel);
+    try{
+      current();const capabilities=await runtime.capabilities();current();
+      if(capabilities?.integratedStatic8!==true)return;
+      if(typeof runtime.services?.prepareStableStand!=='function'||typeof runtime.services?.cancelStableStandPreparation!=='function')
+        throw Object.assign(Error(),{code:'SCENE_PHYSICAL_UNCONFIRMED'});
+      retireStableStandPreparation();retireStableZonePreparation();
+      idle=await liveController?.acquireIdle({standId:scene.standId,waitForGesture:true,waitForCompletion:true,timeoutMs:35000,signal:controller.signal});
+      current();idle?.onPendingLiveIntent(cancel);
+      // Completed facade DATA may refer to an Owner retired by the library
+      // publisher, even when the visible geometry did not change.
+      runtime.services.cancelStableStandPreparation({standId:scene.standId});
+      const began=performance.now();invoked=true;
+      const answer=await runtime.services.prepareStableStand({standId:scene.standId});
+      current();const now=performance.now();
+      if(answer?.status!=='stable-stand-prepared'||Object.keys(answer).sort().join(',')!=='applied,refreshAtMs,sampledAtMs,standId,status,validForMs,validUntilMs'||
+         answer.standId!==scene.standId||answer.applied!==false||!Number.isInteger(answer.validForMs)||answer.validForMs<=2000||answer.validForMs>90000||
+         stablePreparationExpiry(answer,began,now)===null)
+        throw Object.assign(Error(),{code:'SCENE_PHYSICAL_UNCONFIRMED'});
+      prepared=true;
+    }finally{
+      document.removeEventListener?.('visibilitychange',hidden);window.removeEventListener?.('pagehide',cancel);
+      if(invoked&&!prepared)cancel();
+      idle?.release();
+    }
+  }
   async function activateSavedScene675(scene){
     if(sceneActivationJob684)throw Error(t('De scène wordt nog geladen.'));
-    const job={},sceneRoute=route;sceneActivationJob684=job;
+    const job={},sceneRoute=route,routeSignature=JSON.stringify(route),sceneSignature=JSON.stringify(scene),draft=sceneDraft,edit=sceneEdit640,
+      draftMetadata=draft?JSON.stringify({name:draft.name,zoneIds:draft.zoneIds}):null,
+      editSession=edit?.session,editMetadata=edit?JSON.stringify({name:edit.name,zoneIds:edit.zoneIds}):null;
+    sceneActivationJob684=job;
+    const current=()=>sceneActivationJob684===job&&route===sceneRoute&&JSON.stringify(route)===routeSignature&&
+      stand()?.id===scene.standId&&!document.hidden&&JSON.stringify(scene)===sceneSignature&&sceneDraft===draft&&sceneEdit640===edit&&
+      (!draft||JSON.stringify({name:draft.name,zoneIds:draft.zoneIds})===draftMetadata)&&
+      (!edit||edit.session===editSession&&JSON.stringify({name:edit.name,zoneIds:edit.zoneIds})===editMetadata);
     const releaseLoading=sceneLoadingButtons749(scene,{current:()=>sceneActivationJob684===job});
     try{
     // Storage ACK is not a physical light ACK. Reapply the complete saved
     // selection through the ordinary queue; never cancel/clear its Owner.
-    if(route!==sceneRoute||stand()?.id!==scene.standId||document.hidden)throw Object.assign(Error(),{code:'SCENE_ACTIVATION_CONTEXT_CHANGED'});
+    if(!current())throw Object.assign(Error(),{code:'SCENE_ACTIVATION_CONTEXT_CHANGED'});
     await prepareScenePresentation684(scene);
-    if(route!==sceneRoute||stand()?.id!==scene.standId||document.hidden)throw Object.assign(Error(),{code:'SCENE_ACTIVATION_CONTEXT_CHANGED'});
+    if(!current())throw Object.assign(Error(),{code:'SCENE_ACTIVATION_CONTEXT_CHANGED'});
+    await prepareSceneActuation684(scene,current);
+    if(!current())throw Object.assign(Error(),{code:'SCENE_ACTIVATION_CONTEXT_CHANGED'});
     const activated=SceneEditing.activation(model,scene);
     if(nativeLoaded&&!spiPortScenesAvailable&&activated.receiverIds.some(id=>activated.model.receivers.find(receiver=>receiver.id===id)?.state.portStates))throw Object.assign(Error(),{code:'SPI_PORT_SCENES_UNSUPPORTED'});
     model=activated.model;
@@ -4060,8 +4386,10 @@
     const stateKey=()=>JSON.stringify(activated.receiverIds.map(id=>model.receivers.find(receiver=>receiver.id===id)?.state));
     const intended=stateKey();
     if(liveController){
-      await liveController.whenIdle({standId:scene.standId,waitForGesture:true});
-      if(stand()?.id!==scene.standId||document.hidden||stateKey()!==intended||activated.receiverIds.some(id=>liveController.state(id).kind!=='applied'))throw Object.assign(Error(),{code:'SCENE_PHYSICAL_UNCONFIRMED'});
+      const intent=liveController.captureCurrentIntent({standId:scene.standId,receiverIds:activated.receiverIds});
+      if(!intent)throw Object.assign(Error(),{code:'SCENE_PHYSICAL_UNCONFIRMED'});
+      await intent.whenConfirmed();
+      if(stand()?.id!==scene.standId||document.hidden||stateKey()!==intended||activated.receiverIds.some(id=>!['applied','completed-native'].includes(liveController.state(id).kind)))throw Object.assign(Error(),{code:'SCENE_PHYSICAL_UNCONFIRMED'});
     }
     // The CONFIG projection may still contain pre-edit LIVE. Confirm the
     // final existing LIVE checkpoint before releasing the deferred view.
@@ -4233,7 +4561,9 @@
     try{standKnownResumeIntent=capabilities?.standResumeIntent===undefined?{status:'none'}:SimpleStand.resumeIntent(capabilities.standResumeIntent);}
     catch(_){standKnownResumeIntent={status:'unavailable'};}
     spiPortScenesAvailable=capabilities?.spiPortScenes===true;
-    temporarySingleUser=webDemoContext||capabilities?.temporarySingleUser===true;
+    temporarySingleUser=capabilities?.temporarySingleUser===true;
+    pinLoginC97=capabilities?.pinLogin===true&&capabilities?.installationRestore===true;
+    wifiLoginC98=pinLoginC97&&capabilities?.wifiLogin===true;
     simpleStandSupported=capabilities?.simpleStand===true;
     standMigrationReady=simpleStandSupported&&capabilities?.simpleStandMigrationReady===true;
     standSharingAvailable=simpleStandSupported&&capabilities?.simpleStandShare===true;
@@ -4603,8 +4933,9 @@
     });
   }
   function renderPinLogin() {
-    if(temporarySingleUser)return renderSettings();
+    if(temporarySingleUser&&!pinLoginC97)return renderSettings();
     if(simpleStandSupported)return renderStandConnection();
+    if(pinLoginAvailable&&nativeContext&&wifiLoginC98)return renderWifiOpenC98();
     if(pinLoginAvailable&&nativeContext)return `<div class="page pin-login-page">${contextTitle(t("Bestaande stand openen"),t("Met je installatie-PIN"),t("Instellingen"),'settings')}<section class="card"><h2>${esc(t("Verbind met je stand"))}</h2><p>${esc(t("Kies eerst het {network} van je stand in Instellingen → Wifi. Het wifi-wachtwoord is dezelfde PIN.",{network:"ALUVISION-wifi"}))}</p><p>${esc(t("Je maakt geen nieuwe stand en reset geen receivers."))}</p><label class="dialog-field">${esc(t("Installatie-PIN"))}<input data-recovery-pin type="password" inputmode="numeric" autocomplete="off" minlength="8" maxlength="12" pattern="[0-9]{8,12}" spellcheck="false" ${pinLoginBusy?'disabled':''}></label><p data-recovery-status role="status">${pinLoginBusy?t("PIN controleren en je stand ophalen… Laat de receivers aan."):esc(pinLoginError)}</p><button class="button full" data-action="pin-login-submit" ${pinLoginBusy?'disabled':''}>${pinLoginBusy?t("Stand ophalen…"):t("Stand openen")}</button>${pinLoginBusy?`<button class="button secondary full" data-action="pin-login-cancel">${esc(t("Ophalen stoppen"))}</button>`:''}</section><p>${esc(t("Je stand verschijnt pas nadat de receivers en de bewaarde instellingen veilig zijn gecontroleerd."))}</p></div>`;
     if(!pinRequired()&&!nativeContext)return renderSettings();
     // An older or unvalidated native host must never collect a recovery PIN.
@@ -4612,28 +4943,126 @@
     return `<div class="page pin-login-page">${contextTitle(t("Inloggen met PIN"),t("Je bestaande installatie openen"),t("Instellingen"),'settings')}<section class="card pin-login-status" aria-labelledby="pin-login-status-title"><span class="menu-icon" aria-hidden="true">${icon('lock')}</span><h2 id="pin-login-status-title" data-pin-login-status>${esc(t("Nog niet beschikbaar in deze versie"))}</h2><p>${esc(t("Veilig inloggen en je bewaarde installatie terughalen worden nog aangesloten. Je kunt hier daarom nog geen PIN invoeren."))}</p><p>${esc(t("Je huidige stand en receivers blijven ongewijzigd."))}</p></section><section class="card pin-login-guide"><h2>${esc(t("Waarvoor is deze optie?"))}</h2><p>${esc(t("Je bestaande stand weer openen op een ander toestel of nadat je de app opnieuw hebt geïnstalleerd. Je gebruikt dan je bestaande installatie-PIN; je maakt geen nieuwe PIN of nieuwe stand aan."))}</p><ol><li><b>${esc(t("Verbind met het wifi van je installatie"))}</b><span>${esc(t("Kies het ALUVISION-netwerk via de wifi-instellingen van je telefoon."))}</span></li><li><b>${esc(t("Open je installatie met je PIN"))}</b><span>${esc(t("Zodra deze functie beschikbaar is, wordt je PIN veilig gecontroleerd voordat je bewaarde installatie wordt teruggehaald."))}</span></li></ol></section><button class="button full" data-action="settings">${esc(t("Terug naar Instellingen"))}</button></div>`;
   }
   async function openPinLogin(){
-    if(temporarySingleUser)return;
+    if(temporarySingleUser&&!pinLoginC97)return;
     if(simpleStandSupported)return openCentralStandConnection();
     navigate('pin-login');if(!nativeContext||typeof runtime?.services?.recoverInstallation!=='function'||pinLoginChecking)return;
     pinLoginChecking=true;
-    try{const caps=await runtime.capabilities();pinLoginAvailable=caps?.pinLogin===true&&caps?.installationRestore===true;}
+    try{const caps=await runtime.capabilities();pinLoginAvailable=caps?.pinLogin===true&&caps?.installationRestore===true;wifiLoginC98=pinLoginAvailable&&caps?.wifiLogin===true;}
     catch(_){pinLoginAvailable=false;}
     finally{pinLoginChecking=false;if(route.screen==='pin-login')render({top:true});}
   }
+  // C98: silent stand reload (receivers added elsewhere). One at a time; a
+  // failure stays quiet and the next shared-sync pass simply tries again.
+  let standRefreshC98=null,standRefreshAtC98=0,standRefreshOffC98=false;
+  function refreshStandFromWifiC98(){
+    // Never during a setup, an add or a pixel setup (the native reload would
+    // cancel it), and never again once this phone turned out to be the
+    // stand's own original phone (it has nothing to reload: conflict).
+    if(standRefreshOffC98||standRefreshC98||Date.now()-standRefreshAtC98<15000||typeof runtime?.services?.recoverInstallation!=='function'||
+       managementBusy||onboarding?.summary?.()||pairFirstSetup?.entries?.().length||pixelSetup?.isOpen?.()||spiZoneDirections?.isOpen?.())return standRefreshC98;
+    standRefreshAtC98=Date.now();
+    standRefreshC98=(async()=>{
+      window.__c98log?.('STAND_REFRESH start');
+      try{
+        const result=await runtime.services.recoverInstallation({wifi:true});
+        reloadBackupLibraries();
+        model=keepLocalPreviewStates(result.playbackModel,{exceptStandId:result.standId});nativeLoaded=true;
+        sharedSync97?.forget(result.standId);sharedSync97?.changed();
+        if(!stand())route={...route,screen:'stand',standId:result.standId,zoneId:null};
+        render({preserveScroll:true});
+        window.__c98log?.('STAND_REFRESH ok');
+      }catch(error){
+        window.__c98log?.('STAND_REFRESH fail '+(error?.code||''));
+        if(['V30_CHECKPOINT_CONFLICT','NATIVE_STORAGE_CONFLICT','PIN_RECOVERY_WIFI_UNSUPPORTED','STAND_UNAVAILABLE'].includes(error?.code))standRefreshOffC98=true;
+      }
+      finally{standRefreshC98=null;}
+    })();
+    return standRefreshC98;
+  }
+  // A restored installation (PIN or Wi-Fi) becomes this phone's stand.
+  function adoptRecoveredStand(result){
+    reloadBackupLibraries();
+    model=keepLocalPreviewStates(result.playbackModel,{exceptStandId:result.standId});nativeLoaded=true;sharedSync97?.forget(result.standId);sharedSync97?.changed();selections.clear();liveStates.clear();
+    lightIntentDirty=true;saveLightIntent();
+    window.AluvisionSecurityMode?.updateFromNative?.({pinRequired:true});
+    route={...route,screen:'stand',standId:result.standId,zoneId:null};render({top:true});toast(result.librariesComplete===false?t("Receivers en zones hersteld. Op deze receiver waren nog geen scènes, animatiepresets of kleuren bewaard."):t("Je stand is geopend. Kies een zone om je licht te bedienen."));
+  }
+  // C98: open an existing stand by joining its Wi-Fi. That network's key is
+  // derived from the installation PIN, so being on it is the PIN proof; the
+  // receiver checks this, the app only asks. Probes run only while the
+  // welcome or "open existing stand" screen is visible on a phone without a
+  // stand (never during setup), on opening the app and on coming back to it.
+  function wifiOpenEligibleC98(){
+    return wifiLoginC98&&nativeContext&&!model.stands.length&&!document.hidden&&!pinLoginBusy&&!wifiOpenC98.paused&&
+      (route.screen==='pin-login'||(route.screen==='stand'&&!!main?.querySelector('.v50-welcome')));
+  }
+  function scheduleWifiOpenC98(ms){clearTimeout(wifiOpenC98.timer);wifiOpenC98.timer=setTimeout(()=>{wifiOpenC98.timer=0;void probeWifiOpenC98();},ms);}
+  function stopWifiOpenC98(){clearTimeout(wifiOpenC98.timer);wifiOpenC98.timer=0;wifiOpenC98.abort?.abort();}
+  function wifiOpenTextC98(){
+    return {searching:t("Je stand wordt gezocht en ingeladen… Laat de receivers aan."),
+      waiting:t("Nog niet verbonden met het wifi van je stand."),
+      notStand:t("Dit wifi-netwerk is geen beveiligde stand. Kies het wifi-netwerk van je stand."),
+      localNetwork:t("Geef de app toegang tot het lokale netwerk: Instellingen → Aluvision → Lokaal netwerk."),
+      failed:t("Je stand kon nog niet worden ingeladen. Laat de receivers aan; de app probeert het zo opnieuw."),
+      unsupported:t("Deze receivers hebben nog oudere software. Open je stand hieronder met de PIN.")}[wifiOpenC98.status]||'';
+  }
+  function paintWifiOpenC98(){
+    if(route.screen==='pin-login'){render();return;}
+    const el=main?.querySelector('[data-wifi-open-status]');if(!el)return;
+    // The welcome screen stays quiet unless something is actually happening.
+    const shown=['searching','notStand','localNetwork','failed','unsupported'].includes(wifiOpenC98.status);
+    el.textContent=shown?wifiOpenTextC98():'';el.hidden=!shown;
+  }
+  async function probeWifiOpenC98(manual=false){
+    if(wifiOpenC98.running||!wifiOpenEligibleC98()||(wifiOpenC98.fallback&&!manual)||typeof runtime?.services?.recoverInstallation!=='function')return;
+    const abort=new AbortController();wifiOpenC98.running=true;wifiOpenC98.abort=abort;
+    if(manual){wifiOpenC98.status='searching';paintWifiOpenC98();}
+    const slow=setTimeout(()=>{if(wifiOpenC98.abort===abort){wifiOpenC98.status='searching';paintWifiOpenC98();}},2500);
+    let next=5000,opened=false;
+    try{
+      const result=await runtime.services.recoverInstallation({wifi:true,signal:abort.signal});
+      opened=true;wifiOpenC98.status='';wifiOpenC98.fallback=false;adoptRecoveredStand(result);
+    }catch(error){
+      const code=error?.code||'';
+      if(code==='PIN_RECOVERY_WIFI_UNSUPPORTED'){wifiOpenC98.fallback=true;wifiOpenC98.status='unsupported';}
+      else if(code==='PIN_RECOVERY_WIFI_UNAVAILABLE'){wifiOpenC98.status='notStand';next=6000;}
+      else if(code==='LOCAL_NETWORK_DENIED'){wifiOpenC98.status='localNetwork';next=8000;}
+      else if(code==='CANCELLED'||code==='PIN_RECOVERY_CANCELLED'){wifiOpenC98.status='';}
+      else if(/^PIN_RECOVERY_(PROOF|UNAVAILABLE|EXPIRED|CRYPTO)$|UNCONFIRMED|^PLAYBACK|^LIBRARIES/.test(code)){wifiOpenC98.status='failed';next=15000;}
+      else wifiOpenC98.status='waiting'; // not on a receiver network (yet)
+    }finally{
+      clearTimeout(slow);if(wifiOpenC98.abort===abort){wifiOpenC98.running=false;wifiOpenC98.abort=null;}
+      if(!opened){paintWifiOpenC98();if(wifiOpenEligibleC98()&&!wifiOpenC98.fallback)scheduleWifiOpenC98(next);}
+    }
+  }
+  // Called after every render: start on the right screens, stop elsewhere.
+  function syncWifiOpenC98(){
+    if(!wifiLoginC98)return;
+    if(!wifiOpenEligibleC98()){if(wifiOpenC98.running||wifiOpenC98.timer)stopWifiOpenC98();return;}
+    if(!wifiOpenC98.running&&!wifiOpenC98.timer&&!wifiOpenC98.fallback)scheduleWifiOpenC98(400);
+  }
+  document.addEventListener('visibilitychange',()=>{
+    if(!wifiLoginC98)return;
+    // Back from Settings → Wi-Fi: look right away.
+    if(document.hidden)stopWifiOpenC98();else if(wifiOpenEligibleC98()&&!wifiOpenC98.running){wifiOpenC98.fallback=false;scheduleWifiOpenC98(300);}
+  });
+  function renderWifiOpenC98(){
+    const busy=wifiOpenC98.running,status=wifiOpenTextC98()||(busy||wifiOpenC98.paused?'':t("Wachten op het wifi van je stand…"));
+    const steps=[[t("Open Instellingen → Wifi"),t("Kies het wifi-netwerk van je stand.")],[t("Typ het wifi-wachtwoord"),t("Dat krijg je van degene die je stand heeft ingesteld.")],[t("Kom terug naar deze app"),t("Je zones, scènes en animaties worden vanzelf ingeladen.")]];
+    const pinForm=wifiOpenC98.fallback?`<section class="card"><h2>${esc(t("Openen met de PIN"))}</h2><label class="dialog-field">${esc(t("Installatie-PIN"))}<input data-recovery-pin type="password" inputmode="numeric" autocomplete="off" minlength="8" maxlength="12" pattern="[0-9]{8,12}" spellcheck="false" ${pinLoginBusy?'disabled':''}></label><p data-recovery-status role="status">${pinLoginBusy?t("PIN controleren en je stand ophalen… Laat de receivers aan."):esc(pinLoginError)}</p><button class="button full" data-action="pin-login-submit" ${pinLoginBusy?'disabled':''}>${pinLoginBusy?t("Stand ophalen…"):t("Stand openen")}</button></section>`:'';
+    return `<div class="page pin-login-page wifi-open-c98">${contextTitle(t("Bestaande stand openen"),t("Via het wifi van je stand"),t("Instellingen"),'settings')}<section class="card pin-login-guide"><h2>${esc(t("Verbind met het wifi van je stand"))}</h2><p>${esc(t("Je hoeft geen PIN in te typen. Zodra je telefoon met het wifi van je stand verbonden is, opent de app je stand vanzelf."))}</p><ol>${steps.map(([title,hint])=>`<li><b>${esc(title)}</b><span>${esc(hint)}</span></li>`).join('')}</ol><p class="wifi-open-status" data-wifi-open-status role="status"${busy?' data-busy="1"':''}>${esc(status)}</p>${busy?`<button class="button secondary full" data-action="wifi-open-cancel">${esc(t("Stoppen"))}</button>`:`<button class="button full" data-action="wifi-open-retry">${esc(t("Nu zoeken"))}</button>`}</section>${pinForm}<p>${esc(t("Je maakt geen nieuwe stand en reset geen receivers."))}</p></div>`;
+  }
   async function submitPinLogin(){
-    if(temporarySingleUser)return;
+    if(temporarySingleUser&&!pinLoginC97)return;
     if(simpleStandSupported)return;
     const input=main.querySelector('[data-recovery-pin]');if(!pinLoginAvailable||pinLoginBusy||!input)return;
     let pin=input.value;input.value='';
     if(!/^\d{8,12}$/.test(pin)){pinLoginError=t("Vul je bestaande PIN van 8–12 cijfers in.");render();return;}
     pinLoginBusy=true;pinLoginError='';pinRecoveryAbort=new AbortController();render();
     try{
+      stopWifiOpenC98();
       const result=await runtime.services.recoverInstallation({pin,signal:pinRecoveryAbort.signal});pin='';
-      reloadBackupLibraries();
-      model=keepLocalPreviewStates(result.playbackModel,{exceptStandId:result.standId});nativeLoaded=true;selections.clear();liveStates.clear();
-      lightIntentDirty=true;saveLightIntent();
-      window.AluvisionSecurityMode?.updateFromNative?.({pinRequired:true});
-      route={...route,screen:'stand',standId:result.standId,zoneId:null};render({top:true});toast(result.librariesComplete===false?t("Receivers en zones hersteld. Op deze receiver waren nog geen scènes, animatiepresets of kleuren bewaard."):t("Je stand is geopend. Kies een zone om je licht te bedienen."));
+      adoptRecoveredStand(result);
     }catch(error){
       const messages={PIN_RECOVERY_PIN_INVALID:t("Deze PIN klopt niet. Controleer je installatie-PIN."),PIN_RECOVERY_LOCKED:t("Er zijn te veel pogingen gedaan. Wacht even voordat je opnieuw probeert."),PIN_RECOVERY_EXPIRED:t("De controle is verlopen. Controleer je wifi en probeer opnieuw."),PIN_RECOVERY_UNAVAILABLE:t("Je stand kan nog niet volledig worden opgehaald. Controleer de receiverupdates en je wifi."),PIN_RECOVERY_CANCELLED:t("Het ophalen is onderbroken. Je bestaande gegevens zijn niet vervangen.")};
       pinLoginError=error?.code==='CANCELLED'?t("Het ophalen is gestopt. Je kunt het opnieuw proberen."):messages[error?.code]||t("Je stand is nog niet veilig hersteld. Laat de receivers aan, controleer het ALUVISION-wifi en probeer opnieuw.");
@@ -4834,9 +5263,19 @@
     if(!webDemoContext)return renderSettings();
     return `<div class="page demo-wifi-page"><header class="page-heading"><div><h1>${esc(t("Wifi-instellingen"))}</h1><p>${esc(t('settings'))} · V41</p></div></header>${demoSettingsTabs(true)}<section class="card demo-wifi-notice" aria-labelledby="demo-wifi-title"><span class="pill red">${esc(t("DEMO · niet verbonden"))}</span><h2 id="demo-wifi-title">${esc(t("Alleen een voorbeeld"))}</h2><p>${esc(t("Hier bekijk je de wifi-instellingen. Deze demo zoekt geen echte netwerken, maakt geen verbinding en bewaart geen wifi-wachtwoorden."))}</p></section><section class="card demo-wifi-network"><div class="demo-wifi-heading"><span class="menu-icon" aria-hidden="true">${icon('wifi')}</span><div><h2>${esc(t("Wifi van je installatie"))}</h2><p>${esc(t("Je telefoon bedient de verlichting via dit netwerk."))}</p></div></div><dl class="demo-wifi-details"><div><dt>${esc(t("Netwerk"))}</dt><dd>Aluvision-DEMO</dd></div><div><dt>Status</dt><dd>${esc(t("Voorbeeld · geen echte verbinding"))}</dd></div></dl><button class="button full" disabled aria-describedby="demo-wifi-disabled">${esc(t("Verbinding controleren"))}</button><p id="demo-wifi-disabled" class="demo-wifi-caption">${esc(t("Alleen beschikbaar met een echte receiver in de iPhone-app."))}</p></section><section class="card demo-wifi-guide"><h2>${esc(t("Verbinden in de echte app"))}</h2><ol><li>${esc(t("Open Instellingen → Wifi op je iPhone."))}</li><li>${esc(t("Kies het ALUVISION-wifi van je installatie."))}</li><li>${esc(t("Ga terug naar de app om je verlichting te bedienen."))}</li></ol><p>${esc(t("Je hoeft voor deze demo niets aan je wifi te veranderen."))}</p></section></div>`;
   }
+  // The page only knows light or dark; 'system' resolves to the phone's setting.
+  function shownTheme(){
+    const theme=uiPreferences.preferences.theme;
+    return theme==='system'?(window.matchMedia?.('(prefers-color-scheme: dark)').matches?'dark':'light'):theme;
+  }
+  function applyShownTheme(){
+    const theme=shownTheme();
+    document.body.dataset.theme=theme;
+    document.querySelector('meta[name="theme-color"]').content=theme==='dark'?'#171717':'#eef2f6';
+  }
   function themeChoiceMarkup(theme) {
     const active=uiPreferences.preferences.theme===theme;
-    return `<button class="theme-choice" data-action="theme" data-id="${theme}" aria-pressed="${active}"><span class="theme-choice-preview" aria-hidden="true"><i class="theme-preview-header"></i><i class="theme-preview-card"></i><i class="theme-preview-nav"></i></span><span class="theme-choice-label">${icon(theme==='dark'?'moon':'sun')}${esc(t(theme))}</span><span class="theme-choice-check" aria-hidden="true">${icon('check')}</span></button>`;
+    return `<button class="theme-choice" data-action="theme" data-id="${theme}" aria-pressed="${active}"><span class="theme-choice-preview" aria-hidden="true"><i class="theme-preview-header"></i><i class="theme-preview-card"></i><i class="theme-preview-nav"></i></span><span class="theme-choice-label">${icon(theme==='dark'?'moon':theme==='system'?'autoTheme':'sun')}${esc(t(theme))}</span><span class="theme-choice-check" aria-hidden="true">${icon('check')}</span></button>`;
   }
   let storedFirstPinBusy721=false;
   const firstPinUiText721=key=>window.LightningFirstPinV2.text(key,uiPreferences.preferences.language);
@@ -4845,6 +5284,55 @@
     return nativeContext&&runtime?.native===true&&!temporarySingleUser&&!!standId&&
       matchesFirstPinReady686(firstPinReady686.get(standId),model)&&
       typeof runtime.services?.FirstPinV2?.showStored==='function';
+  }
+  // C97 reserve MAIN: one owner action arms the firmware's automatic takeover
+  // (two NODEs become reserve voters with an encrypted copy of the stand).
+  const RESERVE_KEY97='aluvision.c97.reserve-main.v1';let reserveState97=null,reserveTimer97=null;
+  function reserveStore97(){try{return JSON.parse(appStorage.getItem(RESERVE_KEY97)||'{}')||{};}catch(_){return {};}}
+  function reserveSave97(standId,value){try{const all=reserveStore97();all[standId]=value;appStorage.setItem(RESERVE_KEY97,JSON.stringify(all));}catch(_){}}
+  function reserveStand97(){
+    const s=stand();if(!s||!nativeContext||typeof runtime?.services?.reserveMain!=='function'||model.demo)return null;
+    const members=model.receivers.filter(r=>r.standId===s.id&&r.lifecycle==='added');
+    return {stand:s,count:members.length,hasMain:members.some(r=>r.role==='main')};
+  }
+  function reserveMainCard97(){
+    const scope=reserveStand97();if(!scope||!scope.hasMain)return '';
+    const saved=reserveStore97()[scope.stand.id]||{},state=reserveState97?.standId===scope.stand.id?reserveState97:saved;
+    const detail=state.detail||'',phase=Number(state.phase)||0,busy=detail==='AUTHORITY_PREPARING'||state.working===true;
+    const enabled=detail==='AUTHORITY_ENABLED'||detail==='AUTHORITY_REQUIRES_COORDINATED_COMMIT';
+    const tooFew=scope.count<3;
+    const message=tooFew?t("Hiervoor zijn minstens 3 receivers nodig in deze stand."):
+      enabled?t("Ingeschakeld. Valt de hoofdreceiver uit, dan neemt een reserve automatisch over."):
+      busy?t("Reserve wordt voorbereid… stap {step} van 5. Laat alle receivers aan.",{step:Math.min(5,Math.max(1,phase))}):
+      detail==='AUTHORITY_PREPARATION_FAILED'?t("Voorbereiden lukte niet. Zet alle receivers aan en probeer opnieuw."):
+      detail==='AUTHORITY_AUTO_BUSY'?t("Er loopt al een voorbereiding. Even geduld."):
+      detail==='AUTHORITY_AUTO_UNAVAILABLE'?t("Nu niet mogelijk. Meld je aan met de PIN, laat alle receivers aan en wacht tot updates klaar zijn."):
+      state.error?t("Controle mislukt. Controleer de verbinding met je hoofdreceiver."):
+      t("Uit. Zet dit aan zodat je licht blijft werken als de hoofdreceiver uitvalt.");
+    const button=enabled||tooFew?'':`<button class="button ${busy?'secondary':''} full" data-action="reserve-main-enable" ${busy?'disabled':''}>${esc(busy?t("Bezig…"):t("Reserve inschakelen"))}</button>`;
+    return `<section class="card reserve-main-card97" data-reserve-main><div class="section-heading"><h2>${esc(t("Reserve-hoofdreceiver"))}</h2>${icon('lock')}</div><p>${esc(t("Twee andere receivers krijgen een versleutelde kopie van je stand. Valt de hoofdreceiver uit, dan neemt er één automatisch over, met hetzelfde wifi-netwerk."))}</p><p class="reserve-main-status97" role="status">${esc(message)}</p>${button}</section>`;
+  }
+  function refreshReserveCard97(){const old=main.querySelector('[data-reserve-main]');if(old)old.outerHTML=reserveMainCard97();}
+  function newReserveTxn97(){const b=new Uint8Array(8);crypto.getRandomValues(b);b[0]|=1;return [...b].map(x=>x.toString(16).padStart(2,'0')).join('').toUpperCase();}
+  async function reserveCall97(op,txn){
+    const scope=reserveStand97();if(!scope)return;const standId=scope.stand.id;
+    try{
+      const r=await runtime.services.reserveMain({op,standId,txn});
+      reserveState97={standId,txn,detail:r.detail,phase:r.phase,working:false};
+      if(r.txnMatches||r.detail==='AUTHORITY_ENABLED'||r.detail==='AUTHORITY_REQUIRES_COORDINATED_COMMIT')reserveSave97(standId,{txn,detail:r.detail,phase:r.phase});
+    }catch(error){reserveState97={standId,txn,error:error?.code||'RESERVE_FAILED',working:false};}
+    refreshReserveCard97();
+    clearTimeout(reserveTimer97);
+    if(reserveState97.detail==='AUTHORITY_PREPARING'&&route.screen==='settings')reserveTimer97=setTimeout(()=>void reserveCall97('status',txn),2000);
+  }
+  async function enableReserveMain97(){
+    const scope=reserveStand97();if(!scope||scope.count<3)return;
+    const txn=newReserveTxn97();reserveState97={standId:scope.stand.id,txn,working:true};refreshReserveCard97();
+    await reserveCall97('enable',txn);
+  }
+  function reserveCheckOnOpen97(){
+    const scope=reserveStand97();if(!scope||!scope.hasMain||reserveTimer97)return;
+    const saved=reserveStore97()[scope.stand.id];if(saved?.txn)void reserveCall97('status',saved.txn);
   }
   function storedFirstPinCard721(){
     if(!canShowStoredFirstPin721())return '';
@@ -4869,7 +5357,7 @@
     }
   }
   function renderSettings() {
-    return `<div class="page settings-page"><header class="page-heading overview-heading settings-overview-heading"><div><h1>${esc(t('settings'))}</h1></div></header>${interfaceModeMarkup()}<section class="card settings-appearance"><h2 class="settings-appearance-heading">${icon('settings')}<span>${esc(t('appearance'))}</span></h2><h3 class="preference-label">${esc(t('language'))}</h3><div class="preference-grid">${Preferences.languages.map(language=>`<button data-action="language" data-id="${language.code}" lang="${language.code}" aria-pressed="${uiPreferences.preferences.language===language.code}">${language.name}</button>`).join('')}</div>${uiPreferences.preferences.language==='nl'?'':`<p class="preference-note">${esc(t('wipNotice'))}</p>`}<h3 class="preference-label">${esc(t('theme'))}</h3><div class="preference-grid theme-choice-grid">${['light','dark'].map(themeChoiceMarkup).join('')}</div>${uiPreferences.error?`<p role="alert">${esc(uiPreferences.error.message)}</p>`:''}</section><button class="menu-card settings-help-entry" data-action="help"><span class="menu-icon">${icon('info')}</span><div><b>${esc(t("Stand en zones uitgelegd"))}</b><small>${esc(t("Zo organiseer je je verlichting"))}</small></div>${icon('chevron')}</button></div>`;
+    return `<div class="page settings-page"><header class="page-heading overview-heading settings-overview-heading"><div><h1>${esc(t('settings'))}</h1></div></header>${interfaceModeMarkup()}<section class="card settings-appearance"><h2 class="settings-appearance-heading">${icon('settings')}<span>${esc(t('appearance'))}</span></h2><h3 class="preference-label">${esc(t('language'))}</h3><div class="preference-grid">${Preferences.languages.map(language=>`<button data-action="language" data-id="${language.code}" lang="${language.code}" aria-pressed="${uiPreferences.preferences.language===language.code}">${language.name}</button>`).join('')}</div>${uiPreferences.preferences.language==='nl'?'':`<p class="preference-note">${esc(t('wipNotice'))}</p>`}<h3 class="preference-label">${esc(t('theme'))}</h3><div class="preference-grid theme-choice-grid">${['system','light','dark'].map(themeChoiceMarkup).join('')}</div>${uiPreferences.error?`<p role="alert">${esc(uiPreferences.error.message)}</p>`:''}</section><button class="menu-card settings-help-entry" data-action="help"><span class="menu-icon">${icon('info')}</span><div><b>${esc(t("Stand en zones uitgelegd"))}</b><small>${esc(t("Zo organiseer je je verlichting"))}</small></div>${icon('chevron')}</button></div>`;
   }
   function interfaceModeMarkup(){
     const advanced=advancedInterface();
@@ -4963,6 +5451,7 @@
   window.addEventListener('pagehide',retireSpatialAnimationStart620);
   document.addEventListener('visibilitychange',()=>{if(document.hidden)retireSpatialAnimationStart620();});
   function render({top=false,preserveScroll=true,orderExit595=false}={}) {
+    reconcileStableControlPreparation();
     if(paletteDrag?.isActive()&&!top){paletteRenderDeferred=true;return;}
     paletteDrag?.cancel();
     const oldSheetOpen588=!!main.querySelector('[data-order-open="true"]');
@@ -4977,10 +5466,9 @@
     // The optional native appearance acknowledgement remains in the loaded
     // path below; this does not start any native or receiver work earlier.
     document.documentElement.lang=uiPreferences.preferences.language;
-    document.body.dataset.theme=uiPreferences.preferences.theme;
+    applyShownTheme();
     document.body.dataset.interfaceMode=advancedInterface()?'advanced':'basic';
     syncMainConnectionIndicator675();
-    document.querySelector('meta[name="theme-color"]').content=uiPreferences.preferences.theme==='dark'?'#171717':'#eef2f6';
     if(activeControlPointer){
       if(!top&&activeControlPointer.context===motionContextKey()&&activeControlPointer.target.isConnected){controlRenderDeferred=true;return;}
       activeControlPointer=null;controlRenderDeferred=false;
@@ -5008,6 +5496,10 @@
     const disclosureState=keepDisclosures?UIContinuity.captureDisclosures(main):[];
     if(!nativeLoaded){
       main.innerHTML=`<div class="page"><header class="page-heading"><div><h1>${nativeLoadError?'Je gegevens openen':'Je stand openen…'}</h1><p>${nativeLoadError?'Je bewaarde instellingen konden nog niet veilig worden gelezen. Er is niets vervangen of gewist.':'Je bewaarde stand en instellingen worden geladen.'}</p></div></header>${nativeLoadError?`<button class="button full" data-action="native-load-retry">${esc(t("Opnieuw proberen"))}</button>`:''}</div>`;
+      document.getElementById('navigation').replaceChildren();return;
+    }
+    if(appEraseRecovery760){
+      main.innerHTML=`<div class="page"><header class="page-heading"><div><h1>${esc(window.LightningAppErase.text('recoveryTitle',uiPreferences.preferences.language))}</h1><p>${esc(window.LightningAppErase.text('recoveryHint',uiPreferences.preferences.language))}</p></div></header><button class="button full" data-action="app-erase">${esc(window.LightningAppErase.text('resume',uiPreferences.preferences.language))}</button></div>`;
       document.getElementById('navigation').replaceChildren();return;
     }
     if(route.screen==='demo-wifi'&&!webDemoContext)route.screen='settings';
@@ -5074,17 +5566,22 @@
     if(previewDock){const spatial=previewDock.querySelector('.spatial-preview-wrap')!==null;previewDock.dataset.previewSize=controlPreviewSize;previewDock.dataset.spatialPreview=spatial?'true':'false';if(keepCompactPreview)previewDock.dataset.scrolled='true';}
     main.classList.toggle('gallery-scroll-stable',Boolean(main.querySelector('#animation-results')));
     if(route.screen==='scene-detail')main.querySelector('.scene-activate-bar')?.insertAdjacentHTML('afterbegin','<p class="live-confirmation" data-live-status="scene" role="status" aria-live="polite"></p>');
-    if(route.screen==='settings')main.querySelector('.page-heading')?.insertAdjacentHTML('afterend',pinProtectionCard()+storedFirstPinCard721());
+    if(route.screen==='settings'){main.querySelector('.page-heading')?.insertAdjacentHTML('afterend',pinProtectionCard()+reserveMainCard97()+storedFirstPinCard721());reserveCheckOnOpen97();}
     if(route.screen==='settings'&&Backup)main.querySelector('[data-action="help"]')?.insertAdjacentHTML('afterend',backupPanel());
     if(route.screen==='stand'&&model.stands.length>1)main.querySelector('.page-heading')?.insertAdjacentHTML('afterend',`<button class="text-button" data-action="stand-switch-open">${esc(t("Andere stand openen"))}</button>`);
     if(!simpleStandMode&&route.screen==='settings'&&nativeContext&&window.__lightningV32ReceiverContext===true&&standReceivers().length){
       main.querySelector('[data-backup-panel]')?.insertAdjacentHTML('afterend',receiverContextPanel());
       syncReceiverContextPanel();readReceiverContextStatus();
     }
-    if(!temporarySingleUser&&!simpleStandSupported&&(pinRequired()||nativeContext)&&route.screen==='settings')main.querySelector('[data-action="help"]')?.insertAdjacentHTML('afterend',
-      `<button class="menu-card pin-login-entry" data-action="pin-login"><span class="menu-icon">${icon('lock')}</span><div><b>${esc(t("Inloggen met PIN"))}</b><small>${esc(t("Je bestaande installatie openen"))}</small><small class="pin-login-availability">${pinLoginAvailable?t("Je PIN is ook je wifi-wachtwoord"):t("Controleer de toegang tot je stand")}</small></div>${icon('chevron')}</button>`);
+    if((!temporarySingleUser||pinLoginC97)&&!simpleStandSupported&&(pinRequired()||nativeContext)&&route.screen==='settings')main.querySelector('[data-action="help"]')?.insertAdjacentHTML('afterend',
+      `<button class="menu-card pin-login-entry" data-action="pin-login"><span class="menu-icon">${icon('lock')}</span><div><b>${esc(t("Inloggen met PIN"))}</b><small>${esc(t("Je bestaande installatie openen"))}</small><small class="pin-login-availability">${wifiLoginC98?t("Via het wifi van je stand, zonder PIN"):pinLoginAvailable?t("Je PIN is ook je wifi-wachtwoord"):t("Controleer de toegang tot je stand")}</small></div>${icon('chevron')}</button>`);
+    // C97: a new phone with no installation yet can open the existing one
+    // (another phone already set it up) with the PIN, right from the start.
+    if(pinLoginC97&&nativeContext&&!model.stands.length&&route.screen==='stand'&&!main.querySelector('.pin-login-entry'))
+      main.querySelector('.page')?.insertAdjacentHTML('beforeend',`<button class="menu-card pin-login-entry" data-action="pin-login"><span class="menu-icon">${icon('lock')}</span><div><b>${esc(t("Bestaande stand openen"))}</b><small>${esc(wifiLoginC98?t("Verbind met het wifi van je stand. De app opent hem vanzelf."):t("Iemand heeft je stand al ingesteld? Open hem met de PIN."))}</small><small class="wifi-open-status" data-wifi-open-status hidden></small></div>${icon('chevron')}</button>`);
+    syncWifiOpenC98();
     if(route.screen==='settings')main.querySelector('[data-action="help"]')?.insertAdjacentHTML('afterend',`<button class="menu-card" data-action="preferences-reset"><span class="menu-icon">${icon('settings')}</span><div><b>${esc(t("Taal en thema herstellen"))}</b><small>${esc(t("Alleen taal en thema van deze app"))}</small></div>${icon('chevron')}</button>`);
-    if(route.screen==='settings')main.querySelector('[data-action="preferences-reset"]')?.insertAdjacentHTML('afterend',simpleStandMode?`<section class="card app-erase-section"><h2>${esc(t("Op deze telefoon"))}</h2><p>${esc(t("Vergeten wist niets op de hoofdreceiver."))}</p><button class="button secondary full" data-action="stand-forget" ${stand()?'':'disabled'}>${esc(t("Stand vergeten op deze telefoon"))}</button></section>`:`<section class="card app-erase-section"><h2>${esc(t("Gegevens op deze telefoon"))}</h2><p>${esc(t("Dit verwijdert alleen de gegevens in de app. De fysieke receivers blijven gekoppeld en zijn daarna mogelijk pas na een afzonderlijke reset en nieuwe koppeling weer bedienbaar."))}</p><button class="button secondary full" data-action="app-erase">${esc(t("Verwijder alles uit de app"))}</button></section>`);
+    if(route.screen==='settings')main.querySelector('[data-action="preferences-reset"]')?.insertAdjacentHTML('afterend',`<section class="card app-erase-section"><h2>${esc(window.LightningAppErase.text('title',uiPreferences.preferences.language))}</h2><p>${esc(window.LightningAppErase.text('settingsHint',uiPreferences.preferences.language))}</p><button class="button secondary full" data-action="app-erase">${esc(window.LightningAppErase.text('title',uiPreferences.preferences.language))}</button>${simpleStandMode?`<button class="text-button full" data-action="stand-forget" ${stand()?'':'disabled'}>${esc(t("Stand vergeten op deze telefoon"))}</button>`:''}</section>`);
     if(route.screen==='stand')main.querySelectorAll('.stand-summary>div').forEach((tile,index)=>{
       const button=document.createElement('button');button.type='button';button.className='stand-info-tile';
       button.dataset.action=index?'stand-receivers-info':'stand-zones-info';
@@ -5111,6 +5608,7 @@
       if(erase)erase.querySelector('p').textContent=t("Alleen deze tijdelijke demopagina wordt leeg gemaakt. Echte receivers en gegevens op de gewone site blijven onaangeroerd.");
     }
     if(route.screen==='settings')organizeSettings();
+    if(route.screen==='receivers')main.querySelector('.receiver-toolbar')?.insertAdjacentHTML('afterend',pairFirstResumeMarkup());
     main.querySelectorAll('[data-receiver-detail], .ledline-row-settings:not([hidden])').forEach(card=>{
       const inline=card.matches('.ledline-row-settings'),receiverId=inline?card.closest('[data-draft-receiver]')?.dataset.draftReceiver:card.dataset.receiverDetail;
       const r=model.receivers.find(receiver=>receiver.id===receiverId);if(!r)return;
@@ -5224,7 +5722,7 @@
     if(!advancedInterface()&&['layout','animation-family'].includes(screen)){
       screen='controls';extra={...extra,family:null,familyReturnScreen:null,library:'catalogue'};
     }
-    if(temporarySingleUser&&['pin-login','stand-connect','stand-sharing','stand-code-change'].includes(screen))screen='settings';
+    if(temporarySingleUser&&['pin-login','stand-connect','stand-sharing','stand-code-change'].includes(screen)&&!(pinLoginC97&&screen==='pin-login'))screen='settings';
     if(firstAccessCheckpoint&&screen!=='receiver-add')return;
     if(screen==='receiver-add'&&localStandConcept())prepareLocalStandReceiver(extra.setupReturnZoneId||extra.zoneId||route.zoneId);
     if(screen==='receiver-add'&&route.screen!=='receiver-add'&&simpleStandMode&&centralApplied&&!managedPrepared){void openManagedReceiverSetup(extra,{restoreControls});return;}
@@ -5278,6 +5776,8 @@
     const enteredZone=screen==='controls'&&(zoneEntry||changedZone||!['controls','colour','animations','effects','layout','animation-family'].includes(previousRoute.screen));
     if(enteredZone&&!restoreControls){clearAnimationEditorBrowseReturn();controlMode='colour';showControlAnimationGallery=true;settingsOpen=false;++advancedSettingsRevision;}
     if(requestedLayout){openLineSetup.add(route.zoneId);beginArrangement();beginOrderColours();}
+    if(enteredZone&&!requestedLayout)void prepareStableZoneMenu();
+    else if(previousRoute.screen==='layout'&&!requestedLayout)prepareStableZoneAfterLayout(stand()?.id,route.zoneId);
     render({top:true});
     if(screen==='settings')void refreshPinProtection();
   }
@@ -5315,7 +5815,8 @@
     }
     const ids=new Set(selectedReceiverIds());return receivers().filter(receiver=>ids.has(receiver.id));
   }
-  function sendReceiverStates(ids,{remember=true,scope=null,sceneRestore640=false}={}){
+  function sendReceiverStates(ids,{remember=true,scope=null,sceneRestore640=false,paletteOnly=false}={}){
+    retireGradientPower();
     if(standPresentationOnly()){
       for(const id of new Set(ids))liveController?.reject?.(id,'STAND_CONNECTION_BUSY');
       return [];
@@ -5347,10 +5848,16 @@
       const receiver=model.receivers.find(item=>item.id===id);if(!receiver)continue;
       const outputPorts=scope&&['line','lines'].includes(scope.kind)?M.selectionLines(model,receiver.zoneId,scope).filter(line=>line.receiverId===id).map(line=>line.port).sort((a,b)=>a-b):undefined;
       const request=liveRequest(receiver,time,outputPorts);
-      if(nativeLoaded&&liveController&&request&&request.kind==='SPI_PORTS'&&!spiPortScenesAvailable){liveController.reject?.(id,'SPI_PORT_SCENES_UNSUPPORTED');}
+      if(receiver.type==='SPI'&&!request&&(receiver.state.engine==='STATIC_GRADIENT'||Object.hasOwn(receiver.state,'staticGradientRecipe')||Object.values(receiver.state.portStates||{}).some(s=>s.engine==='STATIC_GRADIENT'||Object.hasOwn(s,'staticGradientRecipe')))){
+        // Retire any old generic queue item, but do not manufacture an
+        // FX1/first-colour request. Only dedicated typed Apply can resend.
+        liveController?.reject?.(id,'GRADIENT_REAPPLY_REQUIRED');
+        liveStates.set(id,{kind:'unconfirmed',code:'GRADIENT_REAPPLY_REQUIRED'});
+      }
+      else if(nativeLoaded&&liveController&&request&&request.kind==='SPI_PORTS'&&!spiPortScenesAvailable){liveController.reject?.(id,'SPI_PORT_SCENES_UNSUPPORTED');}
       else if(nativeLoaded&&liveController&&request){
         const context=mainConnectionContext675();if(context&&receiver.standId===context.standId)mainAckContexts675.set(id,context);else mainAckContexts675.delete(id);
-        liveController.request(request);
+        liveController.request(request,paletteOnly?{kind:'animation-palette'}:undefined);
       }
       else if(liveController)liveController.preview(id);
       else liveStates.set(id,{kind:'preview'});
@@ -5480,6 +5987,94 @@
     if(detail.contextPhase==='complete')resumeDeferredPinRead();
   });
   function reloadBackupLibraries(){savedPresets=presetStore.load();savedScenes=sceneStore.load();savedColours=colourStore.load();uiPreferences=preferenceStore.load();}
+  // C97 shared installation: every phone with the PIN sees the same stand
+  // layout, scenes, presets and colours, kept on the stand's MAIN.
+  const sharedNotices97=new Set();
+  function sharedStands97(){
+    if(!nativeContext||!nativeLoaded||simpleStandMode||model.demo||typeof runtime?.services?.sharedDocument!=='function')return [];
+    return model.stands.filter(s=>model.receivers.some(r=>r.standId===s.id&&r.role==='main'&&r.lifecycle==='added')).map(s=>s.id);
+  }
+  function sharedSnapshot97(standId){
+    if([savedPresets,savedScenes,savedColours].some(item=>item.error))return null;
+    // Own public projection: layout fields only. Light state and connection
+    // change with every tap and never belong in the shared document.
+    const pick=(value,keys)=>Object.fromEntries(keys.filter(key=>Object.hasOwn(value,key)).map(key=>[key,copy(value[key])]));
+    const source=model.stands.find(s=>s.id===standId);if(!source)return null;
+    const members=model.receivers.filter(r=>r.standId===standId);if(members.some(r=>r.lifecycle!=='added'))return null;
+    const standModel={...pick(source,['id','name']),zones:source.zones.map(z=>pick(z,['id','name','type','layout','receiverIds','lineOrder']))};
+    // Outputs (ports, pixels) live on the receivers themselves, not here.
+    const receivers=members.map(r=>pick(r,['id','rid','deviceFingerprint','name','type','standId','zoneId','role']));
+    return {model:{stand:standModel,receivers},libraries:{scenes:savedScenes.scenes.filter(s=>s.standId===standId),presets:savedPresets.presets,colors:savedColours.colors}};
+  }
+  // C98: the last shared-document revision this phone applied or wrote.
+  const sharedSeenKeyC98=standId=>'aluvision.c98.sharedSeen.'+standId;
+  function sharedSeenC98(standId){try{const v=Number(appStorage.getItem(sharedSeenKeyC98(standId)));return Number.isSafeInteger(v)&&v>0?v:null;}catch(_){return null;}}
+  function markSharedSeenC98(standId,revision){try{if(Number.isSafeInteger(revision)&&revision>0)appStorage.setItem(sharedSeenKeyC98(standId),String(revision));}catch(_){}}
+  async function applyShared97(standId,doc,meta){
+    const lib=doc.libraries;let scenes,presets,colors;
+    try{scenes=lib.scenes.map(Scenes.validate).filter(s=>s.standId===standId);presets=lib.presets.map(S.validate);colors=Colours.validateColors(lib.colors);}
+    catch(_){throw Object.assign(Error('SHARED_FORMAT'),{code:'SHARED_FORMAT'});}
+    const others=sceneStore.load().scenes.filter(s=>s.standId!==standId);
+    appStorage.setItem(Scenes.STORAGE_KEY,JSON.stringify({version:1,scenes:[...others,...scenes]}));
+    appStorage.setItem(S.STORAGE_KEY,JSON.stringify({version:1,presets}));
+    appStorage.setItem(Colours.STORAGE_KEY,JSON.stringify({version:1,colors}));
+    reloadBackupLibraries();
+    let layout=true;const mine=sharedSnapshot97(standId)?.model,Shared=window.LightningSharedInstallation;
+    if(mine&&Shared.canonical(mine)!==Shared.canonical(doc.model)){
+      const local=new Map(mine.receivers.map(r=>[r.id,r])),remote=doc.model.receivers;
+      // A receiver added on another phone needs this phone's own PIN login
+      // before it can be shown; the layout then waits instead of failing.
+      const unknownRemote=remote.some(r=>!local.has(r.id)||local.get(r.id).rid!==r.rid||local.get(r.id).deviceFingerprint!==r.deviceFingerprint);
+      if(unknownRemote)layout=false;
+      else if(remote.length!==local.size){
+        // C98: this phone holds MORE receivers than the document (it added
+        // them; the document lagged behind). If the document did not change
+        // since this phone last saw it, this layout is the newest: keep it and
+        // upload it. A document changed meanwhile (a removal elsewhere) wins.
+        const seen=sharedSeenC98(standId);
+        layout=seen===null||!(Number.isSafeInteger(meta?.revision)&&meta.revision>seen)?'local':false;
+        window.__c98log?.('SHARED_LAYOUT '+(layout==='local'?'local-newer':'blocked')+' remote='+remote.length+' local='+local.size);
+      }
+      else{
+        const receivers=remote.map(r=>({id:r.id,name:r.name,zoneId:r.zoneId??null}));
+        let view;
+        try{view=await runtime.services.sharedLayout({standId,stand:doc.model.stand,receivers});}
+        catch(error){
+          if(error?.code!=='ACTION_UNSUPPORTED')throw error;
+          // iPhone: the existing validated whole-view import does the same.
+          const current=(await runtime.services.loadState()).model,desired=copy(current);
+          desired.stands=desired.stands.map(s=>s.id===standId?copy(doc.model.stand):s);
+          const byId=new Map(receivers.map(r=>[r.id,r]));
+          desired.receivers=desired.receivers.map(r=>byId.has(r.id)?{...r,name:byId.get(r.id).name,zoneId:byId.get(r.id).zoneId}:r);
+          view=await runtime.services.importInstallationView({model:Backup.nativeModel(Backup.publicModel(desired),current),confirmation:'RESTORE_LOCAL_SETTINGS'});
+        }
+        model=keepLocalPreviewStates(view.model);
+      }
+    }
+    render({preserveScroll:true});
+    return {layout};
+  }
+  sharedSync97=window.LightningSharedInstallation?.create({
+    services:{sharedDocument:request=>runtime.services.sharedDocument(request)},
+    stands:sharedStands97,snapshot:sharedSnapshot97,apply:applyShared97,seen:markSharedSeenC98,
+    // C98: never while a zone/stand control screen is open. Its own owner
+    // session would replace the light-control session on the MAIN (same phone).
+    idle:()=>!managementBusy&&!sceneDraft&&!onboarding?.summary?.()&&!backupTransaction?.pending?.()&&!document.querySelector('dialog[open]')&&
+      !standControlOpen&&!stableZonePreparationUI&&!stableStandPreparationUI&&
+      !['controls','colour','animations','effects','animation-family','layout'].includes(route.screen)&&
+      (typeof runtime?.services?.lightQuiet!=='function'||runtime.services.lightQuiet()),
+    notice:code=>{
+      // C98: a receiver added on another phone. On the stand's Wi-Fi this phone
+      // reloads the stand by itself (that network is the PIN proof): no PIN
+      // screen, no page change. Only a host without Wi-Fi login keeps the old prompt.
+      if(code==='SHARED_LAYOUT_NEEDS_PIN'&&wifiLoginC98&&nativeContext){void refreshStandFromWifiC98();return;}
+      if(sharedNotices97.has(code))return;sharedNotices97.add(code);
+      if(code==='SHARED_LAYOUT_NEEDS_PIN'&&pinLoginC97&&route.screen!=='pin-login'&&!managementBusy)setTimeout(()=>void openPinLogin().catch(()=>{}),2500);
+      toast(t(code==='SHARED_LAYOUT_NEEDS_PIN'?"De receivers zijn op een andere telefoon gewijzigd. Meld je opnieuw aan met de PIN om alles bij te werken.":
+        code==='SHARED_TOO_LARGE'?"De installatie is te groot om te delen met de andere telefoons.":
+        "Delen met de andere telefoons lukt even niet. Je kunt gewoon verder bedienen."));}
+  })||null;
+  sharedSync97?.start();
   async function exportBackup(){
     if(!Backup)return;const loaded=[savedPresets,savedScenes,savedColours,uiPreferences];
     if(loaded.some(item=>item.error))throw Error(t("Een bibliotheek kan niet worden gelezen. Herstel die eerst voordat je een backup bewaart."));
@@ -5566,7 +6161,7 @@
       const zoneCard=node.dataset.liveStatus==='zone-card',zoneId=node.dataset.zonePowerZone;
       const targets=zoneCard?(stand()?.zones.some(item=>item.id===zoneId)?M.zoneReceivers(model,zoneId):[]):liveTargets(node.dataset.liveStatus);
       const states=targets.map(receiver=>liveStates.get(receiver.id)?.kind||'idle');
-      const applied=states.filter(kind=>kind==='applied').length,failed=states.filter(kind=>kind==='failed').length;
+      const applied=states.filter(kind=>kind==='applied').length,failed=states.filter(kind=>kind==='failed'||kind==='unconfirmed').length;
       let kind='idle';
       if(!nativeContext||!liveController){kind='preview';}
       else if(!targets.length){kind='idle';}
@@ -5580,6 +6175,7 @@
       // empty/new delivery ledger must not silently display it as current light.
       else if(states.includes('idle')){kind='preview';}
       else if(applied===targets.length){kind='applied';}
+      else if(states.every(state=>['applied','completed-native'].includes(state))){kind='completed-native';}
       // Zone, whole-stand and scene controls share the same quiet translated
       // presentation. Only closed problem reasons may become visible.
       const message=zoneCard&&kind!=='failed'?'':compactLiveDockMessage592({targets,states,applied,failed,kind,connected:nativeContext&&!!liveController});
@@ -5595,15 +6191,20 @@
     if(!connected)return t('v592LiveNoConnection');
     if(!targets.length)return t('v592LiveNoSelection');
     if(failed){
+      if(targets.some(receiver=>['GRADIENT_REAPPLY_REQUIRED','GRADIENT_RETAINED_UNCONFIRMED','GRADIENT_REAPPLY_UNCONFIRMED','GRADIENT_POWER_UNCONFIRMED'].includes(liveStates.get(receiver.id)?.code)))return t('Het verloop is nog niet bevestigd. Pas het opnieuw toe met de verloopknop.');
       const codes=new Set(targets.map(receiver=>liveStates.get(receiver.id)).filter(state=>state?.kind==='failed').map(state=>state.code));
+      window.__c98log?.('LIVE_FAILED codes='+[...codes].join(','));
       let key='v592LiveUnconfirmed';
       if(codes.has('OUTPUT_CONFIGURATION_PENDING'))key='v592LiveOutputPending';
+      else if(codes.has('LIVE_STABLE_PREPARED_NEW_INTENT_REQUIRED'))key='stablePreparedNewIntent';
+      else if(codes.has('LIVE_STABLE_PREPARATION_PENDING'))key='stableStandPreparing';
       else if(codes.has('LIVE_CONTROL_PROFILE'))key='v592LiveProfile';
       else if(codes.has('LIVE_CONTROL_FIRMWARE_UPDATE'))key='v592LiveFirmware';
       else if(codes.has('LIVE_CONTROL_STAND_UNAVAILABLE'))key='v592LiveStandUnavailable';
       else if(codes.has('SPI_PORT_SCENES_UNSUPPORTED'))key='v592LiveSpiUnsupported';
       else if(['LIVE_CONTROL_BUSY','STAND_BUSY','STAND_CONNECTION_BUSY','NATIVE_BUSY','OTA_BUSY','REMOVAL_BUSY'].some(code=>codes.has(code)))key='v592LiveBusy';
       else if(['LIVE_CONTROL_CANCELLED','CANCELLED'].some(code=>codes.has(code)))key='v592LiveCancelled';
+      else if(!codes.size&&targets.some(receiver=>{const state=liveStates.get(receiver.id);return state?.kind==='unconfirmed'&&state.code==='LIVE_CONTROL_OBSERVATION_UNKNOWN';}))key='v592LiveObservationUnknown';
       const reason=t(key);
       return failed<targets.length?t('v592LivePartial',{count:failed,total:targets.length,reason}):reason;
     }
@@ -5613,7 +6214,7 @@
     // selected animation stays labelled as a choice, not an ACK or success.
     return '';
   }
-  function apply(patch,scope=selection(),{freshRecipe=false,deferPreviewPaint=false}={}) {
+  function apply(patch,scope=selection(),{freshRecipe=false,deferPreviewPaint=false,paletteOnly=false}={}) {
     if(standPresentationOnly())return toast(t("Je stand is nog niet verbonden. Je bewaarde stand blijft zichtbaar."));
     if(orderIdentificationState?.active||orderIdentificationState?.recovering)void orderIdentification?.supersede();
     if(managementBusy)return;
@@ -5623,6 +6224,9 @@
     if(Object.hasOwn(patch,'bri')&&!Object.hasOwn(patch,'brightness'))patch={...patch,brightness:patch.bri};
     else if(Object.hasOwn(patch,'brightness')&&!Object.hasOwn(patch,'bri'))patch={...patch,bri:patch.brightness};
     const memoryOnly=Object.keys(patch).every(key=>key==='rgbwLast');
+    if(!memoryOnly&&tryGradientPower(patch,scope))return;
+    if(!memoryOnly)retireGradientPower();
+    if(!memoryOnly)gradientSetupNotice=null;
     if(memoryOnly){
       if(portScope){model=M.applyState(model,route.zoneId,scope,patch);scheduleLightIntentSave();observeCentralLight(ids);return;}
       const targets=new Set(ids);
@@ -5638,7 +6242,7 @@
       const {rgbwLast,...lightingPatch}=patch;
       const plan=StandAnimations.plan(model,stand().id,marker.effectId,{state:{...marker.state,...lightingPatch},time:performance.now()/1000});
       if(rgbwLast)plan.receivers.forEach(receiver=>{receiver.state.rgbwLast=copy(rgbwLast);});
-      model=plan.model;sendReceiverStates(ids);syncStandPower();syncLiveStatus();paint(performance.now()/1000);return;
+      model=plan.model;sendReceiverStates(ids,{paletteOnly});syncStandPower();syncLiveStatus();paint(performance.now()/1000);return;
     }
     const next=freshRecipe===true?copy(model):model;
     // A line/zone edit ends the stand recipe for the entire stand. The other
@@ -5667,7 +6271,7 @@
     model=standControlOpen?M.applyStandState(next,stand().id,patch):M.applyState(next,route.zoneId,scope,patch);
     if(freshRecipe===true){animationEditorChoice=null;clearAnimationEditorBrowseReturn();}
     else if(patch.engine==='STATIC')clearAnimationEditorBrowseReturn();
-    if(Object.keys(patch).some(key=>key!=='rgbwLast'))sendReceiverStates(ids,portScope?{scope}:{});
+    if(Object.keys(patch).some(key=>key!=='rgbwLast'))sendReceiverStates(ids,{...(portScope?{scope}:{}),paletteOnly});
     const note=document.querySelector('.mixed-note');if(note)note.hidden=!mixedSelection();
     if(standControlOpen)syncStandPower();
     syncLiveStatus();
@@ -5861,12 +6465,16 @@
         const palette=currentBrandColors().slice(0,spec.brandPaletteLimit||0);
         return {...r,state:{...r.state,brandColor:currentBrandPalette()[0],...(palette.length?{colors:palette.map(color=>C.hex([color.r,color.g,color.b])),colorCount:palette.length,whiteChannels:palette.map(color=>color.w),rgbEnabled:palette.map(()=>true),whiteEnabled:palette.map(color=>color.w>0)}:{})}};
       }):spec.receivers;
+      // While the gradient editor is open, the zone's own ledline preview shows
+      // the draft gradient, exactly as the solid colour picker does. Preview only.
+      const gradientDraft=spec.main&&!standControlOpen?demoGradientEditor()?.previewRecipe():null;
+      const shownList=gradientDraft?list.map(r=>r.type==='SPI'?{...r,state:{...r.state,engine:'STATIC_GRADIENT',staticGradientRecipe:gradientDraft,on:true,power:true,portStates:undefined}}:r):list;
       const globalPlan=spec.standLiveZoneId?liveZoneStandPlan(spec.standLiveZoneId):null;
       const globalOptions=globalPlan?StandAnimations.previewOptions(globalPlan,time,{zoneId:spec.standLiveZoneId}):null;
       const exampleBlink=identifying.get(orderIdentificationState?.lines[orderTestState.index]?.receiverId);
       const guidePulse=spec.orderTarget&&orderTestState.preview&&orderTestState.status==='running'&&orderTestState.session===orderIdentificationState?.session&&orderTestFingerprint===orderTestGeometry()?new Map([['order-example-'+(orderTestState.index+1),{scope:zone()?.type==='SPI'?'1':'all',ports:zone()?.type==='SPI'?[1]:[],startedAt:exampleBlink?.startedAt??time,until:exampleBlink?.until??time+0.1}]]):undefined;
       const guideColours=guidePulse?new Map(spec.receivers.map(receiver=>[receiver.id+':'+(receiver.type==='SPI'?1:0),[receiver.state.r,receiver.state.g,receiver.state.b]])):undefined;
-      P.draw(canvas,{...spec,...globalOptions,layout:spec.orderOverview?'stacked':globalPlan?'stacked':draft?.layout||spec.layout,receivers:list,
+      P.draw(canvas,{...spec,...globalOptions,layout:spec.orderOverview?'stacked':globalPlan?'stacked':draft?.layout||spec.layout,receivers:shownList,
         presentation:globalPlan?undefined:spec.presentation,
         geometryReceivers:globalPlan?globalPlan.receivers:spec.preserveZoneGeometry?zoneList:spec.geometryReceivers,selection:spec.orderOverview?{kind:'all'}:spec.main?selection():spec.selection,
         ...(savedZone&&!globalPlan?{lineOrder:proposedOrder||draft?.lineOrder||M.lineIds(model,savedZone.id)}:{}),
@@ -6098,6 +6706,7 @@
     dismissDialog(document.getElementById('effect-dialog'),closeEffectDialog);
   }
   function closeEffectDialog() {
+    retireStableStandPreparation();
     if(pinProtectionBusy)return;
     gradientColourDraft=null;
     orderColourChoice652=null;
@@ -6133,7 +6742,265 @@
     standControlOpen=true;standControlEpoch++;lastStandControlContext=null;standDialogNested=null;standAnimationFamily=null;standAnimationFamilyReturn=null;standAnimationTab='catalogue';
     standControlMode=standAnimationMarker()?'animations':'colour';standAnimationGallery=true;standAnimationQueries.delete(stand()?.id);settingsOpen=false;
     renderStandControls();
+    void prepareStableStandMenu();
   }
+  async function prepareStableStandMenu(){
+    retireStableStandPreparation();retireStableZonePreparation();
+    const standId=stand()?.id,key=stableStandPreparationKey();
+    if(!nativeContext||!standId||!key||document.hidden||!standControlOpen||
+       !['colour','animations'].includes(standControlMode)||typeof runtime.services?.prepareStableStand!=='function')return;
+    const token={standId,key,pending:true,error:false,until:0,retries:0};stableStandPreparationUI=token;
+    syncStableStandPreparationUI();await runStableControlPreparation(token);
+  }
+  // DATA preparation only: no recipe/input capture, LIVE dispatch or replay.
+  function stableStandPreparationKey(){
+    const current=stand();if(!current)return null;
+    return JSON.stringify({standId:current.id,zones:current.zones.map(z=>({id:z.id,type:z.type,layout:z.layout,receiverIds:z.receiverIds,lineOrder:z.lineOrder})),rows:model.receivers.filter(r=>r.standId===current.id).map(r=>({
+      id:r.id,rid:r.rid,physicalId:r.physicalId,type:r.type,role:r.role,lifecycle:r.lifecycle,
+      deviceFingerprint:r.deviceFingerprint,zoneId:r.zoneId,onboardingTransactionId:r.onboardingTransactionId,
+      outputs:r.outputs?.map(o=>({port:o.port,enabled:o.enabled,pixels:o.pixels,reversed:o.reversed}))
+    }))});
+  }
+  function stableZonePreparationKey(){
+    const current=stand();
+    if(!current||!current.zones.some(z=>z.id===route.zoneId)||!zone()||!receivers().length)return null;
+    return stableStandPreparationKey();
+  }
+  function stablePreparationNow(){return performance.now();}
+  function stablePreparationExpiry(answer,began,now){
+    // The facade already reduced native remaining time at its own sampling
+    // point. Use that conservative same-document expiry, not a second await
+    // subtraction. Its explicit sample also refuses a rolled-back clock.
+    if(!answer||Object.keys(answer).sort().join(',')!=='applied,refreshAtMs,sampledAtMs,standId,status,validForMs,validUntilMs'||
+       !Number.isFinite(began)||!Number.isFinite(now)||now<began||
+       !Number.isInteger(answer?.validForMs)||answer.validForMs<=2000||answer.validForMs>90000||
+       !Number.isFinite(answer.sampledAtMs)||!Number.isFinite(answer.validUntilMs)||
+       !Number.isFinite(answer.refreshAtMs)||answer.refreshAtMs<0||answer.refreshAtMs>answer.validUntilMs-2000)return null;
+    if(answer.sampledAtMs<began||answer.sampledAtMs>now||
+       answer.validUntilMs-answer.sampledAtMs>90000||
+       Math.floor(answer.validUntilMs-answer.sampledAtMs)!==answer.validForMs||
+       answer.validUntilMs-now<=2000)return null;
+    return answer.validUntilMs;
+  }
+  function currentStableStandPreparation(token){
+    return stableStandPreparationUI===token&&!document.hidden&&standControlOpen&&
+      ['colour','animations'].includes(standControlMode)&&stand()?.id===token.standId&&stableStandPreparationKey()===token.key;
+  }
+  function currentStableZonePreparation(token){
+    return stableZonePreparationUI===token&&!document.hidden&&!standControlOpen&&
+      ['controls','colour','animations','effects','animation-family'].includes(route.screen)&&
+      !openLineSetup.has(route.zoneId)&&stand()?.id===token.standId&&route.zoneId===token.zoneId&&
+      stableZonePreparationKey()===token.key;
+  }
+  function currentStableControlPreparation(token){
+    return token&& (token.zoneId?currentStableZonePreparation(token):currentStableStandPreparation(token));
+  }
+  function reconcileStableControlPreparation(){
+    const zoneToken=stableZonePreparationUI,standToken=stableStandPreparationUI;
+    if(zoneToken&&!currentStableZonePreparation(zoneToken)){
+      const key=stableZonePreparationKey();
+      const renew=!document.hidden&&!standControlOpen&&stand()?.id===zoneToken.standId&&route.zoneId===zoneToken.zoneId&&
+        ['controls','colour','animations','effects','animation-family'].includes(route.screen)&&!openLineSetup.has(route.zoneId)&&
+        !!key&&key!==zoneToken.key;
+      retireStableZonePreparation();
+      if(renew)void prepareStableZoneMenu(); // Sets pending synchronously, no render/light call.
+    }
+    if(standToken&&!currentStableStandPreparation(standToken)){
+      const key=stableStandPreparationKey();
+      const renew=!document.hidden&&standControlOpen&&stand()?.id===standToken.standId&&
+        ['colour','animations'].includes(standControlMode)&&!!key&&key!==standToken.key;
+      retireStableStandPreparation();
+      if(renew)void prepareStableStandMenu();
+    }
+  }
+  function stablePreparationBlocked(token){
+    // C98: a preparation that failed (all retries spent) no longer locks the
+    // wheel and buttons; the ordinary light route then answers, and a failure
+    // there is visible. Only a preparation that is still running blocks.
+    if(token&&token.error&&!token.pending&&!token.running&&token.retries>=3)return false;
+    return !!token&&(token.pending||token.error||!Number.isFinite(token.until)||token.until-stablePreparationNow()<=2000);
+  }
+  function retireStablePreparation(token){
+    if(pendingStableStaticPreset?.token===token)pendingStableStaticPreset=null;
+    if(!token)return;clearTimeout(token.timer);clearTimeout(token.expiryTimer);token.controller?.abort();
+    if(token.pending&&token.invoked)runtime.services?.cancelStableStandPreparation?.({standId:token.standId});
+  }
+  function retireStableStandPreparation(){
+    const token=stableStandPreparationUI;stableStandPreparationUI=null;retireStablePreparation(token);
+  }
+  function retireStableZonePreparation(){
+    const token=stableZonePreparationUI;stableZonePreparationUI=null;retireStablePreparation(token);
+  }
+  function syncStableStandPreparationUI(){
+    const token=stableStandPreparationUI&&currentStableStandPreparation(stableStandPreparationUI)?stableStandPreparationUI:null;
+    const dialog=document.getElementById('effect-dialog'),notice=dialog?.querySelector('[data-stable-stand-preparation]');
+    const controls=dialog?.querySelector('[data-stable-preparation-controls]'),retry=dialog?.querySelector('[data-stable-preparation-retry]');
+    if(notice){notice.hidden=!token?.pending&&!token?.error;notice.textContent=notice.hidden?'':t(token.pending?'stableStandPreparing':'stableStandPreparationFailed');}
+    if(controls){controls.toggleAttribute('inert',stablePreparationBlocked(token));if(token?.pending)controls.setAttribute('aria-busy','true');else controls.removeAttribute('aria-busy');}
+    if(retry)retry.hidden=!token?.error||token.pending;
+  }
+  function syncStableZonePreparationUI(){
+    const token=stableZonePreparationUI&&currentStableZonePreparation(stableZonePreparationUI)?stableZonePreparationUI:null;
+    const notice=main.querySelector('[data-stable-zone-preparation]'),workspace=main.querySelector('.control-workspace'),retry=main.querySelector('[data-stable-preparation-retry]');
+    if(notice){notice.hidden=!token?.pending&&!token?.error;notice.textContent=notice.hidden?'':t(token.pending?'stableStandPreparing':'stableStandPreparationFailed');}
+    if(workspace){workspace.toggleAttribute('inert',stablePreparationBlocked(token));if(token?.pending)workspace.setAttribute('aria-busy','true');else workspace.removeAttribute('aria-busy');}
+    if(retry)retry.hidden=!token?.error||token.pending;
+    // Never rerender/end a gesture or call a light-dispatch path here.
+  }
+  function syncStableControlPreparation(token){
+    if(token?.zoneId)syncStableZonePreparationUI();else syncStableStandPreparationUI();
+  }
+  function scheduleStableControlPreparation(token){
+    clearTimeout(token.timer);clearTimeout(token.expiryTimer);
+    const remaining=token.until-stablePreparationNow();
+    // A descriptive TTL never grants output. Retire UI before the real owner
+    // expires even if timers/network have delayed a DATA refresh.
+    token.expiryTimer=setTimeout(()=>{
+      if(!currentStableControlPreparation(token))return;
+      token.pending=token.running;token.error=!token.running;syncStableControlPreparation(token);
+    },Math.max(0,remaining-2000));
+    token.timer=setTimeout(()=>{
+      if(currentStableControlPreparation(token))void runStableControlPreparation(token);
+    // Only maintenance scheduling uses the frozen first-return marker.
+    // Delayed/reused DATA cannot extend readiness or restart this marker.
+    },Math.max(1,token.refreshAt-stablePreparationNow()));
+  }
+  async function runStableControlPreparation(token){
+    if(!currentStableControlPreparation(token)||token.running)return;
+    token.running=true;const controller=new AbortController();token.controller=controller;let idle,prepared=false;
+    try{
+      if(runtime.services?.integratedStatic8Available!==true){
+        const caps=await runtime.capabilities();if(caps?.integratedStatic8!==true){token.unavailable=true;return;}
+      }
+      if(!currentStableControlPreparation(token))return;
+      // Keep the original cue's readback session until its bounded completion
+      // observer settles too; DATA renewal must not replace that Owner early.
+      // This queue lease cannot mint a session or admit any output.
+      window.__c98log?.('PREP_WAIT_IDLE');
+      idle=await liveController?.acquireIdle({standId:token.standId,waitForGesture:true,waitForCompletion:true,timeoutMs:35000,signal:controller.signal});
+      window.__c98log?.('PREP_IDLE');
+      if(!currentStableControlPreparation(token)||controller.signal.aborted)return;
+      if(receiverWorkBusy())throw Object.assign(Error(),{code:'LIVE_CONTROL_BUSY'});
+      token.pending=true;token.error=false;syncStableControlPreparation(token);
+      const began=stablePreparationNow();token.invoked=true;
+      window.__c98log?.('PREP_CALL zone='+(token.zoneId||'stand'));
+      const answer=await runtime.services.prepareStableStand({standId:token.standId});
+      window.__c98log?.('PREP_ANSWER '+(answer?.status||'-')+' valid='+answer?.validForMs+' applied='+answer?.applied);
+      if(!currentStableControlPreparation(token)||controller.signal.aborted)return;
+      if(answer?.status!=='stable-stand-prepared'||answer.applied!==false||answer.standId!==token.standId||
+         !Number.isInteger(answer.validForMs)||answer.validForMs<=2000||answer.validForMs>90000)throw Error('LIVE_UNCONFIRMED');
+      const now=stablePreparationNow(),until=stablePreparationExpiry(answer,began,now);
+      if(until===null)throw Error('LIVE_UNCONFIRMED');
+      token.until=until;token.refreshAt=answer.refreshAtMs;token.pending=false;token.error=false;token.retries=0;
+      scheduleStableControlPreparation(token);
+      prepared=true;
+    }catch(error){
+      window.__c98log?.('PREP_FAIL code='+(error?.code||'-')+' msg='+(error?.message||'')+' retries='+token.retries);
+      if(pendingStableStaticPreset?.token===token)pendingStableStaticPreset=null;
+      if(!currentStableControlPreparation(token))return;
+      const busy=['LIVE_CONTROL_BUSY','LIVE_QUEUE_BUSY','NATIVE_BUSY','STAND_BUSY'].includes(error?.code);
+      const stillValid=Number.isFinite(token.until)&&token.until-stablePreparationNow()>2000;
+      token.pending=false;token.error=!busy||!stillValid;
+      // Bounded DATA-only recovery. No captured light value survives here.
+      // Three1/2/5s retries, then honest manual retry until a fresh scope entry.
+      if(token.retries<3){
+        const delay=busy&&stillValid?1000:[1000,2000,5000][token.retries];token.retries++;
+        clearTimeout(token.timer);token.timer=setTimeout(()=>{
+          if(currentStableControlPreparation(token))void runStableControlPreparation(token);
+        },delay);
+      }
+    }finally{
+      token.running=false;token.invoked=false;if(token.controller===controller)token.controller=null;idle?.release();
+      if(!prepared&&pendingStableStaticPreset?.token===token)pendingStableStaticPreset=null;
+      if(currentStableControlPreparation(token)){
+        if(token.unavailable){if(token.zoneId)retireStableZonePreparation();else retireStableStandPreparation();}
+        syncStableControlPreparation(token);
+      }
+    }
+    if(prepared)flushStableStaticPreset(token);
+  }
+  async function prepareStableZoneMenu(){
+    retireStableZonePreparation();retireStableStandPreparation();
+    const standId=stand()?.id,zoneId=route.zoneId,key=stableZonePreparationKey();
+    if(!nativeContext||!standId||!zoneId||!key||document.hidden||standControlOpen||openLineSetup.has(zoneId)||
+       !['controls','colour','animations','effects','animation-family'].includes(route.screen)||
+       typeof runtime.services?.prepareStableStand!=='function')return;
+    const token={standId,zoneId,key,pending:true,error:false,until:0,retries:0};stableZonePreparationUI=token;
+    syncStableZonePreparationUI();await runStableControlPreparation(token);
+  }
+  function reprepareStableControlData(){
+    // Other rejected stale inputs are not retained. Only the received inline
+    // STATIC preset click below can keep one same-view semantic descriptor.
+    const active=standControlOpen?stableStandPreparationUI:stableZonePreparationUI;
+    if(currentStableControlPreparation(active)&&active.running)return;
+    if(standControlOpen)void prepareStableStandMenu();else void prepareStableZoneMenu();
+  }
+  function prepareStableZoneAfterLayout(standId,zoneId){
+    // One explicit layout-exit seam, not a render-driven prepare loop. Set
+    // pending before restored controls paint; the existing idle/receiver-busy
+    // guards keep native preparation behind the original STOP/metadata work.
+    if(document.hidden||standControlOpen||stand()?.id!==standId||route.zoneId!==zoneId||
+       openLineSetup.has(zoneId)||!stableZonePreparationKey()||
+       !['controls','colour','animations','effects','animation-family'].includes(route.screen)||
+       currentStableControlPreparation(stableZonePreparationUI))return;
+    void prepareStableZoneMenu();
+  }
+  window.addEventListener('pagehide',()=>{retireStableStandPreparation();retireStableZonePreparation();});
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){retireStableStandPreparation();retireStableZonePreparation();}
+    else reprepareStableControlData();
+  });
+  function stableStaticPresetButton(event){
+    const button=event.target?.closest?.('button.saved-colour[data-action="swatch"][data-id]');
+    const picker=button?.closest('[data-colour-picker="static"]'),grid=button?.closest('.saved-colour-grid[data-colour-presets-inline="667"]');
+    const item=button?.closest('.saved-colour-item[data-colour-id]');
+    if(!button?.isConnected||button.type!=='button'||button.disabled||button.getAttribute('aria-disabled')==='true'||
+       !picker||!grid||!item||item.dataset.colourId!==button.dataset.id||!picker.contains(grid)||!grid.contains(item)||
+       button.closest('[inert],.is-ordering,.colour-drag-handle,[data-colour-drag]')||
+       colourOrderMode||presetLibraryBusy667||presetEdit667||receiverWorkBusy()||firstAccessCheckpoint||appEraseRecovery760||
+       temporarySingleUser&&temporaryAccessActions.has('swatch')||!standPresentationActionAllowed('swatch')||
+       !interfaceActionAllowed('swatch',button.dataset.id)||
+       standReceiverActions.has('swatch')&&standReceiverActionUnavailable('swatch',button))return null;
+    return savedColours.colors.some(entry=>entry.id===button.dataset.id)?button:null;
+  }
+  function captureStableStaticPreset(button){
+    const entry=savedColours.colors.find(row=>row.id===button.dataset.id);
+    return {button,id:button.dataset.id,entry,entryJSON:JSON.stringify(entry),library:savedColours,libraryEpoch:presetLibraryEpoch667,
+      model,modelJSON:JSON.stringify(model),route,selection:selections.get(route.zoneId),selectionJSON:JSON.stringify(selection()),
+      standOpen:standControlOpen,standEpoch:standControlEpoch,standMode:standControlMode,token:null};
+  }
+  function flushStableStaticPreset(token){
+    const pending=pendingStableStaticPreset;if(!pending||pending.token!==token)return;
+    pendingStableStaticPreset=null; // One-use DATA; ordinary click builds a fresh intent below.
+    if(!currentStableControlPreparation(token)||stablePreparationBlocked(token)||token.running||
+       pending.model!==model||pending.modelJSON!==JSON.stringify(model)||pending.route!==route||
+       pending.selection!==selections.get(route.zoneId)||pending.selectionJSON!==JSON.stringify(selection())||
+       pending.standOpen!==standControlOpen||pending.standEpoch!==standControlEpoch||pending.standMode!==standControlMode||
+       pending.library!==savedColours||pending.libraryEpoch!==presetLibraryEpoch667||
+       pending.entry!==savedColours.colors.find(row=>row.id===pending.id)||pending.entryJSON!==JSON.stringify(pending.entry)||
+       stableStaticPresetButton({target:pending.button})!==pending.button)return;
+    pending.button.click(); // Unchanged normal handler and all its native/current guards.
+  }
+  // Capture before a wheel/slider can mutate local desired state. A delayed
+  // timer cannot leave expired controls optimistically editable.
+  for(const name of ['pointerdown','keydown','beforeinput','click'])document.addEventListener(name,event=>{
+    if(!event.target?.closest?.('.control-workspace,[data-stable-preparation-controls],[data-colour-picker],input[data-setting],[data-action="power"]'))return;
+    const token=standControlOpen?stableStandPreparationUI:stableZonePreparationUI;
+    if(!currentStableControlPreparation(token)||!stablePreparationBlocked(token))return;
+    const preset=event.isTrusted===true?stableStaticPresetButton(event):null;
+    // Inline667 swatches are click-only; their separate drag handle is excluded.
+    // Do not make the workspace inert between a real activation's down and click.
+    if(preset&&(event.type==='pointerdown'&&event.isPrimary===true&&event.button===0||
+       event.type==='keydown'&&!event.repeat&&!event.altKey&&!event.ctrlKey&&!event.metaKey&&['Enter',' '].includes(event.key)))return;
+    const pending=preset&&event.type==='click'?captureStableStaticPreset(preset):null;
+    pendingStableStaticPreset=null;
+    event.preventDefault();event.stopImmediatePropagation();
+    if(!token.running)reprepareStableControlData();
+    const active=standControlOpen?stableStandPreparationUI:stableZonePreparationUI;
+    if(pending&&currentStableControlPreparation(active)){
+      pending.token=active;pendingStableStaticPreset=pending;
+    }
+  },true);
   async function standAnimationsAvailable(){
     try{
       if(runtime.standAnimationsAvailable===true)return true;
@@ -6196,8 +7063,10 @@
     // Title and mode tabs share one opaque sticky surface, including the
     // safe area. Two separate sticky layers leaked scrolling previews at
     // the rounded tab corners and could diverge when the title wrapped.
+    const stablePrep=['colour','animations'].includes(standControlMode)&&stableStandPreparationUI?.standId===stand()?.id?stableStandPreparationUI:null;
+    const preparationNotice=`<p class="live-confirmation" data-stable-stand-preparation role="status" aria-live="polite" ${stablePrep?.pending||stablePrep?.error?'':'hidden'}>${stablePrep?.pending||stablePrep?.error?esc(t(stablePrep.pending?'stableStandPreparing':'stableStandPreparationFailed')):''}</p><button class="text-button" data-stable-preparation-retry data-action="stable-preparation-retry" ${stablePrep?.error&&!stablePrep.pending?'':'hidden'}>${esc(t("Opnieuw proberen"))}</button>`;
     const tabs=`<div class="stand-controls-tabs section-tabs" role="tablist" aria-label="${esc(t('v50StandControls'))}"><button type="button" role="tab" data-action="stand-control-mode" data-id="colour" aria-selected="${standControlMode==='colour'}" aria-controls="stand-controls-panel">${icon('sun')}${esc(t('v50StandColour'))}</button><button type="button" role="tab" data-action="stand-control-mode" data-id="animations" aria-selected="${standControlMode==='animations'}" aria-controls="stand-controls-panel">${icon('animation')}${esc(t('v50StandAnimations'))}</button></div>`;
-    const content=`<div class="stand-controls-sheet" data-stand-control-sheet data-stand-control-mode="${standControlMode}"><p class="stand-control-scope"><b>${esc(standLabel())}</b> · ${esc(t(zoneCount===1?'v50StandZoneOne':'v50StandZoneMany',{count:zoneCount}))} · ${ledlineCount(physicalLineCount(standControlReceivers()))}</p><div id="stand-controls-panel" role="tabpanel"><p class="stand-control-description">${esc(t(standControlMode==='colour'?'v50StandColourHint':'v50StandAnimationHint'))}<small>${esc(t('v50StandUnassignedHint'))}</small></p>${powerControl()}<p class="live-confirmation" data-live-status="stand" role="status" aria-live="polite"></p>${standControlMode==='colour'?`<p id="stand-control-mixed" class="mixed-note" ${mixedSelection()?'':'hidden'}>${esc(t('v50StandMixedHint'))}</p>${colourPickerMarkup(null,true)}${standScenesMarkup(true)}`:animationContent}</div></div>`;
+    const content=`<div class="stand-controls-sheet" data-stand-control-sheet data-stand-control-mode="${standControlMode}"><p class="stand-control-scope"><b>${esc(standLabel())}</b> · ${esc(t(zoneCount===1?'v50StandZoneOne':'v50StandZoneMany',{count:zoneCount}))} · ${ledlineCount(physicalLineCount(standControlReceivers()))}</p><div id="stand-controls-panel" role="tabpanel"><p class="stand-control-description">${esc(t(standControlMode==='colour'?'v50StandColourHint':'v50StandAnimationHint'))}<small>${esc(t('v50StandUnassignedHint'))}</small></p>${preparationNotice}<div data-stable-preparation-controls ${stablePreparationBlocked(stablePrep)?'inert aria-busy="true"':''}>${powerControl()}<p class="live-confirmation" data-live-status="stand" role="status" aria-live="polite"></p>${standControlMode==='colour'?`<p id="stand-control-mixed" class="mixed-note" ${mixedSelection()?'':'hidden'}>${esc(t('v50StandMixedHint'))}</p>${colourPickerMarkup(null,true)}${standScenesMarkup(true)}`:animationContent}</div></div></div>`;
     buildingStandDialog=true;try{showEffectDialog(t('v50StandControls'),content,tabs);}finally{buildingStandDialog=false;}
     // A first colour edit may hide the mixed-settings explanation. Keep only
     // this dialog's initially visible footprint, so its wheel cannot move
@@ -6360,7 +7229,7 @@
     if(color!==undefined)palette[index]=color;if(white!==undefined)whites[index]=white;
     const rgbFlags=palette.map((_,i)=>i===index&&color!==undefined?true:s.rgbEnabled?.[i]!==false),whiteFlags=palette.map((_,i)=>i===index&&white!==undefined?true:s.whiteEnabled?.[i]!==false);
     apply({colors:palette,whiteChannels:whites,rgbEnabled:rgbFlags,whiteEnabled:whiteFlags,
-      ...(color!==undefined&&index===0&&activeEffect()?.controls.includes('brandColor')?{brandColor:color}:{})});
+      ...(color!==undefined&&index===0&&activeEffect()?.controls.includes('brandColor')?{brandColor:color}:{})},selection(),{paletteOnly:true});
     const host=standControlOpen?document.getElementById('effect-dialog'):main;
     const row=host.querySelector('.palette');if(row)row.innerHTML=paletteMarkup(selectedState());
   }
@@ -6711,11 +7580,12 @@
     if(button.dataset.action==='pin-login-cancel'&&pinLoginBusy){pinRecoveryAbort?.abort();return;}
     if(pinProtectionBusy||pinLoginBusy||(managementBusy||arrangementApplying)&&!orderPanelCloseRequest589(button))return;
     const action=button.dataset.action,id=button.dataset.id;
+    if(appEraseRecovery760&&!['app-erase','native-load-retry'].includes(action))return;
     if(action==='gradient-picker-done')return finishGradientColourPicker();
     // Closing a presentation-only chooser needs no receiver connection.
     // Keep it available if a saved stand goes offline while this sheet is open.
     if(action==='spatial-close'){window.LightningInterfaceHaptics?.activate?.(event,action);return dismissDialog(main.querySelector('[data-spatial-choice-dialog]'),closeSpatialChoice);}
-    if(temporarySingleUser&&temporaryAccessActions.has(action))return;
+    if(temporarySingleUser&&temporaryAccessActions.has(action)&&!(pinLoginC97&&['pin-login','pin-login-submit','pin-login-cancel'].includes(action)))return;
     if(!standPresentationActionAllowed(action))return toast(t("Je stand is nog niet verbonden. Je bewaarde stand blijft zichtbaar."));
     if(!interfaceActionAllowed(action,id))return toast(modeText('basicAdvancedCurrentHint'));
     if(standReceiverActions.has(action)&&standReceiverActionUnavailable(action,button))return toast(standReceiverNotice);
@@ -6727,6 +7597,7 @@
     dialogActionOpener=button;
     queueMicrotask(()=>{if(dialogActionOpener===button)dialogActionOpener=null;});
     try {
+      if(action==='stable-preparation-retry'){reprepareStableControlData();return;}
       if(action==='animation-categories'&&button.hasAttribute('data-discovery-return')&&button.closest('.animation-library-inline[data-discovery-ui="662"]'))return revealAnimationCategoryChoices687(button);
       if(['colour-preset-edit667','colour-preset-save667','colour-preset-cancel667','colour-preset-remove667','colour-presets-brands667','colour-preset-rgb-open718'].includes(action)||
         action==='colour-undo'&&button.closest('[data-inline-presets="667"]')){
@@ -6771,6 +7642,15 @@
           standControlMode=id;standAnimationFamily=null;standAnimationFamilyReturn=null;standDialogNested=null;
           if(id==='animations'){standAnimationGallery=true;standAnimationTab='catalogue';standAnimationQueries.delete(stand()?.id);settingsOpen=false;}
           renderStandControls({preserveScroll:false});
+          if(['colour','animations'].includes(id)){
+            const preparation=stableStandPreparationUI;
+            // Browsing tabs changes no stand/geometry preparation scope.
+            // Retain only this exact current pending or still-valid token.
+            if(preparation&&currentStableStandPreparation(preparation)&&!preparation.error&&
+               (preparation.pending||Number.isFinite(preparation.until)&&preparation.until-stablePreparationNow()>2000))
+              syncStableStandPreparationUI();
+            else void prepareStableStandMenu();
+          }
           document.querySelector(`[data-action="stand-control-mode"][data-id="${id}"]`)?.focus({preventScroll:true});return;
         }
         if(action==='family'){
@@ -6939,6 +7819,7 @@
         return navigate(id);
       }
       if(action==='pin-login')return await openPinLogin();
+      if(action==='reserve-main-enable')return await enableReserveMain97();
       if(action==='stand-create-open'){
         if(nativeContext&&simpleStandSupported)return await openCentralStandConnection({intent:'setup'});
         return navigate('receiver-add',{setupFrom:'stand'});
@@ -6993,6 +7874,8 @@
         catch(_){toast(t("Vergeten is niet bevestigd. Je gegevens zijn niet vervangen."));}return;
       }
       if(action==='pin-login-submit')return await submitPinLogin();
+      if(action==='wifi-open-retry'){wifiOpenC98.fallback=false;wifiOpenC98.paused=false;wifiOpenC98.status='';return void probeWifiOpenC98(true);}
+      if(action==='wifi-open-cancel'){wifiOpenC98.paused=true;stopWifiOpenC98();wifiOpenC98.status='';return render();}
       if(action==='stand-switch-open')return showEffectDialog(t("Kies je stand"),model.stands.map(item=>`<button class="menu-card" data-action="stand-switch" data-id="${esc(item.id)}" aria-pressed="${item.id===stand()?.id}"><span class="menu-icon">${icon('stand')}</span><span><b>${esc(item.name)}</b><small>${item.zones.length} zones${item.id===stand()?.id?' · '+t('Nu geopend'):''}</small></span>${icon('chevron')}</button>`).join(''));
       if(action==='stand-switch'){
         if(!model.stands.some(item=>item.id===id))return;
@@ -7034,30 +7917,7 @@
         main.querySelector('[data-action="interface-mode-toggle"]')?.focus({preventScroll:true});return;
       }
       if(action==='preferences-reset')return showEffectDialog(t("Taal en thema herstellen?"),`<section data-preferences-reset><p>${esc(t("Stelt Nederlands en het lichte thema in."))}</p><p>${esc(t("Je stand en receivers blijven ongewijzigd."))}</p><p class="dialog-error" role="alert" hidden></p><button class="button full" data-action="preferences-reset-confirm">${esc(t("Taal en thema herstellen"))}</button><button class="button secondary full" data-action="effect-dialog-close">${esc(t("Annuleren"))}</button></section>`);
-      if(action==='app-erase')return showEffectDialog(t("Alles verwijderen?"),`<section data-app-erase><p>${webDemoContext?t("Alleen de tijdelijke demogegevens op deze pagina worden verwijderd. Gegevens van de gewone site en fysieke receivers blijven onaangeroerd."):t("Alle opgeslagen gegevens en configuraties worden uit de app verwijderd. Dit kan niet ongedaan worden gemaakt. De fysieke receivers worden niet teruggezet naar de fabrieksinstellingen.")}</p><p class="dialog-error" role="alert" hidden></p><button class="button secondary full" data-action="effect-dialog-close">${esc(t("Annuleren"))}</button><button class="button red full" data-action="app-erase-confirm">${esc(t("Alles verwijderen"))}</button></section>`);
-      if(action==='app-erase-confirm'){
-        const panel=document.querySelector('[data-app-erase]');
-        if(!document.getElementById('effect-dialog').open||!panel)return;
-        button.disabled=true;
-        try{
-          if(nativeContext){
-            if(typeof runtime?.services?.eraseAppData!=='function')throw Error('NATIVE_UNAVAILABLE');
-            const result=await runtime.services.eraseAppData({confirmation:t("Alles verwijderen")});
-            if(result?.status!=='erased-local-only')throw Error('ERASE_UNCONFIRMED');
-          }
-          if(webDemoContext)webDemo.storage.clear();
-          else {window.localStorage.clear();window.sessionStorage.clear();}
-          if(nativeContext){window.location.reload();return;}
-          onboarding.reset();model=M.assertValid(webDemoContext?{schemaVersion:30,demo:true,stands:[],receivers:[],scenes:[],presets:[]}:runtime?.emptyModel?.()||{schemaVersion:30,demo:false,stands:[],receivers:[],scenes:[],presets:[]});
-          savedPresets=presetStore.load();savedColours=colourStore.load();savedScenes=sceneStore.load();uiPreferences=preferenceStore.load();interfaceModeState=interfaceModeStore.load();
-          selections.clear();brandEditor=null;presetEdit667=null;removedColour=null;colourLibraryNotice='';presetLibraryEpoch667++;presetLibraryBusy667=false;visualPorts.clear();visualPlugMotions.clear();identifying.clear();expandedReceivers.clear();expandedConnections.clear();
-          sceneDraft=null;receiverFilter='all';route={screen:webDemoContext?'stand':'receiver-add',setupFrom:'stand',zoneId:null,family:null,library:'all'};
-          closeEffectDialog();render({top:true});return;
-        }catch(failure){
-          button.disabled=false;const feedback=panel.querySelector('.dialog-error');
-          feedback.hidden=false;feedback.textContent=failure?.code==='LOCAL_ERASE_REMOVAL_PENDING'?'Rond eerst de openstaande receiververwijdering af. Je appgegevens zijn niet gewist.':'Verwijderen is niet volledig bevestigd. Controleer de app opnieuw voordat je verdergaat.';return;
-        }
-      }
+      if(action==='app-erase')return appErase.open();
       if(action==='preferences-reset-confirm'){
         if(!document.getElementById('effect-dialog').open||!document.querySelector('[data-preferences-reset]'))return;
         const result=preferenceStore.reset();
@@ -7254,6 +8114,8 @@
       }
       if(action==='zone-power'){
         if(route.screen!=='stand'||standControlOpen||!button.closest('.stand-page')||standPresentationOnly()||receiverWorkBusy())return;
+        const gradientZone=M.zoneReceivers(model,id).some(r=>r.state.engine==='STATIC_GRADIENT'||Object.hasOwn(r.state,'staticGradientRecipe')||Object.values(r.state.portStates||{}).some(s=>s.engine==='STATIC_GRADIENT'||Object.hasOwn(s,'staticGradientRecipe')));
+        if(gradientZone){const power=zonePowerState651(model,stand()?.id,id);if(power&&!power.empty)tryGradientPower({on:power.value!==true,power:power.value!==true},{kind:'all'},id);render();return;}
         const plan=planZonePower651(model,stand()?.id,id);if(!plan)return;
         model=plan.model;sendReceiverStates(plan.receiverIds);render();
         main.querySelector(`[data-action="zone-power"][data-id="${CSS.escape(id)}"]`)?.focus({preventScroll:true});return;
@@ -7814,13 +8676,19 @@
   window.addEventListener('pagehide',()=>{activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){activeControlPointer=null;controlRenderDeferred=false;activeStaticGesturePointer=null;releaseStaticFeedbackHold();liveController?.cancelGesture();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){retireOrderSave588();cancelOrderTest();retireOrderFocus664();void orderIdentification?.hide();}});
-  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate756',hardwareEnabled:false});
+  window.LightningV30=Object.freeze({snapshot:()=>copy({model,route,selection:selection()}),version:'50.0.0-candidate578',hardwareEnabled:false});
   async function loadNativeState(){
     if(nativeLoading)return;nativeLoading=true;nativeLoadError=false;render();
     legacyStandLandingId=null;legacyStandReturn=null;standAutoOpenSelected=false;firstPinReady686.clear();
     try{
       if(typeof runtime?.services?.loadState!=='function')throw Error('NATIVE_UNAVAILABLE');
       const startupCapabilities=await refreshStandCapabilities();simpleStandMode=simpleStandSupported;
+      if(startupCapabilities?.appEraseRecovery760!==undefined&&typeof startupCapabilities.appEraseRecovery760!=='boolean')throw Error('APP_ERASE_UNCONFIRMED');
+      appEraseRecovery760=startupCapabilities?.appEraseRecovery760===true;
+      if(appEraseRecovery760){
+        if(startupCapabilities?.appErase760!==true)throw Error('APP_ERASE_UNAVAILABLE');
+        nativeLoaded=true;standPresentationId=null;route={...route,screen:'settings',zoneId:null};return;
+      }
       showStandPresentation();
       const state=await runtime.services.loadState();
       if(state.model?.demo!==false)throw Error('NATIVE_MODEL_INVALID');
@@ -7927,7 +8795,7 @@
       else if(namesOnly){route.screen='stand';route.zoneId=null;route.standId=localStandConceptId;}
       else if(!restored.stands.length&&!localStandConcept()){route.screen='stand';route.standId=null;route.zoneId=null;}
     }catch(_){nativeLoadError=true;if(standPresentationId)standConnectionState={status:'offline',error:'STAND_CONNECTION_UNAVAILABLE'};}
-    finally{nativeLoading=false;render(standPresentationId?{preserveScroll:true}:{top:true});if(standLinkAvailable){standLinkPending=true;void consumeStandShareLink();}}
+    finally{nativeLoading=false;render(standPresentationId?{preserveScroll:true}:{top:true});if(appEraseRecovery760)void appErase.open();else if(standLinkAvailable){standLinkPending=true;void consumeStandShareLink();}}
   }
   paletteDrag=window.LightningV50Interactions?.installPaletteDrag({document,
     onActivity:active=>{if(!active&&paletteRenderDeferred){paletteRenderDeferred=false;queueMicrotask(()=>render({preserveScroll:true}));}},

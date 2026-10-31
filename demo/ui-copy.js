@@ -691,6 +691,7 @@
   rows["animationName:spi-line-breathe-18"]=Object.freeze(["Dubbele puls","Double Pulse","Double pulsation","Doppelter Puls"]);
   rows["animationName:spi-line-gradient-19"]=Object.freeze(["Kleurpauze en overgang","Colour Hold Fade","Pause et fondu de couleur","Farbpause mit Überblendung"]);
   rows["animationName:spi-line-breathe-25"]=Object.freeze(["Natuurlijk kleurverloop","Organic Fade","Fondu naturel","Natürlicher Farbwechsel"]);
+  rows['animationName:rgbw-breathe-0']=rows['animationName:spi-breathe-98']=Object.freeze(['Pulse · blijft zacht branden','Pulse · keeps a soft glow','Pulsation · reste doucement allumée','Puls · bleibt sanft an']);
   rows.backupPresetsOne=Object.freeze(['{count} animatiepreset','{count} animation preset','{count} préréglage d’animation','{count} Animationsvoreinstellung']);
   rows.backupPresetsMany=Object.freeze(['{count} animatiepresets','{count} animation presets','{count} préréglages d’animation','{count} Animationsvoreinstellungen']);
   rows.backupColoursOne=Object.freeze(['{count} kleur','{count} colour','{count} couleur','{count} Farbe']);

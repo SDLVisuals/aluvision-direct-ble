@@ -1,6 +1,6 @@
 /* Scoped SPI demo surface; uses the existing colour / typography tokens. */
 .spi-colour-workspace{display:grid;gap:16px;min-width:0}
-[data-demo-gradient-active] .control-preview-dock :is(.v50-control-preview,.control-location-summary,.live-confirmation){display:none}
+[data-demo-gradient-active] .control-preview-dock .control-location-summary{display:none}
 .spi-colour-modes{display:flex;gap:5px;background:var(--soft);padding:4px;border-radius:14px}
 .spi-colour-modes>button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;border-radius:11px;background:transparent;color:var(--muted);font-size:13px}
 .spi-colour-modes>button[aria-pressed=true]{background:var(--panel);color:var(--ink);box-shadow:0 2px 6px #00000009}
@@ -69,3 +69,70 @@ body[data-theme=dark] .gradient-stop.is-selected i{box-shadow:0 0 0 2px #f4f2ed,
 @media(prefers-reduced-motion:reduce){.spi-colour-workspace *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 #effect-dialog .shared-colour-picker[data-colour-picker="gradient"]>.section-heading{flex-wrap:nowrap}
 #effect-dialog .shared-colour-picker[data-colour-picker="gradient"]>.section-heading h2{flex:1 1 auto;min-width:0}
+.gradient-apply { display:grid; gap:1rem; }
+.gradient-apply label { display:flex; align-items:center; gap:.65rem; }
+.gradient-apply input[type="number"] { width:6rem; max-width:100%; }
+.gradient-apply [data-gradient-apply-status] { margin:0; line-height:1.5; }
+
+/* C97: the gradient editor reuses the app's card, slider-row and
+ * colour-row look (as in the animation colours); the shared ledline preview at
+ * the top shows the draft, so the panel holds no preview of its own. */
+[data-gradient-panel]{gap:14px}
+.gradient-card{display:grid;gap:12px;padding:18px!important;min-width:0}
+.gradient-card h3{font-size:17px;margin:0;color:var(--ink)}
+.gradient-card .gradient-help{font-size:13px;line-height:1.45;color:var(--muted);margin:-4px 0 0}
+.gradient-builtins{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin:0}
+.gradient-builtins button{display:flex;overflow:visible;align-items:center;gap:12px;min-width:0;min-height:56px;padding:0 14px;text-align:left;border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink);font:inherit;font-size:15px;font-weight:650;cursor:pointer}
+.gradient-builtins i{flex:none;display:block;width:64px;height:28px;border-radius:14px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.gradient-builtins span{flex:1;min-width:0;overflow-wrap:anywhere}
+.gradient-builtin-check{visibility:hidden;color:var(--red);font-size:17px}
+.gradient-builtins button[aria-pressed=true]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.gradient-builtins button[aria-pressed=true] .gradient-builtin-check{visibility:visible}
+.gradient-rail-wrap{padding:12px 22px 8px}
+.gradient-stop{top:-9px}
+.gradient-points{display:grid;gap:8px}
+.gradient-point{display:flex;align-items:stretch;min-width:0;border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden}
+.gradient-point.is-selected{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.gradient-point-colour{flex:1;min-width:0;display:flex;align-items:center;gap:12px;min-height:56px;padding:0 14px;background:transparent;color:var(--ink);text-align:left;font:inherit;cursor:pointer}
+.gradient-point-swatch{flex:none;width:30px;height:30px;border-radius:50%;background:var(--stop);box-shadow:inset 0 0 0 1px rgba(0,0,0,.16)}
+.gradient-point-colour b{flex:1;font-size:15px}
+.gradient-point-colour small{font-size:13px;color:var(--muted)}
+.gradient-point-remove{flex:none;width:52px;min-height:56px;border:0;border-left:1px solid var(--line);background:transparent;color:var(--ink);font-size:22px;cursor:pointer}
+.gradient-point-remove:disabled{opacity:.3;cursor:default}
+.gradient-point-add{min-height:52px;border:1.5px dashed var(--line);border-radius:14px;background:transparent;color:var(--red);font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.gradient-point-add:disabled{opacity:.4}
+.gradient-slider{margin:4px 0 0}
+.gradient-slider input[type=range]{width:100%;accent-color:var(--red)}
+.gradient-even{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:50px;margin-top:-2px;border:2px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink);font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.gradient-even svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.gradient-even:active{background:var(--soft)}
+.gradient-even:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+:is(.gradient-point-colour,.gradient-point-remove,.gradient-point-add,.gradient-builtins button):focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.gradient-apply{display:grid;gap:10px;padding-top:14px;border-top:1px solid var(--line)}
+.gradient-apply [data-gradient-apply]{width:100%;min-height:52px;margin:0;font-size:16px}
+.gradient-apply [data-gradient-apply-status]{margin:0;font-size:13px;line-height:1.45;color:var(--muted);text-align:center}
+.gradient-more{border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+.gradient-more>summary{min-height:48px;display:flex;align-items:center;padding:0 14px;font-size:14px;font-weight:650;cursor:pointer;list-style:none}
+.gradient-more>summary::-webkit-details-marker{display:none}
+.gradient-more>summary::after{content:'';margin-left:auto;width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg) translate(-2px,-2px)}
+.gradient-more[open]>summary::after{transform:rotate(-135deg) translate(-2px,-2px)}
+.gradient-more>summary:focus-visible{outline:3px solid var(--ink);outline-offset:2px;border-radius:14px}
+.gradient-more>label{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:0 14px;border-top:1px solid var(--line);font-size:14px}
+.gradient-more .gradient-check{justify-content:flex-start}
+.gradient-more input[type=checkbox]{width:22px;height:22px;accent-color:var(--red);margin:0}
+.gradient-more .gradient-transition span{display:flex;align-items:center;gap:6px;color:var(--muted)}
+.gradient-more input[type=number]{width:5.5rem;min-height:40px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-size:15px;text-align:right}
+.gradient-name-label{font-size:14px}
+.gradient-save-actions .button{font-size:15px;min-height:48px}
+html body .gradient-library .gradient-save-actions :is([data-gradient-save],[data-gradient-save-copy]){background:var(--panel)!important;background-image:none!important;color:var(--ink)!important;border:2px solid var(--line)!important;box-shadow:none!important}
+.gradient-saved-row{border-radius:14px;background:var(--panel)}
+.gradient-saved-row>button:first-child{gap:12px;padding:0 14px;color:var(--ink)}
+.gradient-saved-row i{width:64px;height:28px;border-radius:14px}
+.gradient-saved-row span{font-weight:650}
+.gradient-saved-row>button:first-child{font-size:14px;min-height:56px}
+.gradient-saved-row small{font-size:12px;color:var(--muted)}
+.gradient-remove-preset{min-width:52px;font-size:22px;color:var(--ink)}
+.gradient-notice,.gradient-empty{font-size:13px!important}
+.gradient-notice:empty{display:none}
+.gradient-card-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.gradient-count{flex:none;padding:4px 10px;border-radius:999px;background:var(--soft);color:var(--muted);font-size:12px;font-weight:700}

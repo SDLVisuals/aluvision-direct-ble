@@ -4,10 +4,10 @@
  */
 (function (root, factory) {
   'use strict';
-  const api = factory();
+  const api = factory(typeof module === 'object' && module.exports ? require('./static-gradient.js') : root.LightningStaticGradient);
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.LightningPresets = api;
-}(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+}(typeof globalThis !== 'undefined' ? globalThis : this, function (G) {
   'use strict';
   const STORAGE_KEY = 'aluvision.v30.animation-presets.v1';
   const MAX_PRESETS = 100;
@@ -50,6 +50,8 @@
   rules.receiverType = value => TYPES.includes(value);
   rules.previewFamily = value => value === null || TYPES.includes(value);
   rules.v30Effect = value => value === null || validId(value);
+  rules.staticGradientRecipe = value => { try { G.decodeRecipe(value); return true; } catch (_) { return false; } };
+  rules.gradientLastBrightness = value => Number.isInteger(value) && value>=1 && value<=100;
   rules.colors = value => Array.isArray(value) && value.length >= 1 && value.length <= 16 && value.every(validHex);
   rules.whiteChannels = value => Array.isArray(value) && value.length >= 1 && value.length <= 16 && value.every(item => finite(item, 0, 255));
   ['rgbEnabled', 'whiteEnabled'].forEach(key => { rules[key] = value => Array.isArray(value) && value.length >= 1 && value.length <= 16 && value.every(item => typeof item === 'boolean'); });
@@ -66,6 +68,8 @@
       result[key] = clone(value[key]);
     });
     if (!result.engine || !result.colors || !result.colors.length) fail('STATE_REQUIRED', 'De animatie en kleuren ontbreken.');
+    if (result.engine === 'STATIC_GRADIENT' ? !has(result,'staticGradientRecipe') : has(result,'staticGradientRecipe')) fail('STATE_GRADIENT', 'Dit verloop is niet volledig bewaard. Pas het opnieuw toe met een bijgewerkte app.');
+    if(has(result,'gradientLastBrightness')&&result.engine!=='STATIC_GRADIENT')fail('STATE_GRADIENT','Dit helderheidsgeheugen hoort niet bij een verloop.');
     if (result.colorCount !== undefined && result.colorCount > result.colors.length) fail('PALETTE', 'Het aantal kleuren past niet bij het palet.');
     return result;
   }

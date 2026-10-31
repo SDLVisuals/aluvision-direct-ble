@@ -1143,7 +1143,7 @@
       if(identifyPending.size)return;
       const token=++operation;searchOnMount=false;searchAbort=new AbortController();searchState='searching';results=[];error='';paintPage(false);
       try{
-        const result=await bounded(services.search({standId:draft.stand.id,mainReceiverId:draft.mainReceiverId,signal:searchAbort.signal}),draft.role==='node'?35000:15000);
+        const result=await bounded(services.search({standId:draft.stand.id,mainReceiverId:draft.mainReceiverId,signal:searchAbort.signal}),draft.role==='node'?95000:15000);
         if(token!==operation||searchAbort?.signal.aborted)return;
         const identities=new Set(),localIds=new Set(),fingerprints=new Set(),existing=getModel().receivers;
         results=(Array.isArray(result?.receivers)?result.receivers:[]).filter(receiver=>{
@@ -1701,7 +1701,7 @@
             // lease. Reattest before painting a page that starts test light.
             busy=true;notice='Receiver veilig controleren…';paintPage(false);
             try{
-              const verified=await bounded(services.select({standId:restored.stand.id,transactionId:restored.transactionId,receiver:clone(receiver)}),50000);
+              const verified=await bounded(services.select({standId:restored.stand.id,transactionId:restored.transactionId,receiver:clone(receiver)}),services.selectionDeadlineMS?.(restored.stand.id)??50000);
               if(token!==operation||!container)return;
               if(!/^[A-F0-9]{64}$/.test(verified?.deviceFingerprint||'')||!['id','rid','type','deviceFingerprint'].every(key=>verified?.[key]===restored.receiver[key]))throw Object.assign(Error('IDENTITY_MISMATCH'),{code:'IDENTITY_MISMATCH'});
               restoredSelectionVerified=true;
@@ -1743,7 +1743,7 @@
         if(receiver.canConfigure===false&&receiver.canVerifyIdentity){
           const token=++operation,expected=receiver;busy=true;error='';notice='Receiver veilig controleren…';paintPage(false);
           try{
-            const verified=await bounded(services.select({standId:draft.stand.id,transactionId:draft.transactionId,receiver:clone(expected)}),50000);
+            const verified=await bounded(services.select({standId:draft.stand.id,transactionId:draft.transactionId,receiver:clone(expected)}),services.selectionDeadlineMS?.(draft.stand.id)??50000);
             if(token!==operation||!container||draft.stage!=='receiver')return;
             if(!verified||verified.id!==expected.id||verified.rid!==expected.rid||verified.type!==expected.type||!/^[A-F0-9]{64}$/.test(verified.deviceFingerprint)||expected.deviceFingerprint&&verified.deviceFingerprint!==expected.deviceFingerprint)throw Object.assign(Error('IDENTITY_MISMATCH'),{code:'IDENTITY_MISMATCH'});
             receiver={id:verified.id,rid:verified.rid,type:verified.type,name:expected.name,deviceFingerprint:verified.deviceFingerprint,canConfigure:true,canVerifyIdentity:true};

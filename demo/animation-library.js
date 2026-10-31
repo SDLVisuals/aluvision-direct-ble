@@ -96,6 +96,7 @@
     }));
   }
   function displayName(effect,translate) {
+    if(['rgbw-breathe-0','spi-breathe-98'].includes(effect.id))return text('v50AnimationSoftPulseName','Pulse · blijft zacht branden',translate);
     if(effect.id==='spi-chase-8')return text('v50AnimationName:spi-chase-8','Chase',translate);
     if(effect.id==='v30-tunnel-pulse'&&effect.standMode==='coordinated'&&Array.isArray(effect.supportedTypes)&&effect.supportedTypes.includes('RGBW')&&effect.supportedTypes.includes('SPI'))return text('v50AnimationStandPulseName',effect.standName||effect.name,translate);
     const starter=STARTERS.find(item=>item.ids.includes(effect.id));
@@ -150,7 +151,7 @@
   // small variation of the same recipe. Each slot names existing equivalents
   // for RGBW/SPI; missing entries fall back to the untouched catalogue order.
   const FEATURED = Object.freeze({
-    'whole:pulse':[['rgbw-breathe-1','spi-breathe-99'],['rgbw-breathe-18','spi-line-breathe-18'],['rgbw-breathe-25','spi-line-breathe-25'],['rgbw-breathe-17','spi-line-breathe-17'],['rgbw-breathe-0','spi-breathe-98']],
+    'whole:pulse':[['rgbw-breathe-0','spi-breathe-98'],['rgbw-breathe-1','spi-breathe-99'],['rgbw-breathe-18','spi-line-breathe-18'],['rgbw-breathe-25','spi-line-breathe-25'],['rgbw-breathe-17','spi-line-breathe-17']],
     'pixels:flow':[['spi-gradient-2'],['spi-flow-21'],['spi-flow-42'],['spi-flow-121'],['spi-gradient-123']],
     'pixels:pulse':[['spi-breathe-22'],['spi-breathe-24'],['spi-breathe-39'],['spi-breathe-69'],['spi-breathe-127']],
     'pixels:wave':[['spi-wave-29'],['spi-wave-31'],['spi-wave-116'],['spi-wave-122'],['spi-wave-130']],
@@ -210,7 +211,7 @@
   // remains in the full catalog for current playback, saved scenes and presets.
   const PRESENTATION_CHOICES = Object.freeze({
     'whole:colour':['v30-rgb-jumping','v30-rgb-gradient'],
-    'whole:pulse':['rgbw-breathe-1','spi-breathe-99','rgbw-breathe-18','spi-line-breathe-18','rgbw-breathe-25','spi-line-breathe-25'],
+    'whole:pulse':['rgbw-breathe-0','spi-breathe-98','rgbw-breathe-1','spi-breathe-99','rgbw-breathe-18','spi-line-breathe-18','rgbw-breathe-25','spi-line-breathe-25'],
     'whole:flow':['rgbw-flow-3','spi-line-flow-3','rgbw-gradient-19','spi-line-gradient-19'],
     'whole:flash':['rgbw-sparkle-4','spi-sparkle-102','rgbw-sparkle-20','spi-line-sparkle-20'],
     'pixels:flow':['spi-gradient-4','spi-flow-121','spi-gradient-123'],
@@ -240,11 +241,11 @@
   });
   Object.values(PRESENTATION_CHOICES).forEach(Object.freeze);
   const SHORTLISTED_OMISSIONS = Object.freeze([
-    'rgbw-breathe-0','rgbw-breathe-17','rgbw-breathe-21','rgbw-cascade-22',
+    'rgbw-breathe-17','rgbw-breathe-21','rgbw-cascade-22',
     'rgbw-cascade-6','rgbw-gradient-2','rgbw-gradient-9','rgbw-mirror-13',
     'rgbw-mirror-14','rgbw-sequence-27','rgbw-sequence-5','rgbw-wave-12',
     'rgbw-wave-16','rgbw-wave-24','rgbw-wave-26','rgbw-wave-31','rgbw-wave-7',
-    'spi-breathe-104','spi-breathe-171','spi-breathe-79','spi-breathe-98',
+    'spi-breathe-104','spi-breathe-171','spi-breathe-79',
     'spi-cascade-108','spi-cascade-156','spi-cascade-172','spi-cascade-90',
     'spi-cascade-91','spi-chase-112','spi-chase-113','spi-chase-126',
     'spi-chase-158','spi-chase-80','spi-chase-94','spi-comet-115',

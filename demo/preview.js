@@ -454,7 +454,7 @@ function softTrailCoverage(behind,trail,n,smooth){
       }else if(engine==='ALL')foreground=gradient(temporal);
       else{foreground=gradient(temporal);amount=objectAmount();}
       const priorChannels=(engine==='ALTERNATE'||sequenceSmooth||variant===94&&lines>1)&&smooth?mix(bg,foreground,amount):slowCorrection>=1?null:mixAnimated(bg,foreground,amount);
-      const channels=slowCorrection>=1?mix(bg,foreground,amount):slowCorrection>0?mix(priorChannels,mix(bg,foreground,amount),slowCorrection):priorChannels,bright=engine==='WARM'?(palette.some(c=>c.some(x=>x!==0))?brightness:0):1;
+      const channels=variant===98?mix(bg,foreground,amount):slowCorrection>=1?mix(bg,foreground,amount):slowCorrection>0?mix(priorChannels,mix(bg,foreground,amount),slowCorrection):priorChannels,bright=engine==='WARM'?(palette.some(c=>c.some(x=>x!==0))?brightness:0):1;
       return channels.slice(0,3).map(x=>Math.round(clamp(255-(255-x*bright)*(1-channels[3]*bright/255),0,255)));
     }
     function catalog() {
@@ -733,6 +733,18 @@ function softTrailCoverage(behind,trail,n,smooth){
         {...group,receivers:group.receivers.map(item => item.receiverId === receiver.id
           ? {...item,pixelCount:output.pixels,outputs:[output]} : item)},time));
     }
+    if(receiver.type==='SPI'&&receiver.state?.engine==='STATIC_GRADIENT'){
+      const G=typeof module==='object'&&module.exports?require('./static-gradient.js'):globalThis.LightningStaticGradient;
+      const gradient=G.decodeRecipe(receiver.state.staticGradientRecipe);
+      if(receiver.state.on===false||receiver.state.power===false)return Array.from({length:geo.pixelCount},()=>[0,0,0]);
+      return geo.outputs.flatMap(output=>Array.from({length:output.pixels},(_,pixel)=>{
+        const total=group.layout==='continuous'?group.totalPixels:output.pixels;
+        const physical=output.reversed?output.pixels-1-pixel:pixel;
+        let index=(group.layout==='continuous'?output.offset:0)+physical;if(gradient.reverse)index=total-1-index;
+        const position=total===1?32768:Math.round(index*65535/(total-1));
+        return G.sample(gradient.stops,position/65535).map(c=>Math.round(c*gradient.brightness/100));
+      }));
+    }
     const state = normalizeState(receiver);
     const background = descriptorFor(receiver)?.backgroundEditable ? backgroundSample(state) : null;
     const continuous = group.layout === 'continuous';
@@ -798,13 +810,13 @@ function softTrailCoverage(behind,trail,n,smooth){
     const integer=(value,min,max)=>Number.isInteger(value)&&value>=min&&value<=max;
     for(const receiver of stripped.receivers){
       const original=physical.receivers.find(row=>row.receiverId===receiver.receiverId);if(!original)invalid();
-      if(!integer(receiver.sampleCount,2,120)||!integer(receiver.sampleIndex,0,receiver.sampleCount-1))invalid();
+      if(!integer(receiver.sampleCount,2,256)||!integer(receiver.sampleIndex,0,receiver.sampleCount-1))invalid();
       if(count!==null&&receiver.sampleCount!==count)invalid();count=receiver.sampleCount;
       delete receiver.sampleIndex;delete receiver.sampleCount;
       if(!Array.isArray(receiver.outputs))invalid();
       for(const output of receiver.outputs){
-        if(!integer(output.sampleCount,2,120)||output.sampleCount!==count||!integer(output.sampleIndex,0,count-1)||
-           !integer(output.samplePixels,output.pixels,8192)||!integer(output.sampleOffset,0,output.samplePixels-output.pixels))invalid();
+        if(!integer(output.sampleCount,2,256)||output.sampleCount!==count||!integer(output.sampleIndex,0,count-1)||
+           !integer(output.samplePixels,output.pixels,model.LIMITS.continuousPixels)||!integer(output.sampleOffset,0,output.samplePixels-output.pixels))invalid();
         delete output.sampleIndex;delete output.sampleCount;delete output.samplePixels;delete output.sampleOffset;
       }
     }

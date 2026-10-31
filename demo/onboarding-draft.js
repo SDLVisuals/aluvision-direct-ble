@@ -173,7 +173,7 @@
   function duplicate(context,receiver) { return context.receivers.some(existing => existing.id === receiver.id || existing.rid === receiver.rid || existing.deviceFingerprint === receiver.deviceFingerprint); }
   function compatible(draft,zone) {
     if (zone.type !== null && zone.type !== draft.receiver.type) fail('MIXED_ZONE','Plaats RGBW en SPI in afzonderlijke zones.');
-    if (zone.layout === 'continuous' && zone.type === 'SPI' && zone.pixels + activeOutputs(draft).reduce((sum,output) => sum + output.pixels,0) > Model.LIMITS.continuousPixels) fail('ZONE_PIXEL_LIMIT','Deze doorlopende zone ondersteunt maximaal 8192 pixels. Kies een andere zone.');
+    if (zone.layout === 'continuous' && zone.type === 'SPI' && zone.pixels + activeOutputs(draft).reduce((sum,output) => sum + output.pixels,0) > Model.LIMITS.continuousPixels) fail('ZONE_PIXEL_LIMIT',`Deze doorlopende zone ondersteunt maximaal ${Model.LIMITS.continuousPixels} pixels. Kies een andere zone.`);
   }
   function toSecurity(draft) {
     if(draft.receiver.type==='SPI') {

@@ -1,0 +1,156 @@
+/* C98 glass: a strict, modern frosted-glass skin over the existing design.
+ * Visual only — no layout, flow or control changes. Loaded last; the
+ * !important flags are deliberate so this one layer wins over the older
+ * material layers (v40/v41/premium/milk) without touching them.
+ * Light theme = body:not([data-theme=dark]); dark = body[data-theme=dark]. */
+
+html:not(#c98) body:not(#c98){
+  --glass-blur:blur(22px) saturate(175%);
+  --glass-bg:rgba(255,255,255,.44);
+  --glass-bg-strong:rgba(255,255,255,.66);
+  --glass-bg-soft:rgba(255,255,255,.32);
+  --glass-edge:rgba(255,255,255,.85);
+  --glass-hairline:rgba(17,24,39,.08);
+  --glass-shine:linear-gradient(160deg,rgba(255,255,255,.62) 0%,rgba(255,255,255,.14) 42%,rgba(255,255,255,.04) 100%);
+  --glass-shadow:0 1px 0 0 rgba(255,255,255,.95) inset,0 0 0 1px var(--glass-hairline),0 18px 38px -22px rgba(28,32,56,.32),0 4px 12px -8px rgba(28,32,56,.14);
+  --glass-shadow-soft:0 1px 0 0 rgba(255,255,255,.9) inset,0 0 0 1px var(--glass-hairline),0 6px 16px -12px rgba(28,32,56,.22);
+}
+html:not(#c98) body:not(#c98)[data-theme="dark"]{
+  --glass-bg:rgba(30,30,36,.50);
+  --glass-bg-strong:rgba(38,38,46,.70);
+  --glass-bg-soft:rgba(255,255,255,.05);
+  --glass-edge:rgba(255,255,255,.12);
+  --glass-hairline:rgba(255,255,255,.07);
+  --glass-shine:linear-gradient(160deg,rgba(255,255,255,.10) 0%,rgba(255,255,255,.03) 45%,rgba(255,255,255,0) 100%);
+  --glass-shadow:0 1px 0 0 rgba(255,255,255,.09) inset,0 0 0 1px var(--glass-hairline),0 22px 44px -22px rgba(0,0,0,.85),0 4px 14px -8px rgba(0,0,0,.6);
+  --glass-shadow-soft:0 1px 0 0 rgba(255,255,255,.07) inset,0 0 0 1px var(--glass-hairline),0 8px 18px -12px rgba(0,0,0,.7);
+}
+
+/* Ambient light behind the glass: a fixed layer on the root (iOS WebViews
+ * ignore background-attachment:fixed), so the colours stay put while
+ * scrolling. body::before is continuity.css's safe-area cover (behind the
+ * clock/battery): a clear frost (no mask: WebKit may drop a masked
+ * backdrop blur), so the ambient colours run on to the very top while
+ * scrolled content still blurs away. */
+html:not(#c98) body:not(#c98){background:transparent!important;--glass-safe-tint:rgba(255,255,255,.16)}
+html:not(#c98) body:not(#c98)[data-theme="dark"]{--glass-safe-tint:rgba(10,10,13,.22)}
+html::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--glass-ambient-root)}
+html:not(#c98) body:not(#c98)::before{background:linear-gradient(180deg,var(--glass-safe-tint),transparent)!important;
+  -webkit-backdrop-filter:blur(14px) saturate(170%);backdrop-filter:blur(14px) saturate(170%)}
+
+html{--glass-ambient-root:
+    radial-gradient(65% 40% at 0% 0%,rgba(226,94,84,.34),transparent 70%),
+    radial-gradient(60% 38% at 100% 22%,rgba(124,108,246,.30),transparent 72%),
+    radial-gradient(75% 42% at 90% 100%,rgba(56,189,248,.28),transparent 70%),
+    radial-gradient(55% 32% at 0% 70%,rgba(52,211,153,.18),transparent 70%),
+    linear-gradient(180deg,#f3f4f8 0%,#eceef4 55%,#e8eaf1 100%);background:#eceef4!important}
+html:has(body[data-theme="dark"]){--glass-ambient-root:
+    radial-gradient(65% 40% at 0% 0%,rgba(220,72,64,.36),transparent 70%),
+    radial-gradient(60% 38% at 100% 22%,rgba(99,102,241,.32),transparent 72%),
+    radial-gradient(75% 42% at 85% 100%,rgba(14,165,233,.24),transparent 70%),
+    radial-gradient(50% 30% at 0% 72%,rgba(16,185,129,.14),transparent 70%),
+    linear-gradient(180deg,#0c0c10 0%,#0a0a0d 60%,#08080b 100%);background:#0a0a0d!important}
+
+/* ---- Glass surfaces ------------------------------------------------- */
+html:not(#c98) body:not(#c98) :is(
+  .menu-card,article.zone-entry,section.stand-scenes,section.card,
+  .control-dock-surface,details.receiver-overview-card,.power-card,.animation-family-card,
+  .effect-card,.stand-info-tile,.stand-scenes-entry,.ledline-setup,section.receiver-danger-section
+){
+  background:var(--glass-shine),var(--glass-bg)!important;
+  -webkit-backdrop-filter:var(--glass-blur)!important;backdrop-filter:var(--glass-blur)!important;
+  border:1px solid var(--glass-edge)!important;
+  box-shadow:var(--glass-shadow)!important;
+}
+/* Page titles are text on the background, never a card (WebKit drew the
+ * glass edge as a square box around them). */
+html:not(#c98) body:not(#c98) header.page-heading{
+  background:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  border:0!important;box-shadow:none!important;
+}
+/* Cards inside a glass card: lighter, no second blur (crisper, cheaper). */
+html:not(#c98) body:not(#c98) :is(section.card,details.receiver-overview-card,.control-dock-surface) :is(
+  .receiver-port-row,.saved-colour-item,.channel-row,.warm-white-choice,.receiver-product,
+  .menu-card,.effect-card,.stand-info-tile,.power-card
+),
+html:not(#c98) body:not(#c98) :is(article.zone-entry,section.stand-scenes) :is(p.stand-scenes-empty,.stand-scenes-entry){
+  background:var(--glass-bg-soft)!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  border:1px solid var(--glass-hairline)!important;
+  box-shadow:none!important;
+}
+
+/* App bar: clear glass that the content slides under. */
+html:not(#c98) body:not(#c98) header.brand-bar{
+  background:linear-gradient(180deg,var(--glass-bg-strong),var(--glass-bg))!important;
+  -webkit-backdrop-filter:var(--glass-blur)!important;backdrop-filter:var(--glass-blur)!important;
+  border-bottom:1px solid var(--glass-hairline)!important;
+  box-shadow:0 1px 0 0 var(--glass-edge) inset!important;
+}
+
+/* Floating tab bar: the strongest glass on the screen. */
+html:not(#c98) body:not(#c98) nav.navigation{
+  background:var(--glass-shine),var(--glass-bg-strong)!important;
+  -webkit-backdrop-filter:blur(28px) saturate(190%)!important;backdrop-filter:blur(28px) saturate(190%)!important;
+  border:1px solid var(--glass-edge)!important;
+  box-shadow:var(--glass-shadow)!important;
+}
+
+/* Segmented tabs (Kleur / Animaties, filters): glass track, solid active. */
+html:not(#c98) body:not(#c98) :is(.section-tabs,.receiver-filters,.preview-size-picker,.spi-colour-modes){
+  background:var(--glass-bg-soft)!important;
+  -webkit-backdrop-filter:var(--glass-blur)!important;backdrop-filter:var(--glass-blur)!important;
+  border:1px solid var(--glass-edge)!important;
+  box-shadow:var(--glass-shadow-soft)!important;
+}
+
+/* Secondary buttons and quiet choices: frosted, with a crisp edge. */
+html:not(#c98) body:not(#c98) :is(.button.secondary,.theme-choice,.animation-category-tab,.receiver-setting-row707,.spatial-choice-toggle,.v50-preview-expand,.ledline-setup-toggle){
+  background:var(--glass-bg)!important;
+  -webkit-backdrop-filter:var(--glass-blur)!important;backdrop-filter:var(--glass-blur)!important;
+  border:1px solid var(--glass-edge)!important;
+  box-shadow:var(--glass-shadow-soft)!important;
+}
+
+/* Primary buttons stay solid: the one thing that should not be see-through.
+ * A fine top light makes them read as polished glass-black. */
+html:not(#c98) body:not(#c98) .button:not(.secondary):not(:disabled){
+  box-shadow:0 1px 0 0 rgba(255,255,255,.18) inset,0 10px 22px -12px rgba(0,0,0,.55)!important;
+}
+
+/* Sheets and dialogs: heavier frost over a dimmed, blurred backdrop. */
+html:not(#c98) body:not(#c98) dialog[open]{
+  background:var(--glass-shine),var(--glass-bg-strong)!important;
+  -webkit-backdrop-filter:blur(30px) saturate(180%)!important;backdrop-filter:blur(30px) saturate(180%)!important;
+  border:1px solid var(--glass-edge)!important;
+  box-shadow:var(--glass-shadow)!important;
+}
+html:not(#c98) body:not(#c98) dialog[open]::backdrop{background:rgba(10,12,20,.28);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+
+/* Inputs: inset glass. */
+html:not(#c98) body:not(#c98) :is(input[type=text],input[type=search],input[type=password],input[inputmode],textarea,select){
+  background:var(--glass-bg-soft)!important;
+  border:1px solid var(--glass-hairline)!important;
+  box-shadow:0 1px 2px 0 rgba(0,0,0,.06) inset!important;
+}
+
+/* Strict, modern type: tighter large headings. */
+html:not(#c98) body:not(#c98) :is(h1,.page-heading h1){letter-spacing:-.035em}
+html:not(#c98) body:not(#c98) :is(h2,h3){letter-spacing:-.018em}
+
+/* Accessibility and older engines: solid enough without the blur. */
+@media (prefers-reduced-transparency:reduce){
+  html:not(#c98) body:not(#c98){--glass-bg:var(--panel,#fff);--glass-bg-strong:var(--panel,#fff);--glass-bg-soft:var(--soft,#ecece8)}
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  html:not(#c98) body:not(#c98){--glass-bg:rgba(255,255,255,.9);--glass-bg-strong:rgba(255,255,255,.95)}
+  html:not(#c98) body:not(#c98)[data-theme="dark"]{--glass-bg:rgba(32,32,38,.92);--glass-bg-strong:rgba(38,38,46,.96)}
+}
+
+/* C98 open-by-Wi-Fi: quiet status lines on the welcome card and the guide. */
+html:not(#c98) body:not(#c98) .pin-login-entry small.wifi-open-status{display:block;margin-top:6px;color:var(--red);font-weight:600}
+html:not(#c98) body:not(#c98) .wifi-open-c98 p.wifi-open-status{margin:18px 0 14px;font-size:13px;color:var(--muted);display:flex;gap:10px;align-items:center;min-height:20px}
+html:not(#c98) body:not(#c98) .wifi-open-c98 p.wifi-open-status[data-busy]::before{content:"";flex:none;width:14px;height:14px;border-radius:50%;
+  border:2px solid var(--glass-hairline);border-top-color:var(--red);animation:wifiOpenSpinC98 .9s linear infinite}
+@keyframes wifiOpenSpinC98{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){html:not(#c98) body:not(#c98) .wifi-open-c98 p.wifi-open-status[data-busy]::before{animation:none}}

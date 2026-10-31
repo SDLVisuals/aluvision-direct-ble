@@ -1,3 +1,9 @@
+## Interface-update C99 — tablet, liggend en automatische donkere modus
+
+Op een iPad, tablet of liggende telefoon gebruikt de app de volle breedte: het ledline-voorbeeld staat naast de bediening, lijsten staan in twee of drie kolommen en de navigatiebalk blijft compact. Nieuw thema "Automatisch" volgt de licht/donker-instelling van je toestel, ook live; het is de standaard voor wie nog niets koos. Verder: het verbeterde Verloop-scherm, zwarte knoppen en het nieuwe receiver-icoon.
+
+Nieuwe Android-download code 35 (zelfde ondertekening als code 32: bijwerken zonder verwijderen). Op een Android-emulator gecontroleerd: installeren als update, draaien zonder herstart en donkere modus. Werking op een echt toestel en met receivers is nog niet bevestigd. Deze fictieve browserdemo publiceert geen receiverfirmware.
+
 ## Interface-update606
 
 Compactere bediening, een overzichtelijkere animatiekeuze met meer varianten achter één knop, duidelijkere ledline-instellingen en rustigere Scènes- en Receivers-pagina’s. Op geschikte schermen kun je met een bewuste veeg vanaf de linkerrand teruggaan via dezelfde bestaande terugknop.

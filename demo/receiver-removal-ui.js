@@ -39,15 +39,17 @@
       return String(value??copy).replace(/\{([A-Za-z][A-Za-z0-9_]*)\}/g,(match,name)=>Object.prototype.hasOwnProperty.call(params,name)&&['string','number'].includes(typeof params[name])?String(params[name]):match);
     };
     let dialog,receiver,result,baseline,targets=[],busy=false,error='',generation=0,returnFocus,timer=null,autoContinue=false;
-    const installation=()=>receiver?.role==='main',scope=()=>installation()?'installation':'receiver';
-    const requiresPin=()=>installation()&&result?.requiresPin===true;
+    const logical=(value=result)=>value?.mode==='authority-logical';
+    const installation=(value=result)=>!logical(value)&&receiver?.role==='main',scope=(value=result)=>installation(value)?'installation':'receiver';
+    const requiresPin=()=>result?.requiresPin===true&&(logical()||installation());
+    const nativePin=()=>logical()&&result?.pinEntry==='native';
     const legacyPinCopy=()=>!standCodeAccess()&&pinRequired();
     const clearTimer=()=>{if(timer!==null)root.clearTimeout(timer);timer=null;};
     function clearPin(){const input=dialog?.querySelector('[data-removal-pin]');if(input)input.value='';}
     function close(){if(busy)return;clearPin();clearTimer();generation++;autoContinue=false;dialog?.close();if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});}
     function consentReady(){
       const pinNeeded=requiresPin()&&(result?.status==='ready'||result?.status==='pin-required');
-      return (!pinNeeded||validPin(dialog?.querySelector('[data-removal-pin]')?.value))&&(!installation()||dialog?.querySelector('[data-removal-consent]')?.checked===true);
+      return (!pinNeeded||nativePin()||validPin(dialog?.querySelector('[data-removal-pin]')?.value))&&(!(installation()||logical())||dialog?.querySelector('[data-removal-consent]')?.checked===true);
     }
     function controls(){
       const button=dialog?.querySelector('[data-removal="start"],[data-removal="resume"]');
@@ -55,8 +57,13 @@
       const input=dialog?.querySelector('[data-removal-pin]'),hint=dialog?.querySelector('[data-removal-pin-hint]');
       if(input&&hint){const invalid=input.value!==''&&!validPin(input.value);hint.hidden=!invalid;input.setAttribute('aria-invalid',String(invalid));}
     }
-    function pinFields(){return `${requiresPin()?`<label class="removal-pin-label" for="removal-installation-pin">${escape(t("Voer je installatie-PIN in"))}<input id="removal-installation-pin" data-removal-pin type="password" inputmode="numeric" autocomplete="off" maxlength="12" minlength="8" autocapitalize="off" spellcheck="false" aria-describedby="removal-pin-help"></label><p id="removal-pin-help" class="removal-help">${escape(t("De bestaande PIN van deze installatie · 8–12 cijfers."))}</p><p data-removal-pin-hint class="removal-pin-hint" hidden>${escape(t("Gebruik je volledige PIN van 8–12 cijfers."))}</p>`:''}<label class="removal-consent"><input type="checkbox" data-removal-consent><span>${escape(t("Ik begrijp dat alle receivers uit deze installatie worden gewist."))}</span></label>`;}
+    function pinFields(){
+      const consent=`<label class="removal-consent"><input type="checkbox" data-removal-consent><span>${escape(t(logical()?"Ik wil alleen deze receiver uit het netwerk verwijderen.":"Ik begrijp dat alle receivers uit deze installatie worden gewist."))}</span></label>`;
+      if(nativePin())return (requiresPin()?`<p class="removal-help">${escape(t("Bevestig hierna je PIN in het beveiligde appvenster."))}</p>`:'')+consent;
+      return `${requiresPin()?`<label class="removal-pin-label" for="removal-installation-pin">${escape(t("Voer je installatie-PIN in"))}<input id="removal-installation-pin" data-removal-pin type="password" inputmode="numeric" autocomplete="off" maxlength="12" minlength="8" autocapitalize="off" spellcheck="false" aria-describedby="removal-pin-help"></label><p id="removal-pin-help" class="removal-help">${escape(t("De bestaande PIN van deze installatie · 8–12 cijfers."))}</p><p data-removal-pin-hint class="removal-pin-hint" hidden>${escape(t("Gebruik je volledige PIN van 8–12 cijfers."))}</p>`:''}${consent}`;
+    }
     function warning(){
+      if(logical())return `<section class="card removal-warning"><h3>${escape(t("Deze receiver uit het netwerk verwijderen"))}</h3><p>${escape(t("Je andere receivers en instellingen blijven behouden."))}</p><p class="removal-help">${escape(t("Dit bevestigt geen fabrieksreset. Een niet-bereikbare receiver moet je later zelf resetten voordat je hem opnieuw koppelt."))}</p></section>`;
       if(!installation())return `<section class="card removal-warning"><h3>${escape(t("Deze receiver ontkoppelen"))}</h3><p>${escape(t('{name} wordt losgekoppeld en start opnieuw. Voeg hem daarna opnieuw toe.',{name:receiver.name}))}</p><p>${legacyPinCopy()?t("Je andere receivers en PIN blijven behouden."):t("De rest van je stand blijft behouden.")}</p></section>`;
       const count=Number.isSafeInteger(result?.count)?result.count:targets.length;
       const targetSummary=count===1?t("Er is één receiver in deze installatie."):count>1?t('Je ontkoppelt alle {count} receivers uit deze installatie.',{count}):t("Je ontkoppelt alle receivers uit deze installatie.");
@@ -69,16 +76,17 @@
     function paint(){
       if(!dialog?.open)return;
       const status=result?.status,removed=status==='removed';let content='';
-      if(removed)content=`<section class="card"><h3>${installation()?t("Alle receivers ontkoppeld"):t("Deze receiver ontkoppeld")}</h3><p>${installation()?`${escape(t("Reset bevestigd. Alle receivers starten opnieuw."))}${legacyPinCopy()?' '+escape(t('De oude PIN is verwijderd.')):''}`:escape(t(legacyPinCopy()?'Reset bevestigd. De receiver start opnieuw; je andere receivers en PIN blijven behouden.':'Reset bevestigd. De receiver start opnieuw; je andere receivers blijven behouden.'))}</p><p>${escape(t(installation()?'Daarna kun je alle receivers opnieuw toevoegen.':'Daarna kun je deze receiver opnieuw toevoegen.'))}</p></section>`;
+      if(removed&&logical())content=`<section class="card"><h3>${escape(t("Uit het netwerk verwijderd"))}</h3><p>${escape(t("De overige receivers hebben de nieuwe indeling bevestigd."))}</p><p>${escape(t("De fabrieksreset van deze receiver is niet bevestigd. Reset hem zelf voordat je hem opnieuw koppelt."))}</p></section>`;
+      else if(removed)content=`<section class="card"><h3>${installation()?t("Alle receivers ontkoppeld"):t("Deze receiver ontkoppeld")}</h3><p>${installation()?`${escape(t("Reset bevestigd. Alle receivers starten opnieuw."))}${legacyPinCopy()?' '+escape(t('De oude PIN is verwijderd.')):''}`:escape(t(legacyPinCopy()?'Reset bevestigd. De receiver start opnieuw; je andere receivers en PIN blijven behouden.':'Reset bevestigd. De receiver start opnieuw; je andere receivers blijven behouden.'))}</p><p>${escape(t(installation()?'Daarna kun je alle receivers opnieuw toevoegen.':'Daarna kun je deze receiver opnieuw toevoegen.'))}</p></section>`;
       else if(['verification-required','in-progress','pin-required'].includes(status)){
         content=warning()+progress();
-        if(status==='pin-required'&&requiresPin())content+=`<section class="card"><h3>${escape(t("Verdergaan met wissen"))}</h3><p>${escape(t("Voer je PIN opnieuw in. Bevestigde resets worden niet herhaald."))}</p></section>${pinFields()}<button class="button full removal-confirm" data-removal="resume">${escape(t("PIN bevestigen en verdergaan"))}</button>`;
+        if(status==='pin-required'&&requiresPin())content+=`<section class="card"><h3>${escape(t("Verdergaan met wissen"))}</h3><p>${escape(t(logical()?"Bevestig je PIN om dezelfde verwijderopdracht te vervolgen.":"Voer je PIN opnieuw in. Bevestigde resets worden niet herhaald."))}</p></section>${pinFields()}<button class="button full removal-confirm" data-removal="resume">${escape(t("PIN bevestigen en verdergaan"))}</button>`;
         else if(status==='pin-required')content+=`<section class="card"><h3>${escape(t("Verwijderen gepauzeerd"))}</h3><p>${escape(t("Deze oudere installatie kan niet in deze versie zonder toegangscode worden gewist. Er is niets extra verwijderd."))}</p></section>`;
-        else if(status==='verification-required')content+=`<section class="card"><h3>${escape(t("Verwijdering nog niet bevestigd"))}</h3><p>${escape(t("Laat de overige receivers aan en verbonden. Alleen bevestigde resets worden als voltooid getoond."))}</p></section><button class="button full" data-removal="resume">${escape(t("Opnieuw controleren"))}</button>`;
-        else content+=`<section class="card"><h3>${escape(t("Receivers worden gewist"))}</h3><p>${escape(t("Houd dit scherm open tot de bevestiging."))}</p></section>${autoContinue?'':`<button class="button full" data-removal="resume">${escape(t("Verdergaan"))}</button>`}`;
+        else if(status==='verification-required')content+=`<section class="card"><h3>${escape(t("Verwijdering nog niet bevestigd"))}</h3><p>${escape(t(logical()?"Laat de overige receivers aan. We controleren dezelfde wijziging zonder een nieuwe verwijderopdracht te starten.":"Laat de overige receivers aan en verbonden. Alleen bevestigde resets worden als voltooid getoond."))}</p></section><button class="button full" data-removal="resume">${escape(t("Opnieuw controleren"))}</button>`;
+        else content+=`<section class="card"><h3>${escape(t(logical()?"Netwerkindeling wordt bijgewerkt":"Receivers worden gewist"))}</h3><p>${escape(t("Houd dit scherm open tot de bevestiging."))}</p></section>${autoContinue?'':`<button class="button full" data-removal="resume">${escape(t("Verdergaan"))}</button>`}`;
       }else{
         content=warning();
-        if(status==='ready')content+=(installation()?pinFields():'')+`<button class="button full removal-confirm" data-removal="start">${installation()?t("Alle receivers ontkoppelen"):t("Deze receiver ontkoppelen")}</button>`;
+        if(status==='ready')content+=(installation()||logical()?pinFields():'')+`<button class="button full removal-confirm" data-removal="start">${installation()?t("Alle receivers ontkoppelen"):t("Deze receiver ontkoppelen")}</button>`;
         else if(status==='checking')content+=`<p class="removal-help" role="status">${escape(t("Gekoppelde receivers worden veilig gecontroleerd…"))}</p>`;
         else content+=`<button class="button full" data-removal="check">${status==='blocked'?t("Bereikbaarheid opnieuw controleren"):t("Verbinding controleren")}</button>`;
         if(status==='blocked')content+=`<p class="removal-help">${escape(t("Geen nieuwe reset gestart. Zet alle receivers aan en controleer opnieuw."))}</p>`;
@@ -88,7 +96,8 @@
     }
     function validate(next,action,previous){
       if(standCodeAccess()&&(next?.requiresPin!==false||next?.status==='pin-required'))throw Error('UNCONFIRMED');
-      if(!next||next.standId!==receiver.standId||next.receiverId!==receiver.id||next.rid!==receiver.rid||next.type!==receiver.type||next.scope!==scope()||!statuses.has(next.status)||typeof next.requiresPin!=='boolean'||!installation()&&next.requiresPin||next.status==='pin-required'&&!next.requiresPin||action!=='check'&&next.requiresPin!==previous?.requiresPin)throw Error('UNCONFIRMED');
+      if(next?.mode!==undefined&&!logical(next)||logical(next)&&(standCodeAccess()||next.factoryResetConfirmed!==false||next.pinEntry!=='native'||next.scope!=='receiver'||next.count!==1)||action!=='check'&&logical(next)!==logical(previous))throw Error('UNCONFIRMED');
+      if(!next||next.standId!==receiver.standId||next.receiverId!==receiver.id||next.rid!==receiver.rid||next.type!==receiver.type||next.scope!==scope(next)||!statuses.has(next.status)||typeof next.requiresPin!=='boolean'||!installation(next)&&!logical(next)&&next.requiresPin||next.status==='pin-required'&&!next.requiresPin||action!=='check'&&next.requiresPin!==previous?.requiresPin)throw Error('UNCONFIRMED');
       const partialCheck=standCodeAccess()&&action==='check'&&next.status==='checking'&&next.jobId===undefined&&previous?.jobId===undefined&&typeof next.planId==='string'&&!!next.planId;
       if(!Array.isArray(next.targets)||!Number.isSafeInteger(next.count)||next.count<next.targets.length||!partialCheck&&next.count!==next.targets.length||next.count<1||next.count>60)throw Error('UNCONFIRMED');
       const ids=new Set(),rids=new Set();
@@ -100,7 +109,7 @@
       }
       const own=next.targets.find(t=>t.receiverId===receiver.id);
       const missingOwnAllowed=partialCheck&&!installation()&&next.targets.length===0;
-      if(!own&&!missingOwnAllowed||own&&(own.rid!==receiver.rid||own.type!==receiver.type||own.role!==receiver.role)||(!installation()&&next.count!==1)||installation()&&next.targets.filter(t=>t.role==='main').length!==1)throw Error('UNCONFIRMED');
+      if(!own&&!missingOwnAllowed||own&&(own.rid!==receiver.rid||own.type!==receiver.type||own.role!==receiver.role)||(!installation(next)&&next.count!==1)||installation(next)&&next.targets.filter(t=>t.role==='main').length!==1)throw Error('UNCONFIRMED');
       if(next.status==='ready'&&(action!=='check'||typeof next.planId!=='string'||!next.planId))throw Error('UNCONFIRMED');
       if(['in-progress','pin-required','verification-required','removed'].includes(next.status)&&(typeof next.jobId!=='string'||!next.jobId))throw Error('UNCONFIRMED');
       if(action==='resume'&&next.jobId!==previous?.jobId)throw Error('UNCONFIRMED');
@@ -119,7 +128,7 @@
         // colour/effect. Never restore our old preview after a real release.
         if(!next.view.central&&!next.view.centralClosed)throw Error('UNCONFIRMED');
         const Model=root.LightningModel,model=Model.assertValid(clone(nativeModel));
-        if(next.status==='removed'&&model.receivers.some(r=>installation()?r.standId===receiver.standId:r.id===receiver.id||r.rid===receiver.rid))throw Error('UNCONFIRMED');
+        if(next.status==='removed'&&model.receivers.some(r=>installation(next)?r.standId===receiver.standId:r.id===receiver.id||r.rid===receiver.rid))throw Error('UNCONFIRMED');
         for(const known of baseline?.receivers||[]){
           const retained=model.receivers.find(r=>r.id===known.id);
           if(retained&&['rid','type','role','standId','deviceFingerprint'].some(field=>key(retained[field])!==key(known[field])))throw Error('UNCONFIRMED');
@@ -139,7 +148,7 @@
       }
       if(['checking','ready','blocked'].includes(next.status)&&baseline&&key(model)!==key(baseline))throw Error('UNCONFIRMED');
       const allowed=new Set(next.targets.map(t=>t.receiverId));
-      if(next.status==='removed'&&model.receivers.some(r=>installation()?r.standId===receiver.standId:r.id===receiver.id||r.rid===receiver.rid))throw Error('UNCONFIRMED');
+      if(next.status==='removed'&&model.receivers.some(r=>installation(next)?r.standId===receiver.standId:r.id===receiver.id||r.rid===receiver.rid))throw Error('UNCONFIRMED');
       if(baseline){
         for(const old of baseline.receivers){const found=model.receivers.find(r=>r.id===old.id);if((!allowed.has(old.id)||found)&&key(found)!==key(old))throw Error('UNCONFIRMED');}
         if(model.receivers.some(r=>!baseline.receivers.some(old=>old.id===r.id)))throw Error('UNCONFIRMED');
@@ -153,7 +162,7 @@
         for(const old of baseline.receivers)if(allowed.has(old.id)&&!remaining.has(old.id))expected=Model.unassignReceiver(expected,old.id);
         if(key(model.stands)!==key(expected.stands))throw Error('UNCONFIRMED');
         Model.assertValid(model);
-        if(installation()&&next.status!=='removed'&&!model.receivers.some(r=>r.id===receiver.id))throw Error('UNCONFIRMED');
+        if(installation(next)&&next.status!=='removed'&&!model.receivers.some(r=>r.id===receiver.id))throw Error('UNCONFIRMED');
       }
       await onRemoved(model,{status:next.status});baseline=clone(model);
     }
@@ -165,7 +174,7 @@
       const token=generation,previous=result,request={standId:receiver.standId,receiverId:receiver.id};
       if(action==='start')request.planId=result.planId;
       if(action==='resume')request.jobId=result.jobId;
-      if(requiresPin()&&(action==='start'||result?.status==='pin-required'))request.pin=dialog.querySelector('[data-removal-pin]').value;
+      if(requiresPin()&&!nativePin()&&(action==='start'||result?.status==='pin-required'))request.pin=dialog.querySelector('[data-removal-pin]').value;
       clearPin();clearTimer();if(!automatic&&action!=='check')autoContinue=true;
       busy=true;error='';dialog.dataset.action=action;paint();
       try{

@@ -14,14 +14,15 @@
   // Device-local interface choice, deliberately outside portable backups and
   // the existing language/theme schema. Missing means the full existing UI.
   const MODE_STORAGE_KEY = 'aluvision.ui.advanced-mode.v1';
-  const defaults = Object.freeze({ language: 'nl', theme: 'light' });
+  const defaults = Object.freeze({ language: 'nl', theme: 'system' });
   const languages = Object.freeze([
     Object.freeze({ code: 'nl', name: 'Nederlands' }),
     Object.freeze({ code: 'en', name: 'English' }),
     Object.freeze({ code: 'fr', name: 'Français' }),
     Object.freeze({ code: 'de', name: 'Deutsch' })
   ]);
-  const themes = Object.freeze(['light', 'dark']);
+  // 'system' follows the phone's own light/dark setting.
+  const themes = Object.freeze(['system', 'light', 'dark']);
   const texts = {
     nl: {
       stand: 'Stand', zones: 'Zones', receivers: 'Receivers', scenes: 'Scènes', more: 'Meer',
@@ -52,7 +53,7 @@
       colourOrder: 'Volgorde wijzigen', done: 'Klaar', saveCurrentColour: 'Ingestelde kleur toevoegen',
       animationGallery: 'Alle animaties', animationLibraryTitle: 'Animaties',
       animationNavigation: 'Animatie kiezen of instellen', animationChooseAnother: 'Open animatiekiezer', animationCurrentSettingsTitle: 'Instellingen openen', animationSettingsReturnKicker: 'Actieve animatie', animationCurrentSettingsAccessible: 'Ga naar de instellingen van de actieve animatie {name}', animationSettings: 'Animatie-instellingen',
-      appearance: 'Weergave', language: 'Taal', theme: 'Thema', light: 'Licht', dark: 'Donker', readiness: 'Status werkversie',
+      appearance: 'Weergave', language: 'Taal', theme: 'Thema', system: 'Automatisch', light: 'Licht', dark: 'Donker', readiness: 'Status werkversie',
       wipNotice: 'De navigatie en hoofdknoppen zijn vertaald. Langere ontwerpteksten zijn voorlopig nog Nederlands.',
       back: 'Terug', close: 'Sluiten', cancel: 'Annuleren', save: 'Opslaan', delete: 'Verwijderen',
       backToZone: 'Terug naar {name}',
@@ -124,7 +125,7 @@
       colourOrder: 'Change order', done: 'Done', saveCurrentColour: 'Add current colour',
       animationGallery: 'All animations', animationLibraryTitle: 'Animations',
       animationNavigation: 'Choose or edit animation', animationChooseAnother: 'Open animation picker', animationCurrentSettingsTitle: 'Open settings', animationSettingsReturnKicker: 'Active animation', animationCurrentSettingsAccessible: 'Open settings for active animation {name}', animationSettings: 'Animation settings',
-      appearance: 'Appearance', language: 'Language', theme: 'Theme', light: 'Light', dark: 'Dark', readiness: 'Preview status',
+      appearance: 'Appearance', language: 'Language', theme: 'Theme', system: 'Automatic', light: 'Light', dark: 'Dark', readiness: 'Preview status',
       wipNotice: 'Navigation and main controls are translated. Longer design notes remain in Dutch for now.',
       back: 'Back', close: 'Close', cancel: 'Cancel', save: 'Save', delete: 'Delete',
       backToZone: 'Back to {name}',
@@ -196,7 +197,7 @@
       colourOrder: 'Modifier l’ordre', done: 'Terminé', saveCurrentColour: 'Ajouter la couleur actuelle',
       animationGallery: 'Galerie d’animations', animationLibraryTitle: 'Animations',
       animationNavigation: 'Choisir ou régler une animation', animationChooseAnother: 'Ouvrir le sélecteur', animationCurrentSettingsTitle: 'Ouvrir les réglages', animationSettingsReturnKicker: 'Animation active', animationCurrentSettingsAccessible: 'Ouvrir les réglages de l’animation active {name}', animationSettings: 'Réglages de l’animation',
-      appearance: 'Apparence', language: 'Langue', theme: 'Thème', light: 'Clair', dark: 'Sombre', readiness: 'État de la version de travail',
+      appearance: 'Apparence', language: 'Langue', theme: 'Thème', system: 'Automatique', light: 'Clair', dark: 'Sombre', readiness: 'État de la version de travail',
       wipNotice: 'La navigation et les commandes principales sont traduites. Les textes explicatifs plus longs restent en néerlandais pour le moment.',
       back: 'Retour', close: 'Fermer', cancel: 'Annuler', save: 'Enregistrer', delete: 'Supprimer',
       backToZone: 'Retour à {name}',
@@ -268,7 +269,7 @@
       colourOrder: 'Reihenfolge ändern', done: 'Fertig', saveCurrentColour: 'Aktuelle Farbe hinzufügen',
       animationGallery: 'Animationsgalerie', animationLibraryTitle: 'Animationen',
       animationNavigation: 'Animation wählen oder einstellen', animationChooseAnother: 'Animationsauswahl öffnen', animationCurrentSettingsTitle: 'Einstellungen öffnen', animationSettingsReturnKicker: 'Aktive Animation', animationCurrentSettingsAccessible: 'Einstellungen der aktiven Animation {name} öffnen', animationSettings: 'Animationseinstellungen',
-      appearance: 'Darstellung', language: 'Sprache', theme: 'Design', light: 'Hell', dark: 'Dunkel', readiness: 'Status der Arbeitsversion',
+      appearance: 'Darstellung', language: 'Sprache', theme: 'Design', system: 'Automatisch', light: 'Hell', dark: 'Dunkel', readiness: 'Status der Arbeitsversion',
       wipNotice: 'Navigation und wichtigste Bedienelemente sind übersetzt. Längere Erläuterungen bleiben vorerst auf Niederländisch.',
       back: 'Zurück', close: 'Schließen', cancel: 'Abbrechen', save: 'Speichern', delete: 'Löschen',
       backToZone: 'Zurück zu {name}',
@@ -490,12 +491,28 @@
   };
   Object.keys(animationChoice592).forEach(code => Object.assign(texts[code],animationChoice592[code]));
   const compactLiveDock592 = {
-    nl:{v592LiveNoConnection:'Voorbeeld · geen receiververbinding.',v592LiveNoSelection:'Geen ledline geselecteerd.',v592LivePending:'',v592LiveLastReceipt:'',v592LiveUnconfirmed:'Controleer de receiververbinding.',v592LiveOutputPending:'Controleer de poortinstellingen bij Pixels / kant.',v592LiveProfile:'Installatie klopt niet. Controleer Receivers.',v592LiveFirmware:'Werk de receiversoftware bij om dit te gebruiken.',v592LiveStandUnavailable:'Standanimatie niet beschikbaar voor deze verbinding.',v592LiveSpiUnsupported:'Update de app voor losse SPI-ledlines.',v592LiveBusy:'Receiver bezig. Probeer opnieuw zodra die klaar is.',v592LiveCancelled:'Bediening onderbroken. Kies opnieuw.',v592LivePartial:'Controleer {count} van {total} receivers. {reason}',v592LivePreview:'Bediening niet beschikbaar · alleen voorbeeld.',v592LivePartialPreview:'',v592LiveUnchecked:'',v592LivePartialUnchecked:''},
-    en:{v592LiveNoConnection:'Preview · no receiver connection.',v592LiveNoSelection:'No LED line selected.',v592LivePending:'',v592LiveLastReceipt:'',v592LiveUnconfirmed:'Check the receiver connection.',v592LiveOutputPending:'Check output settings in Pixels / side.',v592LiveProfile:'Installation does not match. Check Receivers.',v592LiveFirmware:'Update receiver software to use this.',v592LiveStandUnavailable:'Booth animation unavailable for this connection.',v592LiveSpiUnsupported:'Update the app for individual SPI lines.',v592LiveBusy:'Receiver busy. Try again when it is ready.',v592LiveCancelled:'Control interrupted. Choose again.',v592LivePartial:'Check {count} of {total} receivers. {reason}',v592LivePreview:'Control unavailable · preview only.',v592LivePartialPreview:'',v592LiveUnchecked:'',v592LivePartialUnchecked:''},
-    fr:{v592LiveNoConnection:'Aperçu · aucun récepteur connecté.',v592LiveNoSelection:'Aucune ligne LED sélectionnée.',v592LivePending:'',v592LiveLastReceipt:'',v592LiveUnconfirmed:'Vérifiez la connexion du récepteur.',v592LiveOutputPending:'Vérifiez les sorties dans Pixels / côté.',v592LiveProfile:'Installation différente. Vérifiez Récepteurs.',v592LiveFirmware:'Mettez à jour le logiciel des récepteurs.',v592LiveStandUnavailable:'Animation du stand indisponible pour cette connexion.',v592LiveSpiUnsupported:'Mettez l’app à jour pour les lignes SPI séparées.',v592LiveBusy:'Récepteur occupé. Réessayez lorsqu’il est prêt.',v592LiveCancelled:'Commande interrompue. Choisissez à nouveau.',v592LivePartial:'Vérifiez {count} récepteurs sur {total}. {reason}',v592LivePreview:'Commande indisponible · aperçu uniquement.',v592LivePartialPreview:'',v592LiveUnchecked:'',v592LivePartialUnchecked:''},
-    de:{v592LiveNoConnection:'Vorschau · keine Receiververbindung.',v592LiveNoSelection:'Keine LED-Linie ausgewählt.',v592LivePending:'',v592LiveLastReceipt:'',v592LiveUnconfirmed:'Prüfe die Receiververbindung.',v592LiveOutputPending:'Prüfe die Ausgänge unter Pixel / Seite.',v592LiveProfile:'Installation stimmt nicht. Prüfe Receiver.',v592LiveFirmware:'Aktualisiere dafür die Receiversoftware.',v592LiveStandUnavailable:'Standanimation für diese Verbindung nicht verfügbar.',v592LiveSpiUnsupported:'Aktualisiere die App für einzelne SPI-Linien.',v592LiveBusy:'Receiver beschäftigt. Versuche es erneut, sobald er bereit ist.',v592LiveCancelled:'Bedienung unterbrochen. Wähle erneut.',v592LivePartial:'Prüfe {count} von {total} Receivern. {reason}',v592LivePreview:'Bedienung nicht verfügbar · nur Vorschau.',v592LivePartialPreview:'',v592LiveUnchecked:'',v592LivePartialUnchecked:''}
+    nl:{v592LiveNoConnection:'Voorbeeld · geen receiververbinding.',v592LiveNoSelection:'Geen ledline geselecteerd.',v592LivePending:'',v592LiveLastReceipt:'',v592LiveUnconfirmed:'Controleer de receiververbinding.',v592LiveObservationUnknown:'Nog niet bevestigd. De opdracht kan al uitgevoerd zijn.',v592LiveOutputPending:'Controleer de poortinstellingen bij Pixels / kant.',v592LiveProfile:'Installatie klopt niet. Controleer Receivers.',v592LiveFirmware:'Werk de receiversoftware bij om dit te gebruiken.',v592LiveStandUnavailable:'Standanimatie niet beschikbaar voor deze verbinding.',v592LiveSpiUnsupported:'Update de app voor losse SPI-ledlines.',v592LiveBusy:'Receiver bezig. Probeer opnieuw zodra die klaar is.',v592LiveCancelled:'Bediening onderbroken. Kies opnieuw.',v592LivePartial:'Controleer {count} van {total} receivers. {reason}',v592LivePreview:'Bediening niet beschikbaar · alleen voorbeeld.',v592LivePartialPreview:'',v592LiveUnchecked:'',v592LivePartialUnchecked:''},
+    en:{v592LiveNoConnection:'Preview · no receiver connection.',v592LiveNoSelection:'No LED line selected.',v592LivePending:'',v592LiveLastReceipt:'',v592LiveUnconfirmed:'Check the receiver connection.',v592LiveObservationUnknown:'Not confirmed yet. The command may already have run.',v592LiveOutputPending:'Check output settings in Pixels / side.',v592LiveProfile:'Installation does not match. Check Receivers.',v592LiveFirmware:'Update receiver software to use this.',v592LiveStandUnavailable:'Booth animation unavailable for this connection.',v592LiveSpiUnsupported:'Update the app for individual SPI lines.',v592LiveBusy:'Receiver busy. Try again when it is ready.',v592LiveCancelled:'Control interrupted. Choose again.',v592LivePartial:'Check {count} of {total} receivers. {reason}',v592LivePreview:'Control unavailable · preview only.',v592LivePartialPreview:'',v592LiveUnchecked:'',v592LivePartialUnchecked:''},
+    fr:{v592LiveNoConnection:'Aperçu · aucun récepteur connecté.',v592LiveNoSelection:'Aucune ligne LED sélectionnée.',v592LivePending:'',v592LiveLastReceipt:'',v592LiveUnconfirmed:'Vérifiez la connexion du récepteur.',v592LiveObservationUnknown:'Pas encore confirmé. La commande peut déjà avoir été exécutée.',v592LiveOutputPending:'Vérifiez les sorties dans Pixels / côté.',v592LiveProfile:'Installation différente. Vérifiez Récepteurs.',v592LiveFirmware:'Mettez à jour le logiciel des récepteurs.',v592LiveStandUnavailable:'Animation du stand indisponible pour cette connexion.',v592LiveSpiUnsupported:'Mettez l’app à jour pour les lignes SPI séparées.',v592LiveBusy:'Récepteur occupé. Réessayez lorsqu’il est prêt.',v592LiveCancelled:'Commande interrompue. Choisissez à nouveau.',v592LivePartial:'Vérifiez {count} récepteurs sur {total}. {reason}',v592LivePreview:'Commande indisponible · aperçu uniquement.',v592LivePartialPreview:'',v592LiveUnchecked:'',v592LivePartialUnchecked:''},
+    de:{v592LiveNoConnection:'Vorschau · keine Receiververbindung.',v592LiveNoSelection:'Keine LED-Linie ausgewählt.',v592LivePending:'',v592LiveLastReceipt:'',v592LiveUnconfirmed:'Prüfe die Receiververbindung.',v592LiveObservationUnknown:'Noch nicht bestätigt. Der Befehl kann bereits ausgeführt worden sein.',v592LiveOutputPending:'Prüfe die Ausgänge unter Pixel / Seite.',v592LiveProfile:'Installation stimmt nicht. Prüfe Receiver.',v592LiveFirmware:'Aktualisiere dafür die Receiversoftware.',v592LiveStandUnavailable:'Standanimation für diese Verbindung nicht verfügbar.',v592LiveSpiUnsupported:'Aktualisiere die App für einzelne SPI-Linien.',v592LiveBusy:'Receiver beschäftigt. Versuche es erneut, sobald er bereit ist.',v592LiveCancelled:'Bedienung unterbrochen. Wähle erneut.',v592LivePartial:'Prüfe {count} von {total} Receivern. {reason}',v592LivePreview:'Bedienung nicht verfügbar · nur Vorschau.',v592LivePartialPreview:'',v592LiveUnchecked:'',v592LivePartialUnchecked:''}
   };
   Object.keys(compactLiveDock592).forEach(code => Object.assign(texts[code],compactLiveDock592[code]));
+  // Only emitted by the explicit integrated test route after a real cold
+  // context pass. Old wheel input is NOT silently replayed or called applied.
+  const stablePreparedNewIntent = {
+    nl:'Verbinding voorbereid. Je vorige kleur is niet verstuurd; kies opnieuw.',
+    en:'Connection prepared. Your previous colour was not sent; choose again.',
+    fr:'Connexion préparée. La couleur précédente n’a pas été envoyée ; choisissez à nouveau.',
+    de:'Verbindung vorbereitet. Deine vorherige Farbe wurde nicht gesendet; wähle erneut.'
+  };
+  Object.keys(stablePreparedNewIntent).forEach(code => {texts[code].stablePreparedNewIntent=stablePreparedNewIntent[code];});
+  const stableStandPreparationText={
+    nl:{stableStandPreparing:'Verbinding voorbereiden… Er wordt nog geen nieuwe kleur verstuurd.',stableStandPreparationFailed:'Voorbereiden niet afgerond. Open deze bediening opnieuw; er is geen nieuwe kleur verstuurd.'},
+    en:{stableStandPreparing:'Preparing connection… No new colour is being sent.',stableStandPreparationFailed:'Preparation incomplete. Reopen these controls; no new colour was sent.'},
+    fr:{stableStandPreparing:'Préparation de la connexion… Aucune nouvelle couleur n’est envoyée.',stableStandPreparationFailed:'Préparation incomplète. Rouvrez ces commandes ; aucune nouvelle couleur n’a été envoyée.'},
+    de:{stableStandPreparing:'Verbindung wird vorbereitet… Es wird noch keine neue Farbe gesendet.',stableStandPreparationFailed:'Vorbereitung nicht abgeschlossen. Öffne diese Bedienung erneut; es wurde keine neue Farbe gesendet.'}
+  };
+  Object.keys(stableStandPreparationText).forEach(code=>Object.assign(texts[code],stableStandPreparationText[code]));
   const interfaceConsistency570 = {
     nl:{v570ZoneUnavailable:'Deze zone is niet meer beschikbaar. Open je stand om de actuele zones te bekijken.',v570HelpLinesTitle:'Kies je ledlines',v570HelpLinesBody:'Tik één of meer ledlines aan in het voorbeeld. Kies Alle om de hele zone te bedienen. Doorlopende SPI bedien je samen.'},
     en:{v570ZoneUnavailable:'This zone is no longer available. Open your booth to view the current zones.',v570HelpLinesTitle:'Choose your LED lines',v570HelpLinesBody:'Tap one or more LED lines in the preview. Choose All to control the whole zone. Continuous SPI lines are controlled together.'},

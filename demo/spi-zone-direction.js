@@ -4,21 +4,21 @@
   const texts={
     title:['Kanten aanpassen','Adjust directions','Ajuster les sens','Richtungen anpassen'],
     added:['Laatste stap · kanten instellen','Last step · set directions','Dernière étape · ajuster les sens','Letzter Schritt · Richtungen einstellen'],
-    intro:['Laat dezelfde eindkleuren bij elkaar aansluiten.','Match the colours where the ends meet.','Faites correspondre les couleurs aux extrémités qui se rejoignent.','Verbinde die Enden mit der gleichen Farbe.'],
-    look:['Kijk naar je echte ledlines.','Look at your real LED lines.','Regardez vos lignes LED réelles.','Schau auf deine echten LED-Linien.'],
+    intro:['Vergelijk de rode en groene uiteinden van je echte ledlines.','Compare the red and green ends of your real LED lines.','Comparez les extrémités rouges et vertes de vos vraies lignes LED.','Vergleiche die roten und grünen Enden deiner echten LED-Linien.'],
+    look:['Kijk naar je echte ledlines.','Look at your real LED lines.','Regardez vos vraies lignes LED.','Schau auf deine echten LED-Linien.'],
     preview:['Voorbeeld · geen echte verlichting verbonden','Preview · no real lighting connected','Aperçu · aucun éclairage réel connecté','Vorschau · keine echte Beleuchtung verbunden'],
     pendingChanged:['Je aansluitingen zijn gewijzigd. Controleer de richtingen opnieuw.','Your connections have changed. Check the directions again.','Vos branchements ont changé. Vérifiez à nouveau les sens.','Deine Anschlüsse wurden geändert. Prüfe die Richtungen erneut.'],
     new:['Nieuw','New','Nouveau','Neu'],existing:['In deze zone','In this zone','Dans cette zone','In dieser Zone'],
     port:['Poort {port}','Port {port}','Port {port}','Port {port}'],line:['Ledline {number}','LED line {number}','Ligne LED {number}','LED-Linie {number}'],pixels:['{count} pixels','{count} pixels','{count} pixels','{count} Pixel'],
     flip:['Omkeren','Flip','Inverser','Umkehren'],focus:['{receiver}, poort {port}: deze ledline herkennen','{receiver}, port {port}: identify this LED line','{receiver}, port {port} : repérer cette ligne LED','{receiver}, Port {port}: diese LED-Linie erkennen'],
-    flipAria:['{receiver}, poort {port}: richting omkeren. Groen staat {end}.','{receiver}, port {port}: flip direction. Green is {end}.','{receiver}, port {port} : inverser le sens. Le vert est {end}.','{receiver}, Port {port}: Richtung umkehren. Grün ist {end}.'],
+    flipAria:['{receiver}, poort {port}: uiteinden omkeren. Groen staat {end}.','{receiver}, port {port}: swap the ends. Green is {end}.','{receiver}, port {port} : inverser les extrémités. Le vert est {end}.','{receiver}, Port {port}: Enden umkehren. Grün ist {end}.'],
     left:['links','on the left','à gauche','links'],right:['rechts','on the right','à droite','rechts'],
     one:['1 pixel · geen richting','1 pixel · no direction','1 pixel · aucun sens','1 Pixel · keine Richtung'],
     selectHint:['Tik op een ledline: alleen haar witte midden pulseert.','Tap an LED line: only its white centre pulses.','Touchez une ligne LED : seul son milieu blanc pulse.','Tippe auf eine LED-Linie: Nur ihre weiße Mitte pulsiert.'],
     selected:['Geselecteerd','Selected','Sélectionnée','Ausgewählt'],
     pulsing:['Midden pulseert','Centre pulsing','Milieu pulsant','Mitte pulsiert'],
     pending:['Eindkleuren instellen…','Setting the end colours…','Réglage des couleurs aux extrémités…','Endfarben einstellen…'],
-    applied:['Controleer de eindkleuren op je echte ledlines.','Check the end colours on your real LED lines.','Vérifiez les couleurs aux extrémités de vos lignes LED réelles.','Prüfe die Endfarben deiner echten LED-Linien.'],
+    applied:['Vergelijk de rode en groene uiteinden op je ledlines.','Compare the red and green ends on your LED lines.','Comparez les extrémités rouges et vertes de vos lignes LED.','Vergleiche die roten und grünen Enden deiner LED-Linien.'],
     unsupported:['Voorbeeld in de app · testlicht hier niet beschikbaar.','App preview · test light is unavailable here.','Aperçu dans l’app · lumière de test indisponible ici.','App-Vorschau · Testlicht hier nicht verfügbar.'],
     failed:['Testlicht niet bevestigd. Controleer de verbinding; je keuzes blijven staan.','Test light is not confirmed. Check the connection; your choices are kept.','Lumière de test non confirmée. Vérifiez la connexion ; vos choix sont conservés.','Testlicht nicht bestätigt. Prüfe die Verbindung; deine Auswahl bleibt erhalten.'],
     recovering:['Verbinding herstellen… Je keuzes blijven staan.','Restoring the connection… Your choices are kept.','Rétablissement de la connexion… Vos choix sont conservés.','Verbindung wird wiederhergestellt… Deine Auswahl bleibt erhalten.'],
@@ -48,9 +48,8 @@
   function validate(value){
     if(!value||!['standId','zoneId','zoneName'].every(key=>typeof value[key]==='string'&&value[key].length>0&&value[key].length<=240)||!Array.isArray(value.receivers)||value.receivers.length>128)throw Error('SPI_ZONE_CONTEXT_INVALID');
     const ids=new Set();for(const receiver of value.receivers){if(!receiver||typeof receiver.id!=='string'||!receiver.id||ids.has(receiver.id)||typeof receiver.name!=='string'||!Array.isArray(receiver.outputs)||receiver.outputs.length!==4)throw Error('SPI_ZONE_RECEIVER_INVALID');ids.add(receiver.id);for(const [index,output] of receiver.outputs.entries())if(!output||output.port!==index+1||typeof output.enabled!=='boolean'||typeof output.reversed!=='boolean'||!Number.isInteger(output.pixels)||output.pixels<(output.enabled?1:0)||output.pixels>1024)throw Error('SPI_ZONE_OUTPUTS_INVALID');}
-    // Physical joins follow the complete saved zone path, including when a
-    // zone appears as one continuous LED line. Never restart parity per box
-    // or infer it from a port number: either would break a receiver boundary.
+    // Keep the complete saved zone path, including continuous LED lines.
+    // Connector orientation is stored per output, never inferred from parity.
     const expected=new Set(value.receivers.flatMap(receiver=>receiver.outputs.filter(output=>output.enabled).map(output=>receiver.id+':'+output.port)));
     if(!Array.isArray(value.lineOrder)||value.lineOrder.length!==expected.size||value.lineOrder.length<1||value.lineOrder.length>120)throw Error('SPI_ZONE_LINE_ORDER_INVALID');
     const seen=new Set();for(const key of value.lineOrder){if(typeof key!=='string'||!expected.has(key)||seen.has(key))throw Error('SPI_ZONE_LINE_ORDER_INVALID');seen.add(key);}
@@ -159,7 +158,7 @@
     }
     function queue(state,testing=false){if(!enabled(state)||state.previewRetired)return Promise.resolve(false);if(state.data.previewOnly||!onPreview){status(state,'unsupported');return Promise.resolve(false);}state.version++;if(state.previewFailed)return Promise.resolve(false);if(!testing){state.pathActive=false;state.pathEnded=false;}state.pending=request(state);state.pendingTest=testing;return drain(state);}
     function setFocus(state,receiverId,port){state.focus=receiverId?{receiverId,port}:null;for(const card of state.dialog.querySelectorAll('[data-spi-zone-line]')){const selected=card.dataset.receiverId===receiverId&&Number(card.dataset.port)===port;card.dataset.selected=String(selected);card.querySelector('[data-spi-zone-action="select"]').setAttribute('aria-pressed',String(selected));const badge=card.querySelector('[data-spi-zone-focus-badge]');if(badge){badge.hidden=!selected;badge.textContent=t(state,'selected');}}}
-    function guideReversed(state,receiver,output){return output.reversed!==(state.data.lineOrder.indexOf(receiver.id+':'+output.port)%2===1);}
+    function guideReversed(state,receiver,output){return output.reversed;}
     function updateCard(state,receiver,output){const card=[...state.dialog.querySelectorAll('[data-spi-zone-line]')].find(node=>node.dataset.receiverId===receiver.id&&Number(node.dataset.port)===output.port);if(!card)return;const reversed=guideReversed(state,receiver,output);card.dataset.reversed=String(reversed);const button=card.querySelector('[data-spi-zone-action="flip"]');button.setAttribute('aria-pressed',String(output.reversed));button.setAttribute('aria-label',output.pixels===1?t(state,'one'):t(state,'flipAria',{receiver:receiver.name,port:output.port,end:t(state,reversed?'right':'left')}));}
     function stop(state){
       state.paused=true;state.previewRetired=true;state.pending=null;state.pendingTest=false;state.pathActive=false;state.pathEnded=false;state.version++;clearObservation(state);win.clearTimeout(state.leaseTimer);state.leaseTimer=null;state.confirmedRequest=null;state.leaseUntil=0;if(current(state))state.dialog.dataset.previewConfirmed='false';
