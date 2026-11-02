@@ -17,9 +17,13 @@
   const copy=v=>JSON.parse(JSON.stringify(v));
   const LISTS=['scenes','presets','colors'];
 
-  function documentFor(standId,model,libraries){
-    return {format:FORMAT,version:VERSION,standId,model:copy(model),
+  function documentFor(standId,model,libraries,light){
+    const doc={format:FORMAT,version:VERSION,standId,model:copy(model),
       libraries:{scenes:copy(libraries.scenes||[]),presets:copy(libraries.presets||[]),colors:copy(libraries.colors||[])}};
+    // C98: the current light per receiver, so every phone shows what the
+    // ledlines show. Display data only: applying it never sends a command.
+    if(light&&typeof light==='object')doc.light=copy(light);
+    return doc;
   }
   function parse(json,standId){
     const doc=JSON.parse(json);
@@ -46,6 +50,8 @@
     // base. Without a base (first contact) the MAIN's layout wins.
     if(base&&canonical(local.model)!==canonical(base.model))result.model=copy(local.model);
     for(const list of LISTS)result.libraries[list]=mergeList(base?.libraries[list],local.libraries[list],remote.libraries[list]);
+    // Light: this phone's newer choice wins only if it changed since the base.
+    if(base&&local.light&&canonical(local.light)!==canonical(base.light||{}))result.light=copy(local.light);
     return result;
   }
 
@@ -91,12 +97,12 @@
       // C98: this phone's own layout is newer than the MAIN's document; keep
       // the key on the document so the next pass uploads this layout.
       st.key=applied?.layout==='local'?canonical(remote):
-        after?canonical(documentFor(standId,st.layoutBlocked?remote.model:after.model,after.libraries)):canonical(remote);
+        after?canonical(documentFor(standId,st.layoutBlocked?remote.model:after.model,after.libraries,after.light)):canonical(remote);
     }
     async function pass(standId){
       const st=stateOf(standId);if(Date.now()<st.until)return;
       const snap=hooks.snapshot(standId);if(!snap)return;
-      const local=documentFor(standId,st.layoutBlocked&&st.doc?st.doc.model:snap.model,snap.libraries),localKey=canonical(local);
+      const local=documentFor(standId,st.layoutBlocked&&st.doc?st.doc.model:snap.model,snap.libraries,snap.light),localKey=canonical(local);
       if(st.revision===null){
         // First contact: an empty MAIN adopts this phone's installation;
         // otherwise the MAIN's document is loaded (and merged).
@@ -121,7 +127,8 @@
             if(['SHARED_DEFERRED','LIVE_CONTROL_BUSY','LIVE_CONTROL_SUPERSEDED','SHARED_BUSY'].includes(error?.code))continue;
             // Offline or MAIN busy: back off quietly, never block light control.
             st.failures++;st.until=Date.now()+Math.min(30000,POLL_MS*2**Math.min(st.failures,4));
-            if(st.failures===3)hooks.notice?.(error?.code||'SHARED_UNAVAILABLE');
+            // C98: only a lasting problem (several minutes), never a brief hiccup.
+            if(st.failures===10)hooks.notice?.(error?.code||'SHARED_UNAVAILABLE');
           }
         }
       }finally{running=false;}

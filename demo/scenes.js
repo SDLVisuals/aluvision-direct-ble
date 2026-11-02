@@ -62,9 +62,10 @@
     const zones=scene.zones.map(z=>{
       if(!plain(z)||!text(z.id)||zoneIds.has(z.id)||!text(z.name,64)||!['RGBW','SPI'].includes(z.type)||!dense(z.receivers)||!z.receivers.length||z.receivers.length>(scene.version===2?30:1000))fail('De zones in de scène zijn niet geldig.');
       zoneIds.add(z.id);
-      if(scene.version===2&&Object.keys(z).sort().join(',')!=='arrangement,id,name,receivers,type')fail('De scènezone bevat onbekende gegevens.');
+      if(scene.version===2&&Object.keys(z).filter(key=>key!=='gradientDomains').sort().join(',')!=='arrangement,id,name,receivers,type')fail('De scènezone bevat onbekende gegevens.');
+      if(Object.hasOwn(z,'gradientDomains')&&(z.type!=='SPI'||!M.validGradientDomains(z.gradientDomains)))fail('De bewaarde verloopselecties zijn ongeldig.');
       const spatial=scene.version===2?arrangement(z.arrangement,z.type):null;
-      const result={id:z.id,name:z.name,type:z.type,...(spatial?{arrangement:spatial}:{}),receivers:z.receivers.map(r=>{
+      const result={id:z.id,name:z.name,type:z.type,...(Object.hasOwn(z,'gradientDomains')?{gradientDomains:copy(z.gradientDomains)}:{}),...(spatial?{arrangement:spatial}:{}),receivers:z.receivers.map(r=>{
         if(!plain(r)||!text(r.id)||receiverIds.has(r.id))fail('Een receiver staat meermaals in de scène.');
         if(scene.version===2&&Object.keys(r).sort().join(',')!=='id,identity,state')fail('De opgeslagen receiver bevat onbekende gegevens.');
         receiverIds.add(r.id);const state=light(r.state,true);
@@ -92,7 +93,7 @@
       fail('Deze animatie gebruikt de hele stand. Kies alle zones en wijs losse receivers eerst aan een zone toe.');
     return validate({version:2,id:options.id||'scene-'+(globalThis.crypto?.randomUUID?.()||Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)),standId,name,
       zones:stand.zones.filter(zone=>zoneIds.includes(zone.id)).map(z=>{
-        return {id:z.id,name:z.name,type:z.type,arrangement:{layout:z.layout,lineOrder:M.lineIds(model,z.id),
+        return {id:z.id,name:z.name,type:z.type,...(z.gradientDomains?{gradientDomains:copy(z.gradientDomains)}:{}),arrangement:{layout:z.layout,lineOrder:M.lineIds(model,z.id),
           presentation:options.presentations?.[z.id]??(z.layout==='vertical'?'wall':'normal')},
           receivers:M.zoneReceivers(model,z.id).map(r=>({id:r.id,identity:{rid:r.rid||null,deviceFingerprint:r.deviceFingerprint||null},
             state:light(z.layout==='continuous'?M.lightStateFor(r,0):r.state)}))};})});
@@ -122,7 +123,7 @@
     const receivers=new Map(model.receivers.map(r=>[r.id,r]));
     return scene.zones.map(saved=>{
       const zone=zones.get(saved.id),matchingZone=zone&&zone.type===saved.type;
-      const result={id:saved.id,name:saved.name,type:saved.type,layout:saved.arrangement?.layout??(matchingZone?zone.layout:null),
+      const result={id:saved.id,name:saved.name,type:saved.type,...(saved.gradientDomains?{gradientDomains:copy(saved.gradientDomains)}:{}),layout:saved.arrangement?.layout??(matchingZone?zone.layout:null),
         ...(saved.arrangement?{presentation:saved.arrangement.presentation,lineOrder:[...saved.arrangement.lineOrder]}:{}),
         receivers:[],available:false,reason:'',receiverCount:saved.receivers.length};
       if(!stand){result.reason='Deze scène hoort bij een andere stand.';return result;}
@@ -150,7 +151,7 @@
       const savedReceivers=new Map(saved.receivers.map(r=>[r.id,r]));
       result.receivers=(saved.arrangement?saved.receivers.map(receiver=>receiver.id):zone.receiverIds).map(id=>{
         const current=receivers.get(id),snapshot=savedReceivers.get(id);
-        return {id,name:current.name,type:saved.type,connection:current.connection,
+        return {id,name:current.name,type:saved.type,standId:scene.standId,zoneId:saved.id,connection:current.connection,
           outputs:current.outputs.map(p=>({port:p.port,enabled:p.enabled,pixels:p.pixels,reversed:p.reversed})),state:copy(snapshot.state)};
       });
       result.available=true;
@@ -194,12 +195,14 @@
       // zones, but dissolve their shared recipe marker to prevent partial waves.
       next.receivers.filter(receiver=>receiver.standId===scene.standId).forEach(receiver=>{delete receiver.state.standAnimation;});
     }
+    for(const saved of scene.zones){const zone=M.getZone(next,saved.id);if(saved.gradientDomains)zone.gradientDomains=copy(saved.gradientDomains);else delete zone.gradientDomains;}
     for(const zone of scene.zones)for(const saved of zone.receivers)next.receivers.find(r=>r.id===saved.id).state=copy(saved.state);
     return M.assertValid(next);
   }
   function presentationModel(model,input){
     const scene=validate(input),next=apply(model,scene);
     for(const receiver of next.receivers)receiver.state=copy(model.receivers.find(current=>current.id===receiver.id).state);
+    for(const stand of next.stands)for(const zone of stand.zones){const current=M.getZone(model,zone.id);if(current?.gradientDomains)zone.gradientDomains=copy(current.gradientDomains);else delete zone.gradientDomains;}
     return M.assertValid(next);
   }
   function createStore(storage){

@@ -25,6 +25,7 @@
   let staticPreparingAvailable=null;
   let staticGestureAvailable=null;
   let integratedStatic8Available=false,staticGradientCatalogueAvailable=false;
+  let singleSpiStaticBatchAvailable=false;
   let authorityJointAvailable=null;
   const authorityStandModes=new Map();
   let stableStandPreparation=null;
@@ -109,6 +110,7 @@
   const actions=new Set(['capabilities','securityPreference','securityStatus','setPinProtection','discover','discoverMesh','select','secure','reconcileSecurity','finalize','verifyFinalReceipt','loadView','saveDraft','parkDraft','resumeDraft','publishModel','editZones','configureOutputs','previewPixels','eraseAppData','applyLive','applyLiveBatch','otaPlan','otaStart','otaStatus','otaResume','otaCancel','otaMainRecoveryPlan','otaMainRecoveryStart','removalPlan','removalStart','removalResume','identify','identifyCandidate','identifyFactoryMain']);
   actions.add('checkpointPreviewExit');
   actions.add('outputConfigurationStatus');
+  actions.add('prewarmSetupC98');
   actions.add('previewSPIZoneDirections');
   actions.add('configureOutputDirections');
   actions.add('commitPixelsToDirections');
@@ -120,7 +122,7 @@
   actions.add('applyStaticGradient');
   actions.add('observeStableCue');
   ['exportBackup','chooseBackup','importInstallationView','recoverInstallation'].forEach(action=>actions.add(action));
-  ['sharedDocument','sharedLayout','reserveMain'].forEach(action=>actions.add(action));
+  ['sharedDocument','sharedLayout','refreshSharedOutputs','reserveMain'].forEach(action=>actions.add(action));
   ['receiverContextStatus','syncInstallationContext','interruptAutomaticContext'].forEach(action=>actions.add(action));
   actions.add('setAppearance');
   actions.add('selectionFeedback');
@@ -195,7 +197,13 @@
   const contextTimers=new Map(),contextEpochs=new Map(),contextJobs=new Map(),contextControls=new Map();let contextQueue=Promise.resolve(),contextResetEpoch=0;
   const contextDiscoveries=new Map(),incompleteLibraryRecovery=new Set();let contextDiscoveryTimer=null,incompleteLibraryRecoveryStorageBlocked=false;
   const incompleteLibraryRecoveryKey='aluvision.v32.incomplete-library-recovery.v1';
+  // C98: also paused on the Receivers screen, where pixel/sides/order setups start
+  // and need the warmed MAIN session instead of a 1 s new handshake.
   const contextVisible=()=>root.document?.visibilityState!=='hidden';
+  // C98: background context sync also waits while the receivers (setup)
+  // screen is open, so it never takes the radio from pixels/sides/order.
+  // Only the background jobs use this; user actions keep contextVisible.
+  const contextBackgroundAllowed=()=>contextVisible()&&root.__c98SetupScreen!==true;
   // Implementing StandSession is not using it. Existing Owner installations
   // retain their archive until a genuine central flow/session is selected;
   // an uncertain or disconnected selected flow never borrows Owner fallback.
@@ -238,9 +246,16 @@
       request.reject(error);
     }
   }
-  let lastLightAtC97=0;
+  let lastLightAtC97=0,sharedOutputReadC98=null;
+  const sharedOutputPassiveC98=new Set(['refreshSharedOutputs','sharedDocument','loadView','outputConfigurationStatus','securityPreference','receiverContextStatus','standSessionStatus','otaStatus','exportBackup','chooseBackup','selectionFeedback','interfaceFeedback','setAppearance']);
   function call(action,payload={},signal,automatic,posted){
-    if(['applyLive','applyLiveBatch','applyStableCatalogue','applyStableBreathe','applyStaticGradient','identify','identifyLayout','previewPixels'].includes(action))lastLightAtC97=Date.now();
+    if(!sharedOutputPassiveC98.has(action))sharedOutputReadC98?.abort();
+    if(['applyLive','applyLiveBatch','applyStableCatalogue','applyStableBreathe','applyStaticGradient','identify','identifyLayout','previewPixels','previewSPIZoneDirections'].includes(action))lastLightAtC97=Date.now();
+    // C98: a pixel, sides or ledline-order screen needs the MAIN at once. A
+    // background context write (about 1.3 s per chunk) is interrupted, not
+    // waited for; it resumes later on its own.
+    if(!automatic&&['previewPixels','previewSPIZoneDirections','identifyLayout','identify','blinkLayoutIdentification'].includes(action))
+      for(const control of contextControls.values()){try{control.interrupt?.();}catch(_){}}
     if(!native||!transportReady)return Promise.reject(fail('NATIVE_UNAVAILABLE'));
     if(!documentId||!/^[A-F0-9]{32}$/.test(documentId))return Promise.reject(fail('NATIVE_DOCUMENT_UNAVAILABLE'));
     if(!actions.has(action))return Promise.reject(fail('ACTION_UNSUPPORTED'));
@@ -391,11 +406,11 @@
     return legacyContextAllowed()&&contextJobs.get(job.standId)===job&&contextEpochs.get(job.standId)===job.epoch&&contextResetEpoch===job.reset;
   }
   function contextCanContinue(job){
-    return contextJobCurrent(job)&&contextVisible()&&typeof contextWriteBarrier==='function'&&job.installation!==null&&!libraryRecoveryBlocked(job.standId)&&
+    return contextJobCurrent(job)&&contextBackgroundAllowed()&&typeof contextWriteBarrier==='function'&&job.installation!==null&&!libraryRecoveryBlocked(job.standId)&&
       contextInstallation(job.standId)===job.installation&&contextControls.size===0;
   }
   function armContextContinuation(job){
-    if(!contextJobCurrent(job)||job.state!=='paused'||contextTimers.has(job.standId)||!contextVisible())return;
+    if(!contextJobCurrent(job)||job.state!=='paused'||contextTimers.has(job.standId)||!contextBackgroundAllowed())return;
     // Clean pending work reconciles at a bounded rate, not by replaying a
     // mutation. Later rounds outlive the original 300s library staging lifetime.
     contextTimers.set(job.standId,root.setTimeout(()=>{
@@ -511,13 +526,13 @@
       const previousJob=contextJobs.get(standId);
       const automaticReturn=returnMode==='return'||returnMode==='idle';
       const settledAllowed=allowSettledJob||automaticReturn&&(previousJob?.state==='stopped'&&previousJob.recheckOnReturn===true||returnMode==='idle'&&previousJob?.state==='paused');
-      if(!legacyContextAllowed()||!contextVisible()||contextControls.size||previousJob&&(!settledAllowed||!['paused','stopped'].includes(previousJob.state))||writeQueue!==settledWriteQueue||typeof contextWriteBarrier!=='function'||
+      if(!legacyContextAllowed()||!contextBackgroundAllowed()||contextControls.size||previousJob&&(!settledAllowed||!['paused','stopped'].includes(previousJob.state))||writeQueue!==settledWriteQueue||typeof contextWriteBarrier!=='function'||
         typeof root.LightningInstallationLibraries?.capture!=='function'||!libraryRecoveryMarker()||libraryRecoveryBlocked(standId))return null;
       const installation=contextInstallation(standId);if(installation===null)return null;
       if(automaticReturn&&previousJob&&installation!==previousJob.installation)return null;
       try{root.LightningModel.assertValid(JSON.parse(viewModelKey));}catch(_){return null;}
       const epoch=contextEpochs.get(standId),reset=contextResetEpoch,writes=writeQueue,revision=viewRevision,model=viewModelKey,draft=viewDraftKey;
-      const current=()=>legacyContextAllowed()&&contextVisible()&&!contextControls.size&&contextJobs.get(standId)===previousJob&&writeQueue===writes&&writeQueue===settledWriteQueue&&
+      const current=()=>legacyContextAllowed()&&contextBackgroundAllowed()&&!contextControls.size&&contextJobs.get(standId)===previousJob&&writeQueue===writes&&writeQueue===settledWriteQueue&&
         viewRevision===revision&&viewModelKey===model&&viewDraftKey===draft&&contextResetEpoch===reset&&contextEpochs.get(standId)===epoch&&
         contextInstallation(standId)===installation&&!libraryRecoveryBlocked(standId);
       let ticket,revoked=false,readStarted=false;
@@ -568,7 +583,7 @@
   function wakeAndDiscoverContexts(){
     if(!legacyContextAllowed())return;
     wakeContextContinuations();
-    if(contextDiscoveryTimer!==null||!contextVisible()||!viewLoaded||viewDraftKey!=='null'||contextControls.size)return;
+    if(contextDiscoveryTimer!==null||!contextBackgroundAllowed()||!viewLoaded||viewDraftKey!=='null'||contextControls.size)return;
     contextDiscoveryTimer=root.setTimeout(()=>{
       contextDiscoveryTimer=null;
       const stands=viewLoaded&&viewDraftKey==='null'?JSON.parse(viewModelKey).stands||[]:[];
@@ -581,6 +596,7 @@
   root.addEventListener?.('online',wakeAndDiscoverContexts);
   root.addEventListener?.('focus',wakeAndDiscoverContexts);
   root.document?.addEventListener?.('visibilitychange',()=>{if(contextVisible())wakeAndDiscoverContexts();});
+  root.addEventListener?.('c98-setup-screen-left',()=>{if(contextBackgroundAllowed())wakeAndDiscoverContexts();});
   root.addEventListener?.('lightning:receiver-work-idle',event=>{
     const detail=event?.detail,standId=detail?.standId;
     if(!detail||typeof detail!=='object'||Array.isArray(detail)||Object.keys(detail).join(',')!=='standId'||
@@ -604,7 +620,10 @@
       contextQueue=contextQueue.catch(()=>{}).then(async()=>{
         if(!current())return;
         if(libraryRecoveryBlocked(standId)){job.state='stopped';contextEvent({standId,status:'pending'},epoch,reset,'complete');return;}
-        if(!contextVisible()||contextControls.size){contextEvent({standId,status:'pending'},epoch,reset,'complete');pauseContext(job);return;}
+        // C98: never start this radio work while the user is choosing light:
+        // it would cancel the in-flight colour. The continuation waits for an
+        // idle LIVE lease.
+        if(!contextBackgroundAllowed()||contextControls.size||Date.now()-lastLightAtC97<6000||(typeof document!=='undefined'&&document.querySelector('dialog[open]'))){contextEvent({standId,status:'pending'},epoch,reset,'complete');pauseContext(job);return;}
         job.state='writing';let cleaned=true,writerStarted=false;
         contextEvent({standId,status:'syncing'},epoch,reset,'writing');
         try{
@@ -651,6 +670,8 @@
   }
   function publicationModel(incoming,stored,central=false,configuration=null){
     if(!incoming||!Array.isArray(incoming.receivers)||!stored||!Array.isArray(stored.receivers))throw fail('VIEW_INVALID');
+    incoming=JSON.parse(JSON.stringify(incoming));
+    for(const stand of incoming.stands||[])for(const zone of stand.zones||[])if(Object.hasOwn(zone,'gradientDomains')){if(!root.LightningModel.validGradientDomains(zone.gradientDomains))throw fail('VIEW_INVALID');delete zone.gradientDomains;}
     if(central){
       // A compact draft may omit central-only descriptors, never replace them.
       // If supplied, rich fields must still match their authenticated baseline.
@@ -1541,6 +1562,27 @@
     },
     async editZones(request){return editZones(request).then(view=>scheduleContext(view,request.standId));},
     sharedDocument,
+    async refreshSharedOutputs({standId,receiverId}){
+      if(!viewLoaded||!contextVisible()||centralStamp!==null||sharedOutputReadC98||writeQueue!==settledWriteQueue||Date.now()-lastLightAtC97<=3000)
+        throw fail('SHARED_DEFERRED');
+      if(typeof standId!=='string'||typeof receiverId!=='string')throw fail('SHARED_INVALID');
+      const controller=new AbortController(),epoch=standSharingEpoch,initialRevision=viewRevision,initialModel=viewModelKey,initialDraft=viewDraftKey,writes=writeQueue;
+      sharedOutputReadC98=controller;
+      try{
+        // A prior read may have committed just before navigation cancelled its
+        // reply. Refresh LOCAL storage before another exact-revision radio read.
+        const stored=await call('loadView',{},controller.signal);
+        if(controller.signal.aborted||epoch!==standSharingEpoch||!contextVisible()||initialRevision!==viewRevision||initialModel!==viewModelKey||initialDraft!==viewDraftKey||writes!==writeQueue)
+          throw fail('SHARED_DEFERRED');
+        acceptView(stored);
+        const revision=viewRevision,modelKey=viewModelKey,draftKey=viewDraftKey;
+        const view=await call('refreshSharedOutputs',{standId,receiverId,expectedRevision:revision},controller.signal);
+        if(controller.signal.aborted||epoch!==standSharingEpoch||!contextVisible()||revision!==viewRevision||modelKey!==viewModelKey||draftKey!==viewDraftKey||writes!==writeQueue)
+          throw fail('SHARED_DEFERRED');
+        root.LightningModel.assertValid(view.model);
+        return acceptView(view);
+      }finally{if(sharedOutputReadC98===controller)sharedOutputReadC98=null;}
+    },
     // C97 reserve MAIN: start/observe the MAIN firmware's automatic arming.
     reserveMain(request){
       if(!request||!['enable','status'].includes(request.op)||typeof request.standId!=='string'||!/^[0-9A-F]{16}$/.test(request.txn||'')||
@@ -1593,6 +1635,8 @@
          !Number.isInteger(answer.previewTTLMS)||answer.previewTTLMS<=7000||answer.previewTTLMS>15000||!Number.isInteger(answer.renewAfterMS)||answer.renewAfterMS<1||answer.renewAfterMS>7000||answer.renewAfterMS>=answer.previewTTLMS)throw fail('SPI_DIRECTION_UNCONFIRMED');
       return answer;
     },
+    // C98: warm the MAIN session before a pixel step is opened.
+    prewarmSetup({standId}){return call('prewarmSetupC98',{standId});},
     async outputConfigurationStatus({standId,receiverId}){
       if(!centralStamp&&root.__lightningV31OutputRecovery!==true)return {status:'none'};
       const id=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(value);
@@ -1630,6 +1674,13 @@
       const payload=JSON.parse(JSON.stringify(request));
       if(centralStamp&&(centralStamp.standId!==request.standId||!standSessionOutputsAvailable||!contextVisible()))throw fail('STAND_NOT_CONNECTED');
       const answer=await call('previewPixels',payload);
+      // Exact native terminal cleanup, not an applied preview or STOP command.
+      if(answer&&Object.hasOwn(answer,'retired')){
+        if(!editor||request.action!=='stop'||request.keepSession===true||
+          !layoutKeys(answer,['retired','editorSession','previewTTLMS','isolationTTLMS'])||answer.retired!==true||
+          answer.editorSession!==request.editorSession||answer.previewTTLMS!==0||answer.isolationTTLMS!==0)throw fail('PIXEL_PREVIEW_UNCONFIRMED');
+        return answer;
+      }
       const lit=ports?request.outputs.some(item=>item.enabled&&item.pixels>0):request.pixels>0;
       const hasMode=!!answer&&Object.hasOwn(answer,'previewMode'),black=hasMode&&answer.previewMode==='black'&&pixelPreviewV50===true&&request.action!=='stop'&&
         (ports?request.outputs.every(item=>!item.enabled):[undefined,'length'].includes(request.guide)&&request.pixels===0)&&
@@ -1733,6 +1784,7 @@
       }
     },
     get integratedStatic8Available(){return integratedStatic8Available;},
+    get singleSpiStaticBatchAvailable(){return singleSpiStaticBatchAvailable&&centralStamp===null&&legacyContextAllowed();},
     get liveBatchLimit(){return integratedStatic8Available&&centralStamp===null?64:30;},
     // Presentation choice only, never an output/Owner/capability grant. The
     // modern publisher cannot borrow the old LIVE-under-identification lane.
@@ -1911,7 +1963,7 @@
     applyStaticGradient({requests,gradient}={}){return services.applyLiveBatch({requests,staticGradient:gradient});},
     applyMixedPower({requests,gradientSelections}={}){return services.applyLiveBatch({requests,gradientSelections});},
     applyLiveBatch({requests,staticGradient,gradientSelections}={}){
-      let requestId=null,settled=false,payload,ids,preparing=false,nativeBreathe=false,nativeCatalogue=false,sequence=0,replacementClosed=false,replacementInFlight=false,acceptedSequence=0;
+      let requestId=null,settled=false,payload,ids,gradientGroups,preparing=false,nativeBreathe=false,nativeCatalogue=false,sequence=0,replacementClosed=false,replacementInFlight=false,acceptedSequence=0;
       const nativeBreatheController=new AbortController();let nativeObservationController=null,retainedOrigin=null;
       let lightTicket=null;
       let retirementSequence=0,retirementInFlight=false,retirementNoticeId=null,posted;
@@ -1976,17 +2028,38 @@
         if(gradientSelections!==undefined){
           if(staticGradient!==undefined||centralStamp!==null||!root.LightningStaticGradient||!Array.isArray(gradientSelections)||
              !gradientSelections.length||gradientSelections.length>256)throw fail('GRADIENT_INVALID');
-          const keys=new Set();
+          const keys=new Set(),groupRefs=new Map();
+          gradientGroups={};
           gradientSelections=gradientSelections.map(row=>{
-            if(!layoutKeys(row,['receiverId','port','gradient'])||!Number.isInteger(row.port)||row.port<0||row.port>4)throw fail('GRADIENT_INVALID');
+            const grouped=!!row&&typeof row==='object'&&!Array.isArray(row)&&Object.hasOwn(row,'group');
+            if(!layoutKeys(row,['receiverId','port','gradient',...(grouped?['group']:[])])||!Number.isInteger(row.port)||row.port<0||row.port>4||
+               grouped&&!root.LightningStaticGradient.validGroup(row.group))throw fail('GRADIENT_INVALID');
             const request=payload.find(r=>r.receiverId===row.receiverId),children=request?.kind==='SPI_PORTS'?request.portScenes:[request];
             if(!request||!children.some(child=>child?.kind==='SPI_SCENE'&&(child.port??0)===row.port))throw fail('GRADIENT_SCOPE');
             const key=row.receiverId+':'+row.port;
             if(keys.has(key)||keys.has(row.receiverId+':0')||row.port===0&&[...keys].some(k=>k.startsWith(row.receiverId+':')))throw fail('GRADIENT_SCOPE');
             keys.add(key);
             if(!layoutKeys(row.gradient,['stops','brightness','reverse','transitionMs']))throw fail('GRADIENT_INVALID');
-            return {receiverId:row.receiverId,port:row.port,gradient:root.LightningStaticGradient.definition(row.gradient.stops,row.gradient)};
+            let groupRef;
+            if(grouped){
+              const signature=JSON.stringify(row.group);
+              groupRef=groupRefs.get(signature);
+              if(!groupRef){groupRef='g'+(groupRefs.size+1);groupRefs.set(signature,groupRef);gradientGroups[groupRef]=[...row.group];}
+            }
+            return {receiverId:row.receiverId,port:row.port,gradient:root.LightningStaticGradient.definition(row.gradient.stops,row.gradient),...(grouped?{groupRef}:{})};
           });
+          if(!groupRefs.size)gradientGroups=undefined;
+          else{
+            const groups=gradientGroups,lines=[...new Set(Object.values(groups).flat())].sort();
+            if(lines.length>256)throw fail('GRADIENT_SCOPE');
+            const indexes=new Map(lines.map((line,i)=>[line,i]));
+            gradientGroups={version:1,lines,entries:{}};
+            for(const [ref,members] of Object.entries(groups)){
+              const bits=Array(Math.ceil(lines.length/4)).fill(0);
+              for(const member of members){const i=indexes.get(member);bits[i>>2]|=1<<(i%4);}
+              gradientGroups.entries[ref]=bits.map(n=>n.toString(16)).join('');
+            }
+          }
         }
         if(staticGradient!==undefined){
           if(centralStamp!==null||!root.LightningStaticGradient||Object.keys(staticGradient||{}).sort().join(',')!=='brightness,reverse,stops,transitionMs')throw fail('GRADIENT_INVALID');
@@ -2037,7 +2110,7 @@
           if(nativeBreathe||nativeCatalogue){
             if(stableStandPreparation?.pending&&stableStandPreparation.standId===payload[0].standId)throw fail('LIVE_STABLE_PREPARATION_PENDING');
             const retainedStatus=nativeCatalogue?'catalogue-retained-deferred':'breathe-retained-deferred';
-            const answer=await call(staticGradient!==undefined?'applyStaticGradient':nativeCatalogue?'applyStableCatalogue':'applyStableBreathe',{requests:payload,...(staticGradient!==undefined?{gradient:staticGradient}:{}),...(gradientSelections!==undefined?{gradientSelections}:{})},nativeBreatheController.signal,undefined,id=>{requestId=id;posted();});
+            const answer=await call(staticGradient!==undefined?'applyStaticGradient':nativeCatalogue?'applyStableCatalogue':'applyStableBreathe',{requests:payload,...(staticGradient!==undefined?{gradient:staticGradient}:{}),...(gradientSelections!==undefined?{gradientSelections}:{}),...(gradientGroups!==undefined?{gradientGroups}:{})},nativeBreatheController.signal,undefined,id=>{requestId=id;posted();});
             const dataKeys=['dataPreparationState','dataTargets','dataPrepared','dataUnavailable'];
             const hasData=dataKeys.some(key=>Object.prototype.hasOwnProperty.call(answer||{},key));
             const expectedKeys=['applied','ready','receiverIds','status',...(hasData?dataKeys:[])].sort().join(',');
@@ -2328,6 +2401,7 @@
     standShareSheetAvailable=simpleStandAvailable&&value?.simpleStandShareSheet===true;
     legacyStandAnimationsAvailable=simpleStandAvailable?value?.legacyStandAnimations===true:value?.standAnimations===true;
     standSessionAnimationsAvailable=value?.standSessionAnimations===true;
+    singleSpiStaticBatchAvailable=value?.singleSpiStaticBatch===true;
     staticPreparingAvailable=value?.staticPreparingReplacement===true;staticGestureAvailable=value?.nativeStaticGesture===true;integratedStatic8Available=value?.integratedStatic8===true;staticGradientCatalogueAvailable=value?.staticGradientCatalogue===true;authorityJointAvailable=value?.authorityJointAdmission===true;standSessionStaticGestureAvailable=value?.standSessionStaticGesture===true;return value;}
   function standAnimationCapability(){
     if(centralStamp)return standSessionAnimationsAvailable;

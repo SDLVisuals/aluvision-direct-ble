@@ -66,7 +66,7 @@
     const model={schemaVersion:30,demo:input.demo,stands:input.stands.map(s=>{
       const next=pick(s,['id','name','zones'],strict);
       if(!Array.isArray(s.zones)||s.zones.length>100)fail('BACKUP_MODEL','Te veel zones.');
-      next.zones=s.zones.map(z=>pick(z,['id','name','type','layout','receiverIds','lineOrder'],strict));return next;
+      next.zones=s.zones.map(z=>pick(z,['id','name','type','layout','receiverIds','lineOrder','gradientDomains'],strict));return next;
     }),receivers:input.receivers.map(r=>{
       const next=pick(r,['id','rid','deviceFingerprint','name','type','standId','zoneId','role','lifecycle','connection','outputs','state','onboardingTransactionId'],strict);
       if(r.lifecycle!=='added')fail('BACKUP_SETUP','Rond eerst het toevoegen van je receiver af.');
@@ -131,14 +131,28 @@
         result.physicalId=native.physicalId;
       }
       return result;
-    });return desired;
+    });for(const stand of desired.stands)for(const zone of stand.zones)delete zone.gradientDomains;return desired;
   }
-  function lightRecord(model){return {version:1,receivers:publicModel(model).receivers.map(r=>({identity:identity(r),state:r.state}))};}
+  function lightDomains(model){return model.stands.flatMap(s=>s.zones.filter(z=>z.gradientDomains!==undefined).map(z=>({standId:s.id,zoneId:z.id,domains:clone(z.gradientDomains)})));}
+  function restoreDomains(model,records,{standId=null}={}){
+    if(!Array.isArray(records)||records.length>2000)fail('LIGHT_STORAGE','Ongeldige verloopselecties.');
+    if(standId!==null&&(typeof standId!=='string'||!standId))fail('LIGHT_STORAGE','Ongeldige stand.');
+    if(standId!==null&&records.some(row=>!plain(row)||row.standId!==standId))fail('LIGHT_STORAGE','Deze verloopselecties horen bij een andere stand.');
+    for(const stand of model.stands)if(standId===null||stand.id===standId)for(const zone of stand.zones)delete zone.gradientDomains;
+    const seen=new Set();for(const row of records){keys(row,['standId','zoneId','domains']);const key=JSON.stringify([row.standId,row.zoneId]);
+      if(typeof row.standId!=='string'||typeof row.zoneId!=='string'||seen.has(key)||!M.validGradientDomains(row.domains))fail('LIGHT_STORAGE','Ongeldige verloopselecties.');seen.add(key);
+      const zone=model.stands.find(s=>s.id===row.standId)?.zones.find(z=>z.id===row.zoneId);if(zone&&zone.type==='SPI')zone.gradientDomains=clone(row.domains);
+    }
+    return model;
+  }
+  function hasDomainRefs(states){return states.some(state=>plain(state)&&[state,...Object.values(state.portStates||{})].some(light=>plain(light)&&Object.hasOwn(light,'staticGradientDomain')));}
+  function lightRecord(model){const safe=publicModel(model),domains=lightDomains(safe),v2=domains.length>0||hasDomainRefs(safe.receivers.map(r=>r.state));return {version:v2?2:1,receivers:safe.receivers.map(r=>({identity:identity(r),state:r.state})),...(v2?{gradientDomains:domains}:{})};}
   function restoreLight(model,raw){
-    if(!raw)return clone(model);const data=parse(raw);keys(data,['version','receivers']);
-    if(data.version!==1||!Array.isArray(data.receivers)||data.receivers.length>1200)fail('LIGHT_STORAGE','De bewaarde lichtkeuze is beschadigd.');
+    if(!raw)return clone(model);const data=parse(raw);keys(data,data.version===2?['version','receivers','gradientDomains']:['version','receivers']);
+    if(![1,2].includes(data.version)||!Array.isArray(data.receivers)||data.receivers.length>1200)fail('LIGHT_STORAGE','De bewaarde lichtkeuze is beschadigd.');
     const states=new Map();for(const r of data.receivers){keys(r,['identity','state']);if(typeof r.identity!=='string'||states.has(r.identity))fail('LIGHT_STORAGE','Ongeldige lichtkeuze.');states.set(r.identity,lightState(r.state,true));}
-    const next=clone(model);for(const r of next.receivers)if(states.has(identity(r))){r.state=states.get(identity(r));validateReceiverAnimations(r);}return M.assertValid(next);
+    if(data.version===1&&hasDomainRefs([...states.values()]))fail('LIGHT_STORAGE','Verloopselecties missen hun bijbehorende gegevens.');
+    const next=clone(model);if(data.version===2)restoreDomains(next,data.gradientDomains);for(const r of next.receivers)if(states.has(identity(r))){r.state=states.get(identity(r));validateReceiverAnimations(r);}return M.assertValid(next);
   }
   function values(backup){return {[P.STORAGE_KEY]:JSON.stringify({version:1,presets:backup.libraries.presets}),[S.STORAGE_KEY]:JSON.stringify({version:1,scenes:backup.libraries.scenes}),[C.STORAGE_KEY]:JSON.stringify({version:1,colors:backup.libraries.colors}),[U.STORAGE_KEY]:JSON.stringify({version:1,preferences:backup.preferences}),[LIGHT_KEY]:JSON.stringify(lightRecord(backup.model))};}
   const storageKeys=[P.STORAGE_KEY,S.STORAGE_KEY,C.STORAGE_KEY,U.STORAGE_KEY,LIGHT_KEY];
@@ -163,5 +177,5 @@
     function discard(model){const j=pending();if(j&&key(publicModel(model))!==j.beforeModel)fail('BACKUP_CONFLICT','De installatie is al gewijzigd. Rond het herstel af.');storage.removeItem(JOURNAL_KEY);}
     return Object.freeze({pending,prepare,finish,discard});
   }
-  return Object.freeze({FORMAT,MAX_BYTES,JOURNAL_KEY,LIGHT_KEY,create,read,validate,publicModel,nativeModel,identity,key,lightRecord,restoreLight,transaction});
+  return Object.freeze({FORMAT,MAX_BYTES,JOURNAL_KEY,LIGHT_KEY,create,read,validate,publicModel,nativeModel,identity,key,lightRecord,restoreLight,lightDomains,restoreDomains,hasDomainRefs,transaction});
 });

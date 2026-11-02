@@ -52,6 +52,8 @@
   rules.v30Effect = value => value === null || validId(value);
   rules.staticGradientRecipe = value => { try { G.decodeRecipe(value); return true; } catch (_) { return false; } };
   rules.gradientLastBrightness = value => Number.isInteger(value) && value>=1 && value<=100;
+  rules.staticGradientGroup = value => G.validGroup(value);
+  rules.staticGradientDomain = value => G.validDomain(value);
   rules.colors = value => Array.isArray(value) && value.length >= 1 && value.length <= 16 && value.every(validHex);
   rules.whiteChannels = value => Array.isArray(value) && value.length >= 1 && value.length <= 16 && value.every(item => finite(item, 0, 255));
   ['rgbEnabled', 'whiteEnabled'].forEach(key => { rules[key] = value => Array.isArray(value) && value.length >= 1 && value.length <= 16 && value.every(item => typeof item === 'boolean'); });
@@ -70,6 +72,8 @@
     if (!result.engine || !result.colors || !result.colors.length) fail('STATE_REQUIRED', 'De animatie en kleuren ontbreken.');
     if (result.engine === 'STATIC_GRADIENT' ? !has(result,'staticGradientRecipe') : has(result,'staticGradientRecipe')) fail('STATE_GRADIENT', 'Dit verloop is niet volledig bewaard. Pas het opnieuw toe met een bijgewerkte app.');
     if(has(result,'gradientLastBrightness')&&result.engine!=='STATIC_GRADIENT')fail('STATE_GRADIENT','Dit helderheidsgeheugen hoort niet bij een verloop.');
+    if(has(result,'staticGradientDomain')&&result.engine!=='STATIC_GRADIENT')fail('STATE_GRADIENT','Deze selectie hoort niet bij een verloop.');
+    if(has(result,'staticGradientGroup')&&result.engine!=='STATIC_GRADIENT')fail('STATE_GRADIENT','Deze ledlineselectie hoort niet bij een verloop.');
     if (result.colorCount !== undefined && result.colorCount > result.colors.length) fail('PALETTE', 'Het aantal kleuren past niet bij het palet.');
     return result;
   }

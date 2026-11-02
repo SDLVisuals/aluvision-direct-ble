@@ -121,7 +121,9 @@
     function recoveryReady(state){return (state.previewFailed===true||state.previewRetired===true)&&!state.data.previewOnly&&!!onPreview&&!state.recoveringPreview&&!state.recoveringTest&&!state.retryResumeJob&&!state.inFlight&&['failed','stopFailed','recovering'].includes(state.status)&&enabled(state);}
     function scheduleRecovery(state){
       if(state.recoveryTimer!=null||state.recoveryJob||!recoveryReady(state))return;
-      const delays=[750,2000,5000],attempt=state.recoveryAttempts||0,delay=attempt<delays.length?delays[attempt]:30000;
+      // C98: while this dialog is open the ledline keeps the direction guide;
+      // after the quick attempts it keeps retrying every 3 s, never 30 s.
+      const delays=[750,2000,3000],attempt=state.recoveryAttempts||0,delay=attempt<delays.length?delays[attempt]:3000;
       const epoch=state.recoveryEpoch||0;
       state.recoveryTimer=win.setTimeout(()=>{
         state.recoveryTimer=null;if(epoch!==(state.recoveryEpoch||0)||!recoveryReady(state))return;
@@ -136,7 +138,10 @@
       },delay);
       status(state,'recovering');
     }
-    function controls(state){if(!current(state))return;const failed=state.previewFailed||state.previewRetired,recovering=state.recoveringPreview||state.recoveryTimer!=null||!!state.recoveryJob||!!state.retryResumeJob;for(const button of state.dialog.querySelectorAll('[data-spi-zone-action="flip"],[data-spi-zone-action="select"],[data-spi-zone-action="save"],[data-spi-zone-action="test"]'))button.disabled=state.saving||state.resuming||state.recoveringTest||recovering||state.stale||!!state.stopJob||button.dataset.spiZoneAction==='test'&&state.inFlight||['flip','select'].includes(button.dataset.spiZoneAction)&&failed||button.dataset.spiZoneAction==='flip'&&(button.closest('[data-spi-zone-line]')?.dataset.pixels==='1'||state.pendingSaveReceivers.has(button.closest('[data-spi-zone-line]')?.dataset.receiverId));scheduleRecovery(state);}
+    function controls(state){if(!current(state))return;const failed=state.previewFailed||state.previewRetired,recovering=state.recoveringPreview||state.recoveryTimer!=null||!!state.recoveryJob||!!state.retryResumeJob;for(const button of state.dialog.querySelectorAll('[data-spi-zone-action="flip"],[data-spi-zone-action="select"],[data-spi-zone-action="save"],[data-spi-zone-action="test"]'))button.disabled=state.saving||state.resuming||state.stale||!!state.stopJob||
+        // C98: a failed or recovering light preview never locks the dialog;
+        // only the test wave waits for it. Choices and Save stay usable.
+        button.dataset.spiZoneAction==='test'&&(state.inFlight||state.recoveringTest||recovering||failed)||button.dataset.spiZoneAction==='flip'&&(button.closest('[data-spi-zone-line]')?.dataset.pixels==='1'||state.pendingSaveReceivers.has(button.closest('[data-spi-zone-line]')?.dataset.receiverId));scheduleRecovery(state);}
     async function drain(state){
       if(state.inFlight||state.previewFailed||!state.pending||!enabled(state))return false;const wanted=state.pending,testing=state.pendingTest===true,version=state.version,sentAt=now();state.pending=null;state.pendingTest=false;state.inFlight=true;let applied=false;status(state,'pending');clearObservation(state);controls(state);
       const firstPreview=state.previewStarted!==true;state.previewStarted=true;
@@ -158,7 +163,13 @@
     }
     function queue(state,testing=false){if(!enabled(state)||state.previewRetired)return Promise.resolve(false);if(state.data.previewOnly||!onPreview){status(state,'unsupported');return Promise.resolve(false);}state.version++;if(state.previewFailed)return Promise.resolve(false);if(!testing){state.pathActive=false;state.pathEnded=false;}state.pending=request(state);state.pendingTest=testing;return drain(state);}
     function setFocus(state,receiverId,port){state.focus=receiverId?{receiverId,port}:null;for(const card of state.dialog.querySelectorAll('[data-spi-zone-line]')){const selected=card.dataset.receiverId===receiverId&&Number(card.dataset.port)===port;card.dataset.selected=String(selected);card.querySelector('[data-spi-zone-action="select"]').setAttribute('aria-pressed',String(selected));const badge=card.querySelector('[data-spi-zone-focus-badge]');if(badge){badge.hidden=!selected;badge.textContent=t(state,'selected');}}}
-    function guideReversed(state,receiver,output){return output.reversed;}
+    function guideReversed(state,receiver,output){
+      // End colours alternate along the complete saved path so matching
+      // colours identify neighbouring ends. The saved direction stays raw.
+      const index=state.data.lineOrder.indexOf(receiver.id+':'+output.port);
+      if(index<0)throw Error('SPI_ZONE_LINE_ORDER_INVALID');
+      return output.reversed!==Boolean(index&1);
+    }
     function updateCard(state,receiver,output){const card=[...state.dialog.querySelectorAll('[data-spi-zone-line]')].find(node=>node.dataset.receiverId===receiver.id&&Number(node.dataset.port)===output.port);if(!card)return;const reversed=guideReversed(state,receiver,output);card.dataset.reversed=String(reversed);const button=card.querySelector('[data-spi-zone-action="flip"]');button.setAttribute('aria-pressed',String(output.reversed));button.setAttribute('aria-label',output.pixels===1?t(state,'one'):t(state,'flipAria',{receiver:receiver.name,port:output.port,end:t(state,reversed?'right':'left')}));}
     function stop(state){
       state.paused=true;state.previewRetired=true;state.pending=null;state.pendingTest=false;state.pathActive=false;state.pathEnded=false;state.version++;clearObservation(state);win.clearTimeout(state.leaseTimer);state.leaseTimer=null;state.confirmedRequest=null;state.leaseUntil=0;if(current(state))state.dialog.dataset.previewConfirmed='false';
@@ -244,16 +255,18 @@
       if(doc.hidden){clearRecovery(state,true);++state.visibilityEpoch;state.resumeRequested=false;state.visibilityStop=stop(state);void state.visibilityStop.catch(()=>{});return;}
       if(state.visibilityStop)resumeForeground(state);
     }
+    const saveLog=message=>{try{host.__c98log?.('SIDES_SAVE '+message);}catch(_){}};
     async function save(state){
-      if(!enabled(state))return;const wanted=changes(state);state.saving=true;controls(state);status(state,'stopping');
-      try{const answer=await bounded(state,stop(state),18000);if(!current(state))return;if(answer?.status!=='stopped'||answer.sessionId!==state.sessionId){status(state,'stopFailed');return;}if(!validContext(state))return;if(!wanted.length){close('done');return;}status(state,'saving');
+      if(!enabled(state)){saveLog('blocked '+JSON.stringify({current:current(state),saving:!!state.saving,resuming:!!state.resuming,paused:!!state.paused,stopJob:!!state.stopJob,stale:!!state.stale,hidden:!!doc.hidden,open:!!state.dialog.open,context:validContext(state)}));return;}
+      const wanted=changes(state);state.saving=true;controls(state);status(state,'stopping');saveLog('start changes='+wanted.length);
+      try{const answer=await bounded(state,stop(state),18000);if(!current(state))return;saveLog('stopped '+(answer?.status||'-'));if(answer?.status!=='stopped'||answer.sessionId!==state.sessionId){status(state,'stopFailed');return;}if(!validContext(state))return;if(!wanted.length){close('done');return;}status(state,'saving');
         const result=await onSave({...context(state),changes:copy(wanted)});if(!current(state))return;
         const reports=result?.results,ids=wanted.map(item=>item.receiverId).sort();if(!Array.isArray(reports)||canonical(reports.map(row=>row.receiverId).sort())!==canonical(ids)||reports.some(row=>!['saved','pending','failed'].includes(row.status))||new Set(reports.map(row=>row.receiverId)).size!==reports.length){status(state,'saveFailed');return;}
         let now;try{now=signature(state);}catch(_){status(state,'stale');state.stale=true;return;}
         if(now!==state.signature&&canonical(result.zoneSignature)!==now){status(state,'stale');state.stale=true;return;}
         state.signature=now;for(const row of reports)if(row.status==='saved'){state.baseline.set(row.receiverId,copy(wanted.find(item=>item.receiverId===row.receiverId).outputs));state.pendingSaveReceivers.delete(row.receiverId);}else if(row.status==='pending')state.pendingSaveReceivers.add(row.receiverId);
         if(reports.every(row=>row.status==='saved')){close('saved');return;}status(state,'partial');
-      }catch(_){if(current(state))status(state,state.status==='stopping'?'stopFailed':'saveFailed');}
+      }catch(error){saveLog('error '+(error?.code||error?.message||'-'));if(current(state))status(state,state.status==='stopping'?'stopFailed':'saveFailed');}
       finally{if(current(state)){state.saving=false;state.paused=!!state.stopJob;controls(state);}}
     }
     function click(state,event){

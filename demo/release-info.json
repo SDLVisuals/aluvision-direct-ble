@@ -26,109 +26,46 @@
     "nativeAppMetadataScope": "Historical native build243 record; the earlier Pages release did not update or attest an iPhone installation."
   },
   "androidTestApp": {
-    "path": "android/aluvision-android-test-50.0.0-c99-beta-35-4c1964cff799.apk",
-    "size": 3308132,
-    "sha256": "4c1964cff799b9c83afcfe49cb4303d5654ac611a29a3f9c64fbe1617013caa0",
+    "path": "android/aluvision-android-test-50.0.0-c100-adaptive-36-c4425e1a4531.apk",
+    "size": 3361911,
+    "sha256": "c4425e1a4531e7941411db7597960d49657b924eb82cd7179b70b6c5f8dafbf2",
     "packageName": "com.aluvision.lighting.android.test",
-    "versionName": "50.0.0-c99-beta",
-    "versionCode": 35,
+    "versionName": "50.0.0-c100-adaptive",
+    "versionCode": 36,
     "minSdk": 26,
     "targetSdk": 36,
     "mode": "receiver",
     "signerCertificateSha256": "b598fc6fa30b423517d6ca68e3bb1191248a32723174d4703baaede9125936ac",
     "signatureVerified": true,
     "packageVerified": true,
+    "debuggable": false,
     "installedVerified": true,
     "physicalAndroidVerified": false,
     "physicalReceiverVerified": false,
     "firmwareIncluded": false,
-    "interfaceBuild": "c99",
-    "features": {
-      "schemaVersion": 1,
-      "mode": "receiver",
-      "backendImplemented": true,
-      "services": [
-        "loadState",
-        "persistDraft",
-        "parkDraft",
-        "checkpointPreviewExit",
-        "resumeDraft",
-        "search",
-        "select",
-        "secure",
-        "reconcileSecurity",
-        "finalize",
-        "verifyFinalReceipt",
-        "publishModel",
-        "previewPixels",
-        "applyLive",
-        "applyLiveBatch",
-        "applyStaticGradient",
-        "prepareStableStand",
-        "cancelStableStandPreparation",
-        "whenLiveReady",
-        "planAppErase",
-        "eraseAppData",
-        "beginAppReset",
-        "continueAppReset",
-        "FirstPinV2",
-        "AuthorityCandidate",
-        "AuthorityRemoval",
-        "identify",
-        "identifyLayout",
-        "stopLayoutIdentification",
-        "blinkLayoutIdentification",
-        "identifyFactoryMain",
-        "configureOutputs",
-        "outputConfigurationStatus",
-        "editZones",
-        "recoverInstallation",
-        "sharedDocument",
-        "sharedLayout",
-        "lightQuiet",
-        "reserveMain"
-      ],
-      "appearance": false,
-      "authorityLogicalInventory": true,
-      "authorityLogicalRemoval": true,
-      "authorityFacade": true,
-      "firstPinV2": true,
-      "outputRecovery": true,
-      "mainOnboarding": true,
-      "meshOnboarding": true,
-      "liveControl": true,
-      "standAnimations": true,
-      "temporarySingleUser": true,
-      "simpleStand": false,
-      "standWifiOpen": false,
-      "standSessionAnimations": false,
-      "pinModeToggle": false,
-      "pinLogin": true,
-      "installationRestore": true,
-      "backupFiles": false,
-      "localBackupRestore": false,
-      "receiverContext": false,
-      "localZoneEditing": true,
-      "spiPortScenes": true,
-      "pixelPreviewV50": true,
-      "zoneHardwareSync": false,
-      "mainOTA": false,
-      "networkOTA": false,
-      "mainRemoval": false,
-      "nodeRemoval": false,
-      "factoryReset": false,
-      "androidBeta": true
-    },
+    "interfaceBuild": "c100-adaptive",
     "uiBetaOnly": true,
+    "sourceBuildVerified": true,
+    "nativeHostTestScope": "Source-level ENDS direction-session and geometry checks; not physical receiver acceptance.",
     "limitations": [
-      "Native PINv2 coordinator/rejoin is not implemented",
-      "OTA and receiver removal remain disabled",
-      "Current firmware77 control parity and physical S24 behavior are not validated"
+      "Timed PATH guide is not implemented or exposed in Android",
+      "Direction ENDS real receiver runtime remains to be tested",
+      "Known-receiver physical output refresh parity with Mac is not included",
+      "OTA and factory reset remain unavailable"
     ],
-    "emulatorVerified": "API 36 emulator: install as update over same signer, rotation keeps the activity, system dark mode reaches the WebView. No receivers."
+    "emulatorVerified": "API 36 emulator: update from signed public code35 retained local stand; real keyboard input, rotation and system dark mode retained the unsaved field and process. No physical Android device or receiver test.",
+    "emulatorValidation": {
+      "upgradePreservesStand": true,
+      "realKeyboardInput": true,
+      "rotationPreservesUnsavedField": true,
+      "systemDarkModePreservesUnsavedField": true,
+      "processRetained": true,
+      "physicalDevice": false,
+      "physicalReceiver": false
+    }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50-demo-static-gradient-full-colour-picker-20261027",
+  "revision": "V50-demo-adaptive-android-tablet-20261102",
   "staticGradientDemo": {
     "browserDemoOnly": true,
     "scope": "SPI zone colour tab, static gradient editor and saved demo presets",
@@ -176,18 +113,8 @@
   "assets": [
     {
       "path": "RELEASE_NOTES.md",
-      "bytes": 40148,
-      "sha256": "d2fe5b3d717abf04caf183b354f8713b3aae4202005a569580dc8a45f08e443c"
-    },
-    {
-      "path": "android-download/android-download.css",
-      "bytes": 1506,
-      "sha256": "f459f0a297a7076b87b5d421550a8a8d5fb6d5118c4dee5f9033c5644eb80a93"
-    },
-    {
-      "path": "android-download/android-download.js",
-      "bytes": 10539,
-      "sha256": "36e647731b639ff7517402a50d9e72518c507078303d9a3ffd8e82435bdb1d9e"
+      "bytes": 40988,
+      "sha256": "b7613e2103e87a79a980807ab7ed9e678dabe65ab77ebda4792cc901302112ef"
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
@@ -270,9 +197,29 @@
       "sha256": "939f8a250774f1864f506b7df0dcf0a0a5178ceaec643d07feaf1fada32f846f"
     },
     {
+      "path": "android/aluvision-android-test-50.0.0-c100-adaptive-36-c4425e1a4531.apk",
+      "bytes": 3361911,
+      "sha256": "c4425e1a4531e7941411db7597960d49657b924eb82cd7179b70b6c5f8dafbf2"
+    },
+    {
+      "path": "android/aluvision-android-test-50.0.0-c99-beta-35-4c1964cff799.apk",
+      "bytes": 3308132,
+      "sha256": "4c1964cff799b9c83afcfe49cb4303d5654ac611a29a3f9c64fbe1617013caa0"
+    },
+    {
       "path": "android/aluvision-android-test-50.0.0-ui756-beta-32-fe389af7347b.apk",
       "bytes": 3012488,
       "sha256": "fe389af7347b48ecca3820b621bdb751fc41ad319a206c2490da9fe06d3a3d37"
+    },
+    {
+      "path": "android-download/android-download.css",
+      "bytes": 1506,
+      "sha256": "f459f0a297a7076b87b5d421550a8a8d5fb6d5118c4dee5f9033c5644eb80a93"
+    },
+    {
+      "path": "android-download/android-download.js",
+      "bytes": 10557,
+      "sha256": "816f39d555183a854443cf95fa9a9bed8aed09b7d70c625d1562f0f8b4b5cf38"
     },
     {
       "path": "animation-chooser.css",
@@ -320,9 +267,19 @@
       "sha256": "325bb013fd007bc11325cbc1a6857164b6ca7142ac858ba75456744491d42692"
     },
     {
+      "path": "app-erase.css",
+      "bytes": 2642,
+      "sha256": "015636d5c43fc7af3cc5f5d71430893ef8cf66d2855e3c0772bde7972b5ae889"
+    },
+    {
+      "path": "app-erase.js",
+      "bytes": 23693,
+      "sha256": "3bcd42cfd77285af5cc570d40d26488a0c06d1d3ddf5111948da502a685dd3af"
+    },
+    {
       "path": "app.js",
-      "bytes": 803276,
-      "sha256": "3deaeeb3aae627b2d1248bf5d53a973e9f425dd1e3bf11472c3d2d03f938d65f"
+      "bytes": 818911,
+      "sha256": "622304265bb0d3608f10891ff9ac08c6e75f6801125a95817f9296aefbb3cb1d"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -331,8 +288,58 @@
     },
     {
       "path": "backup.js",
-      "bytes": 14762,
-      "sha256": "f6b6791da14ba7e59fa0541bfffb6b5fbb1f2da380d0965c6589186ac27ae071"
+      "bytes": 16789,
+      "sha256": "bf0e2f4d7a2241acc5fbbfa08964f8aacfe2d5194f288dde6bf312bb27c8dd74"
+    },
+    {
+      "path": "c100-android-adaptive.css",
+      "bytes": 7195,
+      "sha256": "929f5dc0452c578b6d346c08c16ce83a7cba28a79227c08021e5713083a15f98"
+    },
+    {
+      "path": "c100-stand.css",
+      "bytes": 12345,
+      "sha256": "d998295c4f7cb7a4293a7705f3c65628c0ec59989af44b2ce598c2b383e1fa28"
+    },
+    {
+      "path": "c101-order-mirror.css",
+      "bytes": 16488,
+      "sha256": "fbc6d429e5e9bdc7a4ef4da4cdb5d76c9767ffbcdb9e90016fdf9e6e3ca7244f"
+    },
+    {
+      "path": "c101-order-mirror.js",
+      "bytes": 7502,
+      "sha256": "e219c2558fe02c74d41d215b64460462987c2bb32d1be45aac6bca58cd575b04"
+    },
+    {
+      "path": "c102-swipe.js",
+      "bytes": 3237,
+      "sha256": "73c2d6fa6cc44e5bb413b8febd987aa62d1d95ea708384a620509c9a6a685029"
+    },
+    {
+      "path": "c102-tidy.css",
+      "bytes": 14714,
+      "sha256": "f99dc9b5775e928f572d8150b27ca48e2ea78ddbc01dc64b30f8f7607ba9e593"
+    },
+    {
+      "path": "c97-polish.css",
+      "bytes": 1645,
+      "sha256": "1e75bf061cf85048c38cbd92533be9b2bd66d99b5676bc507ae7c899d1c0d528"
+    },
+    {
+      "path": "c98-debug.js",
+      "bytes": 1944,
+      "sha256": "2766207bad78a2d475b28970affa11d909cf1ae5b8bb04d425d7fa41c6f66901"
+    },
+    {
+      "path": "c98-glass.css",
+      "bytes": 9579,
+      "sha256": "c7ebc21e243514292c90e6ccf0b99e85c93ba2f29b87558ba35992ed19f24fd4"
+    },
+    {
+      "path": "c99-responsive.css",
+      "bytes": 7137,
+      "sha256": "1664d76bcfa6d90726a1ecc858ff0d56593eece0c39bbf5b1786cf5c5132a1c2"
     },
     {
       "path": "colour-library-drag.js",
@@ -375,14 +382,24 @@
       "sha256": "3ba94e0f22b9382ed8f5226551bf3aa0a7733648b711afb688edfe405dae2f8a"
     },
     {
+      "path": "first-pin-v2.css",
+      "bytes": 6066,
+      "sha256": "fa101ce217b26b1f8758625ba4e3d167f86851879a517354c43ea452305baccb"
+    },
+    {
+      "path": "first-pin-v2.js",
+      "bytes": 17070,
+      "sha256": "eb8c941305ce565ebd10fa0a92cb604b3be761e8f8e49217a5a6272b633cb0dd"
+    },
+    {
       "path": "fixtures.js",
       "bytes": 1566,
       "sha256": "7ccc08ac36a6ab22e65c79d796f4dd3e60d42232ff6209ae866b616bc9d0beb8"
     },
     {
       "path": "index.html",
-      "bytes": 10778,
-      "sha256": "f2d24f5dd537ce9eb07343464fdb278c265ec637a1f7088039654e9d4bb02f06"
+      "bytes": 11326,
+      "sha256": "5353562d83cfdb26d4d83d86e1ccb2a1a1f57a58a4207f0111633d59ecac6e53"
     },
     {
       "path": "installation-libraries.js",
@@ -471,8 +488,8 @@
     },
     {
       "path": "live-control.js",
-      "bytes": 65796,
-      "sha256": "e272e114b3734ce49780b95923218b547f71d0081893d88ef39abbc8c3f3f275"
+      "bytes": 66570,
+      "sha256": "09a4e17715311c2665a89f42a633b71f8edc119dc10f4b304a1146f131d9ff94"
     },
     {
       "path": "main-connection-indicator.css",
@@ -481,8 +498,8 @@
     },
     {
       "path": "main-connection-indicator.js",
-      "bytes": 4563,
-      "sha256": "b787b25e4799bdd23d7a3ded10485374c0bd2b3573f48fe0ad9d6744309626e5"
+      "bytes": 5217,
+      "sha256": "4b950676c6571aee76686d5140b37ac1ea79d0160e82350dcc6781ad401993f9"
     },
     {
       "path": "migration.js",
@@ -491,13 +508,13 @@
     },
     {
       "path": "model.js",
-      "bytes": 50014,
-      "sha256": "535fc66cd2613e142848551b2e76d02fa29811c397a133d7ea10336ece67f71d"
+      "bytes": 54288,
+      "sha256": "c19305d1ea1e66660b0b979bd186fc300cb8c5428c8f73c7e344dcaac5d49899"
     },
     {
       "path": "native-runtime.js",
-      "bytes": 212957,
-      "sha256": "877a2b0eff0b031f00abaa8a06a6450105a43916fc9e85680109efef62deee90"
+      "bytes": 218931,
+      "sha256": "e0f46e09979aa3a7f8aa412714ba645d9957f308bdb0dcd1f8ca8d5d26e03093"
     },
     {
       "path": "onboarding-adapter.js",
@@ -556,8 +573,8 @@
     },
     {
       "path": "pixel-setup.js",
-      "bytes": 68130,
-      "sha256": "6f4a649366d03e95d86bb0bfe1f9408dc72caf65e85a16fa94356af28a23d8dd"
+      "bytes": 70219,
+      "sha256": "08951c0a04a7fab5805d82f824f74a45f6b73750d4af8ae1f3e1a0080b1905ee"
     },
     {
       "path": "pixel-translations.js",
@@ -576,13 +593,13 @@
     },
     {
       "path": "presets.js",
-      "bytes": 18202,
-      "sha256": "d2d109eaa39526995ca830135afa270633078ed35c22c6d6502e97cf2304f188"
+      "bytes": 18620,
+      "sha256": "850ebdba42577b51186530f725af24a6f876752290516dc427d8b26bf5e91e02"
     },
     {
       "path": "preview.js",
-      "bytes": 116235,
-      "sha256": "5dddb85a8748edc52df7c326c544755d67579f3970de86249a0a2556f2764444"
+      "bytes": 120571,
+      "sha256": "290fd172bbd189bf1ed1e305400919e59d7f790454b51fb142360405a986f465"
     },
     {
       "path": "receiver-playback.js",
@@ -636,8 +653,8 @@
     },
     {
       "path": "scenes.js",
-      "bytes": 18180,
-      "sha256": "8236d3cce63678d23ee2d71ba8c27107508faad3d1d756a243201d8c12ccf558"
+      "bytes": 19043,
+      "sha256": "0c56d3f792b0d5a57c019790ff8bb7c8554cd7ed60c229996c878e70d0c3502e"
     },
     {
       "path": "security-mode.js",
@@ -653,6 +670,16 @@
       "path": "setup-wifi-guide.js",
       "bytes": 5653,
       "sha256": "ecc9154a298ab01e2b1380844d98b932e739c538cde2d5d952eca58b84a8c674"
+    },
+    {
+      "path": "shared-installation.js",
+      "bytes": 9456,
+      "sha256": "8083e9844ae4033504a98b3f8b84b22714ccbc6cb1258431c0c1b5f25b77e8b2"
+    },
+    {
+      "path": "shared-physical-refresh.js",
+      "bytes": 2262,
+      "sha256": "fb49fbfb6f47ed25b569190d406f4aea6f948ec94a02208e5da99e7dbf0d4643"
     },
     {
       "path": "spi-direction-tutorial.css",
@@ -671,8 +698,8 @@
     },
     {
       "path": "spi-zone-direction.js",
-      "bytes": 46442,
-      "sha256": "6ee0848d220ba5baa33826eb0e5956bb92538c814cd2dba46fac5ab8ce279833"
+      "bytes": 47498,
+      "sha256": "064475c63f69d4279afc1fb19de256e7ad35131ae4359dfe9a3177e6142c67d0"
     },
     {
       "path": "stand-animations.css",
@@ -720,19 +747,19 @@
       "sha256": "3a0bd6c0a4cddd921c5e1d6347fa77ccb747504f28c3b1eef4daf8d330f91459"
     },
     {
-      "path": "static-gradient.js",
-      "bytes": 13801,
-      "sha256": "83e139c371ec138355b88518fa60f39e6080126f2bdaa828e7121defd977937f"
-    },
-    {
       "path": "static-gradient-ui.js",
-      "bytes": 25850,
-      "sha256": "666151eb6d9659a3db68941e44102006fee77725cf1f18fc3db24f391b50c609"
+      "bytes": 30033,
+      "sha256": "35515200e4ce5598a40321ef8da739cbe72307e919b51636bc508bab4a6b8fcf"
     },
     {
       "path": "static-gradient.css",
       "bytes": 13617,
       "sha256": "df8230c2b93af5fa974fd79d78918c1ad83bf9ad7cf6102ae447773c30ce00c7"
+    },
+    {
+      "path": "static-gradient.js",
+      "bytes": 19827,
+      "sha256": "aa7accec38d9fdea45e877c814e2044836144d462dc30be5bb0e41d1bb861f12"
     },
     {
       "path": "styles.css",
@@ -863,56 +890,6 @@
       "path": "web-demo-service.js",
       "bytes": 5876,
       "sha256": "f05d6a7665341abd4ed62b5c33e0e362ed4b30bdec740c554e0d8c6dac32a3d3"
-    },
-    {
-      "path": "android/aluvision-android-test-50.0.0-c99-beta-35-4c1964cff799.apk",
-      "bytes": 3308132,
-      "sha256": "4c1964cff799b9c83afcfe49cb4303d5654ac611a29a3f9c64fbe1617013caa0"
-    },
-    {
-      "path": "app-erase.css",
-      "bytes": 2642,
-      "sha256": "015636d5c43fc7af3cc5f5d71430893ef8cf66d2855e3c0772bde7972b5ae889"
-    },
-    {
-      "path": "app-erase.js",
-      "bytes": 23693,
-      "sha256": "3bcd42cfd77285af5cc570d40d26488a0c06d1d3ddf5111948da502a685dd3af"
-    },
-    {
-      "path": "c97-polish.css",
-      "bytes": 1645,
-      "sha256": "1e75bf061cf85048c38cbd92533be9b2bd66d99b5676bc507ae7c899d1c0d528"
-    },
-    {
-      "path": "c98-debug.js",
-      "bytes": 1944,
-      "sha256": "2766207bad78a2d475b28970affa11d909cf1ae5b8bb04d425d7fa41c6f66901"
-    },
-    {
-      "path": "c98-glass.css",
-      "bytes": 9579,
-      "sha256": "c7ebc21e243514292c90e6ccf0b99e85c93ba2f29b87558ba35992ed19f24fd4"
-    },
-    {
-      "path": "c99-responsive.css",
-      "bytes": 7137,
-      "sha256": "1664d76bcfa6d90726a1ecc858ff0d56593eece0c39bbf5b1786cf5c5132a1c2"
-    },
-    {
-      "path": "first-pin-v2.css",
-      "bytes": 6066,
-      "sha256": "fa101ce217b26b1f8758625ba4e3d167f86851879a517354c43ea452305baccb"
-    },
-    {
-      "path": "first-pin-v2.js",
-      "bytes": 17070,
-      "sha256": "eb8c941305ce565ebd10fa0a92cb604b3be761e8f8e49217a5a6272b633cb0dd"
-    },
-    {
-      "path": "shared-installation.js",
-      "bytes": 8923,
-      "sha256": "21e368ed87cdd23691291f075c813e1797063e8c674b4db901ff57cc2683fec6"
     }
   ],
   "interfaceReviewScope": "Exact source UI hunks and isolated asset/cache verification. Browser visual review and public deployment remain separate; this candidate attests no iPhone606 install, receiver output, radio performance or physical acceptance.",
@@ -3937,5 +3914,120 @@
     "responsive": "iPad/tablet (>=700px) and landscape phones (height<=500px): wider layout, two-column control screen",
     "theme": "Automatisch (system) light/dark, default for new installs",
     "date": "2026-10-31"
+  },
+  "interfaceC100": {
+    "date": "2026-11-02",
+    "scope": "Shared browser interface; fictional in-memory receivers only",
+    "responsive": "320–480 px phones, 600–1600 px tablets and split windows; compact landscape colour picker",
+    "preserved": "Existing colour, gradient, animation and scene interaction paths",
+    "browserLayoutChecked": true,
+    "physicalAndroidVerified": false,
+    "physicalReceiverVerified": false,
+    "hardwareAccess": false,
+    "firmwareIncluded": false,
+    "androidVersionCode": 36,
+    "androidUpdatePending": false
+  },
+  "historicalAndroidCode35Before36": {
+    "path": "android/aluvision-android-test-50.0.0-c99-beta-35-4c1964cff799.apk",
+    "size": 3308132,
+    "sha256": "4c1964cff799b9c83afcfe49cb4303d5654ac611a29a3f9c64fbe1617013caa0",
+    "packageName": "com.aluvision.lighting.android.test",
+    "versionName": "50.0.0-c99-beta",
+    "versionCode": 35,
+    "minSdk": 26,
+    "targetSdk": 36,
+    "mode": "receiver",
+    "signerCertificateSha256": "b598fc6fa30b423517d6ca68e3bb1191248a32723174d4703baaede9125936ac",
+    "signatureVerified": true,
+    "packageVerified": true,
+    "installedVerified": true,
+    "physicalAndroidVerified": false,
+    "physicalReceiverVerified": false,
+    "firmwareIncluded": false,
+    "interfaceBuild": "c99",
+    "features": {
+      "schemaVersion": 1,
+      "mode": "receiver",
+      "backendImplemented": true,
+      "services": [
+        "loadState",
+        "persistDraft",
+        "parkDraft",
+        "checkpointPreviewExit",
+        "resumeDraft",
+        "search",
+        "select",
+        "secure",
+        "reconcileSecurity",
+        "finalize",
+        "verifyFinalReceipt",
+        "publishModel",
+        "previewPixels",
+        "applyLive",
+        "applyLiveBatch",
+        "applyStaticGradient",
+        "prepareStableStand",
+        "cancelStableStandPreparation",
+        "whenLiveReady",
+        "planAppErase",
+        "eraseAppData",
+        "beginAppReset",
+        "continueAppReset",
+        "FirstPinV2",
+        "AuthorityCandidate",
+        "AuthorityRemoval",
+        "identify",
+        "identifyLayout",
+        "stopLayoutIdentification",
+        "blinkLayoutIdentification",
+        "identifyFactoryMain",
+        "configureOutputs",
+        "outputConfigurationStatus",
+        "editZones",
+        "recoverInstallation",
+        "sharedDocument",
+        "sharedLayout",
+        "lightQuiet",
+        "reserveMain"
+      ],
+      "appearance": false,
+      "authorityLogicalInventory": true,
+      "authorityLogicalRemoval": true,
+      "authorityFacade": true,
+      "firstPinV2": true,
+      "outputRecovery": true,
+      "mainOnboarding": true,
+      "meshOnboarding": true,
+      "liveControl": true,
+      "standAnimations": true,
+      "temporarySingleUser": true,
+      "simpleStand": false,
+      "standWifiOpen": false,
+      "standSessionAnimations": false,
+      "pinModeToggle": false,
+      "pinLogin": true,
+      "installationRestore": true,
+      "backupFiles": false,
+      "localBackupRestore": false,
+      "receiverContext": false,
+      "localZoneEditing": true,
+      "spiPortScenes": true,
+      "pixelPreviewV50": true,
+      "zoneHardwareSync": false,
+      "mainOTA": false,
+      "networkOTA": false,
+      "mainRemoval": false,
+      "nodeRemoval": false,
+      "factoryReset": false,
+      "androidBeta": true
+    },
+    "uiBetaOnly": true,
+    "limitations": [
+      "Native PINv2 coordinator/rejoin is not implemented",
+      "OTA and receiver removal remain disabled",
+      "Current firmware77 control parity and physical S24 behavior are not validated"
+    ],
+    "emulatorVerified": "API 36 emulator: install as update over same signer, rotation keeps the activity, system dark mode reaches the WebView. No receivers."
   }
 }

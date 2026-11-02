@@ -235,8 +235,8 @@
   }
   // One bounded latest-wins test-light queue. There is never a CONFIG/SAVE
   // command here. A lost reply remains an error, not a physical-light claim.
-  function createLivePreview({send,onState=()=>{},delay=170,setTimer=setTimeout,clearTimer=clearTimeout,editorIsolation=()=>false,idFactory=editorId686}={}){
-    let queued=null,active=null,desired=null,running=null,timer=null,renew=null,version=0,editor=null,editorIntent=null,expiredEditor=null,handoffJob=null,acceptedHandoff=null,handoffTransferred=false;const provenPalettes=new Map();
+  function createLivePreview({send,onState=()=>{},delay=60,setTimer=setTimeout,clearTimer=clearTimeout,editorIsolation=()=>false,idFactory=editorId686}={}){
+    let queued=null,active=null,desired=null,running=null,timer=null,renew=null,version=0,editor=null,editorIntent=null,expiredEditor=null,handoffJob=null,acceptedHandoff=null,handoffTransferred=false,recoveries=0,recovery=false;const provenPalettes=new Map();
     // A guide/port switch belongs to the same exact editing transaction. The
     // native lease validates and switches its temporary mask without stopping
     // the whole receiver, restoring playback and performing a new handshake.
@@ -247,13 +247,15 @@
     function cancelTimers(){clearTimer(timer);clearTimer(renew);timer=renew=null;}
     function markEditorExpired(request){
       if(!request?.editorSession||!(active&&key(active)===key(request)||editor?.request&&key(editor.request)===key(request)))return false;
-      expiredEditor=copy(request);active=null;editor=null;editorIntent=null;desired=null;cancelTimers();
+      // EXPIRED is also emitted for native clock anomalies, not only proven
+      // restoration. Keep uncertain ownership; no local retire may erase it.
+      expiredEditor=copy(request);editorIntent=null;desired=null;recovery=!!(active||editor?.request);cancelTimers();
       if(queued?.stop)queued.complete({stopped:false});queued=null;return true;
     }
     function retireExpiredEditor(){
       // Explicit close/open escape only. This is NOT a STOP receipt, physical
       // restore acknowledgement, radio operation or permission to auto-replay.
-      if(!expiredEditor)return false;expiredEditor=null;editorIntent=null;version++;cancelTimers();return true;
+      if(!expiredEditor||recovery)return false;expiredEditor=null;editorIntent=null;version++;cancelTimers();return true;
     }
     function retireTransferredEditor(){
       // A new dialog owns no part of the previous adopted direction guide.
@@ -273,6 +275,11 @@
       const keep=keepSession&&!!previous.editorSession;
       let answer;try{answer=await send({...previous,action:'stop',...(keep?{keepSession:true}:{})});}
       catch(error){if(error?.code==='PIXEL_EDITOR_EXPIRED')markEditorExpired(previous);throw error;}
+      if(answer&&Object.hasOwn(answer,'retired')){
+        if(keep||!previous.editorSession||Object.keys(answer).sort().join(',')!=='editorSession,isolationTTLMS,previewTTLMS,retired'||
+          answer.retired!==true||answer.editorSession!==previous.editorSession||answer.previewTTLMS!==0||answer.isolationTTLMS!==0)throw Error('PIXEL_STOP_UNCONFIRMED');
+        active=null;editor=null;acceptedHandoff=null;return{isolationTTLMS:0,retired:true};
+      }
       const ttl=isolationTTL(answer,previous,!keep);
       if(answer?.applied!==true||answer.port!==previous.port||answer.previewTTLMS!==0||ttl===null||Object.hasOwn(answer,'previewMode')){globalThis.LightningNativeRuntime?.services?.pixelReceiptDiagnostic692?.({phase:'STOP_RECEIPT',bits:(answer?.applied===true?1:0)|(answer?.port===previous.port?2:0)|(answer?.previewTTLMS===0?4:0)|(ttl!==null?8:0)});throw Error('PIXEL_STOP_UNCONFIRMED');}
       active=null;acceptedHandoff=null;editor=keep?{request:previous,confirmed:true}:null;return{isolationTTLMS:ttl};
@@ -284,7 +291,16 @@
         while(queued){
           const item=queued;queued=null;
           try{
-            if(item.stop){const stopped=active||editor?.request,answer=await stopActive(item.keepSession);const confirmed=item.version===version&&!desired;if(!confirmed&&stopped)globalThis.LightningNativeRuntime?.services?.pixelReceiptDiagnostic692?.({phase:'STOP_SUPERSEDED',bits:(item.version===version?1:0)|(!desired?2:0)});item.complete({stopped:confirmed});if(confirmed){report('idle',stopped);if(item.keepSession)scheduleRenew(answer.isolationTTLMS,item.version);}continue;}
+            if(item.stop){const stopped=active||editor?.request,answer=await stopActive(item.keepSession);recovery=false;const confirmed=item.version===version&&!desired;if(!confirmed&&stopped)globalThis.LightningNativeRuntime?.services?.pixelReceiptDiagnostic692?.({phase:'STOP_SUPERSEDED',bits:(item.version===version?1:0)|(!desired?2:0)});item.complete({stopped:confirmed});if(confirmed){report('idle',stopped);if(item.keepSession)scheduleRenew(answer.isolationTTLMS,item.version);}continue;}
+            if(item.recover||recovery){
+              // The failed native session still owns a possibly live overlay.
+              // Cleanup shares this queue and the normal strict STOP validator.
+              await stopActive();recovery=false;editorIntent=null;
+              // Read the latest desired value AFTER the await. Closing/hiding
+              // clears desired and must never cause an automatic fresh START.
+              if(desired&&!queued?.stop){const again=copy(desired);delete again.editorSession;desired=null;update(again);}
+              continue;
+            }
             const request=item.request;
             if(item.hold){
               if(!editor?.confirmed||key(editor.request)!==key(request))throw Error('PIXEL_EDITOR_UNCONFIRMED');
@@ -301,11 +317,22 @@
             acceptedHandoff=answer.handoffReady===true&&request.editorSession&&answer.handoffRequest?{request:copy(answer.handoffRequest),version:item.version}:null;
             if(request.editorSession)editor={request,confirmed:true};
             if(request.guide==='ports'&&receiverKey(request)){provenPalettes.set(receiverKey(request),answer.paletteVersion);if(provenPalettes.size>128)provenPalettes.delete(provenPalettes.keys().next().value);}
-            if(item.version===version&&desired){report('applied',request,request.guide==='ports'?answer.paletteVersion:undefined);const leases=[answer.previewTTLMS,ttl].filter(value=>value>0);scheduleRenew(leases.length?Math.min(...leases):0,item.version);}
+            if(item.version===version&&desired){recoveries=0;report('applied',request,request.guide==='ports'?answer.paletteVersion:undefined);const leases=[answer.previewTTLMS,ttl].filter(value=>value>0);scheduleRenew(leases.length?Math.min(...leases):0,item.version);}
           }catch(error){
             if(item.stop)item.complete({stopped:false});
-            if(error?.code==='PIXEL_EDITOR_EXPIRED'&&!expiredEditor)markEditorExpired(item.request);
+            if(error?.code==='PIXEL_EDITOR_EXPIRED'&&!expiredEditor)markEditorExpired(active||editor?.request||item.request);
             if(expiredEditor){report('expired',expiredEditor);continue;}
+            // Retain uncertain ownership across errors and newer input. Never
+            // turn a cleared local reference into a successful cleanup receipt.
+            recovery=!!(active||editor?.request);acceptedHandoff=null;
+            if(editor)editor.confirmed=false;
+            if(!item.stop&&error?.code!=='PIXEL_GUIDE_UPDATE_REQUIRED'&&item.version===version&&desired){
+              recoveries=Math.min(recoveries+1,5);report('pending',desired);clearTimer(renew);
+              const retryVersion=version;
+              renew=setTimer(()=>{renew=null;if(retryVersion!==version||!desired)return;
+                queued={recover:true,version};void drain();},recoveries>1?Math.min(2000,400*recoveries):150);
+              continue;
+            }
             if(item.version===version){desired=null;clearTimer(renew);renew=null;report(error?.code==='PIXEL_GUIDE_UPDATE_REQUIRED'?'unsupported':'failed',active||editor?.request);}
           }
         }
@@ -321,7 +348,7 @@
       if(editorIsolation()===true){const scope=baseKey(next);if(!editorIntent||editorIntent.scope!==scope)editorIntent={scope,session:idFactory()};next.editorSession=editorIntent.session;}
       if(desired&&JSON.stringify(desired)===JSON.stringify(next))return;
       if(queued?.stop)queued.complete({stopped:false});
-      desired=next;version++;clearTimer(renew);renew=null;queued={request:next,version};report('pending',next);
+      desired=next;version++;clearTimer(renew);renew=null;queued=recovery?{recover:true,version}:{request:next,version};report('pending',next);
       if(timer===null&&!running)timer=setTimer(()=>void drain(),delay);
     }
     function stop({keepSession=false}={}){

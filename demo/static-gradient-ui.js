@@ -1,5 +1,6 @@
 /* Explicitly mounted gradient editor. The caller owns authenticated Apply;
- * editing and saving never send receiver commands. No DOM observers/patching.
+ * a chosen gradient auto-applies as edited; saving presets stays local.
+ * No DOM observers/patching.
  */
 (function (root) {
   'use strict';
@@ -21,10 +22,10 @@
     const pixels = G.samplePixels(stops, 400, { brightness, reverse });
     pixels.forEach((pixel, index) => { context.fillStyle = C.screenHex(pixel); context.fillRect(index, 23, 1, 26); });
   }
-  function create({ storage, scope = '', initialRecipe = () => null, palette = () => [], allowed = () => false, onMode = () => {}, chooseColor = () => false, onApply = null } = {}) {
+  function create({ storage, scope = '', applyScope = () => String(scope), initialRecipe = () => null, palette = () => [], allowed = () => false, onMode = () => {}, onIdle = () => {}, chooseColor = () => false, onApply = null } = {}) {
     const store = G.createStore(storage);
     const draftKey = 'aluvision.static-gradient.draft.v1:' + encodeURIComponent(String(scope).slice(0,96));
-    let moreOpen = false, mode = 'solid', draft = clone(G.builtinPresets[0]), selected = 1, brightness = 100, reverse = false, transitionMs = 120, lastRecovered = null, notice = '', host = null, unmount = () => {}, applying = false, applySerial = 0;
+    let moreOpen = false, mode = 'solid', draft = clone(G.builtinPresets[0]), selected = 1, brightness = 100, reverse = false, transitionMs = 120, lastRecovered = null, notice = '', applyNotice = '', host = null, unmount = () => {}, applying = false, applySerial = 0, mountSerial = 0;
     draft.id = null;
     try {
       const saved = JSON.parse(storage?.getItem(draftKey) || 'null');
@@ -45,13 +46,19 @@
     const current = () => !!host?.isConnected && allowed();
     function markup(solid) {
       if (!allowed()) return solid;
-      const recovered=initialRecipe();
-      if(typeof recovered==='string'&&recovered!==lastRecovered){
-        try{
-          const decoded=G.decodeRecipe(recovered),own=Array.from(G.recipe(draft.stops,{brightness,reverse,transitionMs}),x=>x.toString(16).padStart(2,'0')).join('').toUpperCase();
-          if(own!==recovered){draft={id:null,name:'Actief verloop',stops:decoded.stops};brightness=decoded.brightness;reverse=decoded.reverse;transitionMs=decoded.transitionMs;selected=0;}
-          mode='gradient';lastRecovered=recovered;
-        }catch(_){notice='Het actieve verloop kon niet volledig worden heropend. Er is niets verstuurd.';}
+      const recovered=initialRecipe(),recoveryScope=scopeKey(),recoveryKey=JSON.stringify([recoveryScope,typeof recovered==='string'?recovered:null]);
+      if(recoveryKey!==lastRecovered){
+        // A selection change must recover its own intent, including a solid
+        // or mixed selection. A current explicit edit stays the live draft.
+        if(!autoArmed||chosenScope!==recoveryScope){
+          choiceRequired=true;
+          if(typeof recovered==='string')try{
+            const decoded=G.decodeRecipe(recovered),own=Array.from(G.recipe(draft.stops,{brightness,reverse,transitionMs}),x=>x.toString(16).padStart(2,'0')).join('').toUpperCase();
+            if(own!==recovered){draft={id:null,name:'Actief verloop',stops:decoded.stops};brightness=decoded.brightness;reverse=decoded.reverse;transitionMs=decoded.transitionMs;selected=0;}
+            mode='gradient';choiceRequired=false;
+          }catch(_){notice='Het actieve verloop kon niet volledig worden heropend. Er is niets verstuurd.';}
+        }
+        lastRecovered=recoveryKey;
       }
       return `<section class="spi-colour-workspace" data-gradient-workspace data-gradient-mode="${mode}"><div class="spi-colour-modes" role="group" aria-label="Soort vaste kleur"><button type="button" data-gradient-mode-choice="solid" aria-pressed="${mode === 'solid'}">Effen kleur</button><button type="button" data-gradient-mode-choice="gradient" aria-pressed="${mode === 'gradient'}"><span class="gradient-mode-icon" aria-hidden="true"></span>Verloop <small>SPI</small></button></div><div data-gradient-solid ${mode === 'solid' ? '' : 'hidden'}>${solid}</div><div data-gradient-panel ${mode === 'gradient' ? '' : 'hidden'}></div></section>`;
     }
@@ -71,12 +78,12 @@
       return colours + light + ideas + library;
     }
     function officialBody() {
-      const apply = `<div class="gradient-apply"><button type="button" class="button" data-gradient-apply ${applying || typeof onApply !== 'function' ? 'disabled' : ''}>${applying ? 'Verloop versturen…' : 'Verloop toepassen'}</button><p data-gradient-apply-status role="status" aria-live="polite">${esc(notice || 'Je ledline verandert pas als je op Verloop toepassen tikt.')}</p><details class="gradient-more" data-gradient-more ${moreOpen?'open':''}><summary>Meer opties</summary><label class="gradient-check"><input type="checkbox" data-gradient-reverse ${reverse?'checked':''}> Richting omdraaien</label><label class="gradient-transition">Overgangstijd <span><input type="number" inputmode="numeric" data-gradient-transition min="0" max="750" step="1" value="${transitionMs}"> ms</span></label></details></div>`;
+      const apply = `<div class="gradient-apply"><p data-gradient-apply-status role="status" aria-live="polite" ${applyNotice?'':'hidden'}>${esc(applyNotice)}</p><details class="gradient-more" data-gradient-more ${moreOpen?'open':''}><summary>Meer opties</summary><label class="gradient-check"><input type="checkbox" data-gradient-reverse ${reverse?'checked':''}> Richting omdraaien</label><label class="gradient-transition">Overgangstijd <span><input type="number" inputmode="numeric" data-gradient-transition min="0" max="750" step="1" value="${transitionMs}"> ms</span></label></details></div>`;
       return body().replace('<div class="gradient-apply-slot"></div>', apply);
     }
     function paint() {
       if (!current()) return;
-      persistDraft();
+      persistDraft(); scheduleAuto();
       const panel = host.querySelector('[data-gradient-panel]'), stop = draft.stops[selected], range = panel.querySelector('[data-gradient-position]');
       const rail = panel.querySelector('[data-gradient-rail]');
       if (!rail) return;
@@ -100,12 +107,81 @@
       panel.querySelector('[data-gradient-brightness-output]').textContent = brightness + '%';
       panel.querySelectorAll('[data-gradient-builtin]').forEach(button => {
         const preset = G.builtinPresets.find(item => item.id === button.dataset.gradientBuiltin);
-        button.setAttribute('aria-pressed', String(!!preset && JSON.stringify(draft.stops) === JSON.stringify(preset.stops)));
+        button.setAttribute('aria-pressed', String(!choiceRequired && !!preset && JSON.stringify(draft.stops) === JSON.stringify(preset.stops)));
       });
+    }
+    // C98: the gradient follows every change, like colours. Changes settle
+    // for a moment, one send at a time; the newest design always wins.
+    const scopeKey = () => { try { const key = applyScope(); return typeof key === 'string' ? key : null; } catch (_) { return null; } };
+    const designKey = () => JSON.stringify([scopeKey(), G.definition(draft.stops,{brightness,reverse,transitionMs})]);
+    let autoTimer = null, autoTimerKey = null, sentKey = null, autoArmed = false, chosenScope = null;
+    // Only an explicit choice in this still-visible physical selection counts.
+    // Merely opening the gradient tab never holds a presentation repaint.
+    const pending = () => autoArmed && chosenScope === scopeKey() && mode === 'gradient' && current() && (applying || autoTimer !== null);
+    function notifyIdle() { if (!pending()) { try { onIdle(); } catch (_) {} } }
+    // C98: back from plain colours, no gradient is active or highlighted: the
+    // customer picks an example or builds one, and only that choice is sent.
+    let choiceRequired = false;
+    function chosen() {
+      if (choiceRequired) sentKey = null;
+      choiceRequired = false; chosenScope = scopeKey(); autoArmed = chosenScope !== null;
+    }
+    function scheduleAuto(delay = 60) {
+      if (!autoArmed || chosenScope !== scopeKey() || mode !== 'gradient' || typeof onApply !== 'function' || !current()) { try { window.__c98log?.('GRADIENT_AUTO skip armed=' + autoArmed + ' mode=' + mode); } catch (_) {} return; }
+      const key = designKey();
+      if (key === sentKey || (autoTimer && autoTimerKey === key)) return;
+      if (autoTimer) clearTimeout(autoTimer);
+      autoTimerKey = key;
+      autoTimer = setTimeout(() => { autoTimer = null; autoTimerKey = null; if (key === designKey()) sendNow(); }, delay);
+    }
+    function sendNow() {
+      if (applying || !autoArmed || !current() || mode !== 'gradient' || chosenScope !== scopeKey()) return;
+      const owner = host, mounted = mountSerial, targetScope = chosenScope, ticket = ++applySerial, key = designKey();
+      const ownsView = () => ticket === applySerial && mounted === mountSerial && current() && owner === host &&
+        mode === 'gradient' && autoArmed && chosenScope === targetScope && targetScope === scopeKey() && key === designKey();
+      if (key === sentKey) return;
+      const definition = G.definition(draft.stops,{brightness,reverse,transitionMs});
+      applying = true; sentKey = key;
+      let retryDelay = 60, retryNotice = false;
+      Promise.resolve().then(() => {
+        // Capture the same selection in the app's synchronous request setup.
+        // A remount/selection change before this microtask must never retarget it.
+        if (!ownsView()) throw Object.assign(Error(), { code: 'GRADIENT_CHANGED' });
+        return onApply(definition);
+      }).then(() => {
+        // A retained native intent is not a confirmed physical light result.
+        if (ownsView()) setStatus('');
+      }, error => {
+        try { window.__c98log?.('GRADIENT_FAIL ' + String(error?.code || error?.message || '-').slice(0, 60)); } catch (_) {}
+        const unsupported = ['UNSUPPORTED','ACTION_UNSUPPORTED','GRADIENT_UNSUPPORTED'].includes(error?.code);
+        // Keep an unsupported design's key: selecting it again or repainting
+        // must not create a retry loop. A changed design is still allowed.
+        if (!unsupported && sentKey === key) sentKey = null;
+        retryDelay = unsupported ? null : 1200;
+        if (!ownsView()) return;
+        retryNotice = !unsupported;
+        setStatus(unsupported ?
+          'Deze receiver kan nog geen verloop tonen. Werk eerst de receiver bij.' : 'Verloop nog niet bevestigd. Controleer de verbinding.');
+      }).finally(() => {
+        if (ticket === applySerial) {
+          applying = false;
+          const changed = designKey() !== key;
+          if (changed || retryDelay !== null) scheduleAuto(changed ? 60 : retryDelay);
+          // Say retry only after the existing scheduler really armed one.
+          if (retryNotice && autoTimer !== null && ownsView())
+            setStatus('Verloop nog niet bevestigd. De app probeert opnieuw.');
+          notifyIdle();
+        }
+      });
+    }
+    function setStatus(text) {
+      applyNotice = text;
+      const status = host?.querySelector?.('[data-gradient-apply-status]'); if (status) status.textContent = text;
+      if (status) status.hidden = !text;
     }
     let previewKey = '', previewHex = null;
     function previewRecipe() {
-      if (mode !== 'gradient' || !current()) return null;
+      if (mode !== 'gradient' || !current() || !autoArmed || chosenScope !== scopeKey()) return null;
       const key = JSON.stringify([draft.stops, brightness, reverse, transitionMs]);
       if (key !== previewKey) { previewKey = key; previewHex = Array.from(G.recipe(draft.stops, { brightness, reverse, transitionMs }), x => x.toString(16).padStart(2, '0')).join('').toUpperCase(); }
       return previewHex;
@@ -116,12 +192,13 @@
       if (focus) host.querySelector(focus)?.focus({ preventScroll: true });
     }
     function setPosition(percent) {
+      chosen();
       const { min, max } = bounds();
       if (min > max) return; // A valid loaded preset need not fit a whole-percent move.
       draft.stops[selected].position = Math.max(min, Math.min(max, Math.round(percent))) / 100; paint();
     }
     function mount(element) {
-      unmount(); host = element;
+      unmount(); host = element; mountSerial++;
       if (!current()) return () => {};
       const removers = [], on = (name, callback) => { host.addEventListener(name, callback); removers.push(() => element.removeEventListener(name, callback)); };
       let pointer = null, dragIndex = null, moved = false;
@@ -137,7 +214,7 @@
         chooseColor({source:button,color:point.color,white:point.white??0,brightness:point.brightness??100,on:point.on??true,current:samePoint,commit:value=>{
           if(!samePoint()||!value||Object.keys(value).sort().join(',')!=='brightness,color,on,white'||!/^#[0-9a-f]{6}$/i.test(value.color)||
             !Number.isInteger(value.white)||value.white<0||value.white>255||!Number.isFinite(value.brightness)||value.brightness<0||value.brightness>100||typeof value.on!=='boolean')return;
-          consumed=true;
+          consumed=true;chosen();
           const fields={color:value.color.toUpperCase(),white:value.white,brightness:value.brightness,on:value.on};
           if(candidate){draft.stops.splice(insertAt,0,{position:point.position,...fields});selected=insertAt;renderPanel(`[data-gradient-point="${insertAt}"]`);}
           else{Object.assign(point,fields);paint();}
@@ -153,38 +230,22 @@
           host.querySelectorAll('[data-gradient-mode-choice]').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.gradientModeChoice === mode)));
           onMode(mode);
           persistDraft();
-          if (mode === 'gradient') renderPanel();
+          autoArmed = false; chosenScope = null;
+          if (mode === 'gradient') { choiceRequired = true; renderPanel(); setStatus('Kies een voorbeeld of maak je eigen verloop.'); }
+          if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; autoTimerKey = null; }
+          notifyIdle();
           return;
         }
+        if (button.dataset.gradientBuiltin || button.dataset.gradientLoad || button.dataset.gradientSwatch || button.hasAttribute('data-gradient-even') ||
+            button.hasAttribute('data-gradient-remove') || button.dataset.gradientShift) chosen();
         if (button.hasAttribute('data-gradient-stop')) { if (!moved) selectStop(Number(button.dataset.gradientStop)); moved = false; return; }
-        if (button.hasAttribute('data-gradient-apply')) {
-          if (applying || typeof onApply !== 'function' || mode !== 'gradient') return;
-          const owner = host, ticket = ++applySerial;
-          const definition = G.definition(draft.stops,{brightness,reverse,transitionMs}),snapshot=JSON.stringify(definition);
-          applying = true; notice = 'Verloop versturen…'; renderPanel();
-          Promise.resolve().then(() => {
-            if (!current() || mode !== 'gradient' || owner !== host || ticket !== applySerial || snapshot !== JSON.stringify(G.definition(draft.stops,{brightness,reverse,transitionMs}))) throw Error('GRADIENT_CHANGED');
-            return onApply(definition);
-          }).then(answer => {
-            if (!current() || mode !== 'gradient' || owner !== host || ticket !== applySerial || snapshot !== JSON.stringify(G.definition(draft.stops,{brightness,reverse,transitionMs}))) return;
-            notice = answer?.state === 'OBSERVED' ? 'De receivers hebben dit verloop bevestigd.' : 'Verstuurd. De bevestiging volgt.';
-          }, error => {
-            try { window.__c98log?.('GRADIENT_FAIL ' + String(error?.code || error?.message || '-').slice(0, 60)); } catch (_) {}
-            if (!current() || owner !== host || ticket !== applySerial) return;
-            notice = ['UNSUPPORTED','ACTION_UNSUPPORTED','GRADIENT_UNSUPPORTED'].includes(error?.code) ?
-              'Deze receiver kan nog geen verloop tonen. Werk eerst de receiver bij.' :
-              error?.code === 'GRADIENT_CHANGED' || error?.message === 'GRADIENT_CHANGED' ? 'Je verloop is intussen gewijzigd. Tik opnieuw op Verloop toepassen.' :
-              'Het verloop is niet bevestigd. Controleer de verbinding en probeer opnieuw.';
-          }).finally(() => { if (ticket === applySerial) { applying = false; if (current() && owner === host) renderPanel(); } });
-          return;
-        }
         if (button.hasAttribute('data-gradient-color-open')) {
           if (button.dataset.gradientPoint !== undefined) { const index = Number(button.dataset.gradientPoint); if (!draft.stops[index]) return; selected = index; paint(); }
           editPoint(button);return;
         }
         if (button.dataset.gradientRemoveAt !== undefined) {
           const index = Number(button.dataset.gradientRemoveAt); if (draft.stops.length <= 2 || !draft.stops[index]) return;
-          draft.stops.splice(index, 1); selected = Math.min(index, draft.stops.length - 1); renderPanel(); return;
+          chosen(); draft.stops.splice(index, 1); selected = Math.min(index, draft.stops.length - 1); renderPanel(); return;
         }
         if (button.hasAttribute('data-gradient-add')) {
           if (draft.stops.length >= G.MAX_STOPS) return;
@@ -211,11 +272,12 @@
       on('input', event => {
         if (!current()) return;
         const input = event.target;
+        if (input.matches('[data-gradient-position],[data-gradient-brightness],[data-gradient-reverse],[data-gradient-transition]')) chosen();
         if (input.matches('[data-gradient-position]')) setPosition(Number(input.value));
         else if (input.matches('[data-gradient-name]')) { draft.name = input.value; persistDraft(); }
         else if (input.matches('[data-gradient-brightness]')) { brightness = Number(input.value); paint(); }
         else if (input.matches('[data-gradient-reverse]')) { reverse = input.checked; paint(); }
-        else if (input.matches('[data-gradient-transition]')) { const value=Number(input.value);if(Number.isInteger(value)&&value>=0&&value<=750){transitionMs=value;persistDraft();} }
+        else if (input.matches('[data-gradient-transition]')) { const value=Number(input.value);if(Number.isInteger(value)&&value>=0&&value<=750){transitionMs=value;persistDraft();scheduleAuto();} }
       });
       on('keydown', event => {
         if (current() && event.target.matches('[data-gradient-name]') && event.key === 'Enter') {
@@ -240,12 +302,15 @@
       });
       on('pointerup', event => { if (event.pointerId === pointer) { end(); renderPanel(`[data-gradient-stop="${selected}"]`); } });
       on('pointercancel', end); on('lostpointercapture', end);
+      // Opening/repainting is not an Apply. Keep the real sent key and arm
+      // only after an explicit edit/preset choice in this exact selection.
+      autoArmed = false; chosenScope = null;
       if (mode === 'gradient') renderPanel();
       onMode(mode);
-      unmount = () => { end(); removers.splice(0).forEach(remove => remove()); host = null; };
+      unmount = () => { end(); mountSerial++; autoArmed = false; chosenScope = null; if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; autoTimerKey = null; } if (applyNotice === 'Verloop nog niet bevestigd. De app probeert opnieuw.') setStatus('Verloop nog niet bevestigd. Controleer de verbinding.'); removers.splice(0).forEach(remove => remove()); host = null; };
       return unmount;
     }
-    return Object.freeze({ markup, mount, previewRecipe, mountedOn: element => !!element && host === element && !!host.isConnected, get mode() { return mode; } });
+    return Object.freeze({ markup, mount, previewRecipe, mountedOn: element => !!element && host === element && !!host.isConnected, get mode() { return mode; }, get applying() { return applying; }, get pending() { return pending(); } });
   }
   root.LightningStaticGradientUI = Object.freeze({ create, draw });
 }(window));

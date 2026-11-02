@@ -22,6 +22,10 @@
   PORT_NULLABLE_FIELDS.add('staticGradientRecipe');
   PORT_LIGHT_FIELDS.add('gradientLastBrightness');
   PORT_NULLABLE_FIELDS.add('gradientLastBrightness');
+  PORT_LIGHT_FIELDS.add('staticGradientGroup');
+  PORT_NULLABLE_FIELDS.add('staticGradientGroup');
+  PORT_LIGHT_FIELDS.add('staticGradientDomain');
+  PORT_NULLABLE_FIELDS.add('staticGradientDomain');
   function validStaticGradient(value) { try { G.decodeRecipe(value); return true; } catch (_) { return false; } }
   var LAYOUTS = Object.freeze({ RGBW: Object.freeze(['stacked', 'vertical']), SPI: Object.freeze(['continuous', 'stacked', 'vertical']) });
   function allowedLayouts(type) {
@@ -55,6 +59,8 @@
       if(value===null)return PORT_NULLABLE_FIELDS.has(key);
       if(key==='staticGradientRecipe')return validStaticGradient(value);
       if(key==='gradientLastBrightness')return integer(value,1,100);
+      if(key==='staticGradientGroup')return G.validGroup(value);
+      if(key==='staticGradientDomain')return G.validDomain(value);
       if(Object.prototype.hasOwnProperty.call(ranges,key))return typeof value==='number'&&Number.isFinite(value)&&value>=ranges[key][0]&&value<=ranges[key][1]&&(!['objectCount','variant','colorCount'].includes(key)||Number.isInteger(value));
       if(booleans.has(key))return typeof value==='boolean';
       if(['colors','whiteChannels','rgbEnabled','whiteEnabled'].includes(key))return Array.isArray(value)&&value.length>=1&&value.length<=16&&Array.from(value).every(function (item) { return key==='colors'?typeof item==='string'&&/^#[0-9a-f]{6}$/i.test(item):key==='whiteChannels'?typeof item==='number'&&Number.isFinite(item)&&item>=0&&item<=255:typeof item==='boolean'; });
@@ -100,6 +106,7 @@
         else zones.set(zone.id, { zone: zone, stand: stand, path: zp });
         if (!id(zone.name)) add('NAME', zp + '.name', 'Geef de zone een naam.');
         if (Object.prototype.hasOwnProperty.call(zone, 'groups')) add('GROUPS_REMOVED', zp + '.groups', 'Een V30-zone bevat rechtstreeks receivers.');
+        if (Object.prototype.hasOwnProperty.call(zone,'gradientDomains')&&(zone.type!=='SPI'||!G.validDomains(zone.gradientDomains)))add('GRADIENT_DOMAINS',zp+'.gradientDomains','De bewaarde verloopselecties zijn ongeldig.');
         if (zone.type !== null && TYPES.indexOf(zone.type) < 0) add('ZONE_TYPE', zp + '.type', 'Een zone is RGBW, SPI of nog leeg.');
         var allowed = allowedLayouts(zone.type);
         if (allowed.indexOf(zone.layout) < 0) add('LAYOUT', zp + '.layout', 'Deze opstelling past niet bij het zonetype.');
@@ -160,6 +167,8 @@
       else {
         if (Object.prototype.hasOwnProperty.call(receiver.state,'staticGradientRecipe') && (receiver.type!=='SPI' || receiver.state.engine!=='STATIC_GRADIENT' || !validStaticGradient(receiver.state.staticGradientRecipe)) || receiver.state.engine==='STATIC_GRADIENT' && !validStaticGradient(receiver.state.staticGradientRecipe)) add('STATIC_GRADIENT',rp+'.state','Het statische verloop is niet volledig uitgelezen.');
         if(Object.prototype.hasOwnProperty.call(receiver.state,'gradientLastBrightness')&&(receiver.state.engine!=='STATIC_GRADIENT'||!integer(receiver.state.gradientLastBrightness,1,100)))add('STATIC_GRADIENT',rp+'.state','Het helderheidsgeheugen van dit verloop is ongeldig.');
+        if(Object.prototype.hasOwnProperty.call(receiver.state,'staticGradientGroup')&&(receiver.type!=='SPI'||receiver.state.engine!=='STATIC_GRADIENT'||!G.validGroup(receiver.state.staticGradientGroup)))add('STATIC_GRADIENT',rp+'.state','De bewaarde selectie van dit verloop is ongeldig.');
+        if(Object.prototype.hasOwnProperty.call(receiver.state,'staticGradientDomain')&&(receiver.type!=='SPI'||receiver.state.engine!=='STATIC_GRADIENT'||!G.validDomain(receiver.state.staticGradientDomain)))add('STATIC_GRADIENT',rp+'.state','De bewaarde verloopselectie is ongeldig.');
         var ranges = { r: [0,255], g: [0,255], b: [0,255], w: [0,255], bri: [0,100], brightness: [0,100], speed: [0,100], smooth: [0,100], transitionMs: [0,60000], widthPixels: [1,8192] };
         Object.keys(ranges).forEach(function (key) {
           var value = receiver.state[key];
@@ -186,6 +195,8 @@
           else Object.keys(overrides).forEach(function (port) {
             var effective=lightStateFor(receiver,Number(port));
             if((effective.engine==='STATIC_GRADIENT' ? !validStaticGradient(effective.staticGradientRecipe) : Object.prototype.hasOwnProperty.call(effective,'staticGradientRecipe'))||Object.prototype.hasOwnProperty.call(effective,'gradientLastBrightness')&&(effective.engine!=='STATIC_GRADIENT'||!integer(effective.gradientLastBrightness,1,100))) add('STATIC_GRADIENT',rp+'.state.portStates.'+port,'Het statische verloop is niet volledig uitgelezen.');
+            if(Object.prototype.hasOwnProperty.call(effective,'staticGradientDomain')&&(effective.engine!=='STATIC_GRADIENT'||!G.validDomain(effective.staticGradientDomain)))add('STATIC_GRADIENT',rp+'.state.portStates.'+port,'De bewaarde verloopselectie is ongeldig.');
+            if(Object.prototype.hasOwnProperty.call(effective,'staticGradientGroup')&&(effective.engine!=='STATIC_GRADIENT'||!G.validGroup(effective.staticGradientGroup)))add('STATIC_GRADIENT',rp+'.state.portStates.'+port,'De bewaarde selectie van dit verloop is ongeldig.');
           });
         }
       }
@@ -459,6 +470,25 @@
     // Preserve configured zone order regardless of tap order.
     return receivers.filter(function (receiver) { return unique.has(receiver.id); }).map(function (receiver) { return receiver.id; });
   }
+  function gradientGroupPlacements(model, zoneId, group) {
+    var zone=requireZone(model,zoneId);
+    if(zone.type!=='SPI'||!G.validGroup(group))issue('GRADIENT_SCOPE','Pas dit verloop opnieuw toe op de gewenste ledlines.');
+    return G.groupPlacements(zoneLedlines(model,zoneId),group);
+  }
+
+  function gradientDomainGroup(model,zoneId,state){
+    if(Object.prototype.hasOwnProperty.call(state,'staticGradientDomain'))return G.domainGroup(requireZone(model,zoneId).gradientDomains,state.staticGradientDomain);
+    if(Object.prototype.hasOwnProperty.call(state,'staticGradientGroup')){if(!G.validGroup(state.staticGradientGroup))issue('GRADIENT_SCOPE','Pas het verloop opnieuw toe.');return clone(state.staticGradientGroup);}
+    return undefined;
+  }
+  function prepareGradientDomain(model,zoneId,selection){
+    assertValid(model);var zone=requireZone(model,zoneId),group=selectionLines(model,zoneId,selection).map(function(line){return line.id;});
+    gradientGroupPlacements(model,zoneId,group);
+    var used=[];zoneReceivers(model,zoneId).forEach(function(r){[r.state,...Object.values(r.state.portStates||{})].forEach(function(s){if(s.staticGradientDomain)used.push(s.staticGradientDomain);});});
+    var result=G.internDomain(zone.gradientDomains,group,used),next=clone(model);requireZone(next,zoneId).gradientDomains=result.registry;
+    return {model:assertValid(next),domain:result.domain,group:group};
+  }
+
   function resolveTargets(model, zoneId, selection) {
     assertValid(model);
     var zone = requireZone(model, zoneId), selected = new Set(selectionLines(model,zoneId,selection).map(function (line) { return line.id; })), receivers = zoneReceivers(model, zoneId), offset = 0;
@@ -492,7 +522,9 @@
         delete normalized.receiverType;delete normalized.speedMode;
         var state=Object.assign(lightStateFor(receiver,line.port),normalized);
         if(Object.prototype.hasOwnProperty.call(normalized,'staticGradientRecipe')&&!Object.prototype.hasOwnProperty.call(normalized,'gradientLastBrightness'))delete state.gradientLastBrightness;
-        if(state.engine!=='STATIC_GRADIENT'){delete state.staticGradientRecipe;delete state.gradientLastBrightness;}
+        if(Object.prototype.hasOwnProperty.call(normalized,'staticGradientRecipe')&&!Object.prototype.hasOwnProperty.call(normalized,'staticGradientGroup'))delete state.staticGradientGroup;
+        if(Object.prototype.hasOwnProperty.call(normalized,'staticGradientRecipe')&&!Object.prototype.hasOwnProperty.call(normalized,'staticGradientDomain'))delete state.staticGradientDomain;
+        if(state.engine!=='STATIC_GRADIENT'){delete state.staticGradientRecipe;delete state.gradientLastBrightness;delete state.staticGradientGroup;delete state.staticGradientDomain;}
         delete state.standAnimation;
         var base=lightStateFor(receiver,0), override={};
         Object.keys(state).forEach(function (key) { if (JSON.stringify(state[key]) !== JSON.stringify(base[key])) override[key]=clone(state[key]); });
@@ -507,7 +539,9 @@
       if (selected.indexOf(receiver.id) < 0) return;
       receiver.state = Object.assign({}, receiver.state, clone(patch));delete receiver.state.portStates;
       if(Object.prototype.hasOwnProperty.call(patch,'staticGradientRecipe')&&!Object.prototype.hasOwnProperty.call(patch,'gradientLastBrightness'))delete receiver.state.gradientLastBrightness;
-      if(receiver.state.engine!=='STATIC_GRADIENT'){delete receiver.state.staticGradientRecipe;delete receiver.state.gradientLastBrightness;}
+      if(Object.prototype.hasOwnProperty.call(patch,'staticGradientRecipe')&&!Object.prototype.hasOwnProperty.call(patch,'staticGradientGroup'))delete receiver.state.staticGradientGroup;
+      if(Object.prototype.hasOwnProperty.call(patch,'staticGradientRecipe')&&!Object.prototype.hasOwnProperty.call(patch,'staticGradientDomain'))delete receiver.state.staticGradientDomain;
+      if(receiver.state.engine!=='STATIC_GRADIENT'){delete receiver.state.staticGradientRecipe;delete receiver.state.gradientLastBrightness;delete receiver.state.staticGradientGroup;delete receiver.state.staticGradientDomain;}
     });
     return assertValid(next);
   }
@@ -530,7 +564,7 @@
     var selected = new Set(standZoneReceivers(model, standId).map(function (receiver) { return receiver.id; }));
     var next = clone(model);
     next.receivers.forEach(function (receiver) {
-      if (selected.has(receiver.id)) { receiver.state = Object.assign({}, receiver.state, clone(patch));delete receiver.state.portStates;if(receiver.state.engine!=='STATIC_GRADIENT'){delete receiver.state.staticGradientRecipe;delete receiver.state.gradientLastBrightness;} }
+      if (selected.has(receiver.id)) { receiver.state = Object.assign({}, receiver.state, clone(patch));delete receiver.state.portStates;if(receiver.state.engine!=='STATIC_GRADIENT'){delete receiver.state.staticGradientRecipe;delete receiver.state.gradientLastBrightness;delete receiver.state.staticGradientGroup;delete receiver.state.staticGradientDomain;} }
     });
     return assertValid(next);
   }
@@ -627,7 +661,7 @@
     return assertValid({schemaVersion:30,demo:false,stands:[{id:id,name:name,zones:[]}],receivers:[],scenes:[],presets:[]});
   }
   return Object.freeze({ LIMITS: LIMITS, DEFAULT_SPI_PIXELS: DEFAULT_SPI_PIXELS, DEFAULT_ANIMATION_WIDTH: DEFAULT_ANIMATION_WIDTH, localStand: localStand, clone: clone, defaultState: defaultState, validate: validate, assertValid: assertValid, membershipStructure: membershipStructure, getZone: getZone,
-    zoneReceivers: zoneReceivers, standZoneReceivers: standZoneReceivers, lightStateFor: lightStateFor, validPortLightState: validPortLightState, validStaticGradient: validStaticGradient, selectionLines: selectionLines, resolveTargets: resolveTargets, applyState: applyState, applyStandState: applyStandState, setLayout: setLayout,
+    zoneReceivers: zoneReceivers, standZoneReceivers: standZoneReceivers, lightStateFor: lightStateFor, validPortLightState: validPortLightState, validStaticGradient: validStaticGradient, selectionLines: selectionLines, gradientGroupPlacements: gradientGroupPlacements, gradientDomainGroup: gradientDomainGroup, prepareGradientDomain: prepareGradientDomain, validGradientDomains: G.validDomains, resolveTargets: resolveTargets, applyState: applyState, applyStandState: applyStandState, setLayout: setLayout,
     createZone: createZone, renameZone: renameZone, deleteZone: deleteZone, renameReceiver: renameReceiver,
     assignReceiverToZone: assignReceiverToZone, unassignReceiver: unassignReceiver, moveReceivers: moveReceivers,
     reorderReceivers: reorderReceivers, arrangeZone: arrangeZone, arrangeLines: arrangeLines, lineIds: lineIds, ledlines: ledlines, zoneLedlines: zoneLedlines,

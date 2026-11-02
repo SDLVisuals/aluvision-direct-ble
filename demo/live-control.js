@@ -290,13 +290,14 @@
     }
     return {model,inheritedIds,receiverIds:[...refreshIds]};
   }
-  function create({send,sendBatch,sendGesture,onState,onRoute,waitBeforeSend,maxBatchSize=30,compiledModern=()=>false,delay=0,setTimer=setTimeout,clearTimer=clearTimeout}) {
+  function create({send,sendBatch,sendGesture,onState,onRoute,waitBeforeSend,maxBatchSize=30,compiledModern=()=>false,singleSpiStaticBatch=()=>false,delay=0,setTimer=setTimeout,clearTimer=clearTimeout}) {
     if (typeof send !== 'function' || typeof onState !== 'function') throw Error('LIVE_QUEUE_INVALID');
     if (sendBatch!==undefined && typeof sendBatch!=='function') throw Error('LIVE_QUEUE_INVALID');
     if (sendGesture!==undefined && typeof sendGesture!=='function') throw Error('LIVE_QUEUE_INVALID');
     if (waitBeforeSend!==undefined && typeof waitBeforeSend!=='function') throw Error('LIVE_QUEUE_INVALID');
     if (typeof maxBatchSize!=='function'&&![30,64].includes(maxBatchSize)) throw Error('LIVE_QUEUE_INVALID');
     if (typeof compiledModern!=='function') throw Error('LIVE_QUEUE_INVALID');
+    if (typeof singleSpiStaticBatch!=='function') throw Error('LIVE_QUEUE_INVALID');
     const queue=new Map(), desired=new Map(), states=new Map(),idleWaiters=new Set();
     let active=null,draining=false,timer=null,version=0,epoch=0,idleLease=null;
     let completionObserver=null;
@@ -746,15 +747,23 @@
             // One selected moving receiver needs the same bounded retirement
             // hook as a multi-receiver animation. Otherwise a newer palette or
             // speed waits for the previous background correction to finish.
-            // Keep ordinary single-colour, OFF, scoped-port and prelude routes
-            // unchanged; native still admits the complete original request.
+            // Keep RGBW single-colour, OFF, scoped-port and prelude routes
+            // unchanged; the explicit single-SPI-solid opt-in below is separate.
+            // Native still admits the complete original request.
             const singleAnimation=initial.length===1&&initial.every(request=>scopedMovingCandidate(request)||
               request.kind==='SPI_PORTS'&&Array.isArray(request.portScenes)&&request.portScenes.length>0&&request.portScenes.every(child=>child.kind==='SPI_SCENE'&&child.scene)||
               ['RGBW_SCENE','SPI_SCENE'].includes(request.kind)&&request.brightness>0&&
               request.scene&&(request.scene.engine!=='STATIC'||request.scene.v30)&&
               (request.scene.v30||request.scene.engine!=='STATIC'||Number.isInteger(request.scene.phaseMs)&&
                 Number.isInteger(request.scene.phaseRateMicroHz)&&request.scene.phaseRateMicroHz>0));
-            if(!streamComplete&&sendBatch && (items.size>1||singleAnimation||compiledModern()===true)){
+            // Native explicitly opts this C98 route in. A whole-receiver SPI
+            // solid uses the same batch entry as its animations; the request
+            // is unchanged and native still admits target, owner and geometry.
+            // OFF, RGBW, per-port envelopes and typed gradients keep their routes.
+            const singleSpiSolid=initial.length===1&&singleSpiStaticBatch()===true&&
+              initial[0].kind==='SPI_SCENE'&&!Object.hasOwn(initial[0],'outputPort')&&
+              initial[0].transitionMs<=750&&staticGestureShape(initial[0])!==null;
+            if(!streamComplete&&sendBatch && (items.size>1||singleAnimation||singleSpiSolid||compiledModern()===true)){
               active.operation=sendBatch([...items.values()].map(item=>item.request));
               const reply=await active.operation;
               if(reply?.status==='breathe-retained-deferred'||reply?.status==='catalogue-retained-deferred'){

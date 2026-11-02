@@ -74,7 +74,8 @@
   // Gradient editing is local DATA. Only explicit Apply enters the closed
   // authenticated catalogue action; never an ordinary STATIC fallback.
   const gradientEditors = new Map();
-  let gradientStorage=null;try{gradientStorage=window.localStorage;}catch(_){}
+  let gradientStorage=webDemoContext?webDemo.storage:null;
+  if(!webDemoContext){try{gradientStorage=window.localStorage;}catch(_){}}
   const gradientWorkspaceAllowed=id=>zone()?.id===id&&zone()?.type==='SPI'&&!standControlOpen;
   let unmountGradient = null;
   let gradientColourDraft = null;
@@ -112,14 +113,18 @@
     if (!window.LightningStaticGradient || z?.type!=='SPI' || standControlOpen) return null;
     if (!gradientEditors.has(z.id)) gradientEditors.set(z.id, window.LightningStaticGradientUI.create({
       storage:gradientStorage,scope:z.id,
-      initialRecipe:()=>selectedState().staticGradientRecipe,
+      // Deduplicate only the same selected physical lines and saved geometry.
+      // This key never widens native selection or includes mutable light state.
+      applyScope:()=>JSON.stringify([stand()?.id,z.id,zone()?.layout,M.selectionLines(model,z.id,selection()).map(line=>[line.id,line.pixels,line.reversed])]),
+      initialRecipe:()=>{const states=selectedLightEntries().map(entry=>entry.state),first=states[0]?.staticGradientRecipe;return first&&states.every(state=>state.engine==='STATIC_GRADIENT'&&state.staticGradientRecipe===first)?first:null;},
       allowed:()=>gradientWorkspaceAllowed(z.id),
       palette:()=>savedColours.colors.map(entry=>C.hex([entry.color.r,entry.color.g,entry.color.b])),
       chooseColor:openGradientColourPicker,
       onApply:applyStaticGradientUI,
+      onIdle:flushGradientRenderC98,
       // The shared ledline preview shows the draft gradient; only the
       // "chosen light" summary is hidden while editing it.
-      onMode:mode=>{main.querySelector('.editor-grid')?.toggleAttribute('data-demo-gradient-active',mode==='gradient');if(mode==='gradient')prewarmGradientC98();else cancelGradientPrewarmC98();}
+      onMode:mode=>{main.querySelector('.editor-grid')?.toggleAttribute('data-demo-gradient-active',mode==='gradient');if(mode==='gradient'){prewarmGradientC98();scheduleGradientRewarmC98(75000);}else cancelGradientPrewarmC98();}
     }));
     return gradientEditors.get(z.id);
   }
@@ -137,21 +142,59 @@
   // C98: warm the stable catalogue route when the Verloop tab opens, so the
   // first gradient apply takes seconds instead of a cold ~12 s preparation.
   let gradientPrewarmC98=null,gradientPrewarmAtC98=0;
+  let gradientRenderDeferredC98=false,gradientRenderedModelC98=null;
+  function flushGradientRenderC98(){
+    if(!gradientRenderDeferredC98)return;
+    queueMicrotask(()=>{
+      if(!gradientRenderDeferredC98||gradientEditors.get(zone()?.id)?.pending===true)return;
+      gradientRenderDeferredC98=false;render();
+    });
+  }
+  function deferGradientRenderC98(top){
+    if(top||!nativeLoaded||nativeLoadError||managementBusy||standPresentationOnly()||firstAccessCheckpoint||
+       lastRenderedMotionContext!==motionContextKey()||!gradientPrewarmVisibleC98()||
+       gradientEditors.get(zone()?.id)?.pending!==true||gradientRenderedModelC98!==JSON.stringify(model))return false;
+    gradientRenderDeferredC98=true;return true;
+  }
+  function gradientPrewarmVisibleC98(){
+    const z=zone(),editor=z&&gradientEditors.get(z.id),host=main.querySelector('[data-gradient-workspace]');
+    return !document.hidden&&!standControlOpen&&z?.type==='SPI'&&
+      (route.screen==='colour'||route.screen==='controls'&&controlMode==='colour')&&
+      editor?.mode==='gradient'&&editor.mountedOn(host)&&host.dataset.gradientMode==='gradient'&&
+      host.querySelector('[data-gradient-panel]')?.hidden===false&&!host.closest('[hidden],[inert]')&&
+      !document.querySelector('dialog[open]');
+  }
   function prewarmGradientC98(){
     const standId=stand()?.id;
     if(!nativeContext||!standId||typeof runtime?.services?.prewarmGradient!=='function'||gradientPrewarmC98||Date.now()-gradientPrewarmAtC98<5000||
-       managementBusy||document.hidden)return;
+       !gradientPrewarmVisibleC98()||managementBusy||standPresentationOnly()||gradientEditors.get(zone().id)?.applying===true||
+       gradientPowerActive||gradientPowerPending||gradientPowerDraining)return;
     gradientPrewarmAtC98=Date.now();
-    gradientPrewarmC98=runtime.services.prewarmGradient({standId}).then(
+    const held=runtime.services.prewarmGradient({standId}).then(
       answer=>{window.__c98log?.('GRADIENT_PREWARM '+(answer?.status||'-'));},
-      error=>{window.__c98log?.('GRADIENT_PREWARM fail '+(error?.code||''));gradientPrewarmAtC98=0;}).finally(()=>{gradientPrewarmC98=null;});
+      error=>{window.__c98log?.('GRADIENT_PREWARM fail '+(error?.code||''));if(gradientPrewarmC98===held)gradientPrewarmAtC98=0;})
+      .finally(()=>{if(gradientPrewarmC98===held)gradientPrewarmC98=null;});
+    gradientPrewarmC98=held;
   }
   // A colour always wins over the warm-up: it holds the radio for seconds.
   function cancelGradientPrewarmC98(){
+    clearTimeout(gradientRewarmTimerC98);gradientRewarmTimerC98=null;
     if(!gradientPrewarmC98)return;
     window.__c98log?.('GRADIENT_PREWARM cancel');
     try{runtime.services.cancelStableStandPreparation?.({});}catch(_){}
     gradientPrewarmC98=null;gradientPrewarmAtC98=0;
+  }
+  // C98: keep the gradient ready only while its editor is visibly selected.
+  // Ordinary colours and animations never re-arm this radio preparation.
+  let gradientRewarmTimerC98=null;
+  function scheduleGradientRewarmC98(ms=4000){
+    clearTimeout(gradientRewarmTimerC98);gradientRewarmTimerC98=null;
+    if(!gradientPrewarmVisibleC98())return;
+    gradientRewarmTimerC98=setTimeout(()=>{
+      gradientRewarmTimerC98=null;
+      if(!gradientPrewarmVisibleC98())return;
+      prewarmGradientC98();scheduleGradientRewarmC98(75000);
+    },ms);
   }
   async function applyStaticGradientUI(gradient) {
     if(!nativeContext||runtime?.native!==true||typeof runtime.services?.applyStaticGradient!=='function'){window.__c98log?.('GRADIENT_SERVICE missing');throw Object.assign(Error(),{code:'GRADIENT_UNSUPPORTED'});}
@@ -162,6 +205,7 @@
     if(!ids.length)throw Object.assign(Error(),{code:'GRADIENT_INVALID'});
     const definition=window.LightningStaticGradient.definition(gradient.stops,gradient),
       capsule=Array.from(window.LightningStaticGradient.recipe(definition.stops,definition),b=>b.toString(16).padStart(2,'0')).join('').toUpperCase();
+    const gradientDomainPlan=M.prepareGradientDomain(model,zoneId,scope);
     const scene=()=>({engine:'STATIC',variant:0,palette:[[0,0,0,0]],background:[0,0,0,0],speed:50,smooth:0,backgroundBrightness:0,backgroundOn:false,motionReverse:false,widthPixels:1,spacing:0,objectCount:1,trailLength:0,spread:0,randomness:0,bounce:false,mirror:false,lineDelayMs:0});
     const requests=ids.map(id=>{
       const receiver=model.receivers.find(r=>r.id===id);if(receiver?.type!=='SPI')throw Object.assign(Error(),{code:'GRADIENT_UNSUPPORTED'});
@@ -178,6 +222,9 @@
     if(!gradientWorkspaceAllowed(zoneId)||motionContextKey()!==context||document.hidden)throw Object.assign(Error(),{code:'GRADIENT_CHANGED'});
     const inputModel=model,selectionKey=JSON.stringify(scope);
     await gradientPrewarmC98?.catch(()=>{});
+    // Preparation may finish after a different colour, selection or model wins.
+    // Recheck the original UI intent before the first native output dispatch.
+    if(gradientPowerSerial!==editorSerial||model!==inputModel||managementBusy||standPresentationOnly()||!gradientWorkspaceAllowed(zoneId)||motionContextKey()!==context||JSON.stringify(selection())!==selectionKey||document.hidden)throw Object.assign(Error(),{code:'GRADIENT_CHANGED'});
     const operation=runtime.services.applyStaticGradient({requests,gradient:definition});
     gradientSetupNotice=null;
     let retained;
@@ -194,10 +241,12 @@
     if(gradientPowerSerial!==editorSerial||model!==inputModel||!gradientWorkspaceAllowed(zoneId)||motionContextKey()!==context||JSON.stringify(selection())!==selectionKey||document.hidden)throw Object.assign(Error(),{code:'GRADIENT_CHANGED'});
     // Checkpoint only this exact retained intent, never physical APPLIED.
     // No generic Web replay may later substitute the previous solid colour.
-    const desired=copy(model),stands=new Set(ids.map(id=>desired.receivers.find(r=>r.id===id).standId));
+    const desired=copy(gradientDomainPlan.model),stands=new Set(ids.map(id=>desired.receivers.find(r=>r.id===id).standId));
     desired.receivers.filter(r=>stands.has(r.standId)&&r.zoneId!==null).forEach(r=>{delete r.state.standAnimation;});
-    model=M.applyState(desired,zoneId,scope,window.LightningStaticGradient.desiredState(capsule));
-    ids.forEach(id=>liveStates.set(id,{kind:'unconfirmed',code:'GRADIENT_RETAINED_UNCONFIRMED'}));
+    model=M.applyState(desired,zoneId,scope,{...window.LightningStaticGradient.desiredState(capsule),staticGradientDomain:gradientDomainPlan.domain});
+    // C98: the MAIN accepted and retained this gradient; it is on its way,
+    // like a staged colour. Quiet pending, not a warning in the dock.
+    ids.forEach(id=>liveStates.set(id,{kind:'staged',code:'GRADIENT_RETAINED'}));
     scheduleLightIntentSave();syncLiveStatus();
     // Do not add a foreground READ/ack round after dispatch. The existing
     // operation exposes optional read-only observation to its caller; this UI
@@ -263,7 +312,14 @@
           await liveController?.whenIdle({standId:item.model.receivers.find(r=>r.id===item.ids[0]).standId});
           if(!gradientPowerCurrent(item))continue;
           let carrier=model;
-          const gradientSelections=item.units.filter(u=>u.gradient).map(u=>({receiverId:u.receiverId,port:u.port,gradient:u.definition}));
+          const domainResolvers=new Map();
+          const gradientSelections=item.units.filter(u=>u.gradient).map(u=>{
+            let group;
+            if(Object.hasOwn(u.state,'staticGradientDomain')){if(!domainResolvers.has(u.zoneId))domainResolvers.set(u.zoneId,window.LightningStaticGradient.domainResolver(M.getZone(model,u.zoneId).gradientDomains));group=domainResolvers.get(u.zoneId)(u.state.staticGradientDomain);}
+            else group=M.gradientDomainGroup(model,u.zoneId,u.state);
+            if(group!==undefined){const placements=M.gradientGroupPlacements(model,u.zoneId,group);if(u.port&&!placements.some(line=>line.id===u.receiverId+':'+u.port))throw Error('GRADIENT_SCOPE');}
+            return {receiverId:u.receiverId,port:u.port,gradient:u.definition,...(group!==undefined?{group:[...group]}:{})};
+          });
           for(const u of item.units.filter(u=>u.gradient))carrier=M.applyState(carrier,u.zoneId,u.scope,{...M.defaultState(),engine:'STATIC',colors:['#000000'],whiteChannels:[0],rgbEnabled:[true],whiteEnabled:[true],colorCount:1,bri:u.definition.brightness,brightness:u.definition.brightness,on:true,power:true,transitionMs:u.definition.transitionMs,direction:'right'});
           const requests=item.ids.map(id=>{
             const receiver=carrier.receivers.find(r=>r.id===id),z=M.getZone(carrier,receiver.zoneId),ports=receiver.type==='SPI'&&z.layout!=='continuous'?item.units.filter(u=>u.receiverId===id).map(u=>u.port).sort((a,b)=>a-b):undefined;
@@ -682,6 +738,7 @@
       sendBatch:typeof runtime.services.applyLiveBatch==='function'?requests=>runtime.services.applyLiveBatch({requests}):undefined,
       maxBatchSize:()=>runtime.services.liveBatchLimit===64?64:30,
       compiledModern:()=>runtime.services.integratedStatic8Available===true,
+      singleSpiStaticBatch:()=>runtime.services.singleSpiStaticBatchAvailable===true,
       sendGesture:typeof runtime.services.applyStaticGesture==='function'?(requests,options)=>runtime.services.applyStaticGesture({requests,...options}):undefined,
       waitBeforeSend:typeof runtime.services.whenLiveReady==='function'?async()=>{cancelGradientPrewarmC98();await runtime.services.whenLiveReady();if(standPresentationOnly())throw Object.assign(Error(),{code:'STAND_CONNECTION_BUSY'});if(standSession?.snapshot()||standSession?.canResume())await standSession.prepareLive();}:undefined,
       onRoute:observeStaticRoute,
@@ -694,7 +751,7 @@
   let presetEdit667=null,presetLibraryBusy667=false,presetLibraryEpoch667=0;
   let preferenceStore;try{preferenceStore=Preferences.createStore(appStorage);}catch(_){preferenceStore=Preferences.createStore(null);}
   let uiPreferences=preferenceStore.load();
-  if(nativeContext&&runtime?.native===true)mainConnectionIndicator675=window.LightningMainConnectionIndicator?.create({host:document.getElementById('main-connection-indicator675'),language:()=>uiPreferences.preferences.language});
+  if(nativeContext&&runtime?.native===true)mainConnectionIndicator675=window.LightningMainConnectionIndicator?.create({host:document.getElementById('main-connection-indicator675'),language:()=>uiPreferences.preferences.language,standName:()=>stand()?.name||''});
   const interfaceModeStore=Preferences.createModeStore(appStorage);
   let interfaceModeState=interfaceModeStore.load();
   const advancedInterface=()=>interfaceModeState.advancedEnabled!==false;
@@ -916,9 +973,9 @@
     orderTutorialReturnFocus=document.activeElement;
     orderTutorialContext={standId:stand().id,zoneId:z.id};
     dialog.dataset.tutorialVersion='665';
-    dialog.innerHTML=`<header><div><span class="v568-tutorial-badge">${icon('play')}${esc(orderGuideText('tutorialBadge'))}</span><h2 id="order-tutorial-title" tabindex="-1">${esc(orderGuideText('tutorialTitle'))}</h2></div><button type="button" data-action="order-tutorial-close" aria-label="${esc(orderGuideText('tutorialClose'))}">${icon('close')}<span>${esc(t('close'))}</span></button></header><div class="v50-order-tutorial-body">${orderGuide.tutorialMarkup({count,language:uiPreferences.preferences.language})}</div><footer class="v50-order-tutorial-footer"><button type="button" data-action="order-tutorial-close">${esc(orderGuideText('tutorialStart'))}${icon('chevron')}</button></footer>`;
+    dialog.innerHTML=`<header><div><span class="v568-tutorial-badge">${icon('play')}${esc(orderGuideText('tutorialBadge'))}</span><h2 id="order-tutorial-title" tabindex="-1">${esc(window.LightningOrderMirror?(window.LightningOrderMirror.words[uiPreferences.preferences.language]||window.LightningOrderMirror.words.nl).title:orderGuideText('tutorialTitle'))}</h2></div><button type="button" data-action="order-tutorial-close" aria-label="${esc(orderGuideText('tutorialClose'))}">${icon('close')}<span>${esc(t('close'))}</span></button></header><div class="v50-order-tutorial-body">${window.LightningOrderMirror?window.LightningOrderMirror.markup({language:uiPreferences.preferences.language}):orderGuide.tutorialMarkup({count,language:uiPreferences.preferences.language})}</div><footer class="v50-order-tutorial-footer"><button type="button" data-action="order-tutorial-close">${esc(orderGuideText('tutorialStart'))}${icon('chevron')}</button></footer>`;
     try{dialog.showModal();}catch(_){orderTutorialContext=null;orderTutorialReturnFocus=null;dialog.replaceChildren();return false;}
-    orderTutorialDispose=window.LightningLedlineOrderTutorial?.mount(dialog.querySelector('[data-order-tutorial665]'))||null;
+    orderTutorialDispose=window.LightningOrderMirror?.mount(dialog.querySelector('.order-mirror101'))||window.LightningLedlineOrderTutorial?.mount(dialog.querySelector('[data-order-tutorial665]'))||null;
     window.InterfaceMotion?.openDialog?.(dialog,false);
     dialog.querySelector('#order-tutorial-title')?.focus({preventScroll:true});return true;
   }
@@ -936,7 +993,8 @@
     const z=zone(),valid=!!z&&openLineSetup.has(z.id)&&physicalLineCount()>1&&!!main.querySelector('.ledline-setup[data-order-open="true"]');
     if(orderTutorialContext&&(!valid||orderTutorialContext.zoneId!==z.id||orderTutorialContext.standId!==stand()?.id))
       closeOrderTutorial({acknowledge:false,restoreFocus:false});
-    if(valid&&!orderTutorialContext&&!hasSeenOrderTutorial())openOrderTutorial({automatic:true});
+    // No automatic tutorial dialog: the order screen loads straight away and
+    // shows the inline explainer; "Uitleg" opens the full one on request.
   }
   function orderTestGeometry(){
     const z=zone();return z?JSON.stringify([arrangementSignature(z),M.zoneLedlines(model,z.id).map(({id,receiverId,port,pixels,reversed})=>({id,receiverId,port,pixels,reversed}))]):null;
@@ -1477,8 +1535,11 @@
       const active=spiDirectionSessions.get(request.sessionId);
       const action=active?.applied?'update':'start';
       if(action==='start'){
-        await standSession?.settleMaintenance?.();await liveController?.whenIdle({standId:request.standId});
-        await resumeSPIDirectionConnection675(request);
+        const t0=Date.now(),mark=step=>{try{window.__c98log?.('SIDES_START '+step+' +'+(Date.now()-t0)+'ms');}catch(_){}};
+        await standSession?.settleMaintenance?.();mark('maintenance');
+        // C98: a background sync may hold the radio; never let the sides screen wait on it for long.
+        await Promise.race([liveController?.whenIdle({standId:request.standId}),new Promise(resolve=>setTimeout(resolve,800))]);mark('live-idle');
+        await resumeSPIDirectionConnection675(request);mark('resumed');
       }
       requireStandPresentationConnection();
       if(spiDirectionRetired.has(request.sessionId))throw Error('SPI_DIRECTION_CLOSED');
@@ -1578,6 +1639,40 @@
       }
     }
   });
+  // C98: a port change whose final receiver answer was lost stays "pending"
+  // and blocks light to that receiver until the customer saves it again.
+  // Re-send the same intended outputs silently (on start and when light is
+  // refused for it); the native journal verifies the result by readback.
+  let pendingResumeC98=false,pendingResumeAtC98=0;
+  async function resumePendingOutputsC98(){
+    if(Date.now()-pendingResumeAtC98<5000)return;pendingResumeAtC98=Date.now();
+    if(pendingResumeC98||!nativeContext||typeof runtime?.services?.outputConfigurationStatus!=='function'||typeof runtime?.services?.configureOutputs!=='function')return;
+    pendingResumeC98=true;
+    try{
+      for(const receiver of model.receivers.filter(r=>r.type==='SPI'&&r.lifecycle==='added')){
+        let pending=null;try{pending=await runtime.services.outputConfigurationStatus({standId:receiver.standId,receiverId:receiver.id});}catch(_){continue;}
+        if(pending?.status!=='pending'||!Array.isArray(pending.outputs))continue;
+        window.__c98log?.('OUTPUT_PENDING_RESUME '+receiver.id);
+        try{const view=await runtime.services.configureOutputs({standId:receiver.standId,receiverId:receiver.id,outputs:pending.outputs});
+          if(view?.model){model=keepLocalPreviewStates(view.model);render();}window.__c98log?.('OUTPUT_PENDING_RESUME ok');}
+        catch(error){window.__c98log?.('OUTPUT_PENDING_RESUME fail '+(error?.code||''));}
+      }
+    }finally{pendingResumeC98=false;}
+  }
+  setTimeout(()=>void resumePendingOutputsC98(),4000);
+  // C98: open the MAIN session while the user is on the Receivers screen, so
+  // "Pixels aanpassen" does not start with a 1 s handshake after the tap.
+  let prewarmAtC98=0;
+  function prewarmSetupC98(retry=0){
+    const s=stand();if(!s||!nativeContext||typeof runtime?.services?.prewarmSetup!=='function'||(!retry&&Date.now()-prewarmAtC98<20000))return;
+    prewarmAtC98=Date.now();
+    // The radio may be busy for a moment (light being applied): try again shortly.
+    Promise.resolve().then(()=>runtime.services.prewarmSetup({standId:s.id})).then(result=>{
+      if(result?.status==='skipped'&&retry<2&&route.screen!=='stand')setTimeout(()=>prewarmSetupC98(retry+1),2500);
+    }).catch(()=>{});
+  }
+  document.addEventListener('toggle',event=>{if(event.target?.matches?.('details[data-receiver-detail],details[data-receiver-connections]')&&event.target.open)prewarmSetupC98();},true);
+  document.addEventListener('click',event=>{if(event.target?.closest?.('[data-action=nav][data-id=receivers]'))setTimeout(prewarmSetupC98,400);},true);
   async function openSPIZoneDirections({zoneId,newReceiverId,handoff=null}={}){
     if(spiDirectionOpening744||spiZoneDirections.isOpen()||pixelSetup.isOpen()||document.hidden){
       if(handoff?.receipt)try{await stopSPIDirectionTransport744({standId:handoff.receipt.standId,zoneId:handoff.receipt.zoneId,sessionId:handoff.receipt.sessionId},true);}catch(_){}
@@ -1817,7 +1912,8 @@
     wall:'M5 4v16M12 4v16M19 4v16',
     unassigned:'M12 22s7-4.35 7-12a7 7 0 1 0-14 0c0 7.65 7 12 7 12ZM9 10h6',
     light:'M3 9h18v6H3zM6 11v2M10 11v2M14 11v2M18 11v2M1 12h2M21 12h2',
-    receiver:'M5 9h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2ZM17 9V5.5M14.3 4.1a3.6 3.6 0 0 1 5.4 0M7 13h.01M10 13h4M7 17v3M10.3 17v3M13.7 17v3M17 17v3',
+    receiver:'M5.5 11h13a2.5 2.5 0 0 1 2.5 2.5v3a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16.5v-3A2.5 2.5 0 0 1 5.5 11ZM7 15h.01M11 15h1.5M15 15h2M9.5 7.6a3.6 3.6 0 0 1 5 0M7.2 5.2a6.9 6.9 0 0 1 9.6 0',
+    swap:'M16 4l3 3-3 3M19 7H8M8 20l-3-3 3-3M5 17h11',
     back:'m14 6-6 6 6 6M8 12h13', chevron:'m9 5 7 7-7 7', close:'m6 6 12 12M6 18 18 6',
     expand:'M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5',
     edit:'m16 3 5 5-12 12-6 1 1-6ZM14 5l5 5',
@@ -2307,7 +2403,10 @@
       return `<div class="page onboarding-welcome"><header class="page-heading"><div><div class="eyebrow">${esc(t('v50SetupPending'))}</div><h1>${esc(pending.stand.name)}</h1></div></header><section class="stand-setup-overview" aria-label="${esc(t('setupStand'))}">${[t('v50Name'),t('zones'),t('receivers')].map((label,i)=>`<div class="stand-setup-row ${i+1===step?'active':''}"><i>${i+1<step?'✓':i+1}</i><span><small>${esc(t('v50Step',{number:i+1}))}</small><b>${esc(label)}</b></span><small>${esc(t(i+1<step?'v50Ready':i+1===step?'v50Next':'v50Later'))}</small></div>`).join('')}</section><button class="button full onboarding-next-action" data-setup-resume data-action="receiver-add">${esc(t('v50ResumeSetup'))}</button>${languagePicker}</div>`;
     }
     const s = stand(), added = standReceivers();
-    return `<div class="page stand-page"><header class="page-heading overview-heading"><div><div class="eyebrow">${localStandConcept()?t("LOKAAL CONCEPT"):t("JOUW STAND")}</div><h1>${esc(standLabel())}</h1></div><button class="icon-button circle" data-action="help" aria-label="${esc(t("Uitleg over stand en zones"))}">${icon('info')}</button></header>${localStandConcept()?`<p class="local-stand-notice" role="status">${esc(t("Alleen op dit toestel. Er is nog geen receiver verbonden."))} `+(temporarySingleUser?t("Je voegt je eerste receiver toe zonder PIN."):t("Bij je eerste receiver kies je de wifi-PIN."))+'</p>':''}${advancedInterface()?`<div class="stand-summary overview-summary"><div>${icon('zones')}<span><b>${s.zones.length}</b><small>${esc(t("zones"))}</small></span></div><div>${icon('light')}<span><b>${physicalLineCount(added)}</b><small>${esc(t("Ledlines"))}</small></span></div></div>`:''}${pairFirstResumeMarkup()}<section class="zone-section"><div class="section-heading"><h2>${esc(t('zones'))}</h2><button class="text-button" data-action="zone-new">＋ ${esc(t("Nieuwe zone"))}</button></div><div class="zone-grid">${s.zones.map(standZoneCardMarkup659).join('')}</div></section>${standScenesMarkup(false)}</div>`;
+    // Stand card: name plus what the stand contains; the old Zones/Ledlines
+    // tiles repeated the zone list below and are folded into this line.
+    const heroMeta=[[icon('zones'),zoneCount(s.zones.length)],[icon('light'),ledlineCount(physicalLineCount(added))],[icon('receiver'),receiverCount(added.length)]].map(([glyph,text])=>`<span>${glyph}${esc(text)}</span>`).join('');
+    return `<div class="page stand-page"><header class="page-heading overview-heading stand-hero100"><div class="stand-hero-copy"><div class="eyebrow">${localStandConcept()?t("LOKAAL CONCEPT"):t("JOUW STAND")}</div><h1>${esc(standLabel())}</h1><p class="stand-hero-meta">${heroMeta}</p></div><button class="icon-button circle" data-action="help" aria-label="${esc(t("Uitleg over stand en zones"))}">${icon('info')}</button></header>${localStandConcept()?`<p class="local-stand-notice" role="status">${esc(t("Alleen op dit toestel. Er is nog geen receiver verbonden."))} `+(temporarySingleUser?t("Je voegt je eerste receiver toe zonder PIN."):t("Bij je eerste receiver kies je de wifi-PIN."))+'</p>':''}${pairFirstResumeMarkup()}<section class="zone-section"><div class="section-heading"><h2>${esc(t('zones'))}</h2><button class="text-button" data-action="zone-new">＋ ${esc(t("Nieuwe zone"))}</button></div><div class="zone-grid">${s.zones.map(standZoneCardMarkup659).join('')}</div></section>${standScenesMarkup(false)}</div>`;
   }
   function powerControl(draft=null) {
     const states = draft?[draft.on]:powerTargets().map(r => r.state.on !== false && r.state.power !== false);
@@ -3151,17 +3250,19 @@
     return t(({catalogue:'animationAllHint',presets:'animationOwnHint'})[key]||'v567CategoryHint:'+key);
   }
   function animationCategoryArtwork(key){
-    // Decorative, static light sketches, never effect previews or light commands.
-    const strips='<path d="M12 17h48M12 28h48M12 39h48" stroke="#344b50" stroke-width="9" stroke-linecap="round"/><path d="M12 16h48" stroke="#f6aa60" stroke-width="6" stroke-linecap="round"/><path d="M12 27h48" stroke="#c886e5" stroke-width="6" stroke-linecap="round"/><path d="M12 38h48" stroke="#68c7db" stroke-width="6" stroke-linecap="round"/><path d="M14 14.5h44M14 25.5h44M14 36.5h44" stroke="#fff" stroke-opacity=".24" stroke-width="1" stroke-linecap="round"/>';
+    // Decorative ledline sketches that show what a group does (one line that
+    // changes colour, pixels that run, light moving from line to line ...).
+    // Motion lives in c102-tidy.css and stops with reduced motion.
+    const track=(y,w=9)=>`<path d="M11 ${y}h50" stroke="#2b3c41" stroke-width="${w}" stroke-linecap="round"/>`;
     const drawings={
-      catalogue:'<path d="M12 26h18M42 26h18M12 48h18M42 48h18" stroke="#0e2429" stroke-width="5" stroke-linecap="round"/><rect x="10" y="9" width="22" height="16" rx="4" fill="#f6aa60"/><rect x="40" y="9" width="22" height="16" rx="4" fill="#c886e5"/><rect x="10" y="31" width="22" height="16" rx="4" fill="#68c7db"/><rect x="40" y="31" width="22" height="16" rx="4" fill="#97cc9a"/><path d="M14 11h14M44 11h14M14 33h14M44 33h14" stroke="#fff" stroke-opacity=".24" stroke-width="1.5" stroke-linecap="round"/>',
-      whole:strips,
-      pixels:'<path d="M11 16h50M11 28h50M11 40h50" stroke="#344b50" stroke-width="7" stroke-linecap="round"/><path d="M13 16h13m5 12h13m5 12h10" stroke="#6edcce" stroke-width="6" stroke-linecap="round"/><path d="M31 16h3m15 12h3m-26 12h3" stroke="#b89ee9" stroke-width="6" stroke-linecap="round"/><path d="M13 16h2m16 12h2m16 12h2" stroke="#d2f8ee" stroke-width="6" stroke-linecap="round"/>',
-      tunnel:'<ellipse cx="36" cy="49" rx="27" ry="2.5" fill="#0b1d22" opacity=".65"/><path d="m10 47 21-13h14l17 13Z" fill="#28474c"/><path d="m10 9 21 15m31-15L45 24M10 47l21-13m31 13L45 34" fill="none" stroke="#426167" stroke-width="1.3"/><rect x="31" y="24" width="14" height="10" rx="1" fill="#102b30" stroke="#4c9295" stroke-width="1.5"/><rect x="25" y="20" width="25" height="18" rx="1.5" fill="none" stroke="#61acae" stroke-width="2"/><rect x="18" y="15" width="38" height="27" rx="2" fill="none" stroke="#74c8c7" stroke-width="2.5"/><rect x="10" y="9" width="52" height="38" rx="2.5" fill="none" stroke="#6edcce" stroke-opacity=".13" stroke-width="7"/><rect x="10" y="9" width="52" height="38" rx="2.5" fill="none" stroke="#91e9dc" stroke-width="3.5"/><path d="M13 10h46" stroke="#d1fff0" stroke-opacity=".65" stroke-width="1" stroke-linecap="round"/>',
-      brand:'<path d="M12 39V26m11 20V18m11 24V23m11 15V29" stroke="#0e2429" stroke-width="7" stroke-linecap="round"/><path d="M12 37V24m11 20V16m11 24V21m11 15V27" stroke="#e9ad7d" stroke-width="6" stroke-linecap="round"/><path d="m57 9 2.3 6.7L66 18l-6.7 2.3L57 27l-2.3-6.7L48 18l6.7-2.3Z" fill="#b59ce8"/><path d="m57 12 1.5 4.5L63 18l-4.5 1.5L57 24Z" fill="#e0d6f5" opacity=".45"/>',
-      presets:'<rect x="15" y="9" width="34" height="31" rx="5" fill="#40595e"/><rect x="23" y="16" width="35" height="31" rx="5" fill="#0e2429"/><rect x="23" y="14" width="35" height="31" rx="5" fill="#99bdc8"/><path d="M28 16h25" stroke="#d6edf0" stroke-opacity=".65" stroke-width="1.5" stroke-linecap="round"/><path d="M31 24h18m-18 7h13m-13 7h18" stroke="#18353c" stroke-width="3" stroke-linecap="round"/>'
+      catalogue:[['#f6aa60',8,8],['#c886e5',38,8],['#68c7db',8,30],['#97cc9a',38,30]].map(([c,x,y],n)=>`<rect x="${x}" y="${y}" width="26" height="18" rx="5" fill="#22323a"/><path class="c102a-pulse" style="--n:${n}" d="M${x+6} ${y+9}h14" stroke="${c}" stroke-width="5" stroke-linecap="round"/>`).join(''),
+      whole:`${track(28,12)}<path class="c102a-hue c102a-glow" d="M13 28h46" stroke-width="16" stroke-linecap="round"/><path class="c102a-hue" d="M13 28h46" stroke-width="7" stroke-linecap="round"/><path d="M16 26h40" stroke="#fff" stroke-opacity=".3" stroke-width="1.2" stroke-linecap="round"/>`,
+      pixels:`${track(28,10)}${Array.from({length:9},(_,n)=>`<circle cx="${13+n*5.75}" cy="28" r="2.1" fill="#3f5a60"/>`).join('')}<g class="c102a-run">${['#d2f8ee','#6edcce','#2f8f88'].map((c,n)=>`<circle cx="${24-n*5.75}" cy="28" r="2.6" fill="${c}"/>`).join('')}</g>`,
+      tunnel:['M10 49V27a26 19 0 0 1 52 0v22','M20 49V31a16 12 0 0 1 32 0v18','M28 49V34a8 6 0 0 1 16 0v15'].map((d,n)=>`<path d="${d}" fill="none" stroke="#33494e" stroke-width="4" stroke-linecap="round"/><path class="c102a-step" style="--n:${n}" d="${d}" fill="none" stroke="#6edcce" stroke-width="4" stroke-linecap="round"/>`).join('')+'<path d="M6 50h60" stroke="#2b3c41" stroke-width="2" stroke-linecap="round"/>',
+      brand:`${track(32,11)}<path d="M13 32h46" stroke="#e2574c" stroke-width="6" stroke-linecap="round"/><path class="c102a-stripes" d="M13 32h46" stroke="#f4efe9" stroke-width="6" stroke-dasharray="6 6"/><path d="m55 6 2 5.5 5.5 2-5.5 2-2 5.5-2-5.5-5.5-2 5.5-2Z" fill="#f5c76b"/>`,
+      presets:`${track(32,11)}<path d="M13 32h46" stroke="#b59ce8" stroke-width="6" stroke-linecap="round"/><path d="M44 7h15v23l-7.5-5.5L44 30Z" fill="#f5c76b" stroke="#22323a" stroke-width="2" stroke-linejoin="round"/>`
     };
-    return `<svg viewBox="0 0 72 56" focusable="false" aria-hidden="true">${drawings[key]||strips}</svg>`;
+    return `<svg viewBox="0 0 72 56" focusable="false" aria-hidden="true" class="c102-art" data-art="${esc(key)}">${drawings[key]||drawings.whole}</svg>`;
   }
   function animationCategoryTabs(items,counts,tab){
     const keys=['catalogue',...Library.sections(items).map(section=>section.key),'presets'];
@@ -3936,7 +4037,7 @@
         <section class="order-assignment-intro652 order-visual-intro655" data-order-intro-ui="730">
           <div class="order-visual-heading655"><h3 id="ledline-setup-heading">${esc(orderText652('orderDirectTitle668'))}</h3>${count>1?`<button type="button" class="order-visual-help655" data-action="order-tutorial-open" aria-label="${esc(orderGuideText('tutorialView'))}">${icon('play')}<span>${esc(orderText652('orderHelp655'))}</span></button>`:''}</div>
           ${singleLine?`<p class="order-visual-hint655">${esc(orderText652('orderDirectSingle668'))}</p>`:''}
-          ${count>1?`<div class="order-copy-example730" role="img" aria-label="${esc(orderText652('orderVisualExample730',{position:Math.min(3,count)}))}"><div class="order-copy-column730" aria-hidden="true"><small>${eye}${esc(orderText652('orderDirectReal668'))}</small><div class="order-copy-real730">${(count===2?['green','blue']:['red','green','blue']).map((colour,index)=>`<span class="order-copy-row730" data-example-colour730="${colour}"><b>${index+1}</b><i></i></span>`).join('')}</div></div><div class="order-copy-arrows730" aria-hidden="true">${Array.from({length:Math.min(3,count)},()=>'<span>→</span>').join('')}</div><div class="order-copy-column730" aria-hidden="true"><small>${phone}${esc(orderText652('orderDirectApp668'))}</small><div class="order-copy-app730">${(count===2?['green','blue']:['red','green','blue']).map((colour,index)=>`<span class="order-copy-row730" data-example-colour730="${colour}"><b>${index+1}</b><i></i>${icon('grip')}</span>`).join('')}</div></div><span class="order-copy-badge730" aria-hidden="true">${esc(orderText652('orderVisualBadge730'))}</span></div>`:''}
+          ${count>1&&window.LightningOrderMirror?window.LightningOrderMirror.markup({language:uiPreferences.preferences.language,compact:true}):count>1?`<div class="order-copy-example730" role="img" aria-label="${esc(orderText652('orderVisualExample730',{position:Math.min(3,count)}))}"><div class="order-copy-column730" aria-hidden="true"><small>${eye}${esc(orderText652('orderDirectReal668'))}</small><div class="order-copy-real730">${(count===2?['green','blue']:['red','green','blue']).map((colour,index)=>`<span class="order-copy-row730" data-example-colour730="${colour}"><b>${index+1}</b><i></i></span>`).join('')}</div></div><div class="order-copy-arrows730" aria-hidden="true">${Array.from({length:Math.min(3,count)},()=>'<span>→</span>').join('')}</div><div class="order-copy-column730" aria-hidden="true"><small>${phone}${esc(orderText652('orderDirectApp668'))}</small><div class="order-copy-app730">${(count===2?['green','blue']:['red','green','blue']).map((colour,index)=>`<span class="order-copy-row730" data-example-colour730="${colour}"><b>${index+1}</b><i></i>${icon('grip')}</span>`).join('')}</div></div><span class="order-copy-badge730" aria-hidden="true">${esc(orderText652('orderVisualBadge730'))}</span></div>`:''}
           <div class="order-focus-guide664"><span class="order-assignment-direction652"><b>${esc(orderGuideText(direction))}</b></span><span class="sr-only">${esc(orderText652('orderFocusSwap664'))}</span></div>
           <p class="order-focus-status664" data-order-focus-status role="status" aria-live="polite">${esc(orderFocusCopy664())}</p>
         </section>
@@ -4002,7 +4103,7 @@
     const z=M.getZone(model,r.zoneId),rid=esc(r.id);
     const wholeBlink=identifying.get(r.id)?.scope==='all';
     const ordered=route.screen==='layout'&&Number.isInteger(orderIndex);
-    return `<details class="receiver-overview-card" data-receiver-detail="${rid}" ${ordered?`data-order-receiver="${rid}"`:''} ${expandedReceivers.has(r.id)?'open':''}><summary>${ordered?`<button class="order-handle" aria-label="${esc(t('v50DragReceiver',{name:r.name}))}" title="${esc(t('v50DragToMove'))}">⠿</button><span class="order-number">${orderIndex+1}</span>`:productVisual(r,true)}<div class="receiver-heading-copy"><b>${esc(r.name)}</b><small class="receiver-heading-meta"><span class="receiver-family-badge">${r.type}</span> · ${esc(z?.name||t('v50NoZone'))}</small>${r.type==='SPI'?`<small class="receiver-geometry-summary">${ordered?'':`${esc(t(r.outputs.filter(o=>o.enabled).length===1?'v50OutputsOne':'v50OutputsMany',{count:r.outputs.filter(o=>o.enabled).length}))} · `}${esc(t(r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)===1?'v50PixelsOne':'v50PixelsMany',{count:r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)}))}</small>`:ordered?'':`<small class="receiver-geometry-summary">${esc(t('v50RgbwGeometry'))}</small>`}</div><button type="button" class="receiver-blink ${ordered?'order-identify':''}" data-action="visual-identify" data-receiver="${rid}" aria-pressed="${wholeBlink}" aria-label="${esc(t(r.type==='SPI'?(wholeBlink?'v50StopAllOutputs':'v50BlinkAllOutputs'):(wholeBlink?'v50StopReceiver':'v50BlinkReceiver'),{name:r.name}))}">${icon('sun')}<span>${esc(t(wholeBlink?'lineSetupBlinkStop':'lineSetupBlink'))}</span></button>${icon('chevron')}</summary><div class="receiver-details">${receiverDetailMarkup(r)}</div></details>`;
+    return `<details class="receiver-overview-card" data-receiver-detail="${rid}" ${ordered?`data-order-receiver="${rid}"`:''} ${expandedReceivers.has(r.id)?'open':''}><summary>${ordered?`<button class="order-handle" aria-label="${esc(t('v50DragReceiver',{name:r.name}))}" title="${esc(t('v50DragToMove'))}">⠿</button><span class="order-number">${orderIndex+1}</span>`:productVisual(r,true)}<div class="receiver-heading-copy"><b>${esc(r.name)}</b><small class="receiver-heading-meta"><span class="receiver-family-badge">${r.type}</span>${ordered?` · ${esc(z?.name||t('v50NoZone'))}`:`<button type="button" class="receiver-zone-chip100" data-action="receiver-move" data-id="${rid}" data-zoned="${!!z}" aria-label="${esc(t("{receiver} · {zone} · zone wijzigen",{receiver:r.name,zone:z?.name||t("Niet in een zone")}))}">${icon('zones')}<span>${esc(z?.name||t("Niet in een zone"))}</span>${icon('swap')}</button>`}</small>${r.type==='SPI'?`<small class="receiver-geometry-summary">${ordered?'':`${esc(t(r.outputs.filter(o=>o.enabled).length===1?'v50OutputsOne':'v50OutputsMany',{count:r.outputs.filter(o=>o.enabled).length}))} · `}${esc(t(r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)===1?'v50PixelsOne':'v50PixelsMany',{count:r.outputs.filter(o=>o.enabled).reduce((n,o)=>n+o.pixels,0)}))}</small>`:ordered?'':`<small class="receiver-geometry-summary">${esc(t('v50RgbwGeometry'))}</small>`}</div><button type="button" class="receiver-blink ${ordered?'order-identify':''}" data-action="visual-identify" data-receiver="${rid}" aria-pressed="${wholeBlink}" aria-label="${esc(t(r.type==='SPI'?(wholeBlink?'v50StopAllOutputs':'v50BlinkAllOutputs'):(wholeBlink?'v50StopReceiver':'v50BlinkReceiver'),{name:r.name}))}">${icon('sun')}<span>${esc(t(wholeBlink?'lineSetupBlinkStop':'lineSetupBlink'))}</span></button>${icon('chevron')}</summary><div class="receiver-details">${receiverDetailMarkup(r)}</div></details>`;
   }
   function receiverDetailMarkup(r) {
     const rid=esc(r.id),port=selectedVisualPort(r);
@@ -4015,7 +4116,11 @@
   }
   function renderReceivers() {
     const all=standReceivers(),unassigned=all.filter(r=>!r.zoneId);
-    const shown=receiverFilter==='unassigned'?unassigned:all,cards=shown.map(r=>receiverCard(r)).join('');
+    const shown=receiverFilter==='unassigned'?unassigned:all;
+    // One group per zone (receivers without a zone first) so the zone of
+    // every receiver is visible at a glance; the chip on a card moves it.
+    const group=(key,title,list)=>list.length?`<section class="receiver-zone-group100" data-zone-group="${esc(key)}" aria-label="${esc(title)}"><header>${icon(key===''?'unassigned':'zones')}<b>${esc(title)}</b><small>${esc(receiverCount(list.length))}</small></header>${list.map(r=>receiverCard(r)).join('')}</section>`:'';
+    const cards=receiverFilter==='unassigned'?shown.map(r=>receiverCard(r)).join(''):group('',t("Niet in een zone"),unassigned)+(stand()?.zones||[]).map(z=>group(z.id,z.name,shown.filter(r=>r.zoneId===z.id))).join('')+group('?',t("Overige receivers"),shown.filter(r=>r.zoneId&&!(stand()?.zones||[]).some(z=>z.id===r.zoneId)));
     const canUpdate=nativeContext&&runtime?.native===true&&typeof runtime.services?.otaPlan==='function'&&all.length>0;
     const updateEntry=canUpdate?`<button class="button secondary receiver-update-entry" data-action="receiver-update-all" aria-label="${esc(t('softwareUpdateButton'))}">${icon('update')}<span>${esc(t('softwareUpdates'))}</span></button>`:'';
     return `<div class="page receivers-page ui606-pages ui606-receivers-page"><header class="page-heading overview-heading ui606-page-heading"><div><div class="eyebrow">${esc(standLabel())}</div><div class="ui606-title-row"><h1>${esc(t('receivers'))}</h1><span class="ui606-page-count" aria-label="${esc(receiverCount(all.length))}">${all.length}</span></div><p>${esc(t('v50ReceiverChoiceHint'))}</p></div></header><div class="receiver-toolbar${canUpdate?' has-updates':''}"><button class="button receiver-primary-action" data-action="receiver-add"><span aria-hidden="true">＋</span><span>${esc(t('addReceiver'))}</span></button>${updateEntry}</div>${all.length?`<div class="receiver-overview-summary">${['RGBW','SPI'].filter(type=>all.some(receiver=>receiver.type===type)).map(type=>`<span><b>${all.filter(receiver=>receiver.type===type).length}</b> ${type}</span>`).join('')}${unassigned.length?`<span class="receiver-unassigned-summary">${esc(t('v50UnassignedCount',{count:unassigned.length}))}</span>`:''}</div>`:''}<div class="receiver-filters" role="group" aria-label="${esc(t('v50FilterReceivers'))}">${[['all',t('v50AllReceivers'),all.length],['unassigned',t('v50OutsideZone'),unassigned.length]].map(([id,label,count])=>`<button type="button" data-action="receiver-filter" data-id="${id}" aria-pressed="${receiverFilter===id}"><span class="ui606-filter-label">${esc(label)}</span><span class="ui606-filter-count">${count}</span></button>`).join('')}</div><div class="receiver-list">${cards||`<section class="card empty connection-empty receiver-empty-card"><span class="menu-icon" aria-hidden="true">${icon('receiver')}</span><h2>${esc(t(receiverFilter==='unassigned'&&all.length?'v50EverythingAssigned':'v50NoReceivers'))}</h2><p>${esc(t(receiverFilter==='unassigned'&&all.length?'v50AllReceiversAssigned':stand()?'v50AddReceiverAbove':'v50AddReceiverFirst'))}</p>${receiverFilter==='unassigned'?`<button class="button secondary" data-action="receiver-filter" data-id="all">${esc(t('v50ViewAllReceivers'))}</button>`:''}</section>`}</div></div>`;
@@ -4029,9 +4134,11 @@
     const ready=stand().zones.some(z=>M.zoneReceivers(model,z.id).length);
     const cards=list.map(scene=>{
       const count=scene.zones.reduce((n,z)=>n+z.receivers.length,0),names=scene.zones.slice(0,2).map(z=>z.name).join(' · '),extra=scene.zones.length-2;
-      return `<article class="scene-card-row ui606-scene-card"><button type="button" class="scene-card" data-action="scene-open" data-id="${esc(scene.id)}">${scenePreview(scene)}<span class="scene-card-copy"><b>${esc(scene.name)}</b><small class="scene-card-count">${zoneCount(scene.zones.length)} · ${receiverCount(count)}</small><small class="scene-card-names">${esc(names)}${extra>0?' …':''}</small><span class="scene-open-label">${esc(t('v50Details'))} ${icon('chevron')}</span></span></button><div class="ui606-scene-card-action">${sceneActivateButtonMarkup(scene)}</div></article>`;
+      // Swipe left to reveal Details and Delete (c102-swipe.js); both are
+      // ordinary buttons, so keyboard and screen readers reach them as well.
+      return `<div class="scene-swipe102" data-scene-swipe102><div class="scene-swipe-actions102"><button type="button" class="scene-swipe-open102" data-action="scene-open" data-id="${esc(scene.id)}" tabindex="-1">${icon('edit')}<span>${esc(t('v50Details'))}</span></button><button type="button" class="scene-swipe-delete102" data-action="scene-delete" data-id="${esc(scene.id)}">${icon('trash')}<span>${esc(t('delete'))}</span></button></div><article class="scene-card-row ui606-scene-card"><button type="button" class="scene-card" data-action="scene-open" data-id="${esc(scene.id)}">${scenePreview(scene)}<span class="scene-card-copy"><b>${esc(scene.name)}</b><small class="scene-card-count">${zoneCount(scene.zones.length)} · ${receiverCount(count)}</small><small class="scene-card-names">${esc(names)}${extra>0?' …':''}</small><span class="scene-open-label">${esc(t('v50Details'))} ${icon('chevron')}</span></span></button><div class="ui606-scene-card-action">${sceneActivateButtonMarkup(scene)}</div></article></div>`;
     }).join('');
-    return `<div class="page scenes-page ui606-pages" data-scene-ui="640"><header class="page-heading ui606-page-heading"><div><div class="eyebrow">${esc(standLabel())}</div><div class="ui606-title-row"><h1>${esc(t('scenes'))}</h1><span class="ui606-page-count" aria-label="${esc(t(list.length===1?'v50ScenesOne':'v50ScenesMany',{count:list.length}))}">${list.length}</span></div><p>${esc(t("Bewaar je licht en haal je favoriete sfeer met één tik terug."))}</p></div></header><button class="button ui606-main-action" data-action="scene-new" ${ready?'':'disabled'}><span aria-hidden="true">＋</span><span>${esc(t('newScene'))}</span></button>${savedScenes.error?`<p class="card ui606-page-error" role="alert">${esc(savedScenes.error.message)}</p>`:''}<div class="section-heading scene-list-heading"><h2>${esc(t('v50YourScenes'))}</h2><small>${esc(t(list.length===1?'v50ScenesOne':'v50ScenesMany',{count:list.length}))}</small></div><div class="scene-list">${cards||`<section class="card empty ui606-empty"><span class="menu-icon" aria-hidden="true">${icon('scenes')}</span><h2>${esc(t('v50SaveFirstScene'))}</h2><p>${esc(t(ready?'v50SaveFirstSceneHint':'v50SceneAddLightsHint'))}</p></section>`}</div>${list.length?`<details class="scene-workflow-help"><summary>${icon('info')}<span>${esc(t('v50HowItWorks'))}</span>${icon('chevron')}</summary>${sceneWorkflow()}</details>`:sceneWorkflow()}</div>`;
+    return `<div class="page scenes-page ui606-pages" data-scene-ui="640"><header class="page-heading ui606-page-heading"><div><div class="eyebrow">${esc(standLabel())}</div><div class="ui606-title-row"><h1>${esc(t('scenes'))}</h1><span class="ui606-page-count" aria-label="${esc(t(list.length===1?'v50ScenesOne':'v50ScenesMany',{count:list.length}))}">${list.length}</span></div><p>${esc(t("Bewaar je licht en haal je favoriete sfeer met één tik terug."))}</p></div></header><button class="button ui606-main-action" data-action="scene-new" ${ready?'':'disabled'}><span aria-hidden="true">＋</span><span>${esc(t('newScene'))}</span></button>${savedScenes.error?`<p class="card ui606-page-error" role="alert">${esc(savedScenes.error.message)}</p>`:''}<div class="section-heading scene-list-heading"><h2>${esc(t('v50YourScenes'))}</h2><small>${esc(t(list.length===1?'v50ScenesOne':'v50ScenesMany',{count:list.length}))}</small></div>${list.length?`<p class="scene-swipe-hint102">${icon('back')}<span>${esc(t("Veeg een scène naar links om te verwijderen"))}</span></p>`:''}<div class="scene-list">${cards||`<section class="card empty ui606-empty"><span class="menu-icon" aria-hidden="true">${icon('scenes')}</span><h2>${esc(t('v50SaveFirstScene'))}</h2><p>${esc(t(ready?'v50SaveFirstSceneHint':'v50SceneAddLightsHint'))}</p></section>`}</div>${list.length?`<details class="scene-workflow-help"><summary>${icon('info')}<span>${esc(t('v50HowItWorks'))}</span>${icon('chevron')}</summary>${sceneWorkflow()}</details>`:sceneWorkflow()}</div>`;
   }
   function receiverCount(count) { return t(count===1?'v50ReceiversOne':'v50ReceiversMany',{count}); }
   function ledlineCount(count) { return count===1?t('scopeCountOne'):t('scopeCountMany',{count}); }
@@ -4060,7 +4167,7 @@
     return addPreview(saved.receivers,saved.layout,`scene-preview ${css}`,{...savedScenePreviewOptions684(saved),label:t('v50SavedLightPreview',{name:saved.name,type:saved.type})});
   }
   function savedScenePreviewOptions684(saved){
-    return saved.presentation?{lineOrder:[...saved.lineOrder],presentation:saved.layout==='continuous'?'combined':'receivers',
+    return saved.presentation?{...(saved.gradientDomains?{gradientDomains:saved.gradientDomains}:{}),lineOrder:[...saved.lineOrder],presentation:saved.layout==='continuous'?'combined':'receivers',
       ...(['tunnel','wall'].includes(saved.presentation)?{spatialShape:saved.presentation}:{})}:{};
   }
   function scenePreview(scene) {
@@ -4974,6 +5081,10 @@
       }catch(error){
         window.__c98log?.('STAND_REFRESH fail '+(error?.code||''));
         if(['V30_CHECKPOINT_CONFLICT','NATIVE_STORAGE_CONFLICT','PIN_RECOVERY_WIFI_UNSUPPORTED','STAND_UNAVAILABLE'].includes(error?.code))standRefreshOffC98=true;
+        // C98: a transient failure (the app went to the background, the MAIN
+        // was busy) is retried: the next shared-sync pass reads the document
+        // again and asks for this reload again (at most every 15 s).
+        else{try{for(const id of sharedStands97())sharedSync97?.forget(id);}catch(_){}}
       }
       finally{standRefreshC98=null;}
     })();
@@ -5483,6 +5594,8 @@
       inlineOrderDrag.cancel();
     }
     if(dragOrder)finishOrder({pointerId:dragOrder.pointerId},true);
+    if(deferGradientRenderC98(top))return;
+    gradientRenderDeferredC98=false;
     if(gradientColourDraft){gradientColourDraft=null;closeEffectDialog();}
     unmountGradient?.();unmountGradient=null;
     // A real navigation/rebuild ends only this explicit STATIC gesture. A
@@ -5608,6 +5721,8 @@
       if(erase)erase.querySelector('p').textContent=t("Alleen deze tijdelijke demopagina wordt leeg gemaakt. Echte receivers en gegevens op de gewone site blijven onaangeroerd.");
     }
     if(route.screen==='settings')organizeSettings();
+    {const wasSetup=window.__c98SetupScreen===true;window.__c98SetupScreen=route.screen==='receivers';
+     if(wasSetup&&!window.__c98SetupScreen)try{window.dispatchEvent(new Event('c98-setup-screen-left'));}catch(_){}}
     if(route.screen==='receivers')main.querySelector('.receiver-toolbar')?.insertAdjacentHTML('afterend',pairFirstResumeMarkup());
     main.querySelectorAll('[data-receiver-detail], .ledline-row-settings:not([hidden])').forEach(card=>{
       const inline=card.matches('.ledline-row-settings'),receiverId=inline?card.closest('[data-draft-receiver]')?.dataset.draftReceiver:card.dataset.receiverDetail;
@@ -5664,6 +5779,8 @@
     if(main.querySelector('[data-colour-picker] canvas.wheel')){paintWheel();syncColour();}
     const gradientHost=main.querySelector('[data-gradient-workspace]');
     if(gradientHost)unmountGradient=demoGradientEditor()?.mount(gradientHost)||null;
+    else cancelGradientPrewarmC98();
+    gradientRenderedModelC98=gradientHost?JSON.stringify(model):null;
     syncPresetAvailability();
     for(const id of identifyPending.keys())syncIdentifyControls(id);
     syncLiveStatus();
@@ -5994,6 +6111,7 @@
     if(!nativeContext||!nativeLoaded||simpleStandMode||model.demo||typeof runtime?.services?.sharedDocument!=='function')return [];
     return model.stands.filter(s=>model.receivers.some(r=>r.standId===s.id&&r.role==='main'&&r.lifecycle==='added')).map(s=>s.id);
   }
+  let sharedLightBytesC98=-1;
   function sharedSnapshot97(standId){
     if([savedPresets,savedScenes,savedColours].some(item=>item.error))return null;
     // Own public projection: layout fields only. Light state and connection
@@ -6004,12 +6122,55 @@
     const standModel={...pick(source,['id','name']),zones:source.zones.map(z=>pick(z,['id','name','type','layout','receiverIds','lineOrder']))};
     // Outputs (ports, pixels) live on the receivers themselves, not here.
     const receivers=members.map(r=>pick(r,['id','rid','deviceFingerprint','name','type','standId','zoneId','role']));
-    return {model:{stand:standModel,receivers},libraries:{scenes:savedScenes.scenes.filter(s=>s.standId===standId),presets:savedPresets.presets,colors:savedColours.colors}};
+    // C98: current light per receiver (shared so other phones show it too).
+    let light=Object.fromEntries(members.filter(r=>r.state&&typeof r.state==='object').map(r=>[r.id,copy(r.state)]));
+    // Keep the shared document small: it is read in chunks by every phone.
+    // An unusually large light state (long animation recipes) is not shared.
+    const gradientDomains=Backup.lightDomains({stands:[source]});
+    if(gradientDomains.length||Backup.hasDomainRefs(Object.values(light)))light={version:2,receivers:light,gradientDomains};
+    const lightBytes=JSON.stringify(light).length;
+    if(lightBytes!==sharedLightBytesC98){sharedLightBytesC98=lightBytes;window.__c98log?.('SHARED_LIGHT bytes='+lightBytes);}
+    if(lightBytes>6000)light=undefined;
+    return {model:{stand:standModel,receivers},libraries:{scenes:savedScenes.scenes.filter(s=>s.standId===standId),presets:savedPresets.presets,colors:savedColours.colors},light};
   }
   // C98: the last shared-document revision this phone applied or wrote.
   const sharedSeenKeyC98=standId=>'aluvision.c98.sharedSeen.'+standId;
   function sharedSeenC98(standId){try{const v=Number(appStorage.getItem(sharedSeenKeyC98(standId)));return Number.isSafeInteger(v)&&v>0?v:null;}catch(_){return null;}}
   function markSharedSeenC98(standId,revision){try{if(Number.isSafeInteger(revision)&&revision>0)appStorage.setItem(sharedSeenKeyC98(standId),String(revision));}catch(_){}}
+  const sharedIdleC98=()=>!managementBusy&&!sceneDraft&&!onboarding?.summary?.()&&!backupTransaction?.pending?.()&&!document.querySelector('dialog[open]')&&
+    !standControlOpen&&!stableZonePreparationUI&&!stableStandPreparationUI&&
+    !['controls','colour','animations','effects','animation-family','layout'].includes(route.screen)&&
+    (typeof runtime?.services?.lightQuiet!=='function'||runtime.services.lightQuiet());
+  function reconciledSharedStandC98(standId,remote){
+    // Keep remote names, zones, presentation and surviving order choices. Only
+    // reconcile the physical line list against the authenticated local outputs.
+    const desired=copy(model),byId=new Map(remote.receivers.map(r=>[r.id,r]));
+    desired.stands=desired.stands.map(s=>s.id===standId?copy(remote.stand):s);
+    desired.receivers=desired.receivers.map(r=>r.standId===standId&&byId.has(r.id)?{...r,name:byId.get(r.id).name,zoneId:byId.get(r.id).zoneId??null}:r);
+    const stand=desired.stands.find(s=>s.id===standId);if(!stand)throw Error('SHARED_FORMAT');
+    const oldOrder=model.stands.find(s=>s.id===standId)?.zones.flatMap(z=>z.lineOrder||[])||[];
+    for(const zone of stand.zones){
+      const members=zone.receiverIds.map(id=>desired.receivers.find(r=>r.id===id&&r.standId===standId));
+      if(members.some(r=>!r))throw Error('SHARED_FORMAT');
+      const physical=M.ledlines(members).map(line=>line.id),allowed=new Set(physical),seen=new Set();
+      zone.lineOrder=[...(zone.lineOrder||[]),...oldOrder,...physical].filter(id=>allowed.has(id)&&!seen.has(id)&&seen.add(id));
+    }
+    M.assertValid(desired);return stand;
+  }
+  async function refreshSharedPhysicalC98(standId,remote){
+    const helper=window.LightningSharedPhysicalRefreshC98,candidates=helper?.candidates(model,remote);
+    if(!candidates?.length)return null;
+    try{
+      for(const receiverId of candidates){
+        if(!sharedIdleC98()||typeof runtime?.services?.refreshSharedOutputs!=='function')throw Error('deferred');
+        const fresh=await runtime.services.refreshSharedOutputs({standId,receiverId});
+        if(!sharedIdleC98())throw Error('deferred');
+        model=keepLocalPreviewStates(fresh.model);
+      }
+      // A stale remote port list cannot override an authenticated readback.
+      return helper.candidates(model,remote)?.length?'local':null;
+    }catch(_){throw Object.assign(Error('SHARED_DEFERRED'),{code:'SHARED_DEFERRED'});}
+  }
   async function applyShared97(standId,doc,meta){
     const lib=doc.libraries;let scenes,presets,colors;
     try{scenes=lib.scenes.map(Scenes.validate).filter(s=>s.standId===standId);presets=lib.presets.map(S.validate);colors=Colours.validateColors(lib.colors);}
@@ -6019,7 +6180,7 @@
     appStorage.setItem(S.STORAGE_KEY,JSON.stringify({version:1,presets}));
     appStorage.setItem(Colours.STORAGE_KEY,JSON.stringify({version:1,colors}));
     reloadBackupLibraries();
-    let layout=true;const mine=sharedSnapshot97(standId)?.model,Shared=window.LightningSharedInstallation;
+    let layout=(await refreshSharedPhysicalC98(standId,doc.model))||true;const mine=sharedSnapshot97(standId)?.model,Shared=window.LightningSharedInstallation;
     if(mine&&Shared.canonical(mine)!==Shared.canonical(doc.model)){
       const local=new Map(mine.receivers.map(r=>[r.id,r])),remote=doc.model.receivers;
       // A receiver added on another phone needs this phone's own PIN login
@@ -6037,18 +6198,39 @@
       }
       else{
         const receivers=remote.map(r=>({id:r.id,name:r.name,zoneId:r.zoneId??null}));
+        const sharedStand=layout==='local'?reconciledSharedStandC98(standId,doc.model):doc.model.stand;
         let view;
-        try{view=await runtime.services.sharedLayout({standId,stand:doc.model.stand,receivers});}
+        try{view=await runtime.services.sharedLayout({standId,stand:sharedStand,receivers});}
         catch(error){
           if(error?.code!=='ACTION_UNSUPPORTED')throw error;
           // iPhone: the existing validated whole-view import does the same.
           const current=(await runtime.services.loadState()).model,desired=copy(current);
-          desired.stands=desired.stands.map(s=>s.id===standId?copy(doc.model.stand):s);
+          desired.stands=desired.stands.map(s=>s.id===standId?copy(sharedStand):s);
           const byId=new Map(receivers.map(r=>[r.id,r]));
           desired.receivers=desired.receivers.map(r=>byId.has(r.id)?{...r,name:byId.get(r.id).name,zoneId:byId.get(r.id).zoneId}:r);
           view=await runtime.services.importInstallationView({model:Backup.nativeModel(Backup.publicModel(desired),current),confirmation:'RESTORE_LOCAL_SETTINGS'});
         }
         model=keepLocalPreviewStates(view.model);
+      }
+    }
+    // C98: show the light another phone chose. Display only: no command is
+    // sent, and a phone that is choosing light right now keeps its own.
+    if(doc.light&&typeof doc.light==='object'&&!Array.isArray(doc.light)&&layout!==false&&runtime?.services?.lightQuiet?.()!==false){
+      const next=copy(model);let changed=false,sharedLight=doc.light;
+      if(doc.light.version===2){
+        if(Object.keys(doc.light).sort().join(',')!=='gradientDomains,receivers,version'||!doc.light.receivers||typeof doc.light.receivers!=='object'||Array.isArray(doc.light.receivers))throw Error('SHARED_FORMAT');
+        Backup.restoreDomains(next,doc.light.gradientDomains.filter(row=>row.standId===standId),{standId});sharedLight=doc.light.receivers;
+        changed=JSON.stringify(Backup.lightDomains(next))!==JSON.stringify(Backup.lightDomains(model));
+      }
+      if(doc.light.version!==2&&Backup.hasDomainRefs(Object.values(sharedLight)))throw Error('SHARED_FORMAT');
+      for(const receiver of next.receivers){
+        const state=receiver.standId===standId?sharedLight[receiver.id]:null;
+        if(state&&typeof state==='object'&&!Array.isArray(state)&&JSON.stringify(state)!==JSON.stringify(receiver.state)){receiver.state=copy(state);changed=true;}
+      }
+      if(changed){
+        try{M.assertValid(next);model=next;for(const receiver of next.receivers)if(receiver.standId===standId&&sharedLight[receiver.id])liveStates.delete(receiver.id);
+          window.__c98log?.('SHARED_LIGHT applied');}
+        catch(_){window.__c98log?.('SHARED_LIGHT invalid');}
       }
     }
     render({preserveScroll:true});
@@ -6059,10 +6241,7 @@
     stands:sharedStands97,snapshot:sharedSnapshot97,apply:applyShared97,seen:markSharedSeenC98,
     // C98: never while a zone/stand control screen is open. Its own owner
     // session would replace the light-control session on the MAIN (same phone).
-    idle:()=>!managementBusy&&!sceneDraft&&!onboarding?.summary?.()&&!backupTransaction?.pending?.()&&!document.querySelector('dialog[open]')&&
-      !standControlOpen&&!stableZonePreparationUI&&!stableStandPreparationUI&&
-      !['controls','colour','animations','effects','animation-family','layout'].includes(route.screen)&&
-      (typeof runtime?.services?.lightQuiet!=='function'||runtime.services.lightQuiet()),
+    idle:sharedIdleC98,
     notice:code=>{
       // C98: a receiver added on another phone. On the stand's Wi-Fi this phone
       // reloads the stand by itself (that network is the PIN proof): no PIN
@@ -6194,6 +6373,7 @@
       if(targets.some(receiver=>['GRADIENT_REAPPLY_REQUIRED','GRADIENT_RETAINED_UNCONFIRMED','GRADIENT_REAPPLY_UNCONFIRMED','GRADIENT_POWER_UNCONFIRMED'].includes(liveStates.get(receiver.id)?.code)))return t('Het verloop is nog niet bevestigd. Pas het opnieuw toe met de verloopknop.');
       const codes=new Set(targets.map(receiver=>liveStates.get(receiver.id)).filter(state=>state?.kind==='failed').map(state=>state.code));
       window.__c98log?.('LIVE_FAILED codes='+[...codes].join(','));
+      if(codes.has?.('OUTPUT_CONFIGURATION_PENDING'))setTimeout(()=>void resumePendingOutputsC98(),300);
       let key='v592LiveUnconfirmed';
       if(codes.has('OUTPUT_CONFIGURATION_PENDING'))key='v592LiveOutputPending';
       else if(codes.has('LIVE_STABLE_PREPARED_NEW_INTENT_REQUIRED'))key='stablePreparedNewIntent';
@@ -6468,13 +6648,14 @@
       // While the gradient editor is open, the zone's own ledline preview shows
       // the draft gradient, exactly as the solid colour picker does. Preview only.
       const gradientDraft=spec.main&&!standControlOpen?demoGradientEditor()?.previewRecipe():null;
-      const shownList=gradientDraft?list.map(r=>r.type==='SPI'?{...r,state:{...r.state,engine:'STATIC_GRADIENT',staticGradientRecipe:gradientDraft,on:true,power:true,portStates:undefined}}:r):list;
+
       const globalPlan=spec.standLiveZoneId?liveZoneStandPlan(spec.standLiveZoneId):null;
       const globalOptions=globalPlan?StandAnimations.previewOptions(globalPlan,time,{zoneId:spec.standLiveZoneId}):null;
       const exampleBlink=identifying.get(orderIdentificationState?.lines[orderTestState.index]?.receiverId);
       const guidePulse=spec.orderTarget&&orderTestState.preview&&orderTestState.status==='running'&&orderTestState.session===orderIdentificationState?.session&&orderTestFingerprint===orderTestGeometry()?new Map([['order-example-'+(orderTestState.index+1),{scope:zone()?.type==='SPI'?'1':'all',ports:zone()?.type==='SPI'?[1]:[],startedAt:exampleBlink?.startedAt??time,until:exampleBlink?.until??time+0.1}]]):undefined;
       const guideColours=guidePulse?new Map(spec.receivers.map(receiver=>[receiver.id+':'+(receiver.type==='SPI'?1:0),[receiver.state.r,receiver.state.g,receiver.state.b]])):undefined;
-      P.draw(canvas,{...spec,...globalOptions,layout:spec.orderOverview?'stacked':globalPlan?'stacked':draft?.layout||spec.layout,receivers:shownList,
+      P.draw(canvas,{...spec,...globalOptions,layout:spec.orderOverview?'stacked':globalPlan?'stacked':draft?.layout||spec.layout,receivers:list,gradientDraft,
+        gradientDomains: savedZone&&!globalPlan?savedZone.gradientDomains:spec.gradientDomains,
         presentation:globalPlan?undefined:spec.presentation,
         geometryReceivers:globalPlan?globalPlan.receivers:spec.preserveZoneGeometry?zoneList:spec.geometryReceivers,selection:spec.orderOverview?{kind:'all'}:spec.main?selection():spec.selection,
         ...(savedZone&&!globalPlan?{lineOrder:proposedOrder||draft?.lineOrder||M.lineIds(model,savedZone.id)}:{}),
@@ -7066,7 +7247,7 @@
     const stablePrep=['colour','animations'].includes(standControlMode)&&stableStandPreparationUI?.standId===stand()?.id?stableStandPreparationUI:null;
     const preparationNotice=`<p class="live-confirmation" data-stable-stand-preparation role="status" aria-live="polite" ${stablePrep?.pending||stablePrep?.error?'':'hidden'}>${stablePrep?.pending||stablePrep?.error?esc(t(stablePrep.pending?'stableStandPreparing':'stableStandPreparationFailed')):''}</p><button class="text-button" data-stable-preparation-retry data-action="stable-preparation-retry" ${stablePrep?.error&&!stablePrep.pending?'':'hidden'}>${esc(t("Opnieuw proberen"))}</button>`;
     const tabs=`<div class="stand-controls-tabs section-tabs" role="tablist" aria-label="${esc(t('v50StandControls'))}"><button type="button" role="tab" data-action="stand-control-mode" data-id="colour" aria-selected="${standControlMode==='colour'}" aria-controls="stand-controls-panel">${icon('sun')}${esc(t('v50StandColour'))}</button><button type="button" role="tab" data-action="stand-control-mode" data-id="animations" aria-selected="${standControlMode==='animations'}" aria-controls="stand-controls-panel">${icon('animation')}${esc(t('v50StandAnimations'))}</button></div>`;
-    const content=`<div class="stand-controls-sheet" data-stand-control-sheet data-stand-control-mode="${standControlMode}"><p class="stand-control-scope"><b>${esc(standLabel())}</b> · ${esc(t(zoneCount===1?'v50StandZoneOne':'v50StandZoneMany',{count:zoneCount}))} · ${ledlineCount(physicalLineCount(standControlReceivers()))}</p><div id="stand-controls-panel" role="tabpanel"><p class="stand-control-description">${esc(t(standControlMode==='colour'?'v50StandColourHint':'v50StandAnimationHint'))}<small>${esc(t('v50StandUnassignedHint'))}</small></p>${preparationNotice}<div data-stable-preparation-controls ${stablePreparationBlocked(stablePrep)?'inert aria-busy="true"':''}>${powerControl()}<p class="live-confirmation" data-live-status="stand" role="status" aria-live="polite"></p>${standControlMode==='colour'?`<p id="stand-control-mixed" class="mixed-note" ${mixedSelection()?'':'hidden'}>${esc(t('v50StandMixedHint'))}</p>${colourPickerMarkup(null,true)}${standScenesMarkup(true)}`:animationContent}</div></div></div>`;
+    const content=`<div class="stand-controls-sheet" data-stand-control-sheet data-stand-control-mode="${standControlMode}"><p class="stand-control-scope"><b>${esc(standLabel())}</b> · ${esc(t(zoneCount===1?'v50StandZoneOne':'v50StandZoneMany',{count:zoneCount}))} · ${ledlineCount(physicalLineCount(standControlReceivers()))}</p><div id="stand-controls-panel" role="tabpanel">${standReceivers().some(receiver=>!receiver.zoneId)?`<p class="stand-control-description">${esc(t('v50StandUnassignedHint'))}</p>`:''}${preparationNotice}<div data-stable-preparation-controls ${stablePreparationBlocked(stablePrep)?'inert aria-busy="true"':''}>${powerControl()}<p class="live-confirmation" data-live-status="stand" role="status" aria-live="polite"></p>${standControlMode==='colour'?`<p id="stand-control-mixed" class="mixed-note" ${mixedSelection()?'':'hidden'}>${esc(t('v50StandMixedHint'))}</p>${colourPickerMarkup(null,true)}${standScenesMarkup(true)}`:animationContent}</div></div></div>`;
     buildingStandDialog=true;try{showEffectDialog(t('v50StandControls'),content,tabs);}finally{buildingStandDialog=false;}
     // A first colour edit may hide the mixed-settings explanation. Keep only
     // this dialog's initially visible footprint, so its wheel cannot move
@@ -7247,10 +7428,17 @@
   function showReceiverAssignment(receiverId,targetZoneId=undefined) {
     const r=model.receivers.find(item=>item.id===receiverId&&item.lifecycle==='added'&&item.standId===stand().id);if(!r)return;
     receiverAssignment={receiverId,zoneId:targetZoneId===undefined?r.zoneId:targetZoneId};
-    showEffectDialog(t("Zone wijzigen"),`<p class="assignment-context"><b>${esc(r.name)}</b><br><span>${esc(r.type)} · ${r.zoneId?esc(M.getZone(model,r.zoneId).name):t("Nog geen zone")}</span></p><p class="assignment-retention-note">${esc(t("Doet mee met de groepsanimatie in de gekozen zone."))}</p><div class="assignment-choices" aria-label="${esc(t("Zone kiezen"))}">${stand().zones.map(z=>{
-      const compatible=!z.type||z.type===r.type,chosen=z.id===receiverAssignment.zoneId;
-      return `<button class="assignment-choice" data-action="assignment-zone" data-id="${esc(z.id)}" aria-pressed="${chosen}" ${compatible?'':'disabled'}>${icon('zones')}<span><b>${esc(z.name)}</b><small>${z.id===r.zoneId?t("Huidige zone"):compatible?`${zoneTypeLabel(z)}${z.type?` · ${receiverCount(z.receiverIds.length)}`:''}`:esc(t('Alleen {type} · past niet bij deze receiver',{type:z.type}))}</small></span><i aria-hidden="true">${chosen?'✓':''}</i></button>`;
-    }).join('')}<button class="assignment-choice" data-action="assignment-zone" data-id="" aria-pressed="${!receiverAssignment.zoneId}">${icon('unassigned')}<span><b>${esc(t("Nog geen zone"))}</b><small>${esc(t("Blijft gekoppeld aan je stand"))}</small></span><i aria-hidden="true">${!receiverAssignment.zoneId?'✓':''}</i></button></div><button class="button secondary full" data-action="assignment-new-zone">＋ ${esc(t("Nieuwe zone maken"))}</button><p class="dialog-error" role="alert" hidden></p><button class="button full" data-action="assignment-confirm" ${receiverAssignment.zoneId===r.zoneId?'disabled':''}>${esc(t("Zone wijzigen"))}</button>`);
+    // Receiver card, then only the zones it fits in (plus "no zone" and a new
+    // zone). Zones of another ledline type are named once below the list.
+    const current=r.zoneId?M.getZone(model,r.zoneId):null;
+    const fits=stand().zones.filter(z=>!z.type||z.type===r.type),misfits=stand().zones.filter(z=>z.type&&z.type!==r.type);
+    const choice=(id,glyph,name,detail,chosen,extra='')=>`<button class="assignment-choice" data-action="assignment-zone" data-id="${esc(id)}" aria-pressed="${chosen}" ${extra}><span class="assign103-glyph" aria-hidden="true">${glyph}</span><span><b>${esc(name)}</b><small>${esc(detail)}</small></span><i aria-hidden="true">${chosen?'✓':''}</i></button>`;
+    showEffectDialog(t("Zone wijzigen"),`<div class="assign103" data-assign103><div class="assign103-receiver"><span class="assign103-receiver-icon" aria-hidden="true">${icon('receiver')}</span><span class="assign103-receiver-copy"><b>${esc(r.name)}</b><small><span class="receiver-family-badge">${esc(r.type)}</span>${esc(t("Nu in"))} <strong>${esc(current?current.name:t("geen zone"))}</strong></small></span></div><div class="assign103-heading"><b>${esc(t("Verplaats naar"))}</b><small>${esc(t("Doet mee met de groepsanimatie in de gekozen zone."))}</small></div><div class="assignment-choices" aria-label="${esc(t("Zone kiezen"))}">${fits.map(z=>choice(z.id,icon('zones'),z.name,z.id===r.zoneId?t("Huidige zone"):`${zoneTypeLabel(z)}${z.type?` · ${receiverCount(z.receiverIds.length)}`:''}`,z.id===receiverAssignment.zoneId)).join('')}${choice('',icon('unassigned'),t("Nog geen zone"),t("Blijft gekoppeld aan je stand"),!receiverAssignment.zoneId,'data-assign103-none')}<button class="assignment-choice assign103-new" data-action="assignment-new-zone"><span class="assign103-glyph" aria-hidden="true">＋</span><span><b>${esc(t("Nieuwe zone maken"))}</b><small>${esc(t("Met deze receiver erin"))}</small></span></button></div>${misfits.length?`<p class="assign103-misfit">${icon('info')}<span>${esc(t("Past niet bij {type}: {zones}",{type:r.type,zones:misfits.map(z=>z.name).join(', ')}))}</span></p>`:''}<p class="dialog-error" role="alert" hidden></p><button class="button full" data-action="assignment-confirm" ${receiverAssignment.zoneId===r.zoneId?'disabled':''}>${esc(assignmentConfirmLabel103(r))}</button></div>`);
+  }
+  function assignmentConfirmLabel103(r){
+    const target=receiverAssignment?.zoneId;
+    if(target===r.zoneId||(!target&&!r.zoneId))return t("Kies een andere zone");
+    return target?t("Verplaats naar {name}",{name:M.getZone(model,target)?.name||''}):t("Uit de zone halen");
   }
   function showZoneReceiverPicker(zoneId) {
     const z=M.getZone(model,zoneId);if(!z)return;
@@ -7334,6 +7522,10 @@
           if(!Object.keys(r.state.portStates).length)delete r.state.portStates;
         }
       }
+    }
+    for(const stand of next.stands)if(stand.id!==exceptStandId)for(const zone of stand.zones){
+      const old=model.stands.find(s=>s.id===stand.id)?.zones.find(z=>z.id===zone.id);
+      if(zone.type==='SPI'&&old?.type==='SPI'&&old.gradientDomains)zone.gradientDomains=copy(old.gradientDomains);
     }
     // Preview-only colour edits remain local. Never merge identity, role, ports,
     // membership or credentials back over the authoritative native view.
@@ -7683,7 +7875,8 @@
           void orderIdentification?.supersede();
           const plan=StandAnimations.plan(model,stand().id,id,{state:effectState(effect),time:performance.now()/1000});
           model=plan.model;sendReceiverStates(plan.receivers.map(receiver=>receiver.id));
-          standAnimationGallery=false;standAnimationFamily=null;settingsOpen=false;renderStandControls({preserveScroll:false});return;
+          // C98: let the queued light leave first; rebuilding this screen takes ~1 s.
+          standAnimationGallery=false;standAnimationFamily=null;settingsOpen=false;setTimeout(()=>{if(standControlOpen)renderStandControls({preserveScroll:false});},0);return;
         }
         if(action==='preset-confirm'){
           const epoch=standControlEpoch,standId=stand()?.id;
@@ -8023,7 +8216,7 @@
         if(!receiverAssignment)return;receiverAssignment.zoneId=id||null;
         const r=model.receivers.find(r=>r.id===receiverAssignment.receiverId);
         document.querySelectorAll('[data-action="assignment-zone"]').forEach(el=>{el.setAttribute('aria-pressed',el.dataset.id===id);el.querySelector('i').textContent=el.dataset.id===id?'✓':'';});
-        const confirm=document.querySelector('[data-action="assignment-confirm"]');confirm.disabled=receiverAssignment.zoneId===r.zoneId;confirm.textContent=t("Zone wijzigen");return;
+        const confirm=document.querySelector('[data-action="assignment-confirm"]');confirm.disabled=receiverAssignment.zoneId===r.zoneId;confirm.textContent=assignmentConfirmLabel103(r);return;
       }
       if(action==='assignment-new-zone')return showNameDialog('zone-create',receiverAssignment?.receiverId);
       if(action==='assignment-back')return showReceiverAssignment(receiverAssignment.receiverId,receiverAssignment.zoneId);

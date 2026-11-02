@@ -1,0 +1,145 @@
+/* C102: swipe actions on scenes, a tidy unavailable-scene card, and less text
+ * and empty space in "Alles bedienen" and the animation chooser. */
+
+/* ---------- Scenes: swipe to reveal Details / Delete ---------- */
+.scene-swipe102{position:relative;isolation:isolate;min-width:0;border-radius:22px}
+.scene-swipe102>.scene-card-row{position:relative;z-index:1;transform:translateX(var(--swipe102,0px));transition:transform .28s cubic-bezier(.22,.61,.36,1);touch-action:pan-y}
+.scene-swipe102.is-dragging102>.scene-card-row{transition:none}
+.scene-swipe102.is-open102>.scene-card-row{transform:translateX(calc(-1 * var(--actions102,168px)))}
+.scene-swipe102 .scene-swipe-actions102{--w:84px;position:absolute;z-index:0;inset:2px 2px 2px auto;display:flex;gap:6px;width:var(--actions102,168px);padding-left:6px;box-sizing:border-box}
+.scene-swipe102 .scene-swipe-actions102>button{flex:1;display:grid;place-items:center;align-content:center;gap:5px;min-width:0;border:0;border-radius:18px;
+  font:inherit;font-size:12px;font-weight:700;line-height:1.2;cursor:pointer;padding:6px}
+.scene-swipe102 .scene-swipe-actions102>button svg{width:21px;height:21px}
+.scene-swipe102 .scene-swipe-open102{background:color-mix(in srgb,var(--ink,#1c1c1e) 9%,transparent);color:var(--ink,#1c1c1e)}
+.scene-swipe102 .scene-swipe-delete102{background:#d6453b;color:#fff}
+/* Hidden until the card moves, so nothing peeks around rounded corners. */
+.scene-swipe102:not(.is-open102):not(.is-dragging102) .scene-swipe-actions102{visibility:hidden}
+.scene-swipe102:focus-within .scene-swipe-actions102{visibility:visible}
+.scene-swipe-hint102{display:flex;align-items:center;gap:6px;margin:-6px 2px 2px;font-size:12px;color:var(--muted,#646d78)}
+.scene-swipe-hint102 svg{width:14px;height:14px;flex:none}
+@media (prefers-reduced-motion:reduce){.scene-swipe102>.scene-card-row{transition:none}}
+
+/* ---------- Scenes: unavailable card ---------- */
+/* The reason used to sit in the narrow button column ("beschikba-ar").
+ * It now runs full width under the card; the button keeps whole words. */
+html body [data-scene-ui="640"] .scene-card-row.ui606-scene-card:has(.scene-unavailable-note){grid-template-columns:minmax(0,1fr) 84px;grid-template-rows:auto auto;row-gap:0}
+html body [data-scene-ui="640"] .scene-card-row.ui606-scene-card:has(.scene-unavailable-note)>.ui606-scene-card-action{display:contents}
+html body [data-scene-ui="640"] .scene-card-row.ui606-scene-card:has(.scene-unavailable-note) .scene-quick-activate{grid-column:2;grid-row:1;align-self:center;margin:10px 10px 10px 0;min-height:88px}
+html body [data-scene-ui="640"] .scene-card-row.ui606-scene-card .scene-quick-activate:disabled>span{font-size:11px;line-height:1.25;overflow-wrap:normal;word-break:normal;hyphens:manual;text-align:center}
+html body [data-scene-ui="640"] .scene-card-row.ui606-scene-card .scene-unavailable-note{grid-column:1/-1;grid-row:2;display:flex;align-items:flex-start;gap:7px;margin:0;padding:10px 14px 12px;
+  border-top:1px solid color-mix(in srgb,var(--line,#dce1e9) 80%,transparent);font-size:12px;line-height:1.4;color:var(--muted,#646d78);text-align:left}
+html body [data-scene-ui="640"] .scene-card-row.ui606-scene-card .scene-unavailable-note svg{flex:none;width:15px;height:15px;margin-top:1px}
+/* A dark, empty thumbnail with an info glyph reads as broken; show it dimmed. */
+html body [data-scene-ui="640"] .scene-card-row.ui606-scene-card:has(.scene-unavailable-note) .scene-mosaic{opacity:.55}
+
+/* ---------- Alles bedienen ---------- */
+html.interface-polish body #effect-dialog .stand-controls-sheet{gap:10px}
+html.interface-polish body #effect-dialog .stand-control-scope{margin:0;font-size:12.5px;color:var(--muted,#646d78)}
+html.interface-polish body #effect-dialog .stand-control-description{margin:2px 0 0;font-size:12px;line-height:1.4;color:var(--muted,#646d78)}
+/* Status under "Hele stand": a compact label instead of a large red sentence. */
+html.interface-polish body #effect-dialog [data-stand-control-sheet] .live-confirmation{margin:6px 2px 0;font-size:12px;line-height:1.35}
+html.interface-polish body #effect-dialog [data-stand-control-sheet] .live-confirmation:empty{display:none}
+html.interface-polish body #effect-dialog [data-stand-control-sheet] .live-confirmation[data-state="failed"]{
+  display:inline-flex;align-items:center;gap:7px;width:fit-content;max-width:100%;padding:6px 11px;border-radius:12px;
+  background:color-mix(in srgb,#e0a100 13%,transparent);color:#8a5a00;font-weight:600}
+html.interface-polish body #effect-dialog [data-stand-control-sheet] .live-confirmation[data-state="failed"]::before{
+  content:"";flex:none;width:7px;height:7px;border-radius:50%;background:#e0a100}
+body[data-theme=dark] #effect-dialog [data-stand-control-sheet] .live-confirmation[data-state="failed"]{color:#f0c76a!important}
+html.interface-polish body #effect-dialog .mixed-note{margin:8px 0 0;padding:8px 12px;border-radius:12px;font-size:12px;line-height:1.4;
+  background:color-mix(in srgb,var(--ink,#1c1c1e) 5%,transparent)!important;color:var(--muted,#646d78)!important;border:0!important}
+
+/* ---------- Animation chooser (zone and Alles bedienen) ---------- */
+/* The "1 Groep kiezen → 2 Animatie starten" strip repeats what the screen
+ * already shows; the heading is smaller and spacing tighter. */
+html.interface-polish body :is(#main,#effect-dialog) .animation-picker-steps{display:none!important}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-heading h2{font-size:20px;line-height:1.2;letter-spacing:-.01em}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline{gap:12px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section{margin-top:12px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail{display:grid;gap:12px}
+html.interface-polish body :is(#main,#effect-dialog) .family-detail-heading{margin:2px 0 0;padding:0;gap:10px}
+html.interface-polish body :is(#main,#effect-dialog) .family-detail-heading h2{font-size:22px;line-height:1.15;margin:4px 0 2px}
+html.interface-polish body :is(#main,#effect-dialog) .family-detail-heading p{margin:0;font-size:13px;line-height:1.45}
+html.interface-polish body :is(#main,#effect-dialog) .family-detail-category{font-size:11.5px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail>:is(.animation-family-choices,[class*="family-choices"]){margin-top:0}
+/* Chosen animation: one compact line instead of a second large title above
+ * the preview card that already names it. */
+html.interface-polish body :is(#main,#effect-dialog) .current-effect-heading{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:2px 0 0;padding:0 4px!important;background:none!important;border:0!important;box-shadow:none!important}
+html.interface-polish body :is(#main,#effect-dialog) .current-effect-heading .active-animation-kicker{font-size:12px}
+html.interface-polish body :is(#main,#effect-dialog) .current-effect-heading>:is(h2,b){margin:0;font-size:16px!important;line-height:1.3!important;letter-spacing:0}
+html.interface-polish body :is(#main,#effect-dialog) .current-effect-heading .active-animation-kicker{order:2}
+html.interface-polish body :is(#main,#effect-dialog) .family-variants-heading{margin-bottom:8px}
+html.interface-polish body :is(#main,#effect-dialog) .family-variants-panel{padding-top:0;margin-top:0}
+
+/* In Alles bedienen the preview card right below already names the chosen
+ * animation; keep only the "Gekozen" label visible (name stays for readers). */
+html.interface-polish body #effect-dialog .current-effect-heading>b{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}
+html.interface-polish body #effect-dialog .current-effect-heading .active-animation-kicker{order:0;font-size:12.5px}
+
+/* ---------- Animation group artwork ---------- */
+.c102-art{display:block;width:100%;height:100%;overflow:visible;fill:none}
+.c102-art .c102a-pulse{animation:c102a-pulse 2.8s ease-in-out infinite;animation-delay:calc(var(--n) * .35s)}
+.c102-art .c102a-hue{stroke:#f6aa60;animation:c102a-hue 6s linear infinite}
+.c102-art .c102a-glow{opacity:.28;filter:blur(2px)}
+.c102-art .c102a-run{animation:c102a-run 2.2s cubic-bezier(.45,0,.55,1) infinite}
+.c102-art .c102a-step{opacity:.15;animation:c102a-step 2.1s ease-in-out infinite;animation-delay:calc(var(--n) * .35s);filter:drop-shadow(0 0 3px #6edcce)}
+.c102-art .c102a-stripes{animation:c102a-stripes 1.6s linear infinite}
+@keyframes c102a-pulse{0%,100%{opacity:.55}45%{opacity:1}}
+@keyframes c102a-hue{0%,100%{stroke:#f6aa60}25%{stroke:#ef6fa0}50%{stroke:#b07cf0}75%{stroke:#55b7f0}}
+@keyframes c102a-run{0%{transform:translateX(0)}100%{transform:translateX(34.5px)}}
+@keyframes c102a-step{0%,100%{opacity:.15}25%,40%{opacity:1}}
+@keyframes c102a-stripes{to{stroke-dashoffset:-12}}
+@media (prefers-reduced-motion:reduce){
+  .c102-art *{animation:none!important}
+  .c102-art .c102a-step{opacity:1}
+}
+
+/* ---------- "Zone wijzigen" (C103) ---------- */
+/* Flat title instead of a white box inside the dialog card. */
+html.interface-polish body #effect-dialog-content:has(>[data-assign103],>*>[data-assign103],[data-assign103])>header{
+  position:static;margin:0 0 4px;padding:2px 0 6px;background:none!important;background-image:none!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+html.interface-polish body #effect-dialog-content:has([data-assign103])>header h2{font-size:22px}
+.assign103{display:grid;gap:12px}
+/* The receiver being moved */
+.assign103-receiver{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;
+  background:color-mix(in srgb,var(--ink,#1c1c1e) 5%,transparent)}
+.assign103-receiver-icon{display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:13px;background:var(--panel,#fff);color:var(--red,#b6443d);box-shadow:0 1px 3px rgba(20,24,32,.12)}
+.assign103-receiver-icon svg{width:22px;height:22px}
+.assign103-receiver-copy{display:grid;gap:3px;min-width:0}
+.assign103-receiver-copy>b{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.assign103-receiver-copy>small{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:12.5px;color:var(--muted,#646d78)}
+.assign103-receiver-copy>small strong{color:var(--ink,#1c1c1e);font-weight:700}
+.assign103-heading{display:grid;gap:2px;margin-top:2px}
+.assign103-heading>b{font-size:14px}
+.assign103-heading>small{font-size:12px;color:var(--muted,#646d78);line-height:1.4}
+/* Choices: one consistent list, chosen row clearly marked. */
+html.interface-polish body #effect-dialog .assign103 .assignment-choices{display:grid;gap:8px;margin:0}
+html.interface-polish body #effect-dialog .assign103 .assignment-choice{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;margin:0;padding:10px 14px 10px 10px;
+  border-radius:16px;text-align:left;border:1px solid color-mix(in srgb,var(--line,#dce1e9) 90%,transparent);background:var(--panel,#fff)!important;box-shadow:none!important}
+html.interface-polish body #effect-dialog .assign103 .assignment-choice>span:nth-child(2){display:grid;gap:2px;flex:1;min-width:0}
+html.interface-polish body #effect-dialog .assign103 .assignment-choice b{font-size:14.5px}
+html.interface-polish body #effect-dialog .assign103 .assignment-choice small{font-size:12px;color:var(--muted,#646d78)}
+html.interface-polish body #effect-dialog .assign103 .assign103-glyph{display:grid;place-items:center;flex:none;width:38px;height:38px;border-radius:12px;
+  background:color-mix(in srgb,var(--ink,#1c1c1e) 6%,transparent);color:var(--ink,#1c1c1e);font-size:20px;font-weight:600}
+html.interface-polish body #effect-dialog .assign103 .assign103-glyph svg{width:19px;height:19px}
+html.interface-polish body #effect-dialog .assign103 .assignment-choice>i{display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:50%;font-style:normal;font-size:13px;font-weight:800;color:transparent;
+  border:2px solid color-mix(in srgb,var(--line,#dce1e9) 100%,transparent)}
+html.interface-polish body #effect-dialog .assign103 .assignment-choice[aria-pressed="true"]{border-color:var(--red,#b6443d)!important;box-shadow:0 0 0 1px var(--red,#b6443d) inset!important;
+  background:color-mix(in srgb,var(--red,#b6443d) 6%,var(--panel,#fff))!important}
+html.interface-polish body #effect-dialog .assign103 .assignment-choice[aria-pressed="true"]>i{background:var(--red,#b6443d);border-color:var(--red,#b6443d);color:#fff}
+html.interface-polish body #effect-dialog .assign103 .assignment-choice[aria-pressed="true"] .assign103-glyph{background:color-mix(in srgb,var(--red,#b6443d) 14%,transparent);color:var(--red,#b6443d)}
+html.interface-polish body #effect-dialog .assign103 .assign103-new{border-style:dashed!important;background:transparent!important}
+html.interface-polish body #effect-dialog .assign103 .assign103-new .assign103-glyph{background:transparent;color:var(--red,#b6443d)}
+.assign103-misfit{display:flex;align-items:flex-start;gap:7px;margin:0;font-size:12px;line-height:1.4;color:var(--muted,#646d78)}
+.assign103-misfit svg{flex:none;width:14px;height:14px;margin-top:2px}
+/* "Kies een andere zone" until a different zone is chosen: quiet, not broken-grey. */
+html.interface-polish body #effect-dialog .assign103 [data-action="assignment-confirm"]{margin-top:4px}
+html.interface-polish body #effect-dialog .assign103 [data-action="assignment-confirm"]:disabled{background:color-mix(in srgb,var(--ink,#1c1c1e) 7%,transparent)!important;background-image:none!important;
+  color:var(--muted,#646d78)!important;box-shadow:none!important;opacity:1}
+body[data-theme=dark] #effect-dialog .assign103 .assignment-choice{background:rgba(255,255,255,.05)!important;border-color:rgba(255,255,255,.1)!important}
+body[data-theme=dark] #effect-dialog .assign103 .assignment-choice[aria-pressed="true"]{background:color-mix(in srgb,var(--red,#b6443d) 16%,transparent)!important}
+body[data-theme=dark] .assign103-receiver{background:rgba(255,255,255,.06)}
+body[data-theme=dark] .assign103-receiver-icon{background:rgba(255,255,255,.1)}
+body[data-theme=dark] #effect-dialog .assign103 .assign103-new{background:transparent!important}
+.assign103 .receiver-family-badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:7px;font-size:10.5px;font-weight:800;letter-spacing:.4px;
+  color:var(--ink,#1c1c1e);background:var(--panel,#fff);border:1px solid color-mix(in srgb,var(--line,#dce1e9) 90%,transparent)}
+body[data-theme=dark] .assign103 .receiver-family-badge{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.12)}

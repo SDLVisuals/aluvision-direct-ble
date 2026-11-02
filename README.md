@@ -4,7 +4,7 @@
 
 ## Interactieve demo
 
-De hoofdlink opent de V50-demo. Probeer zones, kleuren, RGBW/SPI-animaties, opgeslagen scènes en licht/donker in de telefooninterface.
+De hoofdlink opent de huidige C100-interface. Probeer zones, kleuren, RGBW/SPI-animaties, scènes en licht/donker op een telefoon of tablet, staand of liggend. De indeling is in de browser gecontroleerd van 320 tot 1600 CSS-pixels; op brede schermen krijgen voorbeeld en bediening elk hun eigen ruimte.
 
 De demo gebruikt uitsluitend fictieve receivers. Ze begint leeg en bewaart haar voorbeeldstand alleen tijdelijk; herladen begint opnieuw. Ze bestuurt geen fysieke verlichting, maakt geen echte wifi-verbinding en biedt geen browser-OTA. PIN en delen zijn in deze tijdelijke ééngebruikerversie uitgeschakeld.
 
@@ -14,9 +14,11 @@ In een SPI-zone kun je onder **Kleur → Verloop SPI** een stilstaand kleurverlo
 
 ## Android-testapp
 
-De actuele download is **50.0.0-ui756-beta, code 32**. Deze interfacebèta bevat de gedeelde interface756 met toetsenbordaanpassingen, de vernieuwde receiverinstructies en de Tunnel/Wand-keuze. Het pakket behoudt de bestaande pakketnaam en ondertekening. Build, lint, alle gebundelde bestanden en de handtekening zijn gecontroleerd.
+De actuele download is **50.0.0-c100-adaptive, code 36**, voor Android 8 of nieuwer. Deze testversie bevat de aangepaste telefoon- en tabletindeling, een compacte kleurkiezer voor liggend gebruik en hetzelfde kleurenwiel met fijne RGBW-instellingen voor effen kleuren en Verloop. De schermafbeeldingen op de downloadpagina komen uit de webdemo met fictieve receivers.
 
-De Android-native basis is nog niet volledig: PIN instellen, OTA, receivers verwijderen en gedeelde standtoegang ontbreken. Werking met receiverfirmware77 en op een fysieke Galaxy S24 is nog niet bevestigd. Code32 is een interfacebèta en is nog niet op een Android-toestel geïnstalleerd of fysiek getest. Eerdere APK's blijven beschikbaar voor bestaande verwijzingen.
+Het pakket behoudt dezelfde pakketnaam en handtekening als code 35: kies **Bijwerken**, zonder de app eerst te verwijderen. Build, lint, gebundelde bestanden en ondertekening zijn gecontroleerd. Op een API 36-emulator zijn bijwerken van code 35 naar 36 met behoud van de stand, invoer met het Android-toetsenbord, draaien en donkere modus getest. De onopgeslagen invoer en het appproces bleven daarbij behouden.
+
+De Android-versie blijft een testversie. Receiverupdates, receivers verwijderen, fabrieksreset en backupbestanden zijn nog niet beschikbaar. De getimede verbindingstest en het automatisch ophalen van gewijzigde uitgangen van reeds bekende receivers zijn nog niet gelijk aan de Mac-versie. Werking op een fysieke Android-telefoon of tablet en met echte receivers is nog niet bevestigd. Er zit geen receiverfirmware in de APK. Eerdere APK's blijven beschikbaar voor bestaande verwijzingen.
 
 ## Website en geïnstalleerde app
 

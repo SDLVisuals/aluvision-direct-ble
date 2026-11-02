@@ -719,7 +719,25 @@ function softTrailCoverage(behind,trail,n,smooth){
       brightness: clamp(state.bgBrightness == null ? state.backgroundBrightness : state.bgBrightness, 0, 100, 10) / 100
     };
   }
-  function sample(receiver, sceneGeometry, time = 0) {
+  // Saved public line IDs describe a gradient span, never transport authority.
+  // Resolve against the complete physical preview geometry and same-zone
+  // source receivers; missing members must not silently stretch the gradient.
+  function gradientPlacement(receiver, output, group, sourceReceivers, gradientDomains, domainResolver) {
+    if(!Object.hasOwn(receiver.state||{},'staticGradientGroup')&&!Object.hasOwn(receiver.state||{},'staticGradientDomain'))return undefined;
+    try{
+      const G=typeof module==='object'&&module.exports?require('./static-gradient.js'):globalThis.LightningStaticGradient;
+      const sources=new Map(sourceReceivers.map(row=>[row.id,row])),owner=sources.get(receiver.id);
+      if(!owner||typeof owner.standId!=='string'||!owner.standId||typeof owner.zoneId!=='string'||!owner.zoneId||
+         owner.standId!==receiver.standId||owner.zoneId!==receiver.zoneId)return null;
+      const lines=group.lines.filter(line=>{
+        const source=sources.get(line.receiverId);
+        return line.type==='SPI'&&source?.standId===owner.standId&&source?.zoneId===owner.zoneId;
+      });
+      const members=Object.hasOwn(receiver.state,'staticGradientDomain')?(domainResolver?domainResolver(receiver.state.staticGradientDomain):G.domainGroup(gradientDomains,receiver.state.staticGradientDomain)):receiver.state.staticGradientGroup;
+      return G.groupPlacements(lines,members).find(line=>line.id===output.lineId)||null;
+    }catch(_){return null;}
+  }
+  function sample(receiver, sceneGeometry, time = 0, sourceReceivers = [receiver], gradientUnavailable = null, gradientDomains = undefined, domainResolver = null) {
     types(receiver.type);
     const group = sceneGeometry || geometry([receiver]);
     const geo = group.receivers.find(item => item.receiverId === receiver.id);
@@ -731,19 +749,24 @@ function softTrailCoverage(behind,trail,n,smooth){
       // receiver intent; a stale separate override cannot break that strip.
       return geo.outputs.flatMap(output => sample({...receiver,state:model.lightStateFor(receiver,output.port)},
         {...group,receivers:group.receivers.map(item => item.receiverId === receiver.id
-          ? {...item,pixelCount:output.pixels,outputs:[output]} : item)},time));
+          ? {...item,pixelCount:output.pixels,outputs:[output]} : item)},time,sourceReceivers,gradientUnavailable,gradientDomains,domainResolver));
     }
     if(receiver.type==='SPI'&&receiver.state?.engine==='STATIC_GRADIENT'){
       const G=typeof module==='object'&&module.exports?require('./static-gradient.js'):globalThis.LightningStaticGradient;
       const gradient=G.decodeRecipe(receiver.state.staticGradientRecipe);
       if(receiver.state.on===false||receiver.state.power===false)return Array.from({length:geo.pixelCount},()=>[0,0,0]);
-      return geo.outputs.flatMap(output=>Array.from({length:output.pixels},(_,pixel)=>{
-        const total=group.layout==='continuous'?group.totalPixels:output.pixels;
-        const physical=output.reversed?output.pixels-1-pixel:pixel;
-        let index=(group.layout==='continuous'?output.offset:0)+physical;if(gradient.reverse)index=total-1-index;
-        const position=total===1?32768:Math.round(index*65535/(total-1));
-        return G.sample(gradient.stops,position/65535).map(c=>Math.round(c*gradient.brightness/100));
-      }));
+      return geo.outputs.flatMap(output=>{
+        const placement=gradientPlacement(receiver,output,group,sourceReceivers,gradientDomains,domainResolver);
+        if(placement===null){gradientUnavailable?.add(output.port);return Array.from({length:output.pixels},()=>[0,0,0]);}
+        const total=placement?placement.total:group.layout==='continuous'?group.totalPixels:output.pixels;
+        const offset=placement?placement.offset:group.layout==='continuous'?output.offset:0;
+        return Array.from({length:output.pixels},(_,pixel)=>{
+          const physical=output.reversed?output.pixels-1-pixel:pixel;
+          let index=offset+physical;if(gradient.reverse)index=total-1-index;
+          const position=total===1?32768:Math.round(index*65535/(total-1));
+          return G.sample(gradient.stops,position/65535).map(c=>Math.round(c*gradient.brightness/100));
+        });
+      });
     }
     const state = normalizeState(receiver);
     const background = descriptorFor(receiver)?.backgroundEditable ? backgroundSample(state) : null;
@@ -826,14 +849,45 @@ function softTrailCoverage(behind,trail,n,smooth){
     return candidate;
   }
   function rows(options) {
+    let domainResolver=null;
+    if(options.gradientDomains!==undefined){try{const G=typeof module==='object'&&module.exports?require('./static-gradient.js'):globalThis.LightningStaticGradient;domainResolver=G.domainResolver(options.gradientDomains);}catch(_){domainResolver=()=>{throw Error('GRADIENT_SCOPE');};}}
     const receivers = options.receivers || [];
     const physical = geometry(options.geometryReceivers || receivers, options.layout, {lineOrder:options.lineOrder});
     const group = options.samplingGeometry===undefined?physical:checkedSamplingGeometry(options.samplingGeometry,physical);
+    // The editor draft spans only the selected physical SPI lines, in saved
+    // order. Presentation (stacked/continuous) never changes this span.
+    // This overlays pixels only; receiver state and transport stay untouched.
+    const gradientDraftRows = new Map();
+    if (options.gradientDraft) {
+      const G=typeof module==='object'&&module.exports?require('./static-gradient.js'):globalThis.LightningStaticGradient;
+      const draft=G.decodeRecipe(options.gradientDraft),byId=new Map(receivers.map(r=>[r.id,r]));
+      const lines=physical.lines.filter(line=>line.type==='SPI'&&byId.has(line.receiverId)&&
+        (lineSelection(options.selection)?selectedLine(line.id,options.selection):selected(byId.get(line.receiverId),options.selection)));
+      const total=lines.reduce((sum,line)=>sum+line.pixels,0);
+      let offset=0;
+      for(const line of lines){
+        const pixels=Array.from({length:line.pixels},(_,pixel)=>{
+          let index=offset+(line.reversed?line.pixels-1-pixel:pixel);
+          if(draft.reverse)index=total-1-index;
+          const position=total===1?32768:Math.round(index*65535/(total-1));
+          return G.sample(draft.stops,position/65535).map(c=>Math.round(c*draft.brightness/100));
+        });
+        if(!gradientDraftRows.has(line.receiverId))gradientDraftRows.set(line.receiverId,new Map());
+        gradientDraftRows.get(line.receiverId).set(line.port,pixels);
+        offset+=line.pixels;
+      }
+    }
     const frame = {
       geometry: group,
       rows: receivers.map(receiver => {
         const outputs = group.receivers.find(item => item.receiverId === receiver.id).outputs;
-        const pixels = sample(receiver, group, options.time || 0);
+        const gradientUnavailable = new Set();
+        const pixels = sample(receiver, group, options.time || 0, options.geometryReceivers || receivers, gradientUnavailable, options.gradientDomains, domainResolver);
+        const gradientPorts=gradientDraftRows.get(receiver.id);
+        if(gradientPorts)for(const output of outputs){
+          const draft=gradientPorts.get(output.port);if(!draft)continue;
+          for(let pixel=0;pixel<draft.length;pixel++)pixels[output.localOffset+pixel]=draft[pixel];
+        }
         const blink = options.identifying?.get?.(receiver.id);
         const identificationTime = number(options.identificationTime, options.time || 0);
         const elapsed = blink ? identificationTime - number(blink.startedAt, identificationTime) : -1;
@@ -878,7 +932,8 @@ function softTrailCoverage(behind,trail,n,smooth){
         return { receiverId: receiver.id, name: receiver.name || 'Receiver', type: receiver.type,
           category: categoryFor(receiver), selected: selected(receiver, options.selection),
           individuallySelected: (options.selection?.kind === 'receiver' || options.selection?.kind === 'receivers') && selected(receiver, options.selection),
-          offline: receiver.connection === 'offline', pixels, outputs, identifying, identificationPixels };
+          offline: receiver.connection === 'offline', pixels, outputs, identifying, identificationPixels,
+          ...(gradientUnavailable.size?{gradientUnavailablePorts:Array.from(gradientUnavailable)}:{}) };
       })
     };
     const individualFeedback = options.selectionFeedback === true &&

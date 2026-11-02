@@ -101,9 +101,70 @@
     if(d.brightness>0)state.gradientLastBrightness=d.brightness;
     return state;
   }
+  // Public saved logical membership, never physical offsets or authority.
+  function validGroup(value) {
+    return Array.isArray(value)&&value.length>=1&&value.length<=256&&
+      Array.from(value).every(id=>typeof id==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}:[1-4]$/.test(id))&&new Set(value).size===value.length;
+  }
+  function groupPlacements(orderedLines,group) {
+    const refuse=()=>{throw Object.assign(Error('Een ledline van dit verloop ontbreekt of is verplaatst. Pas het opnieuw toe.'),{code:'GRADIENT_SCOPE'});};
+    if(!validGroup(group)||!Array.isArray(orderedLines)||orderedLines.length>256||
+       new Set(orderedLines.map(line=>line?.id)).size!==orderedLines.length)return refuse();
+    const wanted=new Set(group),lines=orderedLines.filter(line=>wanted.has(line?.id));
+    if(lines.length!==group.length||lines.some(line=>!Number.isInteger(line.pixels)||line.pixels<1||line.pixels>1024||typeof line.reversed!=='boolean'))return refuse();
+    const total=lines.reduce((sum,line)=>sum+line.pixels,0);let offset=0;
+    return lines.map((line,index)=>{const value={id:line.id,index,count:lines.length,offset,total,pixels:line.pixels,reversed:line.reversed};offset+=line.pixels;return value;});
+  }
   // Mirrors ordinary colour UX: changing the slider never changes the power
   // switch. Only explicit ON may restore a remembered positive brightness.
   // The capsule is DATA; fresh native capability/current checks still apply.
+
+  // Public light-only membership registry. IDs are storage references, never
+  // hardware authority; every expanded group is rechecked against native geometry.
+  const DOMAIN_MAX_LINES=1024, DOMAIN_MAX_ENTRIES=320;
+  function validDomain(value){return typeof value==='string'&&/^d[0-9a-f]{16}(?:-[1-9][0-9]{0,2})?$/.test(value);}
+  function domainPlain(v){return !!v&&typeof v==='object'&&!Array.isArray(v)&&[Object.prototype,null].includes(Object.getPrototypeOf(v));}
+  function validDomains(v){
+    if(!domainPlain(v)||Object.keys(v).sort().join(',')!=='entries,lines,version'||v.version!==1||
+       !Array.isArray(v.lines)||v.lines.length>DOMAIN_MAX_LINES||new Set(v.lines).size!==v.lines.length||
+       !Array.from(v.lines).every(id=>typeof id==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}:[1-4]$/.test(id))||
+       !domainPlain(v.entries)||Object.keys(v.entries).length>DOMAIN_MAX_ENTRIES)return false;
+    const width=Math.ceil(v.lines.length/4);
+    return Object.entries(v.entries).every(([id,bits])=>validDomain(id)&&(bits===null||typeof bits==='string'&&bits.length===width&&/^[0-9a-f]+$/.test(bits)&&
+      [...bits].some(c=>c!=='0')&&Array.from({length:width*4-v.lines.length},(_,i)=>v.lines.length+i).every(i=>!(parseInt(bits[i>>2],16)&(1<<(i%4))))&&
+      v.lines.filter((_,i)=>parseInt(bits[i>>2],16)&(1<<(i%4))).length<=256));
+  }
+  function domainGroup(registry,id){
+    if(!validDomain(id)||!validDomains(registry)||!Object.hasOwn(registry.entries,id))throw Object.assign(Error('GRADIENT_SCOPE'),{code:'GRADIENT_SCOPE'});
+    return decodedDomainGroup(registry,id);
+  }
+  function decodedDomainGroup(registry,id){const bits=registry.entries[id];if(typeof bits!=='string')throw Object.assign(Error('GRADIENT_SCOPE'),{code:'GRADIENT_SCOPE'});return registry.lines.filter((_,i)=>parseInt(bits[i>>2],16)&(1<<(i%4)));}
+  function domainResolver(registry){
+    if(!validDomains(registry))throw Object.assign(Error('GRADIENT_SCOPE'),{code:'GRADIENT_SCOPE'});
+    const snapshot={lines:[...registry.lines],entries:{...registry.entries}};
+    return id=>{if(!validDomain(id)||!Object.hasOwn(snapshot.entries,id))throw Object.assign(Error('GRADIENT_SCOPE'),{code:'GRADIENT_SCOPE'});return decodedDomainGroup(snapshot,id);};
+  }
+  function domainKey(group){
+    const text=JSON.stringify([...group].sort());let a=0x811c9dc5,b=0x9e3779b9;
+    for(let i=0;i<text.length;i++){a=Math.imul(a^text.charCodeAt(i),0x01000193)>>>0;b=Math.imul(b^text.charCodeAt(i),0x85ebca6b)>>>0;}
+    return 'd'+a.toString(16).padStart(8,'0')+b.toString(16).padStart(8,'0');
+  }
+  function packDomains(groups){
+    const entries=Object.entries(groups);if(entries.length>DOMAIN_MAX_ENTRIES)throw Object.assign(Error('GRADIENT_SCOPE'),{code:'GRADIENT_SCOPE'});
+    const lines=[...new Set(entries.flatMap(([,members])=>members||[]))].sort();if(lines.length>DOMAIN_MAX_LINES)throw Object.assign(Error('GRADIENT_SCOPE'),{code:'GRADIENT_SCOPE'});
+    const byID=new Map(lines.map((id,i)=>[id,i])),packed={version:1,lines,entries:{}};
+    for(const [id,group] of entries){if(group===null){packed.entries[id]=null;continue;}const bits=Array(Math.ceil(lines.length/4)).fill(0);for(const member of group){const i=byID.get(member);bits[i>>2]|=1<<(i%4);}packed.entries[id]=bits.map(n=>n.toString(16)).join('');}
+    if(!validDomains(packed))throw Object.assign(Error('GRADIENT_SCOPE'),{code:'GRADIENT_SCOPE'});return packed;
+  }
+  function internDomain(registry,group,used=[]){
+    if(!validGroup(group)||!Array.isArray(used)||used.some(id=>!validDomain(id)))throw Object.assign(Error('GRADIENT_SCOPE'),{code:'GRADIENT_SCOPE'});
+    if(registry!==undefined&&!validDomains(registry))throw Object.assign(Error('GRADIENT_SCOPE'),{code:'GRADIENT_SCOPE'});
+    const groups={};for(const id of new Set(used))groups[id]=registry&&Object.hasOwn(registry.entries,id)&&registry.entries[id]!==null?decodedDomainGroup(registry,id):null;
+    const canonical=JSON.stringify([...group].sort());let id=Object.keys(groups).find(key=>groups[key]!==null&&JSON.stringify([...groups[key]].sort())===canonical);
+    if(!id){const base=domainKey(group);id=base;let suffix=1;while(Object.hasOwn(groups,id)){id=base+'-'+suffix++;if(suffix>999)throw Object.assign(Error('GRADIENT_SCOPE'),{code:'GRADIENT_SCOPE'});}groups[id]=[...group];}
+    return {domain:id,registry:packDomains(groups)};
+  }
+
   function powerDim(state,patch) {
     const refuse=()=>{throw Object.assign(Error('Het vorige verloop of de helderheid ontbreekt. Pas het verloop opnieuw toe.'),{code:'GRADIENT_REAPPLY_REQUIRED'});};
     if(!plain(state)||state.engine!=='STATIC_GRADIENT'||!plain(patch)||!Object.keys(patch).length||
@@ -125,6 +186,11 @@
     const definition={...d,brightness:on?next:0},capsule=Array.from(recipe(d.stops,definition),b=>b.toString(16).padStart(2,'0')).join('').toUpperCase(),desired=desiredState(capsule);
     Object.assign(desired,{bri:next,brightness:next,on,power:on});
     if(remembered!==undefined)desired.gradientLastBrightness=remembered;
+    if(Object.hasOwn(state,'staticGradientDomain')){if(!validDomain(state.staticGradientDomain))return refuse();desired.staticGradientDomain=state.staticGradientDomain;}
+    if(Object.hasOwn(state,'staticGradientGroup')){
+      if(!validGroup(state.staticGradientGroup))return refuse();
+      desired.staticGradientGroup=[...state.staticGradientGroup];
+    }
     return {state:desired,definition};
   }
   const builtinPresets = Object.freeze([
@@ -183,5 +249,5 @@
       }
     });
   }
-  return Object.freeze({ MIN_STOPS, MAX_STOPS, MAX_PRESETS, STORAGE_KEY, validateStops, stopRGB, sample, samplePixels, definition, physicalChannels, recipe, decodeRecipe, desiredState, powerDim, supportsDemo, builtinPresets, createStore });
+  return Object.freeze({ MIN_STOPS, MAX_STOPS, MAX_PRESETS, STORAGE_KEY, validateStops, stopRGB, sample, samplePixels, definition, physicalChannels, recipe, decodeRecipe, desiredState, validGroup, groupPlacements, validDomain, validDomains, domainGroup, domainResolver, internDomain, powerDim, supportsDemo, builtinPresets, createStore });
 }));

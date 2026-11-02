@@ -1,3 +1,16 @@
+## Android code 36
+
+Telefoon-, tablet- en liggende weergave verbeterd; hetzelfde kleurenwiel voor effen kleur en Verloop. APK gecontroleerd op pakketnaam, handtekening en minimale Android-versie. Geen receiverfirmware inbegrepen. Fysieke Android-/receiveracceptatie blijft open.
+
+## 2 November 2026 — Adaptive phone and tablet interface
+
+- Small tablets and split windows use more of the available width.
+- Wide colour dialogs place the shared wheel beside the exact RGBW controls.
+- Landscape phones keep all four navigation buttons readable and the colour wheel visible above Done.
+- Includes the current shared interface, gradient and LED-line direction presentation.
+
+This browser demo uses fictional receivers in memory. It does not control or update physical receivers. Android download details refer only to the exact linked APK.
+
 ## Interface-update C99 — tablet, liggend en automatische donkere modus
 
 Op een iPad, tablet of liggende telefoon gebruikt de app de volle breedte: het ledline-voorbeeld staat naast de bediening, lijsten staan in twee of drie kolommen en de navigatiebalk blijft compact. Nieuw thema "Automatisch" volgt de licht/donker-instelling van je toestel, ook live; het is de standaard voor wie nog niets koos. Verder: het verbeterde Verloop-scherm, zwarte knoppen en het nieuwe receiver-icoon.

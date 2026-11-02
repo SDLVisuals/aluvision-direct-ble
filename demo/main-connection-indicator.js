@@ -9,24 +9,32 @@
     fr:{connected:'Récepteur principal connecté',checking:'Vérification de la connexion',unknown:'Connexion non confirmée'},
     de:{connected:'Hauptreceiver verbunden',checking:'Verbindung prüfen',unknown:'Verbindung nicht bestätigt'}
   };
-  const wifi='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 8a14 14 0 0 1 18 0M6 12a9 9 0 0 1 12 0M9 16a4.5 4.5 0 0 1 6 0"/><circle cx="12" cy="20" r=".8" fill="currentColor" stroke="none"/></svg>';
+  // Visible pill text; the full sentence above stays for screen readers.
+  const short={
+    nl:{connected:'Verbonden',checking:'Verbinden…',unknown:'Geen verbinding'},
+    en:{connected:'Connected',checking:'Connecting…',unknown:'Not connected'},
+    fr:{connected:'Connecté',checking:'Connexion…',unknown:'Non connecté'},
+    de:{connected:'Verbunden',checking:'Verbinden…',unknown:'Nicht verbunden'}
+  };
+  const escape=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const plain=x=>!!x&&typeof x==='object'&&!Array.isArray(x)&&[Object.prototype,null].includes(Object.getPrototypeOf(x));
   const validId=x=>typeof x==='string'&&x.length>=1&&x.length<=160&&!/[\u0000-\u001f\u007f]/.test(x);
   function context(value){return plain(value)&&Object.keys(value).sort().join(',')==='mainId,standId'&&validId(value.standId)&&validId(value.mainId)?{standId:value.standId,mainId:value.mainId}:null;}
-  function create({host=null,language=()=> 'nl',now=()=>performance.now(),setTimer=setTimeout,clearTimer=clearTimeout,onState=()=>{}}={}){
+  function create({host=null,language=()=> 'nl',standName=()=>'',now=()=>performance.now(),setTimer=setTimeout,clearTimer=clearTimeout,onState=()=>{}}={}){
     let current=null,confirmedAt=null,visible=true,availability='checking',timer=null,disposed=false,rendered='';
     const cancel=()=>{if(timer!==null)clearTimer(timer);timer=null;};
     function snapshot(){
       const age=confirmedAt===null?Infinity:now()-confirmedAt;
       const status=visible&&age>=0&&age<FRESH_MS?'connected':availability==='unknown'?'unknown':'checking';
       const locale=Object.hasOwn(words,language())?language():'nl';
-      return {shown:!disposed&&current!==null,status,label:words[locale][status]};
+      let name='';try{name=String(standName()||'').trim().slice(0,60);}catch(_){}
+      return {shown:!disposed&&current!==null,status,label:words[locale][status],short:short[locale][status],standName:name};
     }
     function publish(){
       const value=snapshot();
       if(host){
         host.hidden=!value.shown;host.dataset.connectionState=value.status;
-        const html=wifi+'<span>'+value.label+'</span>';
+        const html='<i class="mci-dot" aria-hidden="true"></i><span class="mci-copy" aria-hidden="true"><b>'+escape(value.short)+'</b>'+(value.standName?'<small>'+escape(value.standName)+'</small>':'')+'</span><span class="mci-sr">'+escape(value.label)+(value.standName?' · '+escape(value.standName):'')+'</span>';
         if(html!==rendered){host.innerHTML=html;rendered=html;}
       }
       onState({...value});return value;
