@@ -91,7 +91,8 @@
       !/^#[0-9a-f]{6}$/i.test(color)||!Number.isInteger(white)||white<0||white>255||!Number.isFinite(brightness)||brightness<0||brightness>100||typeof on!=='boolean')return false;
     gradientColourDraft={source,current,commit,zoneId:zone().id,context:motionContextKey(),
       values:[...rgbOf({colors:[color]}),white],brightness,on,memory:Object.fromEntries([...rgbOf({colors:[color]}),white].map((value,i)=>['rgbw'[i],value||255])),root:null};
-    showEffectDialog(t('v50ChooseColour'),colourPickerMarkup('gradient',false,{kind:'gradient',values:gradientColourDraft.values,brightness,on,power:true}));
+    // C109: the live ledline preview sits above the wheel, as for animation colours.
+    showEffectDialog(t('v50ChooseColour'),dialogAnimationPreview()+colourPickerMarkup('gradient',false,{kind:'gradient',values:gradientColourDraft.values,brightness,on,power:true}));
     gradientColourDraft.root=dialog.querySelector('[data-colour-picker="gradient"]');
     paintWheel();syncColour();return true;
   }
@@ -196,7 +197,8 @@
   function syncGradientSeparateC105(host){
     main.querySelectorAll('.c105-gradient-separate').forEach(node=>node.remove());
     const z=zone();if(!host||!z||z.type!=='SPI')return;
-    if(M.selectionLines(model,z.id,selection()).length<2)return;
+    // Only with separate ledlines: a continuous ledline is one gradient by design.
+    if(continuousZone()||M.selectionLines(model,z.id,selection()).length<2)return;
     host.insertAdjacentHTML('afterend',`<label class="c105-gradient-separate"><input type="checkbox" data-gradient-separate ${gradientSeparateC105?'checked':''}><span><strong>${esc(t('Zelfde verloop per ledline'))}</strong><small>${esc(t('Elke gekozen ledline krijgt het hele verloop, in plaats van één doorlopend verloop.'))}</small></span></label>`);
   }
   document.addEventListener('change',event=>{
@@ -234,6 +236,7 @@
       const intent=child=>({...child,brightness:definition.brightness,transitionMs:definition.transitionMs,channels:[],scene:scene()});
       return value.kind==='SPI_PORTS'?{...value,portScenes:value.portScenes.map(intent)}:intent(value);
     });
+    window.__c98log?.('GRADIENT_REQ '+JSON.stringify(requests).slice(0,900));
     await retiredPower?.catch(()=>{});
     await liveController?.whenIdle({standId:requests[0].standId});
     if(gradientPowerSerial!==editorSerial||model!==editorModel||JSON.stringify(selection())!==JSON.stringify(scope))throw Object.assign(Error(),{code:'GRADIENT_CHANGED'});
@@ -244,7 +247,7 @@
     // Recheck the original UI intent before the first native output dispatch.
     if(gradientPowerSerial!==editorSerial||model!==inputModel||managementBusy||standPresentationOnly()||!gradientWorkspaceAllowed(zoneId)||motionContextKey()!==context||JSON.stringify(selection())!==selectionKey||document.hidden)throw Object.assign(Error(),{code:'GRADIENT_CHANGED'});
     lastGradientC105=gradient;
-    const separate=gradientSeparateC105&&M.selectionLines(model,zoneId,scope).length>1;
+    const separate=gradientSeparateC105&&!continuousZone()&&M.selectionLines(model,zoneId,scope).length>1;
     const operation=runtime.services.applyStaticGradient({requests,gradient:definition,...(separate?{separate:true}:{})});
     gradientSetupNotice=null;
     let retained;
@@ -4209,7 +4212,7 @@
       const count=scene.zones.reduce((n,z)=>n+z.receivers.length,0),names=scene.zones.slice(0,2).map(z=>z.name).join(' · '),extra=scene.zones.length-2;
       // Swipe left to reveal Details and Delete (c102-swipe.js); both are
       // ordinary buttons, so keyboard and screen readers reach them as well.
-      return `<div class="scene-swipe102" data-scene-swipe102><div class="scene-swipe-actions102"><button type="button" class="scene-swipe-open102" data-action="scene-open" data-id="${esc(scene.id)}" tabindex="-1">${icon('edit')}<span>${esc(t('v50Details'))}</span></button><button type="button" class="scene-swipe-delete102" data-action="scene-delete" data-id="${esc(scene.id)}">${icon('trash')}<span>${esc(t('delete'))}</span></button></div><article class="scene-card-row ui606-scene-card"><button type="button" class="scene-card" data-action="scene-open" data-id="${esc(scene.id)}">${scenePreview(scene)}<span class="scene-card-copy"><b>${esc(scene.name)}</b><small class="scene-card-count">${zoneCount(scene.zones.length)} · ${receiverCount(count)}</small><small class="scene-card-names">${esc(names)}${extra>0?' …':''}</small><span class="scene-open-label">${esc(t('v50Details'))} ${icon('chevron')}</span></span></button><div class="ui606-scene-card-action">${sceneActivateButtonMarkup(scene)}</div></article></div>`;
+      return `<div class="scene-swipe102" data-scene-swipe102><div class="scene-swipe-actions102"><button type="button" class="scene-swipe-open102" data-action="scene-open" data-id="${esc(scene.id)}" tabindex="-1">${icon('edit')}<span>${esc(t('v50Details'))}</span></button><button type="button" class="scene-swipe-delete102" data-action="scene-delete" data-id="${esc(scene.id)}">${icon('trash')}<span>${esc(t('delete'))}</span></button></div><article class="scene-card-row ui606-scene-card"><button type="button" class="scene-card" data-action="scene-open" data-id="${esc(scene.id)}">${scenePreview(scene)}<span class="scene-card-copy"><b>${esc(scene.name)}</b><small class="scene-card-count">${zoneCount(scene.zones.length)} · ${receiverCount(count)}</small><small class="scene-card-names">${esc(names)}${extra>0?' …':''}</small><span class="scene-open-label">${esc(t('v50Details'))} ${icon('chevron')}</span></span></button><div class="ui606-scene-card-action">${sceneActivateButtonMarkup(scene)}</div>${Scenes.compatibility(model,scene).ok?`<button type="button" class="scene-quick-edit109" data-action="scene-start-edit" data-id="${esc(scene.id)}">${icon('sun')}<span>${esc(t('Licht aanpassen'))}</span></button>`:''}</article></div>`;
     }).join('');
     return `<div class="page scenes-page ui606-pages" data-scene-ui="640"><header class="page-heading ui606-page-heading"><div><div class="eyebrow">${esc(standLabel())}</div><div class="ui606-title-row"><h1>${esc(t('scenes'))}</h1><span class="ui606-page-count" aria-label="${esc(t(list.length===1?'v50ScenesOne':'v50ScenesMany',{count:list.length}))}">${list.length}</span></div><p>${esc(t("Bewaar je licht en haal je favoriete sfeer met één tik terug."))}</p></div></header><button class="button ui606-main-action" data-action="scene-new" ${ready?'':'disabled'}><span aria-hidden="true">＋</span><span>${esc(t('newScene'))}</span></button>${savedScenes.error?`<p class="card ui606-page-error" role="alert">${esc(savedScenes.error.message)}</p>`:''}<div class="section-heading scene-list-heading"><h2>${esc(t('v50YourScenes'))}</h2><small>${esc(t(list.length===1?'v50ScenesOne':'v50ScenesMany',{count:list.length}))}</small></div>${list.length?`<p class="scene-swipe-hint102">${icon('back')}<span>${esc(t("Veeg een scène naar links om te verwijderen"))}</span></p>`:''}<div class="scene-list">${cards||`<section class="card empty ui606-empty"><span class="menu-icon" aria-hidden="true">${icon('scenes')}</span><h2>${esc(t('v50SaveFirstScene'))}</h2><p>${esc(t(ready?'v50SaveFirstSceneHint':'v50SceneAddLightsHint'))}</p></section>`}</div>${list.length?`<details class="scene-workflow-help"><summary>${icon('info')}<span>${esc(t('v50HowItWorks'))}</span>${icon('chevron')}</summary>${sceneWorkflow()}</details>`:sceneWorkflow()}</div>`;
   }
@@ -4656,7 +4659,7 @@
   function renderSceneDraft() {
     if(!stand())return renderScenes();
     if(!sceneDraft)sceneDraft={zoneIds:[],name:'',search:''};
-    const editing=Boolean(sceneDraft.sceneId),subtitle=editing?t("Pas de naam of zones aan. Wil je het licht wijzigen? Kies onderaan ‘Deze scène bewerken’."):sceneDraft.asNew675?t("Geef deze variatie een naam. De oorspronkelijke scène blijft bewaard."):t("Je huidige licht staat klaar. Geef het een naam en sla het op.");
+    const editing=Boolean(sceneDraft.sceneId),subtitle=editing?t("Pas de naam of zones aan. Wil je het licht wijzigen? Kies onderaan ‘Licht aanpassen’."):sceneDraft.asNew675?t("Geef deze variatie een naam. De oorspronkelijke scène blijft bewaard."):t("Je huidige licht staat klaar. Geef het een naam en sla het op.");
     const saveHint=t("Na opslaan wordt deze scène actief.");
     // A saved scene projection includes every zone. Build it once per render,
     // not once again for every card in a larger installation.
@@ -4667,7 +4670,7 @@
       const count=M.zoneReceivers(model,z.id).length;
       const saved=savedZones.find(saved=>saved.id===z.id);
       return `<button class="scene-zone" data-action="scene-zone" data-id="${esc(z.id)}" data-scene-filter-name="${esc(z.name+' '+(z.type||''))}" aria-pressed="${sceneDraft.zoneIds.includes(z.id)}" ${count&&!sceneDraft.saving?'':'disabled'}>${saved?savedZonePreview(saved,'',savedPlan):count?zonePreview(z,'scene-preview',{label:t('Huidig licht · {name} · {type}',{name:z.name,type:z.type})}):`<span class="scene-preview scene-preview-unavailable">${icon('zones')}</span>`}<span><b>${esc(z.name)}</b><small>${count?`${receiverCount(count)} · ${z.type}${saved?' · '+t('opgeslagen licht'):''}`:t("Nog geen verlichting")}</small></span><i aria-hidden="true">${sceneDraft.zoneIds.includes(z.id)?'✓':'+'}</i></button>`;
-    }).join('')}</div><p class="scene-search-empty card" hidden>${esc(t("Geen zones gevonden. Pas je zoekopdracht aan; je selectie blijft bewaard."))}</p></section><div class="scene-save-bar"><p data-scene-selection-summary role="status" aria-live="polite"></p><p class="scene-save-error" data-scene-save-error role="alert" hidden></p><button class="button red full" data-action="scene-save" disabled>${sceneDraft.saving?t("Opslaan…"):editing?t("Scène bijwerken"):t("Scène opslaan")}</button>${editing?`<button class="button secondary full" data-action="scene-save-new" ${sceneDraft.saving?'disabled':''}>${esc(t("Opslaan als nieuwe scène"))}</button>`:''}<small>${esc(saveHint)}</small></div>${editing?`<button class="button full scene-detail-edit" data-action="scene-start-edit" data-id="${esc(sceneDraft.sceneId)}" ${sceneDraft.saving?'disabled':''}>${icon('edit')} ${esc(t("Deze scène bewerken"))} ${icon('chevron')}</button><p class="scene-edit-hint">${esc(t("Laadt het opgeslagen licht en brengt je naar de stand. Pas daar je zones aan en sla de scène opnieuw op."))}</p>`:''}<button class="button secondary full" data-action="scenes" ${sceneDraft.saving?'disabled':''}>${esc(t("Annuleren"))}</button></div>`;
+    }).join('')}</div><p class="scene-search-empty card" hidden>${esc(t("Geen zones gevonden. Pas je zoekopdracht aan; je selectie blijft bewaard."))}</p></section><div class="scene-save-bar"><p data-scene-selection-summary role="status" aria-live="polite"></p><p class="scene-save-error" data-scene-save-error role="alert" hidden></p><button class="button red full" data-action="scene-save" disabled>${sceneDraft.saving?t("Opslaan…"):editing?t("Wijzigingen opslaan"):t("Scène opslaan")}</button>${editing?`<button class="button secondary full" data-action="scene-save-new" ${sceneDraft.saving?'disabled':''}>${esc(t("Opslaan als nieuwe scène"))}</button>`:''}<small>${esc(saveHint)}</small></div>${editing?`<button class="button full scene-detail-edit" data-action="scene-start-edit" data-id="${esc(sceneDraft.sceneId)}" ${sceneDraft.saving?'disabled':''}>${icon('sun')} ${esc(t("Licht aanpassen"))} ${icon('chevron')}</button><p class="scene-edit-hint">${esc(t("Laadt het opgeslagen licht en brengt je naar de stand. Pas daar je zones aan en sla de scène opnieuw op."))}</p>`:''}<button class="button secondary full" data-action="scenes" ${sceneDraft.saving?'disabled':''}>${esc(t("Annuleren"))}</button></div>`;
   }
   function renderSceneDetail() {
     if(!stand())return renderScenes();
@@ -4680,9 +4683,9 @@
       <div class="topline"><button class="back" data-action="scenes" aria-label="${esc(t("Terug naar Scènes"))}">${icon('back')}<span>${esc(t("Scènes"))}</span></button><span class="context-name">${esc(standLabel())}</span></div>
       <div class="scene-detail-header"><div class="scene-detail-heading"><header class="page-heading"><div><h1>${esc(scene.name)}</h1><p>${esc(t(editable?"Tik op een zone om het opgeslagen licht te laden en aan te passen.":"Bekijk de opgeslagen zones of werk de naam en zones bij."))}</p></div></header><div class="scene-scope-summary"><span>${icon('zones')}<b>${zoneCount(zones.length)}</b></span><span>${icon('receiver')}<b>${receiverCount(count)}</b></span></div>${check.ok?`<p class="scene-detail-storage687">${icon('scenes')}<span>${esc(t(scene.version===1?'Alleen licht opgeslagen.':'Licht en opstelling opgeslagen.'))}</span></p>`:''}</div></div>
       ${editable?'':`<section class="scene-detail-status687" role="status"><span class="scene-detail-status-icon687" aria-hidden="true">${icon('info')}</span><div><h2>${esc(t(check.ok?'Bewerken per zone niet beschikbaar':'Scène niet beschikbaar'))}</h2><p>${esc(ownedCompatibilityReason654(reason))}</p></div></section>`}
-      <div class="scene-detail-actions687">${check.ok?`<div class="scene-detail-activate scene-activate-bar">${sceneActivateButtonMarkup(scene)}</div>`:''}<button class="button secondary scene-edit-button" data-action="scene-edit" data-id="${esc(scene.id)}">${icon('edit')}<span>${esc(t("Naam en zones bijwerken"))}</span>${icon('chevron')}</button></div>
+      <div class="scene-detail-actions687">${check.ok?`<div class="scene-detail-activate scene-activate-bar">${sceneActivateButtonMarkup(scene)}</div>`:''}${editable?`<button class="button secondary scene-edit-button scene-light-edit109" data-action="scene-start-edit" data-id="${esc(scene.id)}">${icon('sun')}<span>${esc(t("Licht aanpassen"))}</span>${icon('chevron')}</button>`:''}<button class="button secondary scene-edit-button" data-action="scene-edit" data-id="${esc(scene.id)}">${icon('edit')}<span>${esc(t("Naam en zones bijwerken"))}</span>${icon('chevron')}</button></div>
       <section class="scene-detail"><div class="section-heading"><h2>${esc(t("Zones in deze scène"))}</h2>${editable?`<small>${esc(t("Tik om te bewerken"))}</small>`:''}</div>${sceneSearch('detail',zones.length)}<div class="scene-saved-zones">${zones.map((z,i)=>`${editable?`<button type="button" class="scene-saved-zone" data-action="scene-zone-edit" data-id="${esc(scene.id)}" data-zone="${esc(z.id)}" aria-label="${esc(t('{name}: opgeslagen licht laden en bewerken',{name:z.name}))}"`:'<article class="scene-saved-zone scene-saved-zone-readonly687"'} data-scene-zone="${esc(z.id)}" data-scene-zone-type="${z.type}" data-scene-filter-name="${esc(z.name+' '+z.type)}"><span class="scene-saved-zone-heading"><span class="scene-zone-number">${i+1}</span><span><b>${esc(z.name)}</b><small>${z.type} · ${receiverCount(z.receiverCount)}</small></span>${editable?`<span class="scene-zone-edit-label">${esc(t("Bewerken"))} ${icon('chevron')}</span>`:''}</span>${savedZonePreview(z,'',standPlan)}${z.available?'':`<span class="scene-zone-unavailable687">${esc(t('Voorbeeld niet beschikbaar'))}</span>`}</${editable?'button':'article'}>`).join('')}</div><p class="scene-search-empty card" hidden>${esc(t("Geen zones gevonden. Pas je zoekopdracht aan om je opgeslagen zones te zien."))}</p></section>
-      ${editable?`<button class="button secondary full scene-detail-edit" data-action="scene-start-edit" data-id="${esc(scene.id)}">${icon('edit')} ${esc(t("Licht van alle zones bewerken"))} ${icon('chevron')}</button>`:''}<button class="text-button ui606-scene-delete" data-action="scene-delete" data-id="${esc(scene.id)}">${icon('trash')}<span>${esc(t("Scène verwijderen"))}</span></button></div>`;
+      <button class="text-button ui606-scene-delete" data-action="scene-delete" data-id="${esc(scene.id)}">${icon('trash')}<span>${esc(t("Scène verwijderen"))}</span></button></div>`;
   }
   function standConnectionMessage(){
     const errorText=key=>window.LightningV50ErrorTexts.t(key,uiPreferences.preferences.language);
@@ -6372,6 +6375,12 @@
     // C107: a connection being prepared on the Receivers screen would cancel
     // this read again and again; let it finish first (at most 4 s).
     if(guard&&prewarmFlightC98)await Promise.race([prewarmFlightC98,new Promise(resolve=>setTimeout(resolve,4000))]);
+    // C107: the shared-document poll (a SHARED_CHUNK every ~200 ms) cancelled
+    // this read over and over (OUTPUT_CONFIGURATION_CANCELLED), which made the
+    // pixel and sides editors take ~5 s to open. Hold the poll while an editor
+    // reads; it resumes right after.
+    if(editor)sharedSync97?.pause?.();
+    try{
     for(const receiverId of receiverIds){
       const receiver=model.receivers.find(r=>r.id===receiverId&&r.type==='SPI'&&r.lifecycle==='added');if(!receiver)continue;
       // An editor proves the receiver against this phone's view, so it always
@@ -6394,6 +6403,7 @@
         }
       }
     }
+    }finally{if(editor)sharedSync97?.resume?.();}
     return busy?'busy':undefined;
   }
   async function refreshSharedPhysicalC98(standId,remote){
@@ -6903,7 +6913,9 @@
       }):spec.receivers;
       // While the gradient editor is open, the zone's own ledline preview shows
       // the draft gradient, exactly as the solid colour picker does. Preview only.
-      const gradientDraft=spec.main&&!standControlOpen?demoGradientEditor()?.previewRecipe():null;
+      // C109: with the gradient colour picker open, the colour being picked shows too.
+      const pickerC109=gradientColourDraft&&gradientPickerCurrent()?{color:C.hex(gradientColourDraft.values.slice(0,3)),white:gradientColourDraft.values[3],brightness:gradientColourDraft.brightness,on:gradientColourDraft.on}:null;
+      const gradientDraft=spec.main&&!standControlOpen?demoGradientEditor()?.previewRecipe(pickerC109):null;
 
       const globalPlan=spec.standLiveZoneId?liveZoneStandPlan(spec.standLiveZoneId):null;
       const globalOptions=globalPlan?StandAnimations.previewOptions(globalPlan,time,{zoneId:spec.standLiveZoneId}):null;

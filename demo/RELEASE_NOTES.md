@@ -9,7 +9,8 @@
 - A new phone opens the stand faster and also when another phone saved an older view; a phone whose place was reused reconnects by itself; saving sides is quicker while others operate the light.
 - Back on the gradient tab after a plain colour or an animation, Colour 1, 2 and 3 are empty: tap them to choose; the examples sit below.
 - Pixels per port with a real slider; the connection check in the order step keeps its flip buttons, and a flip restarts the running light.
-- Android test app 47 with the same interface.
+- A gradient on one selected ledline now applies to that ledline only; the pixel editor opens in about a second.
+- Android test app 48 with the same interface.
 
 ## Android code 36
 

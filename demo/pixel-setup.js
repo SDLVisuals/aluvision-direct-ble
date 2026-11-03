@@ -152,6 +152,7 @@
     const available=element=>element&&element.isConnected&&container.contains(element)&&isEnabled();
     function end({commit=false}={}){
       const previous=gesture;gesture=null;if(!previous)return;
+      if(previous.edgeFrame)cancelAnimationFrame(previous.edgeFrame);
       previous.element.removeAttribute('data-scrubbing');
       if(previous.element.hasPointerCapture?.(previous.id))previous.element.releasePointerCapture(previous.id);
       if(commit&&previous.dragging&&available(previous.element))onCommit(Number(previous.element.getAttribute('aria-valuenow')));
@@ -179,11 +180,30 @@
         if(Math.max(Math.abs(dx),Math.abs(dy))<6)return;
         if(Math.abs(dy)>=Math.abs(dx))return end();
         gesture.dragging=true;gesture.element.dataset.scrubbing='true';gesture.element.focus({preventScroll:true});
+        gesture.lastX=gesture.x;gesture.acc=gesture.value;
       }
       if(event.cancelable)event.preventDefault();
-      const proposed=gesture.value+Math.round(dx/12),next=change(gesture.element,proposed);
-      // At an end stop, allow an immediate change back in the other direction.
-      if(next!==proposed){gesture.x=event.clientX;gesture.value=next;}
+      // C109: exact in the middle (one pixel per 12 px), up to five times
+      // faster towards either end of the slider.
+      const box=gesture.element.getBoundingClientRect(),rel=box.width?Math.min(1,Math.max(0,(event.clientX-box.left)/box.width)):.5;
+      const factor=1+Math.pow(Math.abs(rel-.5)*2,2)*4;
+      const step=event.clientX-gesture.lastX;gesture.acc+=step/12*factor;gesture.lastX=event.clientX;gesture.rel=rel;
+      // Moving back from an end stops the edge run until the finger rests again.
+      if(step&&gesture.edgeSide&&Math.sign(step)===-gesture.edgeSide)gesture.edgeSince=globalThis.performance?.now?.()??Date.now();
+      settle(gesture);
+      if(!gesture.edgeFrame)gesture.edgeFrame=requestAnimationFrame(edgeRun);
+    }
+    // At an end stop, allow an immediate change back in the other direction.
+    function settle(current){const proposed=Math.round(current.acc),next=change(current.element,proposed);if(next!==proposed)current.acc=next;}
+    // C109: a finger held near either end keeps counting, faster the longer it stays.
+    function edgeRun(now){
+      const current=gesture;if(!current||!current.dragging)return;
+      current.edgeFrame=requestAnimationFrame(edgeRun);
+      if(!available(current.element))return;
+      const side=current.rel<.1?-1:current.rel>.9?1:0,last=current.edgeTime??now;current.edgeTime=now;
+      if(!side||side!==current.edgeSide){current.edgeSide=side;current.edgeSince=now;return;}
+      const held=(now-current.edgeSince)/1000-.25;if(held<0)return;const speed=6+34*Math.min(1,held/1.2);
+      current.acc+=side*speed*Math.min(.05,(now-last)/1000);settle(current);
     }
     function finish(event){
       if(gesture?.id!==event.pointerId)return;

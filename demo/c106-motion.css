@@ -16,26 +16,9 @@
 
 @media (prefers-reduced-motion:no-preference){
 
-/* ---------- Ledline order: a light runs from place 1 to the last place ---------- */
-/* Shows the direction "begin → einde" on the real cards, three rounds, and
- * stays out of the way while a line is selected or identifying itself. */
-html body .order-assignments652>li{--c106-d:0s}
-html body .order-assignments652>li:nth-child(2){--c106-d:.45s}
-html body .order-assignments652>li:nth-child(3){--c106-d:.9s}
-html body .order-assignments652>li:nth-child(4){--c106-d:1.35s}
-html body .order-assignments652>li:nth-child(5){--c106-d:1.8s}
-html body .order-assignments652>li:nth-child(6){--c106-d:2.25s}
-html body .order-assignments652>li:nth-child(7){--c106-d:2.7s}
-html body .order-assignments652>li:nth-child(8){--c106-d:3.15s}
-html body .order-assignments652:has(>li:nth-child(2)):not(:has([data-order-selected="true"],[data-order-pulsing="true"]))>li:nth-child(-n+8) .order-focus-strip664{position:relative}
-html body .order-assignments652:has(>li:nth-child(2)):not(:has([data-order-selected="true"],[data-order-pulsing="true"]))>li:nth-child(-n+8) .order-focus-strip664::after{
-  content:"";position:absolute;top:0;bottom:0;left:0;width:38%;pointer-events:none;border-radius:inherit;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.75) 50%,transparent);mix-blend-mode:screen;
-  transform:translateX(-110%);animation:c106-strip 4.4s ease-in-out var(--c106-d) 3 both}
-html body .order-assignments652:has(>li:nth-child(2)):not(:has([data-order-selected="true"],[data-order-pulsing="true"]))>li:nth-child(-n+8) .order-place-number668>b{
-  animation:c106-place 4.4s ease-in-out var(--c106-d) 3 both}
-@keyframes c106-strip{0%{transform:translateX(-110%)}22%,100%{transform:translateX(270%)}}
-@keyframes c106-place{0%,100%{transform:none;text-shadow:none}8%{transform:scale(1.28);text-shadow:0 0 10px var(--identify-colour,#f6aa60)}20%{transform:none;text-shadow:none}}
+/* ---------- Ledline order ---------- */
+/* C109: the white light run over the ledline strips is gone: it looked like
+ * light on the stand. */
 /* "Begin → einde": the arrow travels. */
 html body .order-assignment-direction652>b{display:inline-block;background:linear-gradient(90deg,currentColor 0 40%,var(--red,#b6443d) 50%,currentColor 60% 100%) 0 0/250% 100%;
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:c106-direction 2.6s ease-in-out 4}
@@ -82,12 +65,6 @@ html body .c106-new{animation:c106-arrive .55s cubic-bezier(.2,.9,.3,1.15) backw
 @keyframes c106-arrive{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
 @keyframes c106-flash{from{box-shadow:0 0 0 2px #22a06b}to{box-shadow:0 0 0 2px rgba(34,160,107,0)}}
 
-
-/* ---------- Ambient: the stand card's light line flows slowly ---------- */
-html.interface-polish body #main .stand-hero100::after{
-  background:linear-gradient(90deg,#e2574c,#f0a04b 18%,#f5d76e 30%,#5ccf9a 46%,#4f8cf0 64%,#9a6cf0 82%,#e2574c) 0 0/400px 100% repeat-x;
-  animation:c106-flow 14s linear infinite}
-@keyframes c106-flow{to{background-position:-400px 0}}
 
 /* ---------- Found receivers come in one after another ---------- */
 html body .onboarding-results>*{animation:c106-arrive .45s cubic-bezier(.2,.9,.3,1.1) backwards}
@@ -180,17 +157,15 @@ html body .receiver-update-progress[data-state="complete"] .update-receiver-copy
   background:#22a06b url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='M5 9.3l2.6 2.6L13 6.4' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/18px no-repeat}
 @media (prefers-reduced-motion:no-preference){html body .receiver-update-progress[data-state="complete"] .update-receiver-copy>b::after{animation:c106-pop .5s cubic-bezier(.3,1.5,.5,1) both}}
 
-/* ---------- Round 2: a new page lays out its blocks one after another ---------- */
+/* ---------- C109: calm page changes, smooth menus ---------- */
+/* Pages fade in without dropping into place; menus (sheets) glide up and
+ * settle without a bounce. */
 @media (prefers-reduced-motion:no-preference){
-  html body main>.c106-stagger:not(:has(>.control-preview-dock,.spatial-choice-panel,.v50-spatial-header))>:nth-child(-n+7){animation:c106-block .42s cubic-bezier(.2,.8,.25,1) backwards}
-  html body main>.c106-stagger:not(:has(>.control-preview-dock,.spatial-choice-panel,.v50-spatial-header))>:nth-child(2){animation-delay:.05s}
-  html body main>.c106-stagger:not(:has(>.control-preview-dock,.spatial-choice-panel,.v50-spatial-header))>:nth-child(3){animation-delay:.1s}
-  html body main>.c106-stagger:not(:has(>.control-preview-dock,.spatial-choice-panel,.v50-spatial-header))>:nth-child(4){animation-delay:.15s}
-  html body main>.c106-stagger:not(:has(>.control-preview-dock,.spatial-choice-panel,.v50-spatial-header))>:nth-child(5){animation-delay:.2s}
-  html body main>.c106-stagger:not(:has(>.control-preview-dock,.spatial-choice-panel,.v50-spatial-header))>:nth-child(6){animation-delay:.25s}
-  html body main>.c106-stagger:not(:has(>.control-preview-dock,.spatial-choice-panel,.v50-spatial-header))>:nth-child(7){animation-delay:.3s}
+  html body main>.app-page-enter{animation:c109-page-fade .24s ease-out both!important}
+  html body dialog[open]:not(.is-closing),html body dialog#effect-dialog[open]:not(.is-closing){animation:c109-sheet-in .38s cubic-bezier(.22,1,.36,1) both!important}
 }
-@keyframes c106-block{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes c109-page-fade{from{opacity:0}to{opacity:1}}
+@keyframes c109-sheet-in{from{opacity:0;transform:translate3d(0,22px,0)}to{opacity:1;transform:none}}
 
 /* ---------- Round 2: what you tapped answers back ---------- */
 @media (prefers-reduced-motion:no-preference){

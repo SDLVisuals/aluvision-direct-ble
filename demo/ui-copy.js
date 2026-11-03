@@ -707,7 +707,21 @@
   ["Lichtje loopt over elke overgang van ledline naar ledline","A light runs across every join from LED line to LED line","Une lumière parcourt chaque jonction d’une ligne LED à l’autre","Ein Licht läuft über jeden Übergang von LED-Linie zu LED-Linie"],
   ["Laatste stap: zet de ledlines in de juiste volgorde en controleer de verbindingen.","Last step: put the LED lines in the right order and check the connections.","Dernière étape : placez les lignes LED dans le bon ordre et vérifiez les connexions.","Letzter Schritt: Bringe die LED-Linien in die richtige Reihenfolge und prüfe die Verbindungen."],
   ["Even wachten tot de volgorde is opgeslagen.","Please wait until the order has been saved.","Patientez jusqu’à ce que l’ordre soit enregistré.","Bitte warte, bis die Reihenfolge gespeichert ist."],
-];
+    // C109 copy: gradient editor, scenes, animation sync.
+    ["Verplaats {point}", "Move {point}", "Déplacer {point}", "{point} verschieben"],
+    ["Sleep, of gebruik pijl omhoog en omlaag.", "Drag, or use the up and down arrows.", "Faites glisser ou utilisez les flèches haut et bas.", "Ziehen oder die Pfeiltasten nach oben und unten verwenden."],
+    ["Overgang", "Transition", "Transition", "Übergang"],
+    ["Hoe vloeiend het licht naar een nieuw verloop overgaat.", "How smoothly the light changes to a new gradient.", "La douceur avec laquelle la lumière passe à un nouveau dégradé.", "Wie sanft das Licht zu einem neuen Verlauf wechselt."],
+    ["Direct", "Instant", "Immédiat", "Sofort"],
+    ["{seconds} s", "{seconds} s", "{seconds} s", "{seconds} s"],
+    ["Het verloop begint aan de andere kant.", "The gradient starts from the other end.", "Le dégradé commence de l’autre côté.", "Der Verlauf beginnt am anderen Ende."],
+    ["Tik op een verloop om het te gebruiken. Bewaar je eigen verloop om het later terug te halen.", "Tap a gradient to use it. Save your own gradient to bring it back later.", "Touchez un dégradé pour l’utiliser. Enregistrez votre propre dégradé pour le retrouver plus tard.", "Tippe auf einen Verlauf, um ihn zu verwenden. Speichere deinen eigenen Verlauf, um ihn später wieder aufzurufen."],
+    ["Eigen verlopen", "Your gradients", "Vos dégradés", "Eigene Verläufe"],
+    ["Licht aanpassen", "Adjust light", "Ajuster la lumière", "Licht anpassen"],
+    ["Pas de naam of zones aan. Wil je het licht wijzigen? Kies onderaan ‘Licht aanpassen’.", "Change the name or zones. Want to change the light? Choose ‘Adjust light’ below.", "Modifiez le nom ou les zones. Vous voulez changer la lumière ? Choisissez « Ajuster la lumière » en bas.", "Ändere den Namen oder die Zonen. Möchtest du das Licht ändern? Wähle unten ‚Licht anpassen‘."],
+    ["Animatie synchroniseren", "Synchronising animation", "Synchronisation de l’animation", "Animation wird synchronisiert"],
+    ["De receivers starten samen over {seconds} s.", "The receivers start together in {seconds} s.", "Les récepteurs démarrent ensemble dans {seconds} s.", "Die Receiver starten gemeinsam in {seconds} s."],
+  ];
   const rows=Object.create(null);
   for(const row of entries){if(!Array.isArray(row)||row.length!==4||row.some(value=>typeof value!=='string'))throw Error('UI_COPY_ROW');if(Object.prototype.hasOwnProperty.call(rows,row[0])){if(JSON.stringify(rows[row[0]])!==JSON.stringify(row))throw Error('UI_COPY_DUPLICATE');continue;}rows[row[0]]=Object.freeze([...row]);}
   // Existing authored key, presentation terminology only. Preference storage,

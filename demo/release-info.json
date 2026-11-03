@@ -113,8 +113,8 @@
   "assets": [
     {
       "path": "RELEASE_NOTES.md",
-      "bytes": 42247,
-      "sha256": "f21a44cfdb22d6a70426713952e24fee18a1f216aff9566b85f5d9439c28abaa"
+      "bytes": 42360,
+      "sha256": "f494a17c5946d6bbd257fda6a9dfe4aadba65d70ead6c9a90543eb6cff32bbb0"
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
@@ -242,6 +242,11 @@
       "sha256": "d31a290412ba4bcbf74a3319b16c84cac46c861e5064e56f1f0ff0e0113143e6"
     },
     {
+      "path": "android/aluvision-android-test-50.0.0-c107j-48-181b4d42325f.apk",
+      "bytes": 3407403,
+      "sha256": "181b4d42325fadd8a61fed4645eeb4ea55f58cfa0704c97274825acd75e73461"
+    },
+    {
       "path": "android/aluvision-android-test-50.0.0-c99-beta-35-4c1964cff799.apk",
       "bytes": 3308132,
       "sha256": "4c1964cff799b9c83afcfe49cb4303d5654ac611a29a3f9c64fbe1617013caa0"
@@ -318,8 +323,8 @@
     },
     {
       "path": "app.js",
-      "bytes": 840542,
-      "sha256": "c130a53792aa74a08ffc57b26b7694478492ac8b557ad6e018645bd26af89510"
+      "bytes": 841776,
+      "sha256": "bae998e1d9f70db672e27375dfdd188327387eb3889003aa48bb93fb6ca3f744"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -373,13 +378,23 @@
     },
     {
       "path": "c106-motion.css",
-      "bytes": 33658,
-      "sha256": "ca9fed6f5e65900fdd5616386a64544029ee28f04bc2fc272624ccdcaece9f0f"
+      "bytes": 30909,
+      "sha256": "254a2023aa45c5128b5f277bcb007069093c5d02b1128217467913601391bb10"
     },
     {
       "path": "c106-motion.js",
-      "bytes": 6888,
-      "sha256": "8db25a49c096c38c5379e10932e8e5452968a5c2e4db56beef043d5d551a579e"
+      "bytes": 6195,
+      "sha256": "3850a060d11e902b190e1da20050c15c5fe68d7dc2a01aeddc327a16e34a7988"
+    },
+    {
+      "path": "c109-interface.css",
+      "bytes": 7763,
+      "sha256": "4ac671196f6db0a52a2a362f4ec7f03ffd22911d9caf51dcba1a3cdc7224728a"
+    },
+    {
+      "path": "c109-interface.js",
+      "bytes": 3527,
+      "sha256": "7934d3ff89f04605c95b91f8ec21c31b139157877f81a88f97ca02159eed360c"
     },
     {
       "path": "c97-polish.css",
@@ -458,8 +473,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 11580,
-      "sha256": "dbd82f249b71aad671c5a8ed43511cca7645e7ae313e40d347ca3bb8ecfdedc5"
+      "bytes": 11720,
+      "sha256": "2d1ebfb553f497f53bb8a6e393c71444c85487aa1dc2a4724cf69a3f8d7728bc"
     },
     {
       "path": "installation-libraries.js",
@@ -633,8 +648,8 @@
     },
     {
       "path": "pixel-setup.js",
-      "bytes": 70750,
-      "sha256": "6a5b734644386cea6940f35a774ce8a0fd6063cb83f1fb672b37ccdd57fcd849"
+      "bytes": 72272,
+      "sha256": "fcca257f87b2ba07042b0add251dda62dac8362d5a7ada1664bc41a717565489"
     },
     {
       "path": "pixel-translations.js",
@@ -808,13 +823,13 @@
     },
     {
       "path": "static-gradient-ui.js",
-      "bytes": 34021,
-      "sha256": "82351eb3870f54a0cd21678ffa2de44f974820f7196656fd013135c82c70bc21"
+      "bytes": 41306,
+      "sha256": "d5639ad4a776b535d307c2686add1255a103d64b4692017230f5c770f9065b0e"
     },
     {
       "path": "static-gradient.css",
-      "bytes": 14250,
-      "sha256": "3898bef7eac9bc2cb166d18a104541225e430eb47c91c2009e49c8103e4634fc"
+      "bytes": 21854,
+      "sha256": "38dfca78b9f6ea2274744cf9121d81aaf934e7025e79188746f9a182e5a23a0f"
     },
     {
       "path": "static-gradient.js",
@@ -843,8 +858,8 @@
     },
     {
       "path": "ui-copy.js",
-      "bytes": 140893,
-      "sha256": "8b4dfb2b71e7d5d5c4f8dc32150366b39752b5e5cc431ef9aa661922934713e4"
+      "bytes": 143151,
+      "sha256": "463471167fae896f19caf210462a6d3e4b0b7903de67c1db345dd4e960c10d1a"
     },
     {
       "path": "ui606-controls.css",
@@ -4095,11 +4110,11 @@
     "scope": "Shared browser interface; fictional in-memory receivers only",
     "changes": "Fast SPI gradient with per-ledline option, order step with connection check, smoother motion, multi-user fixes, port changes from a phone with an older receiver view, automatic saving on receivers, four phones adjusting one stand together",
     "android": {
-      "versionCode": 47,
-      "versionName": "50.0.0-c107f",
-      "apk": "android/aluvision-android-test-50.0.0-c107f-47-d31a290412ba.apk",
-      "sha256": "d31a290412ba4bcbf74a3319b16c84cac46c861e5064e56f1f0ff0e0113143e6",
-      "bytes": 3399062
+      "versionCode": 48,
+      "versionName": "50.0.0-c107j",
+      "apk": "android/aluvision-android-test-50.0.0-c107j-48-181b4d42325f.apk",
+      "sha256": "181b4d42325fadd8a61fed4645eeb4ea55f58cfa0704c97274825acd75e73461",
+      "bytes": 3407403
     }
   }
 }

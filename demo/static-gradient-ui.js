@@ -42,9 +42,9 @@
     const spreadC107 = () => draft.stops.forEach((stop, i) => { stop.position = i / (draft.stops.length - 1); });
     // The stops that count: chosen colours only, spread evenly while slots
     // are still empty. One colour lights the whole ledline in that colour.
-    function liveStopsC107() {
-      if (!unsetC107.size) return draft.stops;
-      const set = draft.stops.filter((_, i) => !unsetC107At(i));
+    function liveStopsC107(stops = draft.stops, unset = unsetC107) {
+      if (!unset.size) return stops;
+      const set = stops.filter((_, i) => !unset.has(i));
       if (!set.length) return null;
       if (set.length === 1) return [{ ...set[0], position: 0 }, { ...set[0], position: 1 }];
       return set.map((stop, i) => ({ ...stop, position: i / (set.length - 1) }));
@@ -92,20 +92,37 @@
     // the app's card / slider / colour-row look.
     const pct = value => Math.round(value * 100);
     const pointLabel = index => T('Kleur {number}', { number: index + 1 });
+    const transitionText = () => transitionMs === 0 ? T('Direct') : T('{seconds} s', { seconds: (transitionMs / 1000).toLocaleString(document.documentElement.lang || 'nl', { maximumFractionDigits: 2 }) });
+    // C109: move a colour to another place; the places (positions) stay, the
+    // colours change order. Empty slots move along with their colour.
+    function moveColour(from, to) {
+      if (from === to || !draft.stops[from] || !draft.stops[to]) return false;
+      const positions = draft.stops.map(stop => stop.position), empty = draft.stops.map((_, i) => unsetC107At(i));
+      const [stop] = draft.stops.splice(from, 1); draft.stops.splice(to, 0, stop);
+      const [flag] = empty.splice(from, 1); empty.splice(to, 0, flag);
+      draft.stops.forEach((item, i) => { item.position = positions[i]; });
+      unsetC107 = new Set(empty.flatMap((value, i) => value ? [i] : []));
+      if (draft.stops.some((_, i) => !unsetC107At(i))) chosen();
+      selected = to; return true;
+    }
     function body() {
       const state = store.load(), stop = draft.stops[selected], limit = draft.stops.length === G.MAX_STOPS;
       const custom = state.presets.map(preset => `<div class="gradient-saved-row"><button type="button" data-gradient-load="${esc(preset.id)}" aria-pressed="${draft.id === preset.id}"><i style="background:${gradientCSS(preset.stops)}" aria-hidden="true"></i><span>${esc(preset.name)}</span></button><button type="button" class="gradient-remove-preset" data-gradient-delete="${esc(preset.id)}" aria-label="Verwijder ${esc(preset.name)}">−</button></div>`).join('');
-      const ideas = `<section class="card gradient-card gradient-ideas" aria-labelledby="gradient-ideas-title"><h3 id="gradient-ideas-title">${T('Voorbeelden')}</h3><p class="gradient-help">${T('Tik om een voorbeeld als startpunt te gebruiken.')}</p><div class="gradient-builtins">${G.builtinPresets.map(preset => `<button type="button" data-gradient-builtin="${preset.id}" aria-pressed="${!choiceRequired && JSON.stringify(draft.stops)===JSON.stringify(preset.stops)}"><i style="background:${gradientCSS(preset.stops)}" aria-hidden="true"></i><span>${esc(preset.name)}</span><b class="gradient-builtin-check" aria-hidden="true">✓</b></button>`).join('')}</div></section>`;
-      const points = draft.stops.map((item, index) => `<div class="gradient-point${index === selected ? ' is-selected' : ''}${unsetC107At(index) ? ' is-unset' : ''}" data-gradient-point-row="${index}"><button type="button" class="gradient-point-colour" data-gradient-color-open data-gradient-point="${index}" aria-pressed="${index === selected}" aria-haspopup="dialog" aria-label="${pointLabel(index)} ${unsetC107At(index) ? T('kiezen') : T('wijzigen')}">${unsetC107At(index) ? `<span class="gradient-point-swatch is-unset" aria-hidden="true">+</span><b>${pointLabel(index)}</b><small class="gradient-point-choose">${T('Kies een kleur')}</small>` : `<span class="gradient-point-swatch" style="--stop:${C.screenHex(G.stopRGB(item))}" aria-hidden="true"></span><b>${pointLabel(index)}</b><small data-gradient-point-position>${unsetC107.size ? '' : pct(item.position) + '%'}</small>`}</button><button type="button" class="gradient-point-remove" data-gradient-remove-at="${index}" aria-label="Verwijder ${pointLabel(index).toLowerCase()}" ${draft.stops.length <= 2 ? 'disabled' : ''}>−</button></div>`).join('');
-      const colours = `<section class="card gradient-card static-gradient-editor" aria-labelledby="gradient-title"><div class="gradient-card-heading"><h3 id="gradient-title">${T('Verloopkleuren')}</h3><span class="gradient-count">${T('{count} van {max}', { count: draft.stops.length, max: G.MAX_STOPS })}</span></div><p class="gradient-help">${unsetC107.size ? T('Tik op Kleur 1, 2 en 3 en kies je kleuren. Het verloop verschijnt zodra je kiest.') : T('Tik op een kleur om te wijzigen. Sleep de punten op de balk om de overgang te verschuiven.')}</p><div class="gradient-rail-wrap"><div class="gradient-rail${liveStopsC107() ? '' : ' is-blank'}" data-gradient-rail style="background:${railCSSC107()}">${unsetC107.size ? '' : draft.stops.map((item, index) => `<button type="button" class="gradient-stop${index === selected ? ' is-selected' : ''}" data-gradient-stop="${index}" style="left:${item.position * 100}%;--stop:${C.screenHex(G.stopRGB(item))}" aria-label="${T('{point}, positie {percent} procent. Gebruik de pijltjestoetsen om te verplaatsen.', { point: pointLabel(index), percent: pct(item.position) })}" aria-pressed="${index === selected}"><i aria-hidden="true"></i></button>`).join('')}</div></div><div class="gradient-points">${points}</div><button type="button" class="gradient-point-add" data-gradient-add aria-label="${T('Kleur toevoegen')}" ${limit ? 'disabled' : ''}>${T('＋ Kleur')}</button>${limit ? `<p class="gradient-help">${T('Acht kleuren is het maximum.')}</p>` : ''}<div class="slider-row gradient-slider" ${unsetC107.size ? 'hidden' : ''}><label for="gradient-position"><span>${T('Plaats van')} <span data-gradient-number>${pointLabel(selected).toLowerCase()}</span></span><output data-gradient-position-output>${pct(stop.position)}%</output></label><input type="range" id="gradient-position" data-gradient-position min="${bounds().min}" max="${bounds().max}" step="1" value="${pct(stop.position)}"></div><button type="button" class="gradient-even" data-gradient-even ${unsetC107.size ? 'hidden' : ''}><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12h16M4 7v10M12 9v6M20 7v10"/></svg>${T('Kleuren gelijk verdelen')}</button></section>`;
-      const light = `<section class="card gradient-card gradient-apply-card" aria-label="${T('Verloop toepassen')}"><div class="slider-row gradient-slider"><label for="gradient-brightness">${T('Helderheid')}<output data-gradient-brightness-output>${brightness}%</output></label><input type="range" id="gradient-brightness" data-gradient-brightness min="0" max="100" step="1" value="${brightness}"></div><div class="gradient-apply-slot"></div></section>`;
-      const library = `<section class="card gradient-card gradient-library" aria-labelledby="gradient-library-title"><h3 id="gradient-library-title">${T('Mijn verlopen')}</h3><p class="gradient-help">${T('Bewaar je verloop om het later met één tik terug te halen.')}</p><label class="gradient-name-label" for="gradient-name">${T('Naam')}<input type="text" id="gradient-name" data-gradient-name maxlength="48" autocomplete="off" value="${esc(draft.name)}" placeholder="${T('Bijvoorbeeld: Balie warm')}"></label><div class="gradient-save-actions"><button type="button" class="button" data-gradient-save>${draft.id ? T('Wijzigingen bewaren') : T('Verloop bewaren')}</button>${draft.id ? `<button type="button" class="button secondary" data-gradient-save-copy>${T('Bewaar als nieuw')}</button>` : ''}</div><p class="gradient-notice" data-gradient-notice role="status" aria-live="polite">${esc(state.error || notice)}</p><div class="gradient-customs">${custom || `<p class="gradient-empty">${T('Je bewaarde verlopen verschijnen hier.')}</p>`}</div></section>`;
+      // C109: the grip on the left moves a colour to another place (drag, or arrow keys).
+      const grip = index => `<button type="button" class="gradient-point-drag" data-gradient-drag="${index}" aria-label="${T('Verplaats {point}', { point: pointLabel(index).toLowerCase() })}. ${T('Sleep, of gebruik pijl omhoog en omlaag.')}"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></button>`;
+      const points = draft.stops.map((item, index) => `<div class="gradient-point${index === selected ? ' is-selected' : ''}${unsetC107At(index) ? ' is-unset' : ''}" data-gradient-point-row="${index}">${grip(index)}<button type="button" class="gradient-point-colour" data-gradient-color-open data-gradient-point="${index}" aria-pressed="${index === selected}" aria-haspopup="dialog" aria-label="${pointLabel(index)} ${unsetC107At(index) ? T('kiezen') : T('wijzigen')}">${unsetC107At(index) ? `<span class="gradient-point-swatch is-unset" aria-hidden="true">+</span><b>${pointLabel(index)}</b><small class="gradient-point-choose">${T('Kies een kleur')}</small>` : `<span class="gradient-point-swatch" style="--stop:${C.screenHex(G.stopRGB(item))}" aria-hidden="true"></span><b>${pointLabel(index)}</b><small data-gradient-point-position>${unsetC107.size ? '' : pct(item.position) + '%'}</small>`}</button><button type="button" class="gradient-point-remove" data-gradient-remove-at="${index}" aria-label="Verwijder ${pointLabel(index).toLowerCase()}" ${draft.stops.length <= 2 ? 'disabled' : ''}>−</button></div>`).join('');
+      const colours = `<section class="card gradient-card static-gradient-editor" aria-labelledby="gradient-title"><div class="gradient-card-heading"><h3 id="gradient-title">${T('Verloopkleuren')}</h3><span class="gradient-count">${T('{count} van {max}', { count: draft.stops.length, max: G.MAX_STOPS })}</span></div><p class="gradient-help">${unsetC107.size ? T('Tik op Kleur 1, 2 en 3 en kies je kleuren. Het verloop verschijnt zodra je kiest.') : T('Tik op een kleur om te wijzigen. Sleep de punten op de balk om de overgang te verschuiven.')}</p><div class="gradient-rail-wrap"><div class="gradient-rail${liveStopsC107() ? '' : ' is-blank'}" data-gradient-rail style="background:${railCSSC107()}">${unsetC107.size ? '' : draft.stops.map((item, index) => `<button type="button" class="gradient-stop${index === selected ? ' is-selected' : ''}" data-gradient-stop="${index}" style="left:${item.position * 100}%;--stop:${C.screenHex(G.stopRGB(item))}" aria-label="${T('{point}, positie {percent} procent. Gebruik de pijltjestoetsen om te verplaatsen.', { point: pointLabel(index), percent: pct(item.position) })}" aria-pressed="${index === selected}"><i aria-hidden="true"></i></button>`).join('')}</div></div><div class="gradient-points">${points}</div><button type="button" class="gradient-point-add" data-gradient-add aria-label="${T('Kleur toevoegen')}" ${limit ? 'disabled' : ''}>${T('＋ Kleur')}</button>${limit ? `<p class="gradient-help">${T('Acht kleuren is het maximum.')}</p>` : ''}<div class="slider-row gradient-slider gradient-position-slider" ${unsetC107.size ? 'hidden' : ''}><label for="gradient-position"><span class="gradient-slider-name"><i class="gradient-position-dot" aria-hidden="true"></i>${T('Plaats van')} <span data-gradient-number>${pointLabel(selected).toLowerCase()}</span></span><output data-gradient-position-output>${pct(stop.position)}%</output></label><input type="range" id="gradient-position" data-gradient-position min="${bounds().min}" max="${bounds().max}" step="1" value="${pct(stop.position)}"></div><button type="button" class="gradient-even" data-gradient-even ${unsetC107.size ? 'hidden' : ''}><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12h16M4 7v10M12 9v6M20 7v10"/></svg>${T('Kleuren gelijk verdelen')}</button></section>`;
+      // C109: brightness, transition and direction together, always visible
+      // (no "Meer opties"), each with its own look.
+      const light = `<section class="card gradient-card gradient-apply-card" aria-label="${T('Verloop toepassen')}"><div class="slider-row gradient-slider gradient-light-slider"><label for="gradient-brightness"><span class="gradient-slider-name"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>${T('Helderheid')}</span><output data-gradient-brightness-output>${brightness}%</output></label><input type="range" id="gradient-brightness" data-gradient-brightness min="0" max="100" step="1" value="${brightness}"></div><div class="slider-row gradient-slider gradient-transition-slider"><label for="gradient-transition"><span class="gradient-slider-name"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 15c3 0 4-6 9-6s6 6 9 6"/></svg>${T('Overgang')}</span><output data-gradient-transition-output>${transitionText()}</output></label><input type="range" id="gradient-transition" data-gradient-transition min="0" max="750" step="10" value="${transitionMs}"><small class="gradient-slider-hint">${T('Hoe vloeiend het licht naar een nieuw verloop overgaat.')}</small></div><label class="gradient-reverse-row"><span class="gradient-reverse-icon" aria-hidden="true"></span><span class="gradient-reverse-copy"><b>${T('Richting omdraaien')}</b><small>${T('Het verloop begint aan de andere kant.')}</small></span><input type="checkbox" data-gradient-reverse ${reverse ? 'checked' : ''}></label><div class="gradient-apply-slot"></div></section>`;
+      // C109: examples and saved gradients in one place; saving sits below them.
+      const library = `<section class="card gradient-card gradient-library" aria-labelledby="gradient-library-title"><h3 id="gradient-library-title">${T('Mijn verlopen')}</h3><p class="gradient-help">${T('Tik op een verloop om het te gebruiken. Bewaar je eigen verloop om het later terug te halen.')}</p><h4 class="gradient-collection-title">${T('Voorbeelden')}</h4><div class="gradient-builtins">${G.builtinPresets.map(preset => `<button type="button" data-gradient-builtin="${preset.id}" aria-pressed="${!choiceRequired && JSON.stringify(draft.stops)===JSON.stringify(preset.stops)}"><i style="background:${gradientCSS(preset.stops)}" aria-hidden="true"></i><span>${esc(preset.name)}</span><b class="gradient-builtin-check" aria-hidden="true">✓</b></button>`).join('')}</div><h4 class="gradient-collection-title">${T('Eigen verlopen')}</h4><div class="gradient-customs">${custom || `<p class="gradient-empty">${T('Je bewaarde verlopen verschijnen hier.')}</p>`}</div><div class="gradient-save-box"><label class="gradient-name-label" for="gradient-name">${T('Naam')}<input type="text" id="gradient-name" data-gradient-name maxlength="48" autocomplete="off" value="${esc(draft.name)}" placeholder="${T('Bijvoorbeeld: Balie warm')}"></label><div class="gradient-save-actions"><button type="button" class="button" data-gradient-save>${draft.id ? T('Wijzigingen bewaren') : T('Verloop bewaren')}</button>${draft.id ? `<button type="button" class="button secondary" data-gradient-save-copy>${T('Bewaar als nieuw')}</button>` : ''}</div><p class="gradient-notice" data-gradient-notice role="status" aria-live="polite">${esc(state.error || notice)}</p></div></section>`;
       // C107: back from a plain colour or an animation the colour slots are
-      // empty (see blankDraftC107); the examples and saved gradients sit below.
-      return colours + light + ideas + library;
+      // empty (see blankDraftC107); the gradients to start from sit below.
+      return colours + light + library;
     }
     function officialBody() {
-      const apply = `<div class="gradient-apply"><p data-gradient-apply-status role="status" aria-live="polite" ${applyNotice?'':'hidden'}>${esc(applyNotice)}</p><details class="gradient-more" data-gradient-more ${moreOpen?'open':''}><summary>${T('Meer opties')}</summary><label class="gradient-check"><input type="checkbox" data-gradient-reverse ${reverse?'checked':''}> ${T('Richting omdraaien')}</label><label class="gradient-transition">${T('Overgangstijd')} <span><input type="number" inputmode="numeric" data-gradient-transition min="0" max="750" step="1" value="${transitionMs}"> ms</span></label></details></div>`;
+      const apply = `<div class="gradient-apply" ${applyNotice?'':'hidden'}><p data-gradient-apply-status role="status" aria-live="polite" ${applyNotice?'':'hidden'}>${esc(applyNotice)}</p></div>`;
       return body().replace('<div class="gradient-apply-slot"></div>', apply);
     }
     function paint() {
@@ -133,6 +150,12 @@
       panel.querySelector('[data-gradient-number]').textContent = pointLabel(selected).toLowerCase();
       panel.querySelector('[data-gradient-position-output]').textContent = pct(stop.position) + '%';
       panel.querySelector('[data-gradient-brightness-output]').textContent = brightness + '%';
+      const transitionOutput = panel.querySelector('[data-gradient-transition-output]'); if (transitionOutput) transitionOutput.textContent = transitionText();
+      // C109: each slider shows what it changes (see static-gradient.css).
+      panel.querySelector('[data-gradient-brightness]')?.style.setProperty('--fill', brightness + '%');
+      panel.querySelector('[data-gradient-transition]')?.style.setProperty('--fill', transitionMs / 7.5 + '%');
+      const positionSlider = panel.querySelector('.gradient-position-slider');
+      if (positionSlider && stop) positionSlider.style.setProperty('--stop', C.screenHex(G.stopRGB(stop)));
       panel.querySelectorAll('[data-gradient-builtin]').forEach(button => {
         const preset = G.builtinPresets.find(item => item.id === button.dataset.gradientBuiltin);
         button.setAttribute('aria-pressed', String(!choiceRequired && !!preset && JSON.stringify(draft.stops) === JSON.stringify(preset.stops)));
@@ -207,10 +230,26 @@
     function setStatus(text) {
       applyNotice = text;
       const status = host?.querySelector?.('[data-gradient-apply-status]'); if (status) status.textContent = text;
-      if (status) status.hidden = !text;
+      if (status) { status.hidden = !text; const box = status.closest('.gradient-apply'); if (box) box.hidden = !text; }
     }
     let previewKey = '', previewHex = null;
-    function previewRecipe() {
+    // C109: while the colour picker is open, the caller passes the colour being
+    // picked; the preview shows the gradient with it, before Klaar. Preview only.
+    let picking = null;
+    function pickingStops(value) {
+      if (!picking || picking.draft !== draft || !value || !/^#[0-9a-f]{6}$/i.test(value.color)) return null;
+      const fields = { color: value.color.toUpperCase(), white: value.white ?? 0, brightness: value.brightness ?? 100, on: value.on !== false };
+      const stops = draft.stops.map(stop => ({ ...stop }));
+      let unset = new Set(unsetC107);
+      if (picking.candidate) { stops.splice(picking.insertAt, 0, { position: picking.candidate.position, ...fields }); unset = new Set([...unset].map(i => i >= picking.insertAt ? i + 1 : i)); }
+      else if (stops[picking.index]) { Object.assign(stops[picking.index], fields); unset.delete(picking.index); }
+      return liveStopsC107(stops, unset);
+    }
+    function previewRecipe(pickerValue = null) {
+      if (pickerValue && mode === 'gradient' && current()) {
+        const live = pickingStops(pickerValue);
+        if (live) return Array.from(G.recipe(live, { brightness, reverse, transitionMs }), x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
+      }
       if (mode !== 'gradient' || !current() || !autoArmed || chosenScope !== scopeKey()) return null;
       const live = liveStopsC107(); if (!live) return null;
       const key = JSON.stringify([live, brightness, reverse, transitionMs]);
@@ -239,13 +278,14 @@
         const owner=host,editing=draft,index=selected,point=candidate||draft.stops[index],refs=[...draft.stops],snapshot=JSON.stringify(draft.stops);
         const selector=candidate?'[data-gradient-add]':'[data-gradient-color-open]';
         let consumed=false;
+        picking={draft,index,candidate,insertAt};
         const samePoint=()=>!consumed&&current()&&host===owner&&mode==='gradient'&&draft===editing&&selected===index&&
           refs.length===draft.stops.length&&refs.every((stop,i)=>draft.stops[i]===stop)&&JSON.stringify(draft.stops)===snapshot&&
           button.isConnected&&!button.disabled&&button.matches(selector)&&host.contains(button);
         chooseColor({source:button,color:point.color,white:point.white??0,brightness:point.brightness??100,on:point.on??true,current:samePoint,commit:value=>{
           if(!samePoint()||!value||Object.keys(value).sort().join(',')!=='brightness,color,on,white'||!/^#[0-9a-f]{6}$/i.test(value.color)||
             !Number.isInteger(value.white)||value.white<0||value.white>255||!Number.isFinite(value.brightness)||value.brightness<0||value.brightness>100||typeof value.on!=='boolean')return;
-          consumed=true;chosen();
+          consumed=true;picking=null;chosen();
           const fields={color:value.color.toUpperCase(),white:value.white,brightness:value.brightness,on:value.on};
           if(candidate){draft.stops.splice(insertAt,0,{position:point.position,...fields});selected=insertAt;renderPanel(`[data-gradient-point="${insertAt}"]`);}
           else{Object.assign(point,fields);if(unsetC107.delete(index)&&!unsetC107.size)spreadC107();renderPanel(`[data-gradient-point="${index}"]`);}
@@ -312,7 +352,7 @@
         else if (input.matches('[data-gradient-name]')) { draft.name = input.value; persistDraft(); }
         else if (input.matches('[data-gradient-brightness]')) { brightness = Number(input.value); paint(); }
         else if (input.matches('[data-gradient-reverse]')) { reverse = input.checked; paint(); }
-        else if (input.matches('[data-gradient-transition]')) { const value=Number(input.value);if(Number.isInteger(value)&&value>=0&&value<=750){transitionMs=value;persistDraft();scheduleAuto();} }
+        else if (input.matches('[data-gradient-transition]')) { const value=Number(input.value);if(Number.isInteger(value)&&value>=0&&value<=750){transitionMs=value;persistDraft();scheduleAuto();const out=host.querySelector('[data-gradient-transition-output]');if(out)out.textContent=transitionText();input.style.setProperty('--fill',value/7.5+'%');} }
       });
       on('keydown', event => {
         if (current() && event.target.matches('[data-gradient-name]') && event.key === 'Enter') {
@@ -337,6 +377,40 @@
       });
       on('pointerup', event => { if (event.pointerId === pointer) { end(); renderPanel(`[data-gradient-stop="${selected}"]`); } });
       on('pointercancel', end); on('lostpointercapture', end);
+      // C109: drag a colour row by its grip; the other rows make room.
+      let reorder = null;
+      const clearReorder = () => { if (!reorder) return; reorder.rows.forEach(row => { row.style.transform = ''; row.classList.remove('is-dragging', 'is-making-room'); }); const done = reorder; reorder = null; return done; };
+      on('pointerdown', event => {
+        const grip = event.target.closest('[data-gradient-drag]'); if (!current() || !grip || event.button !== 0 || reorder) return;
+        const rows = [...host.querySelectorAll('[data-gradient-point-row]')], from = Number(grip.dataset.gradientDrag); if (!rows[from] || rows.length < 2) return;
+        event.preventDefault();
+        const tops = rows.map(row => row.getBoundingClientRect().top);
+        reorder = { id: event.pointerId, from, to: from, startY: event.clientY, rows, step: tops[1] - tops[0] || rows[0].offsetHeight + 8 };
+        rows[from].classList.add('is-dragging'); try { grip.setPointerCapture(event.pointerId); } catch (_) {}
+      });
+      on('pointermove', event => {
+        if (!reorder || event.pointerId !== reorder.id) return;
+        const { from, rows, step } = reorder, dy = event.clientY - reorder.startY;
+        const to = Math.max(0, Math.min(rows.length - 1, Math.round(from + dy / step)));
+        if (to !== reorder.to) { reorder.to = to; try { navigator.vibrate?.(8); } catch (_) {} }
+        rows[from].style.transform = `translateY(${dy}px)`;
+        rows.forEach((row, i) => {
+          if (i === from) return;
+          const shift = from < to && i > from && i <= to ? -step : from > to && i < from && i >= to ? step : 0;
+          row.style.transform = shift ? `translateY(${shift}px)` : ''; row.classList.toggle('is-making-room', !!shift);
+        });
+      });
+      const dropReorder = event => {
+        if (!reorder || event.pointerId !== reorder.id) return;
+        const { from, to } = clearReorder();
+        if (event.type === 'pointerup' && moveColour(from, to)) renderPanel(`[data-gradient-drag="${to}"]`);
+      };
+      on('pointerup', dropReorder); on('pointercancel', dropReorder);
+      on('keydown', event => {
+        const grip = event.target.closest?.('[data-gradient-drag]'); if (!current() || !grip || !['ArrowUp', 'ArrowDown'].includes(event.key)) return;
+        event.preventDefault(); const from = Number(grip.dataset.gradientDrag), to = from + (event.key === 'ArrowUp' ? -1 : 1);
+        if (moveColour(from, to)) renderPanel(`[data-gradient-drag="${to}"]`);
+      });
       // Opening/repainting is not an Apply. Keep the real sent key and arm
       // only after an explicit edit/preset choice in this exact selection.
       autoArmed = false; chosenScope = null;

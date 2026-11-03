@@ -91,23 +91,12 @@
     requestAnimationFrame(()=>requestAnimationFrame(applyTap));setTimeout(applyTap,160);
   },true);
 
-  /* ---------- A new page lays out its blocks one after another ---------- */
-  // app.js marks the page with .app-page-enter while it fades in; the blocks
-  // follow with a small delay. Our own class outlives that short fade.
-  function stagger(page){
-    if(reduced()||page.classList.contains('c106-stagger'))return;
-    page.classList.add('c106-stagger');setTimeout(()=>page.classList.remove('c106-stagger'),900);
-  }
-
   function start(){
     const toast=document.getElementById('toast');
     if(toast){new MutationObserver(()=>markToast(toast)).observe(toast,{attributes:true,attributeFilter:['hidden'],childList:true,characterData:true,subtree:true});markToast(toast);}
     const main=document.getElementById('main');
     if(main){
       new MutationObserver(queueScan).observe(main,{childList:true,subtree:true});queueScan();
-      new MutationObserver(records=>{
-        for(const record of records)if(record.target.parentElement===main&&record.target.classList.contains('app-page-enter'))stagger(record.target);
-      }).observe(main,{attributes:true,attributeFilter:['class'],subtree:true});
     }
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();

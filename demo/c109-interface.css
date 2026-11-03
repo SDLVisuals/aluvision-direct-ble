@@ -1,0 +1,79 @@
+/* C109 interface wishes (3 Nov): top bar under the Dynamic Island, the stand
+ * card, the "Nieuwe zone" button, Alles bedienen. Presentation only; loaded
+ * after c106-motion.css. */
+
+/* ---------- Top bar runs on under the clock and Dynamic Island ---------- */
+/* continuity.css covers the safe area with a frosted strip (body::before) so
+ * scrolled content blurs away there. While the top bar is still under it, the
+ * strip only drew a hard line across the bar; c109-interface.js marks that
+ * moment and the strip steps aside, so the bar's glass runs to the top. */
+html:not(#c98) body:not(#c98)::before{transition:opacity .22s ease}
+html.c109-bar-top:not(#c98) body:not(#c98)::before{opacity:0}
+@media (prefers-reduced-motion:reduce){html:not(#c98) body:not(#c98)::before{transition:none}}
+
+/* ---------- "Jouw stand": no colour bar along the bottom ---------- */
+html.interface-polish body #main .stand-hero100::after{display:none!important}
+
+/* ---------- "Nieuwe zone" as a clear button ---------- */
+html body #main .section-heading>button[data-action="zone-new"]{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 16px;border-radius:999px;
+  background:var(--red,#b6443d)!important;color:#fff!important;border:0!important;font-size:14px!important;font-weight:750;white-space:nowrap;
+  box-shadow:0 8px 18px -12px color-mix(in srgb,var(--red,#b6443d) 85%,transparent);transition:transform .12s ease}
+html body #main .section-heading>button[data-action="zone-new"]:active{transform:scale(.96)}
+html body #main .section-heading>button[data-action="zone-new"]:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+@media (prefers-reduced-motion:reduce){html body #main .section-heading>button[data-action="zone-new"]{transition:none}}
+
+/* ---------- Alles bedienen: scenes live on the Scènes tab, not at the bottom ---------- */
+#effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry{display:none!important}
+
+/* ---------- Scenes: adjusting a scene is one tap away ---------- */
+html body [data-scene-ui="640"] .scene-card-row.ui606-scene-card:has(>.scene-quick-edit109){grid-template-rows:auto auto}
+html body [data-scene-ui="640"] .scene-card-row.ui606-scene-card>.scene-quick-edit109{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;margin:0;padding:0 14px;
+  border:0;border-top:1px solid var(--line);border-radius:0;background:transparent;color:var(--red,#b6443d);font:inherit;font-size:14px;font-weight:750;cursor:pointer}
+html body [data-scene-ui="640"] .scene-card-row.ui606-scene-card>.scene-quick-edit109 svg{width:18px;height:18px}
+html body [data-scene-ui="640"] .scene-card-row.ui606-scene-card>.scene-quick-edit109:active{background:var(--soft)}
+html body [data-scene-ui="640"] .scene-card-row.ui606-scene-card>.scene-quick-edit109:focus-visible{outline:3px solid var(--ink);outline-offset:-3px}
+body[data-theme=dark] [data-scene-ui="640"] .scene-card-row.ui606-scene-card>.scene-quick-edit109{color:#f19a90}
+/* Scene detail: adjusting the light is the second choice, right under Activeren. */
+html body .scene-detail-actions687{display:grid;gap:10px}
+html body .scene-detail-actions687>.scene-light-edit109{border:1.5px solid color-mix(in srgb,var(--red,#b6443d) 40%,var(--line))!important;color:var(--red,#b6443d)!important}
+html body .scene-detail-actions687>.scene-light-edit109 svg:first-child{color:#e0a43a}
+body[data-theme=dark] .scene-detail-actions687>.scene-light-edit109{color:#f19a90!important}
+
+/* ---------- "Sla je stand op als scène": an inviting card ---------- */
+html body #main .scene-capture-panel>.scene-capture-current{position:relative;overflow:hidden;
+  background:linear-gradient(115deg,color-mix(in srgb,#f6aa60 14%,var(--panel,#fff)),color-mix(in srgb,#ed5799 10%,var(--panel,#fff)) 55%,color-mix(in srgb,#775ad9 12%,var(--panel,#fff)))!important;
+  border:1.5px solid color-mix(in srgb,#ed5799 28%,var(--line,#dce1e9))!important}
+html body #main .scene-capture-panel>.scene-capture-current>svg:first-child{box-sizing:border-box;width:44px!important;height:44px!important;padding:11px;border-radius:14px;color:#fff;stroke:#fff;
+  background:linear-gradient(135deg,#f6aa60,#ed5799 55%,#775ad9);box-shadow:0 8px 18px -10px rgba(237,87,153,.8)}
+html body #main .scene-capture-panel>.scene-capture-current b{font-size:15px}
+body[data-theme=dark] #main .scene-capture-panel>.scene-capture-current{
+  background:linear-gradient(115deg,rgba(246,170,96,.12),rgba(237,87,153,.09) 55%,rgba(119,90,217,.12))!important;border-color:rgba(237,87,153,.28)!important}
+
+/* ---------- Scènes on the stand page ---------- */
+html body #main .stand-scenes>.section-heading>.text-button[data-action="stand-scenes"]{display:inline-flex;align-items:center;gap:4px;min-height:36px;padding:0 10px 0 14px;border-radius:999px;
+  background:color-mix(in srgb,var(--red,#b6443d) 10%,transparent);color:var(--red,#b6443d);font-size:13px!important;font-weight:750}
+html body #main .stand-scenes>.section-heading>.text-button[data-action="stand-scenes"] svg{width:15px;height:15px}
+html body #main .stand-scenes>.section-heading h2::before{content:"";display:inline-block;vertical-align:-4px;width:22px;height:22px;margin-right:8px;border-radius:7px;
+  background:linear-gradient(135deg,#f6aa60,#ed5799 55%,#775ad9)}
+body[data-theme=dark] #main .stand-scenes>.section-heading>.text-button[data-action="stand-scenes"]{background:rgba(226,119,108,.14);color:#f19a90}
+
+/* ---------- Starting an animation: synchronising card ---------- */
+html body .c109-sync{position:fixed;left:50%;bottom:calc(var(--nav,72px) + env(safe-area-inset-bottom,0px) + 22px);z-index:60;transform:translateX(-50%);
+  display:grid;grid-template-columns:38px minmax(0,1fr);grid-template-rows:auto auto;column-gap:12px;row-gap:9px;align-items:center;
+  width:min(420px,calc(100vw - 32px));box-sizing:border-box;padding:12px 14px;border-radius:18px;
+  background:var(--panel,#fff);color:var(--ink,#1c1c1e);border:1px solid var(--line,#dce1e9);box-shadow:0 18px 40px -18px rgba(20,24,32,.5);
+  animation:c109-sync-in .32s cubic-bezier(.22,1,.36,1) both}
+html body .c109-sync.is-leaving{animation:c109-sync-out .24s ease-in both}
+.c109-sync-icon{grid-row:1;width:38px;height:38px;border-radius:12px;background:#11181b url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 38 38'%3E%3Cpath d='M10 19h18' stroke='%23f6aa60' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M19 9v4M19 25v4M12 12l2 2M24 24l2 2M12 26l2-2M24 14l2-2' stroke='%2368c7db' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/38px no-repeat}
+.c109-sync-copy{display:grid;gap:2px;min-width:0}
+.c109-sync-copy b{font-size:14px}
+.c109-sync-copy small{font-size:12.5px;color:var(--muted,#646d78);font-variant-numeric:tabular-nums}
+.c109-sync-bar{grid-column:1/-1;display:block;height:6px;border-radius:999px;overflow:hidden;background:color-mix(in srgb,var(--ink,#1c1c1e) 10%,transparent)}
+.c109-sync-bar>i{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#f6aa60,#68c7db)}
+body[data-theme=dark] .c109-sync{background:#1f2126;border-color:rgba(255,255,255,.1)}
+body[data-theme=dark] .c109-sync-bar{background:rgba(255,255,255,.12)}
+@keyframes c109-sync-in{from{opacity:0;transform:translate(-50%,14px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes c109-sync-out{to{opacity:0;transform:translate(-50%,10px)}}
+@media (prefers-reduced-motion:no-preference){.c109-sync-icon{animation:c109-sync-pulse 1.6s ease-in-out infinite}}
+@keyframes c109-sync-pulse{50%{box-shadow:0 0 0 5px rgba(104,199,219,.18)}}
+@media (prefers-reduced-motion:reduce){html body .c109-sync,html body .c109-sync.is-leaving{animation:none}}
