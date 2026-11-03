@@ -5,7 +5,8 @@
 - Calmer motion, new waiting and progress animations, and fewer messages.
 - A phone with an older view of a receiver can change its ports again and keeps the receiver's newer values.
 - Phones see each other's port, pixel and side changes within seconds; saving on the receivers is automatic.
-- Android test app 41 with the same interface.
+- Tested with four phones on one stand. Only one phone sets up a receiver at a time: the others are told someone else is setting it up. A new phone keeps opening the stand when a radio reply is lost.
+- Android test app 42 with the same interface.
 
 ## Android code 36
 

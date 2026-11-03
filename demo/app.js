@@ -733,7 +733,7 @@
   let pinLoginAvailable=false,pinLoginChecking=false,pinLoginBusy=false,pinLoginError='',pinRecoveryAbort=null;
   // C98: the native host can open an existing stand through its Wi-Fi (no PIN).
   let wifiLoginC98=false;
-  const wifiOpenC98={running:false,abort:null,timer:0,status:'',fallback:false,paused:false};
+  const wifiOpenC98={running:false,abort:null,timer:0,status:'',fallback:false,paused:false,failures:0};
   const liveStates=new Map();
   const staticRouteLabels=Object.freeze({queue:Object.freeze({QUEUE_NO_PROVIDER:'geen streamprovider',QUEUE_INELIGIBLE:'gewone bedieningsroute',QUEUE_ELIGIBLE:'kleurprofiel geschikt'}),
     facade:Object.freeze({STATIC_PROFILE:'verzoekprofiel niet geschikt',LEGACY_CAP_OFF:'legacy-capability uit',LEGACY_CONTEXT_SELECTED:'centrale verbinding geselecteerd',
@@ -1500,8 +1500,17 @@
       const proof=spiDirectionStopProofs744.get(request.sessionId);
       if(proof&&proof.standId===request.standId&&proof.zoneId===request.zoneId)return {status:'stopped',sessionId:request.sessionId};
       if(!requireReceipt&&!spiDirectionSessions.has(request.sessionId))return {status:'stopped',sessionId:request.sessionId};
-      const answer=await runtime.services.previewSPIZoneDirections({action:'stop',...request});
-      if(answer.stopped!==true||answer.sessionId!==request.sessionId)throw Error('SPI_DIRECTION_STOP_UNCONFIRMED');
+      let answer;const until=Date.now()+40000;
+      for(let attempt=0;;attempt++){
+        answer=await runtime.services.previewSPIZoneDirections({action:'stop',...request});
+        if(answer.stopped===true&&answer.sessionId===request.sessionId)break;
+        // C107: a stop that meets another radio exchange is only queued
+        // natively, and while other phones light the zones this editor dimmed
+        // the receiver proves restoration only once that dimming lapses
+        // (native fallback up to 38 s). Keep asking quietly until then.
+        if(Date.now()>=until)throw Error('SPI_DIRECTION_STOP_UNCONFIRMED');
+        await new Promise(resolve=>setTimeout(resolve,attempt<2?400:1500));
+      }
       spiDirectionSessions.delete(request.sessionId);
       spiDirectionStopProofs744.set(request.sessionId,{standId:request.standId,zoneId:request.zoneId});
       while(spiDirectionStopProofs744.size>32)spiDirectionStopProofs744.delete(spiDirectionStopProofs744.keys().next().value);
@@ -1851,7 +1860,7 @@
         try{
           const result=handoffPreview?await runtime.services.commitPixelsToDirections({preview:handoffPreview,configuration:{standId:receiver.standId,receiverId,outputs}}):null;
           if(result)handoff={receipt:result.directionReceipt,sentAt:result.sentAt};
-          const service=directionsOnly?runtime.services.configureOutputDirections:runtime.services.configureOutputs,view=handoffPreview?result.view:await service({standId:receiver.standId,receiverId,outputs});
+          const service=directionsOnly?runtime.services.configureOutputDirections:runtime.services.configureOutputs,view=handoffPreview?result.view:await patientOutputsC107(service,{standId:receiver.standId,receiverId,outputs});
           refreshSuspendedSetup(view);model=keepLocalPreviewStates(view.model);
         }
         catch(error){
@@ -1886,7 +1895,31 @@
       render({preserveScroll:true});if(!paired&&!continueToDirections)toast(pixelText659('pixelOnlySaved'));
       if(handoff)return {handedOff:true};
     }});
+  // C107: with several phones on one stand a receiver is often busy with
+  // someone else's change for a moment, or a reply is lost in the mesh. Wait
+  // and resume silently (the native journal verifies by readback) before the
+  // customer is told anything.
+  async function patientOutputsC107(service,request,budget=12000){
+    const waitCodes=['OTA_BUSY','LIVE_CONTROL_BUSY','RECEIVER_BUSY','MAINTENANCE_BUSY','REMOVAL_BUSY','OUTPUT_CONFIGURATION_BUSY','OUTPUT_CONFIGURATION_CONFLICT','OUTPUT_CONFIGURATION_OTHER_EDITOR'];
+    const resumeCodes=['OUTPUT_CONFIGURATION_UNCONFIRMED','NATIVE_UNCONFIRMED','OUTPUT_CONFIGURATION_PENDING'];
+    const until=Date.now()+budget;let outputs=request.outputs;
+    for(let attempt=0;;attempt++){
+      try{return await service({...request,outputs});}
+      catch(error){
+        const wait=waitCodes.includes(error?.code),resume=resumeCodes.includes(error?.code);
+        if(!wait&&!resume||Date.now()>=until)throw error;
+        window.__c98log?.('OUTPUT_PATIENT '+(error?.code||'-')+' '+attempt);
+        await new Promise(resolve=>setTimeout(resolve,wait?1200:Math.min(600*(attempt+1),2400)));
+        if(resume&&typeof runtime?.services?.outputConfigurationStatus==='function')try{
+          const pending=await runtime.services.outputConfigurationStatus({standId:request.standId,receiverId:request.receiverId});
+          if(pending?.status==='pending'&&Array.isArray(pending.outputs))outputs=pending.outputs;
+        }catch(_){}
+      }
+    }
+  }
   function outputConfigurationErrorMessage(error){
+    // C107: another phone is setting this receiver up; say so plainly.
+    if(error?.code==='OUTPUT_CONFIGURATION_OTHER_EDITOR')return window.LightningV50ErrorTexts.t('editorBusyOther',uiPreferences.preferences.language);
     const key=error?.code==='OTA_PENDING'?'outputOtaPending':['OTA_BUSY','OUTPUT_CONFIGURATION_BUSY','OUTPUT_CONFIGURATION_CONFLICT','LIVE_CONTROL_BUSY','NATIVE_BUSY','MAIN_BUSY','REMOVAL_BUSY'].includes(error?.code)?'outputActionBusy':'outputUnconfirmed';
     return window.LightningV50ErrorTexts.t(key,uiPreferences.preferences.language);
   }
@@ -5173,14 +5206,15 @@
     let next=5000,opened=false;
     try{
       const result=await runtime.services.recoverInstallation({wifi:true,signal:abort.signal});
-      opened=true;wifiOpenC98.status='';wifiOpenC98.fallback=false;adoptRecoveredStand(result);
+      opened=true;wifiOpenC98.status='';wifiOpenC98.fallback=false;wifiOpenC98.failures=0;adoptRecoveredStand(result);
     }catch(error){
       const code=error?.code||'';
       if(code==='PIN_RECOVERY_WIFI_UNSUPPORTED'){wifiOpenC98.fallback=true;wifiOpenC98.status='unsupported';}
       else if(code==='PIN_RECOVERY_WIFI_UNAVAILABLE'){wifiOpenC98.status='notStand';next=6000;}
       else if(code==='LOCAL_NETWORK_DENIED'){wifiOpenC98.status='localNetwork';next=8000;}
       else if(code==='CANCELLED'||code==='PIN_RECOVERY_CANCELLED'){wifiOpenC98.status='';}
-      else if(/^PIN_RECOVERY_(PROOF|UNAVAILABLE|EXPIRED|CRYPTO)$|UNCONFIRMED|^PLAYBACK|^LIBRARIES/.test(code)){wifiOpenC98.status='failed';next=15000;}
+      // C107: a lost radio reply is normal at a busy stand; keep loading quietly a few times first.
+      else if(/^PIN_RECOVERY_(PROOF|UNAVAILABLE|EXPIRED|CRYPTO)$|UNCONFIRMED|^PLAYBACK|^LIBRARIES/.test(code)){wifiOpenC98.failures++;const quiet=wifiOpenC98.failures<3;wifiOpenC98.status=quiet?'searching':'failed';next=quiet?2000:15000;}
       else wifiOpenC98.status='waiting'; // not on a receiver network (yet)
     }finally{
       clearTimeout(slow);if(wifiOpenC98.abort===abort){wifiOpenC98.running=false;wifiOpenC98.abort=null;}
@@ -6279,7 +6313,7 @@
         // Busy right now (a light choice, an editor): try again shortly.
         // C106: a background context write or another radio action held the
         // MAIN for a moment (cancelled): that is "later" too, never "done".
-        if(['SHARED_DEFERRED','CANCELLED','OUTPUT_CONFIGURATION_CANCELLED','OUTPUT_CONFIGURATION_BUSY'].includes(error?.code))later=true;else sharedHintTriedC105.set(receiverId,hint);
+        if(['SHARED_DEFERRED','CANCELLED','OUTPUT_CONFIGURATION_CANCELLED','OUTPUT_CONFIGURATION_BUSY','OUTPUT_CONFIGURATION_OTHER_EDITOR'].includes(error?.code))later=true;else sharedHintTriedC105.set(receiverId,hint);
         window.__c98log?.('SHARED_OUTPUTS_REFRESH_SKIPPED '+receiverId+' '+(error?.code||''));
       }
     }
@@ -6293,24 +6327,37 @@
   // Each read opens its own MAIN session, so a receiver read (or configured)
   // in the last minute is not read again when a screen is reopened.
   const adoptedAtC106=new Map();
-  async function adoptReceiverOutputsC106(receiverIds){
+  // C107: only one phone sets a receiver up at a time. With guard=true (all
+  // editors and the order step) a receiver held by another phone's setup is
+  // waited for quietly for 4 s (a save ends quickly); if it stays
+  // held this returns 'busy' and the caller says someone else is setting it
+  // up instead of opening a second editor.
+  async function adoptReceiverOutputsC106(receiverIds,{editor=false,guard=editor}={}){
     if(!nativeContext||typeof runtime?.services?.refreshSharedOutputs!=='function')return;
+    let busy=false;
     for(const receiverId of receiverIds){
       const receiver=model.receivers.find(r=>r.id===receiverId&&r.type==='SPI'&&r.lifecycle==='added');if(!receiver)continue;
-      if(Date.now()-(adoptedAtC106.get(receiverId)||0)<60000)continue;
-      // A background context write is interrupted by this read; give it a
-      // moment to stop instead of skipping the adoption.
-      for(let attempt=0;attempt<5;attempt++){
+      // An editor proves the receiver against this phone's view, so it always
+      // reads first: another phone may have changed it seconds ago.
+      if(!editor&&Date.now()-(adoptedAtC106.get(receiverId)||0)<60000)continue;
+      // A background context write is interrupted by this read, and a shared
+      // stand write (C107: up to a few seconds with four phones) blocks it;
+      // wait for both instead of opening the editor on an older view.
+      const started=Date.now();let until=started+10000;
+      for(let attempt=0;;attempt++){
         try{const fresh=await runtime.services.refreshSharedOutputs({standId:receiver.standId,receiverId},{foreground:true});
           adoptedAtC106.set(receiverId,Date.now());
           if(fresh?.model){model=keepLocalPreviewStates(fresh.model);window.__c98log?.('OUTPUTS_ADOPTED '+receiverId);}break;}
         catch(error){
-          const later=['CANCELLED','OUTPUT_CONFIGURATION_CANCELLED','SHARED_DEFERRED','OUTPUT_CONFIGURATION_BUSY','LIVE_CONTROL_BUSY'].includes(error?.code);
-          window.__c98log?.('OUTPUTS_ADOPT_SKIPPED '+receiverId+' '+(error?.code||'')+(later&&attempt<4?' retry':''));
-          if(!later||attempt===4)break;await new Promise(resolve=>setTimeout(resolve,700));
+          const other=error?.code==='OUTPUT_CONFIGURATION_OTHER_EDITOR';
+          if(guard&&other)until=Math.min(until,started+4000);
+          const later=['CANCELLED','OUTPUT_CONFIGURATION_CANCELLED','SHARED_DEFERRED','OUTPUT_CONFIGURATION_BUSY','OUTPUT_CONFIGURATION_OTHER_EDITOR','LIVE_CONTROL_BUSY'].includes(error?.code),again=later&&Date.now()+500<until;
+          window.__c98log?.('OUTPUTS_ADOPT_SKIPPED '+receiverId+' '+(error?.code||'')+(again?' retry':''));
+          if(!again){busy||=guard&&other;break;}await new Promise(resolve=>setTimeout(resolve,attempt<3?500:800));
         }
       }
     }
+    return busy?'busy':undefined;
   }
   async function refreshSharedPhysicalC98(standId,remote){
     const helper=window.LightningSharedPhysicalRefreshC98,candidates=helper?.candidates(model,remote);
@@ -8093,7 +8140,8 @@
         else {
           // C106: show the receivers' own ledlines (another phone may have
           // switched ports) before the order and its connection check.
-          await adoptReceiverOutputsC106(model.receivers.filter(r=>r.zoneId===route.zoneId&&r.type==='SPI'&&r.lifecycle==='added').map(r=>r.id));
+          if(await adoptReceiverOutputsC106(model.receivers.filter(r=>r.zoneId===route.zoneId&&r.type==='SPI'&&r.lifecycle==='added').map(r=>r.id),{guard:true})==='busy')
+            return void toast(window.LightningV50ErrorTexts.t('editorBusyOther',uiPreferences.preferences.language));
           if(!zone()||openLineSetup.has(route.zoneId))return;
           openLineSetup.add(route.zoneId);beginArrangement();beginOrderColours();
         }
@@ -8331,7 +8379,7 @@
       if(action==='receiver-directions'){
         const receiver=model.receivers.find(r=>r.id===id&&r.type==='SPI'&&r.lifecycle==='added');if(!receiver?.zoneId||managementBusy||pixelSetup.isOpen())return;
         managementBusy=true;button.disabled=true;
-        try{await adoptReceiverOutputsC106(model.receivers.filter(r=>r.zoneId===receiver.zoneId&&r.type==='SPI'&&r.lifecycle==='added').map(r=>r.id));
+        try{if(await adoptReceiverOutputsC106(model.receivers.filter(r=>r.zoneId===receiver.zoneId&&r.type==='SPI'&&r.lifecycle==='added').map(r=>r.id),{editor:true})==='busy'){toast(window.LightningV50ErrorTexts.t('editorBusyOther',uiPreferences.preferences.language));return;}
           await openSPIZoneDirections({zoneId:receiver.zoneId});}catch(_){toast(t('outputUnconfirmed'));}
         finally{managementBusy=false;button.disabled=false;}return;
       }
@@ -8339,7 +8387,7 @@
         const receiver=model.receivers.find(r=>r.id===id&&r.type==='SPI'&&r.lifecycle==='added');if(!receiver||managementBusy||pixelSetup.isOpen())return;
         managementBusy=true;button.disabled=true;
         try{
-          await adoptReceiverOutputsC106([id]);
+          if(await adoptReceiverOutputsC106([id],{editor:true})==='busy'){toast(window.LightningV50ErrorTexts.t('editorBusyOther',uiPreferences.preferences.language));return;}
           const current=model.receivers.find(r=>r.id===id&&r.type==='SPI'&&r.lifecycle==='added')||receiver;
           const pending=nativeContext&&typeof runtime?.services?.outputConfigurationStatus==='function'
             ?await runtime.services.outputConfigurationStatus({standId:receiver.standId,receiverId:id}):{status:'none'};
@@ -8729,34 +8777,10 @@
           if(typeof runtime?.services?.configureOutputs!=='function')return toast(t("Verbind je telefoon met het wifi van je installatie om de uitgangen te wijzigen."));
           if(managementBusy)return;managementBusy=true;button.disabled=true;
           const wanted=next.receivers.find(r=>r.id===receiver.id).outputs;
-          try{const view=await runtime.services.configureOutputs({standId:receiver.standId,receiverId:receiver.id,outputs:wanted});refreshSuspendedSetup(view);model=keepLocalPreviewStates(view.model);adoptedAtC106.set(receiver.id,Date.now());}
-          catch(error){
-            // C105: a reply lost in the mesh is resumed once, silently. The
-            // native journal holds the same intent and verifies by readback.
-            let resumed=false;
-            // A background task (sync, start-up resume) briefly holds the radio:
-            // wait for it instead of telling the customer to try again.
-            // C106: OUTPUT_CONFIGURATION_CONFLICT now means another phone is
-            // configuring this receiver right now: wait for it the same way.
-            const waitCodes=['OTA_BUSY','LIVE_CONTROL_BUSY','RECEIVER_BUSY','MAINTENANCE_BUSY','REMOVAL_BUSY','OUTPUT_CONFIGURATION_BUSY','OUTPUT_CONFIGURATION_CONFLICT'];
-            if(waitCodes.includes(error?.code))try{
-              for(let attempt=0;attempt<6&&!resumed;attempt++){
-                await new Promise(resolve=>setTimeout(resolve,1200));
-                try{const view=await runtime.services.configureOutputs({standId:receiver.standId,receiverId:receiver.id,outputs:wanted});
-                  refreshSuspendedSetup(view);model=keepLocalPreviewStates(view.model);resumed=true;}
-                catch(retry){if(!waitCodes.includes(retry?.code))throw retry;}
-              }
-            }catch(_){}
-            if(!resumed&&['OUTPUT_CONFIGURATION_UNCONFIRMED','NATIVE_UNCONFIRMED','OUTPUT_CONFIGURATION_PENDING'].includes(error?.code))try{
-              await new Promise(resolve=>setTimeout(resolve,600));
-              const pending=await runtime.services.outputConfigurationStatus({standId:receiver.standId,receiverId:receiver.id});
-              const outputs=pending?.status==='pending'&&Array.isArray(pending.outputs)?pending.outputs:wanted;
-              window.__c98log?.('OUTPUT_RESUME_AFTER_FAIL '+(error?.code||'-'));
-              const view=await runtime.services.configureOutputs({standId:receiver.standId,receiverId:receiver.id,outputs});
-              refreshSuspendedSetup(view);model=keepLocalPreviewStates(view.model);resumed=true;
-            }catch(_){}
-            if(!resumed){toast(outputConfigurationErrorMessage(error));return;}
-          }
+          // C105/C106/C107: busy receivers, another phone's change and lost
+          // mesh replies are waited for and resumed silently.
+          try{const view=await patientOutputsC107(runtime.services.configureOutputs,{standId:receiver.standId,receiverId:receiver.id,outputs:wanted});refreshSuspendedSetup(view);model=keepLocalPreviewStates(view.model);adoptedAtC106.set(receiver.id,Date.now());}
+          catch(error){toast(outputConfigurationErrorMessage(error));return;}
           finally{managementBusy=false;button.disabled=false;}
         }else model=M.assertValid(next);
         resumeConfiguredLighting(receiver.id);

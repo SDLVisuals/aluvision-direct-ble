@@ -263,7 +263,7 @@
     async function save(state){
       if(!enabled(state)){saveLog('blocked '+JSON.stringify({current:current(state),saving:!!state.saving,resuming:!!state.resuming,paused:!!state.paused,stopJob:!!state.stopJob,stale:!!state.stale,hidden:!!doc.hidden,open:!!state.dialog.open,context:validContext(state)}));return;}
       const wanted=changes(state);state.saving=true;controls(state);status(state,'stopping');saveLog('start changes='+wanted.length);
-      try{const answer=await bounded(state,stop(state),18000);if(!current(state))return;saveLog('stopped '+(answer?.status||'-'));if(answer?.status!=='stopped'||answer.sessionId!==state.sessionId){status(state,'stopFailed');return;}if(!validContext(state))return;if(!wanted.length){close(state.data.check===true?'checked':'done');return;}status(state,'saving');
+      try{const answer=await bounded(state,stop(state),45000);if(!current(state))return;saveLog('stopped '+(answer?.status||'-'));if(answer?.status!=='stopped'||answer.sessionId!==state.sessionId){status(state,'stopFailed');return;}if(!validContext(state))return;if(!wanted.length){close(state.data.check===true?'checked':'done');return;}status(state,'saving');
         const result=await onSave({...context(state),changes:copy(wanted)});if(!current(state))return;
         const reports=result?.results,ids=wanted.map(item=>item.receiverId).sort();if(!Array.isArray(reports)||canonical(reports.map(row=>row.receiverId).sort())!==canonical(ids)||reports.some(row=>!['saved','pending','failed'].includes(row.status))||new Set(reports.map(row=>row.receiverId)).size!==reports.length){status(state,'saveFailed');return;}
         let now;try{now=signature(state);}catch(_){status(state,'stale');state.stale=true;return;}
