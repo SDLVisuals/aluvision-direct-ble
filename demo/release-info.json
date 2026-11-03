@@ -113,8 +113,8 @@
   "assets": [
     {
       "path": "RELEASE_NOTES.md",
-      "bytes": 41853,
-      "sha256": "5d881e781917355ba624ff196714b9fe32247f8c540448cb423220f31250e3d9"
+      "bytes": 41774,
+      "sha256": "e11e9229fc35830c64961430e2399bf76b534cd728e32597f380f5463b0be082"
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
