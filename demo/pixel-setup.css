@@ -286,3 +286,13 @@
 .pixel-output-picker .pixel-setup-outputs>button[data-port][aria-checked=true] .pixel-setup-switch{background:#3d495d}
 .pixel-output-picker .pixel-setup-outputs>button[data-port][aria-checked=true] .pixel-setup-switch>i{transform:translateX(14px)}
 @media(max-width:350px){.pixel-output-picker .pixel-setup-outputs>button[data-port]{padding-inline:2px}.pixel-output-picker .pixel-setup-outputs>button[data-port]>.pixel-port-colour{font-size:10px}}
+/* C107: a real slider for the pixel count, next to the swipe and the exact number. */
+.pixel-setup-slider-row{display:grid;gap:2px;padding:4px 2px 0}
+.pixel-setup-range{-webkit-appearance:none;appearance:none;width:100%;min-width:0;height:44px;margin:0;background:transparent;cursor:pointer}
+.pixel-setup-range::-webkit-slider-runnable-track{height:12px;border-radius:6px;background:linear-gradient(90deg,var(--red,#bd4842) var(--pixel-range-fill,0%),var(--soft,#eee) var(--pixel-range-fill,0%))}
+.pixel-setup-range::-webkit-slider-thumb{-webkit-appearance:none;width:32px;height:32px;margin-top:-10px;border-radius:50%;background:#fff;border:3px solid var(--red,#bd4842);box-shadow:0 2px 8px rgba(0,0,0,.28)}
+.pixel-setup-range::-moz-range-track{height:12px;border-radius:6px;background:var(--soft,#eee)}
+.pixel-setup-range::-moz-range-progress{height:12px;border-radius:6px;background:var(--red,#bd4842)}
+.pixel-setup-range::-moz-range-thumb{width:32px;height:32px;border-radius:50%;background:#fff;border:3px solid var(--red,#bd4842)}
+.pixel-setup-range:focus-visible{outline:none}.pixel-setup-range:focus-visible::-webkit-slider-thumb{outline:3px solid var(--ink,#171817);outline-offset:2px}
+.pixel-setup-range-label{display:flex;justify-content:space-between;font-size:11px;color:var(--muted,#666);margin:-4px 2px 0}

@@ -5183,7 +5183,7 @@
   async function readmitStandC107(){
     if(readmitC107.running||Date.now()-readmitC107.at<60000||!nativeContext||!model.stands.length||
        typeof runtime?.services?.recoverInstallation!=='function')return;
-    readmitC107.running=true;readmitC107.at=Date.now();window.__c98log?.('READMIT_START');
+    readmitC107.running=true;readmitC107.at=Date.now();window.__c98log?.('READMIT_START');sharedSync97?.pause?.();
     toast(window.LightningV50ErrorTexts.t('readmitting',uiPreferences.preferences.language));
     try{
       const result=await runtime.services.recoverInstallation({wifi:true});
@@ -5197,7 +5197,7 @@
         readmitC107.limited=true;readmitC107.at=0;setTimeout(()=>void readmitStandC107(),30000);
       }
     }
-    finally{readmitC107.running=false;}
+    finally{readmitC107.running=false;sharedSync97?.resume?.();}
   }
   window.addEventListener('lightning:app-readmit',()=>void readmitStandC107());
   // C98: open an existing stand by joining its Wi-Fi. That network's key is

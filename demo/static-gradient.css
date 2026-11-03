@@ -136,3 +136,8 @@ html body .gradient-library .gradient-save-actions :is([data-gradient-save],[dat
 .gradient-notice:empty{display:none}
 .gradient-card-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .gradient-count{flex:none;padding:4px 10px;border-radius:999px;background:var(--soft);color:var(--muted);font-size:12px;font-weight:700}
+/* C107: empty colour slots (Kleur 1, 2, 3) before the customer chose. */
+.gradient-point-swatch.is-unset{background:transparent;border:2px dashed var(--muted);box-shadow:none;display:grid;place-items:center;color:var(--muted);font-size:20px;font-weight:600;line-height:1;font-style:normal}
+.gradient-point.is-unset .gradient-point-colour small.gradient-point-choose{color:var(--red);font-weight:650}
+.gradient-rail.is-blank{background:repeating-linear-gradient(90deg,var(--soft) 0 12px,var(--panel) 12px 24px)!important;box-shadow:inset 0 0 0 1px var(--line)}
+.gradient-slider[hidden],.gradient-even[hidden]{display:none!important}

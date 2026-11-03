@@ -5,7 +5,7 @@
     title:['Kanten aanpassen','Adjust directions','Ajuster les sens','Richtungen anpassen'],
     // C105: the connection check, opened from the ledline order step.
     checkTitle:['Verbindingen controleren','Check connections','Vérifier les connexions','Verbindungen prüfen'],
-    checkHint:['Elke ledline krijgt een eigen kleur. Op elke overgang loopt een lichtje van de ene ledline naar de volgende. Loopt het lichtje overal mooi door, dan kloppen de verbindingen en de volgorde.','Every ledline gets its own colour. At each connection a light runs from one ledline into the next. If it flows on everywhere, the connections and the order are right.','Chaque ligne LED a sa propre couleur. À chaque connexion, une lumière passe d’une ligne à la suivante. Si elle continue partout, les connexions et l’ordre sont corrects.','Jede LED-Linie erhält eine eigene Farbe. An jeder Verbindung läuft ein Licht von einer Linie in die nächste. Läuft es überall weiter, stimmen Verbindungen und Reihenfolge.'],
+    checkHint:['Elke ledline krijgt een eigen kleur. Op elke overgang loopt een lichtje van de ene ledline naar de volgende. Springt het lichtje ergens verkeerd? Keer die ledline hier om. Loopt het overal mooi door, dan kloppen volgorde en kanten.','Every ledline gets its own colour. At each connection a light runs from one ledline into the next. If it flows on everywhere, the connections and the order are right.','Chaque ligne LED a sa propre couleur. À chaque connexion, une lumière passe d’une ligne à la suivante. Si elle continue partout, les connexions et l’ordre sont corrects.','Jede LED-Linie erhält eine eigene Farbe. An jeder Verbindung läuft ein Licht von einer Linie in die nächste. Läuft es überall weiter, stimmen Verbindungen und Reihenfolge.'],
     checkDone:['Klaar','Done','Terminé','Fertig'],
     added:['Laatste stap · kanten instellen','Last step · set directions','Dernière étape · ajuster les sens','Letzter Schritt · Richtungen einstellen'],
     intro:['Vergelijk de rode en groene uiteinden van je echte ledlines.','Compare the red and green ends of your real LED lines.','Comparez les extrémités rouges et vertes de vos vraies lignes LED.','Vergleiche die roten und grünen Enden deiner echten LED-Linien.'],
@@ -280,7 +280,7 @@
       if(action==='close'||action==='back'){event.preventDefault();close(action);return;}if(action==='save'){void save(state);return;}if(action==='test'){void test(state);return;}if(!['select','flip'].includes(action)||state.previewFailed||state.previewRetired||!enabled(state))return;
       const card=button.closest('[data-spi-zone-line]'),receiver=state.data.receivers.find(item=>item.id===card?.dataset.receiverId),output=receiver?.outputs.find(item=>item.port===Number(card?.dataset.port)&&item.enabled);if(!receiver||!output)return;
       if(action==='flip'&&output.pixels===1)return;
-      setFocus(state,receiver.id,output.port);if(action==='flip'){output.reversed=!output.reversed;updateCard(state,receiver,output);}queue(state);
+      setFocus(state,receiver.id,output.port);if(action==='flip'){output.reversed=!output.reversed;updateCard(state,receiver,output);}queue(state,action==='flip'&&state.dialog.dataset.spiZoneCheck==='true');
     }
     function close(reason='close'){
       const state=active;if(!state)return;clearRecovery(state);if(state.checkTimer){win.clearInterval(state.checkTimer);state.checkTimer=null;}const pendingChanges=changes(state),focused=state.dialog.contains(doc.activeElement)||doc.activeElement===doc.body;active=null;generation++;state.closed=true;state.pending=null;state.unbindTutorial?.();state.dialog.removeEventListener('click',state.click);state.dialog.removeEventListener('cancel',state.cancel);doc.removeEventListener('visibilitychange',state.visibility);win.removeEventListener?.('lightning:native-active',state.nativeActive);for(const [timer,reject] of state.waitTimers){win.clearTimeout(timer);reject(Error('SPI_ZONE_CLOSED'));}state.waitTimers.clear();if(state.dialog.open)state.dialog.close();state.dialog.remove();
@@ -311,7 +311,7 @@
       if(data.check===true){
         dialog.dataset.spiZoneCheck='true';dialog.querySelector('#'+headingId).textContent=t(state,'checkTitle');
         const hint=dialog.querySelector('.spi-zone-select-hint');if(hint)hint.textContent=t(state,'checkHint');
-        for(const flip of dialog.querySelectorAll('[data-spi-zone-action="flip"]'))flip.hidden=true;
+        // C107: the walkthrough keeps the flip buttons: a wrong join is fixed right here.
         dialog.querySelector('[data-spi-zone-action="save"]').querySelector('span').textContent=t(state,'checkDone');
         dialog.querySelector('[data-spi-zone-action="test"]')?.setAttribute('hidden','');
         state.checkTimer=win.setInterval(()=>{if(current(state)&&state.confirmedRequest&&!state.inFlight&&!state.recoveringTest&&enabled(state))void test(state);},6400);

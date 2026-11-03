@@ -69,17 +69,18 @@
   if(isSPI){const output=receiver.outputs.find(o=>o.port===status.port&&o.enabled);if(!output||n('PIXELS',1,1024)!==output.pixels||bool('PHYSREVERSE')!==output.reversed)fail();}
   return {state,mask,installation:f.INSTALLATION};
  }
- function restore(model,statuses,{standId}={}){
+ function restore(model,statuses,{standId,partial=false}={}){
   M.assertValid(model);if(model.demo!==false||!Array.isArray(statuses)||statuses.length>120)fail();
   if(standId!==undefined&&(typeof standId!=='string'||!model.stands.some(stand=>stand.id===standId)))fail();
   const next=copy(model),seen=new Set(),installations=new Map();
   const receivers=standId===undefined?next.receivers:next.receivers.filter(receiver=>receiver.standId===standId);
   if(standId!==undefined&&!receivers.length)fail();
   for(const receiver of receivers){
-   const rows=statuses.filter(s=>s?.receiverId===receiver.id).sort((a,b)=>a.port-b.port);if(!rows.length)fail();
-   const values=rows.map(row=>{const key=row.receiverId+'/'+row.port;if(seen.has(key))fail();seen.add(key);return decode(receiver,row);});
+   // C107 partial: a receiver whose light could not be read keeps its neutral state.
+   const rows=statuses.filter(s=>s?.receiverId===receiver.id).sort((a,b)=>a.port-b.port);if(!rows.length){if(partial)continue;fail();}
+   let values;try{values=rows.map(row=>{const key=row.receiverId+'/'+row.port;if(seen.has(key))fail();seen.add(key);return decode(receiver,row);});}catch(error){if(partial)continue;throw error;}
    const first=values[0],expectedMask=receiver.type==='SPI'?receiver.outputs.reduce((v,o)=>v|(o.enabled?1<<(o.port-1):0),0):first.mask;
-   if(values.some(v=>v.mask!==expectedMask||v.installation!==first.installation||receiver.type!=='SPI'&&JSON.stringify(v.state)!==JSON.stringify(first.state))||rows.reduce((v,s)=>v|(1<<(s.port-1)),0)!==expectedMask)fail();
+   if(values.some(v=>v.mask!==expectedMask||v.installation!==first.installation||receiver.type!=='SPI'&&JSON.stringify(v.state)!==JSON.stringify(first.state))||rows.reduce((v,s)=>v|(1<<(s.port-1)),0)!==expectedMask){if(partial)continue;fail();}
    const prior=installations.get(receiver.standId);if(prior&&prior!==first.installation)fail();installations.set(receiver.standId,first.installation);
    receiver.state=first.state;
    if(receiver.type==='SPI'){

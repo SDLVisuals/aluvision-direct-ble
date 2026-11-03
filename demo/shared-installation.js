@@ -63,7 +63,7 @@
    *        idle() -> boolean               (no dialog/edit/onboarding running)
    *        notice(code)                    (optional user-facing problem) */
   function create(hooks){
-    const states=new Map();let timer=null,running=false,stopped=false;
+    const states=new Map();let timer=null,running=false,stopped=false,paused=false;
     const stateOf=standId=>{if(!states.has(standId))states.set(standId,{revision:null,doc:null,key:null,failures:0,until:0,layoutBlocked:false,libraryOnly:false,removal:null,removalProtected:false});return states.get(standId);};
     const encoder=typeof TextEncoder==='function'?new TextEncoder():null;
     const bytes=text=>encoder?encoder.encode(text).length:text.length;
@@ -219,7 +219,7 @@
       if(s.revision!==st.revision)await download(standId,st,null);
     }
     async function tick(){
-      if(running||stopped)return;running=true;
+      if(running||stopped||paused)return;running=true;
       try{
         if(hooks.idle&&!hooks.idle())return;
         for(const standId of hooks.stands()){
@@ -242,7 +242,10 @@
     // Local edits are pushed at once instead of waiting for the next poll.
     function changed(){if(!stopped&&timer)setTimeout(()=>void tick().catch(()=>{}),150);}
     function forget(standId){states.delete(standId);}
-    return Object.freeze({start,stop,tick,changed,forget,confirmedRemoval});
+    // C107: no polling while this phone opens or re-admits its stand (one MAIN owner session).
+    function pause(){paused=true;}
+    function resume(){if(!paused)return;paused=false;changed();}
+    return Object.freeze({start,stop,tick,changed,forget,confirmedRemoval,pause,resume});
   }
   return Object.freeze({FORMAT,VERSION,MAX_BYTES,POLL_MS,create,merge,mergeList,documentFor,parse,canonical});
 });

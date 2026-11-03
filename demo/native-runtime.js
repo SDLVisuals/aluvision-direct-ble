@@ -1502,8 +1502,10 @@
         const result=await call('recoverInstallation',viaWifi?{wifi:true}:{pin},signal);
         if(result?.status!=='restored'||typeof result.standId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(result.standId)||result.view?.model?.demo!==false||result.view?.draft!==null)throw fail('PIN_RECOVERY_UNCONFIRMED');
         setLibraryRecoveryBlock(result.standId,true);
-        if(result.lightStateComplete!==true||typeof root.LightningReceiverPlayback?.restore!=='function')throw fail('PLAYBACK_UNCONFIRMED');
-        const playbackModel=root.LightningReceiverPlayback.restore(result.view.model,result.liveStatuses,{standId:result.standId});
+        if(typeof result.lightStateComplete!=='boolean'||typeof root.LightningReceiverPlayback?.restore!=='function')throw fail('PLAYBACK_UNCONFIRMED');
+        // C107: a light state the app cannot read never blocks opening the stand;
+        // those receivers show neutral light until the next command or shared update.
+        const playbackModel=root.LightningReceiverPlayback.restore(result.view.model,result.liveStatuses,{standId:result.standId,partial:result.lightStateComplete!==true});
         if(result.librariesComplete===true){
           if(typeof root.LightningInstallationLibraries?.restore!=='function')throw fail('LIBRARIES_RECOVERY_UNAVAILABLE');
           const stored=await root.LightningInstallationLibraries.restore(result.libraries,result.standId);

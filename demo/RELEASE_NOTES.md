@@ -7,7 +7,9 @@
 - Phones see each other's port, pixel and side changes within seconds; saving on the receivers is automatic.
 - Tested with four phones on one stand. Only one phone sets up a receiver at a time: the others are told someone else is setting it up. A new phone keeps opening the stand when a radio reply is lost.
 - A new phone opens the stand faster and also when another phone saved an older view; a phone whose place was reused reconnects by itself; saving sides is quicker while others operate the light.
-- Android test app 43 with the same interface.
+- Back on the gradient tab after a plain colour or an animation, Colour 1, 2 and 3 are empty: tap them to choose; the examples sit below.
+- Pixels per port with a real slider; the connection check in the order step keeps its flip buttons, and a flip restarts the running light.
+- Android test app 47 with the same interface.
 
 ## Android code 36
 
