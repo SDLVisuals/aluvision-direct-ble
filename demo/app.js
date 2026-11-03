@@ -1887,7 +1887,7 @@
       if(handoff)return {handedOff:true};
     }});
   function outputConfigurationErrorMessage(error){
-    const key=error?.code==='OTA_PENDING'?'outputOtaPending':['OTA_BUSY','OUTPUT_CONFIGURATION_BUSY','LIVE_CONTROL_BUSY','NATIVE_BUSY','MAIN_BUSY','REMOVAL_BUSY'].includes(error?.code)?'outputActionBusy':'outputUnconfirmed';
+    const key=error?.code==='OTA_PENDING'?'outputOtaPending':['OTA_BUSY','OUTPUT_CONFIGURATION_BUSY','OUTPUT_CONFIGURATION_CONFLICT','LIVE_CONTROL_BUSY','NATIVE_BUSY','MAIN_BUSY','REMOVAL_BUSY'].includes(error?.code)?'outputActionBusy':'outputUnconfirmed';
     return window.LightningV50ErrorTexts.t(key,uiPreferences.preferences.language);
   }
   const onboarding=window.LightningOnboardingUI.create({getModel:()=>localStandConcept()?localStandBase:model,

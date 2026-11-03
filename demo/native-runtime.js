@@ -1064,6 +1064,27 @@
         const same=canonical(checked)===viewModelKey&&canonical(expectedDraft)===viewDraftKey;
         return canonical(view?.draft)===canonical(expectedDraft)&&(view?.revision===revision+1||same&&view?.revision===revision)&&canonical(view.model)===canonical(checked);
       };
+      // C106: native keeps another phone's newer values for every field this
+      // edit did not change (three-way merge at its readback). Accept exactly
+      // that: each field is either untouched by this edit or as requested.
+      const matchesRebased=view=>{
+        if(directionsOnly||handoffPreview||central)return false;
+        const before=JSON.parse(viewModelKey).receivers?.find(item=>item.id===receiverId),actual=view?.model?.receivers?.find(item=>item.id===receiverId)?.outputs;
+        if(!before||!Array.isArray(actual)||actual.length!==4||!actual.every((row,index)=>layoutKeys(row,['port','enabled','pixels','reversed'])&&row.port===index+1&&
+           typeof row.enabled==='boolean'&&typeof row.reversed==='boolean'&&Number.isInteger(row.pixels)&&row.pixels>=1&&row.pixels<=1024))return false;
+        if(!outputs.every((wanted,index)=>['enabled','pixels','reversed'].every(key=>wanted[key]===before.outputs[index]?.[key]||wanted[key]===actual[index][key])))return false;
+        const checked=JSON.parse(viewModelKey),saved=checked.receivers.find(item=>item.id===receiverId);
+        saved.outputs=actual.map(row=>({...row}));
+        const zone=checked.stands?.find(stand=>stand.id===standId)?.zones?.find(zone=>zone.id===saved.zoneId);
+        if(zone&&Object.prototype.hasOwnProperty.call(zone,'lineOrder')){
+          const Model=root.LightningModel;if(typeof Model?.ledlines!=='function')return false;
+          const enabled=Model.ledlines(zone.receiverIds.map(id=>checked.receivers.find(item=>item.id===id))).map(line=>line.id);
+          const members=new Set(enabled),retained=zone.lineOrder.filter(id=>members.has(id));
+          zone.lineOrder=retained.concat(enabled.filter(id=>!retained.includes(id)));
+        }
+        const draft=previousDraft===null?null:(root.LightningOnboardingDraft?.refreshZones(previousDraft,checked)?.draft||null);
+        return view?.revision===revision+1&&canonical(view?.draft)===canonical(draft)&&canonical(view.model)===canonical(checked);
+      };
       try{
         const sentAt=handoffPreview?(root.performance?.now?.()??Date.now()):null;
         const rawAnswer=await call(handoffPreview?'commitPixelsToDirections':directionsOnly?'configureOutputDirections':'configureOutputs',handoffPreview?
@@ -1100,7 +1121,7 @@
         }
         const view=answer;
         if(directionsOnly&&(epoch!==standSharingEpoch||!contextVisible()||!legacyContextAllowed()))throw fail('STAND_CONNECTION_CANCELLED');
-        if(!matches(view))throw fail('VIEW_INVALID');
+        if(!matches(view)&&!matchesRebased(view))throw fail('VIEW_INVALID');
         const accepted=acceptView(view);
         if(gradientRestore)root.dispatchEvent?.(new CustomEvent('lightning:gradient-restore',{detail:gradientRestore}));
         return accepted;
