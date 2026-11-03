@@ -525,7 +525,7 @@
       if(index===0||recovering){
         dialog.querySelector('.pixel-setup-header [data-pixel-action="close"]')?.remove();
         const back=dialog.querySelector('.pixel-setup-footer [data-pixel-action="back"],.pixel-setup-footer [data-pixel-action="close"]');
-        if(back&&!recovering)back.textContent=t(pixelsOnly?'pixelDontSave':'pixelClose');
+        if(back&&!recovering){back.textContent=t(pixelsOnly?'pixelDontSave':'pixelClose');back.dataset.pixelAction='close';}
       }
       dialog.querySelector('.pixel-setup-body').scrollTop=top?0:previousScroll;
       if(!top&&focusedPort)dialog.querySelector(`[data-pixel-action="output"][data-port="${focusedPort}"]`)?.focus({preventScroll:true});
