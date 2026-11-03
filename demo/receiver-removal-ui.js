@@ -12,7 +12,7 @@
     const code=failure?.code;
     // Preserve the existing bounded internal UNCONFIRMED classification only.
     // No raw receiver exception/message is displayed or newly classified.
-    const messageKey=action==='check'&&code==='VIEW_NOT_LOADED'?'removalViewNotLoaded':action==='check'&&code===undefined&&failure?.message==='UNCONFIRMED'?'removalDataUnconfirmed':action==='check'&&['STAND_NOT_CONNECTED','STAND_SESSION_EXPIRED','STAND_CONNECTION_CANCELLED','STAND_CANCELLED'].includes(code)?'removalStandRequired':code==='REMOVAL_PIN_INVALID'?'removalPinInvalid':code==='REMOVAL_RATE_LIMITED'?'removalRateLimited':code==='REMOVAL_PLAN_STALE'?'removalPlanStale':code==='REMOVAL_SETUP_PENDING'?'removalSetupPending':code==='REMOVAL_OFFLINE'?'removalOffline':code==='REMOVAL_MEMBERSHIP_UNVERIFIED'?'removalMembershipUnverified':code==='REMOVAL_BLOCKED'?'removalBlocked':code==='REMOVAL_PIN_REQUIRED'?'removalPinRequired':action==='start'?'removalStartUnconfirmed':action==='check'?'removalCheckFailed':'removalResumeUnconfirmed';
+    const messageKey=action==='check'&&code==='VIEW_NOT_LOADED'?'removalViewNotLoaded':action==='check'&&code===undefined&&failure?.message==='UNCONFIRMED'?'removalDataUnconfirmed':action==='check'&&['STAND_NOT_CONNECTED','STAND_SESSION_EXPIRED','STAND_CONNECTION_CANCELLED','STAND_CANCELLED'].includes(code)?'removalStandRequired':code==='REMOVAL_PIN_INVALID'?'removalPinInvalid':code==='REMOVAL_RATE_LIMITED'?'removalRateLimited':code==='REMOVAL_PLAN_STALE'?'removalPlanStale':code==='REMOVAL_SETUP_PENDING'?'removalSetupPending':code==='REMOVAL_OFFLINE'?'removalOffline':code==='REMOVAL_MEMBERSHIP_UNVERIFIED'?'removalMembershipUnverified':code==='REMOVAL_BLOCKED'?'removalBlocked':code==='REMOVAL_PIN_REQUIRED'?'removalPinRequired':code==='REMOVAL_TRUST_RENEW'?'removalTrustRenew':action==='start'?'removalStartUnconfirmed':action==='check'?'removalCheckFailed':'removalResumeUnconfirmed';
     const fallback={
       removalViewNotLoaded:'Je standgegevens zijn nog niet geladen. Open je stand en controleer daarna opnieuw.',
       removalDataUnconfirmed:'De receivergegevens konden niet veilig worden bevestigd. Open je stand opnieuw en controleer daarna opnieuw.',
@@ -25,6 +25,7 @@
       removalMembershipUnverified:'Een gekoppelde receiver kon nog niet veilig worden herkend. Er is geen nieuwe reset gestart.',
       removalBlocked:'Wissen kan nog niet veilig worden gestart. Laat alle receivers aan en wacht tot eventuele updates klaar zijn.',
       removalPinRequired:'Voer je installatie-PIN opnieuw in om verder te gaan.',
+      removalTrustRenew:'Deze receiver is opnieuw gekoppeld met een andere telefoon. Ontkoppel hem vanaf die telefoon.',
       removalStartUnconfirmed:'Het wissen is nog niet bevestigd. Controleer eerst de bestaande verwijderopdracht.',
       removalCheckFailed:'De controle is niet gelukt. Controleer de verbinding en probeer opnieuw.',
       removalResumeUnconfirmed:'Verwijderen is nog niet bevestigd. Controleer de verbinding; onbevestigde receivers blijven behouden.'

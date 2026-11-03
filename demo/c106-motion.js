@@ -73,11 +73,42 @@
   let queued=false;
   function queueScan(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;scan();});}
 
+  /* ---------- What you tapped answers back ---------- */
+  // The app redraws the navigation, tabs and switches after a tap, so the
+  // tapped control is found again by what it is, not by the element itself.
+  const TAP='#navigation button[data-id],.switch[role="switch"],.section-tabs button[data-action]';
+  const tapKey=el=>[el.dataset.action||'',el.dataset.id||'',el.getAttribute('aria-label')||''].join('|');
+  let pendingTap=null;
+  function applyTap(){
+    if(!pendingTap||Date.now()>pendingTap.until)return;
+    const el=[...document.querySelectorAll(TAP)].find(item=>tapKey(item)===pendingTap.key&&item.getClientRects().length);
+    if(!el||el.classList.contains('c106-tap'))return;
+    el.classList.add('c106-tap');setTimeout(()=>el.classList.remove('c106-tap'),600);
+  }
+  document.addEventListener('click',event=>{
+    const el=event.target instanceof Element&&event.target.closest(TAP);if(!el||reduced())return;
+    pendingTap={key:tapKey(el),until:Date.now()+700};
+    requestAnimationFrame(()=>requestAnimationFrame(applyTap));setTimeout(applyTap,160);
+  },true);
+
+  /* ---------- A new page lays out its blocks one after another ---------- */
+  // app.js marks the page with .app-page-enter while it fades in; the blocks
+  // follow with a small delay. Our own class outlives that short fade.
+  function stagger(page){
+    if(reduced()||page.classList.contains('c106-stagger'))return;
+    page.classList.add('c106-stagger');setTimeout(()=>page.classList.remove('c106-stagger'),900);
+  }
+
   function start(){
     const toast=document.getElementById('toast');
     if(toast){new MutationObserver(()=>markToast(toast)).observe(toast,{attributes:true,attributeFilter:['hidden'],childList:true,characterData:true,subtree:true});markToast(toast);}
     const main=document.getElementById('main');
-    if(main){new MutationObserver(queueScan).observe(main,{childList:true,subtree:true});queueScan();}
+    if(main){
+      new MutationObserver(queueScan).observe(main,{childList:true,subtree:true});queueScan();
+      new MutationObserver(records=>{
+        for(const record of records)if(record.target.parentElement===main&&record.target.classList.contains('app-page-enter'))stagger(record.target);
+      }).observe(main,{attributes:true,attributeFilter:['class'],subtree:true});
+    }
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 }());

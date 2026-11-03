@@ -3,7 +3,7 @@
 - SPI gradients apply as fast as colours, with an option for the same gradient on every ledline.
 - The ledline order step has a connection check that shows every junction.
 - Calmer motion, new waiting and progress animations, and fewer messages.
-- Android test app 38 with the same interface.
+- Android test app 39 with the same interface.
 
 ## Android code 36
 
