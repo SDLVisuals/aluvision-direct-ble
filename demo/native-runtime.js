@@ -243,6 +243,10 @@
       // C107: this phone's place on the stand went to a phone in use; re-admit it
       // (Android reports the same refusal as MAIN_EXISTING_STAND_ACCESS_REQUIRED).
       if(message.ok!==true&&['TRUST_APP_NOT_ALLOWED','MAIN_EXISTING_STAND_ACCESS_REQUIRED'].includes(message.code)&&request.action!=='recoverInstallation')try{root.dispatchEvent?.(new Event('lightning:app-readmit'));}catch(_){}
+      // C107: a completed exchange over the owner session is proof that the
+      // MAIN is reachable; the top-bar indicator shows it at once.
+      if(message.ok===true&&['sharedDocument','syncInstallationContext','refreshSharedOutputs','standRefresh','standResume','standConnect','applyLive','applyLiveBatch','applyStaticGradient','applyStableCatalogue','applyStableBreathe','configureOutputs','identifyLayout','previewSPIZoneDirections','previewPixels'].includes(request.action))
+        try{root.dispatchEvent?.(new CustomEvent('lightning:main-exchange',{detail:{action:request.action}}));}catch(_){}
     if(message.ok===true&&message.result&&typeof message.result==='object')request.resolve(message.result);
     else {
       const error=fail(typeof message.code==='string'&&/^[A-Z][A-Z0-9_]{0,63}$/.test(message.code)?message.code:'NATIVE_FAILED'),

@@ -10,7 +10,8 @@
 - Back on the gradient tab after a plain colour or an animation, Colour 1, 2 and 3 are empty: tap them to choose; the examples sit below.
 - Pixels per port with a real slider; the connection check in the order step keeps its flip buttons, and a flip restarts the running light.
 - A gradient on one selected ledline now applies to that ledline only; the pixel editor opens in about a second.
-- Android test app 48 with the same interface.
+- The top bar says Connected a few seconds after opening the app, as soon as the main receiver answers.
+- Android test app 49 with the same interface.
 
 ## Android code 36
 

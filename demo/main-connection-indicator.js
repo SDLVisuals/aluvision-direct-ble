@@ -2,7 +2,7 @@
  * heartbeat. Only the caller's validated fresh MAIN exchange can confirm it. */
 (function(root,factory){'use strict';const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.LightningMainConnectionIndicator=api;}(typeof globalThis==='object'?globalThis:this,function(){
   'use strict';
-  const FRESH_MS=40000,PROOFS=new Set(['projection','unchanged','firmware-ack']);
+  const FRESH_MS=40000,PROOFS=new Set(['projection','unchanged','firmware-ack','exchange']);
   const words={
     nl:{connected:'Hoofdreceiver verbonden',checking:'Verbinding controleren',unknown:'Verbinding niet bevestigd'},
     en:{connected:'Main receiver connected',checking:'Checking connection',unknown:'Connection not confirmed'},
@@ -56,7 +56,12 @@
       // 'connected' alone can come from a cache or local write head. It does
       // not renew evidence. A node error must never declare MAIN offline.
       if(['offline','disconnected'].includes(value)){cancel();confirmedAt=null;availability='unknown';}
-      else if(['connecting','checking','reconnect-required','code-required','setup-required','migration-required'].includes(value)){cancel();confirmedAt=null;availability='checking';}
+      // C107: a channel that needs re-opening drops the evidence; a mere
+      // check or (re)connect keeps a fresh exchange with the MAIN as proof,
+      // so a cold start shows "Verbonden" after its first exchange, not
+      // only after the stand projection ~20 s later.
+      else if(['reconnect-required','code-required','setup-required','migration-required'].includes(value)){cancel();confirmedAt=null;availability='checking';}
+      else if(['connecting','checking'].includes(value)){availability='checking';if(confirmedAt===null)cancel();}
       publish();
     }
     function setVisible(value){

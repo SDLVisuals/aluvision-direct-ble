@@ -4897,6 +4897,14 @@
     mainConnectionIndicator675?.setContext(context);
     mainConnectionIndicator675?.confirm({...context,kind:'firmware-ack'});
   }
+  // C107: a completed exchange with the MAIN (shared document, context sync,
+  // a light) is connection proof on its own; the cold start no longer waits
+  // ~20 s for the stand projection before the bar says "Verbonden".
+  window.addEventListener('lightning:main-exchange',()=>{
+    if(document.hidden)return;const context=mainConnectionContext675();if(!context)return;
+    mainConnectionIndicator675?.setContext(context);mainConnectionIndicator675?.setVisible(true);
+    mainConnectionIndicator675?.confirm({...context,kind:'exchange'});
+  });
   function syncStandConnectionStatus(){
     syncMainConnectionIndicator675();
     for(const node of document.querySelectorAll('[data-stand-connection-status]'))node.textContent=standConnectionMessage();
@@ -6015,7 +6023,8 @@
     main.querySelector('.scene-draft-page')?.classList.toggle('is-editing',Boolean(sceneDraft?.sceneId));
     const titles={colour:'staticColour',animations:'animations',scenes:'scenes','scene-draft':sceneDraft?.sceneId?'updateScene':t("saveScene"),receivers:'receivers',settings:'settings','receiver-add':'addReceiver'};
     if(titles[route.screen]&&main.querySelector('h1'))main.querySelector('h1').textContent=t(titles[route.screen]);
-    const actions={'scene-new':'newScene','scene-save':sceneDraft?.sceneId?'updateScene':t("saveScene"),'receiver-add':'addReceiver'};
+    // C109: the save button says what it does; "Licht aanpassen" sits below it.
+    const actions={'scene-new':'newScene','scene-save':sceneDraft?.sceneId?'Wijzigingen opslaan':t("saveScene"),'receiver-add':'addReceiver'};
     main.querySelectorAll('button[data-action]').forEach(button=>{
       if(button.hasAttribute('data-setup-resume')&&onboarding.summary()?.stand)return;
       if(button.dataset.action==='scene-save'&&sceneDraft?.saving)return;
