@@ -1592,7 +1592,14 @@
     },
     async editZones(request){return editZones(request).then(view=>scheduleContext(view,request.standId));},
     sharedDocument,
-    async refreshSharedOutputs({standId,receiverId}){
+    async refreshSharedOutputs({standId,receiverId},{foreground=false}={}){
+      // C106: an editor about to open needs this read now. Stop a background
+      // context write first and wait until it has really stopped, so the
+      // stop itself does not abort this read.
+      if(foreground&&contextControls.size){
+        for(const control of contextControls.values()){try{control.interrupt?.();}catch(_){}}
+        const t0=Date.now();while(contextControls.size&&Date.now()-t0<3000)await new Promise(resolve=>setTimeout(resolve,100));
+      }
       if(!viewLoaded||!contextVisible()||centralStamp!==null||sharedOutputReadC98||writeQueue!==settledWriteQueue||Date.now()-lastLightAtC97<=3000)
         throw fail('SHARED_DEFERRED');
       if(typeof standId!=='string'||typeof receiverId!=='string')throw fail('SHARED_INVALID');

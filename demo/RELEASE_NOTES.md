@@ -4,7 +4,8 @@
 - The ledline order step has a connection check that shows every junction.
 - Calmer motion, new waiting and progress animations, and fewer messages.
 - A phone with an older view of a receiver can change its ports again and keeps the receiver's newer values.
-- Android test app 40 with the same interface.
+- Phones see each other's port, pixel and side changes within seconds; saving on the receivers is automatic.
+- Android test app 41 with the same interface.
 
 ## Android code 36
 
