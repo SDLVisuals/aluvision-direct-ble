@@ -1,3 +1,10 @@
+## 3 November 2026 — Faster gradients, order check and smoother motion
+
+- SPI gradients apply as fast as colours, with an option for the same gradient on every ledline.
+- The ledline order step has a connection check that shows every junction.
+- Calmer motion, new waiting and progress animations, and fewer messages.
+- Android test app 37 with the same interface.
+
 ## Android code 36
 
 Telefoon-, tablet- en liggende weergave verbeterd; hetzelfde kleurenwiel voor effen kleur en Verloop. APK gecontroleerd op pakketnaam, handtekening en minimale Android-versie. Geen receiverfirmware inbegrepen. Fysieke Android-/receiveracceptatie blijft open.

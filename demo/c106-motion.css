@@ -1,0 +1,181 @@
+/* C106 motion: small animations that explain what happens. Presentation only;
+ * loaded after c105-polish.css. Everything that moves sits inside
+ * prefers-reduced-motion:no-preference, so reduced motion keeps the still
+ * pictures and plain states. */
+
+/* GEN:pictures (built by c106gen.py; same drawings as C104/C105, now moving) */
+@media (prefers-reduced-motion:no-preference){
+  html.interface-polish body #main .empty-zone>.menu-icon{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 168 92'%3E%3Cstyle%3E .run%7Bstroke-dasharray:14 90;animation:run 2.4s linear infinite%7D .glow%7Bstroke-dasharray:14 90;animation:run 2.4s linear infinite;opacity:.35%7D .a1%7Banimation:blink 2.4s ease-in-out infinite%7D.a2%7Banimation:blink 2.4s ease-in-out .3s infinite%7D .plus%7Btransform-box:fill-box;transform-origin:center;animation:breathe 2.4s ease-in-out infinite%7D %40keyframes run%7Bfrom%7Bstroke-dashoffset:14%7Dto%7Bstroke-dashoffset:-90%7D%7D %40keyframes blink%7B0%25,100%25%7Bopacity:.25%7D40%25%7Bopacity:1%7D%7D %40keyframes breathe%7B0%25,100%25%7Btransform:scale(1)%7D50%25%7Btransform:scale(1.08)%7D%7D %3C/style%3E%3Crect x='10' y='34' width='46' height='26' rx='8' fill='%23fff' stroke='%23b8c0c9' stroke-width='2'/%3E%3Ccircle cx='21' cy='47' r='3' fill='%2322a06b'/%3E%3Cpath d='M30 47h16' stroke='%23b8c0c9' stroke-width='3' stroke-linecap='round'/%3E%3Cpath class='a1' d='M26 27a12 12 0 0 1 14 0' fill='none' stroke='%23b6443d' stroke-width='2.5' stroke-linecap='round'/%3E%3Cpath class='a2' d='M22 21a19 19 0 0 1 22 0' fill='none' stroke='%23b6443d' stroke-width='2.5' stroke-linecap='round'/%3E%3Cpath d='M56 47c12 0 12 0 24 0' stroke='%23b8c0c9' stroke-width='3' stroke-linecap='round'/%3E%3Crect x='80' y='40' width='78' height='14' rx='7' fill='%23243338'/%3E%3Cpath d='M87 47h64' stroke='%23f6aa60' stroke-width='6' stroke-linecap='round' stroke-dasharray='4 4' opacity='.35'/%3E%3Cpath class='glow' d='M56 47h24M87 47h64' stroke='%23f6aa60' stroke-width='12' stroke-linecap='round'/%3E%3Cpath class='run' d='M56 47h24M87 47h64' stroke='%23ffd9a8' stroke-width='5' stroke-linecap='round'/%3E%3Cg class='plus'%3E%3Ccircle cx='138' cy='22' r='13' fill='%23b6443d'/%3E%3Cpath d='M138 16v12M132 22h12' stroke='%23fff' stroke-width='2.6' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E")}
+  html.interface-polish body #main .scenes-page .ui606-empty>.menu-icon{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 168 92'%3E%3Cstyle%3E .l%7Banimation:mood 6s ease-in-out infinite%7D.l2%7Banimation-delay:-2s%7D.l3%7Banimation-delay:-4s%7D .mark%7Banimation:drop 3s cubic-bezier(.3,.7,.4,1) infinite%7D %40keyframes mood%7B0%25,100%25%7Bstroke:%23f6aa60%7D33%25%7Bstroke:%2368c7db%7D66%25%7Bstroke:%23c886e5%7D%7D %40keyframes drop%7B0%25%7Btransform:translateY(-10px);opacity:0%7D18%25,82%25%7Btransform:none;opacity:1%7D100%25%7Btransform:none;opacity:0%7D%7D %3C/style%3E%3Crect x='14' y='22' width='58' height='50' rx='10' fill='%23243338' transform='rotate(-6 43 47)'/%3E%3Cpath d='M26 40h34M26 50h34M26 60h34' stroke='%2368c7db' stroke-width='5' stroke-linecap='round' transform='rotate(-6 43 47)' opacity='.9'/%3E%3Crect x='96' y='22' width='58' height='50' rx='10' fill='%23243338' transform='rotate(6 125 47)'/%3E%3Cpath d='M108 40h34M108 50h34M108 60h34' stroke='%23c886e5' stroke-width='5' stroke-linecap='round' transform='rotate(6 125 47)' opacity='.9'/%3E%3Crect x='52' y='12' width='64' height='60' rx='11' fill='%2311181b' stroke='%23fff' stroke-width='2'/%3E%3Cpath class='l' d='M64 34h40' stroke='%23f6aa60' stroke-width='6' stroke-linecap='round'/%3E%3Cpath class='l l2' d='M64 46h40' stroke='%23f6aa60' stroke-width='6' stroke-linecap='round'/%3E%3Cpath class='l l3' d='M64 58h40' stroke='%23f6aa60' stroke-width='6' stroke-linecap='round'/%3E%3Cpath class='mark' d='M100 8h14v22l-7-5-7 5Z' fill='%23f5c76b' stroke='%2311181b' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E")}
+  html.interface-polish body #main .receiver-empty-card>.menu-icon{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 168 92'%3E%3Cstyle%3E .dot%7Btransform-box:fill-box;transform-origin:center;animation:pop 4s cubic-bezier(.3,1.5,.5,1) infinite%7D .tick%7Bstroke-dasharray:24;animation:draw 4s ease-out infinite%7D %40keyframes pop%7B0%25%7Btransform:scale(.4);opacity:0%7D10%25,90%25%7Btransform:none;opacity:1%7D100%25%7Btransform:none;opacity:0%7D%7D %40keyframes draw%7B0%25,8%25%7Bstroke-dashoffset:24%7D24%25,100%25%7Bstroke-dashoffset:0%7D%7D %3C/style%3E%3Crect x='20' y='16' width='56' height='60' rx='12' fill='%23fff' stroke='%23b8c0c9' stroke-width='2'/%3E%3Cpath d='M32 34h32M32 46h32M32 58h20' stroke='%2368c7db' stroke-width='5' stroke-linecap='round'/%3E%3Crect x='92' y='16' width='56' height='60' rx='12' fill='%23fff' stroke='%23b8c0c9' stroke-width='2'/%3E%3Cpath d='M104 34h32M104 46h32M104 58h20' stroke='%23f6aa60' stroke-width='5' stroke-linecap='round'/%3E%3Cg class='dot'%3E%3Ccircle cx='84' cy='70' r='15' fill='%2322a06b' stroke='%23fff' stroke-width='3'/%3E%3Cpath class='tick' d='m77 70 5 5 9-10' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E")}
+  html.interface-polish body #main .onboarding-layout587:has(>.onboarding-name-card):not(:has(.onboarding-batch-zones))>.onboarding-heading::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 100'%3E%3Cstyle%3E .top%7Bstroke-dasharray:116;animation:on 4s ease-out infinite%7D .side%7Banimation:fade 4s ease-in-out infinite%7D.s2%7Banimation-delay:.25s%7D .sweep%7Bstroke-dasharray:18 140;animation:run 4s linear infinite%7D %40keyframes on%7B0%25%7Bstroke-dashoffset:116%7D30%25,100%25%7Bstroke-dashoffset:0%7D%7D %40keyframes fade%7B0%25,25%25%7Bopacity:.2%7D45%25,100%25%7Bopacity:1%7D%7D %40keyframes run%7B0%25,30%25%7Bstroke-dashoffset:18%7D100%25%7Bstroke-dashoffset:-140%7D%7D %3C/style%3E%3Cpath d='M10 92h160' stroke='%23b8c0c9' stroke-width='2' stroke-linecap='round'/%3E%3Crect x='22' y='14' width='136' height='64' rx='6' fill='%23fff' stroke='%23b8c0c9' stroke-width='2'/%3E%3Crect x='22' y='14' width='136' height='14' rx='6' fill='%23243338'/%3E%3Cpath class='top' d='M32 21h116' stroke='%23f6aa60' stroke-width='4' stroke-linecap='round'/%3E%3Cpath class='sweep' d='M32 21h116' stroke='%23fff3df' stroke-width='4' stroke-linecap='round'/%3E%3Crect x='72' y='38' width='36' height='14' rx='4' fill='%23b6443d'/%3E%3Cpath d='M80 45h20' stroke='%23fff' stroke-width='2.5' stroke-linecap='round'/%3E%3Cpath class='side' d='M30 34v40' stroke='%2368c7db' stroke-width='4' stroke-linecap='round'/%3E%3Cpath class='side s2' d='M150 34v40' stroke='%2368c7db' stroke-width='4' stroke-linecap='round'/%3E%3Crect x='56' y='62' width='68' height='30' rx='5' fill='%23f2f4f7' stroke='%23b8c0c9' stroke-width='2'/%3E%3Cpath d='M62 66h56' stroke='%23c886e5' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E")}
+  html.interface-polish body #main .onboarding-layout587:has(.onboarding-batch-zones)>.onboarding-heading::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 100'%3E%3Cstyle%3E .edge%7Banimation:march 1.6s linear infinite%7D .z1%7Banimation:lit 4s ease-in-out infinite%7D.z2%7Banimation:lit 4s ease-in-out 2s infinite%7D .n%7Btransform-box:fill-box;transform-origin:center;animation:nod 4s ease-in-out infinite%7D.n2%7Banimation-delay:2s%7D %40keyframes march%7Bto%7Bstroke-dashoffset:-18%7D%7D %40keyframes lit%7B0%25,100%25%7Bopacity:.35%7D20%25,45%25%7Bopacity:1%7D%7D %40keyframes nod%7B0%25,100%25%7Btransform:none%7D12%25%7Btransform:scale(1.18)%7D24%25%7Btransform:none%7D%7D %3C/style%3E%3Cpath d='M10 92h160' stroke='%23b8c0c9' stroke-width='2' stroke-linecap='round'/%3E%3Crect x='22' y='14' width='136' height='64' rx='6' fill='%23fff' stroke='%23b8c0c9' stroke-width='2'/%3E%3Crect class='edge' x='28' y='20' width='124' height='34' rx='6' fill='%2368c7db' fill-opacity='.14' stroke='%2368c7db' stroke-width='2' stroke-dasharray='5 4'/%3E%3Cpath class='z1' d='M38 30h104' stroke='%2368c7db' stroke-width='4' stroke-linecap='round'/%3E%3Crect class='edge' x='52' y='58' width='76' height='34' rx='6' fill='%23f6aa60' fill-opacity='.16' stroke='%23f6aa60' stroke-width='2' stroke-dasharray='5 4'/%3E%3Cpath class='z2' d='M62 68h56' stroke='%23f6aa60' stroke-width='4' stroke-linecap='round'/%3E%3Cg class='n'%3E%3Ccircle cx='150' cy='20' r='10' fill='%2368c7db'/%3E%3Cpath d='M148 15h3v10' fill='none' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/g%3E%3Cg class='n n2'%3E%3Ccircle cx='128' cy='60' r='10' fill='%23f6aa60'/%3E%3Cpath d='M124 56.5a3.5 3.5 0 0 1 7 .5c0 2.5-7 4-7 7h7.5' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E")}
+  html.interface-polish body #main .onboarding-layout587:has(.onboarding-search-actions)>.onboarding-heading::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 96'%3E%3Cstyle%3E .wire%7Banimation:march 1.2s linear infinite%7D .a1%7Banimation:blink 2.2s ease-in-out infinite%7D.a2%7Banimation:blink 2.2s ease-in-out .3s infinite%7D .led%7Bstroke-dasharray:26;animation:on 2.2s ease-out infinite%7D .lamp%7Banimation:blink 2.2s ease-in-out infinite%7D %40keyframes march%7Bto%7Bstroke-dashoffset:-14%7D%7D %40keyframes blink%7B0%25,100%25%7Bopacity:.3%7D40%25%7Bopacity:1%7D%7D %40keyframes on%7B0%25,20%25%7Bstroke-dashoffset:26%7D60%25,100%25%7Bstroke-dashoffset:0%7D%7D %3C/style%3E%3Crect x='58' y='52' width='64' height='26' rx='8' fill='%23fff' stroke='%23b8c0c9' stroke-width='2'/%3E%3Ccircle class='lamp' cx='70' cy='65' r='3.5' fill='%2322a06b'/%3E%3Cpath d='M80 65h16M102 65h8' stroke='%23b8c0c9' stroke-width='3' stroke-linecap='round'/%3E%3Cpath class='a1' d='M76 40a20 20 0 0 1 28 0' fill='none' stroke='%23b6443d' stroke-width='3' stroke-linecap='round'/%3E%3Cpath class='a2' d='M69 31a30 30 0 0 1 42 0' fill='none' stroke='%23b6443d' stroke-width='3' stroke-linecap='round'/%3E%3Cpath class='wire' d='M122 65h14' stroke='%23b8c0c9' stroke-width='3' stroke-linecap='round' stroke-dasharray='3 4'/%3E%3Crect x='136' y='58' width='38' height='14' rx='7' fill='%23243338'/%3E%3Cpath d='M142 65h26' stroke='%23f6aa60' stroke-width='6' stroke-linecap='round' opacity='.25'/%3E%3Cpath class='led' d='M142 65h26' stroke='%23f6aa60' stroke-width='6' stroke-linecap='round'/%3E%3Ccircle cx='28' cy='65' r='15' fill='%23fff' stroke='%23b8c0c9' stroke-width='2'/%3E%3Cpath d='M28 56v8M22 59.5a8 8 0 1 0 12 0' fill='none' stroke='%2322a06b' stroke-width='2.6' stroke-linecap='round'/%3E%3Cpath class='wire' d='M43 65h15' stroke='%23b8c0c9' stroke-width='3' stroke-linecap='round' stroke-dasharray='3 4'/%3E%3C/svg%3E")}
+}
+/* GEN:end */
+
+@media (prefers-reduced-motion:no-preference){
+
+/* ---------- Ledline order: a light runs from place 1 to the last place ---------- */
+/* Shows the direction "begin → einde" on the real cards, three rounds, and
+ * stays out of the way while a line is selected or identifying itself. */
+html body .order-assignments652>li{--c106-d:0s}
+html body .order-assignments652>li:nth-child(2){--c106-d:.45s}
+html body .order-assignments652>li:nth-child(3){--c106-d:.9s}
+html body .order-assignments652>li:nth-child(4){--c106-d:1.35s}
+html body .order-assignments652>li:nth-child(5){--c106-d:1.8s}
+html body .order-assignments652>li:nth-child(6){--c106-d:2.25s}
+html body .order-assignments652>li:nth-child(7){--c106-d:2.7s}
+html body .order-assignments652>li:nth-child(8){--c106-d:3.15s}
+html body .order-assignments652:has(>li:nth-child(2)):not(:has([data-order-selected="true"],[data-order-pulsing="true"]))>li:nth-child(-n+8) .order-focus-strip664{position:relative}
+html body .order-assignments652:has(>li:nth-child(2)):not(:has([data-order-selected="true"],[data-order-pulsing="true"]))>li:nth-child(-n+8) .order-focus-strip664::after{
+  content:"";position:absolute;top:0;bottom:0;left:0;width:38%;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.75) 50%,transparent);mix-blend-mode:screen;
+  transform:translateX(-110%);animation:c106-strip 4.4s ease-in-out var(--c106-d) 3 both}
+html body .order-assignments652:has(>li:nth-child(2)):not(:has([data-order-selected="true"],[data-order-pulsing="true"]))>li:nth-child(-n+8) .order-place-number668>b{
+  animation:c106-place 4.4s ease-in-out var(--c106-d) 3 both}
+@keyframes c106-strip{0%{transform:translateX(-110%)}22%,100%{transform:translateX(270%)}}
+@keyframes c106-place{0%,100%{transform:none;text-shadow:none}8%{transform:scale(1.28);text-shadow:0 0 10px var(--identify-colour,#f6aa60)}20%{transform:none;text-shadow:none}}
+/* "Begin → einde": the arrow travels. */
+html body .order-assignment-direction652>b{display:inline-block;background:linear-gradient(90deg,currentColor 0 40%,var(--red,#b6443d) 50%,currentColor 60% 100%) 0 0/250% 100%;
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:c106-direction 2.6s ease-in-out 4}
+@keyframes c106-direction{from{background-position:100% 0}to{background-position:0 0}}
+
+/* ---------- Light sweep over the zone preview after a choice ---------- */
+/* c106-motion.js adds .c106-sweep for a moment when you pick a colour,
+ * gradient or animation. It answers your tap; it does not claim the light
+ * on the stand has changed. */
+html body .preview-wrap.c106-sweep-host{position:relative}
+html body .preview-wrap.c106-sweep::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.42) 48%,rgba(255,255,255,.1) 56%,transparent 70%) 0 0/250% 100% no-repeat;
+  animation:c106-sweep .9s cubic-bezier(.4,0,.2,1) both}
+@keyframes c106-sweep{from{background-position:120% 0;opacity:1}to{background-position:-60% 0;opacity:.2}}
+
+/* ---------- Success ---------- */
+/* A tick that draws itself in front of a confirming message. */
+html body #toast:not([hidden]){animation:c106-toast .32s cubic-bezier(.2,.9,.3,1.2) both}
+@keyframes c106-toast{from{opacity:0;transform:translate(-50%,10px) scale(.96)}to{opacity:1;transform:translate(-50%,0)}}
+html body #toast[data-c106-success]{display:flex;align-items:center;gap:10px}
+html body #toast[data-c106-success]::before{content:"";flex:none;width:22px;height:22px;border-radius:50%;background:#22a06b
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 22'%3E%3Cstyle%3Epath%7Bstroke-dasharray:16;animation:d .4s ease-out .15s both%7D@keyframes d%7Bfrom%7Bstroke-dashoffset:16%7Dto%7Bstroke-dashoffset:0%7D%7D%3C/style%3E%3Cpath d='m6.5 11.2 3 3 6-6.4' fill='none' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/22px no-repeat;
+  animation:c106-pop .4s cubic-bezier(.3,1.6,.5,1) both}
+@keyframes c106-pop{from{transform:scale(.3);opacity:0}to{transform:none;opacity:1}}
+/* Setup: "Receiver toegevoegd" gets a ring that spreads out once. */
+html body .onboarding-stage-enter .onboarding-success-mark::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:3px solid #22a06b;pointer-events:none;
+  animation:c106-ring .9s ease-out .25s both}
+@keyframes c106-ring{from{transform:scale(.8);opacity:.7}to{transform:scale(1.7);opacity:0}}
+/* Setup steps: the step you just finished pops its tick. */
+html body .onboarding-stand-steps>li.completed:has(+li[aria-current="step"])>b{animation:c106-pop .45s cubic-bezier(.3,1.6,.5,1) .1s both}
+
+/* ---------- Connection pill ---------- */
+/* While connecting, a soft light runs through the pill; once connected the
+ * dot pops once. */
+html body .brand-bar .main-connection-indicator675[data-connection-state="checking"]{
+  background-image:linear-gradient(100deg,transparent 30%,rgba(224,161,0,.16) 50%,transparent 70%);background-size:250% 100%;background-repeat:no-repeat;
+  animation:c106-search 1.8s ease-in-out infinite}
+@keyframes c106-search{from{background-position:130% 0}to{background-position:-30% 0}}
+html body .brand-bar .main-connection-indicator675[data-connection-state="connected"] .mci-dot{animation:c106-pop .45s cubic-bezier(.3,1.6,.5,1) both}
+
+/* ---------- Gentle arrival of new cards ---------- */
+/* c106-motion.js marks a scene, zone or receiver that was not there before. */
+html body .c106-new{animation:c106-arrive .55s cubic-bezier(.2,.9,.3,1.15) backwards,c106-flash 1.8s ease-out .3s backwards}
+@keyframes c106-arrive{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes c106-flash{from{box-shadow:0 0 0 2px #22a06b}to{box-shadow:0 0 0 2px rgba(34,160,107,0)}}
+
+
+/* ---------- Ambient: the stand card's light line flows slowly ---------- */
+html.interface-polish body #main .stand-hero100::after{
+  background:linear-gradient(90deg,#e2574c,#f0a04b 18%,#f5d76e 30%,#5ccf9a 46%,#4f8cf0 64%,#9a6cf0 82%,#e2574c) 0 0/400px 100% repeat-x;
+  animation:c106-flow 14s linear infinite}
+@keyframes c106-flow{to{background-position:-400px 0}}
+
+/* ---------- Found receivers come in one after another ---------- */
+html body .onboarding-results>*{animation:c106-arrive .45s cubic-bezier(.2,.9,.3,1.1) backwards}
+html body .onboarding-results>:nth-child(2){animation-delay:.07s}
+html body .onboarding-results>:nth-child(3){animation-delay:.14s}
+html body .onboarding-results>:nth-child(4){animation-delay:.21s}
+html body .onboarding-results>:nth-child(n+5){animation-delay:.28s}
+
+}
+
+/* ---------- Tablets: more room, larger pictures and explainer ---------- */
+@media (min-width:900px){
+  html.interface-polish body #main :is(.empty-zone,.scenes-page .ui606-empty,.receiver-empty-card)>.menu-icon{width:228px;height:125px}
+  html.interface-polish body #main .onboarding-layout587:is(:has(>.onboarding-name-card),:has(.onboarding-batch-zones),:has(.onboarding-search-actions))>.onboarding-heading::before{width:240px;height:132px}
+  html.interface-polish body #main .onboarding-layout587:has(.onboarding-search-actions)>.onboarding-heading::after{top:30px;width:58px;height:58px;margin-left:-29px}
+  html body .order-mirror101:not([data-om-compact="true"]){--om-row:58px}
+  html body .order-mirror101:not([data-om-compact="true"]) .om-led{height:13px}
+  html body .order-mirror101[data-om-compact="true"]{--om-row:44px}
+}
+@media (min-width:900px) and (max-height:640px){
+  html.interface-polish body #main .onboarding-layout587>.onboarding-heading::before{display:none!important}
+}
+
+/* ---------- Order step: "Verbindingen controleren" (SPI, 2+ ledlines) ---------- */
+/* An inviting card button: a light crossing the junction between two
+ * ledlines on the left, the explanation in the middle, an arrow right. */
+html body .v50-order-connection-check{display:grid;grid-template-columns:56px minmax(0,1fr) 18px;grid-template-rows:auto auto;column-gap:14px;row-gap:3px;align-items:center;
+  width:100%;box-sizing:border-box;margin:14px 0 10px;padding:14px 16px;border-radius:20px;text-align:left;cursor:pointer;font:inherit;color:var(--ink,#1c1c1e);
+  background:linear-gradient(115deg,color-mix(in srgb,#f6aa60 12%,var(--panel,#fff)),color-mix(in srgb,#68c7db 12%,var(--panel,#fff)));
+  border:1.5px solid color-mix(in srgb,#68c7db 40%,var(--line,#dce1e9));box-shadow:0 12px 26px -20px rgba(20,24,32,.55);
+  transition:transform .15s ease,box-shadow .15s ease}
+html body .v50-order-connection-check::before{content:"";grid-row:1/3;width:56px;height:40px;border-radius:12px;background-color:#11181b;background-repeat:no-repeat;background-position:center;background-size:52px 37px}
+html body .v50-order-connection-check::after{content:"";grid-column:3;grid-row:1/3;width:18px;height:18px;opacity:.55;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23646d78' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center/18px no-repeat}
+html body .v50-order-connection-check>span{grid-column:2;font-size:15px;font-weight:750;line-height:1.25}
+html body .v50-order-connection-check>small{grid-column:2;font-size:12.5px;line-height:1.4;color:var(--muted,#646d78)}
+html body .v50-order-connection-check:active{transform:scale(.985)}
+html body .v50-order-connection-check:focus-visible{outline:3px solid var(--ink,#1c1c1e);outline-offset:3px}
+html body .v50-order-connection-check:disabled{opacity:.55;cursor:default}
+body[data-theme=dark] .v50-order-connection-check{color:#f4f3f1!important;box-shadow:none!important;border-color:rgba(104,199,219,.35)!important;
+  background:linear-gradient(115deg,rgba(246,170,96,.12),rgba(104,199,219,.12))!important}
+body[data-theme=dark] .v50-order-connection-check>small{color:rgba(244,243,241,.68)}
+body[data-theme=dark] .v50-order-connection-check::after{filter:invert(1)}
+@media (max-width:360px){html body .v50-order-connection-check{grid-template-columns:48px minmax(0,1fr) 14px;column-gap:10px;padding:12px}html body .v50-order-connection-check::before{width:48px;height:34px;background-size:46px 33px}}
+@media (prefers-reduced-motion:reduce){html body .v50-order-connection-check{transition:none}}
+
+/* ---------- Sides dialog in check mode: the explanation as a calm info panel ---------- */
+html body dialog.spi-zone-direction-dialog[data-spi-zone-check="true"] .spi-zone-select-hint{display:grid;grid-template-columns:48px minmax(0,1fr);gap:12px;align-items:center;
+  margin:0 0 12px;padding:12px 14px;border-radius:16px;font-size:13.5px;line-height:1.45;color:var(--ink,#1c1c1e);
+  background:color-mix(in srgb,#68c7db 11%,var(--panel,#fff));border:1px solid color-mix(in srgb,#68c7db 35%,transparent)}
+html body dialog.spi-zone-direction-dialog[data-spi-zone-check="true"] .spi-zone-select-hint::before{content:"";width:48px;height:34px;border-radius:10px;background-color:#11181b;background-repeat:no-repeat;background-position:center;background-size:44px 31px}
+body[data-theme=dark] dialog.spi-zone-direction-dialog[data-spi-zone-check="true"] .spi-zone-select-hint{color:#f4f3f1;background:rgba(104,199,219,.1);border-color:rgba(104,199,219,.28)}
+
+/* GEN:check (built by c106gen.py) */
+html body .v50-order-connection-check::before,html body dialog.spi-zone-direction-dialog[data-spi-zone-check="true"] .spi-zone-select-hint::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 40'%3E%3Cstyle%3E%3C/style%3E%3Crect x='1' y='13' width='25' height='14' rx='7' fill='%23243338'/%3E%3Cpath d='M7 20h14' stroke='%23f6aa60' stroke-width='5' stroke-linecap='round'/%3E%3Crect x='30' y='13' width='25' height='14' rx='7' fill='%23243338'/%3E%3Cpath d='M35 20h14' stroke='%2368c7db' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M24 20h8' stroke='%239aa4b1' stroke-width='2' stroke-linecap='round'/%3E%3Cg class='dot'%3E%3Ccircle cx='28' cy='20' r='6' fill='%23fff' opacity='.35'/%3E%3Ccircle cx='28' cy='20' r='3.4' fill='%23fff'/%3E%3C/g%3E%3C/svg%3E")}
+@media (prefers-reduced-motion:no-preference){
+  html body .v50-order-connection-check::before,html body dialog.spi-zone-direction-dialog[data-spi-zone-check="true"] .spi-zone-select-hint::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 40'%3E%3Cstyle%3E .dot%7Banimation:run 2s cubic-bezier(.45,0,.55,1) infinite%7D .ring%7Btransform-box:fill-box;transform-origin:center;animation:hit 2s ease-out infinite%7D %40keyframes run%7B0%25%7Btransform:translateX(-20px);opacity:0%7D12%25,88%25%7Bopacity:1%7D100%25%7Btransform:translateX(20px);opacity:0%7D%7D %40keyframes hit%7B0%25,40%25%7Btransform:scale(.5);opacity:0%7D50%25%7Bopacity:.9%7D75%25,100%25%7Btransform:scale(1.6);opacity:0%7D%7D %3C/style%3E%3Crect x='1' y='13' width='25' height='14' rx='7' fill='%23243338'/%3E%3Cpath d='M7 20h14' stroke='%23f6aa60' stroke-width='5' stroke-linecap='round'/%3E%3Crect x='30' y='13' width='25' height='14' rx='7' fill='%23243338'/%3E%3Cpath d='M35 20h14' stroke='%2368c7db' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M24 20h8' stroke='%239aa4b1' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle class='ring' cx='28' cy='20' r='7' fill='none' stroke='%23fff' stroke-width='2'/%3E%3Cg class='dot'%3E%3Ccircle cx='28' cy='20' r='6' fill='%23fff' opacity='.35'/%3E%3Ccircle cx='28' cy='20' r='3.4' fill='%23fff'/%3E%3C/g%3E%3C/svg%3E")}
+}
+/* GEN:checkend */
+
+/* ---------- Waiting for the stand's wifi: a picture of what happens ---------- */
+/* A still drawing; while the app is waiting (status data-busy) the signal moves. */
+/* GEN:wifi (built by c106gen.py) */
+html.interface-polish body #main .wifi-open-c98 .pin-login-guide::before{content:"";display:block;width:200px;height:104px;max-width:100%;margin:0 auto 10px;background:no-repeat center/contain;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 104'%3E%3Cstyle%3E.w1,.w2,.w3%7Bopacity:.75%7D%3C/style%3E%3Crect x='20' y='22' width='38' height='68' rx='9' fill='%23fff' stroke='%23b8c0c9' stroke-width='2'/%3E%3Crect x='26' y='32' width='26' height='44' rx='3' fill='%23eef2f6'/%3E%3Cpath d='M30 42h18M30 50h12' stroke='%23c7ced6' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='39' cy='83' r='2.5' fill='%23b8c0c9'/%3E%3Cg fill='none' stroke='%23b6443d' stroke-width='3' stroke-linecap='round'%3E%3Cpath class='w1' d='M92 56a9 9 0 0 1 12 0'/%3E%3Cpath class='w2' d='M85 49a19 19 0 0 1 26 0'/%3E%3Cpath class='w3' d='M78 42a29 29 0 0 1 40 0'/%3E%3C/g%3E%3Ccircle cx='98' cy='63' r='3.5' fill='%23b6443d'/%3E%3Cpath d='M128 90V30h50v60' fill='none' stroke='%23b8c0c9' stroke-width='2.5' stroke-linejoin='round'/%3E%3Crect x='124' y='22' width='58' height='12' rx='6' fill='%23243338'/%3E%3Cpath d='M131 28h44' stroke='%23f6aa60' stroke-width='5' stroke-linecap='round'/%3E%3Crect x='138' y='70' width='30' height='20' rx='4' fill='%23fff' stroke='%23b8c0c9' stroke-width='2'/%3E%3Cpath d='M118 90h70' stroke='%23b8c0c9' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E")}
+@media (prefers-reduced-motion:no-preference){
+  html.interface-polish body #main .wifi-open-c98 .pin-login-guide:has(.wifi-open-status[data-busy])::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 104'%3E%3Cstyle%3E .w1%7Banimation:wave 1.8s ease-in-out infinite%7D.w2%7Banimation:wave 1.8s ease-in-out .25s infinite%7D.w3%7Banimation:wave 1.8s ease-in-out .5s infinite%7D .hop%7Banimation:hop 1.8s ease-in-out infinite%7D %40keyframes wave%7B0%25,100%25%7Bopacity:.18%7D35%25%7Bopacity:1%7D%7D %40keyframes hop%7B0%25%7Btransform:translateX(0);opacity:0%7D15%25%7Bopacity:1%7D70%25%7Bopacity:1%7D85%25,100%25%7Btransform:translateX(-58px);opacity:0%7D%7D %3C/style%3E%3Crect x='20' y='22' width='38' height='68' rx='9' fill='%23fff' stroke='%23b8c0c9' stroke-width='2'/%3E%3Crect x='26' y='32' width='26' height='44' rx='3' fill='%23eef2f6'/%3E%3Cpath d='M30 42h18M30 50h12' stroke='%23c7ced6' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='39' cy='83' r='2.5' fill='%23b8c0c9'/%3E%3Cg fill='none' stroke='%23b6443d' stroke-width='3' stroke-linecap='round'%3E%3Cpath class='w1' d='M92 56a9 9 0 0 1 12 0'/%3E%3Cpath class='w2' d='M85 49a19 19 0 0 1 26 0'/%3E%3Cpath class='w3' d='M78 42a29 29 0 0 1 40 0'/%3E%3C/g%3E%3Ccircle cx='98' cy='63' r='3.5' fill='%23b6443d'/%3E%3Ccircle class='hop' cx='122' cy='62' r='3' fill='%23b6443d'/%3E%3Cpath d='M128 90V30h50v60' fill='none' stroke='%23b8c0c9' stroke-width='2.5' stroke-linejoin='round'/%3E%3Crect x='124' y='22' width='58' height='12' rx='6' fill='%23243338'/%3E%3Cpath d='M131 28h44' stroke='%23f6aa60' stroke-width='5' stroke-linecap='round'/%3E%3Crect x='138' y='70' width='30' height='20' rx='4' fill='%23fff' stroke='%23b8c0c9' stroke-width='2'/%3E%3Cpath d='M118 90h70' stroke='%23b8c0c9' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E")}
+}
+/* GEN:wifiend */
+@media (max-height:600px),(orientation:landscape) and (max-height:500px){html.interface-polish body #main .wifi-open-c98 .pin-login-guide::before{display:none}}
+body[data-theme=dark] #main .wifi-open-c98 .pin-login-guide::before{filter:brightness(.92)}
+
+/* ---------- Software update and unlinking: progress bars that show they are working ---------- */
+html body :is(.receiver-update-progress,.removal-progress) progress{-webkit-appearance:none;appearance:none;display:block;width:100%;height:10px;border:0;border-radius:999px;overflow:hidden;
+  background:color-mix(in srgb,var(--ink,#1c1c1e) 10%,transparent);color:var(--red,#b6443d)}
+html body :is(.receiver-update-progress,.removal-progress) progress::-webkit-progress-bar{background:transparent;border-radius:999px}
+html body :is(.receiver-update-progress,.removal-progress) progress::-webkit-progress-value{border-radius:999px;background:linear-gradient(90deg,var(--red,#b6443d),#e2776c);transition:width .45s ease}
+html body :is(.receiver-update-progress,.removal-progress) progress::-moz-progress-bar{border-radius:999px;background:linear-gradient(90deg,var(--red,#b6443d),#e2776c)}
+body[data-theme=dark] :is(.receiver-update-progress,.removal-progress) progress{background:rgba(255,255,255,.12)}
+@media (prefers-reduced-motion:no-preference){
+  html body :is(.receiver-update-progress,.removal-progress) progress::-webkit-progress-value{
+    background:linear-gradient(100deg,transparent 0 38%,rgba(255,255,255,.5) 50%,transparent 62%) 0 0/250% 100%,linear-gradient(90deg,var(--red,#b6443d),#e2776c);
+    animation:c106-bar 1.6s linear infinite}
+  html body :is(.receiver-update-progress,.removal-progress) progress[value="100"]::-webkit-progress-value{animation:none}
+}
+@keyframes c106-bar{from{background-position:100% 0,0 0}to{background-position:-50% 0,0 0}}
+@media (prefers-reduced-motion:reduce){html body :is(.receiver-update-progress,.removal-progress) progress::-webkit-progress-value{transition:none}}
+
+/* A finished update gets a green tick next to the receiver's name. */
+html body .receiver-update-progress[data-state="complete"] .update-receiver-copy>b::after{content:"";display:inline-block;vertical-align:-3px;width:18px;height:18px;margin-left:8px;border-radius:50%;
+  background:#22a06b url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='M5 9.3l2.6 2.6L13 6.4' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/18px no-repeat}
+@media (prefers-reduced-motion:no-preference){html body .receiver-update-progress[data-state="complete"] .update-receiver-copy>b::after{animation:c106-pop .5s cubic-bezier(.3,1.5,.5,1) both}}

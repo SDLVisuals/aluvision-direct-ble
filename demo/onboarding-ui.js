@@ -383,6 +383,56 @@
       })();
       return parking;
     }
+    let suspendedReadOnlySearchC101=null;
+    function readOnlySearchScopeC101(){
+      return !firstAccess&&!busy&&!draftSaving&&!pendingChoices&&!managementBusy&&!exiting&&
+        !parking&&!parkPending&&!resumeSelection&&!actionAbort&&!securityReceiptRef&&!finalReceiptRef&&
+        !securityUncertain&&!finalizationStarted&&!registrationPending&&!rejoinRunning&&!automaticFinalizing&&
+        !previewStopJob&&!previewReconcile579&&!localExitPreviewCleanup&&previewState.kind==='idle'&&
+        identifyPending.size===0&&identifying.size===0&&parkedChoices.size===0&&parkedTransactions.size===0&&
+        !!draft&&savedStand()&&draft.zones.every(zone=>zone.isNew===false)&&draft.stage==='receiver'&&draft.receiver===null&&draft.outputs.length===0&&draft.port===null&&
+        draft.zoneId===null&&!draft.cancelled&&draft.membership==='pending'&&
+        draft.security.status==='not-started'&&draft.security.phase==='idle';
+    }
+    function canLeaveReadOnlySearchC101(){return !!container&&readOnlySearchScopeC101();}
+    function readOnlySearchSuspended(){return !container&&draft===suspendedReadOnlySearchC101&&readOnlySearchScopeC101();}
+    function resumeReadOnlySearchC101(){
+      if(!suspendedReadOnlySearchC101)return true;
+      if(draft!==suspendedReadOnlySearchC101||!readOnlySearchScopeC101()){suspendedReadOnlySearchC101=null;return true;}
+      results=[];searchState='idle';
+      try{
+        const model=getModel(),stand=model.stands.find(item=>item.id===draft.stand.id);
+        if(!stand){error='Deze stand bestaat niet meer. Ga terug en open de actuele stand.';return false;}
+        // Keep the stored transaction, never replace a private/native intent.
+        // Only a still-existing destination is carried into the current graph.
+        const active=draft.activeZoneId,valid=active===null||stand.zones.some(zone=>zone.id===active);
+        let next=draftApi.create({model,standId:stand.id,activeZoneId:valid?active:null,transactionId:draft.transactionId});
+        if(!valid||draft.zoneChoiceRequired===true)next=draftApi.snapshot({...next,zoneChoiceRequired:true});
+        draft=next;suspendedReadOnlySearchC101=null;results=[];searchState='idle';error='';return true;
+      }catch(_){error='De actuele stand kon nog niet worden geladen. Je kunt teruggaan en opnieuw openen.';return false;}
+    }
+    function leaveReadOnlySearchC101(returnToStand){
+      if(!canLeaveReadOnlySearchC101())return false;
+      // Browsing has no receiver write to finish. Invalidate its read before
+      // detaching the screen; preserve the exact local/native draft for later.
+      // Neither a failed park nor an unavailable store may trap this page.
+      const retained=draft;cancelSearch();localExitPreviewCleanup=true;
+      try{suspend({discard:true});}finally{localExitPreviewCleanup=false;}
+      draft=retained;suspendedReadOnlySearchC101=retained;onExit(returnToStand?{stand:true}:undefined);
+      // C105: an empty search draft (no receiver, no security, no outputs) is
+      // parked in the background. A lingering native draft blocked every
+      // ledline identification (order step, pixels) and reopened this search
+      // at each start. The page itself never waits for this cleanup.
+      if(retained&&retained.stage==='receiver'&&retained.receiver===null&&retained.security?.status==='not-started'&&
+         retained.security.phase==='idle'&&Array.isArray(retained.outputs)&&retained.outputs.length===0&&retained.port===null&&
+         typeof services.parkDraft==='function')
+        void Promise.resolve().then(()=>services.parkDraft({transactionId:retained.transactionId})).then(()=>{
+          // Same as the ordinary closed-search exit: the next start begins fresh.
+          if(suspendedReadOnlySearchC101===retained)suspendedReadOnlySearchC101=null;
+          if(draft===retained&&!container)draft=null;
+        }).catch(()=>{});
+      return true;
+    }
     async function parkForExit({expiredEditorExit=false}={}){
       if(parking&&!(await parking))return false;
       // A selected receiver is kept privately with its exact transaction.
@@ -558,7 +608,7 @@
       draft=result.draft;error='';if(event.type!=='SECURITY_PROGRESS')keepDraft();if(render)paintPage(top);return true;
     }
     function start({activeZoneId,retargetZone=false}={}){
-      if(firstAccess)return;
+      if(firstAccess||!resumeReadOnlySearchC101())return;
       if(!draft||draft.stage==='done'){
         draft=draftApi.create({model:getModel(),activeZoneId,transactionId:'onboarding-'+uniqueId()});
         // A named, saved stand can add its first receiver without restarting
@@ -1126,6 +1176,7 @@
     function commitPixelKey(event){if(['Enter','ArrowUp','ArrowDown'].includes(event.key)&&event.target.matches('[data-pixel-count]'))updatePixelCount(event.target.value,event.target,{commit:event.key==='Enter'});}
     function keydown(event){if(event.defaultPrevented||event.isComposing||event.keyCode===229)return;if(event.key==='Enter'&&event.target.matches('input:not([data-onboarding-pin])')){const button=container.querySelector('[data-onboarding-action="stand-save"], [data-onboarding-action="zone-create"], [data-onboarding-action="zone-rename-confirm"]')||(draft.stage==='zones'?container.querySelector('[data-onboarding-action="next"]'):null);if(button&&!button.disabled){event.preventDefault();button.click();}}}
     async function search(){
+      if(!resumeReadOnlySearchC101()){paintPage(false);return;}
       if(parkPending||parking){if(!(await parkForSearch()))return;}
       if(searchState==='searching'||busy||identifyPending.size)return;
       if(identifying.size){
@@ -1561,6 +1612,7 @@
         if(job.failed||['failed','unsupported'].includes(previewState.kind)){notice='Stoppen van het testlicht is nog niet bevestigd. Je keuzes blijven staan; probeer opnieuw.';refreshNotice();return;}
       }
       if(action==='exit'){
+        if(leaveReadOnlySearchC101(returnToStand))return;
         if(exiting)return;
         const beforeSave=operation;
         const name=container.querySelector('#onboarding-stand-name')?.value;
@@ -1835,7 +1887,7 @@
     // Only names, counts and the pending step for the Stand resume card; never
     // expose credentials, security receipts or unconfirmed receiver membership.
     function summary(){if(firstAccess&&firstAccess.phase!=='done'){const stand=getModel().stands.find(item=>item.id===firstAccess.identity.standId);return {stand:clone(stand),zones:clone(stand?.zones||[]),stage:'wifi-pin',activeZoneId:null,canManageZones:false};}return draft&&draft.stage!=='done'?{stand:clone(draft.stand),zones:clone(draft.zones),stage:draft.stage,activeZoneId:draft.activeZoneId,canManageZones:canManageZones()}:null;}
-    return Object.freeze({mount,suspend,reset,paint,restore,restoreFirstStandAccess,summary,canContinueLocalConcept,continueLocalConcept});
+    return Object.freeze({mount,suspend,reset,paint,restore,restoreFirstStandAccess,summary,readOnlySearchSuspended,canContinueLocalConcept,continueLocalConcept});
   }
   return Object.freeze({create,firstAccessFailure});
 }));

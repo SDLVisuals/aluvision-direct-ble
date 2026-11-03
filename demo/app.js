@@ -112,7 +112,7 @@
     const z = zone();
     if (!window.LightningStaticGradient || z?.type!=='SPI' || standControlOpen) return null;
     if (!gradientEditors.has(z.id)) gradientEditors.set(z.id, window.LightningStaticGradientUI.create({
-      storage:gradientStorage,scope:z.id,
+      storage:gradientStorage,scope:z.id,text:key=>t(key),
       // Deduplicate only the same selected physical lines and saved geometry.
       // This key never widens native selection or includes mutable light state.
       applyScope:()=>JSON.stringify([stand()?.id,z.id,zone()?.layout,M.selectionLines(model,z.id,selection()).map(line=>[line.id,line.pixels,line.reversed])]),
@@ -124,7 +124,7 @@
       onIdle:flushGradientRenderC98,
       // The shared ledline preview shows the draft gradient; only the
       // "chosen light" summary is hidden while editing it.
-      onMode:mode=>{main.querySelector('.editor-grid')?.toggleAttribute('data-demo-gradient-active',mode==='gradient');if(mode==='gradient'){prewarmGradientC98();scheduleGradientRewarmC98(75000);}else cancelGradientPrewarmC98();}
+      onMode:mode=>{main.querySelector('.editor-grid')?.toggleAttribute('data-demo-gradient-active',mode==='gradient');if(mode!=='gradient')cancelGradientPrewarmC98();}
     }));
     return gradientEditors.get(z.id);
   }
@@ -165,6 +165,9 @@
       !document.querySelector('dialog[open]');
   }
   function prewarmGradientC98(){
+    // C105: gradients take the fast LIVE lane; the ~6 s catalogue warm-up
+    // would only hold the radio. The fallback route still warms itself.
+    if(window.__c105GradientCatalogue!==true)return;
     const standId=stand()?.id;
     if(!nativeContext||!standId||typeof runtime?.services?.prewarmGradient!=='function'||gradientPrewarmC98||Date.now()-gradientPrewarmAtC98<5000||
        !gradientPrewarmVisibleC98()||managementBusy||standPresentationOnly()||gradientEditors.get(zone().id)?.applying===true||
@@ -187,8 +190,23 @@
   // C98: keep the gradient ready only while its editor is visibly selected.
   // Ordinary colours and animations never re-arm this radio preparation.
   let gradientRewarmTimerC98=null;
+  // C105: with two or more ledlines selected, one gradient normally runs on
+  // across them; this switch gives every chosen ledline the whole gradient.
+  let gradientSeparateC105=false,lastGradientC105=null;
+  function syncGradientSeparateC105(host){
+    main.querySelectorAll('.c105-gradient-separate').forEach(node=>node.remove());
+    const z=zone();if(!host||!z||z.type!=='SPI')return;
+    if(M.selectionLines(model,z.id,selection()).length<2)return;
+    host.insertAdjacentHTML('afterend',`<label class="c105-gradient-separate"><input type="checkbox" data-gradient-separate ${gradientSeparateC105?'checked':''}><span><strong>${esc(t('Zelfde verloop per ledline'))}</strong><small>${esc(t('Elke gekozen ledline krijgt het hele verloop, in plaats van één doorlopend verloop.'))}</small></span></label>`);
+  }
+  document.addEventListener('change',event=>{
+    const box=event.target?.closest?.('[data-gradient-separate]');if(!box||!main.contains(box))return;
+    gradientSeparateC105=box.checked;
+    if(lastGradientC105)void applyStaticGradientUI(lastGradientC105).catch(()=>{});
+  });
   function scheduleGradientRewarmC98(ms=4000){
-    clearTimeout(gradientRewarmTimerC98);gradientRewarmTimerC98=null;
+    clearTimeout(gradientRewarmTimerC98);
+    if(window.__c105GradientCatalogue!==true)return;gradientRewarmTimerC98=null;
     if(!gradientPrewarmVisibleC98())return;
     gradientRewarmTimerC98=setTimeout(()=>{
       gradientRewarmTimerC98=null;
@@ -221,11 +239,13 @@
     if(gradientPowerSerial!==editorSerial||model!==editorModel||JSON.stringify(selection())!==JSON.stringify(scope))throw Object.assign(Error(),{code:'GRADIENT_CHANGED'});
     if(!gradientWorkspaceAllowed(zoneId)||motionContextKey()!==context||document.hidden)throw Object.assign(Error(),{code:'GRADIENT_CHANGED'});
     const inputModel=model,selectionKey=JSON.stringify(scope);
-    await gradientPrewarmC98?.catch(()=>{});
+    cancelGradientPrewarmC98();
     // Preparation may finish after a different colour, selection or model wins.
     // Recheck the original UI intent before the first native output dispatch.
     if(gradientPowerSerial!==editorSerial||model!==inputModel||managementBusy||standPresentationOnly()||!gradientWorkspaceAllowed(zoneId)||motionContextKey()!==context||JSON.stringify(selection())!==selectionKey||document.hidden)throw Object.assign(Error(),{code:'GRADIENT_CHANGED'});
-    const operation=runtime.services.applyStaticGradient({requests,gradient:definition});
+    lastGradientC105=gradient;
+    const separate=gradientSeparateC105&&M.selectionLines(model,zoneId,scope).length>1;
+    const operation=runtime.services.applyStaticGradient({requests,gradient:definition,...(separate?{separate:true}:{})});
     gradientSetupNotice=null;
     let retained;
     try{retained=await operation;}
@@ -234,7 +254,7 @@
       // as expired. Send the same gradient once more, now on a warm route.
       if(error?.code!=='LIVE_STABLE_PREPARED_NEW_INTENT_REQUIRED'||gradientPowerSerial!==editorSerial||model!==inputModel||document.hidden||
          JSON.stringify(selection())!==selectionKey)throw error;
-      retained=await runtime.services.applyStaticGradient({requests,gradient:definition});
+      retained=await runtime.services.applyStaticGradient({requests,gradient:definition,...(separate?{separate:true}:{})});
     }
     if(retained?.status!=='catalogue-retained-deferred'||retained.applied!==false||retained.ready!==false||
        !Array.isArray(retained.receiverIds)||retained.receiverIds.length!==ids.length||new Set(retained.receiverIds).size!==ids.length||retained.receiverIds.some(id=>!ids.includes(id)))throw Object.assign(Error(),{code:'GRADIENT_UNCONFIRMED'});
@@ -1050,6 +1070,12 @@
     }catch(_){if(request===orderTestRequest)orderTestState={status:'failed',busy:false,session,zoneId:zone()?.id,preview:previewContext};}
     finally{if(request===orderTestRequest){orderTestPreparing=false;syncArrangementControls();}}
   }
+  // C105: SPI connection check from the order step: every ledline in its own
+  // colour with a light running across each connection, in the draft order.
+  function orderConnectionCheckMarkup(){
+    const z=zone();if(!z||z.type!=='SPI'||M.zoneLedlines(model,z.id).length<2||previewContext)return '';
+    return `<button type="button" class="v50-order-connection-check" data-action="order-connection-check"><span>${esc(t('Verbindingen controleren'))}</span><small>${esc(t('Lichtje loopt over elke overgang van ledline naar ledline'))}</small></button>`;
+  }
   function orderTestMarkup(){
     return `<section class="v50-order-test"><h4>${esc(orderGuideText('testTitle'))}</h4><p data-order-test-status role="status" aria-live="polite"></p><button type="button" class="v50-order-test-start" data-action="order-test-start">${esc(orderGuideText(previewContext?'previewStart':'testStart'))}</button><button type="button" class="v50-order-test-stop" data-action="order-test-stop" hidden>${esc(orderGuideText('testStop'))}</button><button type="button" class="v50-order-test-confirm" data-action="order-test-confirm" hidden>${esc(orderGuideText('confirm'))}</button></section>`;
   }
@@ -1387,6 +1413,8 @@
   const receiverUpdates=window.LightningReceiverUpdateUI.create({services:runtime?.native===true?runtime.services||{}:{},translate:(key,params)=>t(key,params)});
   const receiverRemoval=window.LightningReceiverRemovalUI.create({services:runtime?.native===true?runtime.services||{}:{},translate:(key,params)=>t(key,params),getModel:()=>model,standCodeAccess:()=>simpleStandMode&&!!centralApplied,usesDedicatedFirstPin:receiver=>matchesFirstPinReady686(firstPinReady686.get(receiver.standId),model),
     onRemoved:async(nextModel,{status,central,centralClosed}={})=>{
+      const removedForSharing=status==='removed'?model.receivers.filter(receiver=>!nextModel.receivers.some(next=>next.id===receiver.id)).map(receiver=>({id:receiver.id,standId:receiver.standId,rid:receiver.rid,deviceFingerprint:receiver.deviceFingerprint,type:receiver.type,role:receiver.role})):[];
+      const shareRemoval=()=>{for(const standId of new Set(removedForSharing.map(receiver=>receiver.standId))){const result=sharedSync97?.confirmedRemoval?.(standId,removedForSharing.filter(receiver=>receiver.standId===standId));if(result)window.__c98log?.('SHARED_REMOVAL '+result);}};
       if(status==='removed'){
         const retained=new Set(nextModel.receivers.map(receiver=>receiver.id));
         for(const receiver of model.receivers)if(!retained.has(receiver.id)){try{pairFirstSetup?.remove(receiver.id);}catch(_){/* A stale UI bookmark never reverses a confirmed removal. */}}
@@ -1401,7 +1429,7 @@
         removedIds=model.receivers.filter(receiver=>!remaining.has(receiver.id)).map(receiver=>receiver.id);
       if(status==='removed'&&removedIds.length)applyJoinedZonePlayback(next,[],{confirmedRemovedIds:removedIds});
       else model=M.assertValid(next);
-      selections.clear();visualPorts.clear();visualPlugMotions.clear();identifying.clear();navigate('receivers');}});
+      shareRemoval();selections.clear();visualPorts.clear();visualPlugMotions.clear();identifying.clear();navigate('receivers');}});
   const appErase=window.LightningAppErase.create({
     services:nativeContext?runtime?.services||{}:webDemoContext?webDemo.eraseServices(()=>model):{},
     language:()=>uiPreferences.preferences.language,demo:webDemoContext,
@@ -1632,6 +1660,13 @@
         const joined=newReceiverId&&model.receivers.find(receiver=>receiver.id===newReceiverId&&receiver.standId===standId&&receiver.zoneId===zoneId&&receiver.lifecycle==='added');
         if(joined)resumeConfiguredLighting(joined.id);
         render({preserveScroll:true});toast(pixelText659(joined?'pixelAdded':'pixelDirectionsSaved'));
+        // C105: a new SPI continues with the ledline order step (with the
+        // connection check) when its zone has two or more ledlines.
+        if(joined&&M.zoneLedlines(model,zoneId).length>=2)setTimeout(()=>{
+          if(document.hidden||spiZoneDirections.isOpen()||pixelSetup.isOpen())return;
+          if(route.screen!=='controls'||route.zoneId!==zoneId)navigate('controls',{zoneId});
+          setTimeout(()=>{if(!openLineSetup.has(zoneId))main.querySelector('[data-action="layout"]')?.click();toast(t('Laatste stap: zet de ledlines in de juiste volgorde en controleer de verbindingen.'));},700);
+        },900);
       }
       const ticket=spiOrderReturn744;
       if(ticket&&ticket.standId===standId&&ticket.zoneId===zoneId){
@@ -1660,6 +1695,7 @@
     }finally{pendingResumeC98=false;}
   }
   setTimeout(()=>void resumePendingOutputsC98(),4000);
+  window.addEventListener('c105-output-pending',()=>setTimeout(()=>void resumePendingOutputsC98(),400));
   // C98: open the MAIN session while the user is on the Receivers screen, so
   // "Pixels aanpassen" does not start with a 1 s handshake after the tap.
   let prewarmAtC98=0;
@@ -1673,7 +1709,7 @@
   }
   document.addEventListener('toggle',event=>{if(event.target?.matches?.('details[data-receiver-detail],details[data-receiver-connections]')&&event.target.open)prewarmSetupC98();},true);
   document.addEventListener('click',event=>{if(event.target?.closest?.('[data-action=nav][data-id=receivers]'))setTimeout(prewarmSetupC98,400);},true);
-  async function openSPIZoneDirections({zoneId,newReceiverId,handoff=null}={}){
+  async function openSPIZoneDirections({zoneId,newReceiverId,handoff=null,check=false,lineOrder=null}={}){
     if(spiDirectionOpening744||spiZoneDirections.isOpen()||pixelSetup.isOpen()||document.hidden){
       if(handoff?.receipt)try{await stopSPIDirectionTransport744({standId:handoff.receipt.standId,zoneId:handoff.receipt.zoneId,sessionId:handoff.receipt.sessionId},true);}catch(_){}
       return;
@@ -1722,7 +1758,7 @@
       const receipt=handoff.receipt;
       spiDirectionSessions.set(receipt.sessionId,{standId:receipt.standId,zoneId:receipt.zoneId,sessionId:receipt.sessionId,lineOrder:receipt.lineOrder,lines:receipt.lines,focus:receipt.focus,applied:true,attempted:true});
     }
-    spiZoneDirections.open({standId:current.stand.id,zoneId,zoneName:current.zone.name,lineOrder:M.lineIds(model,zoneId),receivers:receivers.map(receiver=>({id:receiver.id,name:receiver.name,outputs:receiver.outputs.map(output=>({...output}))})),...(newReceiverId?{newReceiverId}:{}),pairFirst,previewOnly:previewContext,pendingChanges,pendingChanged:pendingChanges.length!==previousPending.length},handoff?{initialPreview:{status:'applied',sessionId:handoff.receipt.sessionId,lineOrder:handoff.receipt.lineOrder,lines:handoff.receipt.lines,focus:handoff.receipt.focus,previewTTLMS:handoff.receipt.previewTTLMS,renewAfterMS:handoff.receipt.renewAfterMS},sentAt:handoff.sentAt}:{});edgeOpened=true;
+    spiZoneDirections.open({standId:current.stand.id,zoneId,zoneName:current.zone.name,lineOrder:check&&Array.isArray(lineOrder)&&lineOrder.length===M.lineIds(model,zoneId).length&&lineOrder.every(id=>M.lineIds(model,zoneId).includes(id))?[...lineOrder]:M.lineIds(model,zoneId),...(check?{check:true}:{}),receivers:receivers.map(receiver=>({id:receiver.id,name:receiver.name,outputs:receiver.outputs.map(output=>({...output}))})),...(newReceiverId?{newReceiverId}:{}),pairFirst,previewOnly:previewContext,pendingChanges,pendingChanged:pendingChanges.length!==previousPending.length},handoff?{initialPreview:{status:'applied',sessionId:handoff.receipt.sessionId,lineOrder:handoff.receipt.lineOrder,lines:handoff.receipt.lines,focus:handoff.receipt.focus,previewTTLMS:handoff.receipt.previewTTLMS,renewAfterMS:handoff.receipt.renewAfterMS},sentAt:handoff.sentAt}:{});edgeOpened=true;
     }finally{
       if(handoff?.receipt&&!edgeOpened)try{await stopSPIDirectionTransport744({standId:handoff.receipt.standId,zoneId:handoff.receipt.zoneId,sessionId:handoff.receipt.sessionId},true);}catch(_){}
       if(spiDirectionOpening744===opening)spiDirectionOpening744=null;
@@ -4047,6 +4083,7 @@
           <span class="sr-only" id="order-drag-keyboard668">${esc(orderText652('orderDirectKeyboard668'))}</span>
           <p class="sr-only order-drop-status" role="status" aria-live="polite"></p>
           <ol class="order-assignments652" aria-label="${esc(orderText652('orderCurrentOrder'))}" aria-description="${esc(orderText652('orderDirectRule668'))}">${rows}</ol>${count?'':`<p>${esc(orderText652('orderEmpty'))}</p>`}
+          ${orderConnectionCheckMarkup()}
         </section>
         <footer class="order-assignment-footer652"><small>${esc(orderText652('orderDraftHint686'))}</small><button type="button" class="button full order-assignment-done652" data-action="layout">${icon('check')}${esc(orderText652('orderDone'))}</button></footer>
       </div></section>`;
@@ -5061,7 +5098,11 @@
   // C98: silent stand reload (receivers added elsewhere). One at a time; a
   // failure stays quiet and the next shared-sync pass simply tries again.
   let standRefreshC98=null,standRefreshAtC98=0,standRefreshOffC98=false;
-  function refreshStandFromWifiC98(){
+  function refreshStandFromWifiC98(standId){
+    // A matched native FirstPinV2 receipt identifies this stand's original
+    // local owner. New-phone recovery cannot refresh that owner and would
+    // cancel its live session before correctly rejecting the duplicate grant.
+    if(typeof standId==='string'&&matchesFirstPinReady686(firstPinReady686.get(standId),model))return standRefreshC98;
     // Never during a setup, an add or a pixel setup (the native reload would
     // cancel it), and never again once this phone turned out to be the
     // stand's own original phone (it has nothing to reload: conflict).
@@ -5780,6 +5821,8 @@
     const gradientHost=main.querySelector('[data-gradient-workspace]');
     if(gradientHost)unmountGradient=demoGradientEditor()?.mount(gradientHost)||null;
     else cancelGradientPrewarmC98();
+    syncGradientSeparateC105(gradientHost);
+    watchAnimationGeometryC105();
     gradientRenderedModelC98=gradientHost?JSON.stringify(model):null;
     syncPresetAvailability();
     for(const id of identifyPending.keys())syncIdentifyControls(id);
@@ -5932,6 +5975,38 @@
     }
     const ids=new Set(selectedReceiverIds());return receivers().filter(receiver=>ids.has(receiver.id));
   }
+  // C105: a running animation stays in step after a setup change. When a
+  // zone's geometry (members, ports, pixels, directions, order) changes while
+  // it animates, send its light once more for the whole zone (or stand) in
+  // one batch: one shared start, so no ledline needs to be switched off/on.
+  const animationGeometryC105=new Map();let animationResyncTimerC105=null;
+  const animatedStateC105=state=>!!state&&state.on!==false&&state.power!==false&&(!!state.standAnimation||
+    (!!state.engine&&!['STATIC','STATIC_GRADIENT'].includes(state.engine))||
+    Object.values(state.portStates||{}).some(port=>port&&port.engine&&!['STATIC','STATIC_GRADIENT'].includes(port.engine)));
+  function zoneGeometryC105(z){
+    const members=M.zoneReceivers(model,z.id);
+    return JSON.stringify([members.map(r=>[r.id,(r.outputs||[]).map(o=>[o.port,o.enabled,o.pixels,o.reversed])]),z.layout||null,z.lineOrder||null,M.lineIds?.(model,z.id)||null]);
+  }
+  function watchAnimationGeometryC105(){
+    if(!nativeContext||standPresentationOnly())return;
+    const due=[];
+    for(const st of model.stands||[])for(const z of st.zones||[]){
+      const key=st.id+':'+z.id,geometry=zoneGeometryC105(z),before=animationGeometryC105.get(key);
+      animationGeometryC105.set(key,geometry);
+      if(before!==undefined&&before!==geometry&&M.zoneReceivers(model,z.id).some(r=>animatedStateC105(r.state)))due.push(z.id);
+    }
+    if(!due.length)return;
+    const zones=new Set([...(watchAnimationGeometryC105.pending||[]),...due]);watchAnimationGeometryC105.pending=zones;
+    clearTimeout(animationResyncTimerC105);
+    const fire=()=>{
+      // Never during a setup sheet, pixel/sides/order preview or hidden app.
+      if(document.hidden||document.querySelector('dialog[open]')||managementBusy||receiverWorkBusy?.()){animationResyncTimerC105=setTimeout(fire,1500);return;}
+      const ids=[...watchAnimationGeometryC105.pending].flatMap(id=>M.zoneReceivers(model,id).filter(r=>animatedStateC105(r.state)).map(r=>r.id));
+      watchAnimationGeometryC105.pending=null;animationResyncTimerC105=null;
+      if(ids.length){window.__c98log?.('ANIMATION_RESYNC zones='+zones.size+' receivers='+ids.length);sendReceiverStates(ids,{remember:false});}
+    };
+    animationResyncTimerC105=setTimeout(fire,1200);
+  }
   function sendReceiverStates(ids,{remember=true,scope=null,sceneRestore640=false,paletteOnly=false}={}){
     retireGradientPower();
     if(standPresentationOnly()){
@@ -5990,7 +6065,12 @@
   function applyJoinedZonePlayback(next,receiverIds,options){
     const plan=window.LightningLiveControl.joinZonePlayback(model,next,receiverIds,options);
     model=M.assertValid(plan.model);
-    if(plan.receiverIds.length)sendReceiverStates(plan.receiverIds);
+    // C105: right after a removal the native context is being replaced; the
+    // first command then fails as uncertain. Resume the zone's light shortly
+    // after, once that settles, instead of showing an unconfirmed result.
+    if(plan.receiverIds.length&&options?.confirmedRemovedIds?.length){
+      const ids=[...plan.receiverIds];setTimeout(()=>{const alive=ids.filter(id=>model.receivers.some(r=>r.id===id));if(alive.length)sendReceiverStates(alive);},2000);
+    }else if(plan.receiverIds.length)sendReceiverStates(plan.receiverIds);
     return plan;
   }
   function scheduleLightIntentSave(){
@@ -6118,8 +6198,9 @@
     // change with every tap and never belong in the shared document.
     const pick=(value,keys)=>Object.fromEntries(keys.filter(key=>Object.hasOwn(value,key)).map(key=>[key,copy(value[key])]));
     const source=model.stands.find(s=>s.id===standId);if(!source)return null;
-    const members=model.receivers.filter(r=>r.standId===standId);if(members.some(r=>r.lifecycle!=='added'))return null;
-    const standModel={...pick(source,['id','name']),zones:source.zones.map(z=>pick(z,['id','name','type','layout','receiverIds','lineOrder']))};
+    const members=model.receivers.filter(r=>r.standId===standId),writable=members.every(r=>r.lifecycle==='added');
+    // Derive physical line identities even before manual ordering; GEO remains authoritative.
+    const standModel={...pick(source,['id','name']),zones:source.zones.map(z=>({...pick(z,['id','name','type','layout','receiverIds']),lineOrder:M.lineIds(model,z.id)}))};
     // Outputs (ports, pixels) live on the receivers themselves, not here.
     const receivers=members.map(r=>pick(r,['id','rid','deviceFingerprint','name','type','standId','zoneId','role']));
     // C98: current light per receiver (shared so other phones show it too).
@@ -6131,13 +6212,16 @@
     const lightBytes=JSON.stringify(light).length;
     if(lightBytes!==sharedLightBytesC98){sharedLightBytesC98=lightBytes;window.__c98log?.('SHARED_LIGHT bytes='+lightBytes);}
     if(lightBytes>6000)light=undefined;
-    return {model:{stand:standModel,receivers},libraries:{scenes:savedScenes.scenes.filter(s=>s.standId===standId),presets:savedPresets.presets,colors:savedColours.colors},light};
+    // C105: an output summary per SPI receiver, so another phone notices a
+    // pixel/port/direction change and re-reads that receiver itself.
+    const hint=window.LightningSharedPhysicalRefreshC98?.outputsHint,outputsC105=hint?Object.fromEntries(members.filter(r=>r.type==='SPI'&&Array.isArray(r.outputs)).map(r=>[r.id,hint(r)])):null;
+    return {model:{stand:standModel,receivers,...(outputsC105&&Object.keys(outputsC105).length?{outputsC105}:{})},libraries:{scenes:savedScenes.scenes.filter(s=>s.standId===standId),presets:savedPresets.presets,colors:savedColours.colors},light,...(!writable?{writable:false}:{})};
   }
   // C98: the last shared-document revision this phone applied or wrote.
   const sharedSeenKeyC98=standId=>'aluvision.c98.sharedSeen.'+standId;
   function sharedSeenC98(standId){try{const v=Number(appStorage.getItem(sharedSeenKeyC98(standId)));return Number.isSafeInteger(v)&&v>0?v:null;}catch(_){return null;}}
   function markSharedSeenC98(standId,revision){try{if(Number.isSafeInteger(revision)&&revision>0)appStorage.setItem(sharedSeenKeyC98(standId),String(revision));}catch(_){}}
-  const sharedIdleC98=()=>!managementBusy&&!sceneDraft&&!onboarding?.summary?.()&&!backupTransaction?.pending?.()&&!document.querySelector('dialog[open]')&&
+  const sharedIdleC98=()=>!managementBusy&&!sceneDraft&&(!onboarding?.summary?.()||onboarding?.readOnlySearchSuspended?.()===true)&&!backupTransaction?.pending?.()&&!document.querySelector('dialog[open]')&&
     !standControlOpen&&!stableZonePreparationUI&&!stableStandPreparationUI&&
     !['controls','colour','animations','effects','animation-family','layout'].includes(route.screen)&&
     (typeof runtime?.services?.lightQuiet!=='function'||runtime.services.lightQuiet());
@@ -6157,19 +6241,55 @@
     }
     M.assertValid(desired);return stand;
   }
+  // C105: best effort. Another phone changed pixels/ports/direction of an SPI
+  // receiver: re-read it once per differing summary. Never blocks the shared
+  // document, and a platform without the readback simply keeps its own.
+  const sharedHintTriedC105=new Map();let sharedHintRetryC105=null;
+  async function refreshSharedHintsC105(standId,remote,attempt=0){
+    const helper=window.LightningSharedPhysicalRefreshC98;
+    if(typeof helper?.hintCandidates!=='function'||typeof runtime?.services?.refreshSharedOutputs!=='function')return false;
+    let changed=false,later=false;
+    for(const receiverId of helper.hintCandidates(model,remote)){
+      const hint=remote.outputsC105[receiverId];
+      if(sharedHintTriedC105.get(receiverId)===hint)continue;
+      if(!sharedIdleC98()){later=true;continue;}
+      try{const fresh=await runtime.services.refreshSharedOutputs({standId,receiverId});
+        sharedHintTriedC105.set(receiverId,hint);
+        if(fresh?.model){model=keepLocalPreviewStates(fresh.model);changed=true;window.__c98log?.('SHARED_OUTPUTS_REFRESHED '+receiverId);}}
+      catch(error){
+        // Busy right now (a light choice, an editor): try again shortly.
+        if(error?.code==='SHARED_DEFERRED')later=true;else sharedHintTriedC105.set(receiverId,hint);
+        window.__c98log?.('SHARED_OUTPUTS_REFRESH_SKIPPED '+receiverId+' '+(error?.code||''));
+      }
+    }
+    if(later&&attempt<12&&!sharedHintRetryC105)sharedHintRetryC105=setTimeout(()=>{sharedHintRetryC105=null;
+      void refreshSharedHintsC105(standId,remote,attempt+1).then(done=>{if(done)render({preserveScroll:true});}).catch(()=>{});},5000);
+    return changed;
+  }
   async function refreshSharedPhysicalC98(standId,remote){
     const helper=window.LightningSharedPhysicalRefreshC98,candidates=helper?.candidates(model,remote);
+    await refreshSharedHintsC105(standId,remote);
     if(!candidates?.length)return null;
+    let unreadable=false;
     try{
       for(const receiverId of candidates){
-        if(!sharedIdleC98()||typeof runtime?.services?.refreshSharedOutputs!=='function')throw Error('deferred');
-        const fresh=await runtime.services.refreshSharedOutputs({standId,receiverId});
+        if(!sharedIdleC98())throw Error('deferred');
+        // C105: a stand or platform without the readback (no quorum
+        // authority, Android) keeps this phone's own lines instead of
+        // retrying the document forever.
+        if(typeof runtime?.services?.refreshSharedOutputs!=='function'){unreadable=true;continue;}
+        let fresh;
+        try{fresh=await runtime.services.refreshSharedOutputs({standId,receiverId});}
+        catch(error){if(error?.code==='SHARED_DEFERRED'||!sharedIdleC98())throw error;unreadable=true;window.__c98log?.('SHARED_PHYSICAL_UNREADABLE '+receiverId+' '+(error?.code||''));continue;}
         if(!sharedIdleC98())throw Error('deferred');
         model=keepLocalPreviewStates(fresh.model);
       }
-      // A stale remote port list cannot override an authenticated readback.
-      return helper.candidates(model,remote)?.length?'local':null;
     }catch(_){throw Object.assign(Error('SHARED_DEFERRED'),{code:'SHARED_DEFERRED'});}
+    // A stale remote port list cannot override an authenticated readback.
+    if(!helper.candidates(model,remote)?.length)return null;
+    // Unreadable here: show the shared names/zones on this phone's own lines,
+    // without publishing those lines back (no ping-pong between phones).
+    return unreadable?'reconciled':'local';
   }
   async function applyShared97(standId,doc,meta){
     const lib=doc.libraries;let scenes,presets,colors;
@@ -6180,8 +6300,14 @@
     appStorage.setItem(S.STORAGE_KEY,JSON.stringify({version:1,presets}));
     appStorage.setItem(Colours.STORAGE_KEY,JSON.stringify({version:1,colors}));
     reloadBackupLibraries();
+    // Capture the normalized library result before any native await. A later
+    // local scene edit must not be acknowledged as if it came from the MAIN.
+    const appliedLibraries=copy({scenes,presets,colors});
+    if(meta?.libraryOnly){render({preserveScroll:true});return {layout:'deferred',libraries:appliedLibraries};}
     let layout=(await refreshSharedPhysicalC98(standId,doc.model))||true;const mine=sharedSnapshot97(standId)?.model,Shared=window.LightningSharedInstallation;
-    if(mine&&Shared.canonical(mine)!==Shared.canonical(doc.model)){
+    // The output summary is only a readback hint (handled above), not layout.
+    const layoutOnlyC105=m=>{const c={...m};delete c.outputsC105;return c;};
+    if(mine&&Shared.canonical(layoutOnlyC105(mine))!==Shared.canonical(layoutOnlyC105(doc.model))){
       const local=new Map(mine.receivers.map(r=>[r.id,r])),remote=doc.model.receivers;
       // A receiver added on another phone needs this phone's own PIN login
       // before it can be shown; the layout then waits instead of failing.
@@ -6198,7 +6324,7 @@
       }
       else{
         const receivers=remote.map(r=>({id:r.id,name:r.name,zoneId:r.zoneId??null}));
-        const sharedStand=layout==='local'?reconciledSharedStandC98(standId,doc.model):doc.model.stand;
+        const sharedStand=['local','reconciled'].includes(layout)?reconciledSharedStandC98(standId,doc.model):doc.model.stand;
         let view;
         try{view=await runtime.services.sharedLayout({standId,stand:sharedStand,receivers});}
         catch(error){
@@ -6234,7 +6360,7 @@
       }
     }
     render({preserveScroll:true});
-    return {layout};
+    return {layout,libraries:appliedLibraries};
   }
   sharedSync97=window.LightningSharedInstallation?.create({
     services:{sharedDocument:request=>runtime.services.sharedDocument(request)},
@@ -6242,11 +6368,11 @@
     // C98: never while a zone/stand control screen is open. Its own owner
     // session would replace the light-control session on the MAIN (same phone).
     idle:sharedIdleC98,
-    notice:code=>{
+    notice:(code,meta)=>{
       // C98: a receiver added on another phone. On the stand's Wi-Fi this phone
       // reloads the stand by itself (that network is the PIN proof): no PIN
       // screen, no page change. Only a host without Wi-Fi login keeps the old prompt.
-      if(code==='SHARED_LAYOUT_NEEDS_PIN'&&wifiLoginC98&&nativeContext){void refreshStandFromWifiC98();return;}
+      if(code==='SHARED_LAYOUT_NEEDS_PIN'&&wifiLoginC98&&nativeContext){void refreshStandFromWifiC98(meta?.standId);return;}
       if(sharedNotices97.has(code))return;sharedNotices97.add(code);
       if(code==='SHARED_LAYOUT_NEEDS_PIN'&&pinLoginC97&&route.screen!=='pin-login'&&!managementBusy)setTimeout(()=>void openPinLogin().catch(()=>{}),2500);
       toast(t(code==='SHARED_LAYOUT_NEEDS_PIN'?"De receivers zijn op een andere telefoon gewijzigd. Meld je opnieuw aan met de PIN om alles bij te werken.":
@@ -7925,6 +8051,12 @@
         if(closing||action==='line-setup-open')revealLineSetup();
         if(!document.getElementById('order-tutorial').open)main.querySelector('.ledline-setup-toggle')?.focus({preventScroll:true});return;
       }
+      if(action==='order-connection-check'){
+        const z=zone();if(!z||z.type!=='SPI'||arrangementInteractionBusy?.()||orderTestBusy())return;
+        // Each move is saved at once; wait for a running save, then check the saved order.
+        if(orderSaveQueue588||arrangementApplying){toast(t('Even wachten tot de volgorde is opgeslagen.'));return;}
+        return openSPIZoneDirections({zoneId:z.id,check:true});
+      }
       if(action==='layout-receiver-settings'){
         return openOrderLineSettings(id);
       }
@@ -8541,8 +8673,32 @@
         if(nativeContext){
           if(typeof runtime?.services?.configureOutputs!=='function')return toast(t("Verbind je telefoon met het wifi van je installatie om de uitgangen te wijzigen."));
           if(managementBusy)return;managementBusy=true;button.disabled=true;
-          try{const view=await runtime.services.configureOutputs({standId:receiver.standId,receiverId:receiver.id,outputs:next.receivers.find(r=>r.id===receiver.id).outputs});refreshSuspendedSetup(view);model=keepLocalPreviewStates(view.model);}
-          catch(error){toast(outputConfigurationErrorMessage(error));return;}
+          const wanted=next.receivers.find(r=>r.id===receiver.id).outputs;
+          try{const view=await runtime.services.configureOutputs({standId:receiver.standId,receiverId:receiver.id,outputs:wanted});refreshSuspendedSetup(view);model=keepLocalPreviewStates(view.model);}
+          catch(error){
+            // C105: a reply lost in the mesh is resumed once, silently. The
+            // native journal holds the same intent and verifies by readback.
+            let resumed=false;
+            // A background task (sync, start-up resume) briefly holds the radio:
+            // wait for it instead of telling the customer to try again.
+            if(['OTA_BUSY','LIVE_CONTROL_BUSY','RECEIVER_BUSY','MAINTENANCE_BUSY','REMOVAL_BUSY'].includes(error?.code))try{
+              for(let attempt=0;attempt<6&&!resumed;attempt++){
+                await new Promise(resolve=>setTimeout(resolve,1200));
+                try{const view=await runtime.services.configureOutputs({standId:receiver.standId,receiverId:receiver.id,outputs:wanted});
+                  refreshSuspendedSetup(view);model=keepLocalPreviewStates(view.model);resumed=true;}
+                catch(retry){if(!['OTA_BUSY','LIVE_CONTROL_BUSY','RECEIVER_BUSY','MAINTENANCE_BUSY','REMOVAL_BUSY'].includes(retry?.code))throw retry;}
+              }
+            }catch(_){}
+            if(!resumed&&['OUTPUT_CONFIGURATION_UNCONFIRMED','NATIVE_UNCONFIRMED','OUTPUT_CONFIGURATION_PENDING'].includes(error?.code))try{
+              await new Promise(resolve=>setTimeout(resolve,600));
+              const pending=await runtime.services.outputConfigurationStatus({standId:receiver.standId,receiverId:receiver.id});
+              const outputs=pending?.status==='pending'&&Array.isArray(pending.outputs)?pending.outputs:wanted;
+              window.__c98log?.('OUTPUT_RESUME_AFTER_FAIL '+(error?.code||'-'));
+              const view=await runtime.services.configureOutputs({standId:receiver.standId,receiverId:receiver.id,outputs});
+              refreshSuspendedSetup(view);model=keepLocalPreviewStates(view.model);resumed=true;
+            }catch(_){}
+            if(!resumed){toast(outputConfigurationErrorMessage(error));return;}
+          }
           finally{managementBusy=false;button.disabled=false;}
         }else model=M.assertValid(next);
         resumeConfiguredLighting(receiver.id);

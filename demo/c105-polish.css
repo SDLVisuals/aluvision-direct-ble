@@ -1,0 +1,62 @@
+/* C105 polish: receiver search picture, tablet receiver details, one contrast
+ * fix. Presentation only; loaded after c104-polish.css. */
+
+/* ---------- Receiver search: what to do, as a picture ---------- */
+/* "Zet de ledline aan die je wilt toevoegen": a ledline being switched on and
+ * a receiver sending out a signal, with a soft pulse while you wait. */
+html.interface-polish body #main .onboarding-layout587:has(.onboarding-search-actions)>.onboarding-heading{position:relative}
+html.interface-polish body #main .onboarding-layout587:has(.onboarding-search-actions)>.onboarding-heading::before{
+  content:"";display:block;width:180px;height:96px;margin:0 auto 12px;background-repeat:no-repeat;background-position:center;background-size:contain;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 96'%3E%3Crect x='58' y='52' width='64' height='26' rx='8' fill='%23fff' stroke='%23b8c0c9' stroke-width='2'/%3E%3Ccircle cx='70' cy='65' r='3.5' fill='%2322a06b'/%3E%3Cpath d='M80 65h16M102 65h8' stroke='%23b8c0c9' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M76 40a20 20 0 0 1 28 0M69 31a30 30 0 0 1 42 0' fill='none' stroke='%23b6443d' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M122 65h14' stroke='%23b8c0c9' stroke-width='3' stroke-linecap='round'/%3E%3Crect x='136' y='58' width='38' height='14' rx='7' fill='%23243338'/%3E%3Cpath d='M142 65h26' stroke='%23f6aa60' stroke-width='6' stroke-linecap='round'/%3E%3Ccircle cx='28' cy='65' r='15' fill='%23fff' stroke='%23b8c0c9' stroke-width='2'/%3E%3Cpath d='M28 56v8M22 59.5a8 8 0 1 0 12 0' fill='none' stroke='%2322a06b' stroke-width='2.6' stroke-linecap='round'/%3E%3Cpath d='M43 65h15' stroke='%23b8c0c9' stroke-width='3' stroke-linecap='round' stroke-dasharray='3 4'/%3E%3C/svg%3E")}
+/* Pulsing signal ring above the receiver's antenna. */
+html.interface-polish body #main .onboarding-layout587:has(.onboarding-search-actions)>.onboarding-heading::after{
+  content:"";position:absolute;left:50%;top:22px;width:44px;height:44px;margin-left:-22px;border-radius:50%;border:2px solid #b6443d;opacity:0;pointer-events:none;
+  animation:c105-ping 2.2s ease-out infinite}
+@keyframes c105-ping{0%{transform:scale(.4);opacity:.55}80%,100%{transform:scale(1.5);opacity:0}}
+@media (prefers-reduced-motion:reduce){html.interface-polish body #main .onboarding-layout587:has(.onboarding-search-actions)>.onboarding-heading::after{animation:none;display:none}}
+@media (max-height:640px),(orientation:landscape) and (max-height:500px){
+  html.interface-polish body #main .onboarding-layout587:has(.onboarding-search-actions)>.onboarding-heading::before,
+  html.interface-polish body #main .onboarding-layout587:has(.onboarding-search-actions)>.onboarding-heading::after{display:none}
+}
+body[data-theme=dark] #main .onboarding-layout587:has(.onboarding-search-actions)>.onboarding-heading::before{filter:brightness(.92)}
+
+/* ---------- Tablets: an opened receiver lays out its blocks side by side ---------- */
+@media (min-width:900px){
+  html.interface-polish body #main .receiver-overview-card[open]>.receiver-details{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}
+  html.interface-polish body #main .receiver-overview-card[open]>.receiver-details>*{margin-top:0!important;min-width:0}
+  html.interface-polish body #main .receiver-overview-card[open]>.receiver-details>:is(details[open],.receiver-public-identity,.guide,p){grid-column:1/-1}
+}
+
+/* ---------- Contrast ---------- */
+/* Order explainer: "Op je stand" sat grey on its dark panel in the light theme. */
+html.interface-polish body .order-mirror101 .om-panel-stand .om-panel-title{color:rgba(242,244,247,.8)!important}
+
+/* Receiver search header: the stand name broke mid-word ("Beurssta-nd") next
+ * to "Receivers later toevoegen"; let the row wrap instead. */
+html.interface-polish body #main .onboarding-setup-header{flex-wrap:wrap;row-gap:8px}
+html.interface-polish body #main .onboarding-setup-header>div{flex:1 1 140px;min-width:0}
+html.interface-polish body #main .onboarding-setup-header>div *{overflow-wrap:normal;word-break:normal}
+html.interface-polish body #main .onboarding-setup-header>.back{flex:0 1 auto;white-space:normal;text-align:center}
+
+/* ---------- Per-ledline gradient switch (rendered by app.js after the
+ * gradient workspace when two or more SPI ledlines are selected) ---------- */
+html body [data-gradient-workspace][data-gradient-mode="solid"]+.c105-gradient-separate{display:none}
+html body .c105-gradient-separate{display:flex;align-items:center;gap:14px;margin:12px 0 0;padding:14px 16px;border-radius:20px;cursor:pointer;
+  background:var(--panel,#fff);border:1px solid color-mix(in srgb,var(--line,#dce1e9) 85%,transparent);box-shadow:0 10px 24px -22px rgba(20,24,32,.45)}
+html body .c105-gradient-separate>span{display:grid;gap:3px;flex:1;min-width:0;order:1}
+html body .c105-gradient-separate strong{font-size:14.5px;line-height:1.3;color:var(--ink,#1c1c1e)}
+html body .c105-gradient-separate small{font-size:12.5px;line-height:1.4;color:var(--muted,#646d78)}
+/* The checkbox becomes a switch on the right, same size as the app's switches. */
+html body .c105-gradient-separate>input[data-gradient-separate]{order:2;appearance:none;-webkit-appearance:none;flex:none;position:relative;width:52px;height:32px;margin:0;border-radius:999px;cursor:pointer;
+  background:color-mix(in srgb,var(--ink,#1c1c1e) 16%,transparent);transition:background-color .2s ease}
+html body .c105-gradient-separate>input[data-gradient-separate]::before{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;
+  box-shadow:0 2px 5px rgba(0,0,0,.25);transition:transform .2s cubic-bezier(.3,.7,.4,1)}
+html body .c105-gradient-separate>input[data-gradient-separate]:checked{background:var(--red,#b6443d)}
+html body .c105-gradient-separate>input[data-gradient-separate]:checked::before{transform:translateX(20px)}
+html body .c105-gradient-separate>input[data-gradient-separate]:focus-visible{outline:3px solid var(--ink,#1c1c1e);outline-offset:3px}
+html body .c105-gradient-separate:has(>input:checked){border-color:color-mix(in srgb,var(--red,#b6443d) 45%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,var(--red,#b6443d) 30%,transparent) inset}
+@media (prefers-reduced-motion:reduce){html body .c105-gradient-separate>input[data-gradient-separate],html body .c105-gradient-separate>input[data-gradient-separate]::before{transition:none}}
+body[data-theme=dark] .c105-gradient-separate{background:rgba(255,255,255,.05)!important;border-color:rgba(255,255,255,.1)!important;box-shadow:none!important}
+body[data-theme=dark] .c105-gradient-separate>input[data-gradient-separate]:not(:checked){background:rgba(255,255,255,.18)}
+body[data-theme=dark] .c105-gradient-separate strong{color:#f4f3f1}
+@media (max-width:360px){html body .c105-gradient-separate{padding:12px 12px;gap:10px}html body .c105-gradient-separate strong{font-size:14px}}

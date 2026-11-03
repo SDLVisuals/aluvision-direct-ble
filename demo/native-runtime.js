@@ -238,6 +238,8 @@
     // C98 field diagnosis (debug builds forward it to the device log).
     if(root.__c98log&&request.action&&!['sharedDocument','capabilities','loadView','lightQuiet','interfaceFeedback','selectionFeedback'].includes(request.action))
       root.__c98log((message.ok===true?'NATIVE_OK ':'NATIVE_FAIL ')+request.action+' '+(message.ok===true?JSON.stringify(message.result).slice(0,420):String(message.code)));
+      // C105: any refusal because a port change is still open lets the app resume it silently.
+      if(message.ok!==true&&message.code==='OUTPUT_CONFIGURATION_PENDING')try{root.dispatchEvent?.(new Event('c105-output-pending'));}catch(_){}
     if(message.ok===true&&message.result&&typeof message.result==='object')request.resolve(message.result);
     else {
       const error=fail(typeof message.code==='string'&&/^[A-Z][A-Z0-9_]{0,63}$/.test(message.code)?message.code:'NATIVE_FAILED'),
@@ -254,7 +256,9 @@
     // C98: a pixel, sides or ledline-order screen needs the MAIN at once. A
     // background context write (about 1.3 s per chunk) is interrupted, not
     // waited for; it resumes later on its own.
-    if(!automatic&&['previewPixels','previewSPIZoneDirections','identifyLayout','identify','blinkLayoutIdentification'].includes(action))
+    // C105: a colour, gradient or animation also wins over a background write.
+    if(!automatic&&['previewPixels','previewSPIZoneDirections','identifyLayout','identify','blinkLayoutIdentification',
+      'applyLive','applyLiveBatch','applyStaticGradient','applyStableCatalogue','applyStableBreathe','configureOutputs'].includes(action))
       for(const control of contextControls.values()){try{control.interrupt?.();}catch(_){}}
     if(!native||!transportReady)return Promise.reject(fail('NATIVE_UNAVAILABLE'));
     if(!documentId||!/^[A-F0-9]{32}$/.test(documentId))return Promise.reject(fail('NATIVE_DOCUMENT_UNAVAILABLE'));
@@ -730,11 +734,16 @@
     delete receiver.physicalId;
     return canonical(next)===canonical(expected);
   }
+  let setupPrewarmC101=null;
   function writeView(action,payload){
+    // A local draft write must not race the optional MAIN-session prewarm.
+    // Reserve its existing writeQueue slot now; no new prewarm can overtake it.
+    const setupPrewarm=action==='saveDraft'?setupPrewarmC101:null;
     // Capture publication intent before entering the serial write queue. The
     // UI may continue painting, but cannot change the graph being verified.
-    if(action==='publishModel')payload=JSON.parse(JSON.stringify(payload));
+    if(action==='publishModel'||action==='saveDraft')payload=JSON.parse(JSON.stringify(payload));
     const next=writeQueue.catch(()=>{}).then(async()=>{
+      if(setupPrewarm)await setupPrewarm.promise;
       if(!viewLoaded)throw fail('VIEW_NOT_LOADED');
       const publication=action==='publishModel',localModel=publication?canonical(payload.model):null;
       const central=publication&&!legacyContextAllowed()?centralStamp&&{...centralStamp}:null,epoch=standSharingEpoch;
@@ -1636,7 +1645,17 @@
       return answer;
     },
     // C98: warm the MAIN session before a pixel step is opened.
-    prewarmSetup({standId}){return call('prewarmSetupC98',{standId});},
+    prewarmSetup({standId}){
+      if(writeQueue!==settledWriteQueue)return Promise.resolve({status:'skipped'});
+      if(setupPrewarmC101)return setupPrewarmC101.standId===standId?setupPrewarmC101.promise:Promise.resolve({status:'skipped'});
+      const held={standId,promise:null};setupPrewarmC101=held;
+      held.promise=Promise.resolve().then(()=>{
+        // A draft queued in this same turn has priority before any radio work.
+        if(writeQueue!==settledWriteQueue)return {status:'skipped'};
+        return call('prewarmSetupC98',{standId});
+      }).finally(()=>{if(setupPrewarmC101===held)setupPrewarmC101=null;});
+      return held.promise;
+    },
     async outputConfigurationStatus({standId,receiverId}){
       if(!centralStamp&&root.__lightningV31OutputRecovery!==true)return {status:'none'};
       const id=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(value);
@@ -1960,9 +1979,9 @@
       return {status:'applied-in-firmware',receiverId,generation:result.generation};
       }finally{ticket?.finish();}
     },
-    applyStaticGradient({requests,gradient}={}){return services.applyLiveBatch({requests,staticGradient:gradient});},
+    applyStaticGradient({requests,gradient,separate}={}){return services.applyLiveBatch({requests,staticGradient:gradient,gradientSeparate:separate===true});},
     applyMixedPower({requests,gradientSelections}={}){return services.applyLiveBatch({requests,gradientSelections});},
-    applyLiveBatch({requests,staticGradient,gradientSelections}={}){
+    applyLiveBatch({requests,staticGradient,gradientSelections,gradientSeparate=false}={}){
       let requestId=null,settled=false,payload,ids,gradientGroups,preparing=false,nativeBreathe=false,nativeCatalogue=false,sequence=0,replacementClosed=false,replacementInFlight=false,acceptedSequence=0;
       const nativeBreatheController=new AbortController();let nativeObservationController=null,retainedOrigin=null;
       let lightTicket=null;
@@ -2110,7 +2129,7 @@
           if(nativeBreathe||nativeCatalogue){
             if(stableStandPreparation?.pending&&stableStandPreparation.standId===payload[0].standId)throw fail('LIVE_STABLE_PREPARATION_PENDING');
             const retainedStatus=nativeCatalogue?'catalogue-retained-deferred':'breathe-retained-deferred';
-            const answer=await call(staticGradient!==undefined?'applyStaticGradient':nativeCatalogue?'applyStableCatalogue':'applyStableBreathe',{requests:payload,...(staticGradient!==undefined?{gradient:staticGradient}:{}),...(gradientSelections!==undefined?{gradientSelections}:{}),...(gradientGroups!==undefined?{gradientGroups}:{})},nativeBreatheController.signal,undefined,id=>{requestId=id;posted();});
+            const answer=await call(staticGradient!==undefined?'applyStaticGradient':nativeCatalogue?'applyStableCatalogue':'applyStableBreathe',{requests:payload,...(staticGradient!==undefined?{gradient:staticGradient,...(gradientSeparate===true?{separate:true}:{})}:{}),...(gradientSelections!==undefined?{gradientSelections}:{}),...(gradientGroups!==undefined?{gradientGroups}:{})},nativeBreatheController.signal,undefined,id=>{requestId=id;posted();});
             const dataKeys=['dataPreparationState','dataTargets','dataPrepared','dataUnavailable'];
             const hasData=dataKeys.some(key=>Object.prototype.hasOwnProperty.call(answer||{},key));
             const expectedKeys=['applied','ready','receiverIds','status',...(hasData?dataKeys:[])].sort().join(',');

@@ -3,6 +3,10 @@
   const languages=['nl','en','fr','de'],copy=value=>JSON.parse(JSON.stringify(value));let serial=0;
   const texts={
     title:['Kanten aanpassen','Adjust directions','Ajuster les sens','Richtungen anpassen'],
+    // C105: the connection check, opened from the ledline order step.
+    checkTitle:['Verbindingen controleren','Check connections','Vérifier les connexions','Verbindungen prüfen'],
+    checkHint:['Elke ledline krijgt een eigen kleur. Op elke overgang loopt een lichtje van de ene ledline naar de volgende. Loopt het lichtje overal mooi door, dan kloppen de verbindingen en de volgorde.','Every ledline gets its own colour. At each connection a light runs from one ledline into the next. If it flows on everywhere, the connections and the order are right.','Chaque ligne LED a sa propre couleur. À chaque connexion, une lumière passe d’une ligne à la suivante. Si elle continue partout, les connexions et l’ordre sont corrects.','Jede LED-Linie erhält eine eigene Farbe. An jeder Verbindung läuft ein Licht von einer Linie in die nächste. Läuft es überall weiter, stimmen Verbindungen und Reihenfolge.'],
+    checkDone:['Klaar','Done','Terminé','Fertig'],
     added:['Laatste stap · kanten instellen','Last step · set directions','Dernière étape · ajuster les sens','Letzter Schritt · Richtungen einstellen'],
     intro:['Vergelijk de rode en groene uiteinden van je echte ledlines.','Compare the red and green ends of your real LED lines.','Comparez les extrémités rouges et vertes de vos vraies lignes LED.','Vergleiche die roten und grünen Enden deiner echten LED-Linien.'],
     look:['Kijk naar je echte ledlines.','Look at your real LED lines.','Regardez vos vraies lignes LED.','Schau auf deine echten LED-Linien.'],
@@ -259,7 +263,7 @@
     async function save(state){
       if(!enabled(state)){saveLog('blocked '+JSON.stringify({current:current(state),saving:!!state.saving,resuming:!!state.resuming,paused:!!state.paused,stopJob:!!state.stopJob,stale:!!state.stale,hidden:!!doc.hidden,open:!!state.dialog.open,context:validContext(state)}));return;}
       const wanted=changes(state);state.saving=true;controls(state);status(state,'stopping');saveLog('start changes='+wanted.length);
-      try{const answer=await bounded(state,stop(state),18000);if(!current(state))return;saveLog('stopped '+(answer?.status||'-'));if(answer?.status!=='stopped'||answer.sessionId!==state.sessionId){status(state,'stopFailed');return;}if(!validContext(state))return;if(!wanted.length){close('done');return;}status(state,'saving');
+      try{const answer=await bounded(state,stop(state),18000);if(!current(state))return;saveLog('stopped '+(answer?.status||'-'));if(answer?.status!=='stopped'||answer.sessionId!==state.sessionId){status(state,'stopFailed');return;}if(!validContext(state))return;if(!wanted.length){close(state.data.check===true?'checked':'done');return;}status(state,'saving');
         const result=await onSave({...context(state),changes:copy(wanted)});if(!current(state))return;
         const reports=result?.results,ids=wanted.map(item=>item.receiverId).sort();if(!Array.isArray(reports)||canonical(reports.map(row=>row.receiverId).sort())!==canonical(ids)||reports.some(row=>!['saved','pending','failed'].includes(row.status))||new Set(reports.map(row=>row.receiverId)).size!==reports.length){status(state,'saveFailed');return;}
         let now;try{now=signature(state);}catch(_){status(state,'stale');state.stale=true;return;}
@@ -279,7 +283,7 @@
       setFocus(state,receiver.id,output.port);if(action==='flip'){output.reversed=!output.reversed;updateCard(state,receiver,output);}queue(state);
     }
     function close(reason='close'){
-      const state=active;if(!state)return;clearRecovery(state);const pendingChanges=changes(state),focused=state.dialog.contains(doc.activeElement)||doc.activeElement===doc.body;active=null;generation++;state.closed=true;state.pending=null;state.unbindTutorial?.();state.dialog.removeEventListener('click',state.click);state.dialog.removeEventListener('cancel',state.cancel);doc.removeEventListener('visibilitychange',state.visibility);win.removeEventListener?.('lightning:native-active',state.nativeActive);for(const [timer,reject] of state.waitTimers){win.clearTimeout(timer);reject(Error('SPI_ZONE_CLOSED'));}state.waitTimers.clear();if(state.dialog.open)state.dialog.close();state.dialog.remove();
+      const state=active;if(!state)return;clearRecovery(state);if(state.checkTimer){win.clearInterval(state.checkTimer);state.checkTimer=null;}const pendingChanges=changes(state),focused=state.dialog.contains(doc.activeElement)||doc.activeElement===doc.body;active=null;generation++;state.closed=true;state.pending=null;state.unbindTutorial?.();state.dialog.removeEventListener('click',state.click);state.dialog.removeEventListener('cancel',state.cancel);doc.removeEventListener('visibilitychange',state.visibility);win.removeEventListener?.('lightning:native-active',state.nativeActive);for(const [timer,reject] of state.waitTimers){win.clearTimeout(timer);reject(Error('SPI_ZONE_CLOSED'));}state.waitTimers.clear();if(state.dialog.open)state.dialog.close();state.dialog.remove();
       void stop(state).catch(()=>{});try{onClose({reason,...context(state),...(state.data.newReceiverId?{newReceiverId:state.data.newReceiverId}:{}),pendingChanges:copy(pendingChanges)});}catch(_){}
       if(focused&&!doc.hidden&&state.focusBefore?.isConnected&&(!doc.hasFocus||doc.hasFocus()))state.focusBefore.focus?.({preventScroll:true});
     }
@@ -302,6 +306,17 @@
       dialog.querySelector('[data-spi-zone-action="save"]').querySelector('span').textContent=t(state,data.newReceiverId?(data.pairFirst?'finish':'add'):'save');
       for(const card of dialog.querySelectorAll('[data-spi-zone-line]')){const badge=doc.createElement('span');badge.dataset.spiZoneFocusBadge='';badge.hidden=true;badge.textContent=t(state,'selected');card.querySelector('header').querySelector('b').append(badge);const receiver=data.receivers.find(item=>item.id===card.dataset.receiverId);updateCard(state,receiver,receiver.outputs.find(output=>output.port===Number(card.dataset.port)));}
       const testButton=doc.createElement('button');testButton.type='button';testButton.className='spi-zone-test';testButton.dataset.spiZoneAction='test';testButton.innerHTML=`<svg viewBox="0 0 44 24" fill="none" aria-hidden="true"><path d="M3 12h38m-8-7 8 7-8 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 6v12M14 6v12M20 6v12" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".35"/></svg><span><b>${esc(t(state,'test'))}</b><small data-spi-zone-test-hint>${esc(t(state,'testHint'))}</small></span>`;dialog.querySelector('[data-spi-zone-status]').before(testButton);
+      // C105: the pixel test moved to the order step. Directions only flip
+      // here; in check mode only the connection animation runs.
+      if(data.check===true){
+        dialog.dataset.spiZoneCheck='true';dialog.querySelector('#'+headingId).textContent=t(state,'checkTitle');
+        const hint=dialog.querySelector('.spi-zone-select-hint');if(hint)hint.textContent=t(state,'checkHint');
+        for(const flip of dialog.querySelectorAll('[data-spi-zone-action="flip"]'))flip.hidden=true;
+        dialog.querySelector('[data-spi-zone-action="save"]').querySelector('span').textContent=t(state,'checkDone');
+        dialog.querySelector('[data-spi-zone-action="test"]')?.setAttribute('hidden','');
+        state.checkTimer=win.setInterval(()=>{if(current(state)&&state.confirmedRequest&&!state.inFlight&&!state.recoveringTest&&enabled(state))void test(state);},6400);
+        win.setTimeout(()=>{if(current(state)&&state.confirmedRequest&&!state.inFlight&&enabled(state))void test(state);},900);
+      }else dialog.querySelector('[data-spi-zone-action="test"]')?.setAttribute('hidden','');
       if(state.pendingSaveReceivers.size){const hint=doc.createElement('p');hint.className='spi-zone-change-notice';hint.textContent=t(state,'pendingSave');dialog.querySelector('[data-spi-zone-status]').after(hint);}
       state.recoveryEpoch=0;state.recoveryAttempts=0;state.recoveryTimer=null;state.recoveryJob=null;state.retryResumeJob=null;state.recoveringPreview=false;
       state.visibilityEpoch=0;state.visibilityStop=null;state.previewRetired=false;state.previewFailed=false;state.resuming=false;state.resumeJob=null;state.resumeRequested=false;

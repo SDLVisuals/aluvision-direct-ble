@@ -65,7 +65,7 @@
     }
   },
   "kind": "isolated-browser-demo",
-  "revision": "V50-demo-adaptive-android-tablet-20261102",
+  "revision": "V50-demo-c105-20261103",
   "staticGradientDemo": {
     "browserDemoOnly": true,
     "scope": "SPI zone colour tab, static gradient editor and saved demo presets",
@@ -113,8 +113,8 @@
   "assets": [
     {
       "path": "RELEASE_NOTES.md",
-      "bytes": 40988,
-      "sha256": "b7613e2103e87a79a980807ab7ed9e678dabe65ab77ebda4792cc901302112ef"
+      "bytes": 41356,
+      "sha256": "e8ccfffc691c2cf3491bf213e9d6b4bd65f4a8177fff9a35785b1cde012f20ed"
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
@@ -202,6 +202,11 @@
       "sha256": "c4425e1a4531e7941411db7597960d49657b924eb82cd7179b70b6c5f8dafbf2"
     },
     {
+      "path": "android/aluvision-android-test-50.0.0-c105-37-04e188f6a0e9.apk",
+      "bytes": 3386774,
+      "sha256": "04e188f6a0e99f6e25b1aeeee2fb95a96ebce8815070320c8b35a9b0b20731e8"
+    },
+    {
       "path": "android/aluvision-android-test-50.0.0-c99-beta-35-4c1964cff799.apk",
       "bytes": 3308132,
       "sha256": "4c1964cff799b9c83afcfe49cb4303d5654ac611a29a3f9c64fbe1617013caa0"
@@ -278,8 +283,8 @@
     },
     {
       "path": "app.js",
-      "bytes": 818911,
-      "sha256": "622304265bb0d3608f10891ff9ac08c6e75f6801125a95817f9296aefbb3cb1d"
+      "bytes": 831595,
+      "sha256": "ebefaa61a4c03d71864d6126228c42b607bedc59ca5b6ab78058922f714e420c"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -320,6 +325,26 @@
       "path": "c102-tidy.css",
       "bytes": 14714,
       "sha256": "f99dc9b5775e928f572d8150b27ca48e2ea78ddbc01dc64b30f8f7607ba9e593"
+    },
+    {
+      "path": "c104-polish.css",
+      "bytes": 10827,
+      "sha256": "ddb2aaff19b8003cc6e0e1ee65ee02af85a70d6ca85bd16ea3d45350a567979d"
+    },
+    {
+      "path": "c105-polish.css",
+      "bytes": 7016,
+      "sha256": "8862afb21e81dc2133b0edf6164d08985f81f7a20e990282eedc7e8ff2a20e4f"
+    },
+    {
+      "path": "c106-motion.css",
+      "bytes": 30886,
+      "sha256": "3924917d92ec60a5b6c3556943a836ec8dd06b01cb89c0d44dbec2b3f65742eb"
+    },
+    {
+      "path": "c106-motion.js",
+      "bytes": 5100,
+      "sha256": "51dc10cda60a13754ec83c0deac57b2687528236ba72b3cdc12f236357bd3828"
     },
     {
       "path": "c97-polish.css",
@@ -398,8 +423,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 11326,
-      "sha256": "5353562d83cfdb26d4d83d86e1ccb2a1a1f57a58a4207f0111633d59ecac6e53"
+      "bytes": 11578,
+      "sha256": "0cda3bfc0257606b83728e89dca4a72cb198fc29018fa2f967777ae7b68e3ec2"
     },
     {
       "path": "installation-libraries.js",
@@ -513,8 +538,8 @@
     },
     {
       "path": "native-runtime.js",
-      "bytes": 218931,
-      "sha256": "e0f46e09979aa3a7f8aa412714ba645d9957f308bdb0dcd1f8ca8d5d26e03093"
+      "bytes": 220401,
+      "sha256": "2dff6dca985f112f59d28cc5026608cbf906276f7e5433fe4b27b14ff09a8468"
     },
     {
       "path": "onboarding-adapter.js",
@@ -543,8 +568,8 @@
     },
     {
       "path": "onboarding-ui.js",
-      "bytes": 190865,
-      "sha256": "2e68c6e9bb0c48b9fa4c349d9b680a2400000f7d8ae32ae755638fdcd0c1ced0"
+      "bytes": 194945,
+      "sha256": "220e1d44a47feb961ee56cd760a7c5bc40d838ee3312c33e6261d439673c40a9"
     },
     {
       "path": "onboarding756.css",
@@ -613,8 +638,8 @@
     },
     {
       "path": "receiver-removal-ui.js",
-      "bytes": 24429,
-      "sha256": "bfa79968da2e5de86e734c015641a1241d357811d94a760795475d81cce15f27"
+      "bytes": 25169,
+      "sha256": "0d9228de13586dcaff40ed97c0dc55077fcd6ca74ed376065717041625d62367"
     },
     {
       "path": "receiver-update-ui.css",
@@ -673,13 +698,13 @@
     },
     {
       "path": "shared-installation.js",
-      "bytes": 9456,
-      "sha256": "8083e9844ae4033504a98b3f8b84b22714ccbc6cb1258431c0c1b5f25b77e8b2"
+      "bytes": 16669,
+      "sha256": "383798384c5d66fa4f11c59583f894067cd4227d2b844778aee27eca5d62c8ad"
     },
     {
       "path": "shared-physical-refresh.js",
-      "bytes": 2262,
-      "sha256": "fb49fbfb6f47ed25b569190d406f4aea6f948ec94a02208e5da99e7dbf0d4643"
+      "bytes": 3675,
+      "sha256": "7452b873082e2a0c5f4f6524765e978e2ba63d6795e2a20cd898759e40d5ae25"
     },
     {
       "path": "spi-direction-tutorial.css",
@@ -698,8 +723,8 @@
     },
     {
       "path": "spi-zone-direction.js",
-      "bytes": 47498,
-      "sha256": "064475c63f69d4279afc1fb19de256e7ad35131ae4359dfe9a3177e6142c67d0"
+      "bytes": 49682,
+      "sha256": "13b047fb1643ee80f3c37f7bc964534adc77404d3cd5751c8226b19dcb28b8d5"
     },
     {
       "path": "stand-animations.css",
@@ -748,8 +773,8 @@
     },
     {
       "path": "static-gradient-ui.js",
-      "bytes": 30033,
-      "sha256": "35515200e4ce5598a40321ef8da739cbe72307e919b51636bc508bab4a6b8fcf"
+      "bytes": 30773,
+      "sha256": "b52794f48721feb9ae5a2729854adfb7ad426860562d794560d415c553e6216b"
     },
     {
       "path": "static-gradient.css",
@@ -783,8 +808,8 @@
     },
     {
       "path": "ui-copy.js",
-      "bytes": 131333,
-      "sha256": "9d25c7ff9e8b5b0020634d1863479d9cd0e58a6029c4b6e673db2e4e7d6f2709"
+      "bytes": 139840,
+      "sha256": "bce17fc74ad2dc87c2713e0af0ede4e9a52926cd53c0632d3605e25947e6c687"
     },
     {
       "path": "ui606-controls.css",
@@ -4029,5 +4054,17 @@
       "Current firmware77 control parity and physical S24 behavior are not validated"
     ],
     "emulatorVerified": "API 36 emulator: install as update over same signer, rotation keeps the activity, system dark mode reaches the WebView. No receivers."
+  },
+  "interfaceC105": {
+    "date": "2026-11-03",
+    "scope": "Shared browser interface; fictional in-memory receivers only",
+    "changes": "Fast SPI gradient with per-ledline option, order step with connection check, smoother motion, multi-user fixes",
+    "android": {
+      "versionCode": 37,
+      "versionName": "50.0.0-c105",
+      "apk": "android/aluvision-android-test-50.0.0-c105-37-04e188f6a0e9.apk",
+      "sha256": "04e188f6a0e99f6e25b1aeeee2fb95a96ebce8815070320c8b35a9b0b20731e8",
+      "bytes": 3386774
+    }
   }
 }

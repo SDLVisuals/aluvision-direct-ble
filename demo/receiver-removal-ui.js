@@ -146,6 +146,16 @@
           if(Object.prototype.hasOwnProperty.call(previous,field))retained[field]=clone(previous[field]);
         }
       }
+      // Native membership storage intentionally omits browser light metadata.
+      // Retain only this validated registry for the same surviving SPI zone;
+      // no identities, membership, order, ports or direction come from it.
+      if(baseline)for(const stand of model.stands||[])for(const zone of stand.zones||[]){
+        const previous=baseline.stands.find(s=>s.id===stand.id)?.zones.find(z=>z.id===zone.id);
+        if(zone.type==='SPI'&&previous?.type==='SPI'&&Object.prototype.hasOwnProperty.call(previous,'gradientDomains')){
+          if(root.LightningModel?.validGradientDomains?.(previous.gradientDomains)!==true)throw Error('UNCONFIRMED');
+          zone.gradientDomains=clone(previous.gradientDomains);
+        }
+      }
       if(['checking','ready','blocked'].includes(next.status)&&baseline&&key(model)!==key(baseline))throw Error('UNCONFIRMED');
       const allowed=new Set(next.targets.map(t=>t.receiverId));
       if(next.status==='removed'&&model.receivers.some(r=>installation(next)?r.standId===receiver.standId:r.id===receiver.id||r.rid===receiver.rid))throw Error('UNCONFIRMED');
