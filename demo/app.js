@@ -1712,10 +1712,13 @@
     const s=stand();if(!s||!nativeContext||typeof runtime?.services?.prewarmSetup!=='function'||(!retry&&Date.now()-prewarmAtC98<20000))return;
     prewarmAtC98=Date.now();
     // The radio may be busy for a moment (light being applied): try again shortly.
-    Promise.resolve().then(()=>runtime.services.prewarmSetup({standId:s.id})).then(result=>{
+    const flight=Promise.resolve().then(()=>runtime.services.prewarmSetup({standId:s.id})).then(result=>{
       if(result?.status==='skipped'&&retry<2&&route.screen!=='stand')setTimeout(()=>prewarmSetupC98(retry+1),2500);
     }).catch(()=>{});
+    prewarmFlightC98=flight;flight.finally(()=>{if(prewarmFlightC98===flight)prewarmFlightC98=null;});
   }
+  // C107: an editor's receiver check waits for this instead of colliding with it.
+  let prewarmFlightC98=null;
   document.addEventListener('toggle',event=>{if(event.target?.matches?.('details[data-receiver-detail],details[data-receiver-connections]')&&event.target.open)prewarmSetupC98();},true);
   document.addEventListener('click',event=>{if(event.target?.closest?.('[data-action=nav][data-id=receivers]'))setTimeout(prewarmSetupC98,400);},true);
   async function openSPIZoneDirections({zoneId,newReceiverId,handoff=null,check=false,lineOrder=null}={}){
@@ -5172,6 +5175,31 @@
     window.AluvisionSecurityMode?.updateFromNative?.({pinRequired:true});
     route={...route,screen:'stand',standId:result.standId,zoneId:null};render({top:true});toast(result.librariesComplete===false?t("Receivers en zones hersteld. Op deze receiver waren nog geen scènes, animatiepresets of kleuren bewaard."):t("Je stand is geopend. Kies een zone om je licht te bedienen."));
   }
+  // C107: a receiver gives the place of a phone that is not connected to a
+  // phone that is. When this phone comes back and its stand no longer knows
+  // it, it re-admits itself over the stand Wi-Fi with the same key; the
+  // stand, scenes and settings stay as they are.
+  const readmitC107={running:false,at:0,limited:false};
+  async function readmitStandC107(){
+    if(readmitC107.running||Date.now()-readmitC107.at<60000||!nativeContext||!model.stands.length||
+       typeof runtime?.services?.recoverInstallation!=='function')return;
+    readmitC107.running=true;readmitC107.at=Date.now();window.__c98log?.('READMIT_START');
+    toast(window.LightningV50ErrorTexts.t('readmitting',uiPreferences.preferences.language));
+    try{
+      const result=await runtime.services.recoverInstallation({wifi:true});
+      model=keepLocalPreviewStates(result.playbackModel,{exceptStandId:result.standId});nativeLoaded=true;
+      readmitC107.limited=false;sharedSync97?.forget(result.standId);sharedSync97?.changed();render({preserveScroll:true});window.__c98log?.('READMIT_OK');
+    }catch(error){
+      window.__c98log?.('READMIT_FAIL '+(error?.code||''));
+      // 8 phones are active right now: say so once and keep trying quietly.
+      if(error?.code==='PIN_RECOVERY_ACTIVE_LIMIT'){
+        if(!readmitC107.limited)toast(window.LightningV50ErrorTexts.t('activeLimit',uiPreferences.preferences.language));
+        readmitC107.limited=true;readmitC107.at=0;setTimeout(()=>void readmitStandC107(),30000);
+      }
+    }
+    finally{readmitC107.running=false;}
+  }
+  window.addEventListener('lightning:app-readmit',()=>void readmitStandC107());
   // C98: open an existing stand by joining its Wi-Fi. That network's key is
   // derived from the installation PIN, so being on it is the PIN proof; the
   // receiver checks this, the app only asks. Probes run only while the
@@ -5189,13 +5217,14 @@
       notStand:t("Dit wifi-netwerk is geen beveiligde stand. Kies het wifi-netwerk van je stand."),
       localNetwork:t("Geef de app toegang tot het lokale netwerk: Instellingen → Aluvision → Lokaal netwerk."),
       failed:t("Je stand kon nog niet worden ingeladen. Laat de receivers aan; de app probeert het zo opnieuw."),
-      unsupported:t("Deze receivers hebben nog oudere software. Open je stand hieronder met de PIN.")}[wifiOpenC98.status]||'';
+      unsupported:t("Deze receivers hebben nog oudere software. Open je stand hieronder met de PIN."),
+      activeLimit:window.LightningV50ErrorTexts.t('activeLimit',uiPreferences.preferences.language)}[wifiOpenC98.status]||'';
   }
   function paintWifiOpenC98(){
     if(route.screen==='pin-login'){render();return;}
     const el=main?.querySelector('[data-wifi-open-status]');if(!el)return;
     // The welcome screen stays quiet unless something is actually happening.
-    const shown=['searching','notStand','localNetwork','failed','unsupported'].includes(wifiOpenC98.status);
+    const shown=['searching','notStand','localNetwork','failed','unsupported','activeLimit'].includes(wifiOpenC98.status);
     el.textContent=shown?wifiOpenTextC98():'';el.hidden=!shown;
   }
   async function probeWifiOpenC98(manual=false){
@@ -5210,6 +5239,8 @@
     }catch(error){
       const code=error?.code||'';
       if(code==='PIN_RECOVERY_WIFI_UNSUPPORTED'){wifiOpenC98.fallback=true;wifiOpenC98.status='unsupported';}
+      // C107: 8 phones are active right now; keep trying until one stops.
+      else if(code==='PIN_RECOVERY_ACTIVE_LIMIT'){wifiOpenC98.status='activeLimit';next=20000;}
       else if(code==='PIN_RECOVERY_WIFI_UNAVAILABLE'){wifiOpenC98.status='notStand';next=6000;}
       else if(code==='LOCAL_NETWORK_DENIED'){wifiOpenC98.status='localNetwork';next=8000;}
       else if(code==='CANCELLED'||code==='PIN_RECOVERY_CANCELLED'){wifiOpenC98.status='';}
@@ -6213,6 +6244,9 @@
     if(receiverContextWrites.has(standId))return;
     receiverContextVersions.set(standId,(receiverContextVersions.get(standId)||0)+1);
     receiverContextStates.set(standId,detail);syncReceiverContextPanel();syncPinProtectionCard();
+    // C107: this phone's view of an SPI receiver was older than the receiver;
+    // adopt the receiver's own outputs so the next save carries the right ones.
+    if(detail.code==='RECEIVER_CONTEXT_STALE'){adoptedAtC106.clear();void adoptReceiverOutputsC106(model.receivers.filter(r=>r.standId===standId&&r.type==='SPI'&&r.lifecycle==='added').map(r=>r.id));}
     if(detail.contextPhase==='complete'){resumeDeferredPinRead();scheduleContextRetryC106(standId,detail.status);}
   });
   // C106: saving on the receivers needs no customer tap. A finished attempt
@@ -6335,6 +6369,9 @@
   async function adoptReceiverOutputsC106(receiverIds,{editor=false,guard=editor}={}){
     if(!nativeContext||typeof runtime?.services?.refreshSharedOutputs!=='function')return;
     let busy=false;
+    // C107: a connection being prepared on the Receivers screen would cancel
+    // this read again and again; let it finish first (at most 4 s).
+    if(guard&&prewarmFlightC98)await Promise.race([prewarmFlightC98,new Promise(resolve=>setTimeout(resolve,4000))]);
     for(const receiverId of receiverIds){
       const receiver=model.receivers.find(r=>r.id===receiverId&&r.type==='SPI'&&r.lifecycle==='added');if(!receiver)continue;
       // An editor proves the receiver against this phone's view, so it always

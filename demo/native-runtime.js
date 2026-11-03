@@ -174,7 +174,7 @@
   const spiDiagnosticCodes679=new Set(('NATIVE_UNCONFIRMED TASK_CANCELLED APPLICATION_INACTIVE '+
     'SPI_ZONE_DIRECTION_INVALID SPI_ZONE_DIRECTION_PROFILE SPI_ZONE_DIRECTION_UPDATE_REQUIRED SPI_ZONE_DIRECTION_UNCONFIRMED SPI_ZONE_DIRECTION_CANCELLED SPI_ZONE_DIRECTION_BUSY '+
     'OWNER_SESSION_UNAVAILABLE OWNER_SESSION_BUSY OWNER_REQUEST_INVALID OWNER_REPLY_INVALID OWNER_SESSION_CANCELLED OWNER_SESSION_DEADLINE OWNER_EXCHANGE_UNCERTAIN '+
-    'TRUST_INVALID_TARGET TRUST_INVALID_KEY TRUST_BUSY TRUST_CANCELLED TRUST_DEADLINE TRUST_UNAVAILABLE TRUST_LOCAL_NETWORK_DENIED TRUST_TRANSPORT TRUST_REPLY TRUST_IDENTITY TRUST_WRONG_RECEIVER_NETWORK TRUST_SIGNATURE TRUST_SERVER_FINISH '+
+    'TRUST_INVALID_TARGET TRUST_INVALID_KEY TRUST_BUSY TRUST_CANCELLED TRUST_DEADLINE TRUST_UNAVAILABLE TRUST_LOCAL_NETWORK_DENIED TRUST_TRANSPORT TRUST_REPLY TRUST_IDENTITY TRUST_WRONG_RECEIVER_NETWORK TRUST_SIGNATURE TRUST_SERVER_FINISH TRUST_APP_NOT_ALLOWED '+
     'TRUST_TRANSPORT_REQUEST TRUST_TRANSPORT_REPLY TRUST_TRANSPORT_IDENTITY TRUST_TRANSPORT_WRONG_RECEIVER_NETWORK TRUST_TRANSPORT_BUSY TRUST_TRANSPORT_DEADLINE TRUST_TRANSPORT_CANCELLED TRUST_TRANSPORT_UNAVAILABLE TRUST_TRANSPORT_LOCAL_NETWORK_DENIED '+
     'MAIN_CONFIGURATION_INVALID MAIN_PROTOCOL_UNSUPPORTED MAIN_BUSY MAIN_CANCELLED MAIN_IDENTITY_UNCONFIRMED MAIN_CONNECTION_UNAVAILABLE MAIN_MANAGEMENT_REFUSED MAIN_WRONG_RECEIVER_NETWORK MAIN_STORAGE_UNCONFIRMED MAIN_ACTION_UNCERTAIN MAIN_CONFIGURATION_UNCONFIRMED MAIN_CLAIM_UNCONFIRMED MAIN_MANUAL_WIFI_REQUIRED MAIN_REGISTRATION_UNCONFIRMED MAIN_RECEIPT_INVALID MAIN_EXPLICIT_RETRY_REQUIRED DISCOVERY_EXPIRED MAIN_RECOVERY_UNAVAILABLE MAIN_RECOVERY_CONFLICT PIXEL_GUIDE_UPDATE_REQUIRED '+
     'OUTPUT_CONFIGURATION_INVALID OUTPUT_CONFIGURATION_PROFILE OUTPUT_CONFIGURATION_BUSY OUTPUT_CONFIGURATION_PENDING OUTPUT_CONFIGURATION_UNCONFIRMED OUTPUT_CONFIGURATION_CANCELLED OUTPUT_CONFIGURATION_CONFLICT OUTPUT_CONFIGURATION_OTHER_EDITOR '+
@@ -240,6 +240,9 @@
       root.__c98log((message.ok===true?'NATIVE_OK ':'NATIVE_FAIL ')+request.action+' '+(message.ok===true?JSON.stringify(message.result).slice(0,420):String(message.code)));
       // C105: any refusal because a port change is still open lets the app resume it silently.
       if(message.ok!==true&&message.code==='OUTPUT_CONFIGURATION_PENDING')try{root.dispatchEvent?.(new Event('c105-output-pending'));}catch(_){}
+      // C107: this phone's place on the stand went to a phone in use; re-admit it
+      // (Android reports the same refusal as MAIN_EXISTING_STAND_ACCESS_REQUIRED).
+      if(message.ok!==true&&['TRUST_APP_NOT_ALLOWED','MAIN_EXISTING_STAND_ACCESS_REQUIRED'].includes(message.code)&&request.action!=='recoverInstallation')try{root.dispatchEvent?.(new Event('lightning:app-readmit'));}catch(_){}
     if(message.ok===true&&message.result&&typeof message.result==='object')request.resolve(message.result);
     else {
       const error=fail(typeof message.code==='string'&&/^[A-Z][A-Z0-9_]{0,63}$/.test(message.code)?message.code:'NATIVE_FAILED'),
@@ -329,7 +332,9 @@
   }
   function contextResult(result,standId){
     if(!result||result.standId!==standId||!['synced','pending'].includes(result.status)||!Number.isInteger(result.synced)||!Number.isInteger(result.total)||result.total<1||result.total>30||result.synced<0||result.synced>result.total||(result.status==='synced'&&(result.synced!==result.total||result.librariesComplete===false)))throw fail('RECEIVER_CONTEXT_UNCONFIRMED');
-    return {standId,status:result.status,synced:result.synced,total:result.total,...(typeof result.librariesComplete==='boolean'?{librariesComplete:result.librariesComplete}:{})};
+    return {standId,status:result.status,synced:result.synced,total:result.total,...(typeof result.librariesComplete==='boolean'?{librariesComplete:result.librariesComplete}:{}),
+      // C107: this phone's view of an SPI receiver is older; the app adopts it first.
+      ...(result.status==='pending'&&result.code==='RECEIVER_CONTEXT_STALE'?{code:result.code}:{})};
   }
   function automaticContextControl(standId){
     let requestId=null,settle,requested=false,interruption=null,afterCleanup;
