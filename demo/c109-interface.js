@@ -49,4 +49,46 @@
   }
   const reducedMotion=()=>window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   document.addEventListener('lightning:animation-sync',event=>{const detail=event.detail||{};if(detail.done||detail.failed)hideSync();else showSync(Number(detail.leadMs));});
+
+  /* ---------- Colour pickers: the brightness track fills up ---------- */
+  const fill=input=>input.style.setProperty('--fill',((Number(input.value)-Number(input.min||0))/((Number(input.max||100)-Number(input.min||0))||1)*100)+'%');
+  const fillAll=()=>document.querySelectorAll('.shared-colour-picker input[data-setting="bri"]').forEach(fill);
+  document.addEventListener('input',event=>{if(event.target?.matches?.('.shared-colour-picker input[data-setting="bri"]'))fill(event.target);},true);
+  // The app also sets the value itself (another zone, a preset): check now and then.
+  setInterval(()=>{if(!document.hidden)fillAll();},400);
+  let fillQueued=false;
+  new MutationObserver(()=>{if(!fillQueued){fillQueued=true;requestAnimationFrame(()=>{fillQueued=false;fillAll();});}}).observe(document.body,{childList:true,subtree:true});
+
+  /* ---------- Alles bedienen: the scope line goes under "Hele stand" ---------- */
+  function scopeIntoPowerCard(){
+    const sheet=document.querySelector('#effect-dialog [data-stand-control-sheet]');if(!sheet)return;
+    const scope=sheet.querySelector('.stand-control-scope'),card=sheet.querySelector('.power-card-stand>div:first-child');if(!scope||!card)return;
+    let line=card.querySelector('.c109-scope');
+    if(!line){line=document.createElement('small');line.className='c109-scope';card.append(line);}
+    if(line.textContent!==scope.textContent)line.textContent=scope.textContent;
+  }
+  let scopeQueued=false;
+  new MutationObserver(()=>{if(!scopeQueued){scopeQueued=true;requestAnimationFrame(()=>{scopeQueued=false;scopeIntoPowerCard();});}}).observe(document.body,{childList:true,subtree:true});
+
+  /* ---------- No zooming: pinch and double-tap stay on the app ---------- */
+  for(const name of ['gesturestart','gesturechange'])document.addEventListener(name,event=>event.preventDefault(),{passive:false});
+  document.addEventListener('touchmove',event=>{if(event.touches?.length>1)event.preventDefault();},{passive:false});
+
+  /* ---------- Start colour: hand over to the app's theme ---------- */
+  // c109-early.js painted the saved theme's background before the styles
+  // loaded; once the app sets its theme, the app's own colours take over.
+  function themeReady(){
+    const theme=document.body?.dataset.theme;if(!theme)return;
+    root.style.backgroundColor=theme==='dark'?'#131512':'#f5f4f2';root.style.colorScheme=theme==='dark'?'dark':'light';
+  }
+  const watchTheme=()=>{themeReady();new MutationObserver(themeReady).observe(document.body,{attributes:true,attributeFilter:['data-theme']});};
+  if(document.body)watchTheme();else document.addEventListener('DOMContentLoaded',watchTheme,{once:true});
+
+  /* ---------- Receiver page: outputs open with the receiver ---------- */
+  // Opening an SPI receiver shows its outputs, pixels, sides and order
+  // straight away instead of behind one more menu.
+  document.addEventListener('toggle',event=>{
+    const card=event.target;if(!(card instanceof HTMLDetailsElement)||!card.open||!card.matches('.receiver-overview-card'))return;
+    const outputs=card.querySelector('details.receiver-connections');if(outputs&&!outputs.open)outputs.open=true;
+  },true);
 }());

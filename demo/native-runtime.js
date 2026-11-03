@@ -247,6 +247,11 @@
       // MAIN is reachable; the top-bar indicator shows it at once.
       if(message.ok===true&&['sharedDocument','syncInstallationContext','refreshSharedOutputs','standRefresh','standResume','standConnect','applyLive','applyLiveBatch','applyStaticGradient','applyStableCatalogue','applyStableBreathe','configureOutputs','identifyLayout','previewSPIZoneDirections','previewPixels'].includes(request.action))
         try{root.dispatchEvent?.(new CustomEvent('lightning:main-exchange',{detail:{action:request.action}}));}catch(_){}
+      // C107: an animation start reports the stand's sync lead; the interface
+      // shows a progress card until the common start instant has passed.
+      if(message.ok===true&&['applyLive','applyLiveBatch'].includes(request.action)&&Number.isFinite(message.result?.leadMs)&&message.result.leadMs>0)
+        try{const leadMs=Math.min(60000,message.result.leadMs);root.document.dispatchEvent(new CustomEvent('lightning:animation-sync',{detail:{leadMs}}));
+          root.setTimeout(()=>{try{root.document.dispatchEvent(new CustomEvent('lightning:animation-sync',{detail:{done:true}}));}catch(_){}},leadMs+300);}catch(_){}
     if(message.ok===true&&message.result&&typeof message.result==='object')request.resolve(message.result);
     else {
       const error=fail(typeof message.code==='string'&&/^[A-Z][A-Z0-9_]{0,63}$/.test(message.code)?message.code:'NATIVE_FAILED'),

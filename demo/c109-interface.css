@@ -77,3 +77,215 @@ body[data-theme=dark] .c109-sync-bar{background:rgba(255,255,255,.12)}
 @media (prefers-reduced-motion:no-preference){.c109-sync-icon{animation:c109-sync-pulse 1.6s ease-in-out infinite}}
 @keyframes c109-sync-pulse{50%{box-shadow:0 0 0 5px rgba(104,199,219,.18)}}
 @media (prefers-reduced-motion:reduce){html body .c109-sync,html body .c109-sync.is-leaving{animation:none}}
+
+/* ---------- Port colours on screen: calm, not fluorescent ---------- */
+/* The receivers light up in pure identification colours (pixel-setup.js
+ * PORT_COLOURS); on screen the same colour shows in a calmer tone. Only the
+ * display changes; what is sent to the receivers stays exactly the same. */
+html body :is([style*="--port-colour:#0000ff" i],[style*="--port-colour: #0000ff" i]){--port-colour:#4c6fe0!important;--port-ink:#fff!important}
+html body :is([style*="--port-colour:#ff6000" i],[style*="--port-colour: #ff6000" i]){--port-colour:#e5793a!important;--port-ink:#fff!important}
+html body :is([style*="--port-colour:#ffa000" i],[style*="--port-colour: #ffa000" i]){--port-colour:#e9a24a!important;--port-ink:#2b1b08!important}
+html body :is([style*="--port-colour:#00ff00" i],[style*="--port-colour: #00ff00" i]){--port-colour:#3fae76!important;--port-ink:#fff!important}
+html body :is([style*="--port-colour:#ff00ff" i],[style*="--port-colour: #ff00ff" i]){--port-colour:#c062cf!important;--port-ink:#fff!important}
+html body :is([style*="--port-colour:#ff0000" i],[style*="--port-colour: #ff0000" i]){--port-colour:#d95a4f!important;--port-ink:#fff!important}
+html body :is([style*="--port-colour:#7800c0" i],[style*="--port-colour: #7800c0" i]){--port-colour:#8656c4!important;--port-ink:#fff!important}
+html body :is([style*="--port-colour:#ffff00" i],[style*="--port-colour: #ffff00" i]){--port-colour:#e3c44e!important;--port-ink:#2b2408!important}
+html body :is([style*="--port-colour:#ff1700" i],[style*="--port-colour: #ff1700" i]){--port-colour:#de6544!important;--port-ink:#fff!important}
+html body :is([style*="--port-colour:#ff5000" i],[style*="--port-colour: #ff5000" i]){--port-colour:#e2733d!important;--port-ink:#fff!important}
+html body :is([style*="--port-colour:#ff8000" i],[style*="--port-colour: #ff8000" i]){--port-colour:#e88a45!important;--port-ink:#2b1b08!important}
+html body :is([style*="--port-colour:#8000ff" i],[style*="--port-colour: #8000ff" i]){--port-colour:#875fdc!important;--port-ink:#fff!important}
+html body :is([style*="--port-colour:#00ffff" i],[style*="--port-colour: #00ffff" i]){--port-colour:#45b5c6!important;--port-ink:#fff!important}
+
+/* ---------- Pixels aanpassen ---------- */
+html body .pixel-setup-dialog .pixel-only-hint{display:flex;gap:10px;align-items:flex-start;margin:0 0 4px;padding:11px 14px;border-radius:14px;font-size:13.5px;line-height:1.45;
+  background:color-mix(in srgb,#68c7db 10%,var(--panel,#fff));color:var(--ink,#1c1c1e)}
+html body .pixel-setup-dialog .pixel-only-hint::before{content:"i";flex:none;display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#3fa7c0;color:#fff;font:700 12px/1 Georgia,serif}
+/* Port steps: the current port in its (calm) colour, the others quiet. */
+html body .pixel-setup-dialog .pixel-port-step{border-radius:12px;transition:background-color .2s ease}
+html body .pixel-setup-dialog .pixel-port-step[data-state=current]{box-shadow:0 6px 14px -8px color-mix(in srgb,var(--port-colour) 80%,transparent)!important}
+html body .pixel-setup-dialog .pixel-port-step:not([data-state=current]) span{opacity:.7}
+/* The pixel strip card. */
+html body .pixel-setup-dialog .pixel-setup-visual{border-radius:18px!important;background:radial-gradient(130% 100% at 50% 0%,#232a33,#12161b)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+html body .pixel-setup-dialog .pixel-setup-visual .pixel-preview-notice{display:flex!important;align-items:center;gap:8px;width:fit-content;max-width:100%;box-sizing:border-box;margin-top:4px;padding:6px 12px!important;border-radius:999px!important;font-size:12px!important}
+html body .pixel-setup-dialog .pixel-setup-visual .pixel-preview-notice::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:#68c7db}
+/* − 104 +: round buttons, the number itself is the focus. */
+html body .pixel-setup-dialog .pixel-setup-counter{grid-template-columns:56px minmax(0,1fr) 56px!important;gap:12px!important;margin-top:4px}
+html body .pixel-setup-dialog .pixel-setup-counter>button{width:56px;height:56px!important;border-radius:50%!important;font-size:26px!important;font-weight:500;
+  background:var(--panel,#fff)!important;border:1.5px solid var(--line,#dce1e9)!important;box-shadow:0 6px 14px -10px rgba(20,24,32,.45)}
+html body .pixel-setup-dialog .pixel-setup-counter>button:active:not(:disabled){transform:scale(.94)}
+html body .pixel-setup-dialog .pixel-setup-counter input{height:56px!important;border:0!important;background:transparent!important;font-size:34px!important;font-weight:750!important;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+html body .pixel-setup-dialog .pixel-setup-counter label>span{font-size:12px}
+html body .pixel-setup-dialog .pixel-segment-hint{margin:6px 0 0!important;font-size:12.5px!important;color:var(--muted,#646d78);text-align:center}
+html body .pixel-setup-dialog .pixel-setup-mode{display:flex!important;align-items:center;gap:9px;padding:11px 14px!important;border-radius:14px!important;font-size:12.5px!important}
+html body .pixel-setup-dialog .pixel-setup-mode::before{content:"";flex:none;width:18px;height:18px;background:no-repeat center/18px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2322a06b' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z'/%3E%3Cpath d='M9 12l2 2 4-4'/%3E%3C/svg%3E")}
+body[data-theme=dark] .pixel-setup-dialog .pixel-only-hint{background:rgba(104,199,219,.1);color:#e9edf1}
+body[data-theme=dark] .pixel-setup-dialog .pixel-setup-counter>button{background:rgba(255,255,255,.06)!important;border-color:rgba(255,255,255,.14)!important;box-shadow:none}
+@media (prefers-reduced-motion:reduce){html body .pixel-setup-dialog .pixel-port-step{transition:none}}
+
+/* ---------- Receiver: Uitgangen ---------- */
+html body .receiver-port-list{display:grid;gap:8px}
+html body .receiver-port-row{border-radius:16px!important}
+html body .receiver-port-row .receiver-port-select>b{display:grid;place-items:center;min-width:38px;height:38px;border-radius:12px!important;font-size:13px;letter-spacing:.02em;
+  background:var(--port-colour)!important;color:var(--port-ink,#fff)!important;border:0!important;box-shadow:0 6px 12px -8px color-mix(in srgb,var(--port-colour) 85%,transparent)}
+html body .receiver-port-row .receiver-blink{border-radius:14px!important}
+html body .receiver-port-row:has(.receiver-port-switch[aria-checked="false"]) .receiver-port-select>b{filter:saturate(.55) brightness(.9);box-shadow:none}
+
+/* ---------- Alles bedienen ---------- */
+/* Header and sheet are one surface: no hard edge under the tabs. */
+#effect-dialog:has([data-stand-control-sheet]) #effect-dialog-content>header{
+  background:linear-gradient(180deg,color-mix(in srgb,var(--bg,#f4f5f7) 96%,transparent) 70%,color-mix(in srgb,var(--bg,#f4f5f7) 82%,transparent))!important;
+  -webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);border-bottom:1px solid color-mix(in srgb,var(--line,#dce1e9) 60%,transparent)!important;box-shadow:none!important}
+#effect-dialog:has([data-stand-control-sheet]) .stand-control-scope{margin:2px 2px 10px;font-size:13px;color:var(--muted,#646d78)}
+#effect-dialog:has([data-stand-control-sheet]) .stand-control-scope>b{color:var(--ink,#1c1c1e)}
+#effect-dialog:has([data-stand-control-sheet]) .mixed-note{display:flex;gap:10px;align-items:flex-start;padding:11px 14px!important;border-radius:14px!important;font-size:13px!important;line-height:1.45;
+  background:color-mix(in srgb,#f6aa60 12%,var(--panel,#fff))!important;color:var(--ink,#1c1c1e)!important;border:1px solid color-mix(in srgb,#f6aa60 30%,transparent)!important}
+#effect-dialog:has([data-stand-control-sheet]) .mixed-note::before{content:"";flex:none;width:18px;height:18px;margin-top:1px;border-radius:50%;
+  background:conic-gradient(#f6aa60 0 25%,#ed5799 0 50%,#68c7db 0 75%,#5ccf9a 0)}
+body[data-theme=dark] #effect-dialog:has([data-stand-control-sheet]) .mixed-note{background:rgba(246,170,96,.1)!important;color:#ecebe8!important;border-color:rgba(246,170,96,.22)!important}
+body[data-theme=dark] #effect-dialog:has([data-stand-control-sheet]) #effect-dialog-content>header{background:linear-gradient(180deg,rgba(22,23,27,.94) 70%,rgba(22,23,27,.78))!important;border-bottom-color:rgba(255,255,255,.07)!important}
+
+/* ---------- Every colour picker: brightness and fine controls ---------- */
+/* Brightness shows warm light filling up (--fill is set by c109-interface.js). */
+html body .shared-colour-picker .slider-row input[data-setting="bri"]{-webkit-appearance:none;appearance:none;height:36px;background:transparent}
+html body .shared-colour-picker .slider-row input[data-setting="bri"]::-webkit-slider-runnable-track{height:10px;border-radius:999px;
+  background:linear-gradient(90deg,#f5c76a 0 var(--fill,100%),color-mix(in srgb,var(--ink,#1c1c1e) 12%,transparent) var(--fill,100%))}
+html body .shared-colour-picker .slider-row input[data-setting="bri"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:28px;height:28px;margin-top:-9px;border-radius:50%;background:#fff;border:0;box-shadow:0 0 0 1px rgba(0,0,0,.14),0 3px 8px rgba(0,0,0,.25)}
+body[data-theme=dark] .shared-colour-picker .slider-row input[data-setting="bri"]::-webkit-slider-runnable-track{background:linear-gradient(90deg,#f5c76a 0 var(--fill,100%),rgba(255,255,255,.14) var(--fill,100%))}
+/* Fine controls: light − / + buttons instead of heavy blocks. */
+html body .shared-colour-picker .channel-row>button[data-action="channel-step"]{border-radius:50%!important;background:transparent!important;border:1.5px solid var(--line,#dce1e9)!important;color:var(--ink,#1c1c1e)!important;box-shadow:none!important;font-weight:500}
+body[data-theme=dark] .shared-colour-picker .channel-row>button[data-action="channel-step"]{border-color:rgba(255,255,255,.16)!important;color:#ecebe8!important}
+html body .shared-colour-picker .channel-row>button[data-action="channel-step"]:active{background:var(--soft)!important}
+html body .shared-colour-picker .channel-row .channel-toggle{border-radius:12px!important}
+/* The outputs list and the edit-ports buttons fix their colours per port. */
+html body :is(.receiver-port-row[data-port-row="1"],.v50-edit-ports button[data-port="1"]){--port-colour:#4c6fe0!important;--v659-port-colour:#4c6fe0!important;--v659-port-ink:#fff!important;--port-ink:#fff!important}
+html body :is(.receiver-port-row[data-port-row="2"],.v50-edit-ports button[data-port="2"]){--port-colour:#e9963f!important;--v659-port-colour:#e9963f!important;--v659-port-ink:#2b1b08!important;--port-ink:#2b1b08!important}
+html body :is(.receiver-port-row[data-port-row="3"],.v50-edit-ports button[data-port="3"]){--port-colour:#3fae76!important;--v659-port-colour:#3fae76!important;--v659-port-ink:#fff!important;--port-ink:#fff!important}
+html body :is(.receiver-port-row[data-port-row="4"],.v50-edit-ports button[data-port="4"]){--port-colour:#c062cf!important;--v659-port-colour:#c062cf!important;--v659-port-ink:#fff!important;--port-ink:#fff!important}
+
+/* ---------- Colour pickers: the live preview sits above the wheel ---------- */
+/* As a sticky layer its offset included the iPhone header and safe area, so
+ * it slid over the wheel and left a gap above. It now simply sits on top. */
+#effect-dialog.colour-picker-dialog .dialog-live-preview{position:relative!important;top:auto!important;z-index:1;margin-bottom:12px}
+
+/* ---------- Alles bedienen: what you control, then the note ---------- */
+#effect-dialog:has([data-stand-control-sheet] .power-card-stand .c109-scope) .stand-control-scope{display:none}
+#effect-dialog:has([data-stand-control-sheet]) .power-card-stand>div:first-child{display:grid;gap:2px;min-width:0}
+#effect-dialog:has([data-stand-control-sheet]) .power-card-stand .c109-scope{display:block;padding-left:30px;font-size:12.5px;font-weight:500;color:var(--muted,#646d78);overflow-wrap:anywhere}
+#effect-dialog:has([data-stand-control-sheet]) .mixed-note{margin-top:-2px!important}
+
+/* ---------- Zone cards on the stand page: calmer ---------- */
+html body #main article.zone-entry .zone-family-badge,html body #main article.zone-entry .zone-meta{background:none!important;border:0!important;box-shadow:none!important;padding:0!important}
+html body #main article.zone-entry .zone-meta{display:block;margin-top:4px;font-size:13px!important;font-weight:550;color:var(--muted,#646d78)!important}
+html body #main article.zone-entry .zone-meta *{font:inherit;color:inherit}
+html body #main article.zone-entry .zone-card-actions{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;gap:10px}
+html body #main article.zone-entry .zone-options-button{min-width:40px!important;min-height:40px!important;width:40px;height:40px;border-radius:50%!important;
+  background:transparent!important;border:0!important;box-shadow:none!important;color:var(--muted,#646d78)!important;font-size:15px;letter-spacing:1px}
+html body #main article.zone-entry .zone-options-button:active{background:var(--soft)!important}
+/* The switch says enough on its own; "Aan"/"Uit" stays for screen readers. */
+html body #main article.zone-entry .stand-zone-power .switch>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- Ledline preview card in a zone: calmer controls ---------- */
+html body .v50-control-preview .preview-size-control>summary{min-height:36px!important;padding:0 12px!important;border-radius:999px!important;font-size:13px!important;gap:6px}
+html body .v50-control-preview .preview-size-control>summary>span{display:none}
+html body .v50-control-preview .v50-preview-actions{border-top-color:rgba(255,255,255,.08)!important}
+html body .v50-control-preview .v50-preview-toolbar>button,html body .v50-control-preview .v50-preview-expand{min-height:38px!important;padding:0 12px!important;border-radius:999px!important;font-size:13px!important;
+  background:rgba(255,255,255,.08)!important;border:1px solid rgba(255,255,255,.12)!important;color:#f2f4f7!important;box-shadow:none!important}
+html body .v50-control-preview .v50-preview-toolbar>button svg,html body .v50-control-preview .v50-preview-expand svg{width:16px!important;height:16px!important}
+html body .v50-control-preview .v50-selection-summary small{font-size:10.5px!important;letter-spacing:.04em;text-transform:uppercase;opacity:.7}
+html body .v50-control-preview .v50-selection-summary b{font-size:14px!important}
+
+/* ---------- Editing a scene: unmistakable ---------- */
+/* While a scene is being edited the whole app gets a coloured frame and the
+ * workbench stands out at the top of the page. */
+body:has(.scene-edit-workbench)::after{content:"";position:fixed;inset:0;z-index:40;pointer-events:none;border:3px solid #e2833f;border-radius:0;
+  box-shadow:inset 0 0 24px -6px rgba(226,131,63,.45)}
+html body #main .scene-edit-workbench.scene-edit-workbench687{border:2px solid #e2833f!important;
+  background:linear-gradient(160deg,color-mix(in srgb,#f6aa60 16%,var(--panel,#fff)),var(--panel,#fff) 60%)!important;box-shadow:0 18px 36px -22px rgba(226,131,63,.7)!important}
+html body #main .scene-edit-workbench687 .scene-edit-workbench-copy small{display:inline-flex!important;align-items:center;gap:7px;color:#c4621f!important;font-weight:800!important;letter-spacing:.06em;text-transform:uppercase}
+html body #main .scene-edit-workbench687 .scene-edit-workbench-copy small::before{content:"";width:9px;height:9px;border-radius:50%;background:#e2833f}
+@media (prefers-reduced-motion:no-preference){html body #main .scene-edit-workbench687 .scene-edit-workbench-copy small::before{animation:c109-edit-dot 1.6s ease-in-out infinite}}
+@keyframes c109-edit-dot{50%{box-shadow:0 0 0 5px rgba(226,131,63,.25)}}
+body[data-theme=dark] #main .scene-edit-workbench.scene-edit-workbench687{background:linear-gradient(160deg,rgba(246,170,96,.16),transparent 60%),#1e1f23!important}
+body[data-theme=dark] #main .scene-edit-workbench687 .scene-edit-workbench-copy small{color:#f3a86a!important}
+
+/* ---------- Scene list: lighter "Licht aanpassen" row ---------- */
+html body [data-scene-ui="640"] .scene-card-row.ui606-scene-card>.scene-quick-edit109{min-height:42px;font-size:13.5px;background:color-mix(in srgb,var(--soft,#f1f2f4) 60%,transparent)}
+/* ---------- No zooming ---------- */
+html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+/* iOS zooms into a focused field under 16px; keep fields at 16px. */
+html body :is(input:not([type=range]):not([type=checkbox]):not([type=radio]),select,textarea){font-size:max(16px,1em)}
+
+/* ---------- Top bar: no light edge along its top ---------- */
+html.c109-bar-top:not(#c98) body:not(#c98) header.brand-bar{box-shadow:none!important}
+
+/* ---------- Receiver page: compact, quick actions as tiles ---------- */
+/* Less text: the long hints go; the same functions stay. */
+html body #main .receiver-overview-card .receiver-preserved707,
+html body #main .receiver-connections .receiver-ports-heading>small,
+html body #main .receiver-connections .port-preview-note{display:none!important}
+html body #main .receiver-overview-card .receiver-setting-row707{min-height:58px!important;padding-block:8px!important}
+html body #main .receiver-connections .receiver-product{padding:10px!important}
+html body #main .receiver-connections .receiver-product>canvas{max-height:150px}
+html body #main .receiver-connections .receiver-product-caption{margin:4px 0 0!important;font-size:12.5px}
+html body #main .receiver-connections .receiver-ports-heading{margin:12px 2px 6px!important}
+/* The four outputs as tiles: P-number, on/off, blink. */
+html body #main .receiver-connections .receiver-port-list{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media (min-width:700px){html body #main .receiver-connections .receiver-port-list{grid-template-columns:repeat(4,minmax(0,1fr))}}
+html body #main .receiver-connections .receiver-port-row{display:grid!important;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;gap:8px 6px;align-items:center;padding:10px!important;border-inline-start-width:3px!important}
+html body #main .receiver-connections .receiver-port-row>.receiver-port-select{grid-column:1/-1;display:flex;align-items:center;gap:8px;min-width:0;padding:0!important;background:none!important;border:0!important;box-shadow:none!important}
+html body #main .receiver-connections .receiver-port-row>.receiver-port-select>span{font-size:12.5px;color:var(--muted,#646d78);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body #main .receiver-connections .receiver-port-row.port-focused{box-shadow:inset 0 0 0 2px var(--v659-port-colour,var(--port-colour))!important}
+html body #main .receiver-connections .receiver-port-row>.receiver-port-switch>span,
+html body #main .receiver-connections .receiver-port-row>.receiver-blink>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+html body #main .receiver-connections .receiver-port-row>.receiver-blink{position:relative;justify-self:end;width:40px;min-width:40px!important;height:40px;min-height:40px!important;padding:0!important;border-radius:50%!important;display:grid;place-items:center}
+html body #main .receiver-connections .receiver-port-row>.receiver-blink svg{width:20px;height:20px}
+@media (prefers-reduced-motion:no-preference){html body #main .receiver-connections .receiver-port-row>.receiver-blink:not(:disabled):active svg{animation:c109-blink .5s ease-out}}
+@keyframes c109-blink{40%{transform:scale(1.25);filter:drop-shadow(0 0 6px #f5c76a)}}
+/* Pixels, Kanten and Volgorde side by side, each with a moving picture. */
+html body #main .receiver-connections .spi-settings659{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px;margin-top:10px}
+html body #main .receiver-connections .spi-settings659>button{display:grid!important;justify-items:center;align-content:center;gap:6px;min-height:96px!important;padding:12px 6px!important;margin:0!important;text-align:center;border-radius:16px!important}
+html body #main .receiver-connections .spi-settings659>button>svg{display:none!important}
+html body #main .receiver-connections .spi-settings659>button::before{content:"";width:44px;height:32px;background:no-repeat center/contain}
+html body #main .receiver-connections .spi-settings659>button>span{display:grid;gap:2px;justify-items:center}
+html body #main .receiver-connections .spi-settings659>button>span>b{font-size:13px!important;line-height:1.25}
+html body #main .receiver-connections .spi-settings659>button>span>small{font-size:11.5px!important;color:var(--muted,#646d78)}
+html body #main .receiver-connections .spi-settings659>button:not([data-action="receiver-pixels-only"])>span>small{display:none}
+html body #main .receiver-connections .spi-settings659>button[data-action="receiver-pixels-only"]::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 32'%3E%3Cstyle%3E%3C/style%3E%3Crect x='2' y='10' width='40' height='12' rx='6' fill='%23243338'/%3E%3Crect class='p p1' x='6' y='13' width='5' height='6' rx='1.5' fill='%23f5c76a'/%3E%3Crect class='p p2' x='13' y='13' width='5' height='6' rx='1.5' fill='%23f5c76a'/%3E%3Crect class='p p3' x='20' y='13' width='5' height='6' rx='1.5' fill='%23f5c76a'/%3E%3Crect class='p p4' x='27' y='13' width='5' height='6' rx='1.5' fill='%23f5c76a'/%3E%3Crect class='e' x='34' y='13' width='5' height='6' rx='1.5' fill='%23e2574c'/%3E%3C/svg%3E")}
+html body #main .receiver-connections .spi-settings659>button[data-action="receiver-directions"]::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 32'%3E%3Cstyle%3E%3C/style%3E%3Crect x='9' y='12' width='26' height='8' rx='4' fill='%23243338'/%3E%3Cpath d='M13 16h18' stroke='%2368c7db' stroke-width='3' stroke-linecap='round'/%3E%3Cpath class='a' d='M8 10l-5 6 5 6' fill='none' stroke='%23f6aa60' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath class='b' d='M36 10l5 6-5 6' fill='none' stroke='%23f6aa60' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+html body #main .receiver-connections .spi-settings659>button[data-action="receiver-order109"]::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 32'%3E%3Cstyle%3E%3C/style%3E%3Crect x='8' y='3' width='28' height='7' rx='3.5' fill='%2368c7db'/%3E%3Crect class='d' x='8' y='12.5' width='28' height='7' rx='3.5' fill='%23f6aa60'/%3E%3Crect class='u' x='8' y='22' width='28' height='7' rx='3.5' fill='%23ed5799'/%3E%3C/svg%3E")}
+@media (prefers-reduced-motion:no-preference){
+  html body #main .receiver-connections .spi-settings659>button[data-action="receiver-pixels-only"]:not(:disabled)::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 32'%3E%3Cstyle%3E.p%7Banimation:lit 2.4s ease-in-out infinite%7D.p2%7Banimation-delay:.2s%7D.p3%7Banimation-delay:.4s%7D.p4%7Banimation-delay:.6s%7D.e%7Btransform-box:fill-box;transform-origin:center;animation:end 2.4s ease-in-out infinite%7D%40keyframes lit%7B0%25,100%25%7Bopacity:.35%7D30%25,60%25%7Bopacity:1%7D%7D%40keyframes end%7B0%25,40%25%7Btransform:scale(1)%7D55%25%7Btransform:scale(1.25)%7D70%25,100%25%7Btransform:scale(1)%7D%7D%3C/style%3E%3Crect x='2' y='10' width='40' height='12' rx='6' fill='%23243338'/%3E%3Crect class='p p1' x='6' y='13' width='5' height='6' rx='1.5' fill='%23f5c76a'/%3E%3Crect class='p p2' x='13' y='13' width='5' height='6' rx='1.5' fill='%23f5c76a'/%3E%3Crect class='p p3' x='20' y='13' width='5' height='6' rx='1.5' fill='%23f5c76a'/%3E%3Crect class='p p4' x='27' y='13' width='5' height='6' rx='1.5' fill='%23f5c76a'/%3E%3Crect class='e' x='34' y='13' width='5' height='6' rx='1.5' fill='%23e2574c'/%3E%3C/svg%3E")}
+  html body #main .receiver-connections .spi-settings659>button[data-action="receiver-directions"]:not(:disabled)::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 32'%3E%3Cstyle%3E.a%7Banimation:a 2.2s ease-in-out infinite%7D.b%7Banimation:b 2.2s ease-in-out infinite%7D%40keyframes a%7B0%25,100%25%7Btransform:translateX(0)%7D50%25%7Btransform:translateX(-3px)%7D%7D%40keyframes b%7B0%25,100%25%7Btransform:translateX(0)%7D50%25%7Btransform:translateX(3px)%7D%7D%3C/style%3E%3Crect x='9' y='12' width='26' height='8' rx='4' fill='%23243338'/%3E%3Cpath d='M13 16h18' stroke='%2368c7db' stroke-width='3' stroke-linecap='round'/%3E%3Cpath class='a' d='M8 10l-5 6 5 6' fill='none' stroke='%23f6aa60' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath class='b' d='M36 10l5 6-5 6' fill='none' stroke='%23f6aa60' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+  html body #main .receiver-connections .spi-settings659>button[data-action="receiver-order109"]:not(:disabled)::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 32'%3E%3Cstyle%3E.u%7Banimation:u 2.6s ease-in-out infinite%7D.d%7Banimation:d 2.6s ease-in-out infinite%7D%40keyframes u%7B0%25,30%25%7Btransform:translateY(0)%7D50%25,80%25%7Btransform:translateY(-9px)%7D100%25%7Btransform:translateY(0)%7D%7D%40keyframes d%7B0%25,30%25%7Btransform:translateY(0)%7D50%25,80%25%7Btransform:translateY(9px)%7D100%25%7Btransform:translateY(0)%7D%7D%3C/style%3E%3Crect x='8' y='3' width='28' height='7' rx='3.5' fill='%2368c7db'/%3E%3Crect class='d' x='8' y='12.5' width='28' height='7' rx='3.5' fill='%23f6aa60'/%3E%3Crect class='u' x='8' y='22' width='28' height='7' rx='3.5' fill='%23ed5799'/%3E%3C/svg%3E")}
+}
+
+/* ---------- Pixel strip in "Pixels aanpassen": warm light, clear end ---------- */
+html body .pixel-count-preview .pixel-setup-strip i:not(.end){background:#f3d9a4!important;box-shadow:0 0 6px rgba(245,199,106,.35)!important}
+@media (prefers-reduced-motion:no-preference){
+  html body .pixel-count-preview .pixel-setup-strip i:not(.end){animation:c109-pixel-run 2.8s ease-in-out infinite!important}
+  html body .pixel-count-preview .pixel-setup-strip i:nth-child(2){animation-delay:0.06s!important}html body .pixel-count-preview .pixel-setup-strip i:nth-child(3){animation-delay:0.12s!important}html body .pixel-count-preview .pixel-setup-strip i:nth-child(4){animation-delay:0.18s!important}html body .pixel-count-preview .pixel-setup-strip i:nth-child(5){animation-delay:0.24s!important}html body .pixel-count-preview .pixel-setup-strip i:nth-child(6){animation-delay:0.30s!important}html body .pixel-count-preview .pixel-setup-strip i:nth-child(7){animation-delay:0.36s!important}html body .pixel-count-preview .pixel-setup-strip i:nth-child(8){animation-delay:0.42s!important}html body .pixel-count-preview .pixel-setup-strip i:nth-child(9){animation-delay:0.48s!important}html body .pixel-count-preview .pixel-setup-strip i:nth-child(10){animation-delay:0.54s!important}html body .pixel-count-preview .pixel-setup-strip i:nth-child(11){animation-delay:0.60s!important}html body .pixel-count-preview .pixel-setup-strip i:nth-child(12){animation-delay:0.66s!important}html body .pixel-count-preview .pixel-setup-strip i:nth-child(13){animation-delay:0.72s!important}html body .pixel-count-preview .pixel-setup-strip i:nth-child(14){animation-delay:0.78s!important}html body .pixel-count-preview .pixel-setup-strip i:nth-child(15){animation-delay:0.84s!important}html body .pixel-count-preview .pixel-setup-strip i:nth-child(16){animation-delay:0.90s!important}html body .pixel-count-preview .pixel-setup-strip i:nth-child(17){animation-delay:0.96s!important}html body .pixel-count-preview .pixel-setup-strip i:nth-child(18){animation-delay:1.02s!important}html body .pixel-count-preview .pixel-setup-strip i:nth-child(19){animation-delay:1.08s!important}html body .pixel-count-preview .pixel-setup-strip i:nth-child(20){animation-delay:1.14s!important}html body .pixel-count-preview .pixel-setup-strip i:nth-child(21){animation-delay:1.20s!important}html body .pixel-count-preview .pixel-setup-strip i:nth-child(22){animation-delay:1.26s!important}html body .pixel-count-preview .pixel-setup-strip i:nth-child(23){animation-delay:1.32s!important}
+  html body .pixel-count-preview :is(.pixel-setup-strip,.pixel-count-terminal) i.end{animation:c109-pixel-end 1.6s ease-in-out infinite!important}
+}
+@keyframes c109-pixel-run{0%,100%{opacity:.55}20%{opacity:1}}
+@keyframes c109-pixel-end{50%{box-shadow:0 0 0 4px rgba(240,68,61,.25),0 0 14px #f0443d}}
+
+/* ---------- Pixels aanpassen: choose the ports ---------- */
+html body .pixel-setup-dialog .pixel-port-pick109{display:grid;gap:8px;margin:2px 0 6px}
+html body .pixel-setup-dialog .pixel-port-pick109>p{margin:0;font-size:13px;font-weight:700;color:var(--ink,#1c1c1e)}
+html body .pixel-setup-dialog .pixel-port-pick109>div{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+html body .pixel-setup-dialog .pixel-port-pick109 button{display:grid;justify-items:center;gap:4px;min-height:62px;padding:8px 4px;border-radius:14px;border:1.5px solid var(--line,#dce1e9);background:var(--panel,#fff);color:var(--ink,#1c1c1e);font:inherit;cursor:pointer;transition:transform .15s ease,border-color .15s ease,background-color .15s ease}
+html body .pixel-setup-dialog .pixel-port-pick109 button>b{display:grid;place-items:center;width:34px;height:26px;border-radius:9px;font-size:12.5px;background:color-mix(in srgb,var(--ink,#1c1c1e) 10%,transparent);color:var(--muted,#646d78)}
+html body .pixel-setup-dialog .pixel-port-pick109 button>small{font-size:11px;color:var(--muted,#646d78)}
+html body .pixel-setup-dialog .pixel-port-pick109 button[aria-pressed="true"]{border-color:var(--port-colour);background:color-mix(in srgb,var(--port-colour) 10%,var(--panel,#fff))}
+html body .pixel-setup-dialog .pixel-port-pick109 button[aria-pressed="true"]>b{background:var(--port-colour);color:var(--port-ink,#fff)}
+html body .pixel-setup-dialog .pixel-port-pick109 button[data-pick-state="now"]{box-shadow:0 0 0 2px var(--port-colour)}
+html body .pixel-setup-dialog .pixel-port-pick109 button[data-pick-state="now"]>small{color:var(--ink,#1c1c1e);font-weight:700}
+html body .pixel-setup-dialog .pixel-port-pick109 button:disabled{opacity:.45;cursor:default}
+html body .pixel-setup-dialog .pixel-port-pick109 button:active:not(:disabled){transform:scale(.95)}
+html body .pixel-setup-dialog .pixel-port-pick109 button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+body[data-theme=dark] .pixel-setup-dialog .pixel-port-pick109 button{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.12);color:#ecebe8}
+body[data-theme=dark] .pixel-setup-dialog .pixel-port-pick109 button[aria-pressed="true"]{background:color-mix(in srgb,var(--port-colour) 16%,transparent)}
+body[data-theme=dark] .pixel-setup-dialog .pixel-port-pick109>p{color:#ecebe8}
+/* With the picker the per-port row above is no longer needed. */
+html body .pixel-setup-dialog:has(.pixel-port-pick109) .pixel-port-context ol{display:none}
+@media (prefers-reduced-motion:reduce){html body .pixel-setup-dialog .pixel-port-pick109 button{transition:none}}

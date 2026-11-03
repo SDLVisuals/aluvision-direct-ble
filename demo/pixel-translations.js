@@ -52,6 +52,10 @@
   texts.en.pixelEditorExpired='Close this menu and open it again. Your choices are kept.';
   texts.fr.pixelEditorExpired='Fermez ce menu et rouvrez-le. Vos choix sont conservés.';
   texts.de.pixelEditorExpired='Schließe dieses Menü und öffne es erneut. Deine Auswahl bleibt erhalten.';
+  // C109: pixel screen port picker and footer.
+  Object.assign(texts.en,{pixelDontSave:"Don't save",pixelPickPorts:'Which ports are you adjusting?',pixelPickEdit:'Adjust',pixelPickAria:'Adjust port {port}'});
+  Object.assign(texts.fr,{pixelDontSave:'Ne pas enregistrer',pixelPickPorts:'Quels ports ajustez-vous ?',pixelPickEdit:'Ajuster',pixelPickAria:'Ajuster le port {port}'});
+  Object.assign(texts.de,{pixelDontSave:'Nicht speichern',pixelPickPorts:'Welche Ports passt du an?',pixelPickEdit:'Anpassen',pixelPickAria:'Port {port} anpassen'});
   for(const dictionary of Object.values(texts))Object.freeze(dictionary);Object.freeze(texts);
   function t(key,language='nl',params={}){const code=String(language).toLowerCase().split('-')[0],dictionary=texts[code]||texts.nl,value=dictionary[key]??texts.nl[key]??key;return String(value).replace(/\{([^}]+)\}/g,(_,name)=>String(params[name]??`{${name}}`));}
   return Object.freeze({texts,t});

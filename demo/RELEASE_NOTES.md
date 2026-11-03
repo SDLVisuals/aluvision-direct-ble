@@ -11,7 +11,8 @@
 - Pixels per port with a real slider; the connection check in the order step keeps its flip buttons, and a flip restarts the running light.
 - A gradient on one selected ledline now applies to that ledline only; the pixel editor opens in about a second.
 - The top bar says Connected a few seconds after opening the app, as soon as the main receiver answers.
-- Android test app 49 with the same interface.
+- A calmer interface: gradient colours you can drag, examples and saved gradients in one card, a clearer order step, restyled scenes and pixel editor, no zoom, and a sync card when an animation starts.
+- Android test app 50 with the same interface.
 
 ## Android code 36
 

@@ -24,15 +24,7 @@ html body .order-assignment-direction652>b{display:inline-block;background:linea
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:c106-direction 2.6s ease-in-out 4}
 @keyframes c106-direction{from{background-position:100% 0}to{background-position:0 0}}
 
-/* ---------- Light sweep over the zone preview after a choice ---------- */
-/* c106-motion.js adds .c106-sweep for a moment when you pick a colour,
- * gradient or animation. It answers your tap; it does not claim the light
- * on the stand has changed. */
-html body .preview-wrap.c106-sweep-host{position:relative}
-html body .preview-wrap.c106-sweep::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;border-radius:inherit;
-  background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.42) 48%,rgba(255,255,255,.1) 56%,transparent 70%) 0 0/250% 100% no-repeat;
-  animation:c106-sweep .9s cubic-bezier(.4,0,.2,1) both}
-@keyframes c106-sweep{from{background-position:120% 0;opacity:1}to{background-position:-60% 0;opacity:.2}}
+/* C109: the light sweep over the preview is gone: it showed as a white flash. */
 
 /* ---------- Success ---------- */
 /* A tick that draws itself in front of a confirming message. */

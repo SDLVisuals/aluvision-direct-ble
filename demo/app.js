@@ -4152,7 +4152,7 @@
   function pixelText659(key){return window.LightningPixelTranslations.t(key,uiPreferences.preferences.language);}
   function spiSettingsMarkup659(receiver,{ports=null,blocked=false}={}){
     const chosen=ports||[selectedVisualPort(receiver)],ids=esc(receiver.id),disabled=blocked||!chosen.length||chosen.some(port=>!receiver.outputs.some(output=>output.port===port&&output.enabled));
-    return `<div class="spi-settings659"><button type="button" class="button secondary full" data-action="receiver-pixels-only" data-id="${ids}" data-ports="${chosen.join(',')}" ${ports===null?'data-visual-pixels717':''} ${disabled?'disabled':''}>${icon('sliders')}<span><b>${esc(pixelText659('pixelOnlySettings'))}</b><small>${chosen.map(port=>'P'+port).join(' · ')}</small></span>${icon('chevron')}</button><button type="button" class="button secondary full" data-action="receiver-directions" data-id="${ids}" ${blocked||!receiver.zoneId?'disabled':''}>${icon('swap')}<span><b>${esc(pixelText659('pixelDirectionsSettings'))}</b><small>${esc(pixelText659('pixelDirectionsHint'))}</small></span>${icon('chevron')}</button></div>`;
+    return `<div class="spi-settings659"><button type="button" class="button secondary full" data-action="receiver-pixels-only" data-id="${ids}" data-ports="${chosen.join(',')}" ${ports===null?'data-visual-pixels717':''} ${disabled?'disabled':''}>${icon('sliders')}<span><b>${esc(pixelText659('pixelOnlySettings'))}</b><small>${chosen.map(port=>'P'+port).join(' · ')}</small></span>${icon('chevron')}</button><button type="button" class="button secondary full" data-action="receiver-directions" data-id="${ids}" ${blocked||!receiver.zoneId?'disabled':''}>${icon('swap')}<span><b>${esc(pixelText659('pixelDirectionsSettings'))}</b><small>${esc(pixelText659('pixelDirectionsHint'))}</small></span>${icon('chevron')}</button>${receiver.zoneId&&M.zoneLedlines(model,receiver.zoneId).length>1?`<button type="button" class="button secondary full receiver-order109" data-action="receiver-order109" data-id="${ids}" ${blocked?'disabled':''}>${icon('grip')}<span><b>${esc(t('Volgorde'))}</b><small>${esc(t('Zet de ledlines in de juiste volgorde.'))}</small></span>${icon('chevron')}</button>`:''}</div>`;
   }
   function portEditMarkup(receiver,port){
     const selected=pixelEditSelections.get(receiver.id)||new Set([port]);
@@ -6242,7 +6242,10 @@
       const result=await runtime.services.syncInstallationContext({standId});
       if(current())receiverContextStates.set(standId,result);
     }catch(error){if(current())receiverContextStates.set(standId,error?.code==='RECEIVER_CONTEXT_STALE'&&receiverContextEventVersions.get(standId)?.detail||
-      {status:'pending',busy:['RECEIVER_CONTEXT_BUSY','LIVE_QUEUE_BUSY','LIVE_QUEUE_SCOPE_BUSY','LIVE_QUEUE_CLEARED','NATIVE_BUSY'].includes(error?.code)});}
+      {status:'pending',busy:['RECEIVER_CONTEXT_BUSY','LIVE_QUEUE_BUSY','LIVE_QUEUE_SCOPE_BUSY','LIVE_QUEUE_CLEARED','NATIVE_BUSY'].includes(error?.code)});
+      // C107: at a cold start the first check runs before the MAIN identity
+      // is pinned and fails at once; retry it soon instead of in 30 s.
+      if(current())scheduleContextRetryC106(standId,'pending',error?.code);}
     finally{ticket?.release();if(receiverContextWrites.get(standId)===version)receiverContextWrites.delete(standId);syncReceiverContextPanel();syncPinProtectionCard();resumeDeferredPinRead();}
   }
   window.addEventListener('lightning:receiver-context',event=>{
@@ -6266,9 +6269,11 @@
   // 5 min, at most 8 times per app start) while the app is open and idle. An
   // interrupted transfer keeps the receiver busy for 2 min, hence the steps.
   const contextAutoRetryC106=new Map();
-  function scheduleContextRetryC106(standId,status){
+  function scheduleContextRetryC106(standId,status,code=null){
     const entry=contextAutoRetryC106.get(standId)||{attempt:0,timer:null};contextAutoRetryC106.set(standId,entry);
+    const quick=entry.attempt===0&&['MAIN_IDENTITY_UNCONFIRMED','MAIN_CONFIGURATION_UNCONFIRMED','TRUST_TRANSPORT','TRUST_REPLY','CANCELLED','NATIVE_TIMEOUT'].includes(code);
     if(status==='synced'){clearTimeout(entry.timer);entry.timer=null;entry.attempt=0;return;}
+    if(quick&&entry.timer){clearTimeout(entry.timer);entry.timer=null;}
     if(entry.timer||entry.attempt>=8||typeof runtime?.services?.resumeInstallationContext!=='function')return;
     const run=delay=>{entry.timer=setTimeout(async()=>{
       entry.timer=null;
@@ -6278,7 +6283,7 @@
       entry.attempt++;window.__c98log?.('CONTEXT_AUTO_RETRY '+entry.attempt);
       try{await runtime.services.resumeInstallationContext({standId});}catch(_){}
     },delay);};
-    run(Math.min(300000,30000*2**entry.attempt));
+    run(quick?5000:Math.min(300000,30000*2**entry.attempt));
   }
   function reloadBackupLibraries(){savedPresets=presetStore.load();savedScenes=sceneStore.load();savedColours=colourStore.load();uiPreferences=preferenceStore.load();}
   // C97 shared installation: every phone with the PIN sees the same stand
@@ -8434,6 +8439,11 @@
       }
       if(action==='receiver-remove'){const receiver=model.receivers.find(r=>r.id===id);if(receiver)return receiverRemoval.open(receiver);return;}
       if(action==='receiver-filter'){if(!['all','unassigned'].includes(id))return;receiverFilter=id;return render({preserveScroll:true});}
+      // C109: straight to the zone's ledline order from the receiver page.
+      if(action==='receiver-order109'){
+        const receiver=model.receivers.find(r=>r.id===id&&r.lifecycle==='added');if(!receiver?.zoneId||managementBusy||pixelSetup.isOpen())return;
+        return navigate('layout',{standId:receiver.standId,zoneId:receiver.zoneId});
+      }
       if(action==='receiver-directions'){
         const receiver=model.receivers.find(r=>r.id===id&&r.type==='SPI'&&r.lifecycle==='added');if(!receiver?.zoneId||managementBusy||pixelSetup.isOpen())return;
         managementBusy=true;button.disabled=true;

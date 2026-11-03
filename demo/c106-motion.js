@@ -24,31 +24,6 @@
     if(ok)toast.dataset.c106Success='';else delete toast.dataset.c106Success;
   }
 
-  /* ---------- A light sweep over the preview after a choice ---------- */
-  const CHOICE_AREA='.editor-controls,.control-mode-panel,[data-gradient-workspace],.colour-picker-dialog,dialog[open]';
-  const SKIP='[data-action$="toggle"],[data-action^="order-"],[data-action="layout"],[data-action="stand"],[aria-expanded],summary,.back,[data-gradient-separate]';
-  let lastSweep=0;
-  function sweep(from){
-    const now=Date.now();if(now-lastSweep<700||reduced())return;lastSweep=now;
-    setTimeout(()=>{
-      const scope=from.closest?.('dialog[open]')||document.getElementById('main');
-      const wrap=[...(scope?.querySelectorAll('.preview-wrap')||[])].find(el=>el.getClientRects().length)
-        ||[...document.querySelectorAll('#main .preview-wrap')].find(el=>el.getClientRects().length);
-      if(!wrap)return;
-      wrap.classList.add('c106-sweep-host');wrap.classList.remove('c106-sweep');void wrap.offsetWidth;wrap.classList.add('c106-sweep');
-      clearTimeout(wrap.c106Timer);wrap.c106Timer=setTimeout(()=>wrap.classList.remove('c106-sweep'),1000);
-    },60);
-  }
-  function choice(event){
-    const target=event.target;if(!(target instanceof Element)||!target.closest(CHOICE_AREA))return;
-    if(target.closest(SKIP))return;
-    if(event.type==='click'&&!target.closest('button,[role="option"],[role="radio"],label'))return;
-    sweep(target);
-  }
-  document.addEventListener('click',choice);
-  document.addEventListener('change',choice);
-  document.addEventListener('pointerup',event=>{if(event.target instanceof Element&&event.target.closest('canvas,.colour-wheel')&&!event.target.closest('.preview-wrap'))choice(event);});
-
   /* ---------- New scenes, zones and receivers arrive gently ---------- */
   const KINDS=[
     {name:'zone',page:'[data-action="zone-new"]',item:'article.zone-entry',key:el=>el.querySelector('[data-action="zone"][data-id]')?.dataset.id},

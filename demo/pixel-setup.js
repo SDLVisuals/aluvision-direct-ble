@@ -11,6 +11,7 @@
   const TEXTS=Object.freeze({
     pixelPort:'Poort {port}',pixelOn:'Aan',pixelOff:'Uit',pixelNow:'Nu',pixelReady:'Klaar',pixelLater:'Straks',pixelPreserved:'Behouden',
     pixelOutputs:'Uitgangen',pixelPixels:'Pixels',pixelStart:'Kanten',pixelReview:'Controleren',pixelSetupSteps:'LED Line instellen',pixelEditorExpired:'Sluit dit menu en open het opnieuw. Je keuzes blijven bewaard.',
+    pixelDontSave:'Niet opslaan',pixelPickPorts:'Welke poorten pas je aan?',pixelPickEdit:'Aanpassen',pixelPickAria:'Poort {port} aanpassen',
     pixelOnlySettings:'Pixels aanpassen',pixelOnlyHint:'Je past alleen het aantal pixels aan. De kanten blijven hetzelfde.',pixelDirectionsSettings:'Kanten aanpassen',pixelDirectionsHint:'Alle ledlines uit deze zone samen afstemmen.',pixelOnlySave:'Pixels opslaan',pixelNextDirections:'Verder · kanten instellen →',pixelAdded:'Receiver toegevoegd',pixelDirectionsSaved:'Kanten opgeslagen',pixelOnlySaved:'Pixels opgeslagen',
     pixelPortTask:'Poort {port} · {task}',pixelPortPosition:'{position} van {count} poorten',pixelPortProgress:'Voortgang per poort',
     pixelNextStart:'Verder · beginpunt →',pixelNextPort:'Verder naar poort {port} →',pixelNext:'Volgende →',pixelCheck:'Controleren →',
@@ -511,6 +512,21 @@
         const primary=dialog.querySelector('[data-pixel-action="save"]');if(primary&&!busy)primary.textContent=t('pixelOnlySave');
       }
       if(pairFirstFlow&&!busy){const primary=dialog.querySelector('[data-pixel-action="save"]');if(primary)primary.textContent=t('pixelNextDirections');}
+      // C109: pick the ports to adjust right here (only P1, or P1 and P2, ...).
+      if(pixelsOnly&&!recovering&&outputs.filter(item=>item.enabled).length>1){
+        const chosen=new Set(portsToEdit().map(item=>item.port)),now=step.port;
+        const picker=document.createElement('div');picker.className='pixel-port-pick109';picker.setAttribute('role','group');picker.setAttribute('aria-label',t('pixelPickPorts'));
+        picker.innerHTML=`<p>${esc(t('pixelPickPorts'))}</p><div>${outputs.map(item=>{const colour=portColour(item.port,paletteVersion),state=!item.enabled?'off':item.port===now?'now':chosen.has(item.port)?'edit':'keep';
+          return `<button type="button" data-pixel-action="pick-port" data-port="${item.port}" data-pick-state="${state}" style="--port-colour:${colour.hex};--port-ink:${colour.ink}" aria-pressed="${chosen.has(item.port)}" aria-label="${esc(t('pixelPickAria',{port:item.port}))}" ${!item.enabled||busy?'disabled':''}><b>P${item.port}</b><small>${esc(t(state==='off'?'pixelOff':state==='now'?'pixelNow':state==='edit'?'pixelPickEdit':'pixelPreserved'))}</small></button>`;}).join('')}</div>`;
+        (dialog.querySelector('.pixel-only-hint')||dialog.querySelector('.pixel-setup-body').firstChild)?.after?.(picker);
+      }
+      // C109: one way out per screen. On the first port the footer closes, so
+      // the header cross goes; later ports keep it next to "Terug".
+      if(index===0||recovering){
+        dialog.querySelector('.pixel-setup-header [data-pixel-action="close"]')?.remove();
+        const back=dialog.querySelector('.pixel-setup-footer [data-pixel-action="back"],.pixel-setup-footer [data-pixel-action="close"]');
+        if(back&&!recovering)back.textContent=t(pixelsOnly?'pixelDontSave':'pixelClose');
+      }
       dialog.querySelector('.pixel-setup-body').scrollTop=top?0:previousScroll;
       if(!top&&focusedPort)dialog.querySelector(`[data-pixel-action="output"][data-port="${focusedPort}"]`)?.focus({preventScroll:true});
       else if(top&&replacingOwnFocus&&!document.hidden&&(document.activeElement===document.body||document.activeElement===dialog)){
@@ -552,6 +568,13 @@
         if(!stopped){error=t(previewState.kind==='expired'?'pixelEditorExpired':'pixelPreviewFailed');render(false,{preview:false});return;}
       }
       if(action==='close')return close();
+      if(action==='pick-port'){
+        const port=Number(target.dataset.port),item=outputs.find(row=>row.port===port);if(!pixelsOnly||recovering||!item?.enabled)return;
+        const chosen=new Set(portsToEdit().map(row=>row.port));
+        if(chosen.has(port)){if(chosen.size===1)return;chosen.delete(port);}else chosen.add(port);
+        const was=current().port;selectedPorts=chosen;const steps=plan(),at=steps.findIndex(row=>row.port===was);
+        index=at>=0?at:Math.max(0,Math.min(index,steps.length-1));error='';hapticStep();return render();
+      }
       if(action==='output'){const item=outputs.find(item=>item.port===Number(target.dataset.port));if(!item||selectedPorts&&!selectedPorts.has(item.port))return;item.enabled=!item.enabled;selectedPort=item.port;plugMotion.trigger(item.port,performance.now()/1000,item.enabled);error='';draftChanged();return render();}
       if(['pixel-less','pixel-more','pixel-step'].includes(action)){const delta=action==='pixel-step'?Number(target.dataset.pixelDelta):action==='pixel-less'?-1:1;if(![-30,-15,-1,1,15,30].includes(delta))return;return adjust(stepPixels(output().pixels,delta,limits),null,{commit:false});}
       if(action==='side'){if(!['forward','reverse','left','right'].includes(target.dataset.side))return;output().reversed=['reverse','right'].includes(target.dataset.side);error='';render();void livePreview.flush();return;}

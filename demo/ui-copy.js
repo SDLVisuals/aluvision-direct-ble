@@ -708,6 +708,8 @@
   ["Laatste stap: zet de ledlines in de juiste volgorde en controleer de verbindingen.","Last step: put the LED lines in the right order and check the connections.","Dernière étape : placez les lignes LED dans le bon ordre et vérifiez les connexions.","Letzter Schritt: Bringe die LED-Linien in die richtige Reihenfolge und prüfe die Verbindungen."],
   ["Even wachten tot de volgorde is opgeslagen.","Please wait until the order has been saved.","Patientez jusqu’à ce que l’ordre soit enregistré.","Bitte warte, bis die Reihenfolge gespeichert ist."],
     // C109 copy: gradient editor, scenes, animation sync.
+    ["Volgorde", "Order", "Ordre", "Reihenfolge"],
+    ["Zet de ledlines in de juiste volgorde.", "Put the LED lines in the right order.", "Placez les lignes LED dans le bon ordre.", "Bringe die LED-Linien in die richtige Reihenfolge."],
     ["Verplaats {point}", "Move {point}", "Déplacer {point}", "{point} verschieben"],
     ["Sleep, of gebruik pijl omhoog en omlaag.", "Drag, or use the up and down arrows.", "Faites glisser ou utilisez les flèches haut et bas.", "Ziehen oder die Pfeiltasten nach oben und unten verwenden."],
     ["Overgang", "Transition", "Transition", "Übergang"],
