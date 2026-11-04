@@ -529,3 +529,5 @@ html:not(#c109) body:not(#c109) .ledline-setup .order-drag-handle668::before{con
 html:not(#c109) body:not(#c109) .ledline-setup .order-drag-handle668:disabled::before{opacity:.35}
 /* The sheet's own top padding let the list show above the sticky head. */
 html:not(#c109) body:not(#c109) .ledline-setup[data-order-open="true"]{padding-top:0!important}
+/* Inside an open sheet the card floats above the sheet's own Klaar bar. */
+html body dialog .c109-sync.in-sheet{position:fixed;z-index:20;bottom:calc(max(14px,env(safe-area-inset-bottom,0px)) + 76px)}

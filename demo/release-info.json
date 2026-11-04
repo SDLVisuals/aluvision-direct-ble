@@ -113,8 +113,8 @@
   "assets": [
     {
       "path": "RELEASE_NOTES.md",
-      "bytes": 43347,
-      "sha256": "8e08bd095f48c19d931115ad320a9be8d81910a310a6506a1b9cf01dfc3f6dbe"
+      "bytes": 43464,
+      "sha256": "3533078215bc3979946b0fe3484e92bfb320a31084121cff94cc37ab6614b004"
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
@@ -322,6 +322,11 @@
       "sha256": "bab8ec0025995f063fa379bfd190d79faa34b5732dbf759e0867d591ae2cddd7"
     },
     {
+      "path": "android/aluvision-android-test-50.0.0-c113d-68-3b4fc631d6fe.apk",
+      "bytes": 3444480,
+      "sha256": "3b4fc631d6fedb55396461a29e83c59094667312f5abf1c5df57f46fdf9d8782"
+    },
+    {
       "path": "android/aluvision-android-test-50.0.0-c99-beta-35-4c1964cff799.apk",
       "bytes": 3308132,
       "sha256": "4c1964cff799b9c83afcfe49cb4303d5654ac611a29a3f9c64fbe1617013caa0"
@@ -468,13 +473,13 @@
     },
     {
       "path": "c109-interface.css",
-      "bytes": 72022,
-      "sha256": "c11fa94682ee56feb16b10dc5cf9c8be38265ab68ee3e478dec66af8b41f03a7"
+      "bytes": 72224,
+      "sha256": "d96f8fca047ef18d706ecc89e4ce48f919563acf6c5e9f47ca05c3b9eeac757e"
     },
     {
       "path": "c109-interface.js",
-      "bytes": 8158,
-      "sha256": "e60d32445b70ec8c5780dbf9fdeffb441a5bbb52ea3f1823c3106142a65587c9"
+      "bytes": 8742,
+      "sha256": "c207fa81f1a86f9715ded5378fd855d5a9d1eb18bb2c83753e6a27a612552b10"
     },
     {
       "path": "c109-receiver.js",
@@ -564,7 +569,7 @@
     {
       "path": "index.html",
       "bytes": 11982,
-      "sha256": "d94201e477e2ba04de8348c8e6fe36e0779983d522ebe4da2e17f141b55e3af3"
+      "sha256": "85c15608b3a3edc506557ea12b68469fbdbc635bebf42b923586be8cf4064237"
     },
     {
       "path": "installation-libraries.js",
@@ -4200,10 +4205,10 @@
     "scope": "Shared browser interface; fictional in-memory receivers only",
     "changes": "Fast SPI gradient with per-ledline option, order step with connection check, smoother motion, multi-user fixes, port changes from a phone with an older receiver view, automatic saving on receivers, four phones adjusting one stand together",
     "android": {
-      "versionCode": 67,
-      "versionName": "50.0.0-c113c",
-      "apk": "android/aluvision-android-test-50.0.0-c113c-67-bab8ec002599.apk",
-      "sha256": "bab8ec0025995f063fa379bfd190d79faa34b5732dbf759e0867d591ae2cddd7",
+      "versionCode": 68,
+      "versionName": "50.0.0-c113d",
+      "apk": "android/aluvision-android-test-50.0.0-c113d-68-3b4fc631d6fe.apk",
+      "sha256": "3b4fc631d6fedb55396461a29e83c59094667312f5abf1c5df57f46fdf9d8782",
       "bytes": 3444480
     }
   }

@@ -39,7 +39,10 @@
     const card=document.createElement('div');card.className='c109-sync';card.setAttribute('role','status');card.setAttribute('aria-live','polite');
     card.innerHTML='<span class="c109-sync-icon" aria-hidden="true"></span><span class="c109-sync-copy"><b></b><small></small></span><span class="c109-sync-bar" aria-hidden="true"><i></i></span>';
     card.querySelector('b').textContent=copy(title);
-    document.body.append(card);return card;
+    // An open modal sheet (Alles bedienen) sits in the top layer: show the
+    // card inside it, or it would stay hidden behind the sheet.
+    const sheet=[...document.querySelectorAll('dialog[open]')].reverse().find(d=>d.matches(':modal'));
+    if(sheet)card.classList.add('in-sheet');(sheet||document.body).append(card);return card;
   }
   // C111: a stand animation has no reported lead; the bar runs without a
   // countdown until the stand answers.
@@ -63,6 +66,10 @@
     if(!reducedMotion()){bar.style.transition='none';bar.style.width='0%';void bar.offsetWidth;bar.style.transition='width '+leadMs+'ms linear';bar.style.width='100%';}
   }
   const reducedMotion=()=>window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  // The sheet closes while the receivers still sync: the card moves to the page.
+  document.addEventListener('close',event=>{
+    if(sync&&event.target instanceof Element&&event.target.contains(sync.card)){sync.card.classList.remove('in-sheet');document.body.append(sync.card);}
+  },true);
   document.addEventListener('lightning:animation-sync',event=>{const detail=event.detail||{};if(detail.done||detail.failed)hideSync();else if(detail.joining)showJoining();else showSync(Number(detail.leadMs));});
 
   /* ---------- Colour pickers: the brightness track fills up ---------- */
