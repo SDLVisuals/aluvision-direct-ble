@@ -87,6 +87,10 @@
   /* ---------- Receiver page: outputs open with the receiver ---------- */
   // Opening an SPI receiver shows its outputs, pixels, sides and order
   // straight away instead of behind one more menu.
+  // Pixels: once the ledline has been swiped, its moving finger hint goes.
+  document.addEventListener('pointerdown',event=>{
+    const scrub=event.target instanceof Element&&event.target.closest('[data-pixel-scrub]');if(scrub)scrub.dataset.c109Swiped='';
+  },true);
   document.addEventListener('toggle',event=>{
     const card=event.target;if(!(card instanceof HTMLDetailsElement)||!card.open||!card.matches('.receiver-overview-card'))return;
     const outputs=card.querySelector('details.receiver-connections');if(outputs&&!outputs.open)outputs.open=true;

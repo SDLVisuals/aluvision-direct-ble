@@ -354,8 +354,7 @@ html body #main .receiver-manage-menu .receiver-manage-content>*{margin:0!import
 @media (prefers-reduced-motion:reduce){html body #main .receiver-manage-menu>summary>svg:last-child{transition:none}}
 
 /* ---------- C109c: pixel picker, one control and a clear choice ---------- */
-/* The strip is the slider: white pixels run right up to the red last pixel. */
-html body .pixel-setup-slider-row{display:none!important}
+/* The strip is a second slider: white pixels run right up to the red last pixel. */
 html body .pixel-count-preview .pixel-setup-strip{gap:2px!important}
 html body .pixel-count-preview .pixel-setup-strip i:not(.end){flex:1 1 0!important;min-width:2px!important;max-width:none!important;height:11px}
 html body .pixel-count-preview .pixel-setup-strip i.end{flex:0 0 12px!important;width:12px;height:17px!important;border-radius:4px!important;outline:2px solid rgba(255,255,255,.85);outline-offset:1px}
@@ -382,3 +381,54 @@ html body .pixel-setup-body:has(.pixel-count-preview .pixel-preview-notice)>.pix
 html body #main .receiver-overview-card:has(.receiver-connections) .receiver-manage-menu{margin-inline:10px!important}
 html body .pixel-setup-dialog:has(.pixel-port-pick109) .pixel-port-context{height:auto!important;max-height:none!important;flex:none!important;overflow:visible!important}
 @media (max-width:360px){html body .pixel-setup-dialog .pixel-port-pick109 button[aria-pressed="true"]::after{top:3px;right:3px;width:13px;height:13px;background-size:8px}}
+/* C109d: the ledline is a slider too. The red last pixel is its handle, with
+ * arrows either side; the slider below stays for big steps. */
+html body .pixel-count-preview .pixel-length-rail{position:relative;overflow:visible!important;margin-block:6px}
+html body .pixel-count-preview .pixel-length-rail>.pixel-setup-track{position:relative;overflow:visible!important}
+html body .pixel-count-preview .pixel-setup-strip i.end{height:22px!important;flex-basis:14px!important;width:14px;border-radius:5px!important;background:#e5483f linear-gradient(90deg,transparent 4px,rgba(255,255,255,.55) 4px 5.5px,transparent 5.5px 8.5px,rgba(255,255,255,.55) 8.5px 10px,transparent 10px)!important;outline:2px solid #fff!important;outline-offset:1px;transition:transform .15s}
+html body .pixel-count-preview .pixel-length-rail>.pixel-setup-track::after{content:"";position:absolute;right:-13px;top:50%;width:40px;height:14px;transform:translateY(-50%);pointer-events:none;background:no-repeat center/40px 14px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 14'%3E%3Cpath d='M5 2 0.8 7 5 12M35 2 39.2 7 35 12' fill='none' stroke='%23ffffff' stroke-opacity='.8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+html body .pixel-count-preview[data-preview-pixels="0"] .pixel-length-rail>.pixel-setup-track::after{right:-27px}
+html body [data-pixel-scrub][data-scrubbing="true"] .pixel-setup-strip i.end{transform:scale(1.18)}
+html body [data-pixel-scrub][data-scrubbing="true"] .pixel-length-rail{box-shadow:0 0 0 2px rgba(229,72,63,.35)}
+html body [data-pixel-scrub]:focus-visible{outline:3px solid #fff;outline-offset:3px;border-radius:14px}
+html body .pixel-count-preview .pixel-swipe-cue{font-weight:600;color:rgba(255,255,255,.82)!important}
+@media (prefers-reduced-motion:no-preference){
+  html body .pixel-count-preview .pixel-length-rail>.pixel-setup-track::after{animation:c109-swipe-hint 1.6s ease-in-out infinite}
+  html body .pixel-count-preview .pixel-swipe-cue>i{display:inline-block;animation:c109-swipe-cue 1.6s ease-in-out infinite}
+  html body [data-pixel-scrub][data-scrubbing="true"] .pixel-length-rail>.pixel-setup-track::after{animation:none;opacity:0}
+}
+@keyframes c109-swipe-hint{0%,100%{background-size:32px 14px;opacity:.55}50%{background-size:40px 14px;opacity:1}}
+@keyframes c109-swipe-cue{0%,100%{transform:translateX(-2px)}50%{transform:translateX(2px)}}
+/* The slider below: calm red, like the last pixel. */
+html body .pixel-setup-range::-webkit-slider-runnable-track{background:linear-gradient(90deg,#c9554c var(--pixel-range-fill,0%),rgba(127,127,127,.22) var(--pixel-range-fill,0%))!important}
+html body .pixel-setup-range::-webkit-slider-thumb{border-color:#c9554c!important}
+html body .pixel-count-preview .pixel-setup-track .pixel-setup-strip{overflow:visible!important;align-items:center;height:22px!important}
+html body .pixel-count-preview .pixel-length-rail,html body .pixel-count-preview .pixel-length-rail>.pixel-setup-track{height:22px!important}
+/* C109d: each port in "Pixels aanpassen" has its own on/off switch under it. */
+html body .pixel-setup-dialog .pixel-port-pick109 .pick-cell109{display:grid;gap:6px;justify-items:stretch;min-width:0}
+html body .pixel-setup-dialog .pixel-port-pick109 .pick-cell109>button.pick-power109{justify-self:center;display:block;position:relative;width:40px;min-width:40px;height:24px;min-height:24px;padding:0;border:0;border-radius:999px;background:rgba(127,127,127,.35);box-shadow:none;transition:background .2s}
+html body .pixel-setup-dialog .pixel-port-pick109 .pick-cell109>button.pick-power109>i{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s}
+html body .pixel-setup-dialog .pixel-port-pick109 .pick-cell109>button.pick-power109[aria-checked="true"]{background:var(--port-colour)}
+html body .pixel-setup-dialog .pixel-port-pick109 .pick-cell109>button.pick-power109[aria-checked="true"]>i{transform:translateX(16px)}
+html body .pixel-setup-dialog .pixel-port-pick109 .pick-cell109>button.pick-power109::after{display:none!important}
+html body .pixel-setup-dialog .pixel-port-pick109 .pick-cell109>button.pick-power109:disabled{opacity:.6}
+html body .pixel-setup-dialog .pixel-port-pick109 .pick-cell109>button[data-pixel-action="pick-port"]:disabled{opacity:.5}
+@media (prefers-reduced-motion:reduce){html body .pixel-setup-dialog .pixel-port-pick109 .pick-cell109>button.pick-power109,html body .pixel-setup-dialog .pixel-port-pick109 .pick-cell109>button.pick-power109>i{transition:none}}
+/* C109d: the port card no longer slides under the pixel panel. */
+html body .pixel-setup-dialog:has(.pixel-port-pick109) .pixel-setup-body{display:flex!important;flex-direction:column;gap:14px}
+html body .pixel-setup-dialog:has(.pixel-port-pick109) .pixel-setup-body>*{flex:none}
+/* A finger on the red last pixel shows the ledline can be swiped, until you do. */
+html body .pixel-count-preview .pixel-length-rail>.pixel-setup-track::before{display:none}
+html body [data-pixel-scrub]:not([data-c109-swiped]) .pixel-count-preview:not([data-preview-pixels="0"]) .pixel-length-rail>.pixel-setup-track::before{display:block!important;content:"";position:absolute;inset:auto;right:-9px;top:7px;width:24px;height:28px;z-index:3;pointer-events:none;background:no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 28'%3E%3Cpath d='M9 3.5a2 2 0 0 1 4 0v9l5.2 1.4a2.6 2.6 0 0 1 1.9 3l-1.2 6.4a3 3 0 0 1-3 2.4h-6a3 3 0 0 1-2.5-1.3L3.6 18.6a1.8 1.8 0 0 1 2.6-2.4L9 18.6Z' fill='%23ffffff' stroke='%231c1f24' stroke-width='1.4' stroke-linejoin='round'/%3E%3C/svg%3E");filter:drop-shadow(0 2px 3px rgba(0,0,0,.45))}
+@media (prefers-reduced-motion:no-preference){
+  html body [data-pixel-scrub]:not([data-c109-swiped]) .pixel-count-preview .pixel-length-rail>.pixel-setup-track::before{animation:c109-finger 2.2s ease-in-out infinite}
+}
+@keyframes c109-finger{0%,100%{transform:translateX(0)}45%{transform:translateX(-34px)}60%{transform:translateX(-34px)}}
+/* C109d: while swiping, a small sign shows the mode: exact ±1 in the middle,
+ * faster ›› or ‹‹ towards the ends. */
+html body [data-pixel-scrub]{position:relative}
+html body [data-pixel-scrub][data-scrub-zone] .pixel-swipe-cue{visibility:hidden}
+html body [data-pixel-scrub][data-scrub-zone]::after{position:absolute;top:10px;right:12px;z-index:4;padding:3px 10px;border-radius:999px;font-weight:800;font-size:13px;line-height:18px;color:#fff;background:rgba(255,255,255,.14);pointer-events:none}
+html body [data-pixel-scrub][data-scrub-zone="exact"]::after{content:"±1";background:rgba(63,174,118,.85)}
+html body [data-pixel-scrub][data-scrub-zone="up"]::after{content:"+ ›››";background:rgba(229,72,63,.9)}
+html body [data-pixel-scrub][data-scrub-zone="down"]::after{content:"‹‹‹ −";background:rgba(229,72,63,.9)}

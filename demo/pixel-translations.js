@@ -8,7 +8,7 @@
     pixelOutputs:'Outputs',pixelPixels:'Pixels',pixelStart:'Starting point',pixelReview:'Review',pixelSetupSteps:'Set up LED Line',
     pixelPortTask:'Port {port} · {task}',pixelPortPosition:'{position} of {count} ports',pixelPortProgress:'Progress per port',
     pixelNextStart:'Continue · starting point →',pixelNextPort:'Continue to port {port} →',pixelNext:'Next →',pixelCheck:'Review →',
-    pixelCount:'{count} pixels',pixelCountOne:'1 pixel',pixelSwipe:'Swipe slowly to adjust',pixelSwipeAria:'Pixel count on port {port}; swipe left or right',
+    pixelCount:'{count} pixels',pixelCountOne:'1 pixel',pixelSwipe:'Swipe the ledline',pixelSwipeAria:'Pixel count on port {port}; swipe left or right',
     pixelLastRed:'The last pixel, {count}, should glow red',pixelFirstCount:'Set the pixel count first',pixelCountAria:'Set to {count} pixels. The last pixel, {count}, should glow red.',pixelCountEmptyAria:'No pixels set; there is no red end pixel.',pixelSchematic:'Schematic preview.',
     pixelIllustration:'Preview · no test light',pixelNoTest:'Test preview · no test light',pixelChooseOutputs:'Choose the connected outputs.',pixelOutputSwitches:'Turn outputs on or off',pixelAllOff:'All outputs off',pixelActiveSummary:'{ports} on · {count} of 4 outputs',pixelAtLeastOne:'At least one port must be active.',pixelSelectedRequired:'Turn on at least one selected port to edit it.',
     pixelRed:'Red',pixelYellow:'Yellow',pixelDarkPurple:'Dark purple',pixelBlue:'Blue',pixelOrange:'Orange',pixelGreen:'Green',pixelMagenta:'Magenta',pixelPurple:'Purple',pixelTurquoise:'Turquoise',pixelPortColour:'Port {port} · {colour}',pixelColourGuide:'Each port has its own identification colour.',pixelPortPreviewUnavailable:'Identification colours are shown as a preview here. Test light on the LED Lines is not available yet.',
@@ -21,7 +21,7 @@
     pixelOutputs:'Sorties',pixelPixels:'Pixels',pixelStart:'Point de départ',pixelReview:'Vérification',pixelSetupSteps:'Configurer la LED Line',
     pixelPortTask:'Port {port} · {task}',pixelPortPosition:'{position} sur {count} ports',pixelPortProgress:'Progression par port',
     pixelNextStart:'Continuer · point de départ →',pixelNextPort:'Continuer vers le port {port} →',pixelNext:'Suivant →',pixelCheck:'Vérifier →',
-    pixelCount:'{count} pixels',pixelCountOne:'1 pixel',pixelSwipe:'Balayez doucement pour ajuster',pixelSwipeAria:'Nombre de pixels du port {port} ; balayez à gauche ou à droite',
+    pixelCount:'{count} pixels',pixelCountOne:'1 pixel',pixelSwipe:'Balayez la ledline',pixelSwipeAria:'Nombre de pixels du port {port} ; balayez à gauche ou à droite',
     pixelLastRed:'Le dernier pixel, {count}, doit briller en rouge',pixelFirstCount:'Réglez d’abord le nombre de pixels',pixelCountAria:'Réglage : {count} pixels. Le dernier pixel, {count}, doit briller en rouge.',pixelCountEmptyAria:'Aucun pixel réglé ; il n’y a pas de pixel rouge à l’extrémité.',pixelSchematic:'Aperçu schématique.',
     pixelIllustration:'Aperçu · aucune lumière de test',pixelNoTest:'Aperçu du test · aucune lumière de test',pixelChooseOutputs:'Choisissez les sorties raccordées.',pixelOutputSwitches:'Activer ou désactiver les sorties',pixelAllOff:'Toutes les sorties sont désactivées',pixelActiveSummary:'{ports} activés · {count} sorties sur 4',pixelAtLeastOne:'Au moins un port doit être actif.',pixelSelectedRequired:'Activez au moins un port sélectionné pour le modifier.',
     pixelRed:'Rouge',pixelYellow:'Jaune',pixelDarkPurple:'Violet foncé',pixelBlue:'Bleu',pixelOrange:'Orange',pixelGreen:'Vert',pixelMagenta:'Magenta',pixelPurple:'Violet',pixelTurquoise:'Turquoise',pixelPortColour:'Port {port} · {colour}',pixelColourGuide:'Chaque port possède sa propre couleur d’identification.',pixelPortPreviewUnavailable:'Les couleurs d’identification sont ici un aperçu. La lumière de test sur les LED Lines n’est pas encore disponible.',
@@ -34,7 +34,7 @@
     pixelOutputs:'Ausgänge',pixelPixels:'Pixel',pixelStart:'Startpunkt',pixelReview:'Prüfen',pixelSetupSteps:'LED Line einrichten',
     pixelPortTask:'Port {port} · {task}',pixelPortPosition:'{position} von {count} Ports',pixelPortProgress:'Fortschritt je Port',
     pixelNextStart:'Weiter · Startpunkt →',pixelNextPort:'Weiter zu Port {port} →',pixelNext:'Weiter →',pixelCheck:'Prüfen →',
-    pixelCount:'{count} Pixel',pixelCountOne:'1 Pixel',pixelSwipe:'Langsam wischen zum Anpassen',pixelSwipeAria:'Pixelzahl an Port {port}; nach links oder rechts wischen',
+    pixelCount:'{count} Pixel',pixelCountOne:'1 Pixel',pixelSwipe:'Über die Ledline wischen',pixelSwipeAria:'Pixelzahl an Port {port}; nach links oder rechts wischen',
     pixelLastRed:'Der letzte Pixel, {count}, sollte rot leuchten',pixelFirstCount:'Zuerst die Pixelzahl einstellen',pixelCountAria:'Eingestellt: {count} Pixel. Der letzte Pixel, {count}, sollte rot leuchten.',pixelCountEmptyAria:'Keine Pixel eingestellt; es gibt keinen roten Endpixel.',pixelSchematic:'Schematische Vorschau.',
     pixelIllustration:'Vorschau · kein Testlicht',pixelNoTest:'Testvorschau · kein Testlicht',pixelChooseOutputs:'Die angeschlossenen Ausgänge wählen.',pixelOutputSwitches:'Ausgänge ein- oder ausschalten',pixelAllOff:'Alle Ausgänge aus',pixelActiveSummary:'{ports} ein · {count} von 4 Ausgängen',pixelAtLeastOne:'Mindestens ein Port muss aktiv sein.',pixelSelectedRequired:'Mindestens einen ausgewählten Port einschalten, um ihn anzupassen.',
     pixelRed:'Rot',pixelYellow:'Gelb',pixelDarkPurple:'Dunkelviolett',pixelBlue:'Blau',pixelOrange:'Orange',pixelGreen:'Grün',pixelMagenta:'Magenta',pixelPurple:'Violett',pixelTurquoise:'Türkis',pixelPortColour:'Port {port} · {colour}',pixelColourGuide:'Jeder Port hat eine eigene Erkennungsfarbe.',pixelPortPreviewUnavailable:'Die Erkennungsfarben sind hier eine Vorschau. Testlicht an den LED Lines ist noch nicht verfügbar.',
@@ -53,9 +53,9 @@
   texts.fr.pixelEditorExpired='Fermez ce menu et rouvrez-le. Vos choix sont conservés.';
   texts.de.pixelEditorExpired='Schließe dieses Menü und öffne es erneut. Deine Auswahl bleibt erhalten.';
   // C109: pixel screen port picker and footer.
-  Object.assign(texts.en,{pixelDontSave:"Don't save",pixelPickPorts:'Which ports are you adjusting?',pixelPickEdit:'Adjust',pixelPickAria:'Adjust port {port}',pixelPickKeep:'Unchanged'});
-  Object.assign(texts.fr,{pixelDontSave:'Ne pas enregistrer',pixelPickPorts:'Quels ports ajustez-vous ?',pixelPickEdit:'Ajuster',pixelPickAria:'Ajuster le port {port}',pixelPickKeep:'Inchangé'});
-  Object.assign(texts.de,{pixelDontSave:'Nicht speichern',pixelPickPorts:'Welche Ports passt du an?',pixelPickEdit:'Anpassen',pixelPickAria:'Port {port} anpassen',pixelPickKeep:'Unverändert'});
+  Object.assign(texts.en,{pixelDontSave:"Don't save",pixelPickPorts:'Which ports are you adjusting?',pixelPickEdit:'Adjust',pixelPickAria:'Adjust port {port}',pixelPickKeep:'Unchanged',pixelPortPowerAria:'Port {port} on or off'});
+  Object.assign(texts.fr,{pixelDontSave:'Ne pas enregistrer',pixelPickPorts:'Quels ports ajustez-vous ?',pixelPickEdit:'Ajuster',pixelPickAria:'Ajuster le port {port}',pixelPickKeep:'Inchangé',pixelPortPowerAria:'Port {port} activé ou désactivé'});
+  Object.assign(texts.de,{pixelDontSave:'Nicht speichern',pixelPickPorts:'Welche Ports passt du an?',pixelPickEdit:'Anpassen',pixelPickAria:'Port {port} anpassen',pixelPickKeep:'Unverändert',pixelPortPowerAria:'Port {port} ein oder aus'});
   for(const dictionary of Object.values(texts))Object.freeze(dictionary);Object.freeze(texts);
   function t(key,language='nl',params={}){const code=String(language).toLowerCase().split('-')[0],dictionary=texts[code]||texts.nl,value=dictionary[key]??texts.nl[key]??key;return String(value).replace(/\{([^}]+)\}/g,(_,name)=>String(params[name]??`{${name}}`));}
   return Object.freeze({texts,t});

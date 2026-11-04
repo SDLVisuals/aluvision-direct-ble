@@ -11,11 +11,11 @@
   const TEXTS=Object.freeze({
     pixelPort:'Poort {port}',pixelOn:'Aan',pixelOff:'Uit',pixelNow:'Nu',pixelReady:'Klaar',pixelLater:'Straks',pixelPreserved:'Behouden',
     pixelOutputs:'Uitgangen',pixelPixels:'Pixels',pixelStart:'Kanten',pixelReview:'Controleren',pixelSetupSteps:'LED Line instellen',pixelEditorExpired:'Sluit dit menu en open het opnieuw. Je keuzes blijven bewaard.',
-    pixelDontSave:'Niet opslaan',pixelPickPorts:'Welke poorten pas je aan?',pixelPickEdit:'Aanpassen',pixelPickAria:'Poort {port} aanpassen',pixelPickKeep:'Ongewijzigd',
+    pixelDontSave:'Niet opslaan',pixelPickPorts:'Welke poorten pas je aan?',pixelPickEdit:'Aanpassen',pixelPickAria:'Poort {port} aanpassen',pixelPickKeep:'Ongewijzigd',pixelPortPowerAria:'Poort {port} aan of uit',
     pixelOnlySettings:'Pixels aanpassen',pixelOnlyHint:'Je past alleen het aantal pixels aan. De kanten blijven hetzelfde.',pixelDirectionsSettings:'Kanten aanpassen',pixelDirectionsHint:'Alle ledlines uit deze zone samen afstemmen.',pixelOnlySave:'Pixels opslaan',pixelNextDirections:'Verder · kanten instellen →',pixelAdded:'Receiver toegevoegd',pixelDirectionsSaved:'Kanten opgeslagen',pixelOnlySaved:'Pixels opgeslagen',
     pixelPortTask:'Poort {port} · {task}',pixelPortPosition:'{position} van {count} poorten',pixelPortProgress:'Voortgang per poort',
     pixelNextStart:'Verder · beginpunt →',pixelNextPort:'Verder naar poort {port} →',pixelNext:'Volgende →',pixelCheck:'Controleren →',
-    pixelCount:'{count} pixels',pixelCountOne:'1 pixel',pixelSwipe:'Veeg rustig om aan te passen',pixelSwipeAria:'Aantal pixels op poort {port}; veeg links of rechts',
+    pixelCount:'{count} pixels',pixelCountOne:'1 pixel',pixelSwipe:'Veeg over de ledline',pixelSwipeAria:'Aantal pixels op poort {port}; veeg links of rechts',
     pixelLastRed:'Laatste pixel {count} hoort rood te branden',pixelFirstCount:'Stel eerst het aantal pixels in',pixelCountAria:'Ingesteld: {count} pixels. Laatste pixel {count} hoort rood te branden.',pixelCountEmptyAria:'Geen pixels ingesteld; er is geen rode eindpixel.',pixelSchematic:'Schematisch voorbeeld.',
     pixelIllustration:'Voorbeeld · geen testlicht',pixelNoTest:'Testvoorbeeld · geen testlicht',pixelChooseOutputs:'Kies de aangesloten uitgangen.',pixelOutputSwitches:'Uitgangen aan of uit',pixelAllOff:'Alle uitgangen uit',pixelActiveSummary:'{ports} aan · {count} van 4 uitgangen',pixelAtLeastOne:'Minstens één poort moet actief zijn.',pixelSelectedRequired:'Zet minstens één gekozen poort aan om die aan te passen.',
     pixelRed:'Rood',pixelYellow:'Geel',pixelDarkPurple:'Donkerpaars',pixelBlue:'Blauw',pixelOrange:'Oranje',pixelGreen:'Groen',pixelMagenta:'Magenta',pixelPurple:'Paars',pixelTurquoise:'Turquoise',pixelPortColour:'Poort {port} · {colour}',pixelColourGuide:'Elke poort heeft een eigen herkenningskleur.',pixelPortPreviewUnavailable:'Herkenningskleuren zijn hier een voorbeeld. Testlicht op de LED Lines is nog niet beschikbaar.',
@@ -153,7 +153,7 @@
     function end({commit=false}={}){
       const previous=gesture;gesture=null;if(!previous)return;
       if(previous.edgeFrame)cancelAnimationFrame(previous.edgeFrame);
-      previous.element.removeAttribute('data-scrubbing');
+      previous.element.removeAttribute('data-scrubbing');previous.element.removeAttribute('data-scrub-zone');
       if(previous.element.hasPointerCapture?.(previous.id))previous.element.releasePointerCapture(previous.id);
       if(commit&&previous.dragging&&available(previous.element))onCommit(Number(previous.element.getAttribute('aria-valuenow')));
     }
@@ -183,11 +183,12 @@
         gesture.lastX=gesture.x;gesture.acc=gesture.value;
       }
       if(event.cancelable)event.preventDefault();
-      // C109: exact in the middle (one pixel per 12 px), up to five times
-      // faster towards either end of the slider.
+      // C109: the middle 40 % is exact (one pixel per 18 px, easy for +1/-1);
+      // further out every movement counts up to eight times more.
       const box=gesture.element.getBoundingClientRect(),rel=box.width?Math.min(1,Math.max(0,(event.clientX-box.left)/box.width)):.5;
-      const factor=1+Math.pow(Math.abs(rel-.5)*2,2)*4;
-      const step=event.clientX-gesture.lastX;gesture.acc+=step/12*factor;gesture.lastX=event.clientX;gesture.rel=rel;
+      const out=Math.max(0,Math.abs(rel-.5)-.2)/.3,factor=out?1.5+Math.pow(out,1.5)*6.5:1;
+      const step=event.clientX-gesture.lastX;gesture.acc+=step/(out?12:18)*factor;gesture.lastX=event.clientX;gesture.rel=rel;
+      gesture.element.dataset.scrubZone=out?rel>.5?'up':'down':'exact';
       // Moving back from an end stops the edge run until the finger rests again.
       if(step&&gesture.edgeSide&&Math.sign(step)===-gesture.edgeSide)gesture.edgeSince=globalThis.performance?.now?.()??Date.now();
       settle(gesture);
@@ -195,14 +196,15 @@
     }
     // At an end stop, allow an immediate change back in the other direction.
     function settle(current){const proposed=Math.round(current.acc),next=change(current.element,proposed);if(next!==proposed)current.acc=next;}
-    // C109: a finger held near either end keeps counting, faster the longer it stays.
+    // C109: a finger resting outside the exact middle keeps counting by
+    // itself: slowly just outside it, fast near the ends, faster the longer.
     function edgeRun(now){
       const current=gesture;if(!current||!current.dragging)return;
       current.edgeFrame=requestAnimationFrame(edgeRun);
       if(!available(current.element))return;
-      const side=current.rel<.1?-1:current.rel>.9?1:0,last=current.edgeTime??now;current.edgeTime=now;
+      const rel=current.rel??.5,out=Math.min(1,Math.max(0,Math.abs(rel-.5)-.2)/.3),side=out?Math.sign(rel-.5):0,last=current.edgeTime??now;current.edgeTime=now;
       if(!side||side!==current.edgeSide){current.edgeSide=side;current.edgeSince=now;return;}
-      const held=(now-current.edgeSince)/1000-.25;if(held<0)return;const speed=6+34*Math.min(1,held/1.2);
+      const held=(now-current.edgeSince)/1000-.3;if(held<0)return;const speed=(3+57*Math.pow(out,1.6))*(.4+.6*Math.min(1,held/.8));
       current.acc+=side*speed*Math.min(.05,(now-last)/1000);settle(current);
     }
     function finish(event){
@@ -511,12 +513,14 @@
         const primary=dialog.querySelector('[data-pixel-action="save"]');if(primary&&!busy)primary.textContent=t('pixelOnlySave');
       }
       if(pairFirstFlow&&!busy){const primary=dialog.querySelector('[data-pixel-action="save"]');if(primary)primary.textContent=t('pixelNextDirections');}
-      // C109: pick the ports to adjust right here (only P1, or P1 and P2, ...).
-      if(pixelsOnly&&!recovering&&outputs.filter(item=>item.enabled).length>1){
+      // C109: pick the ports to adjust right here (only P1, or P1 and P2, ...),
+      // and switch ports on or off without leaving this screen.
+      if(pixelsOnly&&!recovering){
         const chosen=new Set(portsToEdit().map(item=>item.port)),now=step.port;
         const picker=document.createElement('div');picker.className='pixel-port-pick109';picker.setAttribute('role','group');picker.setAttribute('aria-label',t('pixelPickPorts'));
         picker.innerHTML=`<p>${esc(t('pixelPickPorts'))}</p><div>${outputs.map(item=>{const colour=portColour(item.port,paletteVersion),state=!item.enabled?'off':item.port===now?'now':chosen.has(item.port)?'edit':'keep';
-          return `<button type="button" data-pixel-action="pick-port" data-port="${item.port}" data-pick-state="${state}" style="--port-colour:${colour.hex};--port-ink:${colour.ink}" aria-pressed="${chosen.has(item.port)}" aria-label="${esc(t('pixelPickAria',{port:item.port}))}" ${!item.enabled||busy?'disabled':''}><b>P${item.port}</b><small>${esc(t(state==='off'?'pixelOff':state==='keep'?'pixelPickKeep':'pixelPickEdit'))}</small></button>`;}).join('')}</div>`;
+          const lastOn=item.enabled&&outputs.filter(row=>row.enabled).length===1;
+          return `<div class="pick-cell109" data-pick-state="${state}" style="--port-colour:${colour.hex};--port-ink:${colour.ink}"><button type="button" data-pixel-action="pick-port" data-port="${item.port}" data-pick-state="${state}" style="--port-colour:${colour.hex};--port-ink:${colour.ink}" aria-pressed="${chosen.has(item.port)}" aria-label="${esc(t('pixelPickAria',{port:item.port}))}" ${!item.enabled||busy?'disabled':''}><b>P${item.port}</b><small>${esc(t(state==='off'?'pixelOff':state==='keep'?'pixelPickKeep':'pixelPickEdit'))}</small></button><button type="button" class="pick-power109" data-pixel-action="pick-power" data-port="${item.port}" role="switch" aria-checked="${item.enabled}" aria-label="${esc(t('pixelPortPowerAria',{port:item.port}))}" ${busy||lastOn?'disabled':''}><i aria-hidden="true"></i></button></div>`;}).join('')}</div>`;
         (dialog.querySelector('.pixel-only-hint')||dialog.querySelector('.pixel-setup-body').firstChild)?.after?.(picker);
       }
       // C109: one way out per screen. On the first port the footer closes, so
@@ -567,6 +571,17 @@
         if(!stopped){error=t(previewState.kind==='expired'?'pixelEditorExpired':'pixelPreviewFailed');render(false,{preview:false});return;}
       }
       if(action==='close')return close();
+      if(action==='pick-power'){
+        const port=Number(target.dataset.port),item=outputs.find(row=>row.port===port);if(!pixelsOnly||recovering||!item)return;
+        if(item.enabled&&outputs.filter(row=>row.enabled).length===1)return;
+        const chosen=new Set(portsToEdit().map(row=>row.port)),was=current().port;
+        item.enabled=!item.enabled;
+        if(item.enabled){if(!(item.pixels>0))item.pixels=receiver.outputs.find(row=>row.port===port)?.pixels||1;chosen.add(port);}
+        else{chosen.delete(port);if(!chosen.size)chosen.add(outputs.find(row=>row.enabled).port);}
+        selectedPorts=chosen;plugMotion.trigger(port,performance.now()/1000,item.enabled);
+        const steps=plan(),at=steps.findIndex(row=>row.port===(item.enabled?port:was));
+        index=at>=0?at:Math.max(0,Math.min(index,steps.length-1));error='';hapticStep();draftChanged();return render();
+      }
       if(action==='pick-port'){
         const port=Number(target.dataset.port),item=outputs.find(row=>row.port===port);if(!pixelsOnly||recovering||!item?.enabled)return;
         const chosen=new Set(portsToEdit().map(row=>row.port));
