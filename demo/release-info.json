@@ -114,7 +114,7 @@
     {
       "path": "RELEASE_NOTES.md",
       "bytes": 43464,
-      "sha256": "3533078215bc3979946b0fe3484e92bfb320a31084121cff94cc37ab6614b004"
+      "sha256": "b45f78cfa076e434765d0a6c2c4967d7d9f3a79dc1a4a4cc4e426389ff4ba207"
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
@@ -4088,7 +4088,7 @@
   "interfaceC100": {
     "date": "2026-11-02",
     "scope": "Shared browser interface; fictional in-memory receivers only",
-    "responsive": "320–480 px phones, 600–1600 px tablets and split windows; compact landscape colour picker",
+    "responsive": "320\u2013480 px phones, 600\u20131600 px tablets and split windows; compact landscape colour picker",
     "preserved": "Existing colour, gradient, animation and scene interaction paths",
     "browserLayoutChecked": true,
     "physicalAndroidVerified": false,
