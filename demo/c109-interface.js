@@ -91,19 +91,4 @@
     const card=event.target;if(!(card instanceof HTMLDetailsElement)||!card.open||!card.matches('.receiver-overview-card'))return;
     const outputs=card.querySelector('details.receiver-connections');if(outputs&&!outputs.open)outputs.open=true;
   },true);
-
-  /* ---------- Adding receivers: the same clear picture in the found list ---------- */
-  // The small 3D canvases in the add flow become the drawn picture; larger
-  // ones (with a chosen port) stay as they are.
-  function drawnInAddFlow(){
-    const icon=window.LightningReceiverIcon109;if(!icon)return;
-    document.querySelectorAll('canvas[data-onboarding-visual][data-compact="true"]:not([data-c109-drawn])').forEach(canvas=>{
-      const type=canvas.dataset.type;if(!['SPI','RGBW'].includes(type))return;
-      const picture=document.createElement('span');picture.className='receiver-product109 c109-add-picture';picture.setAttribute('aria-hidden','true');
-      picture.innerHTML=icon.svg({type,outputs:[1,2,3,4].map(port=>({port,enabled:true}))});
-      canvas.dataset.c109Drawn='';canvas.after(picture);
-    });
-  }
-  let addQueued=false;
-  new MutationObserver(()=>{if(!addQueued){addQueued=true;requestAnimationFrame(()=>{addQueued=false;drawnInAddFlow();});}}).observe(document.body,{childList:true,subtree:true});
 }());

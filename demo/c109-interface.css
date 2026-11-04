@@ -292,39 +292,6 @@ html body #main .receiver-overview-card:has(.receiver-connections) .receiver-man
 html body #main details.receiver-connections>summary{display:none!important}
 html body #main details.receiver-connections{border:0!important;background:none!important;box-shadow:none!important;padding:0!important;margin:0!important}
 html body #main .receiver-connections .receiver-ports-heading{display:none!important}
-/* The drawn receiver picture. */
-html body .receiver-product.receiver-product109{display:grid;place-items:center;padding:6px!important;border-radius:16px;background:radial-gradient(120% 100% at 50% 0%,#2a313b,#141820);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
-html body #main .receiver-connections .receiver-product109{height:128px;margin-bottom:10px}
-html body #main .receiver-connections .receiver-product109>svg{height:116px;width:auto}
-html body .receiver-product109.compact>svg{width:100%;height:100%}
-.c109r{overflow:visible;font-family:inherit}
-.c109r .c109r-shadow{fill:rgba(0,0,0,.35);filter:blur(3px)}
-.c109r .c109r-box{fill:#e8e9e4}
-.c109r .c109r-lid{fill:#f7f7f3}
-.c109r .c109r-label{fill:#2f3433;font-size:9px;font-weight:800;letter-spacing:.12em;text-anchor:middle}
-.c109r .c109r-led{fill:#3fae76}
-.c109r .c109r-cable{fill:none;stroke:#c9cbc4;stroke-width:2.2;stroke-linecap:round}
-.c109r .c109r-plug{fill:#cfd1ca}
-.c109r .c109r-hub{fill:#cfd1ca}
-.c109r .c109r-strip{fill:#2a2f35;stroke:rgba(255,255,255,.12);stroke-width:1}
-.c109r .is-on .c109r-strip{fill:color-mix(in srgb,var(--c109r-c) 55%,#1b1f24)}
-.c109r .c109r-glow{fill:var(--c109r-c);opacity:.85;filter:drop-shadow(0 0 4px var(--c109r-c))}
-.c109r .c109r-run{fill:#fff;opacity:0}
-.c109r .c109r-num{fill:rgba(255,255,255,.55);font-size:8px;font-weight:700;text-anchor:middle}
-.c109r .is-on .c109r-num{fill:#fff}
-.c109r .is-on .c109r-plug{fill:var(--c109r-c)}
-.c109r .is-picked .c109r-strip{stroke:#fff;stroke-width:1.6}
-.c109r .is-picked .c109r-num{fill:#fff;font-size:9px}
-@media (prefers-reduced-motion:no-preference){
-  .c109r .c109r-run{animation:c109r-run 2.4s ease-in-out var(--c109r-d,0s) infinite}
-  .c109r .c109r-glow{animation:c109r-glow 3.2s ease-in-out var(--c109r-d,0s) infinite}
-  .c109r .c109r-led{animation:c109r-led 2s ease-in-out infinite}
-}
-@keyframes c109r-run{0%{opacity:0;transform:translateY(0)}15%{opacity:.95}85%{opacity:.95}100%{opacity:0;transform:translateY(28px)}}
-@keyframes c109r-glow{0%,100%{opacity:.7}50%{opacity:1}}
-@keyframes c109r-led{50%{opacity:.35}}
-/* List thumbnails use the same picture. */
-html body .receiver-overview-card>summary .receiver-product109.compact{width:64px;height:54px;padding:3px!important;border-radius:14px}
 /* Output tiles: number, pixels, on/off, blink. */
 html body #main .receiver-connections .receiver-port-row{grid-template-columns:auto minmax(0,1fr) auto!important;grid-template-rows:auto auto!important}
 html body #main .receiver-connections .receiver-port-row>.receiver-port-select{grid-column:1/3!important}
@@ -346,22 +313,72 @@ html body #main .receiver-connections .spi-settings659>button.receiver-zone109>s
 
 html body #main .receiver-connections .spi-settings659>button.receiver-zone109::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 32'%3E%3Cstyle%3E%3C/style%3E%3Crect x='8' y='3' width='11' height='9' rx='2.5' fill='%233a4049'/%3E%3Crect x='21' y='3' width='11' height='9' rx='2.5' fill='%233a4049'/%3E%3Crect x='8' y='14' width='11' height='9' rx='2.5' fill='%233a4049'/%3E%3Crect x='21' y='14' width='11' height='9' rx='2.5' fill='%233a4049'/%3E%3Crect class='h' x='8' y='3' width='11' height='9' rx='2.5' fill='%23f6aa60'/%3E%3Cpath d='M8 28h24' stroke='%2368c7db' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E")}
 @media (prefers-reduced-motion:no-preference){html body #main .receiver-connections .spi-settings659>button.receiver-zone109:not(:disabled)::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 32'%3E%3Cstyle%3E.h%7Banimation:h 3.2s steps(1) infinite%7D%40keyframes h%7B0%25%7Btransform:translate(0,0)%7D25%25%7Btransform:translate(13px,0)%7D50%25%7Btransform:translate(13px,11px)%7D75%25%7Btransform:translate(0,11px)%7D%7D%3C/style%3E%3Crect x='8' y='3' width='11' height='9' rx='2.5' fill='%233a4049'/%3E%3Crect x='21' y='3' width='11' height='9' rx='2.5' fill='%233a4049'/%3E%3Crect x='8' y='14' width='11' height='9' rx='2.5' fill='%233a4049'/%3E%3Crect x='21' y='14' width='11' height='9' rx='2.5' fill='%233a4049'/%3E%3Crect class='h' x='8' y='3' width='11' height='9' rx='2.5' fill='%23f6aa60'/%3E%3Cpath d='M8 28h24' stroke='%2368c7db' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E")}}
-/* The drawn picture always stands on a dark stage, also in the light theme. */
-html:not(#c109) body:not(#c109):not(#x109) .receiver-product.receiver-product109{background:radial-gradient(120% 100% at 50% 0%,#2a313b,#141820)!important;border:0!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)!important}
-html body .receiver-product.receiver-product109::after{display:none}
-html body .receiver-product109:not(.compact){height:128px;margin-bottom:10px}
-html body .receiver-product109:not(.compact)>svg{height:116px;width:auto;max-width:100%}
 /* Few pixels: the white pixels stay visible, then the dots and the red end. */
 html body .pixel-count-preview .pixel-length-rail>.pixel-setup-track{min-width:min(100%,92px)}
 html body .pixel-count-preview .pixel-setup-track .pixel-setup-strip{overflow:hidden;min-width:0}
 html body .pixel-count-preview .pixel-setup-strip i:not(.end){flex:0 0 auto;min-width:4px}
 html body .pixel-count-preview :is(.pixel-count-more,.pixel-count-terminal){flex:none}
 
-/* Add flow: the drawn picture replaces the small 3D canvas. */
-html body canvas[data-onboarding-visual][data-c109-drawn]{display:none!important}
-html:not(#c109) body:not(#c109):not(#x109) .c109-add-picture{display:grid;place-items:center;width:100%;height:100%;min-height:54px;border-radius:14px;padding:4px;box-sizing:border-box;background:radial-gradient(120% 100% at 50% 0%,#2a313b,#141820)!important}
-html body .c109-add-picture>svg{width:100%;height:100%;max-height:96px}
 /* Receiver settings ("Meer receiveropties"): a receiver with a turning gear. */
 html body #main .receiver-manage-menu>summary .receiver-setting-icon707>svg{display:none}
 html body #main .receiver-manage-menu>summary .receiver-setting-icon707{background:no-repeat center/36px 26px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 32'%3E%3Cstyle%3E%3C/style%3E%3Crect x='3' y='6' width='26' height='16' rx='5' fill='%23e8e9e4'/%3E%3Crect x='6' y='9' width='20' height='6' rx='2.5' fill='%23f7f7f3'/%3E%3Ccircle cx='24' cy='18.5' r='1.6' fill='%233fae76'/%3E%3Cpath d='M8 22v5M13 22v5M18 22v5' stroke='%239aa1ab' stroke-width='2' stroke-linecap='round'/%3E%3Cg class='g'%3E%3Ccircle cx='31' cy='21' r='6.5' fill='%2368c7db'/%3E%3Ccircle cx='31' cy='21' r='2.6' fill='%23141820'/%3E%3Crect x='29.6' y='12' width='2.8' height='4' rx='1' fill='%2368c7db' transform='rotate(0 31 21)'/%3E%3Crect x='29.6' y='12' width='2.8' height='4' rx='1' fill='%2368c7db' transform='rotate(60 31 21)'/%3E%3Crect x='29.6' y='12' width='2.8' height='4' rx='1' fill='%2368c7db' transform='rotate(120 31 21)'/%3E%3Crect x='29.6' y='12' width='2.8' height='4' rx='1' fill='%2368c7db' transform='rotate(180 31 21)'/%3E%3Crect x='29.6' y='12' width='2.8' height='4' rx='1' fill='%2368c7db' transform='rotate(240 31 21)'/%3E%3Crect x='29.6' y='12' width='2.8' height='4' rx='1' fill='%2368c7db' transform='rotate(300 31 21)'/%3E%3C/g%3E%3C/svg%3E")!important}
 @media (prefers-reduced-motion:no-preference){html body #main .receiver-manage-menu>summary .receiver-setting-icon707{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 32'%3E%3Cstyle%3E.g%7Btransform-origin:31px 21px;animation:g 6s linear infinite%7D%40keyframes g%7Bto%7Btransform:rotate(360deg)%7D%7D%3C/style%3E%3Crect x='3' y='6' width='26' height='16' rx='5' fill='%23e8e9e4'/%3E%3Crect x='6' y='9' width='20' height='6' rx='2.5' fill='%23f7f7f3'/%3E%3Ccircle cx='24' cy='18.5' r='1.6' fill='%233fae76'/%3E%3Cpath d='M8 22v5M13 22v5M18 22v5' stroke='%239aa1ab' stroke-width='2' stroke-linecap='round'/%3E%3Cg class='g'%3E%3Ccircle cx='31' cy='21' r='6.5' fill='%2368c7db'/%3E%3Ccircle cx='31' cy='21' r='2.6' fill='%23141820'/%3E%3Crect x='29.6' y='12' width='2.8' height='4' rx='1' fill='%2368c7db' transform='rotate(0 31 21)'/%3E%3Crect x='29.6' y='12' width='2.8' height='4' rx='1' fill='%2368c7db' transform='rotate(60 31 21)'/%3E%3Crect x='29.6' y='12' width='2.8' height='4' rx='1' fill='%2368c7db' transform='rotate(120 31 21)'/%3E%3Crect x='29.6' y='12' width='2.8' height='4' rx='1' fill='%2368c7db' transform='rotate(180 31 21)'/%3E%3Crect x='29.6' y='12' width='2.8' height='4' rx='1' fill='%2368c7db' transform='rotate(240 31 21)'/%3E%3Crect x='29.6' y='12' width='2.8' height='4' rx='1' fill='%2368c7db' transform='rotate(300 31 21)'/%3E%3C/g%3E%3C/svg%3E")!important}}
+
+/* ---------- C109c: receiver page calm and aligned, real receiver picture ---------- */
+/* The 3D receiver picture is back; only the chosen output is named under it. */
+html body #main .receiver-connections .receiver-product{display:grid;justify-items:center;padding:10px 10px 8px!important;margin-bottom:8px}
+html body #main .receiver-connections .receiver-product>canvas{max-height:140px;width:auto;max-width:100%}
+html body #main .receiver-connections .receiver-product-caption{font-size:0!important;margin:2px 0 0!important;text-align:center}
+html body #main .receiver-connections .receiver-product-caption>strong{display:block;font-size:12.5px;font-weight:700}
+/* Outputs: one calm row each: number, pixels, on/off, blink. */
+html body #main .receiver-connections .receiver-port-list{grid-template-columns:minmax(0,1fr)!important;gap:6px!important}
+@media (min-width:700px){html body #main .receiver-connections .receiver-port-list{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+html body #main .receiver-connections .receiver-port-row{grid-template-columns:auto minmax(0,1fr) auto auto!important;grid-template-rows:auto!important;gap:10px!important;padding:7px 8px 7px 10px!important;min-height:0!important}
+html body #main .receiver-connections .receiver-port-row>.receiver-port-select{grid-column:1!important;grid-row:1!important}
+html body #main .receiver-connections .receiver-port-row>.receiver-port-select>b{min-width:36px;height:32px;border-radius:10px!important}
+html body #main .receiver-connections .receiver-port-row>.port-pixels109{grid-column:2!important;grid-row:1!important;justify-self:start;min-height:32px}
+html body #main .receiver-connections .receiver-port-row>.receiver-port-switch{grid-column:3!important;grid-row:1!important;justify-self:end}
+html body #main .receiver-connections .receiver-port-row>.receiver-blink{grid-column:4!important;grid-row:1!important;width:36px;min-width:36px!important;height:36px;min-height:36px!important}
+html body #main .receiver-connections .receiver-port-row>.receiver-blink svg{width:18px;height:18px}
+/* The four quick tiles: icons and names on one line, whatever the text. */
+html body #main .receiver-connections .spi-settings659{margin-top:8px!important}
+html body #main .receiver-connections .spi-settings659>button{grid-template-rows:28px auto;align-content:start!important;justify-content:stretch;min-height:78px!important;padding:12px 4px 8px!important}
+html body #main .receiver-connections .spi-settings659>button::before{justify-self:center;align-self:center}
+html body #main .receiver-connections .spi-settings659>button>span>b{line-height:1.2!important}
+/* "Meer receiveropties" lines up with the blocks above, also when open. */
+html body #main .receiver-overview-card .receiver-manage-menu{margin-inline:0!important}
+html body #main .receiver-manage-menu[open]>summary .receiver-setting-row707,html body #main .receiver-manage-menu[open]>summary>svg:last-child{transition:transform .2s}
+html body #main .receiver-manage-menu[open]>summary>svg:last-child{transform:rotate(90deg)}
+html body #main .receiver-manage-menu .receiver-manage-content{display:grid;gap:8px;padding:4px 12px 12px!important;margin:0!important}
+html body #main .receiver-manage-menu .receiver-manage-content>*{margin:0!important}
+@media (prefers-reduced-motion:reduce){html body #main .receiver-manage-menu>summary>svg:last-child{transition:none}}
+
+/* ---------- C109c: pixel picker, one control and a clear choice ---------- */
+/* The strip is the slider: white pixels run right up to the red last pixel. */
+html body .pixel-setup-slider-row{display:none!important}
+html body .pixel-count-preview .pixel-setup-strip{gap:2px!important}
+html body .pixel-count-preview .pixel-setup-strip i:not(.end){flex:1 1 0!important;min-width:2px!important;max-width:none!important;height:11px}
+html body .pixel-count-preview .pixel-setup-strip i.end{flex:0 0 12px!important;width:12px;height:17px!important;border-radius:4px!important;outline:2px solid rgba(255,255,255,.85);outline-offset:1px}
+html body .pixel-count-preview .pixel-length-rail,html body .pixel-count-preview .pixel-length-rail>.pixel-setup-track{height:19px!important}
+html body .pixel-count-preview [data-pixel-scrub],html body [data-pixel-scrub]{cursor:ew-resize;touch-action:pan-y}
+/* Choosing ports: a tick on the ones you adjust, a ring on the one shown now. */
+html body .pixel-setup-dialog .pixel-port-pick109 button{position:relative}
+html body .pixel-setup-dialog .pixel-port-pick109 button[aria-pressed="true"]::after{content:"";position:absolute;top:5px;right:5px;width:16px;height:16px;border-radius:50%;background:var(--port-colour) no-repeat center/10px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 5.2 4 7.5 8.5 2.5' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+html body .pixel-setup-dialog .pixel-port-pick109 button[data-pick-state="keep"]>b{background:transparent;border:1.5px dashed color-mix(in srgb,var(--muted,#646d78) 60%,transparent)}
+/* The ports are chosen above, so the old receiver picture and the repeated title go. */
+html body .pixel-setup-dialog:has(.pixel-port-pick109) .pixel-port-context{display:flex!important;align-items:center;gap:10px;padding:10px 12px!important;min-height:max-content!important}
+html body .pixel-setup-dialog:has(.pixel-port-pick109) .pixel-port-context>canvas{display:none!important}
+html body .pixel-setup-dialog:has(.pixel-port-pick109) .pixel-port-context::before{content:"P" attr(data-current-port);display:grid;place-items:center;flex:none;width:40px;height:32px;border-radius:10px;background:var(--port-colour);color:var(--port-ink,#fff);font-weight:800;font-size:13px}
+html body .pixel-setup-dialog:has(.pixel-port-pick109) .pixel-port-context h2{font-size:16px!important;margin:0!important}
+html body .pixel-setup-dialog:has(.pixel-port-pick109) .pixel-port-context p{margin:2px 0 0!important}
+html body .pixel-setup-dialog .pixel-port-context~.pixel-setup-panel>h2{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* Unlinking: the button already says it, so its card has no second title. */
+html body #main .receiver-manage-menu .receiver-danger-section>h3{display:none!important}
+html body #main .receiver-manage-menu .receiver-danger-section>.button{color:#d9534a!important}
+html body .pixel-count-preview .pixel-setup-strip i:not(.end){border-radius:2px!important}
+html body .pixel-count-preview .pixel-swipe-cue{font-size:11px;text-align:end}
+/* One "this is only an example" note is enough. */
+html body .pixel-setup-body:has(.pixel-count-preview .pixel-preview-notice)>.pixel-setup-mode{display:none!important}
+html body #main .receiver-overview-card:has(.receiver-connections) .receiver-manage-menu{margin-inline:10px!important}
+html body .pixel-setup-dialog:has(.pixel-port-pick109) .pixel-port-context{height:auto!important;max-height:none!important;flex:none!important;overflow:visible!important}
+@media (max-width:360px){html body .pixel-setup-dialog .pixel-port-pick109 button[aria-pressed="true"]::after{top:3px;right:3px;width:13px;height:13px;background-size:8px}}

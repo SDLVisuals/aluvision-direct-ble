@@ -11,7 +11,7 @@
   const TEXTS=Object.freeze({
     pixelPort:'Poort {port}',pixelOn:'Aan',pixelOff:'Uit',pixelNow:'Nu',pixelReady:'Klaar',pixelLater:'Straks',pixelPreserved:'Behouden',
     pixelOutputs:'Uitgangen',pixelPixels:'Pixels',pixelStart:'Kanten',pixelReview:'Controleren',pixelSetupSteps:'LED Line instellen',pixelEditorExpired:'Sluit dit menu en open het opnieuw. Je keuzes blijven bewaard.',
-    pixelDontSave:'Niet opslaan',pixelPickPorts:'Welke poorten pas je aan?',pixelPickEdit:'Aanpassen',pixelPickAria:'Poort {port} aanpassen',
+    pixelDontSave:'Niet opslaan',pixelPickPorts:'Welke poorten pas je aan?',pixelPickEdit:'Aanpassen',pixelPickAria:'Poort {port} aanpassen',pixelPickKeep:'Ongewijzigd',
     pixelOnlySettings:'Pixels aanpassen',pixelOnlyHint:'Je past alleen het aantal pixels aan. De kanten blijven hetzelfde.',pixelDirectionsSettings:'Kanten aanpassen',pixelDirectionsHint:'Alle ledlines uit deze zone samen afstemmen.',pixelOnlySave:'Pixels opslaan',pixelNextDirections:'Verder · kanten instellen →',pixelAdded:'Receiver toegevoegd',pixelDirectionsSaved:'Kanten opgeslagen',pixelOnlySaved:'Pixels opgeslagen',
     pixelPortTask:'Poort {port} · {task}',pixelPortPosition:'{position} van {count} poorten',pixelPortProgress:'Voortgang per poort',
     pixelNextStart:'Verder · beginpunt →',pixelNextPort:'Verder naar poort {port} →',pixelNext:'Volgende →',pixelCheck:'Controleren →',
@@ -93,10 +93,9 @@
       const limits=pixelLimits(options),progress=Math.max(0,Math.min(100,output.pixels/limits.max*100));
       const represented=output.pixels>24?23:Math.max(0,output.pixels-1),cells=Array.from({length:represented},()=>'<i></i>').join('');
       const endpoint=output.pixels>0?'<i class="end"></i>':'';
-      const terminal=output.pixels>24?`<span class="pixel-count-more" aria-hidden="true">···</span><span class="pixel-count-terminal" aria-hidden="true"><i class="end"></i></span>`:'';
       const guide=output.pixels>0?`<span class="pixel-endpoint-guide"><i aria-hidden="true"></i><span>${esc(t('pixelLastRed',{count:output.pixels}))}</span></span>`:`<span class="pixel-endpoint-guide is-empty">${esc(t('pixelFirstCount'))}</span>`;
       const aria=t(output.pixels>0?'pixelCountAria':'pixelCountEmptyAria',{count:output.pixels});
-      return `<div class="pixel-setup-visual pixel-count-preview" data-pixel-visual="pixels" data-preview-pixels="${output.pixels}" role="img" aria-label="${esc(aria)} ${esc(t('pixelSchematic'))}"><div class="pixel-count-preview-label"><b>${esc(t(output.pixels===1?'pixelCountOne':'pixelCount',{count:output.pixels}))}</b><span class="pixel-swipe-cue"><i aria-hidden="true">↔</i>${esc(t('pixelSwipe'))}</span></div><span class="pixel-length-rail" aria-hidden="true"><span class="pixel-setup-track" style="--pixel-length-progress:${progress}%"><span class="pixel-setup-strip">${cells}${output.pixels>0&&output.pixels<=24?endpoint:''}</span>${terminal}</span></span><small class="pixel-length-scale" aria-hidden="true"><span>0</span><span>163 ${esc(t('pixelPixels').toLowerCase())}</span></small>${guide}<small class="pixel-preview-notice">${esc(t('pixelNoTest'))}</small></div>`;
+      return `<div class="pixel-setup-visual pixel-count-preview" data-pixel-visual="pixels" data-preview-pixels="${output.pixels}" role="img" aria-label="${esc(aria)} ${esc(t('pixelSchematic'))}"><div class="pixel-count-preview-label"><b>${esc(t(output.pixels===1?'pixelCountOne':'pixelCount',{count:output.pixels}))}</b><span class="pixel-swipe-cue"><i aria-hidden="true">↔</i>${esc(t('pixelSwipe'))}</span></div><span class="pixel-length-rail" aria-hidden="true"><span class="pixel-setup-track" style="--pixel-length-progress:${progress}%"><span class="pixel-setup-strip">${cells}${endpoint}</span></span></span><small class="pixel-length-scale" aria-hidden="true"><span>0</span><span>163 ${esc(t('pixelPixels').toLowerCase())}</span></small>${guide}<small class="pixel-preview-notice">${esc(t('pixelNoTest'))}</small></div>`;
     }
     // Raw reversal swaps the physical guide ends and remains the saved
     // animation orientation. The drawing uses the same plain green/red caps.
@@ -517,7 +516,7 @@
         const chosen=new Set(portsToEdit().map(item=>item.port)),now=step.port;
         const picker=document.createElement('div');picker.className='pixel-port-pick109';picker.setAttribute('role','group');picker.setAttribute('aria-label',t('pixelPickPorts'));
         picker.innerHTML=`<p>${esc(t('pixelPickPorts'))}</p><div>${outputs.map(item=>{const colour=portColour(item.port,paletteVersion),state=!item.enabled?'off':item.port===now?'now':chosen.has(item.port)?'edit':'keep';
-          return `<button type="button" data-pixel-action="pick-port" data-port="${item.port}" data-pick-state="${state}" style="--port-colour:${colour.hex};--port-ink:${colour.ink}" aria-pressed="${chosen.has(item.port)}" aria-label="${esc(t('pixelPickAria',{port:item.port}))}" ${!item.enabled||busy?'disabled':''}><b>P${item.port}</b><small>${esc(t(state==='off'?'pixelOff':state==='now'?'pixelNow':state==='edit'?'pixelPickEdit':'pixelPreserved'))}</small></button>`;}).join('')}</div>`;
+          return `<button type="button" data-pixel-action="pick-port" data-port="${item.port}" data-pick-state="${state}" style="--port-colour:${colour.hex};--port-ink:${colour.ink}" aria-pressed="${chosen.has(item.port)}" aria-label="${esc(t('pixelPickAria',{port:item.port}))}" ${!item.enabled||busy?'disabled':''}><b>P${item.port}</b><small>${esc(t(state==='off'?'pixelOff':state==='keep'?'pixelPickKeep':'pixelPickEdit'))}</small></button>`;}).join('')}</div>`;
         (dialog.querySelector('.pixel-only-hint')||dialog.querySelector('.pixel-setup-body').firstChild)?.after?.(picker);
       }
       // C109: one way out per screen. On the first port the footer closes, so

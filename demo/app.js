@@ -4173,9 +4173,6 @@
     return visualPorts.get(receiver.id)||receiver.outputs.find(output=>output.enabled)?.port||1;
   }
   function productVisual(receiver,compact=false) {
-    // C109: a drawn picture that shows the outputs in use; 3D canvas as fallback.
-    const drawn=window.LightningReceiverIcon109?.svg(receiver,{selectedPort:receiver.type==='SPI'?selectedVisualPort(receiver):null});
-    if(drawn)return `<div class="receiver-product receiver-product109 ${compact?'compact list-product':''}" role="img" aria-label="${esc(t(receiver.type==='RGBW'?'v50RgbwProductAccessible':'v50SpiProductAccessible'))}">${drawn}</div>`;
     return `<div class="receiver-product ${compact?'compact list-product':''}"><canvas data-product-receiver="${esc(receiver.id)}" data-compact="${compact}" width="400" height="240" role="img" aria-label="${esc(t(receiver.type==='RGBW'?'v50RgbwProductAccessible':'v50SpiProductAccessible'))}"></canvas>${compact?'':`<p class="receiver-product-caption"><strong>${esc(t(receiver.type==='RGBW'?'v50RgbwOutputCaption':'v50OutputChosen',{port:selectedVisualPort(receiver)}))}</strong>${esc(t(receiver.type==='RGBW'?'v50RgbwOutputHint':'v50ChooseOutputHint'))}</p>`}</div>`;
   }
   function receiverCard(r,orderIndex=null) {
@@ -8837,7 +8834,6 @@
         const details=button.closest('details');details.querySelectorAll('[data-action="visual-port"]').forEach(el=>el.setAttribute('aria-pressed',el===button));
         details.querySelectorAll('[data-port-row]').forEach(el=>el.classList.toggle('port-focused',Number(el.dataset.portRow)===Number(id)));
         const caption=details.querySelector('.receiver-product-caption strong');if(caption)caption.textContent=t('v50OutputChosen',{port:Number(id)});
-        const drawn=details.querySelector('.receiver-product109');if(drawn&&window.LightningReceiverIcon109)drawn.innerHTML=window.LightningReceiverIcon109.svg(r,{selectedPort:Number(id)});
         const pixelsShortcut=details.querySelector('[data-visual-pixels717]');
         if(pixelsShortcut){
           pixelsShortcut.dataset.ports=String(id);pixelsShortcut.querySelector('small').textContent=`P${id}`;
