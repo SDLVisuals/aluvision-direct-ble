@@ -293,6 +293,19 @@
       clearTimer(renew);renew=null;if(ms<=0)return;
       renew=setTimer(()=>{renew=null;if(itemVersion!==version)return;if(desired)queued={request:desired,version};else if(editor?.confirmed)queued={hold:true,request:editor.request,version};else return;void drain();},Math.min(5000,Math.max(500,ms-3000)));
     }
+    // C111: a STOP that collides with a START still in flight (another radio
+    // message, a second phone) is asked again twice, 0.4 s and 0.9 s later,
+    // before the editor reports "Testlicht niet bereikbaar". STOP is idempotent
+    // on the receiver; an expired editor is never retried.
+    async function stopActiveRetryC111(keepSession=false){
+      for(let attempt=0;;attempt++){
+        try{return await stopActive(keepSession);}
+        catch(error){
+          if(attempt>=2||error?.code==='PIXEL_EDITOR_EXPIRED'||expiredEditor||!(active||editor?.request))throw error;
+          await new Promise(resolve=>setTimer(resolve,attempt?900:400));
+        }
+      }
+    }
     async function stopActive(keepSession=false){
       const previous=active||editor?.request;if(!previous)return{isolationTTLMS:0};
       const keep=keepSession&&!!previous.editorSession;
@@ -314,7 +327,7 @@
         while(queued){
           const item=queued;queued=null;
           try{
-            if(item.stop){const stopped=active||editor?.request,answer=await stopActive(item.keepSession);recovery=false;const confirmed=item.version===version&&!desired;if(!confirmed&&stopped)globalThis.LightningNativeRuntime?.services?.pixelReceiptDiagnostic692?.({phase:'STOP_SUPERSEDED',bits:(item.version===version?1:0)|(!desired?2:0)});item.complete({stopped:confirmed});if(confirmed){report('idle',stopped);if(item.keepSession)scheduleRenew(answer.isolationTTLMS,item.version);}continue;}
+            if(item.stop){const stopped=active||editor?.request,answer=await stopActiveRetryC111(item.keepSession);recovery=false;const confirmed=item.version===version&&!desired;if(!confirmed&&stopped)globalThis.LightningNativeRuntime?.services?.pixelReceiptDiagnostic692?.({phase:'STOP_SUPERSEDED',bits:(item.version===version?1:0)|(!desired?2:0)});item.complete({stopped:confirmed});if(confirmed){report('idle',stopped);if(item.keepSession)scheduleRenew(answer.isolationTTLMS,item.version);}continue;}
             if(item.recover||recovery){
               // The failed native session still owns a possibly live overlay.
               // Cleanup shares this queue and the normal strict STOP validator.

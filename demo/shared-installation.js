@@ -16,6 +16,14 @@
   const canonical=v=>JSON.stringify(v,(_,e)=>plain(e)?Object.fromEntries(Object.keys(e).sort().map(k=>[k,e[k]])):e);
   const copy=v=>JSON.parse(JSON.stringify(v));
   const LISTS=['scenes','presets','colors'];
+  // C111: what this phone last held in sync with the MAIN (layout and light),
+  // per stand, kept across app restarts. On first contact after a restart the
+  // MAIN's document wins, except for a layout or light this phone changed
+  // after that sync and never got to publish (an edit made on a zone screen,
+  // where publishing waits, right before the app was closed).
+  const SYNC_KEY='aluvision.shared-sync.v1:';
+  function loadSynced(standId){try{const v=JSON.parse(globalThis.localStorage?.getItem(SYNC_KEY+standId)||'null');return v&&typeof v.model==='string'&&typeof v.light==='string'?v:null;}catch(_){return null;}}
+  function saveSynced(standId,doc){try{globalThis.localStorage?.setItem(SYNC_KEY+standId,JSON.stringify({model:canonical(doc.model),light:canonical(doc.light||{})}));}catch(_){}}
 
   function documentFor(standId,model,libraries,light){
     const doc={format:FORMAT,version:VERSION,standId,model:copy(model),
@@ -61,6 +69,7 @@
    *        apply(standId,doc) -> Promise<{layout:boolean}>  (writes locally;
    *          layout:false when this phone lacks a receiver the layout uses) 
    *        idle() -> boolean               (no dialog/edit/onboarding running)
+   *        statusIdle() -> boolean         (optional: a status question may run now)
    *        notice(code)                    (optional user-facing problem) */
   function create(hooks){
     const states=new Map();let timer=null,running=false,stopped=false,paused=false;
@@ -79,7 +88,7 @@
       const json=canonical(doc);if(bytes(json)>MAX_BYTES){hooks.notice?.('SHARED_TOO_LARGE');return false;}
       const r=await hooks.services.sharedDocument({op:'write',standId,base:st.revision||0,json});
       if(!current(standId,st))return false;
-      if(r?.status==='committed'){st.revision=r.revision;st.doc=doc;st.key=canonical(doc);hooks.seen?.(standId,r.revision);return true;}
+      if(r?.status==='committed'){st.revision=r.revision;st.doc=doc;st.key=canonical(doc);saveSynced(standId,doc);hooks.seen?.(standId,r.revision);return true;}
       if(r?.status==='conflict'){await download(standId,st,doc);return false;}
       throw Object.assign(Error('SHARED_UNCONFIRMED'),{code:'SHARED_UNCONFIRMED'});
     }
@@ -98,6 +107,13 @@
       catch(error){if(error?.code!=='SHARED_FOREIGN')throw error;st.revision=r.revision;st.doc=null;st.key='';st.libraryOnly=libraryOnly;return;}
       const pending=local&&st.key!==null&&canonical(local)!==st.key;
       const next=pending||st.revision===null&&local?merge(st.doc,local,remote):remote;
+      if(st.revision===null&&local&&!pending&&!libraryOnly&&next!==remote){
+        const synced=loadSynced(standId);
+        if(synced){
+          if(canonical(local.model)!==synced.model&&canonical(local.model)!==canonical(remote.model))next.model=copy(local.model);
+          if(local.light&&canonical(local.light)!==synced.light&&canonical(local.light)!==canonical(remote.light||{}))next.light=copy(local.light);
+        }
+      }
       const applied=await hooks.apply(standId,next,{revision:r.revision,libraryOnly});
       if(!current(standId,st))return;
       // A layout this phone cannot show yet (a receiver added elsewhere) is
@@ -109,14 +125,15 @@
       // if its native layer normalised it (order, derived fields). Only a
       // real user edit differs from it later, so two phones never upload in
       // turns. A merge still differs on purpose: it must be uploaded.
-      const after=next===remote?hooks.snapshot(standId):null;
+      const after=next===remote||canonical(next)===canonical(remote)?hooks.snapshot(standId):null;
       // C98: this phone's own layout is newer than the MAIN's document; keep
       // the key on the document so the next pass uploads this layout.
-      st.key=applied?.layout==='local'?canonical(remote):
-        after?canonical(documentFor(standId,st.layoutBlocked?remote.model:after.model,
+      const syncedDoc=applied?.layout!=='local'&&after?documentFor(standId,st.layoutBlocked?remote.model:after.model,
           // Native layout adoption may await I/O. Only the libraries actually
           // installed by apply count as synchronized; later edits stay dirty.
-          applied?.libraries||next.libraries,st.removalProtected&&st.layoutBlocked?remote.light:after.light)):canonical(remote);
+          applied?.libraries||next.libraries,st.removalProtected&&st.layoutBlocked?remote.light:after.light):null;
+      st.key=syncedDoc?canonical(syncedDoc):canonical(remote);
+      if(syncedDoc&&!st.layoutBlocked)saveSynced(standId,syncedDoc);
     }
     // The caller is the existing successful native removal callback. This
     // queue edits documentary membership only; it never removes hardware.
@@ -218,10 +235,20 @@
       const s=await hooks.services.sharedDocument({op:'status',standId});
       if(s.revision!==st.revision)await download(standId,st,null);
     }
+    // C111: on a zone/stand control screen reading and publishing wait, but a
+    // short status question every 25 s keeps the connection indicator honest
+    // ("Verbonden" needs a MAIN exchange within 40 s). Same fast owner lane as
+    // the light on iPhone and Android, so it never displaces light control.
+    let lastStatusC111=0;
+    async function keepAlive(){
+      if(!hooks.statusIdle?.()||Date.now()-lastStatusC111<25000)return;lastStatusC111=Date.now();
+      for(const standId of hooks.stands()){const st=stateOf(standId);if(st.revision===null||Date.now()<st.until)continue;
+        try{await hooks.services.sharedDocument({op:'status',standId});}catch(_){/* the next real pass reports lasting problems */}}
+    }
     async function tick(){
       if(running||stopped||paused)return;running=true;
       try{
-        if(hooks.idle&&!hooks.idle())return;
+        if(hooks.idle&&!hooks.idle()){await keepAlive();return;}
         for(const standId of hooks.stands()){
           const st=stateOf(standId);
           try{await pass(standId);st.failures=0;}

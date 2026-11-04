@@ -194,17 +194,33 @@
   // C105: with two or more ledlines selected, one gradient normally runs on
   // across them; this switch gives every chosen ledline the whole gradient.
   let gradientSeparateC105=false,lastGradientC105=null;
+  // C111: after a restart the switch follows the saved light. One shared
+  // gradient on the chosen ledlines: true when each has its own whole span,
+  // false when they share one; null when they hold no single gradient.
+  function gradientSeparateSavedC111(zoneId){
+    try{
+      const lines=M.selectionLines(model,zoneId,selection()),states=lines.map(line=>M.lightStateFor(model.receivers.find(r=>r.id===line.receiverId),line.port));
+      const first=states[0]?.staticGradientRecipe;
+      if(!first||states.some(state=>state.engine!=='STATIC_GRADIENT'||state.staticGradientRecipe!==first))return null;
+      const groups=states.map(state=>M.gradientDomainGroup(model,zoneId,state));if(groups.some(group=>!Array.isArray(group)))return null;
+      return groups.every((group,i)=>group.length===1&&group[0]===lines[i].id);
+    }catch(_){return null;}
+  }
   function syncGradientSeparateC105(host){
     main.querySelectorAll('.c105-gradient-separate').forEach(node=>node.remove());
     const z=zone();if(!host||!z||z.type!=='SPI')return;
     // Only with separate ledlines: a continuous ledline is one gradient by design.
     if(continuousZone()||M.selectionLines(model,z.id,selection()).length<2)return;
+    const saved=gradientSeparateSavedC111(z.id);if(saved!==null)gradientSeparateC105=saved;
     host.insertAdjacentHTML('afterend',`<label class="c105-gradient-separate"><input type="checkbox" data-gradient-separate ${gradientSeparateC105?'checked':''}><span><strong>${esc(t('Zelfde verloop per ledline'))}</strong><small>${esc(t('Elke gekozen ledline krijgt het hele verloop, in plaats van één doorlopend verloop.'))}</small></span></label>`);
   }
   document.addEventListener('change',event=>{
     const box=event.target?.closest?.('[data-gradient-separate]');if(!box||!main.contains(box))return;
     gradientSeparateC105=box.checked;
-    if(lastGradientC105)void applyStaticGradientUI(lastGradientC105).catch(()=>{});
+    // C111: after a restart the gradient is known only from the saved light.
+    let gradient=lastGradientC105;
+    if(!gradient)try{const states=selectedLightEntries().map(entry=>entry.state),first=states[0]?.staticGradientRecipe;if(first&&states.every(state=>state.engine==='STATIC_GRADIENT'&&state.staticGradientRecipe===first))gradient=window.LightningStaticGradient.decodeRecipe(first);}catch(_){}
+    if(gradient)void applyStaticGradientUI(gradient).catch(()=>{});
   });
   function scheduleGradientRewarmC98(ms=4000){
     clearTimeout(gradientRewarmTimerC98);
@@ -264,9 +280,18 @@
     if(gradientPowerSerial!==editorSerial||model!==inputModel||!gradientWorkspaceAllowed(zoneId)||motionContextKey()!==context||JSON.stringify(selection())!==selectionKey||document.hidden)throw Object.assign(Error(),{code:'GRADIENT_CHANGED'});
     // Checkpoint only this exact retained intent, never physical APPLIED.
     // No generic Web replay may later substitute the previous solid colour.
-    const desired=copy(gradientDomainPlan.model),stands=new Set(ids.map(id=>desired.receivers.find(r=>r.id===id).standId));
+    const desired=copy(separate?model:gradientDomainPlan.model),stands=new Set(ids.map(id=>desired.receivers.find(r=>r.id===id).standId));
     desired.receivers.filter(r=>stands.has(r.standId)&&r.zoneId!==null).forEach(r=>{delete r.state.standAnimation;});
-    model=M.applyState(desired,zoneId,scope,{...window.LightningStaticGradient.desiredState(capsule),staticGradientDomain:gradientDomainPlan.domain});
+    if(separate){
+      // C111: every chosen ledline keeps its own whole gradient, so the
+      // preview and a restart show what the receivers were sent.
+      let next=desired;
+      for(const line of M.selectionLines(next,zoneId,scope)){
+        const one={kind:'line',lineId:line.id},plan=M.prepareGradientDomain(next,zoneId,one);
+        next=M.applyState(plan.model,zoneId,one,{...window.LightningStaticGradient.desiredState(capsule),staticGradientDomain:plan.domain});
+      }
+      model=next;
+    }else model=M.applyState(desired,zoneId,scope,{...window.LightningStaticGradient.desiredState(capsule),staticGradientDomain:gradientDomainPlan.domain});
     // C98: the MAIN accepted and retained this gradient; it is on its way,
     // like a staged colour. Quiet pending, not a warning in the dock.
     ids.forEach(id=>liveStates.set(id,{kind:'staged',code:'GRADIENT_RETAINED'}));
@@ -354,7 +379,8 @@
           const result=await item.operation;
           if(!gradientPowerCurrent(item))continue;
           if(result?.status!=='catalogue-retained-deferred'||result.applied!==false||result.ready!==false||!Array.isArray(result.receiverIds)||result.receiverIds.length!==item.ids.length||new Set(result.receiverIds).size!==item.ids.length||result.receiverIds.some(id=>!item.ids.includes(id)))throw Error('GRADIENT_UNCONFIRMED');
-          item.ids.forEach(id=>liveStates.set(id,{kind:'unconfirmed',code:'GRADIENT_RETAINED_UNCONFIRMED'}));syncLiveStatus();
+          // C111: the MAIN retained it, like a typed gradient: quiet, not a red notice.
+          item.ids.forEach(id=>liveStates.set(id,{kind:'staged',code:'GRADIENT_RETAINED'}));syncLiveStatus();
         }catch(_){if(gradientPowerCurrent(item)){item.ids.forEach(id=>liveStates.set(id,{kind:'unconfirmed',code:'GRADIENT_REAPPLY_REQUIRED'}));syncLiveStatus();}}
         finally{if(gradientPowerActive===item)gradientPowerActive=null;}
       }
@@ -5195,11 +5221,13 @@
     if(readmitC107.running||Date.now()-readmitC107.at<60000||!nativeContext||!model.stands.length||
        typeof runtime?.services?.recoverInstallation!=='function')return;
     readmitC107.running=true;readmitC107.at=Date.now();window.__c98log?.('READMIT_START');sharedSync97?.pause?.();
+    readmitPendingC111(true);
     toast(window.LightningV50ErrorTexts.t('readmitting',uiPreferences.preferences.language));
     try{
       const result=await runtime.services.recoverInstallation({wifi:true});
       model=keepLocalPreviewStates(result.playbackModel,{exceptStandId:result.standId});nativeLoaded=true;
       readmitC107.limited=false;readmitC107.retries=0;sharedSync97?.forget(result.standId);sharedSync97?.changed();render({preserveScroll:true});window.__c98log?.('READMIT_OK');
+      readmitPendingC111(false);
     }catch(error){
       window.__c98log?.('READMIT_FAIL '+(error?.code||''));
       // 8 phones are active right now: say so once and keep trying quietly.
@@ -5217,6 +5245,19 @@
     finally{readmitC107.running=false;sharedSync97?.resume?.();}
   }
   window.addEventListener('lightning:app-readmit',()=>void readmitStandC107());
+  // C111: a re-admission that was interrupted (app closed, phone locked) can
+  // leave this phone known to the MAIN but not to every other receiver, so
+  // it controls light but cannot keep their stand context up to date. The
+  // phone remembers an unfinished re-admission and resumes it on next start.
+  const READMIT_KEY_C111='aluvision.readmit-pending.v1';
+  function readmitPendingC111(on){try{if(on)localStorage.setItem(READMIT_KEY_C111,String(Date.now()));else localStorage.removeItem(READMIT_KEY_C111);}catch(_){}}
+  (function resumeReadmitC111(tries=0){
+    let since=0;try{since=Number(localStorage.getItem(READMIT_KEY_C111))||0;}catch(_){}
+    if(!since)return;
+    if(Date.now()-since>7*86400000){readmitPendingC111(false);return;}
+    if(!(nativeContext&&model?.stands?.length&&typeof runtime?.services?.recoverInstallation==='function')){if(tries<30)setTimeout(()=>resumeReadmitC111(tries+1),2000);return;}
+    window.__c98log?.('READMIT_RESUME');setTimeout(()=>void readmitStandC107(),3000);
+  })();
   // C98: open an existing stand by joining its Wi-Fi. That network's key is
   // derived from the installation PIN, so being on it is the PIN proof; the
   // receiver checks this, the app only asks. Probes run only while the
@@ -6116,7 +6157,7 @@
       syncSceneWorkbench640();
     }
     if(remember)scheduleLightIntentSave();
-    const time=performance.now()/1000;
+    const time=performance.now()/1000,gradientResendIdsC111=[];
     for(const id of requested){
       const receiver=model.receivers.find(item=>item.id===id);if(!receiver)continue;
       const outputPorts=scope&&['line','lines'].includes(scope.kind)?M.selectionLines(model,receiver.zoneId,scope).filter(line=>line.receiverId===id).map(line=>line.port).sort((a,b)=>a-b):undefined;
@@ -6126,6 +6167,7 @@
         // FX1/first-colour request. Only dedicated typed Apply can resend.
         liveController?.reject?.(id,'GRADIENT_REAPPLY_REQUIRED');
         liveStates.set(id,{kind:'unconfirmed',code:'GRADIENT_REAPPLY_REQUIRED'});
+        gradientResendIdsC111.push(id);
       }
       else if(nativeLoaded&&liveController&&request&&request.kind==='SPI_PORTS'&&!spiPortScenesAvailable){liveController.reject?.(id,'SPI_PORT_SCENES_UNSUPPORTED');}
       else if(nativeLoaded&&liveController&&request){
@@ -6136,7 +6178,34 @@
       else liveStates.set(id,{kind:'preview'});
     }
     observeCentralLight(requested);
+    if(gradientResendIdsC111.length)resendGradientC111(gradientResendIdsC111);
     return [...requested];
+  }
+  // C111: after a layout change (Bekijk als, volgorde, pixels) the stand's gradient
+  // must be laid out again. When the customer is on that SPI zone and every
+  // selected ledline carries the same saved gradient, send it again through the
+  // dedicated gradient route (fast lane, ~0.5 s) instead of asking the customer
+  // to press the gradient again ("Het verloop is nog niet bevestigd").
+  function resendGradientC111(ids){
+    try{
+      const z=zone();if(!z||!gradientWorkspaceAllowed(z.id)||managementBusy||standPresentationOnly()||document.hidden)return;
+      if(!ids.every(id=>model.receivers.find(r=>r.id===id)?.zoneId===z.id))return;
+      const lines=M.selectionLines(model,z.id,selection());if(!lines.length)return;
+      const recipes=new Set(lines.map(line=>{const r=model.receivers.find(x=>x.id===line.receiverId);return r?M.lightStateFor(r,z.layout==='continuous'?0:line.port).staticGradientRecipe:undefined;}));
+      if(recipes.size!==1||[...recipes][0]===undefined)return;
+      const gradient=window.LightningStaticGradient.decodeRecipe([...recipes][0]);
+      ids.forEach(id=>liveStates.set(id,{kind:'staged',code:'GRADIENT_RETAINED'}));syncLiveStatus();
+      window.__c98log?.('GRADIENT_RESEND_C111 receivers='+ids.length);
+      clearTimeout(resendGradientC111.timer);
+      resendGradientC111.timer=setTimeout(()=>{
+        // Settled: never leave these receivers "pending", which would hold the order editor.
+        applyStaticGradientUI(gradient).then(()=>{ids.forEach(id=>{if(liveStates.get(id)?.code==='GRADIENT_RETAINED')liveStates.set(id,{kind:'applied',code:'GRADIENT_RETAINED'});});syncLiveStatus();},error=>{
+          // The customer chose something else meanwhile: that choice wins.
+          if(error?.code==='GRADIENT_CHANGED')return;
+          ids.forEach(id=>{if(liveStates.get(id)?.code==='GRADIENT_RETAINED')liveStates.set(id,{kind:'unconfirmed',code:'GRADIENT_REAPPLY_REQUIRED'});});syncLiveStatus();
+        });
+      },400);
+    }catch(_){/* keep the honest reapply notice */}
   }
   function observeCentralLight(ids){
     if(standPresentationOnly()||!simpleStandMode||!standSession?.snapshot()||!centralLiveCheckpoint)return;
@@ -6528,6 +6597,9 @@
     // C98: never while a zone/stand control screen is open. Its own owner
     // session would replace the light-control session on the MAIN (same phone).
     idle:sharedIdleC98,
+    // C111: on a control screen only a short status question (keeps "Verbonden").
+    statusIdle:()=>nativeContext&&!document.hidden&&!managementBusy&&!document.querySelector('dialog[open]')&&!stableZonePreparationUI&&!stableStandPreparationUI&&
+      typeof runtime?.services?.lightQuiet==='function'&&runtime.services.lightQuiet(),
     notice:(code,meta)=>{
       // C98: a receiver added on another phone. On the stand's Wi-Fi this phone
       // reloads the stand by itself (that network is the PIN proof): no PIN
