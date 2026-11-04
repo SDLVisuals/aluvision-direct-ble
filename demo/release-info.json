@@ -113,8 +113,8 @@
   "assets": [
     {
       "path": "RELEASE_NOTES.md",
-      "bytes": 42846,
-      "sha256": "e24e0a767e25b256f3ad1c1ef3d0d5fc2fb2eefb82b86e75a82c7e6e6d69040a"
+      "bytes": 43051,
+      "sha256": "734a8f345723ce4d119b34852a392f72d405e3cbebe00ce014acf3823e49877f"
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
@@ -305,6 +305,11 @@
       "path": "android/aluvision-android-test-50.0.0-c112a-63-aa9866e97c9a.apk",
       "bytes": 3432122,
       "sha256": "aa9866e97c9aa731d2571ba3439a7f97d9b56d8fe470a4b6f5fc86a1a37aa3a7"
+    },
+    {
+      "path": "android/aluvision-android-test-50.0.0-c112b-64-0576d45910b2.apk",
+      "bytes": 3436218,
+      "sha256": "0576d45910b2baa9fece13a8f7cc1e85815a80c88bcc82de3d2093d9fc897b7c"
     },
     {
       "path": "android/aluvision-android-test-50.0.0-c99-beta-35-4c1964cff799.apk",
@@ -544,7 +549,7 @@
     {
       "path": "index.html",
       "bytes": 11916,
-      "sha256": "7167f7053a18c5380c16de55082adc5718d0b9c0578cc96d9486aceb49172582"
+      "sha256": "7957a142e2791d3702150f579941d100e82c3620f5d5f367ab7e8827e8b3651e"
     },
     {
       "path": "installation-libraries.js",
@@ -843,8 +848,8 @@
     },
     {
       "path": "spi-zone-direction.js",
-      "bytes": 50646,
-      "sha256": "4c6c8510a0f832f41767491828ae26239ffad0f5fd7192dd9d3be1544553ec7a"
+      "bytes": 51412,
+      "sha256": "3a1bee9a7b6b506743188268396ec4128fc9dcfb13135651e25b2ae2644f860d"
     },
     {
       "path": "stand-animations.css",
@@ -4180,11 +4185,11 @@
     "scope": "Shared browser interface; fictional in-memory receivers only",
     "changes": "Fast SPI gradient with per-ledline option, order step with connection check, smoother motion, multi-user fixes, port changes from a phone with an older receiver view, automatic saving on receivers, four phones adjusting one stand together",
     "android": {
-      "versionCode": 63,
-      "versionName": "50.0.0-c112a",
-      "apk": "android/aluvision-android-test-50.0.0-c112a-63-aa9866e97c9a.apk",
-      "sha256": "aa9866e97c9aa731d2571ba3439a7f97d9b56d8fe470a4b6f5fc86a1a37aa3a7",
-      "bytes": 3432122
+      "versionCode": 64,
+      "versionName": "50.0.0-c112b",
+      "apk": "android/aluvision-android-test-50.0.0-c112b-64-0576d45910b2.apk",
+      "sha256": "0576d45910b2baa9fece13a8f7cc1e85815a80c88bcc82de3d2093d9fc897b7c",
+      "bytes": 3436218
     }
   }
 }

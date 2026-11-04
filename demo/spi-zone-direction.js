@@ -280,7 +280,13 @@
       if(action==='close'||action==='back'){event.preventDefault();close(action);return;}if(action==='save'){void save(state);return;}if(action==='test'){void test(state);return;}if(!['select','flip'].includes(action)||state.previewFailed||state.previewRetired||!enabled(state))return;
       const card=button.closest('[data-spi-zone-line]'),receiver=state.data.receivers.find(item=>item.id===card?.dataset.receiverId),output=receiver?.outputs.find(item=>item.port===Number(card?.dataset.port)&&item.enabled);if(!receiver||!output)return;
       if(action==='flip'&&output.pixels===1)return;
-      setFocus(state,receiver.id,output.port);if(action==='flip'){output.reversed=!output.reversed;updateCard(state,receiver,output);}queue(state,action==='flip'&&state.dialog.dataset.spiZoneCheck==='true');
+      // C112: a run of the connection check is sent without focus. A flip that
+      // focused its line never matched that answer, so the preview counted as
+      // failed and the whole session restarted (~9 s, normal light between).
+      const checkFlip=action==='flip'&&state.dialog.dataset.spiZoneCheck==='true';
+      setFocus(state,checkFlip?null:receiver.id,output.port);if(action==='flip'){output.reversed=!output.reversed;updateCard(state,receiver,output);}queue(state,checkFlip);
+      // The flip itself starts a run: count the next one from here, never on top of it.
+      if(checkFlip&&state.checkTimer&&state.checkTick){win.clearInterval(state.checkTimer);state.checkTimer=win.setInterval(state.checkTick,6400);}
     }
     function close(reason='close'){
       const state=active;if(!state)return;clearRecovery(state);if(state.checkTimer){win.clearInterval(state.checkTimer);state.checkTimer=null;}const pendingChanges=changes(state),focused=state.dialog.contains(doc.activeElement)||doc.activeElement===doc.body;active=null;generation++;state.closed=true;state.pending=null;state.unbindTutorial?.();state.dialog.removeEventListener('click',state.click);state.dialog.removeEventListener('cancel',state.cancel);doc.removeEventListener('visibilitychange',state.visibility);win.removeEventListener?.('lightning:native-active',state.nativeActive);for(const [timer,reject] of state.waitTimers){win.clearTimeout(timer);reject(Error('SPI_ZONE_CLOSED'));}state.waitTimers.clear();if(state.dialog.open)state.dialog.close();state.dialog.remove();
@@ -310,12 +316,15 @@
       // here; in check mode only the connection animation runs.
       if(data.check===true){
         dialog.dataset.spiZoneCheck='true';dialog.querySelector('#'+headingId).textContent=t(state,'checkTitle');
+        // C112: the red/green ends example explains the sides step; the check
+        // shows dark lines with a coloured light over every joint instead.
+        dialog.querySelector('[data-spi-tutorial-root]')?.remove();
         const hint=dialog.querySelector('.spi-zone-select-hint');if(hint)hint.textContent=t(state,'checkHint');
         // C107: the walkthrough keeps the flip buttons: a wrong join is fixed right here.
         dialog.querySelector('[data-spi-zone-action="save"]').querySelector('span').textContent=t(state,'checkDone');
         dialog.querySelector('[data-spi-zone-action="test"]')?.setAttribute('hidden','');
         const tick=()=>{if(current(state)&&state.confirmedRequest&&!state.inFlight&&!state.recoveringTest&&enabled(state))void test(state);};
-        state.checkTimer=win.setInterval(tick,6400);
+        state.checkTick=tick;state.checkTimer=win.setInterval(tick,6400);
         // C112: the first run starts as soon as the guide is confirmed (it
         // waited for the next 6.4 s tick, ~3 s of dark lines); the interval
         // restarts from that run so two runs never overlap.
