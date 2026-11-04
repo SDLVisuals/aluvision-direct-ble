@@ -1,0 +1,15 @@
+/* C113: the walkthrough (doorloop) as the clear final step of the ledline
+ * order editor. The button keeps its C106 look (.v50-order-connection-check);
+ * this card only frames it with a step label, a title and the explanation. */
+html body .c113-order-walkthrough{margin:18px 0 6px;padding:16px 16px 12px;border-radius:22px;background:var(--panel,#fff);
+  border:1.5px solid color-mix(in srgb,#68c7db 45%,var(--line,#dce1e9));box-shadow:0 14px 30px -24px rgba(20,24,32,.6)}
+html body .c113-order-walkthrough-step{margin:0 0 4px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:color-mix(in srgb,#2a9bb5 80%,var(--ink,#1c1c1e))}
+html body .c113-order-walkthrough>h4{margin:0 0 6px;font-size:18px;line-height:1.2;letter-spacing:-.2px;color:var(--ink,#1c1c1e)}
+html body .c113-order-walkthrough>p:not(.c113-order-walkthrough-step){margin:0 0 4px;font-size:13.5px;line-height:1.45;color:var(--muted,#646d78)}
+html body .c113-order-walkthrough .v50-order-connection-check{margin:10px 0 8px}
+html body .c113-order-walkthrough-note{display:block;font-size:12px;line-height:1.4;color:var(--muted,#646d78)}
+body[data-theme=dark] .c113-order-walkthrough{background:rgba(255,255,255,.04);border-color:rgba(104,199,219,.35);box-shadow:none}
+body[data-theme=dark] .c113-order-walkthrough-step{color:#68c7db}
+body[data-theme=dark] .c113-order-walkthrough>h4{color:#f4f3f1}
+body[data-theme=dark] .c113-order-walkthrough>p:not(.c113-order-walkthrough-step),body[data-theme=dark] .c113-order-walkthrough-note{color:rgba(244,243,241,.68)}
+@media (max-width:360px){html body .c113-order-walkthrough{padding:13px 12px 10px;border-radius:18px}html body .c113-order-walkthrough>h4{font-size:17px}}

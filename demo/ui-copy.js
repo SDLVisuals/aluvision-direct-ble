@@ -726,6 +726,15 @@
     ["Pas de naam of zones aan. Wil je het licht wijzigen? Kies onderaan ‘Licht aanpassen’.", "Change the name or zones. Want to change the light? Choose ‘Adjust light’ below.", "Modifiez le nom ou les zones. Vous voulez changer la lumière ? Choisissez « Ajuster la lumière » en bas.", "Ändere den Namen oder die Zonen. Möchtest du das Licht ändern? Wähle unten ‚Licht anpassen‘."],
     ["Animatie synchroniseren", "Synchronising animation", "Synchronisation de l’animation", "Animation wird synchronisiert"],
     ["De receivers starten samen over {seconds} s.", "The receivers start together in {seconds} s.", "Les récepteurs démarrent ensemble dans {seconds} s.", "Die Receiver starten gemeinsam in {seconds} s."],
+    ["Standanimatie synchroniseren", "Synchronising stand animation", "Synchronisation de l’animation du stand", "Standanimation wird synchronisiert"],
+    ["Alle receivers worden op één tijd afgestemd.", "All receivers are being aligned to one clock.", "Tous les récepteurs sont alignés sur une même horloge.", "Alle Receiver werden auf eine Zeit abgestimmt."],
+  // C113 copy: the walkthrough is the final step of the order editor; the add flow is Uitgangen · Pixels · Volgorde.
+  ["Laatste stap","Last step","Dernière étape","Letzter Schritt"],
+  ["Doorloop controleren","Walkthrough check","Contrôle du parcours lumineux","Durchlauf prüfen"],
+  ["Een gekleurd lichtje loopt over elke overgang van ledline naar ledline. Verdwijnt het en duikt het ergens anders op? Keer die ledline om tijdens de doorloop.","A coloured light runs across every join from LED line to LED line. Does it vanish and pop up somewhere else? Flip that LED line during the walkthrough.","Une lumière colorée parcourt chaque jonction d’une ligne LED à l’autre. Elle disparaît et réapparaît ailleurs ? Inversez cette ligne LED pendant le parcours.","Ein farbiges Licht läuft über jeden Übergang von LED-Linie zu LED-Linie. Verschwindet es und taucht woanders auf? Kehre diese LED-Linie während des Durchlaufs um."],
+  ["Doorloop starten","Start walkthrough","Lancer le parcours","Durchlauf starten"],
+  ["Kanten apart aanpassen kan altijd nog via de receiver.","You can still adjust the directions separately from the receiver page.","Vous pouvez toujours ajuster les sens séparément depuis le récepteur.","Die Richtungen kannst du jederzeit noch separat über den Receiver anpassen."],
+  ["Laatste stap: zet de ledlines in de juiste volgorde en start daarna de doorloop.","Last step: put the LED lines in the right order, then start the walkthrough.","Dernière étape : placez les lignes LED dans le bon ordre, puis lancez le parcours lumineux.","Letzter Schritt: Bringe die LED-Linien in die richtige Reihenfolge und starte dann den Durchlauf."],
   ];
   const rows=Object.create(null);
   for(const row of entries){if(!Array.isArray(row)||row.length!==4||row.some(value=>typeof value!=='string'))throw Error('UI_COPY_ROW');if(Object.prototype.hasOwnProperty.call(rows,row[0])){if(JSON.stringify(rows[row[0]])!==JSON.stringify(row))throw Error('UI_COPY_DUPLICATE');continue;}rows[row[0]]=Object.freeze([...row]);}

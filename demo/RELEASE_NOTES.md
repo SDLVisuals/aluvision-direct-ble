@@ -15,7 +15,9 @@
 - A phone whose place on the stand went to another phone gets it back by itself; a new phone can join while a gradient is showing; receiver cards show a live drawing of the ports.
 - Changes reach the other phones in about 1 s instead of 8 s.
 - Check connections: the LED lines are off and a coloured light runs over every connection; one smooth movement means the connection is right.
-- Android test app 64 with the same interface.
+- Setting up an SPI receiver now runs Outputs, Pixels, Order: the order step ends with the walkthrough (a light over every join, flips allowed), and adjusting the sides stays available from the receiver page.
+- Stand animations show a short "synchronising" card while every receiver is lined up.
+- Android test app 66 with the same interface.
 
 ## Android code 36
 

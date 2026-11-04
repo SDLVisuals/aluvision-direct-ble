@@ -444,6 +444,8 @@
   const expandedConnections=new Set();
   let pixelSetupReceiverId=null;
   let pendingSPIDirectionOpen=null;
+  // C113: after the pixels of a new SPI the ledline order step follows.
+  let pendingSPIOrderOpenC113=null;
   const spiDirectionPending=new Map(),spiDirectionSessions=new Map(),spiDirectionRetired=new Set();
   let spiDirectionTransport=Promise.resolve();
   let spiDirectionOpening744=null;
@@ -1102,8 +1104,10 @@
   // C105: SPI connection check from the order step: every ledline in its own
   // colour with a light running across each connection, in the draft order.
   function orderConnectionCheckMarkup(){
-    const z=zone();if(!z||z.type!=='SPI'||M.zoneLedlines(model,z.id).length<2||previewContext)return '';
-    return `<button type="button" class="v50-order-connection-check" data-action="order-connection-check"><span>${esc(t('Verbindingen controleren'))}</span><small>${esc(t('Lichtje loopt over elke overgang van ledline naar ledline'))}</small></button>`;
+    const z=zone();if(!z||z.type!=='SPI'||M.zoneLedlines(model,z.id).length<2)return '';
+    // C113: the walkthrough is the clear final step of the order editor. The
+    // browser demo shows it as an example without real lighting.
+    return `<section class="c113-order-walkthrough" aria-labelledby="c113-walkthrough-title"><p class="c113-order-walkthrough-step">${esc(t('Laatste stap'))}</p><h4 id="c113-walkthrough-title">${esc(t('Doorloop controleren'))}</h4><p>${esc(t('Een gekleurd lichtje loopt over elke overgang van ledline naar ledline. Verdwijnt het en duikt het ergens anders op? Keer die ledline om tijdens de doorloop.'))}</p><button type="button" class="v50-order-connection-check" data-action="order-connection-check"><span>${esc(t('Doorloop starten'))}</span><small>${esc(t('Lichtje loopt over elke overgang van ledline naar ledline'))}</small></button><small class="c113-order-walkthrough-note">${esc(t('Kanten apart aanpassen kan altijd nog via de receiver.'))}</small></section>`;
   }
   function orderTestMarkup(){
     return `<section class="v50-order-test"><h4>${esc(orderGuideText('testTitle'))}</h4><p data-order-test-status role="status" aria-live="polite"></p><button type="button" class="v50-order-test-start" data-action="order-test-start">${esc(orderGuideText(previewContext?'previewStart':'testStart'))}</button><button type="button" class="v50-order-test-stop" data-action="order-test-stop" hidden>${esc(orderGuideText('testStop'))}</button><button type="button" class="v50-order-test-confirm" data-action="order-test-confirm" hidden>${esc(orderGuideText('confirm'))}</button></section>`;
@@ -1696,15 +1700,10 @@
       }
       if(['saved','done'].includes(reason)){
         const joined=newReceiverId&&model.receivers.find(receiver=>receiver.id===newReceiverId&&receiver.standId===standId&&receiver.zoneId===zoneId&&receiver.lifecycle==='added');
-        if(joined)resumeConfiguredLighting(joined.id);
-        render({preserveScroll:true});toast(pixelText659(joined?'pixelAdded':'pixelDirectionsSaved'));
-        // C105: a new SPI continues with the ledline order step (with the
-        // connection check) when its zone has two or more ledlines.
-        if(joined&&M.zoneLedlines(model,zoneId).length>=2)setTimeout(()=>{
-          if(document.hidden||spiZoneDirections.isOpen()||pixelSetup.isOpen())return;
-          if(route.screen!=='controls'||route.zoneId!==zoneId)navigate('controls',{zoneId});
-          setTimeout(()=>{if(!openLineSetup.has(zoneId))main.querySelector('[data-action="layout"]')?.click();toast(t('Laatste stap: zet de ledlines in de juiste volgorde en controleer de verbindingen.'));},700);
-        },900);
+        // C113: a remembered sides step of an older checkpoint still ends in
+        // the order step; the normal add flow reaches it straight from pixels.
+        if(joined)continueToOrderStepC113(zoneId,joined.id);
+        else{render({preserveScroll:true});toast(pixelText659('pixelDirectionsSaved'));}
       }
       const ticket=spiOrderReturn744;
       if(ticket&&ticket.standId===standId&&ticket.zoneId===zoneId){
@@ -1750,6 +1749,23 @@
   let prewarmFlightC98=null;
   document.addEventListener('toggle',event=>{if(event.target?.matches?.('details[data-receiver-detail],details[data-receiver-connections]')&&event.target.open)prewarmSetupC98();},true);
   document.addEventListener('click',event=>{if(event.target?.closest?.('[data-action=nav][data-id=receivers]'))setTimeout(prewarmSetupC98,400);},true);
+  // C113: the add flow is Uitgangen · Pixels · Volgorde. After the pixels (the
+  // default directions are saved with them) the order editor opens with the
+  // walkthrough as its final step; Kanten stays available from the receiver.
+  function continueToOrderStepC113(zoneId,receiverId){
+    const joined=receiverId&&model.receivers.find(receiver=>receiver.id===receiverId&&receiver.zoneId===zoneId&&receiver.type==='SPI'&&receiver.lifecycle==='added');
+    if(joined)resumeConfiguredLighting(joined.id);
+    render({preserveScroll:true});toast(pixelText659(joined?'pixelAdded':'pixelOnlySaved'));
+    if(!zoneId||M.zoneLedlines(model,zoneId).length<2)return;
+    setTimeout(()=>{
+      if(document.hidden||spiZoneDirections.isOpen()||pixelSetup.isOpen())return;
+      if(route.screen!=='controls'||route.zoneId!==zoneId)navigate('controls',{zoneId});
+      setTimeout(()=>{if(!openLineSetup.has(zoneId))main.querySelector('[data-action="layout"]')?.click();toast(t('Laatste stap: zet de ledlines in de juiste volgorde en start daarna de doorloop.'));},700);
+    },900);
+  }
+  function otherZoneLinesC113(receiver){
+    return receiver?.zoneId?M.zoneLedlines(model,receiver.zoneId).filter(line=>line.receiverId!==receiver.id).length:0;
+  }
   async function openSPIZoneDirections({zoneId,newReceiverId,handoff=null,check=false,lineOrder=null}={}){
     if(spiDirectionOpening744||spiZoneDirections.isOpen()||pixelSetup.isOpen()||document.hidden){
       if(handoff?.receipt)try{await stopSPIDirectionTransport744({standId:handoff.receipt.standId,zoneId:handoff.receipt.zoneId,sessionId:handoff.receipt.sessionId},true);}catch(_){}
@@ -1836,7 +1852,10 @@
       if(resolved.checkpoint.phase==='directions'&&!resolved.resumePending){
         if(!receiver.zoneId){pairFirstAwaitingAssignmentId=receiver.id;toast(pairFirstText('unassigned'));showReceiverAssignment(receiver.id);return;}
         const restored=PairFirst.restoredDirections(resolved.checkpoint,actual);
-        if(restored.length)spiDirectionPending.set(receiver.standId+':'+receiver.zoneId,restored);
+        // C113: the pixels are saved, so the setup is complete; only earlier
+        // unsaved flips of this zone still open the sides dialog first.
+        if(!restored.length){try{pairFirstSetup.remove(receiver.id);}catch(_){}continueToOrderStepC113(receiver.zoneId,receiver.id);return;}
+        spiDirectionPending.set(receiver.standId+':'+receiver.zoneId,restored);
         await openSPIZoneDirections({zoneId:receiver.zoneId,newReceiverId:receiver.id});return;
       }
       pairFirstActiveReceiverId=receiverId;pixelSetupReceiverId=receiverId;
@@ -1844,7 +1863,7 @@
       const directionsOnly=resolved.resumePending&&desired.every((output,index)=>{
         const previous=receiver.outputs[index];return previous&&output.port===previous.port&&output.enabled===previous.enabled&&output.pixels===previous.pixels&&(previous.enabled||output.reversed===previous.reversed);
       });
-      pixelSetup.open({...receiver,outputs:desired},{resumePending:resolved.resumePending,directionsOnly,pairFirst:true,...(resolved.resumeStep?{resumeStep:resolved.resumeStep}:{})});
+      pixelSetup.open({...receiver,outputs:desired},{resumePending:resolved.resumePending,directionsOnly,pairFirst:true,zoneLines:otherZoneLinesC113(receiver),...(resolved.resumeStep?{resumeStep:resolved.resumeStep}:{})});
       if(resolved.changed)toast(pairFirstText('changed'));
     }finally{if(pairFirstOpening===token)pairFirstOpening=null;}
   }
@@ -1852,7 +1871,9 @@
     return receiver?.type==='SPI'&&receiver.lifecycle==='added'&&typeof receiver.onboardingTransactionId==='string'&&!!receiver.onboardingTransactionId&&model.receivers.some(current=>current.lifecycle==='added'&&['id','rid','deviceFingerprint','type','standId','role','onboardingTransactionId'].every(key=>current[key]===receiver[key]));
   }
   const pixelSetup=window.LightningPixelSetup.create({jointDirections:true,mode:previewContext?'preview':nativeContext&&typeof runtime?.services?.configureOutputs==='function'?'native':'native-unavailable',isPublishedReceiver:publishedPixelReceiver686,
-    canHandoff:receiver=>!!receiver?.zoneId&&!spiDirectionPending.get(receiver.standId+':'+receiver.zoneId)?.length,
+    // C113: the sides dialog no longer follows the pixels, so the pixel-ends
+    // preview is never handed over to it; the order step opens instead.
+    canHandoff:()=>false,
     previewCapabilities:{get identifyPorts(){return runtime?.native===true&&runtime.services?.previewCapabilities?.identifyPorts===true;},get power(){return runtime?.native===true&&runtime.services?.previewCapabilities?.power===true;},get editorIsolation(){return runtime?.native===true&&runtime.services?.previewCapabilities?.editorIsolation===true;},get pixelEndsHandoff(){return runtime?.native===true&&runtime.services?.previewCapabilities?.pixelEndsHandoff===true;}},
     onPreview:runtime?.native===true&&typeof runtime.services?.previewPixels==='function'?request=>{requireStandPresentationConnection();return runtime.services.previewPixels({...request,mainReceiverId:request.role==='node'?model.receivers.find(r=>r.standId===request.standId&&r.role==='main'&&r.lifecycle==='added')?.id:null});}:undefined,
     onDraftChange:step=>{
@@ -1862,8 +1883,9 @@
     onClose:()=>{
       const paired=pairFirstActiveReceiverId;
       document.querySelector(`[data-action="receiver-pixel-setup"][data-id="${CSS.escape(pixelSetupReceiverId||'')}"]`)?.focus({preventScroll:true});
-      pixelSetupReceiverId=null;pairFirstActiveReceiverId=null;const next=pendingSPIDirectionOpen;pendingSPIDirectionOpen=null;
+      pixelSetupReceiverId=null;pairFirstActiveReceiverId=null;const next=pendingSPIDirectionOpen;pendingSPIDirectionOpen=null;const order=pendingSPIOrderOpenC113;pendingSPIOrderOpenC113=null;
       if(next)void openSPIZoneDirections(next).catch(()=>toast(t('outputUnconfirmed')));
+      else if(order)continueToOrderStepC113(order.zoneId,order.receiverId);
       else{
         render({preserveScroll:true});
         if(paired&&!document.hidden&&pairFirstSetup.get(paired)?.phase==='directions'&&!model.receivers.find(item=>item.id===paired)?.zoneId){
@@ -1907,19 +1929,22 @@
         model=next;
       }
       if(paired){
+        // C113: the pixels (with the default directions) are saved, so the
+        // pair-first setup is complete; the order step follows. A receiver
+        // without a zone keeps its checkpoint until a zone is chosen.
         const checkpoint=pairFirstSetup.afterPixels(receiverId,model),restored=PairFirst.restoredDirections(checkpoint,model);
         const configured=model.receivers.find(item=>item.id===receiverId);
         if(configured?.zoneId){
-          if(restored.length)spiDirectionPending.set(configured.standId+':'+configured.zoneId,restored);
-          pendingSPIDirectionOpen={zoneId:configured.zoneId,newReceiverId:receiverId,...(handoff?{handoff}:{})};
+          if(restored.length){spiDirectionPending.set(configured.standId+':'+configured.zoneId,restored);pendingSPIDirectionOpen={zoneId:configured.zoneId,newReceiverId:receiverId};}
+          else{try{pairFirstSetup.remove(receiverId);}catch(_){}pendingSPIOrderOpenC113={zoneId:configured.zoneId,receiverId};}
         }
         else toast(pairFirstText('unassigned'));
       }else if(continueToDirections){
         const configured=model.receivers.find(item=>item.id===receiverId);
         if(!configured?.zoneId)throw Error(t('outputUnconfirmed'));
-        // Full configuration has one final direction step. Do not dispatch
-        // the old scene between pixels and that whole-zone test overlay.
-        pendingSPIDirectionOpen={zoneId:configured.zoneId,...(handoff?{handoff}:{})};
+        // C113: a full setup of an existing receiver also ends in the order
+        // step (its ledlines may have changed); the lights resume there.
+        pendingSPIOrderOpenC113={zoneId:configured.zoneId,receiverId:null};
       }else resumeConfiguredLighting(receiverId);
       expandedReceivers.add(receiverId);
       const blink=identifying.get(receiverId);
@@ -1986,7 +2011,7 @@
       }
       if(result?.spiDirectionZoneId){
         navigate('stand',{setupReturnZoneId:null});
-        void openSPIZoneDirections({zoneId:result.spiDirectionZoneId,newReceiverId:result.newReceiverId}).catch(()=>toast(t('outputUnconfirmed')));return;
+        continueToOrderStepC113(result.spiDirectionZoneId,result.newReceiverId);return;
       }
       const returnZone=stand()?.zones.find(z=>z.id===route.setupReturnZoneId);
       if(returnZone){
@@ -8543,7 +8568,7 @@
           const directionsOnly=pending.status==='pending'&&pending.outputs.every((output,index)=>{
             const previous=current.outputs[index];return previous&&output.port===previous.port&&output.enabled===previous.enabled&&output.pixels===previous.pixels&&(previous.enabled||output.reversed===previous.reversed);
           });
-          pixelSetup.open(pending.status==='pending'?{...current,outputs:pending.outputs}:current,{initialPort:selectedVisualPort(current),...(selectedPorts?{selectedPorts}:{}),pixelsOnly:action==='receiver-pixels-only',resumePending:pending.status==='pending',directionsOnly});
+          pixelSetup.open(pending.status==='pending'?{...current,outputs:pending.outputs}:current,{initialPort:selectedVisualPort(current),...(selectedPorts?{selectedPorts}:{}),pixelsOnly:action==='receiver-pixels-only',resumePending:pending.status==='pending',directionsOnly,zoneLines:otherZoneLinesC113(current)});
         }catch(_){toast(t("De vorige poortwijziging kon niet worden gelezen. Probeer opnieuw; er is niets gewist."));}
         finally{managementBusy=false;button.disabled=false;}return;
       }

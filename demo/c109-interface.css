@@ -77,6 +77,11 @@ body[data-theme=dark] .c109-sync-bar{background:rgba(255,255,255,.12)}
 @media (prefers-reduced-motion:no-preference){.c109-sync-icon{animation:c109-sync-pulse 1.6s ease-in-out infinite}}
 @keyframes c109-sync-pulse{50%{box-shadow:0 0 0 5px rgba(104,199,219,.18)}}
 @media (prefers-reduced-motion:reduce){html body .c109-sync,html body .c109-sync.is-leaving{animation:none}}
+/* C111: stand animation, no countdown: a calm light runs along the bar. */
+html body .c109-sync.is-joining .c109-sync-bar>i{width:34%}
+@media (prefers-reduced-motion:no-preference){html body .c109-sync.is-joining .c109-sync-bar>i{animation:c109-sync-run 1.5s ease-in-out infinite}}
+@media (prefers-reduced-motion:reduce){html body .c109-sync.is-joining .c109-sync-bar>i{width:100%;opacity:.55}}
+@keyframes c109-sync-run{from{transform:translateX(-100%)}to{transform:translateX(300%)}}
 
 /* ---------- Port colours on screen: calm, not fluorescent ---------- */
 /* The receivers light up in pure identification colours (pixel-setup.js
@@ -432,3 +437,41 @@ html body [data-pixel-scrub][data-scrub-zone]::after{position:absolute;top:10px;
 html body [data-pixel-scrub][data-scrub-zone="exact"]::after{content:"±1";background:rgba(63,174,118,.85)}
 html body [data-pixel-scrub][data-scrub-zone="up"]::after{content:"+ ›››";background:rgba(229,72,63,.9)}
 html body [data-pixel-scrub][data-scrub-zone="down"]::after{content:"‹‹‹ −";background:rgba(229,72,63,.9)}
+
+/* ---------- C109e: stable sheets and tidy edges ---------- */
+/* An open sheet (ledline order, dialogs) moves only up and down; the page
+ * under it stays still and nothing can be pushed sideways or bounce away. */
+html:has(body.v50-layout-modal),html:has(dialog[open]:modal){overflow:hidden;overscroll-behavior:none}
+html:not(#c109) body:not(#c109).v50-layout-modal{overscroll-behavior:none}
+html:not(#c109) body:not(#c109) .ledline-setup[data-order-open="true"],
+html:not(#c109) body:not(#c109) dialog[open]{overflow-x:hidden!important;overscroll-behavior:contain!important}
+/* The zone's preview card has a glass edge now: give its text room. */
+html:not(#c109) body:not(#c109) .control-preview-dock:not([data-scrolled=true]) .control-dock-surface{padding:9px 9px 8px}
+html:not(#c109) body:not(#c109) .control-dock-surface :is(.control-dock-context-line,.control-location-summary,.live-confirmation){padding-inline:5px;box-sizing:border-box}
+
+/* ---------- C109f: one card language everywhere ---------- */
+/* Big cards 22 px, cards inside a card 16 px, buttons 16 px. A wrapper that
+ * holds cards is no card itself (no double frame on the zone screen). */
+html:not(#c109) body:not(#c109) #main :is(.editor-controls-zone,.animation-simple-page) .control-workspace{
+  background:none!important;border:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;padding:0!important}
+html:not(#c109) body:not(#c109) :is(section.card,.menu-card,article.zone-entry,section.stand-scenes,details.receiver-overview-card,article.animation-family-card,
+  section.receiver-danger-section,.control-dock-surface,section.ledline-setup:not([data-order-open="true"]),aside.scene-edit-workbench,.scene-detail-header,
+  section.order-mirror101,section.c113-order-walkthrough,.control-workspace .shared-colour-picker,.control-workspace .animation-daily-controls){border-radius:22px!important}
+html:not(#c109) body:not(#c109) .control-preview-dock[data-scrolled=true] .control-dock-surface{border-radius:0 0 18px 18px!important}
+html:not(#c109) body:not(#c109) :is(section.card,section.receiver-danger-section,section.stand-scenes,aside.scene-edit-workbench){padding:16px!important}
+html:not(#c109) body:not(#c109) :is(section.card,.menu-card,details.receiver-overview-card,.control-dock-surface,section.ledline-setup,aside.scene-edit-workbench,dialog) :is(
+  .power-card,.receiver-port-row,.warm-white-choice,.saved-colour-item,.om-panel,.order-assignment652,.receiver-product,.scene-saved-zone,.pixel-port-context,
+  details.receiver-manage-menu,button.ledline-add-action,.mixed-note,.pixel-only-hint,.stand-info-tile,.effect-card,.menu-card){border-radius:16px!important}
+html:not(#c109) body:not(#c109) :is(#main,dialog) .button:not(.pill):not([class*=round]){border-radius:16px}
+@media (max-width:360px){html:not(#c109) body:not(#c109) :is(section.card,section.receiver-danger-section,section.stand-scenes,aside.scene-edit-workbench){padding:14px!important}}
+/* The zone's on/off pill got a glass edge: give "Aan" and its switch room. */
+html:not(#c109) body:not(#c109) #main .power-card.power-card-zone{display:inline-flex;align-items:center;gap:8px;padding:4px 5px 4px 12px!important;border-radius:999px!important;min-height:40px;box-sizing:border-box}
+/* Scenes: the Activeren tile sits inside the card with even margins. */
+html:not(#c109) body:not(#c109) #main article.scene-card-row [data-action="scene-apply"]{margin:8px 8px 8px 0;border-radius:16px!important}
+/* Text never touches a button's or chip's edge. */
+html:not(#c109) body:not(#c109) :is(#main,dialog) .button.secondary{padding-inline:max(10px,var(--c109-pad,0px))!important;text-wrap:balance}
+html:not(#c109) body:not(#c109) dialog .stand-animation-zone{padding-inline:10px!important;border-radius:12px!important}
+/* Receiver quick tiles: four in a row only when each tile has room; in a
+ * narrow column (tablet split, small phone) they form a calm 2 x 2. */
+html body #main .receiver-connections{container-type:inline-size}
+@container (max-width:330px){html body #main .receiver-connections .spi-settings659{grid-template-columns:repeat(2,minmax(0,1fr))!important}}

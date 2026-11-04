@@ -27,16 +27,31 @@
     return params?value.replace(/\{(\w+)\}/g,(m,k)=>Object.prototype.hasOwnProperty.call(params,k)?String(params[k]):m):value;};
   let sync=null;
   function hideSync(){
-    if(!sync)return;const {card,timer}=sync;sync=null;clearInterval(timer);
+    if(!sync)return;const {card,timer}=sync;
+    // A stand animation that aligns quickly still shows its card long enough to read.
+    const wait=sync.joining?Math.max(0,sync.shownAt+1400-Date.now()):0;
+    if(wait){clearTimeout(sync.later);sync.later=setTimeout(hideSync,wait);return;}
+    sync=null;clearInterval(timer);
     card.classList.add('is-leaving');setTimeout(()=>card.remove(),260);
+  }
+  function syncCard(title){
+    if(sync){clearInterval(sync.timer);clearTimeout(sync.later);sync.card.remove();sync=null;}
+    const card=document.createElement('div');card.className='c109-sync';card.setAttribute('role','status');card.setAttribute('aria-live','polite');
+    card.innerHTML='<span class="c109-sync-icon" aria-hidden="true"></span><span class="c109-sync-copy"><b></b><small></small></span><span class="c109-sync-bar" aria-hidden="true"><i></i></span>';
+    card.querySelector('b').textContent=copy(title);
+    document.body.append(card);return card;
+  }
+  // C111: a stand animation has no reported lead; the bar runs without a
+  // countdown until the stand answers.
+  function showJoining(){
+    if(sync&&!sync.joining)return;
+    const card=syncCard('Standanimatie synchroniseren');card.classList.add('is-joining');
+    card.querySelector('small').textContent=copy('Alle receivers worden op één tijd afgestemd.');
+    sync={card,timer:0,joining:true,shownAt:Date.now()};
   }
   function showSync(leadMs){
     if(!Number.isFinite(leadMs)||leadMs<=0||leadMs>30000)return hideSync();
-    if(sync){clearInterval(sync.timer);sync.card.remove();sync=null;}
-    const card=document.createElement('div');card.className='c109-sync';card.setAttribute('role','status');card.setAttribute('aria-live','polite');
-    card.innerHTML='<span class="c109-sync-icon" aria-hidden="true"></span><span class="c109-sync-copy"><b></b><small></small></span><span class="c109-sync-bar" aria-hidden="true"><i></i></span>';
-    card.querySelector('b').textContent=copy('Animatie synchroniseren');
-    document.body.append(card);
+    const card=syncCard('Animatie synchroniseren');
     const ends=Date.now()+leadMs,bar=card.querySelector('.c109-sync-bar>i'),note=card.querySelector('small');
     const tick=()=>{
       const left=Math.max(0,ends-Date.now());
@@ -48,7 +63,7 @@
     if(!reducedMotion()){bar.style.transition='none';bar.style.width='0%';void bar.offsetWidth;bar.style.transition='width '+leadMs+'ms linear';bar.style.width='100%';}
   }
   const reducedMotion=()=>window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  document.addEventListener('lightning:animation-sync',event=>{const detail=event.detail||{};if(detail.done||detail.failed)hideSync();else showSync(Number(detail.leadMs));});
+  document.addEventListener('lightning:animation-sync',event=>{const detail=event.detail||{};if(detail.done||detail.failed)hideSync();else if(detail.joining)showJoining();else showSync(Number(detail.leadMs));});
 
   /* ---------- Colour pickers: the brightness track fills up ---------- */
   const fill=input=>input.style.setProperty('--fill',((Number(input.value)-Number(input.min||0))/((Number(input.max||100)-Number(input.min||0))||1)*100)+'%');

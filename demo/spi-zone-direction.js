@@ -4,10 +4,11 @@
   const texts={
     title:['Kanten aanpassen','Adjust directions','Ajuster les sens','Richtungen anpassen'],
     // C105: the connection check, opened from the ledline order step.
-    checkTitle:['Verbindingen controleren','Check connections','Vérifier les connexions','Verbindungen prüfen'],
+    // C113: the walkthrough is the final step of the order editor.
+    checkTitle:['Doorloop controleren','Walkthrough check','Contrôle du parcours lumineux','Durchlauf prüfen'],
     checkHint:['De ledlines staan uit. Op elke overgang loopt een gekleurd lichtje van het einde van de ene ledline in het begin van de volgende. Loopt het in één beweging door, dan klopt die verbinding. Verdwijnt het en duikt het ergens anders op? Keer die ledline hier om.','The LED lines are off. At each connection a coloured light runs from the end of one LED line into the start of the next. If it flows on in one movement, that connection is right. If it vanishes and pops up somewhere else, flip that LED line here.','Les lignes LED sont éteintes. À chaque connexion, une lumière colorée passe de la fin d’une ligne LED au début de la suivante. Si elle continue d’un seul mouvement, la connexion est correcte. Si elle disparaît et réapparaît ailleurs, inversez cette ligne LED ici.','Die LED-Linien sind aus. An jeder Verbindung läuft ein farbiges Licht vom Ende einer LED-Linie in den Anfang der nächsten. Läuft es in einer Bewegung weiter, stimmt die Verbindung. Verschwindet es und taucht woanders auf? Dann kehre diese LED-Linie hier um.'],
     checkDone:['Klaar','Done','Terminé','Fertig'],
-    added:['Laatste stap · kanten instellen','Last step · set directions','Dernière étape · ajuster les sens','Letzter Schritt · Richtungen einstellen'],
+    added:['Kanten instellen','Set directions','Régler les sens','Richtungen einstellen'],
     intro:['Vergelijk de rode en groene uiteinden van je echte ledlines.','Compare the red and green ends of your real LED lines.','Comparez les extrémités rouges et vertes de vos vraies lignes LED.','Vergleiche die roten und grünen Enden deiner echten LED-Linien.'],
     look:['Kijk naar je echte ledlines.','Look at your real LED lines.','Regardez vos vraies lignes LED.','Schau auf deine echten LED-Linien.'],
     preview:['Voorbeeld · geen echte verlichting verbonden','Preview · no real lighting connected','Aperçu · aucun éclairage réel connecté','Vorschau · keine echte Beleuchtung verbunden'],
@@ -165,7 +166,7 @@
       finally{if(state.previewJob===job)state.previewJob=null;state.inFlight=false;if(current(state)){controls(state);if(state.pending)void drain(state);else observeLater(state);}}
       return applied;
     }
-    function queue(state,testing=false){if(!enabled(state)||state.previewRetired)return Promise.resolve(false);if(state.data.previewOnly||!onPreview){status(state,'unsupported');return Promise.resolve(false);}state.version++;if(state.previewFailed)return Promise.resolve(false);if(!testing){state.pathActive=false;state.pathEnded=false;}state.pending=request(state);state.pendingTest=testing;return drain(state);}
+    function queue(state,testing=false){if(!enabled(state)||state.previewRetired)return Promise.resolve(false);if(state.data.previewOnly||!onPreview){status(state,state.data.previewOnly&&state.data.check===true?'testExample':'unsupported');return Promise.resolve(false);}state.version++;if(state.previewFailed)return Promise.resolve(false);if(!testing){state.pathActive=false;state.pathEnded=false;}state.pending=request(state);state.pendingTest=testing;return drain(state);}
     function setFocus(state,receiverId,port){state.focus=receiverId?{receiverId,port}:null;for(const card of state.dialog.querySelectorAll('[data-spi-zone-line]')){const selected=card.dataset.receiverId===receiverId&&Number(card.dataset.port)===port;card.dataset.selected=String(selected);card.querySelector('[data-spi-zone-action="select"]').setAttribute('aria-pressed',String(selected));const badge=card.querySelector('[data-spi-zone-focus-badge]');if(badge){badge.hidden=!selected;badge.textContent=t(state,'selected');}}}
     function guideReversed(state,receiver,output){
       // End colours alternate along the complete saved path so matching

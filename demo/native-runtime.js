@@ -252,6 +252,7 @@
       if(message.ok===true&&['applyLive','applyLiveBatch'].includes(request.action)&&Number.isFinite(message.result?.leadMs)&&message.result.leadMs>0)
         try{const leadMs=Math.min(60000,message.result.leadMs);root.document.dispatchEvent(new CustomEvent('lightning:animation-sync',{detail:{leadMs}}));
           root.setTimeout(()=>{try{root.document.dispatchEvent(new CustomEvent('lightning:animation-sync',{detail:{done:true}}));}catch(_){}},leadMs+300);}catch(_){}
+      else if(request.standSync)try{root.document.dispatchEvent(new CustomEvent('lightning:animation-sync',{detail:{done:true}}));}catch(_){}
     if(message.ok===true&&message.result&&typeof message.result==='object')request.resolve(message.result);
     else {
       const error=fail(typeof message.code==='string'&&/^[A-Z][A-Z0-9_]{0,63}$/.test(message.code)?message.code:'NATIVE_FAILED'),
@@ -262,6 +263,10 @@
   }
   let lastLightAtC97=0,sharedOutputReadC98=null;
   const sharedOutputPassiveC98=new Set(['refreshSharedOutputs','sharedDocument','loadView','outputConfigurationStatus','securityPreference','receiverContextStatus','standSessionStatus','otaStatus','exportBackup','chooseBackup','selectionFeedback','interfaceFeedback','setAppearance']);
+  function carriesStandAnimationC111(payload){
+    const rows=Array.isArray(payload?.requests)?payload.requests:[payload];
+    return rows.some(row=>row?.scene?.standAnimation||Array.isArray(row?.portScenes)&&row.portScenes.some(child=>child?.scene?.standAnimation));
+  }
   function call(action,payload={},signal,automatic,posted){
     if(!sharedOutputPassiveC98.has(action))sharedOutputReadC98?.abort();
     if(['applyLive','applyLiveBatch','applyStableCatalogue','applyStableBreathe','applyStaticGradient','identify','identifyLayout','previewPixels','previewSPIZoneDirections'].includes(action))lastLightAtC97=Date.now();
@@ -302,7 +307,11 @@
         action==='identifyLayout'?35000:['removalPlan','removalStart','removalResume'].includes(action)?210000:['select','secure','reconcileSecurity','finalize','identify','identifyCandidate','identifyFactoryMain'].includes(action)?45000:12000;
       const deadline=['claimFirstPinV2','showFirstPinV2','showStoredFirstPinV2','eraseAppData','beginAppReset','continueAppReset'].includes(action)?300000:['prepareAuthorityCandidate','authorityCandidateMode','authorityCandidateProgress','discoverAuthorityCandidate','selectAuthorityCandidate','admitAuthorityCandidate','completeAuthorityCandidate','secureAuthorityCandidate','finalizeAuthorityCandidate'].includes(action)?120000:['prepareFirstPinV2','reconcileFirstPinV2'].includes(action)?50000:action==='previewSPIZoneDirections'?(payload.action==='stop'?20000:90000):action==='configureOutputDirections'?90000:['applyStaticGesture','standFirstAccessPreflight','prepareStableStand','applyStableBreathe','applyStableCatalogue','applyStaticGradient'].includes(action)?45000:timeout;
       const timer=root.setTimeout(()=>{cancelNative();if(!automatic)receive({id,ok:false,code:'NATIVE_TIMEOUT'});},deadline);
-      pending.set(id,{action,resolve,reject,timer,automatic,nodeConfigurationDiagnosticEligible:['secure','reconcileSecurity'].includes(action)&&payload.configuration?.role==='node',removeAbort:()=>signal?.removeEventListener('abort',abort)});
+      // C111: a stand animation reports no sync lead; the interface shows its
+      // synchronising card while the stand aligns the receivers.
+      const standSync=!automatic&&['applyLive','applyLiveBatch'].includes(action)&&carriesStandAnimationC111(payload);
+      pending.set(id,{action,resolve,reject,timer,automatic,standSync,nodeConfigurationDiagnosticEligible:['secure','reconcileSecurity'].includes(action)&&payload.configuration?.role==='node',removeAbort:()=>signal?.removeEventListener('abort',abort)});
+      if(standSync)try{root.document.dispatchEvent(new CustomEvent('lightning:animation-sync',{detail:{joining:true}}));}catch(_){}
       posted?.(id);
       automatic?.start(id,code=>receive({id,ok:false,code}));
       signal?.addEventListener('abort',abort,{once:true});
