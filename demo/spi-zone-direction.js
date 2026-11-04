@@ -5,7 +5,7 @@
     title:['Kanten aanpassen','Adjust directions','Ajuster les sens','Richtungen anpassen'],
     // C105: the connection check, opened from the ledline order step.
     checkTitle:['Verbindingen controleren','Check connections','Vérifier les connexions','Verbindungen prüfen'],
-    checkHint:['Elke ledline krijgt een eigen kleur. Op elke overgang loopt een lichtje van de ene ledline naar de volgende. Springt het lichtje ergens verkeerd? Keer die ledline hier om. Loopt het overal mooi door, dan kloppen volgorde en kanten.','Every ledline gets its own colour. At each connection a light runs from one ledline into the next. If it flows on everywhere, the connections and the order are right.','Chaque ligne LED a sa propre couleur. À chaque connexion, une lumière passe d’une ligne à la suivante. Si elle continue partout, les connexions et l’ordre sont corrects.','Jede LED-Linie erhält eine eigene Farbe. An jeder Verbindung läuft ein Licht von einer Linie in die nächste. Läuft es überall weiter, stimmen Verbindungen und Reihenfolge.'],
+    checkHint:['De ledlines staan uit. Op elke overgang loopt een gekleurd lichtje van het einde van de ene ledline in het begin van de volgende. Loopt het in één beweging door, dan klopt die verbinding. Verdwijnt het en duikt het ergens anders op? Keer die ledline hier om.','The LED lines are off. At each connection a coloured light runs from the end of one LED line into the start of the next. If it flows on in one movement, that connection is right. If it vanishes and pops up somewhere else, flip that LED line here.','Les lignes LED sont éteintes. À chaque connexion, une lumière colorée passe de la fin d’une ligne LED au début de la suivante. Si elle continue d’un seul mouvement, la connexion est correcte. Si elle disparaît et réapparaît ailleurs, inversez cette ligne LED ici.','Die LED-Linien sind aus. An jeder Verbindung läuft ein farbiges Licht vom Ende einer LED-Linie in den Anfang der nächsten. Läuft es in einer Bewegung weiter, stimmt die Verbindung. Verschwindet es und taucht woanders auf? Dann kehre diese LED-Linie hier um.'],
     checkDone:['Klaar','Done','Terminé','Fertig'],
     added:['Laatste stap · kanten instellen','Last step · set directions','Dernière étape · ajuster les sens','Letzter Schritt · Richtungen einstellen'],
     intro:['Vergelijk de rode en groene uiteinden van je echte ledlines.','Compare the red and green ends of your real LED lines.','Comparez les extrémités rouges et vertes de vos vraies lignes LED.','Vergleiche die roten und grünen Enden deiner echten LED-Linien.'],
@@ -28,10 +28,10 @@
     recovering:['Verbinding herstellen… Je keuzes blijven staan.','Restoring the connection… Your choices are kept.','Rétablissement de la connexion… Vos choix sont conservés.','Verbindung wird wiederhergestellt… Deine Auswahl bleibt erhalten.'],
     test:['Verbinding testen','Test connection','Tester la connexion','Verbindung testen'],
     testHint:['Een lichtgolf volgt je ledlines.','A light wave follows your LED lines.','Une vague lumineuse suit vos lignes LED.','Eine Lichtwelle folgt deinen LED-Linien.'],
-    testActiveShort:['Lichtgolf bezig · 6 seconden','Light wave running · 6 seconds','Vague en cours · 6 secondes','Lichtwelle läuft · 6 Sekunden'],
+    testActiveShort:['Lichtje loopt over elke overgang','Light running over every connection','Lumière sur chaque connexion','Licht läuft über jede Verbindung'],
     testEndedShort:['Test afgelopen · controleer de aansluiting','Test ended · check the connection','Test terminé · vérifiez la jonction','Test beendet · Verbindung prüfen'],
     testUpdateShort:['Receiverupdate nodig','Receiver update needed','Mise à jour du récepteur nécessaire','Receiver-Update erforderlich'],
-    testing:['Kijk naar je ledlines: volgt de lichtgolf de juiste volgorde?','Watch your LED lines: does the light wave follow the correct order?','Regardez vos lignes LED : la vague suit-elle le bon ordre ?','Schau auf deine LED-Linien: Folgt die Lichtwelle der richtigen Reihenfolge?'],
+    testing:['Kijk naar elke overgang: loopt het gekleurde lichtje in één beweging door?','Watch every connection: does the coloured light flow on in one movement?','Regardez chaque connexion : la lumière colorée continue-t-elle d’un seul mouvement ?','Schau auf jede Verbindung: Läuft das farbige Licht in einer Bewegung weiter?'],
     testEnded:['Test afgelopen. Controleer waar je ledlines aansluiten.','Test ended. Check where your LED lines meet.','Test terminé. Vérifiez les jonctions de vos lignes LED.','Test beendet. Prüfe, wo deine LED-Linien zusammentreffen.'],
     testUpdate:['Werk de receiver bij om de verbinding te testen.','Update the receiver to test the connection.','Mettez le récepteur à jour pour tester la connexion.','Aktualisiere den Receiver, um die Verbindung zu testen.'],
     testExample:['Voorbeeld · een lichtgolf volgt de volgorde. Er is geen echte verlichting verbonden.','Preview · a light wave follows the order. No real lighting is connected.','Aperçu · une vague suit l’ordre. Aucun éclairage réel n’est connecté.','Vorschau · eine Lichtwelle folgt der Reihenfolge. Keine echte Beleuchtung verbunden.'],
@@ -314,8 +314,17 @@
         // C107: the walkthrough keeps the flip buttons: a wrong join is fixed right here.
         dialog.querySelector('[data-spi-zone-action="save"]').querySelector('span').textContent=t(state,'checkDone');
         dialog.querySelector('[data-spi-zone-action="test"]')?.setAttribute('hidden','');
-        state.checkTimer=win.setInterval(()=>{if(current(state)&&state.confirmedRequest&&!state.inFlight&&!state.recoveringTest&&enabled(state))void test(state);},6400);
-        win.setTimeout(()=>{if(current(state)&&state.confirmedRequest&&!state.inFlight&&enabled(state))void test(state);},900);
+        const tick=()=>{if(current(state)&&state.confirmedRequest&&!state.inFlight&&!state.recoveringTest&&enabled(state))void test(state);};
+        state.checkTimer=win.setInterval(tick,6400);
+        // C112: the first run starts as soon as the guide is confirmed (it
+        // waited for the next 6.4 s tick, ~3 s of dark lines); the interval
+        // restarts from that run so two runs never overlap.
+        const firstRun=tries=>{
+          if(!current(state)||!state.checkTimer||tries>40)return;
+          if(state.confirmedRequest&&!state.inFlight&&!state.recoveringTest&&enabled(state)){win.clearInterval(state.checkTimer);state.checkTimer=win.setInterval(tick,6400);void test(state);return;}
+          win.setTimeout(()=>firstRun(tries+1),250);
+        };
+        win.setTimeout(()=>firstRun(0),300);
       }else dialog.querySelector('[data-spi-zone-action="test"]')?.setAttribute('hidden','');
       if(state.pendingSaveReceivers.size){const hint=doc.createElement('p');hint.className='spi-zone-change-notice';hint.textContent=t(state,'pendingSave');dialog.querySelector('[data-spi-zone-status]').after(hint);}
       state.recoveryEpoch=0;state.recoveryAttempts=0;state.recoveryTimer=null;state.recoveryJob=null;state.retryResumeJob=null;state.recoveringPreview=false;

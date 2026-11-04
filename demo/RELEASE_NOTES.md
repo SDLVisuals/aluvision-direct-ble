@@ -13,7 +13,9 @@
 - The top bar says Connected a few seconds after opening the app, as soon as the main receiver answers.
 - A calmer interface: gradient colours you can drag, examples and saved gradients in one card, a clearer order step, restyled scenes and pixel editor, no zoom, and a sync card when an animation starts.
 - A phone whose place on the stand went to another phone gets it back by itself; a new phone can join while a gradient is showing; receiver cards show a live drawing of the ports.
-- Android test app 62 with the same interface.
+- Changes reach the other phones in about 1 s instead of 8 s.
+- Check connections: the LED lines are off and a coloured light runs over every connection; one smooth movement means the connection is right.
+- Android test app 63 with the same interface.
 
 ## Android code 36
 

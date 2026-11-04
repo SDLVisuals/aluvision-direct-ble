@@ -22,6 +22,29 @@
   // after that sync and never got to publish (an edit made on a zone screen,
   // where publishing waits, right before the app was closed).
   const SYNC_KEY='aluvision.shared-sync.v1:';
+  // C112: the MAIN stores the document in 768-byte chunks, one radio round
+  // trip each (~0.2 s), so a 23 KB layout took ~8 s to share. A compressed
+  // copy (deflate-raw, base64url behind the PACKED prefix) is ~6x smaller.
+  // Reading accepts both forms, so plain documents of older apps still load.
+  const PACKED='ALVZ1:';
+  const streams=()=>typeof CompressionStream==='function'&&typeof DecompressionStream==='function'&&typeof Response==='function'&&typeof Blob==='function';
+  function base64url(bytes){let s='';for(let i=0;i<bytes.length;i+=0x8000)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+  function unbase64url(text){const s=atob(text.replace(/-/g,'+').replace(/_/g,'/'));const out=new Uint8Array(s.length);for(let i=0;i<s.length;++i)out[i]=s.charCodeAt(i);return out;}
+  async function pack(json){
+    if(json.length<2048||!streams())return json;
+    try{
+      const bytes=new Uint8Array(await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer());
+      const packed=PACKED+base64url(bytes);
+      // Never store a copy that does not read back to the same document.
+      return packed.length<json.length&&await unpack(packed)===json?packed:json;
+    }catch(_){return json;}
+  }
+  async function unpack(text){
+    if(typeof text!=='string'||!text.startsWith(PACKED))return text;
+    if(!streams())throw Object.assign(Error('SHARED_FORMAT'),{code:'SHARED_FORMAT'});
+    try{return await new Response(new Blob([unbase64url(text.slice(PACKED.length))]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();}
+    catch(_){throw Object.assign(Error('SHARED_FORMAT'),{code:'SHARED_FORMAT'});}
+  }
   function loadSynced(standId){try{const v=JSON.parse(globalThis.localStorage?.getItem(SYNC_KEY+standId)||'null');return v&&typeof v.model==='string'&&typeof v.light==='string'?v:null;}catch(_){return null;}}
   function saveSynced(standId,doc){try{globalThis.localStorage?.setItem(SYNC_KEY+standId,JSON.stringify({model:canonical(doc.model),light:canonical(doc.light||{})}));}catch(_){}}
 
@@ -85,7 +108,8 @@
     async function upload(standId,st,doc){
       const snap=hooks.snapshot(standId);
       if(!current(standId,st)||!snap||snap.writable===false||hooks.idle&&!hooks.idle())throw deferred();
-      const json=canonical(doc);if(bytes(json)>MAX_BYTES){hooks.notice?.('SHARED_TOO_LARGE');return false;}
+      const json=await pack(canonical(doc));if(bytes(json)>MAX_BYTES){hooks.notice?.('SHARED_TOO_LARGE');return false;}
+      if(!current(standId,st))return false;
       const r=await hooks.services.sharedDocument({op:'write',standId,base:st.revision||0,json});
       if(!current(standId,st))return false;
       if(r?.status==='committed'){st.revision=r.revision;st.doc=doc;st.key=canonical(doc);saveSynced(standId,doc);hooks.seen?.(standId,r.revision);return true;}
@@ -103,7 +127,7 @@
       local=localDocument(standId,st,snap);const libraryOnly=snap.writable===false;
       if(!r||r.revision===0||r.json===null){st.revision=0;st.doc=null;st.libraryOnly=libraryOnly;return;}
       let remote;
-      try{remote=parse(r.json,standId);}
+      try{remote=parse(await unpack(r.json),standId);}
       catch(error){if(error?.code!=='SHARED_FOREIGN')throw error;st.revision=r.revision;st.doc=null;st.key='';st.libraryOnly=libraryOnly;return;}
       const pending=local&&st.key!==null&&canonical(local)!==st.key;
       const next=pending||st.revision===null&&local?merge(st.doc,local,remote):remote;
@@ -193,7 +217,8 @@
       if(job.base!==st.revision||job.doc!==st.doc||!stillRemoved(fresh,job.targets)){
         st.revision=null;hooks.notice?.('SHARED_REMOVAL_RECONCILE');return;
       }
-      const json=canonical(job.next);if(bytes(json)>MAX_BYTES){hooks.notice?.('SHARED_TOO_LARGE');return;}
+      const json=await pack(canonical(job.next));if(bytes(json)>MAX_BYTES){hooks.notice?.('SHARED_TOO_LARGE');return;}
+      if(!current(standId,st))return;
       // Exactly one CAS; conflicts and uncertain writes require a fresh read,
       // never rebase an old removal onto another incarnation or new revision.
       let result;
