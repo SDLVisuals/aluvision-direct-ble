@@ -76,10 +76,14 @@
     let engine=state.engine||'STATIC',variant=Number(state.variant??0);
     if(extension){engine='BREATHE';variant=0;}
     if(!(spi?SPI_ENGINES:RGBW_ENGINES).includes(engine)||!Number.isInteger(variant)||variant<0||variant>(spi?181:31))return null;
-    if(spi&&state.previewFamily==='RGBW') {
+    // C113: a whole-line stand animation runs the same V30 recipe (21-30) on
+    // RGBW as on SPI. A mixed V30/legacy stand could not use the one-message
+    // FAST_GROUP lane and its slow guarded wave failed (Zacht ademen).
+    const standWhole=!spi&&!extension&&state.standAnimation&&engine!=='STATIC';
+    if(spi&&state.previewFamily==='RGBW'||standWhole) {
       const whole=[0,1,2,3,4,17,18,19,20,25].indexOf(variant);
-      if(whole<0)return null;
-      extension=true;extensionId=21+whole;engine='BREATHE';variant=0;
+      if(whole<0){if(spi)return null;}
+      else{extension=true;extensionId=21+whole;engine='BREATHE';variant=0;}
     }
     const number=(value,fallback,min,max)=>{
       const n=Number(value??fallback);return Number.isFinite(n)&&n>=min&&n<=max?Math.round(n):null;

@@ -113,8 +113,8 @@
   "assets": [
     {
       "path": "RELEASE_NOTES.md",
-      "bytes": 43464,
-      "sha256": "b45f78cfa076e434765d0a6c2c4967d7d9f3a79dc1a4a4cc4e426389ff4ba207"
+      "bytes": 43701,
+      "sha256": "a7e6f8b234897a2a11d56124db7f46fa2477dc4dd347f52119b7744d3560e04b"
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
@@ -327,6 +327,11 @@
       "sha256": "3b4fc631d6fedb55396461a29e83c59094667312f5abf1c5df57f46fdf9d8782"
     },
     {
+      "path": "android/aluvision-android-test-50.0.0-c113l-76-1105047b01b8.apk",
+      "bytes": 3444480,
+      "sha256": "1105047b01b853ce55679118f63ab9bc5b2e8725a309297110491d1369943507"
+    },
+    {
       "path": "android/aluvision-android-test-50.0.0-c99-beta-35-4c1964cff799.apk",
       "bytes": 3308132,
       "sha256": "4c1964cff799b9c83afcfe49cb4303d5654ac611a29a3f9c64fbe1617013caa0"
@@ -403,8 +408,8 @@
     },
     {
       "path": "app.js",
-      "bytes": 853156,
-      "sha256": "d0be2e4eb8936a1c38a0d48c197b9347ac806f11103bf6c577c6e8594c446c46"
+      "bytes": 854526,
+      "sha256": "597e5b1514c4852bd3f7dd6eb40ec4c99b6c9ddfecdbfc676a88da69ecb1b99f"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -569,7 +574,7 @@
     {
       "path": "index.html",
       "bytes": 11982,
-      "sha256": "85c15608b3a3edc506557ea12b68469fbdbc635bebf42b923586be8cf4064237"
+      "sha256": "d875237e6539e3b78d751a2d345416815ac10f40e0c590f4c24af3c27f38f724"
     },
     {
       "path": "installation-libraries.js",
@@ -658,8 +663,8 @@
     },
     {
       "path": "live-control.js",
-      "bytes": 66570,
-      "sha256": "09a4e17715311c2665a89f42a633b71f8edc119dc10f4b304a1146f131d9ff94"
+      "bytes": 66905,
+      "sha256": "7d45e5b6da574ebc2e0396f2adb82ee5b89e4a56e43dc54ffb7bdf361f27bd35"
     },
     {
       "path": "main-connection-indicator.css",
@@ -683,8 +688,8 @@
     },
     {
       "path": "native-runtime.js",
-      "bytes": 225851,
-      "sha256": "1b512d2fa413af305090a1e91119603d45a896496df3ea8e0cdcdeafacbb9f2e"
+      "bytes": 226707,
+      "sha256": "d4d056ae01d82d43ee519f21049b8a139586a77b5f5ca336daab275f54f0c930"
     },
     {
       "path": "onboarding-adapter.js",
@@ -843,8 +848,8 @@
     },
     {
       "path": "shared-installation.js",
-      "bytes": 22739,
-      "sha256": "02faa7acadfa9090aa1eac7125d53b69977eae22c81e6e9350437176f0286991"
+      "bytes": 23746,
+      "sha256": "8ea19d2c34c2513cd90523c10029941017a7d1937d81bf6e897f5fee116c7f11"
     },
     {
       "path": "shared-physical-refresh.js",
@@ -4088,7 +4093,7 @@
   "interfaceC100": {
     "date": "2026-11-02",
     "scope": "Shared browser interface; fictional in-memory receivers only",
-    "responsive": "320\u2013480 px phones, 600\u20131600 px tablets and split windows; compact landscape colour picker",
+    "responsive": "320–480 px phones, 600–1600 px tablets and split windows; compact landscape colour picker",
     "preserved": "Existing colour, gradient, animation and scene interaction paths",
     "browserLayoutChecked": true,
     "physicalAndroidVerified": false,
@@ -4205,10 +4210,10 @@
     "scope": "Shared browser interface; fictional in-memory receivers only",
     "changes": "Fast SPI gradient with per-ledline option, order step with connection check, smoother motion, multi-user fixes, port changes from a phone with an older receiver view, automatic saving on receivers, four phones adjusting one stand together",
     "android": {
-      "versionCode": 68,
-      "versionName": "50.0.0-c113d",
-      "apk": "android/aluvision-android-test-50.0.0-c113d-68-3b4fc631d6fe.apk",
-      "sha256": "3b4fc631d6fedb55396461a29e83c59094667312f5abf1c5df57f46fdf9d8782",
+      "versionCode": 76,
+      "versionName": "50.0.0-c113l",
+      "apk": "android/aluvision-android-test-50.0.0-c113l-76-1105047b01b8.apk",
+      "sha256": "1105047b01b853ce55679118f63ab9bc5b2e8725a309297110491d1369943507",
       "bytes": 3444480
     }
   }

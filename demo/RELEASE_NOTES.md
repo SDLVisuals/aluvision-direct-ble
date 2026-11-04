@@ -19,7 +19,9 @@
 - Stand animations show a short "synchronising" card while every receiver is lined up.
 - Other phones follow an animation chosen in "Control everything" within seconds, even while that screen stays open.
 - The "synchronising" card is also shown in Control everything.
-- Android test app 68 with the same interface.
+- Stand animations stay in step across all receivers.
+- A receiver removed on one phone no longer comes back from another phone; the Android app is simply called Aluvision.
+- Android test app 76 with the same interface.
 
 ## Android code 36
 

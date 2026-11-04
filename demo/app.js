@@ -1731,7 +1731,13 @@
       }
     }finally{pendingResumeC98=false;}
   }
-  setTimeout(()=>void resumePendingOutputsC98(),4000);
+  // C113: this check opens the native setup window (8 s), which held back the
+  // first shared-document read and context publication: the stand's own light
+  // and names arrived ~13 s after start. Run it once the first shared sync is
+  // in (or after 20 s at the latest); a pending output is rare and not urgent.
+  const pendingOutputsBootC113=Date.now();
+  const pendingOutputsStartC113=()=>{if(window.__sharedFirstSyncC113||Date.now()-pendingOutputsBootC113>20000)void resumePendingOutputsC98();else setTimeout(pendingOutputsStartC113,1000);};
+  setTimeout(pendingOutputsStartC113,4000);
   window.addEventListener('c105-output-pending',()=>setTimeout(()=>void resumePendingOutputsC98(),400));
   // C98: open the MAIN session while the user is on the Receivers screen, so
   // "Pixels aanpassen" does not start with a 1 s handshake after the tap.
@@ -4798,6 +4804,8 @@
     temporarySingleUser=capabilities?.temporarySingleUser===true;
     pinLoginC97=capabilities?.pinLogin===true&&capabilities?.installationRestore===true;
     wifiLoginC98=pinLoginC97&&capabilities?.wifiLogin===true;
+    // C113: the page must work from the startup capabilities too (Android showed a 'not available' card).
+    if(pinLoginC97)pinLoginAvailable=true;
     simpleStandSupported=capabilities?.simpleStand===true;
     standMigrationReady=simpleStandSupported&&capabilities?.simpleStandMigrationReady===true;
     standSharingAvailable=simpleStandSupported&&capabilities?.simpleStandShare===true;
@@ -4820,7 +4828,8 @@
     if(standConnectionBusy)return;
     standMigrationPreflightError=null;
     try{await refreshStandCapabilities();}catch(_){return toast(t("De verbinding is nog niet bevestigd. Probeer opnieuw."));}
-    if(!simpleStandSupported)return toast(t("Stand openen is niet beschikbaar in deze appversie. Je bestaande stand blijft behouden."));
+    // C113: a host without the central stand flow opens the stand through its own Wi-Fi login (Android), never a "not available" message.
+    if(!simpleStandSupported){if(pinLoginC97)return openPinLogin();return;}
     standConnectionIntent=intent;standAutoOpenSelected=intent==='open';
     standManualEntry=standConnectionState.status==='migration-required';
     legacyStandReturn=!simpleStandMode&&!standMigrationReady&&!centralApplied&&!centralPending&&legacyStandLandingId===stand()?.id?{standId:legacyStandLandingId}:null;
@@ -5180,6 +5189,9 @@
     if(pinLoginAvailable&&nativeContext&&wifiLoginC98)return renderWifiOpenC98();
     if(pinLoginAvailable&&nativeContext)return `<div class="page pin-login-page">${contextTitle(t("Bestaande stand openen"),t("Met je installatie-PIN"),t("Instellingen"),'settings')}<section class="card"><h2>${esc(t("Verbind met je stand"))}</h2><p>${esc(t("Kies eerst het {network} van je stand in Instellingen → Wifi. Het wifi-wachtwoord is dezelfde PIN.",{network:"ALUVISION-wifi"}))}</p><p>${esc(t("Je maakt geen nieuwe stand en reset geen receivers."))}</p><label class="dialog-field">${esc(t("Installatie-PIN"))}<input data-recovery-pin type="password" inputmode="numeric" autocomplete="off" minlength="8" maxlength="12" pattern="[0-9]{8,12}" spellcheck="false" ${pinLoginBusy?'disabled':''}></label><p data-recovery-status role="status">${pinLoginBusy?t("PIN controleren en je stand ophalen… Laat de receivers aan."):esc(pinLoginError)}</p><button class="button full" data-action="pin-login-submit" ${pinLoginBusy?'disabled':''}>${pinLoginBusy?t("Stand ophalen…"):t("Stand openen")}</button>${pinLoginBusy?`<button class="button secondary full" data-action="pin-login-cancel">${esc(t("Ophalen stoppen"))}</button>`:''}</section><p>${esc(t("Je stand verschijnt pas nadat de receivers en de bewaarde instellingen veilig zijn gecontroleerd."))}</p></div>`;
     if(!pinRequired()&&!nativeContext)return renderSettings();
+    // C113: never show a 'not available in this version' card; a host that
+    // cannot restore an installation simply keeps the customer in Settings.
+    if(nativeContext)return renderSettings();
     // An older or unvalidated native host must never collect a recovery PIN.
     // New-installation commissioning is not a substitute for authenticated recovery.
     return `<div class="page pin-login-page">${contextTitle(t("Inloggen met PIN"),t("Je bestaande installatie openen"),t("Instellingen"),'settings')}<section class="card pin-login-status" aria-labelledby="pin-login-status-title"><span class="menu-icon" aria-hidden="true">${icon('lock')}</span><h2 id="pin-login-status-title" data-pin-login-status>${esc(t("Nog niet beschikbaar in deze versie"))}</h2><p>${esc(t("Veilig inloggen en je bewaarde installatie terughalen worden nog aangesloten. Je kunt hier daarom nog geen PIN invoeren."))}</p><p>${esc(t("Je huidige stand en receivers blijven ongewijzigd."))}</p></section><section class="card pin-login-guide"><h2>${esc(t("Waarvoor is deze optie?"))}</h2><p>${esc(t("Je bestaande stand weer openen op een ander toestel of nadat je de app opnieuw hebt geïnstalleerd. Je gebruikt dan je bestaande installatie-PIN; je maakt geen nieuwe PIN of nieuwe stand aan."))}</p><ol><li><b>${esc(t("Verbind met het wifi van je installatie"))}</b><span>${esc(t("Kies het ALUVISION-netwerk via de wifi-instellingen van je telefoon."))}</span></li><li><b>${esc(t("Open je installatie met je PIN"))}</b><span>${esc(t("Zodra deze functie beschikbaar is, wordt je PIN veilig gecontroleerd voordat je bewaarde installatie wordt teruggehaald."))}</span></li></ol></section><button class="button full" data-action="settings">${esc(t("Terug naar Instellingen"))}</button></div>`;
@@ -5190,7 +5202,7 @@
     navigate('pin-login');if(!nativeContext||typeof runtime?.services?.recoverInstallation!=='function'||pinLoginChecking)return;
     pinLoginChecking=true;
     try{const caps=await runtime.capabilities();pinLoginAvailable=caps?.pinLogin===true&&caps?.installationRestore===true;wifiLoginC98=pinLoginAvailable&&caps?.wifiLogin===true;}
-    catch(_){pinLoginAvailable=false;}
+    catch(_){pinLoginAvailable=pinLoginC97;}
     finally{pinLoginChecking=false;if(route.screen==='pin-login')render({top:true});}
   }
   // C98: silent stand reload (receivers added elsewhere). One at a time; a
@@ -6422,7 +6434,7 @@
   // C98: the last shared-document revision this phone applied or wrote.
   const sharedSeenKeyC98=standId=>'aluvision.c98.sharedSeen.'+standId;
   function sharedSeenC98(standId){try{const v=Number(appStorage.getItem(sharedSeenKeyC98(standId)));return Number.isSafeInteger(v)&&v>0?v:null;}catch(_){return null;}}
-  function markSharedSeenC98(standId,revision){try{if(Number.isSafeInteger(revision)&&revision>0)appStorage.setItem(sharedSeenKeyC98(standId),String(revision));}catch(_){}}
+  function markSharedSeenC98(standId,revision){window.__sharedFirstSyncC113=true;try{if(Number.isSafeInteger(revision)&&revision>0)appStorage.setItem(sharedSeenKeyC98(standId),String(revision));}catch(_){}}
   const controlDialogsOnlyC113=()=>[...document.querySelectorAll('dialog[open]')].every(dialog=>dialog.id==='effect-dialog');
   const sharedIdleC98=()=>!managementBusy&&!sceneDraft&&(!onboarding?.summary?.()||onboarding?.readOnlySearchSuspended?.()===true)&&!backupTransaction?.pending?.()&&!document.querySelector('dialog[open]')&&
     !standControlOpen&&!stableZonePreparationUI&&!stableStandPreparationUI&&
@@ -6451,7 +6463,7 @@
   async function refreshSharedHintsC105(standId,remote,attempt=0){
     const helper=window.LightningSharedPhysicalRefreshC98;
     if(typeof helper?.hintCandidates!=='function'||typeof runtime?.services?.refreshSharedOutputs!=='function')return false;
-    let changed=false,later=false;
+    let changed=false,later=false,otherEditor=false;
     for(const receiverId of helper.hintCandidates(model,remote)){
       const hint=remote.outputsC105[receiverId];
       if(sharedHintTriedC105.get(receiverId)===hint)continue;
@@ -6466,11 +6478,15 @@
         // C106: a background context write or another radio action held the
         // MAIN for a moment (cancelled): that is "later" too, never "done".
         if(['SHARED_DEFERRED','CANCELLED','OUTPUT_CONFIGURATION_CANCELLED','OUTPUT_CONFIGURATION_BUSY','OUTPUT_CONFIGURATION_OTHER_EDITOR'].includes(error?.code))later=true;else sharedHintTriedC105.set(receiverId,hint);
+        if(error?.code==='OUTPUT_CONFIGURATION_OTHER_EDITOR')otherEditor=true;
         window.__c98log?.('SHARED_OUTPUTS_REFRESH_SKIPPED '+receiverId+' '+(error?.code||''));
       }
     }
-    if(later&&attempt<12&&!sharedHintRetryC105)sharedHintRetryC105=setTimeout(()=>{sharedHintRetryC105=null;
-      void refreshSharedHintsC105(standId,remote,attempt+1).then(done=>{if(done)render({preserveScroll:true});}).catch(()=>{});},5000);
+    // C113: while another phone is in an editor each try opened a MAIN owner
+    // session and read the SPI every 5 s, right during that phone's setup.
+    // Wait 30 s then (up to 10 min); other busy causes keep the short retry.
+    if(later&&attempt<(otherEditor?20:12)&&!sharedHintRetryC105)sharedHintRetryC105=setTimeout(()=>{sharedHintRetryC105=null;
+      void refreshSharedHintsC105(standId,remote,attempt+1).then(done=>{if(done)render({preserveScroll:true});}).catch(()=>{});},otherEditor?30000:5000);
     return changed;
   }
   // C106: before a phone edits an SPI receiver, adopt the receiver's own

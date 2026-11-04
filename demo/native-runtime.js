@@ -442,7 +442,7 @@
     // mutation. Later rounds outlive the original 300s library staging lifetime.
     contextTimers.set(job.standId,root.setTimeout(()=>{
       contextTimers.delete(job.standId);enqueueContextContinuation(job);
-    },job.attempts===0?20000:300000));
+    },Math.min(300000,20000*2**Math.min(4,job.attempts))));
   }
   function wakeContextContinuations(){
     for(const job of contextJobs.values())if(job.state==='paused')armContextContinuation(job);
@@ -452,6 +452,11 @@
     job.state='paused';armContextContinuation(job);
   }
   function stopContext(job,error,cleaned){
+    // C113: a receiver context that stays unwritten (e.g. right after a
+    // receiver was added or re-added) blocks every new phone from joining.
+    // A cleanly ended attempt is retried in the background with backoff
+    // (20 s … 5 min, at most 8 rounds) instead of waiting for an app restart.
+    if(cleaned&&!['LIBRARIES_RECOVERY_INCOMPLETE','RECEIVER_CONTEXT_INVALID'].includes(error?.code)&&(job.retriesC113=(job.retriesC113||0)+1)<=8){pauseContext(job);return;}
     job.state=cleaned?'stopped':'blocked';
     // Only closed transport failures with confirmed native cleanup may be
     // reconciled automatically at app return. Deadlines, uncertain exchanges,
@@ -469,7 +474,7 @@
   function enqueueContextContinuation(job){
     if(!contextCanContinue(job)||job.state!=='paused')return;
     job.epoch=(contextEpochs.get(job.standId)||0)+1;contextEpochs.set(job.standId,job.epoch);
-    job.state='queued';job.attempts=Math.min(2,job.attempts+1);
+    job.state='queued';job.attempts=Math.min(8,job.attempts+1);
     contextEvent({standId:job.standId,status:'pending'},job.epoch,job.reset,'queued');
     contextQueue=contextQueue.catch(()=>{}).then(async()=>{
       if(!contextCanContinue(job)){if(contextJobCurrent(job))job.state='paused';return;}
@@ -847,6 +852,10 @@
         if(result?.requiresPin!==false)throw fail('STAND_LEGACY_ACCESS_RETIRED');
       }else if(result?.view)acceptView(result.view);
       else if(result?.status==='removed')throw fail('VIEW_INVALID');
+      // C113: after a removal the remaining receivers' stored context is
+      // republished at once, so a phone joining right after never meets a
+      // roster that differs from the stand's saved context.
+      if(result?.status==='removed'&&result?.view?.model&&!result.view.centralClosed)scheduleContext(result.view,payload.standId,{immediate:true});
       return result;
     });return trackWrite(next);
   }
@@ -1196,7 +1205,7 @@
       if(phased&&(!['SPI_SCENE','RGBW_SCENE'].includes(kind)||extended||!Number.isInteger(scene.phaseMs)||scene.phaseMs<0||scene.phaseMs>999||
         !Number.isInteger(scene.phaseRateMicroHz)||scene.phaseRateMicroHz<0||scene.phaseRateMicroHz>20000000))throw fail('LIVE_INVALID');
       if(extended){
-        const v30=scene.v30,limits={effect:[1,kind==='SPI_SCENE'?43:20],fadeAmount:[0,100],width:[0,100],delayMs:[0,10000]};
+        const v30=scene.v30,limits={effect:[1,kind==='SPI_SCENE'?43:30],fadeAmount:[0,100],width:[0,100],delayMs:[0,10000]};
         if(!v30||typeof v30!=='object'||Array.isArray(v30)||Object.keys(v30).sort().join(',')!=='brand,delayMs,effect,fadeAmount,width'||!colour(v30.brand)||
           !Object.entries(limits).every(([key,[min,max]])=>Number.isInteger(v30[key])&&v30[key]>=min&&v30[key]<=max))throw fail('LIVE_INVALID');
       }
@@ -1209,7 +1218,7 @@
           const speed=Math.max(.5,scene.speed)/100,rate=([4,20].includes(variants[index])?.5+speed*speed*11.5:.003+speed*speed*1.497)*1000000;
           if(Object.keys(marker).sort().join(',')!=='clockId,effectId,kind,phaseMs,phaseRateMicroHz,variant'||marker.kind!=='whole'||marker.variant!==variants[index]||
              !Number.isInteger(marker.phaseMs)||marker.phaseMs<0||marker.phaseMs>999||!Number.isInteger(marker.phaseRateMicroHz)||Math.abs(marker.phaseRateMicroHz-Math.round(rate))>1||
-             scene.lineDelayMs!==0||(kind==='RGBW_SCENE'?(extended||scene.variant!==variants[index]||scene.engine!==engines[index]):scene.v30?.effect!==21+index))throw fail('LIVE_INVALID');
+             scene.lineDelayMs!==0||(kind==='RGBW_SCENE'&&!extended?(scene.variant!==variants[index]||scene.engine!==engines[index]):scene.v30?.effect!==21+index))throw fail('LIVE_INVALID');
         }else{
           const id=extensions.indexOf(marker.effectId),mode=id>=4&&id<=11||id>=17&&id<=19?'coordinated':'whole';
           if(Object.keys(marker).sort().join(',')!=='clockId,effectId,kind'||id<0||[12,13].includes(id)||scene.v30?.effect!==id+1||marker.kind!==mode)throw fail('LIVE_INVALID');

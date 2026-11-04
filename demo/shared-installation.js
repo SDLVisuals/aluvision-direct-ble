@@ -75,11 +75,26 @@
     const order=[...(remote||[]).map(i=>i?.id),...(local||[]).map(i=>i?.id)];
     return [...new Set(order)].filter(id=>out.has(id)).map(id=>out.get(id));
   }
+  // C113: a receiver another phone removed (in the base, gone from remote)
+  // never comes back through this phone's edited layout; it would become a
+  // ghost entry that blocks finding and re-adding that receiver.
+  function withoutRemovedElsewhere(model,base,remote){
+    const ids=list=>new Set((Array.isArray(list)?list:[]).filter(plain).map(r=>r.id));
+    const kept=ids(remote?.receivers),gone=[...ids(base?.receivers)].filter(id=>!kept.has(id));
+    if(!gone.length||!Array.isArray(model.receivers))return model;
+    const drop=new Set(gone);
+    model.receivers=model.receivers.filter(r=>!drop.has(r?.id));
+    for(const zone of Array.isArray(model.stand?.zones)?model.stand.zones:[]){
+      if(Array.isArray(zone.receiverIds))zone.receiverIds=zone.receiverIds.filter(id=>!drop.has(id));
+      if(Array.isArray(zone.lineOrder))zone.lineOrder=zone.lineOrder.filter(line=>!drop.has(String(line).replace(/:[0-9]+$/,'')));
+    }
+    return model;
+  }
   function merge(base,local,remote){
     const result=copy(remote);
     // Layout: this phone's edit wins only if it changed it since the common
     // base. Without a base (first contact) the MAIN's layout wins.
-    if(base&&canonical(local.model)!==canonical(base.model))result.model=copy(local.model);
+    if(base&&canonical(local.model)!==canonical(base.model))result.model=withoutRemovedElsewhere(copy(local.model),base.model,remote.model);
     for(const list of LISTS)result.libraries[list]=mergeList(base?.libraries[list],local.libraries[list],remote.libraries[list]);
     // Light: this phone's newer choice wins only if it changed since the base.
     if(base&&local.light&&canonical(local.light)!==canonical(base.light||{}))result.light=copy(local.light);
