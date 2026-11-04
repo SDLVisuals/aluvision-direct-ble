@@ -114,7 +114,7 @@
     {
       "path": "RELEASE_NOTES.md",
       "bytes": 42846,
-      "sha256": "2565d24a008dcd7dbbb44b667fdcd4c6ec36bf93d1429fc09164209f37c61d55"
+      "sha256": "e01e0fabc3e83545a40c2a91a28e6be1ddb3c9a8a229087c117495e3fa88abd2"
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
@@ -270,6 +270,11 @@
       "path": "android/aluvision-android-test-50.0.0-c110a-55-5e178fe4efbc.apk",
       "bytes": 3423930,
       "sha256": "5e178fe4efbc7957930761791323b38369de76272da7b779398bbe686d9b1d1e"
+    },
+    {
+      "path": "android/aluvision-android-test-50.0.0-c110b-56-838b478679ed.apk",
+      "bytes": 3423930,
+      "sha256": "838b478679edb6ea3cc507e5ef02b93d764f44bcd2b99c827b86a444193d2e54"
     },
     {
       "path": "android/aluvision-android-test-50.0.0-c99-beta-35-4c1964cff799.apk",
@@ -509,7 +514,7 @@
     {
       "path": "index.html",
       "bytes": 11916,
-      "sha256": "e185fa4dd7a36feff83cf6db98a2f8b637fad0a90af8041ea29f9819bcd21b24"
+      "sha256": "fb24e7be602931f1443f915da0921ddd83d372201c937eef73c0e8371437f0bc"
     },
     {
       "path": "installation-libraries.js",
@@ -4145,10 +4150,10 @@
     "scope": "Shared browser interface; fictional in-memory receivers only",
     "changes": "Fast SPI gradient with per-ledline option, order step with connection check, smoother motion, multi-user fixes, port changes from a phone with an older receiver view, automatic saving on receivers, four phones adjusting one stand together",
     "android": {
-      "versionCode": 55,
-      "versionName": "50.0.0-c110a",
-      "apk": "android/aluvision-android-test-50.0.0-c110a-55-5e178fe4efbc.apk",
-      "sha256": "5e178fe4efbc7957930761791323b38369de76272da7b779398bbe686d9b1d1e",
+      "versionCode": 56,
+      "versionName": "50.0.0-c110b",
+      "apk": "android/aluvision-android-test-50.0.0-c110b-56-838b478679ed.apk",
+      "sha256": "838b478679edb6ea3cc507e5ef02b93d764f44bcd2b99c827b86a444193d2e54",
       "bytes": 3423930
     }
   }
