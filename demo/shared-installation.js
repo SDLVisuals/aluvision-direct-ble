@@ -105,15 +105,17 @@
       return documentFor(standId,st.layoutBlocked&&st.doc?st.doc.model:snap.model,snap.libraries,
         st.removalProtected&&st.layoutBlocked&&st.doc?st.doc.light:snap.light);
     }
-    async function upload(standId,st,doc){
+    async function upload(standId,st,doc,controlScreen=false){
       const snap=hooks.snapshot(standId);
-      if(!current(standId,st)||!snap||snap.writable===false||hooks.idle&&!hooks.idle())throw deferred();
+      if(!current(standId,st)||!snap||snap.writable===false||(controlScreen?!hooks.controlUploadIdle?.():hooks.idle&&!hooks.idle()))throw deferred();
       const json=await pack(canonical(doc));if(bytes(json)>MAX_BYTES){hooks.notice?.('SHARED_TOO_LARGE');return false;}
       if(!current(standId,st))return false;
       const r=await hooks.services.sharedDocument({op:'write',standId,base:st.revision||0,json});
       if(!current(standId,st))return false;
       if(r?.status==='committed'){st.revision=r.revision;st.doc=doc;st.key=canonical(doc);saveSynced(standId,doc);hooks.seen?.(standId,r.revision);return true;}
-      if(r?.status==='conflict'){await download(standId,st,doc);return false;}
+      // From a control screen another phone's newer document is not merged
+      // here; that waits until this screen is left (the ordinary pass).
+      if(r?.status==='conflict'){if(controlScreen){st.controlConflict=true;return false;}await download(standId,st,doc);return false;}
       throw Object.assign(Error('SHARED_UNCONFIRMED'),{code:'SHARED_UNCONFIRMED'});
     }
     // Load the MAIN's document. When this phone has unsaved edits, they are
@@ -234,7 +236,7 @@
       await download(standId,st,null);
     }
     async function pass(standId){
-      const st=stateOf(standId);if(Date.now()<st.until)return;
+      const st=stateOf(standId);if(Date.now()<st.until)return;st.controlConflict=false;
       const snap=hooks.snapshot(standId);if(!snap)return;
       if(st.removal&&snap.writable!==false){await publishConfirmedRemoval(standId,st,snap);return;}
       const local=localDocument(standId,st,snap),localKey=canonical(local);
@@ -270,10 +272,29 @@
       for(const standId of hooks.stands()){const st=stateOf(standId);if(st.revision===null||Date.now()<st.until)continue;
         try{await hooks.services.sharedDocument({op:'status',standId});}catch(_){/* the next real pass reports lasting problems */}}
     }
+    // C113: on a control screen the light was only shared after leaving it,
+    // so other phones kept showing an old animation. A write now takes about
+    // 1.3 s on the same fast owner lane as the light, so once the light has
+    // been quiet this phone uploads its own change from there too.
+    async function controlUpload(){
+      for(const standId of hooks.stands()){
+        const st=stateOf(standId);
+        const log=globalThis.__c98log;
+        if(st.revision===null||st.libraryOnly||st.removal||st.controlConflict||Date.now()<st.until){log?.('SHARED_CONTROL skip rev='+st.revision+' lib='+!!st.libraryOnly+' conflict='+!!st.controlConflict);continue;}
+        const snap=hooks.snapshot(standId);if(!snap||snap.writable===false){log?.('SHARED_CONTROL skip snapshot');continue;}
+        const local=localDocument(standId,st,snap);if(canonical(local)===st.key)continue;
+        log?.('SHARED_CONTROL upload');
+        try{await upload(standId,st,local,true);st.failures=0;}
+        catch(error){
+          if(['SHARED_DEFERRED','LIVE_CONTROL_BUSY','LIVE_CONTROL_SUPERSEDED','SHARED_BUSY'].includes(error?.code))continue;
+          st.failures++;st.until=Date.now()+Math.min(30000,POLL_MS*2**Math.min(st.failures,4));
+        }
+      }
+    }
     async function tick(){
       if(running||stopped||paused)return;running=true;
       try{
-        if(hooks.idle&&!hooks.idle()){await keepAlive();return;}
+        if(hooks.idle&&!hooks.idle()){if(hooks.controlUploadIdle?.())await controlUpload();else{if(Date.now()-(tick.logged||0)>5000){tick.logged=Date.now();globalThis.__c98log?.('SHARED_CONTROL waiting');}await keepAlive();}return;}
         for(const standId of hooks.stands()){
           const st=stateOf(standId);
           try{await pass(standId);st.failures=0;}

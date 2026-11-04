@@ -6423,6 +6423,7 @@
   const sharedSeenKeyC98=standId=>'aluvision.c98.sharedSeen.'+standId;
   function sharedSeenC98(standId){try{const v=Number(appStorage.getItem(sharedSeenKeyC98(standId)));return Number.isSafeInteger(v)&&v>0?v:null;}catch(_){return null;}}
   function markSharedSeenC98(standId,revision){try{if(Number.isSafeInteger(revision)&&revision>0)appStorage.setItem(sharedSeenKeyC98(standId),String(revision));}catch(_){}}
+  const controlDialogsOnlyC113=()=>[...document.querySelectorAll('dialog[open]')].every(dialog=>dialog.id==='effect-dialog');
   const sharedIdleC98=()=>!managementBusy&&!sceneDraft&&(!onboarding?.summary?.()||onboarding?.readOnlySearchSuspended?.()===true)&&!backupTransaction?.pending?.()&&!document.querySelector('dialog[open]')&&
     !standControlOpen&&!stableZonePreparationUI&&!stableStandPreparationUI&&
     !['controls','colour','animations','effects','animation-family','layout'].includes(route.screen)&&
@@ -6623,7 +6624,13 @@
     // session would replace the light-control session on the MAIN (same phone).
     idle:sharedIdleC98,
     // C111: on a control screen only a short status question (keeps "Verbonden").
-    statusIdle:()=>nativeContext&&!document.hidden&&!managementBusy&&!document.querySelector('dialog[open]')&&!stableZonePreparationUI&&!stableStandPreparationUI&&
+    // C113: the stand control lives in the effect dialog; it counts as a control screen too.
+    statusIdle:()=>nativeContext&&!document.hidden&&!managementBusy&&controlDialogsOnlyC113()&&!stableZonePreparationUI&&!stableStandPreparationUI&&
+      typeof runtime?.services?.lightQuiet==='function'&&runtime.services.lightQuiet(),
+    // C113: 3 s after the last light command a control screen also shares this
+    // phone's own light change (upload only), so other phones follow it.
+    controlUploadIdle:()=>nativeContext&&!document.hidden&&!managementBusy&&!sceneDraft&&!backupTransaction?.pending?.()&&route.screen!=='layout'&&
+      controlDialogsOnlyC113()&&!stableZonePreparationUI&&!stableStandPreparationUI&&
       typeof runtime?.services?.lightQuiet==='function'&&runtime.services.lightQuiet(),
     notice:(code,meta)=>{
       // C98: a receiver added on another phone. On the stand's Wi-Fi this phone

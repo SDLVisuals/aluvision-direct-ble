@@ -102,6 +102,11 @@
   /* ---------- Receiver page: outputs open with the receiver ---------- */
   // Opening an SPI receiver shows its outputs, pixels, sides and order
   // straight away instead of behind one more menu.
+  // Ledline order: a hairline under the head only once the list scrolls under it.
+  document.addEventListener('scroll',event=>{
+    const sheet=event.target instanceof Element&&event.target.matches('.ledline-setup[data-order-open="true"]')?event.target:null;if(!sheet)return;
+    sheet.toggleAttribute('data-c109-scrolled',sheet.scrollTop>4);
+  },{capture:true,passive:true});
   // Pixels: once the ledline has been swiped, its moving finger hint goes.
   document.addEventListener('pointerdown',event=>{
     const scrub=event.target instanceof Element&&event.target.closest('[data-pixel-scrub]');if(scrub)scrub.dataset.c109Swiped='';

@@ -17,7 +17,8 @@
 - Check connections: the LED lines are off and a coloured light runs over every connection; one smooth movement means the connection is right.
 - Setting up an SPI receiver now runs Outputs, Pixels, Order: the order step ends with the walkthrough (a light over every join, flips allowed), and adjusting the sides stays available from the receiver page.
 - Stand animations show a short "synchronising" card while every receiver is lined up.
-- Android test app 66 with the same interface.
+- Other phones follow an animation chosen in "Control everything" within seconds, even while that screen stays open.
+- Android test app 67 with the same interface.
 
 ## Android code 36
 
