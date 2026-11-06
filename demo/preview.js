@@ -1181,9 +1181,9 @@ function softTrailCoverage(behind,trail,n,smooth){
       // A fine edge identifies the arch without making thin coloured lights
       // look white. The number/check is the primary selection indicator.
       const casing=Math.max(.45,1.4*model.unit*arch.scale);
-      context.strokeStyle='rgba(5,10,8,0.7)';context.lineWidth=arch.thickness+casing+2.4;
+      context.strokeStyle='rgba(6,7,9,0.7)';context.lineWidth=arch.thickness+casing+2.4;
       context.shadowBlur=0;context.stroke();path(arch.points);
-      context.strokeStyle='rgba(230,241,235,0.3)';context.lineWidth=arch.thickness+casing+1.2;context.stroke();
+      context.strokeStyle='rgba(232,235,240,0.3)';context.lineWidth=arch.thickness+casing+1.2;context.stroke();
     });
     for(let rowIndex=frame.rows.length-1;rowIndex>=0;rowIndex--){
       const row=frame.rows[rowIndex],arch=model.arches[rowIndex];
@@ -1252,7 +1252,7 @@ function softTrailCoverage(behind,trail,n,smooth){
     // real SPI pixels. This small ordered key never covers the light itself.
     if(!interactive&&frame.rows.length<=8&&height>=130){
       context.font='10px system-ui';context.textAlign='center';context.textBaseline='top';
-      context.strokeStyle='#111514';context.lineWidth=3;context.fillStyle='#d3ddd6';
+      context.strokeStyle='#121417';context.lineWidth=3;context.fillStyle='#d6d9de';
       for(let rowIndex=frame.rows.length-1;rowIndex>=0;rowIndex--){
         const row=frame.rows[rowIndex];
         const order=spatialLineNumber(frame,row,rowIndex,lineNumbers);
@@ -1290,8 +1290,11 @@ function softTrailCoverage(behind,trail,n,smooth){
     });
     if(framing==='focus'){
       const margin=Math.min(22,width/2),span=Math.max(0,width-2*margin);
+      // C109: a few ledlines stand together in the middle of the wall instead
+      // of at its far edges; from about five lines they fill the width.
+      const gap=count>1?Math.min(span/(count-1),Math.max(56,width*.2)):0,start=width/2-gap*(count-1)/2;
       lines.forEach((line,index)=>{
-        const x=count===1?width/2:margin+span*index/(count-1);
+        const x=count===1?width/2:start+gap*index;
         line.from=[x,Math.max(22,height-52)];line.to=[x,Math.min(22,height/2)];
       });
       wall.splice(0,wall.length,[Math.min(8,width/2),8],[width-Math.min(8,width/2),8],
@@ -1301,6 +1304,8 @@ function softTrailCoverage(behind,trail,n,smooth){
       floor:[wall[3],wall[2],[width,height*.98],[0,height*.98]]};
   }
   const wallProjectionCache=new Map();
+  // C109: neutral graphite stage and wall (the former greenish tint read as
+  // an old blue/green interface); light colours themselves are unchanged.
   function drawWall(context,frame,width,height,lineNumbers,interactive=false,framing='',selection=interactive) {
     const focused=framing==='focus';
     const key=[frame.rows.length,width,height,framing].join(':');
@@ -1323,12 +1328,12 @@ function softTrailCoverage(behind,trail,n,smooth){
     };
     context.save();context.shadowBlur=0;
     rounded(context,0,0,width,height,18);context.clip();
-    context.fillStyle=material([0,0],[width,height],[[0,'#151b18'],[1,'#323a34']]);context.fillRect(0,0,width,height);
+    context.fillStyle=material([0,0],[width,height],[[0,'#16181b'],[1,'#33373d']]);context.fillRect(0,0,width,height);
     path(model.floor,true);
-    context.fillStyle=material([0,height*.77],[width,height],[[0,'#434a43'],[1,'#232c26']]);context.fill();
+    context.fillStyle=material([0,height*.77],[width,height],[[0,'#44484e'],[1,'#24282d']]);context.fill();
     path(model.wall,true);
-    context.fillStyle=material([width*.1,height*.1],[width*.8,height*.8],[[0,'#404740'],[.55,'#272f28'],[1,'#1b231d']]);context.fill();
-    context.strokeStyle='#555e55';context.lineWidth=.75;context.stroke();
+    context.fillStyle=material([width*.1,height*.1],[width*.8,height*.8],[[0,'#41454b'],[.55,'#292d32'],[1,'#1c1f23']]);context.fill();
+    context.strokeStyle='#56595f';context.lineWidth=.75;context.stroke();
     const focusAnchors=focused&&interactive?(model.focusAnchors||
       (model.focusAnchors=wallFocusAnchors(model,width,height))):null;
     if(focusAnchors)drawSpatialTethers(context,focusAnchors);
@@ -1336,9 +1341,9 @@ function softTrailCoverage(behind,trail,n,smooth){
     if(focused&&selection)frame.rows.forEach((row,index)=>{
       if(!row.selected)return;
       const line=model.lines[index];path([line.from,line.to]);
-      context.strokeStyle='rgba(5,10,8,0.7)';context.lineWidth=line.thickness+line.profile+2.4;
+      context.strokeStyle='rgba(6,7,9,0.7)';context.lineWidth=line.thickness+line.profile+2.4;
       context.shadowBlur=0;context.stroke();
-      context.strokeStyle='rgba(230,241,235,0.3)';context.lineWidth=line.thickness+line.profile+1.2;
+      context.strokeStyle='rgba(232,235,240,0.3)';context.lineWidth=line.thickness+line.profile+1.2;
       context.stroke();
     });
     frame.rows.forEach((row,rowIndex)=>{
@@ -1381,7 +1386,7 @@ function softTrailCoverage(behind,trail,n,smooth){
     });
     // An unobtrusive order key on the floor never covers the light itself.
     if(!interactive&&frame.rows.length<=8&&height>=130){
-      context.font='10px system-ui';context.textAlign='center';context.textBaseline='middle';context.fillStyle='#c0c8c2';
+      context.font='10px system-ui';context.textAlign='center';context.textBaseline='middle';context.fillStyle='#c3c8cf';
       frame.rows.forEach((row,index)=>{
         const order=spatialLineNumber(frame,row,index,lineNumbers);
         context.fillText(String(order),model.lines[index].from[0],height*.9);
@@ -1423,7 +1428,7 @@ function softTrailCoverage(behind,trail,n,smooth){
         context.lineWidth=thickness;context.beginPath();context.moveTo(...points[i]);context.lineTo(...points[i+1]);context.stroke();
       }
       context.shadowBlur=0;
-      if(count<=8&&height>=130){const p=point(rowIndex,0),number=spatialLineNumber(frame,row,rowIndex,lineNumbers);context.fillStyle='#bcc6c1';context.font='10px system-ui';context.textAlign='center';context.fillText(String(number),p[0],Math.min(height-6,p[1]+14));}
+      if(count<=8&&height>=130){const p=point(rowIndex,0),number=spatialLineNumber(frame,row,rowIndex,lineNumbers);context.fillStyle='#bfc4cb';context.font='10px system-ui';context.textAlign='center';context.fillText(String(number),p[0],Math.min(height-6,p[1]+14));}
     }
   }
   function draw(canvas, options = {}) {
@@ -1499,20 +1504,20 @@ function softTrailCoverage(behind,trail,n,smooth){
     if (canvas.height !== Math.round(height * scale)) canvas.height = Math.round(height * scale);
     context.setTransform(scale, 0, 0, scale, 0, 0);
     context.clearRect(0, 0, width, height);
-    context.fillStyle = '#111514';
+    context.fillStyle = '#121417';
     rounded(context, 0, 0, width, height, 18); context.fill();
     if (!frame.rows.length) {
       if (width < 220) {
         context.save();
         context.strokeStyle = '#68736c'; context.lineWidth = 1.5;
         rounded(context, width / 2 - 10, height / 2 - 17, 20, 8, 2); context.stroke();
-        context.fillStyle = '#a8b0ab'; context.font = '11px system-ui';
+        context.fillStyle = '#a9afb7'; context.font = '11px system-ui';
         context.textAlign = 'center'; context.textBaseline = 'middle';
         context.fillText('Geen receivers', width / 2, height / 2 + 8, Math.max(1, width - 16));
         context.restore();
         return rawFrame;
       }
-      context.fillStyle = '#a8b0ab'; context.font = '13px system-ui';
+      context.fillStyle = '#a9afb7'; context.font = '13px system-ui';
       context.textAlign = 'center'; context.fillText('Nog geen receivers in deze zone', width / 2, height / 2);
       return rawFrame;
     }
@@ -1529,8 +1534,8 @@ function softTrailCoverage(behind,trail,n,smooth){
         context.font='650 '+(focused?14:Math.min(10,size*.65))+'px system-ui';
         interaction.badges.forEach((badge,index)=>{
           const x=badge.x*width,y=badge.y*height;
-          context.fillStyle='#26332b';rounded(context,x-size/2,y-size/2,size,size,Math.min(5,size/3));context.fill();
-          context.fillStyle='#ecf2ed';context.fillText(String(spatialLineNumber(frame,frame.rows[index],index,options.lineNumbers)),x,y);
+          context.fillStyle='#2a2f36';rounded(context,x-size/2,y-size/2,size,size,Math.min(5,size/3));context.fill();
+          context.fillStyle='#eef0f3';context.fillText(String(spatialLineNumber(frame,frame.rows[index],index,options.lineNumbers)),x,y);
         });
         context.restore();
       }
@@ -1663,7 +1668,7 @@ function softTrailCoverage(behind,trail,n,smooth){
       context.font = (row.selected ? '600 ' : '') + '10px system-ui';
       context.textAlign = vertical ? 'center' : 'left';
       if(options.numberLabels===true&&continuous){
-        context.save();context.font='650 10px system-ui';context.textAlign='center';context.fillStyle='#d3ddd6';
+        context.save();context.font='650 10px system-ui';context.textAlign='center';context.fillStyle='#d6d9de';
         context.fillText(String(options.lineNumbers?.[row.lineId]||options.lineNumbers?.[row.receiverId]||index+1),x+availableLength/2,Math.min(height-10,y+barHeight+15));
         context.restore();
       }

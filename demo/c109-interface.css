@@ -18,7 +18,7 @@ html.interface-polish body #main .stand-hero100::after{display:none!important}
 html body #main .section-heading>button[data-action="zone-new"]{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 16px;border-radius:999px;
   background:var(--red,#b6443d)!important;color:#fff!important;border:0!important;font-size:14px!important;font-weight:750;white-space:nowrap;
   box-shadow:0 8px 18px -12px color-mix(in srgb,var(--red,#b6443d) 85%,transparent);transition:transform .12s ease}
-html body #main .section-heading>button[data-action="zone-new"]:active{transform:scale(.96)}
+
 html body #main .section-heading>button[data-action="zone-new"]:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
 @media (prefers-reduced-motion:reduce){html body #main .section-heading>button[data-action="zone-new"]{transition:none}}
 
@@ -531,3 +531,862 @@ html:not(#c109) body:not(#c109) .ledline-setup .order-drag-handle668:disabled::b
 html:not(#c109) body:not(#c109) .ledline-setup[data-order-open="true"]{padding-top:0!important}
 /* Inside an open sheet the card floats above the sheet's own Klaar bar. */
 html body dialog .c109-sync.in-sheet{position:fixed;z-index:20;bottom:calc(max(14px,env(safe-area-inset-bottom,0px)) + 76px)}
+/* The zone card is rounded; the strip that holds it stays clear until it
+ * sticks to the top, so no dark square corners show behind the card. */
+html:not(#c109) body:not(#c109) #main .control-preview-dock:not([data-scrolled=true]){background:transparent!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+
+/* ---------- C109h: outputs step: dark stage, clear port choice ---------- */
+/* In dark mode the receiver stands on a dark stage, not a white card. */
+body[data-theme=dark] :is(.pixel-output-picker canvas,.pixel-port-context canvas){background:radial-gradient(120% 95% at 50% 18%,#2c3138 0%,#1b1e22 58%,#131518 100%)!important}
+body[data-theme=dark] .pixel-output-picker{background:rgba(255,255,255,.035)!important;border-color:rgba(255,255,255,.1)!important}
+/* A port that is on is filled with its colour; a port that is off rests grey. */
+html:not(#c109) body:not(#c109) .pixel-setup-outputs>button[role=switch]{transition:background-color .2s ease,border-color .2s ease,box-shadow .2s ease,opacity .2s ease;border-width:1.5px!important;border-style:solid!important}
+html:not(#c109) body:not(#c109) .pixel-setup-outputs>button[role=switch][aria-checked=false]:not(:disabled){opacity:.8;border-color:var(--line,#d2d9e3)!important;background:var(--panel,#fff)!important}
+html:not(#c109) body:not(#c109) .pixel-setup-outputs>button[role=switch][aria-checked=false] b{background:color-mix(in srgb,var(--muted,#7a8391) 55%,transparent)!important;color:#fff!important}
+html:not(#c109) body:not(#c109) .pixel-setup-outputs>button[role=switch][aria-checked=false] .pixel-port-colour{color:var(--muted,#646d78)!important}
+html:not(#c109) body:not(#c109) .pixel-setup-outputs>button[role=switch][aria-checked=true]{opacity:1;border-color:var(--port-colour)!important;
+  background:color-mix(in srgb,var(--port-colour) 15%,var(--panel,#fff))!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--port-colour) 22%,transparent),0 8px 18px -12px var(--port-colour)!important}
+html:not(#c109) body:not(#c109) .pixel-setup-outputs>button[role=switch][aria-checked=true]>span:not(.pixel-port-colour){color:var(--port-colour)!important;font-weight:800!important}
+html:not(#c109) body:not(#c109) .pixel-setup-outputs>button[role=switch][aria-checked=true] .pixel-setup-switch{background:var(--port-colour)!important;border-color:var(--port-colour)!important}
+body[data-theme=dark] .pixel-setup-outputs>button[role=switch][aria-checked=true]{background:color-mix(in srgb,var(--port-colour) 20%,#1d2024)!important}
+body[data-theme=dark] .pixel-setup-outputs>button[role=switch][aria-checked=false]:not(:disabled){background:rgba(255,255,255,.03)!important;border-color:rgba(255,255,255,.1)!important}
+@media (prefers-reduced-motion:reduce){html body .pixel-setup-outputs>button[role=switch]{transition:none}}
+
+/* ---------- C109i: receiver cards ---------- */
+/* One frame per card: the head of an open card is part of it, not a card. */
+html:not(#c109) body:not(#c109) details.receiver-overview-card>summary{background:none!important;border:0!important;box-shadow:none!important;border-radius:0!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html:not(#c109) body:not(#c109) details.receiver-overview-card[open]>summary{border-bottom:1px solid color-mix(in srgb,var(--line,#dce1e9) 75%,transparent)!important}
+html:not(#c109) body:not(#c109) details.receiver-overview-card>.receiver-details{background:none!important;border:0!important;box-shadow:none!important}
+/* Knipperen is the same round sun button everywhere. */
+html:not(#c109) body:not(#c109) details.receiver-overview-card>summary .receiver-blink:not(.order-identify){width:46px!important;height:46px!important;min-width:46px!important;min-height:46px!important;padding:0!important;border-radius:50%!important;display:grid!important;place-items:center!important;flex:none}
+html:not(#c109) body:not(#c109) details.receiver-overview-card>summary .receiver-blink:not(.order-identify)>span{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}
+html:not(#c109) body:not(#c109) details.receiver-overview-card>summary .receiver-blink[aria-pressed=true]:not(.order-identify){background:var(--red,#c9554c)!important;color:#fff!important;border-color:transparent!important}
+/* Port chips: P1..P4 with their pixel count; a tap opens Pixels for that port. */
+html:not(#c109) body:not(#c109) .receiver-port-chips109{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+html:not(#c109) body:not(#c109) .port-chip109{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:3px 10px 3px 3px;margin:0;border-radius:999px!important;
+  border:1px solid color-mix(in srgb,var(--port-colour) 45%,transparent)!important;background:color-mix(in srgb,var(--port-colour) 12%,var(--panel,#fff))!important;color:var(--ink,#1c1c1e)!important;box-shadow:none!important;cursor:pointer}
+html:not(#c109) body:not(#c109) .port-chip109>b{display:grid;place-items:center;min-width:28px;height:28px;padding:0 4px;border-radius:999px;background:var(--port-colour);color:var(--port-ink,#fff);font-size:11.5px;font-weight:800}
+html:not(#c109) body:not(#c109) .port-chip109>small{font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;color:inherit}
+html:not(#c109) body:not(#c109) .port-chip109[data-on=false]{border-style:dashed!important;border-color:var(--line,#c9d0da)!important;background:transparent!important;color:var(--muted,#646d78)!important}
+html:not(#c109) body:not(#c109) .port-chip109[data-on=false]>b{background:color-mix(in srgb,var(--muted,#7a8391) 40%,transparent);color:#fff}
+
+body[data-theme=dark] .port-chip109[data-on=true]{background:color-mix(in srgb,var(--port-colour) 18%,#1d2024)!important;color:#f3f4f6!important}
+/* The ledline picture invites a tap; the old long port list is gone. */
+html:not(#c109) body:not(#c109) .receiver-connections canvas[data-product-receiver][data-compact=false]{cursor:pointer}
+html:not(#c109) body:not(#c109) .receiver-product-caption109{font-size:12.5px!important;color:var(--muted,#646d78)!important;text-align:center;margin:6px 0 0!important}
+body[data-theme=dark] .receiver-connections .receiver-product{background:radial-gradient(120% 95% at 50% 18%,#2c3138 0%,#1b1e22 58%,#131518 100%)!important}
+@media (prefers-reduced-motion:reduce){html body .port-chip109:active{transform:none}}
+html body .ui606-receivers-page details.receiver-overview-card>summary{grid-template-columns:58px minmax(0,1fr) 46px 14px!important}
+html:not(#c109) body:not(#c109) details.receiver-overview-card>summary>.receiver-port-chips109{grid-column:2/-1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:2px 0 0}
+html:not(#c109) body:not(#c109) details.receiver-overview-card>summary>.receiver-port-chips109>.port-chip109{justify-content:flex-start;min-width:0;min-height:32px;padding:2px 6px 2px 2px;gap:5px}
+html:not(#c109) body:not(#c109) details.receiver-overview-card>summary>.receiver-port-chips109>.port-chip109>b{min-width:26px;height:26px;font-size:11px}
+html:not(#c109) body:not(#c109) details.receiver-overview-card>summary>.receiver-port-chips109>.port-chip109>small{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:360px){html:not(#c109) body:not(#c109) details.receiver-overview-card>summary>.receiver-port-chips109{grid-column:1/-1}}
+/* The per-port Knipperen buttons under the picture are for screen readers only; sighted users tap the ledline. */
+html body .receiver-product>.sr-only,html body .receiver-product>.sr-only>button{position:absolute!important;width:1px!important;height:1px!important;min-width:0!important;min-height:0!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;border:0!important;white-space:nowrap!important}
+/* The SPI picture is now the way to blink a port: large enough to tap a ledline. */
+html body #main .receiver-connections .receiver-product>canvas{width:100%!important;max-width:100%!important;height:clamp(190px,56vw,260px)!important;max-height:none!important}
+html:not(#c109) body:not(#c109) details.receiver-overview-card>summary>.receiver-port-chips109{grid-template-columns:repeat(4,minmax(0,104px))}
+
+/* ---------- C109j: one row of modes on the zone screen ---------- */
+/* Kleur, Verloop (SPI) and Animaties share one segmented row; the second
+ * "Effen kleur / Verloop" row under the preview is no longer needed. */
+html:not(#c109) body:not(#c109) #main .control-mode-tabs:has([data-action="colour-gradient109"]){grid-template-columns:repeat(3,minmax(0,1fr))!important}
+html:not(#c109) body:not(#c109) #main .control-mode-tabs>button{display:inline-flex!important;align-items:center;justify-content:center;gap:7px;min-width:0;white-space:nowrap}
+html:not(#c109) body:not(#c109) #main .control-mode-tabs .tab-gradient-dot109{flex:none;width:16px;height:16px;border-radius:50%;background:conic-gradient(from 200deg,#e9a24a,#d95a6c,#8656c4,#4c6fe0,#e9a24a)}
+html:not(#c109) body:not(#c109) #main .control-dock-actions:has([data-action="colour-gradient109"])~* .spi-colour-modes,
+html:not(#c109) body:not(#c109) #main:has(.control-mode-tabs [data-action="colour-gradient109"]) .spi-colour-modes{display:none!important}
+/* Scrolled: the row stays, as compact icons; the words come back at the top. */
+html:not(#c109) body:not(#c109) .control-preview-dock[data-scrolled=true] .control-dock-actions{margin-bottom:5px!important}
+html:not(#c109) body:not(#c109) .control-preview-dock[data-scrolled=true] .control-dock-actions>*{min-height:38px!important}
+html:not(#c109) body:not(#c109) .control-preview-dock:is([data-scrolled=true],[data-c109-stuck]) .control-mode-tabs>button,
+html:not(#c109) body:not(#c109) .control-preview-dock[data-scrolled=true] .control-dock-actions>button{min-height:38px!important;height:38px;padding-block:0!important}
+html:not(#c109) body:not(#c109) .control-preview-dock:is([data-scrolled=true],[data-c109-stuck]) :is(.control-mode-tabs>button,.control-dock-actions>button)>:is(svg,.icon,.tab-gradient-dot109){width:19px!important;height:19px!important}
+@media (max-width:360px){html:not(#c109) body:not(#c109) #main .control-mode-tabs>button{gap:5px;font-size:13px}}
+/* Three modes need the room: Zones becomes a round back arrow (it keeps its label for screen readers). */
+html:not(#c109) body:not(#c109) #main .control-dock-actions:has([data-action="colour-gradient109"]){grid-template-columns:44px minmax(0,1fr)!important}
+html:not(#c109) body:not(#c109) #main .control-dock-actions:has([data-action="colour-gradient109"])>.control-dock-back{width:44px!important;min-width:44px!important;padding:0!important;font-size:0!important;gap:0!important;justify-content:center!important;border-radius:14px!important}
+html:not(#c109) body:not(#c109) #main .control-dock-actions:has([data-action="colour-gradient109"])>.control-dock-back>:is(svg,.icon){width:20px!important;height:20px!important;margin:0!important}
+html:not(#c109) body:not(#c109) #main .control-mode-tabs:has([data-action="colour-gradient109"])>button{font-size:13.5px!important;gap:5px!important;padding-inline:4px!important}
+html:not(#c109) body:not(#c109) #main .control-mode-tabs:has([data-action="colour-gradient109"])>button>:is(svg,.icon){width:17px!important;height:17px!important}
+html:not(#c109) body:not(#c109) #main .control-mode-tabs:has([data-action="colour-gradient109"])>button{font-size:13px!important;gap:4px!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-scrolled=true],[data-c109-stuck]) .control-mode-tabs>button>:is(svg,.icon,.tab-gradient-dot109){width:20px!important;height:20px!important}
+
+/* ---------- C109k: ledline order, plain and clear ---------- */
+/* Three short steps replace the stand/app mirror and the loose chips. */
+html:not(#c109) body:not(#c109) .ledline-setup[data-order-open="true"] :is(.order-mirror101,.order-copy-example730,.order-focus-guide664){display:none!important}
+html:not(#c109) body:not(#c109) .ledline-setup[data-order-open="true"] .order-visual-intro655{padding:16px!important}
+html:not(#c109) body:not(#c109) .order-guide109{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:10px}
+html:not(#c109) body:not(#c109) .order-guide109>li{display:grid;grid-template-columns:30px minmax(0,1fr);align-items:center;gap:11px}
+html:not(#c109) body:not(#c109) .order-guide109>li>span{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--ink,#1c1c1e);color:var(--bg,#fff);font-weight:800;font-size:14px}
+html:not(#c109) body:not(#c109) .order-guide109>li>p{margin:0;font-size:14.5px;line-height:1.4;color:var(--ink,#1c1c1e)}
+html:not(#c109) body:not(#c109) .order-guide-colour109{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+html:not(#c109) body:not(#c109) .order-guide-colour109::before{content:"";width:14px;height:14px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 30%,transparent)}
+body[data-theme=dark] .order-guide109>li>span{background:#f3f4f6;color:#16181b}
+/* What matters first: the list. Adding a receiver comes after it. */
+html:not(#c109) body:not(#c109) .ledline-setup[data-order-open="true"] .ledline-setup-body{display:flex!important;flex-direction:column}
+html:not(#c109) body:not(#c109) .ledline-setup[data-order-open="true"] .ledline-setup-body>.layout-receiver-actions{order:5;margin-top:4px}
+
+/* ---------- C109l: stand animation, one visual zone list ---------- */
+/* Every zone is a numbered card with its live preview; a line between the
+ * cards shows how the animation travels (a moving light), or "=" when all
+ * zones play the same light together. */
+html:not(#c109) body:not(#c109) .stand-animation-live .stand-animation-preview{counter-reset:zone109;display:grid!important;gap:22px!important;margin-top:12px}
+html:not(#c109) body:not(#c109) .stand-animation-live .stand-animation-zone{position:relative;counter-increment:zone109;display:grid!important;grid-template-columns:34px minmax(0,1fr);grid-template-areas:"num label" "num role" "view view";column-gap:10px;row-gap:2px;
+  padding:12px!important;border-radius:18px!important;background:var(--panel,#fff)!important;border:1px solid var(--line,#d2d9e3)!important;box-shadow:none!important}
+html:not(#c109) body:not(#c109) .stand-animation-live .stand-animation-zone::before{content:counter(zone109);grid-area:num;align-self:center;display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--ink,#1c1c1e);color:var(--bg,#fff);font-weight:800;font-size:15px}
+html:not(#c109) body:not(#c109) .stand-animation-live .stand-animation-zone-label{grid-area:label;display:flex!important;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+html:not(#c109) body:not(#c109) .stand-animation-live .stand-animation-zone-label>b{font-size:15px!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html:not(#c109) body:not(#c109) .stand-animation-live .stand-animation-family-badge{flex:none;font-size:11px!important;padding:3px 8px!important;border-radius:999px!important}
+html:not(#c109) body:not(#c109) .stand-animation-live .stand-animation-role{grid-area:role;font-size:12px!important;color:var(--muted,#646d78)!important;background:none!important;padding:0!important}
+html:not(#c109) body:not(#c109) .stand-animation-live .stand-animation-zone>:is(.preview-wrap,.scene-preview,div:last-child){grid-area:view;margin-top:10px!important;border-radius:12px!important}
+/* The link between zones. */
+html:not(#c109) body:not(#c109) .stand-animation-live .stand-animation-zone+.stand-animation-zone::after{content:"";position:absolute;left:28px;top:-22px;width:2px;height:22px;
+  background:linear-gradient(var(--line,#c9d0da),var(--line,#c9d0da))}
+html:not(#c109) body:not(#c109) .stand-animation-live [data-stand-mode109]:not([data-stand-mode109="whole"]) .stand-animation-zone+.stand-animation-zone::after{background:linear-gradient(#e9a24a,#d95a4f);width:3px;left:27px}
+html:not(#c109) body:not(#c109) .stand-animation-live [data-stand-mode109="whole"] .stand-animation-zone+.stand-animation-zone::after{content:"=";width:22px;height:22px;left:18px;top:-22px;background:none;display:grid;place-items:center;font-weight:800;color:var(--muted,#646d78)}
+@media (prefers-reduced-motion:no-preference){
+  html:not(#c109) body:not(#c109) .stand-animation-live [data-stand-mode109]:not([data-stand-mode109="whole"]) .stand-animation-zone+.stand-animation-zone::after{
+    background:linear-gradient(180deg,transparent 0 30%,#ffe3c2 45% 55%,transparent 70% 100%),linear-gradient(#e9a24a,#d95a4f);background-size:100% 220%,100% 100%;animation:c109-zone-flow 1.6s linear infinite}
+}
+@keyframes c109-zone-flow{from{background-position:0 120%,0 0}to{background-position:0 -120%,0 0}}
+body[data-theme=dark] .stand-animation-live .stand-animation-zone{background:rgba(255,255,255,.04)!important;border-color:rgba(255,255,255,.1)!important}
+body[data-theme=dark] .stand-animation-live .stand-animation-zone::before{background:#f3f4f6;color:#16181b}
+html:not(#c109) body:not(#c109) .stand-animation-live .stand-animation-zone>canvas{grid-area:view;display:block;width:100%!important;height:64px!important;margin-top:10px;border-radius:12px;background:#121417}
+html:not(#c109) body:not(#c109) .stand-animation-live .stand-animation-zone{overflow:visible!important}
+html:not(#c109) body:not(#c109) .stand-animation-live .stand-animation-preview{gap:30px!important}
+html:not(#c109) body:not(#c109) .stand-animation-live [data-stand-mode109] .stand-animation-zone+.stand-animation-zone::after{top:-31px!important;height:30px!important}
+html:not(#c109) body:not(#c109) .stand-animation-live [data-stand-mode109]:not([data-stand-mode109="whole"]) .stand-animation-zone+.stand-animation-zone::after{width:4px!important;left:28px!important;border-radius:2px}
+html:not(#c109) body:not(#c109) .stand-animation-live [data-stand-mode109="whole"] .stand-animation-zone+.stand-animation-zone::after{left:19px!important;width:22px!important;font-size:18px}
+
+/* ---------- C109m: gradient direction as an arrow button ---------- */
+html:not(#c109) body:not(#c109) .gradient-reverse-row{display:grid!important;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:12px;cursor:pointer;padding:6px 0!important}
+html:not(#c109) body:not(#c109) .gradient-reverse-row>input[data-gradient-reverse]{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+html:not(#c109) body:not(#c109) .gradient-reverse-icon{display:grid!important;place-items:center;width:52px!important;height:52px!important;border-radius:16px!important;border:1px solid var(--line,#d2d9e3);background:var(--panel,#fff)!important;color:var(--ink,#1c1c1e)}
+html:not(#c109) body:not(#c109) .gradient-reverse-icon>svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .3s cubic-bezier(.22,1,.36,1)}
+html:not(#c109) body:not(#c109) .gradient-reverse-row:has(input:checked) .gradient-reverse-icon{background:linear-gradient(90deg,#e9a24a,#d95a6c,#8656c4)!important;color:#fff;border-color:transparent}
+html:not(#c109) body:not(#c109) .gradient-reverse-row:has(input:checked) .gradient-reverse-icon>svg{transform:scaleX(-1)}
+html:not(#c109) body:not(#c109) .gradient-reverse-row:has(input:focus-visible) .gradient-reverse-icon{outline:2px solid var(--red,#c9554c);outline-offset:2px}
+body[data-theme=dark] .gradient-reverse-icon{background:rgba(255,255,255,.06)!important;border-color:rgba(255,255,255,.12)!important;color:#f3f4f6}
+@media (prefers-reduced-motion:reduce){html body .gradient-reverse-icon>svg{transition:none}}
+
+/* ---------- C109n: one brightness slider everywhere ---------- */
+/* Same look as the gradient's Helderheid: a sun, a yellow fill, a white knob. */
+html:not(#c109) body:not(#c109) input[type=range]:is([data-setting="bri"],[data-setting="brightness"],[data-setting="bgBrightness"],[data-colour-preset-bri667],[data-gradient-brightness]){
+  -webkit-appearance:none;appearance:none;height:28px;background:transparent!important;
+  --c109-bri-track:linear-gradient(90deg,#f5c76a 0 var(--fill,100%),color-mix(in srgb,var(--ink,#1c1c1e) 12%,transparent) var(--fill,100%))}
+html:not(#c109) body:not(#c109) input[type=range]:is([data-setting="bri"],[data-setting="brightness"],[data-setting="bgBrightness"],[data-colour-preset-bri667],[data-gradient-brightness])::-webkit-slider-runnable-track{height:10px;border-radius:999px;background:var(--c109-bri-track)}
+html:not(#c109) body:not(#c109) input[type=range]:is([data-setting="bri"],[data-setting="brightness"],[data-setting="bgBrightness"],[data-colour-preset-bri667],[data-gradient-brightness])::-moz-range-track{height:10px;border-radius:999px;background:var(--c109-bri-track)}
+html:not(#c109) body:not(#c109) input[type=range]:is([data-setting="bri"],[data-setting="brightness"],[data-setting="bgBrightness"],[data-colour-preset-bri667],[data-gradient-brightness])::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:28px;height:28px;margin-top:-9px;border-radius:50%;background:#fff;border:0;box-shadow:0 0 0 1px rgba(0,0,0,.14),0 3px 8px rgba(0,0,0,.28)}
+html:not(#c109) body:not(#c109) input[type=range]:is([data-setting="bri"],[data-setting="brightness"],[data-setting="bgBrightness"],[data-colour-preset-bri667],[data-gradient-brightness])::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#fff;border:0;box-shadow:0 0 0 1px rgba(0,0,0,.14),0 3px 8px rgba(0,0,0,.28)}
+body[data-theme=dark] input[type=range]:is([data-setting="bri"],[data-setting="brightness"],[data-setting="bgBrightness"],[data-colour-preset-bri667],[data-gradient-brightness]){--c109-bri-track:linear-gradient(90deg,#f5c76a 0 var(--fill,100%),rgba(255,255,255,.14) var(--fill,100%))!important}
+/* The label of a brightness slider always starts with the same sun. */
+html:not(#c109) body:not(#c109) .slider-row:has(>input:is([data-setting="bri"],[data-setting="brightness"],[data-setting="bgBrightness"]))>label .setting-label-icon>*{display:none!important}
+html:not(#c109) body:not(#c109) .slider-row:has(>input:is([data-setting="bri"],[data-setting="brightness"],[data-setting="bgBrightness"]))>label .setting-label-icon::before,
+html:not(#c109) body:not(#c109) .slider-row:has(>input:is([data-setting="bri"],[data-setting="brightness"],[data-setting="bgBrightness"]))>label:not(:has(.setting-label-icon))::before{content:"";display:inline-block;width:20px;height:20px;margin-right:8px;vertical-align:-4px;background:#e0a43a;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='4'/%3E%3Cpath d='M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='4'/%3E%3Cpath d='M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8'/%3E%3C/svg%3E") center/contain no-repeat}
+html:not(#c109) body:not(#c109) .slider-row:has(>input:is([data-setting="bri"],[data-setting="brightness"],[data-setting="bgBrightness"]))>label .setting-label-icon{background:none!important;display:inline-grid;place-items:center}
+html:not(#c109) body:not(#c109) .slider-row:has(>input:is([data-setting="bri"],[data-setting="brightness"],[data-setting="bgBrightness"]))>label output{color:#e9a24a!important}
+
+/* ---------- C109o: one switch for the whole stand ---------- */
+html:not(#c109) body:not(#c109) .stand-hero100{position:relative}
+html:not(#c109) body:not(#c109) .stand-power109{display:inline-flex;align-items:center;gap:10px;margin:14px 0 0;padding:6px 16px 6px 6px;min-height:56px;border-radius:999px;border:1px solid var(--line,#d2d9e3);
+  background:var(--panel,#fff);color:var(--ink,#1c1c1e);cursor:pointer;box-shadow:none;transition:background-color .25s ease,border-color .25s ease,box-shadow .25s ease}
+html:not(#c109) body:not(#c109) .stand-power-ring109{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:color-mix(in srgb,var(--muted,#7a8391) 22%,transparent);color:var(--muted,#646d78);transition:background-color .25s ease,color .25s ease,box-shadow .25s ease}
+html:not(#c109) body:not(#c109) .stand-power-ring109>svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
+html:not(#c109) body:not(#c109) .stand-power-copy109{display:grid;text-align:left;line-height:1.2}
+html:not(#c109) body:not(#c109) .stand-power-copy109>b{font-size:14px}
+html:not(#c109) body:not(#c109) .stand-power-copy109>small{font-size:12.5px;font-weight:700;color:var(--muted,#646d78)}
+html:not(#c109) body:not(#c109) .stand-power109[data-state=on]{border-color:color-mix(in srgb,#e9a24a 55%,transparent);box-shadow:0 0 0 4px color-mix(in srgb,#e9a24a 14%,transparent)}
+html:not(#c109) body:not(#c109) .stand-power109:is([data-state=on],[data-state=mixed]) .stand-power-ring109{background:linear-gradient(135deg,#f5c76a,#e9a24a);color:#2b1b08;box-shadow:0 0 18px -2px #e9a24a}
+html:not(#c109) body:not(#c109) .stand-power109:is([data-state=on],[data-state=mixed]) .stand-power-copy109>small{color:#c9852f}
+html:not(#c109) body:not(#c109) .stand-power109[data-state=mixed] .stand-power-ring109{opacity:.75}
+
+html:not(#c109) body:not(#c109) .stand-power109:disabled{opacity:.6}
+body[data-theme=dark] .stand-power109{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.12);color:#f3f4f6}
+body[data-theme=dark] .stand-power109:is([data-state=on],[data-state=mixed]) .stand-power-copy109>small{color:#f5c76a}
+@media (prefers-reduced-motion:reduce){html body .stand-power109,html body .stand-power-ring109{transition:none}html body .stand-power109:active{transform:none}}
+
+/* ---------- C109p: Alles bedienen, a calm Hele stand bar ---------- */
+html:not(#c109) body:not(#c109) #effect-dialog .power-card-stand .c109-scope{display:flex!important;flex-wrap:wrap;gap:6px;margin-top:8px}
+html:not(#c109) body:not(#c109) .c109-zone-chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:4px 10px 4px 8px;border-radius:999px;background:color-mix(in srgb,var(--ink,#1c1c1e) 7%,transparent);font-size:12px}
+html:not(#c109) body:not(#c109) .c109-zone-chip>b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html:not(#c109) body:not(#c109) .c109-zone-chip>i{flex:none;width:16px;height:6px;border-radius:3px;background:linear-gradient(90deg,#e05a52,#3fae76,#4c6fe0,#f1efe8)}
+html:not(#c109) body:not(#c109) .c109-zone-chip[data-type=spi]>i{height:6px;background:radial-gradient(circle,#e9a24a 1.6px,transparent 2px) 0 50%/5.4px 6px repeat-x}
+body[data-theme=dark] .c109-zone-chip{background:rgba(255,255,255,.08)}
+/* The demo bar already says there is no real light; this preview note goes. */
+html:not(#c109) body:not(#c109) .live-confirmation[data-state="preview"]{display:none!important}
+
+/* ---------- C109q: animation cards, preview first ---------- */
+/* Groups and variants: a wide moving preview on top, then the name, one
+ * line of text and the action. The zones in a stand preview are plain light
+ * strips on a dark stage (no small labels inside the picture). */
+html:not(#c109) body:not(#c109) :is(.animation-family-trigger,.effect-card.family-variant-card){display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:auto!important;gap:12px!important;text-align:left;align-items:start!important}
+html:not(#c109) body:not(#c109) :is(.animation-family-preview,.animation-effect-preview){display:block!important;width:100%!important;max-width:none!important;min-height:0!important;height:auto!important;padding:12px!important;border-radius:16px!important;background:#121417!important;border:0!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)!important}
+html:not(#c109) body:not(#c109) :is(.animation-family-preview-label,.animation-effect-preview-label){display:none!important}
+html:not(#c109) body:not(#c109) :is(.animation-family-preview,.animation-effect-preview) .stand-animation-preview.is-compact{display:grid!important;gap:8px!important;margin:0!important}
+html:not(#c109) body:not(#c109) :is(.animation-family-preview,.animation-effect-preview) .stand-animation-zone{display:block!important;padding:0!important;margin:0!important;background:none!important;border:0!important;box-shadow:none!important}
+html:not(#c109) body:not(#c109) :is(.animation-family-preview,.animation-effect-preview) .stand-animation-zone-label{display:none!important}
+html:not(#c109) body:not(#c109) :is(.animation-family-preview,.animation-effect-preview) .stand-animation-zone>canvas{display:block;width:100%!important;height:34px!important;border-radius:8px}
+html:not(#c109) body:not(#c109) :is(.animation-family-preview,.animation-effect-preview)>canvas{display:block;width:100%!important;height:72px!important;border-radius:10px}
+html:not(#c109) body:not(#c109) :is(.animation-family-trigger .family-copy,.effect-card.family-variant-card>:not(.animation-effect-preview)){min-width:0}
+html:not(#c109) body:not(#c109) .effect-card.family-variant-card>b{font-size:18px!important;line-height:1.2}
+html:not(#c109) body:not(#c109) .effect-card.family-variant-card .animation-variant-description{font-size:13.5px!important;line-height:1.45;color:var(--muted,#646d78)!important}
+html:not(#c109) body:not(#c109) .effect-card.family-variant-card .animation-start-action{justify-self:stretch;margin:0!important}
+html:not(#c109) body:not(#c109) :is(.animation-family-trigger,.effect-card.family-variant-card){grid-template-areas:none!important}
+html:not(#c109) body:not(#c109) :is(.animation-family-trigger,.effect-card.family-variant-card)>*{grid-area:auto!important;grid-column:1/-1!important;grid-row:auto!important;position:relative!important;inset:auto!important;width:auto!important;transform:none!important}
+html:not(#c109) body:not(#c109) :is(.animation-family-trigger,.effect-card.family-variant-card)>:is(.animation-family-preview,.animation-effect-preview){width:100%!important}
+
+/* ---------- C109r: Bekijk als ---------- */
+/* Same close button as Pixels and Kanten: a 44 px rounded X. */
+html:not(#c109) body:not(#c109) .v50-spatial-header .spatial-choice-close{width:44px!important;min-width:44px!important;height:44px!important;padding:0!important;border-radius:14px!important;display:grid!important;place-items:center!important;font-size:0!important;gap:0!important}
+html:not(#c109) body:not(#c109) .v50-spatial-header .spatial-choice-close>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+html:not(#c109) body:not(#c109) .v50-spatial-header small{font-size:11px!important;color:var(--muted,#646d78)!important}
+html:not(#c109) body:not(#c109) .v50-spatial-header h2{font-size:20px!important;font-weight:780!important;letter-spacing:-.025em}
+html:not(#c109) body:not(#c109) .spatial-choice-help{font-size:13.5px!important;color:var(--muted,#646d78)!important}
+/* Option cards: picture, name and one line, a clear tick when chosen. */
+html:not(#c109) body:not(#c109) .spatial-choice-option{border-radius:20px!important;padding:10px!important;gap:14px!important}
+html:not(#c109) body:not(#c109) .spatial-choice-option .spatial-choice-copy b{font-size:17px!important}
+html:not(#c109) body:not(#c109) .spatial-choice-option .spatial-choice-copy small{font-size:13px!important;font-weight:500!important;color:var(--muted,#646d78)!important}
+html:not(#c109) body:not(#c109) .spatial-choice-option[aria-pressed=true]{border-color:#c9554c!important;box-shadow:0 0 0 3px color-mix(in srgb,#c9554c 22%,transparent)!important}
+/* SPI: one continuous line or separate lines, shown as small moving lights. */
+html:not(#c109) body:not(#c109) .spatial-topology-choice{border-radius:20px!important}
+html:not(#c109) body:not(#c109) .spatial-topology-choice>button{border-radius:16px!important;align-items:center!important}
+html:not(#c109) body:not(#c109) .spatial-topology-glyph{position:relative;flex:none;width:56px!important;height:44px!important;border-radius:12px;background:#121417;overflow:hidden;display:block!important}
+html:not(#c109) body:not(#c109) .spatial-topology-glyph>*{display:none!important}
+html:not(#c109) body:not(#c109) [data-id=continuous] .spatial-topology-glyph::before{content:"";position:absolute;left:7px;right:7px;top:19px;height:6px;border-radius:3px;
+  background:linear-gradient(90deg,#3a3f46 0 32%,#121417 32% 34%,#3a3f46 34% 66%,#121417 66% 68%,#3a3f46 68%)}
+html:not(#c109) body:not(#c109) [data-id=continuous] .spatial-topology-glyph::after{content:"";position:absolute;top:17px;left:7px;width:12px;height:10px;border-radius:5px;background:#f5c76a;box-shadow:0 0 10px 2px #e9a24a}
+html:not(#c109) body:not(#c109) [data-id=stacked] .spatial-topology-glyph::before{content:"";position:absolute;left:9px;right:9px;top:9px;height:26px;
+  background:linear-gradient(#3a3f46 0 4px,transparent 4px 11px,#3a3f46 11px 15px,transparent 15px 22px,#3a3f46 22px 26px);border-radius:2px}
+html:not(#c109) body:not(#c109) [data-id=stacked] .spatial-topology-glyph::after{content:"";position:absolute;top:8px;left:9px;width:10px;height:28px;
+  background:radial-gradient(4px 3px at 50% 2px,#f5c76a 90%,transparent) 0 0/10px 11px repeat-y;filter:drop-shadow(0 0 4px #e9a24a)}
+@media (prefers-reduced-motion:no-preference){
+  html:not(#c109) body:not(#c109) [data-id=continuous] .spatial-topology-glyph::after{animation:c109-topo-run 2.2s cubic-bezier(.45,0,.55,1) infinite}
+  html:not(#c109) body:not(#c109) [data-id=stacked] .spatial-topology-glyph::after{animation:c109-topo-each 1.4s cubic-bezier(.45,0,.55,1) infinite alternate}
+}
+@keyframes c109-topo-run{0%{transform:translateX(0)}100%{transform:translateX(30px)}}
+@keyframes c109-topo-each{0%{transform:translateX(0)}100%{transform:translateX(28px)}}
+html:not(#c109) body:not(#c109) .spatial-topology-choice>button[aria-pressed=true] .spatial-topology-glyph{box-shadow:inset 0 0 0 1.5px #c9554c}
+html:not(#c109) body:not(#c109) .spatial-topology-choice{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:8px!important}
+html:not(#c109) body:not(#c109) .spatial-topology-choice>legend{grid-column:1/-1}
+html:not(#c109) body:not(#c109) .spatial-topology-choice>button{display:grid!important;grid-template-columns:56px minmax(0,1fr)!important;gap:12px!important;padding:10px 12px!important;text-align:left!important;min-height:64px}
+html:not(#c109) body:not(#c109) .spatial-topology-choice .spatial-topology-glyph{position:relative!important;inset:auto!important;transform:none!important;margin:0!important}
+html:not(#c109) body:not(#c109) .spatial-topology-choice>button>span:last-child{display:grid;gap:2px;min-width:0}
+html:not(#c109) body:not(#c109) .spatial-topology-choice>button b{font-size:15px}
+html:not(#c109) body:not(#c109) .spatial-topology-choice>button small{font-size:12.5px;color:var(--muted,#646d78)}
+@media (min-width:640px){html:not(#c109) body:not(#c109) .spatial-topology-choice{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+
+/* ---------- C109s: drag the stand animation's zone order ---------- */
+html:not(#c109) body:not(#c109) .stand-animation-live [data-c109-sortable] .stand-animation-zone{grid-template-columns:34px minmax(0,1fr) 40px!important;grid-template-areas:"num label grip" "num role grip" "view view view"!important}
+html:not(#c109) body:not(#c109) .zone-grip109{grid-area:grip;align-self:center;justify-self:end;width:40px;height:44px;margin:0;padding:0;border:0;border-radius:12px;background:transparent;color:var(--muted,#7a8391);cursor:grab;touch-action:none;display:grid;place-items:center}
+html:not(#c109) body:not(#c109) .zone-grip109::before{content:"";width:12px;height:18px;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 18'%3E%3Cg fill='%23000'%3E%3Ccircle cx='3' cy='3' r='1.6'/%3E%3Ccircle cx='9' cy='3' r='1.6'/%3E%3Ccircle cx='3' cy='9' r='1.6'/%3E%3Ccircle cx='9' cy='9' r='1.6'/%3E%3Ccircle cx='3' cy='15' r='1.6'/%3E%3Ccircle cx='9' cy='15' r='1.6'/%3E%3C/g%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 18'%3E%3Cg fill='%23000'%3E%3Ccircle cx='3' cy='3' r='1.6'/%3E%3Ccircle cx='9' cy='3' r='1.6'/%3E%3Ccircle cx='3' cy='9' r='1.6'/%3E%3Ccircle cx='9' cy='9' r='1.6'/%3E%3Ccircle cx='3' cy='15' r='1.6'/%3E%3Ccircle cx='9' cy='15' r='1.6'/%3E%3C/g%3E%3C/svg%3E") center/contain no-repeat}
+html:not(#c109) body:not(#c109) .stand-animation-zone.is-dragging109{z-index:3;box-shadow:0 18px 36px -16px rgba(0,0,0,.6)!important;border-color:#e9a24a!important;transition:none!important}
+html:not(#c109) body:not(#c109) .stand-animation-zone.is-dragging109::after{opacity:0}
+html:not(#c109) body:not(#c109) .stand-animation-zone.is-dragging109 .zone-grip109{cursor:grabbing;color:#e9a24a}
+
+/* ---------- C109t: ledline order, a moving example in your own colours ---------- */
+html:not(#c109) body:not(#c109) .order-guide109{display:none!important}
+html:not(#c109) body:not(#c109) .order-demo109{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1.2fr);align-items:end;gap:10px;margin:12px 0 10px;padding:14px;border-radius:18px;background:#121417;color:#f3f4f6}
+html:not(#c109) body:not(#c109) .od-side109{display:grid;gap:8px;min-width:0}
+html:not(#c109) body:not(#c109) .od-side109>small{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#aeb5bf}
+html:not(#c109) body:not(#c109) .od-side109>small>svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2}
+html:not(#c109) body:not(#c109) .od-stand109{display:flex;justify-content:space-around;align-items:flex-end;height:calc(var(--n)*30px);padding:6px 4px 0;border-radius:12px;background:linear-gradient(#2a2f36,#1b1e22)}
+html:not(#c109) body:not(#c109) .od-stand109>span{display:grid;justify-items:center;gap:4px}
+html:not(#c109) body:not(#c109) .od-stand109>span>i{width:7px;height:calc(var(--n)*30px - 34px);min-height:40px;border-radius:4px;background:var(--c);box-shadow:0 0 10px 1px color-mix(in srgb,var(--c) 70%,transparent)}
+html:not(#c109) body:not(#c109) .od-stand109>span>b{font-size:11px;color:#cfd4da}
+html:not(#c109) body:not(#c109) .od-arrow109{align-self:center;font-size:20px;color:#6b7380;padding-top:16px}
+html:not(#c109) body:not(#c109) .od-app109{position:relative;display:grid;grid-template-columns:22px minmax(0,1fr);gap:6px}
+html:not(#c109) body:not(#c109) .od-slots109{display:grid;grid-auto-rows:30px}
+html:not(#c109) body:not(#c109) .od-slots109>b{display:grid;place-items:center;font-size:13px;font-weight:800;color:#f3f4f6}
+html:not(#c109) body:not(#c109) .od-pills109{position:relative;height:calc(var(--n)*30px)}
+html:not(#c109) body:not(#c109) .od-pill109{position:absolute;left:0;right:0;top:0;height:26px;display:flex;align-items:center;gap:6px;padding:0 8px;border-radius:8px;background:#2a2f36;transform:translateY(calc(var(--to)*30px));font-size:11.5px;font-weight:700}
+html:not(#c109) body:not(#c109) .od-pill109>i{flex:none;width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 6px var(--c)}
+html:not(#c109) body:not(#c109) .od-pill109>em{font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html:not(#c109) body:not(#c109) .od-pill109.is-moved{z-index:2;box-shadow:0 0 0 1.5px var(--c)}
+html:not(#c109) body:not(#c109) .od-hand109{position:absolute;right:6px;top:8px;width:18px;height:22px;text-decoration:none;opacity:0;
+  background:#fff;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 28'%3E%3Cpath d='M9 2.5a2 2 0 0 1 4 0v9l1-.2a2 2 0 0 1 2.3 1.6l.2 1 .7-.1a2 2 0 0 1 2.3 1.6l.1.8a2 2 0 0 1 2.4 1.9V22c0 2.8-2.2 5-5 5h-4.3c-1.6 0-3-.7-4-2L3.4 18.8a2 2 0 0 1 3-2.6L9 18.5Z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 28'%3E%3Cpath d='M9 2.5a2 2 0 0 1 4 0v9l1-.2a2 2 0 0 1 2.3 1.6l.2 1 .7-.1a2 2 0 0 1 2.3 1.6l.1.8a2 2 0 0 1 2.4 1.9V22c0 2.8-2.2 5-5 5h-4.3c-1.6 0-3-.7-4-2L3.4 18.8a2 2 0 0 1 3-2.6L9 18.5Z'/%3E%3C/svg%3E") center/contain no-repeat}
+@media (prefers-reduced-motion:no-preference){
+  html:not(#c109) body:not(#c109) .od-pill109{animation:c109-od-move 4.2s cubic-bezier(.45,0,.25,1) infinite}
+  html:not(#c109) body:not(#c109) .od-hand109{animation:c109-od-hand 4.2s ease infinite}
+}
+@keyframes c109-od-move{0%,22%{transform:translateY(calc(var(--from)*30px))}55%,92%{transform:translateY(calc(var(--to)*30px))}100%{transform:translateY(calc(var(--from)*30px))}}
+@keyframes c109-od-hand{0%,14%{opacity:0;transform:translate(4px,6px)}22%{opacity:1;transform:none}55%{opacity:1}66%,100%{opacity:0}}
+html:not(#c109) body:not(#c109) .order-demo-text109{margin:0;font-size:14.5px;line-height:1.45;color:var(--ink,#1c1c1e)}
+body[data-theme=dark] .order-demo-text109{color:#f3f4f6}
+
+/* ---------- C109u: make dragging zones obvious ---------- */
+html:not(#c109) body:not(#c109) .zone-drag-hint109{display:flex;align-items:center;gap:10px;margin:12px 0 0;padding:10px 12px;border-radius:14px;background:color-mix(in srgb,#e9a24a 14%,transparent);font-size:13.5px;font-weight:650;line-height:1.35;color:var(--ink,#1c1c1e)}
+html:not(#c109) body:not(#c109) .zone-drag-hint109>span{flex:none;width:30px;height:30px;border-radius:50%;background:#e9a24a;position:relative}
+html:not(#c109) body:not(#c109) .zone-drag-hint109>span::before{content:"";position:absolute;inset:6px;background:#2b1b08;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v18M7 7l5-4 5 4M7 17l5 4 5-4'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v18M7 7l5-4 5 4M7 17l5 4 5-4'/%3E%3C/svg%3E") center/contain no-repeat}
+body[data-theme=dark] .zone-drag-hint109{color:#f3f4f6}
+html:not(#c109) body:not(#c109) .zone-grip109{border:1px solid var(--line,#d2d9e3)!important;background:color-mix(in srgb,var(--ink,#1c1c1e) 5%,transparent)!important;color:var(--ink,#1c1c1e)!important}
+body[data-theme=dark] .zone-grip109{border-color:rgba(255,255,255,.16)!important;background:rgba(255,255,255,.07)!important;color:#f3f4f6!important}
+@media (prefers-reduced-motion:no-preference){html:not(#c109) body:not(#c109) .stand-animation-zone.nudge109{animation:c109-zone-nudge 1.4s ease .6s 2}}
+@keyframes c109-zone-nudge{0%,100%{transform:none}30%{transform:translateY(-10px)}60%{transform:translateY(3px)}}
+
+/* ---------- C109v: preview footer gets room ---------- */
+/* Full screen becomes a round icon (its label stays for screen readers), so
+ * "Alle 3 ledlines · Tik om ledlines te kiezen" fits on one line each. */
+html:not(#c109) body:not(#c109) #main [data-action="preview-fullscreen"]{width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;padding:0!important;border-radius:50%!important;font-size:0!important;gap:0!important;display:grid!important;place-items:center!important;flex:none!important}
+html:not(#c109) body:not(#c109) #main [data-action="preview-fullscreen"]>:is(svg,.icon){width:19px!important;height:19px!important;margin:0!important}
+html:not(#c109) body:not(#c109) #main [data-action="preview-fullscreen"]>:not(svg):not(.icon){position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important}
+
+/* ---------- C109w: the order example shows the zone's own set-up ---------- */
+html:not(#c109) body:not(#c109) .od-stand109[data-shape=stacked]{flex-direction:column;justify-content:center;align-items:stretch;gap:9px;padding:8px 10px}
+html:not(#c109) body:not(#c109) .od-stand109[data-shape=stacked]>span{grid-template-columns:12px minmax(0,1fr);align-items:center;gap:6px}
+html:not(#c109) body:not(#c109) .od-stand109[data-shape=stacked]>span>b{order:-1}
+html:not(#c109) body:not(#c109) .od-stand109[data-shape=stacked]>span>i{width:auto;height:7px;min-height:0}
+html:not(#c109) body:not(#c109) .od-stand109[data-shape=continuous]{align-items:center;justify-content:center;gap:0;padding:0 10px}
+html:not(#c109) body:not(#c109) .od-stand109[data-shape=continuous]>span{flex:1 1 0;gap:6px}
+html:not(#c109) body:not(#c109) .od-stand109[data-shape=continuous]>span>i{width:100%;height:8px;min-height:0;border-radius:0}
+html:not(#c109) body:not(#c109) .od-stand109[data-shape=continuous]>span:first-child>i{border-radius:4px 0 0 4px}
+html:not(#c109) body:not(#c109) .od-stand109[data-shape=continuous]>span:last-child>i{border-radius:0 4px 4px 0}
+html:not(#c109) body:not(#c109) .od-stand109[data-shape=tunnel]{display:block;padding:6px 6px 2px}
+html:not(#c109) body:not(#c109) .od-tunnel109{display:block;width:100%;height:100%}
+html:not(#c109) body:not(#c109) .od-stand109[data-shape=stacked]>span{justify-items:stretch!important}html:not(#c109) body:not(#c109) .od-stand109[data-shape=stacked]>span>i{width:100%!important;display:block}
+
+/* ---------- C109x: V2 smoothness and calm ---------- */
+/* The mode row switches straight to icons: no shrinking text. */
+html body #main .control-mode-tabs>button{transition:background-color .2s ease,color .2s ease!important}
+/* While the page scrolls under the dock, the dock stays compact (size menu
+ * and the "Je bedient" row step aside), as with the app's own scrolled state. */
+/* Ledline order: the Klaar bar stays last; adding a receiver sits above it. */
+html:not(#c109) body:not(#c109) .ledline-setup[data-order-open="true"] .ledline-setup-body>.order-assignment-footer652{order:9}
+/* Zone menu: one card, an icon on each action, delete in calm red. */
+html:not(#c109) body:not(#c109) .zone-options109{display:grid;gap:8px}
+html:not(#c109) body:not(#c109) .zone-options109>.button{display:flex!important;align-items:center;justify-content:flex-start!important;gap:12px;min-height:54px;padding-inline:16px!important;font-weight:700}
+html:not(#c109) body:not(#c109) .zone-options109>.button>svg{width:20px;height:20px;flex:none}
+html:not(#c109) body:not(#c109) .zone-options109>.zone-delete109{color:#d9534a!important}
+/* Fewer words: the grips and dots already say "drag". */
+html:not(#c109) body:not(#c109) :is(.palette-swap-guidance,.colour-presets-heading667>.colour-library-hint){display:none!important}
+/* One meaning per colour: red for actions and section labels, amber for
+ * light, green only for "chosen", grey for neutral badges. */
+html:not(#c109) body:not(#c109) .animation-type-badge{background:color-mix(in srgb,var(--ink,#1c1c1e) 7%,transparent)!important;border:1px solid color-mix(in srgb,var(--ink,#1c1c1e) 14%,transparent)!important;color:var(--muted,#646d78)!important}
+html:not(#c109) body:not(#c109) .family-kicker{color:var(--muted,#646d78)!important}
+html:not(#c109) body:not(#c109) .family-kicker :is(svg,.icon){color:var(--red,#c9554c)!important}
+html:not(#c109) body:not(#c109) .c113-order-walkthrough-step{color:var(--red,#c9554c)!important}
+body[data-theme=dark] .animation-type-badge{background:rgba(255,255,255,.07)!important;border-color:rgba(255,255,255,.14)!important;color:#c5cbd3!important}
+body[data-theme=dark] .family-kicker{color:#aeb5bf!important}
+body[data-theme=dark] .c113-order-walkthrough-step{color:#f19a90!important}
+html:not(#c109) body:not(#c109) .c113-order-walkthrough :is(.v50-order-connection-check>small,.c113-order-walkthrough-note){display:none!important}
+
+/* ---------- C109y: one neutral graphite for every light preview ---------- */
+html:not(#c109) body:not(#c109) :is(.preview-wrap,.v50-control-preview,.animation-family-preview,.animation-family-preview canvas,.family-variant-card canvas,.family-detail-preview>canvas,.scene-card>.scene-mosaic,.stand-animation-zone>canvas,.zone-card canvas,.receiver-scene-preview){background-color:#121417!important}
+
+/* ---------- C109z: the mode row folds smoothly ---------- */
+html:not(#c109) body:not(#c109) #main :is(.control-mode-tabs>button,.control-dock-actions>.control-dock-back){gap:0!important;font-size:13.5px}
+html:not(#c109) body:not(#c109) #main .c109-label{display:inline-block;overflow:hidden;white-space:nowrap;max-width:9em;margin-left:6px;opacity:1;vertical-align:middle}
+html:not(#c109) body:not(#c109) #main .control-dock-actions:has([data-action="colour-gradient109"])>.control-dock-back .c109-label{max-width:0;margin-left:0;opacity:0}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-scrolled=true],[data-c109-stuck]) .c109-label{max-width:0;margin-left:0;opacity:0}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-scrolled=true],[data-c109-stuck]) .control-dock-actions{grid-template-columns:44px minmax(0,1fr)!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-scrolled=true],[data-c109-stuck]) .control-dock-back{width:44px!important;min-width:44px!important;padding:0!important;justify-content:center!important}
+@media (prefers-reduced-motion:no-preference){
+  html:not(#c109) body:not(#c109) #main .c109-label{transition:max-width .34s cubic-bezier(.22,1,.36,1),margin-left .34s cubic-bezier(.22,1,.36,1),opacity .22s ease}
+  html:not(#c109) body:not(#c109) #main :is(.control-mode-tabs>button,.control-dock-actions>button){transition:height .34s cubic-bezier(.22,1,.36,1),min-height .34s cubic-bezier(.22,1,.36,1),background-color .2s ease,color .2s ease!important}
+  html:not(#c109) body:not(#c109) #main :is(.control-mode-tabs>button,.control-dock-actions>button)>:is(svg,.icon,.tab-gradient-dot109){transition:width .34s cubic-bezier(.22,1,.36,1),height .34s cubic-bezier(.22,1,.36,1)}
+}
+/* Folded, the dock is one calm surface that runs into the top of the screen. */
+html:not(#c109) body:not(#c109) .control-preview-dock:is([data-scrolled=true],[data-c109-stuck]) .control-dock-surface{border-radius:22px!important;
+  clip-path:inset(max(0px,calc(var(--sticky-preview-offset,0px) - 2px)) 0 0 0 round 22px)}
+html:not(#c109) body:not(#c109) .control-preview-dock .control-dock-surface{clip-path:inset(0 0 0 0 round 22px)}
+html:not(#c109) body:not(#c109) .control-preview-dock[data-c109-stuck]{filter:drop-shadow(0 12px 16px rgba(0,0,0,.28))}
+@media (prefers-reduced-motion:no-preference){html:not(#c109) body:not(#c109) .control-dock-surface{transition:clip-path .32s cubic-bezier(.4,0,.2,1),box-shadow .32s ease,background-color .32s ease!important}html:not(#c109) body:not(#c109) .control-preview-dock{transition:filter .32s ease}}
+html:not(#c109) body:not(#c109) #main .control-mode-tabs:has([data-action="colour-gradient109"])>button{padding-inline:3px!important;letter-spacing:-.01em}
+html:not(#c109) body:not(#c109) #main .control-mode-tabs:has([data-action="colour-gradient109"]) .c109-label{margin-left:4px}
+html:not(#c109) body:not(#c109) #main .control-mode-tabs:has([data-action="colour-gradient109"])>button>:is(svg,.icon,.tab-gradient-dot109){width:16px!important;height:16px!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-scrolled=true],[data-c109-stuck]) .control-mode-tabs>button>:is(svg,.icon,.tab-gradient-dot109){width:20px!important;height:20px!important}
+html:not(#c109) body:not(#c109) #main .control-mode-tabs:has([data-action="colour-gradient109"])>button{font-size:12.5px!important}html:not(#c109) body:not(#c109) #main .control-mode-tabs:has([data-action="colour-gradient109"]) .c109-label{flex:0 1 auto;min-width:0;text-overflow:ellipsis}@media (min-width:420px){html:not(#c109) body:not(#c109) #main .control-mode-tabs:has([data-action="colour-gradient109"])>button{font-size:13.5px!important}}
+html:not(#c109) body:not(#c109) #main .control-mode-tabs:has([data-action="colour-gradient109"])>button{padding-inline:1px!important;letter-spacing:-.02em}
+
+/* ---------- C109aa: a group clearly holds variants ---------- */
+/* The card looks like a small stack (cards behind it), and its action row
+ * names the variants inside, so it is obvious a tap opens them. */
+html:not(#c109) body:not(#c109) article.animation-family-card{position:relative;margin-bottom:10px!important}
+html:not(#c109) body:not(#c109) article.animation-family-card{box-shadow:0 7px 0 -3px color-mix(in srgb,var(--ink,#1c1c1e) 9%,var(--panel,#fff)),0 14px 0 -7px color-mix(in srgb,var(--ink,#1c1c1e) 5%,var(--panel,#fff))!important}
+body[data-theme=dark] article.animation-family-card{box-shadow:0 7px 0 -3px #23262b,0 14px 0 -7px #1b1d21!important}
+html:not(#c109) body:not(#c109) .family-variants{display:grid!important;grid-template-columns:38px minmax(0,1fr) 24px;align-items:center;gap:10px;min-height:56px;padding:8px 10px!important;border-radius:14px!important;
+  background:color-mix(in srgb,var(--red,#c9554c) 10%,transparent)!important;border:1px solid color-mix(in srgb,var(--red,#c9554c) 28%,transparent)!important}
+html:not(#c109) body:not(#c109) .family-variants-folder{display:grid!important;place-items:center;width:38px;height:38px;border-radius:11px;background:var(--red,#c9554c);color:#fff}
+html:not(#c109) body:not(#c109) .family-variants-folder svg{width:20px;height:20px}
+html:not(#c109) body:not(#c109) .family-variants-copy{display:grid;gap:2px;min-width:0}
+html:not(#c109) body:not(#c109) .family-variants-copy>b{font-size:14.5px!important}
+html:not(#c109) body:not(#c109) .family-variant-names109{font-size:12px;color:var(--muted,#646d78);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html:not(#c109) body:not(#c109) .family-variants-action{color:var(--red,#c9554c)}
+@media (prefers-reduced-motion:no-preference){html:not(#c109) body:not(#c109) .animation-family-trigger:active{transform:scale(.985);transition:transform .12s ease}}
+html:not(#c109) body:not(#c109) .family-variants-folder svg{stroke:#fff!important;color:#fff!important;fill:none!important}
+
+/* ---------- C109bb: one slider for everything ---------- */
+/* Every slider has the Helderheid shape: a 10 px track that fills up and a
+ * large white knob. Its colour tells what it does: amber light, channel
+ * colours for input[type=range]:not(.c109-own-range)/G/B/W, cool-to-warm for warmth, red for everything else. */
+html:not(#c109) body:not(#c109) input[type=range]:not(.c109-own-range){-webkit-appearance:none;appearance:none;height:28px;background:transparent!important;cursor:pointer;
+  --c109-fill-c:#c9554c;--c109-rest:color-mix(in srgb,var(--ink,#1c1c1e) 12%,transparent);
+  --c109-range-track:linear-gradient(90deg,var(--c109-fill-c) 0 var(--fill,50%),var(--c109-rest) var(--fill,50%))}
+body[data-theme=dark] input[type=range]:not(.c109-own-range){--c109-rest:rgba(255,255,255,.14)}
+html:not(#c109) body:not(#c109) input[type=range]:not(.c109-own-range)::-webkit-slider-runnable-track{height:10px;border-radius:999px;background:var(--c109-range-track)}
+html:not(#c109) body:not(#c109) input[type=range]:not(.c109-own-range)::-moz-range-track{height:10px;border-radius:999px;background:var(--c109-range-track)}
+html:not(#c109) body:not(#c109) input[type=range]:not(.c109-own-range)::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:28px;height:28px;margin-top:-9px;border-radius:50%;background:#fff;border:0;box-shadow:0 0 0 1px rgba(0,0,0,.14),0 3px 8px rgba(0,0,0,.28);transition:transform .15s ease}
+html:not(#c109) body:not(#c109) input[type=range]:not(.c109-own-range)::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#fff;border:0;box-shadow:0 0 0 1px rgba(0,0,0,.14),0 3px 8px rgba(0,0,0,.28)}
+html:not(#c109) body:not(#c109) input[type=range]:not(.c109-own-range):active::-webkit-slider-thumb{transform:scale(1.12)}
+html:not(#c109) body:not(#c109) input[type=range]:not(.c109-own-range):focus-visible{outline:none}
+html:not(#c109) body:not(#c109) input[type=range]:not(.c109-own-range):focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px color-mix(in srgb,var(--c109-fill-c) 45%,transparent),0 3px 8px rgba(0,0,0,.28)}
+html:not(#c109) body:not(#c109) input[type=range]:not(.c109-own-range):disabled{opacity:.45;cursor:default}
+html:not(#c109) body:not(#c109) input[type=range]:not(.c109-own-range):is([data-setting="bri"],[data-setting="brightness"],[data-setting="bgBrightness"],[data-colour-preset-bri667],[data-gradient-brightness]){--c109-fill-c:#f5c76a}
+html:not(#c109) body:not(#c109) input[type=range]:not(.c109-own-range):is([data-channel="r"],[data-rgb718-index="0"]){--c109-fill-c:#d95a4f}
+html:not(#c109) body:not(#c109) input[type=range]:not(.c109-own-range):is([data-channel="g"],[data-rgb718-index="1"]){--c109-fill-c:#3fae76}
+html:not(#c109) body:not(#c109) input[type=range]:not(.c109-own-range):is([data-channel="b"],[data-rgb718-index="2"]){--c109-fill-c:#4c6fe0}
+html:not(#c109) body:not(#c109) input[type=range]:not(.c109-own-range):is([data-channel="w"],[data-rgb718-index="3"]){--c109-fill-c:#e9e6dc}
+html:not(#c109) body:not(#c109) input[type=range]:not(.c109-own-range)[data-warmth]{--c109-range-track:linear-gradient(90deg,#d7e6ff,#fff3df 50%,#f5c27a)}
+html:not(#c109) body:not(#c109) input[type=range]:not(.c109-own-range)[data-setting="speed"]{--c109-fill-c:#e57f6f}
+
+/* The same slider wins over older per-screen slider styles. */
+html:not(#c109) body:not(#c109) input[type=range]:not(.c109-own-range){height:28px!important;background:transparent!important;border:0!important;box-shadow:none!important}
+html:not(#c109) body:not(#c109) input[type=range]:not(.c109-own-range)::-webkit-slider-runnable-track{height:10px!important;border-radius:999px!important;background:var(--c109-range-track)!important;border:0!important;box-shadow:none!important}
+html:not(#c109) body:not(#c109) input[type=range]:not(.c109-own-range)::-moz-range-track{height:10px!important;border-radius:999px!important;background:var(--c109-range-track)!important;border:0!important}
+html:not(#c109) body:not(#c109) input[type=range]:not(.c109-own-range)::-webkit-slider-thumb{width:28px!important;height:28px!important;margin-top:-9px!important;border-radius:50%!important;background:#fff!important;border:0!important;box-shadow:0 0 0 1px rgba(0,0,0,.14),0 3px 8px rgba(0,0,0,.28)!important}
+html:not(#c109) body:not(#c109) input[type=range]:not(.c109-own-range)::-moz-range-thumb{width:26px!important;height:26px!important;border-radius:50%!important;background:#fff!important;border:0!important;box-shadow:0 0 0 1px rgba(0,0,0,.14),0 3px 8px rgba(0,0,0,.28)!important}
+
+/* ---------- C109cc: small details on the icons ---------- */
+/* Each icon answers in its own small way when you choose or press it.
+ * Only motion: nothing changes meaning, and all of it stays still with
+ * reduced motion. */
+@media (prefers-reduced-motion:no-preference){
+  html body #main .control-mode-tabs>button[aria-pressed=true]>svg{animation:c109-pop .42s cubic-bezier(.34,1.56,.64,1)}
+  html body #main .control-mode-tabs>[data-action=colour][aria-pressed=true]>svg[data-icon=sun]{animation:c109-pop .42s cubic-bezier(.34,1.56,.64,1),c109-sun-turn .9s cubic-bezier(.22,1,.36,1)}
+  html body #main .control-mode-tabs>[data-action=animations][aria-pressed=true]>svg{animation:c109-pop .42s cubic-bezier(.34,1.56,.64,1),c109-wave 1.8s ease-in-out .4s infinite}
+  html body #main .control-mode-tabs>[data-action=colour-gradient109][aria-pressed=true]>.tab-gradient-dot109{animation:c109-pop .42s cubic-bezier(.34,1.56,.64,1),c109-spin 6s linear infinite}
+  html body .receiver-blink[aria-pressed=true]>svg{animation:c109-blink-pulse .9s ease-in-out infinite}
+  html body .stand-power109[data-state=on] .stand-power-ring109{animation:c109-breathe 3.2s ease-in-out infinite}
+  html body #navigation button[aria-current=page]>svg{animation:c109-lift .45s cubic-bezier(.34,1.56,.64,1)}
+  html body :is(.spatial-choice-option[aria-pressed=true] .spatial-choice-check,.pick-cell109[data-pick-state=edit] button[aria-pressed=true],.gradient-point.is-selected) svg{animation:c109-pop .4s cubic-bezier(.34,1.56,.64,1)}
+  html body button:active>svg:is([data-icon=chevron]),html body a:active>svg[data-icon=chevron],html body :is(.family-variants,.menu-card,.ledline-add-action):active svg[data-icon=chevron]{transform:translateX(3px);transition:transform .12s ease}
+  html body button:active>svg[data-icon=trash],html body button:active svg[data-icon=trash]{animation:c109-wiggle .35s ease}
+  html body :is(button,.text-button):active>svg[data-icon=edit]{animation:c109-wiggle .35s ease}
+  html body .switch[role=switch]:active>i::after{transform-origin:center;scale:1.18 .9;transition:scale .12s ease}
+  html body .zone-grip109:active,html body .gradient-point-drag:active,html body .palette-drag-handle:active,html body .colour-drag-handle:active{transform:scale(1.12);transition:transform .12s ease}
+}
+@keyframes c109-pop{0%{transform:scale(.72)}60%{transform:scale(1.14)}100%{transform:scale(1)}}
+@keyframes c109-sun-turn{from{rotate:-60deg}to{rotate:0deg}}
+@keyframes c109-wave{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.72)}}
+@keyframes c109-spin{to{rotate:360deg}}
+@keyframes c109-blink-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.86)}}
+@keyframes c109-breathe{0%,100%{box-shadow:0 0 14px -4px #e9a24a}50%{box-shadow:0 0 22px 1px #e9a24a}}
+@keyframes c109-lift{0%{transform:translateY(0)}45%{transform:translateY(-4px)}100%{transform:translateY(0)}}
+@keyframes c109-wiggle{0%,100%{rotate:0deg}30%{rotate:-12deg}65%{rotate:9deg}}
+/* Plus signs turn a quarter when pressed. */
+@media (prefers-reduced-motion:no-preference){
+  html body :is(.palette-add,.gradient-point-add,[data-action=zone-new],.ledline-add-action):active :is(.ledline-add-icon,svg){rotate:90deg;transition:rotate .2s ease}
+}
+
+/* ---------- C109dd: folding without any jump ---------- */
+/* Folding never changes the dock's height (a height change moved the page,
+ * which unfolded the row again: a visible flip). Only the words glide away;
+ * buttons keep their size, so the page under the finger stays exactly still. */
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck]:not([data-scrolled=true]) :is(.control-mode-tabs>button,.control-dock-actions>button){min-height:44px!important;height:44px!important}
+html:not(#c109) body:not(#c109) #main{overflow-anchor:none}
+html:not(#c109) body:not(#c109) #main .c109-label{max-width:var(--c109-lw,9em)}
+@media (prefers-reduced-motion:no-preference){html:not(#c109) body:not(#c109) #main .c109-label{transition:max-width .32s cubic-bezier(.4,0,.2,1),margin-left .32s cubic-bezier(.4,0,.2,1),opacity .24s ease!important}}
+
+/* Folded bar is opaque, so nothing shows through behind the buttons. */
+html:not(#c109) body:not(#c109) .control-preview-dock:is([data-scrolled=true],[data-c109-stuck]) .control-dock-surface{background:var(--bg,#eef1f4)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+
+/* ---------- C109ff: words fade at their edge instead of being cut ---------- */
+html:not(#c109) body:not(#c109) #main .c109-label{-webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 10px),transparent);mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 10px),transparent);-webkit-mask-size:var(--c109-lw,9em) 100%;mask-size:var(--c109-lw,9em) 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:not([data-c109-stuck]):not([data-scrolled=true]) .c109-label{-webkit-mask-image:none;mask-image:none}
+@media (prefers-reduced-motion:no-preference){
+  html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .c109-label{transition:max-width .34s cubic-bezier(.4,0,.2,1),margin-left .34s cubic-bezier(.4,0,.2,1),opacity .2s ease!important}
+  html:not(#c109) body:not(#c109) #main .control-preview-dock:not([data-c109-stuck]) .c109-label{transition:max-width .34s cubic-bezier(.4,0,.2,1),margin-left .34s cubic-bezier(.4,0,.2,1),opacity .28s ease .08s!important}
+}
+
+/* ---------- C109gg: spring motion, the way iOS moves ---------- */
+/* A real spring (stiffness 260, damping 22: settles in 0.6 s with a 5 %
+ * overshoot) and a playful one for icons (420/15). Everything moves with
+ * transform, opacity and filter only, so the page under the finger never
+ * shifts. Older engines fall back to an overshooting cubic curve. */
+:root{--c109-spring:linear(0.000, 0.026, 0.092, 0.183, 0.289, 0.400, 0.510, 0.612, 0.705, 0.787, 0.856, 0.913, 0.958, 0.993, 1.018, 1.035, 1.046, 1.052, 1.053, 1.052, 1.048, 1.043, 1.038, 1.032, 1.026, 1.020, 1.015, 1.011, 1.008, 1.005, 1.002, 1.000, 0.999, 0.998, 0.998, 0.997, 0.997, 0.997, 0.997, 0.998, 1.000);--c109-bounce:linear(0.000, 0.052, 0.188, 0.375, 0.584, 0.788, 0.969, 1.114, 1.215, 1.273, 1.291, 1.275, 1.236, 1.182, 1.121, 1.061, 1.009, 0.967, 0.937, 0.921, 0.915, 0.920, 0.931, 0.947, 0.965, 0.982, 0.997, 1.010, 1.018, 1.023, 1.025, 1.023, 1.020, 1.015, 1.010, 1.005, 1.001, 0.997, 0.995, 0.993, 0.993, 0.993, 0.994, 0.996, 1.000);--c109-spring-t:.6s;--c109-bounce-t:.72s}
+@supports not (transition-timing-function:linear(0,1)){:root{--c109-spring:cubic-bezier(.34,1.32,.64,1);--c109-bounce:cubic-bezier(.34,1.7,.64,1)}}
+@media (prefers-reduced-motion:no-preference){
+  /* Words: blur and fade out quickly, the space closes on the spring. */
+  html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .c109-label{opacity:0;filter:blur(3px);transform:translateX(-3px);
+    transition:max-width var(--c109-spring-t) var(--c109-spring),margin-left var(--c109-spring-t) var(--c109-spring),opacity .16s ease,filter .16s ease,transform .2s ease!important}
+  html:not(#c109) body:not(#c109) #main .control-preview-dock:not([data-c109-stuck]) .c109-label{filter:blur(0);transform:none;
+    transition:max-width var(--c109-spring-t) var(--c109-spring),margin-left var(--c109-spring-t) var(--c109-spring),opacity .26s ease .07s,filter .26s ease .07s,transform .32s var(--c109-spring) .05s!important}
+  /* Icons answer with a small bounce when the row folds or opens. */
+  html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] :is(.control-mode-tabs>button,.control-dock-actions>.control-dock-back)>:is(svg,.icon,.tab-gradient-dot109){animation:c109-icon-fold var(--c109-bounce-t) var(--c109-bounce) both}
+  html:not(#c109) body:not(#c109) #main .control-preview-dock:not([data-c109-stuck]) :is(.control-mode-tabs>button,.control-dock-actions>.control-dock-back)>:is(svg,.icon,.tab-gradient-dot109){animation:c109-icon-open .5s var(--c109-spring) both}
+  /* The bar itself breathes once as it docks. */
+  html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .control-dock-actions{animation:c109-bar-dock var(--c109-spring-t) var(--c109-spring) both}
+}
+@keyframes c109-icon-fold{from{transform:scale(.84)}to{transform:scale(1)}}
+@keyframes c109-icon-open{from{transform:scale(.92)}to{transform:scale(1)}}
+@keyframes c109-bar-dock{from{transform:translateY(5px) scale(.985)}to{transform:none}}
+/* The selected button's pill slides to the new choice (iOS segmented look). */
+html:not(#c109) body:not(#c109) #main .control-mode-tabs.has-c109-pill{position:relative;isolation:isolate}
+html:not(#c109) body:not(#c109) #main .control-mode-tabs.has-c109-pill>button{position:relative;z-index:1;background:transparent!important;box-shadow:none!important;transform:none!important}
+html:not(#c109) body:not(#c109) #main .c109-pill{position:absolute;z-index:0;left:0;top:0;pointer-events:none;will-change:transform,width}
+@media (prefers-reduced-motion:no-preference){html:not(#c109) body:not(#c109) #main .c109-pill.is-moving{transition:transform var(--c109-spring-t) var(--c109-spring),width var(--c109-spring-t) var(--c109-spring),height .3s ease}}
+
+/* ---------- C109hh: words never cut short ---------- */
+html:not(#c109) body:not(#c109) #main .c109-label{text-overflow:clip!important;-webkit-mask-size:100% 100%;mask-size:100% 100%}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:not([data-c109-stuck]):not([data-scrolled=true]) .c109-label{max-width:none}
+html:not(#c109) body:not(#c109) #main .control-mode-tabs:has([data-action="colour-gradient109"])>button{font-size:12.5px!important}
+html:not(#c109) body:not(#c109) #main .control-dock-actions:has([data-action="colour-gradient109"]){grid-template-columns:40px minmax(0,1fr)!important;gap:6px!important}
+html:not(#c109) body:not(#c109) #main .control-dock-actions:has([data-action="colour-gradient109"])>.control-dock-back{width:40px!important;min-width:40px!important}
+
+/* ---------- C109ii: the bar stays put when you switch mode ---------- */
+/* On the zone screen the page no longer fades as a whole when Kleur,
+ * Verloop or Animaties is chosen; only the content under the bar rises in,
+ * so the bar and its sliding pill stay calm and visible. */
+html:not(#c109) body:not(#c109) main>.app-page-enter:has(.control-preview-dock){animation:none!important;opacity:1!important;transform:none!important}
+@media (prefers-reduced-motion:no-preference){
+  html:not(#c109) body:not(#c109) main>.app-page-enter :is(.editor-grid>.control-preview-dock~*,.control-preview-dock~*){animation:c109-content-in .42s var(--c109-spring) both}
+}
+@keyframes c109-content-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+/* Until the sliding pill is in place, a freshly drawn row shows no second one. */
+html:not(#c109) body:not(#c109) #main .control-mode-tabs:not(.has-c109-pill)>button[aria-pressed=true]{transition:none!important}
+/* The page fade on a mode change also skips the zone screen as a whole. */
+html:not(#c109) body:not(#c109) #main>:has(.control-preview-dock){opacity:1!important;transform:none!important}
+
+/* C109jj: folded bar = only what you need. Extra text, size button and status
+   glide away; Alle and Bekijk become small round icon buttons. */
+html:not(#c109) body:not(#c109) #main .control-preview-dock :is(.control-location-summary,.preview-wrap>.preview-top,[data-live-status],.v50-selection-summary small,.v50-selection-summary em){transition:max-height .36s var(--c109-spring,cubic-bezier(.2,.9,.3,1)),opacity .22s ease,margin .36s var(--c109-spring,cubic-bezier(.2,.9,.3,1)),padding .36s var(--c109-spring,cubic-bezier(.2,.9,.3,1));max-height:80px}
+html:not(#c109) body:not(#c109) #main .control-preview-dock{transition:margin-bottom .36s var(--c109-spring,cubic-bezier(.2,.9,.3,1))}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] :is(.control-location-summary,.preview-wrap>.preview-top,[data-live-status],.v50-selection-summary small,.v50-selection-summary em){max-height:0!important;opacity:0!important;margin-top:0!important;margin-bottom:0!important;padding-top:0!important;padding-bottom:0!important;overflow:hidden!important;pointer-events:none}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .preview-size-control[open]{display:none}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .v50-preview-actions{margin-top:2px!important;padding-top:3px!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .v50-preview-toolbar{min-height:38px!important;align-items:center!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .v50-selection-summary b{font-size:14px!important;line-height:1.2!important}
+html body .v50-control-preview :is(.v50-preview-toolbar>button,.v50-preview-expand){transition:width .36s var(--c109-spring,cubic-bezier(.2,.9,.3,1)),min-width .36s var(--c109-spring,cubic-bezier(.2,.9,.3,1)),padding .36s var(--c109-spring,cubic-bezier(.2,.9,.3,1)),min-height .36s ease,height .36s ease}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] :is(.v50-preview-toolbar>button,.v50-preview-expand){width:36px!important;min-width:36px!important;height:36px!important;min-height:36px!important;padding:0!important;justify-content:center!important;gap:0!important;font-size:0!important;overflow:hidden!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] :is(.v50-preview-toolbar>button,.v50-preview-expand)>:not(svg){display:none!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] :is(.v50-preview-toolbar>button,.v50-preview-expand) svg{width:17px!important;height:17px!important;margin:0!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-measure],html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-measure] *{transition:none!important;animation:none!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .preview-wrap>.preview-top{min-height:0!important;height:auto!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock .preview-wrap>.preview-top{transition:max-height .36s var(--c109-spring,cubic-bezier(.2,.9,.3,1)),min-height .36s var(--c109-spring,cubic-bezier(.2,.9,.3,1)),opacity .22s ease}
+
+/* C109kk: folded mode row = round buttons, no track around them. */
+html:not(#c109) body:not(#c109) #main .control-preview-dock .control-mode-tabs{transition:background-color .3s ease,border-color .3s ease,box-shadow .3s ease,gap .36s var(--c109-spring,ease)}
+html:not(#c109) body:not(#c109) #main .control-preview-dock .control-mode-tabs>button{transition:max-width var(--c109-spring-t,.6s) var(--c109-spring,cubic-bezier(.2,.9,.3,1)),border-radius .36s ease,background-color .3s ease,border-color .3s ease!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock .c109-pill{transition-property:transform,width,height,border-radius;transition-duration:var(--c109-spring-t,.6s),var(--c109-spring-t,.6s),.3s,.36s}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .control-dock-actions{grid-template-columns:44px minmax(0,1fr)!important;gap:8px!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .control-mode-tabs{display:flex!important;justify-content:flex-start!important;gap:8px!important;padding:0!important;background:transparent!important;border-color:transparent!important;box-shadow:none!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .control-mode-tabs>button{flex:1 1 0!important;max-width:44px;min-width:44px!important;width:auto!important;height:44px!important;padding:0!important;gap:0!important;justify-content:center!important;border-radius:22px!important;border:1px solid var(--line,rgba(127,127,127,.22))!important;background:var(--surface-2,rgba(127,127,127,.12))!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .control-mode-tabs>button[aria-pressed=true]{border-color:transparent!important;background:transparent!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .c109-pill{border-radius:22px!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .control-dock-back{border-radius:22px!important;height:44px!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:not([data-c109-stuck]) .control-mode-tabs>button{flex:1 1 0}
+
+/* C109ll: folded round buttons sit centred as one group. */
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .control-dock-actions{display:flex!important;justify-content:center!important;align-items:center!important;gap:10px!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .control-dock-back{flex:0 0 44px!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .control-mode-tabs{flex:0 1 auto!important;width:auto!important;min-width:0!important;justify-content:center!important;gap:10px!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .control-mode-tabs>button{flex:0 1 auto!important;width:44px!important}
+
+/* C109ll: back buttons on the animation pages = one small chip. */
+html:not(#c109) body:not(#c109) :is(#main,#effect-dialog,dialog) .animation-results-navigation{margin:2px 0 10px!important;padding:0!important;border:0!important;min-height:0!important;background:none!important;box-shadow:none!important}
+html:not(#c109) body:not(#c109) :is(#main,#effect-dialog,dialog) .animation-results-navigation::after,html:not(#c109) body:not(#c109) :is(#main,#effect-dialog,dialog) .animation-results-navigation::before{display:none!important}
+html:not(#c109) body:not(#c109) :is(#main,#effect-dialog,dialog) .family-back-slot{margin:0 0 12px!important;padding:0!important;min-height:0!important;display:flex!important}
+html:not(#c109) body:not(#c109) :is(#main,#effect-dialog,dialog) :is(.animation-discovery-back,.family-detail-back){display:inline-flex!important;align-items:center!important;gap:6px!important;width:auto!important;min-width:0!important;min-height:36px!important;height:36px!important;padding:0 14px 0 10px!important;margin:0!important;border-radius:999px!important;border:1px solid var(--line,rgba(127,127,127,.22))!important;background:var(--surface-2,rgba(127,127,127,.1))!important;box-shadow:none!important;font-size:14px!important;font-weight:650!important;color:inherit!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html:not(#c109) body:not(#c109) :is(#main,#effect-dialog,dialog) :is(.animation-discovery-back,.family-detail-back) :is(.gallery-action-icon,small){display:none!important}
+html:not(#c109) body:not(#c109) :is(#main,#effect-dialog,dialog) .family-detail-back :is(.gallery-action-label,.gallery-action-copy){display:inline!important;padding:0!important;margin:0!important;background:none!important}
+html:not(#c109) body:not(#c109) :is(#main,#effect-dialog,dialog) .family-detail-back .gallery-action-copy b{font:inherit!important}
+html:not(#c109) body:not(#c109) :is(#main,#effect-dialog,dialog) :is(.animation-discovery-back,.family-detail-back) :is(.icon,.family-back-arrow){display:inline-flex!important;width:18px!important;height:18px!important;margin:0!important;padding:0!important;background:none!important;border:0!important;color:var(--accent,#d95a4f)!important}
+
+
+/* C109ll: no purple text; category = calm grey with a red icon. */
+html:not(#c109) body:not(#c109)[data-theme=dark] :is(.family-detail-category,.animation-type-badge){color:rgba(255,255,255,.66)!important}
+html:not(#c109) body:not(#c109)[data-theme=dark] .animation-start-action{color:#f0a198!important}
+html:not(#c109) body:not(#c109) .family-detail-category :is(.icon,.arrangement-icon){color:var(--accent,#d95a4f)!important}
+
+/* C109ll: the backdrop loses its blue, sky and green glows: only the warm red
+   corner and a faint warm light stay, on neutral graphite. */
+html:root:not(#c109){--glass-ambient-root:
+    radial-gradient(65% 40% at 0% 0%,rgba(226,94,84,.26),transparent 70%),
+    radial-gradient(70% 40% at 100% 100%,rgba(240,190,150,.20),transparent 70%),
+    linear-gradient(180deg,#f4f4f3 0%,#efefee 55%,#ebebea 100%)}
+html:root:not(#c109):has(body[data-theme="dark"]){--glass-ambient-root:
+    radial-gradient(65% 40% at 0% 0%,rgba(220,72,64,.30),transparent 70%),
+    radial-gradient(70% 40% at 100% 100%,rgba(200,120,80,.10),transparent 70%),
+    linear-gradient(180deg,#0d0d0e 0%,#0b0b0c 60%,#09090a 100%)}
+html:not(#c109) body:not(#c109) #main header.page-heading.stand-hero100{background:
+    radial-gradient(110% 130% at 100% 0%,color-mix(in srgb,#f0b48a 12%,transparent),transparent 58%),
+    radial-gradient(110% 130% at 0% 100%,color-mix(in srgb,#e2574c 18%,transparent),transparent 62%),
+    color-mix(in srgb,var(--panel,#fff) 90%,transparent)!important}
+
+/* C109mm: dark glass is neutral graphite, never blue-grey. */
+html:not(#c109) body:not(#c109)[data-theme="dark"]{--glass-bg:rgba(30,30,32,.62);--glass-bg-strong:rgba(36,36,38,.84)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){html:not(#c109) body:not(#c109)[data-theme="dark"]{--glass-bg:rgba(30,30,32,.94);--glass-bg-strong:rgba(36,36,38,.97)}}
+
+/* C109mm: every sheet (Alles bedienen, colour editor, effects) has one calm
+   surface. The title bar and the Klaar bar are not hard blocks any more:
+   they are the same surface and fade softly into the content. */
+html:not(#c109) body:not(#c109) #effect-dialog{--c109-sheet:#f5f5f4}
+html:not(#c109) body:not(#c109)[data-theme=dark] #effect-dialog{--c109-sheet:#161618}
+html:not(#c109) body:not(#c109) #effect-dialog[open]{background:var(--c109-sheet)!important;background-image:none!important}
+html:not(#c109) body:not(#c109) #effect-dialog #effect-dialog-content>header{background:linear-gradient(180deg,var(--c109-sheet) 0,var(--c109-sheet) calc(100% - 14px),color-mix(in srgb,var(--c109-sheet) 0%,transparent) 100%)!important;border-bottom:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;padding-bottom:14px!important;margin-bottom:-6px!important}
+html:not(#c109) body:not(#c109) #effect-dialog .colour-picker-actions{background:linear-gradient(0deg,var(--c109-sheet) 0,var(--c109-sheet) calc(100% - 18px),color-mix(in srgb,var(--c109-sheet) 0%,transparent) 100%)!important;border-top:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;padding-top:18px!important}
+html:not(#c109) body:not(#c109) #effect-dialog #effect-dialog-content>header .icon-button{border-radius:50%!important;width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;display:grid!important;place-items:center!important;padding:0!important}
+
+html:not(#c109) body:not(#c109)[data-theme=dark] #effect-dialog section.card.colour-card{background:rgba(255,255,255,.035)!important;border-color:rgba(255,255,255,.07)!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html:not(#c109) body:not(#c109)[data-theme=dark] #effect-dialog .colour-picker-actions .colour-picker-done{border-radius:999px!important}
+html:not(#c109) body:not(#c109) #effect-dialog .colour-picker-actions .colour-picker-done{border-radius:999px!important}
+
+/* Less text: the wheel and the sliders speak for themselves. */
+html:not(#c109) body:not(#c109) #effect-dialog .colour-values>small,html:not(#c109) body:not(#c109) :is(#main,#effect-dialog) .fine-controls-body>p.channel-help{display:none!important}
+/* C109mm: breathing room between the Hele stand card and the heading. */
+html:not(#c109) body:not(#c109) #effect-dialog .animation-library-heading{margin-top:16px!important}
+
+/* C109nn: the mode row = separate capsules with air between them, open and
+   folded. Open they stretch with their text; folded they are circles. One
+   flex layout in both states, so nothing ever switches layout mid-motion. */
+html:not(#c109) body:not(#c109) #main .control-preview-dock .control-dock-actions{display:flex!important;justify-content:center!important;align-items:center!important;gap:10px!important;position:relative}
+html:not(#c109) body:not(#c109) #main .control-preview-dock .control-dock-back{flex:0 0 auto!important;width:auto!important;min-width:44px!important;height:44px!important;min-height:44px!important;padding:0 15px 0 13px!important;border-radius:999px!important;justify-content:center!important;transition:padding var(--c109-spring-t,.6s) var(--c109-spring,ease)!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .control-dock-back{padding:0 12px!important;width:auto!important;flex:0 0 auto!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock .control-mode-tabs{display:flex!important;flex:1 1 auto;gap:10px!important;padding:0!important;min-height:0!important;background:transparent!important;border-color:transparent!important;box-shadow:none!important;border-radius:0!important;justify-content:center!important;width:auto!important;min-width:0!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock .control-mode-tabs>button{flex:1 1 0;min-width:44px!important;max-width:none!important;height:44px!important;min-height:44px!important;padding:0 14px!important;border-radius:999px!important;justify-content:center!important;transition:width var(--c109-spring-t,.6s) var(--c109-spring,cubic-bezier(.2,.9,.3,1)),padding var(--c109-spring-t,.6s) var(--c109-spring,ease),background-color .3s ease,border-color .3s ease!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock .control-mode-tabs>button:not([aria-pressed=true]){border:1px solid var(--line,rgba(127,127,127,.22))!important;background:var(--surface-2,rgba(127,127,127,.1))!important}
+html:not(#c109) body:not(#c109)[data-theme=dark] #main .control-preview-dock .control-mode-tabs>button:not([aria-pressed=true]),html:not(#c109) body:not(#c109)[data-theme=dark] #main .control-preview-dock .control-dock-back{border:1px solid rgba(255,255,255,.09)!important;background:rgba(255,255,255,.055)!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock .control-mode-tabs>button[aria-pressed=true]{border-color:transparent!important;background:transparent!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .control-mode-tabs{flex:0 1 auto!important;gap:10px!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .control-mode-tabs>button{padding:0!important;width:44px;flex:0 0 auto}
+html:not(#c109) body:not(#c109) #main .control-preview-dock .c109-pill{border-radius:999px!important}
+
+
+/* C109nn: the Aluvision logo stays visible in the folded bar, on the left. */
+html:not(#c109) body:not(#c109) #main .control-preview-dock .control-dock-actions::before{content:"";position:absolute;left:6px;top:50%;width:clamp(0px,calc(50% - 124px),76px);height:26px;transform:translate(-6px,-50%);background:url("assets/aluvision-logo.png") no-repeat left center/contain;opacity:0;pointer-events:none;transition:opacity .3s ease,transform var(--c109-spring-t,.6s) var(--c109-spring,ease)}
+html:not(#c109) body:not(#c109)[data-theme=dark] #main .control-preview-dock .control-dock-actions::before{filter:invert(1)}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .control-dock-actions::before{opacity:.92;transform:translate(0,-50%);transition-delay:.12s,0s}
+
+/* C109nn: folded, the bar floats free under the island with air above it,
+   and the page fades out softly behind it instead of a hard edge. */
+html:not(#c109) body:not(#c109) .control-preview-dock[data-c109-stuck] .control-dock-surface{clip-path:inset(max(0px,calc(var(--sticky-preview-offset,0px) + 6px)) 0 0 0 round 24px)!important}
+html:not(#c109) body:not(#c109):has(#main .control-preview-dock[data-c109-stuck])::after{content:"";position:fixed;left:0;right:0;top:0;height:calc(env(safe-area-inset-top,0px) + 30px);z-index:7;pointer-events:none;background:linear-gradient(180deg,var(--c109-page,#efefee) 0,var(--c109-page,#efefee) 30%,color-mix(in srgb,var(--c109-page,#efefee) 0%,transparent) 100%)}
+html:not(#c109) body:not(#c109)[data-theme=dark]{--c109-page:#0c0c0d}
+
+/* C109oo: the pressed capsule keeps its own fill until the pill exists (the
+   pill copies that fill), so the active choice is always clearly lit. */
+html:not(#c109) body:not(#c109) #main .control-preview-dock .control-mode-tabs:not(.has-c109-pill)>button[aria-pressed=true]{background:#ece9e4!important;color:#1c1c1e!important;border-color:transparent!important}
+html:not(#c109) body:not(#c109):not([data-theme=dark]) #main .control-preview-dock .control-mode-tabs:not(.has-c109-pill)>button[aria-pressed=true]{background:#1c1c1e!important;color:#fff!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock .control-mode-tabs.has-c109-pill>button[aria-pressed=true]{background:transparent!important;border-color:transparent!important}
+/* Open capsules size to their word, so Kleur · Verloop · Animaties all fit;
+   the back button is always the round arrow (same as folded). */
+html:not(#c109) body:not(#c109) #main .control-preview-dock:not([data-c109-stuck]) .control-mode-tabs>button{flex:1 1 auto;padding:0 12px!important;gap:6px!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock .control-dock-back{padding:0!important;width:44px!important;flex:0 0 44px!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock .control-dock-back .c109-label{max-width:0!important;margin:0!important;opacity:0!important;overflow:hidden!important}
+
+/* C109pp: animation group cards are one clean rounded card (no stack peeking
+   out below); the "Bekijk N animaties" row has matching soft corners. */
+html:not(#c109) body:not(#c109) article.animation-family-card{margin-bottom:12px!important;border-radius:24px!important;overflow:hidden;box-shadow:0 10px 24px -18px rgba(0,0,0,.45)!important}
+body[data-theme=dark] article.animation-family-card{box-shadow:0 12px 26px -18px rgba(0,0,0,.9)!important}
+html:not(#c109) body:not(#c109) article.animation-family-card :is(.preview-wrap,.effect-preview,canvas){border-radius:16px!important}
+html:not(#c109) body:not(#c109) .family-variants{border-radius:16px!important}
+html:not(#c109) body:not(#c109) .family-variants-folder{border-radius:50%!important}
+
+
+/* C109qq: the colour editor's ledline picture is the zone picture (numbered
+   lines) and stays at the top while the editor scrolls behind it. */
+html:not(#c109) body:not(#c109) #effect-dialog .dialog-live-preview.dialog-preview109{position:sticky!important;top:calc(var(--dialog-header-height,64px) - 10px)!important;z-index:6!important;margin-bottom:12px!important;border-radius:20px!important;box-shadow:0 0 0 8px var(--c109-sheet,#161618),0 14px 22px -10px rgba(0,0,0,.55)!important}
+html:not(#c109) body:not(#c109) #effect-dialog .dialog-live-preview.dialog-preview109 canvas{height:var(--dialog-preview109-h,72px)!important}
+html:not(#c109) body:not(#c109) #effect-dialog .dialog-live-preview.dialog-preview109 .preview-top{display:none!important}
+
+/* C109rr: colour editor picture = zone picture: number badges you can tap,
+   "Alle" to select every ledline, compact, no extra words. */
+html:not(#c109) body:not(#c109) #effect-dialog .dialog-preview109{padding:8px 10px 6px!important;background:#121417!important;border:1px solid rgba(255,255,255,.06)!important}
+html:not(#c109) body:not(#c109):not([data-theme=dark]) #effect-dialog .dialog-preview109{background:#121417!important}
+html:not(#c109) body:not(#c109) #effect-dialog .dialog-preview109 canvas{height:auto!important}
+html:not(#c109) body:not(#c109) #effect-dialog .dialog-preview109 :is(.v50-selection-summary small,.v50-selection-summary em,.v50-preview-expand){display:none!important}
+html:not(#c109) body:not(#c109) #effect-dialog .dialog-preview109 .v50-preview-actions{margin-top:4px!important;padding-top:4px!important}
+html:not(#c109) body:not(#c109) #effect-dialog .dialog-preview109 .v50-selection-summary b{font-size:14px!important;color:#f2f2f0!important}
+html:not(#c109) body:not(#c109) #effect-dialog .dialog-preview109 .v50-preview-toolbar>button{width:36px!important;min-width:36px!important;height:36px!important;min-height:36px!important;padding:0!important;font-size:0!important;gap:0!important;justify-content:center!important;border-radius:50%!important}
+html:not(#c109) body:not(#c109) #effect-dialog .dialog-preview109 .v50-preview-toolbar>button svg{width:17px!important;height:17px!important}
+
+/* C109ss: tunnel and wall animations get a picture big enough to read: the
+   arches / wall fill the card instead of a tiny icon in the middle. */
+html:not(#c109) body:not(#c109) :is(.animation-family-preview,.animation-effect-preview):has(>canvas.tunnel-effect-preview){height:auto!important;min-height:0!important;padding:0!important}
+html:not(#c109) body:not(#c109) :is(.animation-family-preview,.animation-effect-preview)>canvas.tunnel-effect-preview{height:156px!important;max-height:none!important;border-radius:16px!important}
+@media (max-width:380px){html:not(#c109) body:not(#c109) :is(.animation-family-preview,.animation-effect-preview)>canvas.tunnel-effect-preview{height:136px!important}}
+/* C109ss: Start animatie = calm neutral button, red play icon + text. */
+html:not(#c109) body:not(#c109)[data-theme=dark] .animation-start-action{background:rgba(255,255,255,.055)!important;border:1px solid rgba(255,255,255,.1)!important;box-shadow:none!important;border-radius:999px!important}
+html:not(#c109) body:not(#c109):not([data-theme=dark]) .animation-start-action{background:color-mix(in srgb,var(--red,#c9554c) 7%,#fff)!important;border:1px solid color-mix(in srgb,var(--red,#c9554c) 22%,transparent)!important;box-shadow:none!important;border-radius:999px!important}
+
+
+/* C109tt: snappier spring with a little more bounce (12 %, settles in .5 s). */
+:root{--c109-spring:linear(0.000, 0.027, 0.098, 0.198, 0.316, 0.441, 0.564, 0.681, 0.785, 0.876, 0.952, 1.011, 1.056, 1.087, 1.106, 1.115, 1.116, 1.111, 1.101, 1.089, 1.074, 1.060, 1.046, 1.032, 1.021, 1.011, 1.003, 0.996, 0.992, 0.989, 0.987, 0.986, 0.987, 0.987, 0.989, 0.990, 0.992, 0.994, 0.995, 0.997, 1.000);--c109-spring-t:.5s}
+@supports not (transition-timing-function:linear(0,1)){:root{--c109-spring:cubic-bezier(.34,1.45,.64,1)}}
+
+/* C109tt: RGBW / SPI badge on the right of the folded bar (logo left). */
+html:not(#c109) body:not(#c109) #main .control-preview-dock .control-dock-actions::after{content:attr(data-c109-type);position:absolute;right:8px;top:50%;transform:translate(6px,-50%);padding:4px 9px;border-radius:999px;font:700 10.5px/1 var(--font,system-ui);letter-spacing:.06em;color:var(--muted,#8b8f96);background:rgba(127,127,127,.12);border:1px solid rgba(127,127,127,.18);opacity:0;pointer-events:none;transition:opacity .3s ease,transform var(--c109-spring-t,.5s) var(--c109-spring,ease)}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .control-dock-actions[data-c109-type]::after{opacity:1;transform:translate(0,-50%);transition-delay:.12s,0s}
+@media (max-width:360px){html:not(#c109) body:not(#c109) #main .control-preview-dock .control-dock-actions::after{display:none}}
+
+/* C109tt: preview size = a small capsule that shows line thickness, opening
+   a floating menu with three glowing sample lines (Klein / Middel / Groot). */
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-top,html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-row{position:relative!important;overflow:visible!important}
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-control{position:relative!important;display:block!important;margin:0!important;padding:0!important;border:0!important;background:none!important;box-shadow:none!important}
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-control>summary{list-style:none!important;display:inline-flex!important;align-items:center!important;gap:7px!important;height:34px!important;min-height:34px!important;padding:0 11px 0 10px!important;border-radius:999px!important;background:rgba(127,127,127,.12)!important;border:1px solid rgba(127,127,127,.2)!important;box-shadow:none!important;font-size:13px!important;font-weight:650!important;cursor:pointer;transition:transform .2s var(--c109-spring,ease),background-color .2s ease}
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-control>summary::-webkit-details-marker{display:none}
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-control>summary>span{display:none!important}
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-control>summary::before{content:"";width:15px;height:13px;flex:none;background:linear-gradient(currentColor,currentColor) 0 0/100% 2px no-repeat,linear-gradient(currentColor,currentColor) 0 5px/100% 3px no-repeat,linear-gradient(currentColor,currentColor) 0 9px/100% 4px no-repeat;border-radius:2px;opacity:.85}
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-control>summary svg{width:14px!important;height:14px!important;transition:transform .35s var(--c109-spring,ease)}
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-control[open]>summary svg{transform:rotate(180deg)}
+
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-picker{position:absolute!important;right:0!important;left:auto!important;top:calc(100% + 8px)!important;z-index:40!important;display:grid!important;grid-template-columns:repeat(3,66px)!important;gap:4px!important;width:auto!important;height:auto!important;margin:0!important;padding:5px!important;border-radius:20px!important;background:#fff!important;border:1px solid rgba(0,0,0,.08)!important;box-shadow:0 20px 40px -14px rgba(0,0,0,.35),0 2px 8px rgba(0,0,0,.08)!important;transform-origin:top right;animation:c109-pop .5s var(--c109-spring,ease) both}
+body[data-theme=dark] .control-preview-dock .preview-size-picker{background:#242427!important;border-color:rgba(255,255,255,.1)!important;box-shadow:0 22px 44px -14px rgba(0,0,0,.85)!important}
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-picker>button{display:grid!important;justify-items:center!important;align-content:center!important;gap:9px!important;min-height:66px!important;height:auto!important;padding:12px 4px 9px!important;border-radius:15px!important;border:0!important;background:transparent!important;box-shadow:none!important;font-size:12px!important;font-weight:650!important;color:var(--muted,#8b8f96)!important;transition:background-color .2s ease,transform .2s var(--c109-spring,ease)}
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-picker>button::before{content:"";width:36px;height:var(--c109-bar,6px);border-radius:99px;background:linear-gradient(90deg,#e57f6f,#f5c76a);box-shadow:0 0 10px rgba(229,127,111,.45)}
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-picker>button[data-id=small]{--c109-bar:4px}
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-picker>button[data-id=medium]{--c109-bar:7px}
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-picker>button[data-id=large]{--c109-bar:11px}
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-picker>button[aria-pressed=true]{background:rgba(127,127,127,.14)!important;color:var(--ink,#1c1c1e)!important}
+body[data-theme=dark] .control-preview-dock .preview-size-picker>button[aria-pressed=true]{color:#fff!important;background:rgba(255,255,255,.09)!important}
+
+@keyframes c109-pop{from{opacity:0;transform:scale(.82) translateY(-6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-picker{animation:none}}
+
+/* C109uu: size menu in dark mode is dark too; chevron points down / up. */
+html:not(#c109) body:not(#c109)[data-theme=dark] .control-preview-dock .preview-size-picker{background:#242427!important;border-color:rgba(255,255,255,.1)!important;box-shadow:0 22px 44px -14px rgba(0,0,0,.85)!important}
+html:not(#c109) body:not(#c109)[data-theme=dark] .control-preview-dock .preview-size-picker>button[aria-pressed=true]{color:#fff!important;background:rgba(255,255,255,.09)!important}
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-control>summary svg{transform:rotate(90deg)!important}
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-control[open]>summary svg{transform:rotate(-90deg)!important}
+
+/* C109uu: on every page without the zone bar, the Aluvision bar with the
+   connection status stays at the top; the page glides behind frosted glass. */
+html:not(#c109) body:not(#c109):not(:has(#main .control-preview-dock)) header.brand-bar{position:sticky!important;top:0!important;z-index:30!important;background:color-mix(in srgb,var(--c109-page,#efefee) 74%,transparent)!important;-webkit-backdrop-filter:blur(20px) saturate(170%)!important;backdrop-filter:blur(20px) saturate(170%)!important;border-bottom:1px solid rgba(127,127,127,.12)!important;box-shadow:none!important}
+
+/* C109vv: stand card on the home page: warm, no purple corner (dark too). */
+html:not(#c109) body[data-theme=dark]:not(#c109) #main header.page-heading.stand-hero100{background:radial-gradient(110% 130% at 100% 0%,rgba(240,180,138,.10),transparent 58%),radial-gradient(110% 130% at 0% 100%,rgba(226,87,76,.22),transparent 62%),rgba(255,255,255,.05)!important}
+
+/* C109vv: one icon language everywhere: Kleur = sun, Verloop = colour dot,
+   Animaties = sound-wave lines. Section headings carry the same icon as
+   the buttons that lead to them. */
+html:not(#c109) body:not(#c109){
+  --c109-ico-sun:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round'%3E%3Cpath d='M12 2v2M12 20v2M2 12h2M20 12h2M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0'/%3E%3C/svg%3E");
+  --c109-ico-anim:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round'%3E%3Cpath d='M3 9v6M7 5v14M12 2v20M17 6v12M21 9v6'/%3E%3C/svg%3E")}
+html:not(#c109) body:not(#c109) :is(section.colour-card>.section-heading>h2,.animation-library-heading h2#animation-selector-heading,.stand-animation-live-title>b,.gradient-card-heading>h3){display:inline-flex!important;align-items:center!important;gap:8px!important}
+html:not(#c109) body:not(#c109) :is(section.colour-card>.section-heading>h2,.animation-library-heading h2#animation-selector-heading,.stand-animation-live-title>b)::before{content:"";flex:none;width:18px;height:18px;background:currentColor;opacity:.8;-webkit-mask:var(--c109-ico-anim) center/contain no-repeat;mask:var(--c109-ico-anim) center/contain no-repeat}
+html:not(#c109) body:not(#c109) section.colour-card>.section-heading>h2:not(#c109-sun)::before{-webkit-mask-image:var(--c109-ico-sun)!important;mask-image:var(--c109-ico-sun)!important}
+html:not(#c109) body:not(#c109) .gradient-card-heading>h3::before{content:"";flex:none;width:16px;height:16px;border-radius:50%;background:conic-gradient(from 200deg,#e9a24a,#d95a6c,#8656c4,#4c6fe0,#e9a24a)}
+html:not(#c109) body:not(#c109) :is(#main,#effect-dialog) .tab-gradient-dot109{flex:none;width:16px;height:16px;border-radius:50%;background:conic-gradient(from 200deg,#e9a24a,#d95a6c,#8656c4,#4c6fe0,#e9a24a)}
+
+/* C109vv: Alles bedienen tabs look and feel like the zone row: separate
+   capsules with air between them, the chosen one lit. */
+html:not(#c109) body:not(#c109) #effect-dialog .stand-controls-tabs{display:flex!important;gap:10px!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
+html:not(#c109) body:not(#c109) #effect-dialog .stand-controls-tabs>button{flex:1 1 0!important;height:44px!important;min-height:44px!important;border-radius:999px!important;border:1px solid rgba(127,127,127,.2)!important;background:rgba(127,127,127,.1)!important;box-shadow:none!important;gap:7px!important;transition:background-color .25s ease,color .25s ease,transform .2s var(--c109-spring,ease)!important}
+html:not(#c109) body:not(#c109)[data-theme=dark] #effect-dialog .stand-controls-tabs>button{border-color:rgba(255,255,255,.09)!important;background:rgba(255,255,255,.055)!important}
+html:not(#c109) body:not(#c109) #effect-dialog .stand-controls-tabs>button[aria-selected=true]{background:#1c1c1e!important;color:#fff!important;border-color:transparent!important;box-shadow:0 0 0 0 transparent,0 2px 0 0 var(--red,#c9554c)!important}
+html:not(#c109) body:not(#c109)[data-theme=dark] #effect-dialog .stand-controls-tabs>button[aria-selected=true]{background:#ece9e4!important;color:#1c1c1e!important}
+
+
+/* C109ww: Bekijk als = the view chip on top of the picture; Volgorde = a
+   round icon beside Alle / Bekijk. The separate bottom card is gone while
+   closed; the order editor still opens there when asked for. */
+html:not(#c109) body:not(#c109) .control-preview-dock .v50-preview-heading.has-c109-chip{display:flex!important;align-items:center!important;gap:8px!important;min-width:0}
+html:not(#c109) body:not(#c109) .control-preview-dock .v50-preview-heading.has-c109-chip>span:not(.c109-view-chip){display:none!important}
+html:not(#c109) body:not(#c109) .control-preview-dock .c109-view-chip{display:inline-flex;align-items:center;gap:6px;height:34px;min-width:0;max-width:100%;padding:0 8px 0 6px;border-radius:999px;border:1px solid rgba(127,127,127,.2);background:rgba(127,127,127,.12);color:inherit;font:inherit;font-size:13px;cursor:pointer;transition:transform .2s var(--c109-spring,ease),background-color .2s ease}
+
+html:not(#c109) body:not(#c109) .control-preview-dock .c109-view-chip>b{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html:not(#c109) body:not(#c109) .control-preview-dock .c109-view-ic{display:grid;place-items:center;flex:none;width:24px;height:24px;color:var(--red,#d95a4f)}
+html:not(#c109) body:not(#c109) .control-preview-dock .c109-view-ic svg{width:24px;height:24px}
+html:not(#c109) body:not(#c109) .control-preview-dock .c109-view-chev{flex:none;width:14px;height:14px;opacity:.6}
+html:not(#c109) body:not(#c109) .control-preview-dock .c109-order-btn{display:grid;place-items:center;flex:none;width:44px;height:44px;padding:0;border-radius:50%;border:1px solid rgba(127,127,127,.22);background:rgba(127,127,127,.1);color:var(--red,#d95a4f);cursor:pointer;transition:transform .2s var(--c109-spring,ease)}
+
+html:not(#c109) body:not(#c109) .control-preview-dock .c109-order-btn svg{width:22px;height:22px}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .c109-order-btn{display:none!important}
+html:not(#c109) body.c109-view-tools:not(#c109) #main .ledline-setup.ui606-line-tools:has(.ledline-setup-toggle[aria-expanded=false]):not(:has(dialog[open])){position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;clip-path:inset(50%)!important;margin:0!important;padding:0!important;border:0!important}
+
+/* C109xx: saving the stand on the receivers = one quiet floating capsule
+   with a progress ring, springs in above the tab bar, never a hard block. */
+html:not(#c109) body:not(#c109) [data-context-progress-c114]:not([hidden]){display:flex!important;align-items:center!important;gap:9px!important;width:auto!important;min-width:0!important;max-width:calc(100vw - 48px)!important;padding:7px 14px 7px 8px!important;border-radius:999px!important;background:rgba(30,30,32,.74)!important;-webkit-backdrop-filter:blur(18px) saturate(170%);backdrop-filter:blur(18px) saturate(170%);border:1px solid rgba(255,255,255,.1)!important;box-shadow:0 12px 26px -14px rgba(0,0,0,.7)!important;color:#f2f2f0!important;font-size:12.5px!important;font-weight:600!important;bottom:calc(env(safe-area-inset-bottom,0px) + 98px)!important;animation:c109-save-in .55s var(--c109-spring,cubic-bezier(.34,1.4,.64,1)) both}
+html:not(#c109) body:not([data-theme=dark]):not(#c109) [data-context-progress-c114]:not([hidden]){background:rgba(255,255,255,.82)!important;color:#1c1c1e!important;border-color:rgba(0,0,0,.07)!important;box-shadow:0 12px 26px -14px rgba(0,0,0,.3)!important}
+html:not(#c109) body:not(#c109) [data-context-progress-c114]::before{content:"";flex:none;width:18px;height:18px;border-radius:50%;background:conic-gradient(#f5c76a calc(var(--c109-p,25) * 1%),rgba(127,127,127,.28) 0);-webkit-mask:radial-gradient(circle,transparent 5.6px,#000 6.2px);mask:radial-gradient(circle,transparent 5.6px,#000 6.2px);transition:background .4s ease}
+html:not(#c109) body:not(#c109) [data-context-progress-c114][data-c109-spin]::before{animation:c109-ring-spin 1.1s linear infinite}
+html:not(#c109) body:not(#c109) [data-context-progress-c114]>div:not([data-context-progress-text]){display:none!important}
+html:not(#c109) body:not(#c109) [data-context-progress-c114] [data-context-progress-text]{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@keyframes c109-save-in{from{opacity:0;transform:translate(-50%,14px) scale(.9)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+@keyframes c109-ring-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){html:not(#c109) body:not(#c109) [data-context-progress-c114]:not([hidden]),html:not(#c109) body:not(#c109) [data-context-progress-c114][data-c109-spin]::before{animation:none}}
+
+/* C109yy: one press feel everywhere (see c109-interface.js): sink at once,
+   spring back with a little overshoot. Cards sink less than buttons. */
+html:not(#c109) body:not(#c109) .c109-press{scale:var(--c109-press,.95)}
+html:not(#c109) body:not(#c109) :is(.menu-card,.effect-card,.animation-family-card,.family-variants,.stand-control-shortcut,.zone-entry button,.receiver-overview-card>summary,.current-effect-gallery,.animation-category-tab,.warm-white-choice,.saved-colour-item,.button.full,.colour-picker-done,.animation-start-action,.scene-save-bar button){--c109-press:.975}
+html:not(#c109) body:not(#c109) .c109-release{animation:c109-release .55s var(--c109-bounce,cubic-bezier(.34,1.6,.64,1)) both}
+@keyframes c109-release{from{scale:var(--c109-press,.95)}to{scale:1}}
+@media (prefers-reduced-motion:reduce){html:not(#c109) body:not(#c109) .c109-press{scale:1}html:not(#c109) body:not(#c109) .c109-release{animation:none}}
+
+/* C109zz: one radius scale for the whole app.
+   22 = cards · 16 = panels inside a card · 14 = rows and fields
+   12 = small icon tiles · round = every button, chip and pill. */
+html:not(#c109) body:not(#c109) :is(section.card,article.zone-entry,section.stand-scenes,.control-dock-surface,section.ledline-setup,details.receiver-overview-card,section.receiver-danger-section,button.effect-card,article.animation-family-card,section.stand-animation-live,section.pixel-setup-panel,header.page-heading.stand-hero100,button.menu-card,section.c113-order-walkthrough,.receiver-list>details){border-radius:22px!important}
+html:not(#c109) body:not(#c109) :is(.preview-wrap,.receiver-product,.animation-effect-preview,.animation-family-preview,span.spatial-choice-art,div.order-assignment652,div.od-stand109,div.order-demo109,div.stand-animation-zone,div.pixel-setup-visual,section.spi-direction-tutorial,button.spatial-choice-option,fieldset.spatial-topology-choice,label.dialog-field,div.scene-save-bar,button.theme-choice,article.spi-zone-port-card,figure.spi-tutorial-example,.v593-order-status-explanation,.family-detail-preview,.dialog-live-preview){border-radius:16px!important}
+html:not(#c109) body:not(#c109) :is(.preview-wrap,.animation-effect-preview,.animation-family-preview,.family-detail-preview)>canvas{border-radius:16px!important}
+html:not(#c109) body:not(#c109) :is(.channel-row,.saved-colour-item,.palette-item,button.warm-white-choice,.gradient-point,summary.receiver-setting-row707,button.scene-zone,button.animation-category-tab,button.current-effect-gallery,.v569-animation-power,details.onboarding-destination,.receiver-port-row,.c109-port-row,li.order-row,input[type=text],input[type=search],input[type=number]:not(.channel-number),textarea,select,.search-field,.animation-search){border-radius:14px!important}
+html:not(#c109) body:not(#c109) :is(span.menu-icon,span.gallery-action-icon,span.receiver-setting-icon707,span.animation-section-icon,span.setting-label-icon,span.animation-category-artwork,span.ledline-add-icon,input.channel-number,button.channel-toggle){border-radius:12px!important}
+html:not(#c109) body:not(#c109) :is(button.button,a.button,button.text-button,button.gradient-point-add,button.spi-zone-flip,button.v50-order-connection-check,button.spi-tutorial-replay,button.spi-tutorial-understood,button.order-assignment-choice652,button.order-visual-help655,button.palette-add,.family-detail-count,.pill,.badge,button.back:not(.control-dock-back)){border-radius:999px!important}
+
+/* C109ab: the folded bar without clip-path (WebKit let the zone name peek
+   out above it). Folded, the surface itself is see-through; its rounded
+   background is its own layer that starts just above the round buttons,
+   and the zone name/badge row above it is hidden. */
+html:not(#c109) body:not(#c109) .control-preview-dock[data-c109-stuck]{filter:none!important}
+html:not(#c109) body:not(#c109) .control-preview-dock[data-c109-stuck] .control-dock-surface{clip-path:none!important;background:transparent!important;border-color:transparent!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;isolation:isolate;position:relative}
+html:not(#c109) body:not(#c109) .control-preview-dock[data-c109-stuck] .control-dock-surface::before{content:"";position:absolute;left:0;right:0;bottom:0;top:calc(var(--sticky-preview-offset,0px) + 6px);z-index:-1;border-radius:24px;background:var(--bg,#eef1f4);border:1px solid rgba(127,127,127,.16);box-shadow:0 14px 28px -14px rgba(0,0,0,.55);pointer-events:none}
+html:not(#c109) body:not(#c109)[data-theme=dark] .control-preview-dock[data-c109-stuck] .control-dock-surface::before{background:#171718;border-color:rgba(255,255,255,.08);box-shadow:0 16px 30px -14px rgba(0,0,0,.9)}
+html:not(#c109) body:not(#c109) .control-preview-dock[data-c109-stuck] .control-dock-context-line{visibility:hidden!important;opacity:0!important}
+
+/* C109ac: ledline order example as a two-step storyboard (top → bottom). */
+html:not(#c109) body:not(#c109) .order-demo109.od-v2{grid-template-columns:minmax(0,1fr)!important;align-items:stretch!important;gap:8px!important;padding:14px 14px 16px!important}
+html:not(#c109) body:not(#c109) .od-v2 .od-side109>small{font-size:13px!important;color:#eef0f2!important;gap:7px!important}
+html:not(#c109) body:not(#c109) .od-v2 .od-num109{display:grid;place-items:center;flex:none;width:20px;height:20px;border-radius:50%;background:var(--red,#d95a4f);color:#fff;font-size:11.5px;font-weight:800}
+html:not(#c109) body:not(#c109) .od-v2 .od-stand109{min-height:78px;height:calc(var(--n)*28px + 12px)!important;border-radius:16px!important}
+html:not(#c109) body:not(#c109) .od-v2 .od-stand109[data-shape=tunnel]{height:110px!important}
+html:not(#c109) body:not(#c109) .od-v2 .od-stand109>span>b{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:color-mix(in srgb,var(--c) 30%,#1b1e22);color:#fff;font-size:10.5px}
+html:not(#c109) body:not(#c109) .od-v2 .od-arrow109{display:flex;align-items:center;justify-content:center;gap:6px;padding:0!important;font-size:11.5px;font-weight:700;color:#8b929c;letter-spacing:.02em}
+html:not(#c109) body:not(#c109) .od-v2 .od-arrow109 svg{width:18px;height:18px}
+html:not(#c109) body:not(#c109) .od-v2 .od-app109{grid-template-columns:24px minmax(0,1fr)!important;padding:8px;border-radius:16px;background:#1b1e22}
+html:not(#c109) body:not(#c109) .od-v2 .od-pill109{height:26px;border-radius:999px!important;padding:0 10px!important;font-size:12.5px!important}
+html:not(#c109) body:not(#c109) .od-v2 .od-pill109>em{flex:1 1 auto}
+html:not(#c109) body:not(#c109) .od-ok109{flex:none;width:16px;height:16px;border-radius:50%;background:#3fae76 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 12 4 4 8-8'/%3E%3C/svg%3E") center/12px no-repeat;opacity:0;scale:.4;text-decoration:none}
+html:not(#c109) body:not(#c109) .od-v2 .od-hand109{right:28px!important}
+@media (prefers-reduced-motion:no-preference){html:not(#c109) body:not(#c109) .od-ok109{animation:c109-od-ok 4.2s var(--c109-bounce,cubic-bezier(.34,1.6,.64,1)) infinite;animation-delay:calc(var(--k,0) * .12s)}}
+@media (prefers-reduced-motion:reduce){html:not(#c109) body:not(#c109) .od-ok109{opacity:1;scale:1}}
+@keyframes c109-od-ok{0%,58%{opacity:0;scale:.4}66%,92%{opacity:1;scale:1}100%{opacity:0;scale:.4}}
+html:not(#c109) body:not(#c109) .od-v2+.order-demo-text109,html:not(#c109) body:not(#c109) .order-demo-text109{font-size:14px!important;text-align:center}
+
+/* C109ad: the ledline-order sheet is solid like every other sheet, so the
+   colour wheel behind it no longer shines through as coloured blobs. */
+html:not(#c109) body:not(#c109) section.ledline-setup[data-order-open=true]{background:#f5f5f4!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html:not(#c109) body:not(#c109)[data-theme=dark] section.ledline-setup[data-order-open=true]{background:#161618!important}
+
+/* C109ae: tour fixes.
+   - Folded bar stays compact: the "back to the animation picker" strip
+     hides while folded (it is back as soon as the bar opens).
+   - Stand-animation zone names readable in light mode.
+   - Receiver picture on a dark stage in dark mode (no light-grey box).
+   - A disabled main button is calm grey, never muddy red / pink. */
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .animation-wayfinding{display:none!important}
+html:not(#c109) body:not(#c109):not([data-theme=dark]) .stand-animation-zone-label b{color:var(--ink,#1c1c1e)!important}
+html:not(#c109) body:not(#c109)[data-theme=dark] :is(.receiver-product,.receiver-overview-card .receiver-visual,.receiver-detail-visual){background:radial-gradient(130% 100% at 50% 0%,#232a33,#12161b)!important;border-color:rgba(255,255,255,.06)!important}
+html:not(#c109) body:not(#c109) :is(.button.primary,button.primary,.scene-save-bar .button):disabled{background:rgba(127,127,127,.16)!important;color:var(--muted,#8b8f96)!important;border-color:transparent!important;box-shadow:none!important;background-image:none!important}
+html:not(#c109) body:not(#c109):not([data-theme=dark]) .stand-animation-family-badge{color:var(--ink,#1c1c1e)!important;background:rgba(0,0,0,.06)!important;border-color:rgba(0,0,0,.1)!important}
+
+/* C109af: every sheet rises with the same spring as the buttons (Bekijk als
+   no longer just fades in); the backdrop softly dims along. */
+@media (prefers-reduced-motion:no-preference){
+  html:not(#c109) body:not(#c109) dialog[open]:not(.is-closing),
+  html:not(#c109) body:not(#c109) dialog#effect-dialog[open]:not(.is-closing),
+  html:not(#c109) body:not(#c109) dialog.spatial-choice-panel.v50-spatial-dialog[open]:not(.is-closing){animation:c109-sheet-spring .52s var(--c109-spring,cubic-bezier(.34,1.3,.64,1)) both!important}
+}
+@keyframes c109-sheet-spring{from{opacity:0;transform:translate3d(0,56px,0)}35%{opacity:1}to{opacity:1;transform:none}}
+/* C109ag: switch knobs glide with the spring and the track colour fades. */
+@media (prefers-reduced-motion:no-preference){html:not(#c109) body:not(#c109) .switch i::after{transition:transform .46s var(--c109-spring,cubic-bezier(.34,1.4,.64,1)),scale .2s ease!important}html:not(#c109) body:not(#c109) .switch i{transition:background-color .25s ease,box-shadow .25s ease}}
+
+/* C109ah: small phones, three capsules (Kleur · Verloop · Animaties) fit
+   without cutting a word: slightly tighter padding, gap and type. */
+@media (max-width:400px){
+  html:not(#c109) body:not(#c109) #main .control-preview-dock:not([data-c109-stuck]) .control-mode-tabs:has(>button:nth-of-type(3)){gap:6px!important}
+  html:not(#c109) body:not(#c109) #main .control-preview-dock:not([data-c109-stuck]) .control-mode-tabs:has(>button:nth-of-type(3))>button{padding:0 8px!important;gap:4px!important;font-size:12px!important;letter-spacing:-.01em}
+  html:not(#c109) body:not(#c109) #main .control-preview-dock:not([data-c109-stuck]) .control-mode-tabs:has(>button:nth-of-type(3))>button>:is(svg,.icon,.tab-gradient-dot109){width:15px!important;height:15px!important}
+  html:not(#c109) body:not(#c109) #main .control-preview-dock:not([data-c109-stuck]) .control-mode-tabs:has(>button:nth-of-type(3)) .c109-label{margin-left:0!important;text-overflow:clip!important}
+  html:not(#c109) body:not(#c109) #main .control-preview-dock:not([data-c109-stuck]) .control-dock-actions{gap:6px!important}
+}

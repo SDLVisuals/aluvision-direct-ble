@@ -14,6 +14,11 @@
   const clamp=(value,low,high)=>Math.max(low,Math.min(high,Number(value)||0));
   const lerp=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
   const mod=(value,divisor)=>((value%divisor)+divisor)%divisor;
+  // C109: the receivers light a port in a pure identification colour; the
+  // screen shows the same colour in its calm tone (as c109-interface.css).
+  const CALM={'#0000ff':'#4c6fe0','#ffa000':'#e9a24a','#ff6000':'#e5793a','#00ff00':'#3fae76','#ff00ff':'#c062cf','#ff0000':'#d95a4f','#7800c0':'#8656c4',
+    '#ffff00':'#e3c44e','#ff1700':'#de6544','#ff5000':'#e2733d','#ff8000':'#e88a45','#8000ff':'#875fdc','#00ffff':'#45b5c6'};
+  const calm=value=>typeof value==='string'&&/^#[0-9a-f]{6}$/i.test(value)?CALM[value.toLowerCase()]||value:null;
   function createPlugMotion(){
     const entries=new Map();
     const value=(entry,time)=>{const t=clamp((time-entry.time)/.65,0,1),ease=t*t*(3-2*t);return entry.from+(entry.to-entry.from)*ease;};
@@ -252,6 +257,11 @@
     const pulse=options.reducedMotion?1:.82+(1+Math.sin(time*1.6))/2*.18;
     const identifyLevel=options.reducedMotion?1:.16+.84*(.5-.5*Math.cos(time*4.4));
     const identificationColor=`rgb(${[0,1,2].map(()=>Math.round(58+197*identifyLevel)).join(',')})`;
+    // C109: what the real ledline does at this step. 'identify': the whole
+    // line in its port colour, breathing softly; 'count': white pixels with
+    // the last one red. Without either the older red travelling light stays.
+    const portTone=port=>calm(options.portColours?.[port]),ledMode=options.ledMode==='count'?'count':portTone(1)||portTone(2)||portTone(3)||portTone(4)?'identify':'';
+    const breathe=options.reducedMotion?1:.78+.22*(.5+.5*Math.sin(time*2.2));
     function path(world,close=false,port){ctx.beginPath();world.forEach((point,i)=>{const p=project(shifted(point,port));if(i===0)ctx.moveTo(p[0],p[1]);else ctx.lineTo(p[0],p[1]);});if(close)ctx.closePath();}
     function cablePath(cable){
       if(!cable.controlPoints||typeof ctx.bezierCurveTo!=='function'){path(cable.points);return;}
@@ -276,8 +286,8 @@
       if(!options.compact){cablePath(cable);ctx.strokeStyle='rgba(255,255,252,.72)';ctx.lineWidth=Math.max(.3,cable.width*.28*scale);ctx.stroke();}
       if(cable.active&&!cable.identifying){cablePath(cable);ctx.strokeStyle=`rgba(201,78,70,${pulse*.6})`;ctx.lineWidth=Math.max(.5,.8*scale);ctx.stroke();}
       if(cable.active&&!cable.identifying){
-        const at=options.reducedMotion?.6:mod(time*.24,1),p=project(pointOnCable(cable,at));
-        ctx.beginPath();ctx.arc(p[0],p[1],Math.max(1,1.6*scale),0,Math.PI*2);ctx.fillStyle='#FFF4EB';ctx.shadowColor=RED;ctx.shadowBlur=6;ctx.fill();ctx.shadowBlur=0;
+        const at=options.reducedMotion?.6:mod(time*.24,1),p=project(pointOnCable(cable,at)),tone=ledMode==='identify'&&portTone(cable.plugPort);
+        ctx.beginPath();ctx.arc(p[0],p[1],Math.max(1,1.6*scale),0,Math.PI*2);ctx.fillStyle='#FFF4EB';ctx.shadowColor=tone||RED;ctx.shadowBlur=6;ctx.fill();ctx.shadowBlur=0;
       }
     }
     for(const strip of model.strips){
@@ -317,9 +327,13 @@
       const p=project(pixel.point),px=project([pixel.point[0]+1,pixel.point[1],pixel.point[2]]),py=project([pixel.point[0],pixel.point[1]+1,pixel.point[2]]);
       const traveling=options.reducedMotion?1:.24+.76*Math.pow(.5+.5*Math.cos((pixel.index/10-time*.32)*Math.PI*2),1.5);
       ctx.save();ctx.transform(px[0]-p[0],px[1]-p[1],py[0]-p[0],py[1]-p[1],p[0],p[1]);
-      ctx.fillStyle=pixel.active?(pixel.identifying?identificationColor:`rgba(201,78,70,${Math.max(.4,traveling*pulse)})`):'#C6CFC7';
-      if(pixel.diffused)ctx.globalAlpha=pixel.active?.68:.12;
-      ctx.shadowColor=pixel.identifying?'#FFFFFF':RED;ctx.shadowBlur=pixel.active?(pixel.diffused?5:3.5)*(pixel.identifying?identifyLevel:traveling):0;ctx.fillRect(0,0,pixel.width||5,(pixel.height||4.3)+(pixel.diffused?.2:0));ctx.restore();
+      const blinkTone=pixel.identifying&&portTone(pixel.port);
+      if(blinkTone){ctx.fillStyle=blinkTone;if(pixel.diffused)ctx.globalAlpha=.15+.85*identifyLevel;ctx.shadowColor=blinkTone;ctx.shadowBlur=6*identifyLevel;ctx.fillRect(0,0,pixel.width||5,(pixel.height||4.3)+(pixel.diffused?.2:0));ctx.restore();continue;}
+      const tone=pixel.active&&!pixel.identifying&&ledMode==='identify'?portTone(pixel.port):null,counting=pixel.active&&!pixel.identifying&&ledMode==='count';
+      const glow=counting?(pixel.index===9?RED:'#FFFFFF'):tone;
+      ctx.fillStyle=pixel.active?(pixel.identifying?identificationColor:glow||`rgba(201,78,70,${Math.max(.4,traveling*pulse)})`):'#C6CFC7';
+      if(pixel.diffused)ctx.globalAlpha=pixel.active?(glow?(tone?.62+.3*breathe:.9):.68):.12;
+      ctx.shadowColor=pixel.identifying?'#FFFFFF':glow||RED;ctx.shadowBlur=pixel.active?(pixel.diffused?5:3.5)*(pixel.identifying?identifyLevel:traveling):0;ctx.fillRect(0,0,pixel.width||5,(pixel.height||4.3)+(pixel.diffused?.2:0));ctx.restore();
     }
     for(const indicator of model.indicators){const p=project(indicator.point);ctx.beginPath();ctx.arc(p[0],p[1],Math.max(1,indicator.radius*scale),0,Math.PI*2);ctx.fillStyle='#D1DACB';ctx.fill();ctx.beginPath();ctx.arc(p[0],p[1],Math.max(.7,indicator.radius*.62*scale),0,Math.PI*2);ctx.fillStyle=indicator.active?identificationColor:'#7E9B82';ctx.fill();}
     if(!options.compact)for(const screw of model.screws){
@@ -339,7 +353,9 @@
         ctx.font=`650 ${label.size}px system-ui`;ctx.fillText(label.text,0,0);ctx.restore();
       }
     }
-    return {...model.metadata,plugProgress,projectedBounds:{width,height},motionReduced:Boolean(options.reducedMotion),entranceProgress:entrance,
+    // C109: where each ledline sits on the canvas (0..1), for tapping a line.
+    const portCentres=model.strips.map(strip=>{const ps=strip.points.map(project);return {port:strip.port,x:ps.reduce((n,p)=>n+p[0],0)/ps.length/width,y:ps.reduce((n,p)=>n+p[1],0)/ps.length/height,top:Math.min(...ps.map(p=>p[1]))/height,bottom:Math.max(...ps.map(p=>p[1]))/height};});
+    return {...model.metadata,portCentres,plugProgress,projectedBounds:{width,height},motionReduced:Boolean(options.reducedMotion),entranceProgress:entrance,
       identificationLevel:model.metadata.identifying?identifyLevel:0};
   }
   return Object.freeze({scene,draw,createPlugMotion,version:'30-receiver-visual-8',isLocalPreview:true});

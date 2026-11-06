@@ -114,7 +114,9 @@
     container.querySelectorAll('[data-pixel-outputs-visual],[data-pixel-port-visual]').forEach(canvas=>{
       const rect=canvas.getBoundingClientRect(),body=canvas.closest('.pixel-setup-body')?.getBoundingClientRect();
       if(!rect.width||!rect.height||rect.bottom<0||rect.top>innerHeight||body&&(rect.bottom<body.top||rect.top>body.bottom))return;
-      const metadata=visual.draw(canvas,{type:'SPI',enabledPorts:outputs.filter(item=>item.enabled).map(item=>item.port),selectedPort,plugProgress,compact:false,time,reducedMotion,entranceProgress});
+      // C109: the drawing does what the real ledlines do at this step.
+      const ledMode=canvas.matches('[data-pixel-port-visual]')?'count':'identify',portColours=Object.fromEntries(outputs.map(item=>[item.port,item.colour||portColour(item.port,portPalette(outputs)||3).hex]));
+      const metadata=visual.draw(canvas,{type:'SPI',enabledPorts:outputs.filter(item=>item.enabled).map(item=>item.port),selectedPort,plugProgress,compact:false,time,reducedMotion,entranceProgress,ledMode,portColours});
       canvas.dataset.activePorts=metadata.activePorts.join(',');canvas.dataset.portLabelsVisible=String(metadata.portLabelsVisible===true);
       canvas.dataset.selectedPort=String(metadata.selectedPort||'');canvas.dataset.plugProgress=JSON.stringify(plugProgress);
     });
@@ -617,6 +619,9 @@
     }
     function open(value,{initialPort:port,resumePending=false,directionsOnly=false,pixelsOnly:onlyPixels=false,selectedPorts:requestedPorts=null,resumeStep=null,pairFirst=false,zoneLines=0}={}){
       if(dialog)throw Error('PIXEL_SETUP_ALREADY_OPEN');otherLines=Number.isInteger(zoneLines)&&zoneLines>0?zoneLines:0;livePreview.retireExpiredEditor();livePreview.retireTransferredEditor();pixelsOnly=onlyPixels===true;selectedPorts=selectedPortSet(resumePending?null:requestedPorts);outputs=outputsOf(value);receiver=copy(value);previewTransaction=previewId();previewState={kind:'idle'};previewRetiredForSave=false;document.addEventListener('visibilitychange',visibility);initialPort=Number.isInteger(port)&&port>=1&&port<=4?port:null;selectedPort=null;plugMotion.clear();index=0;error='';busy=false;focusBefore=document.activeElement;
+      // C109: a port chosen from the receiver card while it is off is switched
+      // on in this draft only; Opslaan keeps it, closing leaves it as it was.
+      if(pixelsOnly&&resumePending!==true&&selectedPorts)for(const item of outputs)if(selectedPorts.has(item.port)&&!item.enabled){item.enabled=true;if(!(item.pixels>0))item.pixels=1;}
       recovering=resumePending===true;directionOnlyMode=directionsOnly===true;pairFirstFlow=pairFirst===true&&jointDirections&&!directionOnlyMode&&!pixelsOnly&&!selectedPorts;
       directionRecovery=recovering&&directionsOnly===true;
       if(recovering){index=plan().length-1;error=t('pixelPendingConfig');}

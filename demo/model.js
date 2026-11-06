@@ -352,6 +352,19 @@
     });
     return assertValid(next);
   }
+  // C109: only the order of a stand's zones changes (animation order across
+  // the stand). Zone IDs, receivers and ledline orders stay exactly the same.
+  function reorderZones(model, standId, zoneIds) {
+    assertValid(model);
+    var stand = model.stands.find(function (item) { return item.id === standId; });
+    if (!stand) issue('STAND_NOT_FOUND', 'Deze stand bestaat niet.');
+    var current = stand.zones.map(function (zone) { return zone.id; });
+    if (!Array.isArray(zoneIds) || zoneIds.length !== current.length || new Set(zoneIds).size !== current.length ||
+      zoneIds.some(function (id) { return current.indexOf(id) < 0; })) issue('ZONE_ORDER', 'Zet elke zone één keer in de volgorde.');
+    var next = clone(model), target = next.stands.find(function (item) { return item.id === standId; });
+    target.zones = zoneIds.map(function (id) { return target.zones.find(function (zone) { return zone.id === id; }); });
+    return assertValid(next);
+  }
   function renameZone(model, zoneId, name) {
     assertValid(model); requireZone(model, zoneId);
     var updatedName = editName(name), next = clone(model);
@@ -662,7 +675,7 @@
   }
   return Object.freeze({ LIMITS: LIMITS, DEFAULT_SPI_PIXELS: DEFAULT_SPI_PIXELS, DEFAULT_ANIMATION_WIDTH: DEFAULT_ANIMATION_WIDTH, localStand: localStand, clone: clone, defaultState: defaultState, validate: validate, assertValid: assertValid, membershipStructure: membershipStructure, getZone: getZone,
     zoneReceivers: zoneReceivers, standZoneReceivers: standZoneReceivers, lightStateFor: lightStateFor, validPortLightState: validPortLightState, validStaticGradient: validStaticGradient, selectionLines: selectionLines, gradientGroupPlacements: gradientGroupPlacements, gradientDomainGroup: gradientDomainGroup, prepareGradientDomain: prepareGradientDomain, validGradientDomains: G.validDomains, resolveTargets: resolveTargets, applyState: applyState, applyStandState: applyStandState, setLayout: setLayout,
-    createZone: createZone, renameZone: renameZone, deleteZone: deleteZone, renameReceiver: renameReceiver,
+    createZone: createZone, renameZone: renameZone, reorderZones: reorderZones, deleteZone: deleteZone, renameReceiver: renameReceiver,
     assignReceiverToZone: assignReceiverToZone, unassignReceiver: unassignReceiver, moveReceivers: moveReceivers,
     reorderReceivers: reorderReceivers, arrangeZone: arrangeZone, arrangeLines: arrangeLines, lineIds: lineIds, ledlines: ledlines, zoneLedlines: zoneLedlines,
     moveReceiver: moveReceiver, configureSpiOutput: configureSpiOutput });

@@ -121,7 +121,7 @@
   actions.add('applyStableCatalogue');
   actions.add('applyStaticGradient');
   actions.add('observeStableCue');
-  ['exportBackup','chooseBackup','importInstallationView','recoverInstallation'].forEach(action=>actions.add(action));
+  ['exportBackup','chooseBackup','importInstallationView','recoverInstallation','adoptStandNodes'].forEach(action=>actions.add(action));
   ['sharedDocument','sharedLayout','refreshSharedOutputs','reserveMain'].forEach(action=>actions.add(action));
   ['receiverContextStatus','syncInstallationContext','interruptAutomaticContext'].forEach(action=>actions.add(action));
   actions.add('setAppearance');
@@ -302,7 +302,7 @@
       // A cold SPI guide performs pinned MAIN/NODE proofs and may encounter a
       // retained proxy reply before its guide packet. This bounded allowance
       // cancels an uncertain operation once; it never retries that mutation.
-      const timeout=['exportBackup','chooseBackup','recoverInstallation'].includes(action)?300000:action==='sharedDocument'?90000:['scanStandShare','shareStandLink','shareStandWifi','standOpenWifi','standConnect','standMigrate','standResume','standRefresh','standMutation','standCodeChange','prepareReceiverManagement'].includes(action)||action==='publishModel'&&centralStamp!==null?90000:action==='checkpointPreviewExit'?30000:action==='previewPixels'?45000:action==='syncInstallationContext'?180000:['otaPlan','otaMainRecoveryPlan'].includes(action)?120000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:['configureOutputs','commitPixelsToDirections'].includes(action)?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
+      const timeout=['exportBackup','chooseBackup','recoverInstallation','adoptStandNodes'].includes(action)?300000:action==='sharedDocument'?90000:['scanStandShare','shareStandLink','shareStandWifi','standOpenWifi','standConnect','standMigrate','standResume','standRefresh','standMutation','standCodeChange','prepareReceiverManagement'].includes(action)||action==='publishModel'&&centralStamp!==null?90000:action==='checkpointPreviewExit'?30000:action==='previewPixels'?45000:action==='syncInstallationContext'?180000:['otaPlan','otaMainRecoveryPlan'].includes(action)?120000:action==='applyLiveBatch'?30000:action==='applyLive'?20000:['configureOutputs','commitPixelsToDirections'].includes(action)?90000:['discoverMesh','securityStatus','setPinProtection'].includes(action)?30000:
         ['secure','reconcileSecurity'].includes(action)&&payload.configuration?.role==='node'?120000:
         action==='identifyLayout'?35000:['removalPlan','removalStart','removalResume'].includes(action)?210000:['select','secure','reconcileSecurity','finalize','identify','identifyCandidate','identifyFactoryMain'].includes(action)?45000:12000;
       const deadline=['claimFirstPinV2','showFirstPinV2','showStoredFirstPinV2','eraseAppData','beginAppReset','continueAppReset'].includes(action)?300000:['prepareAuthorityCandidate','authorityCandidateMode','authorityCandidateProgress','discoverAuthorityCandidate','selectAuthorityCandidate','admitAuthorityCandidate','completeAuthorityCandidate','secureAuthorityCandidate','finalizeAuthorityCandidate'].includes(action)?120000:['prepareFirstPinV2','reconcileFirstPinV2'].includes(action)?50000:action==='previewSPIZoneDirections'?(payload.action==='stop'?20000:90000):action==='configureOutputDirections'?90000:['applyStaticGesture','standFirstAccessPreflight','prepareStableStand','applyStableBreathe','applyStableCatalogue','applyStaticGradient'].includes(action)?45000:timeout;
@@ -1540,6 +1540,21 @@
         }
         const view=acceptView(result.view);if(result.librariesComplete===true)setLibraryRecoveryBlock(result.standId,false);
         return {status:'restored',standId:result.standId,view,playbackModel,librariesComplete:result.librariesComplete===true};
+      });return trackWrite(next);
+    },
+    // C117: the phone that created a stand adopts receivers another phone added
+    // (through its own MAIN session; recovery is refused for an original owner).
+    async adoptStandNodes({standId}={}){
+      if(simpleStandAvailable===null)await runtimeCapabilities();
+      if(simpleStandAvailable===true)throw fail('STAND_LEGACY_ACCESS_RETIRED');
+      if(typeof standId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(standId))throw fail('STAND_ADOPT_INVALID');
+      const next=writeQueue.catch(()=>{}).then(async()=>{
+        const result=await call('adoptStandNodes',{standId});
+        if(result?.status!=='adopted'||result.standId!==standId||result.view?.model?.demo!==false||result.view?.draft!==null||!Array.isArray(result.liveStatuses))throw fail('STAND_ADOPT_UNCONFIRMED');
+        const view=acceptView(result.view);let playbackModel=view.model;
+        // Only the adopted receivers carry a light state; the others keep this phone's.
+        try{if(typeof root.LightningReceiverPlayback?.restore==='function')playbackModel=root.LightningReceiverPlayback.restore(view.model,result.liveStatuses,{standId,partial:true});}catch(_){playbackModel=view.model;}
+        return {status:'adopted',standId,view,playbackModel,adopted:Array.isArray(result.adopted)?result.adopted.slice():[]};
       });return trackWrite(next);
     },
     async exportBackup({name,json}){

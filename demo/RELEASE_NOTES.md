@@ -1,3 +1,13 @@
+## 6 November 2026 — Smoother, clearer and the same everywhere (interface C109)
+
+- Zone mode buttons are capsules that spring into round buttons while scrolling, with the logo and an RGBW/SPI label.
+- Springy buttons and sheets, one set of roundings and icons, and light haptics on taps, switches and sliders.
+- A clearer ledline-order example in two steps, which follows the zone layout (tunnel, wall, stacked, continuous).
+- Ledlines can be selected in the colour editor; a new preview-size choice; "View as" and "Order" sit at the top.
+- Zones can be dragged into a new order for stand animations.
+- One slider style with a colour per function, a calmer save indicator and no blue tint.
+- Browser demo only; no firmware, native app or Android download in this update.
+
 ## 3 November 2026 — Faster gradients, order check and smoother motion
 
 - SPI gradients apply as fast as colours, with an option for the same gradient on every ledline.
