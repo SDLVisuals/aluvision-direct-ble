@@ -190,6 +190,7 @@
     v109OrderTitle:['Zet de kleuren zoals je ze ziet','Put the colours in the order you see them','Placez les couleurs dans l’ordre où vous les voyez','Ordne die Farben so, wie du sie siehst'],
     v109OrderStep1:['Kijk naar je stand: elke ledline brandt in een eigen kleur.','Look at your stand: each LED line lights in its own colour.','Regardez votre stand : chaque ligne LED s’allume dans sa propre couleur.','Schau auf deinen Stand: Jede LED-Linie leuchtet in einer eigenen Farbe.'],
     v109OrderStep2:['Zie je eerst {colour}? Sleep die naar plaats 1.','See {colour} first? Drag it to place 1.','Vous voyez d’abord {colour} ? Faites-la glisser à la place 1.','Siehst du zuerst {colour}? Zieh sie auf Platz 1.'],
+    v109OrderChip:['Volgorde','Order','Ordre','Reihenfolge'],
     v109OrderSee:['Kijk naar je stand','Look at your stand','Regardez votre stand','Schau auf deinen Stand'],
     v109OrderSame:['Zet ze hier in dezelfde volgorde','Put them in the same order here','Mettez-les ici dans le même ordre','Bring sie hier in dieselbe Reihenfolge'],
     v109OrderSameOrder:['zelfde volgorde','same order','même ordre','gleiche Reihenfolge'],

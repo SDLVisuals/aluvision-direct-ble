@@ -1,3 +1,9 @@
+## 6 November 2026 — One smooth fold (interface C109ai)
+
+- The mode row folds and unfolds as one spring movement; nothing switches abruptly and the page underneath stays still.
+- Above the ledline picture, two clear chips: "View as" and "Order"; the preview size sits with All/View.
+- Browser demo only; no firmware or native app in this update.
+
 ## 6 November 2026 — Smoother, clearer and the same everywhere (interface C109)
 
 - Zone mode buttons are capsules that spring into round buttons while scrolling, with the logo and an RGBW/SPI label.

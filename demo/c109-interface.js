@@ -179,35 +179,43 @@
   // The width is measured at the moment of folding, in the engine that draws
   // it (WebKit measures a little wider than Chrome), and handed back as
   // "none" once open, so a word is never cut short or shown with "…".
-  // C109ww: "Bekijk als" and "Volgorde" move up into the ledline picture
-  // without adding buttons: the view name above the picture becomes the
-  // Bekijk-als chip, and Volgorde is one round icon next to Alle / Bekijk.
-  // Both simply press the original controls, which stay the single source.
+  // C109aj: the two tools of the ledline picture say what they are. Above the
+  // picture sit two chips with a caption and a value — "Bekijk als /
+  // Normale ledline" and "Ledlinevolgorde / 3 ledlines" — and the size
+  // capsule moves down to the row with Alle / Bekijk (its menu opens upward).
+  // All three simply press the original controls, which stay the single
+  // source; their words come from those controls, so every language works.
+  function toolChip(cls,icon,caption,value,label){
+    const chip=document.createElement('button');chip.type='button';chip.className='c109-tool-chip '+cls;
+    chip.setAttribute('aria-label',label);
+    chip.innerHTML='<span class="c109-tool-ic" aria-hidden="true"></span><span class="c109-tool-copy"><small></small><b></b></span><svg class="c109-view-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    if(icon)chip.firstChild.append(icon.cloneNode(true));
+    chip.querySelector('small').textContent=caption;chip.querySelector('b').textContent=value;
+    return chip;
+  }
   function syncViewTools(){
     const dock=document.querySelector('#main .control-preview-dock');if(!dock)return;
     const spatial=document.querySelector('#main .spatial-choice-toggle'),order=document.querySelector('#main .ledline-setup-toggle[data-action=layout]');
-    const heading=dock.querySelector('.v50-preview-heading');
-    if(heading&&spatial&&!heading.querySelector('.c109-view-chip')){
-      const chip=document.createElement('button');chip.type='button';chip.className='c109-view-chip';
+    const heading=dock.querySelector('.v50-preview-heading'),sizeRow=dock.querySelector('.preview-size-row'),toolbar=dock.querySelector('.v50-preview-toolbar');
+    if(heading&&spatial&&!heading.querySelector('.c109-tool-chip')){
       const name=heading.querySelector(':scope>span')?.textContent.trim()||'';
-      chip.setAttribute('aria-label',(spatial.getAttribute('aria-label')||spatial.textContent.trim()).replace(/\s+/g,' '));
-      chip.innerHTML='<span class="c109-view-ic" aria-hidden="true"></span><b></b><svg class="c109-view-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-      const glyph=spatial.querySelector('.spatial-choice-current-icon svg');if(glyph)chip.firstChild.append(glyph.cloneNode(true));
-      chip.querySelector('b').textContent=name;
+      const caption=(spatial.querySelector('small')||spatial.querySelector('.spatial-choice-title'))?.textContent.trim()||(spatial.getAttribute('aria-label')||'').split(/\s*[·:]\s*/)[0];
+      const chip=toolChip('c109-view-chip',spatial.querySelector('.spatial-choice-current-icon svg'),caption,name,(spatial.getAttribute('aria-label')||spatial.textContent.trim()).replace(/\s+/g,' '));
       chip.addEventListener('click',()=>document.querySelector('#main .spatial-choice-toggle')?.click());
       heading.prepend(chip);heading.classList.add('has-c109-chip');
     }
-    if(order&&!dock.querySelector('.c109-order-btn')){
-      const button=document.createElement('button');button.type='button';button.className='c109-order-btn';
-      button.setAttribute('aria-label',order.getAttribute('aria-label')||order.textContent.trim());
-      button.innerHTML=order.querySelector('svg')?.outerHTML||'';
-      button.addEventListener('click',()=>{const original=document.querySelector('#main .ledline-setup-toggle[data-action=layout]');if(!original)return;
+    if(sizeRow&&order&&!sizeRow.querySelector('.c109-order-chip')){
+      const parts=(order.getAttribute('aria-label')||order.textContent.trim()).split(/\s*·\s*/);
+      const chip=toolChip('c109-order-chip',order.querySelector('svg'),order.dataset.shortLabel||parts[0]||'',parts[1]||'',order.getAttribute('aria-label')||order.textContent.trim());
+      chip.addEventListener('click',()=>{const original=document.querySelector('#main .ledline-setup-toggle[data-action=layout]');if(!original)return;
         if(original.getAttribute('aria-expanded')!=='true')original.click();
         setTimeout(()=>document.querySelector('#main .ledline-setup.ui606-line-tools')?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'}),120);});
-      const toolbar=dock.querySelector('.v50-preview-toolbar'),host=toolbar||dock.querySelector('.preview-size-row');
-      if(host)host.insertBefore(button,toolbar?toolbar.querySelector('.v50-preview-expand'):null);
+      sizeRow.append(chip);
     }
-    document.body.classList.toggle('c109-view-tools',!!(dock.querySelector('.c109-view-chip')||dock.querySelector('.c109-order-btn')));
+    // the size capsule lives in the toolbar, next to Alle and Bekijk
+    const size=dock.querySelector('.preview-size-control');
+    if(size&&toolbar&&!toolbar.contains(size)){const expand=toolbar.querySelector('.v50-preview-expand');toolbar.insertBefore(size,expand);size.classList.add('c109-in-toolbar');}
+    document.body.classList.toggle('c109-view-tools',!!dock.querySelector('.c109-tool-chip'));
   }
   let viewQueued=false;
   new MutationObserver(()=>{if(!viewQueued){viewQueued=true;requestAnimationFrame(()=>{viewQueued=false;syncViewTools();});}}).observe(document.body,{childList:true,subtree:true});
@@ -270,34 +278,56 @@
     if(!foldedBefore||dock.hasAttribute('data-c109-stuck')||window.scrollY<=8||getComputedStyle(dock).position!=='sticky')return;
     wrapModeLabels();
     const before=dock.offsetHeight;dock.setAttribute('data-c109-measure','');dock.setAttribute('data-c109-stuck','');
-    const after=dock.offsetHeight,base=parseFloat(getComputedStyle(dock).marginBottom)||0;dock.style.marginBottom=Math.max(0,base+before-after)+'px';
-    syncPill();requestAnimationFrame(()=>requestAnimationFrame(()=>dock.removeAttribute('data-c109-measure')));
+    const after=dock.offsetHeight,base=parseFloat(getComputedStyle(dock).marginBottom)||0;dock.dataset.c109MarginBase=String(base);dock.style.marginBottom=Math.max(0,base+before-after)+'px';
+    syncPill(true);requestAnimationFrame(()=>requestAnimationFrame(()=>dock.removeAttribute('data-c109-measure')));
   }
+  // C109ai: the fold is one motion. Every part — capsules, labels, the rows
+  // that disappear, the bar background, logo and badge — moves with the same
+  // duration and the same spring. Rows collapse from their measured height,
+  // so the bottom margin that keeps the page still matches them frame by
+  // frame. While things move the pressed pill hides and the button carries
+  // its own fill; the pill comes back once everything has settled.
+  const FOLD_MS=560;
+  const foldRows=dock=>[...dock.querySelectorAll('.control-location-summary,.preview-wrap>.preview-top,[data-live-status],.v50-selection-summary small,.v50-selection-summary em,.animation-wayfinding')];
   function foldLabels(dock,fold){
     foldedBefore=fold;
-    // C109jj: the folded bar drops its extra text, so it gets shorter; a
-    // matching bottom margin keeps the page under it exactly where it was.
-    if(fold){const before=dock.offsetHeight;dock.setAttribute('data-c109-measure','');dock.setAttribute('data-c109-stuck','');const after=dock.offsetHeight;dock.removeAttribute('data-c109-stuck');dock.offsetHeight;dock.removeAttribute('data-c109-measure');dock.offsetHeight;
-      const base=parseFloat(getComputedStyle(dock).marginBottom)||0;dock.style.marginBottom=Math.max(0,base+before-after)+'px';}
-    else dock.style.marginBottom='';
-    // C109kk: folded, the mode buttons become separate round buttons; their
-    // width glides from the open size to a circle and back, the pill follows.
-    // C109nn: the capsules get a real width (px to px), so they shrink and
-    // grow continuously; the group stays centred the whole way.
-    const modeButtons=[...dock.querySelectorAll('.control-mode-tabs>button')],modeTabs=dock.querySelector('.control-mode-tabs');
-    if(fold){dock.c109Widths=modeButtons.map(button=>button.getBoundingClientRect().width);modeButtons.forEach((button,i)=>{button.style.width=dock.c109Widths[i]+'px';button.style.flex='0 0 auto';});if(modeTabs)modeTabs.style.flex='0 1 auto';}
-    else{modeButtons.forEach(button=>{button.style.width=button.getBoundingClientRect().width+'px';button.style.flex='0 0 auto';});if(modeTabs)modeTabs.style.flex='0 1 auto';}
-    const labels=[...dock.querySelectorAll('.c109-label')],widths=labels.map(label=>label.scrollWidth);
-    labels.forEach((label,i)=>{label.style.maxWidth=(fold?(label.getBoundingClientRect().width||widths[i]):0)+'px';});
-    dock.offsetWidth;
+    const rows=foldRows(dock),modeButtons=[...dock.querySelectorAll('.control-mode-tabs>button')],modeTabs=dock.querySelector('.control-mode-tabs'),labels=[...dock.querySelectorAll('.c109-label')];
+    // 1. Measure in the current state: row heights, label and capsule widths,
+    //    and (when folding) how much shorter the bar is going to be.
+    // Opening: the open heights are measured for real (state toggled with
+    // every transition off), not guessed from the clipped content.
+    let rowHeights;
+    if(fold)rowHeights=rows.map(row=>row.getBoundingClientRect().height);
+    else{dock.setAttribute('data-c109-measure','');dock.removeAttribute('data-c109-stuck');dock.offsetHeight;rowHeights=rows.map(row=>row.getBoundingClientRect().height);dock.setAttribute('data-c109-stuck','');dock.offsetHeight;dock.removeAttribute('data-c109-measure');dock.offsetHeight;}
+    const labelWidths=labels.map(label=>fold?(label.getBoundingClientRect().width||label.scrollWidth):label.scrollWidth);
+    const buttonWidths=modeButtons.map(button=>button.getBoundingClientRect().width);
+    if(!('c109MarginBase' in dock.dataset))dock.dataset.c109MarginBase=String(parseFloat(getComputedStyle(dock).marginBottom)||0);
+    if(fold){dock.c109Widths=buttonWidths;
+      const before=dock.offsetHeight;dock.setAttribute('data-c109-measure','');dock.setAttribute('data-c109-stuck','');
+      const after=dock.offsetHeight;dock.removeAttribute('data-c109-stuck');dock.offsetHeight;dock.removeAttribute('data-c109-measure');dock.offsetHeight;
+      dock.c109Delta=Math.max(0,before-after);}
+    // 2. Pin everything at its current size with every transition off, so
+    //    the pin itself never starts a glide: px to px glides, auto does not.
+    dock.setAttribute('data-c109-measure','');
+    rows.forEach((row,i)=>{row.style.maxHeight=rowHeights[i]+'px';});
+    labels.forEach((label,i)=>{label.style.maxWidth=(fold?labelWidths[i]:0)+'px';});
+    modeButtons.forEach((button,i)=>{button.style.width=buttonWidths[i]+'px';button.style.flex='0 0 auto';});
+    if(modeTabs)modeTabs.style.flex='0 1 auto';
+    dock.offsetWidth;dock.removeAttribute('data-c109-measure');dock.offsetWidth;
+    // 3. Switch state; every pinned value now glides to its target together.
+    dock.setAttribute('data-c109-folding','');
     if(fold)dock.setAttribute('data-c109-stuck','');else dock.removeAttribute('data-c109-stuck');
+    const base=parseFloat(dock.dataset.c109MarginBase)||0;
+    dock.style.marginBottom=(fold?base+(dock.c109Delta||0):base)+'px';
     const openWidths=dock.c109Widths?.length===modeButtons.length?dock.c109Widths:null;
     modeButtons.forEach((button,i)=>{button.style.width=fold?'44px':(openWidths?openWidths[i]:120)+'px';});
-    clearTimeout(dock.c109OpenTimer);
-    if(!fold)dock.c109OpenTimer=setTimeout(()=>{if(dock.hasAttribute('data-c109-stuck'))return;modeButtons.forEach(button=>{button.style.width='';button.style.flex='';});if(modeTabs)modeTabs.style.flex='';syncPill();},720);
-    followPill(900);
-    labels.forEach((label,i)=>{label.style.maxWidth=(fold?0:widths[i])+'px';
-      if(!fold)label.addEventListener('transitionend',function done(event){if(event.propertyName!=='max-width')return;label.removeEventListener('transitionend',done);if(!dock.hasAttribute('data-c109-stuck'))label.style.maxWidth='';});});
+    labels.forEach((label,i)=>{label.style.maxWidth=(fold?0:labelWidths[i])+'px';});
+    // 4. Settled: release the pins of the open state and bring the pill back.
+    clearTimeout(dock.c109SettleTimer);
+    dock.c109SettleTimer=setTimeout(()=>{
+      if(!fold&&!dock.hasAttribute('data-c109-stuck')){modeButtons.forEach(button=>{button.style.width='';button.style.flex='';});if(modeTabs)modeTabs.style.flex='';labels.forEach(label=>{label.style.maxWidth='';});rows.forEach(row=>{row.style.maxHeight='';});dock.style.marginBottom='';}
+      syncPill(true);dock.removeAttribute('data-c109-folding');
+    },FOLD_MS+40);
   }
   // Labels of the mode row and the back button sit in their own span, so they
   // can glide in and out instead of jumping when the row folds to icons.
@@ -326,7 +356,7 @@
   let lastPill=null;
   let pillFollow=false;
   function followPill(ms){const end=performance.now()+ms;pillFollow=true;const step=()=>{syncPill();if(performance.now()<end)requestAnimationFrame(step);else{pillFollow=false;syncPill();}};requestAnimationFrame(step);}
-  function syncPill(){
+  function syncPill(instant){
     const tabs=document.querySelector('#main .control-mode-tabs');if(!tabs)return;
     const pressed=tabs.querySelector(':scope>button[aria-pressed=true]');let pill=tabs.querySelector(':scope>.c109-pill');
     if(!pressed){pill?.remove();tabs.classList.remove('has-c109-pill');return;}
@@ -338,7 +368,7 @@
     }
     const target={x:pressed.offsetLeft,y:pressed.offsetTop,w:pressed.offsetWidth,h:pressed.offsetHeight,tabsWidth:tabs.offsetWidth};
     const now=pill.style.transform,next=`translate(${target.x}px,${target.y}px)`;
-    if(now!==next||pill.style.width!==target.w+'px'){pill.classList.toggle('is-moving',!!now&&!pillFollow);pill.style.width=target.w+'px';pill.style.height=target.h+'px';pill.style.transform=next;}
+    if(now!==next||pill.style.width!==target.w+'px'){pill.classList.toggle('is-moving',!!now&&!pillFollow&&!instant);pill.style.width=target.w+'px';pill.style.height=target.h+'px';pill.style.transform=next;}
     lastPill=target;
   }
   addEventListener('resize',()=>requestAnimationFrame(syncPill));

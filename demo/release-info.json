@@ -113,8 +113,8 @@
   "assets": [
     {
       "path": "RELEASE_NOTES.md",
-      "bytes": 44475,
-      "sha256": "d03a437cf9c100d206a5d1930f534e224bbbb31a543b29febac3535ddbd4fb27"
+      "bytes": 44824,
+      "sha256": "af47479a38f1a247413c85a6972e9c7ba8f5db7a8c4d95bdc42752fa10ad34e0"
     },
     {
       "path": "android/aluvision-android-test-0.1.0-test.1-1-cf1a36ef7a96.apk",
@@ -408,8 +408,8 @@
     },
     {
       "path": "app.js",
-      "bytes": 873684,
-      "sha256": "5d45b06924fbc1b4c39fca30d7e7d60873dbf568ba88053bae57198fa2014ef9"
+      "bytes": 873730,
+      "sha256": "a21c21555dc91b568fb7e749d45475e57719c971ea431fcf3d1577268b494be7"
     },
     {
       "path": "assets/aluvision-logo.png",
@@ -478,13 +478,13 @@
     },
     {
       "path": "c109-interface.css",
-      "bytes": 192430,
-      "sha256": "0471a81e7d1df7b77e26f0d69e7d328db59b3ba294b78dcc407344a1f7b061ba"
+      "bytes": 211920,
+      "sha256": "6d6088f649afb5688531d43994d5589ca69c4fe9da531e5f974188a3978b0108"
     },
     {
       "path": "c109-interface.js",
-      "bytes": 37818,
-      "sha256": "b0fb598435fa848c6859f7d1cf08728df9e16a1d99bab2fafd3676bcb20524e0"
+      "bytes": 40081,
+      "sha256": "7a3c0d17375d5de14636646ac63e57347fcf855c8a9cbf0f2a77642a949e0698"
     },
     {
       "path": "c109-receiver.js",
@@ -574,7 +574,7 @@
     {
       "path": "index.html",
       "bytes": 11484,
-      "sha256": "829478aad70476e273c419bf8e5878320378f1c8d33638fb7883eebaa4f71045"
+      "sha256": "792adf235e6e627bf85d4a8ed13c1b4da43fef42a01168b3f720659f4fe7a9f9"
     },
     {
       "path": "installation-libraries.js",
@@ -1048,8 +1048,8 @@
     },
     {
       "path": "v50-texts.js",
-      "bytes": 42291,
-      "sha256": "e489c60055084c9dfdc1a07224f322a91aa0931eb6704a3c2c5ccd5d05a2676e"
+      "bytes": 42353,
+      "sha256": "f1739801f3f2eb4814b1d8fe6b4334f4969685159cbaa2135f450e4de4b14803"
     },
     {
       "path": "vendor/v21_animation_catalog.js",

@@ -1390,3 +1390,107 @@ html:not(#c109) body:not(#c109):not([data-theme=dark]) .stand-animation-family-b
   html:not(#c109) body:not(#c109) #main .control-preview-dock:not([data-c109-stuck]) .control-mode-tabs:has(>button:nth-of-type(3)) .c109-label{margin-left:0!important;text-overflow:clip!important}
   html:not(#c109) body:not(#c109) #main .control-preview-dock:not([data-c109-stuck]) .control-dock-actions{gap:6px!important}
 }
+
+/* ---------- C109ai: the fold is one motion ---------- */
+/* One duration and one spring for everything that moves when the mode row
+   folds to round buttons or opens again. Rows collapse from their measured
+   height (set inline), capsules from their measured width, so the page under
+   the bar never shifts. Nothing switches instantly any more. */
+html:not(#c109) body:not(#c109){--c109-fold-t:.56s;--c109-fold:var(--c109-spring,cubic-bezier(.34,1.3,.64,1))}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck]))[data-c109-measure],html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck]))[data-c109-measure] *,html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck]))[data-c109-measure] *::before,html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck]))[data-c109-measure] *::after{transition:none!important;animation:none!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])){transition:margin-bottom var(--c109-fold-t) var(--c109-fold)!important;filter:none!important}
+/* capsules, back button, gaps */
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) .control-mode-tabs>button{transition:width var(--c109-fold-t) var(--c109-fold),padding var(--c109-fold-t) var(--c109-fold),background-color .25s ease,border-color .25s ease,color .25s ease!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) .control-dock-back{transition:padding var(--c109-fold-t) var(--c109-fold),background-color .25s ease!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) .control-dock-actions,html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) .control-mode-tabs{transition:gap var(--c109-fold-t) var(--c109-fold)!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) :is(.control-mode-tabs>button,.control-dock-back)>:is(svg,.icon,.tab-gradient-dot109){transition:width var(--c109-fold-t) var(--c109-fold),height var(--c109-fold-t) var(--c109-fold)!important}
+/* labels: the box glides with the spring, the text fades (out first, in last) */
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) .c109-label{transition:max-width var(--c109-fold-t) var(--c109-fold),margin-left var(--c109-fold-t) var(--c109-fold),opacity .22s ease,transform var(--c109-fold-t) var(--c109-fold)!important;filter:none!important;text-overflow:clip!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck]))[data-c109-stuck] .c109-label{opacity:0!important;transform:translateX(-4px)!important;filter:none!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])):not([data-c109-stuck]) .c109-label{opacity:1;transform:none;transition-delay:0s,0s,.14s,0s!important}
+/* rows that disappear: measured height → 0, same spring */
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) :is(.control-location-summary,.preview-wrap>.preview-top,[data-live-status],.v50-selection-summary small,.v50-selection-summary em,.animation-wayfinding){transition:max-height var(--c109-fold-t) var(--c109-fold),min-height var(--c109-fold-t) var(--c109-fold),margin var(--c109-fold-t) var(--c109-fold),padding var(--c109-fold-t) var(--c109-fold),opacity .22s ease!important;overflow:hidden!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])):not([data-c109-stuck]) :is(.control-location-summary,.preview-wrap>.preview-top,[data-live-status],.v50-selection-summary small,.v50-selection-summary em,.animation-wayfinding){transition-delay:0s,0s,0s,0s,.14s!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck]))[data-c109-stuck] :is(.control-location-summary,.preview-wrap>.preview-top,[data-live-status],.v50-selection-summary small,.v50-selection-summary em,.animation-wayfinding){max-height:0!important;min-height:0!important;opacity:0!important;margin-top:0!important;margin-bottom:0!important;padding-top:0!important;padding-bottom:0!important;pointer-events:none}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck]))[data-c109-stuck] .animation-wayfinding{display:revert!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])):not([data-c109-stuck]):not([data-c109-folding]) .preview-wrap>.preview-top{overflow:visible!important}
+/* toolbar: Alle / Bekijk shrink, the order button folds away, texts fade */
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) .v50-preview-toolbar{transition:min-height var(--c109-fold-t) var(--c109-fold)!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) .v50-preview-actions{transition:margin var(--c109-fold-t) var(--c109-fold),padding var(--c109-fold-t) var(--c109-fold)!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) .v50-selection-summary b{transition:font-size var(--c109-fold-t) var(--c109-fold)!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) :is(.v50-preview-toolbar>button,.v50-preview-expand){transition:width var(--c109-fold-t) var(--c109-fold),min-width var(--c109-fold-t) var(--c109-fold),height var(--c109-fold-t) var(--c109-fold),min-height var(--c109-fold-t) var(--c109-fold),padding var(--c109-fold-t) var(--c109-fold),font-size .2s ease!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) .c109-order-btn{transition:width var(--c109-fold-t) var(--c109-fold),min-width var(--c109-fold-t) var(--c109-fold),opacity .22s ease,margin var(--c109-fold-t) var(--c109-fold),border-width var(--c109-fold-t) var(--c109-fold)!important;overflow:hidden}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck]))[data-c109-stuck] .c109-order-btn{display:grid!important;width:0!important;min-width:0!important;opacity:0!important;margin-left:-6px!important;border-width:0!important;padding:0!important;pointer-events:none}
+/* zone name and type badge above the buttons: fade and lift, never a switch */
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) .control-dock-context-line{transition:opacity .22s ease,transform var(--c109-fold-t) var(--c109-fold)!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck]))[data-c109-stuck] .control-dock-context-line{visibility:visible!important;opacity:0!important;transform:translateY(-8px)!important;pointer-events:none}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])):not([data-c109-stuck]) .control-dock-context-line{transition-delay:.14s,0s!important}
+/* the bar background: the open card fades out while the folded bar fades
+   in, on the same clock; the glass blur stays, so there is no blur switch */
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) .control-dock-surface{position:relative;isolation:isolate;transition:background-color var(--c109-fold-t) var(--c109-fold),border-color var(--c109-fold-t) var(--c109-fold),box-shadow var(--c109-fold-t) var(--c109-fold),clip-path .32s cubic-bezier(.4,0,.2,1)!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck]))[data-c109-stuck] .control-dock-surface{-webkit-backdrop-filter:var(--glass-blur,blur(22px) saturate(175%))!important;backdrop-filter:var(--glass-blur,blur(22px) saturate(175%))!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) .control-dock-surface::before{content:"";position:absolute;left:0;right:0;bottom:0;top:calc(var(--sticky-preview-offset,0px) + 6px);z-index:-1;border-radius:24px;background:var(--bg,#eef1f4);border:1px solid rgba(127,127,127,.16);box-shadow:0 14px 28px -14px rgba(0,0,0,.55);pointer-events:none;opacity:0;transition:opacity var(--c109-fold-t) var(--c109-fold)}
+html:not(#c109) body:not(#c109)[data-theme=dark] #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) .control-dock-surface::before{background:#171718;border-color:rgba(255,255,255,.08);box-shadow:0 16px 30px -14px rgba(0,0,0,.9)}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck]))[data-c109-stuck] .control-dock-surface::before{opacity:1}
+/* the page fades out softly under the top edge; fades with the bar */
+html:not(#c109) body:not(#c109):has(#main .control-preview-dock[data-c109-stuck])::after{content:none!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) .control-dock-surface::after{content:"";position:fixed;left:0;right:0;top:0;height:calc(env(safe-area-inset-top,0px) + 30px);z-index:-2;pointer-events:none;opacity:0;transition:opacity var(--c109-fold-t) var(--c109-fold);background:linear-gradient(180deg,var(--c109-page,#efefee) 0,var(--c109-page,#efefee) 30%,color-mix(in srgb,var(--c109-page,#efefee) 0%,transparent) 100%)}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck]))[data-c109-stuck] .control-dock-surface::after{opacity:1}
+/* logo and badge: in on the same clock, a touch later; out first */
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) .control-dock-actions::before,html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) .control-dock-actions::after{transition:opacity .25s ease,transform var(--c109-fold-t) var(--c109-fold)!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck]))[data-c109-stuck] .control-dock-actions::before,html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck]))[data-c109-stuck] .control-dock-actions[data-c109-type]::after{transition-delay:.12s,0s!important}
+/* the pressed pill hides while the row moves; the button carries its fill */
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) .c109-pill{transition:transform var(--c109-spring-t,.5s) var(--c109-spring),width var(--c109-spring-t,.5s) var(--c109-spring),height .3s ease,border-radius .36s ease,opacity .2s ease}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck]))[data-c109-folding] .c109-pill{opacity:0!important;transition:opacity .1s ease!important}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck]))[data-c109-folding] .control-mode-tabs.has-c109-pill>button[aria-pressed=true]{background:#1c1c1e!important;color:#fff!important}
+html:not(#c109) body:not(#c109)[data-theme=dark] #main .control-preview-dock[data-c109-folding] .control-mode-tabs.has-c109-pill>button[aria-pressed=true]{background:#ece9e4!important;color:#1c1c1e!important}
+@media (prefers-reduced-motion:reduce){html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])),html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) *,html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) *::before,html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) *::after{transition:none!important;animation:none!important}}
+/* C109ai: measuring beats every transition rule above (doubled attribute = higher priority). */
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-measure][data-c109-measure][data-c109-measure][data-c109-measure][data-c109-measure],html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-measure][data-c109-measure][data-c109-measure][data-c109-measure][data-c109-measure] *,html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-measure][data-c109-measure][data-c109-measure][data-c109-measure][data-c109-measure] *::before,html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-measure][data-c109-measure][data-c109-measure][data-c109-measure][data-c109-measure] *::after{transition:none!important;animation:none!important}
+
+/* C109ai: the bar's bottom margin follows the same spring with the overshoot
+   clipped, because the rows it compensates cannot shrink below zero. */
+html:not(#c109) body:not(#c109){--c109-fold-m:linear(0.000, 0.027, 0.098, 0.198, 0.316, 0.441, 0.564, 0.681, 0.785, 0.876, 0.952, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 0.996, 0.992, 0.989, 0.987, 0.986, 0.987, 0.987, 0.989, 0.990, 0.992, 0.994, 0.995, 0.997, 1.000)}
+@supports not (transition-timing-function:linear(0,1)){html:not(#c109) body:not(#c109){--c109-fold-m:cubic-bezier(.3,.9,.4,1)}}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])){transition:margin-bottom var(--c109-fold-t) var(--c109-fold-m)!important}
+
+/* ---------- C109aj: tools that say what they do ---------- */
+/* Two chips above the ledline picture, caption + value, same look; the size
+   capsule sits in the Alle / Bekijk row and opens its menu upward. */
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-wrap>.preview-top{display:flex!important;align-items:stretch!important;justify-content:space-between!important;gap:8px!important;min-height:0!important}
+html:not(#c109) body:not(#c109) .control-preview-dock .v50-preview-heading.has-c109-chip{flex:1 1 auto!important;min-width:0!important;display:flex!important;align-items:stretch!important}
+html:not(#c109) body:not(#c109) .control-preview-dock .v50-preview-heading.has-c109-chip>span:not(.c109-tool-chip){display:none!important}
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-row{flex:0 1 auto!important;min-width:0!important;display:flex!important;margin:0!important}
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-row:empty{display:none!important}
+html:not(#c109) body:not(#c109) .control-preview-dock .c109-tool-chip{display:inline-flex;align-items:center;gap:7px;height:42px;min-width:0;max-width:100%;padding:0 8px 0 6px;border-radius:999px;border:1px solid rgba(127,127,127,.2);background:rgba(127,127,127,.12);color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background-color .2s ease}
+html:not(#c109) body:not(#c109) .control-preview-dock .c109-view-chip{flex:1 1 auto}
+html:not(#c109) body:not(#c109) .control-preview-dock .c109-order-chip{flex:0 1 auto}
+html:not(#c109) body:not(#c109) .control-preview-dock .c109-tool-ic{display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:50%;background:rgba(127,127,127,.14);color:var(--red,#d95a4f)}
+html:not(#c109) body:not(#c109) .control-preview-dock .c109-tool-ic svg{width:20px;height:20px}
+html:not(#c109) body:not(#c109) .control-preview-dock .c109-tool-copy{display:grid;gap:1px;min-width:0;line-height:1.15}
+html:not(#c109) body:not(#c109) .control-preview-dock .c109-tool-copy>small{font-size:10.5px;font-weight:600;letter-spacing:.01em;color:var(--muted,#8b8f96);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html:not(#c109) body:not(#c109) .control-preview-dock .c109-tool-copy>b{font-size:13px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html:not(#c109) body:not(#c109) .control-preview-dock .c109-tool-chip .c109-view-chev{flex:none;width:14px;height:14px;opacity:.55;margin-left:auto}
+html:not(#c109) body:not(#c109) .control-preview-dock .c109-view-ic,html:not(#c109) body:not(#c109) .control-preview-dock .c109-order-btn{display:none!important}
+/* size capsule in the toolbar */
+html:not(#c109) body:not(#c109) .control-preview-dock .v50-preview-toolbar{overflow:visible!important}
+html:not(#c109) body:not(#c109) .control-preview-dock :is(.v50-preview-actions,.preview-wrap){overflow:visible!important}
+html:not(#c109) body:not(#c109) .control-preview-dock .v50-preview-toolbar .preview-size-control{flex:none;margin:0 2px 0 0!important}
+html:not(#c109) body:not(#c109) .control-preview-dock .v50-preview-toolbar .preview-size-control>summary{height:38px!important;min-height:38px!important;padding:0 10px!important}
+html:not(#c109) body:not(#c109) .control-preview-dock .v50-preview-toolbar .preview-size-picker{top:auto!important;bottom:calc(100% + 8px)!important;transform-origin:bottom right}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:is([data-c109-stuck],:not([data-c109-stuck])) .v50-preview-toolbar .preview-size-control{transition:width var(--c109-fold-t) var(--c109-fold),opacity .22s ease,margin var(--c109-fold-t) var(--c109-fold)!important;overflow:hidden}
+html:not(#c109) body:not(#c109) #main .control-preview-dock[data-c109-stuck] .v50-preview-toolbar .preview-size-control{width:0!important;min-width:0!important;opacity:0!important;margin:0 -6px 0 0!important;pointer-events:none}
+html:not(#c109) body:not(#c109) #main .control-preview-dock:not([data-c109-stuck]):not([data-c109-folding]) .v50-preview-toolbar .preview-size-control{overflow:visible!important}
+
+/* C109aj: the order chip keeps its natural width, the view chip gives way;
+   the redundant "3 ledlines" line goes; on small phones the size capsule in
+   the toolbar shows only its icon. */
+html:not(#c109) body:not(#c109) .control-preview-dock .c109-order-chip{flex:0 0 auto!important;max-width:52%!important}
+html:not(#c109) body:not(#c109) .control-preview-dock .c109-view-chip{flex:1 1 0!important;min-width:0!important}
+html:not(#c109) body:not(#c109) .control-preview-dock .v50-preview-heading.has-c109-chip>small{display:none!important}
+html:not(#c109) body:not(#c109) .control-preview-dock .v50-preview-toolbar .preview-size-control>summary>b{display:inline!important}
+@media (max-width:400px){html:not(#c109) body:not(#c109) .control-preview-dock .v50-preview-toolbar .preview-size-control>summary>b{display:none!important}html:not(#c109) body:not(#c109) .control-preview-dock .v50-preview-toolbar .preview-size-control>summary{padding:0 8px!important}}
+/* C109aj: the order chip's cap sits on its row (measured against the header), not on the chip itself. */
+html:not(#c109) body:not(#c109) .control-preview-dock .c109-order-chip{max-width:100%!important}
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-row{max-width:52%!important}
+html:not(#c109) body:not(#c109) .control-preview-dock .preview-size-row{flex:0 0 auto!important}
