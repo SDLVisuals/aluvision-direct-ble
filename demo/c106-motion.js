@@ -56,7 +56,8 @@
   let pendingTap=null;
   function applyTap(){
     if(!pendingTap||Date.now()>pendingTap.until)return;
-    const el=[...document.querySelectorAll(TAP)].find(item=>tapKey(item)===pendingTap.key&&item.getClientRects().length);
+    // C138ui-6: checkVisibility needs style only; getClientRects forced a full layout of the new page.
+    const el=[...document.querySelectorAll(TAP)].find(item=>tapKey(item)===pendingTap.key&&(typeof item.checkVisibility==='function'?item.checkVisibility():item.getClientRects().length));
     if(!el||el.classList.contains('c106-tap'))return;
     el.classList.add('c106-tap');setTimeout(()=>el.classList.remove('c106-tap'),600);
   }

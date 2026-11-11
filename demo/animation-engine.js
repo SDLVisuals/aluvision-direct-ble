@@ -93,19 +93,19 @@
     descriptor('tunnel-pixel-cross', 'Kruisende pixelgolven', 'tunnel', 'Twee pixelgolven ontmoeten elkaar per lijn; die beweging reist daarna naar de volgende receiver.', {},
       { receiverTypes: ['SPI'], spatialResolution: 'pixel', controls: ['speed', 'smooth', 'fadeAmount', 'delayMs', 'direction', 'width'], directions: ['forward', 'reverse'] }),
     descriptor('brand-white-breathe', 'Wit ademen', 'brand', 'Zacht wit met een warme tint ademt rustig. Pas de witmix aan voor jouw ledline.',
-      { colors: ['#400A00'], whiteChannels: [220], speed: 22 },
+      { colors: ['#400A00'], whiteChannels: [220], speed: 30 },
       { controls: ['speed', 'smooth', 'fadeAmount'], paletteEditable:true, colorCountRange:{min:1,max:1}, whiteMixPreset:true }),
     descriptor('brand-warm-white', 'Warm naar wit', 'brand', 'Een rustige overgang tussen warm en zacht wit. Beide RGB + W-mengkleuren zijn instelbaar.',
-      { colors: ['#FF2D00', '#400A00'], whiteChannels: [128, 220], colorCount: 2, speed: 20 },
+      { colors: ['#FF2D00', '#400A00'], whiteChannels: [128, 220], colorCount: 2, speed: 30 },
       { controls: ['speed', 'smooth'], paletteEditable:true, colorCountRange:{min:2,max:2}, whiteMixPreset:true }),
     descriptor('brand-accent', 'Merkaccent', 'brand', 'Je gekozen accentkleur keert zacht terug in een heldere witte basis.',
-      { colors: [DEFAULT_BRAND], brandColor: DEFAULT_BRAND, speed: 22 }, { controls: ['speed', 'smooth', 'fadeAmount', 'brandColor'], paletteEditable: true, colorCountRange: { min: 1, max: 1 } }),
+      { colors: [DEFAULT_BRAND], brandColor: DEFAULT_BRAND, speed: 30 }, { controls: ['speed', 'smooth', 'fadeAmount', 'brandColor'], paletteEditable: true, colorCountRange: { min: 1, max: 1 } }),
     descriptor('brand-sweep', 'Zachte lichtgloed', 'brand', 'Een subtiele merkglans beweegt over een rustige witte basis.',
-      { colors: [DEFAULT_BRAND], brandColor: DEFAULT_BRAND, speed: 23 }, { controls: ['speed', 'smooth', 'width', 'direction', 'brandColor'], directions: ['forward', 'reverse'], paletteEditable: true, colorCountRange: { min: 1, max: 1 } }),
+      { colors: [DEFAULT_BRAND], brandColor: DEFAULT_BRAND, speed: 30 }, { controls: ['speed', 'smooth', 'width', 'direction', 'brandColor'], directions: ['forward', 'reverse'], paletteEditable: true, colorCountRange: { min: 1, max: 1 } }),
     descriptor('brand-focus', 'Productfocus', 'brand', 'Een helder focuspunt trekt langzaam langs de receivers, met een zachte witte achtergrond.',
-      { colors: [DEFAULT_BRAND], brandColor: DEFAULT_BRAND, speed: 20 }, { controls: ['speed', 'smooth', 'width'], paletteEditable: true, colorCountRange: { min: 1, max: 7 } }),
+      { colors: [DEFAULT_BRAND], brandColor: DEFAULT_BRAND, speed: 30 }, { controls: ['speed', 'smooth', 'width'], paletteEditable: true, colorCountRange: { min: 1, max: 7 } }),
     descriptor('brand-soft-gradient', 'Zacht merkverloop', 'brand', 'Een subtiel verloop tussen je gekozen accentkleur en wit, zonder drukke kleurwissels.',
-      { colors: [DEFAULT_BRAND], brandColor: DEFAULT_BRAND, speed: 23 }, { controls: ['speed', 'smooth', 'direction', 'brandColor'], directions: ['forward', 'reverse'], paletteEditable: true, colorCountRange: { min: 1, max: 1 } })
+      { colors: [DEFAULT_BRAND], brandColor: DEFAULT_BRAND, speed: 30 }, { controls: ['speed', 'smooth', 'direction', 'brandColor'], directions: ['forward', 'reverse'], paletteEditable: true, colorCountRange: { min: 1, max: 1 } })
   ];
   const BY_ID = new Map(DEFINITIONS.map(entry => [entry.id, entry]));
   function periodForEffect(state = {}) {
@@ -243,16 +243,20 @@
     const depth = clamp(state.fadeAmount, 0, 100, 90) / 100;
     const local = input.receiverType === 'SPI' ? (finite(input.pixelIndex, 0) + 0.5) / Math.max(1, input.pixelCount) : 0.5;
     const position = (index + local) / Math.max(1, count);
+    // RGBWBRAND: an RGBW line lights as a whole, so it gets deeper swells with
+    // real brand colour on the same phase (RGBW AluvisionV30Effects.h, spi=false).
+    const line = input.receiverType !== 'SPI';
     if (id === 'v30-brand-white-breathe' || id === 'v30-brand-warm-white') {
       // These are real RGB + W mixes, not a promise about the W die's colour
       // temperature. Keep edited channels (including an all-off palette).
       const colours = Array.isArray(state.colors) && state.colors.length ? palette(state) : [];
       const softWhite = physical('#400A00', 220), warmWhite = physical('#FF2D00', 128);
+      const swing = (line ? 0.75 : 0.36) * depth;
       if (id === 'v30-brand-white-breathe') return (colours[0] || softWhite)
-        .map(channel => channel * (1 - 0.36 * depth + breathe * 0.36 * depth));
+        .map(channel => channel * (1 - swing + breathe * swing));
       return mix(colours[0] || warmWhite, colours[Math.min(1, colours.length - 1)] || softWhite, breathe);
     }
-    if (id === 'v30-brand-accent') return mix(white, brand, 0.08 + breathe * 0.45 * depth);
+    if (id === 'v30-brand-accent') return mix(white, brand, line ? 0.10 + breathe * 0.85 * depth : 0.08 + breathe * 0.45 * depth);
     if (id === 'v30-brand-focus') {
       const center = (1 - Math.cos(clock.phase * Math.PI * 2)) / 2;
       const width = 0.12 + clamp(state.width, 0, 100, 65) / 100 * 0.42;
@@ -261,14 +265,16 @@
       const palettePosition = center * Math.max(0, colors.length - 1);
       const first = Math.floor(palettePosition), fraction = shaped(palettePosition - first, state);
       const accent = mix(colors[first] || brand, colors[Math.min(first + 1, colors.length - 1)] || brand, fraction);
+      if (line) return mix(accent, white, 0.15 + focus * 0.60).map(channel => channel * (0.35 + focus * 0.65));
       return mix(accent, white, 0.65 + focus * 0.35).map(channel => channel * (0.52 + focus * 0.48));
     }
     if (id === 'v30-brand-sweep') {
       const distance = Math.abs(mod(position - direction * clock.phase + 0.5, 1) - 0.5);
-      const width = 0.07 + clamp(state.width, 0, 100, 65) / 100 * 0.28;
-      return mix(white, brand, shaped(clamp(1 - distance / width, 0, 1), state) * 0.42);
+      const width = line ? 0.18 + clamp(state.width, 0, 100, 65) / 100 * 0.32 : 0.07 + clamp(state.width, 0, 100, 65) / 100 * 0.28;
+      return mix(white, brand, shaped(clamp(1 - distance / width, 0, 1), state) * (line ? 0.90 : 0.42));
     }
-    return mix(white, brand, 0.12 + 0.4 * shaped((1 + Math.sin((position * 0.6 - direction * clock.phase) * Math.PI * 2)) / 2, state));
+    const flow = shaped((1 + Math.sin((position * 0.6 - direction * clock.phase) * Math.PI * 2)) / 2, state);
+    return mix(white, brand, line ? 0.10 + 0.80 * flow : 0.12 + 0.4 * flow);
   }
   function sample(input = {}) {
     // In a continuous SPI zone all physical outputs form one logical strip.

@@ -66,7 +66,7 @@
     if(key===32||key===42){
       const offset=key===32?y*.6+Math.sin(y*Math.PI*2)*.1:0;
       const distance=mod(p-u*(key===32?1.7:1)-offset),length=.13+w*.32;
-      amount=ease(1-distance/length)*ease(distance/.025);color=at(time*.25+y*.15);
+      amount=ease(1-distance/length)*ease(distance/Math.max(.025,length*.35));color=at(time*.25+y*.15);  // SPIANIM: firmware C113 soft head
     }
     if(key===33||key===41){
       const phase=p-u*.85-y*.2;
@@ -75,7 +75,7 @@
     }
     if(key===34){
       const travel=time*3-u*3-y*.38,distance=mod(travel),length=.18+w*.28;
-      amount=ease(distance/.035)*ease((length-distance)/.13);color=colors[((Math.floor(travel)%colors.length)+colors.length)%colors.length];
+      amount=ease(distance/.09)*ease((length-distance)/.13);  // SPIANIM: firmware C113 soft frontcolor=colors[((Math.floor(travel)%colors.length)+colors.length)%colors.length];
     }
     if(key===35){
       const pos=mod(y*.78-p)*colors.length,i=Math.floor(pos),f=pos-i;
@@ -88,7 +88,7 @@
       const distance=mod(y*.65+u*.24-p+.5)-.5,radius=.16+w*.28;
       amount=.025+.975*soft(distance/radius);color=at(time*.12+.05+soft(distance/(radius*.42))*.45);
     }
-    if(key===38||key===43){amount=band(p*2.6-.16,.36+w*.45,.025+w*.035);}
+    if(key===38||key===43){amount=band(p*2.6-.16,.36+w*.45,.06+w*.12);}  // SPIANIM: firmware C113 soft edges
     if(key===39){const glow=pulse(u-p,.11+w*.3);amount=.22+.78*glow;color=mix(at(time*.25),at(time*.25+1/colors.length),glow);}
     if(key===40){const glow=pulse(u*.68-p,.22+w*.26);amount=.3+.7*glow;color=at(time*.16-u*.32);}
     const brightness=clamp(state.bri??state.brightness??100,0,100)/100;

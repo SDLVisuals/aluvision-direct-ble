@@ -37,6 +37,11 @@
   numberRule('variant', 0, 65535, true);
   numberRule('colorCount', 1, 16, true);
   numberRule('transitionMs lineDelayMs delayMs fadeMs holdMs', 0, 60000);
+  // C109bj: pauses per gap between ledlines (null = evenly spaced, the old behaviour) and the
+  // virtual line slots derived from them for the receivers.
+  rules.lineGapsMs = value => value === null || (Array.isArray(value) && value.length <= 127 && value.every(item => integer(item, 0, 60000)));
+  rules.lineSlots = value => value === null || (Array.isArray(value) && value.length <= 128 && value.every(item => integer(item, 0, 255)));
+  rules.lineSlotCount = value => value === null || integer(value, 1, 256);
   ['power', 'on', 'backgroundOn', 'backgroundRgbEnabled', 'backgroundWhiteEnabled', 'bounce', 'mirror', 'legacySpi'].forEach(key => { rules[key] = value => typeof value === 'boolean'; });
   rules.brandColor = validHex;
   // Three preserved pixel effects use the original {rgb, white} background

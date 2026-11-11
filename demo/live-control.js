@@ -1,3 +1,27 @@
+/* PREVIEWSYNC: one wall-clock preview time base (epoch seconds) for every
+ * animation preview, so a saved previewStartedAt keeps its meaning after an app
+ * reopen and on another phone; plus the dispatch lead used when sampling PHASEMS
+ * (fast lane: receivers start the app's phase at the MAIN deadline, ~120 ms after
+ * the request is built). Bench override: localStorage 'aluvision.previewLeadMs'. */
+(function(root){'use strict';
+  if(typeof root.AluvisionPreviewNowPS!=='function'){
+    const p=root.performance,mono=p&&typeof p.now==='function';
+    let origin=mono?Date.now()-p.now():0;
+    root.AluvisionPreviewNowPS=()=>{
+      const wall=Date.now();if(!mono)return wall/1000;
+      const t=origin+p.now();
+      // Sleep or a wall-clock correction: follow the wall clock again.
+      if(Math.abs(wall-t)>250){origin=wall-p.now();return wall/1000;}
+      return t/1000;
+    };
+  }
+  if(typeof root.AluvisionPreviewLeadPS!=='function'){
+    let lead=120;
+    try{const raw=root.localStorage&&root.localStorage.getItem('aluvision.previewLeadMs');
+      if(raw!==null&&raw!==undefined&&raw!==''){const v=Number(raw);if(Number.isFinite(v)&&v>=0&&v<=1000)lead=v;}}catch(_){}
+    root.AluvisionPreviewLeadPS=()=>lead/1000;
+  }
+})(typeof globalThis==='object'?globalThis:this);
 /* A single radio queue for firmware-confirmed light changes. The preview is
  * immediate; a relay or late reply never proves that LEDs emitted light. */
 (function (root, factory) {
@@ -75,7 +99,8 @@
     if(extension&&(!extensionId||!spi&&([13,14].includes(extensionId)||extensionId>=31)))return null;
     let engine=state.engine||'STATIC',variant=Number(state.variant??0);
     if(extension){engine='BREATHE';variant=0;}
-    if(!(spi?SPI_ENGINES:RGBW_ENGINES).includes(engine)||!Number.isInteger(variant)||variant<0||variant>(spi?181:31))return null;
+    // SPIANIM2: SPI pixel variants are 0..181 plus the SPIANIM animations 200..204.
+    if(!(spi?SPI_ENGINES:RGBW_ENGINES).includes(engine)||!Number.isInteger(variant)||variant<0||(spi?variant>181&&!(variant>=200&&variant<=204):variant>31))return null;
     // C113: a whole-line stand animation runs the same V30 recipe (21-30) on
     // RGBW as on SPI. A mixed V30/legacy stand could not use the one-message
     // FAST_GROUP lane and its slow guarded wave failed (Zacht ademen).
@@ -109,9 +134,12 @@
       trailLength:number(state.trailLength,45,0,100),spread:number(state.spread,50,0,100),
       randomness:number(state.randomness,25,0,100),bounce:state.bounce===true,mirror:state.mirror===true,
       lineDelayMs:number(state.lineDelayMs,0,0,5000)};
+    // C109bj: virtual line slots from the timeline (only when the app sends them)
+    if(Array.isArray(state.lineSlots)&&state.lineSlots.length&&Number.isInteger(state.lineSlotCount)){scene.lineSlots=state.lineSlots.map(v=>Math.max(0,Math.min(255,Math.round(v))));scene.lineSlotCount=Math.max(1,Math.min(256,state.lineSlotCount));}
     if(state.on===false||state.power===false)scene.backgroundOn=false;
     if(!extension&&engine!=='STATIC'){
-      const clock=Number.isFinite(Number(time))?Number(time):performance.now()/1000;
+      // PREVIEWSYNC: sample the phase the preview shows when the receivers start it.
+      const clock=(Number.isFinite(Number(time))?Number(time):globalThis.AluvisionPreviewNowPS())+globalThis.AluvisionPreviewLeadPS();
       const parallel=zone?.layout!=='continuous';
       const lineCount=parallel?Math.max(1,model.ledlines(receivers||[receiver]).length):1;
       const phaseState={...state,speed:Math.max(0.5,Number(state.speed)||0),lineCount,
@@ -139,7 +167,7 @@
       scene.standAnimation={effectId:marker.effectId,kind,clockId};
       if(marker.effectId.startsWith('rgbw-')){
         const canonical=marker.state||state,canonicalVariant=Number(canonical.variant);
-        const clock=Number.isFinite(Number(time))?Number(time):performance.now()/1000;
+        const clock=(Number.isFinite(Number(time))?Number(time):globalThis.AluvisionPreviewNowPS())+globalThis.AluvisionPreviewLeadPS(); // PREVIEWSYNC
         const phaseState={...canonical,previewStartedAt:state.previewStartedAt,phaseMs:state.phaseMs,
           speed:Math.max(0.5,Number(canonical.speed)||0),lineCount:1,lineDelayMs:0};
         const catalog=globalThis.AluvisionV21AnimationCatalog;
@@ -266,7 +294,8 @@
       }))continue;
       const intent=receiver=>{
         const request=requestFor(receiver,{zone:oldZone,receivers:peers,time:0});
-        if(!request||request.brightness===0||request.scene.engine==='STATIC'&&!request.scene.v30)return null;
+        // C137bs: a joining line also inherits the zone's common static colour (it kept its own default before).
+        if(!request||request.brightness===0)return null;
         const {phaseMs,phaseRateMicroHz,...scene}=request.scene;
         // Identical effects can still have deliberately independent clocks.
         // A time-zero sample cannot distinguish two later start anchors, so
@@ -380,7 +409,7 @@
          !Number.isInteger(request.transitionMs)||request.transitionMs<1||request.transitionMs>750||
          !Array.isArray(request.channels)||request.channels.length||!scene||scene.engine==='STATIC'||
          !engines.includes(scene.engine)||!Number.isInteger(scene.variant)||scene.variant<0||
-         scene.variant>(request.kind==='SPI_SCENE'?181:31)||'v30' in scene||!sampled(scene)||
+         (request.kind==='SPI_SCENE'?scene.variant>181&&!(scene.variant>=200&&scene.variant<=204):scene.variant>31)||'v30' in scene||!sampled(scene)||
          !Array.isArray(scene.palette)||scene.palette.length<1||scene.palette.length>4||
          scene.palette.some(colour=>!Array.isArray(colour)||colour.length!==4||
            colour.some(n=>!Number.isInteger(n)||n<0||n>255)))return null;

@@ -1,3 +1,27 @@
+/* PREVIEWSYNC: one wall-clock preview time base (epoch seconds) for every
+ * animation preview, so a saved previewStartedAt keeps its meaning after an app
+ * reopen and on another phone; plus the dispatch lead used when sampling PHASEMS
+ * (fast lane: receivers start the app's phase at the MAIN deadline, ~120 ms after
+ * the request is built). Bench override: localStorage 'aluvision.previewLeadMs'. */
+(function(root){'use strict';
+  if(typeof root.AluvisionPreviewNowPS!=='function'){
+    const p=root.performance,mono=p&&typeof p.now==='function';
+    let origin=mono?Date.now()-p.now():0;
+    root.AluvisionPreviewNowPS=()=>{
+      const wall=Date.now();if(!mono)return wall/1000;
+      const t=origin+p.now();
+      // Sleep or a wall-clock correction: follow the wall clock again.
+      if(Math.abs(wall-t)>250){origin=wall-p.now();return wall/1000;}
+      return t/1000;
+    };
+  }
+  if(typeof root.AluvisionPreviewLeadPS!=='function'){
+    let lead=120;
+    try{const raw=root.localStorage&&root.localStorage.getItem('aluvision.previewLeadMs');
+      if(raw!==null&&raw!==undefined&&raw!==''){const v=Number(raw);if(Number.isFinite(v)&&v>=0&&v<=1000)lead=v;}}catch(_){}
+    root.AluvisionPreviewLeadPS=()=>lead/1000;
+  }
+})(typeof globalThis==='object'?globalThis:this);
 /* Shared SPI setup presentation. This module edits copies only. It does not
  * claim a receiver, change membership or persist. Optional bounded preview
  * commands are sent only through the supplied, acknowledged native service.
@@ -30,7 +54,9 @@
   const PORT_COLOURS_V5=Object.freeze([{hex:'#ff0000',name:'pixelRed'},{hex:'#0000ff',name:'pixelBlue'},{hex:'#ffff00',name:'pixelYellow'},{hex:'#ff1700',name:'pixelOrange'}].map(Object.freeze));
   const PORT_COLOURS_V4=Object.freeze([{hex:'#ff0000',name:'pixelRed'},{hex:'#7800c0',name:'pixelDarkPurple'},{hex:'#0000ff',name:'pixelBlue'},{hex:'#ff5000',name:'pixelOrange'}].map(Object.freeze));
   const LEGACY_PORT_COLOURS=Object.freeze([{hex:'#0000ff',name:'pixelBlue'},{hex:'#ff8000',name:'pixelOrange'},{hex:'#8000ff',name:'pixelPurple'},{hex:'#00ffff',name:'pixelTurquoise'}].map(Object.freeze));
-  function portColour(port,paletteVersion=3){if(!Number.isInteger(port)||port<1||port>4||![1,2,3,4,5].includes(paletteVersion))throw Error('PIXEL_PORT_INVALID');const palette=paletteVersion===1?LEGACY_PORT_COLOURS:paletteVersion===2?PORT_COLOURS:paletteVersion===5?PORT_COLOURS_V5:paletteVersion===4?PORT_COLOURS_V4:PORT_COLOURS_V3;return Object.freeze({...palette[port-1],label:t(palette[port-1].name),ink:['#ff6000','#ffa000','#00ff00','#ff8000','#00ffff','#ff0000','#ff5000','#ffff00','#ff1700'].includes(palette[port-1].hex)?'#161616':'#fff'});}
+  // C137cd (9 Nov, user): the ports step uses the same colours as the first-boot port animation (factory welcome:
+  // P1 red, P2 blue, P3 yellow, P4 orange-red = palette 5, labelled Rood/Blauw/Geel/Oranje), not palette 3.
+  function portColour(port,paletteVersion=5){if(!Number.isInteger(port)||port<1||port>4||![1,2,3,4,5].includes(paletteVersion))throw Error('PIXEL_PORT_INVALID');const palette=paletteVersion===1?LEGACY_PORT_COLOURS:paletteVersion===2?PORT_COLOURS:paletteVersion===5?PORT_COLOURS_V5:paletteVersion===4?PORT_COLOURS_V4:PORT_COLOURS_V3;return Object.freeze({...palette[port-1],label:t(palette[port-1].name),ink:['#ff6000','#ffa000','#00ff00','#ff8000','#00ffff','#ff0000','#ff5000','#ffff00','#ff1700'].includes(palette[port-1].hex)?'#161616':'#fff'});}
   function portPalette(outputs){return [1,2,3,4,5].find(version=>Array.isArray(outputs)&&outputs.length===4&&Array.from(outputs).every((row,index)=>row?.colour===portColour(index+1,version).hex))||null;}
   let previewSerial=0;
   function previewId(){
@@ -81,7 +107,7 @@
     // C113: after the pixels the add flow continues with the ledline order
     // step (walkthrough included); directions are an optional step afterwards.
     const names=directDirections?(orderStep?['pixelOutputs','pixelPixels','pixelOrder']:['pixelOutputs','pixelPixels']):['pixelOutputs','pixelPixels','pixelStart','pixelReview'],position={outputs:0,pixels:1,connection:2,review:3}[stage];return `<ol class="pixel-setup-steps" aria-label="${esc(t('pixelSetupSteps'))}">${names.map((name,index)=>`<li ${index===position?'aria-current="step"':''}><span>${index<position?'✓':index+1}</span>${esc(t(name))}</li>`).join('')}</ol>`;}
-  function renderPortContext(outputs,port,{stage='pixels',selectedPorts=null,paletteVersion=3}={}){
+  function renderPortContext(outputs,port,{stage='pixels',selectedPorts=null,paletteVersion=5}={}){
     const selected=selectedPorts instanceof Set?selectedPorts:selectedPortSet(selectedPorts),active=editableOutputs(outputs,selected),position=active.findIndex(item=>item.port===port),task=t(stage==='connection'?'pixelStart':'pixelSetPixels'),colour=portColour(port,paletteVersion);
     return `<section class="pixel-port-context" data-current-port="${port}" style="--port-colour:${colour.hex};--port-ink:${colour.ink}" aria-label="${esc(t('pixelPortTask',{port,task}))}"><canvas data-pixel-port-visual role="img" aria-label="${esc(t('pixelPort',{port}))}" width="180" height="200"></canvas><div class="pixel-port-context-info"><h2>${esc(t('pixelPortTask',{port,task}))}</h2><p>${esc(t('pixelPortPosition',{position:position+1,count:active.length}))} · <span class="pixel-port-colour">${esc(colour.label)}</span></p><ol aria-label="${esc(t('pixelPortProgress'))}">${outputs.map(item=>{const state=selected&&!selected.has(item.port)?'preserved':!item.enabled?'off':item.port===port?'current':item.port<port?'complete':'pending',label=t({off:'pixelOff',current:'pixelNow',complete:'pixelReady',pending:'pixelLater',preserved:'pixelPreserved'}[state]);return `<li class="pixel-port-step" style="--port-colour:${portColour(item.port,paletteVersion).hex}" data-port="${item.port}" data-state="${state}" ${state==='current'?'aria-current="step"':''} aria-label="${esc(t('pixelPort',{port:item.port}))}: ${esc(label)}"><b>${item.port}</b><span>${esc(label)}</span></li>`;}).join('')}</ol></div></section>`;
   }
@@ -104,7 +130,7 @@
     // animation orientation. The drawing uses the same plain green/red caps.
     return `<div class="pixel-setup-visual pixel-connection-preview pixel-direction-preview" data-pixel-visual="connection" data-direction="${reversed?'reverse':'forward'}" data-preview-pixels="${output.pixels}" role="img" aria-label="${esc(endpointLabel(output))}. ${esc(t('pixelSchematic'))}"><div class="pixel-cable-line"><span class="pixel-setup-track"><span class="pixel-setup-strip pixel-ledline-profile"><i class="start pixel-selected-start-marker" data-start-pixel="1" aria-hidden="true">G</i>${output.pixels>1?`<i class="pixel-selected-end-marker" data-end-pixel="${output.pixels}" aria-hidden="true">R</i>`:''}</span></span></div><small class="pixel-green-start-label"><i aria-hidden="true"></i>${esc(output.pixels===1?t('pixelSingleDirection'):endpointLabel(output))}</small></div>`;
   }
-  function renderOutputs(outputs,{onboarding=false,initialPort=null,selectedPorts=null,live=false,paletteVersion=3}={}){
+  function renderOutputs(outputs,{onboarding=false,initialPort=null,selectedPorts=null,live=false,paletteVersion=5}={}){
     const attr=onboarding?'data-onboarding-action':'data-pixel-action';
     const selected=selectedPorts instanceof Set?selectedPorts:selectedPortSet(selectedPorts),active=outputs.filter(item=>item.enabled).map(item=>`P${item.port}`),summary=active.length?t('pixelActiveSummary',{ports:active.join(' + '),count:active.length}):t('pixelAllOff');
     return `<div class="pixel-output-picker"><canvas data-pixel-outputs-visual role="img" aria-label="${esc(t('pixelReceiver'))} · ${esc(summary)}" width="400" height="200"></canvas><p class="pixel-output-colour-guide">${esc(t('pixelColourGuide'))}</p><div class="pixel-setup-outputs" role="group" aria-label="${esc(t('pixelOutputSwitches'))}">${outputs.map(item=>{const colour=portColour(item.port,paletteVersion),preserved=selected&&!selected.has(item.port);return `<button type="button" ${attr}="output" style="--port-colour:${colour.hex};--port-ink:${colour.ink}" data-port="${item.port}" data-port-colour="${colour.hex}" role="switch" aria-checked="${item.enabled}" aria-label="${esc(t('pixelPortColour',{port:item.port,colour:colour.label}))}" ${item.port===initialPort?'data-requested-port="true"':''} ${preserved?'disabled data-preserved="true"':''}><b>P${item.port}</b><span class="pixel-port-colour">${esc(colour.label)}</span><span>${esc(t(preserved?'pixelPreserved':item.enabled?'pixelOn':'pixelOff'))}</span><i class="pixel-setup-switch" aria-hidden="true"><i></i></i></button>`;}).join('')}</div><p class="pixel-output-summary">${esc(summary)}</p><p class="pixel-setup-error" data-pixel-all-off role="alert" ${active.length?'hidden':''}>${esc(t('pixelAtLeastOne'))}</p><small class="pixel-preview-notice" data-ports-preview-status data-test-light="idle" role="status">${esc(t(live?'pixelIllustration':'pixelPortPreviewUnavailable'))}</small></div>`;
@@ -115,7 +141,7 @@
       const rect=canvas.getBoundingClientRect(),body=canvas.closest('.pixel-setup-body')?.getBoundingClientRect();
       if(!rect.width||!rect.height||rect.bottom<0||rect.top>innerHeight||body&&(rect.bottom<body.top||rect.top>body.bottom))return;
       // C109: the drawing does what the real ledlines do at this step.
-      const ledMode=canvas.matches('[data-pixel-port-visual]')?'count':'identify',portColours=Object.fromEntries(outputs.map(item=>[item.port,item.colour||portColour(item.port,portPalette(outputs)||3).hex]));
+      const ledMode=canvas.matches('[data-pixel-port-visual]')?'count':'identify',portColours=Object.fromEntries(outputs.map(item=>[item.port,item.colour||portColour(item.port,portPalette(outputs)||5).hex]));
       const metadata=visual.draw(canvas,{type:'SPI',enabledPorts:outputs.filter(item=>item.enabled).map(item=>item.port),selectedPort,plugProgress,compact:false,time,reducedMotion,entranceProgress,ledMode,portColours});
       canvas.dataset.activePorts=metadata.activePorts.join(',');canvas.dataset.portLabelsVisible=String(metadata.portLabelsVisible===true);
       canvas.dataset.selectedPort=String(metadata.selectedPort||'');canvas.dataset.plugProgress=JSON.stringify(plugProgress);
@@ -123,7 +149,6 @@
   }
   function renderPixels(output,{inputId='pixel-setup-number',onboarding=false,combined=false}={}){
     const attr=onboarding?'data-onboarding-action':'data-pixel-action',limits=pixelLimits(),valid=editablePixels(output.pixels,limits);
-    const steps=[-30,-15,15,30].map(delta=>`<button type="button" ${attr}="pixel-step" data-pixel-delta="${delta}" aria-label="${esc(t(delta<0?'pixelLessStep':'pixelMoreStep',{count:Math.abs(delta)}))}" ${delta<0?output.pixels===MIN?'disabled':'':output.pixels>=limits.max?'disabled':''}>${delta<0?'−':'+'}${Math.abs(delta)}</button>`).join('');
     return `<section class="pixel-setup-panel" data-pixel-panel="pixels" data-combined="${combined}"><h2>${esc(t('pixelSetPixels'))}</h2><div data-pixel-preview data-pixel-scrub role="slider" tabindex="0" aria-label="${esc(t('pixelSwipeAria',{port:output.port}))}" aria-valuemin="${limits.min}" aria-valuemax="${limits.max}" aria-valuenow="${output.pixels}" aria-valuetext="${esc(t('pixelCountValue',{count:output.pixels}))}">${strip(output,'pixels',limits)}</div><div class="pixel-setup-slider-row"><input type="range" class="pixel-setup-range" data-pixel-range min="${limits.min}" max="${limits.max}" step="1" value="${Math.min(output.pixels,limits.max)}" style="--pixel-range-fill:${Math.round(Math.min(output.pixels,limits.max)/limits.max*100)}%" aria-label="${esc(t('pixelCountLabel',{port:output.port}))}"><div class="pixel-setup-range-label" aria-hidden="true"><span>0</span><span>${limits.max}</span></div></div><div class="pixel-setup-counter"><button type="button" ${attr}="pixel-less" aria-label="${esc(t('pixelLessOne'))}" ${output.pixels===MIN?'disabled':''}>−</button><label for="${esc(inputId)}"><input id="${esc(inputId)}" data-pixel-count type="number" inputmode="numeric" min="${limits.min}" max="${limits.max}" step="1" value="${output.pixels}" aria-invalid="${!valid}" aria-label="${esc(t('pixelCountLabel',{port:output.port}))}" aria-describedby="${esc(inputId)}-error"><span>${esc(t('pixelExact'))}</span></label><button type="button" ${attr}="pixel-more" aria-label="${esc(t('pixelMoreOne'))}" ${output.pixels>=limits.max?'disabled':''}>＋</button></div><p id="${esc(inputId)}-error" data-pixel-error class="pixel-setup-error" role="alert" ${valid?'hidden':''}>${esc(t('pixelRangeError'))}</p><p class="pixel-zero-hint" data-pixel-empty ${output.pixels===0?'':'hidden'}>${esc(t('pixelZero'))}</p><p class="pixel-segment-hint">${esc(t('pixelSingleHint'))}</p></section>`;
   }
   function renderSide(output,{onboarding=false,combined=false,live=false}={}){
@@ -145,6 +170,7 @@
     panel.querySelector('[data-pixel-empty]').hidden=output.pixels!==0;
     panel.querySelector('[data-pixel-action="pixel-less"],[data-onboarding-action="pixel-less"]').disabled=output.pixels===MIN;panel.querySelector('[data-pixel-action="pixel-more"],[data-onboarding-action="pixel-more"]').disabled=output.pixels>=limits.max;
     panel.querySelectorAll('[data-pixel-delta]').forEach(button=>{button.disabled=Number(button.dataset.pixelDelta)<0?output.pixels===MIN:output.pixels>=limits.max;});
+    globalThis.LightningLedlineSetup?.paintRuler?.(panel,output.pixels);   // C144: de liniaal van de eerste setup
   }
   function validateInput(container,value,{pixelsPerMeter}={}){const panel=container.querySelector('[data-pixel-panel="pixels"]'),limits=pixelLimits({pixelsPerMeter:pixelsPerMeter??(Number(panel?.dataset.pixelsPerMeter)||DEFAULT_PIXELS_PER_METER)}),valid=editablePixels(Number(value),limits)&&String(value).trim()!=='';if(panel){panel.querySelector('[data-pixel-count]').setAttribute('aria-invalid',String(!valid));panel.querySelector('[data-pixel-error]').hidden=valid;}return valid;}
   // Relative scrubbing avoids a jump to an arbitrary absolute value on touch.
@@ -263,7 +289,7 @@
   }
   // One bounded latest-wins test-light queue. There is never a CONFIG/SAVE
   // command here. A lost reply remains an error, not a physical-light claim.
-  function createLivePreview({send,onState=()=>{},delay=60,setTimer=setTimeout,clearTimer=clearTimeout,editorIsolation=()=>false,idFactory=editorId686}={}){
+  function createLivePreview({send,onState=()=>{},delay=0,setTimer=setTimeout,clearTimer=clearTimeout,editorIsolation=()=>false,idFactory=editorId686}={}){
     let queued=null,active=null,desired=null,running=null,timer=null,renew=null,version=0,editor=null,editorIntent=null,expiredEditor=null,handoffJob=null,acceptedHandoff=null,handoffTransferred=false,recoveries=0,recovery=false;const provenPalettes=new Map();
     // A guide/port switch belongs to the same exact editing transaction. The
     // native lease validates and switches its temporary mask without stopping
@@ -440,7 +466,7 @@
   }
   function previewMessage(state){return t(state.kind==='expired'?'pixelEditorExpired':state.kind==='unsupported'?'pixelPreviewUnsupported':state.kind==='failed'?'pixelPreviewFailed':state.kind==='pending'?'pixelPreviewPending':state.kind==='applied'?(state.guide==='ports'?'pixelPreviewPorts':state.guide==='direction'?'pixelPreviewDirection':state.guide==='power'?'pixelPreviewPower':state.pixels?'pixelPreviewLength':'pixelPreviewZero'):'pixelNoTest',{port:state.port,count:state.pixels,direction:t(state.reversed?'pixelDirectionReverse':'pixelDirectionForward')});}
   function showPreviewStatus(container,state){
-    if(!container)return;const known=[1,2,3,4,5].includes(state.paletteVersion),version=known?state.paletteVersion:3;
+    if(!container)return;const known=[1,2,3,4,5].includes(state.paletteVersion),version=known?state.paletteVersion:5;
     for(const region of container.querySelectorAll('.pixel-output-picker,.pixel-port-context,.pixel-setup-review')){region.dataset.paletteVersion=String(version);region.dataset.paletteConfirmed=String(known);}
     for(const row of container.querySelectorAll('.pixel-setup-outputs button[data-port],.pixel-port-step[data-port],[data-pixel-palette-port]')){
       const port=Number(row.dataset.port||row.dataset.pixelPalettePort);if(!Number.isInteger(port)||port<1||port>4)continue;
@@ -479,7 +505,7 @@
   function create({onSave,onClose=()=>{},onPreview,onDraftChange=()=>{},mode='preview',previewCapabilities={},jointDirections=false,isPublishedReceiver=()=>false,canHandoff=()=>false}={}){
     if(typeof onSave!=='function')throw Error('PIXEL_SAVE_HANDLER_REQUIRED');
     const limits=pixelLimits();
-    let dialog=null,receiver=null,outputs=[],index=0,busy=false,error='',focusBefore=null,initialPort=null,selectedPort=null,selectedPorts=null,unbindScrub=null,unbindDirectionTutorial=null,recovering=false,directionRecovery=false,directionOnlyMode=false,pairFirstFlow=false,pixelsOnly=false,previewStopJob=null,otherLines=0;
+    let dialog=null,receiver=null,outputs=[],index=0,busy=false,error='',focusBefore=null,initialPort=null,selectedPort=null,selectedPorts=null,unbindScrub=null,unbindDirectionTutorial=null,recovering=false,directionRecovery=false,directionOnlyMode=false,pairFirstFlow=false,pixelsOnly=false,previewStopJob=null,otherLines=0,unbindRuler=null;
     const plugMotion=globalThis.LightningReceiverVisual.createPlugMotion();
     let previewTransaction=null,previewState={kind:'idle'},previewRetiredForSave=false;
     const editorEnabled686=()=>previewCapabilities.editorIsolation===true&&isPublishedReceiver(receiver)===true;
@@ -491,13 +517,20 @@
     // A normal pixel-only edit saves from its last selected port. Pending
     // transaction recovery retains its immutable review/retry screen.
     const directPixels=()=>pixelsOnly&&!recovering&&editableOutputs(outputs,selectedPorts).length>0;
-    const plan=()=>sequence(outputs,{selectedPorts,jointDirections,pixelsOnly,review:!directDirections()&&!directPixels()}),current=()=>plan()[index],output=()=>outputs.find(item=>item.port===current().port),portsToEdit=()=>editableOutputs(outputs,selectedPorts);
+    const firstDesign=()=>pairFirstFlow&&!recovering&&!!globalThis.LightningLedlineSetup;   // C144: eerste setup in de nieuwe vormgeving
+    const plan=()=>sequence(outputs,{selectedPorts,jointDirections,pixelsOnly,review:firstDesign()||!directDirections()&&!directPixels()}),current=()=>plan()[index],output=()=>outputs.find(item=>item.port===current().port),portsToEdit=()=>editableOutputs(outputs,selectedPorts);
     function draftChanged(){
       if(!dialog||recovering||directionOnlyMode||pixelsOnly||selectedPorts||!jointDirections||!['outputs','pixels','review'].includes(current().stage))return;
       onDraftChange({receiverId:receiver.id,outputs:outputs.map(copy),stage:current().stage,port:current().port});
     }
+    // C109bc: the editor can open before the fresh read of the receiver is
+    // done; the test light then waits (status "Testlicht aanpassen…") until
+    // the app releases it, so the native order read → status → preview stays.
+    let previewHeld=false;
+    function releasePreview(){if(!previewHeld)return;previewHeld=false;if(dialog)syncPreview({commit:true});}
     function syncPreview({commit=false}={}){
       if(busy||previewRetiredForSave)return;
+      if(previewHeld){showPreviewStatus(dialog,{...previewState,kind:'pending'});return;}
       if(!dialog||document.hidden){void livePreview.stop();return;}
       const request=guideRequest({context:{standId:receiver.standId,transactionId:previewTransaction,
         receiver:{id:receiver.id,rid:receiver.rid,type:'SPI',deviceFingerprint:receiver.deviceFingerprint},role:receiver.role,
@@ -507,9 +540,36 @@
     }
     function visibility(){syncPreview();}
     function paint(time){if(dialog?.open&&['outputs','pixels','connection'].includes(current().stage)){const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;paintOutputs(dialog,outputs,{time,reducedMotion,selectedPort:current().port||selectedPort,plugProgress:current().stage==='outputs'?plugMotion.sample(time,reducedMotion):{}});}}
-    function close(){if(!dialog||busy&&!previewStopJob)return;previewStopJob=null;busy=false;void livePreview.stop();livePreview.retireExpiredEditor();document.removeEventListener('visibilitychange',visibility);unbindScrub?.();unbindScrub=null;unbindDirectionTutorial?.();unbindDirectionTutorial=null;dialog.close();dialog.remove();dialog=null;plugMotion.clear();focusBefore?.focus?.({preventScroll:true});onClose();}
+    function close(){if(!dialog||busy&&!previewStopJob)return;previewStopJob=null;busy=false;void livePreview.stop();livePreview.retireExpiredEditor();document.removeEventListener('visibilitychange',visibility);unbindScrub?.();unbindScrub=null;unbindRuler?.();unbindRuler=null;unbindDirectionTutorial?.();unbindDirectionTutorial=null;dialog.close();dialog.remove();dialog=null;plugMotion.clear();focusBefore?.focus?.({preventScroll:true});onClose();}
+    // C144 (11 nov, gebruiker: "Ja, in de app"): de eerste setup in de vormgeving van "Ledlines instellen" (prototype
+    // C142p): kop met de twee stappen, kleurtegels, per ledline de liniaal en "Pixels ingesteld". Alleen de weergave is
+    // anders: dezelfde acties (output, pixel-less/more/step, next, back, save, close), hetzelfde testlicht, hetzelfde opslaan.
+    function renderFirst(top,{preview=true}={}){
+      const LS=globalThis.LightningLedlineSetup,I=LS.ICONS,step=current(),active=output(),paletteVersion=[1,2,3,4,5].includes(previewState.paletteVersion)?previewState.paletteVersion:5;
+      const previousScroll=dialog.querySelector('.pixel-setup-body')?.scrollTop||0,replacingOwnFocus=dialog.open&&dialog.contains(document.activeElement);
+      const focusedPort=dialog.contains(document.activeElement)&&document.activeElement.dataset.pixelAction==='output'?document.activeElement.dataset.port:null;
+      const colour=port=>portColour(port,paletteVersion),list=outputs.filter(item=>item.enabled).map(item=>item.port);
+      const back=index===0?LS.button('close',LS.t('goClose')):LS.button('back',LS.t('goBack'),{icon:I.BACK});
+      let body='',foot='';
+      if(step.stage==='outputs'){body=LS.outputs(outputs,{colour,name:receiver.name,pulse:selectedPort});foot=back+LS.button('next',LS.t('goNext'),{primary:true,icon:I.NEXT,after:true,disabled:!list.length});}
+      else if(step.stage==='pixels'&&active){const last=plan()[index+1]?.stage==='review';body=LS.pixels(active,{colour,list,max:limits.max});
+        foot=back+LS.button('next',LS.t(last?'goDone':'goNext'),{primary:true,icon:last?I.CHECK:I.NEXT,after:!last,disabled:!configuredPixels(active.pixels,limits)});}
+      else{const two=orderNext();body=LS.review(outputs,{colour,name:receiver.name});
+        foot=back+LS.button('save',LS.t(two?'goStep2':'goFinish'),{primary:true,icon:two?I.NEXT:I.CHECK,after:two,disabled:!['preview','native'].includes(mode)});}
+      dialog.innerHTML=`<div class="pixel-setup-shell ls-shell"><header class="pixel-setup-header ls-header">${LS.head(step.stage==='outputs'?1:2,{done1:step.stage==='review',steps:!document.documentElement.classList.contains('c137bp-wizard')})}${index>0?`<button type="button" class="ls-x" data-pixel-action="close" aria-label="${esc(t('pixelCloseSettings'))}">×</button>`:''}</header>`+
+        `<div class="pixel-setup-body ls-body" data-stage="${step.stage}" data-port="${step.port||''}">${body}<p class="pixel-setup-mode" id="pixel-setup-mode" ${mode==='preview'&&step.stage!=='review'?'hidden':''}>${esc(t(mode==='preview'?'pixelPreviewMode':mode==='native'?'pixelNativeMode':'pixelUnavailableMode'))}</p><p class="pixel-setup-error" role="alert" ${error?'':'hidden'}>${esc(error)}</p></div>`+
+        `<footer class="pixel-setup-footer ls-footer">${foot}</footer></div>`;
+      if(busy)dialog.querySelectorAll('.ls-footer button,.ls-body button,.ls-body input,.ls-header button').forEach(control=>{control.disabled=true;});
+      if(step.stage==='pixels'&&active){updatePixels(dialog,active,{});requestAnimationFrame(()=>{if(dialog)LS.paintRuler(dialog.querySelector('[data-pixel-panel="pixels"]'),output()?.pixels??0);});}
+      dialog.querySelector('.pixel-setup-body').scrollTop=top?0:previousScroll;
+      if(!top&&focusedPort)dialog.querySelector(`[data-pixel-action="output"][data-port="${focusedPort}"]`)?.focus({preventScroll:true});
+      else if(top&&replacingOwnFocus&&!document.hidden&&(document.activeElement===document.body||document.activeElement===dialog)){const heading=dialog.querySelector('.ls-title');heading?.setAttribute('tabindex','-1');heading?.focus({preventScroll:true});}
+      paint(globalThis.AluvisionPreviewNowPS());
+      if(preview)syncPreview();else showPreviewStatus(dialog,previewState);
+    }
     function render(top=false,{preview=true}={}){
-      if(!dialog)return;unbindDirectionTutorial?.();unbindDirectionTutorial=null;const previousScroll=dialog.querySelector('.pixel-setup-body')?.scrollTop||0,step=current(),ports=portsToEdit(),active=output(),allOff=!outputs.some(item=>item.enabled),direct=directDirections(),finalPixel=(direct||directPixels())&&step.stage==='pixels'&&index===plan().length-1,saveStep=step.stage==='review'||finalPixel,paletteVersion=[1,2,3,4,5].includes(previewState.paletteVersion)?previewState.paletteVersion:3;
+      if(!dialog)return;unbindDirectionTutorial?.();unbindDirectionTutorial=null;
+      if(firstDesign())return renderFirst(top,{preview});const previousScroll=dialog.querySelector('.pixel-setup-body')?.scrollTop||0,step=current(),ports=portsToEdit(),active=output(),allOff=!outputs.some(item=>item.enabled),direct=directDirections(),finalPixel=(direct||directPixels())&&step.stage==='pixels'&&index===plan().length-1,saveStep=step.stage==='review'||finalPixel,paletteVersion=[1,2,3,4,5].includes(previewState.paletteVersion)?previewState.paletteVersion:5;
       const focusedPort=dialog.contains(document.activeElement)&&document.activeElement.dataset.pixelAction==='output'?document.activeElement.dataset.port:null;
       let content='';
       if(step.stage==='outputs')content=`<p>${esc(t('pixelChooseOutputs'))}</p>${selectedPorts?`<p>${esc(t('pixelSelectSummary',{ports:[...selectedPorts].sort().map(port=>`P${port}`).join(' + ')}))}</p>`:''}${renderOutputs(outputs,{initialPort,selectedPorts,paletteVersion,live:mode==='native'&&previewCapabilities.identifyPorts===true})}${!allOff&&!ports.length?`<p class="pixel-setup-error" role="alert">${esc(t('pixelSelectedRequired'))}</p>`:''}`;
@@ -557,7 +617,7 @@
         const heading=dialog.querySelector(step.stage==='pixels'?'[data-pixel-panel="pixels"] > h2':'.pixel-setup-header h1');
         heading?.setAttribute('tabindex','-1');heading?.focus({preventScroll:true});
       }
-      paint(performance.now()/1000);
+      paint(globalThis.AluvisionPreviewNowPS());
       if(preview)syncPreview();else showPreviewStatus(dialog,previewState);
     }
     function adjust(value,source,{commit=false,haptic=true}={}){if(!dialog||busy||current().stage!=='pixels')return;const primary=dialog.querySelector('[data-pixel-action="next"],[data-pixel-action="save"]'),previous=output().pixels,number=Number(value),legacyDecrease=previous>limits.max&&validPixels(number)&&number<=previous;if(!validateInput(dialog,value,limits)&&!legacyDecrease){primary.disabled=true;return;}output().pixels=number;updatePixels(dialog,output(),{source});primary.disabled=!configuredPixels(output().pixels,limits)||primary.dataset.pixelAction==='save'&&portsToEdit().some(item=>!configuredPixels(item.pixels,limits));if(haptic&&output().pixels!==previous)hapticStep();error='';if(output().pixels!==previous)draftChanged();syncPreview({commit});}
@@ -592,6 +652,7 @@
         if(!stopped){error=t(previewState.kind==='expired'?'pixelEditorExpired':'pixelPreviewFailed');render(false,{preview:false});return;}
       }
       if(action==='close')return close();
+      if(action==='tutorial'){globalThis.LightningLedlineTutorial?.open?.();return;}   // C144b: de tutorial van stap 1
       if(action==='pick-power'){
         const port=Number(target.dataset.port),item=outputs.find(row=>row.port===port);if(!pixelsOnly||recovering||!item)return;
         if(item.enabled&&outputs.filter(row=>row.enabled).length===1)return;
@@ -599,7 +660,7 @@
         item.enabled=!item.enabled;
         if(item.enabled){if(!(item.pixels>0))item.pixels=receiver.outputs.find(row=>row.port===port)?.pixels||1;chosen.add(port);}
         else{chosen.delete(port);if(!chosen.size)chosen.add(outputs.find(row=>row.enabled).port);}
-        selectedPorts=chosen;plugMotion.trigger(port,performance.now()/1000,item.enabled);
+        selectedPorts=chosen;plugMotion.trigger(port,globalThis.AluvisionPreviewNowPS(),item.enabled);
         const steps=plan(),at=steps.findIndex(row=>row.port===(item.enabled?port:was));
         index=at>=0?at:Math.max(0,Math.min(index,steps.length-1));error='';hapticStep();draftChanged();return render();
       }
@@ -610,15 +671,15 @@
         const was=current().port;selectedPorts=chosen;const steps=plan(),at=steps.findIndex(row=>row.port===was);
         index=at>=0?at:Math.max(0,Math.min(index,steps.length-1));error='';hapticStep();return render();
       }
-      if(action==='output'){const item=outputs.find(item=>item.port===Number(target.dataset.port));if(!item||selectedPorts&&!selectedPorts.has(item.port))return;item.enabled=!item.enabled;selectedPort=item.port;plugMotion.trigger(item.port,performance.now()/1000,item.enabled);error='';draftChanged();return render();}
-      if(['pixel-less','pixel-more','pixel-step'].includes(action)){const delta=action==='pixel-step'?Number(target.dataset.pixelDelta):action==='pixel-less'?-1:1;if(![-30,-15,-1,1,15,30].includes(delta))return;return adjust(stepPixels(output().pixels,delta,limits),null,{commit:false});}
+      if(action==='output'){const item=outputs.find(item=>item.port===Number(target.dataset.port));if(!item||selectedPorts&&!selectedPorts.has(item.port))return;item.enabled=!item.enabled;selectedPort=item.port;plugMotion.trigger(item.port,globalThis.AluvisionPreviewNowPS(),item.enabled);error='';draftChanged();return render();}
+      if(['pixel-less','pixel-more','pixel-step'].includes(action)){const delta=action==='pixel-step'?Number(target.dataset.pixelDelta):action==='pixel-less'?-1:1;if(![-30,-15,-10,-1,1,10,15,30].includes(delta))return;return adjust(stepPixels(output().pixels,delta,limits),null,{commit:false});}
       if(action==='side'){if(!['forward','reverse','left','right'].includes(target.dataset.side))return;output().reversed=['reverse','right'].includes(target.dataset.side);error='';render();void livePreview.flush();return;}
       if(action==='next'){if(!outputs.some(item=>item.enabled)||!portsToEdit().length)return render();if(step.stage==='pixels'&&(!validateInput(dialog,dialog.querySelector('[data-pixel-count]').value,limits)||!configuredPixels(output().pixels,limits)))return;index++;error='';draftChanged();return render(true);}
       if(action==='back'){if(!index)return close();index--;error='';draftChanged();return render(true);}
       if(action==='save'){if(!['preview','native'].includes(mode)||!portsToEdit().length||portsToEdit().some(item=>!configuredPixels(item.pixels,limits))||step.stage==='pixels'&&!validateInput(dialog,dialog.querySelector('[data-pixel-count]').value,limits))return;busy=true;previewRetiredForSave=true;error='';render();try{await onSave({receiverId:receiver.id,outputs:outputs.map(item=>!item.enabled&&item.pixels===0?{...item,pixels:receiver.outputs.find(original=>original.port===item.port)?.pixels||1}:copy(item)),...(directionRecovery?{directionsOnly:true}:{}),...(directDirections()?{continueToDirections:true}:{}),pixelsOnly});busy=false;close();}catch(failure){busy=false;error=typeof failure?.message==='string'?failure.message:t('pixelSaveFailed');render();}}
     }
-    function open(value,{initialPort:port,resumePending=false,directionsOnly=false,pixelsOnly:onlyPixels=false,selectedPorts:requestedPorts=null,resumeStep=null,pairFirst=false,zoneLines=0}={}){
-      if(dialog)throw Error('PIXEL_SETUP_ALREADY_OPEN');otherLines=Number.isInteger(zoneLines)&&zoneLines>0?zoneLines:0;livePreview.retireExpiredEditor();livePreview.retireTransferredEditor();pixelsOnly=onlyPixels===true;selectedPorts=selectedPortSet(resumePending?null:requestedPorts);outputs=outputsOf(value);receiver=copy(value);previewTransaction=previewId();previewState={kind:'idle'};previewRetiredForSave=false;document.addEventListener('visibilitychange',visibility);initialPort=Number.isInteger(port)&&port>=1&&port<=4?port:null;selectedPort=null;plugMotion.clear();index=0;error='';busy=false;focusBefore=document.activeElement;
+    function open(value,{initialPort:port,resumePending=false,directionsOnly=false,pixelsOnly:onlyPixels=false,selectedPorts:requestedPorts=null,resumeStep=null,pairFirst=false,zoneLines=0,holdPreview=false}={}){
+      if(dialog)throw Error('PIXEL_SETUP_ALREADY_OPEN');previewHeld=holdPreview===true;otherLines=Number.isInteger(zoneLines)&&zoneLines>0?zoneLines:0;livePreview.retireExpiredEditor();livePreview.retireTransferredEditor();pixelsOnly=onlyPixels===true;selectedPorts=selectedPortSet(resumePending?null:requestedPorts);outputs=outputsOf(value);receiver=copy(value);previewTransaction=previewId();previewState={kind:'idle'};previewRetiredForSave=false;document.addEventListener('visibilitychange',visibility);initialPort=Number.isInteger(port)&&port>=1&&port<=4?port:null;selectedPort=null;plugMotion.clear();index=0;error='';busy=false;focusBefore=document.activeElement;
       // C109: a port chosen from the receiver card while it is off is switched
       // on in this draft only; Opslaan keeps it, closing leaves it as it was.
       if(pixelsOnly&&resumePending!==true&&selectedPorts)for(const item of outputs)if(selectedPorts.has(item.port)&&!item.enabled){item.enabled=true;if(!(item.pixels>0))item.pixels=1;}
@@ -626,9 +687,9 @@
       directionRecovery=recovering&&directionsOnly===true;
       if(recovering){index=plan().length-1;error=t('pixelPendingConfig');}
       else if(jointDirections&&!directionsOnly&&!pixelsOnly&&!selectedPorts){const resumed=setupResume(receiver,resumeStep,{directDirections:directDirections()});outputs=resumed.outputs;index=resumed.index;}
-      dialog=document.createElement('dialog');dialog.className='pixel-setup-dialog';dialog.setAttribute('aria-label',t(pixelsOnly?'pixelOnlySettings':'pixelDialogAria'));dialog.addEventListener('click',click);dialog.addEventListener('input',input);dialog.addEventListener('change',input);dialog.addEventListener('keyup',commitKey);dialog.addEventListener('cancel',event=>{event.preventDefault();close();});unbindScrub=bindPixelScrub(dialog,{isEnabled:()=>!busy&&current().stage==='pixels',onChange:value=>adjust(value,null,{haptic:false}),onCommit:()=>void livePreview.flush()});document.body.append(dialog);render(true);dialog.showModal();paint(performance.now()/1000);if(editorEnabled686())void livePreview.flush();
+      dialog=document.createElement('dialog');dialog.className='pixel-setup-dialog';dialog.setAttribute('aria-label',t(pixelsOnly?'pixelOnlySettings':'pixelDialogAria'));dialog.addEventListener('click',click);dialog.addEventListener('input',input);dialog.addEventListener('change',input);dialog.addEventListener('keyup',commitKey);dialog.addEventListener('cancel',event=>{event.preventDefault();close();});unbindScrub=bindPixelScrub(dialog,{isEnabled:()=>!busy&&current().stage==='pixels',onChange:value=>adjust(value,null,{haptic:false}),onCommit:()=>void livePreview.flush()});unbindRuler=globalThis.LightningLedlineSetup?.bindRuler?.(dialog,{isEnabled:()=>!busy&&current().stage==='pixels',onChange:value=>adjust(value,null),onCommit:()=>void livePreview.flush(),value:()=>output()?.pixels??0})||null;document.body.append(dialog);render(true);dialog.showModal();paint(globalThis.AluvisionPreviewNowPS());{const tut=globalThis.LightningLedlineTutorial;if(firstDesign()&&current().stage==='outputs'&&tut&&!tut.seen())requestAnimationFrame(()=>{if(dialog)tut.open();});}   /* C144b: de eerste keer eerst de tutorial */if(editorEnabled686())void livePreview.flush();
     }
-    return Object.freeze({open,close,paint,isOpen:()=>!!dialog});
+    return Object.freeze({open,close,paint,releasePreview,isOpen:()=>!!dialog});
   }
   return Object.freeze({TEXTS,PORT_COLOURS,PORT_COLOURS_V3,PORT_COLOURS_V4,PORT_COLOURS_V5,LEGACY_PORT_COLOURS,portColour,portPalette,guideRequest,create,createLivePreview,showPreviewStatus,showPreviewStopping,renderOutputs,paintOutputs,renderPixels,renderSide,renderPort,renderProgress,renderPortContext,nextPortLabel,bindPixelScrub,updatePixels,validateInput,outputsOf,setupResume,sequence,validPixels,pixelLimits,editablePixels,configuredPixels,stepPixels,stepMeters,meterLabel,endpointLabel,hapticStep});
 }));

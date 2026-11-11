@@ -25,13 +25,7 @@ html.interface-polish body[data-theme="dark"] {
 /* A milky outer surface and a quiet inside, not another blur for each tile.
    Do not target generic .card: several mobile controls deliberately have no
    box, while order disclosures have their own joined-header/body geometry. */
-html.interface-polish body :is(.stand-info-tile, .stand-control-shortcut,
-    .zone-entry, .menu-card, .receiver-list > details, .scene-card, .stand-scenes-entry,
-    .stand-scene-card, .assignment-choice, .assignment-family-choice,
-    .animation-category-trigger, .animation-category-choice,
-    .animation-family-card, .family-variant-card, .effect-card, .family-card,
-    .settings-toggle, .ledline-add-action, .onboarding-name-card,
-    .onboarding-zone, .onboarding-destination) {
+/*c140-sel:interface-polish.css*/html.interface-polish body :where(.stand-info-tile):is(.stand-info-tile, .receiver-list > details), html.interface-polish body :where(.stand-control-shortcut):is(.stand-control-shortcut, .receiver-list > details), html.interface-polish body :where(.zone-entry):is(.zone-entry, .receiver-list > details), html.interface-polish body :where(.menu-card):is(.menu-card, .receiver-list > details), html.interface-polish body :is(.receiver-list > details), html.interface-polish body :where(.scene-card):is(.scene-card, .receiver-list > details), html.interface-polish body :where(.stand-scenes-entry):is(.stand-scenes-entry, .receiver-list > details), html.interface-polish body :where(.stand-scene-card):is(.stand-scene-card, .receiver-list > details), html.interface-polish body :where(.assignment-choice):is(.assignment-choice, .receiver-list > details), html.interface-polish body :where(.assignment-family-choice):is(.assignment-family-choice, .receiver-list > details), html.interface-polish body :where(.animation-category-trigger):is(.animation-category-trigger, .receiver-list > details), html.interface-polish body :where(.animation-category-choice):is(.animation-category-choice, .receiver-list > details), html.interface-polish body :where(.animation-family-card):is(.animation-family-card, .receiver-list > details), html.interface-polish body :where(.family-variant-card):is(.family-variant-card, .receiver-list > details), html.interface-polish body :where(.effect-card):is(.effect-card, .receiver-list > details), html.interface-polish body :where(.family-card):is(.family-card, .receiver-list > details), html.interface-polish body :where(.settings-toggle):is(.settings-toggle, .receiver-list > details), html.interface-polish body :where(.ledline-add-action):is(.ledline-add-action, .receiver-list > details), html.interface-polish body :where(.onboarding-name-card):is(.onboarding-name-card, .receiver-list > details), html.interface-polish body :where(.onboarding-zone):is(.onboarding-zone, .receiver-list > details), html.interface-polish body :where(.onboarding-destination):is(.onboarding-destination, .receiver-list > details){
   background-color: var(--interface-milk);
   background-image: linear-gradient(145deg, var(--interface-highlight), transparent 62%);
   border-color: var(--interface-edge);
@@ -46,17 +40,14 @@ html.interface-polish body .zone-entry > .zone-card {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-html.interface-polish body :is(.family-variants-panel,
-    .animation-category-options, .receiver-list details details,
-    .ledline-row-settings .receiver-connections) {
+html.interface-polish body :where(.family-variants-panel):is(.family-variants-panel, .ledline-row-settings .receiver-connections), html.interface-polish body :where(.animation-category-options):is(.animation-category-options, .ledline-row-settings .receiver-connections), html.interface-polish body :where(.receiver-list details details):is(.receiver-list details details, .ledline-row-settings .receiver-connections), html.interface-polish body :is(.ledline-row-settings .receiver-connections){
   background-color: var(--interface-inner);
   background-image: none;
   box-shadow: inset 0 1px var(--interface-highlight);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-html.interface-polish body :is(.brand-bar, .control-dock-surface,
-    #effect-dialog-content > header) {
+html.interface-polish body :where(.brand-bar):is(.brand-bar, #effect-dialog-content > header), html.interface-polish body :where(.control-dock-surface):is(.control-dock-surface, #effect-dialog-content > header), html.interface-polish body :is(#effect-dialog-content > header){
   border-color: var(--interface-edge);
   box-shadow: inset 0 1px var(--interface-highlight), 0 5px 16px -10px rgba(24, 32, 24, .2);
 }
@@ -75,7 +66,7 @@ html.interface-polish body #effect-dialog:has([data-stand-control-sheet]) {
   backdrop-filter: none;
 }
 /* Group headings are wayfinding, not another card around existing actions. */
-html.interface-polish :is(.settings-installation, .settings-app-tools) {
+html.interface-polish .settings-installation, html.interface-polish .settings-app-tools{
   display: grid;
   gap: 10px;
   border: 0;
@@ -89,7 +80,7 @@ html.interface-polish .settings-group-title {
   line-height: 1.4;
   letter-spacing: -.01em;
 }
-html.interface-polish :is(.scene-unavailable-note, .animation-save-help) {
+html.interface-polish .scene-unavailable-note, html.interface-polish .animation-save-help{
   color: var(--muted);
   font-size: 11px;
   line-height: 1.45;
@@ -127,10 +118,7 @@ html.interface-polish body :is(.assignment-choice, .assignment-family-choice,
   border-color: var(--interface-choice);
   box-shadow: inset 0 0 0 1px var(--interface-choice), inset 0 1px var(--interface-highlight);
 }
-html.interface-polish body :is(.assignment-choice, .assignment-family-choice,
-    .animation-category-choice, .preference-grid button,
-    .family-spatial-options button, .spatial-preview-switch button,
-    .physical-port-picker button, .compact-direction button):not([aria-pressed="true"]) {
+html.interface-polish body :where(.assignment-choice):is(.assignment-choice, .preference-grid button):not([aria-pressed="true"]), html.interface-polish body :where(.assignment-family-choice):is(.assignment-family-choice, .preference-grid button):not([aria-pressed="true"]), html.interface-polish body :where(.animation-category-choice):is(.animation-category-choice, .preference-grid button):not([aria-pressed="true"]), html.interface-polish body :is(.preference-grid button):not([aria-pressed="true"]), html.interface-polish body :is(.family-spatial-options button):not([aria-pressed="true"]), html.interface-polish body :is(.spatial-preview-switch button):not([aria-pressed="true"]), html.interface-polish body :is(.physical-port-picker button):not([aria-pressed="true"]), html.interface-polish body :is(.compact-direction button):not([aria-pressed="true"]){
   border-color: var(--interface-edge);
 }
 html.interface-polish body :is(.settings-toggle, .ledline-settings-toggle,
@@ -148,19 +136,7 @@ html.interface-polish .preview-wrap :is(button, summary):focus-visible {
 /* One transform authority for ordinary buttons. The matching JS selector is
    intentionally explicit; preview tiles, summaries, drag handles and switches
    stay with their original animation. No permanent compositor promotion. */
-html.interface-polish body :is(button.button, button.icon-button,
-    button.text-button, button.menu-card, button.settings-toggle,
-    button.spatial-choice-toggle, button.ledline-setup-toggle,
-    button.ledline-add-action, button.ledline-settings-toggle,
-    button.ledline-reuse-action, button.animation-category-trigger,
-    button.animation-category-choice, button.animation-gallery-return,
-    button.animation-settings-return, button.current-effect-gallery,
-    button.assignment-choice, button.assignment-family-choice, button.back,
-    .navigation > button, .control-mode-tabs > button, .section-tabs > button,
-    .filter-row > button, .preference-grid > button, .compact-direction > button,
-    .physical-port-picker > button, .family-spatial-options > button,
-    .spatial-preview-switch > button, .channel-row > button,
-    .preview-size-picker > button):not(:disabled):not([role="switch"]):not(:has(canvas)) {
+html.interface-polish body button.button:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.icon-button:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.text-button:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.menu-card:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.settings-toggle:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.spatial-choice-toggle:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.ledline-setup-toggle:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.ledline-add-action:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.ledline-settings-toggle:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.ledline-reuse-action:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.animation-category-trigger:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.animation-category-choice:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.animation-gallery-return:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.animation-settings-return:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.current-effect-gallery:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.assignment-choice:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.assignment-family-choice:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.back:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.navigation > button):not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.control-mode-tabs > button):not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.section-tabs > button):not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.filter-row > button):not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.preference-grid > button):not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.compact-direction > button):not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.physical-port-picker > button):not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.family-spatial-options > button):not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.spatial-preview-switch > button):not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.channel-row > button):not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.preview-size-picker > button):not(:disabled):not([role="switch"]):not(:has(canvas)){
   transform: scale(var(--interface-press-scale, 1));
   transition: transform var(--interface-press-time, 165ms) var(--interface-press-ease, var(--interface-release)),
     background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
@@ -174,19 +150,7 @@ html.interface-polish body summary:has(button[data-interface-press="held"]):acti
   /* A nested close/action gets one press, not a second scaled summary. */
   transform: none;
 }
-html.interface-polish body :is(button.button, button.icon-button,
-    button.text-button, button.menu-card, button.settings-toggle,
-    button.spatial-choice-toggle, button.ledline-setup-toggle,
-    button.ledline-add-action, button.ledline-settings-toggle,
-    button.ledline-reuse-action, button.animation-category-trigger,
-    button.animation-category-choice, button.animation-gallery-return,
-    button.animation-settings-return, button.current-effect-gallery,
-    button.assignment-choice, button.assignment-family-choice, button.back,
-    .navigation > button, .control-mode-tabs > button, .section-tabs > button,
-    .filter-row > button, .preference-grid > button, .compact-direction > button,
-    .physical-port-picker > button, .family-spatial-options > button,
-    .spatial-preview-switch > button, .channel-row > button,
-    .preview-size-picker > button):active:not(:disabled):not([role="switch"]):not(:has(canvas)) {
+html.interface-polish body button.button:active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.icon-button:active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.text-button:active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.menu-card:active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.settings-toggle:active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.spatial-choice-toggle:active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.ledline-setup-toggle:active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.ledline-add-action:active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.ledline-settings-toggle:active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.ledline-reuse-action:active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.animation-category-trigger:active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.animation-category-choice:active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.animation-gallery-return:active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.animation-settings-return:active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.current-effect-gallery:active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.assignment-choice:active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.assignment-family-choice:active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.back:active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.navigation > button):active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.control-mode-tabs > button):active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.section-tabs > button):active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.filter-row > button):active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.preference-grid > button):active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.compact-direction > button):active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.physical-port-picker > button):active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.family-spatial-options > button):active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.spatial-preview-switch > button):active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.channel-row > button):active:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.preview-size-picker > button):active:not(:disabled):not([role="switch"]):not(:has(canvas)){
   /* The passive pointer/keyboard listener, not an ancestor :active rule,
      supplies press state. Modified clicks remain ordinary browser actions. */
   transform: scale(var(--interface-press-scale, 1));
@@ -241,20 +205,7 @@ html.interface-polish body .channel-row .channel-number {
 /* Respect OS preferences without replacing native scroll or disabling any
    action. Opaque fallbacks keep text legible in non-blur Safari/engines. */
 @media (prefers-reduced-motion: reduce) {
-  html.interface-polish body :is(button, summary)[data-interface-press],
-  html.interface-polish body :is(button.button, button.icon-button,
-      button.text-button, button.menu-card, button.settings-toggle,
-      button.spatial-choice-toggle, button.ledline-setup-toggle,
-      button.ledline-add-action, button.ledline-settings-toggle,
-      button.ledline-reuse-action, button.animation-category-trigger,
-      button.animation-category-choice, button.animation-gallery-return,
-      button.animation-settings-return, button.current-effect-gallery,
-      button.assignment-choice, button.assignment-family-choice, button.back,
-      .navigation > button, .control-mode-tabs > button, .section-tabs > button,
-      .filter-row > button, .preference-grid > button, .compact-direction > button,
-      .physical-port-picker > button, .family-spatial-options > button,
-      .spatial-preview-switch > button, .channel-row > button,
-      .preview-size-picker > button):not(:disabled):not([role="switch"]):not(:has(canvas)) {
+  html.interface-polish body :is(button, summary)[data-interface-press], html.interface-polish body button.button:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.icon-button:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.text-button:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.menu-card:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.settings-toggle:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.spatial-choice-toggle:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.ledline-setup-toggle:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.ledline-add-action:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.ledline-settings-toggle:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.ledline-reuse-action:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.animation-category-trigger:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.animation-category-choice:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.animation-gallery-return:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.animation-settings-return:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.current-effect-gallery:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.assignment-choice:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.assignment-family-choice:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body button.back:not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.navigation > button):not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.control-mode-tabs > button):not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.section-tabs > button):not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.filter-row > button):not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.preference-grid > button):not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.compact-direction > button):not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.physical-port-picker > button):not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.family-spatial-options > button):not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.spatial-preview-switch > button):not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.channel-row > button):not(:disabled):not([role="switch"]):not(:has(canvas)), html.interface-polish body :is(.preview-size-picker > button):not(:disabled):not([role="switch"]):not(:has(canvas)){
     transform: none !important;
     transition: none !important;
   }
@@ -322,7 +273,7 @@ html.interface-polish body dialog[open][data-interface-sheet="dialog"].is-closin
 html.interface-polish body dialog[open][data-interface-sheet="dialog"].is-closing:is(.v50-fullscreen-preview, :has([data-stand-control-sheet])) {
   transform: none !important;
 }
-html.interface-polish body :is(.settings-panel, .background-details):not([hidden]):not(.is-closing) {
+html.interface-polish body .settings-panel:not([hidden]):not(.is-closing), html.interface-polish body .background-details:not([hidden]):not(.is-closing){
   animation: none;
 }
 html.interface-polish body .preview-size-control[open] .preview-size-picker {

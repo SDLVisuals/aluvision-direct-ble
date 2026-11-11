@@ -79,7 +79,8 @@
       try{pending.target.click();}finally{returning=false;}
     }
     function nav(event){
-      const button=event.target.closest?.('#navigation [data-action="nav"]');
+      // C139ins-2: the header gear (C138ui-12) opens Instellingen now; it remembers the tab you came from, like a tab does.
+      const button=event.target.closest?.('#navigation [data-action="nav"],header.brand-bar>.c138-settings-entry');
       if(returning||!visible(button))return;
       const current=doc.querySelector('#navigation [aria-current="page"]')?.dataset.id;
       if(current&&current!==button.dataset.id&&navTrail.at(-1)!==current){navTrail.push(current);if(navTrail.length>20)navTrail.shift();}

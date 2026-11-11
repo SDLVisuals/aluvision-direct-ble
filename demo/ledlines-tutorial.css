@@ -1,0 +1,598 @@
+/* C144b: de tutorial van stap 1 in de app (uit prototype C142p: ketting.css + herkennen.css + de telefoon-kop van
+   setup.css). De klassen ki-, hk-, hkm- en spm- komen in de rest van de app niet voor. */
+html:not(#c144t) body:not(#c144t) dialog.ki-dialog.ki-dialog,html:not(#c144t) body:not(#c144t) dialog.ki-dialog.ki-dialog[open]:not(#c144t):not(#c144t):not(#c144t):not(#c144t):not(.is-closing){position:fixed!important;inset:0!important;top:0!important;transform:none!important;animation:none!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;overflow:hidden!important;color:inherit}
+dialog.ki-dialog::backdrop{background:transparent}
+dialog.ki-dialog>.ki{position:absolute;inset:0}
+/* C141p prototype "Laat de kleuren doorlopen": only what the real interface CSS does not already give.
+   Colours, fonts, logo bar, tab bar and the switch come from apps/WebApp (linked in index.html).
+   The screen has two steps in one interface: 1 Volgorde (drag), 2 Overgangen (tails + flip). */
+
+  text-transform:uppercase;color:var(--action-ink,#ac3933);background:color-mix(in srgb,var(--red,#bf4841) 12%,transparent)}
+header.brand-bar>span:not(.kt-proto-pill){margin-left:12px}
+
+/* ---------- The app screen ---------- */
+/* "Bekijk tutorial": a clear button under the sentence (plays the tutorial again) */
+  border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-size:14px;font-weight:750;cursor:pointer;box-shadow:var(--surface-shadow);
+  transition:transform .15s ease}
+/* Tapping: the control is active for a moment and a ring fades outwards */
+  animation:kt-tap .5s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes kt-tap{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(1.16)}}
+/* step 2: back to the order */
+
+/* Two steps in one screen: a small progress bar with the step names. */
+  transition:transform .45s cubic-bezier(.32,.72,0,1)}
+
+/* Overview bar: every ledline in chain order as its own pill; in step 2 each gets its tail. */
+
+/* The tail (last 5 pixels into the next colour) only shows in step 2; it grows in from the end. */
+/* Vastpakken: the strip pulses in its own colour (a dark layer goes up and down, no white), like the ledline on the stand. */
+@keyframes kt-pulse{0%,100%{opacity:0}50%{opacity:.55}}
+/* Testlicht: everything turns red calmly, then one wide, soft white band runs over it (as on the stand). */
+  background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.55) 30%,rgba(255,255,255,.95) 50%,rgba(255,255,255,.55) 70%,rgba(255,255,255,0))}
+
+/* Cards: number, colour name, wide strip, flip (step 2), grip — one row, like the phone in the explainer. */
+/* the place numbers stand still in their own column; only the ledline cards move */
+  padding:6px 8px 6px 14px;border-radius:18px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--surface-shadow);
+  user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:pan-y;transition:box-shadow .45s ease,transform .18s ease;outline-offset:2px}
+.kt-strip,.ki-strip{display:flex;align-items:center;min-width:0}
+.kt-strip>.kt-bar,.ki-strip>.ki-bar{flex:1 1 auto}
+/* The connector at the start of the strip (an inline SVG, see ICON_PLUG): the same white round screw connector as on the
+   stand — ribbed strain reliefs, bodies, knurled nut and the red O-ring — with a white cable into the strip.
+   The strip itself is straight with a thin white rim at the top and bottom, like the real ledline sleeve. */
+.kt-plug,.ki-plug{flex:none;display:block;--pw:#fff;--po:#a7acb3;--pk:#c3c7cc;--pc:#fff}
+body[data-theme=dark] .kt-plug,body[data-theme=dark] .ki-plug{--pw:#f4f4f1;--po:#6e737a;--pk:#b9bcc1;--pc:#f4f4f1}
+.ki-plug{width:28px;height:10px}
+.kt-plug svg,.ki-plug svg{display:block;width:100%;height:100%;overflow:visible}
+.kt-plug .w,.ki-plug .w{fill:var(--pw);stroke:var(--po);stroke-width:1}
+.kt-plug .l,.ki-plug .l{fill:none;stroke:var(--pk);stroke-width:.8}
+.kt-plug .r,.ki-plug .r{fill:#e0412f}
+.kt-plug .co,.ki-plug .co{fill:none;stroke:var(--po);stroke-width:3.4;stroke-linecap:round}
+.kt-plug .ci,.ki-plug .ci{fill:none;stroke:var(--pc);stroke-width:1.8;stroke-linecap:round}
+.kt-rim,.ki-crim{position:absolute;inset:0;z-index:4;pointer-events:none}
+.ki-crim{box-shadow:inset 0 2px 0 rgba(255,255,255,.93),inset 0 2.8px 0 rgba(0,0,0,.1),inset 0 -2px 0 rgba(255,255,255,.93),inset 0 -2.8px 0 rgba(0,0,0,.1)}
+  display:grid;place-items:center;cursor:pointer;padding:0;transition:opacity .3s ease,transform .3s cubic-bezier(.2,.8,.2,1)}
+  touch-action:none;cursor:grab;padding:0;min-height:44px}
+  background:color-mix(in srgb,#e9a24a 8%,transparent);pointer-events:none;transition:top .2s cubic-bezier(.32,.72,0,1)}
+
+/* het eindscherm (na Klaar): alleen de samenvatting, Opnieuw en Naar je stand */
+
+/* Bottom: step 1 "Volgende stap"; step 2 round Testlicht + Klaar (black). */
+  padding:12px 16px 10px;max-width:600px;margin:0 auto;box-sizing:border-box;background:linear-gradient(to top,var(--c109-page,var(--bg)) 74%,transparent)}
+.ki-test svg{width:24px;height:12px;stroke:none}
+@keyframes kt-run{0%{transform:translateX(-12px);opacity:0}15%,85%{opacity:1}100%{transform:translateX(6px);opacity:0}}
+/* turning: a block in the next colour glides across the strip (the strip itself does not spin) */
+  display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+  background:#1c1c1e;color:#fff;font-weight:700;font-size:14px;box-shadow:0 14px 30px -12px rgba(0,0,0,.5);width:max-content;max-width:min(86vw,460px);text-align:center}
+@media (max-width:380px){.kt-list{grid-template-columns:30px minmax(0,1fr);column-gap:8px}.kt-slot{left:38px}.kt-card{grid-template-columns:auto minmax(0,1fr) 42px 26px;gap:8px;padding-left:12px}.kt-rank{width:30px;height:30px}.kt-name{font-size:15px}}
+@media (prefers-reduced-motion:reduce){.kt-tapring{display:none}.kt-item,.kt-slot,.kt-card,.kt-flip,.kt-tail,.kt-stepper-fill,.kt-bar::before,.kt-ov-bars>i::before{transition:none!important}.kt-bar::after{animation:none!important}.kt-test.is-running .tl-dot{animation:none}}
+
+/* ---------- Explainer animation ("Zo werkt het") ---------- */
+.ki{position:fixed;inset:0;z-index:60;display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:10px;background:#0b0c0e;color:#f2f1ee;
+  padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 14px);font-family:Inter,system-ui,sans-serif}
+.ki[hidden]{display:none}
+.ki-top{display:flex;align-items:center;gap:10px;min-height:44px}
+.ki-top img{height:22px;filter:brightness(0) invert(1);opacity:.9}
+.ki-top b{font-size:24px;font-weight:800;color:#f2f1ee;letter-spacing:-.01em;line-height:1.1;padding-left:14px;border-left:1px solid rgba(255,255,255,.2)}   /* the title "Tutorial": big and clear */
+.ki-top .ki-btn{margin-left:auto}
+.ki-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:999px;border:1px solid rgba(255,255,255,.26);
+  background:rgba(255,255,255,.08);color:#fff;font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.ki-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+.ki-btn.primary{background:#f4f3f0;color:#141516;border-color:#f4f3f0}
+.ki-btn[hidden]{display:none}
+.ki-btn:disabled{opacity:.35;cursor:default}
+.ki-box{position:relative;overflow:hidden;border-radius:24px;background:radial-gradient(110% 90% at 50% 30%,#1b1d21 0%,#0e0f11 62%,#0b0c0e 100%);contain:strict}
+.ki-fit{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(var(--ki-scale,1))}
+.ki-subs{position:relative;min-height:62px}
+.ki-sub{position:absolute;left:0;right:0;top:0;margin:0 auto;max-width:760px;text-align:center;font-size:clamp(17px,2.3vw,22px);line-height:1.3;font-weight:700;opacity:0;letter-spacing:-.005em}
+.ki-sub.final{font-size:clamp(20px,3vw,30px);letter-spacing:-.015em}
+.ki-sub.final span{display:block;color:#a9a7a2;font-size:.62em;font-weight:650;margin-top:4px;letter-spacing:0}
+.ki-sr{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.ki-bottom{position:relative;display:flex;align-items:center;justify-content:center;gap:10px;min-height:48px}
+.ki-progress{position:absolute;left:16%;right:16%;top:50%;height:3px;margin-top:-1.5px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden}
+.ki-progress i{position:absolute;inset:0;background:#f4f3f0;transform-origin:0 50%;transform:scaleX(0)}
+.ki-dots{display:flex;gap:7px}
+.ki-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.25)}
+.ki-dots i.on{background:#fff}
+.ki-steps,.ki-end{display:flex;align-items:center;gap:10px}
+.ki-steps[hidden],.ki-end[hidden],.ki-progress[hidden]{display:none}
+html.ki-open,html.ki-open body{overflow:hidden}
+
+/* the ledlines in one row, without a frame (geometry is set inline, see sceneHtml) */
+.ki-world{position:absolute;transform-origin:50% 50%;will-change:transform,opacity}
+.ki-close{position:absolute;left:50%;top:50%;transform-origin:50% 50%;will-change:transform,opacity;background:#101113;overflow:hidden}
+.ki-world i,.ki-close i{position:absolute;display:block;box-sizing:border-box}
+.ki-gl{opacity:0}
+/* black frame profile with fine light edges; the round white opal ledline cover on it glows evenly, like neon */
+.ki-dif{overflow:hidden;background:#ecece8;box-shadow:0 5px 12px -7px rgba(0,0,0,.75)}   /* no black frame: the sleeve alone, with a soft shadow */
+/* the two white rims (flanges) of the sleeve, over the light; a fine line where they meet the glowing core */
+.ki-rim{background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(232,232,227,.9));box-shadow:inset 0 -1px 0 rgba(0,0,0,.16)}
+.ki-rim.b{bottom:0;background:linear-gradient(0deg,rgba(255,255,255,.96),rgba(232,232,227,.9));box-shadow:inset 0 1px 0 rgba(0,0,0,.16)}
+.ki-dim{opacity:0;background:#000}
+.ki-dif i{top:0;bottom:0}
+.ki-fb{left:0;right:0}
+.ki-px{transform:scaleX(0)}
+.ki-tl{opacity:0}
+.ki-pl{opacity:0;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.5) 28%,rgba(255,255,255,.95) 50%,rgba(255,255,255,.5) 72%,rgba(255,255,255,0))}
+.ki-wv{opacity:0}
+.ki-red{opacity:0}
+/* the outro: the Aluvision logo above the stand; the ledline colours flow through it (logo as a mask), then it turns white */
+.ki-brand{position:absolute;left:50%;opacity:0;transform-origin:50% 50%;pointer-events:none}
+.ki-brand img{display:block;width:100%;height:auto;filter:brightness(0) invert(1);opacity:0}
+.ki-brand-flow{position:absolute;inset:0;overflow:hidden;-webkit-mask:url(../../apps/WebApp/assets/aluvision-logo.png) center/contain no-repeat;mask:url(../../apps/WebApp/assets/aluvision-logo.png) center/contain no-repeat}
+.ki-brand-flow i{position:absolute;top:0;bottom:0;left:0;width:300%;background:linear-gradient(90deg,#2F6BFF 0%,#FFC61A 12.5%,#9B4DFF 25%,#1FC45B 37.5%,#2F6BFF 50%,#FFC61A 62.5%,#9B4DFF 75%,#1FC45B 87.5%,#2F6BFF 100%)}
+.ki-tb{opacity:0}
+.ki-leds,.ki-shade{pointer-events:none}
+/* the connector on the stand, as on the photos: white cable, white round plastic connector with a red O-ring */
+.ki-cb{border-style:solid;border-color:#e6e6e1}
+.ki-cb2{background:#e6e6e1;-webkit-mask-image:linear-gradient(180deg,#000 25%,transparent);mask-image:linear-gradient(180deg,#000 25%,transparent)}
+.ki-rib{background:repeating-linear-gradient(180deg,#f4f4f0 0 26%,#b9bab5 26% 40%)}
+.ki-cyl{background:linear-gradient(90deg,#c4c5c0 0%,#fff 42%,#ebebe7 62%,#adaeaa 100%)}
+.ki-oring{background:#e0412f}
+.ki-nut{background:repeating-linear-gradient(90deg,rgba(0,0,0,0) 0 14%,rgba(0,0,0,.13) 14% 21%),linear-gradient(90deg,#c9cac5 0%,#fff 45%,#ecece8 66%,#b1b2ad 100%);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+/* the opening: the same ledlines as a thin line drawing (like the box), then the real ones fade in and light up */
+.ki-ren{opacity:0}
+.ki-la{position:absolute;left:0;top:0;overflow:visible;opacity:0;pointer-events:none}
+.ki-la g{fill:none;stroke:#e9e8e3;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.ki-la g>*{vector-effect:non-scaling-stroke}
+.ki-la .f{stroke-opacity:.42}
+.ki-la .c{stroke:url(#ki-la-fade)}
+.ki-la .o{stroke:#e0412f;stroke-width:1.8}
+.ki-comet{left:0;top:0;width:260px;height:120px;margin:-60px 0 0 -130px;border-radius:50%;opacity:0;
+  background:radial-gradient(closest-side,rgba(255,255,255,.4),rgba(255,255,255,.12) 55%,rgba(255,255,255,0))}
+.ki-mark{border-style:dashed;border-color:rgba(255,255,255,.9);border-radius:50%;opacity:0}
+.ki-match{border-radius:50%;opacity:0}
+.ki-world i.ki-check{border-radius:50%;background:#f4f3f0;color:#141516;display:grid;place-items:center;opacity:0;box-shadow:0 6px 14px rgba(0,0,0,.45)}
+.ki-world i.ki-cross{border-radius:50%;background:#e9a24a;color:#1b1206;display:grid;place-items:center;opacity:0;box-shadow:0 6px 14px rgba(0,0,0,.45)}
+.ki-cross svg{width:58%;height:58%;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round}
+.ki-check svg{width:62%;height:62%;fill:none;stroke:currentColor;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* the phone next to the ledlines (same look as the app screen, with its two steps) */
+.ki-phone{position:absolute;box-sizing:border-box;border-radius:36px;border:8px solid #050506;background:var(--bg);color:var(--ink);overflow:hidden;
+  box-shadow:0 36px 60px -30px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.08);will-change:transform,opacity}
+.ki-pin{position:absolute;inset:0;padding:16px 16px 0;display:flex;flex-direction:column;gap:6px}
+.ki-stepper{position:relative;display:grid;grid-template-columns:1fr 1fr;padding-bottom:7px;margin-bottom:4px;font-size:11px;font-weight:700;color:var(--muted)}
+.ki-stepper::before,.ki-stepper>i{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:3px;background:var(--line)}
+.ki-stepper>i{background:var(--ink);transform-origin:0 50%;transform:scaleX(.5)}
+.ki-swap{display:grid}
+.ki-swap>*{grid-area:1/1}
+.ki-eyebrow{font-size:12px;font-weight:600;color:var(--muted)}
+.ki-title{font-size:21px;line-height:1.12;letter-spacing:-.02em;font-weight:800}
+.ki-sentence{font-size:12px;line-height:1.35;color:var(--muted)}
+.ki-sentence b{color:var(--ink);font-weight:700}
+.ki-tut{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;margin-top:2px;padding:3px 11px 3px 3px;border-radius:999px;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink);font-size:10.5px;font-weight:750;box-shadow:var(--surface-shadow)}
+.ki-tut i{display:grid;place-items:center;width:19px;height:19px;border-radius:50%;background:var(--ink);color:var(--panel)}
+.ki-tut svg{width:8px;height:8px;fill:currentColor;margin-left:1px}
+/* inside a strip / overview pill: colour pulse (dark layer), red for the test light, and the white chase band */
+.ki-cdim,.ki-cred,.ki-cch,.ki-ored,.ki-och,.ki-cblob{position:absolute;top:0;bottom:0;pointer-events:none}
+.ki-cblob{left:0;opacity:0}
+.ki-cdim,.ki-cred,.ki-ored{left:0;right:0;opacity:0}
+.ki-cdim{background:#000}
+.ki-cred,.ki-ored{background:#F0473D}
+.ki-cch,.ki-och{left:0;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.55) 30%,rgba(255,255,255,.95) 50%,rgba(255,255,255,.55) 70%,rgba(255,255,255,0))}
+.ki-ovlabel{font-size:11px;font-weight:650;color:var(--muted);margin-top:4px}
+.ki-ov{display:flex;gap:5px;margin:0 0 8px}
+.ki-os{position:relative;flex:1 1 0;height:10px;border-radius:2px;overflow:hidden;will-change:transform}
+.ki-ot{position:absolute;right:0;top:0;bottom:0;width:34%;transform-origin:100% 50%;transform:scaleX(0)}
+.ki-ot.l,.ki-ct.l{right:auto;left:0;transform-origin:0 50%}
+.ki-cards{position:relative}
+.ki-card{position:absolute;left:36px;right:0;box-sizing:border-box;display:grid;grid-template-columns:auto minmax(0,1fr) 32px 16px;align-items:center;gap:8px;
+  padding:0 8px 0 10px;border-radius:15px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--surface-shadow);will-change:transform}
+.ki-rank{position:absolute;left:0;width:28px;display:grid;place-items:center}
+.ki-rank b{width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--panel);display:grid;place-items:center;font-size:13px;font-weight:800}
+.ki-name{font-weight:700;font-size:13px;min-width:3.3em}
+.ki-bar{position:relative;height:10px;min-width:0;border-radius:2px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.ki-ct{position:absolute;right:0;top:0;bottom:0;width:34%;transform-origin:100% 50%;transform:scaleX(0)}
+.ki-flip{position:relative;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--soft);display:grid;place-items:center;opacity:0}
+.ki-flip svg,.ki-grip svg,.ki-test svg,.ki-done svg,.ki-next svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ki-grip{display:grid;place-items:center;color:var(--muted)}
+.ki-grip svg{fill:currentColor;stroke:none}
+.ki-ring{position:absolute;left:31px;right:-5px;border-radius:19px;border:3px solid #e9a24a;opacity:0;box-shadow:0 0 0 6px rgba(233,162,74,.18)}
+.ki-screen{position:absolute;inset:0}
+/* scene 5: ripples on purple's flip button and a label above it, while the app is zoomed in */
+.ki-halo{position:absolute;inset:-3px;border-radius:50%;border:2.5px solid #e9a24a;opacity:0}
+.ki-tip{position:absolute;left:0;top:0;width:0;height:0;opacity:0;transform-origin:0 0;z-index:2}
+.ki-tip b{position:absolute;left:0;bottom:7px;transform:translateX(-50%);white-space:nowrap;padding:6px 13px;border-radius:999px;background:#e9a24a;color:#1b1206;
+  font-size:14px;font-weight:800;box-shadow:0 8px 18px rgba(0,0,0,.3)}
+.ki-tip b::after{content:"";position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-bottom:0;border-top-color:#e9a24a}
+.ki-foot{position:absolute;left:16px;right:16px;bottom:16px;height:46px}
+.ki-foot>*{position:absolute;top:0;bottom:0}
+.ki-next{left:0;right:0;border-radius:15px;background:#1c1c1e;color:#fff;display:flex;align-items:center;justify-content:center;gap:7px;font-weight:800;font-size:15px}
+.ki-next svg{stroke-width:2.3}
+.ki-back{left:0;width:72px;border-radius:15px;background:var(--soft);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:3px;color:var(--ink);box-sizing:border-box;font-size:12.5px;font-weight:800;opacity:0}
+.ki-back svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.ki-test{left:80px;width:84px;border-radius:15px;background:var(--soft);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:5px;color:var(--ink);box-sizing:border-box;font-size:13px;font-weight:800;opacity:0}
+.ki-done{left:172px;right:0;border-radius:15px;background:#1c1c1e;color:#fff;display:flex;align-items:center;justify-content:center;gap:7px;font-weight:800;font-size:15px;opacity:0}
+body[data-theme=dark] .ki-done,body[data-theme=dark] .ki-next{background:#f4f3f0;color:#1c1c1e}
+.ki-finger{position:absolute;left:0;top:0;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(255,255,255,.88);opacity:0;
+  box-shadow:0 0 0 7px rgba(255,255,255,.22),0 10px 22px rgba(0,0,0,.45);will-change:transform,opacity}
+body[data-theme=light] .ki-finger{background:rgba(28,28,30,.55);box-shadow:0 0 0 7px rgba(28,28,30,.14),0 10px 22px rgba(0,0,0,.35)}
+.ki[data-layout=port] .ki-title{font-size:24px}
+.ki[data-layout=port] .ki-eyebrow{font-size:13px}
+.ki[data-layout=port] .ki-name{font-size:15px}
+.ki[data-layout=port] .ki-sentence{font-size:13px}
+.ki[data-layout=port] .ki-tip b{font-size:15px}
+@media (max-width:520px){.ki-top b{font-size:20px;padding-left:10px}}
+
+/* C142p prototype "Ledlines herkennen" + pixels per ledline. The cards, buttons, step bar, footer and the whole
+   tutorial look come from ../ketting-leggen/ketting.css (C141p); this file only adds what is new here.
+   hk-* = the app screen and the simulated stand, hkm-* = the phone in the tutorial, ki-* additions = the tutorial stand. */
+
+/* ---------- the app screen ---------- */
+.kt-app[data-step="3"] [data-only="1"],.kt-app[data-step="3"] [data-only="2"],.kt-app:not([data-step="3"]) [data-only="3"]{display:none}
+.kt-app[data-step="3"] .kt-stepper-fill{transform:none}
+/* the purpose, above the steps: why you set the ledlines up */
+.hk-intro{display:flex;align-items:center;gap:11px;margin:2px 0 10px}
+.hk-intro>i{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:13px;background:var(--ink);color:var(--panel)}
+.hk-intro svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.hk-intro svg circle{fill:currentColor;stroke:none;animation:hk-run 1.8s ease-in-out infinite}
+@keyframes hk-run{0%{transform:translateX(-9px);opacity:0}25%,75%{opacity:1}100%{transform:translateX(0);opacity:0}}
+.hk-stepno{font-style:normal;margin-left:6px;padding:2px 8px;border-radius:999px;background:var(--soft);border:1px solid var(--line);font-size:11.5px;font-weight:800;color:var(--muted);vertical-align:2px;white-space:nowrap}
+.hk-intro b{display:block;font-size:16px;line-height:1.2;font-weight:800;color:var(--ink)}
+.hk-intro small{display:block;margin-top:1px;font-size:13.5px;line-height:1.35;color:var(--muted);font-weight:600}
+.hk-eyebrow{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:13px;font-weight:650}
+.hk-eyebrow i{width:12px;height:12px;border-radius:50%;background:var(--c,var(--muted));box-shadow:0 0 0 3px color-mix(in srgb,var(--c,#888) 22%,transparent)}
+.hk-eyebrow b,.hkm-eyebrow b{color:var(--ci,var(--ink));font-weight:800}
+body[data-theme=dark] .hk-eyebrow b,body[data-theme=dark] .hkm-eyebrow b{color:var(--cd,var(--ink))}
+
+/* step 1: four big colour choices */
+.hk-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hk-tile{position:relative;display:grid;gap:10px;padding:14px 14px 12px;border-radius:18px;border:2px solid var(--line);background:var(--panel);color:var(--ink);
+  font:inherit;text-align:left;cursor:pointer;box-shadow:var(--surface-shadow);transition:border-color .2s ease,box-shadow .25s ease,transform .15s ease}
+.hk-tile:active{transform:scale(.97)}
+.hk-tile[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 28%,transparent),var(--surface-shadow)}
+.hk-tile b{font-size:15px;font-weight:800}
+/* choosing a colour: the choice lights up in its own colour and fades */
+.hk-tile.is-pulse{animation:hk-tpulse 1.2s ease-out}
+@keyframes hk-tpulse{0%{box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 90%,transparent),0 0 26px color-mix(in srgb,var(--c) 60%,transparent)}
+  100%{box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 28%,transparent),var(--surface-shadow)}}
+.hk-tile small{display:block;margin-top:1px;font-size:12.5px;color:var(--muted);font-weight:600}
+.hk-tick{position:absolute;right:10px;top:10px;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;background:var(--soft);
+  transition:background .2s ease,border-color .2s ease}
+.hk-tick svg{width:15px;height:15px;fill:none;stroke:#fff;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;opacity:0;transform:scale(.6);transition:opacity .2s ease,transform .25s cubic-bezier(.3,1.5,.5,1)}
+.hk-tile[aria-pressed="true"] .hk-tick{background:var(--ink);border-color:var(--ink)}
+.hk-tile[aria-pressed="true"] .hk-tick svg{opacity:1;transform:none}
+body[data-theme=dark] .hk-tick svg{stroke:#1c1c1e}
+/* a ledline as the real sleeve: glowing core between two white rims, with the connector */
+.hk-sleeve{position:relative;display:block;height:16px;border-radius:2px;background:var(--c);overflow:hidden;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.93),inset 0 4.2px 0 rgba(0,0,0,.1),inset 0 -3px 0 rgba(255,255,255,.93),inset 0 -4.2px 0 rgba(0,0,0,.1),0 0 14px color-mix(in srgb,var(--c) 55%,transparent)}
+.hk-tile .hk-line{display:flex;align-items:center;margin-right:30px}
+.hk-tile .hk-line .hk-sleeve{flex:1}
+.hk-help-btn{justify-self:center;margin-top:4px;min-height:40px;padding:0 6px;border:0;background:none;color:var(--muted);font:inherit;font-size:14px;font-weight:700;
+  text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.hk-pick{display:grid;gap:10px}
+.hk-help{padding:14px 16px;border-radius:16px;background:var(--panel);border:1px solid var(--line);font-size:14px;line-height:1.45;color:var(--ink)}
+.hk-help ol{margin:6px 0 10px;padding-left:20px}
+.hk-help button{min-height:40px;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:var(--soft);color:var(--ink);font:inherit;font-weight:800;cursor:pointer}
+
+/* step 2: the pixel picker */
+.hk-px{display:grid;gap:14px}
+/* the big number, then −10 · −1 · +1 · +10 (hold = faster), then the strip: tap or drag to jump */
+.hk-count{text-align:center}
+.hk-count b{display:block;font-size:46px;line-height:1;font-weight:850;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.hk-count small{display:block;margin-top:4px;color:var(--muted);font-size:13px;font-weight:650}
+.hk-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.hk-pm{position:relative;height:56px;border-radius:16px;border:1px solid var(--line);background:var(--soft);color:var(--ink);font:inherit;font-size:19px;font-weight:850;
+  letter-spacing:-.01em;font-variant-numeric:tabular-nums;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;transition:transform .12s ease}
+.hk-pm.one{background:var(--ink);border-color:var(--ink);color:var(--panel)}
+.hk-pm:active{transform:scale(.94)}
+/* the strip is the slider: drag anywhere; the big handle sits under the red block */
+.hk-track{position:relative;padding:4px 0 0;touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer}
+.hk-strip{display:flex;align-items:center}
+.hk-strip .kt-plug{margin-right:0}
+.hk-sl{position:relative;flex:1;height:22px;border-radius:2px;overflow:hidden;background:#2a2b2f;outline-offset:6px}
+.hk-sl i{position:absolute;top:0;bottom:0;left:0}
+.hk-sl .hk-wf{width:100%;background:#fdfdfb;transform-origin:0 50%}
+.hk-sl .hk-rb{width:var(--px1);background:#F0473D;box-shadow:0 0 8px rgba(240,71,61,.8)}
+.hk-sl .hk-rim{right:0;box-shadow:inset 0 3.5px 0 rgba(255,255,255,.93),inset 0 4.8px 0 rgba(0,0,0,.12),inset 0 -3.5px 0 rgba(255,255,255,.93),inset 0 -4.8px 0 rgba(0,0,0,.12)}
+.hk-handle{position:relative;height:50px;margin-left:var(--plugw,39px)}
+.hk-thumb{position:absolute;top:6px;left:0;width:44px;height:44px;margin-left:-22px;border-radius:50%;background:var(--panel);border:2px solid var(--ink);
+  box-shadow:0 6px 16px -6px rgba(0,0,0,.5);display:grid;place-items:center;transition:transform .15s ease}
+.hk-thumb::before{content:"";position:absolute;left:50%;top:-8px;width:2px;height:8px;margin-left:-1px;background:var(--ink)}
+.hk-thumb svg{width:20px;height:20px;fill:currentColor;color:var(--muted)}
+.hk-track.is-dragging .hk-thumb{transform:scale(1.08)}
+.hk-scale{display:flex;justify-content:space-between;margin:-4px 0 0 var(--plugw,39px);color:var(--muted);font-size:11.5px;font-weight:650}
+/* a round mark: ✓ */
+.hk-mark{flex:none;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:#e9a24a;color:#1b1206}
+.hk-mark.ok{background:#1FC45B;color:#fff}
+.hk-mark svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+
+/* step 3: done */
+.hk-done{display:grid;gap:10px}
+.hk-done ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.hk-done li{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;min-height:58px;padding:8px 14px;border-radius:16px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--surface-shadow)}
+.hk-done li .hk-sleeve{width:44px;height:12px}
+.hk-done li b{font-size:15px}
+.hk-done li small{display:block;color:var(--muted);font-size:12.5px;font-weight:600}
+.hk-done li .hk-mark{width:24px;height:24px}
+.hk-done li.off{background:transparent;box-shadow:none;border-style:dashed}
+.hk-done li.off .hk-sleeve{opacity:.28;box-shadow:none}
+.hk-next{display:flex;gap:12px;align-items:flex-start;margin-top:6px;padding:14px 16px;border-radius:16px;background:color-mix(in srgb,var(--ink) 6%,var(--panel));border:1px solid var(--line)}
+.hk-next>i{flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:var(--ink);color:var(--panel)}
+.hk-next svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hk-next p{margin:0;font-size:14px;line-height:1.45;color:var(--muted)}
+.hk-next p b{color:var(--ink)}
+.hk-off{font-size:12px;font-weight:800;color:var(--muted);padding:3px 10px;border-radius:999px;border:1px solid var(--line)}
+
+/* ---------- the simulated stand (for playing; not part of the real app) ---------- */
+.hk-sim{display:grid;gap:8px;padding:12px 14px 10px;border-radius:20px;background:radial-gradient(110% 90% at 50% 20%,#1b1d21 0%,#0e0f11 70%);color:#f2f1ee;
+  box-shadow:0 18px 40px -26px rgba(0,0,0,.8)}
+.hk-sim-head{display:flex;align-items:center;gap:8px}
+.hk-sim-head b{font-size:15px}
+.hk-sim-head span{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#a9a7a2;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.08)}
+.hk-new{margin-left:auto;min-height:36px;padding:0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:#fff;font:inherit;font-size:13px;font-weight:750;cursor:pointer}
+/* the simulated stand, drawn like the tutorial and scaled to the card */
+.hk-sim-cap{margin:-2px 0 2px;font-size:12.5px;line-height:1.35;color:#a9a7a2}
+.hk-stand{position:relative;overflow:hidden}
+.hk-simw.ki-world{position:absolute;left:0;top:0;transform-origin:0 0;will-change:auto}
+.hk-simw .ki-px{opacity:0;transition:opacity .35s ease}
+.hk-simw .ki-gl,.hk-simw .hk-wgl{transition:opacity .35s ease}
+.hk-simw .ki-gl.on{opacity:.75}
+.hk-simw .hk-wgl.on{opacity:.34}
+.hk-simw .ki-dif i.hk-dark,.hk-simw .ki-dif i.hk-wfs,.hk-simw .ki-dif i.hk-rbs,.hk-simw .ki-dif i.hk-an{transition:opacity .3s ease}
+.hk-simw .ki-dif.on .ki-px{opacity:1}
+.hk-simw .ki-dif.off .hk-dark,.hk-simw .ki-dif.test .hk-dark{opacity:1}
+.hk-simw .ki-dif.test .hk-wfs,.hk-simw .ki-dif.test .hk-rbs{opacity:1;transition-delay:.3s}
+.hk-simw .ki-dif .hk-rbs.gone{visibility:hidden}
+.hk-simw .ki-dif.run .hk-an{opacity:1}
+.hk-simw .hk-an.run>i{width:30%;animation:hk-band 1.6s cubic-bezier(.45,0,.55,1) infinite}
+.hk-simw .hk-an.flow{background:repeating-linear-gradient(90deg,#ff3b5c 0,#ffb03b 40px,#ffe93b 80px,#3bff8a 120px,#3bb8ff 160px,#8a5bff 200px,#ff3b5c 240px);background-size:240px 100%;animation:hk-flow 3s linear infinite}
+.hk-simw .hk-an.breathe>i{right:0;animation:hk-breathe 1.4s ease-in-out infinite}
+.hk-simw .ki-dif.is-pulse .hk-dark{animation:hk-spulse .55s ease-in-out 2}
+.hk-simw .ki-gl.is-pulse{animation:hk-sglow .55s ease-in-out 2}
+@keyframes hk-band{from{left:-30%}to{left:100%}}
+@keyframes hk-flow{to{background-position:240px 0}}
+@keyframes hk-breathe{0%,100%{opacity:.22}50%{opacity:1}}
+@keyframes hk-spulse{0%,100%{opacity:0}50%{opacity:.5}}
+@keyframes hk-sglow{0%,100%{opacity:.75}50%{opacity:.25}}
+.hk-sim-st{margin:2px 0 0;font-size:13px;line-height:1.4;color:#e9e7e1;font-weight:650;min-height:18px}
+@media (prefers-reduced-motion:reduce){.hk-tile,.hk-tick svg,.hk-thumb,.hk-simw .ki-dif i,.hk-simw .ki-px,.hk-simw .ki-gl,.hk-simw .hk-wgl{transition:none!important}
+  .hk-simw .hk-an,.hk-simw .hk-an i,.hk-simw .is-pulse,.hk-simw .is-pulse .hk-dark,.hk-tile.is-pulse,.hk-intro svg circle{animation:none!important}}
+
+/* ---------- tutorial: the receiver, cables and the pixel test light on the stand ---------- */
+.ki-world .hk-cables{position:absolute;left:0;top:0;overflow:visible}
+.hk-cables path{fill:none;stroke:#e6e6e1;stroke-width:3;stroke-linecap:round}
+.ki-world i.hk-rcvb{border-radius:12px;background:linear-gradient(180deg,#3a3c41,#1f2023);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 10px 20px -10px #000}
+.ki-world i.hk-sockb{border-radius:4px;background:#f2f2ee;box-shadow:0 1px 0 rgba(0,0,0,.4)}
+.ki-world i.hk-ledst{border-radius:50%;background:#1FC45B;box-shadow:0 0 10px #1FC45B}
+.ki-world i.hk-brand{font-style:normal;color:#bdbcb7;font-size:11px;font-weight:800;letter-spacing:.08em;display:grid;place-items:center}
+.ki-dif i.hk-dark{background:#2a2b2f;opacity:0}
+.ki-dif i.hk-wfs{background:#fdfdfb;transform-origin:0 50%;opacity:0}
+.ki-dif i.hk-rbs{background:#F0473D;box-shadow:0 0 10px 2px rgba(240,71,61,.9);opacity:0}
+/* close-up of ledline 1: faint seams between the pixels, and a white glow as far as the white burns */
+.ki-dif i.hk-grid{background:repeating-linear-gradient(90deg,rgba(0,0,0,0) 0 8.2px,rgba(30,30,34,.2) 8.2px 9px);opacity:0}
+.ki-world i.hk-wgl{background:#fff;filter:blur(12px);opacity:0;transform-origin:0 50%}
+.ki-fit .hk-focus{position:absolute;left:880px;top:-500px;width:1000px;height:1700px;background:linear-gradient(90deg,rgba(12,13,15,0),rgba(12,13,15,.95) 90px);opacity:0;pointer-events:none}
+.ki[data-layout=port] .hk-focus{left:520px;top:330px}
+.ki-world i.hk-sockb.hk-hole{background:#141518;box-shadow:inset 0 1px 3px rgba(0,0,0,.9),0 0 0 1.5px #5b5d63}
+.ki-world i.hk-ring{border-radius:11px;border:2.5px solid #e9a24a;box-shadow:0 0 14px rgba(233,162,74,.55);opacity:0}
+/* the data running through each cable, and the three own animations (rainbow, white run, breathing) */
+.hk-cables path.hk-data{stroke-width:2.6;stroke-dasharray:5 12;opacity:0}
+.ki-dif i.hk-an{opacity:0;overflow:hidden}
+.hk-an.one{background:#F0473D}
+.hk-an.one>i{background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.6) 30%,#fff 50%,rgba(255,255,255,.6) 70%,rgba(255,255,255,0))}
+/* every ledline looks the same: a fixed layer order inside the sleeve (Safari otherwise draws animated layers over the rims) */
+.ki-dif{isolation:isolate}
+.ki-dif i.hk-an{z-index:1}
+.ki-dif i.hk-dark,.ki-dif i.hk-wfs{z-index:2}
+.ki-dif i.hk-rbs,.ki-dif i.hk-grid{z-index:3}
+.ki-dif i.ki-shade{z-index:4}
+.ki-dif i.ki-rim{z-index:5}
+/* Safari (live, compositor): without their own layer the shade and rims of the second receiver's ledlines were drawn
+   UNDER the animated colour, so those ledlines looked flat; on their own layer they always stay on top */
+.ki-dif i.ki-shade,.ki-dif i.ki-rim{will-change:transform}
+.hk-an.breathe.c2>i{background:#3bd1ff}
+.hk-an.run.c2{background:#2b1450}
+/* the zone: both receivers together */
+.ki-world .hk-r2{position:absolute}
+.ki-world i.hk-zone{border:2px dashed rgba(255,255,255,.34);border-radius:30px;opacity:0}
+.hk-zone b{position:absolute;left:26px;top:-15px;padding:4px 12px;border-radius:999px;background:#1a1b1f;border:1px solid rgba(255,255,255,.22);color:#e9e7e1;font-size:18px;font-weight:800;font-style:normal;white-space:nowrap}
+.hk-an.stripes{background:#20160a}
+.hk-an.stripes>i{background:repeating-linear-gradient(90deg,#ffb03b 0 14px,rgba(0,0,0,0) 14px 30px)}
+.hk-an.run{background:#123c4c}
+.hk-an.run>i{background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.95) 50%,rgba(255,255,255,0))}
+.hk-an.breathe{background:#1d1e22}
+.hk-an.breathe>i{background:#ff3b9a;opacity:.25}
+.ki-world i.hk-okb{border-radius:50%;background:#1FC45B;color:#fff;display:grid;place-items:center;opacity:0;box-shadow:0 6px 14px rgba(0,0,0,.45)}
+.hk-okb svg{width:60%;height:60%;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- tutorial: the phone (same look as the app screen above) ---------- */
+.hkm-scr{position:absolute;inset:0;padding:20px 16px 0;display:flex;flex-direction:column;gap:6px;opacity:0}
+.hkm-eyebrow{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:650;color:var(--muted)}
+.hkm-swap{display:grid}
+.hkm-swap>*{grid-area:1/1}
+.hkm-eyebrow i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.hkm-tiles{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:4px}
+.hkm-tile{position:relative;display:grid;gap:7px;padding:9px 9px 8px;border-radius:13px;border:1px solid var(--line);background:var(--panel);box-shadow:var(--surface-shadow)}
+.hkm-tile b{font-size:11.5px;font-weight:800}
+.hkm-tile small{display:block;font-size:10px;color:var(--muted);font-weight:600}
+.hkm-tile .hk-sleeve{height:10px;margin-right:22px}
+.hkm-sel{position:absolute;inset:-1px;border-radius:13px;border:2px solid var(--ink);opacity:0;box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 30%,transparent)}
+.hkm-tick{position:absolute;right:7px;top:7px;width:18px;height:18px;border-radius:50%;border:1px solid var(--line);background:var(--soft)}
+.hkm-tick i{position:absolute;inset:-1px;border-radius:50%;background:var(--ink);display:grid;place-items:center;opacity:0}
+.hkm-tick svg{width:11px;height:11px;fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+body[data-theme=dark] .hkm-tick svg{stroke:#1c1c1e}
+.hkm-help{align-self:center;font-size:10.5px;font-weight:700;color:var(--muted);text-decoration:underline;margin-top:2px}
+.hkm-count{margin-top:6px}
+.hkm-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:6px}
+.hkm-steps span{height:26px;border-radius:9px;display:grid;place-items:center;font-size:11.5px;font-weight:850;border:1px solid var(--line);background:var(--soft);color:var(--ink)}
+.hkm-steps span.one{background:var(--ink);border-color:var(--ink);color:var(--panel)}
+.hkm-intro .hk-stepno{font-size:8px;padding:1px 5px;margin-left:4px;vertical-align:1px}
+.hkm-num{position:relative;display:block;height:34px;text-align:center}
+.hkm-num b{position:absolute;left:0;right:0;top:0;font-size:30px;line-height:1;font-weight:850;letter-spacing:-.03em;opacity:0}
+.hkm-num small{position:absolute;left:0;right:0;bottom:-6px;font-size:9.5px;color:var(--muted);font-weight:650}
+.hkm-strip{display:flex;align-items:center;margin-top:12px}
+.hkm-sl{position:relative;flex:1;height:14px;border-radius:2px;overflow:hidden;background:#2a2b2f}
+.hkm-sl i{position:absolute;top:0;bottom:0;left:0}
+.hkm-sl .w{width:100%;background:#fdfdfb;transform-origin:0 50%}
+.hkm-sl .r{width:3%;background:#F0473D}
+.hkm-sl .rim{right:0;box-shadow:inset 0 2.5px 0 rgba(255,255,255,.93),inset 0 3.4px 0 rgba(0,0,0,.12),inset 0 -2.5px 0 rgba(255,255,255,.93),inset 0 -3.4px 0 rgba(0,0,0,.12)}
+.hkm-handle{position:relative;height:30px;margin-left:28px}
+.hkm-thumb{position:absolute;top:5px;left:0;width:26px;height:26px;margin-left:-13px;border-radius:50%;background:var(--panel);border:2px solid var(--ink);box-shadow:0 4px 10px -4px rgba(0,0,0,.5)}
+.hkm-intro{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+.hkm-intro>i{flex:none;display:grid;place-items:center;width:24px;height:24px;border-radius:8px;background:var(--ink);color:var(--panel)}
+.hkm-intro svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+.hkm-intro svg circle{fill:currentColor;stroke:none}
+.hkm-intro b{display:block;font-size:11px;font-weight:800}
+.hkm-intro small{display:block;font-size:9px;line-height:1.3;color:var(--muted);font-weight:600}
+.hkm-pulse{position:absolute;inset:-1px;border-radius:13px;box-shadow:0 0 0 2.5px var(--c),0 0 18px 3px color-mix(in srgb,var(--c) 60%,transparent);opacity:0}
+.hkm-miss{position:absolute;inset:-1px;border-radius:13px;border:2px dashed #e9a24a;opacity:0}
+.hkm-scale{display:flex;justify-content:space-between;margin:-6px 0 0 28px;font-size:9px;color:var(--muted);font-weight:650}
+.hkm-done{display:grid;gap:6px;margin-top:4px}
+.hkm-row{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:9px;min-height:34px;padding:3px 10px;border-radius:12px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--surface-shadow)}
+.hkm-row .hk-sleeve{height:8px}
+.hkm-row b{display:block;font-size:11.5px;font-weight:800}
+.hkm-row small{display:block;font-size:9.5px;color:var(--muted);font-weight:600}
+.hkm-row.off{background:transparent;box-shadow:none;border-style:dashed}
+.hkm-row.off .hk-sleeve{opacity:.28;box-shadow:none}
+.hkm-next{display:flex;gap:8px;align-items:flex-start;margin-top:8px;padding:8px 10px;border-radius:11px;background:color-mix(in srgb,var(--ink) 6%,var(--panel));border:1px solid var(--line)}
+.hkm-next>i{flex:none;display:grid;place-items:center;width:20px;height:20px;border-radius:7px;background:var(--ink);color:var(--panel)}
+.hkm-next svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.hkm-next span{font-size:9.5px;line-height:1.35;color:var(--muted)}
+.hkm-next b{color:var(--ink)}
+.ki[data-layout=port] .hkm-next span{font-size:11px}
+.hkm-ok{width:18px;height:18px;border-radius:50%;background:#1FC45B;color:#fff;display:grid;place-items:center}
+.hkm-ok svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.ki-next .hkm-lab{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:7px}
+.ki-next [data-lab="done"],.ki-next [data-lab="go"]{opacity:0}
+.ki[data-layout=port] .hkm-intro b{font-size:13px}
+.ki[data-layout=port] .hkm-intro small{font-size:10.5px}
+.ki[data-layout=port] .hkm-row b{font-size:13px}
+.ki[data-layout=port] .hkm-row small{font-size:11px}
+.ki[data-layout=port] .hkm-tile b{font-size:13px}
+.ki[data-layout=port] .hkm-tile small{font-size:11px}
+
+/* tutorial: more time to read. Bigger subtitles on a soft pill, and a pause button left of the progress bar */
+.ki .ki-sub{width:fit-content;max-width:min(780px,92%);padding:8px 18px;border-radius:16px;background:rgba(255,255,255,.07);font-size:clamp(19px,2.6vw,26px)}
+.ki .ki-sub.final{background:none}
+.ki .hk-pause{position:absolute;left:calc(16% - 54px);top:50%;width:40px;height:40px;min-height:0;margin-top:-20px;padding:0;border-radius:50%}
+.ki .hk-pause[hidden]{display:none}
+.ki .hk-pause svg{width:16px;height:16px;fill:currentColor}
+.ki.is-paused .ki-box{cursor:pointer}
+a.kt-done,a.kt-done:visited{text-decoration:none}   /* the button keeps its own text colour */
+@media (max-width:385px){html body .brand-bar>span.kt-proto-pill{display:none}}   /* small phones: the prototype label does not fit next to the logo */
+/* the test setup: only in this prototype, closed by default */
+.hk-proto>summary{list-style:none;display:flex;align-items:center;gap:8px;min-height:42px;padding:0 14px;border-radius:14px;border:1.5px dashed var(--line);
+  color:var(--muted);font-size:13.5px;font-weight:800;cursor:pointer;user-select:none;-webkit-user-select:none}
+.hk-proto>summary::-webkit-details-marker{display:none}
+.hk-proto>summary small{font-weight:650;opacity:.8}
+.hk-proto>summary i{display:grid;place-items:center;width:18px;height:18px;transition:transform .2s ease}
+.hk-proto>summary svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.hk-proto[open]>summary{margin-bottom:8px}
+.hk-proto[open]>summary i{transform:rotate(180deg)}
+.hk-proto[hidden]{display:none}
+/* step 2: which ledline you are setting, big ("Ledline 2 · 2 van 4" and one bar per ledline in its colour) */
+.hk-eyebrow:empty{display:none}
+.hk-now{display:grid;gap:10px;margin:2px 0 6px;padding:14px 16px;border-radius:18px;background:var(--panel);border:2px solid color-mix(in srgb,var(--c) 60%,var(--line));
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 14%,transparent),var(--surface-shadow)}
+.hk-now[hidden]{display:none}
+.hk-now-top{display:flex;align-items:center;gap:12px}
+.hk-now-dot{flex:none;width:44px;height:14px;border-radius:2px;background:var(--c);box-shadow:inset 0 2.5px 0 rgba(255,255,255,.92),inset 0 -2.5px 0 rgba(255,255,255,.92),0 0 12px color-mix(in srgb,var(--c) 55%,transparent)}
+.hk-now-top b{font-size:28px;line-height:1.05;font-weight:850;letter-spacing:-.02em;color:var(--ink)}
+.hk-now-of{margin-left:auto;flex:none;padding:5px 12px;border-radius:999px;background:var(--soft);border:1px solid var(--line);font-size:15px;font-weight:850;color:var(--ink)}
+.hk-now-segs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px}
+.hk-now-segs i{height:7px;border-radius:4px;background:color-mix(in srgb,var(--c) 25%,var(--line))}
+.hk-now-segs i.done{background:var(--c);opacity:.55}
+.hk-now-segs i.now{background:var(--c);box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--c)}
+/* the ruler: the ledline up close, pixel by pixel; swipe over it (14 px = 1 pixel); the red block stays in the middle */
+.hk-zoom{position:relative;height:70px;overflow:hidden;border-radius:16px;background:var(--soft);border:1px solid var(--line);touch-action:none;user-select:none;-webkit-user-select:none;
+  cursor:grab;outline-offset:3px;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 12%,#000 88%,transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 12%,#000 88%,transparent 100%)}
+.hk-zoom.is-dragging{cursor:grabbing}
+.hk-ztrack{position:absolute;left:0;top:11px;height:48px;will-change:transform}
+.hk-ztrack.snap{transition:transform .18s cubic-bezier(.2,.8,.2,1)}
+.hk-ztrack>i{position:absolute;left:0;top:0;height:26px}
+.hk-zbase{right:0;background:#2a2b2f;border-radius:2px}
+.hk-zw{background:#fdfdfb}
+.hk-zr{width:14px;background:#F0473D;box-shadow:0 0 10px rgba(240,71,61,.85)}
+.hk-zsep{right:0;background:repeating-linear-gradient(90deg,rgba(0,0,0,.32) 0 1.5px,transparent 1.5px 14px)}
+.hk-zrim{right:0;box-shadow:inset 0 3px 0 rgba(255,255,255,.93),inset 0 -3px 0 rgba(255,255,255,.93)}
+.hk-ztrack b{position:absolute;top:31px;transform:translateX(-50%);font-size:11.5px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+.hk-zmark{position:absolute;left:50%;top:6px;width:22px;height:36px;margin-left:-11px;border:2.5px solid var(--ink);border-radius:7px;pointer-events:none}
+.hk-px .hk-track{margin-top:2px}
+/* done: you can always connect an extra ledline later */
+/* the tutorial phone: the same big card and ruler */
+.hkm-swap>.hkm-nowb{display:grid;gap:6px}
+.hkm-now{display:grid;gap:6px;padding:7px 9px;border-radius:11px;background:var(--panel);border:1.5px solid color-mix(in srgb,var(--c) 60%,var(--line));box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 14%,transparent)}
+.hkm-now-top{display:flex;align-items:center;gap:8px}
+.hkm-now-dot{flex:none;width:24px;height:8px;border-radius:1.5px;background:var(--c);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.9),inset 0 -1.5px 0 rgba(255,255,255,.9)}
+.hkm-now-top b{font-size:16px;font-weight:850;letter-spacing:-.01em}
+.hkm-now-of{margin-left:auto;padding:2px 8px;border-radius:999px;background:var(--soft);border:1px solid var(--line);font-size:9.5px;font-weight:850}
+.hkm-now-segs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px}
+.hkm-now-segs i{height:4px;border-radius:2px;background:color-mix(in srgb,var(--c) 25%,var(--line))}
+.hkm-now-segs i.on{background:var(--c)}
+.hkm-zoom{position:relative;height:40px;margin-top:6px;overflow:hidden;border-radius:10px;background:var(--soft);border:1px solid var(--line);
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 12%,#000 88%,transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 12%,#000 88%,transparent 100%)}
+.hkm-ztrack{position:absolute;left:0;top:6px;height:30px}
+.hkm-ztrack>i{position:absolute;left:0;top:0;height:16px}
+.hkm-zbase{right:0;background:#2a2b2f}
+.hkm-zw{background:#fdfdfb;transform-origin:0 50%}
+.hkm-zr{width:9px;background:#F0473D;box-shadow:0 0 6px rgba(240,71,61,.8)}
+.hkm-zsep{right:0;background:repeating-linear-gradient(90deg,rgba(0,0,0,.3) 0 1px,transparent 1px 9px)}
+.hkm-zrim{right:0;box-shadow:inset 0 2px 0 rgba(255,255,255,.9),inset 0 -2px 0 rgba(255,255,255,.9)}
+.hkm-ztrack b{position:absolute;top:19px;transform:translateX(-50%);font-size:7.5px;font-weight:800;color:var(--muted)}
+.hkm-zmark{position:absolute;left:50%;top:3px;width:14px;height:22px;margin-left:-7px;border:1.5px solid var(--ink);border-radius:5px}
+.hkm-next.hkm-later{position:relative}
+.hkm-next svg{stroke:currentColor}
+.hkm-hl{position:absolute;inset:-2px;border-radius:12px;border:2px solid var(--ink);opacity:0;pointer-events:none}
+.hkm-next>i.hkm-hl{position:absolute;inset:-2px;width:auto;height:auto;border-radius:12px;border:2px solid var(--ink);background:none;opacity:0;pointer-events:none}
+/* portrait: room for subtitles of three lines, so they never run into the play bar */
+.ki .ki-subs{min-height:96px}   /* room for two lines, so a subtitle never runs into the play bar */
+.ki[data-layout=port] .ki-subs{min-height:112px}
+/* the tutorial end: a ledline connected later (it appears, its cable draws itself, it lights up, a plus above it) */
+.ki-world .hk-newg{position:absolute;left:0;top:0;opacity:0}
+.hk-cables path.hk-newc{opacity:0}
+/* de echte receiver (design/receiver/receiver-art.js), liggend zoals in het ontwerp; witte kabels, dunner dan in de tekening */
+.ki-world .hk-rart{position:absolute}
+.ki-world .hk-rart svg{display:block;width:100%;height:100%;filter:drop-shadow(0 0 .8px rgba(255,255,255,.55)) drop-shadow(0 0 14px rgba(255,255,255,.07))}   /* een fijne lichte rand: het zwarte toestel valt niet weg tegen het donker */
+.ki-world .hk-free{position:absolute;left:0;top:0}
+.hk-cables path.hk-cab{stroke:#f2f2ef;stroke-width:4.4}
+.hk-cables path.hk-lead{stroke-width:3.6}
+.ki-world i.hk-sockb.hk-nsock{opacity:0}
+.ki-world i.hk-plusb{background:#f4f3f0;color:#141516}
+.hk-plusb svg{width:58%;height:58%;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round}
+
+.sp-icon{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;overflow:visible}
+.sp-icon circle{fill:currentColor;stroke:none}
+.spm-intro{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+.spm-intro>i{flex:none;display:grid;place-items:center;width:25px;height:25px;border-radius:8px;background:var(--ink);color:var(--panel)}
+.spm-intro .sp-icon{width:17px;height:17px}
+.spm-intro b{display:block;font-size:11px;line-height:1.2;font-weight:800}
+.spm-intro small{display:block;font-size:9px;line-height:1.3;color:var(--muted);font-weight:600}
+.spm-steps{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:4px}
+.spm-step{display:grid;gap:1px;min-width:0;color:var(--muted)}
+.spm-step.is-now,.spm-step.is-done{color:var(--ink)}
+.spm-no{display:inline-flex;align-items:center;gap:3px;font-size:6.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase}
+.spm-no>i{display:none;place-items:center;width:9px;height:9px;border-radius:50%;background:#1FC45B;color:#fff}
+.spm-no>i svg{width:6.5px;height:6.5px;fill:none;stroke:currentColor;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+.spm-step.is-done .spm-no>i{display:inline-grid}
+.spm-step>b{font-size:9.5px;line-height:1.2;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spm-bars{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-top:3px}
+.spm-bars>i{position:relative;height:2.5px;border-radius:2px;background:var(--line);overflow:hidden}
+.spm-bars>i>i{position:absolute;inset:0;background:var(--ink);transform:scaleX(0);transform-origin:0 50%}
+.spm-bars>i.on>i{transform:none}
+.ki[data-layout=port] .spm-intro>i{width:30px;height:30px;border-radius:10px}
+.ki[data-layout=port] .spm-intro .sp-icon{width:20px;height:20px}
+.ki[data-layout=port] .spm-intro b{font-size:13px}
+.ki[data-layout=port] .spm-intro small{font-size:10.5px}
+.ki[data-layout=port] .spm-no{font-size:7.5px}
+.ki[data-layout=port] .spm-step>b{font-size:11.5px}
+.ki[data-layout=port] .spm-bars>i{height:3px}
+
+/* C146p: kabels zoals op de stand (vaste kabels aan receiver, splitter en ledline; daartussen verlengkabels): een buis
+   met een rand, het wit en een glans; zwart voor de kabel naar de RGBW-splitter. Liggende en schuine connectors
+   gebruiken dezelfde ki-*-delen, met het licht van boven (kb-hz) in een gedraaide houder (kb-rot). */
+.hk-cables path.kb-e{stroke:#7e848a;stroke-width:5.8}
+.hk-cables path.kb-c{stroke:#e8e8e3;stroke-width:4.4}
+.hk-cables path.kb-h{stroke:#ffffff;stroke-width:1.5}
+.hk-cables path.kb-e.thin{stroke-width:4.9}
+.hk-cables path.kb-c.thin{stroke-width:3.5}
+.hk-cables path.kb-h.thin{stroke-width:1.2}
+.hk-cables path.kb-e.blk{stroke:#73787f;stroke-width:8.6}
+.hk-cables path.kb-c.blk{stroke:#2a2c31;stroke-width:7}
+.hk-cables path.kb-h.blk{stroke:#868c95;stroke-width:1.7}
+.ki-world .kb-rot{position:absolute;width:0;height:0;transform-origin:0 0}
+.ki-world .kb-layer{position:absolute;left:0;top:0;overflow:visible}
+.ki-world i.kb-hz.ki-rib{background:repeating-linear-gradient(90deg,#f4f4f0 0 26%,#b9bab5 26% 40%)}
+.ki-world i.kb-hz.ki-cyl{background:linear-gradient(180deg,#c4c5c0 0%,#fff 42%,#ebebe7 62%,#adaeaa 100%)}
+.ki-world i.kb-hz.ki-nut{background:repeating-linear-gradient(180deg,rgba(0,0,0,0) 0 14%,rgba(0,0,0,.13) 14% 21%),linear-gradient(180deg,#c9cac5 0%,#fff 45%,#ecece8 66%,#b1b2ad 100%);box-shadow:1px 0 0 rgba(0,0,0,.35)}
+.ki-world [data-newp]{opacity:0}   /* de connector van de verlengkabel naar de nieuwe ledline: komt pas later */

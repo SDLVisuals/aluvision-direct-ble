@@ -134,24 +134,14 @@ html body[data-theme="dark"] .brand-bar {
 }
 html body .brand-bar > span { color: var(--muted); }
 html body .brand-bar > span > b { color: var(--action-ink); }
-html body :is(h1, h2, h3) { color: var(--ink); }
+/*c140-sel:v41-materials.css*/html body h1, html body h2, html body h3{ color: var(--ink); }
 html body h1 { font-weight: 780; letter-spacing: -.04em; }
 html body h2 { font-weight: 730; letter-spacing: -.025em; }
-html body :is(.context-name, .page-heading p, .footer-note, .control-location-summary) { color: var(--muted); }
-html body :is(.eyebrow, .text-button, .active-animation-kicker, .animation-settings-return-kicker,
-    .animation-library-kicker) { color: var(--action-ink); }
+html body :where(.context-name):is(.context-name, .page-heading p), html body :is(.page-heading p), html body :where(.footer-note):is(.footer-note, .page-heading p), html body :where(.control-location-summary):is(.control-location-summary, .page-heading p){ color: var(--muted); }
+html body .eyebrow, html body .text-button, html body .active-animation-kicker, html body .animation-settings-return-kicker{ color: var(--action-ink); }
 
 /* A single quiet edge; no nested shiny picture-frame outlines. */
-html.interface-polish body :is(.card, .stand-info-tile, .stand-control-shortcut,
-    .zone-entry, .menu-card, .receiver-list > details, .scene-card,
-    .stand-scenes, .stand-scenes-entry, .stand-scene-card, .stand-scenes-empty,
-    .stand-setup-overview, .control-workspace, .onboarding-name-card,
-    .pixel-setup-panel, .pixel-setup-shell, .stand-animation-live),
-html.interface-polish body[data-theme="dark"] :is(.card, .stand-info-tile,
-    .stand-control-shortcut, .zone-entry, .menu-card, .receiver-list > details,
-    .scene-card, .stand-scenes, .stand-scenes-entry, .stand-scene-card,
-    .stand-scenes-empty, .stand-setup-overview, .control-workspace,
-    .onboarding-name-card, .pixel-setup-panel, .pixel-setup-shell, .stand-animation-live) {
+html.interface-polish body :where(.card):is(.card, .receiver-list > details), html.interface-polish body :where(.stand-info-tile):is(.stand-info-tile, .receiver-list > details), html.interface-polish body :where(.stand-control-shortcut):is(.stand-control-shortcut, .receiver-list > details), html.interface-polish body :where(.zone-entry):is(.zone-entry, .receiver-list > details), html.interface-polish body :where(.menu-card):is(.menu-card, .receiver-list > details), html.interface-polish body :is(.receiver-list > details), html.interface-polish body :where(.scene-card):is(.scene-card, .receiver-list > details), html.interface-polish body :where(.stand-scenes):is(.stand-scenes, .receiver-list > details), html.interface-polish body :where(.stand-scenes-entry):is(.stand-scenes-entry, .receiver-list > details), html.interface-polish body :where(.stand-scene-card):is(.stand-scene-card, .receiver-list > details), html.interface-polish body :where(.stand-scenes-empty):is(.stand-scenes-empty, .receiver-list > details), html.interface-polish body :where(.stand-setup-overview):is(.stand-setup-overview, .receiver-list > details), html.interface-polish body :where(.control-workspace):is(.control-workspace, .receiver-list > details), html.interface-polish body :where(.onboarding-name-card):is(.onboarding-name-card, .receiver-list > details), html.interface-polish body :where(.pixel-setup-panel):is(.pixel-setup-panel, .receiver-list > details), html.interface-polish body :where(.pixel-setup-shell):is(.pixel-setup-shell, .receiver-list > details), html.interface-polish body :where(.stand-animation-live):is(.stand-animation-live, .receiver-list > details), html.interface-polish body[data-theme="dark"] :where(.card):is(.card, .receiver-list > details), html.interface-polish body[data-theme="dark"] :where(.stand-info-tile):is(.stand-info-tile, .receiver-list > details), html.interface-polish body[data-theme="dark"] :where(.stand-control-shortcut):is(.stand-control-shortcut, .receiver-list > details), html.interface-polish body[data-theme="dark"] :where(.zone-entry):is(.zone-entry, .receiver-list > details), html.interface-polish body[data-theme="dark"] :where(.menu-card):is(.menu-card, .receiver-list > details), html.interface-polish body[data-theme="dark"] :is(.receiver-list > details), html.interface-polish body[data-theme="dark"] :where(.scene-card):is(.scene-card, .receiver-list > details), html.interface-polish body[data-theme="dark"] :where(.stand-scenes):is(.stand-scenes, .receiver-list > details), html.interface-polish body[data-theme="dark"] :where(.stand-scenes-entry):is(.stand-scenes-entry, .receiver-list > details), html.interface-polish body[data-theme="dark"] :where(.stand-scene-card):is(.stand-scene-card, .receiver-list > details), html.interface-polish body[data-theme="dark"] :where(.stand-scenes-empty):is(.stand-scenes-empty, .receiver-list > details), html.interface-polish body[data-theme="dark"] :where(.stand-setup-overview):is(.stand-setup-overview, .receiver-list > details), html.interface-polish body[data-theme="dark"] :where(.control-workspace):is(.control-workspace, .receiver-list > details), html.interface-polish body[data-theme="dark"] :where(.onboarding-name-card):is(.onboarding-name-card, .receiver-list > details), html.interface-polish body[data-theme="dark"] :where(.pixel-setup-panel):is(.pixel-setup-panel, .receiver-list > details), html.interface-polish body[data-theme="dark"] :where(.pixel-setup-shell):is(.pixel-setup-shell, .receiver-list > details), html.interface-polish body[data-theme="dark"] :where(.stand-animation-live):is(.stand-animation-live, .receiver-list > details){
   color: var(--ink);
   border-color: var(--milk-edge);
   background-color: var(--glass);
@@ -160,12 +150,7 @@ html.interface-polish body[data-theme="dark"] :is(.card, .stand-info-tile,
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
-html.interface-polish body :is(.animation-family-card, .family-variant-card,
-    .effect-card, .family-card, .assignment-choice, .assignment-family-choice,
-    .layout-choice, .onboarding-zone, .onboarding-destination),
-html.interface-polish body[data-theme="dark"] :is(.animation-family-card,
-    .family-variant-card, .effect-card, .family-card, .assignment-choice,
-    .assignment-family-choice, .layout-choice, .onboarding-zone, .onboarding-destination) {
+html.interface-polish body .animation-family-card, html.interface-polish body .family-variant-card, html.interface-polish body .effect-card, html.interface-polish body .family-card, html.interface-polish body .assignment-choice, html.interface-polish body .assignment-family-choice, html.interface-polish body .layout-choice, html.interface-polish body .onboarding-zone, html.interface-polish body .onboarding-destination, html.interface-polish body[data-theme="dark"] .animation-family-card, html.interface-polish body[data-theme="dark"] .family-variant-card, html.interface-polish body[data-theme="dark"] .effect-card, html.interface-polish body[data-theme="dark"] .family-card, html.interface-polish body[data-theme="dark"] .assignment-choice, html.interface-polish body[data-theme="dark"] .assignment-family-choice, html.interface-polish body[data-theme="dark"] .layout-choice, html.interface-polish body[data-theme="dark"] .onboarding-zone, html.interface-polish body[data-theme="dark"] .onboarding-destination{
   color: var(--ink);
   background-color: var(--glass);
   background-image: linear-gradient(145deg, var(--milk-face), transparent 72%);
@@ -184,9 +169,7 @@ html.interface-polish body .zone-entry > .zone-card {
   background-image: none !important;
   box-shadow: none !important;
 }
-html.interface-polish body :is(.family-variants-panel, .animation-category-options,
-    .receiver-list details details, .ledline-row-settings .receiver-connections,
-    .stand-scenes .stand-scenes-empty) {
+html.interface-polish body :where(.family-variants-panel):is(.family-variants-panel, .ledline-row-settings .receiver-connections), html.interface-polish body :where(.animation-category-options):is(.animation-category-options, .ledline-row-settings .receiver-connections), html.interface-polish body :where(.receiver-list details details):is(.receiver-list details details, .ledline-row-settings .receiver-connections), html.interface-polish body :is(.ledline-row-settings .receiver-connections), html.interface-polish body :is(.stand-scenes .stand-scenes-empty){
   background-color: var(--milk-inner);
   background-image: none !important;
   border-color: var(--milk-edge);
@@ -194,19 +177,13 @@ html.interface-polish body :is(.family-variants-panel, .animation-category-optio
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
-html.interface-polish body :is(.zone-options-button, .menu-icon:not(.colour-icon),
-    .receiver-type-icon, .advanced-settings-icon, .gallery-action-icon) {
+html.interface-polish body :where(.zone-options-button):is(.zone-options-button, .menu-icon:not(.colour-icon)), html.interface-polish body .menu-icon:not(.colour-icon), html.interface-polish body :where(.receiver-type-icon):is(.receiver-type-icon, .menu-icon:not(.colour-icon)), html.interface-polish body :where(.advanced-settings-icon):is(.advanced-settings-icon, .menu-icon:not(.colour-icon)), html.interface-polish body :where(.gallery-action-icon):is(.gallery-action-icon, .menu-icon:not(.colour-icon)){
   color: var(--ink);
   background: var(--milk-inner);
   border-color: transparent;
   box-shadow: none;
 }
-html.interface-polish body :is(.settings-toggle, .ledline-add-action,
-    .animation-category-trigger, .animation-category-choice,
-    .animation-settings-return, .animation-chooser-action),
-html.interface-polish body[data-theme="dark"] :is(.settings-toggle,
-    .ledline-add-action, .animation-category-trigger, .animation-category-choice,
-    .animation-settings-return, .animation-chooser-action) {
+html.interface-polish body .settings-toggle, html.interface-polish body .ledline-add-action, html.interface-polish body .animation-category-trigger, html.interface-polish body .animation-category-choice, html.interface-polish body .animation-settings-return, html.interface-polish body .animation-chooser-action, html.interface-polish body[data-theme="dark"] .settings-toggle, html.interface-polish body[data-theme="dark"] .ledline-add-action, html.interface-polish body[data-theme="dark"] .animation-category-trigger, html.interface-polish body[data-theme="dark"] .animation-category-choice, html.interface-polish body[data-theme="dark"] .animation-settings-return, html.interface-polish body[data-theme="dark"] .animation-chooser-action{
   color: var(--ink);
   background: linear-gradient(145deg, var(--milk-face), transparent), var(--glass-solid);
   border-color: var(--milk-edge);
@@ -230,15 +207,14 @@ html.interface-polish body[data-theme="dark"] .button.secondary:not(.receiver-da
   border-color: var(--milk-edge);
   box-shadow: 0 3px 8px -6px rgba(30, 43, 63, .2);
 }
-html.interface-polish body :is(.back, .icon-button) {
+html.interface-polish body .back, html.interface-polish body .icon-button{
   color: var(--ink);
   border-color: var(--milk-edge);
   background: var(--glass-solid);
   box-shadow: none;
 }
-html.interface-polish body :is(.button, .back, .menu-card, .settings-toggle) { font-weight: 650; }
-html.interface-polish body :is(.pill:not(.red), .guide, .preview-notice,
-    .pixel-preview-notice, .management-status, .receiver-zone-row-hint) {
+html.interface-polish body .button, html.interface-polish body .back, html.interface-polish body .menu-card, html.interface-polish body .settings-toggle{ font-weight: 650; }
+html.interface-polish body .pill:not(.red), html.interface-polish body :where(.guide):is(.guide, .pill:not(.red)), html.interface-polish body :where(.preview-notice):is(.preview-notice, .pill:not(.red)), html.interface-polish body :where(.pixel-preview-notice):is(.pixel-preview-notice, .pill:not(.red)), html.interface-polish body :where(.management-status):is(.management-status, .pill:not(.red)), html.interface-polish body :where(.receiver-zone-row-hint):is(.receiver-zone-row-hint, .pill:not(.red)){
   background: var(--milk-inner);
   border-color: transparent;
   color: var(--muted);
@@ -249,16 +225,15 @@ html.interface-polish body :is(.pill:not(.red), .guide, .preview-notice,
 
 /* Opaque selected buttons plus existing checks/titles: selection is not only
    a colour difference. Keep border widths fixed to prevent layout jumps. */
-html.interface-polish body :is(.section-tabs, .control-mode-tabs, .demo-settings-tabs) {
+html.interface-polish body .section-tabs, html.interface-polish body .control-mode-tabs, html.interface-polish body .demo-settings-tabs{
   background: var(--milk-inner);
   border-color: var(--milk-edge);
   box-shadow: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-html.interface-polish body :is(.section-tabs, .demo-settings-tabs) > button { color: var(--muted); }
-html.interface-polish body :is(.receiver-chips button, .filter-row button,
-    .compact-direction button, .physical-port-picker button):not([aria-pressed="true"]):not([aria-selected="true"]) {
+html.interface-polish body .section-tabs > button, html.interface-polish body .demo-settings-tabs > button{ color: var(--muted); }
+html.interface-polish body :is(.receiver-chips button):not([aria-pressed="true"]):not([aria-selected="true"]), html.interface-polish body :is(.filter-row button):not([aria-pressed="true"]):not([aria-selected="true"]), html.interface-polish body :is(.compact-direction button):not([aria-pressed="true"]):not([aria-selected="true"]), html.interface-polish body :is(.physical-port-picker button):not([aria-pressed="true"]):not([aria-selected="true"]){
   color: var(--ink);
   background: var(--glass-solid);
   border-color: var(--milk-edge);
@@ -271,12 +246,7 @@ html.interface-polish body .demo-settings-tabs > button[aria-pressed="true"] {
   box-shadow: 0 2px 6px -3px rgba(23, 37, 59, .24);
   font-weight: 750;
 }
-html.interface-polish body :is(.control-mode-tabs button[aria-pressed="true"],
-    .receiver-chips button[aria-pressed="true"], .filter-row button[aria-selected="true"],
-    .compact-direction button[aria-pressed="true"]),
-html.interface-polish body[data-theme="dark"] :is(.control-mode-tabs button[aria-pressed="true"],
-    .receiver-chips button[aria-pressed="true"], .filter-row button[aria-selected="true"],
-    .compact-direction button[aria-pressed="true"]) {
+html.interface-polish body :is(.control-mode-tabs button[aria-pressed="true"]), html.interface-polish body :is(.receiver-chips button[aria-pressed="true"]), html.interface-polish body :is(.filter-row button[aria-selected="true"]), html.interface-polish body :is(.compact-direction button[aria-pressed="true"]), html.interface-polish body[data-theme="dark"] :is(.control-mode-tabs button[aria-pressed="true"]), html.interface-polish body[data-theme="dark"] :is(.receiver-chips button[aria-pressed="true"]), html.interface-polish body[data-theme="dark"] :is(.filter-row button[aria-selected="true"]), html.interface-polish body[data-theme="dark"] :is(.compact-direction button[aria-pressed="true"]){
   color: var(--milk-primary-ink);
   background: linear-gradient(145deg, var(--milk-primary), var(--milk-primary-tail));
   border-color: transparent;
@@ -311,35 +281,7 @@ html.interface-polish body .onboarding-page .onboarding-result-filter .button[ar
   border-color: transparent;
   box-shadow: inset 0 -2px 0 var(--red);
 }
-html.interface-polish body .selection .scope-lines-toggle,
-html.interface-polish body .selection[data-selection-mode="all"] .scope-lines-toggle,
-html.interface-polish body[data-theme="dark"] .selection[data-selection-mode="all"] .scope-lines-toggle {
-  color: var(--ink);
-  background: var(--milk-inner);
-  border-color: transparent;
-  box-shadow: none;
-}
-html.interface-polish body .selection .scope-line[aria-pressed="true"],
-html.interface-polish body[data-theme="dark"] .selection .scope-line[aria-pressed="true"] {
-  color: var(--ink);
-  background: var(--glass-solid);
-  border-color: var(--action-ink);
-  box-shadow: inset 3px 0 0 var(--action-ink);
-}
 html.interface-polish body .selection .scope-copy small { color: var(--muted); }
-html.interface-polish body .selection .scope-lines-toggle[aria-expanded="true"] .scope-toggle-chevron { color: var(--action-ink); background: var(--milk-inner); }
-html.interface-polish body .selection .scope-number { color: var(--ink); background: var(--milk-inner); }
-html.interface-polish body .selection .scope-line[aria-pressed="true"] .scope-number { color: #fff; background: var(--red); }
-html.interface-polish body .selection .scope-selected-mark { color: #fff; background: var(--red); }
-html.interface-polish body .selection .selection-together[aria-pressed="true"],
-html.interface-polish body[data-theme="dark"] .selection .selection-together[aria-pressed="true"] {
-  color: var(--ink);
-  background: var(--glass-solid);
-  border-color: var(--action-ink);
-  box-shadow: inset 3px 0 0 var(--action-ink);
-}
-html.interface-polish body .selection .selection-together[aria-pressed="true"] .scope-copy :is(.scope-option-title, small) { color: var(--ink); }
-html.interface-polish body .selection .selection-together[aria-pressed="true"] > .icon { color: var(--action-ink); }
 html.interface-polish body .bediening-workspace .animation-context {
   background: var(--glass-solid);
   border-color: var(--milk-edge);
@@ -348,12 +290,7 @@ html.interface-polish body .bediening-workspace .animation-context {
 
 /* Fields have their own quiet inset depth; no canvas, range-track, channel or
    swatch colours are changed by the generic form treatment. */
-html.interface-polish body :is(input[type="text"], input[type="password"],
-    input[type="search"], input[type="number"], input[type="tel"], input:not([type]),
-    select, textarea),
-html.interface-polish body[data-theme="dark"] :is(input[type="text"],
-    input[type="password"], input[type="search"], input[type="number"],
-    input[type="tel"], input:not([type]), select, textarea) {
+html.interface-polish body input[type="text"], html.interface-polish body input[type="password"], html.interface-polish body input[type="search"], html.interface-polish body input[type="number"], html.interface-polish body input[type="tel"], html.interface-polish body input:not([type]), html.interface-polish body :where(select):is(select, input[type="text"]), html.interface-polish body :where(textarea):is(textarea, input[type="text"]), html.interface-polish body[data-theme="dark"] input[type="text"], html.interface-polish body[data-theme="dark"] input[type="password"], html.interface-polish body[data-theme="dark"] input[type="search"], html.interface-polish body[data-theme="dark"] input[type="number"], html.interface-polish body[data-theme="dark"] input[type="tel"], html.interface-polish body[data-theme="dark"] input:not([type]), html.interface-polish body[data-theme="dark"] :where(select):is(select, input[type="text"]), html.interface-polish body[data-theme="dark"] :where(textarea):is(textarea, input[type="text"]){
   color: var(--ink);
   background: var(--milk-field);
   border-color: var(--milk-field-edge);
@@ -385,10 +322,7 @@ html.interface-polish body .navigation > button[aria-current="page"] {
 html.interface-polish body .navigation > button[aria-current="page"] .icon { color: var(--milk-nav-active-ink); }
 
 /* The content behind dialogs/sticky controls must not show through labels. */
-html.interface-polish body :is(.control-dock-surface, #effect-dialog-content > header),
-html.interface-polish body .control-preview-dock[data-scrolled="true"] .control-dock-surface,
-html.interface-polish body[data-theme="dark"] .control-preview-dock[data-scrolled="true"] .control-dock-surface,
-html.interface-polish body .stand-controls-tabs.section-tabs {
+html.interface-polish body :where(.control-dock-surface):is(.control-dock-surface, #effect-dialog-content > header), html.interface-polish body :is(#effect-dialog-content > header), html.interface-polish body .control-preview-dock[data-scrolled="true"] .control-dock-surface, html.interface-polish body[data-theme="dark"] .control-preview-dock[data-scrolled="true"] .control-dock-surface, html.interface-polish body .stand-controls-tabs.section-tabs{
   background: var(--glass-solid);
   background-image: none;
   border-color: var(--milk-edge);
@@ -403,9 +337,7 @@ html.interface-polish body .stand-controls-tabs.section-tabs > button[aria-selec
   background: var(--milk-primary);
   box-shadow: 0 2px 6px -3px rgba(23, 37, 59, .24);
 }
-html.interface-polish body :is(dialog, .receiver-update-sheet, .receiver-removal-sheet),
-html.interface-polish body #effect-dialog:not(:has([data-stand-control-sheet])),
-html.interface-polish body[data-theme="dark"] #effect-dialog:not(:has([data-stand-control-sheet])) {
+html.interface-polish body :where(dialog):is(dialog, .receiver-update-sheet), html.interface-polish body .receiver-update-sheet, html.interface-polish body .receiver-removal-sheet, html.interface-polish body #effect-dialog:not(:has([data-stand-control-sheet])), html.interface-polish body[data-theme="dark"] #effect-dialog:not(:has([data-stand-control-sheet])){
   color: var(--ink);
   background: var(--glass-sheet);
   background-image: none !important;
@@ -428,9 +360,8 @@ html.interface-polish body dialog::backdrop { background: rgba(14, 23, 37, .38);
 html.interface-polish body[data-theme="dark"] dialog::backdrop { background: rgba(8, 8, 8, .63); }
 html.interface-polish body .toast { color: #fff; background: #283449; border-color: rgba(255, 255, 255, .18); box-shadow: 0 8px 21px -12px rgba(8, 20, 38, .5); }
 html.interface-polish body[data-theme="dark"] .toast { color: #f4f3f1; background: #3b3936; }
-html.interface-polish body :is(.live-confirmation[data-state="failed"], .onboarding-error,
-    .pixel-setup-error, .removal-pin-hint, .update-warning) { color: var(--milk-danger) !important; }
-html.interface-polish body :is(.onboarding-pin-match, .live-confirmation[data-state="applied"]) { color: var(--milk-success); }
+html.interface-polish body .live-confirmation[data-state="failed"], html.interface-polish body :where(.onboarding-error):is(.onboarding-error, .live-confirmation[data-state="failed"]), html.interface-polish body :where(.pixel-setup-error):is(.pixel-setup-error, .live-confirmation[data-state="failed"]), html.interface-polish body :where(.removal-pin-hint):is(.removal-pin-hint, .live-confirmation[data-state="failed"]), html.interface-polish body :where(.update-warning):is(.update-warning, .live-confirmation[data-state="failed"]){ color: var(--milk-danger) !important; }
+html.interface-polish body :where(.onboarding-pin-match):is(.onboarding-pin-match, .live-confirmation[data-state="applied"]), html.interface-polish body .live-confirmation[data-state="applied"]{ color: var(--milk-success); }
 html.interface-polish body[data-theme="dark"] .live-confirmation[data-state="pending"] { color: #efc785; }
 html.interface-polish body[data-theme="dark"] .live-confirmation[data-state="applied"] { color: #8cd4b1; }
 /* Preview is neither success nor failure. Neutral status text must still be
@@ -552,8 +483,7 @@ html.interface-polish body .preview-wrap :is(button, summary):focus-visible { ou
   html.interface-polish body :is(button, a, input, select, textarea, summary):focus-visible { outline-color: Highlight; }
   html.interface-polish body .navigation > button { color: ButtonText !important; }
   html.interface-polish body .navigation > button[aria-current="page"],
-  html.interface-polish body :is(.section-tabs, .demo-settings-tabs) > button[aria-selected="true"],
-  html.interface-polish body .selection .scope-line[aria-pressed="true"] {
+  html.interface-polish body :is(.section-tabs, .demo-settings-tabs) > button[aria-selected="true"] {
     color: HighlightText !important;
     background: Highlight !important;
     box-shadow: none !important;

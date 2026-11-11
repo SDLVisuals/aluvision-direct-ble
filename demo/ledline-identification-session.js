@@ -296,7 +296,7 @@
               completedBlinks.push(()=>blink.resolve(copy(reply)));
             } catch(error) {
               const code=['IDENTIFICATION_BLINK_CANCELLED','IDENTIFICATION_BLINK_UNCONFIRMED'].includes(error?.code)?error.code:'IDENTIFICATION_BLINK_FAILED';
-              if(active===ctx&&!ctx.closed){ctx.error=code;emit(lastNow);}
+              if(active===ctx&&!ctx.closed)emit(lastNow); /* C137ui2: a lost, late or refused blink never ends the recognition (ctx.error started STOP + recovery and dropped every colour); the caller retries quietly */
               completedBlinks.push(()=>blink.reject(fail(code)));
             }
             continue;
@@ -337,10 +337,17 @@
               session: ctx.session, lineIds: payload.lines.map(line => line.id), ttlMs: reply.ttlMs,
               validUntilMs: Math.min(ctx.deadline, sentAt + reply.ttlMs)
             };
-            ctx.error = null;
+            ctx.error = null;ctx.renewMissC137ui2 = 0; // C137ui2
             ctx.recoveryStarting=false;
             recoveryAttempts=0;
+          } else if (ctx.confirmation && time < ctx.confirmation.validUntilMs - 250 && rejectionCode !== 'IDENTIFY_UNSUPPORTED' &&
+                     (ctx.renewMissC137ui2 = (ctx.renewMissC137ui2 || 0) + 1) < 3) {
+            // C137ui2: one lost renewal (slow MAIN, NATIVE_UNCONFIRMED) keeps the still-valid receipt and the
+            // colours; retry quietly. Only a third miss in a row (or an expired receipt) starts recovery.
+            const retryC137ui2 = ctx;
+            try { setTimer(() => { if (active === retryC137ui2 && !retryC137ui2.closed) void request(retryC137ui2, true, Infinity); }, 1200); } catch (_) {}
           } else {
+            ctx.renewMissC137ui2 = 0;
             ctx.confirmation = null;
             ctx.error = rejected ? rejectionCode : 'IDENTIFICATION_UNCONFIRMED';
           }

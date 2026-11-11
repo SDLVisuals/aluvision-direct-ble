@@ -52,11 +52,7 @@ html:has(body[data-theme="dark"]){--glass-ambient-root:
     linear-gradient(180deg,#0c0c10 0%,#0a0a0d 60%,#08080b 100%);background:#0a0a0d!important}
 
 /* ---- Glass surfaces ------------------------------------------------- */
-html:not(#c98) body:not(#c98) :is(
-  .menu-card,article.zone-entry,section.stand-scenes,section.card,
-  .control-dock-surface,details.receiver-overview-card,.power-card,.animation-family-card,
-  .effect-card,.stand-info-tile,.stand-scenes-entry,.ledline-setup,section.receiver-danger-section
-){
+/*c140-sel:c98-glass.css*/html:not(#c98) body:not(#c98) :where(.menu-card):is(.menu-card, article.zone-entry), html:not(#c98) body:not(#c98) article.zone-entry, html:not(#c98) body:not(#c98) section.stand-scenes, html:not(#c98) body:not(#c98) section.card, html:not(#c98) body:not(#c98) :where(.control-dock-surface):is(.control-dock-surface, article.zone-entry), html:not(#c98) body:not(#c98) details.receiver-overview-card, html:not(#c98) body:not(#c98) :where(.power-card):is(.power-card, article.zone-entry), html:not(#c98) body:not(#c98) :where(.animation-family-card):is(.animation-family-card, article.zone-entry), html:not(#c98) body:not(#c98) :where(.effect-card):is(.effect-card, article.zone-entry), html:not(#c98) body:not(#c98) :where(.stand-info-tile):is(.stand-info-tile, article.zone-entry), html:not(#c98) body:not(#c98) :where(.stand-scenes-entry):is(.stand-scenes-entry, article.zone-entry), html:not(#c98) body:not(#c98) :where(.ledline-setup):is(.ledline-setup, article.zone-entry), html:not(#c98) body:not(#c98) section.receiver-danger-section{
   background:var(--glass-shine),var(--glass-bg)!important;
   -webkit-backdrop-filter:var(--glass-blur)!important;backdrop-filter:var(--glass-blur)!important;
   border:1px solid var(--glass-edge)!important;
@@ -69,11 +65,7 @@ html:not(#c98) body:not(#c98) header.page-heading{
   border:0!important;box-shadow:none!important;
 }
 /* Cards inside a glass card: lighter, no second blur (crisper, cheaper). */
-html:not(#c98) body:not(#c98) :is(section.card,details.receiver-overview-card,.control-dock-surface) :is(
-  .receiver-port-row,.saved-colour-item,.channel-row,.warm-white-choice,.receiver-product,
-  .menu-card,.effect-card,.stand-info-tile,.power-card
-),
-html:not(#c98) body:not(#c98) :is(article.zone-entry,section.stand-scenes) :is(p.stand-scenes-empty,.stand-scenes-entry){
+html:not(#c98) body:not(#c98) :is(section.card,details.receiver-overview-card,.control-dock-surface) .receiver-port-row, html:not(#c98) body:not(#c98) :is(section.card,details.receiver-overview-card,.control-dock-surface) .saved-colour-item, html:not(#c98) body:not(#c98) :is(section.card,details.receiver-overview-card,.control-dock-surface) .channel-row, html:not(#c98) body:not(#c98) :is(section.card,details.receiver-overview-card,.control-dock-surface) .warm-white-choice, html:not(#c98) body:not(#c98) :is(section.card,details.receiver-overview-card,.control-dock-surface) .receiver-product, html:not(#c98) body:not(#c98) :is(section.card,details.receiver-overview-card,.control-dock-surface) .menu-card, html:not(#c98) body:not(#c98) :is(section.card,details.receiver-overview-card,.control-dock-surface) .effect-card, html:not(#c98) body:not(#c98) :is(section.card,details.receiver-overview-card,.control-dock-surface) .stand-info-tile, html:not(#c98) body:not(#c98) :is(section.card,details.receiver-overview-card,.control-dock-surface) .power-card, html:not(#c98) body:not(#c98) :is(article.zone-entry,section.stand-scenes) p.stand-scenes-empty, html:not(#c98) body:not(#c98) :is(article.zone-entry,section.stand-scenes) :where(.stand-scenes-entry):is(.stand-scenes-entry, p.stand-scenes-empty){
   background:var(--glass-bg-soft)!important;
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
   border:1px solid var(--glass-hairline)!important;
@@ -97,7 +89,7 @@ html:not(#c98) body:not(#c98) nav.navigation{
 }
 
 /* Segmented tabs (Kleur / Animaties, filters): glass track, solid active. */
-html:not(#c98) body:not(#c98) :is(.section-tabs,.receiver-filters,.preview-size-picker,.spi-colour-modes){
+html:not(#c98) body:not(#c98) .section-tabs, html:not(#c98) body:not(#c98) .receiver-filters, html:not(#c98) body:not(#c98) .preview-size-picker, html:not(#c98) body:not(#c98) .spi-colour-modes{
   background:var(--glass-bg-soft)!important;
   -webkit-backdrop-filter:var(--glass-blur)!important;backdrop-filter:var(--glass-blur)!important;
   border:1px solid var(--glass-edge)!important;
@@ -105,7 +97,7 @@ html:not(#c98) body:not(#c98) :is(.section-tabs,.receiver-filters,.preview-size-
 }
 
 /* Secondary buttons and quiet choices: frosted, with a crisp edge. */
-html:not(#c98) body:not(#c98) :is(.button.secondary,.theme-choice,.animation-category-tab,.receiver-setting-row707,.spatial-choice-toggle,.v50-preview-expand,.ledline-setup-toggle){
+html:not(#c98) body:not(#c98) .button.secondary, html:not(#c98) body:not(#c98) :where(.theme-choice):is(.theme-choice, .button.secondary), html:not(#c98) body:not(#c98) :where(.animation-category-tab):is(.animation-category-tab, .button.secondary), html:not(#c98) body:not(#c98) :where(.receiver-setting-row707):is(.receiver-setting-row707, .button.secondary), html:not(#c98) body:not(#c98) :where(.spatial-choice-toggle):is(.spatial-choice-toggle, .button.secondary), html:not(#c98) body:not(#c98) :where(.v50-preview-expand):is(.v50-preview-expand, .button.secondary), html:not(#c98) body:not(#c98) :where(.ledline-setup-toggle):is(.ledline-setup-toggle, .button.secondary){
   background:var(--glass-bg)!important;
   -webkit-backdrop-filter:var(--glass-blur)!important;backdrop-filter:var(--glass-blur)!important;
   border:1px solid var(--glass-edge)!important;
@@ -128,15 +120,15 @@ html:not(#c98) body:not(#c98) dialog[open]{
 html:not(#c98) body:not(#c98) dialog[open]::backdrop{background:rgba(10,12,20,.28);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 
 /* Inputs: inset glass. */
-html:not(#c98) body:not(#c98) :is(input[type=text],input[type=search],input[type=password],input[inputmode],textarea,select){
+html:not(#c98) body:not(#c98) input[type=text], html:not(#c98) body:not(#c98) input[type=search], html:not(#c98) body:not(#c98) input[type=password], html:not(#c98) body:not(#c98) input[inputmode], html:not(#c98) body:not(#c98) :where(textarea):is(textarea, input[type=text]), html:not(#c98) body:not(#c98) :where(select):is(select, input[type=text]){
   background:var(--glass-bg-soft)!important;
   border:1px solid var(--glass-hairline)!important;
   box-shadow:0 1px 2px 0 rgba(0,0,0,.06) inset!important;
 }
 
 /* Strict, modern type: tighter large headings. */
-html:not(#c98) body:not(#c98) :is(h1,.page-heading h1){letter-spacing:-.035em}
-html:not(#c98) body:not(#c98) :is(h2,h3){letter-spacing:-.018em}
+html:not(#c98) body:not(#c98) :where(h1):is(h1, .page-heading h1), html:not(#c98) body:not(#c98) :is(.page-heading h1){letter-spacing:-.035em}
+html:not(#c98) body:not(#c98) h2, html:not(#c98) body:not(#c98) h3{letter-spacing:-.018em}
 
 /* Accessibility and older engines: solid enough without the blur. */
 @media (prefers-reduced-transparency:reduce){

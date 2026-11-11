@@ -1,0 +1,145 @@
+/* C144 Ledlines instellen: de eerste setup van een SPI-receiver in de vormgeving van het prototype (C142p).
+   Alleen voor dialog.pixel-setup-dialog met .ls-shell (de eerste setup); "Pixels aanpassen" blijft zoals het was. */
+.pixel-setup-dialog .ls-shell{display:flex;flex-direction:column}
+.pixel-setup-dialog .ls-header{display:block;position:relative;padding:14px 18px 6px;border:0}
+.pixel-setup-dialog .ls-header .ls-x{position:absolute;right:14px;top:12px;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--soft);color:var(--ink);font:inherit;font-size:20px;line-height:1;cursor:pointer}
+.ls-head{display:grid;gap:4px}
+.ls-intro{display:flex;align-items:center;gap:12px;margin:2px 52px 8px 0}
+.ls-intro>i{flex:none;display:grid;place-items:center;width:46px;height:46px;border-radius:15px;background:var(--ink);color:var(--panel)}
+.ls-icon{width:32px;height:32px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;overflow:visible}
+.ls-icon circle{fill:currentColor;stroke:none}
+.ls-intro .ls-k1{animation:ls-k1 4.6s ease-in-out infinite}
+.ls-intro .ls-k2{animation:ls-k2 4.6s ease-in-out infinite}
+@keyframes ls-k1{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+@keyframes ls-k2{0%,100%{transform:translateX(0)}50%{transform:translateX(-6px)}}
+.ls-intro b{display:block;font-size:17px;line-height:1.2;font-weight:800;color:var(--ink)}
+.ls-intro small{display:block;margin-top:2px;font-size:13.5px;line-height:1.35;color:var(--muted);font-weight:600}
+.ls-steps{list-style:none;margin:0 0 4px;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ls-steps li{display:grid;gap:2px;min-width:0;color:var(--muted)}
+.ls-steps li.is-now,.ls-steps li.is-done{color:var(--ink)}
+.ls-no{display:inline-flex;align-items:center;gap:5px;min-height:16px;font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase}
+.ls-no>i{display:none;place-items:center;width:16px;height:16px;border-radius:50%;background:#1FC45B;color:#fff}
+.ls-no>i svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.ls-steps li.is-done .ls-no>i{display:inline-grid}
+.ls-steps li>b{font-size:15px;line-height:1.2;font-weight:800}
+.ls-bars{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:7px}
+.ls-bars>i{height:3px;border-radius:3px;background:var(--line)}
+.ls-bars>i.on{background:var(--ink)}
+
+.pixel-setup-dialog .ls-body{display:grid;align-content:start;gap:12px;padding:10px 18px 24px}
+.ls-eyebrow{color:var(--muted);font-size:13px;font-weight:650}
+.ls-title{margin:0;font-size:26px;line-height:1.12;letter-spacing:-.02em;font-weight:850;color:var(--ink)}
+.ls-say{margin:0;color:var(--muted);font-size:15px;line-height:1.4}
+.ls-say b{color:var(--ink);font-weight:700}
+.ls-hint,.ls-status{margin:0;color:var(--muted);font-size:13px;font-weight:600}
+.ls-status:empty{display:none}
+
+/* Bekijk tutorial: een rustige knop onder de zin */
+.ls-tut{justify-self:start;display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:5px 18px 5px 5px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-size:15px;font-weight:800;box-shadow:var(--surface-shadow);cursor:pointer}
+.ls-tut>i{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--ink);color:var(--panel)}
+.ls-tut svg{width:13px;height:13px;fill:currentColor;margin-left:2px}
+/* een stukje ledline: kleur met de witte randjes van de echte ledline */
+.ls-sleeve{display:block;height:16px;border-radius:2px;background:var(--c);box-shadow:inset 0 3px 0 rgba(255,255,255,.93),inset 0 -3px 0 rgba(255,255,255,.93),0 0 14px -2px color-mix(in srgb,var(--c) 60%,transparent)}
+
+/* kleurtegels */
+.ls-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ls-tile{position:relative;display:grid;gap:10px;padding:14px 14px 12px;border-radius:18px;border:2px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;text-align:left;cursor:pointer;
+  box-shadow:var(--surface-shadow);transition:border-color .2s ease,box-shadow .2s ease,transform .15s ease;-webkit-tap-highlight-color:transparent}
+.ls-tile:active{transform:scale(.97)}
+.ls-tile[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 4px color-mix(in srgb,var(--port-colour) 28%,transparent),var(--surface-shadow)}
+.ls-tile .ls-line{display:block;margin-right:30px}
+.ls-tile .ls-sleeve{--c:var(--port-colour)}
+.ls-tname b{display:block;font-size:15px;font-weight:800}
+.ls-tname small{display:block;margin-top:1px;font-size:12.5px;color:var(--muted);font-weight:600}
+.ls-tick{position:absolute;right:10px;top:10px;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;background:var(--soft);transition:background .2s ease,border-color .2s ease}
+.ls-tick svg{width:15px;height:15px;fill:none;stroke:#fff;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;opacity:0;transform:scale(.6);transition:opacity .2s ease,transform .25s cubic-bezier(.3,1.5,.5,1)}
+.ls-tile[aria-pressed="true"] .ls-tick{background:var(--ink);border-color:var(--ink)}
+.ls-tile[aria-pressed="true"] .ls-tick svg{opacity:1;transform:none}
+body[data-theme=dark] .ls-tick svg,html.c109-dark .ls-tick svg{stroke:#1c1c1e}
+/* gekozen: de tegel licht op in zijn kleur en vervaagt */
+.ls-tile.is-pulse{animation:ls-pulse 1.2s ease-out}
+@keyframes ls-pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--port-colour) 70%,transparent),var(--surface-shadow)}40%{box-shadow:0 0 0 10px color-mix(in srgb,var(--port-colour) 30%,transparent),0 0 26px 2px color-mix(in srgb,var(--port-colour) 55%,transparent)}100%{box-shadow:0 0 0 4px color-mix(in srgb,var(--port-colour) 28%,transparent),var(--surface-shadow)}}
+
+/* welke ledline je instelt, groot */
+.ls-now{display:grid;gap:10px;padding:14px 16px;border-radius:18px;background:var(--panel);border:2px solid color-mix(in srgb,var(--c) 60%,var(--line));box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 14%,transparent),var(--surface-shadow)}
+.ls-now-top{display:flex;align-items:center;gap:12px}
+.ls-now-dot{flex:none;width:44px;height:14px;border-radius:2px;background:var(--c);box-shadow:inset 0 2.5px 0 rgba(255,255,255,.92),inset 0 -2.5px 0 rgba(255,255,255,.92),0 0 12px color-mix(in srgb,var(--c) 55%,transparent)}
+.ls-now-top b{font-size:28px;line-height:1.05;font-weight:850;letter-spacing:-.02em;color:var(--ink)}
+.ls-now-of{margin-left:auto;flex:none;padding:5px 12px;border-radius:999px;background:var(--soft);border:1px solid var(--line);font-size:15px;font-weight:850;color:var(--ink)}
+.ls-now-segs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px}
+.ls-now-segs i{height:7px;border-radius:4px;background:color-mix(in srgb,var(--c) 25%,var(--line))}
+.ls-now-segs i.done{background:var(--c);opacity:.55}
+.ls-now-segs i.now{background:var(--c);box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--c)}
+
+/* het aantal, de liniaal, de knoppen en het overzicht */
+.ls-px{display:grid;gap:12px;margin:0;padding:0;border:0;background:none;box-shadow:none}
+.ls-count{text-align:center}
+.ls-count input{width:100%;max-width:220px;margin:0 auto;display:block;border:0;background:none;color:var(--ink);text-align:center;font:inherit;font-size:46px;line-height:1;font-weight:850;letter-spacing:-.03em;font-variant-numeric:tabular-nums;padding:0;-moz-appearance:textfield}
+.ls-count input::-webkit-inner-spin-button,.ls-count input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.ls-count input:focus-visible{outline:2px solid var(--ink);outline-offset:4px;border-radius:12px}
+.ls-count small{display:block;margin-top:4px;color:var(--muted);font-size:13px;font-weight:650}
+.ls-ruler{position:relative;height:70px;overflow:hidden;border-radius:16px;background:var(--soft);border:1px solid var(--line);touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;
+  -webkit-mask:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent);mask:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent)}
+.ls-ruler.is-dragging{cursor:grabbing}
+.ls-ruler:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.ls-rtrack{position:absolute;left:0;top:11px;height:48px;will-change:transform}
+.ls-rtrack.snap{transition:transform .18s cubic-bezier(.2,.8,.2,1)}
+.ls-rtrack>i{position:absolute;left:0;top:0;height:26px}
+.ls-rbase{right:0;background:#2a2b2f;border-radius:2px}
+.ls-rw{background:#fdfdfb}
+.ls-rr{width:14px;background:#F0473D;box-shadow:0 0 10px rgba(240,71,61,.85)}
+.ls-rsep{right:0;background:repeating-linear-gradient(90deg,rgba(0,0,0,.32) 0 1.5px,transparent 1.5px 14px)}
+.ls-rrim{right:0;box-shadow:inset 0 3px 0 rgba(255,255,255,.93),inset 0 -3px 0 rgba(255,255,255,.93)}
+.ls-rtrack b{position:absolute;top:31px;transform:translateX(-50%);font-size:11.5px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+.ls-rmark{position:absolute;left:50%;top:6px;width:22px;height:36px;margin-left:-11px;border:2.5px solid var(--ink);border-radius:7px;pointer-events:none}
+.ls-pm{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.ls-pm button{min-height:52px;border-radius:16px;border:1px solid var(--line);background:var(--soft);color:var(--ink);font:inherit;font-size:18px;font-weight:850;cursor:pointer;font-variant-numeric:tabular-nums}
+.ls-pm button.dark{background:#1c1c1e;color:#fff;border-color:#1c1c1e}
+body[data-theme=dark] .ls-pm button.dark,html.c109-dark .ls-pm button.dark{background:#f4f3f0;color:#1c1c1e;border-color:#f4f3f0}
+.ls-pm button:disabled{opacity:.4}
+.ls-range{width:100%;height:26px;margin:0;-webkit-appearance:none;appearance:none;background:none;cursor:pointer}
+.ls-range::-webkit-slider-runnable-track{height:12px;border-radius:2px;background:linear-gradient(90deg,#fdfdfb 0 var(--pixel-range-fill,100%),#2a2b2f var(--pixel-range-fill,100%));box-shadow:inset 0 2px 0 rgba(255,255,255,.9),inset 0 -2px 0 rgba(255,255,255,.9),0 0 0 1px var(--line)}
+.ls-range::-webkit-slider-thumb{-webkit-appearance:none;width:8px;height:22px;margin-top:-5px;border-radius:2px;background:#F0473D;box-shadow:0 0 8px rgba(240,71,61,.8)}
+.ls-range::-moz-range-track{height:12px;border-radius:2px;background:#2a2b2f}
+.ls-range::-moz-range-progress{height:12px;background:#fdfdfb}
+.ls-range::-moz-range-thumb{width:8px;height:22px;border:0;border-radius:2px;background:#F0473D}
+.ls-scale{display:flex;justify-content:space-between;margin-top:-6px;color:var(--muted);font-size:12.5px;font-weight:650}
+/* van het oude pixelscherm alleen de testlicht-melding */
+.ls-preview>*:not(.pixel-preview-notice){display:none!important}
+.ls-preview .pixel-preview-notice{margin:0}
+
+/* pixels ingesteld */
+.ls-sum{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.ls-sum li{display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:12px;min-height:58px;padding:8px 14px;border-radius:16px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--surface-shadow)}
+.ls-sum li .ls-sleeve{--c:var(--port-colour);height:12px}
+.ls-sum li b{display:block;font-size:15px;font-weight:800}
+.ls-sum li small{display:block;color:var(--muted);font-size:12.5px;font-weight:600}
+.ls-sum li.off{background:transparent;box-shadow:none;border-style:dashed}
+.ls-sum li.off .ls-sleeve{opacity:.28;box-shadow:none}
+.ls-ok{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#1FC45B;color:#fff}
+.ls-ok svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.ls-offb{font-style:normal;font-size:12px;font-weight:800;color:var(--muted);padding:3px 10px;border-radius:999px;border:1px solid var(--line)}
+.ls-card{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:16px;background:color-mix(in srgb,var(--ink) 6%,var(--panel));border:1px solid var(--line)}
+.ls-card>i{flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:var(--ink);color:var(--panel)}
+.ls-card svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ls-card p{margin:0;font-size:14px;line-height:1.45;color:var(--muted)}
+.ls-card p b{color:var(--ink)}
+
+/* onderaan: één grote knop vooruit, terug ernaast */
+.pixel-setup-dialog .ls-footer{display:flex;gap:10px}
+.ls-footer button{min-height:52px;border-radius:16px;font:inherit;font-size:16px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+.ls-footer svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.ls-footer .ls-secondary{flex:none;padding:0 16px 0 12px;border:1px solid var(--line);background:var(--soft);color:var(--ink)}
+.ls-footer .ls-primary{flex:1;border:0;background:#1c1c1e;color:#fff}
+body[data-theme=dark] .ls-footer .ls-primary,html.c109-dark .ls-footer .ls-primary{background:#f4f3f0;color:#1c1c1e}
+.ls-footer button:disabled{opacity:.45;cursor:default}
+
+/* de algemene stijlen van de app voor invoervelden en schuifbalken in dit dialoogvenster gelden hier niet */
+html:not(#c144) body:not(#c144) .pixel-setup-dialog .ls-count input{height:auto!important;min-height:0!important;border:0!important;border-radius:12px!important;background:transparent!important;box-shadow:none!important;padding:0!important;font-size:46px!important;line-height:1.05!important;font-weight:850!important;letter-spacing:-.03em!important;color:var(--ink)!important;text-align:center!important;width:100%!important;max-width:220px!important}
+html:not(#c144) body:not(#c144) .pixel-setup-dialog input.ls-range{height:26px!important;background:none!important;border:0!important;box-shadow:none!important;padding:0!important;accent-color:#F0473D}
+html:not(#c144) body:not(#c144) .pixel-setup-dialog input.ls-range::-webkit-slider-runnable-track{height:12px!important;border-radius:2px!important;border:0!important;background:linear-gradient(90deg,#fdfdfb 0 var(--pixel-range-fill,100%),#2a2b2f var(--pixel-range-fill,100%))!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.9),inset 0 -2px 0 rgba(255,255,255,.9),0 0 0 1px var(--line)!important}
+html:not(#c144) body:not(#c144) .pixel-setup-dialog input.ls-range::-webkit-slider-thumb{-webkit-appearance:none!important;width:8px!important;height:22px!important;margin-top:-5px!important;border:0!important;border-radius:2px!important;background:#F0473D!important;box-shadow:0 0 8px rgba(240,71,61,.8)!important}
+html:not(#c144) body:not(#c144) .pixel-setup-dialog .ls-tile b,html:not(#c144) body:not(#c144) .pixel-setup-dialog .ls-sum b{width:auto!important;height:auto!important;min-width:0!important;padding:0!important;border-radius:0!important;background:none!important;color:var(--ink)!important;font-size:15px!important;line-height:1.25!important;font-weight:800!important;display:block!important;text-align:left!important;box-shadow:none!important}
+html:not(#c144) body:not(#c144) .pixel-setup-dialog .ls-tile small,html:not(#c144) body:not(#c144) .pixel-setup-dialog .ls-sum small{color:var(--muted)!important;background:none!important}
+@media (max-width:360px){.ls-title{font-size:23px}.ls-now-top b{font-size:24px}.ls-pm button{font-size:16px}}
+@media (prefers-reduced-motion:reduce){.ls-intro .ls-k1,.ls-intro .ls-k2,.ls-tile.is-pulse{animation:none}.ls-rtrack.snap{transition:none}.ls-tile,.ls-tick,.ls-tick svg{transition:none}}

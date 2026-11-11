@@ -125,7 +125,7 @@
   // state, errors and callbacks never carry the link, passphrase or raw reply.
   function create({services={},capabilities={},standConnection,onConnected=()=>{},onManual=()=>{},onChange=()=>{},clipboard,document:doc,window:win,
     setTimer=setTimeout,clearTimer=clearTimeout,privacyMs=120000,translate:tx=key=>SharingCopy.t(key,'nl')}={}){
-    let mode='join',phase='idle',message='',secret=null,showCode=false,wifiFallback=false,epoch=0,job=null,disposed=false,element=null,privacyTimer=null,abortController=null;
+    let mode='join',phase='idle',message='',secret=null,showCode=false,epoch=0,job=null,disposed=false,element=null,privacyTimer=null,abortController=null;
     const caps=()=>typeof capabilities==='function'?capabilities():capabilities;
     const snapshot=()=>standConnection?.snapshot?.();
     const state=()=>({mode,phase,message:message?copyText(tx,message):'',busy:job!==null,hasAccess:secret!==null,
@@ -146,7 +146,7 @@
       }
       onChange(state());
     };
-    function clear(){secret=null;showCode=false;wifiFallback=false;if(privacyTimer!==null)clearTimer(privacyTimer);privacyTimer=null;}
+    function clear(){secret=null;showCode=false;if(privacyTimer!==null)clearTimer(privacyTimer);privacyTimer=null;}
     function touched(){if(!secret)return;if(privacyTimer!==null)clearTimer(privacyTimer);privacyTimer=setTimer(()=>{privacyTimer=null;conceal();message='sharingPrivacyHidden';update();},privacyMs);}
     function open(next){if(!['share','join'].includes(next))fail('STAND_SHARE_INVALID');++epoch;mode=next;phase='idle';message='';clear();update();return state();}
     async function operation(run,{joining=false}={}){
@@ -184,7 +184,7 @@
         // Retain only this foreground QR/link's ephemeral credentials for the
         // explicit system-Wifi fallback. Cancellation/background still wipe.
         if(wifiFallbackCodes.has(error?.code)&&!disposed&&ticket===epoch&&mode==='join'&&!doc?.hidden){
-          secret=validate({version:VERSION,standId:request.expectedStandId,ssid:request.ssid,standCode:request.standCode});wifiFallback=true;phase='error';message=friendlyKey(error);touched();update();
+          secret=validate({version:VERSION,standId:request.expectedStandId,ssid:request.ssid,standCode:request.standCode});phase='error';message=friendlyKey(error);touched();update();
         }
         throw error;
       }finally{request.standCode='';}}

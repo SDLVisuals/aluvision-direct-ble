@@ -2,8 +2,8 @@
 
 /* Helper and status text was 9–10px; 11–12px is readable on a phone. Small
  * uppercase badges and eyebrows keep their design size. */
-html body :is(p.channel-help, small.warmth-help, p.colour-library-hint, p.port-preview-note){font-size:12px;line-height:1.4}
-html body :is(p.live-confirmation, span.zone-meta, small.receiver-geometry-summary, small.preview-summary){font-size:11px}
+/*c140-sel:c97-polish.css*/html body p.channel-help, html body small.warmth-help, html body p.colour-library-hint, html body p.port-preview-note{font-size:12px;line-height:1.4}
+html body p.live-confirmation, html body span.zone-meta, html body small.receiver-geometry-summary, html body small.preview-summary{font-size:11px}
 html body .control-location-summary span{font-size:11px}
 html body .receiver-ports-heading small{font-size:11px}
 html body #navigation [data-action="nav"] span{font-size:11px}

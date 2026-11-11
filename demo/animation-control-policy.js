@@ -57,8 +57,7 @@
         // Legacy CHASE names containing "runner"/"spotlight" inherited a
         // tail switch, but only COMET/SCANNER actually read that field.
         if (!['COMET','SCANNER'].includes(spec.engine)) remove('trailLength');
-        // Comet has a tail per head, but no mirrored-head branch.
-        if (spec.engine === 'COMET') remove('mirror');
+        // C137ax: COMET reads MIRROR (a second comet from the other end), so the switch stays.
       }
     } else if (!effect.state?.v30Effect && !effect.state?.previewFamily &&
         /^spi-(?:chase|breathe)-\d+$/.test(effect.id || '') &&

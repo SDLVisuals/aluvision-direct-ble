@@ -314,7 +314,7 @@
           // A bounded local lane refusal is not evidence that the same MAIN
           // went offline. Keep only an ALREADY connected, visible, identical
           // projection; do not renew its heartbeat or revive an older error.
-          const busy=['STAND_BUSY','STAND_CONNECTION_BUSY','NATIVE_BUSY','OTA_BUSY','LIVE_CONTROL_BUSY'].includes(error?.code),
+          const busy=['STAND_BUSY','STAND_CONNECTION_BUSY','NATIVE_BUSY','OTA_BUSY','STAND_SYNC_BUSY','LIVE_CONTROL_BUSY'].includes(error?.code),
             same=busy&&!paused&&visible()&&state.status==='connected'&&current&&current.standId===before.standId&&current.ssid===before.ssid&&current.bootId===before.bootId&&canonical(stamp(current))===canonical(stamp(before));
           if(same)publish({error:error.code});
           else publish({status:'offline',phase:null,error:error?.code||'STAND_REFRESH_FAILED'});

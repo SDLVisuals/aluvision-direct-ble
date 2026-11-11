@@ -26,6 +26,7 @@
   let staticGestureAvailable=null;
   let integratedStatic8Available=false,staticGradientCatalogueAvailable=false;
   let singleSpiStaticBatchAvailable=false;
+  let lineSlotsAvailable=false; // C125: native LIVE scenes carry timeline lineSlots (tijdlijn C109bj)
   let authorityJointAvailable=null;
   const authorityStandModes=new Map();
   let stableStandPreparation=null;
@@ -122,6 +123,19 @@
   actions.add('applyStaticGradient');
   actions.add('observeStableCue');
   ['exportBackup','chooseBackup','importInstallationView','recoverInstallation','adoptStandNodes'].forEach(action=>actions.add(action));
+  // C118: lightning:stand-connection {state:'connected'|'connecting'|'unreachable'}, debounced ~2 s, only on a change.
+  const STAND_LANE_C118=new Set(['sharedDocument','syncInstallationContext','refreshSharedOutputs','standRefresh','standResume','standConnect','applyLive','applyLiveBatch','applyStaticGradient','applyStableCatalogue','applyStableBreathe','configureOutputs','identifyLayout','previewSPIZoneDirections','previewPixels','recoverInstallation','adoptStandNodes']);
+  const STAND_UNREACHABLE_C118=/TIMEOUT|TRANSPORT|UNREACHABLE|UNAVAILABLE|DEADLINE|UNCERTAIN|^TRUST_|^OWNER_|^LIVE_CONTROL_UNAVAILABLE$|^STAND_CONNECTION_(CLOSED|UNAVAILABLE)$|^STAND_WIFI_UNREACHABLE$|^PIN_RECOVERY_WIFI_UNAVAILABLE$|^LOCAL_NETWORK_DENIED$/;
+  const standLinkC118={wanted:null,shown:null,timer:0};
+  function standConnectionC118(state){
+    if(standLinkC118.wanted===state)return;standLinkC118.wanted=state;
+    try{root.clearTimeout?.(standLinkC118.timer);}catch(_){}
+    standLinkC118.timer=root.setTimeout?.(()=>{
+      if(standLinkC118.wanted===standLinkC118.shown)return;standLinkC118.shown=standLinkC118.wanted;
+      try{root.dispatchEvent?.(new CustomEvent('lightning:stand-connection',{detail:{state:standLinkC118.shown}}));}catch(_){}
+      try{root.__c98log?.('C118 STAND_CONNECTION '+standLinkC118.shown);}catch(_){}
+    },2000);
+  }
   ['sharedDocument','sharedLayout','refreshSharedOutputs','reserveMain'].forEach(action=>actions.add(action));
   ['receiverContextStatus','syncInstallationContext','interruptAutomaticContext'].forEach(action=>actions.add(action));
   actions.add('setAppearance');
@@ -203,7 +217,27 @@
   // C98: background context sync also waits while the receivers (setup)
   // screen is open, so it never takes the radio from pixels/sides/order.
   // Only the background jobs use this; user actions keep contextVisible.
-  const contextBackgroundAllowed=()=>contextVisible()&&root.__c98SetupScreen!==true;
+  // C137am: at a cold start the stand is read first. The automatic receiver-context sync waits for the first
+  // completed sharedDocument (or 45 s), so on Android's single native lane it never holds "Verbinden…" ~25 s.
+  const runtimeStartC137=Date.now();let sharedOkC137=false;
+  const sharedReadyC137=()=>sharedOkC137||Date.now()-runtimeStartC137>45000;
+  setTimeout(()=>{try{if(!sharedOkC137&&contextBackgroundAllowed())wakeAndDiscoverContexts();}catch(_){}},45500);
+  // C202 (9 Nov 22:30, Demo with RGBW MAIN 4282): the Receivers screen is also where people stay after building a stand.
+  // Holding the background context write for as long as that screen was open meant the MAIN never got the stand's
+  // context (tablet: pending 0/4 for 10+ minutes) and NO second phone could open the stand. Now only real setup work on
+  // that screen (pairing, pixels, sides, order, identify, draft saves) holds it, for 20 s after the last such action;
+  // then one wake starts the pending write. Native code still yields at once to every interactive action.
+  const SETUP_ACTIONS_C202=new Set(['discover','discoverMesh','select','secure','reconcileSecurity','finalize','saveDraft','parkDraft','resumeDraft',
+    'configureOutputs','configureOutputDirections','previewPixels','previewSPIZoneDirections','commitPixelsToDirections','identify','identifyLayout',
+    'blinkLayoutIdentification','stopLayoutIdentification','identifyCandidate','identifyFactoryMain']);
+  let setupActivityAtC202=0,setupWakeC202=null;
+  const setupBusyC202=()=>root.__c98SetupScreen===true&&Date.now()-setupActivityAtC202<20000;
+  function noteSetupActivityC202(action){
+    if(!SETUP_ACTIONS_C202.has(action))return;
+    setupActivityAtC202=Date.now();root.clearTimeout(setupWakeC202);
+    setupWakeC202=root.setTimeout(()=>{setupWakeC202=null;try{if(contextBackgroundAllowed())wakeAndDiscoverContexts();}catch(_){}},20500);
+  }
+  const contextBackgroundAllowed=()=>contextVisible()&&!setupBusyC202()&&!(root.__quietAfterLoadC135?.context>Date.now())&&sharedReadyC137(); // C135, C137am, C202
   // Implementing StandSession is not using it. Existing Owner installations
   // retain their archive until a genuine central flow/session is selected;
   // an uncertain or disconnected selected flow never borrows Owner fallback.
@@ -217,12 +251,14 @@
     root.dispatchEvent?.(new root.CustomEvent('lightning:static-route',{detail:Object.freeze({stage:'facade',reason,count})}));
   }catch(_){/* Bench observation is not delivery or receiver authority. */}}
   let contextWriteBarrier=null;
+  let autoRecoverAtC137=0;
   let viewRevision=0,viewLoaded=false,viewModelKey=null,viewDraftKey='null',writeQueue=Promise.resolve(),settledWriteQueue=writeQueue;
+  const emptyDraftC211b=key=>{try{const d=JSON.parse(key);return !!d&&!d.stand&&!d.mainReceiverId&&!d.receiver&&(!d.security||(d.security.status||'not-started')==='not-started');}catch(_){return false;}};
   const fail=code=>Object.assign(new Error('De verbinding is nog niet beschikbaar.'),{code});
   // Closed presentation-only NODE failure context. The original error code
   // remains the sole input to existing retry/admission policies.
   function nodeConfigurationDiagnostic746(value){return typeof value==='string'&&
-    /^NODE_DIAG_(BEGIN|SETUP_BEGIN|CONFIG|SETUP_END|COMMIT|MESH_STAGE)_(MAIN|NODE)_(SCOPE|BUSY|EXPIRED|PREPARE|GEOMETRY|INVALID|SAVE|SECURITY|INCOMPLETE|SHAPE|OTHER)$/.test(value)?value:null;}
+    /^NODE_DIAG_(BEGIN|SETUP_BEGIN|CONFIG|SETUP_END|COMMIT|MESH_STAGE|MESH_COMMIT)_(MAIN|NODE)_(SCOPE|BUSY|EXPIRED|PREPARE|GEOMETRY|INVALID|SAVE|SECURITY|INCOMPLETE|SHAPE|OTHER)$/.test(value)?value:null;}
   function receive(message,fromNative=false){
     if(!message||typeof message.id!=='string')return;
     if(!pending.has(message.id)){
@@ -234,6 +270,8 @@
     }
     const request=pending.get(message.id);pending.delete(message.id);
     if(fromNative)request.automatic?.nativeFinished(message);
+    // C137: another phone holds the setup lease; the app shows its banner (never a red error).
+    if(message.ok===false&&message.code==='SETUP_BUSY')setupLeaseC137(null,{busy:true,kind:null,ttlMs:2000,mine:false});
     root.clearTimeout(request.timer);request.removeAbort();
     // C98 field diagnosis (debug builds forward it to the device log).
     if(root.__c98log&&request.action&&!['sharedDocument','capabilities','loadView','lightQuiet','interfaceFeedback','selectionFeedback'].includes(request.action))
@@ -242,11 +280,27 @@
       if(message.ok!==true&&message.code==='OUTPUT_CONFIGURATION_PENDING')try{root.dispatchEvent?.(new Event('c105-output-pending'));}catch(_){}
       // C107: this phone's place on the stand went to a phone in use; re-admit it
       // (Android reports the same refusal as MAIN_EXISTING_STAND_ACCESS_REQUIRED).
-      if(message.ok!==true&&['TRUST_APP_NOT_ALLOWED','MAIN_EXISTING_STAND_ACCESS_REQUIRED'].includes(message.code)&&request.action!=='recoverInstallation')try{root.dispatchEvent?.(new Event('lightning:app-readmit'));}catch(_){}
+      if(message.ok!==true&&['TRUST_APP_NOT_ALLOWED','MAIN_EXISTING_STAND_ACCESS_REQUIRED'].includes(message.code)&&request.action!=='recoverInstallation')try{root.dispatchEvent?.(typeof CustomEvent==='function'?new CustomEvent('lightning:app-readmit',{detail:{action:request.action}}):new Event('lightning:app-readmit'));}catch(_){}
       // C107: a completed exchange over the owner session is proof that the
       // MAIN is reachable; the top-bar indicator shows it at once.
+      if(message.ok===true&&request.action==='sharedDocument'&&!sharedOkC137){sharedOkC137=true;setTimeout(()=>{try{if(contextBackgroundAllowed())wakeAndDiscoverContexts();}catch(_){}},1500);}
       if(message.ok===true&&['sharedDocument','syncInstallationContext','refreshSharedOutputs','standRefresh','standResume','standConnect','applyLive','applyLiveBatch','applyStaticGradient','applyStableCatalogue','applyStableBreathe','configureOutputs','identifyLayout','previewSPIZoneDirections','previewPixels'].includes(request.action))
         try{root.dispatchEvent?.(new CustomEvent('lightning:main-exchange',{detail:{action:request.action}}));}catch(_){}
+      // C118: calm stand-connection state for the interface chip (identical on iPhone and Android: every native
+      // answer passes here). A completed owner-lane exchange = connected; a transport/owner failure of one = unreachable.
+      if(STAND_LANE_C118.has(request.action)){
+        const codeC118=String(message.code||''),recoveryC118=['recoverInstallation','adoptStandNodes'].includes(request.action);
+        if(message.ok===true)standConnectionC118('connected');
+        // A stand load that reached the MAIN but stopped at one receiver does not make the stand unreachable.
+        else if(recoveryC118?/TIMEOUT|TRANSPORT|UNREACHABLE|WIFI_UNAVAILABLE|LOCAL_NETWORK_DENIED/.test(codeC118):STAND_UNREACHABLE_C118.test(codeC118))standConnectionC118('unreachable');
+        else if(standLinkC118.wanted==='connecting')standConnectionC118(standLinkC118.shown==='connected'?'connected':'unreachable');
+      }
+      // C137ui2: the phone is on another Wi-Fi or the native stand rejoin failed (any action, also discoverMesh /
+      // reconcileFirstPinV2): the stand is not reachable. Feeds the C118 chip and drops the pill's evidence.
+      if(message.ok!==true&&/(^|_)WRONG_RECEIVER_NETWORK$|RECEIVER_NETWORK_(UNAVAILABLE|CHANGED)$|(^|_)LOCAL_NETWORK_DENIED$|^STAND_WIFI_UNREACHABLE$|^WIFI_(DEADLINE|ROUTE_EXPIRED|OS_PERMISSION_REQUIRED|KNOWN_NETWORK_REQUIRED)$/.test(String(message.code||''))){
+        standConnectionC118('unreachable');
+        try{root.dispatchEvent?.(new CustomEvent('lightning:stand-network-lost',{detail:{code:String(message.code),action:request.action}}));}catch(_){}
+      }
       // C107: an animation start reports the stand's sync lead; the interface
       // shows a progress card until the common start instant has passed.
       if(message.ok===true&&['applyLive','applyLiveBatch'].includes(request.action)&&Number.isFinite(message.result?.leadMs)&&message.result.leadMs>0)
@@ -267,7 +321,25 @@
     const rows=Array.isArray(payload?.requests)?payload.requests:[payload];
     return rows.some(row=>row?.scene?.standAnimation||Array.isArray(row?.portScenes)&&row.portScenes.some(child=>child?.scene?.standAnimation));
   }
+  // C137c: the MAIN's TX buffers fill up when several phones poll. Idle phones ask at most every 10 s (mesh status,
+  // shared status); for 30 s after a real action (light, setup, add, removal, sync) every 5 s.
+  const QUIET_ACTIONS_C137=new Set(['meshStatus','loadView','capabilities','interfaceFeedback','selectionFeedback','setAppearance','securityPreference',
+    'otaStatus','standSessionStatus','sharedDocument','sharedLayout','receiverContextStatus','outputConfigurationStatus','securityStatus']);
+  let lastActionAtC137=0;
+  function pollGapC137(){return Date.now()-lastActionAtC137<30000?5000:10000;}
+  try{root.__pollGapC137=pollGapC137;}catch(_){}
+  // C138ui: one MAIN exchange costs ~0.8 s on the single native worker, so a background read that starts between two
+  // taps delays the next tap by 1-4 s. Mesh and shared status wait 4 s after the last light command or touch (each
+  // still runs at least every 20 s, so other phones' changes and offline receivers keep showing).
+  var lastTouchAtC138ui=0;
+  try{root.document?.addEventListener?.('pointerdown',()=>{lastTouchAtC138ui=Date.now();},{capture:true,passive:true});}catch(_){}
+  function interactiveHoldC138ui(){return Math.max(0,Math.max(lastLightAtC97,lastTouchAtC138ui)+4000-Date.now());}
+  try{root.__interactiveHoldC138ui=interactiveHoldC138ui;}catch(_){}
   function call(action,payload={},signal,automatic,posted){
+    if(!QUIET_ACTIONS_C137.has(action))lastActionAtC137=Date.now();
+    if(!automatic)noteSetupActivityC202(action); // C202
+
+    noteStandC125(action,payload);
     if(!sharedOutputPassiveC98.has(action))sharedOutputReadC98?.abort();
     if(['applyLive','applyLiveBatch','applyStableCatalogue','applyStableBreathe','applyStaticGradient','identify','identifyLayout','previewPixels','previewSPIZoneDirections'].includes(action))lastLightAtC97=Date.now();
     // C98: a pixel, sides or ledline-order screen needs the MAIN at once. A
@@ -282,6 +354,8 @@
     if(!actions.has(action))return Promise.reject(fail('ACTION_UNSUPPORTED'));
     if(signal?.aborted)return Promise.reject(fail('CANCELLED'));
     if(pending.size>=8)return Promise.reject(fail('NATIVE_BUSY'));
+    // C118: reconnecting after the stand was unreachable shows "connecting" until it answers.
+    if(['recoverInstallation','adoptStandNodes','standConnect','standResume','standRefresh'].includes(action)&&standLinkC118.wanted==='unreachable')standConnectionC118('connecting');
     return new Promise((resolve,reject)=>{
       const id='v30-'+documentId+'-'+(++serial),cancelNative=()=>{
         if(automatic){automatic.interrupt();return;}
@@ -352,7 +426,12 @@
     if(!result||result.standId!==standId||!['synced','pending'].includes(result.status)||!Number.isInteger(result.synced)||!Number.isInteger(result.total)||result.total<1||result.total>30||result.synced<0||result.synced>result.total||(result.status==='synced'&&(result.synced!==result.total||result.librariesComplete===false)))throw fail('RECEIVER_CONTEXT_UNCONFIRMED');
     return {standId,status:result.status,synced:result.synced,total:result.total,...(typeof result.librariesComplete==='boolean'?{librariesComplete:result.librariesComplete}:{}),
       // C107: this phone's view of an SPI receiver is older; the app adopts it first.
-      ...(result.status==='pending'&&result.code==='RECEIVER_CONTEXT_STALE'?{code:result.code}:{})};
+      ...(result.status==='pending'&&result.code==='RECEIVER_CONTEXT_STALE'?{code:result.code}:{}),
+      // C133: native read an SPI receiver's own outputs back during this publication (its stored view moved on).
+      ...(result.outputsAdopted===true?{outputsAdopted:true}:{}),
+      // C127: the MAIN's live roster differs from this phone's stand; rosterMissing = receivers it no longer names.
+      ...(result.status==='pending'&&['RECEIVER_CONTEXT_ROSTER_AHEAD','RECEIVER_CONTEXT_ROSTER_BEHIND'].includes(result.code)?{code:result.code,
+        ...(Array.isArray(result.rosterMissing)&&result.rosterMissing.length<=30&&result.rosterMissing.every(rid=>typeof rid==='string'&&/^[A-F0-9]{16}$/.test(rid))?{rosterMissing:[...result.rosterMissing]}:{})}:{})};
   }
   function automaticContextControl(standId){
     let requestId=null,settle,requested=false,interruption=null,afterCleanup;
@@ -409,6 +488,9 @@
       if(control)ticket?.onPendingLiveIntent?.(()=>control.interrupt());
       const result=await call(action,{standId,...(libraries===undefined?{}:{libraries}),...(control?{automatic:true}:{})},signal,control);
       if(!legacyContextAllowed())throw fail('STAND_LEGACY_ACCESS_RETIRED');
+      // C133: native committed an SPI receiver's own outputs into the stored view during this publication. Take that
+      // view now, before any other save, so nothing writes the older revision back.
+      if(result?.outputsAdopted===true){try{acceptView(await call('loadView',{}));}catch(_){}}
       return contextResult(result,standId);
     }finally{
       // A local abort or timeout is not cleanup. An unconfirmed interrupt
@@ -879,6 +961,186 @@
       }
     });return trackWrite(next);
   }
+  // C125: mesh sheet feed for the connection chip (C109au sheet, C109bb bubble).
+  // Every ~4.5 s while the app is visible, one read-only native `meshStatus`
+  // on the warm MAIN owner session (native answers "cold" instead of opening
+  // a handshake and "busy" while a light, setup or sync action runs; it is
+  // also skipped here while any such call is pending). It sends
+  // `lightning:mesh-status` (contract C109au, changes:'native') and, for real
+  // changes only, `lightning:mesh-change`: offline after 10 s confirmed,
+  // online, restart (C109bb kind 'restart'), added, removed, MAIN,
+  // channel and a link that gets unstable; at most one per receiver per 20 s.
+  // Old native hosts answer ACTION_UNSUPPORTED: the feed then stops for good.
+  actions.add('meshStatus');sharedOutputPassiveC98.add('meshStatus');
+  const meshC125={timer:0,unsupported:false,inFlight:false,standId:null,standSeen:null,modelKey:null,model:null,
+    primed:false,members:null,mainId:null,mainLat:null,mainHist:[],lastOkAt:0,channel:null,channelAt:0,
+    rows:new Map(),probeAt:new Map(),log:[],last:null,ticks:0,samples:0};
+  const MESH_QUIET_C125=new Set(['meshStatus','loadView','capabilities','interfaceFeedback','selectionFeedback','setAppearance','securityPreference','otaStatus','standSessionStatus']);
+  const MESH_LINES_C125={nl:['ledline','ledlines'],en:['LED line','LED lines'],fr:['ligne LED','lignes LED'],de:['LED-Linie','LED-Linien']};
+  function noteStandC125(action,payload){
+    if(!STAND_LANE_C118.has(action))return;
+    const id=typeof payload?.standId==='string'?payload.standId:Array.isArray(payload?.requests)&&typeof payload.requests[0]?.standId==='string'?payload.requests[0].standId:null;
+    if(id)meshC125.standId=id;
+  }
+  function meshLogC125(line){
+    meshC125.log.push(new Date().toISOString().slice(11,19)+' '+line);if(meshC125.log.length>40)meshC125.log.shift();
+    try{root.__c98log?.('C125 '+line);}catch(_){}
+    try{root.console?.info?.('C125 '+line);}catch(_){}
+  }
+  function meshViewC125(){
+    if(viewModelKey!==meshC125.modelKey){meshC125.modelKey=viewModelKey;try{meshC125.model=JSON.parse(viewModelKey);}catch(_){meshC125.model=null;}}
+    const model=meshC125.model;if(!model||model.demo||!Array.isArray(model.stands)||!Array.isArray(model.receivers))return null;
+    const withMain=model.stands.filter(s=>model.receivers.some(r=>r.standId===s.id&&r.role==='main'&&r.lifecycle==='added'&&typeof r.rid==='string'));
+    const stand=withMain.find(s=>s.id===meshC125.standId)||(withMain.length===1?withMain[0]:null);if(!stand)return null;
+    const members=model.receivers.filter(r=>r.standId===stand.id&&r.lifecycle==='added'&&typeof r.rid==='string'&&/^[0-9A-Fa-f]{16}$/.test(r.rid));
+    return {stand,members,zones:new Map((stand.zones||[]).map(z=>[z.id,z]))};
+  }
+  function meshScheduleC125(ms){
+    try{root.clearTimeout?.(meshC125.timer);}catch(_){}
+    if(meshC125.unsupported||!native||!transportReady)return;
+    meshC125.timer=root.setTimeout?.(()=>{void meshTickC125();},ms);
+  }
+  function meshProbeC125(view,now){
+    // One NODE per call, the one probed longest ago, each at most every 18 s, only while the MAIN lists it online
+    // (most polls then cost one short exchange; the light path always goes first).
+    let best=null,bestAt=Infinity;
+    for(const r of view.members){
+      if(r.role!=='node')continue;const row=meshC125.rows.get(r.id);if(!row||!row.listedOnline)continue;
+      const at=meshC125.probeAt.get(r.id)||0;if(now-at<18000)continue;if(at<bestAt){best=r;bestAt=at;}
+    }
+    if(!best)return '';meshC125.probeAt.set(best.id,now);return best.rid.toUpperCase();
+  }
+  async function meshTickC125(){
+    meshScheduleC125(pollGapC137());meshC125.ticks++; // C137c: was every 4.5 s
+    if(!viewLoaded||!contextVisible()||meshC125.inFlight||contextControls.size)return;
+    if(root.__quietAfterLoadC135?.mesh>Date.now()){meshScheduleC125(root.__quietAfterLoadC135.mesh-Date.now()+50);return;} // C135
+    const view=meshViewC125();if(!view)return;
+    if(meshC125.standSeen!==view.stand.id){meshC125.standSeen=view.stand.id;meshResetC125();}
+    // A light choice, setup step or sync goes first: look again shortly after it.
+    const now=Date.now();if(now-lastLightAtC97<1500){meshScheduleC125(1600);return;}
+    {const hold=interactiveHoldC138ui();if(hold>0&&now-(meshC125.ranAtC138ui||0)<20000){meshScheduleC125(hold+150);return;}} // C138ui
+    for(const request of pending.values())if(!MESH_QUIET_C125.has(request.action)){meshScheduleC125(900);return;}
+    // C137c: a node STATUS probe only shortly after a real action; idle phones only read the MAIN's list.
+    const probe=Date.now()-lastActionAtC137<30000?meshProbeC125(view,now):'';
+    meshC125.ranAtC138ui=Date.now();meshC125.inFlight=true;let answer;
+    try{answer=await call('meshStatus',{standId:view.stand.id,probe});}
+    catch(error){
+      if(error?.code==='ACTION_UNSUPPORTED'){meshC125.unsupported=true;meshLogC125('unsupported (older app host)');return;}
+      // Only a lost MAIN exchange counts against its stability; a busy editor, guide or setup step is just a pause.
+      if(STAND_UNREACHABLE_C118.test(String(error?.code||''))&&!/BUSY/.test(String(error?.code||''))){meshC125.mainHist.push(0);if(meshC125.mainHist.length>20)meshC125.mainHist.shift();}
+      meshLogC125('poll failed '+String(error?.code||'').slice(0,40));return;
+    }finally{meshC125.inFlight=false;}
+    if(!answer||answer.status!=='ok'){if(answer?.status)meshLogC125('poll '+answer.status);return;}
+    if(meshC125.standSeen!==view.stand.id||!contextVisible())return;
+    try{meshApplyC125(view,answer);}catch(error){meshLogC125('apply failed '+String(error?.message||'').slice(0,60));}
+  }
+  function meshResetC125(){meshC125.primed=false;meshC125.members=null;meshC125.mainId=null;meshC125.rows.clear();meshC125.probeAt.clear();meshC125.mainHist=[];meshC125.mainLat=null;meshC125.channel=null;}
+  function meshEmitC125(kind,receiverId,name,extra={}){
+    const detail={kind,receiverId,name,...extra};
+    meshLogC125('MESH_CHANGE kind='+kind+' id='+String(receiverId||'-').slice(0,40));
+    try{root.dispatchEvent?.(new CustomEvent('lightning:mesh-change',{detail}));}catch(_){}
+  }
+  // Short firmware label for the sheet: the version (e.g. 42.0.0-dev1), not the whole build tag.
+  function meshBuildC125(build){if(typeof build!=='string'||!build)return '';const m=build.match(/^V?\d+\.\d+\.\d+(?:-[A-Za-z0-9]+)?/);return (m?m[0]:build).slice(0,24);}
+  function meshApplyC125(view,a){
+    meshC125.answer=a;
+    const now=Date.now(),num=v=>typeof v==='number'&&Number.isFinite(v)?v:null;
+    meshC125.samples++;meshC125.lastOkAt=now;
+    const rtt=num(a.roundTripMs);if(rtt!==null&&rtt>=0)meshC125.mainLat=meshC125.mainLat===null?rtt:meshC125.mainLat*0.6+rtt*0.4;
+    meshC125.mainHist.push(1);if(meshC125.mainHist.length>20)meshC125.mainHist.shift();
+    const listed=new Map((Array.isArray(a.receivers)?a.receivers:[]).filter(x=>x&&typeof x.rid==='string').map(x=>[x.rid.toUpperCase(),x]));
+    const links=a.links&&typeof a.links==='object'&&Array.isArray(a.links.peers)?a.links:null;
+    const peers=new Map(links?links.peers.filter(p=>p&&typeof p.rid==='string').map(p=>[p.rid.toUpperCase(),p]):[]);
+    const probe=a.probe&&typeof a.probe==='object'&&typeof a.probe.rid==='string'?a.probe:null;
+    const channel=links&&num(links.channel)>0&&links.channel<=196?links.channel:null;
+    const lang=(root.document?.documentElement?.lang||'nl').slice(0,2),lines=MESH_LINES_C125[lang]||MESH_LINES_C125.nl;
+    const out=[],changes=[];
+    const ids=new Set(view.members.map(r=>r.id));
+    const main=view.members.find(r=>r.role==='main');
+    for(const r of view.members){
+      const rid=r.rid.toUpperCase();let row=meshC125.rows.get(r.id);
+      if(!row){row={hist:[],up:false,listedOnline:false,downSince:null,lastUpAt:0,confirmed:null,emitted:null,emitAt:0,restart:false,
+        rtt:null,build:'',clock:null,boot:null,unstable:false};meshC125.rows.set(r.id,row);}
+      const d=listed.get(rid),l=peers.get(rid);let up;
+      if(r.role==='main')up=true;
+      else{
+        row.listedOnline=d?.online===true;
+        up=row.listedOnline&&(!l||num(l.authAgeMs)===null||l.authAgeMs<20000);
+        if(probe&&probe.rid.toUpperCase()===rid){
+          if(probe.offline===true)up=false;
+          if(probe.ok===true){
+            const ms=num(probe.roundTripMs);if(ms!==null&&ms>=0)row.rtt=row.rtt===null?ms:row.rtt*0.6+ms*0.4;
+            if(typeof probe.build==='string')row.build=meshBuildC125(probe.build);
+            const clock=num(probe.clockMs);
+            if(clock!==null){
+              // The NODE's clock since boot went back: it restarted between two probes.
+              if(row.clock&&clock+5000<row.clock.ms+(now-row.clock.at)){row.restart=true;meshLogC125('restart seen id='+r.id.slice(0,40)+' clock='+clock);}
+              row.clock={ms:clock,at:now};
+            }
+          }
+        }
+        const boot=l&&num(l.boot)>0?l.boot:null;
+        if(boot!==null){if(row.boot!==null&&boot!==row.boot){row.restart=true;meshLogC125('restart seen id='+r.id.slice(0,40)+' boot');}row.boot=boot;}
+      }
+      row.up=up;row.hist.push(up?1:0);if(row.hist.length>20)row.hist.shift();
+      if(up){row.lastUpAt=now;row.downSince=null;row.confirmed='online';}
+      else{row.clock=null;if(row.downSince===null)row.downSince=now;if(!meshC125.primed||now-row.downSince>=10000)row.confirmed='offline';}
+      const share=row.hist.length>=3?row.hist.reduce((x,y)=>x+y,0)/row.hist.length:null;
+      let stability=r.role==='main'?(meshC125.mainHist.length>=3?meshC125.mainHist.reduce((x,y)=>x+y,0)/meshC125.mainHist.length:null):share;
+      if(l&&num(l.txOk)!==null&&num(l.txFail)!==null&&l.txOk+l.txFail>=20&&stability!==null)stability=Math.min(stability,l.txOk/(l.txOk+l.txFail));
+      const ack=l&&num(l.ackUs)>0?l.ackUs/1000:null;
+      const latency=r.role==='main'?meshC125.mainLat:row.rtt!==null?row.rtt:ack!==null&&meshC125.mainLat!==null?meshC125.mainLat+2*ack:null;
+      const authAge=l?num(l.authAgeMs):null;
+      // A confirmed-offline receiver reads as 'not seen' in the sheet, and has no stability figure of its own.
+      const offline=r.role==='node'&&row.confirmed==='offline';
+      let lastSeen=r.role==='main'?0:authAge!==null?authAge:up?0:Math.min(1e9,now-(row.lastUpAt||now)+12000);
+      if(offline){lastSeen=Math.max(lastSeen,30001);stability=null;}
+      const zone=r.zoneId?view.zones.get(r.zoneId):null;
+      const ports=r.type==='SPI'?(Array.isArray(r.outputs)?r.outputs.filter(o=>o&&o.enabled).length:null):1;
+      const drives=zone?String(zone.name||'')+(ports?' · '+ports+' '+lines[ports===1?0:1]:''):'';
+      const firmware=r.role==='main'?meshBuildC125(a.build):row.build;
+      out.push({id:r.id,name:String(r.name||''),type:r.type==='SPI'?'SPI':'RGBW',role:r.role==='main'?'main':'node',drives,ports,
+        rssi:l&&num(l.rssi)!==null?l.rssi:null,latencyMs:latency===null?null:Math.round(latency),hops:r.role==='main'?0:up?1:null,
+        stability:stability===null?null:Math.round(stability*100)/100,lastSeenMs:lastSeen===null?null:Math.round(lastSeen),firmware:firmware||null});
+      // Changes for this receiver (never on the first sample: that is the starting point, not a change).
+      if(r.role==='node'&&meshC125.primed){
+        const wanted=row.confirmed==='offline'?'offline':row.confirmed==='online'?'online':row.emitted;
+        if(row.emitted===null)row.emitted=wanted;
+        else if(wanted!==row.emitted&&now-row.emitAt>=20000){changes.push([wanted,r]);row.emitted=wanted;row.emitAt=now;row.restart=false;}
+        else if(row.restart&&row.emitted==='online'&&up&&now-row.emitAt>=20000){changes.push(['restart',r]);row.emitAt=now;row.restart=false;}
+        if(up&&stability!==null){
+          if(!row.unstable&&stability<0.7&&row.hist.length>=6){row.unstable=true;if(now-row.emitAt>=20000){changes.push(['unstable',r]);row.emitAt=now;}}
+          else if(row.unstable&&stability>=0.85)row.unstable=false;
+        }
+      }else if(r.role==='node'){row.emitted=row.confirmed==='offline'?'offline':'online';row.restart=false;}
+    }
+    if(meshC125.primed&&meshC125.members){
+      for(const r of view.members)if(!meshC125.members.has(r.id)){const row=meshC125.rows.get(r.id);if(row&&now-row.emitAt>=20000){changes.push(['added',r]);row.emitAt=now;}}
+      for(const [id,name] of meshC125.members)if(!ids.has(id)){changes.push(['removed',{id,name}]);meshC125.rows.delete(id);meshC125.probeAt.delete(id);}
+      if(main&&meshC125.mainId&&main.id!==meshC125.mainId)changes.push(['main',main]);
+      if(channel!==null&&meshC125.channel!==null&&channel!==meshC125.channel&&now-meshC125.channelAt>=20000){changes.push(['channel',null,channel]);meshC125.channelAt=now;}
+    }
+    meshC125.members=new Map(view.members.map(r=>[r.id,String(r.name||'')]));meshC125.mainId=main?.id||null;
+    if(channel!==null)meshC125.channel=channel;
+    const detail={name:String(view.stand.name||''),channel,band:channel!==null?(channel<=14?'2.4 GHz':'5 GHz'):null,updatedAt:now,receivers:out,changes:'native'};
+    meshC125.last=detail;
+    try{root.dispatchEvent?.(new CustomEvent('lightning:mesh-status',{detail}));}catch(_){}
+    if(meshC125.samples%10===1)meshLogC125('status n='+out.length+' rtt='+Math.round(meshC125.mainLat??-1)+' links='+(links?1:0)+' up='+out.filter(x=>x.role==='main'||meshC125.rows.get(x.id)?.up).length);
+    if(!meshC125.primed){meshC125.primed=true;return;}
+    for(const [kind,r,ch] of changes){
+      if(kind==='channel')meshEmitC125('channel',null,'',{channel:ch});
+      else meshEmitC125(kind,r.id,String(r.name||''));
+    }
+  }
+  root.document?.addEventListener?.('visibilitychange',()=>{
+    if(root.document.visibilityState==='hidden'){try{root.clearTimeout?.(meshC125.timer);}catch(_){}return;}
+    // Back in front: start from what is true now; time spent hidden is not an outage.
+    meshC125.primed=false;for(const row of meshC125.rows.values()){row.downSince=null;row.restart=false;row.clock=null;}
+    meshScheduleC125(1200);
+  });
+  meshScheduleC125(6000);
+  root.LightningMeshFeedC125=Object.freeze({get log(){return meshC125.log.slice();},get last(){return meshC125.last;},
+    get answer(){return meshC125.answer;},get state(){return {unsupported:meshC125.unsupported,ticks:meshC125.ticks,samples:meshC125.samples,primed:meshC125.primed,standId:meshC125.standSeen};}});
   // C97 shared installation: the MAIN document (read/write through the
   // native owner channel) and the local adoption of another phone's layout.
   function sharedDocument(request){
@@ -887,7 +1149,23 @@
     if(!fields||Object.keys(request).length!==fields.length||!fields.every(key=>Object.prototype.hasOwnProperty.call(request,key))||
        typeof request.standId!=='string'||request.op==='write'&&(!Number.isSafeInteger(request.base)||request.base<0||typeof request.json!=='string'))
       return Promise.reject(fail('SHARED_INVALID'));
-    return call('sharedDocument',JSON.parse(JSON.stringify(request)));
+    return call('sharedDocument',JSON.parse(JSON.stringify(request))).then(result=>{
+      // C137 (multi-user): the MAIN's setup lease, as seen in this status answer.
+      if(request.op==='status'&&result&&typeof result.setupBusy==='boolean')setupLeaseC137(request.standId,{busy:result.setupBusy,
+        kind:['pixels','order','sides','add'].includes(result.setupKind)?result.setupKind:null,
+        ttlMs:Number.isSafeInteger(result.setupTtlMs)?result.setupTtlMs:null,mine:typeof result.setupMine==='boolean'?result.setupMine:null});
+      return result;
+    },error=>{
+      if(error?.code==='SETUP_BUSY')setupLeaseC137(request.standId,{busy:true,kind:null,ttlMs:2000,mine:false});
+      throw error;
+    });
+  }
+  // C137: one event for the app's banner; SETUP_BUSY from any command (another phone is setting up) is the same signal.
+  let leaseLogC137='';
+  function setupLeaseC137(standId,lease){
+    // C137m: log each change of the MAIN's setup lease as this phone sees it (status poll or a SETUP_BUSY reply).
+    try{const k=[lease.busy,lease.kind,lease.mine].join('/');if(k!==leaseLogC137){leaseLogC137=k;root.__c98log?.('C137 LEASE busy='+lease.busy+' kind='+lease.kind+' ttl='+lease.ttlMs+' mine='+lease.mine);}}catch(_){}
+    try{if(typeof root.dispatchEvent==='function'&&typeof root.CustomEvent==='function')root.dispatchEvent(new root.CustomEvent('lightning:setup-busy',{detail:{standId,...lease}}));}catch(_){}
   }
   function sharedLayout({standId,stand,receivers}){
     const next=writeQueue.catch(()=>{}).then(async()=>{
@@ -904,7 +1182,7 @@
     // uses the most recent accepted view. Callers may bind an explicit earlier
     // revision when their UI decision depends on that exact snapshot.
     const kinds={create:operation&&Object.prototype.hasOwnProperty.call(operation,'receiverId')?['kind','zoneId','name','receiverId']:['kind','zoneId','name'],rename:['kind','zoneId','name'],renameReceiver:['kind','receiverId','name'],delete:['kind','zoneId'],
-      assign:['kind','receiverId','zoneId'],assignMany:['kind','receiverIds','zoneId'],reorder:['kind','zoneId','receiverIds'],layout:['kind','zoneId','layout'],arrange:['kind','zoneId','layout','receiverIds'],arrangeLines:['kind','zoneId','layout','lineOrder'],scenePresentation:['kind','zones']};
+      assign:['kind','receiverId','zoneId'],assignMany:['kind','receiverIds','zoneId'],reorder:['kind','zoneId','receiverIds'],layout:['kind','zoneId','layout'],arrange:['kind','zoneId','layout','receiverIds'],arrangeLines:['kind','zoneId','layout','lineOrder'],scenePresentation:['kind','zones'],zoneOrder:['kind','zoneIds']};
     const fields=typeof operation?.kind==='string'&&Object.prototype.hasOwnProperty.call(kinds,operation.kind)?kinds[operation.kind]:null;
     const boundedId=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(value);
     const denseArray=value=>Array.isArray(value)&&value.length<=240&&Array.from({length:value.length},(_,index)=>Object.prototype.hasOwnProperty.call(value,index)).every(Boolean);
@@ -928,6 +1206,7 @@
         !['stacked','vertical','continuous'].includes(operation.layout)||!denseArray(operation.lineOrder)||operation.lineOrder.length>240||
         Array.from(operation.lineOrder).some(id=>typeof id!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}:[0-4]$/.test(id))||new Set(operation.lineOrder).size!==operation.lineOrder.length)||
       operation.kind==='scenePresentation'&&!validScenePresentation(operation)||
+      operation.kind==='zoneOrder'&&(!denseArray(operation.zoneIds)||!operation.zoneIds.length||operation.zoneIds.length>100||operation.zoneIds.some(id=>!boundedId(id))||new Set(operation.zoneIds).size!==operation.zoneIds.length)||
       expectedZoneSignature!==undefined&&(!['delete','rename','arrange','arrangeLines'].includes(operation.kind)||typeof expectedZoneSignature!=='string'||expectedZoneSignature.length>16384)||
       Object.keys(operation).length!==fields.length||!fields.every(key=>Object.prototype.hasOwnProperty.call(operation,key)))return Promise.reject(fail('ZONE_EDIT_INVALID'));
     let payload;
@@ -1196,7 +1475,10 @@
       const extended=scene&&Object.prototype.hasOwnProperty.call(scene,'v30');
       const phased=scene&&(Object.prototype.hasOwnProperty.call(scene,'phaseMs')||Object.prototype.hasOwnProperty.call(scene,'phaseRateMicroHz'));
       const stand=scene&&Object.prototype.hasOwnProperty.call(scene,'standAnimation');
-      if(!scene||typeof scene!=='object'||Array.isArray(scene)||Object.keys(scene).length!==keys.length+(extended?1:0)+(phased?2:0)+(stand?1:0)||!keys.every(key=>Object.prototype.hasOwnProperty.call(scene,key))||
+      // C109bj: optional timeline slots (lineSlots + lineSlotCount), see tijdlijn-plan-C109be
+      const slotted=scene&&Object.prototype.hasOwnProperty.call(scene,'lineSlots');
+      if(slotted&&(!Array.isArray(scene.lineSlots)||scene.lineSlots.length<1||scene.lineSlots.length>128||!scene.lineSlots.every(v=>Number.isInteger(v)&&v>=0&&v<=255)||!Number.isInteger(scene.lineSlotCount)||scene.lineSlotCount<1||scene.lineSlotCount>256))throw fail('LIVE_INVALID');
+      if(!scene||typeof scene!=='object'||Array.isArray(scene)||Object.keys(scene).length!==keys.length+(extended?1:0)+(phased?2:0)+(stand?1:0)+(slotted?2:0)||!keys.every(key=>Object.prototype.hasOwnProperty.call(scene,key))||
         typeof scene.engine!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(scene.engine)||!colour(scene.background)||!Array.isArray(scene.palette)||scene.palette.length<1||scene.palette.length>(extended?7:4)||!scene.palette.every(colour)||
         !Object.entries(bounds).every(([key,[min,max]])=>Number.isInteger(scene[key])&&scene[key]>=min&&scene[key]<=max)||
         !['backgroundOn','motionReverse','bounce','mirror'].every(key=>typeof scene[key]==='boolean'))throw fail('LIVE_INVALID');
@@ -1228,7 +1510,7 @@
     return {standId,receiverId,kind,brightness,transitionMs,channels:[...channels],...(full?{scene:JSON.parse(JSON.stringify(scene))}:{})};
   }
   function firstPinSSID686(value,type){
-    const prefix=type==='SPI'?'SPI HQ ':type==='RGBW'?'RGBW HQ ':'';
+    const prefix=type==='SPI'?'SPI ':type==='RGBW'?'RGBW ':''; // C137av
     if(!prefix||typeof value!=='string'||value.length>32||!value.startsWith(prefix))return false;
     const suffix=value.slice(prefix.length);return /^[A-Za-z0-9 ._-]+$/.test(suffix)&&suffix.trim()===suffix&&!suffix.includes('  ');
   }
@@ -1525,6 +1807,14 @@
       // C98: wifi:true = the phone is on the stand's PIN-protected Wi-Fi; no PIN.
       const viaWifi=wifi===true;
       if(!viaWifi&&(typeof pin!=='string'||!/^\d{8,12}$/.test(pin)))throw fail('PIN_RECOVERY_INVALID');
+      // C137au: the automatic Wi-Fi recovery never runs while a setup draft is open (it cannot succeed), and at most
+      // once per 4 s however many paths ask (readmit / Wi-Fi probe / resume). The PIN path is unchanged.
+      if(viaWifi){
+        // C211b: an empty draft (no stand, no MAIN, no receiver, nothing secured) is not setup work. It was left when someone opened
+        // "Nieuwe stand" and went back, and then blocked "Bestaande stand openen" silently forever (the button did nothing).
+        if(viewLoaded&&viewDraftKey!=='null'&&!emptyDraftC211b(viewDraftKey))throw fail('RECOVERY_DRAFT_OPEN');
+        const nowC137=Date.now();if(nowC137-autoRecoverAtC137<4000)throw fail('RECOVERY_THROTTLED');autoRecoverAtC137=nowC137;
+      }
       const next=writeQueue.catch(()=>{}).then(async()=>{
         const result=await call('recoverInstallation',viaWifi?{wifi:true}:{pin},signal);
         if(result?.status!=='restored'||typeof result.standId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(result.standId)||result.view?.model?.demo!==false||result.view?.draft!==null)throw fail('PIN_RECOVERY_UNCONFIRMED');
@@ -1539,11 +1829,19 @@
           if(stored?.restored!==true)throw fail('LIBRARIES_RECOVERY_UNCONFIRMED');
         }
         const view=acceptView(result.view);if(result.librariesComplete===true)setLibraryRecoveryBlock(result.standId,false);
-        return {status:'restored',standId:result.standId,view,playbackModel,librariesComplete:result.librariesComplete===true};
+        // C126: receivers the native layer could not reach (kept from a stored copy, or left out) are reported, never hidden.
+        const ridsC126=list=>Array.isArray(list)?list.filter(value=>typeof value==='string'&&/^[A-F0-9]{16}$/.test(value)).slice(0,30):[];
+        return {status:'restored',standId:result.standId,view,playbackModel,librariesComplete:result.librariesComplete===true,receiversOffline:ridsC126(result.receiversOffline),receiversIncomplete:ridsC126(result.receiversIncomplete),receiversUnlisted:ridsC126(result.receiversUnlisted)};
       });return trackWrite(next);
     },
     // C117: the phone that created a stand adopts receivers another phone added
     // (through its own MAIN session; recovery is refused for an original owner).
+    // C118: the shared document's libraries are now this phone's libraries (scenes, presets, colours of the
+    // stand itself), so a recovery that skipped or could not use the MAIN's archive no longer blocks publishing.
+    sharedLibrariesApplied(standId){
+      if(typeof standId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(standId)||!incompleteLibraryRecovery.has(standId))return false;
+      setLibraryRecoveryBlock(standId,false);try{root.__c98log?.('C118 LIBRARY_BLOCK_CLEARED shared-document');}catch(_){}return true;
+    },
     async adoptStandNodes({standId}={}){
       if(simpleStandAvailable===null)await runtimeCapabilities();
       if(simpleStandAvailable===true)throw fail('STAND_LEGACY_ACCESS_RETIRED');
@@ -1639,7 +1937,17 @@
       const reset=contextResetEpoch;
       return writeView('publishModel',{model,configuration,receiptRef}).then(view=>reset===contextResetEpoch?scheduleContext(view,configuration.standId,{immediate:true}):view);
     },
-    async editZones(request){return editZones(request).then(view=>scheduleContext(view,request.standId));},
+    // C137u: record per receiver whose zone this phone itself changed (assign/move/unassign), not every editZones (an order,
+    // name or presentation save changes no membership). The shared upload keeps the MAIN's zone for every other receiver.
+    async editZones(request){
+      const zonesOf=key=>{const out=new Map();try{for(const r of JSON.parse(key)?.receivers||[])out.set(r.id,r.zoneId??null);}catch(_){}return out;};
+      const before=zonesOf(viewModelKey);
+      return editZones(request).then(view=>{
+        try{const after=zonesOf(view?.model?JSON.stringify(view.model):viewModelKey),edits=root.__zoneEditsC137||(root.__zoneEditsC137={}),now=Date.now();
+          for(const [id,zone] of after)if(before.has(id)&&before.get(id)!==zone)edits[id]=now;}catch(_){}
+        return scheduleContext(view,request.standId);
+      });
+    },
     sharedDocument,
     async refreshSharedOutputs({standId,receiverId},{foreground=false}={}){
       // C106: an editor about to open needs this read now. Stop a background
@@ -1688,6 +1996,13 @@
     },
     get spiZoneDirectionPreview(){return spiZoneDirectionPreview===true;},
     async previewSPIZoneDirections(request){
+      // C137f: optional per-line guide colours travel beside the strict request (never inside lines or the answer).
+      let guideColours=null;
+      if(request&&Object.prototype.hasOwnProperty.call(request,'guideColours')){
+        const g=request.guideColours;request={...request};delete request.guideColours;
+        const keys=new Set((Array.isArray(request.lines)?request.lines:[]).map(line=>line?.receiverId+':'+line?.port));
+        if(g&&typeof g==='object'&&!Array.isArray(g)&&Object.keys(g).length<=120&&Object.entries(g).every(([k,v])=>keys.has(k)&&Array.isArray(v)&&v.length===3&&v.every(x=>Number.isInteger(x)&&x>=0&&x<=255)))guideColours=g;
+      }
       const stop=request?.action==='stop',observe=request?.action==='status',test=request?.action==='test',scopeOnly=stop||observe;
       if(!layoutKeys(request,scopeOnly?['action','standId','zoneId','sessionId']:['action','standId','zoneId','sessionId','lines','focus','lineOrder'])||
          !['start','update','test','stop','status'].includes(request.action)||!['standId','zoneId','sessionId'].every(key=>layoutId(request[key]))||test&&request.focus!==null||
@@ -1697,7 +2012,7 @@
       if(!viewLoaded||(centralStamp?(centralStamp.standId!==request.standId||!standSessionOutputsAvailable):!legacyContextAllowed()))throw fail('STAND_NOT_CONNECTED');
       if(!contextVisible()&&!stop)throw fail('STAND_NOT_CONNECTED');
       const stamp=centralStamp&&{...centralStamp},epoch=standSharingEpoch;
-      const answer=await call('previewSPIZoneDirections',JSON.parse(JSON.stringify(request)));
+      const answer=await call('previewSPIZoneDirections',JSON.parse(JSON.stringify(guideColours&&['start','update','test'].includes(request.action)?{...request,guideColours}:request)));
       if(answer?.standId!==request.standId||answer.zoneId!==request.zoneId||answer.sessionId!==request.sessionId)throw fail('SPI_DIRECTION_UNCONFIRMED');
       if(stop){
         if(typeof answer.stopped!=='boolean'||(answer.stopped?answer.ttlFallbackMS!==0:answer.ttlFallbackMS!==15000&&!(setupZoneIsolationAvailable&&answer.ttlFallbackMS===38000)))throw fail('SPI_DIRECTION_UNCONFIRMED');
@@ -1749,6 +2064,12 @@
     },
     pixelReceiptDiagnostic692({phase,bits}={}){pixelDiagnostic692(phase,bits);},
     async previewPixels(request){
+      // C137q: a background receiver-context write holds the native lane; stop it first and wait until it has really
+      // stopped (max 3 s), so the first light of the picker is not refused.
+      if(request?.action!=='stop'&&contextControls.size){
+        for(const control of contextControls.values()){try{control.interrupt?.();}catch(_){}}
+        const t0=Date.now();while(contextControls.size&&Date.now()-t0<3000)await new Promise(resolve=>setTimeout(resolve,100));
+      }
       const editor=request?.editorSession!==undefined;
       if(request?.action==='hold'){
         if(!pixelEditorIsolationAvailable||!legacyContextAllowed()||!layoutKeys(request,['action','standId','transactionId','receiver','role','mainReceiverId','editorSession'])||!pixelEditorScope686(request))throw fail('PIXEL_PREVIEW_INVALID');
@@ -1833,7 +2154,18 @@
       }
     }),
     selectionDeadlineMS(standId){return authorityStandModes.get(standId)==='authority'?210000:50000;},
-    async select({standId,transactionId,receiver}){if(authorityStandModes.get(standId)==='authority')return serviceSet.AuthorityCandidate.select({standId,transactionId,receiver});return call('select',{standId,transactionId,receiver:{id:receiver.id,rid:receiver.rid,type:receiver.type}});},
+    async select({standId,transactionId,receiver}){if(authorityStandModes.get(standId)==='authority')return serviceSet.AuthorityCandidate.select({standId,transactionId,receiver});
+      if(receiver.reAdd!==true)return call('select',{standId,transactionId,receiver:{id:receiver.id,rid:receiver.rid,type:receiver.type}});
+      // C118: selecting a factory-reset member removes its old stand item
+      // natively (a local graph write); serialize it and adopt that view.
+      const next=writeQueue.catch(()=>{}).then(async()=>{
+        if(!viewLoaded)throw fail('VIEW_NOT_LOADED');
+        const answer=await call('select',{standId,transactionId,receiver:{id:receiver.id,rid:receiver.rid,type:receiver.type}});
+        if(answer?.forgotten!==true||!answer.view)throw fail('VIEW_INVALID');
+        root.LightningModel.assertValid(answer.view.model);acceptView(answer.view);
+        if(answer.view.model.receivers.some(item=>item.id===receiver.id||item.rid===receiver.rid))throw fail('VIEW_INVALID');
+        return answer;
+      });return trackWrite(next);},
     async secure({configuration,pin,signal}){if(configuration?.role==='node'&&await authorityMode(configuration.standId,signal))return authoritySecure(configuration,signal);return call('secure',{configuration,...(root.AluvisionSecurityMode?.pinRequired===false||configuration?.role==='node'?{}:{pin})},signal);},
     async reconcileSecurity({configuration,signal}){if(configuration?.role==='node'&&await authorityMode(configuration.standId,signal))return authoritySecure(configuration,signal);return call('reconcileSecurity',{configuration},signal);},
     async planAppErase(request){
@@ -1881,6 +2213,7 @@
     },
     get integratedStatic8Available(){return integratedStatic8Available;},
     get singleSpiStaticBatchAvailable(){return singleSpiStaticBatchAvailable&&centralStamp===null&&legacyContextAllowed();},
+    get lineSlots(){return lineSlotsAvailable&&centralStamp===null;},
     get liveBatchLimit(){return integratedStatic8Available&&centralStamp===null?64:30;},
     // Presentation choice only, never an output/Owner/capability grant. The
     // modern publisher cannot borrow the old LIVE-under-identification lane.
@@ -2056,9 +2389,9 @@
       return {status:'applied-in-firmware',receiverId,generation:result.generation};
       }finally{ticket?.finish();}
     },
-    applyStaticGradient({requests,gradient,separate}={}){return services.applyLiveBatch({requests,staticGradient:gradient,gradientSeparate:separate===true});},
+    applyStaticGradient({requests,gradient,separate,motion}={}){return services.applyLiveBatch({requests,staticGradient:gradient,gradientSeparate:separate===true,...(motion!==undefined?{gradientMotion:motion}:{})});},
     applyMixedPower({requests,gradientSelections}={}){return services.applyLiveBatch({requests,gradientSelections});},
-    applyLiveBatch({requests,staticGradient,gradientSelections,gradientSeparate=false}={}){
+    applyLiveBatch({requests,staticGradient,gradientSelections,gradientSeparate=false,gradientMotion}={}){
       let requestId=null,settled=false,payload,ids,gradientGroups,preparing=false,nativeBreathe=false,nativeCatalogue=false,sequence=0,replacementClosed=false,replacementInFlight=false,acceptedSequence=0;
       const nativeBreatheController=new AbortController();let nativeObservationController=null,retainedOrigin=null;
       let lightTicket=null;
@@ -2157,9 +2490,15 @@
             }
           }
         }
+        if(gradientMotion!==undefined&&staticGradient===undefined)throw fail('GRADIENT_INVALID');
         if(staticGradient!==undefined){
           if(centralStamp!==null||!root.LightningStaticGradient||Object.keys(staticGradient||{}).sort().join(',')!=='brightness,reverse,stops,transitionMs')throw fail('GRADIENT_INVALID');
           staticGradient=root.LightningStaticGradient.definition(staticGradient.stops,staticGradient);
+          // SPIANIM2: the optional motion (VARIANT 210..213 on SPI) reaches native unchanged; exact shape or refused.
+          if(gradientMotion!==undefined){const m=gradientMotion,p=x=>Number.isInteger(x)&&x>=0&&x<=100;
+            if(!m||typeof m!=='object'||Array.isArray(m)||Object.keys(m).sort().join(',')!=='bounce,reverse,speed,spread,trail,variant'||
+               !Number.isInteger(m.variant)||m.variant<210||m.variant>213||typeof m.reverse!=='boolean'||typeof m.bounce!=='boolean'||!p(m.speed)||!p(m.spread)||!p(m.trail))throw fail('GRADIENT_INVALID');
+            gradientMotion={variant:m.variant,reverse:m.reverse,bounce:m.bounce,speed:m.speed,spread:m.spread,trail:m.trail};}
           if(payload.some(r=>!['SPI_SCENE','SPI_PORTS'].includes(r.kind))){root.__c98log?.('GRADIENT_KIND '+payload.map(r=>r.kind).join(','));throw fail('GRADIENT_UNSUPPORTED');}
         }
         // Pure DATA must be closed before it may retire another local intent.
@@ -2206,7 +2545,7 @@
           if(nativeBreathe||nativeCatalogue){
             if(stableStandPreparation?.pending&&stableStandPreparation.standId===payload[0].standId)throw fail('LIVE_STABLE_PREPARATION_PENDING');
             const retainedStatus=nativeCatalogue?'catalogue-retained-deferred':'breathe-retained-deferred';
-            const answer=await call(staticGradient!==undefined?'applyStaticGradient':nativeCatalogue?'applyStableCatalogue':'applyStableBreathe',{requests:payload,...(staticGradient!==undefined?{gradient:staticGradient,...(gradientSeparate===true?{separate:true}:{})}:{}),...(gradientSelections!==undefined?{gradientSelections}:{}),...(gradientGroups!==undefined?{gradientGroups}:{})},nativeBreatheController.signal,undefined,id=>{requestId=id;posted();});
+            const answer=await call(staticGradient!==undefined?'applyStaticGradient':nativeCatalogue?'applyStableCatalogue':'applyStableBreathe',{requests:payload,...(staticGradient!==undefined?{gradient:staticGradient,...(gradientSeparate===true?{separate:true}:{}),...(gradientMotion!==undefined?{motion:gradientMotion}:{})}:{}),...(gradientSelections!==undefined?{gradientSelections}:{}),...(gradientGroups!==undefined?{gradientGroups}:{})},nativeBreatheController.signal,undefined,id=>{requestId=id;posted();});
             const dataKeys=['dataPreparationState','dataTargets','dataPrepared','dataUnavailable'];
             const hasData=dataKeys.some(key=>Object.prototype.hasOwnProperty.call(answer||{},key));
             const expectedKeys=['applied','ready','receiverIds','status',...(hasData?dataKeys:[])].sort().join(',');
@@ -2464,8 +2803,9 @@
           identities.add(observation.rid);
           // An authenticated scan response from the MAIN is not yet proof of
           // the NODE's own device key. Only explicit select may establish it.
+          // C118: native marks a MAIN-proven factory-reset stand member.
           return {id:observation.id,rid:observation.rid,type:observation.type,name:observation.type+'-receiver',
-            deviceFingerprint:null,canConfigure:false,canVerifyIdentity:true,reachabilityOnly:true};
+            deviceFingerprint:null,canConfigure:false,canVerifyIdentity:true,reachabilityOnly:true,...(observation.reAdd===true?{reAdd:true}:{})};
         });
         return {receivers};
       }
@@ -2477,11 +2817,20 @@
       return {receivers:[{id:'receiver-'+observation.receiverId,rid:observation.receiverId,
         type:observation.receiverType,name:observation.receiverType+'-receiver',
         deviceFingerprint:null,canConfigure:false,canVerifyIdentity:response.canVerifyIdentity===true,reachabilityOnly:true,
+        ...(typeof observation.ssid==='string'&&/^[A-Za-z0-9][A-Za-z0-9 _.-]{0,31}$/.test(observation.ssid)?{apSsid:observation.ssid}:{}), // C137aw
         unavailableReason:'Receiver gevonden. Beveiligd toevoegen is in deze V30-bouw nog niet beschikbaar.'}]};
     }
   }:{};
   const services=Object.freeze(serviceSet);
-  async function runtimeCapabilities(){const value=await call('capabilities');selectionHaptics=value?.selectionHaptics===true;interfaceHaptics=value?.interfaceHaptics===true;simpleStandAvailable=value?.simpleStand===true;pixelPreviewV50=value?.pixelPreviewV50===true;spiZoneDirectionPreview=value?.spiZoneDirectionPreview===true;atomicPreviewExitAvailable=value?.atomicPreviewExit579===true;pixelEditorIsolationAvailable=value?.pixelEditorIsolation===true;setupZoneIsolationAvailable=value?.setupZoneIsolation===true;
+  // C138ui: callers that ask at the same moment share one native answer (no capabilities pile-up in the native queue).
+  var capabilitiesSharedC138ui=null;
+  function runtimeCapabilities(){
+    if(capabilitiesSharedC138ui)return capabilitiesSharedC138ui;
+    const asked=runtimeCapabilitiesOnceC138ui();capabilitiesSharedC138ui=asked;
+    const clear=()=>{if(capabilitiesSharedC138ui===asked)capabilitiesSharedC138ui=null;};asked.then(clear,clear);
+    return asked;
+  }
+  async function runtimeCapabilitiesOnceC138ui(){const value=await call('capabilities');selectionHaptics=value?.selectionHaptics===true;interfaceHaptics=value?.interfaceHaptics===true;simpleStandAvailable=value?.simpleStand===true;pixelPreviewV50=value?.pixelPreviewV50===true;spiZoneDirectionPreview=value?.spiZoneDirectionPreview===true;atomicPreviewExitAvailable=value?.atomicPreviewExit579===true;pixelEditorIsolationAvailable=value?.pixelEditorIsolation===true;setupZoneIsolationAvailable=value?.setupZoneIsolation===true;
     pixelEndsHandoffAvailable=value?.pixelEndsHandoff===true;
     pixelReceiptDiagnostics692=value?.pixelReceiptDiagnostics692===true;
     spiPortScenesAvailable=value?.spiPortScenes===true;
@@ -2498,6 +2847,7 @@
     legacyStandAnimationsAvailable=simpleStandAvailable?value?.legacyStandAnimations===true:value?.standAnimations===true;
     standSessionAnimationsAvailable=value?.standSessionAnimations===true;
     singleSpiStaticBatchAvailable=value?.singleSpiStaticBatch===true;
+    lineSlotsAvailable=value?.lineSlots===true;
     staticPreparingAvailable=value?.staticPreparingReplacement===true;staticGestureAvailable=value?.nativeStaticGesture===true;integratedStatic8Available=value?.integratedStatic8===true;staticGradientCatalogueAvailable=value?.staticGradientCatalogue===true;authorityJointAvailable=value?.authorityJointAdmission===true;standSessionStaticGestureAvailable=value?.standSessionStaticGesture===true;return value;}
   function standAnimationCapability(){
     if(centralStamp)return standSessionAnimationsAvailable;

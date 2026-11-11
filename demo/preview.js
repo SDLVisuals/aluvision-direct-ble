@@ -89,6 +89,103 @@
   // original chases. Keep their wire variants and accepted physical formulas,
   // not look-alike aliases. The V32 preview mirrors current SPI scenePixel;
   // actual C++ extraction tests cover every legacy recipe and all 4 channels.
+  // SPIANIM: 1:1 mirror of firmware AluvisionSpiAnimV1.h (two-sided tails,
+  // SPI variants 200..204 and the moving static gradient). Same formulas and
+  // the same integer hash, so the preview shows what the ledline shows.
+  const spiAnimV1 = (() => {
+    const PI=Math.PI,clamp01=x=>x<0?0:x>1?1:x,wrap01=x=>{x-=Math.floor(x);return x<0||x>=1?0:x;};
+    const ease=x=>{x=clamp01(x);return x*x*(3-2*x);};
+    const lobe=(d,w)=>{d=Math.abs(d);if(w<=0||d>=w)return 0;return .5+.5*Math.cos(PI*d/w);};
+    const light=(ahead,lead,trail)=>ahead>=0?lobe(ahead,lead):lobe(-ahead,trail);
+    const hash32=(a,b)=>{let h=(Math.imul(a>>>0,0x9E3779B1)^Math.imul((b+0x7F4A7C15)>>>0,0x85EBCA77))>>>0;
+      h=(h^(h>>>15))>>>0;h=Math.imul(h,0x2C1B3C6D)>>>0;h=(h^(h>>>12))>>>0;h=Math.imul(h,0x297A2D39)>>>0;return (h^(h>>>15))>>>0;};
+    const hash01=(a,b)=>(hash32(a,b)>>>8)/16777216;
+    const lobeCell=(delta,width)=>{const lo=Math.max(-width,delta-.5),hi=Math.min(width,delta+.5);if(hi<=lo)return 0;
+      const span=hi-lo,mid=(hi+lo)*.5;return clamp01(.5*span+width/PI*Math.cos(PI*mid/width)*Math.sin(PI*span/(2*width)));};
+    const boundedLobe=(samplePixel,position,width,pixels)=>{pixels=Math.max(1,pixels);const core=Math.min(Math.max(1,Math.round(width)),pixels);
+      if(core>=pixels)return 1;const centre=clamp01(position)*(pixels-core)+core*.5,sample=Math.round(samplePixel)+.5;
+      return clamp01(lobeCell(sample-centre,core)+lobeCell(sample+centre,core)+lobeCell(sample-(2*pixels-centre),core));};
+    const bounceVelocity=(raw,curve)=>{const triangle=raw<.5?1:-1;return triangle+(Math.sin(2*PI*raw)-triangle)*curve;};
+    const twinkle=(previous,next,life)=>(previous?1:ease(life/.5))*(next?1:ease((1-life)/.5));
+    const objects=(p,max)=>p.objects<1?1:p.objects>max?max:p.objects;
+    function meeting(p){
+      const x=(p.reverse?1-p.u:p.u)*p.n,lead=Math.max(1,p.width),trail=lead*(1+p.trail*.02),margin=lead+trail,span=p.n+2*margin,pairs=objects(p,3);
+      let sum=0,colour=0;
+      for(let k=0;k<pairs;k++){const s=wrap01(p.phase+k/pairs),a=light(x-(-margin+s*span),lead,trail),b=light((p.n+margin-s*span)-x,lead,trail);sum+=a+b;colour+=b*.5;}
+      return {amount:clamp01(sum),colour:sum>0?colour/sum:0};
+    }
+    function rain(p){
+      const x=p.u*p.n,dir=p.reverse?-1:1,drops=2+2*objects(p,4),lead=Math.max(1,p.width*.15),trail=Math.max(2,p.width*(.3+p.trail*.008)),reach=Math.max(lead,trail);
+      let sum=0,colour=0;
+      for(let k=0;k<drops;k++){
+        const t=p.cycles*3+k/drops,whole=Math.floor(t),cycle=whole>>>0,life=t-whole;
+        const start=hash01(k*977+11,cycle)*p.n,length=p.n*(.08+.12*hash01(k*977+23,cycle)),centre=start+dir*life*length,ahead=dir*(x-centre);
+        if(ahead>=reach||-ahead>=reach)continue;
+        const a=Math.sin(PI*life)*light(ahead,lead,trail);sum+=a;colour+=a*hash01(k*977+37,cycle);
+      }
+      return {amount:clamp01(sum),colour:sum>0?colour/sum:0};
+    }
+    function heartbeat(p){
+      const x=p.u*p.n,lead=Math.max(1,p.width*.5),trail=Math.max(1.5,p.width*(.8+p.trail*.012)),gap=Math.max(lead+trail*.6,p.n*.05);
+      const margin=lead+trail+gap,span=p.n+2*margin,beats=objects(p,4),out={amount:0,colour:0};
+      // C137ax: MIRROR adds the same heartbeats from the other end (both fronts meet in the middle).
+      for(let side=0;side<(p.mirror?2:1);side++){
+        const rev=side?!p.reverse:p.reverse,dir=rev?-1:1;
+        for(let k=0;k<beats;k++){
+          const s=wrap01(p.phase+k/beats),head=rev?p.n+margin-s*span:-margin+s*span;
+          const first=light(dir*(x-head),lead,trail),second=light(dir*(x-(head-dir*gap)),lead,trail)*.6,a=Math.max(first,second);
+          if(a>out.amount){out.amount=a;out.colour=k/beats;}
+        }
+      }
+      return out;
+    }
+    function rocket(p){
+      const x=(p.reverse?1-p.u:p.u)*p.n,whole=Math.floor(p.cycles),cycle=whole>>>0,t=p.cycles-whole,lead=Math.max(1,p.width*.4);
+      const burst=p.n*(.42+.36*hash01(203,cycle)),rise=.4;
+      if(t<rise){const s=t/rise,e=1-(1-s)*(1-s),head=-lead+(burst+lead)*e,trail=Math.max(2,p.width*(1+p.trail*.02))*(.4+.6*s);return {amount:light(x-head,lead,trail),colour:0};}
+      const s=(t-rise)/(1-rise),radius=p.n*.3*(.7+.3*hash01(204,cycle))*(1-(1-s)*(1-s)),fade=Math.pow(1-s,1.6),trail=Math.max(2,radius*.7+lead);
+      const outward=light(x-(burst+radius),lead,trail),inward=light((burst-radius)-x,lead,trail),core=lobe(x-burst,lead*2)*(1-s)*(1-s)*(1-s);
+      return {amount:fade*Math.max(outward,inward,core),colour:.75*s+.25*ease(s/.15)};
+    }
+    function aurora(p){
+      const u=p.reverse?1-p.u:p.u,tau=2*PI;
+      const a=.5+.5*Math.sin(tau*(u*1.25-p.phase)),b=.5+.5*Math.sin(tau*(u*.55+2*p.phase+.21)),c=.5+.5*Math.sin(tau*(u*2.1-3*p.phase+.6));
+      return {amount:.15+.85*ease(a*.55+b*.3+c*.15),colour:wrap01(u*.6+.25*Math.sin(tau*(p.phase+u*.9)))};
+    }
+    const supported=variant=>variant>=200&&variant<=204;
+    function sample(variant,p){return variant===200?meeting(p):variant===201?rain(p):variant===202?heartbeat(p):variant===203?rocket(p):variant===204?aurora(p):{amount:0,colour:0};}
+    // Moving static gradient: sampleAt(coordinate 0..1) returns the still
+    // gradient's colour there; motion 1 slide, 2 sway, 3 breathe, 4 light head.
+    function movingGradient(sampleAt,motion,pixel,total,m){
+      const x=total>1?pixel/(total-1):.5,tau=2*PI,dir=m.reverse?-1:1,soft=clamp01((Number(m.softness)||0)/100);
+      const at=y=>sampleAt(clamp01(y)),mix=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*clamp01(t)),scale=(c,level)=>c.map(v=>v*clamp01(level));
+      if(motion===1){const blend=.04+soft*.46,shift=m.bounce?.5-.5*Math.cos(tau*m.phase):m.phase,y=wrap01(x-dir*shift);let c=at(y);if(y>1-blend)c=mix(c,at(0),ease((y-(1-blend))/blend));return c;}
+      if(motion===2){const amplitude=.03+soft*.07;return at(x+amplitude*Math.sin(PI*x)*Math.sin(tau*(m.phase-dir*x)));}
+      if(motion===3){const depth=.35+soft*.6;return scale(at(x),1-depth*(.5+.5*Math.cos(tau*m.phase)));}
+      if(motion===4){
+        const t=total>1?total-1:1,xp=x*t,lead=Math.max(2,t*.025),trail=lead*(1.5+(Number(m.trail)||0)*.06);let ahead,trailNow=trail;
+        if(m.bounce){const velocity=Math.sin(tau*m.phase),head=(.5-.5*Math.cos(tau*m.phase))*t;trailNow=lead+(trail-lead)*Math.abs(velocity);ahead=(velocity>=0?1:-1)*dir*(xp-(m.reverse?t-head:head));}
+        else{const margin=lead+trail,span=t+2*margin,head=m.reverse?t+margin-m.phase*span:-margin+m.phase*span;ahead=dir*(xp-head);}
+        return scale(at(x),.18+.82*light(ahead,lead,trailNow));
+      }
+      return at(x);
+    }
+    return Object.freeze({light,lobe,hash32,hash01,lobeCell,boundedLobe,bounceVelocity,twinkle,supported,sample,movingGradient});
+  })();
+  // A gradient state moves when its variant is 210..217: 210 slide, 211 sway,
+  // 212 breathe, 213 light head; +4 flows the other way. Only state fields the
+  // native recovery validators already know (variant/speed/bounce/spread/
+  // trailLength); the wire sends VARIANT 210..213 plus MOTIONREVERSE.
+  const GRADIENT_MOTION_FIRST = 210, GRADIENT_MOTION_LAST = 217;
+  const gradientMotionOf = state => {
+    const variant = Number(state?.variant);
+    if (!Number.isInteger(variant) || variant < GRADIENT_MOTION_FIRST || variant > GRADIENT_MOTION_LAST) return null;
+    const speed = clamp(state.speed, .5, 100, 35), rate = .002 + (speed / 100) ** 2 * .8;
+    return { motion: (variant - GRADIENT_MOTION_FIRST) % 4 + 1, rate, startedAt: Number(state.previewStartedAt) || 0, phaseMs: Number(state.phaseMs) || 0,
+      reverse: variant >= GRADIENT_MOTION_FIRST + 4, bounce: state.bounce === true, softness: clamp(state.spread, 0, 100, 30), trail: clamp(state.trailLength, 0, 100, 40) };
+  };
+  const gradientMotionAt = (motion, time) => ({ ...motion, phase: (() => { const x = Math.max(0, time - motion.startedAt) * motion.rate + motion.phaseMs / 1000; return x - Math.floor(x); })() });
+
   const legacySpi = (() => {
     const effects = [
       ["Static Color","STATIC","Minimal",0],
@@ -194,7 +291,13 @@
       ["Whole Line Color Fade","GRADIENT","Whole-line",100,{"speed":11,"smooth":98,"spread":64,"lineDelayMs":320}],
       ["Whole Line Smooth Transitions","FLOW","Whole-line",101,{"speed":10,"smooth":100,"spread":72,"lineDelayMs":360}],
       ["Whole Line Flash / Strobe","SPARKLE","Whole-line",102,{"speed":18,"smooth":24,"spacing":76,"lineDelayMs":160}],
-      ["Warm Ribbon Chase","COMET","Professional",103,{"speed":68,"widthPixels":4,"smooth":92,"trailLength":78,"direction":"right","objectCount":1,"spacing":100,"bounce":false,"mirror":false}]
+      ["Warm Ribbon Chase","COMET","Professional",103,{"speed":68,"widthPixels":4,"smooth":92,"trailLength":78,"direction":"right","objectCount":1,"spacing":100,"bounce":false,"mirror":false}],
+      // SPIANIM: new SPI animations (firmware AluvisionSpiAnimV1.h, variants 200..204).
+      ["Meeting Lights","MIRROR","Dynamic",200,{"speed":35,"widthPixels":4,"smooth":100,"trailLength":45,"objectCount":1,"direction":"right"}],
+      ["Light Rain","SPARKLE","Ambient",201,{"speed":30,"widthPixels":3,"smooth":100,"trailLength":55,"objectCount":2,"direction":"right"}],
+      ["Heartbeat","WAVE","Pulse",202,{"speed":35,"widthPixels":3,"smooth":100,"trailLength":35,"objectCount":1,"direction":"right"}],
+      ["Rocket","COMET","Dynamic",203,{"speed":40,"widthPixels":3,"smooth":100,"trailLength":60,"objectCount":1,"direction":"right"}],
+      ["Aurora","FLOW","Ambient",204,{"speed":18,"widthPixels":3,"smooth":100,"objectCount":1,"direction":"right"}]
     ];
     const widthEngines = new Set(['CHASE','COMET','SCANNER','DUAL','MIRROR','MINIMAL','CASCADE','SEQUENCE','FLOW','WAVE','ALTERNATE','SPARKLE']);
     const movingFamilies = new Set(['GRADIENT','FLOW','CHASE','COMET','SCANNER','WAVE','SEQUENCE','MIRROR','ALTERNATE','CASCADE','DUAL','MINIMAL']);
@@ -290,15 +393,16 @@ function raisedCosineChaseCoverage(distance,width,n,smooth){
   return crisp+(clamp(soft,0,1)-crisp)*blend;
 }
 
-// Reflect the same finite C2 band at a bounded scanner's two endpoints.
-// This conserves the selected width, with no far-end wrap or history delay.
-function softBoundedCoverage(samplePixel,position,width,n,smooth){
+
+// SPIANIM: the scanner head with the chase's two-sided raised-cosine lobe,
+// reflected at both electrical ends (firmware raisedCosineBoundedAmount).
+function raisedCosineBoundedCoverage(samplePixel,position,width,n,smooth){
   const core=clamp(Math.round(width),1,n);if(core>=n)return 1;
-  const center=clamp(position,0,1)*(n-core)+core*.5,sample=Math.round(samplePixel)+.5,half=core*.5;
-  const coverage=clamp((core+1)*.5-Math.abs(sample-.5-(center-.5)),0,1),crisp=coverage>=.999?1:0;
+  const center=clamp(position,0,1)*(n-core)+core*.5,sample=Math.round(samplePixel)+.5;
+  const crisp=clamp((core+1)*.5-Math.abs(sample-.5-(center-.5)),0,1)>=.999?1:0;
   if(!smooth)return crisp;
-  const integral=p=>{const x=Math.abs(p),tail=1.5-x,v=x>=1.5?1:x<=.5?.5+x*(.75-x*x/3):1-tail*tail*tail/6;return p<0?1-v:v;};
-  const band=d=>integral(d+half)-integral(d-half),soft=clamp(band(sample-center)+band(sample+center)+band(sample-(2*n-center)),0,1);
+  const PI=Math.PI,cell=(delta,w)=>{const lo=Math.max(-w,delta-.5),hi=Math.min(w,delta+.5);if(hi<=lo)return 0;const span=hi-lo,mid=(hi+lo)*.5;return clamp(.5*span+w/PI*Math.cos(PI*mid/w)*Math.sin(PI*span/(2*w)),0,1);};
+  const soft=clamp(cell(sample-center,core)+cell(sample+center,core)+cell(sample-(2*n-center),core),0,1);
   const s=clamp(smooth,0,100,100)/100,blend=s<.5?4*s*s*s:1-4*Math.pow(1-s,3);
   return crisp+(soft-crisp)*blend;
 }
@@ -353,9 +457,6 @@ function softTrailCoverage(behind,trail,n,smooth){
       // Crisp zero, exact100, fast recipes and specialised variants stay exact.
       const slowCorrection=variant>=90||!['CHASE','MINIMAL','FLOW','WAVE','DUAL','MIRROR','COMET','SCANNER'].includes(engine)||!smooth||smooth>=100||speed>=40?0:speed<=20?1:(()=>{const x=(speed-20)/20;return 1-x*x*x*(10+x*(-15+6*x));})();
       const slowMotion=(x,w)=>{if(slowCorrection>=1)return wrap(x);const p=motion(x,w);if(!slowCorrection)return p;let delta=wrap(x)-wrap(p);if(delta>.5)delta--;if(delta<-.5)delta++;return wrap(p+delta*slowCorrection);};
-      const slowBand=(d,w)=>{const prior=slowCorrection>=1?0:q16(softChaseCoverage(d,w,n,smooth));if(!slowCorrection)return prior;
-        const overlap=q16(w>=n?1:clamp(w*.5+.5-d*n,0,1)),soft=q16(softChaseCoverage(d,w,n,100)),continuous=q16(overlap+(soft-overlap)*curve);
-        return slowCorrection>=1?continuous:q16(prior+(continuous-prior)*slowCorrection);};
       const slowTrail=(behind,length)=>{const prior=softTrailCoverage(behind,length,n,smooth);if(!slowCorrection)return prior;const continuous=softTrailCoverage(behind,length,n,100);return q16(prior+(continuous-prior)*slowCorrection);};
       const raw=wrap(elapsed*rate+(Number(s.phaseMs)||0)/1000),triangle=1-Math.abs(2*raw-1),eased=.5-.5*Math.cos(raw*tau);
       const bounce=s.bounce?triangle+(eased-triangle)*curve:raw,left=s.direction==='left',phase=left?1-bounce:bounce,temporal=phaseSteps(phase);
@@ -377,14 +478,24 @@ function softTrailCoverage(behind,trail,n,smooth){
         let p=sequenceSmooth||slowCorrection>=1?wrap(position):original;
         if(slowCorrection>0&&slowCorrection<1){let delta=wrap(position)-wrap(original);if(delta>.5)delta--;if(delta<-.5)delta++;p=wrap(original+delta*slowCorrection);}
         const coverage=target=>{const d=distance(u,target);
-          if(engine==='CHASE'&&(variant===0||variant===8))return q16(raisedCosineChaseCoverage(d,width,n,smooth));
+          // SPIANIM: every chase and accent light has the soft head AND tail.
+          if(engine==='CHASE'||engine==='MINIMAL')return q16(raisedCosineChaseCoverage(d,width,n,smooth));
           const prior=sequenceSmooth||slowCorrection>=1?0:q16(softChaseCoverage(d,width,n,smooth));
           if(!sequenceSmooth&&!slowCorrection)return prior;
           const overlap=q16(width>=n?1:clamp(width*.5+.5-d*n,0,1)),soft=q16(softChaseCoverage(d,width,n,100)),continuous=q16(overlap+(soft-overlap)*curve);
           return sequenceSmooth||slowCorrection>=1?continuous:q16(prior+(continuous-prior)*slowCorrection);};
         best=Math.max(best,coverage(p));if(s.mirror)best=Math.max(best,coverage(wrap(1-p)));
       }return best;};
-      if(variant===103){
+      if(engine==='GRADIENT'&&variant>=210&&variant<=213){
+        // SPIANIM: menu thumbnail of the moving gradient, over the palette.
+        const at=c=>{if(count===1)return palette[0];const x=clamp(c,0,1)*(count-1),i=Math.min(count-2,Math.floor(x));return palette[i].map((v,k)=>v+(palette[i+1][k]-v)*(x-i));};
+        foreground=spiAnimV1.movingGradient(at,variant-209,index,n,{phase:raw,reverse:left,bounce:s.bounce===true,softness:spread*100,trail});amount=1;
+      }else if(spiAnimV1.supported(variant)){
+        // SPIANIM: same parameters as firmware scenePixel (u over the group,
+        // shared phase, the unwrapped cycle count for per-cycle choices).
+        const m=spiAnimV1.sample(variant,{u,n,phase:raw,cycles:elapsed*rate+(Number(s.phaseMs)||0)/1000,width,trail,objects,reverse:left,mirror:s.mirror===true});
+        foreground=gradient(m.colour,true);amount=q16(m.amount);
+      }else if(variant===103){
         const head=motion(left?1-raw:raw,width),behind=wrap(left?u-head:head-u)*n,ribbon=Math.max(width,Math.min(Math.max(1,n-.5),n*trail/100));
         const fade=Math.max(width*(.35+1.15*sm),ribbon*(.04+.08*sm)),warmZone=Math.min(ribbon,Math.max(fade*2,width*2));
         const edge=Math.min(1.5,Math.min(Math.max(1,n),ribbon)*.5),taper=d=>{const x=clamp(d/edge,0,1);return clamp(x*x*x*(x*(x*6-15)+10),0,1);};
@@ -409,37 +520,48 @@ function softTrailCoverage(behind,trail,n,smooth){
         else if(variant===96){const p=motion(line%2?1-panel:panel,width,physical);amount=thickness(distance(local,p),width,physical);foreground=palette[line%count];}
         else{const p=motion(panel,width,physical);amount=thickness(distance(local,p),width,physical);foreground=gradient(local);}
       }else if(engine==='STATIC')foreground=band(u);
-      else if(engine==='GRADIENT')foreground=gradient(u*(1+spread*3)+temporal*(variant===60?-1:variant%6===0?0:1));
+      else if(engine==='GRADIENT')foreground=gradient(u*(1+spread*3)-temporal*(variant===60||variant%6!==0?1:0));  // C137ax: forward drifts towards the end
       else if(engine==='FLOW'||engine==='WAVE'){foreground=gradient(u*(1+spread*2)-temporal);amount=objectAmount();}
       else if(engine==='BREATHE'){
-        foreground=gradient(u);const clock=phaseSteps(elapsed*(.35+speed/100*2.2)/tau+u*spread);
+        foreground=gradient(u);const clock=phaseSteps(elapsed*(.35+speed/100*2.2)/tau+(left?u:-u)*spread);  // C137ax
         // Match sinf's signed half-cycle boundary before the deliberate 0%
         // hard cut. Double precision rounds the exact pi crossing differently.
         const sine=Math.fround(Math.sin(Math.fround(clock*Math.fround(tau))));
         amount=q16(Math.fround(.5+Math.fround(.5*sine)));
       }
       else if(engine==='SPARKLE'){
-        const tick=Math.floor(Math.fround(elapsed)*Math.fround(3+speed*.22)),seed=Math.max(0,Math.floor(index/width));
-        const hash=(Math.imul(seed,1103515245)+Math.imul(tick,12345)+Math.imul(variant,7919))>>>0;
-        foreground=band(seed/7);amount=hash%1000<Math.min(820,8+clamp(s.randomness,0,100,25)*2+objects*9)?1:0;
+        const clock=Math.fround(Math.fround(elapsed)*Math.fround(3+speed*.22)),tick=Math.floor(clock),seed=Math.max(0,Math.floor(index/width));
+        const threshold=Math.min(820,8+clamp(s.randomness,0,100,25)*2+objects*9);
+        const lit=t=>((Math.imul(seed,1103515245)+Math.imul(t,12345)+Math.imul(variant,7919))>>>0)%1000<threshold;
+        foreground=band(seed/7);amount=lit(tick)?1:0;
+        // SPIANIM: a twinkle fades in and out; strobe recipes 86/87 stay hard.
+        if(amount&&smooth&&variant!==86&&variant!==87){const soft=spiAnimV1.twinkle(lit(tick-1),lit(tick+1),clock-tick);amount=q16(1+(soft-1)*curve);}
       }else if(engine==='SCANNER'){
         const continuousPosition=left?1-(s.bounce?bounce:raw):(s.bounce?bounce:raw);const core=clamp(Math.round(width),1,n),travel=Math.max(1,n-core),step=Math.round(continuousPosition*travel)/travel;let p=step+(continuousPosition-step)*curve;
         if(slowCorrection)p+=(continuousPosition-p)*slowCorrection;
-        const coverage=position=>{const prior=q16(softBoundedCoverage(u*n-.5,position,core,n,smooth));if(!slowCorrection)return prior;
-          const centre=clamp(position,0,1)*(n-core)+(core-1)*.5,overlap=q16(core>=n?1:clamp((core+1)*.5-Math.abs(Math.round(u*n-.5)-centre),0,1)),soft=q16(softBoundedCoverage(u*n-.5,position,core,n,100)),continuous=q16(overlap+(soft-overlap)*curve);
-          return slowCorrection>=1?continuous:q16(prior+(continuous-prior)*slowCorrection);};
+        // SPIANIM: the chase's two-sided lobe, reflected at both ends.
+        const coverage=position=>q16(raisedCosineBoundedCoverage(u*n-.5,position,core,n,smooth));
         foreground=gradient(temporal);amount=coverage(p);if(s.mirror)amount=Math.max(amount,coverage(1-p));
-        if(trail){const tail=wrap(left?u-p:p-u),a=slowTrail(tail*n,Math.max(1,width*(1+trail/12)));amount=Math.max(amount,Math.floor(a*65535*.72)/65535);}
+        if(trail){const length=Math.max(1,width*(1+trail/12));
+          if(s.bounce&&smooth){
+            // The tail follows the travel direction and shrinks to nothing at
+            // both turns, so it changes side without a cut.
+            const velocity=spiAnimV1.bounceVelocity(raw,curve),centre=clamp(p,0,1)*(n-core)+core*.5;
+            const behind=(left?-1:1)*(velocity>=0?1:-1)*(centre-(Math.round(u*n-.5)+.5));
+            if(behind>0){const a=slowTrail(behind,length)*Math.abs(velocity);amount=Math.max(amount,Math.floor(a*65535*.72)/65535);}
+          }else{const tail=wrap(left?u-p:p-u),a=slowTrail(tail*n,length);amount=Math.max(amount,Math.floor(a*65535*.72)/65535);}}
       }else if(engine==='DUAL'||engine==='MIRROR'){
-        foreground=gradient(u+temporal);amount=0;const copies=Math.max(2,objects);
-        for(let k=0;k<copies;k++){const p=slowMotion(phase+k*(.35+spread*.65)/copies,width);amount=Math.max(amount,slowBand(distance(u,p),width),slowBand(distance(u,wrap(1-p)),width));}
+        foreground=gradient(u-temporal);amount=0;const copies=Math.max(2,objects);/*C137ax*/
+        for(let k=0;k<copies;k++){const p=slowMotion(phase+k*(.35+spread*.65)/copies,width);amount=Math.max(amount,q16(raisedCosineChaseCoverage(distance(u,p),width,n,smooth)),q16(raisedCosineChaseCoverage(distance(u,wrap(1-p)),width,n,smooth)));}
       }else if(engine==='COMET'){
         foreground=gradient(temporal);amount=0;
-        for(let k=0;k<objects;k++){const p=slowMotion(phase+(objects===1?0:k*span/objects),width),tail=wrap(left?u-p:p-u),a=slowTrail(tail*n,Math.max(1,width*(1.4+trail*.09)));amount=Math.max(amount,slowBand(distance(u,p),width),Math.floor(a*65535*.88)/65535);}
+        for(let k=0;k<objects;k++){const p=slowMotion(phase+(objects===1?0:k*span/objects),width),tail=wrap(left?u-p:p-u),a=slowTrail(tail*n,Math.max(1,width*(1.4+trail*.09)));amount=Math.max(amount,q16(raisedCosineChaseCoverage(distance(u,p),width,n,smooth)),Math.floor(a*65535*.88)/65535);
+          // C137ax: MIRROR adds the comet from the other end, tail trailing the other way.
+          if(s.mirror){const t=wrap(1-p),tt=wrap(left?t-u:u-t),b=slowTrail(tt*n,Math.max(1,width*(1.4+trail*.09)));amount=Math.max(amount,q16(raisedCosineChaseCoverage(distance(u,t),width,n,smooth)),Math.floor(b*65535*.88)/65535);}}
       }else if(engine==='ALTERNATE'){
         const bandWidth=Math.max(1,Math.round(width)),gap=Math.max(1,Math.floor(Math.fround(bandWidth*Math.fround(.3+spacing*2.7)))),period=bandWidth+gap,p=motion(phase,width),centre=(bandWidth-1)*.5;
         const cyclicDistance=Math.max(period,Math.round(n/period)*period),continuous=phaseSteps(phase)*cyclicDistance,travel=smooth?phase*cyclicDistance:p*n+(continuous-p*n)*curve;
-        foreground=palette[Math.floor(Math.floor(u*n)/period)%count];let delta=u*n-.5+travel-centre;delta-=Math.floor(delta/period+.5)*period;
+        foreground=palette[Math.floor(Math.floor(u*n)/period)%count];let delta=u*n-.5-travel-centre;/*C137ax: forward towards the end*/delta-=Math.floor(delta/period+.5)*period;
         const c=clamp((bandWidth+1)*.5-Math.abs(delta),0,1),a=c>=.999?1:0;
         const integral=p=>{const x=Math.abs(p),tail=1.5-x,v=x>=1.5?1:x<=.5?.5+x*(.75-x*x/3):1-tail*tail*tail/6;return p<0?1-v:v;};
         const band=x=>integral(x+bandWidth*.5)-integral(x-bandWidth*.5);
@@ -449,7 +571,7 @@ function softTrailCoverage(behind,trail,n,smooth){
         if(smooth){const scaled=wrap(q)*count,i=Math.floor(scaled);foreground=mix(palette[i],palette[(i+1)%count],ease(scaled-i));}amount=objectAmount();
         if(engine==='CASCADE')amount=Math.floor(amount*65535*(smooth?continuousCascadeBrightness(q,n,smooth):(60+Math.floor(q*40))/100))/65535;
       }else if(engine==='WARM'){
-        const clock=phaseSteps(temporal+u*.72);
+        const clock=phaseSteps(temporal-u*.72);/*C137ax*/
         foreground=count===1?palette[0].map(channel=>channel*(.68+.32*ease(.5+.5*Math.sin(clock*tau)))):gradient(clock,true);
       }else if(engine==='ALL')foreground=gradient(temporal);
       else{foreground=gradient(temporal);amount=objectAmount();}
@@ -474,6 +596,8 @@ function softTrailCoverage(behind,trail,n,smooth){
           backgroundWhite:0,bgBrightness:10,direction:'right',...animationDefaults(effect),...overrides};
         let capabilities=effectCapabilities(effect);
         if(variant===103) capabilities={speed:true,width:true,smooth:true,direction:true,trail:true};
+        else if(variant>=200&&variant<=203) capabilities={speed:true,width:true,direction:true,trail:true,count:variant!==203,mirror:variant===202}; // C137ax: Hartslag reads MIRROR (second front from the other end)
+        else if(variant===204) capabilities={speed:true,direction:true};
         else if(variant>=98&&variant<=102) {
           capabilities={speed:true,smooth:true,direction:true};
           state.lineDelayMs=0;
@@ -520,7 +644,17 @@ function softTrailCoverage(behind,trail,n,smooth){
           spatialResolution:category==='whole'||[90,91,92,95].includes(variant)?'receiver':'pixel'};
       });
     }
-    return {sample,catalog};
+    // SPIANIM: "Verloop in beweging" menu entry. Choosing it opens the gradient
+    // editor in motion mode (app.js); it never plays as an animation itself.
+    // Its thumbnail slides the palette like the moving gradient does.
+    function catalogWithMotion(){
+      const list=catalog(),drift=list.find(effect=>effect.state.variant===4);
+      if(drift)list.push({...drift,id:'spi-gradient-210',name:'Moving gradient',family:'Verloop in beweging',gradientMotion:true,
+        controls:[],directions:[],description:'Je eigen verloop schuift, golft, ademt of krijgt een lichtkop.',
+        state:{...drift.state,animation:'Moving gradient',variant:210,speed:35,spread:30,trailLength:40,bounce:false}});
+      return list;
+    }
+    return {sample,catalog:catalogWithMotion};
   })();
 
   const FRESH_ANIMATION_COLOURS = Object.freeze(['#FF0000','#00FF00','#0000FF','#FF8000','#FFFF00','#00FFFF','#8000FF']);
@@ -660,9 +794,11 @@ function softTrailCoverage(behind,trail,n,smooth){
     // Old saved presets may predate the explicit marker. Real SPI variants
     // 0–103 always belong to the preserved inline engine, except the shared
     // RGBW whole-line formulas which are explicitly marked previewFamily.
+    // SPIANIM: variants 200..204 are rendered by the same inline sampler.
     state.legacySpi = receiver.type === 'SPI' && !isStatic && !state.v30Effect &&
       state.previewFamily !== 'RGBW' && Number.isInteger(Number(state.variant)) &&
-      Number(state.variant) >= 0 && Number(state.variant) <= 103;
+      (Number(state.variant) >= 0 && Number(state.variant) <= 103 || spiAnimV1.supported(Number(state.variant)) ||
+       state.engine === 'GRADIENT' && Number(state.variant) >= 210 && Number(state.variant) <= 213);
     if (state.legacySpi && !Number.isFinite(Number(state.previewStartedAt))) state.previewStartedAt = 0;
     // The earlier non-tunnel engine treats zero as pause. The V30 UI instead
     // promises its slowest speed. Keep every other speed/formula unchanged.
@@ -737,6 +873,20 @@ function softTrailCoverage(behind,trail,n,smooth){
       return G.groupPlacements(lines,members).find(line=>line.id===output.lineId)||null;
     }catch(_){return null;}
   }
+  // LINESLOTS (tijdlijn C109bj): with lineSlots/lineSlotCount in the light
+  // state, preview line k uses LINEINDEX=lineSlots[k] and LINECOUNT=lineSlotCount,
+  // exactly like the native wire, so the preview shows the stand's pauses.
+  // Missing, invalid, or a line count that does not match: unchanged.
+  function lineSlotsOf(state) {
+    const slots = state && state.lineSlots, total = state && state.lineSlotCount;
+    if (!Array.isArray(slots) || !slots.length || slots.length > 128 || !Number.isInteger(total) || total < 1 || total > 256 ||
+      !slots.every(slot => Number.isInteger(slot) && slot >= 0 && slot < total)) return null;
+    return { slots, total };
+  }
+  function slotted(lineSlots, index, count) {
+    if (!lineSlots || lineSlots.slots.length !== count || !Number.isInteger(index) || index < 0 || index >= count) return { index, count };
+    return { index: lineSlots.slots[index], count: lineSlots.total };
+  }
   function sample(receiver, sceneGeometry, time = 0, sourceReceivers = [receiver], gradientUnavailable = null, gradientDomains = undefined, domainResolver = null) {
     types(receiver.type);
     const group = sceneGeometry || geometry([receiver]);
@@ -760,8 +910,12 @@ function softTrailCoverage(behind,trail,n,smooth){
         if(placement===null){gradientUnavailable?.add(output.port);return Array.from({length:output.pixels},()=>[0,0,0]);}
         const total=placement?placement.total:group.layout==='continuous'?group.totalPixels:output.pixels;
         const offset=placement?placement.offset:group.layout==='continuous'?output.offset:0;
+        // SPIANIM: a moving gradient (variant 210..217) on the shared clock.
+        const motion=gradientMotionOf(receiver.state),moving=motion&&gradientMotionAt(motion,time);
+        const sampleAt=coordinate=>G.sample(gradient.stops,Math.round((gradient.reverse?1-coordinate:coordinate)*65535)/65535).map(c=>c*gradient.brightness/100);
         return Array.from({length:output.pixels},(_,pixel)=>{
           const physical=output.reversed?output.pixels-1-pixel:pixel;
+          if(moving)return spiAnimV1.movingGradient(sampleAt,moving.motion,offset+physical,total,moving).map(c=>Math.round(c));
           let index=offset+physical;if(gradient.reverse)index=total-1-index;
           const position=total===1?32768:Math.round(index*65535/(total-1));
           return G.sample(gradient.stops,position/65535).map(c=>Math.round(c*gradient.brightness/100));
@@ -771,23 +925,27 @@ function softTrailCoverage(behind,trail,n,smooth){
     const state = normalizeState(receiver);
     const background = descriptorFor(receiver)?.backgroundEditable ? backgroundSample(state) : null;
     const continuous = group.layout === 'continuous';
+    const lineSlots = continuous ? null : lineSlotsOf(state);
     if (state.on === false || state.power === false) return Array.from({ length: geo.pixelCount }, () => [0, 0, 0]);
     const isStatic = state.engine === 'STATIC';
     if (!isStatic && state.v30Effect) {
-      const input = { state, receiverIndex: geo.sampleIndex??geo.lineIndex, receiverCount: geo.sampleCount??geo.lineCount,
+      const receiverSlot = slotted(lineSlots, geo.sampleIndex??geo.lineIndex, geo.sampleCount??geo.lineCount);
+      const input = { state, receiverIndex: receiverSlot.index, receiverCount: receiverSlot.count,
         receiverType: receiver.type, time, pixelCount: geo.pixelCount,
         totalPixels: group.totalPixels, layout: group.layout };
       const engine=references.supports(state.v30Effect)?references:extension;
       if (receiver.type === 'RGBW') return [engine.sample({ ...input, pixelIndex: 0, globalPixel: geo.offset })];
-      return geo.outputs.flatMap(output => Array.from({ length: output.pixels }, (_, pixel) => {
+      return geo.outputs.flatMap(output => { const outputSlot = slotted(lineSlots, output.sampleIndex??output.lineIndex, output.sampleCount??output.lineCount);
+        return Array.from({ length: output.pixels }, (_, pixel) => {
         const oriented = output.reversed ? output.pixels - 1 - pixel : pixel;
         return engine.sample({ ...input,
-          ...(continuous ? {} : { receiverIndex: output.sampleIndex??output.lineIndex, receiverCount: output.sampleCount??output.lineCount, pixelCount: output.samplePixels??output.pixels }),
+          ...(continuous ? {} : { receiverIndex: outputSlot.index, receiverCount: outputSlot.count, pixelCount: output.samplePixels??output.pixels }),
           pixelIndex: continuous ? output.localOffset + oriented : (output.sampleOffset??0)+oriented, globalPixel: output.offset + oriented });
-      }));
+      }); });
     }
     if (isStatic || receiver.type === 'RGBW' || state.previewFamily === 'RGBW') {
       const lineColour = (index, count) => {
+        ({ index, count } = slotted(lineSlots, index, count));
         const value = canonical.sampleRgbwLine(background ? { ...state, brightness: 100 } : state, index, count, time);
         if (background) Object.assign(value, { background, brightness: state.brightness / 100 });
         return opticalWhite(value);
@@ -805,12 +963,13 @@ function softTrailCoverage(behind,trail,n,smooth){
     // offline receivers; selecting one receiver must never close a gap.
     return geo.outputs.flatMap(output => {
       const total = continuous ? group.totalPixels : output.pixels;
+      const outputSlot = slotted(lineSlots, output.lineIndex, output.lineCount);
       const sampleState = Object.assign({}, state, {
         // Continuous is one logical strip. Keep the actual output geometry
         // for electrical placement only, never as a new animation boundary.
         groupPixels: total, physicalLeds: total,
         receiverOffset: 0,
-        lineIndex: continuous ? 0 : output.lineIndex, lineCount: continuous ? 1 : output.lineCount
+        lineIndex: continuous ? 0 : outputSlot.index, lineCount: continuous ? 1 : outputSlot.count
       });
       const legacyState = state.legacySpi ? { ...sampleState, backgroundOn: Boolean(background) } : null;
       return Array.from({ length: output.pixels }, (_, pixel) => {
@@ -818,7 +977,7 @@ function softTrailCoverage(behind,trail,n,smooth){
         const position = (continuous ? output.offset : 0) + oriented;
         if (legacyState) return legacySpi.sample(legacyState, (position + 0.5) / total, time, position, total);
         const value = canonical.sampleSpiPixel(sampleState,
-          (position + 0.5) / total, time, total, continuous ? 0 : output.lineIndex, continuous ? 1 : output.lineCount);
+          (position + 0.5) / total, time, total, continuous ? 0 : outputSlot.index, continuous ? 1 : outputSlot.count);
         // The preserved engine supplies the true coverage envelope. V30 exposes
         // that existing foreground/background split without changing its recipe.
         value.background = background;
@@ -864,10 +1023,14 @@ function softTrailCoverage(behind,trail,n,smooth){
       const lines=physical.lines.filter(line=>line.type==='SPI'&&byId.has(line.receiverId)&&
         (lineSelection(options.selection)?selectedLine(line.id,options.selection):selected(byId.get(line.receiverId),options.selection)));
       const total=lines.reduce((sum,line)=>sum+line.pixels,0);
+      // SPIANIM: the editor's motion choice moves the draft live.
+      const draftMotion=gradientMotionOf(options.gradientMotion),draftMoving=draftMotion&&gradientMotionAt(draftMotion,options.time||0);
+      const draftAt=coordinate=>G.sample(draft.stops,Math.round((draft.reverse?1-coordinate:coordinate)*65535)/65535).map(c=>c*draft.brightness/100);
       let offset=0;
       for(const line of lines){
         const pixels=Array.from({length:line.pixels},(_,pixel)=>{
           let index=offset+(line.reversed?line.pixels-1-pixel:pixel);
+          if(draftMoving)return spiAnimV1.movingGradient(draftAt,draftMoving.motion,index,total,draftMoving).map(c=>Math.round(c));
           if(draft.reverse)index=total-1-index;
           const position=total===1?32768:Math.round(index*65535/(total-1));
           return G.sample(draft.stops,position/65535).map(c=>Math.round(c*draft.brightness/100));

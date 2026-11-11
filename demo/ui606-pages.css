@@ -26,7 +26,7 @@ html body .ui606-pages {
   gap: 16px;
   min-width: 0;
 }
-html body .ui606-pages :is(button, input, summary) {
+/*c140-sel:ui606-pages.css*/html body .ui606-pages button, html body .ui606-pages input, html body .ui606-pages summary{
   min-height: 44px;
 }
 html body .ui606-pages .page-heading {
@@ -73,14 +73,14 @@ html body .ui606-pages .ui606-page-count {
   font-weight: 750;
   font-variant-numeric: tabular-nums;
 }
-html body .ui606-pages :is(.ui606-main-action, .receiver-primary-action) {
+html body .ui606-pages .ui606-main-action, html body .ui606-pages .receiver-primary-action{
   width: 100%;
   min-height: 50px;
   border-radius: 16px;
   font-size: 14px;
   gap: 9px;
 }
-html body .ui606-pages :is(.ui606-main-action, .receiver-primary-action) > [aria-hidden] {
+html body .ui606-pages .ui606-main-action > [aria-hidden], html body .ui606-pages .receiver-primary-action > [aria-hidden]{
   font-size: 22px;
   line-height: 1;
   font-weight: 450;
@@ -255,7 +255,7 @@ html body .ui606-receivers-page .receiver-details > .text-button {
   align-items: center;
   margin-top: 8px;
 }
-html body .ui606-receivers-page .receiver-details :is(.receiver-connections, .receiver-manage-menu) {
+html body .ui606-receivers-page .receiver-details .receiver-connections, html body .ui606-receivers-page .receiver-details .receiver-manage-menu{
   border-radius: 15px;
 }
 
@@ -508,7 +508,6 @@ html body .ui606-pages.scene-draft-page[data-has-selection="true"] .scene-save-b
   padding: 10px 12px;
   gap: 6px;
 }
-html body .ui606-pages .ui606-scene-detail-tools { display: grid; gap: 10px; }
 html body .ui606-pages .scene-scope-summary { gap: 6px; }
 html body .ui606-pages .scene-scope-summary > span {
   padding: 6px 9px;
@@ -567,10 +566,6 @@ html body .ui606-pages .ui606-scene-delete .icon { width: 17px; height: 17px; }
   }
   html body .ui606-pages .scene-list > .empty,
   html body .ui606-receivers-page .receiver-list > .empty { grid-column: 1 / -1; }
-  html body .ui606-pages .ui606-scene-detail-tools {
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-  }
 }
 @media (max-width: 359px) {
   html body .ui606-pages { gap: 13px; }

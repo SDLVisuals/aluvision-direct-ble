@@ -4,7 +4,7 @@
 .v50-order-feedback-route{display:flex;align-items:center;gap:10px;font-size:16px;line-height:1.2;font-weight:750}
 .v50-order-feedback-source{min-width:0;overflow-wrap:anywhere}
 .v50-order-feedback-target{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;min-width:44px;min-height:32px;padding:6px 10px;border-radius:11px;background:color-mix(in srgb,var(--order-drag-colour,var(--red,#bb4841)) 13%,var(--panel,#fff));color:var(--ink,#232a33)}
-.v50-order-feedback>small,.v50-order-feedback-detail{font-size:11px;line-height:1.4;color:var(--muted,#6a727d);overflow-wrap:anywhere}
+.v50-order-feedback>small{font-size:11px;line-height:1.4;color:var(--muted,#6a727d);overflow-wrap:anywhere}
 html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] [data-order-item][data-order-grabbed]{opacity:1;background:color-mix(in srgb,var(--order-drag-colour,var(--red,#bb4841)) 8%,var(--panel,#fff));outline:2px solid var(--order-drag-colour,var(--red,#bb4841));outline-offset:1px;box-shadow:0 8px 22px #12192712}
 html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] [data-order-grabbed] .line-order-handle{background:var(--ink,#313a45);color:var(--panel,#fff)}
 html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] [data-order-item][data-order-drop]::before{left:0;right:0;top:-7px;height:5px;background:var(--order-drag-colour,var(--red,#bb4841));border-radius:8px;box-shadow:0 0 0 3px var(--bg,#eef1f4);z-index:3}

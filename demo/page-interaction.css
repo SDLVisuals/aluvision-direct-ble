@@ -11,9 +11,3 @@ textarea {
 
 /* These older compact fields were the only editable controls below 16px.
    Prevent iPhone focus magnification; keep larger PIN/pixel fields unchanged. */
-@media (hover: none) and (pointer: coarse) {
-  .output-row input[type="number"],
-  .output-row select {
-    font-size: 16px;
-  }
-}

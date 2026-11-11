@@ -6,7 +6,7 @@
 .scene-swipe102>.scene-card-row{position:relative;z-index:1;transform:translateX(var(--swipe102,0px));transition:transform .28s cubic-bezier(.22,.61,.36,1);touch-action:pan-y}
 .scene-swipe102.is-dragging102>.scene-card-row{transition:none}
 .scene-swipe102.is-open102>.scene-card-row{transform:translateX(calc(-1 * var(--actions102,168px)))}
-.scene-swipe102 .scene-swipe-actions102{--w:84px;position:absolute;z-index:0;inset:2px 2px 2px auto;display:flex;gap:6px;width:var(--actions102,168px);padding-left:6px;box-sizing:border-box}
+.scene-swipe102 .scene-swipe-actions102{position:absolute;z-index:0;inset:2px 2px 2px auto;display:flex;gap:6px;width:var(--actions102,168px);padding-left:6px;box-sizing:border-box}
 .scene-swipe102 .scene-swipe-actions102>button{flex:1;display:grid;place-items:center;align-content:center;gap:5px;min-width:0;border:0;border-radius:18px;
   font:inherit;font-size:12px;font-weight:700;line-height:1.2;cursor:pointer;padding:6px}
 .scene-swipe102 .scene-swipe-actions102>button svg{width:21px;height:21px}
@@ -60,12 +60,12 @@ html.interface-polish body :is(#main,#effect-dialog) .family-detail-heading{marg
 html.interface-polish body :is(#main,#effect-dialog) .family-detail-heading h2{font-size:22px;line-height:1.15;margin:4px 0 2px}
 html.interface-polish body :is(#main,#effect-dialog) .family-detail-heading p{margin:0;font-size:13px;line-height:1.45}
 html.interface-polish body :is(#main,#effect-dialog) .family-detail-category{font-size:11.5px}
-html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail>:is(.animation-family-choices,[class*="family-choices"]){margin-top:0}
+/*c140-sel:c102-tidy.css*/html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail > .animation-family-choices, html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail > [class*="family-choices"]{margin-top:0}
 /* Chosen animation: one compact line instead of a second large title above
  * the preview card that already names it. */
 html.interface-polish body :is(#main,#effect-dialog) .current-effect-heading{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:2px 0 0;padding:0 4px!important;background:none!important;border:0!important;box-shadow:none!important}
 html.interface-polish body :is(#main,#effect-dialog) .current-effect-heading .active-animation-kicker{font-size:12px}
-html.interface-polish body :is(#main,#effect-dialog) .current-effect-heading>:is(h2,b){margin:0;font-size:16px!important;line-height:1.3!important;letter-spacing:0}
+html.interface-polish body :is(#main,#effect-dialog) .current-effect-heading > h2, html.interface-polish body :is(#main,#effect-dialog) .current-effect-heading > b{margin:0;font-size:16px!important;line-height:1.3!important;letter-spacing:0}
 html.interface-polish body :is(#main,#effect-dialog) .current-effect-heading .active-animation-kicker{order:2}
 html.interface-polish body :is(#main,#effect-dialog) .family-variants-heading{margin-bottom:8px}
 html.interface-polish body :is(#main,#effect-dialog) .family-variants-panel{padding-top:0;margin-top:0}

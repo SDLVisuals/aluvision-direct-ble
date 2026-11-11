@@ -2,13 +2,7 @@
 .animation-library-inline { gap: 12px; }
 .animation-library-inline .animation-library-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin:2px 0 3px; padding:4px 2px 2px; border:0; border-radius:0; background:transparent; box-shadow:none; }
 .animation-library-title-copy { display:grid; gap:5px; min-width:0; flex:1; }
-.animation-library-kicker { display:flex; align-items:center; gap:6px; color:var(--red); font-size:10px; line-height:1.2; font-weight:850; letter-spacing:.09em; text-transform:uppercase; }
-.animation-library-kicker .icon { width:16px; height:16px; }
 .animation-library-heading h2 { margin:0; font-size:21px; line-height:1.22; letter-spacing:-.4px; }
-.animation-library-guidance { margin:0; max-width:42ch; font-size:13px; line-height:1.42; color:var(--muted); }
-.animation-library-heading .animation-active-choice { display:block; width:max-content; max-width:100%; margin:2px 0 0; padding:4px 8px; border-radius:999px; background:var(--soft); font-size:11px; line-height:1.3; color:var(--muted); overflow-wrap:anywhere; }
-.animation-library-heading .animation-return-current { display:flex; align-items:center; flex:none; gap:6px; min-height:46px; padding:10px; border:1px solid var(--line); border-radius:15px; background:var(--panel); color:var(--ink); font-size:14px; line-height:1.2; font-weight:700; box-shadow:0 2px 6px #00000006; }
-.animation-library-heading .animation-return-current .icon { width:18px; height:18px; color:var(--red); }
 .animation-library-inline .animation-category-trigger { display:flex; align-items:center; gap:10px; width:100%; min-height:74px; padding:12px; text-align:left; border:1px solid var(--line); border-radius:20px; color:var(--ink); background:var(--panel); box-shadow:inset 0 1px #ffffff55,0 3px 10px #00000004; }
 .animation-category-art { display:grid; place-items:center; width:42px; height:42px; flex:none; border-radius:13px; color:var(--red); background:color-mix(in srgb,var(--red) 8%,var(--soft)); }
 .animation-category-art > .icon { width:25px; height:25px; }
@@ -41,9 +35,6 @@
 @media(max-width:360px) {
   .animation-library-inline .animation-library-heading { gap:7px; padding:4px 2px 2px; }
   .animation-library-heading h2 { font-size:19px; }
-  .animation-library-guidance { font-size:12px; }
-  .animation-library-heading .animation-return-current { min-height:42px; gap:4px; padding:7px; font-size:12px; }
-  .animation-library-heading .animation-return-current .icon { width:16px; height:16px; }
 }
 
 /* The entire family tile is one button. Its actual animated line now spans
@@ -69,10 +60,10 @@
 .animation-library-inline .family-variants-heading b { font-size:15px; }
 .animation-library-inline .family-variants-heading small { font-size:12px; }
 .animation-library-inline .family-variant-grid,.animation-library-inline #animation-results > .effect-grid { grid-template-columns:minmax(0,1fr); gap:12px; }
-.animation-library-inline :is(.family-variant-card,#animation-results > .effect-grid > .effect-card) { border-radius:18px; padding:10px; }
-.animation-library-inline :is(.family-variant-card,#animation-results > .effect-grid > .effect-card) canvas { height:122px; border-radius:13px; }
-.animation-library-inline :is(.family-variant-card,#animation-results > .effect-grid > .effect-card) b { display:block; font-size:17px; line-height:1.35; padding:11px 4px 5px; }
-.animation-library-inline :is(.family-variant-card,#animation-results > .effect-grid > .effect-card) small { font-size:14px; line-height:1.5; padding:0 4px 5px; }
+/*c140-sel:animation-mobile.css*/.animation-library-inline :where(.family-variant-card):is(.family-variant-card, #animation-results > .effect-grid > .effect-card), .animation-library-inline :is(#animation-results > .effect-grid > .effect-card){ border-radius:18px; padding:10px; }
+.animation-library-inline :where(.family-variant-card):is(.family-variant-card, #animation-results > .effect-grid > .effect-card) canvas, .animation-library-inline :is(#animation-results > .effect-grid > .effect-card) canvas{ height:122px; border-radius:13px; }
+.animation-library-inline :where(.family-variant-card):is(.family-variant-card, #animation-results > .effect-grid > .effect-card) b, .animation-library-inline :is(#animation-results > .effect-grid > .effect-card) b{ display:block; font-size:17px; line-height:1.35; padding:11px 4px 5px; }
+.animation-library-inline :where(.family-variant-card):is(.family-variant-card, #animation-results > .effect-grid > .effect-card) small, .animation-library-inline :is(#animation-results > .effect-grid > .effect-card) small{ font-size:14px; line-height:1.5; padding:0 4px 5px; }
 .animation-library-inline .tunnel-family-card .animation-family-trigger { padding:15px; }
 .animation-library-inline .tunnel-family-card .family-copy { padding:0; }
 .animation-library-inline .tunnel-family-card canvas.tunnel-effect-preview { height:196px; }
@@ -99,18 +90,13 @@
 .ledline-setup .ledline-setup-toggle b { font-size:16px; line-height:1.25; }
 .ledline-setup .ledline-setup-toggle small { font-size:14px; line-height:1.35; font-weight:400; }
 .ledline-setup .ledline-setup-toggle > .icon:last-child { width:20px; height:20px; }
-.ledline-layout-choices > button > .arrangement-icon { width:38px; height:38px; }
-.ledline-layout-choices > button b { font-size:14px; }
-.ledline-layout-choices > button small { font-size:12px; }
 .animation-context .scope-option-title { font-size:14px; }
-.animation-context > .continuous-scope strong,.animation-context > .single-scope b { font-size:13px; }
 .animation-context .power-card .switch { font-size:13px; }
 .animation-context .power-card .switch i { width:40px; height:26px; }
 .animation-context .power-card .switch i:after { width:20px; height:20px; }
 .animation-context .power-card .switch[aria-checked=true] i:after { transform:translateX(14px); }
 @media(min-width:700px) {
   .animation-library-inline .animation-family-grid { grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start; }
-  .animation-library-inline .animation-family-card.is-expanded { grid-column:1 / -1; }
   .animation-library-inline .family-variant-grid,.animation-library-inline #animation-results > .effect-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   #effect-dialog:has([data-animation-categories]) { inset:0; margin:auto; max-height:88dvh; border-radius:28px; }
 }
@@ -129,7 +115,6 @@
   .ledline-setup .spatial-choice-current-icon{width:36px;height:36px;border-radius:10px}
   .ledline-setup .spatial-choice-current-icon>.arrangement-icon{width:24px;height:24px}
   .ledline-setup .spatial-choice-current>small{font-size:10px}
-  .ledline-setup .spatial-choice-current>b{font-size:14px;line-height:1.25}
   .ledline-setup .spatial-choice-current>.spatial-choice-topology{font-size:10px}
   .ledline-setup .ledline-setup-toggle{min-height:56px;gap:9px;padding:8px 12px}
   .ledline-setup .ledline-setup-toggle>.line-order-icon{width:34px;height:34px;padding:4px;border-radius:10px}
@@ -137,7 +122,6 @@
   .ledline-setup .ledline-setup-toggle small{font-size:10px;line-height:1.35}
   .ledline-setup .ledline-setup-toggle>.icon:last-child{width:17px;height:17px}
   .animation-context{align-items:center;gap:4px 6px}
-  .animation-context .selection[data-selection-mode=all] .scope-lines-toggle{min-height:52px}
 }
 
 /* Keep the two setup actions visually parallel on phones: choosing the view
@@ -185,15 +169,6 @@
   }
   .editor-controls-zone .control-mode-panel{gap:11px}
   .editor-controls-zone .bediening-workspace{gap:10px;padding:0}
-  .editor-controls-zone .bediening-workspace-heading{
-    min-height:38px;
-    padding:0 2px 7px;
-    border-bottom:1px solid color-mix(in srgb,var(--line) 72%,transparent);
-  }
-  .editor-controls-zone .bediening-workspace-heading .menu-icon{width:32px;height:32px;border-radius:10px}
-  .editor-controls-zone .bediening-workspace-heading h2{font-size:15px}
-  .editor-controls-zone .bediening-workspace-heading p{font-size:12px;line-height:1.4}
-  .editor-controls-zone .animation-simple-workspace.has-active-animation .bediening-workspace-heading{display:none}
   .editor-controls-zone .animation-context{gap:6px;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
   .editor-controls-zone .shared-colour-picker{padding:13px}
   .editor-controls-zone .shared-colour-picker .section-heading{margin-bottom:8px}
@@ -227,7 +202,6 @@
   .animation-library-inline .animation-library-heading{margin:0;padding:2px 2px 1px}
   .animation-library-inline .animation-library-title-copy{gap:4px}
   .animation-library-heading h2{font-size:20px;line-height:1.2}
-  .animation-library-guidance{font-size:12px;line-height:1.4}
   .animation-library-inline .animation-category-trigger{min-height:60px;padding:8px 10px;border-radius:16px}
   .animation-library-inline .animation-category-art{width:36px;height:36px;border-radius:11px}
   .animation-library-inline .animation-category-art>.icon{width:22px;height:22px}
@@ -350,7 +324,6 @@
   .editor-grid-colour .editor-controls-zone .control-workspace{padding:6px 10px}
   .editor-grid-colour .editor-controls-zone .control-mode-panel{gap:8px}
   .editor-grid-colour .editor-controls-zone .bediening-workspace{gap:7px}
-  .editor-grid-colour .editor-controls-zone .bediening-workspace-heading{min-height:34px;padding-bottom:5px}
   .editor-grid-colour .shared-colour-picker .section-heading{margin-bottom:6px}
 }
 @media(max-width:360px){
@@ -410,6 +383,6 @@
 .family-spatial-options button[aria-pressed=true]>.family-spatial-selected{visibility:visible}
 .family-spatial-options button:active:not(:disabled){transform:scale(.98)}
 .family-spatial-options button:focus-visible{outline:2px solid var(--red);outline-offset:1px}
-.family-spatial-choice :is(.family-spatial-status,.family-spatial-error){margin:6px 4px 0;font-size:11px;line-height:1.45;color:var(--muted)}
+.family-spatial-choice .family-spatial-error{margin:6px 4px 0;font-size:11px;line-height:1.45;color:var(--muted)}
 .family-spatial-choice .family-spatial-error{color:var(--action-ink)}
 @media(prefers-reduced-motion:reduce){.family-spatial-options button{transition:none}}

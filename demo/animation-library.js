@@ -8,6 +8,8 @@
   'use strict';
   const CATEGORIES = Object.freeze([
     Object.freeze({key:'whole',title:'Kleur & sfeer',summary:'Kleur of helderheid verandert tegelijk op alle ledlines.',aliases:'hele lijn volledig gelijk samen uniform rgbw'}),
+    // C109bm: moving gradients get their own place in the discovery list (SPI only: the group exists only there)
+    Object.freeze({key:'gradient',title:'Verloop',summary:'Je eigen kleurverloop beweegt over je ledlines.',aliases:'verloop verlopen gradient kleurverloop beweging bewegend schuiven golven ademen lichtkop overloop'}),
     Object.freeze({key:'pixels',title:'Bewegend licht',summary:'Beweging over pixels: bijvoorbeeld golven of lopend licht.',aliases:'pixel pixels pixelanimatie pixelanimaties led strip spi'}),
     Object.freeze({key:'tunnel',title:'Tunnel',summary:'Licht reist tussen twee of meer ledlines.',aliases:'tunnel tunnel-effect tunnelanimatie wand wanden wall walls muur muren diepte receiver receivers boog bogen achter elkaar ruimte architectuur'}),
     Object.freeze({key:'brand',title:'Merkanimaties',summary:'Rustige kleur- en lichtanimaties voor je merk en beursstand.',aliases:'brand brandanimaties huisstijl merk beurs stand presentatie corporate'})
@@ -19,6 +21,9 @@
       descriptor('pulse','Ademen & pulsen','Alle ledlines worden rustig lichter en donkerder.','pulse puls pulsen ademen ademend ademhaling breathe breathing fade'),
       descriptor('flow','Zachte overgangen','Kleuren mengen geleidelijk, zonder harde sprongen.','flow gradient verloop kleurverloop vloeien zacht overgang fade'),
       descriptor('flash','Flitsen','Korte lichtflitsen; kan ook snel knipperen.','sparkle flash strobe flits flitsen knipperen theater')
+    ]),
+    gradient:Object.freeze([
+      descriptor('gradientmotion','Verloop in beweging','Je eigen verloop schuift, golft, ademt of krijgt een lichtkop.','verloop gradient beweging bewegend schuiven golven ademen lichtkop overloop kleurverloop')
     ]),
     pixels:Object.freeze([
       descriptor('flow','Kleurverloop','Kleuren vloeien zacht over de pixels.','flow gradient verloop kleurverloop vloeien zacht overgang fade'),
@@ -53,7 +58,7 @@
       descriptor('sparkle','Subtiele schittering','Kleine lichtaccenten twinkelen zonder onrustig te worden.','twinkel schitter glans luxe shimmer sprankel')
     ])
   });
-  const PIXEL_FAMILIES = Object.freeze({Flow:'flow',Pulse:'pulse',Wave:'wave',Chase:'chase',Comet:'comet',Scanner:'scanner',Spiegel:'mirror',Sparkle:'sparkle',Sequence:'sequence',Afwisseling:'alternate',Accent:'accent','Warm wit':'warm'});
+  const PIXEL_FAMILIES = Object.freeze({'Verloop in beweging':'gradientmotion',Flow:'flow',Pulse:'pulse',Wave:'wave',Chase:'chase',Comet:'comet',Scanner:'scanner',Spiegel:'mirror',Sparkle:'sparkle',Sequence:'sequence',Afwisseling:'alternate',Accent:'accent','Warm wit':'warm'});
   const TUNNEL_IDS = Object.freeze({
     'v30-tunnel-travel':'waves','v30-tunnel-bounce':'waves','v30-tunnel-pulse':'waves','v30-tunnel-echo':'waves',
     'v30-tunnel-center':'symmetry','v30-tunnel-outside':'symmetry','v30-tunnel-cascade':'build','v30-tunnel-handoff':'build',
@@ -109,8 +114,13 @@
     const section=category(key);return section?Object.freeze({...section,title:text('v50AnimationCategory:'+key+':title',section.title,translate),summary:text('v50AnimationCategory:'+key+':summary',section.summary,translate)}):null;
   }
   const categoriesFor=translate=>Object.freeze(CATEGORIES.map(section=>categoryInfo(section.key,translate)));
+  // C109bm: the library section of an effect. A moving gradient stays an SPI
+  // pixel effect everywhere else (playback, stand logic); only the discovery
+  // list shows it in its own section.
+  function sectionOf(effect) { return effect && effect.category === 'pixels' && PIXEL_FAMILIES[effect.family] === 'gradientmotion' ? 'gradient' : effect?.category; }
   function classification(effect) {
-    if (!effect || !category(effect.category)) return null;
+    if (!effect || !category(sectionOf(effect))) return null;
+    if (sectionOf(effect) === 'gradient') return DEFINITIONS.gradient[0];
     if(effect.id.startsWith('v31-ref-'))return DEFINITIONS[effect.category].find(item=>item.key==='reference');
     let key;
     if (effect.category === 'whole') key = ({Kleurwissel:'colour',Pulse:'pulse',Flow:'flow',Sparkle:'flash'})[effect.family];
@@ -128,7 +138,7 @@
     for (const section of CATEGORIES) {
       if (selected !== 'catalogue' && selected !== section.key) continue;
       for (const family of [...DEFINITIONS[section.key],FALLBACK]) {
-        const effects = items.filter(effect => effect.category === section.key && classification(effect).key === family.key);
+        const effects = items.filter(effect => sectionOf(effect) === section.key && classification(effect).key === family.key);
         if (!effects.length) continue;
         const count = effects.length, extra = count - 1;
         const prefix='v50AnimationGroup:'+(family.key==='other'?'other':section.key+':'+family.key);
@@ -152,12 +162,13 @@
   // for RGBW/SPI; missing entries fall back to the untouched catalogue order.
   const FEATURED = Object.freeze({
     'whole:pulse':[['rgbw-breathe-0','spi-breathe-98'],['rgbw-breathe-1','spi-breathe-99'],['rgbw-breathe-18','spi-line-breathe-18'],['rgbw-breathe-25','spi-line-breathe-25'],['rgbw-breathe-17','spi-line-breathe-17']],
-    'pixels:flow':[['spi-gradient-2'],['spi-flow-21'],['spi-flow-42'],['spi-flow-121'],['spi-gradient-123']],
+    'pixels:flow':[['spi-flow-204'],['spi-gradient-2'],['spi-flow-21'],['spi-flow-42'],['spi-flow-121'],['spi-gradient-123']],
     'pixels:pulse':[['spi-breathe-22'],['spi-breathe-24'],['spi-breathe-39'],['spi-breathe-69'],['spi-breathe-127']],
-    'pixels:wave':[['spi-wave-29'],['spi-wave-31'],['spi-wave-116'],['spi-wave-122'],['spi-wave-130']],
+    'pixels:wave':[['spi-wave-202'],['spi-wave-29'],['spi-wave-31'],['spi-wave-116'],['spi-wave-122'],['spi-wave-130']],
+    'pixels:mirror':[['spi-mirror-200']],
     'pixels:chase':[['spi-chase-8'],['spi-dual-11'],['spi-chase-112'],['spi-chase-126'],['spi-chase-129']],
-    'pixels:comet':[['spi-comet-14'],['spi-comet-103'],['spi-comet-115'],['spi-comet-117'],['spi-comet-131']],
-    'pixels:sparkle':[['spi-sparkle-18'],['spi-sparkle-86'],['spi-sparkle-87'],['spi-sparkle-118'],['spi-sparkle-125']],
+    'pixels:comet':[['spi-comet-203'],['spi-comet-14'],['spi-comet-103'],['spi-comet-115'],['spi-comet-117'],['spi-comet-131']],
+    'pixels:sparkle':[['spi-sparkle-201'],['spi-sparkle-18'],['spi-sparkle-86'],['spi-sparkle-87'],['spi-sparkle-118'],['spi-sparkle-125']],
     'tunnel:reference':[['v31-ref-sheet'],['v31-ref-stagger'],['v31-ref-ribbons'],['v31-ref-packets'],['v31-ref-outline']],
     'tunnel:waves':[['v30-tunnel-travel'],['v30-tunnel-bounce'],['v30-tunnel-echo'],['rgbw-wave-16','spi-wave-106'],['rgbw-wave-24','spi-wave-128']],
     'tunnel:symmetry':[['v30-tunnel-center'],['v30-tunnel-outside'],['rgbw-mirror-29','spi-mirror-179'],['spi-mirror-110'],['spi-dual-96']],
@@ -267,7 +278,7 @@
     return Object.freeze(items.filter(effect => {
       if(MERGED_CHOICES[effect.id]&&available.has(MERGED_CHOICES[effect.id]))return false;
       if(!SHORTLISTED_OMISSIONS.includes(effect.id))return true;
-      const key=effect.category+':'+classification(effect)?.key;
+      const key=sectionOf(effect)+':'+classification(effect)?.key;
       return !(PRESENTATION_CHOICES[key]||[]).some(id=>available.has(id));
     }));
   }
@@ -297,11 +308,11 @@
     const terms = normalize(query).split(' ').filter(Boolean);
     const phrase=terms.join(' ');
     const categoryMatch=CATEGORIES.find(section=>normalize(section.title)===phrase||normalize(categoryInfo(section.key,translate).title)===phrase||terms.length===1&&normalize(section.aliases).split(' ').includes(phrase));
-    if(categoryMatch)return items.filter(effect=>effect.category===categoryMatch.key);
+    if(categoryMatch)return items.filter(effect=>sectionOf(effect)===categoryMatch.key);
     const ordered = groups(items).flatMap(family => family.effects);
     if (!terms.length) return ordered;
     return ordered.map((effect,index) => {
-      const family = classification(effect), section = category(effect.category);
+      const family = classification(effect), section = category(sectionOf(effect));
       const prefix='v50AnimationGroup:'+(family.key==='other'?'other':section.key+':'+family.key),localCategory=categoryInfo(section.key,translate),localFamilyTitle=text(prefix+':title',family.title,translate),localFamilySummary=text(prefix+':summary',family.summary,translate);
       const standPulse=effect.id==='v30-tunnel-pulse'&&effect.standMode==='coordinated'&&Array.isArray(effect.supportedTypes)&&effect.supportedTypes.includes('RGBW')&&effect.supportedTypes.includes('SPI');
       const description=text(standPulse?'v50AnimationStandPulseDescription':'v50AnimationDescription:'+effect.id,effect.description,translate);
@@ -313,5 +324,5 @@
       return {effect,index,rank};
     }).filter(Boolean).sort((a,b) => b.rank - a.rank || a.index - b.index).map(item => item.effect);
   }
-  return Object.freeze({categories:CATEGORIES,categoriesFor,categoryInfo,groups,group,sections,curate,search,normalize,starters,displayName,visibleCatalog,mergedChoices:MERGED_CHOICES,presentationChoices:PRESENTATION_CHOICES,shortlistedOmissions:SHORTLISTED_OMISSIONS});
+  return Object.freeze({sectionOf,categories:CATEGORIES,categoriesFor,categoryInfo,groups,group,sections,curate,search,normalize,starters,displayName,visibleCatalog,mergedChoices:MERGED_CHOICES,presentationChoices:PRESENTATION_CHOICES,shortlistedOmissions:SHORTLISTED_OMISSIONS});
 }));

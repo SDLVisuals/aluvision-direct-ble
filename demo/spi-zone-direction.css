@@ -61,3 +61,24 @@ dialog.spi-zone-direction-dialog::backdrop{background:#1119;backdrop-filter:blur
 .spi-zone-direction-dialog button:focus-visible{outline:3px solid var(--action-ink,var(--ink,#252c37));outline-offset:3px}
 @media(max-width:359px){.spi-zone-direction-dialog .spi-zone-direction-body{padding:11px}.spi-zone-direction-dialog .spi-zone-direction-header{padding:14px 12px 12px}.spi-zone-direction-dialog .spi-zone-direction-header h2{font-size:19px}.spi-zone-direction-dialog .spi-zone-port-card{padding:10px}.spi-zone-direction-dialog .spi-zone-port-actions{gap:7px}.spi-zone-direction-dialog .spi-zone-flip{min-width:103px;padding:9px 7px;font-size:12px}}
 @media(prefers-reduced-motion:reduce){.spi-zone-direction-dialog .spi-zone-strip-interior{animation:none!important;background:rgb(185,185,185)}}
+/* C118: the last step of the first-time setup: a "Laatste stap" label and one clear finish button. */
+.spi-zone-direction-dialog .spi-zone-step{display:block;margin:2px 0 3px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#1f86a0}
+.spi-zone-direction-dialog .spi-zone-direction-footer>button.spi-zone-finish{min-height:54px;border-color:#1f86a0;background:linear-gradient(180deg,#2ea6c1,#1f86a0);color:#fff;font-weight:750;font-size:16px;box-shadow:0 6px 16px rgba(31,134,160,.28)}
+.spi-zone-direction-dialog .spi-zone-direction-footer>button.spi-zone-finish:disabled{opacity:.55;box-shadow:none}
+.spi-zone-direction-dialog .spi-zone-direction-footer>button.spi-zone-finish>svg{width:20px;height:20px;stroke-width:2.4}
+/* C118: shorter sides step: the "explanation only" footnote of the example is left out here. */
+.spi-zone-direction-dialog .spi-tutorial-note{display:none}
+body[data-theme=dark] .spi-zone-direction-dialog .spi-zone-step{color:#68c7db}
+body[data-theme=dark] .spi-zone-direction-dialog .spi-zone-direction-footer>button.spi-zone-finish{border-color:#3fb3cd;background:linear-gradient(180deg,#3fb3cd,#2a93ad);color:#06181d;box-shadow:none}
+.spi-zone-direction-dialog[data-spi-zone-check="true"] .spi-zone-direction-footer{grid-template-columns:auto minmax(0,1fr)}
+.spi-zone-direction-dialog[data-spi-zone-check="true"] .spi-zone-direction-footer>button:first-child{padding-inline:16px}
+.spi-zone-direction-dialog .spi-zone-direction-footer>button.spi-zone-finish>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* C109bc: the walkthrough switch inside the sides step */
+.spi-zone-direction-dialog .spi-zone-test[aria-pressed=true]{border-color:#1f86a0;background:rgba(31,134,160,.1)}
+body[data-theme=dark] .spi-zone-direction-dialog .spi-zone-test[aria-pressed=true]{border-color:#3fb3cd;background:rgba(63,179,205,.12)}
+.spi-zone-direction-dialog .spi-zone-test>svg>path:first-child{transition:transform .4s ease}
+@media (prefers-reduced-motion:no-preference){.spi-zone-direction-dialog .spi-zone-test[aria-pressed=true]>svg>path:last-child{animation:spi-zone-run 1.6s linear infinite}}
+@keyframes spi-zone-run{from{transform:translateX(-8px);opacity:.2}50%{opacity:.6}to{transform:translateX(14px);opacity:.2}}
+.spi-zone-direction-dialog [data-spi-zone-status],.spi-zone-direction-dialog .spi-zone-select-hint{transition:opacity .25s ease}
+.spi-zone-direction-dialog [data-spi-zone-status][data-kind=preparing]{opacity:.75}

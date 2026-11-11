@@ -3,7 +3,7 @@
 html[data-input-modality756="pointer"] body :is(button,a,summary,input,select,textarea,[tabindex]):focus {
   outline:none!important;
 }
-html body :is(input,textarea,select) {
+/*c140-sel:keyboard756.css*/html body input, html body textarea, html body select{
   scroll-margin-block:72px 24px;
 }
 /* Dialogs use the actual visible viewport during text entry. The page keeps
@@ -32,6 +32,6 @@ html.keyboard756 body .ui606-pages.scene-draft-page[data-has-selection="true"] .
   position:static;
   bottom:auto;
 }
-html.keyboard756 body :is(.onboarding-page,.scene-draft-page,.settings-page) {
+html.keyboard756 body .onboarding-page, html.keyboard756 body .scene-draft-page, html.keyboard756 body .settings-page{
   padding-bottom:24px;
 }

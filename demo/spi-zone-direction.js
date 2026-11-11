@@ -1,12 +1,24 @@
 (function(root,factory){'use strict';const api=factory(root);if(typeof module==='object'&&module.exports)module.exports=api;else root.LightningSPIZoneDirection=api;}(typeof globalThis!=='undefined'?globalThis:this,function(host){
   'use strict';
   const languages=['nl','en','fr','de'],copy=value=>JSON.parse(JSON.stringify(value));let serial=0;
+  const TUTORIAL_SEEN_C118='aluvision.ui.spi-sides-example-seen.v1';
   const texts={
     title:['Kanten aanpassen','Adjust directions','Ajuster les sens','Richtungen anpassen'],
     // C105: the connection check, opened from the ledline order step.
     // C113: the walkthrough is the final step of the order editor.
     checkTitle:['Doorloop controleren','Walkthrough check','Contrôle du parcours lumineux','Durchlauf prüfen'],
-    checkHint:['De ledlines staan uit. Op elke overgang loopt een gekleurd lichtje van het einde van de ene ledline in het begin van de volgende. Loopt het in één beweging door, dan klopt die verbinding. Verdwijnt het en duikt het ergens anders op? Keer die ledline hier om.','The LED lines are off. At each connection a coloured light runs from the end of one LED line into the start of the next. If it flows on in one movement, that connection is right. If it vanishes and pops up somewhere else, flip that LED line here.','Les lignes LED sont éteintes. À chaque connexion, une lumière colorée passe de la fin d’une ligne LED au début de la suivante. Si elle continue d’un seul mouvement, la connexion est correcte. Si elle disparaît et réapparaît ailleurs, inversez cette ligne LED ici.','Die LED-Linien sind aus. An jeder Verbindung läuft ein farbiges Licht vom Ende einer LED-Linie in den Anfang der nächsten. Läuft es in einer Bewegung weiter, stimmt die Verbindung. Verschwindet es und taucht woanders auf? Dann kehre diese LED-Linie hier um.'],
+    // C118: short and visual; the animated icon beside it shows the moving light.
+    checkHint:['Een lichtje loopt over elke overgang. Loopt het in één keer door? Dan klopt het. Springt het? Keer die ledline om.','A light runs over every connection. Does it flow straight on? Then it is right. Does it jump? Flip that LED line.','Une lumière passe sur chaque connexion. Elle continue d’un trait ? C’est correct. Elle saute ? Inversez cette ligne LED.','Ein Licht läuft über jede Verbindung. Läuft es glatt weiter? Dann stimmt es. Springt es? Kehre diese LED-Linie um.'],
+    // C118: the first-time setup ends here with one clear finish button.
+    finishSetup:['Opstelling afronden','Finish setup','Terminer l’installation','Einrichtung abschließen'],
+    lastStep:['Laatste stap','Last step','Dernière étape','Letzter Schritt'],
+    // C109bc: the walkthrough is a switch inside the sides step itself.
+    preparing:['Testlicht aan…','Test light on…','Lumière de test…','Testlicht an…'],
+    waiting:['Even wachten… een ander toestel is nog bezig met deze receiver.','One moment… another device is still working on this receiver.','Un instant… un autre appareil utilise encore ce récepteur.','Einen Moment… ein anderes Gerät arbeitet noch an diesem Receiver.'],
+    walkthroughOn:['Doorloop tonen','Show the walkthrough','Afficher le parcours','Durchlauf zeigen'],
+    walkthroughOff:['Doorloop stoppen','Stop the walkthrough','Arrêter le parcours','Durchlauf beenden'],
+    walkthroughHint:['Een lichtje loopt over elke overgang van ledline naar ledline.','A light runs over every joint from LED line to LED line.','Une lumière parcourt chaque jonction entre lignes LED.','Ein Licht läuft über jede Verbindung von Linie zu Linie.'],
+    walkthroughRunning:['Springt het lichtje? Keer die ledline om.','Does the light jump? Flip that LED line.','La lumière saute ? Inversez cette ligne LED.','Springt das Licht? Kehre diese Linie um.'],
     checkDone:['Klaar','Done','Terminé','Fertig'],
     added:['Kanten instellen','Set directions','Régler les sens','Richtungen einstellen'],
     intro:['Vergelijk de rode en groene uiteinden van je echte ledlines.','Compare the red and green ends of your real LED lines.','Comparez les extrémités rouges et vertes de vos vraies lignes LED.','Vergleiche die roten und grünen Enden deiner echten LED-Linien.'],
@@ -19,7 +31,7 @@
     flipAria:['{receiver}, poort {port}: uiteinden omkeren. Groen staat {end}.','{receiver}, port {port}: swap the ends. Green is {end}.','{receiver}, port {port} : inverser les extrémités. Le vert est {end}.','{receiver}, Port {port}: Enden umkehren. Grün ist {end}.'],
     left:['links','on the left','à gauche','links'],right:['rechts','on the right','à droite','rechts'],
     one:['1 pixel · geen richting','1 pixel · no direction','1 pixel · aucun sens','1 Pixel · keine Richtung'],
-    selectHint:['Tik op een ledline: alleen haar witte midden pulseert.','Tap an LED line: only its white centre pulses.','Touchez une ligne LED : seul son milieu blanc pulse.','Tippe auf eine LED-Linie: Nur ihre weiße Mitte pulsiert.'],
+    selectHint:['Tik op een ledline: alleen die pulseert.','Tap an LED line: only that one pulses.','Touchez une ligne LED : seule celle-ci pulse.','Tippe auf eine LED-Linie: Nur diese pulsiert.'],
     selected:['Geselecteerd','Selected','Sélectionnée','Ausgewählt'],
     pulsing:['Midden pulseert','Centre pulsing','Milieu pulsant','Mitte pulsiert'],
     pending:['Eindkleuren instellen…','Setting the end colours…','Réglage des couleurs aux extrémités…','Endfarben einstellen…'],
@@ -38,11 +50,11 @@
     testExample:['Voorbeeld · een lichtgolf volgt de volgorde. Er is geen echte verlichting verbonden.','Preview · a light wave follows the order. No real lighting is connected.','Aperçu · une vague suit l’ordre. Aucun éclairage réel n’est connecté.','Vorschau · eine Lichtwelle folgt der Reihenfolge. Keine echte Beleuchtung verbunden.'],
     stale:['De zone is gewijzigd. Sluit dit scherm en open het opnieuw; je wijzigingen blijven beschikbaar.','The zone has changed. Close this screen and reopen it; your changes remain available.','La zone a changé. Fermez puis rouvrez cet écran ; vos modifications restent disponibles.','Die Zone wurde geändert. Schließe und öffne diesen Bildschirm erneut; deine Änderungen bleiben verfügbar.'],
     stopping:['Testlicht stoppen…','Stopping the test light…','Arrêt de la lumière de test…','Testlicht stoppen…'],
-    stopFailed:['Stoppen niet bevestigd. Je keuzes blijven staan; probeer opslaan opnieuw.','Stopping is not confirmed. Your choices are kept; try saving again.','Arrêt non confirmé. Vos choix sont conservés ; réessayez d’enregistrer.','Stopp nicht bestätigt. Deine Auswahl bleibt erhalten; versuche erneut zu speichern.'],
+    stopFailed:['Testlicht wordt nog gestopt… je keuzes blijven staan.','Still stopping the test light… your choices are kept.','Arrêt de la lumière de test en cours… vos choix sont conservés.','Testlicht wird noch gestoppt… deine Auswahl bleibt erhalten.'],
     saving:['Richtingen bewaren…','Saving directions…','Enregistrement des sens…','Richtungen speichern…'],
     partial:['Niet alles is bewaard. Je overige wijzigingen blijven klaarstaan.','Not everything was saved. Your remaining changes are kept.','Tout n’a pas été enregistré. Vos autres modifications sont conservées.','Nicht alles wurde gespeichert. Deine übrigen Änderungen bleiben erhalten.'],
     pendingSave:['Rond je vorige opslag af met Opslaan. De gekozen kanten blijven behouden.','Finish the previous save with Save. Your chosen directions are kept.','Terminez l’enregistrement précédent avec Enregistrer. Les sens choisis restent conservés.','Schließe den vorherigen Speichervorgang mit Speichern ab. Die gewählten Richtungen bleiben erhalten.'],
-    saveFailed:['Bewaren niet bevestigd. Je wijzigingen blijven klaarstaan.','Saving is not confirmed. Your changes are kept.','Enregistrement non confirmé. Vos modifications sont conservées.','Speichern nicht bestätigt. Deine Änderungen bleiben erhalten.'],
+    saveFailed:['Bewaren loopt nog… je wijzigingen blijven klaarstaan.','Still saving… your changes are kept.','Enregistrement en cours… vos modifications sont conservées.','Speichern läuft noch… deine Änderungen bleiben erhalten.'],
     empty:['Er zijn geen actieve SPI-poorten in deze zone.','There are no active SPI ports in this zone.','Cette zone ne contient aucun port SPI actif.','Diese Zone hat keine aktiven SPI-Ports.'],
     back:['Terug','Back','Retour','Zurück'],save:['Opslaan en klaar','Save and finish','Enregistrer et terminer','Speichern und fertig'],add:['Opslaan en toevoegen','Save and add','Enregistrer et ajouter','Speichern und hinzufügen'],finish:['Opslaan en afronden','Save and finish','Enregistrer et terminer','Speichern und abschließen'],close:['Sluiten','Close','Fermer','Schließen'],
     closeAria:['Richtingen sluiten; niet-bewaarde keuzes behouden','Close directions; keep unsaved choices','Fermer les sens ; conserver les choix non enregistrés','Richtungen schließen; ungespeicherte Auswahl behalten']
@@ -75,7 +87,7 @@
     function t(state,key,params={}){return texts[key][state.language].replace(/\{([a-z]+)\}/gi,(all,key)=>String(params[key]??all));}
     const context=state=>({standId:state.data.standId,zoneId:state.data.zoneId,sessionId:state.sessionId});
     function signature(state){return canonical(getCurrentZoneSignature({standId:state.data.standId,zoneId:state.data.zoneId}));}
-    function status(state,key){if(!current(state))return;state.status=key;state.dialog.dataset.previewConfirmed=String(['applied','testing','testEnded'].includes(key));const node=state.dialog.querySelector('[data-spi-zone-status]');node.textContent=t(state,key);node.dataset.kind=['failed','stale','stopFailed','partial','saveFailed'].includes(key)?'error':key;const hint=state.dialog.querySelector('[data-spi-zone-test-hint]');if(hint)hint.textContent=t(state,{testing:'testActiveShort',testEnded:'testEndedShort',testUpdate:'testUpdateShort'}[key]||'testHint');for(const badge of state.dialog.querySelectorAll('[data-spi-zone-focus-badge]'))badge.textContent=t(state,key==='applied'&&Number(badge.closest('[data-spi-zone-line]').dataset.pixels)>2?'pulsing':'selected');controls(state);}
+    function status(state,key){if(!current(state))return;state.status=key;state.dialog.dataset.previewConfirmed=String(['applied','testing','testEnded'].includes(key));const node=state.dialog.querySelector('[data-spi-zone-status]');node.textContent=t(state,key);node.dataset.kind=['failed','stale','stopFailed','partial','saveFailed'].includes(key)?'quiet':key;const hint=state.dialog.querySelector('[data-spi-zone-test-hint]');if(hint)hint.textContent=t(state,{testing:'testActiveShort',testEnded:'testEndedShort',testUpdate:'testUpdateShort'}[key]||'testHint');for(const badge of state.dialog.querySelectorAll('[data-spi-zone-focus-badge]'))badge.textContent=t(state,key==='applied'&&Number(badge.closest('[data-spi-zone-line]').dataset.pixels)>2?'pulsing':'selected');controls(state);}
     function validContext(state){if(!current(state))return false;try{if(signature(state)===state.signature)return true;}catch(_){}status(state,'stale');state.stale=true;controls(state);return false;}
     function lines(state){return state.data.receivers.flatMap(receiver=>receiver.outputs.filter(output=>output.enabled).map(output=>({receiverId:receiver.id,port:output.port,reversed:output.reversed})));}
     function changes(state){return state.data.receivers.filter(receiver=>state.pendingSaveReceivers.has(receiver.id)||canonical(receiver.outputs)!==canonical(state.baseline.get(receiver.id))).map(receiver=>({receiverId:receiver.id,outputs:copy(receiver.outputs),...(state.pendingSaveReceivers.has(receiver.id)?{requiresReconcile:true}:{})}));}
@@ -94,19 +106,23 @@
     function lease(answer){return Number.isInteger(answer?.previewTTLMS)&&answer.previewTTLMS>0&&answer.previewTTLMS<=15000;}
     function recordLease(state,wanted,answer,sentAt){
       state.confirmedRequest=copy(wanted);state.leaseUntil=sentAt+answer.previewTTLMS;win.clearTimeout(state.leaseTimer);
+      // C137v: the receivers keep the guide only for its TTL (15 s); renew it at native's renewAfterMS, at the latest after
+      // 8 s, so it never lapses back to the scene colour while the screen stays open without a tap.
+      if(Number.isFinite(answer.renewAfterMS)&&answer.renewAfterMS>0)state.renewAt=sentAt+Math.min(answer.renewAfterMS,8000);
       // Independent watchdog: a hung local observation cannot keep a physical
       // confirmation alive. A pending write is already displayed as pending.
       state.leaseTimer=win.setTimeout(()=>{state.leaseTimer=null;if(current(state)&&!state.paused&&!state.inFlight&&!state.previewRetired&&now()>=state.leaseUntil){clearObservation(state);state.previewFailed=true;state.pending=null;status(state,'failed');}},Math.max(1,state.leaseUntil-now()));
     }
     function observeLater(state){
       if(!onObserve||!enabled(state)||state.previewFailed||state.previewRetired||!state.confirmedRequest||state.inFlight)return;
-      win.clearTimeout(state.observeTimer);state.observeTimer=win.setTimeout(()=>{state.observeTimer=null;void observe(state);},Math.max(1,Math.min(1000,state.leaseUntil-now(),state.handoffRenewAt==null?Infinity:state.handoffRenewAt-now())));
+      win.clearTimeout(state.observeTimer);state.observeTimer=win.setTimeout(()=>{state.observeTimer=null;void observe(state);},Math.max(1,Math.min(1000,state.leaseUntil-now(),state.handoffRenewAt==null?Infinity:state.handoffRenewAt-now(),state.renewAt==null?Infinity:state.renewAt-now())));
     }
     async function observe(state){
       if(!enabled(state)||state.previewFailed||state.previewRetired||state.inFlight||!state.confirmedRequest)return;
       // A transferred holder is finite until this UI proves receipt delivery
       // with its first ordinary UPDATE; STATUS alone never grants renewal.
       if(state.handoffRenewAt!=null&&now()>=state.handoffRenewAt){void queue(state);return;}
+      if(state.renewAt!=null&&now()>=state.renewAt&&!state.pathActive&&!state.recoveringTest){state.renewAt=null;void queue(state);return;}
       const epoch=state.observeEpoch,version=state.version,wanted=copy(state.confirmedRequest),sentAt=now();
       let answer;try{answer=await onObserve(copy(context(state)));}catch(_){}
       if(!current(state)||state.observeEpoch!==epoch||state.version!==version||!enabled(state)||state.inFlight||state.previewFailed)return;
@@ -143,12 +159,14 @@
       },delay);
       status(state,'recovering');
     }
-    function controls(state){if(!current(state))return;const failed=state.previewFailed||state.previewRetired,recovering=state.recoveringPreview||state.recoveryTimer!=null||!!state.recoveryJob||!!state.retryResumeJob;for(const button of state.dialog.querySelectorAll('[data-spi-zone-action="flip"],[data-spi-zone-action="select"],[data-spi-zone-action="save"],[data-spi-zone-action="test"]'))button.disabled=state.saving||state.resuming||state.stale||!!state.stopJob||
+    function controls(state){if(!current(state))return;const failed=state.previewFailed||state.previewRetired,recovering=state.recoveringPreview||state.recoveryTimer!=null||!!state.recoveryJob||!!state.retryResumeJob;for(const button of state.dialog.querySelectorAll('[data-spi-zone-action="flip"],[data-spi-zone-action="select"],[data-spi-zone-action="save"],[data-spi-zone-action="test"],[data-spi-zone-action="walkthrough"]'))button.disabled=state.saving||state.resuming||state.stale||!!state.stopJob||
         // C98: a failed or recovering light preview never locks the dialog;
         // only the test wave waits for it. Choices and Save stay usable.
         button.dataset.spiZoneAction==='test'&&(state.inFlight||state.recoveringTest||recovering||failed)||button.dataset.spiZoneAction==='flip'&&(button.closest('[data-spi-zone-line]')?.dataset.pixels==='1'||state.pendingSaveReceivers.has(button.closest('[data-spi-zone-line]')?.dataset.receiverId));scheduleRecovery(state);}
     async function drain(state){
-      if(state.inFlight||state.previewFailed||!state.pending||!enabled(state))return false;const wanted=state.pending,testing=state.pendingTest===true,version=state.version,sentAt=now();state.pending=null;state.pendingTest=false;state.inFlight=true;let applied=false;status(state,'pending');clearObservation(state);controls(state);
+      if(state.inFlight||state.previewFailed||!state.pending||!enabled(state))return false;const wanted=state.pending,testing=state.pendingTest===true,version=state.version,sentAt=now();state.pending=null;state.pendingTest=false;state.inFlight=true;let applied=false;// C121: renewing the running hold (same request, live lease, already confirmed) keeps the status as it is; only a real change shows 'pending'.
+      const holdC121=!!state.confirmedRequest&&canonical(wanted)===canonical(state.confirmedRequest)&&['applied','testing','testEnded'].includes(state.status)&&now()<(state.leaseUntil||0);
+      if(!holdC121)status(state,'pending');clearObservation(state);controls(state);
       const firstPreview=state.previewStarted!==true;state.previewStarted=true;
       const job=Promise.resolve().then(()=>(testing?onTest:onPreview)(copy(wanted)));state.previewJob=job;
       try{let answer=await job,receiptSentAt=sentAt;
@@ -219,6 +237,9 @@
       }finally{if(current(state)){state.recoveringTest=false;controls(state);}}
     }
     function resumeForeground(state){
+      // C138ui-1: without a live preview (previewOnly / no transport) a hide->show left state.paused=true for good, so
+      // Save, Test and flips stayed silently blocked (SIDES_SAVE blocked paused:true). Nothing runs here: just unpause.
+      if(current(state)&&!doc.hidden&&!state.saving&&(state.data.previewOnly||!onPreview)&&state.paused&&!state.stopJob){state.paused=false;state.visibilityStop=null;controls(state);}
       if(!current(state)||doc.hidden||state.saving||state.stale||state.data.previewOnly||!onPreview)return;
       if(state.resumeJob){if(state.resumeEpoch!==state.visibilityEpoch)state.resumeRequested=true;return;}
       if(state.retryResumeJob){state.resumeRequested=true;return;}
@@ -264,21 +285,28 @@
     async function save(state){
       if(!enabled(state)){saveLog('blocked '+JSON.stringify({current:current(state),saving:!!state.saving,resuming:!!state.resuming,paused:!!state.paused,stopJob:!!state.stopJob,stale:!!state.stale,hidden:!!doc.hidden,open:!!state.dialog.open,context:validContext(state)}));return;}
       const wanted=changes(state);state.saving=true;controls(state);status(state,'stopping');saveLog('start changes='+wanted.length);
-      try{const answer=await bounded(state,stop(state),45000);if(!current(state))return;saveLog('stopped '+(answer?.status||'-'));if(answer?.status!=='stopped'||answer.sessionId!==state.sessionId){status(state,'stopFailed');return;}if(!validContext(state))return;if(!wanted.length){close(state.data.check===true?'checked':'done');return;}status(state,'saving');
-        const result=await onSave({...context(state),changes:copy(wanted)});if(!current(state))return;
+      try{
+        // C129: a test light whose stop is not confirmed is stopped again quietly (backoff), and saving never waits on
+        // that proof: the receiver lease ends by itself and native keeps its own checks. No red line, no customer error.
+        let answer=null;for(let attempt=0;attempt<4;attempt++){try{answer=await bounded(state,stop(state),15000);}catch(_){answer=null;}if(!current(state))return;
+          if(answer?.status==='stopped'&&answer.sessionId===state.sessionId)break;saveLog('stop retry '+(attempt+1));if(attempt<3)await new Promise(resolve=>win.setTimeout(resolve,[400,900,1800][attempt]));if(!current(state))return;}
+        saveLog('stopped '+(answer?.status||'-'));if(!validContext(state))return;if(!wanted.length){close(state.data.check===true?'checked':'done');return;}status(state,'saving');
+        let result=null;for(let attempt=0;;attempt++){try{result=await onSave({...context(state),changes:copy(wanted)});break;}catch(error){saveLog('save retry '+(attempt+1)+' '+(error?.code||error?.message||'-'));if(attempt>=3||!current(state))throw error;await new Promise(resolve=>win.setTimeout(resolve,[1000,3000,6000][attempt]));if(!current(state))return;}}
+        if(!current(state))return;
         const reports=result?.results,ids=wanted.map(item=>item.receiverId).sort();if(!Array.isArray(reports)||canonical(reports.map(row=>row.receiverId).sort())!==canonical(ids)||reports.some(row=>!['saved','pending','failed'].includes(row.status))||new Set(reports.map(row=>row.receiverId)).size!==reports.length){status(state,'saveFailed');return;}
         let now;try{now=signature(state);}catch(_){status(state,'stale');state.stale=true;return;}
         if(now!==state.signature&&canonical(result.zoneSignature)!==now){status(state,'stale');state.stale=true;return;}
         state.signature=now;for(const row of reports)if(row.status==='saved'){state.baseline.set(row.receiverId,copy(wanted.find(item=>item.receiverId===row.receiverId).outputs));state.pendingSaveReceivers.delete(row.receiverId);}else if(row.status==='pending')state.pendingSaveReceivers.add(row.receiverId);
-        if(reports.every(row=>row.status==='saved')){close('saved');return;}status(state,'partial');
+        if(reports.every(row=>row.status==='saved')){close(state.data.check===true?'checked':'saved');return;}status(state,'partial');
       }catch(error){saveLog('error '+(error?.code||error?.message||'-'));if(current(state))status(state,state.status==='stopping'?'stopFailed':'saveFailed');}
       finally{if(current(state)){state.saving=false;state.paused=!!state.stopJob;controls(state);}}
     }
     function click(state,event){
+      if(event.target?.closest?.('[data-spi-tutorial-action="close"]')&&event.isTrusted!==false)try{win.localStorage?.setItem(TUTORIAL_SEEN_C118,'1');}catch(_){}
       const button=event.target?.closest?.('[data-spi-zone-action]');
       if(!button){const card=event.target?.closest?.('[data-spi-zone-line]');if(card&&state.dialog.contains(card)&&!state.recoveringTest&&!state.recoveringPreview&&!state.recoveryJob&&!state.retryResumeJob&&state.recoveryTimer==null&&!state.previewFailed&&!state.previewRetired&&enabled(state)){const receiver=state.data.receivers.find(item=>item.id===card.dataset.receiverId),output=receiver?.outputs.find(item=>item.port===Number(card.dataset.port)&&item.enabled);if(output){setFocus(state,receiver.id,output.port);queue(state);}}return;}
       if(!state.dialog.contains(button)||button.disabled)return;const action=button.dataset.spiZoneAction;
-      if(action==='close'||action==='back'){event.preventDefault();close(action);return;}if(action==='save'){void save(state);return;}if(action==='test'){void test(state);return;}if(!['select','flip'].includes(action)||state.previewFailed||state.previewRetired||!enabled(state))return;
+      if(action==='close'||action==='back'){event.preventDefault();close(action);return;}if(action==='save'){void save(state);return;}if(action==='test'){void test(state);return;}if(action==='walkthrough'){toggleWalkthrough(state);return;}if(!['select','flip'].includes(action)||state.previewFailed||state.previewRetired||!enabled(state))return;
       const card=button.closest('[data-spi-zone-line]'),receiver=state.data.receivers.find(item=>item.id===card?.dataset.receiverId),output=receiver?.outputs.find(item=>item.port===Number(card?.dataset.port)&&item.enabled);if(!receiver||!output)return;
       if(action==='flip'&&output.pixels===1)return;
       // C112: a run of the connection check is sent without focus. A flip that
@@ -294,7 +322,32 @@
       void stop(state).catch(()=>{});try{onClose({reason,...context(state),...(state.data.newReceiverId?{newReceiverId:state.data.newReceiverId}:{}),pendingChanges:copy(pendingChanges)});}catch(_){}
       if(focused&&!doc.hidden&&state.focusBefore?.isConnected&&(!doc.hasFocus||doc.hasFocus()))state.focusBefore.focus?.({preventScroll:true});
     }
-    function open(value,{initialPreview=null,sentAt=null}={}){
+    // C109bc: the running light as one switch in the sides step (no second
+    // screen, no hard cut): the same dialog, the same lines, the flip buttons
+    // stay. Timer and first run are the ones the check mode already used.
+    function beginCheckLoop(state){
+      const tick=()=>{if(current(state)&&state.confirmedRequest&&!state.inFlight&&!state.recoveringTest&&enabled(state))void test(state);};
+      state.checkTick=tick;if(state.checkTimer)win.clearInterval(state.checkTimer);state.checkTimer=win.setInterval(tick,6400);
+      const firstRun=tries=>{
+        if(!current(state)||!state.checkTimer||tries>40)return;
+        if(state.confirmedRequest&&!state.inFlight&&!state.recoveringTest&&enabled(state)){win.clearInterval(state.checkTimer);state.checkTimer=win.setInterval(tick,6400);void test(state);return;}
+        win.setTimeout(()=>firstRun(tries+1),250);
+      };
+      win.setTimeout(()=>firstRun(0),300);
+    }
+    function toggleWalkthrough(state){
+      if(!current(state)||!enabled(state))return;
+      const dialog=state.dialog,button=dialog.querySelector('[data-spi-zone-action="walkthrough"]'),hint=dialog.querySelector('.spi-zone-select-hint'),on=dialog.dataset.spiZoneCheck!=='true';
+      dialog.dataset.spiZoneCheck=String(on);
+      if(button){button.setAttribute('aria-pressed',String(on));const b=button.querySelector('b'),small=button.querySelector('small');if(b)b.textContent=t(state,on?'walkthroughOff':'walkthroughOn');if(small)small.textContent=t(state,on?'walkthroughRunning':'walkthroughHint');}
+      if(hint)hint.textContent=t(state,on?'checkHint':'selectHint');
+      if(on){try{dialog.querySelector('[data-spi-tutorial-action="close"]')?.click();}catch(_){}beginCheckLoop(state);}
+      else{if(state.checkTimer){win.clearInterval(state.checkTimer);state.checkTimer=null;}state.checkTick=null;state.pathActive=false;state.pathEnded=false;setFocus(state,null);void queue(state);}
+    }
+    function release(){const state=active;if(!state||!state.held)return;state.held=false;if(current(state))void queue(state);}
+    // C109bi: a calm note while the editor is held (never an error tone)
+    function note(key){const state=active;if(!state||!state.held||!current(state))return;status(state,key);}
+    function open(value,{initialPreview=null,sentAt=null,holdPreview=false}={}){
       if(active)throw Error('SPI_ZONE_DIRECTION_ALREADY_OPEN');if(!doc?.createElement)throw Error('SPI_ZONE_DOM_REQUIRED');validate(value);
       const language=languages.indexOf(String(doc.documentElement.lang||'nl').toLowerCase().split('-')[0]),dialog=doc.createElement('dialog'),data=copy(value),state={generation:++generation,data,dialog,language:Math.max(0,language),sessionId:'spi-zone-'+Date.now().toString(36)+'-'+(++serial),baseline:new Map(data.receivers.map(receiver=>[receiver.id,copy(receiver.outputs)])),focus:null,focusBefore:doc.activeElement,pending:null,inFlight:false,previewJob:null,version:0,paused:false,saving:false,stale:false,closed:false,stopJob:null,waitTimers:new Map(),status:'pending'};
       state.pendingSaveReceivers=new Set();applyPending(data);for(const pending of data.pendingChanges||[])if(pending.requiresReconcile===true)state.pendingSaveReceivers.add(pending.receiverId);
@@ -322,26 +375,25 @@
         dialog.querySelector('[data-spi-tutorial-root]')?.remove();
         const hint=dialog.querySelector('.spi-zone-select-hint');if(hint)hint.textContent=t(state,'checkHint');
         // C107: the walkthrough keeps the flip buttons: a wrong join is fixed right here.
-        dialog.querySelector('[data-spi-zone-action="save"]').querySelector('span').textContent=t(state,'checkDone');
+        // C118: the last step of the first-time setup ends with one clear finish button.
+        const finish=dialog.querySelector('[data-spi-zone-action="save"]');finish.querySelector('span').textContent=t(state,'finishSetup');finish.classList.add('spi-zone-finish');
+        const step=doc.createElement('span');step.className='spi-zone-step';step.textContent=t(state,'lastStep');dialog.querySelector('#'+headingId).before(step);
         dialog.querySelector('[data-spi-zone-action="test"]')?.setAttribute('hidden','');
-        const tick=()=>{if(current(state)&&state.confirmedRequest&&!state.inFlight&&!state.recoveringTest&&enabled(state))void test(state);};
-        state.checkTick=tick;state.checkTimer=win.setInterval(tick,6400);
-        // C112: the first run starts as soon as the guide is confirmed (it
-        // waited for the next 6.4 s tick, ~3 s of dark lines); the interval
-        // restarts from that run so two runs never overlap.
-        const firstRun=tries=>{
-          if(!current(state)||!state.checkTimer||tries>40)return;
-          if(state.confirmedRequest&&!state.inFlight&&!state.recoveringTest&&enabled(state)){win.clearInterval(state.checkTimer);state.checkTimer=win.setInterval(tick,6400);void test(state);return;}
-          win.setTimeout(()=>firstRun(tries+1),250);
-        };
-        win.setTimeout(()=>firstRun(0),300);
-      }else dialog.querySelector('[data-spi-zone-action="test"]')?.setAttribute('hidden','');
+        beginCheckLoop(state);
+      }else{
+        // C109bc: the sides step carries the walkthrough as a switch; it
+        // never opens a second screen.
+        const toggle=dialog.querySelector('[data-spi-zone-action="test"]');
+        if(toggle){toggle.dataset.spiZoneAction='walkthrough';toggle.setAttribute('aria-pressed','false');const b=toggle.querySelector('b'),small=toggle.querySelector('small');if(b)b.textContent=t(state,'walkthroughOn');if(small)small.textContent=t(state,'walkthroughHint');}
+      }
       if(state.pendingSaveReceivers.size){const hint=doc.createElement('p');hint.className='spi-zone-change-notice';hint.textContent=t(state,'pendingSave');dialog.querySelector('[data-spi-zone-status]').after(hint);}
       state.recoveryEpoch=0;state.recoveryAttempts=0;state.recoveryTimer=null;state.recoveryJob=null;state.retryResumeJob=null;state.recoveringPreview=false;
       state.visibilityEpoch=0;state.visibilityStop=null;state.previewRetired=false;state.previewFailed=false;state.resuming=false;state.resumeJob=null;state.resumeRequested=false;
       state.click=event=>click(state,event);state.cancel=event=>{event.preventDefault();close('escape');};state.visibility=()=>visibility(state);state.nativeActive=()=>resumeForeground(state);dialog.addEventListener('click',state.click);dialog.addEventListener('cancel',state.cancel);doc.addEventListener('visibilitychange',state.visibility);win.addEventListener?.('lightning:native-active',state.nativeActive);doc.body.append(dialog);
       try{dialog.showModal();}catch(error){active=null;dialog.removeEventListener('click',state.click);dialog.removeEventListener('cancel',state.cancel);doc.removeEventListener('visibilitychange',state.visibility);win.removeEventListener?.('lightning:native-active',state.nativeActive);dialog.remove();throw error;}
       state.unbindTutorial=host.LightningSPIDirectionTutorial?.bind(dialog)||null;controls(state);
+      // C118: once understood, the red/green example opens folded (one tap shows it again): the sides step stays short.
+      try{if(win.localStorage?.getItem(TUTORIAL_SEEN_C118)==='1')dialog.querySelector('[data-spi-tutorial-action="close"]')?.click();}catch(_){}
       if(initialPreview){
         state.previewStarted=true;state.handoffRenewAt=sentAt+initialPreview.renewAfterMS;const wanted=request(state);
         if(sentAt+initialPreview.previewTTLMS>now()){
@@ -359,10 +411,11 @@
             if(state.previewJob===job)state.previewJob=null;state.inFlight=false;if(current(state)){controls(state);if(state.pending)void drain(state);else observeLater(state);}
           });
         }
-      }else queue(state);
+      }else if(holdPreview===true){state.held=true;status(state,'preparing');}
+      else queue(state);
       return context(state);
     }
-    return Object.freeze({open,close,isOpen:()=>!!active});
+    return Object.freeze({open,close,release,note,isOpen:()=>!!active});
   }
   return Object.freeze({create});
 }));

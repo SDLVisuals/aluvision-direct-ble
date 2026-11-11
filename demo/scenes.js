@@ -16,7 +16,7 @@
     const {layout,presentation,lineOrder}=value;
     if(!(type==='SPI'?['continuous','stacked','vertical']:['stacked','vertical']).includes(layout)||
       !['normal','tunnel','wall'].includes(presentation)||
-      (presentation==='wall')!==(layout==='vertical')||presentation==='tunnel'&&layout!=='stacked'||
+      (layout==='vertical')!==(presentation==='wall')&&layout!=='stacked'||/* C211d: a stacked zone may be saved as Wand */presentation==='tunnel'&&layout!=='stacked'||
       !dense(lineOrder)||!lineOrder.length||lineOrder.length>240||new Set(lineOrder).size!==lineOrder.length||
       lineOrder.some(id=>typeof id!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}:[0-4]$/.test(id)))
       fail('De opgeslagen opstelling is niet geldig.');
@@ -116,8 +116,113 @@
       return 'Een SPI-uitgang uit deze scène is uitgeschakeld of ontbreekt. Bewaar een nieuwe scène.';
     return '';
   }
+  // SCENE-JOIN (9 Nov, user: "scènes moeten blijven werken als er een receiver bijkomt"). Derive the scene that
+  // plays today. A receiver that joined a saved zone after the save is added to that zone's snapshot IN MEMORY:
+  //  - a continuous SPI zone with one zone recipe, or a whole-stand animation: the newcomer takes that recipe, so the
+  //    animation/gradient spans the new geometry. Nothing to update (adaptedIds).
+  //  - any other zone (an extra RGBW, an SPI in a stacked/vertical zone): the rest plays unchanged; the newcomer takes
+  //    the zone's one common saved light, else keeps its own current light, and needsUpdate asks for a new save.
+  // Pure and idempotent. Storage changes only on an explicit save, so the shared library format is unchanged.
+  const canon=v=>Array.isArray(v)?v.map(canon):plain(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,canon(v[k])])):v;
+  const sameLight=(a,b)=>JSON.stringify(canon(a))===JSON.stringify(canon(b));
+  const lineReceiver=line=>line.slice(0,line.lastIndexOf(':'));
+  const hasSelection=state=>[state,...Object.values(state.portStates||{})].some(s=>Object.hasOwn(s,'staticGradientDomain')||Object.hasOwn(s,'staticGradientGroup'));
+  function mergeOrder(saved,current,fresh){
+    // Keep the saved order; place each new id right after its nearest current predecessor.
+    const out=[...saved];
+    current.forEach((id,index)=>{
+      if(!fresh(id)||out.includes(id))return;
+      let at=0;for(let j=index-1;j>=0;j--){const k=out.indexOf(current[j]);if(k>=0){at=k+1;break;}}
+      out.splice(at,0,id);
+    });
+    return out;
+  }
+  function zoneTrial(model,zone){
+    const temp=copy(model),target=M.getZone(temp,zone.id);
+    if(zone.arrangement){target.layout=zone.arrangement.layout;target.lineOrder=[...zone.arrangement.lineOrder];}
+    if(zone.gradientDomains)target.gradientDomains=copy(zone.gradientDomains);else delete target.gradientDomains;
+    for(const receiver of zone.receivers)temp.receivers.find(item=>item.id===receiver.id).state=copy(receiver.state);
+    return M.assertValid(temp);
+  }
+  function spanGradient(model,zone,oldLines){
+    // Only a gradient over ALL saved lines grows with the zone; a partial gradient stays partial.
+    const temp=zoneTrial(model,zone),group=M.gradientDomainGroup(temp,zone.id,zone.receivers[0].state);
+    if(!Array.isArray(group)||group.length!==oldLines.length||oldLines.some(line=>!group.includes(line)))return null;
+    const prepared=M.prepareGradientDomain(temp,zone.id,{kind:'all'});
+    return {domain:prepared.domain,gradientDomains:copy(M.getZone(prepared.model,zone.id).gradientDomains)};
+  }
+  function dropSelection(state){
+    const next=copy(state);delete next.staticGradientDomain;delete next.staticGradientGroup;
+    for(const [port,override]of Object.entries(next.portStates||{})){
+      delete override.staticGradientDomain;delete override.staticGradientGroup;if(!Object.keys(override).length)delete next.portStates[port];
+    }
+    if(next.portStates&&!Object.keys(next.portStates).length)delete next.portStates;
+    return next;
+  }
+  function reconcile(model,input){
+    const scene=validate(input),unchanged={scene,changed:false,needsUpdate:false,addedIds:[],adaptedIds:[]};
+    try{
+      M.assertValid(model);
+      const stand=model.stands.find(item=>item.id===scene.standId);if(!stand)return unchanged;
+      const known=new Set(scene.zones.flatMap(zone=>zone.receivers.map(receiver=>receiver.id)));
+      const shared=scene.zones.some(zone=>zone.receivers.some(receiver=>receiver.state.standAnimation));
+      const savedZones=new Map(scene.zones.map(zone=>[zone.id,zone]));
+      const newcomers=zone=>zone.type?M.zoneReceivers(model,zone.id).filter(receiver=>!known.has(receiver.id)&&receiver.type===zone.type):[];
+      const joined=stand.zones.filter(zone=>(shared||savedZones.has(zone.id))&&(!savedZones.has(zone.id)||savedZones.get(zone.id).type===zone.type)&&newcomers(zone).length);
+      if(!joined.length)return unchanged;
+      const peers=scene.zones.flatMap(zone=>zone.receivers.map(receiver=>({type:zone.type,state:receiver.state})));
+      const standRecipe=type=>{
+        const peer=peers.find(item=>item.type===type&&item.state.standAnimation);if(peer)return copy(peer.state);
+        const base=copy(peers.find(item=>item.state.standAnimation).state),marker=base.standAnimation.state;delete base.portStates;
+        return Object.assign(base,copy(marker),{receiverType:type,previewFamily:type==='SPI'&&!marker.v30Effect?'RGBW':null});
+      };
+      const addedIds=[],adaptedIds=[];let needsUpdate=false;
+      const joinedIds=new Set(joined.map(zone=>zone.id));
+      const zoneOrder=shared?mergeOrder(scene.zones.map(zone=>zone.id),stand.zones.map(zone=>zone.id),id=>joinedIds.has(id)):scene.zones.map(zone=>zone.id);
+      const zones=[];
+      for(const id of zoneOrder){
+        const saved=savedZones.get(id),zone=stand.zones.find(item=>item.id===id);
+        if(!joinedIds.has(id)){if(saved)zones.push(saved);continue;}
+        try{
+          const incoming=newcomers(zone),fresh=new Set(incoming.map(receiver=>receiver.id)),byId=new Map(incoming.map(receiver=>[receiver.id,receiver]));
+          const result=saved?copy(saved):{id:zone.id,name:zone.name,type:zone.type,
+            ...(scene.version===2?{arrangement:{layout:zone.layout,lineOrder:[],presentation:zone.layout==='vertical'?'wall':'normal'}}:{}),receivers:[]};
+          const layout=result.arrangement?.layout??zone.layout,continuous=zone.type==='SPI'&&layout==='continuous';
+          const states=result.receivers.map(receiver=>receiver.state);
+          const uniform=states.length&&!states[0].portStates&&!Object.hasOwn(states[0],'staticGradientGroup')&&states.every(state=>sameLight(state,states[0]))?states[0]:null;
+          let recipe=shared?standRecipe(zone.type):uniform,adapt=shared||!!uniform&&continuous;
+          const currentLines=M.lineIds(model,zone.id);
+          if(result.arrangement)result.arrangement.lineOrder=mergeOrder(result.arrangement.lineOrder,currentLines,line=>fresh.has(lineReceiver(line)));
+          const own=receiver=>{const state=copy(continuous?M.lightStateFor(receiver,0):receiver.state);delete state.standAnimation;return state;};
+          const entry=(receiver,state)=>({id:receiver.id,...(scene.version===2?{identity:{rid:receiver.rid||null,deviceFingerprint:receiver.deviceFingerprint||null}}:{}),state:light(state)});
+          const order=mergeOrder(result.receivers.map(receiver=>receiver.id),zone.receiverIds,receiverId=>fresh.has(receiverId));
+          let receivers=order.map(receiverId=>fresh.has(receiverId)?entry(byId.get(receiverId),recipe?copy(recipe):own(byId.get(receiverId))):result.receivers.find(receiver=>receiver.id===receiverId));
+          if(recipe&&!shared&&Object.hasOwn(recipe,'staticGradientDomain')){
+            const oldLines=(result.arrangement?.lineOrder??currentLines).filter(line=>!fresh.has(lineReceiver(line)));
+            const span=adapt?spanGradient(model,{...result,receivers},oldLines):null;
+            if(span){result.gradientDomains=span.gradientDomains;receivers=receivers.map(receiver=>({...receiver,state:{...receiver.state,staticGradientDomain:span.domain}}));}
+            else{adapt=false;recipe=null;receivers=receivers.map(receiver=>fresh.has(receiver.id)?entry(byId.get(receiver.id),own(byId.get(receiver.id))):receiver);}
+          }
+          if(receivers.some(receiver=>fresh.has(receiver.id)&&hasSelection(receiver.state))){
+            // A newcomer's own gradient selection may live only in today's zone registry. Keep its colours, drop the
+            // selection the saved registry cannot resolve, so playback never stops on GRADIENT_SCOPE.
+            const temp=zoneTrial(model,{...result,receivers});
+            receivers=receivers.map(receiver=>{
+              if(!fresh.has(receiver.id)||!hasSelection(receiver.state))return receiver;
+              try{[receiver.state,...Object.values(receiver.state.portStates||{})].forEach(state=>M.gradientDomainGroup(temp,zone.id,state));return receiver;}
+              catch(_){return {...receiver,state:light(dropSelection(receiver.state))};}
+            });
+          }
+          result.receivers=receivers;zones.push(result);
+          addedIds.push(...fresh);if(adapt)adaptedIds.push(...fresh);else needsUpdate=true;
+        }catch(_){if(saved)zones.push(saved);}
+      }
+      if(!addedIds.length)return unchanged;
+      return {scene:validate({...scene,zones}),changed:true,needsUpdate,addedIds,adaptedIds};
+    }catch(_){return unchanged;}
+  }
   function previewZones(model,input){
-    const scene=validate(input);M.assertValid(model);
+    const scene=reconcile(model,input).scene;M.assertValid(model); // SCENE-JOIN
     const stand=model.stands.find(s=>s.id===scene.standId);
     const zones=new Map((stand?.zones||[]).map(z=>[z.id,z]));
     const receivers=new Map(model.receivers.map(r=>[r.id,r]));
@@ -160,14 +265,14 @@
   }
   function compatibility(model,input){
     try{
-      const scene=validate(input);M.assertValid(model);
+      const scene=reconcile(model,input).scene;M.assertValid(model); // SCENE-JOIN
       const stand=model.stands.find(s=>s.id===scene.standId);if(!stand)return {ok:false,reason:'Deze scène hoort bij een andere stand.'};
       if(scene.zones.some(zone=>zone.receivers.some(receiver=>receiver.state.standAnimation))){
-        const saved=scene.zones.flatMap(zone=>zone.receivers),members=model.receivers.filter(receiver=>receiver.standId===scene.standId&&receiver.lifecycle==='added');
+        const saved=scene.zones.flatMap(zone=>zone.receivers),members=M.standZoneReceivers(model,scene.standId); // SCENE-JOIN: zoned members, as StandAnimations
         if(saved.length!==members.length||saved.some(receiver=>!members.some(member=>member.id===receiver.id)))
           return {ok:false,reason:'De opstelling van deze standanimatie is gewijzigd. Bewaar een nieuwe scène voor de hele stand.'};
-        if(scene.version===2&&JSON.stringify(stand.zones.filter(zone=>scene.zones.some(saved=>saved.id===zone.id)).map(zone=>zone.id))!==JSON.stringify(scene.zones.map(zone=>zone.id)))
-          return {ok:false,reason:'De zonevolgorde van deze standanimatie is gewijzigd. Bewaar een nieuwe scène voor de hele stand.'};
+        // C211e: a changed zone order no longer makes the scene unavailable; the scene keeps its own order and
+        // apply() / activation put that order back (the user may reorder the stand animation without losing scenes).
       }
       for(const saved of scene.zones){
         const zone=stand.zones.find(z=>z.id===saved.id);if(!zone||zone.type!==saved.type)return {ok:false,reason:'Een zone uit deze scène ontbreekt of heeft een ander type.'};
@@ -184,7 +289,10 @@
   }
   function apply(model,input){
     const check=compatibility(model,input);if(!check.ok)fail(check.reason);
-    const scene=validate(input),next=copy(model);
+    const scene=reconcile(model,input).scene,next=copy(model); // SCENE-JOIN
+    // C211e: a stand-animation scene plays in the zone order it was saved with.
+    {const st=next.stands.find(s=>s.id===scene.standId);if(st&&scene.version===2&&scene.zones.some(z=>z.receivers.some(r=>r.state.standAnimation))){
+      const order=scene.zones.map(z=>z.id).filter(id=>st.zones.some(z=>z.id===id));let k=0;const byId=new Map(st.zones.map(z=>[z.id,z]));st.zones=st.zones.map(z=>order.includes(z.id)?byId.get(order[k++]):z);}}
     for(const saved of scene.zones)if(saved.arrangement){const zone=M.getZone(next,saved.id);
       if(zone.layout!==saved.arrangement.layout||JSON.stringify(M.lineIds(next,zone.id))!==JSON.stringify(saved.arrangement.lineOrder)){
         zone.layout=saved.arrangement.layout;zone.lineOrder=[...saved.arrangement.lineOrder];
@@ -232,5 +340,5 @@
     function remove(id){const current=load();if(current.error)return current;if(!current.scenes.some(s=>s.id===id))return current;return write(current.scenes.filter(s=>s.id!==id),current.scenes);}
     return Object.freeze({load,save,rename,remove});
   }
-  return Object.freeze({STORAGE_KEY,capture,validate,arrangement,identity,presentationModel,previewZones,compatibility,apply,createStore});
+  return Object.freeze({STORAGE_KEY,capture,validate,arrangement,identity,presentationModel,previewZones,compatibility,apply,createStore,reconcile});
 });

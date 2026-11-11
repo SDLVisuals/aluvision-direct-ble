@@ -62,7 +62,7 @@ html body #effect-dialog.colour-picker-dialog [data-colour-picker-done]:focus-vi
 html body #effect-dialog.colour-picker-dialog [data-colour-picker-done]:active {
   filter:brightness(.9);
 }
-html body #effect-dialog.colour-picker-dialog :is(button,input) {
+/*c140-sel:colour-picker-dialog.css*/html body #effect-dialog.colour-picker-dialog button, html body #effect-dialog.colour-picker-dialog input{
   scroll-margin-block-end:calc(104px + env(safe-area-inset-bottom));
 }
 html body #effect-dialog.colour-picker-dialog:has([data-stand-control-sheet]) .colour-picker-actions {

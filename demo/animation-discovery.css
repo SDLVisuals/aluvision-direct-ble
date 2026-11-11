@@ -1,5 +1,5 @@
 /* Discovery hierarchy only. No new animation engine, state or device work. */
-html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) {
+/*c140-sel:animation-discovery.css*/html.interface-polish body :is(#main, #effect-dialog) :where([data-discovery-ui="662"]):is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]), html.interface-polish body :is(#main, #effect-dialog) .animation-family-detail[data-curated-gallery="606"]{
   --discovery-accent: var(--action-ink, var(--red));
   gap: 20px;
 }
@@ -7,8 +7,7 @@ html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="66
    gallery is instead one vertical browsing surface, just like the zone
    gallery. Bound its own grid tracks: clipping the fixed dialog overflow
    would hide, rather than fix, a shrunken search field and offscreen cards. */
-html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] .animation-library-inline[data-discovery-ui="662"],
-html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] [data-discovery-ui="662"] :is(.animation-family-section, .animation-family-detail, .family-variants-panel) {
+html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] .animation-library-inline[data-discovery-ui="662"], html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] [data-discovery-ui="662"] .animation-family-section, html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] [data-discovery-ui="662"] .animation-family-detail, html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] [data-discovery-ui="662"] .family-variants-panel{
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-auto-flow: row;
@@ -19,7 +18,7 @@ html.interface-polish body #effect-dialog [data-stand-control-mode="animations"]
   min-width: 0;
   max-width: 100%;
 }
-html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] .animation-library-inline[data-discovery-ui="662"] > :is(.animation-library-heading, .animation-picker-steps, .animation-settings-return-slot, .animation-discovery-browser, #animation-results) {
+html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] .animation-library-inline[data-discovery-ui="662"] > :where(.animation-library-heading):is(.animation-library-heading, #animation-results), html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] .animation-library-inline[data-discovery-ui="662"] > :where(.animation-picker-steps):is(.animation-picker-steps, #animation-results), html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] .animation-library-inline[data-discovery-ui="662"] > :where(.animation-settings-return-slot):is(.animation-settings-return-slot, #animation-results), html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] .animation-library-inline[data-discovery-ui="662"] > :where(.animation-discovery-browser):is(.animation-discovery-browser, #animation-results), html.interface-polish body #effect-dialog [data-stand-control-mode="animations"] .animation-library-inline[data-discovery-ui="662"] > #animation-results{
   grid-column: 1;
   box-sizing: border-box;
   width: 100%;
@@ -103,7 +102,7 @@ html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="66
   background: color-mix(in srgb, var(--discovery-accent) 11%, var(--panel));
   color: var(--discovery-accent);
 }
-html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-step-illustration > .icon {
+html.interface-polish body :is(#main, #effect-dialog) :where([data-discovery-ui="662"]):is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-step-illustration > .icon, html.interface-polish body :is(#main, #effect-dialog) .animation-family-detail[data-curated-gallery="606"] .animation-step-illustration > .icon{
   width: 20px;
   height: 20px;
 }
@@ -210,7 +209,7 @@ html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="66
   font-weight: 750;
   overflow-wrap: anywhere;
 }
-html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-row-copy > small {
+html.interface-polish body :is(#main, #effect-dialog) :where([data-discovery-ui="662"]):is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-row-copy > small, html.interface-polish body :is(#main, #effect-dialog) .animation-family-detail[data-curated-gallery="606"] .animation-category-row-copy > small{
   color: var(--muted);
   font-size: 12px;
   line-height: 1.4;
@@ -227,7 +226,7 @@ html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="66
   height: auto;
   color: var(--muted);
 }
-html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-row-meta > small {
+html.interface-polish body :is(#main, #effect-dialog) :where([data-discovery-ui="662"]):is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-row-meta > small, html.interface-polish body :is(#main, #effect-dialog) .animation-family-detail[data-curated-gallery="606"] .animation-category-row-meta > small{
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -238,11 +237,11 @@ html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="66
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-row-meta .icon {
+html.interface-polish body :is(#main, #effect-dialog) :where([data-discovery-ui="662"]):is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-row-meta .icon, html.interface-polish body :is(#main, #effect-dialog) .animation-family-detail[data-curated-gallery="606"] .animation-category-row-meta .icon{
   width: 17px;
   height: 17px;
 }
-html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-tab[aria-pressed="true"] .animation-category-row-meta > span {
+html.interface-polish body :is(#main, #effect-dialog) :where([data-discovery-ui="662"]):is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-tab[aria-pressed="true"] .animation-category-row-meta > span, html.interface-polish body :is(#main, #effect-dialog) .animation-family-detail[data-curated-gallery="606"] .animation-category-tab[aria-pressed="true"] .animation-category-row-meta > span{
   color: var(--discovery-accent);
 }
 html.interface-polish body :is(#main, #effect-dialog) :is([data-discovery-ui="662"], .animation-family-detail[data-curated-gallery="606"]) .animation-category-tab:is([data-id="catalogue"], [data-id="presets"]) {

@@ -116,7 +116,8 @@
     // Ordinary whole-line effects must not inherit tunnel delays/directions
     // from the previously controlled zone or a saved older light state.
     if (effect.category === 'whole') Object.assign(state, {
-      lineDelayMs: 0, delayMs: 0, bounce: false, mirror: false, direction: 'right'
+      lineDelayMs: 0, delayMs: 0, bounce: false, mirror: false, direction: 'right',
+      lineGapsMs: null, lineSlots: null, lineSlotCount: null
     });
     if (state.colorCount === undefined) state.colorCount = state.colors.length;
     // Every V30 payload contains its accent slot, including effects that do

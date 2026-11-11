@@ -109,9 +109,8 @@ html.interface-polish body :is(#main, #effect-dialog) .animation-category-tabs[d
   border-radius: 14px;
 }
 html.interface-polish body :is(#main, #effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab > b { grid-column: 1 / -1; grid-row: 2; font-size: 14px; line-height: 1.35; font-weight: 700; overflow-wrap: normal; word-break: normal; }
-html.interface-polish body :is(#main, #effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab > span { grid-column: 1; grid-row: 1; }
-html.interface-polish body :is(#main, #effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab > span,
-html.interface-polish body :is(#main, #effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab > span > :is(.icon, .arrangement-icon) { width: 22px; height: 22px; }
+/*c140-sel:animation-chooser.css*/html.interface-polish body #main .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab > span, html.interface-polish body #effect-dialog .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab > span{ grid-column: 1; grid-row: 1; }
+html.interface-polish body #main .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab > span, html.interface-polish body #effect-dialog .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab > span, html.interface-polish body :is(#main, #effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab > span > .icon, html.interface-polish body :is(#main, #effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab > span > .arrangement-icon{ width: 22px; height: 22px; }
 html.interface-polish body :is(#main, #effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab > small { grid-column: 3; grid-row: 1; font-size: 12px; min-width: 24px; padding: 4px 5px; }
 
 html.interface-polish body :is(#main, #effect-dialog) .animation-family-section[data-chooser-version="567"] > .animation-family-grid {
@@ -124,7 +123,7 @@ html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[dat
   gap: 14px;
   padding: 14px;
 }
-html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] .animation-family-preview {
+html.interface-polish body #main .animation-family-card[data-family-card-version="572"] .animation-family-preview, html.interface-polish body #effect-dialog .animation-family-card[data-family-card-version="572"] .animation-family-preview{
   grid-template-rows: auto minmax(96px, 1fr);
   padding: 10px 8px;
   border-radius: 16px;
@@ -132,11 +131,11 @@ html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[dat
 html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] .animation-family-preview canvas { height: 96px !important; }
 html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] .animation-family-preview-label { font-size: 11px; }
 html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] .family-copy { gap: 8px; }
-html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] .family-kicker { font-size: 11px; }
+html.interface-polish body #main .animation-family-card[data-family-card-version="572"] .family-kicker, html.interface-polish body #effect-dialog .animation-family-card[data-family-card-version="572"] .family-kicker{ font-size: 11px; }
 html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] .family-title { font-size: 19px; line-height: 1.3; overflow-wrap: anywhere; }
-html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] .family-summary { font-size: 14px; line-height: 1.5; }
+html.interface-polish body #main .animation-family-card[data-family-card-version="572"] .family-summary, html.interface-polish body #effect-dialog .animation-family-card[data-family-card-version="572"] .family-summary{ font-size: 14px; line-height: 1.5; }
 html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] .family-variants { min-height: 46px; padding: 10px; }
-html.interface-polish body :is(#main, #effect-dialog) .animation-family-card[data-family-card-version="572"] .family-variants-copy > b { font-size: 14px; line-height: 1.35; }
+html.interface-polish body #main .animation-family-card[data-family-card-version="572"] .family-variants-copy > b, html.interface-polish body #effect-dialog .animation-family-card[data-family-card-version="572"] .family-variants-copy > b{ font-size: 14px; line-height: 1.35; }
 @media (max-width: 359px) {
   html.interface-polish body :is(#main, #effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] { grid-template-columns: minmax(0, 1fr); }
   html.interface-polish body :is(#main, #effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab { min-height: 58px; }

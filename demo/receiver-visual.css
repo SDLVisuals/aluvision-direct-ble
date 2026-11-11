@@ -6,7 +6,6 @@
 .receiver-product.compact canvas{height:135px}
 .receiver-product-caption{margin:0;padding:0 16px 14px;color:#657163;font-size:12px;line-height:1.5}
 .receiver-product-caption strong{display:block;color:#253326;font-size:13px}
-@media(max-width:480px){.receiver-product canvas{height:205px}.receiver-product.compact canvas{height:125px}}
 @media(prefers-reduced-motion:reduce){.receiver-product *{animation:none!important;transition:none!important}}
 .receiver-filters{display:flex;gap:5px;padding:4px;margin:16px 0;background:var(--line,#e8e8e3);border-radius:14px}
 .receiver-filters button{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;min-height:48px;border-radius:10px;background:transparent;font-size:12px;padding:7px;color:var(--muted)}
@@ -34,7 +33,5 @@
 .receiver-port-switch{flex-direction:column;gap:3px;flex:none;min-width:48px;min-height:48px;font-size:10px;padding:3px}
 .receiver-port-switch i{width:38px;height:23px}.receiver-port-switch i:after{width:17px;height:17px}.receiver-port-switch[aria-checked=true] i:after{transform:translateX(15px)}
 .receiver-port-switch:disabled{opacity:.4}.receiver-port-row{gap:5px}.receiver-port-row .receiver-port-select{gap:5px;font-size:11px}.receiver-port-row .receiver-blink{width:60px;font-size:9px}
-.pixel-setup-shortcut{display:flex;justify-content:center;align-items:center;gap:8px;font-size:13px}
-.pixel-setup-shortcut>.icon{width:18px;height:18px}
 .receiver-details .receiver-management{border-top:1px solid var(--line);padding-top:16px;margin-top:16px}
 @media(max-width:359px){.receiver-list summary .list-product{width:42px!important;flex-basis:42px!important}.receiver-list summary{padding:12px 10px}.receiver-list summary>.icon{width:10px}.receiver-blink{width:66px}.receiver-heading-copy b{font-size:12px!important}}

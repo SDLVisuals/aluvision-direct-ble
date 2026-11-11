@@ -19,12 +19,12 @@
   /* Stand overview: shortcuts side by side. */
   html body #main .stand-page{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:14px}
   html body #main .stand-page>*{grid-column:1/-1;min-width:0}
-  html body #main .stand-page>:is(.stand-control-shortcut,.scene-capture-panel){grid-column:auto;margin:0}
+  /*c140-sel:c99-responsive.css*/html body #main .stand-page > .stand-control-shortcut, html body #main .stand-page > .scene-capture-panel{grid-column:auto;margin:0}
   html body #main .stand-page>.scene-capture-panel>.button{height:100%}
 
   /* Full-screen sheets (Alles bedienen, colour picker): keep the content in a
    * readable centred column; backgrounds still run edge to edge. */
-  html body #effect-dialog:is(.colour-picker-dialog,:has([data-stand-control-sheet]))>div>:is(header,div,footer){padding-inline:max(16px,calc((100% - 780px)/2))!important;box-sizing:border-box}
+  html body #effect-dialog:is(.colour-picker-dialog,:has([data-stand-control-sheet])) > div > header, html body #effect-dialog:is(.colour-picker-dialog,:has([data-stand-control-sheet])) > div > div, html body #effect-dialog:is(.colour-picker-dialog,:has([data-stand-control-sheet])) > div > footer{padding-inline:max(16px,calc((100% - 780px)/2))!important;box-sizing:border-box}
 
   /* The colour wheel may use the extra room. */
   html.interface-polish body :is(#main,#effect-dialog) .shared-colour-picker .wheel-wrap{width:min(100%,300px);max-width:300px}
@@ -46,7 +46,6 @@
 /* Phones in landscape: little height, notch on the side. Keep the header and
  * tab bar slim and put the ledline preview next to the controls. */
 @media (orientation:landscape) and (max-height:500px){
-  :root,html body{--app-width:100%}
   html body #main{padding-top:10px;padding-inline:max(18px,env(safe-area-inset-left)) max(18px,env(safe-area-inset-right))}
   html body .brand-bar{height:42px;padding-block:2px;padding-inline:max(17px,env(safe-area-inset-left)) max(17px,env(safe-area-inset-right))}
   html body .brand-bar>img{max-height:24px;width:auto}
@@ -72,7 +71,6 @@
   html.interface-polish body #main .onboarding-layout587>.onboarding-task-hint{max-width:none}
   html.interface-polish body #main .onboarding-layout587 .onboarding-heading :is(h1,h2){font-size:24px;line-height:1.2}
   html.interface-polish body #main .onboarding-layout587>.onboarding-footer{position:static}
-  html.interface-polish body :is(#main,#effect-dialog) .shared-colour-picker .wheel-wrap{width:min(100%,220px);max-width:220px}
 }
 
 /* Theme choice "Automatisch" (follows the phone): three choices in a row,

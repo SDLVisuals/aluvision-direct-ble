@@ -1,7 +1,7 @@
 /* 729: copy what you see: each real position faces the same app position.
    Real colour identities stay fixed. Only the app blue/red cards move.
    The unchanged 665 lifecycle owns playback, pause, replay and reduced motion. */
-.order-story665[data-order-story-ui="729"]{--story-red:#df4146;--story-green:#20b974;--story-blue:#2686ef;--story-ink:#252d37;--story-muted:#667180;--story-card:#fff;--story-border:#dce2e8;--story-row729:58px;--story-gap729:12px;--story-step674:calc(var(--story-row729) + var(--story-gap729));color:var(--story-ink)}
+.order-story665[data-order-story-ui="729"]{--story-blue:#2686ef;--story-ink:#252d37;--story-muted:#667180;--story-card:#fff;--story-border:#dce2e8;--story-row729:58px;--story-gap729:12px;--story-step674:calc(var(--story-row729) + var(--story-gap729));color:var(--story-ink)}
 .order-story665[data-order-story-ui="729"] *{box-sizing:border-box}
 dialog.v50-order-tutorial-modal:has([data-order-story-ui="729"])>header h2{font-size:clamp(19px,4.9vw,24px);line-height:1.2}
 dialog.v50-order-tutorial-modal:has([data-order-story-ui="729"])>header h2:focus{outline:none;box-shadow:none}

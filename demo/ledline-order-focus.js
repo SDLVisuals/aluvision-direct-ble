@@ -108,6 +108,22 @@
         }, Math.max(1, Math.ceil(canRenew ? renewAt - at : remaining)));
       } catch (_) { uncertain('ORDER_FOCUS_TIMER', record, true); }
     }
+    // C137ui2: a lost, late or refused blink receipt (slow MAIN, NATIVE_UNCONFIRMED, an RGBW pulse an older native
+    // refuses) is a soft miss, not a sticky fault: the same line is retried once, a newer selection wins, and the
+    // caller hears {soft:true,failures:n} so it can show a calm notice after a few misses in a row.
+    let softFailsC137ui2 = 0;
+    function softFailC137ui2(code, record, enabled) {
+      if (fault) return false;
+      softFailsC137ui2++; cancelTimer(); renew = false;
+      if (enabled && !record.retriedC137ui2 && matches(record, target())) record.retriedC137ui2 = true;
+      else { if (holder === record) holder = null; if (matches(record, target())) paused = true; }
+      revision++;
+      try {
+        onUncertain(Object.freeze({ session: record.ctx.session, standId: record.ctx.standId, zoneId: record.ctx.zoneId,
+          lineId: record.lineId, enabled, error: code, soft: true, failures: softFailsC137ui2 }));
+      } catch (_) {}
+      return true;
+    }
     async function send(record, enabled) {
       let sentAt;
       try { sentAt = now(); } catch (_) { uncertain('ORDER_FOCUS_CLOCK', record, enabled); return false; }
@@ -127,6 +143,8 @@
       });
       job.then(value => { if (transport === operation) transport = null; finish({ value }); },
         () => { if (transport === operation) transport = null; finish({ rejected: true }); });
+      // C137ui2: a reply that arrives after the local timeout frees the lane; resume the latest selection.
+      void job.then(() => {}, () => {}).then(() => { if (operation.lateC137ui2 && epoch === operation.epoch && !fault && !transport) void kick(); });
       emit();
       const resultValue = await result;
       if (operation.timeout !== null) { try { clearTimer(operation.timeout); } catch (_) {} operation.timeout = null; }
@@ -137,10 +155,12 @@
       try { at = now(); } catch (_) { uncertain('ORDER_FOCUS_CLOCK', record, enabled); return false; }
       const parsed = !resultValue.timeout && !resultValue.rejected && receipt(resultValue.value, record, enabled, at, sentAt);
       if (!parsed) {
-        uncertain(resultValue.timeout ? 'ORDER_FOCUS_ACK_TIMEOUT' : 'ORDER_FOCUS_UNCONFIRMED', record, enabled);
+        const codeC137ui2 = resultValue.timeout ? 'ORDER_FOCUS_ACK_TIMEOUT' : 'ORDER_FOCUS_UNCONFIRMED';
+        if (resultValue.timeout) operation.lateC137ui2 = true;
+        if (!softFailC137ui2(codeC137ui2, record, enabled)) uncertain(codeC137ui2, record, enabled); // C137ui2
         return false;
       }
-      if (enabled) { record.confirmed = true; record.sentAt = sentAt; record.expiresAt = sentAt + parsed.ttlMs; }
+      if (enabled) { record.confirmed = true; record.sentAt = sentAt; record.expiresAt = sentAt + parsed.ttlMs; record.retriedC137ui2 = false; softFailsC137ui2 = 0; }
       return true;
     }
     async function run() {

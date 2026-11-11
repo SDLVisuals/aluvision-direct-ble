@@ -17,7 +17,9 @@
   // Port deltas cross the same durable light boundary as scalar settings.
   // No geometry, credentials, shared marker or nested port map belongs here.
   var PORT_LIGHT_FIELDS = new Set(('engine animation effectId category variant r g b w bri brightness speed smooth on power colors whiteChannels rgbEnabled whiteEnabled direction widthPixels transitionMs background backgroundOn bgBrightness fadeAmount width delayMs brandColor motionReverse spacing objectCount trailLength spread randomness bounce mirror phaseMs phaseRateMicroHz previewStartedAt rgbwLast previewFamily backgroundBrightness backgroundRgbEnabled backgroundWhite backgroundWhiteEnabled colorCount legacySpi lineDelayMs v30Effect').split(' '));
-  var PORT_NULLABLE_FIELDS = new Set(('effectId category v30Effect previewFamily rgbwLast brandColor speed smooth colorCount widthPixels objectCount trailLength spacing direction lineDelayMs spread randomness fadeAmount delayMs width').split(' '));
+  var PORT_NULLABLE_FIELDS = new Set(('effectId category v30Effect previewFamily rgbwLast brandColor speed smooth colorCount widthPixels objectCount trailLength spacing direction lineDelayMs spread randomness fadeAmount delayMs width lineGapsMs lineSlots lineSlotCount').split(' '));
+  // C109bj: timeline fields (pauses per gap, virtual slots)
+  PORT_LIGHT_FIELDS.add('lineGapsMs');PORT_LIGHT_FIELDS.add('lineSlots');PORT_LIGHT_FIELDS.add('lineSlotCount');
   PORT_LIGHT_FIELDS.add('staticGradientRecipe');
   PORT_NULLABLE_FIELDS.add('staticGradientRecipe');
   PORT_LIGHT_FIELDS.add('gradientLastBrightness');
@@ -58,6 +60,9 @@
       var value=state[key];if(!PORT_LIGHT_FIELDS.has(key))return false;
       if(value===null)return PORT_NULLABLE_FIELDS.has(key);
       if(key==='staticGradientRecipe')return validStaticGradient(value);
+      if(key==='lineGapsMs')return Array.isArray(value)&&value.length<=127&&value.every(function(item){return integer(item,0,60000);});
+      if(key==='lineSlots')return Array.isArray(value)&&value.length<=128&&value.every(function(item){return integer(item,0,255);});
+      if(key==='lineSlotCount')return integer(value,1,256);
       if(key==='gradientLastBrightness')return integer(value,1,100);
       if(key==='staticGradientGroup')return G.validGroup(value);
       if(key==='staticGradientDomain')return G.validDomain(value);

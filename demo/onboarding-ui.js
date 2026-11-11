@@ -1,3 +1,27 @@
+/* PREVIEWSYNC: one wall-clock preview time base (epoch seconds) for every
+ * animation preview, so a saved previewStartedAt keeps its meaning after an app
+ * reopen and on another phone; plus the dispatch lead used when sampling PHASEMS
+ * (fast lane: receivers start the app's phase at the MAIN deadline, ~120 ms after
+ * the request is built). Bench override: localStorage 'aluvision.previewLeadMs'. */
+(function(root){'use strict';
+  if(typeof root.AluvisionPreviewNowPS!=='function'){
+    const p=root.performance,mono=p&&typeof p.now==='function';
+    let origin=mono?Date.now()-p.now():0;
+    root.AluvisionPreviewNowPS=()=>{
+      const wall=Date.now();if(!mono)return wall/1000;
+      const t=origin+p.now();
+      // Sleep or a wall-clock correction: follow the wall clock again.
+      if(Math.abs(wall-t)>250){origin=wall-p.now();return wall/1000;}
+      return t/1000;
+    };
+  }
+  if(typeof root.AluvisionPreviewLeadPS!=='function'){
+    let lead=120;
+    try{const raw=root.localStorage&&root.localStorage.getItem('aluvision.previewLeadMs');
+      if(raw!==null&&raw!==undefined&&raw!==''){const v=Number(raw);if(Number.isFinite(v)&&v>=0&&v<=1000)lead=v;}}catch(_){}
+    root.AluvisionPreviewLeadPS=()=>lead/1000;
+  }
+})(typeof globalThis==='object'?globalThis:this);
 /* Consumer onboarding shell. No discovery, pairing, credentials persistence or
  * simulated devices are built in. A trusted service must be injected by the
  * native composition root; tests inject their own service into this factory.
@@ -51,8 +75,20 @@
   }
   // Native errors contain only bounded codes. Never render an exception's raw
   // message: network responses can contain credentials or untrusted content.
+  // C137cc (9 Nov 19:39: two selects of a node failed MESH_PROXY_UNCONFIRMED after 5.5 s, the third tap worked): a relay
+  // hop of the MAIN that was not confirmed is retried quietly up to twice before the user sees "even bezig".
+  async function selectWithRetryC137cc(services,request){ // C137ce: module scope has no `services`; the caller passes it
+    for(let attempt=0;;attempt++){
+      try{return await services.select(request);}
+      catch(error){if(attempt<2&&['MESH_PROXY_UNCONFIRMED','PROXY_BUSY','MESH_BUSY'].includes(error?.code)){await new Promise(resolve=>setTimeout(resolve,1500));continue;}throw error;}
+    }
+  }
   function connectionFailure(failure,{viaMain=false}={}){
-    const code=typeof failure?.code==='string'?failure.code:'';
+    // C137br: Android reports the plain/transport wrong-network codes; they showed the generic "Receiver niet gecontroleerd".
+    const rawC137br=typeof failure?.code==='string'?failure.code:'';
+    const code=['WRONG_RECEIVER_NETWORK','TRUST_TRANSPORT_WRONG_RECEIVER_NETWORK'].includes(rawC137br)?'MAIN_WRONG_RECEIVER_NETWORK':rawC137br;
+    // C137br: the MAIN's relay was briefly busy (heap gate) or did not confirm one hop: a calm retry hint, never "niet gecontroleerd".
+    if(['MESH_PROXY_UNCONFIRMED','PROXY_BUSY','MESH_BUSY'].includes(code))return {message:'De hoofdreceiver is even bezig. Laat de receiver aan en tik over een paar seconden op Verbinding controleren. Er is niets gereset.'};
     if(code==='MAIN_EXISTING_STAND_ACCESS_REQUIRED')return {message:'Deze app heeft nog geen toegang tot deze receiver. Open je bestaande stand met de app die al toegang heeft. Er is niets toegevoegd of gereset.'};
     if(code==='MAIN_TRUST_MIGRATION_REQUIRED')return {message:'Deze receiver heeft bestaande standinstellingen. Gebruik je bestaande standtoegang om verder te gaan. Er is niets toegevoegd of gereset.'};
     if(code==='LOCAL_NETWORK_DENIED')return {message:'Geef de Aluvision-app toegang tot het lokale netwerk via Instellingen. Heropen de app. Reset je receiver niet.'};
@@ -64,14 +100,28 @@
     if(['MAIN_PROTOCOL_UNSUPPORTED','ACTION_UNSUPPORTED'].includes(code))return {message:'App en receiver zijn niet compatibel. Werk beide bij; reset de receiver niet.'};
     if(code==='MAIN_MANAGEMENT_REFUSED')return {message:'De hoofdreceiver heeft de koppelcontrole geweigerd. Je gegevens blijven bewaard. Laat de receiver aan en controleer opnieuw.'};
     if(['MAIN_IDENTITY_UNCONFIRMED','IDENTITY_MISMATCH','DISCOVERY_INVALID'].includes(code))return {message:viaMain?'Receiver niet herkend. Controleer je standwifi en probeer opnieuw. Er is niets toegevoegd.':'Receiver niet herkend. Controleer het juiste receiver-wifi en probeer opnieuw. Er is niets toegevoegd.'};
-    if(['NATIVE_BUSY','MAIN_BUSY','OTA_BUSY','REMOVAL_BUSY'].includes(code))return {message:'Er loopt al een receiveractie. Wacht even en probeer opnieuw.'};
+    if(['NATIVE_BUSY','MAIN_BUSY','OTA_BUSY','STAND_SYNC_BUSY','REMOVAL_BUSY'].includes(code))return {message:'Er loopt al een receiveractie. Wacht even en probeer opnieuw.'};
     if(['MAIN_STORAGE_UNCONFIRMED','V30_STORAGE_UNAVAILABLE','V30_STORAGE_UNCONFIRMED','V30_CHECKPOINT_CONFLICT'].includes(code))return {message:'Opslaan niet bevestigd. Je keuzes staan nog in beeld; probeer opnieuw. Reset de receiver niet.'};
     if(code==='MAIN_RECOVERY_UNAVAILABLE')return {message:'Toegang niet bewaard. Laat de receiver aan en probeer opnieuw.'};
     if(code==='MAIN_RECOVERY_CONFLICT')return {message:'Toegang komt niet overeen. Er is niets overschreven. Controleer je standcode.'};
     if(code==='MAIN_REGISTRATION_UNCONFIRMED')return {message:'Toegang wordt nog bewaard. Laat de receiver aan en controleer opnieuw.'};
     if(['NATIVE_UNAVAILABLE','NATIVE_DOCUMENT_UNAVAILABLE'].includes(code))return {message:'Receiververbinding niet beschikbaar. Herstart de app en probeer opnieuw.'};
-    const diagnostic=viaMain&&code==='MAIN_CONFIGURATION_UNCONFIRMED'&&typeof failure?.diagnosticCode==='string'&&
-      /^NODE_DIAG_(BEGIN|SETUP_BEGIN|CONFIG|SETUP_END|COMMIT|MESH_STAGE)_(MAIN|NODE)_(SCOPE|BUSY|EXPIRED|PREPARE|GEOMETRY|INVALID|SAVE|SECURITY|INCOMPLETE|SHAPE|OTHER)$/.test(failure.diagnosticCode)?failure.diagnosticCode:null;
+    // C118: a bounded NODE step code (iPhone: diagnosticCode; Android: the code
+    // itself) chooses fixed copy. Only truly unknown codes keep the fallback.
+    const nodeDiagnostic=/^NODE_DIAG_(BEGIN|SETUP_BEGIN|CONFIG|SETUP_END|COMMIT|MESH_STAGE|MESH_COMMIT)_(MAIN|NODE)_(SCOPE|BUSY|EXPIRED|PREPARE|GEOMETRY|INVALID|SAVE|SECURITY|INCOMPLETE|SHAPE|OTHER)$/;
+    const nodeStep=code==='MAIN_CONFIGURATION_UNCONFIRMED'&&typeof failure?.diagnosticCode==='string'&&nodeDiagnostic.test(failure.diagnosticCode)?failure.diagnosticCode:nodeDiagnostic.test(code)?code:null;
+    const step=nodeStep&&nodeDiagnostic.exec(nodeStep),reason=step?.[3];
+    if(step&&reason==='SECURITY'&&/^MESH_/.test(step[1]))return {message:'De receiver heeft de beveiligde koppeling geweigerd. Zet hem uit en weer aan, wacht een minuut en tik op Verbinding controleren. Je keuzes blijven bewaard.'};
+    if(step&&['INCOMPLETE','EXPIRED'].includes(reason))return {message:'De koppelstap is verlopen. Laat de receiver aan en tik op Verbinding controleren. Je keuzes blijven bewaard.'};
+    if(step&&reason==='BUSY')return {message:'Er loopt al een receiveractie. Wacht even en probeer opnieuw.'};
+    if(step&&reason==='SAVE')return {message:'De receiver kon de instellingen niet opslaan. Laat hem aan en tik op Verbinding controleren. Je keuzes blijven bewaard.'};
+    if((step&&['SCOPE','PREPARE','GEOMETRY','INVALID','SHAPE'].includes(reason))||(code==='MAIN_CONFIGURATION_UNCONFIRMED'&&!nodeStep))return {message:'De receiver heeft de instellingen niet bevestigd. Laat hem aan en tik op Verbinding controleren. Je keuzes blijven bewaard.'};
+    if(code==='MAIN_EXPLICIT_RETRY_REQUIRED')return {message:'De koppeling is nog niet bevestigd. Laat de receiver aan en tik op Verbinding controleren. Je keuzes blijven bewaard.'};
+    if(code==='MAIN_CLAIM_UNCONFIRMED')return {message:'De receiver heeft het koppelen niet bevestigd. Laat hem aan en tik op Verbinding controleren. Je keuzes blijven bewaard.'};
+    // C127: this phone still holds an older copy of a receiver that changed on another phone (removed, added again).
+    // No red error: a calm notice, and the stand is brought up to date (calmProblemC127).
+    if(code==='MESH_BINDING_INVALID')return {calm:true,message:'Deze receiver is net op een ander toestel gewijzigd. Je stand wordt nu bijgewerkt; tik daarna op Verbinding controleren.'};
+    const diagnostic=viaMain&&nodeStep?nodeStep:null;
     return {message:'Receiver niet gecontroleerd. Tik op Verbinding controleren. Reset de receiver niet.'+(diagnostic?' ['+diagnostic+']':'')};
   }
   function finalizationFailure(failure,{viaMain=false,phase='receiver'}={}){
@@ -151,7 +201,7 @@
     return {code,message:messages[code]||'Afronden is niet bevestigd. Controleer je standwifi en probeer opnieuw. Stel geen tweede stand in.'};
   }
 
-  function create({draftApi=window.LightningOnboardingDraft,visual=window.LightningReceiverVisual,pixelSetup=window.LightningPixelSetup,pixelsPerMeter,services={},getModel,onComplete=()=>{},onManage=null,onExit=()=>{},jointSPIDirections=false,pairSPIFirst=false,onPairFirstBegin=null,firstPinV2=false,allowPinLogin=false,automaticFirstReceiver=()=>false,firstStandAccessRequired=()=>false,onFirstStandAccess=null,allowLocalConcept=()=>false,onPreserveLocalConcept=null,onContinueLocalConcept=null}={}){
+  function create({draftApi=window.LightningOnboardingDraft,visual=window.LightningReceiverVisual,pixelSetup=window.LightningPixelSetup,pixelsPerMeter,services={},getModel,onComplete=()=>{},onManage=null,onExit=()=>{},jointSPIDirections=false,pairSPIFirst=false,onPairFirstBegin=null,firstPinV2=false,allowPinLogin=false,automaticFirstReceiver=()=>false,firstStandAccessRequired=()=>false,onFirstStandAccess=null,allowLocalConcept=()=>false,onPreserveLocalConcept=null,onContinueLocalConcept=null,onForgotten=null}={}){
     if(!draftApi||!pixelSetup||typeof getModel!=='function')throw Error('Onboarding dependencies are required.');
     const pixelLimits=pixelSetup.pixelLimits({pixelsPerMeter});
     let draft=null,container=null,results=[],searchState='idle',receiverFilter='all',error='',notice='',busy=false,operation=0;
@@ -631,7 +681,7 @@
     const automaticMain=()=>pinRequired()&&!!draft&&draft.role==='main'&&manualWifi();
     const placementReady=()=>!draft?.zoneChoiceRequired&&(!!draft?.zoneId||draft?.activeZoneId===null);
     const pendingMain=()=>automaticMain()&&((draft.stage==='security'&&securityUncertain)||(['zone','review'].includes(draft.stage)&&draft.security.status==='confirmed'&&placementReady()));
-    const transientRejoin=failure=>['DISCOVERY_UNAVAILABLE','MAIN_MANUAL_WIFI_REQUIRED','MAIN_CONNECTION_UNAVAILABLE','NATIVE_TIMEOUT','TIMEOUT','NATIVE_BUSY','MAIN_BUSY','MAIN_REGISTRATION_UNCONFIRMED','MAIN_RECOVERY_UNAVAILABLE'].includes(failure?.code);
+    const transientRejoin=failure=>['DISCOVERY_UNAVAILABLE','MAIN_MANUAL_WIFI_REQUIRED','MAIN_CONNECTION_UNAVAILABLE','NATIVE_TIMEOUT','TIMEOUT','NATIVE_BUSY','MAIN_BUSY','MAIN_REGISTRATION_UNCONFIRMED','MAIN_RECOVERY_UNAVAILABLE','WIFI_OS_PERMISSION_REQUIRED'].includes(failure?.code); // C137aw: after the OS Wi-Fi permission the join continues by itself
     function stopAutomaticRejoin(){clearTimeout(rejoinTimer);rejoinTimer=null;rejoinSession++;rejoinRunning=false;}
     function resumeAfterWifiReturn({force=false}={}){
       if(container&&!document.hidden&&busy&&automaticMain()&&draft.stage==='security'){returningFromWifi=true;return;}
@@ -662,7 +712,7 @@
       rejoinRunning=false;
       if(outcome==='retry'){
         rejoinExhausted=true;
-        error=registrationPending?'Je receiver is nog bezig. Laat hem aan; je PIN en keuzes blijven bewaard.':'Je receiver is nog niet bereikbaar. Kies zijn ALUVISION-netwerk in Instellingen → Wifi, met je gekozen PIN. Terug in de app gaan we automatisch verder.';
+        error=registrationPending?'Je receiver is nog bezig. Laat hem aan; je PIN en keuzes blijven bewaard.':firstPinState686?.ssid?tx('Je receiver is nog niet bereikbaar. Kies het wifi-netwerk “{name}” in Instellingen → Wifi, met je gekozen PIN. Terug in de app gaan we automatisch verder.',{name:firstPinState686.ssid}):'Je receiver is nog niet bereikbaar. Kies zijn ALUVISION-netwerk in Instellingen → Wifi, met je gekozen PIN. Terug in de app gaan we automatisch verder.'; // C137aw
       }else if(outcome==='stop'&&draft.stage==='security')rejoinBlocked=true;
       paintPage(false);
     }
@@ -752,7 +802,6 @@
     }
     function heading(){
       const firstSetup=firstStandSetup587();
-      const step=draft.stage==='stand'?1:draft.stage==='zones'?2:3;
       const connectionCardStage=draft.stage==='security'||draft.stage==='pin'&&!pinRequired()||draft.stage==='review'&&!pinRequired()&&automaticFinalizing&&busy;
       const title=draft.stage==='done'&&jointSPIDirections&&draft.receiver?.type==='SPI'&&draft.zoneId?window.LightningPixelTranslations.t('pixelDirectionsSettings',document.documentElement.lang):draft.stage==='stand'?tx('Hoe heet je stand?'):draft.stage==='zones'?(zoneRemoval?tx('Zones beheren'):zoneRename?tx('Zone hernoemen'):receiverMove?tx('Ledline verplaatsen'):tx('Je zones')):draft.stage==='receiver'?(receiverMove?tx('Ledline verplaatsen'):busy?tx('Receiver controleren'):searchState==='searching'?tx('Receiver zoeken…'):results.length===1?tx('Receiver gevonden'):results.length>1?tx('Kies je receiver'):tx('Receiver zoeken')):automaticMain()&&draft.stage==='security'?(busy||rejoinRunning?tx('Je receiver toevoegen'):tx('Verbind opnieuw met wifi')):automaticMain()&&automaticFinalizing&&draft.stage==='review'?tx('Je receiver toevoegen'):labels[draft.stage]||tx('Receiver toevoegen');
       const receiverContext=draft.receiver&&!connectionCardStage&&!['receiver','done'].includes(draft.stage)?`<p class="onboarding-receiver-context"><b>${escape(draft.receiver.name||tx('Receiver'))}</b><span>${escape(draft.receiver.type)}</span></p>`:'';
@@ -797,7 +846,25 @@
       const main=getModel().receivers.find(receiver=>receiver.id===draft.mainReceiverId);
       return `<p class="onboarding-main-context" data-onboarding-search-via="${escape(main?.type||'main')}">${escape(tx("Zoeken via je hoofdreceiver"))}</p>`;
     }
+    // C137aw: a receiver whose own Wi-Fi is already a stand network (not ALUVISION-…) is the MAIN of a stand. In the
+    // first-receiver search it is only offered when that network belongs to THIS concept; otherwise it is shown as
+    // part of that stand, without an add button (it would take over the other stand).
+    function foreignStandC137(receiver){
+      const ap=receiver?.apSsid;if(draft.mainReceiverId||typeof ap!=='string'||/^ALUVISION-(SPI|RGBW)-/i.test(ap))return null;
+      if(firstPinState686?.ssid===ap)return null;
+      const name=String(draft.stand?.name||'').trim().toLowerCase().replace(/\s+/g,' ');
+      const own=[receiver.type+' '+name,receiver.type+' hq '+name].map(v=>v.toLowerCase());
+      return name&&own.includes(ap.toLowerCase().replace(/\s+/g,' '))?null:ap;
+    }
+    function standNetworkC137(){
+      if(draft.mainReceiverId)return null;
+      if(firstPinState686?.ssid)return firstPinState686.ssid;
+      const type=resumeSelection?.receiver?.type,name=String(draft.stand?.name||'').trim();
+      return type&&name&&!draft.stand?.isNew?type+' '+name:null;
+    }
     function receiverAction(receiver){
+      const foreign=foreignStandC137(receiver);
+      if(foreign)return `<p class="onboarding-compatibility-note" data-foreign-stand-c137>${escape(tx('Deze receiver hoort al bij stand “{name}”. Verbind je telefoon met het wifi van je nieuwe receiver of van je eigen stand.',{name:foreign}))}</p>`;
       const zone=draft.zones.find(item=>item.id===draft.activeZoneId);
       const compatible=zone&&(!zone.type||zone.type===receiver.type);
       const retryIdentity=!!error&&receiver.canConfigure===false&&receiver.canVerifyIdentity===true;
@@ -894,7 +961,13 @@
       // C113: with pair-first the outputs and pixels follow (then the order step).
       if(jointSPIDirections&&draft.receiver?.type==='SPI'&&draft.zoneId)return connectionCard({title:window.LightningPixelTranslations.t(pairFirstEnabled()?'pixelSettings':'pixelDirectionsSettings',document.documentElement.lang),hint:'',progress:false})+button('joint-directions',window.LightningPixelTranslations.t(pairFirstEnabled()?'pixelNextSetup':'pixelNextDirections',document.documentElement.lang));
       const zone=draft.zones.find(zone=>zone.id===draft.zoneId),count=getModel().receivers.filter(receiver=>receiver.standId===draft.stand.id&&receiver.zoneId===draft.zoneId&&receiver.lifecycle==='added').length;
-      return `<section class="card onboarding-done">${product(draft.receiver,{compact:true})}<span class="onboarding-success-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="m8 16 5 5 11-11"/></svg></span><h2>${escape(tx("Receiver toegevoegd"))}</h2><p>${escape(zone?.name||tx('Niet in een zone'))} · ${count} ${tx(count===1?'receiver':'receivers')}</p></section><section class="onboarding-followup">${button('another',`＋ ${escape(t('setupAnotherReceiver','Nog een receiver toevoegen'))}`,'class="button full"')}${button('done',origin==='layout'?tx('Terug naar ledlines'):escape(t('setupMyStand','Naar mijn stand')),'class="button secondary full"')}${button('another-zone',zone?tx('Receiver in een andere zone'):tx('Receiver met een nieuwe zone'),'class="text-button"')}</section>`;
+      return `<section class="card onboarding-done">${product(draft.receiver,{compact:true})}<span class="onboarding-success-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="m8 16 5 5 11-11"/></svg></span><h2>${escape(tx("Receiver toegevoegd"))}</h2><p>${escape(zone?.name||tx('Niet in een zone'))} · ${count} ${tx(count===1?'receiver':'receivers')}</p></section>${draft.receiver?.type==='RGBW'&&zone&&count>=2?`<section class="card onboarding-order-ask"><p>${escape(tx('Wil je de volgorde van je ledlines juist zetten?'))}</p>${button('order-now',escape(tx('Ja, volgorde instellen')),'class="button full"')}${button('done',escape(tx('Later')),'class="button secondary full"')}</section>`:''}<section class="onboarding-followup">${button('another',`＋ ${escape(t('setupAnotherReceiver','Nog een receiver toevoegen'))}`,'class="button full"')}${button('done',origin==='layout'?tx('Terug naar ledlines'):escape(t('setupMyStand','Naar mijn stand')),'class="button secondary full"')}${button('another-zone',zone?tx('Receiver in een andere zone'):tx('Receiver met een nieuwe zone'),'class="text-button"')}</section>`;
+    }
+    function calmProblemC127(problem){
+      if(!problem?.calm)return problem?.message||'';
+      notice=tx(problem.message);
+      try{window.dispatchEvent(new CustomEvent('lightning:app-readmit',{detail:{action:'syncInstallationContext'}}));}catch(_){}
+      return '';
     }
     function errorBox(){return `<p class="onboarding-error" role="alert" ${error?'':'hidden'}>${escape(tx(error))}</p><p class="onboarding-notice" role="status" ${notice||draftSaving?'':'hidden'}>${draftSaving?tx('Je keuzes bewaren…'):escape(tx(notice))}</p>${pendingChoices&&saveFailed?button('save-retry',draftSaving?'Bewaren…':'Opnieuw bewaren',draftSaving?'disabled':''):''}`;}
     function footer(next='Volgende',disabled=false){return `<div class="onboarding-actions onboarding-footer">${button('back','← Terug',`class="button secondary" ${draft.stage==='zones'&&!draft.stand.isNew?'disabled':''}`)}${button('next',next,disabled?'disabled':'')}</div>`;}
@@ -902,7 +975,7 @@
     function manualWifiGuide(){
       const preview=services.factoryGuidePreview===true&&!draft.mainReceiverId;
       if(results.length||!manualWifi()&&!preview)return '';
-      const instructions=`${preview?`<p class="onboarding-demo-wifi-note">${escape(tx("Voorbeeld · blijf voor deze demo op je huidige wifi."))}</p>`:''}${window.LightningSetupWifiGuide.stepsMarkup()}${!results.length?window.LightningSetupWifiGuide.markup():''}`;
+      const instructions=`${preview?`<p class="onboarding-demo-wifi-note">${escape(tx("Voorbeeld · blijf voor deze demo op je huidige wifi."))}</p>`:''}${window.LightningSetupWifiGuide.stepsMarkup({standNetwork:standNetworkC137()})}${!results.length?window.LightningSetupWifiGuide.markup():''}`;
       return `<section class="card onboarding-manual-wifi" aria-label="${escape(tx("Wifi met de hand verbinden"))}">${instructions}</section>`;
     }
     function securityPanel(){
@@ -1076,7 +1149,7 @@
       if(!busy&&['security','review'].includes(draft.stage)){
         container.querySelector('.onboarding-page').insertAdjacentHTML('beforeend',button('receivers-list','← Terug naar zoeken','class="button secondary full"'));
       }
-      paint(performance.now()/1000);
+      paint(globalThis.AluvisionPreviewNowPS());
       syncPixelPreview();
       queueJointDirections();
     }
@@ -1195,16 +1268,29 @@
       if(identifyPending.size)return;
       const token=++operation;searchOnMount=false;searchAbort=new AbortController();searchState='searching';results=[];error='';paintPage(false);
       try{
-        const result=await bounded(services.search({standId:draft.stand.id,mainReceiverId:draft.mainReceiverId,signal:searchAbort.signal}),draft.role==='node'?95000:15000);
+        // C135: the stand Wi-Fi drops for a few seconds when the MAIN restarts its AP; the phone rejoins by itself. Retry the
+        // search quietly for up to 10 s instead of showing "nothing found" for a search that never reached a receiver.
+        let result;
+        for(const startedC135=Date.now();;){
+          try{result=await bounded(services.search({standId:draft.stand.id,mainReceiverId:draft.mainReceiverId,signal:searchAbort.signal}),draft.role==='node'?95000:15000);break;}
+          catch(failure){
+            if(failure?.code!=='RECEIVER_NETWORK_UNAVAILABLE'||Date.now()-startedC135>10000||token!==operation||searchAbort?.signal.aborted)throw failure;
+            await new Promise(resolve=>setTimeout(resolve,2000));if(token!==operation||searchAbort?.signal.aborted)return;
+          }
+        }
         if(token!==operation||searchAbort?.signal.aborted)return;
         const identities=new Set(),localIds=new Set(),fingerprints=new Set(),existing=getModel().receivers;
         results=(Array.isArray(result?.receivers)?result.receivers:[]).filter(receiver=>{
           const observation=receiver?.reachabilityOnly===true&&receiver.canConfigure===false&&receiver.deviceFingerprint===null;
           if(!receiver||!['SPI','RGBW'].includes(receiver.type)||typeof receiver.id!=='string'||!/^[\w-]{1,96}$/.test(receiver.id)||!/^[\da-f]{16}$/i.test(receiver.rid)||(!observation&&!/^[\da-f]{64}$/i.test(receiver.deviceFingerprint)))return false;
-          const rid=receiver.rid.toUpperCase(),fingerprint=receiver.deviceFingerprint?.toUpperCase();if(identities.has(rid)||localIds.has(receiver.id)||(fingerprint&&fingerprints.has(fingerprint))||existing.some(item=>item.id===receiver.id||item.rid?.toUpperCase()===rid||(fingerprint&&item.deviceFingerprint?.toUpperCase()===fingerprint)))return false;identities.add(rid);localIds.add(receiver.id);if(fingerprint)fingerprints.add(fingerprint);return true;
-        }).map(receiver=>({id:receiver.id,rid:receiver.rid.toUpperCase(),type:receiver.type,name:String(receiver.name||`${receiver.type}-receiver`).slice(0,64),deviceFingerprint:receiver.deviceFingerprint?.toUpperCase()||null,canConfigure:receiver.canConfigure!==false,canVerifyIdentity:receiver.canVerifyIdentity===true&&typeof services.select==='function',unavailableReason:receiver.canConfigure===false?(receiver.canVerifyIdentity===true&&typeof services.select==='function'?'Kies deze receiver om zijn verbinding veilig te controleren.':'Receiver gevonden. Beveiligd toevoegen is in deze appversie nog niet beschikbaar.'):''}));
+          const rid=receiver.rid.toUpperCase(),fingerprint=receiver.deviceFingerprint?.toUpperCase();
+          // C118: native offers a factory-reset member (MAIN-proven unpaired) as
+          // a NEW receiver; its selection first removes the old stand item.
+          const reAdd=receiver.reAdd===true&&draft.role==='node'&&typeof onForgotten==='function'&&!fingerprint&&receiver.id==='receiver-'+rid;
+          if(identities.has(rid)||localIds.has(receiver.id)||(fingerprint&&fingerprints.has(fingerprint))||!reAdd&&existing.some(item=>item.id===receiver.id||item.rid?.toUpperCase()===rid||(fingerprint&&item.deviceFingerprint?.toUpperCase()===fingerprint)))return false;identities.add(rid);localIds.add(receiver.id);if(fingerprint)fingerprints.add(fingerprint);return true;
+        }).map(receiver=>({id:receiver.id,rid:receiver.rid.toUpperCase(),type:receiver.type,...(receiver.reAdd===true?{reAdd:true}:{}),name:String(receiver.name||`${receiver.type}-receiver`).slice(0,64),deviceFingerprint:receiver.deviceFingerprint?.toUpperCase()||null,canConfigure:receiver.canConfigure!==false,canVerifyIdentity:receiver.canVerifyIdentity===true&&typeof services.select==='function',unavailableReason:receiver.canConfigure===false?(receiver.canVerifyIdentity===true&&typeof services.select==='function'?'Kies deze receiver om zijn verbinding veilig te controleren.':'Receiver gevonden. Beveiligd toevoegen is in deze appversie nog niet beschikbaar.'):''}));
         searchState='ready';
-      }catch(failure){if(token!==operation)return;searchState='failed';results=[];error=connectionFailure(failure,{viaMain:draft.role==='node'}).message;}
+      }catch(failure){if(token!==operation)return;searchState='failed';results=[];error=calmProblemC127(connectionFailure(failure,{viaMain:draft.role==='node'}));}
       finally{if(token===operation){searchAbort=null;paintPage(false);}}
       // Even a sole verified receiver remains on the found page until the
       // customer confirms its zone and explicitly chooses to add it.
@@ -1242,7 +1328,7 @@
           if(identifyOperation!==operation||!container||draft.stage!=='receiver'){
             if(!identifyPending.has(id)||identifyPending.get(id)===controller)await stopIdentify(id,receiver);
           }
-          else identifying.set(id,performance.now()/1000+(Number.isInteger(answer.ttlMs)&&answer.ttlMs>0?answer.ttlMs/1000:10));
+          else identifying.set(id,globalThis.AluvisionPreviewNowPS()+(Number.isInteger(answer.ttlMs)&&answer.ttlMs>0?answer.ttlMs/1000:10));
         }
       }catch(_){if(identifyOperation===operation)notice='Knipperen is niet bevestigd. Je kunt de receiver wel verder instellen.';}
       finally{
@@ -1338,7 +1424,7 @@
         if(usingFirstPin&&method==='secure')securityUncertain=false; // prepare is read-only, never a claim attempt.
         if(pinRequired()&&!attempted&&!securityUncertain&&draft.role==='main')draft=draftApi.snapshot({...clone(draft),stage:'pin',security:{status:'not-started',phase:'idle'}});
         if(automaticMain()&&transientRejoin(failure))return 'retry';
-        error=usingFirstPin?firstPinError686(failure):typeof failure?.code==='string'?connectionFailure(failure,{viaMain:draft.role==='node'}).message:tx(pinRequired()?'We konden deze receiver nog niet toevoegen. Je PIN en keuzes blijven bewaard; er is niets opnieuw ingesteld.':'We konden deze receiver nog niet toevoegen. Je keuzes blijven bewaard; er is niets opnieuw ingesteld.');
+        error=usingFirstPin?firstPinError686(failure):typeof failure?.code==='string'?calmProblemC127(connectionFailure(failure,{viaMain:draft.role==='node'})):tx(pinRequired()?'We konden deze receiver nog niet toevoegen. Je PIN en keuzes blijven bewaard; er is niets opnieuw ingesteld.':'We konden deze receiver nog niet toevoegen. Je keuzes blijven bewaard; er is niets opnieuw ingesteld.');
         if(automaticMain())rejoinBlocked=true;
         return 'stop';
       }
@@ -1735,7 +1821,9 @@
         // Looking at a receiver list grants no membership. Only selecting the
         // exact found identity may reopen its private, immutable native intent.
         // Other receivers remain ordinary selectable results in the meantime.
-        if(typeof services.resumeDraft==='function'||parkedChoices.has(receiver.id)){
+        // C137h: a reAdd candidate (factory reset, or an unfinished pairing that can never finish) is a fresh add; its old
+        // parked intent belongs to the failed attempt and is never resumed (select forgets it natively).
+        if(receiver.reAdd!==true&&(typeof services.resumeDraft==='function'||parkedChoices.has(receiver.id))){
           const token=++operation;busy=true;error='';paintPage(false);
           let restored=null,restoredSelectionVerified=false;
           try{
@@ -1746,7 +1834,7 @@
               if(saved.stand.id!==draft.stand.id||identity.id!==receiver.id||identity.rid!==receiver.rid||identity.type!==receiver.type||receiver.deviceFingerprint&&identity.deviceFingerprint!==receiver.deviceFingerprint)throw Error('IDENTITY_MISMATCH');
               restored=saved;
             }
-          }catch(failure){if(token===operation){error=connectionFailure(failure,{viaMain:draft.role==='node'}).message;return;}}
+          }catch(failure){if(token===operation){error=calmProblemC127(connectionFailure(failure,{viaMain:draft.role==='node'}));return;}}
           finally{busy=false;paintPage(false);}
           if(token!==operation||!container)return;
           if(restored?.security.status==='not-started'&&typeof services.select==='function'){
@@ -1754,11 +1842,11 @@
             // lease. Reattest before painting a page that starts test light.
             busy=true;notice='Receiver veilig controleren…';paintPage(false);
             try{
-              const verified=await bounded(services.select({standId:restored.stand.id,transactionId:restored.transactionId,receiver:clone(receiver)}),services.selectionDeadlineMS?.(restored.stand.id)??50000);
+              const verified=await bounded(selectWithRetryC137cc(services,{standId:restored.stand.id,transactionId:restored.transactionId,receiver:clone(receiver)}),services.selectionDeadlineMS?.(restored.stand.id)??50000);
               if(token!==operation||!container)return;
               if(!/^[A-F0-9]{64}$/.test(verified?.deviceFingerprint||'')||!['id','rid','type','deviceFingerprint'].every(key=>verified?.[key]===restored.receiver[key]))throw Object.assign(Error('IDENTITY_MISMATCH'),{code:'IDENTITY_MISMATCH'});
               restoredSelectionVerified=true;
-            }catch(failure){if(token===operation)error=connectionFailure(failure,{viaMain:draft.role==='node'}).message;return;}
+            }catch(failure){if(token===operation)error=calmProblemC127(connectionFailure(failure,{viaMain:draft.role==='node'}));return;}
             finally{if(token===operation){busy=false;notice='';paintPage(false);}}
             if(token!==operation||!container)return;
           }
@@ -1785,7 +1873,7 @@
                 if(token!==operation||!container)return;
                 draft=continued.draft;
               }else await persist();
-            }catch(failure){if(token===operation)error=connectionFailure(failure,{viaMain:draft.role==='node'}).message;return;}
+            }catch(failure){if(token===operation)error=calmProblemC127(connectionFailure(failure,{viaMain:draft.role==='node'}));return;}
             finally{if(token===operation){busy=false;paintPage(false);}}
             if(token!==operation||!container)return;
             if(draft.stage==='pin'&&!pinRequired())draft=draftApi.snapshot({...clone(draft),stage:'security',security:{status:'pending',phase:'configuring'}});
@@ -1796,12 +1884,22 @@
         if(receiver.canConfigure===false&&receiver.canVerifyIdentity){
           const token=++operation,expected=receiver;busy=true;error='';notice='Receiver veilig controleren…';paintPage(false);
           try{
-            const verified=await bounded(services.select({standId:draft.stand.id,transactionId:draft.transactionId,receiver:clone(expected)}),services.selectionDeadlineMS?.(draft.stand.id)??50000);
+            const verified=await bounded(selectWithRetryC137cc(services,{standId:draft.stand.id,transactionId:draft.transactionId,receiver:clone(expected)}),services.selectionDeadlineMS?.(draft.stand.id)??50000);
             if(token!==operation||!container||draft.stage!=='receiver')return;
             if(!verified||verified.id!==expected.id||verified.rid!==expected.rid||verified.type!==expected.type||!/^[A-F0-9]{64}$/.test(verified.deviceFingerprint)||expected.deviceFingerprint&&verified.deviceFingerprint!==expected.deviceFingerprint)throw Object.assign(Error('IDENTITY_MISMATCH'),{code:'IDENTITY_MISMATCH'});
             receiver={id:verified.id,rid:verified.rid,type:verified.type,name:expected.name,deviceFingerprint:verified.deviceFingerprint,canConfigure:true,canVerifyIdentity:true};
+            // C118: the old member is gone natively; take the confirmed model
+            // and continue exactly like a first-time add (nothing remembered).
+            if(expected.reAdd===true){
+              if(verified.forgotten!==true||!verified.view?.model||typeof onForgotten!=='function')throw Object.assign(Error('IDENTITY_MISMATCH'),{code:'IDENTITY_MISMATCH'});
+              await onForgotten(verified.view.model,{receiverId:receiver.id});
+              if(token!==operation||!container||draft.stage!=='receiver')return;
+              const refreshed=draftApi.refreshZones(draft,getModel());
+              if(refreshed.error)throw Object.assign(Error('DRAFT_REFRESH'),{code:'DRAFT_REFRESH'});
+              draft=refreshed.draft;
+            }
             results=results.map(item=>item.id===receiver.id?receiver:item);
-          }catch(failure){if(token===operation){const problem=connectionFailure(failure,{viaMain:draft.role==='node'});error=problem.message;if(problem.expired){results=[];searchState='idle';}}return;}
+          }catch(failure){if(token===operation){const problem=connectionFailure(failure,{viaMain:draft.role==='node'});error=calmProblemC127(problem);if(problem.expired){results=[];searchState='idle';}}return;}
           finally{busy=false;notice='';paintPage(false);}
         }
         if(receiver.canConfigure===false){error=receiver.unavailableReason;paintPage(false);return;}
@@ -1823,7 +1921,7 @@
       if(action==='output'){
         const output=draft.outputs.find(o=>o.port===Number(target.dataset.port));if(!output)return;
         const enabled=!output.enabled;
-        if(change({type:'SET_OUTPUT_ENABLED',port:output.port,enabled},{render:false})){selectedOutput=output.port;plugMotion.trigger(output.port,performance.now()/1000,enabled);}
+        if(change({type:'SET_OUTPUT_ENABLED',port:output.port,enabled},{render:false})){selectedOutput=output.port;plugMotion.trigger(output.port,globalThis.AluvisionPreviewNowPS(),enabled);}
         return paintPage(false);
       }
       if(action==='pixel-step'){
@@ -1879,6 +1977,8 @@
       if(action==='finish')return finish();
       if(action==='joint-directions'){queueJointDirections();return;}
       if(action==='done'){suspend();onExit({stand:true});return;}
+      // C137bz (9 Nov, user): an RGBW joining a zone with other ledlines may set its place in the order right away.
+      if(action==='order-now'){const zoneId=draft.zoneId;suspend();onExit({stand:true,orderZoneIdC137bz:zoneId});return;}
       if(action==='another'){const activeZoneId=draft.zoneId;draft=null;start({activeZoneId});paintPage();if(draft.stage==='receiver')queueMicrotask(()=>{if(container&&draft.stage==='receiver'&&searchState==='idle'&&!busy)void search();});return;}
       if(action==='another-zone'){
         draft=null;start({activeZoneId:null});draft=draftApi.snapshot({...clone(draft),zoneChoiceRequired:true});

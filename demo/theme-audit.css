@@ -10,10 +10,7 @@ html.interface-polish body .ui606-pages .scene-zone[aria-pressed="true"] > i {
 
 /* Legacy error labels used dark red even on a dark dialog or card. Keep
    the existing messages and visibility; change only their readable ink. */
-html.interface-polish body[data-theme="dark"] :is(#main, #effect-dialog) :is(
-  .dialog-error, .scene-save-error, .scene-zone-warning,
-  .scene-edit-workbench-message[role="alert"], .interface-mode-error
-) {
+/*c140-sel:theme-audit.css*/html.interface-polish body[data-theme="dark"] :is(#main, #effect-dialog) :where(.dialog-error):is(.dialog-error, .scene-edit-workbench-message[role="alert"]), html.interface-polish body[data-theme="dark"] :is(#main, #effect-dialog) :where(.scene-save-error):is(.scene-save-error, .scene-edit-workbench-message[role="alert"]), html.interface-polish body[data-theme="dark"] :is(#main, #effect-dialog) :where(.scene-zone-warning):is(.scene-zone-warning, .scene-edit-workbench-message[role="alert"]), html.interface-polish body[data-theme="dark"] :is(#main, #effect-dialog) .scene-edit-workbench-message[role="alert"], html.interface-polish body[data-theme="dark"] :is(#main, #effect-dialog) :where(.interface-mode-error):is(.interface-mode-error, .scene-edit-workbench-message[role="alert"]){
   color: var(--milk-danger) !important;
 }
 html.interface-polish body[data-theme="dark"] .mixed-note {
@@ -22,18 +19,10 @@ html.interface-polish body[data-theme="dark"] .mixed-note {
 
 /* Text and small icons need light accent ink in dark mode. The underlying
    red token still paints switches, filled checks and other real accents. */
-html.interface-polish body[data-theme="dark"] :is(
-  .settings-interface-mode .interface-mode-state,
-  .scene-edit-workbench-copy small,
-  .scene-edit-zones > .scene-edit-zone-chip[aria-pressed="true"],
-  .scene-edit-zones > .scene-edit-overview[aria-pressed="true"]
-) {
+html.interface-polish body[data-theme="dark"] :where(.settings-interface-mode .interface-mode-state):is(.settings-interface-mode .interface-mode-state, .scene-edit-zones > .scene-edit-zone-chip[aria-pressed="true"]), html.interface-polish body[data-theme="dark"] :where(.scene-edit-workbench-copy small):is(.scene-edit-workbench-copy small, .scene-edit-zones > .scene-edit-zone-chip[aria-pressed="true"]), html.interface-polish body[data-theme="dark"] :is(.scene-edit-zones > .scene-edit-zone-chip[aria-pressed="true"]), html.interface-polish body[data-theme="dark"] :is(.scene-edit-zones > .scene-edit-overview[aria-pressed="true"]){
   color: var(--action-ink);
 }
-html.interface-polish body[data-theme="dark"] #main .ui606-line-tools :is(
-  .spatial-choice-current-icon, .ledline-setup-toggle > .icon
-),
-html.interface-polish body[data-theme="dark"] :is(#main, #effect-dialog) .animation-gallery-return .gallery-action-icon {
+html.interface-polish body[data-theme="dark"] #main .ui606-line-tools :where(.spatial-choice-current-icon):is(.spatial-choice-current-icon, .ledline-setup-toggle > .icon), html.interface-polish body[data-theme="dark"] #main .ui606-line-tools :is(.ledline-setup-toggle > .icon), html.interface-polish body[data-theme="dark"] :is(#main, #effect-dialog) .animation-gallery-return .gallery-action-icon{
   color: var(--action-ink);
 }
 

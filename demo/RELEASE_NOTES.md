@@ -1,3 +1,9 @@
+## 11 November 2026 — New ledline setup (interface C144)
+
+- Setting up an SPI receiver now starts with "Ledlines en pixels" in the new design: recognise your ledlines by colour, then set the pixels with the white and red block.
+- A short tutorial opens the first time, with the cables drawn as on the stand.
+- Browser demo only; no firmware in this update.
+
 ## 6 November 2026 — One smooth fold (interface C109ai)
 
 - The mode row folds and unfolds as one spring movement; nothing switches abruptly and the page underneath stays still.

@@ -40,46 +40,7 @@ body:not([data-theme="dark"]) {
 
 /* Zone power is an unboxed row. The dialog keeps its own ID specificity;
    putting its ID inside :is would also overrule later styles on every card. */
-#effect-dialog,
-:is(
-  .card,
-  .stand-info-tile,
-  .zone-entry,
-  .zone-card,
-  .menu-card,
-  .power-card:not(.power-card-zone),
-  .current-effect,
-  .settings-toggle,
-  .assignment-choice,
-  .assignment-family-choice,
-  .layout-choice,
-  .receiver-list details,
-  .receiver-order > [data-order-receiver],
-  .scene-card,
-  .scene-zone,
-  .scene-saved-zone,
-  .scene-save-bar,
-  .stand-scenes,
-  .stand-scenes-empty,
-  .stand-scenes-entry,
-  .stand-scene-card,
-  .stand-overview-row,
-  .preset-card,
-  .effect-card,
-  .family-card,
-  .animation-family-card,
-  .family-variant-card,
-  .onboarding-name-card,
-  .onboarding-zone,
-  .onboarding-destination,
-  .stand-setup-overview,
-  .pixel-setup-panel,
-  .pixel-setup-shell,
-  .receiver-update-sheet,
-  .receiver-removal-sheet,
-  .pin-protection-card,
-  .assignment-choice
-) {
+/*c140-sel:premium-surfaces.css*/#effect-dialog, :where(.card):is(.card, .power-card:not(.power-card-zone)), :where(.stand-info-tile):is(.stand-info-tile, .power-card:not(.power-card-zone)), :where(.zone-entry):is(.zone-entry, .power-card:not(.power-card-zone)), :where(.zone-card):is(.zone-card, .power-card:not(.power-card-zone)), :where(.menu-card):is(.menu-card, .power-card:not(.power-card-zone)), .power-card:not(.power-card-zone), :where(.current-effect):is(.current-effect, .power-card:not(.power-card-zone)), :where(.settings-toggle):is(.settings-toggle, .power-card:not(.power-card-zone)), :where(.assignment-choice):is(.assignment-choice, .power-card:not(.power-card-zone)), :where(.assignment-family-choice):is(.assignment-family-choice, .power-card:not(.power-card-zone)), :where(.layout-choice):is(.layout-choice, .power-card:not(.power-card-zone)), :where(.receiver-list details):is(.receiver-list details, .power-card:not(.power-card-zone)), :is(.receiver-order > [data-order-receiver]), :where(.scene-card):is(.scene-card, .power-card:not(.power-card-zone)), :where(.scene-zone):is(.scene-zone, .power-card:not(.power-card-zone)), :where(.scene-saved-zone):is(.scene-saved-zone, .power-card:not(.power-card-zone)), :where(.scene-save-bar):is(.scene-save-bar, .power-card:not(.power-card-zone)), :where(.stand-scenes):is(.stand-scenes, .power-card:not(.power-card-zone)), :where(.stand-scenes-empty):is(.stand-scenes-empty, .power-card:not(.power-card-zone)), :where(.stand-scenes-entry):is(.stand-scenes-entry, .power-card:not(.power-card-zone)), :where(.stand-scene-card):is(.stand-scene-card, .power-card:not(.power-card-zone)), :where(.stand-overview-row):is(.stand-overview-row, .power-card:not(.power-card-zone)), :where(.preset-card):is(.preset-card, .power-card:not(.power-card-zone)), :where(.effect-card):is(.effect-card, .power-card:not(.power-card-zone)), :where(.family-card):is(.family-card, .power-card:not(.power-card-zone)), :where(.animation-family-card):is(.animation-family-card, .power-card:not(.power-card-zone)), :where(.family-variant-card):is(.family-variant-card, .power-card:not(.power-card-zone)), :where(.onboarding-name-card):is(.onboarding-name-card, .power-card:not(.power-card-zone)), :where(.onboarding-zone):is(.onboarding-zone, .power-card:not(.power-card-zone)), :where(.onboarding-destination):is(.onboarding-destination, .power-card:not(.power-card-zone)), :where(.stand-setup-overview):is(.stand-setup-overview, .power-card:not(.power-card-zone)), :where(.pixel-setup-panel):is(.pixel-setup-panel, .power-card:not(.power-card-zone)), :where(.pixel-setup-shell):is(.pixel-setup-shell, .power-card:not(.power-card-zone)), :where(.receiver-update-sheet):is(.receiver-update-sheet, .power-card:not(.power-card-zone)), :where(.receiver-removal-sheet):is(.receiver-removal-sheet, .power-card:not(.power-card-zone)), :where(.pin-protection-card):is(.pin-protection-card, .power-card:not(.power-card-zone)), :where(.assignment-choice):is(.assignment-choice, .power-card:not(.power-card-zone)){
   background-color: var(--glass);
   background-image:
     linear-gradient(145deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .04)),
@@ -159,7 +120,6 @@ body:not([data-theme="dark"]) {
 
 .icon-button,
 .zone-options-button,
-.order-buttons button,
 .channel-row button,
 .colour-remove span {
   box-shadow: 0 3px 10px rgba(23, 28, 23, .06), inset 0 1px rgba(255, 255, 255, .9);
@@ -214,7 +174,6 @@ body:not([data-theme="dark"]) {
   box-shadow: inset 0 1px rgba(255, 255, 255, .13), inset 0 -2px var(--red), 0 3px 9px rgba(18, 23, 18, .12);
 }
 
-.scope-lines-list .scope-line[aria-pressed="true"],
 .assignment-choice[aria-pressed="true"],
 .assignment-family-choice[aria-pressed="true"],
 .scene-zone[aria-pressed="true"],
@@ -237,12 +196,6 @@ body:not([data-theme="dark"]) {
   overflow-anchor: none;
 }
 
-.animation-family-card.is-expanded {
-  background-image:
-    linear-gradient(150deg, rgba(255, 255, 255, .42), rgba(255, 255, 255, .2)),
-    radial-gradient(120% 130% at 100% 0%, rgba(191, 72, 65, .075), transparent 72%);
-  box-shadow: 0 0 0 1px rgba(191, 72, 65, .18), 0 9px 24px rgba(32, 34, 32, .07), inset 0 1px white;
-}
 
 .family-variants-panel {
   background-image: linear-gradient(145deg, rgba(242, 241, 238, .92), rgba(250, 248, 246, .94));
@@ -250,7 +203,7 @@ body:not([data-theme="dark"]) {
 
 /* Repeated gallery tiles keep the glossy gradient, but skip per-card blur to
    avoid expensive compositing while opening groups or scrolling on phones. */
-:is(.animation-family-card, .family-variant-card, .effect-card, .family-card) {
+.animation-family-card, .family-variant-card, .effect-card, .family-card{
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
@@ -337,45 +290,7 @@ body[data-theme="dark"] .brand-bar {
 }
 
 /* Keep dialog ID specificity on the dialog, not every class in this group. */
-body[data-theme="dark"] #effect-dialog,
-body[data-theme="dark"] :is(
-  .card,
-  .stand-info-tile,
-  .zone-entry,
-  .zone-card,
-  .menu-card,
-  .power-card:not(.power-card-zone),
-  .current-effect,
-  .settings-toggle,
-  .assignment-choice,
-  .assignment-family-choice,
-  .layout-choice,
-  .receiver-list details,
-  .receiver-order > [data-order-receiver],
-  .scene-card,
-  .scene-zone,
-  .scene-saved-zone,
-  .scene-save-bar,
-  .stand-scenes,
-  .stand-scenes-empty,
-  .stand-scenes-entry,
-  .stand-scene-card,
-  .stand-overview-row,
-  .preset-card,
-  .effect-card,
-  .family-card,
-  .animation-family-card,
-  .family-variant-card,
-  .onboarding-name-card,
-  .onboarding-zone,
-  .onboarding-destination,
-  .stand-setup-overview,
-  .pixel-setup-panel,
-  .pixel-setup-shell,
-  .receiver-update-sheet,
-  .receiver-removal-sheet,
-  .pin-protection-card
-) {
+body[data-theme="dark"] #effect-dialog, body[data-theme="dark"] :where(.card):is(.card, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.stand-info-tile):is(.stand-info-tile, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.zone-entry):is(.zone-entry, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.zone-card):is(.zone-card, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.menu-card):is(.menu-card, .power-card:not(.power-card-zone)), body[data-theme="dark"] .power-card:not(.power-card-zone), body[data-theme="dark"] :where(.current-effect):is(.current-effect, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.settings-toggle):is(.settings-toggle, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.assignment-choice):is(.assignment-choice, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.assignment-family-choice):is(.assignment-family-choice, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.layout-choice):is(.layout-choice, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.receiver-list details):is(.receiver-list details, .power-card:not(.power-card-zone)), body[data-theme="dark"] :is(.receiver-order > [data-order-receiver]), body[data-theme="dark"] :where(.scene-card):is(.scene-card, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.scene-zone):is(.scene-zone, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.scene-saved-zone):is(.scene-saved-zone, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.scene-save-bar):is(.scene-save-bar, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.stand-scenes):is(.stand-scenes, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.stand-scenes-empty):is(.stand-scenes-empty, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.stand-scenes-entry):is(.stand-scenes-entry, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.stand-scene-card):is(.stand-scene-card, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.stand-overview-row):is(.stand-overview-row, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.preset-card):is(.preset-card, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.effect-card):is(.effect-card, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.family-card):is(.family-card, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.animation-family-card):is(.animation-family-card, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.family-variant-card):is(.family-variant-card, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.onboarding-name-card):is(.onboarding-name-card, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.onboarding-zone):is(.onboarding-zone, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.onboarding-destination):is(.onboarding-destination, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.stand-setup-overview):is(.stand-setup-overview, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.pixel-setup-panel):is(.pixel-setup-panel, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.pixel-setup-shell):is(.pixel-setup-shell, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.receiver-update-sheet):is(.receiver-update-sheet, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.receiver-removal-sheet):is(.receiver-removal-sheet, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.pin-protection-card):is(.pin-protection-card, .power-card:not(.power-card-zone)){
   color: var(--ink);
   background-color: rgba(32, 35, 30, .76);
   background-image: linear-gradient(145deg, rgba(54, 59, 52, .76), rgba(31, 34, 29, .79)), radial-gradient(120% 110% at 100% 0%, rgba(191, 72, 65, .07), transparent 75%);
@@ -388,14 +303,14 @@ body[data-theme="dark"] .zone-entry .zone-card {
   box-shadow: none;
 }
 
-body[data-theme="dark"] :is(.section-tabs, .control-mode-tabs, .demo-settings-tabs, .guide, .preview-notice, .receiver-zone-row-hint, .pixel-preview-notice, .management-status) {
+body[data-theme="dark"] .section-tabs, body[data-theme="dark"] .control-mode-tabs, body[data-theme="dark"] .demo-settings-tabs, body[data-theme="dark"] .guide, body[data-theme="dark"] .preview-notice, body[data-theme="dark"] .receiver-zone-row-hint, body[data-theme="dark"] .pixel-preview-notice, body[data-theme="dark"] .management-status{
   color: var(--ink);
   background: linear-gradient(145deg, rgba(47, 51, 45, .92), rgba(37, 40, 35, .88));
   border-color: rgba(255, 255, 255, .07);
   box-shadow: inset 0 1px rgba(255, 255, 255, .06);
 }
 
-body[data-theme="dark"] :is(.receiver-chips button, .filter-row button, .compact-direction button, .physical-port-picker button, .preference-grid button, .pill) {
+body[data-theme="dark"] :is(.receiver-chips button), body[data-theme="dark"] :is(.filter-row button), body[data-theme="dark"] :is(.compact-direction button), body[data-theme="dark"] :is(.physical-port-picker button), body[data-theme="dark"] :is(.preference-grid button), body[data-theme="dark"] :where(.pill):is(.pill, .receiver-chips button){
   color: var(--ink);
   background-image: linear-gradient(145deg, rgba(48, 52, 46, .95), rgba(34, 37, 32, .93));
   border-color: rgba(255, 255, 255, .09);
@@ -412,7 +327,7 @@ body[data-theme="dark"] .assignment-family-choice[aria-pressed="true"] {
   background: linear-gradient(145deg, rgba(67, 49, 46, .94), rgba(44, 37, 34, .92));
 }
 
-body[data-theme="dark"] :is(.receiver-chips button[aria-pressed="true"], .filter-row button[aria-selected="true"], .compact-direction button[aria-pressed="true"], .control-mode-tabs button[aria-pressed="true"]) {
+body[data-theme="dark"] :is(.receiver-chips button[aria-pressed="true"]), body[data-theme="dark"] :is(.filter-row button[aria-selected="true"]), body[data-theme="dark"] :is(.compact-direction button[aria-pressed="true"]), body[data-theme="dark"] :is(.control-mode-tabs button[aria-pressed="true"]){
   color: #fff;
   background-color: #202420;
   background-image: linear-gradient(145deg, #333833, #202420);
@@ -434,7 +349,7 @@ body[data-theme="dark"] .family-variants-panel {
 }
 
 /* The LED canvas stays pitch-dark and untouched in both themes. */
-:is(.preview-wrap, .effect-thumb, .scene-mosaic, .layout-art, .zone-card canvas, .scene-preview, .family-card canvas, .effect-card canvas, .family-variant-card canvas, .pixel-connection-preview, .pixel-count-preview) {
+:where(.preview-wrap):is(.preview-wrap, .zone-card canvas), :where(.effect-thumb):is(.effect-thumb, .zone-card canvas), :where(.scene-mosaic):is(.scene-mosaic, .zone-card canvas), :where(.layout-art):is(.layout-art, .zone-card canvas), :is(.zone-card canvas), :where(.scene-preview):is(.scene-preview, .zone-card canvas), :is(.family-card canvas), :is(.effect-card canvas), :is(.family-variant-card canvas), :where(.pixel-connection-preview):is(.pixel-connection-preview, .zone-card canvas), :where(.pixel-count-preview):is(.pixel-count-preview, .zone-card canvas){
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
@@ -453,61 +368,31 @@ body[data-theme="dark"] .family-variants-panel {
 
 /* Keep small controls and nested surfaces as softly rounded as the main cards.
    The LED pixels themselves remain square so their preview stays recognisable. */
-:is(main, dialog) button {
+main button, dialog button{
   border-radius: 13px;
 }
 
-:is(main, dialog) :is(input:not([type="range"]), select, textarea, summary) {
+:is(main, dialog) input:not([type="range"]), :is(main, dialog) :where(select):is(select, input:not([type="range"])), :is(main, dialog) :where(textarea):is(textarea, input:not([type="range"])), :is(main, dialog) :where(summary):is(summary, input:not([type="range"])){
   border-radius: 12px;
 }
 
-main :is(
-  .animation-category-note,
-  .preview-live-controls button,
-  .order-buttons button,
-  .channel-row button,
-  .compact-direction button,
-  .physical-port-picker button,
-  .output-row input[type="number"],
-  .output-row select
-) {
+main :where(.animation-category-note):is(.animation-category-note, .output-row input[type="number"]), main :where(.preview-live-controls button):is(.preview-live-controls button, .output-row input[type="number"]), main :where(.order-buttons button):is(.order-buttons button, .output-row input[type="number"]), main :where(.channel-row button):is(.channel-row button, .output-row input[type="number"]), main :where(.compact-direction button):is(.compact-direction button, .output-row input[type="number"]), main :where(.physical-port-picker button):is(.physical-port-picker button, .output-row input[type="number"]), main :is(.output-row input[type="number"]), main :where(.output-row select):is(.output-row select, .output-row input[type="number"]){
   border-radius: 13px;
 }
 
-main :is(
-  .background-swatch,
-  .receiver-chips .number,
-  .physical-port-picker b,
-  .order-number,
-  .selection .scope-number,
-  .selection .scope-lines-list .scope-line .scope-number,
-  .onboarding-setup-steps li > span,
-  .onboarding-zone-tiles .onboarding-zone i,
-  .onboarding-role-cards .onboarding-type-label,
-  .onboarding-members > h2 > span,
-  .onboarding-role,
-  .onboarding-member-type,
-  .onboarding-review-product li > b,
-  .onboarding-manual-wifi li::before,
-  .onboarding-wifi-steps li::before,
-  .onboarding-pin-future > i,
-  .onboarding-wifi-return-steps li > i,
-  .receiver-filters button span,
-  .scene-zone-number,
-  .scene-mosaic-overflow
-) {
+main :where(.background-swatch):is(.background-swatch, .selection .scope-lines-list .scope-line .scope-number), main :where(.receiver-chips .number):is(.receiver-chips .number, .selection .scope-lines-list .scope-line .scope-number), main :where(.physical-port-picker b):is(.physical-port-picker b, .selection .scope-lines-list .scope-line .scope-number), main :where(.order-number):is(.order-number, .selection .scope-lines-list .scope-line .scope-number), main :where(.selection .scope-number):is(.selection .scope-number, .selection .scope-lines-list .scope-line .scope-number), main :is(.selection .scope-lines-list .scope-line .scope-number), main :where(.onboarding-setup-steps li > span):is(.onboarding-setup-steps li > span, .selection .scope-lines-list .scope-line .scope-number), main :where(.onboarding-zone-tiles .onboarding-zone i):is(.onboarding-zone-tiles .onboarding-zone i, .selection .scope-lines-list .scope-line .scope-number), main :where(.onboarding-role-cards .onboarding-type-label):is(.onboarding-role-cards .onboarding-type-label, .selection .scope-lines-list .scope-line .scope-number), main :where(.onboarding-members > h2 > span):is(.onboarding-members > h2 > span, .selection .scope-lines-list .scope-line .scope-number), main :where(.onboarding-role):is(.onboarding-role, .selection .scope-lines-list .scope-line .scope-number), main :where(.onboarding-member-type):is(.onboarding-member-type, .selection .scope-lines-list .scope-line .scope-number), main :where(.onboarding-review-product li > b):is(.onboarding-review-product li > b, .selection .scope-lines-list .scope-line .scope-number), main :where(.onboarding-pin-future > i):is(.onboarding-pin-future > i, .selection .scope-lines-list .scope-line .scope-number), main :where(.onboarding-wifi-return-steps li > i):is(.onboarding-wifi-return-steps li > i, .selection .scope-lines-list .scope-line .scope-number), main :where(.receiver-filters button span):is(.receiver-filters button span, .selection .scope-lines-list .scope-line .scope-number), main :where(.scene-zone-number):is(.scene-zone-number, .selection .scope-lines-list .scope-line .scope-number), main :where(.scene-mosaic-overflow):is(.scene-mosaic-overflow, .selection .scope-lines-list .scope-line .scope-number){
   border-radius: 10px;
 }
 
-main :is(.onboarding-setup-label, .onboarding-result .pill) {
+main :where(.onboarding-setup-label):is(.onboarding-setup-label, .onboarding-result .pill), main :is(.onboarding-result .pill){
   border-radius: 999px;
 }
 
-main :is(.scene-mosaic-tile, .scene-mosaic .scene-preview, .scene-zone > .scene-preview, .stand-scene-card .scene-preview) {
+main :where(.scene-mosaic-tile):is(.scene-mosaic-tile, .scene-mosaic .scene-preview), main :is(.scene-mosaic .scene-preview), main :is(.scene-zone > .scene-preview), main :is(.stand-scene-card .scene-preview){
   border-radius: 10px;
 }
 
-dialog :is(.pixel-setup-outputs b, .pixel-setup-reference b, .pixel-port-step) {
+dialog :is(.pixel-setup-outputs b), dialog :is(.pixel-setup-reference b), dialog :where(.pixel-port-step):is(.pixel-port-step, .pixel-setup-outputs b){
   border-radius: 10px;
 }
 
@@ -585,10 +470,7 @@ dialog .pixel-setup-steps li {
   backdrop-filter:blur(18px) saturate(130%);
 }
 .bediening-workspace{gap:13px}
-.bediening-workspace-heading{min-height:44px;padding:0 1px 6px;border-bottom:1px solid color-mix(in srgb,var(--line) 72%,transparent)}
-.bediening-workspace-heading .menu-icon{background:color-mix(in srgb,var(--red) 12%,var(--glass));box-shadow:inset 0 1px rgba(255,255,255,.55)}
 .animation-context{gap:8px;padding:6px 4px;border:1px solid color-mix(in srgb,var(--line) 52%,var(--glass-edge));border-radius:16px;background:color-mix(in srgb,var(--glass) 78%,var(--panel));box-shadow:inset 0 1px rgba(255,255,255,.52)}
-.animation-context .selection .scope-lines-toggle{padding-inline:6px!important;white-space:normal}
 .animation-context .scope-copy .scope-option-title,.animation-context .scope-copy>small{white-space:normal;overflow-wrap:anywhere}
 .animation-context>.power-card{border-color:color-mix(in srgb,var(--line) 68%,transparent);background:color-mix(in srgb,var(--panel) 72%,var(--glass));box-shadow:inset 0 1px rgba(255,255,255,.66)}
 .control-workspace .shared-colour-picker,
@@ -654,7 +536,7 @@ dialog .pixel-setup-steps li {
 main>.app-page-enter{transform-origin:50% 0;will-change:opacity,transform;animation:app-page-enter .34s var(--motion-spring) both}
 @keyframes app-page-enter{from{opacity:0;transform:translate3d(0,9px,0) scale(.996)}76%{opacity:1;transform:translate3d(0,-1px,0) scale(1.001)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
 @keyframes app-action-enter{from{opacity:0;transform:translate3d(0,6px,0) scale(.99)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
-main :is(button,summary):active:not(:disabled){transform:scale(.988);transition-duration:110ms;transition-timing-function:var(--motion-spring)}
+main button:active:not(:disabled), main summary:active:not(:disabled){transform:scale(.988);transition-duration:110ms;transition-timing-function:var(--motion-spring)}
 .animation-gallery-return{transition:transform .24s var(--motion-spring),box-shadow .24s var(--motion-ease),border-color .2s var(--motion-ease)}
 .animation-settings-return-slot .animation-settings-return,
 .animation-wayfinding[data-editor-return-shortcut]:not([hidden]) .animation-settings-return{animation:app-action-enter .24s var(--motion-spring) both}
@@ -670,7 +552,7 @@ dialog[open].is-closing::backdrop{animation:app-backdrop-exit var(--motion-sheet
 @keyframes app-backdrop-exit{from{opacity:1}to{opacity:0}}
 @media(prefers-reduced-motion:reduce){
   main>.app-page-enter,dialog[open],dialog[open]::backdrop{animation:none!important;will-change:auto}
-  main :is(button,summary):active:not(:disabled){transform:none;transition:none!important}
+  main button:active:not(:disabled), main summary:active:not(:disabled){transform:none;transition:none!important}
 }
 .settings-panel.is-closing,.background-details.is-closing{pointer-events:none;animation:app-disclosure-exit .18s ease-in both}
 @keyframes app-disclosure-exit{from{opacity:1;transform:translate3d(0,0,0) scale(1)}to{opacity:0;transform:translate3d(0,-5px,0) scale(.99)}}
@@ -678,13 +560,13 @@ dialog[open].is-closing::backdrop{animation:app-backdrop-exit var(--motion-sheet
 
 /* V32 glass polish: strengthen the frosted depth and material contrast while
    keeping the many scrolling animation tiles free of per-card blur. */
-:is(.animation-category-trigger,.animation-category-choice,.animation-search input,.settings-toggle,.preview-size-control>summary){
+:where(.animation-category-trigger):is(.animation-category-trigger, .animation-search input), :where(.animation-category-choice):is(.animation-category-choice, .animation-search input), :is(.animation-search input), :where(.settings-toggle):is(.settings-toggle, .animation-search input), :is(.preview-size-control>summary){
   background-color:var(--glass);
   background-image:linear-gradient(145deg,rgba(255,255,255,.3),rgba(255,255,255,.09));
   border-color:color-mix(in srgb,var(--line) 52%,var(--glass-edge));
   box-shadow:inset 0 1px rgba(255,255,255,.72),0 4px 14px rgba(24,30,24,.035);
 }
-:is(.animation-category-trigger,.animation-category-choice,.animation-search input,.settings-toggle,.preview-size-control>summary){
+:where(.animation-category-trigger):is(.animation-category-trigger, .animation-search input), :where(.animation-category-choice):is(.animation-category-choice, .animation-search input), :is(.animation-search input), :where(.settings-toggle):is(.settings-toggle, .animation-search input), :is(.preview-size-control>summary){
   -webkit-backdrop-filter:blur(14px) saturate(128%);
   backdrop-filter:blur(14px) saturate(128%);
 }
@@ -700,7 +582,7 @@ dialog[open].is-closing::backdrop{animation:app-backdrop-exit var(--motion-sheet
   -webkit-backdrop-filter:blur(16px) saturate(126%);
   backdrop-filter:blur(16px) saturate(126%);
 }
-:is(.animation-family-card,.family-variant-card,.effect-card,.family-card){
+.animation-family-card, .family-variant-card, .effect-card, .family-card{
   background-color:var(--glass);
   background-image:linear-gradient(145deg,rgba(255,255,255,.24),rgba(255,255,255,.055)),radial-gradient(110% 120% at 100% 0%,rgba(191,72,65,.045),transparent 76%);
   border-color:color-mix(in srgb,var(--line) 60%,var(--glass-edge));
@@ -733,7 +615,7 @@ dialog[open].is-closing::backdrop{animation:app-backdrop-exit var(--motion-sheet
   -webkit-backdrop-filter:blur(22px) saturate(132%);
   backdrop-filter:blur(22px) saturate(132%);
 }
-body[data-theme=dark] :is(.animation-category-trigger,.animation-category-choice,.animation-search input,.settings-toggle,.preview-size-control>summary):not([aria-pressed=true]){
+body[data-theme=dark] :where(.animation-category-trigger):is(.animation-category-trigger, .animation-search input):not([aria-pressed=true]), body[data-theme=dark] :where(.animation-category-choice):is(.animation-category-choice, .animation-search input):not([aria-pressed=true]), body[data-theme=dark] :is(.animation-search input):not([aria-pressed=true]), body[data-theme=dark] :where(.settings-toggle):is(.settings-toggle, .animation-search input):not([aria-pressed=true]), body[data-theme=dark] :is(.preview-size-control>summary):not([aria-pressed=true]){
   background-color:rgba(37,41,36,.72);
   background-image:linear-gradient(145deg,rgba(255,255,255,.085),rgba(255,255,255,.018));
   border-color:rgba(255,255,255,.14);
@@ -745,7 +627,7 @@ body[data-theme=dark] .family-variants-panel{
   border-color:rgba(255,255,255,.12);
   box-shadow:inset 0 1px rgba(255,255,255,.08),0 8px 20px rgba(0,0,0,.12);
 }
-body[data-theme=dark] :is(.animation-family-card,.family-variant-card,.effect-card,.family-card){
+body[data-theme=dark] .animation-family-card, body[data-theme=dark] .family-variant-card, body[data-theme=dark] .effect-card, body[data-theme=dark] .family-card{
   background-color:rgba(37,41,36,.72);
   background-image:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.012)),radial-gradient(110% 120% at 100% 0%,rgba(191,72,65,.055),transparent 76%);
   border-color:rgba(255,255,255,.13);
@@ -846,7 +728,6 @@ body[data-theme=dark] .control-preview-dock[data-scrolled=true] .control-dock-su
 #effect-dialog:has([data-stand-control-sheet]) .my-colours .saved-colour i{width:28px;height:28px;font-size:18px}
 #effect-dialog:has([data-stand-control-sheet]) .my-colours .saved-colour span{max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #effect-dialog:has([data-stand-control-sheet]) .my-colours .saved-colour-kind{display:none}
-#effect-dialog:has([data-stand-control-sheet]) .my-colours .add-colour{padding-top:2px}
 #effect-dialog:has([data-stand-control-sheet]) .my-colours .colour-library-feedback:empty{display:none}
 #effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry{min-height:48px;padding:5px 8px;border-radius:14px;gap:7px}
 #effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry-icon{width:32px;height:32px;border-radius:10px}
@@ -900,9 +781,7 @@ dialog#effect-dialog {
 
 /* Readable text accents remain distinct from the red switch/primary fill.
    This avoids pale red text on light buttons in the dark theme. */
-:is(.eyebrow, .text-button, .slider-row output, .current-animation-edit,
-    .stand-scenes-entry-open, .active-animation-kicker,
-    .animation-settings-return-kicker) {
+:where(.eyebrow):is(.eyebrow, .slider-row output), :where(.text-button):is(.text-button, .slider-row output), :is(.slider-row output), :where(.current-animation-edit):is(.current-animation-edit, .slider-row output), :where(.stand-scenes-entry-open):is(.stand-scenes-entry-open, .slider-row output), :where(.active-animation-kicker):is(.active-animation-kicker, .slider-row output), :where(.animation-settings-return-kicker):is(.animation-settings-return-kicker, .slider-row output){
   color: var(--action-ink);
 }
 
@@ -919,17 +798,11 @@ body[data-theme="dark"] .button.secondary:not(.receiver-danger-section .button.s
   box-shadow: inset 0 1px rgba(255, 255, 255, .09), 0 2px 7px rgba(0, 0, 0, .12);
 }
 
-body[data-theme="dark"] :is(.eyebrow, .text-button, .slider-row output,
-    .current-animation-edit, .stand-scenes-entry-open),
-body[data-theme="dark"] .current-effect .active-animation-kicker,
-body[data-theme="dark"] .animation-settings-return .gallery-action-copy > .animation-settings-return-kicker {
+body[data-theme="dark"] :where(.eyebrow):is(.eyebrow, .slider-row output), body[data-theme="dark"] :where(.text-button):is(.text-button, .slider-row output), body[data-theme="dark"] :is(.slider-row output), body[data-theme="dark"] :where(.current-animation-edit):is(.current-animation-edit, .slider-row output), body[data-theme="dark"] :where(.stand-scenes-entry-open):is(.stand-scenes-entry-open, .slider-row output), body[data-theme="dark"] .current-effect .active-animation-kicker, body[data-theme="dark"] .animation-settings-return .gallery-action-copy > .animation-settings-return-kicker{
   color: var(--action-ink);
 }
 
-:is(.control-workspace .shared-colour-picker,
-    .control-workspace .animation-daily-controls,
-    .receiver-list details details, .stand-scenes .stand-scene-card,
-    .animation-family-card, .family-variant-card, .effect-card, .family-card) {
+:is(.control-workspace .shared-colour-picker), :is(.control-workspace .animation-daily-controls), :where(.receiver-list details details):is(.receiver-list details details, .control-workspace .shared-colour-picker), :is(.stand-scenes .stand-scene-card), :where(.animation-family-card):is(.animation-family-card, .control-workspace .shared-colour-picker), :where(.family-variant-card):is(.family-variant-card, .control-workspace .shared-colour-picker), :where(.effect-card):is(.effect-card, .control-workspace .shared-colour-picker), :where(.family-card):is(.family-card, .control-workspace .shared-colour-picker){
   /* Shared card rules also contain a dialog ID: these material-only
      overrides must beat that specificity, not alter the card layout. */
   -webkit-backdrop-filter: none !important;
@@ -1038,14 +911,6 @@ body .ledline-setup.card[data-order-open="true"] > .ledline-setup-body {
   border-color: color-mix(in srgb, var(--order-edge) 70%, transparent);
 }
 
-body .ledline-setup .ledline-setup-toggle > .ledline-setup-disclosure-action {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 5px;
-  min-height: 44px;
-  color: var(--action-ink);
-}
 
 .ledline-setup .ledline-setup-close-label {
   font-size: 12px;
@@ -1053,16 +918,7 @@ body .ledline-setup .ledline-setup-toggle > .ledline-setup-disclosure-action {
   white-space: nowrap;
 }
 
-.ledline-setup .ledline-setup-disclosure-action > .icon {
-  width: 17px;
-  height: 17px;
-  flex: none;
-  transition: transform .2s var(--motion-ease, ease);
-}
 
-.ledline-setup[data-order-open="true"] .ledline-setup-disclosure-action > .icon {
-  transform: rotate(-90deg);
-}
 
 .ledline-setup[data-order-open="true"] .ledline-setup-toggle > .line-order-icon {
   color: var(--action-ink);
@@ -1072,14 +928,6 @@ body .ledline-setup .ledline-setup-toggle > .ledline-setup-disclosure-action {
    LED line. Receiver settings reuse the existing controls inside that row. */
 body .ledline-setup[data-order-open="true"] > .ledline-setup-toggle {
   padding-block: 12px;
-}
-body .ledline-setup .ledline-menu-label {
-  color: var(--action-ink);
-  font-size: 9px;
-  font-weight: 750;
-  letter-spacing: .09em;
-  line-height: 1.4;
-  text-transform: uppercase;
 }
 body .ledline-setup-body > .layout-receiver-actions {
   padding: 8px 0 12px;
@@ -1115,8 +963,6 @@ body .ledline-setup-body > .layout-receiver-actions {
 .ledline-add-copy small { color: var(--muted); font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
 .ledline-add-action > .icon { width: 16px; height: 16px; flex: none; color: var(--action-ink); }
 body .ledline-setup .ledline-arrangement { gap: 9px; padding-top: 12px; }
-.ledline-family-label { padding: 3px 7px; border: 1px solid var(--line); border-radius: 7px; background: var(--soft); font-weight: 700; }
-body .ledline-setup .ledline-order-tools { display: flex; gap: 8px; padding-top: 5px; }
 .ledline-row-actions { display: grid; grid-template-columns: minmax(0,.9fr) minmax(0,1.1fr); gap: 7px; width: 100%; }
 body .ledline-setup .ledline-row-actions > button {
   display: flex;
@@ -1182,16 +1028,12 @@ body .advanced-settings-toggle[aria-expanded="true"] { border-color: var(--line)
 }
 
 @media (min-width: 480px) {
-  body .ledline-setup .ledline-order-tools { flex-wrap: nowrap; }
   .ledline-row-actions { flex: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
   .ledline-settings-toggle > .icon:last-child { transition: none; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .ledline-setup .ledline-setup-disclosure-action > .icon { transition: none; }
-}
 
 @media (prefers-reduced-transparency: reduce) {
   .ledline-setup { --order-surface: var(--glass-solid); }

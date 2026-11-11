@@ -277,7 +277,7 @@
             active.handle.closest('[data-order-item]') !== active.row)) throw new Error('ORDER_HANDLE_CHANGED');
         if (active.slots && slots(fresh).some(function (slot, i) { return slot !== active.slots[i]; })) throw new Error('ORDER_SLOTS_CHANGED');
         return true;
-      } catch (_) { finish(false); return false; }
+      } catch (error) { diag('cancel ' + (error && error.message || 'invalid')); finish(false); return false; }
     }
     function begin(handle, input, pointerId, pointerY, trusted) {
       if (destroyed || active || handle.disabled || handle.getAttribute('aria-disabled') === 'true') return false;
@@ -390,7 +390,7 @@
       flushPointerFrame(); if (valid()) finish(true);
     }
     function pointerCancel(event) {
-      if (active && active.input === 'pointer' && active.pointerId === event.pointerId) finish(false);
+      if (active && active.input === 'pointer' && active.pointerId === event.pointerId) { diag('cancel ' + event.type); finish(false); }
     }
     function keyDown(event) {
       if (event.key === 'Escape' && active) { event.preventDefault(); finish(false); return; }
@@ -424,13 +424,20 @@
       } catch (_) { /* Visibility does not change order or grant authority. */ }
     }
     function scroll() { if (active && active.input === 'pointer') queuePointerFrame(); }
-    function leave() { if (active) finish(false); }
+    function leave(event) { if (active) { diag('cancel ' + (event && event.type || 'leave')); finish(false); } }
     function visibility() { if (document.visibilityState === 'hidden') leave(); }
     function click(event) {
       if (handleOf(event.target)) { event.preventDefault(); event.stopPropagation(); }
     }
+    // C138ui-7 (9 Nov, measured on the Android tablet): press-and-hold on the grip fired a long-press 'contextmenu'
+    // ~0.6 s after touchstart; from then on the WebView delivered no pointer moves, so the held ledline never moved.
+    // Refusing the long-press menu on the grip (and during a drag) keeps the touch sequence alive.
+    function contextMenu(event) {
+      if (active || handleOf(event.target)) { event.preventDefault(); diag('longpress-menu-blocked'); }
+    }
+    function diag(text) { try { var log = view && view.__c98log; if (typeof log === 'function') log('ORDER_DRAG ' + text); } catch (_) {} }
     var listeners = [['pointerdown', pointerDown], ['pointermove', pointerMove], ['pointerup', pointerUp],
-      ['pointercancel', pointerCancel], ['lostpointercapture', pointerCancel], ['keydown', keyDown], ['click', click],
+      ['pointercancel', pointerCancel], ['lostpointercapture', pointerCancel], ['keydown', keyDown], ['click', click], ['contextmenu', contextMenu],
       ['scroll', scroll], ['visibilitychange', visibility]];
     listeners.forEach(function (pair) { host.addEventListener(pair[0], pair[1], true); });
     if (view && typeof view.addEventListener === 'function') { view.addEventListener('blur', leave); view.addEventListener('resize', leave); }

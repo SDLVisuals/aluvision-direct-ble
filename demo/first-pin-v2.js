@@ -62,7 +62,7 @@
     return text('failed',language)+(localFailureCodes.has(code)||match&&match[0]===code&&diagnosisReasons.has(match[2])?' ['+code+']':'');
   }
   function validSSID(ssid,type){
-    const prefix=type==='SPI'?'SPI HQ ':type==='RGBW'?'RGBW HQ ':null;
+    const prefix=type==='SPI'?'SPI ':type==='RGBW'?'RGBW ':null; // C137av: '<type> <stand>' (old 'HQ …' names stay valid)
     if(!prefix||typeof ssid!=='string'||ssid.length>32||!ssid.startsWith(prefix))return false;
     const suffix=ssid.slice(prefix.length);return /^[A-Za-z0-9 ._-]+$/.test(suffix)&&suffix.trim()===suffix&&!suffix.includes('  ');
   }

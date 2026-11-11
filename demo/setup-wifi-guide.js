@@ -9,7 +9,7 @@
   const factoryPassword='aluvision';
   const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const t=(key,fallback)=>{const language=globalThis.document?.documentElement?.lang||'nl',value=globalThis.LightningSetupTranslations?.[language]?.[key]||globalThis.LightningPreferences?.t(key,language);return value&&value!==key?value:fallback;};
-  function stepsMarkup(){
+  function stepsMarkup({standNetwork=null}={}){
     // Instructions only: these drawings do not represent a detected receiver,
     // a successful Wi-Fi connection, or permission to probe a device.
     // A neutral product enclosure follows the existing receiver material and
@@ -20,7 +20,7 @@
     const app='<svg viewBox="0 0 112 88" focusable="false"><ellipse class="wifi-guide-shadow728" cx="58" cy="80" rx="28" ry="4"/><rect class="wifi-guide-phone728" x="35" y="6" width="42" height="73" rx="10"/><rect class="wifi-guide-screen728" x="40" y="18" width="32" height="49" rx="4"/><path class="wifi-guide-detail728" d="M49 12h14m-11 61h8"/><rect class="wifi-guide-app728" x="44" y="29" width="24" height="25" rx="7"/><path class="wifi-guide-app-lines728" d="M50 45v-7m6 10V35m6 10v-7"/><path class="wifi-guide-return674" d="M11 42h24m-7-7 7 7-7 7"/></svg>';
     const rows=[
       [receiver,'wifi674PowerTitle','Zet de receiver aan','wifi674PowerHint','Laat hem aan tijdens het instellen.'],
-      [network,'wifi674NetworkTitle','Open Instellingen → Wifi','wifi674NetworkHint','Kies het ALUVISION-netwerk van je receiver.'],
+      standNetwork?[network,'wifi674NetworkTitle','Open Instellingen → Wifi','wifi674StandNetworkHintC137','Kies het wifi-netwerk van je stand ('+standNetwork+'), of het ALUVISION-netwerk van een nieuwe receiver.']:[network,'wifi674NetworkTitle','Open Instellingen → Wifi','wifi674NetworkHint','Kies het ALUVISION-netwerk van je receiver.'],
       [app,'wifi674ReturnTitle','Ga terug naar de app','wifi674ReturnHint','Controleer hier de verbinding.']
     ];
     return `<ol class="onboarding-wifi-tiles onboarding-wifi-steps wifi-guide674 wifi-guide756" data-setup-visual="wifi-instructions" aria-label="${escape(t('wifi674FlowLabel','Zo verbind je een receiver'))}">${rows.map(([svg,title,fallback,hint,hintFallback],index)=>`<li><span class="wifi-guide-art674" aria-hidden="true">${svg}</span><span class="wifi-guide-copy674"><b><i class="wifi-guide-step674" aria-hidden="true">${index+1}</i><span>${escape(t(title,fallback))}</span></b><small>${escape(t(hint,hintFallback))}</small></span></li>`).join('')}</ol>`;

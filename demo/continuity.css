@@ -17,15 +17,15 @@ dialog,#effect-dialog{width:min(calc(var(--app-width) - 24px),calc(100vw - 24px)
 .receiver-product canvas{height:205px}.receiver-product.compact canvas{height:125px}
 .connection-empty>.icon{width:32px;height:32px;color:var(--muted);margin-bottom:12px}.connection-empty h2{margin-bottom:10px}
 .page-heading:has(>h1){display:block}.page-heading:has(>h1)>.eyebrow{margin-bottom:8px}
-.onboarding-page :is(button,input,summary){scroll-margin-block-end:calc(var(--nav) + env(safe-area-inset-bottom) + 18px)}
+/*c140-sel:continuity.css*/.onboarding-page button, .onboarding-page input, .onboarding-page summary{scroll-margin-block-end:calc(var(--nav) + env(safe-area-inset-bottom) + 18px)}
 /* Names can contain 64 characters without spaces. Keep them inside the phone
    layout, with a compact title and back link above the shared light preview. */
-.page>*{min-width:0}.page-heading :is(h1,p,.eyebrow),.zone-copy b{overflow-wrap:anywhere}
+.page>*{min-width:0}.page-heading :where(h1):is(h1, .eyebrow), .page-heading :where(p):is(p, .eyebrow), .page-heading .eyebrow, .zone-copy b{overflow-wrap:anywhere}
 .topline>.back{min-width:0;max-width:75%}.back>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.context-name{min-width:0;flex:1}
 .control-context h1{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .page-heading>.pill{flex:none}.zone-card{grid-template-columns:105px minmax(0,1fr)}
 .selection-summary{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.selection>header h2{flex:none}
-dialog :is(h2,h3,p){overflow-wrap:anywhere}dialog header h2{min-width:0}
+dialog h2, dialog h3, dialog p{overflow-wrap:anywhere}dialog header h2{min-width:0}
 .animation-search-empty{padding-block:20px}.animation-search-empty h2{margin-top:0}
 @media(min-width:441px){body{border-inline:1px solid var(--line);box-shadow:0 0 45px #20252005}}
 /* More space for everyday actions, without shrinking their touch targets. */
@@ -43,7 +43,6 @@ dialog :is(h2,h3,p){overflow-wrap:anywhere}dialog header h2{min-width:0}
 .control-context .back.back-to-zones{min-height:50px;font-size:14px}
 @media(max-width:360px){.back.back-to-zones{gap:8px;padding-inline:10px;font-size:13px}}
 .current-effect>.button{min-height:44px}
-.preview-live-controls button{min-height:44px}
 .zone-management-actions{padding-top:14px;border-top:1px solid var(--line)}
 .scene-rename{display:inline-flex;align-items:center;gap:7px;justify-self:start;margin-top:-10px}
 .scene-rename .icon{width:16px;height:16px}
@@ -56,9 +55,9 @@ dialog :is(h2,h3,p){overflow-wrap:anywhere}dialog header h2{min-width:0}
 #effect-dialog:has([data-stand-overview]) .stand-overview-row{border-radius:20px}
 #effect-dialog:has([data-stand-overview]) .receiver-zone-change-icon{border-radius:14px}
 #effect-dialog .dialog-live-preview{top:calc(var(--dialog-header-height,64px) - 14px);z-index:5}
-#effect-dialog :is(button,input){scroll-margin-block-start:calc(var(--dialog-header-height,64px) + 12px);scroll-margin-block-end:18px}
+#effect-dialog button, #effect-dialog input{scroll-margin-block-start:calc(var(--dialog-header-height,64px) + 12px);scroll-margin-block-end:18px}
 .pin-login-entry{scroll-margin-block-end:calc(var(--nav) + env(safe-area-inset-bottom) + 18px)}
-#effect-dialog:has(.dialog-live-preview) :is(.shared-colour-picker button,.shared-colour-picker input){scroll-margin-block-start:calc(var(--dialog-header-height,64px) + 115px)}
+#effect-dialog:has(.dialog-live-preview) :is(.shared-colour-picker button), #effect-dialog:has(.dialog-live-preview) :is(.shared-colour-picker input){scroll-margin-block-start:calc(var(--dialog-header-height,64px) + 115px)}
 #effect-dialog .shared-colour-picker .section-heading{flex-wrap:wrap;gap:5px;margin-bottom:12px}
 #effect-dialog .shared-colour-picker .section-heading h2{flex:1 0 100%;font-size:16px}
 #effect-dialog .shared-colour-picker .section-heading small{font-size:11px}
@@ -73,7 +72,6 @@ dialog :is(h2,h3,p){overflow-wrap:anywhere}dialog header h2{min-width:0}
 .saved-colour-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px}
 .saved-colour-item{position:relative;min-width:0;padding-top:14px}
 .saved-colour{width:100%;background:transparent;display:flex;flex-direction:column;align-items:center;gap:7px;padding:7px 2px;font-size:10px;min-width:0;min-height:77px;align-self:start}
-.add-colour{padding-top:21px}
 .colour-library-hint{font-size:10px!important;line-height:1.5;margin-bottom:6px!important;color:var(--muted)}
 .my-colours .section-heading h3{white-space:nowrap}.my-colours .section-heading .text-button{font-size:11px;text-align:right;line-height:1.3}
 .colour-remove{position:absolute;top:0;right:0;display:grid;place-items:center;width:44px;height:44px;background:transparent;padding:0}
@@ -84,20 +82,16 @@ dialog :is(h2,h3,p){overflow-wrap:anywhere}dialog header h2{min-width:0}
 .saved-colour-item.colour-drag-source{opacity:.55;cursor:grabbing}.saved-colour-item.colour-drag-target{border-color:var(--red)!important;outline:2px solid var(--red);box-shadow:0 0 0 3px #c94e4620;background:var(--soft)}
 .colour-drag-ghost{position:fixed;pointer-events:none;z-index:100;display:grid;justify-items:center;gap:5px;width:90px;padding:8px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 6px 20px #0003;font-size:10px}.colour-drag-ghost i{width:34px;height:34px;border-radius:50%}
 .colour-library-feedback{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:24px}.colour-library-status{font-size:11px!important;line-height:1.4;color:var(--muted)}.colour-library-feedback .text-button{font-size:11px;min-height:36px;margin-left:auto}
-.saved-colour i{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--swatch,#eee);border:3px solid var(--panel);box-shadow:0 0 0 1px var(--line);font-style:normal;font-size:24px}.saved-colour span{max-width:100%;overflow-wrap:anywhere}.add-colour i{background:var(--soft);color:var(--ink);box-shadow:none}
+.saved-colour i{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--swatch,#eee);border:3px solid var(--panel);box-shadow:0 0 0 1px var(--line);font-style:normal;font-size:24px}.saved-colour span{max-width:100%;overflow-wrap:anywhere}
 .saved-colour-kind{display:inline-flex;align-items:center;min-height:16px;padding:1px 6px;border:1px solid color-mix(in srgb,var(--red) 28%,var(--line));border-radius:999px;color:var(--red);font-size:9px;font-weight:750;line-height:1.2}
 .shared-colour-picker .wheel{outline-offset:4px}
 .shared-colour-picker .colour-values{grid-template-columns:minmax(0,1fr)}
 #effect-dialog-content{min-width:0}#effect-dialog section{display:block;min-width:0;margin:0}#effect-dialog .shared-colour-picker{margin:0;padding:12px}#effect-dialog .colour-tools{grid-template-columns:minmax(120px,1fr) minmax(0,1fr);gap:14px}#effect-dialog .my-colours{margin-top:15px;padding-top:9px}#effect-dialog .my-colours p{font-size:11px}#effect-dialog .section-heading h2{font-size:16px}#effect-dialog .section-heading small{font-size:10px}#effect-dialog .colour-values{min-width:0}
 .receiver-order>[data-order-receiver]{display:grid;grid-template-columns:30px 25px minmax(0,1fr) 72px;gap:6px;border:1px solid var(--line);border-radius:12px;padding:5px;background:var(--panel)}
 .order-handle{touch-action:none;user-select:none;cursor:grab;background:transparent;min-height:44px;font-size:23px;color:var(--muted)}.order-handle:active{cursor:grabbing}
-.order-name{min-width:0}.order-name b{display:block;overflow-wrap:anywhere;font-size:11px}.order-name small{display:block;font-size:9px}
-.order-buttons{display:flex;gap:3px}.order-buttons button{background:var(--soft);border-radius:8px;min-height:44px;width:34px;font-size:17px}
-.order-help{margin-top:10px!important;font-size:11px!important}.order-status{font-size:11px!important;margin-top:7px!important;min-height:1em}
+.order-status{font-size:11px!important;margin-top:7px!important;min-height:1em}
 .receiver-order>.drag-source{opacity:.6}.receiver-order>.drag-target{border:2px solid var(--red);padding:4px}
-.receiver-order .order-name{grid-column:3/-1}
 .receiver-order .order-handle{grid-row:1/3;align-self:stretch}
-.order-controls{grid-column:2/-1;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .receiver-order .order-identify{flex-direction:row;width:auto;min-height:44px;padding:7px 10px;gap:6px;font-size:10px}
 .scene-list,.scene-zone-list{display:grid;gap:12px}.scene-card,.scene-zone{display:flex;align-items:center;gap:13px;padding:12px;border:1px solid var(--line);border-radius:17px;background:var(--panel);text-align:left;color:var(--ink)}
 .scene-card>span,.scene-zone>span{flex:1;min-width:0}.scene-card b,.scene-zone b{font-size:14px;display:block;overflow-wrap:anywhere}.scene-card small,.scene-zone small{font-size:11px;display:block;line-height:1.5;margin-top:5px}.scene-preview{width:100px;height:80px;flex:none;border-radius:12px;display:block}
@@ -120,17 +114,16 @@ dialog :is(h2,h3,p){overflow-wrap:anywhere}dialog header h2{min-width:0}
 .preference-label{margin:17px 0 9px}.preference-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.preference-grid button{min-height:44px;padding:10px;border:1px solid var(--line);background:var(--soft);border-radius:10px;color:var(--ink);font-size:12px}.preference-grid button[aria-pressed=true]{border-color:var(--red);color:var(--red);box-shadow:inset 0 0 0 1px var(--red)}.preference-note{font-size:11px!important;margin-top:10px!important}
 .pin-login-entry>div{min-width:0}.pin-login-entry .pin-login-availability{font-size:11px;color:var(--muted);margin-top:7px}.pin-login-status{display:grid;gap:12px}.pin-login-status .menu-icon{background:var(--soft);color:var(--red)}.pin-login-status h2,.pin-login-guide h2{font-size:17px;line-height:1.4}.pin-login-status p+p{margin-top:0}.pin-login-guide>p{margin-top:10px}.pin-login-guide ol{list-style:none;counter-reset:pin-step;padding:0;margin:18px 0 0;display:grid;gap:18px}.pin-login-guide li{counter-increment:pin-step;display:grid;grid-template-columns:28px minmax(0,1fr);column-gap:10px;align-items:start}.pin-login-guide li:before{content:counter(pin-step);grid-row:span 2;display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:var(--soft);font-size:12px;font-weight:700}.pin-login-guide li b{font-size:13px}.pin-login-guide li span{grid-column:2;font-size:12px;color:var(--muted);margin-top:4px}
 body[data-theme=dark]{--bg:#131512;--panel:#20231e;--ink:#f1f2ee;--muted:#b6b9ae;--line:#3e443b;--soft:#2b3028;background:var(--bg);color:var(--ink);color-scheme:dark}
-body[data-theme=dark] .brand-bar{background:var(--bg)}body[data-theme=dark] .brand-bar img{filter:invert(1)}body[data-theme=dark] :is(.card,.menu-card,.zone-card,.receiver-list details,.layout-choice,.power-card,.receiver-chips button,.icon-button,dialog,.scene-card,.scene-zone){background:var(--panel);color:var(--ink)}
-body[data-theme=dark] :is(.preview-notice,.guide,.section-tabs,.channel-row button,.button.secondary,.pill,.receiver-type-icon){background:var(--soft);color:var(--muted)}body[data-theme=dark] :is(.pill,.zone-copy span,.guide p,.port-preview-note,.output-row select,.output-row input,.page-heading p){color:var(--muted)}body[data-theme=dark] :is(.section-tabs button[aria-selected=true],.receiver-chips button[aria-pressed=true]){background:#edece5;color:#242720}
-body[data-theme=dark] :is(.dialog-field input,.output-row input,.output-row select,.physical-port-picker button){background:var(--bg);color:var(--ink);border-color:var(--line)}body[data-theme=dark] :is(.stand-summary>div,.current-effect,.effect-card,.family-card){background:var(--panel);color:var(--ink);border-color:var(--line)}
-@media(max-width:360px){.scene-preview{width:72px;height:68px}.order-number{width:24px}.receiver-order>[data-order-receiver]{grid-template-columns:24px 23px minmax(0,1fr) 65px;gap:4px}.order-buttons button{width:31px}.shared-colour-picker .colour-tools{grid-template-columns:130px minmax(0,1fr)}#effect-dialog .colour-tools{grid-template-columns:120px minmax(0,1fr);gap:9px}.shared-colour-picker .setting-hint{font-size:10px}}
+body[data-theme=dark] .brand-bar{background:var(--bg)}body[data-theme=dark] .brand-bar img{filter:invert(1)}body[data-theme=dark] :where(.card):is(.card, .receiver-list details), body[data-theme=dark] :where(.menu-card):is(.menu-card, .receiver-list details), body[data-theme=dark] :where(.zone-card):is(.zone-card, .receiver-list details), body[data-theme=dark] :is(.receiver-list details), body[data-theme=dark] :where(.layout-choice):is(.layout-choice, .receiver-list details), body[data-theme=dark] :where(.power-card):is(.power-card, .receiver-list details), body[data-theme=dark] :is(.receiver-chips button), body[data-theme=dark] :where(.icon-button):is(.icon-button, .receiver-list details), body[data-theme=dark] :where(dialog):is(dialog, .receiver-list details), body[data-theme=dark] :where(.scene-card):is(.scene-card, .receiver-list details), body[data-theme=dark] :where(.scene-zone):is(.scene-zone, .receiver-list details){background:var(--panel);color:var(--ink)}
+body[data-theme=dark] :where(.preview-notice):is(.preview-notice, .button.secondary), body[data-theme=dark] :where(.guide):is(.guide, .button.secondary), body[data-theme=dark] :where(.section-tabs):is(.section-tabs, .button.secondary), body[data-theme=dark] :where(.channel-row button):is(.channel-row button, .button.secondary), body[data-theme=dark] .button.secondary, body[data-theme=dark] :where(.pill):is(.pill, .button.secondary), body[data-theme=dark] :where(.receiver-type-icon):is(.receiver-type-icon, .button.secondary){background:var(--soft);color:var(--muted)}body[data-theme=dark] :where(.pill):is(.pill, .zone-copy span), body[data-theme=dark] :is(.zone-copy span), body[data-theme=dark] :is(.guide p), body[data-theme=dark] :where(.port-preview-note):is(.port-preview-note, .zone-copy span), body[data-theme=dark] :is(.output-row select), body[data-theme=dark] :is(.output-row input), body[data-theme=dark] :is(.page-heading p){color:var(--muted)}body[data-theme=dark] :is(.section-tabs button[aria-selected=true]), body[data-theme=dark] :is(.receiver-chips button[aria-pressed=true]){background:#edece5;color:#242720}
+body[data-theme=dark] :is(.dialog-field input), body[data-theme=dark] :is(.output-row input), body[data-theme=dark] :is(.output-row select), body[data-theme=dark] :is(.physical-port-picker button){background:var(--bg);color:var(--ink);border-color:var(--line)}body[data-theme=dark] :is(.stand-summary>div), body[data-theme=dark] :where(.current-effect):is(.current-effect, .stand-summary>div), body[data-theme=dark] :where(.effect-card):is(.effect-card, .stand-summary>div), body[data-theme=dark] :where(.family-card):is(.family-card, .stand-summary>div){background:var(--panel);color:var(--ink);border-color:var(--line)}
+@media(max-width:360px){.scene-preview{width:72px;height:68px}.order-number{width:24px}.receiver-order>[data-order-receiver]{grid-template-columns:24px 23px minmax(0,1fr) 65px;gap:4px}.shared-colour-picker .colour-tools{grid-template-columns:130px minmax(0,1fr)}#effect-dialog .colour-tools{grid-template-columns:120px minmax(0,1fr);gap:9px}.shared-colour-picker .setting-hint{font-size:10px}}
 /* Keep editor surfaces on the active theme. In dark mode the old literal white
    backgrounds made inherited light labels and direction selections unreadable. */
 .settings-toggle,.brand-colour,.tunnel-guide,.preset-card,.filter-row button,.compact-direction button{background:var(--panel);color:var(--ink)}
 .filter-row button[aria-selected=true],.compact-direction button[aria-pressed=true]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
 .compact-direction button{min-height:44px}
 .physical-port-picker b{background:var(--soft);color:var(--ink)}
-.output-row.port-focused{background:var(--soft);box-shadow:8px 0 var(--soft),-8px 0 var(--soft)}
 .animation-setting{border-color:var(--line)}
 body[data-theme=dark] .onboarding-name-card input{background:var(--panel);color:var(--ink)}
 body[data-theme=dark] .section-tabs button:not([aria-selected=true]){color:var(--muted)}
@@ -142,78 +135,23 @@ body[data-theme=dark] .section-tabs button:not([aria-selected=true]){color:var(-
 .channel-row{grid-template-columns:17px 44px minmax(20px,1fr) 44px 24px;min-height:48px}
 .channel-row button{width:44px;height:44px;border-radius:11px;font-size:20px}
 .channel-row output,.slider-row output{font-variant-numeric:tabular-nums}
-:is(.zone-card,.menu-card,.scene-card,.settings-toggle,.compact-direction button,.filter-row button,.channel-row button){transition:border-color .14s ease,background-color .14s ease,box-shadow .14s ease}
+:where(.zone-card):is(.zone-card, .compact-direction button), :where(.menu-card):is(.menu-card, .compact-direction button), :where(.scene-card):is(.scene-card, .compact-direction button), :where(.settings-toggle):is(.settings-toggle, .compact-direction button), :is(.compact-direction button), :is(.filter-row button), :is(.channel-row button){transition:border-color .14s ease,background-color .14s ease,box-shadow .14s ease}
 :is(button,a,input,select,summary):focus-visible{outline:2px solid var(--red);outline-offset:3px}
 .receiver-list summary:focus-visible{outline-offset:-3px;border-radius:16px}
 @media(hover:hover){:is(.menu-card,.scene-card,.settings-toggle,.channel-row button):hover:not(:disabled){border-color:var(--red);box-shadow:0 2px 9px #2025200c}}
 @media(max-width:360px){.channel-row{grid-template-columns:15px 44px minmax(20px,1fr) 44px 22px;gap:3px}}
-@media(prefers-reduced-motion:reduce){:is(.zone-card,.menu-card,.scene-card,.settings-toggle,.compact-direction button,.filter-row button,.channel-row button,.switch i:after){transition:none}}
+@media(prefers-reduced-motion:reduce){:where(.zone-card):is(.zone-card, .compact-direction button), :where(.menu-card):is(.menu-card, .compact-direction button), :where(.scene-card):is(.scene-card, .compact-direction button), :where(.settings-toggle):is(.settings-toggle, .compact-direction button), :is(.compact-direction button), :is(.filter-row button), :is(.channel-row button){transition:none}}
 /* Scope belongs next to a colour or animation, never on the zone overview. */
 .selection{min-width:0}
 .page>.selection{padding:13px;border:1px solid var(--line);border-radius:15px;background:var(--panel)}
-.selection.single-scope{display:flex;align-items:center;gap:10px;min-height:60px;padding:10px 13px;border:1px solid var(--line);border-radius:18px;background:var(--panel)}
-.selection.single-scope .scope-line-icon{display:grid;place-items:center;width:36px;height:36px;flex:none;border-radius:11px;background:var(--soft);color:var(--red)}
-.selection.single-scope .scope-line-icon svg{width:19px;height:19px}
-.selection.single-scope .scope-single-copy{display:grid;gap:2px;min-width:0}
-.selection.single-scope .scope-single-copy b{font-size:12px}
-.selection.single-scope .scope-single-copy small{font-size:10px;color:var(--muted)}
-.receiver-chips .selection-together{gap:8px;border-width:2px;min-height:44px}
-.receiver-chips .selection-together svg{width:34px;height:28px;color:var(--red)}
 .icon-together .together-link{opacity:.65;stroke-width:1.5}
 .icon-together .together-line{fill:currentColor;fill-opacity:.14;stroke-width:1.5}
 .icon-together .together-check{opacity:0;stroke-width:2.2}
-.receiver-chips .selection-together[aria-pressed=true]{border-color:var(--red);background:var(--ink);color:var(--panel)}
-.receiver-chips .selection-together[aria-pressed=true] svg{color:#f5aaa4}
-.selection-together[aria-pressed=true] .together-line{fill-opacity:.65}
-.selection-together[aria-pressed=true] .together-check{opacity:1;stroke:#fff}
 .receiver-chips button[aria-pressed=true]:not(.selection-together){box-shadow:inset 0 0 0 1px var(--red)}
 .receiver-chips button>span{white-space:nowrap}
 /* Individual LED lines live behind a clear, animated disclosure so a long
    installation stays calm until someone chooses to address one line. */
 .selection .receiver-scope-grid{grid-template-columns:minmax(0,1fr)}
-.selection .scope-lines-toggle{grid-column:1/-1;justify-content:flex-start;min-height:64px;padding:10px 12px;border-radius:16px;background:var(--panel);text-align:left;white-space:normal;transition:background-color .2s ease,border-color .2s ease,box-shadow .2s ease,transform .18s ease}
-.selection[data-selection-mode=all] .scope-lines-toggle{border:1px solid color-mix(in srgb,var(--red) 43%,var(--line));background:color-mix(in srgb,var(--red) 6%,var(--panel));color:var(--ink);box-shadow:inset 3px 0 0 var(--red),0 5px 16px rgba(32,34,32,.06)}
-.selection[data-selection-mode=all] .scope-lines-toggle .scope-toggle-icon{background:var(--red);color:#fff}
-.selection[data-selection-mode=all] .scope-lines-toggle .scope-copy small{color:var(--muted)}
-.selection[data-selection-mode=all] .scope-lines-toggle .scope-all-status{display:grid;place-items:center;width:25px;height:25px;flex:none;border-radius:50%;background:color-mix(in srgb,var(--red) 13%,var(--panel));color:var(--red)}
-.selection[data-selection-mode=all] .scope-lines-toggle .scope-all-status .icon{width:15px;height:15px;stroke-width:2.5}
-.selection[data-selection-mode=all] .scope-lines-toggle .scope-toggle-chevron{background:var(--soft);color:var(--ink)}
-.selection[data-selection-mode=all] .scope-lines-toggle[aria-expanded=true] .scope-toggle-chevron{background:#f5e8e6;color:var(--red)}
-body[data-theme=dark] .selection[data-selection-mode=all] .scope-lines-toggle{border-color:color-mix(in srgb,var(--red) 40%,var(--line));background:color-mix(in srgb,var(--red) 10%,var(--panel));box-shadow:inset 3px 0 0 var(--red),0 5px 16px rgba(0,0,0,.18)}
-.selection .scope-toggle-icon{display:grid;place-items:center;width:38px;height:38px;flex:none;border-radius:12px;background:var(--soft);color:var(--red)}
-.selection .scope-toggle-icon svg{width:20px;height:20px}
-.selection .scope-lines-toggle .scope-copy{gap:4px}
-.selection .scope-lines-toggle .scope-option-title{font-size:13px}
-.selection .scope-lines-toggle .scope-copy small{font-size:10px;line-height:1.35}
-.selection .scope-toggle-chevron{display:grid;place-items:center;width:30px;height:30px;flex:none;margin-left:auto;border-radius:50%;background:var(--soft);color:var(--muted);transition:transform .22s ease,background .18s ease}
-.selection .scope-toggle-chevron svg{width:15px;height:15px}
-.selection .scope-lines-toggle[aria-expanded=true] .scope-toggle-chevron{transform:rotate(-90deg);background:#f5e8e6;color:var(--red)}
-.selection .scope-lines-reveal{grid-column:1/-1;display:grid;grid-template-rows:0fr;min-width:0;opacity:0;transition:grid-template-rows .24s ease,opacity .18s ease}
-.selection .scope-lines-reveal.is-open{grid-template-rows:1fr;opacity:1}
-.selection .scope-lines-inner{display:grid;grid-template-columns:minmax(0,1fr);min-height:0;overflow:hidden}
-.selection .scope-choice-label{padding:4px 2px 8px;font-size:10px}
-.selection .scope-lines-reveal .scope-all-choice{display:flex;grid-column:1/-1;width:calc(100% - 4px);min-width:0;min-height:54px;margin:0 2px 8px;padding:8px 10px;border:1px solid var(--line);border-radius:13px;background:var(--panel);color:var(--ink);text-align:left}
-.selection .scope-lines-reveal .scope-all-choice[aria-pressed=true]{border-color:var(--red);background:color-mix(in srgb,var(--red) 12%,var(--panel));color:var(--ink);box-shadow:inset 3px 0 0 var(--red)}
-.selection .scope-lines-reveal .scope-all-choice .scope-copy small{color:color-mix(in srgb,var(--muted) 85%,var(--ink))}
-.selection .scope-lines-reveal .scope-all-choice[aria-pressed=true] .scope-selected-mark{opacity:1;transform:scale(1)}
-.selection .scope-lines-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0;max-height:min(42dvh,360px);overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:0 2px 5px}
-.selection .scope-lines-list .scope-line{position:relative;display:flex;justify-content:flex-start;align-items:center;gap:8px;width:100%;min-width:0;min-height:58px;padding:9px 10px;border:1px solid var(--line);border-radius:13px;background:var(--panel);color:var(--ink);text-align:left;white-space:normal;flex-shrink:1}
-.selection .scope-lines-list .scope-line .scope-copy{display:grid;gap:3px;min-width:0;flex:1}
-.selection .scope-lines-list .scope-line .scope-option-title{font-size:12px;line-height:1.2;overflow-wrap:anywhere}
-.selection .scope-lines-list .scope-line .scope-copy small{font-size:10px;line-height:1.25;color:var(--muted)}
-.selection .scope-lines-list .scope-line[aria-pressed=true]{background:color-mix(in srgb,var(--red) 6%,var(--panel));border-color:var(--red);box-shadow:0 0 0 1px #bf484133;color:var(--ink)}
-.selection .scope-lines-list .scope-line[aria-pressed=true] .scope-selected-mark{opacity:1;transform:scale(1)}
-.selection.has-multiple-selection>header{align-items:flex-start}
-.selection.has-multiple-selection .selection-summary{max-width:62%;padding:4px 8px;border:1px solid #bf484133;border-radius:999px;background:color-mix(in srgb,var(--red) 9%,var(--panel));color:var(--ink);font-size:10px;font-weight:700;line-height:1.35}
-.selection.has-multiple-selection:not([data-selection-mode=all]) .scope-lines-toggle{border-color:color-mix(in srgb,var(--red) 28%,var(--line));background:var(--panel)}
-.selection.has-multiple-selection:not([data-selection-mode=all]) .scope-lines-toggle .scope-toggle-icon{background:color-mix(in srgb,var(--red) 12%,var(--panel))}
-.selection .scope-lines-list .scope-line .scope-number{width:27px;height:27px;border-radius:9px;flex:none}
-.selection .scope-lines-list .scope-line[aria-pressed=true] .scope-number{background:var(--red);color:white}
-.selection .scope-lines-list .scope-line:last-child:nth-child(odd){grid-column:1/-1;width:calc(50% - 4px);justify-self:center}
-.selection .scope-lines-toggle:focus-visible,.selection .scope-lines-list .scope-line:focus-visible{outline:3px solid #bf484155;outline-offset:2px}
-@media(max-width:360px){.selection .scope-lines-list{grid-template-columns:minmax(0,1fr);gap:6px}.selection .scope-lines-list .scope-line{min-height:54px;padding:8px}.selection .scope-lines-list .scope-line .scope-number{width:24px;height:24px}.selection .scope-lines-list .scope-line .scope-option-title{font-size:11px}.selection .scope-lines-list .scope-line .scope-copy small{font-size:9px}.selection .scope-lines-list .scope-line:last-child:nth-child(odd){grid-column:1;width:100%;justify-self:stretch}.selection.has-multiple-selection .selection-summary{max-width:58%;font-size:9px}}
-@media(max-height:700px){.editor-controls .selection .scope-lines-toggle{min-height:56px;padding:7px 9px}.editor-controls .selection .scope-toggle-icon{width:32px;height:32px}.editor-controls .selection .scope-lines-list .scope-line{min-height:50px;padding:7px 8px}}
-@media(prefers-reduced-motion:reduce){.selection .scope-lines-toggle,.selection .scope-toggle-chevron,.selection .scope-lines-reveal{transition:none}}
 /* A sheet owns the gesture: reaching its end must not scroll the page behind it. */
 html:has(dialog[open]){overflow:hidden}
 dialog{overscroll-behavior:contain}
@@ -250,7 +188,7 @@ dialog{overscroll-behavior:contain}
 .control-preview-dock .preview-top{align-items:center;min-height:15px;font-size:9px;transition:min-height .28s ease,font-size .28s ease}
 .control-preview-dock .preview-size-row{max-height:48px;overflow:hidden;opacity:1;transform:translateY(0);transition:max-height .34s cubic-bezier(.22,.61,.36,1),opacity .22s ease,transform .34s cubic-bezier(.22,.61,.36,1),margin .34s ease,padding .34s ease}
 .control-preview-dock:not([data-scrolled=true]) .preview-size-row:has(.preview-size-control[open]){max-height:180px;overflow:visible}
-.control-preview-dock :is(.preview-live-controls,.live-confirmation){max-height:64px;overflow:hidden;opacity:1;transition:max-height .34s cubic-bezier(.22,.61,.36,1),opacity .22s ease,margin .34s ease,padding .34s ease}
+.control-preview-dock .live-confirmation{max-height:64px;overflow:hidden;opacity:1;transition:max-height .34s cubic-bezier(.22,.61,.36,1),opacity .22s ease,margin .34s ease,padding .34s ease}
 .control-preview-dock .preview-summary{max-width:58%;overflow:hidden;text-align:right;text-overflow:ellipsis;white-space:nowrap;color:#d4d9d4}
 .control-preview-dock .preview-wrap canvas{height:76px}
 .control-preview-dock .spatial-preview-wrap{padding-bottom:7px}
@@ -261,7 +199,6 @@ dialog{overscroll-behavior:contain}
 .animation-library-inline .tunnel-guide-compact .tunnel-status strong{font-size:12px}
 .animation-library-inline .tunnel-guide-compact .tunnel-status .button{min-height:44px}
 .control-preview-dock .live-confirmation{min-height:0;margin:0}
-.control-preview-dock .preview-live-controls{padding:2px 4px 5px;font-size:9px}
 .control-preview-dock+.editor-controls{padding-top:7px}
 body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 @media(max-width:700px){
@@ -304,11 +241,11 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 /* Only the visible header gets a backing, so moving content cannot show through
    the zone name, gaps between buttons, or the preview heading. */
 .control-preview-dock[data-scrolled=true] .control-dock-surface{padding-top:4px;background:var(--bg);border-radius:0 0 15px 15px;box-shadow:0 8px 16px -12px #17201980;pointer-events:auto}
-.control-preview-dock[data-scrolled=true] :is(.control-dock-context-line,.control-dock-actions,.preview-wrap){pointer-events:auto}
+.control-preview-dock[data-scrolled=true] .control-dock-context-line, .control-preview-dock[data-scrolled=true] .control-dock-actions, .control-preview-dock[data-scrolled=true] .preview-wrap{pointer-events:auto}
 .control-preview-dock[data-scrolled=true] .control-dock-context-line{margin-bottom:3px}
 .control-preview-dock[data-scrolled=true] .control-dock-actions{margin-bottom:3px}
 .control-preview-dock[data-scrolled=true] .preview-size-row{max-height:0;opacity:0;transform:translateY(-4px);margin:0;padding-block:0;pointer-events:none}
-.control-preview-dock[data-scrolled=true] :is(.preview-live-controls,.live-confirmation){max-height:0;opacity:0;margin:0;padding-block:0;pointer-events:none}
+.control-preview-dock[data-scrolled=true] .live-confirmation{max-height:0;opacity:0;margin:0;padding-block:0;pointer-events:none}
 .control-preview-dock[data-scrolled=true] .preview-wrap{padding:4px 8px 2px;border-radius:12px}
 .control-preview-dock[data-scrolled=true] .preview-top{min-height:12px;font-size:8px}
 /* One stable route between gallery and settings; never rename Effecten into
@@ -378,25 +315,10 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .animation-simple-page .animation-simple-workspace{padding:0;gap:8px}
 .animation-context{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:6px 9px;min-width:0}
 .animation-context>.selection{margin:0;padding:0;min-width:0}
-.animation-context>.selection>header,.animation-context .scope-copy>small,.animation-context .scope-toggle-icon{display:none}
+.animation-context>.selection>header,.animation-context .scope-copy>small{display:none}
 .animation-context .selection .receiver-scope-grid{padding:0;gap:0}
-.animation-context .selection .scope-lines-toggle{min-height:44px;padding:4px 10px!important;border-radius:13px}
-.animation-context .selection[data-selection-mode=all] .scope-lines-toggle{min-height:54px;gap:7px}
-.animation-context .selection[data-selection-mode=all] .scope-toggle-icon{display:grid;width:30px;height:30px;border-radius:9px;background:var(--red);color:#fff}
-.animation-context .selection[data-selection-mode=all] .scope-toggle-icon .icon{width:20px;height:18px}
 .animation-context .selection[data-selection-mode=all] .scope-copy>small{display:block;font-size:10px;line-height:1.25;color:color-mix(in srgb,var(--muted) 92%,var(--ink))}
 .animation-context .scope-option-title{font-size:12px;line-height:1.3}
-.animation-context .selection .scope-toggle-chevron{width:22px;height:22px}
-.animation-context .scope-lines-reveal{grid-column:1/-1}
-.animation-context .scope-lines-reveal.is-open{padding-top:7px}
-.animation-context>.continuous-scope,.animation-context>.single-scope{min-height:44px;padding:7px 9px;border-radius:13px;background:var(--soft);gap:7px}
-.animation-context>.continuous-scope{min-height:52px;border-left-width:3px}
-.animation-context>.continuous-scope>.scope-toggle-icon{width:30px;height:30px}
-.animation-context>.continuous-scope>.scope-toggle-icon .icon{width:21px;height:18px}
-.animation-context>.continuous-scope strong,.animation-context>.single-scope b{font-size:11px;line-height:1.3}
-.animation-context>.continuous-scope small,.animation-context>.single-scope small{display:none}
-.animation-context>.continuous-scope small{display:block}
-.animation-context>.single-scope[data-port-lines]:not([data-port-lines="1"]) small{display:block;font-size:10px;line-height:1.25;color:var(--muted)}
 .animation-context .mixed-note{font-size:10px}
 .animation-context>.power-card{min-height:44px;padding:0;margin:0;border:0;box-shadow:none;background:transparent}
 .animation-context>.power-card>div{display:none}
@@ -410,8 +332,7 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .animation-simple-page .current-effect{padding:6px 13px;gap:8px;border-radius:18px}
 .animation-simple-page .current-effect>div>small{font-size:10px;line-height:1.25}
 .animation-simple-page .current-effect b{font-size:15px;line-height:1.25}
-.dialog-live-preview .dialog-spatial-preview{height:108px}
-#effect-dialog:has(.dialog-spatial-preview) :is(.shared-colour-picker button,.shared-colour-picker input){scroll-margin-block-start:calc(var(--dialog-header-height,64px) + 151px)}
+#effect-dialog:has(.dialog-spatial-preview) :is(.shared-colour-picker button), #effect-dialog:has(.dialog-spatial-preview) :is(.shared-colour-picker input){scroll-margin-block-start:calc(var(--dialog-header-height,64px) + 151px)}
 @media(prefers-reduced-motion:reduce){.animation-gallery-return{transition:none}}
 .animation-daily-controls.card{padding:13px;gap:9px;border-radius:18px}
 .animation-daily-controls>.slider-row{margin:0}
@@ -469,17 +390,10 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .control-preview-dock[data-scrolled=true][data-preview-size=large] .preview-wrap canvas{height:106px!important;transition:height .34s cubic-bezier(.22,.61,.36,1)}
 .control-preview-dock[data-scrolled=true][data-spatial-preview=true][data-preview-size=large] .spatial-preview-wrap canvas{height:190px!important;transition:height .34s cubic-bezier(.22,.61,.36,1)}
 @media(max-height:700px){.control-preview-dock[data-scrolled=true][data-spatial-preview=true][data-preview-size=large] .spatial-preview-wrap canvas{height:164px!important}}
-@media(prefers-reduced-motion:reduce){.editor-grid>.control-preview-dock,.control-dock-surface,.control-preview-dock .control-dock-context-line,.control-preview-dock .control-dock-actions,.control-preview-dock .preview-wrap,.control-preview-dock .preview-top,.control-preview-dock .preview-size-row,.control-preview-dock .preview-live-controls,.control-preview-dock .live-confirmation,.control-preview-dock .preview-wrap canvas{transition:none!important}}
+@media(prefers-reduced-motion:reduce){.editor-grid>.control-preview-dock,.control-dock-surface,.control-preview-dock .control-dock-context-line,.control-preview-dock .control-dock-actions,.control-preview-dock .preview-wrap,.control-preview-dock .preview-top,.control-preview-dock .preview-size-row,.control-preview-dock .live-confirmation,.control-preview-dock .preview-wrap canvas{transition:none!important}}
 .channel-row .channel-number{width:100%;min-width:0;height:44px;padding:2px 3px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);font-size:16px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
 .channel-number::-webkit-inner-spin-button,.channel-number::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
-.scope-line-icon{display:grid;place-items:center;flex:none;width:38px;height:34px;border-radius:10px;background:var(--soft);color:var(--red)}
-.scope-line-icon .icon{width:28px;height:20px;stroke-width:1.85}
-.scope-lines-list .scope-line[aria-pressed=true] .scope-line-icon{background:var(--red);color:#fff}
-.library-filter-block .filter-row button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:48px;padding-inline:10px;font-size:12px}
-.library-filter-block .filter-row button small{display:grid;place-items:center;min-width:22px;height:22px;padding:0 5px;border-radius:999px;background:var(--soft);color:var(--muted);font-size:10px;font-variant-numeric:tabular-nums}
-.library-filter-block .filter-row button[aria-selected=true] small{background:#ffffff24;color:inherit}
 .animation-family-card{overflow:hidden;border:1px solid var(--line);border-radius:17px;background:var(--panel);box-shadow:0 2px 8px #20252005}
-.animation-family-card.is-expanded{border-color:#c94e4680;box-shadow:0 0 0 1px #c94e4620,0 4px 14px #2025200a}
 .animation-family-trigger{min-height:118px}
 .family-kicker{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .family-variants-panel{padding:12px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--soft) 42%,var(--panel))}
@@ -550,8 +464,7 @@ body[data-theme=dark] .control-preview-dock{background:var(--bg)}
 .control-context .section-tabs button,.control-context .receiver-chips button{min-height:44px}
 body[data-theme=dark] .stand-scenes,body[data-theme=dark] .stand-scene-card,body[data-theme=dark] .stand-scenes-empty,body[data-theme=dark] .stand-scenes-entry,body[data-theme=dark] .colour-manager-row{background:var(--panel);color:var(--ink)}
 body[data-theme=dark] .family-variants-panel{background:color-mix(in srgb,var(--soft) 65%,var(--panel))}
-body[data-theme=dark] .scope-lines-list .scope-line[aria-pressed=true] .scope-line-icon{color:#fff}
-@media(max-width:360px){.animation-family-trigger{grid-template-columns:92px minmax(0,1fr);gap:8px;min-height:102px;padding:8px}.family-variant-grid{grid-template-columns:1fr}.family-variant-card{min-height:0}.family-variant-card canvas{height:68px}.library-filter-block .filter-row{display:flex;flex-wrap:wrap}.library-filter-block .filter-row button{flex:1 1 calc(50% - 6px);min-width:calc(50% - 6px)}.stand-scenes .section-heading{align-items:flex-start}.stand-scenes .section-heading .text-button{padding-inline:4px;font-size:11px}.stand-scene-card .scene-mosaic{width:64px}.stand-scenes-compact .stand-scene-card .scene-mosaic{width:56px}}
+@media(max-width:360px){.animation-family-trigger{grid-template-columns:92px minmax(0,1fr);gap:8px;min-height:102px;padding:8px}.family-variant-grid{grid-template-columns:1fr}.family-variant-card{min-height:0}.family-variant-card canvas{height:68px}.stand-scenes .section-heading{align-items:flex-start}.stand-scenes .section-heading .text-button{padding-inline:4px;font-size:11px}.stand-scene-card .scene-mosaic{width:64px}.stand-scenes-compact .stand-scene-card .scene-mosaic{width:56px}}
 @media(prefers-reduced-motion:reduce){.animation-family-card,.stand-scene-card,.stand-scenes-empty,.stand-scenes-entry{transition:none}}
 .channel-number{-moz-appearance:textfield;appearance:textfield}
 @media(max-width:360px){.channel-row{grid-template-columns:40px 38px minmax(40px,1fr) 38px 50px;gap:3px}.channel-row button{height:44px}}
@@ -573,15 +486,6 @@ body[data-theme=dark] .scope-lines-list .scope-line[aria-pressed=true] .scope-li
 .receiver-connections-content,.receiver-manage-content{padding:0 10px 12px;min-width:0}
 .receiver-manage-content>.text-button{width:100%;text-align:left;min-height:44px}
 .receiver-manage-content .receiver-service-section,.receiver-manage-content .receiver-danger-section{padding:12px;margin-top:10px}
-.combined-receiver-order>[data-order-receiver]{display:block;padding:0}
-.combined-receiver-order>[data-order-receiver]>summary{display:grid;grid-template-columns:26px 23px minmax(0,1fr) 64px 10px;padding:10px 8px;gap:5px;min-height:96px}
-.combined-receiver-order .order-handle{grid-row:auto;min-height:58px;padding:0}
-.combined-receiver-order .order-number{width:23px;height:23px}
-.combined-receiver-order .order-identify{flex-direction:column;width:64px;padding:5px 2px;font-size:9px}
-.combined-receiver-order small{margin-left:0}
-.combined-receiver-order .receiver-details{padding-inline:10px}
-.combined-receiver-order .receiver-heading-copy b{font-size:12px!important}
-.combined-receiver-order .receiver-heading-copy small{font-size:10px!important}
 .layout-receiver-section{min-width:0}
 .zone-entry{position:relative}
 .zone-entry .zone-card{border-radius:20px;padding-right:45px}
@@ -597,48 +501,16 @@ body[data-theme=dark] .scope-lines-list .scope-line[aria-pressed=true] .scope-li
 .stand-overview-row .icon{flex:none}
 .receiver-zone-row>span:nth-child(2){flex:1;min-width:0}
 .control-workspace{display:grid;gap:12px;min-width:0;padding:14px;border:1px solid var(--line);border-radius:19px;background:var(--panel)}
-.control-workspace-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-.control-workspace-heading h2{font-size:17px;line-height:1.3}
-.control-workspace-heading p{margin-top:4px;color:var(--muted);font-size:12px;line-height:1.5}
 .control-mode-tabs{position:relative;z-index:1}
 .control-mode-tabs button{min-height:48px;font-size:13px}
 .control-mode-tabs button[aria-pressed=true]{background:var(--ink);color:var(--panel);box-shadow:0 2px 5px #00000014}
 .control-mode-tabs button .icon{width:18px;height:18px}
 .control-mode-panel{display:grid;gap:12px;min-width:0}
 .bediening-workspace{display:grid;gap:13px;min-width:0;padding-top:3px}
-.bediening-workspace-heading{display:flex;align-items:center;gap:10px;padding:4px 2px}
-.bediening-workspace-heading>div:last-child{min-width:0}
-.bediening-workspace-heading h2{font-size:15px;line-height:1.35}
-.bediening-workspace-heading p{margin-top:3px;color:var(--muted);font-size:11px;line-height:1.45}
-.bediening-workspace-heading .menu-icon{width:38px;height:38px;border-radius:12px;color:var(--red)}
-.bediening-workspace-heading .menu-icon .icon{width:18px;height:18px}
 .bediening-workspace>.selection{margin:0;border-radius:16px;background:var(--bg)}
 .control-animation-choices{display:grid;gap:11px;min-width:0}
 .animation-library-inline{display:grid;gap:12px;min-width:0}
-.current-animation-shortcut{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;min-height:66px;padding:10px 12px;border:1px solid var(--line);border-radius:15px;background:var(--panel);text-align:left}
-.current-animation-shortcut>span:nth-child(2){display:grid;gap:3px;min-width:0}
-.current-animation-shortcut>span:nth-child(2) small{color:var(--muted);font-size:9px;font-weight:700;letter-spacing:.07em}
-.current-animation-shortcut>span:nth-child(2) b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
-.current-animation-edit{display:flex;align-items:center;gap:3px;color:var(--red);font-size:11px;font-weight:650;white-space:nowrap}
-.current-animation-edit .icon{width:14px;height:14px}
-.animation-gallery-entry{display:grid;gap:10px;padding:13px;border-radius:15px}
-.animation-gallery-entry>div{display:grid;gap:4px}
-.animation-gallery-entry b{font-size:14px}
-.animation-gallery-entry small{font-size:11px;line-height:1.45;color:var(--muted)}
-.animation-gallery-entry>.button{margin:0;min-height:48px}
 .preview-selectable canvas{cursor:pointer;touch-action:manipulation}
-.preview-line-hint{padding:0 4px 8px;color:#b2b8b2;font-size:10px;line-height:1.4;pointer-events:none}
-.control-saved-animations{padding:12px;border-radius:15px}
-.control-saved-animations .section-heading{margin-bottom:9px}
-.control-saved-animations .section-heading h3{font-size:13px}
-.control-saved-animations .preset-card{padding:10px;border-radius:13px}
-.control-saved-animations .preset-card .button{font-size:11px}
-.library-filter-block{display:grid;gap:7px;min-width:0}
-.library-filter-heading{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-.library-filter-heading b{font-size:13px}
-.library-filter-heading small{font-size:10px;white-space:nowrap}
-.library-filter-block .filter-row{margin:0 -4px;padding:1px 4px 5px;scroll-snap-type:x proximity}
-.library-filter-block .filter-row button{scroll-snap-align:start}
 .animation-family-section{padding-top:2px}
 .animation-family-heading{align-items:flex-start}
 .animation-family-heading>div{min-width:0}
@@ -646,14 +518,10 @@ body[data-theme=dark] .scope-lines-list .scope-line[aria-pressed=true] .scope-li
 .animation-family-heading p{margin-top:3px;color:var(--muted);font-size:11px;line-height:1.45}
 .animation-family-heading>small{padding:3px 7px;border-radius:20px;background:var(--soft);font-variant-numeric:tabular-nums}
 .animation-category-note{padding:9px 11px;border:1px solid var(--line);border-left:3px solid var(--red);border-radius:13px;background:var(--soft);color:var(--muted);font-size:10px;line-height:1.5}
-.animation-requirement{display:grid;gap:9px}
-.animation-requirement h2{font-size:15px}
-.animation-requirement p{font-size:12px}
-.animation-requirement .button{justify-self:start;margin:0}
 body[data-theme=dark] .animation-family-heading>small{background:var(--soft);color:var(--ink)}
 body[data-theme=dark] .control-mode-tabs button[aria-pressed=true]{background:#edece5;color:#242720}
 .toast{pointer-events:none}
-@media(max-width:360px){.control-workspace{padding:11px}.control-mode-tabs button{gap:5px;padding-inline:7px;font-size:12px}.control-starter-grid .effect-card canvas{height:60px}.library-filter-heading{align-items:flex-start;flex-direction:column;gap:2px}}
+@media(max-width:360px){.control-mode-tabs button{gap:5px;padding-inline:7px;font-size:12px}}
 @media(max-width:360px){.receiver-zone-row{gap:9px;padding:12px}}
 [data-stand-overview]>.button{margin-top:12px}
 
@@ -669,39 +537,10 @@ html.native-app .navigation{bottom:max(4px,calc(env(safe-area-inset-bottom) - 14
 
 /* The selected scope stays obvious, but no longer takes more height than a
    comfortable tap needs on a small phone. Individual lines remain in a drawer. */
-.selection .scope-lines-toggle{min-height:52px;padding:7px 9px;border-radius:13px}
-.selection .scope-toggle-icon{width:32px;height:32px;border-radius:10px}
-.selection .scope-lines-toggle .scope-copy{gap:2px}
-.selection .scope-lines-toggle .scope-option-title{font-size:12px}
-.selection .scope-lines-toggle .scope-copy small{font-size:9px}
-.selection .scope-toggle-chevron{width:26px;height:26px}
-@media(max-width:360px){.selection .scope-lines-toggle{min-height:48px;padding:6px 8px}.selection .scope-toggle-icon{width:30px;height:30px}}
 
 /* Keep physical SPI outputs legible without creating another settings menu.
    These are read-only summaries of the confirmed model, not port selectors. */
-html body .ledline-draft-order>li{grid-template-columns:minmax(32px,auto) 34px minmax(0,1fr);gap:10px;padding:12px;border-radius:18px}
-html body .ledline-draft-order .order-number{width:auto;min-width:32px;height:32px;padding-inline:5px;border-radius:10px;font-size:11px;font-variant-numeric:tabular-nums}
-html body .ledline-draft-order .scope-copy{gap:4px}
-html body .ledline-draft-order .scope-option-title{font-size:13px;line-height:1.3}
-html body .ledline-draft-order .scope-copy small{font-size:11px;line-height:1.4}
-html body .ledline-output-overview{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:2px}
 html body .ledline-output{position:relative;display:grid;gap:5px;min-width:0;padding:10px;border:1px solid var(--v40-edge,var(--line));border-radius:12px;background:var(--v40-inner,var(--soft));color:var(--ink)}
-html body .ledline-output-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;line-height:1.2}
-html body .ledline-output-heading b{font-size:12px;font-weight:750}
-html body .ledline-output-heading small{display:grid;place-items:center;min-width:20px;height:20px;padding:0 4px;border-radius:6px;background:var(--glass-solid,var(--panel));font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
-html body .ledline-output-strip{position:relative;height:5px;margin:3px 4px;border-radius:999px;background:color-mix(in srgb,var(--action-ink,var(--red)) 22%,var(--soft))}
-html body .ledline-output-strip i{position:absolute;top:-2px;left:-2px;width:9px;height:9px;border:2px solid var(--glass-solid,var(--panel));border-radius:50%;background:var(--action-ink,var(--red))}
-html body .ledline-output[data-start-side=right] .ledline-output-strip i{left:auto;right:-2px}
-html body .ledline-output-pixels{font-size:12px;font-weight:650;font-variant-numeric:tabular-nums}
-html body .ledline-output-side{font-size:10px;line-height:1.3;color:var(--muted)}
-html body .ledline-output-overview[data-output-count="1"]{grid-template-columns:minmax(0,1fr)}
-html body .ledline-output-overview[data-output-count="1"] .ledline-output{grid-template-columns:24px minmax(18px,1fr) auto auto;align-items:center;gap:8px}
-html body .ledline-output-overview[data-output-count="1"] .ledline-output-heading small{display:none}
-html body .ledline-draft-order .ledline-order-tools{margin-top:2px;gap:8px}
-html body .ledline-draft-order .ledline-row-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:8px;width:100%}
-html body .ledline-draft-order .ledline-row-actions button{width:100%;min-width:0;min-height:44px;justify-content:center;padding:8px;border-radius:12px}
-html body .ledline-draft-order .ledline-row-actions button span{font-size:11px;line-height:1.3}
-@media(min-width:700px){html body .ledline-output-overview{grid-template-columns:repeat(4,minmax(0,1fr))}}
 /* Updating a saved scene captures today's light, not its old snapshot. Keep
    that distinction visible at the save action even with selected zones. */
 html body .scene-draft-page.is-editing .scene-save-bar>small{display:block;line-height:1.4}

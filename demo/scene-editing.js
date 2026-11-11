@@ -60,7 +60,7 @@
     catch(error){fail(error.message);}
   }
   function begin(model,input,{zoneId=null}={}){
-    const original=Scenes.validate(input);requireCompatible(model,original,true);validateShared(model,original);
+    const original=Scenes.reconcile(model,input).scene;requireCompatible(model,original,true);validateShared(model,original); // SCENE-JOIN: newcomers load and save with the scene
     if(zoneId!==null&&!original.zones.some(zone=>zone.id===zoneId))fail('Deze zone hoort niet bij de opgeslagen scène.');
     const wholeStandLoaded=zoneId===null||shared(original);
     const selected=wholeStandLoaded?original:{...original,zones:original.zones.filter(zone=>zone.id===zoneId)};
@@ -161,7 +161,7 @@
     return Scenes.validate({...original,id,name:name===undefined?original.name:name});
   }
   function activation(model,input){
-    const scene=Scenes.validate(input);requireCompatible(model,scene,true);validateShared(model,scene);
+    const scene=Scenes.reconcile(model,input).scene;requireCompatible(model,scene,true);validateShared(model,scene); // SCENE-JOIN: newcomers are sent too
     return {model:Scenes.apply(model,scene),receiverIds:scene.zones.flatMap(zone=>zone.receivers.map(receiver=>receiver.id))};
   }
   return Object.freeze({begin,record,build,recordPresentation,acceptPresentation,loadZone,loadAll,variation,activation});

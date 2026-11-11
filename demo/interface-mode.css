@@ -49,7 +49,6 @@ html.interface-polish body[data-interface-mode="basic"] .basic-animation-editor 
 html.interface-polish body[data-interface-mode="basic"] .basic-animation-editor .palette-colour > span { width: 30px; height: 30px; flex: 0 0 30px; }
 html.interface-polish body[data-interface-mode="basic"] .basic-animation-editor .palette-item:has(.palette-remove) .palette-colour { padding-right: 48px; }
 html.interface-polish body[data-interface-mode="basic"] .basic-playback { display: grid; gap: 18px; }
-html.interface-polish body[data-interface-mode="basic"] .basic-colours > h3 { margin: 0 0 12px; }
 html.interface-polish body[data-interface-mode="basic"] :is(#main, #effect-dialog) .v50-white-mix-hint,
 html.interface-polish body[data-interface-mode="basic"] :is(#main, #effect-dialog) .warmth-help { display: none; }
 @media (max-width: 359px) {

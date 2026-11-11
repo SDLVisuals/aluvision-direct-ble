@@ -4,6 +4,7 @@
   // Explicit presentation copy keyed by stable category/group IDs. These values
   // never replace recipe names, effect IDs, classification, state or wire data.
   const categories={
+    gradient:['Verloop','Gradient','Dégradé','Verlauf','Je eigen kleurverloop beweegt over je ledlines.','Your own colour gradient moves along your LED lines.','Votre propre dégradé se déplace sur vos lignes LED.','Dein eigener Farbverlauf bewegt sich über deine LED-Linien.'],
     whole:['Kleur & sfeer','Colour & mood','Couleur et ambiance','Farbe und Stimmung','Kleur of helderheid verandert tegelijk op alle ledlines.','Colour or brightness changes on all LED lines together.','La couleur ou la luminosité change sur toutes les lignes LED en même temps.','Farbe oder Helligkeit ändern sich auf allen LED-Linien gleichzeitig.'],
     pixels:['Bewegend licht','Moving light','Lumière en mouvement','Bewegtes Licht','Beweging over pixels: bijvoorbeeld golven of lopend licht.','Movement across pixels, such as waves or running light.','Des mouvements sur les pixels, comme des vagues ou une lumière défilante.','Bewegung über Pixel, zum Beispiel Wellen oder Lauflicht.'],
     tunnel:['Tunnel','Tunnel','Tunnel','Tunnel','Licht reist tussen twee of meer ledlines.','Light travels between two or more LED lines.','La lumière se déplace entre deux lignes LED ou plus.','Licht wandert zwischen zwei oder mehr LED-Linien.'],

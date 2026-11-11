@@ -132,7 +132,6 @@
   function esc(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
   function hex(rgb){return '#'+rgb.map(v=>v.toString(16).padStart(2,'0')).join('');}
   // CSS encodes display RGB; preview state and wire channels stay linear.
-  function screenHex(rgb){return Colour.screenHex(rgb);}
   function referencePlan({count,type='RGBW',view='normal',layout='stacked'}){
     const colours=Identification.positionColours(count),spi=type==='SPI',numbers={};
     const receivers=colours.map((colour,index)=>{

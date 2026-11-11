@@ -74,6 +74,6 @@ body[data-theme=dark] .receiver-product-caption strong{color:#f4f3f1!important}
 html body .stand-animation-preview.is-compact .stand-animation-zone-label{display:grid;gap:2px;justify-items:start;min-width:0}
 html body .stand-animation-preview.is-compact .stand-animation-zone-label>b{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Dark theme: violet and red accent text was too faint on dark surfaces. */
-body[data-theme=dark] :is(.family-detail-category,.animation-start-action,.animation-type-badge){color:#c4b0f5!important}
-body[data-theme=dark] :is(.scene-zone-edit-label,.scene-open-label,.ui606-scene-card .scene-open-label i,.scene-card-copy i){color:#f19a90!important}
+/*c140-sel:c104-polish.css*/body[data-theme=dark] .family-detail-category, body[data-theme=dark] .animation-start-action, body[data-theme=dark] .animation-type-badge{color:#c4b0f5!important}
+body[data-theme=dark] :where(.scene-zone-edit-label):is(.scene-zone-edit-label, .ui606-scene-card .scene-open-label i), body[data-theme=dark] :where(.scene-open-label):is(.scene-open-label, .ui606-scene-card .scene-open-label i), body[data-theme=dark] :is(.ui606-scene-card .scene-open-label i), body[data-theme=dark] :where(.scene-card-copy i):is(.scene-card-copy i, .ui606-scene-card .scene-open-label i){color:#f19a90!important}
 body[data-theme=dark] .stand-scene-card i{color:#f19a90!important}

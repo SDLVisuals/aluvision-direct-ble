@@ -398,6 +398,7 @@
     ['Wijziging opslaan…','Saving change…','Enregistrement de la modification…','Änderung speichern…'],
     ['Verbinding controleren','Check connection','Vérifier la connexion','Verbindung prüfen'],
     ['Stand openen','Open booth','Ouvrir le stand','Stand öffnen'],
+    ['Even wachten… een ander toestel is nog bezig met deze receiver.','One moment… another device is still working on this receiver.','Un instant… un autre appareil utilise encore ce récepteur.','Einen Moment… ein anderes Gerät arbeitet noch an diesem Receiver.'],
     ['Breedte','Width','Largeur','Breite'],
     ['Aantal lichtpunten','Number of light points','Nombre de points lumineux','Anzahl der Lichtpunkte'],
     ['Staart','Trail','Traînée','Schweif'],
@@ -462,7 +463,7 @@
     ['Kies je stand','Choose your booth','Choisissez votre stand','Wähle deinen Stand'],
     ['Nu geopend','Currently open','Actuellement ouvert','Gerade geöffnet'],
     ['Taal en thema herstellen?','Reset language and theme?','Rétablir la langue et le thème ?','Sprache und Design zurücksetzen?'],
-    ['Stelt Nederlands en het lichte thema in.','Sets Dutch and the light theme.','Définit le néerlandais et le thème clair.','Stellt Niederländisch und das helle Design ein.'],
+    ['Stelt Nederlands en het automatische thema in.','Sets Dutch and the automatic theme.','Définit le néerlandais et le thème automatique.','Stellt Niederländisch und das automatische Design ein.'], // C138ui-18: the reset sets theme:'system'
     ['Je stand en receivers blijven ongewijzigd.','Your booth and receivers stay unchanged.','Votre stand et vos récepteurs restent inchangés.','Dein Stand und deine Receiver bleiben unverändert.'],
     ['Taal en thema herstellen','Reset language and theme','Rétablir la langue et le thème','Sprache und Design zurücksetzen'],
     ['Taal en thema hersteld. Je installatie en opgeslagen licht blijven bewaard.','Language and theme reset. Your installation and saved lighting are preserved.','Langue et thème rétablis. Votre installation et votre éclairage enregistré sont conservés.','Sprache und Design zurückgesetzt. Deine Installation und dein gespeichertes Licht bleiben erhalten.'],
@@ -735,6 +736,12 @@
   ["Doorloop starten","Start walkthrough","Lancer le parcours","Durchlauf starten"],
   ["Kanten apart aanpassen kan altijd nog via de receiver.","You can still adjust the directions separately from the receiver page.","Vous pouvez toujours ajuster les sens séparément depuis le récepteur.","Die Richtungen kannst du jederzeit noch separat über den Receiver anpassen."],
   ["Laatste stap: zet de ledlines in de juiste volgorde en start daarna de doorloop.","Last step: put the LED lines in the right order, then start the walkthrough.","Dernière étape : placez les lignes LED dans le bon ordre, puis lancez le parcours lumineux.","Letzter Schritt: Bringe die LED-Linien in die richtige Reihenfolge und starte dann den Durchlauf."],
+  // C127 copy: removing a receiver that does not answer (the main receiver removes it alone).
+  ["Deze receiver is nu niet bereikbaar. Hij wordt verwijderd en vergeet de stand zodra hij weer aan gaat.","This receiver is not reachable right now. It will be removed and forgets the stand as soon as it is switched on again.","Ce récepteur n’est pas joignable pour le moment. Il sera retiré et oubliera le stand dès qu’il sera rallumé.","Dieser Receiver ist gerade nicht erreichbar. Er wird entfernt und vergisst den Stand, sobald er wieder eingeschaltet wird."],
+  ["Verwijderd. Zodra de receiver weer aan gaat, vergeet hij deze stand en kun je hem opnieuw toevoegen.","Removed. As soon as the receiver is switched on again it forgets this stand, and you can add it again.","Retiré. Dès que le récepteur est rallumé, il oublie ce stand et vous pouvez l’ajouter à nouveau.","Entfernt. Sobald der Receiver wieder eingeschaltet wird, vergisst er diesen Stand, und du kannst ihn erneut hinzufügen."],
+  // C127 copy: a receiver that did not answer at the last stand load (shown from this phone's last copy).
+  ["Even niet bereikbaar","Temporarily unreachable","Momentanément injoignable","Gerade nicht erreichbar"],
+  ["Deze receiver is even niet bereikbaar. Zodra hij weer aan staat, kun je dit aanpassen.","This receiver is temporarily unreachable. You can change this as soon as it is switched on again.","Ce récepteur est momentanément injoignable. Vous pourrez modifier cela dès qu’il sera rallumé.","Dieser Receiver ist gerade nicht erreichbar. Sobald er wieder eingeschaltet ist, kannst du das ändern."],
   ];
   const rows=Object.create(null);
   for(const row of entries){if(!Array.isArray(row)||row.length!==4||row.some(value=>typeof value!=='string'))throw Error('UI_COPY_ROW');if(Object.prototype.hasOwnProperty.call(rows,row[0])){if(JSON.stringify(rows[row[0]])!==JSON.stringify(row))throw Error('UI_COPY_DUPLICATE');continue;}rows[row[0]]=Object.freeze([...row]);}
@@ -780,6 +787,45 @@
   rows["animationName:spi-flow-160"]=Object.freeze(["Vloeiende lijnkleuren","Line Smooth Transition","Transitions douces entre les lignes","Sanfte Linienübergänge"]);
   rows["animationName:spi-alternate-165"]=Object.freeze(["Afwisselende tunnelbanen","Tunnel Alternating Lines","Lignes alternées du tunnel","Abwechselnde Tunnellinien"]);
   rows["animationName:spi-gradient-173"]=Object.freeze(["Kleuren doorgeven in de tunnel","Tunnel Colour Relay","Relais de couleurs dans le tunnel","Farbweitergabe im Tunnel"]);
+  // SPIANIM: the new SPI animations (firmware AluvisionSpiAnimV1.h).
+  rows["animationName:spi-gradient-210"]=Object.freeze(["Verloop in beweging","Moving gradient","Dégradé en mouvement","Bewegter Verlauf"]);
+  rows["v50AnimationGroup:gradient:gradientmotion:title"]=Object.freeze(["Verloop in beweging","Moving gradient","Dégradé en mouvement","Bewegter Verlauf"]);
+  rows["v50AnimationGroup:gradient:gradientmotion:summary"]=Object.freeze(["Je eigen verloop schuift, golft, ademt of krijgt een lichtkop.","Your own gradient slides, sways, breathes or gets a light head.","Votre propre dégradé glisse, ondule, respire ou reçoit une tête lumineuse.","Dein eigener Verlauf gleitet, wogt, atmet oder bekommt einen Lichtkopf."]);
+  rows["v50AnimationGroup:pixels:gradientmotion:title"]=Object.freeze(["Verloop in beweging","Moving gradient","Dégradé en mouvement","Bewegter Verlauf"]);
+  rows["v50AnimationGroup:pixels:gradientmotion:summary"]=Object.freeze(["Je eigen verloop schuift, golft, ademt of krijgt een lichtkop.","Your own gradient slides, sways, breathes or gets a light head.","Votre dégradé glisse, ondule, respire ou reçoit une tête lumineuse.","Ihr eigener Verlauf gleitet, wogt, atmet oder bekommt einen Lichtkopf."]);
+  // SPIANIM: the Beweging card of the gradient editor.
+  rows["Beweging"]=Object.freeze(["Beweging","Motion","Mouvement","Bewegung"]);
+  rows["Laat dit verloop bewegen"]=Object.freeze(["Laat dit verloop bewegen","Let this gradient move","Animer ce dégradé","Diesen Verlauf bewegen"]);
+  rows["Laat dit verloop bewegen: schuiven, golven, ademen of een lichtkop."]=Object.freeze(["Laat dit verloop bewegen: schuiven, golven, ademen of een lichtkop.","Let this gradient move: slide, sway, breathe or a light head.","Animez ce dégradé : glisser, onduler, respirer ou une tête lumineuse.","Diesen Verlauf bewegen: gleiten, wogen, atmen oder ein Lichtkopf."]);
+  rows["Het verloop beweegt op alle gekozen ledlines tegelijk."]=Object.freeze(["Het verloop beweegt op alle gekozen ledlines tegelijk.","The gradient moves on all chosen ledlines at the same time.","Le dégradé bouge en même temps sur toutes les lignes LED choisies.","Der Verlauf bewegt sich gleichzeitig auf allen gewählten LED-Linien."]);
+  rows["Soort beweging"]=Object.freeze(["Soort beweging","Kind of motion","Type de mouvement","Art der Bewegung"]);
+  // C139ui-4: Doorlopend verloop (the gradient runs round: the end flows back into the start).
+  rows["Doorlopend verloop"]=Object.freeze(["Doorlopend verloop","Continuous gradient","Dégradé continu","Durchgehender Verlauf"]);
+  rows["Verloop in beweging"]=Object.freeze(["Verloop in beweging","Moving gradient","Dégradé en mouvement","Bewegter Verlauf"]); // C139ui-6
+  rows["Het einde loopt over in het begin, voor ledlines die rondlopen."]=Object.freeze(["Het einde loopt over in het begin, voor ledlines die rondlopen.","The end flows back into the start, for ledlines that run all the way round.","La fin se fond dans le début, pour les lignes LED qui font le tour.","Das Ende geht in den Anfang über, für LED-Linien, die rundum laufen."]);
+  rows["Kan met acht kleuren niet: haal er één weg."]=Object.freeze(["Kan met acht kleuren niet: haal er één weg.","Not possible with eight colours: remove one.","Impossible avec huit couleurs : retirez-en une.","Mit acht Farben nicht möglich: entferne eine."]);
+  rows["Bij een doorlopend verloop zijn zeven kleuren het maximum."]=Object.freeze(["Bij een doorlopend verloop zijn zeven kleuren het maximum.","Seven colours is the maximum for a continuous gradient.","Sept couleurs au maximum pour un dégradé continu.","Bei einem durchgehenden Verlauf sind sieben Farben das Maximum."]);
+  rows["Schuiven"]=Object.freeze(["Schuiven","Slide","Glisser","Gleiten"]);
+  rows["Golven"]=Object.freeze(["Golven","Sway","Onduler","Wogen"]);
+  rows["Ademen"]=Object.freeze(["Ademen","Breathe","Respirer","Atmen"]);
+  rows["Lichtkop"]=Object.freeze(["Lichtkop","Light head","Tête lumineuse","Lichtkopf"]);
+  rows["Richting van de overloop"]=Object.freeze(["Richting van de overloop","Direction of the flow","Sens du fondu","Richtung des Übergangs"]);
+  rows["Naar links"]=Object.freeze(["Naar links","To the left","Vers la gauche","Nach links"]);
+  rows["Naar rechts"]=Object.freeze(["Naar rechts","To the right","Vers la droite","Nach rechts"]);
+  rows["Heen en weer"]=Object.freeze(["Heen en weer","Back and forth","Aller-retour","Hin und her"]);
+  rows["Zachtheid"]=Object.freeze(["Zachtheid","Softness","Douceur","Weichheit"]);
+  rows["Staart"]=Object.freeze(["Staart","Tail","Traîne","Schweif"]);
+  if(!rows["Snelheid"])rows["Snelheid"]=Object.freeze(["Snelheid","Speed","Vitesse","Geschwindigkeit"]);
+  rows["animationName:spi-mirror-200"]=Object.freeze(["Ontmoeting","Meeting lights","Rencontre lumineuse","Lichtbegegnung"]);
+  rows["animationName:spi-sparkle-201"]=Object.freeze(["Lichtregen","Light rain","Pluie de lumière","Lichtregen"]);
+  rows["animationName:spi-wave-202"]=Object.freeze(["Hartslag","Heartbeat","Battement de cœur","Herzschlag"]);
+  rows["animationName:spi-comet-203"]=Object.freeze(["Vuurpijl","Rocket","Fusée","Feuerwerksrakete"]);
+  rows["animationName:spi-flow-204"]=Object.freeze(["Noorderlicht","Northern lights","Aurore boréale","Nordlicht"]);
+  rows["v50AnimationDescription:spi-mirror-200"]=Object.freeze(["Twee lichten komen van beide kanten, kruisen elkaar in het midden en lopen door.","Two lights come from both ends, cross in the middle and carry on.","Deux lumières partent des deux extrémités, se croisent au milieu et continuent.","Zwei Lichter kommen von beiden Enden, kreuzen sich in der Mitte und laufen weiter."]);
+  rows["v50AnimationDescription:spi-sparkle-201"]=Object.freeze(["Zachte lichtdruppels vallen over de ledline en doven rustig uit.","Soft drops of light fall along the ledline and fade out gently.","De douces gouttes de lumière glissent le long de la ligne LED et s’éteignent doucement.","Sanfte Lichttropfen gleiten über die LED-Linie und verblassen ruhig."]);
+  rows["v50AnimationDescription:spi-wave-202"]=Object.freeze(["Een dubbele lichtpuls loopt als een hartslag over de ledline.","A double pulse of light runs along the ledline like a heartbeat.","Une double impulsion lumineuse parcourt la ligne LED comme un battement de cœur.","Ein doppelter Lichtpuls läuft wie ein Herzschlag über die LED-Linie."]);
+  rows["v50AnimationDescription:spi-comet-203"]=Object.freeze(["Een licht schiet omhoog, waaiert uit naar beide kanten en dooft uit.","A light shoots up, fans out to both sides and fades away.","Une lumière s’élance, s’ouvre des deux côtés et s’éteint.","Ein Licht schießt hoch, fächert nach beiden Seiten auf und verglimmt."]);
+  rows["v50AnimationDescription:spi-flow-204"]=Object.freeze(["Trage lichtlagen schuiven over elkaar, zoals noorderlicht.","Slow layers of light slide over each other, like northern lights.","Des couches de lumière lentes glissent les unes sur les autres, comme une aurore boréale.","Langsame Lichtschichten gleiten übereinander, wie Nordlicht."]);
   rows["animationName:spi-mirror-179"]=Object.freeze(["Tunnelportaal","Tunnel Portal","Portail du tunnel","Tunnelportal"]);
   rows["animationName:spi-sequence-180"]=Object.freeze(["Kleurstappen door de tunnel","Tunnel Colour Steps","Étapes de couleur dans le tunnel","Farbschritte im Tunnel"]);
   rows["animationName:spi-line-breathe-18"]=Object.freeze(["Dubbele puls","Double Pulse","Double pulsation","Doppelter Puls"]);

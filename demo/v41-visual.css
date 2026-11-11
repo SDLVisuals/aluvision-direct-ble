@@ -164,8 +164,7 @@ html.interface-polish body .scenes-page .scene-list > .empty h2 {
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
-html.interface-polish body :is(.receiver-empty-card, .zone-start-card, .stand-empty-zones) p,
-html.interface-polish body .scenes-page .scene-list > .empty p {
+/*c140-sel:v41-visual.css*/html.interface-polish body .receiver-empty-card p, html.interface-polish body .zone-start-card p, html.interface-polish body .stand-empty-zones p, html.interface-polish body .scenes-page .scene-list > .empty p{
   max-width: 30em;
   margin-inline: auto;
   color: var(--muted);
