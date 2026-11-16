@@ -573,8 +573,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 11906,
-      "sha256": "bb03b7004dcef5f814774c08cec248befd5d9caa1571f4cf4afcd0c1121610b0"
+      "bytes": 2555,
+      "sha256": "9951284a263ef68a1bf82d3a5d59ffc621afcdf8ed90d77a4c68d2b6aa9a4bec"
     },
     {
       "path": "installation-libraries.js",
@@ -1095,6 +1095,951 @@
       "path": "web-demo-service.js",
       "bytes": 5876,
       "sha256": "f05d6a7665341abd4ed62b5c33e0e362ed4b30bdec740c554e0d8c6dac32a3d3"
+    },
+    {
+      "path": "web-gastheer.js",
+      "bytes": 15251,
+      "sha256": "69bf6dbc983816a7f338d879b82590e215f4f721bff3f9ac9ea05c052385f306"
+    },
+    {
+      "path": "flutter_bootstrap.js",
+      "bytes": 13430,
+      "sha256": "7fc1f80b0f81c28d6ba5a99542c81e776621747536d3d8a82f1e6eb4fb2b6618"
+    },
+    {
+      "path": "flutter.js",
+      "bytes": 12136,
+      "sha256": "2beb1ce6b159c71540aa66030af1d7964b6a92377cc78473745e02f97b74effe"
+    },
+    {
+      "path": "main.dart.js",
+      "bytes": 3583529,
+      "sha256": "c4c347bbd437de38d9ba7dff3d9373a82014f13c039fcfab0a94d9c61f335ebb"
+    },
+    {
+      "path": "version.json",
+      "bytes": 104,
+      "sha256": "933b8555d58a7675b4af767e89f8c48b84ff868894edff7766cb3dc000e53f07"
+    },
+    {
+      "path": "webapp/demo/animation-chooser.css",
+      "bytes": 11096,
+      "sha256": "9ae3293de3237fd1c709bb22eb0e6469898234ebc01ea8b04da83d71ef69837e"
+    },
+    {
+      "path": "webapp/demo/animation-control-policy.js",
+      "bytes": 6081,
+      "sha256": "23f6126c38aa117eeb481b1d97aff06ffefd7ece452addb275ceb1bc51a4f43e"
+    },
+    {
+      "path": "webapp/demo/animation-discovery.css",
+      "bytes": 22692,
+      "sha256": "2b38761ecf9901bf0f5cda9573cf723d52602347a76abbaa2fb59394c25f9009"
+    },
+    {
+      "path": "webapp/demo/animation-engine.js",
+      "bytes": 22588,
+      "sha256": "ec3ed1348a14aa7469c499caae8fc6ac9ed6184df2eb025b58c873d7029b5c4d"
+    },
+    {
+      "path": "webapp/demo/animation-library.css",
+      "bytes": 24746,
+      "sha256": "23a89c2a105bbdb411cdc60a82689a948aac4c84427e95565dfd6471953b400c"
+    },
+    {
+      "path": "webapp/demo/animation-library.js",
+      "bytes": 28655,
+      "sha256": "fa1a94d5ba130ff40ae0fc84589323709fb6aac4a5b69bcea236af5e48680b48"
+    },
+    {
+      "path": "webapp/demo/animation-mobile.css",
+      "bytes": 30747,
+      "sha256": "073b15d141c9ca9ee1af51b89fee4b722493c4d81b5b6c799a721377158b7448"
+    },
+    {
+      "path": "webapp/demo/animation-refinement.css",
+      "bytes": 10915,
+      "sha256": "91b7a6dbd59c7d8397e154cd0da431077c9badf62b3915480cbe2b12b7dd3f38"
+    },
+    {
+      "path": "webapp/demo/animations.css",
+      "bytes": 11268,
+      "sha256": "b8b3f4467ea6d224981ee1b41f4725c1f6f098dcdcacedf043e3f94b9123ee10"
+    },
+    {
+      "path": "webapp/demo/app-erase.css",
+      "bytes": 2983,
+      "sha256": "fa4f32ccc85aee1bdddb7817f12daef35f7ff38a0ce6ac9ed8f8ea51ddf57f26"
+    },
+    {
+      "path": "webapp/demo/app-erase.js",
+      "bytes": 23093,
+      "sha256": "f3f8c60652ae4314680b42b33e8f796ad7ef8cd3be7773fb7b6edd20bbccbf6f"
+    },
+    {
+      "path": "webapp/demo/app.js",
+      "bytes": 1132731,
+      "sha256": "5051b15fb4f87626e6aa5447ceba912c8b2f4296a7bc13a3c000571a97ed4108"
+    },
+    {
+      "path": "webapp/demo/backup.js",
+      "bytes": 16789,
+      "sha256": "bf0e2f4d7a2241acc5fbbfa08964f8aacfe2d5194f288dde6bf312bb27c8dd74"
+    },
+    {
+      "path": "webapp/demo/c100-android-adaptive.css",
+      "bytes": 7195,
+      "sha256": "929f5dc0452c578b6d346c08c16ce83a7cba28a79227c08021e5713083a15f98"
+    },
+    {
+      "path": "webapp/demo/c100-stand.css",
+      "bytes": 12345,
+      "sha256": "d998295c4f7cb7a4293a7705f3c65628c0ec59989af44b2ce598c2b383e1fa28"
+    },
+    {
+      "path": "webapp/demo/c101-order-mirror.css",
+      "bytes": 16488,
+      "sha256": "fbc6d429e5e9bdc7a4ef4da4cdb5d76c9767ffbcdb9e90016fdf9e6e3ca7244f"
+    },
+    {
+      "path": "webapp/demo/c101-order-mirror.js",
+      "bytes": 7502,
+      "sha256": "e219c2558fe02c74d41d215b64460462987c2bb32d1be45aac6bca58cd575b04"
+    },
+    {
+      "path": "webapp/demo/c102-swipe.js",
+      "bytes": 3237,
+      "sha256": "73c2d6fa6cc44e5bb413b8febd987aa62d1d95ea708384a620509c9a6a685029"
+    },
+    {
+      "path": "webapp/demo/c102-tidy.css",
+      "bytes": 14886,
+      "sha256": "5792aaa726b3b880add83dbd7f563a584a87e4bed39ae187aa80e97b1c0c6990"
+    },
+    {
+      "path": "webapp/demo/c104-polish.css",
+      "bytes": 11178,
+      "sha256": "dad2200ee6511cdf04f21da9d2e569d2e06e469e6b958dfbb2f4ccecb59a6e72"
+    },
+    {
+      "path": "webapp/demo/c105-polish.css",
+      "bytes": 7016,
+      "sha256": "8862afb21e81dc2133b0edf6164d08985f81f7a20e990282eedc7e8ff2a20e4f"
+    },
+    {
+      "path": "webapp/demo/c106-motion.css",
+      "bytes": 30235,
+      "sha256": "7fa06cff67a102a14a2c851eb5a730a9b153a1b98c08650e6620959d7afb155f"
+    },
+    {
+      "path": "webapp/demo/c106-motion.js",
+      "bytes": 4724,
+      "sha256": "2d373f8a63a4b3c0849629a85787778b5467ca0e1cd241c8a1636a401ef1a91f"
+    },
+    {
+      "path": "webapp/demo/c109-early.js",
+      "bytes": 702,
+      "sha256": "581c5a0e65360c8a0eb88ae13096cb7f5deb54992f1437c02fd03fe39f1ae379"
+    },
+    {
+      "path": "webapp/demo/c109-interface.css",
+      "bytes": 466006,
+      "sha256": "8e5494e21c8526e71c20c3b58d0e070c31c5b29c36221e25b8dca35c84c14571"
+    },
+    {
+      "path": "webapp/demo/c109-interface.js",
+      "bytes": 202993,
+      "sha256": "6e141478bb1fd2d0a33d0d66c4c01f716d9e7c3602858ed453253d35a0239cd1"
+    },
+    {
+      "path": "webapp/demo/c113-flow.css",
+      "bytes": 38154,
+      "sha256": "f02d2241a4f77e6ee51e294d09dd7bcb47d83b29d5261d9b05be4ba7557cf0ad"
+    },
+    {
+      "path": "webapp/demo/c97-polish.css",
+      "bytes": 1722,
+      "sha256": "5c1b3df35338f3f449224fd01ea3722d4d1647328f195fafeccf08fc0994ac72"
+    },
+    {
+      "path": "webapp/demo/c98-debug.js",
+      "bytes": 1944,
+      "sha256": "2766207bad78a2d475b28970affa11d909cf1ae5b8bb04d425d7fa41c6f66901"
+    },
+    {
+      "path": "webapp/demo/c98-glass.css",
+      "bytes": 12179,
+      "sha256": "97a4e935f7bdce5c1859671717e2f1438b141b907b127985368f77d75c1f920a"
+    },
+    {
+      "path": "webapp/demo/c99-responsive.css",
+      "bytes": 7217,
+      "sha256": "8a5227990f64c5de2a1215e7a84e2b430b0c9e0fe72565d9d7bc651138226156"
+    },
+    {
+      "path": "webapp/demo/colour-library-drag.js",
+      "bytes": 11309,
+      "sha256": "963265a49e1b03fa1db0872ee226ea6df642ac59f4e7b263562ae6338d6a6122"
+    },
+    {
+      "path": "webapp/demo/colour-picker-dialog.css",
+      "bytes": 3899,
+      "sha256": "3f29891271fcd05e423d44b265d4b58e64d574f1c9189be38edf45eff4071517"
+    },
+    {
+      "path": "webapp/demo/colour-presets-ui.css",
+      "bytes": 18710,
+      "sha256": "c60d94924276cdd2d3cdbf7dc9d970188b3ff657a47fbd6f0e6d696da98d0412"
+    },
+    {
+      "path": "webapp/demo/colour-presets-ui.js",
+      "bytes": 19999,
+      "sha256": "4a3019f237482339e300a27a3771e30becf908b8d63222d2462d1c7181602268"
+    },
+    {
+      "path": "webapp/demo/colour-wheel.css",
+      "bytes": 771,
+      "sha256": "58780a9bdf7453dfa5d6e92c47990e71ac587cede072d7436af9ea7de31e2f42"
+    },
+    {
+      "path": "webapp/demo/colour.js",
+      "bytes": 4029,
+      "sha256": "0624b2a75d0fbbbde342f061a7d8702bfea6a2283249217cdeb9011a0b15a32f"
+    },
+    {
+      "path": "webapp/demo/colours-library.js",
+      "bytes": 14955,
+      "sha256": "c0bcf12334710e82214d9995d5d3dd7e98fa8edde1cbaf76b2d00ed01bb5a5ca"
+    },
+    {
+      "path": "webapp/demo/connection-choice.css",
+      "bytes": 481,
+      "sha256": "374f0686b1d62f7b73074d9c2462659d69154bd2fd0ae8ff4242194d1c523c1a"
+    },
+    {
+      "path": "webapp/demo/connection-choice.js",
+      "bytes": 9633,
+      "sha256": "7b900e88ea1ac3127d0e0d4573852a4e524d3dcdd06998f0596ebaba9d7ad181"
+    },
+    {
+      "path": "webapp/demo/continuity.css",
+      "bytes": 66021,
+      "sha256": "a4d951b6a91a91b30ed455907663cbe72e6c579356debf108cf970e2d045ff79"
+    },
+    {
+      "path": "webapp/demo/first-pin-v2.css",
+      "bytes": 6066,
+      "sha256": "fa101ce217b26b1f8758625ba4e3d167f86851879a517354c43ea452305baccb"
+    },
+    {
+      "path": "webapp/demo/first-pin-v2.js",
+      "bytes": 18434,
+      "sha256": "e16f7d82da8a6dc62e2b1db83d8214c9cb1960484f9fb4baa71be9d74159fb80"
+    },
+    {
+      "path": "webapp/demo/fixtures.js",
+      "bytes": 1566,
+      "sha256": "7ccc08ac36a6ab22e65c79d796f4dd3e60d42232ff6209ae866b616bc9d0beb8"
+    },
+    {
+      "path": "webapp/demo/index.html",
+      "bytes": 13879,
+      "sha256": "960db9edf6beefea9be3aacac377bfb5e993ea1155d2ea44ddd280465cdd850f"
+    },
+    {
+      "path": "webapp/demo/installation-libraries.js",
+      "bytes": 12085,
+      "sha256": "f6f3178ddcc768b5a88c878da31e39f3d3a3909457ff016e6b3e8c92623b2f96"
+    },
+    {
+      "path": "webapp/demo/interface-haptics.js",
+      "bytes": 4830,
+      "sha256": "8464a40b23581b167473c10e5a89dd8fa912d230837b55427292098817897315"
+    },
+    {
+      "path": "webapp/demo/interface-mode.css",
+      "bytes": 4989,
+      "sha256": "03dc4692266fc93d5336eb20171789b11c27269d39fbc325cf85083fc3c89682"
+    },
+    {
+      "path": "webapp/demo/interface-mode.js",
+      "bytes": 8897,
+      "sha256": "2915819a63687b4954462c19b82965eec68cc204f81c3af600d213e031defe53"
+    },
+    {
+      "path": "webapp/demo/interface-motion.js",
+      "bytes": 9401,
+      "sha256": "96f3041f1bcee0146db0f54964b8994b6f4a682276b985a4a4092778cb449992"
+    },
+    {
+      "path": "webapp/demo/interface-polish.css",
+      "bytes": 26800,
+      "sha256": "6a83622046671a22d0419be3aa61f9a1996445de1a5f41c7ff382cfb6ee84b28"
+    },
+    {
+      "path": "webapp/demo/keyboard756.css",
+      "bytes": 1617,
+      "sha256": "e71779a962b0cb018fc2c37c20f944e373827deff50987101d3dfd6e20aadeac"
+    },
+    {
+      "path": "webapp/demo/ledline-identification-session.js",
+      "bytes": 30492,
+      "sha256": "69e32de3b055a0d56b73f73f3fbf27ce405bf43cd5bf5faca3d8ec1c5e112b9f"
+    },
+    {
+      "path": "webapp/demo/ledline-kabels.js",
+      "bytes": 8056,
+      "sha256": "e9b7f15ab934e0329bd8a45abc4ed53250793e05150ab283282a649c9e1b4bf5"
+    },
+    {
+      "path": "webapp/demo/ledline-order-direct.css",
+      "bytes": 24211,
+      "sha256": "b2bc1ae94d511f4faa2260d9faf57f3cd313df0fc34c862585f7b0107f1a8f7a"
+    },
+    {
+      "path": "webapp/demo/ledline-order-drag.js",
+      "bytes": 29287,
+      "sha256": "0112d8c227d14be299be063e97e0317885db227ecf061bfc86fd17a205fa6ce0"
+    },
+    {
+      "path": "webapp/demo/ledline-order-focus.css",
+      "bytes": 7998,
+      "sha256": "d87b353b1f79e8ebdff67f26bc0e839eba9c3d4b289e444b940055524b94708e"
+    },
+    {
+      "path": "webapp/demo/ledline-order-focus.js",
+      "bytes": 13472,
+      "sha256": "bbfc1862f3e731ebe45827c7541ba972c9ef17ef67a60a93cd353302dfc32c12"
+    },
+    {
+      "path": "webapp/demo/ledline-order-guide.js",
+      "bytes": 42557,
+      "sha256": "015d469079d639f315479655bc1ed354c45e2a59e6ff592ba98fde23b75eebd2"
+    },
+    {
+      "path": "webapp/demo/ledline-order-test.js",
+      "bytes": 15680,
+      "sha256": "45da1c6aa08f07fb088a13b22363b70f8c543dd174aa9e35b42f502dca2f2012"
+    },
+    {
+      "path": "webapp/demo/ledline-order-tutorial.css",
+      "bytes": 15032,
+      "sha256": "5c9cc6e4a9f825c70b6e52b5096083abaa5473ea74601d1ed5d89c76359fe104"
+    },
+    {
+      "path": "webapp/demo/ledline-order-tutorial.js",
+      "bytes": 3566,
+      "sha256": "9af1f13654b3bbf1a1a8b4fbf59cbabeab52bd24792ab7947a26a74228bb8565"
+    },
+    {
+      "path": "webapp/demo/ledline-order.css",
+      "bytes": 1414,
+      "sha256": "449b46ccd70d90b47f734e4f02d7a330347fce75914a068983f1ad9b98bb473b"
+    },
+    {
+      "path": "webapp/demo/ledlines-order-step-tutorial.js",
+      "bytes": 45040,
+      "sha256": "3bbb530d2551e3913f02c8968d79567aa76ac596dcec3ac277771db11e98ec4d"
+    },
+    {
+      "path": "webapp/demo/ledlines-order-step.css",
+      "bytes": 12909,
+      "sha256": "65c13c27f9202af3ed143e8ecfe9d269f58316eba2971d918506eafb0accccea"
+    },
+    {
+      "path": "webapp/demo/ledlines-order-step.js",
+      "bytes": 34157,
+      "sha256": "d85600c99e7eb69b47adfe8aac4e37cebe363004f0d590aafcdc2aa2751bd8c0"
+    },
+    {
+      "path": "webapp/demo/ledlines-setup.css",
+      "bytes": 15342,
+      "sha256": "aeed97b1206520e4373bd101b091f36db9537145b34f407b4596facb0155adc0"
+    },
+    {
+      "path": "webapp/demo/ledlines-setup.js",
+      "bytes": 14780,
+      "sha256": "fe89a5a458b507d4c0465c094a3e3078f43ca18b1dfef47a8a2e6550dc426914"
+    },
+    {
+      "path": "webapp/demo/ledlines-tutorial.css",
+      "bytes": 53884,
+      "sha256": "88f820c652534dd29df0ec94a4a596a1532310de0109dc08f79f4542e1f1db52"
+    },
+    {
+      "path": "webapp/demo/ledlines-tutorial.js",
+      "bytes": 49451,
+      "sha256": "fbc20e000fbc926fd5e8178010380caac7b8e401da1aa33286413e9542f57f6c"
+    },
+    {
+      "path": "webapp/demo/live-control.js",
+      "bytes": 70931,
+      "sha256": "0614025c5d5f2ae4024dacaf55838b515ee52b0c066827dc0df3e82e673c9e3a"
+    },
+    {
+      "path": "webapp/demo/main-connection-indicator.css",
+      "bytes": 2024,
+      "sha256": "c4e42ec8732769420da55a3ccdc51fefe94eb74db45e158e083e1dcaa7284230"
+    },
+    {
+      "path": "webapp/demo/main-connection-indicator.js",
+      "bytes": 6182,
+      "sha256": "0005f74cd10a7ab21b09a12c1fb36119e799c280b18ffca3ca71330ad8be9656"
+    },
+    {
+      "path": "webapp/demo/model.js",
+      "bytes": 56353,
+      "sha256": "192c733a52aef1e67c1cae99ff490022243ae2545dfd4711afbb6e09f0c99f2e"
+    },
+    {
+      "path": "webapp/demo/native-runtime.js",
+      "bytes": 277534,
+      "sha256": "5139d6abce4b42b9bffb95b81a01de8bf1ea9e365d476e802a5ef5f8209469a3"
+    },
+    {
+      "path": "webapp/demo/onboarding-connect.css",
+      "bytes": 5261,
+      "sha256": "56b0c6de04df9c588b9a723b5cbc619d3dd4841b5c574c7702cc87e9ab4903c4"
+    },
+    {
+      "path": "webapp/demo/onboarding-contract.js",
+      "bytes": 22011,
+      "sha256": "47b7a0cc1e7a3cc21d57e1b701c61011b4519e96f93cccdec59fd91051274403"
+    },
+    {
+      "path": "webapp/demo/onboarding-draft.js",
+      "bytes": 38793,
+      "sha256": "36c09671eecb607a2f66377fc1940cb28a6c88c9ff9348ac9a195f3160bff3ff"
+    },
+    {
+      "path": "webapp/demo/onboarding-ui.css",
+      "bytes": 82146,
+      "sha256": "9a7fe566e68f8b34a154ef902e22a555e9ac77ffe5fcab627ee0844b9356b6ba"
+    },
+    {
+      "path": "webapp/demo/onboarding-ui.js",
+      "bytes": 248437,
+      "sha256": "1530e73bc6b2b54ec254ecba273cf1dedb025214ebfd45c8ced74dcc2a45fbfa"
+    },
+    {
+      "path": "webapp/demo/onboarding756.css",
+      "bytes": 4017,
+      "sha256": "33f9f911dcf907ae1cef7dbeaf77a89791be44afe1a0aa49d81daf0e6a7d5b13"
+    },
+    {
+      "path": "webapp/demo/page-interaction.css",
+      "bytes": 457,
+      "sha256": "71b35efd9706f7656063623e885f4ccf781e2432d2c95816f6131a62436e1f30"
+    },
+    {
+      "path": "webapp/demo/page-interaction.js",
+      "bytes": 5392,
+      "sha256": "aa3a73eb9e9d8a3397b2a8e0686219a6bc080fa214dd68ad53f15a1ddbd3c651"
+    },
+    {
+      "path": "webapp/demo/pair-first-setup.js",
+      "bytes": 17979,
+      "sha256": "ba76aea3ae2d4be138047bce6221da8105987b2361f4cd981faeada6dbdbb170"
+    },
+    {
+      "path": "webapp/demo/pixel-setup.css",
+      "bytes": 34541,
+      "sha256": "cb49b819e74abb61fdd758a8bf353aef2767a9fd90afe27dfc6ede660ff1e802"
+    },
+    {
+      "path": "webapp/demo/pixel-setup.js",
+      "bytes": 89283,
+      "sha256": "68a2a2637d768f68eb40bce43b0f1c686452e8a644163655dc3d9cd10aa88856"
+    },
+    {
+      "path": "webapp/demo/pixel-translations.js",
+      "bytes": 19136,
+      "sha256": "56aff1dda1d9a32e80228dd810a58375e2b098f93b280f79b0a0ebc1dfa58aa6"
+    },
+    {
+      "path": "webapp/demo/preferences.js",
+      "bytes": 105331,
+      "sha256": "8db1db3ad6cc7384831925078f06b76c41db671bc076c611e81061e3561b3c6f"
+    },
+    {
+      "path": "webapp/demo/premium-surfaces.css",
+      "bytes": 70538,
+      "sha256": "1a757b4e988364856dbff9b655bbc247a8ad7c4e164121d586b79d23a53287ec"
+    },
+    {
+      "path": "webapp/demo/presets.js",
+      "bytes": 19579,
+      "sha256": "eef26c19fe437347d40cee889f554241d12d58c7c935076fa917adf767c27f22"
+    },
+    {
+      "path": "webapp/demo/preview.js",
+      "bytes": 139597,
+      "sha256": "7c5bc4d2176c6e6e4062c889a0581e4ba9f6a5000dbf63259e60bf9a4a950381"
+    },
+    {
+      "path": "webapp/demo/receiver-art.js",
+      "bytes": 46534,
+      "sha256": "b33bea3263b64ab46b9c486f8829e12de09985803d0202ba49ade7e5f81663ec"
+    },
+    {
+      "path": "webapp/demo/receiver-pair-scene.js",
+      "bytes": 10445,
+      "sha256": "eaa48337e9f2ac4d56bab988c558352bee9615bbabd8dbdf28e58f19e999a829"
+    },
+    {
+      "path": "webapp/demo/receiver-playback.js",
+      "bytes": 11193,
+      "sha256": "416710c2da4b45a0dd53df6d5165a1543164cc7e82014f9847eca8451abe06ac"
+    },
+    {
+      "path": "webapp/demo/receiver-removal-ui.css",
+      "bytes": 2572,
+      "sha256": "751fb973574322565b51fbad6e4b42029d5b057c1a16faba0cf3adb53fca7bc4"
+    },
+    {
+      "path": "webapp/demo/receiver-removal-ui.js",
+      "bytes": 26143,
+      "sha256": "a40e08a5aeb7ca7b9b6132c86e62f1e002353c5da9958f652c3aa01bd65ba441"
+    },
+    {
+      "path": "webapp/demo/receiver-scan-tutorial.js",
+      "bytes": 12375,
+      "sha256": "fe13a98f709a0105f3e3b4793397d1b4f33ed79d505d9084d761ce0be91b2845"
+    },
+    {
+      "path": "webapp/demo/receiver-update-ui.css",
+      "bytes": 4536,
+      "sha256": "cbbc15b9e2f722027ec32a7dfd3be230f19d306ff2b30665681911b13213cb4a"
+    },
+    {
+      "path": "webapp/demo/receiver-update-ui.js",
+      "bytes": 25159,
+      "sha256": "0a0fc48f5e7ac12ca6ed3a882ae08cba952c9f41f402efeff640315789a14fea"
+    },
+    {
+      "path": "webapp/demo/receiver-visual.css",
+      "bytes": 4112,
+      "sha256": "2d5ebe1ca07b3c8e3e689094d7cce5f7f9eca985e946892e610a8a0b06a05528"
+    },
+    {
+      "path": "webapp/demo/receiver-visual.js",
+      "bytes": 31253,
+      "sha256": "d7a80b0c3015b015b1b60d4bc5503593180eda2cc874fb8c6cf43897cb959962"
+    },
+    {
+      "path": "webapp/demo/receivers-tab-tutorial.js",
+      "bytes": 20334,
+      "sha256": "3a7632760746a75e859759b95a368917b38d049638b58db9b68fdad5c4fafa99"
+    },
+    {
+      "path": "webapp/demo/receivers-tab.css",
+      "bytes": 52456,
+      "sha256": "41dec36fb9fc49b9bbce9a18f293226c8e08b256469ac29c913ea7993e656c2d"
+    },
+    {
+      "path": "webapp/demo/receivers-tab.js",
+      "bytes": 51368,
+      "sha256": "276a10eeabd91aeea6abe59ebc9af18f6d57ed0cf8cfdf7da02108713a3688bd"
+    },
+    {
+      "path": "webapp/demo/receivers-tutorial/index.html",
+      "bytes": 264,
+      "sha256": "9f164b3848d9020d1152aeb3b78e8cf779856c7793a848546dacc88157491b53"
+    },
+    {
+      "path": "webapp/demo/receivers-tutorial/pagina.js",
+      "bytes": 4509,
+      "sha256": "378fb9362d2ee9134daf17fd2e6e8748bb29abdd579181ab06cd3104979a3b25"
+    },
+    {
+      "path": "webapp/demo/receivers-tutorial/rx.js",
+      "bytes": 2742,
+      "sha256": "8c8ab3950e83c9d55f31a037de3c63cb4146127b11a226a582f31856191cf2a0"
+    },
+    {
+      "path": "webapp/demo/reference-animations.js",
+      "bytes": 8768,
+      "sha256": "cfdb7c4a7fead980ef56100ceb28a7b253f83a9f05328a1c80cd386d49ddca8f"
+    },
+    {
+      "path": "webapp/demo/rgbw-tunnel-tutorial.css",
+      "bytes": 5780,
+      "sha256": "a4a192c6b61f03123206528bc92ab151cd623bc0be84e2ac92a0827a5db3742d"
+    },
+    {
+      "path": "webapp/demo/rgbw-tunnel-tutorial.js",
+      "bytes": 29385,
+      "sha256": "52dd862009c67776a53935b7debdead7be02a4da42a7c28e83a68df6ae434ac9"
+    },
+    {
+      "path": "webapp/demo/scene-editing.js",
+      "bytes": 11503,
+      "sha256": "a87ca9d4c175ec0da3a9d8a31c902995dd2e49061cbd1c090f33ba08d4bf50f9"
+    },
+    {
+      "path": "webapp/demo/scenes-home.css",
+      "bytes": 2633,
+      "sha256": "12d5abe43619a7d7b6a7b3ccf26a05db5efe88db504a75b4d28aa17dd99d7b00"
+    },
+    {
+      "path": "webapp/demo/scenes-home.js",
+      "bytes": 2581,
+      "sha256": "20839bae509725048ad3424f596d8b260747421ad971b0dd45a3fa5289dfa200"
+    },
+    {
+      "path": "webapp/demo/scenes.css",
+      "bytes": 33007,
+      "sha256": "8f6dcaf2b6dbbadb497cba3c800f5a3eaf1f0b9d40c3dc35bb6524dfec181456"
+    },
+    {
+      "path": "webapp/demo/scenes.js",
+      "bytes": 28093,
+      "sha256": "2518b27eecc5b6c4b8e5ba91c78ed9383ea214bfdd2ebad79ebbe1e5794378c9"
+    },
+    {
+      "path": "webapp/demo/security-mode.js",
+      "bytes": 527,
+      "sha256": "e4da258988fc8791d0d923d517f86ed3003792fe9d8a89b034bfdd05c8518ef2"
+    },
+    {
+      "path": "webapp/demo/settings-home.css",
+      "bytes": 8969,
+      "sha256": "6cb57e7d62d1e96f0243cdd6cc9b2cf94dda96e63c55a6d6b4bcea732ffaeff5"
+    },
+    {
+      "path": "webapp/demo/settings-home.js",
+      "bytes": 9755,
+      "sha256": "411d11cf527f47f4624e98d2844fcad845cf1f8283dae6eba78ba8bb77ebfbab"
+    },
+    {
+      "path": "webapp/demo/setup-translations.js",
+      "bytes": 102293,
+      "sha256": "bccc28e91ac12d0c423634293fab229c28415d094ebd9f68b8b29a329c3a2013"
+    },
+    {
+      "path": "webapp/demo/setup-wifi-guide.js",
+      "bytes": 5886,
+      "sha256": "8584f31e1fc9ec82d4baaeade3a06e1254e1a51b692e952fd99ce7d3dc4a9e3c"
+    },
+    {
+      "path": "webapp/demo/shared-installation.js",
+      "bytes": 37354,
+      "sha256": "bd264d90e18b48bc8152e82530034c015d6f5b34af3c15790f7aa755a57f216d"
+    },
+    {
+      "path": "webapp/demo/shared-physical-refresh.js",
+      "bytes": 3675,
+      "sha256": "7452b873082e2a0c5f4f6524765e978e2ba63d6795e2a20cd898759e40d5ae25"
+    },
+    {
+      "path": "webapp/demo/spi-direction-tutorial.css",
+      "bytes": 8720,
+      "sha256": "f82373ef5e74c67bb727a14a797ebf050e50432d7e243732bff4884636dfa1dc"
+    },
+    {
+      "path": "webapp/demo/spi-direction-tutorial.js",
+      "bytes": 14112,
+      "sha256": "e9a64ba9ac4e49fbf370c5f48fd4309bb39e48284d8ea384a1ed6a89838cf5de"
+    },
+    {
+      "path": "webapp/demo/spi-zone-direction.css",
+      "bytes": 12418,
+      "sha256": "b225587661eb12723b4d559e87644db5549d5d53ee40abcd71409af73d915801"
+    },
+    {
+      "path": "webapp/demo/spi-zone-direction.js",
+      "bytes": 57227,
+      "sha256": "85ed76849326ba587a939a80f6774256021ed77d7ade67b351a7a3549327339a"
+    },
+    {
+      "path": "webapp/demo/stand-animations.css",
+      "bytes": 12242,
+      "sha256": "48b6e47df68945558926f3192318f0551b54373feedcf13a1abdfda2c5d681a3"
+    },
+    {
+      "path": "webapp/demo/stand-animations.js",
+      "bytes": 20066,
+      "sha256": "1d9fd2e28e59875a7efa10d54c91b4136a7b862665a892ba1537de17e4e9e0d0"
+    },
+    {
+      "path": "webapp/demo/stand-cache.js",
+      "bytes": 3196,
+      "sha256": "fa2732da4929a14d8e40affaf9b0259019e56a1d9a812b7d8be661c368770c93"
+    },
+    {
+      "path": "webapp/demo/stand-connection.js",
+      "bytes": 37830,
+      "sha256": "3cd23dbe5d57a9bd871df867019c2b47382df26354729ffa55772162ceaf6b4a"
+    },
+    {
+      "path": "webapp/demo/stand-home.css",
+      "bytes": 11930,
+      "sha256": "7b82a60877e667cb25d32db25db05360274d15a100aacc21490ec50c5f8cccb3"
+    },
+    {
+      "path": "webapp/demo/stand-home.js",
+      "bytes": 4478,
+      "sha256": "da53ed011880599cf1a39ca5fbca94e4cd8ab2aef0fad7ab702532f2f9f6cac1"
+    },
+    {
+      "path": "webapp/demo/stand-live-checkpoint.js",
+      "bytes": 11293,
+      "sha256": "924452cd9457b50c9ea73ced9b3a778b9373df87040435fbbb9d1d09cec9b600"
+    },
+    {
+      "path": "webapp/demo/stand-management-capabilities.js",
+      "bytes": 1889,
+      "sha256": "822438c0b944b62f11d6e05041bd35f12d50710386adb31f30366bf681b3c134"
+    },
+    {
+      "path": "webapp/demo/stand-sharing-copy.js",
+      "bytes": 12986,
+      "sha256": "f00407d6d55dc1401cbe1659951ea95f80b0978728ba3f215ecc83a53a27fa77"
+    },
+    {
+      "path": "webapp/demo/stand-sharing.css",
+      "bytes": 6087,
+      "sha256": "6cf17f71d2a6e37964972c0e3cae7dfe7505eb790279a28a946ed8220369c2eb"
+    },
+    {
+      "path": "webapp/demo/stand-sharing.js",
+      "bytes": 26317,
+      "sha256": "909dfd75b00b19b791ef72e9c159865651cd183ac3cce09b3f80d9ea648c2c6e"
+    },
+    {
+      "path": "webapp/demo/stand-users.css",
+      "bytes": 26399,
+      "sha256": "968e891b50bba3c416a42e5533255290c9fdf877a63785211c32d31d850e0cd5"
+    },
+    {
+      "path": "webapp/demo/stand-users.js",
+      "bytes": 39540,
+      "sha256": "f84b3ac279af0622f1cb3aa0bfcf9d877868a640f53569f7359869277e421fd6"
+    },
+    {
+      "path": "webapp/demo/static-gradient-ui.js",
+      "bytes": 59668,
+      "sha256": "3bbb4383ad3788ef0048693ae641d84b132948ada7b369df2415fe7c0edd3710"
+    },
+    {
+      "path": "webapp/demo/static-gradient.css",
+      "bytes": 22657,
+      "sha256": "d3509561ab24d7002baad031c719d0d018a2c483ee26b007694331d1423688cc"
+    },
+    {
+      "path": "webapp/demo/static-gradient.js",
+      "bytes": 20745,
+      "sha256": "b630e1b720ecc268253c9fd9b54774ea471be349e3430dfdbadfed5e102226f8"
+    },
+    {
+      "path": "webapp/demo/styles.css",
+      "bytes": 23668,
+      "sha256": "04e92d3db0f86967e81b3dde07684741f52eb2cd854046d442f9b20976d10c22"
+    },
+    {
+      "path": "webapp/demo/tester-preview.js",
+      "bytes": 4021,
+      "sha256": "aa96398e9bd16ccba4b6bc854737f07b82e85d86f456d9410cae461263d55bac"
+    },
+    {
+      "path": "webapp/demo/theme-audit.css",
+      "bytes": 5125,
+      "sha256": "4418d703537b1f0bd4f1298e98e94732b28899916632ad76c11b15e345babd79"
+    },
+    {
+      "path": "webapp/demo/tunnel756.css",
+      "bytes": 655,
+      "sha256": "513502b53b7fd6b82bf1593818d94ec7c4710295e6aa542653b6a318c821eafa"
+    },
+    {
+      "path": "webapp/demo/tutorial-ask.js",
+      "bytes": 2771,
+      "sha256": "605f4b1a04a1bb1b9cc8e146ad89ae9f9b147a599af922aa35046c420774b9b3"
+    },
+    {
+      "path": "webapp/demo/tutorial-frame.js",
+      "bytes": 1406,
+      "sha256": "68236782a10e1d5d9e453ce1d89e811bf9d88013a26d8bc0c9fa71a413bb4dcf"
+    },
+    {
+      "path": "webapp/demo/ui-continuity.js",
+      "bytes": 5114,
+      "sha256": "ae28fd0b92d3100c27eef1c94ecea46bf30d6d4aa93d43b662ab2cc0eb9acb34"
+    },
+    {
+      "path": "webapp/demo/ui-copy.js",
+      "bytes": 161989,
+      "sha256": "609559b92a6d010c864283f6d589996831bfab126b368b33b7007963dc605ee0"
+    },
+    {
+      "path": "webapp/demo/ui606-controls.css",
+      "bytes": 8788,
+      "sha256": "1ce58a87da05d822e19d63852594d64be2bdc957e80d78eeb7fb338c766c57a5"
+    },
+    {
+      "path": "webapp/demo/ui606-gallery.css",
+      "bytes": 2484,
+      "sha256": "1bbc48cf7cc623dd93d68b232ffef30fc478aa87b645aabe6c7ccc613d89a03b"
+    },
+    {
+      "path": "webapp/demo/ui606-navigation.js",
+      "bytes": 7418,
+      "sha256": "ad2c81ea53b35c90dca382f0891f3a8b1422e7d76a34fe08042246f7f04c7267"
+    },
+    {
+      "path": "webapp/demo/ui606-pages.css",
+      "bytes": 21457,
+      "sha256": "2ddc7c58400e2c87adbd94883efc0d46dea1e33e2357ff097455b5d418ac2d93"
+    },
+    {
+      "path": "webapp/demo/v40-design.css",
+      "bytes": 40549,
+      "sha256": "0834b853e8dee58d95e395e62f6bbfabf357fff28848bef32dbb96d28bc2b457"
+    },
+    {
+      "path": "webapp/demo/v41-materials.css",
+      "bytes": 33394,
+      "sha256": "a80b2c9b5380afa0280e299c0092de2c6c5ac9a1ea2f96a7cbb0b07087686289"
+    },
+    {
+      "path": "webapp/demo/v41-visual.css",
+      "bytes": 7139,
+      "sha256": "88f01aeaa9d9b9e283cdb2017dd63ac598b5551e3ca44508c8cc7ed7f959a5cc"
+    },
+    {
+      "path": "webapp/demo/v50-animation-texts.js",
+      "bytes": 47203,
+      "sha256": "81228f77b58011dd50904cdd88d72919e0fbcd938a608e5b5ed6b29325ea77c5"
+    },
+    {
+      "path": "webapp/demo/v50-error-texts.js",
+      "bytes": 23347,
+      "sha256": "f24604e0ed457b092572654a310c7d4312818de830953606f930709e41d91c24"
+    },
+    {
+      "path": "webapp/demo/v50-interactions.js",
+      "bytes": 7025,
+      "sha256": "81a097f387efca0c650c4a935102d291f9b6336ad9e34eb99fdd0b9d113e68e3"
+    },
+    {
+      "path": "webapp/demo/v50-interface.css",
+      "bytes": 109860,
+      "sha256": "352930328b7b6949aecb75d85851ec8506427f82848abe8ef0007890f66fd914"
+    },
+    {
+      "path": "webapp/demo/v50-order-clarity.css",
+      "bytes": 21011,
+      "sha256": "2941a592f3648d0a48e8420023d9c3cde31de7faa597e69d345d986c2ac312bd"
+    },
+    {
+      "path": "webapp/demo/v50-order-drag.css",
+      "bytes": 6040,
+      "sha256": "8ac20696cbccdf3dbf7c6a0d8133f5ee57fda6ee5d0560ca29929be255b4e638"
+    },
+    {
+      "path": "webapp/demo/v50-order-guide.css",
+      "bytes": 4248,
+      "sha256": "a5df8d73dea2ea342dea7c3c8c2b4093f4e946768b5fe3a550df420dc5dda61f"
+    },
+    {
+      "path": "webapp/demo/v50-order-texts.js",
+      "bytes": 21874,
+      "sha256": "4679a789b6274651924153318f0bc3bee8952760cf5bc8799cfb1a4f0f6e9053"
+    },
+    {
+      "path": "webapp/demo/v50-order-tutorial.css",
+      "bytes": 9016,
+      "sha256": "ded3d9395f3df6ce11dec3fa2628ffe301a726992e0c998a815414fbc0ed46ef"
+    },
+    {
+      "path": "webapp/demo/v50-preview-selection.css",
+      "bytes": 16114,
+      "sha256": "31fc3fcb9180d820c36cd37bb1eda3b1716aa47ce7c3051eabae1d7d956df3b2"
+    },
+    {
+      "path": "webapp/demo/v50-texts.js",
+      "bytes": 43021,
+      "sha256": "431a502da64d75fa544c6329f58824ec02913c5e768bcd3f4fb07ab1e022962a"
+    },
+    {
+      "path": "webapp/demo/vendor/v21_animation_catalog.js",
+      "bytes": 93783,
+      "sha256": "e12578a90711eaa016b1c0cc0fb642a441011cd802e043d374b67e9ab5c94790"
+    },
+    {
+      "path": "webapp/demo/vendor/v21_tunnel_engine.js",
+      "bytes": 8498,
+      "sha256": "5e8f4170084d5a6a3597fe014a117597b6a2b2eee4869437ee3ff9a6cc288c3e"
+    },
+    {
+      "path": "webapp/demo/web-demo-service.js",
+      "bytes": 59239,
+      "sha256": "956c97cdf5ea83a7dfed5d59beae5905327e346459044e2375972ed01f7fc127"
+    },
+    {
+      "path": "webapp/demo/web-gastheer-app.js",
+      "bytes": 1173,
+      "sha256": "c76ab0a54213ce49b4f7d7f7a3f02864a8f298f36ee9b89f40fe750f028c6d6b"
+    },
+    {
+      "path": "webapp/demo/zone-lines.js",
+      "bytes": 9153,
+      "sha256": "cce6f07d1aab36f5c8e23cde04b55bcaeb48db1eb7fa895c6b88a970e012f19b"
+    },
+    {
+      "path": "webapp/demo/zone-page-tutorial.js",
+      "bytes": 25411,
+      "sha256": "88c47f5b5fd9f0e6defff0ef491dba797f74a862f77900f6ad919a8fcee91818"
+    },
+    {
+      "path": "webapp/demo/zone-page.css",
+      "bytes": 112586,
+      "sha256": "a680a0943aa387ce65a3e69aa4be3dc4d90e2cb2c9e2d68adc35a645a8020279"
+    },
+    {
+      "path": "webapp/demo/zone-page.js",
+      "bytes": 107107,
+      "sha256": "12c13aaface4ce08c4663c4b37ce48a8cf1a5288694d6bbf13a5cbfe2a90f032"
+    },
+    {
+      "path": "webapp/demo/zone-tutorial/herkennen.css",
+      "bytes": 31322,
+      "sha256": "14280118bda9340cd6d1c5bdef7e1b1e5508dabb94c50cb02943e1b0c901655a"
+    },
+    {
+      "path": "webapp/demo/zone-tutorial/index.html",
+      "bytes": 265,
+      "sha256": "65045ae98341eeb67e9d346431100820db85738618de9e71b24397ab3b3fae71"
+    },
+    {
+      "path": "webapp/demo/zone-tutorial/ketting.css",
+      "bytes": 26914,
+      "sha256": "83ad9f5e3ac97aff17a075a203c5eb58c3e734032a78306cbe9d0e1f52b5e0f7"
+    },
+    {
+      "path": "webapp/demo/zone-tutorial/lijn-view.js",
+      "bytes": 7562,
+      "sha256": "5c5300327952676b5274dd670ab521d5292294149a39d9a9dedae6fee652897b"
+    },
+    {
+      "path": "webapp/demo/zone-tutorial/pagina.js",
+      "bytes": 5102,
+      "sha256": "ed95ca2f5976e84d8025162a8bfca04fb14ff7bcb292b9da1eb43b8e1a265a0f"
+    },
+    {
+      "path": "webapp/demo/zone-tutorial/toevoegen.css",
+      "bytes": 29750,
+      "sha256": "3c96b74308c9a26f5f82b526ff3f38d0bae1dfcaf1c06b98e5cbde54063d97ed"
+    },
+    {
+      "path": "webapp/demo/zone-tutorial/zone.css",
+      "bytes": 71108,
+      "sha256": "dff266f0001ca6c2a212b5a4d330b3da90832be9e5564b4b6661ffb7aff82c52"
+    },
+    {
+      "path": "webapp/demo/zone-tutorial/zone.js",
+      "bytes": 111790,
+      "sha256": "d20f01b15a61d85a15a999e54bf7820efbdf5f786f017dd4ff259899a0fd0878"
     }
   ],
   "interfaceReviewScope": "Exact source UI hunks and isolated asset/cache verification. Browser visual review and public deployment remain separate; this candidate attests no iPhone606 install, receiver output, radio performance or physical acceptance.",
@@ -4246,5 +5191,13 @@
       "sha256": "1105047b01b853ce55679118f63ab9bc5b2e8725a309297110491d1369943507",
       "bytes": 3444480
     }
+  },
+  "flutterDemo": {
+    "description": "De Flutter-app zoals op de telefoon, met de vorige interface eronder (webapp/demo/) voor het koppelen.",
+    "sourceCommit": "e29674f8",
+    "iphoneBuild": 1052,
+    "date": "2026-11-16",
+    "storage": "none",
+    "hardwareAccess": false
   }
 }
