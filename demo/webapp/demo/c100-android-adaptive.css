@@ -1,0 +1,89 @@
+/* Adaptive Android/tablet layout. Presentation only: existing control, scope,
+   gesture and keyboard handlers are unchanged. Breakpoints use available CSS
+   width, so split-screen follows the same layout as a smaller device. */
+
+/* Small tablets and half-screen windows should use their available width. */
+@media (min-width:600px){
+  :root,html body{--app-width:920px}
+  html body #main{padding-inline:max(22px,env(safe-area-inset-left)) max(22px,env(safe-area-inset-right))}
+  html body #navigation{width:min(520px,calc(100% - 24px))}
+  html.interface-polish body :is(#main,#effect-dialog) .shared-colour-picker .wheel-wrap{width:min(100%,320px);max-width:320px}
+}
+
+/* Keep the existing two-pane editor, with space for readable controls. */
+@media (min-width:1000px){
+  :root,html body{--app-width:1280px}
+  html body #main .editor-grid{grid-template-columns:minmax(0,1.05fr) minmax(360px,1fr);column-gap:28px}
+  html body #main .editor-grid>.control-preview-dock{min-width:0}
+  html body #main .editor-grid>.editor-controls{min-width:0}
+}
+
+/* A full-screen colour sheet has enough room for wheel and exact values side
+   by side. The shared picker remains the same component, including gradient
+   colours, channel toggles, brightness, warm white and its existing Done. */
+@media (min-width:900px) and (min-height:520px){
+  html body #effect-dialog.colour-picker-dialog:not(:has([data-stand-control-sheet]))>div>:is(header,div,footer){padding-inline:max(24px,calc((100% - 1100px)/2))!important}
+  html.interface-polish body #effect-dialog.colour-picker-dialog #effect-dialog-content>.shared-colour-picker{
+    display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,1fr);column-gap:32px;align-items:start;
+    width:calc(100% - 48px);max-width:1100px;margin-inline:auto!important;box-sizing:border-box;
+  }
+  html.interface-polish body #effect-dialog.colour-picker-dialog #effect-dialog-content>.shared-colour-picker>*{grid-column:1/-1;min-width:0}
+  html.interface-polish body #effect-dialog.colour-picker-dialog #effect-dialog-content>.shared-colour-picker>.colour-tools{grid-column:1;grid-row:2}
+  html.interface-polish body #effect-dialog.colour-picker-dialog #effect-dialog-content>.shared-colour-picker>.slider-row{grid-column:1;grid-row:3}
+  html.interface-polish body #effect-dialog.colour-picker-dialog #effect-dialog-content>.shared-colour-picker>.fine-controls{grid-column:2;grid-row:2 / span 2;margin-top:0}
+  html.interface-polish body #effect-dialog.colour-picker-dialog .shared-colour-picker .wheel-wrap{width:min(100%,360px);max-width:360px}
+}
+
+/* A portrait phone retains the familiar layout. Let wrapped labels use space
+   rather than forcing a single unbreakable line through a narrow card. */
+html body .spi-colour-modes>button{min-width:0;white-space:normal}
+html body .gradient-card-heading>h2{min-width:0;overflow-wrap:anywhere}
+html body .gradient-point-colour{min-width:0}
+html body .gradient-point-colour>b{min-width:0;overflow-wrap:anywhere}
+@media (max-width:359px){
+  html.interface-polish body :is(#main,#effect-dialog) .shared-colour-picker .channel-row{grid-template-columns:36px 36px minmax(24px,1fr) 36px 48px;gap:4px}
+  html.interface-polish body :is(#main,#effect-dialog) .shared-colour-picker .channel-row>button{min-width:0;width:100%;min-height:44px}
+  html body .gradient-point-colour{gap:8px;padding-inline:10px}
+  html body .gradient-point-colour>small{font-size:11px}
+}
+
+/* Four navigation destinations cannot fit into half a landscape phone.
+   Centre the full-width bar again, reserve its existing bottom space, and let
+   short previews scroll with the page instead of trapping the whole screen. */
+@media (orientation:landscape) and (max-height:500px){
+  :root,html body{--app-width:100%}
+  html body #navigation{left:50%;right:auto;transform:translateX(-50%);width:min(620px,calc(100% - max(24px,env(safe-area-inset-left)) - max(24px,env(safe-area-inset-right))));height:52px}
+  html body #navigation [data-action="nav"]{min-width:0;min-height:44px;height:44px;padding-inline:8px}
+  html body #main{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
+  html body #main .editor-grid>.control-preview-dock{position:static}
+  html.interface-polish body :is(#main,#effect-dialog) .shared-colour-picker .wheel-wrap{width:min(100%,220px);max-width:220px}
+  html body dialog[open]{max-height:calc(100dvh - 16px)}
+  html body #effect-dialog.colour-picker-dialog{max-height:100dvh}
+}
+
+/* A low landscape viewport needs the wheel above its Done bar immediately,
+   not half hidden behind it. Keep the same picker and all exact controls. */
+@media (min-width:600px) and (orientation:landscape) and (max-height:500px){
+  html body #effect-dialog.colour-picker-dialog #effect-dialog-content>header{padding-block:4px;min-height:48px}
+  html body #effect-dialog.colour-picker-dialog #effect-dialog-content>header h2{min-height:40px;font-size:18px}
+  html body #effect-dialog.colour-picker-dialog #effect-dialog-content>header button{min-height:40px}
+  html body #effect-dialog.colour-picker-dialog .colour-picker-actions{padding-block:6px max(6px,env(safe-area-inset-bottom))}
+  html body #effect-dialog.colour-picker-dialog .colour-picker-done-footer{min-height:44px;padding-block:8px}
+  html.interface-polish body #effect-dialog.colour-picker-dialog #effect-dialog-content>.shared-colour-picker{
+    position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,1fr);grid-template-rows:max-content max-content minmax(0,auto);column-gap:18px;
+    margin:8px 10px 0;padding:10px!important;align-items:start;
+  }
+  html.interface-polish body #effect-dialog.colour-picker-dialog #effect-dialog-content>.shared-colour-picker>*{grid-column:1/-1;min-width:0}
+  html.interface-polish body #effect-dialog.colour-picker-dialog #effect-dialog-content>.shared-colour-picker>.section-heading{position:absolute;right:10px;top:6px;margin:0}
+  html.interface-polish body #effect-dialog.colour-picker-dialog #effect-dialog-content>.shared-colour-picker>.section-heading>h2{display:none}
+  html.interface-polish body #effect-dialog.colour-picker-dialog #effect-dialog-content>.shared-colour-picker>.colour-tools{grid-column:1;grid-row:1;gap:6px}
+  html.interface-polish body #effect-dialog.colour-picker-dialog #effect-dialog-content>.shared-colour-picker>.slider-row{grid-column:1;grid-row:2}
+  html.interface-polish body #effect-dialog.colour-picker-dialog #effect-dialog-content>.shared-colour-picker>.fine-controls{grid-column:2;grid-row:1 / span 3;margin-top:0;padding-top:46px}
+  html.interface-polish body #effect-dialog.colour-picker-dialog .shared-colour-picker .wheel-wrap{width:min(100%,clamp(144px,calc(100dvh - 175px),220px));max-width:220px}
+  html.interface-polish body #effect-dialog.colour-picker-dialog .shared-colour-picker .colour-values .setting-hint{margin:0;font-size:12px}
+}
+
+/* Keyboard detection and field scrolling still come from page-interaction.
+   Remove sticky visual competition only while that detector is active. */
+html.keyboard756 body #main .editor-grid>.control-preview-dock{position:static}
+html.keyboard756 body #effect-dialog.colour-picker-dialog{max-height:var(--keyboard-visible-height756,100dvh)}

@@ -1,0 +1,137 @@
+/* V50.559: order guidance only. The target is a fixed example, not receiver
+   telemetry. Keep the instruction and physical check outside the sticky dock. */
+/* The shared renderer omits tiny labels. A stationary colour/number legend
+   stays readable at every canvas height, without pretending128 hues suffice. */
+.ledline-setup[data-order-open=true] .v50-order-instruction {
+  box-sizing:border-box;
+  position:relative;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 124px;
+  align-items:center;
+  gap:8px 12px;
+  min-width:0;
+  margin:10px 0 14px;
+  padding:12px;
+  border:1px solid var(--line,#dce1e9);
+  border-radius:18px;
+  background:var(--panel,#fff);
+  background-image:linear-gradient(135deg,#ffffff66,#ffffff08);
+  color:var(--ink,#232830);
+  box-shadow:inset 0 1px 0 #ffffff8c,0 4px 14px #00000004;
+}
+.ledline-setup[data-order-open=true] .v50-order-test button:focus-visible,
+.ledline-setup[data-order-open=true] .v50-order-test input:focus-visible {
+  outline:2px solid var(--red,#ba433d);
+  outline-offset:3px;
+}
+.ledline-setup[data-order-open=true] .v50-order-test {
+  box-sizing:border-box;
+  display:grid;
+  gap:9px;
+  min-width:0;
+  margin:14px 0;
+  padding:13px;
+  border:1px solid var(--line,#dce1e9);
+  border-radius:18px;
+  color:var(--ink,#232830);
+  background:var(--panel,#fff);
+  box-shadow:inset 0 1px 0 #ffffff80,0 4px 14px #00000004;
+}
+.ledline-setup[data-order-open=true] .v50-order-test>h4 {
+  margin:0;
+  font-size:13px;
+  font-weight:750;
+  line-height:1.4;
+  overflow-wrap:anywhere;
+}
+.ledline-setup[data-order-open=true] .v50-order-test p,
+.ledline-setup[data-order-open=true] .v50-order-test small,
+.ledline-setup[data-order-open=true] .v50-order-test [role=status] {
+  margin:0;
+  color:var(--muted,#656b75);
+  font-size:12px;
+  line-height:1.5;
+  overflow-wrap:anywhere;
+}
+.ledline-setup[data-order-open=true] .v50-order-test button {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  width:100%;
+  min-height:44px;
+  padding:10px 12px;
+  border:1px solid var(--line,#dce1e9);
+  border-radius:13px;
+  color:var(--ink,#232830);
+  background:var(--soft,#eef1f4);
+  font:inherit;
+  font-size:12px;
+  font-weight:650;
+  line-height:1.4;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.ledline-setup[data-order-open=true] .v50-order-test button:disabled {
+  cursor:default;
+  opacity:.55;
+}
+.ledline-setup[data-order-open=true] .v50-order-test label {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  min-width:0;
+  min-height:44px;
+  color:var(--ink,#232830);
+  font-size:12px;
+  font-weight:600;
+  line-height:1.45;
+  overflow-wrap:anywhere;
+  cursor:pointer;
+}
+.ledline-setup[data-order-open=true] .v50-order-test input[type=checkbox] {
+  width:20px;
+  height:20px;
+  flex:none;
+  margin:0;
+  accent-color:var(--red,#ba433d);
+}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] [data-order-item][data-order-test-line=true] {
+  border-color:var(--identify-colour,var(--red,#ba433d))!important;
+  outline:2px solid var(--identify-colour,var(--red,#ba433d));
+  outline-offset:1px;
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--identify-colour,var(--red,#ba433d)) 10%,transparent)!important;
+}
+.ledline-setup[data-order-open=true] .v50-order-test [hidden] {
+  display:none!important;
+}
+body[data-theme=dark] .ledline-setup[data-order-open=true] .v50-order-instruction,
+body[data-theme=dark] .ledline-setup[data-order-open=true] .v50-order-test {
+  background:#242424;
+  background-image:linear-gradient(135deg,#ffffff09,#ffffff02);
+  border-color:#ffffff18;
+  box-shadow:inset 0 1px 0 #ffffff0a,0 4px 14px #00000012;
+}
+body[data-theme=dark] .ledline-setup[data-order-open=true] .v50-order-test button {
+  background:#2b2b2b;
+}
+@media(min-width:600px) {
+  .ledline-setup[data-order-open=true] .v50-order-instruction {
+    grid-template-columns:minmax(0,1fr) 124px;
+    gap:14px 20px;
+    padding:14px 16px;
+  }
+}
+@media(max-width:360px) {
+  .ledline-setup[data-order-open=true] .v50-order-instruction {
+    grid-template-columns:minmax(0,1fr);
+    gap:10px;
+    padding:11px;
+  }
+}
+@media(max-height:600px) {
+  .ledline-setup[data-order-open=true] .v50-order-instruction {
+    margin-top:8px;
+    padding:10px;
+  }
+}

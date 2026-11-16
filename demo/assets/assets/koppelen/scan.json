@@ -1,0 +1,21 @@
+{
+ "made": "tools/test/interface/scanstap-export.mjs",
+ "RGBW": {
+  "breedte": 360,
+  "hoogte": 218.39,
+  "kader": {
+   "left": 0.5561,
+   "top": 0.5532,
+   "width": 0.1478
+  }
+ },
+ "SPI": {
+  "breedte": 360,
+  "hoogte": 218.39,
+  "kader": {
+   "left": 0.6151,
+   "top": 0.2983,
+   "width": 0.1556
+  }
+ }
+}

@@ -1,0 +1,225 @@
+/* Authenticated, journalled resets: MAIN last, exact target binding, no local
+ * delete shortcut. PIN lives only in its single explicit native request. */
+(function(root){
+  'use strict';
+  const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const clone=value=>JSON.parse(JSON.stringify(value));
+  const key=value=>Array.isArray(value)?'['+value.map(key).join(',')+']':value&&typeof value==='object'?'{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+key(value[k])).join(',')+'}':JSON.stringify(value);
+  const validPin=value=>typeof value==='string'&&/^[0-9]{8,12}$/.test(value);
+  const pinRequired=()=>root.AluvisionSecurityMode?.pinRequired!==false;
+  const statuses=new Set(['checking','ready','blocked','in-progress','pin-required','verification-required','removed']);
+  function removalErrorMessage(action,failure){
+    const code=failure?.code;
+    // Preserve the existing bounded internal UNCONFIRMED classification only.
+    // No raw receiver exception/message is displayed or newly classified.
+    const messageKey=action==='check'&&code==='VIEW_NOT_LOADED'?'removalViewNotLoaded':action==='check'&&code===undefined&&failure?.message==='UNCONFIRMED'?'removalDataUnconfirmed':action==='check'&&['STAND_NOT_CONNECTED','STAND_SESSION_EXPIRED','STAND_CONNECTION_CANCELLED','STAND_CANCELLED'].includes(code)?'removalStandRequired':code==='REMOVAL_PIN_INVALID'?'removalPinInvalid':code==='REMOVAL_RATE_LIMITED'?'removalRateLimited':code==='REMOVAL_PLAN_STALE'?'removalPlanStale':code==='REMOVAL_SETUP_PENDING'?'removalSetupPending':code==='REMOVAL_OFFLINE'?'removalOffline':code==='REMOVAL_MEMBERSHIP_UNVERIFIED'?'removalMembershipUnverified':code==='REMOVAL_BLOCKED'?'removalBlocked':code==='REMOVAL_PIN_REQUIRED'?'removalPinRequired':code==='REMOVAL_TRUST_RENEW'?'removalTrustRenew':action==='start'?'removalStartUnconfirmed':action==='check'?'removalCheckFailed':'removalResumeUnconfirmed';
+    const fallback={
+      removalViewNotLoaded:'Je standgegevens zijn nog niet geladen. Open je stand en controleer daarna opnieuw.',
+      removalDataUnconfirmed:'De receivergegevens konden niet veilig worden bevestigd. Open je stand opnieuw en controleer daarna opnieuw.',
+      removalStandRequired:'Open eerst je stand om de receivers te controleren. Controleer daarna opnieuw voordat je verwijdert.',
+      removalPinInvalid:'Deze PIN klopt niet. Er is geen nieuwe reset gestart.',
+      removalRateLimited:'Te veel PIN-pogingen. Wacht even en probeer opnieuw.',
+      removalPlanStale:'De lijst met receivers is veranderd. Controleer opnieuw voordat je wist.',
+      removalSetupPending:'Rond de open receiverinstelling eerst af. Er is niets gewist.',
+      removalOffline:'Een receiver is niet bereikbaar. Zet alle receivers aan en controleer dezelfde verwijdering opnieuw.',
+      removalMembershipUnverified:'Een gekoppelde receiver kon nog niet veilig worden herkend. Er is geen nieuwe reset gestart.',
+      removalBlocked:'Wissen kan nog niet veilig worden gestart. Laat alle receivers aan en wacht tot eventuele updates klaar zijn.',
+      removalPinRequired:'Voer je installatie-PIN opnieuw in om verder te gaan.',
+      removalTrustRenew:'Deze receiver is opnieuw gekoppeld met een andere telefoon. Ontkoppel hem vanaf die telefoon.',
+      removalStartUnconfirmed:'Het wissen is nog niet bevestigd. Controleer eerst de bestaande verwijderopdracht.',
+      removalCheckFailed:'De controle is niet gelukt. Controleer de verbinding en probeer opnieuw.',
+      removalResumeUnconfirmed:'Verwijderen is nog niet bevestigd. Controleer de verbinding; onbevestigde receivers blijven behouden.'
+    };
+    return root.LightningV50ErrorTexts?.t(messageKey,root.document?.documentElement?.lang||'nl')||fallback[messageKey];
+  }
+  function create({services={},translate,getModel,onRemoved=()=>{},standCodeAccess=()=>false,usesDedicatedFirstPin=()=>false}={}){
+    // Closed authored UI keys only; no receiver/customer/native message lookup.
+    // Without an injected translator the original Dutch copy remains valid.
+    const t=(copy,params={})=>{
+      const value=typeof translate==='function'?translate(copy,params):copy;
+      return String(value??copy).replace(/\{([A-Za-z][A-Za-z0-9_]*)\}/g,(match,name)=>Object.prototype.hasOwnProperty.call(params,name)&&['string','number'].includes(typeof params[name])?String(params[name]):match);
+    };
+    let dialog,receiver,result,baseline,targets=[],busy=false,error='',generation=0,returnFocus,timer=null,autoContinue=false;
+    const logical=(value=result)=>value?.mode==='authority-logical';
+    const installation=(value=result)=>!logical(value)&&receiver?.role==='main',scope=(value=result)=>installation(value)?'installation':'receiver';
+    // C127: the receiver did not answer; the main receiver removes it alone and it forgets the stand when it returns.
+    const offline=(value=result)=>value?.offlineTarget===true;
+    const requiresPin=()=>result?.requiresPin===true&&(logical()||installation()||offline());
+    const nativePin=()=>logical()&&result?.pinEntry==='native';
+    const legacyPinCopy=()=>!standCodeAccess()&&pinRequired();
+    const clearTimer=()=>{if(timer!==null)root.clearTimeout(timer);timer=null;};
+    function clearPin(){const input=dialog?.querySelector('[data-removal-pin]');if(input)input.value='';}
+    function close(){if(busy)return;clearPin();clearTimer();generation++;autoContinue=false;dialog?.close();if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});}
+    function consentReady(){
+      const pinNeeded=requiresPin()&&(result?.status==='ready'||result?.status==='pin-required');
+      return (!pinNeeded||nativePin()||validPin(dialog?.querySelector('[data-removal-pin]')?.value))&&(!(installation()||logical()||offline())||dialog?.querySelector('[data-removal-consent]')?.checked===true);
+    }
+    function controls(){
+      const button=dialog?.querySelector('[data-removal="start"],[data-removal="resume"]');
+      if(button)button.disabled=busy||(['ready','pin-required'].includes(result?.status)&&!consentReady());
+      const input=dialog?.querySelector('[data-removal-pin]'),hint=dialog?.querySelector('[data-removal-pin-hint]');
+      if(input&&hint){const invalid=input.value!==''&&!validPin(input.value);hint.hidden=!invalid;input.setAttribute('aria-invalid',String(invalid));}
+    }
+    function pinFields(){
+      const consent=`<label class="removal-consent"><input type="checkbox" data-removal-consent><span>${escape(t(logical()||offline()?"Ik wil alleen deze receiver uit het netwerk verwijderen.":"Ik begrijp dat alle receivers uit deze installatie worden gewist."))}</span></label>`;
+      if(nativePin())return (requiresPin()?`<p class="removal-help">${escape(t("Bevestig hierna je PIN in het beveiligde appvenster."))}</p>`:'')+consent;
+      return `${requiresPin()?`<label class="removal-pin-label" for="removal-installation-pin">${escape(t("Voer je installatie-PIN in"))}<input id="removal-installation-pin" data-removal-pin type="password" inputmode="numeric" autocomplete="off" maxlength="12" minlength="8" autocapitalize="off" spellcheck="false" aria-describedby="removal-pin-help"></label><p id="removal-pin-help" class="removal-help">${escape(t("De bestaande PIN van deze installatie · 8–12 cijfers."))}</p><p data-removal-pin-hint class="removal-pin-hint" hidden>${escape(t("Gebruik je volledige PIN van 8–12 cijfers."))}</p>`:''}${consent}`;
+    }
+    function warning(){
+      if(logical())return `<section class="card removal-warning"><h3>${escape(t("Deze receiver uit het netwerk verwijderen"))}</h3><p>${escape(t("Je andere receivers en instellingen blijven behouden."))}</p><p class="removal-help">${escape(t("Dit bevestigt geen fabrieksreset. Een niet-bereikbare receiver moet je later zelf resetten voordat je hem opnieuw koppelt."))}</p></section>`;
+      if(offline())return `<section class="card removal-warning"><h3>${escape(t("Deze receiver ontkoppelen"))}</h3><p>${escape(t("Deze receiver is nu niet bereikbaar. Hij wordt verwijderd en vergeet de stand zodra hij weer aan gaat."))}</p><p>${escape(t("De rest van je stand blijft behouden."))}</p></section>`;
+      if(!installation())return `<section class="card removal-warning"><h3>${escape(t("Deze receiver ontkoppelen"))}</h3><p>${escape(t('{name} wordt losgekoppeld en start opnieuw. Voeg hem daarna opnieuw toe.',{name:receiver.name}))}</p><p>${legacyPinCopy()?t("Je andere receivers en PIN blijven behouden."):t("De rest van je stand blijft behouden.")}</p></section>`;
+      const count=Number.isSafeInteger(result?.count)?result.count:targets.length;
+      const targetSummary=count===1?t("Er is één receiver in deze installatie."):count>1?t('Je ontkoppelt alle {count} receivers uit deze installatie.',{count}):t("Je ontkoppelt alle receivers uit deze installatie.");
+      return `<section class="card removal-warning"><h3>${escape(t("Alle receivers ontkoppelen"))}</h3><p>${escape(targetSummary)}</p><p>${escape(t(legacyPinCopy()?'De koppeling en installatie-PIN worden gewist. Voeg daarna alle receivers opnieuw toe. Andere stands blijven behouden.':'De koppeling wordt gewist. Voeg daarna alle receivers opnieuw toe. Andere stands blijven behouden.'))}</p><p class="removal-help">${escape(t("Laat alle receivers aan tot de reset is bevestigd."))}</p></section>`;
+    }
+    function progress(){
+      const value=result?.progress;if(!value||!Number.isSafeInteger(value.completed)||!Number.isSafeInteger(value.total))return '';
+      return `<div class="removal-progress" role="status"><b>${escape(t('{completed} van {total} bevestigd',{completed:value.completed,total:value.total}))}</b><progress max="${Math.max(1,value.total)}" value="${value.completed}"></progress><span>${installation()?t("Verbonden tot de laatste stap."):t("Wacht op bevestiging.")}</span></div>`;
+    }
+    function paint(){
+      if(!dialog?.open)return;
+      const status=result?.status,removed=status==='removed';let content='';
+      if(removed&&offline())content=`<section class="card"><h3>${escape(t("Deze receiver ontkoppeld"))}</h3><p>${escape(t("Verwijderd. Zodra de receiver weer aan gaat, vergeet hij deze stand en kun je hem opnieuw toevoegen."))}</p></section>`;
+      else if(removed&&logical())content=`<section class="card"><h3>${escape(t("Uit het netwerk verwijderd"))}</h3><p>${escape(t("De overige receivers hebben de nieuwe indeling bevestigd."))}</p><p>${escape(t("De fabrieksreset van deze receiver is niet bevestigd. Reset hem zelf voordat je hem opnieuw koppelt."))}</p></section>`;
+      else if(removed)content=`<section class="card"><h3>${installation()?t("Alle receivers ontkoppeld"):t("Deze receiver ontkoppeld")}</h3><p>${installation()?`${escape(t("Reset bevestigd. Alle receivers starten opnieuw."))}${legacyPinCopy()?' '+escape(t('De oude PIN is verwijderd.')):''}`:escape(t(legacyPinCopy()?'Reset bevestigd. De receiver start opnieuw; je andere receivers en PIN blijven behouden.':'Reset bevestigd. De receiver start opnieuw; je andere receivers blijven behouden.'))}</p><p>${escape(t(installation()?'Daarna kun je alle receivers opnieuw toevoegen.':'Daarna kun je deze receiver opnieuw toevoegen.'))}</p></section>`;
+      else if(['verification-required','in-progress','pin-required'].includes(status)){
+        content=warning()+progress();
+        if(status==='pin-required'&&requiresPin())content+=`<section class="card"><h3>${escape(t("Verdergaan met wissen"))}</h3><p>${escape(t(logical()?"Bevestig je PIN om dezelfde verwijderopdracht te vervolgen.":"Voer je PIN opnieuw in. Bevestigde resets worden niet herhaald."))}</p></section>${pinFields()}<button class="button full removal-confirm" data-removal="resume">${escape(t("PIN bevestigen en verdergaan"))}</button>`;
+        else if(status==='pin-required')content+=`<section class="card"><h3>${escape(t("Verwijderen gepauzeerd"))}</h3><p>${escape(t("Deze oudere installatie kan niet in deze versie zonder toegangscode worden gewist. Er is niets extra verwijderd."))}</p></section>`;
+        else if(status==='verification-required')content+=`<section class="card"><h3>${escape(t("Verwijdering nog niet bevestigd"))}</h3><p>${escape(t(logical()?"Laat de overige receivers aan. We controleren dezelfde wijziging zonder een nieuwe verwijderopdracht te starten.":"Laat de overige receivers aan en verbonden. Alleen bevestigde resets worden als voltooid getoond."))}</p></section><button class="button full" data-removal="resume">${escape(t("Opnieuw controleren"))}</button>`;
+        else content+=`<section class="card"><h3>${escape(t(logical()?"Netwerkindeling wordt bijgewerkt":"Receivers worden gewist"))}</h3><p>${escape(t("Houd dit scherm open tot de bevestiging."))}</p></section>${autoContinue?'':`<button class="button full" data-removal="resume">${escape(t("Verdergaan"))}</button>`}`;
+      }else{
+        content=warning();
+        if(status==='ready')content+=(installation()||logical()||offline()?pinFields():'')+`<button class="button full removal-confirm" data-removal="start">${installation()?t("Alle receivers ontkoppelen"):t("Deze receiver ontkoppelen")}</button>`;
+        else if(status==='checking')content+=`<p class="removal-help" role="status">${escape(t("Gekoppelde receivers worden veilig gecontroleerd…"))}</p>`;
+        else content+=`<button class="button full" data-removal="check">${status==='blocked'?t("Bereikbaarheid opnieuw controleren"):t("Verbinding controleren")}</button>`;
+        if(status==='blocked')content+=`<p class="removal-help">${escape(t("Geen nieuwe reset gestart. Zet alle receivers aan en controleer opnieuw."))}</p>`;
+      }
+      dialog.innerHTML=`<header><div><h2>${removed?t("Ontkoppeld"):installation()?t("Alle receivers ontkoppelen"):t("Deze receiver ontkoppelen")}</h2><p>${installation()?escape(baseline?.stands.find(s=>s.id===receiver.standId)?.name||t("Je stand"))+' · ':''}${escape(receiver.name)} · ${escape(receiver.type)}</p></div><button class="icon-button" data-removal="close" aria-label="${escape(t("Verwijdervenster sluiten"))}">×</button></header>${content}<p role="alert" ${error?'':'hidden'}>${escape(error)}</p><p role="status" ${busy?'':'hidden'}>${['start','resume'].includes(dialog.dataset.action)?t("Resetopdracht controleren…"):t("Even controleren…")}</p><button class="button secondary full" data-removal="close">${removed?t("Terug naar receivers"):result?.jobId?t("Sluiten · later verdergaan"):t("Niet verwijderen")}</button>`;
+      dialog.querySelectorAll('[data-removal],input').forEach(element=>{element.disabled=busy;});controls();
+    }
+    function validate(next,action,previous){
+      if(standCodeAccess()&&(next?.requiresPin!==false||next?.status==='pin-required'))throw Error('UNCONFIRMED');
+      if(next?.mode!==undefined&&!logical(next)||logical(next)&&(standCodeAccess()||next.factoryResetConfirmed!==false||next.pinEntry!=='native'||next.scope!=='receiver'||next.count!==1)||action!=='check'&&logical(next)!==logical(previous))throw Error('UNCONFIRMED');
+      if(!next||next.standId!==receiver.standId||next.receiverId!==receiver.id||next.rid!==receiver.rid||next.type!==receiver.type||next.scope!==scope(next)||!statuses.has(next.status)||typeof next.requiresPin!=='boolean'||!installation(next)&&!logical(next)&&!offline(next)&&next.requiresPin||next.status==='pin-required'&&!next.requiresPin||action!=='check'&&next.requiresPin!==previous?.requiresPin)throw Error('UNCONFIRMED');
+      const partialCheck=standCodeAccess()&&action==='check'&&next.status==='checking'&&next.jobId===undefined&&previous?.jobId===undefined&&typeof next.planId==='string'&&!!next.planId;
+      if(!Array.isArray(next.targets)||!Number.isSafeInteger(next.count)||next.count<next.targets.length||!partialCheck&&next.count!==next.targets.length||next.count<1||next.count>60)throw Error('UNCONFIRMED');
+      const ids=new Set(),rids=new Set();
+      for(const target of next.targets){
+        if(!target||typeof target.receiverId!=='string'||!target.receiverId||typeof target.rid!=='string'||!/^[A-F0-9]{16}$/.test(target.rid)||!['SPI','RGBW'].includes(target.type)||!['main','node'].includes(target.role)||ids.has(target.receiverId)||rids.has(target.rid))throw Error('UNCONFIRMED');
+        ids.add(target.receiverId);rids.add(target.rid);
+        const known=baseline?.receivers.find(r=>r.id===target.receiverId||r.rid===target.rid);
+        if(known&&(known.id!==target.receiverId||known.rid!==target.rid||known.standId!==receiver.standId||known.type!==target.type||known.role!==target.role))throw Error('UNCONFIRMED');
+      }
+      const own=next.targets.find(t=>t.receiverId===receiver.id);
+      const missingOwnAllowed=partialCheck&&!installation()&&next.targets.length===0;
+      if(!own&&!missingOwnAllowed||own&&(own.rid!==receiver.rid||own.type!==receiver.type||own.role!==receiver.role)||(!installation(next)&&next.count!==1)||installation(next)&&next.targets.filter(t=>t.role==='main').length!==1)throw Error('UNCONFIRMED');
+      if(next.status==='ready'&&(action!=='check'||typeof next.planId!=='string'||!next.planId))throw Error('UNCONFIRMED');
+      if(['in-progress','pin-required','verification-required','removed'].includes(next.status)&&(typeof next.jobId!=='string'||!next.jobId))throw Error('UNCONFIRMED');
+      if(action==='resume'&&next.jobId!==previous?.jobId)throw Error('UNCONFIRMED');
+      if(action==='start'&&next.planId!==previous?.planId)throw Error('UNCONFIRMED');
+      if(action==='start'&&key(next.targets)!==key(previous?.targets))throw Error('UNCONFIRMED');
+      if(previous?.jobId&&next.jobId===previous.jobId&&key(next.targets)!==key(targets))throw Error('UNCONFIRMED');
+      if(next.progress&&(!Number.isSafeInteger(next.progress.completed)||!Number.isSafeInteger(next.progress.total)||next.progress.total!==next.count||next.progress.completed<0||next.progress.completed>next.progress.total))throw Error('UNCONFIRMED');
+      if(previous?.jobId&&next.jobId===previous.jobId&&next.progress&&previous.progress&&next.progress.completed<previous.progress.completed)throw Error('UNCONFIRMED');
+      if(next.status==='removed'&&(!next.progress||next.progress.completed!==next.count))throw Error('UNCONFIRMED');
+    }
+    async function acceptModel(next){
+      const nativeModel=next.view?.model;if(!nativeModel){if(next.status==='removed')throw Error('UNCONFIRMED');return;}
+      if(!Array.isArray(nativeModel.receivers))throw Error('UNCONFIRMED');
+      if(standCodeAccess()){
+        // The central reply is authoritative, including another phone's new
+        // colour/effect. Never restore our old preview after a real release.
+        if(!next.view.central&&!next.view.centralClosed)throw Error('UNCONFIRMED');
+        const Model=root.LightningModel,model=Model.assertValid(clone(nativeModel));
+        if(next.status==='removed'&&model.receivers.some(r=>installation(next)?r.standId===receiver.standId:r.id===receiver.id||r.rid===receiver.rid))throw Error('UNCONFIRMED');
+        for(const known of baseline?.receivers||[]){
+          const retained=model.receivers.find(r=>r.id===known.id);
+          if(retained&&['rid','type','role','standId','deviceFingerprint'].some(field=>key(retained[field])!==key(known[field])))throw Error('UNCONFIRMED');
+        }
+        await onRemoved(model,{status:next.status,central:next.view.central,centralClosed:next.view.centralClosed});baseline=clone(model);return;
+      }
+      // Native storage authorizes the exact membership change, but stores a
+      // neutral light baseline. Keep the already visible colour/animation and
+      // reachability of retained receivers. Never mutate the native reply or
+      // project identity, outputs, zone, role or any other configuration field.
+      const model=clone(nativeModel);
+      if(baseline)for(const retained of model.receivers){
+        const previous=baseline.receivers.find(receiver=>receiver.id===retained.id);
+        if(previous)for(const field of ['state','connection']){
+          if(Object.prototype.hasOwnProperty.call(previous,field))retained[field]=clone(previous[field]);
+        }
+      }
+      // Native membership storage intentionally omits browser light metadata.
+      // Retain only this validated registry for the same surviving SPI zone;
+      // no identities, membership, order, ports or direction come from it.
+      if(baseline)for(const stand of model.stands||[])for(const zone of stand.zones||[]){
+        const previous=baseline.stands.find(s=>s.id===stand.id)?.zones.find(z=>z.id===zone.id);
+        if(zone.type==='SPI'&&previous?.type==='SPI'&&Object.prototype.hasOwnProperty.call(previous,'gradientDomains')){
+          if(root.LightningModel?.validGradientDomains?.(previous.gradientDomains)!==true)throw Error('UNCONFIRMED');
+          zone.gradientDomains=clone(previous.gradientDomains);
+        }
+      }
+      if(['checking','ready','blocked'].includes(next.status)&&baseline&&key(model)!==key(baseline))throw Error('UNCONFIRMED');
+      const allowed=new Set(next.targets.map(t=>t.receiverId));
+      if(next.status==='removed'&&model.receivers.some(r=>installation(next)?r.standId===receiver.standId:r.id===receiver.id||r.rid===receiver.rid))throw Error('UNCONFIRMED');
+      if(baseline){
+        for(const old of baseline.receivers){const found=model.receivers.find(r=>r.id===old.id);if((!allowed.has(old.id)||found)&&key(found)!==key(old))throw Error('UNCONFIRMED');}
+        if(model.receivers.some(r=>!baseline.receivers.some(old=>old.id===r.id)))throw Error('UNCONFIRMED');
+        for(const field of ['schemaVersion','demo','scenes','presets'])if(key(model[field])!==key(baseline[field]))throw Error('UNCONFIRMED');
+        const Model=root.LightningModel,remaining=new Set(model.receivers.map(r=>r.id));
+        if(typeof Model?.assertValid!=='function'||typeof Model?.unassignReceiver!=='function')throw Error('UNCONFIRMED');
+        // Native release preserves each surviving physical line's place and
+        // trims only the released receiver's lines. Use the existing semantic
+        // model operation, not an IDs-only approximation or the reply's order.
+        let expected=Model.assertValid(clone(baseline));
+        for(const old of baseline.receivers)if(allowed.has(old.id)&&!remaining.has(old.id))expected=Model.unassignReceiver(expected,old.id);
+        if(key(model.stands)!==key(expected.stands))throw Error('UNCONFIRMED');
+        Model.assertValid(model);
+        if(installation(next)&&next.status!=='removed'&&!model.receivers.some(r=>r.id===receiver.id))throw Error('UNCONFIRMED');
+      }
+      await onRemoved(model,{status:next.status});baseline=clone(model);
+    }
+    function schedule(action){clearTimer();const token=generation;timer=root.setTimeout(()=>{timer=null;if(token===generation&&dialog?.open&&!busy)perform(action,true);},250);}
+    async function perform(action,automatic=false){
+      if(busy||!dialog?.open)return;
+      if(action==='start'&&(result?.status!=='ready'||!consentReady()))return;
+      if(action==='resume'&&(!result?.jobId||result.status==='pin-required'&&!consentReady()))return;
+      const token=generation,previous=result,request={standId:receiver.standId,receiverId:receiver.id};
+      if(action==='start')request.planId=result.planId;
+      if(action==='resume')request.jobId=result.jobId;
+      if(requiresPin()&&!nativePin()&&(action==='start'||result?.status==='pin-required'))request.pin=dialog.querySelector('[data-removal-pin]').value;
+      clearPin();clearTimer();if(!automatic&&action!=='check')autoContinue=true;
+      busy=true;error='';dialog.dataset.action=action;paint();
+      try{
+        const method={check:'removalPlan',start:'removalStart',resume:'removalResume'}[action];
+        if(typeof services[method]!=='function')throw Error('UNAVAILABLE');
+        const next=await services[method](request);delete request.pin;if(token!==generation)return;
+        validate(next,action,previous);await acceptModel(next);targets=clone(next.targets);result=next;
+        if(!standCodeAccess()&&!usesDedicatedFirstPin(receiver)&&installation()&&action==='check'&&next.status!=='checking'&&next.status!=='blocked')root.AluvisionSecurityMode?.updateFromNative?.({pinRequired:next.requiresPin});
+        if(['verification-required','pin-required','blocked','removed'].includes(next.status))autoContinue=false;
+      }catch(failure){
+        delete request.pin;if(token!==generation)return;autoContinue=false;
+        const code=failure?.code;
+        error=removalErrorMessage(action,failure);
+        // An uncertain start must not leave a second destructive start button.
+        if(action==='start'&&!['REMOVAL_PIN_INVALID','REMOVAL_RATE_LIMITED'].includes(code))result=null;
+        if(action==='check')result=null;
+      }finally{
+        delete request.pin;if(token===generation){busy=false;paint();if(result?.status==='checking')schedule('check');else if(result?.status==='in-progress'&&autoContinue)schedule('resume');}
+      }
+    }
+    function open(value){
+      if(busy)throw Error('REMOVAL_BUSY');
+      if(!value||value.lifecycle!=='added'||!['main','node'].includes(value.role))throw Error('ADDED_RECEIVER_REQUIRED');
+      clearTimer();generation++;receiver={...value};baseline=typeof getModel==='function'?clone(getModel()):null;targets=[];result=null;busy=false;autoContinue=false;error='';returnFocus=document.activeElement;
+      if(!dialog){dialog=document.createElement('dialog');dialog.className='receiver-removal-sheet';dialog.setAttribute('aria-label',t("Receiver verwijderen"));document.body.append(dialog);
+        dialog.addEventListener('click',event=>{const button=event.target.closest('[data-removal]');if(!button||button.disabled)return;button.dataset.removal==='close'?close():perform(button.dataset.removal);});
+        dialog.addEventListener('input',controls);dialog.addEventListener('change',controls);dialog.addEventListener('cancel',event=>{event.preventDefault();close();});}
+      dialog.showModal();paint();dialog.scrollTop=0;perform('check');
+    }
+    return Object.freeze({open,close});
+  }
+  root.LightningReceiverRemovalUI=Object.freeze({create});
+})(window);

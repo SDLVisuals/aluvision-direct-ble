@@ -1,0 +1,111 @@
+/* De standpagina (stand-home.js) en de ronde aan/uit-knop (.alv-power), uit het goedgekeurde prototype
+   ideeen-animaties-instellingen (U1). De knop staat hier omdat hij overal dezelfde is. */
+.alv-power{position:relative;flex:none;display:grid;place-items:center;width:var(--s,44px);height:var(--s,44px);padding:0;border:0;border-radius:50%;background:var(--panel,#fff);color:#9aa1ab;box-shadow:0 0 0 1.5px var(--line,#dce1e9);cursor:pointer;transition:background .3s ease,color .3s ease,box-shadow .3s ease,transform .12s ease}
+.alv-power svg{width:calc(var(--s,44px)*.46);height:calc(var(--s,44px)*.46);fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
+.alv-power.is-on{background:#15171b;color:#fff;box-shadow:0 0 0 2px var(--panel,#fff),0 0 14px 2px color-mix(in srgb,var(--g) 70%,transparent),0 0 0 3.5px color-mix(in srgb,var(--g) 55%,transparent)}
+.alv-power.is-mixed{background:#15171b;color:#ffffffb3;box-shadow:0 0 0 2px var(--panel,#fff),0 0 0 3.5px color-mix(in srgb,var(--g) 35%,transparent)}
+.alv-power:active{transform:scale(.95)}
+.alv-power:disabled{opacity:.4;cursor:default}
+:root[data-theme="dark"] .alv-power:not(.is-on):not(.is-mixed){background:#22252b;color:#8b929c;box-shadow:0 0 0 1.5px #ffffff22}
+.sh-page{display:grid;gap:12px;padding-bottom:24px}
+.sh-stand{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 18px 18px 20px;border-radius:26px;background:var(--panel,#fff);box-shadow:0 0 0 1px var(--line,#e3e6ea),0 18px 40px -30px #000}
+.sh-standt{display:grid;gap:2px;min-width:0}
+.sh-standt small{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:850;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.sh-standt small i{width:8px;height:8px;border-radius:50%;background:currentColor}
+.sh-standt small.is-ok{color:#1a9d4b}.sh-standt small.is-ok i{box-shadow:0 0 8px #1FC45B}
+.sh-standt h1{margin:2px 0;font-size:32px;letter-spacing:-.03em;line-height:1.05;overflow-wrap:anywhere}
+.sh-standt span{font-weight:700;color:var(--muted)}
+.sh-switch{justify-self:start;min-height:36px;padding:0 4px;border:0;background:none;font:inherit;font-weight:800;color:var(--accent,#d9473b)}
+.sh-acts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sh-act{display:flex;align-items:center;gap:10px;min-height:64px;padding:8px 12px 8px 8px;border:0;border-radius:20px;background:var(--panel,#fff);color:var(--ink,#1c1c1e);box-shadow:0 0 0 1px var(--line,#e3e6ea);font:inherit;text-align:left;cursor:pointer}
+.sh-act b{font-size:15px;line-height:1.15}
+.sh-act:disabled{opacity:.5}
+.sh-ic{position:relative;flex:none;display:grid;place-items:center;width:46px;height:46px;border-radius:13px;background:#15171b}
+.sh-ring{position:absolute;inset:4px;border-radius:50%;background:conic-gradient(#FF5E3A,#FFD166,#1FC45B,#2BC7E8,#2F6BFF,#9B4DFF,#FF4FA3,#FF5E3A);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4.5px),#000 calc(100% - 4px));mask:radial-gradient(farthest-side,transparent calc(100% - 4.5px),#000 calc(100% - 4px))}
+.sh-v4{display:grid;grid-template-columns:1fr 1fr;gap:2.5px;width:18px;height:18px}.sh-v4 i{border-radius:3px;background:#FF5E3A;box-shadow:0 0 4px #FF5E3A}
+.sh-mark svg{width:26px;height:26px;fill:#FF5E3A;stroke:none;filter:drop-shadow(0 0 5px #FF5E3A)}
+.sh-mark b{position:absolute;right:-5px;bottom:-5px;display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--panel,#fff);color:#15171b;box-shadow:0 0 0 1.5px #15171b;font-size:15px;line-height:1}
+.sh-zhead{display:flex;align-items:center;justify-content:space-between;margin:10px 2px 12px} /* 15 nov (de eigenaar): ruimte tussen de kop en de eerste zone, zoals tussen de zones */
+.sh-zhead h2{margin:0;font-size:24px}
+.sh-new{display:flex;align-items:center;gap:6px;min-height:42px;padding:0 16px;border:0;border-radius:999px;background:#15171b;color:#fff;font:inherit;font-weight:800;cursor:pointer}.sh-new svg{width:16px;height:16px}
+.sh-list{display:grid!important;grid-template-columns:1fr!important;gap:10px}
+.sh-zone{display:flex;align-items:center;gap:10px;padding:8px 12px 8px 8px;border-radius:22px;background:var(--panel,#fff);box-shadow:0 0 0 1px var(--line,#e3e6ea)}
+.sh-zopen{flex:1;display:flex;align-items:center;gap:12px;min-width:0;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.sh-zprev{flex:none;display:block;width:96px;height:62px;border-radius:14px;background:#111316;overflow:hidden}
+.sh-zprev>*{width:100%!important;height:100%!important;margin:0!important;border-radius:0!important}
+.sh-zprev canvas{display:block;width:100%!important;height:100%!important}
+.sh-zt{display:grid;gap:3px;min-width:0}.sh-zt b{overflow:hidden;font-size:18px;white-space:nowrap;text-overflow:ellipsis}
+.sh-zt small{display:flex;align-items:center;gap:7px;font-weight:700;color:var(--muted)}
+.sh-badge{display:inline-grid;place-items:center;padding:1px 6px;border-radius:6px;box-shadow:inset 0 0 0 1.3px currentColor;font-size:10.5px;font-weight:900;letter-spacing:.08em}
+.sh-zone.is-off .sh-zprev{opacity:.45}
+.sh-empty{margin:0}
+
+/* Alles bedienen (15 nov): één lijn voor al je ledlines, het knopje naar de pop-up en de ronde aan/uit-knop */
+.sc1-top{display:flex;align-items:center;gap:12px;margin:4px 0 12px}
+.sc1-line{flex:1;display:flex;align-items:center;gap:10px;min-width:0;height:58px;padding:0 8px 0 16px;border-radius:20px;background:#111316}
+.sc1-line canvas.sc1-linecv{flex:1;min-width:0;width:100%!important;height:30px!important}
+.sc1-allbtn{display:grid;place-items:center;flex:none;width:36px;height:36px;padding:0;border:0;border-radius:50%;background:#ffffff1a;color:#fff;cursor:pointer}.sc1-allbtn svg{width:17px;height:17px}
+.sc1-pop{position:fixed;inset:0;z-index:80;display:grid;align-items:end}
+.sc1-popbg{position:absolute;inset:0;background:#0007}
+.sc1-popbox{position:relative;display:grid;gap:14px;max-height:86dvh;overflow:auto;padding:10px 16px calc(22px + env(safe-area-inset-bottom));border-radius:26px 26px 0 0;background:radial-gradient(120% 60% at 50% 0%,#2a1d1a,#0f1114 70%);color:#fff;animation:sc1-up .3s cubic-bezier(.2,.8,.2,1)}
+@keyframes sc1-up{from{transform:translateY(40px);opacity:0}}
+.sc1-handle{justify-self:center;width:40px;height:5px;border-radius:3px;background:#ffffff33}
+.sc1-pophead{display:flex;align-items:flex-start;justify-content:space-between}.sc1-pophead h3{margin:0;font-size:24px;color:#fff}.sc1-pophead small{font-weight:700;color:#ffffff8c}
+.sc1-x{display:grid;place-items:center;width:40px;height:40px;border:0;border-radius:50%;background:#ffffff1a;color:#fff;font:inherit;font-size:22px}
+.sc1-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sc1-card{display:grid;gap:8px;padding:12px 12px 10px;border-radius:18px;background:linear-gradient(160deg,#ffffff12,#ffffff06);box-shadow:inset 0 0 0 1px #ffffff14}
+.sc1-ctop{display:flex;align-items:center;justify-content:space-between;gap:6px}.sc1-ctop b{overflow:hidden;font-size:15px;white-space:nowrap;text-overflow:ellipsis}
+.sc1-ctop .sh-badge{color:#ffffffb3}
+.sc1-card canvas{display:block;width:100%!important;height:56px!important;border-radius:10px}
+.sc1-card small{font-size:12px;font-weight:700;color:#ffffff73}
+dialog .stand-controls-sheet .sc1-top,.sc1-top{display:grid!important;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px}
+.alv-power.is-on svg,.alv-power.is-mixed svg{stroke:#fff!important;color:#fff}
+.sc1-allbtn svg{stroke:#fff!important}
+/* Alles bedienen zoals het prototype: de lijn en de knop boven de tabs, Opslaan als scène eronder */
+#effect-dialog header .sc1-top{margin:6px 0 10px}
+#effect-dialog .stand-controls-sheet>.stand-control-scope{display:none}
+.sc1-scene{display:flex;align-items:center;gap:12px;width:100%;margin:10px 0 2px;padding:8px 14px 8px 8px;border:0;border-radius:20px;background:var(--panel,#fff);color:var(--ink,#1c1c1e);box-shadow:0 0 0 1px var(--line,#e3e6ea);font:inherit;text-align:left;cursor:pointer}
+.sc1-scene>span:last-child{display:grid;gap:1px}.sc1-scene b{font-size:16px}.sc1-scene small{font-weight:700;color:var(--muted)}
+#effect-dialog .zp-player{bottom:calc(98px + env(safe-area-inset-bottom))}
+#effect-dialog .zp-a1grid,#effect-dialog .zp-a1wrap{padding-bottom:150px}
+.sc1-herocv{display:block;width:100%!important;height:120px!important}
+/* donkere modus: donkere knoppen op een donkere achtergrond worden licht */
+body[data-theme=dark] .zp-a1chips button[aria-pressed=true]{background:#f2f2f0;color:#15171b}
+/* 15 nov (de eigenaar): in donker geen fel wit blok, maar een donkere knop zoals de andere */
+body[data-theme=dark] .sh-new{background:var(--panel,#1d2024);color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.16)}
+body[data-theme=dark] .zp-a1done button{background:#f2f2f0;color:#15171b}
+body[data-theme=dark] .zp-a1tile.is-on,body[data-theme=dark] .zp-dirs button[aria-pressed=true]{box-shadow:0 0 0 2.5px #f2f2f0}
+body[data-theme=dark] .zp-player{box-shadow:inset 0 0 0 1px #ffffff26,0 18px 40px -16px #000;background:#1d2024}
+body[data-theme=dark] .sh-stand,body[data-theme=dark] .sh-act,body[data-theme=dark] .sh-zone,body[data-theme=dark] .sc1-scene{box-shadow:0 0 0 1px #ffffff1a}
+body[data-theme=dark] .sh-mark b{background:#22252b;color:#fff;box-shadow:0 0 0 1.5px #fff}
+body[data-theme=dark] .sth-qb .sth-ic{background:#f2f2f0;color:#15171b}
+/* de kop van Alles bedienen: titel en kruisje, dan de lijn met de knop, dan de tabs (elk over de volle breedte) */
+#effect-dialog header:has(.sc1-top){display:grid!important;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px}
+#effect-dialog header:has(.sc1-top)>.sc1-top,#effect-dialog header:has(.sc1-top)>.stand-controls-tabs{grid-column:1/-1;order:0}
+#effect-dialog .stand-controls-sheet>.sc1-scene{margin:4px 0 12px}
+#effect-dialog header:has(.sc1-top)>.sc1-top{order:1}
+#effect-dialog header:has(.sc1-top)>.stand-controls-tabs{order:2}
+html body #effect-dialog header:has(.sc1-top)>h2{grid-row:1!important}
+html body #effect-dialog header:has(.sc1-top)>.sc1-top{grid-row:2!important;grid-column:1/-1!important}
+html body #effect-dialog header:has(.sc1-top)>.stand-controls-tabs{grid-row:3!important;grid-column:1/-1!important}
+/* Alles bedienen: geen uitlegregel (zo weinig mogelijk tekst) */
+#effect-dialog [data-stand-control-sheet] #stand-control-mixed{display:none!important}
+.sc1-herocv{height:60px!important}
+/* 15 nov (de eigenaar: "dat zone icoontje beter uitwerken"): een pilletje met een blokje per zone in haar kleur en het aantal */
+.sc1-allbtn{display:flex!important;align-items:center;gap:7px;width:auto!important;height:34px!important;padding:0 11px 0 8px!important;border-radius:999px!important;background:#ffffff1f!important;color:#fff!important;font:inherit;white-space:nowrap}
+.sc1-allbtn b{font-size:12.5px;font-weight:850;color:#fff}
+.sc1-zic{display:grid;grid-template-columns:repeat(2,8px);grid-auto-rows:8px;gap:2px}
+.sc1-zic i{border-radius:2.5px;background:var(--c);box-shadow:0 0 4px var(--c)}
+.sc1-allbtn:active{transform:scale(.96)}
+
+/* zone aanwijzen: de andere zones vervagen, deze knippert (ook op de stand zelf, via app.js zone-find) */
+.sh-find{display:grid;place-items:center;flex:none;width:38px;height:38px;padding:0;border:0;border-radius:50%;background:none;color:var(--muted);cursor:pointer;transition:background .3s ease,color .3s ease}
+.sh-find svg{width:21px;height:21px}
+.sh-find[aria-pressed=true]{background:#15171b;color:#fff}
+body[data-theme=dark] .sh-find[aria-pressed=true]{background:#f2f2f0;color:#15171b}
+.sh-zone{transition:opacity .6s ease,box-shadow .3s ease}
+.sh-list[data-finding] .sh-zone:not(.is-found){opacity:.4}
+.sh-zone.is-found{box-shadow:0 0 0 2px var(--ink)}
+.sh-zone.is-found .sh-zprev{animation:sh-blink 1s ease-in-out infinite}
+@keyframes sh-blink{0%,100%{opacity:1}50%{opacity:.15}}
+@media (prefers-reduced-motion:reduce){.sh-zone.is-found .sh-zprev{animation:none}}

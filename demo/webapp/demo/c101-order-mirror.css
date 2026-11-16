@@ -1,0 +1,173 @@
+/* C101 order explainer. One 9 s loop: 0-30% look, 30-64% drag red to 1,
+ * 64-100% check. Reduced motion shows the finished state without movement. */
+.order-mirror101{
+  --om-t:9s;--om-row:46px;--om-red:#ff5a4f;--om-green:#2fd27a;--om-blue:#3d8bff;--om-ok:#22a06b;
+  display:grid;gap:14px;min-width:0;color:var(--ink,#1c1c1e);
+}
+.order-mirror101[data-om-compact="true"]{--om-row:36px;gap:10px}
+.order-mirror101 svg{display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.order-mirror101 .om-lead{margin:0;font-size:14px;line-height:1.5;color:var(--muted,#646d78);text-align:center}
+
+/* ---------- Stage ---------- */
+.order-mirror101 .om-stage{display:grid;grid-template-columns:minmax(0,1fr) 26px minmax(0,1fr);align-items:stretch;gap:4px;min-width:0}
+.order-mirror101 .om-panel{display:grid;grid-template-rows:auto auto;align-content:start;gap:8px;min-width:0;padding:12px 12px 14px;border-radius:20px}
+.order-mirror101[data-om-compact="true"] .om-panel{padding:10px 10px 11px;border-radius:16px;gap:6px}
+.order-mirror101 .om-panel-title{display:flex;align-items:center;gap:6px;height:18px;margin:0;font-size:11px;font-weight:750;letter-spacing:.3px;white-space:nowrap;overflow:hidden}
+.order-mirror101 .om-panel-title svg{flex:none;width:15px;height:15px}
+.order-mirror101 .om-panel-stand{background:radial-gradient(120% 90% at 50% 0%,#252b36,#11141a);color:#f2f4f7;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 14px 30px -22px rgba(0,0,0,.7)}
+.order-mirror101 .om-panel-stand .om-panel-title{color:rgba(242,244,247,.72)}
+.order-mirror101 .om-panel-app{background:var(--panel,#fff);border:1px solid color-mix(in srgb,var(--line,#dce1e9) 85%,transparent);box-shadow:0 14px 30px -24px rgba(20,24,32,.45)}
+.order-mirror101 .om-panel-app .om-panel-title{color:var(--muted,#646d78)}
+
+/* The stand: three glowing ledlines, lit one after the other. */
+.order-mirror101 .om-wall{display:grid;margin:0;padding:0;list-style:none}
+.order-mirror101 .om-wall-line{--c:var(--om-red);display:grid;grid-template-columns:20px minmax(0,1fr);grid-template-rows:auto auto;column-gap:7px;align-items:center;height:var(--om-row);align-content:center}
+.order-mirror101 .om-wall-line[data-om-colour="green"]{--c:var(--om-green)}
+.order-mirror101 .om-wall-line[data-om-colour="blue"]{--c:var(--om-blue)}
+.order-mirror101 .om-wall-line>b{grid-row:1/3;display:grid;place-items:center;width:20px;height:20px;border-radius:7px;background:rgba(255,255,255,.1);font-size:11px}
+.order-mirror101 .om-led{display:block;height:10px;border-radius:6px;background:#2a2f39;overflow:hidden}
+.order-mirror101 .om-led>i{display:block;height:100%;border-radius:inherit;background:repeating-linear-gradient(90deg,var(--c) 0 5px,color-mix(in srgb,var(--c) 70%,#000) 5px 7px);
+  box-shadow:0 0 14px 2px color-mix(in srgb,var(--c) 70%,transparent);animation:om-light var(--om-t) ease-in-out infinite;animation-delay:calc(var(--om-i) * .45s)}
+.order-mirror101 .om-wall-line>small{font-size:10.5px;font-weight:650;color:rgba(242,244,247,.78);line-height:1.3;margin-top:2px}
+.order-mirror101[data-om-compact="true"] .om-wall-line>small{display:none}
+/* Place 1 on the stand is the one the hand works on in step 2. */
+.order-mirror101 .om-wall-line:first-child>b{animation:om-focus-number var(--om-t) ease-in-out infinite}
+
+/* Links between stand and app: grey while unsure, green tick once matched. */
+.order-mirror101 .om-links{display:grid;align-content:start;padding-top:calc(12px + 18px + 8px)}
+.order-mirror101[data-om-compact="true"] .om-links{padding-top:calc(10px + 18px + 6px)}
+.order-mirror101 .om-link{position:relative;display:grid;place-items:center;height:var(--om-row)}
+.order-mirror101 .om-link>i{position:absolute;left:0;right:0;top:50%;height:2px;border-radius:2px;background:repeating-linear-gradient(90deg,color-mix(in srgb,var(--muted,#646d78) 55%,transparent) 0 4px,transparent 4px 7px);animation:om-link var(--om-t) ease-in-out infinite;animation-delay:calc(var(--om-i) * .35s)}
+.order-mirror101 .om-link>b{position:relative;display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--om-ok);color:#fff;font-size:11px;line-height:1;transform:scale(0);animation:om-tick var(--om-t) cubic-bezier(.3,1.6,.5,1) infinite;animation-delay:calc(var(--om-i) * .35s)}
+
+/* The app: numbered places and cards that can be dragged. */
+.order-mirror101 .om-app{position:relative;height:calc(var(--om-row) * 3)}
+.order-mirror101 .om-slots{position:absolute;inset:0 auto 0 0;display:grid;grid-auto-rows:var(--om-row);width:20px;margin:0;padding:0;list-style:none}
+.order-mirror101 .om-slots>li{display:grid;place-items:center;font-size:12px;font-weight:800;color:var(--muted,#646d78)}
+.order-mirror101 .om-slots>li:first-child{animation:om-focus-slot var(--om-t) ease-in-out infinite}
+.order-mirror101 .om-cards{position:absolute;inset:0 0 0 26px;margin:0;padding:0;list-style:none}
+.order-mirror101 .om-card{--c:var(--om-red);position:absolute;left:0;right:0;top:calc(var(--om-row) * var(--slot) + 3px);height:calc(var(--om-row) - 6px);
+  display:flex;align-items:center;gap:7px;padding:0 6px 0 8px;border-radius:12px;background:var(--panel,#fff);
+  border:1px solid color-mix(in srgb,var(--line,#dce1e9) 90%,transparent);box-shadow:0 2px 6px -3px rgba(20,24,32,.3);min-width:0}
+.order-mirror101 .om-card[data-om-slot="0"]{--slot:0}
+.order-mirror101 .om-card[data-om-slot="1"]{--slot:1}
+.order-mirror101 .om-card[data-om-slot="2"]{--slot:2}
+.order-mirror101 .om-card[data-om-colour="green"]{--c:var(--om-green)}
+.order-mirror101 .om-card[data-om-colour="blue"]{--c:var(--om-blue);animation:om-blue var(--om-t) ease-in-out infinite}
+.order-mirror101 .om-card[data-om-colour="red"]{z-index:2;animation:om-red var(--om-t) cubic-bezier(.45,0,.25,1) infinite}
+.order-mirror101 .om-swatch{flex:none;width:22px;height:9px;border-radius:5px;background:var(--c);box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 22%,transparent)}
+.order-mirror101 .om-card>b{flex:1;min-width:0;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.order-mirror101 .om-grip{flex:none;width:9px;color:var(--muted,#646d78);opacity:.7}
+.order-mirror101 .om-grip svg{fill:currentColor;stroke:none;width:9px;height:14px}
+.order-mirror101[data-om-compact="true"] .om-card>b{font-size:11px}
+.order-mirror101[data-om-compact="true"] .om-swatch{width:16px}
+/* The hand follows the red card from place 3 to place 1. */
+.order-mirror101 .om-hand{position:absolute;right:-4px;top:calc(var(--om-row) * 2 + var(--om-row) / 2 - 4px);z-index:3;width:24px;height:27px;color:var(--ink,#1c1c1e);opacity:0;
+  animation:om-hand var(--om-t) cubic-bezier(.45,0,.25,1) infinite;filter:drop-shadow(0 3px 4px rgba(0,0,0,.25))}
+.order-mirror101 .om-hand svg{width:100%;height:100%;fill:#fff;stroke:#1c1c1e;stroke-width:1.8}
+
+/* ---------- Steps ---------- */
+.order-mirror101 .om-steps{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.order-mirror101 .om-step{display:flex;align-items:flex-start;gap:10px;padding:9px 11px;border-radius:14px;opacity:.45;transition:none}
+.order-mirror101 .om-step[data-om-step="1"]{animation:om-step1 var(--om-t) linear infinite}
+.order-mirror101 .om-step[data-om-step="2"]{animation:om-step2 var(--om-t) linear infinite}
+.order-mirror101 .om-step[data-om-step="3"]{animation:om-step3 var(--om-t) linear infinite}
+.order-mirror101 .om-step-number{flex:none;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--ink,#1c1c1e);color:var(--panel,#fff);font-size:12px;font-weight:800}
+.order-mirror101 .om-step>span:last-child{display:grid;gap:2px;min-width:0}
+.order-mirror101 .om-step b{font-size:14px;line-height:1.3}
+.order-mirror101 .om-step small{font-size:12px;line-height:1.4;color:var(--muted,#646d78)}
+/* Compact: one line per step, only the active one is shown. */
+.order-mirror101[data-om-compact="true"] .om-steps{position:relative;height:36px}
+.order-mirror101[data-om-compact="true"] .om-step{position:absolute;inset:0;align-items:center;padding:0 4px;background:none!important}
+.order-mirror101[data-om-compact="true"] .om-step small{display:none}
+.order-mirror101[data-om-compact="true"] .om-step b{font-size:13px}
+.order-mirror101[data-om-compact="true"] .om-step[data-om-step="1"]{animation-name:om-only1}
+.order-mirror101[data-om-compact="true"] .om-step[data-om-step="2"]{animation-name:om-only2}
+.order-mirror101[data-om-compact="true"] .om-step[data-om-step="3"]{animation-name:om-only3}
+
+/* ---------- Controls ---------- */
+.order-mirror101 .om-controls{display:flex;justify-content:center;gap:8px}
+.order-mirror101 .om-controls button{display:inline-flex;align-items:center;gap:7px;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid color-mix(in srgb,var(--line,#dce1e9) 90%,transparent);
+  background:var(--panel,#fff);color:var(--ink,#1c1c1e);font:inherit;font-size:13px;font-weight:650}
+.order-mirror101 .om-note{margin:0;text-align:center;font-size:11px;color:var(--muted,#646d78)}
+.order-mirror101[data-playing="false"] *,.order-mirror101[data-playing="false"]{animation-play-state:paused!important}
+.order-mirror101.om-restart *{animation:none!important}
+
+/* ---------- Timeline ---------- */
+@keyframes om-light{0%{opacity:.18;box-shadow:none}7%,93%{opacity:1;box-shadow:0 0 14px 2px color-mix(in srgb,var(--c) 70%,transparent)}100%{opacity:.18;box-shadow:none}}
+@keyframes om-focus-number{0%,28%{background:rgba(255,255,255,.1);color:inherit}32%,62%{background:var(--om-red);color:#fff}66%,100%{background:rgba(255,255,255,.1);color:inherit}}
+@keyframes om-focus-slot{0%,28%{color:var(--muted,#646d78);transform:none}32%,62%{color:var(--om-red);transform:scale(1.25)}66%,100%{color:var(--muted,#646d78);transform:none}}
+@keyframes om-red{0%,36%{transform:none;box-shadow:0 2px 6px -3px rgba(20,24,32,.3)}40%{transform:scale(1.05);box-shadow:0 14px 22px -10px rgba(20,24,32,.5)}
+  56%{transform:translateY(calc(var(--om-row) * -2)) scale(1.05);box-shadow:0 14px 22px -10px rgba(20,24,32,.5)}60%,94%{transform:translateY(calc(var(--om-row) * -2));box-shadow:0 2px 6px -3px rgba(20,24,32,.3);opacity:1}
+  97%{transform:translateY(calc(var(--om-row) * -2));opacity:0}98%{transform:none;opacity:0}100%{transform:none;opacity:1}}
+@keyframes om-blue{0%,42%{transform:none;opacity:1}56%,94%{transform:translateY(calc(var(--om-row) * 2));opacity:1}97%{transform:translateY(calc(var(--om-row) * 2));opacity:0}98%{transform:none;opacity:0}100%{transform:none;opacity:1}}
+@keyframes om-hand{0%,30%{opacity:0;transform:translate(6px,6px)}34%{opacity:1;transform:none}38%,40%{opacity:1;transform:scale(.9)}
+  56%{opacity:1;transform:translateY(calc(var(--om-row) * -2)) scale(.9)}60%{opacity:1;transform:translateY(calc(var(--om-row) * -2))}66%,100%{opacity:0;transform:translateY(calc(var(--om-row) * -2)) translate(6px,6px)}}
+@keyframes om-link{0%,64%{background:repeating-linear-gradient(90deg,color-mix(in srgb,var(--muted,#646d78) 55%,transparent) 0 4px,transparent 4px 7px)}68%,95%{background:var(--om-ok)}100%{background:repeating-linear-gradient(90deg,color-mix(in srgb,var(--muted,#646d78) 55%,transparent) 0 4px,transparent 4px 7px)}}
+@keyframes om-tick{0%,64%{transform:scale(0)}69%,95%{transform:scale(1)}100%{transform:scale(0)}}
+@keyframes om-step1{0%,30%{opacity:1;background:color-mix(in srgb,var(--ink,#1c1c1e) 6%,transparent)}33%,100%{opacity:.45;background:transparent}}
+@keyframes om-step2{0%,30%{opacity:.45;background:transparent}33%,64%{opacity:1;background:color-mix(in srgb,var(--ink,#1c1c1e) 6%,transparent)}67%,100%{opacity:.45;background:transparent}}
+@keyframes om-step3{0%,64%{opacity:.45;background:transparent}67%,100%{opacity:1;background:color-mix(in srgb,var(--ink,#1c1c1e) 6%,transparent)}}
+@keyframes om-only1{0%,30%{opacity:1;transform:none}33%,98%{opacity:0;transform:translateY(-4px)}100%{opacity:1;transform:none}}
+@keyframes om-only2{0%,30%{opacity:0;transform:translateY(4px)}33%,64%{opacity:1;transform:none}67%,100%{opacity:0;transform:translateY(-4px)}}
+@keyframes om-only3{0%,64%{opacity:0;transform:translateY(4px)}67%,97%{opacity:1;transform:none}100%{opacity:0}}
+
+/* ---------- Reduced motion: the finished picture, all steps listed ---------- */
+@media (prefers-reduced-motion:reduce){
+  .order-mirror101 *{animation:none!important}
+  .order-mirror101 .om-led>i{opacity:1}
+  .order-mirror101 .om-card[data-om-colour="red"]{transform:translateY(calc(var(--om-row) * -2))}
+  .order-mirror101 .om-card[data-om-colour="blue"]{transform:translateY(calc(var(--om-row) * 2))}
+  .order-mirror101 .om-link>i{background:var(--om-ok)}
+  .order-mirror101 .om-link>b{transform:none}
+  .order-mirror101 .om-step{opacity:1}
+  .order-mirror101[data-om-compact="true"] .om-steps{height:auto;display:grid}
+  .order-mirror101[data-om-compact="true"] .om-step{position:static}
+  .order-mirror101 .om-controls{display:none}
+}
+
+/* ---------- Dark theme ---------- */
+body[data-theme=dark] .order-mirror101 .om-panel-app{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1)}
+body[data-theme=dark] .order-mirror101 .om-card{background:#2a2b2e;border-color:rgba(255,255,255,.1)}
+body[data-theme=dark] .order-mirror101 .om-hand svg{fill:#f4f3f1;stroke:#111}
+body[data-theme=dark] .order-mirror101 .om-controls button{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.12)}
+
+/* ---------- Where it lives ---------- */
+/* Inline in the order screen, in place of the old static example. */
+html.interface-polish body .ledline-setup .order-mirror101[data-om-compact="true"]{margin:4px 0 2px;padding:12px;border-radius:20px;
+  background:color-mix(in srgb,var(--panel,#fff) 60%,transparent);border:1px solid color-mix(in srgb,var(--line,#dce1e9) 70%,transparent)}
+body[data-theme=dark] .ledline-setup .order-mirror101[data-om-compact="true"]{background:rgba(255,255,255,.04)!important;border-color:rgba(255,255,255,.08)!important}
+@media (max-width:360px){
+  .order-mirror101{--om-row:40px}
+  .order-mirror101[data-om-compact="true"]{--om-row:34px}
+  .order-mirror101 .om-stage{grid-template-columns:minmax(0,1fr) 20px minmax(0,1fr)}
+  .order-mirror101 .om-panel{padding:10px 8px 11px}
+  .order-mirror101 .om-card{gap:5px;padding:0 4px 0 6px}
+  .order-mirror101 .om-swatch{width:14px}
+}
+
+/* ---------- Order sheet header and footer ----------
+ * c98-glass.css gives every button (also the sticky "Ledlinevolgorde" header,
+ * which is a button) a see-through glass box with a border. In the full-screen
+ * order sheet that drew a square, transparent frame inset from the screen
+ * edge. Header and footer are solid, full-width bars with one hairline. */
+html:not(#c98) body:not(#c98) .ledline-setup[data-order-open="true"]>.ledline-setup-toggle{
+  margin-inline:calc(50% - 50vw)!important;width:100vw!important;max-width:none!important;
+  padding-inline:max(16px,calc((100vw - 720px) / 2),env(safe-area-inset-left))!important;
+  background:var(--bg,#eef1f4)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  border:0!important;border-bottom:1px solid color-mix(in srgb,var(--line,#dce1e9) 85%,transparent)!important;border-radius:0!important;
+  box-shadow:0 10px 18px -18px rgba(20,24,32,.55)!important;transform:none!important;
+}
+html:not(#c98) body:not(#c98) .ledline-setup[data-order-open="true"] .order-assignment-footer652{
+  margin-inline:calc(50% - 50vw)!important;width:100vw!important;max-width:none!important;box-sizing:border-box!important;
+  padding-inline:max(16px,calc((100vw - 720px) / 2),env(safe-area-inset-left))!important;
+  background:var(--bg,#eef1f4)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  border:0!important;border-top:1px solid color-mix(in srgb,var(--line,#dce1e9) 85%,transparent)!important;border-radius:0!important;
+  box-shadow:0 -10px 18px -18px rgba(20,24,32,.55)!important;
+}
+body[data-theme=dark] .ledline-setup[data-order-open="true"]>.ledline-setup-toggle,
+body[data-theme=dark] .ledline-setup[data-order-open="true"] .order-assignment-footer652{border-color:rgba(255,255,255,.08)!important}
+/* The sheet's bottom padding kept the sticky footer 28px above the screen
+ * edge, so cards showed through underneath it. */
+html:not(#c98) body:not(#c98) .ledline-setup[data-order-open="true"]{padding-bottom:0!important}
+html:not(#c98) body:not(#c98) .ledline-setup[data-order-open="true"] .order-assignment-footer652{bottom:0!important;padding-bottom:max(14px,env(safe-area-inset-bottom))!important}

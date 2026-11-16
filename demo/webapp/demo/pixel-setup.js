@@ -1,0 +1,729 @@
+/* PREVIEWSYNC: one wall-clock preview time base (epoch seconds) for every
+ * animation preview, so a saved previewStartedAt keeps its meaning after an app
+ * reopen and on another phone; plus the dispatch lead used when sampling PHASEMS
+ * (fast lane: receivers start the app's phase at the MAIN deadline, ~120 ms after
+ * the request is built). Bench override: localStorage 'aluvision.previewLeadMs'. */
+(function(root){'use strict';
+  if(typeof root.AluvisionPreviewNowPS!=='function'){
+    const p=root.performance,mono=p&&typeof p.now==='function';
+    let origin=mono?Date.now()-p.now():0;
+    root.AluvisionPreviewNowPS=()=>{
+      const wall=Date.now();if(!mono)return wall/1000;
+      const t=origin+p.now();
+      // Sleep or a wall-clock correction: follow the wall clock again.
+      if(Math.abs(wall-t)>250){origin=wall-p.now();return wall/1000;}
+      return t/1000;
+    };
+  }
+  if(typeof root.AluvisionPreviewLeadPS!=='function'){
+    let lead=120;
+    try{const raw=root.localStorage&&root.localStorage.getItem('aluvision.previewLeadMs');
+      if(raw!==null&&raw!==undefined&&raw!==''){const v=Number(raw);if(Number.isFinite(v)&&v>=0&&v<=1000)lead=v;}}catch(_){}
+    root.AluvisionPreviewLeadPS=()=>lead/1000;
+  }
+})(typeof globalThis==='object'?globalThis:this);
+/* Shared SPI setup presentation. This module edits copies only. It does not
+ * claim a receiver, change membership or persist. Optional bounded preview
+ * commands are sent only through the supplied, acknowledged native service.
+ * A composition root must explicitly supply onSave and verify hardware there.
+ */
+(function(root,factory){'use strict';const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.LightningPixelSetup=api;}(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+  const MIN=0,MAX=163,STORAGE_MAX=1024,DEFAULT_PIXELS_PER_METER=26,copy=value=>JSON.parse(JSON.stringify(value));
+  // Kept beside the shared renderers so all composition roots can translate
+  // the same customer-facing wording. Missing dictionary entries use Dutch.
+  const TEXTS=Object.freeze({
+    pixelPort:'Poort {port}',pixelOn:'Aan',pixelOff:'Uit',pixelNow:'Nu',pixelReady:'Klaar',pixelLater:'Straks',pixelPreserved:'Behouden',
+    pixelOutputs:'Uitgangen',pixelPixels:'Pixels',pixelStart:'Kanten',pixelOrder:'Volgorde',pixelReview:'Controleren',pixelSetupSteps:'LED Line instellen',pixelEditorExpired:'Sluit dit menu en open het opnieuw. Je keuzes blijven bewaard.',
+    pixelDontSave:'Niet opslaan',pixelPickPorts:'Welke poorten pas je aan?',pixelPickEdit:'Aanpassen',pixelPickAria:'Poort {port} aanpassen',pixelPickKeep:'Ongewijzigd',pixelPortPowerAria:'Poort {port} aan of uit',
+    pixelOnlySettings:'Pixels aanpassen',pixelOnlyHint:'Je past alleen het aantal pixels aan. De kanten blijven hetzelfde.',pixelDirectionsSettings:'Kanten aanpassen',pixelDirectionsHint:'Alle ledlines uit deze zone samen afstemmen.',pixelOnlySave:'Pixels opslaan',pixelNextDirections:'Verder · kanten instellen →',pixelNextOrder:'Verder · volgorde →',pixelNextSetup:'Verder · uitgangen en pixels →',pixelFinish:'Opslaan en afronden',pixelAdded:'Receiver toegevoegd',pixelDirectionsSaved:'Kanten opgeslagen',pixelOnlySaved:'Pixels opgeslagen',
+    pixelPortTask:'Poort {port} · {task}',pixelPortPosition:'{position} van {count} poorten',pixelPortProgress:'Voortgang per poort',
+    pixelNextStart:'Verder · beginpunt →',pixelNextPort:'Verder naar poort {port} →',pixelNext:'Volgende →',pixelCheck:'Controleren →',
+    pixelCount:'{count} pixels',pixelCountOne:'1 pixel',pixelSwipe:'Veeg over de ledline',pixelSwipeAria:'Aantal pixels op poort {port}; veeg links of rechts',
+    pixelLastRed:'Laatste pixel {count} hoort rood te branden',pixelFirstCount:'Stel eerst het aantal pixels in',pixelCountAria:'Ingesteld: {count} pixels. Laatste pixel {count} hoort rood te branden.',pixelCountEmptyAria:'Geen pixels ingesteld; er is geen rode eindpixel.',pixelSchematic:'Schematisch voorbeeld.',
+    pixelIllustration:'Voorbeeld · geen testlicht',pixelNoTest:'Testvoorbeeld · geen testlicht',pixelChooseOutputs:'Kies de aangesloten uitgangen.',pixelOutputSwitches:'Uitgangen aan of uit',pixelAllOff:'Alle uitgangen uit',pixelActiveSummary:'{ports} aan · {count} van 4 uitgangen',pixelAtLeastOne:'Minstens één poort moet actief zijn.',pixelSelectedRequired:'Zet minstens één gekozen poort aan om die aan te passen.',
+    pixelRed:'Rood',pixelYellow:'Geel',pixelDarkPurple:'Donkerpaars',pixelBlue:'Blauw',pixelOrange:'Oranje',pixelGreen:'Groen',pixelMagenta:'Magenta',pixelPurple:'Paars',pixelTurquoise:'Turquoise',pixelPortColour:'Poort {port} · {colour}',pixelColourGuide:'Elke poort heeft een eigen herkenningskleur.',pixelPortPreviewUnavailable:'Herkenningskleuren zijn hier een voorbeeld. Testlicht op de LED Lines is nog niet beschikbaar.',
+    pixelSetPixels:'Pixels instellen',pixelLessOne:'Eén pixel minder',pixelMoreOne:'Eén pixel meer',pixelExact:'pixels · exact',pixelLessStep:'{count} pixels minder',pixelMoreStep:'{count} pixels meer',pixelCountLabel:'Aantal pixels op poort {port}',pixelCountValue:'{count} pixels, handmatig ingesteld',pixelRangeError:'Kies een heel aantal van 0 tot 163 pixels.',pixelZero:'Stel het aantal pixels in om verder te gaan.',pixelSingleHint:'− / + wijzigt één pixel. Maximaal 163 pixels.',
+    pixelChooseStart:'Kanten aanpassen',pixelDirectionExplanation:'Vergelijk de rode en groene uiteinden van je echte ledline.',pixelSingleDirection:'1 pixel · geen richting.',pixelCableEnd:'Aansluiting',pixelFarEnd:'Einde',pixelFromFirst:'Vanaf pixel 1',pixelToFirst:'Naar pixel 1',pixelDirectionAria:'Rode en groene uiteinden van je LED Line',pixelDirectionForward:'Groen links',pixelDirectionReverse:'Groen rechts',pixelKeepDirection:'Groen links',pixelReverseDirection:'Groen rechts',pixelWhyStart:'Hoe vergelijk ik de kanten?',pixelWhyExplanation:'Omkeren wisselt rood en groen op de ledline. De gekozen richting wordt ook voor animaties bewaard.',pixelDirectionUnavailable:'Voorbeeld in de app · geen testlicht',pixelDirectionLive:'Vergelijk de rode en groene uiteinden op je ledline.',
+    pixelSelectSummary:'Je past {ports} aan. De andere poorten blijven behouden.',pixelCheckOutputs:'Controleer de gekozen uitgangen.',pixelSameZone:'De receiver blijft in dezelfde zone.',pixelReceiver:'SPI-receiver',pixelSettings:'Uitgangen en pixels',pixelCloseSettings:'Instellingen sluiten',pixelPreviewMode:'Voorbeeld · geen leds aangestuurd.',pixelNativeMode:'Wordt op de receiver opgeslagen.',pixelUnavailableMode:'Voorbeeld bekijken; opslaan en testlicht zijn niet beschikbaar.',pixelSave:'Opslaan',pixelSaving:'Bewaren…',pixelBack:'← Terug',pixelClose:'Sluiten',pixelSaveFailed:'Bewaren is nog niet gelukt. Je keuzes blijven staan.',pixelPendingConfig:'Je vorige wijziging wacht nog op bevestiging. Kies Opslaan om diezelfde wijziging af te ronden.',pixelDialogAria:'Pixels en beginpunt instellen',
+    pixelStopping:'Testlicht stoppen…',pixelStoppingChoices:'Testlicht stoppen… Je keuzes blijven staan.',pixelPreviewPending:'Testlicht aanpassen…',pixelPreviewUnsupported:'Werk deze receiver bij om het gekozen testlicht te tonen. Je keuze blijft staan.',pixelPreviewFailed:'Testlicht niet bereikbaar. Controleer de receiververbinding; je keuze blijft staan.',pixelPreviewLength:'Testlicht verstuurd naar poort {port}. De laatste pixel ({count}) hoort rood te branden; de andere pixels wit.',pixelPreviewPower:'Testlicht verstuurd naar poort {port}. Controleer de rode en groene uiteinden.',pixelPreviewDirection:'Richtingstest verstuurd naar poort {port}. Controleer de beweging op de LED Line: {direction}.',pixelPreviewPorts:'Herkenningskleuren verstuurd. Controleer elke LED Line; uitgeschakelde poorten horen uit te blijven.',pixelPreviewZero:'0 pixels · testlicht uit.'
+  });
+  function t(key,params={}){const language=globalThis.document?.documentElement?.lang||'nl';let text=globalThis.LightningPixelTranslations?.t?.(key,language,params)||globalThis.LightningPreferences?.t?.(key,language,params);if(!text||text===key)text=TEXTS[key]||key;return text.replace(/\{([^}]+)\}/g,(_,name)=>String(params[name]??`{${name}}`));}
+  const PORT_COLOURS=Object.freeze([{hex:'#0000ff',name:'pixelBlue'},{hex:'#ff6000',name:'pixelOrange'},{hex:'#00ff00',name:'pixelGreen'},{hex:'#ff00ff',name:'pixelMagenta'}].map(Object.freeze));
+  const PORT_COLOURS_V3=Object.freeze([{hex:'#0000ff',name:'pixelBlue'},{hex:'#ffa000',name:'pixelOrange'},{hex:'#00ff00',name:'pixelGreen'},{hex:'#ff00ff',name:'pixelMagenta'}].map(Object.freeze));
+  const PORT_COLOURS_V5=Object.freeze([{hex:'#ff0000',name:'pixelRed'},{hex:'#0000ff',name:'pixelBlue'},{hex:'#ffff00',name:'pixelYellow'},{hex:'#ff1700',name:'pixelOrange'}].map(Object.freeze));
+  const PORT_COLOURS_V4=Object.freeze([{hex:'#ff0000',name:'pixelRed'},{hex:'#7800c0',name:'pixelDarkPurple'},{hex:'#0000ff',name:'pixelBlue'},{hex:'#ff5000',name:'pixelOrange'}].map(Object.freeze));
+  const LEGACY_PORT_COLOURS=Object.freeze([{hex:'#0000ff',name:'pixelBlue'},{hex:'#ff8000',name:'pixelOrange'},{hex:'#8000ff',name:'pixelPurple'},{hex:'#00ffff',name:'pixelTurquoise'}].map(Object.freeze));
+  // C137cd (9 Nov, user): the ports step uses the same colours as the first-boot port animation (factory welcome:
+  // P1 red, P2 blue, P3 yellow, P4 orange-red = palette 5, labelled Rood/Blauw/Geel/Oranje), not palette 3.
+  // C233 (de eigenaar 13 nov: "graag de poortkleuren anders, oranje en rood lijken te veel op elkaar"). Het getal dat een
+  // receiver naar zijn leds stuurt, geeft op een scherm niet dezelfde kleur: het oranje van poort 4 (#ff1700; in palet 4
+  // #ff5000) is op de leds oranje, maar op een scherm bijna het rood van poort 1. Zo'n kleur krijgt een eigen schermkleur:
+  // het oranje dat stap 2 ook gebruikt. portColour().hex is wat het scherm tekent; .led blijft het getal voor de receiver
+  // (het palet herkennen, het testlicht).
+  const SCREEN_COLOURS=Object.freeze({'#ff1700':'#ff7a1a','#ff5000':'#ff7a1a'});
+  const screenColour=hex=>SCREEN_COLOURS[String(hex||'').toLowerCase()]||hex;
+  function portColour(port,paletteVersion=5){if(!Number.isInteger(port)||port<1||port>4||![1,2,3,4,5].includes(paletteVersion))throw Error('PIXEL_PORT_INVALID');const palette=paletteVersion===1?LEGACY_PORT_COLOURS:paletteVersion===2?PORT_COLOURS:paletteVersion===5?PORT_COLOURS_V5:paletteVersion===4?PORT_COLOURS_V4:PORT_COLOURS_V3;const led=palette[port-1].hex;return Object.freeze({...palette[port-1],hex:screenColour(led),led,label:t(palette[port-1].name),ink:['#ff6000','#ffa000','#00ff00','#ff8000','#00ffff','#ff0000','#ff5000','#ffff00','#ff1700'].includes(led)?'#161616':'#fff'});}
+  function portPalette(outputs){return [1,2,3,4,5].find(version=>Array.isArray(outputs)&&outputs.length===4&&Array.from(outputs).every((row,index)=>row?.colour===portColour(index+1,version).led))||null;}
+  let previewSerial=0;
+  function previewId(){
+    // A non-secret operation ID, also usable in non-secure local UI previews.
+    const bytes=globalThis.crypto?.getRandomValues?.(new Uint8Array(16));
+    return 'pixels-'+(bytes?Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join(''):Date.now().toString(36)+'-'+(++previewSerial));
+  }
+  function editorId686(){
+    if(typeof globalThis.crypto?.randomUUID==='function')return globalThis.crypto.randomUUID().toLowerCase();
+    const bytes=globalThis.crypto?.getRandomValues?.(new Uint8Array(16));if(!bytes)throw Error('PIXEL_EDITOR_ID_UNAVAILABLE');
+    bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;const hex=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+    return hex.slice(0,8)+'-'+hex.slice(8,12)+'-'+hex.slice(12,16)+'-'+hex.slice(16,20)+'-'+hex.slice(20);
+  }
+  const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const validPixels=value=>Number.isInteger(value)&&value>=1&&value<=STORAGE_MAX;
+  // Read legacy geometry without altering it. New edits are count-based and
+  // bounded to 163 for every supported LED Line, independent of pixel density.
+  function pixelLimits(){return Object.freeze({min:MIN,max:MAX});}
+  function editablePixels(value,options){const limits=pixelLimits(options);return Number.isInteger(value)&&value>=MIN&&value<=limits.max;}
+  function configuredPixels(value,options){return value>0&&editablePixels(value,options);}
+  function stepPixels(value,delta,options){const limits=pixelLimits(options);if(!(value===0||validPixels(value))||!Number.isInteger(delta))throw Error('PIXEL_STEP_INVALID');const ceiling=value>limits.max?value:limits.max;return Math.max(limits.min,Math.min(ceiling,value+delta));}
+  function stepMeters(value,delta,options){
+    const limits=pixelLimits(options);if(!Number.isFinite(delta))throw Error('PIXEL_STEP_INVALID');
+    // Round the distance once, then apply its sign: half-metre buttons remain
+    // reversible even for an odd density. Only whole addressable pixels exist.
+    return stepPixels(value,Math.sign(delta)*Math.round(Math.abs(delta)*DEFAULT_PIXELS_PER_METER),limits);
+  }
+  // Retained only as a legacy caller API; the V50 setup never displays metres.
+  function meterLabel(value){return `≈ ${(value/DEFAULT_PIXELS_PER_METER).toLocaleString('nl-BE',{maximumFractionDigits:2,minimumFractionDigits:2})} m`;}
+  let lastHaptic=-Infinity;
+  function hapticStep(){
+    const now=globalThis.performance?.now?.()??Date.now();if(now-lastHaptic<40)return;
+    lastHaptic=now;
+    try{if(globalThis.LightningNativeRuntime?.selectionFeedback?.()===true)return;}catch(_){/* Feedback is optional. */}
+    try{globalThis.navigator?.vibrate?.(8);}catch(_){/* Feedback is optional. */}
+  }
+  const endpointLabel=output=>t(output.reversed?'pixelDirectionReverse':'pixelDirectionForward');
+  function outputsOf(receiver){
+    if(!receiver||receiver.type!=='SPI'||typeof receiver.id!=='string'||!Array.isArray(receiver.outputs)||receiver.outputs.length!==4)throw Error('SPI_RECEIVER_REQUIRED');
+    const outputs=receiver.outputs.map(output=>({port:output.port,enabled:output.enabled,pixels:output.pixels,reversed:output.reversed})).sort((a,b)=>a.port-b.port);
+    if(outputs.some((output,i)=>output.port!==i+1||typeof output.enabled!=='boolean'||typeof output.reversed!=='boolean'||!validPixels(output.pixels)))throw Error('SPI_OUTPUTS_INVALID');
+    return outputs;
+  }
+  function selectedPortSet(ports){if(ports==null)return null;if(!Array.isArray(ports)||!ports.length||ports.some(port=>!Number.isInteger(port)||port<1||port>4)||new Set(ports).size!==ports.length)throw Error('PIXEL_SELECTED_PORTS_INVALID');return new Set(ports);}
+  function editableOutputs(outputs,ports){const selected=ports instanceof Set?ports:selectedPortSet(ports);return outputs.filter(output=>output.enabled&&(!selected||selected.has(output.port)));}
+  function sequence(outputs,{selectedPorts=null,jointDirections=false,pixelsOnly=false,review=true}={}){const ports=editableOutputs(outputs,selectedPorts).map(output=>output.port);return [...(pixelsOnly?[]:[{stage:'outputs',port:null}]),...ports.flatMap(port=>jointDirections||pixelsOnly?[{stage:'pixels',port}]:[{stage:'pixels',port},{stage:'connection',port}]),...(review?[{stage:'review',port:null}]:[])];}
+  function renderProgress(stage,{directDirections=false,orderStep=true}={}){
+    // C113: after the pixels the add flow continues with the ledline order
+    // step (walkthrough included); directions are an optional step afterwards.
+    const names=directDirections?(orderStep?['pixelOutputs','pixelPixels','pixelOrder']:['pixelOutputs','pixelPixels']):['pixelOutputs','pixelPixels','pixelStart','pixelReview'],position={outputs:0,pixels:1,connection:2,review:3}[stage];return `<ol class="pixel-setup-steps" aria-label="${esc(t('pixelSetupSteps'))}">${names.map((name,index)=>`<li ${index===position?'aria-current="step"':''}><span>${index<position?'✓':index+1}</span>${esc(t(name))}</li>`).join('')}</ol>`;}
+  function renderPortContext(outputs,port,{stage='pixels',selectedPorts=null,paletteVersion=5}={}){
+    const selected=selectedPorts instanceof Set?selectedPorts:selectedPortSet(selectedPorts),active=editableOutputs(outputs,selected),position=active.findIndex(item=>item.port===port),task=t(stage==='connection'?'pixelStart':'pixelSetPixels'),colour=portColour(port,paletteVersion);
+    return `<section class="pixel-port-context" data-current-port="${port}" style="--port-colour:${colour.hex};--port-ink:${colour.ink}" aria-label="${esc(t('pixelPortTask',{port,task}))}"><canvas data-pixel-port-visual role="img" aria-label="${esc(t('pixelPort',{port}))}" width="180" height="200"></canvas><div class="pixel-port-context-info"><h2>${esc(t('pixelPortTask',{port,task}))}</h2><p>${esc(t('pixelPortPosition',{position:position+1,count:active.length}))} · <span class="pixel-port-colour">${esc(colour.label)}</span></p><ol aria-label="${esc(t('pixelPortProgress'))}">${outputs.map(item=>{const state=selected&&!selected.has(item.port)?'preserved':!item.enabled?'off':item.port===port?'current':item.port<port?'complete':'pending',label=t({off:'pixelOff',current:'pixelNow',complete:'pixelReady',pending:'pixelLater',preserved:'pixelPreserved'}[state]);return `<li class="pixel-port-step" style="--port-colour:${portColour(item.port,paletteVersion).hex}" data-port="${item.port}" data-state="${state}" ${state==='current'?'aria-current="step"':''} aria-label="${esc(t('pixelPort',{port:item.port}))}: ${esc(label)}"><b>${item.port}</b><span>${esc(label)}</span></li>`;}).join('')}</ol></div></section>`;
+  }
+  function nextPortLabel(outputs,port,{stage='pixels',last=null}={}){
+    if(stage==='pixels')return t('pixelNextStart');
+    const next=outputs.find(item=>item.enabled&&item.port>port);
+    return next?t('pixelNextPort',{port:next.port}):last||t('pixelNext');
+  }
+  function strip(output,stage,options){
+    const reversed=stage==='connection'&&output.reversed;
+    if(stage==='pixels'){
+      const limits=pixelLimits(options),progress=Math.max(0,Math.min(100,output.pixels/limits.max*100));
+      const represented=output.pixels>24?23:Math.max(0,output.pixels-1),cells=Array.from({length:represented},()=>'<i></i>').join('');
+      const endpoint=output.pixels>0?'<i class="end"></i>':'';
+      const guide=output.pixels>0?`<span class="pixel-endpoint-guide"><i aria-hidden="true"></i><span>${esc(t('pixelLastRed',{count:output.pixels}))}</span></span>`:`<span class="pixel-endpoint-guide is-empty">${esc(t('pixelFirstCount'))}</span>`;
+      const aria=t(output.pixels>0?'pixelCountAria':'pixelCountEmptyAria',{count:output.pixels});
+      return `<div class="pixel-setup-visual pixel-count-preview" data-pixel-visual="pixels" data-preview-pixels="${output.pixels}" role="img" aria-label="${esc(aria)} ${esc(t('pixelSchematic'))}"><div class="pixel-count-preview-label"><b>${esc(t(output.pixels===1?'pixelCountOne':'pixelCount',{count:output.pixels}))}</b><span class="pixel-swipe-cue"><i aria-hidden="true">↔</i>${esc(t('pixelSwipe'))}</span></div><span class="pixel-length-rail" aria-hidden="true"><span class="pixel-setup-track" style="--pixel-length-progress:${progress}%"><span class="pixel-setup-strip">${cells}${endpoint}</span></span></span><small class="pixel-length-scale" aria-hidden="true"><span>0</span><span>163 ${esc(t('pixelPixels').toLowerCase())}</span></small>${guide}<small class="pixel-preview-notice">${esc(t('pixelNoTest'))}</small></div>`;
+    }
+    // Raw reversal swaps the physical guide ends and remains the saved
+    // animation orientation. The drawing uses the same plain green/red caps.
+    return `<div class="pixel-setup-visual pixel-connection-preview pixel-direction-preview" data-pixel-visual="connection" data-direction="${reversed?'reverse':'forward'}" data-preview-pixels="${output.pixels}" role="img" aria-label="${esc(endpointLabel(output))}. ${esc(t('pixelSchematic'))}"><div class="pixel-cable-line"><span class="pixel-setup-track"><span class="pixel-setup-strip pixel-ledline-profile"><i class="start pixel-selected-start-marker" data-start-pixel="1" aria-hidden="true">G</i>${output.pixels>1?`<i class="pixel-selected-end-marker" data-end-pixel="${output.pixels}" aria-hidden="true">R</i>`:''}</span></span></div><small class="pixel-green-start-label"><i aria-hidden="true"></i>${esc(output.pixels===1?t('pixelSingleDirection'):endpointLabel(output))}</small></div>`;
+  }
+  function renderOutputs(outputs,{onboarding=false,initialPort=null,selectedPorts=null,live=false,paletteVersion=5}={}){
+    const attr=onboarding?'data-onboarding-action':'data-pixel-action';
+    const selected=selectedPorts instanceof Set?selectedPorts:selectedPortSet(selectedPorts),active=outputs.filter(item=>item.enabled).map(item=>`P${item.port}`),summary=active.length?t('pixelActiveSummary',{ports:active.join(' + '),count:active.length}):t('pixelAllOff');
+    return `<div class="pixel-output-picker"><canvas data-pixel-outputs-visual role="img" aria-label="${esc(t('pixelReceiver'))} · ${esc(summary)}" width="400" height="200"></canvas><p class="pixel-output-colour-guide">${esc(t('pixelColourGuide'))}</p><div class="pixel-setup-outputs" role="group" aria-label="${esc(t('pixelOutputSwitches'))}">${outputs.map(item=>{const colour=portColour(item.port,paletteVersion),preserved=selected&&!selected.has(item.port);return `<button type="button" ${attr}="output" style="--port-colour:${colour.hex};--port-ink:${colour.ink}" data-port="${item.port}" data-port-colour="${colour.led}" role="switch" aria-checked="${item.enabled}" aria-label="${esc(t('pixelPortColour',{port:item.port,colour:colour.label}))}" ${item.port===initialPort?'data-requested-port="true"':''} ${preserved?'disabled data-preserved="true"':''}><b>P${item.port}</b><span class="pixel-port-colour">${esc(colour.label)}</span><span>${esc(t(preserved?'pixelPreserved':item.enabled?'pixelOn':'pixelOff'))}</span><i class="pixel-setup-switch" aria-hidden="true"><i></i></i></button>`;}).join('')}</div><p class="pixel-output-summary">${esc(summary)}</p><p class="pixel-setup-error" data-pixel-all-off role="alert" ${active.length?'hidden':''}>${esc(t('pixelAtLeastOne'))}</p><small class="pixel-preview-notice" data-ports-preview-status data-test-light="idle" role="status">${esc(t(live?'pixelIllustration':'pixelPortPreviewUnavailable'))}</small></div>`;
+  }
+  function paintOutputs(container,outputs,{time=0,reducedMotion=false,entranceProgress=1,selectedPort=null,plugProgress={},visual=globalThis.LightningReceiverVisual}={}){
+    if(!container||container.ownerDocument?.hidden||typeof visual?.draw!=='function')return;
+    container.querySelectorAll('[data-pixel-outputs-visual],[data-pixel-port-visual]').forEach(canvas=>{
+      const rect=canvas.getBoundingClientRect(),body=canvas.closest('.pixel-setup-body')?.getBoundingClientRect();
+      if(!rect.width||!rect.height||rect.bottom<0||rect.top>innerHeight||body&&(rect.bottom<body.top||rect.top>body.bottom))return;
+      // C109: the drawing does what the real ledlines do at this step.
+      const ledMode=canvas.matches('[data-pixel-port-visual]')?'count':'identify',portColours=Object.fromEntries(outputs.map(item=>[item.port,(item.colour&&screenColour(item.colour))||portColour(item.port,portPalette(outputs)||5).hex]));
+      const metadata=visual.draw(canvas,{type:'SPI',enabledPorts:outputs.filter(item=>item.enabled).map(item=>item.port),selectedPort,plugProgress,compact:false,time,reducedMotion,entranceProgress,ledMode,portColours});
+      canvas.dataset.activePorts=metadata.activePorts.join(',');canvas.dataset.portLabelsVisible=String(metadata.portLabelsVisible===true);
+      canvas.dataset.selectedPort=String(metadata.selectedPort||'');canvas.dataset.plugProgress=JSON.stringify(plugProgress);
+    });
+  }
+  function renderPixels(output,{inputId='pixel-setup-number',onboarding=false,combined=false}={}){
+    const attr=onboarding?'data-onboarding-action':'data-pixel-action',limits=pixelLimits(),valid=editablePixels(output.pixels,limits);
+    return `<section class="pixel-setup-panel" data-pixel-panel="pixels" data-combined="${combined}"><h2>${esc(t('pixelSetPixels'))}</h2><div data-pixel-preview data-pixel-scrub role="slider" tabindex="0" aria-label="${esc(t('pixelSwipeAria',{port:output.port}))}" aria-valuemin="${limits.min}" aria-valuemax="${limits.max}" aria-valuenow="${output.pixels}" aria-valuetext="${esc(t('pixelCountValue',{count:output.pixels}))}">${strip(output,'pixels',limits)}</div><div class="pixel-setup-slider-row"><input type="range" class="pixel-setup-range" data-pixel-range min="${limits.min}" max="${limits.max}" step="1" value="${Math.min(output.pixels,limits.max)}" style="--pixel-range-fill:${Math.round(Math.min(output.pixels,limits.max)/limits.max*100)}%" aria-label="${esc(t('pixelCountLabel',{port:output.port}))}"><div class="pixel-setup-range-label" aria-hidden="true"><span>0</span><span>${limits.max}</span></div></div><div class="pixel-setup-counter"><button type="button" ${attr}="pixel-less" aria-label="${esc(t('pixelLessOne'))}" ${output.pixels===MIN?'disabled':''}>−</button><label for="${esc(inputId)}"><input id="${esc(inputId)}" data-pixel-count type="number" inputmode="numeric" min="${limits.min}" max="${limits.max}" step="1" value="${output.pixels}" aria-invalid="${!valid}" aria-label="${esc(t('pixelCountLabel',{port:output.port}))}" aria-describedby="${esc(inputId)}-error"><span>${esc(t('pixelExact'))}</span></label><button type="button" ${attr}="pixel-more" aria-label="${esc(t('pixelMoreOne'))}" ${output.pixels>=limits.max?'disabled':''}>＋</button></div><p id="${esc(inputId)}-error" data-pixel-error class="pixel-setup-error" role="alert" ${valid?'hidden':''}>${esc(t('pixelRangeError'))}</p><p class="pixel-zero-hint" data-pixel-empty ${output.pixels===0?'':'hidden'}>${esc(t('pixelZero'))}</p><p class="pixel-segment-hint">${esc(t('pixelSingleHint'))}</p></section>`;
+  }
+  function renderSide(output,{onboarding=false,combined=false,live=false}={}){
+    const attr=onboarding?'data-onboarding-action':'data-pixel-action';
+    const tutorial=globalThis.LightningSPIDirectionTutorial?.markup({language:globalThis.document?.documentElement?.lang||'nl'})||'';
+    return `<section class="pixel-setup-panel" data-pixel-panel="connection"><h2>${esc(t('pixelChooseStart'))}</h2>${tutorial}<p>${esc(t('pixelDirectionExplanation'))}</p>${strip(output,'connection')}<small class="pixel-preview-notice" data-power-preview-status data-direction-guide="${live?'available':'app-only'}" data-test-light="idle" role="status" aria-live="polite">${esc(t('pixelDirectionUnavailable'))}</small><div class="pixel-setup-sides" role="group" aria-label="${esc(t('pixelDirectionAria'))}"><button type="button" ${attr}="side" data-side="forward" aria-pressed="${!output.reversed}"><span class="pixel-direction-choice pixel-end-choice" data-green-end="connection" aria-hidden="true"><i></i></span><span>${esc(t('pixelKeepDirection'))}</span></button><button type="button" ${attr}="side" data-side="reverse" aria-pressed="${output.reversed}"><span class="pixel-direction-choice pixel-end-choice" data-green-end="far" aria-hidden="true"><i></i></span><span>${esc(t('pixelReverseDirection'))}</span></button></div><details class="pixel-setup-more"><summary>${esc(t('pixelWhyStart'))}</summary><p>${esc(t('pixelWhyExplanation'))}</p></details></section>`;
+  }
+  function renderPort(output,options={}){return `<div class="pixel-combined-port">${renderPixels(output,{...options,combined:true})}${renderSide(output,{...options,combined:true})}</div>`;}
+  function updatePixels(container,output,{source,pixelsPerMeter}={}){
+    const panel=container.querySelector('[data-pixel-panel="pixels"]');if(!panel)return;
+    const limits=pixelLimits({pixelsPerMeter:pixelsPerMeter??(Number(panel.dataset.pixelsPerMeter)||DEFAULT_PIXELS_PER_METER)});
+    const input=panel.querySelector('[data-pixel-count]'),range=panel.querySelector('[data-pixel-range]');
+    if(input!==source)input.value=String(output.pixels);if(range&&range!==source)range.value=String(output.pixels);
+    if(range)range.style.setProperty('--pixel-range-fill',Math.round(Math.min(output.pixels,limits.max)/limits.max*100)+'%');
+    input.setAttribute('aria-invalid',String(!editablePixels(output.pixels,limits)));panel.querySelector('[data-pixel-error]').hidden=editablePixels(output.pixels,limits);
+    const preview=panel.querySelector('[data-pixel-preview]');
+    preview.setAttribute('aria-valuenow',String(output.pixels));preview.setAttribute('aria-valuetext',t('pixelCountValue',{count:output.pixels}));
+    preview.innerHTML=strip(output,'pixels',limits);
+    panel.querySelector('[data-pixel-empty]').hidden=output.pixels!==0;
+    panel.querySelector('[data-pixel-action="pixel-less"],[data-onboarding-action="pixel-less"]').disabled=output.pixels===MIN;panel.querySelector('[data-pixel-action="pixel-more"],[data-onboarding-action="pixel-more"]').disabled=output.pixels>=limits.max;
+    panel.querySelectorAll('[data-pixel-delta]').forEach(button=>{button.disabled=Number(button.dataset.pixelDelta)<0?output.pixels===MIN:output.pixels>=limits.max;});
+    globalThis.LightningLedlineSetup?.paintRuler?.(panel,output.pixels);   // C144: de liniaal van de eerste setup
+  }
+  function validateInput(container,value,{pixelsPerMeter}={}){const panel=container.querySelector('[data-pixel-panel="pixels"]'),limits=pixelLimits({pixelsPerMeter:pixelsPerMeter??(Number(panel?.dataset.pixelsPerMeter)||DEFAULT_PIXELS_PER_METER)}),valid=editablePixels(Number(value),limits)&&String(value).trim()!=='';if(panel){panel.querySelector('[data-pixel-count]').setAttribute('aria-invalid',String(!valid));panel.querySelector('[data-pixel-error]').hidden=valid;}return valid;}
+  // Relative scrubbing avoids a jump to an arbitrary absolute value on touch.
+  // Capture the stable wrapper, not the preview children replaced on updates.
+  // Vertical gestures stay native scrolling; edits remain owned by the host.
+  function bindPixelScrub(container,{onChange,onCommit=()=>{},isEnabled=()=>true}={}){
+    if(typeof onChange!=='function')throw Error('PIXEL_SCRUB_HANDLER_REQUIRED');
+    let gesture=null;
+    const target=event=>event.target.closest?.('[data-pixel-scrub]');
+    const available=element=>element&&element.isConnected&&container.contains(element)&&isEnabled();
+    function end({commit=false}={}){
+      const previous=gesture;gesture=null;if(!previous)return;
+      if(previous.edgeFrame)cancelAnimationFrame(previous.edgeFrame);
+      previous.element.removeAttribute('data-scrubbing');previous.element.removeAttribute('data-scrub-zone');
+      if(previous.element.hasPointerCapture?.(previous.id))previous.element.releasePointerCapture(previous.id);
+      if(commit&&previous.dragging&&available(previous.element))onCommit(Number(previous.element.getAttribute('aria-valuenow')));
+    }
+    function change(element,value){
+      const min=Number(element.getAttribute('aria-valuemin')),max=Number(element.getAttribute('aria-valuemax'));
+      // A legacy value remains an invalid-but-preserved draft until deliberately
+      // reduced. One swipe/key step must never turn 1024 into 163 implicitly.
+      const previous=Number(element.getAttribute('aria-valuenow')),ceiling=previous>max?previous:max;
+      const next=Math.max(min,Math.min(ceiling,Math.round(value)));
+      if(Number.isFinite(next)&&next!==Number(element.getAttribute('aria-valuenow'))){onChange(next);hapticStep();}
+      return next;
+    }
+    function down(event){
+      if(event.isPrimary===false||event.button!==0)return;
+      const element=target(event);if(!available(element))return;end();
+      gesture={element,id:event.pointerId,x:event.clientX,y:event.clientY,value:Number(element.getAttribute('aria-valuenow')),dragging:false};
+      element.setPointerCapture?.(event.pointerId);
+    }
+    function move(event){
+      if(!gesture||gesture.id!==event.pointerId)return;
+      if(!available(gesture.element))return end();
+      const dx=event.clientX-gesture.x,dy=event.clientY-gesture.y;
+      if(!gesture.dragging){
+        if(Math.max(Math.abs(dx),Math.abs(dy))<6)return;
+        if(Math.abs(dy)>=Math.abs(dx))return end();
+        gesture.dragging=true;gesture.element.dataset.scrubbing='true';gesture.element.focus({preventScroll:true});
+        gesture.lastX=gesture.x;gesture.acc=gesture.value;
+      }
+      if(event.cancelable)event.preventDefault();
+      // C109: the middle 40 % is exact (one pixel per 18 px, easy for +1/-1);
+      // further out every movement counts up to eight times more.
+      const box=gesture.element.getBoundingClientRect(),rel=box.width?Math.min(1,Math.max(0,(event.clientX-box.left)/box.width)):.5;
+      const out=Math.max(0,Math.abs(rel-.5)-.2)/.3,factor=out?1.5+Math.pow(out,1.5)*6.5:1;
+      const step=event.clientX-gesture.lastX;gesture.acc+=step/(out?12:18)*factor;gesture.lastX=event.clientX;gesture.rel=rel;
+      gesture.element.dataset.scrubZone=out?rel>.5?'up':'down':'exact';
+      // Moving back from an end stops the edge run until the finger rests again.
+      if(step&&gesture.edgeSide&&Math.sign(step)===-gesture.edgeSide)gesture.edgeSince=globalThis.performance?.now?.()??Date.now();
+      settle(gesture);
+      if(!gesture.edgeFrame)gesture.edgeFrame=requestAnimationFrame(edgeRun);
+    }
+    // At an end stop, allow an immediate change back in the other direction.
+    function settle(current){const proposed=Math.round(current.acc),next=change(current.element,proposed);if(next!==proposed)current.acc=next;}
+    // C109: a finger resting outside the exact middle keeps counting by
+    // itself: slowly just outside it, fast near the ends, faster the longer.
+    function edgeRun(now){
+      const current=gesture;if(!current||!current.dragging)return;
+      current.edgeFrame=requestAnimationFrame(edgeRun);
+      if(!available(current.element))return;
+      const rel=current.rel??.5,out=Math.min(1,Math.max(0,Math.abs(rel-.5)-.2)/.3),side=out?Math.sign(rel-.5):0,last=current.edgeTime??now;current.edgeTime=now;
+      if(!side||side!==current.edgeSide){current.edgeSide=side;current.edgeSince=now;return;}
+      const held=(now-current.edgeSince)/1000-.3;if(held<0)return;const speed=(3+57*Math.pow(out,1.6))*(.4+.6*Math.min(1,held/.8));
+      current.acc+=side*speed*Math.min(.05,(now-last)/1000);settle(current);
+    }
+    function finish(event){
+      if(gesture?.id!==event.pointerId)return;
+      // A final pointerup can contain a newer coordinate than pointermove.
+      // Cancellation commits the last selected value without using its origin.
+      if(event.type==='pointerup'&&Number.isFinite(event.clientX)&&Number.isFinite(event.clientY))move(event);
+      end({commit:true});
+    }
+    function keydown(event){
+      const element=target(event);if(!available(element)||event.altKey||event.ctrlKey||event.metaKey)return;
+      const value=Number(element.getAttribute('aria-valuenow'));
+      const choices={ArrowRight:value+1,ArrowUp:value+1,ArrowLeft:value-1,ArrowDown:value-1,PageUp:value+10,PageDown:value-10,Home:Number(element.getAttribute('aria-valuemin')),End:Number(element.getAttribute('aria-valuemax'))};
+      if(!Object.hasOwn(choices,event.key))return;event.preventDefault();end();change(element,choices[event.key]);onCommit(Number(element.getAttribute('aria-valuenow')));
+    }
+    const handlers={pointerdown:down,pointermove:move,pointerup:finish,pointercancel:finish,lostpointercapture:finish,keydown};
+    for(const [name,handler] of Object.entries(handlers))container.addEventListener(name,handler);
+    return ()=>{end();for(const [name,handler] of Object.entries(handlers))container.removeEventListener(name,handler);};
+  }
+  function guideRequest({context,outputs,output,stage,capabilities={}}){
+    if(stage==='outputs'){
+      if(capabilities.identifyPorts!==true)return null;
+      // One complete output mask, including disabled ports, is required. This
+      // seam deliberately cannot be mistaken for the old one-port preview.
+      // Keep palette 3 as the request hint. Only native's authenticated exact
+      // capability negotiation and matching ACK may select palette 4.
+      // de eigenaar 14 nov: "als de kleurenkiezer er komt, moeten alle poorten hun kleur uitsturen". Op de kleurstap branden
+      // dus alle vier de poorten in hun kleur, ook een poort die (nog) uit staat; de klant tikt daarna de kleuren aan
+      // die hij ziet. Alleen het testlicht: wat aan of uit staat, verandert hier niet.
+      return {...copy(context),guide:'ports',port:null,pixels:0,previewTTLMS:12000,outputs:outputs.map(item=>({port:item.port,enabled:true,pixels:item.pixels>0?Math.min(MAX,item.pixels):MAX,reversed:item.reversed,colour:portColour(item.port).led}))};
+    }
+    if(!output||!editablePixels(output.pixels))return null;
+    if(stage==='connection')return capabilities.power===true&&output.pixels>0?{...copy(context),port:output.port,pixels:output.pixels,guide:'power',reversed:output.reversed,previewTTLMS:12000}:null;
+    if(stage==='pixels')return {...copy(context),port:output.port,pixels:output.pixels};
+    return null;
+  }
+  function validPreview(request){
+    if(request?.guide==='ports')return request.port===null&&request.pixels===0&&request.previewTTLMS===12000&&portPalette(request.outputs)!==null&&request.outputs.every((item,index)=>Object.keys(item).sort().join(',')==='colour,enabled,pixels,port,reversed'&&item.port===index+1&&typeof item.enabled==='boolean'&&typeof item.reversed==='boolean'&&editablePixels(item.pixels));
+    return Number.isInteger(request?.port)&&request.port>=1&&request.port<=4&&editablePixels(request.pixels)&&['length','power','direction',undefined].includes(request.guide)&&(request.guide==='power'||request.guide==='direction'?request.pixels>0&&typeof request.reversed==='boolean':request.reversed===undefined)&&(request.guide!=='direction'||request.previewTTLMS===12000);
+  }
+  function previewConfirmed(answer,request){
+    const lit=request.guide==='ports'?request.outputs.some(item=>item.enabled&&item.pixels>0):request.pixels>0;
+    const hasMode=!!answer&&Object.hasOwn(answer,'previewMode'),black=hasMode&&answer.previewMode==='black'&&
+      (request.guide==='ports'?request.outputs.every(item=>!item.enabled):[undefined,'length'].includes(request.guide)&&request.pixels===0)&&
+      answer.guide===(request.guide||'length')&&Number.isInteger(answer.previewTTLMS)&&answer.previewTTLMS>0&&answer.previewTTLMS<=15000;
+    if(hasMode&&!black)return false;
+    if(answer?.applied!==true||answer.port!==request.port||answer.pixels!==request.pixels||!Number.isInteger(answer.previewTTLMS)||answer.previewTTLMS<(lit?1:0)||answer.previewTTLMS>15000)return false;
+    if(request.guide==='power'||request.guide==='direction')return answer.guide===request.guide&&answer.reversed===request.reversed;
+    // A positive black lease is an explicit native PORTS0 ACK, never a local
+    // interpretation of a zero-length draft or an isolation-only HOLD.
+    if(!lit&&!black&&answer.previewTTLMS!==0)return false;
+    if(request.guide==='ports')return answer.guide==='ports'&&[1,2,3,4,5].includes(answer.paletteVersion)&&portPalette(answer.outputs)===answer.paletteVersion&&answer.outputs.every((item,index)=>Object.keys(item).sort().join(',')==='colour,enabled,pixels,port,reversed'&&['port','enabled','pixels','reversed'].every(key=>item[key]===request.outputs[index][key]));
+    return true;
+  }
+  // One bounded latest-wins test-light queue. There is never a CONFIG/SAVE
+  // command here. A lost reply remains an error, not a physical-light claim.
+  function createLivePreview({send,onState=()=>{},delay=0,setTimer=setTimeout,clearTimer=clearTimeout,editorIsolation=()=>false,idFactory=editorId686}={}){
+    let queued=null,active=null,desired=null,running=null,timer=null,renew=null,version=0,editor=null,editorIntent=null,expiredEditor=null,handoffJob=null,acceptedHandoff=null,handoffTransferred=false,recoveries=0,recovery=false;const provenPalettes=new Map();
+    // A guide/port switch belongs to the same exact editing transaction. The
+    // native lease validates and switches its temporary mask without stopping
+    // the whole receiver, restoring playback and performing a new handshake.
+    const baseKey=r=>JSON.stringify([r.standId,r.transactionId,r.receiver,r.role,r.mainReceiverId]);
+    const key=r=>JSON.stringify([baseKey(r),r.editorSession||null]);
+    const receiverKey=r=>[r?.standId,r?.receiver?.id,r?.receiver?.rid,r?.receiver?.deviceFingerprint].every(value=>typeof value==='string'&&value.length>0)&&r.receiver.type==='SPI'?JSON.stringify([r.standId,r.receiver.id,r.receiver.rid,r.receiver.type,r.receiver.deviceFingerprint,r.role,r.mainReceiverId]):null;
+    const report=(kind,request,confirmedPalette)=>{const identity=receiverKey(request),paletteVersion=confirmedPalette||(identity&&provenPalettes.get(identity));onState({kind,port:request?.port,pixels:request?.pixels,guide:request?.guide||'length',reversed:request?.reversed,...(paletteVersion?{paletteVersion}:{})});};
+    function cancelTimers(){clearTimer(timer);clearTimer(renew);timer=renew=null;}
+    function markEditorExpired(request){
+      if(!request?.editorSession||!(active&&key(active)===key(request)||editor?.request&&key(editor.request)===key(request)))return false;
+      // EXPIRED is also emitted for native clock anomalies, not only proven
+      // restoration. Keep uncertain ownership; no local retire may erase it.
+      expiredEditor=copy(request);editorIntent=null;desired=null;recovery=!!(active||editor?.request);cancelTimers();
+      if(queued?.stop)queued.complete({stopped:false});queued=null;return true;
+    }
+    function retireExpiredEditor(){
+      // Explicit close/open escape only. This is NOT a STOP receipt, physical
+      // restore acknowledgement, radio operation or permission to auto-replay.
+      if(!expiredEditor||recovery)return false;expiredEditor=null;editorIntent=null;version++;cancelTimers();return true;
+    }
+    function retireTransferredEditor(){
+      // A new dialog owns no part of the previous adopted direction guide.
+      // Forget only an already empty local queue; never send its old STOP or
+      // treat a live/uncertain source as acknowledged cleanup.
+      if(!handoffTransferred||active||editor||handoffJob||running||queued)return false;
+      handoffTransferred=false;return true;
+    }
+    const isolationTTL=(answer,request,end=false)=>!request.editorSession?0:
+      Number.isInteger(answer?.isolationTTLMS)&&answer.isolationTTLMS>=0&&answer.isolationTTLMS<=30000&&(!end||answer.isolationTTLMS===0)?answer.isolationTTLMS:null;
+    function scheduleRenew(ms,itemVersion){
+      clearTimer(renew);renew=null;if(ms<=0)return;
+      renew=setTimer(()=>{renew=null;if(itemVersion!==version)return;if(desired)queued={request:desired,version};else if(editor?.confirmed)queued={hold:true,request:editor.request,version};else return;void drain();},Math.min(5000,Math.max(500,ms-3000)));
+    }
+    // C111: a STOP that collides with a START still in flight (another radio
+    // message, a second phone) is asked again twice, 0.4 s and 0.9 s later,
+    // before the editor reports "Testlicht niet bereikbaar". STOP is idempotent
+    // on the receiver; an expired editor is never retried.
+    async function stopActiveRetryC111(keepSession=false){
+      for(let attempt=0;;attempt++){
+        try{return await stopActive(keepSession);}
+        catch(error){
+          if(attempt>=2||error?.code==='PIXEL_EDITOR_EXPIRED'||expiredEditor||!(active||editor?.request))throw error;
+          await new Promise(resolve=>setTimer(resolve,attempt?900:400));
+        }
+      }
+    }
+    async function stopActive(keepSession=false){
+      const previous=active||editor?.request;if(!previous)return{isolationTTLMS:0};
+      const keep=keepSession&&!!previous.editorSession;
+      let answer;try{answer=await send({...previous,action:'stop',...(keep?{keepSession:true}:{})});}
+      catch(error){if(error?.code==='PIXEL_EDITOR_EXPIRED')markEditorExpired(previous);throw error;}
+      if(answer&&Object.hasOwn(answer,'retired')){
+        if(keep||!previous.editorSession||Object.keys(answer).sort().join(',')!=='editorSession,isolationTTLMS,previewTTLMS,retired'||
+          answer.retired!==true||answer.editorSession!==previous.editorSession||answer.previewTTLMS!==0||answer.isolationTTLMS!==0)throw Error('PIXEL_STOP_UNCONFIRMED');
+        active=null;editor=null;acceptedHandoff=null;return{isolationTTLMS:0,retired:true};
+      }
+      const ttl=isolationTTL(answer,previous,!keep);
+      if(answer?.applied!==true||answer.port!==previous.port||answer.previewTTLMS!==0||ttl===null||Object.hasOwn(answer,'previewMode')){globalThis.LightningNativeRuntime?.services?.pixelReceiptDiagnostic692?.({phase:'STOP_RECEIPT',bits:(answer?.applied===true?1:0)|(answer?.port===previous.port?2:0)|(answer?.previewTTLMS===0?4:0)|(ttl!==null?8:0)});throw Error('PIXEL_STOP_UNCONFIRMED');}
+      active=null;acceptedHandoff=null;editor=keep?{request:previous,confirmed:true}:null;return{isolationTTLMS:ttl};
+    }
+    function drain(){
+      if(running)return running;
+      clearTimer(timer);timer=null;
+      running=(async()=>{
+        while(queued){
+          const item=queued;queued=null;
+          try{
+            if(item.stop){const stopped=active||editor?.request,answer=await stopActiveRetryC111(item.keepSession);recovery=false;const confirmed=item.version===version&&!desired;if(!confirmed&&stopped)globalThis.LightningNativeRuntime?.services?.pixelReceiptDiagnostic692?.({phase:'STOP_SUPERSEDED',bits:(item.version===version?1:0)|(!desired?2:0)});item.complete({stopped:confirmed});if(confirmed){report('idle',stopped);if(item.keepSession)scheduleRenew(answer.isolationTTLMS,item.version);}continue;}
+            if(item.recover||recovery){
+              // The failed native session still owns a possibly live overlay.
+              // Cleanup shares this queue and the normal strict STOP validator.
+              await stopActive();recovery=false;editorIntent=null;
+              // Read the latest desired value AFTER the await. Closing/hiding
+              // clears desired and must never cause an automatic fresh START.
+              if(desired&&!queued?.stop){const again=copy(desired);delete again.editorSession;desired=null;update(again);}
+              continue;
+            }
+            const request=item.request;
+            if(item.hold){
+              if(!editor?.confirmed||key(editor.request)!==key(request))throw Error('PIXEL_EDITOR_UNCONFIRMED');
+              const answer=await send({action:'hold',standId:request.standId,transactionId:request.transactionId,receiver:copy(request.receiver),role:request.role,mainReceiverId:request.mainReceiverId,editorSession:request.editorSession});
+              if(answer?.held!==true||answer.editorSession!==request.editorSession||isolationTTL(answer,request)===null||Object.hasOwn(answer,'previewMode')||Object.hasOwn(answer,'previewTTLMS'))throw Error('PIXEL_EDITOR_UNCONFIRMED');
+              if(item.version===version&&!desired)scheduleRenew(answer.isolationTTLMS,item.version);continue;
+            }
+            const previous=active||editor?.request;if(previous&&key(previous)!==key(request))await stopActive();
+            const action=active?'update':'start';active=request;
+            if(request.editorSession)editor={request,confirmed:false};
+            const answer=await send({...request,action});
+            const ttl=isolationTTL(answer,request);
+            if(!previewConfirmed(answer,request)||ttl===null)throw Error('PIXEL_PREVIEW_UNCONFIRMED');
+            acceptedHandoff=answer.handoffReady===true&&request.editorSession&&answer.handoffRequest?{request:copy(answer.handoffRequest),version:item.version}:null;
+            if(request.editorSession)editor={request,confirmed:true};
+            if(request.guide==='ports'&&receiverKey(request)){provenPalettes.set(receiverKey(request),answer.paletteVersion);if(provenPalettes.size>128)provenPalettes.delete(provenPalettes.keys().next().value);}
+            if(item.version===version&&desired){recoveries=0;report('applied',request,request.guide==='ports'?answer.paletteVersion:undefined);const leases=[answer.previewTTLMS,ttl].filter(value=>value>0);scheduleRenew(leases.length?Math.min(...leases):0,item.version);}
+          }catch(error){
+            if(item.stop)item.complete({stopped:false});
+            if(error?.code==='PIXEL_EDITOR_EXPIRED'&&!expiredEditor)markEditorExpired(active||editor?.request||item.request);
+            if(expiredEditor){report('expired',expiredEditor);continue;}
+            // Retain uncertain ownership across errors and newer input. Never
+            // turn a cleared local reference into a successful cleanup receipt.
+            recovery=!!(active||editor?.request);acceptedHandoff=null;
+            if(editor)editor.confirmed=false;
+            if(!item.stop&&error?.code!=='PIXEL_GUIDE_UPDATE_REQUIRED'&&item.version===version&&desired){
+              recoveries=Math.min(recoveries+1,5);report('pending',desired);clearTimer(renew);
+              const retryVersion=version;
+              renew=setTimer(()=>{renew=null;if(retryVersion!==version||!desired)return;
+                queued={recover:true,version};void drain();},recoveries>1?Math.min(2000,400*recoveries):150);
+              continue;
+            }
+            if(item.version===version){desired=null;clearTimer(renew);renew=null;report(error?.code==='PIXEL_GUIDE_UPDATE_REQUIRED'?'unsupported':'failed',active||editor?.request);}
+          }
+        }
+      })().finally(()=>{running=null;if(queued)void drain();});
+      return running;
+    }
+    function update(request){
+      if(typeof send!=='function'||handoffJob)return;
+      if(expiredEditor){report('expired',expiredEditor);return;}
+      if(!validPreview(request))throw Error('PIXEL_PREVIEW_INVALID');
+      handoffTransferred=false;
+      const next=copy(request);
+      if(editorIsolation()===true){const scope=baseKey(next);if(!editorIntent||editorIntent.scope!==scope)editorIntent={scope,session:idFactory()};next.editorSession=editorIntent.session;}
+      if(desired&&JSON.stringify(desired)===JSON.stringify(next))return;
+      if(queued?.stop)queued.complete({stopped:false});
+      desired=next;version++;clearTimer(renew);renew=null;queued=recovery?{recover:true,version}:{request:next,version};report('pending',next);
+      if(timer===null&&!running)timer=setTimer(()=>void drain(),delay);
+    }
+    function stop({keepSession=false}={}){
+      if(handoffJob){const job=handoffJob;job.cancelled=true;return job.promise.catch(()=>{}).then(()=>stop({keepSession}));}
+      if(handoffTransferred&&!active&&!editor)return Promise.resolve({stopped:false});
+      if(typeof send!=='function')return Promise.resolve({stopped:true});
+      if(expiredEditor)return Promise.resolve({stopped:false});
+      // Cleanup remains non-rejecting for close/hide callers. Navigation must
+      // inspect this exact barrier instead of treating a drained queue as ACK.
+      if(keepSession&&!active&&editor?.confirmed&&!desired&&!queued)return Promise.resolve({stopped:true});
+      if(queued?.stop&&queued.keepSession===keepSession)return queued.completion;
+      if(queued?.stop)queued.complete({stopped:false});
+      if(!keepSession)editorIntent=null;
+      desired=null;version++;cancelTimers();let complete;
+      const completion=new Promise(resolve=>{complete=resolve;});
+      queued={stop:true,keepSession,version,complete,completion};void drain();return completion;
+    }
+    function flush(){
+      if(typeof send!=='function')return Promise.resolve();
+      clearTimer(timer);timer=null;return drain();
+    }
+    function handoff(commit){
+      if(handoffJob)return handoffJob.promise;
+      if(typeof commit!=='function')return Promise.reject(Error('PIXEL_HANDOFF_INVALID'));
+      const job={cancelled:false,promise:null},wanted=desired&&copy(desired),itemVersion=version,acceptedBefore=acceptedHandoff;handoffJob=job;cancelTimers();
+      job.promise=(async()=>{
+        await flush();cancelTimers();
+        const ready=()=>!job.cancelled&&!expiredEditor&&itemVersion===version&&wanted&&active&&editor?.confirmed&&
+          acceptedHandoff&&acceptedHandoff.version===version&&JSON.stringify(desired)===JSON.stringify(wanted)&&key(active)===key(wanted);
+        if(!ready())return {handedOff:false};
+        if(acceptedHandoff===acceptedBefore){
+          // A previously confirmed preview may be near its source deadline.
+          // Refresh it once using the existing same-editor UPDATE, never STOP
+          // or HANDOFF replay. An ACK obtained by flush already is fresh.
+          queued={request:copy(wanted),version:itemVersion};await drain();cancelTimers();
+          if(!ready())return {handedOff:false};
+        }
+        const answer=await commit(copy(acceptedHandoff.request));
+        if(answer?.handedOff!==true)throw Error('PIXEL_HANDOFF_UNCONFIRMED');
+        // A confirmed native successor owns the overlay now. Retire only the
+        // obsolete local queue; sending its old STOP would restore playback.
+        active=null;editor=null;editorIntent=null;desired=null;queued=null;acceptedHandoff=null;handoffTransferred=true;version++;cancelTimers();
+        return {handedOff:true};
+      })().finally(()=>{if(handoffJob===job)handoffJob=null;});
+      return job.promise;
+    }
+    return Object.freeze({update,flush,stop,handoff,retireExpiredEditor,retireTransferredEditor});
+  }
+  function previewMessage(state){return t(state.kind==='expired'?'pixelEditorExpired':state.kind==='unsupported'?'pixelPreviewUnsupported':state.kind==='failed'?'pixelPreviewFailed':state.kind==='pending'?'pixelPreviewPending':state.kind==='applied'?(state.guide==='ports'?'pixelPreviewPorts':state.guide==='direction'?'pixelPreviewDirection':state.guide==='power'?'pixelPreviewPower':state.pixels?'pixelPreviewLength':'pixelPreviewZero'):'pixelNoTest',{port:state.port,count:state.pixels,direction:t(state.reversed?'pixelDirectionReverse':'pixelDirectionForward')});}
+  function showPreviewStatus(container,state){
+    if(!container)return;const known=[1,2,3,4,5].includes(state.paletteVersion),version=known?state.paletteVersion:5;
+    for(const region of container.querySelectorAll('.pixel-output-picker,.pixel-port-context,.pixel-setup-review')){region.dataset.paletteVersion=String(version);region.dataset.paletteConfirmed=String(known);}
+    for(const row of container.querySelectorAll('.pixel-setup-outputs button[data-port],.pixel-port-step[data-port],[data-pixel-palette-port]')){
+      const port=Number(row.dataset.port||row.dataset.pixelPalettePort);if(!Number.isInteger(port)||port<1||port>4)continue;
+      const colour=portColour(port,version);row.style.setProperty('--port-colour',colour.hex);row.style.setProperty('--port-ink',colour.ink);row.dataset.portColour=colour.led;
+      const label=row.querySelector('.pixel-port-colour');if(label)label.textContent=colour.label;
+      if(row.getAttribute('role')==='switch')row.setAttribute('aria-label',t('pixelPortColour',{port,colour:colour.label}));
+    }
+    for(const region of container.querySelectorAll('.pixel-port-context[data-current-port]')){const port=Number(region.dataset.currentPort),colour=portColour(port,version);region.style.setProperty('--port-colour',colour.hex);region.style.setProperty('--port-ink',colour.ink);const label=region.querySelector('.pixel-port-colour');if(label)label.textContent=colour.label;}
+    const label=container.querySelector(state.guide==='ports'?'[data-ports-preview-status]':['power','direction'].includes(state.guide)?'[data-power-preview-status]':'[data-pixel-preview] .pixel-preview-notice');if(label){label.textContent=previewMessage(state);label.dataset.testLight=state.kind;}
+  }
+  // Show bounded cleanup without repainting: repaint would enqueue the same
+  // test light again. Restore only these captured DOM nodes, never a new page.
+  function showPreviewStopping(container){
+    if(!container)return ()=>{};
+    const controls=Array.from(container.querySelectorAll('button,input'),control=>({control,disabled:control.disabled}));
+    const region=container.querySelector('[data-onboarding-stage]')||container,wasBusy=region.getAttribute('aria-busy');
+    const footer=container.querySelector('.pixel-setup-footer,.onboarding-footer');
+    const next=footer?.querySelector('[data-pixel-action="next"],[data-onboarding-action="next"]'),label=next?.textContent;
+    controls.forEach(({control})=>{control.disabled=true;});region.setAttribute('aria-busy','true');
+    if(next)next.textContent=t('pixelStopping');
+    const status=container.ownerDocument.createElement('p');status.className='pixel-preview-notice';status.dataset.previewStopping='true';status.setAttribute('role','status');status.setAttribute('aria-live','polite');status.textContent=t('pixelStoppingChoices');
+    if(footer)footer.before(status);
+    return ()=>{controls.forEach(({control,disabled})=>{control.disabled=disabled;});if(next)next.textContent=label;status.remove();if(wasBusy===null)region.removeAttribute('aria-busy');else region.setAttribute('aria-busy',wasBusy);};
+  }
+  function setupResume(receiver,resumeStep,{directDirections=false}={}){
+    const saved=outputsOf(receiver),fallback={outputs:saved,index:0};
+    if(!resumeStep||!['outputs','pixels','review'].includes(resumeStep.stage)||!Array.isArray(resumeStep.outputs)||resumeStep.outputs.length!==4)return fallback;
+    const draft=resumeStep.outputs;
+    if(draft.some((row,index)=>!row||row.port!==index+1||typeof row.enabled!=='boolean'||typeof row.reversed!=='boolean'||row.reversed!==saved[index].reversed||!Number.isInteger(row.pixels)||!(row.pixels>=0&&row.pixels<=MAX||!row.enabled&&!saved[index].enabled&&row.pixels===saved[index].pixels)))return fallback;
+    const outputs=draft.map(row=>({port:row.port,enabled:row.enabled,pixels:row.pixels,reversed:row.reversed})),steps=sequence(outputs,{jointDirections:true,review:!directDirections});
+    let index=steps.findIndex(step=>step.stage===resumeStep.stage&&step.port===(resumeStep.stage==='pixels'?resumeStep.port:null));
+    if(index<0)index=directDirections&&resumeStep.stage==='review'?steps.length-1:0;
+    if(steps[index].stage==='review'&&(!outputs.some(row=>row.enabled)||outputs.some(row=>row.enabled&&!configuredPixels(row.pixels))))index=Math.max(0,steps.findIndex(step=>step.stage==='pixels'));
+    return {outputs,index};
+  }
+  function create({onSave,onClose=()=>{},onPreview,onDraftChange=()=>{},mode='preview',previewCapabilities={},jointDirections=false,isPublishedReceiver=()=>false,canHandoff=()=>false}={}){
+    if(typeof onSave!=='function')throw Error('PIXEL_SAVE_HANDLER_REQUIRED');
+    const limits=pixelLimits();
+    let dialog=null,receiver=null,outputs=[],index=0,busy=false,error='',focusBefore=null,initialPort=null,selectedPort=null,selectedPorts=null,unbindScrub=null,unbindDirectionTutorial=null,recovering=false,directionRecovery=false,directionOnlyMode=false,pairFirstFlow=false,firstLook=false,lineLook=false,lineWasOff=false,pixelsOnly=false,previewStopJob=null,otherLines=0,unbindRuler=null;
+    const plugMotion=globalThis.LightningReceiverVisual.createPlugMotion();
+    let previewTransaction=null,previewState={kind:'idle'},previewRetiredForSave=false;
+    const editorEnabled686=()=>previewCapabilities.editorIsolation===true&&isPublishedReceiver(receiver)===true;
+    const livePreview=createLivePreview({send:mode==='native'?onPreview:null,editorIsolation:editorEnabled686,onState:state=>{previewState=state;showPreviewStatus(dialog,state);}});
+    const directDirections=()=>jointDirections&&!pixelsOnly&&!selectedPorts&&!recovering&&!directionOnlyMode;
+    // C113: the zone ends with two or more ledlines, so the order step follows.
+    const orderNext=()=>otherLines+outputs.filter(item=>item.enabled).length>=2;
+    const continueLabel=()=>t(orderNext()?'pixelNextOrder':pairFirstFlow?'pixelFinish':'pixelSave');
+    // A normal pixel-only edit saves from its last selected port. Pending
+    // transaction recovery retains its immutable review/retry screen.
+    const directPixels=()=>pixelsOnly&&!recovering&&editableOutputs(outputs,selectedPorts).length>0;
+    // C144: eerste setup in de nieuwe vormgeving. C228: ook "Ledline bijhangen" op de pagina van de receiver (firstLook).
+    // C230: één ledline vanaf de pagina van de receiver (lineLook): dezelfde kiezer, voor alleen die ledline.
+    const firstDesign=()=>(pairFirstFlow||firstLook||lineLook)&&!recovering&&!!globalThis.LightningLedlineSetup;
+    // C228 (12 nov, gebruiker: "eigenlijk is deze pagina niet nodig" / "Ja, pagina weg"): de nieuwe vormgeving heeft geen
+    // overzichtspagina "Pixels ingesteld" meer. De laatste ledline bewaart zelf (dezelfde actie save als voorheen), toont
+    // kort een vinkje en gaat door. Herstel van een wachtende wijziging houdt zijn vaste controlescherm.
+    const plan=()=>sequence(outputs,{selectedPorts,jointDirections,pixelsOnly,review:!firstDesign()&&!directDirections()&&!directPixels()}),current=()=>plan()[index],output=()=>outputs.find(item=>item.port===current().port),portsToEdit=()=>editableOutputs(outputs,selectedPorts);
+    function draftChanged(){
+      if(!dialog||recovering||directionOnlyMode||pixelsOnly||selectedPorts||!jointDirections||!['outputs','pixels','review'].includes(current().stage))return;
+      onDraftChange({receiverId:receiver.id,outputs:outputs.map(copy),stage:current().stage,port:current().port});
+    }
+    // C109bc: the editor can open before the fresh read of the receiver is
+    // done; the test light then waits (status "Testlicht aanpassen…") until
+    // the app releases it, so the native order read → status → preview stays.
+    let previewHeld=false;
+    function releasePreview(){if(!previewHeld)return;previewHeld=false;if(dialog)syncPreview({commit:true});}
+    function syncPreview({commit=false}={}){
+      if(busy||previewRetiredForSave)return;
+      if(previewHeld){showPreviewStatus(dialog,{...previewState,kind:'pending'});return;}
+      if(!dialog||document.hidden){void livePreview.stop();return;}
+      const request=guideRequest({context:{standId:receiver.standId,transactionId:previewTransaction,
+        receiver:{id:receiver.id,rid:receiver.rid,type:'SPI',deviceFingerprint:receiver.deviceFingerprint},role:receiver.role,
+        mainReceiverId:receiver.mainReceiverId||null},outputs,output:output(),stage:current().stage,capabilities:previewCapabilities});
+      if(!request){void livePreview.stop({keepSession:true});return;}
+      livePreview.update(request);if(commit)void livePreview.flush();showPreviewStatus(dialog,previewState);
+    }
+    function visibility(){syncPreview();}
+    function paint(time){if(dialog?.open&&['outputs','pixels','connection'].includes(current().stage)){const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;paintOutputs(dialog,outputs,{time,reducedMotion,selectedPort:current().port||selectedPort,plugProgress:current().stage==='outputs'?plugMotion.sample(time,reducedMotion):{}});}}
+    function close(){if(!dialog||busy&&!previewStopJob)return;globalThis.LightningTutorialAsk?.close();previewStopJob=null;busy=false;void livePreview.stop();livePreview.retireExpiredEditor();document.removeEventListener('visibilitychange',visibility);unbindScrub?.();unbindScrub=null;unbindRuler?.();unbindRuler=null;unbindDirectionTutorial?.();unbindDirectionTutorial=null;dialog.close();dialog.remove();dialog=null;plugMotion.clear();focusBefore?.focus?.({preventScroll:true});onClose();}
+    // C144 (11 nov, gebruiker: "Ja, in de app"): de eerste setup in de vormgeving van "Ledlines instellen" (prototype
+    // C142p): kop met de twee stappen, kleurtegels, per ledline de liniaal en "Pixels ingesteld". Alleen de weergave is
+    // anders: dezelfde acties (output, pixel-less/more/step, next, back, save, close), hetzelfde testlicht, hetzelfde opslaan.
+    // C228: na het bewaren van de laatste ledline een kort vinkje, dan sluit de setup en volgt stap 2 (als die volgt).
+    function savedTick(){
+      const shell=dialog?.querySelector('.ls-shell');if(!shell)return Promise.resolve();
+      let reduced=false;try{reduced=globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches===true;}catch(_){}
+      const mark=document.createElement('div');mark.className='ls-saved';mark.setAttribute('role','status');mark.setAttribute('aria-label',globalThis.LightningLedlineSetup.t('saved'));
+      mark.innerHTML='<i aria-hidden="true"><svg viewBox="0 0 52 52"><path d="m15 27 7.5 7.5L37.5 19"/></svg></i>';shell.append(mark);
+      return new Promise(resolve=>setTimeout(resolve,reduced?450:900));
+    }
+    function renderFirst(top,{preview=true}={}){
+      const LS=globalThis.LightningLedlineSetup,I=LS.ICONS,step=current(),active=output(),paletteVersion=[1,2,3,4,5].includes(previewState.paletteVersion)?previewState.paletteVersion:5;
+      const previousScroll=dialog.querySelector('.pixel-setup-body')?.scrollTop||0,replacingOwnFocus=dialog.open&&dialog.contains(document.activeElement);
+      const focusedPort=dialog.contains(document.activeElement)&&document.activeElement.dataset.pixelAction==='output'?document.activeElement.dataset.port:null;
+      const colour=port=>portColour(port,paletteVersion),list=outputs.filter(item=>item.enabled).map(item=>item.port);
+      // C230: bij één ledline is de knop links "Zet uit" (ze brandt al) of "Sluiten" (ze stond uit)
+      const back=lineLook?(lineWasOff?LS.button('close',LS.t('goClose')):LS.button('line-off',LS.t('lineOff'))):index===0?LS.button('close',LS.t('goClose')):LS.button('back',LS.t('goBack'),{icon:I.BACK});
+      let body='',foot='';
+      if(step.stage==='outputs'){body=LS.outputs(outputs,{colour,name:receiver.name,pulse:selectedPort});foot=back+LS.button('next',LS.t('goNext'),{primary:true,icon:I.NEXT,after:true,disabled:!list.length});}
+      else if(step.stage==='pixels'&&active){const last=index===plan().length-1,two=lineLook?lineWasOff&&orderNext():orderNext();body=LS.pixels(active,{colour,list,max:limits.max,single:lineLook,fresh:lineLook&&lineWasOff});
+        // C228: de laatste ledline bewaart en gaat door (naar stap 2 als die volgt); er komt geen overzichtspagina meer.
+        foot=back+(last?LS.button('save',LS.t(two?'goNext':'goDone'),{primary:true,icon:two?I.NEXT:I.CHECK,after:two,disabled:!configuredPixels(active.pixels,limits)||!['preview','native'].includes(mode)})
+          :LS.button('next',LS.t('goNext'),{primary:true,icon:I.NEXT,after:true,disabled:!configuredPixels(active.pixels,limits)}));}
+      dialog.innerHTML=`<div class="pixel-setup-shell ls-shell${lineLook?' ls-line':''}"><header class="pixel-setup-header ls-header">${lineLook?'':LS.head(step.stage==='outputs'?1:2,{done1:false,steps:!document.documentElement.classList.contains('c137bp-wizard')})}${index>0||lineLook?`<button type="button" class="ls-x" data-pixel-action="close" aria-label="${esc(t('pixelCloseSettings'))}">×</button>`:''}</header>`+
+        `<div class="pixel-setup-body ls-body" data-stage="${step.stage}" data-port="${step.port||''}">${body}<p class="pixel-setup-mode" id="pixel-setup-mode" ${mode==='preview'?'hidden':''}>${esc(t(mode==='preview'?'pixelPreviewMode':mode==='native'?'pixelNativeMode':'pixelUnavailableMode'))}</p><p class="pixel-setup-error" role="alert" ${error?'':'hidden'}>${esc(error)}</p></div>`+
+        `<footer class="pixel-setup-footer ls-footer">${foot}</footer></div>`;
+      if(busy)dialog.querySelectorAll('.ls-footer button,.ls-body button,.ls-body input,.ls-header button').forEach(control=>{control.disabled=true;});
+      if(step.stage==='pixels'&&active){updatePixels(dialog,active,{});requestAnimationFrame(()=>{if(dialog)LS.paintRuler(dialog.querySelector('[data-pixel-panel="pixels"]'),output()?.pixels??0);});}
+      dialog.querySelector('.pixel-setup-body').scrollTop=top?0:previousScroll;
+      if(!top&&focusedPort)dialog.querySelector(`[data-pixel-action="output"][data-port="${focusedPort}"]`)?.focus({preventScroll:true});
+      else if(top&&replacingOwnFocus&&!document.hidden&&(document.activeElement===document.body||document.activeElement===dialog)){const heading=dialog.querySelector('.ls-title');heading?.setAttribute('tabindex','-1');heading?.focus({preventScroll:true});}
+      paint(globalThis.AluvisionPreviewNowPS());
+      if(preview)syncPreview();else showPreviewStatus(dialog,previewState);
+    }
+    function render(top=false,{preview=true}={}){
+      if(!dialog)return;unbindDirectionTutorial?.();unbindDirectionTutorial=null;
+      if(firstDesign())return renderFirst(top,{preview});const previousScroll=dialog.querySelector('.pixel-setup-body')?.scrollTop||0,step=current(),ports=portsToEdit(),active=output(),allOff=!outputs.some(item=>item.enabled),direct=directDirections(),finalPixel=(direct||directPixels())&&step.stage==='pixels'&&index===plan().length-1,saveStep=step.stage==='review'||finalPixel,paletteVersion=[1,2,3,4,5].includes(previewState.paletteVersion)?previewState.paletteVersion:5;
+      const focusedPort=dialog.contains(document.activeElement)&&document.activeElement.dataset.pixelAction==='output'?document.activeElement.dataset.port:null;
+      let content='';
+      if(step.stage==='outputs')content=`<p>${esc(t('pixelChooseOutputs'))}</p>${selectedPorts?`<p>${esc(t('pixelSelectSummary',{ports:[...selectedPorts].sort().map(port=>`P${port}`).join(' + ')}))}</p>`:''}${renderOutputs(outputs,{initialPort,selectedPorts,paletteVersion,live:mode==='native'&&previewCapabilities.identifyPorts===true})}${!allOff&&!ports.length?`<p class="pixel-setup-error" role="alert">${esc(t('pixelSelectedRequired'))}</p>`:''}`;
+      if(active)content=`${renderPortContext(outputs,active.port,{stage:step.stage,selectedPorts,paletteVersion})}${step.stage==='connection'?renderSide(active,{live:mode==='native'&&typeof onPreview==='function'&&previewCapabilities.power===true}):renderPixels(active,limits)}`;
+      if(step.stage==='review')content=`<p>${esc(t('pixelCheckOutputs'))} ${esc(t('pixelSameZone'))}</p><div class="pixel-setup-review">${outputs.map(item=>`<div data-pixel-palette-port="${item.port}" style="--port-colour:${portColour(item.port,paletteVersion).hex};--port-ink:${portColour(item.port,paletteVersion).ink}" ${selectedPorts&&!selectedPorts.has(item.port)?'data-preserved="true"':''}><b>P${item.port}</b><span>${esc(t('pixelCount',{count:item.pixels}))} · ${esc(t(item.enabled?'pixelOn':'pixelOff'))}<small>${jointDirections?'':esc(endpointLabel(item))}${selectedPorts&&!selectedPorts.has(item.port)?' · '+esc(t('pixelPreserved')):''}</small></span></div>`).join('')}</div>`;
+      const replacingOwnFocus=dialog.open&&dialog.contains(document.activeElement);
+      dialog.innerHTML=`<div class="pixel-setup-shell"><header class="pixel-setup-header"><div><small>${esc(receiver.name||t('pixelReceiver'))}</small><h1>${esc(t(step.stage==='connection'?'pixelChooseStart':'pixelSettings'))}</h1></div><button type="button" data-pixel-action="close" aria-label="${esc(t('pixelCloseSettings'))}" ${busy?'disabled':''}>×</button></header>${renderProgress(step.stage,{directDirections:direct,orderStep:orderNext()})}<div class="pixel-setup-body" data-stage="${step.stage}" data-port="${step.port||''}">${content}<p class="pixel-setup-mode" id="pixel-setup-mode" ${mode==='preview'&&step.stage!=='review'?'hidden':''}>${esc(t(mode==='preview'?'pixelPreviewMode':mode==='native'?'pixelNativeMode':'pixelUnavailableMode'))}</p><p class="pixel-setup-error" role="alert" ${error?'':'hidden'}>${esc(error)}</p></div><footer class="pixel-setup-footer"><button type="button" data-pixel-action="back" ${busy?'disabled':''}>${esc(t('pixelBack'))}</button><button type="button" data-pixel-action="${saveStep?'save':'next'}" ${busy||!ports.length||step.stage==='pixels'&&!configuredPixels(active.pixels,limits)||saveStep&&(!['preview','native'].includes(mode)||ports.some(item=>!configuredPixels(item.pixels,limits)))?'disabled aria-describedby="pixel-setup-mode"':''}>${esc(busy?t('pixelSaving'):finalPixel?continueLabel():step.stage==='review'?t('pixelSave'):active?nextPortLabel(ports,active.port,{stage:step.stage,last:t('pixelCheck')}):t('pixelNext'))}</button></footer></div>`;
+      unbindDirectionTutorial=globalThis.LightningSPIDirectionTutorial?.bind(dialog)||null;
+      if(jointDirections){
+        // Counts are saved first. All directions are then edited together in
+        // the zone sheet; never alternate count/side for each separate port.
+        const obsolete=direct?null:dialog.querySelector('.pixel-setup-steps li:nth-child(3)');obsolete?.remove();
+        const steps=dialog.querySelector('.pixel-setup-steps'),stepCount=steps?steps.querySelectorAll('li').length:3;if(steps)steps.style.gridTemplateColumns='repeat('+stepCount+',minmax(0,1fr))';
+        const last=dialog.querySelector('.pixel-setup-steps li:last-child span');if(last&&last.textContent!=='✓')last.textContent=String(stepCount);
+        const next=dialog.querySelector('[data-pixel-action="next"]');if(next&&active)next.textContent=nextPortLabel(ports,active.port,{stage:'connection',last:direct?continueLabel():t('pixelCheck')});
+      }
+      if(recovering){const back=dialog.querySelector('[data-pixel-action="back"]');if(back){back.dataset.pixelAction='close';back.textContent=t('pixelClose');}}
+      if(pixelsOnly){
+        dialog.querySelector('.pixel-setup-header h1').textContent=t('pixelOnlySettings');
+        dialog.querySelector('.pixel-setup-steps')?.remove();
+        const hint=document.createElement('p');hint.className='pixel-only-hint';hint.textContent=t('pixelOnlyHint');dialog.querySelector('.pixel-setup-body').prepend(hint);
+        const primary=dialog.querySelector('[data-pixel-action="save"]');if(primary&&!busy)primary.textContent=t('pixelOnlySave');
+      }
+      if(pairFirstFlow&&!busy){const primary=dialog.querySelector('[data-pixel-action="save"]');if(primary)primary.textContent=continueLabel();}
+      // C109: pick the ports to adjust right here (only P1, or P1 and P2, ...),
+      // and switch ports on or off without leaving this screen.
+      if(pixelsOnly&&!recovering){
+        const chosen=new Set(portsToEdit().map(item=>item.port)),now=step.port;
+        const picker=document.createElement('div');picker.className='pixel-port-pick109';picker.setAttribute('role','group');picker.setAttribute('aria-label',t('pixelPickPorts'));
+        picker.innerHTML=`<p>${esc(t('pixelPickPorts'))}</p><div>${outputs.map(item=>{const colour=portColour(item.port,paletteVersion),state=!item.enabled?'off':item.port===now?'now':chosen.has(item.port)?'edit':'keep';
+          const lastOn=item.enabled&&outputs.filter(row=>row.enabled).length===1;
+          return `<div class="pick-cell109" data-pick-state="${state}" style="--port-colour:${colour.hex};--port-ink:${colour.ink}"><button type="button" data-pixel-action="pick-port" data-port="${item.port}" data-pick-state="${state}" style="--port-colour:${colour.hex};--port-ink:${colour.ink}" aria-pressed="${chosen.has(item.port)}" aria-label="${esc(t('pixelPickAria',{port:item.port}))}" ${!item.enabled||busy?'disabled':''}><b>P${item.port}</b><small>${esc(t(state==='off'?'pixelOff':state==='keep'?'pixelPickKeep':'pixelPickEdit'))}</small></button><button type="button" class="pick-power109" data-pixel-action="pick-power" data-port="${item.port}" role="switch" aria-checked="${item.enabled}" aria-label="${esc(t('pixelPortPowerAria',{port:item.port}))}" ${busy||lastOn?'disabled':''}><i aria-hidden="true"></i></button></div>`;}).join('')}</div>`;
+        (dialog.querySelector('.pixel-only-hint')||dialog.querySelector('.pixel-setup-body').firstChild)?.after?.(picker);
+      }
+      // C109: one way out per screen. On the first port the footer closes, so
+      // the header cross goes; later ports keep it next to "Terug".
+      if(index===0||recovering){
+        dialog.querySelector('.pixel-setup-header [data-pixel-action="close"]')?.remove();
+        const back=dialog.querySelector('.pixel-setup-footer [data-pixel-action="back"],.pixel-setup-footer [data-pixel-action="close"]');
+        if(back&&!recovering){back.textContent=t(pixelsOnly?'pixelDontSave':'pixelClose');back.dataset.pixelAction='close';}
+      }
+      dialog.querySelector('.pixel-setup-body').scrollTop=top?0:previousScroll;
+      if(!top&&focusedPort)dialog.querySelector(`[data-pixel-action="output"][data-port="${focusedPort}"]`)?.focus({preventScroll:true});
+      else if(top&&replacingOwnFocus&&!document.hidden&&(document.activeElement===document.body||document.activeElement===dialog)){
+        const heading=dialog.querySelector(step.stage==='pixels'?'[data-pixel-panel="pixels"] > h2':'.pixel-setup-header h1');
+        heading?.setAttribute('tabindex','-1');heading?.focus({preventScroll:true});
+      }
+      paint(globalThis.AluvisionPreviewNowPS());
+      if(preview)syncPreview();else showPreviewStatus(dialog,previewState);
+    }
+    function adjust(value,source,{commit=false,haptic=true}={}){if(!dialog||busy||current().stage!=='pixels')return;const primary=dialog.querySelector('[data-pixel-action="next"],[data-pixel-action="save"]'),previous=output().pixels,number=Number(value),legacyDecrease=previous>limits.max&&validPixels(number)&&number<=previous;if(!validateInput(dialog,value,limits)&&!legacyDecrease){primary.disabled=true;return;}output().pixels=number;updatePixels(dialog,output(),{source});primary.disabled=!configuredPixels(output().pixels,limits)||primary.dataset.pixelAction==='save'&&portsToEdit().some(item=>!configuredPixels(item.pixels,limits));if(haptic&&output().pixels!==previous)hapticStep();error='';if(output().pixels!==previous)draftChanged();syncPreview({commit});}
+    function input(event){if(busy)return;if(event.target.matches('[data-pixel-count],[data-pixel-range]'))adjust(event.target.value,event.target,{commit:event.type==='change'});}
+    function commitKey(event){if(['Enter','ArrowUp','ArrowDown'].includes(event.key)&&event.target.matches('[data-pixel-count]'))adjust(event.target.value,event.target,{commit:event.key==='Enter'});}
+    async function click(event){
+      const target=event.target.closest('[data-pixel-action]');if(!target||target.disabled||busy&&!(previewStopJob&&target.dataset.pixelAction==='close'))return;
+      const action=target.dataset.pixelAction,step=current();
+      if(action==='save'&&!previewRetiredForSave&&directDirections()&&editorEnabled686()&&previewCapabilities.pixelEndsHandoff===true&&canHandoff(receiver)===true){
+        if(!portsToEdit().length||portsToEdit().some(item=>!configuredPixels(item.pixels,limits))||step.stage==='pixels'&&!validateInput(dialog,dialog.querySelector('[data-pixel-count]').value,limits))return;
+        const owner=dialog;busy=true;error='';render();
+        try{
+          const result=await livePreview.handoff(preview=>onSave({receiverId:receiver.id,outputs:outputs.map(item=>!item.enabled&&item.pixels===0?{...item,pixels:receiver.outputs.find(original=>original.port===item.port)?.pixels||1}:copy(item)),continueToDirections:true,pixelsOnly,handoffPreview:preview}));
+          if(dialog!==owner)return;
+          if(result.handedOff===true){busy=false;previewRetiredForSave=true;close();return;}
+        }catch(failure){
+          if(dialog!==owner)return;
+          busy=false;previewRetiredForSave=true;error=typeof failure?.message==='string'?failure.message:t('pixelSaveFailed');render();return;
+        }
+        busy=false;
+      }
+      const leavesGuide=action==='save'||action==='line-off'||action==='next'&&plan()[index+1]?.stage==='review'||action==='back'&&index===0;
+      if(leavesGuide&&(['outputs','pixels','connection'].includes(step.stage)||action==='save'&&editorEnabled686())){
+        const stoppingDialog=dialog,job={dialog:stoppingDialog};previewStopJob=job;busy=true;const restore=showPreviewStopping(stoppingDialog);
+        // Leaving the editor never waits for transport cleanup. Navigation
+        // within it still waits; a late STOP cannot advance a newer dialog.
+        stoppingDialog.querySelector('[data-pixel-action="close"]')?.removeAttribute('disabled');
+        let stopped=false;
+        try{stopped=(await livePreview.stop({keepSession:action==='next'}))?.stopped===true;}finally{restore();if(previewStopJob===job&&dialog===stoppingDialog)busy=false;}
+        if(previewStopJob!==job||dialog!==stoppingDialog)return;
+        previewStopJob=null;
+        if(!stopped){error=t(previewState.kind==='expired'?'pixelEditorExpired':'pixelPreviewFailed');render(false,{preview:false});return;}
+      }
+      if(action==='close')return close();
+      // C230: "Zet uit" op de pagina van één ledline: die ledline gaat uit en dat wordt meteen bewaard (zelfde opslaan).
+      if(action==='line-off'){
+        const item=output();if(!lineLook||busy||!item||!['preview','native'].includes(mode))return;
+        busy=true;previewRetiredForSave=true;error='';dialog.querySelectorAll('button,input').forEach(control=>{control.disabled=true;});
+        try{await onSave({receiverId:receiver.id,outputs:outputs.map(row=>row.port===item.port?{...copy(row),enabled:false}:copy(row)),pixelsOnly});busy=false;close();}
+        catch(failure){busy=false;previewRetiredForSave=false;error=typeof failure?.message==='string'?failure.message:t('pixelSaveFailed');render();}
+        return;
+      }
+      if(action==='tutorial'){globalThis.LightningLedlineTutorial?.open?.();return;}   // C144b: de tutorial van stap 1
+      if(action==='pick-power'){
+        const port=Number(target.dataset.port),item=outputs.find(row=>row.port===port);if(!pixelsOnly||recovering||!item)return;
+        if(item.enabled&&outputs.filter(row=>row.enabled).length===1)return;
+        const chosen=new Set(portsToEdit().map(row=>row.port)),was=current().port;
+        item.enabled=!item.enabled;
+        if(item.enabled){if(!(item.pixels>0))item.pixels=receiver.outputs.find(row=>row.port===port)?.pixels||1;chosen.add(port);}
+        else{chosen.delete(port);if(!chosen.size)chosen.add(outputs.find(row=>row.enabled).port);}
+        selectedPorts=chosen;plugMotion.trigger(port,globalThis.AluvisionPreviewNowPS(),item.enabled);
+        const steps=plan(),at=steps.findIndex(row=>row.port===(item.enabled?port:was));
+        index=at>=0?at:Math.max(0,Math.min(index,steps.length-1));error='';hapticStep();draftChanged();return render();
+      }
+      if(action==='pick-port'){
+        const port=Number(target.dataset.port),item=outputs.find(row=>row.port===port);if(!pixelsOnly||recovering||!item?.enabled)return;
+        const chosen=new Set(portsToEdit().map(row=>row.port));
+        if(chosen.has(port)){if(chosen.size===1)return;chosen.delete(port);}else chosen.add(port);
+        const was=current().port;selectedPorts=chosen;const steps=plan(),at=steps.findIndex(row=>row.port===was);
+        index=at>=0?at:Math.max(0,Math.min(index,steps.length-1));error='';hapticStep();return render();
+      }
+      if(action==='output'){const item=outputs.find(item=>item.port===Number(target.dataset.port));if(!item||selectedPorts&&!selectedPorts.has(item.port))return;item.enabled=!item.enabled;selectedPort=item.port;plugMotion.trigger(item.port,globalThis.AluvisionPreviewNowPS(),item.enabled);error='';draftChanged();return render();}
+      if(['pixel-less','pixel-more','pixel-step'].includes(action)){const delta=action==='pixel-step'?Number(target.dataset.pixelDelta):action==='pixel-less'?-1:1;if(![-30,-15,-10,-1,1,10,15,30].includes(delta))return;return adjust(stepPixels(output().pixels,delta,limits),null,{commit:false});}
+      if(action==='side'){if(!['forward','reverse','left','right'].includes(target.dataset.side))return;output().reversed=['reverse','right'].includes(target.dataset.side);error='';render();void livePreview.flush();return;}
+      if(action==='next'){if(!outputs.some(item=>item.enabled)||!portsToEdit().length)return render();if(step.stage==='pixels'&&(!validateInput(dialog,dialog.querySelector('[data-pixel-count]').value,limits)||!configuredPixels(output().pixels,limits)))return;index++;error='';draftChanged();return render(true);}
+      if(action==='back'){if(!index)return close();index--;error='';draftChanged();return render(true);}
+      if(action==='save'){if(!['preview','native'].includes(mode)||!portsToEdit().length||portsToEdit().some(item=>!configuredPixels(item.pixels,limits))||step.stage==='pixels'&&!validateInput(dialog,dialog.querySelector('[data-pixel-count]').value,limits))return;busy=true;previewRetiredForSave=true;error='';render();try{await onSave({receiverId:receiver.id,outputs:outputs.map(item=>!item.enabled&&item.pixels===0?{...item,pixels:receiver.outputs.find(original=>original.port===item.port)?.pixels||1}:copy(item)),...(directionRecovery?{directionsOnly:true}:{}),...(directDirections()?{continueToDirections:true}:{}),pixelsOnly});if(firstDesign())await savedTick();busy=false;close();}catch(failure){busy=false;error=typeof failure?.message==='string'?failure.message:t('pixelSaveFailed');render();}}
+    }
+    function open(value,{initialPort:port,resumePending=false,directionsOnly=false,pixelsOnly:onlyPixels=false,selectedPorts:requestedPorts=null,resumeStep=null,pairFirst=false,firstLook:newLook=false,lineLook:oneLine=false,zoneLines=0,holdPreview=false}={}){
+      if(dialog)throw Error('PIXEL_SETUP_ALREADY_OPEN');previewHeld=holdPreview===true;otherLines=Number.isInteger(zoneLines)&&zoneLines>0?zoneLines:0;livePreview.retireExpiredEditor();livePreview.retireTransferredEditor();pixelsOnly=onlyPixels===true;selectedPorts=selectedPortSet(resumePending?null:requestedPorts);outputs=outputsOf(value);receiver=copy(value);previewTransaction=previewId();previewState={kind:'idle'};previewRetiredForSave=false;document.addEventListener('visibilitychange',visibility);initialPort=Number.isInteger(port)&&port>=1&&port<=4?port:null;selectedPort=null;plugMotion.clear();index=0;error='';busy=false;focusBefore=document.activeElement;
+      // C109: a port chosen from the receiver card while it is off is switched
+      // on in this draft only; Opslaan keeps it, closing leaves it as it was.
+      // C230: één ledline in de nieuwe vormgeving; stond ze uit, dan begint ze op het maximum (zoals een nieuwe ledline)
+      lineLook=oneLine===true&&pixelsOnly&&resumePending!==true&&!!selectedPorts&&selectedPorts.size===1&&!!globalThis.LightningLedlineSetup;lineWasOff=false;
+      if(pixelsOnly&&resumePending!==true&&selectedPorts)for(const item of outputs)if(selectedPorts.has(item.port)&&!item.enabled){item.enabled=true;if(lineLook){lineWasOff=true;if(!(item.pixels>0))item.pixels=limits.max;}else if(!(item.pixels>0))item.pixels=1;}
+      recovering=resumePending===true;directionOnlyMode=directionsOnly===true;pairFirstFlow=pairFirst===true&&jointDirections&&!directionOnlyMode&&!pixelsOnly&&!selectedPorts;firstLook=newLook===true&&jointDirections&&!directionOnlyMode&&!pixelsOnly&&!selectedPorts;
+      directionRecovery=recovering&&directionsOnly===true;
+      if(recovering){index=plan().length-1;error=t('pixelPendingConfig');}
+      else if(jointDirections&&!directionsOnly&&!pixelsOnly&&!selectedPorts){const resumed=setupResume(receiver,resumeStep,{directDirections:directDirections()});outputs=resumed.outputs;index=resumed.index;}
+      dialog=document.createElement('dialog');dialog.className='pixel-setup-dialog';dialog.setAttribute('aria-label',t(pixelsOnly?'pixelOnlySettings':'pixelDialogAria'));dialog.addEventListener('click',click);dialog.addEventListener('input',input);dialog.addEventListener('change',input);dialog.addEventListener('keyup',commitKey);dialog.addEventListener('cancel',event=>{event.preventDefault();close();});unbindScrub=bindPixelScrub(dialog,{isEnabled:()=>!busy&&current().stage==='pixels',onChange:value=>adjust(value,null,{haptic:false}),onCommit:()=>void livePreview.flush()});unbindRuler=globalThis.LightningLedlineSetup?.bindRuler?.(dialog,{isEnabled:()=>!busy&&current().stage==='pixels',onChange:value=>adjust(value,null),onCommit:()=>void livePreview.flush(),value:()=>output()?.pixels??0})||null;document.body.append(dialog);render(true);dialog.showModal();paint(globalThis.AluvisionPreviewNowPS());{const tut=globalThis.LightningLedlineTutorial,ask=globalThis.LightningTutorialAsk;if(firstDesign()&&current().stage==='outputs'&&tut&&ask&&!tut.seen())requestAnimationFrame(()=>{if(dialog)ask.ask('spi-ledlines',{onYes:()=>{if(dialog)tut.open();}});});}   /* C144b: de eerste keer de tutorial. C227 (12 nov, gebruiker: "altijd vragen wil je een tutorial bekijken ja of nee"): hij start niet meer vanzelf, de app vraagt het één keer; daarna is er de knop "Bekijk tutorial" */if(editorEnabled686())void livePreview.flush();
+    }
+    return Object.freeze({open,close,paint,releasePreview,isOpen:()=>!!dialog});
+  }
+  return Object.freeze({TEXTS,PORT_COLOURS,PORT_COLOURS_V3,PORT_COLOURS_V4,PORT_COLOURS_V5,LEGACY_PORT_COLOURS,portColour,portPalette,guideRequest,create,createLivePreview,showPreviewStatus,showPreviewStopping,renderOutputs,paintOutputs,renderPixels,renderSide,renderPort,renderProgress,renderPortContext,nextPortLabel,bindPixelScrub,updatePixels,validateInput,outputsOf,setupResume,sequence,validPixels,pixelLimits,editablePixels,configuredPixels,stepPixels,stepMeters,meterLabel,endpointLabel,hapticStep});
+}));

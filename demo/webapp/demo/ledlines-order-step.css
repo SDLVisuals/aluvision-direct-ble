@@ -1,0 +1,133 @@
+/* Aluvision: stap 2 "Looprichting" (volgorde en kanten in één scherm; ledlines-order-step.js). Het scherm uit prototype ketting-leggen (C141p),
+   nu als venster in de app: zelfde plaats en opbouw als stap 1 (onder het logo, kop – inhoud – knoppen onderaan).
+   Kleuren, kaarten en knoppen komen uit de stijl van de app; hier staat alleen wat dit scherm zelf nodig heeft. */
+
+/* ---------- Het venster: onder de logobalk (in de toevoeg-wizard ook onder de stappenbalk), tot onderaan ---------- */
+html:not(#kt):not(#kt):not(#kt) body:not(#kt):not(#kt):not(#kt) dialog.kt-dialog[open]{position:fixed;left:0;right:0;top:var(--kt-top,0px)!important;bottom:0;
+  width:auto;height:auto;max-width:none;max-height:none!important;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;
+  background:var(--c109-page,var(--bg,#f4f4f3));color:var(--ink);overflow:hidden}
+/* geen sluier: het venster vult de pagina zelf; de logobalk (en de stappenbalk) blijven zichtbaar */
+html:not(#kt):not(#kt):not(#kt) body:not(#kt):not(#kt):not(#kt) dialog.kt-dialog[open]::backdrop{background:rgba(0,0,0,.004)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;animation:none!important}
+html.c137bp-wizard:not(#kt):not(#kt):not(#kt) body:not(#kt):not(#kt):not(#kt) dialog.kt-dialog[open]{animation:none!important}
+
+.kt-app{position:relative;display:flex;flex-direction:column;height:100%;min-height:0}
+.kt-main{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:grid;align-content:start;gap:14px;
+  padding:12px max(16px,calc((100% - 600px)/2)) 22px;box-sizing:border-box}
+.kt-head{position:relative;display:grid;gap:4px}
+.kt-head .ls-eyebrow{margin-top:2px}
+.kt-head .ls-say{margin-top:4px}
+.kt-head .ls-tut{margin-top:8px}
+.kt-head .ls-intro{margin-right:52px}
+html:not(#kt) body:not(#kt) dialog.kt-dialog .kt-x{position:absolute;right:-2px;top:0;z-index:2;width:40px;height:40px;min-height:0;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--soft);
+  color:var(--ink);font:inherit;font-size:20px;line-height:1;cursor:pointer}
+html:not(#kt) body:not(#kt) dialog.kt-dialog .kt-x:disabled{opacity:.45}
+.kt-tut{position:relative;transition:transform .15s ease}
+.kt-tut[hidden]{display:none}
+
+/* Tikken: de knop is even actief en een ring vervaagt naar buiten */
+.kt-flip,.kt-back,.kt-test,.kt-done{position:relative}
+.kt-tapring{position:absolute;inset:-3px;border-radius:inherit;border:2px solid color-mix(in srgb,var(--ink) 45%,transparent);pointer-events:none;
+  animation:kt-tap .5s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes kt-tap{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(1.16)}}
+.kt-back:active,.kt-test:active,.kt-done:active,.kt-tut:active{transform:scale(.96)}
+
+/* Overzichtsbalk: elke ledline in volgorde als eigen blokje; in deelstap 2 met zijn staartje */
+.kt-overview{position:relative;display:grid;gap:7px}
+.kt-ov-label{font-size:12.5px;font-weight:650;color:var(--muted)}
+.kt-ov-bars{display:flex;gap:6px}
+.kt-ov-bars>i{position:relative;flex:1 1 0;min-width:0;height:12px;border-radius:2px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+
+/* Het staartje (het einde in de kleur van de volgende) toont alleen in deelstap 2; het groeit in vanaf het einde */
+.kt-tail{position:absolute;top:0;bottom:0;width:34%;transform:scaleX(0);transition:transform .5s cubic-bezier(.2,.8,.2,1) calc(var(--i,0) * 70ms)}
+.kt-tail.is-left{left:0;transform-origin:0 50%}
+.kt-tail.is-right{right:0;transform-origin:100% 50%}
+.kt-app[data-step="2"] .kt-tail{transform:none}
+/* Vastpakken of tikken: de strip pulseert in zijn eigen kleur (een donkere laag gaat op en neer, geen wit), zoals de ledline */
+.kt-bar::after{content:"";position:absolute;inset:0;z-index:2;background:#000;opacity:0;pointer-events:none}
+@keyframes kt-pulse{0%,100%{opacity:0}50%{opacity:.55}}
+.kt-item.is-dragging .kt-bar::after,.kt-card.is-identifying .kt-bar::after{animation:kt-pulse .6s ease-in-out infinite}
+/* Testlicht: alles wordt rustig rood, dan loopt er één brede, zachte witte band overheen (zoals op de stand) */
+.kt-bar::before,.kt-ov-bars>i::before{content:"";position:absolute;inset:0;z-index:1;background:#F0473D;opacity:0;transition:opacity .5s ease;pointer-events:none}
+.kt-app.is-testing .kt-bar::before,.kt-app.is-testing .kt-ov-bars>i::before{opacity:1}
+.kt-chase{position:absolute;left:0;top:0;bottom:0;z-index:3;pointer-events:none;
+  background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.55) 30%,rgba(255,255,255,.95) 50%,rgba(255,255,255,.55) 70%,rgba(255,255,255,0))}
+
+/* Kaarten: plaats, kleurnaam, brede strip, omdraaien (deelstap 2), greep */
+.kt-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:32px minmax(0,1fr);column-gap:10px;row-gap:8px;position:relative}
+/* de plaatsnummers staan stil in hun eigen kolom; alleen de kaarten bewegen */
+.kt-rank{grid-column:1;align-self:center;list-style:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--ink);color:var(--panel)}
+html:not(#kt) body:not(#kt) dialog.kt-dialog .kt-rank b{font-size:15px;font-weight:800;line-height:1;color:inherit;background:none}
+.kt-list>.kt-item{grid-column:2}
+.kt-item{position:relative;margin:0;padding:0;transition:transform .2s cubic-bezier(.32,.72,0,1);will-change:transform}
+.kt-item.is-dragging{transition:none;z-index:5}
+.kt-item.is-dragging .kt-card{box-shadow:0 22px 40px -18px rgba(0,0,0,.45),0 3px 10px rgba(0,0,0,.12);transform:scale(1.015)}
+.kt-item.is-settling{transition:transform .18s cubic-bezier(.32,.72,0,1)}
+.kt-card{display:grid;grid-template-columns:auto minmax(0,1fr) 44px 30px;align-items:center;gap:10px;min-height:62px;box-sizing:border-box;
+  padding:6px 8px 6px 14px;border-radius:18px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--surface-shadow);
+  user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:pan-y;transition:box-shadow .45s ease,transform .18s ease;outline-offset:2px;
+  -webkit-tap-highlight-color:transparent;cursor:pointer}
+.kt-app[data-rgbw] .kt-card{grid-template-columns:auto minmax(0,1fr) 30px}
+.kt-card.is-identifying{box-shadow:0 0 0 3px color-mix(in srgb,var(--hl) 80%,transparent),0 0 20px color-mix(in srgb,var(--hl) 45%,transparent),var(--surface-shadow);transition-duration:.15s}
+.kt-name{font-size:16px;font-weight:650;white-space:nowrap;min-width:4.9em;color:var(--ink)} /* elke naam even breed: connectors en strips staan onder elkaar */
+.kt-app[data-rgbw] .kt-name{min-width:6.4em;max-width:11em;overflow:hidden;text-overflow:ellipsis}
+.kt-strip{display:flex;align-items:center;min-width:0}
+.kt-strip>.kt-bar{flex:1 1 auto}
+/* De connector aan het begin van de strip: dezelfde witte ronde schroefconnector als op de stand, met de rode O-ring en een
+   witte kabel naar de strip. De strip zelf is recht, met een dun wit randje boven en onder, zoals de echte ledline. */
+.kt-plug{flex:none;display:block;width:39px;height:14px;--pw:#fff;--po:#a7acb3;--pk:#c3c7cc;--pc:#fff}
+body[data-theme=dark] .kt-plug,html.c109-dark .kt-plug{--pw:#f4f4f1;--po:#6e737a;--pk:#b9bcc1;--pc:#f4f4f1}
+.kt-plug svg{display:block;width:100%;height:100%;overflow:visible}
+.kt-plug .w{fill:var(--pw);stroke:var(--po);stroke-width:1}
+.kt-plug .l{fill:none;stroke:var(--pk);stroke-width:.8}
+.kt-plug .r{fill:#e0412f}
+.kt-plug .co{fill:none;stroke:var(--po);stroke-width:3.4;stroke-linecap:round}
+.kt-plug .ci{fill:none;stroke:var(--pc);stroke-width:1.8;stroke-linecap:round}
+.kt-rim{position:absolute;inset:0;z-index:4;pointer-events:none;box-shadow:inset 0 2.5px 0 rgba(255,255,255,.93),inset 0 3.5px 0 rgba(0,0,0,.1),inset 0 -2.5px 0 rgba(255,255,255,.93),inset 0 -3.5px 0 rgba(0,0,0,.1)}
+.kt-bar{position:relative;display:block;height:14px;min-width:0;border-radius:2px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);transform-origin:50% 50%}
+html:not(#kt) body:not(#kt) dialog.kt-dialog .kt-flip{width:44px;height:44px;min-height:0;border-radius:50%;border:1px solid var(--line);background:var(--soft);color:var(--ink);
+  display:grid;place-items:center;cursor:pointer;padding:0;transition:opacity .3s ease,transform .3s cubic-bezier(.2,.8,.2,1)}
+html:not(#kt) body:not(#kt) dialog.kt-dialog .kt-app[data-step="1"] .kt-flip{opacity:0;transform:scale(.6);pointer-events:none}
+.kt-flip svg,.kt-grip svg,.kt-test svg,.kt-done svg,.kt-back svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+html:not(#kt) body:not(#kt) dialog.kt-dialog .kt-flip:active{transform:scale(.92)}
+html:not(#kt) body:not(#kt) dialog.kt-dialog .kt-grip{align-self:stretch;display:grid;place-items:center;width:30px;border:0;border-radius:10px;background:transparent;color:var(--muted);
+  touch-action:none;cursor:grab;padding:0;min-height:44px;box-shadow:none}
+.kt-grip svg{fill:currentColor;stroke:none}
+.kt-slot{position:absolute;left:42px;right:0;box-sizing:border-box;border:2px dashed color-mix(in srgb,#e9a24a 65%,transparent);border-radius:18px;
+  background:color-mix(in srgb,#e9a24a 8%,transparent);pointer-events:none;transition:top .2s cubic-bezier(.32,.72,0,1)}
+html.kt-dragging,html.kt-dragging *{user-select:none!important;-webkit-user-select:none!important;cursor:grabbing}
+
+.kt-app[data-step="1"] [data-only="2"],.kt-app[data-step="2"] [data-only="1"]{display:none!important}
+
+/* Onderaan: deelstap 1 "Volgende stap"; deelstap 2 Terug, Testlicht en Klaar */
+.kt-footer{flex:none;display:flex;gap:10px;padding:11px max(14px,calc((100% - 604px)/2)) max(11px,env(safe-area-inset-bottom));box-sizing:border-box;
+  border-top:1px solid var(--line);background:var(--bg)}
+html:not(#kt) body:not(#kt) dialog.kt-dialog .kt-back{flex:none;height:52px;min-height:52px;padding:0 14px 0 10px;border-radius:16px;border:1px solid var(--line);background:var(--soft);color:var(--ink);
+  display:flex;align-items:center;gap:6px;cursor:pointer;font:inherit;font-size:15px;font-weight:800}
+.kt-back svg{width:18px;height:18px;stroke-width:2.2}
+html:not(#kt) body:not(#kt) dialog.kt-dialog .kt-test{flex:none;height:52px;min-height:52px;padding:0 16px 0 12px;border-radius:16px;border:1px solid var(--line);background:var(--soft);color:var(--ink);
+  display:flex;align-items:center;gap:8px;cursor:pointer;font:inherit;font-size:15px;font-weight:800}
+.kt-test svg{width:32px;height:16px;stroke:none}
+.kt-test.is-running .tl-dot{animation:kt-run 1.1s ease-in-out infinite}
+@keyframes kt-run{0%{transform:translateX(-12px);opacity:0}15%,85%{opacity:1}100%{transform:translateX(6px);opacity:0}}
+/* omdraaien: een blok in de kleur van de volgende glijdt over de strip (de strip zelf draait niet) */
+.kt-blob{position:absolute;left:0;top:0;bottom:0;pointer-events:none}
+html:not(#kt) body:not(#kt) dialog.kt-dialog .kt-done{flex:1;min-height:52px;border:0;border-radius:16px;background:#1c1c1e;color:#fff;font:inherit;font-size:16px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+.kt-done svg{stroke-width:2.3}
+html:not(#kt) body:not(#kt)[data-theme=dark] dialog.kt-dialog .kt-done,html.c109-dark:not(#kt) body:not(#kt) dialog.kt-dialog .kt-done{background:#f4f3f0;color:#1c1c1e}
+html:not(#kt) body:not(#kt) dialog.kt-dialog .kt-footer button:disabled{opacity:.45;cursor:default}
+.kt-toast{position:absolute;left:50%;bottom:calc(86px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:40;padding:12px 16px;border-radius:16px;
+  background:#1c1c1e;color:#fff;font-weight:700;font-size:14px;line-height:1.3;box-shadow:0 14px 30px -12px rgba(0,0,0,.5);width:max-content;max-width:min(86vw,460px);text-align:center;pointer-events:none}
+body[data-theme=dark] .kt-toast,html.c109-dark .kt-toast{background:#f4f3f0;color:#1c1c1e}
+.kt-toast[hidden]{display:none}
+@media (max-width:380px){.kt-list{grid-template-columns:30px minmax(0,1fr);column-gap:8px}.kt-slot{left:38px}.kt-card{grid-template-columns:auto minmax(0,1fr) 42px 26px;gap:8px;padding-left:12px}
+  .kt-app[data-rgbw] .kt-card{grid-template-columns:auto minmax(0,1fr) 26px}.kt-rank{width:30px;height:30px}.kt-name{font-size:15px}}
+@media (prefers-reduced-motion:reduce){.kt-tapring{display:none}.kt-item,.kt-slot,.kt-card,.kt-flip,.kt-tail,.kt-bar::before,.kt-ov-bars>i::before{transition:none!important}
+  .kt-bar::after{animation:none!important}.kt-test.is-running .tl-dot{animation:none}}
+
+/* ---------- De tutorial van stap 2 (ledlines-order-step-tutorial.js) ----------
+   De stijl van de tutorial staat in ledlines-tutorial.css (samen met de tutorial van stap 1). Eén regel uit het
+   prototype ontbreekt daar: de strip op de kaart is een rij (connector + strip). */
+.ki-order .ki-strip{display:flex;align-items:center;min-width:0}
+.kt-app[data-single] [data-action="back"]{display:none!important}
+.kt-app[data-single] .kt-grip{visibility:hidden}

@@ -1,0 +1,83 @@
+/* Instellingen (settings-home.js, prototype I3): snelle knoppen, zoeken, één lijst, en elk onderdeel op een eigen pagina */
+.sth-home{display:grid;gap:12px;margin-bottom:12px}
+.sth-stand{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-radius:24px;background:#111316;color:#fff;box-shadow:0 20px 40px -26px #000}
+.sth-stand b{display:block;font-size:22px}
+.sth-stand small{display:flex;align-items:center;gap:6px;font-weight:700;color:#ffffffb3}.sth-stand small i{width:8px;height:8px;border-radius:50%;background:currentColor}
+.sth-stand small.is-ok{color:#7ee2a2}.sth-stand small.is-ok i{box-shadow:0 0 8px #1FC45B}
+.sth-quick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sth-qb{display:grid;justify-items:center;gap:8px;padding:14px 6px;border:0;border-radius:20px;background:var(--panel);color:var(--ink);box-shadow:0 0 0 1px var(--line);font:inherit;text-align:center;cursor:pointer}
+.sth-qb .sth-ic{background:#15171b;color:#fff;border-radius:50%}.sth-qb b{font-size:13px;line-height:1.2}
+.sth-ic{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:12px;background:var(--soft,#eef1f4);color:var(--ink)}.sth-ic svg{width:21px;height:21px}
+.sth-search{display:flex;align-items:center;gap:10px;padding:0 14px;min-height:48px;border-radius:16px;background:var(--panel);box-shadow:0 0 0 1px var(--line)}
+.sth-search svg{width:19px;height:19px;color:var(--muted)}.sth-search input{flex:1;min-width:0;border:0;background:none;color:var(--ink);font:inherit;outline:none}
+.sth-list{display:grid;border-radius:20px;background:var(--panel);box-shadow:0 0 0 1px var(--line);overflow:hidden}
+.sth-row{display:flex;align-items:center;gap:12px;min-height:62px;padding:8px 14px 8px 10px;border:0;border-top:1px solid var(--line);background:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.sth-row:first-child{border-top:0}.sth-row[hidden]{display:none}.sth-row>svg{width:17px;height:17px;color:var(--muted)}
+.sth-row .sth-ic{width:36px;height:36px;border-radius:10px}
+.sth-rt{flex:1}.sth-rt b{font-size:16px}
+.sth-none{margin:0;padding:16px;font-weight:700;color:var(--muted)}
+.sth-quiet{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;border:0;background:none;color:var(--muted);font:inherit;font-weight:800;cursor:pointer}.sth-quiet svg{width:18px;height:18px}
+.sth-rest{display:grid;gap:12px}
+.sth-sub{position:fixed;inset:0;z-index:45;overflow:auto;display:grid;align-content:start;gap:12px;padding:calc(12px + env(safe-area-inset-top)) 16px calc(110px + env(safe-area-inset-bottom));background:var(--bg,#f4f4f2);animation:sth-in .3s cubic-bezier(.2,.8,.2,1)}
+.sth-sub[hidden]{display:none}
+@keyframes sth-in{from{transform:translateX(24px);opacity:0}}
+.sth-subhead{display:flex;align-items:center;gap:8px}
+.sth-subhead small{display:block;font-size:12px;font-weight:850;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.sth-subhead b{font-size:24px;letter-spacing:-.02em}
+.sth-back{display:grid;place-items:center;flex:none;width:34px;height:44px;margin-left:-4px;padding:0;border:0;background:none;color:var(--ink);cursor:pointer}.sth-back svg{width:24px;height:24px}
+.sth-subbody{display:grid;gap:12px}
+.sth-subbody>*{margin:0!important}
+body[data-theme=dark] .sth-sub{background:#101113}
+@media (prefers-reduced-motion:reduce){.sth-sub{animation:none}}
+/* standkaart met QR, Kleuren en animaties, Over de app; de subpagina's zoals het prototype */
+.sth-qr{display:grid;place-items:center;width:44px;height:44px;padding:0;border:0;border-radius:50%;background:#ffffff1f;color:#fff;cursor:pointer}.sth-qr svg{width:22px;height:22px}
+.sth-card{display:grid;gap:12px;padding:16px;border-radius:22px;background:var(--panel);box-shadow:0 0 0 1px var(--line)}
+.sth-card h3{margin:0;font-size:13px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.sth-sw{display:flex;flex-wrap:wrap;gap:10px}.sth-sw i{width:36px;height:36px;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 1px #0002}
+.sth-anims{display:grid;gap:8px}.sth-anim{display:flex;align-items:center;gap:12px;min-height:48px}.sth-anim b{font-size:15px}
+.sth-say{margin:0;font-weight:700;color:var(--muted)}
+.sth-made{display:grid;gap:12px}
+.sth-about{display:flex;align-items:center;gap:12px;padding-bottom:6px}.sth-about img{height:26px}.sth-about b{font-size:13px;letter-spacing:.14em;color:var(--muted)}
+body[data-theme=dark] .sth-about img{filter:invert(1)}
+.sth-kv{display:flex;justify-content:space-between;gap:12px;min-height:40px;align-items:center;border-top:1px solid var(--line)}.sth-kv span{color:var(--muted);font-weight:700}
+/* Verbinding: twee grote keuzes zoals het prototype */
+.sth-sub .connection-choice-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important}
+.sth-sub .connection-choice-grid>button{min-height:96px!important;border-radius:20px!important;flex-direction:column!important;justify-content:center!important;gap:8px!important;font-size:17px!important}
+.sth-sub [data-backup-panel] .button{min-height:52px;border-radius:999px}
+.sth-page{padding-bottom:calc(120px + env(safe-area-inset-bottom))!important}
+
+/* Kanaal (connection-choice.js) */
+.settings-channel .channel-mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* Bereik (C261): één rij die het Flutter-scherm opent */
+.settings-range{padding:0!important}
+.settings-range-open{display:flex;align-items:center;gap:12px;width:100%;min-height:58px;padding:10px 16px;border:0;background:none;color:var(--ink);font:inherit;font-size:17px;text-align:left;cursor:pointer}
+.settings-range-open b{flex:1}
+.settings-range-open svg{width:22px;height:22px}
+.settings-range-ic{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:var(--soft,#eef1f4)}
+.settings-range-open>svg{color:var(--muted)}
+.settings-channel .channel-mode-grid button{display:grid;gap:2px;padding:12px;border:0;border-radius:18px;background:var(--soft,#eef1f4);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.settings-channel .channel-mode-grid button small{font-weight:700;color:var(--muted)}
+.settings-channel .channel-mode-grid button[aria-pressed=true]{background:var(--panel);box-shadow:0 0 0 2.5px var(--ink)}
+.settings-channel .channel-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.settings-channel .channel-grid button{min-width:52px;min-height:44px;border:0;border-radius:14px;background:var(--soft,#eef1f4);color:var(--ink);font:inherit;font-weight:850;cursor:pointer}
+.settings-channel .channel-grid button[aria-pressed=true]{background:var(--ink);color:var(--panel)}
+.settings-channel .channel-now{margin:10px 0 0;font-weight:700;color:var(--muted)}
+/* Backup = je stand + je PIN (app.js autoBackupInner): zoals prototype instellingen › Backup */
+.auto-backup{display:grid;gap:0}
+.auto-backup .st-bk{display:grid;justify-items:center;gap:4px;margin:4px 0 6px;text-align:center}
+.auto-backup .st-bkic{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:var(--soft,#eef1f4);color:var(--muted)}
+.auto-backup .st-bkic.is-on{background:#1FC45B22;color:#1a9b4b}
+.auto-backup .st-bkic svg{width:32px;height:32px}
+.auto-backup .st-bk b{font-size:19px}.auto-backup .st-bk small{font-weight:700;color:var(--muted)}
+.auto-backup .st-group{display:block!important;margin:14px 0 0;border-radius:22px;background:var(--panel,#fff);box-shadow:0 0 0 1px var(--line,#e3e6ea),0 12px 28px -26px #000;overflow:hidden}
+.auto-backup .st-row{display:flex!important;align-items:center;gap:14px;width:100%;min-height:64px;padding:10px 14px;color:var(--ink,#1c1c1e)}
+.auto-backup .st-row+.st-row{border-top:1px solid var(--line,#eceef1)}
+.auto-backup .st-ic{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:var(--soft,#eef1f4);color:var(--ink,#1c1c1e)}
+.auto-backup .st-ic svg{width:21px;height:21px;color:var(--red,#bf4841)}
+.auto-backup .st-rt{flex:1;min-width:0;display:grid;gap:2px}.auto-backup .st-rt b{font-size:16.5px}.auto-backup .st-rt small{font-weight:700;color:var(--muted)}
+.auto-backup .st-bkbtns{display:grid;gap:4px;margin-top:16px}
+.auto-backup .st-sharebtn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:50px;border-radius:999px;border:0;background:var(--ink,#1c1c1e);color:var(--panel,#fff);font:inherit;font-weight:800;font-size:16px;cursor:pointer}
+.auto-backup .st-sharebtn svg{width:20px;height:20px}
+.auto-backup .st-quiet{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:0;background:none;color:var(--muted);font:inherit;font-weight:700;cursor:pointer}
+.auto-backup .st-quiet svg{width:18px;height:18px}.auto-backup .st-bkback{justify-self:center}
+.auto-backup button:disabled{opacity:.55}
+.auto-backup .st-bknote{margin:6px 0 0;text-align:center;font-weight:700;color:var(--muted)}.auto-backup .st-bknote[hidden]{display:none}

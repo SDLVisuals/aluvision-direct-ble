@@ -1,0 +1,8 @@
+/* A nearby camera choice uses the existing segmented-control language. */
+.tunnel-preview-choice756{margin:8px 0 14px}
+.tunnel-preview-heading756{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 3px 7px;font-size:12px;color:var(--muted)}
+.tunnel-preview-heading756>b{font-weight:700}
+.tunnel-preview-heading756>span{white-space:nowrap;font-variant-numeric:tabular-nums}
+.tunnel-preview-choice756 .family-spatial-options button{min-height:52px}
+.tunnel-preview-choice756 .family-spatial-options button>b{font-size:14px}
+.tunnel-preview-choice756 .family-spatial-options button>span>.arrangement-icon{width:30px;height:30px}

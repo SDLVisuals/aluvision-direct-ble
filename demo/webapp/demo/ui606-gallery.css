@@ -1,0 +1,57 @@
+/* Presentation-only curation. Native details keeps every original choice
+   reachable with touch, keyboard and assistive technology. */
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-curated-gallery="606"] {
+  gap:14px;
+}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-curated-gallery="606"] .family-variants-panel {
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-curated-gallery="606"] .family-variants-heading {
+  margin:0 0 10px;
+  padding:0 2px;
+}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-curated-gallery="606"] .family-variants-heading>div>b {
+  color:var(--muted);
+  font-size:12px;
+  font-weight:650;
+}
+html.interface-polish body :is(#main,#effect-dialog) .family-more-variants {
+  margin-top:14px;
+  padding:0;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:var(--panel);
+  overflow:hidden;
+}
+html.interface-polish body :is(#main,#effect-dialog) .family-more-variants>summary {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  min-height:54px;
+  padding:11px 14px;
+  color:var(--ink);
+  list-style:none;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.family-more-variants>summary::-webkit-details-marker { display:none; }
+.family-more-label { display:flex;align-items:center;gap:9px;min-width:0; }
+.family-more-label>b { font-size:14px;line-height:1.3;font-weight:650; }
+.family-more-count { display:grid;place-items:center;min-width:25px;min-height:25px;padding:3px 7px;border-radius:8px;background:var(--soft);color:var(--muted);font-size:12px;line-height:1.2; }
+.family-more-chevron { display:flex;flex:none;color:var(--muted);transition:transform .22s ease; }
+.family-more-chevron>.icon { width:20px;height:20px; }
+.family-more-variants:not([open]) .family-more-open,
+.family-more-variants[open] .family-more-closed { display:none; }
+.family-more-variants[open] .family-more-chevron { transform:rotate(90deg); }
+html.interface-polish body :is(#main,#effect-dialog) .family-more-variants>.family-more-grid {
+  padding:0 10px 10px;
+}
+.family-more-variants>summary:focus-visible { outline:2px solid var(--chooser-accent,var(--red));outline-offset:-3px;border-radius:15px; }
+@media(prefers-reduced-motion:reduce) {
+  .family-more-chevron { transition:none; }
+}

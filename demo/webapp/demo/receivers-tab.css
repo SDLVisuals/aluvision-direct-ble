@@ -1,0 +1,513 @@
+/* Aluvision: de Receivers-tab en de receiverpagina (receivers-tab.js). Uit prototype receivers-tab (C146p).
+   rx-* = de lijst en zijn vellen; rxw-* = de wereld van de tutorial; rxm-* = de telefoon in de tutorial.
+   Kleuren, kaarten en knoppen komen uit de stijl van de app; hier staat alleen wat deze schermen zelf nodig hebben. */
+
+/* ---------- de pagina ---------- */
+.rx-tab{display:grid;align-content:start;gap:18px;width:100%;max-width:600px;margin:0 auto;padding:8px 0 24px;box-sizing:border-box}
+.rx-title-row{display:flex;align-items:flex-start;gap:10px}
+.rx-tab .ls-tut{margin-top:2px}
+.rx-group-note{margin:-4px 0 0;color:var(--muted);font-size:13.5px;font-weight:650}
+
+/* ---------- een vel is een venster dat van onderaan omhoog schuift; het logo blijft zichtbaar ---------- */
+html:not(#rx):not(#rx):not(#rx) body:not(#rx):not(#rx):not(#rx) dialog.rx-sheet[open]{position:fixed;left:0;right:0;top:var(--c109-logo-bottom,0px)!important;bottom:0;
+  width:auto;height:auto;max-width:none;max-height:none!important;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:hidden;
+  display:flex;align-items:flex-end;justify-content:center;animation:none!important;color:var(--ink)}
+html:not(#rx):not(#rx):not(#rx) body:not(#rx):not(#rx):not(#rx) dialog.rx-sheet[open]::backdrop{background:rgba(0,0,0,.004)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;animation:none!important}
+dialog.rx-sheet:not([open]){display:none}
+
+/* ---------- de lijst ---------- */
+.rx-head{display:grid;gap:6px}
+.rx-head h1{margin:0;font-size:30px;line-height:1.08;letter-spacing:-.025em;flex:1}
+.rx-count{min-width:40px;height:40px;padding:0 10px;border-radius:14px;display:grid;place-items:center;font-weight:850;font-size:17px;background:var(--soft);border:1px solid var(--line);box-sizing:border-box}
+.rx-add{display:flex;align-items:center;justify-content:center;gap:10px;min-height:54px;border-radius:18px;background:#1c1c1e;color:#fff;text-decoration:none;font-weight:800;font-size:16px;border:0;font-family:inherit;cursor:pointer;width:100%}
+body[data-theme=dark] .rx-add{background:#f4f3f0;color:#1c1c1e}
+.rx-add svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
+.rx-zone{display:grid;gap:10px}
+.rx-zhead{display:flex;flex-wrap:wrap;align-items:center;gap:3px 9px;min-height:30px}
+.rx-zhead b{min-width:0;font-size:18px;letter-spacing:-.01em;overflow-wrap:anywhere}
+.rx-zhead .rx-badge,.rx-zhead .rx-zic{flex:none}
+.rx-zhead small{color:var(--muted);font-size:13.5px;font-weight:650}
+.rx-zic{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:var(--soft);color:var(--muted)}
+.rx-zic svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linejoin:round}
+.rx-cards{display:grid;gap:10px}
+.rx-empty{margin:0;padding:16px;border-radius:18px;border:1px dashed var(--line);color:var(--muted);font-size:14.5px}
+/* De kaart (de eigenaar 13 nov: "als de kaart is ingeklapt gewoon een mooie knop Knipperen ... en een mooie badge SPI - RGBW";
+   "graag de balkjes minder dik, graag knipperen rechts van de receiver"; "ook duidelijk zijn dat je dat kan openklikken
+   voor de instellingen van die receiver"; "graag de knipperknop hetzelfde als instellingen, zonder tekst"). Eén smalle
+   balk: de tekening, de naam met het type, en rechts twee gelijke knopjes zonder tekst: Knipperen en het tandwiel. Tik op
+   de balk om de receiver te openen: de knop rx-open beslaat de hele kaart; het tandwiel (rx-set) is daar het teken van
+   en ligt eronder, dus een tik erop opent de receiver. */
+.rx-card{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;column-gap:8px;padding:11px 12px;border-radius:20px;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink);box-shadow:var(--surface-shadow);transition:transform .15s ease}
+.rx-card:has(.rx-open:active){transform:scale(.985)}
+.rx-tab .rx-open{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;column-gap:12px;width:100%;min-height:0;margin:0;padding:0;border:0;border-radius:14px;
+  background:none;box-shadow:none;color:inherit;font:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.rx-open::after{content:"";position:absolute;inset:0;border-radius:20px}
+.rx-tab .rx-blink,.rx-set{display:grid;place-items:center;width:46px;height:46px;min-width:0;min-height:0;margin:0;padding:0;border-radius:14px;border:1px solid var(--line);background:var(--soft);
+  box-shadow:none;color:var(--ink);box-sizing:border-box}
+.rx-tab .rx-blink{position:relative;z-index:1;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .15s ease,background-color .15s ease,color .15s ease}
+.rx-blink svg,.rx-set svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.rx-set svg{stroke-width:1.6}
+.rx-blink:active{transform:scale(.94)}
+.rx-tab .rx-blink[aria-pressed=true]{background:#1c1c1e;color:#fff;border-color:#1c1c1e}
+body[data-theme=dark] .rx-tab .rx-blink[aria-pressed=true],html.c109-dark .rx-tab .rx-blink[aria-pressed=true]{background:#f4f3f0;color:#1c1c1e;border-color:#f4f3f0}
+.rx-blink[aria-pressed=true] svg{animation:rx-blinkic .8s steps(2,end) infinite}
+.rx-blink[aria-busy=true]{opacity:.6}
+.rx-blink:disabled{opacity:.5;cursor:default}
+/* knippert de receiver op de stand, dan knippert zijn tekening op de kaart mee */
+.rx-card:has(.rx-blink[aria-pressed=true]) .rx-art svg{animation:rx-strip-blink .9s ease-in-out infinite}
+/* een telefoon: de tekening iets kleiner, zodat de naam past */
+@media (max-width:480px){
+  .rx-card{column-gap:6px}
+  .rx-tab .rx-open{column-gap:10px}
+  .rx-card .rx-art{width:84px;height:48px}.rx-card .rx-art svg{width:84px}
+}
+/* het type als badge: zwart zoals de receiver zelf, alleen het woord SPI of RGBW (de eigenaar 13 nov: "niet met die kleurbolletjes") */
+.rx-badge{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:999px;background:#1c1c1e;color:#fff;font-size:11px;font-weight:850;letter-spacing:.09em;line-height:1;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+body[data-theme=dark] .rx-badge,html.c109-dark .rx-badge{background:#0c0c0d;box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)}
+/* Onder de grote knop twee rustige knoppen naast elkaar, zoals onderaan op de receiverpagina (de eigenaar 13 nov: "software
+   updates graag bovenaan", "de knop niet in zone voor receivers die niet toegewezen zijn aan een zone", en daarna "graag
+   software en niet in zone ook beter"): Software-updates voor alle receivers, en "Niet in een zone" met in het bolletje
+   het aantal receivers zonder zone. Die tweede staat er alleen als er zulke receivers zijn; een tik toont alleen die
+   receivers (de knop is dan donker), nog een tik weer alles. Is er maar één knop, dan krijgt hij de hele breedte. */
+.rx-sec{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;margin-top:-8px}
+.rx-tab .rx-sec button{display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;min-height:48px;margin:0;padding:0 10px;border-radius:16px;border:1px solid var(--line);background:var(--soft);
+  box-shadow:none;color:var(--ink);font:inherit;font-size:14px;font-weight:750;line-height:1.1;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .15s ease,background-color .15s ease,color .15s ease}
+.rx-sec button:active{transform:scale(.97)}
+.rx-sec button b{font:inherit;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rx-sec svg{flex:none;width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.rx-sec .rx-loose>i{flex:none;display:grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:var(--ink);color:var(--panel);box-sizing:border-box;
+  font-style:normal;font-size:13px;font-weight:850;font-variant-numeric:tabular-nums}
+.rx-tab .rx-sec .rx-loose[aria-pressed=true]{background:#1c1c1e;color:#fff;border-color:#1c1c1e}
+.rx-sec .rx-loose[aria-pressed=true]>i{background:#fff;color:#1c1c1e}
+body[data-theme=dark] .rx-tab .rx-sec .rx-loose[aria-pressed=true],html.c109-dark .rx-tab .rx-sec .rx-loose[aria-pressed=true]{background:#f4f3f0;color:#1c1c1e;border-color:#f4f3f0}
+body[data-theme=dark] .rx-sec .rx-loose[aria-pressed=true]>i,html.c109-dark .rx-sec .rx-loose[aria-pressed=true]>i{background:#1c1c1e;color:#f4f3f0}
+[data-rx-list][data-rx-only=loose] .rx-zone:not(.is-loose){display:none}
+/* "Bekijk tutorial" staat onderaan de lijst, uit de weg (de eigenaar 13 nov: "graag de bekijk tutorial ergens anders") */
+.rx-tutrow{display:flex;justify-content:center;margin-top:4px}
+.rx-tutrow[hidden]{display:none}
+.rx-tutrow .ls-tut{margin-top:0}
+.rx-art{display:grid;place-items:center;width:120px;height:52px;border-radius:14px;background:color-mix(in srgb,var(--soft) 70%,transparent);overflow:hidden}
+.rx-art svg{display:block;width:120px;height:auto}
+.rx-txt{display:grid;gap:3px;min-width:0}
+.rx-name{font-size:17px;font-weight:850;letter-spacing:.01em;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rx-txt small{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:13.5px;font-weight:650}
+.rx-dot{width:9px;height:9px;border-radius:50%;background:#a9abae;flex:none;font-style:normal}
+.rx-dot.on{background:#1FC45B;box-shadow:0 0 0 3px color-mix(in srgb,#1FC45B 22%,transparent)}
+.rx-artw{position:relative;display:block}
+/* het blauwe telefoontje: op de hoek van de tekening van de receiver waarmee deze telefoon verbonden is */
+.rx-me{position:absolute;left:-7px;top:-7px;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#2F6BFF;color:#fff;border:2px solid var(--panel);box-sizing:border-box;box-shadow:0 5px 12px -6px #2F6BFF}
+.rx-me[hidden]{display:none}
+.rx-me svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+.rx-me-inline svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.rx-ll{display:inline-flex;align-items:center;gap:7px;padding:6px 11px 6px 7px;border-radius:999px;background:var(--soft);font-size:15px}
+.rx-ll b{font-weight:800}
+.rx-ll small{color:var(--muted);font-weight:700;font-size:12px}
+.rx-rgbw{display:block;width:30px;height:13px;border-radius:4px;background:linear-gradient(90deg,#f0473d,#ffc61a,#1fc45b,#2f6bff,#9b4dff)}
+
+/* ---------- vellen ---------- */
+.rx-sheet-back{position:absolute;inset:0;background:rgba(10,12,16,.38);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;transition:opacity .25s ease}
+.rx-panel{position:relative;width:100%;max-width:600px;max-height:min(92dvh,calc(100dvh - var(--rx-top,0px)));overflow:auto;box-sizing:border-box;padding:18px 18px calc(22px + env(safe-area-inset-bottom,0px));
+  border-radius:28px 28px 0 0;background:var(--c109-page,var(--bg));box-shadow:0 -18px 40px -20px rgba(0,0,0,.35);display:grid;gap:14px;
+  transform:translateY(100%);transition:transform .32s cubic-bezier(.2,.8,.2,1)}
+.rx-sheet.is-in .rx-sheet-back{opacity:1}
+.rx-sheet.is-in .rx-panel{transform:none}
+.rx-sheet.is-out .rx-sheet-back{opacity:0}
+.rx-sheet.is-out .rx-panel{transform:translateY(100%);transition-duration:.24s}
+.rx-ph{display:flex;align-items:center;gap:12px}
+.rx-ph>div{flex:1;min-width:0;display:grid;gap:3px}
+.rx-ph small{color:var(--muted);font-size:13.5px;font-weight:700}
+.rx-ph h2{margin:0;font-size:25px;line-height:1.1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.rx-stat{display:flex;align-items:center;gap:7px;margin-top:3px;font-size:14px;font-weight:700;color:var(--muted)}
+.rx-me-inline{display:inline-flex;align-items:center;gap:5px;margin-left:6px;padding:3px 9px 3px 6px;border-radius:999px;background:#2F6BFF;color:#fff;font-size:12.5px}
+.rx-big-art{display:grid;place-items:center;padding:6px 0;border-radius:20px;background:color-mix(in srgb,var(--soft) 70%,transparent)}
+.rx-big-art svg{display:block;width:min(330px,100%);height:auto}
+.rx-primary{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;width:100%;min-height:68px;padding:12px 16px;border-radius:22px;border:0;
+  background:#1c1c1e;color:#fff;font:inherit;text-align:left;cursor:pointer;box-shadow:0 14px 30px -18px #000}
+body[data-theme=dark] .rx-primary{background:#f4f3f0;color:#1c1c1e}
+.rx-primary b{display:block;font-size:18px;font-weight:850;letter-spacing:-.01em}
+.rx-primary small{display:block;margin-top:2px;opacity:.7;font-size:13.5px;font-weight:650}
+.rx-primary>svg:last-child{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round}
+.rx-primary.rx-zonepick>svg:first-child{width:27px;height:27px;margin:0 8px 0 4px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.rx-oic{flex:none;width:54px;height:27px;overflow:hidden}
+.rx-oic-run{animation:rx-run 2.6s cubic-bezier(.45,.05,.25,1) infinite}
+/* het lichtje loopt over de drie blokjes en is daarbuiten niet te zien (het stond anders als een grijs blokje naast het icoon) */
+@keyframes rx-run{0%{transform:translateX(0)}70%,100%{transform:translateX(62px)}}
+.rx-how{justify-self:start;display:inline-flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;min-height:34px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-size:13.5px;font-weight:750;cursor:pointer;margin-top:-4px}
+.rx-how i{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--ink);color:var(--panel)}
+.rx-how svg{width:10px;height:10px;fill:currentColor;margin-left:1px}
+.rx-hows{display:flex;flex-wrap:wrap;gap:8px}
+.rx-rows{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+/* één regel per ledline: het icoon, de naam, de pixels en een pijltje: tikken = pixels aanpassen */
+.rx-pxsec{display:grid;gap:8px;margin-top:4px}
+.rx-pxsec .rx-h3{margin:0;font-size:17px;color:var(--ink);font-weight:850;letter-spacing:-.01em}
+.rx-hint{margin:-4px 0 2px;color:var(--muted);font-size:14px;line-height:1.35}
+.rx-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 12px 8px 18px;border-radius:16px;
+  border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.rx-row>svg{width:16px;height:16px;fill:none;stroke:var(--muted);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.rx-row>b{font-size:16px;font-weight:800}
+.rx-row .rx-px{font-size:14px;color:var(--muted);font-weight:650;white-space:nowrap}
+.rx-row .rx-px b{display:inline;font-size:17px;color:var(--ink)}
+.rx-row.off{background:var(--soft)}
+.rx-row.off>b{color:var(--muted)}
+.rx-row.off .rx-px{font-weight:800;color:var(--ink)}
+.rx-tip{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:14px 16px;border-radius:20px;background:color-mix(in srgb,#FFC61A 16%,var(--panel));border:1px solid color-mix(in srgb,#FFC61A 40%,var(--line))}
+.rx-tip>svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.9}
+.rx-tip p{margin:0;font-size:14.5px;line-height:1.35}
+.rx-tip-go{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:#1c1c1e;color:#fff;text-decoration:none;font-weight:800;font-size:13.5px}
+.rx-tip-go svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
+.rx-small{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:6px}
+.rx-small button{display:grid;justify-items:center;gap:6px;padding:12px 6px;border-radius:16px;border:1px solid var(--line);background:var(--soft);color:var(--ink);font:inherit;font-size:13px;font-weight:750;cursor:pointer}
+.rx-small svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.rx-small button[aria-pressed=true]{background:#1c1c1e;color:#fff;border-color:#1c1c1e}
+body[data-theme=dark] .rx-small button[aria-pressed=true],html.c109-dark .rx-small button[aria-pressed=true]{background:#f4f3f0;color:#1c1c1e;border-color:#f4f3f0}
+.rx-small button[aria-pressed=true] svg{animation:rx-blinkic .8s steps(2,end) infinite}
+@keyframes rx-blinkic{50%{opacity:.25}}
+.rx-remove{justify-self:center;display:inline-flex;align-items:center;gap:8px;margin-top:4px;padding:10px 14px;border:0;background:none;color:var(--muted);font:inherit;font-size:14px;font-weight:750;cursor:pointer}
+.rx-remove svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.rx-note{margin:0;color:var(--muted);font-size:14px;line-height:1.4}
+
+.rx-psay{margin:0;color:var(--muted);font-size:15px;line-height:1.4}
+.rx-psay b{color:var(--ink)}
+/* ---------- zone wisselen, info ---------- */
+.rx-zopts{display:grid;gap:8px}
+.rx-zopt{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:12px;padding:14px 16px;border-radius:18px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.rx-zopt>svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8}
+.rx-zopt b{display:block;font-size:16px}
+.rx-zopt small{color:var(--muted);font-size:13.5px;font-weight:650}
+.rx-zopt[disabled]{opacity:.55;cursor:default}
+.rx-dl{margin:0;display:grid;gap:2px}
+.rx-dl div{display:flex;justify-content:space-between;gap:12px;padding:13px 2px;border-bottom:1px solid var(--line)}
+.rx-dl dt{color:var(--muted);font-weight:700}
+.rx-dl dd{margin:0;font-weight:750;text-align:right;display:flex;align-items:center;gap:8px}
+.rx-bars{display:inline-flex;align-items:flex-end;gap:2px;height:14px}
+.rx-bars i{width:4px;border-radius:1px;background:var(--line)}
+.rx-bars i:nth-child(1){height:5px}.rx-bars i:nth-child(2){height:8px}.rx-bars i:nth-child(3){height:11px}.rx-bars i:nth-child(4){height:14px}
+.rx-bars[data-lvl=Sterk] i,.rx-bars[data-lvl=Goed] i:nth-child(-n+3),.rx-bars[data-lvl=Zwak] i:nth-child(-n+2){background:#1FC45B}
+
+/* ---------- "Bekijk hoe": korte animaties ---------- */
+.rx-hw{position:relative;height:120px;border-radius:20px;background:#141518;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:10px}
+.rx-hb{display:block;width:70px;height:16px;border-radius:4px;background:#3a3b40;box-shadow:inset 0 3px 0 rgba(255,255,255,.18)}
+.rx-hw.flow .rx-hb{animation:rx-flow 3s ease-in-out infinite;animation-delay:calc(var(--i)*.35s)}
+@keyframes rx-flow{0%,8%{background:#3a3b40}25%,70%{background:var(--c);box-shadow:0 0 18px -2px var(--c),inset 0 3px 0 rgba(255,255,255,.35)}90%,100%{background:#3a3b40}}
+.rx-hw-chase{position:absolute;top:50%;left:0;width:40px;height:22px;margin-top:-11px;border-radius:6px;background:rgba(255,255,255,.75);filter:blur(5px);animation:rx-chase 3s ease-in-out infinite}
+@keyframes rx-chase{0%{transform:translateX(30px);opacity:0}15%{opacity:1}80%{opacity:1}100%{transform:translateX(min(520px,80vw));opacity:0}}
+.rx-hw.pix .rx-hb.one{width:220px;background:linear-gradient(90deg,var(--c) 0 72%,#3a3b40 72%);animation:rx-pfill 3.4s ease-in-out infinite}
+@keyframes rx-pfill{0%{background:linear-gradient(90deg,var(--c) 0 100%,#3a3b40 100%)}35%,60%{background:linear-gradient(90deg,var(--c) 0 70%,#3a3b40 70%)}100%{background:linear-gradient(90deg,var(--c) 0 100%,#3a3b40 100%)}}
+.rx-hw-block{position:absolute;top:50%;left:50%;width:9px;height:24px;margin:-12px 0 0 101px;border-radius:3px;background:#fff;box-shadow:0 0 14px #fff;animation:rx-pblk 3.4s ease-in-out infinite}
+@keyframes rx-pblk{0%{transform:translateX(0)}35%,60%{transform:translateX(-66px)}100%{transform:translateX(0)}}
+.rx-hw.zone{justify-content:space-around}
+.rx-hw-z{width:38%;height:76px;border-radius:14px;border:1.5px dashed #4a4c52;display:grid;align-content:start;padding:8px 10px;box-sizing:border-box;color:#c9cac6;font-size:12.5px}
+.rx-hw-card{position:absolute;top:50%;left:12%;width:22%;height:26px;margin-top:-4px;border-radius:8px;background:#f4f3f0;box-shadow:0 6px 14px -6px #000;animation:rx-zmove 3.6s cubic-bezier(.45,.05,.25,1) infinite}
+@keyframes rx-zmove{0%,18%{transform:none}55%,100%{transform:translateX(min(196px,32vw))}}
+.rx-hw.blink .rx-hb{background:var(--c);animation:rx-hblink 1s steps(2,end) infinite;width:56px}
+@keyframes rx-hblink{50%{background:#3a3b40;box-shadow:none}}
+
+/* een smalle telefoon: alles een maat kleiner, zodat de naam nog past */
+@media (max-width:392px){.rx-card{padding-inline:10px}.rx-tab .rx-open{column-gap:8px}.rx-card .rx-art,.rx-card .rx-art svg{width:76px}.rx-tab .rx-sec button{font-size:13px;gap:6px;padding:0 6px}}
+@media (max-width:370px){.rx-name{font-size:16px}}
+@media (max-width:380px){.rx-small button{font-size:12px}}
+@media (prefers-reduced-motion:reduce){.rx-panel,.rx-sheet-back{transition:none}.rx-oic-run,.rx-hw *,.rx-reset *{animation:none!important}.rx-small button[aria-pressed=true] svg,.rx-sl.blink{animation:none}}
+
+/* in de app: de regels voor knoppen in vensters gelden hier niet */
+html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-small button{min-height:0}
+html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-ph h2{font-size:25px}
+html.c109-dark .rx-add,html.c109-dark .rx-primary{background:#f4f3f0;color:#1c1c1e}
+.rx-row:disabled,.rx-primary:disabled,.rx-small button:disabled,.rx-remove:disabled{opacity:.5;cursor:default}
+.rx-open:focus-visible{outline:none}
+.rx-card:has(.rx-open:focus-visible),.rx-blink:focus-visible,.rx-row:focus-visible,.rx-primary:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+/* ---------- de receiverpagina, rustiger (de eigenaar 12 nov: "voelt veel aan" / "bedenk eens goed hoe dit beter kan") ----------
+   Eén beeld: de receiver van dichtbij met zijn vier ledlines eraan. Elke ledline is een knop: haar pixels in een pil,
+   de strip in haar kleur, de connector, en dan de kabel naar haar uitgang op de receiver. */
+.rx-ph h2+.rx-stat{margin-top:5px}
+.rx-stat-zone{position:relative;padding-left:13px}
+.rx-stat-zone::before{content:"";position:absolute;left:4px;top:50%;width:3px;height:3px;margin-top:-1.5px;border-radius:50%;background:currentColor;opacity:.6}
+.rx-lines{--u:1px;--cut:116;--fade:74%;position:relative;display:flex;height:calc(var(--h)*var(--u));border-radius:20px;background:color-mix(in srgb,var(--soft) 70%,transparent);overflow:hidden}
+.rx-lines-rows{position:relative;flex:1 1 auto;min-width:0}
+/* --cut: hoeveel van de receiver in beeld is (116 punten = 35 mm, 188 = 56 mm); de rest valt weg achter een zachte rand.
+   Op een smal scherm is dat net genoeg voor de uitgangen met hun nummer, zodat de ledlines de breedte krijgen. */
+.rx-lines-art{flex:none;width:calc(var(--cut)*var(--u));height:100%;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,#000 var(--fade),transparent);mask-image:linear-gradient(90deg,#000 var(--fade),transparent)}
+.rx-lines-art svg{display:block;height:100%;width:auto;max-width:none}
+/* Een ledline die aan staat, heeft drie knoppen, en elk deel doet wat het toont: het getal met het potloodje (pixels
+   aanpassen), de strip (laat deze ledline knipperen op de stand) en de connector (zet ze uit). Een ledline die uit
+   staat, is één knop over de hele rij (zet ze aan). */
+html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-line{position:absolute;top:calc(var(--t)*var(--u));left:calc(12*var(--u));right:0;height:calc(42*var(--u));display:flex;align-items:center;gap:calc(8*var(--u));
+  min-height:0;margin:0;padding:0;border:0;border-radius:12px;background:none;box-shadow:none;color:var(--ink);font:inherit;text-align:left;-webkit-tap-highlight-color:transparent}
+html:not(#rx) body:not(#rx) dialog.rx-sheet button.rx-line{cursor:pointer}
+html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-line-px{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:calc(3*var(--u));min-width:calc(62*var(--u));height:calc(30*var(--u));min-height:0;margin:0;padding:0 calc(9*var(--u));box-sizing:border-box;border-radius:999px;
+  background:var(--panel);border:1px solid var(--line);box-shadow:var(--surface-shadow);color:var(--ink);font:inherit;transition:transform .15s ease;-webkit-tap-highlight-color:transparent}
+html:not(#rx) body:not(#rx) dialog.rx-sheet button.rx-line-px{cursor:pointer}
+html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-line-light{flex:1 1 auto;align-self:stretch;min-width:0;display:flex;align-items:center;gap:calc(8*var(--u));min-height:0;margin:0;padding:0;border:0;border-radius:10px;
+  background:none;box-shadow:none;color:inherit;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.rx-line-light:disabled{cursor:default}
+.rx-line-light[aria-busy=true]{opacity:.6}
+.rx-line-px b{font-size:calc(15*var(--u));font-weight:850;line-height:1}
+.rx-line-px small{font-size:calc(11*var(--u));font-weight:700;color:var(--muted);line-height:1}
+.rx-line-px svg{width:calc(15*var(--u));height:calc(15*var(--u));fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
+/* het potloodje bij het getal: hier pas je de pixels aan (de eigenaar 13 nov: "duidelijker dat als je op pixels duwt je de pixels kan instellen") */
+.rx-line-px>b~svg{width:calc(11*var(--u));height:calc(11*var(--u));margin-left:calc(2*var(--u));stroke:var(--muted);stroke-width:2.1;stroke-linejoin:round}
+.rx-line-offic{display:none;position:absolute;inset:0;place-items:center;font-style:normal}
+.rx-line-offic svg{display:block;width:calc(16*var(--u));height:calc(16*var(--u));stroke-width:2.4}
+/* De connector is de schakelaar: een ronde knop met de connector erin. Eén tik: hij komt half los, de strip dooft half
+   en het getal wordt een aan/uit-teken; een tweede tik zet de ledline uit (receivers-tab.js, unplugAsk en unplugGo). */
+html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-line-unplug{flex:none;align-self:stretch;display:flex;align-items:center;min-height:0;margin:0;padding:0;border:0;border-radius:10px;background:none;box-shadow:none;color:inherit;font:inherit;-webkit-tap-highlight-color:transparent}
+html:not(#rx) body:not(#rx) dialog.rx-sheet button.rx-line-unplug{cursor:pointer}
+button.rx-line-unplug .rx-line-plug{position:relative}
+button.rx-line-unplug .rx-line-plug::before{content:"";position:absolute;z-index:-1;left:calc(4.6*var(--u));top:calc(-6*var(--u));width:calc(26*var(--u));height:calc(26*var(--u));border-radius:50%;
+  background:var(--panel);border:1px solid var(--line);box-sizing:border-box;box-shadow:var(--surface-shadow);transition:transform .15s ease}
+button.rx-line-unplug:active .rx-line-plug::before{transform:scale(.92)}
+.rx-line.is-unplugging .rx-plug-led{transform:translateX(6.5px)}
+.rx-line-light .rx-line-strip{transition:transform .12s ease,opacity .2s ease,margin-right .34s cubic-bezier(.3,1.2,.5,1)}
+.rx-line.is-unplugging .rx-line-strip{opacity:.38;margin-right:calc(5.8*var(--u))}
+html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-line.is-unplugging .rx-line-px{background:#1c1c1e;border-color:#1c1c1e;color:#fff}
+body[data-theme=dark] dialog.rx-sheet .rx-line.is-unplugging .rx-line-px,html.c109-dark:not(#rx) body:not(#rx) dialog.rx-sheet .rx-line.is-unplugging .rx-line-px{background:#f4f3f0;border-color:#f4f3f0;color:#1c1c1e}
+.rx-line.is-unplugging .rx-line-px{position:relative}
+.rx-line.is-unplugging .rx-line-px>:not(.rx-line-offic){visibility:hidden}
+.rx-line.is-unplugging .rx-line-offic{display:grid}
+.rx-line.is-unplugging.is-busy .rx-line-px{animation:rx-blinkic .8s steps(2,end) infinite}
+.rx-line .c109-wait-note{position:absolute;left:0;top:100%;font-size:11px;color:var(--muted);white-space:nowrap}
+/* het balkje van een ledline: dun (de eigenaar 13 nov: "graag de balkjes minder dik"), een lijn licht in de kleur van haar poort */
+.rx-line-strip{flex:1 1 auto;min-width:calc(16*var(--u));height:calc(8*var(--u));border-radius:calc(1.6*var(--u));background:var(--c);transition:transform .12s ease;
+  box-shadow:inset 0 calc(1.7*var(--u)) 0 rgba(255,255,255,.92),inset 0 calc(-1.7*var(--u)) 0 rgba(255,255,255,.92),0 0 calc(10*var(--u)) -1px color-mix(in srgb,var(--c) 70%,transparent)}
+.rx-line.off .rx-line-strip{background:transparent;box-shadow:none;border:1.5px dashed #a9abae;box-sizing:border-box}
+html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-line.off .rx-line-px{color:var(--muted)}
+.rx-lines .rx-line-plug{flex:none;width:calc(39*var(--u));height:calc(14*var(--u));transform:scaleX(-1);margin:0 calc(-1*var(--u)) 0 calc(-3*var(--u))}
+/* Waar geen ledline is aangesloten, zit de connector los (de eigenaar 13 nov: "de koppeling van de connector niet aan elkaar,
+   kleine details tellen"): de huls van de ledline ligt 12 punten van de wartel, zodat je de pin met de rode O-ring ziet.
+   De connector is gespiegeld getekend, dus +x in de tekening is naar links op het scherm. */
+.rx-line-plug .rx-plug-led{transition:transform .34s cubic-bezier(.3,1.2,.5,1),opacity .2s ease}
+.rx-line.off .rx-plug-led{transform:translateX(12px);opacity:.62}
+.rx-line.off .rx-line-strip{position:relative;margin-right:calc(10.6*var(--u));transition:margin-right .34s cubic-bezier(.3,1.2,.5,1),border-color .2s ease}
+.rx-line.off .rx-line-strip::after{content:"";position:absolute;inset:-1.5px;border-radius:inherit;background:var(--c);opacity:0;transform:scaleX(0);transform-origin:100% 50%;
+  box-shadow:inset 0 calc(1.7*var(--u)) 0 rgba(255,255,255,.92),inset 0 calc(-1.7*var(--u)) 0 rgba(255,255,255,.92),0 0 calc(10*var(--u)) -1px color-mix(in srgb,var(--c) 70%,transparent);
+  transition:transform .22s ease,opacity .18s ease .06s}
+/* Tik op het plusje: de ledline schuift in de connector, dan loopt haar poortkleur van de connector naar het einde.
+   Daarna opent de pixelkiezer (receivers-tab.js, plugIn). Zonder .is-plugging loopt alles vanzelf terug. */
+.rx-line.off.is-plugging .rx-plug-led{transform:none;opacity:1}
+.rx-line.off.is-plugging .rx-line-strip{margin-right:0;border-color:transparent;transition:margin-right .34s cubic-bezier(.3,1.2,.5,1),border-color .2s ease .34s}
+.rx-line.off.is-plugging .rx-line-strip::after{opacity:1;transform:none;transition:transform .38s cubic-bezier(.25,.7,.3,1) .34s,opacity .1s linear .34s;animation:rx-plug-on .45s ease-out .6s both}
+/* het licht gaat aan: eerst een sterke gloed in de kleur van de poort, die tot rust komt (de kleur zelf blijft dezelfde) */
+@keyframes rx-plug-on{0%{box-shadow:inset 0 calc(1.7*var(--u)) 0 rgba(255,255,255,.92),inset 0 calc(-1.7*var(--u)) 0 rgba(255,255,255,.92),0 0 calc(20*var(--u)) calc(2.5*var(--u)) color-mix(in srgb,var(--c) 80%,transparent)}
+  100%{box-shadow:inset 0 calc(1.7*var(--u)) 0 rgba(255,255,255,.92),inset 0 calc(-1.7*var(--u)) 0 rgba(255,255,255,.92),0 0 calc(10*var(--u)) -1px color-mix(in srgb,var(--c) 70%,transparent)}}
+html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-line.off.is-plugging .rx-line-px{opacity:.5;transition:opacity .2s ease}
+.rx-line-px:active,.rx-line.off:active .rx-line-px{transform:scale(.94)}
+.rx-line-light:active .rx-line-strip{transform:scaleY(1.5)}
+/* knippert ze (of knippert de hele receiver via "Laat knipperen"), dan knippert de strip op het scherm mee */
+.rx-line-light[aria-pressed=true] .rx-line-strip,.rx-page:has(.rx-foot [data-action="visual-identify"][aria-pressed=true]) .rx-line-light .rx-line-strip{animation:rx-strip-blink .9s ease-in-out infinite}
+@keyframes rx-strip-blink{0%,100%{opacity:1}50%{opacity:.16}}
+html:not(#rx) body:not(#rx) dialog.rx-sheet :is(.rx-line,.rx-line-px,.rx-line-light,.rx-line-unplug):focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
+/* zonder tekening (ze laadt niet): dezelfde ledlines onder elkaar */
+.rx-lines.is-plain{display:grid;gap:2px;height:auto;padding:8px 12px 8px 0}
+html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-lines.is-plain .rx-line{position:relative;top:auto;left:auto;margin-left:12px}
+/* RGBW: de kleine tekening met wat hij doet */
+.rx-big-art.is-small{gap:10px;padding:12px 0 14px}
+.rx-big-art.is-small svg{width:min(240px,82%)}
+.rx-big-art.is-small .rx-ll{background:var(--panel);border:1px solid var(--line)}
+/* onderaan twee rustige knoppen naast elkaar: laat knipperen en meer */
+.rx-small.rx-two{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:0}
+html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-small.rx-two button{display:flex;align-items:center;justify-content:center;gap:9px;min-height:50px;padding:0 10px;font-size:14.5px}
+.rx-small.rx-two svg{flex:none}
+.rx-small.rx-two button[data-rx="more"] svg{fill:currentColor;stroke:none}
+.rx-moresheet .rx-zopt{cursor:pointer}
+.rx-moresheet .rx-zopt small{display:block}
+@media (prefers-reduced-motion:reduce){.rx-line-px,.rx-line-strip,.rx-line.off .rx-line-strip,.rx-line.off .rx-line-strip::after,.rx-line-plug .rx-plug-led,.rx-card,.rx-blink{transition:none;animation:none}
+  .rx-blink[aria-pressed=true] svg,.rx-card:has(.rx-blink[aria-pressed=true]) .rx-art svg{animation:none}
+  .rx-line-light[aria-pressed=true] .rx-line-strip,.rx-page:has(.rx-foot [data-action="visual-identify"][aria-pressed=true]) .rx-line-light .rx-line-strip{animation:none;outline:2px solid var(--ink);outline-offset:3px}}
+/* tekst voor wie het scherm laat voorlezen; bij knipperen schrijft de app er zelf haar stand in */
+.rx-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
+/* de zichtbare tekst van "Laat knipperen" volgt de knop zelf (de app houdt aria-pressed bij, ook als het knipperen vanzelf stopt) */
+.rx-small button b{font:inherit}
+.rx-small button[aria-pressed=true]>.rx-when-off,.rx-small button:not([aria-pressed=true])>.rx-when-on{display:none}
+
+/* ---------- de receiverpagina is een volledig scherm (de eigenaar 13 nov: "graag een volledige schermweergave i.p.v. pop-up") ----------
+   Zelfde plaats en opbouw als stap 1 en stap 2: onder het logo tot onderaan, kop – beeld – knoppen onderaan. Geen sluier
+   en geen ronde hoeken; een terugpijl zoals op de zonepagina. Ze komt in beeld zoals een volgende pagina van de app
+   (c109-page-in-fwd: van rechts, met een zachte overgang). De vellen Meer, Zone wisselen en Info schuiven er nog boven. */
+html:not(#rx):not(#rx):not(#rx) body:not(#rx):not(#rx):not(#rx) dialog.rx-sheet.rx-page[open]{display:block}
+.rx-page .rx-sheet-back{display:none}
+.rx-page .rx-panel{position:absolute;inset:0;width:auto;max-width:none;max-height:none;padding:0;gap:0;border-radius:0;box-shadow:none;overflow:hidden auto;overscroll-behavior:contain;
+  display:flex;flex-direction:column;background:var(--c109-page,var(--bg));opacity:0;transform:translate3d(46px,0,0);transition:transform .34s cubic-bezier(.2,.8,.2,1),opacity .2s ease}
+.rx-page.is-in .rx-panel{opacity:1;transform:none}
+.rx-page.is-out .rx-panel{opacity:0;transform:translate3d(38px,0,0);transition-duration:.2s}
+.rx-page .rx-panel>*{box-sizing:border-box;padding-inline:max(16px,calc((100% - 600px)/2))}
+.rx-top{flex:none;gap:12px;padding-top:14px;padding-bottom:6px}
+.rx-top h2{font-size:27px;letter-spacing:-.025em}
+.rx-top .rx-stat{flex-wrap:wrap;row-gap:5px}
+.rx-top .rx-stat-zone,.rx-top .rx-me-inline{white-space:nowrap}
+html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-back{flex:none;display:grid;place-items:center;width:44px;height:44px;min-height:0;margin:0;padding:0;border-radius:14px;
+  border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background:var(--panel);box-shadow:none;color:var(--red,#bf4841);cursor:pointer;transition:transform .15s ease}
+.rx-back svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.rx-back:active{transform:scale(.94)}
+/* het beeld staat in het midden van de vrije ruimte en is zo groot als daar past (in de breedte en in de hoogte) */
+.rx-stage{flex:1 1 0;min-height:230px;display:grid;align-content:center;justify-items:center;gap:14px;padding-top:8px;padding-bottom:max(14px,9%);container-type:size}
+.rx-stage>.rx-lines,.rx-stage>.rx-big-art,.rx-stage>.rx-tip{width:100%;box-sizing:border-box}
+@supports (width:1cqw){
+  .rx-stage>.rx-lines{--u:max(.8px,min(1.32px,calc(100cqw/308),calc((100cqh - 24px)/var(--h))))}
+  @container (min-width:520px){.rx-stage>.rx-lines{--cut:188;--fade:66%;--u:max(.8px,min(1.5px,calc(100cqw/430),calc((100cqh - 24px)/var(--h))))}}
+  .rx-stage>.rx-big-art.is-small svg{width:min(380px,86cqw,calc((100cqh - 150px)*2.4))}
+}
+.rx-stage>.rx-big-art.is-small{gap:14px;padding:22px 0 20px}
+.rx-foot{flex:none;display:grid;gap:8px;padding-top:11px;padding-bottom:calc(11px + env(safe-area-inset-bottom,0px));background:var(--c109-page,var(--bg));border-top:1px solid var(--line)}
+.rx-foot .rx-primary{min-height:62px;border-radius:20px}
+/* een laag scherm (telefoon op zijn kant): het beeld links, de kop en de knoppen rechts */
+@media (max-height:560px) and (min-width:620px){
+  .rx-page:not(.rx-sub) .rx-panel{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);grid-template-rows:auto minmax(0,1fr);grid-template-areas:"stage top" "stage foot"}
+  .rx-page:not(.rx-sub) .rx-panel>*{padding-inline:16px}
+  .rx-page:not(.rx-sub) .rx-top{grid-area:top}
+  .rx-stage{grid-area:stage;min-height:0;padding-block:12px}
+  .rx-foot{grid-area:foot;align-self:end;border-top:0;background:none}
+}
+@media (prefers-reduced-motion:reduce){.rx-page .rx-panel,.rx-back{transition:none}}
+/* Meer, Zone wisselen, Info en "Bekijk hoe": elk een volledige pagina zoals de receiverpagina (de eigenaar 13 nov: "graag de
+   halve pop-up kaarten volledige pagina kaarten van maken"): de kop met de terugpijl, daaronder de inhoud. */
+.rx-sub .rx-body{flex:1 1 auto;min-height:0;display:grid;align-content:start;gap:12px;padding-top:14px;padding-bottom:calc(22px + env(safe-area-inset-bottom,0px));overflow:hidden auto}
+.rx-sub .rx-body .rx-how{margin-top:0}
+/* Zone wisselen, klantvriendelijk (de eigenaar 13 nov): dezelfde keuze als bij het toevoegen van een receiver. Per zone een
+   grote kaart met een rondje; aangevinkt (rood) = waar de receiver nu staat; een zone van het andere type is flauw en
+   zegt "Alleen voor ...". Daaronder "Niet in een zone" en de knop "Nieuwe zone", die een veld voor de naam wordt. */
+.rx-zpicks{display:grid;gap:8px}
+html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-zpick{display:flex;align-items:center;gap:12px;width:100%;min-height:64px;margin:0;padding:10px 14px 10px 16px;border:1.5px solid var(--line);border-radius:18px;
+  background:var(--panel);box-shadow:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:border-color .15s ease,transform .15s ease}
+.rx-zpick>span{flex:1;min-width:0;display:grid;gap:2px}
+.rx-zpick-top{display:flex;align-items:center;gap:8px;min-width:0}
+.rx-zpick-top .rx-badge{flex:none}
+.rx-zpick b{min-width:0;font-size:16.5px;line-height:1.25;font-weight:800;overflow-wrap:anywhere}
+.rx-zpick small{font-size:13.5px;line-height:1.3;font-weight:650;color:var(--muted)}
+.rx-zpick>i{flex:none;display:grid;place-items:center;width:26px;height:26px;border:1.5px solid var(--line);border-radius:50%;box-sizing:border-box;transition:background-color .15s ease,border-color .15s ease}
+.rx-zpick>i svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;opacity:0;transition:opacity .15s ease}
+html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-zpick[aria-checked=true]{border-color:var(--red,#bf4841)}
+.rx-zpick[aria-checked=true]>i{border-color:var(--red,#bf4841);background:var(--red,#bf4841)}
+.rx-zpick[aria-checked=true]>i svg{opacity:1}
+html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-zpick:disabled{opacity:.5;cursor:default}
+.rx-zpick:not(:disabled):active{transform:scale(.985)}
+html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-zpick:focus-visible,html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-newzone button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.rx-newzone{display:grid;gap:10px}
+html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-newzone button{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;margin:0;padding:0 14px;border-radius:16px;border:1px solid var(--line);
+  background:var(--soft);box-shadow:none;color:var(--ink);font:inherit;font-size:15.5px;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.rx-newzone button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round}
+.rx-newzone button b{font:inherit}
+.rx-newzone.is-open{padding:14px;border:1px solid var(--line);border-radius:18px;background:var(--panel)}
+.rx-field{display:grid;gap:6px;font-size:13.5px;font-weight:750;color:var(--muted)}
+html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-field input{width:100%;min-height:52px;margin:0;padding:0 14px;box-sizing:border-box;border:1.5px solid var(--line);border-radius:14px;background:var(--bg,var(--panel));color:var(--ink);
+  font:inherit;font-size:17px;font-weight:650;outline:none}
+html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-field input:focus{border-color:var(--ink)}
+.rx-newzone-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-newzone button.rx-newzone-make{background:#1c1c1e;color:#fff;border-color:#1c1c1e}
+body[data-theme=dark] dialog.rx-sheet .rx-newzone button.rx-newzone-make,html.c109-dark:not(#rx) body:not(#rx) dialog.rx-sheet .rx-newzone button.rx-newzone-make{background:#f4f3f0;color:#1c1c1e;border-color:#f4f3f0}
+html:not(#rx) body:not(#rx) dialog.rx-sheet .rx-newzone button:disabled{opacity:.45;cursor:default}
+@media (prefers-reduced-motion:reduce){.rx-zpick,.rx-zpick>i,.rx-zpick>i svg{transition:none}}
+.rx-sub .rx-hw{height:150px}
+/* RGBW: de receiver met zijn echte kabels en de zwarte splitter, het beeld van het toevoegen (receiver-pair-scene.js;
+   de eigenaar 13 nov: "zorg ervoor dat de RGBW de juiste splitter gebruikt") */
+.rx-stage>.rx-rgbw-pic{width:100%;box-sizing:border-box}
+.rx-rgbw-pic .pair-still{height:260px;border-radius:20px}
+@supports (width:1cqw){.rx-rgbw-pic .pair-still{height:max(170px,min(340px,calc(100cqh - 30px)))}}
+
+/* ---------- tutorial: de telefoon (dezelfde schermen als de app) ---------- */
+.rtm{position:absolute;left:0;width:300px;padding:6px 14px 0;color:var(--ink);transform-origin:0 0;box-sizing:border-box}
+.rtm-prog{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.rtm-prog span{display:grid;gap:3px}
+.rtm-prog b{font-size:8.5px;font-weight:800;color:var(--muted)}
+.rtm-prog span:nth-child(-n+2) b{color:var(--ink)}
+.rtm-prog span>i{position:relative;height:2.5px;border-radius:2px;background:var(--line);overflow:hidden}
+.rtm-prog span>i>i{position:absolute;inset:0;background:var(--ink);transform:scaleX(0);transform-origin:0 50%}
+.rtm-scr{position:absolute;left:14px;right:14px;top:34px;bottom:10px;display:flex;flex-direction:column;gap:9px}
+.rtm-scr[data-ms=b],.rtm-scr[data-ms=c]{opacity:0}
+.rtm-swap{position:relative;height:25px;flex:none}
+.rtm-title{position:absolute;left:0;top:0;font-size:19px;line-height:1.15;font-weight:850;letter-spacing:-.02em;white-space:nowrap}
+.rtm-scr[data-ms=c] .rtm-title{position:static;white-space:normal}
+.rtm-say{font-size:11.5px;line-height:1.35;color:var(--muted);font-weight:600}
+.rtm-cam{position:relative;flex:none;align-self:center;border-radius:18px;overflow:hidden;background:#141518}
+.rtm-cam-in{position:absolute}
+.rtm-cam-in svg{display:block;width:100%;height:100%}
+.rtm-cam-blur{filter:blur(9px) brightness(.36);opacity:0}
+.rtm-frame{position:absolute;left:50%;top:48%;width:44%;aspect-ratio:1;translate:-50% -50%}
+.rtm-frame i{position:absolute;width:26%;height:26%;border:3px solid #fff;filter:drop-shadow(0 0 5px rgba(255,255,255,.55))}
+.rtm-frame i:nth-child(1){left:0;top:0;border-right:0;border-bottom:0;border-top-left-radius:12px}
+.rtm-frame i:nth-child(2){right:0;top:0;border-left:0;border-bottom:0;border-top-right-radius:12px}
+.rtm-frame i:nth-child(3){left:0;bottom:0;border-right:0;border-top:0;border-bottom-left-radius:12px}
+.rtm-frame i:nth-child(4){right:0;bottom:0;border-left:0;border-top:0;border-bottom-right-radius:12px}
+.rtm-ping{position:absolute;left:50%;top:48%;width:46%;aspect-ratio:1;translate:-50% -50%;border-radius:50%;border:3px solid #fff;opacity:0}
+.rtm-flash{position:absolute;inset:0;background:#fff;opacity:0}
+.rtm-glow{position:absolute;left:50%;top:50%;width:96%;aspect-ratio:1.5;translate:-50% -50%;border-radius:50%;background:radial-gradient(closest-side,rgba(59,130,246,.72),rgba(59,130,246,0));opacity:0}
+.rtm-grow{position:absolute;left:50%;top:50%;width:78%;translate:-50% -50%;opacity:0}
+.rtm-grow svg,.rtm-float svg{display:block;width:100%;height:auto}
+.rtm-id{display:grid;gap:1px;text-align:center;opacity:0}
+.rtm-id b{font-size:13px;font-weight:850}
+.rtm-id span{font-size:11px;color:var(--muted);font-weight:650}
+.rtm-list{align-self:center;font-size:10.5px;font-weight:700;color:var(--muted);text-decoration:underline;text-underline-offset:2px}
+.rtm-pin{position:relative;height:14px;flex:none;margin:4px 0}
+.rtm-pin>span{position:absolute;inset:0;display:flex;justify-content:center;gap:6px}
+.rtm-pin>span>i{position:relative;width:10px;height:10px;border-radius:50%;border:1.6px solid var(--ink)}
+.rtm-pin>span>i.opt{border-style:dashed;border-color:var(--muted)}
+.rtm-pin>span>i>i{position:absolute;inset:-1.6px;border-radius:50%;background:var(--ink);opacity:0}
+.rtm-keys{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.rtm-key{position:relative;display:grid;place-items:center;height:44px;border-radius:13px;border:1px solid var(--line);background:var(--panel);font-size:19px;font-weight:750;box-shadow:var(--surface-shadow);overflow:hidden}
+.rtm-key>i{position:absolute;inset:0;background:color-mix(in srgb,var(--ink) 14%,transparent);opacity:0}
+.rtm-key svg{position:relative;width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linejoin:round;stroke-linecap:round}
+.rtm-btn{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;height:44px;border-radius:14px;background:color-mix(in srgb,var(--ink) 28%,var(--panel));color:var(--panel);font-size:14px;font-weight:800;overflow:hidden}
+.rtm-btn>i{position:absolute;inset:0;background:var(--ink);opacity:0}
+.rtm-btn>span,.rtm-btn>svg{position:relative}
+.rtm-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.rtm-scr[data-ms=b] .rtm-btn{position:absolute;left:0;right:0;bottom:0}
+.rtm-spin{align-self:center;margin-top:34px;width:34px;height:34px;border-radius:50%;border:4px solid var(--line);border-top-color:#3b82f6}
+.rtm-sheet{position:absolute;left:0;right:0;bottom:0;height:80%;padding:12px 16px 16px;border-radius:24px 24px 0 0;background:var(--panel);box-shadow:0 -14px 30px -14px rgba(0,0,0,.45);
+  display:flex;flex-direction:column;align-items:center;gap:3px;transform:translateY(105%)}
+.rtm-stage{position:relative;width:100%;flex:1;min-height:0;display:grid;place-items:center}
+.rtm-g,.rtm-burst{position:absolute;left:50%;top:50%;width:100%;aspect-ratio:1.4;translate:-50% -50%;border-radius:50%;opacity:0}
+.rtm-g.b{background:radial-gradient(closest-side,rgba(59,130,246,.62),rgba(59,130,246,0))}
+.rtm-g.g{background:radial-gradient(closest-side,rgba(31,196,91,.62),rgba(31,196,91,0))}
+.rtm-burst{border:3px solid rgba(31,196,91,.8)}
+.rtm-float{position:relative;width:88%}
+.rtm-tick{flex:none;width:34px;height:34px;fill:none;stroke:#1FC45B;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}
+.rtm-tick circle{stroke-dasharray:145;opacity:.35}
+.rtm-tick path{stroke-dasharray:34}
+.rtm-name{font-size:20px;line-height:1.1;font-weight:850;letter-spacing:-.02em}
+.rtm-sheet code{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em}
+.rtm-ok{font-size:12.5px;font-weight:700}
+.rtm-go{align-self:stretch;margin-top:8px;background:var(--ink);color:var(--panel)}
+/* tutorial: "Eerste receiver" op het PIN-scherm en het deelscherm in de telefoon */
+.rtm-pill{align-self:flex-start;padding:2px 7px;border-radius:999px;background:var(--soft);border:1px solid var(--line);font-size:8.5px;font-weight:850;letter-spacing:.04em}
+.rtm-scr[data-ms=d]{opacity:0}
+.rtm-title.rtm-static{position:static}
+.rtm-pass{position:relative;overflow:hidden;display:grid;gap:7px;padding:12px 12px 10px;border-radius:18px;color:#f4f3f0;background:radial-gradient(120% 80% at 50% 0%,#24272e,#15171b 55%,#0f1013)}
+.rtm-pass-line{position:absolute;left:12px;right:12px;top:0;height:3px;border-radius:0 0 3px 3px;background:linear-gradient(90deg,#FF0000,#0000FF 33%,#FFFF00 66%,#FF5000)}
+.rtm-pass-head{display:grid}
+.rtm-pass-head b{font-size:14px;font-weight:850}
+.rtm-pass-head small{font-size:8px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#a9a7a2}
+.rtm-qr{justify-self:center;width:46%;padding:6px;border-radius:12px;background:#fff}
+.rtm-qr svg{max-width:none!important;width:100%!important;height:auto}
+.rtm-row{display:grid;padding:6px 8px;border-radius:10px;background:rgba(255,255,255,.07)}
+.rtm-row small{font-size:7.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#a9a7a2}
+.rtm-row b{font-size:12px;font-weight:850;font-family:ui-monospace,"SF Mono",Menlo,monospace}
+.rtm-share{margin-top:auto;background:var(--ink)}
+.rtm-share>i{background:color-mix(in srgb,var(--panel) 30%,transparent)}
+/* tutorial: de iPhone 18 Pro Max (titanium rand, zwarte rand, Dynamic Island, statusbalk, thuisbalk, knoppen) */
+.ki .rti{position:absolute}
+.rti-body{position:absolute;inset:0;background:#050506;box-shadow:0 0 0 1.6px #8d8f94,0 0 0 2.6px #d3d4d7,0 0 0 3.4px #6e7075,0 26px 48px -22px rgba(0,0,0,.85)}
+.rti-b{position:absolute;width:3.4px;border-radius:2px;background:linear-gradient(90deg,#77797e,#d0d1d4 55%,#8a8c91)}
+.rti-b.l{left:-6px}.rti-b.r{right:-6px}
+.rti-screen{position:absolute;overflow:hidden;background:var(--bg);isolation:isolate}
+.rti-status{position:absolute;left:0;right:0;top:0;z-index:6;display:flex;align-items:center;justify-content:space-between;padding:0 9% 0 11%;color:var(--ink);pointer-events:none}
+.rti-status b{font-weight:650;letter-spacing:-.01em}
+.rti-status span{display:inline-flex;align-items:center;gap:.3em}
+.rti-status svg{height:.78em;width:auto;fill:currentColor;stroke:currentColor}
+.rti-island{position:absolute;left:50%;z-index:7;translate:-50% 0;border-radius:999px;background:#000}
+.rti-home{position:absolute;left:50%;z-index:7;height:4px;translate:-50% 0;border-radius:3px;background:var(--ink);opacity:.85}
+
+/* ---------- de tutorial (14 nov herbouwd): de echte Receivers-tab in een telefoon, de stand ernaast ---------- */
+.rxi-label{position:absolute;color:#a9a7a2;font-size:13px;font-weight:850;letter-spacing:.12em;text-transform:uppercase}
+.rxi-stand{position:absolute;border-radius:24px;overflow:hidden;background:#101114;box-shadow:0 30px 60px -34px #000,inset 0 0 0 1px rgba(255,255,255,.06)}
+.rxi-stand canvas{display:block;width:100%;height:100%}
+.rxi-frame{position:absolute;left:0;border:0;transform-origin:0 0;pointer-events:none;background:var(--bg,#f5f4f2)}
+.rxi-ring{position:absolute;left:0;top:0;width:0;height:0;box-sizing:border-box;border-radius:22px;border:4px solid #FFC61A;opacity:0;pointer-events:none;z-index:9;
+  transition:opacity .25s ease,left .45s cubic-bezier(.45,.05,.25,1),top .45s cubic-bezier(.45,.05,.25,1),width .45s cubic-bezier(.45,.05,.25,1),height .45s cubic-bezier(.45,.05,.25,1)}
+.rxi-ring.is-on{opacity:1;animation:rxi-spot 1.6s ease-in-out infinite}
+@keyframes rxi-spot{0%,100%{box-shadow:0 0 0 9999px rgba(0,0,0,.32),0 0 22px rgba(255,198,26,.55)}50%{box-shadow:0 0 0 9999px rgba(0,0,0,.32),0 0 40px rgba(255,198,26,.95)}}
+.rxi .rxi-finger{z-index:10;transition-property:left,top,opacity,transform;transition-timing-function:cubic-bezier(.45,.05,.25,1);transition-duration:600ms}
+.rxi .rxi-finger.is-press{transform:scale(.78)}
+.rxi .ki-sub{transform:translateY(6px);transition:opacity .22s ease,transform .22s ease}
+.rxi .ki-sub.is-on{opacity:1;transform:none;transition:opacity .35s ease .25s,transform .35s ease .25s}
+@media (prefers-reduced-motion:reduce){.rxi-ring.is-on{animation:none;box-shadow:0 0 0 9999px rgba(0,0,0,.32)}.rxi .rxi-finger{transition:none}}

@@ -1,0 +1,26 @@
+/* One centred wheel in every colour picker; keep live controls unchanged. */
+html.interface-polish body :is(#main, #effect-dialog) .shared-colour-picker .colour-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-column: 1 / -1;
+  justify-items: center;
+  gap: 12px;
+}
+
+html.interface-polish body :is(#main, #effect-dialog) .shared-colour-picker .wheel-wrap {
+  width: min(100%, 260px);
+  max-width: 260px;
+  aspect-ratio: 1;
+  margin: 0 auto;
+  justify-self: center;
+}
+
+html.interface-polish body :is(#main, #effect-dialog) .shared-colour-picker .colour-values {
+  width: 100%;
+  text-align: center;
+  align-items: center;
+}
+
+html.interface-polish body :is(#main, #effect-dialog) .shared-colour-picker .colour-values .setting-hint {
+  margin: 0;
+}

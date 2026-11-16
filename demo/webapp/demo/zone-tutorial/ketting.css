@@ -1,0 +1,290 @@
+/* C141p prototype "Laat de kleuren doorlopen": only what the real interface CSS does not already give.
+   Colours, fonts, logo bar, tab bar and the switch come from apps/WebApp (linked in index.html).
+   kt-* = the app screen (same look as the phone in the explainer), ki-* = the explainer animation.
+   The screen has two steps in one interface: 1 Volgorde (drag), 2 Overgangen (tails + flip). */
+
+.kt-body{margin:0;min-height:100dvh;background:var(--bg)}
+.kt-proto-pill{margin-left:auto;padding:5px 10px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--action-ink,#ac3933);background:color-mix(in srgb,var(--red,#bf4841) 12%,transparent)}
+header.brand-bar>span:not(.kt-proto-pill){margin-left:12px}
+
+/* ---------- The app screen ---------- */
+.kt-app{min-height:100dvh}
+.kt-main{display:grid;align-content:start;gap:14px;padding:8px 16px calc(var(--nav,72px) + 100px + env(safe-area-inset-bottom,0px));max-width:600px;margin:0 auto}
+.kt-head{display:grid;gap:4px}
+.kt-head small{color:var(--muted);font-size:13px;font-weight:600}
+.kt-title-row{display:flex;align-items:flex-start;gap:10px}
+.kt-head h1{margin:0;font-size:26px;line-height:1.12;letter-spacing:-.02em;flex:1;min-width:0}
+.kt-head p{margin:4px 0 0;color:var(--muted);font-size:15px;line-height:1.4}
+.kt-head p b{color:var(--ink);font-weight:700}
+/* "Bekijk tutorial": a clear button under the sentence (plays the tutorial again) */
+.kt-tut{position:relative;justify-self:start;display:inline-flex;align-items:center;gap:9px;margin-top:8px;min-height:42px;padding:0 16px 0 6px;border-radius:999px;
+  border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-size:14px;font-weight:750;cursor:pointer;box-shadow:var(--surface-shadow);
+  transition:transform .15s ease}
+.kt-tut i{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--ink);color:var(--panel)}
+.kt-tut svg{width:12px;height:12px;fill:currentColor;margin-left:2px}
+/* Tapping: the control is active for a moment and a ring fades outwards */
+.kt-flip,.kt-back,.kt-test,.kt-done{position:relative}
+.kt-tapring{position:absolute;inset:-3px;border-radius:inherit;border:2px solid color-mix(in srgb,var(--ink) 45%,transparent);pointer-events:none;
+  animation:kt-tap .5s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes kt-tap{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(1.16)}}
+.kt-back:active,.kt-test:active,.kt-done:active,.kt-tut:active{transform:scale(.96)}
+/* step 2: back to the order */
+.kt-back{flex:none;height:52px;padding:0 14px 0 10px;border-radius:16px;border:1px solid var(--line);background:var(--soft);color:var(--ink);display:flex;align-items:center;gap:6px;cursor:pointer;font:inherit;font-size:15px;font-weight:800}
+.kt-back svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Two steps in one screen: a small progress bar with the step names. */
+.kt-stepper{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-bottom:9px;margin-bottom:6px}
+.kt-stepper::before{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:3px;background:var(--line)}
+.kt-stepper-fill{position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:3px;background:var(--ink);transform-origin:0 50%;transform:scaleX(.5);
+  transition:transform .45s cubic-bezier(.32,.72,0,1)}
+.kt-app[data-step="2"] .kt-stepper-fill{transform:none}
+.kt-stepper button{display:flex;align-items:center;gap:5px;min-height:36px;padding:0;border:0;background:none;font:inherit;font-size:14px;font-weight:700;color:var(--muted);cursor:pointer;text-align:left}
+.kt-stepper button b{font:inherit}
+.kt-app[data-step="1"] [data-goto="1"],.kt-app[data-step="2"] [data-goto="2"]{color:var(--ink)}
+
+/* Overview bar: every ledline in chain order as its own pill; in step 2 each gets its tail. */
+.kt-overview{position:relative;display:grid;gap:7px}
+.kt-ov-label{font-size:12.5px;font-weight:650;color:var(--muted)}
+.kt-ov-bars{display:flex;gap:6px}
+.kt-ov-bars>i{position:relative;flex:1 1 0;min-width:0;height:12px;border-radius:2px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+
+/* The tail (last 5 pixels into the next colour) only shows in step 2; it grows in from the end. */
+.kt-tail{position:absolute;top:0;bottom:0;width:34%;transform:scaleX(0);transition:transform .5s cubic-bezier(.2,.8,.2,1) calc(var(--i,0) * 70ms)}
+.kt-tail.is-left{left:0;transform-origin:0 50%}
+.kt-tail.is-right{right:0;transform-origin:100% 50%}
+/* Vastpakken: the strip pulses in its own colour (a dark layer goes up and down, no white), like the ledline on the stand. */
+.kt-bar::after{content:"";position:absolute;inset:0;z-index:2;background:#000;opacity:0;pointer-events:none}
+@keyframes kt-pulse{0%,100%{opacity:0}50%{opacity:.55}}
+.kt-item.is-dragging .kt-bar::after,.kt-card.is-identifying .kt-bar::after{animation:kt-pulse .6s ease-in-out infinite}
+/* Testlicht: everything turns red calmly, then one wide, soft white band runs over it (as on the stand). */
+.kt-bar::before,.kt-ov-bars>i::before{content:"";position:absolute;inset:0;z-index:1;background:#F0473D;opacity:0;transition:opacity .5s ease;pointer-events:none}
+.kt-app.is-testing .kt-bar::before,.kt-app.is-testing .kt-ov-bars>i::before{opacity:1}
+.kt-chase{position:absolute;left:0;top:0;bottom:0;z-index:3;pointer-events:none;
+  background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.55) 30%,rgba(255,255,255,.95) 50%,rgba(255,255,255,.55) 70%,rgba(255,255,255,0))}
+.kt-app[data-step="2"] .kt-tail{transform:none}
+
+/* Cards: number, colour name, wide strip, flip (step 2), grip — one row, like the phone in the explainer. */
+.kt-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:32px minmax(0,1fr);column-gap:10px;row-gap:8px;position:relative}
+/* the place numbers stand still in their own column; only the ledline cards move */
+.kt-rank{grid-column:1;align-self:center;list-style:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--ink);color:var(--panel)}
+.kt-rank b{font-size:15px;font-weight:800;line-height:1}
+.kt-list>.kt-item{grid-column:2}
+.kt-item{position:relative;margin:0;padding:0;transition:transform .2s cubic-bezier(.32,.72,0,1);will-change:transform}
+.kt-item.is-dragging{transition:none;z-index:5}
+.kt-item.is-dragging .kt-card{box-shadow:0 22px 40px -18px rgba(0,0,0,.45),0 3px 10px rgba(0,0,0,.12);transform:scale(1.015)}
+.kt-item.is-settling{transition:transform .18s cubic-bezier(.32,.72,0,1)}
+.kt-card{display:grid;grid-template-columns:auto minmax(0,1fr) 44px 30px;align-items:center;gap:10px;min-height:62px;box-sizing:border-box;
+  padding:6px 8px 6px 14px;border-radius:18px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--surface-shadow);
+  user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:pan-y;transition:box-shadow .45s ease,transform .18s ease;outline-offset:2px}
+.kt-card.is-identifying{box-shadow:0 0 0 3px color-mix(in srgb,var(--hl) 80%,transparent),0 0 20px color-mix(in srgb,var(--hl) 45%,transparent),var(--surface-shadow);transition-duration:.15s}
+.kt-name{font-size:16px;font-weight:650;white-space:nowrap;min-width:4.9em} /* same width for every name: the plugs and strips line up */
+.kt-strip,.ki-strip{display:flex;align-items:center;min-width:0}
+.kt-strip>.kt-bar,.ki-strip>.ki-bar{flex:1 1 auto}
+/* The connector at the start of the strip (an inline SVG, see ICON_PLUG): the same white round screw connector as on the
+   stand — ribbed strain reliefs, bodies, knurled nut and the red O-ring — with a white cable into the strip.
+   The strip itself is straight with a thin white rim at the top and bottom, like the real ledline sleeve. */
+.kt-plug,.ki-plug{flex:none;display:block;--pw:#fff;--po:#a7acb3;--pk:#c3c7cc;--pc:#fff}
+body[data-theme=dark] .kt-plug,body[data-theme=dark] .ki-plug{--pw:#f4f4f1;--po:#6e737a;--pk:#b9bcc1;--pc:#f4f4f1}
+.kt-plug{width:39px;height:14px}
+.ki-plug{width:28px;height:10px}
+.kt-plug svg,.ki-plug svg{display:block;width:100%;height:100%;overflow:visible}
+.kt-plug .w,.ki-plug .w{fill:var(--pw);stroke:var(--po);stroke-width:1}
+.kt-plug .l,.ki-plug .l{fill:none;stroke:var(--pk);stroke-width:.8}
+.kt-plug .r,.ki-plug .r{fill:#e0412f}
+.kt-plug .co,.ki-plug .co{fill:none;stroke:var(--po);stroke-width:3.4;stroke-linecap:round}
+.kt-plug .ci,.ki-plug .ci{fill:none;stroke:var(--pc);stroke-width:1.8;stroke-linecap:round}
+.kt-rim,.ki-crim{position:absolute;inset:0;z-index:4;pointer-events:none}
+.kt-rim{box-shadow:inset 0 2.5px 0 rgba(255,255,255,.93),inset 0 3.5px 0 rgba(0,0,0,.1),inset 0 -2.5px 0 rgba(255,255,255,.93),inset 0 -3.5px 0 rgba(0,0,0,.1)}
+.ki-crim{box-shadow:inset 0 2px 0 rgba(255,255,255,.93),inset 0 2.8px 0 rgba(0,0,0,.1),inset 0 -2px 0 rgba(255,255,255,.93),inset 0 -2.8px 0 rgba(0,0,0,.1)}
+.kt-bar{position:relative;display:block;height:14px;min-width:0;border-radius:2px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);transform-origin:50% 50%}
+.kt-flip{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--soft);color:var(--ink);
+  display:grid;place-items:center;cursor:pointer;padding:0;transition:opacity .3s ease,transform .3s cubic-bezier(.2,.8,.2,1)}
+.kt-app[data-step="1"] .kt-flip{opacity:0;transform:scale(.6);pointer-events:none}
+.kt-flip svg,.kt-grip svg,.kt-test svg,.kt-done svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.kt-flip:active{transform:scale(.92)}
+.kt-grip{align-self:stretch;display:grid;place-items:center;width:30px;border:0;border-radius:10px;background:transparent;color:var(--muted);
+  touch-action:none;cursor:grab;padding:0;min-height:44px}
+.kt-grip svg{fill:currentColor;stroke:none}
+.kt-slot{position:absolute;left:42px;right:0;box-sizing:border-box;border:2px dashed color-mix(in srgb,#e9a24a 65%,transparent);border-radius:18px;
+  background:color-mix(in srgb,#e9a24a 8%,transparent);pointer-events:none;transition:top .2s cubic-bezier(.32,.72,0,1)}
+html.kt-dragging,html.kt-dragging *{user-select:none!important;-webkit-user-select:none!important;cursor:grabbing}
+
+.kt-app[data-step="1"] [data-only="2"],.kt-app[data-step="2"] [data-only="1"]{display:none}
+/* het eindscherm (na Klaar): alleen de samenvatting, Opnieuw en Naar je stand */
+.kt-app[data-step="3"] [data-only="1"],.kt-app[data-step="3"] [data-only="2"],.kt-app:not([data-step="3"]) [data-only="3"],
+.kt-app[data-step="3"] .kt-overview,.kt-app[data-step="3"] .kt-list,.kt-app[data-step="3"] .kt-tut{display:none}
+
+/* Bottom: step 1 "Volgende stap"; step 2 round Testlicht + Klaar (black). */
+.kt-footer{position:fixed;left:0;right:0;bottom:calc(var(--nav,72px) + env(safe-area-inset-bottom,0px));z-index:12;display:flex;gap:10px;
+  padding:12px 16px 10px;max-width:600px;margin:0 auto;box-sizing:border-box;background:linear-gradient(to top,var(--c109-page,var(--bg)) 74%,transparent)}
+.kt-test{flex:none;height:52px;padding:0 16px 0 12px;border-radius:16px;border:1px solid var(--line);background:var(--soft);color:var(--ink);display:flex;align-items:center;gap:8px;cursor:pointer;font:inherit;font-size:15px;font-weight:800}
+.kt-test svg{width:32px;height:16px;stroke:none}
+.ki-test svg{width:24px;height:12px;stroke:none}
+.kt-test.is-running .tl-dot{animation:kt-run 1.1s ease-in-out infinite}
+@keyframes kt-run{0%{transform:translateX(-12px);opacity:0}15%,85%{opacity:1}100%{transform:translateX(6px);opacity:0}}
+/* turning: a block in the next colour glides across the strip (the strip itself does not spin) */
+.kt-blob{position:absolute;left:0;top:0;bottom:0;pointer-events:none}
+.kt-done{flex:1;min-height:52px;border:0;border-radius:16px;background:#1c1c1e;color:#fff;font:inherit;font-size:16px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+.kt-done svg{stroke-width:2.3}
+body[data-theme=dark] .kt-done{background:#f4f3f0;color:#1c1c1e}
+.kt-nav{z-index:13}
+.kt-toast{position:fixed;left:50%;bottom:calc(var(--nav,72px) + 86px);transform:translateX(-50%);z-index:40;padding:12px 16px;border-radius:16px;
+  background:#1c1c1e;color:#fff;font-weight:700;font-size:14px;box-shadow:0 14px 30px -12px rgba(0,0,0,.5);width:max-content;max-width:min(86vw,460px);text-align:center}
+body[data-theme=dark] .kt-toast{background:#f4f3f0;color:#1c1c1e}
+.kt-toast[hidden]{display:none}
+@media (max-width:380px){.kt-list{grid-template-columns:30px minmax(0,1fr);column-gap:8px}.kt-slot{left:38px}.kt-card{grid-template-columns:auto minmax(0,1fr) 42px 26px;gap:8px;padding-left:12px}.kt-rank{width:30px;height:30px}.kt-name{font-size:15px}}
+@media (prefers-reduced-motion:reduce){.kt-tapring{display:none}.kt-item,.kt-slot,.kt-card,.kt-flip,.kt-tail,.kt-stepper-fill,.kt-bar::before,.kt-ov-bars>i::before{transition:none!important}.kt-bar::after{animation:none!important}.kt-test.is-running .tl-dot{animation:none}}
+
+/* ---------- Explainer animation ("Zo werkt het") ---------- */
+.ki{position:fixed;inset:0;z-index:60;display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:10px;background:#0b0c0e;color:#f2f1ee;
+  padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 14px);font-family:Inter,system-ui,sans-serif}
+.ki[hidden]{display:none}
+.ki-top{display:flex;align-items:center;gap:10px;min-height:44px}
+.ki-top img{height:22px;filter:brightness(0) invert(1);opacity:.9}
+.ki-top b{font-size:24px;font-weight:800;color:#f2f1ee;letter-spacing:-.01em;line-height:1.1;padding-left:14px;border-left:1px solid rgba(255,255,255,.2)}   /* the title "Tutorial": big and clear */
+.ki-top .ki-btn{margin-left:auto}
+.ki-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:999px;border:1px solid rgba(255,255,255,.26);
+  background:rgba(255,255,255,.08);color:#fff;font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.ki-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+.ki-btn.primary{background:#f4f3f0;color:#141516;border-color:#f4f3f0}
+.ki-btn[hidden]{display:none}
+.ki-btn:disabled{opacity:.35;cursor:default}
+.ki-box{position:relative;overflow:hidden;border-radius:24px;background:radial-gradient(110% 90% at 50% 30%,#1b1d21 0%,#0e0f11 62%,#0b0c0e 100%);contain:strict}
+.ki-fit{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(var(--ki-scale,1))}
+.ki-subs{position:relative;min-height:62px}
+.ki-sub{position:absolute;left:0;right:0;top:0;margin:0 auto;max-width:760px;text-align:center;font-size:clamp(17px,2.3vw,22px);line-height:1.3;font-weight:700;opacity:0;letter-spacing:-.005em}
+.ki-sub.final{font-size:clamp(20px,3vw,30px);letter-spacing:-.015em}
+.ki-sub.final span{display:block;color:#a9a7a2;font-size:.62em;font-weight:650;margin-top:4px;letter-spacing:0}
+.ki-sr{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.ki-bottom{position:relative;display:flex;align-items:center;justify-content:center;gap:10px;min-height:48px}
+.ki-progress{position:absolute;left:16%;right:16%;top:50%;height:3px;margin-top:-1.5px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden}
+.ki-progress i{position:absolute;inset:0;background:#f4f3f0;transform-origin:0 50%;transform:scaleX(0)}
+.ki-dots{display:flex;gap:7px}
+.ki-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.25)}
+.ki-dots i.on{background:#fff}
+.ki-steps,.ki-end{display:flex;align-items:center;gap:10px}
+.ki-steps[hidden],.ki-end[hidden],.ki-progress[hidden]{display:none}
+html.ki-open,html.ki-open body{overflow:hidden}
+
+/* the ledlines in one row, without a frame (geometry is set inline, see sceneHtml) */
+.ki-world{position:absolute;transform-origin:50% 50%;will-change:transform,opacity}
+.ki-close{position:absolute;left:50%;top:50%;transform-origin:50% 50%;will-change:transform,opacity;background:#101113;overflow:hidden}
+.ki-world i,.ki-close i{position:absolute;display:block;box-sizing:border-box}
+.ki-gl{opacity:0}
+/* black frame profile with fine light edges; the round white opal ledline cover on it glows evenly, like neon */
+.ki-dif{overflow:hidden;background:#ecece8;box-shadow:0 5px 12px -7px rgba(0,0,0,.75)}   /* no black frame: the sleeve alone, with a soft shadow */
+/* the two white rims (flanges) of the sleeve, over the light; a fine line where they meet the glowing core */
+.ki-rim{background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(232,232,227,.9));box-shadow:inset 0 -1px 0 rgba(0,0,0,.16)}
+.ki-rim.b{bottom:0;background:linear-gradient(0deg,rgba(255,255,255,.96),rgba(232,232,227,.9));box-shadow:inset 0 1px 0 rgba(0,0,0,.16)}
+.ki-dim{opacity:0;background:#000}
+.ki-dif i{top:0;bottom:0}
+.ki-fb{left:0;right:0}
+.ki-px{transform:scaleX(0)}
+.ki-tl{opacity:0}
+.ki-pl{opacity:0;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.5) 28%,rgba(255,255,255,.95) 50%,rgba(255,255,255,.5) 72%,rgba(255,255,255,0))}
+.ki-wv{opacity:0}
+.ki-red{opacity:0}
+/* the outro: the Aluvision logo above the stand; the ledline colours flow through it (logo as a mask), then it turns white */
+.ki-brand{position:absolute;left:50%;opacity:0;transform-origin:50% 50%;pointer-events:none}
+.ki-brand img{display:block;width:100%;height:auto;filter:brightness(0) invert(1);opacity:0}
+.ki-brand-flow{position:absolute;inset:0;overflow:hidden;-webkit-mask:url(../../apps/WebApp/assets/aluvision-logo.png) center/contain no-repeat;mask:url(../../apps/WebApp/assets/aluvision-logo.png) center/contain no-repeat}
+.ki-brand-flow i{position:absolute;top:0;bottom:0;left:0;width:300%;background:linear-gradient(90deg,#2F6BFF 0%,#FFC61A 12.5%,#9B4DFF 25%,#1FC45B 37.5%,#2F6BFF 50%,#FFC61A 62.5%,#9B4DFF 75%,#1FC45B 87.5%,#2F6BFF 100%)}
+.ki-tb{opacity:0}
+.ki-leds,.ki-shade{pointer-events:none}
+/* the connector on the stand, as on the photos: white cable, white round plastic connector with a red O-ring */
+.ki-cb{border-style:solid;border-color:#e6e6e1}
+.ki-cb2{background:#e6e6e1;-webkit-mask-image:linear-gradient(180deg,#000 25%,transparent);mask-image:linear-gradient(180deg,#000 25%,transparent)}
+.ki-rib{background:repeating-linear-gradient(180deg,#f4f4f0 0 26%,#b9bab5 26% 40%)}
+.ki-cyl{background:linear-gradient(90deg,#c4c5c0 0%,#fff 42%,#ebebe7 62%,#adaeaa 100%)}
+.ki-oring{background:#e0412f}
+.ki-nut{background:repeating-linear-gradient(90deg,rgba(0,0,0,0) 0 14%,rgba(0,0,0,.13) 14% 21%),linear-gradient(90deg,#c9cac5 0%,#fff 45%,#ecece8 66%,#b1b2ad 100%);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+/* the opening: the same ledlines as a thin line drawing (like the box), then the real ones fade in and light up */
+.ki-ren{opacity:0}
+.ki-la{position:absolute;left:0;top:0;overflow:visible;opacity:0;pointer-events:none}
+.ki-la g{fill:none;stroke:#e9e8e3;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.ki-la g>*{vector-effect:non-scaling-stroke}
+.ki-la .f{stroke-opacity:.42}
+.ki-la .c{stroke:url(#ki-la-fade)}
+.ki-la .o{stroke:#e0412f;stroke-width:1.8}
+.ki-comet{left:0;top:0;width:260px;height:120px;margin:-60px 0 0 -130px;border-radius:50%;opacity:0;
+  background:radial-gradient(closest-side,rgba(255,255,255,.4),rgba(255,255,255,.12) 55%,rgba(255,255,255,0))}
+.ki-mark{border-style:dashed;border-color:rgba(255,255,255,.9);border-radius:50%;opacity:0}
+.ki-match{border-radius:50%;opacity:0}
+.ki-world i.ki-check{border-radius:50%;background:#f4f3f0;color:#141516;display:grid;place-items:center;opacity:0;box-shadow:0 6px 14px rgba(0,0,0,.45)}
+.ki-world i.ki-cross{border-radius:50%;background:#e9a24a;color:#1b1206;display:grid;place-items:center;opacity:0;box-shadow:0 6px 14px rgba(0,0,0,.45)}
+.ki-cross svg{width:58%;height:58%;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round}
+.ki-check svg{width:62%;height:62%;fill:none;stroke:currentColor;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* the phone next to the ledlines (same look as the app screen, with its two steps) */
+.ki-phone{position:absolute;box-sizing:border-box;border-radius:36px;border:8px solid #050506;background:var(--bg);color:var(--ink);overflow:hidden;
+  box-shadow:0 36px 60px -30px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.08);will-change:transform,opacity}
+.ki-pin{position:absolute;inset:0;padding:16px 16px 0;display:flex;flex-direction:column;gap:6px}
+.ki-stepper{position:relative;display:grid;grid-template-columns:1fr 1fr;padding-bottom:7px;margin-bottom:4px;font-size:11px;font-weight:700;color:var(--muted)}
+.ki-stepper::before,.ki-stepper>i{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:3px;background:var(--line)}
+.ki-stepper>i{background:var(--ink);transform-origin:0 50%;transform:scaleX(.5)}
+.ki-swap{display:grid}
+.ki-swap>*{grid-area:1/1}
+.ki-eyebrow{font-size:12px;font-weight:600;color:var(--muted)}
+.ki-title{font-size:21px;line-height:1.12;letter-spacing:-.02em;font-weight:800}
+.ki-sentence{font-size:12px;line-height:1.35;color:var(--muted)}
+.ki-sentence b{color:var(--ink);font-weight:700}
+.ki-tut{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;margin-top:2px;padding:3px 11px 3px 3px;border-radius:999px;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink);font-size:10.5px;font-weight:750;box-shadow:var(--surface-shadow)}
+.ki-tut i{display:grid;place-items:center;width:19px;height:19px;border-radius:50%;background:var(--ink);color:var(--panel)}
+.ki-tut svg{width:8px;height:8px;fill:currentColor;margin-left:1px}
+/* inside a strip / overview pill: colour pulse (dark layer), red for the test light, and the white chase band */
+.ki-cdim,.ki-cred,.ki-cch,.ki-ored,.ki-och,.ki-cblob{position:absolute;top:0;bottom:0;pointer-events:none}
+.ki-cblob{left:0;opacity:0}
+.ki-cdim,.ki-cred,.ki-ored{left:0;right:0;opacity:0}
+.ki-cdim{background:#000}
+.ki-cred,.ki-ored{background:#F0473D}
+.ki-cch,.ki-och{left:0;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.55) 30%,rgba(255,255,255,.95) 50%,rgba(255,255,255,.55) 70%,rgba(255,255,255,0))}
+.ki-ovlabel{font-size:11px;font-weight:650;color:var(--muted);margin-top:4px}
+.ki-ov{display:flex;gap:5px;margin:0 0 8px}
+.ki-os{position:relative;flex:1 1 0;height:10px;border-radius:2px;overflow:hidden;will-change:transform}
+.ki-ot{position:absolute;right:0;top:0;bottom:0;width:34%;transform-origin:100% 50%;transform:scaleX(0)}
+.ki-ot.l,.ki-ct.l{right:auto;left:0;transform-origin:0 50%}
+.ki-cards{position:relative}
+.ki-card{position:absolute;left:36px;right:0;box-sizing:border-box;display:grid;grid-template-columns:auto minmax(0,1fr) 32px 16px;align-items:center;gap:8px;
+  padding:0 8px 0 10px;border-radius:15px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--surface-shadow);will-change:transform}
+.ki-rank{position:absolute;left:0;width:28px;display:grid;place-items:center}
+.ki-rank b{width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--panel);display:grid;place-items:center;font-size:13px;font-weight:800}
+.ki-name{font-weight:700;font-size:13px;min-width:3.3em}
+.ki-bar{position:relative;height:10px;min-width:0;border-radius:2px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.ki-ct{position:absolute;right:0;top:0;bottom:0;width:34%;transform-origin:100% 50%;transform:scaleX(0)}
+.ki-flip{position:relative;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--soft);display:grid;place-items:center;opacity:0}
+.ki-flip svg,.ki-grip svg,.ki-test svg,.ki-done svg,.ki-next svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ki-grip{display:grid;place-items:center;color:var(--muted)}
+.ki-grip svg{fill:currentColor;stroke:none}
+.ki-ring{position:absolute;left:31px;right:-5px;border-radius:19px;border:3px solid #e9a24a;opacity:0;box-shadow:0 0 0 6px rgba(233,162,74,.18)}
+.ki-screen{position:absolute;inset:0}
+/* scene 5: ripples on purple's flip button and a label above it, while the app is zoomed in */
+.ki-halo{position:absolute;inset:-3px;border-radius:50%;border:2.5px solid #e9a24a;opacity:0}
+.ki-tip{position:absolute;left:0;top:0;width:0;height:0;opacity:0;transform-origin:0 0;z-index:2}
+.ki-tip b{position:absolute;left:0;bottom:7px;transform:translateX(-50%);white-space:nowrap;padding:6px 13px;border-radius:999px;background:#e9a24a;color:#1b1206;
+  font-size:14px;font-weight:800;box-shadow:0 8px 18px rgba(0,0,0,.3)}
+.ki-tip b::after{content:"";position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-bottom:0;border-top-color:#e9a24a}
+.ki-foot{position:absolute;left:16px;right:16px;bottom:16px;height:46px}
+.ki-foot>*{position:absolute;top:0;bottom:0}
+.ki-next{left:0;right:0;border-radius:15px;background:#1c1c1e;color:#fff;display:flex;align-items:center;justify-content:center;gap:7px;font-weight:800;font-size:15px}
+.ki-next svg{stroke-width:2.3}
+.ki-back{left:0;width:72px;border-radius:15px;background:var(--soft);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:3px;color:var(--ink);box-sizing:border-box;font-size:12.5px;font-weight:800;opacity:0}
+.ki-back svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.ki-test{left:80px;width:84px;border-radius:15px;background:var(--soft);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:5px;color:var(--ink);box-sizing:border-box;font-size:13px;font-weight:800;opacity:0}
+.ki-done{left:172px;right:0;border-radius:15px;background:#1c1c1e;color:#fff;display:flex;align-items:center;justify-content:center;gap:7px;font-weight:800;font-size:15px;opacity:0}
+body[data-theme=dark] .ki-done,body[data-theme=dark] .ki-next{background:#f4f3f0;color:#1c1c1e}
+.ki-finger{position:absolute;left:0;top:0;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(255,255,255,.88);opacity:0;
+  box-shadow:0 0 0 7px rgba(255,255,255,.22),0 10px 22px rgba(0,0,0,.45);will-change:transform,opacity}
+body[data-theme=light] .ki-finger{background:rgba(28,28,30,.55);box-shadow:0 0 0 7px rgba(28,28,30,.14),0 10px 22px rgba(0,0,0,.35)}
+.ki[data-layout=port] .ki-title{font-size:24px}
+.ki[data-layout=port] .ki-eyebrow{font-size:13px}
+.ki[data-layout=port] .ki-name{font-size:15px}
+.ki[data-layout=port] .ki-sentence{font-size:13px}
+.ki[data-layout=port] .ki-tip b{font-size:15px}
+@media (max-width:520px){.ki-top b{font-size:20px;padding-left:10px}}
+
+/* C145p: RGBW-volgorde — de kaart toont een receiver in plaats van de connector van een ledline; geen omdraaiknop */
+.kt-plug.kt-rcv{width:44px}
+.kt-app[data-mode=rgbw] .kt-card{grid-template-columns:auto minmax(0,1fr) 30px}

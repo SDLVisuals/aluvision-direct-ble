@@ -1,0 +1,68 @@
+/* Aluvision: de stijl van de tutorial "Tunneleffecten" bij RGBW (C233), uit prototype rgbw-tunnel (C145p), ongewijzigd.
+   tnw-* = de stand in de tutorial (receivers met elk 4 staande ledlines), tnm-* = de telefoon met het volgordescherm.
+   De schil (ki-*), het toestel (rti-*) en de kabels (kb-*) komen uit ledlines-tutorial.css en receivers-tab.css. */
+/* ---------- tutorial: de stand (receivers met elk 4 staande ledlines) ---------- */
+.tnw .tnw-g,.tnw .tnw-g8{position:absolute;inset:0}
+.tnw .tnw-g8{opacity:0}
+.ki-world i.tnw-bar{border-radius:2px;background:#cfcfca;box-shadow:inset 2.6px 0 0 rgba(255,255,255,.93),inset -2.6px 0 0 rgba(255,255,255,.93),inset 0 4px 0 rgba(255,255,255,.55),0 6px 12px -8px rgba(0,0,0,.7)}
+.ki-world i.tnw-glow{border-radius:44px;filter:blur(22px);opacity:0;background:#9cc3ff}
+.tnw-cab{position:absolute;left:0;top:0;overflow:visible}
+.tnw-cab path{fill:none;stroke:#f2f2ef;stroke-width:2.4;stroke-linecap:round}
+.tnw-rcv{position:absolute}
+.tnw-rcv svg{display:block;width:100%;height:100%;filter:drop-shadow(0 0 .8px rgba(255,255,255,.55))}
+.ki-world i.tnw-num{display:grid;place-items:center;font-style:normal;font-size:15px;font-weight:850;color:#d9d8d4;border-radius:50%;background:rgba(255,255,255,.08)}
+/* C146p: de kabels in de tunnelwereld, kleiner dan in de andere tutorials */
+.tnw-cab path.kb-e.sm{stroke-width:3.5}
+.tnw-cab path.kb-c.sm{stroke-width:2.5}
+.tnw-cab path.kb-h.sm{stroke-width:.8}
+.tnw-cab path.kb-e.sm.thin{stroke-width:3}
+.tnw-cab path.kb-c.sm.thin{stroke-width:2.1}
+.tnw-cab path.kb-e.blk.sm{stroke-width:4.4}
+.tnw-cab path.kb-c.blk.sm{stroke-width:3.4}
+.tnw-cab path.kb-h.blk.sm{stroke-width:.9}
+.ki-world i.tnw-pill{display:flex;align-items:center;justify-content:center;gap:8px;border-radius:999px;font-style:normal;opacity:0;font-size:13.5px;font-weight:800;color:#141516;background:#f4f3f0;box-shadow:0 8px 20px -10px #000;white-space:nowrap}
+.ki-world i.tnw-pill.no{background:#3a3b40;color:#f4f3f0}
+.ki-world i.tnw-pill.yes{background:#1FC45B;color:#fff}
+.ki-world i.tnw-pill.tip{background:#FFC61A;color:#1c1c1e}
+.ki-world i.tnw-pill em{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;color:#fff}
+.ki-world i.tnw-pill.bad em{background:#e9a24a;color:#1b1206}
+.ki-world i.tnw-pill.good em{background:#1FC45B}
+.ki-world i.tnw-pill em svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- tutorial: de telefoon met het volgordescherm (RGBW, zoals bij SPI zonder kanten) ---------- */
+.rtm.tnm{display:flex;flex-direction:column;gap:6px;padding:8px 14px 0}
+.tnm-head{display:flex;align-items:center;gap:8px}
+.tnm-head>i{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--ink);color:var(--panel)}
+.tnm-head .sp-icon{width:20px;height:20px}
+.tnm-head b{display:block;font-size:12px;font-weight:800}
+.tnm-head small{display:block;font-size:9.5px;color:var(--muted);font-weight:600}
+.tnm-zone{margin-top:4px;font-size:10px;color:var(--muted);font-weight:650}
+.tnm-title{font-size:19px;line-height:1.12;font-weight:850;letter-spacing:-.02em}
+.tnm-say{font-size:10.5px;line-height:1.35;color:var(--muted)}
+.tnm-say b{color:var(--ink)}
+.tnm-ovl{margin-top:4px;font-size:9.5px;font-weight:700;color:var(--muted)}
+.tnm-ov{position:relative;height:9px;flex:none}
+.tnm-ov>i{position:absolute;top:0;width:32.4%;height:9px;border-radius:2px;overflow:hidden}
+.tnm-band{position:absolute;top:0;bottom:0;left:0;width:45%;background:linear-gradient(90deg,rgba(255,255,255,0),#fff 45%,#fff 55%,rgba(255,255,255,0));transform:translateX(-120%)}
+.tnm-list{position:relative;display:grid;grid-template-columns:24px minmax(0,1fr);gap:8px;margin-top:6px;height:170px;flex:none}
+.tnm-ranks{position:relative}
+.tnm-ranks b{position:absolute;left:0;top:0;display:grid;place-items:center;width:24px;height:50px}
+.tnm-ranks b::before{content:"";position:absolute;z-index:-1;width:22px;height:22px;top:14px;left:1px;border-radius:50%;background:var(--ink)}
+.tnm-ranks b{color:var(--panel);font-size:11.5px;font-weight:850;z-index:0}
+.tnm-ranks b{text-indent:0}
+.tnm-cards{position:relative}
+.tnm-card{position:absolute;left:0;right:0;height:50px;display:grid;grid-template-columns:auto minmax(0,1fr) 18px;align-items:center;gap:8px;padding:0 10px;border-radius:14px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--surface-shadow);box-sizing:border-box}
+.tnm-name{font-size:13px;font-weight:800}
+.tnm-strip{display:flex;align-items:center;gap:4px;min-width:0}
+.tnm-rcv{flex:none;width:30px;height:11px}
+.tnm-rcv svg{display:block;width:100%;height:100%}
+.tnm-bar{position:relative;flex:1;height:9px;border-radius:2px;background:var(--c);overflow:hidden;box-shadow:inset 0 2px 0 rgba(255,255,255,.9),inset 0 -2px 0 rgba(255,255,255,.9)}
+.tnm-grip svg{display:block;width:16px;height:16px;fill:var(--muted)}
+.tnm-btn{position:absolute;left:14px;right:14px;bottom:10px;height:44px;border-radius:14px;background:var(--ink);color:var(--panel);display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;font-weight:800;overflow:hidden}
+.tnm-btn>i{position:absolute;inset:0;background:color-mix(in srgb,var(--panel) 30%,transparent);opacity:0}
+.tnm-btn>span,.tnm-btn>svg{position:relative}
+.tnm-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.tnm-toast{position:absolute;left:50%;bottom:64px;translate:-50% 0;padding:7px 12px;border-radius:12px;background:var(--ink);color:var(--panel);font-size:11px;font-weight:800;opacity:0;white-space:nowrap}
+
+/* staand (telefoon): de labels groter, zodat je ze kan lezen */
+.ki[data-layout=port] .ki-world i.tnw-pill{font-size:16.5px}

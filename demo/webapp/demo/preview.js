@@ -1,0 +1,1913 @@
+/* V32 presentation adapter. No storage, timers, hardware calls or runtime patches.
+ * The retained V21 engines include mirrored V32 smooth-motion/loop corrections.
+ * W is neutral white; non-static speed 0 still moves.
+ * This is a local preview, not a claim of calibrated light or firmware parity.
+ */
+(function (root, factory) {
+  const canonical = typeof module === 'object' && module.exports
+    ? require('./vendor/v21_animation_catalog.js') : root.AluvisionV21AnimationCatalog;
+  const extension = typeof module === 'object' && module.exports
+    ? require('./animation-engine.js') : root.LightningAnimationEngine;
+  const references = typeof module === 'object' && module.exports ? require('./reference-animations.js') : root.LightningReferenceAnimations;
+  const colour = typeof module === 'object' && module.exports ? require('./colour.js') : root.LightningColour;
+  const model = typeof module === 'object' && module.exports ? require('./model.js') : root.LightningModel;
+  const api = factory(canonical, extension, references, colour, model);
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.LightningPreview = api;
+}(typeof globalThis !== 'undefined' ? globalThis : this, function (canonical, extension, references, colour, model) {
+  'use strict';
+  if (!canonical) throw new Error('Load the V30 vendored animation catalog before preview.js');
+  if (!extension) throw new Error('Load animation-engine.js before preview.js');
+  if (!model) throw new Error('Load model.js before preview.js');
+  const copy = value => JSON.parse(JSON.stringify(value));
+  const number = (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback;
+  const clamp = (value, low, high, fallback = low) => Math.min(high, Math.max(low, number(value, fallback)));
+  const rgb = value => {
+    let hex = String(value || '#000000').replace(/^#/, '');
+    if (/^[\da-f]{3}$/i.test(hex)) hex = hex.split('').map(c => c + c).join('');
+    return /^[\da-f]{6}$/i.test(hex) ? [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16)) : [0, 0, 0];
+  };
+  const hex = channels => '#' + channels.map(v => Math.round(clamp(v, 0, 255)).toString(16).padStart(2, '0')).join('');
+  // Rondes per seconde van een SPI-recept, gelijk aan de receiver. C252 (mesh, 14 nov): de stroboscoop over een hele
+  // ledline (102) volgt de snelle RGBW-schaal (0,50 + n² × 11,50); de andere recepten de trage SPI-schaal (0,002 + n² × 0,80).
+  const spiRate = (variant, speed) => { const n = clamp(speed, .5, 100, 35) / 100; return Number(variant) === 102 ? .5 + n * n * 11.5 : .002 + n * n * .8; };
+  const types = type => {
+    if (!['RGBW', 'SPI'].includes(type)) throw new Error('Unknown receiver type: ' + type);
+    return type;
+  };
+  const family = effect => {
+    if (effect.tunnel || effect.kind === 'tunnel-lines') return 'Tunnel';
+    return ({ CHASE: 'Chase', COMET: 'Comet', WAVE: 'Wave', BREATHE: 'Pulse',
+      FLOW: 'Flow', GRADIENT: 'Flow', SPARKLE: 'Sparkle', SCANNER: 'Scanner',
+      MIRROR: 'Spiegel', DUAL: 'Chase', SEQUENCE: 'Sequence', CASCADE: 'Sequence',
+      ALTERNATE: 'Afwisseling', MINIMAL: 'Accent', WARM: 'Warm wit' })[effect.engine] || 'Overige';
+  };
+  const controlAliases = { width: 'widthPixels', count: 'objectCount', trail: 'trailLength' };
+  // These are complete, existing receiver recipes (SPI variants 47–49 and
+  // 73–85), not look-alike demos. Keep their wire engines/variants intact but
+  // surface the exhibition-friendly ones in the dedicated Brand collection.
+  const BRAND_SPI_VARIANTS = new Set([47,48,49,73,74,75,76,77,78,79,80,81,82,84,85]);
+  // Colour-only crossfades cover the full line continuously; a background
+  // control would do nothing there. Pulses, chases and tunnel envelopes expose
+  // the area/time outside the foreground and can blend a separate background.
+  const wholeBackground = variant => ![2, 3, 9, 10, 19, 23].includes(Number(variant));
+  const wholeColorLimit = variant => [0, 1, 4, 17].includes(Number(variant)) ? 1 : 4;
+  function controls(effect) {
+    const supported = effect.receiverType === 'SPI'
+      ? Object.keys(effect.capabilities || {}).filter(key => effect.capabilities[key])
+      : Object.keys(effect.defaults || {});
+    return supported.map(key => controlAliases[key] || key).filter(key => [
+      'speed', 'smooth', 'widthPixels', 'objectCount', 'trailLength', 'spacing',
+      'direction', 'lineDelayMs', 'spread', 'randomness'
+    ].includes(key));
+  }
+  function entry(effect, targetType, wholeLine = false) {
+    const state = canonical.effectState(effect);
+    state.on = true;
+    state.bri = state.brightness == null ? 100 : state.brightness;
+    if (wholeLine) state.previewFamily = 'RGBW';
+    const wholeFormula = effect.receiverType === 'RGBW' || wholeLine;
+    const sharedVariant = effect.sharedRgbwVariant;
+    return {
+      id: wholeLine ? 'spi-line-' + effect.engine.toLowerCase() + '-' + effect.variant
+        : targetType.toLowerCase() + '-' + effect.engine.toLowerCase() + '-' + effect.variant,
+      name: effect.name, family: family(effect), state,
+      category: family(effect) === 'Tunnel' ? 'tunnel' : wholeLine || targetType === 'RGBW' ? 'whole'
+        : BRAND_SPI_VARIANTS.has(Number(effect.variant)) ? 'brand' : 'pixels',
+      description: effect.description.nl,
+      controls: controls(effect),
+      directions: controls(effect).includes('direction') ? ['right', 'left'] : [],
+      paletteEditable: true,
+      colorCountRange: { min: 1, max: wholeFormula ? wholeColorLimit(effect.variant)
+        : sharedVariant != null ? wholeColorLimit(sharedVariant) : 4 },
+      backgroundEditable: wholeFormula ? wholeBackground(effect.variant)
+        : sharedVariant != null ? wholeBackground(sharedVariant) : true,
+      spatialResolution: wholeLine || targetType === 'RGBW' ? 'receiver' : 'pixel',
+      minimumReceivers: family(effect) === 'Tunnel' ? 2 : 1
+    };
+  }
+
+  // The standalone V21 catalog replaced only variants 104 and later. Its
+  // original app retained 0–103 in index.html, including scanners and the
+  // original chases. Keep their wire variants and accepted physical formulas,
+  // not look-alike aliases. The V32 preview mirrors current SPI scenePixel;
+  // actual C++ extraction tests cover every legacy recipe and all 4 channels.
+  // SPIANIM: 1:1 mirror of firmware AluvisionSpiAnimV1.h (two-sided tails,
+  // SPI variants 200..204 and the moving static gradient). Same formulas and
+  // the same integer hash, so the preview shows what the ledline shows.
+  const spiAnimV1 = (() => {
+    const PI=Math.PI,clamp01=x=>x<0?0:x>1?1:x,wrap01=x=>{x-=Math.floor(x);return x<0||x>=1?0:x;};
+    const ease=x=>{x=clamp01(x);return x*x*(3-2*x);};
+    const lobe=(d,w)=>{d=Math.abs(d);if(w<=0||d>=w)return 0;return .5+.5*Math.cos(PI*d/w);};
+    const light=(ahead,lead,trail)=>ahead>=0?lobe(ahead,lead):lobe(-ahead,trail);
+    const hash32=(a,b)=>{let h=(Math.imul(a>>>0,0x9E3779B1)^Math.imul((b+0x7F4A7C15)>>>0,0x85EBCA77))>>>0;
+      h=(h^(h>>>15))>>>0;h=Math.imul(h,0x2C1B3C6D)>>>0;h=(h^(h>>>12))>>>0;h=Math.imul(h,0x297A2D39)>>>0;return (h^(h>>>15))>>>0;};
+    const hash01=(a,b)=>(hash32(a,b)>>>8)/16777216;
+    const lobeCell=(delta,width)=>{const lo=Math.max(-width,delta-.5),hi=Math.min(width,delta+.5);if(hi<=lo)return 0;
+      const span=hi-lo,mid=(hi+lo)*.5;return clamp01(.5*span+width/PI*Math.cos(PI*mid/width)*Math.sin(PI*span/(2*width)));};
+    const boundedLobe=(samplePixel,position,width,pixels)=>{pixels=Math.max(1,pixels);const core=Math.min(Math.max(1,Math.round(width)),pixels);
+      if(core>=pixels)return 1;const centre=clamp01(position)*(pixels-core)+core*.5,sample=Math.round(samplePixel)+.5;
+      return clamp01(lobeCell(sample-centre,core)+lobeCell(sample+centre,core)+lobeCell(sample-(2*pixels-centre),core));};
+    const bounceVelocity=(raw,curve)=>{const triangle=raw<.5?1:-1;return triangle+(Math.sin(2*PI*raw)-triangle)*curve;};
+    const twinkle=(previous,next,life)=>(previous?1:ease(life/.5))*(next?1:ease((1-life)/.5));
+    const objects=(p,max)=>p.objects<1?1:p.objects>max?max:p.objects;
+    function meeting(p){
+      const x=(p.reverse?1-p.u:p.u)*p.n,lead=Math.max(1,p.width),trail=lead*(1+p.trail*.02),margin=lead+trail,span=p.n+2*margin,pairs=objects(p,3);
+      let sum=0,colour=0;
+      for(let k=0;k<pairs;k++){const s=wrap01(p.phase+k/pairs),a=light(x-(-margin+s*span),lead,trail),b=light((p.n+margin-s*span)-x,lead,trail);sum+=a+b;colour+=b*.5;}
+      return {amount:clamp01(sum),colour:sum>0?colour/sum:0};
+    }
+    function rain(p){
+      const x=p.u*p.n,dir=p.reverse?-1:1,drops=2+2*objects(p,4),lead=Math.max(1,p.width*.15),trail=Math.max(2,p.width*(.3+p.trail*.008)),reach=Math.max(lead,trail);
+      let sum=0,colour=0;
+      for(let k=0;k<drops;k++){
+        const t=p.cycles*3+k/drops,whole=Math.floor(t),cycle=whole>>>0,life=t-whole;
+        const start=hash01(k*977+11,cycle)*p.n,length=p.n*(.08+.12*hash01(k*977+23,cycle)),centre=start+dir*life*length,ahead=dir*(x-centre);
+        if(ahead>=reach||-ahead>=reach)continue;
+        const a=Math.sin(PI*life)*light(ahead,lead,trail);sum+=a;colour+=a*hash01(k*977+37,cycle);
+      }
+      return {amount:clamp01(sum),colour:sum>0?colour/sum:0};
+    }
+    function heartbeat(p){
+      const x=p.u*p.n,lead=Math.max(1,p.width*.5),trail=Math.max(1.5,p.width*(.8+p.trail*.012)),gap=Math.max(lead+trail*.6,p.n*.05);
+      const margin=lead+trail+gap,span=p.n+2*margin,beats=objects(p,4),out={amount:0,colour:0};
+      // C137ax: MIRROR adds the same heartbeats from the other end (both fronts meet in the middle).
+      for(let side=0;side<(p.mirror?2:1);side++){
+        const rev=side?!p.reverse:p.reverse,dir=rev?-1:1;
+        for(let k=0;k<beats;k++){
+          const s=wrap01(p.phase+k/beats),head=rev?p.n+margin-s*span:-margin+s*span;
+          const first=light(dir*(x-head),lead,trail),second=light(dir*(x-(head-dir*gap)),lead,trail)*.6,a=Math.max(first,second);
+          if(a>out.amount){out.amount=a;out.colour=k/beats;}
+        }
+      }
+      return out;
+    }
+    function rocket(p){
+      const x=(p.reverse?1-p.u:p.u)*p.n,whole=Math.floor(p.cycles),cycle=whole>>>0,t=p.cycles-whole,lead=Math.max(1,p.width*.4);
+      const burst=p.n*(.42+.36*hash01(203,cycle)),rise=.4;
+      if(t<rise){const s=t/rise,e=1-(1-s)*(1-s),head=-lead+(burst+lead)*e,trail=Math.max(2,p.width*(1+p.trail*.02))*(.4+.6*s);return {amount:light(x-head,lead,trail),colour:0};}
+      const s=(t-rise)/(1-rise),radius=p.n*.3*(.7+.3*hash01(204,cycle))*(1-(1-s)*(1-s)),fade=Math.pow(1-s,1.6),trail=Math.max(2,radius*.7+lead);
+      const outward=light(x-(burst+radius),lead,trail),inward=light((burst-radius)-x,lead,trail),core=lobe(x-burst,lead*2)*(1-s)*(1-s)*(1-s);
+      return {amount:fade*Math.max(outward,inward,core),colour:.75*s+.25*ease(s/.15)};
+    }
+    function aurora(p){
+      const u=p.reverse?1-p.u:p.u,tau=2*PI;
+      const a=.5+.5*Math.sin(tau*(u*1.25-p.phase)),b=.5+.5*Math.sin(tau*(u*.55+2*p.phase+.21)),c=.5+.5*Math.sin(tau*(u*2.1-3*p.phase+.6));
+      return {amount:.15+.85*ease(a*.55+b*.3+c*.15),colour:wrap01(u*.6+.25*Math.sin(tau*(p.phase+u*.9)))};
+    }
+    const supported=variant=>variant>=200&&variant<=204;
+    function sample(variant,p){return variant===200?meeting(p):variant===201?rain(p):variant===202?heartbeat(p):variant===203?rocket(p):variant===204?aurora(p):{amount:0,colour:0};}
+    // Moving static gradient: sampleAt(coordinate 0..1) returns the still
+    // gradient's colour there; motion 1 slide, 2 sway, 3 breathe, 4 light head.
+    function movingGradient(sampleAt,motion,pixel,total,m){
+      const x=total>1?pixel/(total-1):.5,tau=2*PI,dir=m.reverse?-1:1,soft=clamp01((Number(m.softness)||0)/100);
+      const at=y=>sampleAt(clamp01(y)),mix=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*clamp01(t)),scale=(c,level)=>c.map(v=>v*clamp01(level));
+      if(motion===1){const blend=.04+soft*.46,shift=m.bounce?.5-.5*Math.cos(tau*m.phase):m.phase,y=wrap01(x-dir*shift);let c=at(y);if(y>1-blend)c=mix(c,at(0),ease((y-(1-blend))/blend));return c;}
+      if(motion===2){const amplitude=.03+soft*.07;return at(x+amplitude*Math.sin(PI*x)*Math.sin(tau*(m.phase-dir*x)));}
+      if(motion===3){const depth=.35+soft*.6;return scale(at(x),1-depth*(.5+.5*Math.cos(tau*m.phase)));}
+      if(motion===4){
+        const t=total>1?total-1:1,xp=x*t,lead=Math.max(2,t*.025),trail=lead*(1.5+(Number(m.trail)||0)*.06);let ahead,trailNow=trail;
+        if(m.bounce){const velocity=Math.sin(tau*m.phase),head=(.5-.5*Math.cos(tau*m.phase))*t;trailNow=lead+(trail-lead)*Math.abs(velocity);ahead=(velocity>=0?1:-1)*dir*(xp-(m.reverse?t-head:head));}
+        else{const margin=lead+trail,span=t+2*margin,head=m.reverse?t+margin-m.phase*span:-margin+m.phase*span;ahead=dir*(xp-head);}
+        return scale(at(x),.18+.82*light(ahead,lead,trailNow));
+      }
+      return at(x);
+    }
+    return Object.freeze({light,lobe,hash32,hash01,lobeCell,boundedLobe,bounceVelocity,twinkle,supported,sample,movingGradient});
+  })();
+  // A gradient state moves when its variant is 210..217: 210 slide, 211 sway,
+  // 212 breathe, 213 light head; +4 flows the other way. Only state fields the
+  // native recovery validators already know (variant/speed/bounce/spread/
+  // trailLength); the wire sends VARIANT 210..213 plus MOTIONREVERSE.
+  const GRADIENT_MOTION_FIRST = 210, GRADIENT_MOTION_LAST = 217;
+  const gradientMotionOf = state => {
+    const variant = Number(state?.variant);
+    if (!Number.isInteger(variant) || variant < GRADIENT_MOTION_FIRST || variant > GRADIENT_MOTION_LAST) return null;
+    const speed = clamp(state.speed, .5, 100, 35), rate = .002 + (speed / 100) ** 2 * .8;
+    return { motion: (variant - GRADIENT_MOTION_FIRST) % 4 + 1, rate, startedAt: Number(state.previewStartedAt) || 0, phaseMs: Number(state.phaseMs) || 0,
+      reverse: variant >= GRADIENT_MOTION_FIRST + 4, bounce: state.bounce === true, softness: clamp(state.spread, 0, 100, 30), trail: clamp(state.trailLength, 0, 100, 40) };
+  };
+  const gradientMotionAt = (motion, time) => ({ ...motion, phase: (() => { const x = Math.max(0, time - motion.startedAt) * motion.rate + motion.phaseMs / 1000; return x - Math.floor(x); })() });
+
+  const legacySpi = (() => {
+    const effects = [
+      ["Static Color","STATIC","Minimal",0],
+      ["Dual Static","STATIC","Minimal",1],
+      ["Soft Gradient","GRADIENT","Gradient",2],
+      ["Multi Gradient","GRADIENT","Gradient",3],
+      ["Gradient Drift","GRADIENT","Gradient",4],
+      ["Corporate Flow","FLOW","Corporate",5],
+      ["Slow Color Flow","FLOW","Flow",6],
+      ["Elegant Chase","CHASE","Chase",7],
+      ["Soft Chase","CHASE","Chase",8],
+      ["Thin Chase","CHASE","Chase",9],
+      ["Wide Chase","CHASE","Chase",10],
+      ["Dual Chase","DUAL","Chase",11],
+      ["Multi Chase","CHASE","Chase",12],
+      ["Comet","COMET","Dynamic",13],
+      ["Soft Comet","COMET","Dynamic",14],
+      ["Moving Highlight","CHASE","Professional",15],
+      ["Double Highlight","DUAL","Professional",16],
+      ["Premium Shimmer","SPARKLE","Ambient",17],
+      ["Subtle Sparkle","SPARKLE","Ambient",18],
+      ["Slow Shimmer","SPARKLE","Ambient",19],
+      ["Satin Glow","BREATHE","Ambient",20],
+      ["Silk Flow","FLOW","Flow",21],
+      ["Breathing","BREATHE","Pulse",22],
+      ["Soft Breathing","BREATHE","Pulse",23],
+      ["Dual Breathing","BREATHE","Pulse",24],
+      ["Pulse","BREATHE","Pulse",25],
+      ["Soft Pulse","BREATHE","Pulse",26],
+      ["Traveling Pulse","CHASE","Pulse",27],
+      ["Wave","WAVE","Flow",28],
+      ["Soft Wave","WAVE","Flow",29],
+      ["Sine Wave","WAVE","Flow",30],
+      ["Dual Wave","WAVE","Flow",31],
+      ["Light Sweep","SCANNER","Dynamic",32],
+      ["Slow Sweep","SCANNER","Dynamic",33],
+      ["Edge Sweep","SCANNER","Dynamic",34],
+      ["Center Sweep","MIRROR","Dynamic",35],
+      ["Center Out","MIRROR","Dynamic",36],
+      ["Outside In","MIRROR","Dynamic",37],
+      ["Edge-to-Edge Fade","GRADIENT","Gradient",38],
+      ["Cross Fade","BREATHE","Gradient",39],
+      ["Color Fade","BREATHE","Gradient",40],
+      ["Slow Color Transition","BREATHE","Gradient",41],
+      ["Aurora Flow","FLOW","Ambient",42],
+      ["Ambient Drift","FLOW","Ambient",43],
+      ["Gentle Motion","FLOW","Ambient",44],
+      ["Minimal Accent","MINIMAL","Minimal",45],
+      ["Moving Accent","MINIMAL","Minimal",46],
+      ["Corporate Accent","FLOW","Corporate",47],
+      ["White Accent Flow","FLOW","Corporate",48],
+      ["Warm White Flow","WARM","Corporate",49],
+      ["Gallery Light","STATIC","Professional",50],
+      ["Architectural Flow","FLOW","Professional",51],
+      ["Tunnel Flow","FLOW","Professional",52],
+      ["Parallel Flow","FLOW","Professional",53],
+      ["Synchronized Sweep","SCANNER","Professional",54],
+      ["Alternating Lines","ALTERNATE","Professional",55],
+      ["Cascading Lines","CASCADE","Professional",56],
+      ["Mirror Flow","MIRROR","Professional",57],
+      ["Symmetric Chase","DUAL","Chase",58],
+      ["Asymmetric Chase","CHASE","Chase",59],
+      ["Liquid Gradient","GRADIENT","Gradient",60],
+      ["Soft Liquid","GRADIENT","Gradient",61],
+      ["Glow Trail","COMET","Dynamic",62],
+      ["Fade Trail","COMET","Dynamic",63],
+      ["Comet Trail","COMET","Dynamic",64],
+      ["Light Runner","CHASE","Dynamic",65],
+      ["Slow Runner","CHASE","Dynamic",66],
+      ["Spotlight Travel","CHASE","Professional",67],
+      ["Soft Spotlight","CHASE","Professional",68],
+      ["Gradient Pulse","BREATHE","Gradient",69],
+      ["Gradient Wave","WAVE","Gradient",70],
+      ["Gradient Chase","CHASE","Gradient",71],
+      ["Gradient Sweep","SCANNER","Gradient",72],
+      ["Brand Color Flow","FLOW","Corporate",73],
+      ["Brand Color Pulse","BREATHE","Corporate",74],
+      ["Brand Color Chase","CHASE","Corporate",75],
+      ["Exhibition Mode","FLOW","Professional",76],
+      ["Welcome Flow","FLOW","Professional",77],
+      ["Presentation Mode","BREATHE","Professional",78],
+      ["Evening Ambient","BREATHE","Ambient",79],
+      ["Product Highlight","CHASE","Professional",80],
+      ["Luxury Shimmer","SPARKLE","Ambient",81],
+      ["Calm Motion","FLOW","Ambient",82],
+      ["Minimal White","STATIC","Minimal",83],
+      ["Dynamic White","BREATHE","Minimal",84],
+      ["White Temperature Flow","WARM","Corporate",85],
+      ["Soft Strobe","SPARKLE","Dynamic",86],
+      ["Accent Flash","SPARKLE","Dynamic",87],
+      ["Sequence Fade","SEQUENCE","Dynamic",88],
+      ["Custom Timeline","SEQUENCE","Custom",89],
+      ["Line Fade Down","CASCADE","Multi-line",90,{"spread":70,"spacing":68,"speed":12,"smooth":96}],
+      ["Line Fade Up","CASCADE","Multi-line",91,{"spread":70,"spacing":68,"speed":12,"smooth":96}],
+      ["LED Line Sequence Fade","SEQUENCE","Multi-line",92,{"spread":72,"speed":11,"smooth":98,"direction":"right"}],
+      ["Panel Wave","WAVE","Multi-line",93,{"spread":64,"objectCount":1,"speed":14,"smooth":96}],
+      ["Panel Chase","CHASE","Multi-line",94,{"spread":68,"objectCount":1,"widthPixels":3,"speed":16,"smooth":94}],
+      ["Center Rows Out","MIRROR","Multi-line",95,{"spread":72,"speed":11,"smooth":98,"direction":"right"}],
+      ["Alternating Directions","DUAL","Multi-line",96,{"spread":58,"objectCount":1,"widthPixels":3,"speed":15,"smooth":95}],
+      ["Synchronized Rows","FLOW","Multi-line",97,{"spread":0,"objectCount":1,"widthPixels":3,"speed":14,"smooth":96}],
+      ["Whole Line Pulse","BREATHE","Whole-line",98,{"speed":10,"smooth":96,"spacing":34,"lineDelayMs":240}],
+      ["Whole Line Soft Fade","BREATHE","Whole-line",99,{"speed":8,"smooth":99,"spacing":24,"lineDelayMs":320}],
+      ["Whole Line Color Fade","GRADIENT","Whole-line",100,{"speed":11,"smooth":98,"spread":64,"lineDelayMs":320}],
+      ["Whole Line Smooth Transitions","FLOW","Whole-line",101,{"speed":10,"smooth":100,"spread":72,"lineDelayMs":360}],
+      ["Whole Line Flash / Strobe","SPARKLE","Whole-line",102,{"speed":18,"smooth":24,"spacing":76,"lineDelayMs":160}],
+      ["Warm Ribbon Chase","COMET","Professional",103,{"speed":68,"widthPixels":4,"smooth":92,"trailLength":78,"direction":"right","objectCount":1,"spacing":100,"bounce":false,"mirror":false}],
+      // SPIANIM: new SPI animations (firmware AluvisionSpiAnimV1.h, variants 200..204).
+      ["Meeting Lights","MIRROR","Dynamic",200,{"speed":35,"widthPixels":4,"smooth":100,"trailLength":45,"objectCount":1,"direction":"right"}],
+      ["Light Rain","SPARKLE","Ambient",201,{"speed":30,"widthPixels":3,"smooth":100,"trailLength":55,"objectCount":2,"direction":"right"}],
+      ["Heartbeat","WAVE","Pulse",202,{"speed":35,"widthPixels":3,"smooth":100,"trailLength":35,"objectCount":1,"direction":"right"}],
+      ["Rocket","COMET","Dynamic",203,{"speed":40,"widthPixels":3,"smooth":100,"trailLength":60,"objectCount":1,"direction":"right"}],
+      ["Aurora","FLOW","Ambient",204,{"speed":18,"widthPixels":3,"smooth":100,"objectCount":1,"direction":"right"}]
+    ];
+    const widthEngines = new Set(['CHASE','COMET','SCANNER','DUAL','MIRROR','MINIMAL','CASCADE','SEQUENCE','FLOW','WAVE','ALTERNATE','SPARKLE']);
+    const movingFamilies = new Set(['GRADIENT','FLOW','CHASE','COMET','SCANNER','WAVE','SEQUENCE','MIRROR','ALTERNATE','CASCADE','DUAL','MINIMAL']);
+    const clamp = (value, minimum = 0, maximum = 100, fallback = minimum) => Math.max(minimum, Math.min(maximum, Number.isFinite(Number(value)) ? Number(value) : fallback));
+    const effectWireVariant = effect => Number(effect?.[3]);
+    function effectColorCount(effect) {
+      const variant = effectWireVariant(effect);
+      if (variant === 85) return 2;
+      if ([98,99,102].includes(variant)) return 1;
+      if ([100,103].includes(variant)) return 2;
+      if (variant === 101) return 3;
+      const name = (effect?.[0] || '').toLowerCase(), engine = effect?.[1];
+      if (/multi|aurora|sequence|timeline|cascade/.test(name)) return 3;
+      return /dual/.test(name) || ['GRADIENT','FLOW','ALTERNATE'].includes(engine) ? 2 : 1;
+    }
+
+function animationDefaults(e){
+  let name=(e?.[0]||'').toLowerCase(),engine=e?.[1]||'STATIC',d={speed:18,speedMode:'slow',widthPixels:3,smooth:90,spacing:58,objectCount:1,trailLength:45,spread:55,randomness:25,bounce:false,mirror:false};
+  if(engine==='STATIC')Object.assign(d,{speed:0,widthPixels:1,smooth:100});
+  if(engine==='GRADIENT')Object.assign(d,{speed:10,speedMode:'ultra',smooth:98,spread:72});
+  if(engine==='FLOW')Object.assign(d,{speed:14,speedMode:'slow',widthPixels:Math.max(4,Math.round(25*.16)),smooth:96,objectCount:2,spacing:68,spread:62});
+  if(engine==='CHASE')Object.assign(d,{speed:18,widthPixels:3,smooth:92,objectCount:1,spacing:62});
+  if(engine==='COMET')Object.assign(d,{speed:16,widthPixels:3,smooth:94,trailLength:68,spacing:72});
+  if(engine==='SCANNER')Object.assign(d,{speed:18,widthPixels:4,smooth:94,trailLength:28,bounce:true});
+  if(engine==='SPARKLE')Object.assign(d,{speed:11,speedMode:'ultra',widthPixels:1,smooth:70,objectCount:4,randomness:32});
+  if(engine==='WAVE')Object.assign(d,{speed:14,widthPixels:Math.max(3,Math.round(25*.12)),smooth:96,objectCount:2,spacing:74,spread:65});
+  if(engine==='BREATHE'||engine==='ALL')Object.assign(d,{speed:12,speedMode:'ultra',smooth:98,spread:engine==='BREATHE'?18:50});
+  if(engine==='DUAL'||engine==='MIRROR')Object.assign(d,{speed:16,widthPixels:3,smooth:95,objectCount:2,spread:76,mirror:true});
+  if(engine==='ALTERNATE')Object.assign(d,{speed:14,widthPixels:2,smooth:84,objectCount:4,spacing:52});
+  if(engine==='CASCADE'||engine==='SEQUENCE')Object.assign(d,{speed:15,widthPixels:3,smooth:88,objectCount:4,spacing:58});
+  if(engine==='MINIMAL')Object.assign(d,{speed:12,speedMode:'ultra',widthPixels:1,smooth:96,objectCount:1,spacing:72});
+  if(engine==='WARM')Object.assign(d,{speed:8,speedMode:'ultra',smooth:100});
+  if(/slow|soft|gentle|calm|ambient|silk|satin/.test(name)){d.speed=Math.min(d.speed,10);d.speedMode='ultra';d.smooth=Math.max(d.smooth,96)}
+  if(/thin|minimal accent/.test(name))d.widthPixels=1;
+  if(/wide|spotlight/.test(name))d.widthPixels=Math.max(6,d.widthPixels);
+  if(/dual|double|symmetric/.test(name))d.objectCount=Math.max(2,d.objectCount);
+  if(/multi|cascade|sequence/.test(name))d.objectCount=Math.max(3,d.objectCount);
+  if(/trail|comet/.test(name))d.trailLength=Math.max(68,d.trailLength);
+  if(/center|mirror|symmetric/.test(name))d.mirror=true;
+  if(/line cascade up/.test(name))d.direction='right';
+  if(/line cascade down/.test(name))d.direction='right';
+  if(e?.[2]==='Multi-line')Object.assign(d,{speed:12,speedMode:'ultra',smooth:96,spacing:70,spread:70});
+  return d
+ }
+
+function effectCapabilities(e){
+  let name=(e?.[0]||'').toLowerCase(),engine=e?.[1]||'STATIC',gradientMoves=engine==='GRADIENT'&&/(drift|liquid|fade|transition)/.test(name);
+  return {
+   speed:!['STATIC'].includes(engine)&&(engine!=='GRADIENT'||gradientMoves),
+   width:widthEngines.has(engine),
+   smooth:!['STATIC','SPARKLE'].includes(engine),
+   direction:movingFamilies.has(engine)&&(engine!=='GRADIENT'||gradientMoves),
+   background:!['STATIC','GRADIENT','WARM','ALL'].includes(engine),
+   spacing:['CHASE','COMET','WAVE','FLOW','ALTERNATE','CASCADE','SEQUENCE','MINIMAL'].includes(engine),
+   count:['CHASE','COMET','WAVE','FLOW','SPARKLE','ALTERNATE','CASCADE','SEQUENCE','MINIMAL','DUAL','MIRROR'].includes(engine),
+   trail:['COMET','SCANNER'].includes(engine)||/(trail|runner|spotlight)/.test(name),
+   spread:['GRADIENT','FLOW','WAVE','BREATHE','DUAL','MIRROR'].includes(engine),
+   randomness:engine==='SPARKLE',
+   bounce:['CHASE','COMET','SCANNER','MINIMAL'].includes(engine)||/(sweep|runner|bounce)/.test(name),
+   mirror:['CHASE','COMET','SCANNER','WAVE','FLOW','MINIMAL'].includes(engine)
+  }
+ }
+
+// Staart vóór en achter (receivers/gedeeld/licht/Staart.h, docs/onderzoek/spi-staart-en-achtergrond.md §3), dezelfde formule als de
+// firmware (ALUVISION_STAART). Uit tot firmware, JS en Dart samen aangaan. staartNu = de staart van de receiver die nu getekend wordt
+// (sample() zet hem uit TAILPX/TAILSOFT van de toestand), zoals de firmware per poort.
+const STAART_AAN=false;
+const staartNu={px:0,zacht:100};
+function staartLengte(kern){return staartNu.px?Math.min(64,Math.max(4,staartNu.px)):Math.min(64,Math.max(4,kern));}
+function staartMet(d,L){if(d<=0)return 1;if(L<=0||d>=L)return 0;const t=d/L,recht=1-t,zacht=1-t*t*t*(t*(t*6-15)+10);return recht+(zacht-recht)*Math.min(100,staartNu.zacht)/100;}
+
+// Same finite, energy-preserving spatial edge as SPI softChaseAmount.
+// No afterimage/time filter: a receiver joining later renders this exact phase.
+function softChaseCoverage(distance,width,n,smooth){
+  width=clamp(Math.round(width),1,n);if(width>=n)return 1;
+  const d=Math.abs(distance)*n,half=width*.5;
+  const crisp=clamp(half+.5-d,0,1)>=.999?1:0;
+  if(STAART_AAN&&smooth){const L=staartLengte(width),soft=Math.max(staartMet(d-half,L),staartMet((n-d)-half,L)),s=clamp(smooth,0,100,100)/100,blend=s<.5?4*s*s*s:1-4*Math.pow(1-s,3);return crisp+(soft-crisp)*blend;}
+  const integral=p=>{const x=Math.abs(p),tail=1.5-x,v=x>=1.5?1:x<=.5?.5+x*(.75-x*x/3):1-tail*tail*tail/6;return p<0?1-v:v;};
+  const band=delta=>integral(delta+half)-integral(delta-half);
+  let soft=band(d);if(n-d<half+1.5)soft+=band(d-n);if(n+d<half+1.5)soft+=band(d+n);
+  const s=clamp(smooth,0,100,100)/100,blend=s<.5?4*s*s*s:1-4*Math.pow(1-s,3);
+  return crisp+(clamp(soft,0,1)-crisp)*blend;
+}
+
+// FW51's ordinary CHASE0 / Soft Chase8 use the factory-style raised-cosine
+// head AND tail. Integrating each pixel cell avoids stepping at subpixels;
+// periodic neighbours preserve WIDTHPX energy at the first/last pixel.
+// This changes shape only, never the existing shared clock or saved palette.
+function raisedCosineChaseCoverage(distance,width,n,smooth){
+  n=Math.max(1,n);width=clamp(width,1,n);if(width>=n)return 1;
+  const d=Math.abs(distance)*n,crisp=clamp(width*.5+.5-d,0,1)>=.999?1:0;
+  if(!smooth)return crisp;
+  if(STAART_AAN){const L=staartLengte(width),soft=Math.max(staartMet(d-width*.5,L),staartMet((n-d)-width*.5,L)),s=clamp(smooth,0,100,100)/100,blend=s<.5?4*s*s*s:1-4*Math.pow(1-s,3);return crisp+(soft-crisp)*blend;}
+  const cell=delta=>{
+    const lo=Math.max(-width,delta-.5),hi=Math.min(width,delta+.5);
+    if(hi<=lo)return 0;
+    const span=hi-lo,mid=(hi+lo)*.5;
+    return clamp(.5*span+width/Math.PI*Math.cos(Math.PI*mid/width)*Math.sin(Math.PI*span/(2*width)),0,1);
+  };
+  let soft=cell(d);if(n-d<width+.5)soft+=cell(d-n);if(n+d<width+.5)soft+=cell(d+n);
+  const s=clamp(smooth,0,100,100)/100,blend=s<.5?4*s*s*s:1-4*Math.pow(1-s,3);
+  return crisp+(clamp(soft,0,1)-crisp)*blend;
+}
+
+
+// SPIANIM: the scanner head with the chase's two-sided raised-cosine lobe,
+// reflected at both electrical ends (firmware raisedCosineBoundedAmount).
+function raisedCosineBoundedCoverage(samplePixel,position,width,n,smooth){
+  const core=clamp(Math.round(width),1,n);if(core>=n)return 1;
+  const center=clamp(position,0,1)*(n-core)+core*.5,sample=Math.round(samplePixel)+.5;
+  const crisp=clamp((core+1)*.5-Math.abs(sample-.5-(center-.5)),0,1)>=.999?1:0;
+  if(!smooth)return crisp;
+  if(STAART_AAN){const L=staartLengte(core),h=core*.5,soft=Math.max(staartMet(Math.abs(sample-center)-h,L),staartMet(Math.abs(sample+center)-h,L),staartMet(Math.abs(sample-(2*n-center))-h,L)),s=clamp(smooth,0,100,100)/100,blend=s<.5?4*s*s*s:1-4*Math.pow(1-s,3);return crisp+(soft-crisp)*blend;}
+  const PI=Math.PI,cell=(delta,w)=>{const lo=Math.max(-w,delta-.5),hi=Math.min(w,delta+.5);if(hi<=lo)return 0;const span=hi-lo,mid=(hi+lo)*.5;return clamp(.5*span+w/PI*Math.cos(PI*mid/w)*Math.sin(PI*span/(2*w)),0,1);};
+  const soft=clamp(cell(sample-center,core)+cell(sample+center,core)+cell(sample-(2*n-center),core),0,1);
+  const s=clamp(smooth,0,100,100)/100,blend=s<.5?4*s*s*s:1-4*Math.pow(1-s,3);
+  return crisp+(soft-crisp)*blend;
+}
+
+function continuousCascadeBrightness(phase,n,smooth){
+  phase-=Math.floor(phase);
+  const s=clamp(smooth,0,100,100)/100,blend=s<.5?4*s*s*s:1-4*Math.pow(1-s,3),edge=Math.min(.25,(1+2*blend)/Math.max(1,n));
+  let ramp=phase;
+  if(phase<edge||phase>1-edge){const unwrapped=phase<edge?phase+1:phase,t=clamp((unwrapped-(1-edge))/(2*edge),0,1);ramp=unwrapped-t*t*t*(t*(t*6-15)+10);}
+  return .6+.4*clamp(ramp,0,1);
+}
+
+function softTrailCoverage(behind,trail,n,smooth){
+  const amount=clamp(1-behind/trail,0,1),s=clamp(smooth,0,100,100)/100,blend=s<.5?4*s*s*s:1-4*Math.pow(1-s,3);
+  const legacy=Math.round(amount*65535);
+  if(!smooth)return legacy/65535;
+  const edge=Math.min(1.5,Math.max(1,n)*.5),taper=d=>{const t=clamp(d/edge,0,1);return t*t*t*(t*(t*6-15)+10);};
+  const gate=taper(behind)*taper(n-behind);
+  return Math.floor(legacy*(1+(gate-1)*blend))/65535;
+}
+
+    // V32: mirror the CURRENT SPI scenePixel implementation, not the archived
+    // V21 HTML mock-up. In particular colour/envelope quantisation, comet tails,
+    // sparkle clocks and real four-channel W must agree before screen clipping.
+    // This does not send pixels or alter the receiver's accepted effect recipes.
+    function sample(s,u,time,index,n) {
+      staartNu.px=Number.isInteger(s.tailPx)?Math.max(0,Math.min(64,s.tailPx)):0;staartNu.zacht=Number.isInteger(s.tailSoft)?Math.max(0,Math.min(100,s.tailSoft)):100;   // staart: zoals RenderFrame per poort
+      const variant=Number(s.variant),engine=s.engine||'CHASE',smooth=clamp(s.smooth,0,100,100),sm=smooth/100;
+      const curve=sm<.5?4*sm*sm*sm:1-4*Math.pow(1-sm,3),tau=Math.PI*2;
+      const wrap=x=>x-Math.floor(x),ease=x=>{x=clamp(x,0,1);return x*x*(3-2*x);};
+      const q16=x=>Math.round(clamp(x,0,1)*65535)/65535;
+      const mix=(a,b,x)=>a.map((v,i)=>v+(b[i]-v)*q16(x));
+      const animated=x=>{x=clamp(x,0,1);const step=x<.5?0:1;return step+(x-step)*curve;};
+      const mixAnimated=(a,b,x)=>mix(a,b,animated(x));
+      const blend=(a,b)=>{let delta=wrap(b)-wrap(a);if(delta>.5)delta--;if(delta<-.5)delta++;return wrap(a+delta*curve);};
+      const phaseSteps=(x,steps=16)=>smooth>=100?wrap(x):blend(Math.floor(wrap(x)*steps)/steps,wrap(x));
+      const motion=(x,width,pixels=n)=>{x=wrap(x);if(smooth>=100)return x;let pixel=x*pixels,nearest=Math.round(pixel);if(Math.abs(pixel-nearest)<.0001)pixel=nearest;return blend(wrap((Math.floor(pixel)+(Math.round(width)%2?.5:0))/pixels),x);};
+      const distance=(a,b)=>Math.min(Math.abs(a-b),1-Math.abs(a-b));
+      const thickness=(d,width,pixels=n)=>{if(width>=pixels)return 1;if(STAART_AAN&&smooth)return q16(raisedCosineChaseCoverage(d,Math.max(1,width),pixels,smooth));const coverage=clamp(width*.5+.5-d*pixels,0,1),step=coverage>=.999?1:0;return q16(step+(coverage-step)*curve);};
+      const brightness=clamp(s.brightness,0,100,100)/100;
+      // V30LiveScene.delivery scales only the sent foreground palette and
+      // uses BRIGHT=100, so the user's background dimmer stays independent.
+      // WARM alone keeps its real palette and uses the physical output dimmer.
+      const count=clamp(Math.round(s.colorCount||1),1,4),palette=Array.from({length:count},(_,i)=>[
+        ...(s.rgbEnabled?.[i]===false?[0,0,0]:rgb(s.colors?.[i])),s.whiteEnabled?.[i]===false?0:clamp(s.whiteChannels?.[i],0,255)]
+        .map(x=>engine==='WARM'?x:Math.round(x*brightness)));
+      const band=x=>palette[Math.min(count-1,Math.floor(wrap(x)*count))];
+      const gradient=(x,eased=false)=>{const scaled=wrap(x)*count,i=Math.floor(scaled),fraction=scaled-i;return mixAnimated(palette[i],palette[(i+1)%count],eased?ease(fraction):fraction);};
+      const elapsed=Math.max(0,time-(Number(s.previewStartedAt)||0)),speed=clamp(s.speed,.5,100,35),rate=spiRate(variant,speed);
+      // The 20..40 fade preserves the accepted fast recipe; it is not an
+      // optical calibration.
+      // Slow moving bands share fractional handover, not a shared effect/tail.
+      // Crisp zero, exact100, fast recipes and specialised variants stay exact.
+      const slowCorrection=variant>=90||!['CHASE','MINIMAL','FLOW','WAVE','DUAL','MIRROR','COMET','SCANNER'].includes(engine)||!smooth||smooth>=100||speed>=40?0:speed<=20?1:(()=>{const x=(speed-20)/20;return 1-x*x*x*(10+x*(-15+6*x));})();
+      const slowMotion=(x,w)=>{if(slowCorrection>=1)return wrap(x);const p=motion(x,w);if(!slowCorrection)return p;let delta=wrap(x)-wrap(p);if(delta>.5)delta--;if(delta<-.5)delta++;return wrap(p+delta*slowCorrection);};
+      const slowTrail=(behind,length)=>{const prior=softTrailCoverage(behind,length,n,smooth);if(!slowCorrection)return prior;const continuous=softTrailCoverage(behind,length,n,100);return q16(prior+(continuous-prior)*slowCorrection);};
+      const raw=wrap(elapsed*rate+(Number(s.phaseMs)||0)/1000),triangle=1-Math.abs(2*raw-1),eased=.5-.5*Math.cos(raw*tau);
+      const bounce=s.bounce?triangle+(eased-triangle)*curve:raw,left=s.direction==='left',phase=left?1-bounce:bounce,temporal=phaseSteps(phase);
+      const width=Math.max(1,Number(s.widthPixels)||3),objects=clamp(Math.round(s.objectCount||1),1,8),spacing=clamp(s.spacing,0,100,50)/100,spread=clamp(s.spread,0,100,50)/100,trail=clamp(s.trailLength,0,100,45);
+      const span=.18+spacing*.82,physical=Math.max(1,Number(s.physicalLeds)||n),offset=Number(s.receiverOffset)||0,local=(index-offset+.5)/physical;
+      let lines=Math.max(1,Number(s.lineCount)||1),line=clamp(s.lineIndex,0,lines-1);
+      // Ordinary whole-line effects are sent with one shared row/zero delay.
+      if(variant>=98&&variant<=102){lines=1;line=0;}
+      const slot=left?lines-1-line:line,delay=s.lineDelayMs!=null?Math.round(clamp(s.lineDelayMs,0,5080)/40)*.04*rate:spread*.65/Math.max(1,lines-1);
+      const linePhase=left?wrap(1-phaseSteps(raw-slot*delay)):phaseSteps(raw-slot*delay);
+      const backgroundValue=typeof s.background==='object'&&s.background?s.background:{rgb:s.background,white:s.backgroundWhite};
+      const bg=s.backgroundOn?[
+        ...(s.backgroundRgbEnabled===false?[0,0,0]:rgb(backgroundValue.rgb)),s.backgroundWhiteEnabled===false?0:clamp(backgroundValue.white,0,255)
+      ].map(x=>Math.floor(x*clamp(s.bgBrightness??s.backgroundBrightness,0,100,10)/100)):[0,0,0,0];
+      let foreground=palette[0],amount=1;
+      const sequenceSmooth=smooth&&(engine==='CASCADE'||engine==='SEQUENCE')&&!(variant>=98&&variant<=103)&&!(variant>=90&&variant<=97&&lines>1);
+      const objectAmount=()=>{let best=0;for(let k=0;k<objects;k++){
+        const position=phase+(objects===1?0:k*span/objects),original=sequenceSmooth||slowCorrection>=1?0:motion(position,width);
+        let p=sequenceSmooth||slowCorrection>=1?wrap(position):original;
+        if(slowCorrection>0&&slowCorrection<1){let delta=wrap(position)-wrap(original);if(delta>.5)delta--;if(delta<-.5)delta++;p=wrap(original+delta*slowCorrection);}
+        const coverage=target=>{const d=distance(u,target);
+          // SPIANIM: every chase and accent light has the soft head AND tail.
+          if(engine==='CHASE'||engine==='MINIMAL')return q16(raisedCosineChaseCoverage(d,width,n,smooth));
+          const prior=sequenceSmooth||slowCorrection>=1?0:q16(softChaseCoverage(d,width,n,smooth));
+          if(!sequenceSmooth&&!slowCorrection)return prior;
+          const overlap=q16(width>=n?1:clamp(width*.5+.5-d*n,0,1)),soft=q16(softChaseCoverage(d,width,n,100)),continuous=q16(overlap+(soft-overlap)*curve);
+          return sequenceSmooth||slowCorrection>=1?continuous:q16(prior+(continuous-prior)*slowCorrection);};
+        best=Math.max(best,coverage(p));if(s.mirror)best=Math.max(best,coverage(wrap(1-p)));
+      }return best;};
+      if(engine==='GRADIENT'&&variant>=210&&variant<=213){
+        // SPIANIM: menu thumbnail of the moving gradient, over the palette.
+        const at=c=>{if(count===1)return palette[0];const x=clamp(c,0,1)*(count-1),i=Math.min(count-2,Math.floor(x));return palette[i].map((v,k)=>v+(palette[i+1][k]-v)*(x-i));};
+        foreground=spiAnimV1.movingGradient(at,variant-209,index,n,{phase:raw,reverse:left,bounce:s.bounce===true,softness:spread*100,trail});amount=1;
+      }else if(spiAnimV1.supported(variant)){
+        // SPIANIM: same parameters as firmware scenePixel (u over the group,
+        // shared phase, the unwrapped cycle count for per-cycle choices).
+        const m=spiAnimV1.sample(variant,{u,n,phase:raw,cycles:elapsed*rate+(Number(s.phaseMs)||0)/1000,width,trail,objects,reverse:left,mirror:s.mirror===true});
+        foreground=gradient(m.colour,true);amount=q16(m.amount);
+      }else if(variant===103){
+        const head=motion(left?1-raw:raw,width),behind=wrap(left?u-head:head-u)*n,ribbon=Math.max(width,Math.min(Math.max(1,n-.5),n*trail/100));
+        const fade=Math.max(width*(.35+1.15*sm),ribbon*(.04+.08*sm)),warmZone=Math.min(ribbon,Math.max(fade*2,width*2));
+        const edge=Math.min(1.5,Math.min(Math.max(1,n),ribbon)*.5),taper=d=>{const x=clamp(d/edge,0,1);return clamp(x*x*x*(x*(x*6-15)+10),0,1);};
+        const gate=smooth?taper(behind)*taper(ribbon-behind)*taper(n-behind):1;
+        if(STAART_AAN&&smooth){const L=staartLengte(width),tail=ease((ribbon-behind+.5)/Math.max(L,fade))*taper(ribbon-behind)*taper(n-behind),voor=staartMet(wrap(left?head-u:u-head)*n,L);amount=q16(Math.max(tail,voor));}
+        else amount=q16(ease((ribbon-behind+.5)/Math.max(.5,fade))*ease((behind+.5)/(.45+sm))*gate);
+        foreground=mixAnimated(palette[0],palette[count>1?1:0],ease((behind-(ribbon-warmZone))/Math.max(.5,warmZone)));
+      }else if(variant>=98&&variant<=102){
+        foreground=band(linePhase);
+        if(variant===98){amount=q16(.1+.9*(.5-.5*Math.cos(linePhase*tau)));if(smooth)foreground=gradient(linePhase,true);}
+        else if(variant===99)amount=q16(ease(1-Math.abs(2*linePhase-1)));
+        else if(variant===100)foreground=gradient(linePhase);
+        else if(variant===101)foreground=gradient(linePhase,true);
+        else amount=linePhase<.04+.22*sm?1:0;
+      }else if(variant>=90&&variant<=97&&lines>1){
+        const row=line/Math.max(1,lines-1),panelRaw=phaseSteps(raw-slot*delay,Math.max(16,lines)),panel=left?wrap(1-panelRaw):panelRaw;
+        const rowWidth=Math.max(1,1+width/physical*lines);
+        if(variant===90||variant===91){let sweep=variant===91?1-panel:panel;const feather=(rowWidth*.5+.5)/lines;sweep+=(sweep*2-1)*feather*curve;amount=thickness(Math.abs(row-sweep),rowWidth,lines);foreground=palette[line%count];}
+        else if(variant===92){const active=Math.min(lines-1,Math.floor(panel*lines)),next=(active+1)%lines,fade=ease(panel*lines-active),old=line===active?1:0,continuous=line===active?1-fade:line===next?fade:0;amount=q16(old+(continuous-old)*curve);foreground=palette[line%count];}
+        else if(variant===93){amount=q16(Math.pow(.5+.5*Math.sin((local-panel+row*spread)*tau*objects),.8));foreground=gradient(row+local);}
+        else if(variant===94){const continuous=left?wrap(1-wrap(raw-slot*delay)):wrap(raw-slot*delay),p=smooth?wrap(continuous-row*spacing/lines):motion(panel-row*spacing/lines,width,physical),d=distance(local,p);amount=smooth?q16(width>=physical?1:clamp(width*.5+.5-d*physical,0,1)):thickness(d,width,physical);foreground=palette[line%count];}
+        else if(variant===95){const centre=(lines-1)*.5,d=Math.abs(line-centre)/Math.max(1,centre),feather=(rowWidth*.5+.5)/lines,sweep=panel+(panel*2-1)*feather*curve;amount=thickness(Math.abs(d-sweep),rowWidth,lines);foreground=band(Math.min(d,.999999));}
+        else if(variant===96){const p=motion(line%2?1-panel:panel,width,physical);amount=thickness(distance(local,p),width,physical);foreground=palette[line%count];}
+        else{const p=motion(panel,width,physical);amount=thickness(distance(local,p),width,physical);foreground=gradient(local);}
+      }else if(engine==='STATIC')foreground=band(u);
+      else if(engine==='GRADIENT')foreground=gradient(u*(1+spread*3)-temporal*(variant===60||variant%6!==0?1:0));  // C137ax: forward drifts towards the end
+      else if(engine==='FLOW'||engine==='WAVE'){foreground=gradient(u*(1+spread*2)-temporal);amount=objectAmount();}
+      else if(engine==='BREATHE'){
+        foreground=gradient(u);const clock=phaseSteps(elapsed*(.35+speed/100*2.2)/tau+(left?u:-u)*spread);  // C137ax
+        // Match sinf's signed half-cycle boundary before the deliberate 0%
+        // hard cut. Double precision rounds the exact pi crossing differently.
+        const sine=Math.fround(Math.sin(Math.fround(clock*Math.fround(tau))));
+        amount=q16(Math.fround(.5+Math.fround(.5*sine)));
+      }
+      else if(engine==='SPARKLE'){
+        const clock=Math.fround(Math.fround(elapsed)*Math.fround(3+speed*.22)),tick=Math.floor(clock),seed=Math.max(0,Math.floor(index/width));
+        const threshold=Math.min(820,8+clamp(s.randomness,0,100,25)*2+objects*9);
+        const lit=t=>((Math.imul(seed,1103515245)+Math.imul(t,12345)+Math.imul(variant,7919))>>>0)%1000<threshold;
+        foreground=band(seed/7);amount=lit(tick)?1:0;
+        // SPIANIM: a twinkle fades in and out; strobe recipes 86/87 stay hard.
+        if(amount&&smooth&&variant!==86&&variant!==87){const soft=spiAnimV1.twinkle(lit(tick-1),lit(tick+1),clock-tick);amount=q16(1+(soft-1)*curve);}
+      }else if(engine==='SCANNER'){
+        const continuousPosition=left?1-(s.bounce?bounce:raw):(s.bounce?bounce:raw);const core=clamp(Math.round(width),1,n),travel=Math.max(1,n-core),step=Math.round(continuousPosition*travel)/travel;let p=step+(continuousPosition-step)*curve;
+        if(slowCorrection)p+=(continuousPosition-p)*slowCorrection;
+        // SPIANIM: the chase's two-sided lobe, reflected at both ends.
+        const coverage=position=>q16(raisedCosineBoundedCoverage(u*n-.5,position,core,n,smooth));
+        foreground=gradient(temporal);amount=coverage(p);if(s.mirror)amount=Math.max(amount,coverage(1-p));
+        if(trail){const length=Math.max(1,width*(1+trail/12));
+          if(s.bounce&&smooth){
+            // The tail follows the travel direction and shrinks to nothing at
+            // both turns, so it changes side without a cut.
+            const velocity=spiAnimV1.bounceVelocity(raw,curve),centre=clamp(p,0,1)*(n-core)+core*.5;
+            const behind=(left?-1:1)*(velocity>=0?1:-1)*(centre-(Math.round(u*n-.5)+.5));
+            // C248 (firmware, de eigenaar 14 nov: "chases met staart van voor en vanachter"): ook vóór de kop, even lang
+            {const a=slowTrail(Math.abs(behind),length)*Math.abs(velocity);amount=Math.max(amount,Math.floor(a*65535*.72)/65535);}
+          }else{const tail=wrap(left?u-p:p-u),ahead=wrap(left?p-u:u-p),a=Math.max(slowTrail(tail*n,length),slowTrail(ahead*n,length));amount=Math.max(amount,Math.floor(a*65535*.72)/65535);}}   // C248: vóór en achter
+      }else if(engine==='DUAL'||engine==='MIRROR'){
+        foreground=gradient(u-temporal);amount=0;const copies=Math.max(2,objects);/*C137ax*/
+        for(let k=0;k<copies;k++){const p=slowMotion(phase+k*(.35+spread*.65)/copies,width);amount=Math.max(amount,q16(raisedCosineChaseCoverage(distance(u,p),width,n,smooth)),q16(raisedCosineChaseCoverage(distance(u,wrap(1-p)),width,n,smooth)));}
+      }else if(engine==='COMET'){
+        foreground=gradient(temporal);amount=0;
+        // C248 (firmware, de eigenaar 14 nov): de zachte staart ligt vóór én achter de kop, even lang
+        for(let k=0;k<objects;k++){const p=slowMotion(phase+(objects===1?0:k*span/objects),width),tail=wrap(left?u-p:p-u),ahead=wrap(left?p-u:u-p),tl=Math.max(1,width*(1.4+trail*.09)),a=Math.max(slowTrail(tail*n,tl),slowTrail(ahead*n,tl));amount=Math.max(amount,q16(raisedCosineChaseCoverage(distance(u,p),width,n,smooth)),Math.floor(a*65535*.88)/65535);
+          // C137ax: MIRROR adds the comet from the other end, tail trailing the other way.
+          if(s.mirror){const t=wrap(1-p),tt=wrap(left?t-u:u-t),ta=wrap(left?u-t:t-u),b=Math.max(slowTrail(tt*n,Math.max(1,width*(1.4+trail*.09))),slowTrail(ta*n,Math.max(1,width*(1.4+trail*.09))));amount=Math.max(amount,q16(raisedCosineChaseCoverage(distance(u,t),width,n,smooth)),Math.floor(b*65535*.88)/65535);}}
+      }else if(engine==='ALTERNATE'){
+        const bandWidth=Math.max(1,Math.round(width)),gap=Math.max(1,Math.floor(Math.fround(bandWidth*Math.fround(.3+spacing*2.7)))),period=bandWidth+gap,p=motion(phase,width),centre=(bandWidth-1)*.5;
+        const cyclicDistance=Math.max(period,Math.round(n/period)*period),continuous=phaseSteps(phase)*cyclicDistance,travel=smooth?phase*cyclicDistance:p*n+(continuous-p*n)*curve;
+        foreground=palette[Math.floor(Math.floor(u*n)/period)%count];let delta=u*n-.5-travel-centre;/*C137ax: forward towards the end*/delta-=Math.floor(delta/period+.5)*period;
+        const c=clamp((bandWidth+1)*.5-Math.abs(delta),0,1),a=c>=.999?1:0;
+        const integral=p=>{const x=Math.abs(p),tail=1.5-x,v=x>=1.5?1:x<=.5?.5+x*(.75-x*x/3):1-tail*tail*tail/6;return p<0?1-v:v;};
+        const band=x=>integral(x+bandWidth*.5)-integral(x-bandWidth*.5);
+        const soft=STAART_AAN?(()=>{const L=Math.min(staartLengte(bandWidth),Math.max(2,gap*.5)),h=bandWidth*.5;return Math.max(staartMet(Math.abs(delta)-h,L),staartMet(Math.abs(delta-period)-h,L),staartMet(Math.abs(delta+period)-h,L));})():clamp(band(delta)+band(delta-period)+band(delta+period),0,1);amount=q16(smooth?c+(soft-c)*curve:a);
+      }else if(engine==='CASCADE'||engine==='SEQUENCE'){
+        const q=wrap(u-(smooth?phase:temporal));foreground=mix(palette[Math.min(Math.floor(q*objects),objects-1)%count],gradient(q,true),curve);
+        if(smooth){const scaled=wrap(q)*count,i=Math.floor(scaled);foreground=mix(palette[i],palette[(i+1)%count],ease(scaled-i));}amount=objectAmount();
+        if(engine==='CASCADE')amount=Math.floor(amount*65535*(smooth?continuousCascadeBrightness(q,n,smooth):(60+Math.floor(q*40))/100))/65535;
+      }else if(engine==='WARM'){
+        const clock=phaseSteps(temporal-u*.72);/*C137ax*/
+        foreground=count===1?palette[0].map(channel=>channel*(.68+.32*ease(.5+.5*Math.sin(clock*tau)))):gradient(clock,true);
+      }else if(engine==='ALL')foreground=gradient(temporal);
+      else{foreground=gradient(temporal);amount=objectAmount();}
+      const priorChannels=(engine==='ALTERNATE'||sequenceSmooth||variant===94&&lines>1)&&smooth?mix(bg,foreground,amount):slowCorrection>=1?null:mixAnimated(bg,foreground,amount);
+      const channels=variant===98?mix(bg,foreground,amount):slowCorrection>=1?mix(bg,foreground,amount):slowCorrection>0?mix(priorChannels,mix(bg,foreground,amount),slowCorrection):priorChannels,bright=engine==='WARM'?(palette.some(c=>c.some(x=>x!==0))?brightness:0):1;
+      return channels.slice(0,3).map(x=>Math.round(clamp(255-(255-x*bright)*(1-channels[3]*bright/255),0,255)));
+    }
+    function catalog() {
+      return effects.filter(effect=>effect[1]!=='STATIC').map(effect=>{
+        const [name,engine,,variant,overrides={}]=effect;
+        const count=effectColorCount(effect);
+        // The installed W emitter is neutral/cool, not inherently warm. Use
+        // an explicit, editable red-dominant RGB + W mix, without a Kelvin
+        // claim. New defaults only: never overwrite saved customer palettes.
+        const whiteMixPreset=[48,49,79,84,85].includes(variant);
+        const palette=variant===85?['#FF2D00','#400A00']:engine==='WARM'?['#FF2D00']:whiteMixPreset?['#400A00','#803000']:variant===103 ? ['#FFF4D4','#F3A24D'] : ['#C94E46','#F0B95F','#669CC6'];
+        const whites=variant===85?[128,220]:engine==='WARM'?[128]:whiteMixPreset?[220,190]:Array(count).fill(0);
+        const state={animation:name,engine,variant,legacySpi:true,previewStartedAt:0,phaseMs:0,
+          colors:palette.slice(0,count),whiteChannels:whites.slice(0,count),
+          rgbEnabled:Array(count).fill(true),whiteEnabled:Array(count).fill(true),colorCount:count,
+          on:true,power:true,bri:100,brightness:100,backgroundOn:false,background:'#000000',
+          backgroundWhite:0,bgBrightness:10,direction:'right',...animationDefaults(effect),...overrides};
+        let capabilities=effectCapabilities(effect);
+        if(variant===103) capabilities={speed:true,width:true,smooth:true,direction:true,trail:true};
+        else if(variant>=200&&variant<=203) capabilities={speed:true,width:true,direction:true,trail:true,count:variant!==203,mirror:variant===202}; // C137ax: Hartslag reads MIRROR (second front from the other end)
+        else if(variant===204) capabilities={speed:true,direction:true};
+        else if(variant>=98&&variant<=102) {
+          capabilities={speed:true,smooth:true,direction:true};
+          state.lineDelayMs=0;
+        }
+        else if(variant>=90&&variant<=97) {
+          // The original multiline editor narrowed these controls beyond
+          // the engine-family defaults: a row fade has no pixel width, for
+          // example, and Fade Up/Down already encode their direction.
+          capabilities={speed:true,smooth:true,lineDelayMs:true,
+            width:[94,96,97].includes(variant),direction:![90,91].includes(variant),
+            spacing:[90,91,94,96,97].includes(variant),count:[93,94,96,97].includes(variant),
+            mirror:[94,96,97].includes(variant)};
+          state.lineDelayMs=240;
+        }
+        const controlKeys=Object.keys(capabilities).filter(key=>capabilities[key]&&key!=='background').map(key=>controlAliases[key]||key);
+        const descriptions={
+          GRADIENT:'Kleuren lopen geleidelijk in elkaar over over de pixels.',
+          FLOW:'Gekleurde lichtbanden bewegen over de LED Line.',
+          CHASE:'Een of meer lichtpunten volgen elkaar over de LED Line.',
+          COMET:'Een lichtkop met een uitlopende staart reist over de pixels.',
+          SCANNER:'Een lichtbundel beweegt heen en terug over de LED Line.',
+          MIRROR:'Een gespiegelde beweging op beide zijden van de LED Line.',
+          DUAL:'Twee of meer gespiegelde lichtpunten bewegen samen.',
+          SPARKLE:'Afzonderlijke pixels lichten kort op.',
+          BREATHE:'Lichtsterkte neemt geleidelijk toe en af.',
+          WAVE:'Lichtgolven bewegen over de pixels.',
+          WARM:'Warm licht en wit gaan zacht in elkaar over.',
+          ALTERNATE:'Lichtbanden en kleuren wisselen elkaar af.',
+          CASCADE:'Lichtbewegingen volgen elkaar op.',
+          SEQUENCE:'Een reeks kleuren beweegt over de pixels.',
+          MINIMAL:'Een compact lichtaccent beweegt over de LED Line.'
+        };
+        const category=variant>=90&&variant<=97?'tunnel':variant>=98&&variant<=102?'whole'
+          :BRAND_SPI_VARIANTS.has(Number(variant))?'brand':'pixels';
+        const entryFamily=category==='tunnel'?'Tunnel':family({engine});
+        return {id:'spi-'+engine.toLowerCase()+'-'+variant,name,family:entryFamily,state,
+          category,legacy:true,source:'v21-inline-catalog',paletteEditable:true,whiteMixPreset,
+          colorCountRange:{min:1,max:variant===85?2:engine==='WARM'||[90,91,92,94,96,98,99,102].includes(variant)?1:variant===103?2:4},
+          backgroundEditable:variant===103||!['STATIC','GRADIENT','WARM','ALL'].includes(engine)&&![100,101].includes(variant),
+          description:variant===49?'Een warme RGB + W-mix ademt rustig. Pas de witmix aan voor jouw ledline.':variant===85?'Warm en zacht wit gaan rustig in elkaar over. Beide witmixen zijn instelbaar.':category==='tunnel'?'Een bestaande beweging verdeeld over meerdere LED Lines.':
+            category==='whole'?'De volledige SPI LED Line neemt samen dezelfde kleur of fade aan.':descriptions[engine],
+          controls:controlKeys,directions:controlKeys.includes('direction')?['right','left']:[],
+          minimumReceivers:category==='tunnel'?2:1,
+          spatialResolution:category==='whole'||[90,91,92,95].includes(variant)?'receiver':'pixel'};
+      });
+    }
+    // SPIANIM: "Verloop in beweging" menu entry. Choosing it opens the gradient
+    // editor in motion mode (app.js); it never plays as an animation itself.
+    // Its thumbnail slides the palette like the moving gradient does.
+    function catalogWithMotion(){
+      const list=catalog(),drift=list.find(effect=>effect.state.variant===4);
+      if(drift)list.push({...drift,id:'spi-gradient-210',name:'Moving gradient',family:'Verloop in beweging',gradientMotion:true,
+        controls:[],directions:[],description:'Je eigen verloop schuift, golft, ademt of krijgt een lichtkop.',
+        state:{...drift.state,animation:'Moving gradient',variant:210,speed:35,spread:30,trailLength:40,bounce:false}});
+      return list;
+    }
+    return {sample,catalog:catalogWithMotion,staartAan:STAART_AAN};
+  })();
+
+  const FRESH_ANIMATION_COLOURS = Object.freeze(['#FF0000','#00FF00','#0000FF','#FF8000','#FFFF00','#00FFFF','#8000FF']);
+  const LOCALIZED_SPI_MOTION = new Set(['CHASE','COMET','SCANNER','MIRROR','DUAL','MINIMAL','CASCADE','SEQUENCE','WAVE','SPARKLE','ALTERNATE']);
+  const localizedSpiMotion = effect => effect?.spatialResolution === 'pixel' && effect.category === 'pixels' && LOCALIZED_SPI_MOTION.has(effect.state?.engine);
+  function gallerySample(effect, { state = effect?.state, pixels = 32 } = {}) {
+    if (!effect || !state || typeof state !== 'object' || Array.isArray(state)) throw new Error('Invalid gallery sample');
+    const sampleState = copy(state), basePixels = Math.round(clamp(pixels, 1, 163, 32));
+    if (!localizedSpiMotion(effect)) {
+      // 14 nov (telefoon): "Onthullen vanuit het donker" (FLOW 121: 20 px licht, 20 px tussenruimte) bleef op 32 pixels
+      // altijd donker; vanaf 96 pixels komt het licht in beeld.
+      const reveal = sampleState.engine === 'FLOW' && Number(sampleState.variant) === 121;
+      return Object.freeze({ state: sampleState, pixels: reveal ? Math.max(96, basePixels) : basePixels });
+    }
+    // Disposable recipe illustration only. A 20-pixel object on the old
+    // 32-pixel sample filled most of the strip and obscured the actual motion.
+    // Keep its real width/formula, show enough surrounding pixels, and use a
+    // dark backdrop. Never run this helper on the live installation preview.
+    Object.assign(sampleState, { backgroundOn: false, background: '#000000', backgroundWhite: 0,
+      backgroundRgbEnabled: true, backgroundWhiteEnabled: false, bgBrightness: 0, backgroundBrightness: 0 });
+    const width = clamp(sampleState.widthPixels, 1, 163, 20), trail = clamp(sampleState.trailLength, 0, 100, 45);
+    // The retained COMET formula has a genuine width*(1.4+trail*.09) tail.
+    // Do not crop that tail into a full glowing strip on a tiny thumbnail.
+    const tailPixels = sampleState.engine === 'COMET' ? width * (1.4 + trail * .09) * 1.25 : 0;
+    return Object.freeze({ state: sampleState, pixels: Math.min(163, Math.max(96, basePixels, Math.ceil(width * 6), Math.ceil(tailPixels))) });
+  }
+  function freshAnimationDefaults(effect) {
+    // Descriptor creation ONLY: never run this on a receiver, saved preset or
+    // restored scene. Explicit white/brand/reference recipes retain their
+    // intentional mix. Ordinary new choices use clear RGB, not an old pastel
+    // showcase palette or an invisible W-emitter slot inherited from V21.
+    if (effect.whiteMixPreset || effect.category === 'brand' || effect.state.engine === 'WARM' ||
+      effect.id.startsWith('v31-ref-') || effect.id.startsWith('v30-seven-')) return effect;
+    const state = effect.state, count = Math.max(1, state.colors?.length || state.colorCount || 1);
+    const colors = Array.from({length:count}, (_,index) => FRESH_ANIMATION_COLOURS[index % FRESH_ANIMATION_COLOURS.length]);
+    return {...effect,state:{...state,colors,whiteChannels:colors.map(()=>0),rgbEnabled:colors.map(()=>true),
+      whiteEnabled:colors.map(()=>false),backgroundWhite:0,backgroundWhiteEnabled:false,
+      ...(localizedSpiMotion(effect)?{backgroundOn:false,background:'#000000',bgBrightness:0,backgroundBrightness:0}:{}),
+      // Existing mapping: 45% is about6.1s, close to the6s factory wave.
+      // Only a fresh SPI starter uses it; saved speed/smooth remain untouched.
+      ...(effect.id==='spi-chase-8'?{speed:45,smooth:100}:{})}};
+  }
+  function buildCatalog(type) {
+    types(type);
+    // Static color is its own page, not an animation. Include the real existing
+    // whole-line formulas on SPI as well, without remapping their wire variant.
+    const whole = canonical.rgbwEffects.filter(effect => effect.engine !== 'STATIC' && effect.kind === 'whole-line');
+    const preserved = type === 'RGBW'
+      ? canonical.rgbwEffects.filter(effect => effect.engine !== 'STATIC').map(effect => entry(effect, type))
+      : legacySpi.catalog().concat(canonical.spiEffects.map(effect => entry(effect, type)), whole.map(effect => entry(effect, type, true)));
+    return preserved.concat(extension.catalog(type),references.catalog(type)).map(freshAnimationDefaults).map(effect => {
+      // New built-in choices start at the editor's requested width. This is a
+      // descriptor default only: saved light states are never rewritten, and
+      // recipes without an editable pixel width retain their original shape.
+      if (!effect.controls.includes('widthPixels')) return effect;
+      return { ...effect, state: { ...effect.state, widthPixels: model.DEFAULT_ANIMATION_WIDTH } };
+    });
+  }
+  const catalogSnapshots = new Map();
+  function freezeCatalog(value) {
+    if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+      Object.values(value).forEach(freezeCatalog);
+      Object.freeze(value);
+    }
+    return value;
+  }
+  // Read-only descriptors are installation-independent. Reusing them avoids
+  // rebuilding every recipe for each activeEffect/palette/scene lookup.
+  // Keep catalog()'s original fresh/mutable return contract for other callers.
+  function catalogSnapshot(type) {
+    types(type);
+    if (!catalogSnapshots.has(type)) catalogSnapshots.set(type, freezeCatalog(buildCatalog(type)));
+    return catalogSnapshots.get(type);
+  }
+  function catalog(type) { return copy(catalogSnapshot(type)); }
+  const descriptors = new Map(['RGBW', 'SPI'].flatMap(type => catalogSnapshot(type).map(effect =>
+    [effect.state.v30Effect || [type, effect.state.engine, effect.state.variant, effect.state.previewFamily || ''].join(':'), effect])));
+  function descriptorFor(receiver) {
+    const state = receiver.state || {};
+    return descriptors.get(state.v30Effect || [receiver.type, state.engine, state.variant, state.previewFamily || ''].join(':'));
+  }
+  function categoryFor(receiver) { return descriptorFor(receiver)?.category; }
+  function defaultWidthPixels(receiver) {
+    const effect = descriptorFor(receiver);
+    return effect?.controls.includes('widthPixels') ? model.DEFAULT_ANIMATION_WIDTH
+      : effect?.state.widthPixels ?? 4;
+  }
+  function selected(receiver, selection) {
+    return !selection || selection.kind === 'all' ||
+      (selection.kind === 'receiver' && selection.receiverId === receiver.id) ||
+      (selection.kind === 'receivers' && Array.isArray(selection.receiverIds) && selection.receiverIds.includes(receiver.id)) ||
+      (['line','lines'].includes(selection.kind) && model.ledlines([receiver]).some(line =>
+        selection.kind === 'line' ? selection.lineId === line.id :
+          Array.isArray(selection.lineIds) && selection.lineIds.includes(line.id)));
+  }
+  const lineSelection = selection => ['line','lines'].includes(selection?.kind);
+  const selectedLine = (lineId, selection) => selection?.kind === 'line' ? selection.lineId === lineId :
+    selection?.kind === 'lines' && Array.isArray(selection.lineIds) && selection.lineIds.includes(lineId);
+  function geometry(receivers, layout = 'stacked', { lineOrder } = {}) {
+    if (!Array.isArray(receivers)) throw new Error('Receivers must be an array');
+    const seen = new Set();
+    const lines = model.ledlines(receivers, lineOrder);
+    const explicitOrder = lineOrder !== undefined;
+    let offset = 0;
+    const mapped = receivers.map((receiver, lineIndex) => {
+      types(receiver.type);
+      if (!receiver.id || seen.has(receiver.id)) throw new Error('Receiver identity must be unique');
+      seen.add(receiver.id);
+      let localOffset = 0;
+      const receiverLines = lines.filter(line => line.receiverId === receiver.id);
+      // Raw sample arrays keep DIN-to-DOUT order. A drag changes only global
+      // placement, never electrical port order, reversal or local offsets.
+      const outputs = receiver.type === 'RGBW' ? [] : receiverLines.slice().sort((a,b)=>a.port-b.port).map(output => {
+        const pixels = output.pixels;
+        const result = { port: output.port, pixels, reversed: Boolean(output.reversed),
+          offset: output.offset, localOffset: output.localOffset, lineId: output.id,
+          lineIndex: output.lineIndex, lineCount: output.lineCount };
+        localOffset += pixels;
+        return result;
+      });
+      const result = { receiverId: receiver.id,
+        lineIndex: explicitOrder && receiverLines.length ? Math.min(...receiverLines.map(line=>line.lineIndex)) : lineIndex,
+        lineCount: explicitOrder ? lines.length : receivers.length,
+        pixelCount: receiver.type === 'RGBW' ? 1 : localOffset,
+        offset: explicitOrder && receiverLines.length ? Math.min(...receiverLines.map(line=>line.offset)) : offset, outputs };
+      offset += result.pixelCount;
+      return result;
+    });
+    return { layout, totalPixels: offset, receivers: mapped, lines };
+  }
+  function ledlineCount(receivers) { return model.ledlines(receivers).length; }
+  function normalizeState(receiver) {
+    const state = copy(receiver.state || {});
+    const isStatic = !state.engine || String(state.engine).toUpperCase() === 'STATIC';
+    state.engine = isStatic ? 'STATIC' : String(state.engine).toUpperCase();
+    if (isStatic) { state.animation = 'Static Color'; state.variant = 0; }
+    if (!Array.isArray(state.colors) || !state.colors.length) state.colors = [hex([state.r == null ? 255 : state.r, state.g || 0, state.b || 0])];
+    if (!Array.isArray(state.whiteChannels)) state.whiteChannels = [clamp(state.w, 0, 255, 0)];
+    state.colorCount = Math.round(clamp(state.colorCount, 1, state.v30Effect ? Math.max(1, state.colors.length) : 4, state.colors.length));
+    state.brightness = clamp(state.bri == null ? state.brightness : state.bri, 0, 100, 100);
+    state.smooth = clamp(state.smooth, 0, 100, 100);
+    // Old saved presets may predate the explicit marker. Real SPI variants
+    // 0–103 always belong to the preserved inline engine, except the shared
+    // RGBW whole-line formulas which are explicitly marked previewFamily.
+    // SPIANIM: variants 200..204 are rendered by the same inline sampler.
+    state.legacySpi = receiver.type === 'SPI' && !isStatic && !state.v30Effect &&
+      state.previewFamily !== 'RGBW' && Number.isInteger(Number(state.variant)) &&
+      (Number(state.variant) >= 0 && Number(state.variant) <= 103 || spiAnimV1.supported(Number(state.variant)) ||
+       state.engine === 'GRADIENT' && Number(state.variant) >= 210 && Number(state.variant) <= 213);
+    if (state.legacySpi && !Number.isFinite(Number(state.previewStartedAt))) state.previewStartedAt = 0;
+    // The earlier non-tunnel engine treats zero as pause. The V30 UI instead
+    // promises its slowest speed. Keep every other speed/formula unchanged.
+    if (!isStatic) state.speed = clamp(state.speed, state.v30Effect ? 0 : 0.5, 100, 35);
+    // Resolve an absent old field for display/transport only; do not mutate
+    // stored presets or replace any explicit width selected by the customer.
+    if (!isStatic && state.widthPixels == null) state.widthPixels = defaultWidthPixels(receiver);
+    return state;
+  }
+  // A speed edit changes the slope of the preview clock, not its position.
+  // Keep sub-pixel precision locally; only the native request builder rounds
+  // its existing PHASEMS field. This does not restart or command a receiver.
+  function retimeMotion(before, after, time, { lineCount = 1 } = {}) {
+    if (!Number.isFinite(time) || time < 0) throw new Error('Invalid preview edit clock');
+    if (!before || !after || before.id !== after.id || before.type !== after.type ||
+        before.standId !== after.standId || before.zoneId !== after.zoneId) return after;
+    const old = normalizeState(before), next = normalizeState(after);
+    if (old.engine === 'STATIC' || next.engine === 'STATIC' || old.v30Effect || next.v30Effect ||
+        old.engine !== next.engine || Number(old.variant) !== Number(next.variant) ||
+        old.previewFamily !== next.previewFamily || old.speed === next.speed) return after;
+    // These recipes also use independent seconds-based breathe/grain clocks.
+    // Do not reset those clocks as a side effect of correcting motion phase.
+    if ((old.legacySpi && Number(old.variant) < 98 && ['BREATHE', 'SPARKLE'].includes(old.engine)) ||
+        (after.type === 'SPI' && !old.legacySpi && !old.previewFamily && [117, 125].includes(Number(old.variant)))) return after;
+    const wrap = value => value - Math.floor(value);
+    const phase = old.legacySpi
+      ? wrap(Math.max(0, time - (Number(old.previewStartedAt) || 0)) *
+          spiRate(old.variant, old.speed) + (Number(old.phaseMs) || 0) / 1000)
+      : canonical.phaseFor({ ...old, lineCount }, time, old.previewFamily === 'RGBW' ? 'RGBW' : before.type);
+    if (!Number.isFinite(phase)) return after;
+    return { ...after, state: { ...after.state, previewStartedAt: time, phaseMs: wrap(phase) * 1000 } };
+  }
+  // M9 wit warm ↔ koud (STAND_WHITE, C266; docs/onderzoek/wit-warm-koud-voorstel.md, firmware licht/WitTint.h): één keuze voor de hele
+  // stand, -100 koud … +100 warm. Per pixel met wit W, vóór de helderheid: warm R += 0,35·W·t, G += 0,16·W·t; koud G += 0,08·W·|t|,
+  // B += 0,30·W·|t|; W ×= 1 − 0,15·|t|; elk kanaal hoogstens 255. Zonder W verandert niets. Dart: Tekenaar.witTintPixel.
+  let whiteTint = 0;
+  function setWhiteTint(value) { const v = Math.round(Number(value)); whiteTint = Number.isFinite(v) ? Math.max(-100, Math.min(100, v)) : 0; return whiteTint; }
+  function tintRGBW(rgb, w) {
+    if (!whiteTint || !(w > 0)) return [rgb, w];
+    const t = whiteTint / 100, a = Math.abs(t);
+    let [r, g, b] = rgb;
+    if (t > 0) { r += w * 0.350 * t; g += w * 0.160 * t; } else { g += w * 0.080 * a; b += w * 0.300 * a; }
+    return [[Math.min(255, r), Math.min(255, g), Math.min(255, b)], Math.min(255, w * (1 - 0.150 * a))];
+  }
+  function opticalWhite(raw) {
+    const fg = tintRGBW(raw.rgb.map(c => clamp(c, 0, 255)), clamp(raw.white, 0, 255));
+    const bg = raw.background ? tintRGBW(raw.background.rgb, raw.background.white) : null;
+    const sample = { ...raw, rgb: fg[0], white: fg[1], background: raw.background ? { ...raw.background, rgb: bg[0], white: bg[1] } : raw.background };
+    const amount = clamp(sample.amount, 0, 1, 0);
+    const background = sample.background;
+    // Interpolate/dim R/G/B/W independently, exactly like receiver output.
+    // Compose the limited screen RGB only afterwards, never round it early.
+    const brightness = sample.brightness == null ? 1 : sample.brightness;
+    const backgroundWhite = background ? background.white * background.brightness : 0;
+    const white = (backgroundWhite + (clamp(sample.white, 0, 255) * brightness - backgroundWhite) * amount) / 255;
+    return sample.rgb.map((channel, index) => {
+      const base = background ? background.rgb[index] * background.brightness : 0;
+      const linear = base + (clamp(channel, 0, 255) * brightness - base) * amount;
+      return Math.round(clamp(255 - (255 - linear) * (1 - white), 0, 255));
+    });
+  }
+  function backgroundSample(state) {
+    if (!state.backgroundOn) return null;
+    const value = typeof state.background === 'object' && state.background
+      ? state.background : { rgb: state.background || '#000000', white: state.backgroundWhite || 0 };
+    return {
+      rgb: state.backgroundRgbEnabled === false ? [0, 0, 0] : rgb(value.rgb),
+      white: state.backgroundWhiteEnabled === false ? 0 : clamp(value.white, 0, 255),
+      brightness: clamp(state.bgBrightness == null ? state.backgroundBrightness : state.bgBrightness, 0, 100, 10) / 100
+    };
+  }
+  // Saved public line IDs describe a gradient span, never transport authority.
+  // Resolve against the complete physical preview geometry and same-zone
+  // source receivers; missing members must not silently stretch the gradient.
+  function gradientPlacement(receiver, output, group, sourceReceivers, gradientDomains, domainResolver) {
+    if(!Object.hasOwn(receiver.state||{},'staticGradientGroup')&&!Object.hasOwn(receiver.state||{},'staticGradientDomain'))return undefined;
+    try{
+      const G=typeof module==='object'&&module.exports?require('./static-gradient.js'):globalThis.LightningStaticGradient;
+      const sources=new Map(sourceReceivers.map(row=>[row.id,row])),owner=sources.get(receiver.id);
+      if(!owner||typeof owner.standId!=='string'||!owner.standId||typeof owner.zoneId!=='string'||!owner.zoneId||
+         owner.standId!==receiver.standId||owner.zoneId!==receiver.zoneId)return null;
+      const lines=group.lines.filter(line=>{
+        const source=sources.get(line.receiverId);
+        return line.type==='SPI'&&source?.standId===owner.standId&&source?.zoneId===owner.zoneId;
+      });
+      const members=Object.hasOwn(receiver.state,'staticGradientDomain')?(domainResolver?domainResolver(receiver.state.staticGradientDomain):G.domainGroup(gradientDomains,receiver.state.staticGradientDomain)):receiver.state.staticGradientGroup;
+      return G.groupPlacements(lines,members).find(line=>line.id===output.lineId)||null;
+    }catch(_){return null;}
+  }
+  // LINESLOTS (tijdlijn C109bj): with lineSlots/lineSlotCount in the light
+  // state, preview line k uses LINEINDEX=lineSlots[k] and LINECOUNT=lineSlotCount,
+  // exactly like the native wire, so the preview shows the stand's pauses.
+  // Missing, invalid, or a line count that does not match: unchanged.
+  function lineSlotsOf(state) {
+    const slots = state && state.lineSlots, total = state && state.lineSlotCount;
+    if (!Array.isArray(slots) || !slots.length || slots.length > 128 || !Number.isInteger(total) || total < 1 || total > 256 ||
+      !slots.every(slot => Number.isInteger(slot) && slot >= 0 && slot < total)) return null;
+    return { slots, total };
+  }
+  function slotted(lineSlots, index, count) {
+    if (!lineSlots || lineSlots.slots.length !== count || !Number.isInteger(index) || index < 0 || index >= count) return { index, count };
+    return { index: lineSlots.slots[index], count: lineSlots.total };
+  }
+  function sample(receiver, sceneGeometry, time = 0, sourceReceivers = [receiver], gradientUnavailable = null, gradientDomains = undefined, domainResolver = null) {
+    types(receiver.type);
+    const group = sceneGeometry || geometry([receiver]);
+    const geo = group.receivers.find(item => item.receiverId === receiver.id);
+    if (!geo) throw new Error('Receiver is not in the full-zone geometry');
+    if (receiver.type === 'SPI' && group.layout !== 'continuous' && receiver.state?.portStates) {
+      // Separate SPI outputs may have independent lighting intent and clocks.
+      // Keep the full-zone physical indices/directions, but sample each port
+      // with only its own override. Continuous mode always uses the one shared
+      // receiver intent; a stale separate override cannot break that strip.
+      return geo.outputs.flatMap(output => sample({...receiver,state:model.lightStateFor(receiver,output.port)},
+        {...group,receivers:group.receivers.map(item => item.receiverId === receiver.id
+          ? {...item,pixelCount:output.pixels,outputs:[output]} : item)},time,sourceReceivers,gradientUnavailable,gradientDomains,domainResolver));
+    }
+    if(receiver.type==='SPI'&&receiver.state?.engine==='STATIC_GRADIENT'){
+      const G=typeof module==='object'&&module.exports?require('./static-gradient.js'):globalThis.LightningStaticGradient;
+      const gradient=G.decodeRecipe(receiver.state.staticGradientRecipe);
+      if(receiver.state.on===false||receiver.state.power===false)return Array.from({length:geo.pixelCount},()=>[0,0,0]);
+      return geo.outputs.flatMap(output=>{
+        const placement=gradientPlacement(receiver,output,group,sourceReceivers,gradientDomains,domainResolver);
+        if(placement===null){gradientUnavailable?.add(output.port);return Array.from({length:output.pixels},()=>[0,0,0]);}
+        const total=placement?placement.total:group.layout==='continuous'?group.totalPixels:output.pixels;
+        const offset=placement?placement.offset:group.layout==='continuous'?output.offset:0;
+        // SPIANIM: a moving gradient (variant 210..217) on the shared clock.
+        const motion=gradientMotionOf(receiver.state),moving=motion&&gradientMotionAt(motion,time);
+        const sampleAt=coordinate=>G.sample(gradient.stops,Math.round((gradient.reverse?1-coordinate:coordinate)*65535)/65535).map(c=>c*gradient.brightness/100);
+        return Array.from({length:output.pixels},(_,pixel)=>{
+          const physical=output.reversed?output.pixels-1-pixel:pixel;
+          if(moving)return spiAnimV1.movingGradient(sampleAt,moving.motion,offset+physical,total,moving).map(c=>Math.round(c));
+          let index=offset+physical;if(gradient.reverse)index=total-1-index;
+          const position=total===1?32768:Math.round(index*65535/(total-1));
+          return G.sample(gradient.stops,position/65535).map(c=>Math.round(c*gradient.brightness/100));
+        });
+      });
+    }
+    const state = normalizeState(receiver);
+    const background = descriptorFor(receiver)?.backgroundEditable ? backgroundSample(state) : null;
+    const continuous = group.layout === 'continuous';
+    const lineSlots = continuous ? null : lineSlotsOf(state);
+    if (state.on === false || state.power === false) return Array.from({ length: geo.pixelCount }, () => [0, 0, 0]);
+    const isStatic = state.engine === 'STATIC';
+    if (!isStatic && state.v30Effect) {
+      const receiverSlot = slotted(lineSlots, geo.sampleIndex??geo.lineIndex, geo.sampleCount??geo.lineCount);
+      const input = { state, receiverIndex: receiverSlot.index, receiverCount: receiverSlot.count,
+        receiverType: receiver.type, time, pixelCount: geo.pixelCount,
+        totalPixels: group.totalPixels, layout: group.layout };
+      const engine=references.supports(state.v30Effect)?references:extension;
+      if (receiver.type === 'RGBW') return [engine.sample({ ...input, pixelIndex: 0, globalPixel: geo.offset })];
+      return geo.outputs.flatMap(output => { const outputSlot = slotted(lineSlots, output.sampleIndex??output.lineIndex, output.sampleCount??output.lineCount);
+        return Array.from({ length: output.pixels }, (_, pixel) => {
+        const oriented = output.reversed ? output.pixels - 1 - pixel : pixel;
+        return engine.sample({ ...input,
+          ...(continuous ? {} : { receiverIndex: outputSlot.index, receiverCount: outputSlot.count, pixelCount: output.samplePixels??output.pixels }),
+          pixelIndex: continuous ? output.localOffset + oriented : (output.sampleOffset??0)+oriented, globalPixel: output.offset + oriented });
+      }); });
+    }
+    if (isStatic || receiver.type === 'RGBW' || state.previewFamily === 'RGBW') {
+      const lineColour = (index, count) => {
+        ({ index, count } = slotted(lineSlots, index, count));
+        const value = canonical.sampleRgbwLine(background ? { ...state, brightness: 100 } : state, index, count, time);
+        if (background) Object.assign(value, { background, brightness: state.brightness / 100 });
+        return opticalWhite(value);
+      };
+      if (receiver.type === 'RGBW' || continuous || isStatic) {
+        const colour = lineColour(geo.lineIndex, geo.lineCount);
+        return Array.from({ length: geo.pixelCount }, () => colour.slice());
+      }
+      return geo.outputs.flatMap(output => {
+        const colour = lineColour(output.lineIndex, output.lineCount);
+        return Array.from({ length: output.pixels }, () => colour.slice());
+      });
+    }
+    // Physical placement is calculated from ALL zone members, including
+    // offline receivers; selecting one receiver must never close a gap.
+    return geo.outputs.flatMap(output => {
+      const total = continuous ? group.totalPixels : output.pixels;
+      const outputSlot = slotted(lineSlots, output.lineIndex, output.lineCount);
+      const sampleState = Object.assign({}, state, {
+        // Continuous is one logical strip. Keep the actual output geometry
+        // for electrical placement only, never as a new animation boundary.
+        groupPixels: total, physicalLeds: total,
+        receiverOffset: 0,
+        lineIndex: continuous ? 0 : outputSlot.index, lineCount: continuous ? 1 : outputSlot.count
+      });
+      const legacyState = state.legacySpi ? { ...sampleState, backgroundOn: Boolean(background) } : null;
+      return Array.from({ length: output.pixels }, (_, pixel) => {
+        const oriented = output.reversed ? output.pixels - 1 - pixel : pixel;
+        const position = (continuous ? output.offset : 0) + oriented;
+        if (legacyState) return legacySpi.sample(legacyState, (position + 0.5) / total, time, position, total);
+        const value = canonical.sampleSpiPixel(sampleState,
+          (position + 0.5) / total, time, total, continuous ? 0 : outputSlot.index, continuous ? 1 : outputSlot.count);
+        // The preserved engine supplies the true coverage envelope. V30 exposes
+        // that existing foreground/background split without changing its recipe.
+        value.background = background;
+        return opticalWhite(value);
+      });
+    });
+  }
+  function checkedSamplingGeometry(candidate,physical) {
+    const invalid=()=>{throw new Error('Invalid internal sampling geometry');};
+    if(!candidate||typeof candidate!=='object'||!Array.isArray(candidate.receivers)||candidate.receivers.length!==physical.receivers.length)invalid();
+    const stripped=JSON.parse(JSON.stringify(candidate));let count=null;
+    const integer=(value,min,max)=>Number.isInteger(value)&&value>=min&&value<=max;
+    for(const receiver of stripped.receivers){
+      const original=physical.receivers.find(row=>row.receiverId===receiver.receiverId);if(!original)invalid();
+      if(!integer(receiver.sampleCount,2,256)||!integer(receiver.sampleIndex,0,receiver.sampleCount-1))invalid();
+      if(count!==null&&receiver.sampleCount!==count)invalid();count=receiver.sampleCount;
+      delete receiver.sampleIndex;delete receiver.sampleCount;
+      if(!Array.isArray(receiver.outputs))invalid();
+      for(const output of receiver.outputs){
+        if(!integer(output.sampleCount,2,256)||output.sampleCount!==count||!integer(output.sampleIndex,0,count-1)||
+           !integer(output.samplePixels,output.pixels,model.LIMITS.continuousPixels)||!integer(output.sampleOffset,0,output.samplePixels-output.pixels))invalid();
+        delete output.sampleIndex;delete output.sampleCount;delete output.samplePixels;delete output.sampleOffset;
+      }
+    }
+    // Only the four bounded sample coordinates may differ. Electrical/visual
+    // identity, line order, physical lengths/reversal and all other fields match.
+    if(JSON.stringify(stripped)!==JSON.stringify(physical))invalid();
+    return candidate;
+  }
+  function rows(options) {
+    let domainResolver=null;
+    if(options.gradientDomains!==undefined){try{const G=typeof module==='object'&&module.exports?require('./static-gradient.js'):globalThis.LightningStaticGradient;domainResolver=G.domainResolver(options.gradientDomains);}catch(_){domainResolver=()=>{throw Error('GRADIENT_SCOPE');};}}
+    const receivers = options.receivers || [];
+    const physical = geometry(options.geometryReceivers || receivers, options.layout, {lineOrder:options.lineOrder});
+    const group = options.samplingGeometry===undefined?physical:checkedSamplingGeometry(options.samplingGeometry,physical);
+    // The editor draft spans only the selected physical SPI lines, in saved
+    // order. Presentation (stacked/continuous) never changes this span.
+    // This overlays pixels only; receiver state and transport stay untouched.
+    const gradientDraftRows = new Map();
+    if (options.gradientDraft) {
+      const G=typeof module==='object'&&module.exports?require('./static-gradient.js'):globalThis.LightningStaticGradient;
+      const draft=G.decodeRecipe(options.gradientDraft),byId=new Map(receivers.map(r=>[r.id,r]));
+      const lines=physical.lines.filter(line=>line.type==='SPI'&&byId.has(line.receiverId)&&
+        (lineSelection(options.selection)?selectedLine(line.id,options.selection):selected(byId.get(line.receiverId),options.selection)));
+      const total=lines.reduce((sum,line)=>sum+line.pixels,0);
+      // SPIANIM: the editor's motion choice moves the draft live.
+      const draftMotion=gradientMotionOf(options.gradientMotion),draftMoving=draftMotion&&gradientMotionAt(draftMotion,options.time||0);
+      const draftAt=coordinate=>G.sample(draft.stops,Math.round((draft.reverse?1-coordinate:coordinate)*65535)/65535).map(c=>c*draft.brightness/100);
+      let offset=0;
+      for(const line of lines){
+        const pixels=Array.from({length:line.pixels},(_,pixel)=>{
+          let index=offset+(line.reversed?line.pixels-1-pixel:pixel);
+          if(draftMoving)return spiAnimV1.movingGradient(draftAt,draftMoving.motion,index,total,draftMoving).map(c=>Math.round(c));
+          if(draft.reverse)index=total-1-index;
+          const position=total===1?32768:Math.round(index*65535/(total-1));
+          return G.sample(draft.stops,position/65535).map(c=>Math.round(c*draft.brightness/100));
+        });
+        if(!gradientDraftRows.has(line.receiverId))gradientDraftRows.set(line.receiverId,new Map());
+        gradientDraftRows.get(line.receiverId).set(line.port,pixels);
+        offset+=line.pixels;
+      }
+    }
+    const frame = {
+      geometry: group,
+      rows: receivers.map(receiver => {
+        const outputs = group.receivers.find(item => item.receiverId === receiver.id).outputs;
+        const gradientUnavailable = new Set();
+        const pixels = sample(receiver, group, options.time || 0, options.geometryReceivers || receivers, gradientUnavailable, options.gradientDomains, domainResolver);
+        const gradientPorts=gradientDraftRows.get(receiver.id);
+        if(gradientPorts)for(const output of outputs){
+          const draft=gradientPorts.get(output.port);if(!draft)continue;
+          for(let pixel=0;pixel<draft.length;pixel++)pixels[output.localOffset+pixel]=draft[pixel];
+        }
+        const blink = options.identifying?.get?.(receiver.id);
+        const identificationTime = number(options.identificationTime, options.time || 0);
+        const elapsed = blink ? identificationTime - number(blink.startedAt, identificationTime) : -1;
+        const ports = blink?.scope === 'all' ? outputs.map(output => output.port)
+          : Array.isArray(blink?.ports) ? blink.ports.map(Number) : [];
+        const identifying = Boolean(blink && elapsed >= 0 && Number.isFinite(blink.until) &&
+          identificationTime < blink.until && (receiver.type === 'RGBW' || outputs.some(output => ports.includes(output.port))));
+        // Identification is a presentation overlay, never a new saved colour.
+        // Its clock is separate from the animation clock so it can run while
+        // an effect is paused. The caller decides when to show this preview;
+        // it is not evidence that a physical receiver accepted a command.
+        let identificationPixels = null;
+        if (identifying) {
+          const level = options.reducedMotion ? 1 : .16 + .84 * (.5 - .5 * Math.cos(elapsed * 4.4));
+          const white = Math.round(58 + 197 * level);
+          identificationPixels = pixels.map((pixel, index) => receiver.type === 'RGBW' ||
+            outputs.some(output => ports.includes(output.port) && index >= output.localOffset && index < output.localOffset + output.pixels)
+            ? [white, white, white] : pixel.slice());
+        }
+        // Arrangement colours are an independent, temporary output overlay.
+        // Sample the normal effect underneath it; closing the menu therefore
+        // reveals its CURRENT phase, never a saved snapshot from menu entry.
+        const orderColours=options.identificationColours;
+        if(orderColours?.size){
+          const assigned=outputs.filter(output=>orderColours.has(receiver.id+':'+output.port));
+          const rgbw=receiver.type==='RGBW'?orderColours.get(receiver.id+':0'):null;
+          if(rgbw||assigned.length){
+            const previous=identificationPixels||pixels;
+            identificationPixels=previous.map((pixel,index)=>{
+              const output=assigned.find(output=>index>=output.localOffset&&index<output.localOffset+output.pixels);
+              const colour=rgbw||(output&&orderColours.get(receiver.id+':'+output.port));
+              if(!colour)return pixel.slice();
+              // Optional extra recognition pulses this line's OWN colour.
+              // Never replace every coloured line with the same white flash.
+              const blinkThisLine=identifying&&(receiver.type==='RGBW'||ports.includes(output?.port));
+              const gain=blinkThisLine&&!options.reducedMotion?
+                .3+.7*(.5-.5*Math.cos(elapsed*4.4)):1;
+              return colour.map(channel=>Math.round(clamp(channel,0,255)*gain));
+            });
+          }
+        }
+        return { receiverId: receiver.id, name: receiver.name || 'Receiver', type: receiver.type,
+          category: categoryFor(receiver), selected: selected(receiver, options.selection),
+          individuallySelected: (options.selection?.kind === 'receiver' || options.selection?.kind === 'receivers') && selected(receiver, options.selection),
+          offline: receiver.connection === 'offline', pixels, outputs, identifying, identificationPixels,
+          ...(gradientUnavailable.size?{gradientUnavailablePorts:Array.from(gradientUnavailable)}:{}) };
+      })
+    };
+    const individualFeedback = options.selectionFeedback === true &&
+      !(options.layout === 'continuous' && frame.rows.every(row => row.type === 'SPI'));
+    frame.highlightedReceiverIds = individualFeedback
+      ? frame.rows.filter(row => row.individuallySelected).map(row => row.receiverId) : [];
+    frame.identifyingReceiverIds = frame.rows.filter(row => row.identifying).map(row => row.receiverId);
+    if (options.lineOrder !== undefined || lineSelection(options.selection)) {
+      const byReceiver = new Map(frame.rows.map(row=>[row.receiverId,row]));
+      // Expose a physical projection separately: rows remains the unchanged
+      // receiver-scoped/electrical sample contract used by live control.
+      frame.lineRows = group.lines.filter(line=>byReceiver.has(line.receiverId)).map(line=>{
+        const row = byReceiver.get(line.receiverId), output = row.outputs.find(item=>item.port===line.port);
+        const start = output?.localOffset || 0, blink = options.identifying?.get?.(line.receiverId);
+        return {...row,port:line.port,lineId:line.id,lineIndex:line.lineIndex,lineCount:line.lineCount,
+          offset:line.offset,localOffset:line.localOffset,
+          ...(lineSelection(options.selection)?{selected:selectedLine(line.id,options.selection),
+            individuallySelected:selectedLine(line.id,options.selection)}:{}),
+          pixels:row.pixels.slice(start,start+line.pixels),outputs:output?[{...output,localOffset:0}]:[],
+          identifying:row.identifying && (row.type==='RGBW'||blink?.scope==='all'||Array.isArray(blink?.ports)&&blink.ports.map(Number).includes(line.port)),
+          identificationPixels:row.identificationPixels?row.identificationPixels.slice(start,start+line.pixels):null};
+      });
+    }
+    frame.highlightedLineIds = individualFeedback && lineSelection(options.selection)
+      ? (frame.lineRows || []).filter(row=>row.individuallySelected).map(row=>row.lineId) : [];
+    return frame;
+  }
+  function rounded(context, x, y, width, height, radius) {
+    context.beginPath();
+    if (context.roundRect) context.roundRect(x, y, width, height, radius);
+    else context.rect(x, y, width, height);
+  }
+  // Diffuser depth belongs only to the canvas material, never the sampled
+  // light. Shade across the strip, not along it: an RGBW line stays one colour
+  // end to end and neighbouring SPI pixels never blend into each other.
+  // Every stop is the same RGB ratio; pure red cannot gain white/blue from a
+  // decorative highlight. The central lens retains the exact sampled RGB.
+  const diffuserStops = [[0,.66],[.16,.92],[.40,1],[.72,1],[1,.62]];
+  function diffuser(context, colour, css, crossStart, thickness, vertical, materials) {
+    if (materials.has(css)) return materials.get(css);
+    let material = css;
+    if (typeof context.createLinearGradient === 'function') {
+      const gradient = vertical
+        ? context.createLinearGradient(crossStart,0,crossStart + thickness,0)
+        : context.createLinearGradient(0,crossStart,0,crossStart + thickness);
+      // Canvas-less test hosts and old drawing adapters may lack gradients.
+      // Their solid fallback preserves exactly the same light and geometry.
+      if (gradient && typeof gradient.addColorStop === 'function') {
+        diffuserStops.forEach(([position,shade]) => gradient.addColorStop(position,
+          'rgb(' + colour.map(channel => Math.round(channel * shade)).join(',') + ')'));
+        material = gradient;
+      }
+    }
+    materials.set(css,material);
+    return material;
+  }
+  // The user-confirmed frontal aluminium tunnel from bb93c89. Only its camera
+  // and materials return: every light arch still uses one actual receiver row.
+  // Arc-length sampling prevents a slow chase from speeding up in the bends.
+  function tunnelCurveSamples(curve) {
+    const segments=curve.slice(1).map((control,index)=>[
+      curve[index].slice(-2),control.slice(0,2),control.slice(2,4),control.slice(4,6)]);
+    const raw = [], distances = [0];
+    segments.forEach((segment, part) => {
+      for (let step = part ? 1 : 0; step <= 48; step++) {
+        const t=step/48, s=1-t;
+        const p=[0,1].map(axis=>s*s*s*segment[0][axis]+3*s*s*t*segment[1][axis]+3*s*t*t*segment[2][axis]+t*t*t*segment[3][axis]);
+        if(raw.length)distances.push(distances.at(-1)+Math.hypot(p[0]-raw.at(-1)[0],p[1]-raw.at(-1)[1]));
+        raw.push(p);
+      }
+    });
+    let cursor=1;
+    return Array.from({length:129},(_,index)=>{
+      const distance=index/128*distances.at(-1);
+      while(cursor<distances.length-1&&distances[cursor]<distance)cursor++;
+      const ratio=(distance-distances[cursor-1])/(distances[cursor]-distances[cursor-1]);
+      return [0,1].map(axis=>raw[cursor-1][axis]+(raw[cursor][axis]-raw[cursor-1][axis])*ratio);
+    });
+  }
+  const tunnelInner=[[82,224],[55,196,40,162,43,122],[46,76,82,40,132,40],[181,40,216,73,220,123],[221,163,206,195,182,224]];
+  const tunnelOuter=[[60,224],[20,190,12,148,18,110],[24,47,72,14,132,14],[194,14,241,59,244,116],[246,159,230,194,206,224]];
+  const tunnelRim=tunnelOuter.map((points,index)=>points.map((value,axis)=>(value+tunnelInner[index][axis])/2));
+  tunnelRim[0]=[83,240];tunnelRim[1][0]=57;tunnelRim[1][1]=211;
+  tunnelRim[4][2]=207;tunnelRim[4][3]=211;tunnelRim[4][4]=183;tunnelRim[4][5]=240;
+  const tunnelCurve=tunnelCurveSamples(tunnelInner),tunnelOuterCurve=tunnelCurveSamples(tunnelOuter),tunnelFasciaCurve=tunnelCurveSamples(tunnelRim);
+  function tunnelProjection(lineCount, width=360, height=240, framing='') {
+    const count=Math.max(0,Math.floor(number(lineCount,0)));
+    width=Math.max(1,number(width,360));height=Math.max(1,number(height,240));
+    // Preserve the proportions of the original 360x260 illustration, including
+    // its slightly off-centre vanishing point. Never stretch the circular face
+    // to fit a wide gallery card or turn it back into an upright U-shaped arch.
+    const focused=framing==='focus';
+    // Retain the familiar front-facing tunnel. Reserve only the bottom number
+    // row; adding labels must not turn its nested arches into a sideways train.
+    const unit=focused?Math.max(.001,Math.min(Math.max(1,width-48)/260,Math.max(1,height-52)/224)):
+      Math.min(width/360,height/260),offset=[(width-360*unit)/2,(height-260*unit)/2];
+    const screen=focused?(x,y)=>[width/2+(x-132)*unit,
+      5+(y-14)*unit+Math.max(0,(height-52-224*unit)/2)]:
+      (x,y)=>[offset[0]+(x+44)*unit,offset[1]+(y+5)*unit];
+    const point=(x,y,scale)=>screen(164+(x-164)*scale,108+(y-108)*scale);
+    const project=(scale,curve=tunnelCurve)=>curve.map(([x,y])=>point(x,y,scale));
+    const floor=(left,right,near=1.1,far=.48)=>[point(left,224,near),point(right,224,near),point(right,224,far),point(left,224,far)];
+    const front=project(1), back=project(.48);
+    const arches=Array.from({length:count},(_,index)=>{
+      const depth=(index+.5)/count,scale=Math.pow(.48,depth);
+      // Each selected line gets its own depth. More lines narrow the diffuser
+      // instead of clipping the rear lines or imposing the old four-line cap.
+      const spacing=184*unit*scale*(1-Math.pow(.48,1/Math.max(1,count)));
+      const thickness=Math.max(.45,Math.min(3.2*unit*scale,spacing*.55));
+      return {index,depth,scale,thickness,points:project(scale),
+        panel:[...project(Math.pow(.48,index/count)),...project(Math.pow(.48,(index+1)/count)).reverse()]};
+    });
+    return {width,height,unit,arches,front,back,vanishing:point(164,108,1),
+      outer:project(1,tunnelOuterCurve),outerBack:project(.48,tunnelOuterCurve),fascia:project(1,tunnelFasciaCurve),
+      groundY:point(132,224,1)[1],shadow:screen(132,231),exitCentre:point(132,129,.48),floor:floor(82,182),inlay:floor(109,155),
+      exitFloor:floor(82,182,.48,.08),exitInlay:floor(109,155,.48,.08),
+      ...(focused?{minimumWidth:Math.max(176,count*44)}:{})};
+  }
+  const tunnelProjectionCache=new Map();
+  // Identification can name the visible zone lines locally without changing
+  // their shared animation ordinals. Only explicit physical-line labels take
+  // precedence; ordinary previews retain their global geometry numbering.
+  function spatialLineNumber(frame,row,rowIndex,lineNumbers) {
+    const local=lineNumbers?.[row.lineId];
+    return Number.isInteger(local)&&local>0?local:
+      (row.lineIndex??frame.geometry.receivers.find(item=>item.receiverId===row.receiverId)?.lineIndex??rowIndex)+1;
+  }
+  function spatialIdentity(row) {
+    return {receiverId:row.receiverId,
+      ...(row.lineId?{lineId:row.lineId}:row.type==='RGBW'?{lineId:row.receiverId+':0'}:{}),
+      ...(Number.isInteger(row.port)?{port:row.port}:row.type==='RGBW'?{port:0}:{})};
+  }
+  const spatialInteractionCache=new Map();
+  function spatialInteractions(frame,paths,width,height,anchors,shape,framing='') {
+    // Geometry and identities do not change with animation/selection state.
+    // Cache only this presentation metadata, not pixels or light settings.
+    const key=JSON.stringify([shape,framing,width,height,frame.rows.map(row=>[row.receiverId,row.lineId,row.port])]);
+    if(spatialInteractionCache.has(key))return spatialInteractionCache.get(key);
+    const marginX=Math.min(framing==='focus'?22:13,width/2),marginY=Math.min(framing==='focus'?22:13,height/2);
+    const result={
+      paths:frame.rows.map((row,index)=>({...spatialIdentity(row),
+        points:paths[index].map(([x,y])=>[x/width,y/height]),tolerancePx:12})),
+      badges:frame.rows.map((row,index)=>({...spatialIdentity(row),
+        x:clamp(anchors[index].x,marginX,width-marginX)/width,
+        y:clamp(anchors[index].y,marginY,height-marginY)/height,
+        pathX:anchors[index].path[0]/width,pathY:anchors[index].path[1]/height}))
+    };
+    result.pathsJSON=JSON.stringify(result.paths);result.badgesJSON=JSON.stringify(result.badges);
+    if(spatialInteractionCache.size>=8)spatialInteractionCache.delete(spatialInteractionCache.keys().next().value);
+    spatialInteractionCache.set(key,result);return result;
+  }
+  function tunnelFocusAnchors(model,width,height) {
+    // The customer requested one clear1..N row in FRONT of the original
+    // tunnel. The number still carries its own exact physical-line identity;
+    // tapping it highlights that complete arch without changing the camera.
+    const count=model.arches.length,margin=Math.min(22,width/2);
+    // Normal controls reserve44px per number. A tiny thumbnail fallback keeps
+    // identities distinct instead of clamping several numbers to one edge.
+    const xFor=index=>width<count*44&&count>1
+      ?margin+(width-2*margin)*index/(count-1):width*(index+.5)/Math.max(1,count);
+    return model.arches.map((arch,index)=>({x:xFor(index),
+      y:height-Math.min(22,height/2),path:arch.points[0]}));
+  }
+  function wallFocusAnchors(model,width,height) {
+    // A single consistent baseline: every number is directly beneath its own
+    // physical line. Dense interactive walls scroll horizontally rather than
+    // scattering the numbers above/below, or overlapping their touch targets.
+    return model.lines.map(line=>({x:line.from[0],y:height-Math.min(22,height/2),path:line.from}));
+  }
+  function drawSpatialTethers(context,anchors) {
+    context.save();context.shadowBlur=0;context.lineWidth=1;
+    context.strokeStyle='rgba(226,235,230,.44)';context.lineCap='round';
+    anchors.forEach(anchor=>{context.beginPath();context.moveTo(anchor.x,anchor.y);
+      context.lineTo(...anchor.path);context.stroke();});
+    context.restore();
+  }
+  function drawTunnel(context,frame,width,height,lineNumbers,interactive=false,framing='',selection=interactive) {
+    const focused=framing==='focus',key=[frame.rows.length,width,height,framing].join(':');
+    let model=tunnelProjectionCache.get(key);
+    if(!model){
+      model=tunnelProjection(frame.rows.length,width,height,framing);
+      if(tunnelProjectionCache.size>=8)tunnelProjectionCache.delete(tunnelProjectionCache.keys().next().value);
+      tunnelProjectionCache.set(key,model);
+    }
+    const path=(points,close=false)=>{
+      context.beginPath();points.forEach(([x,y],index)=>index?context.lineTo(x,y):context.moveTo(x,y));
+      if(close)context.closePath();
+    };
+    const material=(start,end,from,to,stops)=>{
+      if(typeof context.createLinearGradient==='function'){
+        const gradient=context.createLinearGradient(...start,...end);
+        if(gradient&&typeof gradient.addColorStop==='function'){(stops||[[0,from],[1,to]]).forEach(([at,colour])=>gradient.addColorStop(at,colour));return gradient;}
+      }
+      return from;
+    };
+    const radial=(x,y,r,from,to)=>{
+      const gradient=context.createRadialGradient?.(x,y,0,x,y,r);
+      if(gradient&&typeof gradient.addColorStop==='function'){gradient.addColorStop(0,from);gradient.addColorStop(1,to);return gradient;}
+      return from;
+    };
+    context.shadowBlur=0;
+    // Neutral materials, the circular silver face and the dark central inlay
+    // reproduce the confirmed product illustration. No decorative light rows,
+    // baked-in pink animations or four-block floor reflections are introduced.
+    rounded(context,0,0,width,height,18);
+    context.fillStyle=material([0,0],[width,height],'#16191a','#2a2c2e');context.fill();
+    context.save();context.translate(...model.shadow);context.scale(1,12/131);
+    context.beginPath();context.arc(0,0,131*model.unit,0,Math.PI*2);
+    context.fillStyle=radial(0,0,131*model.unit,'rgba(0,0,0,.7)','rgba(0,0,0,0)');context.fill();context.restore();
+    path(model.back,true);context.fillStyle=material([width*.5,0],[width*.5,height],'#262a2e','#4b4e50');context.fill();
+    context.save();path(model.back,true);context.clip();
+    context.fillStyle=radial(...model.exitCentre,43*model.unit,'rgba(215,217,216,.23)','rgba(215,217,216,0)');
+    context.fillRect(0,0,width,height);
+    path(model.exitFloor,true);context.fillStyle='#66696a';context.fill();
+    path(model.exitInlay,true);context.fillStyle='#343739';context.fill();context.restore();
+    path([...model.outer,...model.outerBack.slice().reverse()],true);
+    context.fillStyle=material([0,0],[width,height],'#d1d5d5','#a8aeb1');context.fill();
+    path([...model.front,...model.back.slice().reverse()],true);
+    const lining=material([width*.2,0],[width*.8,height*.8],'#202226','#111316',[[0,'#202226'],[.36,'#090c10'],[.7,'#25272b'],[1,'#111316']]);
+    context.fillStyle=lining;context.fill();
+    for(let rowIndex=frame.rows.length-1;rowIndex>=0;rowIndex--){
+      const row=frame.rows[rowIndex],pixels=row.identificationPixels||row.pixels;
+      const sum=[0,0,0];
+      for(const colour of pixels)for(let channel=0;channel<3;channel++)sum[channel]+=colour[channel];
+      const mean=sum.map(value=>Math.round(value/Math.max(1,pixels.length)));
+      path(model.arches[rowIndex].panel,true);
+      context.fillStyle=material([width*.3,height],[width*.7,0],'rgba('+mean.join(',')+',.08)','rgba('+mean.join(',')+',.025)');context.fill();
+    }
+    path(model.floor,true);
+    context.fillStyle=material([width*.4,height],[width*.6,height*.4],'#a3a09a','#424345');context.fill();
+    path(model.inlay,true);context.fillStyle='#252729';context.fill();
+    context.strokeStyle='#919493';context.lineWidth=Math.max(.45,model.unit*.7);
+    path([model.floor[0],model.floor[3]]);context.stroke();
+    path([model.floor[1],model.floor[2]]);context.stroke();
+    path([model.inlay[0],model.inlay[3]]);context.stroke();
+    path([model.inlay[1],model.inlay[2]]);context.stroke();
+    const focusAnchors=focused&&interactive?(model.focusAnchors||
+      (model.focusAnchors=tunnelFocusAnchors(model,width,height))):null;
+    // Front numbers form one quiet row. No crossing leaders over the tunnel;
+    // the existing whole-arch highlight shows the selected physical line.
+    context.lineCap='round';context.lineJoin='round';
+    if(focused&&selection)frame.rows.forEach((row,index)=>{
+      if(!row.selected)return;
+      const arch=model.arches[index];path(arch.points);
+      // A fine edge identifies the arch without making thin coloured lights
+      // look white. The number/check is the primary selection indicator.
+      const casing=Math.max(.45,1.4*model.unit*arch.scale);
+      context.strokeStyle='rgba(6,7,9,0.7)';context.lineWidth=arch.thickness+casing+2.4;
+      context.shadowBlur=0;context.stroke();path(arch.points);
+      context.strokeStyle='rgba(232,235,240,0.3)';context.lineWidth=arch.thickness+casing+1.2;context.stroke();
+    });
+    for(let rowIndex=frame.rows.length-1;rowIndex>=0;rowIndex--){
+      const row=frame.rows[rowIndex],arch=model.arches[rowIndex];
+      const pixels=row.identificationPixels||row.pixels;
+      const point=position=>{
+        const at=clamp(position,0,1)*128,index=Math.min(127,Math.floor(at)),fraction=at-index;
+        return [0,1].map(axis=>arch.points[index][axis]+(arch.points[index+1][axis]-arch.points[index][axis])*fraction);
+      };
+      const part=(from,to)=>{
+        const points=[point(from)],begin=Math.floor(from*128)+1,end=Math.ceil(to*128);
+        for(let index=begin;index<end;index++)points.push(arch.points[index]);
+        points.push(point(to));path(points);
+      };
+      if(!focused&&selection&&row.selected){
+        // Selection traces the spatial light path, outside its sampled core.
+        // The exact RGB/SPI strokes below remain untouched and fully visible.
+        path(arch.points);context.strokeStyle='rgba(240,245,242,0.2)';
+        context.lineWidth=arch.thickness+5;context.shadowBlur=0;context.stroke();
+      }
+      path(arch.points);context.strokeStyle=material(arch.points[0],arch.points[64],'#393d40','#606467');
+      context.lineWidth=arch.thickness+Math.max(.45,1.4*model.unit*arch.scale);context.stroke();
+      path(arch.points);context.strokeStyle='#29342f';context.lineWidth=arch.thickness+.8;context.stroke();
+      const segments=row.type==='RGBW'?1:Math.min(384,pixels.length);
+      // Blur is decoration, not pixel data. Rasterizing hundreds of separate
+      // shadow masks per arch is expensive on phones. Draw a bounded, soft
+      // halo underneath, then every exact foreground pixel without blur.
+      const groupedHalo=row.type==='SPI'&&segments>64;
+      if(groupedHalo){
+        const groups=16;
+        for(let group=0;group<groups;group++){
+          const start=Math.floor(group*pixels.length/groups),end=Math.floor((group+1)*pixels.length/groups),sum=[0,0,0];
+          for(let pixel=start;pixel<end;pixel++)for(let channel=0;channel<3;channel++)sum[channel]+=pixels[pixel][channel];
+          const colour=sum.map(value=>Math.round(value/Math.max(1,end-start)));
+          if(Math.max(...colour)===0)continue;
+          const css='rgba('+colour.join(',')+',0.38)';context.strokeStyle=css;context.shadowColor=css;
+          context.shadowBlur=Math.min(5,arch.thickness*1.25);context.lineWidth=arch.thickness;
+          part(group/groups,(group+1)/groups);context.stroke();
+        }
+        context.shadowBlur=0;
+      }
+      for(let index=0;index<segments;index++){
+        const colour=pixels[Math.min(pixels.length-1,Math.floor((index+.5)/segments*pixels.length))]||[0,0,0];
+        const css='rgb('+colour.join(',')+')',on=Math.max(...colour)>0;
+        // A tiny gap keeps SPI's physical pixels legible at useful sizes;
+        // subpixel/dense samples naturally read as a continuous diffuser.
+        const gap=row.type==='SPI'&&pixels.length<=64?.035:0;
+        context.strokeStyle=css;context.shadowColor=css;
+        context.shadowBlur=on&&!groupedHalo?Math.min(5,arch.thickness*1.25):0;
+        context.lineWidth=arch.thickness;
+        part((index+gap)/segments,(index+1-gap)/segments);context.stroke();
+      }
+      context.shadowBlur=0;
+    }
+    // Constant-width aluminium fascia with level-cut feet, as in bb93c89.
+    // Draw only OUTSIDE the opening so even dense front arches stay visible.
+    context.save();context.beginPath();context.rect(0,0,width,model.groundY);context.clip();
+    context.beginPath();context.rect(0,0,width,height);
+    model.front.forEach(([x,y],index)=>index?context.lineTo(x,y):context.moveTo(x,y));context.closePath();context.clip('evenodd');
+    context.lineCap='butt';path(model.fascia);context.strokeStyle='#969ea2';context.lineWidth=28*model.unit;context.stroke();
+    path(model.fascia);context.strokeStyle='#eceeed';context.lineWidth=27.5*model.unit;context.stroke();
+    path(model.fascia);context.strokeStyle=material([width*.25,0],[width*.7,height],'#d5d8d8','#b4b9bc');context.lineWidth=26*model.unit;context.stroke();
+    context.restore();context.lineCap='round';
+    path(model.front);context.strokeStyle='#858c90';context.lineWidth=Math.max(.5,model.unit);context.stroke();
+    // Numbers belong below the model, not on the walkway: the foot of a rear
+    // arch is very close to the next strip. Overlay labels used to hide those
+    // real SPI pixels. This small ordered key never covers the light itself.
+    if(!interactive&&frame.rows.length<=8&&height>=130){
+      context.font='10px system-ui';context.textAlign='center';context.textBaseline='top';
+      context.strokeStyle='#121417';context.lineWidth=3;context.fillStyle='#d6d9de';
+      for(let rowIndex=frame.rows.length-1;rowIndex>=0;rowIndex--){
+        const row=frame.rows[rowIndex];
+        const order=spatialLineNumber(frame,row,rowIndex,lineNumbers);
+        const spread=Math.min(width*.6,180*model.unit),x=width/2+((rowIndex+.5)/frame.rows.length-.5)*spread,y=height-13;
+        context.strokeText(String(order),x,y);context.fillText(String(order),x,y);
+      }
+    }
+    context.shadowBlur=0;
+    if(interactive){
+      const anchors=focusAnchors||model.arches.map((arch,index)=>{
+        // Nested arch feet are too close for separate targets. Stagger their
+        // badges around the actual curves, just outside the luminous paths.
+        const at=Math.round(10+108*index/Math.max(1,frame.rows.length-1));
+        const point=arch.points[at],dx=point[0]-model.vanishing[0],dy=point[1]-model.vanishing[1];
+        const norm=Math.max(1,Math.hypot(dx,dy));
+        return {x:point[0]+dx/norm*18,y:point[1]+dy/norm*18,path:point};
+      });
+      return spatialInteractions(frame,model.arches.map(arch=>arch.points),width,height,anchors,'tunnel',framing);
+    }
+  }
+  // The approved "Strakke wand" is only another camera for these same rows.
+  // Setup order goes left to right, with each strip's first pixel at its foot.
+  // In particular, a view change must not reverse an output a second time.
+  function wallProjection(lineCount, width=360, height=240, framing='') {
+    const count=Math.max(0,Math.floor(number(lineCount,0)));
+    width=Math.max(1,number(width,360));height=Math.max(1,number(height,240));
+    const wall=[[width*.095,height*.11],[width*.905,height*.11],
+      [width*.905,height*.84],[width*.095,height*.84]];
+    const lane=width*.648/Math.max(1,count);
+    const thickness=Math.max(.2,Math.min(4.3,width*.012,height*.028,lane*.3));
+    const profile=Math.min(2,width*.006,height*.012,lane*.18);
+    const lines=Array.from({length:count},(_,index)=>{
+      const x=width*(.176+.648*(index+.5)/count);
+      return {index,thickness,profile,from:[x,height*.7816],to:[x,height*.1757]};
+    });
+    if(framing==='focus'){
+      const margin=Math.min(22,width/2),span=Math.max(0,width-2*margin);
+      // C109: a few ledlines stand together in the middle of the wall instead
+      // of at its far edges; from about five lines they fill the width.
+      const gap=count>1?Math.min(span/(count-1),Math.max(56,width*.2)):0,start=width/2-gap*(count-1)/2;
+      lines.forEach((line,index)=>{
+        const x=count===1?width/2:start+gap*index;
+        line.from=[x,Math.max(22,height-52)];line.to=[x,Math.min(22,height/2)];
+      });
+      wall.splice(0,wall.length,[Math.min(8,width/2),8],[width-Math.min(8,width/2),8],
+        [width-Math.min(8,width/2),height-40],[Math.min(8,width/2),height-40]);
+    }
+    return {width,height,wall,lines,
+      floor:[wall[3],wall[2],[width,height*.98],[0,height*.98]]};
+  }
+  const wallProjectionCache=new Map();
+  // C109: neutral graphite stage and wall (the former greenish tint read as
+  // an old blue/green interface); light colours themselves are unchanged.
+  function drawWall(context,frame,width,height,lineNumbers,interactive=false,framing='',selection=interactive) {
+    const focused=framing==='focus';
+    const key=[frame.rows.length,width,height,framing].join(':');
+    let model=wallProjectionCache.get(key);
+    if(!model){
+      model=wallProjection(frame.rows.length,width,height,framing);
+      if(wallProjectionCache.size>=8)wallProjectionCache.delete(wallProjectionCache.keys().next().value);
+      wallProjectionCache.set(key,model);
+    }
+    const path=(points,close=false)=>{
+      context.beginPath();points.forEach(([x,y],index)=>index?context.lineTo(x,y):context.moveTo(x,y));
+      if(close)context.closePath();
+    };
+    const material=(start,end,stops)=>{
+      const gradient=context.createLinearGradient?.(...start,...end);
+      if(gradient&&typeof gradient.addColorStop==='function'){
+        stops.forEach(([at,colour])=>gradient.addColorStop(at,colour));return gradient;
+      }
+      return stops[0][1];
+    };
+    context.save();context.shadowBlur=0;
+    rounded(context,0,0,width,height,18);context.clip();
+    context.fillStyle=material([0,0],[width,height],[[0,'#16181b'],[1,'#33373d']]);context.fillRect(0,0,width,height);
+    path(model.floor,true);
+    context.fillStyle=material([0,height*.77],[width,height],[[0,'#44484e'],[1,'#24282d']]);context.fill();
+    path(model.wall,true);
+    context.fillStyle=material([width*.1,height*.1],[width*.8,height*.8],[[0,'#41454b'],[.55,'#292d32'],[1,'#1c1f23']]);context.fill();
+    context.strokeStyle='#56595f';context.lineWidth=.75;context.stroke();
+    const focusAnchors=focused&&interactive?(model.focusAnchors||
+      (model.focusAnchors=wallFocusAnchors(model,width,height))):null;
+    if(focusAnchors)drawSpatialTethers(context,focusAnchors);
+    context.lineCap='butt';context.lineJoin='round';
+    if(focused&&selection)frame.rows.forEach((row,index)=>{
+      if(!row.selected)return;
+      const line=model.lines[index];path([line.from,line.to]);
+      context.strokeStyle='rgba(6,7,9,0.7)';context.lineWidth=line.thickness+line.profile+2.4;
+      context.shadowBlur=0;context.stroke();
+      context.strokeStyle='rgba(232,235,240,0.3)';context.lineWidth=line.thickness+line.profile+1.2;
+      context.stroke();
+    });
+    frame.rows.forEach((row,rowIndex)=>{
+      const line=model.lines[rowIndex],pixels=row.identificationPixels||row.pixels;
+      const point=position=>position===0?line.from:position===1?line.to:
+        [line.from[0],line.from[1]+(line.to[1]-line.from[1])*position];
+      const part=(from,to)=>path([point(from),point(to)]);
+      if(!focused&&selection&&row.selected){
+        part(0,1);context.strokeStyle='rgba(240,245,242,0.2)';
+        context.lineWidth=line.thickness+6;context.shadowBlur=0;context.stroke();
+      }
+      part(0,1);context.strokeStyle='#646b67';context.lineWidth=line.thickness+line.profile;context.stroke();
+      part(0,1);context.strokeStyle='#101713';context.lineWidth=line.thickness+.4*line.profile;context.stroke();
+      const segments=row.type==='RGBW'?1:Math.min(384,pixels.length);
+      // Halo is surface decoration only. Bound expensive shadow masks to
+      // sixteen per line; keep all foreground samples exact below the limit.
+      const groupedHalo=row.type==='SPI'&&segments>64;
+      if(groupedHalo){
+        const groups=16;
+        for(let group=0;group<groups;group++){
+          const start=Math.floor(group*pixels.length/groups),end=Math.floor((group+1)*pixels.length/groups),sum=[0,0,0];
+          for(let pixel=start;pixel<end;pixel++)for(let channel=0;channel<3;channel++)sum[channel]+=pixels[pixel][channel];
+          const colour=sum.map(value=>Math.round(value/Math.max(1,end-start)));
+          if(Math.max(...colour)===0)continue;
+          const css='rgba('+colour.join(',')+',0.38)';context.strokeStyle=css;context.shadowColor=css;
+          context.shadowBlur=Math.min(7,line.thickness*2);context.lineWidth=line.thickness;
+          part(group/groups,(group+1)/groups);context.stroke();
+        }
+        context.shadowBlur=0;
+      }
+      for(let index=0;index<segments;index++){
+        const colour=pixels[Math.min(pixels.length-1,Math.floor((index+.5)/segments*pixels.length))]||[0,0,0];
+        const css='rgb('+colour.join(',')+')';
+        const gap=row.type==='SPI'&&pixels.length<=64?.035:0;
+        context.strokeStyle=css;context.shadowColor=css;context.lineWidth=line.thickness;
+        context.shadowBlur=Math.max(...colour)>0&&!groupedHalo?Math.min(7,line.thickness*2):0;
+        part((index+gap)/segments,(index+1-gap)/segments);context.stroke();
+      }
+      context.shadowBlur=0;
+    });
+    // An unobtrusive order key on the floor never covers the light itself.
+    if(!interactive&&frame.rows.length<=8&&height>=130){
+      context.font='10px system-ui';context.textAlign='center';context.textBaseline='middle';context.fillStyle='#c3c8cf';
+      frame.rows.forEach((row,index)=>{
+        const order=spatialLineNumber(frame,row,index,lineNumbers);
+        context.fillText(String(order),model.lines[index].from[0],height*.9);
+      });
+    }
+    context.restore();context.shadowBlur=0;
+    if(interactive){
+      return spatialInteractions(frame,model.lines.map(line=>[line.from,line.to]),width,height,
+        focusAnchors||model.lines.map(line=>({x:line.from[0],y:height*.87,path:line.from})),'wall',framing);
+    }
+  }
+  // A projection of the SAME sampled pixels, not a second canned animation.
+  // View shape changes presentation only; it never changes output mapping.
+  function drawSpatial(context,frame,width,height,shape,lineNumbers,interactive=false,framing='',selection=interactive) {
+    if(shape==='tunnel')return drawTunnel(context,frame,width,height,lineNumbers,interactive,framing,selection);
+    if(shape==='wall')return drawWall(context,frame,width,height,lineNumbers,interactive,framing,selection);
+    const count=frame.rows.length;
+    const point=(index,u)=>{
+      const spread=(index+.5)/count;
+      if(shape==='frames'){
+        const depth=count===1?0:index/(count-1),scale=1-depth*.57;
+        const corners=[[-.36,.34],[.36,.34],[.36,-.34],[-.36,-.34],[-.36,.34]];
+        const pos=u*4,k=Math.min(3,Math.floor(pos)),f=pos-k;
+        return [width*(.5+(corners[k][0]*(1-f)+corners[k+1][0]*f)*scale+depth*.07),height*(.51+(corners[k][1]*(1-f)+corners[k+1][1]*f)*scale-depth*.08)];
+      }
+      const x=.11+spread*.78;
+      if(u<.32)return [width*x,height*(.88-u/.32*.32)];
+      const t=(u-.32)/.68,bend=Math.sin(Math.min(1,t*3)*Math.PI/2);
+      return [width*(.52+(x-.52)*(1-t*.56)),height*(.56-.18*bend-.24*t)];
+    };
+    context.lineCap='round';context.lineJoin='round';
+    for(let rowIndex=count-1;rowIndex>=0;rowIndex--){
+      const row=frame.rows[rowIndex],steps=Math.min(144,Math.max(32,row.pixels.length)),thickness=Math.max(1.2,Math.min(5,width/count*.055));
+      const points=Array.from({length:steps+1},(_,i)=>point(rowIndex,i/steps));
+      context.beginPath();points.forEach(([x,y],i)=>i?context.lineTo(x,y):context.moveTo(x,y));context.strokeStyle='#303937';context.lineWidth=thickness+2;context.stroke();
+      for(let i=0;i<steps;i++){
+        const color=row.pixels[Math.min(row.pixels.length-1,Math.floor((i+.5)/steps*row.pixels.length))]||[0,0,0];
+        const [r,g,b]=color;context.strokeStyle=`rgb(${r},${g},${b})`;context.shadowColor=context.strokeStyle;context.shadowBlur=Math.max(r,g,b)>35?5:0;
+        context.lineWidth=thickness;context.beginPath();context.moveTo(...points[i]);context.lineTo(...points[i+1]);context.stroke();
+      }
+      context.shadowBlur=0;
+      if(count<=8&&height>=130){const p=point(rowIndex,0),number=spatialLineNumber(frame,row,rowIndex,lineNumbers);context.fillStyle='#bfc4cb';context.font='10px system-ui';context.textAlign='center';context.fillText(String(number),p[0],Math.min(height-6,p[1]+14));}
+    }
+  }
+  function draw(canvas, options = {}) {
+    const rawFrame = rows(options);
+    // A stand-wide recipe is sampled on its shared clock/global line indices.
+    // A zone canvas nevertheless shows that zone's saved physical topology.
+    // Keep these contracts separate: projection must not resample the effect
+    // as an unrelated continuous mixed stand, or restart each zone's phase.
+    const renderGeometry = options.renderGeometry || rawFrame.geometry;
+    const layout = options.renderGeometry ? renderGeometry.layout : options.layout;
+    const renderLines = new Map();
+    if (options.renderGeometry) {
+      const sampleLines = new Map(rawFrame.geometry.lines.map(line => [line.id,line]));
+      let offset = 0;
+      const invalid = () => { const error = new Error('Invalid preview render geometry'); error.code = 'RENDER_GEOMETRY'; throw error; };
+      if (!renderGeometry || !['stacked','continuous','vertical'].includes(layout) ||
+          !Array.isArray(renderGeometry.lines) || !Array.isArray(rawFrame.lineRows)) invalid();
+      for (const line of renderGeometry.lines) {
+        const sample = line && sampleLines.get(line.id);
+        if (!sample || renderLines.has(line.id) || line.offset !== offset ||
+            ['receiverId','port','type','pixels','reversed'].some(key => line[key] !== sample[key]) ||
+            layout === 'continuous' && line.type !== 'SPI') invalid();
+        renderLines.set(line.id,line);offset += line.pixels;
+      }
+      if (offset !== renderGeometry.totalPixels || rawFrame.lineRows.some(row => !renderLines.has(row.lineId))) invalid();
+    }
+    // Sampling and transport keep exact receiver values. Encode once, only
+    // for canvas materials, after all effects, dimmers and W have been mixed.
+    // Never feed these screen bytes back into state, sampling or a receiver.
+    // Raw samples retain the receiver's electrical DIN-to-DOUT order.
+    // A continuous installation is drawn in its physical zone order instead:
+    // a right-side cable must not mirror that output in the on-screen line.
+    const spatialPixels=(row,pixels)=>layout==='continuous'&&row.type==='SPI'
+      ? row.outputs.flatMap(output=>{
+        const segment=pixels.slice(output.localOffset,output.localOffset+output.pixels);
+        return output.reversed?segment.reverse():segment;
+      }):pixels;
+    const colouredRows = rawFrame.lineRows ? [] : rawFrame.rows.map(row=>({...row,
+      pixels:spatialPixels(row,row.pixels).map(colour.screenRGB),
+      ...(row.identificationPixels?{identificationPixels:spatialPixels(row,row.identificationPixels).map(colour.screenRGB)}:{})}));
+    // Keep raw receiver samples and selection scope intact. A separate or
+    // spatial view projects each physical active SPI port as its own line.
+    // A regular continuous view remains one end-to-end virtual strip.
+    const splitPorts = layout !== 'continuous' || Boolean(options.spatialShape) || options.presentation === 'receivers';
+    const physicalRows = rawFrame.lineRows?.map(row=>{
+      const toScreen=pixels=>(layout==='continuous'&&row.outputs[0]?.reversed?[...pixels].reverse():pixels).map(colour.screenRGB);
+      return {...row,...(options.renderGeometry?{offset:renderLines.get(row.lineId).offset}:{}),pixels:toScreen(row.pixels),
+        ...(row.identificationPixels?{identificationPixels:toScreen(row.identificationPixels)}:{})};
+    });
+    const frame = {...rawFrame,geometry:renderGeometry,rows:physicalRows || colouredRows.flatMap(row=>splitPorts&&row.type==='SPI'
+      ? row.outputs.map(output=>({...row,port:output.port,lineId:output.lineId,lineIndex:output.lineIndex,
+        pixels:row.pixels.slice(output.localOffset,output.localOffset+output.pixels),
+        outputs:[{...output,localOffset:0}],
+        ...(row.identificationPixels?{identificationPixels:row.identificationPixels.slice(output.localOffset,output.localOffset+output.pixels)}:{})}))
+      : [row])};
+    if (canvas.dataset) {
+      canvas.dataset.highlightedReceiverIds = frame.highlightedReceiverIds.join(',');
+      canvas.dataset.highlightedLineIds = frame.highlightedLineIds.join(',');
+      canvas.dataset.identifyingReceiverIds = frame.identifyingReceiverIds.join(',');
+      canvas.dataset.renderedLineCount = String(frame.rows.length);
+      canvas.dataset.lineHitRegions = '[]';
+      canvas.dataset.lineHitPaths = '[]';
+      canvas.dataset.lineTargetBadges = '[]';
+      canvas.dataset.spatialShape = options.spatialShape && frame.rows.length ? options.spatialShape : '';
+      canvas.dataset.spatialLineCount = options.spatialShape ? String(frame.rows.length) : '';
+    }
+    const context = canvas.getContext('2d');
+    if (!context) return rawFrame;
+    const width = Math.max(1, canvas.clientWidth || canvas.width || 320);
+    const height = Math.max(1, canvas.clientHeight || canvas.height || 180);
+    const scale = typeof devicePixelRatio === 'number' ? Math.min(devicePixelRatio, 2) : 1;
+    if (canvas.width !== Math.round(width * scale)) canvas.width = Math.round(width * scale);
+    if (canvas.height !== Math.round(height * scale)) canvas.height = Math.round(height * scale);
+    context.setTransform(scale, 0, 0, scale, 0, 0);
+    context.clearRect(0, 0, width, height);
+    context.fillStyle = '#121417';
+    rounded(context, 0, 0, width, height, 18); context.fill();
+    if (!frame.rows.length) {
+      if (width < 220) {
+        context.save();
+        context.strokeStyle = '#68736c'; context.lineWidth = 1.5;
+        rounded(context, width / 2 - 10, height / 2 - 17, 20, 8, 2); context.stroke();
+        context.fillStyle = '#a9afb7'; context.font = '11px system-ui';
+        context.textAlign = 'center'; context.textBaseline = 'middle';
+        context.fillText('Geen receivers', width / 2, height / 2 + 8, Math.max(1, width - 16));
+        context.restore();
+        return rawFrame;
+      }
+      context.fillStyle = '#a9afb7'; context.font = '13px system-ui';
+      context.textAlign = 'center'; context.fillText('Nog geen receivers in deze zone', width / 2, height / 2);
+      return rawFrame;
+    }
+    if(options.spatialShape){
+      if(canvas.dataset){canvas.dataset.spatialShape=options.spatialShape;canvas.dataset.spatialLineCount=String(frame.rows.length);}
+      const continuousSPI=layout==='continuous'&&frame.rows.every(row=>row.type==='SPI');
+      const interactive=!continuousSPI&&options.main===true&&options.interactiveLines===true&&options.selectionOverlay===true;
+      const focused=options.spatialFraming==='focus';
+      const interaction=drawSpatial(context,frame,width,height,options.spatialShape,options.lineNumbers,
+        interactive||options.numberLabels===true,focused?'focus':'',focused?interactive:interactive||options.numberLabels===true);
+      if(options.numberLabels===true&&interaction){
+        context.save();context.shadowBlur=0;context.textAlign='center';context.textBaseline='middle';
+        const size=focused?28:Math.max(9,Math.min(18,width/Math.max(1,frame.rows.length)*.65));
+        context.font='650 '+(focused?14:Math.min(10,size*.65))+'px system-ui';
+        interaction.badges.forEach((badge,index)=>{
+          const x=badge.x*width,y=badge.y*height;
+          context.fillStyle='#2a2f36';rounded(context,x-size/2,y-size/2,size,size,Math.min(5,size/3));context.fill();
+          context.fillStyle='#eef0f3';context.fillText(String(spatialLineNumber(frame,frame.rows[index],index,options.lineNumbers)),x,y);
+        });
+        context.restore();
+      }
+      if(canvas.dataset&&interaction&&interactive){
+        canvas.dataset.lineHitPaths=interaction.pathsJSON;
+        canvas.dataset.lineTargetBadges=interaction.badgesJSON;
+      }
+      return rawFrame;
+    }
+    const byReceiver = options.presentation === 'receivers' || layout !== 'continuous' && frame.rows.some(row => row.category === 'tunnel');
+    const vertical = layout === 'vertical' && options.presentation !== 'receivers';
+    const continuous = layout === 'continuous' && !byReceiver && frame.rows.every(row => row.type === 'SPI');
+    const padding = Math.min(18, width / 8);
+    const numberedTargets=(options.interactiveLines===true||options.numberLabels===true)&&!continuous;
+    // The main interactive example owns its accessible selection controls.
+    // Leave room for their numbered check badges, without painting a second
+    // number or reducing the sampled light when a line is not selected.
+    const selectionOverlay=numberedTargets&&options.selectionOverlay===true&&options.main===true;
+    const rowInset=selectionOverlay&&['small','medium','large'].includes(options.previewSize)?4:8;
+    const labelGutter=numberedTargets&&!vertical?(selectionOverlay?42:24):0;
+    const maxRowPixels = Math.max(1, ...frame.rows.filter(row => row.type === 'SPI').map(row => row.pixels.length));
+    const shortestFraction = Math.min(1, ...frame.rows.filter(row => row.type === 'SPI').map(row => row.pixels.length / maxRowPixels));
+    const hitRegions = [];
+    const targetBadges = [];
+    context.font = '11px system-ui'; context.textBaseline = 'middle';
+    frame.rows.forEach((row, index) => {
+      const lane = vertical ? (width - padding * 2) / frame.rows.length : Math.max(1, height - rowInset*2) / frame.rows.length;
+      // A single ledline should read as a light bar, not a hairline, in the
+      // compact sticky preview. Scale with each lane so multi-line layouts
+      // stay clearly separated on small screens.
+      const showLabel = numberedTargets ? false : continuous ? false : vertical ? lane >= 48 : lane >= 30 || row.individuallySelected && lane >= 24;
+      const compactVertical = vertical && options.main === true && height < 140;
+      const verticalStart = Math.min(showLabel ? compactVertical ? 24 : 38 : 14, height / 3);
+      const verticalBottom = selectionOverlay&&vertical?36:compactVertical ? 18 : Math.min(24, height / 4);
+      // In a short vertical thumbnail, strip length (not the much wider lane)
+      // limits thickness. All lanes keep the same material/pixel pitch, while
+      // even the shortest physical line still reads as a line, not a square.
+      const verticalThickness = (height - verticalStart - verticalBottom) * shortestFraction * .45;
+      // The main preview has an explicit size control. Let its lit strip grow
+      // with the chosen canvas height so “large” enlarges the actual example,
+      // not just an empty black area around the same thin line. Gallery cards
+      // stay compact and keep their established pixel pitch.
+      const chosenBarLimit={small:18,medium:25,large:32}[options.previewSize];
+      const mainBarLimit = options.main === true ? chosenBarLimit??Math.min(42, Math.max(18, height * .29)) : 18;
+      const barHeight = continuous ? Math.min(mainBarLimit, height * .5)
+        : Math.max(0.5, Math.min(compactVertical && options.main !== true ? 10 : mainBarLimit,
+          lane * 0.62, vertical ? verticalThickness : Infinity));
+      const continuousFraction = row.pixels.length / Math.max(1, frame.geometry.totalPixels);
+      const continuousOffset = (row.offset ?? frame.geometry.receivers.find(item=>item.receiverId===row.receiverId).offset) / Math.max(1, frame.geometry.totalPixels);
+      const x = continuous ? padding + (width - padding * 2) * continuousOffset : vertical ? padding + lane * index + lane / 2 - barHeight / 2 : padding+labelGutter;
+      const y = continuous ? (height - barHeight) / 2 : vertical ? verticalStart
+        : rowInset + lane * index + (lane - barHeight) / 2 + (showLabel ? 4 : 0);
+      if (options.main === true && !continuous) hitRegions.push({receiverId:row.receiverId,
+        ...(row.port?{port:row.port,lineId:row.lineId}:{}),
+        x:vertical?(padding + lane * index) / width:0,
+        y:vertical?0:(rowInset + lane * index) / height,
+        width:vertical?lane / width:1,
+        height:vertical?1:lane / height});
+      if(selectionOverlay){
+        targetBadges.push({receiverId:row.receiverId,...(row.lineId?{lineId:row.lineId}:{}),
+          x:(vertical?padding+lane*index+lane/2:padding+10)/width,
+          y:(vertical?height-18:rowInset+lane*index+lane/2)/height});
+        if(row.selected){
+          // Selection belongs to the whole touch lane, not a casing around
+          // the luminous strip. Paint it first so every LED keeps its colour.
+          context.save();context.shadowBlur=0;context.lineWidth=1;
+          context.fillStyle='rgba(238,244,239,0.055)';
+          context.strokeStyle='rgba(238,244,239,0.19)';
+          rounded(context,vertical?padding+lane*index+3:8,vertical?8:rowInset+lane*index+3,
+            vertical?Math.max(.5,lane-6):Math.max(.5,width-16),
+            vertical?Math.max(.5,height-16):Math.max(.5,lane-6),12);
+          context.fill();context.stroke();context.restore();
+        }
+      }
+      const availableLength = Math.max(0.5, continuous ? (width - padding * 2) * continuousFraction
+        : vertical ? height - y - verticalBottom : width - padding * 2-labelGutter);
+      // One common physical pixel pitch for separate SPI rows. A 12-pixel
+      // line must not get giant blocks beside a 28-pixel line merely because
+      // each row was stretched independently to the full viewport width.
+      // Long lines share the same drawing stride; real sampling stays exact.
+      const sharedPixels = row.type === 'SPI' && !continuous;
+      const pixelPitch = availableLength / maxRowPixels;
+      const drawStride = sharedPixels ? Math.max(1, Math.ceil(5 / pixelPitch)) : 1;
+      const length = sharedPixels ? Math.max(0.5, row.pixels.length * pixelPitch) : availableLength;
+      const gap = continuous ? Math.min(1, length / 5) : 0;
+      const bw = vertical ? barHeight : Math.max(0.5, length - gap);
+      // Light floats directly on the shared dark canvas. No separate casing,
+      // border or pill-shaped ring around a receiver's individual LED line.
+      // The main preview can mark selected lines beside/below their light.
+      // It never dims unselected lines or adds a ring around an LED strip.
+      // Sampling stays at real pixel resolution. Only the final canvas drawing
+      // is downsampled when a strip has more LEDs than visible screen pixels.
+      const visible = row.type === 'RGBW' ? 1 : sharedPixels ? Math.ceil(row.pixels.length / drawStride)
+        : Math.max(1, Math.min(row.pixels.length, Math.floor(length / 5)));
+      const step = sharedPixels ? pixelPitch * drawStride : length / visible;
+      // One material per unique colour in a row. Static lines reuse a single
+      // gradient, while effects retain their independently sampled pixels.
+      // No extra passes, offscreen canvas, shadows per layer or GPU filters.
+      const materials = new Map();
+      for (let i = 0; i < visible; i += 1) {
+        const colour = (row.identificationPixels || row.pixels)[Math.min(row.pixels.length - 1, sharedPixels ? i * drawStride : Math.floor(i * row.pixels.length / visible))] || [0, 0, 0];
+        const css = 'rgb(' + colour.join(',') + ')';
+        context.fillStyle = diffuser(context,colour,css,vertical ? x : y,barHeight,vertical,materials);
+        context.shadowColor = css;
+        // The RGBW diffuser has a soft continuous halo. SPI needs a smaller
+        // halo so the separate pixel lenses and dark gaps remain readable.
+        const light = Math.max(...colour) / 255;
+        context.shadowBlur = Math.min(row.type === 'RGBW' ? 10 : 3.5,barHeight * (row.type === 'RGBW' ? .9 : .32)) * light;
+        const inset = row.type === 'RGBW' ? 0 : Math.min(1, step * 0.15);
+        const cellLength = Math.min(step, length - i * step);
+        const cellWidth = vertical ? barHeight : Math.max(0.25, cellLength - inset - gap);
+        const cellHeight = vertical ? Math.max(0.25, cellLength - inset) : barHeight;
+        const radius = Math.min(row.type === 'RGBW' ? 2 : 2.6, Math.min(cellWidth,cellHeight) * (row.type === 'RGBW' ? .18 : .26));
+        rounded(context, x + (vertical ? 0 : i * step), y + (vertical ? i * step : 0),
+          cellWidth, cellHeight, radius);
+        context.fill();
+      }
+      context.shadowBlur = 0;
+      const highlighted = frame.highlightedReceiverIds.includes(row.receiverId) || frame.highlightedLineIds.includes(row.lineId);
+      if (highlighted&&!numberedTargets) {
+        context.fillStyle = '#f5f6f1';
+        // An open accent marks position without changing the displayed colour
+        // or introducing a rounded enclosure. Dense layouts use a short side
+        // mark, leaving every real pixel and its spatial offset untouched.
+        if (vertical) context.fillRect(Math.max(1, x - 5), y, 2, length);
+        else if (showLabel && y + barHeight + 7 < height) context.fillRect(x, y + barHeight + 5, bw, 2);
+        else context.fillRect(Math.max(1, x - 6), y, 3, barHeight);
+      }
+      context.fillStyle = row.selected ? '#eef1ec' : '#85948c';
+      context.font = (row.selected ? '600 ' : '') + '10px system-ui';
+      context.textAlign = vertical ? 'center' : 'left';
+      if(options.numberLabels===true&&continuous){
+        context.save();context.font='650 10px system-ui';context.textAlign='center';context.fillStyle='#d6d9de';
+        context.fillText(String(options.lineNumbers?.[row.lineId]||options.lineNumbers?.[row.receiverId]||index+1),x+availableLength/2,Math.min(height-10,y+barHeight+15));
+        context.restore();
+      }
+      if(numberedTargets&&!selectionOverlay){
+        // A stable number target shows selection without changing LED RGB,
+        // blinking the example, or losing the identity of a physical port.
+        const number=options.lineNumbers?.[row.lineId]||(row.port?row.lineIndex+1:options.lineNumbers?.[row.receiverId]||index+1);
+        const size=Math.min(22,vertical?lane-3:lane-3),cx=vertical?x+barHeight/2:padding+7,cy=vertical?height-15:8+lane*index+lane/2;
+        if(size>=10){
+          context.fillStyle=highlighted?'#edf1ed':'#29322e';
+          rounded(context,cx-size/2,cy-size/2,size,size,Math.min(7,size/3));context.fill();
+          context.fillStyle=highlighted?'#18201c':'#bbc6be';context.font='650 '+(options.numberLabels===true?12:Math.min(11,size*.6))+'px system-ui';
+          context.textAlign='center';context.fillText(String(number),cx,cy);context.textAlign=vertical?'center':'left';
+        }
+      }
+      // The light example is not a receiver list. Separate lines use only
+      // their spatial order; a continuous strip has no per-receiver captions.
+      // Pixel totals are actual active-output counts, never RGBW's sample size.
+      if (options.labels !== false && !continuous && showLabel) {
+        if (frame.rows.length > 1 || highlighted) context.fillText(String(options.lineNumbers?.[row.lineId] ||
+          (row.port?row.lineIndex+1:options.lineNumbers?.[row.receiverId]||index+1)) + (highlighted ? ' · Actief' : ''),
+          vertical ? x + barHeight / 2 : x, vertical ? compactVertical ? 12 : 19 : y - 12,
+          vertical ? lane - 5 : Math.max(10, bw));
+        if (row.type === 'SPI') {
+          context.fillStyle = '#9fac9f'; context.font = '9px system-ui';
+          context.textAlign = vertical ? 'center' : 'right';
+          context.fillText(row.pixels.length + ' px', vertical ? x + barHeight / 2 : width - padding,
+            vertical ? height - 10 : y - 12, vertical ? lane - 5 : Math.max(10, width - padding * 2 - 22));
+        }
+      }
+    });
+    if (canvas.dataset) {
+      canvas.dataset.lineHitRegions = JSON.stringify(hitRegions);
+      canvas.dataset.lineTargetBadges = JSON.stringify(targetBadges);
+    }
+    return rawFrame;
+  }
+  return Object.freeze({ setWhiteTint, tintRGBW, catalog, catalogSnapshot, gallerySample, geometry, ledlineCount, sample, draw, rows, selected, normalizeState, defaultWidthPixels, retimeMotion, opticalWhite, tunnelProjection, wallProjection,
+    engineVersion: canonical.version, extensionVersion: extension.version, isLocalPreview: true,
+    staartAan: legacySpi.staartAan === true });
+}));

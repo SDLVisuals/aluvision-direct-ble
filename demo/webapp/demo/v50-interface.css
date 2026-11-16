@@ -1,0 +1,666 @@
+/* V50 additions are scoped; saved model and transport behavior remain owned by app.js. */
+.v50-welcome{max-width:540px;margin:auto;padding-top:clamp(24px,7vh,90px)}
+.v50-welcome h1{font-size:clamp(32px,8vw,50px);line-height:1.1}
+.v50-welcome-steps{display:flex;gap:10px;list-style:none;padding:0;margin:30px 0;color:var(--muted,#656b75)}
+.v50-welcome-steps li{flex:1;display:grid;gap:9px;min-width:0;font-size:13px}
+.v50-welcome-steps b{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--panel,#fff);border:1px solid var(--line,#dde1e7);color:var(--ink,#232830)}
+.v50-preview-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
+.v50-preview-expand{display:flex;align-items:center;gap:6px;flex-shrink:0;min-height:38px;background:transparent;border:0;font-size:12px;font-weight:650}
+.v50-preview-expand .icon{width:18px;height:18px}
+body.v50-layout-modal{overflow:hidden}
+.ledline-setup[data-order-open=true]{position:fixed!important;inset:0!important;width:100vw!important;max-width:none!important;height:100dvh!important;margin:0!important;padding:max(14px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))!important;border-radius:0!important;overflow:auto!important;overscroll-behavior:contain;z-index:1000;background:var(--bg,#eef1f4)!important;animation:v50-sheet-in 180ms ease-out}
+.ledline-setup[data-order-open=true]>.ledline-setup-toggle{position:sticky;top:0;z-index:2;background:var(--bg,#eef1f4);padding:15px 0;margin:0;max-width:720px;margin-inline:auto;display:flex;width:100%;border-bottom:1px solid var(--line,#dce1e9)}
+.ledline-setup[data-order-open=true] .ledline-setup-body{max-width:720px;margin-inline:auto;max-height:none!important;overflow:visible!important;display:block}
+.ledline-setup[data-order-open=true] .ledline-setup-close-label{display:flex;gap:5px;align-items:center}
+.ledline-setup[data-order-open=true] .ledline-setup-copy small{display:none}
+.ledline-setup[data-order-open=true] .ledline-arrangement{padding:18px 0}
+.ledline-setup[data-order-open=true] [data-order-item]{padding:16px!important;border-radius:22px!important;background:var(--panel,#fff)}
+.ledline-setup[data-order-open=true] .order-number{width:48px!important;height:48px!important;flex-shrink:0;font-size:27px!important;border:2px solid var(--identify-colour);color:var(--ink,#282d35);border-radius:16px;background:color-mix(in srgb,var(--identify-colour) 14%,var(--panel,#fff))}
+.ledline-setup[data-order-open=true] .line-order-handle{width:46px;height:46px;font-size:25px;touch-action:none}
+.ledline-setup[data-order-open=true] .layout-receiver-actions{margin:18px 0 0}
+.ledline-setup[data-order-open=true] .ledline-row-settings{grid-column:1/-1;min-width:0}
+.ledline-setup[data-order-open=true] .scope-copy{min-width:0;overflow-wrap:anywhere}
+dialog.v50-fullscreen-preview{inset:0;width:100vw!important;max-width:none!important;max-height:none!important;height:100dvh!important;border-radius:0!important;margin:0!important;padding:max(16px,env(safe-area-inset-top)) 18px max(24px,env(safe-area-inset-bottom));overscroll-behavior:contain}
+.v50-full-preview{max-width:960px;margin:auto;display:grid;gap:18px}
+.v50-expanded-canvas{width:100%;height:min(55vh,540px);border-radius:24px;background:#111917}
+.v50-full-preview [data-action=preview-fullscreen]{display:none}
+.v50-white-fine>summary::-webkit-details-marker{display:none}
+.palette-item{position:relative}
+.palette-drag-handle{display:block;width:44px;min-height:44px;background:transparent;border:0;font-size:21px;touch-action:none;margin:0 auto;color:var(--muted,#656b75)}
+.palette-item[data-palette-drop]{outline:2px solid var(--red,#ba433d);outline-offset:3px;border-radius:14px}
+.palette-drag-handle[aria-grabbed=true]{color:var(--red,#ba433d)}
+@keyframes v50-sheet-in{from{opacity:.6;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.ledline-setup[data-order-open=true]{animation:none}}
+/* Override the old inline-card skin, including its high-specificity
+   transparent !important surface. A modal must cover the workspace. */
+html.interface-polish body :is(#main,[data-order-exit-host595]) .editor-controls .ledline-setup.card[data-order-open=true]{background:var(--bg)!important;background-image:none!important;border:0!important;box-shadow:none!important;display:block}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup.card[data-order-open=true]>.ledline-setup-toggle{border:0;border-bottom:1px solid var(--line);border-radius:0;background:var(--bg);box-shadow:none}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup.card[data-order-open=true]>.ledline-setup-body{border:0;border-radius:0;background:transparent;box-shadow:none;padding:0}
+/* Compact rows keep each touch target usable. Settings stay in this row,
+   rather than opening an unrelated receiver-management page. */
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] [data-order-item]{grid-template-columns:40px minmax(0,1fr) 88px 44px!important;gap:4px 8px!important;padding:10px!important;border-radius:18px!important;border:1px solid var(--line);box-shadow:0 3px 12px #00000003}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] .order-number{grid-column:1;grid-row:1/3;width:40px!important;height:44px!important;border-radius:13px;font-size:24px!important}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] .scope-copy{grid-column:2/4;grid-row:1;padding:0;align-self:end;line-height:1.25}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] .scope-option-title{font-size:14px;line-height:1.3}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] .scope-copy>small{font-size:10px;line-height:1.3;margin-top:2px;display:block}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] .line-order-handle{grid-column:4;grid-row:1/3;width:44px;height:48px;border-radius:12px;font-size:23px;color:var(--muted)}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] .ledline-row-actions{display:flex;gap:0;width:88px}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] .ledline-row-actions>button{position:relative;flex:0 0 44px;width:44px;min-height:44px;padding:0;border-radius:11px;border:0;background:transparent;display:grid;place-items:center;box-shadow:none;color:var(--muted)}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] .ledline-row-actions>button:hover{background:var(--glass-solid,var(--panel))}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] .ledline-row-actions>button[aria-expanded=true],html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] .ledline-row-actions>button[aria-pressed=true]{color:var(--red);background:color-mix(in srgb,var(--red) 8%,var(--panel))}
+/*c140-sel:v50-interface.css*/html.interface-polish body #main .ledline-setup[data-order-open=true] .ledline-row-actions > button > span, html.interface-polish body :where([data-order-exit-host595]):is([data-order-exit-host595], #main) .ledline-setup[data-order-open=true] .ledline-row-actions > button > span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] .ledline-row-actions>button>.icon{width:18px;height:18px}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] .ledline-settings-toggle>.icon:last-child{display:none}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] .ledline-row-settings{grid-row:3;grid-column:1/-1;margin-top:4px;padding-top:12px;border-top:1px solid var(--line)}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] .ledline-row-settings[hidden]{display:none}
+/* Announce movement to assistive technology without inserting a second
+   visible message above the fixed slots. The feedback card is always there. */
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] .order-drop-status{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;margin:0;padding:0}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true]>.ledline-setup-toggle .ledline-setup-copy b{font-size:18px;line-height:1.2}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] .order-recognition-status{margin:8px 0 12px;min-height:0;font-size:11px;line-height:1.4}
+@media(max-width:360px){.v50-preview-actions{align-items:flex-start}.v50-preview-expand{font-size:11px}.ledline-setup[data-order-open=true] .scope-copy>small{font-size:9px}}
+/* The preview header describes the installation; selection has its own
+   compact toolbar. Nothing disappears into a clipped selection sentence. */
+.v50-preview-actions{display:grid;gap:8px;margin-top:10px;min-width:0}
+.v50-preview-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.v50-selection-summary{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.v50-selection-summary>.icon{width:26px;height:26px;flex:none;color:var(--red)}
+.v50-selection-summary>span{display:grid;gap:2px;min-width:0}
+.v50-selection-summary small{font-size:10px;color:var(--muted);line-height:1.2}
+.v50-selection-summary b{font-size:12px;line-height:1.3;overflow-wrap:anywhere}
+.v50-preview-expand{min-height:44px;padding:6px 10px;border:1px solid var(--line);background:var(--panel);border-radius:14px;font-size:11px;gap:6px;flex:none}
+.v50-preview-expand .icon{width:17px;height:17px}
+.v50-preview-expand:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.v50-select-all .icon{width:23px;height:22px}
+.control-preview-dock .v50-control-preview .preview-top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0;min-height:34px;font-size:11px}
+.control-preview-dock .v50-control-preview .preview-top>span{flex:1;min-width:0;line-height:1.3;overflow-wrap:anywhere}
+.control-preview-dock .v50-control-preview .preview-summary{max-width:none;width:100%;overflow:visible;text-overflow:clip;white-space:normal;text-align:left;font-size:10px;line-height:1.4;padding:0 0 4px;color:#c0c9c3}
+.control-preview-dock .v50-control-preview .preview-size-row{flex:none;max-height:none;overflow:visible;padding:0;max-width:48%;width:auto!important}
+.v50-control-preview .preview-size-control summary{min-height:34px;padding:5px 8px;font-size:10px;border-radius:11px;gap:5px}
+.v50-control-preview .preview-size-control summary>span{display:none}
+.v50-control-preview .preview-size-control summary>b{padding:0;background:transparent;font-size:11px}
+.v50-control-preview .preview-size-control .icon{width:13px;height:13px}
+.control-preview-dock[data-spatial-preview=false] .v50-control-preview.preview-selectable canvas[data-preview]{min-height:var(--v50-preview-min-height,112px)!important}
+.v50-full-canvas-scroll{max-height:58dvh;overflow:auto;border-radius:20px;overscroll-behavior:contain;background:#111514}
+.v50-full-canvas-scroll .v50-expanded-canvas{min-height:var(--v50-preview-min-height,160px)!important}
+/* Warm white remains inside RGBW fine controls, but is no longer hidden
+   behind a separate disclosure or presented as the physical W channel. */
+.v50-white-mix{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.v50-white-mix .warm-white-choice{min-height:56px;padding:9px 12px;border-radius:15px;background:color-mix(in srgb,#e7b669 10%,var(--panel));box-shadow:none}
+.v50-white-mix .warm-white-choice b{font-size:13px;line-height:1.3}
+.v50-white-mix .warm-white-choice small{font-size:10px}
+.v50-white-mix .warm-white-swatch{width:26px;height:26px;flex:none}
+.v50-white-mix .warm-white-choice>.icon{width:18px;height:18px}
+.v50-white-mix-hint{font-size:10px;line-height:1.5;color:var(--muted);margin:8px 1px 10px}
+.v50-white-mix .warmth-row{margin-bottom:0}
+.v50-white-mix .warmth-help{font-size:10px;line-height:1.4}
+@media(max-width:360px){.v50-selection-summary b{font-size:11px}.v50-preview-expand{font-size:10px;padding-inline:8px}.v50-selection-summary>.icon{width:23px;height:23px}}
+/* Positions are a separate, stationary rail. Only physical endpoint cards
+   move; numbers and recognition colours belong to the destination slots. */
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] [data-order-slot]{box-sizing:border-box;flex:none;min-height:84px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:12px 0 0!important;margin:0!important;border:0!important;background:transparent!important;box-shadow:none!important;border-radius:0;gap:5px}
+[data-slot-colour-name]{max-width:48px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8px;line-height:1.3;color:var(--muted)}
+/* Reserving feedback height avoids a layout jump when a drag starts. */
+.v50-order-feedback{box-sizing:border-box;height:84px;min-height:84px;grid-template-rows:32px minmax(0,1fr);gap:4px;padding:10px 12px;overflow:hidden}
+.v50-order-feedback-route{min-width:0;white-space:nowrap;font-size:14px}
+.v50-order-feedback-source{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v50-order-feedback>small{overflow:hidden;line-height:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] [data-order-slot][data-order-slot-target]{background:color-mix(in srgb,var(--identify-colour) 10%,var(--panel))!important;border-radius:16px;outline:2px solid var(--identify-colour);outline-offset:-2px;box-shadow:0 0 0 3px color-mix(in srgb,var(--identify-colour) 12%,transparent)!important}
+/* A brief opacity-only entrance keeps drag geometry stable even when the
+   customer starts moving a line immediately after opening the sheet. */
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true]{animation:none}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true][data-order-motion588=enter]{animation:v50-order-sheet-in 220ms ease-out}
+@keyframes v50-order-sheet-in{from{opacity:0}to{opacity:1}}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=false][data-order-motion588=exit]{animation:v50-order-summary-in 180ms ease-out}
+@keyframes v50-order-summary-in{from{opacity:.35}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true],html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=false]{animation:none!important}}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true]>.ledline-setup-toggle{box-sizing:border-box;gap:8px}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true]>.ledline-setup-toggle>.ledline-setup-copy{flex:1;min-width:0}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true] .ledline-setup-close-label{font-size:11px;gap:4px}
+/* Keep the instruction and live LED overview together while the endpoint
+   list scrolls behind them. The header height follows text and viewport size. */
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true]{padding-top:0!important;scroll-padding-top:calc(var(--v50-order-header-height,80px) + var(--v50-order-dock-height,300px) + 16px);scroll-padding-bottom:24px}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open=true]>.ledline-setup-toggle{z-index:8;padding-top:calc(15px + max(14px,env(safe-area-inset-top)));padding-bottom:15px}
+.v50-order-dock{position:sticky;top:calc(var(--v50-order-header-height,66px) + 4px);z-index:6;display:grid;gap:8px;padding:6px 0 10px;margin:0;background:var(--bg);isolation:isolate}
+.v50-order-dock .v50-order-feedback{position:static;top:auto;margin:0;box-shadow:none}
+.v50-order-dock .v50-order-feedback>small{line-height:13px}
+@media(max-height:600px){.v50-order-dock{gap:6px;padding:4px 0 8px}.v50-order-dock .v50-order-feedback{height:72px;min-height:72px;grid-template-rows:24px minmax(0,1fr);gap:3px;padding:6px 10px}.v50-order-dock .v50-order-feedback-route{font-size:13px}.v50-order-dock .v50-order-feedback-target{min-height:24px;padding:4px 8px}}
+
+/* V50.557: Bekijk als is a true native fullscreen sheet. The dialog itself
+   scrolls; the safe-area header and close action remain in view. */
+body:has(dialog.v50-spatial-dialog[open]){overflow:hidden}
+dialog.spatial-choice-panel.v50-spatial-dialog{box-sizing:border-box;position:fixed;inset:0;display:block;width:100vw;max-width:none;height:100vh;height:100dvh;min-height:0;max-height:none;margin:0;padding:0;border:0;border-radius:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scroll-padding-block:110px 32px;isolation:isolate;color:var(--ink,#232830);background:var(--bg,#eef1f4);background-image:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+/* Earlier disclosure styling sets display:grid, so explicitly retain the
+   native closed-dialog invariant instead of relying on the browser's UA rule. */
+dialog.spatial-choice-panel.v50-spatial-dialog:not([open]){display:none!important}
+dialog.spatial-choice-panel.v50-spatial-dialog[open]{animation:v50-spatial-sheet-in 150ms ease-out both}
+dialog.v50-spatial-dialog::backdrop{background:var(--bg,#eef1f4);-webkit-backdrop-filter:none;backdrop-filter:none;animation:none}
+dialog.v50-spatial-dialog>.v50-spatial-header{box-sizing:border-box;position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;margin:0;padding:calc(15px + env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) 15px max(18px,env(safe-area-inset-left));border-bottom:1px solid var(--line,#dce1e9);background:var(--bg,#eef1f4);box-shadow:0 5px 16px #00000004}
+dialog.v50-spatial-dialog>.v50-spatial-header>div{flex:1;min-width:0;max-width:900px}
+.v50-spatial-header small{display:block;margin-bottom:5px;color:var(--muted,#656b75);font-size:12px;line-height:1.35;overflow-wrap:anywhere}
+.v50-spatial-header h2{margin:0;font-size:clamp(23px,4vw,32px);line-height:1.12;letter-spacing:-.5px;overflow-wrap:anywhere}
+.v50-spatial-header .spatial-choice-close{display:inline-flex;align-items:center;justify-content:center;gap:7px;flex:none;min-width:44px;min-height:44px;max-width:45%;padding:10px 12px;border:1px solid var(--line,#dce1e9);border-radius:14px;background:var(--panel,#fff);color:var(--ink,#232830);font:inherit;font-size:13px;font-weight:650;line-height:1.2;cursor:pointer;touch-action:manipulation}
+.v50-spatial-header .spatial-choice-close>.icon{width:18px;height:18px;flex:none}
+dialog.v50-spatial-dialog>.v50-spatial-content{box-sizing:border-box;display:grid;gap:18px;width:100%;max-width:1120px;min-width:0;margin:0 auto;padding:22px max(18px,env(safe-area-inset-right)) max(32px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left))}
+.v50-spatial-dialog .spatial-choice-help{max-width:760px;margin:0;color:var(--muted,#656b75);font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.v50-spatial-dialog .spatial-choice-options{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0}
+.v50-spatial-dialog .spatial-choice-option{box-sizing:border-box;display:grid;grid-template-columns:minmax(100px,36%) minmax(0,1fr) 24px;align-items:center;gap:12px;min-width:0;min-height:124px;width:100%;padding:12px;border:1px solid var(--line,#dce1e9);border-radius:22px;background:var(--panel,#fff);color:var(--ink,#232830);box-shadow:0 4px 14px #00000004;text-align:left;cursor:pointer;touch-action:manipulation;transition:border-color 140ms ease,background-color 140ms ease,box-shadow 140ms ease}
+.v50-spatial-dialog .spatial-choice-option[aria-pressed=true]{border-color:var(--red,#ba433d);background:color-mix(in srgb,var(--red,#ba433d) 5%,var(--panel,#fff));box-shadow:inset 0 0 0 1px var(--red,#ba433d),0 4px 16px #00000004}
+.v50-spatial-dialog .spatial-choice-art{display:block;width:100%;min-width:0;height:clamp(98px,22vw,152px);margin:0;overflow:hidden;border-radius:14px;background:#111514}
+.v50-spatial-dialog .spatial-choice-art>.spatial-choice-preview{display:block;width:100%;height:100%;border-radius:inherit;background:#111514;-webkit-backdrop-filter:none;backdrop-filter:none}
+.v50-spatial-dialog .spatial-choice-copy{display:grid;gap:7px;min-width:0}
+.v50-spatial-dialog .spatial-choice-copy>b{font-size:17px;font-weight:700;line-height:1.2;letter-spacing:-.25px;overflow-wrap:anywhere}
+.v50-spatial-dialog .spatial-choice-copy>small{color:var(--muted,#656b75);font-size:12px;line-height:1.45;overflow-wrap:anywhere}
+.v50-spatial-dialog .spatial-choice-check{display:grid;place-items:center;align-self:start;width:24px;height:24px;margin-top:3px;border:1px solid var(--line,#dce1e9);border-radius:50%;color:transparent;background:var(--soft,#f1f3f6)}
+.v50-spatial-dialog .spatial-choice-check>.icon{width:14px;height:14px}
+.v50-spatial-dialog .spatial-choice-option[aria-pressed=true] .spatial-choice-check{color:#fff;background:var(--red,#ba433d);border-color:var(--red,#ba433d)}
+.v50-spatial-dialog .spatial-choice-option:disabled{opacity:.55;cursor:progress}
+.v50-spatial-dialog :is(.spatial-choice-option,.spatial-choice-close,.spatial-topology-choice>button):focus-visible{outline:3px solid var(--red,#ba433d);outline-offset:3px}
+.v50-spatial-dialog .spatial-choice-option:active:not(:disabled){transform:none}
+.v50-spatial-dialog .spatial-topology-choice{gap:10px;padding:14px;border-radius:20px;min-width:0;background:var(--panel,#fff)}
+.v50-spatial-dialog .spatial-topology-choice legend{font-size:14px;line-height:1.35}
+.v50-spatial-dialog .spatial-topology-choice>button{min-height:84px;padding:12px;border-radius:14px}
+.v50-spatial-dialog .spatial-topology-choice b{font-size:13px;line-height:1.3}
+.v50-spatial-dialog .spatial-topology-choice small{font-size:11px;line-height:1.4}
+.v50-spatial-dialog .spatial-preview-only, .v50-spatial-dialog .v50-spatial-saving, .v50-spatial-dialog .arrangement-error{margin:0;font-size:12px;line-height:1.45;overflow-wrap:anywhere}
+.v50-spatial-dialog .spatial-preview-only{color:var(--muted,#656b75)}
+.v50-spatial-dialog .v50-spatial-saving{padding:12px 14px;border:1px solid var(--line,#dce1e9);border-radius:14px;background:var(--panel,#fff);color:var(--muted,#656b75)}
+.v50-spatial-dialog :is(.v50-spatial-saving,.arrangement-error)[hidden]{display:none!important}
+@keyframes v50-spatial-sheet-in{from{opacity:.65}to{opacity:1}}
+@media(min-width:780px){
+  dialog.v50-spatial-dialog>.v50-spatial-header{padding-inline:max(28px,env(safe-area-inset-left)) max(28px,env(safe-area-inset-right))}
+  dialog.v50-spatial-dialog>.v50-spatial-content{padding-top:30px;gap:24px}
+  .v50-spatial-dialog .spatial-choice-options{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+  .v50-spatial-dialog .spatial-choice-option{grid-template-columns:minmax(0,1fr) 24px;grid-template-rows:auto minmax(76px,1fr);align-items:start;gap:16px 10px;padding:16px}
+  .v50-spatial-dialog .spatial-choice-art{grid-column:1/-1;height:clamp(150px,24dvh,220px);border-radius:16px}
+  .v50-spatial-dialog .spatial-choice-copy>b{font-size:20px}
+  .v50-spatial-dialog .spatial-choice-copy>small{font-size:13px}
+  .v50-spatial-dialog .spatial-topology-choice{max-width:720px;width:100%;justify-self:start}
+}
+@media(max-width:360px){
+  dialog.v50-spatial-dialog>.v50-spatial-header{gap:9px;padding-inline:max(14px,env(safe-area-inset-left)) max(14px,env(safe-area-inset-right))}
+  .v50-spatial-header .spatial-choice-close{gap:4px;padding-inline:9px;font-size:12px}
+  dialog.v50-spatial-dialog>.v50-spatial-content{gap:15px;padding-inline:max(14px,env(safe-area-inset-left)) max(14px,env(safe-area-inset-right))}
+  .v50-spatial-dialog .spatial-choice-option{grid-template-columns:100px minmax(0,1fr) 22px;gap:8px;padding:10px;min-height:114px;border-radius:18px}
+  .v50-spatial-dialog .spatial-choice-art{height:92px;border-radius:12px}
+  .v50-spatial-dialog .spatial-choice-copy>b{font-size:15px}
+  .v50-spatial-dialog .spatial-choice-copy>small{font-size:11px;line-height:1.4}
+  .v50-spatial-dialog .spatial-choice-check{width:22px;height:22px}
+  .v50-spatial-dialog .spatial-topology-choice{grid-template-columns:minmax(0,1fr);padding:11px}
+}
+@media(max-height:520px){.v50-spatial-dialog .spatial-choice-art{height:120px}dialog.v50-spatial-dialog>.v50-spatial-content{padding-top:16px}}
+@media(prefers-reduced-motion:reduce){dialog.v50-spatial-dialog[open],dialog.v50-spatial-dialog::backdrop{animation:none!important}.v50-spatial-dialog :is(.spatial-choice-option,.spatial-choice-close,.spatial-topology-choice>button){transition:none!important}}
+
+/* App chrome is not document text: a long press must not select labels or
+   controls. Editable fields and explicitly copyable data retain native text
+   selection/callouts; no pointer/keyboard events are cancelled by JavaScript. */
+html,body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+/*c140-userselect*/body input:not(:is([type=range],[type=button],[type=submit],[type=reset],[type=checkbox],[type=radio],[type=color],[type=file],[type=image],[type=hidden])), body textarea, body [contenteditable=""], body [contenteditable="true" i], body [contenteditable="plaintext-only" i], body [data-selectable-text], body [contenteditable=""] *, body [contenteditable="true" i] *, body [contenteditable="plaintext-only" i] *, body [data-selectable-text] *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+body :where(button):is(button, input[type=range]), body input[type=range], body input[type=button], body input[type=submit], body input[type=reset], body input[type=checkbox], body input[type=radio], body input[type=color], body input[type=file], body input[type=image], body input[type=hidden], body :where(button):is(button, input[type=range]) *, body input[type=range] *, body input[type=button] *, body input[type=submit] *, body input[type=reset] *, body [contenteditable="false" i], body [contenteditable="false" i] *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+
+/* V50.558: A quiet first-start screen, with three centred steps rather than
+   unexplained decorative icons. Only the initial welcome component changes. */
+.v50-welcome{display:grid;align-content:start;gap:0;width:100%;max-width:460px;margin:0 auto;padding-top:clamp(28px,7dvh,64px);padding-bottom:24px}
+html body .v50-welcome>.page-heading,
+html.interface-polish body .v50-welcome>.page-heading{display:flex;justify-content:center;margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;text-align:center}
+.v50-welcome>.page-heading>div{width:100%;min-width:0}
+.v50-welcome>.page-heading .eyebrow{margin:0 0 10px;font-size:10px;line-height:1.4;letter-spacing:1.7px;color:var(--action-ink,var(--red,#ba433d))}
+html body .v50-welcome>.page-heading h1{margin:0;font-size:clamp(30px,8.4vw,40px);font-weight:750;line-height:1.14;letter-spacing:-.9px;color:var(--ink,#232830);overflow-wrap:anywhere;text-wrap:balance}
+html body .v50-welcome>.page-heading h1{white-space:pre-line;text-wrap:wrap}
+.v50-welcome>.page-heading p{max-width:31ch;margin:12px auto 0;color:var(--muted,#656b75);font-size:14px;line-height:1.6;text-wrap:balance}
+.v50-welcome>.v50-welcome-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start;gap:10px;list-style:none;padding:0;margin:28px 0 26px;color:var(--muted,#656b75)}
+.v50-welcome>.v50-welcome-steps>li{display:grid;grid-template-rows:38px auto;justify-items:center;align-content:start;gap:9px;min-width:0;margin:0;padding:0;text-align:center;font-size:13px;line-height:1.35}
+.v50-welcome>.v50-welcome-steps>li>b{display:grid;place-items:center;width:38px;height:38px;margin:0;border:1px solid var(--line,#dce1e9);border-radius:50%;background:var(--panel,#fff);color:var(--ink,#232830);box-shadow:none;font-size:15px;font-weight:750;line-height:1;font-variant-numeric:tabular-nums}
+.v50-welcome>.v50-welcome-steps>li>span{display:block;max-width:100%;min-width:0;color:var(--muted,#656b75);font-size:13px;font-weight:600;line-height:1.35;overflow-wrap:anywhere;text-wrap:balance}
+.v50-welcome>.v50-welcome-start{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;min-height:52px;margin:0;padding:14px 18px;border-radius:17px;font-size:14px;font-weight:650;line-height:1.3;text-align:center;touch-action:manipulation}
+.v50-welcome>.v50-welcome-start>.icon{width:18px;height:18px;flex:none}
+@media(max-width:360px){
+  .v50-welcome{padding-top:26px}
+  .v50-welcome>.v50-welcome-steps{gap:6px;margin-block:25px 24px}
+  .v50-welcome>.v50-welcome-steps>li>span{font-size:12px}
+}
+@media(max-height:600px){
+  .v50-welcome{padding-top:12px;padding-bottom:16px}
+  .v50-welcome>.page-heading p{margin-top:9px}
+  .v50-welcome>.v50-welcome-steps{margin-block:22px}
+}
+
+/* V50.567: first browse a group, then explicitly start an animation.
+   Every rule belongs to the new chooser marker; live/sticky previews and the
+   ledline-order workflow retain their accepted 566 layout. */
+html.interface-polish body [data-chooser-version="567"]{--chooser-accent:var(--red,#b8433c)}
+html.interface-polish body [data-chooser-version="567"][data-animation-category="pixels"],
+html.interface-polish body [data-chooser-version="567"] .animation-category-tab[data-id="pixels"]{--chooser-accent:#7862a4}
+html.interface-polish body [data-chooser-version="567"][data-animation-category="tunnel"],
+html.interface-polish body [data-chooser-version="567"] .animation-category-tab[data-id="tunnel"]{--chooser-accent:#277b67}
+html.interface-polish body [data-chooser-version="567"][data-animation-category="brand"],
+html.interface-polish body [data-chooser-version="567"] .animation-category-tab[data-id="brand"]{--chooser-accent:#97672f}
+html.interface-polish body [data-chooser-version="567"] .animation-category-tab:is([data-id="catalogue"],[data-id="presets"]){--chooser-accent:var(--ink)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-chooser-version="567"]{gap:10px;min-width:0}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-chooser-version="567"] .animation-library-heading{margin:0;padding:0;border:0;background:transparent;box-shadow:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-chooser-version="567"] .animation-library-title-copy{gap:4px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-chooser-version="567"] .animation-library-heading h2{margin:0;font-size:19px;line-height:1.25;letter-spacing:-.35px}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-picker-steps{display:flex;align-items:stretch;gap:7px;list-style:none;margin:0;padding:7px;border:1px solid var(--line);border-radius:13px;background:color-mix(in srgb,var(--soft) 66%,transparent)}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-picker-steps>li{display:flex;align-items:center;flex:1;gap:6px;min-width:0;margin:0;padding:3px 2px;font-size:11px;line-height:1.3;font-weight:600;color:var(--muted)}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-picker-steps>li>span{display:grid;place-items:center;flex:none;width:24px;height:24px;border:1px solid var(--line);border-radius:8px;background:var(--panel);font-size:12px;line-height:1;font-weight:750;font-variant-numeric:tabular-nums}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-picker-steps>li[aria-current="step"]{color:var(--ink);font-weight:750}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-picker-steps>li[aria-current="step"]>span{border-color:var(--chooser-accent);background:color-mix(in srgb,var(--chooser-accent) 10%,var(--panel));color:var(--chooser-accent)}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-category-tabs{display:flex;align-items:stretch;gap:6px;min-width:0;max-width:100%;margin-inline:-2px;padding:3px 2px 6px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none;scroll-snap-type:x proximity}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-category-tabs::-webkit-scrollbar{display:none;width:0;height:0}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-category-tab{display:flex;align-items:center;justify-content:center;flex:none;gap:6px;min-width:44px;min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--muted);font-size:12px;line-height:1.25;white-space:nowrap;scroll-snap-align:start;touch-action:pan-x;box-shadow:none}
+html.interface-polish body #main [data-chooser-version="567"] .animation-category-tab > span, html.interface-polish body #effect-dialog [data-chooser-version="567"] .animation-category-tab > span{display:grid;place-items:center;flex:none}
+html.interface-polish body #main [data-chooser-version="567"] .animation-category-tab .icon, html.interface-polish body #effect-dialog [data-chooser-version="567"] .animation-category-tab .icon, html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-category-tab .arrangement-icon{width:18px;height:18px}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-category-tab>b{font-size:12px;font-weight:650}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-category-tab>small{padding:2px 4px;border-radius:5px;background:var(--soft);font-size:10px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--muted)}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-category-tab[aria-pressed="true"]{border-color:var(--chooser-accent);background:color-mix(in srgb,var(--chooser-accent) 7%,var(--panel));color:var(--ink);box-shadow:inset 0 -3px var(--chooser-accent)}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-category-tab[aria-pressed="true"]>span{color:var(--chooser-accent)}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-search input{box-sizing:border-box;width:100%;min-height:44px;height:44px;padding:9px 12px 9px 38px;border-radius:13px;font-size:16px;line-height:1.3}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-search>.icon{top:13px;left:12px;width:18px;height:18px}
+
+/* Category names and geometry icons carry the distinction; colour is only
+   an additional cue, with a quiet tint in both light and dark mode. */
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"]{gap:9px;min-width:0}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"]+.animation-family-section{margin-top:18px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"]>.animation-family-heading{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:9px;margin:0;padding:10px;border:1px solid color-mix(in srgb,var(--chooser-accent) 24%,var(--line));border-left:3px solid var(--chooser-accent);border-radius:13px;background:color-mix(in srgb,var(--chooser-accent) 5%,var(--panel));box-shadow:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"] .animation-section-icon{display:grid;place-items:center;align-self:start;width:36px;height:36px;border-radius:11px;background:color-mix(in srgb,var(--chooser-accent) 11%,var(--panel));color:var(--chooser-accent)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"] .animation-section-icon .icon, html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"] .animation-section-icon .arrangement-icon{width:22px;height:22px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"] .animation-family-heading>div{display:grid;gap:2px;min-width:0}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"] .animation-category-eyebrow{color:var(--muted);font-size:9px;line-height:1.2;font-weight:700;letter-spacing:.045em;text-transform:uppercase}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"] .animation-family-heading h2{margin:0;font-size:16px;line-height:1.25;letter-spacing:-.2px;overflow-wrap:normal;word-break:normal}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"] .animation-family-heading p{margin:1px 0 0;font-size:11px;line-height:1.35;color:var(--muted)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"] .animation-family-heading>small{align-self:start;max-width:76px;padding:4px 6px;border-radius:8px;background:var(--panel);color:var(--muted);font-size:10px;line-height:1.3;text-align:center;white-space:normal;font-variant-numeric:tabular-nums}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"]>.animation-family-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:9px;align-items:stretch}
+html.interface-polish body #main .animation-family-card[data-chooser-version="567"], html.interface-polish body #effect-dialog .animation-family-card[data-chooser-version="567"]{min-width:0;border-radius:16px;border-color:var(--line);box-shadow:0 4px 12px #10151005;grid-column:auto}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"]>.animation-family-trigger{display:grid;grid-template-columns:104px minmax(0,1fr);align-items:center;gap:10px;width:100%;min-height:44px;padding:10px;background:transparent;color:var(--ink);text-align:left;white-space:normal;box-shadow:none}
+html.interface-polish body #main .animation-family-card[data-chooser-version="567"] .animation-family-preview, html.interface-polish body #effect-dialog .animation-family-card[data-chooser-version="567"] .animation-family-preview{display:grid;position:relative;grid-template-rows:auto 70px auto;gap:4px;align-self:center;width:100%;height:auto;min-height:0;min-width:0;padding:6px;border:1px solid #ffffff16;border-radius:12px;background:#111613;overflow:hidden}
+html.interface-polish body #main .animation-family-card[data-chooser-version="567"] .animation-family-preview-label, html.interface-polish body #effect-dialog .animation-family-card[data-chooser-version="567"] .animation-family-preview-label{display:block;position:static;max-width:100%;margin:0;padding:0;color:#cad4cd;font-size:10px;line-height:1.3;font-weight:600;letter-spacing:0;white-space:normal;overflow:visible;text-overflow:clip}
+html.interface-polish body #main .animation-family-card[data-chooser-version="567"] .animation-family-preview canvas, html.interface-polish body #effect-dialog .animation-family-card[data-chooser-version="567"] .animation-family-preview canvas{display:block;width:100%;height:70px!important;min-height:0!important;max-height:none;margin:0;border-radius:8px;background:#111613}
+html.interface-polish body #main .animation-family-card[data-chooser-version="567"] .family-copy, html.interface-polish body #effect-dialog .animation-family-card[data-chooser-version="567"] .family-copy{display:grid;align-content:center;gap:5px;min-height:0;min-width:0;margin:0;padding:0}
+html.interface-polish body #main .animation-family-card[data-chooser-version="567"] .family-kicker, html.interface-polish body #effect-dialog .animation-family-card[data-chooser-version="567"] .family-kicker{display:flex;align-items:center;flex-wrap:wrap;gap:5px;color:var(--muted);font-size:10px;line-height:1.3}
+html.interface-polish body #main .animation-family-card[data-chooser-version="567"] .animation-type-badge, html.interface-polish body #effect-dialog .animation-family-card[data-chooser-version="567"] .animation-type-badge{min-height:18px;padding:2px 5px;border-color:var(--line);background:var(--soft);color:var(--muted);font-size:9px;line-height:1.25;letter-spacing:0}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .family-title{display:block;margin:0;padding:0;font-size:16px;line-height:1.25;letter-spacing:-.15px;overflow-wrap:normal;word-break:normal}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .family-summary{display:block;-webkit-line-clamp:unset;-webkit-box-orient:initial;margin:0;padding:0;color:var(--muted);font-size:12px;font-weight:400;line-height:1.35;white-space:normal;overflow:visible;overflow-wrap:normal;word-break:normal}
+html.interface-polish body #main .animation-family-card[data-chooser-version="567"] .family-variants, html.interface-polish body #effect-dialog .animation-family-card[data-chooser-version="567"] .family-variants{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:44px;margin:2px 0 0!important;padding:6px 8px;border:1px solid color-mix(in srgb,var(--chooser-accent) 27%,var(--line));border-radius:11px;background:color-mix(in srgb,var(--chooser-accent) 6%,var(--panel));color:var(--chooser-accent);box-shadow:none;font-size:12px;line-height:1.3}
+html.interface-polish body #main .animation-family-card[data-chooser-version="567"] .family-variants-copy, html.interface-polish body #effect-dialog .animation-family-card[data-chooser-version="567"] .family-variants-copy{display:block;flex:1;min-width:0}
+html.interface-polish body #main .animation-family-card[data-chooser-version="567"] .family-variants-copy > b, html.interface-polish body #effect-dialog .animation-family-card[data-chooser-version="567"] .family-variants-copy > b{font-size:12px;line-height:1.3;font-weight:750;white-space:normal;overflow-wrap:normal;word-break:normal}
+html.interface-polish body #main .animation-family-card[data-chooser-version="567"] .family-variants-action, html.interface-polish body #effect-dialog .animation-family-card[data-chooser-version="567"] .family-variants-action{display:flex;flex:none;color:inherit}
+html.interface-polish body #main .animation-family-card[data-chooser-version="567"] .family-variants-action > .icon, html.interface-polish body #effect-dialog .animation-family-card[data-chooser-version="567"] .family-variants-action > .icon{width:16px;height:16px;transform:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .stand-animation-preview{max-height:70px;min-height:0;padding:0;gap:3px;overflow:hidden}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .stand-animation-zone{padding:2px 4px;gap:2px;border-radius:6px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .stand-animation-zone-label{font-size:9px;line-height:1.2}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .stand-animation-zone canvas{height:18px!important;border-radius:4px}
+
+/* Detail cards are the only chooser controls with a play/start action. The
+   same styles apply to standalone and inline group-detail routes. */
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"]{gap:10px;min-width:0}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-back-slot>.family-detail-back{min-height:44px;padding:6px 9px;border-radius:13px;font-size:12px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-detail-back .gallery-action-icon{width:28px;height:28px;border-radius:9px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-detail-back .gallery-action-icon>.icon{width:17px;height:17px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-detail-back .gallery-action-copy>b{font-size:12px;line-height:1.35}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"]>.family-detail-heading{align-items:flex-start;gap:10px;padding:0}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-detail-heading>div{gap:5px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-detail-category{display:flex;align-items:center;gap:6px;width:max-content;max-width:100%;color:var(--chooser-accent);font-size:11px;line-height:1.3;font-weight:750}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-detail-category>span{display:flex;flex:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-detail-category .icon, html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-detail-category .arrangement-icon{width:18px;height:18px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-detail-heading h2{margin:0;font-size:21px;line-height:1.22;letter-spacing:-.4px;overflow-wrap:normal;word-break:normal}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-detail-heading p{margin:0;font-size:12px;line-height:1.4}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-detail-count{min-height:25px;max-width:80px;padding:5px 7px;border-radius:10px;font-size:11px;line-height:1.3;text-align:center;white-space:normal}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-variants-panel{margin:0;padding:10px;border-radius:16px;background:var(--panel)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-variants-heading{margin:0 0 9px;padding:0;gap:8px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-variants-heading>div>b{font-size:15px;line-height:1.3}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"] .family-variants-heading>div>small{font-size:11px;line-height:1.35}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .family-variant-grid, html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .effect-grid{display:grid;grid-template-columns:minmax(0,1fr);align-items:stretch;gap:8px;min-width:0}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]{display:flex;flex-direction:column;align-items:stretch;gap:5px;min-width:0;min-height:44px;padding:8px;border:1px solid var(--line);border-radius:13px;background-color:var(--panel);text-align:left;white-space:normal;overflow:hidden}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]>.animation-effect-preview{position:relative;display:grid;grid-template-rows:auto 84px;align-items:stretch;gap:4px;width:100%;min-width:0;padding:6px;border:1px solid #ffffff16;border-radius:10px;background:#111613;overflow:hidden}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"] .animation-effect-preview-label{display:block;margin:0;padding:0;color:#bbc8c0;font-size:10px;line-height:1.3;font-weight:600;white-space:normal}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"] .animation-effect-preview>canvas{display:block;width:100%;height:84px!important;min-height:0!important;min-width:0;border-radius:7px;grid-column:auto;grid-row:auto;align-self:stretch}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]:is([data-animation-category="tunnel"],:has(.reference-preview))>.animation-effect-preview{grid-template-rows:auto 104px}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]:is([data-animation-category="tunnel"],:has(.reference-preview)) .animation-effect-preview>canvas{height:104px!important}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]>b{margin:0;padding:2px 1px;font-size:14px;line-height:1.3;overflow-wrap:normal;word-break:normal;text-wrap:balance}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]>.animation-variant-position{grid-column:auto;grid-row:auto;align-self:flex-start;max-width:100%;margin:0!important;padding:3px 5px;font-size:10px!important;line-height:1.25!important;white-space:normal}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]>.animation-variant-description{display:block;margin:0;padding:0 1px;font-size:11px;font-weight:400;line-height:1.4;color:var(--muted);overflow-wrap:normal;word-break:normal}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]>.animation-start-action{display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;margin-top:auto;padding:7px 6px;border-radius:10px;border:1px solid color-mix(in srgb,var(--chooser-accent) 30%,var(--line));background:color-mix(in srgb,var(--chooser-accent) 7%,var(--panel));color:var(--chooser-accent);font-size:11px;line-height:1.3;font-weight:750;text-align:center}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]>.animation-start-action>span{display:flex;flex:none}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]>.animation-start-action .icon{width:16px;height:16px}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"] .animation-current-badge{position:absolute;right:6px;bottom:6px;display:flex;align-items:center;max-width:calc(100% - 12px);min-height:21px;margin:0;padding:4px 6px;border:1px solid #8db19c;border-radius:7px;background:#243d2e;color:#f0f7f2;font-size:10px;line-height:1.2;font-weight:700;white-space:normal;pointer-events:none}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"][aria-pressed="true"]{border-color:var(--chooser-accent);box-shadow:0 0 0 1px var(--chooser-accent)}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"]>.animation-start-unavailable{display:block;margin-top:auto;padding:7px 4px;font-size:11px;line-height:1.35;color:var(--muted)}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"] .stand-animation-preview{min-height:0;padding:0;gap:4px;background:transparent}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"] .stand-animation-zone{padding:3px 5px;gap:2px;border-radius:7px}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"] .stand-animation-zone-label{font-size:10px;line-height:1.25}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"] .stand-animation-zone canvas{height:32px!important;border-radius:5px}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] :is(.animation-category-tab,.animation-family-trigger,.effect-card):focus-visible{outline:2px solid var(--chooser-accent);outline-offset:-2px}
+@media(min-width:360px){
+  html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .family-variant-grid, html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .effect-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(min-width:760px){
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"]>.animation-family-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:359px){
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"]>.animation-family-trigger{grid-template-columns:98px minmax(0,1fr);gap:8px;padding:8px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .family-title{font-size:15px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .family-summary{font-size:11px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"]>.animation-family-heading{grid-template-columns:30px minmax(0,1fr) auto;gap:7px;padding:8px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"] .animation-section-icon{width:30px;height:30px;border-radius:9px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"] .animation-family-heading h2{font-size:15px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"] .animation-family-heading>small{max-width:64px;font-size:9px}
+  html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-picker-steps{gap:5px;padding:6px}
+  html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-picker-steps>li{gap:5px;font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-detail[data-chooser-version="567"]{animation:none}
+  html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] :is(.animation-family-card,.animation-family-trigger,.effect-card,.animation-category-tab){transition:none!important}
+  html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-category-tabs{scroll-snap-type:none;scroll-behavior:auto}
+}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-chooser-version="567"] .animation-scope-note{display:flex;align-items:center;gap:9px;margin:0;padding:9px 11px;min-height:40px;border:0;border-radius:12px;background:var(--soft);text-align:left}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-chooser-version="567"] .animation-scope-note>span{display:flex;flex:none;color:var(--muted)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-chooser-version="567"] .animation-scope-note .icon{width:21px;height:21px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-chooser-version="567"] .animation-scope-note>strong{display:block;margin:0;padding:0;font-size:12px;font-weight:500;line-height:1.4;color:var(--ink)}
+/* A visual route replaces the ignored explanatory paragraph. Folder = browse;
+   the triangular play icon is reserved for actual start actions. */
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-picker-steps{position:relative;gap:20px}
+html.interface-polish body :is(#main,#effect-dialog) [data-chooser-version="567"] .animation-picker-steps::after{content:'→';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:17px;font-weight:600;color:var(--muted);pointer-events:none}
+html.interface-polish body #main .animation-family-card[data-chooser-version="567"] .family-kicker > span:first-child, html.interface-polish body #effect-dialog .animation-family-card[data-chooser-version="567"] .family-kicker > span:first-child{display:flex;color:var(--chooser-accent)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"] .family-kicker .icon{width:13px;height:13px}
+/* The app can stay phone-width inside a wide browser. Use the section's actual
+   space, not the viewport breakpoint, before placing groups side by side. */
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-section[data-chooser-version="567"]>.animation-family-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+
+/* V50.569: the current recipe is distinct from browsing a new animation.
+   These additions only skin the versioned editor and additive current-state
+   markers. A current badge describes the saved choice, not radio delivery. */
+html.interface-polish body :is(#main,#effect-dialog) :where([data-animation-editor-version="569"]):is([data-animation-editor-version="569"], .effect-card[data-chooser-version="567"][data-active-effect="true"]), html.interface-polish body :is(#main,#effect-dialog) :where([data-active-summary-version="569"]):is([data-active-summary-version="569"], .effect-card[data-chooser-version="567"][data-active-effect="true"]), html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"][data-active-effect="true"], html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"].is-active-family{--v569-current:#287657}
+html.interface-polish body[data-theme="dark"] :is(#main,#effect-dialog) :where([data-animation-editor-version="569"]):is([data-animation-editor-version="569"], .effect-card[data-chooser-version="567"][data-active-effect="true"]), html.interface-polish body[data-theme="dark"] :is(#main,#effect-dialog) :where([data-active-summary-version="569"]):is([data-active-summary-version="569"], .effect-card[data-chooser-version="567"][data-active-effect="true"]), html.interface-polish body[data-theme="dark"] :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"][data-active-effect="true"], html.interface-polish body[data-theme="dark"] :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"].is-active-family{--v569-current:#8dceae}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"]{display:grid;gap:10px;min-width:0;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+
+/* The same back button keeps its size when the app moves it into the dock. */
+html.interface-polish body :is(#main,#effect-dialog) :is([data-animation-editor-version="569"] .current-effect-gallery), html.interface-polish body :is(#main,#effect-dialog) :where([data-animation-back-version="569"]):is([data-animation-back-version="569"], [data-animation-editor-version="569"] .current-effect-gallery){display:flex;align-items:center;justify-content:flex-start;gap:8px;width:100%;min-width:0;min-height:44px;margin:0;padding:6px 10px;border:1px solid var(--line);border-radius:12px;background:var(--panel);background-image:none;color:var(--ink);box-shadow:none;font-size:13px;line-height:1.3;text-align:left;white-space:normal;-webkit-backdrop-filter:none;backdrop-filter:none}
+html.interface-polish body :is(#main,#effect-dialog) :is([data-animation-editor-version="569"] .current-effect-gallery,[data-animation-back-version="569"]) .gallery-action-label{display:flex;align-items:center;gap:8px;min-width:0}
+html.interface-polish body :is(#main,#effect-dialog) :is([data-animation-editor-version="569"] .current-effect-gallery,[data-animation-back-version="569"]) .gallery-action-icon{display:grid;place-items:center;flex:none;width:28px;height:28px;border:0;border-radius:8px;background:var(--soft);color:var(--muted);box-shadow:none}
+html.interface-polish body :is(#main,#effect-dialog) :is([data-animation-editor-version="569"] .current-effect-gallery,[data-animation-back-version="569"]) .gallery-action-icon>.icon{width:17px;height:17px}
+html.interface-polish body :is(#main,#effect-dialog) :is([data-animation-editor-version="569"] .current-effect-gallery,[data-animation-back-version="569"]) .gallery-action-copy{display:block;min-width:0}
+html.interface-polish body :is(#main,#effect-dialog) :is([data-animation-editor-version="569"] .current-effect-gallery,[data-animation-back-version="569"]) .gallery-action-copy>b{display:block;margin:0;padding:0;font-size:13px;line-height:1.3;font-weight:650;letter-spacing:0;overflow-wrap:anywhere}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"]>.v569-animation-header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px 8px;min-width:0;padding:0 0 2px;border:0;border-radius:0;background:transparent!important;background-image:none!important;box-shadow:none!important;-webkit-backdrop-filter:none;backdrop-filter:none}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-animation-header>.current-effect-gallery-slot{display:grid;grid-column:1/-1;min-width:0}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-animation-header>.current-effect-heading{display:grid;align-content:center;gap:3px;min-width:0;padding:1px 2px}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .active-animation-kicker{display:flex;align-items:center;gap:5px;margin:0;color:var(--v569-current);font-size:10px;line-height:1.35;font-weight:700;letter-spacing:.025em;text-transform:none;overflow:visible;-webkit-line-clamp:unset}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .active-animation-kicker>span{display:grid;place-items:center;flex:none;width:16px;height:16px;border-radius:50%;background:color-mix(in srgb,var(--v569-current) 11%,var(--panel))}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .active-animation-kicker .icon{width:11px;height:11px}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] #active-animation-title{display:block;min-width:0;margin:0;padding:0;color:var(--ink);font-size:22px;font-weight:750;line-height:1.2;letter-spacing:-.4px;overflow-wrap:anywhere;text-wrap:balance}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-animation-power{min-width:0;margin:0;padding:0}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-animation-power>.power-card{display:flex;align-items:center;justify-content:flex-end;min-height:44px;margin:0;padding:0;border:0;border-radius:0;background:transparent;background-image:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-animation-power>.power-card>div{display:none}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-animation-power .switch{min-width:44px;min-height:44px;padding:0 2px;gap:6px;font-size:12px;line-height:1.3}
+
+/* Colour choices remain large enough to edit, reorder or remove separately. */
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"]>:is(.v569-colour-panel,.v569-playback-panel){display:grid;gap:8px;min-width:0;margin:0;padding:12px;border:1px solid var(--line);border-radius:16px;background-color:var(--panel)!important;background-image:none!important;box-shadow:0 3px 12px #10151004!important;-webkit-backdrop-filter:none;backdrop-filter:none}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel>h2{margin:0;padding:0;color:var(--ink);font-size:14px;line-height:1.3;font-weight:700;letter-spacing:-.1px}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel > .v569-palette-hint, html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel > .palette-guidance{margin:-3px 0 1px;padding:0;color:var(--muted);font-size:11px;line-height:1.4;font-weight:400}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel>.palette{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,158px),1fr));align-items:stretch;gap:6px;min-width:0;margin:0;padding:0;overflow:visible;scroll-snap-type:none}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel .palette-item{display:flex;align-items:stretch;flex:initial;gap:0;min-width:0;max-width:100%;margin:0;border:1px solid var(--line);border-radius:11px;background:var(--soft);box-shadow:none;overflow:hidden}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel .palette-colour{display:grid;grid-template-columns:24px minmax(0,1fr);align-items:center;justify-content:flex-start;flex:1;gap:5px;min-width:44px;min-height:44px;margin:0;padding:6px 7px;background:transparent;color:var(--ink);font-size:11px;line-height:1.25;text-align:left}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel .palette-colour>span{display:block;width:24px;height:24px;min-width:24px;border:2px solid var(--panel);box-shadow:0 0 0 1px var(--line)}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel .palette-colour>small{display:block;min-width:0;margin:0;padding:0;font-size:10px;line-height:1.25;font-weight:600;white-space:normal;overflow-wrap:normal;word-break:normal}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel :is(.palette-drag-handle,.palette-remove){display:grid;place-items:center;flex:none;width:44px;min-width:44px;min-height:44px;margin:0;padding:0;border:0;border-left:1px solid var(--line);border-radius:0;background:transparent;color:var(--muted);box-shadow:none;font-size:21px;line-height:1}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel .palette-drag-handle[aria-grabbed="true"]{background:color-mix(in srgb,var(--red) 9%,var(--panel));color:var(--red)}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel .palette-item:has(.palette-remove) .palette-colour{grid-template-columns:minmax(0,1fr);justify-items:center;gap:2px;padding:4px 5px;text-align:center}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel .palette-item:has(.palette-remove) .palette-colour>span{width:20px;height:20px;min-width:20px}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel .palette-add{display:flex;align-items:center;justify-content:center;flex:initial;min-width:44px;min-height:44px;margin:0;padding:8px;border:1px dashed var(--line);border-radius:11px;background:transparent;color:var(--action-ink,var(--red));font-size:11px;line-height:1.3;white-space:normal;text-align:center}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel .animation-background{gap:7px;margin:2px 0 0;padding-top:8px;border-top:1px solid var(--line)}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel .background-control-heading{gap:7px;min-width:0;min-height:44px}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel .background-control-copy b{font-size:12px;line-height:1.3}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel .background-control-heading .switch{min-width:44px;min-height:44px;padding:0 2px;font-size:11px}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel .background-details{gap:7px;padding:9px;border:1px solid var(--line);border-radius:12px;background:var(--soft);box-shadow:none}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-colour-panel .background-colour{min-height:44px;border-radius:10px;font-size:12px}
+
+/* Primary values are always visible; advanced controls remain a disclosure. */
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"]>.v569-playback-panel{gap:0}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-primary-setting{display:grid;gap:0;min-width:0}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-primary-setting+.v569-primary-setting{margin-top:8px;padding-top:9px;border-top:1px solid var(--line)}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .slider-row{min-width:0;margin:0;padding:0}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .slider-row>label{display:flex;align-items:center;gap:7px;min-height:28px;margin:0;padding:0;font-size:13px;line-height:1.3;font-weight:650;color:var(--ink)}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .slider-row .setting-label-icon{display:grid;place-items:center;flex:none;width:26px;height:26px;border-radius:8px;background:var(--soft);color:var(--muted)}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .slider-row .setting-label-icon>.icon{width:16px;height:16px}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .slider-row output{flex:none;min-width:44px;margin-left:auto;padding:4px 7px;border:1px solid var(--line);border-radius:8px;background:var(--soft);color:var(--ink);font-size:12px;line-height:1.25;font-weight:700;text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .slider-row input[type="range"]{display:block;box-sizing:border-box;width:100%;height:44px;min-height:44px;margin:0;padding:0;accent-color:var(--action-ink,var(--red));touch-action:pan-y}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .setting-reset{display:flex;align-items:center;justify-content:center;justify-self:end;min-width:44px;min-height:44px;margin:0;padding:6px 8px;border:0;border-radius:9px;background:var(--soft);color:var(--muted);font-size:11px;line-height:1.3;white-space:normal}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .setting-reset[hidden]{display:none!important}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"]>.advanced-settings-toggle{display:flex;align-items:center;gap:9px;min-height:58px;min-width:0;margin:0;padding:9px 11px;border:1px solid var(--line);border-radius:13px;background:color-mix(in srgb,var(--panel) 65%,var(--soft));background-image:none;color:var(--ink);box-shadow:none}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .advanced-settings-icon{display:grid;place-items:center;flex:none;width:30px;height:30px;border:0;border-radius:9px;background:var(--soft);color:var(--muted)}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .advanced-settings-icon>.icon{width:18px;height:18px}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .advanced-settings-copy{display:grid;flex:1;gap:2px;min-width:0}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .advanced-settings-copy>b{font-size:13px;line-height:1.3;font-weight:650}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .advanced-settings-copy>small{font-size:11px;line-height:1.35;font-weight:400;color:var(--muted);overflow-wrap:anywhere}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .advanced-settings-next{display:grid;place-items:center;flex:none;width:20px;height:20px;color:var(--muted)}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .advanced-settings-next>.icon{width:17px;height:17px;transition:transform .15s ease}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .advanced-settings-toggle[aria-expanded="true"] .advanced-settings-next>.icon{transform:rotate(90deg)}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"]>.settings-panel{gap:10px;min-width:0;margin:0;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--panel);background-image:none;box-shadow:none}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"]>.settings-panel[hidden]{display:none!important}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .animation-setting{padding-bottom:9px}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .animation-preview-feedback{margin:0;padding:7px 8px;border-radius:10px;font-size:11px!important;line-height:1.35!important}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .compact-direction{flex-wrap:wrap;gap:6px}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .compact-direction>button{flex:1 1 104px;min-width:44px;min-height:44px;padding:7px 8px;font-size:11px;line-height:1.3;white-space:normal}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"]>.animation-save-recipe{min-height:44px;margin:0;padding:8px 12px;border:1px solid var(--line)!important;border-radius:12px;background:transparent!important;color:var(--muted)!important;box-shadow:none!important;font-size:12px;line-height:1.35;white-space:normal}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"]>.animation-save-help{margin:0;padding:0 3px;font-size:11px;line-height:1.4;color:var(--muted)}
+
+/* Editing the current choice is not the same action as starting a new one. */
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"]{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-width:0;min-height:70px;margin:0;padding:9px 11px;border:1px solid color-mix(in srgb,var(--v569-current) 35%,var(--line));border-left:3px solid var(--v569-current);border-radius:14px;background:color-mix(in srgb,var(--v569-current) 5%,var(--panel));background-image:none;color:var(--ink);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"]>.gallery-action-label{display:flex;align-items:center;flex:1;gap:9px;min-width:0}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"] .gallery-action-icon{display:grid;place-items:center;flex:none;width:34px;height:34px;border:0;border-radius:11px;background:color-mix(in srgb,var(--v569-current) 12%,var(--panel));color:var(--v569-current);box-shadow:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"] .gallery-action-icon>.icon{width:18px;height:18px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"] .gallery-action-copy{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:3px 10px;flex:1;min-width:0}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"] .animation-settings-return-kicker{grid-column:1/-1;min-width:0;margin:0;padding:0;color:var(--v569-current);font-size:10px;line-height:1.25;font-weight:650;letter-spacing:0;text-transform:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"] .animation-settings-return-name{min-width:0;margin:0;padding:0;color:var(--ink);font-size:16px;line-height:1.25;font-weight:750;letter-spacing:-.2px;overflow-wrap:anywhere;text-wrap:balance}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"] .animation-settings-return-action{display:flex;align-items:center;justify-content:center;min-height:32px;margin:0;padding:5px 7px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font-size:11px;line-height:1.25;font-weight:650;white-space:normal;text-align:center}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"]>.gallery-action-next{display:grid;place-items:center;flex:none;width:16px;height:24px;margin:0;padding:0;border:0;border-radius:0;background:transparent;color:var(--muted)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"] .gallery-action-next>.icon{width:16px;height:16px}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"][data-active-effect="true"]{border-color:var(--v569-current);background-color:color-mix(in srgb,var(--v569-current) 5%,var(--panel));box-shadow:inset 0 0 0 1px var(--v569-current)}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"][data-active-effect="true"]>.animation-start-action{border-color:var(--v569-current);background:color-mix(in srgb,var(--v569-current) 11%,var(--panel));color:var(--v569-current)}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"][data-active-effect="true"] .animation-current-badge{gap:4px;min-height:24px;border-color:#8db19c;background:#243d2e;color:#f0f7f2;font-size:10px;line-height:1.3}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"][data-active-effect="true"] .animation-current-badge>span{display:grid;place-items:center;flex:none}
+html.interface-polish body :is(#main,#effect-dialog) .effect-card[data-chooser-version="567"][data-active-effect="true"] .animation-current-badge .icon{width:12px;height:12px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"].is-active-family{border-color:color-mix(in srgb,var(--v569-current) 50%,var(--line));box-shadow:inset 3px 0 var(--v569-current)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"].is-active-family .v569-family-current{display:flex;align-items:center;gap:4px;width:fit-content;max-width:100%;margin:0;padding:3px 5px;border-radius:6px;background:color-mix(in srgb,var(--v569-current) 10%,var(--panel));color:var(--v569-current);font-size:10px;line-height:1.3;font-weight:650;white-space:normal}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"].is-active-family .v569-family-current>span{display:grid;place-items:center;flex:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-chooser-version="567"].is-active-family .v569-family-current .icon{width:11px;height:11px}
+html.interface-polish body :is(#main,#effect-dialog) :is([data-animation-editor-version="569"] button,[data-animation-back-version="569"],[data-active-summary-version="569"]):focus-visible{outline:2px solid var(--action-ink,var(--red));outline-offset:2px}
+@media(min-width:760px){
+  html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"]>.v569-playback-panel{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+  html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-primary-setting+.v569-primary-setting{margin:0;padding:0 0 0 14px;border-top:0;border-left:1px solid var(--line)}
+}
+@media(max-width:359px){
+  html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"]>:is(.v569-colour-panel,.v569-playback-panel){padding:10px}
+  html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] #active-animation-title{font-size:20px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"]{gap:7px;padding:8px;min-height:68px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"] .gallery-action-label{gap:7px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"] .animation-settings-return-name{font-size:14px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"] .animation-settings-return-action{font-size:10px;padding:4px 5px}
+}
+@media(prefers-reduced-motion:reduce){
+  html.interface-polish body :is(#main,#effect-dialog) :is([data-animation-back-version="569"],[data-active-summary-version="569"],[data-animation-editor-version="569"] button){transition:none!important}
+  html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .advanced-settings-next>.icon{transition:none}
+}
+
+/* One back button belongs to the measured dock flow, never an overlay over
+   the first settings row. The stand sheet keeps its ordinary inline header. */
+html.interface-polish body :is(#main,#effect-dialog) .control-preview-dock [data-animation-editor-nav="569"]{display:block;position:static!important;inset:auto!important;top:auto!important;right:auto!important;bottom:auto!important;left:auto!important;z-index:auto;box-sizing:border-box;width:100%;max-width:100%;min-width:0;height:auto;min-height:0;max-height:none;margin:0;padding:5px 0;border:0;border-radius:0;background:var(--glass-solid,var(--bg));background-image:none;box-shadow:none;transform:none;pointer-events:auto;-webkit-backdrop-filter:none;backdrop-filter:none}
+html.interface-polish body :is(#main,#effect-dialog) .control-preview-dock [data-animation-editor-nav="569"][hidden]{display:none!important}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-editor-version="569"] .v569-animation-header [data-editor-gallery-slot]:empty{display:none}
+
+/* V50.572: one calm group card, one browse affordance. The folder belongs
+   to the CTA; the animated illustration has no second action or play icon. */
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"]{border-radius:18px;background:var(--panel);box-shadow:0 3px 10px #10151004;overflow:hidden}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"]>.animation-family-trigger{grid-template-columns:96px minmax(0,1fr);align-items:stretch;gap:12px;padding:12px;border-radius:inherit;transition:background-color .15s ease}
+html.interface-polish body #main .animation-family-card[data-family-card-version="572"] .animation-family-preview, html.interface-polish body #effect-dialog .animation-family-card[data-family-card-version="572"] .animation-family-preview{box-sizing:border-box;grid-template-rows:auto minmax(72px,1fr);align-self:stretch;align-items:center;gap:4px;padding:8px 6px;border-radius:13px;background:linear-gradient(155deg,#1c2420,#0d120f);border-color:#ffffff0f}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .animation-family-preview-label{align-self:start;text-align:center;font-size:9px;font-weight:500;line-height:1.35;color:#b7c4bb;overflow-wrap:anywhere}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .animation-family-preview canvas{height:72px!important;background:transparent}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .family-copy{gap:5px}
+html.interface-polish body #main .animation-family-card[data-family-card-version="572"] .family-kicker, html.interface-polish body #effect-dialog .animation-family-card[data-family-card-version="572"] .family-kicker{gap:6px;font-size:9px;font-weight:600;letter-spacing:.025em}
+html.interface-polish body #main .animation-family-card[data-family-card-version="572"] .family-kicker > .animation-type-badge, html.interface-polish body #effect-dialog .animation-family-card[data-family-card-version="572"] .family-kicker > .animation-type-badge{display:inline-flex;align-items:center;min-height:17px;padding:2px 5px;font-size:9px;color:var(--muted)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .family-title{font-size:16px;line-height:1.25;letter-spacing:-.25px}
+html.interface-polish body #main .animation-family-card[data-family-card-version="572"] .family-summary, html.interface-polish body #effect-dialog .animation-family-card[data-family-card-version="572"] .family-summary{font-size:11px;line-height:1.4}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .family-variants{justify-content:flex-start;gap:7px;min-height:44px;margin-top:4px!important;padding:7px 9px;border:0;border-radius:10px;background:color-mix(in srgb,var(--chooser-accent) 8%,var(--panel));color:var(--chooser-accent)}
+html.interface-polish body #main .animation-family-card[data-family-card-version="572"] .family-variants-folder, html.interface-polish body #effect-dialog .animation-family-card[data-family-card-version="572"] .family-variants-folder{display:grid;place-items:center;flex:none;width:18px;height:18px;color:inherit}
+html.interface-polish body #main .animation-family-card[data-family-card-version="572"] .family-variants-folder > .icon, html.interface-polish body #effect-dialog .animation-family-card[data-family-card-version="572"] .family-variants-folder > .icon{width:18px;height:18px}
+html.interface-polish body #main .animation-family-card[data-family-card-version="572"] .family-variants-copy > b, html.interface-polish body #effect-dialog .animation-family-card[data-family-card-version="572"] .family-variants-copy > b{font-size:12px;font-weight:650;line-height:1.3}
+html.interface-polish body #main .animation-family-card[data-family-card-version="572"] .family-variants-action > .icon, html.interface-polish body #effect-dialog .animation-family-card[data-family-card-version="572"] .family-variants-action > .icon{width:15px;height:15px}
+html.interface-polish body[data-theme="dark"] :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .family-variants{color:var(--ink)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"].is-active-family{border-color:color-mix(in srgb,var(--v569-current) 50%,var(--line));box-shadow:inset 3px 0 var(--v569-current)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"]>.animation-family-trigger:focus-visible{outline:2px solid var(--chooser-accent);outline-offset:-3px}
+@media(hover:hover){html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"]>.animation-family-trigger:hover{background:color-mix(in srgb,var(--chooser-accent) 3%,var(--panel))}}
+@media(max-width:359px){
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"]>.animation-family-trigger{grid-template-columns:80px minmax(0,1fr);gap:9px;padding:10px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .family-title{font-size:15px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"] .family-variants{gap:5px;padding-inline:7px}
+}
+@media(prefers-reduced-motion:reduce){html.interface-polish body :is(#main,#effect-dialog) .animation-family-card[data-family-card-version="572"]>.animation-family-trigger{transition:none}}
+
+/* V50.573: a clear gallery header without nested frames or hidden filters.
+   Browsing and the current-animation shortcut keep their existing actions. */
+html.interface-polish body #main .control-workspace:has([data-library-ui-version="573"]){margin:0;padding:0;border:0;border-radius:0;background:transparent;background-image:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]{gap:10px;min-width:0;margin:0;padding:0;border:0;border-radius:0;background:transparent;background-image:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-library-heading{padding:0 2px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"] .animation-library-heading h2{font-size:20px;line-height:1.25;letter-spacing:-.4px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-picker-steps{align-items:center;gap:24px;margin-top:-3px;padding:0 2px;border:0;border-radius:0;background:transparent;box-shadow:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-picker-steps>li{gap:6px;min-height:28px;padding:0;font-size:11px;line-height:1.35;font-weight:500}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-picker-steps>li>span{width:21px;height:21px;border:0;border-radius:50%;background:var(--soft);font-size:11px;font-weight:650}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-picker-steps>li[aria-current="step"]{font-weight:650}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-picker-steps>li[aria-current="step"]>span{background:color-mix(in srgb,var(--chooser-accent) 10%,var(--panel));color:var(--chooser-accent)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-picker-steps::after{font-size:14px;font-weight:500}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-current-shortcut-version="573"]{gap:8px;min-height:58px;padding:8px 10px;border-left-width:3px;border-radius:12px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-current-shortcut-version="573"]>.gallery-action-label{gap:8px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-current-shortcut-version="573"] .gallery-action-icon{width:26px;height:26px;border-radius:50%;background:color-mix(in srgb,var(--v569-current) 10%,var(--panel))}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-current-shortcut-version="573"] .gallery-action-icon>.icon{width:16px;height:16px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-current-shortcut-version="573"] .gallery-action-copy{gap:3px 8px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-current-shortcut-version="573"] .animation-settings-return-kicker{grid-column:1;grid-row:1;font-size:10px;line-height:1.25}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-current-shortcut-version="573"] .animation-settings-return-name{grid-column:1;grid-row:2;font-size:14px;line-height:1.25;font-weight:700;text-wrap:pretty}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-current-shortcut-version="573"] .animation-settings-return-action{grid-column:2;grid-row:1/3;min-height:0;max-width:86px;padding:0;border:0;border-radius:0;background:transparent;color:var(--ink);font-size:11px;line-height:1.3;font-weight:600}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-current-shortcut-version="573"]>.gallery-action-next{width:14px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:6px;max-width:100%;margin:0;padding:0;overflow:visible;scroll-snap-type:none;overscroll-behavior:auto}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab{display:grid;grid-template-columns:18px minmax(0,1fr) auto;align-items:center;gap:6px;min-width:0;min-height:44px;margin:0;padding:7px 9px;border:1px solid var(--line);border-radius:11px;background:var(--panel);background-image:none;box-shadow:none;color:var(--muted);font-size:12px;line-height:1.3;white-space:normal;text-align:left;scroll-snap-align:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab>b{min-width:0;font-size:12px;line-height:1.3;font-weight:600;overflow-wrap:anywhere}
+html.interface-polish body #main .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab > span, html.interface-polish body #effect-dialog .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab > span{display:grid;place-items:center;width:18px;height:18px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab > span > .icon, html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab > span > .arrangement-icon{width:18px;height:18px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab>small{min-width:20px;padding:3px 4px;border-radius:6px;background:var(--soft);color:var(--muted);font-size:10px;line-height:1.2;font-weight:600;text-align:center;font-variant-numeric:tabular-nums}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--panel);box-shadow:none}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab[aria-pressed="true"]>small{background:var(--panel);color:var(--ink)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab[aria-pressed="true"]>span{color:var(--panel)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab[aria-pressed="true"] > span > .icon, html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"] > .animation-category-tab[aria-pressed="true"] > span > .arrangement-icon{color:inherit}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab:last-child:nth-child(odd){grid-column:1/-1}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-search{position:relative;display:block;margin:0}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-search>span{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-search input{height:44px;min-height:44px;padding:9px 12px 9px 37px;border:1px solid var(--line);border-radius:11px;background:var(--panel);background-image:none;box-shadow:none;font-size:16px;line-height:1.3}
+html.interface-polish body :is(#main,#effect-dialog) .animation-library-inline[data-library-ui-version="573"]>.animation-search>.icon{position:absolute;z-index:1;top:13px;left:12px;width:18px;height:18px;pointer-events:none;color:var(--muted)}
+html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab:focus-visible{outline:2px solid var(--chooser-accent);outline-offset:2px}
+@media(min-width:760px){
+  html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]{grid-template-columns:repeat(3,minmax(0,1fr))}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab:last-child:nth-child(odd){grid-column:auto}
+}
+@media(max-width:359px){
+  html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab{gap:5px;padding:7px;font-size:11px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-category-tabs[data-categories-ui-version="573"]>.animation-category-tab>b{font-size:11px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-current-shortcut-version="573"] .animation-settings-return-action{max-width:64px;font-size:10px}
+}
+
+/* 574: local app-language choice before a stand exists. */
+html body .onboarding-welcome>.welcome-language{position:relative;justify-self:center;width:max-content;max-width:100%;margin:14px auto 0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;z-index:3}
+html body .welcome-language>summary{display:flex;align-items:center;gap:7px;min-height:44px;padding:8px 12px;list-style:none;border:0;border-radius:10px;background:none;color:var(--muted,#656b75);font-size:12px;line-height:1.4;cursor:pointer;touch-action:manipulation}
+.welcome-language>summary::-webkit-details-marker{display:none}
+.welcome-language>summary::marker{content:''}
+html body .welcome-language>summary>span{color:var(--muted,#656b75)}
+html body .welcome-language>summary>b{color:var(--ink,#232830);font-size:12px;font-weight:600}
+html body .welcome-language .icon{flex:none;width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7}
+.welcome-language[open] .welcome-language-chevron{transform:rotate(180deg)}
+html body .welcome-language>.welcome-language-options{position:absolute;top:calc(100% + 4px);left:50%;transform:translateX(-50%);display:grid;width:224px;max-width:calc(100vw - 40px);padding:5px;border:1px solid var(--line,#dce1e9);border-radius:15px;background:var(--panel,#fff);box-shadow:0 12px 32px #00000022}
+html body .welcome-language-options>button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:44px;margin:0;padding:11px 12px;border:0;border-radius:10px;background:transparent;color:var(--ink,#232830);font-size:14px;text-align:left;touch-action:manipulation}
+html body .welcome-language-options>button[aria-pressed="true"]{background:var(--soft,#eef2f6);color:var(--action-ink,var(--red,#ba433d));font-weight:650}
+.welcome-language-options>button[aria-pressed="false"]>.icon{visibility:hidden}
+html body .welcome-language :is(summary,button):focus-visible{outline:2px solid var(--action-ink,var(--red,#ba433d));outline-offset:3px}
+/* The original wordmark belongs to the welcome hero, not a second header. */
+html body:has(#main>.v50-welcome)>.brand-bar{display:none}
+html body .v50-welcome:has(.welcome-brand){padding-top:clamp(24px,5dvh,46px)}
+html body .v50-welcome>.welcome-brand{display:grid;justify-items:center;gap:14px;width:100%;max-width:100%;margin:0 auto 30px;text-align:center}
+html body .welcome-brand>img{display:block;width:clamp(190px,60vw,238px);max-width:100%;height:auto;object-fit:contain;filter:none}
+/* 575: centre the 438px wordmark inside the original 512px asset.
+   The separate A occupies the remaining right-hand area; preserve that asset. */
+html body .welcome-brand>img{transform:translateX(7.2265625%)}
+html body[data-theme="dark"] .welcome-brand>img{filter:invert(1)}
+html body .welcome-brand-lighting{display:flex;align-items:center;justify-content:center;gap:7px;margin:0;padding:0;color:var(--ink,#232830);font-size:20px;font-weight:650;line-height:1.4;letter-spacing:0;text-indent:0}
+html body .welcome-brand-lighting>span{display:block;animation:welcome-cold-white574 10s ease-in-out infinite;animation-delay:calc(var(--light-letter)*.16s)}
+html body .v50-welcome:has(.welcome-brand)>.page-heading .eyebrow{display:none}
+@keyframes welcome-cold-white574{
+  0%,20%,62%,100%{color:var(--ink,#232830);text-shadow:none;-webkit-text-stroke:0 transparent}
+  38%,44%{color:#f5faff;text-shadow:0 0 5px #e5f2ff,0 0 12px #dfedff99;-webkit-text-stroke:.3px #65768b88}
+}
+html body .v50-welcome:has(.welcome-brand){text-align:center;justify-items:stretch}
+html body .v50-welcome:has(.welcome-brand)>.page-heading{width:100%;text-align:center}
+/* 579: centre the complete welcome, not just the logo. A short screen still
+   grows naturally and scrolls; no fixed height can clip the language menu. */
+html body:has(#main>.v50-welcome){display:flex;flex-direction:column}
+html body:has(#main>.v50-welcome) #main{
+  display:flex;
+  align-items:center;
+  flex:1 0 auto;
+  min-height:0;
+  margin-block:0;
+  padding-block:calc(24px + env(safe-area-inset-top,0px)) calc(24px + env(safe-area-inset-bottom,0px));
+}
+html body #main>.v50-welcome:has(.welcome-brand){
+  flex:none;
+  margin-block:auto;
+  padding-block:0;
+}
+@media(max-height:600px){
+  html body #main>.v50-welcome>.welcome-brand{margin-bottom:22px;gap:10px}
+}
+@media(prefers-reduced-motion:reduce){
+  html body .welcome-brand-lighting>span{animation:none;color:var(--ink,#232830);text-shadow:none;-webkit-text-stroke:0 transparent}
+}
+
+/* 629: local order dismissal stays opaque/tappable while its native cleanup
+   finishes. Pending receiver rows never show through the sticky close bar. */
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open="true"]>.ledline-setup-toggle{
+  z-index:10;isolation:isolate;opacity:1;background:var(--bg,#eef1f4)!important;
+  box-shadow:0 5px 0 var(--bg,#eef1f4);pointer-events:auto;min-height:82px;
+}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open="true"] .ledline-setup-close-label{
+  justify-content:center;gap:7px;min-width:88px;min-height:44px;padding:9px 12px;
+  border:1px solid var(--line);border-radius:13px;background:var(--panel);
+  color:var(--ink);font-size:13px;font-weight:650;line-height:1.25;
+}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open="true"] .ledline-setup-close-label>.icon{width:18px;height:18px}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open="true"]>.ledline-setup-toggle:focus-visible{outline:0}
+html.interface-polish body :is(#main,[data-order-exit-host595]) .ledline-setup[data-order-open="true"]>.ledline-setup-toggle:focus-visible .ledline-setup-close-label{outline:2px solid var(--red);outline-offset:3px}
+
+/* Both animation navigation actions use the same roomy card language. Their
+   existing chosen/unconfirmed ledger, labels and action IDs remain unchanged. */
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"]{
+  gap:12px;min-height:88px;padding:14px 16px;border-left-width:4px;border-radius:18px;
+  background:color-mix(in srgb,var(--v569-current) 4%,var(--panel));
+}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"]>.gallery-action-label{gap:12px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"] .gallery-action-icon{width:42px;height:42px;border-radius:13px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"] .gallery-action-icon>.icon{width:23px;height:23px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"] .gallery-action-copy{gap:5px 12px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"] .animation-settings-return-kicker{grid-column:1/-1;font-size:12px;line-height:1.35}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"] .animation-settings-return-name{font-size:18px;line-height:1.3;font-weight:750}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"] .animation-settings-return-action{
+  grid-row:2;min-height:44px;max-width:none;padding:8px 10px;border:1px solid var(--line);
+  border-radius:12px;background:var(--panel);font-size:13px;line-height:1.3;font-weight:650;
+}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"]>.gallery-action-next{width:18px}
+html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"]>.gallery-action-next>.icon{width:18px;height:18px}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-back-version="569"].current-effect-gallery.animation-gallery-return{
+  min-height:64px;gap:12px;padding:12px 16px;border-radius:18px;background:var(--panel);
+}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-back-version="569"].current-effect-gallery.animation-gallery-return .gallery-action-label{gap:12px}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-back-version="569"].current-effect-gallery.animation-gallery-return .gallery-action-icon{width:38px;height:38px;border-radius:12px}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-back-version="569"].current-effect-gallery.animation-gallery-return .gallery-action-icon>.icon{width:22px;height:22px}
+html.interface-polish body :is(#main,#effect-dialog) [data-animation-back-version="569"].current-effect-gallery.animation-gallery-return .gallery-action-copy>b{font-size:16px;line-height:1.35;font-weight:700}
+@media(max-width:359px){
+  html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"]{gap:8px;padding:12px;min-height:88px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"] .gallery-action-label{gap:9px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"] .gallery-action-icon{width:36px;height:36px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"] .gallery-action-copy{gap:5px 8px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"] .animation-settings-return-name{font-size:16px}
+  html.interface-polish body :is(#main,#effect-dialog) .animation-settings-return[data-active-summary-version="569"][data-current-shortcut-version="573"] .animation-settings-return-action{font-size:12px;max-width:80px;padding:7px}
+}

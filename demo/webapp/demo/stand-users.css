@@ -1,0 +1,277 @@
+/* Aluvision: Delen en gebruikers (stand-users.js), alleen in de tester. su-* = deze pagina's.
+   Kleuren, kaarten, schakelaars en knoppen komen uit de stijl van de app; hier staat alleen wat dit menu zelf nodig heeft.
+   De pagina's zijn volledige pagina's onder het logo, met een terugpijl, zoals de receiverpagina (receivers-tab.css). */
+
+/* ---------- een pagina over het hele scherm, onder het logo ---------- */
+html:not(#su):not(#su):not(#su) body:not(#su):not(#su):not(#su) dialog.su-page[open]{position:fixed;left:0;right:0;top:var(--c109-logo-bottom,0px)!important;bottom:0;
+  width:auto;height:auto;max-width:none;max-height:none!important;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:hidden;display:block;animation:none!important;color:var(--ink)}
+html:not(#su):not(#su):not(#su) body:not(#su):not(#su):not(#su) dialog.su-page[open]::backdrop{background:rgba(0,0,0,.004)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;animation:none!important}
+dialog.su-page:not([open]){display:none}
+.su-panel{position:absolute;inset:0;overflow:hidden auto;overscroll-behavior:contain;display:flex;flex-direction:column;background:var(--c109-page,var(--bg));
+  opacity:0;transform:translate3d(46px,0,0);transition:transform .34s cubic-bezier(.2,.8,.2,1),opacity .2s ease}
+.su-page.is-in .su-panel{opacity:1;transform:none}
+.su-page.is-out .su-panel{opacity:0;transform:translate3d(38px,0,0);transition-duration:.2s}
+.su-panel>*{box-sizing:border-box;padding-inline:max(16px,calc((100% - 600px)/2))}
+.su-top{flex:none;display:flex;align-items:center;gap:12px;padding-top:14px;padding-bottom:6px}
+.su-top h2{margin:0;font-size:27px;line-height:1.1;letter-spacing:-.025em}
+.su-under{display:block;margin-top:3px;color:var(--muted);font-size:14px;font-weight:700}
+html:not(#su) body:not(#su) dialog.su-page .su-back{flex:none;display:grid;place-items:center;width:44px;height:44px;min-height:0;margin:0;padding:0;border-radius:14px;
+  border:1px solid color-mix(in srgb,var(--line) 70%,transparent);background:var(--panel);box-shadow:none;color:var(--red,#bf4841);cursor:pointer}
+.su-page svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.su-back svg{width:20px;height:20px}
+.su-body{flex:1 1 auto;display:grid;align-content:start;gap:12px;padding-top:12px;padding-bottom:calc(26px + env(safe-area-inset-bottom,0px))}
+.su-h{margin:8px 2px 0;font-size:17px;font-weight:850}
+@media (prefers-reduced-motion:reduce){.su-panel{transition:none}}
+
+/* ---------- Stand delen (de grote knop) ---------- */
+html:not(#su) body:not(#su) dialog.su-page .su-share-big{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;width:100%;min-height:76px;margin:0;padding:14px 16px 14px 14px;
+  border:0;border-radius:24px;background:#202220;color:#fff;font:inherit;text-align:left;cursor:pointer;box-shadow:0 14px 28px -18px rgba(0,0,0,.65)}
+body[data-theme=dark] dialog.su-page .su-share-big{background:#f3f2ee!important;color:#18191b!important}
+.su-share-ic{display:grid;place-items:center;width:48px;height:48px;border-radius:16px;background:rgba(255,255,255,.14)}
+body[data-theme=dark] .su-share-ic{background:rgba(0,0,0,.08)}
+.su-share-ic svg{width:24px;height:24px}
+.su-share-big b{display:block;font-size:18px;font-weight:850}
+.su-share-big small{display:block;margin-top:2px;font-size:13px;font-weight:650;opacity:.72}
+.su-share-big>svg{width:20px;height:20px}
+
+/* ---------- de gebruikers ---------- */
+.su-users{display:grid;gap:8px}
+html:not(#su) body:not(#su) dialog.su-page .su-user{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:12px;width:100%;min-height:66px;margin:0;padding:10px 14px 10px 12px;
+  border:1px solid var(--line);border-radius:20px;background:var(--panel);color:var(--ink);font:inherit;text-align:left;cursor:pointer;box-shadow:none}
+.su-user.is-main{grid-template-columns:auto minmax(0,1fr);cursor:default}
+.su-user.is-new{animation:su-new 1.6s ease}
+@keyframes su-new{0%,30%{border-color:var(--red,#bf4841);box-shadow:0 0 0 4px color-mix(in srgb,var(--red,#bf4841) 18%,transparent)}100%{}}
+.su-user>svg{width:18px;height:18px;color:var(--muted)}
+.su-av{display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:var(--soft);border:1px solid var(--line);color:var(--ink);font-size:17px;font-weight:850}
+.su-av.is-main{background:#202220;border-color:#202220;color:#ffc61a}
+.su-av.is-main svg{width:21px;height:21px}
+.su-user-t{display:grid;gap:2px;min-width:0}
+.su-user-t b{font-size:16.5px;font-weight:850;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.su-user-t small{color:var(--muted);font-size:13px;font-weight:700}
+.su-mini{display:flex;gap:3px;color:var(--muted)}
+.su-mini svg{width:16px;height:16px}
+
+/* ---------- wat mag die persoon ---------- */
+.su-roles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+html:not(#su) body:not(#su) dialog.su-page .su-role{display:grid;justify-items:start;align-content:start;gap:4px;min-height:112px;margin:0;padding:12px;border:1.5px solid var(--line);border-radius:18px;
+  background:var(--panel);color:var(--ink);font:inherit;text-align:left;cursor:pointer;box-shadow:none}
+html:not(#su) body:not(#su) dialog.su-page .su-role[aria-checked=true]{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.su-role-ic{display:grid;place-items:center;width:36px;height:36px;margin-bottom:4px;border-radius:12px;background:var(--soft)}
+.su-role[aria-checked=true] .su-role-ic{background:#202220;color:#fff}
+body[data-theme=dark] .su-role[aria-checked=true] .su-role-ic{background:#f3f2ee;color:#18191b}
+.su-role-ic svg{width:20px;height:20px}
+.su-role b{font-size:15px;font-weight:850}
+.su-role small{color:var(--muted);font-size:12px;font-weight:650;line-height:1.3}
+.su-vakjes{display:grid;gap:0;border:1px solid var(--line);border-radius:20px;background:var(--panel);overflow:hidden}
+.su-vak{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;min-height:60px;padding:8px 12px}
+.su-vak+.su-vak{border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.su-vak-ic{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:var(--soft);color:var(--ink)}
+.su-vak-ic svg{width:18px;height:18px}
+.su-vak-t{display:grid;gap:1px;min-width:0}
+.su-vak-t b{font-size:15px;font-weight:800}
+.su-vak-t small{color:var(--muted);font-size:12.5px;font-weight:650}
+.su-always{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:2px 4px}
+.su-always>b{color:var(--muted);font-size:12.5px;font-weight:850;letter-spacing:.04em;text-transform:uppercase}
+.su-always>span{display:flex;flex-wrap:wrap;gap:6px}
+.su-always i{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:999px;background:var(--soft);font-style:normal;color:var(--ink)}
+.su-always i svg{width:15px;height:15px}
+.su-always em{font-style:normal;font-size:12px;font-weight:750}
+.su-note{display:flex;align-items:flex-start;gap:8px;margin:2px 4px;color:var(--muted);font-size:13px;font-weight:650;line-height:1.35}
+.su-note svg{flex:none;width:16px;height:16px;margin-top:1px}
+.su-field{display:grid;gap:6px;font-size:14px;font-weight:800;color:var(--ink)}
+html:not(#su) body:not(#su) dialog.su-page .su-field input{width:100%;min-height:52px;margin:0;padding:0 14px;box-sizing:border-box;border:1.5px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink);font:inherit;font-size:17px;font-weight:650;outline:none}
+html:not(#su) body:not(#su) dialog.su-page .su-field input:focus{border-color:var(--ink)}
+html:not(#su) body:not(#su) dialog.su-page .su-primary{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;min-height:56px;margin:4px 0 0;border:0;border-radius:999px;background:#202220;color:#fff;font:inherit;font-size:16.5px;font-weight:850;cursor:pointer}
+body[data-theme=dark] dialog.su-page .su-primary{background:#f3f2ee!important;color:#18191b!important}
+.su-primary svg{width:20px;height:20px}
+
+/* ---------- het bestandje en de manieren om het te delen ---------- */
+.su-file{display:grid;justify-items:center;gap:6px;padding:22px 16px;border:1px solid var(--line);border-radius:24px;background:var(--panel);text-align:center}
+.su-file-ic{display:grid;place-items:center;width:64px;height:64px;border-radius:20px;background:#202220;color:#fff}
+.su-file-ic svg{width:32px;height:32px}
+.su-file b{font-size:19px;font-weight:850}
+.su-file small{color:var(--muted);font-size:13.5px;font-weight:700}
+.su-targets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+html:not(#su) body:not(#su) dialog.su-page .su-target{display:grid;justify-items:center;gap:7px;min-height:92px;margin:0;padding:12px 4px;border:1px solid var(--line);border-radius:18px;background:var(--panel);color:var(--ink);font:inherit;cursor:pointer;box-shadow:none}
+.su-target span{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--soft)}
+.su-target span svg{width:22px;height:22px}
+.su-target b{font-size:12.5px;font-weight:800}
+
+/* ---------- een gebruiker ---------- */
+.su-who{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:12px}
+.su-who b{display:block;font-size:17px;font-weight:850}
+.su-who small{color:var(--muted);font-size:13px;font-weight:650}
+html:not(#su) body:not(#su) dialog.su-page .su-revoke{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;margin:8px 0 0;border:1.5px solid color-mix(in srgb,var(--red,#bf4841) 55%,transparent);border-radius:999px;background:none;color:var(--red,#bf4841);font:inherit;font-size:15.5px;font-weight:850;cursor:pointer}
+html:not(#su) body:not(#su) dialog.su-page .su-revoke.is-armed{background:var(--red,#bf4841);color:#fff;border-color:var(--red,#bf4841)}
+.su-revoke svg{width:18px;height:18px}
+
+/* ---------- de kaart in Instellingen ---------- */
+.su-entry{width:100%}
+.su-entry .menu-icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.su-entry-chev{margin-left:auto;display:grid;place-items:center}
+.su-entry-chev svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+@media (max-width:380px){.su-roles{gap:6px}html:not(#su) body:not(#su) dialog.su-page .su-role{padding:10px;min-height:104px}.su-role small{font-size:11.5px}}
+/* de titel staat links naast de terugpijl (de app zet koppen in een venster anders uit elkaar) */
+html:not(#su) body:not(#su) dialog.su-page .su-top{justify-content:flex-start;text-align:left}
+html:not(#su) body:not(#su) dialog.su-page .su-top>div{flex:1 1 auto;min-width:0;text-align:left}
+html:not(#su) body:not(#su) dialog.su-page .su-share-big small{color:inherit;opacity:.75}
+
+/* ---------- Stand delen in drie stappen (de eigenaar 13 nov: "nog beter uitwerken en nog klantvriendelijker") ---------- */
+/* het beeld: je stand gaat als bestandje van jouw telefoon naar de andere */
+.su-anim{position:relative;height:92px;border-radius:22px;background:var(--panel);border:1px solid var(--line);overflow:hidden}
+.su-ph{position:absolute;top:14px;display:grid;align-content:center;gap:5px;width:40px;height:64px;padding:0 7px;box-sizing:border-box;border:2px solid var(--ink);border-radius:10px;background:var(--soft)}
+.su-ph i{display:block;height:4px;border-radius:2px;background:linear-gradient(90deg,#2F6BFF,#9B4DFF)}
+.su-ph i:nth-child(2){width:70%}
+.su-ph-a{left:18%}
+.su-ph-b{right:18%}
+.su-ph-b i{opacity:.15;animation:su-fill 3s ease-in-out infinite}
+.su-ph-b i:nth-child(2){animation-delay:.08s}.su-ph-b i:nth-child(3){animation-delay:.16s}
+.su-fly{position:absolute;top:30px;left:calc(18% + 46px);display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:#202220;color:#fff;animation:su-fly 3s ease-in-out infinite}
+.su-fly svg{width:17px;height:17px}
+@keyframes su-fly{0%,12%{left:calc(18% + 8px);opacity:0;transform:scale(.6)}22%{opacity:1;transform:none}62%{left:calc(82% - 38px);opacity:1;transform:none}72%,100%{left:calc(82% - 38px);opacity:0;transform:scale(.6)}}
+@keyframes su-fill{0%,62%{opacity:.15}72%,94%{opacity:1}100%{opacity:.15}}
+@media (prefers-reduced-motion:reduce){.su-fly{animation:none;left:calc(50% - 15px)}.su-ph-b i{animation:none;opacity:1}}
+/* snelle namen */
+.su-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:-4px}
+html:not(#su) body:not(#su) dialog.su-page .su-chip{min-height:34px;margin:0;padding:0 14px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--ink);font:inherit;font-size:13.5px;font-weight:750;cursor:pointer;box-shadow:none}
+html:not(#su) body:not(#su) dialog.su-page .su-chip[aria-pressed=true]{background:#202220;border-color:#202220;color:#fff}
+body[data-theme=dark] dialog.su-page .su-chip[aria-pressed=true]{background:#f3f2ee!important;border-color:#f3f2ee!important;color:#18191b!important}
+/* drie grote kaarten: wat die rol mag, in icoontjes */
+.su-bigroles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+html:not(#su) body:not(#su) dialog.su-page .su-bigrole{display:grid;justify-items:center;align-content:start;gap:6px;min-height:118px;margin:0;padding:14px 8px 12px;border:1.5px solid var(--line);border-radius:20px;background:var(--panel);color:var(--ink);font:inherit;text-align:center;cursor:pointer;box-shadow:none}
+html:not(#su) body:not(#su) dialog.su-page .su-bigrole[aria-checked=true]{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.su-bigrole[aria-checked=true] .su-role-ic{background:#202220;color:#fff}
+body[data-theme=dark] .su-bigrole[aria-checked=true] .su-role-ic{background:#f3f2ee;color:#18191b}
+.su-bigrole b{font-size:15.5px;font-weight:850}
+.su-may{display:flex;flex-wrap:wrap;justify-content:center;gap:3px;color:var(--muted)}
+.su-may svg{width:14px;height:14px}
+.su-may.is-own{align-items:center;gap:4px}.su-may em{font-style:normal;font-size:12px;font-weight:750}
+.su-maylist{display:grid;gap:0;margin:0;padding:4px 12px;list-style:none;border:1px solid var(--line);border-radius:18px;background:var(--panel)}
+.su-maylist li{display:flex;align-items:center;gap:10px;min-height:42px;font-size:14.5px;font-weight:750}
+.su-maylist li+li{border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.su-maylist svg{width:17px;height:17px;color:var(--muted)}
+.su-primary>svg{width:18px;height:18px}
+/* stap 2 en 3 */
+.su-file.is-big{padding:28px 16px}
+.su-file.is-big .su-file-ic{width:76px;height:76px;border-radius:22px}
+.su-file.is-big .su-file-ic svg{width:38px;height:38px}
+html:not(#su) body:not(#su) dialog.su-page .su-textbtn{justify-self:center;display:inline-flex;align-items:center;gap:6px;min-height:40px;margin:0;padding:0 14px;border:0;background:none;color:var(--muted);font:inherit;font-size:14.5px;font-weight:800;cursor:pointer;box-shadow:none}
+.su-textbtn svg{width:16px;height:16px}
+.su-done{display:grid;justify-items:center;gap:8px;padding:34px 16px 18px;text-align:center}
+.su-done-ic{display:grid;place-items:center;width:84px;height:84px;border-radius:50%;background:#1FC45B;color:#fff;animation:su-pop .5s cubic-bezier(.2,1.4,.4,1) both}
+.su-done-ic svg{width:42px;height:42px;stroke-width:2.6}
+.su-done b{font-size:22px;font-weight:850;letter-spacing:-.01em}
+.su-done small{max-width:30ch;color:var(--muted);font-size:14.5px;font-weight:650;line-height:1.4}
+@keyframes su-pop{0%{transform:scale(.4);opacity:0}100%{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.su-done-ic{animation:none}}
+/* in donker: het bestandje licht op een donkere achtergrond */
+body[data-theme=dark] .su-fly,body[data-theme=dark] .su-file-ic{background:#f3f2ee;color:#18191b}
+
+/* ---------- de pagina mooier (de eigenaar 13 nov: "denk dat die pagina nog beter kan") ---------- */
+/* de kleur van elke rol: Gast blauw, Opbouwer oranje, Eigen keuze paars; de hoofdgebruiker zwart met een gouden kroon */
+.su-page{--su-gast:#2F6BFF;--su-opbouwer:#E8890C;--su-eigen:#8B4DFF}
+[data-role=gast]{--su-c:var(--su-gast)}[data-role=opbouwer]{--su-c:var(--su-opbouwer)}[data-role=eigen]{--su-c:var(--su-eigen)}
+.su-av[data-role]{background:color-mix(in srgb,var(--su-c) 14%,var(--panel));border-color:color-mix(in srgb,var(--su-c) 40%,transparent);color:var(--su-c)}
+.su-av.is-big{width:76px;height:76px;font-size:30px;border-width:2px}
+.su-pill{justify-self:end;display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;background:color-mix(in srgb,var(--su-c,#202220) 13%,transparent);color:var(--su-c,var(--ink));font-size:12.5px;font-weight:850;white-space:nowrap}
+.su-pill.is-main{background:#202220;color:#ffc61a}
+body[data-theme=dark] .su-pill.is-main{background:#f3f2ee;color:#9a6a00}
+.su-meter{display:inline-flex;gap:3px;margin-top:4px}
+.su-meter i{width:14px;height:5px;border-radius:3px;background:color-mix(in srgb,var(--line) 85%,transparent)}
+.su-meter i.on{background:var(--su-c)}
+html:not(#su) body:not(#su) dialog.su-page .su-user{grid-template-columns:auto minmax(0,1fr) auto auto}
+.su-user.is-main{grid-template-columns:auto minmax(0,1fr) auto}
+.su-count{display:inline-grid;place-items:center;min-width:22px;height:22px;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--soft);color:var(--muted);font-size:12.5px;font-weight:850;vertical-align:2px}
+.su-empty{display:flex;align-items:center;gap:8px;margin:0 4px;color:var(--muted);font-size:14px;font-weight:700}
+.su-empty svg{width:18px;height:18px}
+/* het beeld: je stand in het midden, jij links, de anderen in een boog rechts; dunne lijntjes waar het licht over loopt */
+.su-hero{display:grid;gap:14px;padding:16px;border:1px solid var(--line);border-radius:26px;background:var(--panel);box-shadow:0 14px 30px -24px rgba(0,0,0,.45)}
+.su-orbit{position:relative;height:178px}
+.su-links{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.su-links line{stroke:color-mix(in srgb,var(--ink) 22%,transparent);stroke-width:.6;stroke-dasharray:2 2.4;vector-effect:non-scaling-stroke;animation:su-flow 1.6s linear infinite;animation-delay:var(--d,0s)}
+.su-links line.me{stroke:color-mix(in srgb,#c79100 55%,transparent)}
+@keyframes su-flow{to{stroke-dashoffset:-9}}
+.su-stand{position:absolute;left:50%;top:50%;translate:-50% -50%;display:grid;justify-items:center;gap:6px}
+.su-stand-ic{display:grid;place-items:center;width:64px;height:64px;border-radius:20px;background:#202220;color:#fff;box-shadow:0 10px 24px -12px rgba(0,0,0,.6)}
+body[data-theme=dark] .su-stand-ic{background:#f3f2ee;color:#18191b}
+.su-stand-ic svg{width:30px;height:30px}
+.su-stand b{font-size:14px;font-weight:850;white-space:nowrap}
+.su-orb{position:absolute;left:var(--x);top:var(--y);translate:-50% -50%;display:grid;place-items:center;width:44px;height:44px;margin:0;padding:0;border-radius:50%;border:2px solid var(--panel);
+  background:var(--su-c,#202220);color:#fff;font:inherit;font-size:17px;font-weight:850;cursor:pointer;box-shadow:0 0 0 1.5px color-mix(in srgb,var(--su-c,#202220) 45%,transparent),0 8px 16px -10px rgba(0,0,0,.6)}
+.su-orb.is-me{background:#202220;color:#ffc61a;cursor:default}
+body[data-theme=dark] .su-orb.is-me{background:#f3f2ee;color:#9a6a00}
+.su-orb.is-me svg{width:21px;height:21px}
+.su-more{position:absolute;right:2%;bottom:4%;padding:3px 8px;border-radius:999px;background:var(--soft);color:var(--muted);font-size:12px;font-weight:850}
+html:not(#su) body:not(#su) dialog.su-page .su-hero .su-share-big{display:flex;grid-template-columns:none;min-height:56px;padding:0 18px;margin:0;border-radius:999px;justify-content:center;gap:10px}
+.su-hero .su-share-big svg{width:20px;height:20px}
+.su-hero .su-share-big b{font-size:16.5px}
+@media (prefers-reduced-motion:reduce){.su-links line{animation:none}}
+/* de kop van een gebruiker */
+.su-whohero{display:grid;justify-items:center;gap:8px;padding:6px 0 2px;text-align:center}
+.su-whohero>b{font-size:22px;font-weight:850;letter-spacing:-.01em}
+.su-whometa{display:flex;align-items:center;gap:10px}
+.su-whometa .su-meter{margin:0}
+html:not(#su) body:not(#su) dialog.su-page .su-second{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;margin:8px 0 0;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--ink);font:inherit;font-size:15.5px;font-weight:850;cursor:pointer;box-shadow:none}
+.su-second svg{width:18px;height:18px}
+html:not(#su) body:not(#su) dialog.su-page .su-revoke{margin-top:0}
+.su-file .su-meter{margin-top:2px}
+
+/* het doorsturen van een wijziging naar de telefoon van die persoon (de eigenaar 13 nov) */
+.su-sync{display:inline-flex;align-items:center;gap:7px;min-height:28px;padding:0 12px;border-radius:999px;background:var(--soft);color:var(--muted);font-size:13px;font-weight:750}
+.su-sync i{width:13px;height:13px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:su-spin .8s linear infinite}
+.su-sync.is-done{background:color-mix(in srgb,#1FC45B 14%,var(--panel));color:#14823c}
+body[data-theme=dark] .su-sync.is-done{color:#5be08a}
+.su-sync svg{width:15px;height:15px;stroke-width:2.6}
+@keyframes su-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.su-sync i{animation:none}}
+html:not(#su) body:not(#su) dialog.su-page .su-revoke.is-armed span{font-size:14px}
+
+/* ---------- de tutorial (de eigenaar 13 nov): twee telefoons, jij en je collega; de schil is die van de andere tutorials (ki-*) ---------- */
+.sut{z-index:2147483000}
+.sut-fit{position:absolute}
+.sut-phone{position:absolute;top:30px;width:300px;height:610px}
+.sut-phone.is-me{left:20px}.sut-phone.is-other{right:20px}
+.sut-label{position:absolute;left:0;right:0;top:-28px;text-align:center;font-size:15px;font-weight:800;color:#d8d6d1;letter-spacing:.02em}
+.sut-glass{position:absolute;inset:0;border-radius:42px;background:#1c1d20;box-shadow:inset 0 0 0 2px #3b3d42,0 30px 60px -30px rgba(0,0,0,.8);padding:9px}
+.sut-screen{position:relative;width:390px;height:818px;transform:scale(.7231);transform-origin:0 0;border-radius:44px;overflow:hidden;background:var(--c109-page,var(--bg,#eef2f6));color:var(--ink)}
+/* jouw telefoon: de echte pagina, maar binnen de telefoon (geen vast scherm) */
+html:not(#su):not(#su):not(#su):not(#su) body:not(#su):not(#su):not(#su):not(#su) dialog.su-page.sut-static[open]{position:absolute;inset:0;top:0!important;display:block;width:auto;height:auto;z-index:auto}
+.sut-static .su-panel{opacity:1;transform:none;transition:none;overflow:hidden}
+.sut-static .su-panel>*{padding-inline:16px}
+.sut-static .su-top{padding-top:44px}
+.sut-static .su-hero .su-orbit{height:150px}
+.sut-static [data-sut-target]{display:grid;justify-items:center;gap:7px;min-height:92px;padding:12px 4px;border:1px solid var(--line);border-radius:18px;background:var(--panel)}
+/* de telefoon van je collega */
+.sut-other{position:absolute;inset:0;display:grid;align-content:start;gap:14px;padding:54px 18px 18px;background:linear-gradient(180deg,#e9edf3,#dfe5ee)}
+body[data-theme=dark] .sut-other{background:linear-gradient(180deg,#1b1d22,#121316)}
+.sut-time{position:absolute;left:30px;top:16px;font-size:15px;font-weight:800}
+.sut-chat{display:grid;gap:8px;margin-top:40px}
+.sut-chat small{color:var(--muted);font-size:13px;font-weight:800}
+.sut-bubble{justify-self:start;display:flex;align-items:center;gap:10px;max-width:86%;padding:12px 14px;border-radius:18px 18px 18px 6px;background:var(--panel);box-shadow:0 8px 20px -14px rgba(0,0,0,.5)}
+.sut-bubble>svg{flex:none;width:30px;height:30px;padding:6px;border-radius:9px;background:#202220;color:#fff;fill:none;stroke:currentColor;stroke-width:1.8}
+body[data-theme=dark] .sut-bubble>svg{background:#f3f2ee;color:#18191b}
+.sut-bubble b{display:block;font-size:14px;font-weight:850}.sut-bubble em{font-style:normal;color:var(--muted);font-size:12px;font-weight:700}
+.sut-appcard{display:grid;justify-items:center;gap:6px;margin-top:30px;padding:22px 14px;border-radius:24px;background:var(--panel);text-align:center;box-shadow:0 14px 30px -24px rgba(0,0,0,.5)}
+.sut-appcard b{font-size:19px;font-weight:850}.sut-appcard small{color:var(--muted);font-size:13px;font-weight:700}
+.sut-appcard svg,.sut-lights svg,.sut-toast svg,.sut-lock svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sut-appcard .su-stand-ic svg{width:30px;height:30px}
+.sut-appcard .su-meter{--su-c:var(--su-opbouwer,#E8890C)}
+.sut-lights{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.sut-lights i{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:999px;background:var(--panel);font-style:normal}
+.sut-lights svg{width:15px;height:15px}.sut-lights em{font-style:normal;font-size:12px;font-weight:750}
+.sut-toast{display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:16px;background:#14823c;color:#fff;font-size:13.5px;font-weight:800;animation:su-pop .4s ease both}
+.sut-toast svg{flex:none;width:18px;height:18px;stroke-width:2.6}
+.sut-other.is-locked{place-content:center;justify-items:center;text-align:center;gap:8px}
+.sut-lock{display:grid;place-items:center;width:84px;height:84px;border-radius:50%;background:#bf4841;color:#fff;animation:su-pop .45s ease both}
+.sut-lock svg{width:40px;height:40px}
+.sut-other.is-locked b{font-size:20px;font-weight:850}.sut-other.is-locked small{color:var(--muted);font-size:14px;font-weight:700}
+/* het bestandje dat van jouw telefoon naar die van je collega vliegt, en de vinger */
+.sut-fly{position:absolute;left:0;top:0;z-index:3;display:grid;place-items:center;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:14px;background:#f3f2ee;color:#18191b;opacity:0;
+  transition-property:left,top,opacity;transition-timing-function:cubic-bezier(.45,.05,.25,1);box-shadow:0 10px 24px rgba(0,0,0,.5)}
+.sut-fly svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8}
+.sut-finger{z-index:4;transition-property:left,top,opacity,transform;transition-timing-function:cubic-bezier(.45,.05,.25,1)}
+.sut-finger.is-press{transform:scale(.8)}
+.su-tut{justify-self:center;margin-top:6px}
+/* de ondertitel van de stap die speelt */
+.sut .ki-sub{transition:opacity .35s ease,transform .35s ease;transform:translateY(6px)}
+.sut .ki-sub.is-on{opacity:1;transform:none}

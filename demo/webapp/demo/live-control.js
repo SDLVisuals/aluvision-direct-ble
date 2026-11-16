@@ -1,0 +1,989 @@
+/* PREVIEWSYNC: one wall-clock preview time base (epoch seconds) for every
+ * animation preview, so a saved previewStartedAt keeps its meaning after an app
+ * reopen and on another phone; plus the dispatch lead used when sampling PHASEMS
+ * (fast lane: receivers start the app's phase at the MAIN deadline, ~120 ms after
+ * the request is built). Bench override: localStorage 'aluvision.previewLeadMs'. */
+(function(root){'use strict';
+  if(typeof root.AluvisionPreviewNowPS!=='function'){
+    const p=root.performance,mono=p&&typeof p.now==='function';
+    let origin=mono?Date.now()-p.now():0;
+    root.AluvisionPreviewNowPS=()=>{
+      const wall=Date.now();if(!mono)return wall/1000;
+      const t=origin+p.now();
+      // Sleep or a wall-clock correction: follow the wall clock again.
+      if(Math.abs(wall-t)>250){origin=wall-p.now();return wall/1000;}
+      return t/1000;
+    };
+  }
+  if(typeof root.AluvisionPreviewLeadPS!=='function'){
+    let lead=120;
+    try{const raw=root.localStorage&&root.localStorage.getItem('aluvision.previewLeadMs');
+      if(raw!==null&&raw!==undefined&&raw!==''){const v=Number(raw);if(Number.isFinite(v)&&v>=0&&v<=1000)lead=v;}}catch(_){}
+    root.AluvisionPreviewLeadPS=()=>lead/1000;
+  }
+})(typeof globalThis==='object'?globalThis:this);
+/* A single radio queue for firmware-confirmed light changes. The preview is
+ * immediate; a relay or late reply never proves that LEDs emitted light. */
+(function (root, factory) {
+  const model = typeof module === 'object' && module.exports ? require('./model.js') : root.LightningModel;
+  const preview = typeof module === 'object' && module.exports ? require('./preview.js') : root.LightningPreview;
+  const api = factory(model,root,preview);
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  root.LightningLiveControl = api;
+})(typeof globalThis === 'object' ? globalThis : this, function (model,root,preview) {
+  'use strict';
+  const SPI_ENGINES=['STATIC','GRADIENT','BREATHE','CHASE','COMET','SCANNER','SPARKLE','WAVE','SEQUENCE','ALL','MIRROR','ALTERNATE','CASCADE','DUAL','FLOW','WARM','MINIMAL'];
+  const RGBW_ENGINES=[...SPI_ENGINES,'PULSE','STROBE','SMOOTH'];
+  const V30_EFFECTS=['rgb-jumping','seven-jumping','rgb-gradient','seven-gradient','tunnel-travel','tunnel-bounce','tunnel-center','tunnel-outside','tunnel-cascade','tunnel-handoff','tunnel-pulse','tunnel-echo','tunnel-pixel-curtain','tunnel-pixel-cross','brand-white-breathe','brand-warm-white','brand-accent','brand-sweep','brand-focus','brand-soft-gradient'].map(id=>'v30-'+id);
+  const SPI_TIMED_VARIANTS=new Set([...Array(13)].map((_,i)=>90+i).concat([104,105,106,107,108,109,110,111,128]));
+  const SHARED_TUNNEL_VARIANTS=new Set([5,6,7,8,9,10,11,12,13,14,15,16,21,22,23,24,26,27,28,29,30,31]);
+  // Use a 120 ms receiver ramp for static wheel/dimmer targets, without delaying
+  // dispatch or storing a history of pointer movements. A new powered
+  // animation cue blends briefly; an explicit power-OFF fades to black.
+  // Zero-brightness intents keep their existing separate safe semantics.
+  // Receiver cue classification prevents duplicates restarting that blend.
+  // C98: 250 ms lets each wheel step fade into the next on RGBW instead
+  // of jumping (a tap still starts changing at once).
+  const STATIC_TRANSITION_MS=250;
+  const ANIMATION_CUE_TRANSITION_MS=180;
+  const POWER_OFF_TRANSITION_MS=350;
+  const clone=value=>JSON.parse(JSON.stringify(value));
+  // Zonepagina (docs/zonepagina-samenvoegen-en-eigen-timing.md). In de lichtstand van elke receiver van de zone:
+  //   lineJoin     per ledline van de zone (in haar volgorde) het nummer van de ledline waar ze na samenvoegen in zit;
+  //   ownTimingMs  Eigen timing: [ronde, in, vol, uit, start van ledline 0, 1, …] in ms. Alleen bij een looplicht.
+  // De apps rekenen daaruit LINEINDEX/LINECOUNT/V30PIXELS/V30OFFSET en V30ID 44 met V30CYCLE/IN/HOLD/OUT/START.
+  const OWN_TIMING_EFFECT=44;
+  function lineJoinOf(state,zone){
+    const join=state?.lineJoin;
+    if(zone?.layout==='continuous'||!Array.isArray(join)||join.length<2||join.length>128||!join.every(v=>Number.isInteger(v)&&v>=0&&v<=119))return null;
+    const groups=new Set(join);return groups.size===Math.max(...join)+1&&groups.size<join.length?join.slice():null;
+  }
+  function ownTimingOf(state,zone){
+    const ms=state?.ownTimingMs;
+    if(zone?.layout==='continuous'||state?.category!=='tunnel'||state?.standAnimation||!Array.isArray(ms)||ms.length<5||ms.length>124||
+       !ms.every(v=>Number.isInteger(v)&&v>=0&&v<=10000)||ms[0]<1000||ms[1]>1000||ms[2]<50||ms[2]>2000||ms[3]>2000||!ms.slice(4).every(v=>v+50<=ms[0]))return null;
+    return ms.slice();
+  }
+  // Route hint only: native repeats closed parsing and exact physical-child
+  // admission. An explicit subset remains SPI_PORTS, never a PORT=0 scene.
+  function scopedMovingCandidate(request){
+    if(request?.kind!=='SPI_PORTS'||!Array.isArray(request.portScenes)||!request.portScenes.length||request.portScenes.length>4)return false;
+    let previous=0,common=null;
+    return request.portScenes.every(child=>{
+      const {port,...recipe}=child,scene=child.scene;
+      if(!Number.isInteger(port)||port<=previous||port>4||child.kind!=='SPI_SCENE'||child.brightness<=0||
+         !scene||!['CHASE','WAVE','BREATHE'].includes(scene.engine)||scene.backgroundOn!==false||
+         scene.v30!==undefined||scene.standAnimation!==undefined||
+         !Number.isInteger(scene.phaseMs)||!Number.isInteger(scene.phaseRateMicroHz)||scene.phaseRateMicroHz<=0)return false;
+      previous=port;const shape=JSON.stringify(recipe);
+      if(common!==null&&shape!==common)return false;common=shape;return true;
+    });
+  }
+  function spiPhaseLineDelay(state,variant,lineCount,parallel) {
+    if(!parallel||lineCount<=1)return 0;
+    const shared=variant>=150&&SHARED_TUNNEL_VARIANTS.has(variant-150);
+    const timed=SPI_TIMED_VARIANTS.has(variant)||shared;
+    if(timed)return Math.min(5080,Math.round(Math.max(0,Math.min(5000,Number(state.lineDelayMs)||0))/40)*40);
+    const speed=Math.max(0.5,Math.min(100,Number(state.speed)||0));
+    const normalized=speed/100,rate=0.002+normalized*normalized*0.80;
+    const delay=Number(state.spread??50)/100*0.65*1000/((lineCount-1)*rate);
+    return Math.min(5080,Math.round(Math.max(0,Math.min(5080,delay))/40)*40);
+  }
+  // Full lighting intent. Geometry is deliberately not accepted from this
+  // object; the native owner resolves it against its persisted receiver list.
+  function requestFor(receiver,{zone,receivers,time,outputPorts,transitionMs}={}) {
+    if(!receiver||!['RGBW','SPI'].includes(receiver.type))return null;
+    if(transitionMs!==undefined&&(!Number.isInteger(transitionMs)||transitionMs<0||transitionMs>750))return null;
+    const state=receiver.state||{},spi=receiver.type==='SPI';
+    // A typed gradient is never an FX1/first-colour fallback, even when its
+    // saved capsule is missing or the old engine field was corrupted.
+    if(state.engine==='STATIC_GRADIENT'||Object.hasOwn(state,'staticGradientRecipe')||Object.hasOwn(state,'gradientLastBrightness'))return null;
+    const portScope=outputPorts!==undefined?outputPorts:spi&&zone?.layout!=='continuous'&&state.portStates&&Object.keys(state.portStates).length?receiver.outputs.filter(output=>output.enabled).map(output=>output.port):null;
+    if(portScope!==null){
+      if(!spi||zone?.layout==='continuous'||!Array.isArray(portScope)||!portScope.length||portScope.length>4||
+         Array.from(portScope).some((port,index)=>!Number.isInteger(port)||port<1||port>4||index>0&&port<=portScope[index-1]||!receiver.outputs.some(output=>output.port===port&&output.enabled)))return null;
+      const children=portScope.map(port=>{
+        const intent=requestFor({...receiver,state:model.lightStateFor(receiver,port)},{zone,receivers,time,transitionMs});
+        if(!intent||intent.kind!=='SPI_SCENE'||intent.scene?.standAnimation)return null;
+        const {standId,receiverId,...child}=intent;return {port,...child};
+      });
+      return children.some(child=>!child)?null:{standId:receiver.standId,receiverId:receiver.id,kind:'SPI_PORTS',portScenes:children};
+    }
+    let extension=state.engine==='V30'||state.v30Effect;
+    const reference=typeof module==='object'&&module.exports?require('./reference-animations.js'):globalThis.LightningReferenceAnimations;
+    let extensionId=extension?(reference.wireId(state.v30Effect)||V30_EFFECTS.indexOf(state.v30Effect)+1):0;
+    if(extension&&(!extensionId||!spi&&([13,14].includes(extensionId)||extensionId>=31)))return null;
+    let engine=state.engine||'STATIC',variant=Number(state.variant??0);
+    if(extension){engine='BREATHE';variant=0;}
+    // SPIANIM2: SPI pixel variants are 0..181 plus the SPIANIM animations 200..204.
+    if(!(spi?SPI_ENGINES:RGBW_ENGINES).includes(engine)||!Number.isInteger(variant)||variant<0||(spi?variant>181&&!(variant>=200&&variant<=204):variant>31))return null;
+    // C113: a whole-line stand animation runs the same V30 recipe (21-30) on
+    // RGBW as on SPI. A mixed V30/legacy stand could not use the one-message
+    // FAST_GROUP lane and its slow guarded wave failed (Zacht ademen).
+    const standWhole=!spi&&!extension&&state.standAnimation&&engine!=='STATIC';
+    if(spi&&state.previewFamily==='RGBW'||standWhole) {
+      const whole=[0,1,2,3,4,17,18,19,20,25].indexOf(variant);
+      if(whole<0){if(spi)return null;}
+      else{extension=true;extensionId=21+whole;engine='BREATHE';variant=0;}
+    }
+    // Eigen timing vervangt het patroon van het looplicht door V30ID 44 (RGBW en SPI).
+    const ownTiming=ownTimingOf(state,zone);
+    if(ownTiming){extension=true;extensionId=OWN_TIMING_EFFECT;engine='BREATHE';variant=0;}
+    const number=(value,fallback,min,max)=>{
+      const n=Number(value??fallback);return Number.isFinite(n)&&n>=min&&n<=max?Math.round(n):null;
+    };
+    const colour=(hex,white,rgb=true,w=true)=>{
+      if(typeof hex!=='string'||!/^#[a-f\d]{6}$/i.test(hex))return null;
+      const neutral=number(white,0,0,255);if(neutral===null)return null;
+      return [...(rgb===false?[0,0,0]:[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16))),w===false?0:neutral];
+    };
+    const hex=state.colors?.length?state.colors:['#'+[state.r??0,state.g??0,state.b??0].map(n=>Math.max(0,Math.min(255,Number(n)||0)).toString(16).padStart(2,'0')).join('')];
+    const count=engine==='STATIC'?1:number(state.colorCount,hex.length,1,extension&&(extensionId<=20||extensionId===OWN_TIMING_EFFECT)?7:4);
+    if(count===null||count>hex.length)return null;
+    const palette=hex.slice(0,count).map((c,i)=>colour(c,state.whiteChannels?.[i]??(i===0?state.w:0),state.rgbEnabled?.[i],state.whiteEnabled?.[i]));
+    const background=colour(typeof state.background==='object'?state.background?.rgb:state.background??'#000000',state.backgroundWhite??state.background?.white??0,state.backgroundRgbEnabled,state.backgroundWhiteEnabled);
+    if(palette.some(c=>!c)||!background)return null;
+    const brightness=number(state.bri??state.brightness,100,0,100);
+    const scene={engine,variant,palette,background,
+      speed:number(state.speed,30,0,100),smooth:number(state.smooth,100,0,100),
+      backgroundBrightness:number(state.bgBrightness,0,0,100),backgroundOn:state.backgroundOn===true,
+      motionReverse:['left','reverse'].includes(state.direction),widthPixels:number(state.widthPixels,
+        engine==='STATIC'&&!extension?4:preview.defaultWidthPixels(receiver),1,8192),
+      spacing:number(state.spacing,50,0,100),objectCount:number(state.objectCount,1,1,8),
+      trailLength:number(state.trailLength,45,0,100),spread:number(state.spread,50,0,100),
+      randomness:number(state.randomness,25,0,100),bounce:state.bounce===true,mirror:state.mirror===true,
+      lineDelayMs:number(state.lineDelayMs,0,0,5000)};
+    // C109bj: virtual line slots from the timeline (only when the app sends them)
+    if(Array.isArray(state.lineSlots)&&state.lineSlots.length&&Number.isInteger(state.lineSlotCount)){scene.lineSlots=state.lineSlots.map(v=>Math.max(0,Math.min(255,Math.round(v))));scene.lineSlotCount=Math.max(1,Math.min(256,state.lineSlotCount));}
+    const lineJoin=lineJoinOf(state,zone);if(lineJoin)scene.lineJoin=lineJoin;
+    // Staart vóór en achter (C265): alleen SPI, alleen als de staart aan staat (firmware, JS en Dart samen) en de klant iets koos.
+    if(spi&&!extension&&preview.staartAan===true&&(Number.isInteger(state.tailPx)||Number.isInteger(state.tailSoft)))
+      scene.tail={px:number(state.tailPx,0,0,64)??0,soft:number(state.tailSoft,100,0,100)??100};
+    if(state.on===false||state.power===false)scene.backgroundOn=false;
+    if(!extension&&engine!=='STATIC'){
+      // PREVIEWSYNC: sample the phase the preview shows when the receivers start it.
+      const clock=(Number.isFinite(Number(time))?Number(time):globalThis.AluvisionPreviewNowPS())+globalThis.AluvisionPreviewLeadPS();
+      const parallel=zone?.layout!=='continuous';
+      const lineCount=parallel?Math.max(1,model.ledlines(receivers||[receiver]).length):1;
+      const phaseState={...state,speed:Math.max(0.5,Number(state.speed)||0),lineCount,
+        lineDelayMs:spi?spiPhaseLineDelay(state,variant,lineCount,parallel):(Number(state.lineDelayMs)||0)};
+      const family=spi?'SPI':'RGBW';
+      const phase=globalThis.AluvisionV21AnimationCatalog?.phaseFor?.(phaseState,clock,family);
+      if(Number.isFinite(phase))scene.phaseMs=Math.round((((phase%1)+1)%1)*1000)%1000;
+      const rate=globalThis.AluvisionV21AnimationCatalog?.cyclesPerSecond?.(phaseState,family);
+      if(Number.isFinite(rate)&&rate>=0&&rate<=20)scene.phaseRateMicroHz=Math.round(rate*1000000);
+    }
+    if(extension){
+      const brand=state.v30Effect==='v30-brand-focus'?palette[0]:
+        colour(state.brandColor||hex[0]||'#C94E46',state.whiteChannels?.[0]??state.w??0,true,state.whiteEnabled?.[0]);
+      scene.v30={effect:extensionId,fadeAmount:number(extensionId>=21&&extensionId<=30?state.spacing:state.fadeAmount,90,0,100),
+        width:number(state.width,65,0,100),delayMs:number(state.delayMs,300,0,10000),brand};
+      if(Object.values(scene.v30).some(value=>value===null))return null;
+      if(ownTiming)scene.v30.timingMs=ownTiming;
+      if(state.on===false||state.power===false)scene.backgroundOn=false;
+    }
+    // Stand recipes are lighting intent only. Native independently resolves
+    // every physical line from its saved installation; JS sends no geometry.
+    if(state.standAnimation){
+      const marker=state.standAnimation,kind=marker.mode,clockId=marker.clockId;
+      if(!['whole','coordinated'].includes(kind)||typeof marker.effectId!=='string'||
+         typeof clockId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(clockId))return null;
+      scene.standAnimation={effectId:marker.effectId,kind,clockId};
+      if(marker.effectId.startsWith('rgbw-')){
+        const canonical=marker.state||state,canonicalVariant=Number(canonical.variant);
+        const clock=(Number.isFinite(Number(time))?Number(time):globalThis.AluvisionPreviewNowPS())+globalThis.AluvisionPreviewLeadPS(); // PREVIEWSYNC
+        const phaseState={...canonical,previewStartedAt:state.previewStartedAt,phaseMs:state.phaseMs,
+          speed:Math.max(0.5,Number(canonical.speed)||0),lineCount:1,lineDelayMs:0};
+        const catalog=globalThis.AluvisionV21AnimationCatalog;
+        const phase=catalog?.phaseFor?.(phaseState,clock,'RGBW'),rate=catalog?.cyclesPerSecond?.(phaseState,'RGBW');
+        if(![0,1,2,3,4,17,18,19,20,25].includes(canonicalVariant)||
+           !Number.isFinite(phase)||!Number.isFinite(rate)||rate<0||rate>20)return null;
+        Object.assign(scene.standAnimation,{variant:canonicalVariant,
+          phaseMs:Math.round((((phase%1)+1)%1)*1000)%1000,phaseRateMicroHz:Math.round(rate*1000000)});
+      }
+    }
+    if(brightness===null||Object.values(scene).some(value=>value===null))return null;
+    const powered=state.on!==false&&state.power!==false;
+    // A solid colour must not inherit irrelevant animation history in its
+    // wire recipe: native compares the complete recipe before sharing a bank.
+    // Canonicalize only this fresh, fully validated intent, never saved state
+    // or physical geometry. Smooth remains meaningful for SPI output precision.
+    if(powered&&brightness>0&&!extension&&scene.engine==='STATIC'&&scene.variant===0&&
+       scene.palette.length===1&&!scene.backgroundOn&&!scene.v30&&!scene.standAnimation&&
+       scene.phaseMs===undefined&&scene.phaseRateMicroHz===undefined){
+      Object.assign(scene,{background:[0,0,0,0],backgroundBrightness:0,speed:30,
+        motionReverse:false,widthPixels:4,spacing:50,objectCount:1,trailLength:45,
+        spread:50,randomness:25,bounce:false,mirror:false,lineDelayMs:0});
+    }
+    return {standId:receiver.standId,receiverId:receiver.id,kind:spi?'SPI_SCENE':'RGBW_SCENE',
+      brightness:powered?brightness:0,
+      transitionMs:!powered?POWER_OFF_TRANSITION_MS:transitionMs??(scene.engine==='STATIC'&&!extension?STATIC_TRANSITION_MS:
+        brightness>0?ANIMATION_CUE_TRANSITION_MS:0),channels:[],scene};
+  }
+  // Membership has already been confirmed by native storage. A new line can
+  // join an unambiguous running animation, but never choose between separately
+  // controlled/mixed lines. Copy light intent only; physical geometry, identity
+  // and enrollment remain the confirmed next model's exclusive authority.
+  function joinZonePlayback(previous,next,receiverIds,options={}) {
+    // Removal authority is supplied only by the validated, terminal native
+    // removal route. Ordinary zone joins must never infer it from missing IDs.
+    if(!options||typeof options!=='object'||Array.isArray(options)||
+       ![Object.prototype,null].includes(Object.getPrototypeOf(options))||
+       Object.keys(options).some(key=>key!=='confirmedRemovedIds'))throw Error('LIVE_JOIN_INVALID');
+    const removedIds=options.confirmedRemovedIds===undefined?[]:options.confirmedRemovedIds;
+    if(!Array.isArray(removedIds)||new Set(removedIds).size!==removedIds.length||
+       Array.from(removedIds).some(id=>typeof id!=='string'||!id||
+         !previous.receivers.some(receiver=>receiver.id===id&&receiver.lifecycle==='added')||
+         next.receivers.some(receiver=>receiver.id===id))||
+       removedIds.length&&(receiverIds||[]).length)throw Error('LIVE_JOIN_INVALID');
+    const model=clone(next),inheritedIds=[],refreshIds=new Set(),changedZones=new Set();
+    const before=new Map(previous.receivers.map(receiver=>[receiver.id,receiver]));
+    const zones=new Map(model.stands.flatMap(stand=>stand.zones.map(zone=>[zone.id,{...zone,standId:stand.id}])));
+    // Confirmed zone placement changes the whole stand's physical ordinals,
+    // even when its destination is empty or the receiver becomes unzoned.
+    // Preserve a coherent existing clock and intent; never infer a new shared
+    // recipe from a partial marker, changed board identity or mixed power.
+    const standAnimations=typeof module==='object'&&module.exports?require('./stand-animations.js'):globalThis.LightningStandAnimations;
+    const changedStands=new Set(),sharedBefore=new Map(),handledStands=new Set(),unsafeStands=new Set();
+    const members=(value,standId)=>value.receivers.filter(receiver=>receiver.standId===standId&&receiver.lifecycle==='added');
+    const powered=receiver=>receiver.state?.on!==false&&receiver.state?.power!==false;
+    const sameIdentity=(a,b)=>a&&b&&['rid','deviceFingerprint','physicalId','standId','type','role','lifecycle'].every(key=>a[key]===b[key]);
+    const clearShared=standId=>{
+      for(const receiver of members(model,standId)){delete receiver.state.standAnimation;refreshIds.delete(receiver.id);}
+    };
+    const coherentAfter=(standId,prior)=>{
+      const marker=standAnimations?.active(model,standId),current=members(model,standId);
+      return marker&&JSON.stringify(marker)===JSON.stringify(prior.marker)&&current.length&&
+        current.every(receiver=>powered(receiver)===prior.powered);
+    };
+    for(const standId of new Set(removedIds.map(id=>before.get(id).standId))){
+      const oldMembers=members(previous,standId),current=members(model,standId);
+      if(!oldMembers.some(receiver=>receiver.state?.standAnimation)&&!current.some(receiver=>receiver.state?.standAnimation))continue;
+      const authorized=new Set(removedIds),survivors=previous.receivers.filter(receiver=>
+        receiver.standId===standId&&!authorized.has(receiver.id)),retainedMembers=model.receivers.filter(receiver=>receiver.standId===standId);
+      const marker=standAnimations?.active(previous,standId),oldPower=oldMembers.length?powered(oldMembers[0]):null;
+      const exactSurvivors=retainedMembers.length===survivors.length&&survivors.every(old=>{
+        const retained=retainedMembers.find(receiver=>receiver.id===old.id);
+        return sameIdentity(old,retained)&&old.onboardingTransactionId===retained.onboardingTransactionId&&
+          old.state?.previewStartedAt===retained.state?.previewStartedAt&&old.state?.phaseMs===retained.state?.phaseMs;
+      });
+      if(!marker||!exactSurvivors||!oldMembers.every(receiver=>powered(receiver)===oldPower)||
+         !coherentAfter(standId,{marker,powered:oldPower})){
+        // A changed authority, partial recipe or newer light state is not an
+        // invitation to replay the pre-removal scene. Keep the authoritative
+        // geometry and every current light value; dissolve only shared scope.
+        unsafeStands.add(standId);clearShared(standId);continue;
+      }
+      handledStands.add(standId);current.forEach(receiver=>refreshIds.add(receiver.id));
+    }
+    for(const id of new Set(receiverIds||[])){
+      const receiver=model.receivers.find(item=>item.id===id),old=before.get(id);
+      if(receiver?.lifecycle==='added'&&old?.zoneId!==receiver.zoneId&&(!old||old.standId===receiver.standId))changedStands.add(receiver.standId);
+    }
+    for(const standId of changedStands){
+      const oldMembers=members(previous,standId),current=members(model,standId);
+      if(!oldMembers.some(receiver=>receiver.state?.standAnimation)&&!current.some(receiver=>receiver.state?.standAnimation))continue;
+      const marker=standAnimations?.active(previous,standId),oldPower=oldMembers.length?powered(oldMembers[0]):null;
+      if(!marker||!oldMembers.every(receiver=>powered(receiver)===oldPower&&sameIdentity(receiver,current.find(item=>item.id===receiver.id)))){
+        unsafeStands.add(standId);clearShared(standId);continue;
+      }
+      const prior={marker,powered:oldPower};sharedBefore.set(standId,prior);
+      if(coherentAfter(standId,prior)){
+        handledStands.add(standId);current.forEach(receiver=>refreshIds.add(receiver.id));
+      }
+    }
+    const joined=new Map();
+    for(const id of new Set(receiverIds||[])){
+      const receiver=model.receivers.find(item=>item.id===id),old=before.get(id);
+      if(!receiver||receiver.lifecycle!=='added'||old?.zoneId===receiver.zoneId||
+         old&&old.standId!==receiver.standId)continue;
+      if(handledStands.has(receiver.standId)||unsafeStands.has(receiver.standId))continue;
+      if(old?.zoneId)changedZones.add(old.zoneId);
+      const target=zones.get(receiver.zoneId);
+      if(!target||target.standId!==receiver.standId||target.type!==receiver.type||!target.receiverIds.includes(id))continue;
+      changedZones.add(target.id);
+      if(!joined.has(target.id))joined.set(target.id,[]);
+      joined.get(target.id).push(receiver);
+    }
+    for(const [zoneId,incoming]of joined){
+      const zone=zones.get(zoneId),oldZone=previous.stands.find(stand=>stand.id===zone.standId)?.zones.find(item=>item.id===zoneId);
+      const incomingIds=new Set(incoming.map(receiver=>receiver.id));
+      const peers=(oldZone?.receiverIds||[]).map(id=>before.get(id)).filter(receiver=>
+        receiver&&receiver.lifecycle==='added'&&receiver.type===zone.type&&receiver.standId===zone.standId&&
+        zone.receiverIds.includes(receiver.id)&&!incomingIds.has(receiver.id));
+      if(!peers.length)continue;
+      if(!peers.every(receiver=>{
+        const current=model.receivers.find(item=>item.id===receiver.id);
+        return current&&['rid','deviceFingerprint','physicalId','standId','type','role','lifecycle'].every(key=>current[key]===receiver[key]);
+      }))continue;
+      const intent=receiver=>{
+        const request=requestFor(receiver,{zone:oldZone,receivers:peers,time:0});
+        // C137bs: a joining line also inherits the zone's common static colour (it kept its own default before).
+        if(!request||request.brightness===0)return null;
+        const {phaseMs,phaseRateMicroHz,...scene}=request.scene;
+        // Identical effects can still have deliberately independent clocks.
+        // A time-zero sample cannot distinguish two later start anchors, so
+        // compare their origins as well before choosing a group's leader.
+        const started=Number(receiver.state?.previewStartedAt),phase=Number(receiver.state?.phaseMs);
+        const timing={startedAt:Number.isFinite(started)&&started>0?started:0,
+          phaseMs:Number.isFinite(phase)?((phase%1000)+1000)%1000:0};
+        return JSON.stringify({brightness:request.brightness,scene,timing});
+      };
+      const common=intent(peers[0]);if(!common||!peers.every(receiver=>intent(receiver)===common))continue;
+      for(const receiver of incoming){receiver.state=clone(peers[0].state);inheritedIds.push(receiver.id);}
+    }
+    // Every surviving member needs the new line count/continuous offset. A
+    // single batch uses one phase sample, also when moving between two zones.
+    for(const zoneId of inheritedIds.length?changedZones:[]){
+      const zone=zones.get(zoneId);if(!zone)continue;
+      for(const id of zone.receiverIds)if(model.receivers.some(receiver=>receiver.id===id&&receiver.lifecycle==='added'))refreshIds.add(id);
+    }
+    // A newly enrolled same-family line may first inherit its zone's proven
+    // intent above. Refresh every member only if that result really preserves
+    // the prior shared marker and power; no unmarked newcomer is a fake ACK.
+    for(const [standId,prior]of sharedBefore){
+      if(coherentAfter(standId,prior))members(model,standId).forEach(receiver=>refreshIds.add(receiver.id));
+      else clearShared(standId);
+    }
+    return {model,inheritedIds,receiverIds:[...refreshIds]};
+  }
+  function create({send,sendBatch,sendGesture,onState,onRoute,waitBeforeSend,maxBatchSize=30,compiledModern=()=>false,singleSpiStaticBatch=()=>false,delay=0,setTimer=setTimeout,clearTimer=clearTimeout}) {
+    if (typeof send !== 'function' || typeof onState !== 'function') throw Error('LIVE_QUEUE_INVALID');
+    if (sendBatch!==undefined && typeof sendBatch!=='function') throw Error('LIVE_QUEUE_INVALID');
+    if (sendGesture!==undefined && typeof sendGesture!=='function') throw Error('LIVE_QUEUE_INVALID');
+    if (waitBeforeSend!==undefined && typeof waitBeforeSend!=='function') throw Error('LIVE_QUEUE_INVALID');
+    if (typeof maxBatchSize!=='function'&&![30,64].includes(maxBatchSize)) throw Error('LIVE_QUEUE_INVALID');
+    if (typeof compiledModern!=='function') throw Error('LIVE_QUEUE_INVALID');
+    if (typeof singleSpiStaticBatch!=='function') throw Error('LIVE_QUEUE_INVALID');
+    const queue=new Map(), desired=new Map(), states=new Map(),idleWaiters=new Set();
+    let active=null,draining=false,timer=null,version=0,epoch=0,idleLease=null;
+    let completionObserver=null;
+    let gestureHeld=false,gestureEpoch=0,failedGesture=null;
+    const emit=(id,kind,code='')=>{const value={kind,code};states.set(id,value);onState(id,value);};
+    const observeRoute=(reason,count,requests)=>{try{
+      const flag=Object.getOwnPropertyDescriptor(root,'__lightningV41GestureDiagnostics');
+      if(flag?.value===true&&flag.writable===false&&flag.configurable===false&&typeof onRoute==='function'&&
+         ['QUEUE_NO_PROVIDER','QUEUE_INELIGIBLE','QUEUE_ELIGIBLE'].includes(reason)&&Number.isInteger(count)&&count>=1&&count<=64)
+      {
+        onRoute(Object.freeze({stage:'queue',reason,count}));
+        // DEBUG Mac observation only. Never a queue/send eligibility input.
+        // Closed equality bits expose no request, colour, identity or scalar.
+        if(Array.isArray(requests)&&requests.length===count){
+          const first=requests[0];
+          const profileMask=(requests.every(request=>staticGestureShape(request)!==null)?1:0)|
+            (requests.every(request=>request.brightness===first.brightness)?2:0)|
+            (requests.every(request=>request.transitionMs===first.transitionMs)?4:0)|
+            (requests.every(request=>signature(request.scene?.palette)===signature(first.scene?.palette))?8:0);
+          root.dispatchEvent?.(new root.CustomEvent('lightning:static-queue-route',{
+            detail:Object.freeze({stage:'queue',reason,count,profileMask})}));
+        }
+      }
+    }catch(_){/* Observation must never alter delivery. */}};
+    const signature=request=>JSON.stringify(request);
+    function cancelCompletionObserver(){
+      const old=completionObserver;completionObserver=null;
+      if(old?.timer!==null&&old?.timer!==undefined)clearTimer(old.timer);
+      old?.operation?.cancelNativeObservation?.();
+    }
+    function observeCompletion(items,operation,observedEpoch){
+      if(typeof operation?.observeNativeCompletion!=='function')return;
+      cancelCompletionObserver();
+      const held={items:new Map(items),operation,epoch:observedEpoch,timer:null};completionObserver=held;
+      const current=()=>completionObserver===held&&epoch===held.epoch&&[...held.items].every(([id,item])=>
+        desired.get(id)?.version===item.version&&desired.get(id)?.signature===item.signature);
+      held.timer=setTimer(async()=>{
+        held.timer=null;
+        if(!current()){
+          // A newer explicit request can precede this original timer's
+          // registration. Retire only this stale local wait, never its
+          // successor's observer or any receiver/output result.
+          if(completionObserver===held){completionObserver=null;settleIdle();}
+          return;
+        }
+        if(queue.size||active)return;
+        try{
+          const result=await operation.observeNativeCompletion();if(!current())return;
+          const complete=result?.state==='OBSERVED'&&result.applied===false&&result.targets===held.items.size&&result.completed===held.items.size;
+          const code=result?.state==='UNKNOWN'&&result.applied===false?'LIVE_CONTROL_OBSERVATION_UNKNOWN':'LIVE_CONTROL_UNCONFIRMED';
+          for(const [id]of held.items)emit(id,complete?'completed-native':'unconfirmed',complete?'':code);
+        }catch(_){if(current())for(const [id]of held.items)emit(id,'unconfirmed','LIVE_CONTROL_UNCONFIRMED');}
+        finally{if(completionObserver===held)completionObserver=null;settleIdle();}
+      },100); // Quiet readback delay, never an output/start delay.
+    }
+    function staticGestureShape(request){
+      const scene=request?.scene;
+      if(!['RGBW_SCENE','SPI_SCENE'].includes(request?.kind)||
+         !Number.isInteger(request.brightness)||request.brightness<1||request.brightness>100||
+         !Number.isInteger(request.transitionMs)||request.transitionMs<1||request.transitionMs>5000||
+         !Array.isArray(request.channels)||request.channels.length||
+         !scene||scene.engine!=='STATIC'||scene.variant!==0||scene.backgroundOn!==false||
+         'v30' in scene||'standAnimation' in scene||
+         !Array.isArray(scene.palette)||scene.palette.length!==1||
+         !Array.isArray(scene.palette[0])||scene.palette[0].length!==4||
+         !scene.palette[0].every(n=>Number.isInteger(n)&&n>=0&&n<=255))return null;
+      const shape=clone(request);shape.brightness=1;shape.scene.palette=[];
+      return signature(shape);
+    }
+    function animationPaletteShape(request){
+      const scene=request?.scene,engines=request?.kind==='RGBW_SCENE'?RGBW_ENGINES:
+        request?.kind==='SPI_SCENE'?SPI_ENGINES:null;
+      const sampled=value=>Number.isInteger(value?.phaseMs)&&value.phaseMs>=0&&value.phaseMs<1000&&
+        Number.isInteger(value.phaseRateMicroHz)&&value.phaseRateMicroHz>=0&&value.phaseRateMicroHz<=20000000;
+      if(!engines||!Number.isInteger(request.brightness)||request.brightness<1||request.brightness>100||
+         !Number.isInteger(request.transitionMs)||request.transitionMs<1||request.transitionMs>750||
+         !Array.isArray(request.channels)||request.channels.length||!scene||scene.engine==='STATIC'||
+         !engines.includes(scene.engine)||!Number.isInteger(scene.variant)||scene.variant<0||
+         (request.kind==='SPI_SCENE'?scene.variant>181&&!(scene.variant>=200&&scene.variant<=204):scene.variant>31)||'v30' in scene||!sampled(scene)||
+         !Array.isArray(scene.palette)||scene.palette.length<1||scene.palette.length>4||
+         scene.palette.some(colour=>!Array.isArray(colour)||colour.length!==4||
+           colour.some(n=>!Number.isInteger(n)||n<0||n>255)))return null;
+      const shape=clone(request);shape.scene.palette=scene.palette.map(()=>[]);
+      // These are independently sampled positions of the same unchanged rate,
+      // not a different recipe. Compare locally only: neither the original nor
+      // newest payload/phase is rewritten, retimed or granted output authority.
+      delete shape.scene.phaseMs;
+      if('standAnimation' in scene){
+        const marker=scene.standAnimation,id=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(value);
+        if(!marker||typeof marker!=='object'||Array.isArray(marker)||
+           !id(marker.effectId)||!id(marker.clockId)||!['whole','coordinated'].includes(marker.kind)||
+           Object.keys(marker).some(key=>!['effectId','kind','clockId','variant','phaseMs','phaseRateMicroHz'].includes(key)))return null;
+        if('variant' in marker&&(!Number.isInteger(marker.variant)||marker.variant<0||marker.variant>31))return null;
+        if('phaseMs' in marker||'phaseRateMicroHz' in marker){
+          if(!sampled(marker))return null;
+          delete shape.scene.standAnimation.phaseMs;
+        }
+      }
+      return signature(shape);
+    }
+    const idleError=code=>Object.assign(Error(code),{code});
+    function otherStand(standId){
+      return !!standId&&(idleLease&&idleLease.standId!==standId||[...queue.values(),...(active?.items.values()||[])].some(item=>item.request.standId!==standId));
+    }
+    function finishWaiter(waiter,error,value){
+      if(!idleWaiters.delete(waiter))return;
+      clearTimer(waiter.timer);waiter.signal?.removeEventListener('abort',waiter.abort);
+      if(error)waiter.reject(error);else waiter.resolve(value);
+    }
+    function lease(standId){
+      const held={standId,epoch,onLiveIntent:null};idleLease=held;
+      return Object.freeze({onPendingLiveIntent(callback){
+        if(typeof callback!=='function'||idleLease!==held||held.epoch!==epoch)return;
+        held.onLiveIntent=callback;
+        if([...queue.values()].some(item=>item.request.standId===standId))callback();
+      },release(){
+        if(idleLease!==held)return;
+        idleLease=null;schedule();settleIdle();
+      }});
+    }
+    function settleIdle(){
+      for(const waiter of [...idleWaiters]){
+        if(waiter.signal?.aborted)finishWaiter(waiter,idleError('LIVE_QUEUE_CANCELLED'));
+        else if(waiter.epoch!==epoch)finishWaiter(waiter,idleError('LIVE_QUEUE_CLEARED'));
+        else if(otherStand(waiter.standId))finishWaiter(waiter,idleError('LIVE_QUEUE_SCOPE_BUSY'));
+        else if(!idleLease&&!draining&&!active&&!queue.size&&(!waiter.waitForGesture||!gestureHeld)&&(!waiter.waitForCompletion||!completionObserver))finishWaiter(waiter,null,waiter.acquire?lease(waiter.standId):undefined);
+      }
+    }
+    function waitIdle({standId,timeoutMs=35000,signal,waitForGesture=false,waitForCompletion=false}={},acquire=false){
+      if(standId!==undefined&&(typeof standId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(standId))||
+         acquire&&standId===undefined||typeof waitForGesture!=='boolean'||typeof waitForCompletion!=='boolean'||!Number.isInteger(timeoutMs)||timeoutMs<1||timeoutMs>35000||
+         signal!==undefined&&(!signal||typeof signal.aborted!=='boolean'||typeof signal.addEventListener!=='function'||typeof signal.removeEventListener!=='function'))return Promise.reject(idleError('LIVE_QUEUE_INVALID'));
+      if(signal?.aborted)return Promise.reject(idleError('LIVE_QUEUE_CANCELLED'));
+      if(active&&active.epoch!==epoch||idleLease&&idleLease.epoch!==epoch)return Promise.reject(idleError('LIVE_QUEUE_CLEARED'));
+      if(otherStand(standId))return Promise.reject(idleError('LIVE_QUEUE_SCOPE_BUSY'));
+      if(!idleLease&&!draining&&!active&&!queue.size&&(!waitForGesture||!gestureHeld)&&(!waitForCompletion||!completionObserver))return Promise.resolve(acquire?lease(standId):undefined);
+      if(idleWaiters.size>=8)return Promise.reject(idleError('LIVE_QUEUE_BUSY'));
+      return new Promise((resolve,reject)=>{
+        const waiter={standId,epoch,acquire,signal,waitForGesture,waitForCompletion,resolve,reject,timer:null,abort:null};idleWaiters.add(waiter);
+        waiter.abort=()=>finishWaiter(waiter,idleError('LIVE_QUEUE_CANCELLED'));signal?.addEventListener('abort',waiter.abort,{once:true});
+        waiter.timer=setTimer(()=>finishWaiter(waiter,idleError('LIVE_QUEUE_BUSY')),timeoutMs);
+      });
+    }
+    const whenIdle=options=>waitIdle(options),acquireIdle=options=>waitIdle(options,true);
+    function captureCurrentIntent(scope){
+      // Observation only: retain the already queued intent's exact local
+      // versions, never a new request, receipt, lease or authority token.
+      if(!scope||typeof scope!=='object'||Array.isArray(scope)||Object.keys(scope).sort().join(',')!=='receiverIds,standId'||
+         typeof scope.standId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(scope.standId)||
+         !Array.isArray(scope.receiverIds)||!scope.receiverIds.length||scope.receiverIds.length>64||
+         new Set(scope.receiverIds).size!==scope.receiverIds.length)return null;
+      const capturedEpoch=epoch,standId=scope.standId,bindings=new Map();
+      for(const id of scope.receiverIds){
+        const wanted=desired.get(id),item=queue.get(id)||active?.items.get(id);
+        if(typeof id!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(id)||!wanted||!item||item.request.standId!==standId||
+           item.version!==wanted.version||item.signature!==wanted.signature)return null;
+        bindings.set(id,{version:item.version,signature:item.signature});
+      }
+      return Object.freeze({async whenConfirmed(){
+        await waitIdle({standId,waitForGesture:true,waitForCompletion:true});
+        if(epoch!==capturedEpoch||[...bindings].some(([id,binding])=>
+          desired.get(id)?.version!==binding.version||desired.get(id)?.signature!==binding.signature||
+          !['applied','completed-native'].includes(states.get(id)?.kind)))throw idleError('LIVE_CONTROL_UNCONFIRMED');
+      },observeActiveTerminal(afterTerminal){
+        const held=active;
+        if(typeof afterTerminal!=='function'||epoch!==capturedEpoch||!held||held.epoch!==capturedEpoch||
+           !held.operation||typeof held.operation.then!=='function'||held.preludeOpen||held.stream||
+           held.preparingTouched||held.retirementTouched||held.supersessionRequested||held.terminalObserver||
+           held.items.size!==bindings.size||[...bindings].some(([id,binding])=>{
+             const item=held.items.get(id);return !item||item.request.standId!==standId||
+               item.version!==binding.version||item.signature!==binding.signature;
+           }))return null;
+        let resolve;const completion=new Promise(done=>{resolve=done;});
+        held.terminalObserver={operation:held.operation,afterTerminal,resolve};
+        return Object.freeze({completion});
+      }});
+    }
+    function schedule(){
+      if(draining||idleLease||timer!==null||!queue.size)return;
+      timer=setTimer(()=>{timer=null;void drain();},delay);
+    }
+    function considerPreparingSupersession(){
+      const held=active;
+      if(held?.preludeOpen)return;
+      if(held?.stream){considerStaticGestureUpdate(held);return;}
+      if(held&&typeof held.operation?.retireEarlyAnimation==='function'&&[...held.items.values()].every(({request})=>
+         scopedMovingCandidate(request)||request.kind!=='SPI_PORTS'&&request.brightness>0&&request.scene&&
+         (request.scene.engine!=='STATIC'||request.scene.v30))){considerAnimationRetirement(held);return;}
+      if(!held||held.epoch!==epoch||held.supersessionCheck||held.supersessionRequested||
+         typeof held.operation?.supersedePreparing!=='function')return;
+      held.supersessionCheck=true;
+      // A group gesture enqueues its members synchronously. Never replace a
+      // six-member preparation just because the first member was enqueued.
+      Promise.resolve().then(()=>{
+        held.supersessionCheck=false;
+        if(active!==held||epoch!==held.epoch||held.supersessionRequested||queue.size!==held.items.size)return;
+        const replacement=[];
+        for(const [id,item] of held.items){
+          const latest=queue.get(id);
+          if(!latest||desired.get(id)?.signature!==latest.signature||
+             latest.request.standId!==item.request.standId||latest.request.kind!==item.request.kind)return;
+          replacement.push(latest.request);
+        }
+        // A continuously moving colour wheel must not cancel every cold
+        // calibration before it can publish a single colour. Finish one
+        // already-running ordinary STATIC wave; queue.set retains only the
+        // newest successor, not a history. All native witnesses/receipts and
+        // post-await fences remain untouched. Off, animation, scope, geometry
+        // and other recipe changes still use the existing supersession path.
+        if(replacement.every(request=>{
+          const before=staticGestureShape(held.items.get(request.receiverId).request);
+          return before!==null&&before===staticGestureShape(request);
+        })){
+          considerPreparingStaticReplacement(held,replacement);
+          return;
+        }
+        if(!replacement.some(request=>signature(request)!==held.items.get(request.receiverId).signature))return;
+        held.supersessionRequested=true;
+        const unavailable=()=>{
+          if(active!==held||epoch!==held.epoch)return;
+          held.supersessionRequested=false;
+          for(const [id,item] of held.items)if(queue.get(id)?.signature===item.signature&&
+            desired.get(id)?.signature===item.signature)queue.delete(id);
+        };
+        let result;try{result=held.operation.supersedePreparing(replacement);}catch(_){unavailable();return;}
+        Promise.resolve(result).then(accepted=>{
+          if(accepted||active!==held||epoch!==held.epoch)return;
+          unavailable();
+        },unavailable);
+      });
+    }
+    function considerAnimationRetirement(held){
+      if(active!==held||epoch!==held.epoch||held.retirementCheck||held.retirementInFlight||held.retirementRequested)return;
+      held.retirementCheck=true;
+      Promise.resolve().then(()=>{
+        held.retirementCheck=false;
+        if(active!==held||epoch!==held.epoch||held.retirementInFlight||held.retirementRequested||queue.size<held.items.size)return;
+        // A later whole-stand choice may include more targets than this old
+        // zone wave. Offer only the exact held IDs to native's existing safe
+        // retirement gate; additional same-stand targets stay queued. No
+        // submitted wave or Owner scope is widened by this local notice.
+        const standId=held.items.values().next().value.request.standId;
+        if([...queue.values()].some(item=>item.request.standId!==standId))return;
+        const newer=new Map();
+        for(const[id,item]of held.items){
+          const latest=queue.get(id);
+          if(!latest||desired.get(id)?.version!==latest.version||latest.request.standId!==item.request.standId)return;
+          newer.set(id,latest);
+        }
+        if(![...newer].some(([id,item])=>item.signature!==held.items.get(id).signature))return;
+        // Keep one original standard powered animation's preparation alive
+        // while palette-only gestures coalesce to the newest never-submitted
+        // request. Exact target set/scope/recipe/rates/clock remain unchanged;
+        // OFF, extensions, ports and every other change keep retirement below.
+        if(queue.size===held.items.size&&[...newer].every(([id,item])=>{
+          const before=animationPaletteShape(held.items.get(id).request);
+          return before!==null&&before===animationPaletteShape(item.request);
+        })&&([...newer].some(([id,item])=>signature(item.request.scene.palette)!==
+          signature(held.items.get(id).request.scene.palette))||
+          [...newer].every(([,item])=>item.paletteEdit===true)))return;
+        held.retirementInFlight=true;held.retirementTouched=true;
+        Promise.resolve(held.operation.retireEarlyAnimation([...newer.values()].map(item=>item.request))).then(answer=>{
+          if(active!==held||epoch!==held.epoch)return;
+          held.retirementInFlight=false;
+          if(answer?.status==='requested')held.retirementRequested=true;
+          // Neither a missing local ACK nor rejection means receiver success.
+          // Keep all latest intents queued until the original Task truly ends.
+        },()=>{if(active===held)held.retirementInFlight=false;});
+      });
+    }
+    function considerPreparingStaticReplacement(held,replacement){
+      if(active!==held||held.preparingClosed||held.preparingInFlight||
+         typeof held.operation?.replacePreparingStatic!=='function')return;
+      if(held.preparingAccepted&&replacement.every(request=>
+         held.preparingAccepted.get(request.receiverId)?.signature===signature(request)))return;
+      const attempted=new Map(replacement.map(request=>[request.receiverId,queue.get(request.receiverId)]));
+      held.preparingTouched=true;held.preparingInFlight=attempted;
+      let operation;
+      try{operation=held.operation.replacePreparingStatic(replacement);}catch(_){operation=Promise.resolve({status:'unknown',submitted:true});}
+      held.preparingSettled=Promise.resolve(operation).then(result=>{
+        if(active!==held||epoch!==held.epoch)return;
+        held.preparingInFlight=null;
+        if(result?.status==='accepted'&&Number.isInteger(result.sequence)&&result.sequence>0){
+          held.preparingAccepted=attempted;
+          // Acknowledge only local staging. Keep every desired item pending
+          // until the original terminal receipt binds its chosen sequence.
+          considerPreparingSupersession();
+        }else{
+          held.preparingClosed=true;
+          if(result?.status!=='unavailable')held.preparingUnknown=attempted;
+        }
+      },()=>{
+        if(active!==held||epoch!==held.epoch)return;
+        held.preparingInFlight=null;held.preparingUnknown=attempted;held.preparingClosed=true;
+      });
+    }
+    function streamEligible(requests){
+      return requests.length>=1&&requests.length<=64&&requests.every(request=>staticGestureShape(request)!==null&&
+        request.brightness===requests[0].brightness&&request.transitionMs===requests[0].transitionMs&&
+        signature(request.scene.palette)===signature(requests[0].scene.palette));
+    }
+    function considerStaticGestureUpdate(held){
+      if(active!==held||held.epoch!==epoch||held.streamClosed||held.streamCheck||held.streamInFlight)return;
+      held.streamCheck=true;
+      Promise.resolve().then(()=>{
+        held.streamCheck=false;
+        if(active!==held||held.epoch!==epoch||held.streamClosed||held.streamInFlight)return;
+        const latest=new Map();
+        for(const [id,item]of held.items){
+          const candidate=queue.get(id)||held.streamStaged?.get(id)||item;
+          if(desired.get(id)?.signature!==candidate.signature||candidate.gesture!==held.gesture){finishStream(held);return;}
+          latest.set(id,candidate);
+        }
+        const baseline=held.streamStaged||held.items,changed=[...latest].some(([id,item])=>item.signature!==baseline.get(id).signature);
+        if(!changed){if(!gestureHeld||gestureEpoch!==held.gesture)finishStream(held);return;}
+        const requests=[...latest.values()].map(item=>item.request);
+        if(!streamEligible(requests)||requests.some(request=>staticGestureShape(request)!==staticGestureShape(held.items.get(request.receiverId).request))){finishStream(held);return;}
+        held.streamTouched=true;held.streamInFlight=latest;
+        let result;try{result=held.operation.updateStaticGesture(requests);}catch(_){result=Promise.resolve({status:'unknown',submitted:true});}
+        Promise.resolve(result).then(answer=>{
+          if(active!==held||epoch!==held.epoch)return;
+          held.streamInFlight=null;
+          if(answer?.status==='staged'&&Number.isInteger(answer.sequence)&&answer.sequence>1){
+            held.streamStaged=latest;
+            for(const [id,item]of latest)if(desired.get(id)?.version===item.version)emit(id,'staged');
+            considerStaticGestureUpdate(held);
+          }else{
+            held.streamClosed=true;
+            if(answer?.submitted)held.streamUnknown=latest;
+            // An explicit local rejection is not a firmware success. Closing
+            // this series never replays its attempted intent automatically.
+            if(answer?.submitted)held.operation.stopStaticGesture?.();
+            else finishStream(held);
+          }
+        },()=>{held.streamInFlight=null;held.streamUnknown=latest;held.streamClosed=true;held.operation.stopStaticGesture?.();});
+      });
+    }
+    function finishStream(held){
+      if(held.streamEnded||active!==held)return;
+      held.streamEnded=true;
+      Promise.resolve(held.operation.endStaticGesture?.()).then(answer=>{
+        if(active!==held||epoch!==held.epoch)return;
+        if(answer?.status==='unknown'){held.streamClosed=true;held.operation.stopStaticGesture?.();}
+      },()=>{held.streamClosed=true;held.operation.stopStaticGesture?.();});
+    }
+    function beginGesture(){gestureHeld=true;gestureEpoch++;failedGesture=null;}
+    function endGesture(){gestureHeld=false;if(active?.stream)considerStaticGestureUpdate(active);settleIdle();}
+    function cancelGesture(){
+      gestureHeld=false;
+      if(active?.stream){
+        active.streamClosed=true;failedGesture=active.gesture;active.operation?.stopStaticGesture?.();
+        for(const [id,item]of queue)if(item.gesture===active.gesture){queue.delete(id);emit(id,'failed','LIVE_CONTROL_CANCELLED');}
+      }
+      settleIdle();
+    }
+    async function drain(){
+      if(draining||idleLease)return;
+      draining=true;
+      try{
+        while(queue.size){
+          // A local write may keep the native boundary unavailable. Leave
+          // intents coalescible until that read-only readiness wait finishes;
+          // the native send retains its own write/view/authority checks.
+          const readyEpoch=epoch;let readinessError=null;
+          if(waitBeforeSend)try{await waitBeforeSend();}catch(cause){readinessError=cause?.code||cause?.message||'LIVE_UNCONFIRMED';}
+          if(epoch!==readyEpoch)continue;
+          if(idleLease)break;
+          let batchLimit=30;
+          try{
+            const value=typeof maxBatchSize==='function'?maxBatchSize():maxBatchSize;
+            if(![30,64].includes(value))throw Error('LIVE_QUEUE_INVALID');
+            batchLimit=value;
+          }catch(_){readinessError='LIVE_QUEUE_INVALID';}
+          // App colour-wheel handlers enqueue the selected receivers together.
+          // Take their latest values in insertion order, with one native owner
+          // operation per stand. Never accumulate a gesture history.
+          const items=new Map();let stand;
+          for(const [id,item] of queue){
+            if(desired.get(id)?.signature!==item.signature){queue.delete(id);continue;}
+            if(items.size && (!sendBatch || item.request.standId!==stand))break;
+            stand=item.request.standId;items.set(id,item);queue.delete(id);
+            if(items.size===(sendBatch?batchLimit:1))break;
+          }
+          if(!items.size)continue;
+          const runEpoch=epoch;
+          active={items,epoch:runEpoch,gesture:[...items.values()][0].gesture};
+          const held=active;
+          let error=null,results,superseded=false,retired=false,completedItems=items;
+          let streamComplete=false;
+          try{
+            if(readinessError)throw Object.assign(Error(readinessError),{code:readinessError});
+            // A scoped edit cannot erase a never-submitted full-board intent.
+            // Finish that bounded full-board prelude once, then send the latest
+            // physical-port intents. It is not a replay after an unknown ACK.
+            let preludes=[...items.values()].filter(item=>item.prelude).map(item=>item.prelude);
+            while(preludes.length){
+              held.preludeOpen=true;
+              const modernPrelude=compiledModern()===true;
+              active.operation=sendBatch&&(preludes.length>1||modernPrelude)?sendBatch(preludes):send(preludes[0]);
+              const reply=await active.operation;
+              if(epoch!==runEpoch||active!==held)throw Error('LIVE_QUEUE_CLEARED');
+              const retained=modernPrelude&&['catalogue-retained-deferred','breathe-retained-deferred'].includes(reply?.status);
+              if(retained){
+                const expected=new Set(preludes.map(request=>request.receiverId));
+                if(Object.keys(reply).sort().join(',')!=='applied,ready,receiverIds,status'||reply.applied!==false||reply.ready!==false||
+                   !Array.isArray(reply.receiverIds)||reply.receiverIds.length!==expected.size||new Set(reply.receiverIds).size!==expected.size||reply.receiverIds.some(id=>!expected.has(id)))throw Error('LIVE_UNCONFIRMED');
+              }else{
+              const results=preludes.length>1?reply?.status==='batch-complete'&&reply.results:[reply];
+              const expected=new Set(preludes.map(request=>request.receiverId)),received=new Set();
+              if(!Array.isArray(results)||results.length!==preludes.length||results.some(result=>{
+                if(result?.status!=='applied-in-firmware'||!expected.has(result.receiverId)||received.has(result.receiverId)||!Number.isSafeInteger(result.generation)||result.generation<1)return true;
+                received.add(result.receiverId);return false;
+              }))throw Error('LIVE_UNCONFIRMED');
+              }
+              held.preludeOpen=false;
+              for(const [id,item]of items){
+                delete item.prelude;
+                const latest=queue.get(id);
+                if(latest&&desired.get(id)?.signature===latest.signature&&latest.request.standId===item.request.standId){items.set(id,latest);queue.delete(id);}
+              }
+              // A genuinely newer full-board edit may have arrived while the
+              // previous prelude was in flight. Keep that newest base before
+              // its later scoped edit; never replay an already submitted base.
+              preludes=[...items.values()].filter(item=>item.prelude).map(item=>item.prelude);
+            }
+            const initial=[...items.values()].map(item=>item.request);
+            const eligible=sendGesture&&streamEligible(initial);
+            observeRoute(!sendGesture?'QUEUE_NO_PROVIDER':eligible?'QUEUE_ELIGIBLE':'QUEUE_INELIGIBLE',initial.length,initial);
+            if(eligible){
+              held.stream=true;active.operation=sendGesture(initial,{held:gestureHeld&&gestureEpoch===held.gesture});
+              const reply=await active.operation;
+              if(reply?.status==='static-gesture-unavailable-before-open'&&Object.keys(reply).length===1){held.stream=false;}
+              else{
+                const retained=reply?.status==='static-gesture-retained-deferred';
+                if((reply?.status!=='static-gesture-complete'&&!retained)||!Number.isInteger(reply.sequence)||reply.sequence<1||reply.sequence>65535||
+                   !Array.isArray(reply.requests)||reply.requests.length!==items.size||!Array.isArray(reply.receiverIds)||reply.receiverIds.length!==items.size||
+                   reply.receiverIds.some((id,index)=>id!==initial[index].receiverId)||
+                   (retained?(reply.applied!==false||reply.ready!==false):(!Number.isInteger(reply.ports)||reply.ports<items.size||reply.ports>24||
+                   !/^[A-F0-9]{64}$/.test(reply.witness||''))))throw Error('LIVE_UNCONFIRMED');
+                const candidates=reply.sequence===1?[items]:[held.streamStaged,held.streamInFlight,held.streamUnknown].filter(Boolean);
+                const chosen=candidates.find(candidate=>reply.requests.every(request=>candidate.get(request?.receiverId)?.signature===signature(request)));
+                if(!chosen||new Set(reply.requests.map(request=>request.receiverId)).size!==items.size)throw Error('LIVE_UNCONFIRMED');
+                completedItems=chosen;streamComplete=true;
+                results=new Map([...chosen].map(([id])=>[id,{receiverId:id,status:retained?'retained-deferred':'applied-in-firmware'}]));
+              }
+            }
+            // One selected moving receiver needs the same bounded retirement
+            // hook as a multi-receiver animation. Otherwise a newer palette or
+            // speed waits for the previous background correction to finish.
+            // Keep RGBW single-colour, OFF, scoped-port and prelude routes
+            // unchanged; the explicit single-SPI-solid opt-in below is separate.
+            // Native still admits the complete original request.
+            const singleAnimation=initial.length===1&&initial.every(request=>scopedMovingCandidate(request)||
+              request.kind==='SPI_PORTS'&&Array.isArray(request.portScenes)&&request.portScenes.length>0&&request.portScenes.every(child=>child.kind==='SPI_SCENE'&&child.scene)||
+              ['RGBW_SCENE','SPI_SCENE'].includes(request.kind)&&request.brightness>0&&
+              request.scene&&(request.scene.engine!=='STATIC'||request.scene.v30)&&
+              (request.scene.v30||request.scene.engine!=='STATIC'||Number.isInteger(request.scene.phaseMs)&&
+                Number.isInteger(request.scene.phaseRateMicroHz)&&request.scene.phaseRateMicroHz>0));
+            // Native explicitly opts this C98 route in. A whole-receiver SPI
+            // solid uses the same batch entry as its animations; the request
+            // is unchanged and native still admits target, owner and geometry.
+            // OFF, RGBW, per-port envelopes and typed gradients keep their routes.
+            const singleSpiSolid=initial.length===1&&singleSpiStaticBatch()===true&&
+              initial[0].kind==='SPI_SCENE'&&!Object.hasOwn(initial[0],'outputPort')&&
+              initial[0].transitionMs<=750&&staticGestureShape(initial[0])!==null;
+            if(!streamComplete&&sendBatch && (items.size>1||singleAnimation||singleSpiSolid||compiledModern()===true)){
+              active.operation=sendBatch([...items.values()].map(item=>item.request));
+              const reply=await active.operation;
+              if(reply?.status==='breathe-retained-deferred'||reply?.status==='catalogue-retained-deferred'){
+                if(Object.keys(reply).sort().join(',')!=='applied,ready,receiverIds,status'||reply.applied!==false||reply.ready!==false||
+                   !Array.isArray(reply.receiverIds)||reply.receiverIds.length!==items.size||
+                   new Set(reply.receiverIds).size!==items.size||reply.receiverIds.some(id=>!items.has(id)))throw Error('LIVE_UNCONFIRMED');
+                results=new Map([...items].map(([id])=>[id,{receiverId:id,status:'retained-deferred'}]));
+              }else if(reply?.status==='early-animation-retired'){
+                if(Object.keys(reply).sort().join(',')!=='receiverIds,sequence,status'||
+                   !Number.isInteger(reply.sequence)||reply.sequence<1||reply.sequence>65535||!held.retirementTouched||
+                   !Array.isArray(reply.receiverIds)||reply.receiverIds.length!==items.size||
+                   new Set(reply.receiverIds).size!==items.size||reply.receiverIds.some(id=>!items.has(id)))throw Error('LIVE_UNCONFIRMED');
+                retired=true;
+              }else if(reply?.status==='batch-superseded-before-dispatch'){
+                if(Object.keys(reply).length!==2||!Array.isArray(reply.receiverIds)||reply.receiverIds.length!==items.size||
+                   new Set(reply.receiverIds).size!==items.size||reply.receiverIds.some(id=>!items.has(id)))throw Error('LIVE_UNCONFIRMED');
+                superseded=true;
+              }else{
+              if(reply?.status!=='batch-complete'||!Array.isArray(reply.results)||reply.results.length!==items.size)
+                throw Error('LIVE_UNCONFIRMED');
+              if('preparingSequence' in reply||'preparingRequests' in reply){
+                if(!Number.isInteger(reply.preparingSequence)||reply.preparingSequence<0||reply.preparingSequence>65535||
+                   !Array.isArray(reply.preparingRequests)||reply.preparingRequests.length!==items.size)throw Error('LIVE_UNCONFIRMED');
+                const candidates=reply.preparingSequence===0?[items]:
+                  [held.preparingAccepted,held.preparingInFlight,held.preparingUnknown].filter(Boolean);
+                const selected=candidates.find(candidate=>reply.preparingRequests.every(request=>
+                  candidate.get(request?.receiverId)?.signature===signature(request)));
+                if(!selected||new Set(reply.preparingRequests.map(request=>request.receiverId)).size!==items.size||
+                   reply.results.some(result=>result?.status!=='applied-in-firmware'))throw Error('LIVE_UNCONFIRMED');
+                completedItems=selected;
+              }
+              results=new Map();
+              for(const result of reply.results){
+                if(!items.has(result?.receiverId)||results.has(result.receiverId))throw Error('LIVE_UNCONFIRMED');
+                if(result.status==='applied-in-firmware'){
+                  if(!Number.isSafeInteger(result.generation)||result.generation<1)throw Error('LIVE_UNCONFIRMED');
+                }else if(!['unconfirmed','not-sent'].includes(result.status)||typeof result.code!=='string'||
+                         !/^[A-Z][A-Z0-9_]{0,79}$/.test(result.code))throw Error('LIVE_UNCONFIRMED');
+                results.set(result.receiverId,result);
+              }
+              }
+            }else if(!streamComplete){
+              const [id,item]=items.entries().next().value;
+              active.operation=send(item.request);const reply=await active.operation;
+              if(reply?.status!=='applied-in-firmware'||reply.receiverId!==id||
+                 !Number.isSafeInteger(reply.generation)||reply.generation<1)throw Error('LIVE_UNCONFIRMED');
+              results=new Map([[id,reply]]);
+            }
+          }catch(cause){error=cause?.code||cause?.message||'LIVE_UNCONFIRMED';}
+          // C98: a replacement asked a few ms before this terminal is still in
+          // flight. Wait for its answer: "unavailable" leaves the newest colour
+          // queued for the next ordinary send instead of failing it.
+          if(held.preparingInFlight&&held.preparingSettled)
+            await Promise.race([held.preparingSettled.catch(()=>{}),new Promise(resolve=>setTimeout(resolve,1500))]);
+          const observer=held.terminalObserver;
+          if(observer&&observer.operation===held.operation){
+            const terminal=Object.freeze({applied:epoch===runEpoch&&!error&&!retired&&!superseded&&completedItems===items&&
+              results?.size===items.size&&[...results.values()].every(result=>result.status==='applied-in-firmware')});
+            // The original operation has actually settled. Its exact cleanup
+            // observer runs BEFORE a queued next writer, without clearing,
+            // retrying or granting success to any original/new request.
+            try{await observer.afterTerminal(terminal);}catch(_){/* Cleanup cannot rewrite the original result. */}
+            observer.resolve(terminal);
+          }
+          active=null;
+          if(retired){
+            // No APPLIED, no zero-write supersession claim. Even reversion to
+            // the original colour needs its fresh ordinary admitted wave.
+            if(epoch===runEpoch)for(const[id,item]of items)if(!queue.has(id)&&desired.get(id)?.signature===item.signature)queue.set(id,item);
+            continue;
+          }
+          if(error&&held.stream){
+            failedGesture=held.gesture;
+            for(const [id,item]of queue)if(item.gesture===held.gesture){queue.delete(id);if(desired.get(id)?.version===item.version)emit(id,'failed',error);}
+          }
+          if(!error&&held.stream)for(const candidate of [held.streamInFlight,held.streamUnknown].filter(Boolean))if(candidate!==completedItems){
+            for(const [id,item]of candidate)if(queue.get(id)?.version===item.version){
+              queue.delete(id);failedGesture=held.gesture;
+              if(desired.get(id)?.version===item.version)emit(id,'failed','LIVE_UNCONFIRMED');
+            }
+          }
+          if(superseded){
+            // A same-colour reversion may match the old preparation again.
+            // It still needs a fresh wave: superseded means zero LIVE, not ACK.
+            if(epoch===runEpoch)for(const [id,item] of items)if(!queue.has(id)&&desired.get(id)?.signature===item.signature)queue.set(id,item);
+            continue;
+          }
+          if(error&&held.preparingTouched){
+            // A lost replacement ACK/FINAL may already have changed the LEDs.
+            // Never automatically replay that submitted version. A genuinely
+            // later never-submitted gesture remains a separate pending intent.
+            for(const candidate of [held.preparingAccepted,held.preparingInFlight,held.preparingUnknown].filter(Boolean)){
+              for(const [id,item]of candidate)if(queue.get(id)?.version===item.version){
+                queue.delete(id);
+                if(desired.get(id)?.version===item.version)emit(id,'failed',error);
+              }
+            }
+          }
+          if(!error){
+            // A FINAL for the original/another version does not resolve a
+            // missing local replacement ACK. Fail that attempted version
+            // rather than automatically dispatching it again.
+            for(const candidate of [held.preparingInFlight,held.preparingUnknown].filter(Boolean))if(candidate!==completedItems){
+              for(const [id,item]of candidate)if(queue.get(id)?.version===item.version){
+                queue.delete(id);
+                if(desired.get(id)?.version===item.version)emit(id,'failed','LIVE_UNCONFIRMED');
+              }
+            }
+          }
+          for(const [id,item] of completedItems){
+            if(epoch!==runEpoch||desired.get(id)?.signature!==item.signature)continue;
+            if(!error&&queue.get(id)?.signature===item.signature)queue.delete(id);
+            const result=results?.get(id),retained=result?.status==='retained-deferred',code=error||(['applied-in-firmware','retained-deferred'].includes(result?.status)?'':result?.code);
+            emit(id,code?'failed':retained?'staged':'applied',code||'');
+          }
+          if(!error&&epoch===runEpoch&&results?.size===completedItems.size&&
+             [...results.values()].every(result=>result.status==='retained-deferred'))observeCompletion(completedItems,held.operation,runEpoch);
+        }
+      }finally{active=null;draining=false;schedule();settleIdle();}
+    }
+    function request(input,localIntent){
+      cancelCompletionObserver();
+      let copied=clone(input);const id=copied.receiverId;
+      const pending=queue.get(id),previous=pending||(active?.preludeOpen?active.items.get(id):null);
+      let prelude=pending?.prelude;
+      if(copied.kind==='SPI_PORTS'&&previous?.request.standId===copied.standId){
+        if(previous.request.kind==='SPI_PORTS'){
+          const ports=new Map(previous.request.portScenes.map(child=>[child.port,clone(child)]));
+          copied.portScenes.forEach(child=>ports.set(child.port,child));
+          copied={...copied,portScenes:[...ports.values()].sort((a,b)=>a.port-b.port)};
+        }else if(['SPI_SCENE','SPI_BRIGHTNESS'].includes(previous.request.kind)&&(pending||!active?.preludeOpen))prelude=clone(previous.request);
+      }else if(copied.kind!=='SPI_PORTS')prelude=undefined;
+      const sig=signature(copied);
+      const intentVersion=++version;desired.set(id,{signature:sig,version:intentVersion});
+      if(active?.epoch===epoch&&active.items.get(id)?.signature===sig&&!active.supersessionRequested&&!active.preparingTouched&&!active.streamTouched&&!active.retirementTouched){queue.delete(id);emit(id,'pending');return;}
+      if(gestureHeld&&failedGesture===gestureEpoch){queue.delete(id);emit(id,'failed','LIVE_UNCONFIRMED');return;}
+      // Private picker provenance stays on the queue item, never the request.
+      const paletteEdit=localIntent?.kind==='animation-palette'&&Object.keys(localIntent).length===1;
+      queue.set(id,{request:copied,paletteEdit,signature:sig,version:intentVersion,gesture:gestureEpoch,...(prelude?{prelude}:{})});emit(id,'pending');
+      // Only an explicitly registered automatic archive may yield this lease.
+      // The callback cannot release it; actual native cleanup owns that proof.
+      if(idleLease?.epoch===epoch&&idleLease.standId===copied.standId)idleLease.onLiveIntent?.();
+      schedule();
+      considerPreparingSupersession();
+      // A newly selected other installation cannot inherit an existing idle
+      // barrier. Fail it closed rather than silently waiting for foreign work.
+      for(const waiter of [...idleWaiters])if(otherStand(waiter.standId))finishWaiter(waiter,idleError('LIVE_QUEUE_SCOPE_BUSY'));
+    }
+    function preview(id){
+      cancelCompletionObserver();
+      desired.set(id,{signature:null,version:++version});queue.delete(id);emit(id,'preview');
+    }
+    function reject(id,code){
+      cancelCompletionObserver();
+      desired.set(id,{signature:null,version:++version});queue.delete(id);emit(id,'failed',code);
+    }
+    function clear(){
+      cancelCompletionObserver();
+      active?.operation?.stopStaticGesture?.();active?.operation?.cancelNativeIntent?.();gestureHeld=false;gestureEpoch++;failedGesture=null;
+      epoch++;if(timer!==null)clearTimer(timer);timer=null;queue.clear();desired.clear();states.clear();
+      for(const waiter of [...idleWaiters])finishWaiter(waiter,idleError('LIVE_QUEUE_CLEARED'));
+    }
+    return Object.freeze({request,preview,reject,clear,beginGesture,endGesture,cancelGesture,whenIdle,acquireIdle,captureCurrentIntent,state:id=>states.get(id)||{kind:'idle',code:''}});
+  }
+  return Object.freeze({create,requestFor,joinZonePlayback});
+});

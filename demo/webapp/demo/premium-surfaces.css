@@ -1,0 +1,1074 @@
+/* V31 visual finish: soft, milky surfaces with a quiet Aluvision red accent.
+   Keep every lighting preview dark and every control high-contrast. */
+:root {
+  --bg: #f5f4f2;
+  --panel: #fff;
+  --ink: #202220;
+  --muted: #60675f;
+  --line: #deded9;
+  --red: #bf4841;
+  --soft: #eeede9;
+  --glass: rgba(255, 255, 255, .38);
+  --glass-edge: rgba(255, 255, 255, .84);
+  --glass-solid: #f8f7f4;
+  --glass-sheet: rgba(250, 249, 246, .9);
+  --action-ink: #ac3933;
+  --surface-shadow: 0 7px 22px rgba(25, 30, 25, .045), 0 2px 5px rgba(25, 30, 25, .022);
+  --surface-highlight: inset 0 1px rgba(255, 255, 255, .86), inset 0 0 0 1px rgba(255, 255, 255, .2);
+}
+
+body:not([data-theme="dark"]) {
+  background:
+    radial-gradient(95% 27rem at 2% -8%, rgba(255, 255, 255, .98), transparent 75%),
+    radial-gradient(80% 27rem at 104% 16%, rgba(191, 72, 65, .16), transparent 76%),
+    radial-gradient(72% 30rem at 18% 70%, rgba(214, 220, 211, .58), transparent 72%),
+    linear-gradient(180deg, #f8f7f5 0%, #e6e5e1 100%);
+}
+
+/* Glass is a surface treatment, not a veil over content. */
+.brand-bar {
+  background: rgba(249, 248, 246, .76);
+  border-color: rgba(255, 255, 255, .82);
+  -webkit-backdrop-filter: blur(22px) saturate(132%);
+  backdrop-filter: blur(22px) saturate(132%);
+}
+
+.brand-bar {
+  box-shadow: 0 3px 16px rgba(23, 28, 23, .035);
+}
+
+
+/* Zone power is an unboxed row. The dialog keeps its own ID specificity;
+   putting its ID inside :is would also overrule later styles on every card. */
+/*c140-sel:premium-surfaces.css*/#effect-dialog, :where(.card):is(.card, .power-card:not(.power-card-zone)), :where(.stand-info-tile):is(.stand-info-tile, .power-card:not(.power-card-zone)), :where(.zone-entry):is(.zone-entry, .power-card:not(.power-card-zone)), :where(.zone-card):is(.zone-card, .power-card:not(.power-card-zone)), :where(.menu-card):is(.menu-card, .power-card:not(.power-card-zone)), .power-card:not(.power-card-zone), :where(.current-effect):is(.current-effect, .power-card:not(.power-card-zone)), :where(.settings-toggle):is(.settings-toggle, .power-card:not(.power-card-zone)), :where(.assignment-choice):is(.assignment-choice, .power-card:not(.power-card-zone)), :where(.assignment-family-choice):is(.assignment-family-choice, .power-card:not(.power-card-zone)), :where(.layout-choice):is(.layout-choice, .power-card:not(.power-card-zone)), :where(.receiver-list details):is(.receiver-list details, .power-card:not(.power-card-zone)), :is(.receiver-order > [data-order-receiver]), :where(.scene-card):is(.scene-card, .power-card:not(.power-card-zone)), :where(.scene-zone):is(.scene-zone, .power-card:not(.power-card-zone)), :where(.scene-saved-zone):is(.scene-saved-zone, .power-card:not(.power-card-zone)), :where(.scene-save-bar):is(.scene-save-bar, .power-card:not(.power-card-zone)), :where(.stand-scenes):is(.stand-scenes, .power-card:not(.power-card-zone)), :where(.stand-scenes-empty):is(.stand-scenes-empty, .power-card:not(.power-card-zone)), :where(.stand-scenes-entry):is(.stand-scenes-entry, .power-card:not(.power-card-zone)), :where(.stand-scene-card):is(.stand-scene-card, .power-card:not(.power-card-zone)), :where(.stand-overview-row):is(.stand-overview-row, .power-card:not(.power-card-zone)), :where(.preset-card):is(.preset-card, .power-card:not(.power-card-zone)), :where(.effect-card):is(.effect-card, .power-card:not(.power-card-zone)), :where(.family-card):is(.family-card, .power-card:not(.power-card-zone)), :where(.animation-family-card):is(.animation-family-card, .power-card:not(.power-card-zone)), :where(.family-variant-card):is(.family-variant-card, .power-card:not(.power-card-zone)), :where(.onboarding-name-card):is(.onboarding-name-card, .power-card:not(.power-card-zone)), :where(.onboarding-zone):is(.onboarding-zone, .power-card:not(.power-card-zone)), :where(.onboarding-destination):is(.onboarding-destination, .power-card:not(.power-card-zone)), :where(.stand-setup-overview):is(.stand-setup-overview, .power-card:not(.power-card-zone)), :where(.pixel-setup-panel):is(.pixel-setup-panel, .power-card:not(.power-card-zone)), :where(.pixel-setup-shell):is(.pixel-setup-shell, .power-card:not(.power-card-zone)), :where(.receiver-update-sheet):is(.receiver-update-sheet, .power-card:not(.power-card-zone)), :where(.receiver-removal-sheet):is(.receiver-removal-sheet, .power-card:not(.power-card-zone)), :where(.pin-protection-card):is(.pin-protection-card, .power-card:not(.power-card-zone)), :where(.assignment-choice):is(.assignment-choice, .power-card:not(.power-card-zone)){
+  background-color: var(--glass);
+  background-image:
+    linear-gradient(145deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .04)),
+    radial-gradient(110% 130% at 100% 0%, rgba(191, 72, 65, .055), transparent 70%),
+    radial-gradient(120% 100% at 0% 100%, rgba(234, 236, 232, .18), transparent 72%);
+  border-color: color-mix(in srgb, var(--line) 52%, var(--glass-edge));
+  box-shadow: var(--surface-shadow), var(--surface-highlight);
+  -webkit-backdrop-filter: blur(20px) saturate(134%);
+  backdrop-filter: blur(20px) saturate(134%);
+}
+
+.zone-entry {
+  overflow: hidden;
+}
+
+.zone-entry .zone-card {
+  background-color: rgba(255, 255, 255, .36);
+  background-image: linear-gradient(145deg, rgba(255, 255, 255, .24), rgba(255, 255, 255, .07));
+  box-shadow: none;
+}
+
+.zone-entry .zone-card:hover {
+  background-image: linear-gradient(145deg, rgba(255, 255, 255, .74), rgba(250, 246, 244, .56));
+}
+
+.stand-info-tile {
+  border-radius: 17px;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.stand-info-tile > svg:first-child,
+.stand-info-tile > span {
+  position: relative;
+  z-index: 1;
+}
+
+.stand-info-tile > svg:first-child {
+  color: var(--red);
+  filter: drop-shadow(0 2px 5px rgba(191, 72, 65, .12));
+}
+
+.card,
+.menu-card,
+.power-card,
+.current-effect,
+.settings-toggle,
+.assignment-choice,
+.scene-card,
+.scene-zone,
+.stand-scenes-empty,
+.stand-scene-card,
+.receiver-list details,
+.onboarding-name-card,
+.pixel-setup-panel,
+.pixel-setup-shell {
+  border-radius: 20px;
+}
+
+.button {
+  border: 1px solid rgba(255, 255, 255, .08);
+  background: linear-gradient(145deg, #292d29 0%, #171a17 78%);
+  box-shadow: 0 5px 13px rgba(18, 23, 18, .13), inset 0 1px rgba(255, 255, 255, .16);
+  transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+}
+
+.button.red,
+.button.removal-confirm {
+  background: linear-gradient(145deg, #bf4841 0%, #a63832 82%);
+  box-shadow: 0 5px 13px rgba(160, 54, 48, .18), inset 0 1px rgba(255, 255, 255, .24);
+}
+
+.button.secondary {
+  border: 1px solid color-mix(in srgb, var(--line) 66%, white);
+  background: linear-gradient(145deg, rgba(255, 255, 255, .82), rgba(244, 242, 237, .66));
+  box-shadow: 0 2px 7px rgba(29, 33, 29, .035), inset 0 1px rgba(255, 255, 255, .9);
+}
+
+.icon-button,
+.zone-options-button,
+.channel-row button,
+.colour-remove span {
+  box-shadow: 0 3px 10px rgba(23, 28, 23, .06), inset 0 1px rgba(255, 255, 255, .9);
+}
+
+.pill {
+  background: linear-gradient(145deg, rgba(255, 255, 255, .92), rgba(242, 241, 237, .82));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .9);
+}
+
+.pill.red,
+.onboarding-setup-label {
+  background: linear-gradient(145deg, rgba(255, 255, 255, .92), rgba(248, 229, 226, .82));
+}
+
+.section-tabs,
+.control-mode-tabs,
+.demo-settings-tabs {
+  border: 1px solid rgba(255, 255, 255, .78);
+  background: linear-gradient(145deg, rgba(236, 236, 232, .94), rgba(226, 226, 221, .8));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .84), 0 4px 13px rgba(26, 30, 26, .035);
+}
+
+.section-tabs button[aria-selected="true"] {
+  background: linear-gradient(145deg, #fff, rgba(255, 255, 255, .9));
+  box-shadow: 0 3px 9px rgba(30, 34, 30, .075), inset 0 1px #fff;
+}
+
+.control-mode-tabs button[aria-pressed="true"],
+.filter-row button[aria-selected="true"] {
+  color: #fff;
+  background-color: #202420;
+  background-image: linear-gradient(145deg, #292d29, #171a17);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .14), inset 0 -2px var(--red), 0 3px 9px rgba(18, 23, 18, .13);
+}
+
+.receiver-chips button,
+.filter-row button,
+.compact-direction button,
+.physical-port-picker button,
+.preference-grid button {
+  background-image: linear-gradient(145deg, rgba(255, 255, 255, .96), rgba(242, 241, 238, .86));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .9), 0 2px 8px rgba(30, 34, 30, .035);
+}
+
+.receiver-chips button[aria-pressed="true"],
+.filter-row button[aria-selected="true"],
+.compact-direction button[aria-pressed="true"] {
+  color: #fff;
+  background-color: #202420;
+  background-image: linear-gradient(145deg, #292d29, #171a17);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .13), inset 0 -2px var(--red), 0 3px 9px rgba(18, 23, 18, .12);
+}
+
+.assignment-choice[aria-pressed="true"],
+.assignment-family-choice[aria-pressed="true"],
+.scene-zone[aria-pressed="true"],
+.onboarding-zone[aria-pressed="true"],
+.layout-choice[aria-pressed="true"],
+.effect-card[aria-pressed="true"] {
+  box-shadow: inset 0 1px rgba(255, 255, 255, .9), 0 0 0 1px rgba(191, 72, 65, .5), 0 5px 14px rgba(191, 72, 65, .07);
+}
+
+.animation-family-card {
+  overflow-anchor: none;
+  background-image:
+    linear-gradient(150deg, rgba(255, 255, 255, .36), rgba(255, 255, 255, .14)),
+    radial-gradient(120% 130% at 100% 0%, rgba(191, 72, 65, .055), transparent 72%);
+  box-shadow: 0 7px 21px rgba(25, 30, 25, .055), inset 0 1px rgba(255, 255, 255, .95);
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+#animation-results {
+  overflow-anchor: none;
+}
+
+
+.family-variants-panel {
+  background-image: linear-gradient(145deg, rgba(242, 241, 238, .92), rgba(250, 248, 246, .94));
+}
+
+/* Repeated gallery tiles keep the glossy gradient, but skip per-card blur to
+   avoid expensive compositing while opening groups or scrolling on phones. */
+.animation-family-card, .family-variant-card, .effect-card, .family-card{
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.guide,
+.preview-notice,
+.receiver-zone-row-hint,
+.pixel-preview-notice,
+.management-status {
+  background: linear-gradient(145deg, rgba(239, 238, 234, .92), rgba(230, 229, 224, .78));
+  border: 1px solid rgba(255, 255, 255, .62);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .55);
+}
+
+.navigation {
+  border: 1px solid rgba(255, 255, 255, .18);
+  background: linear-gradient(145deg, rgba(32, 36, 32, .9), rgba(17, 20, 17, .88));
+  box-shadow: 0 12px 30px rgba(13, 18, 13, .2), inset 0 1px rgba(255, 255, 255, .14);
+  -webkit-backdrop-filter: blur(24px) saturate(136%);
+  backdrop-filter: blur(24px) saturate(136%);
+}
+
+.navigation button[aria-current="page"] {
+  background: linear-gradient(145deg, #fff, rgba(248, 247, 244, .97));
+  box-shadow: 0 3px 9px rgba(0, 0, 0, .13), inset 0 1px white;
+}
+
+.navigation button[aria-current="page"] svg {
+  filter: drop-shadow(0 2px 4px rgba(191, 72, 65, .13));
+}
+
+.toast {
+  border: 1px solid rgba(255, 255, 255, .13);
+  background: linear-gradient(145deg, rgba(39, 44, 39, .97), rgba(23, 27, 23, .97));
+  box-shadow: 0 12px 32px rgba(16, 21, 16, .2), inset 0 1px rgba(255, 255, 255, .1);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+@media (hover: hover) {
+  :is(.stand-info-tile, .zone-card, .menu-card, .scene-card, .stand-scene-card, .animation-family-card, .effect-card, .family-card, .layout-choice):hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--red) 24%, var(--line));
+    box-shadow: 0 8px 20px rgba(24, 30, 24, .07), inset 0 1px rgba(255, 255, 255, .92);
+  }
+
+  .button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.035);
+    box-shadow: 0 8px 17px rgba(18, 23, 18, .16), inset 0 1px rgba(255, 255, 255, .18);
+  }
+}
+
+@media (max-width: 700px) {
+  /* Keep the full-zone preview visible while leaving a clear touch lane below. */
+  .control-preview-dock .preview-wrap canvas {
+    height: 52px;
+  }
+}
+
+@media (max-height: 700px) {
+  .control-preview-dock .preview-wrap canvas {
+    height: 48px;
+  }
+}
+
+body[data-theme="dark"] {
+  --glass: rgba(37, 41, 36, .74);
+  --glass-edge: rgba(255, 255, 255, .14);
+  --glass-solid: #252923;
+  --glass-sheet: rgba(34, 38, 32, .94);
+  --action-ink: #e59c93;
+  --surface-shadow: 0 12px 28px rgba(0, 0, 0, .22), 0 2px 6px rgba(0, 0, 0, .12);
+  --surface-highlight: inset 0 1px rgba(255, 255, 255, .085), inset 0 0 0 1px rgba(255, 255, 255, .025);
+  background:
+    radial-gradient(90% 26rem at 100% 0%, rgba(191, 72, 65, .055), transparent 74%),
+    radial-gradient(80% 26rem at 0% 22%, rgba(255, 255, 255, .025), transparent 75%),
+    linear-gradient(180deg, #151714 0%, #111310 100%);
+}
+
+body[data-theme="dark"] .brand-bar {
+  background: rgba(21, 23, 20, .76);
+  border-color: rgba(255, 255, 255, .08);
+}
+
+/* Keep dialog ID specificity on the dialog, not every class in this group. */
+body[data-theme="dark"] #effect-dialog, body[data-theme="dark"] :where(.card):is(.card, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.stand-info-tile):is(.stand-info-tile, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.zone-entry):is(.zone-entry, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.zone-card):is(.zone-card, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.menu-card):is(.menu-card, .power-card:not(.power-card-zone)), body[data-theme="dark"] .power-card:not(.power-card-zone), body[data-theme="dark"] :where(.current-effect):is(.current-effect, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.settings-toggle):is(.settings-toggle, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.assignment-choice):is(.assignment-choice, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.assignment-family-choice):is(.assignment-family-choice, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.layout-choice):is(.layout-choice, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.receiver-list details):is(.receiver-list details, .power-card:not(.power-card-zone)), body[data-theme="dark"] :is(.receiver-order > [data-order-receiver]), body[data-theme="dark"] :where(.scene-card):is(.scene-card, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.scene-zone):is(.scene-zone, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.scene-saved-zone):is(.scene-saved-zone, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.scene-save-bar):is(.scene-save-bar, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.stand-scenes):is(.stand-scenes, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.stand-scenes-empty):is(.stand-scenes-empty, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.stand-scenes-entry):is(.stand-scenes-entry, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.stand-scene-card):is(.stand-scene-card, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.stand-overview-row):is(.stand-overview-row, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.preset-card):is(.preset-card, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.effect-card):is(.effect-card, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.family-card):is(.family-card, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.animation-family-card):is(.animation-family-card, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.family-variant-card):is(.family-variant-card, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.onboarding-name-card):is(.onboarding-name-card, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.onboarding-zone):is(.onboarding-zone, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.onboarding-destination):is(.onboarding-destination, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.stand-setup-overview):is(.stand-setup-overview, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.pixel-setup-panel):is(.pixel-setup-panel, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.pixel-setup-shell):is(.pixel-setup-shell, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.receiver-update-sheet):is(.receiver-update-sheet, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.receiver-removal-sheet):is(.receiver-removal-sheet, .power-card:not(.power-card-zone)), body[data-theme="dark"] :where(.pin-protection-card):is(.pin-protection-card, .power-card:not(.power-card-zone)){
+  color: var(--ink);
+  background-color: rgba(32, 35, 30, .76);
+  background-image: linear-gradient(145deg, rgba(54, 59, 52, .76), rgba(31, 34, 29, .79)), radial-gradient(120% 110% at 100% 0%, rgba(191, 72, 65, .07), transparent 75%);
+  border-color: rgba(255, 255, 255, .16);
+  box-shadow: var(--surface-shadow), var(--surface-highlight);
+}
+
+body[data-theme="dark"] .zone-entry .zone-card {
+  background-image: linear-gradient(145deg, rgba(49, 53, 47, .86), rgba(30, 33, 28, .88));
+  box-shadow: none;
+}
+
+body[data-theme="dark"] .section-tabs, body[data-theme="dark"] .control-mode-tabs, body[data-theme="dark"] .demo-settings-tabs, body[data-theme="dark"] .guide, body[data-theme="dark"] .preview-notice, body[data-theme="dark"] .receiver-zone-row-hint, body[data-theme="dark"] .pixel-preview-notice, body[data-theme="dark"] .management-status{
+  color: var(--ink);
+  background: linear-gradient(145deg, rgba(47, 51, 45, .92), rgba(37, 40, 35, .88));
+  border-color: rgba(255, 255, 255, .07);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .06);
+}
+
+body[data-theme="dark"] :is(.receiver-chips button), body[data-theme="dark"] :is(.filter-row button), body[data-theme="dark"] :is(.compact-direction button), body[data-theme="dark"] :is(.physical-port-picker button), body[data-theme="dark"] :is(.preference-grid button), body[data-theme="dark"] :where(.pill):is(.pill, .receiver-chips button){
+  color: var(--ink);
+  background-image: linear-gradient(145deg, rgba(48, 52, 46, .95), rgba(34, 37, 32, .93));
+  border-color: rgba(255, 255, 255, .09);
+}
+
+body[data-theme="dark"] .assignment-family-choice {
+  color: var(--ink);
+  background: linear-gradient(145deg, rgba(48, 52, 46, .95), rgba(34, 37, 32, .93));
+  border-color: rgba(255, 255, 255, .09);
+}
+
+body[data-theme="dark"] .assignment-family-choice[aria-pressed="true"] {
+  border-color: rgba(191, 72, 65, .72);
+  background: linear-gradient(145deg, rgba(67, 49, 46, .94), rgba(44, 37, 34, .92));
+}
+
+body[data-theme="dark"] :is(.receiver-chips button[aria-pressed="true"]), body[data-theme="dark"] :is(.filter-row button[aria-selected="true"]), body[data-theme="dark"] :is(.compact-direction button[aria-pressed="true"]), body[data-theme="dark"] :is(.control-mode-tabs button[aria-pressed="true"]){
+  color: #fff;
+  background-color: #202420;
+  background-image: linear-gradient(145deg, #333833, #202420);
+  border-color: rgba(191, 72, 65, .56);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .08), inset 0 -2px var(--red), 0 4px 12px rgba(0, 0, 0, .18);
+}
+
+body[data-theme="dark"] .navigation {
+  background: linear-gradient(145deg, rgba(31, 35, 31, .97), rgba(15, 18, 15, .97));
+}
+
+body[data-theme="dark"] .navigation button[aria-current="page"] {
+  color: var(--red);
+  background: linear-gradient(145deg, #f6f5f0, #e8e7e1);
+}
+
+body[data-theme="dark"] .family-variants-panel {
+  background: linear-gradient(145deg, rgba(42, 46, 40, .94), rgba(34, 37, 32, .94));
+}
+
+/* The LED canvas stays pitch-dark and untouched in both themes. */
+:where(.preview-wrap):is(.preview-wrap, .zone-card canvas), :where(.effect-thumb):is(.effect-thumb, .zone-card canvas), :where(.scene-mosaic):is(.scene-mosaic, .zone-card canvas), :where(.layout-art):is(.layout-art, .zone-card canvas), :is(.zone-card canvas), :where(.scene-preview):is(.scene-preview, .zone-card canvas), :is(.family-card canvas), :is(.effect-card canvas), :is(.family-variant-card canvas), :where(.pixel-connection-preview):is(.pixel-connection-preview, .zone-card canvas), :where(.pixel-count-preview):is(.pixel-count-preview, .zone-card canvas){
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.stand-info-tile, .button, .animation-family-card) {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) and (hover: hover) {
+  :is(.stand-info-tile, .button, .animation-family-card):hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* Keep small controls and nested surfaces as softly rounded as the main cards.
+   The LED pixels themselves remain square so their preview stays recognisable. */
+main button, dialog button{
+  border-radius: 13px;
+}
+
+:is(main, dialog) input:not([type="range"]), :is(main, dialog) :where(select):is(select, input:not([type="range"])), :is(main, dialog) :where(textarea):is(textarea, input:not([type="range"])), :is(main, dialog) :where(summary):is(summary, input:not([type="range"])){
+  border-radius: 12px;
+}
+
+main :where(.animation-category-note):is(.animation-category-note, .output-row input[type="number"]), main :where(.preview-live-controls button):is(.preview-live-controls button, .output-row input[type="number"]), main :where(.order-buttons button):is(.order-buttons button, .output-row input[type="number"]), main :where(.channel-row button):is(.channel-row button, .output-row input[type="number"]), main :where(.compact-direction button):is(.compact-direction button, .output-row input[type="number"]), main :where(.physical-port-picker button):is(.physical-port-picker button, .output-row input[type="number"]), main :is(.output-row input[type="number"]), main :where(.output-row select):is(.output-row select, .output-row input[type="number"]){
+  border-radius: 13px;
+}
+
+main :where(.background-swatch):is(.background-swatch, .selection .scope-lines-list .scope-line .scope-number), main :where(.receiver-chips .number):is(.receiver-chips .number, .selection .scope-lines-list .scope-line .scope-number), main :where(.physical-port-picker b):is(.physical-port-picker b, .selection .scope-lines-list .scope-line .scope-number), main :where(.order-number):is(.order-number, .selection .scope-lines-list .scope-line .scope-number), main :where(.selection .scope-number):is(.selection .scope-number, .selection .scope-lines-list .scope-line .scope-number), main :is(.selection .scope-lines-list .scope-line .scope-number), main :where(.onboarding-setup-steps li > span):is(.onboarding-setup-steps li > span, .selection .scope-lines-list .scope-line .scope-number), main :where(.onboarding-zone-tiles .onboarding-zone i):is(.onboarding-zone-tiles .onboarding-zone i, .selection .scope-lines-list .scope-line .scope-number), main :where(.onboarding-role-cards .onboarding-type-label):is(.onboarding-role-cards .onboarding-type-label, .selection .scope-lines-list .scope-line .scope-number), main :where(.onboarding-members > h2 > span):is(.onboarding-members > h2 > span, .selection .scope-lines-list .scope-line .scope-number), main :where(.onboarding-role):is(.onboarding-role, .selection .scope-lines-list .scope-line .scope-number), main :where(.onboarding-member-type):is(.onboarding-member-type, .selection .scope-lines-list .scope-line .scope-number), main :where(.onboarding-review-product li > b):is(.onboarding-review-product li > b, .selection .scope-lines-list .scope-line .scope-number), main :where(.onboarding-pin-future > i):is(.onboarding-pin-future > i, .selection .scope-lines-list .scope-line .scope-number), main :where(.onboarding-wifi-return-steps li > i):is(.onboarding-wifi-return-steps li > i, .selection .scope-lines-list .scope-line .scope-number), main :where(.receiver-filters button span):is(.receiver-filters button span, .selection .scope-lines-list .scope-line .scope-number), main :where(.scene-zone-number):is(.scene-zone-number, .selection .scope-lines-list .scope-line .scope-number), main :where(.scene-mosaic-overflow):is(.scene-mosaic-overflow, .selection .scope-lines-list .scope-line .scope-number){
+  border-radius: 10px;
+}
+
+main :where(.onboarding-setup-label):is(.onboarding-setup-label, .onboarding-result .pill), main :is(.onboarding-result .pill){
+  border-radius: 999px;
+}
+
+main :where(.scene-mosaic-tile):is(.scene-mosaic-tile, .scene-mosaic .scene-preview), main :is(.scene-mosaic .scene-preview), main :is(.scene-zone > .scene-preview), main :is(.stand-scene-card .scene-preview){
+  border-radius: 10px;
+}
+
+dialog :is(.pixel-setup-outputs b), dialog :is(.pixel-setup-reference b), dialog :where(.pixel-port-step):is(.pixel-port-step, .pixel-setup-outputs b){
+  border-radius: 10px;
+}
+
+dialog .pixel-setup-steps li {
+  border-radius: 11px;
+}
+
+/* Keep the per-zone power switch available without spending a full card row. */
+.editor-controls-zone {
+  gap: 8px;
+}
+
+#main .power-card-zone {
+  min-height: 44px;
+  padding: 0 2px 0 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  background-image: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.power-card-zone strong {
+  gap: 7px;
+  font-size: 12px;
+}
+
+.power-card-zone strong .icon {
+  width: 17px;
+  height: 17px;
+  color: var(--red);
+}
+
+.power-card-zone .switch {
+  min-height: 44px;
+  gap: 6px;
+  padding: 0 1px 0 8px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.power-card-zone .switch i {
+  width: 37px;
+  height: 22px;
+}
+
+.power-card-zone .switch i:after {
+  left: 2px;
+  top: 2px;
+  width: 18px;
+  height: 18px;
+}
+
+.power-card-zone .switch[aria-checked=true] i:after {
+  transform: translateX(15px);
+}
+
+.power-card-zone .switch[aria-checked=mixed] i:after {
+  transform: translateX(7px);
+}
+
+/* V32 control finish: colour and effects share one calm hierarchy, while the
+   preview size continues to describe the actual light on compact/sticky views. */
+.control-workspace,
+.animation-simple-page .control-workspace{
+  padding:12px;
+  border:1px solid color-mix(in srgb,var(--line) 45%,var(--glass-edge));
+  border-radius:20px;
+  background-color:var(--glass);
+  background-image:linear-gradient(145deg,color-mix(in srgb,var(--glass) 88%,white 12%),color-mix(in srgb,var(--glass) 96%,transparent)),radial-gradient(120% 100% at 100% 0%,rgba(191,72,65,.08),transparent 72%);
+  box-shadow:var(--surface-shadow),var(--surface-highlight);
+  -webkit-backdrop-filter:blur(18px) saturate(130%);
+  backdrop-filter:blur(18px) saturate(130%);
+}
+.bediening-workspace{gap:13px}
+.animation-context{gap:8px;padding:6px 4px;border:1px solid color-mix(in srgb,var(--line) 52%,var(--glass-edge));border-radius:16px;background:color-mix(in srgb,var(--glass) 78%,var(--panel));box-shadow:inset 0 1px rgba(255,255,255,.52)}
+.animation-context .scope-copy .scope-option-title,.animation-context .scope-copy>small{white-space:normal;overflow-wrap:anywhere}
+.animation-context>.power-card{border-color:color-mix(in srgb,var(--line) 68%,transparent);background:color-mix(in srgb,var(--panel) 72%,var(--glass));box-shadow:inset 0 1px rgba(255,255,255,.66)}
+.control-workspace .shared-colour-picker,
+.control-workspace .animation-daily-controls{border-radius:17px}
+.shared-colour-picker .fine-controls-body{display:grid;gap:5px}
+.shared-colour-picker .fine-controls-body .channel-row{padding:3px 7px;border:1px solid color-mix(in srgb,var(--line) 70%,var(--glass-edge));border-radius:12px;background:color-mix(in srgb,var(--glass) 76%,var(--panel))}
+.control-mode-tabs button{transition:background-color .2s ease,color .2s ease,box-shadow .22s ease,transform .2s ease}
+.control-mode-tabs button[aria-pressed=true]{transform:translateY(-1px)}
+.preview-size-control>summary{transition:background-color .18s ease,border-color .18s ease,color .18s ease}
+.preview-size-control[open] .preview-size-picker{transform-origin:top right;animation:control-disclosure-enter .28s cubic-bezier(.2,.82,.24,1.06) both}
+.settings-panel:not([hidden]),
+.background-details:not([hidden]){animation:control-disclosure-enter .28s cubic-bezier(.2,.82,.24,1.06) both}
+.animation-category-choice{transition:transform .2s cubic-bezier(.2,.72,.25,1),border-color .2s ease,background-color .2s ease,box-shadow .2s ease}
+@keyframes control-disclosure-enter{from{opacity:0;transform:translateY(-7px) scale(.988)}78%{opacity:1;transform:translateY(1px) scale(1.002)}to{opacity:1;transform:translateY(0) scale(1)}}
+.control-mode-panel{animation:none}
+
+/* A larger choice enlarges the strip itself, not a mostly-empty canvas. */
+.control-preview-dock[data-spatial-preview=false][data-preview-size=small] .preview-wrap canvas{height:70px!important;min-height:0!important;transition:height .28s cubic-bezier(.22,.61,.36,1)}
+.control-preview-dock[data-spatial-preview=false][data-preview-size=medium] .preview-wrap canvas{height:112px!important;min-height:0!important;transition:height .28s cubic-bezier(.22,.61,.36,1)}
+.control-preview-dock[data-spatial-preview=false][data-preview-size=large] .preview-wrap canvas{height:156px!important;min-height:0!important;transition:height .28s cubic-bezier(.22,.61,.36,1)}
+@media(max-width:700px){
+  .control-preview-dock[data-spatial-preview=false][data-preview-size=small] .preview-wrap canvas{height:58px!important}
+  .control-preview-dock[data-spatial-preview=false][data-preview-size=medium] .preview-wrap canvas{height:92px!important}
+  .control-preview-dock[data-spatial-preview=false][data-preview-size=large] .preview-wrap canvas{height:132px!important}
+  .control-preview-dock[data-spatial-preview=false][data-scrolled=true][data-preview-size=small] .preview-wrap canvas{height:50px!important;transition:height .34s cubic-bezier(.22,.61,.36,1)}
+  .control-preview-dock[data-spatial-preview=false][data-scrolled=true][data-preview-size=medium] .preview-wrap canvas{height:76px!important;transition:height .34s cubic-bezier(.22,.61,.36,1)}
+  .control-preview-dock[data-spatial-preview=false][data-scrolled=true][data-preview-size=large] .preview-wrap canvas{height:106px!important;transition:height .34s cubic-bezier(.22,.61,.36,1)}
+}
+@media(max-width:360px){
+  .control-workspace{padding:11px}
+  .control-preview-dock[data-spatial-preview=false][data-preview-size=small] .preview-wrap canvas{height:52px!important}
+  .control-preview-dock[data-spatial-preview=false][data-preview-size=medium] .preview-wrap canvas{height:80px!important}
+  .control-preview-dock[data-spatial-preview=false][data-preview-size=large] .preview-wrap canvas{height:116px!important}
+  .control-preview-dock[data-spatial-preview=false][data-scrolled=true][data-preview-size=small] .preview-wrap canvas{height:50px!important;transition:height .34s cubic-bezier(.22,.61,.36,1)}
+  .control-preview-dock[data-spatial-preview=false][data-scrolled=true][data-preview-size=medium] .preview-wrap canvas{height:72px!important;transition:height .34s cubic-bezier(.22,.61,.36,1)}
+  .control-preview-dock[data-spatial-preview=false][data-scrolled=true][data-preview-size=large] .preview-wrap canvas{height:100px!important;transition:height .34s cubic-bezier(.22,.61,.36,1)}
+}
+@media(max-height:700px){
+  .control-preview-dock[data-spatial-preview=false][data-preview-size=small] .preview-wrap canvas{height:50px!important}
+  .control-preview-dock[data-spatial-preview=false][data-preview-size=medium] .preview-wrap canvas{height:76px!important}
+  .control-preview-dock[data-spatial-preview=false][data-preview-size=large] .preview-wrap canvas{height:108px!important}
+}
+@media(max-width:700px){
+  .control-preview-dock[data-spatial-preview=false][data-scrolled=true][data-preview-size=small] .preview-wrap canvas{height:50px!important}
+  .control-preview-dock[data-spatial-preview=false][data-scrolled=true][data-preview-size=medium] .preview-wrap canvas{height:76px!important}
+  .control-preview-dock[data-spatial-preview=false][data-scrolled=true][data-preview-size=large] .preview-wrap canvas{height:106px!important}
+}
+@media(max-width:360px){
+  .control-preview-dock[data-spatial-preview=false][data-scrolled=true][data-preview-size=small] .preview-wrap canvas{height:50px!important}
+  .control-preview-dock[data-spatial-preview=false][data-scrolled=true][data-preview-size=medium] .preview-wrap canvas{height:72px!important}
+  .control-preview-dock[data-spatial-preview=false][data-scrolled=true][data-preview-size=large] .preview-wrap canvas{height:100px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .app-page-enter,.animation-settings-return-slot .animation-settings-return,.animation-wayfinding[data-editor-return-shortcut]:not([hidden]) .animation-settings-return,.family-wayfinding:not([hidden]),.preview-size-control[open] .preview-size-picker,.settings-panel:not([hidden]),.background-details:not([hidden]){animation:none!important}
+  .control-mode-panel{animation:none!important}
+  .control-mode-tabs button,.preview-size-control>summary,.animation-category-choice{transition:none!important}
+  .control-preview-dock[data-spatial-preview=false] .preview-wrap canvas{transition:none!important}
+}
+
+/* A small, consistent spring makes page changes and touch feedback feel quick
+   without making every data refresh replay a large card animation. */
+:root{--motion-spring:cubic-bezier(.2,.82,.24,1.08);--motion-ease:cubic-bezier(.22,.72,.25,1);--motion-sheet-in:320ms;--motion-sheet-out:150ms}
+main>.app-page-enter{transform-origin:50% 0;will-change:opacity,transform;animation:app-page-enter .34s var(--motion-spring) both}
+@keyframes app-page-enter{from{opacity:0;transform:translate3d(0,9px,0) scale(.996)}76%{opacity:1;transform:translate3d(0,-1px,0) scale(1.001)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
+@keyframes app-action-enter{from{opacity:0;transform:translate3d(0,6px,0) scale(.99)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
+main button:active:not(:disabled), main summary:active:not(:disabled){transform:scale(.988);transition-duration:110ms;transition-timing-function:var(--motion-spring)}
+.animation-gallery-return{transition:transform .24s var(--motion-spring),box-shadow .24s var(--motion-ease),border-color .2s var(--motion-ease)}
+.animation-settings-return-slot .animation-settings-return,
+.animation-wayfinding[data-editor-return-shortcut]:not([hidden]) .animation-settings-return{animation:app-action-enter .24s var(--motion-spring) both}
+dialog[open],dialog#effect-dialog[open]{animation:app-dialog-enter var(--motion-sheet-in) var(--motion-spring) both}
+dialog[open]::backdrop{animation:app-backdrop-enter .2s ease-out both}
+@keyframes app-dialog-enter{from{opacity:0;transform:translate3d(0,8px,0) scale(.986)}78%{opacity:1;transform:translate3d(0,-1px,0) scale(1.002)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
+@keyframes app-backdrop-enter{from{opacity:0}to{opacity:1}}
+/* Only manual dismissal receives this class; native workflow completion
+   stays immediate. A sheet moves, never the scrolling content beneath it. */
+dialog[open].is-closing,dialog#effect-dialog[open].is-closing{pointer-events:none;animation:app-dialog-exit var(--motion-sheet-out) var(--motion-ease) both}
+dialog[open].is-closing::backdrop{animation:app-backdrop-exit var(--motion-sheet-out) ease-out both}
+@keyframes app-dialog-exit{from{opacity:1;transform:translate3d(0,0,0) scale(1)}to{opacity:0;transform:translate3d(0,8px,0) scale(.986)}}
+@keyframes app-backdrop-exit{from{opacity:1}to{opacity:0}}
+@media(prefers-reduced-motion:reduce){
+  main>.app-page-enter,dialog[open],dialog[open]::backdrop{animation:none!important;will-change:auto}
+  main button:active:not(:disabled), main summary:active:not(:disabled){transform:none;transition:none!important}
+}
+.settings-panel.is-closing,.background-details.is-closing{pointer-events:none;animation:app-disclosure-exit .18s ease-in both}
+@keyframes app-disclosure-exit{from{opacity:1;transform:translate3d(0,0,0) scale(1)}to{opacity:0;transform:translate3d(0,-5px,0) scale(.99)}}
+@media(prefers-reduced-motion:reduce){.settings-panel.is-closing,.background-details.is-closing{animation:none!important}}
+
+/* V32 glass polish: strengthen the frosted depth and material contrast while
+   keeping the many scrolling animation tiles free of per-card blur. */
+:where(.animation-category-trigger):is(.animation-category-trigger, .animation-search input), :where(.animation-category-choice):is(.animation-category-choice, .animation-search input), :is(.animation-search input), :where(.settings-toggle):is(.settings-toggle, .animation-search input), :is(.preview-size-control>summary){
+  background-color:var(--glass);
+  background-image:linear-gradient(145deg,rgba(255,255,255,.3),rgba(255,255,255,.09));
+  border-color:color-mix(in srgb,var(--line) 52%,var(--glass-edge));
+  box-shadow:inset 0 1px rgba(255,255,255,.72),0 4px 14px rgba(24,30,24,.035);
+}
+:where(.animation-category-trigger):is(.animation-category-trigger, .animation-search input), :where(.animation-category-choice):is(.animation-category-choice, .animation-search input), :is(.animation-search input), :where(.settings-toggle):is(.settings-toggle, .animation-search input), :is(.preview-size-control>summary){
+  -webkit-backdrop-filter:blur(14px) saturate(128%);
+  backdrop-filter:blur(14px) saturate(128%);
+}
+:is(.animation-category-choice,.family-variant-card):is([aria-pressed=true]){
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+}
+.family-variants-panel{
+  border-color:color-mix(in srgb,var(--glass-edge) 28%,var(--line));
+  background-color:var(--glass);
+  background-image:linear-gradient(145deg,rgba(255,255,255,.22),rgba(255,255,255,.06)),radial-gradient(100% 120% at 100% 0%,rgba(191,72,65,.045),transparent 74%);
+  box-shadow:inset 0 1px rgba(255,255,255,.68),0 5px 16px rgba(25,30,25,.035);
+  -webkit-backdrop-filter:blur(16px) saturate(126%);
+  backdrop-filter:blur(16px) saturate(126%);
+}
+.animation-family-card, .family-variant-card, .effect-card, .family-card{
+  background-color:var(--glass);
+  background-image:linear-gradient(145deg,rgba(255,255,255,.24),rgba(255,255,255,.055)),radial-gradient(110% 120% at 100% 0%,rgba(191,72,65,.045),transparent 76%);
+  border-color:color-mix(in srgb,var(--line) 60%,var(--glass-edge));
+  box-shadow:inset 0 1px rgba(255,255,255,.76),0 5px 16px rgba(25,30,25,.035);
+}
+.animation-simple-page .control-workspace{
+  background-image:linear-gradient(145deg,rgba(255,255,255,.25),rgba(255,255,255,.07)),radial-gradient(120% 100% at 100% 0%,rgba(191,72,65,.055),transparent 72%);
+}
+.animation-context{
+  background:linear-gradient(145deg,color-mix(in srgb,var(--glass) 86%,transparent),color-mix(in srgb,var(--glass) 66%,transparent));
+  border-color:color-mix(in srgb,var(--line) 56%,var(--glass-edge));
+  box-shadow:inset 0 1px rgba(255,255,255,.62),0 5px 14px rgba(25,30,25,.025);
+  -webkit-backdrop-filter:blur(14px) saturate(126%);
+  backdrop-filter:blur(14px) saturate(126%);
+}
+.animation-context>.power-card{
+  background:linear-gradient(145deg,color-mix(in srgb,var(--glass) 88%,transparent),color-mix(in srgb,var(--glass) 72%,transparent));
+  box-shadow:inset 0 1px rgba(255,255,255,.74),0 2px 8px rgba(25,30,25,.025);
+}
+.editor-grid>.control-preview-dock{
+  background:var(--bg);
+  -webkit-backdrop-filter:blur(22px) saturate(132%);
+  backdrop-filter:blur(22px) saturate(132%);
+}
+.editor-grid>.control-preview-dock[data-scrolled=true]{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
+.control-preview-dock[data-scrolled=true] .control-dock-surface{
+  background:var(--bg);
+  background-image:linear-gradient(145deg,rgba(255,255,255,.12),rgba(255,255,255,.025));
+  box-shadow:0 9px 22px -14px rgba(23,32,25,.28),inset 0 1px rgba(255,255,255,.86);
+  -webkit-backdrop-filter:blur(22px) saturate(132%);
+  backdrop-filter:blur(22px) saturate(132%);
+}
+body[data-theme=dark] :where(.animation-category-trigger):is(.animation-category-trigger, .animation-search input):not([aria-pressed=true]), body[data-theme=dark] :where(.animation-category-choice):is(.animation-category-choice, .animation-search input):not([aria-pressed=true]), body[data-theme=dark] :is(.animation-search input):not([aria-pressed=true]), body[data-theme=dark] :where(.settings-toggle):is(.settings-toggle, .animation-search input):not([aria-pressed=true]), body[data-theme=dark] :is(.preview-size-control>summary):not([aria-pressed=true]){
+  background-color:rgba(37,41,36,.72);
+  background-image:linear-gradient(145deg,rgba(255,255,255,.085),rgba(255,255,255,.018));
+  border-color:rgba(255,255,255,.14);
+  box-shadow:inset 0 1px rgba(255,255,255,.09),0 5px 16px rgba(0,0,0,.12);
+}
+body[data-theme=dark] .family-variants-panel{
+  background-color:rgba(37,41,36,.72);
+  background-image:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.012)),radial-gradient(100% 120% at 100% 0%,rgba(191,72,65,.055),transparent 74%);
+  border-color:rgba(255,255,255,.12);
+  box-shadow:inset 0 1px rgba(255,255,255,.08),0 8px 20px rgba(0,0,0,.12);
+}
+body[data-theme=dark] .animation-family-card, body[data-theme=dark] .family-variant-card, body[data-theme=dark] .effect-card, body[data-theme=dark] .family-card{
+  background-color:rgba(37,41,36,.72);
+  background-image:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.012)),radial-gradient(110% 120% at 100% 0%,rgba(191,72,65,.055),transparent 76%);
+  border-color:rgba(255,255,255,.13);
+  box-shadow:inset 0 1px rgba(255,255,255,.09),0 5px 16px rgba(0,0,0,.13);
+}
+body[data-theme=dark] .animation-simple-page .control-workspace{background-image:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.018)),radial-gradient(120% 100% at 100% 0%,rgba(191,72,65,.07),transparent 72%)}
+body[data-theme=dark] .animation-context{background:linear-gradient(145deg,rgba(37,41,36,.74),rgba(37,41,36,.58));border-color:rgba(255,255,255,.12);box-shadow:inset 0 1px rgba(255,255,255,.075),0 5px 16px rgba(0,0,0,.1)}
+body[data-theme=dark] .animation-context>.power-card{background:linear-gradient(145deg,rgba(48,53,46,.78),rgba(32,36,31,.74));box-shadow:inset 0 1px rgba(255,255,255,.08),0 3px 9px rgba(0,0,0,.12)}
+body[data-theme=dark] .editor-grid>.control-preview-dock{background:var(--bg)}
+body[data-theme=dark] .editor-grid>.control-preview-dock[data-scrolled=true]{background:transparent}
+body[data-theme=dark] .control-preview-dock[data-scrolled=true] .control-dock-surface{background:var(--bg);background-image:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.012));box-shadow:0 9px 24px -14px rgba(0,0,0,.55),inset 0 1px rgba(255,255,255,.1)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  :root{--glass:rgba(255,255,255,.78)}
+  body[data-theme=dark]{--glass:rgba(37,41,36,.94)}
+  :is(.animation-category-trigger,.animation-category-choice,.animation-search input,.settings-toggle,.preview-size-control>summary,.family-variants-panel,.animation-family-card,.family-variant-card,.effect-card,.family-card,.animation-context){-webkit-backdrop-filter:none;backdrop-filter:none}
+}
+
+/* The same picker in every fixed-colour editor. Warmth is an explicit RGB/W
+   mix, not a Kelvin reading; precise channels never hide behind a submenu. */
+.warm-white-controls{display:grid;gap:9px;margin-top:12px}
+.warm-white-choice{display:flex;align-items:center;gap:10px;min-height:52px;width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:16px;background:var(--glass);color:var(--ink);text-align:left;box-shadow:var(--surface-highlight)}
+.warm-white-choice[aria-pressed=true]{border-color:var(--action-ink);background:color-mix(in srgb,var(--glass) 93%,#ffd195)}
+.warm-white-choice>span:nth-child(2){display:grid;gap:2px;flex:1;min-width:0}
+.warm-white-choice b{font-size:14px}.warm-white-choice small{font-size:11px;color:var(--muted)}
+.warm-white-choice>.icon{width:21px;height:21px;color:var(--action-ink)}
+.warm-white-swatch{width:26px;height:26px;flex:none;border-radius:50%;background:#ffe2ae;box-shadow:inset 0 0 0 1px #99692630}
+.warm-white-controls .warmth-row{margin:0}
+.warmth-row input{accent-color:#bd894d}.warmth-row input:disabled{opacity:.4}
+.warmth-scale{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:11px}
+.warmth-help{display:block;margin-top:4px;font-size:11px;line-height:1.35;color:var(--muted)}
+
+/* Whole-stand controls are their own page on phones. Keep the familiar
+   wheel, dimmer and exact channels together, with one sticky exit. */
+#effect-dialog:has([data-stand-control-sheet]){
+  position:fixed;inset:0;margin:0;width:100vw;max-width:none;
+  height:100dvh;max-height:100dvh;box-sizing:border-box;
+  padding:0;border:0;border-radius:0;
+  /* A full page needs a quiet base: translucency on nested surfaces must not
+     expose the previous page's readable text through the controls in Safari. */
+  background-color:var(--bg);
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+  overflow-y:auto;
+  overflow-x:hidden;overscroll-behavior:contain;
+  scroll-padding-top:calc(var(--dialog-header-height,64px) + 12px);
+}
+#effect-dialog:has([data-stand-control-sheet]) #effect-dialog-content{gap:0}
+#effect-dialog:has([data-stand-control-sheet]) #effect-dialog-content>header{
+  top:0;margin:0;
+  padding:calc(10px + env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 10px max(14px,env(safe-area-inset-left));
+  border-radius:0;box-shadow:0 3px 12px #00000008;
+}
+#effect-dialog:has([data-stand-control-sheet]) #effect-dialog-content>header h2{font-size:20px}
+#effect-dialog:has([data-stand-control-sheet]) [data-action=effect-dialog-close]{width:44px;min-width:44px;height:44px;min-height:44px;border-radius:14px}
+.stand-controls-sheet{display:grid;gap:8px;min-width:0;padding:10px max(12px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+.stand-control-scope{font-size:12px!important;line-height:1.3;margin:0;color:var(--muted)}
+.stand-control-description{font-size:12px!important;line-height:1.4;margin:0;color:var(--muted)}
+.stand-controls-sheet .power-card{min-height:52px;padding:3px 12px;border-radius:16px}
+.stand-controls-sheet .power-card strong{font-size:14px}
+.stand-controls-sheet .power-card .switch{min-height:44px}
+.stand-controls-sheet .live-confirmation{min-height:0;margin:0;font-size:11px;line-height:1.3}
+.stand-controls-sheet .live-confirmation:empty{display:none}
+.stand-controls-sheet .mixed-note{margin:0;padding:8px 10px;border-radius:12px;background:color-mix(in srgb,var(--red) 7%,var(--glass));font-size:12px;line-height:1.35}
+.stand-controls-sheet #stand-control-mixed[data-preserve-mixed-space][hidden]{display:block!important;visibility:hidden}
+.stand-controls-sheet [data-static-feedback-space]{display:block!important;box-sizing:border-box;min-height:var(--static-feedback-height)}
+.stand-controls-sheet [data-static-feedback-held]{height:var(--static-feedback-height);overflow:auto}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker{padding:12px}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .section-heading{flex-wrap:nowrap;gap:6px;margin-bottom:5px}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .section-heading h2{flex:1 1 auto;margin:0;font-size:16px}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .colour-tools{grid-template-columns:minmax(104px,.9fr) minmax(0,1.1fr);gap:10px}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .wheel-wrap{width:min(100%,112px);max-width:112px;margin:0 auto;justify-self:center}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .colour-values{gap:5px}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .colour-swatch{height:24px;margin:0}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .setting-hint{font-size:12px;line-height:1.3;margin:0}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .slider-row{margin:3px 0 0}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .slider-row>label{font-size:13px;margin-bottom:0}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .slider-row input{height:44px;min-height:44px}
+#effect-dialog:has([data-stand-control-sheet]) .warm-white-controls{grid-template-columns:minmax(80px,.75fr) minmax(0,1.7fr);gap:12px;margin-top:7px;align-items:center}
+#effect-dialog:has([data-stand-control-sheet]) .warm-white-choice{min-height:60px;padding:8px;gap:7px}
+#effect-dialog:has([data-stand-control-sheet]) .warm-white-choice small,
+#effect-dialog:has([data-stand-control-sheet]) .warm-white-choice>.icon{display:none}
+#effect-dialog:has([data-stand-control-sheet]) .warm-white-swatch{width:20px;height:20px}
+#effect-dialog:has([data-stand-control-sheet]) .warm-white-controls .slider-row{margin:0}
+#effect-dialog:has([data-stand-control-sheet]) .warmth-help{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+#effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .fine-controls{margin-top:10px;padding-top:8px}
+.stand-fine-controls h3{margin:0 0 6px;font-size:14px}
+.stand-fine-controls .fine-controls-body{display:grid;gap:4px;padding:0}
+.stand-fine-controls .channel-help{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+#effect-dialog:has([data-stand-control-sheet]) .channel-row{min-height:44px;padding:0 5px;gap:4px}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours{margin-top:5px;padding-top:5px}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .section-heading{margin:0 0 3px}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .section-heading h3{font-size:12px}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .colour-library-hint{display:none}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .colour-library-actions{gap:4px}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .colour-library-actions :is(.icon-button,.text-button){min-height:44px;height:44px}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .saved-colour-grid{display:flex;gap:5px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:thin;padding:1px 1px 4px}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .saved-colour-item{flex:0 0 66px;width:66px;padding:0}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .saved-colour{min-height:57px;height:57px;gap:2px;padding:2px 1px;font-size:9px}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .saved-colour i{width:28px;height:28px;font-size:18px}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .saved-colour span{max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .saved-colour-kind{display:none}
+#effect-dialog:has([data-stand-control-sheet]) .my-colours .colour-library-feedback:empty{display:none}
+#effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry{min-height:48px;padding:5px 8px;border-radius:14px;gap:7px}
+#effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry-icon{width:32px;height:32px;border-radius:10px}
+#effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry-copy{gap:0}
+#effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry-copy b{font-size:12px}
+#effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry-copy small{font-size:9px;line-height:1.2}
+#effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry-open{font-size:10px}
+#effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry>.icon:last-child{width:14px;height:14px}
+@media(max-width:360px){
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .colour-tools{grid-template-columns:minmax(96px,.85fr) minmax(0,1.15fr);gap:8px}
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .wheel-wrap{width:min(100%,120px);max-width:120px}
+  #effect-dialog:has([data-stand-control-sheet]) .my-colours .saved-colour-item{flex-basis:60px;width:60px}
+}
+@media(max-height:740px){
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .wheel-wrap{width:min(100%,116px);max-width:116px}
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .slider-row{margin-top:4px}
+  #effect-dialog:has([data-stand-control-sheet]) .stand-scenes-entry{min-height:44px}
+}
+@media(min-width:900px) and (min-height:600px){
+  #effect-dialog:has([data-stand-control-sheet]){inset:24px;margin:auto;width:min(860px,calc(100vw - 48px));height:fit-content;max-height:calc(100dvh - 48px);border:1px solid var(--glass-edge);border-radius:26px}
+  #effect-dialog:has([data-stand-control-sheet]) #effect-dialog-content>header{border-radius:25px 25px 0 0;padding:14px 20px}
+  .stand-controls-sheet{padding:16px 20px 20px;gap:10px}
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 24px;padding:18px}
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker>.section-heading,
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker>.my-colours{grid-column:1 / -1}
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker>.colour-tools{grid-column:1;grid-row:2}
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker>.slider-row{grid-column:1;grid-row:3}
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker>.warm-white-controls{grid-column:1;grid-row:4}
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker>.fine-controls{grid-column:2;grid-row:2 / 5;border-top:0;border-left:1px solid var(--line);padding:0 0 0 20px;margin:0}
+  /* Inline RGBW tuning follows brightness; colour presets stay underneath. */
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker[data-colour-picker="static"]>.fine-controls{grid-column:1 / -1;grid-row:auto;border:0;border-top:1px solid var(--line);padding:12px 0 0;margin:12px 0 0}
+  #effect-dialog:has([data-stand-control-sheet]) .shared-colour-picker .wheel-wrap{width:150px;max-width:150px}
+}
+
+/* Material refinement, not a new layout: one frosted sheet, quieter nested
+   surfaces and solid, legible actions. Never blur an LED or colour canvas. */
+dialog,
+dialog#effect-dialog {
+  background-color: var(--glass-sheet);
+  background-image: linear-gradient(145deg, rgba(255, 255, 255, .13), transparent 65%);
+  border-color: var(--glass-edge);
+  box-shadow: 0 18px 48px rgba(18, 23, 18, .16), var(--surface-highlight);
+  -webkit-backdrop-filter: blur(20px) saturate(125%);
+  backdrop-filter: blur(20px) saturate(125%);
+}
+
+#effect-dialog-content > header {
+  background: var(--glass-solid);
+  box-shadow: 0 6px 0 var(--glass-solid);
+}
+
+/* Readable text accents remain distinct from the red switch/primary fill.
+   This avoids pale red text on light buttons in the dark theme. */
+:where(.eyebrow):is(.eyebrow, .slider-row output), :where(.text-button):is(.text-button, .slider-row output), :is(.slider-row output), :where(.current-animation-edit):is(.current-animation-edit, .slider-row output), :where(.stand-scenes-entry-open):is(.stand-scenes-entry-open, .slider-row output), :where(.active-animation-kicker):is(.active-animation-kicker, .slider-row output), :where(.animation-settings-return-kicker):is(.animation-settings-return-kicker, .slider-row output){
+  color: var(--action-ink);
+}
+
+/* The mobile sheet follows this file: keep its small kicker and slider
+   glyphs readable without changing the red hardware/control accent. */
+body .editor-controls-zone .current-effect .active-animation-kicker,
+body .control-workspace .setting-label-icon {
+  color: var(--action-ink);
+}
+
+body[data-theme="dark"] .button.secondary:not(.receiver-danger-section .button.secondary) {
+  border-color: rgba(255, 255, 255, .19);
+  background: linear-gradient(145deg, rgba(62, 67, 57, .9), rgba(42, 47, 39, .82));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .09), 0 2px 7px rgba(0, 0, 0, .12);
+}
+
+body[data-theme="dark"] :where(.eyebrow):is(.eyebrow, .slider-row output), body[data-theme="dark"] :where(.text-button):is(.text-button, .slider-row output), body[data-theme="dark"] :is(.slider-row output), body[data-theme="dark"] :where(.current-animation-edit):is(.current-animation-edit, .slider-row output), body[data-theme="dark"] :where(.stand-scenes-entry-open):is(.stand-scenes-entry-open, .slider-row output), body[data-theme="dark"] .current-effect .active-animation-kicker, body[data-theme="dark"] .animation-settings-return .gallery-action-copy > .animation-settings-return-kicker{
+  color: var(--action-ink);
+}
+
+:is(.control-workspace .shared-colour-picker), :is(.control-workspace .animation-daily-controls), :where(.receiver-list details details):is(.receiver-list details details, .control-workspace .shared-colour-picker), :is(.stand-scenes .stand-scene-card), :where(.animation-family-card):is(.animation-family-card, .control-workspace .shared-colour-picker), :where(.family-variant-card):is(.family-variant-card, .control-workspace .shared-colour-picker), :where(.effect-card):is(.effect-card, .control-workspace .shared-colour-picker), :where(.family-card):is(.family-card, .control-workspace .shared-colour-picker){
+  /* Shared card rules also contain a dialog ID: these material-only
+     overrides must beat that specificity, not alter the card layout. */
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* The size chooser belongs to the pitch-dark preview, not the white UI.
+   Preserve its light labels without laying pale glass underneath them. */
+.preview-wrap .preview-size-control > summary {
+  color: #dce2dc;
+  background: rgba(255, 255, 255, .07);
+  border-color: rgba(255, 255, 255, .22);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .06);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* No-blur engines and reduced-transparency users get opaque backing rather
+   than transparent text over moving content. Scope important to material
+   properties only, so the later mobile layout keeps its unboxed controls. */
+@media (prefers-reduced-transparency: reduce) {
+  :root { --glass: var(--glass-solid); --glass-sheet: var(--glass-solid); }
+  body[data-theme="dark"] { --glass: var(--glass-solid); --glass-sheet: var(--glass-solid); }
+  dialog::backdrop {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  body :is(.card, .zone-entry, .zone-card, .menu-card, .stand-info-tile,
+      .receiver-list details, .scene-card, .stand-scenes, .stand-scene-card,
+      .family-variants-panel, .animation-family-card, .family-variant-card,
+      .animation-category-trigger, .animation-category-choice, .animation-search input,
+      .settings-toggle, .animation-context, .control-workspace, .brand-bar,
+      .control-preview-dock, .control-dock-surface, .navigation, .toast, dialog) {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  body :is(.card:not(.shared-colour-picker):not(.animation-daily-controls),
+      .zone-entry, .zone-card, .menu-card, .stand-info-tile, .receiver-list details,
+      .scene-card, .stand-scenes, .stand-scene-card, .animation-family-card,
+      .family-variant-card, .effect-card, .family-card,
+      .brand-bar, .family-variants-panel, .animation-category-trigger,
+      .animation-category-choice, .animation-search input, .settings-toggle,
+      .control-workspace:not(.active-animation-workspace), dialog) {
+    background-color: var(--glass-solid) !important;
+    background-image: none !important;
+  }
+  .navigation { background: #1c211c !important; }
+  .toast { background: #252b25 !important; }
+}
+
+/* One order disclosure, not another primary action. The view chooser stays
+   separate; the open header and rows share one quiet, blur-free glass surface. */
+.ledline-setup {
+  --order-surface: color-mix(in srgb, var(--glass-solid) 97%, var(--soft));
+  --order-edge: color-mix(in srgb, var(--action-ink) 28%, var(--line));
+}
+
+body .editor-controls .ledline-setup.card[data-order-open="true"] {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+body .editor-grid .editor-controls .ledline-setup.card[data-order-open="true"] {
+  display: grid;
+  gap: 0;
+}
+
+.ledline-setup.card[data-order-open="true"] > .spatial-preview-choice {
+  margin-bottom: 7px;
+  padding: 0;
+  border: 0;
+}
+
+.ledline-setup.card[data-order-open="true"] .spatial-choice-toggle {
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: var(--glass-solid);
+}
+
+body .ledline-setup.card[data-order-open="true"] > .ledline-setup-toggle,
+body .ledline-setup.card[data-order-open="true"] > .ledline-setup-body {
+  border: 1px solid var(--order-edge);
+  background: var(--order-surface);
+}
+
+body .ledline-setup.card[data-order-open="true"] > .ledline-setup-toggle {
+  border-bottom: 0;
+  border-radius: 17px 17px 0 0;
+  box-shadow: inset 0 1px var(--glass-edge);
+}
+
+body .ledline-setup.card[data-order-open="true"] > .ledline-setup-body {
+  border-top: 0;
+  border-radius: 0 0 17px 17px;
+  box-shadow: 0 5px 14px rgba(25, 30, 25, .035);
+}
+
+.ledline-setup[data-order-open="true"] .ledline-arrangement {
+  border-color: color-mix(in srgb, var(--order-edge) 70%, transparent);
+}
+
+
+.ledline-setup .ledline-setup-close-label {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+
+
+.ledline-setup[data-order-open="true"] .ledline-setup-toggle > .line-order-icon {
+  color: var(--action-ink);
+}
+
+/* A single, contextual management panel: add first, then one compact row per
+   LED line. Receiver settings reuse the existing controls inside that row. */
+body .ledline-setup[data-order-open="true"] > .ledline-setup-toggle {
+  padding-block: 12px;
+}
+body .ledline-setup-body > .layout-receiver-actions {
+  padding: 8px 0 12px;
+  border: 0;
+}
+.ledline-add-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 1px solid var(--order-edge);
+  border-radius: 14px;
+  background: linear-gradient(120deg, var(--glass), var(--glass-solid));
+  box-shadow: inset 0 1px var(--glass-edge), 0 3px 10px rgba(25,30,25,.035);
+  color: var(--ink);
+  text-align: left;
+}
+.ledline-add-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--soft);
+  color: var(--action-ink);
+  font-size: 23px;
+}
+.ledline-add-copy { display: grid; gap: 3px; flex: 1; min-width: 0; }
+.ledline-add-copy b { font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
+.ledline-add-copy small { color: var(--muted); font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
+.ledline-add-action > .icon { width: 16px; height: 16px; flex: none; color: var(--action-ink); }
+body .ledline-setup .ledline-arrangement { gap: 9px; padding-top: 12px; }
+.ledline-row-actions { display: grid; grid-template-columns: minmax(0,.9fr) minmax(0,1.1fr); gap: 7px; width: 100%; }
+body .ledline-setup .ledline-row-actions > button {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--soft);
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.35;
+}
+.ledline-row-actions > button > span { min-width: 0; overflow-wrap: anywhere; }
+.ledline-row-actions > button > .icon { flex: none; width: 16px; height: 16px; }
+.ledline-settings-toggle > .icon:last-child { width: 12px; height: 12px; transition: transform .2s var(--motion-ease, ease); }
+.ledline-settings-toggle[aria-expanded="true"] > .icon:last-child { transform: rotate(90deg); }
+body .ledline-setup .ledline-settings-toggle[aria-expanded="true"],
+body .ledline-setup .ledline-row-actions > .receiver-blink[aria-pressed="true"] { border-color: var(--order-edge); color: var(--action-ink); background: var(--glass-solid); }
+.ledline-row-settings { grid-column: 1 / -1; min-width: 0; padding-top: 12px; border-top: 1px solid var(--line); }
+.ledline-row-settings[hidden] { display: none; }
+.ledline-row-settings h4 { margin: 0; color: var(--ink); font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
+.ledline-settings-context { margin: 4px 0 12px; color: var(--muted); font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
+body .ledline-row-settings > .receiver-details { display: grid; gap: 12px; padding: 0; }
+body .ledline-row-settings .receiver-management { padding: 0; margin: 0; border: 0; }
+body .ledline-row-settings .receiver-management > small { line-height: 1.5; }
+body .ledline-row-settings .receiver-connections { min-width: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--glass-solid); }
+body .ledline-row-settings .receiver-connections > summary { min-height: 54px; padding: 10px; }
+body .ledline-row-settings :is(.receiver-connections,.receiver-manage-menu) > summary { display: flex; align-items: center; gap: 8px; list-style: none; cursor: pointer; }
+body .ledline-row-settings :is(.receiver-connections,.receiver-manage-menu) > summary::-webkit-details-marker { display: none; }
+body .ledline-row-settings .receiver-connections > summary > span { display: grid; gap: 3px; flex: 1; min-width: 0; }
+body .ledline-row-settings .receiver-connections > summary b { display: block; font-size: 12px; line-height: 1.4; }
+body .ledline-row-settings .receiver-connections > summary small { display: block; color: var(--muted); font-size: 10px; line-height: 1.4; }
+body .ledline-row-settings :is(.receiver-connections,.receiver-manage-menu) > summary > .icon { width: 14px; height: 14px; flex: none; margin-left: auto; }
+body .ledline-row-settings :is(.receiver-connections,.receiver-manage-menu)[open] > summary > .icon { transform: rotate(90deg); }
+body .ledline-row-settings > .receiver-status { margin: -8px 0 10px; font-size: 11px; line-height: 1.4; color: var(--muted); }
+body .ledline-row-settings .receiver-connections-content { padding: 0 8px 8px; }
+body .ledline-row-settings .receiver-port-row { flex-wrap: wrap; }
+body .ledline-row-settings .receiver-port-select { flex: 1 1 70px; min-width: 0; }
+body .ledline-row-settings .receiver-port-row .receiver-blink { flex-direction: row; width: auto; min-height: 44px; padding: 6px 8px; }
+body .ledline-row-settings .receiver-manage-menu > summary { min-height: 44px; }
+body .ledline-setup .ledline-reuse-action { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 48px; margin-top: 12px; padding: 10px 4px 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; color: var(--muted); text-align: left; font-size: 11px; line-height: 1.4; }
+.ledline-reuse-action > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.ledline-reuse-action > .icon { flex: none; width: 17px; height: 17px; }
+/* One consistent disclosure for the less frequently used animation controls. */
+body .settings-toggle.advanced-settings-toggle { min-height: 72px; padding: 12px 14px; gap: 10px; border-radius: 17px; color: var(--ink); }
+body .advanced-settings-toggle > .advanced-settings-icon { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 12px; background: var(--glass); box-shadow: inset 0 1px 0 var(--glass-edge); color: var(--ink); }
+.advanced-settings-icon > .icon { width: 23px; height: 23px; }
+body .advanced-settings-toggle > .advanced-settings-copy { display: grid; gap: 4px; flex: 1; min-width: 0; }
+.advanced-settings-copy > b { font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; }
+.advanced-settings-copy > small { color: var(--muted); font-size: 11px; line-height: 1.45; overflow-wrap: anywhere; }
+body .advanced-settings-toggle > .advanced-settings-next { display: grid; place-items: center; flex: none; width: 20px; height: 24px; color: var(--muted); transition: transform 200ms cubic-bezier(.22,1,.36,1); }
+.advanced-settings-next > .icon { width: 18px; height: 18px; }
+.advanced-settings-toggle[aria-expanded="true"] > .advanced-settings-next { transform: rotate(90deg); }
+body .advanced-settings-toggle[aria-expanded="true"] { border-color: var(--line); }
+@media (prefers-reduced-motion: reduce) {
+  body .advanced-settings-toggle > .advanced-settings-next { transition: none; }
+}
+
+@media (min-width: 480px) {
+  .ledline-row-actions { flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ledline-settings-toggle > .icon:last-child { transition: none; }
+}
+
+
+@media (prefers-reduced-transparency: reduce) {
+  .ledline-setup { --order-surface: var(--glass-solid); }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .ledline-setup { --order-surface: var(--glass-solid); }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root { --glass: var(--glass-solid); --glass-sheet: var(--glass-solid); }
+  body[data-theme="dark"] { --glass: var(--glass-solid); --glass-sheet: var(--glass-solid); }
+  dialog::backdrop {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  body :is(.card, .zone-entry, .zone-card, .menu-card, .stand-info-tile,
+      .receiver-list details, .scene-card, .stand-scenes, .stand-scene-card,
+      .family-variants-panel, .animation-family-card, .family-variant-card,
+      .animation-category-trigger, .animation-category-choice, .animation-search input,
+      .settings-toggle, .animation-context, .control-workspace, .brand-bar,
+      .control-preview-dock, .control-dock-surface, .navigation, .toast, dialog) {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  body :is(.card:not(.shared-colour-picker):not(.animation-daily-controls),
+      .zone-entry, .zone-card, .menu-card, .stand-info-tile, .receiver-list details,
+      .scene-card, .stand-scenes, .stand-scene-card, .animation-family-card,
+      .family-variant-card, .effect-card, .family-card,
+      .brand-bar, .family-variants-panel, .animation-category-trigger,
+      .animation-category-choice, .animation-search input, .settings-toggle,
+      .control-workspace:not(.active-animation-workspace), dialog) {
+    background-color: var(--glass-solid) !important;
+    background-image: none !important;
+  }
+  .navigation { background: #1c211c !important; }
+  .toast { background: #252b25 !important; }
+}

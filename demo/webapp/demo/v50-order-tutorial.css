@@ -1,0 +1,136 @@
+/* V50.564: fullscreen explanatory tutorial and compact move-colour feedback.
+   These styles never request light output or imply a physical test succeeded. */
+body:has(dialog.v50-order-tutorial-modal[open]){overflow:hidden}
+dialog.v50-order-tutorial-modal{
+  box-sizing:border-box;position:fixed;inset:0;width:100vw;max-width:none;
+  height:100vh;height:100dvh;max-height:none;min-height:0;margin:0;padding:0;
+  border:0;border-radius:0;overflow:hidden;color:var(--ink,#252729);
+  background:#f1f2f1;background-image:linear-gradient(150deg,#ffffffa3,#ffffff08);
+  box-shadow:none;isolation:isolate;overscroll-behavior:contain;
+}
+dialog.v50-order-tutorial-modal:not([open]){display:none!important}
+dialog.v50-order-tutorial-modal[open]{display:grid;grid-template-rows:auto minmax(0,1fr) auto}
+dialog.v50-order-tutorial-modal::backdrop{background:#eff0ef;-webkit-backdrop-filter:none;backdrop-filter:none}
+dialog.v50-order-tutorial-modal>header{
+  box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;min-width:0;margin:0;padding:calc(16px + env(safe-area-inset-top))
+    max(18px,env(safe-area-inset-right)) 15px max(18px,env(safe-area-inset-left));
+  border-bottom:1px solid #dce0dc;background:#f7f8f7e8;z-index:2;
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+}
+dialog.v50-order-tutorial-modal>header h2{
+  min-width:0;margin:0;font-size:clamp(20px,5vw,28px);line-height:1.15;
+  font-weight:750;letter-spacing:-.4px;overflow-wrap:anywhere;
+}
+dialog.v50-order-tutorial-modal>header button{
+  box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
+  flex:none;gap:6px;min-width:44px;min-height:44px;max-width:44%;margin:0;padding:10px;
+  border:1px solid #dce0dc;border-radius:13px;background:#ffffffa6;color:inherit;
+  font:inherit;font-size:12px;font-weight:650;line-height:1.2;touch-action:manipulation;
+}
+dialog.v50-order-tutorial-modal>header button .icon{width:18px;height:18px;flex:none}
+.v50-order-tutorial-body{
+  box-sizing:border-box;min-width:0;min-height:0;width:100%;overflow-x:hidden;overflow-y:auto;
+  padding:22px max(18px,env(safe-area-inset-right)) 26px max(18px,env(safe-area-inset-left));
+  overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+}
+dialog.v50-order-tutorial-modal .v50-order-tutorial-content{
+  box-sizing:border-box;display:block;position:static;inset:auto;max-width:600px;width:100%;
+  min-width:0;height:auto;min-height:0;max-height:none;margin:0 auto;padding:0;
+  border:0;border-radius:0;background:none;box-shadow:none;overflow:visible;
+}
+dialog.v50-order-tutorial-modal .v50-order-instruction[data-guide-detailed=true]{
+  box-sizing:border-box;position:relative;display:grid;grid-template-columns:minmax(0,1fr);
+  align-items:center;min-width:0;gap:15px;margin:0;padding:20px;
+  border:1px solid #dce0dc;border-radius:24px;background:#ffffffbb;
+  background-image:linear-gradient(150deg,#ffffff8c,#ffffff0a);
+  box-shadow:inset 0 1px 0 #fff,0 10px 28px #00000006;
+}
+dialog.v50-order-tutorial-modal>.v50-order-tutorial-footer{
+  box-sizing:border-box;min-width:0;margin:0;padding:12px max(18px,env(safe-area-inset-right))
+    max(16px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));
+  border-top:1px solid #dce0dc;background:#f7f8f7f0;z-index:2;
+}
+.v50-order-tutorial-footer>button{
+  box-sizing:border-box;display:flex;align-items:center;justify-content:center;width:100%;max-width:600px;
+  min-height:50px;margin:0 auto!important;padding:12px 16px;border:0;border-radius:16px;
+  background:#292d2a;color:#fff;font:inherit;font-size:15px;font-weight:700;line-height:1.3;touch-action:manipulation;
+}
+dialog.v50-order-tutorial-modal button:focus-visible{
+  outline:2px solid var(--red,#ba433d);outline-offset:3px;
+}
+/* One narrow feedback strip sits below the fixed example; it is illustrative
+   until the caller explicitly reports a saved/confirmed move. */
+.v50-order-dock>.v50-order-feedback{
+  box-sizing:border-box;height:104px;min-height:104px;grid-template-rows:28px minmax(0,1fr);
+  gap:4px;padding:10px 12px;overflow:hidden;
+}
+.v50-order-dock>.v50-order-feedback[data-order-feedback-phase=proposal]>small,
+.v50-order-dock>.v50-order-feedback[data-order-feedback-phase=saved]>small{display:none}
+.v50-order-dock .v50-order-feedback-target{box-sizing:border-box;min-height:28px;height:28px;padding:4px 8px}
+.v50-order-live-change{
+  box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) 18px minmax(0,1fr);
+  align-items:center;align-self:center;gap:2px 8px;min-width:0;height:45px;min-height:45px;margin:0;padding:5px 10px;
+  border:1px solid var(--line,#dce0dc);border-radius:11px;color:var(--ink,#252729);
+  background:var(--panel,#fff);box-shadow:inset 0 1px 0 #ffffff70;
+}
+.v50-order-live-change[hidden]{display:none!important}
+.v50-order-live-change>*{min-width:0}
+.v50-order-live-change .v50-order-light-before,.v50-order-live-change .v50-order-light-after{
+  box-sizing:border-box;display:flex;align-items:center;justify-content:center;min-width:0;
+  gap:6px;height:16px;padding:0 8px;border-radius:5px;background:#151a17;
+}
+.v50-order-live-change .v50-order-light-before{color:var(--order-from-colour,#ff3030)}
+.v50-order-live-change .v50-order-light-after{color:var(--order-to-colour,#0070ff)}
+.v50-order-live-change .v50-order-light-before>i,.v50-order-live-change .v50-order-light-after>i{
+  display:block;flex:1;min-width:0;width:auto;height:3px;border-radius:3px;background:currentColor;box-shadow:0 0 4px currentColor;
+}
+.v50-order-live-change .v50-order-light-before>span,.v50-order-live-change .v50-order-light-after>span{flex:none;color:#c6cdc7;font-size:9px;line-height:1}
+.v50-order-live-change[data-order-live-phase=proposal] .v50-order-light-after,
+.v50-order-live-change[data-phase=proposal] .v50-order-light-after{outline:1px dashed color-mix(in srgb,var(--order-to-colour,#0070ff) 55%,transparent);outline-offset:2px;opacity:.75}
+.v50-order-live-change[data-order-live-phase=saved] .v50-order-light-after,
+.v50-order-live-change[data-phase=saved] .v50-order-light-after{outline:none;opacity:1}
+.v50-order-colour-arrow{display:grid;place-items:center;grid-column:2;grid-row:1;color:var(--muted,#626963);font-size:17px;line-height:1}
+.v50-order-live-caption{
+  grid-column:1/-1;min-width:0;margin:0;color:var(--muted,#626963);font-size:10px;line-height:1.2;
+  text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.v50-order-live-change small{font-size:9px;line-height:1.2;color:var(--muted,#626963)}
+body[data-theme=dark] dialog.v50-order-tutorial-modal{background:#1b1c1b;background-image:linear-gradient(150deg,#ffffff05,#ffffff01)}
+body[data-theme=dark] dialog.v50-order-tutorial-modal::backdrop{background:#1b1c1b}
+body[data-theme=dark] dialog.v50-order-tutorial-modal>header,body[data-theme=dark] dialog.v50-order-tutorial-modal>.v50-order-tutorial-footer{
+  background:#222322ef;border-color:#ffffff14;
+}
+body[data-theme=dark] dialog.v50-order-tutorial-modal>header button{background:#303230;border-color:#ffffff18}
+body[data-theme=dark] dialog.v50-order-tutorial-modal .v50-order-instruction[data-guide-detailed=true]{
+  background:#282a28;background-image:linear-gradient(150deg,#ffffff06,#ffffff01);border-color:#ffffff14;box-shadow:inset 0 1px 0 #ffffff08;
+}
+body[data-theme=dark] .v50-order-tutorial-footer>button{background:#e7ebe7;color:#1e211e}
+body[data-theme=dark] .v50-order-live-change{background:#282a28;border-color:#ffffff14;box-shadow:inset 0 1px 0 #ffffff06}
+@media(max-width:360px){
+  dialog.v50-order-tutorial-modal>header{gap:8px;padding-inline:14px}
+  dialog.v50-order-tutorial-modal>header h2{font-size:20px}
+  .v50-order-tutorial-body{padding:18px 14px 22px}
+  dialog.v50-order-tutorial-modal .v50-order-instruction[data-guide-detailed=true]{padding:14px;gap:12px;border-radius:20px}
+  .v50-order-live-change{gap:2px 6px;padding-inline:8px}
+}
+
+/* V50.568: three visual teaching steps. The fixed example, moving cards and
+   simulated physical light share one finite timeline. No real output is used. */
+dialog.v50-order-tutorial-modal:has([data-tutorial-version="568"])>header{
+  padding-top:calc(12px + env(safe-area-inset-top));padding-bottom:12px;
+}
+dialog.v50-order-tutorial-modal:has([data-tutorial-version="568"])>header h2{
+  font-size:clamp(20px,5vw,24px);line-height:1.2;overflow-wrap:normal;word-break:normal;
+}
+dialog.v50-order-tutorial-modal:has([data-tutorial-version="568"]) .v50-order-tutorial-body{
+  padding-top:14px;padding-bottom:14px;
+}
+dialog.v50-order-tutorial-modal [data-tutorial-version="568"].v50-order-tutorial-content{
+  display:grid;gap:10px;max-width:540px;position:static;inset:auto;height:auto;
+  min-height:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;
+}
+@media(max-width:360px){
+  dialog.v50-order-tutorial-modal:has([data-tutorial-version="568"]) .v50-order-tutorial-body{padding-inline:12px}
+  dialog.v50-order-tutorial-modal [data-tutorial-version="568"].v50-order-tutorial-content{gap:8px}
+}

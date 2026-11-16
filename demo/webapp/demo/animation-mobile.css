@@ -1,0 +1,388 @@
+/* Phone-first animation browsing. No recipe, receiver or preview-engine changes. */
+.animation-library-inline { gap: 12px; }
+.animation-library-inline .animation-library-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin:2px 0 3px; padding:4px 2px 2px; border:0; border-radius:0; background:transparent; box-shadow:none; }
+.animation-library-title-copy { display:grid; gap:5px; min-width:0; flex:1; }
+.animation-library-heading h2 { margin:0; font-size:21px; line-height:1.22; letter-spacing:-.4px; }
+.animation-library-inline .animation-category-trigger { display:flex; align-items:center; gap:10px; width:100%; min-height:74px; padding:12px; text-align:left; border:1px solid var(--line); border-radius:20px; color:var(--ink); background:var(--panel); box-shadow:inset 0 1px #ffffff55,0 3px 10px #00000004; }
+.animation-category-art { display:grid; place-items:center; width:42px; height:42px; flex:none; border-radius:13px; color:var(--red); background:color-mix(in srgb,var(--red) 8%,var(--soft)); }
+.animation-category-art > .icon { width:25px; height:25px; }
+.animation-category-copy { display:grid; gap:4px; flex:1; min-width:0; }
+.animation-category-copy b { font-size:16px; line-height:1.3; overflow-wrap:anywhere; }
+.animation-category-copy small { font-size:13px; line-height:1.4; color:var(--muted); font-weight:500; }
+.animation-category-count { padding:5px 7px; border-radius:9px; background:var(--soft); font-size:13px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.animation-category-trigger > .icon { width:18px; height:18px; flex:none; transform:rotate(90deg); }
+.animation-category-trigger[aria-expanded=true] > .icon { transform:rotate(-90deg); }
+.animation-library-inline .animation-search { position:relative; display:block; margin:0; }
+.animation-library-inline .animation-search > span { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.animation-search > .icon { position:absolute; left:15px; top:16px; width:20px; height:20px; color:var(--muted); pointer-events:none; }
+.animation-library-inline .animation-search input { min-height:52px; padding:12px 14px 12px 44px; border-radius:17px; font-size:16px; line-height:1.4; background:var(--panel); }
+
+/* A real modal sheet, with large descriptive choices and a persistent close
+   control. Existing dialog focus/scroll locking applies on Safari too. */
+#effect-dialog:has([data-animation-categories]) { position:fixed; inset:auto 0 0; width:min(100%,540px); max-width:100%; max-height:calc(100dvh - max(16px,env(safe-area-inset-top))); margin:0 auto; padding:0; border-radius:28px 28px 0 0; border:1px solid var(--line); background:var(--bg); color:var(--ink); box-shadow:0 -10px 50px #00000022; overflow:auto; animation:animation-category-enter .2s ease-out; }
+#effect-dialog:has([data-animation-categories]) #effect-dialog-content { gap:0; }
+#effect-dialog:has([data-animation-categories]) #effect-dialog-content > header { top:0; margin:0; padding:17px 16px 12px; gap:12px; border-radius:27px 27px 0 0; border-bottom:1px solid var(--line); box-shadow:none; background:var(--bg); }
+#effect-dialog:has([data-animation-categories]) #effect-dialog-content > header h2 { font-size:21px; }
+#effect-dialog:has([data-animation-categories]) [data-action=effect-dialog-close] { width:46px; height:46px; min-height:46px; flex:none; border-radius:15px; }
+.animation-category-options { display:grid; gap:8px; padding:12px 12px max(18px,env(safe-area-inset-bottom)); }
+.animation-category-options .animation-category-choice { display:flex; align-items:center; gap:11px; width:100%; min-height:78px; padding:12px; text-align:left; border:1px solid var(--line); border-radius:19px; color:var(--ink); background:var(--panel); }
+.animation-category-choice[aria-pressed=true] { border-color:var(--red); background:color-mix(in srgb,var(--red) 7%,var(--panel)); box-shadow:inset 0 0 0 1px var(--red); }
+.animation-category-meta { display:grid; justify-items:center; align-content:center; gap:4px; flex:none; min-width:24px; font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.animation-category-meta .icon { width:19px; height:19px; }
+.animation-category-choice[aria-pressed=true] .animation-category-meta .icon { color:var(--red); }
+.animation-category-choice:focus-visible,.animation-category-trigger:focus-visible { outline:3px solid color-mix(in srgb,var(--red) 55%,transparent); outline-offset:2px; }
+@keyframes animation-category-enter { from { transform:translateY(24px); opacity:.5; } to { transform:translateY(0); opacity:1; } }
+@media(max-width:360px) {
+  .animation-library-inline .animation-library-heading { gap:7px; padding:4px 2px 2px; }
+  .animation-library-heading h2 { font-size:19px; }
+}
+
+/* The entire family tile is one button. Its actual animated line now spans
+   the width instead of competing with tiny copy in a square thumbnail. */
+.animation-library-inline .animation-family-section { gap:12px; }
+.animation-library-inline .animation-family-heading h2 { font-size:18px; line-height:1.3; }
+.animation-library-inline .animation-family-heading p { font-size:14px; line-height:1.5; }
+.animation-library-inline .animation-family-heading > small { font-size:12px; }
+.animation-library-inline .animation-family-heading { flex-wrap:wrap; gap:5px 9px; }
+.animation-library-inline .animation-family-heading > div { flex:1 1 180px; }
+.animation-library-inline .animation-family-card { border-radius:23px; }
+.animation-library-inline .animation-family-trigger { display:grid; grid-template-columns:minmax(0,1fr); gap:0; width:100%; padding:11px; min-height:0; }
+.animation-library-inline .animation-family-preview { display:block; position:relative; width:100%; padding:0; border-radius:15px; }
+.animation-library-inline .animation-family-preview-label { position:absolute; top:10px; left:12px; z-index:1; font-size:11px; line-height:1.2; font-weight:500; }
+.animation-library-inline .animation-family-preview canvas { display:block; width:100%; height:112px; border-radius:15px; }
+.animation-library-inline .family-copy { gap:5px; padding:13px 5px 4px; }
+.animation-library-inline .family-kicker { display:none; }
+.animation-library-inline .animation-family-card .family-title { font-size:18px; line-height:1.3; }
+.animation-library-inline .animation-family-card .family-summary { font-size:14px; line-height:1.5; }
+.animation-library-inline .animation-family-card .family-variants { min-height:30px; margin-top:6px; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; font-size:14px; line-height:1.4; }
+.animation-library-inline .family-variants .icon { width:20px; height:20px; }
+.animation-library-inline .family-variants-panel { margin:0; padding:14px 11px 11px; border-radius:0 0 22px 22px; }
+.animation-library-inline .family-variants-heading b { font-size:15px; }
+.animation-library-inline .family-variants-heading small { font-size:12px; }
+.animation-library-inline .family-variant-grid,.animation-library-inline #animation-results > .effect-grid { grid-template-columns:minmax(0,1fr); gap:12px; }
+/*c140-sel:animation-mobile.css*/.animation-library-inline :where(.family-variant-card):is(.family-variant-card, #animation-results > .effect-grid > .effect-card), .animation-library-inline :is(#animation-results > .effect-grid > .effect-card){ border-radius:18px; padding:10px; }
+.animation-library-inline :where(.family-variant-card):is(.family-variant-card, #animation-results > .effect-grid > .effect-card) canvas, .animation-library-inline :is(#animation-results > .effect-grid > .effect-card) canvas{ height:122px; border-radius:13px; }
+.animation-library-inline :where(.family-variant-card):is(.family-variant-card, #animation-results > .effect-grid > .effect-card) b, .animation-library-inline :is(#animation-results > .effect-grid > .effect-card) b{ display:block; font-size:17px; line-height:1.35; padding:11px 4px 5px; }
+.animation-library-inline :where(.family-variant-card):is(.family-variant-card, #animation-results > .effect-grid > .effect-card) small, .animation-library-inline :is(#animation-results > .effect-grid > .effect-card) small{ font-size:14px; line-height:1.5; padding:0 4px 5px; }
+.animation-library-inline .tunnel-family-card .animation-family-trigger { padding:15px; }
+.animation-library-inline .tunnel-family-card .family-copy { padding:0; }
+.animation-library-inline .tunnel-family-card canvas.tunnel-effect-preview { height:196px; }
+.animation-library-inline .family-variant-card canvas.reference-preview { height:155px; }
+.animation-library-inline .animation-category-note { font-size:13px; line-height:1.5; }
+.animation-library-inline .tunnel-guide .tunnel-live-preview { height:240px; }
+.animation-library-inline .tunnel-example-name,.animation-library-inline .tunnel-ready strong { font-size:14px; }
+.animation-library-inline .tunnel-guide { padding:14px; border-radius:23px; }
+.animation-library-inline .spatial-preview-choice > span,.animation-library-inline .spatial-preview-switch button { font-size:15px; }
+.animation-library-inline .spatial-preview-switch button { min-height:48px;font-size:13px;gap:4px;padding-inline:4px }
+@media(max-width:360px){
+  .animation-library-inline .spatial-preview-switch button{font-size:11px;gap:3px;padding-inline:2px}
+  .animation-library-inline .spatial-preview-switch button .arrangement-icon{width:14px;height:14px}
+  .animation-library-inline .family-variant-card{grid-template-columns:101px minmax(0,1fr);column-gap:7px}
+  .animation-library-inline .family-variant-card>canvas{min-width:101px;height:122px}
+}
+
+/* Geometry, not an audio-mixer symbol: the three outlines also match the
+   actual Tunnel / Wall / Continuous choices. Keep direct apply unchanged. */
+.arrangement-icon { fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+.ledline-setup .ledline-setup-toggle { min-height:64px; gap:12px; padding:11px 13px; }
+.ledline-setup .ledline-setup-toggle > .arrangement-icon { width:40px; height:40px; padding:5px; border-radius:12px; background:color-mix(in srgb,var(--red) 8%,var(--soft)); flex:none; }
+.ledline-setup .ledline-setup-toggle > span { display:grid; gap:3px; }
+.ledline-setup .ledline-setup-toggle b { font-size:16px; line-height:1.25; }
+.ledline-setup .ledline-setup-toggle small { font-size:14px; line-height:1.35; font-weight:400; }
+.ledline-setup .ledline-setup-toggle > .icon:last-child { width:20px; height:20px; }
+.animation-context .scope-option-title { font-size:14px; }
+.animation-context .power-card .switch { font-size:13px; }
+.animation-context .power-card .switch i { width:40px; height:26px; }
+.animation-context .power-card .switch i:after { width:20px; height:20px; }
+.animation-context .power-card .switch[aria-checked=true] i:after { transform:translateX(14px); }
+@media(min-width:700px) {
+  .animation-library-inline .animation-family-grid { grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start; }
+  .animation-library-inline .family-variant-grid,.animation-library-inline #animation-results > .effect-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  #effect-dialog:has([data-animation-categories]) { inset:0; margin:auto; max-height:88dvh; border-radius:28px; }
+}
+@media(max-width:360px) {
+  /* A narrow phone cannot fit two readable names and explanations beside
+     each other. Use a complete, finger-sized row instead of shrinking type. */
+}
+@media(prefers-reduced-motion:reduce) { #effect-dialog:has([data-animation-categories]) { animation:none; } }
+
+/* Keep the arrangement picker a single calm card: the current-view control
+   and line-order action are related settings, not cards nested in a card. */
+@media(max-width:540px){
+  .ledline-setup.card{border-radius:17px;background:var(--panel)}
+  .ledline-setup>.spatial-preview-choice{padding:6px 10px;border-bottom:1px solid var(--line)}
+  .ledline-setup .spatial-choice-toggle{min-height:54px;gap:9px;padding:5px 7px;border:0;border-radius:12px;background:transparent}
+  .ledline-setup .spatial-choice-current-icon{width:36px;height:36px;border-radius:10px}
+  .ledline-setup .spatial-choice-current-icon>.arrangement-icon{width:24px;height:24px}
+  .ledline-setup .spatial-choice-current>small{font-size:10px}
+  .ledline-setup .spatial-choice-current>.spatial-choice-topology{font-size:10px}
+  .ledline-setup .ledline-setup-toggle{min-height:56px;gap:9px;padding:8px 12px}
+  .ledline-setup .ledline-setup-toggle>.line-order-icon{width:34px;height:34px;padding:4px;border-radius:10px}
+  .ledline-setup .ledline-setup-toggle b{font-size:13px;line-height:1.25}
+  .ledline-setup .ledline-setup-toggle small{font-size:10px;line-height:1.35}
+  .ledline-setup .ledline-setup-toggle>.icon:last-child{width:17px;height:17px}
+  .animation-context{align-items:center;gap:4px 6px}
+}
+
+/* Keep the two setup actions visually parallel on phones: choosing the view
+   and opening line order are sibling cards. Inset focus rings stay fully
+   visible inside the rounded touch target instead of clipping as a red arc. */
+@media(max-width:540px){
+  .ledline-setup.card{display:grid;gap:7px;padding:0;border:0;border-radius:0;background:transparent;overflow:visible}
+  .ledline-setup>.spatial-preview-choice{gap:0;padding:0;border:0}
+  .ledline-setup .spatial-choice-toggle{min-height:56px;padding:7px 12px;border:1px solid var(--line);border-radius:17px;background:var(--panel)}
+  .ledline-setup .spatial-choice-current>b{font-size:14px;line-height:1.25}
+  .ledline-setup .ledline-setup-toggle{width:100%;min-height:56px;gap:12px;padding:7px 12px;border:1px solid var(--line);border-radius:17px;background:var(--panel);box-shadow:0 2px 8px #17181708}
+  .ledline-setup .ledline-setup-toggle>.line-order-icon{width:36px;height:36px;padding:4px;border-radius:10px}
+  .ledline-setup .ledline-setup-toggle b{font-size:14px;line-height:1.25}
+  .ledline-setup .ledline-setup-toggle:focus-visible{outline-offset:-3px;border-radius:14px}
+}
+
+/* A family card only opens the group; applying happens on the next screen. */
+.animation-library-inline .animation-family-card .family-variants{display:flex;align-items:center;justify-content:space-between;gap:9px;min-height:58px;margin-top:9px;padding:9px 10px;border:1px solid color-mix(in srgb,var(--red) 30%,var(--line));border-radius:14px;background:color-mix(in srgb,var(--red) 6%,var(--panel));box-shadow:none;color:var(--red);text-align:left}
+.animation-library-inline .family-variants-copy{display:grid;gap:3px;min-width:0}
+.animation-library-inline .family-variants-copy>b{font-size:15px;line-height:1.25;font-weight:850}
+.animation-library-inline .family-variants-copy>small{color:var(--muted);font-size:12px;line-height:1.35;font-weight:550;white-space:normal}
+.animation-library-inline .family-variants-action{display:flex;align-items:center;gap:4px;flex:none;color:var(--red)}
+.animation-library-inline .family-variants-action>small{font-size:11px;line-height:1.25;font-weight:750;white-space:nowrap}
+.family-detail-preview figcaption small{font-size:11px}
+@media(max-width:360px){
+  .animation-library-inline .animation-family-card .family-variants{gap:6px;padding:8px}
+  .animation-library-inline .family-variants-copy>b{font-size:14px}
+  .animation-library-inline .family-variants-copy>small{font-size:11px}
+  .animation-library-inline .family-variants-action>small{font-size:10px}
+}
+
+/* The three everyday control states share a lighter page hierarchy: one
+   task heading, one line scope, and one glass surface for the actual control. */
+@media(max-width:540px){
+  .editor-controls-zone .control-workspace{
+    gap:11px;
+    padding:11px;
+    border:1px solid color-mix(in srgb,var(--line) 36%,var(--glass-edge));
+    border-radius:18px;
+    background-color:color-mix(in srgb,var(--glass) 72%,transparent);
+    background-image:linear-gradient(145deg,color-mix(in srgb,var(--glass) 78%,white 22%),color-mix(in srgb,var(--glass) 92%,transparent));
+    box-shadow:inset 0 1px rgba(255,255,255,.66),0 5px 16px rgba(25,30,25,.025);
+    -webkit-backdrop-filter:blur(12px) saturate(126%);
+    backdrop-filter:blur(12px) saturate(126%);
+  }
+  .editor-controls-zone .control-mode-panel{gap:11px}
+  .editor-controls-zone .bediening-workspace{gap:10px;padding:0}
+  .editor-controls-zone .animation-context{gap:6px;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+  .editor-controls-zone .shared-colour-picker{padding:13px}
+  .editor-controls-zone .shared-colour-picker .section-heading{margin-bottom:8px}
+  .editor-controls-zone .shared-colour-picker .section-heading h2{font-size:16px}
+  .editor-controls-zone .shared-colour-picker .colour-tools{grid-template-columns:minmax(120px,.9fr) minmax(0,1.1fr);gap:10px}
+  .editor-controls-zone .shared-colour-picker .wheel-wrap{width:min(100%,clamp(124px,38vw,164px));max-width:164px;margin:4px auto 6px}
+  .editor-controls-zone .shared-colour-picker .colour-values{gap:7px}
+  .editor-controls-zone .shared-colour-picker .colour-swatch{height:25px;margin:2px 0 4px}
+  .editor-controls-zone .shared-colour-picker .setting-hint{font-size:11px;line-height:1.4}
+  #main .editor-controls-zone .current-effect{display:grid;gap:8px;align-items:stretch;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+  .editor-controls-zone .current-effect>.current-effect-heading{display:grid;gap:3px;padding:1px 3px 0}
+  .editor-controls-zone .current-effect .active-animation-kicker{color:var(--red);font-size:10px;line-height:1.25;font-weight:850;letter-spacing:.09em;text-transform:uppercase}
+  .editor-controls-zone .current-effect b{margin:0;font-size:20px;line-height:1.25;letter-spacing:-.35px}
+  .editor-controls-zone .current-effect>.current-effect-gallery-slot{display:grid;flex:auto;min-width:0}
+  .editor-controls-zone .current-effect-gallery-slot>.current-effect-gallery{min-height:58px;padding:8px 10px;border-radius:15px;box-shadow:inset 0 1px #ffffffa8,0 3px 10px #20252008}
+  .editor-controls-zone .current-effect-gallery .gallery-action-icon{width:38px;height:38px;border-radius:12px}
+  .editor-controls-zone .current-effect-gallery .gallery-action-icon>.icon{width:21px;height:21px}
+  .editor-controls-zone .current-effect-gallery .gallery-action-copy>b{font-size:13px}
+  .editor-controls-zone .current-effect-gallery .gallery-action-copy>small{font-size:10px;line-height:1.3}
+  .editor-controls-zone .animation-daily-controls.card{padding:13px;border-radius:17px}
+  .editor-controls-zone .active-animation-workspace{gap:11px}
+
+  /* A little breathing room after the sticky preview stops its edge shadow
+     from visually touching the next heading during mobile scroll. */
+  .editor-grid>.control-preview-dock[data-scrolled=true]{margin-bottom:11px;padding-bottom:7px}
+  .editor-grid>.control-preview-dock+.editor-controls{padding-top:11px}
+  .animation-family-screen>.control-preview-dock[data-scrolled=true]{margin-bottom:11px}
+  .animation-family-screen>.animation-family-controls{padding-top:11px}
+
+  .animation-library-inline{gap:9px}
+  .animation-library-inline .animation-library-heading{margin:0;padding:2px 2px 1px}
+  .animation-library-inline .animation-library-title-copy{gap:4px}
+  .animation-library-heading h2{font-size:20px;line-height:1.2}
+  .animation-library-inline .animation-category-trigger{min-height:60px;padding:8px 10px;border-radius:16px}
+  .animation-library-inline .animation-category-art{width:36px;height:36px;border-radius:11px}
+  .animation-library-inline .animation-category-art>.icon{width:22px;height:22px}
+  .animation-library-inline .animation-category-copy{gap:2px}
+  .animation-library-inline .animation-category-copy b{font-size:14px}
+  .animation-library-inline .animation-category-copy small{font-size:11px;line-height:1.3}
+  .animation-library-inline .animation-category-count{padding:4px 6px;font-size:11px}
+  /* Keep Safari's no-auto-zoom threshold even on the narrowest phone. */
+  .animation-library-inline .animation-search input{min-height:46px;border-radius:14px;font-size:16px}
+  .animation-library-inline .animation-search>.icon{top:13px}
+  .animation-library-inline .animation-family-section{gap:9px}
+  .animation-library-inline .animation-family-heading{gap:4px 8px}
+  .animation-library-inline .animation-family-heading h2{font-size:16px}
+  .animation-library-inline .animation-family-heading p{font-size:12px;line-height:1.4}
+  .animation-library-inline .animation-family-card{border-radius:18px}
+  .animation-library-inline .animation-family-trigger{padding:9px;border-radius:18px}
+  .animation-library-inline .animation-family-preview{grid-template-rows:12px 68px;gap:4px;padding:6px;border-radius:12px}
+  .animation-library-inline .animation-family-preview-label{font-size:9px;line-height:12px}
+  .animation-library-inline .animation-family-preview canvas{height:68px;border-radius:9px}
+  .animation-library-inline .family-copy{gap:4px;padding:8px 2px 1px}
+  .animation-library-inline .animation-family-card .family-title{font-size:16px;line-height:1.25}
+  .animation-library-inline .animation-family-card .family-summary{font-size:12px;line-height:1.35;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+  .animation-library-inline .animation-family-card .family-variants{gap:5px;min-height:48px;margin-top:4px;padding:6px 7px;border-radius:12px}
+  .animation-library-inline .family-variants-copy{gap:2px}
+  .animation-library-inline .family-variants-copy>b{font-size:13px;line-height:1.2}
+  .animation-library-inline .family-variants-copy>small{font-size:10px;line-height:1.3}
+  .animation-library-inline .family-variants-action{gap:2px}
+  .animation-library-inline .family-variants-action>small{font-size:10px}
+  .animation-library-inline .family-variants-action>.icon{width:16px;height:16px}
+}
+@media(min-width:380px) and (max-width:540px){
+  .animation-library-inline .animation-family-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:9px}
+  .animation-library-inline .animation-family-card{min-width:0}
+  .animation-library-inline .animation-family-trigger{grid-template-columns:minmax(0,1fr);align-content:start;min-height:0;gap:0}
+  .animation-library-inline .animation-family-preview canvas{height:62px}
+  .animation-library-inline .animation-family-preview{grid-template-rows:12px 62px}
+  .animation-library-inline .family-copy{min-height:128px;align-content:start}
+  .animation-library-inline .family-variants{margin-top:auto!important}
+  .animation-library-inline .tunnel-family-card{grid-column:1/-1}
+  .animation-library-inline .tunnel-family-card .animation-family-trigger{padding:12px}
+  .animation-library-inline .tunnel-family-card .family-copy{min-height:0}
+}
+@media(max-width:379px){
+  .animation-library-inline .animation-family-preview canvas{height:82px}
+  .animation-library-inline .animation-family-preview{grid-template-rows:12px 82px}
+}
+@media(prefers-reduced-motion:reduce){
+  .editor-controls-zone .current-effect-gallery-slot>.current-effect-gallery{transition:none}
+}
+
+/* Refine the three everyday control pages as one continuous workflow. Keep
+   one clear hierarchy, make all animation swatches fit naturally, and avoid
+   nested cards around the actual controls. */
+@media(max-width:540px){
+  .editor-controls-zone .shared-colour-picker{
+    padding:13px 1px 2px;
+    border:0;
+    border-top:1px solid color-mix(in srgb,var(--line) 72%,transparent);
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+  }
+  .editor-controls-zone .shared-colour-picker .section-heading{margin:0 2px 8px}
+  .editor-controls-zone .shared-colour-picker .wheel-wrap{width:min(100%,clamp(120px,35vw,148px));max-width:148px}
+  .editor-controls-zone .active-animation-workspace{
+    gap:10px;
+    padding:0;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+  }
+  .editor-controls-zone .animation-daily-controls.card{
+    padding:10px 1px 2px;
+    border:0;
+    border-top:1px solid color-mix(in srgb,var(--line) 72%,transparent);
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+  }
+  .editor-controls-zone .animation-daily-controls .palette{
+    display:flex;
+    flex-wrap:nowrap;
+    align-items:stretch;
+    gap:6px;
+    min-width:0;
+    margin-inline:-1px;
+    padding:1px 1px 5px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    overscroll-behavior-x:contain;
+    scrollbar-width:thin;
+    scroll-snap-type:x proximity;
+  }
+  .editor-controls-zone .animation-daily-controls .palette-item,
+  .editor-controls-zone .animation-daily-controls .palette-add{flex:0 0 auto;scroll-snap-align:start}
+  .editor-controls-zone .animation-daily-controls .palette-item{border-radius:12px}
+  .editor-controls-zone .animation-daily-controls .palette-colour{min-height:44px;gap:5px;padding:4px 7px}
+  .editor-controls-zone .animation-daily-controls .palette-colour>span{width:20px;height:20px}
+  .editor-controls-zone .animation-daily-controls .palette-colour small{font-size:10px;white-space:nowrap}
+  .editor-controls-zone .animation-daily-controls .palette-remove{width:38px;min-height:44px}
+  .editor-controls-zone .animation-daily-controls .palette-add{min-height:44px;padding:7px 10px;font-size:11px;white-space:nowrap}
+  .animation-library-inline .animation-library-heading{padding-bottom:8px;border-bottom:1px solid color-mix(in srgb,var(--line) 68%,transparent)}
+  .animation-library-inline .animation-library-heading h2{letter-spacing:-.025em}
+
+  /* On the fixed-colour screen, keep the wheel fully clear of the bottom dock
+     on first load while preserving 50px+ actions and the chosen preview size. */
+  .editor-grid-colour>.control-preview-dock[data-preview-size="small"] .preview-wrap canvas{height:60px!important}
+  .editor-grid-colour>.control-preview-dock{margin-bottom:7px}
+  .editor-grid-colour>.editor-controls{padding-top:5px}
+  .editor-grid-colour>.editor-controls .ledline-setup{gap:5px}
+  .editor-grid-colour>.editor-controls .spatial-choice-toggle,
+  .editor-grid-colour>.editor-controls .ledline-setup-toggle{min-height:50px}
+  .editor-grid-colour>.editor-controls .spatial-choice-current-icon,
+  .editor-grid-colour>.editor-controls .ledline-setup-toggle>.line-order-icon{width:32px;height:32px}
+  .editor-grid-colour .editor-controls-zone .control-workspace{padding:6px 10px}
+  .editor-grid-colour .editor-controls-zone .control-mode-panel{gap:8px}
+  .editor-grid-colour .editor-controls-zone .bediening-workspace{gap:7px}
+  .editor-grid-colour .shared-colour-picker .section-heading{margin-bottom:6px}
+}
+@media(max-width:360px){
+  .editor-controls-zone .animation-daily-controls .palette{gap:5px}
+  .editor-controls-zone .animation-daily-controls .palette-colour{gap:4px;padding-inline:5px}
+  .editor-controls-zone .animation-daily-controls .palette-colour>span{width:18px;height:18px}
+  .editor-controls-zone .animation-daily-controls .palette-colour small{font-size:9px}
+  .editor-controls-zone .animation-daily-controls .palette-remove{width:34px}
+  .editor-controls-zone .animation-daily-controls .palette-add{padding-inline:8px;font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){
+  .editor-controls-zone .animation-daily-controls .palette{scroll-behavior:auto;scroll-snap-type:none}
+}
+@media(max-width:400px){
+  /* Phone widths cannot comfortably fit colour chips, remove controls, and
+     the add action on one line. Use a balanced two-chip row and a full-width
+     add action instead of leaving a lone button stranded at the left edge. */
+  .editor-controls-zone .animation-daily-controls .palette{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;overflow:visible;scroll-snap-type:none}
+  .editor-controls-zone .animation-daily-controls .palette-item{width:100%;min-width:0}
+  .editor-controls-zone .animation-daily-controls .palette-item .palette-colour{flex:1;min-width:0;padding-inline:6px}
+  .editor-controls-zone .animation-daily-controls .palette-add{grid-column:1/-1;width:100%;justify-content:center}
+}
+
+/* Spatial group cards need a recognisable camera, not a cropped strip thumb.
+   Keep the label above the scene and use its own aspect ratio at every width. */
+.animation-family-card.tunnel-family-card .animation-family-spatial-preview{
+  display:grid;
+  grid-template-rows:auto auto;
+  gap:0;
+  padding:9px;
+  border-radius:15px;
+}
+.animation-family-card.tunnel-family-card .animation-family-spatial-preview .animation-family-preview-label{
+  position:static;
+  padding:0 3px 3px;
+  font-size:11px;
+  line-height:16px;
+}
+.animation-family-card.tunnel-family-card .animation-family-spatial-preview canvas.tunnel-effect-preview{
+  width:100%;
+  height:auto;
+  min-height:0;
+  aspect-ratio:2/1;
+  border-radius:10px;
+}
+
+/* A focused spatial family offers exactly two easy-to-reach arrangements.
+   Keep this with the sticky group example, not in the general setup menu. */
+.family-spatial-choice{margin:8px 0 2px;min-width:0}
+.family-spatial-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;padding:4px;border:1px solid var(--line);border-radius:16px;background:color-mix(in srgb,var(--soft) 80%,var(--panel));box-shadow:inset 0 1px #ffffff40}
+.family-spatial-options button{display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;min-height:44px;padding:5px 8px;border:1px solid transparent;border-radius:12px;background:transparent;color:var(--muted);transition:background-color .2s ease,border-color .2s ease,box-shadow .2s ease,transform .18s cubic-bezier(.2,.8,.2,1)}
+.family-spatial-options button>b{font-size:13px;line-height:1.25;font-weight:750}
+.family-spatial-options button>span>.arrangement-icon{display:block;width:25px;height:25px}
+.family-spatial-options button[aria-pressed=true]{border-color:var(--line);background:var(--panel);color:var(--ink);box-shadow:0 2px 7px #17201914,inset 0 1px #ffffff50}
+.family-spatial-selected{display:flex;align-items:center;visibility:hidden}
+.family-spatial-selected>.icon{width:15px;height:15px}
+.family-spatial-options button[aria-pressed=true]>.family-spatial-selected{visibility:visible}
+.family-spatial-options button:active:not(:disabled){transform:scale(.98)}
+.family-spatial-options button:focus-visible{outline:2px solid var(--red);outline-offset:1px}
+.family-spatial-choice .family-spatial-error{margin:6px 4px 0;font-size:11px;line-height:1.45;color:var(--muted)}
+.family-spatial-choice .family-spatial-error{color:var(--action-ink)}
+@media(prefers-reduced-motion:reduce){.family-spatial-options button{transition:none}}

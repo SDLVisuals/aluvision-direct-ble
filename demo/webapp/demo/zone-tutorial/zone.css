@@ -1,0 +1,767 @@
+/* C147p prototype (versie 2): de zonepagina als facelift in de stijl van de app.
+   De onderdelen van de app (switch, slider-row, wheel-wrap, fine-controls, channel-row, zone-card) houden hun eigen
+   opmaak uit de app-CSS; hier staat alleen de nieuwe indeling en wat nieuw is (zf-*). Tokens: --panel --ink --muted
+   --line --soft --red (app). */
+
+.zf-app{--zf-r:28px;--zf-shadow:0 22px 44px -34px rgba(32,34,32,.55),0 2px 6px -4px rgba(32,34,32,.12);--zf-stage:#15161a;--zf-glass:color-mix(in srgb,var(--panel) 84%,transparent)}
+.zf-main{gap:14px;padding-bottom:30px}
+.zf-proto{display:flex;flex-wrap:wrap;gap:8px;max-width:640px;margin:6px auto 0;padding:0 16px}
+.zf-proto[hidden]{display:none}
+.zf-proto button{border:1px dashed var(--line);background:var(--soft);color:var(--ink);border-radius:999px;padding:7px 12px;font:inherit;font-size:13px;font-weight:750;cursor:pointer}
+.zf-app .icon{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.zf-round{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--ink);display:grid;place-items:center;cursor:pointer;padding:0;box-shadow:0 6px 14px -12px rgba(0,0,0,.6)}
+.zf-round .icon{width:21px;height:21px}
+.zf-sheet .zf-round{width:40px;height:40px}
+
+/* ---------- de stand (dezelfde kaarten als de app) ---------- */
+.zf-standpage .zone-card canvas{display:block}
+
+/* ---------- de dock bovenaan: naam, voorbeeld en tabs, blijft staan bij scrollen ---------- */
+.zf-dock{position:sticky;top:calc(var(--zf-brand,56px) + 8px);z-index:6;display:grid;gap:12px;padding:12px;border-radius:32px;background:var(--zf-glass);-webkit-backdrop-filter:blur(20px) saturate(1.5);backdrop-filter:blur(20px) saturate(1.5);
+  border:1px solid color-mix(in srgb,var(--line) 70%,transparent);box-shadow:0 24px 48px -34px rgba(32,34,32,.6);transition:padding .25s ease,gap .25s ease}
+.zf-top{display:grid;grid-template-columns:44px minmax(0,1fr) auto 44px;align-items:center;gap:10px}
+.zf-back,.zf-gear{color:var(--red)}
+.zf-title{display:grid;min-width:0}
+.zf-title b{font-size:22px;line-height:1.1;font-weight:850;letter-spacing:-.025em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zf-title small{color:var(--muted);font-size:13px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zf-power{min-height:44px}
+/* het voorbeeld: dezelfde kaart als de app (preview-wrap v50-control-preview, met de selectie van v50-preview-selection.css) */
+.zf-app .zf-stage{margin:0!important;transition:opacity .2s ease}
+.zf-app .zf-stage canvas[data-stagecv]{display:block;width:100%;height:var(--stage-h,190px);transition:height .25s ease}
+.zf-app .zf-stage.is-off canvas[data-stagecv]{opacity:.35}
+.zf-app .zf-stage .v50-preview-canvas-scroll{max-height:none;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+.zf-app .zf-stage .v50-preview-canvas-scroll::-webkit-scrollbar{display:none}
+/* wand en tunnel: de breedte die de tekening van de app nodig heeft (bij veel ledlines schuif je opzij) */
+.zf-app .zf-stage .v50-preview-canvas-stage:is([data-preview-spatial=wall],[data-preview-spatial=tunnel]){min-width:var(--v50-spatial-min-width,0px)}
+.zf-app .zf-stage.preview-selectable canvas[data-stagecv]{cursor:pointer}
+.zf-app .zf-stage .v50-selection-summary>span{display:grid}
+.zf-app .zf-stage .v50-selection-summary b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zf-app .zf-stage .v50-preview-inline-hint{font-style:normal;font-size:11.5px;color:#aab5ae}
+/* de twee tabs, in de stijl van de app (gekozen = donker) */
+.zf-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.zf-tabs button{display:flex;align-items:center;justify-content:center;gap:9px;min-height:52px;border-radius:999px;border:1px solid var(--line);background:var(--soft);color:var(--ink);font:inherit;font-size:16.5px;font-weight:800;cursor:pointer;transition:background .2s ease,color .2s ease}
+.zf-tabs button[aria-selected=true]{background:#202220;color:#fff;border-color:#202220;box-shadow:0 10px 22px -14px rgba(0,0,0,.7)}
+body[data-theme=dark] .zf-tabs button[aria-selected=true]{background:#f3f2ee;color:#18191b;border-color:#f3f2ee}
+/* ingeklapt bij scrollen: kleiner voorbeeld, kleinere titel */
+.zf-dock.is-compact{gap:8px;padding:8px 10px}
+.zf-dock.is-compact .zf-top{grid-template-columns:40px minmax(0,1fr) auto 40px}
+.zf-dock.is-compact .zf-round{width:40px;height:40px}
+.zf-dock.is-compact .zf-title b{font-size:18px}
+.zf-dock.is-compact .zf-title small{display:none}
+.zf-dock.is-compact .zf-stage canvas[data-stagecv]{height:min(var(--stage-h,190px),104px)}
+.zf-dock.is-compact :is(.v50-preview-actions,.v50-preview-line-targets){display:none}
+.zf-dock.is-compact .zf-tabs button{min-height:42px;font-size:15px}
+/* RGBW: de volgorde staat nog niet */
+.zf-banner{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;width:100%;padding:14px 16px;border-radius:22px;border:1px solid color-mix(in srgb,#e7b343 45%,var(--line));
+  background:color-mix(in srgb,#f5c76a 18%,var(--panel));color:var(--ink);font:inherit;text-align:left;cursor:pointer;box-shadow:var(--zf-shadow)}
+.zf-banner-ic{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:var(--panel);color:#b07a10}
+.zf-banner-ic .icon{width:26px;height:26px}
+.zf-banner b{display:block;font-size:16px}
+.zf-banner small{display:block;color:var(--muted);font-size:13px;font-weight:650}
+
+/* ---------- kaarten ---------- */
+.zf-body{display:grid;gap:14px}
+.zf-app .zf-card.card{display:grid;gap:16px;margin:0;padding:18px;border-radius:var(--zf-r);border:1px solid color-mix(in srgb,var(--line) 75%,transparent);background:var(--panel);box-shadow:var(--zf-shadow)}
+.zf-cardhead{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+.zf-cardhead h2{margin:0;font-size:23px;font-weight:850;letter-spacing:-.025em}
+.zf-cardhead h3{margin:0;font-size:18px;font-weight:850;letter-spacing:-.015em}
+.zf-cardhead small{color:var(--muted);font-size:12.5px;font-weight:650}
+.zf-for{padding:5px 11px;border-radius:999px;background:var(--soft);color:var(--ink);font-size:12.5px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
+.zf-kicker{display:block;color:var(--red);font-size:11.5px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
+.zf-hint{margin:-4px 0 0;color:var(--muted);font-size:13px;font-weight:600}
+.zf-note{display:flex;align-items:center;gap:8px;margin:0;color:var(--muted);font-size:14px;font-weight:650}
+/* de kleuren van het verloop: bolletjes, + voor een kleur erbij */
+.zf-points{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.zf-point{width:46px;height:46px;border-radius:50%;padding:0;border:3px solid var(--panel);background:var(--k);cursor:pointer;box-shadow:0 0 0 1px var(--line),0 8px 16px -10px rgba(0,0,0,.55);transition:transform .15s ease,box-shadow .15s ease}
+.zf-point.is-on{box-shadow:0 0 0 2.5px var(--ink),0 10px 20px -10px rgba(0,0,0,.6);transform:scale(1.06)}
+.zf-add{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:46px;height:46px;padding:0 12px;border-radius:999px;border:1.5px dashed color-mix(in srgb,var(--ink) 32%,transparent);background:none;color:var(--ink);font:inherit;font-size:15px;font-weight:800;cursor:pointer}
+.zf-add.is-first{padding:0 16px 0 12px}
+.zf-add .icon{width:19px;height:19px;stroke-width:2.4}
+.zf-del{margin-left:auto;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--soft);color:var(--muted);display:grid;place-items:center;cursor:pointer;padding:0}
+.zf-del .icon{width:16px;height:16px}
+.zf-gbar{height:12px;border-radius:999px;margin-top:-4px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+/* het kleurwiel van de app, iets groter */
+.zf-card .zf-tools{display:block;margin:0}
+.zf-card .zf-tools .wheel-wrap{width:min(270px,74vw);max-width:none;margin:2px auto 0}
+.zf-card .zf-tools .wheel{display:block;width:100%;height:100%;border-radius:50%;cursor:crosshair;touch-action:none;box-shadow:0 18px 36px -24px rgba(0,0,0,.55)}
+.zf-card .zf-tools .wheel-cursor{width:26px;height:26px}
+/* schuifjes: de app tekent de baan (geel voor helderheid); hier alleen de regel erboven */
+.zf-app .zf-slider{display:grid;gap:4px;margin:0}
+.zf-app .zf-slider label{display:flex;align-items:center;gap:8px;margin:0;font-size:15px;font-weight:750;color:var(--ink)}
+.zf-app .zf-slider label .icon{color:#d49a2a;width:19px;height:19px}
+.zf-app .zf-slider output{margin-left:auto;font-weight:850;color:var(--muted);font-variant-numeric:tabular-nums}
+.zf-app .zf-slider input[type=range]{width:100%;margin:0}
+.zf-app .warmth-scale{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;font-weight:650}
+/* Fijn instellen: de rijen van de app, met een titel die niet te groot is */
+.zf-fine{margin:0;padding-top:14px;border-top:1px solid var(--line)}
+.zf-fine h3{margin:0 0 6px;font-size:15px;font-weight:850}
+.zf-fine .fine-controls-body{display:grid;gap:4px}
+/* laten bewegen: vier soorten beweging */
+.zf-motion{display:grid;gap:12px;padding-top:14px;border-top:1px solid var(--line)}
+.zf-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
+.zf-row>span:first-child{display:grid;min-width:0}
+.zf-row b{font-size:15.5px;font-weight:800}
+.zf-row small{color:var(--muted);font-size:12.5px;font-weight:600}
+.zf-moves{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.zf-moves button{display:grid;justify-items:center;gap:4px;padding:10px 4px 9px;border-radius:16px;border:1px solid var(--line);background:var(--soft);color:var(--ink);font:inherit;font-size:13px;font-weight:750;cursor:pointer}
+.zf-moves button .icon{width:22px;height:22px}
+.zf-moves button[aria-pressed=true]{background:#202220;color:#fff;border-color:#202220}
+body[data-theme=dark] .zf-moves button[aria-pressed=true]{background:#f3f2ee;color:#18191b;border-color:#f3f2ee}
+/* de balk van het verloop met de puntjes (sleep = overgang verschuiven) */
+.zf-count{padding:5px 11px;border-radius:999px;background:var(--soft);color:var(--muted);font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums}
+.zf-rail{position:relative;height:30px;margin:6px 14px 0;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);touch-action:none}
+.zf-app .zf-gstop{position:absolute;top:50%;width:30px;height:30px;min-width:0;min-height:0;margin:-15px 0 0 -15px;padding:0;border-radius:50%;border:3px solid #fff;background:var(--k);box-shadow:0 0 0 1px rgba(0,0,0,.25),0 4px 10px rgba(0,0,0,.35);cursor:grab;touch-action:none}
+.zf-app .zf-gstop.is-on{box-shadow:0 0 0 2.5px var(--ink),0 6px 14px rgba(0,0,0,.4);z-index:1}
+.zf-app .zf-gstop:active{cursor:grabbing}
+.zf-railfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:-6px;padding:0 2px}
+.zf-railfoot small{color:var(--muted);font-size:12.5px;font-weight:650}
+.zf-textbtn{flex:none;border:0;background:none;color:var(--red);font:inherit;font-size:14.5px;font-weight:800;padding:8px 4px;cursor:pointer;min-height:40px}
+.zf-textbtn.is-done{color:var(--ink)}
+/* het verloop: richting, doorlopend, beweging */
+.zf-gradcard{gap:6px!important}
+.zf-iconrow{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;min-height:58px}
+.zf-iconrow+.zf-iconrow{border-top:1px solid var(--line)}
+.zf-rowic{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:var(--soft);color:var(--ink)}
+.zf-rowtxt{display:grid;min-width:0}
+.zf-gradcard .zf-motion{border-top:1px solid var(--line);padding-top:2px;gap:12px}
+.zf-flows{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.zf-flows button{min-height:42px;padding:6px 4px;border-radius:14px;border:1px solid var(--line);background:var(--soft);color:var(--ink);font:inherit;font-size:13.5px;font-weight:750;cursor:pointer}
+.zf-flows button[aria-pressed=true]{background:#202220;color:#fff;border-color:#202220}
+body[data-theme=dark] .zf-flows button[aria-pressed=true]{background:#f3f2ee;color:#18191b;border-color:#f3f2ee}
+/* bewaarde kleuren: bolletjes */
+.zf-bubbles{display:grid;grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:12px 6px}
+.zf-bub{display:grid;justify-items:center;gap:6px;border:0;background:none;color:var(--ink);font:inherit;cursor:pointer;padding:0;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.zf-bub i{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:var(--k);box-shadow:0 0 0 1px var(--line),0 8px 16px -10px rgba(0,0,0,.5);border:3px solid var(--panel)}
+.zf-bub span{max-width:100%;font-size:12px;font-weight:700;color:var(--muted);text-align:center;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zf-subhead{margin:4px 0 -4px;font-size:14px;font-weight:850;color:var(--muted)}
+.zf-bub.is-edit{position:relative}
+.zf-bubsw{display:grid;justify-items:center;gap:6px;border:0;background:none;color:var(--ink);font:inherit;cursor:pointer;padding:0;max-width:100%}
+.zf-bub.is-edit i{animation:zf-wiggle .32s ease-in-out infinite alternate}
+.zf-bub.is-edit:nth-child(2n) i{animation-delay:-.16s}
+@keyframes zf-wiggle{from{transform:rotate(-3deg)}to{transform:rotate(3deg)}}
+.zf-x{position:absolute;top:-7px;left:calc(50% + 12px);width:28px;height:28px;padding:0;border-radius:50%;border:2px solid var(--panel);background:#202220;color:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.3)}
+body[data-theme=dark] .zf-x{background:#f3f2ee;color:#18191b}
+.zf-x .icon{width:13px;height:13px;stroke-width:2.8}
+/* gewist: Ongedaan maken */
+.zf-undo{position:fixed;left:16px;right:16px;margin:0 auto;width:fit-content;bottom:calc(var(--nav,72px) + 26px + env(safe-area-inset-bottom,0px));z-index:60;display:flex;align-items:center;gap:14px;max-width:calc(100vw - 32px);box-sizing:border-box;padding:8px 8px 8px 18px;border-radius:999px;background:#202220;color:#fff;
+  box-shadow:0 18px 40px -16px rgba(0,0,0,.55);transform:translateY(20px);opacity:0;transition:transform .25s ease,opacity .25s ease;font-weight:750;font-size:14.5px}
+.zf-undo.is-in{transform:none;opacity:1}
+.zf-undo[hidden]{display:none}
+.zf-undo span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zf-undo button{flex:none;min-height:40px;padding:0 16px;border-radius:999px;border:0;background:#fff;color:#202220;font:inherit;font-weight:850;cursor:pointer}
+body[data-theme=dark] .zf-undo{background:#f3f2ee;color:#18191b}
+body[data-theme=dark] .zf-undo button{background:#202220;color:#fff}
+.zf-bub.is-add i{background:var(--soft);border:1.5px dashed color-mix(in srgb,var(--ink) 30%,transparent);box-shadow:none;color:var(--ink)}
+/* Meer */
+.zf-app .zf-more.card{gap:0;padding:4px 18px}
+.zf-more summary{display:flex;align-items:center;gap:10px;min-height:56px;cursor:pointer;list-style:none}
+.zf-more summary::-webkit-details-marker{display:none}
+.zf-more summary>span{font-size:17px;font-weight:850}
+.zf-more summary small{color:var(--muted);font-size:13px;font-weight:650;margin-right:auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zf-more summary>span{flex:none}
+.zf-more summary .icon{color:var(--muted);transform:rotate(90deg);transition:transform .2s ease}
+.zf-more[open] summary .icon{transform:rotate(-90deg)}
+.zf-morebody{display:grid;gap:10px;padding:2px 0 16px}
+.zf-warmsw{display:flex!important;align-items:center;gap:12px}
+.zf-warmsw>i{flex:none;width:36px;height:36px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff3e0,#ffc98a 70%);box-shadow:0 0 0 1px var(--line)}
+.zf-warmsw>span{display:grid}
+
+/* ---------- animaties ---------- */
+.zf-playing .zf-cardhead{align-items:flex-start}
+.zf-playing h2{margin-top:2px}
+.zf-star{color:var(--muted)}
+.zf-star.is-on{color:#d49a2a}
+.zf-star.is-on .icon{fill:#f5c76a}
+.zf-colrow{display:flex;align-items:center;gap:10px;min-height:44px;padding:4px 4px 4px 14px;border-radius:16px;background:var(--soft)}
+.zf-colrow>span:first-child{font-weight:800;font-size:15px}
+.zf-dots{display:flex;gap:6px;margin-right:auto}
+.zf-dots i{width:24px;height:24px;border-radius:50%;background:var(--k);box-shadow:0 0 0 2px var(--panel),0 0 0 3px var(--line)}
+.zf-link{border:0;background:none;color:var(--red);font:inherit;font-weight:800;font-size:14.5px;padding:8px 10px;cursor:pointer}
+/* samen of apart: twee kaartjes met een klein bewegend voorbeeld */
+.zf-together{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.zf-together button{display:grid;gap:3px;padding:7px 7px 12px;border-radius:20px;border:2px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;text-align:left;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease}
+.zf-together canvas{display:block;width:100%;height:70px;border-radius:14px;background:var(--zf-stage);margin-bottom:5px}
+.zf-together b{font-size:16px;font-weight:850;padding:0 5px}
+.zf-together small{font-size:12.5px;color:var(--muted);font-weight:650;padding:0 5px;line-height:1.25}
+.zf-together button[aria-pressed=true]{border-color:var(--ink);box-shadow:0 12px 24px -18px rgba(0,0,0,.7)}
+.zf-stop{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border-radius:999px;border:1px solid var(--line);background:var(--soft);color:var(--ink);font:inherit;font-size:15px;font-weight:800;cursor:pointer}
+.zf-stop .icon{width:16px;height:16px;fill:currentColor;stroke:none}
+/* de tegels: bewegend, in jouw kleuren */
+.zf-picks{display:grid;gap:12px}
+.zf-sechead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:0 4px}
+.zf-sechead h3{margin:0;font-size:18px;font-weight:850}
+.zf-sechead small{color:var(--muted);font-size:12.5px;font-weight:650}
+.zf-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.zf-tile{display:grid;gap:8px;padding:7px 7px 12px;border-radius:24px;border:2px solid transparent;background:var(--panel);color:var(--ink);font:inherit;text-align:left;cursor:pointer;box-shadow:var(--zf-shadow);transition:border-color .15s ease,transform .15s ease}
+.zf-tile:active{transform:scale(.98)}
+.zf-tilecv{position:relative;display:block;border-radius:17px;overflow:hidden;background:var(--zf-stage)}
+.zf-tilecv canvas{display:block;width:100%;height:78px}
+.zf-tile b{font-size:14.5px;font-weight:800;padding:0 6px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zf-tile.is-on{border-color:var(--red)}
+.zf-tick{position:absolute;right:8px;top:8px;width:26px;height:26px;border-radius:50%;background:var(--red);color:#fff;display:grid;place-items:center;box-shadow:0 4px 10px rgba(0,0,0,.35)}
+.zf-tick .icon{width:15px;height:15px;stroke-width:3}
+.zf-allrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:12px;width:100%;min-height:64px;padding:10px 14px 10px 10px;border-radius:22px;border:1px solid color-mix(in srgb,var(--line) 75%,transparent);background:var(--panel);color:var(--ink);font:inherit;text-align:left;cursor:pointer;box-shadow:var(--zf-shadow)}
+.zf-allic{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:#202220;color:#fff}
+body[data-theme=dark] .zf-allic{background:#f3f2ee;color:#18191b}
+.zf-allrow b{display:block;font-size:16px;font-weight:850}
+.zf-allrow small{display:block;color:var(--muted);font-size:12.5px;font-weight:650}
+.zf-allrow em{font-style:normal;font-weight:850;color:var(--muted);font-variant-numeric:tabular-nums}
+.zf-allrow>.icon{color:var(--muted)}
+
+/* ---------- vellen (onderaan, zoals de vensters van de app) ---------- */
+.zf-sheet{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.zf-sheet-back{position:absolute;inset:0;background:rgba(14,15,17,.42);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;transition:opacity .25s ease}
+.zf-panel{position:relative;width:100%;max-width:640px;max-height:92dvh;overflow:auto;overscroll-behavior:contain;box-sizing:border-box;padding:18px 16px calc(24px + env(safe-area-inset-bottom,0px));border-radius:32px 32px 0 0;
+  background:var(--bg,#f5f4f2);box-shadow:0 -18px 40px -20px rgba(0,0,0,.4);display:grid;gap:16px;align-content:start;transform:translateY(100%);transition:transform .32s cubic-bezier(.2,.8,.2,1)}
+body[data-theme=dark] .zf-panel{background:#17181a}
+.zf-sheet.is-in .zf-sheet-back{opacity:1}
+.zf-sheet.is-in .zf-panel{transform:none}
+.zf-sheet.is-out .zf-panel{transform:translateY(100%)}
+.zf-sheet.is-out .zf-sheet-back{opacity:0}
+.zf-sh{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.zf-sh b{font-size:23px;font-weight:850;letter-spacing:-.025em}
+.zf-sh>div{display:grid;min-width:0}
+/* bibliotheek */
+.zf-search{display:flex;align-items:center;gap:10px;min-height:50px;padding:0 16px;border-radius:16px;border:1px solid var(--line);background:var(--panel);color:var(--muted)}
+.zf-search input{flex:1;min-width:0;border:0;background:none;font:inherit;font-size:16px;color:var(--ink);outline:none}
+.zf-groups{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px 2px}
+.zf-groups::-webkit-scrollbar{display:none}
+.zf-groups button{flex:none;display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 15px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-size:14px;font-weight:750;cursor:pointer;white-space:nowrap}
+.zf-groups small{font-size:12px;font-weight:800;color:var(--muted)}
+.zf-groups button[aria-pressed=true]{background:#202220;color:#fff;border-color:#202220}
+.zf-groups button[aria-pressed=true] small{color:rgba(255,255,255,.65)}
+body[data-theme=dark] .zf-groups button[aria-pressed=true]{background:#f3f2ee;color:#18191b;border-color:#f3f2ee}
+body[data-theme=dark] .zf-groups button[aria-pressed=true] small{color:rgba(0,0,0,.55)}
+.zf-list{display:grid;gap:8px}
+.zf-li{display:grid;grid-template-columns:118px minmax(0,1fr) auto;align-items:center;gap:12px;padding:6px 12px 6px 6px;border-radius:20px;border:1.5px solid transparent;background:var(--panel);color:var(--ink);font:inherit;text-align:left;cursor:pointer;box-shadow:0 10px 24px -22px rgba(0,0,0,.6)}
+.zf-li.is-on{border-color:var(--red)}
+.zf-licv{display:block;border-radius:14px;overflow:hidden;background:var(--zf-stage)}
+.zf-licv canvas{display:block;width:118px;height:54px}
+.zf-litxt{display:grid;min-width:0}
+.zf-litxt b{font-size:15.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zf-litxt small{color:var(--muted);font-size:12.5px;font-weight:650}
+.zf-li .zf-tick{position:static}
+.zf-saved-star{color:#d49a2a}
+.zf-saved-star .icon{fill:#f5c76a;width:18px;height:18px}
+.zf-none{margin:0;padding:24px 10px;color:var(--muted);text-align:center;font-weight:650}
+/* tandwiel */
+.zf-orderrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;width:100%;padding:14px 16px 14px 14px;border-radius:24px;border:0;background:#202220;color:#fff;font:inherit;text-align:left;cursor:pointer;box-shadow:0 18px 34px -22px rgba(0,0,0,.8)}
+body[data-theme=dark] .zf-orderrow{background:#f3f2ee;color:#18191b}
+.zf-orderic{display:grid;place-items:center;width:48px;height:48px;border-radius:16px;background:rgba(255,255,255,.12)}
+body[data-theme=dark] .zf-orderic{background:rgba(0,0,0,.08)}
+.zf-orderic .icon{width:28px;height:28px}
+.zf-orderrow b{display:block;font-size:17px;font-weight:850}
+.zf-orderrow small{display:block;font-size:13px;font-weight:600;opacity:.7}
+.zf-gsec{display:grid;gap:10px}
+.zf-gsec h3{margin:0;font-size:17px;font-weight:850}
+.zf-views{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}
+.zf-views button{display:grid;gap:6px;padding:6px 6px 10px;border-radius:20px;border:2px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;cursor:pointer}
+.zf-views canvas{display:block;width:100%;height:100px;border-radius:14px;background:var(--zf-stage)}
+.zf-views b{font-size:14px;font-weight:800}
+.zf-views button{align-content:start}
+.zf-views small{font-size:11.5px;font-weight:650;color:var(--muted);line-height:1.2;margin-top:-3px}
+.zf-views button[aria-pressed=true]{border-color:var(--ink)}
+.zf-rcvs{display:grid;gap:8px}
+.zf-rcv{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:8px 10px 8px 12px;border-radius:18px;background:var(--panel);border:1px solid color-mix(in srgb,var(--line) 75%,transparent)}
+.zf-rart{display:grid;place-items:center;width:64px;height:34px;overflow:hidden;color:var(--muted)}
+.zf-rart svg{width:64px;height:auto}
+.zf-rcv b{font-variant-numeric:tabular-nums;font-size:15px}
+.zf-chip{border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:999px;min-height:36px;padding:0 13px;font:inherit;font-size:13px;font-weight:750;cursor:pointer}
+.zf-addrcv{display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;border-radius:18px;border:1.5px dashed color-mix(in srgb,var(--ink) 28%,transparent);color:var(--ink);text-decoration:none;font-weight:800}
+.zf-tutlink{justify-self:start;display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 16px 0 6px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-weight:800;cursor:pointer}
+.zf-tutlink i{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--red);color:#fff}
+.zf-tutlink i .icon{width:13px;height:13px;fill:currentColor;stroke:none;margin-left:2px}
+/* groot voorbeeld */
+.zf-fullsheet .zf-panel{max-height:96dvh}
+.zf-fullbox{display:grid;gap:14px}
+/* bewaarde kleur lang ingedrukt */
+.zf-heldhead{display:flex!important;align-items:center;gap:12px}
+.zf-heldhead i{width:36px;height:36px;border-radius:50%;background:var(--k);box-shadow:0 0 0 1px var(--line)}
+.zf-heldbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* een zone aanmaken */
+.zf-field{display:grid;gap:7px}
+.zf-field span{font-weight:800}
+.zf-field input{min-height:52px;padding:0 16px;border-radius:16px;border:1px solid var(--line);background:var(--panel);font:inherit;font-size:16.5px;color:var(--ink)}
+.zf-nw{display:grid;gap:16px}
+.zf-q{margin:4px 0 0;font-size:25px;font-weight:850;letter-spacing:-.025em;line-height:1.15}
+.zf-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.zf-opts.is-three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.zf-opt{display:grid;gap:3px;align-content:start;padding:7px 7px 13px;border-radius:22px;border:2px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.zf-opt canvas{display:block;width:100%;height:92px;border-radius:15px;background:var(--zf-stage);margin-bottom:6px}
+.zf-opt b{font-size:15px;font-weight:850;padding:0 5px;line-height:1.2}
+.zf-opt small{font-size:12.5px;color:var(--muted);font-weight:650;padding:0 5px;line-height:1.25}
+.zf-opt[aria-pressed=true]{border-color:var(--ink);box-shadow:0 14px 26px -18px rgba(0,0,0,.7)}
+.zf-go{width:100%}
+/* tunnel-pop-up (RGBW, 2e receiver) */
+.zf-popbody{display:grid;gap:12px;text-align:center}
+.zf-popbody canvas{display:block;width:100%;height:170px;border-radius:22px;background:var(--zf-stage)}
+.zf-popbody p{margin:0;color:var(--muted);line-height:1.4;font-weight:600}
+.zf-later{border:0;background:none;color:var(--ink);font:inherit;font-weight:800;min-height:46px;cursor:pointer}
+.zf-sheet-open{overflow:hidden}
+
+
+/* de kleuren van een animatie (zoals de app: tik op een kleur om ze te wijzigen) */
+.zf-palhead{display:grid;gap:1px;margin-top:-2px}
+.zf-palhead b{font-size:15.5px;font-weight:850}
+.zf-palhead small{color:var(--muted);font-size:12.5px;font-weight:650}
+.zf-palette{display:flex;flex-wrap:wrap;gap:12px 10px}
+.zf-palitem{position:relative}
+.zf-palcol,.zf-paladd{display:grid;justify-items:center;gap:5px;width:64px;padding:0;border:0;background:none;color:var(--ink);font:inherit;cursor:pointer}
+.zf-palcol i,.zf-paladd i{display:grid;place-items:center;width:54px;height:54px;border-radius:17px;background:var(--k);box-shadow:0 0 0 1px var(--line),0 10px 18px -12px rgba(0,0,0,.55);border:3px solid var(--panel)}
+.zf-paladd i{background:var(--soft);border:1.5px dashed color-mix(in srgb,var(--ink) 30%,transparent);box-shadow:none}
+.zf-palcol small,.zf-paladd small{font-size:12px;font-weight:750;color:var(--muted)}
+.zf-palitem .zf-x{left:auto;right:-4px;top:-8px}
+/* zo loopt het, achtergrond, geavanceerd */
+.zf-run{gap:14px!important}
+.zf-dirs{grid-template-columns:1fr 1fr}
+.zf-bgsw{display:block;width:26px;height:26px;border-radius:50%;background:var(--k);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ink) 25%,transparent)}
+.zf-bgpick{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;min-height:52px;padding:6px 12px 6px 8px;border-radius:16px;border:1px solid var(--line);background:var(--soft);color:var(--ink);font:inherit;font-weight:800;text-align:left;cursor:pointer}
+.zf-bgpick i{width:36px;height:36px;border-radius:11px;background:var(--k);box-shadow:0 0 0 1px var(--line)}
+.zf-bgpick .icon{color:var(--muted)}
+.zf-bgcard{display:grid;gap:10px;padding-top:12px;border-top:1px solid var(--line)}
+.zf-adv summary{gap:12px}
+.zf-adv summary .zf-rowic .icon{width:20px;height:20px}
+.zf-adv summary>span:nth-child(2){font-size:17px;font-weight:850}
+.zf-adv .zf-textbtn{justify-self:start}
+.zf-colsheet .zf-card{gap:14px}
+
+
+/* de bibliotheek: sorteren, en per soort de varianten samen op een rij */
+.zf-sortbar{display:flex;align-items:center;gap:10px;margin-top:-4px}
+.zf-sortbar>span{color:var(--muted);font-size:13px;font-weight:750}
+.zf-sort{display:flex;gap:4px;padding:3px;border-radius:999px;background:var(--soft);border:1px solid var(--line)}
+.zf-sort button{min-height:34px;padding:0 12px;border-radius:999px;border:0;background:none;color:var(--muted);font:inherit;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap}
+.zf-sort button[aria-pressed=true]{background:var(--panel);color:var(--ink);box-shadow:0 4px 10px -6px rgba(0,0,0,.45)}
+.zf-cathead{margin:8px 2px -2px;font-size:13px;font-weight:850;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.zf-fam{display:grid;gap:10px;padding:12px;border-radius:22px;background:var(--panel);border:1px solid color-mix(in srgb,var(--line) 75%,transparent);box-shadow:0 10px 24px -22px rgba(0,0,0,.6)}
+.zf-fam.has-current{border-color:color-mix(in srgb,var(--red) 55%,var(--line))}
+.zf-fam header{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:0 2px}
+.zf-fam header b{font-size:16px;font-weight:850}
+.zf-fam header small{color:var(--muted);font-size:12.5px;font-weight:700;white-space:nowrap}
+/* de varianten van één soort naast elkaar: alles in één oogopslag, niets verstopt achter opzij schuiven */
+.zf-famrow{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+.zf-var{min-width:0;display:grid;gap:6px;padding:5px 5px 9px;border-radius:18px;border:2px solid transparent;background:var(--soft);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.zf-var.is-on{border-color:var(--red)}
+.zf-varcv{position:relative;display:block;border-radius:13px;overflow:hidden;background:var(--zf-stage)}
+.zf-varcv canvas{display:block;width:100%;height:58px}
+.zf-var b{font-size:13.5px;font-weight:800;padding:0 4px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zf-var .zf-tick{width:22px;height:22px;right:6px;top:6px}
+.zf-var .zf-saved-star{position:absolute;right:6px;top:6px}
+
+@media (max-width:380px){
+  .zf-top{grid-template-columns:40px minmax(0,1fr) auto 40px;gap:8px}
+  .zf-round{width:40px;height:40px}
+  .zf-title b{font-size:19px}
+  .zf-power>span{display:none}
+  .zf-tiles{gap:8px}
+}
+@media (min-width:700px){
+  .zf-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (prefers-reduced-motion:reduce){.zf-panel,.zf-sheet-back,.zf-dock,.zf-stage canvas[data-stagecv],.zf-undo{transition:none}.zf-bub.is-edit i{animation:none}}
+
+/* ---------- de tutorial (ZfIntro): de echte pagina in de iPhone, de stand ernaast ---------- */
+.zfi .ki-sub{transition:opacity .35s ease,transform .35s ease;transform:translateY(6px)}
+.zfi .ki-sub.is-on{opacity:1;transform:none}
+.zfi-label{position:absolute;color:#a9a7a2;font-size:13px;font-weight:850;letter-spacing:.12em;text-transform:uppercase}
+.zfi-stand{position:absolute;border-radius:24px;overflow:hidden;background:#101114;box-shadow:0 30px 60px -34px #000,inset 0 0 0 1px rgba(255,255,255,.06)}
+.zfi-stand canvas{display:block;width:100%;height:100%}
+.zfi-frame{position:absolute;left:0;border:0;transform-origin:0 0;pointer-events:none;background:var(--bg,#f5f4f2)}
+.zfi-ring{position:absolute;left:0;top:0;width:0;height:0;box-sizing:border-box;border-radius:20px;border:3px solid #FFC61A;opacity:0;pointer-events:none;z-index:9;
+  box-shadow:0 0 0 2px rgba(0,0,0,.35),0 0 24px rgba(255,198,26,.55);transition:opacity .25s ease,left .45s cubic-bezier(.45,.05,.25,1),top .45s cubic-bezier(.45,.05,.25,1),width .45s cubic-bezier(.45,.05,.25,1),height .45s cubic-bezier(.45,.05,.25,1)}
+.zfi-ring.is-on{opacity:1;animation:zfi-pulse 1.5s ease-in-out infinite}
+@keyframes zfi-pulse{50%{box-shadow:0 0 0 2px rgba(0,0,0,.35),0 0 38px rgba(255,198,26,.8)}}
+.zfi .zfi-finger{z-index:10;transition-property:left,top,opacity,transform;transition-timing-function:cubic-bezier(.45,.05,.25,1);transition-duration:600ms}
+.zfi .zfi-finger.is-press{transform:scale(.78)}
+@media (prefers-reduced-motion:reduce){.zfi-ring.is-on{animation:none}.zfi .zfi-finger{transition:none}}
+
+/* nooit breder dan het scherm: één kolom die mag krimpen (lange teksten breken af of krijgen …, ze duwen de pagina niet breder) */
+.zf-body,.zf-picks,.zf-panel,.zf-nw,.zf-fullbox,.zf-gsec,.zf-morebody,.zf-app .zf-card.card{grid-template-columns:minmax(0,1fr)}
+.zf-main>*,.zf-body>*,.zf-panel>*{min-width:0}
+.zf-lib .zf-panel{overflow-x:hidden}
+
+/* geavanceerd: een klein bewegend icoontje per instelling (een stukje ledline dat toont wat de instelling doet) */
+.zf-ai{position:relative;flex:none;width:46px;height:22px;border-radius:7px;background:#15161a;overflow:hidden;display:block}
+.zf-ai b{position:absolute;top:8px;left:6px;width:6px;height:6px;border-radius:3px;background:#ffc61a;box-shadow:0 0 6px #ffc61a}
+.zf-ai-widthPixels b:nth-child(n+2),.zf-ai-width b:nth-child(n+2),.zf-ai-trailLength b:nth-child(n+2),.zf-ai-smooth b:nth-child(n+2),.zf-ai-spread b:nth-child(n+2),.zf-ai-fadeAmount b:nth-child(n+2){display:none}
+.zf-ai-widthPixels b,.zf-ai-width b{left:50%;animation:zfa-width 2.4s ease-in-out infinite}
+@keyframes zfa-width{0%,100%{width:6px;margin-left:-3px}50%{width:32px;margin-left:-16px}}
+.zf-ai-objectCount b{animation:zfa-count 3s steps(1) infinite}
+.zf-ai-objectCount b:nth-child(2){left:20px;animation-name:zfa-count2}
+.zf-ai-objectCount b:nth-child(3){left:34px;animation-name:zfa-count3}
+@keyframes zfa-count{0%,100%{opacity:1}}
+@keyframes zfa-count2{0%,33%{opacity:0}34%,100%{opacity:1}}
+@keyframes zfa-count3{0%,66%{opacity:0}67%,100%{opacity:1}}
+.zf-ai-trailLength b{left:auto;right:6px;animation:zfa-trail 2.6s ease-in-out infinite;background:linear-gradient(90deg,transparent,#ffc61a)}
+@keyframes zfa-trail{0%,100%{width:6px}50%{width:34px}}
+.zf-ai-spacing b:nth-child(1){left:50%;margin-left:-9px;animation:zfa-spaceL 2.6s ease-in-out infinite}
+.zf-ai-spacing b:nth-child(2){left:50%;margin-left:3px;animation:zfa-spaceR 2.6s ease-in-out infinite}
+.zf-ai-spacing b:nth-child(3){display:none}
+@keyframes zfa-spaceL{50%{transform:translateX(-10px)}}
+@keyframes zfa-spaceR{50%{transform:translateX(10px)}}
+.zf-ai-smooth b{animation:zfa-step 2.4s steps(4) infinite,zfa-soft 4.8s steps(1) infinite}
+@keyframes zfa-step{from{transform:translateX(0)}to{transform:translateX(30px)}}
+@keyframes zfa-soft{0%{animation-timing-function:steps(4)}50%,100%{filter:blur(1.2px)}}
+.zf-ai-spread b{left:50%;margin-left:-3px;animation:zfa-spread 2.6s ease-in-out infinite}
+@keyframes zfa-spread{50%{box-shadow:0 0 0 0 #ffc61a,12px 0 8px 2px rgba(255,198,26,.55),-12px 0 8px 2px rgba(255,198,26,.55)}}
+.zf-ai-randomness b{animation:zfa-rand 1.7s steps(1) infinite}
+.zf-ai-randomness b:nth-child(2){left:20px;animation-duration:1.1s;animation-delay:-.4s}
+.zf-ai-randomness b:nth-child(3){left:34px;animation-duration:2.3s;animation-delay:-.9s}
+@keyframes zfa-rand{0%,45%{opacity:1}46%,100%{opacity:.12}}
+.zf-ai-fadeAmount b{left:8px;width:30px;animation:zfa-fade 2.4s ease-in-out infinite}
+@keyframes zfa-fade{0%,100%{opacity:.1}50%{opacity:1}}
+.zf-ai-lineDelayMs b,.zf-ai-delayMs b{left:8px;width:30px;height:3px;top:4px;animation:zfa-line 2.4s linear infinite}
+.zf-ai-lineDelayMs b:nth-child(2),.zf-ai-delayMs b:nth-child(2){top:10px;animation-delay:.5s}
+.zf-ai-lineDelayMs b:nth-child(3),.zf-ai-delayMs b:nth-child(3){top:16px;animation-delay:1s}
+@keyframes zfa-line{0%,100%{opacity:.12}15%,40%{opacity:1}55%{opacity:.12}}
+@media (prefers-reduced-motion:reduce){.zf-ai b{animation:none!important}}
+
+/* kleuren verslepen */
+.zf-points [data-point],.zf-palitem,.zf-bub.is-edit{touch-action:none;-webkit-user-select:none;user-select:none}
+.is-dragging{position:relative;z-index:5;transition:none!important;filter:drop-shadow(0 10px 14px rgba(0,0,0,.4));animation:none!important}
+.is-droptarget{outline:2.5px dashed var(--ink);outline-offset:4px;border-radius:50%}
+.zf-palitem.is-droptarget{border-radius:18px}
+.zf-dragging{cursor:grabbing;-webkit-user-select:none;user-select:none}
+
+/* de aan-knop ook bij het kleurenwiel (zoals in de app) */
+.zf-cardhead .zf-cardpower{margin-left:auto;min-height:40px;flex:none}
+.zf-cardhead:has(.zf-for,.zf-count) .zf-cardpower{margin-left:0}
+.zf-cardhead:has(.zf-cardpower)>:is(.zf-for,.zf-count){margin-left:auto}
+.zf-cardhead h2{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zf-cardhead:has(.zf-for,.zf-count) .zf-cardpower>span{display:none}
+
+/* bewaarde kleuren in het kleurvenster: één rij die je opzij schuift */
+.zf-cspre{display:grid;gap:10px;min-width:0}
+.zf-cspre h3{margin:0;font-size:15px}
+.zf-csrow{display:flex;gap:6px;overflow-x:auto;padding:4px 2px 6px;margin:0 -2px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.zf-csrow::-webkit-scrollbar{display:none}
+.zf-csrow .zf-bub{flex:0 0 66px}
+
+/* verslepen: de andere kleuren schuiven meteen op, je laat los waar je wil */
+.is-shifting{transition:transform .2s cubic-bezier(.2,.8,.2,1)}
+@media (prefers-reduced-motion:reduce){.is-shifting{transition:none}}
+
+/* kleuren zien er overal hetzelfde uit: rond, zoals in de tab Kleur */
+.zf-palcol i,.zf-paladd i{border-radius:50%}
+
+/* een volledig scherm (Alle animaties): logo altijd bovenaan, terugknop boven en onder */
+.zf-page{align-items:stretch}
+.zf-page .zf-panel{--zfp:max(16px,calc((100vw - 760px)/2));max-width:none;height:100dvh;max-height:100dvh;border-radius:0;padding-top:0;padding-inline:var(--zfp);transform:translateX(100%)}
+.zf-page.is-in .zf-panel{transform:none}
+.zf-page.is-out .zf-panel{transform:translateX(100%)}
+.zf-page .zf-pagehead{position:sticky;top:0;z-index:4;margin:0 calc(-1*var(--zfp)) 12px;padding:0 0 10px;background:inherit;box-shadow:0 10px 18px -18px rgba(0,0,0,.45)}
+.zf-page .zf-pagehead .brand-bar{position:static;margin:0}
+.zf-page .zf-pagebar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;max-width:760px;margin:10px auto 0;padding:0 16px}
+.zf-page .zf-pagebar b{font-size:21px;font-weight:850;letter-spacing:-.025em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zf-backbtn{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 16px 0 12px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--ink);font:inherit;font-size:15px;font-weight:800;cursor:pointer}
+.zf-backbtn .icon{width:19px;height:19px}
+.zf-pageback{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:18px}
+.zf-pageback .icon{width:19px;height:19px}
+@media (prefers-reduced-motion:reduce){.zf-page .zf-panel{transform:none}}
+
+/* weergave wisselen bij het voorbeeld zelf: een klein knopje rechtsboven dat openplooit */
+.zf-stage{position:relative}
+.zf-viewswitch{position:absolute;right:8px;top:8px;z-index:4;display:flex;gap:4px;padding:3px;border-radius:999px;background:rgba(16,17,20,.72);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.14)}
+.zf-viewswitch button{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:32px;padding:0 10px;border:0;border-radius:999px;background:none;color:rgba(255,255,255,.82);font:inherit;font-size:12.5px;font-weight:750;cursor:pointer;white-space:nowrap}
+.zf-viewswitch button svg{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.zf-viewswitch button .icon{width:12px;height:12px;rotate:90deg;opacity:.7}
+.zf-viewswitch.is-open{left:8px;justify-content:space-between;animation:zf-viewopen .2s ease}
+.zf-viewswitch.is-open button{flex:1 1 0;min-height:36px;font-size:13px}
+.zf-viewswitch.is-open button[aria-pressed=true]{background:#f3f4f6;color:#16181b}
+@keyframes zf-viewopen{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.zf-viewswitch.is-open{animation:none}}
+.zf-dock.is-compact .zf-viewswitch{display:none}
+.zf-page .zf-panel{align-content:start;grid-auto-rows:max-content}
+.zf-page .zf-panel>*{flex:none}
+
+/* Samen: de ledlines in de doorlopende lijn (een streepje waar de volgende begint, het nummer eronder) */
+.zf-stage .v50-preview-canvas-stage{position:relative}
+.zf-segs{position:absolute;left:18px;right:18px;top:0;bottom:0;display:flex;pointer-events:none}
+.zf-segs i{flex:1 1 0;min-width:0;position:relative}
+.zf-segs i+i::before{content:"";position:absolute;left:-1.5px;top:calc(50% - 12px);width:3px;height:24px;border-radius:2px;background:#101114}
+.zf-segs i+i::after{content:"";position:absolute;left:-.5px;top:calc(50% - 12px);width:1px;height:24px;background:rgba(255,255,255,.55)}
+.zf-segs b{position:absolute;left:50%;top:calc(50% + 11px);translate:-50% 0;font-size:11px;font-weight:800;color:rgba(255,255,255,.72);font-style:normal}
+.zf-dock.is-compact .zf-segs b{top:calc(50% + 9px);font-size:10px}
+/* ledlines samenvoegen (Geavanceerd in het tandwiel) */
+.zf-joinsec summary{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:52px;cursor:pointer;list-style:none}
+.zf-joinsec summary::-webkit-details-marker{display:none}
+.zf-joinsec summary span{display:grid;gap:1px}.zf-joinsec summary b{font-size:17px;font-weight:800}.zf-joinsec summary small{color:var(--muted);font-size:13px;font-weight:650}
+.zf-joinsec summary .icon{width:18px;height:18px;transition:rotate .2s ease}.zf-joinsec[open] summary .icon{rotate:90deg}
+.zf-joinlist{display:grid;gap:6px;margin-top:10px}
+.zf-joinrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;min-height:54px;padding:8px 12px;border:1px solid var(--line);border-radius:16px;background:var(--panel)}
+.zf-joinrow.is-joined{border-color:color-mix(in srgb,var(--ink) 45%,transparent)}
+.zf-joinnum{display:grid;place-items:center;width:30px;height:30px;border-radius:10px;background:var(--ink);color:var(--panel);font-size:14px;font-weight:850}
+.zf-jointxt{display:grid;gap:1px;min-width:0}.zf-jointxt b{font-size:15px}.zf-jointxt small{color:var(--muted);font-size:12.5px;font-weight:650}
+.zf-joinbtn{justify-self:center;display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 14px;border:1.5px dashed color-mix(in srgb,var(--ink) 30%,transparent);border-radius:999px;background:none;color:var(--ink);font:inherit;font-size:13.5px;font-weight:750;cursor:pointer}
+.zf-joinbtn .icon{width:17px;height:17px}
+
+/* eigen timing: tab in Geavanceerd en de tijdlijn op een volledig scherm */
+.zf-advtabs{align-self:start;margin-bottom:4px}
+.zf-seqmini{display:block;width:100%;padding:14px 16px 26px;border:1px solid var(--line);border-radius:18px;background:var(--panel);cursor:pointer}
+.zf-seqbar{position:relative;display:block;height:4px;border-radius:2px;background:color-mix(in srgb,var(--ink) 14%,transparent)}
+.zf-seqbar i{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--ink)}
+.zf-seqbar b{position:absolute;left:50%;top:16px;translate:-50% 0;font-size:10.5px;font-weight:800;font-style:normal;color:var(--muted)}
+.zf-seqstage{margin:0!important}
+.zf-seqstage canvas{display:block;width:100%;height:min(34dvh,260px)}
+.zf-seqcard{gap:6px!important;padding:16px 14px 12px!important}
+.zf-seqrows{position:relative;display:grid;gap:4px}
+.zf-seqrow{display:grid;grid-template-columns:30px minmax(0,1fr) 54px;align-items:center;gap:12px;min-height:46px}
+.zf-seqrow output{font-size:12.5px;font-weight:750;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.zf-seqtrack{position:relative;height:46px;touch-action:none;cursor:pointer}
+.zf-seqtrack::before{content:"";position:absolute;left:0;right:0;top:50%;height:4px;margin-top:-2px;border-radius:2px;background:color-mix(in srgb,var(--ink) 12%,transparent)}
+.zf-seqhold{position:absolute;top:50%;height:10px;margin-top:-5px;border-radius:5px;background:color-mix(in srgb,var(--ink) 34%,transparent);pointer-events:none}
+.zf-seqdot{position:absolute;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;padding:0;border:3px solid var(--panel);border-radius:50%;background:var(--ink);box-shadow:0 0 0 1px var(--line),0 6px 12px -6px rgba(0,0,0,.5);cursor:grab;touch-action:none}
+.zf-seqhead{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;border-radius:1px;background:#e2231a;opacity:.75;pointer-events:none}
+.zf-seqscale{position:relative;height:16px;margin:2px 66px 0 42px}
+.zf-seqscale span{position:absolute;top:0;translate:-50% 0;font-size:10.5px;font-weight:700;color:var(--muted);white-space:nowrap}
+.zf-seqh{margin:0;font-size:17px}
+.zf-seqpresets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.zf-seqpresets button{display:grid;gap:3px;justify-items:start;min-height:58px;padding:10px 12px;border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.zf-seqpresets b{font-size:14.5px}.zf-seqpresets small{color:var(--muted);font-size:12px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.zf-seqpage .zf-panel{display:grid;gap:12px}
+
+/* eigen timing, makkelijker: het voorbeeld blijft in beeld, tik het ritme, − en + per ledline */
+.zf-seqpage .zf-seqstage{position:sticky;top:var(--zf-seqtop,118px);z-index:3;box-shadow:0 14px 22px -18px rgba(0,0,0,.6)}
+.zf-seqpage .zf-seqstage canvas{height:min(26dvh,210px)}
+.zf-seqtapcard{padding:10px!important}
+.zf-seqtap{display:grid;justify-items:center;gap:6px;width:100%;min-height:112px;padding:16px 14px;border:0;border-radius:20px;background:var(--ink);color:var(--panel);font:inherit;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none;transition:transform .08s ease}
+.zf-seqtap:active{transform:scale(.975)}
+.zf-seqtap b{font-size:21px;font-weight:850;letter-spacing:-.02em}
+.zf-seqtap small{font-size:13.5px;font-weight:650;opacity:.78;text-align:center}
+.zf-seqtap.is-rec{background:#e2231a;color:#fff}
+.zf-seqtapdots{display:flex;gap:7px;margin-top:4px}
+.zf-seqtapdots i{width:10px;height:10px;border-radius:50%;background:currentColor;opacity:.28}
+.zf-seqtapdots i.on{opacity:1}
+.zf-seqrow{grid-template-columns:30px minmax(0,1fr) auto!important;gap:10px!important}
+.zf-seqnudge{display:inline-flex;align-items:center;gap:2px}
+.zf-seqnudge button{width:34px;height:38px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);font:inherit;font-size:19px;font-weight:700;line-height:1;cursor:pointer;touch-action:manipulation}
+.zf-seqnudge output{min-width:46px;text-align:center!important}
+.zf-seqscale{margin:2px 132px 0 40px!important}
+.zf-seqdot{width:30px!important;height:30px!important;margin:-15px 0 0 -15px!important}
+
+/* klein voorbeeld (na scrollen): wand en tunnel krijgen wat meer hoogte, zodat ze herkenbaar blijven */
+.zf-dock.is-compact .zf-stage:has([data-preview-spatial]:not([data-preview-spatial=""])) canvas[data-stagecv]{height:min(var(--stage-h,190px),148px)}
+
+.zf-viewswitch:not(.is-open) button{width:34px;min-height:34px;padding:0}
+.zf-viewswitch:not(.is-open) button svg{width:18px;height:18px}
+
+/* label SPI / RGBW */
+.zf-kind{display:inline-flex;align-items:center;gap:3px;height:22px;padding:0 9px 0 7px;border-radius:999px;background:#16181b;color:#fff;vertical-align:middle;flex:none}
+.zf-kind b{margin-left:4px;font-size:11px;font-weight:850;letter-spacing:.08em;color:#fff;font-style:normal}
+.zf-kind i{width:6px;height:6px;border-radius:2px}
+.zf-kind[data-kind=spi] i:nth-child(1){background:#ff3b6b}.zf-kind[data-kind=spi] i:nth-child(2){background:#ffb020}.zf-kind[data-kind=spi] i:nth-child(3){background:#2fd27a}.zf-kind[data-kind=spi] i:nth-child(4){background:#3b8bff}
+.zf-kind[data-kind=rgbw] i{border-radius:50%}
+.zf-kind[data-kind=rgbw] i:nth-child(1){background:#ff3b30}.zf-kind[data-kind=rgbw] i:nth-child(2){background:#30d158}.zf-kind[data-kind=rgbw] i:nth-child(3){background:#0a84ff}.zf-kind[data-kind=rgbw] i:nth-child(4){background:#fff}
+body[data-theme=dark] .zf-kind{background:#f3f4f6}body[data-theme=dark] .zf-kind b{color:#16181b}
+body[data-theme=dark] .zf-kind[data-kind=rgbw] i:nth-child(4){box-shadow:0 0 0 1px #9aa0a8}
+.zf-title small{display:flex;align-items:center;gap:7px;min-width:0}
+.zf-title small>span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* snelle keuzes van de eigen timing: het ritme als bolletjes */
+.zf-seqpat{position:relative;display:block;width:100%;height:10px;margin-top:4px}
+.zf-seqpat::before{content:"";position:absolute;left:0;right:0;top:50%;height:2px;margin-top:-1px;border-radius:1px;background:color-mix(in srgb,var(--ink) 14%,transparent)}
+.zf-seqpat i{position:absolute;top:50%;width:9px;height:9px;margin:-4.5px 0 0 0;border-radius:50%;background:var(--ink)}
+.zf-title small{flex-wrap:wrap;row-gap:3px;font-size:12.5px}
+.zf-kind{height:20px;padding:0 8px 0 6px}
+.zf-kind i{width:5px;height:5px}
+.zf-kind b{font-size:10.5px}
+
+/* 12 nov (avond): label SPI / RGBW als eenvoudig vakje, zonder puntjes */
+.zf-kind,body[data-theme=dark] .zf-kind{display:inline-flex;align-items:center;height:20px;padding:0 7px;border:1.5px solid color-mix(in srgb,var(--ink) 55%,transparent);border-radius:6px;background:transparent;color:var(--ink);font-size:10.5px;font-weight:850;letter-spacing:.08em;line-height:1;vertical-align:middle;flex:none}
+/* kleine weergave (na scrollen): de nummers 1, 2, 3 … blijven om ledlines te kiezen; de tekening gebruikt de ruimte */
+.zf-dock.is-compact .v50-preview-line-targets{display:block}
+.zf-dock.is-compact .v50-preview-line-badge{scale:.8}
+.zf-dock.is-compact .zf-stage:has([data-preview-spatial=tunnel]) canvas[data-stagecv]{height:min(var(--stage-h,190px),184px)}
+.zf-dock.is-compact .zf-stage[data-preview-layout=stacked]:has([data-preview-spatial=""]) canvas[data-stagecv]{height:min(var(--stage-h,190px),calc(var(--zf-n,5)*27px + 8px))}
+/* Geavanceerd: twee duidelijke knoppen (Instellingen · Eigen timing) */
+.zf-advtabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
+.zf-advtabs button{display:flex;align-items:center;gap:10px;min-height:58px;padding:9px 12px;border:1.5px solid var(--line);border-radius:16px;background:var(--panel);color:var(--ink);font:inherit;text-align:left;cursor:pointer;touch-action:manipulation}
+.zf-advtabs button svg{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.zf-advtabs button span{display:grid;gap:1px;min-width:0}
+.zf-advtabs button b{font-size:15px;font-weight:800;line-height:1.15}
+.zf-advtabs button small{font-size:12px;font-weight:650;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zf-advtabs button[aria-pressed=true]{border-color:var(--ink);background:var(--ink);color:var(--panel)}
+.zf-advtabs button[aria-pressed=true] small{color:inherit;opacity:.72}
+/* tijdlijn: het nummer staat in het bolletje, een raster toont de tijd, en het bolletje licht op als die ledline brandt */
+.zf-seqrows{padding-left:17px}
+.zf-seqrow{grid-template-columns:minmax(0,1fr) auto!important}
+.zf-seqdot{display:grid;place-items:center;width:32px!important;height:32px!important;margin:-16px 0 0 -16px!important;color:var(--panel);font:inherit;font-size:13px;font-weight:850;line-height:1;transition:background-color .12s ease,box-shadow .12s ease,transform .12s ease}
+.zf-seqdot.is-on{background:#e2231a;box-shadow:0 0 0 1px #e2231a,0 0 14px rgba(226,35,26,.55);transform:scale(1.12)}
+.zf-seqgrid{position:absolute;left:17px;right:128px;top:0;bottom:0;pointer-events:none}
+.zf-seqgrid i{position:absolute;top:2px;bottom:2px;width:1px;background:color-mix(in srgb,var(--ink) 9%,transparent)}
+.zf-seqhold{background:linear-gradient(90deg,color-mix(in srgb,var(--ink) 40%,transparent),color-mix(in srgb,var(--ink) 16%,transparent))!important}
+.zf-seqscale{margin:2px 128px 0 17px!important}
+.zf-seqhead{width:2.5px!important;opacity:.9!important}
+@media (prefers-reduced-motion:reduce){.zf-seqdot{transition:none}}
+/* kleine weergave, tunnel: de tunnel links, rechts ernaast wat er gekozen is en de knop Alle (in plaats van lege ruimte) */
+.zf-dock.is-compact .zf-stage:has([data-preview-spatial=tunnel]){display:grid;grid-template-columns:minmax(0,54%) minmax(0,1fr);align-items:center}
+.zf-dock.is-compact .zf-stage:has([data-preview-spatial=tunnel]) .v50-preview-actions{display:block;margin:0;padding:0 12px 0 4px;border:0;background:none}
+.zf-dock.is-compact .zf-stage:has([data-preview-spatial=tunnel]) .v50-preview-toolbar{display:grid;gap:10px;justify-items:start}
+.zf-dock.is-compact .zf-stage:has([data-preview-spatial=tunnel]) :is(.v50-preview-expand,.v50-preview-inline-hint){display:none}
+
+/* Looplicht (de eigenaar 13 nov): het beeldje dat zonder woorden toont wat een looplicht doet: drie ledlines die na elkaar oplichten */
+.zf-loop{position:relative;display:inline-grid;grid-auto-flow:column;gap:4px;flex:none;width:34px;height:22px;padding:3px 5px;box-sizing:border-box;border-radius:7px;background:#141416}
+.zf-loop b{display:block;width:4px;height:100%;border-radius:2px;background:#3a3a40;animation:zf-loop 1.5s linear infinite}
+.zf-loop b:nth-child(2){animation-delay:.5s}
+.zf-loop b:nth-child(3){animation-delay:1s}
+@keyframes zf-loop{0%,8%{background:#ff6a3d;box-shadow:0 0 6px #ff6a3d}30%,100%{background:#3a3a40;box-shadow:none}}
+.zf-loophead{display:flex;align-items:center;gap:10px;margin:2px 2px 4px;color:var(--ink);font-size:14.5px;font-weight:700}
+.zf-loophead span{display:grid;gap:1px}
+.zf-loophead small{color:var(--muted);font-size:13px;font-weight:650}
+/* een looplicht dat nog niet kan (minder dan 2 ledlines / receivers): grijs, met "vanaf 2"; het voorbeeld speelt zacht mee */
+.zf-tile.is-later,.zf-var.is-later,.zf-li.is-later{cursor:default;opacity:.55;filter:grayscale(.75)}
+.zf-tile.is-later:active,.zf-var.is-later:active{transform:none}
+.zf-from{position:absolute;right:8px;bottom:8px;padding:3px 8px;border-radius:999px;background:rgba(20,20,22,.88);color:#fff;font-size:11.5px;font-weight:800;font-style:normal;letter-spacing:.02em}
+.zf-li .zf-from{position:static;margin-left:auto;align-self:center}
+.zf-groups button.is-later{opacity:.6}
+@media (prefers-reduced-motion:reduce){.zf-loop b{animation:none}.zf-loop b:first-child{background:#ff6a3d}}
+/* de weergave onder het voorbeeld (de eigenaar 13 nov: "een compacte knop die duidelijk aangeeft; hoeft niet in het voorbeeld"):
+   twee kleine schakelaars naast elkaar; past het niet, dan komt de tweede eronder */
+.zf-viewbar{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:-4px 0}
+@media (max-width:400px){.zf-seg button{padding:0 7px;gap:4px;font-size:12.5px;letter-spacing:-.01em}.zf-seg button svg{width:16px;height:16px}
+  /* smal scherm: bij de weergave alleen de icoontjes (liggend, staand), zodat alles op één rij past */
+  .zf-viewbar:has(.zf-seg+.zf-seg) .zf-seg-view button span{display:none}}
+.zf-seg{flex:0 1 auto;display:flex;gap:2px;padding:2px;border-radius:999px;background:rgba(120,124,130,.14)}
+.zf-seg button{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:30px;min-width:34px;padding:0 9px;border:0;border-radius:999px;background:none;color:var(--muted);font:inherit;font-size:13px;font-weight:800;white-space:nowrap;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.zf-seg button svg{width:17px;height:17px;flex:none;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round}
+/* gekozen: wit op grijs (zoals een schakelaar), zodat het niet lijkt op de zwarte tabs Kleur en Animaties */
+.zf-seg button[aria-pressed=true]{background:var(--panel,#fff);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.14),0 0 0 .5px rgba(0,0,0,.06)}
+.zf-dock.is-compact .zf-viewbar{display:none}
+.zf-fullbox .zf-viewbar{margin-top:10px}
+/* Horizontaal/Verticaal in de donkere balk van het voorbeeld (de eigenaar 13 nov): klein, naast Volledig scherm */
+.v50-preview-toolbar .zf-seg{flex:none;align-self:center;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14)}
+.v50-preview-toolbar .zf-seg button{min-height:30px;color:rgba(255,255,255,.72)}
+.v50-preview-toolbar .zf-seg button[aria-pressed=true]{background:#f3f4f6;color:#16181b;box-shadow:none}
+/* krap (smal scherm of naast Alle): alleen de icoontjes; het woord staat in de knop als uitleg (title) */
+.zf-dock.is-compact .v50-preview-toolbar .zf-seg{display:none}
+/* de eigenaar 13 nov: "vaste kleur en 5 ledlines het licht loopt door, dat moet er allemaal niet op + de tekst volledig scherm
+   ook niet": de balk van het voorbeeld heeft alleen knoppen (Horizontaal/Verticaal links, Alle en volledig scherm rechts) */
+.zf-stage .v50-selection-summary{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap}
+.zf-stage .v50-preview-toolbar{display:flex;align-items:center;gap:8px}
+.zf-stage .v50-preview-toolbar .zf-seg{margin-right:auto}
+.zf-stage .v50-preview-expand span{display:none}
+.zf-stage .v50-preview-expand{width:38px;min-width:38px;padding:0;justify-content:center}
+@media (max-width:380px){.zf-stage:has(.v50-select-all) .v50-preview-toolbar .zf-seg button:not([aria-pressed=true]) span{display:none}}
+/* het icoon van Looprichting (zoals in de app) */
+.zf-oic{width:40px;height:20px;overflow:hidden}
+.zf-oic-run{animation:zf-oic-run 2.6s cubic-bezier(.45,.05,.25,1) infinite}
+@keyframes zf-oic-run{0%{transform:translateX(0)}70%,100%{transform:translateX(62px)}}
+@media (prefers-reduced-motion:reduce){.zf-oic-run{animation:none}}
+/* de lijst van alle animaties meteen in de tab Animaties (de eigenaar 13 nov) */
+.zf-libinline{display:grid;gap:12px}
+.zf-libinline .zf-groups{margin:0 -4px;padding:0 4px 2px}
+/* icoontjes in het tandwiel (de eigenaar 13 nov: "graag meer icoontjes bij instellingen") */
+.zf-gsec h3{display:flex;align-items:center;gap:9px}
+.zf-gic{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:10px;background:var(--soft);color:var(--ink);border:1px solid var(--line)}
+.zf-gic svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.zf-joinsec summary>span{flex:1}
+.zf-joinsec summary{justify-content:flex-start;gap:10px}
+/* een bij RGBW bewaarde animatie in een SPI-zone: klein label RGBW op de tegel */
+.zf-varcv .zf-kind{position:absolute;left:6px;top:6px;z-index:1}
+/* de nummers bij de ledlines: kleiner en rond (de eigenaar 13 nov: "de 1 2 3 wat kleiner maken, eventueel cirkels") */
+html:not(#zf) body:not(#zf) .zf-stage .v50-preview-line-badge,html:not(#zf) body:not(#zf) .zf-stage .v50-preview-line-target[data-spatial=true] .v50-preview-line-badge{width:23px;height:23px;border-radius:50%}
+html:not(#zf) body:not(#zf) .zf-stage .v50-preview-line-badge b{font-size:11.5px;font-weight:800}
+html:not(#zf) body:not(#zf) .zf-stage .v50-preview-line-check{width:12px;height:12px;right:-4px;top:-4px;font-size:7px;border-width:1.5px}
+html:not(#zf) body:not(#zf) .zf-stage .v50-preview-line-target[aria-pressed=true] .v50-preview-line-badge{transform:translate(-50%,-50%) scale(1.04)}
+/* Ledlines samenvoegen in het tandwiel (de eigenaar 13 nov) */
+.zf-joinanim{position:relative;height:84px;border-radius:18px;background:#141518;overflow:hidden}
+.zf-joinanim>span{position:absolute;top:46px;height:8px;border-radius:4px;background:#3a3e45;box-shadow:0 0 0 1px rgba(255,255,255,.04)}
+.zf-joinanim>span b{position:absolute;top:-30px;left:50%;translate:-50% 0;display:grid;place-items:center;width:21px;height:21px;border-radius:50%;background:#f3f4f6;color:#16181b;font-size:11px;font-weight:850}
+.zf-ja-a{left:8%;width:40%;animation:zf-ja-a 5s ease-in-out infinite}
+.zf-ja-b{left:52%;width:40%;animation:zf-ja-b 5s ease-in-out infinite}
+.zf-ja-a b{animation:zf-ja-na 5s ease-in-out infinite}
+.zf-ja-b b{animation:zf-ja-nb 5s ease-in-out infinite}
+.zf-ja-run{position:absolute;top:43px;left:0;width:34px;height:14px;border-radius:7px;background:radial-gradient(closest-side,#fff 0,#7fb2ff 45%,rgba(47,107,255,0) 100%);opacity:0;animation:zf-ja-run 5s linear infinite}
+@keyframes zf-ja-a{0%,22%{left:8%}40%,100%{left:10%}}
+@keyframes zf-ja-b{0%,22%{left:52%}40%,100%{left:50%}}
+@keyframes zf-ja-na{0%,30%{left:50%}45%,100%{left:100%}}
+@keyframes zf-ja-nb{0%,30%{opacity:1}42%,100%{opacity:0}}
+@keyframes zf-ja-run{0%,46%{opacity:0;left:9%}50%{opacity:1;left:9%}88%{opacity:1;left:calc(90% - 34px)}94%,100%{opacity:0;left:calc(90% - 34px)}}
+.zf-chain{display:grid;gap:4px}
+.zf-cl{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:10px;min-height:46px;padding:6px 10px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+.zf-cl.is-joined{border-color:color-mix(in srgb,var(--ink) 40%,transparent)}
+.zf-cnum{display:grid;place-items:center;width:23px;height:23px;border-radius:50%;background:var(--ink);color:var(--panel);font-size:11.5px;font-weight:850}
+.zf-cb{display:flex;gap:3px;width:var(--w);height:7px}
+.zf-cb i{flex:1;border-radius:4px;background:linear-gradient(90deg,#2F6BFF,#7fb2ff)}
+.zf-cl small{color:var(--muted);font-size:12px;font-weight:750;white-space:nowrap}
+.zf-clink{justify-self:center;display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border:1.5px dashed color-mix(in srgb,var(--ink) 28%,transparent);border-radius:999px;background:none;color:var(--ink);font:inherit;font-size:12.5px;font-weight:800;cursor:pointer}
+.zf-clink .icon{width:15px;height:15px}
+@media (prefers-reduced-motion:reduce){.zf-joinanim *{animation:none!important}.zf-ja-a{left:10%}.zf-ja-b{left:50%}.zf-ja-b b{opacity:0}.zf-ja-a b{left:100%}}
+/* Alle kiezen: het nieuwe icoon (vakje met vinkje, een tweede vakje erachter), groot genoeg om te zien (de eigenaar 13 nov) */
+html:not(#zf) body:not(#zf) .zf-stage .v50-select-all svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+/* samenvoegen met een selectie (de eigenaar 13 nov): tik aan wat samen moet, dan Voeg samen; een groep heeft Ontkoppel */
+.zf-jlist{display:grid;gap:6px}
+.zf-jrow{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto auto;align-items:center;gap:10px;width:100%;min-height:50px;padding:6px 10px;border:1.5px solid var(--line);border-radius:16px;background:var(--panel);color:var(--ink);font:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:border-color .15s ease,background-color .15s ease}
+.zf-jtick{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line);color:transparent}
+.zf-jtick svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.zf-jrow[aria-pressed=true]{border-color:var(--red,#bf4841);background:color-mix(in srgb,var(--red,#bf4841) 7%,var(--panel))}
+.zf-jrow[aria-pressed=true] .zf-jtick{background:var(--red,#bf4841);border-color:var(--red,#bf4841);color:#fff}
+.zf-jrow.is-joined{cursor:default;border-color:color-mix(in srgb,var(--ink) 35%,transparent)}
+.zf-jrow.is-joined .zf-jtick{border:0;background:var(--ink);color:var(--panel)}
+.zf-jrow small{color:var(--muted);font-size:12px;font-weight:750;white-space:nowrap}
+.zf-unlink{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 12px;border:1px solid var(--line);border-radius:999px;background:var(--soft);color:var(--ink);font:inherit;font-size:12.5px;font-weight:800;cursor:pointer}
+.zf-unlink svg,.zf-joingo svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.zf-joingo{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:50px;border:1.5px dashed color-mix(in srgb,var(--ink) 25%,transparent);border-radius:16px;background:none;color:var(--muted);font:inherit;font-size:15px;font-weight:800;cursor:default}
+.zf-joingo.is-ready{border:0;background:#202220;color:#fff;cursor:pointer;box-shadow:0 10px 22px -14px rgba(0,0,0,.7)}
+body[data-theme=dark] .zf-joingo.is-ready{background:#f3f2ee;color:#18191b}
+.zf-joinanim.is-rgbw>span{height:10px;background:#3a2f45}
+/* twee tutorials in het tandwiel: de gewone en de gevorderde (looplicht en eigen timing) */
+.zf-tutrow{display:flex;flex-wrap:wrap;gap:8px}
+.zf-tutlink.is-pro i{background:#202220}
+
+/* de verloopkaart (de eigenaar 13 nov: "de instellingen van overloop verbeteren en mooiere duidelijke icoontjes"): elke keuze
+   is een tegel met een klein bewegend voorbeeld in jouw eigen kleuren (--g), zodat je ziet wat ze doet */
+.zf-gradcard2{gap:10px!important}
+.zf-gtiles{display:grid;gap:8px}
+.zf-gtiles.is-two{grid-template-columns:1fr 1fr}
+.zf-gtiles.is-five{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.zf-gtile{display:grid;gap:7px;justify-items:center;margin:0;padding:8px 6px 9px;border:1.5px solid var(--line);border-radius:16px;background:var(--panel);color:var(--ink);font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.zf-gtile b{font-size:13px;font-weight:800;line-height:1.1;text-align:center}
+.zf-gtiles.is-five .zf-gtile b{font-size:11.5px}
+.zf-gtile[aria-pressed=true]{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.zf-gprev{position:relative;display:block;width:100%;height:30px;border-radius:10px;background:#141518;overflow:hidden}
+.zf-gprev i{position:absolute;left:8px;right:8px;top:11px;height:8px;border-radius:4px;background:var(--g)}
+/* omdraaien: het verloop keert om en terug */
+.zf-gprev.is-rev i{animation:zfg-rev 3s ease-in-out infinite}
+@keyframes zfg-rev{0%,40%{transform:scaleX(1)}50%,90%{transform:scaleX(-1)}100%{transform:scaleX(1)}}
+/* doorlopend: het einde loopt over in het begin */
+.zf-gprev.is-loop i{background:var(--g-loop)}
+/* stil, schuiven, golven, ademen, lichtkop */
+.zf-gprev.is-schuif i{background:var(--g-loop);background-size:200% 100%;animation:zfg-slide 2.2s linear infinite}
+@keyframes zfg-slide{from{background-position:0 0}to{background-position:-200% 0}}
+.zf-gprev.is-golf i{background:var(--g);-webkit-mask:linear-gradient(90deg,#000 0,rgba(0,0,0,.25) 25%,#000 50%,rgba(0,0,0,.25) 75%,#000 100%);mask:linear-gradient(90deg,#000 0,rgba(0,0,0,.25) 25%,#000 50%,rgba(0,0,0,.25) 75%,#000 100%);
+  -webkit-mask-size:50% 100%;mask-size:50% 100%;animation:zfg-wave 1.6s linear infinite}
+@keyframes zfg-wave{from{-webkit-mask-position:0 0;mask-position:0 0}to{-webkit-mask-position:100% 0;mask-position:100% 0}}
+.zf-gprev.is-adem i{animation:zfg-breathe 2.4s ease-in-out infinite}
+@keyframes zfg-breathe{0%,100%{opacity:.18}50%{opacity:1}}
+.zf-gprev.is-kop i{background:var(--g);-webkit-mask:linear-gradient(90deg,transparent 0 30%,#000 47%,#000 50%,transparent 51%);mask:linear-gradient(90deg,transparent 0 30%,#000 47%,#000 50%,transparent 51%);-webkit-mask-size:200% 100%;mask-size:200% 100%;animation:zfg-head 1.8s cubic-bezier(.45,.05,.25,1) infinite}
+@keyframes zfg-head{from{-webkit-mask-position:100% 0;mask-position:100% 0}to{-webkit-mask-position:0 0;mask-position:0 0}}
+.zf-motion2{display:grid;gap:10px;padding-top:4px;border-top:1px solid var(--line)}
+.zf-flows2 button{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.zf-flows2 .icon{width:17px;height:17px}
+/* het icoontje bij Snelheid: een lichtje dat snel heen en weer gaat */
+.zf-ai-speed b{animation:zfa-speed .9s ease-in-out infinite alternate}
+.zf-ai-speed b:nth-child(n+2){display:none}
+@keyframes zfa-speed{from{transform:translateX(0)}to{transform:translateX(28px)}}
+@media (prefers-reduced-motion:reduce){.zf-gprev i{animation:none!important}}
+
+/* terug naar de kiezer als er een animatie speelt (de eigenaar 13 nov) */
+.zf-tochooser{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:auto auto;column-gap:12px;align-items:center;width:100%;margin:2px 0 4px;padding:10px 14px 10px 10px;border:0;border-radius:18px;
+  background:#202220;color:#fff;font:inherit;text-align:left;cursor:pointer;box-shadow:0 10px 22px -16px rgba(0,0,0,.7)}
+body[data-theme=dark] .zf-tochooser{background:#f3f2ee;color:#18191b}
+.zf-tochooser-ic{grid-row:1/3;display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.14)}
+body[data-theme=dark] .zf-tochooser-ic{background:rgba(0,0,0,.08)}
+.zf-tochooser-ic .icon{width:19px;height:19px}
+.zf-tochooser b{font-size:15.5px;font-weight:850}
+.zf-tochooser small{grid-column:2;font-size:12.5px;font-weight:650;opacity:.7}
+.zf-tochooser>.icon{grid-column:3;grid-row:1/3;width:18px;height:18px}
+.zf-libinline.is-flash{animation:zf-flash 1.1s ease}
+@keyframes zf-flash{0%{box-shadow:0 0 0 0 transparent}25%{box-shadow:0 0 0 4px color-mix(in srgb,var(--red,#bf4841) 35%,transparent)}100%{box-shadow:0 0 0 0 transparent}}
+.zf-libinline{border-radius:20px}
+
+/* tutorials (de eigenaar 14 nov): een opvallende omcirkeling met de rest even gedimd, en ondertitels na elkaar */
+.zfi-ring{border-width:4px!important;border-radius:22px}
+.zfi-ring.is-on{animation:zfi-spot 1.6s ease-in-out infinite}
+@keyframes zfi-spot{0%,100%{box-shadow:0 0 0 9999px rgba(0,0,0,.32),0 0 22px rgba(255,198,26,.55)}50%{box-shadow:0 0 0 9999px rgba(0,0,0,.32),0 0 40px rgba(255,198,26,.95)}}
+.zfi .ki-sub{transition:opacity .22s ease,transform .22s ease}
+.zfi .ki-sub.is-on{transition:opacity .35s ease .25s,transform .35s ease .25s}
+@media (prefers-reduced-motion:reduce){.zfi-ring.is-on{animation:none;box-shadow:0 0 0 9999px rgba(0,0,0,.32)}}

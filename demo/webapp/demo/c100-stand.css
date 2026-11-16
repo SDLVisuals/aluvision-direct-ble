@@ -1,0 +1,147 @@
+/* C100: brand bar, connection pill, stand card, receivers grouped per zone,
+ * and rounded corners for the last square surfaces. Presentation only. */
+
+/* ---------- Brand bar ---------- */
+html.interface-polish body .brand-bar{
+  background:color-mix(in srgb,var(--panel,#fff) 70%,transparent)!important;
+  -webkit-backdrop-filter:blur(20px) saturate(1.5);backdrop-filter:blur(20px) saturate(1.5);
+  border-bottom:1px solid color-mix(in srgb,var(--line,#dce1e9) 70%,transparent);
+  box-shadow:0 10px 24px -22px rgba(20,24,32,.45);
+}
+html body .brand-bar>img{width:100px;height:auto}
+/* "LIGHTING V50" becomes a quiet tag */
+html body .brand-bar>span{display:inline-flex;align-items:center;gap:7px;padding:6px 6px 6px 11px;border-radius:999px;
+  background:color-mix(in srgb,var(--ink,#1c1c1e) 5%,transparent);font-size:9px;letter-spacing:2.2px;font-weight:650;color:var(--muted)}
+html body .brand-bar>span>b{margin:0;padding:3px 7px;border-radius:999px;background:var(--panel,#fff);color:var(--ink);
+  font-size:9.5px;letter-spacing:.4px;box-shadow:0 1px 2px rgba(20,24,32,.12)}
+body[data-theme=dark] .brand-bar>span>b{background:rgba(255,255,255,.12);box-shadow:none}
+
+/* ---------- Connection pill (native app only) ---------- */
+/* One row: the pill replaces the "Lighting" tag while it is shown. */
+html body .brand-bar:has(.main-connection-indicator675:not([hidden])){
+  display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:calc(58px + var(--app-safe-top,0px));
+  padding-block:calc(8px + var(--app-safe-top,0px)) 8px;
+}
+html body .brand-bar:has(.main-connection-indicator675:not([hidden]))>span{display:none}
+html body .brand-bar .main-connection-indicator675{
+  display:inline-flex;align-items:center;gap:9px;min-width:0;max-width:62%;padding:6px 13px 6px 11px;border-radius:999px;
+  background:color-mix(in srgb,var(--muted,#646d78) 10%,transparent);border:1px solid color-mix(in srgb,var(--muted,#646d78) 18%,transparent);
+  color:var(--ink);text-align:start;line-height:1.15;transition:background-color .3s ease,border-color .3s ease;
+}
+html body .brand-bar .main-connection-indicator675 .mci-dot{position:relative;flex:none;width:9px;height:9px;border-radius:50%;background:#9aa1ab}
+html body .brand-bar .main-connection-indicator675 .mci-copy{display:grid;min-width:0}
+/* The generic .brand-bar b rule paints the version red; the status text stays ink. */
+html body .brand-bar .main-connection-indicator675 .mci-copy b{margin:0;font-size:12px;font-weight:700;letter-spacing:0;color:var(--ink);white-space:nowrap}
+html body .brand-bar .main-connection-indicator675 .mci-copy small{font-size:10.5px;font-weight:550;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body .brand-bar .main-connection-indicator675 .mci-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+html body .brand-bar .main-connection-indicator675[data-connection-state="connected"]{
+  background:color-mix(in srgb,#22a06b 12%,transparent);border-color:color-mix(in srgb,#22a06b 28%,transparent)}
+html body .brand-bar .main-connection-indicator675[data-connection-state="connected"] .mci-dot{background:#22a06b}
+html body .brand-bar .main-connection-indicator675[data-connection-state="connected"] .mci-dot::after{
+  content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid #22a06b;opacity:0;animation:mci-pulse 2.4s ease-out infinite}
+html body .brand-bar .main-connection-indicator675[data-connection-state="checking"]{
+  background:color-mix(in srgb,#e0a100 11%,transparent);border-color:color-mix(in srgb,#e0a100 26%,transparent)}
+html body .brand-bar .main-connection-indicator675[data-connection-state="checking"] .mci-dot{background:#e0a100;animation:mci-blink 1.2s ease-in-out infinite}
+html body .brand-bar .main-connection-indicator675[data-connection-state="unknown"] .mci-dot{background:#c2453c}
+body[data-theme=dark] .brand-bar .main-connection-indicator675[data-connection-state="connected"] .mci-dot{background:#4fd39b}
+body[data-theme=dark] .brand-bar .main-connection-indicator675[data-connection-state="connected"] .mci-dot::after{border-color:#4fd39b}
+@keyframes mci-pulse{0%{transform:scale(.6);opacity:.7}80%,100%{transform:scale(1.7);opacity:0}}
+@keyframes mci-blink{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){
+  html body .brand-bar .main-connection-indicator675 .mci-dot,html body .brand-bar .main-connection-indicator675 .mci-dot::after{animation:none}
+}
+
+/* ---------- Stand card ---------- */
+html.interface-polish body #main .stand-hero100{
+  position:relative;overflow:hidden;align-items:flex-start;gap:14px;margin:4px 0 2px;padding:20px 18px 22px 20px;border-radius:26px;
+  background:
+    radial-gradient(110% 130% at 100% 0%,color-mix(in srgb,#7b6cf6 22%,transparent),transparent 58%),
+    radial-gradient(110% 130% at 0% 100%,color-mix(in srgb,#e2574c 18%,transparent),transparent 62%),
+    color-mix(in srgb,var(--panel,#fff) 90%,transparent);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  border:1px solid color-mix(in srgb,var(--line,#dce1e9) 80%,transparent);
+  box-shadow:0 18px 36px -26px rgba(20,24,32,.5),inset 0 1px 0 rgba(255,255,255,.6);
+}
+/* A thin "light line" under the card: what the stand is about. */
+html.interface-polish body #main .stand-hero100::after{
+  content:"";position:absolute;left:20px;right:20px;bottom:0;height:3px;border-radius:3px 3px 0 0;
+  background:linear-gradient(90deg,#e2574c,#f0a04b 30%,#f5d76e 45%,#5ccf9a 62%,#4f8cf0 80%,#9a6cf0);opacity:.85;
+}
+html.interface-polish body #main .stand-hero100 .stand-hero-copy{min-width:0;flex:1}
+html.interface-polish body #main .stand-hero100 .eyebrow{display:inline-flex;align-items:center;gap:7px;margin:0 0 6px;font-size:10.5px;letter-spacing:1.8px}
+html.interface-polish body #main .stand-hero100 .eyebrow::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 0 3px color-mix(in srgb,currentColor 18%,transparent)}
+html.interface-polish body #main .stand-hero100 h1{font-size:32px;line-height:1.08;letter-spacing:-.02em;overflow-wrap:anywhere}
+html.interface-polish body #main .stand-hero100 .stand-hero-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+html.interface-polish body #main .stand-hero100 .stand-hero-meta>span{display:inline-flex;align-items:center;gap:6px;padding:6px 10px 6px 8px;border-radius:999px;
+  background:color-mix(in srgb,var(--panel,#fff) 82%,transparent);border:1px solid color-mix(in srgb,var(--line,#dce1e9) 75%,transparent);
+  font-size:12px;font-weight:650;color:var(--ink);white-space:nowrap}
+html.interface-polish body #main .stand-hero100 .stand-hero-meta svg{width:15px;height:15px;color:var(--muted)}
+html.interface-polish body #main .stand-hero100>.icon-button{flex:none;background:color-mix(in srgb,var(--panel,#fff) 85%,transparent)}
+body[data-theme=dark] #main .stand-hero100{box-shadow:0 18px 36px -26px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.06)!important}
+body[data-theme=dark] #main .stand-hero100 .stand-hero-meta>span{background:rgba(255,255,255,.07)!important}
+@media (max-width:360px){
+  html.interface-polish body #main .stand-hero100{padding:18px 14px 20px 16px}
+  html.interface-polish body #main .stand-hero100 h1{font-size:27px}
+  html.interface-polish body #main .stand-hero100 .stand-hero-meta>span{font-size:11px;padding:5px 9px 5px 7px}
+}
+
+/* c98-glass.css clears every page heading (header.page-heading, !important).
+ * The stand card is the one heading that keeps its own surface. */
+html:not(#c98) body:not(#c98) #main header.page-heading.stand-hero100{
+  background:
+    radial-gradient(110% 130% at 100% 0%,color-mix(in srgb,#7b6cf6 22%,transparent),transparent 58%),
+    radial-gradient(110% 130% at 0% 100%,color-mix(in srgb,#e2574c 18%,transparent),transparent 62%),
+    color-mix(in srgb,var(--panel,#fff) 90%,transparent)!important;
+  -webkit-backdrop-filter:blur(14px)!important;backdrop-filter:blur(14px)!important;
+  border:1px solid color-mix(in srgb,var(--line,#dce1e9) 80%,transparent)!important;
+  box-shadow:0 18px 36px -26px rgba(20,24,32,.5),inset 0 1px 0 rgba(255,255,255,.6)!important;
+}
+html:not(#c98) body[data-theme=dark]:not(#c98) #main header.page-heading.stand-hero100{
+  background:
+    radial-gradient(110% 130% at 100% 0%,rgba(123,108,246,.28),transparent 58%),
+    radial-gradient(110% 130% at 0% 100%,rgba(226,87,76,.22),transparent 62%),
+    rgba(255,255,255,.06)!important;
+  border-color:rgba(255,255,255,.1)!important;box-shadow:0 18px 36px -26px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.06)!important;
+}
+
+/* ---------- Receivers grouped per zone ---------- */
+html.interface-polish body #main .receiver-list:has(>.receiver-zone-group100){display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
+html.interface-polish body #main .receiver-zone-group100{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-items:start}
+html.interface-polish body #main .receiver-zone-group100>header{grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:0 4px}
+html.interface-polish body #main .receiver-zone-group100>header>svg{width:17px;height:17px;color:var(--red,#b6443d)}
+html.interface-polish body #main .receiver-zone-group100>header>b{font-size:15px;letter-spacing:-.01em}
+html.interface-polish body #main .receiver-zone-group100>header>small{margin-left:auto;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:650;color:var(--muted);
+  background:color-mix(in srgb,var(--ink,#1c1c1e) 5%,transparent)}
+html.interface-polish body #main .receiver-zone-group100[data-zone-group=""]>header>svg{color:#c27c00}
+@media (min-width:700px){
+  html.interface-polish body #main .receiver-zone-group100{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (min-width:1000px){
+  html.interface-polish body #main .receiver-zone-group100{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+
+/* Zone chip on a receiver card: shows the zone and moves the receiver. */
+html.interface-polish body #main .receiver-heading-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+html.interface-polish body #main .receiver-zone-chip100{
+  display:inline-flex;align-items:center;gap:5px;min-height:30px;max-width:100%;padding:4px 8px 4px 7px;border-radius:999px;
+  border:1px solid color-mix(in srgb,var(--red,#b6443d) 26%,transparent);background:color-mix(in srgb,var(--red,#b6443d) 8%,transparent);
+  color:var(--ink);font:inherit;font-size:12px;font-weight:650;line-height:1.2;cursor:pointer;
+}
+html.interface-polish body #main .receiver-zone-chip100>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html.interface-polish body #main .receiver-zone-chip100>svg{flex:none;width:14px;height:14px;color:var(--red,#b6443d)}
+html.interface-polish body #main .receiver-zone-chip100>svg:last-child{width:13px;height:13px;opacity:.75}
+html.interface-polish body #main .receiver-zone-chip100[data-zoned="false"]{border-color:color-mix(in srgb,#c27c00 40%,transparent);background:color-mix(in srgb,#e0a100 12%,transparent)}
+html.interface-polish body #main .receiver-zone-chip100[data-zoned="false"]>svg{color:#c27c00}
+html.interface-polish body #main .receiver-zone-chip100:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+@media (hover:hover){html.interface-polish body #main .receiver-zone-chip100:hover{background:color-mix(in srgb,var(--red,#b6443d) 14%,transparent)}}
+
+/* ---------- Square surfaces that looked unfinished ---------- */
+/* "Aan" switch block next to a zone */
+html.interface-polish body :is(#main,#effect-dialog) .power-card{border-radius:14px}
+/* Ledline set-up card ("Aanpassen") and, when opened, its header and footer */
+html.interface-polish body :is(#main,#effect-dialog) .ledline-setup.card{border-radius:20px}
+html.interface-polish body :is(#main,#effect-dialog) .ledline-setup[data-order-open=true]{border-radius:0}
+html.interface-polish body :is(#main,#effect-dialog) .ledline-setup[data-order-open=true]>.ledline-setup-toggle{border-radius:0 0 18px 18px}
+html.interface-polish body :is(#main,#effect-dialog) .ledline-setup .order-assignment-footer652{border-radius:18px 18px 0 0}
+/* Sticky preview on phones: round the lower edge that casts the shadow */
+html.interface-polish body #main .editor-grid>.control-preview-dock{border-radius:0 0 22px 22px}

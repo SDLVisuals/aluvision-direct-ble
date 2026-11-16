@@ -4,13 +4,9 @@
 
 ## Interactieve demo
 
-De hoofdlink opent de huidige C100-interface. Probeer zones, kleuren, RGBW/SPI-animaties, scènes en licht/donker op een telefoon of tablet, staand of liggend. De indeling is in de browser gecontroleerd van 320 tot 1600 CSS-pixels; op brede schermen krijgen voorbeeld en bediening elk hun eigen ruimte.
+De hoofdlink opent de app zoals op de telefoon: de schermen in Flutter (welkom, nieuwe stand, standpagina, zones, scènes, receivers, instellingen), met eronder de vorige interface voor de stap die nog niet in Flutter staat (een receiver koppelen). Deze demo is gebouwd uit dezelfde code als iPhone-build 1052 (16 november 2026).
 
-De demo gebruikt uitsluitend fictieve receivers. Ze begint leeg en bewaart haar voorbeeldstand alleen tijdelijk; herladen begint opnieuw. Ze bestuurt geen fysieke verlichting, maakt geen echte wifi-verbinding en biedt geen browser-OTA. PIN en delen zijn in deze tijdelijke ééngebruikerversie uitgeschakeld.
-
-De demo gebruikt de huidige gedeelde interface. Native functies blijven afhankelijk van expliciete appmogelijkheden; de browser krijgt geen receiver-, beveiligings- of firmwaretoegang.
-
-In een SPI-zone kun je onder **Kleur → Verloop SPI** een stilstaand kleurverloop maken met twee tot acht kleuren. Verplaats de kleurpunten om de verdeling aan te passen en bewaar je eigen verloopideeën tijdens de demosessie. ‘Kleur toevoegen’ opent meteen hetzelfde kleurenwiel, de helderheid en de fijne RGBW-regelaars als de gewone kleurkeuze. Dit is alleen een browservoorbeeld; deze publicatie wijzigt geen receiverfirmware of geïnstalleerde telefoonapp.
+De demo gebruikt uitsluitend fictieve receivers. Ze bestuurt geen fysieke verlichting, maakt geen echte wifi- of bluetoothverbinding en bewaart niets in de browser: herladen begint opnieuw. Ze werkt op elke breedte, maar is gemaakt voor een telefoon (390 px).
 
 ## Android-testapp
 

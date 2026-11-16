@@ -1,0 +1,5 @@
+/* Instellingen › Verbinding: Bluetooth / Wifi (connection-choice.js). Zelfde knoppen als Taal en Thema (.preference-grid). */
+.settings-connection .settings-appearance-heading svg{width:20px;height:20px}
+.connection-choice-grid{margin-top:12px}
+.connection-choice-grid .connection-choice-button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;font-size:14px}
+.connection-choice-grid .connection-choice-button svg{width:20px;height:20px;flex:none}
