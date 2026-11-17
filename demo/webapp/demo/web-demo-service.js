@@ -16,12 +16,18 @@
     // /demo/ shares an origin with the public root. Never touch that origin's
     // localStorage or sessionStorage: the walkthrough resets on page reload.
     const memory=new Map();
+    // opslag-spiegel.js (stap 1, alleen met ?opslag=1): de bewaarde waarden van de gastheer vooraf, elke schrijfactie gemeld,
+    // en wat Dart schreef in dit geheugen (__alvOpslagDoel). Zonder spiegel verandert er niets.
+    const spiegel=window.__alvOpslagNatief===true;
+    if(spiegel)for(const [k,v] of Object.entries(window.__alvOpslagBegin||{}))if(typeof v==='string')memory.set(k,v);
+    const meld=(k,v)=>{if(spiegel)try{window.__alvOpslagMeld?.(k,v);}catch(_){}};
     const storage=Object.freeze({
       getItem:key=>memory.has(String(key))?memory.get(String(key)):null,
-      setItem:(key,value)=>{memory.set(String(key),String(value));},
-      removeItem:key=>{memory.delete(String(key));},
-      clear:()=>{memory.clear();}
+      setItem:(key,value)=>{memory.set(String(key),String(value));meld(String(key),String(value));},
+      removeItem:key=>{memory.delete(String(key));meld(String(key),null);},
+      clear:()=>{const ks=[...memory.keys()];memory.clear();ks.forEach(k=>meld(k,null));}
     });
+    if(spiegel)window.__alvOpslagDoel=(k,v)=>{if(v==null)memory.delete(k);else memory.set(k,v);};
     // Ten of each family can be added during a walkthrough. Keep the original
     // four identities stable; the additional identities are deterministic UI
     // fixtures too, never physical device fingerprints or security evidence.
@@ -42,7 +48,8 @@
     //   {mode:'ok'|'cancel'|'denied'|'busy'|'unavailable'|'missing'|'family', family:'SPI'|'RGBW', unit:'demo-rgbw-7', delay:ms,
     //    secureDelay:<ms> (the connecting screen stays in view that long),
     //    requireLabel:true (a receiver chosen from the list answers RECEIVER_LABEL_REQUIRED until it is scanned),
-    //    invalidOnce:true (the next select answers RECEIVER_LABEL_INVALID once), hidePhysicalId:true}
+    //    invalidOnce:true (the next select answers RECEIVER_LABEL_INVALID once), hidePhysicalId:true,
+    //    prepareFailOnce:true (the next first-PIN preparation fails once with MAIN_CONNECTION_UNAVAILABLE; nazicht 1061 K3)}
     const chosen=new Set(),scanned=new Set();
     const demoScan=()=>root.__alvDemoScan&&typeof root.__alvDemoScan==='object'?root.__alvDemoScan:{};
     const fail=code=>Object.assign(Error(code),{code});
@@ -372,6 +379,7 @@
       async prepare({configuration,standName,signal}={}){
         const unit=firstPinUnit(configuration);await wait(900,signal);
         if(!unit)throw fail('FIRST_PIN_V2_INVALID');
+        {const o=demoScan();if(o.prepareFailOnce===true){o.prepareFailOnce=false;throw fail('MAIN_CONNECTION_UNAVAILABLE');}}
         if(!claims.has(unit.id))autoFactory(unit);
         if(!phone.receiversOn||phone.wifi!==factorySsid(unit)||claims.has(unit.id))throw fail('MAIN_CONNECTION_UNAVAILABLE');
         const ssid=networkName(standName,unit.type);if(!ssid)throw fail('MAIN_CONFIGURATION_INVALID');

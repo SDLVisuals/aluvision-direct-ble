@@ -574,7 +574,7 @@
     {
       "path": "index.html",
       "bytes": 2846,
-      "sha256": "8b2d7d9f68c67a875df611c677d1d0acd9770f0669fe96824d8416c2c4ca2243"
+      "sha256": "d75befda73fbbeebfcab25dd8452d49252841e4e948ad2c67f4269516ab961ab"
     },
     {
       "path": "installation-libraries.js",
@@ -1098,13 +1098,13 @@
     },
     {
       "path": "web-gastheer.js",
-      "bytes": 21642,
-      "sha256": "d25e38dd46c68a8c9d657e3210b89bdb3384f2e02a657e06e9e4a27b6bdcce8e"
+      "bytes": 21654,
+      "sha256": "a1e55e03e01477edf39d55e549223e1c627cefb9e68a5103759be19a68a4586c"
     },
     {
       "path": "flutter_bootstrap.js",
       "bytes": 13430,
-      "sha256": "d9bbba5186a8867828f05606cd8f9ef62ba347dc5f84588a57db845720fb3492"
+      "sha256": "928292ed332c057efc06f32bea4d8e531bee53b444c9fdb2bcac7ef296451cf6"
     },
     {
       "path": "flutter.js",
@@ -1113,8 +1113,8 @@
     },
     {
       "path": "main.dart.js",
-      "bytes": 3718545,
-      "sha256": "8f64189a95cf0c4e8da2b167c3ed465a843483303e5428def825a9dd78d4d4e5"
+      "bytes": 3722683,
+      "sha256": "781d32dd2901ab624419252a8b76d069e54965022710474fd85125ca38a66474"
     },
     {
       "path": "version.json",
@@ -1178,8 +1178,8 @@
     },
     {
       "path": "webapp/demo/app.js",
-      "bytes": 1166671,
-      "sha256": "b991f6eadf58913124e3ccdf0a522a2a1db486a17dd5347593f777e94fbfc884"
+      "bytes": 1179621,
+      "sha256": "f85c98cee7e41376227cc825e1f5a8b4aaf0a626ba6e5bff87cadb2b04118d9b"
     },
     {
       "path": "webapp/demo/backup.js",
@@ -1343,8 +1343,8 @@
     },
     {
       "path": "webapp/demo/index.html",
-      "bytes": 13879,
-      "sha256": "9a991bb6fba011c47bd1a054c749e145d95c6d5eee645b32f4c055cab7458ad1"
+      "bytes": 13942,
+      "sha256": "575ca9b7f748770d26e63027f1d83d86f733a4c99ef21b532c5f87ff65ed595e"
     },
     {
       "path": "webapp/demo/installation-libraries.js",
@@ -1493,8 +1493,8 @@
     },
     {
       "path": "webapp/demo/native-runtime.js",
-      "bytes": 277534,
-      "sha256": "5139d6abce4b42b9bffb95b81a01de8bf1ea9e365d476e802a5ef5f8209469a3"
+      "bytes": 280297,
+      "sha256": "8657c419b470fd3760701fc1656a8ffdd4fa5eead15e6a0b08f8239ed64f6dee"
     },
     {
       "path": "webapp/demo/onboarding-connect.css",
@@ -1973,8 +1973,8 @@
     },
     {
       "path": "webapp/demo/web-demo-service.js",
-      "bytes": 59239,
-      "sha256": "956c97cdf5ea83a7dfed5d59beae5905327e346459044e2375972ed01f7fc127"
+      "bytes": 60175,
+      "sha256": "0f393e232cda94221c393a2d1dbb4891b5e9158008f699664e546fa73651d3e4"
     },
     {
       "path": "webapp/demo/web-gastheer-app.js",
@@ -5193,9 +5193,9 @@
     }
   },
   "flutterDemo": {
-    "description": "De Flutter-app zoals op de telefoon (gelijk aan iPhone-build 1061), met de vorige interface eronder (webapp/demo/) voor het koppelen.",
-    "sourceCommit": "19e1f580",
-    "iphoneBuild": 1061,
+    "description": "De Flutter-app zoals op de telefoon (gelijk aan iPhone-build 1063), met de vorige interface eronder (webapp/demo/) voor het koppelen.",
+    "sourceCommit": "ad60ace3",
+    "iphoneBuild": 1063,
     "date": "2026-11-17",
     "storage": "none",
     "hardwareAccess": false

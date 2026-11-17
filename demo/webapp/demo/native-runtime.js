@@ -987,6 +987,33 @@
   // channel and a link that gets unstable; at most one per receiver per 20 s.
   // Old native hosts answer ACTION_UNSUPPORTED: the feed then stops for good.
   actions.add('meshStatus');sharedOutputPassiveC98.add('meshStatus');
+  // R1/R5 punt C (docs/onderzoek/toevoegtijd-r1-17nov.md, akkoord coördinatie 17 nov): het nazicht van een extra receiver pas na
+  // "gelukt". Native finalize {nazichtAchteraf:true} houdt de verse NODE-sessie en CLAIM_STATUS, maar slaat het meshbewijs over
+  // (± 5–8 s). Hier daarna, zonder iets te tonen: eerst passief in de meshStatus-feed (de receiver staat online met een verse
+  // beveiligde schakel: row.up); ziet de feed hem niet binnen 45 s, dan stil een gewone finalize (het volledige bewijs), alleen als er
+  // geen andere native oproep loopt; mislukt die, opnieuw na 30 s, hoogstens 3 keer. Elke stap een KOPPEL-regel in c98.log, nooit rood.
+  // Schakelaar uit = finalize zoals vroeger. Een native zonder de capability nazichtAchteraf krijgt de vlag nooit.
+  const NAZICHT_ACHTERAF=false;let nazichtAchterafAvailable=false;const nazichtC269=new Map();
+  function nazichtLogC269(text){try{root.__c98log?.('KOPPEL nazicht '+text);}catch(_){}}
+  function nazichtAchterafC269(configuration,securityReceiptRef){
+    const id=String(configuration?.receiverId||''),rid=String(configuration?.rid||'').slice(-6);if(!id||nazichtC269.has(id))return;
+    const job={start:Date.now(),pogingen:0,timer:0};nazichtC269.set(id,job);nazichtLogC269('start rid='+rid);
+    const klaar=text=>{nazichtLogC269(text+' rid='+rid+' s='+Math.round((Date.now()-job.start)/1000));nazichtC269.delete(id);};
+    const kijk=()=>{
+      if(nazichtC269.get(id)!==job)return;
+      if(meshC125.rows.get(id)?.up===true)return klaar('ok feed');
+      if(Date.now()-job.start<45000){job.timer=root.setTimeout?.(kijk,2000);return;}
+      if(pending.size>0){job.timer=root.setTimeout?.(kijk,3000);return;}   // nooit tussen een handeling van de klant
+      job.pogingen++;nazichtLogC269('opnieuw poging='+job.pogingen+' rid='+rid);
+      call('finalize',{configuration,securityReceiptRef}).then(()=>klaar('ok finalize'),fout=>{
+        const code=String(fout?.code||fout?.message||'FOUT').slice(0,40);nazichtLogC269('fout poging='+job.pogingen+' code='+code+' rid='+rid);
+        if(nazichtC269.get(id)!==job)return;
+        if(job.pogingen>=3)return klaar('opgegeven');
+        job.timer=root.setTimeout?.(kijk,30000);
+      });
+    };
+    job.timer=root.setTimeout?.(kijk,2000);
+  }
   const meshC125={timer:0,unsupported:false,inFlight:false,standId:null,standSeen:null,modelKey:null,model:null,
     primed:false,members:null,mainId:null,mainLat:null,mainHist:[],lastOkAt:0,channel:null,channelAt:0,
     rows:new Map(),probeAt:new Map(),log:[],last:null,ticks:0,samples:0};
@@ -2870,7 +2897,12 @@
       }});
       return operation;
     },
-    async finalize({configuration,securityReceiptRef,signal}){if(configuration?.role==='node'&&await authorityMode(configuration.standId,signal))return call('finalizeAuthorityCandidate',{configuration},signal);return call('finalize',{configuration,securityReceiptRef},signal);},
+    async finalize({configuration,securityReceiptRef,signal}){if(configuration?.role==='node'&&await authorityMode(configuration.standId,signal))return call('finalizeAuthorityCandidate',{configuration},signal);
+      // R1/R5 punt C: met NAZICHT_ACHTERAF (uit) en een native die het kent, het meshbewijs pas na "gelukt" (nazichtAchterafC269)
+      const achteraf=NAZICHT_ACHTERAF===true&&nazichtAchterafAvailable===true&&configuration?.role==='node';
+      if(!achteraf)return call('finalize',{configuration,securityReceiptRef},signal);
+      const result=await call('finalize',{configuration,securityReceiptRef,nazichtAchteraf:true},signal);
+      nazichtAchterafC269(configuration,securityReceiptRef);return result;},
     async verifyFinalReceipt({receiptRef,purpose,expected}){return call('verifyFinalReceipt',{receiptRef,purpose,expected});},
     async otaPlan({standId,receiverId}){return call('otaPlan',{standId,receiverId});},
     async otaMainRecoveryPlan({standId,receiverId}){return call('otaMainRecoveryPlan',{standId,receiverId});},
@@ -3030,7 +3062,7 @@
     const clear=()=>{if(capabilitiesSharedC138ui===asked)capabilitiesSharedC138ui=null;};asked.then(clear,clear);
     return asked;
   }
-  async function runtimeCapabilitiesOnceC138ui(){const value=await call('capabilities');selectionHaptics=value?.selectionHaptics===true;interfaceHaptics=value?.interfaceHaptics===true;simpleStandAvailable=value?.simpleStand===true;pixelPreviewV50=value?.pixelPreviewV50===true;spiZoneDirectionPreview=value?.spiZoneDirectionPreview===true;atomicPreviewExitAvailable=value?.atomicPreviewExit579===true;pixelEditorIsolationAvailable=value?.pixelEditorIsolation===true;setupZoneIsolationAvailable=value?.setupZoneIsolation===true;
+  async function runtimeCapabilitiesOnceC138ui(){const value=await call('capabilities');nazichtAchterafAvailable=value?.nazichtAchteraf===true;selectionHaptics=value?.selectionHaptics===true;interfaceHaptics=value?.interfaceHaptics===true;simpleStandAvailable=value?.simpleStand===true;pixelPreviewV50=value?.pixelPreviewV50===true;spiZoneDirectionPreview=value?.spiZoneDirectionPreview===true;atomicPreviewExitAvailable=value?.atomicPreviewExit579===true;pixelEditorIsolationAvailable=value?.pixelEditorIsolation===true;setupZoneIsolationAvailable=value?.setupZoneIsolation===true;
     pixelEndsHandoffAvailable=value?.pixelEndsHandoff===true;
     pixelReceiptDiagnostics692=value?.pixelReceiptDiagnostics692===true;
     spiPortScenesAvailable=value?.spiPortScenes===true;

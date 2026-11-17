@@ -2797,8 +2797,11 @@
         navigate('controls',{zoneId,setupReturnZoneId:null});return;   // niets te ordenen: de zonepagina, niet het oude scherm
       }
       if(result?.spiPairFirstReceiverId){
+        // nazicht 1061 K2: tussen hier en a7OpenA7 (twee native oproepen) gaf setupViewA1 'none' en ging KoppelStap weg; tot
+        // openPairFirstSetup klaar is (of hoogstens 20 s) blijft de koppeling op 'pixels' zonder receiver (Flutter: een rustige achtergrond)
+        if(a7AanA7())a7WachtTotA7=Date.now()+20000;
         navigate('stand',{setupReturnZoneId:null});
-        void openPairFirstSetup(result.spiPairFirstReceiverId).catch(error=>toast(error?.code?.startsWith('PAIR_FIRST_')?pairFirstText('storage'):t('outputUnconfirmed')));return;
+        void openPairFirstSetup(result.spiPairFirstReceiverId).catch(error=>toast(error?.code?.startsWith('PAIR_FIRST_')?pairFirstText('storage'):t('outputUnconfirmed'))).finally(()=>{a7WachtTotA7=0;});return;
       }
       if(result?.spiDirectionZoneId){
         startAddWizardC137bp(); // C137ui2: this post-claim path is one wizard too (stage + step bar, no page between)
@@ -3391,7 +3394,7 @@
         chips:[...main.querySelectorAll('.scene-scope-summary span')].map(e=>e.textContent.replace(/\s+/g,' ').trim()),storage:txt('.scene-detail-storage687'),
         status:main.querySelector('.scene-detail-status687')?{title:txt('.scene-detail-status687 h2'),text:txt('.scene-detail-status687 p')}:null,
         join:txt('.scene-join-note,.scene-join-note740,[data-scene-join-note]'),
-        activate:apply?{label:apply.textContent.replace(/\s+/g,' ').trim(),enabled:!apply.disabled,note:txt('.scene-unavailable-note')}:null,
+        activate:apply?{label:visibleTextU20(apply),enabled:!apply.disabled,note:txt('.scene-unavailable-note')}:null,
         lightEdit:main.querySelector('[data-action="scene-start-edit"]')?txt('[data-action="scene-start-edit"]'):null,
         edit:txt('[data-action="scene-edit"]'),zonesTitle:txt('.scene-detail .section-heading h2'),zonesHint:txt('.scene-detail .section-heading small'),
         zones:[...main.querySelectorAll('[data-scene-zone]')].map(el=>{const id=el.dataset.sceneZone;return {id,nr:el.querySelector('.scene-zone-number')?.textContent||'',name:el.querySelector('b')?.textContent||'',
@@ -3434,7 +3437,7 @@
     }
     const scene=route.screen==='scene-detail'?route.sceneId:'',cur=CSS.escape(String(scene||''));
     let ok=false,open=false;
-    if(op==='activate')ok=click(`[data-action="scene-apply"][data-id="${cur}"]`);
+    if(op==='activate'){ok=click(`[data-action="scene-apply"][data-id="${cur}"]`);if(ok)await sceneActivationDoneU20();}
     else if(op==='light-edit'){ok=click('[data-action="scene-start-edit"]');open=ok;}
     else if(op==='edit')ok=click('[data-action="scene-edit"]');
     else if(op==='zone-edit'){ok=click(`[data-action="scene-zone-edit"][data-zone="${CSS.escape(String(zone||''))}"]`);open=ok;}
@@ -3474,6 +3477,9 @@
         else if(e.matches('p[role=status]')){if(text(e))items.push({kind:'status',text:text(e)});}
         else if(e.tagName==='P'){if(text(e))items.push({kind:'p',text:text(e)});}
         else if(e.tagName==='BUTTON')items.push({kind:'button',...knop(e)});
+        // nazicht 1061 R1: een vinkje (removal-consent) is een vinkje, geen tekstveld met "on"
+        else if(e.matches('label')&&e.querySelector('input[type=checkbox]')){const i=e.querySelector('input[type=checkbox]');if(!i.id)i.id='u17-'+Math.random().toString(36).slice(2,8);
+          items.push({kind:'check',label:text(e),id:i.id,checked:i.checked,disabled:!!i.disabled});}
         else if(e.matches('label')&&e.querySelector('input')){const i=e.querySelector('input');if(!i.id)i.id='u17-'+Math.random().toString(36).slice(2,8);
           items.push({kind:'field',label:[...e.childNodes].filter(n=>n.nodeType===3||n.tagName==='SPAN').map(n=>n.textContent).join('').trim(),id:i.id,value:i.value||'',placeholder:i.placeholder||'',max:Number(i.maxLength)>0?Number(i.maxLength):64,secret:i.type==='password'||i.inputMode==='numeric'});}
         else if(e.querySelector('button,section,p,label'))walk(e);
@@ -3518,6 +3524,7 @@
       main.append(b);b.click();b.remove();await wait(120);return dialogDataU16();
     }
     {const sheet=document.querySelector(SHEETS_U17);if(sheet){
+      if(op==='toggle'){const i=document.getElementById(String(field||''));if(i&&sheet.contains(i)&&i.type==='checkbox'&&!i.disabled){i.checked=!i.checked;i.dispatchEvent(new Event('change',{bubbles:true}));await wait(30);}return dialogDataU16();}
       if(op==='input'){const i=document.getElementById(String(field||''));if(i&&sheet.contains(i)){i.value=String(value??'').slice(0,Number(i.maxLength)>0?i.maxLength:64);i.dispatchEvent(new Event('input',{bubbles:true}));await wait(30);}return dialogDataU16();}
       if(op==='click'){dialogDataU16();const b=dialogButtonsU16[Number(index)];if(!b||b.disabled)return dialogDataU16();b.click();await wait(250);for(let i=0;i<25&&(b.dataset.removal||b.dataset.update)==='close'&&sheet.open&&!sheet.classList.contains('is-closing');i++)await wait(100);
         if(!sheet.open||sheet.classList.contains('is-closing'))return {open:false,screen:route.screen,zoneId:route.zoneId||null};
@@ -3529,6 +3536,8 @@
     const d=document.getElementById('effect-dialog');if(!d?.open)return {open:false,screen:route.screen};
     if(op==='input'){const i=document.getElementById(String(field||''));if(!i||!d.contains(i))return dialogDataU16();i.value=String(value??'').slice(0,Number(i.maxLength)>0?i.maxLength:64);i.dispatchEvent(new Event('input',{bubbles:true}));await wait(30);return dialogDataU16();}
     if(op==='click'){dialogDataU16();const b=dialogButtonsU16[Number(index)];if(!b||b.disabled)return dialogDataU16();b.click();for(let i=0;i<50&&d.open&&b.isConnected&&b.disabled;i++)await wait(100);await wait(150);
+      // nazicht 1061 S5: "Scène verwijderen" wacht op de bevestiging van de MAIN (vaak langer dan 150 ms): wachten tot die klaar is
+      for(let i=0;i<150&&sceneDeleteBusyU20;i++)await wait(100);
       // 17 nov: Annuleren/Behouden (effect-dialog-close) sluit met een korte animatie (dismissDialog): wachten tot het venster echt dicht is
       for(let i=0;i<20&&d.open&&pendingDialogDismissals.has(d);i++)await wait(100);
       const r=dialogDataU16();return r.open?r:{open:false,screen:route.screen,zoneId:route.zoneId||null};}
@@ -3552,6 +3561,8 @@
   }
   // Flutter: de kleuren van de animatie die speelt (dezelfde functies als de bolletjes en + op de instellingenpagina)
   function hostPaletteOpU1(op,value){
+    // nazicht 1061 Z1: alleen de eigen ops; al de rest (power, presetSave, reset …) gaat verder in standOp/zone(), ook bij een vaste kleur
+    if(!['palette','paletteAdd','paletteRemove','backgroundToggle'].includes(op))return null;
     const effect=activeEffect();if(!effect)return false;
     if(op==='palette'){const i=Number(value?.index),rgb=String(value?.rgb||''),w=value?.white;if(!Number.isInteger(i)||!/^#[0-9A-F]{6}$/i.test(rgb))return false;
       updatePalette(i,rgb.toUpperCase(),Number.isInteger(w)&&w>=0&&w<=255?w:undefined);return true;}
@@ -3921,10 +3932,13 @@
   // Met FlutterSchermen.koppelen aan (newStand {koppelen:true}): zodra de app op een stap komt die Flutter heeft (scan, PIN-kaart,
   // wifi-kaart) en Flutter stond opzij, vraagt de app het Flutter-scherm 'koppelen'. Flutter gaat zelf opzij op een stap van de app.
   var koppelenA1={on:false,view:null,views:['scan','pin','pair']};
+  var KOPPEL_VIEWS_KEY_A1='aluvision.koppelViews.v1',KOPPEL_VIEWS_A1=['scan','pin','pair','pixels','order','zoeken','plaats','afronden','aansluiting'];
+  function koppelViewsBewaarA1(views){try{if(Array.isArray(views))appStorage?.setItem(KOPPEL_VIEWS_KEY_A1,JSON.stringify(views.filter(v=>KOPPEL_VIEWS_A1.includes(v))));else appStorage?.removeItem?.(KOPPEL_VIEWS_KEY_A1);}catch(_){}}
+  function koppelViewsLeesA1(){try{const v=JSON.parse(appStorage?.getItem(KOPPEL_VIEWS_KEY_A1)||'null');return Array.isArray(v)&&v.length?v.filter(x=>KOPPEL_VIEWS_A1.includes(x)):null;}catch(_){return null;}}
   // A7 (plan 17 nov punt 11): na het toevoegen de pixelstap en de Looprichting als de Flutter-schermen (Pixels, Looprichting) in plaats
   // van de dialogen van de app. Alleen met een Flutter-gastheer die 'pixels' in zijn koppelViews noemde (KoppelStap kent ze); anders,
   // of met A7_FLUTTER=false, de dialogen van de app zoals vandaag. a7StapA7 = de stap die Flutter nu toont.
-  var A7_FLUTTER=true,a7StapA7=null,a7StilTotA7=0;
+  var A7_FLUTTER=true,a7StapA7=null,a7StilTotA7=0,a7WachtTotA7=0;
   function a7AanA7(){return A7_FLUTTER===true&&flutterHostU1()&&koppelenA1.views.includes('pixels');}
   function a7OpenA7(stap){a7StapA7=stap;try{window.__c98log?.('KOPPEL a7 '+stap.view);}catch(_){}
     try{const m={open:'flutter',screen:'koppelen'};if(window.webkit?.messageHandlers?.lightningHost)window.webkit.messageHandlers.lightningHost.postMessage(m);else window.AluvisionFlutterHost.postMessage(JSON.stringify(m));}catch(_){}}
@@ -3943,11 +3957,17 @@
   },400);
   function setupViewA1(){
     if(a7StapA7)return a7StapA7.view; // A7: Pixels of Looprichting in Flutter
+    if(a7WachtTotA7>Date.now())return 'pixels'; // K2: Pixels komt zo (openPairFirstSetup loopt nog)
     if(route.screen!=='receiver-add')return 'none';
+    // nazicht 1061 K1: zoeken en verbinden van de eerste receiver tekenen het koppelbeeld (pairBusy) binnen [data-first-scan]: dat is 'pair'
+    if(main.querySelector('[data-first-scan] [data-pair-scene]'))return 'pair';
     if(main.querySelector('[data-first-scan]'))return 'scan';
     if(main.querySelector('section.card.first-pin-v2[data-first-pin-v2]'))return 'pin';
     // het koppelbeeld (A2), gelukt (A5) en de extra receiver (A6): pairScreen/pairOp van toevoeg-flow
     if(main.querySelector('[data-pair-scene],[data-label-scan]'))return 'pair';
+    // nazicht 1061 K3: secure()/de PIN-voorbereiding mislukte (stage security, niet bezig): geen oud scherm maar het koppelbeeld in rust
+    // met "Opnieuw" (pairScreenA2 maakt die scène uit de knoppen van de app)
+    if(securityRustA1())return 'pair';
     // de zoekpagina van de eerste receiver (gevonden receivers, of niets gevonden): Flutter toont ze als ZoekStap (doorlichting
     // 17 nov punt 8: op de eigenaar zijn pad met bluetooth kan de app meer dan één receiver vinden, of er één die niet vanzelf verbindt)
     // (alleen als Flutter die view noemt in koppelViews: schakelaar FlutterSchermen.zoekStap; anders de pagina van de app, 'app')
@@ -4034,8 +4054,8 @@
   }
   function setupScreenA1(){
     const view=setupViewA1(),root=view==='scan'?main.querySelector('[data-first-scan]'):null;
-    if(view==='pixels')return {view,receiverId:a7StapA7.receiverId};
-    if(view==='order')return {view,zoneId:a7StapA7.zoneId};
+    if(view==='pixels')return {view,receiverId:a7StapA7?.receiverId??null};
+    if(view==='order')return {view,zoneId:a7StapA7?.zoneId??null};
     if(view==='pin')return {view,scan:false,pin:setupPinA1()};
     if(view==='zoeken')return zoekA1();
     if(view==='afronden')return afrondA1();
@@ -4177,7 +4197,21 @@
         zones:[...main.querySelectorAll('[data-receiver-destination] [data-onboarding-action="active-zone"]')].map(b=>({id:b.hasAttribute('data-without-zone')?null:b.dataset.id||null,
           name:b.querySelector('b')?.textContent.trim()||'',sub:b.querySelector('small')?.textContent.trim()||'',on:b.getAttribute('aria-pressed')==='true'})),
         nieuweZone:!!main.querySelector('[data-receiver-destination] [data-onboarding-action="zone-add-from-receiver"]')}};}
+    // K3: de rustige stap na een mislukte secure()/PIN-voorbereiding: het koppelbeeld stil, de titel van de kaart, de eerste
+    // aanwijzing (de wifi-stap) als zin, en dezelfde knoppen van de app (Opnieuw proberen; Opnieuw beginnen als de app die toont)
+    if(securityRustA1()){
+      const kaart=main.querySelector('.onboarding-wifi-return,.onboarding-connect-card,.onboarding-manual-wifi,.onboarding-security')||main;
+      const type=onboarding.summary()?.receiverType==='RGBW'||kaart.dataset?.connectType==='RGBW'?'RGBW':'SPI';
+      const knop=(b,soort)=>b&&!b.hidden?{id:b.dataset.onboardingAction,tekst:txt(b),soort,pijl:false,uit:b.disabled===true}:null;
+      const acties=[knop(main.querySelector('[data-onboarding-action="security-retry"]'),'go'),knop(main.querySelector('[data-onboarding-action="flutter-restart"]'),'tweede')].filter(Boolean);
+      return {kind:'scene',scene:{state:'busy',step:'link',type,known:true,found:false,arrive:false,enter:false,rust:true,
+        cap:txt(kaart.querySelector('h2')),sub:txt(kaart.querySelector('.onboarding-wifi-return-steps small,p:not(.onboarding-error)')),light:null,actions:acties,done:null}};
+    }
     return {kind:null,screen:route.screen,stage:onboarding.summary()?.stage||null};
+  }
+  function securityRustA1(){
+    return route.screen==='receiver-add'&&onboarding.summary()?.stage==='security'&&!main.querySelector('[data-pair-scene],[data-label-scan],section.card.first-pin-v2[data-first-pin-v2]')&&
+      !!main.querySelector('[data-onboarding-action="security-retry"]');
   }
   function pairOpA2(args={}){const action=args.action;
     if(typeof action!=='string'||!/^[a-z0-9-]{1,40}$/.test(action)||/pin(?!-check|-help)/.test(action))return {ok:false};
@@ -4350,7 +4384,83 @@
   }
   function flutterStandArrivalU1(){if(flutterHostU1()&&!flutterStandShownU1){flutterStandShownU1=true;setTimeout(()=>{if(!appStepOpenA7())showFlutterU1();},0);}}
   let lastManagementU19={code:null,reconciled:false}; // de laatste reden waarom persistManagement niet bewaarde (voor Flutter, beheer)
+  let sceneDeleteBusyU20=false; // nazicht 1061 S5: scene-delete-confirm wacht op de MAIN
+  // nazicht 1061 S2/S4: na "Activeren" pas antwoorden als de activering klaar is (sceneActivationJob684 leeg, lastSceneU1 gezet),
+  // hoogstens 15 s; anders las Flutter "ActiverenScène laden…" en zag de lijst de scène nooit 'aan'
+  async function sceneActivationDoneU20(ms=15000){
+    const wait=t=>new Promise(r=>setTimeout(r,t)),tot=Date.now()+ms;
+    await wait(60);while(sceneActivationJob684&&Date.now()<tot)await wait(100);await wait(60);
+  }
+  // de zichtbare tekst van een knop (zonder verborgen spans en zonder het icoon)
+  function visibleTextU20(el){
+    const delen=[];const loop=n=>{for(const c of n.childNodes){if(c.nodeType===3)delen.push(c.textContent);else if(c.nodeType===1&&!c.hidden&&c.tagName.toLowerCase()!=='svg'&&getComputedStyle(c).display!=='none')loop(c);}};
+    loop(el);return delen.join('').replace(/\s+/g,' ').trim();
+  }
   let lightModelSnapshotU19=null; // fase 1: het model dat Flutter kreeg bij lightModel (adoptLight past alleen daarop)
+  let lightPortSnapshotU20=null; // stap 2a: de poorten van sendReceiverStates die Flutter kreeg bij lightModel
+  function lightPortU20(){return {nativeLoaded:!!nativeLoaded,controller:!!liveController,spiPortScenes:!!spiPortScenesAvailable,nativeContext:!!nativeContext};}
+  let lightScopeSnapshotU20=null; // stap 2b: de zone en de keuze die Flutter kreeg bij lightModel
+  // Stap 2c: wat de zone-ops setting, direction en toggle toelaten (dezelfde controles als die ops), en de huidige knopjes.
+  function zoneControlsU20(){try{
+    const effect=activeEffect();if(!effect)return null;const s=selectedState();
+    return {effect:effect.id,settingKeys:animationSettingsDataU5(effect).keys.map(k=>k.key),
+      directions:AnimationControlPolicy.directionValuesFor(effect,s,animationControlContext(effect)),
+      toggles:Object.fromEntries(['bounce','mirror'].filter(c=>effect.controls.includes(c)).map(c=>[c,!!s[c]]))};
+  }catch(_){return null;}}
+  // Stap 2b: kleur of helderheid van een zone, gepland in Dart (ZoneLicht.plan = apply, Versturen.plan = sendReceiverStates).
+  // Hier alleen wat apply() rond het model doet (schermtoestand) en de handelingen. 'webapp' = Flutter stuurt de gewone zone-op.
+  function adoptZoneLightU20(args){
+    const next=args?.model,acties=args?.acties,op=args?.op;
+    if(!stand()||!['colour','brightness','setting','direction','toggle'].includes(op)||!Array.isArray(acties))return {ok:false,reason:'input'};
+    if(standControlOpen||sceneEdit640||managementBusy)return {ok:false,reason:'webapp'};
+    if(route.screen!=='controls'||args.zoneId!==route.zoneId||lightScopeSnapshotU20===null||
+       JSON.stringify({zoneId:route.zoneId,scope:selection()})!==lightScopeSnapshotU20||
+       lightModelSnapshotU19===null||JSON.stringify(model)!==lightModelSnapshotU19||JSON.stringify(lightPortU20())!==lightPortSnapshotU20)return {ok:false,reason:'changed'};
+    lightModelSnapshotU19=null;lightScopeSnapshotU20=null;
+    const strip=value=>{const c=copy(value);(c.receivers||[]).forEach(r=>{delete r.state;});return JSON.stringify(c);};
+    try{M.assertValid(next);}catch(_){return {ok:false,reason:'invalid'};}
+    if(strip(next)!==strip(model))return {ok:false,reason:'structure'};
+    const ids=Array.isArray(args.receiverIds)?args.receiverIds.filter(id=>typeof id==='string'&&next.receivers.some(r=>r.id===id)):[];
+    if(!lightActionsValidU20(acties,next))return {ok:false,reason:'input'};
+    // dezelfde stappen als apply(), in dezelfde volgorde
+    if(orderIdentificationState?.active||orderIdentificationState?.recovering)void orderIdentification?.supersede();
+    retireGradientPower();gradientSetupNotice=null;resetGradientDraftsC139(ids);
+    model=next;
+    if(op==='colour')clearAnimationEditorBrowseReturn(); // patch.engine==='STATIC'
+    runLightActionsU20(acties);
+    const note=document.querySelector('.mixed-note');if(note)note.hidden=!mixedSelection();
+    syncLiveStatus();syncPresetAvailability();syncControlLocation();paint(globalThis.AluvisionPreviewNowPS());
+    if(op==='colour')syncColour();
+    return {ok:true};
+  }
+  // Stap 2a (docs/bedienen-in-dart-stap2.md): de handelingen van Versturen.plan (Dart) uitvoeren zoals sendReceiverStates ze
+  // zelf doet, via dezelfde lichtwachtrij. De WebApp beslist hier niets meer; ze kijkt alleen na dat elke handeling klopt.
+  function lightActionsValidU20(acties,next){
+    const ids=new Set(next.receivers.map(r=>r.id)),id=v=>typeof v==='string'&&ids.has(v),lijst=v=>Array.isArray(v)&&v.every(id);
+    const code=v=>typeof v==='string'&&/^[A-Z0-9_]{1,64}$/.test(v),obj=v=>!!v&&typeof v==='object'&&!Array.isArray(v);
+    return acties.length<=512&&acties.every(a=>obj(a)&&(
+      a.op==='reject'?id(a.id)&&code(a.code):a.op==='state'?id(a.id)&&obj(a.state)&&typeof a.state.kind==='string':
+      a.op==='hold'||a.op==='observe'||a.op==='gradientResend'?lijst(a.ids):a.op==='remember'?true:a.op==='preview'?id(a.id):
+      a.op==='request'?obj(a.request)&&id(a.request.receiverId)&&(a.meta===undefined||(obj(a.meta)&&a.meta.kind==='animation-palette')):false));
+  }
+  function runLightActionsU20(acties){
+    retireGradientPower();
+    const context=mainConnectionContext675();
+    for(const a of acties){
+      if(a.op==='reject')liveController?.reject?.(a.id,a.code);
+      else if(a.op==='state')liveStates.set(a.id,a.state);
+      else if(a.op==='hold')holdPresentationLiveC137(a.ids);
+      else if(a.op==='remember')scheduleLightIntentSave();
+      else if(a.op==='request'){
+        const receiver=model.receivers.find(r=>r.id===a.request.receiverId);
+        if(context&&receiver?.standId===context.standId)mainAckContexts675.set(receiver.id,context);else mainAckContexts675.delete(a.request.receiverId);
+        liveController?.request(a.request,a.meta);
+      }
+      else if(a.op==='preview'){if(liveController)liveController.preview(a.id);else liveStates.set(a.id,{kind:'preview'});}
+      else if(a.op==='observe')observeCentralLight(a.ids);
+      else if(a.op==='gradientResend')resendGradientC111(a.ids);
+    }
+  }
   window.LightningHost=Object.freeze({
     async open(screen,id){
       // 16 nov (leesonderzoek mesh, iPhone 1043): zonder stand (welkom, setup van een nieuwe stand) opent Flutter hier niets.
@@ -4392,6 +4502,7 @@
         if(route.screen!=='receiver-add')navigate('receiver-add',{setupFrom:'stand'});
         koppelenA1.on=args?.koppelen===true;koppelenA1.view='flutter';
         koppelenA1.views=Array.isArray(args?.koppelViews)?args.koppelViews.filter(v=>['scan','pin','pair','pixels','order','zoeken','plaats','afronden','aansluiting'].includes(v)):['scan','pin','pair'];
+        koppelViewsBewaarA1(koppelenA1.on?koppelenA1.views:null); // W1: na een herstart van de app de koppeling weer in Flutter
         const ok=await applyFlutterSetupU1();
         // de kleur per zone die de klant bij Zones zag (welkom.dart): bewaren bij de zone-id's van het ontwerp
         if(ok&&Array.isArray(args?.colours))try{zoneColoursSaveA1(onboarding.summary()?.zones||[],zones,args.colours);}catch(_){}
@@ -4467,6 +4578,14 @@
       if(name==='usersSave'){const st=window.LightningStandUsers?.store;return {ok:!!st&&st.save(args||{})===true};}
       // Flutter-Backup: terugzetten (de laatste automatische backup) of uit een bestand. Zelfde stappen als de knoppen van de
       // WebApp; opent de app een venster (Backup herstellen?) of laadt ze de stand, dan zegt open:true dat Flutter zich verbergt.
+      // Flutter-Backup "Nu bewaren" en het Ja van de backupvraag (nazicht 1061, I1, 17 nov): dezelfde stap als de knop van de app,
+      // autoBackupRun({force:true}) met {standId, standName, json} (de bewaarde scènes en voorkeuren erbij). Rechtstreeks naar native
+      // ('backupNow' zonder payload) bewaarde native alleen zijn eigen model. ok:false met status unavailable/none = rustig niets.
+      if(name==='backupNow'){
+        const r=await autoBackupRun({force:true});
+        if(r)return {...r,ok:r.status==='saved'};
+        return {ok:false,status:autoBackup.unavailable||!autoBackupServices()?'unavailable':'none',note:autoBackup.note||''};
+      }
       if(name==='backupRestore'||name==='backupImport'){
         const before=route;
         try{if(name==='backupRestore')await autoBackupRestore();else await chooseBackup();}catch(_){return {ok:false,note:""};}
@@ -4547,16 +4666,24 @@
       }
       if(name==='lightModel'){
         if(!stand())return null;
-        lightModelSnapshotU19=JSON.stringify(model);
-        return {model:JSON.parse(lightModelSnapshotU19),standId:stand().id,
-          gates:{presentationOnly:standPresentationOnly(),receiverWorkBusy:!!receiverWorkBusy(),standControlOpen:!!standControlOpen,managementBusy:!!managementBusy}};
+        // stap 2b: met een zone (kleur, helderheid) opent de WebApp die zone en geeft ze de keuze (selection) mee
+        if(args?.zoneId!==undefined&&!hostZoneU1(args.zoneId))return null;
+        lightScopeSnapshotU20=args?.zoneId!==undefined?JSON.stringify({zoneId:route.zoneId,scope:selection()}):null;
+        lightModelSnapshotU19=JSON.stringify(model);lightPortSnapshotU20=JSON.stringify(lightPortU20());
+        return {model:JSON.parse(lightModelSnapshotU19),standId:stand().id,time:globalThis.AluvisionPreviewNowPS(),previewLead:globalThis.AluvisionPreviewLeadPS(),
+          ...(lightScopeSnapshotU20?{zone:JSON.parse(lightScopeSnapshotU20),bediening:zoneControlsU20()}:{}),
+          gates:{presentationOnly:standPresentationOnly(),receiverWorkBusy:!!receiverWorkBusy(),standControlOpen:!!standControlOpen,managementBusy:!!managementBusy,...lightPortU20()}};
       }
       if(name==='adoptLight'){
         const kind=args?.kind,next=args?.model;
+        if(kind==='zone-light')return adoptZoneLightU20(args);
         if(!stand()||!['zone-power','stand-power','zone-power-gradient'].includes(kind))return {ok:false,reason:'input'};
         flutterStandShownU1=true;if(route.screen!=='stand')navigate('stand');
         if(standControlOpen||standPresentationOnly()||receiverWorkBusy())return {ok:false,reason:'gate'};
         if(lightModelSnapshotU19===null||JSON.stringify(model)!==lightModelSnapshotU19)return {ok:false,reason:'changed'};
+        // stap 2a: Dart plande ook het versturen (Versturen.plan); dan moeten de poorten nog dezelfde zijn als bij lightModel
+        const acties=Array.isArray(args?.acties)&&!sceneEdit640?args.acties:null;
+        if(acties&&JSON.stringify(lightPortU20())!==lightPortSnapshotU20)return {ok:false,reason:'changed'};
         lightModelSnapshotU19=null;
         if(kind==='zone-power-gradient'){
           const id=args?.zoneId,power=zonePowerState651(model,stand().id,id);if(power&&!power.empty)tryGradientPower({on:power.value!==true,power:power.value!==true},{kind:'all'},id);
@@ -4566,9 +4693,12 @@
         try{M.assertValid(next);}catch(_){return {ok:false,reason:'invalid'};}
         if(strip(next)!==strip(model))return {ok:false,reason:'structure'};
         const ids=Array.isArray(args?.receiverIds)?args.receiverIds.filter(id=>typeof id==='string'&&next.receivers.some(r=>r.id===id)):[];
+        if(acties&&!lightActionsValidU20(acties,next))return {ok:false,reason:'input'};
         model=next;
         if(kind==='stand-power'&&Array.isArray(args?.gradientZones))for(const zoneId of args.gradientZones)if(typeof zoneId==='string')tryGradientPower({on:args.target===true,power:args.target===true},{kind:'all'},zoneId);
-        if(ids.length)sendReceiverStates(ids);render();
+        // zonder handelingen van Dart (of tijdens een scènebewerking) verstuurt de WebApp zelf, op dezelfde plek
+        if(acties)runLightActionsU20(acties);else if(ids.length)sendReceiverStates(ids);
+        render();
         return {ok:true};
       }
       if(name==='standData'){
@@ -4605,7 +4735,9 @@
         if(op==='direction'){const effect=activeEffect();if(!effect||!AnimationControlPolicy.directionValuesFor(effect,selectedState(),animationControlContext(effect)).includes(value))return {ok:false};apply({direction:value});return {ok:true};}
         if(op==='toggle'){const effect=activeEffect();if(!['bounce','mirror'].includes(value)||!effect?.controls.includes(value))return {ok:false};apply({[value]:!selectedState()[value]});return {ok:true};}
         {const r=hostPaletteOpU1(op,value);if(r!==null)return {ok:r};}
-        if(op==='power'){const button=document.createElement('button');button.type='button';button.hidden=true;button.dataset.action='stand-power';main.append(button);try{button.click();}finally{button.remove();}return {ok:true};}
+        // Z1: de aan/uit-knop van Alles bedienen in de app (action 'power' met standControlOpen), niet de stand-power-knop van de
+        // standpagina (die doet niets zolang Alles bedienen open is)
+        if(op==='power'){const on=!powerTargets().every(r=>r.state.on!==false&&r.state.power!==false);apply({on,power:on},{kind:'all'});return {ok:true};}
         return {ok:false};
       }
       // Flutter-Scènes: de lijst zoals scenesHomeMarkupU1 ze tekent, plus het licht per scène voor het bewegende voorbeeld
@@ -4635,6 +4767,7 @@
         const button=main.querySelector(`[data-scenes-home] [data-action="${action}"]${id?`[data-id="${CSS.escape(id)}"]`:''}`);
         if(!button)return {ok:false};
         button.click();
+        if(action==='scene-apply')await sceneActivationDoneU20(); // S4: de lijst leest daarna 'aan' (lastSceneU1)
         return {ok:true,open:action==='scene-open'||action==='scene-new'};
       }
       if(name==='restoreBackup'){
@@ -12116,7 +12249,9 @@ quietAfterLoadC135();      readmitC107.limited=false;readmitC107.retries=0;readm
         render();if(!nativeContext)toast(t("Scène direct geactiveerd in het voorbeeld."));return;
       }
       if(action==='scene-delete'){if(sceneEditBusy640())return;const scene=savedScenes.scenes.find(s=>s.id===id&&s.standId===stand().id);if(!scene)return;showEffectDialog(t("Scène verwijderen?"),`<p>${esc(t('“{name}” wordt uit je opgeslagen scènes verwijderd. Je verlichting verandert niet.',{name:scene.name}))}</p><button class="button full" data-action="scene-delete-confirm" data-id="${esc(id)}">${esc(t("Scène verwijderen"))}</button><button class="button secondary full" data-action="effect-dialog-close">${esc(t("Behouden"))}</button>`);return;}
-      if(action==='scene-delete-confirm'){const result=sceneStore.remove(id);if(result.error)return toast(result.error.message);await confirmCentralLibrary(result);savedScenes=result;closeEffectDialog();return navigate('scenes');}
+      if(action==='scene-delete-confirm'){const result=sceneStore.remove(id);if(result.error)return toast(result.error.message);
+        sceneDeleteBusyU20=true;try{await confirmCentralLibrary(result);}finally{sceneDeleteBusyU20=false;} // S5: dialogOp wacht hierop
+        savedScenes=result;closeEffectDialog();return navigate('scenes');}
       if(action==='effects'||action==='effects-root'||action==='animations-gallery'){
         if(route.screen==='controls'&&controlMode==='animations'&&!showControlAnimationGallery)rememberAnimationEditorForBrowse();
         closeZoneMenus();
@@ -12775,7 +12910,11 @@ quietAfterLoadC135();      readmitC107.limited=false;readmitC107.retries=0;readm
       }
       // Only a successful load can establish that this is a first installation.
       // An existing stand with no receivers is not a reason to restart setup.
-      if(state.draft&&!namesOnly){route.screen='receiver-add';route.setupFrom='stand';}
+      if(state.draft&&!namesOnly){route.screen='receiver-add';route.setupFrom='stand';
+        // nazicht 1061 W1: de app herstartte midden in de eerste koppeling (weggeveegd). Was ze met Flutter-koppelen begonnen
+        // (newStand bewaarde de koppelViews), dan neemt de poll het weer op en roept Flutter 'koppelen' (ook A7), geen oude schermen.
+        const views=state.draft.stand?.isNew===true&&flutterHostU1()?koppelViewsLeesA1():null;
+        if(views){koppelenA1.log=null;koppelenA1.on=true;koppelenA1.view='app';koppelenA1.views=views;try{window.__c98log?.('KOPPEL start herstart');}catch(_){}}}
       else if(namesOnly){route.screen='stand';route.zoneId=null;route.standId=localStandConceptId;}
       else if(!restored.stands.length&&!localStandConcept()){route.screen='stand';route.standId=null;route.zoneId=null;}
     }catch(_){nativeLoadError=true;if(standPresentationId)standConnectionState={status:'offline',error:'STAND_CONNECTION_UNAVAILABLE'};}
