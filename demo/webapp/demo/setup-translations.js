@@ -16,6 +16,7 @@
     ["Bekijk tutorial", "Watch tutorial", "Voir le tutoriel", "Tutorial ansehen"],
     ["Zo verbind je je eerste receiver", "How to connect your first receiver", "Comment connecter votre premier récepteur", "So verbindest du deinen ersten Receiver"],
     ["Geef Aluvision toegang tot je camera in de instellingen van je toestel. Of controleer de verbinding hieronder.", "Allow Aluvision to use your camera in your device settings. Or check the connection below.", "Autorisez Aluvision à utiliser l’appareil photo dans les réglages de votre appareil. Ou vérifiez la connexion ci-dessous.", "Erlaube Aluvision in den Geräteeinstellungen den Zugriff auf die Kamera. Oder prüfe unten die Verbindung."],
+    ["Scan de QR-code op deze receiver.", "Scan the QR code on this receiver.", "Scannez le code QR de ce récepteur.", "Scanne den QR-Code auf diesem Receiver."],
     ["Scannen lukt nu niet. Zet de receiver aan en probeer opnieuw, of controleer de verbinding hieronder.", "Scanning is not working right now. Switch the receiver on and try again, or check the connection below.", "Le scan ne fonctionne pas pour le moment. Allumez le récepteur et réessayez, ou vérifiez la connexion ci-dessous.", "Scannen klappt gerade nicht. Schalte den Receiver ein und versuche es erneut, oder prüfe unten die Verbindung."],
     // C214: scan step of an extra receiver
     ["Scan je receiver", "Scan your receiver", "Scannez votre récepteur", "Scanne deinen Receiver"],

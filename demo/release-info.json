@@ -574,7 +574,7 @@
     {
       "path": "index.html",
       "bytes": 2846,
-      "sha256": "d75befda73fbbeebfcab25dd8452d49252841e4e948ad2c67f4269516ab961ab"
+      "sha256": "4b2a3f24a729c8f853b433ced7f87c9effbf639104330cdef8687020486b2051"
     },
     {
       "path": "installation-libraries.js",
@@ -1098,13 +1098,13 @@
     },
     {
       "path": "web-gastheer.js",
-      "bytes": 21654,
-      "sha256": "a1e55e03e01477edf39d55e549223e1c627cefb9e68a5103759be19a68a4586c"
+      "bytes": 21731,
+      "sha256": "3c88689daf32e632b3641292d955015b8035e48c94aa666190eb2508e0c31d29"
     },
     {
       "path": "flutter_bootstrap.js",
       "bytes": 13430,
-      "sha256": "928292ed332c057efc06f32bea4d8e531bee53b444c9fdb2bcac7ef296451cf6"
+      "sha256": "5445d5608846c39d95718ba9a16adb5b2ff47d768eb73c5fa2c6c0c03bd1ad0e"
     },
     {
       "path": "flutter.js",
@@ -1113,8 +1113,8 @@
     },
     {
       "path": "main.dart.js",
-      "bytes": 3722683,
-      "sha256": "781d32dd2901ab624419252a8b76d069e54965022710474fd85125ca38a66474"
+      "bytes": 3916503,
+      "sha256": "9ed680d7e59f9733fb70ece8ba85d91377d4463411d5dda128be35505dfbb09b"
     },
     {
       "path": "version.json",
@@ -1178,8 +1178,8 @@
     },
     {
       "path": "webapp/demo/app.js",
-      "bytes": 1179621,
-      "sha256": "f85c98cee7e41376227cc825e1f5a8b4aaf0a626ba6e5bff87cadb2b04118d9b"
+      "bytes": 1201464,
+      "sha256": "e167305de3b0e1c2c669b46013dc18d0a75dc7aa9e6fad033053a9247ac53d6f"
     },
     {
       "path": "webapp/demo/backup.js",
@@ -1344,7 +1344,7 @@
     {
       "path": "webapp/demo/index.html",
       "bytes": 13942,
-      "sha256": "575ca9b7f748770d26e63027f1d83d86f733a4c99ef21b532c5f87ff65ed595e"
+      "sha256": "0b684e080d228646e7d890b104ac7843dc186f4cf2ffde62ec4ac85b2f0e62d3"
     },
     {
       "path": "webapp/demo/installation-libraries.js",
@@ -1493,8 +1493,8 @@
     },
     {
       "path": "webapp/demo/native-runtime.js",
-      "bytes": 280297,
-      "sha256": "8657c419b470fd3760701fc1656a8ffdd4fa5eead15e6a0b08f8239ed64f6dee"
+      "bytes": 283012,
+      "sha256": "3b8c9762f1d520124fdbbafa1e28d8d58acbf03801a351fa59d00da84db454a9"
     },
     {
       "path": "webapp/demo/onboarding-connect.css",
@@ -1518,8 +1518,8 @@
     },
     {
       "path": "webapp/demo/onboarding-ui.js",
-      "bytes": 248832,
-      "sha256": "8ad354f271ce220a3a1ec3e99d2ce656b34d6925a2b76f5c7074c0e718de4775"
+      "bytes": 252771,
+      "sha256": "2028bd55ef1b9c0121e36425cc60c3025324eff0896c451ed0e89ee1d2a4cb48"
     },
     {
       "path": "webapp/demo/onboarding756.css",
@@ -1598,8 +1598,8 @@
     },
     {
       "path": "webapp/demo/receiver-removal-ui.js",
-      "bytes": 26143,
-      "sha256": "a40e08a5aeb7ca7b9b6132c86e62f1e002353c5da9958f652c3aa01bd65ba441"
+      "bytes": 26806,
+      "sha256": "e26d9e78dbd3bb92c00b1713ee456258759e344a21a5a397d0652ff20297757a"
     },
     {
       "path": "webapp/demo/receiver-scan-tutorial.js",
@@ -1713,8 +1713,8 @@
     },
     {
       "path": "webapp/demo/setup-translations.js",
-      "bytes": 102588,
-      "sha256": "6c775ab479f9987a718dc413104e4de10d7ae1fec28a439df3fd693ebe552e80"
+      "bytes": 102752,
+      "sha256": "705586ab970aa065d189e921499a61e63faf4e6123e000179104993fff7ccb47"
     },
     {
       "path": "webapp/demo/setup-wifi-guide.js",
@@ -1868,8 +1868,8 @@
     },
     {
       "path": "webapp/demo/ui-copy.js",
-      "bytes": 161989,
-      "sha256": "609559b92a6d010c864283f6d589996831bfab126b368b33b7007963dc605ee0"
+      "bytes": 163902,
+      "sha256": "2167b37ec1e970fcd6f1484b71dcf2b268adb1d1139c7cf32420dbeb701e0d4a"
     },
     {
       "path": "webapp/demo/ui606-controls.css",
@@ -5198,6 +5198,9 @@
     "iphoneBuild": 1063,
     "date": "2026-11-17",
     "storage": "none",
-    "hardwareAccess": false
+    "hardwareAccess": false,
+    "bron": "3b9ca56b",
+    "gelijkAan": "iPhone 1071 / Android 412",
+    "datum": "2026-11-18"
   }
 }

@@ -820,7 +820,7 @@
   }
   function trackedLibraryStore(store,field){
     return Object.freeze(Object.fromEntries(Object.entries(store).map(([method,implementation])=>[method,(...args)=>{
-      if(simpleStandMode&&method!=='load'&&standConnectionState.status!=='connected')return {...store.load(),error:{code:'STAND_NOT_CONNECTED',message:'Verbind met je stand voordat je dit opslaat.'}};
+      if(simpleStandMode&&method!=='load'&&standConnectionState.status!=='connected')return {...store.load(),error:{code:'STAND_NOT_CONNECTED',message:t('Verbind met je stand voordat je dit opslaat.')}};
       try{installationLibraries?.recover();}catch(error){return {[field]:[],error:{code:'LIBRARY_STORAGE',message:error.message}};}
       const result=implementation(...args);if(method!=='load')scheduleLibraryContext(field,result);return result;
     }])));
@@ -2125,24 +2125,59 @@
     return {receiverId,name:r.name,zone:M.getZone(model,r.zoneId)?.name||'',max:1024,
       outputs:[1,2,3,4].map(port=>{const o=r.outputs.find(x=>x.port===port)||{port,enabled:false,pixels:0,reversed:false};return {port,enabled:o.enabled===true,pixels:o.pixels||0,reversed:o.reversed===true,colour:colour(port)};})};
   }
-  function pixelLightU13({stage,port,outputs}={}){
+  var pixelLogU13=''; // c98.log: alleen bij een andere stap of poort (de schuif stuurt veel aanvragen)
+  // de eigenaar 17 nov (1067): "als ik nu poort 2 open met de pixelkiezer werkt het, het werkt niet in de setup". Een poort die op de
+  // receiver nog UIT staat (net toegevoegd: alleen poort 1) kreeg in de setup geen licht. Vlak vóór het eerste voorbeeld van zo'n poort
+  // zetten we alleen die poort aan (configureOutputs); sluit Pixels zonder bewaren, dan gaat ze weer uit (pixelCloseU13).
+  async function pixelPortAanU13(f,r,port,outs){
+    if(!Number.isInteger(port)||port<1||port>4||!Array.isArray(r.outputs)||r.outputs.find(o=>o.port===port)?.enabled===true)return;
+    if(f.aan?.has(port))return f.aanBezig;
+    if(!nativeContext||typeof runtime?.services?.configureOutputs!=='function')return;
+    f.aan=f.aan||new Set();f.aan.add(port);
+    f.origineel=f.origineel||[1,2,3,4].map(p=>{const o=r.outputs.find(x=>x.port===p)||{port:p,enabled:false,pixels:163,reversed:false};return {port:p,enabled:o.enabled===true,pixels:Number.isInteger(o.pixels)&&o.pixels>0?o.pixels:163,reversed:o.reversed===true};});
+    const nu=r.outputs.map(o=>({port:o.port,enabled:o.enabled===true,pixels:o.pixels,reversed:o.reversed===true})).sort((a,b)=>a.port-b.port);
+    const px=outs.find(o=>o.port===port)?.pixels;
+    const rij=(nu.length===4?nu:f.origineel).map(o=>o.port===port?{port,enabled:true,pixels:Number.isInteger(px)&&px>=1&&px<=163?px:(o.pixels>0&&o.pixels<=163?o.pixels:163),reversed:o.reversed===true}:{...o,pixels:o.pixels>0?o.pixels:163});
+    // iPhone V40StandConnection weigert configureOutputs zolang er een voorbeeld-binding open staat (OUTPUT_CONFIGURATION_PENDING): eerst
+    // het voorbeeld van poort 1 stoppen ('stop' sluit de binding), dan de poort aan; het volgende licht start het voorbeeld opnieuw
+    f.aanBezig=(async()=>{try{try{await f.preview?.stop();}catch(_){}
+      const view=await runtime.services.configureOutputs({standId:r.standId,receiverId:r.id,outputs:rij});
+      if(view?.model){model=keepLocalPreviewStates(view.model);}window.__c98log?.('PIXELS poort aan port='+port+' ok');}
+      catch(error){window.__c98log?.('PIXELS poort aan port='+port+' fout '+String(error?.code||'').slice(0,40));}})();
+    return f.aanBezig;
+  }
+  async function pixelLightU13({stage,port,outputs}={}){
     const f=pixelFlutterU13,r=f&&model.receivers.find(x=>x.id===f.receiverId),outs=pixelOutputsU13(outputs);
     if(!f?.preview||!r||!outs||!['outputs','pixels'].includes(stage))return {ok:false};
+    if(stage==='pixels'){await pixelPortAanU13(f,r,port,outs);if(pixelFlutterU13!==f)return {ok:false};}
     const caps=runtime?.services?.previewCapabilities||{};
     const request=window.LightningPixelSetup.guideRequest({context:{standId:r.standId,transactionId:f.transaction,
       receiver:{id:r.id,rid:r.rid,type:'SPI',deviceFingerprint:r.deviceFingerprint},role:r.role,mainReceiverId:r.mainReceiverId||null},
-      outputs:outs,output:outs.find(o=>o.port===port)||null,stage,capabilities:{identifyPorts:caps.identifyPorts===true,power:caps.power===true}});
+      // de eigenaar 17 nov (1065): "poort 2 startte de pixelkiezer niet". Een ledline die langer bewaard staat dan het voorbeeld toont (163
+      // pixels, pixel-setup.js MAX) gaf geen voorbeeld (guideRequest null → stop): geen rood blokje. Nu tot 163, alleen voor het licht.
+      outputs:outs,output:(o=>o?{...o,pixels:Math.min(o.pixels,163)}:null)(outs.find(o=>o.port===port)),stage,capabilities:{identifyPorts:caps.identifyPorts===true,power:caps.power===true}});
+    {const k=stage+':'+(port??'-')+':'+(request?1:0);if(k!==pixelLogU13){pixelLogU13=k;try{window.__c98log?.('PIXELS licht stage='+stage+' port='+(port??'-')+(request?'':' geen'));}catch(_){}}}
     if(!request){void f.preview.stop({keepSession:true});return {ok:true};}
     f.preview.update(request);void f.preview.flush();return {ok:true};
   }
   async function pixelSaveU13({outputs}={}){
     const f=pixelFlutterU13,outs=pixelOutputsU13(outputs);if(!f||!outs)return {ok:false};
     try{await f.preview?.stop();}catch(_){}
+    // pixelPortAanU13 zette een poort al aan: het bewaren vergelijkt met de toestand van vóór Pixels (een nieuwe ledline blijft nieuw)
+    if(f.origineel){try{await f.aanBezig;}catch(_){}const r0=model.receivers.find(x=>x.id===f.receiverId);if(r0)try{r0.outputs=f.origineel.map(o=>({...o}));}catch(_){}}
     try{await pixelSetupSaveC109({receiverId:f.receiverId,outputs:outs});}
     catch(error){return {ok:false,note:typeof outputConfigurationErrorMessage==='function'?outputConfigurationErrorMessage(error):''};}
+    // nazicht 1061 (blok 1): buiten de koppeling (geen A7) opent Flutter zelf de Looprichting na een nieuwe ledline; de wachtende
+    // opdracht van de app wissen, anders opende later de oude Looprichting-dialoog
+    if(!a7StapA7)pendingSPIOrderOpenC113=null;
     pixelFlutterU13=null;render({preserveScroll:true});return {ok:true};
   }
-  function pixelCloseU13(){const f=pixelFlutterU13;pixelFlutterU13=null;if(f?.preview)void Promise.resolve(f.preview.stop()).catch(()=>{});return {ok:true};}
+  function pixelCloseU13(){const f=pixelFlutterU13;pixelFlutterU13=null;const gestopt=f?.preview?Promise.resolve(f.preview.stop()).catch(()=>{}):Promise.resolve();
+    // Pixels dicht zonder bewaren: een poort die pixelPortAanU13 aanzette, gaat weer uit (de opgeslagen toestand van ervoor)
+    if(f?.origineel){const r=model.receivers.find(x=>x.id===f.receiverId);void (async()=>{try{await f.aanBezig;}catch(_){}await gestopt;
+      try{const view=await runtime.services.configureOutputs({standId:r.standId,receiverId:r.id,outputs:f.origineel});if(view?.model){model=keepLocalPreviewStates(view.model);render({preserveScroll:true});}window.__c98log?.('PIXELS poort terug uit ok');}
+      catch(error){window.__c98log?.('PIXELS poort terug uit fout '+String(error?.code||'').slice(0,40));}})();}
+    return {ok:true};}
   // M9 wit warm ↔ koud (U14): de laatst gekende keuze per stand op dit toestel (de hoofdreceiver is de bron: STAND_WHITE), zodat de
   // voorbeelden van de app dezelfde tint tonen als de leds. Flutter zet ze na een SET of STATUS ('whiteTint').
   var WHITE_TINT_KEY_U14='aluvision.wittint.v1',whiteTintStandU14=null; // var: render() kan al lopen vóór deze regel
@@ -2793,6 +2828,8 @@
         // C138ui-17: straight to the order screen (same path as Volgorde in the receiver menu); the zone page no longer
         // shows for 0.5 s in between.
         const zoneId=result.orderZoneIdC137bz;
+        // nazicht 1061 (blok 6): met Flutter-koppelen (A7) de Looprichting van Flutter, niet de dialoog van de app (die sloot Flutter)
+        if(orderStepReadyC229(zoneId)&&a7AanA7()){navigate('stand',{setupReturnZoneId:null});a7OpenA7({view:'order',zoneId,receiverId:null});return;}
         if(orderStepReadyC229(zoneId)){navigate('stand',{setupReturnZoneId:null});openOrderStepC229({zoneId});return;} // C229
         navigate('controls',{zoneId,setupReturnZoneId:null});return;   // niets te ordenen: de zonepagina, niet het oude scherm
       }
@@ -3384,22 +3421,33 @@
     if(saved)return (saved.receivers||[]).map(r=>{const real=model.receivers.find(x=>x.id===r.id);return real?{id:r.id,type:real.type,outputs:real.outputs||[],state:r.state||{}}:null;}).filter(Boolean);
     return M.zoneReceivers(model,zoneId).map(r=>({id:r.id,type:r.type,outputs:r.outputs||[],state:r.state||{}}));
   }
+  // Flutter-scènepagina's (prototype scenes SC2/SC3, 17 nov): per zone "wat er speelt" (de naam van de animatie, Verloop of Vaste kleur)
+  // en de eerste kleur, voor het kleurbolletje. Dezelfde herkenning als activeEffect/currentLightLabel, maar op het bewaarde licht.
+  function sceneZoneWhatU17(type,lights){
+    const states=lights.map(l=>l.state||{}),st=states[0]||{},c=st.colors?.[0];let colour=typeof c==='string'&&/^#[0-9a-f]{6}$/i.test(c)?c.toUpperCase():null;
+    if(!colour&&[st.r,st.g,st.b].every(Number.isFinite))try{colour=C.hex([st.r,st.g,st.b]);}catch(_){}
+    if(!states.length)return {what:'',colour};
+    if(states.every(x=>x.engine==='STATIC_GRADIENT'))return {what:t(states.some(x=>Number(x.variant)>=210&&Number(x.variant)<=217)?'Verloop in beweging':'Verloop'),colour};
+    if(!st.engine||String(st.engine).toUpperCase()==='STATIC')return {what:t('staticColour'),colour};
+    let effect=null;try{effect=P.catalogSnapshot(type||'RGBW').find(e=>st.v30Effect?e.state.v30Effect===st.v30Effect:!e.state.v30Effect&&e.state.engine===st.engine&&e.state.variant===st.variant&&(e.state.previewFamily||null)===(st.previewFamily||null));}catch(_){}
+    return {what:effect?Library.displayName(effect,t):'',colour};
+  }
   function sceneScreenU16(){
     const txt=sel=>main.querySelector(sel)?.textContent.replace(/\s+/g,' ').trim()||'';
     const s=stand();if(!s)return {screen:'none'};
     if(route.screen==='scene-detail'){
       const scene=savedScenes.scenes.find(x=>x.id===route.sceneId&&x.standId===s.id);if(!scene)return {screen:'none'};
       const apply=main.querySelector('[data-action="scene-apply"]'),saved=id=>scene.zones.find(z=>z.id===id);
-      return {screen:'detail',id:scene.id,name:scene.name,standName:standLabel(),back:txt('.topline .back span'),subtitle:txt('.scene-detail-heading .page-heading p'),
+      return {screen:'detail',id:scene.id,name:scene.name,standName:standLabel(),playing:!!(lastSceneU1&&lastSceneU1.standId===s.id&&lastSceneU1.id===scene.id&&lastSceneU1.print===sceneFingerprintU1()),back:txt('.topline .back span'),subtitle:txt('.scene-detail-heading .page-heading p'),
         chips:[...main.querySelectorAll('.scene-scope-summary span')].map(e=>e.textContent.replace(/\s+/g,' ').trim()),storage:txt('.scene-detail-storage687'),
         status:main.querySelector('.scene-detail-status687')?{title:txt('.scene-detail-status687 h2'),text:txt('.scene-detail-status687 p')}:null,
         join:txt('.scene-join-note,.scene-join-note740,[data-scene-join-note]'),
         activate:apply?{label:visibleTextU20(apply),enabled:!apply.disabled,note:txt('.scene-unavailable-note')}:null,
         lightEdit:main.querySelector('[data-action="scene-start-edit"]')?txt('[data-action="scene-start-edit"]'):null,
         edit:txt('[data-action="scene-edit"]'),zonesTitle:txt('.scene-detail .section-heading h2'),zonesHint:txt('.scene-detail .section-heading small'),
-        zones:[...main.querySelectorAll('[data-scene-zone]')].map(el=>{const id=el.dataset.sceneZone;return {id,nr:el.querySelector('.scene-zone-number')?.textContent||'',name:el.querySelector('b')?.textContent||'',
+        zones:[...main.querySelectorAll('[data-scene-zone]')].map(el=>{const id=el.dataset.sceneZone,lights=sceneLightsU16(id,saved(id));return {id,...sceneZoneWhatU17(el.dataset.sceneZoneType,lights),nr:el.querySelector('.scene-zone-number')?.textContent||'',name:el.querySelector('b')?.textContent||'',
           meta:el.querySelector('small')?.textContent||'',edit:el.matches('[data-action="scene-zone-edit"]')?(el.querySelector('.scene-zone-edit-label')?.textContent.trim()||''):null,
-          unavailable:el.querySelector('.scene-zone-unavailable687')?.textContent||null,type:el.dataset.sceneZoneType||'',layout:saved(id)?.layout||s.zones.find(z=>z.id===id)?.layout||'stacked',lights:sceneLightsU16(id,saved(id))};}),
+          unavailable:el.querySelector('.scene-zone-unavailable687')?.textContent||null,type:el.dataset.sceneZoneType||'',layout:saved(id)?.layout||s.zones.find(z=>z.id===id)?.layout||'stacked',lights};}),
         remove:txt('[data-action="scene-delete"]')};
     }
     if(route.screen==='scene-draft'&&sceneDraft){
@@ -3408,11 +3456,13 @@
       return {screen:'draft',editing:!!sceneDraft.sceneId,title:txt('.page-heading h1, .context-title h1, h1'),subtitle:txt('.page-heading p, .context-title p'),back:txt('.topline .back span'),standName:standLabel(),
         step1:txt('.scene-name-field .ui606-step-heading > span:last-child'),name:name?.value||'',placeholder:name?.placeholder||'',step2:txt('#scene-zone-picker-title'),
         selectAll:txt('[data-action="scene-select-all"]'),clear:txt('[data-action="scene-clear-selection"]'),warning:txt('.scene-edit-warning'),
-        zones:[...main.querySelectorAll('[data-action="scene-zone"]')].map(el=>({id:el.dataset.id,name:el.querySelector('b')?.textContent||'',meta:el.querySelector('small')?.textContent||'',
+        zones:[...main.querySelectorAll('[data-action="scene-zone"]')].map(el=>(z=>({...z,...sceneZoneWhatU17(z.type,z.lights)}))({id:el.dataset.id,name:el.querySelector('b')?.textContent||'',meta:el.querySelector('small')?.textContent||'',
           selected:el.getAttribute('aria-pressed')==='true',enabled:!el.disabled,layout:s.zones.find(z=>z.id===el.dataset.id)?.layout||'stacked',type:s.zones.find(z=>z.id===el.dataset.id)?.type||'',lights:sceneLightsU16(el.dataset.id,sceneDraft.original?.zones?.find(z=>z.id===el.dataset.id))})),
         summary:txt('[data-scene-selection-summary]'),error:err&&!err.hidden?err.textContent.trim():'',
         save:save?{label:save.textContent.replace(/\s+/g,' ').trim(),enabled:!save.disabled}:null,saveNew:saveNew?{label:saveNew.textContent.trim(),enabled:!saveNew.disabled}:null,
-        cancel:cancel?cancel.textContent.trim():'',saving:!!sceneDraft.saving};
+        cancel:cancel?cancel.textContent.trim():'',saving:!!sceneDraft.saving,
+        // nazicht 1061 (blok 5): "Licht aanpassen" bij Scène aanpassen (renderSceneDraft, alleen bij een bestaande scène)
+        lightEdit:(b=>b?{label:visibleTextU20(b),enabled:!b.disabled,hint:txt('.scene-edit-hint')}:null)(main.querySelector('.scene-draft-page [data-action="scene-start-edit"]'))};
     }
     return {screen:route.screen==='scenes'?'scenes':'other'};
   }
@@ -3442,11 +3492,19 @@
     else if(op==='edit')ok=click('[data-action="scene-edit"]');
     else if(op==='zone-edit'){ok=click(`[data-action="scene-zone-edit"][data-zone="${CSS.escape(String(zone||''))}"]`);open=ok;}
     else if(op==='delete'){ok=click('[data-action="scene-delete"]');open=ok;}
+    // Flutter-scènedetails (prototype scenes SC2, 17 nov): "Opnieuw bewaren · Met wat nu brandt" = dezelfde zones van de scène met het
+    // licht van nu, onder dezelfde naam en id; dezelfde weg als Scène opslaan (captureScene684 + saveScene640, daarna actief).
+    else if(op==='resave'){
+      const sc=savedScenes.scenes.find(x=>x.id===route.sceneId&&x.standId===stand()?.id);
+      const ids=sc?sc.zones.map(z=>z.id).filter(id=>stand().zones.some(z=>z.id===id)&&M.zoneReceivers(model,id).length):[];
+      if(sc&&ids.length&&!sceneEditBusy640(sc.id)){ok=true;await saveScene640(captureScene684(model,stand().id,ids,sc.name,{id:sc.id}));}
+    }
     else if(op==='name'){const i=main.querySelector('#scene-name');if(i&&typeof value==='string'){i.value=value.slice(0,64);i.dispatchEvent(new Event('input',{bubbles:true}));ok=true;}}
     else if(op==='zone')ok=click(`[data-action="scene-zone"][data-id="${CSS.escape(String(zone||''))}"]`);
     else if(op==='all')ok=click('[data-action="scene-select-all"]');
     else if(op==='clear')ok=click('[data-action="scene-clear-selection"]');
-    else if(op==='save'||op==='save-new'){ok=click(`[data-action="${op==='save'?'scene-save':'scene-save-new'}"]`);for(let i=0;i<60&&sceneDraft?.saving;i++)await wait(100);}
+    // nazicht 1061: bewaren wacht op de MAIN en de receivers (vaak > 6 s): dezelfde grens als bar-save (15 s)
+    else if(op==='save'||op==='save-new'){ok=click(`[data-action="${op==='save'?'scene-save':'scene-save-new'}"]`);for(let i=0;i<150&&sceneDraft?.saving;i++)await wait(100);}
     else if(op==='back'){ok=true;if(route.screen==='scene-draft'&&sceneDraft?.sceneId)navigate('scene-detail',{sceneId:sceneDraft.sceneId});else navigate('scenes');}
     else return {ok:false};
     await wait(open?150:80);
@@ -3467,8 +3525,11 @@
     const text=e=>e.textContent.replace(/\s+/g,' ').trim();
     const knop=b=>{const k={index:buttons.length,label:text(b),action:b.dataset.removal||b.dataset.update||'',disabled:!!b.disabled,
       style:b.classList.contains('red')||b.classList.contains('danger')?'red':b.classList.contains('secondary')?'secondary':b.classList.contains('text-button')?'text':'dark'};buttons.push(b);return k;};
+    // nazicht 1061 (blok 1): de knoppen in een kaart (update: Opnieuw controleren, herstel starten/controleren, annuleren) als buttons van
+    // die kaart, zodat Flutter ze toont en dezelfde knop aantikt (dialogOp click met hun index)
     const card=c=>({kind:'card',title:text(c.querySelector('h3')||c.querySelector('b')||document.createElement('i')),
-      lines:[...c.querySelectorAll('p,small')].filter(vis).map(text).filter(Boolean),state:c.dataset.state||''});
+      lines:[...c.querySelectorAll('p,small')].filter(vis).map(text).filter(Boolean),state:c.dataset.state||'',
+      buttons:[...c.querySelectorAll('button')].filter(vis).map(knop)});
     const walk=el=>{
       for(const e of el.children){
         if(e.tagName==='HEADER'||!vis(e))continue;
@@ -3562,13 +3623,17 @@
   // Flutter: de kleuren van de animatie die speelt (dezelfde functies als de bolletjes en + op de instellingenpagina)
   function hostPaletteOpU1(op,value){
     // nazicht 1061 Z1: alleen de eigen ops; al de rest (power, presetSave, reset …) gaat verder in standOp/zone(), ook bij een vaste kleur
-    if(!['palette','paletteAdd','paletteRemove','backgroundToggle'].includes(op))return null;
+    if(!['palette','paletteAdd','paletteRemove','backgroundToggle','background'].includes(op))return null;
     const effect=activeEffect();if(!effect)return false;
     if(op==='palette'){const i=Number(value?.index),rgb=String(value?.rgb||''),w=value?.white;if(!Number.isInteger(i)||!/^#[0-9A-F]{6}$/i.test(rgb))return false;
       updatePalette(i,rgb.toUpperCase(),Number.isInteger(w)&&w>=0&&w<=255?w:undefined);return true;}
     if(op==='paletteAdd'){changePalette();return true;}
     if(op==='paletteRemove'){const i=Number(value);if(!Number.isInteger(i))return false;changePalette(i);return true;}
     if(op==='backgroundToggle'){if(!effect.backgroundEditable)return false;apply({backgroundOn:!selectedState().backgroundOn});return true;}
+    // nazicht 1061: de achtergrondkleur kiezen (zoals background-edit → de kleurkiezer 'background'): kleur en wit samen
+    if(op==='background'){if(!effect.backgroundEditable)return false;const rgb=String(value?.rgb||''),w=value?.white;if(!/^#[0-9A-F]{6}$/i.test(rgb))return false;
+      const s=selectedState(),wit=Number.isInteger(w)&&w>=0&&w<=255?w:(s.backgroundWhite??s.background?.white??0);
+      apply({background:rgb.toUpperCase(),backgroundWhite:wit,backgroundRgbEnabled:true,backgroundWhiteEnabled:true});try{syncBackground();}catch(_){}return true;}
     return null;
   }
   // de WebApp onder Flutter op deze zone zetten (zonder dat Flutter verdwijnt); false als de zone niet (meer) bestaat
@@ -3589,6 +3654,12 @@
         const current=colourStore.load();if(current.error)return false;
         const base=Colours.suggestName(color);let name=base,n=2;while(current.colors.some(e=>e.name===name))name=`${base} ${n++}`;
         const result=colourStore.save(Colours.capture(name,color));if(result.error)return false;savedColours=result;await confirmCentralLibrary(result);return true;
+      }
+      // de eigenaar 17 nov: bewaarde kleuren verslepen in Flutter (vasthouden); zelfde winkel als de sleepgreep van de app (colourStore.move)
+      if(op==='savedColourMove'){
+        const mid=typeof value?.id==='string'?value.id:'',to=value?.toIndex;if(!mid||!Number.isInteger(to)||to<0)return false;
+        const current=colourStore.load();if(current.error||!current.colors.some(e=>e.id===mid)||to>=current.colors.length)return false;
+        const result=colourStore.move(mid,to);if(result.error)return false;savedColours=result;await confirmCentralLibrary(result);return true;
       }
       if(op==='savedColourRemove'){
         const current=colourStore.load();if(current.error)return false;const entry=current.colors.find(e=>e.id===id);if(!entry)return false;
@@ -3613,11 +3684,64 @@
     return false;
   }
   function gradientForFlutterU3(){
-    try{const g=demoGradientEditor()?.zone;if(!g)return null;const st=g.state();
-      return {mode:st.mode,selected:st.selected,max:st.max,applying:!!st.applying,playing:selectedState()?.engine==='STATIC_GRADIENT',
-        stops:st.stops.map(x=>({hex:String(x.color).toUpperCase(),white:Number(x.white)||0,position:Number(x.position)||0,unset:!!x.unset}))};}catch(_){return null;}
+    try{const ed=demoGradientEditor(),g=ed?.zone;if(!g)return null;const st=g.state();
+      // de eigenaar 17 nov ("als overloop aan staat toont het voorbeeld het niet"): het concept dat het voorbeeld van de app tekent
+      // (gradientDraft/gradientMotion), zodat het Flutter-voorbeeld hetzelfde verloop toont terwijl de bewerker open staat
+      let voorbeeld=null;try{const recipe=standControlOpen?null:ed.previewRecipe();if(recipe)voorbeeld={recipe,motion:ed.previewMotion?.()||null};}catch(_){}
+      return {mode:st.mode,selected:st.selected,max:st.max,applying:!!st.applying,playing:selectedState()?.engine==='STATIC_GRADIENT',voorbeeld,reorder:typeof g.reorder==='function',
+        stops:st.stops.map(x=>({hex:String(x.color).toUpperCase(),white:Number(x.white)||0,position:Number(x.position)||0,unset:!!x.unset})),
+        kaart:verloopKaartU20()};}catch(_){return null;}
   }
-  function gradientOpU3(op,value){
+  // nazicht 1061 (1-op-1): de Verloop-kaart van de zonepagina (zone-page.js gradientState/gradCardHtml): Omdraaien, Doorlopend, de
+  // beweging (0 Stil, 1 Schuiven, 2 Golven, 3 Ademen, 4 Lichtkop), de richting en de schuiven, gelezen uit de verloopbewerker
+  function verloopKaartU20(){
+    const ws=main.querySelector('[data-gradient-workspace]');if(!ws)return null;const q=s=>ws.querySelector(s);
+    const type=+(q('[data-gradient-motion-type][aria-pressed="true"]')?.dataset.gradientMotionType||0),aan=!!q('[data-gradient-motion-card]')&&q('[data-gradient-motion-toggle]')?.getAttribute('aria-checked')==='true';
+    const v=k=>{const n=+(q(`[data-gradient-motion-${k}]`)?.value??40);return Number.isFinite(n)?n:40;};
+    return {reverse:!!q('[data-gradient-reverse]')?.checked,loop:q('[data-gradient-loop-toggle]')?.getAttribute('aria-checked')==='true',
+      loopOff:!!q('[data-gradient-loop-toggle]')?.disabled,move:aan?type:0,flow:q('[data-gradient-motion-flow][aria-pressed="true"]')?.dataset.gradientMotionFlow||'right',
+      speed:v('speed'),softness:v('softness'),trail:v('trail'),
+      // bewaarde verlopen, de voorbeelden en Ongedaan maken (zone-page.js savedHtml); kleuren uit de achtergrond van het tegeltje
+      bewaard:[...ws.querySelectorAll('[data-gradient-load]')].map(b=>({id:b.dataset.gradientLoad,name:b.querySelector('span')?.textContent||'',
+        kleuren:kleurenUitCssU20(b.querySelector('i')?.style.background)})).slice(0,40),
+      voorbeelden:(window.LightningStaticGradient?.builtinPresets||[]).map(pr=>({id:pr.id,name:pr.name,kleuren:pr.stops.map(x=>String(x.color).toUpperCase())})),
+      ongedaan:!!demoGradientEditor()?.zone?.canUndoPreset};
+  }
+  // de kleuren van een verloop-achtergrond: de browser schrijft ze als rgb(r, g, b), soms als #rrggbb
+  function kleurenUitCssU20(css){
+    return (String(css||'').match(/#[0-9a-f]{6}|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+[^)]*\)/gi)||[]).map(x=>x.startsWith('#')?x.toUpperCase()
+      :'#'+x.match(/\d+/g).slice(0,3).map(n=>Math.max(0,Math.min(255,+n)).toString(16).padStart(2,'0')).join('').toUpperCase());
+  }
+  // dezelfde knoppen als zone-page.js gradientAct, op de verloopbewerker van de app
+  async function verloopKaartOpU20(value){
+    const ws=main.querySelector('[data-gradient-workspace]');if(!ws)return false;const q=s=>ws.querySelector(s),wat=value?.wat,v=value?.waarde;
+    const frame=()=>new Promise(r=>requestAnimationFrame(()=>r()));
+    if(wat==='reverse'){const box=q('[data-gradient-reverse]');if(!box)return false;box.checked=!box.checked;box.dispatchEvent(new Event('input',{bubbles:true}));return true;}
+    if(wat==='loop'){const b=q('[data-gradient-loop-toggle]');if(!b||b.disabled)return false;b.click();return true;}
+    if(wat==='move'){if(![0,1,2,3,4].includes(v))return false;const toggle=()=>ws.querySelector('[data-gradient-motion-toggle]'),on=toggle()?.getAttribute('aria-checked')==='true';
+      if(!v){if(on)toggle().click();return true;}
+      if(!on){if(toggle())toggle().click();else window.dispatchEvent(new CustomEvent('aluvision:gradient-motion-c139'));}
+      for(let n=0;n<20;n++){const b=ws.querySelector(`[data-gradient-motion-type="${v}"]`);if(b){if(b.getAttribute('aria-pressed')!=='true')b.click();return true;}await frame();}
+      return false;}
+    if(wat==='flow'){if(!['left','right','bounce'].includes(v))return false;const b=q(`[data-gradient-motion-flow="${v}"]`);if(!b)return false;b.click();return true;}
+    if(wat==='bewaar'){const b=q('[data-gradient-save]');if(!b)return false;b.click();return true;}
+    if(wat==='laad'||wat==='voorbeeld'){if(typeof v!=='string'||!/^[A-Za-z0-9._:-]{1,96}$/.test(v))return false;
+      const b=q(wat==='laad'?`[data-gradient-load="${CSS.escape(v)}"]`:`[data-gradient-builtin="${CSS.escape(v)}"]`);if(!b)return false;b.click();return true;}
+    if(wat==='wis'){if(typeof v!=='string'||!q(`[data-gradient-load="${CSS.escape(v)}"]`))return false;demoGradientEditor()?.zone?.removePreset?.(v);return true;}
+    if(wat==='ongedaan'){const g=demoGradientEditor()?.zone;if(!g?.canUndoPreset)return false;g.undoRemovePreset();return true;}
+    if(['speed','softness','trail'].includes(wat)){const r=q(`[data-gradient-motion-${wat}]`),n=Math.round(Number(v));if(!r||!Number.isFinite(n)||n<0||n>100)return false;
+      r.value=String(n);r.dispatchEvent(new Event('input',{bubbles:true}));return true;}
+    return false;
+  }
+  // de eigenaar 17 nov ("een verloop maken lukt niet"): speelde er een animatie op de zone, dan stond de zonepagina van de app onder Flutter
+  // op Animaties (presentZoneLightC139) en was de verloopbewerker niet gemonteerd: gradientStart gaf stil false, er ging niets uit.
+  // Nu eerst naar Kleur, zoals de Kleur-knop van de app (action 'colour'), en een beeld wachten tot de bewerker er staat.
+  async function gradientOpU3(op,value,vanFlutter=false){
+    if(vanFlutter&&route.screen==='controls'&&controlMode!=='colour'){
+      clearAnimationEditorBrowseReturn();closeZoneMenus();controlMode='colour';render({top:true});
+      await new Promise(r=>setTimeout(r,60)); // geen requestAnimationFrame: die staat stil als de WebView niet vooraan ligt
+      try{window.__c98log?.('GRADIENT_KLEUR_MODUS op='+String(op).slice(0,24));}catch(_){}
+    }
     const g=demoGradientEditor()?.zone;if(!g)return false;const hex=v=>typeof v==='string'&&/^#[0-9A-F]{6}$/i.test(v);
     try{
       if(op==='gradientStart'){const c=value?.colours;if(!Array.isArray(c)||!c.every(hex))return false;return g.start(c)!==false;}
@@ -3627,6 +3751,9 @@
       if(op==='gradientMove'){if(!Number.isInteger(value?.index)||!Number.isFinite(value?.percent))return false;g.move(value.index,Math.max(0,Math.min(100,value.percent)));return true;}
       if(op==='gradientSelect'){if(!Number.isInteger(value))return false;g.select(value);return true;}
       if(op==='gradientEven'){g.even();return true;}
+      // de eigenaar 17 nov (prototype zone-facelift): een kleurpunt naar een andere plaats slepen; de bewerker kent reorder al
+      if(op==='gradientReorder'){const f=value?.from,to=value?.to;if(!Number.isInteger(f)||!Number.isInteger(to)||typeof g.reorder!=='function')return false;g.reorder(f,to);return true;}
+      if(op==='gradientCard')return verloopKaartOpU20(value);
     }catch(_){return false;}
     return false;
   }
@@ -3678,9 +3805,12 @@
   }
   // Flutter-Instellingen (U8): Over de app, Standen op deze telefoon, Mijn kleuren en animaties. Alleen lezen en de bestaande
   // bewaarplaatsen; niets gaat naar de receivers behalve wat die bewaarplaatsen zelf al doen.
+  // coördinatie 17 nov: Flutter toont "Stand delen" en het QR-icoon alleen als delen op dit toestel kan (de deelpagina van de app of
+  // de uitnodiging v2); anders geen dode knop. Zet native het aan, dan verschijnen ze vanzelf.
+  function delenKanU20(){return !!(standSharingAvailable||capabilitiesU11?.standInviteV2===true);}
   function settingsForFlutterU8(){
     const s=stand(),sid=s?.id,lib=savedForFlutterU2();
-    return {stand:s?{id:s.id,name:standLabel()}:null,zones:s?.zones.length||0,receivers:standReceivers().length,mainRelease:mainReleaseU6(),
+    return {stand:s?{id:s.id,name:standLabel()}:null,zones:s?.zones.length||0,receivers:standReceivers().length,mainRelease:mainReleaseU6(),share:delenKanU20(),
       stands:(model?.stands||[]).map(item=>({id:item.id,name:item.name,zones:item.zones.length,
         receivers:(model.receivers||[]).filter(r=>r.standId===item.id&&r.lifecycle==='added').length,current:item.id===sid})),
       colours:lib.colours,presets:(savedPresets?.presets||[]).filter(p=>!p.standId||!sid||p.standId===sid).map(p=>({id:p.id,name:p.name,effectId:p.effectId,category:p.category,type:(p.supportedTypes||[]).includes('SPI')?'SPI':'RGBW',state:p.state}))}; // effect en licht: Flutter toont de bewaarde animatie bewegend (prototype I3, de eigenaar 37)
@@ -3869,7 +3999,8 @@
   // de hoofdreceiver is vrij zodra de sleutels vastliggen (nieuw-mesh 16 nov), dus Flutter start meteen de volgende. Na het
   // toevoegen geen schermen van de app (pixels, volgorde): die doet de rondgang per zone. roundRun {op:'start'|'status'}.
   const ROUND_BG_KEY_U7='aluvision.rondgang.achtergrond';
-  function roundBackgroundOnU7(){try{if(window.localStorage?.getItem(ROUND_BG_KEY_U7)==='1')return true;}catch(_){}try{return appStorage?.getItem(ROUND_BG_KEY_U7)==='1';}catch(_){return false;}}
+  // 1067 (coördinatie 17 nov avond): standaard aan; '0' zet het op dit toestel uit (de proefschakelaar)
+  function roundBackgroundOnU7(){try{const v=window.localStorage?.getItem(ROUND_BG_KEY_U7);if(v==='0')return false;if(v==='1')return true;}catch(_){}try{return appStorage?.getItem(ROUND_BG_KEY_U7)!=='0';}catch(_){return true;}}
   let roundRunNowU7=null,roundQuietU7=false;
   // §3 stuk 2: het standdocument één keer per zone naar de hoofdreceiver. Het native vastleggen (publishModel) blijft per
   // receiver met zijn eigen ontvangstbewijs; alleen de synchronisatie van het gedeelde document (shared-installation.js, het
@@ -3909,7 +4040,7 @@
     if(args?.op==='status'){const hold=roundHoldSharedU7();return roundRunNowU7?{state:roundRunNowU7.state,physicalId:roundRunNowU7.physicalId,hold}:{state:'leeg',hold};}
     if(args?.op==='publish'){roundReleaseU7();return {status:'ok'};}
     // de proefschakelaar (alleen in de tester te zien, of op een toestel na lang drukken op de titel van de rondgang)
-    if(args?.op==='switch'){try{if(args.on===true)window.localStorage.setItem(ROUND_BG_KEY_U7,'1');else{window.localStorage.removeItem(ROUND_BG_KEY_U7);appStorage?.removeItem?.(ROUND_BG_KEY_U7);roundReleaseU7();}}catch(_){return {status:'error'};}
+    if(args?.op==='switch'){try{if(args.on===true)window.localStorage.setItem(ROUND_BG_KEY_U7,'1');else{window.localStorage.setItem(ROUND_BG_KEY_U7,'0');roundReleaseU7();}}catch(_){return {status:'error'};}
       try{window.__c98log?.('ROUND_BG switch '+(args.on===true?'aan':'uit'));}catch(_){}return {status:'ok',on:roundBackgroundOnU7()};}
     if(args?.op!=='start')return {status:'error'};
     if(!roundBackgroundOnU7())return {status:'off'};
@@ -3994,7 +4125,8 @@
     const zones=[...main.querySelectorAll('[data-onboarding-action="active-zone"]')].map(b=>({id:b.hasAttribute('data-without-zone')?null:b.dataset.id||null,
       name:b.querySelector('b')?.textContent.trim()||'',sub:b.querySelector('small')?.textContent.trim()||'',on:b.getAttribute('aria-pressed')==='true'}));
     const chosen=zones.find(z=>z.on);
-    return {view:'zoeken',scan:false,titel:txt(main.querySelector('.onboarding-results-heading h2'))||null,zin:txt(main.querySelector('.onboarding-results-heading p'))||null,
+    // nazicht 1061: zonder lijstkop (0 of 1 resultaat) de h1 van de app, in de taal van de app (anders bleef de Nederlandse terugvaltitel)
+    return {view:'zoeken',scan:false,titel:txt(main.querySelector('.onboarding-results-heading h2'))||txt(main.querySelector('.onboarding-heading h1'))||null,zin:txt(main.querySelector('.onboarding-results-heading p'))||null,
       bezig:main.querySelector('.onboarding-searching')?txt(main.querySelector('.onboarding-searching')):null,
       leeg:leeg?{titel:txt(leeg.querySelector('h2')),zin:txt(leeg.querySelector('p'))}:null,kaarten,
       knoppen:[...main.querySelectorAll('.onboarding-search-actions [data-onboarding-action],.onboarding-search-again [data-onboarding-action]')].map(knop),
@@ -4042,9 +4174,17 @@
       waarom:paneel?.querySelector('.pixel-setup-more')?{titel:txt(paneel.querySelector('.pixel-setup-more summary')),zin:txt(paneel.querySelector('.pixel-setup-more p'))}:null,
       knoppen:[...main.querySelectorAll('.onboarding-footer [data-onboarding-action]')].map(knop),fout:(()=>{const e=main.querySelector('.onboarding-error');return e&&!e.hidden&&txt(e)?txt(e):null;})()};
   }
+  let pinCodeLogA1='';
+  function pinZinA1(tekst){
+    const codes=[...String(tekst).matchAll(/\s*\[([A-Z0-9_:.-]{3,80})\]/g)].map(m=>m[1]);
+    if(codes.length){const k=codes.join(',');if(k!==pinCodeLogA1){pinCodeLogA1=k;try{window.__c98log?.('KOPPEL pin-fout code='+k);}catch(_){}}}
+    return String(tekst).replace(/\s*\[[A-Z0-9_:.-]{3,80}\]/g,'').trim()||null;
+  }
   function setupPinA1(){
     const card=main.querySelector('section.card.first-pin-v2[data-first-pin-v2]');if(!card)return null;
-    const shown=sel=>{const e=main.querySelector(sel);return e&&!e.hidden?e.textContent.trim():null;};
+    // nazicht 1061 (blok 6): firstPinAPI.failure zet de technische code tussen haakjes achter de zin ("… [MAIN_CONNECTION_UNAVAILABLE]").
+    // Flutter krijgt alleen de rustige zin; de code gaat één keer naar c98.log.
+    const shown=sel=>{const e=main.querySelector(sel);if(!e||e.hidden)return null;return pinZinA1(e.textContent.trim());};
     const check=main.querySelector('[data-onboarding-action="first-pin-check"]');
     return {phase:card.dataset.firstPinV2==='rejoin'?'rejoin':'pin',handoff:card.querySelector('[data-first-pin-handoff]')?.dataset.firstPinHandoff||'manual',
       ssid:card.querySelector('.first-pin-v2-network strong')?.textContent.trim()||'',busy:card.getAttribute('aria-busy')==='true',
@@ -4062,7 +4202,9 @@
     if(view==='aansluiting')return aansluitA1();
     if(view==='plaats'){const zones=[...main.querySelectorAll('[data-onboarding-action="zone"]')].map(b=>({id:b.hasAttribute('data-without-zone')?null:b.dataset.id||null,
         name:b.querySelector('b')?.textContent.trim()||'',sub:b.querySelector('small')?.textContent.trim()||'',on:b.getAttribute('aria-pressed')==='true',uit:b.disabled===true}));
-      return {view,scan:false,zones,nieuweZone:!!main.querySelector('[data-onboarding-action="zone-add-from-receiver"]')};}
+      // nazicht 1061 (blok 6): in stage placement heet de knop zone-new (niet zone-add-from-receiver), en er is een Terug
+      return {view,scan:false,zones,nieuweZone:!!main.querySelector('[data-onboarding-action="zone-add-from-receiver"],[data-onboarding-action="zone-new"]'),
+        terug:!!main.querySelector('[data-onboarding-action="back"]')};}
     if(!root)return {view,scan:false,screen:route.screen,stage:onboarding.summary()?.stage||null};
     const zones=[...main.querySelectorAll('[data-onboarding-action="active-zone"]')].map(b=>({id:b.hasAttribute('data-without-zone')?null:b.dataset.id||null,
       name:b.querySelector('b')?.textContent.trim()||'',sub:b.querySelector('small')?.textContent.trim()||'',on:b.getAttribute('aria-pressed')==='true'}));
@@ -4071,7 +4213,11 @@
       type:root.querySelector('[data-pair-type]')?.dataset.pairType==='SPI'?'SPI':'RGBW',nieuw:!!main.querySelector('[data-onboarding-action="back"].first-scan-back'),
       zoneId:chosen?chosen.id:null,zoneName:main.querySelector('.onboarding-destination-name b')?.textContent.trim()||null,
       zones:zones.filter(z=>z.id).map(({id,name,sub})=>({id,name,sub})),hulp:wifiHulpA4(root),later:laterA1(),
-      nieuweZone:!!main.querySelector('[data-onboarding-action="zone-add-from-receiver"]')};
+      nieuweZone:!!main.querySelector('[data-onboarding-action="zone-add-from-receiver"]'),
+      // nazicht 1061 (blok 6): "Opnieuw beginnen" na een geparkeerde of geblokkeerde koppeling (stage receiver, zoals de PIN-kaart),
+      // en de uitweg naar de stand bij een bestaande stand (de knop exit van de app; '← Zones beheren' is er alleen bij een nieuwe stand)
+      restart:!!main.querySelector('[data-onboarding-action="flutter-restart"]'),
+      exit:(()=>{const b=main.querySelector('[data-onboarding-action="exit"]');return b&&!b.hidden&&!b.disabled?b.textContent.replace(/\s+/g,' ').trim().replace(/^←\s*/,'')||null:null;})()};
   }
   // "+ Nieuwe zone" in de zonekiezer van Flutter (koppelen/zone_kiezer.dart, de eigenaar 17 nov): dezelfde weg als het venster van de app
   // (onboarding-ui.js zone-add-from-receiver → naamveld → zone-create: ADD_ZONE en meteen SELECT_ACTIVE_ZONE), maar zonder dat de
@@ -4114,6 +4260,14 @@
     // de zone kiezen vóór de PIN (view plaats, Flutter PlaatsStap): dezelfde knoppen van de app (zoneChoices)
     if(setupViewA1()==='plaats'){
       if(op==='zone'){const sel=id?`[data-onboarding-action="zone"][data-id="${CSS.escape(String(id))}"]`:'[data-onboarding-action="zone"][data-without-zone]';return {ok:click(sel)};}
+      // nazicht 1061: + Nieuwe zone (zoals afronden) en ← Terug
+      if(op==='zone-new'){
+        naam=String(naam||'').trim();if(!naam||naam.length>40)return {ok:false};
+        if(!main.querySelector('#onboarding-zone-name')&&!click('[data-onboarding-action="zone-new"]')&&!click('[data-onboarding-action="zone-add-from-receiver"]'))return {ok:false};
+        const veld=main.querySelector('#onboarding-zone-name');if(!veld)return {ok:false};
+        veld.value=naam;veld.dispatchEvent(new Event('input',{bubbles:true}));return {ok:click('[data-onboarding-action="zone-create"]')};
+      }
+      if(op==='back')return {ok:click('[data-onboarding-action="back"]')};
       return {ok:false};
     }
     // zone/overzicht/wifi terug (view afronden, Flutter AfrondStap) en de aansluitgids (view aansluiting): dezelfde knoppen van de app
@@ -4145,6 +4299,8 @@
     if(op==='scan')return {ok:click('[data-onboarding-action="first-scan"]')};
     if(op==='zone'){const sel=id?`[data-onboarding-action="active-zone"][data-id="${CSS.escape(String(id))}"]`:'[data-onboarding-action="active-zone"][data-without-zone]';return {ok:click(sel)};}
     if(op==='back')return {ok:click('[data-onboarding-action="back"].first-scan-back')};
+    if(op==='restart')return {ok:click('[data-onboarding-action="flutter-restart"]')}; // nazicht 1061: zoals op de PIN-kaart
+    if(op==='exit')return {ok:click('[data-onboarding-action="exit"]')};
     // de tutorial en de wifi-hulp zijn nog schermen van de app: Flutter gaat opzij; na de tutorial komt Flutter terug
     if(op==='tutorial'){
       const before=new Set(document.querySelectorAll('dialog.ki-dialog[open]'));
@@ -4262,7 +4418,14 @@
   }
   async function backupConfirmForFlutterB8(args){
     const op=String(args?.op||'data');
-    if(op==='confirm'){const ja=document.querySelector('#effect-dialog[open] [data-backup-confirm] [data-action=backup-confirm]');if(ja&&!ja.disabled)await restoreBackup(ja);}
+    if(op==='confirm'){const ja=document.querySelector('#effect-dialog[open] [data-backup-confirm] [data-action=backup-confirm]');if(ja&&!ja.disabled){
+      // nazicht 1061 r.98: restoreBackup gooit STAND_NOT_CONNECTED vóór haar eigen try; Flutter kreeg dan null en geen zin.
+      // Nu staat de rustige zin in de foutregel van het venster, die Flutter als 'error' leest.
+      try{await restoreBackup(ja);}catch(error){
+        const zin=error?.code==='STAND_NOT_CONNECTED'?error.message:backupError(error),note=document.querySelector('#effect-dialog[open] [data-backup-confirm] .dialog-error');
+        if(note){note.hidden=false;note.textContent=zin;}
+      }
+    }}
     else if(op==='cancel'){if(document.querySelector('#effect-dialog[open] [data-backup-confirm]'))closeEffectDialog();} // zoals Annuleren
     return backupConfirmDataB8();
   }
@@ -4329,6 +4492,27 @@
       receivers:st.receivers.map(r=>{const m=rows.get(r.id);return {id:r.id,rid:model.receivers.find(x=>x.id===r.id)?.rid||null,name:r.name,type:r.type,zoneId:r.zoneId,online:r.online,main:r.me,blinking:!!r.blinking,canOrder:!!r.canOrder,
         lines:r.lines,signal:r.signal||level(m?.rssi),rssi:Number.isFinite(m?.rssi)?m.rssi:null,stability:Number.isFinite(m?.stability)?m.stability:null,
         latencyMs:Number.isFinite(m?.latencyMs)?m.latencyMs:null,version:r.version||m?.firmware||null};})};
+  }
+  // Verbindingsblokje in Flutter (de eigenaar 17 nov): dezelfde toestand als het blokje van de app (main-connection-indicator.js snapshot)
+  // en de laatste meshmeting (meshLastU5 = lightning:mesh-status; het ruwe native antwoord in LightningMeshFeedC125.answer).
+  // Nooit een PIN of wifi-wachtwoord: alleen tijden, tellers, kanaal, namen en versies.
+  let verbindingViaV1={via:null,at:0};
+  async function verbindingForFlutterV1(){
+    const num=v=>typeof v==='number'&&Number.isFinite(v)?v:null;
+    let snap=null;try{snap=mainConnectionIndicator675?.snapshot?.()||null;}catch(_){}
+    const staat=!snap||!snap.shown?null:snap.status==='connected'?'verbonden':snap.status==='checking'?'verbinden':'niet';
+    const a=window.LightningMeshFeedC125?.answer||null,d=meshLastU5,links=a&&a.links&&typeof a.links==='object'?a.links:null;
+    const peers=new Map((Array.isArray(links?.peers)?links.peers:[]).filter(p=>p&&typeof p.rid==='string').map(p=>[p.rid.toUpperCase(),p]));
+    if(Date.now()-verbindingViaV1.at>30000&&typeof runtime?.services?.connectionChoice==='function'){verbindingViaV1.at=Date.now();
+      try{const c=await runtime.services.connectionChoice();verbindingViaV1.via=['wifi','bluetooth'].includes(c?.choice)?c.choice:null;}catch(_){}}
+    const rtt=num(a?.roundTripMs),up=num(links?.uptimeS),updated=num(d?.updatedAt);
+    return {staat,stand:snap?.standName||'',via:verbindingViaV1.via,roundTripMs:rtt!==null&&rtt>=0?Math.round(rtt):null,
+      kanaal:num(d?.channel),band:typeof d?.band==='string'?d.band:null,uptimeS:up!==null&&up>0?up:null,
+      leeftijdMs:updated!==null?Math.max(0,Date.now()-updated):null,
+      receivers:(Array.isArray(d?.receivers)?d.receivers:[]).map(r=>{
+        const rid=String(model?.receivers?.find(x=>x.id===r.id)?.rid||'').toUpperCase(),p=peers.get(rid)||null;
+        return {id:r.id,naam:String(r.name||''),type:r.type,main:r.role==='main',latencyMs:num(r.latencyMs),stability:num(r.stability),rssi:num(r.rssi),
+          lastSeenMs:num(r.lastSeenMs),versie:r.firmware||null,txOk:p?num(p.txOk):null,txFail:p?num(p.txFail):null,ackUs:p&&num(p.ackUs)>0?p.ackUs:null};})};
   }
   async function receiverOpU5({op,id,value,koppelen,koppelViews}){
     const receiver=model.receivers.find(r=>r.id===id&&r.lifecycle==='added'&&r.standId===stand()?.id);
@@ -4574,7 +4758,7 @@
         if(route.screen==='receiver-add'&&onboarding.summary())return {status:'busy'};
         try{return await svc.labelCue({standId:s.id,family,physicalId:pid});}catch(e){return {status:/BUSY/.test(e?.code||'')?'busy':'error'};}}
       // Flutter-Delen en gebruikers (U9): de gebruikers van deze stand (stand-users.js, op dit toestel bewaard)
-      if(name==='usersData'){const st=window.LightningStandUsers?.store;if(!st)return null;return {standName:stand()?.name||'',...st.load()};}
+      if(name==='usersData'){const st=window.LightningStandUsers?.store;if(!st)return null;return {standName:stand()?.name||'',...st.load(),share:delenKanU20()};}
       if(name==='usersSave'){const st=window.LightningStandUsers?.store;return {ok:!!st&&st.save(args||{})===true};}
       // Flutter-Backup: terugzetten (de laatste automatische backup) of uit een bestand. Zelfde stappen als de knoppen van de
       // WebApp; opent de app een venster (Backup herstellen?) of laadt ze de stand, dan zegt open:true dat Flutter zich verbergt.
@@ -4588,6 +4772,7 @@
       }
       if(name==='backupRestore'||name==='backupImport'){
         const before=route;
+        if(name==='backupImport')autoBackup.note=''; // nazicht 1061 r.110: een oude zin van Terugzetten maakte een gelukt bestand ok:false
         try{if(name==='backupRestore')await autoBackupRestore();else await chooseBackup();}catch(_){return {ok:false,note:""};}
         const open=!!document.querySelector('#effect-dialog[open],dialog[open]')||route!==before||!!window.LightningStandLoad?.state?.();
         return {ok:!autoBackup.note,note:autoBackup.note||'',open,screen:route.screen}; // screen: B9, Flutter blijft vooraan bij 'stand'
@@ -4607,7 +4792,7 @@
       if(name==='accessData'){const s=stand(),svc=runtime?.services;if(!s||!nativeContext||typeof svc?.accessUsers!=='function')return {status:'local'};
         try{const users=[];let total=0;for(let page=0;page<8;page++){const r=await svc.accessUsers({standId:s.id,op:'LIST',page});if(r?.status!=='ok')return {status:r?.status||'error'};
             users.push(...(r.users||[]));total=r.total||0;if(users.length>=total||!(r.users||[]).length)break;}
-          return {status:'ok',standName:s.name,users,invite:capabilitiesU11?.standInviteV2===true};}catch(error){return {status:/UNSUPPORTED|UNKNOWN/.test(error?.code||'')?'unsupported':'error'};}}
+          return {status:'ok',standName:s.name,users,invite:capabilitiesU11?.standInviteV2===true,share:delenKanU20()};}catch(error){return {status:/UNSUPPORTED|UNKNOWN/.test(error?.code||'')?'unsupported':'error'};}}
       if(name==='accessOp'){const s=stand(),svc=runtime?.services,op=args?.op;if(!s||typeof svc?.accessUsers!=='function'||!['RIGHTS','REVOKE'].includes(op))return {status:'local'};
         try{return await svc.accessUsers({standId:s.id,op,seq:args.seq,...(op==='RIGHTS'?{rights:args.rights}:{})});}catch(_){return {status:'error'};}}
       // Flutter-Delen v2 stap 2/3: het bestand delen; een geopend bestand bekijken; het wifi-wachtwoord kopiëren.
@@ -4631,7 +4816,10 @@
       if(name==='settingsData')return settingsForFlutterU8();
       if(name==='settingsOp')return await settingsOpU8(args||{});
       // Flutter volgt dezelfde taal en hetzelfde thema als de app (Taal en thema, de taalkeuze op het welkom).
-      if(name==='preferences')return {language:uiPreferences.preferences.language,theme:uiPreferences.preferences.theme};
+      // linkOpen (coördinatie 17 nov): kan deze telefoon een gedeelde stand openen (link, QR of bestand v2)? Zo niet: geen knop "Ik kreeg een link"
+      if(name==='verbinding')return await verbindingForFlutterV1(); // het verbindingsblokje in de logobalk van Flutter (lib/verbinding.dart)
+      if(name==='preferences')return {language:uiPreferences.preferences.language,theme:uiPreferences.preferences.theme,
+        linkOpen:!!(standLinkAvailable||standScanAvailable||capabilitiesU11?.standInviteV2===true)};
       if(name==='setPreferences'){
         const patch={};if(typeof args?.language==='string')patch.language=args.language;if(typeof args?.theme==='string')patch.theme=args.theme;
         const result=preferenceStore.save(patch);if(!result.error){uiPreferences=result;render();}
@@ -4738,6 +4926,8 @@
         // Z1: de aan/uit-knop van Alles bedienen in de app (action 'power' met standControlOpen), niet de stand-power-knop van de
         // standpagina (die doet niets zolang Alles bedienen open is)
         if(op==='power'){const on=!powerTargets().every(r=>r.state.on!==false&&r.state.power!==false);apply({on,power:on},{kind:'all'});return {ok:true};}
+        // nazicht 1061: ↺ Alles terug zoals het was in Alles bedienen (resetAnimationSettingsU5 werkt met standControlOpen)
+        if(op==='reset'){if(!activeEffect())return {ok:false};resetAnimationSettingsU5();return {ok:true};}
         return {ok:false};
       }
       // Flutter-Scènes: de lijst zoals scenesHomeMarkupU1 ze tekent, plus het licht per scène voor het bewegende voorbeeld
@@ -4812,8 +5002,8 @@
     async zone(zoneId,op,value){
       if(!hostZoneU1(zoneId))return false;
       // Bewaarde kleuren en animaties (16 nov): eigen acties, geen klik op een verborgen WebApp-knop. Zelfde stores en centrale bibliotheek.
-      if(['savedColourUse','colourSave','savedColourRemove','presetUse','presetSave','presetRemove'].includes(op))return savedOpU2(op,value);
-      if(/^gradient[A-Z]/.test(op))return gradientOpU3(op,value);
+      if(['savedColourUse','colourSave','savedColourRemove','savedColourMove','presetUse','presetSave','presetRemove'].includes(op))return savedOpU2(op,value);
+      if(/^gradient[A-Z]/.test(op))return gradientOpU3(op,value,true);
       if(/^gear[A-Z]/.test(op))return gearOpU4(zoneId,op,value);
       // Selectie op het voorbeeld: dezelfde knop als de app (data-action="select", data-id = ledline, receiver of 'all')
       if(op==='select'){if(typeof value!=='string'||!/^[A-Za-z0-9._:-]{1,96}$/.test(value))return false;
@@ -6626,9 +6816,13 @@
     const palette=s.brandColor&&effect.controls.includes('brandColor')?[s.brandColor]:colours(s),count=Math.max(1,Math.min(8,s.colorCount||palette.length));
     const hexes=Array.from({length:count},(_,i)=>{const rgb=s.rgbEnabled?.[i]===false?[0,0,0]:rgbOf({colors:[palette[i%palette.length]]});return C.screenHex(rgb,s.whiteEnabled?.[i]===false?0:(s.whiteChannels?.[i]||0));});
     let bg=null;try{if(AnimationControlPolicy.backgroundEditableFor(effect,s,ctx)){const ch=backgroundChannels();bg={on:Boolean(s.backgroundOn),hex:C.screenHex(ch.slice(0,3),ch[3]||0)};}}catch(_){}
+    // de eigenaar 17 nov ("de achtergrondkleur moet je ook kunnen dimmen"): de schuif Helderheid van de achtergrond van de app (backgroundControls), groep 'achtergrond'
+    if(bg)keys.push({key:'bgBrightness',label:t('animationBackgroundBrightness'),min:0,max:100,value:Math.round(Number(s.bgBrightness??10)),unit:'%',group:'achtergrond',changed:settingChanged('bgBrightness')});
     return {keys,dirs:values.length>1?values.map(v=>({value:v,label:labels[v]||v,on:v===current})):[],
       bounce:available.includes('bounce')?{on:!!s.bounce}:null,mirror:available.includes('mirror')?{on:!!s.mirror}:null,
       palette:effect.paletteEditable===false?[]:hexes,canAdd:!!(effect.colorCountRange&&count<effect.colorCountRange.max),bg,
+      // de eigenaar 17 nov: het kleurblad van een animatiekleur is dezelfde kleurkiezer als de Kleur-tab (Wit, Fijn instellen): de ruwe waarden
+      paletteRaw:effect.paletteEditable===false?[]:Array.from({length:count},(_,i)=>({hex:C.hex(rgbOf({colors:[palette[i%palette.length]]})),white:Number(s.whiteChannels?.[i])||0})),
       tunnel:effect.category==='tunnel',lines:selectedLineCount()};
   }
   // Een animatie die als V30-effect speelt (bv. de hele-lijn-animaties) krijgt de staart niet (live-control stuurt hem daar niet mee).
@@ -6836,7 +7030,7 @@
     if(scenePresentationJob684||sceneActivationJob684||sceneOpenJob684){toast(t('De scène wordt nog geladen.'));return true;}
     if(!sceneEdit640)return false;
     if(!sceneEdit640.saving&&sceneId===sceneEdit640.session.original.id)return false;
-    toast(sceneEdit640.saving?'Je scène wordt nog bewaard.':'Sla je scène eerst op of kies ‘Stoppen met bewerken’.');return true;
+    toast(sceneEdit640.saving?t('Je scène wordt nog bewaard.'):t('Sla je scène eerst op of stop met bewerken.'));return true; // nazicht 1061: vertaald
   }
   let scenePresentationJob684=null,sceneActivationJob684=null,sceneOpenJob684=null;
   const sceneLoadingOwners749=new WeakMap();
@@ -9314,7 +9508,9 @@ quietAfterLoadC135();      readmitC107.limited=false;readmitC107.retries=0;readm
   }
   async function autoBackupRun({force=false}={}){
     if(!autoBackupServices()||autoBackup.busy||autoBackup.restoring)return null;
-    if(!autoBackup.status)await refreshAutoBackupStatus();
+    // nazicht 1061 r.95: elke run de status opnieuw lezen (de 3 s-rem blijft). Flutter zet Automatisch bewaren rechtstreeks in
+    // native (setBackupAuto); met een bewaarde status bleef de WebApp het oude aan/uit volgen (na het wissen: uit).
+    await refreshAutoBackupStatus();
     if(!force&&!autoBackupOn())return null;
     let next=null;try{next=autoBackupCandidate();}catch(_){next=null;}
     if(!next){if(force){autoBackup.note=t("Open eerst je stand.");updateAutoBackupPanel();}return null;}
@@ -12214,7 +12410,7 @@ quietAfterLoadC135();      readmitC107.limited=false;readmitC107.retries=0;readm
         if(!sceneEdit640||sceneEdit640.saving)return;
         const unconfirmed=sceneEdit640.centralUnconfirmed;
         sceneEdit640=null;sceneDraft=null;flushCentralProjection();render({preserveScroll:true});
-        return toast(unconfirmed?'Bewerking gesloten. Opslaan bij de hoofdreceiver is nog niet bevestigd.':'Bewerking gestopt. De laatst opgeslagen scène blijft bewaard; je verlichting blijft zoals je die hebt ingesteld.');
+        return toast(unconfirmed?t('Bewerking gesloten. Opslaan bij de hoofdreceiver is nog niet bevestigd.'):t('Bewerking gestopt. De laatst opgeslagen scène blijft bewaard; je verlichting blijft zoals je die hebt ingesteld.'));
       }
       if(action==='scene-zone'){
         if(!sceneDraft||sceneDraft.saving||!stand()?.zones.some(z=>z.id===id)||!M.zoneReceivers(model,id).length)return;

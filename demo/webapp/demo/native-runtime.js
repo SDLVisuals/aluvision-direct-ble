@@ -157,7 +157,9 @@
   ['scanStandShare','takeStandShareLink','shareStandLink'].forEach(action=>actions.add(action));
   // C213: the camera reads the factory label on a receiver (see scanReceiverLabel below).
   actions.add('scanReceiverLabel');
-  let receiverLabelScanAvailable=null,bluetoothFirstPairAvailable=null;
+  // LABEL_ALTIJD (17 nov): de klant stopt een koppeling; de app wist het labelgeheim van die receiver (ook uit sleutelhanger/Keystore)
+  actions.add('labelForget');
+  let receiverLabelScanAvailable=null,bluetoothFirstPairAvailable=null,firstCueAvailable=false;
   // Receiverpagina: herstartreden en versie, op vraag; een antwoord blijft 60 s goed (de hoofdreceiver heeft weinig geheugen).
   actions.add('receiverHealth');actions.add('pairSteps');actions.add('labelCue');actions.add('autoPlan');actions.add('autoControl');actions.add('accessUsers');actions.add('shareStandInvite');actions.add('takeStandInvite');actions.add('copyStandInvitePassword');
   const healthCacheU6=new Map(),healthTriedU6=new Map();
@@ -353,6 +355,7 @@
   function call(action,payload={},signal,automatic,posted){
     if(!QUIET_ACTIONS_C137.has(action))lastActionAtC137=Date.now();
     if(!automatic)noteSetupActivityC202(action); // C202
+    if(NAZICHT_WACHT_C269.has(action))nazichtWachtC269=Date.now(); // de eigenaar 17 nov: de nazicht wacht op Pixels/Looprichting/bediening
 
     noteStandC125(action,payload);
     if(!sharedOutputPassiveC98.has(action))sharedOutputReadC98?.abort();
@@ -993,7 +996,12 @@
   // beveiligde schakel: row.up); ziet de feed hem niet binnen 45 s, dan stil een gewone finalize (het volledige bewijs), alleen als er
   // geen andere native oproep loopt; mislukt die, opnieuw na 30 s, hoogstens 3 keer. Elke stap een KOPPEL-regel in c98.log, nooit rood.
   // Schakelaar uit = finalize zoals vroeger. Een native zonder de capability nazichtAchteraf krijgt de vlag nooit.
-  const NAZICHT_ACHTERAF=false;let nazichtAchterafAvailable=false;const nazichtC269=new Map();
+  const NAZICHT_ACHTERAF=true; // aan in 1067 (coördinatie 17 nov avond)
+ let nazichtAchterafAvailable=false;const nazichtC269=new Map();
+  // de eigenaar 17 nov (1067, poort 2 in de setup): de achtergrond-nazicht hield de MAIN bezet tijdens Pixels en Looprichting (STAND_SYNC_BUSY,
+  // het licht van poort 2 kwam niet). Zolang de klant de laatste 20 s iets instelt of bedient, wacht de nazicht.
+  const NAZICHT_WACHT_C269=new Set(['previewPixels','configureOutputs','configureOutputDirections','previewSPIZoneDirections','commitPixelsToDirections','identify','identifyLayout','applyLive','applyLiveBatch','applyStaticGradient']);
+  let nazichtWachtC269=0;
   function nazichtLogC269(text){try{root.__c98log?.('KOPPEL nazicht '+text);}catch(_){}}
   function nazichtAchterafC269(configuration,securityReceiptRef){
     const id=String(configuration?.receiverId||''),rid=String(configuration?.rid||'').slice(-6);if(!id||nazichtC269.has(id))return;
@@ -1004,10 +1012,13 @@
       if(meshC125.rows.get(id)?.up===true)return klaar('ok feed');
       if(Date.now()-job.start<45000){job.timer=root.setTimeout?.(kijk,2000);return;}
       if(pending.size>0){job.timer=root.setTimeout?.(kijk,3000);return;}   // nooit tussen een handeling van de klant
+      if(Date.now()-nazichtWachtC269<20000){job.timer=root.setTimeout?.(kijk,3000);return;}   // Pixels/Looprichting/bediening gaan voor
       job.pogingen++;nazichtLogC269('opnieuw poging='+job.pogingen+' rid='+rid);
       call('finalize',{configuration,securityReceiptRef}).then(()=>klaar('ok finalize'),fout=>{
         const code=String(fout?.code||fout?.message||'FOUT').slice(0,40);nazichtLogC269('fout poging='+job.pogingen+' code='+code+' rid='+rid);
         if(nazichtC269.get(id)!==job)return;
+        // 1067: MAIN_RECEIPT_INVALID wordt nooit meer geldig (het bewijs van de koppeling is op): niet nog twee keer de MAIN belasten
+        if(code==='MAIN_RECEIPT_INVALID'||code==='NATIVE_RECEIPT_INVALID')return klaar('opgegeven (bewijs verlopen)');
         if(job.pogingen>=3)return klaar('opgegeven');
         job.timer=root.setTimeout?.(kijk,30000);
       });
@@ -1765,6 +1776,10 @@
     // adding a receiver. The label's secret part stays inside the native app, which uses it by itself when the
     // receiver asks for it. The page learns only which receiver was scanned: its family and factory address
     // (the same value as a candidate's physicalId). proof=false means the label carried no secret part.
+    async labelForget({physicalId}={}){
+      if(typeof physicalId!=='string'||!/^[0-9A-F]{12}$/.test(physicalId))throw fail('PAYLOAD_INVALID');
+      const r=await call('labelForget',{physicalId});return {status:r?.status==='ok'?'ok':'unknown'};
+    },
     async scanReceiverLabel(input={},signal){
       if(receiverLabelScanAvailable===null)await runtimeCapabilities();
       if(receiverLabelScanAvailable!==true)throw fail('RECEIVER_LABEL_SCAN_UNAVAILABLE');
@@ -1783,7 +1798,10 @@
       if(bluetoothFirstPairAvailable!==true)throw fail('RECEIVER_LABEL_SCAN_UNAVAILABLE');
       const scan=await this.scanReceiverLabel({},signal);
       if(scan?.status!=='scanned')return scan;
-      const result=await call('bluetoothFirstPair',{family:scan.family,physicalId:scan.physicalId},signal);
+      // KOPPEL_LICHT (17 nov): kan native meteen de hello met het labelbewijs sturen (capability firstCue, schakelaar in native), dan de
+      // stand erbij; de receiver pulst dan blauw terwijl de app nog zoekt. Anders zoals vroeger.
+      const standId=firstCueAvailable===true&&typeof input?.standId==='string'&&input.standId?input.standId:null;
+      const result=await call('bluetoothFirstPair',standId?{family:scan.family,physicalId:scan.physicalId,standId}:{family:scan.family,physicalId:scan.physicalId},signal);
       if(!layoutKeys(result,['status'])||result.status!=='active')throw fail('RECEIVER_LABEL_SCAN_UNAVAILABLE');
       return {status:'scanned',family:scan.family,physicalId:scan.physicalId,via:'bluetooth'};
     },
@@ -3036,8 +3054,14 @@
           // An authenticated scan response from the MAIN is not yet proof of
           // the NODE's own device key. Only explicit select may establish it.
           // C118: native marks a MAIN-proven factory-reset stand member.
+          // 17 nov (de eigenaar's test: QR of a second receiver gave "Je stand hoort hem niet"): the label step matches on physicalId
+          // (onboarding-ui.js labelMatch), and native never sent one. A fresh receiver has a canonical RID: A101 (SPI) or A102
+          // (RGBW) + its MAC (receivers/gedeeld/basis/PhysicalIdentity.h canonicalRid). Only a match hint: the claim still needs
+          // the label proof. A non-canonical RID (ownership history) gets no physicalId, as before.
+          const canonical=observation.rid.slice(0,4)===(observation.type==='SPI'?'A101':'A102')?observation.rid.slice(4):'';
           return {id:observation.id,rid:observation.rid,type:observation.type,name:observation.type+'-receiver',
-            deviceFingerprint:null,canConfigure:false,canVerifyIdentity:true,reachabilityOnly:true,...(observation.reAdd===true?{reAdd:true}:{})};
+            deviceFingerprint:null,canConfigure:false,canVerifyIdentity:true,reachabilityOnly:true,...(observation.reAdd===true?{reAdd:true}:{}),
+            ...(/^[0-9A-F]{12}$/.test(canonical)&&!/^0+$/.test(canonical)?{physicalId:canonical}:{})};
         });
         return {receivers};
       }
@@ -3062,7 +3086,7 @@
     const clear=()=>{if(capabilitiesSharedC138ui===asked)capabilitiesSharedC138ui=null;};asked.then(clear,clear);
     return asked;
   }
-  async function runtimeCapabilitiesOnceC138ui(){const value=await call('capabilities');nazichtAchterafAvailable=value?.nazichtAchteraf===true;selectionHaptics=value?.selectionHaptics===true;interfaceHaptics=value?.interfaceHaptics===true;simpleStandAvailable=value?.simpleStand===true;pixelPreviewV50=value?.pixelPreviewV50===true;spiZoneDirectionPreview=value?.spiZoneDirectionPreview===true;atomicPreviewExitAvailable=value?.atomicPreviewExit579===true;pixelEditorIsolationAvailable=value?.pixelEditorIsolation===true;setupZoneIsolationAvailable=value?.setupZoneIsolation===true;
+  async function runtimeCapabilitiesOnceC138ui(){const value=await call('capabilities');nazichtAchterafAvailable=value?.nazichtAchteraf===true;firstCueAvailable=value?.firstCue===true;selectionHaptics=value?.selectionHaptics===true;interfaceHaptics=value?.interfaceHaptics===true;simpleStandAvailable=value?.simpleStand===true;pixelPreviewV50=value?.pixelPreviewV50===true;spiZoneDirectionPreview=value?.spiZoneDirectionPreview===true;atomicPreviewExitAvailable=value?.atomicPreviewExit579===true;pixelEditorIsolationAvailable=value?.pixelEditorIsolation===true;setupZoneIsolationAvailable=value?.setupZoneIsolation===true;
     pixelEndsHandoffAvailable=value?.pixelEndsHandoff===true;
     pixelReceiptDiagnostics692=value?.pixelReceiptDiagnostics692===true;
     spiPortScenesAvailable=value?.spiPortScenes===true;

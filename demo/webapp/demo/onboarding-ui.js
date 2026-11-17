@@ -218,6 +218,12 @@
     // meldt; native weigert dan meteen met MAIN_CONFIGURATION_INVALID (V30Bridge: applicationIsForeground). Dat is geen fout van
     // de klant: één stille herhaling zodra de app actief is (lightning:native-active), anders na 1,5 s. Eén keer per terugkomst.
     let firstPinEarly686={wait:false,used:false,timer:0};
+    // de eigenaar 17 nov (c98-1805.log, koppeling 10 en 16): de MAIN herstart ± 1,5 s na de claim (voor het benoemde wifi). De eerste
+    // controle valt in die herstart (…UNKNOWN_OWNER_REPLY_UNCONFIRMED, daarna MAIN_CONFIGURATION_INVALID) en de PIN-kaart kwam terug
+    // (22 s). Binnen 45 s na het antwoord op de claim (in het log viel de tweede fout 29,8 s erna): stil opnieuw (om de 2 s), het koppelbeeld blijft staan; pas daarna de bestaande rustige weg.
+    let firstPinClaimAt=0,firstPinStil=false;
+    const herstartNaClaim=failure=>Date.now()-firstPinClaimAt<45000&&(/UNKNOWN_OWNER_REPLY_UNCONFIRMED$/.test(String(failure?.code||''))||
+      ['MAIN_CONFIGURATION_INVALID','MAIN_CONNECTION_UNAVAILABLE','NATIVE_TIMEOUT','MAIN_BUSY'].includes(failure?.code));
     function retryEarlyFirstPin686(){
       clearTimeout(firstPinEarly686.timer);if(!firstPinEarly686.wait)return;
       firstPinEarly686.wait=false;firstPinReturn686=true;resumeFirstPin686();
@@ -228,6 +234,7 @@
     const firstPinCurrent686=()=>!!firstPinState686&&!!draft?.receiver&&firstPinState686.transactionId===draft.transactionId&&firstPinState686.receiverId===draft.receiver.id&&firstPinState686.rid===draft.receiver.rid&&firstPinState686.fingerprint===draft.receiver.deviceFingerprint;
     function rememberFirstPin686(answer,phase,handoff='manual'){
       if(!firstPinAPI?.validSSID(answer?.ssid,draft.receiver.type)||firstPinCurrent686()&&answer.ssid!==firstPinState686.ssid)throw Object.assign(Error(),{code:'FIRST_PIN_V2_UNCONFIRMED'});
+      if(phase==='rejoin'&&firstPinState686?.phase==='pin')firstPinClaimAt=Date.now(); // net geclaimd: de MAIN herstart zo
       firstPinState686={transactionId:draft.transactionId,receiverId:draft.receiver.id,rid:draft.receiver.rid,fingerprint:draft.receiver.deviceFingerprint,ssid:answer.ssid,phase,handoff:phase==='rejoin'&&handoff==='switching'?'switching':'manual'};
       manualRejoinSSID=phase==='rejoin'?answer.ssid:null;
     }
@@ -368,6 +375,23 @@
     // C214: the scan step of an extra receiver (QR label). state: intro | scanning | finding | connecting | missing | list.
     let labelScan=null,labelAbort=null;
     let firstScan={state:'intro',note:'',wifiHelp:false},firstScanAbort=null;
+    // de eigenaar 17 nov: een lege receiver mag alleen gekoppeld worden door de app die zijn QR-code scande. Met de firmware achter
+    // ALUVISION_LABEL_ALTIJD weigert ook de eerste receiver (bluetooth/eigen AP) zonder labelbewijs: dan rustig terug naar de
+    // scanstap met "Scan de QR-code op deze receiver" (nooit rood). Schakelaar uit tot de firmware het doet.
+    const LABEL_ALTIJD=true; // aan in 1067 (firmware C270: ALUVISION_LABEL_ALTIJD)
+    const labelCode=failure=>failure?.code==='RECEIVER_LABEL_REQUIRED'||failure?.code==='RECEIVER_LABEL_INVALID';
+    // De receivers die in deze koppeling gescand zijn: annuleren (exit) wist hun labelgeheim in de app (labelForget). Gelukt wist native
+    // het zelf (finalize, claim); de rondgang gebruikt deze weg niet, dus haar wachtrij met scans blijft.
+    const scannedLabels=new Set();
+    function noteScanned(answer){if(answer?.status==='scanned'&&typeof answer.physicalId==='string')scannedLabels.add(answer.physicalId);}
+    function forgetScannedLabels(){
+      if(!LABEL_ALTIJD||typeof services.labelForget!=='function')return;
+      for(const physicalId of scannedLabels)void Promise.resolve(services.labelForget({physicalId})).catch(()=>{});
+      scannedLabels.clear();
+    }
+    function firstLabelScan(){
+      firstScanAbort?.abort();firstScanAbort=null;firstScan={state:'intro',note:'label',wifiHelp:false};results=[];searchState='idle';error='';
+    }
     // 15 nov: de eerste receiver werd via bluetooth gevonden (scanFirstReceiver gaf via:'bluetooth'). Dan loopt alles tot het einde van
     // de setup over bluetooth naar die receiver (native): na de PIN geen wifi-wissel, de controle volgt vanzelf.
     let bluetoothFirst=false;
@@ -751,7 +775,7 @@
         else if(draft.stage==='review')outcome=await finish({automatic:true});
       }
       if(session!==rejoinSession||!container||document.hidden)return;
-      if(outcome==='retry'&&pendingMain()&&rejoinAttempts<3){
+      if(outcome==='retry'&&pendingMain()&&(rejoinAttempts<3||Date.now()-firstPinClaimAt<45000)){
         rejoinTimer=setTimeout(()=>void automaticRejoin(session),rejoinAttempts*1500);paintPage(false);return;
       }
       rejoinRunning=false;
@@ -1033,7 +1057,7 @@
       const owner=container;cancelSearch();results=[];searchState='idle';
       labelAbort=new AbortController();const signal=labelAbort.signal;gate.state='scanning';gate.note='';gate.hint='';gate.detail='';gate.reason='';error='';notice='';paintPage(false);
       let answer=null,failure=null;
-      try{answer=await services.scanReceiverLabel({},signal);}catch(caught){failure=caught;}
+      try{answer=await services.scanReceiverLabel({},signal);noteScanned(answer);}catch(caught){failure=caught;}
       if(labelAbort?.signal===signal)labelAbort=null;
       if(container!==owner||labelScan!==gate||gate.state!=='scanning')return;
       if(failure){
@@ -1089,7 +1113,12 @@
     // A receiver with a label refused the add: lead to the scan step (or say calmly that this device cannot scan).
     function labelFailure(failure){
       const code=failure?.code;if(code!=='RECEIVER_LABEL_REQUIRED'&&code!=='RECEIVER_LABEL_INVALID')return false;
-      const gate=labelGate();if(!gate)return false;
+      const gate=labelGate();
+      if(!gate){
+        // de eerste receiver (role main): terug naar de scanstap van de eerste receiver
+        if(LABEL_ALTIJD&&draft?.role==='main'&&draft.stage==='receiver'&&firstScanReady()){firstLabelScan();return true;}
+        return false;
+      }
       error='';gate.scan=null;gate.detail='';gate.reason='';
       if(labelScanReady()){gate.state='intro';gate.note=code==='RECEIVER_LABEL_INVALID'?'invalid':'required';gate.hint='';}
       else{gate.state='intro';gate.note='unavailable';gate.hint='';}
@@ -1116,7 +1145,7 @@
     function firstScanView(){
       const scanning=firstScan.state==='scanning',type=draft.zones.find(item=>item.id===draft.activeZoneId)?.type||'RGBW';
       const camera='<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.2-1.8h5.4L15.9 6h1.6A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.500 19h-11A2.5 2.5 0 0 1 4 16.5z"/><circle cx="12" cy="12.5" r="3.4"/></svg>';
-      const say={denied:'Geef Aluvision toegang tot je camera in de instellingen van je toestel. Of controleer de verbinding hieronder.',unavailable:'Scannen lukt nu niet. Zet de receiver aan en probeer opnieuw, of controleer de verbinding hieronder.'}[firstScan.note];
+      const say={denied:'Geef Aluvision toegang tot je camera in de instellingen van je toestel. Of controleer de verbinding hieronder.',unavailable:'Scannen lukt nu niet. Zet de receiver aan en probeer opnieuw, of controleer de verbinding hieronder.',label:'Scan de QR-code op deze receiver.'}[firstScan.note];
       return `<div class="label-scan first-scan" data-first-scan="${firstScan.state}" data-first-scan-note="${escape(firstScan.note||'')}" data-label-scan="intro"><p class="label-scan-say">${say?escape(tx(say)):tx('Richt je camera op de <b>QR-code op je receiver</b>.')}</p>`+
         `<div class="label-scan-stage" data-label-stage><div class="label-scan-art" data-label-art>${scanArt(type)}</div><i class="label-scan-frame" data-label-frame aria-hidden="true" hidden><i></i><i></i><i></i><i></i><b class="label-scan-phone"></b></i></div>`+
         `<div class="onboarding-actions onboarding-footer label-scan-actions">${button('first-scan',`${camera}<span>${escape(tx(scanning?'Camera is open…':firstScan.note==='denied'?'Opnieuw proberen':'Scan de QR-code'))}</span>`,scanning?'disabled':'')}</div>`+
@@ -1168,7 +1197,7 @@
       const owner=container,state=firstScan;cancelSearch();searchState='idle';
       firstScanAbort=new AbortController();const signal=firstScanAbort.signal;state.state='scanning';state.note='';error='';notice='';paintPage(false);
       let answer=null,failure=null;
-      try{answer=await services.scanFirstReceiver({standId:draft.stand.id},signal);}catch(caught){failure=caught;}
+      try{answer=await services.scanFirstReceiver({standId:draft.stand.id},signal);noteScanned(answer);}catch(caught){failure=caught;}
       if(firstScanAbort?.signal===signal)firstScanAbort=null;
       if(container!==owner||firstScan!==state||state.state!=='scanning')return;
       state.state='intro';
@@ -1790,7 +1819,18 @@
         if(token!==operation)return 'stop';
         if(usingFirstPin&&method==='secure')securityUncertain=false; // prepare is read-only, never a claim attempt.
         if(pinRequired()&&!attempted&&!securityUncertain&&draft.role==='main')draft=draftApi.snapshot({...clone(draft),stage:'pin',security:{status:'not-started',phase:'idle'}});
+        // LABEL_ALTIJD: de voorbereiding van de eerste receiver weigerde zonder (geldig) labelbewijs. Nooit een claim gestart, dus terug
+        // naar de scanstap (zoals "Terug naar zoeken"), met de rustige zin; geen foutkaart
+        if(LABEL_ALTIJD&&labelCode(failure)&&draft.role==='main'&&!securityUncertain){
+          error='';queueMicrotask(()=>{void (async()=>{if(await parkForSearch()){firstLabelScan();paintPage(true);}})();});return 'stop';
+        }
         if(automaticMain()&&transientRejoin(failure))return 'retry';
+        if(usingFirstPin&&method==='reconcileSecurity'&&firstPinCurrent686()&&firstPinState686.phase==='rejoin'&&herstartNaClaim(failure)){
+          try{window.__c98log?.('KOPPEL pin-herstart stil code='+String(failure?.code||'').slice(0,60));}catch(_){}
+          firstPinStil=true;firstPinState686.handoff='checking';error='';
+          if(!automatic){firstPinEarly686.wait=true;clearTimeout(firstPinEarly686.timer);firstPinEarly686.timer=setTimeout(retryEarlyFirstPin686,2000);}
+          return 'retry'; // automatic: automaticRejoin probeert zelf opnieuw (binnen de 45 s zonder grens op het aantal)
+        }
         if(usingFirstPin&&method==='reconcileSecurity'&&failure?.code==='MAIN_CONFIGURATION_INVALID'&&!firstPinEarly686.used&&firstPinCurrent686()&&firstPinState686.phase==='rejoin'){
           firstPinEarly686.used=true;firstPinEarly686.wait=true;clearTimeout(firstPinEarly686.timer);firstPinEarly686.timer=setTimeout(retryEarlyFirstPin686,1500);
           return 'retry';
@@ -1800,7 +1840,7 @@
         return 'stop';
       }
       finally{
-        pin='';repeat='';if(actionAbort===controller)actionAbort=null;if(token===operation){busy=false;if(usingFirstPin&&firstPinCurrent686()&&firstPinState686.handoff==='checking')firstPinState686.handoff='manual';}
+        pin='';repeat='';if(actionAbort===controller)actionAbort=null;if(token===operation){busy=false;if(firstPinStil)firstPinStil=false;else if(usingFirstPin&&firstPinCurrent686()&&firstPinState686.handoff==='checking')firstPinState686.handoff='manual';}
         if(token===operation){
           if(finishSelectedZone&&container)void finish({automatic:true});
           else {keepDraft();paintPage(!automatic);resumeFirstPin686();if((returningFromWifi&&!rejoinRunning)||(!automatic&&draft.security.status==='confirmed'))resumeAfterWifiReturn();}
@@ -2079,6 +2119,7 @@
       if(action==='exit'){
         if(leaveReadOnlySearchC101(returnToStand))return;
         if(exiting)return;
+        if(!draft?.receiver||draft.security?.status==='not-started')forgetScannedLabels(); // nog geen claim: de klant stopt deze koppeling
         const beforeSave=operation;
         const name=container.querySelector('#onboarding-stand-name')?.value;
         const events=draft.stage==='stand'&&validName(name||'')?[{type:'SET_STAND',id:draft.stand?.id||'stand-'+uniqueId(),name}]:[];

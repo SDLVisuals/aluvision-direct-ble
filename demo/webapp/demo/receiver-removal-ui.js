@@ -39,7 +39,7 @@
       const value=typeof translate==='function'?translate(copy,params):copy;
       return String(value??copy).replace(/\{([A-Za-z][A-Za-z0-9_]*)\}/g,(match,name)=>Object.prototype.hasOwnProperty.call(params,name)&&['string','number'].includes(typeof params[name])?String(params[name]):match);
     };
-    let dialog,receiver,result,baseline,targets=[],busy=false,error='',generation=0,returnFocus,timer=null,autoContinue=false;
+    let dialog,receiver,result,baseline,targets=[],busy=false,error='',generation=0,returnFocus,timer=null,autoContinue=false,checkRetries=0,retryCheck=false;
     const logical=(value=result)=>value?.mode==='authority-logical';
     const installation=(value=result)=>!logical(value)&&receiver?.role==='main',scope=(value=result)=>installation(value)?'installation':'receiver';
     // C127: the receiver did not answer; the main receiver removes it alone and it forgets the stand when it returns.
@@ -199,21 +199,28 @@
         validate(next,action,previous);await acceptModel(next);targets=clone(next.targets);result=next;
         if(!standCodeAccess()&&!usesDedicatedFirstPin(receiver)&&installation()&&action==='check'&&next.status!=='checking'&&next.status!=='blocked')root.AluvisionSecurityMode?.updateFromNative?.({pinRequired:next.requiresPin});
         if(['verification-required','pin-required','blocked','removed'].includes(next.status))autoContinue=false;
+        if(action==='check')checkRetries=0;
       }catch(failure){
         delete request.pin;if(token!==generation)return;autoContinue=false;
         const code=failure?.code;
+        // nazicht 1061 (blok 1): een mislukte controle eerst 2 keer stil opnieuw (1,5 s), pas daarna een zin in het venster
+        if(action==='check'&&checkRetries<2){checkRetries++;retryCheck=true;result=null;error='';return;}
         error=removalErrorMessage(action,failure);
         // An uncertain start must not leave a second destructive start button.
         if(action==='start'&&!['REMOVAL_PIN_INVALID','REMOVAL_RATE_LIMITED'].includes(code))result=null;
         if(action==='check')result=null;
       }finally{
-        delete request.pin;if(token===generation){busy=false;paint();if(result?.status==='checking')schedule('check');else if(result?.status==='in-progress'&&autoContinue)schedule('resume');}
+        delete request.pin;
+        // stil opnieuw: het venster blijft "bezig" (zoals tijdens de controle zelf), zonder foutzin
+        if(token===generation&&retryCheck){retryCheck=false;clearTimer();timer=root.setTimeout(()=>{timer=null;if(token!==generation||!dialog?.open)return;busy=false;perform('check',true);},1500);}
+        else if(token===generation){busy=false;paint();
+          if(result?.status==='checking')schedule('check');else if(result?.status==='in-progress'&&autoContinue)schedule('resume');}
       }
     }
     function open(value){
       if(busy)throw Error('REMOVAL_BUSY');
       if(!value||value.lifecycle!=='added'||!['main','node'].includes(value.role))throw Error('ADDED_RECEIVER_REQUIRED');
-      clearTimer();generation++;receiver={...value};baseline=typeof getModel==='function'?clone(getModel()):null;targets=[];result=null;busy=false;autoContinue=false;error='';returnFocus=document.activeElement;
+      clearTimer();generation++;checkRetries=0;retryCheck=false;receiver={...value};baseline=typeof getModel==='function'?clone(getModel()):null;targets=[];result=null;busy=false;autoContinue=false;error='';returnFocus=document.activeElement;
       if(!dialog){dialog=document.createElement('dialog');dialog.className='receiver-removal-sheet';dialog.setAttribute('aria-label',t("Receiver verwijderen"));document.body.append(dialog);
         dialog.addEventListener('click',event=>{const button=event.target.closest('[data-removal]');if(!button||button.disabled)return;button.dataset.removal==='close'?close():perform(button.dataset.removal);});
         dialog.addEventListener('input',controls);dialog.addEventListener('change',controls);dialog.addEventListener('cancel',event=>{event.preventDefault();close();});}
