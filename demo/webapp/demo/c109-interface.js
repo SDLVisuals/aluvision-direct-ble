@@ -329,15 +329,19 @@ window.__c109SoftClose=function(){};
   const LOAD_KEY='c109.standLoad';
   let load=null,loadDoneTimer=0,loadCreep=0,loadFullTimer=0;
   const loadSave=()=>{try{if(load)localStorage.setItem(LOAD_KEY,JSON.stringify(load));else localStorage.removeItem(LOAD_KEY);}catch(_){}};
+  // de knoppen van de kaart; ook voor Flutter (B9, LightningStandLoad.minimise/show/retry)
+  function loadMinimise(){if(!load)return;load.minimised=true;renderLoad();loadSave();}
+  function loadShow(){if(!load)return;load.minimised=false;renderLoad();loadSave();}
+  function loadRetry(){if(!load)return;load.phase='discover';load.pct=0;load.at=Date.now();renderLoad();loadSave();try{window.dispatchEvent(new CustomEvent('lightning:stand-load-retry',{detail:{standId:load.standId}}));}catch(_){}}
   function loadEl(){
     let el=document.getElementById('c109-load');if(el)return el;
     el=document.createElement('section');el.id='c109-load';el.setAttribute('role','status');el.setAttribute('aria-live','polite');
     el.innerHTML='<div class="c109-load-card"><img class="c109-load-logo" alt="Aluvision" src="assets/aluvision-logo.png"><div class="c109-load-strips" aria-hidden="true"><i></i><i></i><i></i></div><h2 class="c109-load-title"></h2><p class="c109-load-name"></p><div class="c109-load-bar" aria-hidden="true"><b></b></div><p class="c109-load-phase"></p><p class="c109-load-note"></p><div class="c109-load-actions"><button type="button" class="c109-load-min"></button><button type="button" class="c109-load-retry" hidden></button><button type="button" class="c109-load-close" hidden></button></div></div><button type="button" class="c109-load-capsule" hidden><span class="c109-load-ring" aria-hidden="true"></span><span class="c109-load-capsule-text"></span></button>';
-    el.querySelector('.c109-load-min').addEventListener('click',()=>{if(!load)return;load.minimised=true;renderLoad();loadSave();});
-    el.querySelector('.c109-load-capsule').addEventListener('click',()=>{if(!load)return;load.minimised=false;renderLoad();loadSave();});
+    el.querySelector('.c109-load-min').addEventListener('click',loadMinimise);
+    el.querySelector('.c109-load-capsule').addEventListener('click',loadShow);
     el.querySelector('.c109-load-close').addEventListener('click',()=>{load=null;renderLoad();loadSave();});
-    el.querySelector('.c109-load-retry').addEventListener('click',()=>{if(!load)return;load.phase='discover';load.pct=0;load.at=Date.now();renderLoad();loadSave();try{window.dispatchEvent(new CustomEvent('lightning:stand-load-retry',{detail:{standId:load.standId}}));}catch(_){}});
-    el.addEventListener('click',event=>{if(event.target===el&&load&&load.phase!=='done'){load.minimised=true;renderLoad();loadSave();}});
+    el.querySelector('.c109-load-retry').addEventListener('click',loadRetry);
+    el.addEventListener('click',event=>{if(event.target===el&&load&&load.phase!=='done')loadMinimise();});
     document.body.append(el);return el;
   }
   // C109cf: the loading also feeds a native Live Activity (iPhone lock screen /
@@ -355,8 +359,10 @@ window.__c109SoftClose=function(){};
   function renderLoad(){
     const el=loadEl();
     if(!load){clearTimeout(etaTick);el.classList.remove('is-on','is-min','is-done','is-failed');el.hidden=true;document.body.classList.remove('c109-loading');clearInterval(loadCreep);loadCreep=0;try{window.__c109ActLoad?.(null);}catch(_){}liveActivity({state:'end'});return;}
-    el.hidden=false;el.classList.add('is-on');el.classList.toggle('is-min',!!load.minimised);el.classList.toggle('is-done',load.phase==='done');el.classList.toggle('is-failed',load.phase==='failed');
-    document.body.classList.toggle('c109-loading',!load.minimised);
+    // B9: staat Flutter vooraan en tekent het zelf (lib/inladen.dart), dan blijft de kaart van de WebApp verborgen
+    const flutterB9=window.__flutterInladenB9?.()===true;
+    el.hidden=flutterB9;el.classList.add('is-on');el.classList.toggle('is-min',!!load.minimised);el.classList.toggle('is-done',load.phase==='done');el.classList.toggle('is-failed',load.phase==='failed');
+    document.body.classList.toggle('c109-loading',!load.minimised&&!flutterB9);
     const eta=etaText(load),etaS=etaSeconds(load);const phaseText=(lt(load.phase)||'')+(eta?' · '+eta:'');const pct=Math.round(load.pct);
     clearTimeout(etaTick);if(etaS)etaTick=setTimeout(()=>{if(load&&!document.hidden)renderLoad();},1000);
     el.querySelector('.c109-load-title').textContent=load.phase==='done'?lt('done'):lt('title');
@@ -372,7 +378,7 @@ window.__c109SoftClose=function(){};
     // C109cf: the small state lives in the one notice place (under the connection pill)
     {const short=load.phase==='done'?lt('done'):load.phase==='failed'?lt('failedShort'):lt('title');
      const detail=load.phase==='done'||load.phase==='failed'?'':phaseText;
-     try{window.__c109ActLoad?.(load.minimised?{title:short,detail,progress:load.phase==='failed'?NaN:pct/100,onTap:()=>{if(!load)return;load.minimised=false;renderLoad();loadSave();}}:null);}catch(_){}
+     try{window.__c109ActLoad?.(load.minimised&&!flutterB9?{title:short,detail,progress:load.phase==='failed'?NaN:pct/100,onTap:()=>{if(!load)return;load.minimised=false;renderLoad();loadSave();}}:null);}catch(_){}
      liveActivity({state:load.phase==='done'?'end':load.phase==='failed'?'failed':'update',phase:load.phase,title:short,detail,progress:pct/100,etaSeconds:etaS?etaS.sec:null,etaLate:!!etaS?.late,standName:load.name||'',standId:load.standId||''});}
     el.querySelector('.c109-load-capsule-text').textContent=load.phase==='done'?lt('done'):load.phase==='failed'?lt('failedShort'):(lt('title')+' · '+phaseText);
     if(!loadCreep)loadCreep=setInterval(()=>{if(!load||load.phase==='done'||load.phase==='failed'||!load.indeterminate)return;const end=(PHASE_SPAN[load.phase]||[0,0])[1];if(load.pct<end-1){load.pct+=(end-load.pct)*.06;renderLoad();}},900);
@@ -411,8 +417,8 @@ window.__c109SoftClose=function(){};
     // tab bar; only native's full:true opens the full view, and even that one
     // shrinks to the capsule by itself after a few seconds, or on a tap beside
     // the card. A failure always lives in the capsule.
-    if(!load){if(d.phase==='done'||d.phase==='failed')return;load={phase:d.phase,pct:0,standId:'',name:'',at:Date.now(),startAt:Date.now(),phaseAt:Date.now(),durs:{},minimised:d.full!==true,indeterminate:true};}
-    else if(d.full===true)load.minimised=false;else if(d.minimised===true)load.minimised=true;
+    if(!load){if(d.phase==='done'||d.phase==='failed')return;load={phase:d.phase,pct:0,standId:'',name:'',at:Date.now(),startAt:Date.now(),phaseAt:Date.now(),durs:{},minimised:d.full!==true,indeterminate:true};try{window.__flutterInladenB9Wek?.();}catch(_){}}
+    else if(d.full===true){load.minimised=false;try{window.__flutterInladenB9Wek?.();}catch(_){}}else if(d.minimised===true)load.minimised=true;
     if(d.phase==='failed')load.minimised=true;
     clearTimeout(loadFullTimer);if(!load.minimised&&d.phase!=='done')loadFullTimer=setTimeout(()=>{if(load&&!load.minimised&&load.phase!=='done'){load.minimised=true;renderLoad();loadSave();}},7000);
     if(d.standId)load.standId=String(d.standId);if(d.name||d.standName)load.name=String(d.name||d.standName);
@@ -427,7 +433,9 @@ window.__c109SoftClose=function(){};
     clearTimeout(loadDoneTimer);if(d.phase==='done')loadDoneTimer=setTimeout(()=>{load=null;renderLoad();loadSave();},2400);
   }
   window.addEventListener('lightning:stand-load-progress',event=>handleLoad(event.detail||{}));
-  window.LightningStandLoad=Object.freeze({progress:handleLoad,begin:d=>handleLoad({phase:'discover',...(d||{})}),done:d=>handleLoad({phase:'done',...(d||{})}),failed:d=>handleLoad({phase:'failed',...(d||{})}),dismiss(){load=null;renderLoad();loadSave();},state:()=>load?{...load}:null});
+  window.LightningStandLoad=Object.freeze({progress:handleLoad,begin:d=>handleLoad({phase:'discover',...(d||{})}),done:d=>handleLoad({phase:'done',...(d||{})}),failed:d=>handleLoad({phase:'failed',...(d||{})}),dismiss(){load=null;renderLoad();loadSave();},state:()=>load?{...load,eta:etaSeconds(load)}:null,
+    // B9 (Flutter): dezelfde knoppen als de kaart, en opnieuw tekenen als Flutter het overneemt
+    minimise:loadMinimise,show:loadShow,retry:loadRetry,refresh(){if(load)renderLoad();},conn:()=>connFlutterB9});
   // the app's own log lines, until native sends the event
   {const original=window.__c98log;const fromLog=line=>{const s=String(line);
       if(s.startsWith('READMIT_START')||s.startsWith('READMIT_RESUME'))handleLoad({phase:load&&load.phase!=='discover'?'access':'discover'});
@@ -498,7 +506,7 @@ window.__c109SoftClose=function(){};
   // until then the app's own connection indicator (connected / checking /
   // unknown) drives it.
   const CONN_T={nl:{unreachable:'Stand niet bereikbaar · opnieuw verbinden…',connecting:'Opnieuw verbinden…'},en:{unreachable:'Stand unreachable · reconnecting…',connecting:'Reconnecting…'},fr:{unreachable:'Stand injoignable · reconnexion…',connecting:'Reconnexion…'},de:{unreachable:'Stand nicht erreichbar · verbinde erneut…',connecting:'Verbinde erneut…'}};
-  let connNative=null,connNativeAt=0;
+  let connNative=null,connNativeAt=0,connFlutterB9=null;
   function connState(){
     // C139ui-3: while the header pill still holds a fresh answer from the MAIN, one failed action does not turn the
     // notice line into "Stand niet bereikbaar" (the pill drops itself when the failure is confirmed).
@@ -522,7 +530,11 @@ window.__c109SoftClose=function(){};
     // amber line on the tab bar.
     // geen stand: geen verbindingsmelding (16 nov)
     {const busy=(state==='connecting'||state==='unreachable')&&window.__lightningHasStand?.()!==false;const lang0=(document.documentElement.lang||'nl').slice(0,2);
-     try{window.__c109ActConn?.(busy?(headVisible?{silent:true}:{title:(CONN_T[lang0]||CONN_T.nl)[state],state,onTap:()=>head?.click()}):null);}catch(_){}}
+     try{window.__c109ActConn?.(busy?(headVisible?{silent:true}:{title:(CONN_T[lang0]||CONN_T.nl)[state],state,onTap:()=>head?.click()}):null);}catch(_){}
+     // B9 (Flutter): Flutter heeft geen verbindingspil, dus de regel staat er zolang er opnieuw verbonden wordt; een nieuwe regel meldt
+     // de WebApp aan Flutter zoals een nieuw inladen
+     const next=busy?{state,title:(CONN_T[lang0]||CONN_T.nl)[state]}:null;
+     if(JSON.stringify(next)!==JSON.stringify(connFlutterB9)){const was=connFlutterB9;connFlutterB9=next;if(next&&!was)try{window.__flutterInladenB9Wek?.();}catch(_){}}}
     const show=false;
     if(el.hidden!==!show)el.hidden=!show;if(!show)return; // C138jank: an unchanged write re-queued renderConn through its own 'hidden' observer every frame
     const lang=(document.documentElement.lang||'nl').slice(0,2);const T=CONN_T[lang]||CONN_T.nl;

@@ -503,7 +503,7 @@
 
   // Staart vóór en achter (receivers/gedeeld/licht/Staart.h, docs/onderzoek/spi-staart-en-achtergrond.md): dezelfde formule als de
   // firmware (ALUVISION_STAART) en preview.js. Uit tot firmware, JS en Dart samen aangaan. sampleSpiPixel zet staartNu uit de toestand.
-  var STAART_AAN = false;
+  var STAART_AAN = true;
   var staartNu = { px: 0, zacht: 100 };
   function staartLengte(kern) { return staartNu.px ? Math.min(64, Math.max(4, staartNu.px)) : Math.min(64, Math.max(4, kern)); }
   function staartMet(d, L) {

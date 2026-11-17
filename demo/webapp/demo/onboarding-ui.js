@@ -534,7 +534,10 @@
       return true;
     }
     async function browseReceivers(){
-      if(await parkForSearch()){paintPage(true);if(container)void search();}
+      // Flutter (KoppelStap, "← Terug naar zoeken" op de PIN-kaart): niet de oude zoeklijst maar de scanstap, die Flutter zelf toont
+      // (app.js setupOp list zet de vlag; doorlichting 17 nov: nooit de oude interface)
+      const scanInFlutter=window.__koppelZoekFlutterA1===true;window.__koppelZoekFlutterA1=false;
+      if(await parkForSearch()){if(scanInFlutter){results=[];searchState='idle';paintPage(true);return;}paintPage(true);if(container)void search();}
     }
     let previewState={kind:'idle'},previewStopJob=null,localExitPreviewCleanup=false,localCleanup579=null,previewReconcile579=null;
     function previewReconcileCurrent579(){const r=previewReconcile579;return !!r&&!document.hidden&&container===r.container&&container?.ownerDocument===document&&draft===r.draft&&operation===r.operation&&canonical(draft)===r.choices&&canonical(getModel())===r.model;}

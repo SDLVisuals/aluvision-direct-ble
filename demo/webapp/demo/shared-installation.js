@@ -86,13 +86,21 @@
     return saved;
   }
 
-  function documentFor(standId,model,libraries,light,tombstones){
+  // Zonekleur (A9, 17 nov): {zoneId: 0..4}, de index in de zonekleuren van de app; alleen weergave, zodat elke telefoon dezelfde
+  // kleur per zone toont. Hoogstens 64 zones; iets anders wordt weggelaten (nooit een fout). Oudere apps lezen het document gewoon.
+  function zoneColoursOf(value){
+    if(!plain(value))return null;const out={};
+    for(const [id,c] of Object.entries(value).slice(0,64))if(typeof id==='string'&&id.length>0&&id.length<=160&&Number.isInteger(c)&&c>=0&&c<=4)out[id]=c;
+    return Object.keys(out).length?out:null;
+  }
+  function documentFor(standId,model,libraries,light,tombstones,zoneColours){
     const doc={format:FORMAT,version:VERSION,standId,model:copy(model),
       libraries:{scenes:copy(libraries.scenes||[]),presets:copy(libraries.presets||[]),colors:copy(libraries.colors||[])}};
     if(tombstones&&hasTombstones(tombstones)){doc.libraries.tombstones=unionTombstones(tombstones);withoutTombstoned(doc.libraries,doc.libraries.tombstones);}
     // C98: the current light per receiver, so every phone shows what the
     // ledlines show. Display data only: applying it never sends a command.
     if(light&&typeof light==='object')doc.light=copy(light);
+    const zc=zoneColoursOf(zoneColours);if(zc)doc.zoneColours=zc;
     return doc;
   }
   function parse(json,standId){
@@ -102,6 +110,7 @@
     if(plain(doc)&&doc.format===FORMAT&&doc.version===VERSION&&doc.standId!==standId)throw Object.assign(Error('SHARED_FOREIGN'),{code:'SHARED_FOREIGN'});
     if(!plain(doc)||doc.format!==FORMAT||doc.version!==VERSION||!plain(doc.model)||!plain(doc.libraries))throw Object.assign(Error('SHARED_FORMAT'),{code:'SHARED_FORMAT'});
     for(const list of LISTS)if(!Array.isArray(doc.libraries[list]))throw Object.assign(Error('SHARED_FORMAT'),{code:'SHARED_FORMAT'});
+    if(Object.hasOwn(doc,'zoneColours')){const zc=zoneColoursOf(doc.zoneColours);if(zc)doc.zoneColours=zc;else delete doc.zoneColours;}
     return doc;
   }
   // Three-way merge per library item id: this phone's additions, edits and
@@ -142,6 +151,8 @@
     if(hasTombstones(tombs)){result.libraries.tombstones=tombs;withoutTombstoned(result.libraries,tombs);}
     // Light: this phone's newer choice wins only if it changed since the base.
     if(base&&local.light&&canonical(local.light)!==canonical(base.light||{}))result.light=copy(local.light);
+    // Zonekleur: die van het document blijft; wat alleen deze telefoon kent, komt erbij.
+    const zc=zoneColoursOf({...(local.zoneColours||{}),...(remote.zoneColours||{})});if(zc)result.zoneColours=zc;
     return result;
   }
 
@@ -213,7 +224,7 @@
     function localDocument(standId,st,snap){
       const tombs=unionTombstones(tombstonesOf(st.doc),recordLocalDeletions(standId,st.doc?.libraries||syncedLibraries(standId)?.libraries,snap.libraries));
       return documentFor(standId,st.layoutBlocked&&st.doc?st.doc.model:dropDanglingZonesC137(preserveFromMainC137(standId,st,snap.model)),snap.libraries,
-        st.removalProtected&&st.layoutBlocked&&st.doc?st.doc.light:snap.light,tombs);
+        st.removalProtected&&st.layoutBlocked&&st.doc?st.doc.light:snap.light,tombs,snap.zoneColours??st.doc?.zoneColours); // zonder eigen zonekleur: die van het document niet wissen
     }
     async function upload(standId,st,doc,controlScreen=false){
       const snap=hooks.snapshot(standId);
@@ -256,6 +267,9 @@
           if(local.light&&canonical(local.light)!==synced.light&&canonical(local.light)!==canonical(remote.light||{}))next.light=copy(local.light);
         }
       }
+      // Zonekleur van deze telefoon die het document nog niet heeft: erbij (en daarna gedeeld).
+      if(local&&!libraryOnly){const zc=zoneColoursOf({...(local.zoneColours||{}),...(remote.zoneColours||{})});
+        if(zc&&canonical(zc)!==canonical(remote.zoneColours||{})){if(next===remote)next=copy(remote);next.zoneColours=zc;}}
       const applied=await hooks.apply(standId,next,{revision:r.revision,libraryOnly});
       if(!current(standId,st))return;
       // A layout this phone cannot show yet (a receiver added elsewhere) is
@@ -273,7 +287,7 @@
       const syncedDoc=applied?.layout!=='local'&&after?documentFor(standId,st.layoutBlocked?remote.model:preserveFromMainC137(standId,st,after.model),
           // Native layout adoption may await I/O. Only the libraries actually
           // installed by apply count as synchronized; later edits stay dirty.
-          applied?.libraries||next.libraries,st.removalProtected&&st.layoutBlocked?remote.light:after.light,tombstonesOf(remote)):null;
+          applied?.libraries||next.libraries,st.removalProtected&&st.layoutBlocked?remote.light:after.light,tombstonesOf(remote),after.zoneColours??remote.zoneColours):null;
       st.key=syncedDoc?canonical(syncedDoc):canonical(remote);
       if(syncedDoc&&!st.layoutBlocked)saveSynced(standId,syncedDoc);
     }

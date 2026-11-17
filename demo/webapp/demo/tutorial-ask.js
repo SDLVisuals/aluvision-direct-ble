@@ -10,8 +10,11 @@
 const KEY='aluvision.tutorialAsk.';
 const WORDS={nl:['Wil je een tutorial bekijken?','Ja','Nee'],en:['Would you like to watch a tutorial?','Yes','No'],
   fr:['Voulez-vous regarder un tutoriel ?','Oui','Non'],de:['Möchtest du ein Tutorial ansehen?','Ja','Nein']};
-const asked=id=>{try{return localStorage.getItem(KEY+id)==='1';}catch(_){return false;}};
-const remember=id=>{try{localStorage.setItem(KEY+id,'1');}catch(_){}};
+// De openbare webdemo (/demo/, web-demo-service.js) deelt haar oorsprong met andere pagina's en bewaart niets: daar alleen in het
+// geheugen, zoals de rest van de demo (herladen = opnieuw vragen).
+const demo=new Map(),inDemo=()=>window.LightningWebDemo?.available===true;
+const asked=id=>{if(inDemo())return demo.get(KEY+id)==='1';try{return localStorage.getItem(KEY+id)==='1';}catch(_){return false;}};
+const remember=id=>{if(inDemo()){demo.set(KEY+id,'1');return;}try{localStorage.setItem(KEY+id,'1');}catch(_){}};
 let open=null;
 // Vraagt het één keer voor deze tutorial (id). Geeft false als de vraag al gesteld is of er al een vraag open staat.
 // Ja → onYes(), Nee of wegtikken → onNo(). In beide gevallen wordt het daarna niet meer gevraagd.

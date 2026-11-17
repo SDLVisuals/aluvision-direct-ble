@@ -666,6 +666,7 @@
     wifi674FlowLabel:['Zo verbind je een receiver','How to connect a receiver','Comment connecter un récepteur','So verbindest du einen Receiver'],
     wifi674PowerTitle:['Zet de receiver aan','Turn on the receiver','Allumez le récepteur','Receiver einschalten'],
     wifi674PowerHint:['Laat hem aan tijdens het instellen.','Leave it on during setup.','Laissez-le allumé pendant la configuration.','Lass ihn während der Einrichtung eingeschaltet.'],
+    wifi674TapHint:['Tik kort op zijn knop: dan staat zijn wifi 10 minuten aan.','Tap its button briefly: its Wi-Fi then stays on for 10 minutes.','Appuyez brièvement sur son bouton : son Wi-Fi reste alors actif 10 minutes.','Tippe kurz auf seine Taste: sein WLAN bleibt dann 10 Minuten an.'],
     wifi674NetworkTitle:['Open Instellingen → Wifi','Open Settings → Wi-Fi','Ouvrez Réglages → Wi-Fi','Öffne Einstellungen → WLAN'],
     wifi674NetworkHint:['Kies het ALUVISION-netwerk van je receiver.','Choose your receiver’s ALUVISION network.','Choisissez le réseau ALUVISION de votre récepteur.','Wähle das ALUVISION-Netzwerk deines Receivers.'],
     wifi674ReturnTitle:['Ga terug naar de app','Return to the app','Revenez dans l’application','Kehre zur App zurück'],

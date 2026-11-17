@@ -367,7 +367,7 @@ function effectCapabilities(e){
 // Staart vóór en achter (receivers/gedeeld/licht/Staart.h, docs/onderzoek/spi-staart-en-achtergrond.md §3), dezelfde formule als de
 // firmware (ALUVISION_STAART). Uit tot firmware, JS en Dart samen aangaan. staartNu = de staart van de receiver die nu getekend wordt
 // (sample() zet hem uit TAILPX/TAILSOFT van de toestand), zoals de firmware per poort.
-const STAART_AAN=false;
+const STAART_AAN=true;
 const staartNu={px:0,zacht:100};
 function staartLengte(kern){return staartNu.px?Math.min(64,Math.max(4,staartNu.px)):Math.min(64,Math.max(4,kern));}
 function staartMet(d,L){if(d<=0)return 1;if(L<=0||d>=L)return 0;const t=d/L,recht=1-t,zacht=1-t*t*t*(t*(t*6-15)+10);return recht+(zacht-recht)*Math.min(100,staartNu.zacht)/100;}

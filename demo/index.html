@@ -18,6 +18,10 @@
     /* nooit display:none: dan heeft het Flutter-beeld geen grootte meer */
     #flutter-laag{z-index:1;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s,visibility 0s linear .2s}
     #flutter-laag.zichtbaar{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .2s,visibility 0s}
+    /* een nagemaakt native scherm van de WebApp-demo staat open (camera, PIN): het iframe boven Flutter, zoals native op een
+       toestel bovenop alles komt (web-gastheer.js, pasNatiefToe) */
+    #toestel.natief-boven>#webapp{z-index:1}
+    #toestel.natief-boven>#flutter-laag{z-index:0}
     #startbeeld{z-index:2;background:var(--start-achter);transition:opacity .2s}
     #startbeeld.weg{opacity:0}
     #startbeeld .logo{position:absolute;left:50%;top:50%;width:193px;height:64px;transform:translate(-50%,calc(-50% - 20px));background:var(--start-logo);
@@ -32,7 +36,7 @@
     <div id="flutter-laag"></div>
     <div id="startbeeld" aria-hidden="true"><div class="logo"></div><p class="lighting">LIGHTING</p></div>
   </div>
-  <script src="web-gastheer.js?v=69bf6dbc983816a7"></script>
-  <script src="flutter_bootstrap.js?v=7fc1f80b0f81c28d" async></script>
+  <script src="web-gastheer.js?v=d25e38dd46c68a8c"></script>
+  <script src="flutter_bootstrap.js?v=d9bbba5186a88678" async></script>
 </body>
 </html>

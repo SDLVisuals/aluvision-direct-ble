@@ -194,12 +194,13 @@ function begin(from){build();t0=performance.now();root.querySelector('[data-ki-s
   if(!raf)raf=requestAnimationFrame(drawStand);if(staticMode)go(from);else play(from);}
 function refit(){if(!root||root.hidden)return;const bx=root.querySelector('[data-ki-box]'),want=pickLayout(bx);
   if(want!==layoutName){begin(step);return;}root.querySelector('[data-ki-fit]').style.setProperty('--ki-scale',Math.min(bx.clientWidth/L.W,bx.clientHeight/L.H).toFixed(4));}
-function open(kind='spi'){if(!SCRIPTS[kind])kind='spi';
+let onClose=null; // Flutter: de terugweg (app.js zoneTutorialForFlutterA8)
+function open(kind='spi',opts={}){if(!SCRIPTS[kind])kind='spi';onClose=typeof opts?.onClose==='function'?opts.onClose:null;
   if(root&&root.dataset.kind!==kind){root.remove();root=null;ro?.disconnect();ro=null;}KIND=kind;STEPS=SCRIPTS[kind].steps;if(!root)root=shell();staticMode=reduce();step=0;root.hidden=false;document.documentElement.classList.add('ki-open');
   if(!ro&&typeof ResizeObserver==='function'){ro=new ResizeObserver(()=>refit());ro.observe(root.querySelector('[data-ki-box]'));}
   requestAnimationFrame(()=>{begin(0);root.querySelector('[data-ki="skip"]').focus({preventScroll:true});});}
 function close(){run++;cancelAnimationFrame(raf);raf=0;if(root){root.hidden=true;root.querySelector('[data-ki-fit]').innerHTML='';}frame=null;
   document.documentElement.classList.remove('ki-open');try{localStorage.setItem(KEY+KIND,'1');}catch(_){}
-  document.querySelector('[data-action=gear]')?.focus({preventScroll:true});}
+  document.querySelector('[data-action=gear]')?.focus({preventScroll:true});const done=onClose;onClose=null;try{done?.();}catch(_){}}
 return {open,close,kinds:Object.keys(SCRIPTS),seenBefore:kind=>{try{return localStorage.getItem(KEY+(kind||'spi'))==='1';}catch(_){return false;}}};
 })();
