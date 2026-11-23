@@ -32,3 +32,12 @@
 .app-erase-sheet .app-erase-warning{display:block!important}
 .app-erase-sheet .app-erase-warning>*{display:block;width:auto;margin:0 0 8px}
 .app-erase-sheet .app-erase-warning>*:last-child{margin-bottom:0}
+
+/* 22 nov (de eigenaar, iPhone 1100): "Gepauzeerd · bevestiging nodig" stond letter per letter in een smalle kolom (.card is een raster
+   met kolommen); in de wisdialoog staat alles altijd onder elkaar */
+.app-erase-sheet section.card{display:block!important}
+.app-erase-sheet section.card>*{display:block;width:auto;max-width:100%;margin:0 0 8px}
+.app-erase-sheet section.card>*:last-child{margin-bottom:0}
+.app-erase-sheet .app-erase-note{margin:0 0 4px;font-weight:700}
+.app-erase-sheet .text-button.full{display:block;width:100%;min-height:48px;margin-top:8px}
+.app-erase-sheet .app-erase-confirm+.app-erase-progress{margin-top:14px}

@@ -16,8 +16,8 @@
   // Exacte kopieën uit V30FlutterHost.swift (screens, webAppCalls, zoneOps). Verandert daar iets, dan hier ook:
   // demo-bouw.sh vergelijkt ze bij elke bouw en stopt als ze verschillen.
   const SCHERMEN=new Set(['stand','bereik','zone','instellingen','welkom','scenes','receivers','rondgang','terug','nieuwe-stand','opnieuw','koppelen','inladen','deellink']);
-  const WEBAPP_CALLS=new Set(['newStand','standLoad','backupConfirm','standLinkOpen','receiverArtLed','receiverLinesArt','roundNewZone','setupScreen','setupOp','restoreBackup','currentStand','receiverArt','dialogData','dialogOp','sceneScreen','sceneOp','scenesData','sceneAction','openErase','standData','standOp','preferences','verbinding','setPreferences','receiversData','receiverOp','roundData','roundQueue','roundScan','roundAdd','roundSteps','roundStep','settingsData','settingsOp','usersData','usersSave','backupRestore','backupImport','backupNow','autoData','autoSave','autoStatus','shareOpen','accessData','accessOp','inviteShare','inviteTake','invitePassword','orderData','orderLight','orderSave','orderClose','pixelData','pixelLight','pixelSave','pixelClose','whiteTint','erasePlan','eraseDo','roundCue','roundRun','lightModel','adoptLight','beheer','pairScreen','pairOp','pixelTutorial','orderTutorial','receiversTutorial','scanTutorial','zoneTutorial','tutorialAsk']);
-  const ZONE_OPS=new Set(['colour','select','brightness','effect','setting','direction','toggle','reset','power','palette','paletteAdd','paletteRemove','backgroundToggle','background','savedColourUse','colourSave','savedColourRemove','savedColourMove','presetUse','presetSave','presetRemove','gradientStart','gradientColour','gradientAdd','gradientRemove','gradientMove','gradientSelect','gradientEven','gradientReorder','gradientCard','gearLayout','gearRename','gearOrder','gearMoveReceiver','gearAddReceiver','gearDelete','gearJoin','gearTiming']);
+  const WEBAPP_CALLS=new Set(['newStand','standLoad','backupConfirm','standLinkOpen','receiverArtLed','receiverLinesArt','roundNewZone','roundDeleteZone','setupScreen','setupOp','restoreBackup','currentStand','receiverArt','dialogData','dialogOp','sceneScreen','sceneOp','scenesData','sceneAction','openErase','standData','standOp','preferences','verbinding','setPreferences','receiversData','receiverOp','roundData','roundQueue','roundScan','roundAdd','roundSteps','roundStep','settingsData','settingsOp','usersData','usersSave','backupRestore','backupImport','backupNow','autoData','autoSave','autoStatus','shareOpen','accessData','accessOp','inviteShare','inviteTake','invitePassword','orderData','orderLight','orderSave','orderClose','pixelData','pixelLight','pixelSave','pixelClose','whiteTint','erasePlan','eraseDo','roundCue','roundRun','lightModel','adoptLight','beheer','pairScreen','pairOp','pixelTutorial','orderTutorial','receiversTutorial','scanTutorial','zoneTutorial','tutorialAsk']);
+  const ZONE_OPS=new Set(['sleepBegin', 'sleepEinde', 'colour','select','brightness','effect','setting','direction','toggle','reset','power','palette','paletteAdd','paletteRemove','backgroundToggle','background','savedColourUse','colourSave','savedColourRemove','savedColourMove','presetUse','presetSave','presetRemove','gradientStart','gradientColour','gradientAdd','gradientRemove','gradientMove','gradientSelect','gradientEven','gradientReorder','gradientCard','gearLayout','gearRename','gearOrder','gearMoveReceiver','gearAddReceiver','gearDelete','gearJoin','gearTiming','animField','lineSetting']);
   const RE_SCHERM=/^[a-z][a-z-]{1,40}$/,RE_ID=/^[A-Za-z0-9._:-]{1,96}$/,RE_V30_ID=/^v30-[A-F0-9]{32}-[1-9][0-9]{0,12}$/,RE_SLEUTEL=/^[A-Za-z0-9._:/@+-]{1,160}$/,RE_ACTIE=/^[A-Za-z][A-Za-z0-9]{0,63}$/;
   const MAX_WAARDE=2000000,NIET_GEKEND=Symbol('nietGekend');
   const START_VANGNET_MS=3000,START_MAX_MS=20000,WEBAPP_MAX_MS=20000,LOADVIEW_WACHT_MS=5000;
@@ -197,9 +197,55 @@
     if(args.version!==1||!RE_V30_ID.test(id||'')||typeof args.action!=='string'||!RE_ACTIE.test(args.action))return nee('NATIVE_INVALID_REQUEST');
     if(args.payload!=null&&(typeof args.payload!=='object'||Array.isArray(args.payload)))return nee('NATIVE_INVALID_REQUEST');
     if(args.action==='loadView')return laadView(id);
+    // 9.3 Software-updates (lib/beheer/mesh_update.dart): een nagemaakte update via het mesh, zodat de repetitie het scherm kan
+    // doorlopen (geen echte receivers). ?ota=nietbijgewerkt: na Herstarten draait de hoofdreceiver nog de oude versie.
+    if(/^meshUpdate(Plan|Start|Status|Go|Abort)$/.test(args.action)){const r=nepMeshUpdate(args.action,args.payload||{});return r.code?nee(r.code):{version:1,id,ok:true,result:r};}
     // backupStatus, mainLink, setConnectionChoice, applyLive, identify, …: de demo heeft geen telefoon en geen receiver.
     // Zelfde fout als zonder gastheer: elk Flutter-scherm neemt zijn rustige weg "niet beschikbaar".
     return nee('NATIVE_UNAVAILABLE');
+  }
+
+  // ---------- nagemaakte update via het mesh (zoals V30MeshUpdateC270 / AlvMeshUpdate antwoorden) ----------
+  // Per familie: 3 s opladen naar de hoofdreceiver, 3 s uitzenden (per receiver procent), dan klaar tot Herstarten; herstarten 3 s,
+  // dan de volgende familie (die van de hoofdreceiver als laatste) of gedaan.
+  const NEP_PROGRAMMAS=[{id:'rgbw-c275a',familie:'RGBW',naam:'C275A',grootte:2665296},{id:'spi-c275a',familie:'SPI',naam:'C275A',grootte:2829344}];
+  const NEP_NIET_BIJGEWERKT=/[?&]ota=nietbijgewerkt(?:&|$)/.test(window.location.search);
+  let nepUpdate=null;
+  function nepMeshUpdate(actie,p){
+    const nu=Date.now();
+    if(actie==='meshUpdatePlan')return typeof p.standId==='string'?{programmas:NEP_PROGRAMMAS}:{code:'MESH_UPDATE_INVALID'};
+    if(actie==='meshUpdateStart'){
+      const progs=Array.isArray(p.programmas)?NEP_PROGRAMMAS.filter(x=>p.programmas.includes(x.id)):[];
+      if(typeof p.standId!=='string'||!progs.length||!Array.isArray(p.receivers)||typeof p.hoofdFamilie!=='string')return {code:'MESH_UPDATE_INVALID'};
+      // de familie van de hoofdreceiver als laatste
+      progs.sort((a,b)=>(a.familie===p.hoofdFamilie)-(b.familie===p.hoofdFamilie));
+      nepUpdate={start:nu,stap:0,go:null,gestopt:false,progs,receivers:p.receivers.filter(r=>r&&typeof r.rid==='string').map(r=>({rid:r.rid,familie:String(r.type||'').toUpperCase()}))};
+      return nepStatus();
+    }
+    if(!nepUpdate)return {fase:'rust'};
+    if(actie==='meshUpdateAbort'){if(nepUpdate.go===null)nepUpdate.gestopt=true;return nepStatus();}
+    if(actie==='meshUpdateGo'){if(nepStatus().fase==='klaar')nepUpdate.go=nu;return nepStatus();}
+    return nepStatus();
+  }
+  function nepStatus(){
+    const u=nepUpdate,nu=Date.now(),fam=u.progs[u.stap];
+    const families=u.progs.map((x,i)=>({familie:x.familie,naam:x.naam,fase:i<u.stap?'gedaan':i>u.stap?'wacht':'?'}));
+    const rijen=(fase,procent)=>u.receivers.map(r=>{const deze=r.familie===fam?.familie,eerder=u.progs.findIndex(x=>x.familie===r.familie)<u.stap;
+      return {rid:r.rid,familie:r.familie,procent:eerder?100:deze?procent:0,klaar:eerder||deze&&procent>=100,fase:eerder?'gedaan':deze?fase:'wacht'};});
+    const uit=(fase,extra={})=>{families[u.stap].fase=fase;return {fase,familie:fam.familie,families,...extra};};
+    if(u.gestopt)return {fase:'gestopt',families,receivers:rijen('gestopt',0)};
+    if(u.go!==null){
+      const sinds=nu-u.go;
+      if(sinds<3000)return {...uit('herstarten'),receivers:rijen('herstarten',100)};
+      if(NEP_NIET_BIJGEWERKT)return {fase:'fout',fout:'MESH_UPDATE_NIET_BIJGEWERKT',families,receivers:rijen('fout',100)};
+      if(u.stap<u.progs.length-1){u.stap++;u.start=nu;u.go=null;return nepStatus();}
+      families.forEach(f=>{f.fase='gedaan';});
+      return {fase:'gedaan',families,receivers:rijen('gedaan',100).map(r=>({...r,klaar:true,procent:100,fase:'gedaan'}))};
+    }
+    const t=nu-u.start;
+    if(t<3000)return {...uit('opladen',{grootte:fam.grootte,opgeladen:Math.floor(fam.grootte*t/3000)}),receivers:rijen('wacht',0)};
+    if(t<6000)return {...uit('uitzenden'),receivers:rijen('uitzenden',Math.floor((t-3000)/30))};
+    return {...uit('klaar'),receivers:rijen('klaar',100)};
   }
 
   // ---------- aluvision/host ----------

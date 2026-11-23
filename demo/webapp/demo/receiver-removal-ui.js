@@ -67,7 +67,7 @@
     }
     function warning(){
       if(logical())return `<section class="card removal-warning"><h3>${escape(t("Deze receiver uit het netwerk verwijderen"))}</h3><p>${escape(t("Je andere receivers en instellingen blijven behouden."))}</p><p class="removal-help">${escape(t("Dit bevestigt geen fabrieksreset. Een niet-bereikbare receiver moet je later zelf resetten voordat je hem opnieuw koppelt."))}</p></section>`;
-      if(offline())return `<section class="card removal-warning"><h3>${escape(t("Deze receiver ontkoppelen"))}</h3><p>${escape(t("Deze receiver is nu niet bereikbaar. Hij wordt verwijderd en vergeet de stand zodra hij weer aan gaat."))}</p><p>${escape(t("De rest van je stand blijft behouden."))}</p></section>`;
+      if(offline())return `<section class="card removal-warning"><h3>${escape(t("Deze receiver ontkoppelen"))}</h3><p>${escape(t("Deze receiver is nu niet bereikbaar. Hij wordt uit je stand verwijderd. Zet hem daarna terug naar de fabrieksinstellingen met de knop op de receiver."))}</p><p>${escape(t("De rest van je stand blijft behouden."))}</p></section>`;
       if(!installation())return `<section class="card removal-warning"><h3>${escape(t("Deze receiver ontkoppelen"))}</h3><p>${escape(t('{name} wordt losgekoppeld en start opnieuw. Voeg hem daarna opnieuw toe.',{name:receiver.name}))}</p><p>${legacyPinCopy()?t("Je andere receivers en PIN blijven behouden."):t("De rest van je stand blijft behouden.")}</p></section>`;
       const count=Number.isSafeInteger(result?.count)?result.count:targets.length;
       const targetSummary=count===1?t("Er is één receiver in deze installatie."):count>1?t('Je ontkoppelt alle {count} receivers uit deze installatie.',{count}):t("Je ontkoppelt alle receivers uit deze installatie.");

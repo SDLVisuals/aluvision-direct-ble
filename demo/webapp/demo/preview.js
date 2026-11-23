@@ -925,6 +925,25 @@ function softTrailCoverage(behind,trail,n,smooth){
     if (!lineSlots || lineSlots.slots.length !== count || !Number.isInteger(index) || index < 0 || index >= count) return { index, count };
     return { index: lineSlots.slots[index], count: lineSlots.total };
   }
+  // voorbeeldHeleZone (aan sinds 22 nov): een samengevoegde rij (lichtstand lineJoin, live-control.js) loopt over de ledlines van de zone heen, ook
+  // over twee receivers (100 + 61 = één rij van 161). rowPlace geeft voor één ledline het rijnummer, het aantal rijen, de lengte van de
+  // rij en de plaats van dit deel in de rij. Gelijk aan rowPlace in apps/Flutter_Module/lib/licht/tekenaar.dart.
+  // Schakelaar uit, doorlopend, ongeldige lineJoin of een lineJoin die niet bij de ledlines van de zone past: null (= per ledline).
+  let voorbeeldHeleZone = true; // aan 22 nov (tegoed voorbeeld-zone)
+  function setVoorbeeldHeleZone(value) { voorbeeldHeleZone = value === true; return voorbeeldHeleZone; }
+  function rowPlace(state, group, lineId) {
+    if (!voorbeeldHeleZone || group.layout === 'continuous') return null;
+    const join = state && state.lineJoin, lines = group.lines || [];
+    if (!Array.isArray(join) || join.length < 2 || join.length > 128 || join.length !== lines.length ||
+      !join.every(v => Number.isInteger(v) && v >= 0 && v <= 119)) return null;
+    const count = Math.max(...join) + 1;
+    if (new Set(join).size !== count || count >= join.length) return null;
+    const at = lines.findIndex(line => line.id === lineId);
+    if (at < 0) return null;
+    let pixels = 0, offset = 0;
+    lines.forEach((line, i) => { if (join[i] !== join[at]) return; if (i < at) offset += line.pixels; pixels += line.pixels; });
+    return { index: join[at], count, pixels, offset };
+  }
   function sample(receiver, sceneGeometry, time = 0, sourceReceivers = [receiver], gradientUnavailable = null, gradientDomains = undefined, domainResolver = null) {
     types(receiver.type);
     const group = sceneGeometry || geometry([receiver]);
@@ -972,13 +991,18 @@ function softTrailCoverage(behind,trail,n,smooth){
         receiverType: receiver.type, time, pixelCount: geo.pixelCount,
         totalPixels: group.totalPixels, layout: group.layout };
       const engine=references.supports(state.v30Effect)?references:extension;
-      if (receiver.type === 'RGBW') return [engine.sample({ ...input, pixelIndex: 0, globalPixel: geo.offset })];
-      return geo.outputs.flatMap(output => { const outputSlot = slotted(lineSlots, output.sampleIndex??output.lineIndex, output.sampleCount??output.lineCount);
+      if (receiver.type === 'RGBW') {
+        const row = geo.sampleIndex == null ? rowPlace(state, group, receiver.id + ':0') : null;
+        const rowSlot = row && slotted(lineSlots, row.index, row.count);
+        return [engine.sample({ ...input, ...(rowSlot ? { receiverIndex: rowSlot.index, receiverCount: rowSlot.count } : {}), pixelIndex: 0, globalPixel: geo.offset })];
+      }
+      return geo.outputs.flatMap(output => { const row = output.sampleIndex == null ? rowPlace(state, group, output.lineId) : null;
+        const outputSlot = row ? slotted(lineSlots, row.index, row.count) : slotted(lineSlots, output.sampleIndex??output.lineIndex, output.sampleCount??output.lineCount);
         return Array.from({ length: output.pixels }, (_, pixel) => {
         const oriented = output.reversed ? output.pixels - 1 - pixel : pixel;
         return engine.sample({ ...input,
-          ...(continuous ? {} : { receiverIndex: outputSlot.index, receiverCount: outputSlot.count, pixelCount: output.samplePixels??output.pixels }),
-          pixelIndex: continuous ? output.localOffset + oriented : (output.sampleOffset??0)+oriented, globalPixel: output.offset + oriented });
+          ...(continuous ? {} : { receiverIndex: outputSlot.index, receiverCount: outputSlot.count, pixelCount: row ? row.pixels : output.samplePixels??output.pixels }),
+          pixelIndex: continuous ? output.localOffset + oriented : (row ? row.offset : output.sampleOffset??0)+oriented, globalPixel: output.offset + oriented });
       }); });
     }
     if (isStatic || receiver.type === 'RGBW' || state.previewFamily === 'RGBW') {
@@ -989,19 +1013,22 @@ function softTrailCoverage(behind,trail,n,smooth){
         return opticalWhite(value);
       };
       if (receiver.type === 'RGBW' || continuous || isStatic) {
-        const colour = lineColour(geo.lineIndex, geo.lineCount);
+        const row = receiver.type === 'RGBW' ? rowPlace(state, group, receiver.id + ':0') : null;
+        const colour = row ? lineColour(row.index, row.count) : lineColour(geo.lineIndex, geo.lineCount);
         return Array.from({ length: geo.pixelCount }, () => colour.slice());
       }
       return geo.outputs.flatMap(output => {
-        const colour = lineColour(output.lineIndex, output.lineCount);
+        const row = rowPlace(state, group, output.lineId);
+        const colour = row ? lineColour(row.index, row.count) : lineColour(output.lineIndex, output.lineCount);
         return Array.from({ length: output.pixels }, () => colour.slice());
       });
     }
     // Physical placement is calculated from ALL zone members, including
     // offline receivers; selecting one receiver must never close a gap.
     return geo.outputs.flatMap(output => {
-      const total = continuous ? group.totalPixels : output.pixels;
-      const outputSlot = slotted(lineSlots, output.lineIndex, output.lineCount);
+      const row = rowPlace(state, group, output.lineId);
+      const total = continuous ? group.totalPixels : row ? row.pixels : output.pixels;
+      const outputSlot = row ? slotted(lineSlots, row.index, row.count) : slotted(lineSlots, output.lineIndex, output.lineCount);
       const sampleState = Object.assign({}, state, {
         // Continuous is one logical strip. Keep the actual output geometry
         // for electrical placement only, never as a new animation boundary.
@@ -1012,7 +1039,7 @@ function softTrailCoverage(behind,trail,n,smooth){
       const legacyState = state.legacySpi ? { ...sampleState, backgroundOn: Boolean(background) } : null;
       return Array.from({ length: output.pixels }, (_, pixel) => {
         const oriented = output.reversed ? output.pixels - 1 - pixel : pixel;
-        const position = (continuous ? output.offset : 0) + oriented;
+        const position = (continuous ? output.offset : row ? row.offset : 0) + oriented;
         if (legacyState) return legacySpi.sample(legacyState, (position + 0.5) / total, time, position, total);
         const value = canonical.sampleSpiPixel(sampleState,
           (position + 0.5) / total, time, total, continuous ? 0 : outputSlot.index, continuous ? 1 : outputSlot.count);
@@ -1907,7 +1934,7 @@ function softTrailCoverage(behind,trail,n,smooth){
     }
     return rawFrame;
   }
-  return Object.freeze({ setWhiteTint, tintRGBW, catalog, catalogSnapshot, gallerySample, geometry, ledlineCount, sample, draw, rows, selected, normalizeState, defaultWidthPixels, retimeMotion, opticalWhite, tunnelProjection, wallProjection,
+  return Object.freeze({ setWhiteTint, setVoorbeeldHeleZone, tintRGBW, catalog, catalogSnapshot, gallerySample, geometry, ledlineCount, sample, draw, rows, selected, normalizeState, defaultWidthPixels, retimeMotion, opticalWhite, tunnelProjection, wallProjection,
     engineVersion: canonical.version, extensionVersion: extension.version, isLocalPreview: true,
     staartAan: legacySpi.staartAan === true });
 }));

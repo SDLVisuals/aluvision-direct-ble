@@ -63,6 +63,13 @@
   rules.gradientLastBrightness = value => Number.isInteger(value) && value>=1 && value<=100;
   rules.staticGradientGroup = value => G.validGroup(value);
   rules.staticGradientDomain = value => G.validDomain(value);
+  // Animatievelden (animatie-velden-ontwerp-21nov.md, W12): bewaarde animaties, scènes en back-ups met deze sleutels laden gewoon
+  // (zelfde vorm en grenzen als model.js). null = niet gezet.
+  rules.backgroundStops = value => value === null || G.validateStops(value);
+  rules.fadeInOut = value => value === null || (Array.isArray(value) && value.length === 2 && value.every(item => integer(item, 0, 200)));
+  rules.whiteMix = value => value === null || integer(value, 0, 100);
+  rules.breathe = value => value === null || (Array.isArray(value) && value.length === 2 && integer(value[0], 500, 20000) && integer(value[1], 0, 100));
+  rules.pixelRange = value => value === null || (Array.isArray(value) && value.length === 2 && value.every(item => integer(item, 0, 8191)) && value[0] <= value[1]);
   rules.colors = value => Array.isArray(value) && value.length >= 1 && value.length <= 16 && value.every(validHex);
   rules.whiteChannels = value => Array.isArray(value) && value.length >= 1 && value.length <= 16 && value.every(item => finite(item, 0, 255));
   ['rgbEnabled', 'whiteEnabled'].forEach(key => { rules[key] = value => Array.isArray(value) && value.length >= 1 && value.length <= 16 && value.every(item => typeof item === 'boolean'); });

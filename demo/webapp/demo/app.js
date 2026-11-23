@@ -73,7 +73,7 @@
   let simpleStandMode=false,simpleStandSupported=false,standMigrationReady=false,standSession=null,centralApplied=null,centralPending=null;
   const presentationLiveC137=new Map();let presentationLiveToastC137=0;
   let temporarySingleUser=false,pinLoginC97=false; // C97: PIN login of another phone stays available in single-user mode
-  const temporaryAccessActions=new Set(['pin-login','pin-login-submit','pin-login-cancel','pin-protection-toggle','pin-protection-refresh','pin-protection-reconnect','pin-protection-recheck','pin-protection-save','stand-connect','stand-open-options','stand-connect-submit','stand-wifi-open','stand-join-open','stand-share-open','stand-code-suggest','stand-code-change','stand-code-change-submit','stand-setup-start','stand-migrate-submit','stand-inspect-submit','stand-find-submit','stand-copy-factory-wifi','stand-show-loaded','stand-resume-submit','stand-refresh','stand-forget','stand-forget-confirm']);
+  const temporaryAccessActions=new Set(['pin-login','pin-login-submit','pin-login-cancel','pin-protection-refresh','pin-protection-reconnect','pin-protection-recheck','stand-connect','stand-open-options','stand-connect-submit','stand-wifi-open','stand-join-open','stand-share-open','stand-code-suggest','stand-code-change','stand-code-change-submit','stand-setup-start','stand-migrate-submit','stand-inspect-submit','stand-find-submit','stand-copy-factory-wifi','stand-show-loaded','stand-resume-submit','stand-refresh','stand-forget','stand-forget-confirm']);
   let centralPendingReadFence=null,standConnectionIntent='open',standManualEntry=false,firstFactorySetup=false;
   // Presentation intent only: a cold cache/empty phone cannot silently choose
   // setup or open another stand. An explicit "Stand openen" enables one
@@ -949,7 +949,7 @@
   }
   const liveController=nativeContext&&runtime?.native===true&&typeof runtime.services?.applyLive==='function'
     ?window.LightningLiveControl?.create({send:request=>busyLogC255('applyLive',runtime.services.applyLive(request)),
-      sendBatch:typeof runtime.services.applyLiveBatch==='function'?requests=>busyLogC255('applyLiveBatch',runtime.services.applyLiveBatch({requests})):undefined,
+      sendBatch:typeof runtime.services.applyLiveBatch==='function'?(requests,opts)=>busyLogC255('applyLiveBatch',runtime.services.applyLiveBatch(opts?.tussen===true?{requests,tussen:true}:{requests})):undefined,
       maxBatchSize:()=>runtime.services.liveBatchLimit===64?64:30,
       compiledModern:()=>runtime.services.integratedStatic8Available===true,
       singleSpiStaticBatch:()=>runtime.services.singleSpiStaticBatchAvailable===true,
@@ -1081,7 +1081,7 @@
     const key=JSON.stringify(context);
     if(key===orderFocusContextKey664)return;
     orderFocusContextKey664=key;
-    void orderFocus664.update(context);
+    void orderFocus664?.update(context);
   }
   function orderFocusCopy664(){
     const state=orderFocusState664;
@@ -1157,7 +1157,8 @@
       void orderIdentification.renewForeground().catch(()=>{});
   },5000);
   const orderGuide=window.LightningLedlineOrderGuide;
-  function orderGuideText(key,params){return orderGuide.t(key,uiPreferences.preferences.language,params);}
+  // WebApp weg stap 0c: de gids (ledline-order-guide.js) is weg; alleen dode code van het oude Volgorde-paneel vroeg nog teksten
+  function orderGuideText(key,params){return orderGuide?.t?.(key,uiPreferences.preferences.language,params)??'';}
   const ORDER_TUTORIAL_KEY='aluvision.ui.ledline-order-tutorial.v3-observed-colours';
   let orderTutorialSeenMemory=false,orderTutorialContext=null,orderTutorialReturnFocus=null,orderTutorialDispose=null;
   function hasSeenOrderTutorial(){
@@ -1171,6 +1172,7 @@
       !main.querySelector('.ledline-setup[data-order-open="true"]')||document.querySelector('dialog[open]')||
       arrangementApplying||managementBusy||orderTestBusy()||inlineOrderDrag?.isActive())return false;
     if(automatic&&hasSeenOrderTutorial())return false;
+    if(!orderGuide)return false; // WebApp weg stap 0c: de gids is weg (dit venster opende al nooit: geen open paneel)
     const count=M.zoneLedlines(model,z.id).length;if(count<2)return false;
     orderTutorialReturnFocus=document.activeElement;
     orderTutorialContext={standId:stand().id,zoneId:z.id};
@@ -1249,7 +1251,7 @@
       if(!previewContext){await orderIdentification.interaction();await orderIdentification.settle();}
       if(request!==orderTestRequest||session!==orderIdentificationState?.session||!orderTestContext().ready)return;
       orderTestPreparing=false;
-      await orderTest.start();
+      await orderTest?.start();
     }catch(_){if(request===orderTestRequest)orderTestState={status:'failed',busy:false,session,zoneId:zone()?.id,preview:previewContext};}
     finally{if(request===orderTestRequest){orderTestPreparing=false;syncArrangementControls();}}
   }
@@ -1270,7 +1272,7 @@
     // Geometry can change through another metadata view while the same token
     // is alive. Cancel both native and visual tests, not just radio steps.
     if(orderTestState.busy&&['preparing','running'].includes(orderTestState.status)&&!same){
-      orderTestRequest++;orderTestPreparing=false;orderTestConfirmation=null;orderTest.contextChanged();return;
+      orderTestRequest++;orderTestPreparing=false;orderTestConfirmation=null;orderTest?.contextChanged();return;
     }
     const terminalHere=orderTestState.zoneId===context.zoneId&&orderTestFingerprint===orderTestGeometry()&&['failed','cancelled'].includes(orderTestState.status);
     const state=same||terminalHere?orderTestState:{status:'idle'},confirmed=orderTestConfirmation===orderTestGeometry()&&same&&state.status==='complete'&&!previewContext;
@@ -1480,7 +1482,7 @@
   // C109ap: at most one density check per frame (the raw scroll event fired it several times per frame on touch devices).
   let densityFrameC109=0,measureFrameC109=0;
   window.addEventListener('scroll',()=>{if(densityFrameC109)return;densityFrameC109=requestAnimationFrame(()=>{densityFrameC109=0;updateControlPreviewDensity();});},{passive:true});
-  window.addEventListener('resize',()=>{measureControlPreviewDock();updateControlPreviewDensity();if(openLineSetup.has(route.zoneId)){if(inlineOrderDrag?.isActive())inlineOrderDrag.cancel();syncOrderSlots();}},{passive:true});
+  window.addEventListener('resize',()=>{measureControlPreviewDock();updateControlPreviewDensity();if(openLineSetup.has(route.zoneId)){if(inlineOrderDrag?.isActive())inlineOrderDrag?.cancel();syncOrderSlots();}},{passive:true});
   function revealAnimationStart(){
     // Enter settings at the page start: zone tabs and preview stay visible.
     // Only explicit editor entry calls this; live edits and nested pickers
@@ -2114,6 +2116,8 @@
       return Number.isInteger(px)&&px>=0&&px<=1024?{port,enabled:r.enabled===true,pixels:px,reversed:r.reversed===true}:null;});
     return out.every(Boolean)?out:null;
   }
+  // WebApp weg stap 1: wat het Flutter-scherm Pixels bij hervatten nodig heeft (openPairFirstSetup), één keer per opening
+  const hervatA12=new Map();
   function pixelDataU13({receiverId}={}){
     const r=model.receivers.find(x=>x.id===receiverId&&x.type==='SPI'&&x.lifecycle==='added');if(!r||pixelSetup.isOpen())return null;
     pixelCloseU13();
@@ -2122,8 +2126,11 @@
       return previewQuietRetryC135(()=>runtime.services.previewPixels({...request,mainReceiverId:request.role==='node'?model.receivers.find(x=>x.standId===request.standId&&x.role==='main'&&x.lifecycle==='added')?.id:null}));}}):null;
     pixelFlutterU13={receiverId,preview,transaction:crypto.randomUUID()};
     const colour=port=>{try{return PS.portColour(port).hex||null;}catch(_){return null;}};
+    const hervat=hervatA12.get(receiverId)||null;hervatA12.delete(receiverId);
+    const bron=hervat?hervat.outputs:r.outputs;
     return {receiverId,name:r.name,zone:M.getZone(model,r.zoneId)?.name||'',max:1024,
-      outputs:[1,2,3,4].map(port=>{const o=r.outputs.find(x=>x.port===port)||{port,enabled:false,pixels:0,reversed:false};return {port,enabled:o.enabled===true,pixels:o.pixels||0,reversed:o.reversed===true,colour:colour(port)};})};
+      outputs:[1,2,3,4].map(port=>{const o=bron.find(x=>x.port===port)||{port,enabled:false,pixels:0,reversed:false};return {port,enabled:o.enabled===true,pixels:o.pixels||0,reversed:o.reversed===true,colour:colour(port)};}),
+      ...(hervat?{hervat:{stap:hervat.stap,poort:hervat.poort,wacht:hervat.wacht}}:{})};
   }
   var pixelLogU13=''; // c98.log: alleen bij een andere stap of poort (de schuif stuurt veel aanvragen)
   // de eigenaar 17 nov (1067): "als ik nu poort 2 open met de pixelkiezer werkt het, het werkt niet in de setup". Een poort die op de
@@ -2200,12 +2207,15 @@
   function eraseTextU15(key,params){return window.LightningAppErase.text(key,uiPreferences.preferences.language,params||{});}
   function eraseStateU15(){
     const {plan,result}=eraseFlutterU15;
-    const keys=['title','choose','localTitle','localHint','localWarning','physicalTitle','physicalHint','physicalWarning','recovery','pin','consent','confirmLocal','confirmPhysical','retained','reconnect','resume','resumeLocal','localPending','later','back','progressTitle','paused','demo'];
+    const keys=['title','choose','localTitle','localHint','localWarning','physicalTitle','physicalHint','physicalWarning','recovery','pin','consent','confirmLocal','confirmPhysical','retained','reconnect','resume','resumeLocal','localPending','later','back','progressTitle','paused','demo','wipe','alsoReceivers','noRecovery'];
+    // stands (22 nov, wissen meteen): de standen met receivers, zodat Flutter kijkt of hun herstelcode bevestigd is
     return {status:'ok',demo:!!webDemoContext,receivers:plan?.receiverCount||0,recoveryLost:plan?.recoveryWillBeLost===true,
+      stands:(plan?.scopes||[]).filter(scope=>scope.receiverCount>0).map(scope=>scope.standId),
       summary:plan?eraseTextU15('summary',{count:plan.receiverCount,stands:plan.scopes.length}):'',
       texts:Object.fromEntries(keys.map(k=>[k,eraseTextU15(k)])),
       pending:result&&['in-progress','verification-required','pin-required'].includes(result.status)?{status:result.status,scope:result.scope,
-        completed:result.progress.completed,total:result.progress.total,text:eraseTextU15(result.mode==='authority-negative'?'modernProgress':'progress',{completed:result.progress.completed,total:result.progress.total})}:null};
+        completed:result.progress.completed,total:result.progress.total,text:eraseTextU15(result.mode==='authority-negative'?'modernProgress':'progress',{completed:result.progress.completed,total:result.progress.total}),
+        count:eraseTextU15('resetCount',{completed:result.progress.completed,total:result.progress.total})}:null};
   }
   async function erasePlanU15(){
     const sv=eraseServicesU15();if(typeof sv.planAppErase!=='function')return {status:'unavailable',note:eraseTextU15('unavailable')};
@@ -2347,7 +2357,23 @@
     const before=JSON.stringify(M.lineIds(model,z.id));
     if(JSON.stringify(order)!==before){
       const next=M.arrangeLines(model,z.id,{layout:z.layout,lineOrder:order});
-      const view=simpleStandMode?await saveCentralModel(next):await runtime.services.editZones({standId:st.id,operation:{kind:'arrangeLines',zoneId:z.id,layout:z.layout,lineOrder:order}});
+      // de eigenaar 18 nov (1073b, 18:28–18:30): ± 15× ZONE_EDIT_INVALID. native-runtime rekent de volgorde na op zijn eigen bewaarde
+      // kopie van het model, en die liep achter (na de rondgang/Pixels). Dan één keer het model van native opnieuw laden en opnieuw.
+      // de eigenaar 18 nov (1075, 19:14): native-runtime editZones eist bij arrangeLines een expectedZoneSignature (anders ZONE_EDIT_INVALID):
+      // elke ECHTE wissel faalde, alleen een ongewijzigde volgorde (geen editZones) lukte. De signatuur van de zone zoals ze nu is.
+      const bewaar=()=>{const zNu=M.getZone(model,z.id)||z;
+        return simpleStandMode?saveCentralModel(next):runtime.services.editZones({standId:st.id,operation:{kind:'arrangeLines',zoneId:z.id,layout:z.layout,lineOrder:order},
+          expectedZoneSignature:JSON.stringify([zNu.id,zNu.name,zNu.type,zNu.receiverIds,zNu.layout,M.lineIds(model,z.id)])});};
+      let view;
+      try{view=await bewaar();}
+      catch(error){
+        if(simpleStandMode||!['ZONE_EDIT_INVALID','V30_CHECKPOINT_CONFLICT'].includes(error?.code)||typeof runtime?.services?.loadState!=='function')throw error;
+        try{window.__c98log?.('C232 ORDER_LINES model='+JSON.stringify(M.lineIds(model,z.id))+' order='+JSON.stringify(order)+' -> loadState');}catch(_){}
+        const vers=await runtime.services.loadState();
+        if(vers?.model){model=keepLocalPreviewStates(vers.model);}
+        try{window.__c98log?.('C232 ORDER_LINES vers='+JSON.stringify(M.lineIds(model,z.id)));}catch(_){}
+        view=await bewaar();
+      }
       refreshSuspendedSetup(view);model=simpleStandMode?M.assertValid(view.model):keepLocalPreviewStates(view.model);
     }
     if(context.rgbw)return;
@@ -2631,6 +2657,16 @@
         const previous=receiver.outputs[index];return previous&&output.port===previous.port&&output.enabled===previous.enabled&&output.pixels===previous.pixels&&(previous.enabled||output.reversed===previous.reversed);
       });
       if(a7&&!resolved.resumePending&&!resolved.resumeStep){a7OpenA7({view:'pixels',receiverId,zoneId:receiver.zoneId||null});if(resolved.changed)toast(pairFirstText('changed'));return;}
+      // WebApp weg stap 1 (FlutterSchermen.hervatPixels → koppelView 'hervat'): hervatten na een herstart in het Flutter-scherm Pixels
+      // in plaats van de pixel-dialoog van de app. Zelfde gegevens als die dialoog: de wachtende uitgangen (resumePending: de laatste
+      // stap, met de zin dat de vorige wijziging nog op bevestiging wacht) of het halve ontwerp (resumeStep: die stap en poort).
+      if(a7&&koppelenA1.views.includes('hervat')){
+        const stapOutputs=resolved.resumeStep&&Array.isArray(resolved.resumeStep.outputs)&&resolved.resumeStep.outputs.length===4?resolved.resumeStep.outputs:null;
+        hervatA12.set(receiverId,{outputs:(resolved.resumePending?desired:stapOutputs||receiver.outputs).map(o=>({port:o.port,enabled:o.enabled===true,pixels:o.pixels||0,reversed:o.reversed===true})),
+          stap:resolved.resumePending?'review':resolved.resumeStep?.stage||'outputs',poort:resolved.resumePending?null:Number.isInteger(resolved.resumeStep?.port)?resolved.resumeStep.port:null,wacht:resolved.resumePending===true});
+        try{window.__c98log?.('HERVAT pixels '+(resolved.resumePending?'wacht':'stap '+(resolved.resumeStep?.stage||'')));}catch(_){}
+        a7OpenA7({view:'pixels',receiverId,zoneId:receiver.zoneId||null});if(resolved.changed)toast(pairFirstText('changed'));return;
+      }
       if(a7)startAddWizardC137bp();
       pixelSetup.open({...receiver,outputs:desired},{resumePending:resolved.resumePending,directionsOnly,pairFirst:true,zoneLines:otherZoneLinesC113(receiver),...(resolved.resumeStep?{resumeStep:resolved.resumeStep}:{})});
       if(resolved.changed)toast(pairFirstText('changed'));
@@ -3576,13 +3612,106 @@
     return {open:true,title:document.getElementById('effect-dialog-title')?.textContent.trim()||'',items};
   }
   var dialogButtonsU16=[];
-  async function dialogOpU16({op,action,id,field,value,index}){
+  // Waarom een venster van een receiver niet openging (zelfde bewakers als de klik-afhandeling en de vensters zelf).
+  function dialogWhyU22(action,id){
+    if(appEraseRecovery760)return 'erase';
+    if(firstAccessCheckpoint||pinProtectionBusy||pinLoginBusy||managementBusy||arrangementApplying)return 'busy';
+    if(action==='receiver-update-all')return standReceivers().length?'unknown':'none';
+    const receiver=model.receivers.find(r=>r.id===id);
+    if(!receiver)return 'gone';
+    if(receiver.lifecycle!=='added'||(action==='receiver-remove'&&!['main','node'].includes(receiver.role)))return 'not-added';
+    return 'unknown';
+  }
+  // WebApp weg (FlutterSchermen.zoneVensters): de zonevensters Nieuwe zone, Zone hernoemen en Zone verwijderen zonder het DOM.
+  // Flutter vraagt dialogOp {op:'start', zelf:true}; de app antwoordt met dezelfde items en teksten als showNameDialog en
+  // showZoneDelete (wat dialogDataU16 vroeger uit het DOM las) en doet de klik met dezelfde modelfuncties en dezelfde bewaarweg
+  // (updateManagement / persistManagement, zoals management-name-save en confirmZoneDelete). Zolang zo'n venster open is, gaan de
+  // volgende dialogOp's (input, click, close) hierheen.
+  let zoneVensterA14=null;
+  function zoneVensterDataA14(fout=''){
+    const v=zoneVensterA14;if(!v)return {open:false,screen:route.screen};
+    const s=stand(),z=v.zoneId?s?.zones.find(item=>item.id===v.zoneId):null;
+    if(v.kind==='delete'){
+      if(!z){zoneVensterA14=null;return {open:false,screen:route.screen};}
+      const count=M.zoneReceivers(model,z.id).length,scenes=savedScenes.scenes.some(scene=>scene.standId===s.id&&scene.zones.some(item=>item.id===z.id));
+      const items=[{kind:'p',text:t('Je verwijdert alleen de zone {name}.',{name:z.name})}];
+      if(count){
+        items.push({kind:'info',icon:'receiver',title:t(count===1?'{count} receiver blijft gekoppeld':'{count} receivers blijven gekoppeld',{count}),text:t('Verplaatsen naar {zone}',{zone:t('Niet in een zone')})});
+        items.push({kind:'p',text:t('Je kunt ze daar opnieuw aan een zone toewijzen. Kleuren en poorten blijven bewaard. De receivers blijven onderdeel van je stand.')+(pinRequired()?' '+t('Je PIN blijft ook behouden.'):'')});
+      }else items.push({kind:'p',text:t("Deze zone bevat geen receivers. Je stand blijft bestaan.")});
+      if(scenes)items.push({kind:'p',text:t("Scènes met deze zone blijven bewaard, maar kunnen niet meer worden geactiveerd. Bewaar na het opnieuw indelen een nieuwe scène.")});
+      if(fout||v.changed)items.push({kind:'error',text:fout||t("Deze zone is ondertussen gewijzigd. Controleer hierboven welke receivers je losmaakt.")});
+      items.push({kind:'actions',buttons:[{index:0,label:t("Zone verwijderen"),action:'zone-delete-confirm',disabled:false,style:'red'},{index:1,label:t("Annuleren"),action:'effect-dialog-close',disabled:false,style:'secondary'}]});
+      return {open:true,title:t("Zone verwijderen?"),items};
+    }
+    const creating=v.kind==='create';
+    const items=[{kind:'p',text:creating?t("Kies een herkenbare pleknaam."):t("Alleen de naam wijzigt.")},
+      {kind:'field',label:t("Naam zone"),id:'management-name',value:v.naam,placeholder:t("Bijvoorbeeld: Balie"),max:64}];
+    if(fout)items.push({kind:'error',text:fout});
+    items.push({kind:'button',index:0,label:creating?t("Zone maken"):t("Naam opslaan"),action:'management-name-save',disabled:!v.naam.trim(),style:'dark'});
+    return {open:true,title:creating?t("Nieuwe zone"):t("Zone hernoemen"),items};
+  }
+  async function zoneVensterOpA14({op,action,id,field,value,index}={}){
+    if(op==='start'){
+      const s=stand();zoneVensterA14=null;if(!s)return {open:false};
+      if(action==='zone-new')zoneVensterA14={kind:'create',naam:''};
+      else{const z=s.zones.find(item=>item.id===id);if(!z)return {open:false};
+        if(action==='zone-rename')zoneVensterA14={kind:'rename',zoneId:z.id,naam:z.name};
+        else if(action==='zone-delete')zoneVensterA14={kind:'delete',zoneId:z.id,standId:s.id,signature:zoneDeletionSignature(z),changed:false};
+        else return {open:false};}
+      try{window.__c98log?.('ZONEVENSTER '+action);}catch(_){}
+      return zoneVensterDataA14();
+    }
+    const v=zoneVensterA14;if(!v)return {open:false,screen:route.screen};
+    if(op==='input'){if(field==='management-name')v.naam=String(value??'').slice(0,64);return zoneVensterDataA14();}
+    if(op==='close'){zoneVensterA14=null;return {open:false,screen:route.screen};}
+    if(op!=='click')return zoneVensterDataA14();
+    const mislukt=error=>zoneVensterDataA14(typeof error?.message==='string'&&error.code?error.message:t('Dat lukt nu niet. Probeer het zo opnieuw.'));
+    if(v.kind==='delete'){
+      if(Number(index)===1){zoneVensterA14=null;return {open:false,screen:route.screen};}
+      const s=stand(),z=s?.zones.find(item=>item.id===v.zoneId);if(!z||s.id!==v.standId){zoneVensterA14=null;return {open:false,screen:route.screen};}
+      if(v.signature!==zoneDeletionSignature(z)){v.signature=zoneDeletionSignature(z);v.changed=true;return zoneVensterDataA14();}
+      const releasedIds=M.zoneReceivers(model,z.id).map(receiver=>receiver.id),count=releasedIds.length;
+      let next;try{next=await persistManagement(M.deleteZone(model,z.id),{kind:'delete',zoneId:z.id},v.signature);}catch(error){return mislukt(error);}
+      if(!next)return mislukt(null);
+      applyJoinedZonePlayback(next,releasedIds);selections.delete(z.id);
+      if(sceneDraft)sceneDraft.zoneIds=sceneDraft.zoneIds.filter(item=>item!==z.id);
+      receiverAssignment=null;nameDialog=null;zoneVensterA14=null;
+      if(count){receiverFilter='unassigned';navigate('receivers',{zoneId:null});}else navigate('stand',{zoneId:null});
+      toast(count?`Zone verwijderd. ${count} ${count===1?'receiver staat':'receivers staan'} bij Niet in een zone.`:'Zone verwijderd.');
+      return {open:false,screen:route.screen,zoneId:null};
+    }
+    const naam=v.naam.trim();if(!naam)return zoneVensterDataA14();
+    try{
+      if(v.kind==='create'){
+        const zoneId='zone-'+crypto.randomUUID();
+        const saved=await updateManagement(M.createZone(model,stand().id,{id:zoneId,name:naam}),t('Zone {name} gemaakt.',{name:naam}),null,{kind:'create',zoneId,name:naam});
+        if(!saved)return mislukt(null);
+        zoneVensterA14=null;navigate('controls',{zoneId});return {open:false,screen:route.screen,zoneId:route.zoneId||null};
+      }
+      const saved=await updateManagement(M.renameZone(model,v.zoneId,naam),t("Naam aangepast."),null,{kind:'rename',zoneId:v.zoneId,name:naam});
+      if(!saved)return mislukt(null);
+      zoneVensterA14=null;return {open:false,screen:route.screen,zoneId:route.zoneId||null};
+    }catch(error){return mislukt(error);}
+  }
+  async function dialogOpU16({op,action,id,field,value,index,zelf}){
     const wait=ms=>new Promise(r=>setTimeout(r,ms));
     flutterStandShownU1=true;
+    if(op==='start'&&zelf===true&&['zone-new','zone-rename','zone-delete'].includes(action))return await zoneVensterOpA14({op,action,id});
+    if(zoneVensterA14&&op!=='start')return await zoneVensterOpA14({op,action,id,field,value,index});
+    if(op==='start')zoneVensterA14=null; // een gewoon venster van de app: een oud zonevenster telt niet meer
     if(op==='start'){
       if(!DIALOG_START_U16.has(action))return {open:false};
       const b=document.createElement('button');b.type='button';b.hidden=true;b.dataset.action=action;if(typeof id==='string'&&id)b.dataset.id=id;
-      main.append(b);b.click();b.remove();await wait(120);return dialogDataU16();
+      main.append(b);b.click();b.remove();await wait(120);
+      // weg-naar-10 §3 App 2: verwijderen en software-update doen nooit stil niets. Gaat het venster niet open, dan zegt de app
+      // waarom (Flutter toont één grijze regel, FlutterSchermen.nooitStil) en schrijft het in het logboek van de telefoon.
+      const r=dialogDataU16();
+      if(r.open!==true&&['receiver-remove','receiver-update','receiver-update-all'].includes(action)){
+        const reason=dialogWhyU22(action,id);try{window.__c98log?.('DIALOG_START_REFUSED '+JSON.stringify({action,reason}));}catch(_){}
+        return {...r,reason};
+      }
+      return r;
     }
     {const sheet=document.querySelector(SHEETS_U17);if(sheet){
       if(op==='toggle'){const i=document.getElementById(String(field||''));if(i&&sheet.contains(i)&&i.type==='checkbox'&&!i.disabled){i.checked=!i.checked;i.dispatchEvent(new Event('change',{bubbles:true}));await wait(30);}return dialogDataU16();}
@@ -3629,7 +3758,8 @@
       updatePalette(i,rgb.toUpperCase(),Number.isInteger(w)&&w>=0&&w<=255?w:undefined);return true;}
     if(op==='paletteAdd'){changePalette();return true;}
     if(op==='paletteRemove'){const i=Number(value);if(!Number.isInteger(i))return false;changePalette(i);return true;}
-    if(op==='backgroundToggle'){if(!effect.backgroundEditable)return false;apply({backgroundOn:!selectedState().backgroundOn});return true;}
+    // bugjacht #10/#13/#36: true/false = de doeltoestand; zonder waarde omschakelen zoals vroeger
+    if(op==='backgroundToggle'){if(!effect.backgroundEditable)return false;apply({backgroundOn:typeof value==='boolean'?value:!selectedState().backgroundOn});return true;}
     // nazicht 1061: de achtergrondkleur kiezen (zoals background-edit → de kleurkiezer 'background'): kleur en wit samen
     if(op==='background'){if(!effect.backgroundEditable)return false;const rgb=String(value?.rgb||''),w=value?.white;if(!/^#[0-9A-F]{6}$/i.test(rgb))return false;
       const s=selectedState(),wit=Number.isInteger(w)&&w>=0&&w<=255?w:(s.backgroundWhite??s.background?.white??0);
@@ -3669,6 +3799,9 @@
       if(op==='presetUse'){
         const preset=savedPresets.presets.find(p=>p.id===id);if(!preset)return false;
         const restored=S.restore(preset,presetContext(),catalogue());if(!restored.compatible)return false;
+        // bugjacht 21 nov #14: de editor vergeet de vorige keuze, anders bleef activeEffect() de vorige animatie tonen (tegel en
+        // instellingen) en deed die vorige animatie terugkiezen niets
+        animationEditorChoice=null;clearAnimationEditorBrowseReturn();
         apply({...backgroundDefaults(),...restored.state,v30Effect:restored.state.v30Effect||null,previewFamily:restored.state.previewFamily||null});return true;
       }
       if(op==='presetSave'){
@@ -3777,7 +3910,7 @@
         // A6 vanuit de zonepagina (FlutterSchermen.koppelen, value {koppelen,koppelViews}): Flutter gaat opzij en de app roept het
         // Flutter-scherm 'koppelen' terug zodra ze op een stap komt die Flutter heeft (de labelscan meteen), zoals bij newStand
         if(value?.koppelen===true&&flutterHostU1()){try{window.__c98log?.('KOPPEL start zone');}catch(_){}koppelenA1.log=null;koppelenA1.on=true;koppelenA1.view='app';
-          koppelenA1.views=Array.isArray(value.koppelViews)?value.koppelViews.filter(v=>['scan','pin','pair','pixels','order','zoeken','plaats','afronden','aansluiting'].includes(v)):['scan','pin','pair'];}
+          koppelenA1.views=Array.isArray(value.koppelViews)?value.koppelViews.filter(v=>['scan','pin','pair','pixels','order','zoeken','plaats','afronden','aansluiting','hervat'].includes(v)):['scan','pin','pair'];}
         return true;}
       if(op==='gearDelete'){showZoneDelete(zoneId);return true;}
       // Samenvoegen: per ledline het nummer van haar groep (0, 1, … zonder gaten), of null = niets samengevoegd. Voor de hele zone.
@@ -3813,12 +3946,25 @@
     return {stand:s?{id:s.id,name:standLabel()}:null,zones:s?.zones.length||0,receivers:standReceivers().length,mainRelease:mainReleaseU6(),share:delenKanU20(),
       stands:(model?.stands||[]).map(item=>({id:item.id,name:item.name,zones:item.zones.length,
         receivers:(model.receivers||[]).filter(r=>r.standId===item.id&&r.lifecycle==='added').length,current:item.id===sid})),
-      colours:lib.colours,presets:(savedPresets?.presets||[]).filter(p=>!p.standId||!sid||p.standId===sid).map(p=>({id:p.id,name:p.name,effectId:p.effectId,category:p.category,type:(p.supportedTypes||[]).includes('SPI')?'SPI':'RGBW',state:p.state}))}; // effect en licht: Flutter toont de bewaarde animatie bewegend (prototype I3, de eigenaar 37)
+      colours:lib.colours,gradients:gradientsForFlutterU8(),presets:(savedPresets?.presets||[]).filter(p=>!p.standId||!sid||p.standId===sid).map(p=>({id:p.id,name:p.name,effectId:p.effectId,category:p.category,type:(p.supportedTypes||[]).includes('SPI')?'SPI':'RGBW',state:p.state}))}; // effect en licht: Flutter toont de bewaarde animatie bewegend (prototype I3, de eigenaar 37)
+  }
+  // M2 (prototype-gaten 17 nov): de eigen verlopen voor Mijn kleuren ({id, name, colours}); dezelfde opslag als de verloop-editor
+  function gradientStoreU8(){try{return window.LightningStaticGradient?.createStore(gradientStorage)||null;}catch(_){return null;}}
+  function gradientsForFlutterU8(){
+    try{const st=gradientStoreU8()?.load();if(!st||st.error)return [];
+      return st.presets.map(p=>({id:p.id,name:p.name,colours:p.stops.map(x=>String(x.color).toUpperCase())})).slice(0,24);}catch(_){return [];}
   }
   async function settingsOpU8({op,value}){
     if(op==='standSwitch'){if(!model?.stands.some(item=>item.id===value))return {ok:false};closeEffectDialog();navigate('stand',{standId:value,zoneId:null});return {ok:true};}
     if(op==='colourRemove')return {ok:await savedOpU2('savedColourRemove',value)};
     if(op==='presetRemove')return {ok:await savedOpU2('presetRemove',value)};
+    if(op==='gradientPresetRemove'){
+      const store=gradientStoreU8(),st=store?.load();
+      if(!store||st?.error||typeof value!=='string'||!st.presets.some(p=>p.id===value))return {ok:false};
+      const r=store.remove(value);
+      // de verloop-editor leest de lijst bij elke tekening uit dezelfde opslag (static-gradient-ui.js store.load())
+      return {ok:!r?.error};
+    }
     return {ok:false};
   }
   // Automatisch (U10, docs/automatisch-scenes.md): de planning per stand op dit toestel. {on, blocks:[{from,to,what}], rest, alt:{every,
@@ -3838,8 +3984,10 @@
   function autoDataU10(){
     const s=stand();if(!s)return null;
     const list=savedScenes.scenes.filter(x=>x.standId===s.id),ids=new Set(list.map(x=>x.id));
+    // lights: het bewaarde licht van de scène (zoals de scènelijst), zodat de dagklok van Automatisch het licht speelt (de eigenaar 18 nov, ontwerp B)
     const scenes=list.map(scene=>{const c=scene.zones.flatMap(z=>z.receivers).map(r=>r.state).find(Boolean)?.colors?.[0];
-      return {id:scene.id,name:scene.name,glow:typeof c==='string'&&/^#[0-9a-f]{6}$/i.test(c)?c.toUpperCase():null};});
+      const lights=scene.zones.flatMap(z=>z.receivers.map(r=>{const real=model.receivers.find(x=>x.id===r.id);return real?{id:r.id,type:real.type,outputs:real.outputs||[],state:r.state||{}}:null;})).filter(Boolean);
+      return {id:scene.id,name:scene.name,glow:typeof c==='string'&&/^#[0-9a-f]{6}$/i.test(c)?c.toUpperCase():null,lights};});
     // een scène die intussen weg is, valt uit de planning (blokken en afwisselen)
     const raw=autoAllU10()[s.id]||null;let plan=null;
     if(raw){const keep=v=>v==='OFF'||v==='ALT'||ids.has(v);
@@ -3854,7 +4002,7 @@
   function autoRequestsU10(scene){
     const act=SceneEditing.activation(model,scene),out=[];
     for(const id of act.receiverIds){const r=act.model.receivers.find(x=>x.id===id),z=r&&M.getZone(act.model,r.zoneId);
-      const q=r&&z?window.LightningLiveControl?.requestFor(r,{zone:z,receivers:M.zoneReceivers(act.model,z.id),time:0}):null;if(!q)return null;
+      const q=r&&z?window.LightningLiveControl?.requestFor(r,{zone:z,receivers:M.zoneReceivers(act.model,z.id),time:0,velden:false}):null;if(!q)return null;
       // Geen fase: die dient om de receivers gelijk te laten lopen met het voorbeeld op de telefoon. Een geplande scène start de
       // hoofdreceiver zelf, voor alle receivers samen (FAST_GROUP); zonder fase past een gewone animatie in FAST_GROUP.
       if(q.scene){delete q.scene.phaseMs;delete q.scene.phaseRateMicroHz;}
@@ -3878,7 +4026,7 @@
       const needsOff=plan.rest==='OFF'||plan.blocks.some(b=>b.what==='OFF');
       let off;
       if(needsOff){off=standReceivers().filter(r=>r.lifecycle==='added').map(r=>window.LightningLiveControl?.requestFor({...r,state:{...(r.state||{}),engine:'STATIC',colors:['#000000'],whiteChannels:[0],bri:0,brightness:0,on:false,power:false}},
-        {zone:M.getZone(model,r.zoneId),receivers:M.zoneReceivers(model,r.zoneId),time:0}));if(!off.length||off.some(x=>!x))return {status:'scene',sceneId:'OFF'};}
+        {zone:M.getZone(model,r.zoneId),receivers:M.zoneReceivers(model,r.zoneId),time:0,velden:false}));if(!off.length||off.some(x=>!x))return {status:'scene',sceneId:'OFF'};}
       // Een scène in delen (S<n>.<k>, één per groep met hetzelfde licht) alleen als de hoofdreceiver C266 of nieuwer is; anders één deel.
       if(!mainReleaseU6()){const main=standReceivers().find(r=>r.role==='main');
         if(main?.rid&&typeof svc.receiverHealth==='function')try{await svc.receiverHealth({standId:s.id,rid:main.rid,type:main.type});}catch(_){}}
@@ -3924,6 +4072,17 @@
       const z=draftZones.find(z=>typeof z?.name==='string'&&z.name.trim().toLowerCase()===String(name).trim().toLowerCase());if(z?.id)next[z.id]=c;});
     const keys=Object.keys(next);if(keys.length>64)keys.slice(0,keys.length-64).forEach(k=>{delete next[k];});
     appStorage?.setItem(ZONE_COLOURS_KEY_A1,JSON.stringify(next));
+  }
+  // Het icoon per zone van de zone-aanmaker (Flutter, zone_iconen.dart): bewaard bij de zone-id, zoals de kleur. Alleen de namen
+  // van de iconenset (letters); zonder bewaard icoon kiest Flutter het zelf uit de naam.
+  const ZONE_ICONS_KEY_A1='aluvision.zoneiconen.v1';
+  function zoneIconsA1(){try{const v=JSON.parse(appStorage?.getItem(ZONE_ICONS_KEY_A1)||'{}');return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(_){return {};}}
+  function zoneIconsSaveA1(draftZones,names,icons){
+    const next=zoneIconsA1();
+    names.forEach((name,i)=>{const c=icons[i];if(typeof c!=='string'||!/^[a-z0-9]{2,16}$/.test(c))return;
+      const z=draftZones.find(z=>typeof z?.name==='string'&&z.name.trim().toLowerCase()===String(name).trim().toLowerCase());if(z?.id)next[z.id]=c;});
+    const keys=Object.keys(next);if(keys.length>64)keys.slice(0,keys.length-64).forEach(k=>{delete next[k];});
+    appStorage?.setItem(ZONE_ICONS_KEY_A1,JSON.stringify(next));
   }
   function roundDataU7(){
     const s=stand(),list=standReceivers();
@@ -3999,6 +4158,23 @@
   // de hoofdreceiver is vrij zodra de sleutels vastliggen (nieuw-mesh 16 nov), dus Flutter start meteen de volgende. Na het
   // toevoegen geen schermen van de app (pixels, volgorde): die doet de rondgang per zone. roundRun {op:'start'|'status'}.
   const ROUND_BG_KEY_U7='aluvision.rondgang.achtergrond';
+  // de eigenaar 18 nov (1076): elke ingang naar "receiver toevoegen" = de rondgang, ook de knoppen van de app zelf. "+ Nog een receiver" op
+  // het gelukt-scherm (pair-more): de toevoeging afsluiten zoals "Naar mijn stand" en Flutter de rondgang laten openen (screen
+  // 'rondgang'; main.dart legt ze op de stand). Schakelaar (aan): RONDGANG_NA_KOPPELEN_U7.
+  const RONDGANG_NA_KOPPELEN_U7=true;let rondgangBezigU7=false;
+  function naarRondgangU7(reden){
+    if(rondgangBezigU7||!flutterHostU1())return false;
+    const klaar=main.querySelector('[data-pair-scene] [data-onboarding-action="done"]');if(!klaar)return false;
+    rondgangBezigU7=true;try{window.__c98log?.('KOPPEL rondgang '+reden);}catch(_){}
+    klaar.click();
+    setTimeout(()=>{try{const m={open:'flutter',screen:'rondgang'};if(window.webkit?.messageHandlers?.lightningHost)window.webkit.messageHandlers.lightningHost.postMessage(m);else window.AluvisionFlutterHost.postMessage(JSON.stringify(m));}catch(_){}rondgangBezigU7=false;},400);
+    return true;
+  }
+  document.addEventListener('click',event=>{
+    const b=event.target?.closest?.('[data-pair-scene] [data-onboarding-action="another"]');
+    if(!b||!RONDGANG_NA_KOPPELEN_U7||!flutterHostU1())return;
+    if(naarRondgangU7('pair-more')){event.preventDefault();event.stopImmediatePropagation();}
+  },true);
   // 1067 (coördinatie 17 nov avond): standaard aan; '0' zet het op dit toestel uit (de proefschakelaar)
   function roundBackgroundOnU7(){try{const v=window.localStorage?.getItem(ROUND_BG_KEY_U7);if(v==='0')return false;if(v==='1')return true;}catch(_){}try{return appStorage?.getItem(ROUND_BG_KEY_U7)!=='0';}catch(_){return true;}}
   let roundRunNowU7=null,roundQuietU7=false;
@@ -4025,10 +4201,12 @@
   let roundBeforeU7=null;
   const roundAddedU7=(pid,family)=>roundAddedListU7().some(r=>String(r.physicalId||'').toUpperCase()===pid||
     roundBeforeU7&&!roundBeforeU7.has(r.id)&&r.type===family&&!(typeof r.physicalId==='string'&&/^[0-9A-F]{12}$/i.test(r.physicalId)));
-  async function roundWaitU7(pid,family){
-    const end=Date.now()+150000;await new Promise(r=>setTimeout(r,800));
+  // Coördinatie 19 nov (de eigenaar: "heel traag"): niet meer eerst vast 800 ms wachten, meteen om de 400 ms kijken.
+  async function roundWaitU7(pid,family,run){
+    const end=Date.now()+150000;
     while(Date.now()<end){
       if(roundAddedU7(pid,family))return true;
+      if(run&&roundLosU7(run))return 'los'; // C275: nog geen claim na 45 s
       if(route.screen!=='receiver-add')return roundAddedU7(pid,family);
       const st=onboarding.roundState?.();
       if(st&&!st.busy&&(st.state==='missing'||st.error&&!['finding','connecting'].includes(st.state)))return false;
@@ -4036,6 +4214,26 @@
     }
     return roundAddedU7(pid,family);
   }
+  // Coördinatie 19 nov: bij MAIN bezet niet vast 4 s wachten, maar zo lang als de MAIN zegt (PAIR_STEPS REMAINMS, snel toevoegen
+  // 502232e), minstens 0,5 s en hoogstens 10 s. Zonder REMAINMS (oude firmware, niet bezet, fout): 4 s zoals vroeger.
+  async function roundRemainU7(){
+    try{const svc=runtime?.services,id=stand()?.id;if(typeof svc?.pairSteps!=='function'||!id)return 4000;
+      const r=await svc.pairSteps({standId:id});
+      if(r?.status==='ok'&&r.busy===true&&Number.isFinite(r.remainMs))return Math.min(10000,Math.max(500,r.remainMs));
+      if(r?.status==='ok'&&r.busy===false)return 500;
+    }catch(_){}
+    return 4000;
+  }
+  // C275 (coördinatie 20 nov, interface → koppel-sessie): één receiver zonder stroom legde de rondgang 150–170 s stil (drie pogingen,
+  // elk tot de zoektocht opgaf). Met de schakelaar: is na 45 s de claim van deze receiver nog niet begonnen (onboarding.roundState
+  // claimed), dan laat de app ze los (state 'achteraan'; de toevoegpagina dicht = het zoeken stopt, er is nog niets op de receiver
+  // gezet) en zet Flutter ze achteraan in de rij; de volgende start meteen. Is de claim wel begonnen, dan nooit loslaten: die loopt
+  // af zoals vandaag (secure hoogstens 125 s; het meshbewijs daarna loopt al op de achtergrond, nazichtAchteraf C269).
+  // Uit = zoals vroeger. docs/rondgang-loslaten.md.
+  const RONDGANG_LOSLATEN_C275=false,LOSLATEN_NA_MS_C275=45000;
+  // Eén keer gezien = blijft zo voor deze run (een nieuwe poging opent een verse draft; de begonnen claim telt dan nog altijd).
+  const roundLosU7=run=>{if(onboarding.roundState?.()?.claimed===true)run.claim=true;
+    return RONDGANG_LOSLATEN_C275&&!run.claim&&Date.now()-run.start>LOSLATEN_NA_MS_C275;};
   function roundRunU7(args){
     if(args?.op==='status'){const hold=roundHoldSharedU7();return roundRunNowU7?{state:roundRunNowU7.state,physicalId:roundRunNowU7.physicalId,hold}:{state:'leeg',hold};}
     if(args?.op==='publish'){roundReleaseU7();return {status:'ok'};}
@@ -4047,12 +4245,25 @@
     const {family,physicalId,proof,zoneId}=args;
     if(!['SPI','RGBW'].includes(family)||!/^[0-9A-F]{12}$/.test(physicalId||''))return {status:'error'};
     if(roundRunNowU7?.state==='bezig')return {status:'busy',physicalId:roundRunNowU7.physicalId};
-    const run={physicalId,state:'bezig'};roundRunNowU7=run;roundQuietU7=true;roundBeforeU7=new Set(roundAddedListU7().map(r=>r.id));if(typeof zoneId==='string'){if(roundHoldZoneU7&&roundHoldZoneU7!==zoneId)roundReleaseU7();roundHoldZoneU7=zoneId;}roundHoldAtU7=Date.now();
+    // de eigenaar 18 nov (1076, 20:03): een receiver die al in de stand zit (bv. net via "+ Nog een receiver" toegevoegd) niet opnieuw
+    // toevoegen: dat gaf "Niet gelukt". RID = A101/A102 + het fysieke adres.
+    if(roundAddedListU7().some(r=>String(r.physicalId||'').toUpperCase()===physicalId||String(r.rid||'').toUpperCase().slice(4)===physicalId)){
+      try{window.__c98log?.('ROUND_BG '+physicalId+' al in de stand');}catch(_){}
+      roundRunNowU7={physicalId,state:'klaar'};return {status:'started'};
+    }
+    const run={physicalId,state:'bezig',start:Date.now()};roundRunNowU7=run;roundQuietU7=true;roundBeforeU7=new Set(roundAddedListU7().map(r=>r.id));if(typeof zoneId==='string'){if(roundHoldZoneU7&&roundHoldZoneU7!==zoneId)roundReleaseU7();roundHoldZoneU7=zoneId;}roundHoldAtU7=Date.now();
     void (async()=>{
-      let ok=false;
-      try{const r=await roundAddU7({family,physicalId,proof,zoneId});ok=r?.ok===true&&await roundWaitU7(physicalId,family);}catch(_){ok=false;}
-      try{window.__c98log?.('ROUND_BG '+physicalId+' '+(ok?'klaar':'mislukt'));}catch(_){}
-      roundQuietU7=false;run.state=ok?'klaar':'mislukt';roundHoldAtU7=Date.now();
+      let ok=false,los=false;
+      // 1076: MAIN_BUSY (de nazicht van de vorige receiver liep nog) is geen "mislukt": stil nog twee keer, 4 s ertussen
+      for(let poging=0;poging<3&&!ok&&!los;poging++){
+        if(poging){if(roundLosU7(run)){los=true;break;}
+          const ms=await roundRemainU7();try{window.__c98log?.('ROUND_BG '+physicalId+' opnieuw '+poging+' ms='+ms);}catch(_){}await new Promise(r=>setTimeout(r,ms));
+          if(roundAddedListU7().some(r=>String(r.physicalId||'').toUpperCase()===physicalId||String(r.rid||'').toUpperCase().slice(4)===physicalId)){ok=true;break;}}
+        try{const r=await roundAddU7({family,physicalId,proof,zoneId});const w=r?.ok===true?await roundWaitU7(physicalId,family,run):false;ok=w===true;los=w==='los';}catch(_){ok=false;}
+      }
+      if(!ok&&!los&&roundLosU7(run))los=true;
+      try{window.__c98log?.('ROUND_BG '+physicalId+' '+(ok?'klaar':los?'achteraan (geen claim na 45 s)':'mislukt'));}catch(_){}
+      roundQuietU7=false;run.state=ok?'klaar':los?'achteraan':'mislukt';roundHoldAtU7=Date.now();
       // mislukt: de toevoegpagina staat er nog (onzichtbaar); terug naar de stand zodat de volgende receiver vers begint
       if(route.screen==='receiver-add')try{navigate('stand',{setupReturnZoneId:null});}catch(_){}
     })();
@@ -4063,7 +4274,7 @@
   // Met FlutterSchermen.koppelen aan (newStand {koppelen:true}): zodra de app op een stap komt die Flutter heeft (scan, PIN-kaart,
   // wifi-kaart) en Flutter stond opzij, vraagt de app het Flutter-scherm 'koppelen'. Flutter gaat zelf opzij op een stap van de app.
   var koppelenA1={on:false,view:null,views:['scan','pin','pair']};
-  var KOPPEL_VIEWS_KEY_A1='aluvision.koppelViews.v1',KOPPEL_VIEWS_A1=['scan','pin','pair','pixels','order','zoeken','plaats','afronden','aansluiting'];
+  var KOPPEL_VIEWS_KEY_A1='aluvision.koppelViews.v1',KOPPEL_VIEWS_A1=['scan','pin','pair','pixels','order','zoeken','plaats','afronden','aansluiting','hervat'];
   function koppelViewsBewaarA1(views){try{if(Array.isArray(views))appStorage?.setItem(KOPPEL_VIEWS_KEY_A1,JSON.stringify(views.filter(v=>KOPPEL_VIEWS_A1.includes(v))));else appStorage?.removeItem?.(KOPPEL_VIEWS_KEY_A1);}catch(_){}}
   function koppelViewsLeesA1(){try{const v=JSON.parse(appStorage?.getItem(KOPPEL_VIEWS_KEY_A1)||'null');return Array.isArray(v)&&v.length?v.filter(x=>KOPPEL_VIEWS_A1.includes(x)):null;}catch(_){return null;}}
   // A7 (plan 17 nov punt 11): na het toevoegen de pixelstap en de Looprichting als de Flutter-schermen (Pixels, Looprichting) in plaats
@@ -4081,6 +4292,17 @@
     // iPhone-log (c98.log): welke koppelstap de app toont (met de stap van het koppelbeeld/de labelscan) en of Flutter hem heeft
     try{const q=v==='pair'?pairScreenA2():null,fijn=v==='scan'?main.querySelector('[data-first-scan]')?.dataset.firstScan||'':q?.scene?(q.scene.state==='done'?'gelukt':q.scene.step||''):q?.label?q.label.state||'':'',k=v+' '+fijn;
       if(k!==koppelenA1.log){koppelenA1.log=k;window.__c98log?.('KOPPEL view='+v+(fijn?' stap='+fijn:'')+' flutter='+koppelenA1.views.includes(v));}}catch(_){}
+    // de eigenaar 18 nov (1076, 20:01:57): na de EERSTE receiver van een nieuwe stand vanzelf de rondgang (± 1,2 s gelukt in beeld). Op het
+    // toestel staat hier soms de WebApp vooraan (niet Flutter): daarom hier, niet alleen in Flutter (KoppelStap).
+    try{const q=v==='pair'?pairScreenA2():null,gelukt=q?.scene?.state==='done';
+      if(!gelukt)koppelenA1.geluktSinds=0;
+      // Coördinatie 19 nov (repetitie 87935d6a --nog-een): tijdens toevoegen op de achtergrond (ROUND_BG) haalt de onzichtbare
+      // toevoegflow ook "gelukt", en de stand telt dan nog 1 receiver (het document wacht op de zone). Dan NIET: dat opende een tweede
+      // rondgang (de startpagina) bovenop de lopende.
+      else if(RONDGANG_NA_KOPPELEN_U7&&!(typeof roundQuietU7!=='undefined'&&roundQuietU7)&&standReceivers().length===1&&standReceivers()[0].role==='main'){
+        koppelenA1.geluktSinds=koppelenA1.geluktSinds||Date.now();
+        if(Date.now()-koppelenA1.geluktSinds>=1200)naarRondgangU7('na de eerste receiver');
+      }}catch(_){}
     if(v==='none'){koppelenA1.on=false;return;}   // de koppeling is voorbij (stand of terug naar het welkom)
     const flutter=koppelenA1.views.includes(v);
     if(flutter&&koppelenA1.view==='app'){try{const m={open:'flutter',screen:'koppelen'};if(window.webkit?.messageHandlers?.lightningHost)window.webkit.messageHandlers.lightningHost.postMessage(m);else window.AluvisionFlutterHost.postMessage(JSON.stringify(m));}catch(_){}}
@@ -4241,7 +4463,8 @@
     return {aria:kaart.getAttribute('aria-label')||'',stappen:[...kaart.querySelectorAll('li')].map(li=>({titel:li.querySelector('.wifi-guide-copy674 b > span')?.textContent.trim()||'',zin:li.querySelector('.wifi-guide-copy674 small')?.textContent.trim()||''})),
       knop:knop?{id:'check',tekst:knop.textContent.trim(),uit:knop.disabled===true}:null};
   }
-  async function setupOpA1({op,id,bewaard,inFlutter,naam}={}){
+  async function setupOpA1({op,id,bewaard,inFlutter,naam,scherm,open}={}){
+    if(op==='bezig')return flutterSetupBezigU18(scherm||'setup',open===true);
     try{window.__c98log?.('KOPPEL_OP setup '+String(op).slice(0,24)+' view='+setupViewA1());}catch(_){}
     // A7: Flutter sloot Pixels of Looprichting (bewaard of niet): de app gaat verder zoals na haar eigen dialoog
     if(op==='pixels-klaar'||op==='order-klaar')return a7KlaarA7(op,bewaard===true);
@@ -4520,7 +4743,7 @@
       if(op==='add'){navigate('receiver-add',value&&stand()?.zones.some(z=>z.id===value)?{zoneId:value,setupReturnZoneId:value}:{});
         // A6 in Flutter (FlutterSchermen.koppelen): de app roept Flutter terug op een stap die Flutter heeft, zoals bij newStand
         if(koppelen===true&&flutterHostU1()){try{window.__c98log?.('KOPPEL start plus');}catch(_){}koppelenA1.log=null;koppelenA1.on=true;koppelenA1.view='flutter';
-          koppelenA1.views=Array.isArray(koppelViews)?koppelViews.filter(v=>['scan','pin','pair','pixels','order','zoeken','plaats','afronden','aansluiting'].includes(v)):['scan','pin','pair'];return {ok:true,open:false};}
+          koppelenA1.views=Array.isArray(koppelViews)?koppelViews.filter(v=>['scan','pin','pair','pixels','order','zoeken','plaats','afronden','aansluiting','hervat'].includes(v)):['scan','pin','pair'];return {ok:true,open:false};}
         return {ok:true,open:true};}
       if(!receiver)return {ok:false};
       if(op==='identify'){toggleIdentification(receiver,typeof value==='string'&&/^[1-4]$/.test(value)?value:'all');return {ok:true};}
@@ -4680,16 +4903,19 @@
         // koos maar nog niets claimde; een begonnen claim blijft, die mag nooit stil verdwijnen)
         const half=onboarding.summary();
         if(half?.stand&&half.stage!=='wifi-pin'&&(['stand','zones','receiver'].includes(half.stage)||half.claim===false)){onboarding.reset();if(route.screen==='receiver-add')navigate('stand');await new Promise(r=>setTimeout(r,150));}
-        flutterSetupU1={name:n,zones};
+        // startZone (Flutter, de eigenaar 21 nov): de zone waar de eerste receiver heen gaat; prepareStand kiest ze voor de eerste scan
+        flutterSetupU1={name:n,zones,...(typeof args?.startZone==='string'&&zones.includes(args.startZone)?{startZone:args.startZone}:{})};
         // 16 nov (de eigenaar, foto 08:35 "de QR-pagina wil niet inladen"): niet via de knop "Stand instellen", want die opent op een
         // telefoon de oude wifi-weg (stand-connect) en dan kwam de scanstap nooit. Meteen de setup met de QR-scan, zoals de demo.
         if(route.screen!=='receiver-add')navigate('receiver-add',{setupFrom:'stand'});
         koppelenA1.on=args?.koppelen===true;koppelenA1.view='flutter';
-        koppelenA1.views=Array.isArray(args?.koppelViews)?args.koppelViews.filter(v=>['scan','pin','pair','pixels','order','zoeken','plaats','afronden','aansluiting'].includes(v)):['scan','pin','pair'];
+        koppelenA1.views=Array.isArray(args?.koppelViews)?args.koppelViews.filter(v=>['scan','pin','pair','pixels','order','zoeken','plaats','afronden','aansluiting','hervat'].includes(v)):['scan','pin','pair'];
         koppelViewsBewaarA1(koppelenA1.on?koppelenA1.views:null); // W1: na een herstart van de app de koppeling weer in Flutter
         const ok=await applyFlutterSetupU1();
         // de kleur per zone die de klant bij Zones zag (welkom.dart): bewaren bij de zone-id's van het ontwerp
         if(ok&&Array.isArray(args?.colours))try{zoneColoursSaveA1(onboarding.summary()?.zones||[],zones,args.colours);}catch(_){}
+        // en het icoon per zone (zone-aanmaker, achter FlutterSchermen.zoneAanmaker)
+        if(ok&&Array.isArray(args?.icons))try{zoneIconsSaveA1(onboarding.summary()?.zones||[],zones,args.icons);}catch(_){}
         // waarom niet (voor het logboek van de telefoon; de klant ziet alleen "Probeer opnieuw")
         // NEWSTAND_ROUTE: waar de WebApp 1 s en 3 s later staat (iPhone-log; 16 nov viel ze terug op de receiverslijst)
         if(ok)for(const ms of [1000,3000])setTimeout(()=>{try{window.__c98log?.('NEWSTAND_ROUTE +'+ms+' '+JSON.stringify({screen:route.screen,stage:onboarding.summary()?.stage||null,nav:!document.getElementById('navigation')?.hidden}));}catch(_){}},ms);
@@ -4709,7 +4935,8 @@
       // De rondgang (Flutter): zones en wat al gekoppeld is, de wachtrij (bewaard op dit toestel, overleeft afsluiten), scannen, toevoegen.
       // De scanstap in Flutter (A1, koppelen/scan_stap.dart, achter FlutterSchermen.koppelen): de toestand van de scanstap van de
       // app (onboarding-ui.js firstScanView) en dezelfde knoppen. De WebApp blijft eigenaar van het ontwerp; Flutter leest de pagina.
-      if(name==='setupScreen')return setupScreenA1();
+      // eerste-receiver (22 nov): de native code van de koppelfout die in beeld staat (onboarding-ui summary().failCode)
+      if(name==='setupScreen'){const r=setupScreenA1(),f=onboarding.summary?.()?.failCode;return f&&r&&typeof r==='object'?{...r,koppelFout:f}:r;}
       if(name==='setupOp')return setupOpA1(args||{});
       if(name==='pairScreen')return pairScreenA2();
       if(name==='pairOp')return pairOpA2(args||{});
@@ -4729,9 +4956,18 @@
       if(name==='standLinkOpen')return standLinkOpenForFlutterB10(args||{});
       if(name==='tutorialAsk')return tutorialAskForFlutterA8(args||{});
       // Flutter-rondgang: "+" maakt een nieuwe zone ("Zone n"), zoals het prototype koppel-rondgang; de soort volgt de eerste scan.
+      // de eigenaar 19 nov: een zone wegswipen in de rondgang. Alleen een lege zone (zonder receivers); dezelfde weg als Zone verwijderen
+      // (M.deleteZone, alleen het lidmaatschap, nooit een receiver resetten). Met receivers: {ok:false,receivers:n}, Flutter legt het uit.
+      if(name==='roundDeleteZone'){const st=stand(),z=st?.zones.find(item=>item.id===args?.zoneId);if(!z||managementBusy)return {ok:false};
+        const n=M.zoneReceivers(model,z.id).length;if(n)return {ok:false,receivers:n};
+        try{const saved=await persistManagement(M.deleteZone(model,z.id),{kind:'delete',zoneId:z.id},zoneDeletionSignature(z));
+          if(!saved)return {ok:false};model=saved;selections.delete(z.id);render({preserveScroll:true});return {ok:true};}catch(_){return {ok:false};}}
       if(name==='roundNewZone'){const st=stand();if(!st||managementBusy)return {ok:false};
         const used=new Set(st.zones.map(z=>z.name));let n=st.zones.length+1;while(used.has(t('Zone {n}',{n})))n++;
-        const zoneId='zone-'+crypto.randomUUID(),zname=t('Zone {n}',{n});
+        // Flutter nieuweZoneNaam (de eigenaar 21 nov, 1094): een naam die de klant koos (1–40 tekens, geen < >, niet dubbel); anders Zone n
+        const gekozen=typeof args?.name==='string'?args.name.trim():'';
+        if(gekozen&&(gekozen.length>40||/[<>]/.test(gekozen)||st.zones.some(z=>z.name.toLowerCase()===gekozen.toLowerCase())))return {ok:false};
+        const zoneId='zone-'+crypto.randomUUID(),zname=gekozen||t('Zone {n}',{n});
         try{const saved=await persistManagement(M.createZone(model,st.id,{id:zoneId,name:zname}),{kind:'create',zoneId,name:zname});
           if(!saved)return {ok:false};model=saved;render({preserveScroll:true});return {ok:true,zoneId,name:zname};}catch(_){return {ok:false};}}
       // Flutter-receiverpagina: de receiver van dichtbij (receiver-art.js, zoals linesScene in receivers-tab.js): de tekening tot 56 mm
@@ -4755,7 +4991,7 @@
       if(name==='roundCue'){const s=stand(),svc=runtime?.services,family=args?.family,pid=args?.physicalId;
         if(webDemoContext)return {status:'ok'};
         if(!s||typeof svc?.labelCue!=='function')return {status:'unsupported'};
-        if(route.screen==='receiver-add'&&onboarding.summary())return {status:'busy'};
+        if(route.screen==='receiver-add'&&onboarding.summary()&&svc.cueTussendoor!==true)return {status:'busy'}; // met cueTussendoor: tussen twee toevoegstappen (native-runtime.js)
         try{return await svc.labelCue({standId:s.id,family,physicalId:pid});}catch(e){return {status:/BUSY/.test(e?.code||'')?'busy':'error'};}}
       // Flutter-Delen en gebruikers (U9): de gebruikers van deze stand (stand-users.js, op dit toestel bewaard)
       if(name==='usersData'){const st=window.LightningStandUsers?.store;if(!st)return null;return {standName:stand()?.name||'',...st.load(),share:delenKanU20()};}
@@ -4900,7 +5136,7 @@
           effect:effect?{id:effect.id,name:Library.displayName(effect,t),category:effect.category}:null,
           settings:effect?animationSettingsDataU5(effect):null,lineOrder:null,
           receivers:list.map(r=>({id:r.id,type:r.type,outputs:r.outputs||[],state:r.state||{}})),
-          zones:stand().zones.map(z=>({id:z.id,name:z.name,receivers:M.zoneReceivers(model,z.id).map(r=>({id:r.id,type:r.type,outputs:r.outputs||[],state:r.state||{}}))})).filter(z=>z.receivers.length),
+          zones:stand().zones.map(z=>({id:z.id,name:z.name,kleur:zoneColoursA1()[z.id]??null,receivers:M.zoneReceivers(model,z.id).map(r=>({id:r.id,type:r.type,outputs:r.outputs||[],state:r.state||{}}))})).filter(z=>z.receivers.length),
           families:Library.groups(items,'catalogue',t).map(group=>({key:group.key,title:group.title,effects:(group.effects||[]).filter(item=>items.includes(item))
             .map(item=>({id:item.id,name:Library.displayName(item,t),category:item.category,need:Math.max(item.minimumReceivers||1,item.category==='tunnel'?2:1)}))})).filter(group=>group.effects.length)};
       }
@@ -4919,9 +5155,11 @@
           standControlMode='animations'; // het blad start een animatie alleen in de modus Animaties
           const dialog=document.getElementById('effect-dialog'),proxy=document.createElement('button');proxy.type='button';proxy.hidden=true;proxy.dataset.action='effect';proxy.dataset.id=value;
           (dialog.querySelector('[data-stand-control-sheet]')||dialog).append(proxy);try{proxy.click();}finally{proxy.remove();}return {ok:true};}
+        if(op==='animField'){const r=animFieldPatchA13(value);if(!r)return {ok:false};apply(r);return {ok:true};}
         if(op==='setting'){const effect=activeEffect(),key=value?.key,v=Number(value?.value);if(!effect||!animationSettingsDataU5(effect).keys.some(k=>k.key===key)||!Number.isFinite(v))return {ok:false};apply({[key]:v});return {ok:true};}
-        if(op==='direction'){const effect=activeEffect();if(!effect||!AnimationControlPolicy.directionValuesFor(effect,selectedState(),animationControlContext(effect)).includes(value))return {ok:false};apply({direction:value});return {ok:true};}
-        if(op==='toggle'){const effect=activeEffect();if(!['bounce','mirror'].includes(value)||!effect?.controls.includes(value))return {ok:false};apply({[value]:!selectedState()[value]});return {ok:true};}
+        // bugjacht 21 nov #3/#10: zoals zone(): een richting zet Heen en weer uit; toggle aanvaardt ook de doeltoestand {key, on}
+        if(op==='direction'){const effect=activeEffect();if(!effect||!AnimationControlPolicy.directionValuesFor(effect,selectedState(),animationControlContext(effect)).includes(value))return {ok:false};apply({direction:value,...(selectedState().bounce&&effect.controls.includes('bounce')?{bounce:false}:{})});return {ok:true};}
+        if(op==='toggle'){const effect=activeEffect(),key=value&&typeof value==='object'?value.key:value;if(!['bounce','mirror'].includes(key)||!effect?.controls.includes(key))return {ok:false};apply({[key]:value&&typeof value==='object'?value.on===true:!selectedState()[key]});return {ok:true};}
         {const r=hostPaletteOpU1(op,value);if(r!==null)return {ok:r};}
         // Z1: de aan/uit-knop van Alles bedienen in de app (action 'power' met standControlOpen), niet de stand-power-knop van de
         // standpagina (die doet niets zolang Alles bedienen open is)
@@ -4968,7 +5206,9 @@
     },
     // Flutter-zonepagina: de gegevens van een zone (namen, animaties, instellingen) als JSON; Flutter tekent zelf
     zoneData(zoneId){
-      if(!hostZoneU1(zoneId))return null;
+      // 1085 (de eigenaar 20 nov: zonepagina "Niet verbonden"): waarom de app de zone niet opende, voor het logboek van de telefoon
+      if(!hostZoneU1(zoneId)){try{window.__c98log?.('ZONEDATA_NULL '+JSON.stringify({zone:zoneId,stand:!!stand(),inStand:!!stand()?.zones.some(z=>z.id===zoneId),screen:route.screen,routeZone:route.zoneId||null,
+        firstAccess:!!firstAccessCheckpoint,arranging:!!arrangementApplying,sceneEdit:!!sceneEdit640,hidden:document.hidden}));}catch(_){}return null;}
       const z=zone(),list=receivers(),s=selectedState(),effect=activeEffect(),items=visibleCatalogue().filter(item=>item.category!=='brand');
       const states=powerTargets().map(r=>r.state.on!==false&&r.state.power!==false);
       return JSON.stringify({id:z.id,name:z.name,type:z.type,layout:z.layout,lineCount:physicalLineCount(list),pixels:z.type==='SPI'?P.geometry(list,z.layout).totalPixels:0,
@@ -5011,10 +5251,19 @@
       if(op==='colour'){if(!/^#[0-9A-F]{6}$/i.test(value?.rgb||''))return false;const w=Math.round(Number(value.white)||0);const h=value.rgb;staticColour([1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),Math.max(0,Math.min(255,w)));return true;}
       if(op==='brightness'){const b=Number(value);if(!Number.isFinite(b)||b<0||b>100)return false;apply({bri:Math.round(b)});return true;}
       if(op==='effect'){const effect=catalogue().find(e=>e.id===value);if(!effect||effect.gradientMotion)return false;if(activeEffect()?.id===value)return true;startZoneAnimationEffect620(effect,{inline:true});return true;}
+      if(op==='animField'){const r=animFieldPatchA13(value);if(!r)return false;apply(r);return true;}
+      if(op==='lineSetting')return lineSettingA14(value);
       if(op==='setting'){const effect=activeEffect(),key=value?.key,v=Number(value?.value);if(!effect||!animationSettingsDataU5(effect).keys.some(k=>k.key===key)||!Number.isFinite(v))return false;apply({[key]:v});return true;}
-      if(op==='direction'){const effect=activeEffect();if(!effect||!AnimationControlPolicy.directionValuesFor(effect,selectedState(),animationControlContext(effect)).includes(value))return false;apply({direction:value});return true;}
+      // bugjacht 21 nov #3/#17: een richting kiezen zet Heen en weer uit, zoals de knoppen van de pagina (zone-page.js: bounce.click())
+      if(op==='direction'){const effect=activeEffect();if(!effect||!AnimationControlPolicy.directionValuesFor(effect,selectedState(),animationControlContext(effect)).includes(value))return false;apply({direction:value,...(selectedState().bounce&&effect.controls.includes('bounce')?{bounce:false}:{})});return true;}
       if(op==='reset'){resetAnimationSettingsU5();return true;} // ↺ Alles terug zoals het was (zone-page.js a1reset)
-      if(op==='toggle'){const effect=activeEffect();if(!['bounce','mirror'].includes(value)||!effect?.controls.includes(value))return false;apply({[value]:!selectedState()[value]});return true;}
+      // Flutter (FlutterSchermen.sleepSignaal): een sleep op het wiel of een schuif, zoals de schuiven van de app (pointerdown/up);
+      // de wachtrij bevestigt tijdens het slepen niet en stuurt bij het einde de eindwaarde met bevestiging (koppel-sessie)
+      if(op==='sleepBegin'){liveController?.beginGesture?.();return true;}
+      if(op==='sleepEinde'){liveController?.endGesture?.();return true;}
+      // bugjacht #10/#13/#36: ook de doeltoestand {key, on} (twee snelle tikken heffen elkaar dan niet op); een naam = omschakelen zoals vroeger
+      if(op==='toggle'){const effect=activeEffect(),key=value&&typeof value==='object'?value.key:value;if(!['bounce','mirror'].includes(key)||!effect?.controls.includes(key))return false;
+        apply({[key]:value&&typeof value==='object'?value.on===true:!selectedState()[key]});return true;}
       {const r=hostPaletteOpU1(op,value);if(r!==null)return r;}
       if(op==='power'){const button=main.querySelector('.zf-top [data-action="power"]')||main.querySelector('[data-zone-page] [data-action="power"]');if(!button)return false;button.click();return true;}
       return false;
@@ -6791,6 +7040,96 @@
   // animatie-instellingen nodig heeft. Dezelfde regels als animationEditorMarkup (welke regelaars, welke richtingen,
   // achtergrond, kleuren); de knoppen en schuiven sturen dezelfde acties (data-setting, direction, effect-boolean,
   // palette-edit/-add, background-toggle/-edit, preset-save), dus er verandert niets aan wat naar de receivers gaat.
+  // Animatievelden (docs/onderzoek/animatie-velden-ontwerp-21nov.md B.6, W1/W5/W16): achtergrond als verloop, in- en uitfaden en
+  // bereik. Ze gaan alleen mee (live-control) en de knoppen staan er alleen (zoneData) als de schakelaar aan staat EN elke receiver
+  // van de stand ANIMCAP meldt in zijn gezondheid (receiverHealth, native S15/J11). Bit 1 = faden, 2 = bereik, 4 = verloop; een
+  // oude receiver die doorgeeft, gooit een bericht met onbekende velden weg, dus één receiver zonder ANIMCAP = alles uit.
+  // de eigenaar kiest nog of faden per ronde of één keer bij aan/uit is; gebouwd: per ronde (het ontwerp). Uit = nooit iets.
+  const ANIMATIE_VELDEN_A13=false;
+  const animCapGevraagdA13=new Set();
+  function animatieVeldenA13(){
+    if(!ANIMATIE_VELDEN_A13)return null;
+    const s=stand(),list=standReceivers().filter(r=>r.lifecycle==='added');
+    if(!s||!list.length||typeof runtime?.services?.receiverHealthCached!=='function')return null;
+    let alle=15;
+    for(const r of list){
+      const h=r.rid?runtime.services.receiverHealthCached(s.id,r.rid):null,cap=Number.isInteger(h?.animCap)?h.animCap:null;
+      if(cap===null){
+        // één keer per receiver vragen (receiverHealth is op vraag, nooit in een lus); onbekend = uit
+        const key=s.id+':'+r.id;if(!animCapGevraagdA13.has(key)&&r.rid&&typeof runtime.services.receiverHealth==='function'){animCapGevraagdA13.add(key);
+          void runtime.services.receiverHealth({standId:s.id,rid:r.rid,type:r.type}).catch(()=>{});}
+        return null;
+      }
+      // een RGBW meldt 1 (faden); bereik en verloop kunnen dan nog voor de SPI-leden, als elke SPI ze meldt
+      // bit 8 = ademen erover (SPI meldt 15, RGBW 9); een RGBW zonder bit 8 zet het voor de hele stand uit
+      alle&=r.type==='SPI'?cap:(cap&9)|6;
+    }
+    return (alle&1)?{faden:true,bereik:!!(alle&2),verloop:!!(alle&4),ademen:!!(alle&8)}:null;
+  }
+  try{window.LightningLiveControl?.setAnimatieVelden?.(()=>animatieVeldenA13()||false);}catch(_){}
+  // De staart (TAILPX/TAILSOFT) kent een receiver sinds de klantbouw C275A (ALUVISION_STAART=1, nieuw-mesh 21 nov). Elke SPI-receiver
+  // van de stand moet het melden (fwRelease in zijn gezondheid, zoals ANIMCAP); onbekend = één keer vragen en voorlopig niet.
+  const STAART_SCHUIVEN_A8=true; // aan 21 nov (onder voorbehoud van de repetitie op deze commit; alleen bij fwRelease >= C275)
+  const staartGevraagdA8=new Set();
+  function staartKanA8(){
+    const s=stand(),list=standReceivers().filter(r=>r.lifecycle==='added'&&r.type==='SPI');
+    if(!s||!list.length||typeof runtime?.services?.receiverHealthCached!=='function')return false;
+    for(const r of list){
+      const h=r.rid?runtime.services.receiverHealthCached(s.id,r.rid):null,m=/^C(\d{3,4})/.exec(String(h?.fwRelease||''));
+      if(!m){
+        const key=s.id+':'+r.id;if(!staartGevraagdA8.has(key)&&r.rid&&typeof runtime.services.receiverHealth==='function'){staartGevraagdA8.add(key);
+          void runtime.services.receiverHealth({standId:s.id,rid:r.rid,type:r.type}).catch(()=>{});}
+        return false;
+      }
+      if(Number(m[1])<275)return false;
+    }
+    return true;
+  }
+  // Uitgebreide Gevorderd, Per ledline (animatiesessie 21 nov, de eigenaar "bouw alles in"; Flutter gevorderdUitgebreid): richting en
+  // helderheid per ledline. Alleen bij SPI met ledlines apart (de receiver krijgt dan SPI_PORTS, één scène per poort). De andere
+  // ledlines veranderen niet; een wijziging voor alle ledlines laat richting en helderheid per ledline staan (model.setKeepLineKeys).
+  // Bestaande lichtsleutels, dus geen nieuw veld voor native. Uit = settings.lineSetting ontbreekt en de zone-op weigert.
+  const LIJN_INSTELLING_A14=true; // aan 21 nov (onder voorbehoud van de repetitie op deze commit)
+  try{if(LIJN_INSTELLING_A14)M.setKeepLineKeys?.(['direction','brightness']);}catch(_){}
+  function lijnInstellingA14(){
+    if(!LIJN_INSTELLING_A14||standControlOpen)return false;
+    const z=zone();return !!z&&z.type==='SPI'&&z.layout!=='continuous'&&M.zoneLedlines(model,z.id).length>1;
+  }
+  // zone-op 'lineSetting' {line:'<receiverId>:<poort>', key:'direction'|'brightness', value}
+  function lineSettingA14(value){
+    const effect=activeEffect(),z=zone();
+    if(!lijnInstellingA14()||!effect||!value||typeof value!=='object'||typeof value.line!=='string')return false;
+    const line=M.zoneLedlines(model,z.id).find(l=>l.id===value.line),receiver=line&&receivers().find(r=>r.id===line.receiverId);if(!receiver)return false;
+    const st=M.lightStateFor(receiver,line.port),scope={kind:'line',lineId:line.id};
+    if(value.key==='direction'){
+      if(!AnimationControlPolicy.directionValuesFor(effect,st,animationControlContext(effect)).includes(value.value))return false;
+      // zoals 'direction': een richting zet Heen en weer uit (bugjacht 21 nov #3), hier alleen voor deze ledline
+      apply({direction:value.value,...(st.bounce&&effect.controls.includes('bounce')?{bounce:false}:{})},scope);return true;
+    }
+    if(value.key==='brightness'){const b=Number(value.value);if(!Number.isInteger(b)||b<0||b>100)return false;apply({bri:b},scope);return true;}
+    return false;
+  }
+  // zone-op 'animField' {key, value}: een lijst kan niet via 'setting' (één getal). null = terug naar geen.
+  // Gevorderd › Overgang (live-control OVERGANG_KIEZEN_A15): het maximum per soort; 0 = standaard (model 250, de overgang van vroeger)
+  function overgangMaxA15(){const list=standControlOpen?standControlReceivers():receivers();return list.length&&list.every(r=>r.type==='SPI')?10000:750;}
+  function animFieldPatchA13(value){
+    // witmix (live-control WITMIX_A16): 0–100, alleen als elke receiver van de keuze SPI is
+    if(window.LightningLiveControl?.witmixKiezen&&value&&typeof value==='object'&&value.key==='whiteMix'){
+      const x=value.value,list=standControlOpen?standControlReceivers():receivers();
+      if(!Number.isInteger(x)||x<0||x>100||!list.length||!list.every(r=>r.type==='SPI'))return null;return {whiteMix:x};
+    }
+    if(window.LightningLiveControl?.overgangKiezen&&value&&typeof value==='object'&&value.key==='transitionMs'){
+      const x=value.value;if(!Number.isInteger(x)||x<0||x>overgangMaxA15())return null;return {transitionMs:x===0?250:x};
+    }
+    const v=animatieVeldenA13();if(!v||!value||typeof value!=='object')return null;
+    const key=value.key,x=value.value,G=window.LightningStaticGradient;
+    if(key==='fadeInOut'&&v.faden&&(x===null||Array.isArray(x)&&x.length===2&&x.every(n=>Number.isInteger(n)&&n>=0&&n<=200)))return {fadeInOut:x};
+    if(key==='pixelRange'&&v.bereik&&(x===null||Array.isArray(x)&&x.length===2&&x.every(n=>Number.isInteger(n)&&n>=0&&n<=8191)&&x[0]<=x[1]))return {pixelRange:x};
+    if(key==='backgroundStops'&&v.verloop&&(x===null||G?.validateStops?.(x)))return {backgroundStops:x};
+    if(key==='breathe'&&v.ademen&&(x===null||Array.isArray(x)&&x.length===2&&Number.isInteger(x[0])&&x[0]>=500&&x[0]<=20000&&Number.isInteger(x[1])&&x[1]>=0&&x[1]<=100))
+      return {breathe:x===null||x[1]===0?null:x};
+    return null;
+  }
   function animationSettingsDataU5(effect){
     const s=selectedState(),ctx=animationControlContext(effect),available=animationAvailableControls(effect);
     const purpose=AnimationControlPolicy.spacingPurposeFor(effect);
@@ -6801,12 +7140,12 @@
       ['randomness',t("Variatie"),0,100,s.randomness??20,'%','meer'],['lineDelayMs',t("Startverschil tussen ledlines"),0,5000,s.lineDelayMs??160,' ms','meer'],['delayMs',t("Minimale tijd tussen ledlines"),0,10000,s.delayMs??300,' ms','meer']];
     const keys=[['bri',t('animationBrightness'),0,100,s.bri??100,'%','licht'],...(available.includes('speed')?[['speed',t('animationSpeed'),1,100,s.speed??50,'%','licht']]:[]),...specs.filter(x=>available.includes(x[0]))]
       .map(([key,label,min,max,value,unit,group])=>({key,label,min,max,value:Math.round(Number(value)||0),unit,group,changed:settingChanged(key)}));
-    const STAART_SCHUIVEN_A8=false; // plan alles-erin 17 nov: de staart staat aan, de schuiven blijven verborgen (TAILPX/TAILSOFT nooit gestuurd)
-    // Staart vóór en achter (C265; aan samen met firmware en tekenaar): Lengte (0 = Auto, anders 4–64 px) bij de vaste knoppen,
-    // Zachtheid bij Geavanceerd. Alleen bij SPI (de receiver tekent het per pixel).
-    if(STAART_SCHUIVEN_A8&&(standControlOpen?standControlReceivers():receivers()).some(r=>r.type==='SPI')&&!extensionOnlyEffectU5(effect)){
-      keys.push({key:'tailPx',label:t('Lengte'),min:0,max:64,value:Math.round(Number(s.tailPx)||0),unit:' px',group:'licht',changed:settingChanged('tailPx')},
-        {key:'tailSoft',label:t('Zachtheid'),min:0,max:100,value:Math.round(Number(s.tailSoft??100)),unit:'%',group:'meer',changed:settingChanged('tailSoft')});
+    // Staart vóór en achter (C265): Lengte (0 = Auto, anders 4–64 px) en Zachtheid. Alleen bij SPI (de receiver tekent het per pixel).
+    // 21 nov (animatiesessie, uitgebreide Gevorderd): group 'staart' = alleen het paneel Staart van Gevorderd (Flutter
+    // gevorderdUitgebreid), nooit in Eenvoudig; en alleen als elke SPI-receiver de staart kent (staartKanA8). Uit tot de --aan-run na 1091.
+    if(STAART_SCHUIVEN_A8&&(standControlOpen?standControlReceivers():receivers()).some(r=>r.type==='SPI')&&!extensionOnlyEffectU5(effect)&&staartKanA8()){
+      keys.push({key:'tailPx',label:t('Lengte'),min:0,max:64,value:Math.round(Number(s.tailPx)||0),unit:' px',group:'staart',changed:settingChanged('tailPx')},
+        {key:'tailSoft',label:t('Zachtheid'),min:0,max:100,value:Math.round(Number(s.tailSoft??100)),unit:'%',group:'staart',changed:settingChanged('tailSoft')});
     }
     const values=AnimationControlPolicy.directionValuesFor(effect,s,ctx);
     const forward=t(!standControlOpen&&zone()?.layout==='vertical'?'v650DirectionRight':effect.category==='tunnel'?'v650DirectionOrder':'v650DirectionForward');
@@ -6823,7 +7162,16 @@
       palette:effect.paletteEditable===false?[]:hexes,canAdd:!!(effect.colorCountRange&&count<effect.colorCountRange.max),bg,
       // de eigenaar 17 nov: het kleurblad van een animatiekleur is dezelfde kleurkiezer als de Kleur-tab (Wit, Fijn instellen): de ruwe waarden
       paletteRaw:effect.paletteEditable===false?[]:Array.from({length:count},(_,i)=>({hex:C.hex(rgbOf({colors:[palette[i%palette.length]]})),white:Number(s.whiteChannels?.[i])||0})),
-      tunnel:effect.category==='tunnel',lines:selectedLineCount()};
+      tunnel:effect.category==='tunnel',lines:selectedLineCount(),...(lijnInstellingA14()?{lineSetting:true}:{}),
+      // animatievelden: alleen als ze mogen (animatieVeldenA13); verloop en bereik alleen bij SPI
+      ...(()=>{const v=animatieVeldenA13(),spi=(standControlOpen?standControlReceivers():receivers()).every(r=>r.type==='SPI');
+        const og={...(window.LightningLiveControl?.overgangKiezen?{overgang:{waarde:Number.isInteger(s.transitionMs)&&s.transitionMs!==250?s.transitionMs:0,max:overgangMaxA15()}}:{}),
+          ...(window.LightningLiveControl?.witmixKiezen&&spi?{witmix:{waarde:Number.isInteger(s.whiteMix)?s.whiteMix:0}}:{})};
+        if(!v)return Object.keys(og).length?{velden:og}:{};
+        return {velden:{faden:v.faden?{waarde:Array.isArray(s.fadeInOut)?[...s.fadeInOut]:[0,0]}:null,
+          bereik:v.bereik&&spi?{waarde:Array.isArray(s.pixelRange)?[...s.pixelRange]:null,max:Math.max(0,(selectedLineCount()||1)*1024-1)}:null,
+          verloop:v.verloop&&spi&&bg?{stops:Array.isArray(s.backgroundStops)?s.backgroundStops.map(x=>({...x})):null}:null,
+          ademen:v.ademen?{waarde:Array.isArray(s.breathe)?[...s.breathe]:null}:null,...og}};})()};
   }
   // Een animatie die als V30-effect speelt (bv. de hele-lijn-animaties) krijgt de staart niet (live-control stuurt hem daar niet mee).
   function extensionOnlyEffectU5(effect){const st={...(effect?.state||{}),...(selectedState()||{})};return st.engine==='V30'||!!st.v30Effect;}
@@ -6851,8 +7199,34 @@
     data.lineTools=ledlineSetupMarkup();data.lineToolsOpen=openLineSetup.has(z.id);
     return zonePageC250.markup(data);
   }
+  // Coördinatie 18 nov (1076-log: otaPlan OTA_IMAGE_INVALID bij elke tik op Software-updates; de catalogus van de app staat nog op
+  // 41.0.81): Software-updates en Bijwerken alleen als native een geldig, nieuwer beeld heeft. Eén stille vraag per stand (otaPlan van de
+  // receivers, tot de eerste 'ready'); daarna een rustige regel zonder knop: "Je receivers hebben de nieuwste software." of "Updates
+  // komen binnenkort.". Een bezette stand (busy, offline) = later opnieuw vragen. Nooit rood.
+  const otaStaatU18=new Map(),otaVraagU18=new Set();
+  function otaStaatVanU18(s,list){
+    if(!s||!list.length)return 'onbekend';
+    const nu=otaStaatU18.get(s.id);if(nu&&Date.now()-nu.t<10*60000)return nu.staat;
+    if(!otaVraagU18.has(s.id)&&nativeContext&&runtime?.native===true&&typeof runtime.services?.otaPlan==='function'){
+      otaVraagU18.add(s.id);
+      (async()=>{
+        let staat='nieuwste';
+        try{
+          for(const r of list.filter(x=>!offlineReceiverC127(x)).slice(0,6)){
+            const plan=await runtime.services.otaPlan({standId:s.id,receiverId:r.id});
+            if(plan?.status==='ready'||plan?.status==='pending'){staat='ja';break;}
+          }
+        }catch(error){staat=/^OTA_(IMAGE|CATALOG|ARTIFACT)/.test(String(error?.code||''))?'binnenkort':null;}
+        try{window.__c98log?.('OTA_STAAT '+(staat||'later'));}catch(_){}
+        if(staat)otaStaatU18.set(s.id,{staat,t:Date.now()});
+        otaVraagU18.delete(s.id);
+      })();
+    }
+    return nu?.staat||'onbekend';
+  }
   function receiversTabStateC230(){
     const s=stand(),list=standReceivers(),zones=s?.zones||[];
+    const ota=otaStaatVanU18(s,list);
     return {
       zones:zones.map(z=>({id:z.id,name:z.name,type:z.type==='RGBW'?'rgbw':z.type==='SPI'?'spi':''})),
       receivers:list.map((r,index)=>({id:r.id,name:r.name,label:r.name,type:r.type==='RGBW'?'rgbw':'spi',zoneId:zones.some(z=>z.id===r.zoneId)?r.zoneId:null,
@@ -6862,7 +7236,8 @@
         // de demo heeft geen echte receivers: versie en signaal zijn daar voorbeelden; een echt toestel toont ze pas als de app ze kent
         ...(webDemoContext?{version:'C211',signal:['strong','good','strong','good'][index%4]}:{})})),
       // Receivers-tab 13 nov: Software-updates in de tab en achter "Meer": dezelfde voorwaarde als op de bestaande receiverpagina; de demo speelt een update na
-      canUpdate:list.length>0&&(nativeContext&&runtime?.native===true&&typeof runtime.services?.otaPlan==='function'||webDemoContext&&typeof webDemo?.updateServices==='function'),
+      canUpdate:list.length>0&&(nativeContext&&runtime?.native===true&&typeof runtime.services?.otaPlan==='function'&&ota==='ja'||webDemoContext&&typeof webDemo?.updateServices==='function'),
+      updateNote:ota==='nieuwste'||ota==='binnenkort'?ota:null, // Flutter zet er de zin bij (in de taal van de app)
       extra:pairFirstResumeMarkup()};
   }
   // Naar een andere zone (het vel "Naar welke zone?"): dezelfde bewaarweg als "Zone wijzigen"; daarna, zoals het
@@ -8208,6 +8583,11 @@
     if(wait<=0)return false;
     clearTimeout(standLoadGateC118.timer);standLoadGateC118.timer=setTimeout(run,wait+500);return true;
   }
+  // Heropname C277 (21 nov, de eigenaar zijn log: 24 van 25 heropnames mislukt, build/heropnames-ruw.md). Uit = zoals nu.
+  //  - V30_CHECKPOINT_CONFLICT is definitief (de telefoon die de stand maakte, of een MAIN die al in het model staat): de vlag
+  //    readmit-pending weg, geen herpogingen, geen "mislukt"-laadscherm.
+  //  - PIN_RECOVERY_CANCELLED (de app was nog niet actief) = pauze tot de klant terug is, nooit een herpoging na 35 s.
+  const HEROPNAME_FINAAL_C277=true;
   async function readmitStandC107(opts={}){
     if(readmitC107.running)return;
     if(!readmitC107.running&&nativeContext&&afterStandLoadGateC118(()=>{readmitC107.at=0;void readmitStandC107(opts);}))return;
@@ -8251,9 +8631,11 @@ quietAfterLoadC135();      readmitC107.limited=false;readmitC107.retries=0;readm
     }catch(error){
       window.__c98log?.('READMIT_FAIL '+(error?.code||''));standLoadCooldownC118(error?.code);
       // C118: a quiet re-admission never leaves a failed loading screen behind; it tries again by itself.
-      const pausedC118=['CANCELLED','NATIVE_CANCELLED','PIN_RECOVERY_CANCELLED'].includes(error?.code)&&(readmitC107.interruptedC118||document.hidden);
+      const finaalC277=HEROPNAME_FINAAL_C277&&error?.code==='V30_CHECKPOINT_CONFLICT';
+      const pausedC118=!finaalC277&&['CANCELLED','NATIVE_CANCELLED','PIN_RECOVERY_CANCELLED'].includes(error?.code)&&(readmitC107.interruptedC118||document.hidden||(HEROPNAME_FINAAL_C277&&error?.code==='PIN_RECOVERY_CANCELLED'));
       // C118: the customer left the app while the stand was loading. Nothing is wrong: resume quietly on return.
       if(pausedC118){readmitC107.at=0;readmitC107.resumeC118=true;retryC118=true;readmitC107.quietC118=true;window.__c98log?.('C118 LOAD_PAUSED readmit');}
+      else if(finaalC277){window.__c98log?.('HEROPNAME definitief '+error.code);readmitPendingC111(false);readmitC107.retries=0;readmitC107.adoptC114=false;retryC118=true;}
       // 8 phones are active right now: say so once and keep trying quietly.
       else if(error?.code==='PIN_RECOVERY_ACTIVE_LIMIT'){
         if(!readmitC107.limited)toast(window.LightningV50ErrorTexts.t('activeLimit',uiPreferences.preferences.language));
@@ -8306,6 +8688,8 @@ quietAfterLoadC135();      readmitC107.limited=false;readmitC107.retries=0;readm
   window.addEventListener('lightning:native-active',resumeStandLoadC118);
   // C127: receivers left out of a stand load are tried again when the app comes back and when the stand reconnects.
   window.addEventListener('lightning:native-active',()=>resumeRecoveryGapsC127('active'));
+  // 20 nov: de MAIN bereidt een reserve voor en een opdracht wacht al 10 s (native wacht stil tot ± 60 s): één rustige melding, nooit rood.
+  window.addEventListener('lightning:owner-busy',event=>{if(event?.detail?.busy===true)toast(t("Even bezig…"));});
   window.addEventListener('lightning:stand-connection',event=>{if(event?.detail?.state==='connected'){rosterRestartC133('reconnect');resumeRecoveryGapsC127('reconnect',3000);scheduleRosterCheckC127('reconnect',10000);}});
   // C118: only a real first load (Wi-Fi open, PIN, link) takes the full screen; a quiet re-admission stays a capsule.
   window.addEventListener('lightning:stand-load-progress',event=>{
@@ -8579,58 +8963,8 @@ quietAfterLoadC135();      readmitC107.limited=false;readmitC107.retries=0;readm
       resumeQueuedPinProtectionRead();
     }
   }
-  function openPinProtection(){
-    if(temporarySingleUser||simpleStandSupported)return;
-    const current=pinProtection?.standId===securityStand()?.id?pinProtection:null;if(!current||pinProtectionBusy||current.status==='pending'||pinProtectionPendingCheckStandId===current.standId||pinProtectionNeedsRefresh())return;
-    const enabled=!current.pinRequired,needsPin=enabled&&current.scope==='installation'&&!current.hasPin;
-    showEffectDialog(enabled?t("PIN-beveiliging aanzetten?"):t("PIN-beveiliging uitzetten?"),`<section class="pin-protection-dialog" data-pin-protection-dialog data-enabled="${enabled}" data-stand="${esc(current.standId)}"><p>${enabled?(current.scope==='new-installation'?t("Je kiest je PIN tijdens het instellen van je stand."):current.hasPin?t("Je bestaande PIN wordt opnieuw gebruikt voor wifi en netwerk verwijderen."):t("Beveilig het wifi van je installatie met één PIN.")):t("Het receiver-wifinetwerk wordt open. Je stand, zones en koppelingen blijven bewaard.")}</p>${needsPin?`<label class="dialog-field">${esc(t("Kies je PIN · 8–12 cijfers"))}<input data-security-pin type="password" inputmode="numeric" autocomplete="off" minlength="8" maxlength="12" pattern="[0-9]{8,12}" autocapitalize="off" spellcheck="false"></label><label class="dialog-field">${esc(t("Herhaal je PIN"))}<input data-security-pin-repeat type="password" inputmode="numeric" autocomplete="off" minlength="8" maxlength="12" pattern="[0-9]{8,12}" autocapitalize="off" spellcheck="false"></label><small>${esc(t("Bewaar je PIN: voor wifi en netwerk verwijderen."))}</small>`:''}<p class="dialog-error" role="alert" hidden></p><div class="pin-protection-actions"><button class="button secondary full" data-action="effect-dialog-close">${esc(t("Annuleren"))}</button><button class="button full" data-action="pin-protection-save" ${needsPin?'disabled':''}>${enabled?t("Aanzetten"):t("Uitzetten")}</button></div></section>`);
-  }
   function showPinReconnect(result){
     showEffectDialog(t('Verbind opnieuw met wifi'),`<section class="pin-protection-dialog" data-pin-reconnect><span class="menu-icon" aria-hidden="true">${icon('lock')}</span><p>${esc(t(result.unconfirmed===true?'De wijziging is nog niet bevestigd. Tijdens het aanpassen van wifi kan de verbinding even wegvallen.':'Het wifi van je installatie wordt aangepast.'))} ${esc(t('Je stand en receivers blijven bewaard.'))}</p><ol><li>${esc(t('Open Instellingen → Wifi.'))}</li><li>${esc(t(result.pinRequired?'Kies {network} en gebruik je PIN.':'Kies {network} zonder wachtwoord.',{network:result.ssid||t('het ALUVISION-wifi van je installatie')}))}</li><li>${esc(t('Kom terug naar de app.'))}</li></ol><p role="status">${esc(t('We controleren de verbinding zodra je terugkomt.'))}${result.unconfirmed===true?' '+esc(t('De beveiliging staat pas bevestigd aan of uit na die controle.')):''}</p><button class="button secondary full" data-action="pin-protection-recheck">${esc(t("Verbinding controleren"))}</button></section>`);
-  }
-  async function savePinProtection(button){
-    if(temporarySingleUser||simpleStandSupported)return;
-    const panel=document.querySelector('[data-pin-protection-dialog]');if(!panel||pinProtectionBusy||pinProtection?.status==='pending'||pinProtectionPendingCheckStandId===securityStand()?.id||pinProtectionNeedsRefresh())return;
-    const enabled=panel.dataset.enabled==='true',standId=panel.dataset.stand,pin=panel.querySelector('[data-security-pin]')?.value;
-    if(standId!==securityStand()?.id)return;
-    if(pin!==undefined&&(!/^\d{8,12}$/.test(pin)||pin!==panel.querySelector('[data-security-pin-repeat]')?.value))return;
-    const operation={standId,epoch:pinProtectionGeneration,scope:pinProtectionScopeKey(standId)};pinProtectionWrite=operation;
-    const current=()=>pinProtectionWrite===operation&&currentPinProtectionOperation(operation)&&panel.isConnected;
-    let contextOperation;
-    pinProtectionBusy=true;button.disabled=true;button.textContent=t("Beveiliging aanpassen…");
-    panel.querySelectorAll('input').forEach(input=>{input.disabled=true;});
-    try{
-      const result=await runtime.services.setPinProtection({standId,enabled,...(pin===undefined?{}:{pin}),...(enabled?{}:{confirmation:'DISABLE_PIN'})});
-      const pending=verifiedPendingPinStatus(result);
-      if(!pending&&(!verifiedPinStatus(result)||result.pinRequired!==enabled))throw Error('SECURITY_UNCONFIRMED');
-      panel.querySelectorAll('input').forEach(input=>{input.value='';});
-      if(!current()){rememberPinProtectionRead(operation);return;}
-      if(pending)pinProtectionPendingCheckStandId=standId;
-      if(pending){pinProtection={...result,standId};pinProtectionReconnect=null;showPinPending(result);return;}
-      pinProtection={...result,standId};
-      if(result.status==='reconnect-required'||result.requiresWifiReconnect===true){pinProtectionReconnect={...result,standId};showPinReconnect(result);}
-      else {
-        if(result.status==='applied'&&result.scope==='installation'&&result.pinRequired===true&&result.hasPin===true)contextOperation=operation;
-        pinProtectionBusy=false;window.AluvisionSecurityMode?.updateFromNative?.({pinRequired:result.pinRequired});closeEffectDialog();render();toast(enabled?t("PIN-beveiliging staat aan."):t("PIN-beveiliging staat uit."));
-      }
-    }catch(cause){
-      if(!current()){rememberPinProtectionRead(operation);return;}
-      if(cause?.code==='PIN_MODE_RECONNECT_UNCONFIRMED'&&pinProtection?.standId===standId&&pinProtection.scope==='installation'){
-        // Native confirms only the saved intent + dispatched uncertain SET,
-        // never its result. Do not flip the switch or repeat the mutation.
-        panel.querySelectorAll('input').forEach(input=>{input.value='';});
-        pinProtectionReconnect={standId,pinRequired:enabled,ssid:pinProtection.ssid,unconfirmed:true};
-        showPinReconnect(pinProtectionReconnect);return;
-      }
-      const error=panel.querySelector('.dialog-error');error.textContent=cause?.code==='OTA_PENDING'
-        ?t("Er is nog een software-update in deze stand niet afgerond. Controleer die eerst bij Receivers → Softwareversie en updates. De PIN-beveiliging is niet gewijzigd.")
-        :cause?.code==='OTA_BUSY'?t("Er wordt software bijgewerkt. Wacht tot de update klaar is. De PIN-beveiliging is niet gewijzigd.")
-        :t("De wijziging is nog niet bevestigd. Je stand en receivers zijn niet gewist. Controleer de verbinding en probeer opnieuw.");error.dataset.closedCategory=['OTA_PENDING','OTA_BUSY','PIN_MODE_UNCONFIRMED','PIN_MODE_UPDATE_REQUIRED','PIN_MODE_INVALID','PIN_MODE_PROFILE','PIN_MODE_PENDING'].includes(cause?.code)?cause.code:'NATIVE_UNCONFIRMED';error.hidden=false;
-      panel.querySelectorAll('input').forEach(input=>{input.disabled=false;});button.disabled=false;button.textContent=t("Opnieuw proberen");
-    }finally{
-      if(pinProtectionWrite===operation)pinProtectionWrite=null;
-      pinProtectionBusy=false;syncPinProtectionCard();scheduleContextAfterConfirmedPin(contextOperation);resumeQueuedPinProtectionRead();
-    }
   }
   // Browser walkthrough only: no network service, credential field or native
   // bridge call is exposed by these example settings.
@@ -8882,7 +9216,7 @@ quietAfterLoadC135();      readmitC107.limited=false;readmitC107.retries=0;readm
       // An ordinary status redraw must not replace the captured handle or
       // close the active editor. Navigation still cancels the interaction.
       if(!top&&lastRenderedMotionContext===motionContextKey()){orderRenderDeferred=true;return;}
-      inlineOrderDrag.cancel();
+      inlineOrderDrag?.cancel();
     }
     if(dragOrder)finishOrder({pointerId:dragOrder.pointerId},true);
     if(deferGradientRenderC98(top))return;
@@ -9039,7 +9373,7 @@ quietAfterLoadC135();      readmitC107.limited=false;readmitC107.retries=0;readm
       // Compact row settings deliberately have no receiver-management host.
       // OTA and destructive network actions belong to full receiver details.
       if(inline)return;
-      if(nativeContext&&runtime?.native===true&&typeof runtime.services?.otaPlan==='function')card.querySelector('.receiver-manage-content').insertAdjacentHTML('beforeend',`<section class="receiver-service-section" aria-label="${esc(t("Receiver en software"))}"><h3>${esc(t('softwareUpdateSection'))}</h3><p>${esc(t('softwareUpdateSubtitle'))}</p><button class="button secondary full" data-action="receiver-update" data-id="${esc(r.id)}">${esc(t('softwareUpdates'))}</button></section>`);
+      if(nativeContext&&runtime?.native===true&&typeof runtime.services?.otaPlan==='function'&&otaStaatVanU18(stand(),standReceivers())==='ja')card.querySelector('.receiver-manage-content').insertAdjacentHTML('beforeend',`<section class="receiver-service-section" aria-label="${esc(t("Receiver en software"))}"><h3>${esc(t('softwareUpdateSection'))}</h3><p>${esc(t('softwareUpdateSubtitle'))}</p><button class="button secondary full" data-action="receiver-update" data-id="${esc(r.id)}">${esc(t('softwareUpdates'))}</button></section>`);
       card.querySelector('.receiver-manage-content').insertAdjacentHTML('beforeend',`<section class="receiver-danger-section" data-receiver-role="${esc(r.role)}" aria-label="${esc(t("Receiver verwijderen"))}"><h3>${r.role==='main'?t("Alle receivers ontkoppelen"):t("Deze receiver ontkoppelen")}</h3><p>${r.role==='main'?t("Hiermee verwijder je het volledige receivernetwerk."):t("Hiermee verwijder je alleen deze receiver uit het netwerk.")}</p><button class="button secondary full" data-action="receiver-remove" data-id="${esc(r.id)}">${r.role==='main'?t("Alle receivers ontkoppelen"):t("Deze receiver ontkoppelen")}</button></section>`);
     });
     if(zoneScreen&&zone()?.type===null)main.querySelector('.page-heading .pill')?.remove();
@@ -9589,8 +9923,25 @@ quietAfterLoadC135();      readmitC107.limited=false;readmitC107.retries=0;readm
     button.dataset.action=state?.status==='unavailable'?'receiver-context-status-retry':'receiver-context-sync';
     button.textContent=t("Opnieuw controleren");
   }
+  // de eigenaar 18 nov (1073b, 18:28–18:31): tijdens Pixels, Looprichting en de rondgang in Flutter startte het bewaren van de stand op de
+  // receivers (syncInstallationContext) toch: receiverWorkBusy kende alleen de schermen van de WebApp. Native weigerde dan het
+  // testlicht en previewPixels (STAND_SYNC_BUSY). Flutter meldt nu zijn setupschermen (setupOp 'bezig'); zolang er één open staat,
+  // wacht het bewaren, en een ronde die al liep wordt onderbroken (zoals een lichtgebaar dat doet). Daarna start het opnieuw.
+  const flutterSetupU18=new Set(),contextYieldU18=new Set();
+  function flutterSetupBezigU18(scherm,open){
+    const was=flutterSetupU18.size>0;
+    open?flutterSetupU18.add(String(scherm)):flutterSetupU18.delete(String(scherm));
+    try{window.__c98log?.('SETUP_BEZIG '+String(scherm).slice(0,16)+' '+(open?'open':'dicht')+' n='+flutterSetupU18.size+' lopend='+contextYieldU18.size);}catch(_){}
+    if(open&&!was){for(const stop of [...contextYieldU18]){try{stop();}catch(_){}}contextYieldU18.clear();}
+    if(!open&&was&&!flutterSetupU18.size){
+      const standId=stand()?.id;
+      // 1076-log: na 1,5 s botste het bewaren met de volgende zone of het vizier; pas na 20 s rust, en niet als er weer een setupscherm open is
+      setTimeout(()=>{if(!flutterSetupU18.size&&standId&&typeof runtime?.services?.scheduleInstallationContext==='function')try{Promise.resolve(runtime.services.scheduleInstallationContext({standId})).catch(()=>{});}catch(_){}},20000);
+    }
+    return {ok:true,bezig:flutterSetupU18.size};
+  }
   function receiverWorkBusy(){
-    return managementBusy||!!pairFirstOpening||arrangementApplying||pinProtectionBusy||pinLoginBusy||orderIdentificationState?.active===true||orderRecoveryPending744()||identifyPending.size>0||pixelSetup.isOpen()||spiZoneDirections.isOpen()||
+    return flutterSetupU18.size>0||managementBusy||!!pairFirstOpening||arrangementApplying||pinProtectionBusy||pinLoginBusy||orderIdentificationState?.active===true||orderRecoveryPending744()||identifyPending.size>0||pixelSetup.isOpen()||spiZoneDirections.isOpen()||
       !!document.querySelector('.receiver-removal-sheet[open],.receiver-update-sheet[open]');
   }
   // BGSAVE-C138 (9 Nov, user: "stand bewaren op de achtergrond, zelfs tijdens de bediening"): the automatic
@@ -9628,7 +9979,9 @@ quietAfterLoadC135();      readmitC107.limited=false;readmitC107.retries=0;readm
       // background write at its next exchange for any queued light/preview task (latest value wins).
       held?.release();
       if(finished)return;
-      return {release(){}};
+      // native-runtime: een automatische ronde geeft hier zijn onderbreking door; een Flutter-setupscherm dat opengaat roept ze op
+      const stops=[];
+      return {release(){for(const x of stops)contextYieldU18.delete(x);stops.length=0;},onPendingLiveIntent(callback){if(typeof callback!=='function')return;stops.push(callback);contextYieldU18.add(callback);}};
     })();
     try{
       ticket=await Promise.race([acquisition,new Promise((_,reject)=>{
@@ -10573,7 +10926,7 @@ quietAfterLoadC135();      readmitC107.limited=false;readmitC107.retries=0;readm
         // The settings shortcut and visible place rows share one controller.
         // Never leave a second independent blink on a different receiver.
         const selected=orderFocusState664?.lineId===lineId;
-        if(selected){orderFocusContextKey664='';await orderFocus664.clear();}
+        if(selected){orderFocusContextKey664='';await orderFocus664?.clear();}
         else selectOrderPlace664(M.lineIds(model,route.zoneId).indexOf(lineId));
         syncIdentifyControls(receiver.id);return;
       }
@@ -12051,11 +12404,9 @@ quietAfterLoadC135();      readmitC107.limited=false;readmitC107.retries=0;readm
       if(action==='backup-confirm')return await restoreBackup(button);
       if(action==='demo-settings-tab'&&webDemoContext)return navigate(id==='wifi'?'demo-wifi':'settings');
       if(action==='first-pin-stored-show721')return showStoredFirstPin721(button);
-      if(action==='pin-protection-toggle')return openPinProtection();
       if(action==='pin-protection-refresh')return refreshPinProtection();
       if(action==='pin-protection-reconnect'&&pinProtectionReconnect)return showPinReconnect(pinProtectionReconnect);
       if(action==='pin-protection-recheck')return refreshPinProtection({afterReconnect:true});
-      if(action==='pin-protection-save')return savePinProtection(button);
       if(action==='language'||action==='theme'){
         const result=preferenceStore.save({[action]:id});if(result.error)return toast(result.error.message);
         const welcomePicker=action==='language'?button.closest?.('.welcome-language'):null;
@@ -12636,11 +12987,6 @@ quietAfterLoadC135();      readmitC107.limited=false;readmitC107.retries=0;readm
         const value=Number(input.value);
         if(gradientPickerCurrent(gradientRoot)&&Number.isFinite(value)&&value>=0&&value<=100){gradientColourDraft.brightness=value;syncGradientPickerControls(gradientRoot);}return;
       }
-      if(input.matches('[data-security-pin],[data-security-pin-repeat]')){
-        const panel=input.closest('[data-pin-protection-dialog]'),first=panel?.querySelector('[data-security-pin]'),repeat=panel?.querySelector('[data-security-pin-repeat]');
-        if(panel)panel.querySelector('[data-action="pin-protection-save"]').disabled=!/^\d{8,12}$/.test(first.value)||first.value!==repeat.value;
-        return;
-      }
       if(input.id==='management-name'){document.querySelector('[data-action="management-name-save"]').disabled=!input.value.trim();return;}
       if(input.id==='preset-name'){document.querySelector('[data-action="preset-confirm"]').disabled=!input.value.trim();return;}
       if(input.id==='animation-search'){
@@ -12898,49 +13244,7 @@ quietAfterLoadC135();      readmitC107.limited=false;readmitC107.retries=0;readm
       grabSelectC138(id,'pointer');
     }catch(_){}
   },true);
-  inlineOrderDrag=window.LightningLedlineOrderDrag?.install({
-    root:document,
-    getItems:()=>orderDragAvailable668()?[...arrangementDraft.lineOrder]:[],
-    getRowId:row=>row.dataset.orderItem,
-    getSlotElements:()=>[...main.querySelectorAll('[data-order-slot]')],
-    getScrollBounds:()=>({top:openLineSetup.has(route.zoneId)?Math.max(0,main.querySelector('.ledline-setup[data-order-open="true"] > .ledline-setup-toggle')?.getBoundingClientRect().bottom||80)+8:Math.max(0,main.querySelector('.control-dock-surface')?.getBoundingClientRect().bottom||0)+8,bottom:openLineSetup.has(route.zoneId)?Math.min(innerHeight-16,main.querySelector('.order-assignment-footer652')?.getBoundingClientRect().top||innerHeight)-8:Math.min(innerHeight,document.getElementById('navigation')?.getBoundingClientRect().top||innerHeight)-8}),
-    getScrollTop:()=>main.querySelector('[data-order-open="true"]')?.scrollTop??window.scrollY,
-    scrollBy:delta=>{const sheet=main.querySelector('[data-order-open="true"]');if(sheet)sheet.scrollTop+=delta;else window.scrollBy({top:delta,left:0,behavior:'instant'});},
-    onActivity:()=>{if(!orderSaveQueue588&&!arrangementInteractionBusy()&&orderIdentificationState?.active)void orderIdentification?.interaction();},
-    message:(key,params)=>window.LightningV50OrderTexts.t(key,uiPreferences.preferences.language,params),
-    onStatus:text=>{const status=main.querySelector('.order-drop-status');if(status)status.textContent=text;},
-    onFeedback:feedback=>{
-      // C137t: the grabbed ledline pulses in its own colour at once (on grab, not on drop) and keeps pulsing while dragged.
-      try{if((feedback.phase==='start'||feedback.phase==='update')&&feedback.id&&orderIdentificationState?.active&&!previewContext&&typeof orderIdentification?.blink==='function'){
-        const now=Date.now();if(orderDragPulseC137.id!==feedback.id||now-orderDragPulseC137.at>4000){orderDragPulseC137={id:feedback.id,at:now};void orderIdentification.blink(feedback.id,true).catch(()=>{});}}}catch(_){}
-      // C137cf (9 Nov, user: "zodra je hem vastpakt wordt hij geselecteerd, nu moet je er echt op tikken"): the grab's
-      // selection was reset when the drag renewed the recognition (new focus context). While a line is held, keep it the
-      // selected/pulsing place: re-select it whenever the focus controller lost it (latest grab wins, no extra sends otherwise).
-      try{if(feedback.phase==='update'&&feedback.id&&orderIdentificationState?.active&&orderFocusState664?.lineId!==feedback.id){
-        const posC137cf=arrangementDraft?.lineOrder?.indexOf(feedback.id);if(Number.isInteger(posC137cf)&&posC137cf>=0)selectOrderPlace664(posC137cf);}}catch(_){}
-      if(feedback.phase==='start'||feedback.phase==='update')window.LightningInterfaceHaptics?.emit?.('selection','order-position',{userInitiated:feedback.trusted===true});
-      if(feedback.phase==='cancel'){orderPreviewGesture=null;syncOrderFeedback();paint(globalThis.AluvisionPreviewNowPS(),{orderFeedback:true});return;}
-      if(feedback.phase==='start'){
-        if(orderMoveTimer!==null)clearTimeout(orderMoveTimer);orderMoveTimer=null;orderMoveResult=null;
-        const physical=M.zoneLedlines(model,route.zoneId).find(line=>line.id===feedback.id),receiver=model.receivers.find(item=>item.id===physical?.receiverId);
-        // Recognise this physical colour immediately, including after earlier
-        // unsaved swaps. The draft changes places, never the endpoint itself.
-        // The existing focus controller still owns finite ON/STOP receipts.
-        // C137bj: the first grab opens the recognition colours; until the receivers confirm them a select is ignored.
-        // Remember the grabbed line and select it (= pulse) as soon as the colours are confirmed.
-        if(!orderIdentificationState?.active||(!previewContext&&!orderIdentificationState.physicalConfirmed))orderGrabPendingC137bj={id:feedback.id,at:Date.now()};else orderGrabPendingC137bj=null;
-        if(!(orderGrabSelectC138?.id===feedback.id&&Date.now()-orderGrabSelectC138.at<1500))selectOrderPlace664(arrangementDraft.lineOrder.indexOf(feedback.id));
-        orderPreviewGesture={...feedback,zoneId:route.zoneId,receiverName:receiver?.name||'',port:physical?.port||0,colour:orderMarker652(zone(),feedback.id)?.hex,positionColours:arrangementDraft.lineOrder.map(id=>orderMarker652(zone(),id))};
-      }else if(orderPreviewGesture?.id===feedback.id)orderPreviewGesture={...orderPreviewGesture,...feedback};
-      syncOrderFeedback();paint(globalThis.AluvisionPreviewNowPS(),{orderFeedback:true});
-    },
-    onInteraction:active=>{
-      if(active&&!orderSaveQueue588&&!arrangementInteractionBusy()){if(orderIdentificationState?.active)void orderIdentification?.interaction();else beginOrderColours();}
-      if(!active&&orderRenderDeferred){orderRenderDeferred=false;queueMicrotask(()=>renderArrangement());}
-      if(!active)requestAnimationFrame(()=>syncOrderSlots());
-    },
-    onDrop:moveOrderLine
-  });
+  // WebApp weg stap 0d: het slepen van het oude Volgorde-paneel (ledline-order-drag.js) is weg; inlineOrderDrag blijft null.
   document.addEventListener('pointerdown',event=>{
     const target=event.target.closest?.('input[type="range"],canvas.wheel');
     if(target?.closest('[data-colour-preset-editor667]'))return;

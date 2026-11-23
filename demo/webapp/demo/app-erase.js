@@ -6,6 +6,9 @@
   if(typeof module==='object'&&module.exports)module.exports=api;else root.LightningAppErase=api;
 })(typeof globalThis==='object'?globalThis:this,function(root){
   'use strict';
+  // 22 nov (de eigenaar, iPhone 1100): de app wissen = altijd meteen lokaal, zonder te wachten op receivers, wifi of bevestiging.
+  // Receivers terugzetten blijft een aparte, optionele knop die het wissen nooit blokkeert. Uit = de oude keuze met vinkje.
+  const WISSEN_METEEN_A17=true; // aan 22 nov na groene gerichte tests (tools/test/app-wissen, flutter wissen_meteen_test)
   const plain=value=>!!value&&typeof value==='object'&&!Array.isArray(value)&&Object.getPrototypeOf(value)===Object.prototype;
   const keys=(value,names)=>plain(value)&&Object.keys(value).sort().join(',')===names.slice().sort().join(',');
   const id=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(value);
@@ -82,19 +85,48 @@
     stale:['De opgeslagen installaties zijn veranderd. Controleer de lijst opnieuw; er is niets extra gewist.','The saved installations have changed. Check the list again; nothing more was erased.','Les installations enregistrées ont changé. Vérifiez à nouveau la liste ; rien de plus n’a été effacé.','Die gespeicherten Installationen haben sich geändert. Prüfe die Liste erneut; es wurde nichts zusätzlich gelöscht.'],
     unavailable:['Wissen is in deze versie niet veilig beschikbaar. Je gegevens blijven bewaard.','Erasing is not safely available in this version. Your data is kept.','L’effacement sécurisé n’est pas disponible dans cette version. Vos données sont conservées.','Sicheres Löschen ist in dieser Version nicht verfügbar. Deine Daten bleiben erhalten.'],
     demo:['Demo · geen echte receivers of PIN-controle','Demo · no real receivers or PIN verification','Démo · aucun récepteur réel ni contrôle du code PIN','Demo · keine echten Receiver oder PIN-Prüfung'],
+    wipe:['Wissen','Erase','Effacer','Löschen'],
+    alsoReceivers:['Receivers ook terugzetten','Also reset receivers','Réinitialiser aussi les récepteurs','Receiver auch zurücksetzen'],
+    noRecovery:['Zonder herstelcode kom je niet meer bij je stand.','Without your recovery code you cannot get back to your booth.','Sans code de récupération, vous ne pourrez plus accéder à votre stand.','Ohne Wiederherstellungscode kommst du nicht mehr an deinen Stand.'],
+    resetCount:['{completed}/{total} receivers teruggezet','{completed}/{total} receivers reset','{completed}/{total} récepteurs réinitialisés','{completed}/{total} Receiver zurückgesetzt'],
     demoHint:['Alleen deze tijdelijke demopagina wordt leeggemaakt.','Only this temporary demo page is cleared.','Seule cette page de démonstration temporaire est effacée.','Nur diese temporäre Demoseite wird geleert.']
   };
   const languages=['nl','en','fr','de'];
   const icon=name=>name==='phone'?'<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3" stroke="currentColor" stroke-width="1.7"/><path d="M10 5h4m-3 14h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>':'<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2" y="5" width="20" height="12" rx="3" stroke="currentColor" stroke-width="1.7"/><path d="M6 17v3m4-3v3m4-3v3m4-3v3M6 9h6m-6 4h3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="18" cy="11" r="1.5" fill="currentColor"/></svg>';
   function text(key,language='nl',params={}){const row=COPY[key==='summary'&&params.stands===1?'summaryOne':key];if(!row)return '';const index=Math.max(0,languages.indexOf(String(language).split('-')[0]));return row[index].replace(/\{([a-z]+)\}/gi,(match,name)=>Object.hasOwn(params,name)?String(params[name]):match);}
-  function create({services={},language=()=>root.document?.documentElement?.lang||'nl',demo=false,onErased=()=>{},onRecovery=()=>{}}={}){
+  const errorKey=code=>['REMOVAL_PIN_INVALID','APP_ERASE_PIN_INVALID','APP_RESET_PIN_INVALID'].includes(code)?'pinError':code==='APP_ERASE_PIN_UNAVAILABLE'?'pinUnavailable':code==='APP_ERASE_SETUP_PENDING'?'setupPending':['APP_ERASE_PLAN_STALE','APP_RESET_PLAN_STALE'].includes(code)?'stale':'error';
+  function create({services={},language=()=>root.document?.documentElement?.lang||'nl',demo=false,onErased=()=>{},onRecovery=()=>{},recoveryConfirmed=()=>false,meteen=WISSEN_METEEN_A17}={}){
     let dialog,plan=null,result=null,choice=null,busy=false,error='',timer=null,generation=0,returnFocus=null,unavailable=false;
     const t=(key,params)=>text(key,language(),params);
     const clearTimer=()=>{if(timer!==null)root.clearTimeout(timer);timer=null;};
     function close(){if(busy)return;clearTimer();generation++;dialog?.close();if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});}
     function pendingResult(){return result&&['in-progress','verification-required','pin-required'].includes(result.status);}
+    // WISSEN_METEEN_A17: één knop Wissen (altijd lokaal, meteen); receivers terugzetten apart en optioneel, nooit blokkerend.
+    function paintMeteen(){
+      let body='';
+      if(!plan)body=busy?'':`<p class="app-erase-hint">${esc(t(unavailable?'unavailable':'error'))}</p>${!unavailable?`<button class="button secondary full" data-erase="check">${esc(t('retry'))}</button>`:''}`;
+      else{
+        const receivers=plan.receiverCount>0,p=pendingResult()&&result.scope==='receivers-and-local'?result.progress:null;
+        let confirmed=false;try{confirmed=recoveryConfirmed(plan.scopes.filter(s=>s.receiverCount>0).map(s=>s.standId))===true;}catch(_){confirmed=false;}
+        body=`${receivers&&!confirmed?`<p class="app-erase-note">${esc(t('noRecovery'))}</p>`:''}${demo?`<p class="app-erase-hint">${esc(t('demoHint'))}</p>`:''}<button type="button" class="button full app-erase-confirm" data-erase="wipe">${esc(t('wipe'))}</button>${receivers?`${p?`<div class="app-erase-progress" role="status"><b>${esc(t('resetCount',p))}</b><progress max="${Math.max(1,p.total)}" value="${p.completed}"></progress></div>`:''}<button type="button" class="text-button full" data-erase="${p?'resume':'receivers'}">${esc(t('alsoReceivers'))}</button>`:''}`;
+      }
+      dialog.innerHTML=`<header><h2>${esc(t('title'))}</h2><button type="button" class="icon-button" data-erase="close" aria-label="${esc(t('close'))}">×</button></header>${demo?`<p class="app-erase-demo" role="note">${esc(t('demo'))}</p>`:''}${body}<p class="app-erase-hint" role="status" ${error?'':'hidden'}>${esc(error)}</p>`;
+      dialog.querySelectorAll('button').forEach(control=>{if(busy)control.disabled=true;});
+    }
+    async function wipeNow(){
+      if(busy||!plan)return;clearTimer();busy=true;error='';paint();let failed=null;
+      try{
+        const answer=validateLocal(await services.eraseAppData({confirmation:'Alles verwijderen',scope:'local-only',planId:plan.planId}));
+        if(answer.status==='erased-local-only'){clearTimer();generation++;dialog?.close();busy=false;await onErased(answer);return;}
+      }catch(failure){failed=failure;}
+      finally{busy=false;}
+      // Mislukt (bv. een verouderd plan): het plan opnieuw lezen zodat de knop meteen weer werkt; de melding blijft rustig in de pagina.
+      if(failed){await check();error=t(errorKey(failed?.code));}
+      paint();
+    }
     function paint(){
       if(!dialog?.open)return;
+      if(meteen)return paintMeteen();
       let body='';
       if(!plan)body=`<p role="status">${esc(t(busy?'checking':unavailable?'unavailable':'error'))}</p>${!busy&&!unavailable?`<button class="button full" data-erase="check">${esc(t('retry'))}</button>`:''}`;
       else if(pendingResult()&&!choice){
@@ -141,8 +173,9 @@
         // Never infer a reset/wipe from timeout or transport failure. Stop the
         // loop and re-read the native durable journal on explicit retry.
         const code=failure?.code;
-        error=t(['REMOVAL_PIN_INVALID','APP_ERASE_PIN_INVALID','APP_RESET_PIN_INVALID'].includes(code)?'pinError':code==='APP_ERASE_PIN_UNAVAILABLE'?'pinUnavailable':code==='APP_ERASE_SETUP_PENDING'?'setupPending':['APP_ERASE_PLAN_STALE','APP_RESET_PLAN_STALE'].includes(code)?'stale':'error');
-        if(result)result={...result,status:'verification-required'};else plan=null;
+        error=t(errorKey(code));
+        // Meteen-wissen: een mislukte receiverreset laat het plan staan, zodat Wissen altijd blijft werken.
+        if(result)result={...result,status:'verification-required'};else if(!meteen)plan=null;
         if(code==='APP_ERASE_PENDING')onRecovery(true);
       }finally{busy=false;paint();}
       if(!error)queue();
@@ -150,6 +183,12 @@
     function click(event){
       const button=event.target.closest?.('[data-erase]');if(!button||busy)return;
       const action=button.dataset.erase;if(action==='close')return close();if(action==='check')return void check();
+      if(meteen){
+        if(action==='wipe')return void wipeNow();
+        if(action==='receivers'&&plan&&!pendingResult()){choice='receivers-and-local';return void perform('confirm').finally(()=>{choice=null;});}
+        if(action==='resume'&&pendingResult())return void perform('resume');
+        return;
+      }
       if(action==='back'){choice=null;error='';return paint();}
       if(action==='choose-local'&&pendingResult()&&result.scope==='receivers-and-local'){choice='local-only';error='';return paint();}
       if(['local-only','receivers-and-local'].includes(action)){if(!plan||pendingResult())return;choice=action;error='';return paint();}
@@ -164,5 +203,5 @@
     }
     return Object.freeze({open,close,isOpen:()=>dialog?.open===true});
   }
-  return Object.freeze({validatePlan,validateLocal,validateReset,progress,text,create});
+  return Object.freeze({validatePlan,validateLocal,validateReset,progress,text,create,meteen:WISSEN_METEEN_A17});
 });

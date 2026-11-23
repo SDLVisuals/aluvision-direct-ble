@@ -20,6 +20,13 @@
   // Staart vóór en achter (C265, alleen SPI, als paar): terug in de toestand, anders toont de app Auto terwijl de receiver iets anders speelt.
   const tailed=isSPI&&('TAILPX' in f||'TAILSOFT' in f);if(tailed){allowed.add('TAILPX');allowed.add('TAILSOFT');}
   if(gradient)allowed.add('GRADIENTRECIPE');
+  // Animatievelden (animatie-velden-ontwerp-21nov.md, W14): alleen als de poort ze meldt. FADEIN/FADEOUT altijd samen (ook RGBW);
+  // BGGRAD en RANGE alleen SPI. Niet bij het vaste verloop (FX 17): daar blijft de sleutelset exact.
+  const faded=!gradient&&('FADEIN' in f||'FADEOUT' in f);if(faded){allowed.add('FADEIN');allowed.add('FADEOUT');}
+  if(isSPI&&!gradient&&'BGGRAD' in f)allowed.add('BGGRAD');
+  if(isSPI&&!gradient&&'RANGE' in f)allowed.add('RANGE');
+  // Ademen erover: BREATHE=p,d per poort (alleen als de poort ademt); de herhaling van de hoofdreceiver voegt de fase toe (p,d,f)
+  const breathed=!gradient&&'BREATHE' in f;if(breathed)allowed.add('BREATHE');
   for(const[key,value]of Object.entries(f))if(!allowed.has(key)||typeof value!=='string'||value.length>(gradient&&key==='GRADIENTRECIPE'?160:96))fail();
   const n=(key,min,max)=>{if(!/^(0|[1-9]\d*)$/.test(f[key]||''))fail();const value=Number(f[key]);if(!Number.isSafeInteger(value)||value<min||value>max)fail();return value;};
   const bool=key=>n(key,0,1)===1;
@@ -69,6 +76,20 @@
   }else{
    Object.assign(state,{lineDelayMs:n('LINEDELAY',0,60000),spacing:f.SPACING==='-1'?state.spacing:n('SPACING',0,100)});n('PHASEMS',0,999);
   }
+  if(faded)state.fadeInOut=[n('FADEIN',0,200),n('FADEOUT',0,200)];
+  if(breathed){
+   const m=/^(0|[1-9]\d{0,4}),(0|[1-9]\d{0,2})(,(0|[1-9]\d{0,5}))?$/.exec(f.BREATHE);if(!m)fail();
+   const p=Number(m[1]),d=Number(m[2]);if(d>100||(d>0&&(p<500||p>20000)))fail();
+   if(d>0)state.breathe=[p,d];
+  }
+  if('BGGRAD' in f){
+   // 2–8 stops van 12 hexcijfers PPPPRRGGBBWW, plaats strikt stijgend; in de toestand zoals het vaste verloop
+   const g=f.BGGRAD;if(!/^([0-9A-F]{12}){2,8}$/.test(g))fail();
+   const stops=g.match(/.{12}/g).map(t=>({position:parseInt(t.slice(0,4),16)/65535,color:'#'+t.slice(4,10),white:parseInt(t.slice(10,12),16)}));
+   const G=typeof module==='object'&&module.exports?require('./static-gradient.js'):globalThis.LightningStaticGradient;
+   if(!G.validateStops(stops))fail();state.backgroundStops=stops;
+  }
+  if('RANGE' in f){const m=/^(0|[1-9]\d*),(0|[1-9]\d*)$/.exec(f.RANGE);if(!m)fail();const van=Number(m[1]),tot=Number(m[2]);if(van>tot||tot>8191)fail();state.pixelRange=[van,tot];}
   if(isSPI){const output=receiver.outputs.find(o=>o.port===status.port&&o.enabled);if(!output||n('PIXELS',1,1024)!==output.pixels||bool('PHYSREVERSE')!==output.reversed)fail();}
   return {state,mask,installation:f.INSTALLATION};
  }

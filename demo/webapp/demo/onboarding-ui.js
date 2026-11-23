@@ -83,9 +83,16 @@
       catch(error){if(attempt<2&&['MESH_PROXY_UNCONFIRMED','PROXY_BUSY','MESH_BUSY'].includes(error?.code)){await new Promise(resolve=>setTimeout(resolve,1500));continue;}throw error;}
     }
   }
+  // 20 nov (koppel-rooktest Android-emulator): de eigen bluetooth-codes van de native weg (BluetoothStandLink / AlvBluetoothLink) stonden
+  // niet in de lijst: de klant kreeg "Receiver niet gecontroleerd. Tik op Verbinding controleren." in plaats van de bluetooth-zin.
+  const BLE_NIET_GEVONDEN_C272=['BLUETOOTH_DEADLINE','BLUETOOTH_UNAVAILABLE','BLUETOOTH_OFF','BLUETOOTH_REPLY_INVALID'];
+  // eerste-receiver (22 nov): de native code van de laatst getoonde koppelfout; summary().failCode geeft hem door zolang die fout
+  // in beeld staat (Flutter setupScreen.koppelFout → één rustige zin). Alleen een vaste code [A-Z0-9_], nooit een tekst.
+  let koppelFoutC278='';
+  const onthoudKoppelFout=code=>{koppelFoutC278=typeof code==='string'&&/^[A-Z0-9_]{1,64}$/.test(code)?code:'';};
   function connectionFailure(failure,{viaMain=false,network='',bluetooth=false}={}){
     // C137br: Android reports the plain/transport wrong-network codes; they showed the generic "Receiver niet gecontroleerd".
-    const rawC137br=typeof failure?.code==='string'?failure.code:'';
+    const rawC137br=typeof failure?.code==='string'?failure.code:'';onthoudKoppelFout(rawC137br);
     const code=['WRONG_RECEIVER_NETWORK','TRUST_TRANSPORT_WRONG_RECEIVER_NETWORK'].includes(rawC137br)?'MAIN_WRONG_RECEIVER_NETWORK':rawC137br;
     // C137br: the MAIN's relay was briefly busy (heap gate) or did not confirm one hop: a calm retry hint, never "niet gecontroleerd".
     if(['MESH_PROXY_UNCONFIRMED','PROXY_BUSY','MESH_BUSY'].includes(code))return {message:'Je stand is even bezig. Laat de receiver aan en tik over een paar seconden op Verbinding controleren. Er is niets gereset.'};
@@ -93,7 +100,7 @@
     if(code==='MAIN_TRUST_MIGRATION_REQUIRED')return {message:'Deze receiver heeft bestaande standinstellingen. Gebruik je bestaande standtoegang om verder te gaan. Er is niets toegevoegd of gereset.'};
     if(code==='LOCAL_NETWORK_DENIED')return {message:'Geef de Aluvision-app toegang tot het lokale netwerk via Instellingen. Heropen de app. Reset je receiver niet.'};
     // 15 nov: eerste receiver via bluetooth: niet gevonden = bluetooth, afstand of stroom, nooit een wifi-stap.
-    if(bluetooth&&!viaMain&&['DISCOVERY_UNAVAILABLE','MAIN_MANUAL_WIFI_REQUIRED','MAIN_CONNECTION_UNAVAILABLE','NATIVE_TIMEOUT','TIMEOUT','MAIN_WRONG_RECEIVER_NETWORK'].includes(code))return {message:'Receiver niet gevonden. Zet bluetooth aan, laat de receiver aan en houd je telefoon dichtbij. Probeer dan opnieuw.'};
+    if(bluetooth&&!viaMain&&['DISCOVERY_UNAVAILABLE','MAIN_MANUAL_WIFI_REQUIRED','MAIN_CONNECTION_UNAVAILABLE','NATIVE_TIMEOUT','TIMEOUT','MAIN_WRONG_RECEIVER_NETWORK',...BLE_NIET_GEVONDEN_C272].includes(code))return {message:'Receiver niet gevonden. Zet bluetooth aan, laat de receiver aan en houd je telefoon dichtbij. Probeer dan opnieuw.'};
     if(code==='MAIN_WRONG_RECEIVER_NETWORK'&&!viaMain&&network)return {message:'Verkeerde wifi. Kies in Instellingen → Wifi het netwerk {network} van deze receiver en tik op Verbinding controleren.',vars:{network}};
     if(code==='MAIN_WRONG_RECEIVER_NETWORK')return {message:viaMain?'Verkeerde wifi. Kies in Instellingen → Wifi je bestaande ALUVISION-standnetwerk (niet de nieuwe receiver) en tik op Verbinding controleren.':'Verkeerde wifi. Kies het ALUVISION-netwerk van deze receiver en tik op Verbinding controleren.'};
     if(!pinRequired()&&['MAIN_RECOVERY_UNAVAILABLE','MAIN_RECOVERY_CONFLICT','MAIN_REGISTRATION_UNCONFIRMED','REMOVAL_PIN_REQUIRED'].includes(code))return {message:'Receiver niet bereikbaar. Laat hem aan en controleer de verbinding opnieuw.'};
@@ -222,8 +229,23 @@
     // controle valt in die herstart (…UNKNOWN_OWNER_REPLY_UNCONFIRMED, daarna MAIN_CONFIGURATION_INVALID) en de PIN-kaart kwam terug
     // (22 s). Binnen 45 s na het antwoord op de claim (in het log viel de tweede fout 29,8 s erna): stil opnieuw (om de 2 s), het koppelbeeld blijft staan; pas daarna de bestaande rustige weg.
     let firstPinClaimAt=0,firstPinStil=false;
-    const herstartNaClaim=failure=>Date.now()-firstPinClaimAt<45000&&(/UNKNOWN_OWNER_REPLY_UNCONFIRMED$/.test(String(failure?.code||''))||
-      ['MAIN_CONFIGURATION_INVALID','MAIN_CONNECTION_UNAVAILABLE','NATIVE_TIMEOUT','MAIN_BUSY'].includes(failure?.code));
+    // Tijdprofiel 20 nov (de eigenaar 18 nov, 4 van 4 eerste receivers): de eerste controle valt 1,8 s na de claim in de herstart met
+    // TRUST_REPLY -> MAIN_IDENTITY_UNCONFIRMED. Die code stond niet in de lijst: de PIN-kaart kwam terug en pas 14–27 s later liep
+    // de volgende controle. Binnen dezelfde 45 s na de claim is dat ook de herstart (de controle leest alleen; de claim gaat nooit
+    // opnieuw). En: firstPinClaimAt werd nooit gezet (de fase stond vóór de claim al op 'rejoin', rememberFirstPin686 zag dus geen
+    // overgang pin -> rejoin), dus deze stille weg liep op een toestel nooit (0 keer "pin-herstart" in de logs van 18 nov). Nu bij het
+    // antwoord op de claim. Schakelaar uit = zoals vroeger.
+    const HERSTART_NA_CLAIM_C272=true;
+    // 20 nov (koppelen sneller/stabieler): de eerste receiver gaat via bluetooth (bluetoothFirst). Na de claim herstart de MAIN
+    // (± 10 s), de bluetooth-link moet opnieuw verbinden en één controle over bluetooth duurt ± 13 s. In 1073 kwam "gelukt" pas
+    // 42,6 s na de claim: 45 s laat geen ruimte. De klant kan via bluetooth niets anders doen (er is geen wifi te kiezen) en de zin
+    // "controleer je standwifi" klopt daar niet. Met bluetooth dus 90 s stil; via wifi blijft het 45 s. Schakelaar uit = altijd 45 s.
+    const REJOIN_PLAFOND_C276=false;
+    const STIL_BLUETOOTH_C272=true;
+    const stilNaClaimMs=()=>STIL_BLUETOOTH_C272&&bluetoothFirst?90000:45000;
+    const herstartNaClaim=failure=>Date.now()-firstPinClaimAt<stilNaClaimMs()&&(/UNKNOWN_OWNER_REPLY_UNCONFIRMED$/.test(String(failure?.code||''))||
+      ['MAIN_CONFIGURATION_INVALID','MAIN_CONNECTION_UNAVAILABLE','NATIVE_TIMEOUT','MAIN_BUSY'].includes(failure?.code)||
+      HERSTART_NA_CLAIM_C272&&(failure?.code==='MAIN_IDENTITY_UNCONFIRMED'||/^TRUST_(REPLY|TRANSPORT|DEADLINE)$/.test(String(failure?.code||''))));
     function retryEarlyFirstPin686(){
       clearTimeout(firstPinEarly686.timer);if(!firstPinEarly686.wait)return;
       firstPinEarly686.wait=false;firstPinReturn686=true;resumeFirstPin686();
@@ -244,7 +266,7 @@
       if(typeof ap==='string'&&/^ALUVISION-(SPI|RGBW)-[A-F0-9]{4,12}$/.test(ap))return ap;
       return r&&['SPI','RGBW'].includes(r.type)&&/^[0-9A-F]{12}$/.test(String(r.physicalId||''))?'ALUVISION-'+r.type+'-'+r.physicalId:'';
     }
-    function firstPinError686(failure){const rejoin=firstPinCurrent686()&&firstPinState686.phase==='rejoin';return firstPinAPI.failure(failure?.code,{rejoin,network:receiverNetwork(),standNetwork:rejoin?firstPinState686.ssid:''});}
+    function firstPinError686(failure){onthoudKoppelFout(failure?.code);const rejoin=firstPinCurrent686()&&firstPinState686.phase==='rejoin';return firstPinAPI.failure(failure?.code,{rejoin,network:receiverNetwork(),standNetwork:rejoin?firstPinState686.ssid:''});}
     function resumeFirstPin686(){
       if(!firstPinReturn686||!firstPinCurrent686()||firstPinState686.phase!=='rejoin'||!container||document.hidden||busy)return;
       firstPinReturn686=false;void secure(undefined,undefined,{reconcile:true});
@@ -264,6 +286,7 @@
         // This native result requests an OS wifi handoff, not proof that the
         // new AP is visible. Keep checking explicit and never infer readiness
         // from elapsed time, the SSID label or the handoff illustration.
+        if(HERSTART_NA_CLAIM_C272)firstPinClaimAt=Date.now(); // net geclaimd: de MAIN herstart zo (zie herstartNaClaim)
         rememberFirstPin686(answer,'rejoin','switching');
         // C231, alleen de demo: de telefoon staat daar vanzelf op het standnetwerk, dus de controle volgt vanzelf (even later,
         // zodat het beeld "verbinden met je telefoon" te zien is). Een echt toestel controleert zoals voorheen: als de klant
@@ -775,8 +798,10 @@
         else if(draft.stage==='review')outcome=await finish({automatic:true});
       }
       if(session!==rejoinSession||!container||document.hidden)return;
-      if(outcome==='retry'&&pendingMain()&&(rejoinAttempts<3||Date.now()-firstPinClaimAt<45000)){
-        rejoinTimer=setTimeout(()=>void automaticRejoin(session),rejoinAttempts*1500);paintPage(false);return;
+      if(outcome==='retry'&&pendingMain()&&(rejoinAttempts<3||Date.now()-firstPinClaimAt<stilNaClaimMs())){
+        // Wachttijden na een herstart (REJOIN_PLAFOND_C276, uit): de pauze groeide zonder plafond (1,5 s × poging); met de
+        // schakelaar hoogstens 2 s, de receivers zijn nu na 2–4 s terug. Uit = zoals nu.
+        rejoinTimer=setTimeout(()=>void automaticRejoin(session),REJOIN_PLAFOND_C276?Math.min(rejoinAttempts*1500,2000):rejoinAttempts*1500);paintPage(false);return;
       }
       rejoinRunning=false;
       if(outcome==='retry'){
@@ -797,7 +822,14 @@
       if(document.hidden){if(pendingMain())returningFromWifi=true;stopAutomaticRejoin();}
       else {resumeFinishC231(); /* C231: eerst het gepauzeerde afronden; de controles hieronder wachten dan (busy) */resumeFirstPin686();resumeFirstAccessAfterWifiReturn();if(returningFromWifi)resumeAfterWifiReturn();queueJointDirections();}
     }
+    // 20 nov (./alu android-rook, c98.log): na een vraag van Android (bluetooth-, cameratoestemming) wordt de app weer actief (nativeActive) en
+    // zocht deze controle via wifi, terwijl de klant op de QR-scanstap van de eerste receiver stond: even "zoeken" in beeld, dan
+    // NATIVE_FAIL discover NATIVE_UNCONFIRMED en terug. Die controle hoort bij de wifi-weg (terug uit Instellingen → Wifi). Op de
+    // QR-scanstap (bluetooth) dus niet, tenzij de klant zelf de wifi-reserve opende ("Scannen lukt niet?", firstScan.wifiHelp).
+    const GEEN_WIFIPROBE_BIJ_QR_C272=true;
+    const qrScanstap=()=>firstScanReady()&&draft?.role==='main'&&!draft.mainReceiverId&&firstScan.wifiHelp!==true;
     function probeAfterWifiReturn(){
+      if(GEEN_WIFIPROBE_BIJ_QR_C272&&qrScanstap()){try{window.__c98log?.('KOPPEL wifi-controle overgeslagen (QR-scanstap)');}catch(_){}return;}
       const guide=window.LightningSetupWifiGuide;
       if(guide?.canProbe({mounted:!!container,hidden:document.hidden,manualWifi:manualWifi(),stage:draft?.stage,busy,
         saving:draftSaving,pending:!!pendingChoices,firstAccess:!!firstAccess,searching:searchState==='searching',identifying:!!(identifyPending.size||identifying.size)}))void search();
@@ -1662,13 +1694,17 @@
       if(identifyPending.size)return;
       const token=++operation;searchOnMount=false;searchAbort=new AbortController();searchState='searching';results=[];error='';paintPage(false);
       try{
+        // 20 nov: eerste receiver via bluetooth: niet gevonden binnen de termijn (BLUETOOTH_DEADLINE/UNAVAILABLE) = binnen dezelfde 10 s stil
+        // nog eens zoeken (de receiver kan net opstarten of zijn melding nog niet gehoord zijn), pas dan de bluetooth-zin. Schakelaar uit = meteen de zin.
+        const ZOEK_BLE_STIL_C272=true;
         // C135: the stand Wi-Fi drops for a few seconds when the MAIN restarts its AP; the phone rejoins by itself. Retry the
         // search quietly for up to 10 s instead of showing "nothing found" for a search that never reached a receiver.
         let result;
         for(const startedC135=Date.now();;){
           try{result=await bounded(services.search({standId:draft.stand.id,mainReceiverId:draft.mainReceiverId,signal:searchAbort.signal}),draft.role==='node'?95000:15000);break;}
           catch(failure){
-            if(failure?.code!=='RECEIVER_NETWORK_UNAVAILABLE'||Date.now()-startedC135>10000||token!==operation||searchAbort?.signal.aborted)throw failure;
+            if(!(failure?.code==='RECEIVER_NETWORK_UNAVAILABLE'||ZOEK_BLE_STIL_C272&&bluetoothFirst&&!draft.mainReceiverId&&/^BLUETOOTH_(DEADLINE|UNAVAILABLE)$/.test(String(failure?.code||'')))||Date.now()-startedC135>10000||token!==operation||searchAbort?.signal.aborted)throw failure;
+            try{if(failure?.code!=='RECEIVER_NETWORK_UNAVAILABLE')window.__c98log?.('KOPPEL zoeken stil opnieuw code='+failure.code);}catch(_){}
             await new Promise(resolve=>setTimeout(resolve,2000));if(token!==operation||searchAbort?.signal.aborted)return;
           }
         }
@@ -1826,7 +1862,7 @@
         }
         if(automaticMain()&&transientRejoin(failure))return 'retry';
         if(usingFirstPin&&method==='reconcileSecurity'&&firstPinCurrent686()&&firstPinState686.phase==='rejoin'&&herstartNaClaim(failure)){
-          try{window.__c98log?.('KOPPEL pin-herstart stil code='+String(failure?.code||'').slice(0,60));}catch(_){}
+          try{window.__c98log?.('KOPPEL pin-herstart stil code='+String(failure?.code||'').slice(0,60)+' ms='+(Date.now()-firstPinClaimAt)+' venster='+stilNaClaimMs()+(bluetoothFirst?' bluetooth':''));}catch(_){}
           firstPinStil=true;firstPinState686.handoff='checking';error='';
           if(!automatic){firstPinEarly686.wait=true;clearTimeout(firstPinEarly686.timer);firstPinEarly686.timer=setTimeout(retryEarlyFirstPin686,2000);}
           return 'retry'; // automatic: automaticRejoin probeert zelf opnieuw (binnen de 45 s zonder grens op het aantal)
@@ -2427,10 +2463,10 @@
     }
     // Only names, counts and the pending step for the Stand resume card; never
     // expose credentials, security receipts or unconfirmed receiver membership.
-    function summary(){if(firstAccess&&firstAccess.phase!=='done'){const stand=getModel().stands.find(item=>item.id===firstAccess.identity.standId);return {stand:clone(stand),zones:clone(stand?.zones||[]),stage:'wifi-pin',activeZoneId:null,canManageZones:false};}return draft&&draft.stage!=='done'?{stand:clone(draft.stand),zones:clone(draft.zones),stage:draft.stage,claim:draft.security?.status!=='not-started',receiverType:draft.receiver?.type||null,activeZoneId:draft.activeZoneId,canManageZones:canManageZones()}:null;}
+    function summary(){if(firstAccess&&firstAccess.phase!=='done'){const stand=getModel().stands.find(item=>item.id===firstAccess.identity.standId);return {stand:clone(stand),zones:clone(stand?.zones||[]),stage:'wifi-pin',activeZoneId:null,canManageZones:false};}return draft&&draft.stage!=='done'?{stand:clone(draft.stand),zones:clone(draft.zones),stage:draft.stage,claim:draft.security?.status!=='not-started',failCode:error&&koppelFoutC278?koppelFoutC278:null,receiverType:draft.receiver?.type||null,activeZoneId:draft.activeZoneId,canManageZones:canManageZones()}:null;}
     // Flutter-welkom (welkom.dart): standnaam en zones uit Flutter, dan meteen de stap "Eerste receiver" (scannen).
     // Zelfde gebeurtenissen als de knoppen "Verder · zones maken" en "Receiver toevoegen"; true als de scanstap klaarstaat.
-    async function prepareStand({name,zones}={}){
+    async function prepareStand({name,zones,startZone}={}){
       if(!draft||typeof name!=='string'||!validName(name.trim())||!Array.isArray(zones))return false;
       flutterStart=true; // al vóór het eerste beeld: nooit even het oude menu
       const names=zones.filter(z=>typeof z==='string'&&z.trim()).map(z=>z.trim()).slice(0,32);
@@ -2452,6 +2488,11 @@
         if(!(await save([...events,{type:'NEXT'}],()=>{resetZoneNames();zoneNameOpen=false;
           if(!draft.mainReceiverId&&!pinRequired()&&(!manualWifi()||automaticFirstReceiver()))queueMicrotask(()=>{if(container&&draft.stage==='receiver')void search();});})))return false;
       }
+      // startZone (Flutter): de eerste receiver gaat naar de zone die de klant bij Zones koos (zoals de zonekeuze van de scanstap)
+      if(draft.stage==='receiver'&&typeof startZone==='string'&&!draft.receiver){
+        const z=draft.zones.find(x=>x.name.toLowerCase()===startZone.trim().toLowerCase());
+        if(z&&draft.activeZoneId!==z.id)await save([{type:'SELECT_ACTIVE_ZONE',zoneId:z.id}]);
+      }
       if(draft.stage!=='receiver')flutterStart=false;
       return draft.stage==='receiver';
     }
@@ -2470,7 +2511,10 @@
     }
     // §3 (rondgang op de achtergrond): hoe staat de toevoeging na addScanned? state = de scanstap (finding, connecting, missing…),
     // busy = er loopt een stap, error = de pagina toont een fout. Alleen lezen.
-    function roundState(){return {state:labelScan?.state||null,busy:!!busy,error:!!error,stage:draft?.stage||null};}
+    // claimed (C275, rondgang loslaten): de claim van deze receiver is begonnen (secure liep of loopt, of de draft is voorbij de
+    // receiver-/PIN-stap). Dan mag de rondgang ze nooit meer loslaten: een begonnen claim verdwijnt niet stil.
+    function roundState(){return {state:labelScan?.state||null,busy:!!busy,error:!!error,stage:draft?.stage||null,
+      claimed:!!draft&&(securityUncertain||finalizationStarted||!['receiver','pin'].includes(draft.stage))};}
     return Object.freeze({mount,suspend,reset,paint,restore,restoreFirstStandAccess,summary,readOnlySearchSuspended,canContinueLocalConcept,continueLocalConcept,prepareStand,addScanned,roundState});
   }
   return Object.freeze({create,firstAccessFailure});

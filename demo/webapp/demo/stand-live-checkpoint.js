@@ -8,6 +8,8 @@
   'use strict';
   const FIELDS=new Set(('engine animation effectId category variant r g b w brightness speed smooth power colors whiteChannels rgbEnabled whiteEnabled direction widthPixels transitionMs background backgroundOn bgBrightness fadeAmount width delayMs brandColor motionReverse spacing objectCount trailLength spread randomness bounce mirror phaseMs phaseRateMicroHz previewStartedAt standAnimation rgbwLast previewFamily backgroundBrightness backgroundRgbEnabled backgroundWhite backgroundWhiteEnabled colorCount legacySpi lineDelayMs v30Effect tailPx tailSoft lineJoin ownTimingMs').split(' '));
   const NULLABLE=new Set(('effectId category v30Effect previewFamily rgbwLast standAnimation brandColor speed smooth colorCount widthPixels objectCount trailLength spacing direction lineDelayMs spread randomness fadeAmount delayMs width lineJoin ownTimingMs').split(' '));
+  // Animatievelden (animatie-velden-ontwerp-21nov.md, W13): ook per ledline gedeeld tussen telefoons; null = niet gezet.
+  for(const name of ['backgroundStops','fadeInOut','pixelRange']){FIELDS.add(name);NULLABLE.add(name);}
   const PORT_FIELDS=new Set(['portState1','portState2','portState3','portState4']);
   for(const name of PORT_FIELDS){FIELDS.add(name);NULLABLE.add(name);}
   const copy=value=>JSON.parse(JSON.stringify(value));

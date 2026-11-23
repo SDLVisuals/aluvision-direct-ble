@@ -53,6 +53,12 @@
     const chosen=new Set(),scanned=new Set();
     const demoScan=()=>root.__alvDemoScan&&typeof root.__alvDemoScan==='object'?root.__alvDemoScan:{};
     const fail=code=>Object.assign(Error(code),{code});
+    // 20 nov, c98-naspeler (tools/test/interface/c98-naspeler.mjs): window.__alvDemoNaspeel = {<native actie>: [null | 'CODE', …]}.
+    // Elke oproep van die actie neemt de volgende uitkomst: null = gewoon verder (de demo antwoordt), 'CODE' = die fout, zoals in de
+    // c98.log van een toestel. Leeg of geen lijst = de demo zoals altijd. window.__alvDemoNaspeelGespeeld houdt bij wat gespeeld is.
+    const naspeel=action=>{const lijst=root.__alvDemoNaspeel&&root.__alvDemoNaspeel[action];if(!Array.isArray(lijst)||!lijst.length)return;
+      const code=lijst.shift();try{(root.__alvDemoNaspeelGespeeld=root.__alvDemoNaspeelGespeeld||[]).push(action+' '+(code||'OK'));}catch(_){}
+      if(typeof code==='string'&&/^[A-Z][A-Z0-9_]{1,80}$/.test(code))throw fail(code);};
     // ---- Real walkthrough (12 Nov, user: "everything must look like the real thing") --------------------------------
     // A person who opens the demo gets the same screens, in the same order, as a customer with a real phone. Those
     // screens are the app's own (onboarding-ui.js, first-pin-v2.js): nothing is redrawn here. This service only plays
@@ -377,6 +383,7 @@
       // dan zelf verder controleren (het koppelbeeld loopt door), zonder de tik op "Ik ben verbonden · controleren".
       get autoRejoin(){return phone.auto===true;},
       async prepare({configuration,standName,signal}={}){
+        naspeel('prepareFirstPinV2');
         const unit=firstPinUnit(configuration);await wait(900,signal);
         if(!unit)throw fail('FIRST_PIN_V2_INVALID');
         {const o=demoScan();if(o.prepareFailOnce===true){o.prepareFailOnce=false;throw fail('MAIN_CONNECTION_UNAVAILABLE');}}
@@ -387,6 +394,7 @@
         return {status:'pin-required',ssid,standName};
       },
       async claim({configuration,signal}={}){
+        naspeel('claimFirstPinV2');
         const unit=firstPinUnit(configuration),plan=unit&&plans.get(unit.id);
         if(!plan||claims.has(unit.id))throw fail('FIRST_PIN_V2_INVALID');
         const pin=await pinPage({ssid:plan.ssid,signal});
@@ -401,6 +409,7 @@
         return {status:'manual-rejoin',ssid:plan.ssid};
       },
       async reconcile({configuration,signal}={}){
+        naspeel('reconcileFirstPinV2');
         const unit=firstPinUnit(configuration);await wait(1100,signal);
         if(!unit)throw fail('FIRST_PIN_V2_INVALID');
         const claim=claims.get(unit.id),plan=plans.get(unit.id);
@@ -597,6 +606,7 @@
       // service, exactly like the real app (native-runtime.js: connectionMode and FirstPinV2).
       ...(walkthrough?{connectionMode:'manual-wifi',FirstPinV2:demoFirstPin,scanFirstReceiver}:{}),
       search:async({standId,mainReceiverId,signal}={})=>{
+        naspeel(mainReceiverId===undefined||mainReceiverId===null?'discover':'discoverMesh');
         const o=demoScan();if(Number.isFinite(o.searchDelay))await new Promise(resolve=>setTimeout(resolve,o.searchDelay));
         if(walkthrough){
           if(!Number.isFinite(o.searchDelay))await wait(900,signal);
@@ -615,6 +625,7 @@
         return {receivers:copy(units.map(({physicalId,...unit})=>({...unit,...(o.hidePhysicalId===true?{}:{physicalId}),canConfigure:o.requireLabel!==true&&o.invalidOnce!==true,canVerifyIdentity:true})))};
       },
       select:async({receiver,standId})=>{
+        naspeel('select');
         const o=demoScan(),unit=units.find(item=>item.id===receiver?.id);
         if(o.invalidOnce===true){o.invalidOnce=false;throw fail('RECEIVER_LABEL_INVALID');}
         if(o.requireLabel===true&&unit&&!scanned.has(unit.id))throw fail('RECEIVER_LABEL_REQUIRED');
@@ -635,6 +646,7 @@
       identifyFactoryMain:async()=>({confirmed:true,ttlMs:5000}),
       identifyCandidate:async()=>({confirmed:true,ttlMs:5000}),
       secure:async({configuration,signal})=>{
+        naspeel('secure');
         const o=demoScan();
         if(Number.isFinite(o.secureDelay))await new Promise(resolve=>setTimeout(resolve,o.secureDelay));
         else if(walkthrough)await wait(2200,signal);   // pairing through the stand takes a few seconds on a real stand too
@@ -644,8 +656,9 @@
         }
         return receipt('security-confirmed',configuration);
       },
-      reconcileSecurity:async({configuration})=>receipt('security-confirmed',configuration),
+      reconcileSecurity:async({configuration})=>{naspeel('reconcileSecurity');return receipt('security-confirmed',configuration);},
       finalize:async({configuration,signal})=>{
+        naspeel('finalize');
         const id=configuration?.receiver?.id||configuration?.receiverId;
         if(walkthrough)await wait(900,signal);
         if(typeof id==='string'){chosen.add(id);added.add(id);}

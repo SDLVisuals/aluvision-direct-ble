@@ -12,6 +12,10 @@
 })(typeof globalThis==='object'?globalThis:this,function(){
   'use strict';
   const FORMAT='aluvision-shared-installation',VERSION=1,MAX_BYTES=256*1024,POLL_MS=2000;
+  // Heropname C277 (21 nov, de eigenaar zijn log: het gedeelde document werd nooit gelezen, 139x "skip rev=null"): de app herstelt na elke
+  // start naar het bedienscherm, waar idle() onwaar is, dus de eerste lezing liep nooit. Aan: op het bedienscherm (statusIdle) ook
+  // de eerste lezing doen zolang de revisie nog onbekend is; hoogstens elke 10 s per stand. Uit = zoals nu.
+  const EERSTE_LEZING_BEDIENEN_C277=true;
   const plain=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
   const canonical=v=>JSON.stringify(v,(_,e)=>plain(e)?Object.fromEntries(Object.keys(e).sort().map(k=>[k,e[k]])):e);
   const copy=v=>JSON.parse(JSON.stringify(v));
@@ -243,7 +247,7 @@
     // merged on top; the merged result is uploaded on the next pass.
     async function download(standId,st,local){
       const r=await hooks.services.sharedDocument({op:'read',standId});
-      if(!current(standId,st)||hooks.idle&&!hooks.idle())throw deferred();
+      if(!current(standId,st)||hooks.idle&&!hooks.idle()&&!(eersteBezigC277&&hooks.statusIdle?.()))throw deferred();
       // A library edit can happen while the native read is in flight. Merge
       // the current local snapshot, never the one captured before the read.
       const snap=hooks.snapshot(standId);if(!snap)throw deferred();
@@ -479,10 +483,24 @@
         }
       }
     }
+    // EERSTE_LEZING_BEDIENEN_C277: true = er liep een eerste lezing (de rest wacht tot de volgende tik).
+    let eersteBezigC277=false;
+    async function eersteLezingC277(){
+      for(const standId of hooks.stands()){
+        const st=stateOf(standId);if(st.revision!==null||Date.now()<st.until||Date.now()-(st.eersteC277||0)<10000)continue;
+        st.eersteC277=Date.now();globalThis.__c98log?.('SHARED_EERSTE_LEZING bedienscherm');
+        eersteBezigC277=true;
+        try{await pass(standId);st.failures=0;}
+        catch(error){if(!['SHARED_DEFERRED','LIVE_CONTROL_BUSY','LIVE_CONTROL_SUPERSEDED','SHARED_BUSY'].includes(error?.code)){st.failures++;st.until=Date.now()+Math.min(30000,POLL_MS*2**Math.min(st.failures,4));}}
+        finally{eersteBezigC277=false;}
+        return true;
+      }
+      return false;
+    }
     async function tick(){
       if(running||stopped||paused)return;running=true;
       try{
-        if(hooks.idle&&!hooks.idle()){if(hooks.controlUploadIdle?.())await controlUpload();else{if(Date.now()-(tick.logged||0)>5000){tick.logged=Date.now();globalThis.__c98log?.('SHARED_CONTROL waiting');}await keepAlive();}return;}
+        if(hooks.idle&&!hooks.idle()){if(EERSTE_LEZING_BEDIENEN_C277&&hooks.statusIdle?.()&&await eersteLezingC277())return;if(hooks.controlUploadIdle?.())await controlUpload();else{if(Date.now()-(tick.logged||0)>5000){tick.logged=Date.now();globalThis.__c98log?.('SHARED_CONTROL waiting');}await keepAlive();}return;}
         for(const standId of hooks.stands()){
           const st=stateOf(standId);
           try{await pass(standId);st.failures=0;}

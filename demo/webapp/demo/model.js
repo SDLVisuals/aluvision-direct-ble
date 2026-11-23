@@ -17,6 +17,10 @@
   // Port deltas cross the same durable light boundary as scalar settings.
   // No geometry, credentials, shared marker or nested port map belongs here.
   var PORT_LIGHT_FIELDS = new Set(('engine animation effectId category variant r g b w bri brightness speed smooth on power colors whiteChannels rgbEnabled whiteEnabled direction widthPixels transitionMs background backgroundOn bgBrightness fadeAmount width delayMs brandColor motionReverse spacing objectCount trailLength spread randomness bounce mirror phaseMs phaseRateMicroHz previewStartedAt rgbwLast previewFamily backgroundBrightness backgroundRgbEnabled backgroundWhite backgroundWhiteEnabled colorCount legacySpi lineDelayMs v30Effect tailPx tailSoft').split(' '));
+  // Per ledline (interface 21 nov, uitgebreide Gevorderd; app.js LIJN_INSTELLING_A14, uit): welke instellingen per ledline blijven
+  // staan als er een wijziging voor alle ledlines komt (snelheid, kleur). Leeg = zoals vroeger: alle portStates weg.
+  var KEEP_LINE_KEYS = [];
+  function setKeepLineKeys(keys) { KEEP_LINE_KEYS = Array.isArray(keys) ? keys.filter(function (k) { return k === 'direction' || k === 'brightness'; }) : []; }
   var PORT_NULLABLE_FIELDS = new Set(('effectId category v30Effect previewFamily rgbwLast brandColor speed smooth colorCount widthPixels objectCount trailLength spacing direction lineDelayMs spread randomness fadeAmount delayMs width lineGapsMs lineSlots lineSlotCount lineJoin ownTimingMs').split(' '));
   // C109bj: timeline fields (pauses per gap, virtual slots)
   PORT_LIGHT_FIELDS.add('lineGapsMs');PORT_LIGHT_FIELDS.add('lineSlots');PORT_LIGHT_FIELDS.add('lineSlotCount');
@@ -30,6 +34,17 @@
   PORT_NULLABLE_FIELDS.add('staticGradientGroup');
   PORT_LIGHT_FIELDS.add('staticGradientDomain');
   PORT_NULLABLE_FIELDS.add('staticGradientDomain');
+  // Animatievelden (docs/onderzoek/animatie-velden-ontwerp-21nov.md, W11): eerst leren LEZEN, nog niets sturen. backgroundStops =
+  // de achtergrond als verloop (2–8 stops zoals het vaste verloop), fadeInOut = [in, uit] in tienden van een seconde (0–200),
+  // pixelRange = [van, tot] in canvaspixels (0–8191, van ≤ tot). Een bewaarde of gedeelde toestand met deze sleutels is dus geldig.
+  ['backgroundStops','fadeInOut','pixelRange'].forEach(function (key) { PORT_LIGHT_FIELDS.add(key); PORT_NULLABLE_FIELDS.add(key); });
+  // Ademen erover (docs/ontwerp-ademen-erover.md, firmware ALUVISION_ADEMEN): breathe = [periode 500–20000 ms, diepte 0–100], eerst lezen
+  PORT_LIGHT_FIELDS.add('breathe'); PORT_NULLABLE_FIELDS.add('breathe');
+  // Witmix (live-control WITMIX_A16, SPI-firmware WHITEMIX 0–100): eerst lezen
+  PORT_LIGHT_FIELDS.add('whiteMix'); PORT_NULLABLE_FIELDS.add('whiteMix');
+  function validBreathe(value) { return Array.isArray(value) && value.length === 2 && integer(value[0], 500, 20000) && integer(value[1], 0, 100); }
+  function validFadeInOut(value) { return Array.isArray(value) && value.length === 2 && value.every(function (item) { return integer(item, 0, 200); }); }
+  function validPixelRange(value) { return Array.isArray(value) && value.length === 2 && value.every(function (item) { return integer(item, 0, 8191); }) && value[0] <= value[1]; }
   function validStaticGradient(value) { try { G.decodeRecipe(value); return true; } catch (_) { return false; } }
   var LAYOUTS = Object.freeze({ RGBW: Object.freeze(['stacked', 'vertical']), SPI: Object.freeze(['continuous', 'stacked', 'vertical']) });
   function allowedLayouts(type) {
@@ -70,6 +85,11 @@
       if(key==='gradientLastBrightness')return integer(value,1,100);
       if(key==='staticGradientGroup')return G.validGroup(value);
       if(key==='staticGradientDomain')return G.validDomain(value);
+      if(key==='backgroundStops')return G.validateStops(value);
+      if(key==='fadeInOut')return validFadeInOut(value);
+      if(key==='breathe')return validBreathe(value);
+      if(key==='whiteMix')return integer(value,0,100);
+      if(key==='pixelRange')return validPixelRange(value);
       if(Object.prototype.hasOwnProperty.call(ranges,key))return typeof value==='number'&&Number.isFinite(value)&&value>=ranges[key][0]&&value<=ranges[key][1]&&(!['objectCount','variant','colorCount'].includes(key)||Number.isInteger(value));
       if(booleans.has(key))return typeof value==='boolean';
       if(['colors','whiteChannels','rgbEnabled','whiteEnabled'].includes(key))return Array.isArray(value)&&value.length>=1&&value.length<=16&&Array.from(value).every(function (item) { return key==='colors'?typeof item==='string'&&/^#[0-9a-f]{6}$/i.test(item):key==='whiteChannels'?typeof item==='number'&&Number.isFinite(item)&&item>=0&&item<=255:typeof item==='boolean'; });
@@ -559,13 +579,30 @@
       });
     } else next.receivers.forEach(function (receiver) {
       if (selected.indexOf(receiver.id) < 0) return;
+      var kept = keptLineStates(receiver.state.portStates, patch);
       receiver.state = Object.assign({}, receiver.state, clone(patch));delete receiver.state.portStates;
+      if (kept) receiver.state.portStates = kept;
       if(Object.prototype.hasOwnProperty.call(patch,'staticGradientRecipe')&&!Object.prototype.hasOwnProperty.call(patch,'gradientLastBrightness'))delete receiver.state.gradientLastBrightness;
       if(Object.prototype.hasOwnProperty.call(patch,'staticGradientRecipe')&&!Object.prototype.hasOwnProperty.call(patch,'staticGradientGroup'))delete receiver.state.staticGradientGroup;
       if(Object.prototype.hasOwnProperty.call(patch,'staticGradientRecipe')&&!Object.prototype.hasOwnProperty.call(patch,'staticGradientDomain'))delete receiver.state.staticGradientDomain;
       if(receiver.state.engine!=='STATIC_GRADIENT'){delete receiver.state.staticGradientRecipe;delete receiver.state.gradientLastBrightness;delete receiver.state.staticGradientGroup;delete receiver.state.staticGradientDomain;}
     });
     return assertValid(next);
+  }
+  // Wat van de portStates overblijft bij een wijziging voor alle ledlines: alleen KEEP_LINE_KEYS, en niet wat de wijziging zelf zet
+  // (een nieuwe richting voor alles geldt voor alles); een andere animatie (effectId) wist alles.
+  function keptLineStates(portStates, patch) {
+    if (!KEEP_LINE_KEYS.length || !portStates || Object.prototype.hasOwnProperty.call(patch, 'effectId')) return null;
+    var out = {};
+    Object.keys(portStates).forEach(function (port) {
+      var o = {};
+      KEEP_LINE_KEYS.forEach(function (key) {
+        var zet = key === 'brightness' ? Object.prototype.hasOwnProperty.call(patch, 'bri') || Object.prototype.hasOwnProperty.call(patch, 'brightness') : Object.prototype.hasOwnProperty.call(patch, key);
+        if (!zet && Object.prototype.hasOwnProperty.call(portStates[port], key) && portStates[port][key] !== null) o[key] = clone(portStates[port][key]);
+      });
+      if (Object.keys(o).length) out[port] = o;
+    });
+    return Object.keys(out).length ? out : null;
   }
   function setLayout(model, zoneId, layout) {
     assertValid(model);
@@ -683,7 +720,7 @@
     return assertValid({schemaVersion:30,demo:false,stands:[{id:id,name:name,zones:[]}],receivers:[],scenes:[],presets:[]});
   }
   return Object.freeze({ LIMITS: LIMITS, DEFAULT_SPI_PIXELS: DEFAULT_SPI_PIXELS, DEFAULT_ANIMATION_WIDTH: DEFAULT_ANIMATION_WIDTH, localStand: localStand, clone: clone, defaultState: defaultState, validate: validate, assertValid: assertValid, membershipStructure: membershipStructure, getZone: getZone,
-    zoneReceivers: zoneReceivers, standZoneReceivers: standZoneReceivers, lightStateFor: lightStateFor, validPortLightState: validPortLightState, validStaticGradient: validStaticGradient, selectionLines: selectionLines, gradientGroupPlacements: gradientGroupPlacements, gradientDomainGroup: gradientDomainGroup, prepareGradientDomain: prepareGradientDomain, validGradientDomains: G.validDomains, resolveTargets: resolveTargets, applyState: applyState, applyStandState: applyStandState, setLayout: setLayout,
+    zoneReceivers: zoneReceivers, standZoneReceivers: standZoneReceivers, lightStateFor: lightStateFor, setKeepLineKeys: setKeepLineKeys, validPortLightState: validPortLightState, validStaticGradient: validStaticGradient, selectionLines: selectionLines, gradientGroupPlacements: gradientGroupPlacements, gradientDomainGroup: gradientDomainGroup, prepareGradientDomain: prepareGradientDomain, validGradientDomains: G.validDomains, resolveTargets: resolveTargets, applyState: applyState, applyStandState: applyStandState, setLayout: setLayout,
     createZone: createZone, renameZone: renameZone, reorderZones: reorderZones, deleteZone: deleteZone, renameReceiver: renameReceiver,
     assignReceiverToZone: assignReceiverToZone, unassignReceiver: unassignReceiver, moveReceivers: moveReceivers,
     reorderReceivers: reorderReceivers, arrangeZone: arrangeZone, arrangeLines: arrangeLines, lineIds: lineIds, ledlines: ledlines, zoneLedlines: zoneLedlines,

@@ -91,9 +91,17 @@
   }
   // Full lighting intent. Geometry is deliberately not accepted from this
   // object; the native owner resolves it against its persisted receiver list.
-  function requestFor(receiver,{zone,receivers,time,outputPorts,transitionMs}={}) {
+  // Animatievelden: app.js zet hier één functie die zegt of ze mee mogen (schakelaar + ANIMCAP van elke receiver). Standaard: nooit.
+  let animatieVelden=()=>false;
+  function setAnimatieVelden(fn){animatieVelden=typeof fn==='function'?fn:()=>false;}
+  function gekozenOvergang(state,scene,spi,extension){
+    if(!OVERGANG_KIEZEN_A15||extension||scene.engine==='STATIC')return undefined;
+    const v=state?.transitionMs;if(!Number.isInteger(v)||v===250||v<0)return undefined;
+    return Math.min(v,LANGE_OVERGANG_C277&&spi?10000:750);
+  }
+  function requestFor(receiver,{zone,receivers,time,outputPorts,transitionMs,velden=true}={}) {
     if(!receiver||!['RGBW','SPI'].includes(receiver.type))return null;
-    if(transitionMs!==undefined&&(!Number.isInteger(transitionMs)||transitionMs<0||transitionMs>750))return null;
+    if(transitionMs!==undefined&&(!Number.isInteger(transitionMs)||transitionMs<0||transitionMs>(LANGE_OVERGANG_C277&&receiver.type==='SPI'?10000:750)))return null;
     const state=receiver.state||{},spi=receiver.type==='SPI';
     // A typed gradient is never an FX1/first-colour fallback, even when its
     // saved capsule is missing or the old engine field was corrupted.
@@ -103,11 +111,14 @@
       if(!spi||zone?.layout==='continuous'||!Array.isArray(portScope)||!portScope.length||portScope.length>4||
          Array.from(portScope).some((port,index)=>!Number.isInteger(port)||port<1||port>4||index>0&&port<=portScope[index-1]||!receiver.outputs.some(output=>output.port===port&&output.enabled)))return null;
       const children=portScope.map(port=>{
-        const intent=requestFor({...receiver,state:model.lightStateFor(receiver,port)},{zone,receivers,time,transitionMs});
+        const intent=requestFor({...receiver,state:model.lightStateFor(receiver,port)},{zone,receivers,time,transitionMs,velden});
         if(!intent||intent.kind!=='SPI_SCENE'||intent.scene?.standAnimation)return null;
         const {standId,receiverId,...child}=intent;return {port,...child};
       });
-      return children.some(child=>!child)?null:{standId:receiver.standId,receiverId:receiver.id,kind:'SPI_PORTS',portScenes:children};
+      if(children.some(child=>!child))return null;
+      const geheel=NODE_VLOEIEND_C278?geheleReceiverC278(receiver,portScope,children):null;
+      if(geheel)return geheel;
+      return {standId:receiver.standId,receiverId:receiver.id,kind:'SPI_PORTS',portScenes:children};
     }
     let extension=state.engine==='V30'||state.v30Effect;
     const reference=typeof module==='object'&&module.exports?require('./reference-animations.js'):globalThis.LightningReferenceAnimations;
@@ -182,6 +193,26 @@
       if(ownTiming)scene.v30.timingMs=ownTiming;
       if(state.on===false||state.power===false)scene.backgroundOn=false;
     }
+    // Animatievelden (animatie-velden-ontwerp-21nov.md, W8): alleen als de app ze mag sturen (app.js: schakelaar aan EN elke receiver
+    // van de stand meldt ANIMCAP). Anders gaan ze nooit mee, ook niet uit een bewaarde toestand of scène. Niet bij Eigen timing en
+    // niet bij een standanimatie (die gaat langs de snelle baan, en die kent de velden niet).
+    // velden:false = Automatisch (de planning gaat langs de snelle baan van de hoofdreceiver, die de velden niet kent)
+    // witmix hangt niet aan ANIMCAP: de SPI-firmware kent WHITEMIX al (0–100)
+    if(WITMIX_A16&&spi&&Number.isInteger(state.whiteMix)&&state.whiteMix>=0&&state.whiteMix<=100)scene.whiteMix=state.whiteMix;
+    if(velden!==false&&animatieVelden()&&!ownTiming&&!state.standAnimation){
+      const fio=state.fadeInOut,pr=state.pixelRange,stops=state.backgroundStops;
+      if(Array.isArray(fio)&&fio.length===2&&fio.every(n=>Number.isInteger(n)&&n>=0&&n<=200)&&(fio[0]>0||fio[1]>0))scene.fade={in:fio[0],out:fio[1]};
+      // Ademen erover (ontwerp-ademen-erover.md): alleen als elke receiver ANIMCAP bit 8 meldt (animatieVelden().ademen), RGBW en SPI
+      const br=state.breathe,av=animatieVelden();
+      if(av&&av.ademen===true&&Array.isArray(br)&&br.length===2&&Number.isInteger(br[0])&&br[0]>=500&&br[0]<=20000&&Number.isInteger(br[1])&&br[1]>0&&br[1]<=100)scene.breathe={period:br[0],depth:br[1]};
+      if(spi&&Array.isArray(pr)&&pr.length===2&&pr.every(n=>Number.isInteger(n)&&n>=0&&n<=8191)&&pr[0]<=pr[1])scene.range={from:pr[0],to:pr[1]};
+      const G=typeof module==='object'&&module.exports?require('./static-gradient.js'):globalThis.LightningStaticGradient;
+      if(spi&&scene.backgroundOn===true&&G?.validateStops?.(stops)){
+        // BGGRAD: [plaats 0–65535, r, g, b, w] per stop; BG wordt de eerste stop, zodat een oude receiver effen die kleur toont
+        scene.backgroundGradient=stops.map(stop=>[Math.round(stop.position*65535),...[1,3,5].map(i=>parseInt(stop.color.slice(i,i+2),16)),Number.isInteger(stop.white)?stop.white:0]);
+        scene.background=scene.backgroundGradient[0].slice(1);
+      }
+    }
     // Stand recipes are lighting intent only. Native independently resolves
     // every physical line from its saved installation; JS sends no geometry.
     if(state.standAnimation){
@@ -217,7 +248,7 @@
     }
     return {standId:receiver.standId,receiverId:receiver.id,kind:spi?'SPI_SCENE':'RGBW_SCENE',
       brightness:powered?brightness:0,
-      transitionMs:!powered?POWER_OFF_TRANSITION_MS:transitionMs??(scene.engine==='STATIC'&&!extension?STATIC_TRANSITION_MS:
+      transitionMs:!powered?POWER_OFF_TRANSITION_MS:transitionMs??gekozenOvergang(state,scene,spi,extension)??(scene.engine==='STATIC'&&!extension?STATIC_TRANSITION_MS:
         brightness>0?ANIMATION_CUE_TRANSITION_MS:0),channels:[],scene};
   }
   // Membership has already been confirmed by native storage. A new line can
@@ -347,6 +378,43 @@
     }
     return {model,inheritedIds,receiverIds:[...refreshIds]};
   }
+  // EEN_RECEIVER_SNEL_C277 (21 nov, de eigenaar: "de hoofdreceiver apart bedienen reageert heel traag"): één vaste RGBW-kleur voor één receiver
+  // ging als applyLive langs de gewone eigenaarsweg (over bluetooth ± 3 s per keuze); als batch van één neemt native de FAST_GROUP-weg
+  // (iPhone fastGroupIntentC96 aanvaardt 1–64 leden; ± 0,9 s), en zonder FAST_GROUP valt native terug op de gewone weg. Uit = zoals nu.
+  const EEN_RECEIVER_SNEL_C277=true;
+  // NODE_VLOEIEND_C278 (22 nov, de eigenaar 13:12, iPhone 1098: "een gewone receiver apart bedienen gaat met schokken"): een SPI-node met
+  // ledlines apart (portStates) of via zijn lijn gekozen werd SPI_PORTS, en die soort neemt de snelle baan nooit (iPhone
+  // fastGroupIntentC96 en Android AlvFastGroupC96.one weigeren ze) → elke stap bevestigd langs de gewone weg (± 0,6 s). Aan: dekt de
+  // keuze ALLE aangezette uitgangen met dezelfde inhoud (één uitgang, of meerdere met één vaste kleur), dan is het één scène voor de
+  // hele receiver (SPI_SCENE): FAST_GROUP via de hoofdreceiver, ook zonder de hoofdreceiver in de batch, en een vaste SPI-kleur voor
+  // één receiver gaat als batch van één (zoals EEN_RECEIVER_SNEL_C277), met de sleep-regel van SLEEP_ZONDER_BEVESTIGEN_C277.
+  // Een echte deelkeuze (een deel van de uitgangen, of verschillende inhoud) blijft SPI_PORTS. Uit = zoals vroeger.
+  const NODE_VLOEIEND_C278=true;
+  function geheleReceiverC278(receiver,portScope,children){
+    const aan=(receiver.outputs||[]).filter(output=>output&&output.enabled).map(output=>output.port).sort((a,b)=>a-b);
+    if(!aan.length||aan.length!==portScope.length||aan.some((port,index)=>port!==portScope[index]))return null;
+    const vormen=children.map(({port,...rest})=>JSON.stringify(rest));
+    if(vormen.some(vorm=>vorm!==vormen[0]))return null;
+    const {port,...inhoud}=children[0],scene=inhoud.scene;
+    // Meer dan één uitgang: alleen een vaste kleur (een animatie over de hele receiver loopt over alle uitgangen samen, niet per lijn).
+    if(aan.length>1&&!(inhoud.kind==='SPI_SCENE'&&scene&&scene.engine==='STATIC'&&!scene.v30&&!scene.standAnimation&&!scene.backgroundOn&&
+       Array.isArray(scene.palette)&&scene.palette.length===1))return null;
+    return {standId:receiver.standId,receiverId:receiver.id,...inhoud};
+  }
+  // SLEEP_ZONDER_BEVESTIGEN_C277 (21 nov, mesh BLE-meting: het licht staat er na 0,1–0,2 s, de volgende kleur pas na ± 0,75 s door de
+  // FAST_GROUP_STATUS-bevestiging): tijdens een sleep (beginGesture, Flutter sleepBegin) gaat een batch met tussen:true; native slaat
+  // de bevestiging over en antwoordt 'dispatched'. Bij het loslaten (endGesture) gaat de laatste waarde nog eens, MET bevestiging.
+  // Nooit "gelukt" voor een tussenwaarde (toestand 'staged'). Uit = zoals nu.
+  const SLEEP_ZONDER_BEVESTIGEN_C277=true;
+  // LANGE_OVERGANG_C277 (21 nov, Gevorderd): een overgang tot 10 000 ms op SPI (de firmware kan het); RGBW en de snelle baan blijven 750
+  // (native neemt dan de gewone weg). native-runtime.js en native hebben dezelfde schakelaar. Uit = zoals nu (0–750).
+  const LANGE_OVERGANG_C277=true;
+  // OVERGANG_KIEZEN_A15 (22 nov, Gevorderd › Overgang): de overgang die de klant koos (state.transitionMs) bij een animatie. 250 is de
+  // standaardwaarde van het model en betekent "niet gekozen" (dan de vaste overgangen van vroeger). Tot 10 000 ms op SPI, 750 op RGBW.
+  const OVERGANG_KIEZEN_A15=true;
+  // WITMIX_A16 (22 nov, uit): witmix uit de toestand (state.whiteMix 0–100) als scene.whiteMix, alleen SPI (de SPI-firmware leest WHITEMIX
+  // 0–100; de RGBW-firmware niet). Native moet scene.whiteMix doorlaten en als WHITEMIX sturen (nu vast 0): docs/schakelaars-stand.md.
+  const WITMIX_A16=false; // aan 22 nov (repetitie op deze commit; 1097)
   function create({send,sendBatch,sendGesture,onState,onRoute,waitBeforeSend,maxBatchSize=30,compiledModern=()=>false,singleSpiStaticBatch=()=>false,delay=0,setTimer=setTimeout,clearTimer=clearTimeout}) {
     if (typeof send !== 'function' || typeof onState !== 'function') throw Error('LIVE_QUEUE_INVALID');
     if (sendBatch!==undefined && typeof sendBatch!=='function') throw Error('LIVE_QUEUE_INVALID');
@@ -359,6 +427,7 @@
     let active=null,draining=false,timer=null,version=0,epoch=0,idleLease=null;
     let completionObserver=null;
     let gestureHeld=false,gestureEpoch=0,failedGesture=null;
+    const tussenC277=new Map(); // receiverId -> verzoek dat alleen 'dispatched' kreeg (wacht op de bevestigde eindwaarde)
     const emit=(id,kind,code='')=>{const value={kind,code};states.set(id,value);onState(id,value);};
     const observeRoute=(reason,count,requests)=>{try{
       const flag=Object.getOwnPropertyDescriptor(root,'__lightningV41GestureDiagnostics');
@@ -701,7 +770,10 @@
       },()=>{held.streamClosed=true;held.operation.stopStaticGesture?.();});
     }
     function beginGesture(){gestureHeld=true;gestureEpoch++;failedGesture=null;}
-    function endGesture(){gestureHeld=false;if(active?.stream)considerStaticGestureUpdate(active);settleIdle();}
+    function endGesture(){gestureHeld=false;if(active?.stream)considerStaticGestureUpdate(active);
+      // SLEEP_ZONDER_BEVESTIGEN_C277: de eindwaarde van elke receiver met een onbevestigde tussenwaarde opnieuw, nu bevestigd.
+      if(tussenC277.size){const laatste=[...tussenC277.values()];tussenC277.clear();for(const r of laatste)if(!queue.has(r.receiverId))request(r);}
+      settleIdle();}
     function cancelGesture(){
       gestureHeld=false;
       if(active?.stream){
@@ -820,8 +892,12 @@
             const singleSpiSolid=initial.length===1&&singleSpiStaticBatch()===true&&
               initial[0].kind==='SPI_SCENE'&&!Object.hasOwn(initial[0],'outputPort')&&
               initial[0].transitionMs<=750&&staticGestureShape(initial[0])!==null;
-            if(!streamComplete&&sendBatch && (items.size>1||singleAnimation||singleSpiSolid||compiledModern()===true)){
-              active.operation=sendBatch([...items.values()].map(item=>item.request));
+            const singleRgbwSolid=EEN_RECEIVER_SNEL_C277&&initial.length===1&&!Object.hasOwn(initial[0],'outputPort')&&!(initial[0].transitionMs>750)&&
+              (initial[0].kind==='RGBW_STATIC'||(initial[0].kind==='RGBW_SCENE'||NODE_VLOEIEND_C278&&initial[0].kind==='SPI_SCENE')&&
+                initial[0].scene?.engine==='STATIC'&&!initial[0].scene.v30&&!initial[0].scene.standAnimation&&!initial[0].scene.backgroundOn);
+            if(!streamComplete&&sendBatch && (items.size>1||singleAnimation||singleSpiSolid||singleRgbwSolid||compiledModern()===true)){
+              const tussen=SLEEP_ZONDER_BEVESTIGEN_C277&&gestureHeld;held.tussenC277=tussen;
+              active.operation=tussen?sendBatch([...items.values()].map(item=>item.request),{tussen:true}):sendBatch([...items.values()].map(item=>item.request));
               const reply=await active.operation;
               if(reply?.status==='breathe-retained-deferred'||reply?.status==='catalogue-retained-deferred'){
                 if(Object.keys(reply).sort().join(',')!=='applied,ready,receiverIds,status'||reply.applied!==false||reply.ready!==false||
@@ -857,6 +933,8 @@
                 if(!items.has(result?.receiverId)||results.has(result.receiverId))throw Error('LIVE_UNCONFIRMED');
                 if(result.status==='applied-in-firmware'){
                   if(!Number.isSafeInteger(result.generation)||result.generation<1)throw Error('LIVE_UNCONFIRMED');
+                }else if(held.tussenC277&&result.status==='dispatched'){
+                  // tussenwaarde: verstuurd, niet bevestigd
                 }else if(!['unconfirmed','not-sent'].includes(result.status)||typeof result.code!=='string'||
                          !/^[A-Z][A-Z0-9_]{0,79}$/.test(result.code))throw Error('LIVE_UNCONFIRMED');
                 results.set(result.receiverId,result);
@@ -933,7 +1011,8 @@
           for(const [id,item] of completedItems){
             if(epoch!==runEpoch||desired.get(id)?.signature!==item.signature)continue;
             if(!error&&queue.get(id)?.signature===item.signature)queue.delete(id);
-            const result=results?.get(id),retained=result?.status==='retained-deferred',code=error||(['applied-in-firmware','retained-deferred'].includes(result?.status)?'':result?.code);
+            const result=results?.get(id),retained=result?.status==='retained-deferred'||result?.status==='dispatched',code=error||(['applied-in-firmware','retained-deferred','dispatched'].includes(result?.status)?'':result?.code);
+            if(result?.status==='dispatched')tussenC277.set(id,item.request);else if(result?.status==='applied-in-firmware')tussenC277.delete(id);
             emit(id,code?'failed':retained?'staged':'applied',code||'');
           }
           if(!error&&epoch===runEpoch&&results?.size===completedItems.size&&
@@ -985,5 +1064,5 @@
     }
     return Object.freeze({request,preview,reject,clear,beginGesture,endGesture,cancelGesture,whenIdle,acquireIdle,captureCurrentIntent,state:id=>states.get(id)||{kind:'idle',code:''}});
   }
-  return Object.freeze({create,requestFor,joinZonePlayback});
+  return Object.freeze({create,requestFor,joinZonePlayback,setAnimatieVelden,overgangKiezen:OVERGANG_KIEZEN_A15,witmixKiezen:WITMIX_A16});
 });

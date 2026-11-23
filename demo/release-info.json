@@ -574,7 +574,7 @@
     {
       "path": "index.html",
       "bytes": 2846,
-      "sha256": "4b2a3f24a729c8f853b433ced7f87c9effbf639104330cdef8687020486b2051"
+      "sha256": "95a3e9f503e65983d0a5d1b8cc558a1f811909c512bedf5e9b18819e1f26020f"
     },
     {
       "path": "installation-libraries.js",
@@ -1098,13 +1098,13 @@
     },
     {
       "path": "web-gastheer.js",
-      "bytes": 21731,
-      "sha256": "3c88689daf32e632b3641292d955015b8035e48c94aa666190eb2508e0c31d29"
+      "bytes": 25441,
+      "sha256": "9d276696366939b6bc1a78451766478f2d24d9a573e781ddfcb28d2819c8e4ab"
     },
     {
       "path": "flutter_bootstrap.js",
       "bytes": 13430,
-      "sha256": "5445d5608846c39d95718ba9a16adb5b2ff47d768eb73c5fa2c6c0c03bd1ad0e"
+      "sha256": "71ee1dfffe3e3bcc26f4283b61b1cca40a7cd84e9fd9ebd7663c2e1c1b48759a"
     },
     {
       "path": "flutter.js",
@@ -1113,8 +1113,8 @@
     },
     {
       "path": "main.dart.js",
-      "bytes": 3916503,
-      "sha256": "9ed680d7e59f9733fb70ece8ba85d91377d4463411d5dda128be35505dfbb09b"
+      "bytes": 4306718,
+      "sha256": "bd56717c2dc86b369aa2a8c85a8cfe5b5c596acc11a61fb627bcf9b3839223ec"
     },
     {
       "path": "version.json",
@@ -1168,18 +1168,18 @@
     },
     {
       "path": "webapp/demo/app-erase.css",
-      "bytes": 2983,
-      "sha256": "fa4f32ccc85aee1bdddb7817f12daef35f7ff38a0ce6ac9ed8f8ea51ddf57f26"
+      "bytes": 3624,
+      "sha256": "7160e7d6a9b2aa3a87224e37014bea26c44d0c3baf31917996f7df43332121b3"
     },
     {
       "path": "webapp/demo/app-erase.js",
-      "bytes": 23093,
-      "sha256": "f3f8c60652ae4314680b42b33e8f796ad7ef8cd3be7773fb7b6edd20bbccbf6f"
+      "bytes": 27105,
+      "sha256": "effcf81f7d5b50e1a63a8929ac051d86e69a3839bb584f9bb323d31c8772ca28"
     },
     {
       "path": "webapp/demo/app.js",
-      "bytes": 1201464,
-      "sha256": "e167305de3b0e1c2c669b46013dc18d0a75dc7aa9e6fad033053a9247ac53d6f"
+      "bytes": 1226591,
+      "sha256": "890f61159f06b4b070678ff3a6a8ea9241a3500da2a73d57405bf9fb871a71df"
     },
     {
       "path": "webapp/demo/backup.js",
@@ -1343,8 +1343,8 @@
     },
     {
       "path": "webapp/demo/index.html",
-      "bytes": 13942,
-      "sha256": "0b684e080d228646e7d890b104ac7843dc186f4cf2ffde62ec4ac85b2f0e62d3"
+      "bytes": 13346,
+      "sha256": "71c3052cc78b2b0790460183aa07ee66c2bb0c081082f91c68eb7c3823112249"
     },
     {
       "path": "webapp/demo/installation-libraries.js",
@@ -1473,8 +1473,8 @@
     },
     {
       "path": "webapp/demo/live-control.js",
-      "bytes": 70931,
-      "sha256": "0614025c5d5f2ae4024dacaf55838b515ee52b0c066827dc0df3e82e673c9e3a"
+      "bytes": 79072,
+      "sha256": "efde75d567c6e836d08be03fb9a28a2933bd9fe7ccafe6de296ea6d40726fbf2"
     },
     {
       "path": "webapp/demo/main-connection-indicator.css",
@@ -1488,13 +1488,13 @@
     },
     {
       "path": "webapp/demo/model.js",
-      "bytes": 56353,
-      "sha256": "192c733a52aef1e67c1cae99ff490022243ae2545dfd4711afbb6e09f0c99f2e"
+      "bytes": 59630,
+      "sha256": "d35a6a02de2db55ed26adfcac6fcff631f8bf9889a171c9d1e5797d0a4e83e49"
     },
     {
       "path": "webapp/demo/native-runtime.js",
-      "bytes": 283012,
-      "sha256": "3b8c9762f1d520124fdbbafa1e28d8d58acbf03801a351fa59d00da84db454a9"
+      "bytes": 293860,
+      "sha256": "f39cae0a7d4a67ee4cc170fa6f9f95893d2613d427f2243f7838c30acf2fd38f"
     },
     {
       "path": "webapp/demo/onboarding-connect.css",
@@ -1518,8 +1518,8 @@
     },
     {
       "path": "webapp/demo/onboarding-ui.js",
-      "bytes": 252771,
-      "sha256": "2028bd55ef1b9c0121e36425cc60c3025324eff0896c451ed0e89ee1d2a4cb48"
+      "bytes": 258030,
+      "sha256": "c919e4ed1ccb5814ba2b6636d6449318238ae561c0a0d366aa2724a104476943"
     },
     {
       "path": "webapp/demo/onboarding756.css",
@@ -1568,13 +1568,13 @@
     },
     {
       "path": "webapp/demo/presets.js",
-      "bytes": 19579,
-      "sha256": "eef26c19fe437347d40cee889f554241d12d58c7c935076fa917adf767c27f22"
+      "bytes": 20378,
+      "sha256": "8cdb7341879a2ff1a26a0207c4c82ab9b7e499af3421a7dffb50d9c2c26457cd"
     },
     {
       "path": "webapp/demo/preview.js",
-      "bytes": 139596,
-      "sha256": "1690b5cc1e0490f088747edd2edd0a094358a9146ca13fbd527994dbacc53d70"
+      "bytes": 141963,
+      "sha256": "07885458e83011e3e0cc0adb35b3cf671057aef3345a94701d935ff8a2f83c75"
     },
     {
       "path": "webapp/demo/receiver-art.js",
@@ -1588,8 +1588,8 @@
     },
     {
       "path": "webapp/demo/receiver-playback.js",
-      "bytes": 11193,
-      "sha256": "416710c2da4b45a0dd53df6d5165a1543164cc7e82014f9847eca8451abe06ac"
+      "bytes": 12880,
+      "sha256": "50602dd313b94276635f9715c8bb5ee40efaffc81ed5f0035a78affea10e53f9"
     },
     {
       "path": "webapp/demo/receiver-removal-ui.css",
@@ -1598,8 +1598,8 @@
     },
     {
       "path": "webapp/demo/receiver-removal-ui.js",
-      "bytes": 26806,
-      "sha256": "e26d9e78dbd3bb92c00b1713ee456258759e344a21a5a397d0652ff20297757a"
+      "bytes": 26853,
+      "sha256": "04926627484222a642ad11cc4fcc5a14ab2f9ac72801c6f578d53fbfeed2e5ad"
     },
     {
       "path": "webapp/demo/receiver-scan-tutorial.js",
@@ -1648,8 +1648,8 @@
     },
     {
       "path": "webapp/demo/receivers-tutorial/pagina.js",
-      "bytes": 4509,
-      "sha256": "378fb9362d2ee9134daf17fd2e6e8748bb29abdd579181ab06cd3104979a3b25"
+      "bytes": 4448,
+      "sha256": "f01f56bc445a400d2e86ecd32d4196cb6163215bcfb1e98f4b9edd8780560b3a"
     },
     {
       "path": "webapp/demo/receivers-tutorial/rx.js",
@@ -1723,8 +1723,8 @@
     },
     {
       "path": "webapp/demo/shared-installation.js",
-      "bytes": 38788,
-      "sha256": "8b9bc2e2c26d8f0d8bd55831620ca0fbaea9cf40802233c5557edd669a3111b9"
+      "bytes": 40165,
+      "sha256": "9a8282ddf025566aed6a17836ee87f57d738434d3103a05aec27f7177a4794f3"
     },
     {
       "path": "webapp/demo/shared-physical-refresh.js",
@@ -1783,8 +1783,8 @@
     },
     {
       "path": "webapp/demo/stand-live-checkpoint.js",
-      "bytes": 11293,
-      "sha256": "924452cd9457b50c9ea73ced9b3a778b9373df87040435fbbb9d1d09cec9b600"
+      "bytes": 11519,
+      "sha256": "ef74eb9fd78ca390aa83d395559a44f2f922d2014e6565e4e49b6db2bbef7ce7"
     },
     {
       "path": "webapp/demo/stand-management-capabilities.js",
@@ -1868,8 +1868,8 @@
     },
     {
       "path": "webapp/demo/ui-copy.js",
-      "bytes": 163902,
-      "sha256": "2167b37ec1e970fcd6f1484b71dcf2b268adb1d1139c7cf32420dbeb701e0d4a"
+      "bytes": 164126,
+      "sha256": "9dd27d4008f49cdf3f5ff855e447b7a2ceabf77f5f34b26e47510b6c092c90a6"
     },
     {
       "path": "webapp/demo/ui606-controls.css",
@@ -1973,8 +1973,8 @@
     },
     {
       "path": "webapp/demo/web-demo-service.js",
-      "bytes": 60175,
-      "sha256": "0f393e232cda94221c393a2d1dbb4891b5e9158008f699664e546fa73651d3e4"
+      "bytes": 61280,
+      "sha256": "6f31e6851097ae3277bb2a94dc8b0f4e768ea2e0935c7c4733828f98a3e38436"
     },
     {
       "path": "webapp/demo/web-gastheer-app.js",
@@ -2023,8 +2023,8 @@
     },
     {
       "path": "webapp/demo/zone-tutorial/pagina.js",
-      "bytes": 5102,
-      "sha256": "ed95ca2f5976e84d8025162a8bfca04fb14ff7bcb292b9da1eb43b8e1a265a0f"
+      "bytes": 5041,
+      "sha256": "d8e74fded0a22007d7a5e0a876dd6ae58b15dfb6731a46fb0d191ee13f3bea61"
     },
     {
       "path": "webapp/demo/zone-tutorial/toevoegen.css",

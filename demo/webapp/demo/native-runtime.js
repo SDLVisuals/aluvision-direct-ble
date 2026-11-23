@@ -14,6 +14,10 @@
   // confirmed host plus the V30 handler may send native messages.
   const native=root.__lightningV30NativeHost===true||root.location?.protocol==='file:';
   const transportReady=root.__lightningV30NativeHost===true&&!!handler&&typeof handler.postMessage==='function';
+  // Beveiliging H1 (docs/onderzoek/beveiliging-apps-21nov.md): c98-log zonder de antwoorden van native; deze acties nooit. Uit = zoals nu.
+  // Let op: tools/test/telefoon-meting.py en de c98-naspeler lezen alleen NATIVE_OK/FAIL + actie, niet het antwoord.
+  const LOG_GEEN_RESULTAAT_C275=false;
+  const LOG_NOOIT_C275=new Set(['backupRestore','backupRecover','standSessionShare','inviteCreate','inviteRedeem','accessUsers','recoverInstallation']);
   // Distinct document namespace prevents an already queued WebKit reply from
   // being consumed by a newly loaded page with a reset local sequence counter.
   let documentId=null;
@@ -25,6 +29,7 @@
   let staticPreparingAvailable=null;
   let staticGestureAvailable=null;
   let integratedStatic8Available=false,staticGradientCatalogueAvailable=false;
+  const LANGE_OVERGANG_C277=true; // zie live-control.js
   let singleSpiStaticBatchAvailable=false;
   let lineSlotsAvailable=false; // C125: native LIVE scenes carry timeline lineSlots (tijdlijn C109bj)
   let authorityJointAvailable=null;
@@ -186,12 +191,24 @@
   const layoutUUID=value=>typeof value==='string'&&/^[A-Fa-f0-9]{8}(-[A-Fa-f0-9]{4}){3}-[A-Fa-f0-9]{12}$/.test(value)&&!/^0{8}(-0{4}){3}-0{12}$/.test(value);
   const layoutTextBytes=value=>Array.from(value).reduce((bytes,c)=>{const n=c.codePointAt(0);return bytes+(n<=0x7f?1:n<=0x7ff?2:n<=0xffff?3:4);},0);
   const layoutKeys=(value,names)=>value&&Object.getPrototypeOf(value)===Object.prototype&&Object.keys(value).sort().join(',')===names.slice().sort().join(',');
+  // Tijdprofiel 20 nov (docs/setup-tijdprofiel.md): elke native authorityCandidateMode doet een eigen handdruk met de MAIN en
+  // gooit daarna de warme MAIN- en NODE-sessie weg (iPhone mesh.invalidateIdleTransport). Per extra receiver gebeurde dat 3× (zoeken,
+  // secure, finalize): finalize moest beide sessies opnieuw openen (± 5 s). Een "legacy"-antwoord blijft MODUS_ONTHOUDEN_MS geldig voor
+  // dezelfde stand; "authority" vragen we altijd opnieuw. Schakelaar uit = elke keer vragen, zoals vroeger.
+  const MODUS_ONTHOUDEN_C272=true,MODUS_ONTHOUDEN_MS=90000;const authorityLegacyAt=new Map();
   async function authorityMode(standId,signal){
     if(authorityJointAvailable===null)await runtimeCapabilities();
     if(!authorityJointAvailable)return false;
+    const at=authorityLegacyAt.get(standId);
+    if(MODUS_ONTHOUDEN_C272&&authorityStandModes.get(standId)==='legacy'&&typeof at==='number'&&Date.now()-at>=0&&Date.now()-at<MODUS_ONTHOUDEN_MS){
+      try{root.__c98log?.('KOPPEL modus onthouden legacy ms='+(Date.now()-at));}catch(_){}
+      return false;
+    }
     const answer=await call('authorityCandidateMode',{standId},signal);
     if(!layoutKeys(answer,['mode'])||!['authority','legacy'].includes(answer.mode))throw fail('AUTHORITY_CANDIDATE_UNCONFIRMED');
-    authorityStandModes.set(standId,answer.mode);return answer.mode==='authority';
+    authorityStandModes.set(standId,answer.mode);
+    if(answer.mode==='legacy')authorityLegacyAt.set(standId,Date.now());else authorityLegacyAt.delete(standId);
+    return answer.mode==='authority';
   }
   async function authoritySecure(configuration,signal){
     const state=await call('authorityCandidateProgress',{configuration},signal);
@@ -291,8 +308,11 @@
     if(message.ok===false&&message.code==='SETUP_BUSY')setupLeaseC137(null,{busy:true,kind:null,ttlMs:2000,mine:false});
     root.clearTimeout(request.timer);request.removeAbort();
     // C98 field diagnosis (debug builds forward it to the device log).
-    if(root.__c98log&&request.action&&!['sharedDocument','capabilities','loadView','lightQuiet','interfaceFeedback','selectionFeedback'].includes(request.action))
-      root.__c98log((message.ok===true?'NATIVE_OK ':'NATIVE_FAIL ')+request.action+' '+(message.ok===true?JSON.stringify(message.result).slice(0,420):String(message.code)));
+    // Beveiliging H1 (docs/onderzoek/beveiliging-apps-21nov.md): met LOG_GEEN_RESULTAAT_C275 nooit het antwoord zelf in de log (het kan
+    // een PIN of standcode dragen), alleen 'ok' en de sleutelnamen; acties met een geheim komen er helemaal niet in. Uit = zoals nu.
+    if(root.__c98log&&request.action&&!['sharedDocument','capabilities','loadView','lightQuiet','interfaceFeedback','selectionFeedback'].includes(request.action)
+       &&!(LOG_GEEN_RESULTAAT_C275&&LOG_NOOIT_C275.has(request.action)))
+      root.__c98log((message.ok===true?'NATIVE_OK ':'NATIVE_FAIL ')+request.action+' '+(message.ok===true?(LOG_GEEN_RESULTAAT_C275?'ok keys='+(message.result&&typeof message.result==='object'?Object.keys(message.result).slice(0,12).join(','):typeof message.result):JSON.stringify(message.result).slice(0,420)):String(message.code)));
       // C105: any refusal because a port change is still open lets the app resume it silently.
       if(message.ok!==true&&message.code==='OUTPUT_CONFIGURATION_PENDING')try{root.dispatchEvent?.(new Event('c105-output-pending'));}catch(_){}
       // C107: this phone's place on the stand went to a phone in use; re-admit it
@@ -343,7 +363,14 @@
   const QUIET_ACTIONS_C137=new Set(['meshStatus','loadView','capabilities','interfaceFeedback','selectionFeedback','setAppearance','connectionChoice','setConnectionChoice','securityPreference',
     'otaStatus','standSessionStatus','sharedDocument','sharedLayout','receiverContextStatus','outputConfigurationStatus','securityStatus']);
   let lastActionAtC137=0;
-  function pollGapC137(){return Date.now()-lastActionAtC137<30000?5000:10000;}
+  // Wachttijden na een herstart (docs/onderzoek/wachttijden-na-herstart-21nov.md): na een herstart van de hoofdreceiver zag de feed
+  // de stand pas 10 s later terug. Met MESH_POLL_TERUG_C276: om de 3 s zolang de feed kort na een "ok" (< 120 s) "cold" of mislukt is,
+  // en nog 60 s nadat hij terug is; daarna weer 5/10 s (TX-buffers van de MAIN, C137c). Uit = zoals nu.
+  const MESH_POLL_TERUG_C276=false;let meshOkAtC276=0,meshKwijtC276=false,meshTerugTotC276=0;
+  function meshPollZagC276(ok){const nu=Date.now();if(ok){if(meshKwijtC276)meshTerugTotC276=nu+60000;meshKwijtC276=false;meshOkAtC276=nu;}else if(meshOkAtC276)meshKwijtC276=true;}
+  function pollGapC137(){
+    if(MESH_POLL_TERUG_C276){const nu=Date.now();if(nu<meshTerugTotC276||meshKwijtC276&&nu-meshOkAtC276<120000)return 3000;}
+    return Date.now()-lastActionAtC137<30000?5000:10000;}
   try{root.__pollGapC137=pollGapC137;}catch(_){}
   // C138ui: one MAIN exchange costs ~0.8 s on the single native worker, so a background read that starts between two
   // taps delays the next tap by 1-4 s. Mesh and shared status wait 4 s after the last light command or touch (each
@@ -352,10 +379,59 @@
   try{root.document?.addEventListener?.('pointerdown',()=>{lastTouchAtC138ui=Date.now();},{capture:true,passive:true});}catch(_){}
   function interactiveHoldC138ui(){return Math.max(0,Math.max(lastLightAtC97,lastTouchAtC138ui)+4000-Date.now());}
   try{root.__interactiveHoldC138ui=interactiveHoldC138ui;}catch(_){}
+  // de eigenaar 18 nov (1076-log 19:15–19:17: zone aanwijzen en het testlicht van de Looprichting kregen STAND_SYNC_BUSY): een testlicht
+  // onderbreekt een automatische opslag al (C98, hieronder), maar dat onderbreken loopt nog terwijl het licht al vertrekt. Daarom een
+  // licht van de klant bij STAND_SYNC_BUSY nog eens, kort erna (hoogstens 4 keer, ± 2 s); elke poging onderbreekt opnieuw. Stil, nooit rood.
+  const VOORGROND_OPNIEUW_U18=new Set(['identifyLayout','blinkLayoutIdentification','identify','previewPixels','previewSPIZoneDirections']);
+  // de eigenaar 19 nov ("zodra je scant moet deze blauw worden"), coördinatie 20 nov: loopt er een toevoeging, dan gaat de cue (labelCue,
+  // alleen de hello met het labelbewijs) TUSSEN twee toevoegstappen door de hoofdreceiver: hij wacht tot de lopende stap terug is en
+  // gaat vóór de volgende. Eén bericht tegelijk blijft (R2). Uit = zoals vroeger (app.js antwoordt dan "busy" tijdens een toevoeging).
+  const CUE_TUSSENDOOR_C272=true; // aan voor 1083 (coördinatie 20 nov): kijken naar 'KOPPEL cue tussendoor … ms=' en de toevoegtijd
+  const TOEVOEG_STAPPEN_C272=new Set(['discoverMesh','select','secure','reconcileSecurity','finalize','publishModel','configureOutputs']);
+  let toevoegLooptC272=0;const cueRijC272=[];
+  async function toevoegStapC272(run){
+    toevoegLooptC272++;let antwoord,fout=null;
+    try{antwoord=await run();}catch(error){fout=error;}finally{toevoegLooptC272--;}
+    await cueRijAfC272();
+    if(fout)throw fout;
+    return antwoord;
+  }
+  async function cueRijAfC272(){
+    while(cueRijC272.length){
+      const cue=cueRijC272.shift();let r;
+      try{r=await callMetOpnieuwC272('labelCue',cue.args);}catch(error){r={status:/BUSY/.test(error?.code||'')?'busy':'error'};}
+      try{root.__c98log?.('KOPPEL cue tussendoor '+cue.args.physicalId.slice(-6)+' '+(r?.status||'?')+' ms='+(Date.now()-cue.at));}catch(_){}
+      cue.resolve(r);
+    }
+  }
+  function labelCueTussendoorC272(args){
+    if(!CUE_TUSSENDOOR_C272||toevoegLooptC272<=0)return null;
+    const al=cueRijC272.find(c=>c.args.physicalId===args.physicalId&&c.args.standId===args.standId);
+    if(al)return al.promise;
+    const cue={args,at:Date.now()};cue.promise=new Promise(resolve=>{cue.resolve=resolve;});cueRijC272.push(cue);return cue.promise;
+  }
   function call(action,payload={},signal,automatic,posted){
+    if(CUE_TUSSENDOOR_C272&&TOEVOEG_STAPPEN_C272.has(action))return toevoegStapC272(()=>callMetOpnieuwC272(action,payload,signal,automatic,posted));
+    return callMetOpnieuwC272(action,payload,signal,automatic,posted);
+  }
+  function callMetOpnieuwC272(action,payload={},signal,automatic,posted){
+    if(automatic||!VOORGROND_OPNIEUW_U18.has(action))return callEenmaal(action,payload,signal,automatic,posted);
+    return (async()=>{
+      for(let poging=0;;poging++){
+        try{return await callEenmaal(action,payload,signal,automatic,posted);}
+        catch(error){
+          if(error?.code!=='STAND_SYNC_BUSY'||poging>=4||signal?.aborted)throw error;
+          try{root.__c98log?.('VOORGROND_OPNIEUW '+action+' poging='+(poging+1));}catch(_){}
+          await new Promise(resolve=>root.setTimeout(resolve,450));
+        }
+      }
+    })();
+  }
+  function callEenmaal(action,payload={},signal,automatic,posted){
     if(!QUIET_ACTIONS_C137.has(action))lastActionAtC137=Date.now();
     if(!automatic)noteSetupActivityC202(action); // C202
     if(NAZICHT_WACHT_C269.has(action))nazichtWachtC269=Date.now(); // de eigenaar 17 nov: de nazicht wacht op Pixels/Looprichting/bediening
+    if(NAZICHT_WIJKT_C272&&NAZICHT_WIJK_C272.has(action))nazichtWijkC272(action); // 20 nov: ook voor een nieuwe scan/toevoeging
 
     noteStandC125(action,payload);
     if(!sharedOutputPassiveC98.has(action))sharedOutputReadC98?.abort();
@@ -1002,10 +1078,23 @@
   // het licht van poort 2 kwam niet). Zolang de klant de laatste 20 s iets instelt of bedient, wacht de nazicht.
   const NAZICHT_WACHT_C269=new Set(['previewPixels','configureOutputs','configureOutputDirections','previewSPIZoneDirections','commitPixelsToDirections','identify','identifyLayout','applyLive','applyLiveBatch','applyStaticGradient']);
   let nazichtWachtC269=0;
+  // Coördinatie 20 nov (tijdprofiel punt 5, de eigenaar 18 nov 1076: MAIN_BUSY bij de volgende scan): het nazicht wijkt ook voor een nieuwe
+  // scan of toevoeging, zoals voor Pixels/Looprichting: 20 s pauze na de laatste zulke stap, en loopt zijn eigen finalize al, dan
+  // stopt die (afbreken = lezen; de bewaarde toestand blijft gelijk) en telt dat als pauze, niet als poging. Daarna verder.
+  // Schakelaar uit = zoals vroeger.
+  const NAZICHT_WIJKT_C272=true;
+  const NAZICHT_WIJK_C272=new Set(['scanReceiverLabel','labelCue','discover','discoverMesh','select','secure','reconcileSecurity','authorityCandidateMode','prepareFirstPinV2','claimFirstPinV2','reconcileFirstPinV2']);
+  function nazichtWijkC272(action){
+    nazichtWachtC269=Date.now();
+    for(const job of nazichtC269.values()){
+      if(!job.ctrl||job.ctrl.signal.aborted)continue;
+      job.gepauzeerd=true;nazichtLogC269('wijkt voor '+action+' rid='+job.rid);try{job.ctrl.abort();}catch(_){}
+    }
+  }
   function nazichtLogC269(text){try{root.__c98log?.('KOPPEL nazicht '+text);}catch(_){}}
   function nazichtAchterafC269(configuration,securityReceiptRef){
     const id=String(configuration?.receiverId||''),rid=String(configuration?.rid||'').slice(-6);if(!id||nazichtC269.has(id))return;
-    const job={start:Date.now(),pogingen:0,timer:0};nazichtC269.set(id,job);nazichtLogC269('start rid='+rid);
+    const job={start:Date.now(),pogingen:0,timer:0,rid,ctrl:null,gepauzeerd:false};nazichtC269.set(id,job);nazichtLogC269('start rid='+rid);
     const klaar=text=>{nazichtLogC269(text+' rid='+rid+' s='+Math.round((Date.now()-job.start)/1000));nazichtC269.delete(id);};
     const kijk=()=>{
       if(nazichtC269.get(id)!==job)return;
@@ -1014,9 +1103,14 @@
       if(pending.size>0){job.timer=root.setTimeout?.(kijk,3000);return;}   // nooit tussen een handeling van de klant
       if(Date.now()-nazichtWachtC269<20000){job.timer=root.setTimeout?.(kijk,3000);return;}   // Pixels/Looprichting/bediening gaan voor
       job.pogingen++;nazichtLogC269('opnieuw poging='+job.pogingen+' rid='+rid);
-      call('finalize',{configuration,securityReceiptRef}).then(()=>klaar('ok finalize'),fout=>{
-        const code=String(fout?.code||fout?.message||'FOUT').slice(0,40);nazichtLogC269('fout poging='+job.pogingen+' code='+code+' rid='+rid);
+      const ctrl=typeof root.AbortController==='function'?new root.AbortController():typeof AbortController==='function'?new AbortController():null;
+      job.ctrl=ctrl;job.gepauzeerd=false;
+      call('finalize',{configuration,securityReceiptRef},ctrl?.signal).then(()=>{job.ctrl=null;klaar('ok finalize');},fout=>{
+        job.ctrl=null;
         if(nazichtC269.get(id)!==job)return;
+        // gestopt voor een nieuwe scan/toevoeging: een pauze, geen poging
+        if(job.gepauzeerd){job.gepauzeerd=false;job.pogingen--;nazichtLogC269('pauze rid='+rid);job.timer=root.setTimeout?.(kijk,3000);return;}
+        const code=String(fout?.code||fout?.message||'FOUT').slice(0,40);nazichtLogC269('fout poging='+job.pogingen+' code='+code+' rid='+rid);
         // 1067: MAIN_RECEIPT_INVALID wordt nooit meer geldig (het bewijs van de koppeling is op): niet nog twee keer de MAIN belasten
         if(code==='MAIN_RECEIPT_INVALID'||code==='NATIVE_RECEIPT_INVALID')return klaar('opgegeven (bewijs verlopen)');
         if(job.pogingen>=3)return klaar('opgegeven');
@@ -1081,9 +1175,10 @@
       if(error?.code==='ACTION_UNSUPPORTED'){meshC125.unsupported=true;meshLogC125('unsupported (older app host)');return;}
       // Only a lost MAIN exchange counts against its stability; a busy editor, guide or setup step is just a pause.
       if(STAND_UNREACHABLE_C118.test(String(error?.code||''))&&!/BUSY/.test(String(error?.code||''))){meshC125.mainHist.push(0);if(meshC125.mainHist.length>20)meshC125.mainHist.shift();}
-      meshLogC125('poll failed '+String(error?.code||'').slice(0,40));return;
+      meshLogC125('poll failed '+String(error?.code||'').slice(0,40));meshPollZagC276(false);return;
     }finally{meshC125.inFlight=false;}
-    if(!answer||answer.status!=='ok'){if(answer?.status)meshLogC125('poll '+answer.status);return;}
+    if(!answer||answer.status!=='ok'){if(answer?.status)meshLogC125('poll '+answer.status);if(answer?.status==='cold')meshPollZagC276(false);return;}
+    meshPollZagC276(true);
     if(meshC125.standSeen!==view.stand.id||!contextVisible())return;
     try{meshApplyC125(view,answer);}catch(error){meshLogC125('apply failed '+String(error?.message||'').slice(0,60));}
   }
@@ -1530,8 +1625,10 @@
     const validID=value=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(value);
     const byte=value=>Number.isInteger(value)&&value>=0&&value<=255;
     const full=['RGBW_SCENE','SPI_SCENE'].includes(kind);
+    // LANGE_OVERGANG_C277 (live-control.js): op SPI tot 10 000 ms
+    const maxOvergang=LANGE_OVERGANG_C277&&String(kind).startsWith('SPI')?10000:750;
     if(!validID(standId)||!validID(receiverId)||!['RGBW_STATIC','SPI_BRIGHTNESS','RGBW_SCENE','SPI_SCENE'].includes(kind)||
-      !Number.isInteger(brightness)||brightness<0||brightness>100||!Number.isInteger(transitionMs)||transitionMs<0||transitionMs>750||
+      !Number.isInteger(brightness)||brightness<0||brightness>100||!Number.isInteger(transitionMs)||transitionMs<0||transitionMs>maxOvergang||
       !Array.isArray(channels)||(kind==='RGBW_STATIC'?channels.length!==4||!channels.every(byte):channels.length!==0)||full!==(scene!==undefined))throw fail('LIVE_INVALID');
     if(full){
       const keys=['engine','variant','palette','background','speed','smooth','backgroundBrightness','backgroundOn','motionReverse','widthPixels','spacing','objectCount','trailLength','spread','randomness','bounce','mirror','lineDelayMs'];
@@ -1550,7 +1647,23 @@
       const tailed=scene&&Object.prototype.hasOwnProperty.call(scene,'tail');
       if(tailed&&(kind!=='SPI_SCENE'||!scene.tail||typeof scene.tail!=='object'||Array.isArray(scene.tail)||Object.keys(scene.tail).sort().join(',')!=='px,soft'||
         !Number.isInteger(scene.tail.px)||scene.tail.px<0||scene.tail.px>64||!Number.isInteger(scene.tail.soft)||scene.tail.soft<0||scene.tail.soft>100))throw fail('LIVE_INVALID');
-      if(!scene||typeof scene!=='object'||Array.isArray(scene)||Object.keys(scene).length!==keys.length+(extended?1:0)+(phased?2:0)+(stand?1:0)+(slotted?2:0)+(joined?1:0)+(tailed?1:0)||!keys.every(key=>Object.prototype.hasOwnProperty.call(scene,key))||
+      // Animatievelden (animatie-velden-ontwerp-21nov.md, W10): fade {in,out} 0–200 tienden van een seconde (RGBW en SPI), range
+      // {from,to} 0–8191 en backgroundGradient [[plaats 0–65535 strikt stijgend, r, g, b, w], 2–8] alleen SPI, verloop alleen met
+      // backgroundOn. Native (S1/J1) moet ze ook kennen; zonder ANIMCAP stuurt live-control ze nooit.
+      const has=key=>scene&&Object.prototype.hasOwnProperty.call(scene,key);
+      const faded=has('fade'),ranged=has('range'),gradiented=has('backgroundGradient'),breathed=has('breathe'),witmixed=has('whiteMix');
+      // Witmix (live-control WITMIX_A16): alleen SPI_SCENE, geheel getal 0–100; native S1/J1 stuurt het als WHITEMIX
+      if(witmixed&&(kind!=='SPI_SCENE'||!Number.isInteger(scene.whiteMix)||scene.whiteMix<0||scene.whiteMix>100))throw fail('LIVE_INVALID');
+      // Ademen erover: breathe {period 500–20000, depth 1–100} (RGBW en SPI); native S1/J1 zet het om naar BREATHE=p,d
+      if(breathed&&(!scene.breathe||typeof scene.breathe!=='object'||Array.isArray(scene.breathe)||Object.keys(scene.breathe).sort().join(',')!=='depth,period'||
+        !Number.isInteger(scene.breathe.period)||scene.breathe.period<500||scene.breathe.period>20000||!Number.isInteger(scene.breathe.depth)||scene.breathe.depth<1||scene.breathe.depth>100))throw fail('LIVE_INVALID');
+      if(faded&&(!scene.fade||typeof scene.fade!=='object'||Array.isArray(scene.fade)||Object.keys(scene.fade).sort().join(',')!=='in,out'||
+        !['in','out'].every(k=>Number.isInteger(scene.fade[k])&&scene.fade[k]>=0&&scene.fade[k]<=200)))throw fail('LIVE_INVALID');
+      if(ranged&&(kind!=='SPI_SCENE'||!scene.range||typeof scene.range!=='object'||Array.isArray(scene.range)||Object.keys(scene.range).sort().join(',')!=='from,to'||
+        !Number.isInteger(scene.range.from)||!Number.isInteger(scene.range.to)||scene.range.from<0||scene.range.to>8191||scene.range.from>scene.range.to))throw fail('LIVE_INVALID');
+      if(gradiented&&(kind!=='SPI_SCENE'||scene.backgroundOn!==true||!Array.isArray(scene.backgroundGradient)||scene.backgroundGradient.length<2||scene.backgroundGradient.length>8||
+        !scene.backgroundGradient.every((stop,i,all)=>Array.isArray(stop)&&stop.length===5&&Number.isInteger(stop[0])&&stop[0]>=0&&stop[0]<=65535&&stop.slice(1).every(byte)&&(i===0||stop[0]>all[i-1][0]))))throw fail('LIVE_INVALID');
+      if(!scene||typeof scene!=='object'||Array.isArray(scene)||Object.keys(scene).length!==keys.length+(extended?1:0)+(phased?2:0)+(stand?1:0)+(slotted?2:0)+(joined?1:0)+(tailed?1:0)+(faded?1:0)+(ranged?1:0)+(gradiented?1:0)+(breathed?1:0)+(witmixed?1:0)||!keys.every(key=>Object.prototype.hasOwnProperty.call(scene,key))||
         typeof scene.engine!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(scene.engine)||!colour(scene.background)||!Array.isArray(scene.palette)||scene.palette.length<1||scene.palette.length>(extended?7:4)||!scene.palette.every(colour)||
         !Object.entries(bounds).every(([key,[min,max]])=>Number.isInteger(scene[key])&&scene[key]>=min&&scene[key]<=max)||
         !['backgroundOn','motionReverse','bounce','mirror'].every(key=>typeof scene[key]==='boolean'))throw fail('LIVE_INVALID');
@@ -1846,8 +1959,11 @@
     // Rondgang R3: blauw meteen na de scan (alleen de hello met het labelbewijs, via de hoofdreceiver).
     async labelCue({standId,family,physicalId}={}){
       if(typeof standId!=='string'||!['SPI','RGBW'].includes(family)||!/^[0-9A-F]{12}$/.test(physicalId||''))throw fail('LABEL_CUE_INVALID');
+      const tussendoor=labelCueTussendoorC272({standId,family,physicalId});if(tussendoor)return await tussendoor;
       return await call('labelCue',{standId,family,physicalId});
     },
+    // de cue mag ook tijdens een toevoeging (CUE_TUSSENDOOR_C272); app.js antwoordt dan niet meer zelf "busy"
+    get cueTussendoor(){return CUE_TUSSENDOOR_C272===true;},
     async autoControl({standId,op}={}){if(typeof standId!=='string'||!['STATUS','PAUSE','RESUME','CLEAR'].includes(op))throw fail('AUTO_INVALID');return await call('autoControl',{standId,op});},
     receiverHealthCached(standId,rid){const kept=healthCacheU6.get(standId+':'+String(rid||'').toUpperCase());return kept&&Date.now()-kept.at<600000?kept.value:null;},
     // De rondgang: de eerste receiver is al gescand; richt de bluetooth-weg op die receiver zonder de camera opnieuw.
@@ -2625,7 +2741,7 @@
     },
     applyStaticGradient({requests,gradient,separate,motion}={}){return services.applyLiveBatch({requests,staticGradient:gradient,gradientSeparate:separate===true,...(motion!==undefined?{gradientMotion:motion}:{})});},
     applyMixedPower({requests,gradientSelections}={}){return services.applyLiveBatch({requests,gradientSelections});},
-    applyLiveBatch({requests,staticGradient,gradientSelections,gradientSeparate=false,gradientMotion}={}){
+    applyLiveBatch({requests,staticGradient,gradientSelections,gradientSeparate=false,gradientMotion,tussen=false}={}){
       let requestId=null,settled=false,payload,ids,gradientGroups,preparing=false,nativeBreathe=false,nativeCatalogue=false,sequence=0,replacementClosed=false,replacementInFlight=false,acceptedSequence=0;
       const nativeBreatheController=new AbortController();let nativeObservationController=null,retainedOrigin=null;
       let lightTicket=null;
@@ -2798,7 +2914,7 @@
             retainedOrigin=requestId;
             return {status:retainedStatus,receiverIds:[...ids],applied:false,ready:false};
           }
-          const answer=await call('applyLiveBatch',{requests:payload,...(preparing?{preparingStatic:true}:{})},undefined,undefined,id=>{requestId=id;posted();});
+          const answer=await call('applyLiveBatch',{requests:payload,...(preparing?{preparingStatic:true}:tussen===true?{tussen:true}:{})},undefined,undefined,id=>{requestId=id;posted();});
           if(answer?.status==='early-animation-retired'){
             if(Object.keys(answer).sort().join(',')!=='receiverIds,requestId,sequence,status'||
                answer.requestId!==requestId||!retirementLedger.has(answer.sequence)||
@@ -2819,6 +2935,7 @@
             if(!result||!ids.delete(result.receiverId))throw fail('LIVE_UNCONFIRMED');
             if(result.status==='applied-in-firmware'&&Number.isSafeInteger(result.generation)&&result.generation>=1)return {receiverId:result.receiverId,status:result.status,generation:result.generation};
             if(['unconfirmed','not-sent'].includes(result.status)&&typeof result.code==='string'&&/^[A-Z][A-Z0-9_]{0,63}$/.test(result.code))return {receiverId:result.receiverId,status:result.status,code:result.code};
+            if(tussen===true&&!preparing&&result.status==='dispatched')return {receiverId:result.receiverId,status:'dispatched'}; // C277 tussenwaarde
             throw fail('LIVE_UNCONFIRMED');
           });
           return {status:'batch-complete',results,...(preparing?{
