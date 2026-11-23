@@ -4258,7 +4258,13 @@
       for(let poging=0;poging<3&&!ok&&!los;poging++){
         if(poging){if(roundLosU7(run)){los=true;break;}
           const ms=await roundRemainU7();try{window.__c98log?.('ROUND_BG '+physicalId+' opnieuw '+poging+' ms='+ms);}catch(_){}await new Promise(r=>setTimeout(r,ms));
-          if(roundAddedListU7().some(r=>String(r.physicalId||'').toUpperCase()===physicalId||String(r.rid||'').toUpperCase().slice(4)===physicalId)){ok=true;break;}}
+          if(roundAddedListU7().some(r=>String(r.physicalId||'').toUpperCase()===physicalId||String(r.rid||'').toUpperCase().slice(4)===physicalId)){ok=true;break;}
+          // tweede-blauw (23 nov): nooit een tweede claim op dezelfde receiver terwijl de vorige nog loopt; loopt ze na 130 s nog, dan
+          // niet opnieuw (mislukt) en de claim zelf loopt af.
+          if(typeof CLAIM_NIET_ONDERBREKEN_C279!=='undefined'&&CLAIM_NIET_ONDERBREKEN_C279&&onboarding.claimInFlight?.()===true){const tot=Date.now()+130000;
+            while(onboarding.claimInFlight?.()===true&&Date.now()<tot)await new Promise(r=>setTimeout(r,400));
+            if(onboarding.claimInFlight?.()===true){try{window.__c98log?.('ROUND_BG '+physicalId+' claim loopt nog, geen tweede');}catch(_){}break;}
+            if(roundAddedListU7().some(r=>String(r.physicalId||'').toUpperCase()===physicalId||String(r.rid||'').toUpperCase().slice(4)===physicalId)){ok=true;break;}}}
         try{const r=await roundAddU7({family,physicalId,proof,zoneId});const w=r?.ok===true?await roundWaitU7(physicalId,family,run):false;ok=w===true;los=w==='los';}catch(_){ok=false;}
       }
       if(!ok&&!los&&roundLosU7(run))los=true;
@@ -9484,7 +9490,37 @@ quietAfterLoadC135();      readmitC107.limited=false;readmitC107.retries=0;readm
       if(route===previous&&!document.hidden)toast(error?.code==='STAND_CONFIG_CONFLICT'?'De stand is op een ander toestel veranderd. Open hem opnieuw; er is niets toegevoegd.':'De actuele receiverlijst is nog niet bevestigd. Controleer de verbinding en probeer opnieuw.');
     }finally{if(receiverSetupPreparation===token)receiverSetupPreparation=null;flushCentralProjection();}
   }
+  // tweede-blauw (23 nov, de eigenaar 13:15, iPhone 1109, c98 1345): tijdens de claim van een tweede receiver (rondgang op de achtergrond,
+  // ROUND_BG) wisselde de onzichtbare WebApp van receiver-add naar stand (een Flutter-vraag zoals command/adoptLight/openScreen doet
+  // navigate('stand')). Het verlaten van receiver-add roept onboarding.suspend() -> parkForSearch() -> actionAbort.abort(): de lopende
+  // secure werd CANCELLED, de receiver bleef blauw. Aan: zolang de rondgang een receiver toevoegt of (met een Flutter-gastheer) een
+  // claimstap loopt, wacht elke wissel weg van receiver-add tot dat voorbij is (hoogstens 3 min); de laatste vraag gaat dan alsnog.
+  // Ook de zoektocht (discoverMesh) van de rondgang breekt zo niet meer af. Uit = zoals vroeger.
+  // var (geen const/let): navigate kan al lopen vóór deze regel (opstart); dan staat de schakelaar nog op undefined = niets uitstellen.
+  var CLAIM_NIET_ONDERBREKEN_C279=true,routeLaterC279=null,routeDoorC279=false;
+  function claimHoudtRouteC279(){
+    if(!CLAIM_NIET_ONDERBREKEN_C279||route.screen!=='receiver-add')return false;
+    try{if(roundRunNowU7?.state==='bezig'&&roundQuietU7)return true;}catch(_){}
+    try{return flutterHostU1()&&onboarding.claimInFlight?.()===true;}catch(_){return false;}
+  }
+  function routeLaterNazienC279(){
+    const later=routeLaterC279;if(!later)return;
+    // zolang de rondgang zelf nog loopt geen plafond (die heeft haar eigen grenzen: 150 s wachten, 130 s op een lopende claim)
+    if(claimHoudtRouteC279()&&(Date.now()-later.at<180000||roundRunNowU7?.state==='bezig'))return;
+    routeLaterC279=null;if(route.screen!=='receiver-add')return;
+    try{window.__c98log?.('ROUTE uitgesteld klaar -> '+later.screen+' ms='+(Date.now()-later.at));}catch(_){}
+    routeDoorC279=true;try{navigate(later.screen,later.extra,later.opties);}finally{routeDoorC279=false;}
+  }
+  if(CLAIM_NIET_ONDERBREKEN_C279)setInterval(routeLaterNazienC279,300);
   function navigate(screen, extra={}, {restoreControls=false,managedPrepared=false,zoneEntry=false,scenePrepared640=false}={}) {
+    if(screen!=='receiver-add'&&!routeDoorC279&&claimHoudtRouteC279()){
+      const nieuw=!routeLaterC279;
+      routeLaterC279={screen,extra,opties:{restoreControls,managedPrepared,zoneEntry,scenePrepared640},at:routeLaterC279?.at||Date.now()};
+      if(nieuw)try{const wie=String(new Error().stack||'').split('\n').slice(2,4).map(x=>x.trim().replace(/^at /,'').replace(/\(.*\/([^/]+)\)$/,'($1)')).join(' < ');
+        window.__c98log?.('ROUTE uitgesteld receiver-add -> '+screen+' (claim loopt) door '+wie);}catch(_){}
+      return;
+    }
+    if(screen==='receiver-add')routeLaterC279=null;
     try{if(screen!==route.screen)window.__c98log?.('ROUTE '+route.screen+' -> '+screen);}catch(_){} // iPhone-log: welk scherm wanneer (16 nov)
     if(temporarySingleUser&&['pin-login','stand-connect','stand-sharing','stand-code-change'].includes(screen)&&!(pinLoginC97&&screen==='pin-login'))screen='settings';
     if(firstAccessCheckpoint&&screen!=='receiver-add')return;

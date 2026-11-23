@@ -574,7 +574,7 @@
     {
       "path": "index.html",
       "bytes": 2846,
-      "sha256": "95a3e9f503e65983d0a5d1b8cc558a1f811909c512bedf5e9b18819e1f26020f"
+      "sha256": "f3ee76c1ba5b31dd127fe9a795245765f213bd1feab147c85f7848dc34cee4a8"
     },
     {
       "path": "installation-libraries.js",
@@ -1104,7 +1104,7 @@
     {
       "path": "flutter_bootstrap.js",
       "bytes": 13430,
-      "sha256": "71ee1dfffe3e3bcc26f4283b61b1cca40a7cd84e9fd9ebd7663c2e1c1b48759a"
+      "sha256": "ea9e3283f9df13cc6671e4486a0e992128009f307874148988f3db58c62972f3"
     },
     {
       "path": "flutter.js",
@@ -1113,8 +1113,8 @@
     },
     {
       "path": "main.dart.js",
-      "bytes": 4306718,
-      "sha256": "bd56717c2dc86b369aa2a8c85a8cfe5b5c596acc11a61fb627bcf9b3839223ec"
+      "bytes": 4315747,
+      "sha256": "48932b1fdda5c0bb58c8877dc2d6ac630a4307149bbe3ffcf8e5896bcad59d2f"
     },
     {
       "path": "version.json",
@@ -1178,8 +1178,8 @@
     },
     {
       "path": "webapp/demo/app.js",
-      "bytes": 1226591,
-      "sha256": "890f61159f06b4b070678ff3a6a8ea9241a3500da2a73d57405bf9fb871a71df"
+      "bytes": 1229922,
+      "sha256": "7c664ca6730dd969f939bed96d65c668d20e29acca499e5d03fe68a2b715d332"
     },
     {
       "path": "webapp/demo/backup.js",
@@ -1344,7 +1344,7 @@
     {
       "path": "webapp/demo/index.html",
       "bytes": 13346,
-      "sha256": "71c3052cc78b2b0790460183aa07ee66c2bb0c081082f91c68eb7c3823112249"
+      "sha256": "a659378bc406738c9e02d541acf9d202a14486661bba5a7b4041b8295450c3c9"
     },
     {
       "path": "webapp/demo/installation-libraries.js",
@@ -1518,8 +1518,8 @@
     },
     {
       "path": "webapp/demo/onboarding-ui.js",
-      "bytes": 258030,
-      "sha256": "c919e4ed1ccb5814ba2b6636d6449318238ae561c0a0d366aa2724a104476943"
+      "bytes": 258456,
+      "sha256": "e3f19756e413c3de172fb066038e66eed492837c948900caa2ad08f3b1b44a0c"
     },
     {
       "path": "webapp/demo/onboarding756.css",

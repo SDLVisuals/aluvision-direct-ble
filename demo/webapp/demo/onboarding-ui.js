@@ -2515,7 +2515,10 @@
     // receiver-/PIN-stap). Dan mag de rondgang ze nooit meer loslaten: een begonnen claim verdwijnt niet stil.
     function roundState(){return {state:labelScan?.state||null,busy:!!busy,error:!!error,stage:draft?.stage||null,
       claimed:!!draft&&(securityUncertain||finalizationStarted||!['receiver','pin'].includes(draft.stage))};}
-    return Object.freeze({mount,suspend,reset,paint,restore,restoreFirstStandAccess,summary,readOnlySearchSuspended,canContinueLocalConcept,continueLocalConcept,prepareStand,addScanned,roundState});
+    // tweede-blauw (23 nov): loopt er nu een stap van de claim (secure, reconcile, finalize of de PIN-claim) die suspend() zou afbreken
+    // (actionAbort)? Dan mag de app niet van route wisselen (app.js CLAIM_NIET_ONDERBREKEN_C279). Alleen lezen.
+    function claimInFlight(){return !!actionAbort&&!!busy&&!!draft&&(securityUncertain||finalizationStarted||['security','pin','review'].includes(draft.stage));}
+    return Object.freeze({mount,suspend,reset,paint,restore,restoreFirstStandAccess,summary,readOnlySearchSuspended,canContinueLocalConcept,continueLocalConcept,prepareStand,addScanned,roundState,claimInFlight});
   }
   return Object.freeze({create,firstAccessFailure});
 }));
